@@ -42,7 +42,6 @@ import java.util.Map;
  */
 public abstract class VirtualContainerBase<C extends Control, B extends BehaviorBase<C>, I extends IndexedCell> extends BehaviorSkinBase<C, B> {
 
-    public static final String SCROLL_TO_INDEX_CENTERED = "VirtualContainerBase.scrollToIndexCentered";
     public static final String SCROLL_TO_INDEX_TOP = "VirtualContainerBase.scrollToIndexTop";
     public static final String SCROLL_TO_OFFSET = "VirtualContainerBase.scrollToOffset";    
 
@@ -100,19 +99,11 @@ public abstract class VirtualContainerBase<C extends Control, B extends Behavior
     
     private void handleControlProperties(C control) {
         Map<Object, Object>properties = control.getProperties();
-        if (properties.containsKey(SCROLL_TO_INDEX_CENTERED)) {
-            Object row = properties.get(SCROLL_TO_INDEX_CENTERED);
-            if (row instanceof Integer) {
-                // we want the index to be centered
-                flow.scrollTo((Integer)row, true);
-            }
-
-            properties.remove(SCROLL_TO_INDEX_CENTERED);
-        } else if (properties.containsKey(SCROLL_TO_INDEX_TOP)) {
+        if (properties.containsKey(SCROLL_TO_INDEX_TOP)) {
             Object index = properties.get(SCROLL_TO_INDEX_TOP);
             if (index instanceof Integer) {
                 // we don't want the index to be centered
-                flow.scrollTo((Integer)index, false);
+                flow.scrollTo((Integer)index);
             }
 
             properties.remove(SCROLL_TO_INDEX_TOP);
