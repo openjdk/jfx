@@ -238,7 +238,7 @@ public class LabeledText extends Text {
             }
         };
 
-        private static final CssMetaData<LabeledText,Boolean> LINE_SPACING =
+        private static final CssMetaData<LabeledText,Number> LINE_SPACING =
 	    new CssMetaData<LabeledText,Number>("-fx-line-spacing",
                 SizeConverter.getInstance(),
                 0) {

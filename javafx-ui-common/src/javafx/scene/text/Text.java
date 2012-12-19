@@ -1347,7 +1347,7 @@ public class Text extends Shape {
 
          private static final
              CssMetaData<Text,Number> LINE_SPACING =
-                 new CssPropertyMetaData<Text,Number>("-fx-line-spacing",
+                 new CssMetaData<Text,Number>("-fx-line-spacing",
                  SizeConverter.getInstance(), 0) {
 
             @Override
@@ -1617,7 +1617,7 @@ public class Text extends Shape {
                     new StyleableDoubleProperty(DEFAULT_LINE_SPACING) {
                     @Override public Object getBean() { return Text.this; }
                     @Override public String getName() { return "lineSpacing"; }
-                    @Override public StyleablePropertyMetaData getStyleablePropertyMetaData() {
+                    @Override public CssMetaData getCssMetaData() {
                         return StyleableProperties.LINE_SPACING;
                     }
                     @Override public void invalidated() {

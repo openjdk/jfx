@@ -839,8 +839,8 @@ public abstract class Labeled extends Control {
             }
         };
         
-        private static final CssMetaData<Labeled,ContentDisplay> CONTENT_DISPLAY = 
-            new CssMetaData<Labeled,ContentDisplay>("-fx-content-display",
+        private static final CssMetaData<Labeled,Number> LINE_SPACING =
+            new CssMetaData<Labeled,Number>("-fx-line-spacing",
                 SizeConverter.getInstance(), 0) {
 
             @Override
@@ -854,6 +854,8 @@ public abstract class Labeled extends Control {
             }
         };
 
+        private static final CssMetaData<Labeled,ContentDisplay> CONTENT_DISPLAY = 
+            new CssMetaData<Labeled,ContentDisplay>("-fx-content-display",
                 new EnumConverter<ContentDisplay>(ContentDisplay.class), 
                 ContentDisplay.LEFT) {
 

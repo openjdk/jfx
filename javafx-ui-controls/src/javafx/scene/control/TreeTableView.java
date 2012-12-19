@@ -29,6 +29,7 @@ import com.sun.javafx.collections.annotations.ReturnsUnmodifiableCollection;
 import com.sun.javafx.css.StyleManager;
 import com.sun.javafx.scene.control.ReadOnlyUnbackedObservableList;
 import com.sun.javafx.scene.control.TableColumnComparator;
+import com.sun.javafx.scene.control.skin.TableViewSkinBase;
 import javafx.event.WeakEventHandler;
 import com.sun.javafx.scene.control.skin.TreeTableViewSkin;
 import com.sun.javafx.scene.control.skin.VirtualContainerBase;
@@ -1324,7 +1325,7 @@ public class TreeTableView<S> extends Control {
      * the data model.
      */
     private void refresh() {
-        getProperties().put(TableView.REFRESH, Boolean.TRUE);
+        getProperties().put(TableViewSkinBase.REFRESH, Boolean.TRUE);
     }
     
     /**
