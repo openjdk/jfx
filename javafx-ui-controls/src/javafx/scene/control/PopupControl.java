@@ -50,7 +50,6 @@ import com.sun.javafx.css.CssMetaData;
 import com.sun.javafx.css.PseudoClass;
 import com.sun.javafx.css.StyleManager;
 import com.sun.javafx.css.Styleable;
-import com.sun.javafx.css.StyleablePropertyMetaData;
 import com.sun.javafx.css.StyleableStringProperty;
 import com.sun.javafx.css.converters.StringConverter;
 import com.sun.javafx.scene.control.Logging;
