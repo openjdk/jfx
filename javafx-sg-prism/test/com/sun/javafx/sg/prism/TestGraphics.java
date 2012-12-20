@@ -28,7 +28,6 @@ import java.nio.Buffer;
 import com.sun.glass.ui.Screen;
 import com.sun.glass.ui.View;
 import com.sun.javafx.font.FontStrike;
-import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.RectBounds;
 import com.sun.javafx.geom.Shape;
 import com.sun.javafx.geom.transform.BaseTransform;
@@ -169,6 +168,7 @@ public class TestGraphics extends BaseGraphics {
                 @Override public boolean readPixels(Buffer pixels, int x, int y, int width, int height) { return false; }
                 @Override public boolean readPixels(Buffer pixels) { return false; }
                 @Override public boolean isVolatile() { return false; }
+                @Override public boolean isSurfaceLost() { return false; }
                 @Override public Screen getAssociatedScreen() { return null; }
                 @Override public Graphics createGraphics() {
                     return new TestGraphics();

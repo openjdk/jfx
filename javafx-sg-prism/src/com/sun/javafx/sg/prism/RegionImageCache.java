@@ -102,7 +102,7 @@ class RegionImageCache {
                 RTTexture image = ref.get();
                 // If the image surface is lost, then we will remove it from the cache and report back
                 // to the caller that we have no cached image.
-                if (image.getNativeDestHandle() == 0L) {
+                if (image.isSurfaceLost()) {
                     if (PulseLogger.PULSE_LOGGING_ENABLED) {
                         PulseLogger.PULSE_LOGGER.renderIncrementCounter("Region RTTexture surface lost");
                     }
