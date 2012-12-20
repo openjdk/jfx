@@ -120,7 +120,8 @@ text.setText("The quick brown fox jumps over the lazy dog");
 public class Text extends Shape {
 
     private TextLayout layout;
-    
+    private static final PathElement[] EMPTY_PATH_ELEMENT_ARRAY = new PathElement[0];
+
     /**
      * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended
@@ -143,6 +144,7 @@ public class Text extends Shape {
         InvalidationListener listener = new InvalidationListener() {
             @Override public void invalidated(Observable observable) {
                 checkSpan();
+                checkOrientation();
             }
         };
         parentProperty().addListener(listener);
@@ -181,9 +183,7 @@ public class Text extends Shape {
         isSpan = isManaged() && getParent() instanceof TextFlow;
     }
 
-    @Deprecated
-    public void impl_transformsChanged() {
-        super.impl_transformsChanged();
+    private void checkOrientation() {
         if (!isSpan()) {
             /* Using impl_transformsChanged to detect for orientation change.
              * This can be improved if EffectiveNodeOrientation becomes a
@@ -197,6 +197,12 @@ public class Text extends Shape {
                 needsTextLayout();
             }
         }
+    }
+
+    @Deprecated
+    public void impl_transformsChanged() {
+        super.impl_transformsChanged();
+        checkOrientation();
     }
 
     @Override
@@ -1022,7 +1028,7 @@ public class Text extends Shape {
             float y = (float)getY() - getYRendering();
             return layout.getRange(start, end, type, x, y);
         }
-        return new PathElement[0];
+        return EMPTY_PATH_ELEMENT_ARRAY;
     }
 
     /**
@@ -1751,7 +1757,7 @@ public class Text extends Shape {
                             TextLayout layout = getTextLayout();
                             return layout.getCaretShape(pos, bias, x, y);
                         }
-                        return new PathElement[0];
+                        return EMPTY_PATH_ELEMENT_ARRAY;
                     }
                 };
                 impl_caretShape = new SimpleObjectProperty<PathElement[]>(Text.this, "impl_caretShape");
