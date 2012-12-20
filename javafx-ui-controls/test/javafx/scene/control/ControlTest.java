@@ -22,7 +22,6 @@ import javafx.beans.value.WritableValue;
 import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.shape.Rectangle;
-import com.sun.javafx.css.StyleablePropertyMetaData;
 import com.sun.javafx.scene.control.Logging;
 import org.junit.Before;
 import org.junit.Ignore;
