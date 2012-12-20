@@ -79,7 +79,7 @@ import com.sun.javafx.css.converters.SizeConverter;
 import com.sun.javafx.css.converters.SizeConverter.SequenceConverter;
 import com.sun.javafx.css.converters.StringConverter;
 import com.sun.javafx.css.converters.URLConverter;
-import com.sun.javafx.logging.PlatformLogger;
+import sun.util.logging.PlatformLogger;
 import com.sun.javafx.scene.layout.region.BackgroundPositionConverter;
 import com.sun.javafx.scene.layout.region.BackgroundSizeConverter;
 import com.sun.javafx.scene.layout.region.BorderImageSliceConverter;

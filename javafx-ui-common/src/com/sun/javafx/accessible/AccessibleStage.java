@@ -25,23 +25,23 @@
 
 package com.sun.javafx.accessible;
 
+import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.List;
+import javafx.collections.ListChangeListener;
+import javafx.collections.ObservableList;
+import javafx.scene.Node;
+import javafx.scene.Parent;
+import javafx.scene.Scene;
+import javafx.stage.Screen;
+import javafx.stage.Stage;
+import com.sun.javafx.Logging;
+import com.sun.javafx.accessible.providers.AccessibleProvider;
+import com.sun.javafx.accessible.providers.AccessibleStageProvider;
 import com.sun.javafx.accessible.utils.NavigateDirection;
 import com.sun.javafx.accessible.utils.PropertyIds;
 import com.sun.javafx.accessible.utils.Rect;
-import com.sun.javafx.Logging;
-import com.sun.javafx.logging.PlatformLogger;
-import java.util.List;
-import java.util.ArrayList;
-import com.sun.javafx.accessible.providers.AccessibleProvider;
-import com.sun.javafx.accessible.providers.AccessibleStageProvider;
-import com.sun.javafx.accessible.providers.Accessible;
-import java.lang.reflect.Method;
-import javafx.collections.ListChangeListener;
-import javafx.collections.ListChangeListener.Change;
-import javafx.collections.ObservableList;
-import javafx.scene.* ;
-import javafx.stage.Screen;
-import javafx.stage.Stage;
+import sun.util.logging.PlatformLogger;
 /**
  *
  * Maintains the correspondence of native object to node 

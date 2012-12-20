@@ -60,7 +60,7 @@ import com.sun.javafx.css.converters.ShapeConverter;
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.PickRay;
 import com.sun.javafx.geom.transform.BaseTransform;
-import com.sun.javafx.logging.PlatformLogger;
+import sun.util.logging.PlatformLogger;
 import com.sun.javafx.scene.DirtyBits;
 import com.sun.javafx.sg.PGNode;
 import com.sun.javafx.sg.PGRegion;

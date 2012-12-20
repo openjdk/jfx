@@ -37,7 +37,7 @@ import javafx.scene.Parent;
 import javafx.scene.Scene;
 
 import com.sun.javafx.Logging;
-import com.sun.javafx.logging.PlatformLogger;
+import sun.util.logging.PlatformLogger;
 
 public class TraversalEngine {
     

@@ -25,49 +25,48 @@
 
 package com.sun.javafx.css;
 
-import java.awt.font.FontRenderContext;
+import java.io.FileNotFoundException;
+import java.io.FilePermission;
 import java.io.IOException;
+import java.lang.ref.Reference;
+import java.lang.ref.WeakReference;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
-import java.io.FilePermission;
 import java.security.AccessControlContext;
 import java.security.AccessController;
 import java.security.PermissionCollection;
+import java.security.PrivilegedAction;
+import java.security.PrivilegedActionException;
+import java.security.PrivilegedExceptionAction;
 import java.security.ProtectionDomain;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
+import java.util.WeakHashMap;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
-
-import javafx.collections.FXCollections;
-import javafx.scene.Node;
-import javafx.scene.Scene;
-
-import com.sun.javafx.css.parser.CSSParser;
-import com.sun.javafx.css.StyleHelper.StyleCacheBucket;
-import com.sun.javafx.css.StyleHelper.StyleCacheKey;
-import com.sun.javafx.logging.PlatformLogger;
-import java.io.FileNotFoundException;
-import java.lang.ref.Reference;
-import java.lang.ref.WeakReference;
-import java.security.PrivilegedAction;
-import java.security.PrivilegedExceptionAction;
-import java.security.PrivilegedActionException;
-import java.util.*;
-import java.util.Map.Entry;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
-import javafx.collections.*;
+import javafx.collections.FXCollections;
+import javafx.collections.ListChangeListener;
 import javafx.collections.ListChangeListener.Change;
+import javafx.collections.ObservableList;
+import javafx.scene.Node;
 import javafx.scene.Parent;
+import javafx.scene.Scene;
 import javafx.scene.text.Font;
 import javafx.stage.PopupWindow;
 import javafx.stage.Window;
+import com.sun.javafx.css.StyleHelper.StyleCacheBucket;
+import com.sun.javafx.css.StyleHelper.StyleCacheKey;
+import com.sun.javafx.css.parser.CSSParser;
+import sun.util.logging.PlatformLogger;
 
 /**
  * Contains the stylesheet state for a single scene. This includes both the

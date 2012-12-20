@@ -25,7 +25,7 @@
 
 package com.sun.javafx.scene.control;
 
-import com.sun.javafx.logging.PlatformLogger;
+import sun.util.logging.PlatformLogger;
 
 /**
  * Holds PlatformLoggers to use for logging javafx-ui-controls related things.

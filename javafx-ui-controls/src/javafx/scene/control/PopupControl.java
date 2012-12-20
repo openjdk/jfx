@@ -24,7 +24,11 @@
  */
 package javafx.scene.control;
 
-import com.sun.javafx.Utils;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import javafx.application.Application;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.DoublePropertyBase;
@@ -38,18 +42,17 @@ import javafx.collections.ObservableList;
 import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.stage.PopupWindow;
-import java.lang.reflect.Constructor;
-import java.lang.reflect.InvocationTargetException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-
+import com.sun.javafx.Utils;
 import com.sun.javafx.application.PlatformImpl;
 import com.sun.javafx.collections.TrackableObservableList;
-import com.sun.javafx.css.*;
+import com.sun.javafx.css.CssError;
+import com.sun.javafx.css.StyleManager;
+import com.sun.javafx.css.Styleable;
+import com.sun.javafx.css.StyleablePropertyMetaData;
+import com.sun.javafx.css.StyleableStringProperty;
 import com.sun.javafx.css.converters.StringConverter;
-import com.sun.javafx.logging.PlatformLogger;
 import com.sun.javafx.scene.control.Logging;
+import sun.util.logging.PlatformLogger;
 
 /**
  * An extension of PopupWindow that allows for CSS styling.

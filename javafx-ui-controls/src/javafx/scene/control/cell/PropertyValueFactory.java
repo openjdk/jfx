@@ -33,7 +33,7 @@ import javafx.scene.control.TableColumn.CellDataFeatures;
 import javafx.scene.control.TableView;
 import javafx.util.Callback;
 
-import com.sun.javafx.logging.PlatformLogger;
+import sun.util.logging.PlatformLogger;
 import com.sun.javafx.property.PropertyReference;
 import com.sun.javafx.scene.control.Logging;
 
