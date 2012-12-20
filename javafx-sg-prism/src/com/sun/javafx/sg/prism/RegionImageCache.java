@@ -33,6 +33,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import com.sun.javafx.logging.PulseLogger;
 import com.sun.prism.RTTexture;
 
 /**
@@ -56,13 +57,13 @@ class RegionImageCache {
     // Reference queue for tracking lost soft references to images in the cache
     private ReferenceQueue<RTTexture> referenceQueue = new ReferenceQueue<RTTexture>();
 
-    public RegionImageCache() {
+    RegionImageCache() {
         this.maxPixelCount = (8 * 1024 * 1024) / 4; // 8Mb of pixels
         this.maxSingleImagePixelSize = 300 * 300;
     }
 
     /** Clear the cache */
-    public void flush() {
+    void flush() {
         lock.readLock().lock();
         try {
             map.clear();
@@ -78,25 +79,37 @@ class RegionImageCache {
      * @param h The image height
      * @return True if the image size is less than max
      */
-    public boolean isImageCachable(int w, int h) {
+    boolean isImageCachable(int w, int h) {
         return w > 0 && h > 0 && (w * h) < maxSingleImagePixelSize;
     }
 
     /**
      * Get the cached image for given keys
      *
-     * @param config The graphics configuration, needed if cached image is a Volatile Image. Used as part of cache key
+     * @param config The Screen used with the target Graphics. Used as part of cache key
      * @param w      The image width, used as part of cache key
      * @param h      The image height, used as part of cache key
      * @param args   Other arguments to use as part of the cache key
      * @return Returns the cached Image, or null there is no cached image for key
      */
-    public RTTexture getImage(Object config, int w, int h, Object... args) {
+    RTTexture getImage(Object config, int w, int h, Object... args) {
         lock.readLock().lock();
         try {
-            PixelCountSoftReference ref = map.get(hash(config, w, h, args));
-            // check reference has not been lost and the key truly matches, in case of false positive hash match
+            final int hash = hash(config, w, h, args);
+            PixelCountSoftReference ref = map.get(hash);
+            // Check reference has not been lost and the key truly matches, in case of false positive hash match
             if (ref != null && ref.equals(config, w, h, args)) {
+                RTTexture image = ref.get();
+                // If the image surface is lost, then we will remove it from the cache and report back
+                // to the caller that we have no cached image.
+                if (image.isSurfaceLost()) {
+                    if (PulseLogger.PULSE_LOGGING_ENABLED) {
+                        PulseLogger.PULSE_LOGGER.renderIncrementCounter("Region RTTexture surface lost");
+                    }
+                    currentPixelCount -= ref.pixelCount;
+                    map.remove(hash);
+                    return null;
+                }
                 return ref.get();
             } else {
                 return null;
@@ -110,13 +123,13 @@ class RegionImageCache {
      * Sets the cached image for the specified constraints.
      *
      * @param image  The image to store in cache
-     * @param config The graphics configuration, needed if cached image is a Volatile Image. Used as part of cache key
+     * @param config The Screen used with the target Graphics. Used as part of cache key
      * @param w      The image width, used as part of cache key
      * @param h      The image height, used as part of cache key
      * @param args   Other arguments to use as part of the cache key
      * @return true if the image could be cached or false if the image is too big
      */
-    public boolean setImage(RTTexture image, Object config, int w, int h, Object... args) {
+    boolean setImage(RTTexture image, Object config, int w, int h, Object... args) {
         if (!isImageCachable(w, h)) return false;
         int hash = hash(config, w, h, args);
         lock.writeLock().lock();
@@ -128,6 +141,9 @@ class RegionImageCache {
             }
             // clear out old
             if (ref != null) {
+                if (PulseLogger.PULSE_LOGGING_ENABLED) {
+                    PulseLogger.PULSE_LOGGER.renderIncrementCounter("Region RTTexture replaced in RegionImageCache");
+                }
                 currentPixelCount -= ref.pixelCount;
                 map.remove(hash);
             }

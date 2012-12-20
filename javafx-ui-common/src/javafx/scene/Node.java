@@ -130,7 +130,7 @@ import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.geom.transform.NoninvertibleTransformException;
 import com.sun.javafx.jmx.MXNodeAlgorithm;
 import com.sun.javafx.jmx.MXNodeAlgorithmContext;
-import com.sun.javafx.logging.PlatformLogger;
+import sun.util.logging.PlatformLogger;
 import com.sun.javafx.perf.PerformanceTracker;
 import com.sun.javafx.scene.BoundsAccessor;
 import com.sun.javafx.scene.CSSFlags;

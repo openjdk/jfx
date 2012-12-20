@@ -1215,14 +1215,13 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
                   select, false);
     }
 
-    public void lineStart(boolean select, boolean extendSelection) {
-        Bounds caretBounds = caretPath.getLayoutBounds();
-        double midY = (caretBounds.getMinY() + caretBounds.getMaxY()) / 2;
-        HitInfo hit = getTextNode().impl_hitTestChar(translateCaretPosition(new Point2D(getTextLeft(), midY)));
-        positionCaret(hit, select, extendSelection);
+    public void toLeftLineEdge(boolean select, boolean extendSelection) {
+        targetCaretX = 0;
+        downLines(0, select, extendSelection);
+        targetCaretX = -1;
     }
 
-    public void lineEnd(boolean select, boolean extendSelection) {
+    public void toRightLineEdge(boolean select, boolean extendSelection) {
         targetCaretX = Double.MAX_VALUE;
         downLines(0, select, extendSelection);
         targetCaretX = -1;

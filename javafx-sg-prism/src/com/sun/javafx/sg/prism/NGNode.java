@@ -24,15 +24,16 @@
  */
 package com.sun.javafx.sg.prism;
 
+import java.util.List;
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.Point2D;
 import com.sun.javafx.geom.RectBounds;
 import com.sun.javafx.geom.Rectangle;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.geom.transform.GeneralTransform3D;
-import com.sun.javafx.sg.BaseNode;
 import com.sun.javafx.sg.BaseCacheFilter;
 import com.sun.javafx.sg.BaseEffectFilter;
+import com.sun.javafx.sg.BaseNode;
 import com.sun.javafx.sg.BaseNodeEffectInput;
 import com.sun.javafx.sg.DirtyRegionContainer;
 import com.sun.javafx.sg.NodePath;
@@ -43,24 +44,23 @@ import com.sun.prism.GraphicsPipeline;
 import com.sun.prism.RTTexture;
 import com.sun.prism.ReadbackGraphics;
 import com.sun.prism.Texture;
+import com.sun.prism.Texture.WrapMode;
 import com.sun.prism.impl.PrismSettings;
 import com.sun.prism.paint.Color;
 import com.sun.scenario.effect.Blend;
 import com.sun.scenario.effect.Effect;
-import com.sun.scenario.effect.Filterable;
 import com.sun.scenario.effect.FilterContext;
+import com.sun.scenario.effect.Filterable;
 import com.sun.scenario.effect.ImageData;
 import com.sun.scenario.effect.impl.prism.PrDrawable;
 import com.sun.scenario.effect.impl.prism.PrEffectHelper;
 import com.sun.scenario.effect.impl.prism.PrFilterContext;
-import java.util.List;
 
-import static com.sun.javafx.logging.PulseLogger.PULSE_LOGGING_ENABLED;
-import static com.sun.javafx.logging.PulseLogger.PULSE_LOGGER;
-import com.sun.prism.Texture.WrapMode;
+import static com.sun.javafx.logging.PulseLogger.*;
 
 
 /**
+ * Basic implementation of node.
  */
 public abstract class NGNode extends BaseNode<Graphics> {
 
@@ -77,7 +77,7 @@ public abstract class NGNode extends BaseNode<Graphics> {
 
     /***************************************************************************
      *                                                                         *
-     *                     Culling Related Methods                             *
+     *                     Culling Related Methods.                            *
      *                                                                         *
      **************************************************************************/
     protected void markCullRegions(
@@ -316,7 +316,7 @@ public abstract class NGNode extends BaseNode<Graphics> {
 
     /***************************************************************************
      *                                                                         *
-     *                     Rendering Related Methods                           *
+     *                     Rendering Related Methods.                          *
      *                                                                         *
      **************************************************************************/
 
@@ -680,136 +680,20 @@ public abstract class NGNode extends BaseNode<Graphics> {
 
     protected abstract boolean hasOverlappingContents();
 
-    protected boolean cull(Rectangle clip, BaseTransform tx, GeneralTransform3D pvTx) {
-
-        if (clip == null) {
-            // we don't have a clip to check against, so don't cull
-            return false;
-        }
-
-        // quick cull based on the cached bounds being empty
-        // I do this based on the content bounds because the calculation is
-        // faster and is a necessary part of calculating the transformed bounds
-        // anyway, so might as well do it first and quit if possible
-        if (transformedBounds.isEmpty()) {
-            return true;
-        }
-
-        // If this node lies now entirely outside the clip, then we cull it
-        if (tx.isIdentity()) {
-            TEMP_BOUNDS.deriveWithNewBounds(transformedBounds);
-        } else {
-            tx.transform(transformedBounds, TEMP_BOUNDS);
-        }
-        if (pvTx != null) {
-            if (!pvTx.isIdentity()) {
-                pvTx.transform(TEMP_BOUNDS, TEMP_BOUNDS);
-            }
-        }
-        TEMP_BOUNDS.deriveWithNewBounds(TEMP_BOUNDS.getMinX(),
-                TEMP_BOUNDS.getMinY(),
-                0,
-                TEMP_BOUNDS.getMaxX(),
-                TEMP_BOUNDS.getMaxY(),
-                0);
-
-        if (TEMP_BOUNDS.disjoint(clip.x, clip.y, clip.width, clip.height)) {
-            return true;
-        }
-
-        // don't cull!
-        return false;
-    }
-
-
-
     /***************************************************************************
      *                                                                         *
-     *                       Static Helper Methods                             *
+     *                       Static Helper Methods.                            *
      *                                                                         *
      **************************************************************************/
-
-    /**
-     * Safely accumulates the {@code newRect} rectangle into an existing
-     * {@code accumulator} rectangle and returns the accumulated result.
-     * The result may be {@code null} if the existing {@code accumulator}
-     * was {@code null} and the {@code newRect} is either null or empty.
-     * If the existing {@code accumulator} was not {@code null} then it
-     * is returned, possibly augmented with the union of the bounds of the
-     * two rectangles.
-     * If a non-{@code null} result is returned then it is guaranteed to
-     * be non-empty.
-     * The result is never the same object as {@code newRect}.
-     * <p>
-     * This method provides a convenient mechanism to perform the task
-     * of accumulating rectangles used throughout various parts of
-     * scene graph management while providing workarounds for unexpected
-     * behaviors in the {@link RectBounds#add} method which sometimes
-     * produces a non-empty result from combining two empty rectangles.
-     *
-     * @param accumulator the existing accumulation of rectangle bounds
-     * @param newRect a new rectangle to accumulate
-     * @return the non-empty result of accumulation, or null if the
-     *         accumulation is still empty
-     */
-    static RectBounds accumulate(RectBounds accumulator, RectBounds newBounds) {
-        return accumulate(accumulator, newBounds, false);
-    }
-
-    /**
-     * Safely accumulates the {@code newRect} rectangle into an existing
-     * {@code accumulator} rectangle and returns the accumulated result.
-     * The result may be {@code null} if the existing {@code accumulator}
-     * was {@code null} and the {@code newRect} is either null or empty.
-     * If the existing {@code accumulator} was not {@code null} then it
-     * is returned, possibly augmented with the union of the bounds of the
-     * two rectangles.
-     * If a non-{@code null} result is returned then it is guaranteed to
-     * be non-empty.
-     * The result is never the same object as {@code newRect} if
-     * {@code newRectShareable} is false.
-     * <p>
-     * This method provides a convenient mechanism to perform the task
-     * of accumulating rectangles used throughout various parts of
-     * scene graph management while providing workarounds for unexpected
-     * behaviors in the {@link RectBounds#add} method which sometimes
-     * produces a non-empty result from combining two empty rectangles.
-     *
-     * @param accumulator the existing accumulation of rectangle bounds
-     * @param newRect a new rectangle to accumulate
-     * @param newRectShareable a boolean to indicate if the {@code newRect}
-     *        parameter can be shared by using it as the result
-     * @return the non-empty result of accumulation, or null if the
-     *         accumulation is still empty
-     */
-    static RectBounds accumulate(RectBounds accumulator,
-                               RectBounds newBounds,
-                               boolean newBoundsShareable)
-    {
-        // Manually test for positive width and height to avoid
-        // accumulation of NaN values.
-        if (newBounds != null &&
-            newBounds.getWidth() > 0 &&
-            newBounds.getHeight() > 0)
-        {
-            if (accumulator == null) {
-                accumulator = (newBoundsShareable
-                               ? newBounds
-                               : new RectBounds(newBounds));
-            } else {
-                accumulator.unionWith(newBounds);
-            }
-        }
-        return accumulator;
-    }
 
     boolean isReadbackSupported(Graphics g) {
         return ((g instanceof ReadbackGraphics) &&
                 ((ReadbackGraphics) g).canReadBack());
     }
+
     /***************************************************************************
      *                                                                         *
-     *                      Filters (Cache, Effect, etc)                       *
+     *                      Filters (Cache, Effect, etc).                      *
      *                                                                         *
      **************************************************************************/
 
@@ -862,7 +746,7 @@ public abstract class NGNode extends BaseNode<Graphics> {
         }
         
         /**
-         * Render node to cache
+         * Render node to cache.
          * @param cacheData the cache
          * @param cacheBounds cache bounds
          * @param xform transformation
@@ -889,9 +773,9 @@ public abstract class NGNode extends BaseNode<Graphics> {
                 if (xform != null) {
                     g.transform(xform);
                 }
-                if (((NGNode)node).getClipNode() != null) {
+                if (node.getClipNode() != null) {
                     ((NGNode)node).renderClip(g);
-                } else if (((NGNode)node).getEffectFilter() != null) {
+                } else if (node.getEffectFilter() != null) {
                     ((NGNode)node).renderEffect(g);
                 } else {
                     ((NGNode)node).renderContent(g);
@@ -942,7 +826,7 @@ public abstract class NGNode extends BaseNode<Graphics> {
         }
 
         /**
-         * True if we can use scrolling optimization on this node
+         * True if we can use scrolling optimization on this node.
          */
         @Override
         protected boolean impl_scrollCacheCapable() {
@@ -1007,14 +891,13 @@ public abstract class NGNode extends BaseNode<Graphics> {
         }
 
         /**
-         * Get the cache bounds
+         * Get the cache bounds.
          * @param bounds rectangle to store bounds to
          * @param xform transformation
          */
         @Override
         protected Rectangle impl_getCacheBounds(Rectangle bounds, BaseTransform xform) {
-            BaseBounds b = ((NGNode) node).getClippedBounds(TEMP_BOUNDS,
-                    xform);
+            final BaseBounds b = node.getClippedBounds(TEMP_BOUNDS, xform);
             bounds.setBounds(b);
             return bounds;
         }

@@ -25,7 +25,7 @@
 
 package com.sun.javafx;
 
-import com.sun.javafx.logging.PlatformLogger;
+import sun.util.logging.PlatformLogger;
 
 /**
  * Holds PlatformLoggers to use for logging javafx-ui-common related things.
