@@ -33,6 +33,7 @@ import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.event.EventHandler;
+import javafx.geometry.NodeOrientation;
 import javafx.scene.Cursor;
 import javafx.scene.Node;
 import javafx.scene.control.TableColumnBase;
@@ -370,6 +371,9 @@ public class NestedTableColumnHeader extends TableColumnHeader {
 
     private void columnResizing(TableColumnBase col, MouseEvent me) {
         double draggedX = me.getSceneX() - dragAnchorX;
+        if (getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT) {
+            draggedX = -draggedX;
+        }
         double delta = draggedX - lastX;
         boolean allowed = getTableViewSkin().resizeColumn(col, delta);
         if (allowed) {
