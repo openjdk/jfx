@@ -29,11 +29,18 @@ import com.sun.javafx.geom.PickRay;
 import com.sun.javafx.sg.PGNode;
 import javafx.scene.input.Dragboard;
 
+import java.security.AccessControlContext;
+
 /**
  * TKScene
  *
  */
 public interface TKScene {
+
+    /**
+     * This method is used to set security context of the Scene.
+     */
+    public void setSecurityContext(AccessControlContext ctx);
 
     /**
      * Waits until the render thread is available for synchronization

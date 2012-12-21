@@ -25,7 +25,6 @@
 
 package javafx.scene.control;
 
-import com.sun.javafx.Utils;
 import com.sun.javafx.application.PlatformImpl;
 import com.sun.javafx.beans.annotations.DuplicateInBuilderProperties;
 import com.sun.javafx.css.*;
@@ -77,6 +76,59 @@ public abstract class Control extends Region implements Skinnable {
         // Ensures that the default application user agent stylesheet is loaded
         if (Application.getUserAgentStylesheet() == null) {
             PlatformImpl.setDefaultPlatformUserAgentStylesheet();
+        }
+    }
+
+    /**
+     * Utility for loading a class in a manner that will work with multiple
+     * class loaders, as is typically found in OSGI modular applications.
+     * In particular, this method will attempt to just load the class
+     * identified by className. If that fails, it attempts to load the
+     * class using the current thread's context class loader. If that fails,
+     * it attempts to use the class loader of the supplied "instance", and
+     * if it still fails it walks up the class hierarchy of the instance
+     * and attempts to use the class loader of each class in the super-type
+     * hierarchy.
+     *
+     * @param className The name of the class we want to load
+     * @param instance An optional instance used to help find the class to load
+     * @return The class. Cannot return null
+     * @throws ClassNotFoundException If the class cannot be found using any technique.
+     */
+    static Class<?> loadClass(final String className, final Object instance)
+            throws ClassNotFoundException
+    {
+        try {
+            // Try just loading the class
+            return Class.forName(className);
+        } catch (ClassNotFoundException ex) {
+            // RT-17525 : Use context class loader only if Class.forName fails.
+            if (Thread.currentThread().getContextClassLoader() != null) {
+                try {
+                    return Thread.currentThread().getContextClassLoader().loadClass(className);
+                } catch (ClassNotFoundException ex2) {
+                    // Do nothing, just fall through
+                }
+            }
+
+            // RT-14177: Try looking up the class using the class loader of the
+            //           current class, walking up the list of superclasses
+            //           and checking each of them, before bailing and using
+            //           the context class loader.
+            if (instance != null) {
+                Class<?> currentType = instance.getClass();
+                while (currentType != null) {
+                    try {
+                        return currentType.getClassLoader().loadClass(className);
+                    } catch (ClassNotFoundException ex2) {
+                        currentType = currentType.getSuperclass();
+                    }
+                }
+            }
+
+            // We failed to find the class using any of the above means, so we're going
+            // to just throw the ClassNotFoundException that we caught earlier
+            throw ex;
         }
     }
     
@@ -632,7 +684,7 @@ public abstract class Control extends Region implements Skinnable {
         }
 
         try {
-            final Class<?> skinClass = Utils.loadClass(skinClassName.get(), this);
+            final Class<?> skinClass = Control.loadClass(skinClassName.get(), this);
             Constructor<?>[] constructors = skinClass.getConstructors();
             Constructor<?> skinConstructor = null;
             for (Constructor<?> c : constructors) {
