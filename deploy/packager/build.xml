@@ -108,13 +108,14 @@
     <target name="-do-jar-with-manifest"    depends="mymanifest"/>
     <target name="-pre-jar"                 depends="myjarstart,mymanifest"/>
     <target name="-post-jar"
-            depends="myjarendWin, myjarendMac, myjarendLinux">
+            depends="myjarendWin, myjarendMac, myjarendLinux, myjarendIOS">
         <mkdir dir="${jfx.sdk.dir}/lib"/>
         <mkdir dir="${jfx.sdk.dir}/bin"/>
         <copy tofile="${jfx.sdk.dir}/lib/ant-javafx.jar"
               file="../dist/packager.jar"/>
         <antcall target="copy-javafxpackager-Win"/>
         <antcall target="copy-javafxpackager-Mac"/>
+        <antcall target="copy-javafxpackager-Ios"/>
         <antcall target="copy-javafxpackager-Linux"/>
     </target>
 
@@ -125,6 +126,13 @@
     </target>
 
     <target name="copy-javafxpackager-Mac" if="isMacOSX">
+        <copy todir="${jfx.sdk.dir}/bin">
+           <fileset file="../dist/javafxpackager" />
+        </copy>
+        <chmod file="${jfx.sdk.dir}/bin/javafxpackager" perm="ugo+rx"/>
+    </target>
+
+    <target name="copy-javafxpackager-Ios" if="isIOS">
         <copy todir="${jfx.sdk.dir}/bin">
            <fileset file="../dist/javafxpackager" />
         </copy>
@@ -352,6 +360,14 @@
     </target>
 
     <target name="myjarendMac"  if="isMacOSX">
+      <copy todir="../dist">
+        <fileset dir="scripts" includes="javafxpackager"/>
+        <fileset dir="dist"    includes="packager.jar"/>
+      </copy>
+      <chmod file="../dist/javafxpackager" perm="755"/>
+    </target>
+
+    <target name="myjarendIOS"  if="isIOS">
       <copy todir="../dist">
         <fileset dir="scripts" includes="javafxpackager"/>
         <fileset dir="dist"    includes="packager.jar"/>
