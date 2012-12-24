@@ -28,7 +28,7 @@ package javafx.concurrent;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.concurrent.*;
-import com.sun.javafx.logging.PlatformLogger;
+import sun.util.logging.PlatformLogger;
 import com.sun.javafx.tk.Toolkit;
 import javafx.application.Platform;
 import javafx.beans.property.*;

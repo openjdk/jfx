@@ -25,17 +25,16 @@
 
 package com.sun.javafx.scene.control.accessible;
 
-import com.sun.javafx.accessible.utils.EventIds;
-import com.sun.javafx.accessible.utils.ControlTypeIds;
-import com.sun.javafx.accessible.utils.PropertyIds;
-import com.sun.javafx.accessible.utils.ToggleState;
-import com.sun.javafx.Logging;
-import com.sun.javafx.logging.PlatformLogger;
-import com.sun.javafx.accessible.providers.ToggleProvider;
 import javafx.event.ActionEvent;
-import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.scene.control.CheckBox;
+import com.sun.javafx.Logging;
+import com.sun.javafx.accessible.providers.ToggleProvider;
+import com.sun.javafx.accessible.utils.ControlTypeIds;
+import com.sun.javafx.accessible.utils.EventIds;
+import com.sun.javafx.accessible.utils.PropertyIds;
+import com.sun.javafx.accessible.utils.ToggleState;
+import sun.util.logging.PlatformLogger;
 
 public class AccessibleCheckBox extends AccessibleControl implements ToggleProvider {
     CheckBox checkBox ;

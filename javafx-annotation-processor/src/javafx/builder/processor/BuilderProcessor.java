@@ -42,6 +42,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.PropertyResourceBundle;
@@ -71,6 +72,7 @@ import javax.lang.model.type.NoType;
 import javax.lang.model.type.PrimitiveType;
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
+import javax.lang.model.type.WildcardType;
 import javax.lang.model.util.ElementFilter;
 import javax.lang.model.util.Elements;
 import javax.lang.model.util.Types;
@@ -418,12 +420,21 @@ public class BuilderProcessor extends AbstractProcessor {
         // We also consider that getters for properties that are Collections (such as List or ObservableList) are
         // effectively setters since you can replace the contents of the collection.  But if there is a setter
         // we will prefer that.
-        for (String pName : scanned.properties.keySet()) {
+        Iterator<String> it = scanned.properties.keySet().iterator();
+        while (it.hasNext()) {
+            String pName = it.next();
             TypeMirror pType = scanned.typeOf(pName);
+
             if (types.isSubtype(types.erasure(pType), rawCollectionType)) {
-                boolean added = scanned.propertiesWithSetters.add(pName);
-                if (added) {
-                    scanned.collectionProperties.add(pName);
+                if (isWildcardType(pType)) {
+                    // we ignore wildcard collections (e.g. List<? extend Color>
+                    // because there is no way to add an element to them anyway
+                    it.remove();
+                } else {
+                    boolean added = scanned.propertiesWithSetters.add(pName);
+                    if (added) {
+                        scanned.collectionProperties.add(pName);
+                    }
                 }
             }
         }
@@ -697,6 +708,20 @@ public class BuilderProcessor extends AbstractProcessor {
             p += ", ?";
         }
         return p;
+    }
+
+    private static boolean isWildcardType(TypeMirror type) {
+        boolean result = false;
+        if (type instanceof DeclaredType) {
+            DeclaredType dType = (DeclaredType) type;
+            for (TypeMirror typeArg : dType.getTypeArguments()) {
+                if (typeArg instanceof WildcardType) {
+                    result = true;
+                    break;
+                }
+            }
+        }
+        return result;
     }
 
     private void makeBuilder(TypeElement type, Scanned scanned, Set<String> buildablePropertyNames) throws IOException {

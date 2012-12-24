@@ -225,12 +225,12 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
 
         if (!done) {
             done = true;
-            if ("LineStart".equals(name)) skin.lineStart(false, false);
-            else if ("LineEnd".equals(name)) skin.lineEnd(false, false);
-            else if ("SelectLineStart".equals(name)) skin.lineStart(true, false);
-            else if ("SelectLineStartExtend".equals(name)) skin.lineStart(true, true);
-            else if ("SelectLineEnd".equals(name)) skin.lineEnd(true, false);
-            else if ("SelectLineEndExtend".equals(name)) skin.lineEnd(true, true);
+            if ("LineStart".equals(name)) lineStart(false, false);
+            else if ("LineEnd".equals(name)) lineEnd(false, false);
+            else if ("SelectLineStart".equals(name)) lineStart(true, false);
+            else if ("SelectLineStartExtend".equals(name)) lineStart(true, true);
+            else if ("SelectLineEnd".equals(name)) lineEnd(true, false);
+            else if ("SelectLineEndExtend".equals(name)) lineEnd(true, true);
             else if ("PreviousLine".equals(name)) skin.previousLine(false);
             else if ("NextLine".equals(name)) skin.nextLine(false);
             else if ("SelectPreviousLine".equals(name)) skin.previousLine(true);
@@ -278,6 +278,22 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
 
     @Override protected void deleteChar(boolean previous) {
         skin.deleteChar(previous);
+    }
+
+    private void lineStart(boolean select, boolean extendSelection) {
+        if (isRTLText()) {
+            skin.toRightLineEdge(select, extendSelection);
+        } else {
+            skin.toLeftLineEdge(select, extendSelection);
+        }
+    }
+
+    private void lineEnd(boolean select, boolean extendSelection) {
+        if (isRTLText()) {
+            skin.toLeftLineEdge(select, extendSelection);
+        } else {
+            skin.toRightLineEdge(select, extendSelection);
+        }
     }
 
     protected void scrollCharacterToVisible(int index) {

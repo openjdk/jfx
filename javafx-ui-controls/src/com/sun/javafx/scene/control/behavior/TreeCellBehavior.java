@@ -25,15 +25,19 @@
 
 package com.sun.javafx.scene.control.behavior;
 
-import com.sun.javafx.PlatformUtil;
-import com.sun.javafx.logging.PlatformLogger;
-import com.sun.javafx.scene.control.Logging;
 import java.util.WeakHashMap;
-
 import javafx.scene.Node;
-import javafx.scene.control.*;
+import javafx.scene.control.FocusModel;
+import javafx.scene.control.MultipleSelectionModel;
+import javafx.scene.control.SelectionMode;
+import javafx.scene.control.TreeCell;
+import javafx.scene.control.TreeItem;
+import javafx.scene.control.TreeView;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
+import com.sun.javafx.PlatformUtil;
+import com.sun.javafx.scene.control.Logging;
+import sun.util.logging.PlatformLogger;
 
 /**
  */

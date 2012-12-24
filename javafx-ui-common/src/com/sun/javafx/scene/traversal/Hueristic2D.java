@@ -17,32 +17,24 @@
  * You should have received a copy of the GNU General Public License version
  * 2 along with this work; if not, write to the Free Software Foundation,
  * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
- *
  * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
 package com.sun.javafx.scene.traversal;
 
-import static com.sun.javafx.scene.traversal.Direction.DOWN;
-import static com.sun.javafx.scene.traversal.Direction.LEFT;
-import static com.sun.javafx.scene.traversal.Direction.NEXT;
-import static com.sun.javafx.scene.traversal.Direction.PREVIOUS;
-import static com.sun.javafx.scene.traversal.Direction.RIGHT;
-import static com.sun.javafx.scene.traversal.Direction.UP;
-
 import java.util.List;
 import java.util.Stack;
-
-import javafx.geometry.Bounds;
 import javafx.geometry.BoundingBox;
+import javafx.geometry.Bounds;
 import javafx.geometry.Point2D;
 import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.Parent;
-
 import com.sun.javafx.Logging;
-import com.sun.javafx.logging.PlatformLogger;
+import sun.util.logging.PlatformLogger;
+
+import static com.sun.javafx.scene.traversal.Direction.*;
 
 
 public class Hueristic2D implements Algorithm {
