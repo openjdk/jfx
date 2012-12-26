@@ -42,7 +42,6 @@ import javafx.event.EventHandler;
 import javafx.geometry.Bounds;
 import javafx.geometry.HPos;
 import javafx.geometry.Insets;
-import javafx.geometry.NodeOrientation;
 import javafx.geometry.Point2D;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.Group;
@@ -171,7 +170,6 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
         clip.heightProperty().bind(textGroup.heightProperty());
 
         // Add content
-        textGroup.setNodeOrientation(NodeOrientation.LEFT_TO_RIGHT);
         textGroup.setClip(clip);
         // Hack to defeat the fact that otherwise when the caret blinks the parent group
         // bounds are completely invalidated and therefore the dirty region is much
@@ -419,13 +417,13 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
 
         if (PlatformUtil.isEmbedded() && newValue != null && newValue.getLength() > 0) {
             Bounds b = selectionHighlightPath.getBoundsInParent();
-            if (isRTL()) {
-                selectionHandle1.setLayoutX(textGroup.getWidth() - b.getMaxX() - selectionHandle2.getWidth() / 2);
-                selectionHandle2.setLayoutX(textGroup.getWidth() - b.getMinX() - selectionHandle1.getWidth() / 2);
-            } else {
+//             if (isRTL()) {
+//                 selectionHandle1.setLayoutX(textGroup.getWidth() - b.getMaxX() - selectionHandle2.getWidth() / 2);
+//                 selectionHandle2.setLayoutX(textGroup.getWidth() - b.getMinX() - selectionHandle1.getWidth() / 2);
+//             } else {
                 selectionHandle1.setLayoutX(b.getMinX() - selectionHandle1.getWidth() / 2);
                 selectionHandle2.setLayoutX(b.getMaxX() - selectionHandle2.getWidth() / 2);
-            }
+//             }
         }
     }
 
@@ -534,11 +532,11 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
                                         caretWidth / 2));
         }
         if (PlatformUtil.isEmbedded()) {
-            if (isRTL()) {
-                caretHandle.setLayoutX(textGroup.getWidth() - caretX - caretHandle.getWidth() / 2 - 1);
-            } else {
+//             if (isRTL()) {
+//                 caretHandle.setLayoutX(textGroup.getWidth() - caretX - caretHandle.getWidth() / 2 - 1);
+//             } else {
                 caretHandle.setLayoutX(caretX - caretHandle.getWidth() / 2 + 1);
-            }
+//             }
         }
     }
 
@@ -625,13 +623,13 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
         Insets insets = getSkinnable().getInsets();
         Point2D p;
 
-        if (isRTL()) {
-            p = new Point2D(insets.getLeft() + textGroup.getWidth() - e.getX() - textTranslateX.get(),
-                            e.getY() - insets.getTop());
-        } else {
+//         if (isRTL()) {
+//             p = new Point2D(insets.getLeft() + textGroup.getWidth() - e.getX() - textTranslateX.get(),
+//                             e.getY() - insets.getTop());
+//         } else {
             p = new Point2D(e.getX() - textTranslateX.get() - insets.getLeft(),
                             e.getY() - insets.getTop());
-        }
+//         }
         return textNode.impl_hitTestChar(translateCaretPosition(p));
     }
 
@@ -695,6 +693,11 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
     }
 
     @Override public void nextCharacterVisually(boolean moveRight) {
+        if (isRTL()) {
+            // Text node is mirrored.
+            moveRight = !moveRight;
+        }
+
         Bounds caretBounds = caretPath.getLayoutBounds();
         if (caretPath.getElements().size() == 4) {
             // The caret is split
@@ -771,11 +774,6 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
 
     protected HPos getHAlignment() {
         HPos hPos = getSkinnable().getAlignment().getHpos();
-        if (hPos != HPos.CENTER) {
-            if (isRTL()) {
-                hPos = (hPos == HPos.LEFT) ? HPos.RIGHT : HPos.LEFT;
-            }
-        }
         return hPos;
     }
 
