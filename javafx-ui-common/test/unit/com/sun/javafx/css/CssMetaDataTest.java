@@ -305,10 +305,10 @@ public class CssMetaDataTest {
         
         Selector root = new SimpleSelector("*", rootStyleClass, null, null);
         
-        ParsedValue fxBaseValue = CSSParser.getInstance().parseExpr("-fx-base", "red");
+        ParsedValueImpl fxBaseValue = CSSParser.getInstance().parseExpr("-fx-base", "red");
         Declaration fxBase = new Declaration("-fx-base", fxBaseValue, false);
 
-        ParsedValue<String,String> fxColorValue = new ParsedValue<String,String>(fxBase.getProperty(), null, true);
+        ParsedValueImpl<String,String> fxColorValue = new ParsedValueImpl<String,String>(fxBase.getProperty(), null, true);
         Declaration fxColor = new Declaration("-fx-color", fxColorValue, false);
         
         List<Selector> selectors = new ArrayList<Selector>();
@@ -328,7 +328,7 @@ public class CssMetaDataTest {
         
         Selector rect = new SimpleSelector("*", rectStyleClass, null, null);
         
-        ParsedValue fxFillValue = CSSParser.getInstance().parseExpr("-fx-fill", "-fx-color");
+        ParsedValueImpl fxFillValue = CSSParser.getInstance().parseExpr("-fx-fill", "-fx-color");
         Declaration fxFill = new Declaration("-fx-fill", fxFillValue, false);
         
         selectors = new ArrayList<Selector>();
@@ -346,7 +346,7 @@ public class CssMetaDataTest {
         
         Selector rectHover = new SimpleSelector("*", rectStyleClass, pseudoclasses, null);
         
-        ParsedValue<Color,Color> fxFillHoverValue = new ParsedValue<Color,Color>(Color.YELLOW, null);        
+        ParsedValueImpl<Color,Color> fxFillHoverValue = new ParsedValueImpl<Color,Color>(Color.YELLOW, null);        
         Declaration fxFillHover = new Declaration("-fx-fill", fxFillHoverValue, false);
         
         selectors = new ArrayList<Selector>();
@@ -410,10 +410,10 @@ public class CssMetaDataTest {
         
         Selector root = new SimpleSelector("*", rootStyleClass, null, null);
         
-        ParsedValue fxBaseValue = CSSParser.getInstance().parseExpr("-fx-base", "red");
+        ParsedValueImpl fxBaseValue = CSSParser.getInstance().parseExpr("-fx-base", "red");
         Declaration fxBase = new Declaration("-fx-base", fxBaseValue, false);
 
-        ParsedValue<String,String> fxColorValue = new ParsedValue<String,String>(fxBase.getProperty(), null, true);
+        ParsedValueImpl<String,String> fxColorValue = new ParsedValueImpl<String,String>(fxBase.getProperty(), null, true);
         Declaration fxColor = new Declaration("-fx-color", fxColorValue, false);
         
         List<Selector> selectors = new ArrayList<Selector>();
@@ -433,7 +433,7 @@ public class CssMetaDataTest {
         
         Selector rect = new SimpleSelector("*", rectStyleClass, null, null);
         
-        ParsedValue fxFillValue = CSSParser.getInstance().parseExpr("-fx-fill", "-fx-color");
+        ParsedValueImpl fxFillValue = CSSParser.getInstance().parseExpr("-fx-fill", "-fx-color");
         Declaration fxFill = new Declaration("-fx-fill", fxFillValue, false);
         
         selectors = new ArrayList<Selector>();
@@ -451,7 +451,7 @@ public class CssMetaDataTest {
         
         Selector rectHover = new SimpleSelector("*", rectStyleClass, pseudoclasses, null);
         
-        ParsedValue<Color,Color> fxFillHoverValue = new ParsedValue<Color,Color>(Color.YELLOW, null);        
+        ParsedValueImpl<Color,Color> fxFillHoverValue = new ParsedValueImpl<Color,Color>(Color.YELLOW, null);        
         Declaration fxFillHover = new Declaration("-fx-fill", fxFillHoverValue, false);
         
         selectors = new ArrayList<Selector>();
@@ -465,7 +465,7 @@ public class CssMetaDataTest {
 
         // Declaration now checks origin, so we need to make this expected
         // value look like it came from an inline
-        final Declaration decl = new Declaration("-fx-base", new ParsedValue<Color,Color>(Color.GREEN, null), false);
+        final Declaration decl = new Declaration("-fx-base", new ParsedValueImpl<Color,Color>(Color.GREEN, null), false);
     
         Stylesheet ss = new Stylesheet() {
             {
@@ -533,10 +533,10 @@ public class CssMetaDataTest {
         
         Selector root = new SimpleSelector("*", rootStyleClass, null, null);
         
-        ParsedValue fxBaseValue = CSSParser.getInstance().parseExpr("-fx-base", "red");
+        ParsedValueImpl fxBaseValue = CSSParser.getInstance().parseExpr("-fx-base", "red");
         Declaration fxBase = new Declaration("-fx-base", fxBaseValue, false);
 
-        ParsedValue<String,String> fxColorValue = new ParsedValue<String,String>(fxBase.getProperty(), null, true);
+        ParsedValueImpl<String,String> fxColorValue = new ParsedValueImpl<String,String>(fxBase.getProperty(), null, true);
         Declaration fxColor = new Declaration("-fx-color", fxColorValue, false);
         
         List<Selector> selectors = new ArrayList<Selector>();
@@ -556,7 +556,7 @@ public class CssMetaDataTest {
         
         Selector rect = new SimpleSelector("*", rectStyleClass, null, null);
         
-        ParsedValue fxFillValue = CSSParser.getInstance().parseExpr("-fx-fill", "-fx-color");
+        ParsedValueImpl fxFillValue = CSSParser.getInstance().parseExpr("-fx-fill", "-fx-color");
         Declaration fxFill = new Declaration("-fx-fill", fxFillValue, false);
         
         selectors = new ArrayList<Selector>();
@@ -574,7 +574,7 @@ public class CssMetaDataTest {
         
         Selector rectHover = new SimpleSelector("*", rectStyleClass, pseudoclasses, null);
         
-        ParsedValue<Color,Color> fxFillHoverValue = new ParsedValue<Color,Color>(Color.YELLOW, null);        
+        ParsedValueImpl<Color,Color> fxFillHoverValue = new ParsedValueImpl<Color,Color>(Color.YELLOW, null);        
         Declaration fxFillHover = new Declaration("-fx-fill", fxFillHoverValue, false);
         
         selectors = new ArrayList<Selector>();
@@ -588,7 +588,7 @@ public class CssMetaDataTest {
                 
         // Declaration now checks origin, so we need to make this expected
         // value look like it came from an inline
-        final Declaration decl = new Declaration("-fx-base", new ParsedValue<Color,Color>(Color.GREEN, null), false);
+        final Declaration decl = new Declaration("-fx-base", new ParsedValueImpl<Color,Color>(Color.GREEN, null), false);
     
         Stylesheet ss = new Stylesheet() {
             {
@@ -656,10 +656,10 @@ public class CssMetaDataTest {
         
         Selector root = new SimpleSelector("*", rootStyleClass, null, null);
         
-        ParsedValue fxBaseValue = CSSParser.getInstance().parseExpr("-fx-base", "red");
+        ParsedValueImpl fxBaseValue = CSSParser.getInstance().parseExpr("-fx-base", "red");
         Declaration fxBase = new Declaration("-fx-base", fxBaseValue, false);
 
-        ParsedValue<String,String> fxColorValue = new ParsedValue<String,String>(fxBase.getProperty(), null, true);
+        ParsedValueImpl<String,String> fxColorValue = new ParsedValueImpl<String,String>(fxBase.getProperty(), null, true);
         Declaration fxColor = new Declaration("-fx-color", fxColorValue, false);
         
         List<Selector> selectors = new ArrayList<Selector>();
@@ -679,7 +679,7 @@ public class CssMetaDataTest {
         
         Selector rect = new SimpleSelector("*", rectStyleClass, null, null);
         
-        ParsedValue fxFillValue = CSSParser.getInstance().parseExpr("-fx-fill", "-fx-color");
+        ParsedValueImpl fxFillValue = CSSParser.getInstance().parseExpr("-fx-fill", "-fx-color");
         Declaration fxFill = new Declaration("-fx-fill", fxFillValue, false);
         
         selectors = new ArrayList<Selector>();
@@ -697,7 +697,7 @@ public class CssMetaDataTest {
         
         Selector rectHover = new SimpleSelector("*", rectStyleClass, pseudoclasses, null);
         
-        ParsedValue<Color,Color> fxFillHoverValue = new ParsedValue<Color,Color>(Color.YELLOW, null);        
+        ParsedValueImpl<Color,Color> fxFillHoverValue = new ParsedValueImpl<Color,Color>(Color.YELLOW, null);        
         Declaration fxFillHover = new Declaration("-fx-fill", fxFillHoverValue, false);
         
         selectors = new ArrayList<Selector>();
@@ -711,8 +711,8 @@ public class CssMetaDataTest {
 
         // Declaration now checks origin, so we need to make this expected
         // value look like it came from an inline
-        final Declaration gdecl = new Declaration("-fx-base", new ParsedValue<Color,Color>(Color.GREEN, null), false);
-        final Declaration ydecl = new Declaration("-fx-color", new ParsedValue<Color,Color>(Color.YELLOW, null), false);
+        final Declaration gdecl = new Declaration("-fx-base", new ParsedValueImpl<Color,Color>(Color.GREEN, null), false);
+        final Declaration ydecl = new Declaration("-fx-color", new ParsedValueImpl<Color,Color>(Color.YELLOW, null), false);
     
         Stylesheet ss = new Stylesheet() {
             {
@@ -783,13 +783,13 @@ public class CssMetaDataTest {
         
         Selector root = new SimpleSelector("*", rootStyleClass, null, null);
         
-        ParsedValue fxBaseValue = CSSParser.getInstance().parseExpr("-fx-base", "red");
+        ParsedValueImpl fxBaseValue = CSSParser.getInstance().parseExpr("-fx-base", "red");
         Declaration fxBase = new Declaration("-fx-base", fxBaseValue, false);
 
-        ParsedValue<String,String> fxColorValue = new ParsedValue<String,String>(fxBase.getProperty(), null, true);
+        ParsedValueImpl<String,String> fxColorValue = new ParsedValueImpl<String,String>(fxBase.getProperty(), null, true);
         Declaration fxColor = new Declaration("-fx-color", fxColorValue, false);
 
-        ParsedValue<Color,Color> fxFillShouldNotMatchValue = new ParsedValue<Color,Color>(Color.RED, null);        
+        ParsedValueImpl<Color,Color> fxFillShouldNotMatchValue = new ParsedValueImpl<Color,Color>(Color.RED, null);        
         Declaration fxFillShouldNotMatch = new Declaration("-fx-fill", fxFillShouldNotMatchValue, false);
         
         List<Selector> selectors = new ArrayList<Selector>();
@@ -809,7 +809,7 @@ public class CssMetaDataTest {
         
         Selector rect = new SimpleSelector("*", rectStyleClass, null, null);
         
-        ParsedValue fxFillValue = CSSParser.getInstance().parseExpr("-fx-fill", "-fx-color");
+        ParsedValueImpl fxFillValue = CSSParser.getInstance().parseExpr("-fx-fill", "-fx-color");
         Declaration fxFill = new Declaration("-fx-fill", fxFillValue, false);
         
         selectors = new ArrayList<Selector>();
@@ -827,7 +827,7 @@ public class CssMetaDataTest {
         
         Selector rectHover = new SimpleSelector("*", rectStyleClass, pseudoclasses, null);
         
-        ParsedValue<Color,Color> fxFillHoverValue = new ParsedValue<Color,Color>(Color.YELLOW, null);        
+        ParsedValueImpl<Color,Color> fxFillHoverValue = new ParsedValueImpl<Color,Color>(Color.YELLOW, null);        
         Declaration fxFillHover = new Declaration("-fx-fill", fxFillHoverValue, false);
         
         selectors = new ArrayList<Selector>();
@@ -894,13 +894,13 @@ public class CssMetaDataTest {
         //
         Selector root = new SimpleSelector("*", rootStyleClass, null, null);
         
-        ParsedValue fxBaseValue = CSSParser.getInstance().parseExpr("-fx-base", "red");
+        ParsedValueImpl fxBaseValue = CSSParser.getInstance().parseExpr("-fx-base", "red");
         Declaration fxBase = new Declaration("-fx-base", fxBaseValue, false);
 
-        ParsedValue<String,String> fxColorValue = new ParsedValue<String,String>(fxBase.getProperty(), null, true);
+        ParsedValueImpl<String,String> fxColorValue = new ParsedValueImpl<String,String>(fxBase.getProperty(), null, true);
         Declaration fxColor = new Declaration("-fx-color", fxColorValue, false);
 
-        ParsedValue<Color,Color> fxFillShouldNotMatchValue = new ParsedValue<Color,Color>(Color.RED, null);        
+        ParsedValueImpl<Color,Color> fxFillShouldNotMatchValue = new ParsedValueImpl<Color,Color>(Color.RED, null);        
         Declaration fxFillShouldNotMatch = new Declaration("-fx-fill", fxFillShouldNotMatchValue, false);
         
         List<Selector> selectors = new ArrayList<Selector>();
@@ -917,7 +917,7 @@ public class CssMetaDataTest {
         //
         Selector rect = new SimpleSelector("*", rectStyleClass, null, null);
         
-        ParsedValue fxFillValue = CSSParser.getInstance().parseExpr("-fx-fill", "-fx-color");
+        ParsedValueImpl fxFillValue = CSSParser.getInstance().parseExpr("-fx-fill", "-fx-color");
         Declaration fxFill = new Declaration("-fx-fill", fxFillValue, false);
         
         selectors = new ArrayList<Selector>();
@@ -935,7 +935,7 @@ public class CssMetaDataTest {
         
         Selector rectHover = new SimpleSelector("*", rectStyleClass, pseudoclasses, null);
         
-        ParsedValue<Color,Color> fxFillHoverValue = new ParsedValue<Color,Color>(Color.YELLOW, null);        
+        ParsedValueImpl<Color,Color> fxFillHoverValue = new ParsedValueImpl<Color,Color>(Color.YELLOW, null);        
         Declaration fxFillHover = new Declaration("-fx-fill", fxFillHoverValue, false);
         
         selectors = new ArrayList<Selector>();
@@ -997,7 +997,7 @@ public class CssMetaDataTest {
         
         Selector root = new SimpleSelector("*", rootStyleClass, null, null);
         
-        ParsedValue<Color,Color> fxFontShouldInheritValue = CSSParser.getInstance().parseExpr("-fx-font", "12px system");       
+        ParsedValueImpl<Color,Color> fxFontShouldInheritValue = CSSParser.getInstance().parseExpr("-fx-font", "12px system");       
         Declaration fxFontShouldInherit = new Declaration("-fx-font", fxFontShouldInheritValue, false);
         
         List<Selector> selectors = new ArrayList<Selector>();
@@ -1017,7 +1017,7 @@ public class CssMetaDataTest {
         
         Selector textSelector = new SimpleSelector("*", textStyleClass, null, null);
         
-        ParsedValue fxFillValue = CSSParser.getInstance().parseExpr("-fx-fill", "red");
+        ParsedValueImpl fxFillValue = CSSParser.getInstance().parseExpr("-fx-fill", "red");
         Declaration fxFill = new Declaration("-fx-fill", fxFillValue, false);
         
         selectors = new ArrayList<Selector>();
@@ -1077,7 +1077,7 @@ public class CssMetaDataTest {
         
         Selector root = new SimpleSelector("*", rootStyleClass, null, null);
         
-        ParsedValue<Color,Color> fxFontShouldInheritValue = CSSParser.getInstance().parseExpr("-fx-font", "12px system");       
+        ParsedValueImpl<Color,Color> fxFontShouldInheritValue = CSSParser.getInstance().parseExpr("-fx-font", "12px system");       
         Declaration fxFontShouldInherit = new Declaration("-fx-font", fxFontShouldInheritValue, false);
         
         List<Selector> selectors = new ArrayList<Selector>();
@@ -1097,10 +1097,10 @@ public class CssMetaDataTest {
         
         Selector textSelector = new SimpleSelector("*", rectStyleClass, null, null);
         
-        ParsedValue fxFillValue = CSSParser.getInstance().parseExpr("-fx-fill", "red");
+        ParsedValueImpl fxFillValue = CSSParser.getInstance().parseExpr("-fx-fill", "red");
         Declaration fxFill = new Declaration("-fx-fill", fxFillValue, false);
 
-        ParsedValue fxFontFamilyValue = CSSParser.getInstance().parseExpr("-fx-font-family", "arial");
+        ParsedValueImpl fxFontFamilyValue = CSSParser.getInstance().parseExpr("-fx-font-family", "arial");
         Declaration fxFontFamily = new Declaration("-fx-font-family", fxFontFamilyValue, false);
         
         selectors = new ArrayList<Selector>();

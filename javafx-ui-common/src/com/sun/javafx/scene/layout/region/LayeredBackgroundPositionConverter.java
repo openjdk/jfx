@@ -4,7 +4,7 @@ import javafx.scene.layout.BackgroundPosition;
 import javafx.scene.text.Font;
 import com.sun.javafx.css.ParsedValue;
 import com.sun.javafx.css.Size;
-import com.sun.javafx.css.StyleConverter;
+import com.sun.javafx.css.StyleConverterImpl;
 
 /**
  * background-position: <bg-position>
@@ -14,7 +14,7 @@ import com.sun.javafx.css.StyleConverter;
  * ]
  * @see <a href="http://www.w3.org/TR/css3-background/#the-background-position">background-position</a>
  */
-public final class LayeredBackgroundPositionConverter extends StyleConverter<ParsedValue<ParsedValue<?, Size>[], BackgroundPosition>[], BackgroundPosition[]> {
+public final class LayeredBackgroundPositionConverter extends StyleConverterImpl<ParsedValue<ParsedValue<?, Size>[], BackgroundPosition>[], BackgroundPosition[]> {
     private static final LayeredBackgroundPositionConverter LAYERED_BACKGROUND_POSITION_CONVERTER =
             new LayeredBackgroundPositionConverter();
 

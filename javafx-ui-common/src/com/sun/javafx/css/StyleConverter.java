@@ -25,104 +25,147 @@
 
 package com.sun.javafx.css;
 
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
-import java.lang.reflect.Method;
-import java.util.HashMap;
-import java.util.Map;
-import javafx.scene.text.Font;
+import com.sun.javafx.css.converters.BooleanConverter;
+import com.sun.javafx.css.converters.ColorConverter;
+import com.sun.javafx.css.converters.EffectConverter;
 import com.sun.javafx.css.converters.EnumConverter;
+import com.sun.javafx.css.converters.FontConverter;
+import com.sun.javafx.css.converters.InsetsConverter;
+import com.sun.javafx.css.converters.PaintConverter;
+import com.sun.javafx.css.converters.SizeConverter;
+import com.sun.javafx.css.converters.StringConverter;
+import com.sun.javafx.css.converters.URLConverter;
+import javafx.geometry.Insets;
+import javafx.scene.effect.Effect;
+import javafx.scene.paint.Color;
+import javafx.scene.paint.Paint;
+import javafx.scene.text.Font;
 
 /**
- * Converter converts ParsedValue&lt;F,T&gt; from type F to type T.
- * F is the type of the parsed value, T is the converted type of
- * the ParsedValue. For example, a converter from String to Color would
- * be declared
- * <p>&nbsp;&nbsp;&nbsp;&nbsp;
- * <code>public Color convert(ParsedValue&lt;String,Color&gt; value, Font font)</code>
- * </p>
+ * Converter converts {@code ParsedValue<F,T>} from type F to type T. the
+ * {@link CssMetaData} API requires a {@code StyleConverter} which is used
+ * when computing a value for the {@see StyleableProperty}. There are
+ * a number of predefined converters which are accessible by the static 
+ * methods of this class.
+ * @see ParsedValue
+ * @see StyleableProperty
  */
 public class StyleConverter<F, T> {
 
     /**
-     * Convert from the parsed css value to the target property type.
+     * Convert from the parsed CSS value to the target property type.
      *
-     * The default returns the value contained in ParsedValue.
-     *
-     * @param value        The value to convert
-     * @param font         The font parameter is used to convert those types that are relative
-     * to or inherited from a parent font.
+     * @param value        The {@link ParsedValue} to convert
+     * @param font         The {@link Font} to use when converting a
+     * <a href="http://www.w3.org/TR/css3-values/#relative-lengths">relative</a>
+     * value.
      */
     public T convert(ParsedValue<F,T> value, Font font) {
         return (T) value.getValue();
     }
 
-    /**
-     * Convert from the constituent values to the target property type.
-     * Implemented by Types that have Keys with subKeys.
+    /** 
+     * @return A {@code StyleConverter} that converts &quot;true&quot; or &quot;false&quot; to {@code Boolean}
+     * @see Boolean#valueOf(java.lang.String) 
      */
-    public T convert(Map<CssMetaData,Object> convertedValues) {
-        return null;
-    }
-
-    private static StyleConverter CONVERTER = new StyleConverter();
-
-    /** This converter simply returns value.getValue() */
-    public static StyleConverter getInstance() {
-        return CONVERTER;
-    }
-
-    protected StyleConverter() { }
-
-    public void writeBinary(DataOutputStream os, StringStore sstore)
-            throws IOException {
-
-        String cname = getClass().getName();
-        int index = sstore.addString(cname);
-        os.writeShort(index);
-    }
-
-    // map of StyleConverter class name to StyleConverter
-    private static Map<String,StyleConverter> tmap;
-
-    public static StyleConverter readBinary(DataInputStream is, String[] strings)
-            throws IOException {
-
-        int index = is.readShort();
-        String cname = strings[index];
-
-        // Make a new entry in tmap, if necessary
-        if (tmap == null || !tmap.containsKey(cname)) {
-            StyleConverter converter = null;
-            try {
-                Class cl = Class.forName(cname);
-                // is cl assignable from EnumType.class?
-                if (EnumConverter.class.isAssignableFrom(cl)) {
-                    converter = new EnumConverter(is, strings);
-                } else {
-                    Method getInstanceMethod = cl.getMethod("getInstance");
-                    converter = (StyleConverter) getInstanceMethod.invoke(null);
-                }
-            } catch (ClassNotFoundException cnfe) {
-                // Class.forName failed
-                System.err.println(cnfe.toString());
-            } catch (Exception nsme) {
-                // Class.forName failed
-                System.err.println(nsme.toString());
-            }
-            if (converter == null) {
-                System.err.println("could not deserialize " + cname);
-            }
-            if (tmap == null) tmap = new HashMap<String,StyleConverter>();
-            tmap.put(cname, converter);
-            return converter;
-        }
-        return tmap.get(cname);
+    public static StyleConverter getBooleanConverter() {
+        return BooleanConverter.getInstance();
     }
     
-    public String writeJava() {
-        return getClass().getCanonicalName() + ".getInstance()";
+    /** 
+     * @return A {@code StyleConverter} that converts a String 
+     * representation of a web color to a {@code Color}
+     * @see Color#web(java.lang.String) 
+     */
+    public static StyleConverter getColorConverter() {
+        return ColorConverter.getInstance();
     }
+    
+    /** 
+     * @return A {@code StyleConverter} that converts a parsed representation
+     * of an {@code Effect} to an {@code Effect}
+     * @see Effect
+     */
+    public static StyleConverter getEffectConverter() {
+        return EffectConverter.getInstance();
+    }
+    
+    /** 
+     * @return A {@code StyleConverter} that converts a String representation
+     * of an {@code Enum} to an {@code Enum}
+     * @see Enum#valueOf(java.lang.Class, java.lang.String) 
+     */
+    public static StyleConverter getEnumConverter(Class enumClass) {        
+        // TODO: reuse EnumConverter instances
+        return new EnumConverter(enumClass);
+    }    
+
+    /** 
+     * @return A {@code StyleConverter} that converts a parsed representation
+     * of a {@code Font} to an {@code Font}. 
+     * @see Font#font(java.lang.String, javafx.scene.text.FontWeight, javafx.scene.text.FontPosture, double)  
+     */
+    public static StyleConverter getFontConverter() {
+        return FontConverter.getInstance();
+    }
+    
+    /** 
+     * @return A {@code StyleConverter} that converts a [&lt;length&gt; |
+     * &lt;percentage&gt;]{1,4} to an {@code Insets}. 
+     */
+    public static StyleConverter getInsetsConverter() {
+        return InsetsConverter.getInstance();
+    }
+
+    /** 
+     * @return A {@code StyleConverter} that converts a parsed representation
+     * of a {@code Paint} to a {@code Paint}.
+     */
+    public static StyleConverter getPaintConverter() {
+        return PaintConverter.getInstance();
+    }
+    
+    /** 
+     * CSS length and number values are parsed into a Size object that is
+     * converted to a Number before the value is applied. If the property is
+     * a {@code Number} type other than Double, the 
+     * {@link CssMetaData#set(javafx.scene.Node, java.lang.Object, com.sun.javafx.css.Origin) set}
+     * method of ({@code CssMetaData} can be over-ridden to convert the Number
+     * to the correct type. For example, if the property is an {@code IntegerProperty}:
+     * <code><pre>
+     *     {@literal @}Override public void set(MyNode node, Number value, Origin origin) {
+     *         if (value != null) {
+     *             super.set(node, value.intValue(), origin);
+     *         } else {
+     *             super.set(node, value, origin);
+     *         }
+     *     }
+     * </pre></code>
+     * @return A {@code StyleConverter} that converts a parsed representation
+     * of a CSS length or number value to a {@code Number} that is an instance
+     * of {@code Double}. 
+     */
+    public static StyleConverter getSizeConverter() {
+        return SizeConverter.getInstance();
+    }
+    
+    /** 
+     * A converter for quoted strings which may have embedded unicode characters.
+     * @return A {@code StyleConverter} that converts a representation of a
+     * CSS string value to a {@code String}.
+     */
+    public static StyleConverter getStringConverter() {
+        return StringConverter.getInstance();
+    }
+    
+    /** 
+     * A converter for URL strings.
+     * @return A {@code StyleConverter} that converts a representation of a
+     * CSS URL value to a {@code String}.
+     */
+    public static StyleConverter getUrlConverter() {
+        return URLConverter.getInstance();
+    }
+    
 
 }

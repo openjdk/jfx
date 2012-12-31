@@ -29,13 +29,13 @@ import javafx.scene.paint.Stop;
 import javafx.scene.text.Font;
 
 import com.sun.javafx.css.Size;
-import com.sun.javafx.css.StyleConverter;
+import com.sun.javafx.css.StyleConverterImpl;
 import com.sun.javafx.css.ParsedValue;
 
 /**
  * convert a Stop from a Size and a Color
  */
-public final class StopConverter extends StyleConverter<ParsedValue[], Stop> {
+public final class StopConverter extends StyleConverterImpl<ParsedValue[], Stop> {
 
     // lazy, thread-safe instatiation
     private static class Holder {

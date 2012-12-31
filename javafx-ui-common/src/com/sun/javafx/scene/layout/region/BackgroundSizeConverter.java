@@ -28,14 +28,14 @@ package com.sun.javafx.scene.layout.region;
 import com.sun.javafx.css.ParsedValue;
 import com.sun.javafx.css.Size;
 import com.sun.javafx.css.SizeUnits;
-import com.sun.javafx.css.StyleConverter;
+import com.sun.javafx.css.StyleConverterImpl;
 import com.sun.javafx.css.converters.BooleanConverter;
 import javafx.scene.layout.BackgroundSize;
 import javafx.scene.text.Font;
 
 /**
  */
-public final class BackgroundSizeConverter  extends StyleConverter<ParsedValue[], BackgroundSize> {
+public final class BackgroundSizeConverter  extends StyleConverterImpl<ParsedValue[], BackgroundSize> {
     private static final BackgroundSizeConverter BACKGROUND_SIZE_CONVERTER =
             new BackgroundSizeConverter();
 

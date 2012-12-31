@@ -29,14 +29,14 @@ import javafx.geometry.Insets;
 import javafx.scene.image.Image;
 import javafx.scene.paint.Paint;
 import com.sun.javafx.css.ParsedValue;
-import com.sun.javafx.css.StyleConverter;
 import com.sun.javafx.css.CssMetaData;
+import com.sun.javafx.css.StyleConverterImpl;
 import com.sun.javafx.scene.layout.region.RepeatStruct;
 
 /**
  * Converts the CSS for -fx-background items into a Background.
  */
-class BackgroundConverter extends StyleConverter<ParsedValue[], Background> {
+class BackgroundConverter extends StyleConverterImpl<ParsedValue[], Background> {
     static final BackgroundConverter INSTANCE = new BackgroundConverter();
 
     @Override public Background convert(Map<CssMetaData,Object> convertedValues) {

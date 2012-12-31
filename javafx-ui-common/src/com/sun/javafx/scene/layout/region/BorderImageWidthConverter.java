@@ -5,14 +5,14 @@ import javafx.scene.text.Font;
 import com.sun.javafx.css.ParsedValue;
 import com.sun.javafx.css.Size;
 import com.sun.javafx.css.SizeUnits;
-import com.sun.javafx.css.StyleConverter;
+import com.sun.javafx.css.StyleConverterImpl;
 
 /**
  * User: richardbair
  * Date: 8/10/12
  * Time: 8:07 PM
  */
-public class BorderImageWidthConverter extends StyleConverter<ParsedValue<?, Size>[], BorderWidths> {
+public class BorderImageWidthConverter extends StyleConverterImpl<ParsedValue<?, Size>[], BorderWidths> {
     private static final BorderImageWidthConverter CONVERTER_INSTANCE = new BorderImageWidthConverter();
 
     public static BorderImageWidthConverter getInstance() {

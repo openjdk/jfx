@@ -26,13 +26,13 @@
 package com.sun.javafx.scene.layout.region;
 
 import com.sun.javafx.css.ParsedValue;
-import com.sun.javafx.css.StyleConverter;
+import com.sun.javafx.css.StyleConverterImpl;
 import javafx.scene.layout.BackgroundRepeat;
 import javafx.scene.text.Font;
 
 /**
  */
-public final class RepeatStructConverter extends StyleConverter<ParsedValue<BackgroundRepeat, BackgroundRepeat>[][], RepeatStruct[]> {
+public final class RepeatStructConverter extends StyleConverterImpl<ParsedValue<BackgroundRepeat, BackgroundRepeat>[][], RepeatStruct[]> {
 
     private static final RepeatStructConverter REPEAT_STRUCT_CONVERTER =
             new RepeatStructConverter();

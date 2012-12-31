@@ -27,10 +27,10 @@ package com.sun.javafx.css.converters;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 
-import com.sun.javafx.css.StyleConverter;
+import com.sun.javafx.css.StyleConverterImpl;
 import com.sun.javafx.css.ParsedValue;
 
-public final class ColorConverter extends StyleConverter<String, Color> {
+public final class ColorConverter extends StyleConverterImpl<String, Color> {
 
     private static class Holder {
         static ColorConverter COLOR_INSTANCE = new ColorConverter();

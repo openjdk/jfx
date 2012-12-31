@@ -27,11 +27,11 @@ package com.sun.javafx.css.converters;
 import javafx.scene.text.Font;
 
 import com.sun.javafx.css.Size;
-import com.sun.javafx.css.StyleConverter;
+import com.sun.javafx.css.StyleConverterImpl;
 import com.sun.javafx.css.ParsedValue;
 
 /* Convert a Size to Double */
-public final class SizeConverter extends StyleConverter<ParsedValue<?, Size>, Double> {
+public final class SizeConverter extends StyleConverterImpl<ParsedValue<?, Size>, Double> {
 
     // lazy, thread-safe instatiation
     private static class Holder {
@@ -61,7 +61,7 @@ public final class SizeConverter extends StyleConverter<ParsedValue<?, Size>, Do
     /*
      * Convert [<size>]+ to an array of Double[].
      */
-    public static final class SequenceConverter extends StyleConverter<ParsedValue<?, Size>[], Double[]> {
+    public static final class SequenceConverter extends StyleConverterImpl<ParsedValue<?, Size>[], Double[]> {
 
         public static SequenceConverter getInstance() {
             return Holder.SEQUENCE_INSTANCE;

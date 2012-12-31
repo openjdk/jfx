@@ -34,12 +34,12 @@ import javafx.scene.text.FontWeight;
 import com.sun.javafx.Utils;
 import com.sun.javafx.css.FontUnits;
 import com.sun.javafx.css.Size;
-import com.sun.javafx.css.StyleConverter;
+import com.sun.javafx.css.StyleConverterImpl;
 import com.sun.javafx.css.CssMetaData;
 import com.sun.javafx.css.ParsedValue;
 import java.util.Map.Entry;
 
-public final class FontConverter extends StyleConverter<ParsedValue[], Font> {
+public final class FontConverter extends StyleConverterImpl<ParsedValue[], Font> {
 
     // lazy, thread-safe instatiation
     private static class Holder {
@@ -107,7 +107,7 @@ public final class FontConverter extends StyleConverter<ParsedValue[], Font> {
         return "FontConverter";
     }
 
-    public static final class StyleConverter extends com.sun.javafx.css.StyleConverter<FontUnits.Style, FontPosture> {
+    public static final class StyleConverter extends StyleConverterImpl<FontUnits.Style, FontPosture> {
 
         // lazy, thread-safe instatiation
         private static class Holder {
@@ -145,7 +145,7 @@ public final class FontConverter extends StyleConverter<ParsedValue[], Font> {
         }
     }
 
-    public static final class WeightConverter extends com.sun.javafx.css.StyleConverter<FontUnits.Weight, FontWeight> {
+    public static final class WeightConverter extends StyleConverterImpl<FontUnits.Weight, FontWeight> {
 
         // lazy, thread-safe instatiation
         private static class Holder {
@@ -193,7 +193,7 @@ public final class FontConverter extends StyleConverter<ParsedValue[], Font> {
         }
     }
     
-    public static final class SizeConverter extends com.sun.javafx.css.StyleConverter<ParsedValue<?, Size>, Double> {
+    public static final class SizeConverter extends StyleConverterImpl<ParsedValue<?, Size>, Double> {
 
         // lazy, thread-safe instatiation
         private static class Holder {

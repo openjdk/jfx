@@ -29,11 +29,11 @@ import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
 import javafx.scene.text.Font;
 import com.sun.javafx.css.ParsedValue;
-import com.sun.javafx.css.StyleConverter;
+import com.sun.javafx.css.StyleConverterImpl;
 
 /**
  */
-public class StrokeBorderPaintConverter extends StyleConverter<ParsedValue<?,Paint>[], Paint[]> {
+public class StrokeBorderPaintConverter extends StyleConverterImpl<ParsedValue<?,Paint>[], Paint[]> {
     /**
      * Convert an array of border paint values to an array of Paint which
      * contains one Paint element per border (top, right, bottom, left).

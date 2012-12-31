@@ -33,12 +33,13 @@ import javafx.scene.shape.StrokeLineJoin;
 import javafx.scene.shape.StrokeType;
 import javafx.scene.text.Font;
 import com.sun.javafx.css.ParsedValue;
+import com.sun.javafx.css.ParsedValueImpl;
 import com.sun.javafx.css.Size;
-import com.sun.javafx.css.StyleConverter;
+import com.sun.javafx.css.StyleConverterImpl;
 
 /**
  */
-public class BorderStyleConverter  extends StyleConverter<ParsedValue[], BorderStrokeStyle> {
+public class BorderStyleConverter  extends StyleConverterImpl<ParsedValue[], BorderStrokeStyle> {
 //    private static final ParsedValue<ParsedValue<?,Size>[],Double[]> DASHED =
 //            new ParsedValue<ParsedValue<?,Size>[],Double[]>(
 //                    new ParsedValue[] {
@@ -60,11 +61,11 @@ public class BorderStyleConverter  extends StyleConverter<ParsedValue[], BorderS
 //                    }, SizeConverter.SequenceConverter.getInstance());
 
 
-    public static final ParsedValue<ParsedValue<?,Size>[],Double[]> NONE = new ParsedValue<ParsedValue<?,Size>[],Double[]>(null, null);
-    public static final ParsedValue<ParsedValue<?,Size>[],Double[]> HIDDEN = new ParsedValue<ParsedValue<?,Size>[],Double[]>(null, null);
-    public static final ParsedValue<ParsedValue<?,Size>[],Double[]> DOTTED = new ParsedValue<ParsedValue<?,Size>[],Double[]>(null, null);
-    public static final ParsedValue<ParsedValue<?,Size>[],Double[]> DASHED = new ParsedValue<ParsedValue<?,Size>[],Double[]>(null, null);
-    public static final ParsedValue<ParsedValue<?,Size>[],Double[]> SOLID = new ParsedValue<ParsedValue<?,Size>[],Double[]>(null, null);
+    public static final ParsedValueImpl<ParsedValue<?,Size>[],Double[]> NONE = new ParsedValueImpl<ParsedValue<?,Size>[],Double[]>(null, null);
+    public static final ParsedValueImpl<ParsedValue<?,Size>[],Double[]> HIDDEN = new ParsedValueImpl<ParsedValue<?,Size>[],Double[]>(null, null);
+    public static final ParsedValueImpl<ParsedValue<?,Size>[],Double[]> DOTTED = new ParsedValueImpl<ParsedValue<?,Size>[],Double[]>(null, null);
+    public static final ParsedValueImpl<ParsedValue<?,Size>[],Double[]> DASHED = new ParsedValueImpl<ParsedValue<?,Size>[],Double[]>(null, null);
+    public static final ParsedValueImpl<ParsedValue<?,Size>[],Double[]> SOLID = new ParsedValueImpl<ParsedValue<?,Size>[],Double[]>(null, null);
 
     /**
      * Convert a sequence of values to a BorderStyle.

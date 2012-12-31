@@ -58,8 +58,8 @@ public class DeclarationTest {
             {
                 setOrigin(Origin.INLINE);
                 
-                DECLS[GI] = new Declaration("-fx-base", new ParsedValue<Color,Color>(Color.GREEN, null), false);
-                DECLS[YI] = new Declaration("-fx-color", new ParsedValue<Color,Color>(Color.YELLOW, null), false);
+                DECLS[GI] = new Declaration("-fx-base", new ParsedValueImpl<Color,Color>(Color.GREEN, null), false);
+                DECLS[YI] = new Declaration("-fx-color", new ParsedValueImpl<Color,Color>(Color.YELLOW, null), false);
     
                 Collections.addAll(getRules(),
                     new Rule(Arrays.asList(SimpleSelector.getUniversalSelector()), Arrays.asList(DECLS[GI])),
@@ -72,8 +72,8 @@ public class DeclarationTest {
             {
                 setOrigin(Origin.AUTHOR);
                 
-                DECLS[GA1] = new Declaration("-fx-base", new ParsedValue<Color,Color>(Color.GREEN, null), false);
-                DECLS[YA1] = new Declaration("-fx-color", new ParsedValue<Color,Color>(Color.YELLOW, null), false);
+                DECLS[GA1] = new Declaration("-fx-base", new ParsedValueImpl<Color,Color>(Color.GREEN, null), false);
+                DECLS[YA1] = new Declaration("-fx-color", new ParsedValueImpl<Color,Color>(Color.YELLOW, null), false);
     
                 Collections.addAll(getRules(),
                     new Rule(Arrays.asList(SimpleSelector.getUniversalSelector()), Arrays.asList(DECLS[GA1])),
@@ -86,8 +86,8 @@ public class DeclarationTest {
             {
                 setOrigin(Origin.AUTHOR);
                 
-                DECLS[GA2] = new Declaration("-fx-base", new ParsedValue<Color,Color>(Color.GREEN, null), false);
-                DECLS[YA2] = new Declaration("-fx-color", new ParsedValue<Color,Color>(Color.YELLOW, null), false);
+                DECLS[GA2] = new Declaration("-fx-base", new ParsedValueImpl<Color,Color>(Color.GREEN, null), false);
+                DECLS[YA2] = new Declaration("-fx-color", new ParsedValueImpl<Color,Color>(Color.YELLOW, null), false);
     
                 Collections.addAll(getRules(),
                     new Rule(Arrays.asList(SimpleSelector.getUniversalSelector()), Arrays.asList(DECLS[GA2])),

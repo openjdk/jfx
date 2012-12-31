@@ -1,14 +1,14 @@
 package com.sun.javafx.scene.layout.region;
 
 import com.sun.javafx.css.ParsedValue;
-import com.sun.javafx.css.StyleConverter;
+import com.sun.javafx.css.StyleConverterImpl;
 import javafx.scene.paint.Paint;
 import javafx.scene.text.Font;
 
 /*
  * border-color	<paint> | <paint> <paint> <paint> <paint> [ , [<paint> | <paint> <paint> <paint> <paint>] ]*	null
  */
-public final class LayeredBorderPaintConverter extends StyleConverter<ParsedValue<ParsedValue<?,Paint>[],Paint[]>[], Paint[][]> {
+public final class LayeredBorderPaintConverter extends StyleConverterImpl<ParsedValue<ParsedValue<?,Paint>[],Paint[]>[], Paint[][]> {
     /**
      * Convert layers of border paint values to an array of Paint[], where
      * each layer contains one Paint element per border.

@@ -28,10 +28,10 @@ import javafx.scene.paint.Color;
 import javafx.scene.paint.Stop;
 import javafx.scene.text.Font;
 
-import com.sun.javafx.css.StyleConverter;
+import com.sun.javafx.css.StyleConverterImpl;
 import com.sun.javafx.css.ParsedValue;
 
-public final class LadderConverter extends StyleConverter<ParsedValue[], Color> {
+public final class LadderConverter extends StyleConverterImpl<ParsedValue[], Color> {
 
     // lazy, thread-safe instatiation
     private static class Holder {

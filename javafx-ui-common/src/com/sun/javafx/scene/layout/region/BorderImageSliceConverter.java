@@ -30,11 +30,11 @@ import javafx.scene.text.Font;
 import com.sun.javafx.css.ParsedValue;
 import com.sun.javafx.css.Size;
 import com.sun.javafx.css.SizeUnits;
-import com.sun.javafx.css.StyleConverter;
+import com.sun.javafx.css.StyleConverterImpl;
 
 /**
  */
-public final class BorderImageSliceConverter extends StyleConverter<ParsedValue[], BorderImageSlices> {
+public final class BorderImageSliceConverter extends StyleConverterImpl<ParsedValue[], BorderImageSlices> {
 
     private static final BorderImageSliceConverter BORDER_IMAGE_SLICE_CONVERTER =
             new BorderImageSliceConverter();

@@ -29,7 +29,7 @@ import javafx.geometry.Insets;
 import javafx.scene.image.Image;
 import javafx.scene.paint.Paint;
 import com.sun.javafx.css.ParsedValue;
-import com.sun.javafx.css.StyleConverter;
+import com.sun.javafx.css.StyleConverterImpl;
 import com.sun.javafx.css.CssMetaData;
 import com.sun.javafx.scene.layout.region.BorderImageSlices;
 import com.sun.javafx.scene.layout.region.Margins;
@@ -37,7 +37,7 @@ import com.sun.javafx.scene.layout.region.RepeatStruct;
 
 /**
  */
-class BorderConverter extends StyleConverter<ParsedValue[], Border> {
+class BorderConverter extends StyleConverterImpl<ParsedValue[], Border> {
 
     private static final BorderConverter BORDER_IMAGE_CONVERTER =
             new BorderConverter();

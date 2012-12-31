@@ -26,10 +26,10 @@ package com.sun.javafx.css.converters;
 
 import javafx.scene.text.Font;
 
-import com.sun.javafx.css.StyleConverter;
+import com.sun.javafx.css.StyleConverterImpl;
 import com.sun.javafx.css.ParsedValue;
 
-public final class BooleanConverter extends StyleConverter<String, Boolean> {
+public final class BooleanConverter extends StyleConverterImpl<String, Boolean> {
 
     // lazy, thread-safe instatiation
     private static class Holder {

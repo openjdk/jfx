@@ -1,7 +1,7 @@
 package com.sun.javafx.scene.layout.region;
 
 import com.sun.javafx.css.ParsedValue;
-import com.sun.javafx.css.StyleConverter;
+import com.sun.javafx.css.StyleConverterImpl;
 import com.sun.javafx.css.Size;
 import javafx.scene.layout.BorderWidths;
 import javafx.scene.text.Font;
@@ -11,7 +11,7 @@ import javafx.scene.text.Font;
  * Date: 8/10/12
  * Time: 8:27 PM
  */
-public class BorderImageWidthsSequenceConverter extends StyleConverter<ParsedValue<ParsedValue<?,Size>[], BorderWidths>[], BorderWidths[]> {
+public class BorderImageWidthsSequenceConverter extends StyleConverterImpl<ParsedValue<ParsedValue<?,Size>[], BorderWidths>[], BorderWidths[]> {
     private static final BorderImageWidthsSequenceConverter CONVERTER =
             new BorderImageWidthsSequenceConverter();
 

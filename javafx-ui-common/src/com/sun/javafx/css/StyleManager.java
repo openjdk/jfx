@@ -984,9 +984,6 @@ final public class StyleManager {
             throw new IllegalArgumentException("null arg fname");
         }
 
-        // RT-20643
-        CssError.setCurrentScene(scene);
-
         // if this stylesheet has been added already, move it to first element
         int index = userAgentStylesheets.indexOf(fname);
         if (index != -1) {

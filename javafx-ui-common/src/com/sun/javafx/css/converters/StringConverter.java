@@ -27,13 +27,13 @@ package com.sun.javafx.css.converters;
 import javafx.scene.text.Font;
 
 import com.sun.javafx.Utils;
-import com.sun.javafx.css.StyleConverter;
+import com.sun.javafx.css.StyleConverterImpl;
 import com.sun.javafx.css.ParsedValue;
 
 /**
  * String type converts embedded unicode characters
  */
-public final class StringConverter extends StyleConverter<String, String> {
+public final class StringConverter extends StyleConverterImpl<String, String> {
 
     // lazy, thread-safe instatiation
     private static class Holder {
@@ -63,7 +63,7 @@ public final class StringConverter extends StyleConverter<String, String> {
         return "StringConverter";
     }
 
-    public static final class SequenceConverter extends StyleConverter<ParsedValue<String, String>[], String[]> {
+    public static final class SequenceConverter extends StyleConverterImpl<ParsedValue<String, String>[], String[]> {
 
 
         public static SequenceConverter getInstance() {

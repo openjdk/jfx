@@ -3,7 +3,7 @@ package com.sun.javafx.scene.layout.region;
 import javafx.scene.layout.BorderStrokeStyle;
 import javafx.scene.text.Font;
 import com.sun.javafx.css.ParsedValue;
-import com.sun.javafx.css.StyleConverter;
+import com.sun.javafx.css.StyleConverterImpl;
 
 /**
  * User: richardbair
@@ -18,7 +18,7 @@ import com.sun.javafx.css.StyleConverter;
 * where <dash-style> = none | solid | dotted | dashed | segments(<size>[, <size>]+) ]
 */
 public final class LayeredBorderStyleConverter
-        extends StyleConverter<ParsedValue<ParsedValue<ParsedValue[],BorderStrokeStyle>[], BorderStrokeStyle[]>[], BorderStrokeStyle[][]> {
+        extends StyleConverterImpl<ParsedValue<ParsedValue<ParsedValue[],BorderStrokeStyle>[], BorderStrokeStyle[]>[], BorderStrokeStyle[][]> {
 
     /**
      * Convert layers of border style values to an array of BorderStyle[], where

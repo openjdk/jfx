@@ -112,10 +112,10 @@ public class Node_cssStyleMap_Test {
                 
         final List<Declaration> declsNoState = new ArrayList<Declaration>();
         Collections.addAll(declsNoState, 
-            new Declaration("-fx-fill", new ParsedValue<Color,Color>(Color.RED, null), false),
-            new Declaration("-fx-stroke", new ParsedValue<Color,Color>(Color.YELLOW, null), false),
-            new Declaration("-fx-stroke-width", new ParsedValue<ParsedValue<?,Size>,Double>(
-                new ParsedValue<Size,Size>(new Size(3d, SizeUnits.PX), null), 
+            new Declaration("-fx-fill", new ParsedValueImpl<Color,Color>(Color.RED, null), false),
+            new Declaration("-fx-stroke", new ParsedValueImpl<Color,Color>(Color.YELLOW, null), false),
+            new Declaration("-fx-stroke-width", new ParsedValueImpl<ParsedValue<?,Size>,Double>(
+                new ParsedValueImpl<Size,Size>(new Size(3d, SizeUnits.PX), null), 
                 SizeConverter.getInstance()), false)
         );
         
@@ -133,8 +133,8 @@ public class Node_cssStyleMap_Test {
         
         final List<Declaration> declsDisabledState = new ArrayList<Declaration>();
         Collections.addAll(declsDisabledState, 
-            new Declaration("-fx-fill", new ParsedValue<Color,Color>(Color.GRAY, null), false),
-            new Declaration("-fx-stroke", new ParsedValue<Color,Color>(Color.DARKGRAY, null), false)
+            new Declaration("-fx-fill", new ParsedValueImpl<Color,Color>(Color.GRAY, null), false),
+            new Declaration("-fx-stroke", new ParsedValueImpl<Color,Color>(Color.DARKGRAY, null), false)
         );
         
         final List<Selector> selsDisabledState = new ArrayList<Selector>();
@@ -218,8 +218,8 @@ public class Node_cssStyleMap_Test {
 
         final List<Declaration> rootDecls = new ArrayList<Declaration>();
         Collections.addAll(rootDecls, 
-            new Declaration("-fx-font-size", new ParsedValue<ParsedValue<?,Size>,Double>(
-                new ParsedValue<Size,Size>(new Size(12, SizeUnits.PX), null), 
+            new Declaration("-fx-font-size", new ParsedValueImpl<ParsedValue<?,Size>,Double>(
+                new ParsedValueImpl<Size,Size>(new Size(12, SizeUnits.PX), null), 
                 SizeConverter.getInstance()), false)
         );
         
@@ -244,9 +244,9 @@ public class Node_cssStyleMap_Test {
         
         
         final ParsedValue[] fontValues = new ParsedValue[] {
-            new ParsedValue<String,String>("system", null),
-            new ParsedValue<ParsedValue<?,Size>,Double>(
-                new ParsedValue<Size,Size>(new Size(1.5, SizeUnits.EM), null),
+            new ParsedValueImpl<String,String>("system", null),
+            new ParsedValueImpl<ParsedValue<?,Size>,Double>(
+                new ParsedValueImpl<Size,Size>(new Size(1.5, SizeUnits.EM), null),
                 SizeConverter.getInstance()
             ), 
             null,
@@ -254,7 +254,7 @@ public class Node_cssStyleMap_Test {
         };
         final List<Declaration> textDecls = new ArrayList<Declaration>();
         Collections.addAll(textDecls, 
-            new Declaration("-fx-font", new ParsedValue<ParsedValue[], Font>(
+            new Declaration("-fx-font", new ParsedValueImpl<ParsedValue[], Font>(
                 fontValues, FontConverter.getInstance()), false)
         );
         

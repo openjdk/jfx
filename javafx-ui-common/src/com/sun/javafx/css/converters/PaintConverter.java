@@ -35,11 +35,11 @@ import javafx.scene.text.Font;
 
 import com.sun.javafx.css.Size;
 import com.sun.javafx.css.SizeUnits;
-import com.sun.javafx.css.StyleConverter;
+import com.sun.javafx.css.StyleConverterImpl;
 import com.sun.javafx.css.ParsedValue;
 
 
-public final class PaintConverter extends StyleConverter<ParsedValue<?, Paint>, Paint> {
+public final class PaintConverter extends StyleConverterImpl<ParsedValue<?, Paint>, Paint> {
 
     // lazy, thread-safe instatiation
     private static class Holder {
@@ -76,7 +76,7 @@ public final class PaintConverter extends StyleConverter<ParsedValue<?, Paint>, 
     /**
      * Convert [<paint]+ to Paint[]
      */
-    public static final class SequenceConverter extends StyleConverter<ParsedValue<?, Paint>[], Paint[]> {
+    public static final class SequenceConverter extends StyleConverterImpl<ParsedValue<?, Paint>[], Paint[]> {
 
         public static SequenceConverter getInstance() {
             return Holder.SEQUENCE_INSTANCE;
@@ -102,7 +102,7 @@ public final class PaintConverter extends StyleConverter<ParsedValue<?, Paint>, 
         }
     }
 
-    public static final class LinearGradientConverter extends StyleConverter<ParsedValue[], Paint> {
+    public static final class LinearGradientConverter extends StyleConverterImpl<ParsedValue[], Paint> {
 
         public static LinearGradientConverter getInstance() {
             return Holder.LINEAR_GRADIENT_INSTANCE;
@@ -135,7 +135,7 @@ public final class PaintConverter extends StyleConverter<ParsedValue<?, Paint>, 
         }
     }
 
-    public static final class ImagePatternConverter extends StyleConverter<ParsedValue[], Paint> {
+    public static final class ImagePatternConverter extends StyleConverterImpl<ParsedValue[], Paint> {
 
         public static ImagePatternConverter getInstance() {
             return Holder.IMAGE_PATTERN_INSTANCE;
@@ -173,7 +173,7 @@ public final class PaintConverter extends StyleConverter<ParsedValue<?, Paint>, 
         }
     }
 
-    public static final class RepeatingImagePatternConverter extends StyleConverter<ParsedValue[], Paint> {
+    public static final class RepeatingImagePatternConverter extends StyleConverterImpl<ParsedValue[], Paint> {
 
         public static RepeatingImagePatternConverter getInstance() {
             return Holder.REPEATING_IMAGE_PATTERN_INSTANCE;
@@ -200,7 +200,7 @@ public final class PaintConverter extends StyleConverter<ParsedValue<?, Paint>, 
         }
     }
 
-    public static final class RadialGradientConverter extends StyleConverter<ParsedValue[], Paint> {
+    public static final class RadialGradientConverter extends StyleConverterImpl<ParsedValue[], Paint> {
 
         public static RadialGradientConverter getInstance() {
             return Holder.RADIAL_GRADIENT_INSTANCE;

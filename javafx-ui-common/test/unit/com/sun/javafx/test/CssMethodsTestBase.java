@@ -129,7 +129,7 @@ public abstract class CssMethodsTestBase {
 
     public static class Configuration {
         private static final StyleConverter<String, Object> TEST_TYPE =
-                StyleConverter.getInstance();
+                StyleConverter.getStringConverter();
 
         private static final CssMetaData UNDEFINED_KEY =
                 new CssMetaData<Node,Object>("U-N-D-E-F-I-N-E-D", TEST_TYPE, "") {

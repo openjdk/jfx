@@ -33,12 +33,12 @@ import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 
 import com.sun.javafx.css.Size;
-import com.sun.javafx.css.StyleConverter;
+import com.sun.javafx.css.StyleConverterImpl;
 import com.sun.javafx.css.ParsedValue;
 import com.sun.javafx.css.StyleManager;
 import com.sun.javafx.logging.PlatformLogger;
 
-public class EffectConverter extends StyleConverter<ParsedValue[], Effect> {
+public class EffectConverter extends StyleConverterImpl<ParsedValue[], Effect> {
 
     // lazy, thread-safe instatiation
     private static class Holder {

@@ -88,8 +88,8 @@ class CascadingStyle implements Comparable {
     }
     
     // Wrapper to make StyleHelper's life a little easier
-    ParsedValue getParsedValue() {
-        return style.getDeclaration().getParsedValue();
+    ParsedValueImpl getParsedValueImpl() {
+        return style.getDeclaration().getParsedValueImpl();
     }
     
     /**

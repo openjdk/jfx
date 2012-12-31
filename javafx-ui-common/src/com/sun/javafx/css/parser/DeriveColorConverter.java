@@ -28,13 +28,13 @@ import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 
 import com.sun.javafx.css.Size;
-import com.sun.javafx.css.StyleConverter;
+import com.sun.javafx.css.StyleConverterImpl;
 import com.sun.javafx.css.ParsedValue;
 
 /**
  * Derive a Color from a Color and a brightness value
  */
-public final class DeriveColorConverter extends StyleConverter<ParsedValue[], Color> {
+public final class DeriveColorConverter extends StyleConverterImpl<ParsedValue[], Color> {
 
     // lazy, thread-safe instatiation
     private static class Holder {

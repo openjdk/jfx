@@ -61,6 +61,7 @@ import com.sun.javafx.css.Declaration;
 import com.sun.javafx.css.FontFace;
 import com.sun.javafx.css.FontUnits;
 import com.sun.javafx.css.ParsedValue;
+import com.sun.javafx.css.ParsedValueImpl;
 import com.sun.javafx.css.Rule;
 import com.sun.javafx.css.Selector;
 import com.sun.javafx.css.SimpleSelector;
@@ -306,8 +307,8 @@ final public class CSSParser {
     }
 
     /** convenience method for unit tests */
-    public ParsedValue parseExpr(String property, String expr) {
-        ParsedValue value = null;
+    public ParsedValueImpl parseExpr(String property, String expr) {
+        ParsedValueImpl value = null;
         try {
             setInputSource(null, property + ": " + expr);
             char buf[] = new char[expr.length() + 1];
@@ -346,7 +347,7 @@ final public class CSSParser {
     /*
      * While parsing a declaration, tokens from parsing value (that is,
      * the expr rule) are held in this tree structure which is then passed
-     * to methods which convert the tree into a ParsedValue.
+     * to methods which convert the tree into a ParsedValueImpl.
      *
      * Each term in expr is a Term. For simple terms, like HASH, the
      * Term is just the Token. If the term is a function, then the
@@ -494,7 +495,7 @@ final public class CSSParser {
     }
     
     // Assumes string is not a lookup!
-    private ParsedValue<Color,Color> colorValueOfString(String str) {
+    private ParsedValueImpl<Color,Color> colorValueOfString(String str) {
 
         if(str.startsWith("#") || str.startsWith("0x")) {
 
@@ -512,11 +513,11 @@ final public class CSSParser {
                 c = c.substring(0,len-2);
             }
             // else color was rgb or rrggbb (no alpha)
-            return new ParsedValue<Color,Color>(Color.web(c,a), null);
+            return new ParsedValueImpl<Color,Color>(Color.web(c,a), null);
         }
 
         try {
-            return new ParsedValue<Color,Color>(Color.web(str), null);
+            return new ParsedValueImpl<Color,Color>(Color.web(str), null);
         } catch (final IllegalArgumentException e) {
         } catch (final NullPointerException e) {
         }
@@ -690,7 +691,7 @@ final public class CSSParser {
     //
     ////////////////////////////////////////////////////////////////////////////
 
-    ParsedValue valueFor(String property, Term root) throws ParseException {
+    ParsedValueImpl valueFor(String property, Term root) throws ParseException {
         final String prop = property.toLowerCase();
         properties.put(prop, prop);
         if (root == null || root.token == null) {
@@ -699,9 +700,9 @@ final public class CSSParser {
 
         if (root.token.getType() == CSSLexer.IDENT) {
             if ("inherit".equalsIgnoreCase(root.token.getText())) {
-                return new ParsedValue<String,String>("inherit", null);
+                return new ParsedValueImpl<String,String>("inherit", null);
             } else if ("null".equalsIgnoreCase(root.token.getText())) {
-                return new ParsedValue<String,String>("null", null);
+                return new ParsedValueImpl<String,String>("null", null);
             }
         }
 
@@ -742,23 +743,23 @@ final public class CSSParser {
         } else if ("-fx-border-image-width".equals(prop)) {
              return parseBorderImageWidthLayers(root);
         } else if ("-fx-padding".equals(prop)) {
-            ParsedValue<?,Size>[] sides = parseSizeSeries(root);
-            return new ParsedValue<ParsedValue<?,Size>[],Insets>(sides, InsetsConverter.getInstance());
+            ParsedValueImpl<?,Size>[] sides = parseSizeSeries(root);
+            return new ParsedValueImpl<ParsedValue<?,Size>[],Insets>(sides, InsetsConverter.getInstance());
         } else if ("-fx-label-padding".equals(prop)) {
-            ParsedValue<?,Size>[] sides = parseSizeSeries(root);
-            return new ParsedValue<ParsedValue<?,Size>[],Insets>(sides, InsetsConverter.getInstance());
+            ParsedValueImpl<?,Size>[] sides = parseSizeSeries(root);
+            return new ParsedValueImpl<ParsedValue<?,Size>[],Insets>(sides, InsetsConverter.getInstance());
         } else if (prop.endsWith("font-family")) {
             return parseFontFamily(root);
         } else if (prop.endsWith("font-size")) {
-            ParsedValue fsize = parseFontSize(root);
+            ParsedValueImpl fsize = parseFontSize(root);
             if (fsize == null) error(root, "Expected \'<font-size>\'");
             return fsize;
         } else if (prop.endsWith("font-style")) {
-            ParsedValue fstyle = parseFontStyle(root);
+            ParsedValueImpl fstyle = parseFontStyle(root);
             if (fstyle == null) error(root, "Expected \'<font-style>\'");
             return fstyle;
         } else if (prop.endsWith("font-weight")) {
-            ParsedValue fweight = parseFontWeight(root);
+            ParsedValueImpl fweight = parseFontWeight(root);
             if (fweight == null) error(root, "Expected \'<font-style>\'");
             return fweight;
         } else if (prop.endsWith("font")) {
@@ -768,31 +769,31 @@ final public class CSSParser {
             // special cased.
             Term term = root;
             int nArgs = numberOfTerms(term);
-            ParsedValue<?,Size>[] segments = new ParsedValue[nArgs];
+            ParsedValueImpl<?,Size>[] segments = new ParsedValueImpl[nArgs];
             int segment = 0;
             while(term != null) {
                 segments[segment++] = parseSize(term);
                 term = term.nextInSeries;
             }
 
-            return new ParsedValue<ParsedValue<?,Size>[],Double[]>(segments,SequenceConverter.getInstance());
+            return new ParsedValueImpl<ParsedValue<?,Size>[],Double[]>(segments,SequenceConverter.getInstance());
 
         } else if ("-fx-stroke-line-join".equals(prop)) {
             // TODO: Figure out a way that these properties don't need to be
             // special cased.
-            ParsedValue[] values = parseStrokeLineJoin(root);
+            ParsedValueImpl[] values = parseStrokeLineJoin(root);
             if (values == null) error(root, "Expected \'miter', \'bevel\' or \'round\'");
             return values[0];
         } else if ("-fx-stroke-line-cap".equals(prop)) {
             // TODO: Figure out a way that these properties don't need to be
             // special cased.
-            ParsedValue value = parseStrokeLineCap(root);
+            ParsedValueImpl value = parseStrokeLineCap(root);
             if (value == null) error(root, "Expected \'square', \'butt\' or \'round\'");
             return value;
         } else if ("-fx-stroke-type".equals(prop)) {
             // TODO: Figure out a way that these properties don't need to be
             // special cased.
-            ParsedValue value = parseStrokeType(root);
+            ParsedValueImpl value = parseStrokeType(root);
             if (value == null) error(root, "Expected \'centered', \'inside\' or \'outside\'");
             return value;
         } else if ("-fx-font-smoothing-type".equals(prop)) {
@@ -809,16 +810,16 @@ final public class CSSParser {
                     || str.isEmpty()) {
                 error(root,  "Expected STRING or IDENT");
             }
-            return new ParsedValue<String, String>(stripQuotes(str), null, false);            
+            return new ParsedValueImpl<String, String>(stripQuotes(str), null, false);            
         }
         return parse(root);
     }
 
-    private ParsedValue parse(Term root) throws ParseException {
+    private ParsedValueImpl parse(Term root) throws ParseException {
 
         if (root.token == null) error(root, "Parse error");
         final Token token = root.token;
-        ParsedValue value = null; // value to return;
+        ParsedValueImpl value = null; // value to return;
 
         final int ttype = token.getType();
         switch (ttype) {
@@ -836,8 +837,8 @@ final public class CSSParser {
         case CSSLexer.GRAD:
         case CSSLexer.RAD:
         case CSSLexer.TURN:
-            ParsedValue sizeValue = new ParsedValue<Size,Double>(size(token), null);
-            value = new ParsedValue<ParsedValue<?,Size>, Double>(sizeValue, SizeConverter.getInstance());
+            ParsedValueImpl sizeValue = new ParsedValueImpl<Size,Double>(size(token), null);
+            value = new ParsedValueImpl<ParsedValue<?,Size>, Double>(sizeValue, SizeConverter.getInstance());
             break;
         case CSSLexer.STRING:
         case CSSLexer.IDENT:
@@ -852,22 +853,22 @@ final public class CSSParser {
                 value = radialGradient(root);
             } else if ("true".equals(text)) {
                 // TODO: handling of boolean is really bogus
-                value = new ParsedValue<String,Boolean>("true",BooleanConverter.getInstance());
+                value = new ParsedValueImpl<String,Boolean>("true",BooleanConverter.getInstance());
             } else if ("false".equals(text)) {
                 // TODO: handling of boolean is really bogus
-                value = new ParsedValue<String,Boolean>("false",BooleanConverter.getInstance());
+                value = new ParsedValueImpl<String,Boolean>("false",BooleanConverter.getInstance());
             } else {
                 // if the property value is another property, then it needs to be looked up.
                 boolean needsLookup = isIdent && properties.containsKey(str);
                 if (needsLookup || ((value = colorValueOfString(str)) == null )) {
-                    value = new ParsedValue<String,String>(str, null, isIdent || needsLookup);
+                    value = new ParsedValueImpl<String,String>(str, null, isIdent || needsLookup);
                 }
             }
             break;
         case CSSLexer.HASH:
             final String clr = token.getText();
             try {
-                value = new ParsedValue<Color,Color>(Color.web(clr), null);
+                value = new ParsedValueImpl<Color,Color>(Color.web(clr), null);
             } catch (final IllegalArgumentException e) {
                 error(root, e.getMessage());
             }
@@ -885,30 +886,30 @@ final public class CSSParser {
     /* Parse size.
      * @throw RecongnitionExcpetion if the token is not a size type or a lookup.
      */
-    private ParsedValue<?,Size> parseSize(final Term root) throws ParseException {
+    private ParsedValueImpl<?,Size> parseSize(final Term root) throws ParseException {
 
         if (root.token == null || !isSize(root.token)) error(root, "Expected \'<size>\'");
 
-        ParsedValue<?,Size> value = null;
+        ParsedValueImpl<?,Size> value = null;
 
         if (root.token.getType() != CSSLexer.IDENT) {
 
             Size size = size(root.token);
-            value = new ParsedValue<Size,Size>(size, null);
+            value = new ParsedValueImpl<Size,Size>(size, null);
 
         } else {
 
             String key = root.token.getText();
-            value = new ParsedValue<String,Size>(key, null, true);
+            value = new ParsedValueImpl<String,Size>(key, null, true);
 
         }
 
         return value;
     }
 
-    private ParsedValue<?,Color> parseColor(final Term root) throws ParseException {
+    private ParsedValueImpl<?,Color> parseColor(final Term root) throws ParseException {
 
-        ParsedValue<?,Color> color = null;
+        ParsedValueImpl<?,Color> color = null;
         if (root.token != null &&
             (root.token.getType() == CSSLexer.IDENT ||
              root.token.getType() == CSSLexer.HASH ||
@@ -926,7 +927,7 @@ final public class CSSParser {
     // rgba(NUMBER, NUMBER, NUMBER, NUMBER)
     // rgb(PERCENTAGE, PERCENTAGE, PERCENTAGE)
     // rgba(PERCENTAGE, PERCENTAGE, PERCENTAGE, NUMBER)
-    private ParsedValue rgb(Term root) throws ParseException {
+    private ParsedValueImpl rgb(Term root) throws ParseException {
 
         // first term in the chain is the function name...
         final String fn = (root.token != null) ? root.token.getText() : null;
@@ -992,13 +993,13 @@ final public class CSSParser {
         final String atext = (atok != null) ? atok.getText() : null;
         final double aval =  (atext != null) ? clamp(0.0f, Double.parseDouble(atext), 1.0f) : 1.0;
 
-        return new ParsedValue<Color,Color>(Color.color(rval,gval,bval,aval), null);
+        return new ParsedValueImpl<Color,Color>(Color.color(rval,gval,bval,aval), null);
 
     }
 
     // hsb(NUMBER, PERCENTAGE, PERCENTAGE)
     // hsba(NUMBER, PERCENTAGE, PERCENTAGE, NUMBER)
-    private ParsedValue hsb(Term root) throws ParseException {
+    private ParsedValueImpl hsb(Term root) throws ParseException {
 
         // first term in the chain is the function name...
         final String fn = (root.token != null) ? root.token.getText() : null;
@@ -1042,11 +1043,11 @@ final public class CSSParser {
         final Size aval = (atok != null) ? size(atok) : null;
         final double opacity =  (aval != null) ? clamp(0.0f, aval.pixels(), 1.0f) : 1.0;
 
-        return new ParsedValue<Color,Color>(Color.hsb(hue, saturation, brightness, opacity), null);
+        return new ParsedValueImpl<Color,Color>(Color.hsb(hue, saturation, brightness, opacity), null);
     }
 
     // derive(color, pct)
-    private ParsedValue<ParsedValue[],Color> derive(final Term root)
+    private ParsedValueImpl<ParsedValue[],Color> derive(final Term root)
             throws ParseException {
 
         // first term in the chain is the function name...
@@ -1059,19 +1060,19 @@ final public class CSSParser {
         Term arg = root;
         if ((arg = arg.firstArg) == null) error(root, "Expected \'<color>\'");
 
-        final ParsedValue<?,Color> color = parseColor(arg);
+        final ParsedValueImpl<?,Color> color = parseColor(arg);
 
         final Term prev = arg;
         if ((arg = arg.nextArg) == null) error(prev, "Expected \'<percent\'");
 
-        final ParsedValue<?,Size> brightness = parseSize(arg);
+        final ParsedValueImpl<?,Size> brightness = parseSize(arg);
 
-        ParsedValue[] values = new ParsedValue[] { color, brightness };
-        return new ParsedValue<ParsedValue[],Color>(values, DeriveColorConverter.getInstance());
+        ParsedValueImpl[] values = new ParsedValueImpl[] { color, brightness };
+        return new ParsedValueImpl<ParsedValue[],Color>(values, DeriveColorConverter.getInstance());
     }
 
     // 'ladder' color 'stops' stop+
-    private ParsedValue<ParsedValue[],Color> ladder(final Term root) throws ParseException {
+    private ParsedValueImpl<ParsedValue[],Color> ladder(final Term root) throws ParseException {
 
         // first term in the chain is the function name...
         final String fn = (root.token != null) ? root.token.getText() : null;
@@ -1087,7 +1088,7 @@ final public class CSSParser {
         Term term = root;
 
         if ((term = term.nextInSeries) == null) error(root, "Expected \'<color>\'");
-        final ParsedValue<?,Color> color = parse(term);
+        final ParsedValueImpl<?,Color> color = parse(term);
 
         Term prev = term;
 
@@ -1108,11 +1109,11 @@ final public class CSSParser {
         } while (((temp = temp.nextInSeries) != null) &&
                  ((temp.token != null) && (temp.token.getType() == CSSLexer.LPAREN)));
 
-        ParsedValue[] values = new ParsedValue[nStops+1];
+        ParsedValueImpl[] values = new ParsedValueImpl[nStops+1];
         values[0] = color;
         int stopIndex = 1;
         do {
-            ParsedValue<ParsedValue[],Stop> stop = stop(term);
+            ParsedValueImpl<ParsedValue[],Stop> stop = stop(term);
             if (stop != null) values[stopIndex++] = stop;
             prev = term;
         } while(((term = term.nextInSeries) != null) &&
@@ -1134,11 +1135,11 @@ final public class CSSParser {
             root.nextLayer = prev.nextLayer;
         }
 
-        return new ParsedValue<ParsedValue[], Color>(values, LadderConverter.getInstance());
+        return new ParsedValueImpl<ParsedValue[], Color>(values, LadderConverter.getInstance());
     }
     
     // <ladder> = ladder(<color>, <color-stop>[, <color-stop>]+ ) 
-    private ParsedValue<ParsedValue[],Color> parseLadder(final Term root) throws ParseException {
+    private ParsedValueImpl<ParsedValue[],Color> parseLadder(final Term root) throws ParseException {
 
         // first term in the chain is the function name...
         final String fn = (root.token != null) ? root.token.getText() : null;
@@ -1150,25 +1151,25 @@ final public class CSSParser {
         Term term = root;
 
         if ((term = term.firstArg) == null) error(root, "Expected \'<color>\'");
-        final ParsedValue<?,Color> color = parse(term);
+        final ParsedValueImpl<?,Color> color = parse(term);
 
         Term prev = term;
 
         if ((term = term.nextArg) == null) 
             error(prev,  "Expected \'<color-stop>[, <color-stop>]+\'");
 
-        ParsedValue<ParsedValue[],Stop>[] stops = parseColorStops(term);
+        ParsedValueImpl<ParsedValue[],Stop>[] stops = parseColorStops(term);
 
-        ParsedValue[] values = new ParsedValue[stops.length+1];
+        ParsedValueImpl[] values = new ParsedValueImpl[stops.length+1];
         values[0] = color;
         System.arraycopy(stops, 0, values, 1, stops.length);
-        return new ParsedValue<ParsedValue[], Color>(values, LadderConverter.getInstance());
+        return new ParsedValueImpl<ParsedValue[], Color>(values, LadderConverter.getInstance());
     }    
 
     // parse (<number>, <color>)+
     // root.token should be a size
     // root.token.next should be a color
-    private ParsedValue<ParsedValue[], Stop> stop(final Term root)
+    private ParsedValueImpl<ParsedValue[], Stop> stop(final Term root)
             throws ParseException {
 
         // first term in the chain is the function name...
@@ -1182,21 +1183,21 @@ final public class CSSParser {
 
         if ((arg = root.firstArg) == null) error(root,  "Expected \'<number>\'");
 
-        ParsedValue<?,Size> size = parseSize(arg);
+        ParsedValueImpl<?,Size> size = parseSize(arg);
 
         Term prev = arg;
         if ((arg = arg.nextArg) == null) error(prev,  "Expected \'<color>\'");
 
-        ParsedValue<?,Color> color = parseColor(arg);
+        ParsedValueImpl<?,Color> color = parseColor(arg);
 
-        ParsedValue[] values = new ParsedValue[] { size, color };
-        return new ParsedValue<ParsedValue[],Stop>(values, StopConverter.getInstance());
+        ParsedValueImpl[] values = new ParsedValueImpl[] { size, color };
+        return new ParsedValueImpl<ParsedValue[],Stop>(values, StopConverter.getInstance());
 
     }
 
     // http://dev.w3.org/csswg/css3-images/#color-stop-syntax
     // <color-stop> = <color> [ <percentage> | <length> ]?
-    private ParsedValue<ParsedValue[], Stop>[] parseColorStops(final Term root)
+    private ParsedValueImpl<ParsedValue[], Stop>[] parseColorStops(final Term root)
             throws ParseException {
 
         int nArgs = 1;
@@ -1216,7 +1217,7 @@ final public class CSSParser {
             error(root, "Expected \'<color-stop>\'");
         }
 
-        ParsedValue<?,Color>[] colors = new ParsedValue[nArgs];
+        ParsedValueImpl<?,Color>[] colors = new ParsedValueImpl[nArgs];
         Size[] positions = new Size[nArgs];
         java.util.Arrays.fill(positions, null);
 
@@ -1309,11 +1310,11 @@ final public class CSSParser {
             }
         }
      
-        ParsedValue<ParsedValue[],Stop>[] stops = new ParsedValue[nArgs];
+        ParsedValueImpl<ParsedValue[],Stop>[] stops = new ParsedValueImpl[nArgs];
         for (int n=0; n<nArgs; n++) {
-            stops[n] = new ParsedValue<ParsedValue[],Stop>(
-                new ParsedValue[] {
-                    new ParsedValue<Size,Size>(positions[n], null),
+            stops[n] = new ParsedValueImpl<ParsedValue[],Stop>(
+                new ParsedValueImpl[] {
+                    new ParsedValueImpl<Size,Size>(positions[n], null),
                     colors[n]
                 },
                 StopConverter.getInstance()
@@ -1325,7 +1326,7 @@ final public class CSSParser {
     }
     
     // parse (<number>, <number>)
-    private ParsedValue[] point(final Term root) throws ParseException {
+    private ParsedValueImpl[] point(final Term root) throws ParseException {
 
         if (root.token == null ||
             root.token.getType() != CSSLexer.LPAREN) error(root, "Expected \'(<number>, <number>)\'");
@@ -1341,18 +1342,18 @@ final public class CSSParser {
         // no <number>
         if ((arg = root.firstArg) == null)  error(root, "Expected \'<number>\'");
 
-        final ParsedValue<?,Size> ptX = parseSize(arg);
+        final ParsedValueImpl<?,Size> ptX = parseSize(arg);
 
         final Term prev = arg;
 
         if ((arg = arg.nextArg) == null) error(prev, "Expected \'<number>\'");
 
-        final ParsedValue<?,Size> ptY = parseSize(arg);
+        final ParsedValueImpl<?,Size> ptY = parseSize(arg);
 
-        return new ParsedValue[] { ptX, ptY };
+        return new ParsedValueImpl[] { ptX, ptY };
     }
 
-    private ParsedValue parseFunction(final Term root) throws ParseException {
+    private ParsedValueImpl parseFunction(final Term root) throws ParseException {
 
         // Text from parser is function name plus the lparen, e.g., 'derive('
         final String fcn = (root.token != null) ? root.token.getText() : null;
@@ -1386,7 +1387,7 @@ final public class CSSParser {
         return null;
     }
 
-    private ParsedValue<BlurType,BlurType> blurType(final Term root) throws ParseException {
+    private ParsedValueImpl<BlurType,BlurType> blurType(final Term root) throws ParseException {
 
         if (root == null) return null;
         if (root.token == null ||
@@ -1410,11 +1411,11 @@ final public class CSSParser {
             final String msg = "Expected \'gaussian\', \'one-pass-box\', \'two-pass-box\', or \'three-pass-box\'";
             error(root, msg);
         }
-        return new ParsedValue<BlurType,BlurType>(blurType, null);
+        return new ParsedValueImpl<BlurType,BlurType>(blurType, null);
     }
 
     // innershadow <blur-type> <color> <radius> <choke> <offset-x> <offset-y>
-    private ParsedValue innershadow(final Term root) throws ParseException {
+    private ParsedValueImpl innershadow(final Term root) throws ParseException {
 
         // first term in the chain is the function name...
         final String fn = (root.token != null) ? root.token.getText() : null;
@@ -1426,34 +1427,34 @@ final public class CSSParser {
         Term arg;
 
         if ((arg = root.firstArg) == null) error(root, "Expected \'<blur-type>\'");
-        ParsedValue<BlurType,BlurType> blurVal = blurType(arg);
+        ParsedValueImpl<BlurType,BlurType> blurVal = blurType(arg);
 
         Term prev = arg;
         if ((arg = arg.nextArg) == null) error(prev, "Expected \'<color>\'");
 
-        ParsedValue<?,Color> colorVal = parseColor(arg);
+        ParsedValueImpl<?,Color> colorVal = parseColor(arg);
 
         prev = arg;
         if ((arg = arg.nextArg) == null) error(prev, "Expected \'<number>\'");
 
-        ParsedValue<?,Size> radiusVal = parseSize(arg);
+        ParsedValueImpl<?,Size> radiusVal = parseSize(arg);
 
         prev = arg;
         if ((arg = arg.nextArg) == null) error(prev, "Expected \'<number>\'");
 
-        ParsedValue<?,Size> chokeVal = parseSize(arg);
+        ParsedValueImpl<?,Size> chokeVal = parseSize(arg);
 
         prev = arg;
         if ((arg = arg.nextArg) == null) error(prev, "Expected \'<number>\'");
 
-        ParsedValue<?,Size> offsetXVal = parseSize(arg);
+        ParsedValueImpl<?,Size> offsetXVal = parseSize(arg);
 
         prev = arg;
         if ((arg = arg.nextArg) == null) error(prev, "Expected \'<number>\'");
 
-        ParsedValue<?,Size> offsetYVal = parseSize(arg);
+        ParsedValueImpl<?,Size> offsetYVal = parseSize(arg);
 
-        ParsedValue[] values = new ParsedValue[] {
+        ParsedValueImpl[] values = new ParsedValueImpl[] {
             blurVal,
             colorVal,
             radiusVal,
@@ -1461,11 +1462,11 @@ final public class CSSParser {
             offsetXVal,
             offsetYVal
         };
-        return new ParsedValue<ParsedValue[],Effect>(values, EffectConverter.InnerShadowConverter.getInstance());
+        return new ParsedValueImpl<ParsedValue[],Effect>(values, EffectConverter.InnerShadowConverter.getInstance());
     }
 
     // dropshadow <blur-type> <color> <radius> <spread> <offset-x> <offset-y>
-    private ParsedValue dropshadow(final Term root) throws ParseException {
+    private ParsedValueImpl dropshadow(final Term root) throws ParseException {
 
         // first term in the chain is the function name...
         final String fn = (root.token != null) ? root.token.getText() : null;
@@ -1477,34 +1478,34 @@ final public class CSSParser {
         Term arg;
 
         if ((arg = root.firstArg) == null) error(root, "Expected \'<blur-type>\'");
-        ParsedValue<BlurType,BlurType> blurVal = blurType(arg);
+        ParsedValueImpl<BlurType,BlurType> blurVal = blurType(arg);
 
         Term prev = arg;
         if ((arg = arg.nextArg) == null) error(prev, "Expected \'<color>\'");
 
-        ParsedValue<?,Color> colorVal = parseColor(arg);
+        ParsedValueImpl<?,Color> colorVal = parseColor(arg);
 
         prev = arg;
         if ((arg = arg.nextArg) == null) error(prev, "Expected \'<number>\'");
 
-        ParsedValue<?,Size> radiusVal = parseSize(arg);
+        ParsedValueImpl<?,Size> radiusVal = parseSize(arg);
 
         prev = arg;
         if ((arg = arg.nextArg) == null) error(prev, "Expected \'<number>\'");
 
-        ParsedValue<?,Size> spreadVal = parseSize(arg);
+        ParsedValueImpl<?,Size> spreadVal = parseSize(arg);
 
         prev = arg;
         if ((arg = arg.nextArg) == null) error(prev, "Expected \'<number>\'");
 
-        ParsedValue<?,Size> offsetXVal = parseSize(arg);
+        ParsedValueImpl<?,Size> offsetXVal = parseSize(arg);
 
         prev = arg;
         if ((arg = arg.nextArg) == null) error(prev, "Expected \'<number>\'");
 
-        ParsedValue<?,Size> offsetYVal = parseSize(arg);
+        ParsedValueImpl<?,Size> offsetYVal = parseSize(arg);
 
-        ParsedValue[] values = new ParsedValue[] {
+        ParsedValueImpl[] values = new ParsedValueImpl[] {
             blurVal,
             colorVal,
             radiusVal,
@@ -1512,11 +1513,11 @@ final public class CSSParser {
             offsetXVal,
             offsetYVal
         };
-        return new ParsedValue<ParsedValue[],Effect>(values, EffectConverter.DropShadowConverter.getInstance());
+        return new ParsedValueImpl<ParsedValue[],Effect>(values, EffectConverter.DropShadowConverter.getInstance());
     }
 
     // returns null if the Term is null or is not a cycle method.
-    private ParsedValue<CycleMethod, CycleMethod> cycleMethod(final Term root) {
+    private ParsedValueImpl<CycleMethod, CycleMethod> cycleMethod(final Term root) {
         CycleMethod cycleMethod = null;
         if (root != null && root.token.getType() == CSSLexer.IDENT) {
 
@@ -1530,13 +1531,13 @@ final public class CSSParser {
             }
         }
         if (cycleMethod != null)
-            return new ParsedValue<CycleMethod,CycleMethod>(cycleMethod, null);
+            return new ParsedValueImpl<CycleMethod,CycleMethod>(cycleMethod, null);
         else
             return null;
     }
 
     // linear <point> TO <point> STOPS <stop>+ cycleMethod?
-    private ParsedValue<ParsedValue[],Paint> linearGradient(final Term root) throws ParseException {
+    private ParsedValueImpl<ParsedValue[],Paint> linearGradient(final Term root) throws ParseException {
 
         final String fn = (root.token != null) ? root.token.getText() : null;
         if (fn == null || !"linear".equalsIgnoreCase(fn)) {
@@ -1552,7 +1553,7 @@ final public class CSSParser {
 
         if ((term = term.nextInSeries) == null) error(root, "Expected \'(<number>, <number>)\'");
 
-        final ParsedValue<?,Size>[] startPt = point(term);
+        final ParsedValueImpl<?,Size>[] startPt = point(term);
 
         Term prev = term;
         if ((term = term.nextInSeries) == null) error(prev, "Expected \'to\'");
@@ -1563,7 +1564,7 @@ final public class CSSParser {
         prev = term;
         if ((term = term.nextInSeries) == null) error(prev, "Expected \'(<number>, <number>)\'");
 
-        final ParsedValue<?,Size>[] endPt = point(term);
+        final ParsedValueImpl<?,Size>[] endPt = point(term);
 
         prev = term;
         if ((term = term.nextInSeries) == null) error(prev, "Expected \'stops\'");
@@ -1582,21 +1583,21 @@ final public class CSSParser {
         } while (((temp = temp.nextInSeries) != null) &&
                  ((temp.token != null) && (temp.token.getType() == CSSLexer.LPAREN)));
 
-        ParsedValue[] stops = new ParsedValue[nStops];
+        ParsedValueImpl[] stops = new ParsedValueImpl[nStops];
         int stopIndex = 0;
         do {
-            ParsedValue<ParsedValue[],Stop> stop = stop(term);
+            ParsedValueImpl<ParsedValue[],Stop> stop = stop(term);
             if (stop != null) stops[stopIndex++] = stop;
             prev = term;
         } while(((term = term.nextInSeries) != null) &&
                 (term.token.getType() == CSSLexer.LPAREN));
 
         // term is either null or is a cycle method, or the start of another Paint.
-        ParsedValue<CycleMethod,CycleMethod> cycleMethod = cycleMethod(term);
+        ParsedValueImpl<CycleMethod,CycleMethod> cycleMethod = cycleMethod(term);
 
         if (cycleMethod == null) {
 
-            cycleMethod = new ParsedValue<CycleMethod,CycleMethod>(CycleMethod.NO_CYCLE, null);
+            cycleMethod = new ParsedValueImpl<CycleMethod,CycleMethod>(CycleMethod.NO_CYCLE, null);
 
             // if term is not null and the last term was not a cycle method,
             // then term starts a new series or layer of Paint
@@ -1623,7 +1624,7 @@ final public class CSSParser {
             root.nextLayer = term.nextLayer;
         }
 
-        ParsedValue[] values = new ParsedValue[5 + stops.length];
+        ParsedValueImpl[] values = new ParsedValueImpl[5 + stops.length];
         int index = 0;
         values[index++] = (startPt != null) ? startPt[0] : null;
         values[index++] = (startPt != null) ? startPt[1] : null;
@@ -1631,7 +1632,7 @@ final public class CSSParser {
         values[index++] = (endPt != null) ? endPt[1] : null;
         values[index++] = cycleMethod;
         for (int n=0; n<stops.length; n++) values[index++] = stops[n];
-        return new ParsedValue<ParsedValue[], Paint>(values, PaintConverter.LinearGradientConverter.getInstance());
+        return new ParsedValueImpl<ParsedValue[], Paint>(values, PaintConverter.LinearGradientConverter.getInstance());
     }
 
     // Based off http://dev.w3.org/csswg/css3-images/#linear-gradients
@@ -1649,7 +1650,7 @@ final public class CSSParser {
     // If neither [from <point> to <point>] nor [ to <side-or-corner> ] are given, 
     // then the gradient direction defaults to 'to bottom'. 
     // Stops are per http://dev.w3.org/csswg/css3-images/#color-stop-syntax.
-    private ParsedValue parseLinearGradient(final Term root) throws ParseException {
+    private ParsedValueImpl parseLinearGradient(final Term root) throws ParseException {
 
         // first term in the chain is the function name...
         final String fn = (root.token != null) ? root.token.getText() : null;
@@ -1669,23 +1670,23 @@ final public class CSSParser {
         }
 
         Term prev = arg;
-//        ParsedValue<Size,Size> angleVal = null;
-        ParsedValue<?,Size>[] startPt = null;
-        ParsedValue<?,Size>[] endPt = null;
+//        ParsedValueImpl<Size,Size> angleVal = null;
+        ParsedValueImpl<?,Size>[] startPt = null;
+        ParsedValueImpl<?,Size>[] endPt = null;
 
         if ("from".equalsIgnoreCase(arg.token.getText())) {
 
             prev = arg;
             if ((arg = arg.nextInSeries) == null) error(prev, "Expected \'<point>\'");
 
-            ParsedValue<?,Size> ptX = parseSize(arg);
+            ParsedValueImpl<?,Size> ptX = parseSize(arg);
 
             prev = arg;
             if ((arg = arg.nextInSeries) == null) error(prev, "Expected \'<point>\'");
 
-            ParsedValue<?,Size> ptY = parseSize(arg);
+            ParsedValueImpl<?,Size> ptY = parseSize(arg);
 
-            startPt = new ParsedValue[] { ptX, ptY };
+            startPt = new ParsedValueImpl[] { ptX, ptY };
 
             prev = arg;
             if ((arg = arg.nextInSeries) == null) error(prev, "Expected \'to\'");
@@ -1703,7 +1704,7 @@ final public class CSSParser {
 
             ptY = parseSize(arg);
 
-            endPt = new ParsedValue[] { ptX, ptY };
+            endPt = new ParsedValueImpl[] { ptX, ptY };
 
             prev = arg;
             arg = arg.nextArg;
@@ -1795,14 +1796,14 @@ final public class CSSParser {
             }
                 
 
-            startPt = new ParsedValue[] {
-                new ParsedValue<Size,Size>(new Size(startX, SizeUnits.PERCENT), null),
-                new ParsedValue<Size,Size>(new Size(startY, SizeUnits.PERCENT), null)
+            startPt = new ParsedValueImpl[] {
+                new ParsedValueImpl<Size,Size>(new Size(startX, SizeUnits.PERCENT), null),
+                new ParsedValueImpl<Size,Size>(new Size(startY, SizeUnits.PERCENT), null)
             };
 
-            endPt = new ParsedValue[] {
-                new ParsedValue<Size,Size>(new Size(endX, SizeUnits.PERCENT), null),
-                new ParsedValue<Size,Size>(new Size(endY, SizeUnits.PERCENT), null)
+            endPt = new ParsedValueImpl[] {
+                new ParsedValueImpl<Size,Size>(new Size(endX, SizeUnits.PERCENT), null),
+                new ParsedValueImpl<Size,Size>(new Size(endY, SizeUnits.PERCENT), null)
             };
 
             prev = arg;
@@ -1811,14 +1812,14 @@ final public class CSSParser {
 
         if (startPt == null && endPt == null) {
             // spec says defaults to bottom
-            startPt = new ParsedValue[] {
-                new ParsedValue<Size,Size>(new Size(0, SizeUnits.PERCENT), null),
-                new ParsedValue<Size,Size>(new Size(0, SizeUnits.PERCENT), null)
+            startPt = new ParsedValueImpl[] {
+                new ParsedValueImpl<Size,Size>(new Size(0, SizeUnits.PERCENT), null),
+                new ParsedValueImpl<Size,Size>(new Size(0, SizeUnits.PERCENT), null)
             };
 
-            endPt = new ParsedValue[] {
-                new ParsedValue<Size,Size>(new Size(0, SizeUnits.PERCENT), null),
-                new ParsedValue<Size,Size>(new Size(100, SizeUnits.PERCENT), null)
+            endPt = new ParsedValueImpl[] {
+                new ParsedValueImpl<Size,Size>(new Size(0, SizeUnits.PERCENT), null),
+                new ParsedValueImpl<Size,Size>(new Size(100, SizeUnits.PERCENT), null)
             };
         }
 
@@ -1845,24 +1846,24 @@ final public class CSSParser {
             error(prev, "Expected \'<color-stop>\'");
         }
 
-        ParsedValue<ParsedValue[],Stop>[] stops = parseColorStops(arg);
+        ParsedValueImpl<ParsedValue[],Stop>[] stops = parseColorStops(arg);
 
-        ParsedValue[] values = new ParsedValue[5 + stops.length];
+        ParsedValueImpl[] values = new ParsedValueImpl[5 + stops.length];
         int index = 0;
         values[index++] = (startPt != null) ? startPt[0] : null;
         values[index++] = (startPt != null) ? startPt[1] : null;
         values[index++] = (endPt != null) ? endPt[0] : null;
         values[index++] = (endPt != null) ? endPt[1] : null;
-        values[index++] = new ParsedValue<CycleMethod,CycleMethod>(cycleMethod, null);
+        values[index++] = new ParsedValueImpl<CycleMethod,CycleMethod>(cycleMethod, null);
         for (int n=0; n<stops.length; n++) values[index++] = stops[n];
-        return new ParsedValue<ParsedValue[], Paint>(values, PaintConverter.LinearGradientConverter.getInstance());
+        return new ParsedValueImpl<ParsedValue[], Paint>(values, PaintConverter.LinearGradientConverter.getInstance());
 
     }
 
     // radial [focus-angle <number | percent>]? [focus-distance <size>]?
     // [center (<size>,<size>)]? <size>
     // stops [ ( <number> , <color> ) ]+ [ repeat | reflect ]?
-    private ParsedValue<ParsedValue[], Paint> radialGradient(final Term root) throws ParseException {
+    private ParsedValueImpl<ParsedValue[], Paint> radialGradient(final Term root) throws ParseException {
 
         final String fn = (root.token != null) ? root.token.getText() : null;
         if (fn == null || !"radial".equalsIgnoreCase(fn)) {
@@ -1881,7 +1882,7 @@ final public class CSSParser {
         if (term.token == null) error(term, "Expected \'focus-angle <number>\', \'focus-distance <number>\', \'center (<number>,<number>)\' or \'<size>\'");
 
 
-        ParsedValue<?,Size> focusAngle = null;
+        ParsedValueImpl<?,Size> focusAngle = null;
         if (term.token.getType() == CSSLexer.IDENT) {
             final String keyword = term.token.getText().toLowerCase();
             if ("focus-angle".equals(keyword)) {
@@ -1898,7 +1899,7 @@ final public class CSSParser {
             }
         }
 
-        ParsedValue<?,Size> focusDistance = null;
+        ParsedValueImpl<?,Size> focusDistance = null;
         if (term.token.getType() == CSSLexer.IDENT) {
             final String keyword = term.token.getText().toLowerCase();
             if ("focus-distance".equals(keyword)) {
@@ -1915,7 +1916,7 @@ final public class CSSParser {
             }
         }
 
-        ParsedValue<?,Size>[] centerPoint = null;
+        ParsedValueImpl<?,Size>[] centerPoint = null;
         if (term.token.getType() == CSSLexer.IDENT) {
             final String keyword = term.token.getText().toLowerCase();
             if ("center".equals(keyword)) {
@@ -1933,7 +1934,7 @@ final public class CSSParser {
             }
         }
 
-        ParsedValue<?,Size> radius = parseSize(term);
+        ParsedValueImpl<?,Size> radius = parseSize(term);
 
         prev = term;
         if ((term = term.nextInSeries) == null) error(prev, "Expected \'stops\' keyword");
@@ -1953,21 +1954,21 @@ final public class CSSParser {
         } while (((temp = temp.nextInSeries) != null) &&
                  ((temp.token != null) && (temp.token.getType() == CSSLexer.LPAREN)));
 
-        ParsedValue[] stops = new ParsedValue[nStops];
+        ParsedValueImpl[] stops = new ParsedValueImpl[nStops];
         int stopIndex = 0;
         do {
-            ParsedValue<ParsedValue[],Stop> stop = stop(term);
+            ParsedValueImpl<ParsedValue[],Stop> stop = stop(term);
             if (stop != null) stops[stopIndex++] = stop;
             prev = term;
         } while(((term = term.nextInSeries) != null) &&
                 (term.token.getType() == CSSLexer.LPAREN));
 
         // term is either null or is a cycle method, or the start of another Paint.
-        ParsedValue<CycleMethod,CycleMethod> cycleMethod = cycleMethod(term);
+        ParsedValueImpl<CycleMethod,CycleMethod> cycleMethod = cycleMethod(term);
 
         if (cycleMethod == null) {
 
-            cycleMethod = new ParsedValue<CycleMethod,CycleMethod>(CycleMethod.NO_CYCLE, null);
+            cycleMethod = new ParsedValueImpl<CycleMethod,CycleMethod>(CycleMethod.NO_CYCLE, null);
 
             // if term is not null and the last term was not a cycle method,
             // then term starts a new series or layer of Paint
@@ -1994,7 +1995,7 @@ final public class CSSParser {
             root.nextLayer = term.nextLayer;
         }
 
-        ParsedValue[] values = new ParsedValue[6 + stops.length];
+        ParsedValueImpl[] values = new ParsedValueImpl[6 + stops.length];
         int index = 0;
         values[index++] = focusAngle;
         values[index++] = focusDistance;
@@ -2003,7 +2004,7 @@ final public class CSSParser {
         values[index++] = radius;
         values[index++] = cycleMethod;
         for (int n=0; n<stops.length; n++) values[index++] = stops[n];
-        return new ParsedValue<ParsedValue[], Paint>(values, PaintConverter.RadialGradientConverter.getInstance());
+        return new ParsedValueImpl<ParsedValue[], Paint>(values, PaintConverter.RadialGradientConverter.getInstance());
     }
 
     // Based off http://dev.w3.org/csswg/css3-images/#radial-gradients
@@ -2017,7 +2018,7 @@ final public class CSSParser {
     //        <color-stop>[, <color-stop>]+ ) 
     //
     // Stops are per http://dev.w3.org/csswg/css3-images/#color-stop-syntax.
-    private ParsedValue parseRadialGradient(final Term root) throws ParseException {
+    private ParsedValueImpl parseRadialGradient(final Term root) throws ParseException {
 
         // first term in the chain is the function name...
         final String fn = (root.token != null) ? root.token.getText() : null;
@@ -2039,10 +2040,10 @@ final public class CSSParser {
         }
 
         Term prev = arg;
-        ParsedValue<?,Size>focusAngle = null;
-        ParsedValue<?,Size>focusDistance = null;
-        ParsedValue<?,Size>[] centerPoint = null;
-        ParsedValue<?,Size>radius = null;
+        ParsedValueImpl<?,Size>focusAngle = null;
+        ParsedValueImpl<?,Size>focusDistance = null;
+        ParsedValueImpl<?,Size>[] centerPoint = null;
+        ParsedValueImpl<?,Size>radius = null;
 
         if ("focus-angle".equalsIgnoreCase(arg.token.getText())) {
 
@@ -2061,7 +2062,7 @@ final public class CSSParser {
                 default:
                     error(arg, "Expected [deg | rad | grad | turn ]");
             }
-            focusAngle = new ParsedValue<Size,Size>(angle, null);
+            focusAngle = new ParsedValueImpl<Size,Size>(angle, null);
 
             prev = arg;
             if ((arg = arg.nextArg) == null)
@@ -2087,7 +2088,7 @@ final public class CSSParser {
                 default:
                     error(arg, "Expected \'%\'");
             }
-            focusDistance = new ParsedValue<Size,Size>(distance, null);
+            focusDistance = new ParsedValueImpl<Size,Size>(distance, null);
 
             prev = arg;
             if ((arg = arg.nextArg) == null)
@@ -2101,14 +2102,14 @@ final public class CSSParser {
             prev = arg;
             if ((arg = arg.nextInSeries) == null) error(prev, "Expected \'<point>\'");
 
-            ParsedValue<?,Size> ptX = parseSize(arg);
+            ParsedValueImpl<?,Size> ptX = parseSize(arg);
 
             prev = arg;
             if ((arg = arg.nextInSeries) == null) error(prev, "Expected \'<point>\'");
 
-            ParsedValue<?,Size> ptY = parseSize(arg);
+            ParsedValueImpl<?,Size> ptY = parseSize(arg);
 
-            centerPoint = new ParsedValue[] { ptX, ptY };
+            centerPoint = new ParsedValueImpl[] { ptX, ptY };
             
             prev = arg;
             if ((arg = arg.nextArg) == null)
@@ -2145,18 +2146,18 @@ final public class CSSParser {
             error(prev, "Expected \'<color-stop>\'");
         }
 
-        ParsedValue<ParsedValue[],Stop>[] stops = parseColorStops(arg);
+        ParsedValueImpl<ParsedValue[],Stop>[] stops = parseColorStops(arg);
 
-        ParsedValue[] values = new ParsedValue[6 + stops.length];
+        ParsedValueImpl[] values = new ParsedValueImpl[6 + stops.length];
         int index = 0;
         values[index++] = focusAngle;
         values[index++] = focusDistance;
         values[index++] = (centerPoint != null) ? centerPoint[0] : null;
         values[index++] = (centerPoint != null) ? centerPoint[1] : null;
         values[index++] = radius;
-        values[index++] = new ParsedValue<CycleMethod,CycleMethod>(cycleMethod, null);
+        values[index++] = new ParsedValueImpl<CycleMethod,CycleMethod>(cycleMethod, null);
         for (int n=0; n<stops.length; n++) values[index++] = stops[n];
-        return new ParsedValue<ParsedValue[], Paint>(values, PaintConverter.RadialGradientConverter.getInstance());
+        return new ParsedValueImpl<ParsedValue[], Paint>(values, PaintConverter.RadialGradientConverter.getInstance());
         
     }
     
@@ -2164,7 +2165,7 @@ final public class CSSParser {
     //
     // image-pattern(<uri-string>[,<size>,<size>,<size>,<size>[,<boolean>]?]?)
     //
-    private ParsedValue<ParsedValue[], Paint> parseImagePattern(final Term root) throws ParseException {
+    private ParsedValueImpl<ParsedValue[], Paint> parseImagePattern(final Term root) throws ParseException {
 
         // first term in the chain is the function name...
         final String fn = (root.token != null) ? root.token.getText() : null;
@@ -2183,66 +2184,66 @@ final public class CSSParser {
         Term prev = arg;
 
         final String uri = arg.token.getText();
-        ParsedValue[] uriValues = new ParsedValue[] {
-            new ParsedValue<String,String>(uri, StringConverter.getInstance()),
-            new ParsedValue<URL,URL>(sourceOfStylesheet, null)
+        ParsedValueImpl[] uriValues = new ParsedValueImpl[] {
+            new ParsedValueImpl<String,String>(uri, StringConverter.getInstance()),
+            new ParsedValueImpl<URL,URL>(sourceOfStylesheet, null)
         };
-        ParsedValue parsedURI = new ParsedValue<ParsedValue[],String>(uriValues, URLConverter.getInstance());
+        ParsedValueImpl parsedURI = new ParsedValueImpl<ParsedValue[],String>(uriValues, URLConverter.getInstance());
 
         // If nextArg is null, then there are no remaining arguments, so we are done.
         if (arg.nextArg == null) {
-            ParsedValue[] values = new ParsedValue[1];
+            ParsedValueImpl[] values = new ParsedValueImpl[1];
             values[0] = parsedURI;
-            return new ParsedValue<ParsedValue[], Paint>(values, PaintConverter.ImagePatternConverter.getInstance());
+            return new ParsedValueImpl<ParsedValue[], Paint>(values, PaintConverter.ImagePatternConverter.getInstance());
         }
 
         // There must now be 4 sizes in a row.
         Token token;
         if ((arg = arg.nextArg) == null) error(prev, "Expected \'<size>\'");
-        ParsedValue<?, Size> x = parseSize(arg);
+        ParsedValueImpl<?, Size> x = parseSize(arg);
 
         prev = arg;
         if ((arg = arg.nextArg) == null) error(prev, "Expected \'<size>\'");
-        ParsedValue<?, Size> y = parseSize(arg);
+        ParsedValueImpl<?, Size> y = parseSize(arg);
 
         prev = arg;
         if ((arg = arg.nextArg) == null) error(prev, "Expected \'<size>\'");
-        ParsedValue<?, Size> w = parseSize(arg);
+        ParsedValueImpl<?, Size> w = parseSize(arg);
 
         prev = arg;
         if ((arg = arg.nextArg) == null) error(prev, "Expected \'<size>\'");
-        ParsedValue<?, Size> h = parseSize(arg);
+        ParsedValueImpl<?, Size> h = parseSize(arg);
 
         // If there are no more args, then we are done.
         if (arg.nextArg == null) {
-            ParsedValue[] values = new ParsedValue[5];
+            ParsedValueImpl[] values = new ParsedValueImpl[5];
             values[0] = parsedURI;
             values[1] = x;
             values[2] = y;
             values[3] = w;
             values[4] = h;
-            return new ParsedValue<ParsedValue[], Paint>(values, PaintConverter.ImagePatternConverter.getInstance());
+            return new ParsedValueImpl<ParsedValue[], Paint>(values, PaintConverter.ImagePatternConverter.getInstance());
         }
 
         prev = arg;
         if ((arg = arg.nextArg) == null) error(prev, "Expected \'<boolean>\'");
         if ((token = arg.token) == null || token.getText() == null) error(arg, "Expected \'<boolean>\'");
 
-        ParsedValue[] values = new ParsedValue[6];
+        ParsedValueImpl[] values = new ParsedValueImpl[6];
         values[0] = parsedURI;
         values[1] = x;
         values[2] = y;
         values[3] = w;
         values[4] = h;
-        values[5] = new ParsedValue<Boolean, Boolean>(Boolean.parseBoolean(token.getText()), null);
-        return new ParsedValue<ParsedValue[], Paint>(values, PaintConverter.ImagePatternConverter.getInstance());
+        values[5] = new ParsedValueImpl<Boolean, Boolean>(Boolean.parseBoolean(token.getText()), null);
+        return new ParsedValueImpl<ParsedValue[], Paint>(values, PaintConverter.ImagePatternConverter.getInstance());
     }
 
     // For tiling ImagePatterns easily.
     //
     // repeating-image-pattern(<uri-string>)
     //
-    private ParsedValue<ParsedValue[], Paint> parseRepeatingImagePattern(final Term root) throws ParseException {
+    private ParsedValueImpl<ParsedValue[], Paint> parseRepeatingImagePattern(final Term root) throws ParseException {
         // first term in the chain is the function name...
         final String fn = (root.token != null) ? root.token.getText() : null;
         // NOTE: We should put this in an assertion, so as not to do this work ordinarily, because only a
@@ -2258,25 +2259,25 @@ final public class CSSParser {
         }
 
         final String uri = arg.token.getText();
-        ParsedValue[] uriValues = new ParsedValue[] {
-            new ParsedValue<String,String>(uri, StringConverter.getInstance()),
-            new ParsedValue<URL,URL>(sourceOfStylesheet, null)
+        ParsedValueImpl[] uriValues = new ParsedValueImpl[] {
+            new ParsedValueImpl<String,String>(uri, StringConverter.getInstance()),
+            new ParsedValueImpl<URL,URL>(sourceOfStylesheet, null)
         };
-        ParsedValue parsedURI = new ParsedValue<ParsedValue[],String>(uriValues, URLConverter.getInstance());
-        ParsedValue[] values = new ParsedValue[1];
+        ParsedValueImpl parsedURI = new ParsedValueImpl<ParsedValue[],String>(uriValues, URLConverter.getInstance());
+        ParsedValueImpl[] values = new ParsedValueImpl[1];
         values[0] = parsedURI;
-        return new ParsedValue<ParsedValue[], Paint>(values, PaintConverter.RepeatingImagePatternConverter.getInstance());
+        return new ParsedValueImpl<ParsedValue[], Paint>(values, PaintConverter.RepeatingImagePatternConverter.getInstance());
     }
 
     // parse a series of paint values separated by commas.
     // i.e., <paint> [, <paint>]*
-    private ParsedValue<ParsedValue<?,Paint>[],Paint[]> parsePaintLayers(Term root)
+    private ParsedValueImpl<ParsedValue<?,Paint>[],Paint[]> parsePaintLayers(Term root)
             throws ParseException {
 
         // how many paints in the series?
         int nPaints = numberOfLayers(root);
 
-        ParsedValue<?,Paint>[] paints = new ParsedValue[nPaints];
+        ParsedValueImpl<?,Paint>[] paints = new ParsedValueImpl[nPaints];
 
         Term temp = root;
         int paint = 0;
@@ -2286,22 +2287,22 @@ final public class CSSParser {
                 temp.token.getText() == null ||
                 temp.token.getText().isEmpty()) error(temp, "Expected \'<paint>\'");
 
-            paints[paint++] = (ParsedValue<?,Paint>)parse(temp);
+            paints[paint++] = (ParsedValueImpl<?,Paint>)parse(temp);
 
             temp = nextLayer(temp);
         } while (temp != null);
 
-        return new ParsedValue<ParsedValue<?,Paint>[],Paint[]>(paints, PaintConverter.SequenceConverter.getInstance());
+        return new ParsedValueImpl<ParsedValue<?,Paint>[],Paint[]>(paints, PaintConverter.SequenceConverter.getInstance());
 
     }
 
     // An size or a series of four size values
     // <size> | <size> <size> <size> <size>
-    private ParsedValue<?,Size>[] parseSizeSeries(final Term root)
+    private ParsedValueImpl<?,Size>[] parseSizeSeries(final Term root)
             throws ParseException {
 
         Term temp = root;
-        ParsedValue<?,Size>[] sides = new ParsedValue[4];
+        ParsedValueImpl<?,Size>[] sides = new ParsedValueImpl[4];
         int side = 0;
 
         while (side < 4 && temp != null) {
@@ -2318,38 +2319,38 @@ final public class CSSParser {
 
     // A series of inset or sets of four inset values
     // <size> | <size> <size> <size> <size> [ , [ <size> | <size> <size> <size> <size>] ]*
-    private ParsedValue<ParsedValue<ParsedValue<?,Size>[],Insets>[], Insets[]> parseInsetsLayers(Term root)
+    private ParsedValueImpl<ParsedValue<ParsedValue<?,Size>[],Insets>[], Insets[]> parseInsetsLayers(Term root)
             throws ParseException {
 
         int nLayers = numberOfLayers(root);
 
         Term temp = root;
         int layer = 0;
-        ParsedValue<ParsedValue<?,Size>[],Insets>[] layers = new ParsedValue[nLayers];
+        ParsedValueImpl<ParsedValue<?,Size>[],Insets>[] layers = new ParsedValueImpl[nLayers];
 
         while(temp != null) {
-            ParsedValue<?,Size>[] sides = parseSizeSeries(temp);
-            layers[layer++] = new ParsedValue<ParsedValue<?,Size>[],Insets>(sides, InsetsConverter.getInstance());
+            ParsedValueImpl<?,Size>[] sides = parseSizeSeries(temp);
+            layers[layer++] = new ParsedValueImpl<ParsedValue<?,Size>[],Insets>(sides, InsetsConverter.getInstance());
             while(temp.nextInSeries != null) {
                 temp = temp.nextInSeries;
             }
             temp = nextLayer(temp);
         }
 
-        return new ParsedValue<ParsedValue<ParsedValue<?,Size>[],Insets>[], Insets[]>(layers, InsetsConverter.SequenceConverter.getInstance());
+        return new ParsedValueImpl<ParsedValue<ParsedValue<?,Size>[],Insets>[], Insets[]>(layers, InsetsConverter.SequenceConverter.getInstance());
     }
 
     // A single inset (1, 2, 3, or 4 digits)
     // <size> | <size> <size> <size> <size>
-    private ParsedValue<ParsedValue<?,Size>[],Insets> parseInsetsLayer(Term root)
+    private ParsedValueImpl<ParsedValue<?,Size>[],Insets> parseInsetsLayer(Term root)
             throws ParseException {
 
         Term temp = root;
-        ParsedValue<ParsedValue<?,Size>[],Insets> layer = null;
+        ParsedValueImpl<ParsedValue<?,Size>[],Insets> layer = null;
 
         while(temp != null) {
-            ParsedValue<?,Size>[] sides = parseSizeSeries(temp);
-            layer = new ParsedValue<ParsedValue<?,Size>[],Insets>(sides, InsetsConverter.getInstance());
+            ParsedValueImpl<?,Size>[] sides = parseSizeSeries(temp);
+            layer = new ParsedValueImpl<ParsedValue<?,Size>[],Insets>(sides, InsetsConverter.getInstance());
             while(temp.nextInSeries != null) {
                 temp = temp.nextInSeries;
             }
@@ -2359,36 +2360,36 @@ final public class CSSParser {
     }
 
     // <size> | <size> <size> <size> <size>
-    private ParsedValue<ParsedValue<ParsedValue<?,Size>[],Margins>[], Margins[]> parseMarginsLayers(Term root)
+    private ParsedValueImpl<ParsedValue<ParsedValue<?,Size>[],Margins>[], Margins[]> parseMarginsLayers(Term root)
             throws ParseException {
 
         int nLayers = numberOfLayers(root);
 
         Term temp = root;
         int layer = 0;
-        ParsedValue<ParsedValue<?,Size>[],Margins>[] layers = new ParsedValue[nLayers];
+        ParsedValueImpl<ParsedValue<?,Size>[],Margins>[] layers = new ParsedValueImpl[nLayers];
 
         while(temp != null) {
-            ParsedValue<?,Size>[] sides = parseSizeSeries(temp);
-            layers[layer++] = new ParsedValue<ParsedValue<?,Size>[],Margins>(sides, Margins.Converter.getInstance());
+            ParsedValueImpl<?,Size>[] sides = parseSizeSeries(temp);
+            layers[layer++] = new ParsedValueImpl<ParsedValue<?,Size>[],Margins>(sides, Margins.Converter.getInstance());
             while(temp.nextInSeries != null) {
                 temp = temp.nextInSeries;
             }
             temp = nextLayer(temp);
         }
 
-        return new ParsedValue<ParsedValue<ParsedValue<?,Size>[],Margins>[], Margins[]>(layers, Margins.SequenceConverter.getInstance());
+        return new ParsedValueImpl<ParsedValue<ParsedValue<?,Size>[],Margins>[], Margins[]>(layers, Margins.SequenceConverter.getInstance());
     }
 
     /* Constant for background position */
-    private final static ParsedValue<Size,Size> ZERO_PERCENT =
-            new ParsedValue<Size,Size>(new Size(0f, SizeUnits.PERCENT), null);
+    private final static ParsedValueImpl<Size,Size> ZERO_PERCENT =
+            new ParsedValueImpl<Size,Size>(new Size(0f, SizeUnits.PERCENT), null);
     /* Constant for background position */
-    private final static ParsedValue<Size,Size> FIFTY_PERCENT =
-            new ParsedValue<Size,Size>(new Size(50f, SizeUnits.PERCENT), null);
+    private final static ParsedValueImpl<Size,Size> FIFTY_PERCENT =
+            new ParsedValueImpl<Size,Size>(new Size(50f, SizeUnits.PERCENT), null);
     /* Constant for background position */
-    private final static ParsedValue<Size,Size> ONE_HUNDRED_PERCENT =
-            new ParsedValue<Size,Size>(new Size(100f, SizeUnits.PERCENT), null);
+    private final static ParsedValueImpl<Size,Size> ONE_HUNDRED_PERCENT =
+            new ParsedValueImpl<Size,Size>(new Size(100f, SizeUnits.PERCENT), null);
 
     /*
      * http://www.w3.org/TR/css3-background/#the-background-position
@@ -2405,10 +2406,10 @@ final public class CSSParser {
      *
      * From the W3 spec:
      *
-     * returned ParsedValue is [size, size, size, size] with the semantics
+     * returned ParsedValueImpl is [size, size, size, size] with the semantics
      * [top offset, right offset, bottom offset left offset]
      */
-    private ParsedValue<ParsedValue<?,Size>[], BackgroundPosition> parseBackgroundPosition(Term term)
+    private ParsedValueImpl<ParsedValue<?,Size>[], BackgroundPosition> parseBackgroundPosition(Term term)
         throws ParseException {
 
         if (term.token == null ||
@@ -2427,7 +2428,7 @@ final public class CSSParser {
         Term termFour = (termThree != null) ? termThree.nextInSeries : null;
         Token valueFour = (termFour != null) ? termFour.token : null;
 
-        ParsedValue<?,Size> top, right, bottom, left;
+        ParsedValueImpl<?,Size> top, right, bottom, left;
         top = right = bottom = left = ZERO_PERCENT;
 
         // http://www.w3.org/TR/css3-background/#the-background-position states:
@@ -2458,7 +2459,7 @@ final public class CSSParser {
                 valueOne.getText().isEmpty())
                 error(termOne, "Expected \'center\', \'left\' or \'right\'");
 
-            ParsedValue<?,Size> sizeTwo = null;
+            ParsedValueImpl<?,Size> sizeTwo = null;
             if (valueTwo != null && isSize(valueTwo)) {
                 sizeTwo = parseSize(termTwo);
             } else {
@@ -2470,7 +2471,7 @@ final public class CSSParser {
                 valueThree.getText().isEmpty())
                 error(termThree, "Expected \'center\', \'left\' or \'right\'");
 
-            ParsedValue<?,Size> sizeFour = null;
+            ParsedValueImpl<?,Size> sizeFour = null;
             if (valueFour != null) {
                 if (isSize(valueFour)) {
                     sizeFour = parseSize(termFour);
@@ -2651,29 +2652,29 @@ final public class CSSParser {
 
         }
 
-        ParsedValue<?,Size>[] values = new ParsedValue[] {top, right, bottom, left};
-        return new ParsedValue<ParsedValue<?,Size>[], BackgroundPosition>(values, BackgroundPositionConverter.getInstance());
+        ParsedValueImpl<?,Size>[] values = new ParsedValueImpl[] {top, right, bottom, left};
+        return new ParsedValueImpl<ParsedValue<?,Size>[], BackgroundPosition>(values, BackgroundPositionConverter.getInstance());
     }
 
-    private ParsedValue<ParsedValue<ParsedValue<?,Size>[], BackgroundPosition>[], BackgroundPosition[]>
+    private ParsedValueImpl<ParsedValue<ParsedValue<?,Size>[], BackgroundPosition>[], BackgroundPosition[]>
             parseBackgroundPositionLayers(final Term root) throws ParseException {
 
         int nLayers = numberOfLayers(root);
-        ParsedValue<ParsedValue<?,Size>[], BackgroundPosition>[] layers = new ParsedValue[nLayers];
+        ParsedValueImpl<ParsedValue<?,Size>[], BackgroundPosition>[] layers = new ParsedValueImpl[nLayers];
         int layer = 0;
         Term term = root;
         while (term != null) {
             layers[layer++] = parseBackgroundPosition(term);
             term = nextLayer(term);
         }
-        return new ParsedValue<ParsedValue<ParsedValue<?,Size>[], BackgroundPosition>[], BackgroundPosition[]>(layers, LayeredBackgroundPositionConverter.getInstance());
+        return new ParsedValueImpl<ParsedValue<ParsedValue<?,Size>[], BackgroundPosition>[], BackgroundPosition[]>(layers, LayeredBackgroundPositionConverter.getInstance());
     }
 
     /*
     http://www.w3.org/TR/css3-background/#the-background-repeat
     <repeat-style> = repeat-x | repeat-y | [repeat | space | round | no-repeat]{1,2}
     */
-    private ParsedValue<BackgroundRepeat, BackgroundRepeat>[] parseRepeatStyle(final Term root)
+    private ParsedValueImpl<BackgroundRepeat, BackgroundRepeat>[] parseRepeatStyle(final Term root)
             throws ParseException {
 
         BackgroundRepeat xAxis, yAxis;
@@ -2738,48 +2739,48 @@ final public class CSSParser {
             }
         }
 
-        return new ParsedValue[] {
-            new ParsedValue<BackgroundRepeat,BackgroundRepeat>(xAxis, null),
-            new ParsedValue<BackgroundRepeat,BackgroundRepeat>(yAxis, null)
+        return new ParsedValueImpl[] {
+            new ParsedValueImpl<BackgroundRepeat,BackgroundRepeat>(xAxis, null),
+            new ParsedValueImpl<BackgroundRepeat,BackgroundRepeat>(yAxis, null)
         };
     }
 
-    private ParsedValue<ParsedValue<BackgroundRepeat, BackgroundRepeat>[][],RepeatStruct[]>
+    private ParsedValueImpl<ParsedValue<BackgroundRepeat, BackgroundRepeat>[][],RepeatStruct[]>
             parseBorderImageRepeatStyleLayers(final Term root) throws ParseException {
 
         int nLayers = numberOfLayers(root);
-        ParsedValue<BackgroundRepeat, BackgroundRepeat>[][] layers = new ParsedValue[nLayers][];
+        ParsedValueImpl<BackgroundRepeat, BackgroundRepeat>[][] layers = new ParsedValueImpl[nLayers][];
         int layer = 0;
         Term term = root;
         while (term != null) {
             layers[layer++] = parseRepeatStyle(term);
             term = nextLayer(term);
         }
-        return new ParsedValue<ParsedValue<BackgroundRepeat, BackgroundRepeat>[][],RepeatStruct[]>(layers, RepeatStructConverter.getInstance());
+        return new ParsedValueImpl<ParsedValue<BackgroundRepeat, BackgroundRepeat>[][],RepeatStruct[]>(layers, RepeatStructConverter.getInstance());
     }
 
-    private ParsedValue<ParsedValue<BackgroundRepeat, BackgroundRepeat>[][], RepeatStruct[]>
+    private ParsedValueImpl<ParsedValue<BackgroundRepeat, BackgroundRepeat>[][], RepeatStruct[]>
             parseBackgroundRepeatStyleLayers(final Term root) throws ParseException {
 
         int nLayers = numberOfLayers(root);
-        ParsedValue<BackgroundRepeat, BackgroundRepeat>[][] layers = new ParsedValue[nLayers][];
+        ParsedValueImpl<BackgroundRepeat, BackgroundRepeat>[][] layers = new ParsedValueImpl[nLayers][];
         int layer = 0;
         Term term = root;
         while (term != null) {
             layers[layer++] = parseRepeatStyle(term);
             term = nextLayer(term);
         }
-        return new ParsedValue<ParsedValue<BackgroundRepeat, BackgroundRepeat>[][], RepeatStruct[]>(layers, RepeatStructConverter.getInstance());
+        return new ParsedValueImpl<ParsedValue<BackgroundRepeat, BackgroundRepeat>[][], RepeatStruct[]>(layers, RepeatStructConverter.getInstance());
     }
 
     /*
     http://www.w3.org/TR/css3-background/#the-background-size
     <bg-size> = [ <length> | <percentage> | auto ]{1,2} | cover | contain
     */
-    private ParsedValue<ParsedValue[], BackgroundSize> parseBackgroundSize(final Term root)
+    private ParsedValueImpl<ParsedValue[], BackgroundSize> parseBackgroundSize(final Term root)
         throws ParseException {
 
-        ParsedValue<?,Size> height = null, width = null;
+        ParsedValueImpl<?,Size> height = null, width = null;
         boolean cover = false, contain = false;
 
         Term term = root;
@@ -2834,35 +2835,35 @@ final public class CSSParser {
 
         }
 
-        ParsedValue[] values = new ParsedValue[] {
+        ParsedValueImpl[] values = new ParsedValueImpl[] {
             width,
             height,
             // TODO: handling of booleans is really bogus
-            new ParsedValue<String,Boolean>((cover ? "true" : "false"), BooleanConverter.getInstance()),
-            new ParsedValue<String,Boolean>((contain ? "true" : "false"), BooleanConverter.getInstance())
+            new ParsedValueImpl<String,Boolean>((cover ? "true" : "false"), BooleanConverter.getInstance()),
+            new ParsedValueImpl<String,Boolean>((contain ? "true" : "false"), BooleanConverter.getInstance())
         };
-        return new ParsedValue<ParsedValue[], BackgroundSize>(values, BackgroundSizeConverter.getInstance());
+        return new ParsedValueImpl<ParsedValue[], BackgroundSize>(values, BackgroundSizeConverter.getInstance());
     }
 
-    private ParsedValue<ParsedValue<ParsedValue[], BackgroundSize>[],  BackgroundSize[]>
+    private ParsedValueImpl<ParsedValue<ParsedValue[], BackgroundSize>[],  BackgroundSize[]>
             parseBackgroundSizeLayers(final Term root) throws ParseException {
 
         int nLayers = numberOfLayers(root);
-        ParsedValue<ParsedValue[], BackgroundSize>[] layers = new ParsedValue[nLayers];
+        ParsedValueImpl<ParsedValue[], BackgroundSize>[] layers = new ParsedValueImpl[nLayers];
         int layer = 0;
         Term term = root;
         while (term != null) {
             layers[layer++] = parseBackgroundSize(term);
             term = nextLayer(term);
         }
-        return new ParsedValue<ParsedValue<ParsedValue[], BackgroundSize>[], BackgroundSize[]>(layers, LayeredBackgroundSizeConverter.getInstance());
+        return new ParsedValueImpl<ParsedValue<ParsedValue[], BackgroundSize>[], BackgroundSize[]>(layers, LayeredBackgroundSizeConverter.getInstance());
     }
 
-    private ParsedValue<ParsedValue<?,Paint>[], Paint[]> parseBorderPaint(final Term root)
+    private ParsedValueImpl<ParsedValue<?,Paint>[], Paint[]> parseBorderPaint(final Term root)
         throws ParseException {
 
         Term term = root;
-        ParsedValue<?,Paint>[] paints = new ParsedValue[4];
+        ParsedValueImpl<?,Paint>[] paints = new ParsedValueImpl[4];
         int paint = 0;
 
         while(term != null) {
@@ -2875,29 +2876,29 @@ final public class CSSParser {
         if (paint < 3) paints[2] = paints[0]; // bottom = top
         if (paint < 4) paints[3] = paints[1]; // left = right
 
-        return new ParsedValue<ParsedValue<?,Paint>[], Paint[]>(paints, StrokeBorderPaintConverter.getInstance());
+        return new ParsedValueImpl<ParsedValue<?,Paint>[], Paint[]>(paints, StrokeBorderPaintConverter.getInstance());
     }
 
-    private ParsedValue<ParsedValue<ParsedValue<?,Paint>[],Paint[]>[], Paint[][]> parseBorderPaintLayers(final Term root)
+    private ParsedValueImpl<ParsedValue<ParsedValue<?,Paint>[],Paint[]>[], Paint[][]> parseBorderPaintLayers(final Term root)
         throws ParseException {
 
         int nLayers = numberOfLayers(root);
-        ParsedValue<ParsedValue<?,Paint>[],Paint[]>[] layers = new ParsedValue[nLayers];
+        ParsedValueImpl<ParsedValue<?,Paint>[],Paint[]>[] layers = new ParsedValueImpl[nLayers];
         int layer = 0;
         Term term = root;
         while (term != null) {
             layers[layer++] = parseBorderPaint(term);
             term = nextLayer(term);
         }
-        return new ParsedValue<ParsedValue<ParsedValue<?,Paint>[],Paint[]>[], Paint[][]>(layers, LayeredBorderPaintConverter.getInstance());
+        return new ParsedValueImpl<ParsedValue<ParsedValue<?,Paint>[],Paint[]>[], Paint[][]>(layers, LayeredBorderPaintConverter.getInstance());
     }
 
     // borderStyle (borderStyle (borderStyle borderStyle?)?)?
-    private ParsedValue<ParsedValue<ParsedValue[],BorderStrokeStyle>[],BorderStrokeStyle[]> parseBorderStyleSeries(final Term root)
+    private ParsedValueImpl<ParsedValue<ParsedValue[],BorderStrokeStyle>[],BorderStrokeStyle[]> parseBorderStyleSeries(final Term root)
             throws ParseException {
 
         Term term = root;
-        ParsedValue<ParsedValue[],BorderStrokeStyle>[] borders = new ParsedValue[4];
+        ParsedValueImpl<ParsedValue[],BorderStrokeStyle>[] borders = new ParsedValueImpl[4];
         int border = 0;
         while (term != null) {
             borders[border++] = parseBorderStyle(term);
@@ -2908,22 +2909,22 @@ final public class CSSParser {
         if (border < 3) borders[2] = borders[0]; // bottom = top
         if (border < 4) borders[3] = borders[1]; // left = right
 
-        return new ParsedValue<ParsedValue<ParsedValue[],BorderStrokeStyle>[],BorderStrokeStyle[]>(borders, BorderStrokeStyleSequenceConverter.getInstance());
+        return new ParsedValueImpl<ParsedValue<ParsedValue[],BorderStrokeStyle>[],BorderStrokeStyle[]>(borders, BorderStrokeStyleSequenceConverter.getInstance());
     }
 
 
-    private ParsedValue<ParsedValue<ParsedValue<ParsedValue[],BorderStrokeStyle>[],BorderStrokeStyle[]>[], BorderStrokeStyle[][]>
+    private ParsedValueImpl<ParsedValue<ParsedValue<ParsedValue[],BorderStrokeStyle>[],BorderStrokeStyle[]>[], BorderStrokeStyle[][]>
             parseBorderStyleLayers(final Term root) throws ParseException {
 
         int nLayers = numberOfLayers(root);
-        ParsedValue<ParsedValue<ParsedValue[],BorderStrokeStyle>[],BorderStrokeStyle[]>[] layers = new ParsedValue[nLayers];
+        ParsedValueImpl<ParsedValue<ParsedValue[],BorderStrokeStyle>[],BorderStrokeStyle[]>[] layers = new ParsedValueImpl[nLayers];
         int layer = 0;
         Term term = root;
         while (term != null) {
             layers[layer++] = parseBorderStyleSeries(term);
             term = nextLayer(term);
         }
-        return new ParsedValue<ParsedValue<ParsedValue<ParsedValue[],BorderStrokeStyle>[],BorderStrokeStyle[]>[], BorderStrokeStyle[][]>(layers, LayeredBorderStyleConverter.getInstance());
+        return new ParsedValueImpl<ParsedValue<ParsedValue<ParsedValue[],BorderStrokeStyle>[],BorderStrokeStyle[]>[], BorderStrokeStyle[][]>(layers, LayeredBorderStyleConverter.getInstance());
     }
 
     // Only meant to be used from parseBorderStyle, but might be useful elsewhere
@@ -2944,7 +2945,7 @@ final public class CSSParser {
     //      <dash-style> [centered | inside | outside]? [line-join [miter <number> | bevel | round]]? [line-cap [square | butt | round]]?
     // where <dash-style> =
     //      [ none | solid | dotted | dashed ]
-    private ParsedValue<ParsedValue[],BorderStrokeStyle> parseBorderStyle(final Term root)
+    private ParsedValueImpl<ParsedValue[],BorderStrokeStyle> parseBorderStyle(final Term root)
             throws ParseException {
 
 
@@ -2971,8 +2972,8 @@ final public class CSSParser {
                  term.token == null ||
                  !isSize(term.token)) error(term, "Expected \'<size>\'");
 
-            ParsedValue<?,Size> sizeVal = parseSize(term);
-            dashPhase = new ParsedValue<ParsedValue<?,Size>,Double>(sizeVal,SizeConverter.getInstance());
+            ParsedValueImpl<?,Size> sizeVal = parseSize(term);
+            dashPhase = new ParsedValueImpl<ParsedValue<?,Size>,Double>(sizeVal,SizeConverter.getInstance());
 
             prev = term;
             term = term.nextInSeries;
@@ -2992,7 +2993,7 @@ final public class CSSParser {
             prev = term;
             term = term.nextInSeries;
 
-            ParsedValue[] lineJoinValues = parseStrokeLineJoin(term);
+            ParsedValueImpl[] lineJoinValues = parseStrokeLineJoin(term);
             if (lineJoinValues != null) {
                 strokeLineJoin = lineJoinValues[0];
                 strokeMiterLimit = lineJoinValues[1];
@@ -3039,7 +3040,7 @@ final public class CSSParser {
             strokeLineCap
         };
 
-        return new ParsedValue(values, BorderStyleConverter.getInstance());
+        return new ParsedValueImpl(values, BorderStyleConverter.getInstance());
     }
 
     //
@@ -3106,7 +3107,7 @@ final public class CSSParser {
         return BorderStyleConverter.SOLID;
     }
 
-    private ParsedValue<ParsedValue<?,Size>[],Double[]> segments(Term root)
+    private ParsedValueImpl<ParsedValue<?,Size>[],Double[]> segments(Term root)
             throws ParseException {
 
         // first term in the chain is the function name...
@@ -3119,18 +3120,18 @@ final public class CSSParser {
         if (arg == null) error(null, "Expected \'<size>\'");
 
         int nArgs = numberOfArgs(root);
-        ParsedValue<?,Size>[] segments = new ParsedValue[nArgs];
+        ParsedValueImpl<?,Size>[] segments = new ParsedValueImpl[nArgs];
         int segment = 0;
         while(arg != null) {
             segments[segment++] = parseSize(arg);
             arg = arg.nextArg;
         }
 
-        return new ParsedValue<ParsedValue<?,Size>[],Double[]>(segments,SizeConverter.SequenceConverter.getInstance());
+        return new ParsedValueImpl<ParsedValue<?,Size>[],Double[]>(segments,SizeConverter.SequenceConverter.getInstance());
 
     }
 
-    private ParsedValue<String,StrokeType> parseStrokeType(final Term root)
+    private ParsedValueImpl<String,StrokeType> parseStrokeType(final Term root)
         throws ParseException {
 
         final String keyword = getKeyword(root);
@@ -3140,7 +3141,7 @@ final public class CSSParser {
             "inside".equals(keyword) ||
             "outside".equals(keyword)) {
 
-            return new ParsedValue<String,StrokeType>(keyword, new EnumConverter(StrokeType.class));
+            return new ParsedValueImpl<String,StrokeType>(keyword, new EnumConverter(StrokeType.class));
 
         }
         return null;
@@ -3148,10 +3149,10 @@ final public class CSSParser {
 
     // Root term is the term just after the line-join keyword
     // Returns an array of two Values or null.
-    // ParsedValue[0] is ParsedValue<StrokeLineJoin,StrokeLineJoin>
-    // ParsedValue[1] is ParsedValue<Value<?,Size>,Double> if miter limit is given, null otherwise.
+    // ParsedValueImpl[0] is ParsedValueImpl<StrokeLineJoin,StrokeLineJoin>
+    // ParsedValueImpl[1] is ParsedValueImpl<Value<?,Size>,Double> if miter limit is given, null otherwise.
     // If the token is not a StrokeLineJoin, then null is returned.
-    private ParsedValue[] parseStrokeLineJoin(final Term root)
+    private ParsedValueImpl[] parseStrokeLineJoin(final Term root)
         throws ParseException {
 
         final String keyword = getKeyword(root);
@@ -3160,10 +3161,10 @@ final public class CSSParser {
             "bevel".equals(keyword) ||
             "round".equals(keyword)) {
 
-            ParsedValue<String,StrokeLineJoin> strokeLineJoin =
-                    new ParsedValue<String,StrokeLineJoin>(keyword, new EnumConverter(StrokeLineJoin.class));
+            ParsedValueImpl<String,StrokeLineJoin> strokeLineJoin =
+                    new ParsedValueImpl<String,StrokeLineJoin>(keyword, new EnumConverter(StrokeLineJoin.class));
 
-            ParsedValue<ParsedValue<?,Size>,Double> strokeMiterLimit = null;
+            ParsedValueImpl<ParsedValue<?,Size>,Double> strokeMiterLimit = null;
             if ("miter".equals(keyword)) {
 
                 Term next = root.nextInSeries;
@@ -3172,20 +3173,20 @@ final public class CSSParser {
                     isSize(next.token)) {
 
                     root.nextInSeries = next.nextInSeries;
-                    ParsedValue<?,Size> sizeVal = parseSize(next);
-                    strokeMiterLimit = new ParsedValue<ParsedValue<?,Size>,Double>(sizeVal,SizeConverter.getInstance());
+                    ParsedValueImpl<?,Size> sizeVal = parseSize(next);
+                    strokeMiterLimit = new ParsedValueImpl<ParsedValue<?,Size>,Double>(sizeVal,SizeConverter.getInstance());
                 }
 
             }
 
-            return new ParsedValue[] { strokeLineJoin, strokeMiterLimit };
+            return new ParsedValueImpl[] { strokeLineJoin, strokeMiterLimit };
         }
         return null;
     }
 
     // Root term is the term just after the line-cap keyword
     // If the token is not a StrokeLineCap, then null is returned.
-    private ParsedValue<String,StrokeLineCap> parseStrokeLineCap(final Term root)
+    private ParsedValueImpl<String,StrokeLineCap> parseStrokeLineCap(final Term root)
         throws ParseException {
 
         final String keyword = getKeyword(root);
@@ -3194,7 +3195,7 @@ final public class CSSParser {
             "butt".equals(keyword) ||
             "round".equals(keyword)) {
 
-            return new ParsedValue<String,StrokeLineCap>(keyword, new EnumConverter(StrokeLineCap.class));
+            return new ParsedValueImpl<String,StrokeLineCap>(keyword, new EnumConverter(StrokeLineCap.class));
         }
         return null;
     }
@@ -3203,14 +3204,14 @@ final public class CSSParser {
      * http://www.w3.org/TR/css3-background/#the-border-image-slice
      * [<number> | <percentage>]{1,4} && fill?
      */
-    private ParsedValue<ParsedValue[],BorderImageSlices> parseBorderImageSlice(final Term root)
+    private ParsedValueImpl<ParsedValue[],BorderImageSlices> parseBorderImageSlice(final Term root)
         throws ParseException {
 
         Term term = root;
         if (term.token == null || !isSize(term.token))
                 error(term, "Expected \'<size>\'");
 
-        ParsedValue<?,Size>[] insets = new ParsedValue[4];
+        ParsedValueImpl<?,Size>[] insets = new ParsedValueImpl[4];
         Boolean fill = Boolean.FALSE;
 
         int inset = 0;
@@ -3232,39 +3233,39 @@ final public class CSSParser {
         if (inset < 3) insets[2] = insets[0]; // bottom = top
         if (inset < 4) insets[3] = insets[1]; // left = right
 
-        ParsedValue[] values = new ParsedValue[] {
-                new ParsedValue<ParsedValue<?,Size>[],Insets>(insets, InsetsConverter.getInstance()),
-                new ParsedValue<Boolean,Boolean>(fill, null)
+        ParsedValueImpl[] values = new ParsedValueImpl[] {
+                new ParsedValueImpl<ParsedValue<?,Size>[],Insets>(insets, InsetsConverter.getInstance()),
+                new ParsedValueImpl<Boolean,Boolean>(fill, null)
         };
-        return new ParsedValue<ParsedValue[], BorderImageSlices>(values, BorderImageSliceConverter.getInstance());
+        return new ParsedValueImpl<ParsedValue[], BorderImageSlices>(values, BorderImageSliceConverter.getInstance());
     }
 
-    private ParsedValue<ParsedValue<ParsedValue[],BorderImageSlices>[],BorderImageSlices[]>
+    private ParsedValueImpl<ParsedValue<ParsedValue[],BorderImageSlices>[],BorderImageSlices[]>
             parseBorderImageSliceLayers(final Term root) throws ParseException {
 
         int nLayers = numberOfLayers(root);
-        ParsedValue<ParsedValue[], BorderImageSlices>[] layers = new ParsedValue[nLayers];
+        ParsedValueImpl<ParsedValue[], BorderImageSlices>[] layers = new ParsedValueImpl[nLayers];
         int layer = 0;
         Term term = root;
         while (term != null) {
             layers[layer++] = parseBorderImageSlice(term);
             term = nextLayer(term);
         }
-        return new ParsedValue<ParsedValue<ParsedValue[],BorderImageSlices>[],BorderImageSlices[]> (layers, SliceSequenceConverter.getInstance());
+        return new ParsedValueImpl<ParsedValue<ParsedValue[],BorderImageSlices>[],BorderImageSlices[]> (layers, SliceSequenceConverter.getInstance());
     }
 
     /*
      * http://www.w3.org/TR/css3-background/#border-image-width
      * [ <length> | <percentage> | <number> | auto ]{1,4}
      */
-    private ParsedValue<ParsedValue<?,Size>[], BorderWidths> parseBorderImageWidth(final Term root)
+    private ParsedValueImpl<ParsedValue<?,Size>[], BorderWidths> parseBorderImageWidth(final Term root)
             throws ParseException {
 
         Term term = root;
         if (term.token == null || !isSize(term.token))
             error(term, "Expected \'<size>\'");
 
-        ParsedValue<?,Size>[] insets = new ParsedValue[4];
+        ParsedValueImpl<?,Size>[] insets = new ParsedValueImpl[4];
 
         int inset = 0;
         while (inset < 4 && term != null) {
@@ -3280,28 +3281,28 @@ final public class CSSParser {
         if (inset < 3) insets[2] = insets[0]; // bottom = top
         if (inset < 4) insets[3] = insets[1]; // left = right
 
-        return new ParsedValue<ParsedValue<?,Size>[], BorderWidths>(insets, BorderImageWidthConverter.getInstance());
+        return new ParsedValueImpl<ParsedValue<?,Size>[], BorderWidths>(insets, BorderImageWidthConverter.getInstance());
     }
 
-    private ParsedValue<ParsedValue<ParsedValue<?,Size>[],BorderWidths>[],BorderWidths[]>
+    private ParsedValueImpl<ParsedValue<ParsedValue<?,Size>[],BorderWidths>[],BorderWidths[]>
         parseBorderImageWidthLayers(final Term root) throws ParseException {
 
         int nLayers = numberOfLayers(root);
-        ParsedValue<ParsedValue<?,Size>[], BorderWidths>[] layers = new ParsedValue[nLayers];
+        ParsedValueImpl<ParsedValue<?,Size>[], BorderWidths>[] layers = new ParsedValueImpl[nLayers];
         int layer = 0;
         Term term = root;
         while (term != null) {
             layers[layer++] = parseBorderImageWidth(term);
             term = nextLayer(term);
         }
-        return new ParsedValue<ParsedValue<ParsedValue<?,Size>[],BorderWidths>[],BorderWidths[]> (layers, BorderImageWidthsSequenceConverter.getInstance());
+        return new ParsedValueImpl<ParsedValue<ParsedValue<?,Size>[],BorderWidths>[],BorderWidths[]> (layers, BorderImageWidthsSequenceConverter.getInstance());
     }
 
 
 
     // parse a URI value
     // i.e., url("<uri>")
-    private ParsedValue<ParsedValue[],String> parseURI(Term root)
+    private ParsedValueImpl<ParsedValue[],String> parseURI(Term root)
             throws ParseException {
 
         // first term in the chain is the function name...
@@ -3319,30 +3320,30 @@ final public class CSSParser {
             arg.token.getText().isEmpty()) error(arg, "Expected \'url(\"<uri-string>\")\'");
 
         final String uri = arg.token.getText();
-        ParsedValue[] uriValues = new ParsedValue[] {
-            new ParsedValue<String,String>(uri, StringConverter.getInstance()),
-            new ParsedValue<URL,URL>(sourceOfStylesheet, null)
+        ParsedValueImpl[] uriValues = new ParsedValueImpl[] {
+            new ParsedValueImpl<String,String>(uri, StringConverter.getInstance()),
+            new ParsedValueImpl<URL,URL>(sourceOfStylesheet, null)
         };
-        return new ParsedValue<ParsedValue[],String>(uriValues, URLConverter.getInstance());
+        return new ParsedValueImpl<ParsedValue[],String>(uriValues, URLConverter.getInstance());
     }
 
     // parse a series of URI values separated by commas.
     // i.e., <uri> [, <uri>]*
-    private ParsedValue<ParsedValue<ParsedValue[],String>[],String[]> parseURILayers(Term root)
+    private ParsedValueImpl<ParsedValue<ParsedValue[],String>[],String[]> parseURILayers(Term root)
             throws ParseException {
 
         int nLayers = numberOfLayers(root);
 
         Term temp = root;
         int layer = 0;
-        ParsedValue<ParsedValue[],String>[] layers = new ParsedValue[nLayers];
+        ParsedValueImpl<ParsedValue[],String>[] layers = new ParsedValueImpl[nLayers];
 
         while(temp != null) {
             layers[layer++] = parseURI(temp);
             temp = nextLayer(temp);
         }
 
-        return new ParsedValue<ParsedValue<ParsedValue[],String>[],String[]>(layers, URLConverter.SequenceConverter.getInstance());
+        return new ParsedValueImpl<ParsedValue<ParsedValue[],String>[],String[]>(layers, URLConverter.SequenceConverter.getInstance());
     }
 
     ////////////////////////////////////////////////////////////////////////////
@@ -3352,7 +3353,7 @@ final public class CSSParser {
     ////////////////////////////////////////////////////////////////////////////
 
     /* http://www.w3.org/TR/css3-fonts/#font-size-the-font-size-property */
-    private ParsedValue<ParsedValue<?,Size>,Double> parseFontSize(final Term root) throws ParseException {
+    private ParsedValueImpl<ParsedValue<?,Size>,Double> parseFontSize(final Term root) throws ParseException {
 
         if (root == null) return null;
         final Token token = root.token;
@@ -3394,12 +3395,12 @@ final public class CSSParser {
             size = size(token);
         }
 
-        ParsedValue<?,Size> svalue = new ParsedValue<Size,Size>(size, null);
-        return new ParsedValue<ParsedValue<?,Size>,Double>(svalue, FontConverter.SizeConverter.getInstance());
+        ParsedValueImpl<?,Size> svalue = new ParsedValueImpl<Size,Size>(size, null);
+        return new ParsedValueImpl<ParsedValue<?,Size>,Double>(svalue, FontConverter.SizeConverter.getInstance());
     }
 
     /* http://www.w3.org/TR/css3-fonts/#font-style-the-font-style-property */
-    private ParsedValue<FontUnits.Style,FontPosture> parseFontStyle(Term root) throws ParseException {
+    private ParsedValueImpl<FontUnits.Style,FontPosture> parseFontStyle(Term root) throws ParseException {
 
         if (root == null) return null;
         final Token token = root.token;
@@ -3423,11 +3424,11 @@ final public class CSSParser {
             return null;
         }
 
-        return new ParsedValue<FontUnits.Style,FontPosture>(style, FontConverter.StyleConverter.getInstance());
+        return new ParsedValueImpl<FontUnits.Style,FontPosture>(style, FontConverter.StyleConverter.getInstance());
     }
 
     /* http://www.w3.org/TR/css3-fonts/#font-weight-the-font-weight-property */
-    private ParsedValue<FontUnits.Weight,FontWeight> parseFontWeight(Term root) throws ParseException {
+    private ParsedValueImpl<FontUnits.Weight,FontWeight> parseFontWeight(Term root) throws ParseException {
 
         if (root == null) return null;
         final Token token = root.token;
@@ -3467,10 +3468,10 @@ final public class CSSParser {
         } else {
 	    error(root, "Expected \'<font-weight>\'");
 	}
-        return new ParsedValue<FontUnits.Weight,FontWeight>(weight, FontConverter.WeightConverter.getInstance());
+        return new ParsedValueImpl<FontUnits.Weight,FontWeight>(weight, FontConverter.WeightConverter.getInstance());
     }
 
-    private ParsedValue<String,String>  parseFontFamily(Term root) throws ParseException {
+    private ParsedValueImpl<String,String>  parseFontFamily(Term root) throws ParseException {
 
         if (root == null) return null;
         final Token token = root.token;
@@ -3483,20 +3484,20 @@ final public class CSSParser {
 
         final String fam = stripQuotes(text.toLowerCase());
         if ("inherit".equals(fam)) {
-            return new ParsedValue<String,String>("inherit", StringConverter.getInstance());
+            return new ParsedValueImpl<String,String>("inherit", StringConverter.getInstance());
         } else if ("serif".equals(fam) ||
             "sans-serif".equals(fam) ||
             "cursive".equals(fam) ||
             "fantasy".equals(fam) ||
             "monospace".equals(fam)) {
-            return new ParsedValue<String,String>(fam, StringConverter.getInstance());
+            return new ParsedValueImpl<String,String>(fam, StringConverter.getInstance());
         } else {
-            return new ParsedValue<String,String>(token.getText(), StringConverter.getInstance());
+            return new ParsedValueImpl<String,String>(token.getText(), StringConverter.getInstance());
         }
     }
 
     // (fontStyle || fontVariant || fontWeight)* fontSize (SOLIDUS size)? fontFamily
-    private ParsedValue<ParsedValue[],Font> parseFont(Term root) throws ParseException {
+    private ParsedValueImpl<ParsedValue[],Font> parseFont(Term root) throws ParseException {
 
         // Because style, variant, weight, size and family can inherit
         // AND style, variant and weight are optional, parsing this backwards
@@ -3515,7 +3516,7 @@ final public class CSSParser {
         int ttype = token.getType();
         if (ttype != CSSLexer.IDENT &&
             ttype != CSSLexer.STRING) error(root, "Expected \'<font-family>\'");
-        ParsedValue<String,String> ffamily = parseFontFamily(root);
+        ParsedValueImpl<String,String> ffamily = parseFontFamily(root);
 
         Term term = root;
         if ((term = term.nextInSeries) == null) error(root, "Expected \'<size>\'");
@@ -3535,11 +3536,11 @@ final public class CSSParser {
             token = term.token;
         }
 
-        ParsedValue<ParsedValue<?,Size>,Double> fsize = parseFontSize(term);
+        ParsedValueImpl<ParsedValue<?,Size>,Double> fsize = parseFontSize(term);
         if (fsize == null) error(root, "Expected \'<size>\'");
 
-        ParsedValue<FontUnits.Style,FontPosture> fstyle = null;
-        ParsedValue<FontUnits.Weight,FontWeight> fweight = null;
+        ParsedValueImpl<FontUnits.Style,FontPosture> fstyle = null;
+        ParsedValueImpl<FontUnits.Weight,FontWeight> fweight = null;
         String fvariant = null;
 
         while ((term = term.nextInSeries) != null) {
@@ -3559,8 +3560,8 @@ final public class CSSParser {
             }
         }
 
-        ParsedValue[] values = new ParsedValue[]{ ffamily, fsize, fweight, fstyle };
-        return new ParsedValue<ParsedValue[],Font>(values, FontConverter.getInstance());
+        ParsedValueImpl[] values = new ParsedValueImpl[]{ ffamily, fsize, fweight, fstyle };
+        return new ParsedValueImpl<ParsedValue[],Font>(values, FontConverter.getInstance());
     }
 
     //
@@ -4086,7 +4087,7 @@ final public class CSSParser {
         currentToken = nextToken(lexer);
 
         Term root = expr(lexer);
-        ParsedValue value = null;
+        ParsedValueImpl value = null;
         try {
             value = (root != null) ? valueFor(property, root) : null;
         } catch (ParseException re) {

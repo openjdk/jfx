@@ -31,20 +31,31 @@ import java.io.IOException;
 
 final public class Declaration {
     final String property;
-    final ParsedValue parsedValue;
+    final ParsedValueImpl parsedValue;
     final boolean important;   
     // The Rule to which this Declaration belongs.
     Rule rule;
 
-    public Declaration(final String propertyName, final ParsedValue parsedValue,
+    public Declaration(final String propertyName, final ParsedValueImpl parsedValue,
             final boolean important) {
         this.property = propertyName;
         this.parsedValue = parsedValue;
         this.important = important;
+        if (propertyName == null) { 
+            throw new IllegalArgumentException("propertyName cannot be null");
+        }
+        if (parsedValue == null) { 
+            throw new IllegalArgumentException("parsedValue cannot be null");
+        }
     }
 
     /** @return ParsedValue contains the parsed declaration. */
     public ParsedValue getParsedValue() {
+        return parsedValue;
+    }
+    
+    /** @return ParsedValue contains the parsed declaration. */
+    ParsedValueImpl getParsedValueImpl() {
         return parsedValue;
     }
     
@@ -122,18 +133,19 @@ final public class Declaration {
     void writeBinary(final DataOutputStream os, final StringStore stringStore)
         throws IOException
     {
-        os.writeShort(stringStore.addString(property));
-        parsedValue.writeBinary(os,stringStore);
-        os.writeBoolean(important);
+        os.writeShort(stringStore.addString(getProperty()));
+        getParsedValueImpl().writeBinary(os,stringStore);
+        os.writeBoolean(isImportant());            
     }
 
     static Declaration readBinary(DataInputStream is, String[] strings)
         throws IOException
     {
         final String propertyName = strings[is.readShort()];
-        final ParsedValue parsedValue = ParsedValue.readBinary(is,strings);
+        final ParsedValueImpl parsedValue = ParsedValueImpl.readBinary(is,strings);
         final boolean important = is.readBoolean();
         return new Declaration(propertyName, parsedValue, important);
+            
     }
     
     public String writeJava() {
@@ -141,7 +153,7 @@ final public class Declaration {
         sb.append("new Declaration(\"");
         sb.append(getProperty());
         sb.append("\", ");
-        sb.append(getParsedValue().writeJava());
+        sb.append(getParsedValueImpl().writeJava());
         sb.append(", ");
         sb.append(isImportant());
         sb.append(")"); 

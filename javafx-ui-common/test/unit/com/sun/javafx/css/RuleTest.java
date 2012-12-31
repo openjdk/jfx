@@ -66,9 +66,9 @@ public class RuleTest {
     @Test
     public void testGetDeclarations() {
         List<Declaration> expResult = new ArrayList<Declaration>();
-        expResult.add(new Declaration("one", new ParsedValue<String,String>("one", null), false));
-        expResult.add(new Declaration("two", new ParsedValue<String,String>("two", null), false));
-        expResult.add(new Declaration("three", new ParsedValue<String,String>("three", null), false));
+        expResult.add(new Declaration("one", new ParsedValueImpl<String,String>("one", null), false));
+        expResult.add(new Declaration("two", new ParsedValueImpl<String,String>("two", null), false));
+        expResult.add(new Declaration("three", new ParsedValueImpl<String,String>("three", null), false));
         Rule instance = new Rule(Collections.EMPTY_LIST, expResult);
         List result = instance.getDeclarations();
         assertEquals(expResult, result);

@@ -28,14 +28,14 @@ import java.net.URL;
 
 import javafx.scene.text.Font;
 
-import com.sun.javafx.css.StyleConverter;
+import com.sun.javafx.css.StyleConverterImpl;
 import com.sun.javafx.css.ParsedValue;
 import java.net.MalformedURLException;
 
 /**
  * Convert url("<path>") a URL string resolved relative to the location of the stylesheet.
  */
-public final class URLConverter extends StyleConverter<ParsedValue[], String> {
+public final class URLConverter extends StyleConverterImpl<ParsedValue[], String> {
 
     // lazy, thread-safe instatiation
     private static class Holder {
@@ -90,7 +90,7 @@ public final class URLConverter extends StyleConverter<ParsedValue[], String> {
         return "URLType";
     }
 
-    public static final class SequenceConverter extends StyleConverter<ParsedValue<ParsedValue[], String>[], String[]> {
+    public static final class SequenceConverter extends StyleConverterImpl<ParsedValue<ParsedValue[], String>[], String[]> {
 
         public static SequenceConverter getInstance() {
             return Holder.SEQUENCE_INSTANCE;

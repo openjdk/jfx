@@ -2,12 +2,12 @@ package com.sun.javafx.scene.layout.region;
 
 import javafx.scene.text.Font;
 import com.sun.javafx.css.ParsedValue;
-import com.sun.javafx.css.StyleConverter;
+import com.sun.javafx.css.StyleConverterImpl;
 
 /**
  * [<size> | <size> <size> <size> <size>] <fill>? [ , [ <size> | <size> <size> <size> <size>] <fill>? ]*
  */
-public final class SliceSequenceConverter extends StyleConverter<ParsedValue<ParsedValue[], BorderImageSlices>[], BorderImageSlices[]> {
+public final class SliceSequenceConverter extends StyleConverterImpl<ParsedValue<ParsedValue[], BorderImageSlices>[], BorderImageSlices[]> {
     private static final SliceSequenceConverter BORDER_IMAGE_SLICE_SEQUENCE_CONVERTER =
             new SliceSequenceConverter();
 

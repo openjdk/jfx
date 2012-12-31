@@ -28,7 +28,7 @@ import javafx.geometry.Insets;
 import javafx.scene.text.Font;
 
 import com.sun.javafx.css.Size;
-import com.sun.javafx.css.StyleConverter;
+import com.sun.javafx.css.StyleConverterImpl;
 import com.sun.javafx.css.ParsedValue;
 
 /**
@@ -38,7 +38,7 @@ import com.sun.javafx.css.ParsedValue;
  * If there is only top and right, then bottom is set to top and left is set to right.
  * If top, right and bottom are given, then left is set to right.
  */
-public final class InsetsConverter extends StyleConverter<ParsedValue<?, Size>[], Insets> {
+public final class InsetsConverter extends StyleConverterImpl<ParsedValue<?, Size>[], Insets> {
 
     // lazy, thread-safe instatiation
     private static class Holder {
@@ -72,7 +72,7 @@ public final class InsetsConverter extends StyleConverter<ParsedValue<?, Size>[]
     /**
      * Convert a <size>{1,4} [,<size>{1,4}]*  an Insets[]
      */
-    public static final class SequenceConverter extends StyleConverter<ParsedValue<ParsedValue<?, Size>[], Insets>[], Insets[]> {
+    public static final class SequenceConverter extends StyleConverterImpl<ParsedValue<ParsedValue<?, Size>[], Insets>[], Insets[]> {
 
         public static SequenceConverter getInstance() {
             return Holder.SEQUENCE_INSTANCE;

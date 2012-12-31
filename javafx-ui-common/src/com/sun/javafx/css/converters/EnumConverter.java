@@ -31,10 +31,10 @@ import java.io.IOException;
 import javafx.scene.text.Font;
 
 import com.sun.javafx.css.StringStore;
-import com.sun.javafx.css.StyleConverter;
+import com.sun.javafx.css.StyleConverterImpl;
 import com.sun.javafx.css.ParsedValue;
 
-public final class EnumConverter<T extends Enum<T>> extends StyleConverter<String, T> {
+public final class EnumConverter<T extends Enum<T>> extends StyleConverterImpl<String, T> {
 
     private final Class enumClass;
 

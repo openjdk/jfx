@@ -31,12 +31,12 @@ import javafx.scene.text.Font;
 import com.sun.javafx.css.ParsedValue;
 import com.sun.javafx.css.Size;
 import com.sun.javafx.css.SizeUnits;
-import com.sun.javafx.css.StyleConverter;
+import com.sun.javafx.css.StyleConverterImpl;
 
 /**
  * Given four Sizes from the Parser, this converter will produce a BackgroundPosition object.
  */
-public final class BackgroundPositionConverter extends StyleConverter<ParsedValue<?, Size>[], BackgroundPosition> {
+public final class BackgroundPositionConverter extends StyleConverterImpl<ParsedValue<?, Size>[], BackgroundPosition> {
     private static final BackgroundPositionConverter BACKGROUND_POSITION_CONVERTER =
             new BackgroundPositionConverter();
 

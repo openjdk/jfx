@@ -27,10 +27,10 @@ package com.sun.javafx.css.converters;
 import javafx.scene.Cursor;
 import javafx.scene.text.Font;
 
-import com.sun.javafx.css.StyleConverter;
+import com.sun.javafx.css.StyleConverterImpl;
 import com.sun.javafx.css.ParsedValue;
 
-public final class CursorConverter extends StyleConverter<String, Cursor> {
+public final class CursorConverter extends StyleConverterImpl<String, Cursor> {
 
     // lazy, thread-safe instatiation
     private static class Holder {

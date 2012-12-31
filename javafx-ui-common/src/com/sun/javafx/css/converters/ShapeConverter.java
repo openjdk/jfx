@@ -28,12 +28,12 @@ import javafx.scene.shape.SVGPath;
 import javafx.scene.shape.Shape;
 import javafx.scene.text.Font;
 import com.sun.javafx.css.ParsedValue;
-import com.sun.javafx.css.StyleConverter;
+import com.sun.javafx.css.StyleConverterImpl;
 
 /**
  * Converts an SVG shape string into a Shape object.
  */
-public class ShapeConverter extends StyleConverter<String, Shape> {
+public class ShapeConverter extends StyleConverterImpl<String, Shape> {
     private static final ShapeConverter INSTANCE = new ShapeConverter();
 
     public static ShapeConverter getInstance() { return INSTANCE; }

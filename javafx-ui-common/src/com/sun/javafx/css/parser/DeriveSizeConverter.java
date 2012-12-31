@@ -28,14 +28,14 @@ import javafx.scene.text.Font;
 
 import com.sun.javafx.css.Size;
 import com.sun.javafx.css.SizeUnits;
-import com.sun.javafx.css.StyleConverter;
+import com.sun.javafx.css.StyleConverterImpl;
 import com.sun.javafx.css.ParsedValue;
 
 /**
  * A type that combines two Size values.  The primary purpose of
  * this type is to handle "convert(size1, size2)" expressions in CSS.
  */
-public final class DeriveSizeConverter extends StyleConverter<ParsedValue<Size, Size>[], Size> {
+public final class DeriveSizeConverter extends StyleConverterImpl<ParsedValue<Size, Size>[], Size> {
 
     // lazy, thread-safe instatiation
     private static class Holder {

@@ -1152,7 +1152,6 @@ final public class StyleHelper {
         // and if it is INHERIT then we will inherit otherwise we just skip it.
         final List<CssMetaData> subProperties = styleable.getSubProperties();
         final int numSubProperties = (subProperties != null) ? subProperties.size() : 0;
-        final StyleConverter keyType = styleable.getConverter();
         if (style == null) {
             
             if (numSubProperties == 0) {
@@ -1209,9 +1208,14 @@ final public class StyleHelper {
                 }
 
                 try {
-                    
-                    final Object ret = keyType.convert(subs);
-                    return new CalculatedValue(ret, origin, isRelative);
+                    final StyleConverter keyType = styleable.getConverter();
+                    assert(keyType instanceof StyleConverterImpl);
+                    if (keyType instanceof StyleConverterImpl) {
+                        Object ret = ((StyleConverterImpl)keyType).convert(subs);
+                        return new CalculatedValue(ret, origin, isRelative);
+                    } else {
+                        return SKIP;
+                    }
                 } catch (ClassCastException cce) {
                     final String msg = formatExceptionMessage(node, styleable, null, cce);
                     List<CssError> errors = null;
@@ -1241,7 +1245,7 @@ final public class StyleHelper {
 
             // If there was a style found, then we want to check whether the
             // value was "inherit". If so, then we will simply inherit.
-            final ParsedValue cssValue = style.getParsedValue();
+            final ParsedValueImpl cssValue = style.getParsedValueImpl();
             if (cssValue != null && "inherit".equals(cssValue.getValue())) {
                 if (styleList != null) styleList.add(style.getStyle());
                 return inherit(node, styleable, userStyles, 
@@ -1315,7 +1319,7 @@ final public class StyleHelper {
                         initialStyle = new Style( 
                             Selector.getUniversalSelector(),
                             new Declaration(styleable.getProperty(), 
-                                        new ParsedValue(initialValue, null), false));
+                                        new ParsedValueImpl(initialValue, null), false));
                         stylesFromDefaults.put(styleable, initialStyle);
                         declarationsFromDefaults.add(initialStyle.getDeclaration());
                     }
@@ -1398,23 +1402,28 @@ final public class StyleHelper {
     }
 
     // to resolve a lookup, we just need to find the parsed value.
-    private ParsedValue resolveLookups(
+    private ParsedValueImpl resolveLookups(
             Node node, 
-            ParsedValue value, 
+            ParsedValueImpl value, 
             PseudoClass.States states,
             Map<String,CascadingStyle> inlineStyles,
             ObjectProperty<Origin> whence,
             List<Style> styleList) {
         
         
+        assert(value instanceof ParsedValueImpl);
+        if ((value instanceof ParsedValueImpl) == false) { return value; }
+        
+        ParsedValueImpl parsedValue = (ParsedValueImpl)value;
+        
         //
         // either the value itself is a lookup, or the value contain a lookup
         //
-        if (value.isLookup()) {
+        if (parsedValue.isLookup()) {
 
             // The value we're looking for should be a Paint, one of the
             // containers for linear, radial or ladder, or a derived color.
-            final Object val = value.getValue();
+            final Object val = parsedValue.getValue();
             if (val instanceof String) {
 
                 final String sval = (String)val;
@@ -1446,20 +1455,20 @@ final public class StyleHelper {
                     // the resolved value may itself need to be resolved.
                     // For example, if the value "color" resolves to "base",
                     // then "base" will need to be resolved as well.
-                    return resolveLookups(node, resolved.getParsedValue(), states, inlineStyles, whence, styleList);
+                    return resolveLookups(node, resolved.getParsedValueImpl(), states, inlineStyles, whence, styleList);
                 }
             }
         }
 
         // If the value doesn't contain any values that need lookup, then bail
-        if (!value.isContainsLookups()) {
-            return value;
+        if (!parsedValue.isContainsLookups()) {
+            return parsedValue;
         }
 
-        final Object val = value.getValue();
-        if (val instanceof ParsedValue[][]) {
-        // If ParsedValue is a layered sequence of values, resolve the lookups for each.
-            final ParsedValue[][] layers = (ParsedValue[][])val;
+        final Object val = parsedValue.getValue();
+        if (val instanceof ParsedValueImpl[][]) {
+        // If ParsedValueImpl is a layered sequence of values, resolve the lookups for each.
+            final ParsedValueImpl[][] layers = (ParsedValueImpl[][])val;
             for (int l=0; l<layers.length; l++) {
                 for (int ll=0; ll<layers[l].length; ll++) {
                     if (layers[l][ll] == null) continue;
@@ -1468,9 +1477,9 @@ final public class StyleHelper {
                 }
             }
 
-        } else if (val instanceof ParsedValue[]) {
-        // If ParsedValue is a sequence of values, resolve the lookups for each.
-            final ParsedValue[] layer = (ParsedValue[])val;
+        } else if (val instanceof ParsedValueImpl[]) {
+        // If ParsedValueImpl is a sequence of values, resolve the lookups for each.
+            final ParsedValueImpl[] layer = (ParsedValueImpl[])val;
             for (int l=0; l<layer.length; l++) {
                 if (layer[l] == null) continue;
                 layer[l].resolved =
@@ -1478,11 +1487,11 @@ final public class StyleHelper {
             }
         }
 
-        return value;
+        return parsedValue;
 
     }
     
-    private String getUnresolvedLookup(ParsedValue resolved) {
+    private String getUnresolvedLookup(ParsedValueImpl resolved) {
 
         Object value = resolved.getValue();
 
@@ -1490,8 +1499,8 @@ final public class StyleHelper {
             return (String)value;
         } 
 
-        if (value instanceof ParsedValue[][]) {
-            final ParsedValue[][] layers = (ParsedValue[][])value;
+        if (value instanceof ParsedValueImpl[][]) {
+            final ParsedValueImpl[][] layers = (ParsedValueImpl[][])value;
             for (int l=0; l<layers.length; l++) {
                 for (int ll=0; ll<layers[l].length; ll++) {
                     if (layers[l][ll] == null) continue;
@@ -1500,9 +1509,9 @@ final public class StyleHelper {
                 }
             }
 
-        } else if (value instanceof ParsedValue[]) {
-        // If ParsedValue is a sequence of values, resolve the lookups for each.
-            final ParsedValue[] layer = (ParsedValue[])value;
+        } else if (value instanceof ParsedValueImpl[]) {
+        // If ParsedValueImpl is a sequence of values, resolve the lookups for each.
+            final ParsedValueImpl[] layer = (ParsedValueImpl[])value;
             for (int l=0; l<layer.length; l++) {
                 if (layer[l] == null) continue;
                 String unresolvedLookup = getUnresolvedLookup(layer[l]);
@@ -1513,7 +1522,7 @@ final public class StyleHelper {
         return null;
     }
     
-    private String formatUnresolvedLookupMessage(Node node, CssMetaData styleable, Style style, ParsedValue resolved) {
+    private String formatUnresolvedLookupMessage(Node node, CssMetaData styleable, Style style, ParsedValueImpl resolved) {
         
         // find value that could not be looked up
         String missingLookup = resolved != null ? getUnresolvedLookup(resolved) : null;
@@ -1578,11 +1587,11 @@ final public class StyleHelper {
             final CacheEntry cacheEntry, 
             final List<Style> styleList) {
 
-        final ParsedValue cssValue = style.getParsedValue();
+        final ParsedValueImpl cssValue = style.getParsedValueImpl();
         if (cssValue != null && !("null").equals(cssValue.getValue())) {
 
             ObjectProperty<Origin> whence = new SimpleObjectProperty<Origin>(style.getOrigin());
-            final ParsedValue resolved = 
+            final ParsedValueImpl resolved = 
                 resolveLookups(node, cssValue, states, inlineStyles, whence, styleList);
             
             try {
@@ -2157,8 +2166,8 @@ final public class StyleHelper {
                     origin = cv.origin;
                 
                     // what did font shorthand specify? 
-                    ParsedValue[] vals = 
-                            (ParsedValue[])csShorthand.getParsedValue().getValue();
+                    ParsedValueImpl[] vals = 
+                            (ParsedValueImpl[])csShorthand.getParsedValueImpl().getValue();
                     // Use family and size from converted font since the actual 
                     // values may have been resolved. The weight and posture, 
                     // however, are hard to get reliably from the font so use 
@@ -2390,7 +2399,7 @@ final public class StyleHelper {
                 styleList.addAll(styles);
                 for (int n=0, nMax=styles.size(); n<nMax; n++) {
                     final CascadingStyle style = styles.get(n);
-                    final ParsedValue parsedValue = style.getParsedValue();
+                    final ParsedValueImpl parsedValue = style.getParsedValueImpl();
                     getMatchingLookupStyles(node, parsedValue, inlineStyleMap, styleList);
                 }
             }
@@ -2413,7 +2422,7 @@ final public class StyleHelper {
     }
     
     // Pretty much a duplicate of resolveLookups, but without the state
-    private void getMatchingLookupStyles(Styleable node, ParsedValue parsedValue, Map<String,List<CascadingStyle>> inlineStyleMap, List<CascadingStyle> styleList) {
+    private void getMatchingLookupStyles(Styleable node, ParsedValueImpl parsedValue, Map<String,List<CascadingStyle>> inlineStyleMap, List<CascadingStyle> styleList) {
                 
         if (parsedValue.isLookup()) {
             
@@ -2455,7 +2464,7 @@ final public class StyleHelper {
                         
                         for (int index=start; index<end; index++) {
                             final CascadingStyle style = styleList.get(index);
-                            getMatchingLookupStyles(parent, style.getParsedValue(), inlineStyleMap, styleList);
+                            getMatchingLookupStyles(parent, style.getParsedValueImpl(), inlineStyleMap, styleList);
                         }
                     }
                                                                                     
@@ -2470,9 +2479,9 @@ final public class StyleHelper {
         }
 
         final Object val = parsedValue.getValue();
-        if (val instanceof ParsedValue[][]) {
-        // If ParsedValue is a layered sequence of values, resolve the lookups for each.
-            final ParsedValue[][] layers = (ParsedValue[][])val;
+        if (val instanceof ParsedValueImpl[][]) {
+        // If ParsedValueImpl is a layered sequence of values, resolve the lookups for each.
+            final ParsedValueImpl[][] layers = (ParsedValueImpl[][])val;
             for (int l=0; l<layers.length; l++) {
                 for (int ll=0; ll<layers[l].length; ll++) {
                     if (layers[l][ll] == null) continue;
@@ -2480,9 +2489,9 @@ final public class StyleHelper {
                 }
             }
 
-        } else if (val instanceof ParsedValue[]) {
-        // If ParsedValue is a sequence of values, resolve the lookups for each.
-            final ParsedValue[] layer = (ParsedValue[])val;
+        } else if (val instanceof ParsedValueImpl[]) {
+        // If ParsedValueImpl is a sequence of values, resolve the lookups for each.
+            final ParsedValueImpl[] layer = (ParsedValueImpl[])val;
             for (int l=0; l<layer.length; l++) {
                 if (layer[l] == null) continue;
                     getMatchingLookupStyles(node, layer[l], inlineStyleMap, styleList);
