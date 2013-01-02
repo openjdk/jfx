@@ -176,6 +176,10 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
     @Override protected boolean isIndentationRequired() {
         return true;
     }
+
+    @Override protected TableColumnBase getTreeColumn() {
+        return getSkinnable().getTreeTableView().getTreeColumn();
+    }
     
     @Override protected int getIndentationLevel(TreeTableRow<T> control) {
         return TreeTableView.getNodeLevel(control.getTreeItem());
