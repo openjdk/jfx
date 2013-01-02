@@ -25,17 +25,15 @@
 
 package com.sun.javafx.scene.control.accessible;
 
-import com.sun.javafx.Logging;
-import com.sun.javafx.accessible.AccessibleNode;
-import com.sun.javafx.logging.PlatformLogger;
-import com.sun.javafx.accessible.utils.EventIds;
-import com.sun.javafx.accessible.providers.AccessibleProvider;
-import com.sun.javafx.accessible.utils.ProviderOptions;
-import javafx.beans.value.ObservableValue;
-import javafx.scene.control.Control;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
+import javafx.scene.control.Control;
+import com.sun.javafx.Logging;
+import com.sun.javafx.accessible.AccessibleNode;
+import com.sun.javafx.accessible.utils.EventIds;
+import sun.util.logging.PlatformLogger;
 
 public class AccessibleControl extends AccessibleNode {
     Control control ;

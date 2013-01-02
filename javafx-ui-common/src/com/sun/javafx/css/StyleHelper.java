@@ -33,20 +33,19 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.WritableValue;
 import javafx.scene.Node;
+import javafx.scene.Parent;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontPosture;
 import javafx.scene.text.FontWeight;
 import com.sun.javafx.Logging;
 import com.sun.javafx.Utils;
-import com.sun.javafx.css.Origin;
 import com.sun.javafx.css.converters.FontConverter;
 import com.sun.javafx.css.parser.CSSParser;
-import com.sun.javafx.logging.PlatformLogger;
-import javafx.beans.property.ObjectProperty;
-import javafx.beans.property.SimpleObjectProperty;
-import javafx.scene.Parent;
+import sun.util.logging.PlatformLogger;
 
 /**
  * The StyleHelper is a helper class used for applying CSS information to Nodes.

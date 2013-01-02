@@ -24,7 +24,6 @@
  */
 package javafx.scene.control;
 
-import com.sun.javafx.beans.annotations.NoBuilder;
 import java.text.Collator;
 import java.util.Comparator;
 
@@ -90,7 +89,6 @@ import javafx.collections.ObservableMap;
  * @see TreeTableColumn
  * @see TablePositionBase
  */
-@NoBuilder  // TODO should this be here?
 public abstract class TableColumnBase<S,T> implements EventTarget {
     
     /***************************************************************************

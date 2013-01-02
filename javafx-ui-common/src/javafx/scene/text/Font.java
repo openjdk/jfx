@@ -337,7 +337,7 @@ public final class Font {
             return null;
         }
         if (size <= 0) {
-            size = 12;
+            size = getDefaultSystemFontSize();
         }
         // Now lets parse the URL and decide if its a file,
         // or a remote URL from which we need to read.
@@ -407,7 +407,7 @@ public final class Font {
      */
     public static Font loadFont(InputStream in, double size) {
         if (size <= 0) {
-            size = 12;
+            size = getDefaultSystemFontSize();
         }
         return Toolkit.getToolkit().getFontLoader().loadFont(in, size);
     }

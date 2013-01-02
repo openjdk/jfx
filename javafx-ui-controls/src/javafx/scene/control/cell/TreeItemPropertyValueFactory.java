@@ -27,14 +27,13 @@ package javafx.scene.control.cell;
 import javafx.beans.property.Property;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.value.ObservableValue;
-import javafx.util.Callback;
-
-import com.sun.javafx.logging.PlatformLogger;
-import com.sun.javafx.property.PropertyReference;
-import com.sun.javafx.scene.control.Logging;
 import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeTableColumn;
 import javafx.scene.control.TreeTableColumn.CellDataFeatures;
+import javafx.util.Callback;
+import com.sun.javafx.property.PropertyReference;
+import com.sun.javafx.scene.control.Logging;
+import sun.util.logging.PlatformLogger;
 
 
 /**

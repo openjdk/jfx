@@ -36,17 +36,19 @@ import javafx.beans.binding.DoubleBinding;
 import javafx.beans.binding.ObjectBinding;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
+import javafx.beans.property.DoublePropertyBase;
 import javafx.beans.property.IntegerProperty;
+import javafx.beans.property.IntegerPropertyBase;
 import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.ObjectPropertyBase;
 import javafx.beans.property.ReadOnlyDoubleProperty;
 import javafx.beans.property.ReadOnlyDoubleWrapper;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.SimpleBooleanProperty;
-import javafx.beans.property.SimpleDoubleProperty;
 import javafx.beans.property.SimpleIntegerProperty;
 import javafx.beans.property.SimpleObjectProperty;
-import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
+import javafx.beans.property.StringPropertyBase;
 import javafx.beans.value.WritableValue;
 import javafx.geometry.BoundingBox;
 import javafx.geometry.Bounds;
@@ -120,7 +122,8 @@ text.setText("The quick brown fox jumps over the lazy dog");
 public class Text extends Shape {
 
     private TextLayout layout;
-    
+    private static final PathElement[] EMPTY_PATH_ELEMENT_ARRAY = new PathElement[0];
+
     /**
      * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended
@@ -143,6 +146,7 @@ public class Text extends Shape {
         InvalidationListener listener = new InvalidationListener() {
             @Override public void invalidated(Observable observable) {
                 checkSpan();
+                checkOrientation();
             }
         };
         parentProperty().addListener(listener);
@@ -181,9 +185,7 @@ public class Text extends Shape {
         isSpan = isManaged() && getParent() instanceof TextFlow;
     }
 
-    @Deprecated
-    public void impl_transformsChanged() {
-        super.impl_transformsChanged();
+    private void checkOrientation() {
         if (!isSpan()) {
             /* Using impl_transformsChanged to detect for orientation change.
              * This can be improved if EffectiveNodeOrientation becomes a
@@ -197,6 +199,12 @@ public class Text extends Shape {
                 needsTextLayout();
             }
         }
+    }
+
+    @Deprecated
+    public void impl_transformsChanged() {
+        super.impl_transformsChanged();
+        checkOrientation();
     }
 
     @Override
@@ -403,7 +411,9 @@ public class Text extends Shape {
 
     public final StringProperty textProperty() {
         if (text == null) {
-            text = new SimpleStringProperty(this, "text", "") {
+            text = new StringPropertyBase("") {
+                @Override public Object getBean() { return Text.this; }
+                @Override public String getName() { return "text"; }
                 @Override  public void invalidated() {
                     needsFullTextLayout();
                     setImpl_selectionStart(-1);
@@ -442,7 +452,9 @@ public class Text extends Shape {
 
     public final DoubleProperty xProperty() {
         if (x == null) {
-            x = new SimpleDoubleProperty(this, "x") {
+            x = new DoublePropertyBase() {
+                @Override public Object getBean() { return Text.this; }
+                @Override public String getName() { return "x"; }
                 @Override public void invalidated() {
                     impl_geomChanged();
                 }
@@ -468,7 +480,9 @@ public class Text extends Shape {
 
     public final DoubleProperty yProperty() {
         if (y == null) {
-            y = new SimpleDoubleProperty(this, "y") {
+            y = new DoublePropertyBase() {
+                @Override public Object getBean() { return Text.this; }
+                @Override public String getName() { return "y"; }
                 @Override public void invalidated() {
                     impl_geomChanged();
                 }
@@ -586,7 +600,9 @@ public class Text extends Shape {
 
     public final DoubleProperty wrappingWidthProperty() {
         if (wrappingWidth == null) {
-            wrappingWidth = new SimpleDoubleProperty(this, "wrappingWidth") {
+            wrappingWidth = new DoublePropertyBase() {
+                @Override public Object getBean() { return Text.this; }
+                @Override public String getName() { return "wrappingWidth"; }
                 @Override public void invalidated() {
                     if (!isSpan()) {
                         TextLayout layout = getTextLayout();
@@ -1022,7 +1038,7 @@ public class Text extends Shape {
             float y = (float)getY() - getYRendering();
             return layout.getRange(start, end, type, x, y);
         }
-        return new PathElement[0];
+        return EMPTY_PATH_ELEMENT_ARRAY;
     }
 
     /**
@@ -1519,8 +1535,9 @@ public class Text extends Shape {
         public final ObjectProperty<TextBoundsType> boundsTypeProperty() {
             if (boundsType == null) {
                 boundsType =
-                   new SimpleObjectProperty<TextBoundsType>(Text.this, "boundsType", 
-                       DEFAULT_BOUNDS_TYPE) {
+                   new ObjectPropertyBase<TextBoundsType>(DEFAULT_BOUNDS_TYPE) {
+                       @Override public Object getBean() { return Text.this; }
+                       @Override public String getName() { return "boundsType"; }
                        @Override public void invalidated() {
                            impl_geomChanged();
                        }
@@ -1680,8 +1697,9 @@ public class Text extends Shape {
         public final ObjectProperty<Paint> impl_selectionFillProperty() {
             if (selectionFill == null) {
                 selectionFill = 
-                    new SimpleObjectProperty<Paint>(Text.this, "impl_selectionFill",
-                                                    DEFAULT_SELECTION_FILL) {
+                    new ObjectPropertyBase<Paint>(DEFAULT_SELECTION_FILL) {
+                        @Override public Object getBean() { return Text.this; }
+                        @Override public String getName() { return "impl_selectionFill"; }
                         @Override protected void invalidated() {
                             impl_markDirty(DirtyBits.TEXT_SELECTION);
                         }
@@ -1702,7 +1720,9 @@ public class Text extends Shape {
         public final IntegerProperty impl_selectionStartProperty() {
             if (impl_selectionStart == null) {
                 impl_selectionStart = 
-                    new SimpleIntegerProperty(Text.this, "impl_selectionStart", DEFAULT_SELECTION_START) {
+                    new IntegerPropertyBase(DEFAULT_SELECTION_START) {
+                        @Override public Object getBean() { return Text.this; }
+                        @Override public String getName() { return "impl_selectionStart"; }
                         @Override protected void invalidated() {
                             impl_markDirty(DirtyBits.TEXT_SELECTION);
                         }
@@ -1723,7 +1743,9 @@ public class Text extends Shape {
         public final IntegerProperty impl_selectionEndProperty() {
             if (impl_selectionEnd == null) {
                 impl_selectionEnd = 
-                    new SimpleIntegerProperty(Text.this, "impl_selectionEnd", DEFAULT_SELECTION_END) {
+                    new IntegerPropertyBase(DEFAULT_SELECTION_END) {
+                        @Override public Object getBean() { return Text.this; }
+                        @Override public String getName() { return "impl_selectionEnd"; }
                         @Override protected void invalidated() {
                             impl_markDirty(DirtyBits.TEXT_SELECTION);
                         }
@@ -1751,7 +1773,7 @@ public class Text extends Shape {
                             TextLayout layout = getTextLayout();
                             return layout.getCaretShape(pos, bias, x, y);
                         }
-                        return new PathElement[0];
+                        return EMPTY_PATH_ELEMENT_ARRAY;
                     }
                 };
                 impl_caretShape = new SimpleObjectProperty<PathElement[]>(Text.this, "impl_caretShape");

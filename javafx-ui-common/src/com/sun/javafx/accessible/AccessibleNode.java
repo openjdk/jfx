@@ -25,18 +25,18 @@
 
 package com.sun.javafx.accessible;
 
-import com.sun.javafx.accessible.utils.NavigateDirection;
-import com.sun.javafx.accessible.utils.PropertyIds;
-import com.sun.javafx.accessible.utils.Rect;
-import com.sun.javafx.Logging;
+import java.util.ArrayList;
 import java.util.List;
+import javafx.geometry.Bounds;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.stage.Screen;
-import javafx.geometry.Bounds;
-import com.sun.javafx.logging.PlatformLogger;
-import java.util.ArrayList;
+import com.sun.javafx.Logging;
 import com.sun.javafx.accessible.providers.AccessibleProvider;
+import com.sun.javafx.accessible.utils.NavigateDirection;
+import com.sun.javafx.accessible.utils.PropertyIds;
+import com.sun.javafx.accessible.utils.Rect;
+import sun.util.logging.PlatformLogger;
 
 public class AccessibleNode implements AccessibleProvider
 {

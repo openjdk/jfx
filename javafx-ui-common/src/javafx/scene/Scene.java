@@ -94,7 +94,7 @@ import com.sun.javafx.event.EventQueue;
 import com.sun.javafx.geom.PickRay;
 import com.sun.javafx.geom.transform.Affine2D;
 import com.sun.javafx.geom.transform.BaseTransform;
-import com.sun.javafx.logging.PlatformLogger;
+import sun.util.logging.PlatformLogger;
 import com.sun.javafx.perf.PerformanceTracker;
 import com.sun.javafx.robot.impl.FXRobotHelper;
 import com.sun.javafx.scene.CSSFlags;

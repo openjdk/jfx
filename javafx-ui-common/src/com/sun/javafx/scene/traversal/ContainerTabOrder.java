@@ -24,23 +24,15 @@
  */
 package com.sun.javafx.scene.traversal;
 
-import static com.sun.javafx.scene.traversal.Direction.DOWN;
-import static com.sun.javafx.scene.traversal.Direction.LEFT;
-import static com.sun.javafx.scene.traversal.Direction.NEXT;
-import static com.sun.javafx.scene.traversal.Direction.PREVIOUS;
-import static com.sun.javafx.scene.traversal.Direction.RIGHT;
-import static com.sun.javafx.scene.traversal.Direction.UP;
-
 import java.util.List;
-
 import javafx.geometry.Bounds;
 import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.Parent;
-
 import com.sun.javafx.Logging;
-import com.sun.javafx.logging.PlatformLogger;
+import sun.util.logging.PlatformLogger;
 
+import static com.sun.javafx.scene.traversal.Direction.*;
 
 public class ContainerTabOrder implements Algorithm {
 
