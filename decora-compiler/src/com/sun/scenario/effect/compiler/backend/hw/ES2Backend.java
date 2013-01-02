@@ -81,7 +81,7 @@ public class ES2Backend extends GLSLBackend {
         // shader functions to have lower precision
         String name = d.getFunction().getName();
         if ("mask".equals(name) || "paint".equals(name)) {
-            output("LOWP ");
+            output("lowp ");
         }
         super.visitFuncDef(d);
     }
@@ -112,13 +112,10 @@ public class ES2Backend extends GLSLBackend {
         sb.append("#extension GL_OES_standard_derivatives : enable\n");
         sb.append("precision highp float;\n");
         sb.append("precision highp int;\n");
-        sb.append("#define HIGHP highp\n");
-        sb.append("#define MEDIUMP mediump\n");
-        sb.append("#define LOWP lowp\n");
         sb.append("#else\n");
-        sb.append("#define HIGHP\n");
-        sb.append("#define MEDIUMP\n");
-        sb.append("#define LOWP\n");
+        sb.append("#define highp\n");
+        sb.append("#define mediump\n");
+        sb.append("#define lowp\n");
         sb.append("#endif\n");
 
         // output varying value declarations (passed from the vertex shader)
@@ -129,7 +126,7 @@ public class ES2Backend extends GLSLBackend {
             sb.append("varying vec2 texCoord1;\n");
         }
         if (isVertexColorReferenced) {
-            sb.append("varying LOWP vec4 perVertexColor;\n");
+            sb.append("varying lowp vec4 perVertexColor;\n");
         }
 
         // output special pixcoord offset uniform variable declaration
