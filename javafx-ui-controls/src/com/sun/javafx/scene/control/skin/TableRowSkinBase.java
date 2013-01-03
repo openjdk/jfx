@@ -83,6 +83,10 @@ public abstract class TableRowSkinBase<T, C extends IndexedCell/*<T>*/,
     protected boolean isIndentationRequired() {
         return false;
     }
+    
+    protected TableColumnBase getTreeColumn() {
+        return null;
+    }
 
     protected Node getDisclosureNode() {
         return null;
@@ -163,13 +167,8 @@ public abstract class TableRowSkinBase<T, C extends IndexedCell/*<T>*/,
     
     private int fullRefreshCounter = DEFAULT_FULL_REFRESH_COUNTER;
 
-//    protected boolean showColumns = true;
-    
     protected boolean isDirty = false;
     protected boolean updateCells = false;
-    
-//    private TableView<T> tableView;
-//    private TableViewSkin tableViewSkin;
     
     private final double fixedCellLength;
     private final boolean fixedCellLengthEnabled;
@@ -182,9 +181,7 @@ public abstract class TableRowSkinBase<T, C extends IndexedCell/*<T>*/,
     };
     
     // spanning support
-//    private CellSpanTableView<T> cellSpanTableView;
     protected SpanModel spanModel;
-//    private static final Map<TableView, SpanType[][]> spanMap = new WeakHashMap<TableView, SpanType[][]>();
     
     // supports variable row heights
     public static <C extends IndexedCell> double getTableRowHeight(int index, C tableRow) {
@@ -368,19 +365,6 @@ public abstract class TableRowSkinBase<T, C extends IndexedCell/*<T>*/,
         }
     }
 
-//    private void updateShowColumns() {
-//        boolean newValue = (isIgnoreText() && isIgnoreGraphic());
-//        if (showColumns == newValue) return;
-//        
-//        showColumns = newValue;
-////        showColumns = true;
-//        
-//        System.out.println("showColumns is " + showColumns + " for row " + getSkinnable().getIndex());
-//
-//        updateCells = true;
-//        requestLayout();
-//    }
-    
     @Override protected void layoutChildren(double x, final double y,
             double w, final double h) {
         
@@ -395,7 +379,9 @@ public abstract class TableRowSkinBase<T, C extends IndexedCell/*<T>*/,
         
         if (cellsMap.isEmpty()) return;
         
-        if (/*showColumns && */! getVisibleLeafColumns().isEmpty()) {
+        
+        ObservableList<? extends TableColumnBase> visibleLeafColumns = getVisibleLeafColumns();
+        if (! visibleLeafColumns.isEmpty()) {
             
             ///////////////////////////////////////////
             // indentation code starts here
@@ -404,14 +390,21 @@ public abstract class TableRowSkinBase<T, C extends IndexedCell/*<T>*/,
             double disclosureWidth = 0;
             boolean indentationRequired = isIndentationRequired();
             boolean disclosureVisible = isDisclosureNodeVisible();
+            int indentationColumnIndex = 0;
+            Node disclosureNode = null;
             if (indentationRequired) {
+                // Determine the column in which we want to put the disclosure node.
+                // By default it is null, which means the 0th column should be
+                // where the indentation occurs.
+                TableColumnBase treeColumn = getTreeColumn();
+                indentationColumnIndex = treeColumn == null ? 0 : visibleLeafColumns.indexOf(treeColumn);
+                indentationColumnIndex = indentationColumnIndex < 0 ? 0 : indentationColumnIndex;
+                
                 int indentationLevel = getIndentationLevel(getSkinnable());
                 if (! isShowRoot()) indentationLevel--;
                 final double indentationPerLevel = getIndentationPerLevel();
                 leftMargin = indentationLevel * indentationPerLevel;
             
-                x += leftMargin;
-                
                 // position the disclosure node so that it is at the proper indent
                 Control c = getVirtualFlowOwner();
                 final double defaultDisclosureWidth = maxDisclosureWidthMap.containsKey(c) ?
@@ -419,25 +412,12 @@ public abstract class TableRowSkinBase<T, C extends IndexedCell/*<T>*/,
                 disclosureWidth = defaultDisclosureWidth;
 
                 if (disclosureVisible) {
-                    Node disclosureNode = getDisclosureNode();
-                    disclosureWidth = disclosureNode.prefWidth(-1);
+                    disclosureNode = getDisclosureNode();
+                    disclosureWidth = disclosureNode.prefWidth(h);
                     if (disclosureWidth > defaultDisclosureWidth) {
                         maxDisclosureWidthMap.put(c, disclosureWidth);
                     }
-
-                    double ph = disclosureNode.prefHeight(-1);
-
-                    disclosureNode.resize(disclosureWidth, ph);
-                    positionInArea(disclosureNode, x, y,
-                            disclosureWidth, h, /*baseline ignored*/0,
-                            HPos.CENTER, VPos.CENTER);
                 }
-
-                // determine starting point of the graphic or cell node, and the
-                // remaining width available to them
-                final int padding = getGraphic() == null ? 0 : 3;
-                x += disclosureWidth + padding;
-                w -= (leftMargin + disclosureWidth + padding);
             }
             ///////////////////////////////////////////
             // indentation code ends here
@@ -451,9 +431,16 @@ public abstract class TableRowSkinBase<T, C extends IndexedCell/*<T>*/,
             
             double verticalPadding = insets.getTop() + insets.getBottom();
             double horizontalPadding = insets.getLeft() + insets.getRight();
-            
+
+            /**
+             * RT-26743:TreeTableView: Vertical Line looks unfinished.
+             * We used to not do layout on cells whose row exceeded the number
+             * of items, but now we do so as to ensure we get vertical lines
+             * where expected in cases where the vertical height exceeds the 
+             * number of items.
+             */
             int row = getSkinnable().getIndex();
-            if (row < 0 || row >= itemsProperty().get().size()) return;
+            if (row < 0/* || row >= itemsProperty().get().size()*/) return;
             
             for (int column = 0, max = cells.size(); column < max; column++) {
                 R tableCell = cells.get(column);
@@ -486,6 +473,38 @@ public abstract class TableRowSkinBase<T, C extends IndexedCell/*<T>*/,
                     if (fixedCellLengthEnabled && ! getChildren().contains(tableCell)) {
                         getChildren().add(tableCell);
                     }
+                    
+                    
+                    
+                    ///////////////////////////////////////////
+                    // further indentation code starts here
+                    ///////////////////////////////////////////
+                    if (indentationRequired && column == indentationColumnIndex) {
+                        x += leftMargin;
+                        
+                        if (disclosureVisible) {
+                            double ph = disclosureNode.prefHeight(disclosureWidth);
+                            
+                            if (width < (disclosureWidth + leftMargin)) {
+                                disclosureNode.setVisible(false);
+                            } else {
+                                disclosureNode.setVisible(true);
+                                disclosureNode.resize(disclosureWidth, ph);
+                                positionInArea(disclosureNode, x, y,
+                                        disclosureWidth, ph, /*baseline ignored*/0,
+                                        HPos.CENTER, VPos.CENTER);
+                            }
+                        }
+                        
+                        // determine starting point of the graphic or cell node, and the
+                        // remaining width available to them
+                        final int padding = getGraphic() == null ? 0 : 3;
+                        x += disclosureWidth + padding;
+                        w -= (leftMargin + disclosureWidth + padding);
+                    }
+                    ///////////////////////////////////////////
+                    // further indentation code ends here
+                    ///////////////////////////////////////////
                     
                     ///////////////////////////////////////////
                     // cell spanning code starts here
@@ -539,13 +558,27 @@ public abstract class TableRowSkinBase<T, C extends IndexedCell/*<T>*/,
                     // cell spanning code ends here
                     ///////////////////////////////////////////
                     
-                    // a little bit more special code for indentation purposes
-                    if (indentationRequired && column == 0) {
-                        tableCell.resize(width - leftMargin - disclosureWidth, height);
-                        tableCell.relocate(x, insets.getTop());
+                    // a little bit more special code for indentation purposes.
+                    // we use j here to prevent the table cells being sized as
+                    // negative or 0 widths. If this is allowed, the vertical 
+                    // lines for that column are removed from view, which 
+                    // doesn't look right.
+                    double j = width - (leftMargin + disclosureWidth);
+                    if (indentationRequired && column == indentationColumnIndex) {
+                        // the min width of a table cell is now 1 pixel
+                        tableCell.resize(Math.max(1, j), height);
                     } else {
                         tableCell.resize(width, height);
+                    }
+
+                    if (indentationRequired && column > indentationColumnIndex) {
                         tableCell.relocate(x - leftMargin - disclosureWidth, insets.getTop());
+                    } else {
+                        // if j is a negative number (because the width is smaller
+                        // that the left margin and disclosure node), we relocate
+                        // the cell to the left (and subtract 1 to take into 
+                        // account the minimum 1px width we resize cells to above).
+                        tableCell.relocate(x + Math.min(0, j - 1), insets.getTop());
                     }
                 } else {
                     if (fixedCellLengthEnabled) {
@@ -629,8 +662,8 @@ public abstract class TableRowSkinBase<T, C extends IndexedCell/*<T>*/,
                 R cell = cellsMap.get(col);
                 if (cell == null) continue;
 
-                cell.updateIndex(skinnableIndex);
                 updateCell(cell, skinnable);
+                cell.updateIndex(skinnableIndex);
                 cells.add(cell);
             }
 //        }

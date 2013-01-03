@@ -693,6 +693,31 @@ public class TreeTableView<S> extends Control {
     }
     
     
+    
+    // --- Tree Column
+    private ObjectProperty<TreeTableColumn<S,?>> treeColumn;
+    /**
+     * Property that represents which column should have the disclosure node
+     * shown in it (that is, the column with the arrow). By default this will be
+     * the left-most column if this property is null, otherwise it will be the
+     * specified column assuming it is non-null and contained within the 
+     * {@link #getVisibleLeafColumns() visible leaf columns} list.
+     */
+    public final ObjectProperty<TreeTableColumn<S,?>> treeColumnProperty() {
+        if (treeColumn == null) {
+            treeColumn = new SimpleObjectProperty<TreeTableColumn<S,?>>(this, "treeColumn", null);
+        }
+        return treeColumn;
+    }
+    public final void setTreeColumn(TreeTableColumn<S,?> value) {
+        treeColumnProperty().set(value);
+    }
+    public final TreeTableColumn<S,?> getTreeColumn() {
+        return treeColumn == null ? null : treeColumn.get();
+    }
+    
+    
+    
     // --- Selection Model
     private ObjectProperty<TreeTableViewSelectionModel<S>> selectionModel;
 

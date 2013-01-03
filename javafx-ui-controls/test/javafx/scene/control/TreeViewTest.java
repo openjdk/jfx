@@ -210,7 +210,7 @@ public class TreeViewTest {
         assertEquals(0, treeView.getRow(root));
     }
     
-    @Test public void ensureRootIndexIsNegativeOne1WhenRootIsNotShowing() {
+    @Test public void ensureRootIndexIsNegativeOneWhenRootIsNotShowing() {
         installChildren();
         treeView.setShowRoot(false);
         assertEquals(-1, treeView.getRow(root));
@@ -239,6 +239,18 @@ public class TreeViewTest {
         assertEquals(-1, treeView.getRow(child1));
         assertEquals(-1, treeView.getRow(child2));
         assertEquals(-1, treeView.getRow(child3));
+    }
+    
+    @Test public void ensureCorrectIndexWhenRootTreeItemIsCollapsed() {
+        installChildren();
+        root.setExpanded(false);
+        assertEquals(0, treeView.getRow(root));
+        
+        // note that the indices are still positive, representing what the values
+        // would be if this row is visible
+        assertEquals(1, treeView.getRow(child1));
+        assertEquals(2, treeView.getRow(child2));
+        assertEquals(3, treeView.getRow(child3));
     }
     
     @Test public void removingLastTest() {

@@ -194,6 +194,8 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeViewB
             weakRootListener = new WeakEventHandler(rootListener);
             getRoot().addEventHandler(TreeItem.<T>treeNotificationEvent(), weakRootListener);
         }
+        
+        updateItemCount();
     }
 
     @Override public int getItemCount() {

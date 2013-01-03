@@ -230,6 +230,8 @@ public class TreeTableViewSkin<S> extends TableViewSkinBase<S, TreeTableView<S>,
             weakRootListener = new WeakEventHandler(rootListener);
             getRoot().addEventHandler(TreeItem.<S>treeNotificationEvent(), weakRootListener);
         }
+        
+        updateItemCount();
     }
     
     
@@ -336,22 +338,38 @@ public class TreeTableViewSkin<S> extends TableViewSkinBase<S, TreeTableView<S>,
             padding = r.getInsets().getLeft() + r.getInsets().getRight();
         } 
         
+        TreeTableRow treeTableRow = new TreeTableRow();
+        treeTableRow.updateTreeTableView(treeTableView);
+        
         int rows = maxRows == -1 ? items.size() : Math.min(items.size(), maxRows);
         double maxWidth = 0;
         for (int row = 0; row < rows; row++) {
+            treeTableRow.updateIndex(row);
+            treeTableRow.updateTreeItem(treeTableView.getTreeItem(row));
+            
             cell.updateTreeTableColumn(col);
             cell.updateTreeTableView(treeTableView);
+            cell.updateTreeTableRow(treeTableRow);
             cell.updateIndex(row);
             
             if ((cell.getText() != null && !cell.getText().isEmpty()) || cell.getGraphic() != null) {
                 getChildren().add(cell);
                 cell.impl_processCSS(false);
-                maxWidth = Math.max(maxWidth, cell.prefWidth(-1));
+                
+                double w = cell.prefWidth(-1);
+                
+                maxWidth = Math.max(maxWidth, w);
                 getChildren().remove(cell);
             }
         }
         
-        col.impl_setWidth(maxWidth + padding);
+        // RT-23486
+        double widthMax = maxWidth + padding;
+        if(treeTableView.getColumnResizePolicy() == TreeTableView.CONSTRAINED_RESIZE_POLICY) {
+             widthMax = Math.max(widthMax, col.getWidth());
+        }
+
+        col.impl_setWidth(widthMax); 
     }
     
     /** {@inheritDoc} */

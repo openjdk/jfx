@@ -46,7 +46,7 @@ public abstract class TableCellSkinBase<C extends IndexedCell, B extends CellBeh
     // clicks result in the column being resized to fit the widest content in 
     // the column
     static final String DEFER_TO_PARENT_PREF_WIDTH = "deferToParentPrefWidth";
-    private boolean isDeferToParentForPrefWidth = false;
+    boolean isDeferToParentForPrefWidth = false;
     
     private InvalidationListener columnWidthListener = new InvalidationListener() {
         @Override public void invalidated(Observable valueModel) {
