@@ -70,6 +70,7 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
         registerChangeListener(control.indexProperty(), "INDEX");
         registerChangeListener(control.treeTableViewProperty(), "TREE_TABLE_VIEW");
         registerChangeListener(control.treeItemProperty(), "TREE_ITEM");
+        registerChangeListener(control.getTreeTableView().treeColumnProperty(), "TREE_COLUMN");
     }
     
     @Override protected void handleControlPropertyChanged(String p) {
@@ -84,6 +85,9 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
             }
         } else if ("TREE_ITEM".equals(p)) {
             updateDisclosureNode();
+        } else if ("TREE_COLUMN".equals(p)) {
+            updateCells = true;
+            requestLayout();
         }
     }
     
