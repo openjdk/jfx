@@ -413,7 +413,7 @@ public abstract class TableRowSkinBase<T, C extends IndexedCell/*<T>*/,
 
                 if (disclosureVisible) {
                     disclosureNode = getDisclosureNode();
-                    disclosureWidth = disclosureNode.prefWidth(-1);
+                    disclosureWidth = disclosureNode.prefWidth(h);
                     if (disclosureWidth > defaultDisclosureWidth) {
                         maxDisclosureWidthMap.put(c, disclosureWidth);
                     }
@@ -481,10 +481,10 @@ public abstract class TableRowSkinBase<T, C extends IndexedCell/*<T>*/,
                         x += leftMargin;
                         
                         if (disclosureVisible) {
-                            double ph = disclosureNode.prefHeight(-1);
+                            double ph = disclosureNode.prefHeight(disclosureWidth);
                             disclosureNode.resize(disclosureWidth, ph);
                             positionInArea(disclosureNode, x, y,
-                                    disclosureWidth, h, /*baseline ignored*/0,
+                                    disclosureWidth, ph, /*baseline ignored*/0,
                                     HPos.CENTER, VPos.CENTER);
                         }
                         

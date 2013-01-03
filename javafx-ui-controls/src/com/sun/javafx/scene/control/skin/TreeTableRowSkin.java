@@ -135,6 +135,9 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
         } else if (disclosureNode.getParent() == null) {
             getChildren().add(disclosureNode);
             disclosureNode.toFront();
+            
+            // RT-26625: [TreeView, TreeTableView] can lose arrows while scrolling
+            disclosureNode.impl_processCSS(true);
         } else {
             disclosureNode.toBack();
         }

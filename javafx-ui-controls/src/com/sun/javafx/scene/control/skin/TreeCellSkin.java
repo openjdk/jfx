@@ -121,6 +121,9 @@ public class TreeCellSkin extends CellSkinBase<TreeCell<?>, TreeCellBehavior> {
         } else if (disclosureNode.getParent() == null) {
             getChildren().add(disclosureNode);
             disclosureNode.toFront();
+            
+            // RT-26625: [TreeView, TreeTableView] can lose arrows while scrolling
+            disclosureNode.impl_processCSS(true);
         } else {
             disclosureNode.toBack();
         }
@@ -160,16 +163,16 @@ public class TreeCellSkin extends CellSkinBase<TreeCell<?>, TreeCellBehavior> {
             }
             
             if (disclosureNode != null) {
-                disclosureWidth = disclosureNode.prefWidth(-1);
+                disclosureWidth = disclosureNode.prefWidth(h);
                 if (disclosureWidth > defaultDisclosureWidth) {
                     maxDisclosureWidthMap.put(tree, disclosureWidth);
                 }
 
-                double ph = disclosureNode.prefHeight(-1);
-
+                double ph = disclosureNode.prefHeight(disclosureWidth);
+                
                 disclosureNode.resize(disclosureWidth, ph);
                 positionInArea(disclosureNode, x, y,
-                        disclosureWidth, h, /*baseline ignored*/0,
+                        disclosureWidth, ph, /*baseline ignored*/0,
                         HPos.CENTER, VPos.CENTER);
             }
         }
