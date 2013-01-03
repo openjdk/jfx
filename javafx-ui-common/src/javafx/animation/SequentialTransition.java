@@ -370,7 +370,7 @@ public final class SequentialTransition extends Transition {
             int i = 0;
             for (final Animation animation : cachedChildren) {
                 startTimes[i] = cycleTicks;
-                rates[i] = animation.getRate();
+                rates[i] = Math.abs(animation.getRate());
                 if (rates[i] < EPSILON) {
                     rates[i] = 1;
                 }
