@@ -362,7 +362,7 @@ public final class ParallelTransition extends Transition {
             cycleTime = 0;
             int i = 0;
             for (final Animation animation : cachedChildren) {
-                rates[i] = animation.getRate();
+                rates[i] = Math.abs(animation.getRate());
                 if (rates[i] < EPSILON) {
                     rates[i] = 1;
                 }
