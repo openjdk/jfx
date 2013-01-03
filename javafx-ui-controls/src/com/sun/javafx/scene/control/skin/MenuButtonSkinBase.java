@@ -279,7 +279,7 @@ public abstract class MenuButtonSkinBase<C extends MenuButton, B extends MenuBut
                                     Event.fireEvent(menuitem, new Event(MenuItem.MENU_VALIDATION_EVENT));
                                 }
                                 Menu target = (Menu)menuitem.getParentMenu();
-                                if(target.getOnMenuValidation() != null) {
+                                if(target!= null && target.getOnMenuValidation() != null) {
                                     Event.fireEvent(target, new Event(MenuItem.MENU_VALIDATION_EVENT));
                                 }
                                 if (!menuitem.isDisable()) menuitem.fire();
