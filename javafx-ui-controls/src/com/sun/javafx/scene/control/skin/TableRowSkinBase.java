@@ -644,8 +644,8 @@ public abstract class TableRowSkinBase<T, C extends IndexedCell/*<T>*/,
                 R cell = cellsMap.get(col);
                 if (cell == null) continue;
 
-                cell.updateIndex(skinnableIndex);
                 updateCell(cell, skinnable);
+                cell.updateIndex(skinnableIndex);
                 cells.add(cell);
             }
 //        }

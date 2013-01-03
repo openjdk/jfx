@@ -27,8 +27,12 @@ package com.sun.javafx.scene.control.skin;
 import com.sun.javafx.scene.control.behavior.TreeTableCellBehavior;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ReadOnlyDoubleProperty;
+import javafx.scene.Node;
+import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeTableCell;
 import javafx.scene.control.TreeTableColumn;
+import javafx.scene.control.TreeTableRow;
+import javafx.scene.control.TreeTableView;
 
 /**
  */
@@ -52,5 +56,40 @@ public class TreeTableCellSkin extends TableCellSkinBase<TreeTableCell, TreeTabl
 
     @Override protected ReadOnlyDoubleProperty columnWidthProperty() {
         return tableColumn.widthProperty();
+    }
+    
+    @Override protected double computePrefWidth(double height) {
+        if (isDeferToParentForPrefWidth) {
+            // RT-27167: we must take into account the disclosure node and the
+            // indentation (which is not taken into account by the LabeledSkinBase.
+            double ph = super.computePrefWidth(height);
+            
+            TreeTableRow treeTableRow = getSkinnable().getTreeTableRow();
+            if (treeTableRow != null) {
+                TreeItem treeItem = treeTableRow.getTreeItem();
+                if (treeItem != null) {
+                    int nodeLevel = TreeTableView.getNodeLevel(treeItem);
+                    if (!treeTableRow.getTreeTableView().isShowRoot()) nodeLevel--;
+                    
+                    // FIXME we're assuming an indent of 10px here, which is not
+                    // necessarily accurate as it is configurable via -fx-indent.
+                    // Unfortunately this value is stored in TreeTableRowSkin.
+                    ph += nodeLevel * 10;
+                    
+                    // Adding a little extra for padding
+                    ph += 10;
+
+                    // add in the width of the disclosure node, if one exists
+                    Node disclosureNode = treeTableRow.getDisclosureNode();
+                    if (disclosureNode != null) {
+                        double disclosureNodeWidth = disclosureNode.prefWidth(height);
+                        ph += disclosureNodeWidth;
+                    }
+                }
+            }
+            
+            return ph;
+        }
+        return columnWidthProperty().get();
     }
 }
