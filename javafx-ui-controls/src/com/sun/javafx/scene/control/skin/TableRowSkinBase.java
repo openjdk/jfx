@@ -474,6 +474,8 @@ public abstract class TableRowSkinBase<T, C extends IndexedCell/*<T>*/,
                         getChildren().add(tableCell);
                     }
                     
+                    
+                    
                     ///////////////////////////////////////////
                     // further indentation code starts here
                     ///////////////////////////////////////////
@@ -482,10 +484,16 @@ public abstract class TableRowSkinBase<T, C extends IndexedCell/*<T>*/,
                         
                         if (disclosureVisible) {
                             double ph = disclosureNode.prefHeight(disclosureWidth);
-                            disclosureNode.resize(disclosureWidth, ph);
-                            positionInArea(disclosureNode, x, y,
-                                    disclosureWidth, ph, /*baseline ignored*/0,
-                                    HPos.CENTER, VPos.CENTER);
+                            
+                            if (width < (disclosureWidth + leftMargin)) {
+                                disclosureNode.setVisible(false);
+                            } else {
+                                disclosureNode.setVisible(true);
+                                disclosureNode.resize(disclosureWidth, ph);
+                                positionInArea(disclosureNode, x, y,
+                                        disclosureWidth, ph, /*baseline ignored*/0,
+                                        HPos.CENTER, VPos.CENTER);
+                            }
                         }
                         
                         // determine starting point of the graphic or cell node, and the
@@ -550,9 +558,15 @@ public abstract class TableRowSkinBase<T, C extends IndexedCell/*<T>*/,
                     // cell spanning code ends here
                     ///////////////////////////////////////////
                     
-                    // a little bit more special code for indentation purposes
+                    // a little bit more special code for indentation purposes.
+                    // we use j here to prevent the table cells being sized as
+                    // negative or 0 widths. If this is allowed, the vertical 
+                    // lines for that column are removed from view, which 
+                    // doesn't look right.
+                    double j = width - (leftMargin + disclosureWidth);
                     if (indentationRequired && column == indentationColumnIndex) {
-                        tableCell.resize(width - leftMargin - disclosureWidth, height);
+                        // the min width of a table cell is now 1 pixel
+                        tableCell.resize(Math.max(1, j), height);
                     } else {
                         tableCell.resize(width, height);
                     }
@@ -560,7 +574,11 @@ public abstract class TableRowSkinBase<T, C extends IndexedCell/*<T>*/,
                     if (indentationRequired && column > indentationColumnIndex) {
                         tableCell.relocate(x - leftMargin - disclosureWidth, insets.getTop());
                     } else {
-                        tableCell.relocate(x, insets.getTop());
+                        // if j is a negative number (because the width is smaller
+                        // that the left margin and disclosure node), we relocate
+                        // the cell to the left (and subtract 1 to take into 
+                        // account the minimum 1px width we resize cells to above).
+                        tableCell.relocate(x + Math.min(0, j - 1), insets.getTop());
                     }
                 } else {
                     if (fixedCellLengthEnabled) {
