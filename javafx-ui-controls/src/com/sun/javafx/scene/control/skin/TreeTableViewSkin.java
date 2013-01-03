@@ -351,7 +351,13 @@ public class TreeTableViewSkin<S> extends TableViewSkinBase<S, TreeTableView<S>,
             }
         }
         
-        col.impl_setWidth(maxWidth + padding);
+        // RT-23486
+        double widthMax = maxWidth + padding;
+        if(treeTableView.getColumnResizePolicy() == TreeTableView.CONSTRAINED_RESIZE_POLICY) {
+             widthMax = Math.max(widthMax, col.getWidth());
+        }
+
+        col.impl_setWidth(widthMax); 
     }
     
     /** {@inheritDoc} */
