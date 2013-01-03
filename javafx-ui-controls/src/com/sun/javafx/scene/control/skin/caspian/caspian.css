@@ -2312,9 +2312,7 @@
    TableColumn, and a 'filler' area that extends from the right-most column
    to the edge of the tableview, or up to the 'column control' button. */
 .table-view .column-header,
-.table-view .filler,
-.tree-table-view .column-header,
-.tree-table-view .filler{
+.tree-table-view .column-header {
     -fx-text-fill: -fx-selection-bar-text;
 
     /* TODO: for some reason, this doesn't scale. */
@@ -2335,6 +2333,26 @@
     -fx-border-insets: 0 1 1 0, 0 0 0 0;
     -fx-border-width: 0.083333em, 0.083333em;
 }
+
+.table-view .filler,
+.tree-table-view .filler {
+    -fx-size: 25;
+    -fx-border-style: solid;
+    -fx-border-color: 
+        /* 
+          Inner border: we have different colours along the top, right, bottom and left.
+          Refer to RT-12298 for the spec.
+        */
+        derive(-fx-base, 80%) 
+        linear-gradient(to bottom, derive(-fx-base,80%) 20%, derive(-fx-base,-10%) 90%)
+        derive(-fx-base, 10%) 
+        linear-gradient(to bottom, derive(-fx-base,80%) 20%, derive(-fx-base,-10%) 90%),
+        /* Outer border: */
+        transparent transparent -fx-table-header-border-color transparent;
+    -fx-border-insets: 0 0 1 0, 0 0 0 0;
+    -fx-border-width: 0.083333em, 0.083333em 0 0.083333em 0.083333em;
+}
+
 
 .table-view .column-header .sort-order,
 .tree-table-view .column-header .sort-order{
