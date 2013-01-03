@@ -230,6 +230,8 @@ public class TreeTableViewSkin<S> extends TableViewSkinBase<S, TreeTableView<S>,
             weakRootListener = new WeakEventHandler(rootListener);
             getRoot().addEventHandler(TreeItem.<S>treeNotificationEvent(), weakRootListener);
         }
+        
+        updateItemCount();
     }
     
     
