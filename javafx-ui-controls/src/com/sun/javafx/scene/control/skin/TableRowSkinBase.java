@@ -431,9 +431,16 @@ public abstract class TableRowSkinBase<T, C extends IndexedCell/*<T>*/,
             
             double verticalPadding = insets.getTop() + insets.getBottom();
             double horizontalPadding = insets.getLeft() + insets.getRight();
-            
+
+            /**
+             * RT-26743:TreeTableView: Vertical Line looks unfinished.
+             * We used to not do layout on cells whose row exceeded the number
+             * of items, but now we do so as to ensure we get vertical lines
+             * where expected in cases where the vertical height exceeds the 
+             * number of items.
+             */
             int row = getSkinnable().getIndex();
-            if (row < 0 || row >= itemsProperty().get().size()) return;
+            if (row < 0/* || row >= itemsProperty().get().size()*/) return;
             
             for (int column = 0, max = cells.size(); column < max; column++) {
                 R tableCell = cells.get(column);
