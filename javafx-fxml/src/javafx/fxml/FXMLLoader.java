@@ -1812,9 +1812,9 @@ public class FXMLLoader {
 
     /**
      * Sets the root of the object hierarchy. The value passed to this method
-     * is used as the value of the <tt>&lt;fx:root%gt;</tt> tag. This method
+     * is used as the value of the <tt>&lt;fx:root&gt;</tt> tag. This method
      * must be called prior to loading the document when using
-     * <tt>&lt;fx:root%gt;</tt>.
+     * <tt>&lt;fx:root&gt;</tt>.
      *
      * @param root
      * The root of the object hierarchy.
