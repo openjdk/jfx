@@ -37,13 +37,13 @@ public class BooleanStringConverter extends StringConverter<Boolean> {
     @Override public Boolean fromString(String value) {
         // If the specified value is null or zero-length, return null
         if (value == null) {
-            return null;
+            return Boolean.FALSE;
         }
 
         value = value.trim();
 
         if (value.length() < 1) {
-            return null;
+            return Boolean.FALSE;
         }
 
         return Boolean.valueOf(value);
@@ -53,7 +53,7 @@ public class BooleanStringConverter extends StringConverter<Boolean> {
     @Override public String toString(Boolean value) {
         // If the specified value is null, return a zero-length String
         if (value == null) {
-            return "";
+            return "false";
         }
 
         return value.toString();
