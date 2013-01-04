@@ -404,7 +404,12 @@ public class TableColumnHeader extends Region {
         if (! isSortingEnabled()) return;
         
         isSortColumn = sortPos != -1;
-        if (! isSortColumn) return;
+        if (! isSortColumn) {
+            if (sortArrow != null) {
+                sortArrow.setVisible(false);
+            }
+            return;
+        }
         
         final int sortColumnCount = getTableViewSkin().getSortOrder().size();
         boolean showSortOrderDots = sortPos <= 3 && sortColumnCount > 1;
