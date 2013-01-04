@@ -205,6 +205,7 @@ public class ColorPalette extends StackPane {
                     case ENTER:
                         processSelectKey(ke);
                         break;
+                    default: // no-op
                 }
             }
         });
