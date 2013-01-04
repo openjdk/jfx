@@ -40,13 +40,12 @@ import javafx.geometry.NodeOrientation;
  */
 public class CheckBoxSkin extends LabeledSkinBase<CheckBox, ButtonBehavior<CheckBox>> {
 
-    private StackPane box;
+    private final StackPane box = new StackPane();
     private StackPane innerbox;
 
     public CheckBoxSkin(CheckBox checkbox) {
         super(checkbox, new ButtonBehavior<CheckBox>(checkbox));
 
-        box = new StackPane();
         box.getStyleClass().setAll("box");
         innerbox = new StackPane();
         innerbox.getStyleClass().setAll("mark");
