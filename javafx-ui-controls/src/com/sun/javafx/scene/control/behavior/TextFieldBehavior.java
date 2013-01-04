@@ -278,6 +278,7 @@ public class TextFieldBehavior extends TextInputControlBehavior<TextField> {
                         case 1: mouseSingleClick(hit); break;
                         case 2: mouseDoubleClick(hit); break;
                         case 3: mouseTripleClick(hit); break;
+                        default: // no-op
                     }
                 } else if (e.isShiftDown() && !(e.isControlDown() || e.isAltDown() || e.isMetaDown()) && e.getClickCount() == 1) {
                     // didn't click inside the selection, so select
