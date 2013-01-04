@@ -275,18 +275,17 @@ public class SamplePage extends GridPane {
                 withState(new Slider(0,100,50), "focused", ".thumb", "hover"),
                 withState(new Slider(0,100,50), "focused", ".thumb", "hover, pressed"));
         newDetailedSection(
-                new String[] {"Scrollbar - V: ", "normal", "small", "focused", ".thumb hover", ".thumb pressed"}, 
+                new String[] {"Scrollbar - H: ", "normal", "small", "big thumb"}, 
                 new ScrollBar(),
                 ScrollBarBuilder.create().minWidth(30).prefWidth(30).build(),
-                withState(new ScrollBar(), "horizontal, focused"),
-                withState(new ScrollBar(), "horizontal", ".thumb", "hover"),
-                withState(new ScrollBar(), "horizontal", ".thumb", "pressed")
+                ScrollBarBuilder.create().visibleAmount(60).max(100).build()
                 );
         newDetailedSection(
-                new String[] {"Scrollbar - V: ", "normal", "small", "focused", ".thumb hover", ".thumb pressed"}, 
+                new String[] {"Scrollbar - V: ", "normal", "small", "btn hover", "btn pressed", ".thumb hover", ".thumb pressed"}, 
                 withState(ScrollBarBuilder.create().orientation(Orientation.VERTICAL).build(), "vertical"),
                 withState(ScrollBarBuilder.create().orientation(Orientation.VERTICAL).minHeight(30).prefHeight(30).build(), "vertical"),
-                withState(ScrollBarBuilder.create().orientation(Orientation.VERTICAL).build(), "vertical, focused"),
+                withState(ScrollBarBuilder.create().orientation(Orientation.VERTICAL).build(), "vertical", ".decrement-button", "hover"),
+                withState(ScrollBarBuilder.create().orientation(Orientation.VERTICAL).build(), "vertical", ".decrement-button", "pressed"),
                 withState(ScrollBarBuilder.create().orientation(Orientation.VERTICAL).build(), "vertical", ".thumb", "hover"),
                 withState(ScrollBarBuilder.create().orientation(Orientation.VERTICAL).build(), "vertical", ".thumb", "pressed")
                 );
