@@ -356,9 +356,10 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
                     // to indicate the text can be dragged, etc.
                 } else if (!(e.isControlDown() || e.isAltDown() || e.isShiftDown() || e.isMetaDown())) {
                     switch (e.getClickCount()) {
-                      case 1: skin.positionCaret(hit, false, false); break;
-                      case 2: mouseDoubleClick(hit); break;
-                      case 3: mouseTripleClick(hit); break;
+                        case 1: skin.positionCaret(hit, false, false); break;
+                        case 2: mouseDoubleClick(hit); break;
+                        case 3: mouseTripleClick(hit); break;
+                        default: // no-op
                     }
                 } else if (e.isShiftDown() && !(e.isControlDown() || e.isAltDown() || e.isMetaDown()) && e.getClickCount() == 1) {
                     // didn't click inside the selection, so select
