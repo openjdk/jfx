@@ -42,7 +42,6 @@ import javafx.collections.ObservableList;
 import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.stage.PopupWindow;
-import com.sun.javafx.Utils;
 import com.sun.javafx.application.PlatformImpl;
 import com.sun.javafx.collections.TrackableObservableList;
 import com.sun.javafx.css.CssError;
@@ -1196,7 +1195,7 @@ public class PopupControl extends PopupWindow implements Skinnable {
             }
 
             try {
-                final Class<?> skinClass = Utils.loadClass(skinClassName.get(), this);
+                final Class<?> skinClass = Control.loadClass(skinClassName.get(), this);
                 Constructor<?>[] constructors = skinClass.getConstructors();
                 Constructor<?> skinConstructor = null;
                 for (Constructor<?> c : constructors) {
