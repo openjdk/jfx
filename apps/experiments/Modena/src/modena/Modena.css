@@ -1010,7 +1010,7 @@
  *                                                                             *
  ******************************************************************************/
 .text-area {
-    -fx-padding: 1;
+    -fx-padding: 0;
 }
 .text-area > .scroll-pane {
     -fx-background-color: transparent;

@@ -332,17 +332,10 @@ public class SamplePage extends GridPane {
                 "TextArea:", 
                 TextAreaBuilder.create().text("TextArea").prefColumnCount(10).prefRowCount(2).build(),
                 TextAreaBuilder.create().text("Many Lines of\nText.\n#3\n#4\n#5\n#6\n#7\n#8\n#9\n#10").prefColumnCount(10).prefRowCount(3).build(),
+                TextAreaBuilder.create().text("Many Lines of\nText.\n#3\n#4\n#5\n#6\n#7\n#8\n#9\n#10").prefColumnCount(6).prefRowCount(3).build(),
                 TextAreaBuilder.create().promptText("Prompt Text").prefColumnCount(10).prefRowCount(2).build(),
-                withState(TextAreaBuilder.create().text("Focused").prefColumnCount(10).prefRowCount(2).build(), "focused"),
-                withState(TextAreaBuilder.create().text("Disabled").prefColumnCount(10).prefRowCount(2).build(), "disabled")
-                );
-        newSection(      
-                "TextArea:", 
-                TextAreaBuilder.create().text("TextArea").prefColumnCount(10).prefRowCount(2).build(),
-                TextAreaBuilder.create().text("Many Lines of\nText.\n#3\n#4\n#5\n#6\n#7\n#8\n#9\n#10").prefColumnCount(10).prefRowCount(3).build(),
-                TextAreaBuilder.create().promptText("Prompt Text").prefColumnCount(10).prefRowCount(2).build(),
-                withState(TextAreaBuilder.create().text("Focused").prefColumnCount(10).prefRowCount(2).build(), "focused"),
-                withState(TextAreaBuilder.create().text("Disabled").prefColumnCount(10).prefRowCount(2).build(), "disabled")
+                withState(TextAreaBuilder.create().text("Focused").prefColumnCount(7).prefRowCount(2).build(), "focused"),
+                withState(TextAreaBuilder.create().text("Disabled").prefColumnCount(8).prefRowCount(2).build(), "disabled")
                 );
         newSection(      
                 "ChoiceBox:", 
