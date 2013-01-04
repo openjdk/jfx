@@ -83,7 +83,6 @@ public class ColorPickerBehavior extends ComboBoxBaseBehavior<Color> {
     }
 
     @Override protected void callAction(String name) {
-        ColorPicker colorPicker = (ColorPicker)getControl();
         if (OPEN_ACTION.equals(name)) {
             show();
         } else if(CLOSE_ACTION.equals(name)) {
