@@ -841,17 +841,21 @@
     -fx-opacity: -fx-disabled-opacity;
 }
 /* new styleclass for edge to edge scrollpanes that don't want to draw a border */
-.scroll-pane.edge-to-edge {
+.scroll-pane.edge-to-edge,
+.tab-pane > * > .scroll-pane {
     -fx-background-color: -fx-background;
     -fx-background-insets: 0;
     -fx-padding: 0;
 }
-.scroll-pane.edge-to-edge > .scroll-bar {
+.scroll-pane.edge-to-edge > .scroll-bar,
+.tab-pane > * > .scroll-pane > .scroll-bar {
     -fx-background-insets: 0;
     -fx-padding: 0;
 }
 .scroll-pane.edge-to-edge > .scroll-bar > .increment-button, 
-.scroll-pane.edge-to-edge > .scroll-bar > .decrement-button {
+.scroll-pane.edge-to-edge > .scroll-bar > .decrement-button,
+.tab-pane > * > .scroll-pane > .scroll-bar > .increment-button, 
+.tab-pane > * > .scroll-pane > .scroll-bar > .decrement-button {
     -fx-padding: 3px;
 }
 /*******************************************************************************
@@ -1011,6 +1015,7 @@
  ******************************************************************************/
 .text-area {
     -fx-padding: 0;
+    -fx-cursor: default;
 }
 .text-area > .scroll-pane {
     -fx-background-color: transparent;
@@ -1159,7 +1164,7 @@
 /*    -fx-background-color: -fx-tab-border-color, -fx-inner-border, -fx-body-color;
     -fx-background-radius: 5 5 0 0, 4 4 0 0, 3 3 0 0;
     -fx-background-insets: 0, 1 1 0 1, 2 2 0 2;*/
-    -fx-background-color: -fx-tab-border-color, -fx-control-inner-background;
+    -fx-background-color: -fx-tab-border-color, -fx-background;
     -fx-background-insets: 0, 1 1 0 1;
     -fx-background-radius: 5 5 0 0, 4 4 0 0;
 }
@@ -1204,9 +1209,9 @@
     -fx-padding: 0.833em 0.416667em 0.166667em 0.0em; /* 10 5 2 0 */
 }
 
-.tab-pane > .tab-header-area > .headers-region {
+/*.tab-pane > .tab-header-area > .headers-region {
     -fx-effect: dropshadow(two-pass-box , rgba(0,0,0,0.6) , 4, 0.0 , 0, 0);
-}
+}*/
 
 /* TODO: scaling the shape seems to make it way too large */
 .tab-pane > .tab-header-area > .headers-region > .tab > .tab-container > .tab-close-button {
