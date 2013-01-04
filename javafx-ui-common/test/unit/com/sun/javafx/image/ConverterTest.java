@@ -341,7 +341,7 @@ public class ConverterTest {
             int red   = (pixel >> rshift) & 0xff;
             int green = (pixel >> gshift) & 0xff;
             int blue  = (pixel >> bshift) & 0xff;
-            if (alpha < 255 && getter.getAlphaType() == AlphaType.PREMULTIPLIED) {
+            if (alpha > 0 && alpha < 255 && getter.getAlphaType() == AlphaType.PREMULTIPLIED) {
                 int halfa = alpha >> 1;
                 red   = (red   >= alpha) ? 255 : (red   * 255 + halfa) / alpha;
                 green = (green >= alpha) ? 255 : (green * 255 + halfa) / alpha;
