@@ -44,10 +44,14 @@
 }
 .section-label {
     -fx-font-weight: normal;
-    -fx-text-fill: rgba(0,0,0,0.5);
+    -fx-text-fill: derive(-fx-text-background-color,30%);
 }
 
 .section-border {
-    -fx-border-color: rgba(0,0,0,0.1);
+    -fx-border-color: ladder(
+        -fx-background,
+        derive(-fx-background,10%) 20%,
+        derive(-fx-background,-10%)  21%
+     );;
     -fx-padding: 20;
 }
