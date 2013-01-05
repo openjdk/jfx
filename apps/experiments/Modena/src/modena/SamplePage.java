@@ -50,6 +50,7 @@ import javafx.scene.control.PasswordField;
 import javafx.scene.control.PasswordFieldBuilder;
 import javafx.scene.control.ProgressBar;
 import javafx.scene.control.ProgressIndicator;
+import javafx.scene.control.ProgressIndicatorBuilder;
 import javafx.scene.control.RadioButton;
 import javafx.scene.control.ScrollBar;
 import javafx.scene.control.ScrollBarBuilder;
@@ -307,12 +308,18 @@ public class SamplePage extends GridPane {
                 new ProgressBar(-1)
                 );
         newDetailedSection(
-                new String[] {"ProgressIndicator: ", "normal 0%", "normal 60%", "normal 100%", "disabled", "indeterminate"}, 
+                new String[] {"ProgressIndicator: ", "normal 0%", "normal 60%", "normal 100%", "disabled"}, 
                 new ProgressIndicator(0),
                 new ProgressIndicator(0.6),
                 new ProgressIndicator(1),
-                withState(new ProgressIndicator(0.5), "disabled"),
-                new ProgressIndicator(-1)
+                withState(new ProgressIndicator(0.5), "disabled")
+                );
+        newDetailedSection(
+                new String[] {"ProgressIndicator Indeterminate: ", "normal", "small", "large", "disabled"}, 
+                ProgressIndicatorBuilder.create().progress(-1).maxWidth(USE_PREF_SIZE).maxHeight(USE_PREF_SIZE).build(),
+                ProgressIndicatorBuilder.create().progress(-1).prefWidth(30).prefHeight(30).build(),
+                ProgressIndicatorBuilder.create().progress(-1).prefWidth(60).prefHeight(60).build(),
+                ProgressIndicatorBuilder.create().progress(-1).maxWidth(USE_PREF_SIZE).maxHeight(USE_PREF_SIZE).disable(true).build()
                 );
         newSection(      
                 "TextField:", 

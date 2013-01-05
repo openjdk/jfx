@@ -886,38 +886,28 @@
  * ProgressBar                                                                 *
  *                                                                             *
  ******************************************************************************/
-
 .progress-bar {
-    -fx-background-color:
-        -fx-box-border,
-        linear-gradient(to bottom, derive(-fx-color,30%) 5%, derive(-fx-color,-17%));
-    -fx-background-insets: 0, 1;
     -fx-indeterminate-bar-length: 60;
     -fx-indeterminate-bar-escape: true;
     -fx-indeterminate-bar-flip: true;
     -fx-indeterminate-bar-animation-time: 2;
 }
-
 .progress-bar > .bar {
-    -fx-background-color:
-        -fx-box-border,
-        linear-gradient(to bottom, derive(-fx-accent,95%), derive(-fx-accent,10%)),
-        linear-gradient(to bottom, derive(-fx-accent,38%), -fx-accent);
-    -fx-background-insets: 0, 1, 2;
+    -fx-background-color: -fx-box-border,-fx-accent;
+    -fx-background-insets: 0, 1;
+    -fx-background-radius: 0.416667em, 0.416667em;
     -fx-padding: 0.416667em; /* 5 */
 }
-
 .progress-bar:indeterminate > .bar {
     -fx-background-color: linear-gradient(to left, transparent, -fx-accent);
 }
-
 .progress-bar > .track {
      -fx-background-color:
         -fx-box-border,
         linear-gradient(to bottom, derive(-fx-color,-15%), derive(-fx-color,2.2%) 20%, derive(-fx-color,60%));
     -fx-background-insets:  0, 1;
+    -fx-background-radius: 0.416667em, 0.416667em;
 }
-
 .progress-bar:disabled {
     -fx-opacity: -fx-disabled-opacity;
 }
@@ -927,49 +917,76 @@
  * ProgressIndicator                                                           *
  *                                                                             *
  ******************************************************************************/
-
 .progress-indicator {
-    -fx-progress-color: -fx-accent;
+    -fx-indeterminate-segment-count: 12;
+    -fx-spin-enabled: true;
 }
-
 .progress-indicator > .determinate-indicator > .indicator {
-    -fx-background-color:
-        -fx-box-border,
-        -fx-outer-border,
-        -fx-inner-border,
-        -fx-body-color;
-    -fx-background-insets: 1 0 -1 0, 0, 1, 2;
-    -fx-padding: 0.083333em; /* 1 */
-}
-
-.progress-indicator > .determinate-indicator > .progress {
-    -fx-background-color:
-        linear-gradient(to bottom, derive(-fx-box-border,38%), derive(-fx-box-border,-60%)),
-        linear-gradient(to bottom, derive(-fx-box-border,38%), -fx-box-border);
+    -fx-background-color: -fx-box-border, derive( -fx-background, -10%);
     -fx-background-insets: 0, 1;
-    -fx-padding: 0.75em; /* 9 */
+    -fx-padding: 1;
 }
-
+.progress-indicator > .determinate-indicator > .progress {
+    -fx-background-color: -fx-accent;
+    -fx-background-insets: 0;
+    -fx-padding: 1em; /* 9 */
+}
 /* TODO: scaling the shape seems to make it disappear */
 .progress-indicator > .determinate-indicator > .tick {
-    -fx-background-color: -fx-mark-color, white;
-    -fx-background-insets: 1 0 -1 0, 0;
+    -fx-background-color: white;
+    -fx-background-insets: 0;
     -fx-padding: 0.416667em; /* 5 */
-    -fx-shape: "M 0,5 L 2.5,5 L 3.7,7.5 L 7.5,0 L 10,0 L 5,10 L 2.5,10 Z";
+    -fx-shape: "M-0.25,6.083c0.843-0.758,4.583,4.833,5.75,4.833S14.5-1.5,15.917-0.917c1.292,0.532-8.75,17.083-10.5,17.083C3,16.167-1.083,6.833-0.25,6.083z";
     -fx-scale-shape: false;
 }
-
 .progress-indicator:indeterminate > .spinner {
     -fx-padding: 0.833333em; /* 10 */
 }
-
 .progress-indicator > .percentage {
     -fx-font-size: 0.916667em; /* 11pt - 1 less than the default font */
     -fx-fill: -fx-text-background-color;
 }
-
 .progress-indicator:disabled {
     -fx-opacity: -fx-disabled-opacity;
+}
+.progress-indicator:indeterminate .segment {
+    -fx-background-color: -fx-accent;
+}
+.progress-indicator:indeterminate .segment0 {
+    -fx-shape:"M10,0C9.998,0,9.995,0,9.992,0C9.991,0,9.991,0,9.99,0C9.988,0,9.986,0,9.985,0S9.982,0,9.981,0S9.979,0,9.978,0S9.975,0,9.974,0S9.972,0,9.971,0C9.969,0,9.968,0,9.966,0H9.965c-0.007,0-0.014,0-0.02,0C9.944,0,9.944,0,9.944,0C9.941,0,9.939,0,9.937,0c-0.77,0.007-1.389,0.634-1.384,1.404C8.557,2.176,9.185,2.8,9.956,2.8c0.001,0,0.003,0,0.004,0H10c0.773-0.002,1.4-0.63,1.4-1.404c0-0.77-0.622-1.393-1.392-1.396C10.006,0,10.003,0,10,0L10,0z";
+}
+.progress-indicator:indeterminate .segment1 {
+    -fx-shape:"M5.688,1.156c-0.236,0-0.476,0.06-0.696,0.187C4.98,1.349,4.969,1.356,4.958,1.363c0,0-0.001,0-0.001,0C4.955,1.364,4.954,1.365,4.952,1.366c-0.001,0-0.002,0.001-0.004,0.002c0,0,0,0-0.001,0C4.944,1.371,4.94,1.373,4.936,1.375c0,0,0,0-0.001,0C4.933,1.377,4.931,1.378,4.929,1.38C4.267,1.772,4.046,2.624,4.438,3.288c0.261,0.444,0.73,0.692,1.212,0.692c0.24,0,0.484-0.062,0.706-0.192l0.034-0.02C7.058,3.378,7.283,2.52,6.896,1.851C6.636,1.405,6.168,1.156,5.688,1.156L5.688,1.156z";
+}
+.progress-indicator:indeterminate .segment2 {
+    -fx-shape:"M2.534,4.326c-0.482,0-0.951,0.25-1.209,0.697C1.323,5.027,1.321,5.029,1.32,5.031l0,0C1.319,5.033,1.318,5.034,1.317,5.036S1.315,5.039,1.314,5.04c0,0.001,0,0.002-0.001,0.002C1.312,5.044,1.311,5.046,1.31,5.048c0,0,0,0,0,0.001C1.309,5.051,1.308,5.053,1.307,5.055C1.302,5.063,1.297,5.071,1.292,5.079l0,0C1.291,5.082,1.29,5.084,1.288,5.087c-0.376,0.67-0.141,1.519,0.529,1.898c0.218,0.123,0.456,0.182,0.69,0.182c0.488,0,0.963-0.255,1.222-0.708l0.02-0.035c0.383-0.671,0.149-1.527-0.521-1.912C3.008,4.386,2.769,4.326,2.534,4.326L2.534,4.326z";
+}
+.progress-indicator:indeterminate .segment3 {
+    -fx-shape:"M1.396,8.648c-0.002,0-0.005,0-0.008,0C0.619,8.652-0.001,9.278,0,10.047c0,0.002,0,0.006,0,0.008l0,0c0,0.019,0,0.037,0,0.056c0,0.001,0,0.002,0,0.003s0,0.003,0,0.004c0.01,0.765,0.632,1.378,1.396,1.378c0.005,0,0.01,0,0.015,0c0.773-0.009,1.395-0.642,1.389-1.415v-0.04C2.794,9.27,2.166,8.648,1.396,8.648L1.396,8.648z";
+}
+.progress-indicator:indeterminate .segment4 {
+    -fx-shape:"M2.579,12.955c-0.242,0-0.487,0.062-0.71,0.194c-0.664,0.391-0.885,1.242-0.499,1.906c0.013,0.021,0.025,0.043,0.038,0.063c0.262,0.436,0.724,0.678,1.197,0.678c0.243,0,0.49-0.063,0.714-0.197c0.665-0.396,0.883-1.257,0.489-1.922l-0.02-0.034C3.526,13.201,3.059,12.955,2.579,12.955L2.579,12.955z";
+}
+.progress-indicator:indeterminate .segment5 {
+    -fx-shape:"M5.772,16.09c-0.489,0-0.965,0.257-1.223,0.712c-0.38,0.671-0.146,1.52,0.523,1.901c0.002,0.001,0.004,0.002,0.007,0.004h0c0.004,0.002,0.008,0.004,0.012,0.007c0,0,0,0,0.001,0c0.001,0.001,0.002,0.002,0.004,0.002c0.001,0.001,0.003,0.002,0.004,0.003c0,0,0.001,0,0.001,0.001c0.012,0.006,0.023,0.013,0.035,0.019c0.214,0.119,0.446,0.176,0.675,0.176c0.489,0,0.963-0.258,1.22-0.716c0.377-0.675,0.137-1.529-0.537-1.908l-0.035-0.02C6.242,16.149,6.006,16.09,5.772,16.09L5.772,16.09z";
+}
+.progress-indicator:indeterminate .segment6 {
+    -fx-shape:"M10.14,17.198c-0.006,0-0.013,0-0.02,0h-0.039c-0.773,0.011-1.394,0.646-1.385,1.419c0.008,0.767,0.631,1.382,1.396,1.382c0.003,0,0.006,0,0.009-0.001c0.024,0,0.051,0,0.075-0.001c0.769-0.016,1.38-0.648,1.367-1.418C11.53,17.813,10.904,17.198,10.14,17.198L10.14,17.198z";
+}
+.progress-indicator:indeterminate .segment7 {
+    -fx-shape:"M14.433,15.97c-0.245,0-0.494,0.064-0.72,0.2l-0.034,0.021c-0.663,0.397-0.88,1.258-0.483,1.922c0.261,0.439,0.725,0.683,1.2,0.683c0.24,0,0.484-0.062,0.707-0.194c0.022-0.013,0.044-0.025,0.065-0.039c0.656-0.399,0.866-1.254,0.469-1.913C15.373,16.212,14.909,15.97,14.433,15.97L14.433,15.97z";
+}
+.progress-indicator:indeterminate .segment8 {
+    -fx-shape:"M17.539,12.748c-0.493,0-0.973,0.261-1.229,0.723l-0.02,0.034c-0.376,0.676-0.133,1.53,0.542,1.907c0.216,0.121,0.45,0.178,0.681,0.178c0.487,0,0.96-0.256,1.217-0.71c0.003-0.006,0.007-0.012,0.01-0.019c0.007-0.013,0.015-0.025,0.021-0.038l0,0c0.002-0.003,0.003-0.005,0.004-0.008c0.369-0.675,0.124-1.521-0.55-1.893C18.001,12.805,17.769,12.748,17.539,12.748L17.539,12.748z";
+}
+.progress-indicator:indeterminate .segment9 {
+    -fx-shape:"M18.603,8.408c-0.011,0-0.021,0-0.031,0c-0.773,0.018-1.388,0.657-1.373,1.431l0.001,0.04c0.015,0.765,0.641,1.377,1.403,1.377c0.008,0,0.016,0,0.023,0c0.77-0.013,1.383-0.646,1.373-1.414c0-0.003,0-0.006,0-0.009l0,0c-0.001-0.019-0.001-0.037-0.001-0.055c0-0.001,0-0.001-0.001-0.002c0-0.002,0-0.004,0-0.006C19.979,9.012,19.358,8.408,18.603,8.408L18.603,8.408z";
+}
+.progress-indicator:indeterminate .segment10 {
+    -fx-shape:"M17.345,4.121c-0.248,0-0.5,0.066-0.728,0.205c-0.659,0.403-0.869,1.266-0.468,1.927l0.021,0.034c0.265,0.435,0.728,0.675,1.202,0.675c0.247,0,0.497-0.065,0.724-0.202c0.659-0.397,0.871-1.252,0.477-1.912c-0.007-0.011-0.013-0.021-0.02-0.032c-0.001-0.002-0.002-0.003-0.002-0.004c-0.001,0-0.001-0.001-0.001-0.002c-0.004-0.005-0.008-0.011-0.011-0.017c0-0.001,0-0.001-0.001-0.001c-0.001-0.002-0.002-0.004-0.004-0.007C18.271,4.358,17.813,4.121,17.345,4.121L17.345,4.121z";
+}
+.progress-indicator:indeterminate .segment11 {
+    -fx-shape:"M14.104,1.039c-0.494,0-0.974,0.264-1.227,0.729c-0.37,0.679-0.12,1.531,0.559,1.903l0.034,0.019c0.214,0.117,0.445,0.173,0.673,0.173c0.495,0,0.976-0.262,1.231-0.726c0.371-0.674,0.129-1.519-0.542-1.894c-0.012-0.006-0.024-0.013-0.036-0.02c-0.007-0.004-0.014-0.008-0.021-0.012c-0.003-0.001-0.006-0.003-0.009-0.005C14.556,1.094,14.329,1.039,14.104,1.039L14.104,1.039z";
 }
 
 /*******************************************************************************
