@@ -193,7 +193,7 @@
      * a control. It is typically the same size as the control (i.e., insets
      * are 0).
      */
-    -fx-outer-border: derive(-fx-color,-20%);
+    -fx-outer-border: derive(-fx-color,-23%);
 /*    -fx-outer-border: linear-gradient(
         to bottom,
         derive(-fx-color,-9%) 0%, 
@@ -709,20 +709,11 @@
     -fx-color: -fx-pressed-base;
 }
 
-.slider .track {
-    -fx-background-color:
-        derive(-fx-color,-22%),
-        linear-gradient(to bottom, derive(-fx-color,-15.5%), derive(-fx-color,34%) 30%, derive(-fx-color,68%));
-    -fx-background-insets: 0, 1;
-    -fx-background-radius: 2.5, 1.5;
-    -fx-padding: 0.208333em; /* 2.5 */
-}
-
-.slider:vertical .track {
-    -fx-background-color:
-        derive(-fx-color,-22%),
-        linear-gradient(to right, derive(-fx-color,-15.5%), derive(-fx-color,34%) 30%, derive(-fx-color,68%));
-    -fx-background-insets: 0, 1;
+.slider .track, .slider:vertical .track {
+    -fx-background-color:  derive(-fx-box-border, 20%), derive(-fx-background, -5%), -fx-background;
+    -fx-background-insets: 0, 1, 2 1 1 1;
+    -fx-background-radius: 2.5, 1.5, 1.5;
+    -fx-padding: 2;
 }
 
 .slider .axis {

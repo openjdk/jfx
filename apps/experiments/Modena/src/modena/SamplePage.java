@@ -267,16 +267,18 @@ public class SamplePage extends GridPane {
                 withState(new Hyperlink("F & Hover"), "focused, hover"),
                 withState(new Hyperlink("F & Armed"), "focused, armed"),
                 withState(new Hyperlink("Disabled"), "disabled"));
-        newSection("Slider:", 
-                new Slider(0,100,50),
-                withState(new Slider(0,100,50), null, ".thumb", "hover"),
-                withState(new Slider(0,100,50), null, ".thumb", "hover, pressed"),
-                withState(new Slider(0,100,50), "disabled"));
-        newSection("Slider Focused:", 
-                withState(new Slider(0,100,50), "focused"),
-                withState(new Slider(0,100,50), "focused", ".thumb", "hover"),
-                withState(new Slider(0,100,50), "focused", ".thumb", "hover, pressed"));
-        newSection("Slider (V):", 
+        newDetailedSection(
+                new String[]{"Slider - H: ", "normal", "hover", "pressed", "disabled"},
+                new Slider(0, 100, 50),
+                withState(new Slider(0, 100, 50), null, ".thumb", "hover"),
+                withState(new Slider(0, 100, 50), null, ".thumb", "hover, pressed"),
+                withState(new Slider(0, 100, 50), "disabled"));
+        newDetailedSection(
+                new String[]{"Slider - H - Focused: ", "normal", "hover", "pressed"},
+                withState(new Slider(0, 100, 50), "focused"),
+                withState(new Slider(0, 100, 50), "focused", ".thumb", "hover"),
+                withState(new Slider(0, 100, 50), "focused", ".thumb", "hover, pressed"));
+        newSection("Slider - V:",
                 SliderBuilder.create().min(0).max(100).value(50).orientation(Orientation.VERTICAL).build(),
                 withState(SliderBuilder.create().min(0).max(100).value(50).orientation(Orientation.VERTICAL).build(), null, ".thumb", "hover"),
                 withState(SliderBuilder.create().min(0).max(100).value(50).orientation(Orientation.VERTICAL).build(), null, ".thumb", "hover, pressed"),
