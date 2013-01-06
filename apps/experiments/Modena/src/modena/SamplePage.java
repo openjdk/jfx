@@ -59,6 +59,7 @@ import javafx.scene.control.ScrollPaneBuilder;
 import javafx.scene.control.Separator;
 import javafx.scene.control.SeparatorBuilder;
 import javafx.scene.control.Slider;
+import javafx.scene.control.SliderBuilder;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextAreaBuilder;
 import javafx.scene.control.TextField;
@@ -275,6 +276,11 @@ public class SamplePage extends GridPane {
                 withState(new Slider(0,100,50), "focused"),
                 withState(new Slider(0,100,50), "focused", ".thumb", "hover"),
                 withState(new Slider(0,100,50), "focused", ".thumb", "hover, pressed"));
+        newSection("Slider (V):", 
+                SliderBuilder.create().min(0).max(100).value(50).orientation(Orientation.VERTICAL).build(),
+                withState(SliderBuilder.create().min(0).max(100).value(50).orientation(Orientation.VERTICAL).build(), null, ".thumb", "hover"),
+                withState(SliderBuilder.create().min(0).max(100).value(50).orientation(Orientation.VERTICAL).build(), null, ".thumb", "hover, pressed"),
+                withState(SliderBuilder.create().min(0).max(100).value(50).orientation(Orientation.VERTICAL).build(), "disabled"));
         newDetailedSection(
                 new String[] {"Scrollbar - H: ", "normal", "small", "big thumb"}, 
                 new ScrollBar(),
@@ -315,7 +321,7 @@ public class SamplePage extends GridPane {
                 withState(new ProgressIndicator(0.5), "disabled")
                 );
         newDetailedSection(
-                new String[] {"ProgressIndicator Indeterminate: ", "normal", "small", "large", "disabled"}, 
+                new String[] {"ProgressIndicator\nIndeterminate: ", "normal", "small", "large", "disabled"}, 
                 ProgressIndicatorBuilder.create().progress(-1).maxWidth(USE_PREF_SIZE).maxHeight(USE_PREF_SIZE).build(),
                 ProgressIndicatorBuilder.create().progress(-1).prefWidth(30).prefHeight(30).build(),
                 ProgressIndicatorBuilder.create().progress(-1).prefWidth(60).prefHeight(60).build(),
