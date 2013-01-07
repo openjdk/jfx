@@ -32,21 +32,17 @@
 package modena;
 
 import javafx.application.Platform;
-import javafx.collections.FXCollections;
-import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
-import javafx.scene.Group;
-import javafx.scene.GroupBuilder;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonBuilder;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.ChoiceBoxBuilder;
+import javafx.scene.control.ComboBoxBuilder;
 import javafx.scene.control.Hyperlink;
 import javafx.scene.control.Label;
-import javafx.scene.control.PasswordField;
 import javafx.scene.control.PasswordFieldBuilder;
 import javafx.scene.control.ProgressBar;
 import javafx.scene.control.ProgressIndicator;
@@ -54,16 +50,16 @@ import javafx.scene.control.ProgressIndicatorBuilder;
 import javafx.scene.control.RadioButton;
 import javafx.scene.control.ScrollBar;
 import javafx.scene.control.ScrollBarBuilder;
-import javafx.scene.control.ScrollPane;
 import javafx.scene.control.ScrollPaneBuilder;
-import javafx.scene.control.Separator;
 import javafx.scene.control.SeparatorBuilder;
 import javafx.scene.control.Slider;
 import javafx.scene.control.SliderBuilder;
-import javafx.scene.control.TextArea;
+import javafx.scene.control.Tab;
+import javafx.scene.control.TabPaneBuilder;
 import javafx.scene.control.TextAreaBuilder;
 import javafx.scene.control.TextField;
 import javafx.scene.control.TextFieldBuilder;
+import javafx.scene.control.TitledPaneBuilder;
 import javafx.scene.control.ToggleButton;
 import javafx.scene.control.ToggleButtonBuilder;
 import javafx.scene.control.ToggleGroup;
@@ -71,11 +67,7 @@ import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.HBoxBuilder;
 import javafx.scene.layout.VBox;
-import javafx.scene.paint.Color;
-import javafx.scene.shape.Line;
-import javafx.scene.shape.LineBuilder;
-import javafx.scene.shape.Rectangle;
-import javafx.scene.shape.RectangleBuilder;
+import static modena.SamplePageHelpers.*;
 
 /**
  * Page showing every control in every state
@@ -126,19 +118,6 @@ public class SamplePage extends GridPane {
         setConstraints(sectionLabel, 0, rowIndex);
         setConstraints(hbox, 1, rowIndex++);
         getChildren().addAll(sectionLabel,hbox);
-    }
-    
-    private static ObservableList<String> sampleItems() {
-        return FXCollections.observableArrayList("Item A","Item B","Item C",
-                "Item D","Item E","Item F","Item G");
-    }
-    
-    private static Node scrollPaneContent() {
-        return GroupBuilder.create().children(
-                RectangleBuilder.create().width(200).height(200).fill(Color.PALETURQUOISE).build(),
-                LineBuilder.create().endX(200).endY(200).stroke(Color.DODGERBLUE).build(),
-                LineBuilder.create().startX(200).endX(0).endY(200).stroke(Color.DODGERBLUE).build()
-            ).build();
     }
     
     public SamplePage() {
@@ -361,6 +340,53 @@ public class SamplePage extends GridPane {
                 withState(ChoiceBoxBuilder.create(String.class).items(sampleItems()).value("Item B").build(), "showing"),
                 withState(ChoiceBoxBuilder.create(String.class).items(sampleItems()).value("Item B").build(), "focused"),
                 withState(ChoiceBoxBuilder.create(String.class).items(sampleItems()).value("Item C").build(), "disabled")
+                );
+        newSection(      
+                "ComboBox:", 
+                ComboBoxBuilder.create(String.class).items(sampleItems()).value("Item A").build(),
+                withState(ComboBoxBuilder.create(String.class).items(sampleItems()).value("Item B").build(), "hover"),
+                withState(ComboBoxBuilder.create(String.class).items(sampleItems()).value("Item B").build(), "showing"),
+                withState(ComboBoxBuilder.create(String.class).items(sampleItems()).value("Item B").build(), "focused"),
+                withState(ComboBoxBuilder.create(String.class).items(sampleItems()).value("Item C").build(), "disabled")
+                );
+        newSection(      
+                "ComboBox\nEditable:", 
+                ComboBoxBuilder.create(String.class).items(sampleItems()).value("Item A").editable(true).build(),
+                withState(ComboBoxBuilder.create(String.class).items(sampleItems()).value("Item B").editable(true).build(), "hover"),
+                withState(ComboBoxBuilder.create(String.class).items(sampleItems()).value("Item B").editable(true).build(), "showing"),
+                withState(ComboBoxBuilder.create(String.class).items(sampleItems()).value("Item B").editable(true).build(), "focused"),
+                withState(ComboBoxBuilder.create(String.class).items(sampleItems()).value("Item C").editable(true).build(), "disabled")
+                );
+        newDetailedSection(
+                new String[] {"ToolBar (H):", "normal", "overflow", "disabled"}, 
+                createToolBar(false,false),
+                createToolBar(false,true),
+                withState(createToolBar(false,false), "disabled")
+                );
+        newDetailedSection(
+                new String[] {"ToolBar (V):", "normal", "overflow", "disabled"}, 
+                createToolBar(true,false),
+                createToolBar(true,true),
+                withState(createToolBar(true,false), "disabled")
+                );
+        newSection(      
+                "Tabs Floating:", 
+                createTabPane(3, 250,null,true),
+                withState(createTabPane(5, 200,"Tab Disabled &\nMany Tabs", true), null, ".tab", "disabled"),
+                withState(createTabPane(5, 200,"Disabled", true), "disabled")
+                );
+        newDetailedSection(
+                new String[] {"TitledPane:", "normal", "focused", "disabled"}, 
+                TitledPaneBuilder.create().text("Title").content(new Label("Content\nLine2.")).build(),
+                withState(TitledPaneBuilder.create().text("Title").content(new Label("Content\nLine2.")).build(), "focused"),
+                withState(TitledPaneBuilder.create().text("Title").content(new Label("Content\nLine2.")).build(), "disabled")
+                );
+        newDetailedSection(
+                new String[] {"Accordian:", "normal", "hover", "focused", "disabled"}, 
+                createAccordion(),
+                withState(createAccordion(), null, ".titled-pane", "hover"),
+                withState(createAccordion(), null, ".titled-pane", "focused"),
+                withState(createAccordion(), "disabled")
                 );
     }
 }

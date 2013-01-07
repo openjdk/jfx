@@ -651,11 +651,17 @@
         linear-gradient(to bottom, derive(-fx-base,46.9%) 2%, derive(-fx-base,-2.1%) 95%);
     -fx-background-insets: 0 0 0 0, 1 0 0 0;
     -fx-background-radius: 0, 0 ;
-    -fx-padding: 0.416667em 0.833em 8px 0.833em; /* 5 10 5 10 */
+    -fx-padding: 0.416667em 0.833em 0.416667em 0.833em; /* 5 10 5 10 */
     -fx-spacing: 0.333em; /* 4 */
     -fx-alignment: CENTER_LEFT;
 }
 
+.tool-bar:horizontal > .container > .separator {
+    -fx-orientation: vertical;
+}
+.tool-bar:vertical > .container > .separator {
+    -fx-orientation: horizontal;    
+}
 /*
 .tool-bar .separator:vertical .line {
     -fx-border-style: solid;
@@ -1118,6 +1124,10 @@
     -fx-tab-max-height: 2em; /* 24 */
 }
 
+.tab-pane:disabled {
+    -fx-opacity: -fx-disabled-opacity;
+}
+
 .tab-pane > .tab-header-area > .headers-region > .tab > .tab-container > .tab-label {
     -fx-background-color: transparent;    
     -fx-alignment: CENTER;
@@ -1293,3 +1303,236 @@
     -fx-background-insets: 0, 1 1 0 1, 2 2 0 2;
 }*/
 
+
+/* -------------- CODE  FOR THE NON-EDITABLE COMBO-BOX -------------- */
+
+/* ------- MAIN BUTTON ------- */
+
+.combo-box-base  {
+    -fx-background-color: -fx-outer-border, -fx-inner-border, -fx-body-color; 
+    -fx-background-insets: 0, 1, 2;
+    -fx-background-radius: 5, 4, 3;
+    -fx-padding: 0;
+}
+
+.combo-box-base:hover {
+    -fx-color: -fx-hover-base;
+}
+
+/*------- THIS SPECIFIES THE BUTTON COLOR WHEN THE POPUP MENU IS SHOWING -------*/
+.combo-box-base:showing {
+    -fx-color: -fx-pressed-base;
+}
+
+.combo-box-base:focused {
+    -fx-background-color: -fx-faint-focus-color, -fx-focus-color, -fx-inner-border, -fx-body-color; 
+    -fx-background-insets: -2, -0.3, 1, 2;
+    -fx-background-radius: 7, 6, 4, 3;
+}
+
+.combo-box-base:disabled {
+    -fx-opacity: .4;
+}
+
+/* ------- OPEN BUTTON ------- */
+.combo-box-base > .arrow-button {
+    -fx-background-color: -fx-outer-border, -fx-inner-border, -fx-body-color;
+    -fx-background-insets: 0, 1, 2;
+    -fx-background-radius: 0 5 5 0, 0 4 4 0, 0 3 3 0;
+    -fx-padding: 0.5em 0.416667em 0.5em 0.416667em; /* 6 5 6 5  */
+}
+/*    -fx-background-color: null;
+    -fx-background-insets: 0, 1, 2;
+    -fx-background-radius: 0 5 5 0, 0 4 4 0, 0 3 3 0;
+    -fx-padding: 0.5em 0.416667em 0.5em 0.416667em;  6 5 6 5 
+}*/
+/*.combo-box-base.split-button .arrow-button {
+    -fx-background-color: -fx-outer-border, -fx-inner-border, -fx-body-color;
+    -fx-background-insets: 0, 1, 2;
+    -fx-background-radius: 0 5 5 0, 0 4 4 0, 0 3 3 0;
+    -fx-padding: 0.5em 0.416667em 0.5em 0.416667em;  6 5 6 5 
+}*/
+
+/* ------- ARROW* ------- */
+.combo-box-base > .arrow-button > .arrow,
+.web-view .form-select-button .arrow {
+    -fx-background-insets: 1 0 -1 0, 0;
+    -fx-background-color: -fx-mark-highlight-color, -fx-mark-color;
+    -fx-padding: 0.166667em 0.333333em 0.166667em 0.333333em; /* 2 4 2 4 */
+    -fx-shape: "M 0 0 h 7 l -3.5 4 z";
+}
+
+.web-view .form-select-button {
+    -fx-background-radius: 2, 2, 1, 0;
+    -fx-background-insets: 2 2 1 2, 2, 3, 4;
+}
+
+/* ------- POPUP MENU ------- */
+/* --- .combo-box .popup-menu, .combo-box .menu-item, .combo-box .popup-menu .menu-item-radio
+all inherit from Menu Control's popup-menu. --- */
+
+
+/* -------------- CODE  FOR THE EDITABLE COMBO-BOX -------------- */
+
+/* ------- TEXTBOX SEGMENT OF COMBO BOX ------- */
+/*--- The editable ComboBox TextBox inherits its properties from the TextBox Control.
+Only the properties with values that are different from the TextBox are specified here. ---*/
+
+.combo-box-base:editable > .text-field {
+    -fx-padding: 3 5 2 5;
+    -fx-background-radius: 4 5 5 4, 3 4 4 3, 2 3 3 2;
+    -fx-background-insets: 0 0 -1 0, 0, 1;
+    -fx-vpos: CENTER;
+    -fx-content-display: LEFT;
+}
+
+.combo-box-base:editable > .text-field:focused {
+    -fx-background-color: -fx-focus-color, -fx-outer-border, -fx-control-inner-background;
+    -fx-background-radius: 5.4, 3, 2;
+    -fx-background-insets: -1.4, 0, 1;
+}
+
+.combo-box-base:editable:focused {
+    -fx-background-color: -fx-shadow-highlight-color, -fx-outer-border, -fx-inner-border, -fx-control-inner-background;
+    -fx-background-radius: 5, 5, 4, 3;
+    -fx-background-insets: 0 0 -1 0, 0, 1, 2;
+}
+
+/* -------------- STYLES FOR THE DEFAULT LISTVIEW-BASED COMBOBOX ------------- */
+
+/* Customie the ListCell that appears in the ComboBox button itself */
+.combo-box > .list-cell {
+    -fx-background: transparent;
+    -fx-background-color: transparent;
+    -fx-text-fill: -fx-text-base-color;
+    -fx-padding: 3 0 2 7;
+    -fx-cell-size: 1.7500em; /* 21 */
+}
+
+.combo-box-popup > .list-view {
+    -fx-background-color: -fx-box-border, -fx-control-inner-background;
+    -fx-background-insets: 0, 1;
+    -fx-effect: dropshadow( three-pass-box , rgba(0,0,0,0.6) , 8, 0.0 , 0 , 0 );
+}
+
+.combo-box-popup > .list-view > .virtual-flow > .clipped-container > .sheet > .list-cell {
+    -fx-padding: 4 0 4 5;
+    
+    /* No alternate highlighting */
+    -fx-background-color: -fx-control-inner-background;
+}
+
+.combo-box-popup > .list-view > .virtual-flow > .clipped-container > .sheet > .list-cell:filled:selected, 
+.combo-box-popup  > .list-view > .virtual-flow > .clipped-container > .sheet > .list-cell:filled:selected:hover {
+    -fx-background: -fx-accent;
+    -fx-background-color: -fx-selection-bar;
+    -fx-text-fill: -fx-selection-bar-text;
+}
+
+.combo-box-popup  > .list-view > .virtual-flow > .clipped-container > .sheet > .list-cell:filled:hover {
+    -fx-background-color: -fx-cell-hover-color;
+    -fx-text-fill: -fx-text-inner-color;
+}
+
+
+/*******************************************************************************
+ *                                                                             *
+ * TitledPane                                                                  *
+ *                                                                             *
+ ******************************************************************************/
+
+.titled-pane {
+    -fx-text-fill: -fx-text-base-color;
+}
+
+.titled-pane:focused {
+    -fx-text-fill: white;
+}
+
+.titled-pane > .title {
+    -fx-background-color: -fx-box-border, -fx-inner-border, -fx-body-color;
+    -fx-background-insets: 0, 1, 2;
+    -fx-background-radius: 5 5 0 0, 4 4 0 0, 3 3 0 0;
+    -fx-padding: 0.166667em 0.833333em 0.25em 0.833333em; /* 2 10 3 10 */
+}
+
+.titled-pane:focused > .title {
+    -fx-color: -fx-focus-color;
+}
+
+.titled-pane > .title > .arrow-button {
+    -fx-background-color: null;
+    -fx-background-insets: 0;
+    -fx-background-radius: 0;
+    -fx-padding: 0.0em 0.25em 0.0em 0.0em; /* 0 3 0 0 */
+}
+
+.titled-pane > .title > .arrow-button > .arrow {
+    -fx-background-color: -fx-mark-highlight-color, -fx-mark-color;
+    -fx-background-insets: 1 0 -1 0, 0;
+    -fx-padding: 0.25em 0.3125em 0.25em 0.3125em; /* 3 3.75 3 3.75 */
+    -fx-shape: "M 0 0 h 7 l -3.5 4 z";
+}
+
+.titled-pane:collapsed > .title > .arrow-button > .arrow {
+    -fx-rotate: -90;
+}
+
+.titled-pane > *.content {
+    -fx-background-color:
+        -fx-box-border,
+        linear-gradient(to bottom, derive(-fx-color,-02%), derive(-fx-color,65%) 12%, derive(-fx-color,23%) 88%, derive(-fx-color,50%) 99%, -fx-box-border);
+    -fx-background-insets: 0, 0 1 1 1;
+    -fx-padding: 0.167em;
+}
+
+.titled-pane:focused > .title > .arrow-button > .arrow {
+    -fx-background-color: white;
+}
+
+/*******************************************************************************
+ *                                                                             *
+ * Accordion                                                                   *
+ *                                                                             *
+ ******************************************************************************/
+
+.accordion > .titled-pane > .title {
+    -fx-background-color:
+        -fx-box-border,
+        -fx-inner-border,
+        -fx-body-color;
+    -fx-background-insets: -1 0 0 0, 0 1 1 1, 1 2 2 2;
+    -fx-background-radius: 0, 0, 0;
+}
+
+.accordion > .first-titled-pane > .title {
+    -fx-background-insets: 0, 1, 2;
+}
+
+.accordion > .titled-pane:focused > .title {
+    -fx-color: -fx-focus-color;
+}
+
+.accordion > .titled-pane:focused {
+    -fx-text-fill: white;
+}
+
+.accordion > .titled-pane:focused > .title > .arrow-button > .arrow {
+    -fx-background-color: white;
+}
+
+.accordion > .titled-pane:focused > .titled-pane:collapsed > .title > .arrow-button > .arrow {
+    -fx-background-color: white;
+}
+
+.accordion > .titled-pane:collapsed:focused > .title {
+    -fx-color: -fx-focus-color;
+}
+
+.accordion > .titled-pane:expanded:focused > .title {
+    -fx-color: -fx-focus-color;
+}
+
+.accordion > .titled-pane:hover > .title {
+    -fx-color: -fx-hover-base;
+}
