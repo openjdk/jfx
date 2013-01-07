@@ -38,6 +38,7 @@ import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
+import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.event.EventTarget;
 import javafx.scene.Node;
@@ -166,7 +167,13 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
                     }
                 }
                 
-                textField.fireEvent(t);
+                /*
+                ** We didn't want this event, re-target it
+                ** for textField, and consume our copy
+                */
+                Event retargetedEvent = t.copyFor(t.getSource(), textField);
+                textField.fireEvent(retargetedEvent);
+                t.consume();
             }
         });
         
