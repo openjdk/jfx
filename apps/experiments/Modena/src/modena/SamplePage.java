@@ -268,11 +268,12 @@ public class SamplePage extends GridPane {
                 withState(new Hyperlink("F & Armed"), "focused, armed"),
                 withState(new Hyperlink("Disabled"), "disabled"));
         newDetailedSection(
-                new String[]{"Slider - H: ", "normal", "hover", "pressed", "disabled"},
-                new Slider(0, 100, 50),
-                withState(new Slider(0, 100, 50), null, ".thumb", "hover"),
-                withState(new Slider(0, 100, 50), null, ".thumb", "hover, pressed"),
-                withState(new Slider(0, 100, 50), "disabled"));
+                new String[]{"Slider - H: ", "normal", "hover", "pressed", "disabled", "tickmarks"},
+                withState(SliderBuilder.create().maxWidth(90).min(0).max(100).value(50).build(), null),
+                withState(SliderBuilder.create().maxWidth(90).min(0).max(100).value(50).build(), null, ".thumb", "hover"),
+                withState(SliderBuilder.create().maxWidth(90).min(0).max(100).value(50).build(), null, ".thumb", "hover, pressed"),
+                withState(SliderBuilder.create().maxWidth(90).min(0).max(100).value(50).build(), "disabled"),
+                SliderBuilder.create().min(0).max(100).value(50).showTickMarks(true).showTickLabels(true).build());
         newDetailedSection(
                 new String[]{"Slider - H - Focused: ", "normal", "hover", "pressed"},
                 withState(new Slider(0, 100, 50), "focused"),
@@ -282,7 +283,8 @@ public class SamplePage extends GridPane {
                 SliderBuilder.create().min(0).max(100).value(50).orientation(Orientation.VERTICAL).build(),
                 withState(SliderBuilder.create().min(0).max(100).value(50).orientation(Orientation.VERTICAL).build(), null, ".thumb", "hover"),
                 withState(SliderBuilder.create().min(0).max(100).value(50).orientation(Orientation.VERTICAL).build(), null, ".thumb", "hover, pressed"),
-                withState(SliderBuilder.create().min(0).max(100).value(50).orientation(Orientation.VERTICAL).build(), "disabled"));
+                withState(SliderBuilder.create().min(0).max(100).value(50).orientation(Orientation.VERTICAL).build(), "disabled"),
+                SliderBuilder.create().min(0).max(100).value(50).showTickMarks(true).showTickLabels(true).orientation(Orientation.VERTICAL).build());
         newDetailedSection(
                 new String[] {"Scrollbar - H: ", "normal", "small", "big thumb"}, 
                 new ScrollBar(),
