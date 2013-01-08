@@ -31,6 +31,17 @@
  *                                                                             *
  ******************************************************************************/
 
+
+
+/*******************************************************************************
+ *                                                                             *
+ * Label                                                                       *
+ *                                                                             *
+ ******************************************************************************/
+.label {
+    -fx-font-size: 0.75em; /** 9pt */
+}
+
 /*******************************************************************************
  *                                                                             *
  * PopupMenu                                                                   *
@@ -243,6 +254,97 @@
 
 
 /*******************************************************************************
+ *                                                                             *
+ * ComboBox                                                                    *
+ *                                                                             *
+ ******************************************************************************/
+
+.combo-box:external-focus {
+    -fx-border-color: red; 
+    -fx-focus-color: red;
+    -fx-opacity: 0.8;
+}
+.combo-box:internal-focus {
+    -fx-border-color: null; 
+    -fx-focus-color: #0093ff;
+    -fx-opacity: 1.0;
+}
+
+/* Customie the ListCell that appears in the ComboBox button itself */
+.combo-box > .list-cell {
+    -fx-padding: 0.5em 0.725em 0.5em 0.725em;
+    -fx-cell-size: 2em; 
+}
+
+.combo-box-popup > .list-view > .virtual-flow > .clipped-container > .sheet > .list-cell {
+    -fx-cell-size: 2.182em;
+}
+
+
+/*******************************************************************************
+ *                                                                             *
+ * SplitPane                                                                   *
+ *                                                                             *
+ ******************************************************************************/
+.split-pane > .split-pane-divider {
+    -fx-padding: 0 0.2725em 0 0.2725em; 
+}
+
+.split-pane > .split-pane-divider > .horizontal-grabber {
+    -fx-padding: 0.636em 0.18em 0.636em 0.18em;
+}
+
+.split-pane > .split-pane-divider > .vertical-grabber {
+    -fx-padding: 0.205em 0.545em 0.205em 0.545em;
+}
+
+
+/*******************************************************************************
+ *                                                                             *
+ * TabPane                                                                     *
+ *                                                                             *
+ ******************************************************************************/
+.tab-pane {
+    -fx-tab-min-width: 2.725em;
+    -fx-tab-min-height: 2.725em; 
+    -fx-tab-max-height: 2.725em; 
+}
+
+.tab-pane > .tab-header-area > .headers-region > .tab > .tab-container > .tab-label {
+    -fx-font-size: 1em;
+    -fx-padding: 0 0.545em 0 0.545em;
+}
+
+
+/*******************************************************************************
+ *                                                                             *
+ * TitledPane                                                                  *
+ *                                                                             *
+ ******************************************************************************/
+
+
+/*******************************************************************************
+ *                                                                             *
+ * ListView                                                                    *
+ *                                                                             *
+ ******************************************************************************/
+.list-view:external-focus {
+    -fx-border-color: red; 
+    -fx-focus-color: red;
+    -fx-opacity: 0.8;
+}
+.list-view:internal-focus {
+    -fx-border-color: null; 
+    -fx-focus-color: #0093ff;
+    -fx-opacity: 1.0;
+}
+
+.list-cell {
+    -fx-cell-size: 2.364em;
+}
+
+
+/*******************************************************************************
  *
  * 2-level focus setting.
  * The visuals aren't ready yet, so currently these are just placeholders.
@@ -312,17 +414,6 @@
     -fx-opacity: 1.0;
 }
 
-.list-view:external-focus {
-    -fx-border-color: red; 
-    -fx-focus-color: red;
-    -fx-opacity: 0.8;
-}
-.list-view:internal-focus {
-    -fx-border-color: null; 
-    -fx-focus-color: #0093ff;
-    -fx-opacity: 1.0;
-}
-
 .table-view:external-focus {
     -fx-border-color: red; 
     -fx-focus-color: red;
@@ -334,13 +425,4 @@
     -fx-opacity: 1.0;
 }
 
-.combo-box:external-focus {
-    -fx-border-color: red; 
-    -fx-focus-color: red;
-    -fx-opacity: 0.8;
-}
-.combo-box:internal-focus {
-    -fx-border-color: null; 
-    -fx-focus-color: #0093ff;
-    -fx-opacity: 1.0;
-}
+
