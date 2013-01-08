@@ -911,9 +911,13 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
             closeBtn.getStyleClass().setAll("tab-close-button");
             closeBtn.setOnMousePressed(new EventHandler<MouseEvent>() {
                 @Override public void handle(MouseEvent me) {
-                    removeListeners(getTab());
-                    getBehavior().closeTab(getTab());
-                    setOnMousePressed(null);
+                    Tab tab = getTab();
+                    TabPaneBehavior behavior = getBehavior();
+                    if (behavior.canCloseTab(tab)) {
+                         removeListeners(tab);
+                         behavior.closeTab(tab);
+                         setOnMousePressed(null);    
+                    }
                 }
             });
             
@@ -1082,8 +1086,12 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
                     }
                     if (me.getButton().equals(MouseButton.MIDDLE)) {
                         if (showCloseButton()) {
-                            removeListeners(getTab());
-                            getBehavior().closeTab(getTab());
+                            Tab tab = getTab();
+                            TabPaneBehavior behavior = getBehavior();
+                            if (behavior.canCloseTab(tab)) {
+                                removeListeners(tab);
+                                behavior.closeTab(tab);    
+                            }
                         }
                     } else if (me.getButton().equals(MouseButton.PRIMARY)) {
                         getBehavior().selectTab(getTab());

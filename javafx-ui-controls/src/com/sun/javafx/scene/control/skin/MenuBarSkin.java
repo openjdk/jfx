@@ -913,8 +913,8 @@ public class MenuBarSkin extends BehaviorSkinBase<MenuBar, BehaviorBase<MenuBar>
     // Return empty insets when "container" is empty, which happens
     // when using the system menu bar.
     @Override public Insets getInsets() {
-        if (container.getChildren().size() == 0) {
-            return new Insets(0, 0, 0, 0);
+        if (container.getChildren().isEmpty()) {
+            return Insets.EMPTY;
         } else {
             return super.getInsets();
         }

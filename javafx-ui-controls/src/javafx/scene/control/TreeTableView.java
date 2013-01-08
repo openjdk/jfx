@@ -549,16 +549,21 @@ public class TreeTableView<S> extends Control {
             
             // Fix for RT-15194: Need to remove removed columns from the 
             // sortOrder list.
+            List<TreeTableColumn> toRemove = new ArrayList<TreeTableColumn>();
             while (c.next()) {
                 TableUtil.removeColumnsListener(c.getRemoved(), weakColumnsObserver);
                 TableUtil.addColumnsListener(c.getAddedSubList(), weakColumnsObserver);
                 
                 if (c.wasRemoved()) {
-                    for (int i = 0; i < c.getRemovedSize(); i++) {
-                        getSortOrder().remove(c.getRemoved().get(i));
-                    }
+                    toRemove.addAll(c.getRemoved());
+                }
+                
+                if (c.wasAdded()) {
+                    toRemove.removeAll(c.getAddedSubList());
                 }
             }
+            
+            sortOrder.removeAll(toRemove);
         }
     };
     
