@@ -296,6 +296,10 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
                 caretPath.getElements().addAll(paragraphNode.getImpl_caretShape());
 
                 caretPath.setLayoutX(paragraphNode.getLayoutX());
+
+                // TODO: Remove this temporary workaround for RT-27533
+                paragraphNode.setLayoutX(2 * paragraphNode.getLayoutX() - paragraphNode.getBoundsInParent().getMinX());
+
                 caretPath.setLayoutY(paragraphNode.getLayoutY());
                 if (oldCaretBounds == null || !oldCaretBounds.equals(caretPath.getBoundsInParent())) {
                     scrollCaretToVisible();
