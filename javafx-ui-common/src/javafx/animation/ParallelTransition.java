@@ -394,10 +394,13 @@ public final class ParallelTransition extends Transition {
     @Override
     void impl_resume() {
         super.impl_resume();
+        int i = 0;
         for (final Animation animation : cachedChildren) {
             if (animation.getStatus() == Status.PAUSED) {
                 animation.impl_resume();
+                animation.clipEnvelope.setRate(rates[i] * Math.signum(getCurrentRate()));
             }
+            i++;
         }
     }
 
@@ -548,12 +551,16 @@ public final class ParallelTransition extends Transition {
             } else {
                 if (status == Status.STOPPED) {
                     startChild(animation, i);
+                    if (getStatus() == Status.PAUSED) {
+                        animation.impl_pause();
+                    }
+
                     offsetTicks[i] = (getCurrentRate() > 0)? newTicks - delays[i] : add(durations[i], delays[i]) - newTicks;
+                } else if (status == Status.PAUSED) {
+                    offsetTicks[i] += (newTicks - oldTicks) * Math.signum(this.clipEnvelope.getCurrentRate());
                 } else {
                     offsetTicks[i] += (getCurrentRate() > 0) ? newTicks - oldTicks : oldTicks - newTicks;
                 }
-                // TODO: This does probably not work if animation is paused (getCurrentRate() == 0)
-                // TODO: Do I have to use newTicks or currentTicks?
                 animation.clipEnvelope.jumpTo(Math.round(sub(newTicks, delays[i]) * rates[i]));
             }
             i++;

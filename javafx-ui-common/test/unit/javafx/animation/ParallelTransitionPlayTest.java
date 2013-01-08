@@ -555,4 +555,275 @@ public class ParallelTransitionPlayTest {
         assertEquals(5000 + TICK_STEP, yProperty.get());
 
     }
+
+    @Test
+    public void testPauseForward1() {
+        pt.getChildren().addAll(child1X, child1Y);
+
+        pt.play();
+        pt.jumpTo(Duration.seconds(5));
+        amt.pulse();
+        pt.pause();
+        assertEquals(Status.PAUSED, pt.getStatus());
+        assertEquals(Status.PAUSED, child1X.getStatus());
+        assertEquals(Status.PAUSED, child1Y.getStatus());
+        assertEquals(5000 + TICK_STEP, xProperty.get());
+        assertEquals(5000 + TICK_STEP, yProperty.get());
+
+        pt.jumpTo(Duration.seconds(6));
+        assertEquals(Status.PAUSED, pt.getStatus());
+        assertEquals(Status.PAUSED, child1X.getStatus());
+        assertEquals(Status.PAUSED, child1Y.getStatus());
+        assertEquals(6000, xProperty.get());
+        assertEquals(6000, yProperty.get());
+
+        pt.play();
+        assertEquals(Status.RUNNING, pt.getStatus());
+        assertEquals(Status.RUNNING, child1X.getStatus());
+        assertEquals(Status.RUNNING, child1Y.getStatus());
+        assertEquals(6000, xProperty.get());
+        assertEquals(6000, yProperty.get());
+
+        amt.pulse();
+        assertEquals(Status.RUNNING, pt.getStatus());
+        assertEquals(Status.RUNNING, child1X.getStatus());
+        assertEquals(Status.RUNNING, child1Y.getStatus());
+        assertEquals(6000 + TICK_STEP, xProperty.get());
+        assertEquals(6000 + TICK_STEP, yProperty.get());
+
+        pt.pause();
+        pt.jumpTo(Duration.seconds(7));
+        pt.jumpTo(Duration.seconds(9));
+        assertEquals(Status.PAUSED, pt.getStatus());
+        assertEquals(Status.PAUSED, child1X.getStatus());
+        assertEquals(Status.PAUSED, child1Y.getStatus());
+        assertEquals(9000, xProperty.get());
+        assertEquals(9000, yProperty.get());
+
+        pt.play();
+        assertEquals(Status.RUNNING, pt.getStatus());
+        assertEquals(Status.RUNNING, child1X.getStatus());
+        assertEquals(Status.RUNNING, child1Y.getStatus());
+        assertEquals(9000, xProperty.get());
+        assertEquals(9000, yProperty.get());
+
+        amt.pulse();
+        assertEquals(Status.RUNNING, pt.getStatus());
+        assertEquals(Status.RUNNING, child1X.getStatus());
+        assertEquals(Status.RUNNING, child1Y.getStatus());
+        assertEquals(9000 + TICK_STEP, xProperty.get());
+        assertEquals(9000 + TICK_STEP, yProperty.get());
+
+        pt.pause();
+        assertEquals(Status.PAUSED, pt.getStatus());
+        assertEquals(Status.PAUSED, child1X.getStatus());
+        assertEquals(Status.PAUSED, child1Y.getStatus());
+        assertEquals(9000 + TICK_STEP, xProperty.get());
+        assertEquals(9000 + TICK_STEP, yProperty.get());
+
+        pt.jumpTo(Duration.seconds(10).subtract(TickCalculation.toDuration(100)));
+        assertEquals(Status.PAUSED, pt.getStatus());
+        assertEquals(Status.PAUSED, child1X.getStatus());
+        assertEquals(Status.PAUSED, child1Y.getStatus());
+        assertEquals(10000 - TICK_STEP, xProperty.get());
+        assertEquals(10000 - TICK_STEP, yProperty.get());
+
+        pt.play();
+        assertEquals(Status.RUNNING, pt.getStatus());
+        assertEquals(Status.RUNNING, child1X.getStatus());
+        assertEquals(Status.RUNNING, child1Y.getStatus());
+        assertEquals(10000 - TICK_STEP, xProperty.get());
+        assertEquals(10000 - TICK_STEP, yProperty.get());
+
+        amt.pulse();
+        assertEquals(Status.RUNNING, pt.getStatus());
+        assertEquals(Status.RUNNING, child1X.getStatus());
+        assertEquals(Status.STOPPED, child1Y.getStatus());
+        assertEquals(10000, xProperty.get());
+        assertEquals(10000, yProperty.get());
+
+        pt.pause();
+        pt.jumpTo(Duration.seconds(60).subtract(TickCalculation.toDuration(100)));
+        assertEquals(Status.PAUSED, pt.getStatus());
+        assertEquals(Status.PAUSED, child1X.getStatus());
+        assertEquals(Status.STOPPED, child1Y.getStatus());
+        assertEquals(60000 - TICK_STEP, xProperty.get());
+        assertEquals(10000, yProperty.get());
+
+        pt.play();
+        assertEquals(Status.RUNNING, pt.getStatus());
+        assertEquals(Status.RUNNING, child1X.getStatus());
+        assertEquals(Status.STOPPED, child1Y.getStatus());
+        assertEquals(60000 - TICK_STEP, xProperty.get());
+        assertEquals(10000, yProperty.get());
+
+        amt.pulse();
+        assertEquals(Status.STOPPED, pt.getStatus());
+        assertEquals(Status.STOPPED, child1X.getStatus());
+        assertEquals(Status.STOPPED, child1Y.getStatus());
+        assertEquals(60000, xProperty.get());
+        assertEquals(10000, yProperty.get());
+    }
+
+    @Test
+    public void testPauseForward2() {
+        pt.getChildren().addAll(child1X, child1Y);
+
+        pt.play();
+        pt.jumpTo(Duration.seconds(5));
+        amt.pulse();
+        pt.pause();
+        assertEquals(Status.PAUSED, pt.getStatus());
+        assertEquals(Status.PAUSED, child1X.getStatus());
+        assertEquals(Status.PAUSED, child1Y.getStatus());
+        assertEquals(5000 + TICK_STEP, xProperty.get());
+        assertEquals(5000 + TICK_STEP, yProperty.get());
+
+        pt.jumpTo(Duration.seconds(30));
+        assertEquals(Status.PAUSED, pt.getStatus());
+        assertEquals(Status.PAUSED, child1X.getStatus());
+        assertEquals(Status.STOPPED, child1Y.getStatus());
+        assertEquals(30000, xProperty.get());
+        assertEquals(10000, yProperty.get());
+
+        pt.play();
+        assertEquals(Status.RUNNING, pt.getStatus());
+        assertEquals(Status.RUNNING, child1X.getStatus());
+        assertEquals(Status.STOPPED, child1Y.getStatus());
+        assertEquals(30000, xProperty.get());
+        assertEquals(10000, yProperty.get());
+
+        amt.pulse();
+        assertEquals(Status.RUNNING, pt.getStatus());
+        assertEquals(Status.RUNNING, child1X.getStatus());
+        assertEquals(Status.STOPPED, child1Y.getStatus());
+        assertEquals(30000 + TICK_STEP, xProperty.get());
+        assertEquals(10000, yProperty.get());
+
+        pt.pause();
+        pt.jumpTo(Duration.seconds(60).subtract(TickCalculation.toDuration(100)));
+        assertEquals(Status.PAUSED, pt.getStatus());
+        assertEquals(Status.PAUSED, child1X.getStatus());
+        assertEquals(Status.STOPPED, child1Y.getStatus());
+        assertEquals(60000 - TICK_STEP, xProperty.get());
+        assertEquals(10000, yProperty.get());
+
+        pt.play();
+        assertEquals(Status.RUNNING, pt.getStatus());
+        assertEquals(Status.RUNNING, child1X.getStatus());
+        assertEquals(Status.STOPPED, child1Y.getStatus());
+        assertEquals(60000 - TICK_STEP, xProperty.get());
+        assertEquals(10000, yProperty.get());
+
+        amt.pulse();
+        assertEquals(Status.STOPPED, pt.getStatus());
+        assertEquals(Status.STOPPED, child1X.getStatus());
+        assertEquals(Status.STOPPED, child1Y.getStatus());
+        assertEquals(60000, xProperty.get());
+        assertEquals(10000, yProperty.get());
+    }
+
+    @Test
+    public void testPauseAutoReverse() {
+        pt.getChildren().addAll(child1X, child1Y);
+        pt.setAutoReverse(true);
+        pt.setCycleCount(-1);
+
+        pt.play();
+        pt.jumpTo(Duration.seconds(5));
+        amt.pulse();
+        pt.pause();
+        assertEquals(Status.PAUSED, pt.getStatus());
+        assertEquals(Status.PAUSED, child1X.getStatus());
+        assertEquals(Status.PAUSED, child1Y.getStatus());
+        assertEquals(5000 + TICK_STEP, xProperty.get());
+        assertEquals(5000 + TICK_STEP, yProperty.get());
+
+        pt.jumpTo(Duration.seconds(60).subtract(TickCalculation.toDuration(100)));
+        assertEquals(Status.PAUSED, pt.getStatus());
+        assertEquals(Status.PAUSED, child1X.getStatus());
+        assertEquals(Status.STOPPED, child1Y.getStatus());
+        assertEquals(60000 - TICK_STEP, xProperty.get());
+        assertEquals(10000, yProperty.get());
+
+        pt.play();
+        assertEquals(Status.RUNNING, pt.getStatus());
+        assertEquals(Status.RUNNING, child1X.getStatus());
+        assertEquals(Status.STOPPED, child1Y.getStatus());
+        assertEquals(60000 - TICK_STEP, xProperty.get());
+        assertEquals(10000, yProperty.get());
+
+        amt.pulse();
+        assertEquals(Status.RUNNING, pt.getStatus());
+        assertEquals(Status.STOPPED, child1X.getStatus());
+        assertEquals(Status.STOPPED, child1Y.getStatus());
+        assertEquals(60000, xProperty.get());
+        assertEquals(10000, yProperty.get());
+
+        amt.pulse();
+        assertEquals(Status.RUNNING, pt.getStatus());
+        assertEquals(Status.RUNNING, child1X.getStatus());
+        assertEquals(Status.STOPPED, child1Y.getStatus());
+        assertEquals(60000 - TICK_STEP, xProperty.get());
+        assertEquals(10000, yProperty.get());
+
+        pt.pause();
+        pt.jumpTo(Duration.seconds(110).subtract(TickCalculation.toDuration(100)));
+        assertEquals(Status.PAUSED, pt.getStatus());
+        assertEquals(Status.PAUSED, child1X.getStatus());
+        assertEquals(Status.STOPPED, child1Y.getStatus());
+        assertEquals(10000 + TICK_STEP, xProperty.get());
+        assertEquals(10000, yProperty.get());
+
+        pt.play();
+        assertEquals(Status.RUNNING, pt.getStatus());
+        assertEquals(Status.RUNNING, child1X.getStatus());
+        assertEquals(Status.STOPPED, child1Y.getStatus());
+        assertEquals(10000 + TICK_STEP, xProperty.get());
+        assertEquals(10000, yProperty.get());
+
+        amt.pulse();
+        assertEquals(Status.RUNNING, pt.getStatus());
+        assertEquals(Status.RUNNING, child1X.getStatus());
+        assertEquals(Status.STOPPED, child1Y.getStatus());
+        assertEquals(10000, xProperty.get());
+        assertEquals(10000, yProperty.get());
+
+        amt.pulse();
+        assertEquals(Status.RUNNING, pt.getStatus());
+        assertEquals(Status.RUNNING, child1X.getStatus());
+        assertEquals(Status.RUNNING, child1Y.getStatus());
+        assertEquals(10000 - TICK_STEP, xProperty.get());
+        assertEquals(10000 - TICK_STEP, yProperty.get());
+
+        pt.pause();
+        pt.jumpTo(Duration.seconds(120).subtract(TickCalculation.toDuration(100)));
+        assertEquals(Status.PAUSED, pt.getStatus());
+        assertEquals(Status.PAUSED, child1X.getStatus());
+        assertEquals(Status.PAUSED, child1Y.getStatus());
+        assertEquals(0 + TICK_STEP, xProperty.get());
+        assertEquals(0 + TICK_STEP, yProperty.get());
+
+        pt.play();
+        assertEquals(Status.RUNNING, pt.getStatus());
+        assertEquals(Status.RUNNING, child1X.getStatus());
+        assertEquals(Status.RUNNING, child1Y.getStatus());
+        assertEquals(0 + TICK_STEP, xProperty.get());
+        assertEquals(0 + TICK_STEP, yProperty.get());
+
+        amt.pulse();
+        assertEquals(Status.RUNNING, pt.getStatus());
+        assertEquals(Status.STOPPED, child1X.getStatus());
+        assertEquals(Status.STOPPED, child1Y.getStatus());
+        assertEquals(0, xProperty.get());
+        assertEquals(0, yProperty.get());
+
+        amt.pulse();
+        assertEquals(Status.RUNNING, pt.getStatus());
+        assertEquals(Status.RUNNING, child1X.getStatus());
+        assertEquals(Status.RUNNING, child1Y.getStatus());
+        assertEquals(0 + TICK_STEP, xProperty.get());
+        assertEquals(0 + TICK_STEP, yProperty.get());
+    }
+
 }
