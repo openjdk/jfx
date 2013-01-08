@@ -5,25 +5,39 @@
 package modena;
 
 import java.util.ArrayList;
+import java.util.List;
+import javafx.beans.InvalidationListener;
+import javafx.beans.Observable;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.event.ActionEvent;
+import javafx.event.EventHandler;
 import javafx.geometry.Orientation;
 import javafx.scene.GroupBuilder;
 import javafx.scene.Node;
 import javafx.scene.control.Accordion;
 import javafx.scene.control.Button;
+import javafx.scene.control.CheckMenuItem;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListView;
+import javafx.scene.control.Menu;
+import javafx.scene.control.MenuItem;
 import javafx.scene.control.MultipleSelectionModel;
 import javafx.scene.control.Pagination;
 import javafx.scene.control.SelectionMode;
 import javafx.scene.control.Separator;
+import javafx.scene.control.SeparatorMenuItem;
 import javafx.scene.control.SplitPane;
 import javafx.scene.control.TabBuilder;
 import javafx.scene.control.TabPane;
 import javafx.scene.control.TextField;
 import javafx.scene.control.TitledPaneBuilder;
 import javafx.scene.control.ToolBar;
+import javafx.scene.control.Tooltip;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
+import javafx.scene.input.KeyCharacterCombination;
+import javafx.scene.input.KeyCombination;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.LineBuilder;
 import javafx.scene.shape.RectangleBuilder;
@@ -153,5 +167,69 @@ public class SamplePageHelpers {
             listView.getSelectionModel().select(1);
         }
         return listView;
+    }
+    
+    static MenuItem[] createMenuItems(int numberOfItems) {
+        ArrayList<MenuItem> items = new ArrayList<MenuItem>();
+        if (numberOfItems < 26) {
+            for(int i=0; i<numberOfItems; i++) {
+                items.add(new MenuItem("Item "+LETTERS[i]));
+            }
+        } else {
+            for(int i=0; i<numberOfItems; i++) {
+                items.add(new MenuItem("Item "+i));
+            }
+        }
+        return items.toArray(new MenuItem[items.size()]);
+    }
+    
+    static Object[] createMenuContents() {
+        List menuItems = new ArrayList();
+//        Menu menu11 = makeMenu("_New", new ImageView(new Image(getClass().getResourceAsStream("about_16.png"))));
+        final Menu menu11 = new Menu("_New", new ImageView(new Image("helloworld/about_16.png")));
+        MenuItem menu12 = new MenuItem("_Open", new ImageView(new Image("helloworld/folder_16.png")));
+        menu12.setAccelerator(new KeyCharacterCombination("]", 
+                KeyCombination.SHIFT_DOWN, KeyCombination.META_DOWN));
+        Menu menu13 = new Menu("_Submenu");
+        CheckMenuItem showMessagesItem = new CheckMenuItem("Enable onShowing/onHiding _messages", 
+                                             new ImageView(new Image("helloworld/about_16.png")));
+        MenuItem menu15 = new MenuItem("E_xit");
+        final String change[] = {"Change Text", "Change Back"};
+        final MenuItem menu16 = new MenuItem(change[0]);
+        final boolean toggle = false;
+        menu16.setAccelerator(KeyCombination.keyCombination("Shortcut+C"));
+        menuItems.add(menu11);
+        menuItems.add(menu12);
+        menuItems.add(menu13);
+        menuItems.add(showMessagesItem);
+        menuItems.add(new SeparatorMenuItem());
+        menuItems.add(menu15);
+        menuItems.add(menu16);
+
+        // --- Menu 11 submenu
+        final MenuItem menu111 = new MenuItem("blah");
+        final MenuItem menu112 = new MenuItem("foo");
+        final CheckMenuItem menu113 = new CheckMenuItem("Show \"foo\" item");
+        menu113.setSelected(true);
+        menu113.selectedProperty().addListener(new InvalidationListener() {
+            @Override public void invalidated(Observable valueModel) {
+                menu112.setVisible(menu113.isSelected());
+                System.err.println("MenuItem \"foo\" is now " + (menu112.isVisible() ? "" : "not") + " visible.");
+            }
+        });
+        menu11.getItems().addAll(menu111, menu112, menu113);
+
+        // --- Menu 13 submenu
+        MenuItem menu131 = new MenuItem("Item _1");
+        MenuItem menu132 = new MenuItem("Item _2");
+        menu13.getItems().addAll(menu131, menu132);
+        
+        return menuItems.toArray();
+    }
+    
+    static final Image recorder48 = new Image(SamplePageHelpers.class.getResource("recorder-icon-48.png").toExternalForm());
+    
+    static ImageView createGraphic() {
+        return new ImageView(recorder48);
     }
 }

@@ -44,6 +44,8 @@ import javafx.scene.control.ColorPickerBuilder;
 import javafx.scene.control.ComboBoxBuilder;
 import javafx.scene.control.Hyperlink;
 import javafx.scene.control.Label;
+import javafx.scene.control.LabelBuilder;
+import javafx.scene.control.MenuButtonBuilder;
 import javafx.scene.control.PasswordFieldBuilder;
 import javafx.scene.control.ProgressBar;
 import javafx.scene.control.ProgressIndicator;
@@ -55,6 +57,7 @@ import javafx.scene.control.ScrollPaneBuilder;
 import javafx.scene.control.SeparatorBuilder;
 import javafx.scene.control.Slider;
 import javafx.scene.control.SliderBuilder;
+import javafx.scene.control.SplitMenuButtonBuilder;
 import javafx.scene.control.Tab;
 import javafx.scene.control.TabPaneBuilder;
 import javafx.scene.control.TextAreaBuilder;
@@ -64,10 +67,13 @@ import javafx.scene.control.TitledPaneBuilder;
 import javafx.scene.control.ToggleButton;
 import javafx.scene.control.ToggleButtonBuilder;
 import javafx.scene.control.ToggleGroup;
+import javafx.scene.control.Tooltip;
+import javafx.scene.control.TooltipBuilder;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.HBoxBuilder;
 import javafx.scene.layout.VBox;
+import javafx.scene.layout.VBoxBuilder;
 import javafx.scene.paint.Color;
 import static modena.SamplePageHelpers.*;
 
@@ -248,6 +254,54 @@ public class SamplePage extends GridPane {
                 withState(new Hyperlink("F & Hover"), "focused, hover"),
                 withState(new Hyperlink("F & Armed"), "focused, armed"),
                 withState(new Hyperlink("Disabled"), "disabled"));
+        newSection(      
+                "ChoiceBox:", 
+                ChoiceBoxBuilder.create(String.class).items(sampleItems()).value("Item A").build(),
+                withState(ChoiceBoxBuilder.create(String.class).items(sampleItems()).value("Item B").build(), "hover"),
+                withState(ChoiceBoxBuilder.create(String.class).items(sampleItems()).value("Item B").build(), "showing"),
+                withState(ChoiceBoxBuilder.create(String.class).items(sampleItems()).value("Item B").build(), "focused"),
+                withState(ChoiceBoxBuilder.create(String.class).items(sampleItems()).value("Item C").build(), "disabled")
+                );
+        newSection(      
+                "ComboBox:", 
+                ComboBoxBuilder.create(String.class).items(sampleItems()).value("Item A").build(),
+                withState(ComboBoxBuilder.create(String.class).items(sampleItems()).value("Item B").build(), "hover"),
+                withState(ComboBoxBuilder.create(String.class).items(sampleItems()).value("Item B").build(), "showing"),
+                withState(ComboBoxBuilder.create(String.class).items(sampleItems()).value("Item B").build(), "focused"),
+                withState(ComboBoxBuilder.create(String.class).items(sampleItems()).value("Item C").build(), "disabled")
+                );
+        newSection(      
+                "ComboBox\nEditable:", 
+                ComboBoxBuilder.create(String.class).items(sampleItems()).value("Item A").editable(true).build(),
+                withState(ComboBoxBuilder.create(String.class).items(sampleItems()).value("Item B").editable(true).build(), "hover"),
+                withState(ComboBoxBuilder.create(String.class).items(sampleItems()).value("Item B").editable(true).build(), "showing"),
+                withState(ComboBoxBuilder.create(String.class).items(sampleItems()).value("Item B").editable(true).build(), "focused"),
+                withState(ComboBoxBuilder.create(String.class).items(sampleItems()).value("Item C").editable(true).build(), "disabled")
+                );
+        newSection(      
+                "Color Picker:", 
+                ColorPickerBuilder.create().value(Color.DODGERBLUE).build(),
+                withState(ColorPickerBuilder.create().value(Color.DODGERBLUE).build(), "hover"),
+                withState(ColorPickerBuilder.create().value(Color.DODGERBLUE).build(), "showing"),
+                withState(ColorPickerBuilder.create().value(Color.DODGERBLUE).build(), "focused"),
+                withState(ColorPickerBuilder.create().value(Color.DODGERBLUE).build(), "disabled")
+                );
+        newSection(      
+                "MenuButton:", 
+                MenuButtonBuilder.create().items(createMenuItems(20)).text("normal").build(),
+                withState(MenuButtonBuilder.create().items(createMenuItems(20)).text("hover").build(), "hover"),
+                withState(MenuButtonBuilder.create().items(createMenuItems(20)).text("armed").build(), "armed"),
+                withState(MenuButtonBuilder.create().items(createMenuItems(20)).text("focused").build(), "focused"),
+                withState(MenuButtonBuilder.create().items(createMenuItems(20)).text("disabled").build(), "disabled")
+                );
+        newSection(      
+                "SplitMenuButton:", 
+                SplitMenuButtonBuilder.create().items(createMenuItems(20)).text("normal").build(),
+                withState(SplitMenuButtonBuilder.create().items(createMenuItems(20)).text("hover").build(), "hover"),
+                withState(SplitMenuButtonBuilder.create().items(createMenuItems(20)).text("armed").build(), "armed"),
+                withState(SplitMenuButtonBuilder.create().items(createMenuItems(20)).text("focused").build(), "focused"),
+                withState(SplitMenuButtonBuilder.create().items(createMenuItems(20)).text("disabled").build(), "disabled")
+                );
         newDetailedSection(
                 new String[]{"Slider - H: ", "normal", "hover", "pressed", "disabled", "tickmarks"},
                 withState(SliderBuilder.create().maxWidth(90).min(0).max(100).value(50).build(), null),
@@ -335,38 +389,6 @@ public class SamplePage extends GridPane {
                 withState(TextAreaBuilder.create().text("Focused").prefColumnCount(7).prefRowCount(2).build(), "focused"),
                 withState(TextAreaBuilder.create().text("Disabled").prefColumnCount(8).prefRowCount(2).build(), "disabled")
                 );
-        newSection(      
-                "ChoiceBox:", 
-                ChoiceBoxBuilder.create(String.class).items(sampleItems()).value("Item A").build(),
-                withState(ChoiceBoxBuilder.create(String.class).items(sampleItems()).value("Item B").build(), "hover"),
-                withState(ChoiceBoxBuilder.create(String.class).items(sampleItems()).value("Item B").build(), "showing"),
-                withState(ChoiceBoxBuilder.create(String.class).items(sampleItems()).value("Item B").build(), "focused"),
-                withState(ChoiceBoxBuilder.create(String.class).items(sampleItems()).value("Item C").build(), "disabled")
-                );
-        newSection(      
-                "ComboBox:", 
-                ComboBoxBuilder.create(String.class).items(sampleItems()).value("Item A").build(),
-                withState(ComboBoxBuilder.create(String.class).items(sampleItems()).value("Item B").build(), "hover"),
-                withState(ComboBoxBuilder.create(String.class).items(sampleItems()).value("Item B").build(), "showing"),
-                withState(ComboBoxBuilder.create(String.class).items(sampleItems()).value("Item B").build(), "focused"),
-                withState(ComboBoxBuilder.create(String.class).items(sampleItems()).value("Item C").build(), "disabled")
-                );
-        newSection(      
-                "ComboBox\nEditable:", 
-                ComboBoxBuilder.create(String.class).items(sampleItems()).value("Item A").editable(true).build(),
-                withState(ComboBoxBuilder.create(String.class).items(sampleItems()).value("Item B").editable(true).build(), "hover"),
-                withState(ComboBoxBuilder.create(String.class).items(sampleItems()).value("Item B").editable(true).build(), "showing"),
-                withState(ComboBoxBuilder.create(String.class).items(sampleItems()).value("Item B").editable(true).build(), "focused"),
-                withState(ComboBoxBuilder.create(String.class).items(sampleItems()).value("Item C").editable(true).build(), "disabled")
-                );
-        newSection(      
-                "Color Picker:", 
-                ColorPickerBuilder.create().value(Color.DODGERBLUE).build(),
-                withState(ColorPickerBuilder.create().value(Color.DODGERBLUE).build(), "hover"),
-                withState(ColorPickerBuilder.create().value(Color.DODGERBLUE).build(), "showing"),
-                withState(ColorPickerBuilder.create().value(Color.DODGERBLUE).build(), "focused"),
-                withState(ColorPickerBuilder.create().value(Color.DODGERBLUE).build(), "disabled")
-                );
         newDetailedSection(
                 new String[] {"ToolBar (H):", "normal", "overflow", "disabled"}, 
                 createToolBar(false,false),
@@ -431,10 +453,20 @@ public class SamplePage extends GridPane {
                 createListView(3, false, true)
                 );
         newDetailedSection(
-                new String[] {"ListView\n:10,000 items\nmultiple selection:","normal", "focused", "disabled"}, 
+                new String[] {"ListView\n10,000 items\nmultiple selection:","normal", "focused", "disabled"}, 
                 createListView(10000, true, false),
                 withState(createListView(10000, true, false), "focused"),
                 createListView(10000, true, true)
+                );
+        newDetailedSection(
+                new String[] {"ToolTip:","inline","inline + graphic", "popup"}, 
+                LabelBuilder.create().text("This is a simple Tooltip.").styleClass("tooltip").build(),
+                LabelBuilder.create().text("This is a simple Tooltip\nwith graphic.").graphic(createGraphic()).styleClass("tooltip").build(),
+                VBoxBuilder.create().fillWidth(true).spacing(4).children(
+                    ButtonBuilder.create().text("Hover over me").tooltip(new Tooltip("This is a simple Tooltip.")).build(),
+                    ButtonBuilder.create().text("me too").tooltip(new Tooltip("This is a simple Tooltip\nwith more than one line.")).build(),
+                    ButtonBuilder.create().text("or me").tooltip(TooltipBuilder.create().text("This is a simple Tooltip\nwith graphic.").graphic(createGraphic()).build()).build()
+                ).build()
                 );
     }
 }

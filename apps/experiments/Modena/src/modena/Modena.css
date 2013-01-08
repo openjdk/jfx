@@ -610,6 +610,140 @@
     -fx-stroke: -fx-text-fill;
 } 
 
+/*******************************************************************************
+ *                                                                             *
+ * MenuButton                                                                  *
+ *                                                                             *
+ ******************************************************************************/
+
+/*.button {
+    -fx-background-color: -fx-outer-border, -fx-inner-border, -fx-body-color; 
+    -fx-background-insets: 0, 1, 2;
+    -fx-background-radius: 5, 4, 3;
+    -fx-padding: 0.333333em 1em 0.416667em 1em;
+    -fx-text-fill: -fx-text-base-color;
+}
+.button:hover {
+    -fx-color: -fx-hover-base;
+}
+.button:armed {
+    -fx-color: -fx-pressed-base;
+}
+.button:default {
+    -fx-base: -fx-accent;
+}
+.button:focused {
+    -fx-background-color: -fx-faint-focus-color, -fx-focus-color, -fx-inner-border, -fx-body-color; 
+    -fx-background-insets: -2, -0.3, 1, 2;
+    -fx-background-radius: 7, 6, 4, 3;
+}*/
+.menu-button {
+    -fx-background-color: -fx-outer-border, -fx-inner-border, -fx-body-color; 
+    -fx-background-insets: 0, 1, 2;
+    -fx-background-radius: 5, 4, 3;
+    -fx-padding: 0;
+    -fx-text-fill: -fx-text-base-color;
+}
+.menu-button > .label {
+    /* The MenuButton skin uses an inner Label part */
+    -fx-padding: 0.166667em 1.5em 0.25em 0.833333em; /* 2 18 3 10 */
+}
+.menu-button:focused {
+    -fx-background-color: -fx-faint-focus-color, -fx-focus-color, -fx-inner-border, -fx-body-color; 
+    -fx-background-insets: -2, -0.3, 1, 2;
+    -fx-background-radius: 7, 6, 4, 3;
+    /*-fx-color: -fx-focused-base;*/
+}
+.menu-button:hover {
+    -fx-color: -fx-hover-base;
+}
+.menu-button:armed {
+    -fx-color: -fx-pressed-base;
+}
+.menu-button > .arrow-button {
+    -fx-background-insets: 0;
+    -fx-background-radius: 0;
+    -fx-padding: 0.5em 0.416667em 0.5em 0.0em; /* 6 5 6 0 */
+}
+.menu-button > .arrow-button > .arrow {
+    -fx-background-insets: 1 0 -1 0, 0;
+    -fx-background-color: -fx-mark-highlight-color, -fx-mark-color;
+    -fx-padding: 0.25em; /* 3 */
+    -fx-shape: "M 0 -3.5 v 7 l 4 -3.5 z";
+}
+.menu-button:openvertically > .arrow-button > .arrow {
+    -fx-padding: 0.166667em 0.333333em 0.166667em 0.333333em; /* 2 4 2 4 */
+    -fx-shape: "M 0 0 h 7 l -3.5 4 z";
+}
+.menu-button:disabled {
+    -fx-opacity: -fx-disabled-opacity;
+}
+.menu-button:show-mnemonics > .mnemonic-underline {
+    -fx-stroke: -fx-text-fill;
+} 
+
+/*******************************************************************************
+ *                                                                             *
+ * SplitMenuButton                                                             *
+ *                                                                             *
+ ******************************************************************************/
+.split-menu-button {
+    -fx-padding: 0.0em; /* 0 */
+    -fx-text-fill: -fx-text-base-color;
+}
+.split-menu-button:focused {
+    -fx-background-color: -fx-focus-color;
+    -fx-background-insets: -2;
+    -fx-background-radius: 7;
+}
+.split-menu-button > .label:hover {
+    -fx-color: -fx-hover-base;
+}
+.split-menu-button:armed > .label {
+    -fx-color: -fx-pressed-base;
+}
+/* The SplitMenuButton skin uses an inner Label part */
+.split-menu-button > .label {
+    -fx-background-color: -fx-outer-border, -fx-inner-border, -fx-body-color; 
+    -fx-background-insets: 0, 1 0 1 1, 2 1 2 2;
+    -fx-background-radius: 5 0 0 5, 4 0 0 4, 3 0 0 3;
+    -fx-padding: 0.166667em 1.5em 0.25em 0.833333em; /* 2 18 3 10 */
+}
+
+.split-menu-button > .arrow-button {
+    -fx-background-color: -fx-outer-border, -fx-inner-border, -fx-body-color;
+    -fx-background-insets: 0, 1, 2;
+    -fx-background-radius: 0 5 5 0, 0 4 4 0, 0 3 3 0;
+    -fx-padding: 0.5em 0.416667em 0.5em 0.416667em; /* 6 5 6 5 */
+}
+
+.split-menu-button > .arrow-button:hover {
+    -fx-color: -fx-hover-base;
+}
+
+.split-menu-button > .arrow-button:pressed {
+    -fx-color: -fx-pressed-base;
+}
+
+.split-menu-button > .arrow-button > .arrow {
+    -fx-background-color: -fx-mark-highlight-color, -fx-mark-color;
+    -fx-background-insets: 1 0 -1 0, 0;
+    -fx-padding: 0.25em; /* 3 */
+    -fx-shape: "M 0 -3.5 v 7 l 4 -3.5 z";
+}
+
+.split-menu-button:openvertically > .arrow-button > .arrow {
+    -fx-padding: 0.166667em 0.333333em 0.166667em 0.333333em; /* 2 4 2 4 */
+    -fx-shape: "M 0 0 h 7 l -3.5 4 z";
+}
+
+.split-menu-button:disabled {
+    -fx-opacity: -fx-disabled-opacity;
+}
+
+.split-menu-button:show-mnemonics > .mnemonic-underline {
+    -fx-stroke: -fx-text-fill;
+} 
 
 /* ====   TOOLBAR   ========================================================= */
 
@@ -2704,3 +2838,20 @@ Only the properties with values that are different from the TextBox are specifie
     -fx-text-fill: -fx-text-inner-color;
 }
 /** End of hover styles */
+
+
+/*******************************************************************************
+ *                                                                             *
+ * Tooltip                                                                     *
+ *                                                                             *
+ ******************************************************************************/
+
+.tooltip {
+    -fx-background: rgba(30,30,30);
+    -fx-text-fill: white;
+    -fx-background-color: rgba(30,30,30,0.8);
+    -fx-background-radius: 6px;
+    -fx-background-insets: 0;
+    -fx-padding: 0.666667em; /* 8 */
+    -fx-effect: dropshadow( three-pass-box , rgba(0,0,0,0.6) , 8, 0.0 , 0 , 0 );
+}
