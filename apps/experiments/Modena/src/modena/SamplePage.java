@@ -40,6 +40,7 @@ import javafx.scene.control.Button;
 import javafx.scene.control.ButtonBuilder;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.ChoiceBoxBuilder;
+import javafx.scene.control.ColorPickerBuilder;
 import javafx.scene.control.ComboBoxBuilder;
 import javafx.scene.control.Hyperlink;
 import javafx.scene.control.Label;
@@ -67,6 +68,7 @@ import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.HBoxBuilder;
 import javafx.scene.layout.VBox;
+import javafx.scene.paint.Color;
 import static modena.SamplePageHelpers.*;
 
 /**
@@ -357,6 +359,14 @@ public class SamplePage extends GridPane {
                 withState(ComboBoxBuilder.create(String.class).items(sampleItems()).value("Item B").editable(true).build(), "focused"),
                 withState(ComboBoxBuilder.create(String.class).items(sampleItems()).value("Item C").editable(true).build(), "disabled")
                 );
+        newSection(      
+                "Color Picker:", 
+                ColorPickerBuilder.create().value(Color.DODGERBLUE).build(),
+                withState(ColorPickerBuilder.create().value(Color.DODGERBLUE).build(), "hover"),
+                withState(ColorPickerBuilder.create().value(Color.DODGERBLUE).build(), "showing"),
+                withState(ColorPickerBuilder.create().value(Color.DODGERBLUE).build(), "focused"),
+                withState(ColorPickerBuilder.create().value(Color.DODGERBLUE).build(), "disabled")
+                );
         newDetailedSection(
                 new String[] {"ToolBar (H):", "normal", "overflow", "disabled"}, 
                 createToolBar(false,false),
@@ -387,6 +397,44 @@ public class SamplePage extends GridPane {
                 withState(createAccordion(), null, ".titled-pane", "hover"),
                 withState(createAccordion(), null, ".titled-pane", "focused"),
                 withState(createAccordion(), "disabled")
+                );
+        newDetailedSection(
+                new String[] {"SplitPane (H):", "simple", "many", "complex"}, 
+                createSplitPane(2,false,null),
+                createSplitPane(4,false,null),
+                createSplitPane(2,false,createSplitPane(2,true,null))
+                );
+        newDetailedSection(
+                new String[] {"SplitPane (V):", "simple", "many", "complex"}, 
+                createSplitPane(2,true,null),
+                createSplitPane(4,true,null),
+                createSplitPane(2,true,createSplitPane(2,false,null))
+                );
+        newDetailedSection(
+                new String[] {"Pagination:", "simple", "infinate"}, 
+                createPagination(5, false, true),
+                createPagination(Integer.MAX_VALUE, false, true)
+                );
+        newDetailedSection(
+                new String[] {"Pagination\nBullet Style:", "simple", "infinate"}, 
+                createPagination(5, true, true),
+                createPagination(Integer.MAX_VALUE, true, true)
+                );
+        newSection(
+                "Pagination\nNo Arrows:", 
+                createPagination(Integer.MAX_VALUE, false, false)
+                );
+        newDetailedSection(
+                new String[] {"ListView\n2 items\nsingle selection:", "normal", "focused", "disabled"}, 
+                createListView(3, false, false),
+                withState(createListView(3, false, false), "focused"),
+                createListView(3, false, true)
+                );
+        newDetailedSection(
+                new String[] {"ListView\n:10,000 items\nmultiple selection:","normal", "focused", "disabled"}, 
+                createListView(10000, true, false),
+                withState(createListView(10000, true, false), "focused"),
+                createListView(10000, true, true)
                 );
     }
 }
