@@ -32,6 +32,7 @@ import javafx.beans.Observable;
 import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.geometry.HPos;
+import javafx.geometry.NodeOrientation;
 import javafx.geometry.Point2D;
 import javafx.geometry.VPos;
 import javafx.scene.Node;
@@ -84,7 +85,9 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
     }
     
     private Point2D getPrefPopupPosition() {
-        return com.sun.javafx.Utils.pointRelativeTo(getSkinnable(), getPopupContent(), HPos.CENTER, VPos.BOTTOM, -7, -10, false);
+        double dx = (getPopupContent().getLayoutBounds().getWidth() - getPopup().getWidth()) / 2;
+        dx += (getSkinnable().getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT) ? -1 : 1;
+        return com.sun.javafx.Utils.pointRelativeTo(getSkinnable(), getPopupContent(), HPos.CENTER, VPos.BOTTOM, dx, -10, false);
     }
     
     private void positionAndShowPopup() {
@@ -93,6 +96,7 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
         }
         
         Point2D p = getPrefPopupPosition();
+        getPopup().getScene().setNodeOrientation(getSkinnable().getEffectiveNodeOrientation());
         getPopup().show(getSkinnable().getScene().getWindow(), p.getX(), p.getY());
     }
     
