@@ -58,8 +58,6 @@ import javafx.scene.control.SeparatorBuilder;
 import javafx.scene.control.Slider;
 import javafx.scene.control.SliderBuilder;
 import javafx.scene.control.SplitMenuButtonBuilder;
-import javafx.scene.control.Tab;
-import javafx.scene.control.TabPaneBuilder;
 import javafx.scene.control.TextAreaBuilder;
 import javafx.scene.control.TextField;
 import javafx.scene.control.TextFieldBuilder;
@@ -76,6 +74,9 @@ import javafx.scene.layout.VBox;
 import javafx.scene.layout.VBoxBuilder;
 import javafx.scene.paint.Color;
 import static modena.SamplePageHelpers.*;
+import static modena.SamplePageTableHelper.*;
+import static modena.SamplePageTreeHelper.*;
+import static modena.SamplePageTreeTableHelper.*;
 
 /**
  * Page showing every control in every state
@@ -457,6 +458,21 @@ public class SamplePage extends GridPane {
                 createListView(10000, true, false),
                 withState(createListView(10000, true, false), "focused"),
                 createListView(10000, true, true)
+                );
+        newSection(
+                "TableView:", 
+                createTableView(550),
+                withState(createTableView(100), "focused")
+                );
+        newSection(
+                "TreeView:", 
+                createTreeView(350),
+                withState(createTreeView(350), "focused")
+                );
+        newSection(
+                "TreeTableView:", 
+                createTreeTableView(550),
+                withState(createTreeTableView(200), "focused")
                 );
         newDetailedSection(
                 new String[] {"ToolTip:","inline","inline + graphic", "popup"}, 

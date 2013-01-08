@@ -62,6 +62,8 @@
      * with -fx-control-inner-background.
      */
     -fx-control-inner-background: derive(-fx-base,80%);
+    /* Version of -fx-control-inner-background for alternative rows */
+    -fx-control-inner-background-alt: derive(-fx-control-inner-background,-2%);
 
     /* One of these colors will be chosen based upon a ladder calculation
      * that uses the brightness of a background color.  Instead of using these
@@ -159,7 +161,7 @@
     -fx-box-border: ladder(
         -fx-color,
         black 20%,
-        derive(-fx-color,-30%) 30%
+        derive(-fx-color,-15%) 30%
     );
 
     /* Darker than -fx-background and used to draw boxes around text boxes and
@@ -283,11 +285,7 @@
      * remove the setting -fx-background in all the sections that use
      * -fx-selection-bar.
      */
-    -fx-selection-bar: linear-gradient(
-        to bottom,
-        derive(-fx-background,-7%) 0%,
-        derive(-fx-background,-34%) 100%
-    );
+    -fx-selection-bar: -fx-accent;
 
     /* The color to use as -fx-text-fill when painting text on top of
      * backgrounds filled with -fx-selection-bar.
@@ -2112,45 +2110,31 @@ Only the properties with values that are different from the TextBox are specifie
  * ListView and ListCell                                                       *
  *                                                                             *
  ******************************************************************************/
-
 .list-view {
     -fx-background-color: -fx-box-border, -fx-control-inner-background;
     -fx-background-insets: 0, 1;
-
-     /* There is some oddness if padding is in em values rather than pixels,
-        in particular, the left border of the control doesn't show. */
-    -fx-padding: 1; /* 0.083333em; */
+    -fx-padding: 1;
 }
-
 .list-view:focused {
-    -fx-background-color: -fx-focus-color,-fx-box-border,-fx-control-inner-background;
-    -fx-background-insets: -1.4, 0, 1;
-    -fx-background-radius: 1.4, 0, 0;
-
-    /* There is some oddness if padding is in em values rather than pixels,
-       in particular, the left border of the control doesn't show. */
-    -fx-padding: 1; /* 0.083333em; */
+    -fx-background-color: -fx-faint-focus-color, -fx-focus-color,-fx-control-inner-background;
+    -fx-background-insets: -2, -0.3, 1;
+    -fx-background-radius: 2, 0, 0;
 }
-
 .list-view > .virtual-flow > .scroll-bar:vertical{
     -fx-background-insets: 0, 0 0 0 1;
     -fx-padding: -1 -1 -1 0;
 }
-
 .list-view > .virtual-flow > .scroll-bar:horizontal{
     -fx-background-insets: 0, 1 0 0 0;
     -fx-padding: 0 -1 -1 -1;
 }
-
 .list-view:disabled {
     -fx-opacity: -fx-disabled-opacity;
 }
-
 .list-view > .virtual-flow > .corner {
     -fx-background-color: -fx-box-border, -fx-base;
     -fx-background-insets: 0, 1 0 0 1;
 }
-
 .list-cell {
     -fx-background-color: -fx-control-inner-background;
     -fx-padding: 0.25em; /* 3 */
@@ -2159,7 +2143,7 @@ Only the properties with values that are different from the TextBox are specifie
 }
 
 .list-cell:odd {
-    -fx-background-color: derive(-fx-control-inner-background,-5%);
+    -fx-background-color: -fx-control-inner-background-alt;
 }
 
 .list-view:focused > .virtual-flow > .clipped-container > .sheet > .list-cell:focused {
@@ -2168,7 +2152,7 @@ Only the properties with values that are different from the TextBox are specifie
 }
 
 .list-view:focused > .virtual-flow > .clipped-container > .sheet > .list-cell:focused:odd {
-    -fx-background-color: -fx-focus-color, -fx-cell-focus-inner-border, derive(-fx-control-inner-background,-5%);
+    -fx-background-color: -fx-focus-color, -fx-cell-focus-inner-border, -fx-control-inner-background-alt;
     -fx-background-insets: 0, 1, 2;
 }
 
@@ -2220,7 +2204,7 @@ Only the properties with values that are different from the TextBox are specifie
 
 .list-view:horizontal > .virtual-flow > .clipped-container > .sheet > .list-cell:filled:selected,
 .list-view:horizontal > .virtual-flow > .clipped-container > .sheet > .list-cell:filled:selected:hover {
-    -fx-background-color: linear-gradient(to right, derive(-fx-accent,-7%), derive(-fx-accent,-25%));
+    -fx-background-color: -fx-selection-bar;
 }
 
 /*******************************************************************************
@@ -2232,20 +2216,13 @@ Only the properties with values that are different from the TextBox are specifie
 .tree-view {
     -fx-background-color: -fx-box-border, -fx-control-inner-background;
     -fx-background-insets: 0, 1;
-
-    /* There is some oddness if padding is in em values rather than pixels,
-       in particular, the left border of the control doesn't show. */
-    -fx-padding: 1; /* 0.083333em; */
+    -fx-padding: 1;
 }
 
 .tree-view:focused {
-    -fx-background-color: -fx-focus-color,-fx-box-border,-fx-control-inner-background;
-    -fx-background-insets: -1.4, 0, 1;
-    -fx-background-radius: 1.4, 0, 0;
-
-    /* There is some oddness if padding is in em values rather than pixels,
-       in particular, the left border of the control doesn't show. */
-    -fx-padding: 1; /* 0.083333em; */
+    -fx-background-color: -fx-faint-focus-color, -fx-focus-color,-fx-control-inner-background;
+    -fx-background-insets: -2, -0.3, 1;
+    -fx-background-radius: 2, 0, 0;
 }
 
 .tree-view > .virtual-flow > .scroll-bar:vertical{
@@ -2292,13 +2269,11 @@ Only the properties with values that are different from the TextBox are specifie
 
 .tree-view:focused > .virtual-flow > .clipped-container > .sheet > .tree-cell:filled:selected, 
 .tree-view:focused > .virtual-flow > .clipped-container > .sheet > .tree-cell:filled:selected:hover {
-    -fx-background: -fx-accent;
     -fx-background-color: -fx-selection-bar;
     -fx-text-fill: -fx-selection-bar-text;
 }
 
 .tree-view:focused > .virtual-flow > .clipped-container > .sheet > .tree-cell:filled:focused:selected:hover {
-    -fx-background: -fx-accent;
     -fx-background-color: -fx-focus-color, -fx-cell-focus-inner-border, -fx-selection-bar;
     -fx-background-insets: 0, 1, 2;
     -fx-text-fill: -fx-selection-bar-text;
@@ -2377,29 +2352,22 @@ Only the properties with values that are different from the TextBox are specifie
 .table-view {
     -fx-background-color: -fx-box-border, -fx-control-inner-background;
     -fx-background-insets: 0,1;
-
-    /* There is some oddness if padding is in em values rather than pixels,
-       in particular, the left border of the control doesn't show. */
-    -fx-padding: 1; /* 0.083333em; */
+    -fx-padding: 1;
 
     /* Constants used throughout the tableview.
      * TODO: Should these be derived from the palette in .scene?
      */
-    -fx-table-header-border-color: #959595;
+    -fx-table-header-border-color: -fx-box-border;
 /*    -fx-table-header-background-color: linear (0%,0%) to (0%,100%) stops (80%, #bbbbbb) (10%, #f6f6f6);*/
-    -fx-table-cell-border-color: #bbbbbb;
+    -fx-table-cell-border-color: -fx-box-border;
 }
 
 /** Draws focus border around tableview */
 .table-view:focused,
 .tree-table-view:focused {
-    -fx-background-color: -fx-focus-color,-fx-box-border,-fx-control-inner-background;
-    -fx-background-insets: -1.4, 0, 1;
-    -fx-background-radius: 1.4, 0, 0;
-
-    /* There is some oddness if padding is in em values rather than pixels,
-       in particular, the left border of the control doesn't show. */
-    -fx-padding: 1; /* 0.083333em; */
+    -fx-background-color: -fx-faint-focus-color, -fx-focus-color,-fx-control-inner-background;
+    -fx-background-insets: -2, -0.3, 1;
+    -fx-background-radius: 2, 0, 0;
 }
 
 .table-view:disabled,
@@ -2435,7 +2403,7 @@ Only the properties with values that are different from the TextBox are specifie
 }
 
 .table-row-cell:odd {
-    -fx-background-color: -fx-table-cell-border-color, derive(-fx-control-inner-background,-5%);
+    -fx-background-color: -fx-table-cell-border-color, -fx-control-inner-background-alt;
     -fx-background-insets: 0, 0 0 1 0;
 }
 
@@ -2446,7 +2414,7 @@ Only the properties with values that are different from the TextBox are specifie
 }
 
 .table-row-cell:focused:odd {
-    -fx-background-color: -fx-focus-color, -fx-cell-focus-inner-border, derive(-fx-control-inner-background,-5%);
+    -fx-background-color: -fx-focus-color, -fx-cell-focus-inner-border, -fx-control-inner-background-alt;
     -fx-background-insets: 0, 1, 2;
 }
 
@@ -2738,6 +2706,23 @@ Only the properties with values that are different from the TextBox are specifie
 .tree-table-view .empty-table {
     -fx-background-color: white;
     -fx-font-size: 1.166667em; /* 14pt - 2 more than the default font */
+}
+
+/*******************************************************************************
+ *                                                                             *
+ * Table Cells    
+ ******************************************************************************/
+.check-box-table-cell {
+    -fx-alignment: center;
+}
+.check-box-table-cell > .check-box {
+    -fx-opacity: 1;
+}   
+.check-box-table-cell > .check-box > .box {
+    -fx-background-color: null;
+    -fx-background-insets: 0;
+    -fx-border-color: -fx-outer-border;
+    -fx-border-radius: 3;
 }
 
 /*******************************************************************************
