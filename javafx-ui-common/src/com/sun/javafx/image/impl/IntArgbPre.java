@@ -36,14 +36,14 @@ import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 
 public class IntArgbPre {
-    public static final IntPixelGetter     getter = IntArgb.Accessor.instance;
-    public static final IntPixelSetter     setter = IntArgb.Accessor.instance;
-    public static final IntPixelAccessor accessor = IntArgb.Accessor.instance;
+    public static final IntPixelGetter     getter = Accessor.instance;
+    public static final IntPixelSetter     setter = Accessor.instance;
+    public static final IntPixelAccessor accessor = Accessor.instance;
 
     public static final IntToBytePixelConverter ToByteBgraConverter =
         IntArgbPre.ToByteBgraConv.instance;
     public static final IntToBytePixelConverter ToByteBgraPreConverter =
-        IntArgb.ToByteBgraSameConv.premul;
+        new IntTo4ByteSameConverter(IntArgbPre.getter, ByteBgraPre.setter);
     public static final IntToIntPixelConverter ToIntArgbConverter =
         IntArgbPre.ToIntArgbConv.instance;
     public static final IntToIntPixelConverter ToIntArgbPreConverter =
@@ -213,9 +213,10 @@ public class IntArgbPre {
                     int g = (pixel >>  8) & 0xff;
                     int b = (pixel      ) & 0xff;
                     if (a > 0 && a < 0xff) {
-                        r = (r * a + 0x7f) / 0xff;
-                        g = (g * a + 0x7f) / 0xff;
-                        b = (b * a + 0x7f) / 0xff;
+                        int halfa = a >> 1;
+                        r = (r * 0xff + halfa) / a;
+                        g = (g * 0xff + halfa) / a;
+                        b = (b * 0xff + halfa) / a;
                     }
                     dstbuf.put(dstoff    , (byte) b);
                     dstbuf.put(dstoff + 1, (byte) g);
