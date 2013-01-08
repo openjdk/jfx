@@ -510,10 +510,10 @@ public class MenuBarSkin extends BehaviorSkinBase<MenuBar, BehaviorBase<MenuBar>
                         currentMenuBarStage = null;
                         setSystemMenu(stage);
 
-                        requestLayout();
+                        getSkinnable().requestLayout();
                         javafx.application.Platform.runLater(new Runnable() {
                             public void run() {
-                                requestLayout();
+                                getSkinnable().requestLayout();
                             }
                         });
                         return;
@@ -724,7 +724,7 @@ public class MenuBarSkin extends BehaviorSkinBase<MenuBar, BehaviorBase<MenuBar>
             });
             updateActionListeners(menu, true);
         }
-        requestLayout();
+        getSkinnable().requestLayout();
     }
     
     /*
@@ -912,11 +912,11 @@ public class MenuBarSkin extends BehaviorSkinBase<MenuBar, BehaviorBase<MenuBar>
 
     // Return empty insets when "container" is empty, which happens
     // when using the system menu bar.
-    @Override public Insets getInsets() {
+    private Insets getInsets() {
         if (container.getChildren().isEmpty()) {
             return Insets.EMPTY;
         } else {
-            return super.getInsets();
+            return getSkinnable().getInsets();
         }
     }
 
@@ -931,19 +931,23 @@ public class MenuBarSkin extends BehaviorSkinBase<MenuBar, BehaviorBase<MenuBar>
     }
 
     @Override protected double computeMinWidth(double height) {
-        return container.minWidth(height) + getInsets().getLeft() + getInsets().getRight();
+        Insets insets = getInsets();
+        return container.minWidth(height) + insets.getLeft() + insets.getRight();
     }
 
     @Override protected double computePrefWidth(double height) {
-        return container.prefWidth(height) + getInsets().getLeft() + getInsets().getRight();
+        Insets insets = getInsets();
+        return container.prefWidth(height) + insets.getLeft() + insets.getRight();
     }
 
     @Override protected double computeMinHeight(double width) {
-        return container.minHeight(width) + getInsets().getTop() + getInsets().getBottom();
+        Insets insets = getInsets();
+        return container.minHeight(width) + insets.getTop() + insets.getBottom();
     }
 
     @Override protected double computePrefHeight(double width) {
-        return container.prefHeight(width) + getInsets().getTop() + getInsets().getBottom();
+        Insets insets = getInsets();
+        return container.prefHeight(width) + insets.getTop() + insets.getBottom();
     }
 
     // grow horizontally, but not vertically

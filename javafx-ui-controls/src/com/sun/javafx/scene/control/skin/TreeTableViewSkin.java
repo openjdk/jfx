@@ -193,11 +193,11 @@ public class TreeTableViewSkin<S> extends TableViewSkinBase<S, TreeTableView<S>,
                 // had changed. So, here we just watch for the case where the number
                 // of items being added is equal to the number of items being removed.
                 needItemCountUpdate = true;
-                requestLayout();
+                getSkinnable().requestLayout();
             } else if (e.getEventType().equals(TreeItem.valueChangedEvent())) {
                 // Fix for RT-14971 and RT-15338. 
                 needCellsRecreated = true;
-                requestLayout();
+                getSkinnable().requestLayout();
             } else {
                 // Fix for RT-20090. We are checking to see if the event coming
                 // from the TreeItem root is an event where the count has changed.
@@ -205,7 +205,7 @@ public class TreeTableViewSkin<S> extends TableViewSkinBase<S, TreeTableView<S>,
                 while (eventType != null) {
                     if (eventType.equals(TreeItem.<S>expandedItemCountChangeEvent())) {
                         needItemCountUpdate = true;
-                        requestLayout();
+                        getSkinnable().requestLayout();
                         break;
                     }
                     eventType = eventType.getSuperType();

@@ -39,6 +39,7 @@ import com.sun.javafx.scene.control.behavior.AccordionBehavior;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import javafx.geometry.Insets;
 
 public class AccordionSkin extends BehaviorSkinBase<Accordion, AccordionBehavior> {
 
@@ -78,7 +79,7 @@ public class AccordionSkin extends BehaviorSkinBase<Accordion, AccordionBehavior
 
         initTitledPaneListeners(accordion.getPanes());
         getChildren().setAll(accordion.getPanes());
-        requestLayout();
+        getSkinnable().requestLayout();
 
         registerChangeListener(getSkinnable().widthProperty(), "WIDTH");
         registerChangeListener(getSkinnable().heightProperty(), "HEIGHT");
@@ -88,9 +89,9 @@ public class AccordionSkin extends BehaviorSkinBase<Accordion, AccordionBehavior
     protected void handleControlPropertyChanged(String property) {
         super.handleControlPropertyChanged(property);
         if ("WIDTH".equals(property)) {
-            clipRect.setWidth(getWidth());
+            clipRect.setWidth(getSkinnable().getWidth());
         } else if ("HEIGHT".equals(property)) {
-            clipRect.setHeight(getHeight());
+            clipRect.setHeight(getSkinnable().getHeight());
         }
     }
 
@@ -122,7 +123,9 @@ public class AccordionSkin extends BehaviorSkinBase<Accordion, AccordionBehavior
                 h += snapSize(pane.minHeight(width));
             }
         }
-        return h + snapSpace(getInsets().getTop()) + snapSpace(getInsets().getBottom());
+        
+        Insets insets = getSkinnable().getInsets();
+        return h + snapSpace(insets.getTop()) + snapSpace(insets.getBottom());
     }
 
     @Override protected void layoutChildren(final double x, double y,

@@ -78,7 +78,7 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
 
         if ("INDEX".equals(p)) {
             updateCells = true;
-            requestLayout();
+            getSkinnable().requestLayout();
         } else if ("TREE_TABLE_VIEW".equals(p)) {
             for (int i = 0; i < getChildren().size(); i++) {
                 ((TreeTableCell)getChildren().get(i)).updateTreeTableView(getSkinnable().getTreeTableView());
@@ -87,7 +87,7 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
             updateDisclosureNode();
         } else if ("TREE_COLUMN".equals(p)) {
             updateCells = true;
-            requestLayout();
+            getSkinnable().requestLayout();
         }
     }
     

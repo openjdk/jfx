@@ -44,6 +44,7 @@ import com.sun.javafx.css.StyleableDoubleProperty;
 import com.sun.javafx.css.CssMetaData;
 import com.sun.javafx.css.converters.SizeConverter;
 import com.sun.javafx.scene.control.behavior.TreeCellBehavior;
+import javafx.geometry.Insets;
 
 public class TreeCellSkin extends CellSkinBase<TreeCell<?>, TreeCellBehavior> {
 
@@ -195,7 +196,8 @@ public class TreeCellSkin extends CellSkinBase<TreeCell<?>, TreeCellBehavior> {
     @Override protected double computePrefWidth(double height) {
         double labelWidth = super.computePrefWidth(height);
 
-        double pw = getInsets().getLeft() + getInsets().getRight();
+        final Insets padding = getSkinnable().getInsets();
+        double pw = padding.getLeft() + padding.getRight();
 
         TreeView tree = getSkinnable().getTreeView();
         if (tree == null) return pw;

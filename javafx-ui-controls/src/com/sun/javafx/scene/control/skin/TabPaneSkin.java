@@ -189,13 +189,13 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
             isSelectingTab = true;
             previousSelectedTab = selectedTab;
             selectedTab = getSkinnable().getSelectionModel().getSelectedItem();
-            requestLayout();
+            getSkinnable().requestLayout();
         } else if ("SIDE".equals(property)) {
             updateTabPosition();
         } else if ("WIDTH".equals(property)) {
-            clipRect.setWidth(getWidth());
+            clipRect.setWidth(getSkinnable().getWidth());
         } else if ("HEIGHT".equals(property)) {
-            clipRect.setHeight(getHeight());
+            clipRect.setHeight(getSkinnable().getHeight());
         }
     }
 
@@ -307,7 +307,7 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
     private void updateTabPosition() {
         tabHeaderArea.setScrollOffset(0.0F);
         getSkinnable().impl_reapplyCSS();
-        requestLayout();
+        getSkinnable().requestLayout();
     }
 
     private Timeline createTimeline(final TabHeaderSkin tabRegion, final Duration duration, final double endValue, final EventHandler<ActionEvent> func) {
@@ -365,7 +365,8 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
         }
         double prefwidth = isHorizontal() ?
             maxw : maxw + snapSize(tabHeaderArea.prefHeight(-1));
-        return snapSize(prefwidth) + snapSize(getInsets().getRight()) + snapSize(getInsets().getLeft());
+        final Insets padding = getSkinnable().getInsets();
+        return snapSize(prefwidth) + snapSize(padding.getRight()) + snapSize(padding.getLeft());
     }
 
     private double maxh = 0.0d;
@@ -376,7 +377,8 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
         }
         double prefheight = isHorizontal()?
             maxh + snapSize(tabHeaderArea.prefHeight(-1)) : maxh;
-        return snapSize(prefheight) + snapSize(getInsets().getTop()) + snapSize(getInsets().getBottom());
+        final Insets padding = getSkinnable().getInsets();
+        return snapSize(prefheight) + snapSize(padding.getTop()) + snapSize(padding.getBottom());
     }
 
     @Override public double getBaselineOffset() {
@@ -510,7 +512,7 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
             final TabPane tabPane = getSkinnable();
 
             headerClip = new Rectangle();
-
+            
             headersRegion = new StackPane() {
                 @Override protected double computePrefWidth(double height) {
                     double width = 0.0F;

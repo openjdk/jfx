@@ -31,6 +31,7 @@ import javafx.scene.control.IndexedCell;
 
 import com.sun.javafx.scene.control.behavior.BehaviorBase;
 import java.util.Map;
+import javafx.geometry.Insets;
 
 /**
  * Parent class to control skins whose contents are virtualized and scrollable.
@@ -84,7 +85,8 @@ public abstract class VirtualContainerBase<C extends Control, B extends Behavior
     public abstract int getItemCount();
 
     double getMaxCellWidth(int rowsToCount) {
-        return getInsets().getLeft() + flow.getMaxCellWidth(rowsToCount) + getInsets().getRight();
+        final Insets padding = getSkinnable().getInsets();
+        return padding.getLeft() + flow.getMaxCellWidth(rowsToCount) + padding.getRight();
     }
     
     double getVirtualFlowPreferredHeight(int rows) {
@@ -94,7 +96,8 @@ public abstract class VirtualContainerBase<C extends Control, B extends Behavior
             height += flow.getCellLength(i);
         }
         
-        return height + getInsets().getTop() + getInsets().getBottom();
+        final Insets padding = getSkinnable().getInsets();
+        return height + padding.getTop() + padding.getBottom();
     }
     
     private void handleControlProperties(C control) {

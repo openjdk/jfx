@@ -83,13 +83,14 @@ public class RadioButtonSkin extends LabeledSkinBase<RadioButton, ButtonBehavior
     }
 
     @Override protected double computePrefHeight(double width) {
+        final Insets padding = getSkinnable().getInsets();
         return Math.max(snapSize(super.computePrefHeight(width - radio.prefWidth(-1))),
-                        getInsets().getTop() + radio.prefHeight(-1) + getInsets().getBottom());
+                        padding.getTop() + radio.prefHeight(-1) + padding.getBottom());
     }
 
     @Override protected void layoutChildren(final double x, final double y,
             final double w, final double h) {
-        Insets padding = getInsets();
+        Insets padding = getSkinnable().getInsets();
 
         final double radioWidth = radio.prefWidth(-1);
         final double radioHeight = radio.prefHeight(-1);

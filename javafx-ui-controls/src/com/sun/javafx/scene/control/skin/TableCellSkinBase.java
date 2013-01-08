@@ -50,7 +50,7 @@ public abstract class TableCellSkinBase<C extends IndexedCell, B extends CellBeh
     
     private InvalidationListener columnWidthListener = new InvalidationListener() {
         @Override public void invalidated(Observable valueModel) {
-            requestLayout();
+            getSkinnable().requestLayout();
         }
     };
     
@@ -99,7 +99,7 @@ public abstract class TableCellSkinBase<C extends IndexedCell, B extends CellBeh
         // fit the cell within this space
         // FIXME the subtraction of bottom padding isn't right here - but it
         // results in better visuals, so I'm leaving it in place for now.
-        layoutLabelInArea(x, y, w, h - getPadding().getBottom());
+        layoutLabelInArea(x, y, w, h - getSkinnable().getPadding().getBottom());
     }
 
     @Override protected double computePrefWidth(double height) {

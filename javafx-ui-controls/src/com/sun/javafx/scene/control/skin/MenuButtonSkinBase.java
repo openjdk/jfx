@@ -113,7 +113,7 @@ public abstract class MenuButtonSkinBase<C extends MenuButton, B extends MenuBut
         getChildren().clear();
         getChildren().addAll(label, arrowButton);
 
-        requestLayout();
+        getSkinnable().requestLayout();
         
         control.getItems().addListener(new ListChangeListener() {
             @Override public void onChanged(Change c) {
@@ -221,7 +221,7 @@ public abstract class MenuButtonSkinBase<C extends MenuButton, B extends MenuBut
 
         } else if ("MNEMONIC_PARSING".equals(p)) {
             label.setMnemonicParsing(getSkinnable().isMnemonicParsing());
-            requestLayout();
+            getSkinnable().requestLayout();
         }
     }
 
@@ -232,7 +232,7 @@ public abstract class MenuButtonSkinBase<C extends MenuButton, B extends MenuBut
      **************************************************************************/
 
     @Override protected double computePrefWidth(double height) {
-        final Insets padding = getInsets();
+        final Insets padding = getSkinnable().getInsets();
         return padding.getLeft()
                 + label.prefWidth(height)
                 + snapSize(arrowButton.prefWidth(height))
@@ -240,7 +240,7 @@ public abstract class MenuButtonSkinBase<C extends MenuButton, B extends MenuBut
     }
 
     @Override protected double computePrefHeight(double width) {
-        final Insets padding = getInsets();
+        final Insets padding = getSkinnable().getInsets();
         return padding.getTop()
                 + Math.max(label.prefHeight(width), snapSize(arrowButton.prefHeight(-1)))
                 + padding.getBottom();

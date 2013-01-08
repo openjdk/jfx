@@ -52,6 +52,7 @@ import javafx.scene.text.Text;
 
 import com.sun.javafx.scene.control.behavior.ChoiceBoxBehavior;
 import javafx.collections.WeakListChangeListener;
+import javafx.geometry.Insets;
 
 
 /**
@@ -62,7 +63,7 @@ import javafx.collections.WeakListChangeListener;
     public ChoiceBoxSkin(ChoiceBox control) {
         super(control, new ChoiceBoxBehavior(control));
         initialize();
-        requestLayout();
+        control.requestLayout();
         registerChangeListener(control.selectionModelProperty(), "SELECTION_MODEL");
         registerChangeListener(control.showingProperty(), "SHOWING");
         registerChangeListener(control.itemsProperty(), "ITEMS");
@@ -98,7 +99,7 @@ import javafx.collections.WeakListChangeListener;
                         addPopupItem(obj, i);
                         i++;
                     }
-                    requestLayout(); // RT-18052
+                    getSkinnable().requestLayout(); // RT-18052
                     return;
                 }
                 for (int i = c.getFrom(); i < c.getTo(); i++) {
@@ -110,7 +111,7 @@ import javafx.collections.WeakListChangeListener;
             // RT-21891 weird initial appearance: need a better fix for this instead
             // of having to rely on impl_processCSS. 
             popup.getScene().getRoot().impl_processCSS(true); 
-            requestLayout(); // RT-18052 resize of choicebox should happen immediately.
+            getSkinnable().requestLayout(); // RT-18052 resize of choicebox should happen immediately.
         }
     };
     
@@ -330,25 +331,29 @@ import javafx.collections.WeakListChangeListener;
         // open button width/height
         double obw = openButton.prefWidth(-1);
 
-        label.resizeRelocate(getInsets().getLeft(), getInsets().getTop(), w, h);
+        ChoiceBox control = getSkinnable();
+        Insets insets = control.getInsets();
+        label.resizeRelocate(insets.getLeft(), insets.getTop(), w, h);
         openButton.resize(obw, openButton.prefHeight(-1));
-        positionInArea(openButton, getWidth() - getInsets().getRight() - obw,
-                getInsets().getTop(), obw, h, /*baseline ignored*/0, HPos.CENTER, VPos.CENTER);
+        positionInArea(openButton, control.getWidth() - insets.getRight() - obw,
+                insets.getTop(), obw, h, /*baseline ignored*/0, HPos.CENTER, VPos.CENTER);
     }
 
     @Override protected double computeMinWidth(double height) {
         final double boxWidth = label.minWidth(-1) + openButton.minWidth(-1);
         final double popupWidth = popup.minWidth(-1);
-        return getInsets().getLeft() + Math.max(boxWidth, popupWidth)
-                + getInsets().getRight();
+        final Insets insets = getSkinnable().getInsets();
+        return insets.getLeft() + Math.max(boxWidth, popupWidth)
+                + insets.getRight();
     }
 
     @Override protected double computeMinHeight(double width) {
         final double displayHeight = label.minHeight(-1);
         final double openButtonHeight = openButton.minHeight(-1);
-        return getInsets().getTop()
+        final Insets insets = getSkinnable().getInsets();
+        return insets.getTop()
                 + Math.max(displayHeight, openButtonHeight)
-                + getInsets().getBottom();
+                + insets.getBottom();
     }
 
     @Override protected double computePrefWidth(double height) {
@@ -360,16 +365,18 @@ import javafx.collections.WeakListChangeListener;
                 popupWidth = (new Text(((MenuItem)popup.getItems().get(0)).getText())).prefWidth(-1);
             }
         }
-        return (popup.getItems().size() == 0) ? 50 : getInsets().getLeft() + Math.max(boxWidth, popupWidth)
-                + getInsets().getRight();
+        final Insets insets = getSkinnable().getInsets();
+        return (popup.getItems().size() == 0) ? 50 : insets.getLeft() + Math.max(boxWidth, popupWidth)
+                + insets.getRight();
     }
 
     @Override protected double computePrefHeight(double width) {
         final double displayHeight = label.prefHeight(-1);
         final double openButtonHeight = openButton.prefHeight(-1);
-        return getInsets().getTop()
+        final Insets insets = getSkinnable().getInsets();
+        return insets.getTop()
                 + Math.max(displayHeight, openButtonHeight)
-                + getInsets().getBottom();
+                + insets.getBottom();
     }
     
     @Override protected double computeMaxHeight(double width) {

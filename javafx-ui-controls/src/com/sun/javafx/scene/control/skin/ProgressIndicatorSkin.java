@@ -66,6 +66,7 @@ import com.sun.javafx.css.converters.PaintConverter;
 import com.sun.javafx.css.converters.SizeConverter;
 import com.sun.javafx.scene.control.behavior.ProgressIndicatorBehavior;
 import com.sun.javafx.scene.control.skin.resources.ControlResources;
+import javafx.geometry.Insets;
 
 public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, ProgressIndicatorBehavior<ProgressIndicator>> {
 
@@ -145,7 +146,7 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, P
                         if (getSkinnable().impl_isTreeVisible()) {
                             spinner.indeterminateTimeline.play();
                         }
-                        requestLayout();
+                        getSkinnable().requestLayout();
                     }
                 }
             }
@@ -153,7 +154,7 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, P
         control.sceneProperty().addListener(sceneListener);
 
         initialize();
-        requestLayout();
+        getSkinnable().requestLayout();
     }
 
     private void initialize() {
@@ -299,11 +300,13 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, P
         @Override protected void layoutChildren() {
             // Position and size the circular background
             double doneTextHeight = doneText.getLayoutBounds().getHeight();
+            final Insets controlInsets = control.getInsets();
+            
             /*
             ** use the min of width, or height, keep it a circle
             */
-            double areaW = (control.getWidth() - (skin.getInsets().getLeft() + skin.getInsets().getRight()));
-            double areaH = (control.getHeight() - (skin.getInsets().getTop() + skin.getInsets().getBottom()));
+            double areaW = (control.getWidth() - (controlInsets.getLeft() + controlInsets.getRight()));
+            double areaH = (control.getHeight() - (controlInsets.getTop() + controlInsets.getBottom()));
 
             double radiusW = areaW / 2;
             double radiusH = (areaH-(textGap+doneTextHeight)) / 2;
@@ -316,8 +319,8 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, P
             ** we need to work out the available space between the padding,
             ** and centre the indicator inside it
             */
-            indicator.setLayoutX(skin.getInsets().getLeft()+(radiusW - radius));
-            indicator.setLayoutY(skin.getInsets().getTop()+(radiusH - radius));
+            indicator.setLayoutX(controlInsets.getLeft()+(radiusW - radius));
+            indicator.setLayoutY(controlInsets.getTop()+(radiusH - radius));
 
 
             arcShape.setRadiusX(((indicator.getWidth() - indicator.getInsets().getLeft() - indicator.getInsets().getRight()) / 2));
@@ -347,10 +350,10 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, P
                 ** but if it can't then use the padding
                 */
                 if (textWidth > (radiusW*2)) {
-                    text.setLayoutX(skin.getInsets().getLeft()+(radiusW - radius));
+                    text.setLayoutX(controlInsets.getLeft()+(radiusW - radius));
                 }
                 else {
-                    text.setLayoutX(skin.getInsets().getLeft()+((radiusW*2 - textWidth)/2));
+                    text.setLayoutX(controlInsets.getLeft()+((radiusW*2 - textWidth)/2));
                 }
             }
             else {
@@ -522,8 +525,9 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, P
         }
 
         @Override protected void layoutChildren() {
-            final double w = control.getWidth() - skin.getInsets().getLeft() - skin.getInsets().getRight();
-            final double h = control.getHeight() - skin.getInsets().getTop() - skin.getInsets().getBottom();
+            Insets controlInsets = control.getInsets();
+            final double w = control.getWidth() - controlInsets.getLeft() - controlInsets.getRight();
+            final double h = control.getHeight() - controlInsets.getTop() - controlInsets.getBottom();
             final double prefW = pathsG.prefWidth(-1);
             final double prefH = pathsG.prefHeight(-1);
             double scaleX = w / prefW;

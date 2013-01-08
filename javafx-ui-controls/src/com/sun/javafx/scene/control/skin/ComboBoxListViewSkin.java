@@ -92,7 +92,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
     private final ListChangeListener listViewItemsListener = new ListChangeListener() {
         @Override public void onChanged(ListChangeListener.Change c) {
             itemCountDirty = true;
-            requestLayout();
+            getSkinnable().requestLayout();
         }
     };
     
@@ -263,7 +263,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
         }
         
         itemCountDirty = true;
-        requestLayout();
+        getSkinnable().requestLayout();
     }
     
     @Override public Node getPopupContent() {

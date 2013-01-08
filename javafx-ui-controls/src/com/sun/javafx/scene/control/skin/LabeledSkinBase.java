@@ -103,7 +103,7 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
     final InvalidationListener graphicPropertyChangedListener = new InvalidationListener() {
         @Override public void invalidated(Observable valueModel) {
             invalidText = true;
-            requestLayout();
+            getSkinnable().requestLayout();
         }
     };
 
@@ -200,7 +200,7 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
             // it will already have fit all available height and a change to vpos
             // has no effect. Or it is too short (i.e. it all fits) and we don't
             // have to worry about truncation. So just call request layout.
-            requestLayout();
+            getSkinnable().requestLayout();
         } else if ("MNEMONIC_PARSING".equals(p)) {
             textMetricsChanged();
         } else if ("TEXT".equals(p)) {
@@ -228,7 +228,7 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
     }
 
     protected double topPadding() {
-        return snapSpace(getInsets().getTop());
+        return snapSpace(getSkinnable().getInsets().getTop());
     }
 
     protected double topLabelPadding() {
@@ -236,7 +236,7 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
     }
 
     protected double bottomPadding() {
-        return snapSpace(getInsets().getBottom());
+        return snapSpace(getSkinnable().getInsets().getBottom());
     }
 
     protected double bottomLabelPadding() {
@@ -244,7 +244,7 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
     }
 
     protected double leftPadding() {
-        return snapSpace(getInsets().getLeft());
+        return snapSpace(getSkinnable().getInsets().getLeft());
     }
 
     protected double leftLabelPadding() {
@@ -252,7 +252,7 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
     }
 
     protected double rightPadding() {
-        return snapSpace(getInsets().getRight());
+        return snapSpace(getSkinnable().getInsets().getRight());
     }
 
     protected double rightLabelPadding() {
@@ -267,7 +267,7 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
      */
     private void textMetricsChanged() {
         invalidText = true;
-        requestLayout();
+        getSkinnable().requestLayout();
     }
 
     /*

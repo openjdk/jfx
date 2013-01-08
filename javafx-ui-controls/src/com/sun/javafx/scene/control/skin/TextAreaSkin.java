@@ -421,7 +421,7 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
 
         forwardBiasProperty().addListener(new InvalidationListener() {
             @Override public void invalidated(Observable observable) {
-                if (getWidth() > 0) {
+                if (textArea.getWidth() > 0) {
                     updateTextNodeCaretPos(textArea.getCaretPosition());
                 }
             }
@@ -502,7 +502,7 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
             @Override
             public void changed(ObservableValue<? extends IndexRange> observable, IndexRange oldValue, IndexRange newValue) {
                 // TODO Why do we need two calls here?
-                requestLayout();
+                textArea.requestLayout();
                 contentView.requestLayout();
             }
         });
@@ -639,7 +639,7 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
         usePromptText.addListener(new InvalidationListener() {
             @Override public void invalidated(Observable observable) {
                 createPromptNode();
-                requestLayout();
+                textArea.requestLayout();
             }
         });
 
@@ -800,7 +800,7 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
 
     @Override
     public double getBaselineOffset() {
-        return fontMetrics.get().getAscent() + getInsets().getTop();
+        return fontMetrics.get().getAscent() + textArea.getInsets().getTop();
     }
 
     @Override

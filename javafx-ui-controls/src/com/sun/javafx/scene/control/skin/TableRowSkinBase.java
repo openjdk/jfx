@@ -176,7 +176,7 @@ public abstract class TableRowSkinBase<T, C extends IndexedCell/*<T>*/,
     private ListChangeListener visibleLeafColumnsListener = new ListChangeListener() {
         @Override public void onChanged(Change c) {
             isDirty = true;
-            requestLayout();
+            getSkinnable().requestLayout();
         }
     };
     
@@ -354,14 +354,14 @@ public abstract class TableRowSkinBase<T, C extends IndexedCell/*<T>*/,
 
         if ("ITEM".equals(p)) {
             updateCells = true;
-            requestLayout();
+            getSkinnable().requestLayout();
             
             // Required to fix RT-24725
             getSkinnable().layout();
         } else if (p == "SPAN_MODEL") {
             // TODO update layout based on changes to span model
             spanModel = spanModelProperty().get();
-            requestLayout();
+            getSkinnable().requestLayout();
         }
     }
 
@@ -427,7 +427,7 @@ public abstract class TableRowSkinBase<T, C extends IndexedCell/*<T>*/,
             double width;
             double height;
             
-            Insets insets = getInsets();
+            Insets insets = getSkinnable().getInsets();
             
             double verticalPadding = insets.getTop() + insets.getBottom();
             double horizontalPadding = insets.getLeft() + insets.getRight();
@@ -449,7 +449,7 @@ public abstract class TableRowSkinBase<T, C extends IndexedCell/*<T>*/,
                 show(tableCell);
                 
                 width = snapSize(tableCell.prefWidth(-1)) - snapSize(horizontalPadding);
-                height = Math.max(getHeight(), tableCell.prefHeight(-1));
+                height = Math.max(getSkinnable().getHeight(), tableCell.prefHeight(-1));
                 height = snapSize(height) - snapSize(verticalPadding);
                 
                 boolean isVisible = true;
