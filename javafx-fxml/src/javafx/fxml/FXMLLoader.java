@@ -1087,20 +1087,10 @@ public class FXMLLoader {
             if (type == null) {
                 throw new LoadException(this.type + " is not a valid type.");
             }
-
+            
             Object value;
             if (root == null) {
-                value = (builderFactory == null) ? null : builderFactory.getBuilder(type);
-
-                if (value == null) {
-                    try {
-                        value = type.newInstance();
-                    } catch (InstantiationException exception) {
-                        throw new LoadException(exception);
-                    } catch (IllegalAccessException exception) {
-                        throw new LoadException(exception);
-                    }
-                }
+                throw new LoadException("Root hasn't been set. Use method setRoot() before load.");                        
             } else {
                 if (!type.isAssignableFrom(root.getClass())) {
                     throw new LoadException("Root is not an instance of "
