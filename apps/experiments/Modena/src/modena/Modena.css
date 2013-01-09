@@ -84,7 +84,8 @@
      * default buttons.
      */
     /*-fx-accent: #a3daee;*/
-    -fx-accent: #4fb6d6;
+    /*-fx-accent: #4fb6d6;*/
+    -fx-accent: #0096C9;
 
     /* A bright blue for the focus indicator of objects. Typically used as the
      * first color in -fx-background-color for the "focused" pseudo-class. Also

@@ -29,24 +29,11 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
- .color-well , .color-well:focused {
-    -fx-background-color: -fx-base;
-    -fx-background-insets: 0;
-    -fx-effect: innershadow(gaussian,rgba(0,0,0,0.7),3,0,0,1);
-}
-.color-well:selected {
-    -fx-background-color: -fx-base;
-    -fx-effect: innershadow(gaussian,rgba(0,0,0,1),5,0,0,1);
-    -fx-text-fill: -fx-text-base-color;
-}
-.color-well .text {
-    -fx-effect: null;
-}
+
 .section-label {
     -fx-font-weight: normal;
     -fx-text-fill: derive(-fx-text-background-color,30%);
 }
-
 .section-border {
     -fx-border-color: ladder(
         -fx-background,

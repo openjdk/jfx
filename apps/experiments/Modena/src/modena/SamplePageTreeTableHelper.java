@@ -204,7 +204,7 @@ public class SamplePageTreeTableHelper {
 
         public FileTreeItem(File value) {
             super(value);
-            setGraphic(value.isFile() ? createFILE() : createFOLDER());
+//            setGraphic(value.isFile() ? createFILE() : createFOLDER());
         }
 
         @Override public ObservableList<TreeItem<File>> getChildren() {
