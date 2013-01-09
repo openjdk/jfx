@@ -731,7 +731,7 @@
 .hyperlink:focused {
     -fx-color: -fx-focused-base;
     -fx-border-color: -fx-focus-color;
-    -fx-border-style: dotted;
+    -fx-border-style: segments(0.166667em, 0.166667em);
     -fx-border-width: 1px;
 }
 
