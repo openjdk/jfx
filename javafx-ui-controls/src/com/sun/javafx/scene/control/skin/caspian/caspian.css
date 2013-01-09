@@ -2670,9 +2670,9 @@
 }
 
 .tab-pane:focused > .tab-header-area > .headers-region > .tab:selected .focus-indicator {
-	-fx-border-style: segments(5,3) inside;
-	-fx-border-width: 1;
-	-fx-border-color: -fx-focus-color;
+    -fx-border-style: segments(0.166667em, 0.166667em);
+    -fx-border-width: 1;
+    -fx-border-color: -fx-focus-color;
 }
 
 .tab-pane > .tab-header-area > .headers-region > .tab:disabled {
