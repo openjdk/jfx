@@ -228,35 +228,35 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
     }
 
     protected double topPadding() {
-        return snapSpace(getSkinnable().getInsets().getTop());
+        return snapSize(getSkinnable().getInsets().getTop());
     }
 
     protected double topLabelPadding() {
-        return snapSpace(getSkinnable().getLabelPadding().getTop());
+        return snapSize(getSkinnable().getLabelPadding().getTop());
     }
 
     protected double bottomPadding() {
-        return snapSpace(getSkinnable().getInsets().getBottom());
+        return snapSize(getSkinnable().getInsets().getBottom());
     }
 
     protected double bottomLabelPadding() {
-        return snapSpace(getSkinnable().getLabelPadding().getBottom());
+        return snapSize(getSkinnable().getLabelPadding().getBottom());
     }
 
     protected double leftPadding() {
-        return snapSpace(getSkinnable().getInsets().getLeft());
+        return snapSize(getSkinnable().getInsets().getLeft());
     }
 
     protected double leftLabelPadding() {
-        return snapSpace(getSkinnable().getLabelPadding().getLeft());
+        return snapSize(getSkinnable().getLabelPadding().getLeft());
     }
 
     protected double rightPadding() {
-        return snapSpace(getSkinnable().getInsets().getRight());
+        return snapSize(getSkinnable().getInsets().getRight());
     }
 
     protected double rightLabelPadding() {
-        return snapSpace(getSkinnable().getLabelPadding().getRight());
+        return snapSize(getSkinnable().getLabelPadding().getRight());
     }
 
 
