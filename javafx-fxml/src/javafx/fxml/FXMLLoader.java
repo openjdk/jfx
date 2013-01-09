@@ -546,7 +546,7 @@ public class FXMLLoader {
 
     // Element representing a value
     private abstract class ValueElement extends Element {
-        public String id = null;
+        public String fx_id = null;
 
         @Override
         public void processStartElement() throws IOException {
@@ -627,20 +627,24 @@ public class FXMLLoader {
             }
 
             // Add the value to the namespace
-            if (id != null) {
-                namespace.put(id, value);
+            if (fx_id != null) {
+                namespace.put(fx_id, value);
 
                 // If the value defines an ID property, set it
                 IDProperty idProperty = value.getClass().getAnnotation(IDProperty.class);
 
                 if (idProperty != null) {
                     Map<String, Object> properties = getProperties();
-                    properties.put(idProperty.value(), id);
+                    // set fx:id property value to Node.id only if Node.id was not
+                    // already set when processing start element attributes
+                    if (properties.get(idProperty.value()) == null) {
+                        properties.put(idProperty.value(), fx_id);
+                    }
                 }
-                
+
                 // Set the controller field value
                 if (controller != null) {
-                    Field field = getControllerFields().get(id);
+                    Field field = getControllerFields().get(fx_id);
 
                     if (field != null) {
                         try {
@@ -697,7 +701,7 @@ public class FXMLLoader {
                         }
                     }
 
-                    id = value;
+                    fx_id = value;
 
                 } else if (localName.equals(FX_CONTROLLER_ATTRIBUTE)) {
                     if (current.parent != null) {
@@ -928,8 +932,8 @@ public class FXMLLoader {
 
             Object value = fxmlLoader.load();
 
-            if (id != null) {
-                String id = this.id + CONTROLLER_SUFFIX;
+            if (fx_id != null) {
+                String id = this.fx_id + CONTROLLER_SUFFIX;
                 Object controller = fxmlLoader.getController();
 
                 namespace.put(id, controller);
@@ -1808,9 +1812,9 @@ public class FXMLLoader {
 
     /**
      * Sets the root of the object hierarchy. The value passed to this method
-     * is used as the value of the <tt>&lt;fx:root%gt;</tt> tag. This method
+     * is used as the value of the <tt>&lt;fx:root&gt;</tt> tag. This method
      * must be called prior to loading the document when using
-     * <tt>&lt;fx:root%gt;</tt>.
+     * <tt>&lt;fx:root&gt;</tt>.
      *
      * @param root
      * The root of the object hierarchy.

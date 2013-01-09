@@ -370,7 +370,7 @@ public final class SequentialTransition extends Transition {
             int i = 0;
             for (final Animation animation : cachedChildren) {
                 startTimes[i] = cycleTicks;
-                rates[i] = animation.getRate();
+                rates[i] = Math.abs(animation.getRate());
                 if (rates[i] < EPSILON) {
                     rates[i] = 1;
                 }
@@ -435,6 +435,7 @@ public final class SequentialTransition extends Transition {
             final Animation current = cachedChildren[curIndex];
             if (current.getStatus() == Status.PAUSED) {
                 current.impl_resume();
+                current.clipEnvelope.setRate(rates[curIndex] * Math.signum(getCurrentRate()));
             }
         }
     }
@@ -689,11 +690,22 @@ public final class SequentialTransition extends Transition {
                 }
             }
         }
-        // TODO: This does probably not work if animation is paused (getCurrentRate() == 0)
         if (oldIndex == curIndex) {
-            offsetTicks += currentRate > 0 ? newTicks - oldTicks : oldTicks - newTicks;
+            if (currentRate == 0) {
+                offsetTicks += (newTicks - oldTicks) * Math.signum(this.clipEnvelope.getCurrentRate());
+            } else {
+                offsetTicks += currentRate > 0 ? newTicks - oldTicks : oldTicks - newTicks;
+            }
         } else {
-            offsetTicks = currentRate > 0 ? newTicks - add(startTimes[curIndex], delays[curIndex]) : startTimes[curIndex + 1] - newTicks;
+            if (currentRate == 0) {
+                if (this.clipEnvelope.getCurrentRate() > 0) {
+                    offsetTicks = newTicks - add(startTimes[curIndex], delays[curIndex]);
+                } else {
+                    offsetTicks = startTimes[curIndex] + durations[curIndex] - newTicks;
+                }
+            } else {
+                offsetTicks = currentRate > 0 ? newTicks - add(startTimes[curIndex], delays[curIndex]) : startTimes[curIndex + 1] - newTicks;
+            }
         }
         newAnimation.clipEnvelope.jumpTo(Math.round(sub(newTicks, add(startTimes[curIndex], delays[curIndex])) * rates[curIndex]));
         oldTicks = newTicks;

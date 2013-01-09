@@ -41,7 +41,7 @@ public class IntArgb {
     public static final IntPixelAccessor accessor = Accessor.instance;
 
     public static final IntToBytePixelConverter ToByteBgraConverter =
-        IntArgb.ToByteBgraSameConv.nonpremul;
+        new IntTo4ByteSameConverter(IntArgb.getter, ByteBgra.setter);
     public static final IntToBytePixelConverter ToByteBgraPreConverter =
         IntArgb.ToByteBgraPreConv.instance;
     public static final IntToIntPixelConverter ToIntArgbConverter =
@@ -163,56 +163,6 @@ public class IntArgb {
                 }
                 srcoff += srcscanints;
                 dstoff += dstscanints;
-            }
-        }
-    }
-
-    static class ToByteBgraSameConv extends BaseIntToByteConverter {
-        static final IntToBytePixelConverter nonpremul = new ToByteBgraSameConv(false);
-        static final IntToBytePixelConverter premul = new ToByteBgraSameConv(true);
-
-        private ToByteBgraSameConv(boolean isPremult) {
-            super(isPremult ?  IntArgbPre.getter :  IntArgb.getter,
-                  isPremult ? ByteBgraPre.setter : ByteBgra.setter);
-        }
-
-        @Override
-        void doConvert(int  srcarr[], int srcoff, int srcscanints,
-                       byte dstarr[], int dstoff, int dstscanbytes,
-                       int w, int h)
-        {
-            srcscanints -= w;
-            dstscanbytes -= w * 4;
-            while (--h >= 0) {
-                for (int x = 0; x < w; x++) {
-                    int pixel = srcarr[srcoff++];
-                    dstarr[dstoff++] = (byte) (pixel      );
-                    dstarr[dstoff++] = (byte) (pixel >>  8);
-                    dstarr[dstoff++] = (byte) (pixel >> 16);
-                    dstarr[dstoff++] = (byte) (pixel >> 24);
-                }
-                srcoff += srcscanints;
-                dstoff += dstscanbytes;
-            }
-        }
-
-        @Override
-        void doConvert(IntBuffer  srcbuf, int srcoff, int srcscanints,
-                       ByteBuffer dstbuf, int dstoff, int dstscanbytes,
-                       int w, int h)
-        {
-            dstscanbytes -= w * 4;
-            while (--h >= 0) {
-                for (int x = 0; x < w; x++) {
-                    int pixel = srcbuf.get(srcoff + x);
-                    dstbuf.put(dstoff    , (byte) (pixel      ));
-                    dstbuf.put(dstoff + 1, (byte) (pixel >>  8));
-                    dstbuf.put(dstoff + 2, (byte) (pixel >> 16));
-                    dstbuf.put(dstoff + 3, (byte) (pixel >> 24));
-                    dstoff += 4;
-                }
-                srcoff += srcscanints;
-                dstoff += dstscanbytes;
             }
         }
     }

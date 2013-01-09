@@ -44,6 +44,7 @@ import java.util.Set;
 import java.lang.reflect.*;
 
 import javafx.beans.value.ObservableValue;
+import sun.reflect.misc.ReflectUtil;
 
 /**
  * Exposes Java Bean properties of an object via the {@link Map} interface.
@@ -55,6 +56,8 @@ import javafx.beans.value.ObservableValue;
 public class BeanAdapter extends AbstractMap<String, Object> {
     private Object bean;
 
+    private static ClassLoader contextClassLoader;
+    
     private static HashMap<Class<?>, HashMap<String, LinkedList<Method>>> globalMethodCache =
         new HashMap<Class<?>, HashMap<String, LinkedList<Method>>>();
 
@@ -64,7 +67,14 @@ public class BeanAdapter extends AbstractMap<String, Object> {
     public static final String PROPERTY_SUFFIX = "Property";
 
     public static final String VALUE_OF_METHOD_NAME = "valueOf";
+    
+    static {
+        contextClassLoader = Thread.currentThread().getContextClassLoader();
 
+        if (contextClassLoader == null) {
+            throw new NullPointerException();
+        }
+    }
     /**
      * Creates a new Bean adapter.
      *
@@ -447,8 +457,12 @@ public class BeanAdapter extends AbstractMap<String, Object> {
                 coercedValue = new BigDecimal(value.toString());
             }
         } else if (type == Class.class) {
-            try {
-                coercedValue = Class.forName(value.toString());
+            try {   
+                ReflectUtil.checkPackageAccess(value.toString());
+                coercedValue = Class.forName(
+                        value.toString(), 
+                        false, 
+                        BeanAdapter.contextClassLoader);
             } catch (ClassNotFoundException exception) {
                 throw new IllegalArgumentException(exception);
             }

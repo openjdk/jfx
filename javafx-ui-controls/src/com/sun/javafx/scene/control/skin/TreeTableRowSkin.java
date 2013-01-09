@@ -241,7 +241,7 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
-    @Override protected TableColumnBase<T, ?> getTableColumnBase(TreeTableCell cell) {
+    @Override protected TreeTableColumn<T, ?> getTableColumnBase(TreeTableCell cell) {
         return cell.getTableColumn();
     }
 
