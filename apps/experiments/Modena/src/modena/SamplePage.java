@@ -160,7 +160,7 @@ public class SamplePage extends GridPane {
         ToggleGroup tg2 = new ToggleGroup();
         ToggleGroup tg3 = new ToggleGroup();
         ToggleGroup tg4 = new ToggleGroup();
-        newSection("Pill Buttons:", 
+        newSection("Pill Toggle\nButtons:", 
                 HBoxBuilder.create()
                     .children(
                         ToggleButtonBuilder.create().text("Left").styleClass("left-pill").toggleGroup(tg1).build(),

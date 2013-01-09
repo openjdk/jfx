@@ -84,6 +84,7 @@ public class Modena extends Application {
     
     private BorderPane root;
     private SamplePage samplePage;
+    private Node mosaic;
     private Stage mainStage;
     
     @Override public void start(Stage stage) throws Exception {
@@ -123,11 +124,16 @@ public class Modena extends Application {
                 ).build(),
                 TabBuilder.create().text("UI Mosaic").content(
                     ScrollPaneBuilder.create().content(
-                        (Node)FXMLLoader.load(Modena.class.getResource("ui-mosaic.fxml"))
+                        mosaic = (Node)FXMLLoader.load(Modena.class.getResource("ui-mosaic.fxml"))
                     ).build()
                 ).build()
             );
             contentTabs.getSelectionModel().select(selectedTab);
+            // set white background for caspian
+            if (!modena) {
+                samplePage.setStyle("-fx-background-color: white;");
+                mosaic.setStyle("-fx-background-color: white;");
+            }
             // Create Toolbar
             final ToggleButton modenaButton;;
             final ToggleButton retinaButton = ToggleButtonBuilder.create()
