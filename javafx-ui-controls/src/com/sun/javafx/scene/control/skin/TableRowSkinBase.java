@@ -34,6 +34,7 @@ import javafx.collections.ListChangeListener;
 
 import com.sun.javafx.scene.control.behavior.CellBehaviorBase;
 import java.util.Map;
+import javafx.animation.FadeTransition;
 import javafx.beans.property.ObjectProperty;
 import javafx.collections.WeakListChangeListener;
 import javafx.collections.ObservableList;
@@ -48,12 +49,14 @@ import javafx.scene.control.Control;
 import javafx.scene.control.IndexedCell;
 import javafx.scene.control.SpanModel;
 import javafx.scene.control.TableColumnBase;
+import javafx.util.Duration;
 
 /**
  */
-public abstract class TableRowSkinBase<T, C extends IndexedCell/*<T>*/, 
-                                          B extends CellBehaviorBase<C>, 
-                                          R extends IndexedCell> extends CellSkinBase<C,B> {
+public abstract class TableRowSkinBase<T, 
+                                       C extends IndexedCell/*<T>*/, 
+                                       B extends CellBehaviorBase<C>, 
+                                       R extends IndexedCell> extends CellSkinBase<C,B> {
     
     /*
      * This is rather hacky - but it is a quick workaround to resolve the
@@ -376,7 +379,6 @@ public abstract class TableRowSkinBase<T, C extends IndexedCell/*<T>*/,
             updateCells(true);
             updateCells = false;
         }
-        
         if (cellsMap.isEmpty()) return;
         
         
@@ -388,6 +390,7 @@ public abstract class TableRowSkinBase<T, C extends IndexedCell/*<T>*/,
             ///////////////////////////////////////////
             double leftMargin = 0;
             double disclosureWidth = 0;
+            double graphicWidth = 0;
             boolean indentationRequired = isIndentationRequired();
             boolean disclosureVisible = isDisclosureNodeVisible();
             int indentationColumnIndex = 0;
@@ -486,21 +489,38 @@ public abstract class TableRowSkinBase<T, C extends IndexedCell/*<T>*/,
                             double ph = disclosureNode.prefHeight(disclosureWidth);
                             
                             if (width < (disclosureWidth + leftMargin)) {
-                                disclosureNode.setVisible(false);
+                                fadeOut(disclosureNode);
                             } else {
-                                disclosureNode.setVisible(true);
+                                fadeIn(disclosureNode);
                                 disclosureNode.resize(disclosureWidth, ph);
                                 positionInArea(disclosureNode, x, y,
-                                        disclosureWidth, ph, /*baseline ignored*/0,
+                                        disclosureWidth, h, /*baseline ignored*/0,
                                         HPos.CENTER, VPos.CENTER);
                             }
                         }
                         
                         // determine starting point of the graphic or cell node, and the
                         // remaining width available to them
-                        final int padding = getGraphic() == null ? 0 : 3;
-                        x += disclosureWidth + padding;
-                        w -= (leftMargin + disclosureWidth + padding);
+                        Node graphic = getGraphic();
+                        x += disclosureWidth;
+                        
+                        if (graphic != null) {
+                            graphicWidth = graphic.prefWidth(-1) + 3;
+                            
+                            if (width < disclosureWidth + leftMargin + graphicWidth) {
+                                fadeOut(graphic);
+                            } else {
+                                fadeIn(graphic);
+                                positionInArea(graphic, x, y,
+                                            disclosureWidth, h, /*baseline ignored*/0,
+                                            HPos.CENTER, VPos.CENTER);
+                            }
+                            
+                            x += graphicWidth;
+                            w -= graphicWidth;
+                        }
+                        
+                        w -= (leftMargin + disclosureWidth + graphicWidth);
                     }
                     ///////////////////////////////////////////
                     // further indentation code ends here
@@ -563,7 +583,7 @@ public abstract class TableRowSkinBase<T, C extends IndexedCell/*<T>*/,
                     // negative or 0 widths. If this is allowed, the vertical 
                     // lines for that column are removed from view, which 
                     // doesn't look right.
-                    double j = width - (leftMargin + disclosureWidth);
+                    double j = width - (leftMargin + disclosureWidth + graphicWidth);
                     if (indentationRequired && column == indentationColumnIndex) {
                         // the min width of a table cell is now 1 pixel
                         tableCell.resize(Math.max(1, j), height);
@@ -572,7 +592,7 @@ public abstract class TableRowSkinBase<T, C extends IndexedCell/*<T>*/,
                     }
 
                     if (indentationRequired && column > indentationColumnIndex) {
-                        tableCell.relocate(x - leftMargin - disclosureWidth, insets.getTop());
+                        tableCell.relocate(x - leftMargin - disclosureWidth - graphicWidth, insets.getTop());
                     } else {
                         // if j is a negative number (because the width is smaller
                         // that the left margin and disclosure node), we relocate
@@ -753,4 +773,20 @@ public abstract class TableRowSkinBase<T, C extends IndexedCell/*<T>*/,
 //            tableViewSkin = (TableViewSkin)tableView.getSkin();
 //        }
 //    }
+    
+    private static final Duration FADE_DURATION = Duration.millis(200);
+    
+    private void fadeOut(final Node node) {
+        if (node.getOpacity() < 1.0) return;
+        FadeTransition fader = new FadeTransition(FADE_DURATION, node);
+        fader.setToValue(0.0);
+        fader.play();
+    }
+    
+    private void fadeIn(final Node node) {
+        if (node.getOpacity() > 0.0) return;
+        FadeTransition fader = new FadeTransition(FADE_DURATION, node);
+        fader.setToValue(1.0);
+        fader.play();
+    }
 }
