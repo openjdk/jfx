@@ -36,7 +36,6 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.StringBufferInputStream;
 import java.net.URL;
 import java.net.URLConnection;
 import java.net.URLStreamHandler;
@@ -58,6 +57,9 @@ import javafx.scene.SnapshotParameters;
 import javafx.scene.control.ButtonBuilder;
 import javafx.scene.control.ColorPicker;
 import javafx.scene.control.Label;
+import javafx.scene.control.MenuButton;
+import javafx.scene.control.MenuItemBuilder;
+import javafx.scene.control.RadioMenuItemBuilder;
 import javafx.scene.control.ScrollPaneBuilder;
 import javafx.scene.control.Separator;
 import javafx.scene.control.TabBuilder;
@@ -85,7 +87,13 @@ public class Modena extends Application {
     private BorderPane root;
     private SamplePage samplePage;
     private Node mosaic;
+    private Node heightTest;
     private Stage mainStage;
+    private Color baseColor;
+    private Color accentColor;
+    private String fontName = null;
+    private int fontSize = 13;
+    private String cssOverride = "";
     
     @Override public void start(Stage stage) throws Exception {
         mainStage = stage;
@@ -126,6 +134,9 @@ public class Modena extends Application {
                     ScrollPaneBuilder.create().content(
                         mosaic = (Node)FXMLLoader.load(Modena.class.getResource("ui-mosaic.fxml"))
                     ).build()
+                ).build(),
+                TabBuilder.create().text("Height Test").content(
+                        heightTest = (Node)FXMLLoader.load(Modena.class.getResource("SameHeightTest.fxml"))
                 ).build()
             );
             contentTabs.getSelectionModel().select(selectedTab);
@@ -133,6 +144,7 @@ public class Modena extends Application {
             if (!modena) {
                 samplePage.setStyle("-fx-background-color: white;");
                 mosaic.setStyle("-fx-background-color: white;");
+                heightTest.setStyle("-fx-background-color: white;");
             }
             // Create Toolbar
             final ToggleButton modenaButton;;
@@ -183,6 +195,8 @@ public class Modena extends Application {
                 new Separator(),
                 retinaButton,
                 new Separator(),
+                createFontMenu(),
+                new Separator(),
                 new Label("Base:"),
                 createBaseColorPicker(),
                 new Separator(),
@@ -215,6 +229,48 @@ public class Modena extends Application {
         } catch (IOException ex) {
             Logger.getLogger(Modena.class.getName()).log(Level.SEVERE, null, ex);
         }
+    }
+    
+    private MenuButton createFontMenu() {
+        MenuButton mb = new MenuButton("Font Sizes");
+        ToggleGroup tg = new ToggleGroup();
+        mb.getItems().addAll(
+            RadioMenuItemBuilder.create().text("System Default").onAction(new EventHandler<ActionEvent>(){
+                @Override public void handle(ActionEvent event) {
+                    fontName = null;
+                    updateCSSOverrides();
+                }
+            }).style("-fx-font: 13px System;").toggleGroup(tg).selected(true).build(),
+            RadioMenuItemBuilder.create().text("Mac (13px)").onAction(new EventHandler<ActionEvent>(){
+                @Override public void handle(ActionEvent event) {
+                    fontName = "Lucida Grande";
+                    fontSize = 13;
+                    updateCSSOverrides();
+                }
+            }).style("-fx-font: 13px \"Lucida Grande\";").toggleGroup(tg).build(),
+            RadioMenuItemBuilder.create().text("Windows 100% (12px)").onAction(new EventHandler<ActionEvent>(){
+                @Override public void handle(ActionEvent event) {
+                    fontName = "Segoe UI";
+                    fontSize = 12;
+                    updateCSSOverrides();
+                }
+            }).style("-fx-font: 12px \"Segoe UI\";").toggleGroup(tg).build(),
+            RadioMenuItemBuilder.create().text("Windows 125% (15px)").onAction(new EventHandler<ActionEvent>(){
+                @Override public void handle(ActionEvent event) {
+                    fontName = "Segoe UI";
+                    fontSize = 15;
+                    updateCSSOverrides();
+                }
+            }).style("-fx-font: 15px \"Segoe UI\";").toggleGroup(tg).build(),
+            RadioMenuItemBuilder.create().text("Windows 150% (18px)").onAction(new EventHandler<ActionEvent>(){
+                @Override public void handle(ActionEvent event) {
+                    fontName = "Segoe UI";
+                    fontSize = 18;
+                    updateCSSOverrides();
+                }
+            }).style("-fx-font: 18px \"Segoe UI\";").toggleGroup(tg).build()
+        );
+        return mb;
     }
     
     private ColorPicker createBaseColorPicker() {
@@ -283,10 +339,6 @@ public class Modena extends Application {
         return colorPicker;
     }
     
-    private Color baseColor;
-    private Color accentColor;
-    private String cssOverride = "";
-    
     private void updateCSSOverrides() {
         cssOverride = ".root {\n";
         System.out.println("baseColor = "+baseColor);
@@ -304,6 +356,9 @@ public class Modena extends Application {
                     Math.round(accentColor.getGreen() * 255), 
                     Math.round(accentColor.getBlue() * 255));
             cssOverride += "    -fx-accent:"+color+";\n";
+        }
+        if (fontName != null) {
+            cssOverride += "    -fx-font:"+fontSize+"px \""+fontName+"\";\n";
         }
         cssOverride += "}\n";
         System.out.println("cssOverride = " + cssOverride);

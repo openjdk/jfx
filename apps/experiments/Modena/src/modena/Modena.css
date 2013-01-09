@@ -37,6 +37,15 @@
  *                                                                             *
  ******************************************************************************/
 
+/*
+TODO: Explain here how themeing works:
+
+     * -fx-text-base-color for text on top of -fx-base, -fx-color, and -fx-body-color
+     * -fx-text-background-color for text on top of -fx-background
+     * -fx-text-inner-color for text on top of -fx-control-inner-color
+     * -fx-selection-bar-text for text on top of -fx-selection-bar
+*/
+
 .root {
     /***************************************************************************
      *                                                                         *
@@ -79,11 +88,11 @@
     -fx-light-text-color: white;
 
     /* A bright blue for highlighting/accenting objects.  For example: selected
-     * text; selected items in menus, lists, trees, and tables; progress bars;
-     * default buttons.
-     */
-    /*-fx-accent: #4fb6d6;*/
+     * text; selected items in menus, lists, trees, and tables; progress bars */
     -fx-accent: #0096C9;
+    
+    /* Default buttons color, this is similar to accent but more subtle */
+    -fx-default-button: #4fb6d6;
 
     /* A bright blue for the focus indicator of objects. Typically used as the
      * first color in -fx-background-color for the "focused" pseudo-class. Also
@@ -142,17 +151,7 @@
         -fx-dark-text-color  46%,
         -fx-dark-text-color  59%,
         -fx-mid-text-color   60%
-     );
-
-    /* The default color for all text.  Sections should change the -fx-text-fill
-     * property if change the background color to something else.  See also:
-     *
-     * -fx-text-base-color for text on top of -fx-base, -fx-color, and -fx-body-color
-     * -fx-text-background-color for text on top of -fx-background
-     * -fx-text-inner-color for text on top of -fx-control-inner-color
-     * -fx-selection-bar-text for text on top of -fx-selection-bar
-     */
-    -fx-text-fill: -fx-text-background-color;
+    );
 
     /* A little darker than -fx-color and used to draw boxes around objects such
      * as progress bars, scroll bars, scroll panes, trees, tables, and lists.
@@ -474,7 +473,7 @@
 /* ====   DEFAULT   ========================================================= */
 
 .button:default {
-    -fx-base: -fx-accent;
+    -fx-base: -fx-default-button;
 }
 
 /* ====   PILL BUTTONS   ==================================================== */
@@ -516,7 +515,7 @@
         linear-gradient(to bottom, derive(-fx-color,-65.1%) 0%, derive(-fx-color,-50.2%) 90%, derive(-fx-color,-45.1%) 100%), 
         linear-gradient(to bottom, derive(-fx-color,-52.8%) 0%, derive(-fx-color,-40.8%) 90%, derive(-fx-color,-35.7%) 100%),
         linear-gradient(to bottom, derive(-fx-color,-44.3%) 0%, derive(-fx-color,-41.7%) 2% ,derive(-fx-color,-33.6%) 98%, derive(-fx-color,-35.7%) 100%); 
-    /* TODO: -fx-text-fill should be derived */
+    /* TODO: -fx-text-fill should be derived on background color */
     -fx-text-fill: -fx-light-text-color;
 }
 
@@ -600,7 +599,7 @@
 }
 .hyperlink:focused {
     -fx-border-color: -fx-focus-color;
-    -fx-border-style: dotted;
+    -fx-border-style: segments(0.166667em, 0.166667em);
     -fx-border-width: 1px;
 }
 .hyperlink:hover {
@@ -1324,6 +1323,11 @@
     -fx-background-insets: 0, 1 1 0 1;
     -fx-background-radius: 5 5 0 0, 4 4 0 0;
 }
+.tab-pane:focused > .tab-header-area > .headers-region > .tab:selected .focus-indicator {
+    -fx-border-style: segments(0.166667em, 0.166667em);
+    -fx-border-width: 1;
+    -fx-border-color: -fx-focus-color;
+}
 .tab-pane > .tab-header-area > .headers-region > .tab:disabled {
     -fx-opacity: -fx-disabled-opacity;
 }
@@ -1771,7 +1775,6 @@
         linear-gradient( to bottom, derive(-fx-color,-60%) 0%, derive(-fx-color,-35%) 50%, derive(-fx-color,-30%) 98%, derive(-fx-color,-50%) 100% ),    
         linear-gradient( to right, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0) 10%, rgba(0,0,0,0) 90%, rgba(0,0,0,0.3) 100% );
     -fx-background-insets: 0, 1, 1;
-    /* TODO: -fx-text-fill should be derived */
     -fx-text-fill: -fx-light-text-color;
 }
 .custom-color-dialog .controls-pane #toggle-button-left {
@@ -2595,6 +2598,7 @@
     -fx-background-insets: 0;
     -fx-padding: 0.666667em; /* 8 */
     -fx-effect: dropshadow( three-pass-box , rgba(0,0,0,0.5) , 10, 0.0 , 0 , 0 );
+    -fx-font-size: 0.85em;
 }
 
 /*******************************************************************************

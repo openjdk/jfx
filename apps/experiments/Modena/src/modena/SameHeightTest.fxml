@@ -1,0 +1,187 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import java.lang.*?>
+<?import java.util.*?>
+<?import javafx.collections.*?>
+<?import javafx.geometry.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.paint.*?>
+<?import javafx.scene.text.*?>
+
+<AnchorPane id="AnchorPane" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="-1.0" prefWidth="-1.0" xmlns:fx="http://javafx.com/fxml">
+  <children>
+    <ScrollPane fitToHeight="true" prefHeight="631.0" prefWidth="899.0" AnchorPane.bottomAnchor="14.0" AnchorPane.leftAnchor="14.0" AnchorPane.rightAnchor="14.0" AnchorPane.topAnchor="46.0">
+      <content>
+        <VBox alignment="CENTER_LEFT" prefHeight="-1.0" prefWidth="-1.0" spacing="50.0">
+          <children>
+            <HBox maxHeight="-Infinity" prefHeight="-1.0" prefWidth="-1.0" style="-fx-border-color: black transparent black transparent;&#10;-fx-border-width: 10 0 10 0;">
+              <children>
+                <Button mnemonicParsing="false" text="Button" />
+                <ToggleButton mnemonicParsing="false" prefWidth="90.0" selected="true" text="Toggle">
+                  <toggleGroup>
+                    <ToggleGroup fx:id="toggle1" />
+                  </toggleGroup>
+                </ToggleButton>
+                <MenuButton mnemonicParsing="false" prefWidth="100.0" text="MenuButton">
+                  <items>
+                    <MenuItem mnemonicParsing="false" text="Action 1" />
+                    <MenuItem mnemonicParsing="false" text="Action 2" />
+                  </items>
+                </MenuButton>
+                <SplitMenuButton mnemonicParsing="false" prefWidth="100.0" text="SplitMenuButton">
+                  <items>
+                    <MenuItem mnemonicParsing="false" text="Action 1" />
+                    <MenuItem mnemonicParsing="false" text="Action 2" />
+                  </items>
+                </SplitMenuButton>
+                <ChoiceBox prefWidth="60.0">
+                  <items>
+                    <FXCollections fx:factory="observableArrayList">
+                      <String fx:value="Item 1" />
+                      <String fx:value="Item 2" />
+                      <String fx:value="Item 3" />
+                    </FXCollections>
+                  </items>
+                </ChoiceBox>
+                <ComboBox prefWidth="60.0">
+                  <items>
+                    <FXCollections fx:factory="observableArrayList">
+                      <String fx:value="Item 1" />
+                      <String fx:value="Item 2" />
+                      <String fx:value="Item 3" />
+                    </FXCollections>
+                  </items>
+                </ComboBox>
+                <ComboBox editable="true" prefWidth="60.0" promptText="Choose">
+                  <items>
+                    <FXCollections fx:factory="observableArrayList">
+                      <String fx:value="Item 1" />
+                      <String fx:value="Item 2" />
+                      <String fx:value="Item 3" />
+                    </FXCollections>
+                  </items>
+                </ComboBox>
+                <ColorPicker />
+                <TextField prefWidth="100.0" promptText="Textfield" text="TextField" />
+                <PasswordField prefWidth="100.0" promptText="Password" text="password" />
+              </children>
+            </HBox>
+            <HBox maxHeight="-Infinity" prefHeight="-1.0" prefWidth="-1.0" style="-fx-border-color: red transparent red transparent;">
+              <children>
+                <Button mnemonicParsing="false" text="Button" />
+                <ToggleButton mnemonicParsing="false" prefWidth="90.0" selected="true" text="Toggle">
+                  <toggleGroup>
+                    <ToggleGroup />
+                  </toggleGroup>
+                </ToggleButton>
+                <MenuButton mnemonicParsing="false" prefWidth="100.0" text="MenuButton">
+                  <items>
+                    <MenuItem mnemonicParsing="false" text="Action 1" />
+                    <MenuItem mnemonicParsing="false" text="Action 2" />
+                  </items>
+                </MenuButton>
+                <SplitMenuButton mnemonicParsing="false" prefWidth="100.0" text="SplitMenuButton">
+                  <items>
+                    <MenuItem mnemonicParsing="false" text="Action 1" />
+                    <MenuItem mnemonicParsing="false" text="Action 2" />
+                  </items>
+                </SplitMenuButton>
+                <ChoiceBox prefWidth="60.0">
+                  <items>
+                    <FXCollections fx:factory="observableArrayList">
+                      <String fx:value="Item 1" />
+                      <String fx:value="Item 2" />
+                      <String fx:value="Item 3" />
+                    </FXCollections>
+                  </items>
+                </ChoiceBox>
+                <ComboBox prefWidth="60.0">
+                  <items>
+                    <FXCollections fx:factory="observableArrayList">
+                      <String fx:value="Item 1" />
+                      <String fx:value="Item 2" />
+                      <String fx:value="Item 3" />
+                    </FXCollections>
+                  </items>
+                </ComboBox>
+                <ComboBox editable="true" prefWidth="60.0" promptText="Choose">
+                  <items>
+                    <FXCollections fx:factory="observableArrayList">
+                      <String fx:value="Item 1" />
+                      <String fx:value="Item 2" />
+                      <String fx:value="Item 3" />
+                    </FXCollections>
+                  </items>
+                </ComboBox>
+                <ColorPicker />
+                <TextField prefWidth="100.0" promptText="Textfield" text="TextField" />
+                <PasswordField prefWidth="100.0" promptText="Password" text="password" />
+              </children>
+            </HBox>
+            <HBox maxHeight="-Infinity" prefHeight="-1.0" prefWidth="-1.0" style="">
+              <children>
+                <Button mnemonicParsing="false" text="Button" />
+                <ToggleButton mnemonicParsing="false" prefWidth="90.0" selected="true" text="Toggle">
+                  <toggleGroup>
+                    <ToggleGroup />
+                  </toggleGroup>
+                </ToggleButton>
+                <MenuButton mnemonicParsing="false" prefWidth="100.0" text="MenuButton">
+                  <items>
+                    <MenuItem mnemonicParsing="false" text="Action 1" />
+                    <MenuItem mnemonicParsing="false" text="Action 2" />
+                  </items>
+                </MenuButton>
+                <SplitMenuButton mnemonicParsing="false" prefWidth="100.0" text="SplitMenuButton">
+                  <items>
+                    <MenuItem mnemonicParsing="false" text="Action 1" />
+                    <MenuItem mnemonicParsing="false" text="Action 2" />
+                  </items>
+                </SplitMenuButton>
+                <ChoiceBox prefWidth="60.0">
+                  <items>
+                    <FXCollections fx:factory="observableArrayList">
+                      <String fx:value="Item 1" />
+                      <String fx:value="Item 2" />
+                      <String fx:value="Item 3" />
+                    </FXCollections>
+                  </items>
+                </ChoiceBox>
+                <ComboBox prefWidth="60.0">
+                  <items>
+                    <FXCollections fx:factory="observableArrayList">
+                      <String fx:value="Item 1" />
+                      <String fx:value="Item 2" />
+                      <String fx:value="Item 3" />
+                    </FXCollections>
+                  </items>
+                </ComboBox>
+                <ComboBox editable="true" prefWidth="60.0" promptText="Choose">
+                  <items>
+                    <FXCollections fx:factory="observableArrayList">
+                      <String fx:value="Item 1" />
+                      <String fx:value="Item 2" />
+                      <String fx:value="Item 3" />
+                    </FXCollections>
+                  </items>
+                </ComboBox>
+                <ColorPicker />
+                <TextField prefWidth="100.0" promptText="Textfield" text="TextField" />
+                <PasswordField prefWidth="100.0" promptText="Password" text="password" />
+              </children>
+            </HBox>
+          </children>
+          <padding>
+            <Insets bottom="8.0" left="8.0" right="8.0" top="8.0" />
+          </padding>
+        </VBox>
+      </content>
+    </ScrollPane>
+    <Label layoutX="15.0" layoutY="18.0" text="All of these controls should be the same height.">
+      <font>
+        <Font name="System Bold" size="13.0" />
+      </font>
+    </Label>
+  </children>
+</AnchorPane>
