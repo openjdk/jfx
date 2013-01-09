@@ -774,16 +774,18 @@ public abstract class TableRowSkinBase<T,
 //        }
 //    }
     
+    private static final Duration FADE_DURATION = Duration.millis(200);
+    
     private void fadeOut(final Node node) {
         if (node.getOpacity() < 1.0) return;
-        FadeTransition fader = new FadeTransition(Duration.millis(250), node);
+        FadeTransition fader = new FadeTransition(FADE_DURATION, node);
         fader.setToValue(0.0);
         fader.play();
     }
     
     private void fadeIn(final Node node) {
         if (node.getOpacity() > 0.0) return;
-        FadeTransition fader = new FadeTransition(Duration.millis(250), node);
+        FadeTransition fader = new FadeTransition(FADE_DURATION, node);
         fader.setToValue(1.0);
         fader.play();
     }
