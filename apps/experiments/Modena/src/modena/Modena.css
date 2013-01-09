@@ -32,8 +32,8 @@
 
 /*******************************************************************************
  *                                                                             *
- * CSS Styles for core infrastructure bits.  The .root section provides the   *
- * overall default font and colors used by the rest of the sections.           *
+ * CSS Styles for core infrastructure bits.  The .root section provides the    *
+ * overall default colors used by the rest of the sections.                    *
  *                                                                             *
  ******************************************************************************/
 
@@ -47,7 +47,6 @@
     /* A light grey that is the base color for objects.  Instead of using
      * -fx-base directly, the sections in this file will typically use -fx-color.
      */
-    /*-fx-base: #d0d0d0;*/
     -fx-base: #ececec;
 
     /* A very light grey used for the background of windows.  See also
@@ -83,7 +82,6 @@
      * text; selected items in menus, lists, trees, and tables; progress bars;
      * default buttons.
      */
-    /*-fx-accent: #a3daee;*/
     /*-fx-accent: #4fb6d6;*/
     -fx-accent: #0096C9;
 
@@ -181,26 +179,12 @@
      * are 0).
      */
     -fx-outer-border: derive(-fx-color,-23%);
-/*    -fx-outer-border: linear-gradient(
-        to bottom,
-        derive(-fx-color,-9%) 0%, 
-        derive(-fx-color,-33%) 100%
-    );*/
 
     /* A gradient that goes from a bit lighter than -fx-color on the top to
      * a little darker at the bottom.  Typically is the third color in the
      * -fx-background-color list as a thin highlight inside the outer border.
      * Insets are typically 1.
      */
-/*    -fx-inner-border: linear-gradient(
-        to bottom,
-        ladder(-fx-color, 
-               derive(-fx-color,80%) 60%, 
-               white 82%) 0%,
-        ladder(-fx-color, 
-               derive(-fx-color,20%) 10%, 
-               derive(-fx-color,-10%) 80%) 100%
-    );*/
     -fx-inner-border: linear-gradient(to bottom, 
         derive(-fx-color,75%), 
         derive(-fx-color,2%));
@@ -230,11 +214,6 @@
      * in the -fx-background-color list and represents main body of the control.
      * Insets are typically 2.
      */
-/*    -fx-body-color: linear-gradient(
-        to bottom,
-        derive(-fx-color,34%) 0%,
-        derive(-fx-color,-18%) 100%
-    );*/
     -fx-body-color: linear-gradient(to bottom, derive(-fx-color,10%) ,derive(-fx-color,-6%));
     -fx-body-color-bottomup: linear-gradient(to top, derive(-fx-color,10%) ,derive(-fx-color,-6%));
     -fx-body-color-to-right: linear-gradient(to right, derive(-fx-color,10%) ,derive(-fx-color,-6%));
@@ -330,128 +309,177 @@
     -fx-background-color: -fx-background;
 }
 
-/* ====   LABEL   =========================================================== */
+/*******************************************************************************
+ *                                                                             *
+ * Common Styles                                                               *
+ *                                                                             *
+ * These are styles that give a standard look to a whole range of controls     *
+ *                                                                             *
+ ******************************************************************************/
+
+/* ====   BUTTON LIKE THINGS   ============================================== */
+
+.button,
+.toggle-button,
+.radio-button > .radio,
+.check-box > .box,
+.menu-button,
+.split-menu-button > .arrow-button {
+    -fx-background-color: -fx-outer-border, -fx-inner-border, -fx-body-color; 
+    -fx-background-insets: 0, 1, 2;
+    -fx-background-radius: 5, 4, 3;
+    -fx-padding: 0.333333em 1em 0.416667em 1em;
+    -fx-text-fill: -fx-text-base-color;
+}
+.button:hover,
+.toggle-button:hover,
+.radio-button:hover > .radio,
+.check-box:hover > .box,
+.menu-button:hover,
+.split-menu-button > .label:hover,
+.split-menu-button > .arrow-button:hover {
+    -fx-color: -fx-hover-base;
+}
+.button:armed,
+.toggle-button:armed,
+.radio-button:armed > .radio,
+.check-box:armed .box,
+.menu-button:armed,
+.split-menu-button:armed > .label,
+.split-menu-button > .arrow-button:pressed {
+    -fx-color: -fx-pressed-base;
+}
+.button:focused,
+.toggle-button:focused,
+.radio-button:focused > .radio,
+.check-box:focused > .box,
+.menu-button:focused {
+    /*-fx-color: -fx-focused-base; TODO do we want this? */
+    -fx-background-color: -fx-faint-focus-color, -fx-focus-color, -fx-inner-border, -fx-body-color; 
+    -fx-background-insets: -2, -0.3, 1, 2;
+    -fx-background-radius: 7, 6, 4, 3;
+}
+
+/* ====   DISABLED THINGS   ================================================= */
+
+.button:disabled,
+.toggle-button:disabled,
+.radio-button:disabled,
+.check-box:disabled,
+.hyperlink:disabled,
+.menu-button:disabled,
+.split-menu-button:disabled {
+    -fx-opacity: -fx-disabled-opacity;
+}
+
+/* ====   MNEMONIC THINGS   ================================================= */
+
+.button:show-mnemonics .mnemonic-underline,
+.toggle-button:show-mnemonics .mnemonic-underline,
+.radio-button:show-mnemonics .mnemonic-underline,
+.check-box:show-mnemonics .mnemonic-underline,
+.hyperlink:show-mnemonics > .mnemonic-underline,
+.split-menu-button:show-mnemonics > .mnemonic-underline,
+.menu-button:show-mnemonics > .mnemonic-underline {
+    -fx-stroke: -fx-text-base-color;
+} 
+
+/* ====   MARKS   =========================================================== */
+
+.radio-button:selected > .radio > .dot,
+.check-box:selected > .box > .mark {
+    -fx-background-color: -fx-mark-highlight-color, -fx-mark-color !important;
+    -fx-background-insets: 0 0 -1 0, 0;
+}
+/* ====   ARROWS   ========================================================== */
+
+.menu-button > .arrow-button > .arrow,
+.split-menu-button > .arrow-button > .arrow {
+    -fx-background-color: -fx-mark-highlight-color, -fx-mark-color;
+    -fx-background-insets: 0 0 -1 0, 0;
+    /*-fx-padding: 0.25em;  3 */
+    -fx-shape: "M 0 -3.5 v 7 l 4 -3.5 z";
+}
+.menu-button:openvertically > .arrow-button > .arrow,
+.split-menu-button:openvertically > .arrow-button > .arrow {
+    -fx-padding: 0.166667em 0.333333em 0.166667em 0.333333em; /* 2 4 2 4 */
+    -fx-shape: "M 0 0 h 7 l -3.5 4 z";
+}
+
+/*******************************************************************************
+ *                                                                             *
+ * Label                                                                       *
+ *                                                                             *
+ ******************************************************************************/
 
 .label {
     -fx-text-fill: -fx-text-background-color;
 }
 
-/* ====   BUTTON   ========================================================== */
+/*******************************************************************************
+ *                                                                             *
+ * Button & ToogleButton                                                       *
+ *                                                                             *
+ ******************************************************************************/
 
-.button {
-    -fx-background-color: -fx-outer-border, -fx-inner-border, -fx-body-color; 
-    -fx-background-insets: 0, 1, 2;
-    -fx-background-radius: 5, 4, 3;
-    -fx-padding: 0.333333em 1em 0.416667em 1em;
-    -fx-text-fill: -fx-text-base-color;
-}
-.button:hover {
-    -fx-color: -fx-hover-base;
-}
-.button:armed {
-    -fx-color: -fx-pressed-base;
-}
+/* ====   DEFAULT   ========================================================= */
+
 .button:default {
     -fx-base: -fx-accent;
 }
-.button:focused {
-    -fx-background-color: -fx-faint-focus-color, -fx-focus-color, -fx-inner-border, -fx-body-color; 
-    -fx-background-insets: -2, -0.3, 1, 2;
-    -fx-background-radius: 7, 6, 4, 3;
-}
-.button:disabled {
-    -fx-opacity: -fx-disabled-opacity;
-}
-.button:show-mnemonics .mnemonic-underline {
-    -fx-stroke: -fx-text-fill;
-} 
 
-/* ====   TOGGLE BUTTON   =================================================== */
+/* ====   PILL BUTTONS   ==================================================== */
 
-.toggle-button {
-    -fx-background-color: -fx-outer-border, -fx-inner-border, -fx-body-color; 
-    -fx-background-insets: 0, 1, 2;
-    -fx-background-radius: 5, 4, 3;
-    -fx-padding: 0.333333em 1em 0.416667em 1em;
-    -fx-text-fill: -fx-text-base-color;
-}
+.button.left-pill,
 .toggle-button.left-pill {
     -fx-background-radius: 5 0 0 5, 4 0 0 4, 3 0 0 3;
     -fx-background-insets: 0, 1 0 1 1, 2 1 2 2;
 }
+.button.center-pill,
 .toggle-button.center-pill {
     -fx-background-radius: 0;
     -fx-background-insets: 0, 1 0 1 1, 2 1 2 2;
 }
+.button.right-pill,
 .toggle-button.right-pill {
     -fx-background-radius: 0 5 5 0, 0 4 4 0, 0 3 3 0;
 }
+.button.left-pill:focused,
 .toggle-button.left-pill:focused {
     -fx-background-radius: 7 0 0 7, 6 0 0 6, 4 0 0 4, 3 0 0 3;
     -fx-background-insets: -2 0 -2 -2, -0.3 0 -0.3 -0.3, 1, 2;
 }
+.button.center-pill:focused,
 .toggle-button.center-pill:focused {
     -fx-background-radius: 0;
     -fx-background-insets: -2 0 -1 0, -0.3 0 -0.3 0, 1, 2;
 }
+.button.right-pill:focused,
 .toggle-button.right-pill:focused {
     -fx-background-radius: 0 7 7 0, 0 6 6 0, 0 4 4 0, 0 3 3 0;
     -fx-background-insets: -2 -2 -2 0, -0.3 -0.3 -0.3 0, 1, 2;
 }
-.toggle-button:focused {
-    -fx-background-color: -fx-faint-focus-color, -fx-focus-color, -fx-inner-border, -fx-body-color; 
-    -fx-background-insets: -2, -0.3, 1, 2;
-    -fx-background-radius: 7, 6, 4, 3;
-}
-.toggle-button:hover {
-    -fx-color: -fx-hover-base;
-}
-.toggle-button:armed {
-    -fx-color: -fx-pressed-base;
-}
+
+/* ====   SELECTED TOGGLE   ================================================= */
+
 .toggle-button:selected {
-/*    -fx-background-color:
-        linear-gradient(to bottom, derive(-fx-color,-90%) 0%, derive(-fx-color,-60%) 100%),
-        linear-gradient(to bottom, derive(-fx-color,-60%) 0%, derive(-fx-color,-35%) 50%, derive(-fx-color,-30%) 98%, derive(-fx-color,-50%) 100%),
-        linear-gradient(to right, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0) 10%, rgba(0,0,0,0) 90%, rgba(0,0,0,0.3) 100%);*/
-/*    -fx-background-color:
-        linear-gradient(to bottom, 5b656f 0%, derive(-fx-color,-60%) 100%),
-        #5b656f,
-        linear-gradient(to bottom, #646e78 0%, #77848d 100%);*/
     -fx-background-color: 
-        /*-fx-outer-border,*/ 
-        /*linear-gradient(to bottom, derive(-fx-color,75%), derive(-fx-color,2%)),*/ 
         linear-gradient(to bottom, derive(-fx-color,-65.1%) 0%, derive(-fx-color,-50.2%) 90%, derive(-fx-color,-45.1%) 100%), 
         linear-gradient(to bottom, derive(-fx-color,-52.8%) 0%, derive(-fx-color,-40.8%) 90%, derive(-fx-color,-35.7%) 100%),
         linear-gradient(to bottom, derive(-fx-color,-44.3%) 0%, derive(-fx-color,-41.7%) 2% ,derive(-fx-color,-33.6%) 98%, derive(-fx-color,-35.7%) 100%); 
-    -fx-background-insets: 0, 1, 2;
     /* TODO: -fx-text-fill should be derived */
     -fx-text-fill: -fx-light-text-color;
 }
 
 .toggle-button:selected:focused {
-/*    -fx-background-color:
-        -fx-focus-color,
-        linear-gradient(to bottom, derive(-fx-color,-90%) 0%, derive(-fx-color,-60%) 100%),
-        linear-gradient(to bottom, derive(-fx-color,-60%) 0%, derive(-fx-color,-35%) 50%, derive(-fx-color,-30%) 98%, derive(-fx-color,-50%) 100%),
-        linear-gradient(to right, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0) 10%, rgba(0,0,0,0) 90%, rgba(0,0,0,0.3) 100%);*/
     -fx-background-color: 
         -fx-faint-focus-color, -fx-focus-color, 
         linear-gradient(to bottom, derive(-fx-color,-52.8%) 0%, derive(-fx-color,-40.8%) 90%, derive(-fx-color,-35.7%) 100%),
         linear-gradient(to bottom, derive(-fx-color,-44.3%) 0%, derive(-fx-color,-41.7%) 2% ,derive(-fx-color,-33.6%) 98%, derive(-fx-color,-35.7%) 100%); 
-    -fx-background-insets: -2, -0.3, 1, 2;
-    -fx-background-radius: 7, 6, 4, 3;
-    /*-fx-background-insets: -1.4, 0, 1, 1;*/
 }
-.toggle-button:selected .text {
+.toggle-button:selected > .text {
     -fx-effect: dropshadow(one-pass-box,derive(-fx-color,-90%),1,0,0,1);
-} 
-.toggle-button:disabled {
-    -fx-opacity: -fx-disabled-opacity;
 }
-.toggle-button:show-mnemonics .mnemonic-underline {
-    -fx-stroke: -fx-text-fill;
-} 
 
 /*******************************************************************************
  *                                                                             *
@@ -463,50 +491,15 @@
     -fx-label-padding: 0.0em 0.0em 0.0em 0.416667em; /* 0 0 0 5 */
     -fx-text-fill: -fx-text-background-color;
 }
-
-.radio-button:focused {
-    -fx-color: -fx-focused-base;
-}
-
-.radio-button .radio  {
-   -fx-background-color: -fx-outer-border, -fx-inner-border, -fx-body-color;
-   -fx-background-insets: 0,  1,  2;
+.radio-button > .radio  {
    -fx-background-radius: 1.0em; /* large value to make sure this remains circular */
    -fx-padding: 0.333333em; /* 4 -- padding from outside edge to the inner black dot */
 }
-
-.radio-button:focused .radio {
-    -fx-background-color: -fx-faint-focus-color, -fx-focus-color, -fx-inner-border, -fx-body-color; 
-    -fx-background-radius: 1.0em; /* large value to make sure this remains circular */
-    -fx-background-insets: -2, -0.3, 1, 2;
-}
-
-.radio-button:hover .radio {
-    -fx-color: -fx-hover-base;
-}
-.radio-button:armed .radio {
-    -fx-color: -fx-pressed-base;
-}
-
-.radio-button .dot {
+.radio-button > .radio > .dot {
    -fx-background-color: transparent;
-   -fx-background-insets: 0;
    -fx-background-radius: 1.0em; /* large value to make sure this remains circular */
    -fx-padding: 0.25em; /* 3 -- radius of the inner black dot when selected */
 }
-
-.radio-button:selected .dot {
-   -fx-background-color: -fx-mark-highlight-color, -fx-mark-color;
-   -fx-background-insets: 0 0 -1 0, 0;
-}
-
-.radio-button:disabled {
-    -fx-opacity: -fx-disabled-opacity;
-}
-
-.radio-button:show-mnemonics .mnemonic-underline {
-    -fx-stroke: -fx-text-fill;
-} 
 
 /*******************************************************************************
  *                                                                             *
@@ -518,63 +511,26 @@
     -fx-label-padding: 0.0em 0.0em 0.0em 0.416667em; /* 0 0 0 5 */
     -fx-text-fill: -fx-text-background-color;
 }
-
-.check-box:focused {
-    -fx-color: -fx-focused-base;
-}
-
-.check-box .box {
-    -fx-background-color: -fx-outer-border, -fx-inner-border, -fx-body-color;
-    -fx-background-insets: 0, 1, 2;
+.check-box > .box {
     -fx-background-radius: 3, 2, 1;
-    /*-fx-padding: 0.25em;  3 -- padding from the outside edge to the mark */
     -fx-padding: -2 0 3 3;
 }
-
-.check-box:focused .box {
-    -fx-background-color: -fx-faint-focus-color, -fx-focus-color, -fx-inner-border, -fx-body-color; 
-    -fx-background-insets: -2, -0.3, 1, 2;
+.check-box:focused > .box {
     -fx-background-radius: 3.4, 3, 2, 1;
 }
-
-.check-box:hover .box {
-    -fx-color: -fx-hover-base;
-}
-
-.check-box:armed .box {
-    -fx-color: -fx-pressed-base;
-}
-
-.check-box .mark {
+.check-box > .box > .mark {
     -fx-background-color: transparent;
-    -fx-background-insets: 1 0 -1 0, 0;
-    /*-fx-padding: 0.333333em;  4 -- this is half the size of the mark */
     -fx-padding: 8 7 8 7; /* 4 -- this is half the size of the mark */
-    /*-fx-shape: "M0,4H2L3,6L6,0H8L4,8H2Z";*/
     -fx-shape: "M-0.25,6.083c0.843-0.758,4.583,4.833,5.75,4.833S14.5-1.5,15.917-0.917c1.292,0.532-8.75,17.083-10.5,17.083C3,16.167-1.083,6.833-0.25,6.083z";
 }
-
-.check-box:indeterminate .box {
+.check-box:indeterminate > .box {
     -fx-padding: 7 3 7 3;
 }
-.check-box:indeterminate .mark {
+.check-box:indeterminate  > .box > .mark {
     -fx-background-color: -fx-mark-highlight-color, -fx-mark-color;
     -fx-shape: "M0,0H8V2H0Z";
     -fx-padding: 2 6 1 5;
-    /*-fx-scale-shape: false;*/
 }
-
-.check-box:selected .mark {
-    -fx-background-color: -fx-mark-highlight-color, -fx-mark-color;
-}
-
-.check-box:disabled {
-    -fx-opacity: -fx-disabled-opacity;
-}
-
-.check-box:show-mnemonics .mnemonic-underline {
-    -fx-stroke: -fx-text-fill;
-} 
 
 /*******************************************************************************
  *                                                                             *
@@ -594,13 +550,9 @@
     -fx-text-fill: -fx-accent;
 }
 .hyperlink:focused {
-    -fx-color: -fx-focused-base;
     -fx-border-color: -fx-focus-color;
     -fx-border-style: dotted;
     -fx-border-width: 1px;
-}
-.hyperlink:disabled {
-    -fx-opacity: -fx-disabled-opacity;
 }
 .hyperlink:hover {
     -fx-underline: true;
@@ -615,71 +567,18 @@
  *                                                                             *
  ******************************************************************************/
 
-/*.button {
-    -fx-background-color: -fx-outer-border, -fx-inner-border, -fx-body-color; 
-    -fx-background-insets: 0, 1, 2;
-    -fx-background-radius: 5, 4, 3;
-    -fx-padding: 0.333333em 1em 0.416667em 1em;
-    -fx-text-fill: -fx-text-base-color;
-}
-.button:hover {
-    -fx-color: -fx-hover-base;
-}
-.button:armed {
-    -fx-color: -fx-pressed-base;
-}
-.button:default {
-    -fx-base: -fx-accent;
-}
-.button:focused {
-    -fx-background-color: -fx-faint-focus-color, -fx-focus-color, -fx-inner-border, -fx-body-color; 
-    -fx-background-insets: -2, -0.3, 1, 2;
-    -fx-background-radius: 7, 6, 4, 3;
-}*/
 .menu-button {
-    -fx-background-color: -fx-outer-border, -fx-inner-border, -fx-body-color; 
-    -fx-background-insets: 0, 1, 2;
-    -fx-background-radius: 5, 4, 3;
     -fx-padding: 0;
-    -fx-text-fill: -fx-text-base-color;
 }
 .menu-button > .label {
     /* The MenuButton skin uses an inner Label part */
     -fx-padding: 0.166667em 1.5em 0.25em 0.833333em; /* 2 18 3 10 */
-}
-.menu-button:focused {
-    -fx-background-color: -fx-faint-focus-color, -fx-focus-color, -fx-inner-border, -fx-body-color; 
-    -fx-background-insets: -2, -0.3, 1, 2;
-    -fx-background-radius: 7, 6, 4, 3;
-    /*-fx-color: -fx-focused-base;*/
-}
-.menu-button:hover {
-    -fx-color: -fx-hover-base;
-}
-.menu-button:armed {
-    -fx-color: -fx-pressed-base;
 }
 .menu-button > .arrow-button {
     -fx-background-insets: 0;
     -fx-background-radius: 0;
     -fx-padding: 0.5em 0.416667em 0.5em 0.0em; /* 6 5 6 0 */
 }
-.menu-button > .arrow-button > .arrow {
-    -fx-background-insets: 1 0 -1 0, 0;
-    -fx-background-color: -fx-mark-highlight-color, -fx-mark-color;
-    -fx-padding: 0.25em; /* 3 */
-    -fx-shape: "M 0 -3.5 v 7 l 4 -3.5 z";
-}
-.menu-button:openvertically > .arrow-button > .arrow {
-    -fx-padding: 0.166667em 0.333333em 0.166667em 0.333333em; /* 2 4 2 4 */
-    -fx-shape: "M 0 0 h 7 l -3.5 4 z";
-}
-.menu-button:disabled {
-    -fx-opacity: -fx-disabled-opacity;
-}
-.menu-button:show-mnemonics > .mnemonic-underline {
-    -fx-stroke: -fx-text-fill;
-} 
 
 /*******************************************************************************
  *                                                                             *
@@ -695,12 +594,6 @@
     -fx-background-insets: -2;
     -fx-background-radius: 7;
 }
-.split-menu-button > .label:hover {
-    -fx-color: -fx-hover-base;
-}
-.split-menu-button:armed > .label {
-    -fx-color: -fx-pressed-base;
-}
 /* The SplitMenuButton skin uses an inner Label part */
 .split-menu-button > .label {
     -fx-background-color: -fx-outer-border, -fx-inner-border, -fx-body-color; 
@@ -710,59 +603,34 @@
 }
 
 .split-menu-button > .arrow-button {
-    -fx-background-color: -fx-outer-border, -fx-inner-border, -fx-body-color;
-    -fx-background-insets: 0, 1, 2;
     -fx-background-radius: 0 5 5 0, 0 4 4 0, 0 3 3 0;
     -fx-padding: 0.5em 0.416667em 0.5em 0.416667em; /* 6 5 6 5 */
-}
-
-.split-menu-button > .arrow-button:hover {
-    -fx-color: -fx-hover-base;
-}
-
-.split-menu-button > .arrow-button:pressed {
-    -fx-color: -fx-pressed-base;
 }
 
 .split-menu-button > .arrow-button > .arrow {
     -fx-background-color: -fx-mark-highlight-color, -fx-mark-color;
     -fx-background-insets: 1 0 -1 0, 0;
-    -fx-padding: 0.25em; /* 3 */
+    -fx-padding: 0.25em;
     -fx-shape: "M 0 -3.5 v 7 l 4 -3.5 z";
 }
-
 .split-menu-button:openvertically > .arrow-button > .arrow {
-    -fx-padding: 0.166667em 0.333333em 0.166667em 0.333333em; /* 2 4 2 4 */
+    -fx-padding: 0.166667em 0.333333em 0.166667em 0.333333em;
     -fx-shape: "M 0 0 h 7 l -3.5 4 z";
 }
-
-.split-menu-button:disabled {
-    -fx-opacity: -fx-disabled-opacity;
-}
-
-.split-menu-button:show-mnemonics > .mnemonic-underline {
-    -fx-stroke: -fx-text-fill;
-} 
 
 /* ====   TOOLBAR   ========================================================= */
 
 .tool-bar:vertical {
     -fx-background: derive(-fx-base,-20%);
     -fx-background-color:
-        linear-gradient(to right, derive(-fx-base,-30%), derive(-fx-base,-60%)),
-        linear-gradient(to right, derive(-fx-base,65%) 2%, derive(-fx-base,-20%) 95%);
-    -fx-background-insets: 0, 0 1 0 1;
+        linear-gradient(to right, derive(-fx-base,0%) 0%, derive(-fx-base,10%) 50%, derive(-fx-base,0%) 100%);
+    -fx-background-insets: 0;
     -fx-background-radius: 0 ;
     -fx-padding: 0.833em 0.416667em 0.833em 0.416667em; /* 10 5 10 5 */
     -fx-spacing: 0.333em; /* 4 */
     -fx-alignment: TOP_LEFT;
 }
 .tool-bar:horizontal {
-    /*-fx-background: derive(-fx-base,-30%);*/
-/*    -fx-background-color:
-        linear-gradient(to bottom, derive(-fx-base,75%) 0%, derive(-fx-base,-26.0%) 90%, derive(-fx-base,-7.0%) 93%, -fx-background 100%),
-        linear-gradient(to bottom, derive(-fx-base,46.9%) 2%, derive(-fx-base,-2.1%) 95%);
-    -fx-background-insets: 0 0 0 0, 1 0 4 0;*/
     -fx-background-color:
         linear-gradient(to bottom, derive(-fx-base,75%) 0%, derive(-fx-base,-26.0%) 90%),
         linear-gradient(to bottom, derive(-fx-base,46.9%) 2%, derive(-fx-base,-2.1%) 95%);
@@ -772,7 +640,6 @@
     -fx-spacing: 0.333em; /* 4 */
     -fx-alignment: CENTER_LEFT;
 }
-
 .tool-bar:horizontal > .container > .separator {
     -fx-orientation: vertical;
 }

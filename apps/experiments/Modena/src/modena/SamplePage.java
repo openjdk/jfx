@@ -403,6 +403,12 @@ public class SamplePage extends GridPane {
                 withState(createToolBar(true,false), "disabled")
                 );
         newSection(      
+                "Tabs:", 
+                createTabPane(3, 250,null,false),
+                withState(createTabPane(5, 200,"Tab Disabled &\nMany Tabs", false), null, ".tab", "disabled"),
+                withState(createTabPane(5, 200,"Disabled", false), "disabled")
+                );
+        newSection(      
                 "Tabs Floating:", 
                 createTabPane(3, 250,null,true),
                 withState(createTabPane(5, 200,"Tab Disabled &\nMany Tabs", true), null, ".tab", "disabled"),
