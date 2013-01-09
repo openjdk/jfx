@@ -1,0 +1,85 @@
+/*******************************************************************************
+ *                                                                             *
+ * Virtual Keyboard                                                            *
+ *                                                                             *
+ ******************************************************************************/
+
+.fxvk {
+    -fx-cursor: default;
+    -fx-background-color: linear-gradient(to bottom, rgb(126, 126, 126) 0%, rgb(76, 76, 76) 10%, rgb(84, 84, 84) 100%);
+    -fx-background-insets: 0;
+    -fx-padding: 8 4 10 4;
+}
+
+.backspace-icon {
+    -fx-background-image: url("images/backspace-icon.png");
+    -fx-background-repeat: no-repeat;
+    -fx-background-position: center;
+}
+
+.enter-icon {
+    -fx-background-image: url("images/enter-icon.png");
+    -fx-background-repeat: no-repeat;
+    -fx-background-position: center;
+}
+
+.shift-icon {
+    -fx-background-image: url("images/shift-icon.png");
+    -fx-background-repeat: no-repeat;
+    -fx-background-position: center;
+}
+
+.hide-icon {
+    -fx-background-image: url("images/vk-hide.png");
+    -fx-background-repeat: no-repeat;
+    -fx-background-position: center;
+}
+
+.key {
+    -fx-border-image-source: url("images/vk-light.png");
+    -fx-border-image-slice: 14 fill;
+    -fx-border-image-width: 14;
+    -fx-border-image-repeat: stretch;
+    -fx-border-image-insets: -3 -3 -3 -3;
+    -fx-padding: 3 3 5 0;
+}
+
+.key:pressed {
+    -fx-border-image-source: url("images/vk-light-pressed.png");
+    -fx-padding: 5 3 3 0;
+}
+
+.key-text {
+    -fx-font-size: 22px;
+    -fx-fill: #333333;
+}
+
+.key.special {
+    -fx-border-image-source: url("images/vk-dark.png");
+}
+
+.key.special:pressed {
+    -fx-border-image-source: url("images/vk-dark-pressed.png");
+    -fx-padding: 5 3 3 0;
+}
+
+.special-text {
+    -fx-font-size: 18px;
+    -fx-fill: rgb(230, 230, 230);
+}
+
+.key.short {
+    -fx-border-image-source: url("images/vk-medium.png");
+}
+
+.key.short:pressed {
+    -fx-border-image-source: url("images/vk-medium-pressed.png");
+    -fx-padding: 5 3 3 0;
+}
+
+.short .key-text {
+    -fx-font-size: 20px;
+    -fx-font-weight: normal;
+    -fx-fill: #333333;
+}
+
