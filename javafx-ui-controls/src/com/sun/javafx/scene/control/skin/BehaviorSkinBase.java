@@ -25,12 +25,15 @@
 package com.sun.javafx.scene.control.skin;
 
 import com.sun.javafx.css.PseudoClass;
+import com.sun.javafx.scene.control.MultiplePropertyChangeListenerHandler;
 import com.sun.javafx.scene.control.behavior.BehaviorBase;
+import javafx.beans.value.ObservableValue;
 import javafx.event.EventHandler;
 import javafx.event.EventType;
 import javafx.scene.control.Control;
 import javafx.scene.control.SkinBase;
 import javafx.scene.input.MouseEvent;
+import javafx.util.Callback;
 
 /**
  *
@@ -53,6 +56,14 @@ public abstract class BehaviorSkinBase<C extends Control, BB extends BehaviorBas
      * implementations. For example, a ButtonSkin might require a ButtonBehavior.
      */
     private BB behavior;
+    
+    /**
+     * This is part of the workaround introduced during delomboking. We probably will
+     * want to adjust the way listeners are added rather than continuing to use this
+     * map (although it doesn't really do much harm).
+     */
+    private MultiplePropertyChangeListenerHandler changeListenerHandler;
+    
     
     
     /***************************************************************************
@@ -130,6 +141,11 @@ public abstract class BehaviorSkinBase<C extends Control, BB extends BehaviorBas
 
     /** {@inheritDoc} */
     @Override public void dispose() { 
+        // unhook listeners
+        if (changeListenerHandler != null) {
+            changeListenerHandler.dispose();
+        }
+        
         C control = getSkinnable();
         control.removeEventHandler(MouseEvent.MOUSE_ENTERED, mouseHandler);
         control.removeEventHandler(MouseEvent.MOUSE_EXITED, mouseHandler);
@@ -140,6 +156,41 @@ public abstract class BehaviorSkinBase<C extends Control, BB extends BehaviorBas
         this.behavior = null;
         
         super.dispose();
+    }
+    
+    
+    
+    /***************************************************************************
+     *                                                                         *
+     * Public API                                                              *
+     *                                                                         *
+     **************************************************************************/
+    
+    /**
+     * Subclasses can invoke this method to register that we want to listen to
+     * property change events for the given property.
+     *
+     * @param property
+     * @param reference
+     */
+    protected final void registerChangeListener(ObservableValue property, String reference) {
+        if (changeListenerHandler == null) {
+            changeListenerHandler = new MultiplePropertyChangeListenerHandler(new Callback<String, Void>() {
+                @Override public Void call(String p) {
+                    handleControlPropertyChanged(p);
+                    return null;
+                }
+            });
+        }
+        changeListenerHandler.registerChangeListener(property, reference);
+    }
+    
+    /**
+     * Skin subclasses will override this method to handle changes in corresponding
+     * control's properties.
+     */
+    protected void handleControlPropertyChanged(String propertyReference) {
+        // no-op
     }
     
     
