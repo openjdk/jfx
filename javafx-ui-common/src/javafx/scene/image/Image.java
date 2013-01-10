@@ -1018,57 +1018,6 @@ public class Image {
     }
 
     /**
-     * This method converts a JavaFX Image to the specified image class or
-     * to an image of the same class and the same format as specified image.
-     * If the specified image class is not supported, then null will be returned.
-     *
-     * @param imgType either a Class object that specifies the type of image,
-     *      or an actual image object of the desired type and format.
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    // SB-dependency: ?????
-    // TODO: need to ensure that both SceneBuilder and JDevloper have migrated
-    // to new 2.2 public API before we remove this.
-    @Deprecated
-    public Object impl_toExternalImage(Object imgType) {
-        return Toolkit.getToolkit().toExternalImage(impl_getPlatformImage(), imgType);
-    }
-
-    /**
-     * This method converts the specified image to a JavaFX Image.
-     * If the specified image class is not supported, then null will be returned.
-     *
-     * @param extImage - an image to convert.
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    // SB-dependency: ?????
-    // TODO: need to ensure that both SceneBuilder and JDevloper have migrated
-    // to new 2.2 public API before we remove this.
-    @Deprecated
-    public static Image impl_fromExternalImage(Object extImage) {
-        return impl_isExternalFormatSupported(extImage.getClass())
-                ? new Image(extImage)
-                : null;
-    }
-
-    /**
-     * This method indicates whether conversion to/from the specified external
-     * format is possible.
-     *
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    // SB-dependency: ?????
-    // TODO: need to ensure that both SceneBuilder and JDevloper have migrated
-    // to new 2.2 public API before we remove this.
-    @Deprecated
-    public static boolean impl_isExternalFormatSupported(Class format) {
-        return Toolkit.getToolkit().isExternalFormatSupported(format);
-    }
-
-    /**
      * Indicates whether image is animated.
      */
     boolean isAnimation() {
