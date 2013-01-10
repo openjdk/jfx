@@ -323,13 +323,12 @@ TODO: Explain here how themeing works:
 .radio-button > .radio,
 .check-box > .box,
 .menu-button,
-.split-menu-button > .arrow-button,
 .choice-box,
 .combo-box-base {
     -fx-background-color: -fx-outer-border, -fx-inner-border, -fx-body-color; 
     -fx-background-insets: 0, 1, 2;
     -fx-background-radius: 5, 4, 3;
-    -fx-padding: 0.333333em 1em 0.416667em 1em;
+    -fx-padding: 0.333333em 1em 0.416667em 1em; /* 4 12 5 12 */
     -fx-text-fill: -fx-text-base-color;
 }
 .button:hover,
@@ -354,6 +353,7 @@ TODO: Explain here how themeing works:
 .menu-button:armed,
 .split-menu-button:armed > .label,
 .split-menu-button > .arrow-button:pressed,
+.split-menu-button:showing > .arrow-button,
 .slider .thumb:pressed,
 .scroll-bar > .thumb:pressed,
 .scroll-bar > .increment-button:pressed, 
@@ -425,12 +425,59 @@ TODO: Explain here how themeing works:
     -fx-background-color: -fx-mark-highlight-color, -fx-mark-color;
     -fx-background-insets: 0 0 -1 0, 0;
     /*-fx-padding: 0.25em;  3 */
+    -fx-padding: 0.25em;
     -fx-shape: "M 0 -3.5 v 7 l 4 -3.5 z";
 }
 .menu-button:openvertically > .arrow-button > .arrow,
 .split-menu-button:openvertically > .arrow-button > .arrow {
     -fx-padding: 0.166667em 0.333333em 0.166667em 0.333333em; /* 2 4 2 4 */
     -fx-shape: "M 0 0 h 7 l -3.5 4 z";
+}
+
+/* ====   CHOICE BOX LIKE THINGS   ========================================== */
+
+.choice-box,
+.menu-button,
+.combo-box-base {
+    -fx-padding: 0;
+}
+.choice-box > .label,
+.menu-button > .label {
+    -fx-padding: 0.333333em 0.833333em 0.416667em 0.833333em; /* 4 10 5 10 */
+    -fx-text-fill: -fx-text-base-color;
+}
+.choice-box > .open-button,
+.menu-button > .arrow-button {
+    -fx-padding: 0.5em 0.833333em 0.5em 0.0em; /* 6 10 6 0 */
+}
+
+/* ====   SPLIT BOX LIKE THINGS   ========================================== */
+
+.split-menu-button {
+    -fx-background-color: -fx-outer-border; 
+    -fx-background-insets: 0;
+    -fx-background-radius: 5;
+    -fx-padding: 0;
+}
+.split-menu-button:focused {
+    -fx-background-color: -fx-faint-focus-color, -fx-focus-color; 
+    -fx-background-insets: -2, -0.3;
+    -fx-background-radius: 7, 6;
+}
+.split-menu-button > .label {
+    -fx-text-fill: -fx-text-base-color;
+    -fx-background-color: -fx-inner-border, -fx-body-color; 
+    -fx-background-insets: 1 0 1 1, 2 1 2 2;
+    -fx-background-radius: 4 0 0 4, 3 0 0 3;
+    -fx-padding: 0.333333em 0.833333em 0.416667em 0.833333em; /* 4 10 5 10 */
+}
+.split-menu-button > .arrow-button,
+.combo-box-base > .arrow-button  {
+    -fx-background-color: -fx-inner-border, -fx-body-color; 
+    -fx-background-insets: 1, 2;
+    -fx-background-radius: 4, 3;
+    -fx-background-radius: 0 4 4 0, 0 3 3 0;
+    -fx-padding: 0.5em 0.833333em 0.5em 0.833333em; /* 6 10 6 10 */
 }
 
 /* ====   BOX LIKE THINGS   ================================================= */
@@ -607,25 +654,6 @@ TODO: Explain here how themeing works:
 }
 .hyperlink:show-mnemonics > .mnemonic-underline {
     -fx-stroke: -fx-text-fill;
-} 
-
-/*******************************************************************************
- *                                                                             *
- * MenuButton                                                                  *
- *                                                                             *
- ******************************************************************************/
-
-.menu-button {
-    -fx-padding: 0;
-}
-.menu-button > .label {
-    /* The MenuButton skin uses an inner Label part */
-    -fx-padding: 0.166667em 1.5em 0.25em 0.833333em; /* 2 18 3 10 */
-}
-.menu-button > .arrow-button {
-    -fx-background-insets: 0;
-    -fx-background-radius: 0;
-    -fx-padding: 0.5em 0.416667em 0.5em 0.0em; /* 6 5 6 0 */
 }
 
 /*******************************************************************************
@@ -633,40 +661,19 @@ TODO: Explain here how themeing works:
  * SplitMenuButton                                                             *
  *                                                                             *
  ******************************************************************************/
-.split-menu-button {
-    -fx-padding: 0.0em; /* 0 */
-    -fx-text-fill: -fx-text-base-color;
-}
-.split-menu-button:focused {
-    -fx-background-color: -fx-focus-color;
-    -fx-background-insets: -2;
-    -fx-background-radius: 7;
-}
-/* The SplitMenuButton skin uses an inner Label part */
-.split-menu-button > .label {
-    -fx-background-color: -fx-outer-border, -fx-inner-border, -fx-body-color; 
-    -fx-background-insets: 0, 1 0 1 1, 2 1 2 2;
-    -fx-background-radius: 5 0 0 5, 4 0 0 4, 3 0 0 3;
-    -fx-padding: 0.166667em 1.5em 0.25em 0.833333em; /* 2 18 3 10 */
-}
 
-.split-menu-button > .arrow-button {
-    -fx-background-radius: 0 5 5 0, 0 4 4 0, 0 3 3 0;
-    -fx-padding: 0.5em 0.416667em 0.5em 0.416667em; /* 6 5 6 5 */
-}
-
-.split-menu-button > .arrow-button > .arrow {
-    -fx-background-color: -fx-mark-highlight-color, -fx-mark-color;
-    -fx-background-insets: 1 0 -1 0, 0;
-    -fx-padding: 0.25em;
-    -fx-shape: "M 0 -3.5 v 7 l 4 -3.5 z";
-}
+/* TODO for some reason I can not remove this even though its at top of file */
 .split-menu-button:openvertically > .arrow-button > .arrow {
     -fx-padding: 0.166667em 0.333333em 0.166667em 0.333333em;
     -fx-shape: "M 0 0 h 7 l -3.5 4 z";
 }
 
-/* ====   TOOLBAR   ========================================================= */
+
+/*******************************************************************************
+ *                                                                             *
+ * ToolBar                                                                     *
+ *                                                                             *
+ ******************************************************************************/
 
 .tool-bar:vertical {
     -fx-background: derive(-fx-base,-20%);
@@ -1221,45 +1228,14 @@ TODO: Explain here how themeing works:
  *                                                                             *
  ******************************************************************************/
 
-.choice-box {
-    -fx-padding: 0.0em 0.5em 0.0em 0.0em; /* 0 6 0 0 */
-    -fx-alignment: CENTER;
-    -fx-content-display: LEFT;
-}
-.choice-box > .label {
-    -fx-padding: 0.166667em 0.333333em 0.25em 0.5em; /* 2 4 3 6 */
-    -fx-text-fill: -fx-text-base-color;
-}
-
-.choice-box > .open-button {
-    -fx-background-color: null;
-    -fx-padding: 0.083333em 0.0em 0.0em 0.666667em; /* 1 0 0 8 */
-}
 .choice-box > .open-button > .arrow {
     -fx-background-color: -fx-mark-highlight-color, -fx-mark-color;
     -fx-background-insets: 1 0 -1 0, 0;
-    /* padding determines the size of the arrow;
-       this should match the design size in the SVG */
     -fx-padding: 0.166667em 0.333333em 0.166667em 0.333333em; /* 2 3.5 2 3.5 */
     -fx-shape: "M 0 0 h 7 l -3.5 4 z";
 }
 .choice-box > .context-menu {
     -fx-background-radius: 6, 5, 4;
-}
-
-/*.choice-box > .context-menu > .menu-item {
-    -fx-accelerator-gutter: 0;
-}*/
-
-/* TODO: need to use the ID here.  For some reason, the other form does not
- * work.  This might be related to popup issues.
- */
-/*.choice-box > * > .menu-item-radio {*/
-#choice-box-menu-item > * > .menu-item-radio {
-    /* When we show RadioMenuItems in ChoiceBox, we replace the radio shape with
-       a check mark, which looks much better */
-    -fx-shape: "M0,5H2L4,8L8,0H10L5,10H3Z";
-    -fx-scale-shape: false;
 }
 
 /*******************************************************************************
@@ -1430,20 +1406,16 @@ TODO: Explain here how themeing works:
  *                                                                             *
  ******************************************************************************/
 
-/* ------- MAIN BUTTON ------- */
-.combo-box-base  {
-    -fx-padding: 0;
-}
 /* ------- OPEN BUTTON ------- */
-.combo-box-base > .arrow-button {
+/*.combo-box-base > .arrow-button {
     -fx-background-color: -fx-outer-border, -fx-inner-border, -fx-body-color;
     -fx-background-insets: 0, 1, 2;
     -fx-background-radius: 0 5 5 0, 0 4 4 0, 0 3 3 0;
-    -fx-padding: 0.5em 0.416667em 0.5em 0.416667em; /* 6 5 6 5  */
+    -fx-padding: 0.5em 0.416667em 0.5em 0.416667em;  6 5 6 5  
 }
 .combo-box-base:focused > .arrow-button {
     -fx-background-color: -fx-focus-color, -fx-inner-border, -fx-body-color; 
-}
+}*/
 /*    -fx-background-color: null;
     -fx-background-insets: 0, 1, 2;
     -fx-background-radius: 0 5 5 0, 0 4 4 0, 0 3 3 0;

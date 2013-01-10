@@ -35,6 +35,7 @@ import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
+import javafx.geometry.Side;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonBuilder;
@@ -289,6 +290,7 @@ public class SamplePage extends GridPane {
                 );
         newSection(      
                 "MenuButton:", 
+                MenuButtonBuilder.create().items(createMenuItems(20)).text("right").popupSide(Side.RIGHT).build(),
                 MenuButtonBuilder.create().items(createMenuItems(20)).text("normal").build(),
                 withState(MenuButtonBuilder.create().items(createMenuItems(20)).text("hover").build(), "hover"),
                 withState(MenuButtonBuilder.create().items(createMenuItems(20)).text("armed").build(), "armed"),
@@ -297,9 +299,12 @@ public class SamplePage extends GridPane {
                 );
         newSection(      
                 "SplitMenuButton:", 
+                SplitMenuButtonBuilder.create().items(createMenuItems(20)).text("right").popupSide(Side.RIGHT).build(),
                 SplitMenuButtonBuilder.create().items(createMenuItems(20)).text("normal").build(),
-                withState(SplitMenuButtonBuilder.create().items(createMenuItems(20)).text("hover").build(), "hover"),
-                withState(SplitMenuButtonBuilder.create().items(createMenuItems(20)).text("armed").build(), "armed"),
+                withState(SplitMenuButtonBuilder.create().items(createMenuItems(20)).text("hover").build(),null,".label", "hover"),
+                withState(SplitMenuButtonBuilder.create().items(createMenuItems(20)).text("armed").build(),null,".label", "armed"),
+                withState(SplitMenuButtonBuilder.create().items(createMenuItems(20)).text("h").build(),null,".arrow-button", "hover"),
+                withState(SplitMenuButtonBuilder.create().items(createMenuItems(20)).text("showing").build(), "showing"),
                 withState(SplitMenuButtonBuilder.create().items(createMenuItems(20)).text("focused").build(), "focused"),
                 withState(SplitMenuButtonBuilder.create().items(createMenuItems(20)).text("disabled").build(), "disabled")
                 );
