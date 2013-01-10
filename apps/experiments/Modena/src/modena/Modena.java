@@ -138,8 +138,10 @@ public class Modena extends Application {
                         mosaic = (Node)FXMLLoader.load(Modena.class.getResource("ui-mosaic.fxml"))
                     ).build()
                 ).build(),
-                TabBuilder.create().text("Height Test").content(
+                TabBuilder.create().text("Alignment Test").content(
+                    ScrollPaneBuilder.create().content(
                         heightTest = (Node)FXMLLoader.load(Modena.class.getResource("SameHeightTest.fxml"))
+                    ).build()
                 ).build()
             );
             contentTabs.getSelectionModel().select(selectedTab);
