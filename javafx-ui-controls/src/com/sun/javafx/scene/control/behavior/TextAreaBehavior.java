@@ -281,19 +281,11 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
     }
 
     private void lineStart(boolean select, boolean extendSelection) {
-        if (isRTLText()) {
-            skin.toRightLineEdge(select, extendSelection);
-        } else {
-            skin.toLeftLineEdge(select, extendSelection);
-        }
+        skin.lineStart(select, extendSelection);
     }
 
     private void lineEnd(boolean select, boolean extendSelection) {
-        if (isRTLText()) {
-            skin.toLeftLineEdge(select, extendSelection);
-        } else {
-            skin.toRightLineEdge(select, extendSelection);
-        }
+        skin.lineEnd(select, extendSelection);
     }
 
     protected void scrollCharacterToVisible(int index) {

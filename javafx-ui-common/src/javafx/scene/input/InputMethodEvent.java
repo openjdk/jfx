@@ -25,6 +25,10 @@
 
 package javafx.scene.input;
 
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.util.ArrayList;
 import java.util.List;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -97,7 +101,7 @@ public final class InputMethodEvent extends InputEvent{
      *
      * @defaultValue null
      */
-    private final ObservableList<InputMethodTextRun> composed;
+    private transient ObservableList<InputMethodTextRun> composed;
 
     /**
      * Gets the text under composition.  This text should be displayed with the
@@ -175,6 +179,16 @@ public final class InputMethodEvent extends InputEvent{
         return (EventType<InputMethodEvent>) super.getEventType();
     }
     
-    
+    private void writeObject(ObjectOutputStream oos) throws IOException {
+        oos.defaultWriteObject();
+        oos.writeObject(new ArrayList(composed));
+    }
+
+    private void readObject(ObjectInputStream ois) throws IOException,
+            ClassNotFoundException {
+        ois.defaultReadObject();
+        ArrayList<InputMethodTextRun> o = (ArrayList)ois.readObject();
+        composed = FXCollections.unmodifiableObservableList(FXCollections.observableArrayList(o));
+    }
 
 }
