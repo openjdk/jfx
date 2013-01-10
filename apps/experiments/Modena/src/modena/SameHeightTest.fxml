@@ -15,7 +15,7 @@
       <content>
         <VBox alignment="CENTER_LEFT" prefHeight="-1.0" prefWidth="-1.0" spacing="50.0">
           <children>
-            <HBox maxHeight="-Infinity" prefHeight="-1.0" prefWidth="-1.0" style="-fx-border-color: black transparent black transparent;&#10;-fx-border-width: 10 0 10 0;">
+            <HBox maxHeight="-Infinity" prefHeight="-1.0" prefWidth="-1.0" spacing="3.0" style="-fx-border-color: black transparent black transparent;&#10;-fx-border-width: 10 0 10 0;">
               <children>
                 <Button mnemonicParsing="false" text="Button" />
                 <ToggleButton mnemonicParsing="false" prefWidth="90.0" selected="true" text="Toggle">
@@ -67,7 +67,7 @@
                 <PasswordField prefWidth="100.0" promptText="Password" text="password" />
               </children>
             </HBox>
-            <HBox maxHeight="-Infinity" prefHeight="-1.0" prefWidth="-1.0" style="-fx-border-color: red transparent red transparent;">
+            <HBox maxHeight="-Infinity" prefHeight="-1.0" prefWidth="-1.0" spacing="3.0" style="-fx-border-color: red transparent red transparent;">
               <children>
                 <Button mnemonicParsing="false" text="Button" />
                 <ToggleButton mnemonicParsing="false" prefWidth="90.0" selected="true" text="Toggle">
@@ -119,7 +119,71 @@
                 <PasswordField prefWidth="100.0" promptText="Password" text="password" />
               </children>
             </HBox>
-            <HBox maxHeight="-Infinity" prefHeight="-1.0" prefWidth="-1.0" style="" spacing="5">
+            <StackPane id="StackPane">
+              <children>
+                <HBox maxHeight="-Infinity" prefHeight="-1.0" prefWidth="-1.0" spacing="3.0" style="">
+                  <children>
+                    <Button mnemonicParsing="false" text="Button" />
+                    <ToggleButton mnemonicParsing="false" prefWidth="90.0" selected="true" text="Toggle">
+                      <toggleGroup>
+                        <ToggleGroup />
+                      </toggleGroup>
+                    </ToggleButton>
+                    <MenuButton mnemonicParsing="false" prefWidth="100.0" text="MenuButton">
+                      <items>
+                        <MenuItem mnemonicParsing="false" text="Action 1" />
+                        <MenuItem mnemonicParsing="false" text="Action 2" />
+                      </items>
+                    </MenuButton>
+                    <SplitMenuButton mnemonicParsing="false" prefWidth="100.0" text="SplitMenuButton">
+                      <items>
+                        <MenuItem mnemonicParsing="false" text="Action 1" />
+                        <MenuItem mnemonicParsing="false" text="Action 2" />
+                      </items>
+                    </SplitMenuButton>
+                    <ChoiceBox prefWidth="60.0">
+                      <items>
+                        <FXCollections fx:factory="observableArrayList">
+                          <String fx:value="Item 1" />
+                          <String fx:value="Item 2" />
+                          <String fx:value="Item 3" />
+                        </FXCollections>
+                      </items>
+                    </ChoiceBox>
+                    <ComboBox prefWidth="60.0">
+                      <items>
+                        <FXCollections fx:factory="observableArrayList">
+                          <String fx:value="Item 1" />
+                          <String fx:value="Item 2" />
+                          <String fx:value="Item 3" />
+                        </FXCollections>
+                      </items>
+                    </ComboBox>
+                    <ComboBox editable="true" prefWidth="60.0" promptText="Choose">
+                      <items>
+                        <FXCollections fx:factory="observableArrayList">
+                          <String fx:value="Item 1" />
+                          <String fx:value="Item 2" />
+                          <String fx:value="Item 3" />
+                        </FXCollections>
+                      </items>
+                    </ComboBox>
+                    <ColorPicker />
+                    <TextField prefWidth="100.0" promptText="Textfield" text="TextField" />
+                    <PasswordField prefWidth="100.0" promptText="Password" text="password" />
+                  </children>
+                </HBox>
+                <StackPane prefHeight="-1.0" prefWidth="-1.0">
+                  <children>
+                    <Region maxHeight="1.0" prefHeight="1.0" prefWidth="-1.0" style="-fx-background-color: red;" />
+                  </children>
+                  <padding>
+                    <Insets top="9.0" />
+                  </padding>
+                </StackPane>
+              </children>
+            </StackPane>
+            <HBox maxHeight="-Infinity" prefHeight="-1.0" prefWidth="-1.0" spacing="3.0" style="">
               <children>
                 <Button mnemonicParsing="false" text="Button" />
                 <ToggleButton mnemonicParsing="false" prefWidth="90.0" selected="true" text="Toggle">

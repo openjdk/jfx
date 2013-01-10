@@ -60,10 +60,8 @@ import javafx.scene.control.ColorPicker;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.MenuButton;
-import javafx.scene.control.MenuItemBuilder;
 import javafx.scene.control.RadioMenuItemBuilder;
 import javafx.scene.control.ScrollPaneBuilder;
-import javafx.scene.control.SelectionModel;
 import javafx.scene.control.Separator;
 import javafx.scene.control.TabBuilder;
 import javafx.scene.control.TabPane;
@@ -97,6 +95,8 @@ public class Modena extends Application {
     private String fontName = null;
     private int fontSize = 13;
     private String cssOverride = "";
+    private ToggleButton modenaButton,retinaButton;
+    private TabPane contentTabs;
     
     @Override public void start(Stage stage) throws Exception {
         mainStage = stage;
@@ -126,7 +126,7 @@ public class Modena extends Application {
                 root.setCenter(null);
             }
             // Create Content Area
-            final TabPane contentTabs = new TabPane();
+            contentTabs = new TabPane();
             contentTabs.getTabs().addAll(
                 TabBuilder.create().text("All Controls").content(
                     ScrollPaneBuilder.create().content(
@@ -161,8 +161,7 @@ public class Modena extends Application {
                 heightTest.setStyle("-fx-background-color: white;");
             }
             // Create Toolbar
-            final ToggleButton modenaButton;;
-            final ToggleButton retinaButton = ToggleButtonBuilder.create()
+            retinaButton = ToggleButtonBuilder.create()
                 .text("Retina @2x")
                 .selected(retina)
                 .onAction(new EventHandler<ActionEvent>(){
@@ -178,7 +177,6 @@ public class Modena extends Application {
                 })
                 .build();
             ToggleGroup themesToggleGroup = new ToggleGroup();
-            ToggleGroup colorToggleGroup = new ToggleGroup();
             ToolBar toolBar = new ToolBar(
                 HBoxBuilder.create()
                     .children(

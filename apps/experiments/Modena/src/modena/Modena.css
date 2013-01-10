@@ -32,19 +32,54 @@
 
 /*******************************************************************************
  *                                                                             *
- * CSS Styles for core infrastructure bits.  The .root section provides the    *
- * overall default colors used by the rest of the sections.                    *
+ * THEMEING INSTRUCTIONS                                                       *
  *                                                                             *
- ******************************************************************************/
+ *******************************************************************************
 
-/*
 TODO: Explain here how themeing works:
 
      * -fx-text-base-color for text on top of -fx-base, -fx-color, and -fx-body-color
      * -fx-text-background-color for text on top of -fx-background
      * -fx-text-inner-color for text on top of -fx-control-inner-color
      * -fx-selection-bar-text for text on top of -fx-selection-bar
-*/
+
+RESIZING FOR DIFFERNT SCEEN DPI
+-------------------------------
+
+When the screen DPI changes Windows will use a differnt font size be default. 
+The default is 12px and the can change to 15px or 18px depending on user 
+preference or screen DPI. On Mac the default is 13px and embbeded will depend 
+on hardware. To make UI controls scale and be the right proportions of each of 
+these font sizes we base the padding (which controls size of control) on the 
+font size. This is done using the CSS measument unit of a "em" where 
+(1em = font size). The default sizes are based on Windows default of 12px, as
+a quick reference here are common px sizes in em units on windows.
+
+     1px  = 0.083333em
+     2px  = 0.166667em
+     3px  = 0.25em
+     4px  = 0.333333em
+     5px  = 0.416667em
+     6px  = 0.5em
+     7px  = 0.583333em
+     8px  = 0.666667em
+     9px  = 0.75em
+    10px  = 0.833333em
+    11px  = 0.916667em
+    12px  = 1em
+
+IMPORTANT: Not all sizes are scaled with em units only padding. All borders and 
+background insets are still in pixels. Also any padding where it has to match up
+is being used to size a border should also be in pixels.
+
+ ******************************************************************************/
+
+/*******************************************************************************
+ *                                                                             *
+ * CSS Styles for core infrastructure bits.  The .root section provides the    *
+ * overall default colors used by the rest of the sections.                    *
+ *                                                                             *
+ ******************************************************************************/
 
 .root {
     /***************************************************************************
@@ -184,11 +219,10 @@ TODO: Explain here how themeing works:
      * -fx-background-color list as a thin highlight inside the outer border.
      * Insets are typically 1.
      */
-    -fx-inner-border: linear-gradient(to bottom, 
-        derive(-fx-color,75%), 
-        derive(-fx-color,2%));
+    -fx-inner-border: linear-gradient(to bottom, derive(-fx-color,75%), derive(-fx-color,2%));
 
-    -fx-inner-border-horizontal: linear-gradient(
+    -fx-inner-border-horizontal: linear-gradient(to right, derive(-fx-color,75%), derive(-fx-color,2%));
+/*    -fx-inner-border-horizontal: linear-gradient(
         to right,
         ladder(-fx-color, 
                derive(-fx-color,80%) 60%, 
@@ -196,7 +230,7 @@ TODO: Explain here how themeing works:
         ladder(-fx-color, 
                derive(-fx-color,20%) 10%, 
                derive(-fx-color,-10%) 80%) 100%
-    );
+    );*/
 
     -fx-inner-border-bottomup: linear-gradient(
         to top,
@@ -1579,40 +1613,18 @@ TODO: Explain here how themeing works:
  *                                                                             *
  ******************************************************************************/
 
-.split-pane > * > * > .table-view { -fx-padding: 0px; }
-.split-pane > * > * > .list-view { -fx-padding: 0px; }
-.split-pane > * > * > .tree-view { -fx-padding: 0px; }
-.split-pane > * > * > .scroll-pane { -fx-padding: 0px; }
-.split-pane > * > * > .split-pane {
-    -fx-background-insets: 0, 0;
-    -fx-padding: 0;
- }
 .split-pane > .split-pane-divider {
-    -fx-padding: 0 2 0 2; /* 0 3 0 3 */
+    -fx-padding: 0 0.25em 0 0.25em; /* 0 3 0 3 */
 }
 /* horizontal the two nodes are placed to the left/right of each other. */
 .split-pane:horizontal > .split-pane-divider {
-   -fx-border-color: transparent -fx-box-border transparent #BBBBBB;
-   -fx-background-color: transparent, -fx-inner-border-horizontal;
+   -fx-background-color: -fx-box-border, -fx-inner-border-horizontal;
    -fx-background-insets: 0, 0 1 0 1;
 }
 /* vertical the two nodes are placed on top of each other. */
 .split-pane:vertical > .split-pane-divider {
-   -fx-border-color:  #BBBBBB transparent -fx-box-border transparent;
-   -fx-background-color: transparent, -fx-inner-border;
+   -fx-background-color: -fx-box-border, -fx-inner-border;
    -fx-background-insets: 0, 1 0 1 0;
-}
-.split-pane > .split-pane-divider > .horizontal-grabber {
-    -fx-padding: 5 1 5 1;
-    -fx-background-color: #FFFFFF, -fx-box-border;
-    -fx-background-insets: 1 0 -1 0, 0;
-    -fx-shape: "M0 0 L0 0 L2 0 L2 2 L0 2 Z M0 4 L0 4 L2 4 L2 6 L0 6 Z M0 8 L0 8 L2 8 L2 10 L0 10 Z";
-}
-.split-pane > .split-pane-divider > .vertical-grabber {
-    -fx-padding: 1 5 1 5;
-    -fx-background-color: #FFFFFF, -fx-box-border;
-    -fx-background-insets: 1 0 -1 0, 0;
-    -fx-shape: "M0 0 L0 0 L2 0 L2 2 L0 2 Z M4 0 L4 0 L4 2 L6 2 L6 0 Z M8 0 L8 0 L8 2 L10 2 L10 0 Z";
 }
 
 /*******************************************************************************
@@ -2870,3 +2882,23 @@ TODO: Explain here how themeing works:
     -fx-padding: 8px;
     -fx-border-color: null;
 }
+
+
+/*******************************************************************************
+ *                                                                             *
+ * Combinations                                                                *
+ *                                                                             *
+ * This section is for special handling of when one control is nested inside   *
+ * another control. There are many cases where we would end up with ugly       *
+ * double borders that are fixed here.                                         *
+ *                                                                             *
+ ******************************************************************************/
+
+.split-pane > * > .table-view { -fx-padding: 0px; }
+.split-pane > * > .list-view { -fx-padding: 0px; }
+.split-pane > * > .tree-view { -fx-padding: 0px; }
+.split-pane > * > .scroll-pane { -fx-padding: 0px; }
+.split-pane > * > .split-pane {
+    -fx-background-insets: 0, 0;
+    -fx-padding: 0;
+ }
