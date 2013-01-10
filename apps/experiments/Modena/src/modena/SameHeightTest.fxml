@@ -119,7 +119,7 @@
                 <PasswordField prefWidth="100.0" promptText="Password" text="password" />
               </children>
             </HBox>
-            <HBox maxHeight="-Infinity" prefHeight="-1.0" prefWidth="-1.0" style="">
+            <HBox maxHeight="-Infinity" prefHeight="-1.0" prefWidth="-1.0" style="" spacing="5">
               <children>
                 <Button mnemonicParsing="false" text="Button" />
                 <ToggleButton mnemonicParsing="false" prefWidth="90.0" selected="true" text="Toggle">

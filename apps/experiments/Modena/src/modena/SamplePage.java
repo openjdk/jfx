@@ -352,10 +352,11 @@ public class SamplePage extends GridPane {
                 withState(ScrollBarBuilder.create().orientation(Orientation.VERTICAL).build(), "vertical", ".thumb", "pressed")
                 );
         newDetailedSection(
-                new String[] {"ScrollPane: ", "normal", "small", "focused"}, 
+                new String[] {"ScrollPane: ", "normal", "small", "focused", "empty"}, 
                 ScrollPaneBuilder.create().content(scrollPaneContent()).build(),
                 ScrollPaneBuilder.create().content(scrollPaneContent()).minWidth(40).prefWidth(40).minHeight(40).prefHeight(40).build(),
-                withState(ScrollPaneBuilder.create().content(scrollPaneContent()).build(), "focused")
+                withState(ScrollPaneBuilder.create().content(scrollPaneContent()).build(), "focused"),
+                ScrollPaneBuilder.create().build()
                 ); 
         newDetailedSection(
                 new String[] {"Separator: ", "horizontal", "vertical"}, 

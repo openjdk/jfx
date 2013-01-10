@@ -330,7 +330,7 @@ TODO: Explain here how themeing works:
     -fx-background-color: -fx-outer-border, -fx-inner-border, -fx-body-color; 
     -fx-background-insets: 0, 1, 2;
     -fx-background-radius: 5, 4, 3;
-    -fx-padding: 0.333333em 1em 0.416667em 1em; /* 4 12 5 12 */
+    -fx-padding: 0.333333em 1em 0.333333em 1em; /* 4 12 4 12 */
     -fx-text-fill: -fx-text-base-color;
 }
 .button:hover,
@@ -465,7 +465,7 @@ TODO: Explain here how themeing works:
 .choice-box > .label,
 .menu-button > .label,
 .color-picker > .label {
-    -fx-padding: 0.333333em 0.833333em 0.416667em 0.833333em; /* 4 10 5 10 */
+    -fx-padding: 0.333333em 0.833333em 0.333333em 0.833333em; /* 4 10 4 10 */
     -fx-text-fill: -fx-text-base-color;
 }
 .choice-box > .open-button,
@@ -490,8 +490,17 @@ TODO: Explain here how themeing works:
 .list-view:focused,
 .tree-view:focused,
 .tree-table-view:focused {
-    -fx-background-color: -fx-faint-focus-color, -fx-focus-color, -fx-background; 
+    -fx-background-color: -fx-faint-focus-color, -fx-focus-color, -fx-control-inner-background; 
     -fx-background-insets: -2, -0.3, 1;
+}
+/* ones with grey -fx-background not lighter -fx-control-inner-background */
+.scroll-pane,
+.split-pane {
+    -fx-background-color: -fx-box-border, -fx-background;
+}
+.scroll-pane:focused,
+.split-pane:focused {
+    -fx-background-color: -fx-faint-focus-color, -fx-focus-color, -fx-background; 
 }
 
 /*******************************************************************************
@@ -678,7 +687,7 @@ TODO: Explain here how themeing works:
     -fx-background-color: -fx-inner-border, -fx-body-color; 
     -fx-background-insets: 1 0 1 1, 2 1 2 2;
     -fx-background-radius: 4 0 0 4, 3 0 0 3;
-    -fx-padding: 0.333333em 0.833333em 0.416667em 0.833333em; /* 4 10 5 10 */
+    -fx-padding: 0.333333em 0.833333em 0.333333em 0.833333em; /* 4 10 4 10 */
 }
 .split-menu-button > .arrow-button {
     -fx-background-color: -fx-inner-border, -fx-body-color; 
@@ -1018,8 +1027,8 @@ TODO: Explain here how themeing works:
     -fx-background-insets: 0, 1;
     -fx-background-radius: 2, 2;
     -fx-cursor: text;
-    -fx-padding: 0.416667em; /* 5 */
-    /* TODO USE OLD ? -fx-padding: 3 5 3 5;*/
+    /*-fx-padding: 0.416667em;  5 */
+    -fx-padding: 0.417em 0.333em 0.333em 0.333em; /* 5 4 4 4 */
 }
 .text-input:focused {
     -fx-highlight-fill: -fx-accent;
@@ -1275,7 +1284,6 @@ TODO: Explain here how themeing works:
     -fx-effect: dropshadow(two-pass-box , rgba(255, 255, 255, 0.4), 1, 0.0 , 0, 1);
 }*/
 .tab-pane > .tab-content-area {
-    -fx-background-color: -fx-control-inner-background;
     -fx-padding: 0.0em; /* 0 */
 }
 .tab-pane > .tab-header-area > .headers-region > .tab {
@@ -1423,7 +1431,7 @@ TODO: Explain here how themeing works:
     -fx-background: transparent;
     -fx-background-color: transparent;
     -fx-text-fill: -fx-text-base-color;
-    -fx-padding: 0.333333em 1em 0.416667em 1em; /* 4 12 5 12 */
+    -fx-padding: 0.333333em 1em 0.333333em 1em; /* 4 12 4 12 */
 }
 .combo-box-base > .arrow-button  {
     -fx-background-radius: 0 5 5 0, 0 4 4 0, 0 3 3 0;
