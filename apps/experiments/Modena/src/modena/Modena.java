@@ -55,12 +55,15 @@ import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.SnapshotParameters;
 import javafx.scene.control.ButtonBuilder;
+import javafx.scene.control.ChoiceBox;
 import javafx.scene.control.ColorPicker;
+import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.MenuButton;
 import javafx.scene.control.MenuItemBuilder;
 import javafx.scene.control.RadioMenuItemBuilder;
 import javafx.scene.control.ScrollPaneBuilder;
+import javafx.scene.control.SelectionModel;
 import javafx.scene.control.Separator;
 import javafx.scene.control.TabBuilder;
 import javafx.scene.control.TabPane;
@@ -140,6 +143,17 @@ public class Modena extends Application {
                 ).build()
             );
             contentTabs.getSelectionModel().select(selectedTab);
+            // height test set selection for 
+            Platform.runLater(new Runnable() {
+                @Override public void run() {
+                    for (Node n: heightTest.lookupAll(".choice-box")) {
+                        ((ChoiceBox)n).getSelectionModel().selectFirst();
+                    }
+                    for (Node n: heightTest.lookupAll(".combo-box")) {
+                        ((ComboBox)n).getSelectionModel().selectFirst();
+                    }
+                }
+            });
             // set white background for caspian
             if (!modena) {
                 samplePage.setStyle("-fx-background-color: white;");

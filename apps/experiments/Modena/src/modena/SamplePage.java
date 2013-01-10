@@ -41,6 +41,7 @@ import javafx.scene.control.Button;
 import javafx.scene.control.ButtonBuilder;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.ChoiceBoxBuilder;
+import javafx.scene.control.ColorPicker;
 import javafx.scene.control.ColorPickerBuilder;
 import javafx.scene.control.ComboBoxBuilder;
 import javafx.scene.control.Hyperlink;
@@ -278,6 +279,7 @@ public class SamplePage extends GridPane {
                 withState(ComboBoxBuilder.create(String.class).items(sampleItems()).value("Item B").editable(true).build(), "hover"),
                 withState(ComboBoxBuilder.create(String.class).items(sampleItems()).value("Item B").editable(true).build(), "showing"),
                 withState(ComboBoxBuilder.create(String.class).items(sampleItems()).value("Item B").editable(true).build(), "focused"),
+                withState(ComboBoxBuilder.create(String.class).items(sampleItems()).value("Item B").editable(true).build(), null,".text-field", "focused"),
                 withState(ComboBoxBuilder.create(String.class).items(sampleItems()).value("Item C").editable(true).build(), "disabled")
                 );
         newSection(      
@@ -287,6 +289,14 @@ public class SamplePage extends GridPane {
                 withState(ColorPickerBuilder.create().value(Color.DODGERBLUE).build(), "showing"),
                 withState(ColorPickerBuilder.create().value(Color.DODGERBLUE).build(), "focused"),
                 withState(ColorPickerBuilder.create().value(Color.DODGERBLUE).build(), "disabled")
+                );
+        newSection(      
+                "Color Picker\n Split Button:", 
+                ColorPickerBuilder.create().value(Color.DODGERBLUE).styleClass(ColorPicker.STYLE_CLASS_SPLIT_BUTTON).build(),
+                withState(ColorPickerBuilder.create().value(Color.DODGERBLUE).styleClass(ColorPicker.STYLE_CLASS_SPLIT_BUTTON).build(), "hover"),
+                withState(ColorPickerBuilder.create().value(Color.DODGERBLUE).styleClass(ColorPicker.STYLE_CLASS_SPLIT_BUTTON).build(), "showing"),
+                withState(ColorPickerBuilder.create().value(Color.DODGERBLUE).styleClass(ColorPicker.STYLE_CLASS_SPLIT_BUTTON).build(), "focused"),
+                withState(ColorPickerBuilder.create().value(Color.DODGERBLUE).styleClass(ColorPicker.STYLE_CLASS_SPLIT_BUTTON).build(), "disabled")
                 );
         newSection(      
                 "MenuButton:", 
