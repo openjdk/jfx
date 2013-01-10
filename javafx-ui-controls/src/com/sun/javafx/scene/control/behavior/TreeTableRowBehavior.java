@@ -47,6 +47,8 @@ public class TreeTableRowBehavior<T> extends CellBehaviorBase<TreeTableRow<T>> {
         TreeTableRow<T> treeTableRow = getControl();
         TreeTableView<T> tv = treeTableRow.getTreeTableView();
         TreeItem treeItem = treeTableRow.getTreeItem();
+        if (treeItem == null) return;
+        
         int index = treeTableRow.getIndex();
         MultipleSelectionModel sm = tv.getSelectionModel();
         boolean isAlreadySelected = sm.isSelected(index);
@@ -56,9 +58,7 @@ public class TreeTableRowBehavior<T> extends CellBehaviorBase<TreeTableRow<T>> {
         Node disclosureNode = treeTableRow.getDisclosureNode();
         if (disclosureNode != null) {
             if (disclosureNode.getBoundsInParent().contains(e.getX(), e.getY())) {
-                if (treeItem != null) {
-                    treeItem.setExpanded(! treeItem.isExpanded());
-                }
+                treeItem.setExpanded(! treeItem.isExpanded());
                 return;
             }
         }
