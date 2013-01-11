@@ -309,6 +309,12 @@ public class PieChart extends Chart {
     }
 
     // -------------- METHODS --------------------------------------------------
+
+    @Override public void requestLayout() {
+        super.requestLayout();
+        // RT-22986 PieChart legend resize issue
+        if (legend != null) legend.requestLayout();
+    }
     
     private void dataNameChanged(Data item) {
         item.textNode.setText(item.getName());
