@@ -46,7 +46,7 @@ public class CharacterStringConverter extends StringConverter<Character> {
             return null;
         }
 
-        return new Character(value.charAt(0));
+        return Character.valueOf(value.charAt(0));
     }
 
     /** {@inheritDoc} */

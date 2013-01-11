@@ -282,19 +282,11 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
     }
 
     private void lineStart(boolean select, boolean extendSelection) {
-        if (isRTLText()) {
-            skin.toRightLineEdge(select, extendSelection);
-        } else {
-            skin.toLeftLineEdge(select, extendSelection);
-        }
+        skin.lineStart(select, extendSelection);
     }
 
     private void lineEnd(boolean select, boolean extendSelection) {
-        if (isRTLText()) {
-            skin.toLeftLineEdge(select, extendSelection);
-        } else {
-            skin.toRightLineEdge(select, extendSelection);
-        }
+        skin.lineEnd(select, extendSelection);
     }
 
     protected void scrollCharacterToVisible(int index) {
@@ -357,9 +349,10 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
                     // to indicate the text can be dragged, etc.
                 } else if (!(e.isControlDown() || e.isAltDown() || e.isShiftDown() || e.isMetaDown())) {
                     switch (e.getClickCount()) {
-                      case 1: skin.positionCaret(hit, false, false); break;
-                      case 2: mouseDoubleClick(hit); break;
-                      case 3: mouseTripleClick(hit); break;
+                        case 1: skin.positionCaret(hit, false, false); break;
+                        case 2: mouseDoubleClick(hit); break;
+                        case 3: mouseTripleClick(hit); break;
+                        default: // no-op
                     }
                 } else if (e.isShiftDown() && !(e.isControlDown() || e.isAltDown() || e.isMetaDown()) && e.getClickCount() == 1) {
                     // didn't click inside the selection, so select

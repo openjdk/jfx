@@ -4,12 +4,12 @@
 
 package javafx.scene.control;
 
+import com.sun.javafx.scene.control.skin.TooltipSkin;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.DoublePropertyBase;
 import javafx.beans.property.SimpleStringProperty;
 
-import com.sun.javafx.scene.control.skin.PopupControlSkin;
-import com.sun.javafx.scene.control.skin.TooltipSkin;
+import javafx.scene.Node;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -21,12 +21,18 @@ import static org.junit.Assert.*;
  */
 public class PopupControlTest {
     private PopupControl popup;
+    
+    private static final class PopupControlSkin<C extends PopupControl> implements Skin<C>{
+        @Override public Node getNode()     { return null; }
+        @Override public void dispose()     { }
+        @Override public C getSkinnable()   { return null; }
+    }
 
     @Before public void setup() {
         popup = new PopupControl();
         // PopupControl normally gets its stylesheet from the owner scene.
         popup.getScene().getStylesheets().add(
-            PopupControlSkin.class.getResource("caspian/caspian.css").toExternalForm()
+            TooltipSkin.class.getResource("caspian/caspian.css").toExternalForm()
         );
     }
 
@@ -125,7 +131,7 @@ public class PopupControlTest {
     }
 
     @Test public void setAndGetSpecifiedSkin() {
-        PopupControlSkin skin = new PopupControlSkin();
+        Skin skin = new PopupControlSkin();
         popup.setSkin(skin);
         assertEquals(skin, popup.getSkin());
     }

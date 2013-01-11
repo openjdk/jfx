@@ -137,7 +137,7 @@ public abstract class ComboBoxBaseSkin<T> extends BehaviorSkinBase<ComboBoxBase<
             updateDisplayArea();
         }
         
-        final Insets padding = getInsets();
+        final Insets padding = getSkinnable().getInsets();
         final Insets arrowButtonPadding = arrowButton.getInsets();
 
         final double arrowWidth = snapSize(arrow.prefWidth(-1));
@@ -152,7 +152,8 @@ public abstract class ComboBoxBaseSkin<T> extends BehaviorSkinBase<ComboBoxBase<
         if (isButton()) return;
         
         arrowButton.resize(arrowButtonWidth, h);
-        positionInArea(arrowButton, getWidth() - padding.getRight() - arrowButtonWidth, 0, 
+        positionInArea(arrowButton, 
+                getSkinnable().getWidth() - padding.getRight() - arrowButtonWidth, 0, 
                 arrowButtonWidth, h, 0, HPos.CENTER, VPos.CENTER);
     }
     
@@ -167,8 +168,8 @@ public abstract class ComboBoxBaseSkin<T> extends BehaviorSkinBase<ComboBoxBase<
         
         final double totalWidth = (displayNode == null) ? 0 : (displayNode.prefWidth(height) 
                 + arrowButtonWidth);
-        return getInsets().getLeft() + totalWidth +
-                + getInsets().getRight();
+        final Insets padding = getSkinnable().getInsets();
+        return padding.getLeft() + totalWidth + padding.getRight();
     }
     
     @Override protected double computePrefHeight(double width) {
@@ -194,7 +195,7 @@ public abstract class ComboBoxBaseSkin<T> extends BehaviorSkinBase<ComboBoxBase<
             ph = displayNode.prefHeight(width);
         }
 
-        final Insets padding = getInsets();
+        final Insets padding = getSkinnable().getInsets();
         return padding.getTop()+ ph + padding.getBottom();
     }
 

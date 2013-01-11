@@ -47,6 +47,7 @@ import com.sun.javafx.scene.control.behavior.BehaviorBase;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import javafx.geometry.Insets;
 import javafx.geometry.NodeOrientation;
 import javafx.scene.Group;
 
@@ -132,7 +133,7 @@ public class SplitPaneSkin extends BehaviorSkinBase<SplitPane, BehaviorBase<Spli
             if (checkDividerPos) {
                 checkDividerPosition(divider, posToDividerPos(divider, newValue), posToDividerPos(divider, oldValue));                
             }
-            requestLayout();
+            getSkinnable().requestLayout();
         }
     }
        
@@ -238,7 +239,7 @@ public class SplitPaneSkin extends BehaviorSkinBase<SplitPane, BehaviorBase<Spli
                     divider.setInitialPos(divider.getDividerPos());
                     divider.setPressPos(e.getSceneX());
                     divider.setPressPos(getSkinnable().getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT
-                            ? getWidth() - e.getSceneX() : e.getSceneX());
+                            ? getSkinnable().getWidth() - e.getSceneX() : e.getSceneX());
                 } else {
                     divider.setInitialPos(divider.getDividerPos());
                     divider.setPressPos(e.getSceneY());
@@ -252,7 +253,7 @@ public class SplitPaneSkin extends BehaviorSkinBase<SplitPane, BehaviorBase<Spli
                 double delta = 0; 
                 if (horizontal) {
                     delta = getSkinnable().getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT 
-                            ? getWidth() - e.getSceneX() : e.getSceneX();
+                            ? getSkinnable().getWidth() - e.getSceneX() : e.getSceneX();
                 } else {
                     delta = e.getSceneY();
                 }
@@ -290,13 +291,13 @@ public class SplitPaneSkin extends BehaviorSkinBase<SplitPane, BehaviorBase<Spli
             }
             getSkinnable().requestLayout();
         } else if ("WIDTH".equals(property) || "HEIGHT".equals(property)) {
-            requestLayout();
+            getSkinnable().requestLayout();
         }
     }
 
     // Value is the left edge of the divider
     private void setAbsoluteDividerPos(ContentDivider divider, double value) {
-        if (getWidth() > 0 && getHeight() > 0 && divider != null) {
+        if (getSkinnable().getWidth() > 0 && getSkinnable().getHeight() > 0 && divider != null) {
             SplitPane.Divider paneDivider = divider.getDivider();
             divider.setDividerPos(value);
             double size = getSize();
@@ -315,7 +316,7 @@ public class SplitPaneSkin extends BehaviorSkinBase<SplitPane, BehaviorBase<Spli
     // The value updated to SplitPane.Divider will be the center of the divider.
     // The returned position will be the left edge of the divider
     private double getAbsoluteDividerPos(ContentDivider divider) {
-        if (getWidth() > 0 && getHeight() > 0 && divider != null) {
+        if (getSkinnable().getWidth() > 0 && getSkinnable().getHeight() > 0 && divider != null) {
             SplitPane.Divider paneDivider = divider.getDivider();
             double newPos = posToDividerPos(divider, paneDivider.getPosition());
             divider.setDividerPos(newPos);
@@ -350,14 +351,16 @@ public class SplitPaneSkin extends BehaviorSkinBase<SplitPane, BehaviorBase<Spli
     }
 
     private double getSize() {
+        final SplitPane s = getSkinnable();
+        final Insets padding = s.getInsets();
         double size = totalMinSize();
         if (horizontal) {
-            if (getWidth() > size) {
-                size = getWidth() - getInsets().getLeft() - getInsets().getRight();
+            if (s.getWidth() > size) {
+                size = s.getWidth() - padding.getLeft() - padding.getRight();
             }
         } else {
-            if (getHeight() > size) {
-                size = getHeight() - getInsets().getTop() - getInsets().getBottom();
+            if (s.getHeight() > size) {
+                size = s.getHeight() - padding.getTop() - padding.getBottom();
             }
         }
         return size;
@@ -501,8 +504,8 @@ public class SplitPaneSkin extends BehaviorSkinBase<SplitPane, BehaviorBase<Spli
     }
 
     private void layoutDividersAndContent(double width, double height) {
-        double paddingX = getInsets().getLeft();
-        double paddingY = getInsets().getTop();
+        double paddingX = getSkinnable().getInsets().getLeft();
+        double paddingY = getSkinnable().getInsets().getTop();
         double dividerWidth = contentDividers.isEmpty() ? 0 : contentDividers.get(0).prefWidth(-1);
 
         for (Content c: contentRegions) {
@@ -538,15 +541,19 @@ public class SplitPaneSkin extends BehaviorSkinBase<SplitPane, BehaviorBase<Spli
 
     @Override protected void layoutChildren(final double x, final double y,
             final double w, final double h) {
-        if (!getSkinnable().isVisible() || 
-            (horizontal ? getWidth() == 0 : getHeight() == 0) ||
+        final SplitPane s = getSkinnable();
+        final double sw = s.getWidth();
+        final double sh = s.getHeight();
+        
+        if (!s.isVisible() || 
+            (horizontal ? sw == 0 : sh == 0) ||
             contentRegions.isEmpty()) {
             return;
         }
         
         double dividerWidth = contentDividers.isEmpty() ? 0 : contentDividers.get(0).prefWidth(-1);
 
-        if (contentDividers.size() > 0 && previousArea != -1 && previousArea != (getWidth() * getHeight())) {
+        if (contentDividers.size() > 0 && previousArea != -1 && previousArea != (sw * sh)) {
             //This algorithm adds/subtracts a little to each panel on every resize
             List<Content> resizeList = new ArrayList<Content>();
             for (Content c: contentRegions) {
@@ -555,7 +562,7 @@ public class SplitPaneSkin extends BehaviorSkinBase<SplitPane, BehaviorBase<Spli
                 }
             }
                         
-            double delta = horizontal ? (getWidth() - previousWidth) : (getHeight() - previousHeight);
+            double delta = horizontal ? (s.getWidth() - previousWidth) : (s.getHeight() - previousHeight);
             boolean growing = delta > 0;
             
             delta = Math.abs(delta);            
@@ -615,9 +622,9 @@ public class SplitPaneSkin extends BehaviorSkinBase<SplitPane, BehaviorBase<Spli
                 }
             }
 
-            previousArea = getWidth() * getHeight();
-            previousWidth = getWidth();
-            previousHeight = getHeight();
+            previousArea = sw * sh;
+            previousWidth = sw;
+            previousHeight = sh;
 
             // If we are resizing the window save the current area into
             // resizableWithParentArea.  We use this value during layout.
@@ -627,9 +634,9 @@ public class SplitPaneSkin extends BehaviorSkinBase<SplitPane, BehaviorBase<Spli
             }
             resize = true;
         } else {
-            previousArea = getWidth() * getHeight();
-            previousWidth = getWidth();
-            previousHeight = getHeight();
+            previousArea = sw * sh;
+            previousWidth = sw;
+            previousHeight = sh;
         }
         
         // If the window is less than the min size we want to resize
@@ -835,10 +842,11 @@ public class SplitPaneSkin extends BehaviorSkinBase<SplitPane, BehaviorBase<Spli
         for (ContentDivider d: contentDividers) {
             minWidth += d.prefWidth(-1);
         }
+        final Insets padding = getSkinnable().getInsets();
         if (horizontal) {
-            return minWidth + getInsets().getLeft() + getInsets().getRight();
+            return minWidth + padding.getLeft() + padding.getRight();
         } else {
-            return maxMinWidth + getInsets().getLeft() + getInsets().getRight();
+            return maxMinWidth + padding.getLeft() + padding.getRight();
         }
     }
 
@@ -852,10 +860,11 @@ public class SplitPaneSkin extends BehaviorSkinBase<SplitPane, BehaviorBase<Spli
         for (ContentDivider d: contentDividers) {
             minHeight += d.prefWidth(-1);
         }
+        final Insets padding = getSkinnable().getInsets();
         if (horizontal) {
-            return maxMinHeight + getInsets().getTop() + getInsets().getBottom();
+            return maxMinHeight + padding.getTop() + padding.getBottom();
         } else {
-            return minHeight + getInsets().getTop() + getInsets().getBottom();
+            return minHeight + padding.getTop() + padding.getBottom();
         }
     }
 
@@ -869,10 +878,11 @@ public class SplitPaneSkin extends BehaviorSkinBase<SplitPane, BehaviorBase<Spli
         for (ContentDivider d: contentDividers) {
             prefWidth += d.prefWidth(-1);
         }
+        final Insets padding = getSkinnable().getInsets();
         if (horizontal) {
-            return prefWidth + getInsets().getLeft() + getInsets().getRight();
+            return prefWidth + padding.getLeft() + padding.getRight();
         } else {
-            return prefMaxWidth + getInsets().getLeft() + getInsets().getRight();
+            return prefMaxWidth + padding.getLeft() + padding.getRight();
         }
     }
 
@@ -886,10 +896,11 @@ public class SplitPaneSkin extends BehaviorSkinBase<SplitPane, BehaviorBase<Spli
         for (ContentDivider d: contentDividers) {
             prefHeight += d.prefWidth(-1);
         }
+        final Insets padding = getSkinnable().getInsets();
         if (horizontal) {
-            return maxPrefHeight + getInsets().getTop() + getInsets().getBottom();
+            return maxPrefHeight + padding.getTop() + padding.getBottom();
         } else {
-            return prefHeight + getInsets().getTop() + getInsets().getBottom();
+            return prefHeight + padding.getTop() + padding.getBottom();
         }
     }
     

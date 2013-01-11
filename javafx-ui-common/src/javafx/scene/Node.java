@@ -1439,11 +1439,11 @@ public abstract class Node implements EventTarget {
     }
 
     /**
-     * Sets the individual disabled state of this {@code Node}. Setting
+     * Defines the individual disabled state of this {@code Node}. Setting
      * {@code disable} to true will cause this {@code Node} and any subnodes to
-     * become disabled. This variable should be used only to set the disabled
+     * become disabled. This property should be used only to set the disabled
      * state of a {@code Node}.  For querying the disabled state of a
-     * {@code Node}, the {@link #disabledProperty disabled} variable should instead be used,
+     * {@code Node}, the {@link #disabledProperty disabled} property should instead be used,
      * since it is possible that a {@code Node} was disabled as a result of an
      * ancestor being disabled even if the individual {@code disable} state on
      * this {@code Node} is {@code false}.

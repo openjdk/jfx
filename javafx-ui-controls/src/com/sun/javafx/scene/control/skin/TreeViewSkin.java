@@ -157,11 +157,11 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeViewB
                 // had changed. So, here we just watch for the case where the number
                 // of items being added is equal to the number of items being removed.
                 needItemCountUpdate = true;
-                requestLayout();
+                getSkinnable().requestLayout();
             } else if (e.getEventType().equals(TreeItem.valueChangedEvent())) {
                 // Fix for RT-14971 and RT-15338. 
                 needCellsRecreated = true;
-                requestLayout();
+                getSkinnable().requestLayout();
             } else {
                 // Fix for RT-20090. We are checking to see if the event coming
                 // from the TreeItem root is an event where the count has changed.
@@ -169,7 +169,7 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeViewB
                 while (eventType != null) {
                     if (eventType.equals(TreeItem.<T>expandedItemCountChangeEvent())) {
                         needItemCountUpdate = true;
-                        requestLayout();
+                        getSkinnable().requestLayout();
                         break;
                     }
                     eventType = eventType.getSuperType();
@@ -194,6 +194,8 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeViewB
             weakRootListener = new WeakEventHandler(rootListener);
             getRoot().addEventHandler(TreeItem.<T>treeNotificationEvent(), weakRootListener);
         }
+        
+        updateItemCount();
     }
 
     @Override public int getItemCount() {

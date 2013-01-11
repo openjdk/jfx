@@ -240,7 +240,7 @@ public class CheckBoxTableCell<S,T> extends TableCell<S,T> {
             final StringConverter<T> converter) {
         // we let getSelectedProperty be null here, as we can always defer to the
         // TableColumn
-        this.getStyleClass().add("choice-box-table-cell");
+        this.getStyleClass().add("check-box-table-cell");
         setSelectedStateCallback(getSelectedProperty);
         setConverter(converter);
         this.showLabel = converter != null;

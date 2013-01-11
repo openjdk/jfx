@@ -24,12 +24,7 @@
  */
 package javafx.builder.processor;
 
-import com.sun.javafx.beans.annotations.DuplicateInBuilderProperties;
-import com.sun.javafx.beans.annotations.Default;
 import com.sun.javafx.beans.annotations.NoBuilder;
-import com.sun.javafx.beans.annotations.NoInit;
-import com.sun.javafx.collections.annotations.ReturnsUnmodifiableCollection;
-import java.beans.Introspector;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.Writer;
@@ -37,26 +32,18 @@ import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
-import java.util.Collection;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.PropertyResourceBundle;
 import java.util.ResourceBundle;
 import java.util.Set;
-import java.util.SortedSet;
 import java.util.TreeMap;
-import java.util.TreeSet;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.regex.PatternSyntaxException;
 import javax.annotation.Generated;
 import javax.annotation.processing.AbstractProcessor;
-import javax.annotation.processing.Filer;
 import javax.annotation.processing.RoundEnvironment;
 import javax.annotation.processing.SupportedAnnotationTypes;
 import javax.annotation.processing.SupportedOptions;
@@ -65,18 +52,11 @@ import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
-import javax.lang.model.element.TypeParameterElement;
 import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.NoType;
-import javax.lang.model.type.PrimitiveType;
-import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
-import javax.lang.model.type.WildcardType;
 import javax.lang.model.util.ElementFilter;
-import javax.lang.model.util.Elements;
-import javax.lang.model.util.Types;
-import javax.tools.Diagnostic;
 import javax.tools.JavaFileObject;
 
 /**
@@ -96,39 +76,12 @@ import javax.tools.JavaFileObject;
  */
 @SupportedAnnotationTypes("*")
 @SupportedOptions({
-    BuilderProcessor.inputOption, BuilderProcessor.outputOption, BuilderProcessor.verboseOption
+    AnnotationUtils.inputOption, AnnotationUtils.outputOption, AnnotationUtils.verboseOption
 })
 public class BuilderProcessor extends AbstractProcessor {
-    static final String inputOption = "javafx.builders.input";
-    static final String outputOption = "javafx.builders.output";
-    static final String verboseOption = "javafx.builders.verbose";
-
-    private Types types;
-    private Elements elements;
-    private NoType voidType;
-    private PrimitiveType booleanType;
-    private Filer filer;
-    private Pattern inputPat = Pattern.compile("(javafx\\..*)");
-    private String outputRepl = "$1Builder";
-    private boolean verbose;
-    private TypeMirror rawCollectionType;
-    private TypeMirror rawObservableListType;
+    private AnnotationUtils utils;
 
     private final Set<String> builderNames = new HashSet<String>();
-
-    private void note(String msg) {
-        if (verbose) {
-            processingEnv.getMessager().printMessage(Diagnostic.Kind.NOTE, msg);
-        }
-    }
-
-    private void warn(String msg) {
-        processingEnv.getMessager().printMessage(Diagnostic.Kind.WARNING, msg);
-    }
-
-    private void error(String msg) {
-        processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR, msg);
-    }
 
     // We are asserting here that this processor can handle anything that new versions of the language can
     // throw at it.  That's probably true, and even if it isn't we can always rewrite.
@@ -153,155 +106,24 @@ public class BuilderProcessor extends AbstractProcessor {
     // the method is called with an empty set of root elements.
     @Override
     public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
-        Map<String, String> options = processingEnv.getOptions();
-        if (options.containsKey(verboseOption)) {
-            verbose = Boolean.parseBoolean(options.get(verboseOption));
-        }
-        note("BuilderProcessor runs");
-        String input = options.get(inputOption);
-        if (input != null) {
-            try {
-                inputPat = Pattern.compile(input);
-            } catch (PatternSyntaxException e) {
-                error("Value for option " + inputOption + " is not a valid regular expression: " + e.getMessage());
-                return false;
-            }
-        }
-        if (options.containsKey(outputOption)) {
-            outputRepl = options.get(outputOption);
-        }
-        types = processingEnv.getTypeUtils();
-        elements = processingEnv.getElementUtils();
-        voidType = types.getNoType(TypeKind.VOID);
-        booleanType = types.getPrimitiveType(TypeKind.BOOLEAN);
-        filer = processingEnv.getFiler();
-        rawCollectionType = types.getDeclaredType(elements.getTypeElement(Collection.class.getName()));
-        TypeElement observableArrayListType = elements.getTypeElement("javafx.collections.ObservableList");
-        if (observableArrayListType != null) {
-            rawObservableListType = types.getDeclaredType(observableArrayListType);
-        }
+        utils = new AnnotationUtils(processingEnv);
+        utils.note("BuilderProcessor runs");
 
-        processTypes(ElementFilter.typesIn(roundEnv.getRootElements()));
-        return false;
-    }
-
-    private void processTypes(Set<TypeElement> types) {
-        for (TypeElement type : types) {
+        for (TypeElement type : ElementFilter.typesIn(roundEnv.getRootElements())) {
             if (isCandidateType(type)) {
                 processType(type);
             }
         }
+        return false;
     }
 
     private boolean isCandidateType(TypeElement type) {
         String typeName = type.toString();
         return (!builderNames.contains(typeName) &&
-                inputPat.matcher(type.toString()).matches() &&
+                utils.inputPat.matcher(type.toString()).matches() &&
+                !typeName.endsWith("BuilderExtension") &&
                 type.getKind() == ElementKind.CLASS &&
                 type.getModifiers().contains(Modifier.PUBLIC));
-    }
-
-    // The result of scanning a class.
-    private static class Scanned {
-        // The properties that are defined in this class or inherited from the superclass.
-        // The name of each property is mapped to its getter.
-        final Map<String, ExecutableElement> properties = new TreeMap<String, ExecutableElement>(String.CASE_INSENSITIVE_ORDER);
-
-        // The properties (local or inherited) that are set by the chosen constructor of this class.
-        // Each property is mapped to an initializer-expression string specified by @Default, or empty string if none
-        final Map<String, String> constructorProperties = new TreeMap<String, String>(String.CASE_INSENSITIVE_ORDER);
-
-        // Since constructorProperties loses the original order of the constructor arguments, we save them separately.
-        // We originally used a LinkedHashMap to keep the original order, but that didn't give us an easy way to ensure
-        // case-insensitivity.
-        final List<String> constructorParameters = new ArrayList<String>();
-
-        // Which properties (local or inherited) have setters.
-        final Set<String> propertiesWithSetters = new TreeSet<String>(String.CASE_INSENSITIVE_ORDER);
-
-        // Which local properties are of type Collection or a subtype, meaning that they can be changed by
-        // changing the Collection rather than calling a setter.
-        final Set<String> collectionProperties = new TreeSet<String>(String.CASE_INSENSITIVE_ORDER);
-
-        // Which local properties were marked as @ReturnsUnmodifiableCollection.
-        // We will only generate a method for such a property in the builder
-        // if it is one of the properties set by the constructor.
-        final Set<String> unmodifiableCollectionProperties = new TreeSet<String>(String.CASE_INSENSITIVE_ORDER);
-
-        // Which properties were marked with @MovedFromSubclass annotation.
-        // Methods for these properties will be generated both for the superclass
-        // and for subclasses
-        final Set<String> movedProperties = new HashSet<String>();
-
-        // The result of scanning the superclass if it exists and is available; otherwise null.
-        final Scanned superScanned;
-
-        // True if the class is abstract or "effectively abstract" (has no public constructor).
-        boolean isAbstract;
-
-        // The expression to produce an instance of the class, an invocation either of a constructor or a factory method.
-        // Does not include arguments, so for example it might be "new javafx.scene.shape.Rectangle".
-        String constructorCall;
-
-        Scanned(Scanned superScanned) {
-            this.superScanned = superScanned;
-        }
-
-        boolean inherits(String property) {
-            return inheritedProperties().contains(property);
-        }
-
-        Set<String> inheritedProperties() {
-            if (superScanned == null) {
-                return Collections.emptySet();
-            } else {
-                return superScanned.properties.keySet();
-            }
-        }
-
-        Set<String> inheritedSetters() {
-            if (superScanned == null) {
-                return Collections.emptySet();
-            } else {
-                return superScanned.propertiesWithSetters;
-            }
-        }
-
-        // Fills the movedProperties set with properties from
-        // @MovedFromSubclass annotation
-        // Also adds these properties into appropriate collections for this
-        // scan class as they need to be processed when making the builder
-        void buildMovedProperties(TypeElement type) {
-            if (superScanned != null) {
-                DuplicateInBuilderProperties annotation = type.getAnnotation(DuplicateInBuilderProperties.class);
-                if (annotation != null) {
-                    for (int i = 0; i < annotation.properties().length; i++) {
-                        String propertyName = annotation.properties()[i];
-                        if (superScanned.propertiesWithSetters.contains(propertyName)) {
-                            propertiesWithSetters.add(propertyName);
-                            movedProperties.add(propertyName);
-                        }
-                        if (superScanned.collectionProperties.contains(propertyName)) {
-                            collectionProperties.add(propertyName);
-                            movedProperties.add(propertyName);
-                        }
-                        if (superScanned.constructorProperties.containsKey(propertyName)) {
-                            constructorProperties.put(propertyName, superScanned.constructorProperties.get(propertyName));
-                            movedProperties.add(propertyName);
-                        }
-                    }
-                }
-            }
-        }
-
-        TypeMirror typeOf(String property) {
-            ExecutableElement getter = properties.get(property);
-            if (getter == null) {
-                return null;
-            } else {
-                return getter.getReturnType();
-            }
-        }
     }
 
     private Map<TypeElement, Scanned> scanMap = new HashMap<TypeElement, Scanned>();
@@ -326,287 +148,50 @@ public class BuilderProcessor extends AbstractProcessor {
         if (forSuper && scanMap.containsKey(type)) {
             return scanMap.get(type);
         }
-        Scanned scanned = scan1(type, forSuper);
-        scanMap.put(type, scanned);
-        return scanned;
-    }
 
-    private Scanned scan1(TypeElement type, boolean forSuper) {
         Scanned superScanned = null;
         TypeMirror superMirror = type.getSuperclass();
         if (!(superMirror instanceof NoType)) {
-            TypeElement superElement = elements.getTypeElement(types.erasure(superMirror).toString());
+            TypeElement superElement = utils.elements.getTypeElement(utils.types.erasure(superMirror).toString());
             if (superElement != null && isCandidateType(superElement)) {
                 superScanned = scan(superElement, true);
             }
         }
 
-        final Scanned scanned = new Scanned(superScanned);
-        scanned.isAbstract = type.getModifiers().contains(Modifier.ABSTRACT);
-        if (superScanned != null) {
-            scanned.properties.putAll(superScanned.properties);
-            scanned.propertiesWithSetters.addAll(scanned.inheritedSetters());
-        }
-
-        final boolean noBuilder = (type.getAnnotation(NoBuilder.class) != null);
-
-        // Find the properties with explicit getters
-        final List<ExecutableElement> methods = ElementFilter.methodsIn(type.getEnclosedElements());
-        for (ExecutableElement method : methods) {
-            if (method.getModifiers().contains(Modifier.PUBLIC) &&
-                    !method.getModifiers().contains(Modifier.STATIC) &&
-                    !types.isSameType(voidType, method.getReturnType()) &&
-                    method.getParameters().isEmpty() &&
-                    method.getTypeParameters().isEmpty() &&
-                    method.getAnnotation(NoInit.class) == null) {
-                final String name = method.getSimpleName().toString();
-                final int len;
-                if (name.startsWith("get")) {
-                    len = 3;
-                } else if (name.startsWith("is") && types.isSameType(method.getReturnType(), booleanType)) {
-                    len = 2;
-                } else {
-                    len = -1;
-                }
-                if (len > 0 && name.length() > len && !name.equals("getClass")) {
-                    String propertyName = Introspector.decapitalize(name.substring(len));
-                    if (!scanned.inherits(propertyName)) {
-                        TypeMirror propertyType = method.getReturnType();
-                        TypeMirror oldType = scanned.typeOf(propertyName);
-                        scanned.properties.put(propertyName, method);
-                        if (oldType != null && !types.isSameType(oldType, propertyType)) {
-                            warn("Property " + name + " has type " + oldType + " via annotations but type " +
-                                    propertyType + " via getter");
-                            // Could lead to problems with e.g. List<?> which is not equal to itself.
-                        }
-                        if (method.getAnnotation(ReturnsUnmodifiableCollection.class) != null) {
-                            scanned.unmodifiableCollectionProperties.add(propertyName);
-                        }
-                    }
-                }
-            }
-        }
-
-        // If anyone is foolish enough to define a property that is a Java reserved word, then they won't
-        // be able to set it with our generated builder.
-        for (String prop : scanned.properties.keySet()) {
-            if (javaKeyWords.contains(prop)) {
-                if (!noBuilder) {
-                    warn("Property " + type + "." + prop + " is a reserved word");
-                }
-                scanned.properties.remove(prop);
-            }
-        }
-
-        // Find any setters for the properties found above.
-        for (ExecutableElement method : methods) {
-            if (method.getModifiers().contains(Modifier.PUBLIC) &&
-                    !method.getModifiers().contains(Modifier.STATIC) &&
-                    types.isSameType(voidType, method.getReturnType()) &&
-                    method.getParameters().size() == 1 &&
-                    method.getTypeParameters().isEmpty()) {
-                final String name = method.getSimpleName().toString();
-                if (name.startsWith("set") && !name.equals("set")) {
-                    final String propertyName = Introspector.decapitalize(name.substring(3));
-                    TypeMirror getterType = scanned.typeOf(propertyName);
-                    TypeMirror setterType = method.getParameters().get(0).asType();
-                    if (getterType != null && types.isSameType(getterType, setterType)) {
-                        scanned.propertiesWithSetters.add(propertyName);
-                    }
-                }
-            }
-        }
-
-        // We also consider that getters for properties that are Collections (such as List or ObservableList) are
-        // effectively setters since you can replace the contents of the collection.  But if there is a setter
-        // we will prefer that.
-        Iterator<String> it = scanned.properties.keySet().iterator();
-        while (it.hasNext()) {
-            String pName = it.next();
-            TypeMirror pType = scanned.typeOf(pName);
-
-            if (types.isSubtype(types.erasure(pType), rawCollectionType)) {
-                if (isWildcardType(pType)) {
-                    // we ignore wildcard collections (e.g. List<? extend Color>
-                    // because there is no way to add an element to them anyway
-                    it.remove();
-                } else {
-                    boolean added = scanned.propertiesWithSetters.add(pName);
-                    if (added) {
-                        scanned.collectionProperties.add(pName);
-                    }
-                }
-            }
-        }
-
-        // Now we want the constructor that defines the most properties with no setters.  In the case
-        // of immutable classes, this will be the constructor that defines everything.  In the case
-        // of completely-mutable classes, this will typically be the no-arg constructor.  In the case
-        // of partly-mutable classes, this will be the constructor that defines all the immutable propeties.
-        // If there is a tie between two constructors then we choose the one that has the fewest parameters,
-        // which means that it sets the fewest properties that could also be set with setters.
-        ExecutableElement chosenConstructor;
-
-        chosenConstructor = chooseConstructor(type, scanned, Modifier.PUBLIC);
-        if (chosenConstructor == null && !scanned.propertiesWithSetters.isEmpty()) {
-            // If there is no public constructor but there are protected ones then we consider those,
-            // but we also mark the builder as abstract.  If the class has no setters (is immutable)
-            // with a protected constructor, then we will not make a buider for it.
-            chosenConstructor = chooseConstructor(type, scanned, Modifier.PROTECTED);
-            if (chosenConstructor != null) {
-                scanned.isAbstract = true;
-            }
-        }
-
-        if (chosenConstructor == null) {
-            if (!scanned.isAbstract) {
-                if (!forSuper && !noBuilder && scanned.properties.size() > 1) {
-                    warn("Cannot make builder for " + type +
-                            " because no constructor specifies only properties as parameters");
-                }
-                return new Scanned(null);
-            }
-        } else {
-            if (chosenConstructor.getKind() == ElementKind.CONSTRUCTOR) {
-                scanned.constructorCall = "new " + type;
-            } else {
-                scanned.constructorCall = type + "." + chosenConstructor.getSimpleName();
-            }
-
-            List<String> missingDefaults = new ArrayList<String>();
-            for (VariableElement param : chosenConstructor.getParameters()) {
-                String pName = param.getSimpleName().toString();
-                Default def = param.getAnnotation(Default.class);
-                String defaultInit;
-                if (def == null) {
-                    missingDefaults.add(pName);
-                    defaultInit = "";
-                } else {
-                    defaultInit = def.value();
-                }
-                scanned.constructorProperties.put(pName, defaultInit);
-                scanned.constructorParameters.add(setGet((SortedSet<String>) scanned.properties.keySet(), pName));
-            }
-
-            if (verbose && !noBuilder && !missingDefaults.isEmpty()) {
-                warn("Constructor does not specify @Default for parameters " + missingDefaults + ": " + chosenConstructor);
-            }
-        }
-
-        // process properties with @MovedFromSubclass annotation
-        scanned.buildMovedProperties(type);
-
+        Scanned scanned = Scanned.createScanned(superScanned, type, forSuper, utils);
+        scanMap.put(type, scanned);
         return scanned;
     }
 
-    // Find the constructor that sets the most immutable properties and the fewest mutable ones.
-    private ExecutableElement chooseConstructor(TypeElement type, Scanned scanned, Modifier access) {
-        ExecutableElement best = null;
-        int bestImmutables = -1;
-        int bestCount = -1;
-
-        final List<ExecutableElement> constructors =
-                new ArrayList<ExecutableElement>(ElementFilter.constructorsIn(type.getEnclosedElements()));
-
-        // It turns out that this is not appropriate, so it's disabled for now.  We may at some future point
-        // restore support for factories, probably with an explicit @Factory annotation.
-        if (false) {
-            // We rather hackily consider that static methods with the same name as the class they are in,
-            // ignoring case, are factory methods equivalent to constructors, as in Font.font and Color.color.
-            // If both a factory method and a constructor are "best", then we prefer the factory method on the
-            // grounds that it may be able to reuse instances and the like.
-            for (ExecutableElement factory : ElementFilter.methodsIn(type.getEnclosedElements())) {
-                if (factory.getModifiers().contains(Modifier.STATIC) &&
-                        factory.getSimpleName().toString().equalsIgnoreCase(type.getSimpleName().toString())) {
-                    constructors.add(factory);
-                }
-            }
-        }
-
-        for (ExecutableElement constructor : constructors) {
-            if (constructor.getModifiers().contains(access) && constructor.getTypeParameters().isEmpty()) {
-                int immutables = 0;
-                for (VariableElement param : constructor.getParameters()) {
-                    final String pName = param.getSimpleName().toString();
-                    final TypeMirror pType = scanned.typeOf(pName);
-                    if (pType == null ||
-                            (!types.isSameType(param.asType(), pType) && !param.asType().toString().equals(pType.toString()))) {
-                        // This area is a bit messy. Really we should be determining whether the parameter is a subtype of
-                        // the (possibly inherited) property type. But if it is a strict subtype then we need to adjust the
-                        // inherited type, so that for example InputEvent's constructor which takes an EventType<? extends InputEvent>
-                        // would cause the builder to have a field of that type, even though the corresponding property
-                        // inherited from Event is an EventType<? extends Event>. For now, we forgo some possibilities
-                        // to generate builders.
-                        immutables = -1;
-                        break;
-                    }
-                    if (!scanned.propertiesWithSetters.contains(pName)) {
-                        immutables++;
-                    }
-                }
-                final int count = constructor.getParameters().size();
-                if (immutables > bestImmutables || (immutables == bestImmutables && count < bestCount) ||
-                        (immutables == bestImmutables && count == bestCount && best != null &&
-                         best.getKind() == ElementKind.CONSTRUCTOR && constructor.getKind() == ElementKind.METHOD)) {
-                    // That last giant conjunct is where we prefer static factory methods to constructors,
-                    // all else being equal.
-                    best = constructor;
-                    bestImmutables = immutables;
-                    bestCount = count;
-                }
-            }
-        }
-
-        return best;
-    }
-
     private void processType(TypeElement type) {
-        note("BuilderProcessor: process " + type);
+        utils.note("BuilderProcessor: process " + type);
 
         Scanned scanned = scan(type, false);
-
-        Set<String> buildablePropertyNames = new TreeSet<String>(String.CASE_INSENSITIVE_ORDER);
-        buildablePropertyNames.addAll(scanned.propertiesWithSetters);
-        buildablePropertyNames.removeAll(scanned.inheritedSetters());
-        buildablePropertyNames.removeAll(scanned.unmodifiableCollectionProperties);
-        buildablePropertyNames.addAll(scanned.constructorProperties.keySet());
-        buildablePropertyNames.addAll(scanned.movedProperties);
-
-        Map<String, ExecutableElement> notBuildable = new TreeMap<String, ExecutableElement>(String.CASE_INSENSITIVE_ORDER);
-        notBuildable.putAll(scanned.properties);
-        notBuildable.keySet().removeAll(buildablePropertyNames);
-        notBuildable.keySet().removeAll(scanned.inheritedProperties());
+        Set<String> buildablePropertyNames = scanned.getBuildablePropertyNames();
 
         if (type.getAnnotation(NoBuilder.class) != null) {
             return;
         }
 
         // No properties, no builder
-        if (buildablePropertyNames.isEmpty() && scanned.inheritedSetters().isEmpty()) {
+        if (buildablePropertyNames.isEmpty() &&
+                !scanned.hasInheritedSetters() &&
+                !scanned.hasBuilderExtension()) {
             // We still want a builder if the parent has properties, since the generated builder will
             // construct the right type of object even though you will only be able to set the inherited properties.
+            //
+            // Also the builder methods may be specified by BuilderExtension
+            // so we want to construct the builder every time we have a BuilderExtension            
             return;
         }
 
         try {
             makeBuilder(type, scanned, buildablePropertyNames);
         } catch (IOException e) {
-            if (verbose) {
+            if (utils.verbose) {
                 e.printStackTrace();
             }
-            error("Could not make builder for " + type + ": " + e);
-        }
-    }
-
-    private String builderName(String type) {
-        Matcher m = inputPat.matcher(type);
-        if (m.matches()) {
-            String name = m.replaceAll(outputRepl);
-            builderNames.add(name);
-            return name;
-        } else {
-            error("Internal error: pattern does not match " + type);
-            return type + "Builder";
+            utils.error("Could not make builder for " + type + ": " + e);
         }
     }
 
@@ -638,104 +223,7 @@ public class BuilderProcessor extends AbstractProcessor {
                 Calendar.getInstance().get(Calendar.YEAR)
             });
 
-    // A string of the type parameters of this type, without the enclosing <>. For List<E>, it will be "E";
-    // for Integer, it will be ""; for Map<K, V>, it will be "K, V".
-    // If there is an "extends" clause it will be included, so for example
-    // ValueAxis<T extends Number> will return "T extends Number"
-    private static String typeParameterString(TypeElement type) {
-        String s = "";
-        for (TypeParameterElement p : type.getTypeParameters()) {
-            if (!s.isEmpty()) {
-                s += ", ";
-            }
-            s += p;
-            String b = p.getBounds().toString();
-            if (b.startsWith("[") && b.endsWith("]")) {
-                b = b.substring(1, b.length() - 1).trim();
-            }
-            if (!b.equals("java.lang.Object")) {
-                s += " extends " + b;
-            }
-        }
-        return s;
-    }
-
-    // A string of the type arguments of this type. Given ValueAxis<T> extends Axis<T>, if we ask about
-    // Axis<T> then the returned string will be "T".
-    private static String typeArgumentString(TypeMirror type0) {
-        DeclaredType type = (DeclaredType) type0;
-        String s = "";
-        for (TypeMirror p : type.getTypeArguments()) {
-            if (!s.isEmpty()) {
-                s += ", ";
-            }
-            s += p;
-        }
-        return s;
-    }
-
-    // Returns parameters of typed create()
-    // e.g. for this create:
-    // public static <T> ChoiceBoxBuilder<T, ?> create(final Class<T> type1)
-    // it returns final Class<T> type1
-    private String typedCreateParamString(TypeElement type) {
-        String s = "";
-        int i = 0;
-        for (TypeParameterElement p : type.getTypeParameters()) {
-            if (!s.isEmpty()) {
-                s += "> type" + i + " , ";
-            }
-            s += "final Class<";
-            s += p;
-            i++;
-        }
-        s += "> type" + i;
-        return s;
-    }
-
-    // Returns a string of the type arguments for non-typed create()
-    // e.g. <?, ?> in
-    // public static javafx.scene.control.ChoiceBoxBuilder<?, ?> create()
-    private String nonTypedCreateArgumentString(TypeElement type, boolean isFinal) {
-        String p = "";
-        for (int j = 1; j <= type.getTypeParameters().size(); j++) {
-            if (!p.isEmpty()) {
-                p += ", ";
-            }
-            p += "?";
-        }
-        if (!isFinal) {
-            p += ", ?";
-        }
-        return p;
-    }
-
-    private static boolean isWildcardType(TypeMirror type) {
-        boolean result = false;
-        if (type instanceof DeclaredType) {
-            DeclaredType dType = (DeclaredType) type;
-            for (TypeMirror typeArg : dType.getTypeArguments()) {
-                if (typeArg instanceof WildcardType) {
-                    result = true;
-                    break;
-                }
-            }
-        }
-        return result;
-    }
-
     private void makeBuilder(TypeElement type, Scanned scanned, Set<String> buildablePropertyNames) throws IOException {
-
-        if (false) {
-            // We do generate builders even if there is only one property.  Usually you'll just want to
-            // call the constructor in that case, but the builder does give you the option of naming the
-            // parameter, and it can also be inherited by several subclass builders.
-            int n = scanned.inheritedSetters().size() + buildablePropertyNames.size();
-            if (n < 2) {
-                warn("Properties in " + type + ": " + n);
-            }
-        }
-
         // Substitution variables that will be used as we construct the output text.  See rewrite method below.
         // If no value is defined for a var then its value is empty; this is error-prone but simplifies the logic
         // a lot.
@@ -747,7 +235,7 @@ public class BuilderProcessor extends AbstractProcessor {
         // A class can also be "effectively final" if it has no visible constructors, but we've already eliminated
         // such classes since we need a constructor in order to build.
 
-        final boolean inherits = !scanned.inheritedSetters().isEmpty();
+        final boolean inherits = scanned.hasInheritedSetters();
         // We only try to inherit from the superclass's builder if it exists and has setters.  If the superclass
         // is immutable then we are potentially missing a chance to reuse its builder's fields and methods, but
         // that case is rather unusual, and would require the builder to access those fields, which are currently
@@ -759,7 +247,8 @@ public class BuilderProcessor extends AbstractProcessor {
         buildableProperties.keySet().retainAll(buildablePropertyNames);
 
         vars.put("copyrightComment", copyrightComment);
-        final String builderName = builderName(type.toString());
+        final String builderName = utils.getBuilderName(type.toString());
+        builderNames.add(builderName);
         vars.put("builderName", builderName);
         final String[] tokens = builderName.split("\\.");
         vars.put("shortBuilderName", tokens[tokens.length - 1]);
@@ -769,6 +258,23 @@ public class BuilderProcessor extends AbstractProcessor {
             vars.put("packageDecl", "package " + pkg + ";");
         }
         vars.put("simpleName", builderName.substring(lastDot + 1));
+
+        // we need to know name of builderExtension even for classes without one
+        // if their parent class has one
+        // we need to put parent builder extension into construtor
+        vars.put("builderExtensionName", scanned.getBuilderExtensionName());
+        vars.put("builderExtensionAccess","private"); // private for now
+        if (scanned.hasBuilderExtension() || scanned.hasInheritedBuilderExtension()) {
+            vars.put("createBuilderExtension", "new {builderExtensionName}()");
+        }
+        if (scanned.hasBuilderExtension() && !scanned.hasInheritedBuilderExtension()) {
+            // has builder extension so we need to declare it
+            // Disabled for now: (but it is not inherited)
+            vars.put("declareBuilderExtension", "{builderExtensionAccess} final {builderExtensionName} be;");
+            vars.put("accessBuilderExtension", "be");
+        } else {
+            vars.put("accessBuilderExtension", "(({builderExtensionName})be)");
+        }
 
         if (isAbstract) {
             vars.put("abstract", "abstract ");
@@ -780,8 +286,8 @@ public class BuilderProcessor extends AbstractProcessor {
             vars.put("create4",     "return new {builderName}();");
             vars.put("create5", "}");
         }
-        final String originalTypeParams = typeParameterString(type);
-        final String typeArgs = typeArgumentString(type.asType());
+        final String originalTypeParams = AnnotationUtils.typeParameterString(type);
+        final String typeArgs = AnnotationUtils.typeArgumentString(type.asType());
         if (originalTypeParams.isEmpty()) {
             vars.put("type", type.toString());
             vars.put("rawType", type.toString());
@@ -791,8 +297,8 @@ public class BuilderProcessor extends AbstractProcessor {
             vars.put("type", type + "<" + originalTypeParams + ">");
             vars.put("rawType", type.getQualifiedName().toString());
             vars.put("typeWithoutBounds", type + "<" + typeArgs + ">");
-            vars.put("createParams", typedCreateParamString(type));
-            String nonTypedArgs = nonTypedCreateArgumentString(type, isFinal);
+            vars.put("createParams", AnnotationUtils.typedCreateParamString(type));
+            String nonTypedArgs = AnnotationUtils.nonTypedCreateArgumentString(type, isFinal);
             vars.put("createType2", builderName + "<" + nonTypedArgs + ">");
             if (!isAbstract) {
                 vars.put("createB1", "/** Creates a new instance of {shortBuilderName}. */");
@@ -808,16 +314,16 @@ public class BuilderProcessor extends AbstractProcessor {
             // the full declaration of ValueAxisBuilder is
             // public class ValueAxisBuilder<T extends Number, B extends ValueAxisBuilder<T, B>> extends AxisBuilder<T, B>
             // Here we are computing "extends AxisBuilder<T, B>".
-            final String sup = builderName(types.erasure(type.getSuperclass()).toString());
+            final String sup = utils.getBuilderName(utils.types.erasure(type.getSuperclass()).toString());
             vars.put("supB", "B");
-            final String supTypeParams = typeArgumentString(type.getSuperclass());
+            final String supTypeParams = AnnotationUtils.typeArgumentString(type.getSuperclass());
             if (supTypeParams.isEmpty()) {
                 vars.put("extends", " extends " + sup + "<{supB}>");
             } else {
                 vars.put("extends", " extends " + sup + "<" + supTypeParams + ", {supB}>");
             }
         }
-        if (!scanned.isAbstract && isAbstract(scanned.superScanned)) {
+        if (!scanned.isAbstract && Scanned.isAbstract(scanned.superScanned)) {
             vars.put("implements", " implements javafx.util.Builder<{typeWithoutBounds}>");
         }
         final String typeParams;
@@ -854,6 +360,18 @@ public class BuilderProcessor extends AbstractProcessor {
 
         vars.put("classjavadoc", "Builder class for " + type.getQualifiedName());
 
+        if (scanned.hasBuilderExtension() || scanned.hasInheritedBuilderExtension()) {
+            vars.put("constructorBuilderExtension1", "{builderExtensionAccess} {simpleName}({builderExtensionName} be) {");
+            if (scanned.hasInheritedBuilderExtension()) {
+                vars.put("constructorBuilderExtension2", "super(be);");
+                vars.put("assingBuilderExtension", "this({createBuilderExtension});");
+            } else {
+                vars.put("constructorBuilderExtension2", "this.be = be;");
+                vars.put("assingBuilderExtension", "this.be = {createBuilderExtension};");
+            }
+            vars.put("constructorBuilderExtension3", "}");
+        }
+
         List<String> lines = rewrite(vars,
                 "{debug}",
                 "{copyrightComment}",
@@ -866,7 +384,14 @@ public class BuilderProcessor extends AbstractProcessor {
                 generated,
                 "public {final}{abstract}class {simpleName}{typeParams}{extends}{implements} {",
                     "protected {simpleName}() {",
+                 // should be
+                 // "{constructorAccess} {simpleName}() {",
+                    "{assingBuilderExtension}",
                     "}",
+                    "{declareBuilderExtension}",
+                    "{constructorBuilderExtension1}",
+                    "{constructorBuilderExtension2}",
+                    "{constructorBuilderExtension3}",
                     "",
                     "{create1}",
                     "{create2}",
@@ -881,9 +406,14 @@ public class BuilderProcessor extends AbstractProcessor {
                     "{createB5}",
                     "{createB6}"
                 );
+                
+        if (scanned.hasBuilderExtension()) {
+            List<String> be = processBuilderExtension(vars, scanned);
+            lines.addAll(rewrite(vars, be));
+        }
 
-        if (!setters.isEmpty() || inherits) {
-            List<String> applyTo = makeApplyTo(vars, setters, scanned, !scanned.inheritedSetters().isEmpty());
+        if (!setters.isEmpty() || inherits || scanned.hasBuilderExtension()) {
+            List<String> applyTo = makeApplyTo(vars, setters, scanned, inherits);
             lines.addAll(rewrite(vars, applyTo));
             vars.put("applyTo(x)", "applyTo(x);");
         }
@@ -901,7 +431,7 @@ public class BuilderProcessor extends AbstractProcessor {
             // an existing object. In either case, we remember {elementType} so that we can use it to provide
             // a varargs setter as well, which will be Color... or whatever.
             if (scanned.collectionProperties.contains(pName) &&
-                    pType instanceof DeclaredType && ((DeclaredType) pType).getTypeArguments().size() == 1) {
+                    AnnotationUtils.hasOneArgument(pType)) {
                 TypeMirror typeArg = ((DeclaredType) pType).getTypeArguments().get(0);
                 if (scanned.constructorProperties.containsKey(pName)) {
                     vars.put("pType", pType.toString());
@@ -992,6 +522,59 @@ public class BuilderProcessor extends AbstractProcessor {
 
         makeClass(builderName, type, lines);
     }
+    
+    private List<String> processBuilderExtension(Map<String, Object> vars, Scanned scanned) {
+        final List<String> lines = new ArrayList<String>();
+        
+        for (ExecutableElement method : scanned.builderExtensionMethods) {
+            final String name = method.getSimpleName().toString();
+            String javadoc = utils.elements.getDocComment(method);
+            vars.put("javadoc", javadoc != null ? javadoc : "");
+            vars.put("methodName", name);
+            vars.put("methodTypes", AnnotationUtils.methodParameterString(method));
+            vars.put("methodArgs", AnnotationUtils.methodCallParameterString(method));
+
+            if (scanned.builderExtensionProperties.contains(name) &&
+                scanned.constructorParameters.contains(name)) {
+                    // Special case when we want to change the behavior of 
+                    // otherwise constructed method
+                    // eg. StageBuilder.style(StageStyle x)
+                    // we know it has exactly 1 argument otherwise it would not 
+                    // be put into builderExtensionProperties
+                    VariableElement el = method.getParameters().get(0);
+                    String init = scanned.constructorProperties.get(name);
+                    
+                    if (init == null || init.isEmpty()) {
+                        vars.remove("init");
+                    } else {
+                        vars.put("init", " = " + init);
+                    }
+                    vars.put("argName", el.getSimpleName());
+                    vars.put("pType", el.asType());
+                    vars.put("pName", name);
+                    vars.put("constructorPropertyDef", "private {pType} {pName}{init};");
+                    vars.put("constructorPropertyAssign", "this.{pName} = {argName};");
+            } else {
+                vars.remove("constructorPropertyDef");
+                vars.remove("constructorPropertyAssign");
+            }
+            lines.addAll(rewrite(vars,
+                    "{constructorPropertyDef}", // for constructor args
+                    "/**",
+                    " {javadoc}",
+                    " */",
+                    "{suppressWarnings}",
+                    "public B {methodName}({methodTypes}) {",
+                        "{constructorPropertyAssign}", // for constructor args
+                        "{accessBuilderExtension}.{methodName}({methodArgs});",
+                        "return {cast}this;",
+                    "}",
+                    ""
+                    ));
+        }
+        
+        return lines;
+    }
 
     // This complicated method does two things.  First, it updates |vars| with extra definitions
     // that are appropriate when there will be setter calls at construction time.  Second, it returns
@@ -1000,7 +583,7 @@ public class BuilderProcessor extends AbstractProcessor {
     private List<String> makeApplyTo(
             Map<String, Object> vars, List<String> properties, final Scanned scanned, boolean inheritsSetters) {
         int n = properties.size();
-        if (n == 0) {
+        if (n == 0  && !scanned.hasBuilderExtension()) {
             return Collections.emptyList();
         }
 
@@ -1011,7 +594,7 @@ public class BuilderProcessor extends AbstractProcessor {
                 String cap = cap(property);
                 if (scanned.collectionProperties.contains(property)) {
                     TypeMirror type = scanned.typeOf(property);
-                    if (rawObservableListType != null && types.isSubtype(types.erasure(type), rawObservableListType)) {
+                    if (utils.isObservableList(type)) {
                         return "x.get" + cap + "().addAll(" + value + ");";
                     } else {
                         return "{ x.get" + cap + "().clear(); x.get" + cap + "().addAll(" + value + "); }";
@@ -1033,69 +616,78 @@ public class BuilderProcessor extends AbstractProcessor {
         if (inheritsSetters) {
             lines.add("super.applyTo(x);");
         }
+        
+        // only call applyTo for builderExtension for the top class 
+        // in the hierarchy of inherited builders, otherwise it would
+        // be called more than once (as builder.applyTo calls super.applyTo())
+        if (scanned.hasBuilderExtension() && !scanned.hasInheritedBuilderExtension()) {
+            lines.add("be.applyTo(x);");
+        }
 
-        vars.put("declareBitset", "private {bitset} __set;");
-        if (n == 1) {
-            // If there is only one property then we only need a boolean to record whether it has been set.
-            vars.put("bitset", "boolean");
-            vars.put("setBitI", "__set = true;");
-            lines.addAll(rewrite(vars, "if (__set) " + setterCall.make(properties.get(0))));
-        } else if (n < 8) {
-            // With a small number of properties, we can record them in an int bitset, and use a sequence of ifs
-            // to determine which of them has been set.
-            vars.put("bitset", "int");
-            vars.put("setBitI", "__set |= 1 << {i};");
-            lines.add("int set = __set;");
-            for (int i = 0; i < n; i++) {
-                vars.put("i", i);
-                vars.put("set", setterCall.make(properties.get(i)));
-                lines.addAll(rewrite(vars,
-                        "if ((set & (1 << {i})) != 0) {set}"));
-            }
-        } else {
-            // With many properties, it is cheaper in both code size and time to loop over the bits and determine
-            // which ones have been set.
-            vars.put("setStart", "private void __set(int i) {");
-            vars.put("setBody", "{setBitI}");
-            vars.put("setEnd", "}");
-            vars.put("setBitI", "__set({i});");
-            if (n < 64) {
-                if (n < 32) {
-                    vars.put("bitset", "int");
-                    vars.put("one", "1");
-                    vars.put("boxedBits", "Integer");
-                } else {
-                    vars.put("bitset", "long");
-                    vars.put("one", "1L");
-                    vars.put("boxedBits", "Long");
+        if (n > 0) { // empty applyTo for builder extension
+            vars.put("declareBitset", "private {bitset} __set;");
+            if (n == 1) {
+                // If there is only one property then we only need a boolean to record whether it has been set.
+                vars.put("bitset", "boolean");
+                vars.put("setBitI", "__set = true;");
+                lines.addAll(rewrite(vars, "if (__set) " + setterCall.make(properties.get(0))));
+            } else if (n < 8) {
+                // With a small number of properties, we can record them in an int bitset, and use a sequence of ifs
+                // to determine which of them has been set.
+                vars.put("bitset", "int");
+                vars.put("setBitI", "__set |= 1 << {i};");
+                lines.add("int set = __set;");
+                for (int i = 0; i < n; i++) {
+                    vars.put("i", i);
+                    vars.put("set", setterCall.make(properties.get(i)));
+                    lines.addAll(rewrite(vars,
+                            "if ((set & (1 << {i})) != 0) {set}"));
                 }
-                vars.put("setBody", "__set |= {one} << i;");
-                vars.put("loop1", "while (set != 0) {");
-                vars.put("loop2", "int i = {boxedBits}.numberOfTrailingZeros(set);");
-                vars.put("loop3", "set &= ~({one} << i);");
             } else {
-                // At the time of writing, no classes had more than 64 properties.  (This doesn't include
-                // inherited properties, so 64 is really quite a lot.)
-                vars.put("bitset", "java.util.BitSet");
-                vars.put("declareBitset", "java.util.BitSet __set = new java.util.BitSet();");
-                vars.put("setBody", "__set.set(i);");
-                vars.put("loop1", "for (int i = -1; (i = set.nextSetBit(i + 1)) >= 0; ) {");
-            }
-            lines.addAll(rewrite(vars,
-                    "{bitset} set = __set;",
-                    "{loop1}",
-                    "{loop2}",
-                    "{loop3}",
-                    "switch (i) {"));
-            for (int i = 0; i < n; i++) {
-                vars.put("i", i);
-                vars.put("set", setterCall.make(properties.get(i)));
+                // With many properties, it is cheaper in both code size and time to loop over the bits and determine
+                // which ones have been set.
+                vars.put("setStart", "private void __set(int i) {");
+                vars.put("setBody", "{setBitI}");
+                vars.put("setEnd", "}");
+                vars.put("setBitI", "__set({i});");
+                if (n < 64) {
+                    if (n < 32) {
+                        vars.put("bitset", "int");
+                        vars.put("one", "1");
+                        vars.put("boxedBits", "Integer");
+                    } else {
+                        vars.put("bitset", "long");
+                        vars.put("one", "1L");
+                        vars.put("boxedBits", "Long");
+                    }
+                    vars.put("setBody", "__set |= {one} << i;");
+                    vars.put("loop1", "while (set != 0) {");
+                    vars.put("loop2", "int i = {boxedBits}.numberOfTrailingZeros(set);");
+                    vars.put("loop3", "set &= ~({one} << i);");
+                } else {
+                    // At the time of writing, no classes had more than 64 properties.  (This doesn't include
+                    // inherited properties, so 64 is really quite a lot.)
+                    vars.put("bitset", "java.util.BitSet");
+                    vars.put("declareBitset", "java.util.BitSet __set = new java.util.BitSet();");
+                    vars.put("setBody", "__set.set(i);");
+                    vars.put("loop1", "for (int i = -1; (i = set.nextSetBit(i + 1)) >= 0; ) {");
+                }
                 lines.addAll(rewrite(vars,
-                        "case {i}: {set} break;"));
-            }
+                        "{bitset} set = __set;",
+                        "{loop1}",
+                        "{loop2}",
+                        "{loop3}",
+                        "switch (i) {"));
+                for (int i = 0; i < n; i++) {
+                    vars.put("i", i);
+                    vars.put("set", setterCall.make(properties.get(i)));
+                    lines.addAll(rewrite(vars,
+                            "case {i}: {set} break;"));
+                }
             lines.add("default: break; // can never happen");
-            lines.add("}"); // switch
-            lines.add("}"); // loop
+                lines.add("}"); // switch
+                lines.add("}"); // loop
+            }
         }
 
         lines.add("}");
@@ -1108,7 +700,7 @@ public class BuilderProcessor extends AbstractProcessor {
     // left braces always appear at the end of a line and right braces at the beginning.  (It will also work
     // if matching braces appear within a line.)
     private void makeClass(String className, TypeElement originatingElement, List<String> lines) throws IOException {
-        JavaFileObject jfo = filer.createSourceFile(className, originatingElement);
+        JavaFileObject jfo = processingEnv.getFiler().createSourceFile(className, originatingElement);
         Writer w = jfo.openWriter();
         PrintWriter pw = new PrintWriter(w);
         int indent = 0;
@@ -1173,29 +765,4 @@ public class BuilderProcessor extends AbstractProcessor {
     private static String cap(String p) {
         return Character.toUpperCase(p.charAt(0)) + p.substring(1);
     }
-
-    // Return the element of the given set that is equal to e according to the set's comparator.
-    // This can be used to get the canonical spelling wrt case when the comparator is String.CASE_INSENSITIVE_ORDER
-    // for example.
-    private static <E> E setGet(SortedSet<E> set, E e) {
-        Comparator<? super E> cmp = set.comparator();
-        for (E x : set) {
-            if (cmp.compare(x, e) == 0) {
-                return x;
-            }
-        }
-        return null;
-    }
-
-    private static boolean isAbstract(Scanned scanned) {
-        return scanned == null || (scanned.isAbstract && isAbstract(scanned.superScanned));
-    }
-    
-    private static final Set<String> javaKeyWords = new TreeSet<String>(Arrays.asList(
-        "abstract", "assert", "boolean", "break", "byte", "case", "catch", "char", "class", "const",
-        "continue", "default", "do", "double", "else", "enum", "extends", "false", "final", "finally", "float",
-        "for", "goto", "if", "implements", "import", "instanceof", "int", "interface", "long", "native",
-        "new", "null", "package", "private", "protected", "public", "return", "short", "static", "strictfp",
-        "super", "switch", "synchronized", "this", "throw", "throws", "transient", "true", "try", "void",
-        "volatile", "while"));
 }

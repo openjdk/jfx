@@ -40,10 +40,11 @@ import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeView;
 
 import javafx.css.StyleableDoubleProperty;
+import javafx.css.StyleableProperty;
 import javafx.css.CssMetaData;
 import com.sun.javafx.css.converters.SizeConverter;
 import com.sun.javafx.scene.control.behavior.TreeCellBehavior;
-import javafx.css.StyleableProperty;
+import javafx.geometry.Insets;
 
 public class TreeCellSkin extends CellSkinBase<TreeCell<?>, TreeCellBehavior> {
 
@@ -121,6 +122,9 @@ public class TreeCellSkin extends CellSkinBase<TreeCell<?>, TreeCellBehavior> {
         } else if (disclosureNode.getParent() == null) {
             getChildren().add(disclosureNode);
             disclosureNode.toFront();
+            
+            // RT-26625: [TreeView, TreeTableView] can lose arrows while scrolling
+            disclosureNode.impl_processCSS(true);
         } else {
             disclosureNode.toBack();
         }
@@ -160,16 +164,16 @@ public class TreeCellSkin extends CellSkinBase<TreeCell<?>, TreeCellBehavior> {
             }
             
             if (disclosureNode != null) {
-                disclosureWidth = disclosureNode.prefWidth(-1);
+                disclosureWidth = disclosureNode.prefWidth(h);
                 if (disclosureWidth > defaultDisclosureWidth) {
                     maxDisclosureWidthMap.put(tree, disclosureWidth);
                 }
 
-                double ph = disclosureNode.prefHeight(-1);
-
+                double ph = disclosureNode.prefHeight(disclosureWidth);
+                
                 disclosureNode.resize(disclosureWidth, ph);
                 positionInArea(disclosureNode, x, y,
-                        disclosureWidth, h, /*baseline ignored*/0,
+                        disclosureWidth, ph, /*baseline ignored*/0,
                         HPos.CENTER, VPos.CENTER);
             }
         }
@@ -192,7 +196,8 @@ public class TreeCellSkin extends CellSkinBase<TreeCell<?>, TreeCellBehavior> {
     @Override protected double computePrefWidth(double height) {
         double labelWidth = super.computePrefWidth(height);
 
-        double pw = getInsets().getLeft() + getInsets().getRight();
+        final Insets padding = getSkinnable().getInsets();
+        double pw = padding.getLeft() + padding.getRight();
 
         TreeView tree = getSkinnable().getTreeView();
         if (tree == null) return pw;

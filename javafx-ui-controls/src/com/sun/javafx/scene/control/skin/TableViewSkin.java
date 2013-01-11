@@ -247,7 +247,13 @@ public class TableViewSkin<T> extends TableViewSkinBase<T, TableView<T>, TableVi
             }
         }
         
-        col.impl_setWidth(maxWidth + padding);
+        // RT-23486
+        double widthMax = maxWidth + padding;
+        if(tableView.getColumnResizePolicy() == TableView.CONSTRAINED_RESIZE_POLICY) {
+             widthMax = Math.max(widthMax, col.getWidth());
+        }
+
+        col.impl_setWidth(widthMax); 
     }
     
     /** {@inheritDoc} */

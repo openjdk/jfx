@@ -51,6 +51,7 @@ import com.sun.javafx.scene.control.behavior.ProgressBarBehavior;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
 import javafx.css.StyleableProperty;
+import javafx.geometry.Insets;
 import javafx.scene.control.SkinBase;
 
 
@@ -251,7 +252,7 @@ public class ProgressBarSkin extends BehaviorSkinBase<ProgressBar, ProgressBarBe
                         if (getSkinnable().impl_isTreeVisible()) {
                             indeterminateTimeline.play();
                         }
-                        requestLayout();
+                        getSkinnable().requestLayout();
                     }
                 }
             }
@@ -259,7 +260,8 @@ public class ProgressBarSkin extends BehaviorSkinBase<ProgressBar, ProgressBarBe
         control.sceneProperty().addListener(sceneListener);
 
 
-        barWidth = ((int) (control.getWidth() - getInsets().getLeft() - getInsets().getRight()) * 2 * Math.min(1, Math.max(0, control.getProgress()))) / 2.0F;
+        final Insets padding = getSkinnable().getInsets();
+        barWidth = ((int) (control.getWidth() - padding.getLeft() - padding.getRight()) * 2 * Math.min(1, Math.max(0, control.getProgress()))) / 2.0F;
 
         InvalidationListener listener = new InvalidationListener() {
             @Override public void invalidated(Observable valueModel) {
@@ -276,7 +278,7 @@ public class ProgressBarSkin extends BehaviorSkinBase<ProgressBar, ProgressBarBe
         getSkinnable().setClip(clipRectangle);
 
         initialize();
-        requestLayout();
+        getSkinnable().requestLayout();
     }
 
     private void initialize() {
@@ -325,7 +327,9 @@ public class ProgressBarSkin extends BehaviorSkinBase<ProgressBar, ProgressBarBe
     private void createIndeterminateTimeline() {
         if (indeterminateTimeline != null) indeterminateTimeline.stop();
 
-        final double w = getWidth() - (getInsets().getLeft() + getInsets().getRight());
+        ProgressBar control = getSkinnable();
+        Insets padding = control.getInsets();
+        final double w = control.getWidth() - (padding.getLeft() + padding.getRight());
         final double startX = getIndeterminateBarEscape()? -getIndeterminateBarLength() : 0;
         final double endX = getIndeterminateBarEscape()? w : w - getIndeterminateBarLength();
 
@@ -361,14 +365,15 @@ public class ProgressBarSkin extends BehaviorSkinBase<ProgressBar, ProgressBarBe
 
     private void updateProgress() {
         ProgressBar control = getSkinnable();
-        barWidth = ((int) (control.getWidth() - getInsets().getLeft() - getInsets().getRight()) * 2 * Math.min(1, Math.max(0, control.getProgress()))) / 2.0F;
-        requestLayout();
+        Insets padding = control.getInsets();
+        barWidth = ((int) (control.getWidth() - padding.getLeft() - padding.getRight()) * 2 * Math.min(1, Math.max(0, control.getProgress()))) / 2.0F;
+        getSkinnable().requestLayout();
     }
 
     @Override
     public double getBaselineOffset() {
         double height = getSkinnable().getHeight();        
-        return getInsets().getTop() + height;
+        return getSkinnable().getInsets().getTop() + height;
     }
     
     @Override public void dispose() {
@@ -390,11 +395,14 @@ public class ProgressBarSkin extends BehaviorSkinBase<ProgressBar, ProgressBarBe
      **************************************************************************/
 
     @Override protected double computePrefWidth(double height) {
-        return Math.max(100, getInsets().getLeft() + bar.prefWidth(getWidth()) + getInsets().getRight());
+        ProgressBar control = getSkinnable();
+        Insets padding = control.getInsets();
+        return Math.max(100, padding.getLeft() + bar.prefWidth(control.getWidth()) + padding.getRight());
     }
 
     @Override protected double computePrefHeight(double width) {
-        return getInsets().getTop() + bar.prefHeight(width) + getInsets().getBottom();
+        Insets padding = getSkinnable().getInsets();
+        return padding.getTop() + bar.prefHeight(width) + padding.getBottom();
     }
 
     @Override protected double computeMaxWidth(double height) {
@@ -407,18 +415,21 @@ public class ProgressBarSkin extends BehaviorSkinBase<ProgressBar, ProgressBarBe
 
     @Override protected void layoutChildren(final double x, final double y,
             final double w, final double h) {
-        boolean isIndeterminate = getSkinnable().isIndeterminate();
+        
+        final ProgressBar control = getSkinnable();
+        final Insets padding = control.getInsets();
+        boolean isIndeterminate = control.isIndeterminate();
 
         // Prevent the indeterminate bar from drawing outside the skin
         if (clipRectangle != null) {
-            clipRectangle.setWidth(getWidth());
-            clipRectangle.setHeight(getHeight());
+            clipRectangle.setWidth(control.getWidth());
+            clipRectangle.setHeight(control.getHeight());
         }
 
         track.resizeRelocate(x, y, w, h);
 
         bar.resizeRelocate(x, y, isIndeterminate? getIndeterminateBarLength() : barWidth,
-                   getHeight() - (getInsets().getTop() + getInsets().getBottom()));
+                   control.getHeight() - (padding.getTop() + padding.getBottom()));
 
         // things should be invisible only when well below minimum length
         track.setVisible(true);

@@ -745,7 +745,7 @@ private void setIcon(Key key, String fileName) {
     @Override public void layoutChildren(final double x, final double y,
             final double w, final double h) {
         double kw, kh;
-        Insets insets = getInsets();
+        Insets insets = getSkinnable().getInsets();
         if (vbox == null) {
             createKeys();
         }
@@ -774,7 +774,7 @@ private void setIcon(Key key, String fileName) {
             kh = ((FXVKSkin)primaryVK.getSkin()).keyHeight;
         } else {
             kw = (hbox.getWidth() - (maxNKeys - 1) * hGap) / Math.max(maxWidth, 10.0);
-            kh = (getHeight() - insets.getTop() - insets.getBottom() - (keyRows.length - 1) * vbox.getSpacing()) / keyRows.length;
+            kh = (getSkinnable().getHeight() - insets.getTop() - insets.getBottom() - (keyRows.length - 1) * vbox.getSpacing()) / keyRows.length;
         }
 
         if (keyWidth != kw || keyHeight != kh) {
@@ -866,7 +866,7 @@ private void setIcon(Key key, String fileName) {
                 secondaryVK.setAttachedNode(textInput);
                 FXVKSkin primarySkin = (FXVKSkin)primaryVK.getSkin();
                 FXVKSkin secondarySkin = (FXVKSkin)secondaryVK.getSkin();
-                Insets insets = secondarySkin.getInsets();
+                Insets insets = secondarySkin.getSkinnable().getInsets();
                 int nKeys = secondaryVK.chars.length;
                 int nRows = (int)Math.floor(Math.sqrt(Math.max(1, nKeys - 2)));
                 int nKeysPerRow = (int)Math.ceil(nKeys / (double)nRows);

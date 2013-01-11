@@ -100,9 +100,13 @@ public class ServiceWithSecurityManagerTest extends ServiceLifecycleTest {
 
             @Override public void checkPermission(Permission permission) {
                 if (isPrivileged()) return; // OK
-                if (permission instanceof RuntimePermission &&
-                        "setSecurityManager".equals(permission.getName())) {
-                    return; // OK
+                if (permission instanceof RuntimePermission) {
+                    if ("setSecurityManager".equals(permission.getName())) {
+                        return; // OK
+                    }
+                    if ("accessClassInPackage.sun.util.logging".equals(permission.getName())) {
+                        return; // OK
+                    }
                 }
                 super.checkPermission(permission);
             }

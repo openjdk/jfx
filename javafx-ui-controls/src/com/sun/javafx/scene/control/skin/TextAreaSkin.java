@@ -43,7 +43,6 @@ import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.Bounds;
 import javafx.geometry.Insets;
-import javafx.geometry.NodeOrientation;
 import javafx.geometry.Orientation;
 import javafx.geometry.Point2D;
 import javafx.geometry.Rectangle2D;
@@ -61,7 +60,6 @@ import javafx.scene.shape.MoveTo;
 import javafx.scene.shape.Path;
 import javafx.scene.shape.PathElement;
 import javafx.scene.text.Text;
-import javafx.scene.text.TextAlignment;
 import javafx.util.Duration;
 import com.sun.javafx.PlatformUtil;
 import com.sun.javafx.scene.control.behavior.TextAreaBehavior;
@@ -296,6 +294,10 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
                 caretPath.getElements().addAll(paragraphNode.getImpl_caretShape());
 
                 caretPath.setLayoutX(paragraphNode.getLayoutX());
+
+                // TODO: Remove this temporary workaround for RT-27533
+                paragraphNode.setLayoutX(2 * paragraphNode.getLayoutX() - paragraphNode.getBoundsInParent().getMinX());
+
                 caretPath.setLayoutY(paragraphNode.getLayoutY());
                 if (oldCaretBounds == null || !oldCaretBounds.equals(caretPath.getBoundsInParent())) {
                     scrollCaretToVisible();
@@ -421,15 +423,13 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
 
         forwardBiasProperty().addListener(new InvalidationListener() {
             @Override public void invalidated(Observable observable) {
-                if (getWidth() > 0) {
+                if (textArea.getWidth() > 0) {
                     updateTextNodeCaretPos(textArea.getCaretPosition());
                 }
             }
         });
 
 //        setManaged(false);
-
-        contentView.setNodeOrientation(NodeOrientation.LEFT_TO_RIGHT);
 
         // Initialize content
         scrollPane = new ScrollPane();
@@ -502,7 +502,7 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
             @Override
             public void changed(ObservableValue<? extends IndexRange> observable, IndexRange oldValue, IndexRange newValue) {
                 // TODO Why do we need two calls here?
-                requestLayout();
+                textArea.requestLayout();
                 contentView.requestLayout();
             }
         });
@@ -639,7 +639,7 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
         usePromptText.addListener(new InvalidationListener() {
             @Override public void invalidated(Observable observable) {
                 createPromptNode();
-                requestLayout();
+                textArea.requestLayout();
             }
         });
 
@@ -771,10 +771,6 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
         paragraphNode.fontProperty().bind(font);
         paragraphNode.fillProperty().bind(textFill);
         paragraphNode.impl_selectionFillProperty().bind(highlightTextFill);
-        
-        if (textArea.getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT) {
-            paragraphNode.setTextAlignment(TextAlignment.RIGHT);
-        }
     }
 
     @Override public void layoutChildren(final double x, final double y,
@@ -800,7 +796,7 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
 
     @Override
     public double getBaselineOffset() {
-        return fontMetrics.get().getAscent() + getInsets().getTop();
+        return fontMetrics.get().getAscent() + textArea.getInsets().getTop();
     }
 
     @Override
@@ -1136,6 +1132,11 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
     double targetCaretX = -1;
 
     @Override public void nextCharacterVisually(boolean moveRight) {
+        if (isRTL()) {
+            // Text node is mirrored.
+            moveRight = !moveRight;
+        }
+
         Text textNode = getTextNode();
         Bounds caretBounds = caretPath.getLayoutBounds();
         if (caretPath.getElements().size() == 4) {
@@ -1157,11 +1158,11 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
             // We're at beginning or end of line. Try moving up / down.
             int dot = textArea.getCaretPosition();
             targetCaretX = moveRight ? 0 : Double.MAX_VALUE;
-            // TODO: Use Bidi sniffing instead of base direction here?
-            downLines((moveRight != isRTL()) ? -1 : 1, false, false);
+            // TODO: Use Bidi sniffing instead of assuming right means forward here?
+            downLines(moveRight ? 1 : -1, false, false);
             targetCaretX = -1;
             if (dot == textArea.getCaretPosition()) {
-                if (moveRight != isRTL()) {
+                if (moveRight) {
                     textArea.forward();
                 } else {
                     textArea.backward();
@@ -1215,13 +1216,13 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
                   select, false);
     }
 
-    public void toLeftLineEdge(boolean select, boolean extendSelection) {
+    public void lineStart(boolean select, boolean extendSelection) {
         targetCaretX = 0;
         downLines(0, select, extendSelection);
         targetCaretX = -1;
     }
 
-    public void toRightLineEdge(boolean select, boolean extendSelection) {
+    public void lineEnd(boolean select, boolean extendSelection) {
         targetCaretX = Double.MAX_VALUE;
         downLines(0, select, extendSelection);
         targetCaretX = -1;

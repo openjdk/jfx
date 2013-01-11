@@ -27,8 +27,13 @@ package com.sun.javafx.scene.control.skin;
 import com.sun.javafx.scene.control.behavior.TreeTableCellBehavior;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ReadOnlyDoubleProperty;
+import javafx.scene.Node;
+import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeTableCell;
 import javafx.scene.control.TreeTableColumn;
+import javafx.scene.control.TreeTableRow;
+import javafx.scene.control.TreeTableView;
+import sun.security.jca.GetInstance;
 
 /**
  */
@@ -52,5 +57,58 @@ public class TreeTableCellSkin extends TableCellSkinBase<TreeTableCell, TreeTabl
 
     @Override protected ReadOnlyDoubleProperty columnWidthProperty() {
         return tableColumn.widthProperty();
+    }
+    
+    @Override protected double computePrefWidth(double height) {
+        if (isDeferToParentForPrefWidth) {
+            // RT-27167: we must take into account the disclosure node and the
+            // indentation (which is not taken into account by the LabeledSkinBase.
+            double pw = super.computePrefWidth(height);
+            
+            TreeTableCell cell = getSkinnable();
+            
+            TreeTableColumn tableColumn = cell.getTableColumn();
+            if (tableColumn == null) return pw;
+            
+            // check if this column is the TreeTableView treeColumn (i.e. the 
+            // column showing the disclosure node and graphic).
+            TreeTableView treeTable = cell.getTreeTableView();
+            if (treeTable == null) return pw;
+            
+            int columnIndex = treeTable.getVisibleLeafIndex(tableColumn);
+            
+            TreeTableColumn treeColumn = treeTable.getTreeColumn();
+            if ((treeColumn == null && columnIndex != 0) || (treeColumn != null && ! tableColumn.equals(treeColumn))) {
+                return pw;
+            }
+            
+            TreeTableRow treeTableRow = cell.getTreeTableRow();
+            if (treeTableRow == null) return pw;
+            
+            TreeItem treeItem = treeTableRow.getTreeItem();
+            if (treeItem == null) return pw;
+            
+            int nodeLevel = TreeTableView.getNodeLevel(treeItem);
+            if (! treeTable.isShowRoot()) nodeLevel--;
+
+            // FIXME we're assuming an indent of 10px here, which is not
+            // necessarily accurate as it is configurable via -fx-indent.
+            // Unfortunately this value is stored in TreeTableRowSkin.
+            pw += nodeLevel * 10;
+            
+            // add in the width of the disclosure node, if one exists
+            Node disclosureNode = treeTableRow.getDisclosureNode();
+            pw += disclosureNode == null ? 0 : disclosureNode.prefWidth(height);
+
+            // Adding a little extra for padding
+            pw += 13;
+
+            // adding in the width of the graphic on the tree item
+            Node graphic = treeItem.getGraphic();
+            pw += graphic == null ? 0 : graphic.prefWidth(height);
+
+            return pw;
+        }
+        return columnWidthProperty().get();
     }
 }

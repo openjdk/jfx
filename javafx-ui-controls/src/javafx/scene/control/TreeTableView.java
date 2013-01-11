@@ -550,16 +550,21 @@ public class TreeTableView<S> extends Control {
             
             // Fix for RT-15194: Need to remove removed columns from the 
             // sortOrder list.
+            List<TreeTableColumn> toRemove = new ArrayList<TreeTableColumn>();
             while (c.next()) {
                 TableUtil.removeColumnsListener(c.getRemoved(), weakColumnsObserver);
                 TableUtil.addColumnsListener(c.getAddedSubList(), weakColumnsObserver);
                 
                 if (c.wasRemoved()) {
-                    for (int i = 0; i < c.getRemovedSize(); i++) {
-                        getSortOrder().remove(c.getRemoved().get(i));
-                    }
+                    toRemove.addAll(c.getRemoved());
+                }
+                
+                if (c.wasAdded()) {
+                    toRemove.removeAll(c.getAddedSubList());
                 }
             }
+            
+            sortOrder.removeAll(toRemove);
         }
     };
     
@@ -692,6 +697,31 @@ public class TreeTableView<S> extends Control {
         }
         return showRoot;
     }
+    
+    
+    
+    // --- Tree Column
+    private ObjectProperty<TreeTableColumn<S,?>> treeColumn;
+    /**
+     * Property that represents which column should have the disclosure node
+     * shown in it (that is, the column with the arrow). By default this will be
+     * the left-most column if this property is null, otherwise it will be the
+     * specified column assuming it is non-null and contained within the 
+     * {@link #getVisibleLeafColumns() visible leaf columns} list.
+     */
+    public final ObjectProperty<TreeTableColumn<S,?>> treeColumnProperty() {
+        if (treeColumn == null) {
+            treeColumn = new SimpleObjectProperty<TreeTableColumn<S,?>>(this, "treeColumn", null);
+        }
+        return treeColumn;
+    }
+    public final void setTreeColumn(TreeTableColumn<S,?> value) {
+        treeColumnProperty().set(value);
+    }
+    public final TreeTableColumn<S,?> getTreeColumn() {
+        return treeColumn == null ? null : treeColumn.get();
+    }
+    
     
     
     // --- Selection Model

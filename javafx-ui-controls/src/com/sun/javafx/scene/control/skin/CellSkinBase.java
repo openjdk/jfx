@@ -39,7 +39,6 @@ import com.sun.javafx.scene.control.behavior.CellBehaviorBase;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ReadOnlyDoubleProperty;
 import javafx.css.StyleableProperty;
-import javafx.scene.control.IndexedCell;
 import javafx.scene.control.SkinBase;
 
 
@@ -68,9 +67,7 @@ public class CellSkinBase<C extends Cell, B extends CellBehaviorBase<C>> extends
     private DoubleProperty cellSizePropertyImpl() {
         if (cellSize == null) {
             cellSize = new StyleableDoubleProperty(DEFAULT_CELL_SIZE) {
-
-                @Override
-                public void set(double value) {
+                @Override public void set(double value) {
 //                    // Commented this out due to RT-19794, because otherwise
 //                    // cellSizeSet would be false when the default caspian.css
 //                    // cell size was set. This would lead to 
@@ -78,22 +75,19 @@ public class CellSkinBase<C extends Cell, B extends CellBehaviorBase<C>> extends
 //                    // of the cell (which is about 22px), rather than use the 
 //                    // value provided by caspian.css (which is 24px).
 //                    // cellSizeSet = true;//value != DEFAULT_CELL_SIZE;
-                     super.set(value);
-                    requestLayout();
+                    super.set(value);
+                    getSkinnable().requestLayout();
                 }
                 
-                @Override
-                public Object getBean() {
+                @Override public Object getBean() {
                     return CellSkinBase.this;
                 }
 
-                @Override
-                public String getName() {
+                @Override public String getName() {
                     return "cellSize";
                 }
 
-                @Override
-                public CssMetaData getCssMetaData() {
+                @Override public CssMetaData getCssMetaData() {
                     return StyleableProperties.CELL_SIZE;
                 }
             }; 

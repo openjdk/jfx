@@ -166,6 +166,9 @@ public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehav
     private int direction;
 
     private void initializeSwipeAndTouchHandlers() {
+        final Pagination control = getSkinnable();
+        final Insets controlPadding = control.getInsets();
+                    
         getSkinnable().setOnTouchPressed(new EventHandler<TouchEvent>() {
             @Override public void handle(TouchEvent e) {
                 if (touchEventId == -1) {
@@ -199,7 +202,7 @@ public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehav
                 }
 
                 if (touchThresholdBroken) {
-                    double width = getWidth() - (getInsets().getLeft() + getInsets().getRight());
+                    double width = control.getWidth() - (controlPadding.getLeft() + controlPadding.getRight());
                     double currentPaneX;
                     double nextPaneX;
 
@@ -281,7 +284,7 @@ public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehav
                     final double velocity = quick ? (double)drag / time : touchVelocity; // pixels/ms
                     // calculate distance we would travel at this speed for 500ms of travel
                     final double distance = (velocity * 500);
-                    final double width = getWidth() - (getInsets().getLeft() + getInsets().getRight());
+                    final double width = control.getWidth() - (controlPadding.getLeft() + controlPadding.getRight());
 
                     // The swipe distance travelled.
                     final double threshold = Math.abs(distance/width);
@@ -534,7 +537,7 @@ public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehav
             arrowsVisible = new StyleableBooleanProperty(DEFAULT_ARROW_VISIBLE) {
                 @Override
                 protected void invalidated() {
-                    requestLayout();
+                    getSkinnable().requestLayout();
                 }
 
                 @Override
@@ -564,7 +567,7 @@ public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehav
             pageInformationVisible = new StyleableBooleanProperty(DEFAULT_PAGE_INFORMATION_VISIBLE) {
                 @Override
                 protected void invalidated() {
-                    requestLayout();
+                    getSkinnable().requestLayout();
                 }
 
                 @Override
@@ -594,7 +597,7 @@ public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehav
             pageInformationAlignment = new StyleableObjectProperty<Side>(Side.BOTTOM) {
                 @Override
                 protected void invalidated() {
-                    requestLayout();
+                    getSkinnable().requestLayout();
                 }
 
                 @Override
@@ -624,7 +627,7 @@ public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehav
             tooltipVisible = new StyleableBooleanProperty(DEFAULT_TOOLTIP_VISIBLE) {
                 @Override
                 protected void invalidated() {
-                    requestLayout();
+                    getSkinnable().requestLayout();
                 }
 
                 @Override
@@ -671,46 +674,51 @@ public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehav
             navigation.initializePageIndicators();
             navigation.updatePageIndicators();
         } else if ("WIDTH".equals(p)) {
-            clipRect.setWidth(getWidth());
+            clipRect.setWidth(getSkinnable().getWidth());
         } else if ("HEIGHT".equals(p)) {
-            clipRect.setHeight(getHeight());
+            clipRect.setHeight(getSkinnable().getHeight());
         }
         
-        requestLayout();
+        getSkinnable().requestLayout();
     }
 
     @Override protected double computeMinWidth(double height) {
-        double left = snapSpace(getInsets().getLeft());
-        double right = snapSpace(getInsets().getRight());
+        Insets padding = getSkinnable().getInsets();
+        double left = snapSpace(padding.getLeft());
+        double right = snapSpace(padding.getRight());
         double navigationWidth = navigation.isVisible() ? snapSize(navigation.minWidth(height)) : 0;
         return left + Math.max(currentStackPane.minWidth(height), navigationWidth) + right;
     }
 
     @Override protected double computeMinHeight(double width) {
-        double top = snapSpace(getInsets().getTop());
-        double bottom = snapSpace(getInsets().getBottom());
+        Insets padding = getSkinnable().getInsets();
+        double top = snapSpace(padding.getTop());
+        double bottom = snapSpace(padding.getBottom());
         double navigationHeight = navigation.isVisible() ? snapSize(navigation.minHeight(width)) : 0;
         return top + currentStackPane.minHeight(width) + navigationHeight + bottom;
     }
 
     @Override protected double computePrefWidth(double height) {
-        double left = snapSpace(getInsets().getLeft());
-        double right = snapSpace(getInsets().getRight());
+        Insets padding = getSkinnable().getInsets();
+        double left = snapSpace(padding.getLeft());
+        double right = snapSpace(padding.getRight());
         double navigationWidth = navigation.isVisible() ? snapSize(navigation.prefWidth(height)) : 0;
         return left + Math.max(currentStackPane.prefWidth(height), navigationWidth) + right;
     }
 
     @Override protected double computePrefHeight(double width) {
-        double top = snapSpace(getInsets().getTop());
-        double bottom = snapSpace(getInsets().getBottom());
+        Insets padding = getSkinnable().getInsets();
+        double top = snapSpace(padding.getTop());
+        double bottom = snapSpace(padding.getBottom());
         double navigationHeight = navigation.isVisible() ? snapSize(navigation.prefHeight(width)) : 0;
         return top + currentStackPane.prefHeight(width) + navigationHeight + bottom;
     }
 
     @Override protected void layoutChildren(final double x, final double y,
             final double w, final double h) {
-        double left = snapSpace(getInsets().getLeft());
-        double top = snapSpace(getInsets().getTop());
+        Insets padding = getSkinnable().getInsets();
+        double left = snapSpace(padding.getLeft());
+        double top = snapSpace(padding.getTop());
         double navigationHeight = navigation.isVisible() ? snapSize(navigation.prefHeight(-1)) : 0;
         double stackPaneHeight = snapSize(h - navigationHeight);
 

@@ -337,48 +337,6 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
     }
     
     
-    /***************************************************************************
-     *                                                                         *
-     * Convenience API                                                         *
-     *                                                                         *
-     **************************************************************************/      
-    
-    /**
-     * Calls requestLayout() on the Skinnable
-     */
-    protected void requestLayout() {
-        control.requestLayout();
-    }
-    
-    /**
-     * Calls getInsets() on the Skinnable
-     */
-    protected Insets getInsets() {
-        return control.getInsets();
-    }
-    
-    /**
-     * Calls getPadding() on the Skinnable
-     */
-    protected Insets getPadding() {
-        return control.getPadding();
-    }
-    
-    /**
-     * Calls getWidth() on the Skinnable
-     */
-    protected double getWidth() {
-        return control.getWidth();
-    }
-    
-    /**
-     * Calls getHeight() on the Skinnable
-     */
-    protected double getHeight() {
-        return control.getHeight();
-    }    
-    
-    
     
     /***************************************************************************
      *                                                                         *

@@ -193,11 +193,11 @@ public class TreeTableViewSkin<S> extends TableViewSkinBase<S, TreeTableView<S>,
                 // had changed. So, here we just watch for the case where the number
                 // of items being added is equal to the number of items being removed.
                 needItemCountUpdate = true;
-                requestLayout();
+                getSkinnable().requestLayout();
             } else if (e.getEventType().equals(TreeItem.valueChangedEvent())) {
                 // Fix for RT-14971 and RT-15338. 
                 needCellsRecreated = true;
-                requestLayout();
+                getSkinnable().requestLayout();
             } else {
                 // Fix for RT-20090. We are checking to see if the event coming
                 // from the TreeItem root is an event where the count has changed.
@@ -205,7 +205,7 @@ public class TreeTableViewSkin<S> extends TableViewSkinBase<S, TreeTableView<S>,
                 while (eventType != null) {
                     if (eventType.equals(TreeItem.<S>expandedItemCountChangeEvent())) {
                         needItemCountUpdate = true;
-                        requestLayout();
+                        getSkinnable().requestLayout();
                         break;
                     }
                     eventType = eventType.getSuperType();
@@ -230,6 +230,8 @@ public class TreeTableViewSkin<S> extends TableViewSkinBase<S, TreeTableView<S>,
             weakRootListener = new WeakEventHandler(rootListener);
             getRoot().addEventHandler(TreeItem.<S>treeNotificationEvent(), weakRootListener);
         }
+        
+        updateItemCount();
     }
     
     
@@ -336,22 +338,38 @@ public class TreeTableViewSkin<S> extends TableViewSkinBase<S, TreeTableView<S>,
             padding = r.getInsets().getLeft() + r.getInsets().getRight();
         } 
         
+        TreeTableRow treeTableRow = new TreeTableRow();
+        treeTableRow.updateTreeTableView(treeTableView);
+        
         int rows = maxRows == -1 ? items.size() : Math.min(items.size(), maxRows);
         double maxWidth = 0;
         for (int row = 0; row < rows; row++) {
+            treeTableRow.updateIndex(row);
+            treeTableRow.updateTreeItem(treeTableView.getTreeItem(row));
+            
             cell.updateTreeTableColumn(col);
             cell.updateTreeTableView(treeTableView);
+            cell.updateTreeTableRow(treeTableRow);
             cell.updateIndex(row);
             
             if ((cell.getText() != null && !cell.getText().isEmpty()) || cell.getGraphic() != null) {
                 getChildren().add(cell);
                 cell.impl_processCSS(false);
-                maxWidth = Math.max(maxWidth, cell.prefWidth(-1));
+                
+                double w = cell.prefWidth(-1);
+                
+                maxWidth = Math.max(maxWidth, w);
                 getChildren().remove(cell);
             }
         }
         
-        col.impl_setWidth(maxWidth + padding);
+        // RT-23486
+        double widthMax = maxWidth + padding;
+        if(treeTableView.getColumnResizePolicy() == TreeTableView.CONSTRAINED_RESIZE_POLICY) {
+             widthMax = Math.max(widthMax, col.getWidth());
+        }
+
+        col.impl_setWidth(widthMax); 
     }
     
     /** {@inheritDoc} */

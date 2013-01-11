@@ -206,6 +206,7 @@ public class ColorPalette extends StackPane {
                     case ENTER:
                         processSelectKey(ke);
                         break;
+                    default: // no-op
                 }
             }
         });
@@ -539,7 +540,6 @@ public class ColorPalette extends StackPane {
     class ColorPickerGrid extends GridPane {
 
         private final List<ColorSquare> squares;
-        Window owner;
 
         public ColorPickerGrid(Color initPaint) {
             getStyleClass().add("color-picker-grid");

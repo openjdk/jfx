@@ -60,6 +60,7 @@ public class LauncherImpl {
     // set to true to debug launch issues from Java launcher
     private static final boolean trace = false;
 
+    private static final String MF_MAIN_CLASS = "Main-Class";
     private static final String MF_JAVAFX_MAIN = "JavaFX-Application-Class";
     private static final String MF_JAVAFX_PRELOADER = "JavaFX-Preloader-Class";
 
@@ -189,7 +190,12 @@ public class LauncherImpl {
 
             mainClassName = jarAttrs.getValue(MF_JAVAFX_MAIN);
             if (mainClassName == null) {
-                abort(null, "JavaFX jar manifest requires a valid JavaFX-Appliation-Class entry");
+                // fall back on Main-Class if no JAC
+                mainClassName = jarAttrs.getValue(MF_MAIN_CLASS);
+                if (mainClassName == null) {
+                    // Should not happen as the launcher enforces the presence of Main-Class
+                    abort(null, "JavaFX jar manifest requires a valid JavaFX-Appliation-Class or Main-Class entry");
+                }
             }
             mainClassName = mainClassName.trim();
 
