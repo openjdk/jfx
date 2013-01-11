@@ -34,8 +34,8 @@
         <MenuItem mnemonicParsing="false" text="Action 2" />
       </items>
     </SplitMenuButton>
-    <TextField layoutX="39.0" layoutY="149.0" prefWidth="160.0" promptText="Textfield" />
-    <TextArea layoutX="39.0" layoutY="180.0" prefHeight="130.0" prefWidth="160.0" promptText="Text Area" wrapText="true" />
+    <TextField layoutX="39.0" layoutY="149.0" prefWidth="160.0" promptText="Textfield" text="Textfield" />
+    <TextArea layoutX="39.0" layoutY="180.0" prefHeight="130.0" prefWidth="160.0" promptText="Text Area" text="Text Area with some text spanning over a few lines." wrapText="true" />
     <ToggleButton layoutX="241.0" layoutY="196.0" mnemonicParsing="false" prefWidth="90.0" selected="true" text="Toggle">
       <toggleGroup>
         <ToggleGroup fx:id="toggle1" />
@@ -63,7 +63,7 @@
         <ToggleGroup />
       </toggleGroup>
     </ToggleButton>
-    <ComboBox editable="true" layoutX="395.0" layoutY="244.0" prefWidth="136.0001220703125" promptText="Choose">
+    <ComboBox editable="true" layoutX="395.0" layoutY="243.0" prefWidth="136.0001220703125" promptText="Choose">
       <items>
         <FXCollections fx:factory="observableArrayList">
           <String fx:value="Item 1" />

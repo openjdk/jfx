@@ -205,7 +205,7 @@ is being used to size a border should also be in pixels.
         black 10%,
         derive(-fx-background, -15%) 30%
     );
-    
+     
     /* A gradient that goes from a little darker than -fx-color on the top to
      * even more darker than -fx-color on the bottom.  Typically is the second
      * color in the -fx-background-color list as the small thin border around
@@ -808,9 +808,13 @@ is being used to size a border should also be in pixels.
     -fx-background-radius: 1.0em; /* makes sure this remains circular */
 }
 .slider .track, .slider:vertical .track {
-    -fx-background-color:  derive(-fx-box-border, 20%), derive(-fx-background, -5%), -fx-background;
-    -fx-background-insets: 0, 1, 2 1 1 1;
-    -fx-background-radius: 2.5, 1.5, 1.5;
+    -fx-background-color: 
+        linear-gradient(to bottom, derive(-fx-text-box-border, -10%), -fx-text-box-border),
+        derive(-fx-control-inner-background, -9%),
+        derive(-fx-control-inner-background, -7%),
+        -fx-control-inner-background;
+    -fx-background-insets: 0, 1 1 1 1, 2 1 1 1, 3 1 1 1;
+    -fx-background-radius: 4, 4, 4, 4;
     -fx-padding: 2;
 }
 .slider .axis {
@@ -957,7 +961,7 @@ is being used to size a border should also be in pixels.
 }
 .progress-bar > .bar {
     -fx-background-color: -fx-box-border,-fx-accent;
-    -fx-background-insets: 0, 1;
+    -fx-background-insets: 2, 3;
     -fx-background-radius: 0.416667em, 0.416667em;
     -fx-padding: 0.416667em; /* 5 */
 }
@@ -965,11 +969,18 @@ is being used to size a border should also be in pixels.
     -fx-background-color: linear-gradient(to left, transparent, -fx-accent);
 }
 .progress-bar > .track {
-     -fx-background-color:
+    -fx-background-color: 
+        linear-gradient(to bottom, derive(-fx-text-box-border, -10%), -fx-text-box-border),
+        derive(-fx-control-inner-background, -9%),
+        derive(-fx-control-inner-background, -7%),
+        -fx-control-inner-background;
+    -fx-background-insets: 0, 1 1 1 1, 2 1 1 1, 3 1 1 1;
+    -fx-background-radius: 0.416667em, 0.416667em, 0.416667em, 0.416667em;
+/*     -fx-background-color:
         -fx-box-border,
         linear-gradient(to bottom, derive(-fx-color,-15%), derive(-fx-color,2.2%) 20%, derive(-fx-color,60%));
     -fx-background-insets:  0, 1;
-    -fx-background-radius: 0.416667em, 0.416667em;
+    -fx-background-radius: 0.416667em, 0.416667em;*/
 }
 
 /*******************************************************************************
@@ -1057,9 +1068,12 @@ is being used to size a border should also be in pixels.
     -fx-highlight-fill: derive(-fx-control-inner-background,-20%);
     -fx-highlight-text-fill: -fx-text-inner-color;
     -fx-prompt-text-fill: derive(-fx-control-inner-background,-30%);
-    -fx-background-color: -fx-text-box-border, -fx-control-inner-background;
-    -fx-background-insets: 0, 1;
-    -fx-background-radius: 2, 2;
+    -fx-background-color: linear-gradient(to bottom, derive(-fx-text-box-border, -10%), -fx-text-box-border),
+        derive(-fx-control-inner-background, -9%),
+        derive(-fx-control-inner-background, -7%),
+        -fx-control-inner-background;
+    -fx-background-insets: 0, 1 1 1 1, 2 1 1 1, 3 1 1 1;
+    -fx-background-radius: 4, 4, 4, 4;
     -fx-cursor: text;
     -fx-padding: 0.416667em; /*  5 */
 }
