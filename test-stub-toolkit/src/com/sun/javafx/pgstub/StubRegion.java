@@ -42,7 +42,7 @@ public class StubRegion extends StubGroup implements PGRegion {
     }
     public void updateBackground(Object background) {
     }
-    public void updateShape(Object shape, boolean scale, boolean center) {
+    public void updateShape(Object shape, boolean scale, boolean center, boolean cacheShape) {
     }
     public void setSize(float width, float height) {
     }

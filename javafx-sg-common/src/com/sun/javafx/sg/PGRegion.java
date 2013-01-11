@@ -58,8 +58,9 @@ public interface PGRegion extends PGGroup {
      * @param shape    The shape, may be null.
      * @param scaleShape whether to scale the shape
      * @param positionShape whether to center the shape
+     * @param cacheShape whether to attempt region caching for the shape-based region
      */
-    public void updateShape(Object shape, boolean scaleShape, boolean positionShape);
+    public void updateShape(Object shape, boolean scaleShape, boolean positionShape, boolean cacheShape);
 
     /**
      * The opaque insets as specified either by the user, or as determined by
