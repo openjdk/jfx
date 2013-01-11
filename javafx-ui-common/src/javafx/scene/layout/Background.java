@@ -34,7 +34,7 @@ import javafx.scene.image.Image;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
 import com.sun.javafx.UnmodifiableArrayList;
-import com.sun.javafx.css.CssMetaData;
+import javafx.css.CssMetaData;
 import com.sun.javafx.css.SubCssMetaData;
 import com.sun.javafx.css.converters.InsetsConverter;
 import com.sun.javafx.css.converters.PaintConverter;

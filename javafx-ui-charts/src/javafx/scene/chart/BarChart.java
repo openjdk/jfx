@@ -27,6 +27,7 @@ package javafx.scene.chart;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.ArrayList;
 import java.util.Collections;
 
@@ -50,11 +51,11 @@ import javafx.util.Duration;
 
 import com.sun.javafx.charts.Legend;
 import com.sun.javafx.charts.Legend.LegendItem;
-import com.sun.javafx.css.StyleableDoubleProperty;
-import com.sun.javafx.css.CssMetaData;
-import com.sun.javafx.css.PseudoClass;
+import javafx.css.StyleableDoubleProperty;
+import javafx.css.CssMetaData;
+import javafx.css.PseudoClass;
 import com.sun.javafx.css.converters.SizeConverter;
-import javafx.beans.value.WritableValue;
+import javafx.css.StyleableProperty;
 
 /**
  * A chart that plots bars indicating data values for a category. The bars can be vertical or horizontal depending on
@@ -497,8 +498,8 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
             }
 
             @Override
-            public WritableValue<Number> getWritableValue(BarChart node) {
-                return node.barGapProperty();
+            public StyleableProperty<Number> getStyleableProperty(BarChart node) {
+                return (StyleableProperty)node.barGapProperty();
             }
         };
          
@@ -512,8 +513,8 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
             }
 
             @Override
-            public WritableValue<Number> getWritableValue(BarChart node) {
-                return node.categoryGapProperty();
+            public StyleableProperty<Number> getStyleableProperty(BarChart node) {
+                return (StyleableProperty)node.categoryGapProperty();
             }
         };
 
@@ -547,20 +548,20 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
     }
 
     /** Pseudoclass indicating this is a vertical chart. */
-    private static final PseudoClass.State VERTICAL_PSEUDOCLASS_STATE =
-            PseudoClass.getState("vertical");
+    private static final PseudoClass VERTICAL_PSEUDOCLASS_STATE =
+            PseudoClass.getPseudoClass("vertical");
 
     /** Pseudoclass indicating this is a horizontal chart. */
-    private static final PseudoClass.State HORIZONTAL_PSEUDOCLASS_STATE = 
-            PseudoClass.getState("horizontal");
+    private static final PseudoClass HORIZONTAL_PSEUDOCLASS_STATE = 
+            PseudoClass.getPseudoClass("horizontal");
 
     /**
      * {@inheritDoc}
      */
-    @Override public PseudoClass.States getPseudoClassStates() {
-        PseudoClass.States states = super.getPseudoClassStates();
-        if (orientation == Orientation.VERTICAL) states.addState(VERTICAL_PSEUDOCLASS_STATE);
-        else states.addState(HORIZONTAL_PSEUDOCLASS_STATE);
+    @Override public Set<PseudoClass> getPseudoClassStates() {
+        Set<PseudoClass> states = super.getPseudoClassStates();
+        if (orientation == Orientation.VERTICAL) states.add(VERTICAL_PSEUDOCLASS_STATE);
+        else states.add(HORIZONTAL_PSEUDOCLASS_STATE);
         return states;
 
     }

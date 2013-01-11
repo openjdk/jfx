@@ -28,7 +28,7 @@ import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 
 import com.sun.javafx.css.StyleConverterImpl;
-import com.sun.javafx.css.ParsedValue;
+import javafx.css.ParsedValue;
 
 public final class ColorConverter extends StyleConverterImpl<String, Color> {
 

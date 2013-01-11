@@ -25,14 +25,14 @@
 
 package com.sun.javafx.css;
 
-import static org.junit.Assert.assertEquals;
+import com.sun.javafx.css.converters.StringConverter;
+import javafx.css.ParsedValue;
+import javafx.css.StyleConverter;
 import javafx.scene.text.Font;
-
 import org.junit.AfterClass;
+import static org.junit.Assert.assertEquals;
 import org.junit.BeforeClass;
 import org.junit.Test;
-
-import com.sun.javafx.css.converters.StringConverter;
 
 
 public class StringTypeTest {
@@ -54,19 +54,19 @@ public class StringTypeTest {
     @Test
     public void testConvert() {
         //System.out.println("convert");
-        ParsedValue<String,String> value = new ParsedValue<String,String>("test", StringConverter.getInstance());
+        ParsedValue<String,String> value = new ParsedValueImpl<String,String>("test", StyleConverter.getStringConverter());
         Font font = null;
         String expResult = "test";
         String result = value.convert(font);
         assertEquals(expResult, result);
 
         ParsedValue<String,String>[] values = new ParsedValue[] {
-            new ParsedValue<String,String>("hello", StringConverter.getInstance()),
-            new ParsedValue<String,String>("world", StringConverter.getInstance())
+            new ParsedValueImpl<String,String>("hello", StyleConverter.getStringConverter()),
+            new ParsedValueImpl<String,String>("world", StyleConverter.getStringConverter())
         };
 
         ParsedValue<ParsedValue<String,String>[], String[]> seq =
-            new ParsedValue<ParsedValue<String,String>[], String[]>(values, StringConverter.SequenceConverter.getInstance());
+            new ParsedValueImpl<ParsedValue<String,String>[], String[]>(values, StringConverter.SequenceConverter.getInstance());
 
         String[] strings = seq.convert(font);
         assertEquals("hello", strings[0]);

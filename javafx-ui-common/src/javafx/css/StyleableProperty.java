@@ -22,15 +22,17 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-package com.sun.javafx.css;
+package javafx.css;
+
+import javafx.beans.value.WritableValue;
 
 /**
  * StyleableProperty allows a {@link javafx.beans.property} to be styled from
  * CSS. 
  * <p>This interface allows coordination between CSS 
- * processing and a <code>javafx.beans.property</code>. The implementations
+ * processing and a <code>javafx.beans.property</code>. The implementation
  * ensure that the priority for setting the value is, in increasing order
- * and assuming equal importance,
+ * and assuming equal importance:
  * <ol>
  * <li>a style from a user agent stylesheet in 
  * {@link javafx.application.Application#setUserAgentStylesheet(java.lang.String)}</li>
@@ -40,23 +42,23 @@ package com.sun.javafx.css;
  * <li>a style from {@link javafx.scene.Node#setStyle(java.lang.String)}</li>
  * </ol>
  */
-interface StyleableProperty<T> {
+public interface StyleableProperty<T> extends WritableValue<T> {
     
     /** 
      * This method is called from CSS code to set the value of the property. 
      */
-    void applyStyle(Origin origin, T value);
+    void applyStyle(StyleOrigin origin, T value);
         
     /**
      * Tells the origin of the value of the property. This is needed to 
      * determine whether or not CSS can override the value.
      */
-    Origin getOrigin();
+    StyleOrigin getStyleOrigin();
     
     /**
      * Reflect back the CssMetaData that corresponds to this 
      * <code>javafx.beans.property.StyleableProperty</code>
      */
     CssMetaData getCssMetaData();
-    
+       
 }

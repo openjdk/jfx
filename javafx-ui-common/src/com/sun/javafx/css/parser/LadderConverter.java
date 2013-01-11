@@ -29,7 +29,7 @@ import javafx.scene.paint.Stop;
 import javafx.scene.text.Font;
 
 import com.sun.javafx.css.StyleConverterImpl;
-import com.sun.javafx.css.ParsedValue;
+import javafx.css.ParsedValue;
 
 public final class LadderConverter extends StyleConverterImpl<ParsedValue[], Color> {
 

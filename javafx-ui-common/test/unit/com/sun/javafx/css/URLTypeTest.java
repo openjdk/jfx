@@ -31,6 +31,7 @@ import static org.junit.Assert.fail;
 import java.net.MalformedURLException;
 import java.net.URL;
 
+import javafx.css.ParsedValue;
 import javafx.scene.text.Font;
 
 import org.junit.Before;
@@ -93,14 +94,14 @@ public class URLTypeTest {
 
         for(int n=0; n<testPairs.length; n++) {
             ParsedValue[] values = new ParsedValue[] {
-                new ParsedValue<String,String>(testPairs[n][0], StringConverter.getInstance()),
-                new ParsedValue<URL, URL>(baseURL, null)
+                new ParsedValueImpl<String,String>(testPairs[n][0], StringConverter.getInstance()),
+                new ParsedValueImpl<URL, URL>(baseURL, null)
             };
-            urls[n] = new ParsedValue<ParsedValue[],String>(values, URLConverter.getInstance());
+            urls[n] = new ParsedValueImpl<ParsedValue[],String>(values, URLConverter.getInstance());
         };
 
         ParsedValue<ParsedValue<ParsedValue[],String>[],String[]> value =
-                new ParsedValue<ParsedValue<ParsedValue[],String>[],String[]>(urls, URLConverter.SequenceConverter.getInstance());
+                new ParsedValueImpl<ParsedValue<ParsedValue[],String>[],String[]>(urls, URLConverter.SequenceConverter.getInstance());
 
         Font font = null;
         String[] result = value.convert(font);

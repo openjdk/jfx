@@ -23,7 +23,7 @@
  * questions.
  */
 
-package com.sun.javafx.css;
+package javafx.css;
 
 import javafx.scene.text.Font;
 
@@ -38,6 +38,7 @@ import javafx.scene.text.Font;
  * parsed CSS values. Elsewhere the value returned by 
  * {@link #getValue()} is likely to be obscure, abstruse and perplexing. 
  */
+@com.sun.javafx.beans.annotations.NoBuilder
 public class ParsedValue<V, T> {
 
     /**
@@ -71,7 +72,7 @@ public class ParsedValue<V, T> {
 
     /**
      * Convenience method for calling 
-     * {@link StyleConverter#convert(com.sun.javafx.css.ParsedValue, javafx.scene.text.Font) convert}
+     * {@link StyleConverter#convert(javafx.css.ParsedValue, javafx.scene.text.Font) convert}
      * on this {@code ParsedValue}.
      * @param font         The {@link Font} to use when converting a
      * <a href="http://www.w3.org/TR/css3-values/#relative-lengths">relative</a>

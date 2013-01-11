@@ -34,6 +34,10 @@ import java.util.List;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.StringProperty;
+import javafx.css.CssMetaData;
+import javafx.css.StyleableBooleanProperty;
+import javafx.css.StyleableDoubleProperty;
+import javafx.css.StyleableStringProperty;
 import javafx.scene.Node;
 
 import com.sun.javafx.geom.BaseBounds;
@@ -42,6 +46,7 @@ import com.sun.javafx.jmx.MXNodeAlgorithm;
 import com.sun.javafx.jmx.MXNodeAlgorithmContext;
 import com.sun.javafx.sg.PGNode;
 import javafx.beans.value.WritableValue;
+import javafx.css.StyleableProperty;
 
 /** Test Node with styleable properties and an getClassCssMetaData method */
 class TestNodeBase extends Node {
@@ -175,8 +180,8 @@ class TestNodeBase extends Node {
             }
 
             @Override
-            public WritableValue<Boolean> getWritableValue(TestNodeBase n) {
-                return n.testProperty();
+            public StyleableProperty<Boolean> getStyleableProperty(TestNodeBase n) {
+                return (StyleableProperty)n.testProperty();
             }
         };
 
@@ -190,8 +195,8 @@ class TestNodeBase extends Node {
             }
 
             @Override
-            public WritableValue<String> getWritableValue(TestNodeBase n) {
-                return n.stringProperty();
+            public StyleableProperty<String> getStyleableProperty(TestNodeBase n) {
+                return (StyleableProperty)n.stringProperty();
             }
         };
 
@@ -205,8 +210,8 @@ class TestNodeBase extends Node {
             }
 
             @Override
-            public WritableValue<Number> getWritableValue(TestNodeBase n) {
-                return n.doublePropertyProperty();
+            public StyleableProperty<Number> getStyleableProperty(TestNodeBase n) {
+                return (StyleableProperty)n.doublePropertyProperty();
             }
         };
         

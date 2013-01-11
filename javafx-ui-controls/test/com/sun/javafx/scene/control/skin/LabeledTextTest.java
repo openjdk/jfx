@@ -4,7 +4,7 @@
  */
 package com.sun.javafx.scene.control.skin;
 
-import com.sun.javafx.css.CssMetaData;
+import javafx.css.CssMetaData;
 import com.sun.javafx.css.Stylesheet;
 import java.util.List;
 import javafx.beans.value.ChangeListener;

@@ -25,7 +25,7 @@
 package javafx.scene.control;
 
 import com.sun.javafx.css.Styleable;
-import com.sun.javafx.css.CssMetaData;
+import javafx.css.CssMetaData;
 import com.sun.javafx.event.EventHandlerManager;
 import com.sun.javafx.scene.control.skin.TableViewSkinBase;
 import java.util.Collections;

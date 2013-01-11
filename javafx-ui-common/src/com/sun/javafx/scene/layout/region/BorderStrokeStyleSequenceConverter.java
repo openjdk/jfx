@@ -26,7 +26,7 @@ package com.sun.javafx.scene.layout.region;
 
 import javafx.scene.layout.BorderStrokeStyle;
 import javafx.scene.text.Font;
-import com.sun.javafx.css.ParsedValue;
+import javafx.css.ParsedValue;
 import com.sun.javafx.css.StyleConverterImpl;
 
 /**

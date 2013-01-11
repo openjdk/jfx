@@ -35,8 +35,9 @@ import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 
 import com.sun.javafx.collections.TrackableObservableList;
-import com.sun.javafx.css.CssMetaData;
+import javafx.css.CssMetaData;
 import com.sun.javafx.scene.control.skin.AccordionSkin;
+import javafx.css.StyleableProperty;
 
 /**
  * <p>An accordion is a group of {@link TitledPane TitlePanes}.  Only one TitledPane can be opened at
@@ -78,8 +79,8 @@ public class Accordion extends Control {
         // makes it look to css like the user set the value and css will not 
         // override. Initializing focusTraversable by calling set on the 
         // CssMetaData ensures that css will be able to override the value.        
-        final CssMetaData prop = CssMetaData.getCssMetaData(focusTraversableProperty());
-        prop.set(this, Boolean.FALSE);            
+        final CssMetaData prop = ((StyleableProperty)focusTraversableProperty()).getCssMetaData();
+        prop.set(this, Boolean.FALSE, null); 
     }
 
     /***************************************************************************

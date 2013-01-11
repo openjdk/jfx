@@ -24,7 +24,7 @@
  */
 package javafx.scene.control;
 
-import com.sun.javafx.css.PseudoClass;
+import javafx.css.PseudoClass;;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.WeakInvalidationListener;
@@ -585,7 +585,7 @@ public class TableCell<S,T> extends IndexedCell<T> {
      **************************************************************************/
 
     private static final String DEFAULT_STYLE_CLASS = "table-cell";
-    private static final PseudoClass.State PSEUDO_CLASS_LAST_VISIBLE = 
-            PseudoClass.getState("last-visible");
+    private static final PseudoClass PSEUDO_CLASS_LAST_VISIBLE = 
+            PseudoClass.getPseudoClass("last-visible");
 
 }

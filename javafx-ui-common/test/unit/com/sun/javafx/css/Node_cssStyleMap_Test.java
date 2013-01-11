@@ -43,7 +43,10 @@ import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
-import javafx.beans.value.WritableValue;
+import javafx.css.StyleOrigin;
+import javafx.css.StyleableProperty;
+import javafx.css.ParsedValue;
+import javafx.css.PseudoClass;
 import javafx.collections.FXCollections;
 import javafx.collections.MapChangeListener;
 import javafx.scene.Group;
@@ -77,7 +80,7 @@ public class Node_cssStyleMap_Test {
             styles.add(
                 new CascadingStyle(
                     new Style(decl.rule.selectors.get(0), decl), 
-                    PseudoClass.createStatesInstance(),
+                    new PseudoClassSet(),
                     0, 
                     0
                 )
@@ -128,7 +131,7 @@ public class Node_cssStyleMap_Test {
         Rule rule = new Rule(selsNoState, declsNoState);        
         
         Stylesheet stylesheet = new Stylesheet();
-        stylesheet.setOrigin(Origin.USER_AGENT);
+        stylesheet.setOrigin(StyleOrigin.USER_AGENT);
         stylesheet.getRules().add(rule);
         
         final List<Declaration> declsDisabledState = new ArrayList<Declaration>();
@@ -149,14 +152,14 @@ public class Node_cssStyleMap_Test {
         final List<CascadingStyle> stylesDisabledState = createStyleList(declsDisabledState);
         
         // add to this list on wasAdded, check bean on wasRemoved.
-        final List<WritableValue> beans = new ArrayList<WritableValue>();
+        final List<StyleableProperty> beans = new ArrayList<StyleableProperty>();
         
         Rectangle rect = new Rectangle(50,50);
         rect.getStyleClass().add("rect");
-        rect.impl_setStyleMap(FXCollections.observableMap(new HashMap<WritableValue, List<Style>>()));
-        rect.impl_getStyleMap().addListener(new MapChangeListener<WritableValue, List<Style>>() {
+        rect.impl_setStyleMap(FXCollections.observableMap(new HashMap<StyleableProperty, List<Style>>()));
+        rect.impl_getStyleMap().addListener(new MapChangeListener<StyleableProperty, List<Style>>() {
 
-            public void onChanged(MapChangeListener.Change<? extends WritableValue, ? extends List<Style>> change) {
+            public void onChanged(MapChangeListener.Change<? extends StyleableProperty, ? extends List<Style>> change) {
 
                 if (change.wasAdded()) {
                     
@@ -172,15 +175,15 @@ public class Node_cssStyleMap_Test {
                             assertTrue(style.getSelector().toString(),selsDisabledState.contains(style.getSelector()));                            
                         }
                         Object value = style.getDeclaration().parsedValue.convert(null);
-                        WritableValue writable = change.getKey();
-                        beans.add(writable);
-                        assertEquals(writable.getValue(), value);
+                        StyleableProperty styleableProperty = change.getKey();
+                        beans.add(styleableProperty);
+                        assertEquals(styleableProperty.getValue(), value);
                         nadds += 1;                        
                     }
                     
                 } if (change.wasRemoved()) {
-                    WritableValue writable = change.getKey();
-                    assert(beans.contains(writable));
+                    StyleableProperty styleableProperty = change.getKey();
+                    assert(beans.contains(styleableProperty));
                     nremoves += 1;
                 }
             }
@@ -231,7 +234,7 @@ public class Node_cssStyleMap_Test {
         Rule rootRule = new Rule(rootSels, rootDecls);        
         
         Stylesheet stylesheet = new Stylesheet();
-        stylesheet.setOrigin(Origin.USER_AGENT);
+        stylesheet.setOrigin(StyleOrigin.USER_AGENT);
         stylesheet.getRules().add(rootRule);
 
         final List<CascadingStyle> rootStyles = createStyleList(rootDecls);
@@ -277,13 +280,13 @@ public class Node_cssStyleMap_Test {
 //        expecteds.addAll(rootDecls);
         expecteds.addAll(textDecls);
         text.getStyleClass().add("text");
-        text.impl_setStyleMap(FXCollections.observableMap(new HashMap<WritableValue, List<Style>>()));
-        text.impl_getStyleMap().addListener(new MapChangeListener<WritableValue, List<Style>>() {
+        text.impl_setStyleMap(FXCollections.observableMap(new HashMap<StyleableProperty, List<Style>>()));
+        text.impl_getStyleMap().addListener(new MapChangeListener<StyleableProperty, List<Style>>() {
 
             // a little different than the other tests since we should end up 
             // with font and font-size in the map and nothing else. After all 
             // the changes have been handled, the expecteds list should be empty.
-            public void onChanged(MapChangeListener.Change<? extends WritableValue, ? extends List<Style>> change) {
+            public void onChanged(MapChangeListener.Change<? extends StyleableProperty, ? extends List<Style>> change) {
                 if (change.wasAdded()) {
                     List<Style> styles = change.getValueAdded();
                     for (Style style : styles) {

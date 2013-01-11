@@ -55,13 +55,13 @@ import java.util.Collections;
 import java.util.List;
 
 import com.sun.javafx.Utils;
-import com.sun.javafx.css.StyleableObjectProperty;
-import com.sun.javafx.css.CssMetaData;
+import javafx.css.StyleableObjectProperty;
+import javafx.css.CssMetaData;
 import com.sun.javafx.css.converters.PaintConverter;
 import com.sun.javafx.scene.control.behavior.ProgressIndicatorBehavior;
 import com.sun.javafx.scene.control.skin.resources.ControlResources;
 import javafx.beans.property.ObjectProperty;
-import javafx.beans.value.WritableValue;
+import javafx.css.StyleableProperty;
 import javafx.scene.control.SkinBase;
 
 public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, ProgressIndicatorBehavior<ProgressIndicator>> {
@@ -611,9 +611,9 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, P
             }
 
             @Override
-            public WritableValue<Paint> getWritableValue(ProgressIndicator n) {
+            public StyleableProperty<Paint> getStyleableProperty(ProgressIndicator n) {
                 final ProgressIndicatorSkin skin = (ProgressIndicatorSkin) n.getSkin();
-                return skin.progressColor;
+                return (StyleableProperty)skin.progressColor;
             }
         };
 

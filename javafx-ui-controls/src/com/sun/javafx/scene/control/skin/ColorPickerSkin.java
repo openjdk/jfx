@@ -24,8 +24,8 @@
  */
 package com.sun.javafx.scene.control.skin;
 
-import com.sun.javafx.css.StyleableBooleanProperty;
-import com.sun.javafx.css.CssMetaData;
+import javafx.css.StyleableBooleanProperty;
+import javafx.css.CssMetaData;
 import com.sun.javafx.css.converters.BooleanConverter;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -46,7 +46,7 @@ import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.scene.control.ColorPicker;
 import javafx.beans.property.BooleanProperty;
-import javafx.beans.value.WritableValue;
+import javafx.css.StyleableProperty;
 import javafx.event.ActionEvent;
 import javafx.event.Event;
 import javafx.event.EventType;
@@ -288,9 +288,9 @@ public class ColorPickerSkin extends ComboBoxPopupControl<Color> {
                 return skin.colorLabelVisible == null || !skin.colorLabelVisible.isBound();
             }
             
-            @Override public WritableValue<Boolean> getWritableValue(ColorPicker n) {
+            @Override public StyleableProperty<Boolean> getStyleableProperty(ColorPicker n) {
                 final ColorPickerSkin skin = (ColorPickerSkin) n.getSkin();
-                return skin.colorLabelVisible;
+                return (StyleableProperty)skin.colorLabelVisible;
             }
         };
         private static final List<CssMetaData> STYLEABLES;

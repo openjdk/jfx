@@ -24,7 +24,8 @@
  */
 package javafx.scene.control;
 
-import com.sun.javafx.css.PseudoClass;
+import java.util.Set;
+import javafx.css.PseudoClass;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.WeakInvalidationListener;
@@ -529,17 +530,17 @@ public class TreeCell<T> extends IndexedCell<T> {
 
     private static final String DEFAULT_STYLE_CLASS = "tree-cell";
 
-    private static final PseudoClass.State EXPANDED_PSEUDOCLASS_STATE = PseudoClass.getState("expanded");
-    private static final PseudoClass.State COLLAPSED_PSEUDOCLASS_STATE = PseudoClass.getState("collapsed");
+    private static final PseudoClass EXPANDED_PSEUDOCLASS_STATE = PseudoClass.getPseudoClass("expanded");
+    private static final PseudoClass COLLAPSED_PSEUDOCLASS_STATE = PseudoClass.getPseudoClass("collapsed");
 
    /**
      * {@inheritDoc}
      */
-    @Override public PseudoClass.States getPseudoClassStates() {
-        PseudoClass.States states = super.getPseudoClassStates();
+    @Override public Set<PseudoClass> getPseudoClassStates() {
+        Set<PseudoClass> states = super.getPseudoClassStates();
         if (getTreeItem() != null && ! getTreeItem().isLeaf()) {
-            if (getTreeItem().isExpanded()) states.addState(EXPANDED_PSEUDOCLASS_STATE);
-            else states.addState(COLLAPSED_PSEUDOCLASS_STATE);
+            if (getTreeItem().isExpanded()) states.add(EXPANDED_PSEUDOCLASS_STATE);
+            else states.add(COLLAPSED_PSEUDOCLASS_STATE);
         }
         return states;
     }

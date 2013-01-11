@@ -28,6 +28,7 @@ package com.sun.javafx.css;
 import java.lang.ref.Reference;
 import java.lang.ref.WeakReference;
 import java.net.URL;
+import javafx.css.CssMetaData;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 

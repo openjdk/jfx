@@ -24,11 +24,11 @@
  */
 package javafx.scene.chart;
 
-import com.sun.javafx.css.CssMetaData;
-import com.sun.javafx.css.PseudoClass;
-import com.sun.javafx.css.StyleableBooleanProperty;
-import com.sun.javafx.css.StyleableDoubleProperty;
-import com.sun.javafx.css.StyleableObjectProperty;
+import javafx.css.CssMetaData;
+import javafx.css.PseudoClass;
+import javafx.css.StyleableBooleanProperty;
+import javafx.css.StyleableDoubleProperty;
+import javafx.css.StyleableObjectProperty;
 import com.sun.javafx.css.converters.BooleanConverter;
 import com.sun.javafx.css.converters.EnumConverter;
 import com.sun.javafx.css.converters.PaintConverter;
@@ -36,15 +36,17 @@ import com.sun.javafx.css.converters.SizeConverter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 
 import javafx.animation.FadeTransition;
 import javafx.beans.binding.DoubleExpression;
 import javafx.beans.binding.ObjectExpression;
 import javafx.beans.binding.StringExpression;
 import javafx.beans.property.*;
-import javafx.beans.value.WritableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.css.FontCssMetaData;
+import javafx.css.StyleableProperty;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.Bounds;
@@ -1045,8 +1047,8 @@ public abstract class Axis<T> extends Region {
             }
 
             @Override
-            public WritableValue<Side> getWritableValue(Axis n) {
-                return n.sideProperty();
+            public StyleableProperty<Side> getStyleableProperty(Axis n) {
+                return (StyleableProperty)n.sideProperty();
             }
         };
         
@@ -1060,13 +1062,13 @@ public abstract class Axis<T> extends Region {
             }
 
             @Override
-            public WritableValue<Number> getWritableValue(Axis n) {
-                return n.tickLengthProperty();
+            public StyleableProperty<Number> getStyleableProperty(Axis n) {
+                return (StyleableProperty)n.tickLengthProperty();
             }
         };
         
         private static final CssMetaData<Axis,Font> TICK_LABEL_FONT =
-            new CssMetaData.FONT<Axis>("-fx-tick-label-font",
+            new FontCssMetaData<Axis>("-fx-tick-label-font",
                 Font.font("system", 8.0)) {
 
             @Override
@@ -1075,8 +1077,8 @@ public abstract class Axis<T> extends Region {
             }
 
             @Override
-            public WritableValue<Font> getWritableValue(Axis n) {
-                return n.tickLabelFontProperty();
+            public StyleableProperty<Font> getStyleableProperty(Axis n) {
+                return (StyleableProperty)n.tickLabelFontProperty();
             }
         };
 
@@ -1090,8 +1092,8 @@ public abstract class Axis<T> extends Region {
             }
 
             @Override
-            public WritableValue<Paint> getWritableValue(Axis n) {
-                return n.tickLabelFillProperty();
+            public StyleableProperty<Paint> getStyleableProperty(Axis n) {
+                return (StyleableProperty)n.tickLabelFillProperty();
             }
         };
         
@@ -1105,8 +1107,8 @@ public abstract class Axis<T> extends Region {
             }
 
             @Override
-            public WritableValue<Number> getWritableValue(Axis n) {
-                return n.tickLabelGapProperty();
+            public StyleableProperty<Number> getStyleableProperty(Axis n) {
+                return (StyleableProperty)n.tickLabelGapProperty();
             }
         };
         
@@ -1120,8 +1122,8 @@ public abstract class Axis<T> extends Region {
             }
 
             @Override
-            public WritableValue<Boolean> getWritableValue(Axis n) {
-                return n.tickMarkVisibleProperty();
+            public StyleableProperty<Boolean> getStyleableProperty(Axis n) {
+                return (StyleableProperty)n.tickMarkVisibleProperty();
             }
         };
         
@@ -1135,8 +1137,8 @@ public abstract class Axis<T> extends Region {
             }
 
             @Override
-            public WritableValue<Boolean> getWritableValue(Axis n) {
-                return n.tickLabelsVisibleProperty();
+            public StyleableProperty<Boolean> getStyleableProperty(Axis n) {
+                return (StyleableProperty)n.tickLabelsVisibleProperty();
             }
         };
 
@@ -1174,23 +1176,23 @@ public abstract class Axis<T> extends Region {
     }
 
     /** Pseudoclass indicating this is a vertical Top side Axis. */
-    private static final PseudoClass.State TOP_PSEUDOCLASS_STATE =
-            PseudoClass.getState("top");
+    private static final PseudoClass TOP_PSEUDOCLASS_STATE =
+            PseudoClass.getPseudoClass("top");
     /** Pseudoclass indicating this is a vertical Bottom side Axis. */
-    private static final PseudoClass.State BOTTOM_PSEUDOCLASS_STATE =
-            PseudoClass.getState("bottom");
+    private static final PseudoClass BOTTOM_PSEUDOCLASS_STATE =
+            PseudoClass.getPseudoClass("bottom");
     /** Pseudoclass indicating this is a vertical Left side Axis. */
-    private static final PseudoClass.State LEFT_PSEUDOCLASS_STATE =
-            PseudoClass.getState("left");
+    private static final PseudoClass LEFT_PSEUDOCLASS_STATE =
+            PseudoClass.getPseudoClass("left");
     /** Pseudoclass indicating this is a vertical Right side Axis. */
-    private static final PseudoClass.State RIGHT_PSEUDOCLASS_STATE =
-            PseudoClass.getState("right");
+    private static final PseudoClass RIGHT_PSEUDOCLASS_STATE =
+            PseudoClass.getPseudoClass("right");
 
     /**
      * {@inheritDoc}
      */
-    @Override public PseudoClass.States getPseudoClassStates() {
-        PseudoClass.States states = super.getPseudoClassStates();
+    @Override public Set<PseudoClass> getPseudoClassStates() {
+        Set<PseudoClass> states = super.getPseudoClassStates();
         if (getSide() == null) {
             // RT-18270 XYChart has not initialized Side values and it could be null
             // note: We do not have initial default property on creation, as the default
@@ -1200,16 +1202,16 @@ public abstract class Axis<T> extends Region {
         } 
         switch(getSide()) {
             case TOP:
-                states.addState(TOP_PSEUDOCLASS_STATE);
+                states.add(TOP_PSEUDOCLASS_STATE);
                 break;
             case RIGHT:
-                states.addState(RIGHT_PSEUDOCLASS_STATE);
+                states.add(RIGHT_PSEUDOCLASS_STATE);
                 break;
             case BOTTOM:
-                states.addState(BOTTOM_PSEUDOCLASS_STATE);
+                states.add(BOTTOM_PSEUDOCLASS_STATE);
                 break;
             case LEFT:
-                states.addState(LEFT_PSEUDOCLASS_STATE);
+                states.add(LEFT_PSEUDOCLASS_STATE);
                 break;
         }
         return states;

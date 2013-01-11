@@ -22,85 +22,86 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-package com.sun.javafx.css;
+package javafx.css;
 
-import javafx.beans.property.SimpleIntegerProperty;
+import javafx.beans.property.SimpleFloatProperty;
 import javafx.beans.value.ObservableValue;
 
 /**
- * This class extends {@code SimpleIntegerProperty} and provides a full
+ * This class extends {@code SimpleFloatProperty} and provides a full
  * implementation of a {@code StyleableProperty}. The method 
  * {@link StyleableProperty#getCssMetaData()} is not implemented. 
  * 
- * This class is used to make a {@link javafx.beans.property.IntegerProperty}, 
- * that would otherwise be implemented as a {@link SimpleIntegerProperty}, 
+ * This class is used to make a {@link javafx.beans.property.FloatProperty}, 
+ * that would otherwise be implemented as a {@link SimpleFloatProperty}, 
  * style&#8209;able by CSS.
  * 
- * @see javafx.beans.property.SimpleIntegerProperty
+ * @see javafx.beans.property.SimpleFloatProperty
  * @see CssMetaData
  * @see StyleableProperty
  */
-public abstract class SimpleStyleableIntegerProperty
-    extends SimpleIntegerProperty implements StyleableProperty<Integer> {
+@com.sun.javafx.beans.annotations.NoBuilder
+public abstract class SimpleStyleableFloatProperty
+    extends SimpleFloatProperty implements StyleableProperty<Number> {
 
     /**
-     * The constructor of the {@code SimpleStyleableIntegerProperty}.
+     * The constructor of the {@code SimpleStyleableFloatProperty}.
      * @param cssMetaData
      *            the CssMetaData associated with this {@code StyleableProperty}
      */
-    public SimpleStyleableIntegerProperty(CssMetaData cssMetaData) {
+    public SimpleStyleableFloatProperty(CssMetaData cssMetaData) {
         super();
         this.cssMetaData = cssMetaData;
     }
 
     /**
-     * The constructor of the {@code SimpleStyleableIntegerProperty}.
+     * The constructor of the {@code SimpleStyleableFloatProperty}.
      *
      * @param cssMetaData
      *            the CssMetaData associated with this {@code StyleableProperty}
      * @param initialValue
      *            the initial value of the wrapped {@code Object}
      */
-    public SimpleStyleableIntegerProperty(CssMetaData cssMetaData, int initialValue) {
+    public SimpleStyleableFloatProperty(CssMetaData cssMetaData, float initialValue) {
         super(initialValue);
         this.cssMetaData = cssMetaData;
     }
 
     /**
-     * The constructor of the {@code SimpleStyleableIntegerProperty}.
+     * The constructor of the {@code SimpleStyleableFloatProperty}.
      *
      * @param cssMetaData
      *            the CssMetaData associated with this {@code StyleableProperty}
      * @param bean
-     *            the bean of this {@code IntegerProperty}
+     *            the bean of this {@code FloatProperty}
      * @param name
-     *            the name of this {@code IntegerProperty}
+     *            the name of this {@code FloatProperty}
      */
-    public SimpleStyleableIntegerProperty(CssMetaData cssMetaData, Object bean, String name) {
+    public SimpleStyleableFloatProperty(CssMetaData cssMetaData, Object bean, String name) {
         super(bean, name);
         this.cssMetaData = cssMetaData;
     }
 
     /**
-     * The constructor of the {@code SimpleStyleableIntegerProperty}.
+     * The constructor of the {@code SimpleStyleableFloatProperty}.
      *
      * @param cssMetaData
      *            the CssMetaData associated with this {@code StyleableProperty}
      * @param bean
-     *            the bean of this {@code IntegerProperty}
+     *            the bean of this {@code FloatProperty}
      * @param name
-     *            the name of this {@code IntegerProperty}
+     *            the name of this {@code FloatProperty}
      * @param initialValue
      *            the initial value of the wrapped {@code Object}
      */
-    public SimpleStyleableIntegerProperty(CssMetaData cssMetaData, Object bean, String name, int initialValue) {
+    public SimpleStyleableFloatProperty(CssMetaData cssMetaData, Object bean, String name, float initialValue) {
         super(bean, name, initialValue);
         this.cssMetaData = cssMetaData;
     }
 
     /** {@inheritDoc} */
     @Override
-    public void applyStyle(Origin origin, Integer v) {
+    public void applyStyle(StyleOrigin origin, Number v) {
         setValue(v);
         this.origin = origin;
     }
@@ -109,19 +110,19 @@ public abstract class SimpleStyleableIntegerProperty
     @Override
     public void bind(ObservableValue<? extends Number> observable) {
         super.bind(observable);
-        origin = Origin.USER;
+        origin = StyleOrigin.USER;
     }
 
     /** {@inheritDoc} */
     @Override
-    public void set(int v) {
+    public void set(float v) {
         super.set(v);
-        origin = Origin.USER;
+        origin = StyleOrigin.USER;
     }
 
     /** {@inheritDoc} */
     @Override
-    public final Origin getOrigin() { return origin; }
+    public final StyleOrigin getStyleOrigin() { return origin; }
 
     /** {@inheritDoc} */
     @Override
@@ -129,7 +130,7 @@ public abstract class SimpleStyleableIntegerProperty
         return cssMetaData;
     }
 
-    private Origin origin = null;
+    private StyleOrigin origin = null;
     private final CssMetaData cssMetaData;
 
 }

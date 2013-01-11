@@ -4,7 +4,7 @@
 
 package javafx.scene.chart;
 
-import com.sun.javafx.css.CssMetaData;
+import javafx.css.CssMetaData;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ReadOnlyDoubleProperty;
@@ -12,6 +12,7 @@ import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.css.StyleableProperty;
 import static org.junit.Assert.*;
 
 
@@ -136,7 +137,7 @@ public class CategoryAxisTest {
      * CSS related Tests                                                 *
      ********************************************************************/
     @Test public void whenStartMarginIsBound_impl_cssSettable_ReturnsFalse() {
-        CssMetaData styleable = CssMetaData.getCssMetaData(axis.startMarginProperty());
+        CssMetaData styleable = ((StyleableProperty)axis.startMarginProperty()).getCssMetaData();
         assertTrue(styleable.isSettable(axis));
         DoubleProperty other = new SimpleDoubleProperty();
         axis.startMarginProperty().bind(other);
@@ -144,19 +145,19 @@ public class CategoryAxisTest {
     }
 
     @Test public void whenStartMarginIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
-        CssMetaData styleable = CssMetaData.getCssMetaData(axis.startMarginProperty());
-        styleable.set(axis,10.9);
+        CssMetaData styleable = ((StyleableProperty)axis.startMarginProperty()).getCssMetaData();
+        styleable.set(axis,10.9, null);
         assertTrue(styleable.isSettable(axis));
     }
 
     @Test public void canSpecifyStartMarginViaCSS() {
-        CssMetaData styleable = CssMetaData.getCssMetaData(axis.startMarginProperty());
-        styleable.set(axis,10.34);
+        CssMetaData styleable = ((StyleableProperty)axis.startMarginProperty()).getCssMetaData();
+        styleable.set(axis,10.34, null);
         assertEquals(10.34, axis.getStartMargin(), 0.0);
     }
 
     @Test public void whenEndMarginIsBound_impl_cssSettable_ReturnsFalse() {
-        CssMetaData styleable = CssMetaData.getCssMetaData(axis.endMarginProperty());
+        CssMetaData styleable = ((StyleableProperty)axis.endMarginProperty()).getCssMetaData();
         assertTrue(styleable.isSettable(axis));
         DoubleProperty other = new SimpleDoubleProperty();
         axis.endMarginProperty().bind(other);
@@ -164,20 +165,20 @@ public class CategoryAxisTest {
     }
 
     @Test public void whenEndMarginIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
-        CssMetaData styleable = CssMetaData.getCssMetaData(axis.endMarginProperty());
-        styleable.set(axis,10.9);
+        CssMetaData styleable = ((StyleableProperty)axis.endMarginProperty()).getCssMetaData();
+        styleable.set(axis,10.9, null);
         assertTrue(styleable.isSettable(axis));
     }
 
     @Test public void canSpecifyEndMarginViaCSS() {
-        CssMetaData styleable = CssMetaData.getCssMetaData(axis.endMarginProperty());
-        styleable.set(axis,10.34);
+        CssMetaData styleable = ((StyleableProperty)axis.endMarginProperty()).getCssMetaData();
+        styleable.set(axis,10.34, null);
         assertEquals(10.34, axis.getEndMargin(), 0.0);
     }
 
 
     @Test public void whenGapStartAndEndIsBound_impl_cssSettable_ReturnsFalse() {
-        CssMetaData styleable = CssMetaData.getCssMetaData(axis.gapStartAndEndProperty());
+        CssMetaData styleable = ((StyleableProperty)axis.gapStartAndEndProperty()).getCssMetaData();
         assertTrue(styleable.isSettable(axis));
         BooleanProperty other = new SimpleBooleanProperty();
         axis.gapStartAndEndProperty().bind(other);
@@ -185,14 +186,14 @@ public class CategoryAxisTest {
     }
 
     @Test public void whenGapStartAndEndIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
-        CssMetaData styleable = CssMetaData.getCssMetaData(axis.gapStartAndEndProperty());
-        styleable.set(axis,false);
+        CssMetaData styleable = ((StyleableProperty)axis.gapStartAndEndProperty()).getCssMetaData();
+        styleable.set(axis,false, null);
         assertTrue(styleable.isSettable(axis));
     }
 
     @Test public void canGapStartAndEndViaCSS() {
-        CssMetaData styleable = CssMetaData.getCssMetaData(axis.gapStartAndEndProperty());
-        styleable.set(axis,true);
+        CssMetaData styleable = ((StyleableProperty)axis.gapStartAndEndProperty()).getCssMetaData();
+        styleable.set(axis,true, null);
         assertSame(true, axis.isGapStartAndEnd());
     }
 

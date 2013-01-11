@@ -26,6 +26,7 @@
 package com.sun.javafx.scene.control.behavior;
 
 import java.util.List;
+import java.util.Set;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.beans.value.ChangeListener;
@@ -54,7 +55,7 @@ import com.sun.javafx.scene.control.skin.TextFieldSkin;
 import com.sun.javafx.scene.text.HitInfo;
 
 import static com.sun.javafx.PlatformUtil.*;
-import com.sun.javafx.css.PseudoClass;
+import javafx.css.PseudoClass;
 
 /**
  * Text field behavior.
@@ -442,19 +443,19 @@ public class TextFieldBehavior extends TextInputControlBehavior<TextField> {
         TEXT_AREA;
     }
 
-    private static final PseudoClass.State INTERNAL_PSEUDOCLASS_STATE = 
-            PseudoClass.getState("internal-focus");
-    private static final PseudoClass.State EXTERNAL_PSEUDOCLASS_STATE = 
-            PseudoClass.getState("external-focus");
+    private static final PseudoClass INTERNAL_PSEUDOCLASS_STATE = 
+            PseudoClass.getPseudoClass("internal-focus");
+    private static final PseudoClass EXTERNAL_PSEUDOCLASS_STATE = 
+            PseudoClass.getPseudoClass("external-focus");
 
     /**
      * {@inheritDoc}
      */
-    @Override public PseudoClass.States getPseudoClassStates() {
-        PseudoClass.States states = super.getPseudoClassStates();
+    @Override public Set<PseudoClass> getPseudoClassStates() {
+        Set<PseudoClass> states = super.getPseudoClassStates();
         if (tlFocus != null) {
-            if (tlFocus.isExternalFocus()) states.addState(EXTERNAL_PSEUDOCLASS_STATE);
-            else states.addState(INTERNAL_PSEUDOCLASS_STATE);
+            if (tlFocus.isExternalFocus()) states.add(EXTERNAL_PSEUDOCLASS_STATE);
+            else states.add(INTERNAL_PSEUDOCLASS_STATE);
         }
         return states;
     }

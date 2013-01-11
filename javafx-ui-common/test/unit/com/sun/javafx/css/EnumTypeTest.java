@@ -27,6 +27,8 @@ package com.sun.javafx.css;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
+import javafx.css.ParsedValue;
+import javafx.css.StyleConverter;
 import javafx.scene.text.Font;
 
 import org.junit.Test;
@@ -46,18 +48,18 @@ public class EnumTypeTest {
     public void testConvert() {
         StyleConverter sizeUnitsType = new EnumConverter(SizeUnits.class);
         ParsedValue<String,Enum> value = 
-                new ParsedValue<String,Enum>("percent", sizeUnitsType);
+                new ParsedValueImpl<String,Enum>("percent", sizeUnitsType);
         Font font = null;
         Enum expResult = SizeUnits.PERCENT;
         Enum result = value.convert(font);
         assertEquals(expResult, result);
 
-        value = new ParsedValue<String,Enum>("SizeUnits.PERCENT", sizeUnitsType);
+        value = new ParsedValueImpl<String,Enum>("SizeUnits.PERCENT", sizeUnitsType);
         result = value.convert(font);
         assertEquals(expResult, result);
 
         try {
-            value = new ParsedValue<String,Enum>("fubar", sizeUnitsType);
+            value = new ParsedValueImpl<String,Enum>("fubar", sizeUnitsType);
             result = value.convert(font);
             fail("expected IllegalArgumentException");
         } catch (IllegalArgumentException iae) {

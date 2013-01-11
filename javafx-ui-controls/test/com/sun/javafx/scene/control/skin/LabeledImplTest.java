@@ -4,8 +4,8 @@
  */
 package com.sun.javafx.scene.control.skin;
 
-import com.sun.javafx.css.StyleConverter;
-import com.sun.javafx.css.CssMetaData;
+import javafx.css.StyleConverter;
+import javafx.css.CssMetaData;
 import java.util.ArrayList;
 
 import java.util.Arrays;
@@ -53,8 +53,8 @@ public class LabeledImplTest {
     }
     
     private static Configuration config(CssMetaData styleable) {
-        WritableValue source = styleable.getWritableValue(LABELED);
-        WritableValue mirror   = styleable.getWritableValue(LABELED_IMPL);
+        WritableValue source = styleable.getStyleableProperty(LABELED);
+        WritableValue mirror   = styleable.getStyleableProperty(LABELED_IMPL);
         Object value = null;
         if (source != null && mirror != null) {
             final String prop = styleable.getProperty();

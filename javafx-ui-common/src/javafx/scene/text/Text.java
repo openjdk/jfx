@@ -49,7 +49,6 @@ import javafx.beans.property.SimpleIntegerProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.StringProperty;
 import javafx.beans.property.StringPropertyBase;
-import javafx.beans.value.WritableValue;
 import javafx.geometry.BoundingBox;
 import javafx.geometry.Bounds;
 import javafx.geometry.NodeOrientation;
@@ -61,10 +60,10 @@ import javafx.scene.shape.PathElement;
 import javafx.scene.shape.Shape;
 import javafx.scene.shape.StrokeType;
 
-import com.sun.javafx.css.StyleableBooleanProperty;
-import com.sun.javafx.css.StyleableDoubleProperty;
-import com.sun.javafx.css.StyleableObjectProperty;
-import com.sun.javafx.css.CssMetaData;
+import javafx.css.StyleableBooleanProperty;
+import javafx.css.StyleableDoubleProperty;
+import javafx.css.StyleableObjectProperty;
+import javafx.css.CssMetaData;
 import com.sun.javafx.css.converters.BooleanConverter;
 import com.sun.javafx.css.converters.EnumConverter;
 import com.sun.javafx.css.converters.SizeConverter;
@@ -86,6 +85,8 @@ import com.sun.javafx.sg.PGShape.Mode;
 import com.sun.javafx.tk.Toolkit;
 import com.sun.javafx.accessible.providers.AccessibleProvider;
 import com.sun.javafx.accessible.AccessibleNode;
+import javafx.css.FontCssMetaData;
+import javafx.css.StyleableProperty;
 
 /**
  * The {@code Text} class defines a node that displays a text.
@@ -1256,7 +1257,7 @@ public class Text extends Shape {
      private static class StyleableProperties {
 
          private static final CssMetaData<Text,Font> FONT =
-            new CssMetaData.FONT<Text>("-fx-font", Font.getDefault()) {
+            new FontCssMetaData<Text>("-fx-font", Font.getDefault()) {
 
             @Override
             public boolean isSettable(Text node) {
@@ -1264,8 +1265,8 @@ public class Text extends Shape {
             }
 
             @Override
-            public WritableValue<Font> getWritableValue(Text node) {
-                return node.fontProperty();
+            public StyleableProperty<Font> getStyleableProperty(Text node) {
+                return (StyleableProperty)node.fontProperty();
             }
          };
 
@@ -1281,8 +1282,8 @@ public class Text extends Shape {
             }
 
             @Override
-            public WritableValue<Boolean> getWritableValue(Text node) {
-                return node.underlineProperty();
+            public StyleableProperty<Boolean> getStyleableProperty(Text node) {
+                return (StyleableProperty)node.underlineProperty();
             }
          };
 
@@ -1298,8 +1299,8 @@ public class Text extends Shape {
             }
 
             @Override
-            public WritableValue<Boolean> getWritableValue(Text node) {
-                return node.strikethroughProperty();
+            public StyleableProperty<Boolean> getStyleableProperty(Text node) {
+                return (StyleableProperty)node.strikethroughProperty();
             }
          };
 
@@ -1317,8 +1318,8 @@ public class Text extends Shape {
             }
 
             @Override
-            public WritableValue<TextAlignment> getWritableValue(Text node) {
-                return node.textAlignmentProperty();
+            public StyleableProperty<TextAlignment> getStyleableProperty(Text node) {
+                return (StyleableProperty)node.textAlignmentProperty();
             }
          };
 
@@ -1335,8 +1336,8 @@ public class Text extends Shape {
             }
 
             @Override
-            public WritableValue<VPos> getWritableValue(Text node) {
-                return node.textOriginProperty();
+            public StyleableProperty<VPos> getStyleableProperty(Text node) {
+                return (StyleableProperty)node.textOriginProperty();
             }
          };
 
@@ -1354,10 +1355,10 @@ public class Text extends Shape {
             }
 
             @Override
-            public WritableValue<FontSmoothingType>
-                                 getWritableValue(Text node) {
+            public StyleableProperty<FontSmoothingType>
+                                 getStyleableProperty(Text node) {
 
-                return node.fontSmoothingTypeProperty();
+                return (StyleableProperty)node.fontSmoothingTypeProperty();
             }
          };
 
@@ -1374,8 +1375,8 @@ public class Text extends Shape {
             }
 
             @Override
-            public WritableValue<Number> getWritableValue(Text node) {
-                return node.lineSpacingProperty();
+            public StyleableProperty<Number> getStyleableProperty(Text node) {
+                return (StyleableProperty)node.lineSpacingProperty();
             }
          };
 

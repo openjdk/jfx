@@ -25,7 +25,12 @@
 
 package javafx.scene.control;
 
-import com.sun.javafx.css.*;
+
+import javafx.css.PseudoClass;
+import javafx.css.StyleableBooleanProperty;
+import javafx.css.StyleableDoubleProperty;
+import javafx.css.StyleableObjectProperty;
+import javafx.css.StyleableStringProperty;
 import com.sun.javafx.css.converters.BooleanConverter;
 import com.sun.javafx.css.converters.EnumConverter;
 import com.sun.javafx.css.converters.SizeConverter;
@@ -40,7 +45,9 @@ import java.util.List;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.beans.property.*;
-import javafx.beans.value.WritableValue;
+import javafx.css.CssMetaData;
+import javafx.css.FontCssMetaData;
+import javafx.css.StyleableProperty;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.scene.Group;
@@ -331,7 +338,7 @@ public class Tooltip extends PopupControl {
 
     private static class StyleableProperties {
         private static final CssMetaData<CSSBridge,Font> FONT = 
-            new CssMetaData.FONT<CSSBridge>("-fx-font", Font.getDefault()) {
+            new FontCssMetaData<CSSBridge>("-fx-font", Font.getDefault()) {
 
             @Override
             public boolean isSettable(CSSBridge n) {
@@ -339,8 +346,8 @@ public class Tooltip extends PopupControl {
             }
 
             @Override
-            public WritableValue<Font> getWritableValue(CSSBridge n) {
-                return n.fontProperty();
+            public StyleableProperty<Font> getStyleableProperty(CSSBridge n) {
+                return (StyleableProperty)n.fontProperty();
             }
         };
         
@@ -355,8 +362,8 @@ public class Tooltip extends PopupControl {
             }
 
             @Override
-            public WritableValue<TextAlignment> getWritableValue(CSSBridge n) {
-                return n.textAlignmentProperty();
+            public StyleableProperty<TextAlignment> getStyleableProperty(CSSBridge n) {
+                return (StyleableProperty)n.textAlignmentProperty();
             }
         };
         
@@ -371,8 +378,8 @@ public class Tooltip extends PopupControl {
             }
 
             @Override
-            public WritableValue<OverrunStyle> getWritableValue(CSSBridge n) {
-                return n.textOverrunProperty();
+            public StyleableProperty<OverrunStyle> getStyleableProperty(CSSBridge n) {
+                return (StyleableProperty)n.textOverrunProperty();
             }
         };
         
@@ -386,8 +393,8 @@ public class Tooltip extends PopupControl {
             }
 
             @Override
-            public WritableValue<Boolean> getWritableValue(CSSBridge n) {
-                return n.wrapTextProperty();
+            public StyleableProperty<Boolean> getStyleableProperty(CSSBridge n) {
+                return (StyleableProperty)n.wrapTextProperty();
             }
         };
         
@@ -401,8 +408,8 @@ public class Tooltip extends PopupControl {
             }
 
             @Override
-            public WritableValue<String> getWritableValue(CSSBridge n) {
-                return n.imageUrlProperty();
+            public StyleableProperty<String> getStyleableProperty(CSSBridge n) {
+                return (StyleableProperty)n.imageUrlProperty();
             }
         };
         
@@ -417,8 +424,8 @@ public class Tooltip extends PopupControl {
             }
 
             @Override
-            public WritableValue<ContentDisplay> getWritableValue(CSSBridge n) {
-                return n.contentDisplayProperty();
+            public StyleableProperty<ContentDisplay> getStyleableProperty(CSSBridge n) {
+                return (StyleableProperty)n.contentDisplayProperty();
             }
         };
     
@@ -432,8 +439,8 @@ public class Tooltip extends PopupControl {
             }
 
             @Override
-            public WritableValue<Number> getWritableValue(CSSBridge n) {
-                return n.graphicTextGapProperty();
+            public StyleableProperty<Number> getStyleableProperty(CSSBridge n) {
+                return (StyleableProperty)n.graphicTextGapProperty();
             }
         };
     
@@ -472,7 +479,7 @@ public class Tooltip extends PopupControl {
 
     private final class CSSBridge extends PopupControl.CSSBridge {
         
-        @Override public void pseudoClassStateChanged(PseudoClass.State s) {
+        @Override public void pseudoClassStateChanged(PseudoClass s) {
             super.pseudoClassStateChanged(s);
         }
 

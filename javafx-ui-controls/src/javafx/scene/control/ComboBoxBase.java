@@ -25,7 +25,8 @@
 
 package javafx.scene.control;
 
-import com.sun.javafx.css.PseudoClass;
+import java.util.Set;
+import javafx.css.PseudoClass;
 import javafx.beans.property.*;
 import javafx.event.ActionEvent;
 import javafx.event.Event;
@@ -431,21 +432,21 @@ public abstract class ComboBoxBase<T> extends Control {
 
     private static final String DEFAULT_STYLE_CLASS = "combo-box-base";
     
-    private static final PseudoClass.State PSEUDO_CLASS_EDITABLE =
-            PseudoClass.getState("editable");
-    private static final PseudoClass.State PSEUDO_CLASS_SHOWING =
-            PseudoClass.getState("showing");
-    private static final PseudoClass.State PSEUDO_CLASS_ARMED =
-            PseudoClass.getState("armed");
+    private static final PseudoClass PSEUDO_CLASS_EDITABLE =
+            PseudoClass.getPseudoClass("editable");
+    private static final PseudoClass PSEUDO_CLASS_SHOWING =
+            PseudoClass.getPseudoClass("showing");
+    private static final PseudoClass PSEUDO_CLASS_ARMED =
+            PseudoClass.getPseudoClass("armed");
     
     /**
      * {@inheritDoc}
      */
-    @Override public PseudoClass.States getPseudoClassStates() {
-        PseudoClass.States states = super.getPseudoClassStates();
-        if (isEditable()) states.addState(PSEUDO_CLASS_EDITABLE);
-        if (isShowing()) states.addState(PSEUDO_CLASS_SHOWING);
-        if (isArmed()) states.addState(PSEUDO_CLASS_ARMED);
+    @Override public Set<PseudoClass> getPseudoClassStates() {
+        Set<PseudoClass> states = super.getPseudoClassStates();
+        if (isEditable()) states.add(PSEUDO_CLASS_EDITABLE);
+        if (isShowing()) states.add(PSEUDO_CLASS_SHOWING);
+        if (isArmed()) states.add(PSEUDO_CLASS_ARMED);
         return states;
     }
 }

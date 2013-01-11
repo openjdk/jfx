@@ -25,7 +25,7 @@
 
 package javafx.scene.layout;
 
-import com.sun.javafx.css.*;
+import javafx.css.*;
 import com.sun.javafx.css.converters.BooleanConverter;
 import com.sun.javafx.css.converters.EnumConverter;
 import com.sun.javafx.css.converters.SizeConverter;
@@ -557,8 +557,8 @@ public class HBox extends Pane {
             }
 
             @Override
-            public WritableValue<Pos> getWritableValue(HBox node) {
-                return node.alignmentProperty();
+            public StyleableProperty<Pos> getStyleableProperty(HBox node) {
+                return (StyleableProperty)node.alignmentProperty();
             }
                      
          };
@@ -574,8 +574,8 @@ public class HBox extends Pane {
             }
 
             @Override
-            public WritableValue<Boolean> getWritableValue(HBox node) {
-                return node.fillHeightProperty();
+            public StyleableProperty<Boolean> getStyleableProperty(HBox node) {
+                return (StyleableProperty)node.fillHeightProperty();
             }
                      
          };
@@ -590,8 +590,8 @@ public class HBox extends Pane {
             }
 
             @Override
-            public WritableValue<Number> getWritableValue(HBox node) {
-                return node.spacingProperty();
+            public StyleableProperty<Number> getStyleableProperty(HBox node) {
+                return (StyleableProperty)node.spacingProperty();
             }
                      
          };

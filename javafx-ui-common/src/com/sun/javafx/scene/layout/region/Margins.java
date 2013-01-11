@@ -29,7 +29,7 @@ import javafx.scene.text.Font;
 import com.sun.javafx.css.Size;
 import com.sun.javafx.css.SizeUnits;
 import com.sun.javafx.css.StyleConverterImpl;
-import com.sun.javafx.css.ParsedValue;
+import javafx.css.ParsedValue;
 
 /**
  * Similar to Insets but with flag denoting values are proportional.

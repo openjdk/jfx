@@ -32,6 +32,8 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
+import javafx.css.ParsedValue;
+import javafx.css.StyleConverter;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 

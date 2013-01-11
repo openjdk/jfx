@@ -36,8 +36,8 @@ import javafx.beans.property.DoublePropertyBase;
 import javafx.beans.value.WritableValue;
 import javafx.scene.paint.Paint;
 
-import com.sun.javafx.css.StyleableDoubleProperty;
-import com.sun.javafx.css.CssMetaData;
+import javafx.css.StyleableDoubleProperty;
+import javafx.css.CssMetaData;
 import com.sun.javafx.css.converters.SizeConverter;
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.RoundRectangle2D;
@@ -48,6 +48,7 @@ import com.sun.javafx.sg.PGRectangle;
 import com.sun.javafx.sg.PGShape.Mode;
 import com.sun.javafx.tk.Toolkit;
 import javafx.beans.property.Property;
+import javafx.css.StyleableProperty;
 
 
 /**
@@ -407,8 +408,8 @@ public  class Rectangle extends Shape {
             }
 
             @Override
-            public WritableValue<Number> getWritableValue(Rectangle node) {
-                return node.arcHeightProperty();
+            public StyleableProperty<Number> getStyleableProperty(Rectangle node) {
+                return (StyleableProperty)node.arcHeightProperty();
             }
 
         };         
@@ -422,8 +423,8 @@ public  class Rectangle extends Shape {
             }
 
             @Override
-            public WritableValue<Number> getWritableValue(Rectangle node) {
-                return node.arcWidthProperty();
+            public StyleableProperty<Number> getStyleableProperty(Rectangle node) {
+                return (StyleableProperty)node.arcWidthProperty();
             }
 
         };

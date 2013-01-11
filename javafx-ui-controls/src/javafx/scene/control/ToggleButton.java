@@ -25,6 +25,7 @@
 
 package javafx.scene.control;
 
+import java.util.Set;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.BooleanPropertyBase;
 import javafx.beans.property.ObjectProperty;
@@ -32,9 +33,10 @@ import javafx.beans.property.ObjectPropertyBase;
 import javafx.event.ActionEvent;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
-import com.sun.javafx.css.CssMetaData;
-import com.sun.javafx.css.PseudoClass;
+import javafx.css.CssMetaData;
+import javafx.css.PseudoClass;
 import com.sun.javafx.scene.control.skin.ToggleButtonSkin;
+import javafx.css.StyleableProperty;
 
 /**
  * A {@code ToggleButton} is a specialized control which has the ability to be
@@ -122,8 +124,8 @@ import com.sun.javafx.scene.control.skin.ToggleButtonSkin;
         // makes it look to css like the user set the value and css will not 
         // override. Initializing alignment by calling set on the 
         // CssMetaData ensures that css will be able to override the value.
-        final CssMetaData prop = CssMetaData.getCssMetaData(alignmentProperty());
-        prop.set(this, Pos.CENTER);
+        final CssMetaData prop = ((StyleableProperty)alignmentProperty()).getCssMetaData();
+        prop.set(this, Pos.CENTER, null);
         setMnemonicParsing(true);     // enable mnemonic auto-parsing by default
     }
     /***************************************************************************
@@ -243,15 +245,15 @@ import com.sun.javafx.scene.control.skin.ToggleButtonSkin;
      **************************************************************************/
 
     private static final String DEFAULT_STYLE_CLASS = "toggle-button";
-    private static final PseudoClass.State PSEUDO_CLASS_SELECTED =
-            PseudoClass.getState("selected");
+    private static final PseudoClass PSEUDO_CLASS_SELECTED =
+            PseudoClass.getPseudoClass("selected");
 
     /**
      * {@inheritDoc}
      */
-    @Override public PseudoClass.States getPseudoClassStates() {
-        PseudoClass.States states = super.getPseudoClassStates();
-        if (isSelected()) states.addState(PSEUDO_CLASS_SELECTED);
+    @Override public Set<PseudoClass> getPseudoClassStates() {
+        Set<PseudoClass> states = super.getPseudoClassStates();
+        if (isSelected()) states.add(PSEUDO_CLASS_SELECTED);
         return states;
     }
     

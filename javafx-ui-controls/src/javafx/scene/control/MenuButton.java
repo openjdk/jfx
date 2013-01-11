@@ -25,7 +25,8 @@
 
 package javafx.scene.control;
 
-import com.sun.javafx.css.PseudoClass;
+import java.util.Set;
+import javafx.css.PseudoClass;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ObjectPropertyBase;
 import javafx.collections.FXCollections;
@@ -247,20 +248,20 @@ public class MenuButton extends ButtonBase {
      **************************************************************************/
 
     private static final String DEFAULT_STYLE_CLASS = "menu-button";
-    private static final PseudoClass.State PSEUDO_CLASS_OPENVERTICALLY = 
-            PseudoClass.getState("openvertically");
-    private static final PseudoClass.State PSEUDO_CLASS_SHOWING = 
-            PseudoClass.getState("showing");
+    private static final PseudoClass PSEUDO_CLASS_OPENVERTICALLY = 
+            PseudoClass.getPseudoClass("openvertically");
+    private static final PseudoClass PSEUDO_CLASS_SHOWING = 
+            PseudoClass.getPseudoClass("showing");
 
     /**
      * {@inheritDoc}
      */
-    @Override public PseudoClass.States getPseudoClassStates() {
-        PseudoClass.States states = super.getPseudoClassStates();
+    @Override public Set<PseudoClass> getPseudoClassStates() {
+        Set<PseudoClass> states = super.getPseudoClassStates();
         if (getPopupSide() == Side.TOP || getPopupSide() == Side.BOTTOM)
-            states.addState(PSEUDO_CLASS_OPENVERTICALLY);
+            states.add(PSEUDO_CLASS_OPENVERTICALLY);
         if (isShowing()) {
-            states.addState(PSEUDO_CLASS_SHOWING);
+            states.add(PSEUDO_CLASS_SHOWING);
         }
         return states;
     }

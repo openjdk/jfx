@@ -39,9 +39,9 @@ import javafx.geometry.VPos;
 import javafx.scene.Node;
 import javafx.scene.layout.Pane;
 
-import com.sun.javafx.css.StyleableDoubleProperty;
-import com.sun.javafx.css.StyleableObjectProperty;
-import com.sun.javafx.css.CssMetaData;
+import javafx.css.StyleableDoubleProperty;
+import javafx.css.StyleableObjectProperty;
+import javafx.css.CssMetaData;
 import com.sun.javafx.css.converters.EnumConverter;
 import com.sun.javafx.css.converters.SizeConverter;
 import com.sun.javafx.geom.BaseBounds;
@@ -52,6 +52,7 @@ import com.sun.javafx.scene.text.TextLayout;
 import com.sun.javafx.scene.text.TextLayoutFactory;
 import com.sun.javafx.scene.text.TextSpan;
 import com.sun.javafx.tk.Toolkit;
+import javafx.css.StyleableProperty;
 
 /**
  * TextFlow is special layout designed to lay out rich text.
@@ -429,8 +430,8 @@ public class TextFlow extends Pane {
                 return node.textAlignment == null || !node.textAlignment.isBound();
             }
 
-            @Override public WritableValue<TextAlignment> getWritableValue(TextFlow node) {
-                return node.textAlignmentProperty();
+            @Override public StyleableProperty<TextAlignment> getStyleableProperty(TextFlow node) {
+                return (StyleableProperty)node.textAlignmentProperty();
             }
          };
 
@@ -443,8 +444,8 @@ public class TextFlow extends Pane {
                 return node.lineSpacing == null || !node.lineSpacing.isBound();
             }
 
-            @Override public WritableValue<Number> getWritableValue(TextFlow node) {
-                return node.lineSpacingProperty();
+            @Override public StyleableProperty<Number> getStyleableProperty(TextFlow node) {
+                return (StyleableProperty)node.lineSpacingProperty();
             }
          };
 

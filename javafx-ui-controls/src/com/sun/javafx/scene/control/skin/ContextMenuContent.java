@@ -32,6 +32,7 @@ package com.sun.javafx.scene.control.skin;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 
 import javafx.animation.Animation.Status;
 import javafx.animation.KeyFrame;
@@ -68,8 +69,8 @@ import javafx.scene.layout.VBox;
 import javafx.scene.shape.Rectangle;
 import javafx.util.Duration;
 
-import com.sun.javafx.css.CssMetaData;
-import com.sun.javafx.css.PseudoClass;
+import javafx.css.CssMetaData;
+import javafx.css.PseudoClass;
 import java.util.Iterator;
 import javafx.geometry.NodeOrientation;
 import javafx.stage.Window;
@@ -1319,16 +1320,16 @@ public class ContextMenuContent extends Region {
         }
 
         @Override
-        public PseudoClass.States getPseudoClassStates() {
-            PseudoClass.States states = super.getPseudoClassStates();
+        public Set<PseudoClass> getPseudoClassStates() {
+            Set<PseudoClass> states = super.getPseudoClassStates();
             if (item instanceof Menu && item.equals(openSubmenu) && submenu.isShowing()) {
-                states.addState(SELECTED_PSEUDOCLASS_STATE);
+                states.add(SELECTED_PSEUDOCLASS_STATE);
             } else if (item instanceof RadioMenuItem && ((RadioMenuItem)item).isSelected()) {
-                states.addState(CHECKED_PSEUDOCLASS_STATE);
+                states.add(CHECKED_PSEUDOCLASS_STATE);
             } else if (item instanceof CheckMenuItem && ((CheckMenuItem)item).isSelected()) {
-                states.addState(CHECKED_PSEUDOCLASS_STATE);
+                states.add(CHECKED_PSEUDOCLASS_STATE);
             }
-            if (item.isDisable()) states.addState(DISABLED_PSEUDOCLASS_STATE);
+            if (item.isDisable()) states.add(DISABLED_PSEUDOCLASS_STATE);
             return states;
         }
 
@@ -1361,7 +1362,7 @@ public class ContextMenuContent extends Region {
         private void listen(ObservableBooleanValue property, final String pseudoClass) {
             property.addListener(new InvalidationListener() {
                 @Override public void invalidated(Observable valueModel) {
-                    PseudoClass.State state = PseudoClass.getState(pseudoClass);
+                    PseudoClass state = PseudoClass.getPseudoClass(pseudoClass);
                     pseudoClassStateChanged(state);
                 }
             });
@@ -1399,12 +1400,12 @@ public class ContextMenuContent extends Region {
     }
 
 
-    private static final PseudoClass.State SELECTED_PSEUDOCLASS_STATE =
-            PseudoClass.getState("selected");
-    private static final PseudoClass.State DISABLED_PSEUDOCLASS_STATE =
-            PseudoClass.getState("disabled");
-    private static final PseudoClass.State CHECKED_PSEUDOCLASS_STATE =
-            PseudoClass.getState("checked");
+    private static final PseudoClass SELECTED_PSEUDOCLASS_STATE =
+            PseudoClass.getPseudoClass("selected");
+    private static final PseudoClass DISABLED_PSEUDOCLASS_STATE =
+            PseudoClass.getPseudoClass("disabled");
+    private static final PseudoClass CHECKED_PSEUDOCLASS_STATE =
+            PseudoClass.getPseudoClass("checked");
 
     private class MenuLabel extends Label {
 

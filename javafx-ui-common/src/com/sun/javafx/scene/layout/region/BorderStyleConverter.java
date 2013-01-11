@@ -32,7 +32,7 @@ import javafx.scene.shape.StrokeLineCap;
 import javafx.scene.shape.StrokeLineJoin;
 import javafx.scene.shape.StrokeType;
 import javafx.scene.text.Font;
-import com.sun.javafx.css.ParsedValue;
+import javafx.css.ParsedValue;
 import com.sun.javafx.css.ParsedValueImpl;
 import com.sun.javafx.css.Size;
 import com.sun.javafx.css.StyleConverterImpl;

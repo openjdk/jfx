@@ -26,6 +26,7 @@
 package com.sun.javafx.css;
 
 import static org.junit.Assert.assertEquals;
+import javafx.css.ParsedValue;
 import javafx.scene.text.Font;
 
 import org.junit.Test;
@@ -43,27 +44,27 @@ public class FontSizeTypeTest {
      */
     @Test
     public void testConvertToPixels() {
-        ParsedValue<Size,Size> size = new ParsedValue<Size,Size>(new Size(2.0f, SizeUnits.EM), null);
-        ParsedValue<ParsedValue<?,Size>,Double> value = new ParsedValue<ParsedValue<?,Size>,Double>(size, SizeConverter.getInstance());
+        ParsedValue<Size,Size> size = new ParsedValueImpl<Size,Size>(new Size(2.0f, SizeUnits.EM), null);
+        ParsedValue<ParsedValue<?,Size>,Double> value = new ParsedValueImpl<ParsedValue<?,Size>,Double>(size, SizeConverter.getInstance());
         Font font = Font.getDefault();
         double expResult = SizeUnits.EM.pixels(2, 1, font);
         double result = SizeConverter.getInstance().convert(value, font);
         assertEquals(expResult, result, 0.01);
 
-        size = new ParsedValue<Size,Size>(new Size(120.0f, SizeUnits.PERCENT), null);
-        value = new ParsedValue<ParsedValue<?,Size>,Double>(size, SizeConverter.getInstance());
+        size = new ParsedValueImpl<Size,Size>(new Size(120.0f, SizeUnits.PERCENT), null);
+        value = new ParsedValueImpl<ParsedValue<?,Size>,Double>(size, SizeConverter.getInstance());
         expResult = SizeUnits.PERCENT.pixels(120, 1, font);
         result = SizeConverter.getInstance().convert(value, font);
         assertEquals(expResult, result, 0.01);
 
-        size = new ParsedValue<Size,Size>(new Size(12.0f, SizeUnits.PT), null);
-        value = new ParsedValue<ParsedValue<?,Size>,Double>(size, SizeConverter.getInstance());
+        size = new ParsedValueImpl<Size,Size>(new Size(12.0f, SizeUnits.PT), null);
+        value = new ParsedValueImpl<ParsedValue<?,Size>,Double>(size, SizeConverter.getInstance());
         expResult = SizeUnits.PT.pixels(12, 1, font);
         result = SizeConverter.getInstance().convert(value, font);
         assertEquals(expResult, result, 0.01);
 
-        size = new ParsedValue<Size,Size>(new Size(12.0f, SizeUnits.PX), null);
-        value = new ParsedValue<ParsedValue<?,Size>,Double>(size, SizeConverter.getInstance());
+        size = new ParsedValueImpl<Size,Size>(new Size(12.0f, SizeUnits.PX), null);
+        value = new ParsedValueImpl<ParsedValue<?,Size>,Double>(size, SizeConverter.getInstance());
         expResult = SizeUnits.PX.pixels(12, 1, font);
         result = SizeConverter.getInstance().convert(value, font);
         assertEquals(expResult, result, 0.01);
@@ -76,26 +77,26 @@ public class FontSizeTypeTest {
 //        // font size is in pixels. convert to points
 //        double pointSize = font.getSize() / javafx.stage.Screen.getPrimary().getDpi() * 72;
 //
-//        ParsedValue<Size,Size> size = new ParsedValue<Size,Size>(new Size(2.0f, SizeUnits.EM), null);
-//        ParsedValue<Value<?,Size>,Double> value = new ParsedValue<Value<?,Size>,Double>(size, StyleConverter.POINTS);
+//        ParsedValue<Size,Size> size = new ParsedValueImpl<Size,Size>(new Size(2.0f, SizeUnits.EM), null);
+//        ParsedValue<Value<?,Size>,Double> value = new ParsedValueImpl<Value<?,Size>,Double>(size, StyleConverter.POINTS);
 //        double expResult = SizeUnits.EM.points(2, 1, font);
 //        double result = StyleConverter.POINTS.convert(value, font);
 //        assertEquals(expResult, result, 0.01);
 //
-//        size = new ParsedValue<Size,Size>(new Size(120.0f, SizeUnits.PERCENT), null);
-//        value = new ParsedValue<Value<?,Size>,Double>(size, StyleConverter.POINTS);
+//        size = new ParsedValueImpl<Size,Size>(new Size(120.0f, SizeUnits.PERCENT), null);
+//        value = new ParsedValueImpl<Value<?,Size>,Double>(size, StyleConverter.POINTS);
 //        expResult = SizeUnits.PERCENT.points(120, 1, font);
 //        result = StyleConverter.POINTS.convert(value, font);
 //        assertEquals(expResult, result, 0.01);
 //
-//        size = new ParsedValue<Size,Size>(new Size(12.0f, SizeUnits.PT), null);
-//        value = new ParsedValue<Value<?,Size>,Double>(size, StyleConverter.POINTS);
+//        size = new ParsedValueImpl<Size,Size>(new Size(12.0f, SizeUnits.PT), null);
+//        value = new ParsedValueImpl<Value<?,Size>,Double>(size, StyleConverter.POINTS);
 //        expResult = SizeUnits.PT.points(12, 1, font);
 //        result = StyleConverter.POINTS.convert(value, font);
 //        assertEquals(expResult, result, 0.01);
 //
-//        size = new ParsedValue<Size,Size>(new Size(12.0f, SizeUnits.PX), null);
-//        value = new ParsedValue<Value<?,Size>,Double>(size, StyleConverter.POINTS);
+//        size = new ParsedValueImpl<Size,Size>(new Size(12.0f, SizeUnits.PX), null);
+//        value = new ParsedValueImpl<Value<?,Size>,Double>(size, StyleConverter.POINTS);
 //        expResult = SizeUnits.PX.points(12, 1, font);
 //        result = StyleConverter.POINTS.convert(value, font);
 //        assertEquals(expResult, result, 0.01);

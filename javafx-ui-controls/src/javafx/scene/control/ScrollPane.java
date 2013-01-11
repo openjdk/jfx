@@ -25,29 +25,30 @@
 
 package javafx.scene.control;
 
-import com.sun.javafx.css.CssMetaData;
-import com.sun.javafx.css.PseudoClass;
-import com.sun.javafx.css.StyleableBooleanProperty;
-import com.sun.javafx.css.StyleableObjectProperty;
+import javafx.css.CssMetaData;
+import javafx.css.PseudoClass;
+import javafx.css.StyleableBooleanProperty;
+import javafx.css.StyleableObjectProperty;
 import com.sun.javafx.css.converters.BooleanConverter;
 import com.sun.javafx.css.converters.EnumConverter;
 import com.sun.javafx.scene.control.skin.ScrollPaneSkin;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.beans.property.SimpleObjectProperty;
-import javafx.beans.value.WritableValue;
 
 import javafx.geometry.BoundingBox;
 import javafx.geometry.Bounds;
 import javafx.scene.Node;
 
 import javafx.beans.DefaultProperty;
+import javafx.css.StyleableProperty;
 
 /**
  * A Control that provides a scrolled, clipped viewport of its contents. It
@@ -103,8 +104,8 @@ public class ScrollPane extends Control {
         // makes it look to css like the user set the value and css will not 
         // override. Initializing focusTraversable by calling set on the 
         // CssMetaData ensures that css will be able to override the value.
-        final CssMetaData prop = CssMetaData.getCssMetaData(focusTraversableProperty());
-        prop.set(this, Boolean.FALSE);            
+        final CssMetaData prop = ((StyleableProperty)focusTraversableProperty()).getCssMetaData();
+        prop.set(this, Boolean.FALSE, null); 
     }
     /***************************************************************************
      *                                                                         *
@@ -610,8 +611,8 @@ public class ScrollPane extends Control {
             }
 
             @Override
-            public WritableValue<ScrollBarPolicy> getWritableValue(ScrollPane n) {
-                return n.hbarPolicyProperty();
+            public StyleableProperty<ScrollBarPolicy> getStyleableProperty(ScrollPane n) {
+                return (StyleableProperty)n.hbarPolicyProperty();
             }
         };
                 
@@ -626,8 +627,8 @@ public class ScrollPane extends Control {
             }
 
             @Override
-            public WritableValue<ScrollBarPolicy> getWritableValue(ScrollPane n) {
-                return n.vbarPolicyProperty();
+            public StyleableProperty<ScrollBarPolicy> getStyleableProperty(ScrollPane n) {
+                return (StyleableProperty)n.vbarPolicyProperty();
             }
         };
                 
@@ -641,8 +642,8 @@ public class ScrollPane extends Control {
             }
 
             @Override
-            public WritableValue<Boolean> getWritableValue(ScrollPane n) {
-                return n.fitToWidthProperty();
+            public StyleableProperty<Boolean> getStyleableProperty(ScrollPane n) {
+                return (StyleableProperty)n.fitToWidthProperty();
             }
         };
                 
@@ -656,8 +657,8 @@ public class ScrollPane extends Control {
             }
 
             @Override
-            public WritableValue<Boolean> getWritableValue(ScrollPane n) {
-                return n.fitToHeightProperty();
+            public StyleableProperty<Boolean> getStyleableProperty(ScrollPane n) {
+                return (StyleableProperty)n.fitToHeightProperty();
             }
         };
                 
@@ -671,8 +672,8 @@ public class ScrollPane extends Control {
             }
 
             @Override
-            public WritableValue<Boolean> getWritableValue(ScrollPane n) {
-                return n.pannableProperty();
+            public StyleableProperty<Boolean> getStyleableProperty(ScrollPane n) {
+                return (StyleableProperty)n.pannableProperty();
             }
         };
 
@@ -707,26 +708,26 @@ public class ScrollPane extends Control {
         return getClassCssMetaData();
     }
 
-    private static final PseudoClass.State PANNABLE_PSEUDOCLASS_STATE =
-            PseudoClass.getState("pannable");
-    private static final PseudoClass.State FIT_TO_WIDTH_PSEUDOCLASS_STATE =
-            PseudoClass.getState("fitToWidth");
-    private static final PseudoClass.State FIT_TO_HEIGHT_PSEUDOCLASS_STATE =
-            PseudoClass.getState("fitToHeight");
+    private static final PseudoClass PANNABLE_PSEUDOCLASS_STATE =
+            PseudoClass.getPseudoClass("pannable");
+    private static final PseudoClass FIT_TO_WIDTH_PSEUDOCLASS_STATE =
+            PseudoClass.getPseudoClass("fitToWidth");
+    private static final PseudoClass FIT_TO_HEIGHT_PSEUDOCLASS_STATE =
+            PseudoClass.getPseudoClass("fitToHeight");
 
     /**
      * {@inheritDoc}
      */
-    @Override public PseudoClass.States getPseudoClassStates() {
-        PseudoClass.States states = super.getPseudoClassStates();
+    @Override public Set<PseudoClass> getPseudoClassStates() {
+        Set<PseudoClass> states = super.getPseudoClassStates();
         if (isPannable()) {
-            states.addState(PANNABLE_PSEUDOCLASS_STATE);
+            states.add(PANNABLE_PSEUDOCLASS_STATE);
         }
         if (isFitToWidth()) {
-            states.addState(FIT_TO_WIDTH_PSEUDOCLASS_STATE);
+            states.add(FIT_TO_WIDTH_PSEUDOCLASS_STATE);
         }
         if (isFitToHeight()) {
-            states.addState(FIT_TO_HEIGHT_PSEUDOCLASS_STATE);
+            states.add(FIT_TO_HEIGHT_PSEUDOCLASS_STATE);
         }
         return states;
     }

@@ -4,7 +4,7 @@
 
 package javafx.scene.control;
 
-import com.sun.javafx.css.CssMetaData;
+import javafx.css.CssMetaData;
 import static javafx.scene.control.ControlTestUtils.*;
 import com.sun.javafx.pgstub.StubToolkit;
 import com.sun.javafx.scene.control.skin.ScrollBarSkin;
@@ -13,6 +13,7 @@ import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.beans.property.SimpleObjectProperty;
+import javafx.css.StyleableProperty;
 import javafx.geometry.Orientation;
 import static org.junit.Assert.*;
 
@@ -240,7 +241,7 @@ public class ScrollBarTest {
      * CSS related Tests                                                 *
      ********************************************************************/
     @Test public void whenOrientationIsBound_impl_cssSettable_ReturnsFalse() {
-        CssMetaData styleable = CssMetaData.getCssMetaData(scrollBar.orientationProperty());
+        CssMetaData styleable = ((StyleableProperty)scrollBar.orientationProperty()).getCssMetaData();
         assertTrue(styleable.isSettable(scrollBar));
         ObjectProperty<Orientation> other = new SimpleObjectProperty<Orientation>(Orientation.VERTICAL);
         scrollBar.orientationProperty().bind(other);
@@ -248,19 +249,19 @@ public class ScrollBarTest {
     }
 
     @Test public void whenOrientationIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
-        CssMetaData styleable = CssMetaData.getCssMetaData(scrollBar.orientationProperty());
-        styleable.set(scrollBar, Orientation.VERTICAL);
+        CssMetaData styleable = ((StyleableProperty)scrollBar.orientationProperty()).getCssMetaData();
+        styleable.set(scrollBar, Orientation.VERTICAL, null);
         assertTrue(styleable.isSettable(scrollBar));
     }
 
     @Test public void canSpecifyOrientationViaCSS() {
-        CssMetaData styleable = CssMetaData.getCssMetaData(scrollBar.orientationProperty());
-        styleable.set(scrollBar, Orientation.VERTICAL);
+        CssMetaData styleable = ((StyleableProperty)scrollBar.orientationProperty()).getCssMetaData();
+        styleable.set(scrollBar, Orientation.VERTICAL, null);
         assertTrue(styleable.isSettable(scrollBar));
     }
 
     @Test public void whenUnitIncIsBound_impl_cssSettable_ReturnsFalse() {
-        CssMetaData styleable = CssMetaData.getCssMetaData(scrollBar.unitIncrementProperty());
+        CssMetaData styleable = ((StyleableProperty)scrollBar.unitIncrementProperty()).getCssMetaData();
         assertTrue(styleable.isSettable(scrollBar));
         DoubleProperty other = new SimpleDoubleProperty(2.0);
         scrollBar.unitIncrementProperty().bind(other);
@@ -268,19 +269,19 @@ public class ScrollBarTest {
     }
 
     @Test public void whenUnitIncIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
-        CssMetaData styleable = CssMetaData.getCssMetaData(scrollBar.unitIncrementProperty());
-        styleable.set(scrollBar, 5.0);
+        CssMetaData styleable = ((StyleableProperty)scrollBar.unitIncrementProperty()).getCssMetaData();
+        styleable.set(scrollBar, 5.0, null);
         assertTrue(styleable.isSettable(scrollBar));
     }
 
     @Test public void canSpecifyUnitIncViaCSS() {
-        CssMetaData styleable = CssMetaData.getCssMetaData(scrollBar.unitIncrementProperty());
-        styleable.set(scrollBar, 6.0);
+        CssMetaData styleable = ((StyleableProperty)scrollBar.unitIncrementProperty()).getCssMetaData();
+        styleable.set(scrollBar, 6.0, null);
         assertEquals(6.0, scrollBar.getUnitIncrement(), 0.0);
     }
 
     @Test public void whenBlockIncIsBound_impl_cssSettable_ReturnsFalse() {
-        CssMetaData styleable = CssMetaData.getCssMetaData(scrollBar.blockIncrementProperty());
+        CssMetaData styleable = ((StyleableProperty)scrollBar.blockIncrementProperty()).getCssMetaData();
         assertTrue(styleable.isSettable(scrollBar));
         DoubleProperty other = new SimpleDoubleProperty(2.0);
         scrollBar.blockIncrementProperty().bind(other);
@@ -288,14 +289,14 @@ public class ScrollBarTest {
     }
 
     @Test public void whenBlockIncIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
-        CssMetaData styleable = CssMetaData.getCssMetaData(scrollBar.blockIncrementProperty());
-        styleable.set(scrollBar, 5.0);
+        CssMetaData styleable = ((StyleableProperty)scrollBar.blockIncrementProperty()).getCssMetaData();
+        styleable.set(scrollBar, 5.0, null);
         assertTrue(styleable.isSettable(scrollBar));
     }
 
     @Test public void canSpecifyBlockIncViaCSS() {
-        CssMetaData styleable = CssMetaData.getCssMetaData(scrollBar.blockIncrementProperty());
-        styleable.set(scrollBar, 6.0);
+        CssMetaData styleable = ((StyleableProperty)scrollBar.blockIncrementProperty()).getCssMetaData();
+        styleable.set(scrollBar, 6.0, null);
         assertEquals(6.0, scrollBar.getBlockIncrement(), 0.0);
     }
 

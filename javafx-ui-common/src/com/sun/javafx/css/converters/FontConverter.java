@@ -24,7 +24,6 @@
  */
 package com.sun.javafx.css.converters;
 
-import java.util.List;
 import java.util.Map;
 
 import javafx.scene.text.Font;
@@ -35,9 +34,9 @@ import com.sun.javafx.Utils;
 import com.sun.javafx.css.FontUnits;
 import com.sun.javafx.css.Size;
 import com.sun.javafx.css.StyleConverterImpl;
-import com.sun.javafx.css.CssMetaData;
-import com.sun.javafx.css.ParsedValue;
+import javafx.css.ParsedValue;
 import java.util.Map.Entry;
+import javafx.css.CssMetaData;
 
 public final class FontConverter extends StyleConverterImpl<ParsedValue[], Font> {
 

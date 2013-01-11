@@ -4,10 +4,11 @@
  */
 package com.sun.javafx.scene.control.skin;
 
-import com.sun.javafx.css.PseudoClass;
+import javafx.css.PseudoClass;
 import com.sun.javafx.css.StyleManager;
 import javafx.scene.control.ColorPicker;
 import java.util.List;
+import java.util.Set;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
 import javafx.beans.value.ChangeListener;
@@ -509,12 +510,12 @@ public class ColorPalette extends StackPane {
             }
             return selected;
         }
-        private final PseudoClass.State SELECTED_PSEUDOCLASS_STATE =
-            PseudoClass.getState("selected");
+        private final PseudoClass SELECTED_PSEUDOCLASS_STATE =
+            PseudoClass.getPseudoClass("selected");
 
-        @Override public PseudoClass.States getPseudoClassStates() {
-            PseudoClass.States states = super.getPseudoClassStates();
-            if (isSelected()) states.addState(SELECTED_PSEUDOCLASS_STATE);
+        @Override public Set<PseudoClass> getPseudoClassStates() {
+            Set<PseudoClass> states = super.getPseudoClassStates();
+            if (isSelected()) states.add(SELECTED_PSEUDOCLASS_STATE);
             return states;
         }
         

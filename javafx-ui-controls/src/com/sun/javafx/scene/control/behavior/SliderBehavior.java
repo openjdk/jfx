@@ -41,6 +41,7 @@ import static javafx.scene.input.KeyEvent.KEY_RELEASED;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 import javafx.event.EventType;
 import javafx.geometry.NodeOrientation;
@@ -53,7 +54,7 @@ import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
 
 import com.sun.javafx.Utils;
-import com.sun.javafx.css.PseudoClass;
+import javafx.css.PseudoClass;
 
 public class SliderBehavior extends BehaviorBase<Slider> {
     /**************************************************************************
@@ -267,19 +268,19 @@ public class SliderBehavior extends BehaviorBase<Slider> {
     }
 
 
-    private static final PseudoClass.State INTERNAL_PSEUDOCLASS_STATE = 
-            PseudoClass.getState("internal-focus");
-    private static final PseudoClass.State EXTERNAL_PSEUDOCLASS_STATE = 
-            PseudoClass.getState("external-focus");
+    private static final PseudoClass INTERNAL_PSEUDOCLASS_STATE = 
+            PseudoClass.getPseudoClass("internal-focus");
+    private static final PseudoClass EXTERNAL_PSEUDOCLASS_STATE = 
+            PseudoClass.getPseudoClass("external-focus");
 
     /**
      * {@inheritDoc}
      */
-    @Override public PseudoClass.States getPseudoClassStates() {
-        PseudoClass.States states = super.getPseudoClassStates();
+    @Override public Set<PseudoClass> getPseudoClassStates() {
+        Set<PseudoClass> states = super.getPseudoClassStates();
         if (tlFocus != null) {
-            if (tlFocus.isExternalFocus()) states.addState(EXTERNAL_PSEUDOCLASS_STATE);
-            else states.addState(INTERNAL_PSEUDOCLASS_STATE);
+            if (tlFocus.isExternalFocus()) states.add(EXTERNAL_PSEUDOCLASS_STATE);
+            else states.add(INTERNAL_PSEUDOCLASS_STATE);
         }
         return states;
     }

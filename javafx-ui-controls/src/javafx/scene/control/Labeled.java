@@ -25,8 +25,13 @@
 
 package javafx.scene.control;
 
-import com.sun.javafx.css.*;
-import com.sun.javafx.css.converters.*;
+
+import com.sun.javafx.css.converters.BooleanConverter;
+import com.sun.javafx.css.converters.EnumConverter;
+import com.sun.javafx.css.converters.InsetsConverter;
+import com.sun.javafx.css.converters.PaintConverter;
+import com.sun.javafx.css.converters.SizeConverter;
+import com.sun.javafx.css.converters.StringConverter;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
@@ -41,7 +46,6 @@ import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
-import javafx.beans.value.WritableValue;
 import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
@@ -54,10 +58,16 @@ import javafx.scene.text.Font;
 import javafx.scene.text.TextAlignment;
 
 import javafx.beans.DefaultProperty;
+import javafx.css.CssMetaData;
+import javafx.css.FontCssMetaData;
+import javafx.css.StyleOrigin;
+import javafx.css.StyleableBooleanProperty;
+import javafx.css.StyleableDoubleProperty;
+import javafx.css.StyleableObjectProperty;
+import javafx.css.StyleableProperty;
 
-import com.sun.javafx.css.StyleableStringProperty;
+import javafx.css.StyleableStringProperty;
 
-import static com.sun.javafx.scene.control.skin.resources.ControlResources.*;
 
 /**
  * A Labeled {@link Control} is one which has as part of its user interface
@@ -327,8 +337,8 @@ public abstract class Labeled extends Control {
                     // RT-20727 - if font is changed by calling setFont, then
                     // css might need to be reapplied since font size affects
                     // calculated values for styles with relative values
-                    Origin origin = CssMetaData.getOrigin(font);
-                    if (origin == null || origin == Origin.USER) {
+                    StyleOrigin origin = ((StyleableProperty)font).getStyleOrigin();
+                    if (origin == null || origin == StyleOrigin.USER) {
                         Labeled.this.impl_reapplyCSS();
                     }
                 }
@@ -366,8 +376,15 @@ public abstract class Labeled extends Control {
      */
     public final ObjectProperty<Node> graphicProperty() {
         if (graphic == null) {
-            graphic = new ObjectPropertyBase<Node>() {
-                
+            graphic = new StyleableObjectProperty<Node>() {
+
+                // The graphic is styleable by css, but it is the 
+                // imageUrlProperty that handles the style value. 
+                @Override
+                public CssMetaData getCssMetaData() {
+                    return StyleableProperties.GRAPHIC;
+                }
+                                
                 @Override
                 public Object getBean() {
                     return Labeled.this;
@@ -397,25 +414,27 @@ public abstract class Labeled extends Control {
         if (imageUrl == null) {
             imageUrl = new StyleableStringProperty() {
 
-                @Override
-                protected void invalidated() {
+            @Override
+            public void applyStyle(StyleOrigin origin, String v) {
 
+                super.applyStyle(origin, v);
+                
                     String imageUrl = null;
-                    if (get() != null) {
+                    if (v != null) {
                         URL url = null;
                         try {
-                            url = new URL(get());
+                            url = new URL(v);
                         } catch (MalformedURLException malf) {
                             // This may be a relative URL, so try resolving
                             // it using the application classloader
                             final ClassLoader cl = Thread.currentThread().getContextClassLoader();
-                            url = cl.getResource(get());
+                            url = cl.getResource(v);
                         }
                         if (url != null) {
-                            setGraphic(new ImageView(new Image(url.toExternalForm())));                            
+                            ((StyleableProperty)graphicProperty()).applyStyle(origin, new ImageView(new Image(url.toExternalForm())));                            
                         }
                     } else {
-                        setGraphic(null);
+                        ((StyleableProperty)graphicProperty()).applyStyle(origin, null);
                     }                    
                 }
 
@@ -699,8 +718,8 @@ public abstract class Labeled extends Control {
       * @treatAsPrivate implementation detail
       */
     private static class StyleableProperties {
-        private static final CssMetaData.FONT<Labeled> FONT = 
-            new CssMetaData.FONT<Labeled>("-fx-font", Font.getDefault()) {
+        private static final FontCssMetaData<Labeled> FONT = 
+            new FontCssMetaData<Labeled>("-fx-font", Font.getDefault()) {
 
             @Override
             public boolean isSettable(Labeled n) {
@@ -708,8 +727,8 @@ public abstract class Labeled extends Control {
             }
 
             @Override
-            public WritableValue<Font> getWritableValue(Labeled n) {
-                return n.fontProperty();
+            public StyleableProperty<Font> getStyleableProperty(Labeled n) {
+                return (StyleableProperty)n.fontProperty();
             }
         };
         
@@ -723,8 +742,8 @@ public abstract class Labeled extends Control {
             }
 
             @Override
-            public WritableValue<Pos> getWritableValue(Labeled n) {
-                return n.alignmentProperty();
+            public StyleableProperty<Pos> getStyleableProperty(Labeled n) {
+                return (StyleableProperty)n.alignmentProperty();
             }
             
             @Override
@@ -744,8 +763,8 @@ public abstract class Labeled extends Control {
             }
 
             @Override
-            public WritableValue<TextAlignment> getWritableValue(Labeled n) {
-                return n.textAlignmentProperty();
+            public StyleableProperty<TextAlignment> getStyleableProperty(Labeled n) {
+                return (StyleableProperty)n.textAlignmentProperty();
             }
         };
         
@@ -759,8 +778,8 @@ public abstract class Labeled extends Control {
             }
 
             @Override
-            public WritableValue<Paint> getWritableValue(Labeled n) {
-                return n.textFillProperty();
+            public StyleableProperty<Paint> getStyleableProperty(Labeled n) {
+                return (StyleableProperty)n.textFillProperty();
             }
         };
         
@@ -775,8 +794,8 @@ public abstract class Labeled extends Control {
             }
 
             @Override
-            public WritableValue<OverrunStyle> getWritableValue(Labeled n) {
-                return n.textOverrunProperty();
+            public StyleableProperty<OverrunStyle> getStyleableProperty(Labeled n) {
+                return (StyleableProperty)n.textOverrunProperty();
             }
         };
 
@@ -788,8 +807,8 @@ public abstract class Labeled extends Control {
                 return n.ellipsisString == null || !n.ellipsisString.isBound();
             }
 
-            @Override public WritableValue<String> getWritableValue(Labeled n) {
-                return n.ellipsisStringProperty();
+            @Override public StyleableProperty<String> getStyleableProperty(Labeled n) {
+                return (StyleableProperty)n.ellipsisStringProperty();
             }
         };
 
@@ -803,8 +822,8 @@ public abstract class Labeled extends Control {
             }
 
             @Override
-            public WritableValue<Boolean> getWritableValue(Labeled n) {
-                return n.wrapTextProperty();
+            public StyleableProperty<Boolean> getStyleableProperty(Labeled n) {
+                return (StyleableProperty)n.wrapTextProperty();
             }
         };
         
@@ -819,8 +838,8 @@ public abstract class Labeled extends Control {
             }
 
             @Override
-            public WritableValue<String> getWritableValue(Labeled n) {
-                return n.imageUrlProperty();
+            public StyleableProperty<String> getStyleableProperty(Labeled n) {
+                return (StyleableProperty)n.imageUrlProperty();
             }
         };
         
@@ -834,8 +853,8 @@ public abstract class Labeled extends Control {
             }
 
             @Override
-            public WritableValue<Boolean> getWritableValue(Labeled n) {
-                return n.underlineProperty();
+            public StyleableProperty<Boolean> getStyleableProperty(Labeled n) {
+                return (StyleableProperty)n.underlineProperty();
             }
         };
         
@@ -849,8 +868,8 @@ public abstract class Labeled extends Control {
             }
 
             @Override
-            public WritableValue<Number> getWritableValue(Labeled n) {
-                return n.lineSpacingProperty();
+            public StyleableProperty<Number> getStyleableProperty(Labeled n) {
+                return (StyleableProperty)n.lineSpacingProperty();
             }
         };
 
@@ -865,8 +884,8 @@ public abstract class Labeled extends Control {
             }
 
             @Override
-            public WritableValue<ContentDisplay> getWritableValue(Labeled n) {
-                return n.contentDisplayProperty();
+            public StyleableProperty<ContentDisplay> getStyleableProperty(Labeled n) {
+                return (StyleableProperty)n.contentDisplayProperty();
             }
         };
         
@@ -880,8 +899,8 @@ public abstract class Labeled extends Control {
             }
 
             @Override
-            public WritableValue<Insets> getWritableValue(Labeled n) {
-                return n.labelPaddingPropertyImpl();
+            public StyleableProperty<Insets> getStyleableProperty(Labeled n) {
+                return (StyleableProperty)n.labelPaddingPropertyImpl();
             }
         };
         
@@ -895,8 +914,8 @@ public abstract class Labeled extends Control {
             }
 
             @Override
-            public WritableValue<Number> getWritableValue(Labeled n) {
-                return n.graphicTextGapProperty();
+            public StyleableProperty<Number> getStyleableProperty(Labeled n) {
+                return (StyleableProperty)n.graphicTextGapProperty();
             }
         };
 

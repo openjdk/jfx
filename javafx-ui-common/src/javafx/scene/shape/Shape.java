@@ -33,7 +33,6 @@ import java.util.List;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
-import javafx.beans.value.WritableValue;
 import javafx.collections.ObservableList;
 import javafx.scene.Node;
 import javafx.scene.paint.Color;
@@ -41,10 +40,10 @@ import javafx.scene.paint.Paint;
 
 import com.sun.javafx.Utils;
 import com.sun.javafx.collections.TrackableObservableList;
-import com.sun.javafx.css.StyleableBooleanProperty;
-import com.sun.javafx.css.StyleableDoubleProperty;
-import com.sun.javafx.css.StyleableObjectProperty;
-import com.sun.javafx.css.CssMetaData;
+import javafx.css.StyleableBooleanProperty;
+import javafx.css.StyleableDoubleProperty;
+import javafx.css.StyleableObjectProperty;
+import javafx.css.CssMetaData;
 import com.sun.javafx.css.converters.BooleanConverter;
 import com.sun.javafx.css.converters.EnumConverter;
 import com.sun.javafx.css.converters.PaintConverter;
@@ -62,6 +61,7 @@ import com.sun.javafx.sg.PGShape.Mode;
 import com.sun.javafx.tk.Toolkit;
 import javafx.beans.property.Property;
 import javafx.collections.ListChangeListener.Change;
+import javafx.css.StyleableProperty;
 
 
 /**
@@ -562,8 +562,8 @@ public abstract class Shape extends Node {
             }
 
             @Override
-            public WritableValue<Paint> getWritableValue(Shape node) {
-                return node.fillProperty();
+            public StyleableProperty<Paint> getStyleableProperty(Shape node) {
+                return (StyleableProperty)node.fillProperty();
             }
 
             @Override
@@ -589,8 +589,8 @@ public abstract class Shape extends Node {
             }
 
             @Override
-            public WritableValue<Boolean> getWritableValue(Shape node) {
-                return node.smoothProperty();
+            public StyleableProperty<Boolean> getStyleableProperty(Shape node) {
+                return (StyleableProperty)node.smoothProperty();
             }
 
         };
@@ -609,8 +609,8 @@ public abstract class Shape extends Node {
             }
 
             @Override
-            public WritableValue<Paint> getWritableValue(Shape node) {
-                return node.strokeProperty();
+            public StyleableProperty<Paint> getStyleableProperty(Shape node) {
+                return (StyleableProperty)node.strokeProperty();
             }
             
             @Override
@@ -648,8 +648,8 @@ public abstract class Shape extends Node {
             }
 
             @Override
-            public WritableValue<Double[]> getWritableValue(final Shape node) {
-                return node.getStrokeAttributes().cssDashArrayProperty();
+            public StyleableProperty<Double[]> getStyleableProperty(final Shape node) {
+                return (StyleableProperty)node.getStrokeAttributes().cssDashArrayProperty();
             }
 
         };
@@ -669,8 +669,8 @@ public abstract class Shape extends Node {
             }
 
             @Override
-            public WritableValue<Number> getWritableValue(Shape node) {
-                return node.strokeDashOffsetProperty();
+            public StyleableProperty<Number> getStyleableProperty(Shape node) {
+                return (StyleableProperty)node.strokeDashOffsetProperty();
             }
 
         };
@@ -691,8 +691,8 @@ public abstract class Shape extends Node {
             }
 
             @Override
-            public WritableValue<StrokeLineCap> getWritableValue(Shape node) {
-                return node.strokeLineCapProperty();
+            public StyleableProperty<StrokeLineCap> getStyleableProperty(Shape node) {
+                return (StyleableProperty)node.strokeLineCapProperty();
             }
 
         };
@@ -713,8 +713,8 @@ public abstract class Shape extends Node {
             }
 
             @Override
-            public WritableValue<StrokeLineJoin> getWritableValue(Shape node) {
-                return node.strokeLineJoinProperty();
+            public StyleableProperty<StrokeLineJoin> getStyleableProperty(Shape node) {
+                return (StyleableProperty)node.strokeLineJoinProperty();
             }
 
         };
@@ -735,8 +735,8 @@ public abstract class Shape extends Node {
             }
 
             @Override
-            public WritableValue<StrokeType> getWritableValue(Shape node) {
-                return node.strokeTypeProperty();
+            public StyleableProperty<StrokeType> getStyleableProperty(Shape node) {
+                return (StyleableProperty)node.strokeTypeProperty();
             }
 
 
@@ -757,8 +757,8 @@ public abstract class Shape extends Node {
             }
 
             @Override
-            public WritableValue<Number> getWritableValue(Shape node) {
-                return node.strokeMiterLimitProperty();
+            public StyleableProperty<Number> getStyleableProperty(Shape node) {
+                return (StyleableProperty)node.strokeMiterLimitProperty();
             }
 
         };
@@ -778,8 +778,8 @@ public abstract class Shape extends Node {
             }
 
             @Override
-            public WritableValue<Number> getWritableValue(Shape node) {
-                return node.strokeWidthProperty();
+            public StyleableProperty<Number> getStyleableProperty(Shape node) {
+                return (StyleableProperty)node.strokeWidthProperty();
             }
 
         };         

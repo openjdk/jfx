@@ -30,6 +30,8 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
+import javafx.css.PseudoClass;
 
 import javafx.scene.Node;
 import javafx.scene.Scene;
@@ -64,13 +66,13 @@ abstract public class Selector {
     public abstract boolean applies(Node node);
     
     // same as applies, but will return pseudoclass state that it finds along the way
-    abstract boolean applies(Node node, PseudoClass.States[] pseudoclassBits, int bit);
+    abstract boolean applies(Node node, PseudoClassSet[] pseudoclassBits, int bit);
     
     /**
      * Determines whether the current state of the node and its parents
      * matches the pseudo-classes defined (if any) for this selector.
      */
-    abstract boolean stateMatches(Node node, PseudoClass.States state);
+    abstract boolean stateMatches(Node node, PseudoClassSet state);
 
     private static final int TYPE_SIMPLE = 1;
     private static final int TYPE_COMPOUND = 2;

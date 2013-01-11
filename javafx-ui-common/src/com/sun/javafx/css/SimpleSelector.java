@@ -29,6 +29,7 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.*;
+import javafx.css.PseudoClass;
 
 import javafx.scene.Node;
 import javafx.scene.Scene;
@@ -177,9 +178,9 @@ final public class SimpleSelector extends Selector {
     }
     
     // a mask of bits corresponding to the pseudoclasses
-    final private PseudoClass.States pseudoClassStates;
+    final private PseudoClassSet pseudoClassStates;
     
-    PseudoClass.States getPseudoClassStates() {
+    PseudoClassSet getPseudoClassStates() {
         return pseudoClassStates;
     }
 
@@ -187,8 +188,12 @@ final public class SimpleSelector extends Selector {
      * @return Immutable List&lt;String&gt; of pseudo-classes of the selector
      */
     public List<String> getPseudoclasses() {
-        final List<String> pseudoClasses = pseudoClassStates.getPseudoClasses();
-        return Collections.unmodifiableList(pseudoClasses);
+        final List<PseudoClass> pseudoClasses = pseudoClassStates.getPseudoClasses();
+        final List<String> strings = new ArrayList<String>(pseudoClasses.size());
+        for (PseudoClass pseudoClass : pseudoClasses) {
+            strings.add(pseudoClass.getPseudoClassName());
+        }
+        return Collections.unmodifiableList(strings);
     }
         
     // true if name is not a wildcard
@@ -215,7 +220,13 @@ final public class SimpleSelector extends Selector {
                 : new long[0];
         this.matchOnStyleClass = (this.styleClassMasks.length > 0);
 
-        this.pseudoClassStates = PseudoClass.createStatesInstance(pseudoclasses);
+        this.pseudoClassStates = new PseudoClassSet();
+        final int nMax = pseudoclasses != null ? pseudoclasses.size() : 0;
+        for(int n=0; n<nMax; n++) { 
+            String pclass = pseudoclasses.get(n);
+            if (pclass == null || pclass.isEmpty()) continue;
+            this.pseudoClassStates.add(PseudoClass.getPseudoClass(pclass));
+        }
 
         this.id = id == null ? "" : id;
         // if id is not null and not empty, then match needs to check id
@@ -321,7 +332,7 @@ final public class SimpleSelector extends Selector {
     }
     
     @Override 
-    boolean applies(Node node, PseudoClass.States[] states, int depth) {
+    boolean applies(Node node, PseudoClassSet[] states, int depth) {
 
         final boolean applies = applies(node);
         //
@@ -329,8 +340,10 @@ final public class SimpleSelector extends Selector {
         // 
         assert(states == null || depth < states.length);
         if (applies && states != null && depth < states.length) {
-            final PseudoClass.States mask = PseudoClass.States.unionOf(states[depth], this.pseudoClassStates);
-            states[depth] = mask;
+            final PseudoClassSet temp = new PseudoClassSet();
+            temp.addAll(states[depth]);
+            temp.addAll(this.pseudoClassStates);
+            states[depth] = temp;
         }
         return applies;
     }
@@ -343,10 +356,10 @@ final public class SimpleSelector extends Selector {
     }
     
     @Override
-    boolean stateMatches(final Node node, PseudoClass.States states) {
+    boolean stateMatches(final Node node, PseudoClassSet states) {
         // [foo bar] matches [foo bar bang], 
         // but [foo bar bang] doesn't match [foo bar]
-        return pseudoClassStates.isSubsetOf(states);
+        return states.containsAll(pseudoClassStates);
     }
 
     /*

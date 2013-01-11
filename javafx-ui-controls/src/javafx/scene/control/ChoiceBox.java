@@ -25,7 +25,7 @@
 
 package javafx.scene.control;
 
-
+import java.util.Set;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ObjectPropertyBase;
 import javafx.beans.property.SimpleObjectProperty;
@@ -39,7 +39,7 @@ import javafx.beans.property.ReadOnlyBooleanWrapper;
 import javafx.event.ActionEvent;
 import javafx.util.StringConverter;
 
-import com.sun.javafx.css.PseudoClass;
+import javafx.css.PseudoClass;
 import com.sun.javafx.scene.control.skin.ChoiceBoxSkin;
 import javafx.beans.DefaultProperty;
 
@@ -322,15 +322,15 @@ public class ChoiceBox<T> extends Control {
      *                                                                         *
      **************************************************************************/
 
-    private static final PseudoClass.State SHOWING_PSEUDOCLASS_STATE =
-            PseudoClass.getState("showing");
+    private static final PseudoClass SHOWING_PSEUDOCLASS_STATE =
+            PseudoClass.getPseudoClass("showing");
 
     /**
      * {@inheritDoc}
      */
-    @Override public PseudoClass.States getPseudoClassStates() {
-        PseudoClass.States states = super.getPseudoClassStates();
-        if (isShowing()) states.addState(SHOWING_PSEUDOCLASS_STATE);
+    @Override public Set<PseudoClass> getPseudoClassStates() {
+        Set<PseudoClass> states = super.getPseudoClassStates();
+        if (isShowing()) states.add(SHOWING_PSEUDOCLASS_STATE);
         return states;
     }
 

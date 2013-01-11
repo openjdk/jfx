@@ -30,7 +30,7 @@ import javafx.scene.effect.Effect;
 import javafx.scene.effect.InnerShadow;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
-import com.sun.javafx.css.ParsedValue;
+import javafx.css.ParsedValue;
 import com.sun.javafx.css.Size;
 import com.sun.javafx.css.StyleConverterImpl;
 

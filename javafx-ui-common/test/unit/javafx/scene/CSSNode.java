@@ -24,7 +24,6 @@
  */
 package javafx.scene;
 
-import com.sun.javafx.css.StyleManager;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -34,14 +33,13 @@ import javafx.beans.property.FloatProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleFloatProperty;
-import javafx.beans.value.WritableValue;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
 
-import com.sun.javafx.css.StyleableFloatProperty;
-import com.sun.javafx.css.StyleableObjectProperty;
-import com.sun.javafx.css.CssMetaData;
-import com.sun.javafx.css.PseudoClass;
+import javafx.css.StyleableFloatProperty;
+import javafx.css.StyleableObjectProperty;
+import javafx.css.CssMetaData;
+import javafx.css.PseudoClass;
 import com.sun.javafx.css.converters.PaintConverter;
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.transform.BaseTransform;
@@ -49,6 +47,7 @@ import com.sun.javafx.jmx.MXNodeAlgorithm;
 import com.sun.javafx.jmx.MXNodeAlgorithmContext;
 import com.sun.javafx.sg.PGNode;
 import com.sun.javafx.tk.Toolkit;
+import javafx.css.StyleableProperty;
 
 public  class CSSNode extends Node {
     
@@ -199,7 +198,7 @@ public  class CSSNode extends Node {
      * A pseudoclass state for this Node. It cannot be styled, but can
      * be used as a pseudoclass
      */
-    private PseudoClass.State SPECIAL_PSEUDO_CLASS = PseudoClass.getState("special");
+    private PseudoClass SPECIAL_PSEUDO_CLASS = PseudoClass.getPseudoClass("special");
     private BooleanProperty special;
     public final void setSpecial(boolean value) {
         specialProperty().set(value);
@@ -251,7 +250,7 @@ public  class CSSNode extends Node {
     }
 
     @Override
-    boolean isPseudoclassUsed(PseudoClass.State pseudoclass) {
+    boolean isPseudoclassUsed(PseudoClass pseudoclass) {
         return true;    
     }
     
@@ -266,8 +265,8 @@ public  class CSSNode extends Node {
             }
 
             @Override
-            public WritableValue<Paint> getWritableValue(CSSNode n) {
-                return n.fillProperty();
+            public StyleableProperty<Paint> getStyleableProperty(CSSNode n) {
+                return (StyleableProperty)n.fillProperty();
             }
         };
         
@@ -280,8 +279,8 @@ public  class CSSNode extends Node {
             }
 
             @Override
-            public WritableValue<Paint> getWritableValue(CSSNode n) {
-                return n.strokeProperty();
+            public StyleableProperty<Paint> getStyleableProperty(CSSNode n) {
+                return (StyleableProperty)n.strokeProperty();
             }
         };
         
@@ -294,8 +293,8 @@ public  class CSSNode extends Node {
             }
 
             @Override
-            public WritableValue<Number> getWritableValue(CSSNode n) {
-                return n.paddingProperty();
+            public StyleableProperty<Number> getStyleableProperty(CSSNode n) {
+                return (StyleableProperty)n.paddingProperty();
             }
         };
         

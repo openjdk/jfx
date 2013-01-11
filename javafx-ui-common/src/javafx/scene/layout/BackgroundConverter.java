@@ -28,8 +28,8 @@ import java.util.Map;
 import javafx.geometry.Insets;
 import javafx.scene.image.Image;
 import javafx.scene.paint.Paint;
-import com.sun.javafx.css.ParsedValue;
-import com.sun.javafx.css.CssMetaData;
+import javafx.css.ParsedValue;
+import javafx.css.CssMetaData;
 import com.sun.javafx.css.StyleConverterImpl;
 import com.sun.javafx.scene.layout.region.RepeatStruct;
 

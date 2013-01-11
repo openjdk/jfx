@@ -29,10 +29,11 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import javafx.collections.ListChangeListener.Change;
 import javafx.collections.ObservableList;
+import javafx.css.StyleOrigin;
+import javafx.css.PseudoClass;
 
 import javafx.scene.Node;
 import javafx.scene.Scene;
@@ -86,7 +87,7 @@ final public class Rule {
         this.stylesheet = stylesheet;
     }
 
-    public Origin getOrigin() {
+    public StyleOrigin getOrigin() {
         return stylesheet != null ? stylesheet.getOrigin() : null;
     }
 
@@ -135,7 +136,7 @@ final public class Rule {
         return matches;
     }
 
-    boolean applies(Node node, PseudoClass.States[] pseudoclassBits) {
+    boolean applies(Node node, PseudoClassSet[] pseudoclassBits) {
         for (int i = 0; i < selectors.size(); i++) {
             Selector sel = selectors.get(i);
             if (sel.applies(node, pseudoclassBits, 0)) return true;

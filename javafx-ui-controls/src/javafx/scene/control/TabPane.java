@@ -27,24 +27,25 @@ package javafx.scene.control;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ObjectPropertyBase;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleObjectProperty;
-import javafx.beans.value.WritableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.geometry.Side;
 
-import com.sun.javafx.css.StyleableDoubleProperty;
-import com.sun.javafx.css.CssMetaData;
-import com.sun.javafx.css.PseudoClass;
+import javafx.css.StyleableDoubleProperty;
+import javafx.css.CssMetaData;
+import javafx.css.PseudoClass;
 import com.sun.javafx.css.converters.SizeConverter;
 import com.sun.javafx.scene.control.skin.TabPaneSkin;
 import javafx.beans.DefaultProperty;
+import javafx.css.StyleableProperty;
 
 /**
  * <p>A control that allows switching between a group of {@link Tab Tabs}.  Only one tab
@@ -504,8 +505,8 @@ public class TabPane extends Control {
             }
 
             @Override
-            public WritableValue<Number> getWritableValue(TabPane n) {
-                return n.tabMinWidthProperty();
+            public StyleableProperty<Number> getStyleableProperty(TabPane n) {
+                return (StyleableProperty)n.tabMinWidthProperty();
             }
         };
 
@@ -519,8 +520,8 @@ public class TabPane extends Control {
             }
 
             @Override
-            public WritableValue<Number> getWritableValue(TabPane n) {
-                return n.tabMaxWidthProperty();
+            public StyleableProperty<Number> getStyleableProperty(TabPane n) {
+                return (StyleableProperty)n.tabMaxWidthProperty();
             }
         };
 
@@ -534,8 +535,8 @@ public class TabPane extends Control {
             }
 
             @Override
-            public WritableValue<Number> getWritableValue(TabPane n) {
-                return n.tabMinHeightProperty();
+            public StyleableProperty<Number> getStyleableProperty(TabPane n) {
+                return (StyleableProperty)n.tabMinHeightProperty();
             }
         };
 
@@ -549,8 +550,8 @@ public class TabPane extends Control {
             }
 
             @Override
-            public WritableValue<Number> getWritableValue(TabPane n) {
-                return n.tabMaxHeightProperty();
+            public StyleableProperty<Number> getStyleableProperty(TabPane n) {
+                return (StyleableProperty)n.tabMaxHeightProperty();
             }
         };
 
@@ -584,35 +585,35 @@ public class TabPane extends Control {
         return getClassCssMetaData();
     }
 
-    private static final PseudoClass.State TOP_PSEUDOCLASS_STATE = PseudoClass.getState("top");
-    private static final PseudoClass.State BOTTOM_PSEUDOCLASS_STATE = PseudoClass.getState("bottom");
-    private static final PseudoClass.State LEFT_PSEUDOCLASS_STATE = PseudoClass.getState("left");
-    private static final PseudoClass.State RIGHT_PSEUDOCLASS_STATE = PseudoClass.getState("right");
+    private static final PseudoClass TOP_PSEUDOCLASS_STATE = PseudoClass.getPseudoClass("top");
+    private static final PseudoClass BOTTOM_PSEUDOCLASS_STATE = PseudoClass.getPseudoClass("bottom");
+    private static final PseudoClass LEFT_PSEUDOCLASS_STATE = PseudoClass.getPseudoClass("left");
+    private static final PseudoClass RIGHT_PSEUDOCLASS_STATE = PseudoClass.getPseudoClass("right");
 
     /**
      * {@inheritDoc}
      */
-    @Override public PseudoClass.States getPseudoClassStates() {
-        PseudoClass.States states = super.getPseudoClassStates();
+    @Override public Set<PseudoClass> getPseudoClassStates() {
+        Set<PseudoClass> states = super.getPseudoClassStates();
         switch(getSide()) {
             case TOP:
-                states.addState(TOP_PSEUDOCLASS_STATE);
+                states.add(TOP_PSEUDOCLASS_STATE);
                 break;
             case RIGHT:
-                states.addState(RIGHT_PSEUDOCLASS_STATE);
+                states.add(RIGHT_PSEUDOCLASS_STATE);
                 break;
             case BOTTOM:
-                states.addState(BOTTOM_PSEUDOCLASS_STATE);
+                states.add(BOTTOM_PSEUDOCLASS_STATE);
                 break;
             case LEFT:
-                states.addState(LEFT_PSEUDOCLASS_STATE);
+                states.add(LEFT_PSEUDOCLASS_STATE);
                 break;
         }
         return states;
     }
 
     private void pseudoClassStateChanged(Side side) {
-        PseudoClass.State state = null;
+        PseudoClass state = null;
         switch(getSide()) {
             case TOP:
                 pseudoClassStateChanged(TOP_PSEUDOCLASS_STATE);

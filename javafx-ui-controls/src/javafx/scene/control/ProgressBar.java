@@ -25,8 +25,9 @@
 
 package javafx.scene.control;
 
-import com.sun.javafx.css.CssMetaData;
+import javafx.css.CssMetaData;
 import com.sun.javafx.scene.control.skin.ProgressBarSkin;
+import javafx.css.StyleableProperty;
 
 /**
  * A specialization of the ProgressIndicator which is represented as a
@@ -76,8 +77,8 @@ public class ProgressBar extends ProgressIndicator {
         // makes it look to css like the user set the value and css will not 
         // override. Initializing focusTraversable by calling set on the 
         // CssMetaData ensures that css will be able to override the value.
-        final CssMetaData prop = CssMetaData.getCssMetaData(focusTraversableProperty());
-        prop.set(this, Boolean.FALSE);            
+        final CssMetaData prop = ((StyleableProperty)focusTraversableProperty()).getCssMetaData();
+        prop.set(this, Boolean.FALSE, null);            
         setProgress(progress);
         getStyleClass().setAll(DEFAULT_STYLE_CLASS);
     }

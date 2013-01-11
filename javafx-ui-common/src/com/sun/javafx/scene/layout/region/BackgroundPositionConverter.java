@@ -28,7 +28,7 @@ package com.sun.javafx.scene.layout.region;
 import javafx.geometry.Side;
 import javafx.scene.layout.BackgroundPosition;
 import javafx.scene.text.Font;
-import com.sun.javafx.css.ParsedValue;
+import javafx.css.ParsedValue;
 import com.sun.javafx.css.Size;
 import com.sun.javafx.css.SizeUnits;
 import com.sun.javafx.css.StyleConverterImpl;

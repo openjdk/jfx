@@ -30,12 +30,12 @@ import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 import javafx.application.Application;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ObjectPropertyBase;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.StringProperty;
-import javafx.beans.value.WritableValue;
 import javafx.collections.ObservableList;
 import javafx.event.EventHandler;
 import javafx.geometry.Insets;
@@ -47,13 +47,14 @@ import com.sun.javafx.accessible.providers.AccessibleProvider;
 import com.sun.javafx.application.PlatformImpl;
 import com.sun.javafx.beans.annotations.DuplicateInBuilderProperties;
 import com.sun.javafx.css.CssError;
-import com.sun.javafx.css.CssMetaData;
-import com.sun.javafx.css.PseudoClass;
+import javafx.css.CssMetaData;
+import javafx.css.PseudoClass;
 import com.sun.javafx.css.StyleManager;
-import com.sun.javafx.css.StyleableObjectProperty;
-import com.sun.javafx.css.StyleableStringProperty;
+import javafx.css.StyleableObjectProperty;
+import javafx.css.StyleableStringProperty;
 import com.sun.javafx.css.converters.StringConverter;
 import com.sun.javafx.scene.control.Logging;
+import javafx.css.StyleableProperty;
 import sun.util.logging.PlatformLogger;
 
 
@@ -347,8 +348,8 @@ public abstract class Control extends Region implements Skinnable {
         // makes it look to css like the user set the value and css will not 
         // override. Initializing focusTraversable by calling set on the 
         // CssMetaData ensures that css will be able to override the value.        
-        final CssMetaData prop = CssMetaData.getCssMetaData(focusTraversableProperty());
-        prop.set(this, Boolean.TRUE);  
+        final CssMetaData prop = ((StyleableProperty)focusTraversableProperty()).getCssMetaData();
+        prop.set(this, Boolean.TRUE, null);  
         
         // we add a listener for menu request events to show the context menu
         // that may be set on the Control
@@ -513,11 +514,11 @@ public abstract class Control extends Region implements Skinnable {
     /**
      * {@inheritDoc}
      */
-    @Override public PseudoClass.States getPseudoClassStates() {
-        PseudoClass.States states = super.getPseudoClassStates();
+    @Override public Set<PseudoClass> getPseudoClassStates() {
+        Set<PseudoClass> states = super.getPseudoClassStates();
         
         if (skinBase != null) {
-            states = PseudoClass.States.unionOf(states, skinBase.getPseudoClassStates());
+            states.addAll(skinBase.getPseudoClassStates());
         }
         
         return states;
@@ -712,8 +713,8 @@ public abstract class Control extends Region implements Skinnable {
             }
 
             @Override
-            public WritableValue<String> getWritableValue(Control n) {
-                return n.skinClassNameProperty();
+            public StyleableProperty<String> getStyleableProperty(Control n) {
+                return (StyleableProperty)n.skinClassNameProperty();
             }
         };
 
@@ -814,8 +815,8 @@ public abstract class Control extends Region implements Skinnable {
         return null; // return a valid value for specific controls accessible objects
     }
 
-    private static final PseudoClass.State INTERNAL_FOCUS = PseudoClass.getState("internal-focus");
-    private static final PseudoClass.State EXTERNAL_FOCUS = PseudoClass.getState("external-focus");
+    private static final PseudoClass INTERNAL_FOCUS = PseudoClass.getPseudoClass("internal-focus");
+    private static final PseudoClass EXTERNAL_FOCUS = PseudoClass.getPseudoClass("external-focus");
     /**
      * The pseudo classes associated with 2-level focus have changed.
      * @treatAsPrivate implementation detail

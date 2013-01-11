@@ -32,7 +32,7 @@ import javafx.scene.text.Font;
 
 import com.sun.javafx.css.StringStore;
 import com.sun.javafx.css.StyleConverterImpl;
-import com.sun.javafx.css.ParsedValue;
+import javafx.css.ParsedValue;
 
 public final class EnumConverter<T extends Enum<T>> extends StyleConverterImpl<String, T> {
 

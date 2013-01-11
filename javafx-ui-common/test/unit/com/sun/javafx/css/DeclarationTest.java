@@ -10,6 +10,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import javafx.css.StyleOrigin;
 import javafx.scene.paint.Color;
 import org.junit.Test;
 import static org.junit.Assert.*;
@@ -56,7 +57,7 @@ public class DeclarationTest {
         
         Stylesheet inlineSS = new Stylesheet() {
             {
-                setOrigin(Origin.INLINE);
+                setOrigin(StyleOrigin.INLINE);
                 
                 DECLS[GI] = new Declaration("-fx-base", new ParsedValueImpl<Color,Color>(Color.GREEN, null), false);
                 DECLS[YI] = new Declaration("-fx-color", new ParsedValueImpl<Color,Color>(Color.YELLOW, null), false);
@@ -70,7 +71,7 @@ public class DeclarationTest {
         
         Stylesheet authorSS_1 = new Stylesheet() {
             {
-                setOrigin(Origin.AUTHOR);
+                setOrigin(StyleOrigin.AUTHOR);
                 
                 DECLS[GA1] = new Declaration("-fx-base", new ParsedValueImpl<Color,Color>(Color.GREEN, null), false);
                 DECLS[YA1] = new Declaration("-fx-color", new ParsedValueImpl<Color,Color>(Color.YELLOW, null), false);
@@ -84,7 +85,7 @@ public class DeclarationTest {
         
         Stylesheet authorSS_2 = new Stylesheet() {
             {
-                setOrigin(Origin.AUTHOR);
+                setOrigin(StyleOrigin.AUTHOR);
                 
                 DECLS[GA2] = new Declaration("-fx-base", new ParsedValueImpl<Color,Color>(Color.GREEN, null), false);
                 DECLS[YA2] = new Declaration("-fx-color", new ParsedValueImpl<Color,Color>(Color.YELLOW, null), false);

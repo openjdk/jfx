@@ -4,8 +4,8 @@
  */
 package com.sun.javafx.scene.control.skin;
 
-import com.sun.javafx.css.StyleConverter;
-import com.sun.javafx.css.CssMetaData;
+import javafx.css.StyleConverter;
+import javafx.css.CssMetaData;
 import java.net.URL;
 import java.util.ArrayList;
 

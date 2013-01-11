@@ -24,7 +24,7 @@
  */
 package com.sun.javafx.css;
 
-import com.sun.javafx.css.Origin;
+import javafx.css.StyleOrigin;
 import java.net.URL;
 import java.util.Collections;
 import java.util.List;
@@ -65,22 +65,22 @@ public class StylesheetTest {
     @Test
     public void testGetStylesheetSourceGetterAndSetter() {
         Stylesheet instance = new Stylesheet();
-        Origin expResult = Origin.AUTHOR;
-        Origin result = instance.getOrigin();
+        StyleOrigin expResult = StyleOrigin.AUTHOR;
+        StyleOrigin result = instance.getOrigin();
         assertEquals(expResult, result);
         
-        instance.setOrigin(Origin.INLINE);
-        expResult = Origin.INLINE;
+        instance.setOrigin(StyleOrigin.INLINE);
+        expResult = StyleOrigin.INLINE;
         result = instance.getOrigin();
         assertEquals(expResult, result);
 
-        instance.setOrigin(Origin.USER);
-        expResult = Origin.USER;
+        instance.setOrigin(StyleOrigin.USER);
+        expResult = StyleOrigin.USER;
         result = instance.getOrigin();
         assertEquals(expResult, result);
 
-        instance.setOrigin(Origin.USER_AGENT);
-        expResult = Origin.USER_AGENT;
+        instance.setOrigin(StyleOrigin.USER_AGENT);
+        expResult = StyleOrigin.USER_AGENT;
         result = instance.getOrigin();
         assertEquals(expResult, result);
     }

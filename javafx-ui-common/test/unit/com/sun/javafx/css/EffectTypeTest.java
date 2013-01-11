@@ -26,6 +26,7 @@
 package com.sun.javafx.css;
 
 import static org.junit.Assert.assertEquals;
+import javafx.css.ParsedValue;
 import javafx.scene.effect.BlurType;
 import javafx.scene.effect.DropShadow;
 import javafx.scene.effect.Effect;
@@ -62,26 +63,26 @@ public class EffectTypeTest {
 
         if (colorIsDerived) {
             ParsedValue[] values = new ParsedValue[] {
-                new ParsedValue<Color,Color>(is.getColor(),null),
-                new ParsedValue<Size,Size>(makeSize(0.5f),null)
+                new ParsedValueImpl<Color,Color>(is.getColor(),null),
+                new ParsedValueImpl<Size,Size>(makeSize(0.5f),null)
             };
-            colorVal = new ParsedValue<ParsedValue[],Color>(values, DeriveColorConverter.getInstance());
+            colorVal = new ParsedValueImpl<ParsedValue[],Color>(values, DeriveColorConverter.getInstance());
         } else {
-            colorVal = new ParsedValue<Color,Color>(is.getColor(),null);
+            colorVal = new ParsedValueImpl<Color,Color>(is.getColor(),null);
         }
 
         BlurType blurType = is.getBlurType();
 
         ParsedValue[] vals = new ParsedValue[] {
-            new ParsedValue<BlurType,BlurType>(blurType, null),
+            new ParsedValueImpl<BlurType,BlurType>(blurType, null),
             colorVal,
-            new ParsedValue<Size,Size>(radius, null),
-            new ParsedValue<Size,Size>(choke, null),
-            new ParsedValue<Size,Size>(offsetX, null),
-            new ParsedValue<Size,Size>(offsetY, null)
+            new ParsedValueImpl<Size,Size>(radius, null),
+            new ParsedValueImpl<Size,Size>(choke, null),
+            new ParsedValueImpl<Size,Size>(offsetX, null),
+            new ParsedValueImpl<Size,Size>(offsetY, null)
         };
 
-        return new ParsedValue<ParsedValue[],Effect>(vals, EffectConverter.InnerShadowConverter.getInstance());
+        return new ParsedValueImpl<ParsedValue[],Effect>(vals, EffectConverter.InnerShadowConverter.getInstance());
     }
 
     DropShadow getDropShadow() {
@@ -98,26 +99,26 @@ public class EffectTypeTest {
 
         if (colorIsDerived) {
             ParsedValue[] values = new ParsedValue[] {
-                new ParsedValue<Color,Color>(ds.getColor(),null),
-                new ParsedValue<Size,Size>(makeSize(0.5f),null)
+                new ParsedValueImpl<Color,Color>(ds.getColor(),null),
+                new ParsedValueImpl<Size,Size>(makeSize(0.5f),null)
             };
-            colorVal = new ParsedValue<ParsedValue[],Color>(values, DeriveColorConverter.getInstance());
+            colorVal = new ParsedValueImpl<ParsedValue[],Color>(values, DeriveColorConverter.getInstance());
         } else {
-            colorVal = new ParsedValue<Color,Color>(ds.getColor(),null);
+            colorVal = new ParsedValueImpl<Color,Color>(ds.getColor(),null);
         }
 
         BlurType blurType = ds.getBlurType();
 
         ParsedValue[] vals = new ParsedValue[] {
-            new ParsedValue<BlurType,BlurType>(blurType, null),
+            new ParsedValueImpl<BlurType,BlurType>(blurType, null),
             colorVal,
-            new ParsedValue<Size,Size>(radius, null),
-            new ParsedValue<Size,Size>(spread, null),
-            new ParsedValue<Size,Size>(offsetX, null),
-            new ParsedValue<Size,Size>(offsetY, null)
+            new ParsedValueImpl<Size,Size>(radius, null),
+            new ParsedValueImpl<Size,Size>(spread, null),
+            new ParsedValueImpl<Size,Size>(offsetX, null),
+            new ParsedValueImpl<Size,Size>(offsetY, null)
         };
 
-        return new ParsedValue<ParsedValue[],Effect>(vals, EffectConverter.DropShadowConverter.getInstance());
+        return new ParsedValueImpl<ParsedValue[],Effect>(vals, EffectConverter.DropShadowConverter.getInstance());
     }
 
     void checkColor(String msg, Color c1, Color c2) {

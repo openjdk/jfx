@@ -26,6 +26,7 @@
 package com.sun.javafx.css;
 
 import static org.junit.Assert.assertEquals;
+import javafx.css.ParsedValue;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontPosture;
 
@@ -46,7 +47,7 @@ public class FontStyleTypeTest {
     @Test
     public void testConvert() {
         ParsedValue<Style,FontPosture> value =
-                new ParsedValue<Style,FontPosture>(Style.ITALIC, FontConverter.StyleConverter.getInstance());
+                new ParsedValueImpl<Style,FontPosture>(Style.ITALIC, FontConverter.StyleConverter.getInstance());
         Font font = null;
         FontPosture expResult = FontPosture.ITALIC;
         FontPosture result = value.convert(font);

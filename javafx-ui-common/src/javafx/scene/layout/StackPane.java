@@ -37,9 +37,10 @@ import javafx.geometry.Pos;
 import javafx.geometry.VPos;
 import javafx.scene.Node;
 
-import com.sun.javafx.css.StyleableObjectProperty;
-import com.sun.javafx.css.CssMetaData;
+import javafx.css.StyleableObjectProperty;
+import javafx.css.CssMetaData;
 import com.sun.javafx.css.converters.EnumConverter;
+import javafx.css.StyleableProperty;
 
 /**
  *
@@ -358,8 +359,8 @@ public class StackPane extends Pane {
             }
 
             @Override
-            public WritableValue<Pos> getWritableValue(StackPane node) {
-                return node.alignmentProperty();
+            public StyleableProperty<Pos> getStyleableProperty(StackPane node) {
+                return (StyleableProperty)node.alignmentProperty();
             }
         };
 

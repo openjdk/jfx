@@ -25,7 +25,7 @@
 
 package javafx.scene.shape;
 
-import com.sun.javafx.css.CssMetaData;
+import javafx.css.CssMetaData;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -132,10 +132,10 @@ public class ShapeTest {
     @Test public void testGetStrokeDashArrayViaCSSPropertyIsNotNull() {
         Rectangle rect = new Rectangle();
         Double[] actual = null;
-        List<CssMetaData> styleables = CssMetaData.getStyleables(rect);
+        List<CssMetaData> styleables = rect.getCssMetaData();
         for (CssMetaData styleable : styleables) {
             if ("-fx-stroke-dash-array".equals(styleable.getProperty())) {
-                WritableValue writable = styleable.getWritableValue(rect);
+                WritableValue writable = styleable.getStyleableProperty(rect);
                 actual = (Double[])writable.getValue();
                 break;
             }
@@ -148,11 +148,11 @@ public class ShapeTest {
         Rectangle rect = new Rectangle();
         rect.getStrokeDashArray().addAll(5d, 7d, 1d, 3d);
         Double[] actuals = null;
-        List<CssMetaData> styleables = CssMetaData.getStyleables(rect);
+        List<CssMetaData> styleables = rect.getCssMetaData();
         
         for (CssMetaData styleable : styleables) {
             if ("-fx-stroke-dash-array".equals(styleable.getProperty())) {
-                WritableValue writable = styleable.getWritableValue(rect);
+                WritableValue writable = styleable.getStyleableProperty(rect);
                 actuals = (Double[])writable.getValue();
             }
         }
@@ -165,11 +165,11 @@ public class ShapeTest {
         
         Rectangle rect = new Rectangle();
         List<Double> actual = null;
-        List<CssMetaData> styleables = CssMetaData.getStyleables(rect);
+        List<CssMetaData> styleables = rect.getCssMetaData();
         
         for (CssMetaData styleable : styleables) {
             if ("-fx-stroke-dash-array".equals(styleable.getProperty())) {
-                styleable.set(rect, new Double[] {5d, 7d, 1d, 3d});
+                styleable.set(rect, new Double[] {5d, 7d, 1d, 3d}, null);
                 actual = rect.getStrokeDashArray();
             }
         }

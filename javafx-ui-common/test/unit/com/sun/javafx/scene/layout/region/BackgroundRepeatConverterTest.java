@@ -28,7 +28,7 @@ package com.sun.javafx.scene.layout.region;
 import javafx.scene.layout.BackgroundRepeat;
 import org.junit.Ignore;
 import org.junit.Test;
-import com.sun.javafx.css.ParsedValue;
+import javafx.css.ParsedValue;
 import com.sun.javafx.css.ParsedValueImpl;
 
 import static org.junit.Assert.assertEquals;

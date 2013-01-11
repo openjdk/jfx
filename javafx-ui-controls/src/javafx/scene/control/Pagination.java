@@ -44,9 +44,9 @@
 
 package javafx.scene.control;
 
-import com.sun.javafx.css.StyleableIntegerProperty;
-import com.sun.javafx.css.CssMetaData;
-import com.sun.javafx.css.Origin;
+import javafx.css.StyleableIntegerProperty;
+import javafx.css.CssMetaData;
+import javafx.css.StyleOrigin;
 import com.sun.javafx.css.converters.SizeConverter;
 import com.sun.javafx.scene.control.skin.PaginationSkin;
 import java.util.ArrayList;
@@ -54,9 +54,8 @@ import java.util.Collections;
 import java.util.List;
 import javafx.beans.DefaultProperty;
 import javafx.beans.property.*;
-import javafx.beans.value.WritableValue;
+import javafx.css.StyleableProperty;
 import javafx.scene.Node;
-import javafx.scene.control.Control;
 import javafx.util.Callback;
 
 /**
@@ -342,7 +341,7 @@ public class Pagination extends Control {
                 SizeConverter.getInstance(), DEFAULT_MAX_PAGE_INDICATOR_COUNT) {
 
             @Override
-            public void set(Pagination node, Number value, Origin origin) {
+            public void set(Pagination node, Number value, StyleOrigin origin) {
                 super.set(node, value.intValue(), origin);
             }
 
@@ -352,8 +351,8 @@ public class Pagination extends Control {
             }
 
             @Override
-            public WritableValue<Number> getWritableValue(Pagination n) {
-                return n.maxPageIndicatorCountProperty();
+            public StyleableProperty<Number> getStyleableProperty(Pagination n) {
+                return (StyleableProperty)n.maxPageIndicatorCountProperty();
             }
         };
         private static final List<CssMetaData> STYLEABLES;

@@ -26,9 +26,10 @@
 
 package javafx.scene.layout;
 
-import com.sun.javafx.css.ParsedValue;
-import com.sun.javafx.css.CssMetaData;
+import javafx.css.ParsedValue;
+import javafx.css.CssMetaData;
 import com.sun.javafx.css.parser.CSSParser;
+import javafx.css.StyleableProperty;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import javafx.geometry.Insets;
@@ -925,7 +926,7 @@ public class TilePaneTest {
         
         ParsedValue pv = CSSParser.getInstance().parseExpr("-fx-perf-tile-width","67.0");
         Object val = pv.convert(null);        
-        CssMetaData prop = CssMetaData.getCssMetaData(tilepane.prefTileWidthProperty());
+        CssMetaData prop = ((StyleableProperty)tilepane.prefTileWidthProperty()).getCssMetaData();
         try {
             prop.set(tilepane, val, null);
             assertEquals(67.0, tilepane.getPrefTileWidth(), 0.00001);
@@ -942,7 +943,7 @@ public class TilePaneTest {
         
         ParsedValue pv = CSSParser.getInstance().parseExpr("-fx-perf-rows","2");
         Object val = pv.convert(null);        
-        CssMetaData prop = CssMetaData.getCssMetaData(tilepane.prefRowsProperty());
+        CssMetaData prop = ((StyleableProperty)tilepane.prefRowsProperty()).getCssMetaData();
         try {
             prop.set(tilepane, val, null);
             assertEquals(2, tilepane.getPrefRows(), 0.00001);
@@ -960,7 +961,7 @@ public class TilePaneTest {
         
         ParsedValue pv = CSSParser.getInstance().parseExpr("-fx-pref-columns","2");
         Object val = pv.convert(null);        
-        CssMetaData prop = CssMetaData.getCssMetaData(tilepane.prefColumnsProperty());
+        CssMetaData prop = ((StyleableProperty)tilepane.prefColumnsProperty()).getCssMetaData();
         try {
             prop.set(tilepane, val, null);
             assertEquals(2, tilepane.getPrefColumns(), 0.00001);

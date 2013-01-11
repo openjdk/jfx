@@ -22,12 +22,12 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-package com.sun.javafx.css;
+package javafx.css;
 
 /**
  * Enumeration of the possible source or origin of a stylesheet and styles. 
  */
-public enum Origin {
+public enum StyleOrigin {
     /** The stylesheet is a user-agent stylesheet */
     USER_AGENT, 
     /** The value of a property was set by the user through a call to a set method */

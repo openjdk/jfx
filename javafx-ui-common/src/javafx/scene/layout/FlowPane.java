@@ -44,12 +44,13 @@ import javafx.geometry.Pos;
 import javafx.geometry.VPos;
 import javafx.scene.Node;
 
-import com.sun.javafx.css.StyleableDoubleProperty;
-import com.sun.javafx.css.StyleableObjectProperty;
-import com.sun.javafx.css.CssMetaData;
+import javafx.css.StyleableDoubleProperty;
+import javafx.css.StyleableObjectProperty;
+import javafx.css.CssMetaData;
 import com.sun.javafx.css.converters.EnumConverter;
 import com.sun.javafx.css.converters.SizeConverter;
 import javafx.beans.property.Property;
+import javafx.css.StyleableProperty;
 
 /**
  * FlowPane lays out its children in a flow that wraps at the flowpane's boundary.
@@ -751,8 +752,8 @@ public class FlowPane extends Pane {
             }
 
             @Override
-            public WritableValue<Pos> getWritableValue(FlowPane node) {
-                return node.alignmentProperty();
+            public StyleableProperty<Pos> getStyleableProperty(FlowPane node) {
+                return (StyleableProperty)node.alignmentProperty();
             }
                  
          };
@@ -767,8 +768,8 @@ public class FlowPane extends Pane {
             }
 
             @Override
-            public WritableValue<HPos> getWritableValue(FlowPane node) {
-                return node.columnHalignmentProperty();
+            public StyleableProperty<HPos> getStyleableProperty(FlowPane node) {
+                return (StyleableProperty)node.columnHalignmentProperty();
             }
                      
          };
@@ -783,8 +784,8 @@ public class FlowPane extends Pane {
             }
 
             @Override
-            public WritableValue<Number> getWritableValue(FlowPane node) {
-                return node.hgapProperty();
+            public StyleableProperty<Number> getStyleableProperty(FlowPane node) {
+                return (StyleableProperty)node.hgapProperty();
             }
                      
          };
@@ -799,8 +800,8 @@ public class FlowPane extends Pane {
             }
 
             @Override
-            public WritableValue<VPos> getWritableValue(FlowPane node) {
-                return node.rowValignmentProperty();
+            public StyleableProperty<VPos> getStyleableProperty(FlowPane node) {
+                return (StyleableProperty)node.rowValignmentProperty();
             }
                      
          }; 
@@ -822,8 +823,8 @@ public class FlowPane extends Pane {
             }
 
             @Override
-            public WritableValue<Orientation> getWritableValue(FlowPane node) {
-                return node.orientationProperty();
+            public StyleableProperty<Orientation> getStyleableProperty(FlowPane node) {
+                return (StyleableProperty)node.orientationProperty();
             }
                      
          };  
@@ -838,8 +839,8 @@ public class FlowPane extends Pane {
             }
 
             @Override
-            public WritableValue<Number> getWritableValue(FlowPane node) {
-                return node.vgapProperty();
+            public StyleableProperty<Number> getStyleableProperty(FlowPane node) {
+                return (StyleableProperty)node.vgapProperty();
             }
                      
          }; 

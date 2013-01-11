@@ -29,7 +29,7 @@ import javafx.scene.text.Font;
 
 import com.sun.javafx.css.Size;
 import com.sun.javafx.css.StyleConverterImpl;
-import com.sun.javafx.css.ParsedValue;
+import javafx.css.ParsedValue;
 
 /**
  * Derive a Color from a Color and a brightness value

@@ -26,11 +26,13 @@
 package com.sun.javafx.css;
 
 import static org.junit.Assert.assertEquals;
+
+import javafx.css.ParsedValue;
+import javafx.css.StyleConverter;
 import javafx.scene.text.Font;
 
 import org.junit.Test;
 
-import com.sun.javafx.css.converters.SizeConverter;
 
 
 public class SizeTypeTest {
@@ -45,12 +47,12 @@ public class SizeTypeTest {
     public void testConvert() {
         //System.out.println("convert");
         Size size = new Size(2.0f, SizeUnits.EM);
-        ParsedValue<Size, Size> value = new ParsedValue<Size,Size>(size,null);
+        ParsedValue<Size, Size> value = new ParsedValueImpl<Size,Size>(size,null);
         Font font = null;
         Size result = value.convert(font);
         assertEquals(size, result);
 
-        ParsedValue<ParsedValue<?,Size>,Double> pxSize = new ParsedValue(value,SizeConverter.getInstance());
+        ParsedValue<ParsedValue<?,Size>,Double> pxSize = new ParsedValueImpl(value,StyleConverter.getSizeConverter());
         Float expResult = (float) size.pixels(font);
         Float pixels = (float) ((double) pxSize.convert(font));
         assertEquals(expResult, pixels);

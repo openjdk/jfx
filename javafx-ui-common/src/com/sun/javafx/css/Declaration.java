@@ -28,6 +28,8 @@ package com.sun.javafx.css;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import javafx.css.StyleOrigin;
+import javafx.css.ParsedValue;
 
 final public class Declaration {
     final String property;
@@ -74,7 +76,7 @@ final public class Declaration {
     }
 
     /** Helper */
-    private Origin getOrigin() {
+    private StyleOrigin getOrigin() {
         Rule rule = getRule();
         if (rule != null)  {
             return rule.getOrigin();

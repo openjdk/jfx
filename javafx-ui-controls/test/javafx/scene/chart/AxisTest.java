@@ -4,7 +4,7 @@
 
 package javafx.scene.chart;
 
-import com.sun.javafx.css.CssMetaData;
+import javafx.css.CssMetaData;
 import java.util.List;
 import static javafx.scene.control.ControlTestUtils.*;
 import javafx.beans.property.BooleanProperty;
@@ -13,6 +13,7 @@ import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.beans.property.SimpleObjectProperty;
+import javafx.css.StyleableProperty;
 import javafx.geometry.Side;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
@@ -298,7 +299,7 @@ public class AxisTest {
      * CSS related Tests                                                 *
      ********************************************************************/
     @Test public void whenSideIsBound_impl_cssSettable_ReturnsFalse() {
-        CssMetaData styleable = CssMetaData.getCssMetaData(axis.sideProperty());
+        CssMetaData styleable = ((StyleableProperty)axis.sideProperty()).getCssMetaData();
         assertTrue(styleable.isSettable(axis));
         ObjectProperty<Side> other = new SimpleObjectProperty<Side>(Side.LEFT);
         axis.sideProperty().bind(other);
@@ -306,19 +307,19 @@ public class AxisTest {
     }
 
     @Test public void whenSideIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
-        CssMetaData styleable = CssMetaData.getCssMetaData(axis.sideProperty());
-        styleable.set(axis,Side.RIGHT);
+        CssMetaData styleable = ((StyleableProperty)axis.sideProperty()).getCssMetaData();
+        styleable.set(axis,Side.RIGHT, null);
         assertTrue(styleable.isSettable(axis));
     }
 
     @Test public void canSpecifySideViaCSS() {
-        CssMetaData styleable = CssMetaData.getCssMetaData(axis.sideProperty());
-        styleable.set(axis,Side.BOTTOM);
+        CssMetaData styleable = ((StyleableProperty)axis.sideProperty()).getCssMetaData();
+        styleable.set(axis,Side.BOTTOM, null);
         assertSame(Side.BOTTOM, axis.getSide());
     }
 
     @Test public void whenTickMarkVisibleIsBound_impl_cssSettable_ReturnsFalse() {
-        CssMetaData styleable = CssMetaData.getCssMetaData(axis.tickMarkVisibleProperty());
+        CssMetaData styleable = ((StyleableProperty)axis.tickMarkVisibleProperty()).getCssMetaData();
         assertTrue(styleable.isSettable(axis));
         BooleanProperty other = new SimpleBooleanProperty();
         axis.tickMarkVisibleProperty().bind(other);
@@ -326,19 +327,19 @@ public class AxisTest {
     }
 
     @Test public void whenTickMarkVisibleIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
-        CssMetaData styleable = CssMetaData.getCssMetaData(axis.tickMarkVisibleProperty());
-        styleable.set(axis,false);
+        CssMetaData styleable = ((StyleableProperty)axis.tickMarkVisibleProperty()).getCssMetaData();
+        styleable.set(axis,false, null);
         assertTrue(styleable.isSettable(axis));
     }
 
     @Test public void canSpecifyTickMarkVisibleViaCSS() {
-        CssMetaData styleable = CssMetaData.getCssMetaData(axis.tickMarkVisibleProperty());
-        styleable.set(axis,true);
+        CssMetaData styleable = ((StyleableProperty)axis.tickMarkVisibleProperty()).getCssMetaData();
+        styleable.set(axis,true, null);
         assertSame(true, axis.isTickMarkVisible());
     }
 
     @Test public void whenTickLabelsVisibleIsBound_impl_cssSettable_ReturnsFalse() {
-        CssMetaData styleable = CssMetaData.getCssMetaData(axis.tickLabelsVisibleProperty());
+        CssMetaData styleable = ((StyleableProperty)axis.tickLabelsVisibleProperty()).getCssMetaData();
         assertTrue(styleable.isSettable(axis));
         BooleanProperty other = new SimpleBooleanProperty();
         axis.tickLabelsVisibleProperty().bind(other);
@@ -346,19 +347,19 @@ public class AxisTest {
     }
 
     @Test public void whenTickLabelsVisibleIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
-        CssMetaData styleable = CssMetaData.getCssMetaData(axis.tickLabelsVisibleProperty());
-        styleable.set(axis,false);
+        CssMetaData styleable = ((StyleableProperty)axis.tickLabelsVisibleProperty()).getCssMetaData();
+        styleable.set(axis,false, null);
         assertTrue(styleable.isSettable(axis));
     }
 
     @Test public void canSpecifyTickLabelsVisibleViaCSS() {
-        CssMetaData styleable = CssMetaData.getCssMetaData(axis.tickLabelsVisibleProperty());
-        styleable.set(axis,true);
+        CssMetaData styleable = ((StyleableProperty)axis.tickLabelsVisibleProperty()).getCssMetaData();
+        styleable.set(axis,true, null);
         assertSame(true, axis.isTickMarkVisible());
     }
 
     @Test public void whenTickLengthIsBound_impl_cssSettable_ReturnsFalse() {
-        CssMetaData styleable = CssMetaData.getCssMetaData(axis.tickLengthProperty());
+        CssMetaData styleable = ((StyleableProperty)axis.tickLengthProperty()).getCssMetaData();
         assertTrue(styleable.isSettable(axis));
         DoubleProperty other = new SimpleDoubleProperty();
         axis.tickLengthProperty().bind(other);
@@ -366,19 +367,19 @@ public class AxisTest {
     }
 
     @Test public void whenTickLengthIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
-        CssMetaData styleable = CssMetaData.getCssMetaData(axis.tickLengthProperty());
-        styleable.set(axis,10.9);
+        CssMetaData styleable = ((StyleableProperty)axis.tickLengthProperty()).getCssMetaData();
+        styleable.set(axis,10.9, null);
         assertTrue(styleable.isSettable(axis));
     }
 
     @Test public void canSpecifyTickLengthViaCSS() {
-        CssMetaData styleable = CssMetaData.getCssMetaData(axis.tickLengthProperty());
-        styleable.set(axis,10.34);
+        CssMetaData styleable = ((StyleableProperty)axis.tickLengthProperty()).getCssMetaData();
+        styleable.set(axis,10.34, null);
         assertSame(true, axis.isTickMarkVisible());
     }
 
     @Test public void whenTickLabelFontIsBound_impl_cssSettable_ReturnsFalse() {
-        CssMetaData styleable = CssMetaData.getCssMetaData(axis.tickLabelFontProperty());
+        CssMetaData styleable = ((StyleableProperty)axis.tickLabelFontProperty()).getCssMetaData();
         assertTrue(styleable.isSettable(axis));
         ObjectProperty<Font> other = new SimpleObjectProperty<Font>(Font.getDefault());
         axis.tickLabelFontProperty().bind(other);
@@ -386,19 +387,19 @@ public class AxisTest {
     }
 
     @Test public void whenTickLabelFontIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
-        CssMetaData styleable = CssMetaData.getCssMetaData(axis.tickLabelFontProperty());
-        styleable.set(axis,Font.getDefault());
+        CssMetaData styleable = ((StyleableProperty)axis.tickLabelFontProperty()).getCssMetaData();
+        styleable.set(axis,Font.getDefault(), null);
         assertTrue(styleable.isSettable(axis));
     }
 
     @Test public void canSpecifyTickLabelFontViaCSS() {
-        CssMetaData styleable = CssMetaData.getCssMetaData(axis.tickLabelFontProperty());
-        styleable.set(axis,Font.getDefault());
+        CssMetaData styleable = ((StyleableProperty)axis.tickLabelFontProperty()).getCssMetaData();
+        styleable.set(axis,Font.getDefault(), null);
         assertSame(Font.getDefault(), axis.getTickLabelFont());
     }
 
     @Test public void whenTickLabelFillIsBound_impl_cssSettable_ReturnsFalse() {
-        CssMetaData styleable = CssMetaData.getCssMetaData(axis.tickLabelFillProperty());
+        CssMetaData styleable = ((StyleableProperty)axis.tickLabelFillProperty()).getCssMetaData();
         assertTrue(styleable.isSettable(axis));
         ObjectProperty<Color> other = new SimpleObjectProperty<Color>(Color.BROWN);
         axis.tickLabelFillProperty().bind(other);
@@ -406,19 +407,19 @@ public class AxisTest {
     }
 
     @Test public void whenTickLabelFillIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
-        CssMetaData styleable = CssMetaData.getCssMetaData(axis.tickLabelFillProperty());
-        styleable.set(axis,Color.BROWN);
+        CssMetaData styleable = ((StyleableProperty)axis.tickLabelFillProperty()).getCssMetaData();
+        styleable.set(axis,Color.BROWN, null);
         assertTrue(styleable.isSettable(axis));
     }
 
     @Test public void canSpecifyTickLabelFillViaCSS() {
-        CssMetaData styleable = CssMetaData.getCssMetaData(axis.tickLabelFillProperty());
-        styleable.set(axis,Color.BROWN);
+        CssMetaData styleable = ((StyleableProperty)axis.tickLabelFillProperty()).getCssMetaData();
+        styleable.set(axis,Color.BROWN, null);
         assertSame(Color.BROWN, axis.getTickLabelFill());
     }
 
     @Test public void whenTickLabelGapIsBound_impl_cssSettable_ReturnsFalse() {
-        CssMetaData styleable = CssMetaData.getCssMetaData(axis.tickLabelGapProperty());
+        CssMetaData styleable = ((StyleableProperty)axis.tickLabelGapProperty()).getCssMetaData();
         assertTrue(styleable.isSettable(axis));
         DoubleProperty other = new SimpleDoubleProperty();
         axis.tickLabelGapProperty().bind(other);
@@ -426,14 +427,14 @@ public class AxisTest {
     }
 
     @Test public void whenTickLabelGapIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
-        CssMetaData styleable = CssMetaData.getCssMetaData(axis.tickLabelGapProperty());
-        styleable.set(axis, 9.0);
+        CssMetaData styleable = ((StyleableProperty)axis.tickLabelGapProperty()).getCssMetaData();
+        styleable.set(axis, 9.0, null);
         assertTrue(styleable.isSettable(axis));
     }
 
     @Test public void canSpecifyTickLabelGapViaCSS() {
-        CssMetaData styleable = CssMetaData.getCssMetaData(axis.tickLabelGapProperty());
-        styleable.set(axis,10.34);
+        CssMetaData styleable = ((StyleableProperty)axis.tickLabelGapProperty()).getCssMetaData();
+        styleable.set(axis,10.34, null);
         assertEquals(10.34, axis.getTickLabelGap(), 0.0);
     }
 

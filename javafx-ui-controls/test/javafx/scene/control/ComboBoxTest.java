@@ -3,7 +3,7 @@
  */
 package javafx.scene.control;
 
-import com.sun.javafx.css.PseudoClass;
+import javafx.css.PseudoClass;
 import com.sun.javafx.scene.control.skin.ComboBoxListViewSkin;
 import com.sun.javafx.scene.control.skin.ListViewSkin;
 import com.sun.javafx.scene.control.skin.VirtualFlow;
@@ -11,6 +11,7 @@ import static javafx.scene.control.ControlTestUtils.assertStyleClassContains;
 import static org.junit.Assert.*;
 
 import java.util.Arrays;
+import java.util.Set;
 
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
@@ -567,20 +568,20 @@ public class ComboBoxTest {
     }
     
     @Test public void ensureImpl_getPseudoClassStateReturnsValidValue() {
-        PseudoClass.States value1 = comboBox.getPseudoClassStates();
-        assertTrue(value1.getCount() >= 0);
+        Set<PseudoClass> value1 = comboBox.getPseudoClassStates();
+        assertTrue(value1.size() >= 0);
         
         comboBox.setEditable(true);
-        PseudoClass.States value2 = comboBox.getPseudoClassStates();
-        assertTrue(value2.containsState(PseudoClass.getState("editable")));
+        Set<PseudoClass> value2 = comboBox.getPseudoClassStates();
+        assertTrue(value2.contains(PseudoClass.getPseudoClass("editable")));
         
         comboBox.show();
-        PseudoClass.States value3 = comboBox.getPseudoClassStates();
-        assertTrue(value3.containsState(PseudoClass.getState("showing")));
+        Set<PseudoClass> value3 = comboBox.getPseudoClassStates();
+        assertTrue(value3.contains(PseudoClass.getPseudoClass("showing")));
         
         comboBox.arm();
-        PseudoClass.States value4 = comboBox.getPseudoClassStates();
-        assertTrue(value4.containsState(PseudoClass.getState("armed")));
+        Set<PseudoClass> value4 = comboBox.getPseudoClassStates();
+        assertTrue(value4.contains(PseudoClass.getPseudoClass("armed")));
         
         assertFalse(value1.equals(value2));
         assertFalse(value1.equals(value3));

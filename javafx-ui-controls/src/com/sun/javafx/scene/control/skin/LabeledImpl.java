@@ -34,12 +34,12 @@ import javafx.beans.Observable;
 import javafx.scene.control.Label;
 import javafx.scene.control.Labeled;
 
-import com.sun.javafx.css.CssMetaData;
-import com.sun.javafx.css.Origin;
+import javafx.css.CssMetaData;
+import javafx.css.StyleOrigin;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import javafx.beans.value.WritableValue;
+import javafx.css.StyleableProperty;
 import javafx.scene.Parent;
 import javafx.scene.layout.Region;
 
@@ -70,12 +70,12 @@ public class LabeledImpl extends Label {
             // skin constructor. 
             if ("-fx-skin".equals(styleable.getProperty())) continue;
             
-            final WritableValue fromVal = styleable.getWritableValue(labeled);
+            final StyleableProperty fromVal = styleable.getStyleableProperty(labeled);
             if (fromVal instanceof Observable) {
                 // listen for changes to this property
                 ((Observable)fromVal).addListener(shuttler);
                 // set this LabeledImpl's property to the same value as the Labeled. 
-                final Origin origin = CssMetaData.getOrigin(fromVal);
+                final StyleOrigin origin = fromVal.getStyleOrigin();
                 styleable.set(labeledImpl, fromVal.getValue(), origin);
             }
         }
@@ -101,18 +101,17 @@ public class LabeledImpl extends Label {
                 // If the user set the graphic, then mirror that.
                 // Otherwise, the graphic was set via the imageUrlProperty which
                 // will be mirrored onto the labeledImpl by the next block.
-                Origin origin = CssMetaData.getOrigin(labeled.graphicProperty());
-                if (origin == null || origin == Origin.USER) {
+                StyleOrigin origin = ((StyleableProperty)labeled.graphicProperty()).getStyleOrigin();
+                if (origin == null || origin == StyleOrigin.USER) {
                     labeledImpl.setGraphic(labeled.getGraphic());
                 }
                 
-            } else if (valueModel instanceof WritableValue) { 
-                WritableValue writable = (WritableValue)valueModel;
-                CssMetaData styleable = 
-                        CssMetaData.getCssMetaData(writable);
-                if (styleable != null) {
-                    Origin origin = CssMetaData.getOrigin(writable);
-                    styleable.set(labeledImpl, writable.getValue(), origin);
+            } else if (valueModel instanceof StyleableProperty) { 
+                StyleableProperty styleableProperty = (StyleableProperty)valueModel;
+                CssMetaData cssMetaData = styleableProperty.getCssMetaData();
+                if (cssMetaData != null) {
+                    StyleOrigin origin = styleableProperty.getStyleOrigin();
+                    cssMetaData.set(labeledImpl, styleableProperty.getValue(), origin);
                 }
             }
         }

@@ -35,8 +35,8 @@ import javafx.geometry.Rectangle2D;
 import javafx.scene.Node;
 
 import com.sun.javafx.beans.event.AbstractNotifyListener;
-import com.sun.javafx.css.CssMetaData;
-import com.sun.javafx.css.StyleableStringProperty;
+import javafx.css.CssMetaData;
+import javafx.css.StyleableStringProperty;
 import com.sun.javafx.css.converters.StringConverter;
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.transform.BaseTransform;
@@ -50,6 +50,7 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import javafx.beans.DefaultProperty;
 import javafx.beans.property.*;
+import javafx.css.StyleableProperty;
 import javafx.geometry.NodeOrientation;
 
 /**
@@ -806,8 +807,8 @@ public class ImageView extends Node {
             }
 
             @Override
-            public WritableValue<String> getWritableValue(ImageView n) {
-                return n.imageUrlProperty();
+            public StyleableProperty<String> getStyleableProperty(ImageView n) {
+                return (StyleableProperty)n.imageUrlProperty();
             }
         };
             

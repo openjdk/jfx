@@ -23,7 +23,7 @@
  * questions.
  */
 
-package com.sun.javafx.css;
+package javafx.css;
 
 import com.sun.javafx.css.converters.BooleanConverter;
 import com.sun.javafx.css.converters.ColorConverter;
@@ -35,10 +35,8 @@ import com.sun.javafx.css.converters.PaintConverter;
 import com.sun.javafx.css.converters.SizeConverter;
 import com.sun.javafx.css.converters.StringConverter;
 import com.sun.javafx.css.converters.URLConverter;
-import javafx.geometry.Insets;
 import javafx.scene.effect.Effect;
 import javafx.scene.paint.Color;
-import javafx.scene.paint.Paint;
 import javafx.scene.text.Font;
 
 /**
@@ -129,7 +127,7 @@ public class StyleConverter<F, T> {
      * CSS length and number values are parsed into a Size object that is
      * converted to a Number before the value is applied. If the property is
      * a {@code Number} type other than Double, the 
-     * {@link CssMetaData#set(javafx.scene.Node, java.lang.Object, com.sun.javafx.css.Origin) set}
+     * {@link CssMetaData#set(javafx.scene.Node, java.lang.Object, javafx.css.Origin) set}
      * method of ({@code CssMetaData} can be over-ridden to convert the Number
      * to the correct type. For example, if the property is an {@code IntegerProperty}:
      * <code><pre>

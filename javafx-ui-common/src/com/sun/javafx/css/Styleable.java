@@ -27,6 +27,8 @@ package com.sun.javafx.css;
 import java.util.List;
 import javafx.beans.value.WritableValue;
 import javafx.collections.ObservableMap;
+import javafx.css.CssMetaData;
+import javafx.css.StyleableProperty;
 import javafx.scene.Node;
 
 /**
@@ -93,14 +95,14 @@ public abstract class Styleable {
       * @treatAsPrivate implementation detail
       * @deprecated This is an experimental API that is not intended for use
       */
-     private ObservableMap<WritableValue, List<Style>> styleMap;
+     private ObservableMap<StyleableProperty, List<Style>> styleMap;
      
      /**
       * RT-17293
       * @treatAsPrivate implementation detail
       * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
       */
-     public ObservableMap<WritableValue, List<Style>> getStyleMap() {
+     public ObservableMap<StyleableProperty, List<Style>> getStyleMap() {
          return styleMap;
      }
 
@@ -109,7 +111,7 @@ public abstract class Styleable {
       * @treatAsPrivate implementation detail
       * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
       */
-     public void setStyleMap(ObservableMap<WritableValue, List<Style>> styleMap) {
+     public void setStyleMap(ObservableMap<StyleableProperty, List<Style>> styleMap) {
          this.styleMap = styleMap;
      }
     

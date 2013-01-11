@@ -36,7 +36,6 @@ import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ObjectPropertyBase;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
-import javafx.beans.value.WritableValue;
 import javafx.collections.ListChangeListener.Change;
 import javafx.collections.ObservableList;
 import javafx.scene.Group;
@@ -46,13 +45,14 @@ import com.sun.javafx.Utils;
 import com.sun.javafx.application.PlatformImpl;
 import com.sun.javafx.collections.TrackableObservableList;
 import com.sun.javafx.css.CssError;
-import com.sun.javafx.css.CssMetaData;
-import com.sun.javafx.css.PseudoClass;
+import javafx.css.CssMetaData;
+import javafx.css.PseudoClass;;
 import com.sun.javafx.css.StyleManager;
 import com.sun.javafx.css.Styleable;
-import com.sun.javafx.css.StyleableStringProperty;
+import javafx.css.StyleableStringProperty;
 import com.sun.javafx.css.converters.StringConverter;
 import com.sun.javafx.scene.control.Logging;
+import javafx.css.StyleableProperty;
 import sun.util.logging.PlatformLogger;
 
 /**
@@ -911,8 +911,8 @@ public class PopupControl extends PopupWindow implements Skinnable {
             }
 
             @Override
-            public WritableValue<String> getWritableValue(CSSBridge n) {
-                return n.skinClassNameProperty();
+            public StyleableProperty<String> getStyleableProperty(CSSBridge n) {
+                return (StyleableProperty)n.skinClassNameProperty();
             }
         };
 
@@ -946,9 +946,9 @@ public class PopupControl extends PopupWindow implements Skinnable {
     }
 
     /**
-     * @see Node#pseudoClassStateChanged(com.sun.javafx.css.PseudoClass.State) 
+     * @see Node#pseudoClassStateChanged(com.sun.javafx.css.PseudoClass) 
      */
-    protected void pseudoClassStateChanged(PseudoClass.State s) {
+    protected void pseudoClassStateChanged(PseudoClass s) {
         bridge.pseudoClassStateChanged(s);
     }
 
@@ -1015,7 +1015,7 @@ public class PopupControl extends PopupWindow implements Skinnable {
         /**
         * {@inheritDoc}
         */
-        @Override protected void pseudoClassStateChanged(PseudoClass.State s) {
+        @Override protected void pseudoClassStateChanged(PseudoClass s) {
             super.pseudoClassStateChanged(s);
         }
         
@@ -1280,8 +1280,8 @@ public class PopupControl extends PopupWindow implements Skinnable {
         
     }
 
-    private static final PseudoClass.State INTERNAL_FOCUS = PseudoClass.getState("internal-focus");
-    private static final PseudoClass.State EXTERNAL_FOCUS = PseudoClass.getState("external-focus");
+    private static final PseudoClass INTERNAL_FOCUS = PseudoClass.getPseudoClass("internal-focus");
+    private static final PseudoClass EXTERNAL_FOCUS = PseudoClass.getPseudoClass("external-focus");
     /**
      * The pseudo classes associated with 2-level focus have changed.
      * @treatAsPrivate implementation detail

@@ -3,7 +3,7 @@
  */
 package javafx.scene.control;
 
-import com.sun.javafx.css.CssMetaData;
+import javafx.css.CssMetaData;
 import static javafx.scene.control.ControlTestUtils.*;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -12,6 +12,7 @@ import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
+import javafx.css.StyleableProperty;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
 import javafx.scene.shape.Rectangle;
@@ -122,8 +123,14 @@ public class LabelTest {
     }
     
     @Test public void impl_cssSettable_AlwaysReturnsFalseForLabelFor() {
-        CssMetaData styleable = CssMetaData.getCssMetaData(label.labelForProperty());
-        assertNull(styleable);
+        try {
+            CssMetaData styleable = ((StyleableProperty)label.labelForProperty()).getCssMetaData();
+            assertNull(styleable);
+        } catch (ClassCastException ignored) {
+            // pass!
+        } catch (Exception e) {
+            org.junit.Assert.fail(e.toString());
+        }
     }
     
     @Test public void labelForBeanIsCorrect() {

@@ -26,9 +26,9 @@
 
 package javafx.scene.layout;
 
-import com.sun.javafx.css.StyleableBooleanProperty;
-import com.sun.javafx.css.StyleableDoubleProperty;
-import com.sun.javafx.css.StyleableObjectProperty;
+import javafx.css.StyleableBooleanProperty;
+import javafx.css.StyleableDoubleProperty;
+import javafx.css.StyleableObjectProperty;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -41,11 +41,12 @@ import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 
-import com.sun.javafx.css.CssMetaData;
+import javafx.css.CssMetaData;
 import com.sun.javafx.css.converters.BooleanConverter;
 import com.sun.javafx.css.converters.EnumConverter;
 import com.sun.javafx.css.converters.SizeConverter;
 import javafx.beans.value.WritableValue;
+import javafx.css.StyleableProperty;
 import javafx.geometry.HPos;
 import javafx.geometry.VPos;
 
@@ -530,8 +531,8 @@ public class VBox extends Pane {
             }
 
             @Override
-            public WritableValue<Pos> getWritableValue(VBox node) {
-                return node.alignmentProperty();
+            public StyleableProperty<Pos> getStyleableProperty(VBox node) {
+                return (StyleableProperty)node.alignmentProperty();
             }
         };
          
@@ -545,8 +546,8 @@ public class VBox extends Pane {
             }
 
             @Override
-            public WritableValue<Boolean> getWritableValue(VBox node) {
-                return node.fillWidthProperty();
+            public StyleableProperty<Boolean> getStyleableProperty(VBox node) {
+                return (StyleableProperty)node.fillWidthProperty();
             }
         };
          
@@ -560,8 +561,8 @@ public class VBox extends Pane {
             }
 
             @Override
-            public WritableValue<Number> getWritableValue(VBox node) {
-                return node.spacingProperty();
+            public StyleableProperty<Number> getStyleableProperty(VBox node) {
+                return (StyleableProperty)node.spacingProperty();
             }
         };
 

@@ -29,7 +29,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
-
+import javafx.css.ParsedValue;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.CycleMethod;
 import javafx.scene.paint.LinearGradient;
@@ -64,14 +64,14 @@ public class PaintTypeTest {
     };
 
     ParsedValue<?,Size> sizeVal(float value) {
-        return new ParsedValue<Size,Size>(new Size(value*100, SizeUnits.PERCENT), null);
+        return new ParsedValueImpl<Size,Size>(new Size(value*100, SizeUnits.PERCENT), null);
     }
 
     ParsedValue<ParsedValue[],Stop> stopValue(Stop stop) {
         ParsedValue<?,Size> offset = sizeVal((float)stop.getOffset());
-        ParsedValue<Color,Color> color = new ParsedValue<Color,Color>(stop.getColor(), null);
+        ParsedValue<Color,Color> color = new ParsedValueImpl<Color,Color>(stop.getColor(), null);
         ParsedValue[] values = new ParsedValue[] { offset, color };
-        return new ParsedValue<ParsedValue[],Stop>(values, StopConverter.getInstance());
+        return new ParsedValueImpl<ParsedValue[],Stop>(values, StopConverter.getInstance());
     };
 
     ParsedValue<ParsedValue[],Paint> linearGradientValues(LinearGradient lg) {
@@ -81,28 +81,28 @@ public class PaintTypeTest {
         values[v++] = sizeVal((float) lg.getStartY());
         values[v++] = sizeVal((float) lg.getEndX());
         values[v++] = sizeVal((float) lg.getEndY());
-        values[v++] = new ParsedValue<CycleMethod,CycleMethod>(lg.getCycleMethod(),null);
+        values[v++] = new ParsedValueImpl<CycleMethod,CycleMethod>(lg.getCycleMethod(),null);
         values[v++] = stopValue(stops[0]);
         values[v++] = stopValue(stops[1]);
-        return new ParsedValue<ParsedValue[],Paint>(values, PaintConverter.LinearGradientConverter.getInstance());
+        return new ParsedValueImpl<ParsedValue[],Paint>(values, PaintConverter.LinearGradientConverter.getInstance());
     }
 
     ParsedValue<ParsedValue[],Paint> radialGradientValues(RadialGradient rg) {
         ParsedValue[] values = new ParsedValue[8];
         int v = 0;
-        values[v++] = new ParsedValue<Size,Size>(new Size(rg.getFocusAngle(), SizeUnits.PX), null);
-        values[v++] = new ParsedValue<Size,Size>(new Size(rg.getFocusDistance(), SizeUnits.PX), null);
+        values[v++] = new ParsedValueImpl<Size,Size>(new Size(rg.getFocusAngle(), SizeUnits.PX), null);
+        values[v++] = new ParsedValueImpl<Size,Size>(new Size(rg.getFocusDistance(), SizeUnits.PX), null);
         values[v++] = sizeVal((float) rg.getCenterX());
         values[v++] = sizeVal((float) rg.getCenterY());
-        values[v++] = new ParsedValue<Size,Size>(new Size(rg.getRadius(), SizeUnits.PX), null);
-        values[v++] = new ParsedValue<CycleMethod,CycleMethod>(rg.getCycleMethod(),null);
+        values[v++] = new ParsedValueImpl<Size,Size>(new Size(rg.getRadius(), SizeUnits.PX), null);
+        values[v++] = new ParsedValueImpl<CycleMethod,CycleMethod>(rg.getCycleMethod(),null);
         values[v++] = stopValue(stops[0]);
         values[v++] = stopValue(stops[1]);
-        return new ParsedValue<ParsedValue[],Paint>(values, PaintConverter.RadialGradientConverter.getInstance());
+        return new ParsedValueImpl<ParsedValue[],Paint>(values, PaintConverter.RadialGradientConverter.getInstance());
     }
 
     ParsedValue[] paintValues = new ParsedValue[] {
-        new ParsedValue<Paint,Paint>(paints[0], null),
+        new ParsedValueImpl<Paint,Paint>(paints[0], null),
         linearGradientValues((LinearGradient)paints[1]),
         radialGradientValues((RadialGradient)paints[2])
     };
@@ -117,7 +117,7 @@ public class PaintTypeTest {
         for (int l=0; l<nLayers; l++) {
             layers[l] = paintValues[l % paintValues.length];
         }
-        return new ParsedValue<ParsedValue<?,Paint>[],Paint[]>(layers, PaintConverter.SequenceConverter.getInstance());
+        return new ParsedValueImpl<ParsedValue<?,Paint>[],Paint[]>(layers, PaintConverter.SequenceConverter.getInstance());
     }
     /**
      * Test of convert method, of class PaintType.

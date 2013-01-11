@@ -42,7 +42,6 @@ import javafx.beans.property.SimpleDoubleProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.StringProperty;
 import javafx.beans.property.StringPropertyBase;
-import javafx.beans.value.WritableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
@@ -59,13 +58,14 @@ import javafx.util.Duration;
 import com.sun.javafx.charts.Legend;
 import com.sun.javafx.charts.Legend.LegendItem;
 import com.sun.javafx.collections.NonIterableChange;
-import com.sun.javafx.css.StyleableBooleanProperty;
-import com.sun.javafx.css.StyleableDoubleProperty;
-import com.sun.javafx.css.CssMetaData;
+import javafx.css.StyleableBooleanProperty;
+import javafx.css.StyleableDoubleProperty;
+import javafx.css.CssMetaData;
 import com.sun.javafx.css.converters.BooleanConverter;
 import com.sun.javafx.css.converters.SizeConverter;
 import java.util.ArrayList;
 import javafx.animation.*;
+import javafx.css.StyleableProperty;
 
 /**
  * Displays a PieChart. The chart content is populated by pie slices based on
@@ -874,8 +874,8 @@ public class PieChart extends Chart {
             }
 
             @Override
-            public WritableValue<Boolean> getWritableValue(PieChart node) {
-                return node.clockwiseProperty();
+            public StyleableProperty<Boolean> getStyleableProperty(PieChart node) {
+                return (StyleableProperty)node.clockwiseProperty();
             }
         };
          
@@ -889,8 +889,8 @@ public class PieChart extends Chart {
             }
 
             @Override
-            public WritableValue<Boolean> getWritableValue(PieChart node) {
-                return node.labelsVisibleProperty();
+            public StyleableProperty<Boolean> getStyleableProperty(PieChart node) {
+                return (StyleableProperty)node.labelsVisibleProperty();
             }
         };
          
@@ -904,8 +904,8 @@ public class PieChart extends Chart {
             }
 
             @Override
-            public WritableValue<Number> getWritableValue(PieChart node) {
-                return node.labelLineLengthProperty();
+            public StyleableProperty<Number> getStyleableProperty(PieChart node) {
+                return (StyleableProperty)node.labelLineLengthProperty();
             }
         };
          
@@ -919,8 +919,8 @@ public class PieChart extends Chart {
             }
 
             @Override
-            public WritableValue<Number> getWritableValue(PieChart node) {
-                return node.startAngleProperty();
+            public StyleableProperty<Number> getStyleableProperty(PieChart node) {
+                return (StyleableProperty)node.startAngleProperty();
             }
         };
 

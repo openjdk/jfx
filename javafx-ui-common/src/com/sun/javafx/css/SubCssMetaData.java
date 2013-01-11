@@ -24,7 +24,9 @@
  */
 package com.sun.javafx.css;
 
-import javafx.beans.value.WritableValue;
+import javafx.css.CssMetaData;
+import javafx.css.StyleConverter;
+import javafx.css.StyleableProperty;
 import javafx.scene.Node;
 
 /**
@@ -40,5 +42,5 @@ public class SubCssMetaData<T> extends CssMetaData<Node,T> {
     }
 
     @Override public boolean isSettable(Node node) { return false; }
-    @Override public WritableValue<T> getWritableValue(Node node) { return null; }
+    @Override public StyleableProperty<T> getStyleableProperty(Node node) { return null; }
 }

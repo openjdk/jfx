@@ -3,7 +3,7 @@
  */
 package javafx.scene.control;
 
-import com.sun.javafx.css.CssMetaData;
+import javafx.css.CssMetaData;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
@@ -20,6 +20,7 @@ import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
+import javafx.css.StyleableProperty;
 import javafx.scene.input.Clipboard;
 import javafx.scene.input.ClipboardContent;
 
@@ -162,7 +163,7 @@ public class TextInputControlTest {
 
     @Ignore("getCssMetaData will return null for textProperty")
     @Test public void impl_cssSettable_ReturnsFalseForTextAlways() {
-        CssMetaData styleable = CssMetaData.getCssMetaData(textInput.textProperty());
+        CssMetaData styleable = ((StyleableProperty)textInput.textProperty()).getCssMetaData();
         assertTrue(styleable.isSettable(textInput));
         StringProperty other = new SimpleStringProperty("Apples");
         textInput.textProperty().bind(other);
@@ -170,10 +171,14 @@ public class TextInputControlTest {
     }
 
     @Test public void cannotSpecifyTextViaCSS() {
-        CssMetaData styleable = CssMetaData.getCssMetaData(textInput.textProperty());
-        assertNull(styleable);
-//        styleable.set(textInput,"Hello");
-//        assertFalse("Hello".equals(textInput.getText()));
+        try {
+            CssMetaData styleable = ((StyleableProperty)textInput.textProperty()).getCssMetaData();
+            assertNull(styleable);
+        } catch (ClassCastException ignored) {
+            // pass!
+        } catch (Exception e) {
+            org.junit.Assert.fail(e.toString());
+        }
     }
 
     @Test public void settingTextNotifiesOfChange() {
@@ -246,7 +251,7 @@ public class TextInputControlTest {
     
     @Ignore("getCssMetaData will return null for editableProperty")
     @Test public void impl_cssSettable_ReturnsFalseForEditableAlways() {
-        CssMetaData styleable = CssMetaData.getCssMetaData(textInput.editableProperty());
+        CssMetaData styleable = ((StyleableProperty)textInput.editableProperty()).getCssMetaData();
         assertTrue(styleable.isSettable(textInput));
         StringProperty other = new SimpleStringProperty("Apples");
         textInput.textProperty().bind(other);
@@ -254,10 +259,14 @@ public class TextInputControlTest {
     }
 
     @Test public void cannotSpecifyEditableViaCSS() {
-        CssMetaData styleable = CssMetaData.getCssMetaData(textInput.editableProperty());
-        assertNull(styleable);
-//        styleable.set(textInput,"Hello");
-//        assertFalse("Hello".equals(textInput.getText()));
+        try {
+            CssMetaData styleable = ((StyleableProperty)textInput.editableProperty()).getCssMetaData();
+            assertNull(styleable);
+        } catch (ClassCastException ignored) {
+            // pass!
+        } catch (Exception e) {
+            org.junit.Assert.fail(e.toString());
+        }
     }
 
     @Test public void settingEditableNotifiesOfChange() {

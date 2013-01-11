@@ -24,7 +24,7 @@
  */
 package com.sun.javafx.css.converters;
 
-import com.sun.javafx.css.ParsedValue;
+import javafx.css.ParsedValue;
 import com.sun.javafx.css.ParsedValueImpl;
 import java.net.MalformedURLException;
 import java.net.URL;

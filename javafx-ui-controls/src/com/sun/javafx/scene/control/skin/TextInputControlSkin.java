@@ -39,7 +39,6 @@ import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.value.ObservableBooleanValue;
 import javafx.beans.value.ObservableObjectValue;
-import javafx.beans.value.WritableValue;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
@@ -75,9 +74,9 @@ import javafx.scene.text.Font;
 import javafx.stage.Window;
 import javafx.util.Duration;
 import com.sun.javafx.PlatformUtil;
-import com.sun.javafx.css.StyleableBooleanProperty;
-import com.sun.javafx.css.StyleableObjectProperty;
-import com.sun.javafx.css.CssMetaData;
+import javafx.css.StyleableBooleanProperty;
+import javafx.css.StyleableObjectProperty;
+import javafx.css.CssMetaData;
 import com.sun.javafx.css.converters.BooleanConverter;
 import com.sun.javafx.css.converters.PaintConverter;
 import com.sun.javafx.scene.control.behavior.TextInputControlBehavior;
@@ -86,6 +85,8 @@ import com.sun.javafx.tk.Toolkit;
 
 import static com.sun.javafx.PlatformUtil.*;
 import static com.sun.javafx.scene.control.skin.resources.ControlResources.*;
+import javafx.css.FontCssMetaData;
+import javafx.css.StyleableProperty;
 
 /**
  * Abstract base class for text input skins.
@@ -686,7 +687,7 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
 
     private static class StyleableProperties {
         private static final CssMetaData<TextInputControl,Font> FONT =
-           new CssMetaData.FONT<TextInputControl>("-fx-font", Font.getDefault()) {
+           new FontCssMetaData<TextInputControl>("-fx-font", Font.getDefault()) {
 
             @Override
             public boolean isSettable(TextInputControl n) {
@@ -695,9 +696,9 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
             }
 
             @Override
-            public WritableValue<Font> getWritableValue(TextInputControl n) {
+            public StyleableProperty<Font> getStyleableProperty(TextInputControl n) {
                 final TextInputControlSkin skin = (TextInputControlSkin) n.getSkin();
-                return skin.font;
+                return (StyleableProperty)skin.font;
             }
         };
         
@@ -712,9 +713,9 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
             }
 
             @Override
-            public WritableValue<Paint> getWritableValue(TextInputControl n) {
+            public StyleableProperty<Paint> getStyleableProperty(TextInputControl n) {
                 final TextInputControlSkin skin = (TextInputControlSkin) n.getSkin();
-                return skin.textFill;
+                return (StyleableProperty)skin.textFill;
             }
         };
        
@@ -729,9 +730,9 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
             }
 
             @Override
-            public WritableValue<Paint> getWritableValue(TextInputControl n) {
+            public StyleableProperty<Paint> getStyleableProperty(TextInputControl n) {
                 final TextInputControlSkin skin = (TextInputControlSkin) n.getSkin();
-                return skin.promptTextFill;
+                return (StyleableProperty)skin.promptTextFill;
             }
         };
         
@@ -746,9 +747,9 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
             }
 
             @Override
-            public WritableValue<Paint> getWritableValue(TextInputControl n) {
+            public StyleableProperty<Paint> getStyleableProperty(TextInputControl n) {
                 final TextInputControlSkin skin = (TextInputControlSkin) n.getSkin();
-                return skin.highlightFill;
+                return (StyleableProperty)skin.highlightFill;
             }
         };
         
@@ -763,9 +764,9 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
             }
 
             @Override
-            public WritableValue<Paint> getWritableValue(TextInputControl n) {
+            public StyleableProperty<Paint> getStyleableProperty(TextInputControl n) {
                 final TextInputControlSkin skin = (TextInputControlSkin) n.getSkin();
-                return skin.highlightTextFill;
+                return (StyleableProperty)skin.highlightTextFill;
             }
         };
         
@@ -780,9 +781,9 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
             }
 
             @Override
-            public WritableValue<Boolean> getWritableValue(TextInputControl n) {
+            public StyleableProperty<Boolean> getStyleableProperty(TextInputControl n) {
                 final TextInputControlSkin skin = (TextInputControlSkin) n.getSkin();
-                return skin.displayCaret;
+                return (StyleableProperty)skin.displayCaret;
             }
         };
 

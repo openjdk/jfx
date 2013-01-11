@@ -40,7 +40,7 @@ import javafx.scene.transform.Transform;
 
 import org.junit.Test;
 
-import com.sun.javafx.css.CssMetaData;
+import javafx.css.CssMetaData;
 import com.sun.javafx.scene.DirtyBits;
 
 public abstract class OnInvalidateMethodsTestBase {

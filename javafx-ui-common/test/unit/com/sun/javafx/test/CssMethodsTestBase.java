@@ -27,18 +27,15 @@ package com.sun.javafx.test;
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 import javafx.scene.Node;
 
 import org.junit.Test;
 
-import com.sun.javafx.css.StyleConverter;
-import com.sun.javafx.css.CssMetaData;
-import java.util.HashMap;
+import javafx.css.StyleConverter;
+import javafx.css.CssMetaData;
 import java.util.List;
-import java.util.Map;
-import javafx.beans.value.WritableValue;
+import javafx.css.StyleableProperty;
 
 public abstract class CssMethodsTestBase {
     private final Configuration configuration;
@@ -117,7 +114,7 @@ public abstract class CssMethodsTestBase {
     
     private static CssMetaData getCssMetaData(Node node, String cssProperty) {
         
-        List<CssMetaData> styleables = CssMetaData.getStyleables(node);
+        List<CssMetaData> styleables = node.getCssMetaData();
         for(CssMetaData styleable : styleables) {
             if (styleable.getProperty().equals(cssProperty)) {
                 return styleable;
@@ -140,7 +137,7 @@ public abstract class CssMethodsTestBase {
             }
 
             @Override
-            public WritableValue<Object> getWritableValue(Node n) {
+            public StyleableProperty<Object> getStyleableProperty(Node n) {
                 return null;
             }
         };
@@ -245,7 +242,7 @@ public abstract class CssMethodsTestBase {
 
         public void cssSetTest() {
             nodePropertyReference.setValue(node, initialValue);
-            cssPropertyKey.set(node, cssPropertyValue);
+            cssPropertyKey.set(node, cssPropertyValue, null);
 
             final Object nodePropertyValue = 
                     nodePropertyReference.getValue(node);
@@ -264,10 +261,9 @@ public abstract class CssMethodsTestBase {
         
         public void cssPropertyReferenceIntegrityTest() {
             
-            WritableValue writable = cssPropertyKey.getWritableValue(node);
+            StyleableProperty prop  = cssPropertyKey.getStyleableProperty(node);
             
-            CssMetaData styleable = 
-                CssMetaData.getCssMetaData(writable);
+            CssMetaData styleable = prop.getCssMetaData();
             
             ValueComparator.DEFAULT.assertEquals(cssPropertyKey, styleable);
         }

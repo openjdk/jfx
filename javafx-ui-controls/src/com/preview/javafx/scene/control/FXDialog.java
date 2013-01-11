@@ -24,7 +24,7 @@
  */
 package com.preview.javafx.scene.control;
 
-import com.sun.javafx.css.PseudoClass;
+import javafx.css.PseudoClass;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.event.Event;
@@ -53,6 +53,7 @@ import com.sun.javafx.css.StyleManager;
 import java.net.URL;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
+import java.util.Set;
 import javafx.geometry.Pos;
 
 class FXDialog extends Stage {
@@ -294,17 +295,17 @@ class FXDialog extends Stage {
          *                                                                         *
          **************************************************************************/
 
-        private static final PseudoClass.State PSEUDO_CLASS_ACTIVE_MASK = PseudoClass.getState("active");
+        private static final PseudoClass PSEUDO_CLASS_ACTIVE_MASK = PseudoClass.getPseudoClass("active");
 
-        @Override public PseudoClass.States getPseudoClassStates() {
-            PseudoClass.States states = super.getPseudoClassStates();
+        @Override public Set<PseudoClass> getPseudoClassStates() {
+            Set<PseudoClass> states = super.getPseudoClassStates();
             if (getScene().getWindow().isFocused()) {
-                states.addState(PSEUDO_CLASS_ACTIVE_MASK);
+                states.add(PSEUDO_CLASS_ACTIVE_MASK);
             }
             return states;
         }
 
-        @Override protected void pseudoClassStateChanged(PseudoClass.State pseudoClass) {
+        @Override protected void pseudoClassStateChanged(PseudoClass pseudoClass) {
             super.pseudoClassStateChanged(pseudoClass);
         }
     }

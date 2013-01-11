@@ -29,6 +29,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Set;
 
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
@@ -40,7 +41,6 @@ import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.beans.value.WeakChangeListener;
-import javafx.beans.value.WritableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ListChangeListener.Change;
@@ -51,8 +51,8 @@ import javafx.event.EventType;
 import javafx.geometry.Orientation;
 import javafx.util.Callback;
 
-import com.sun.javafx.css.StyleableObjectProperty;
-import com.sun.javafx.css.CssMetaData;
+import javafx.css.StyleableObjectProperty;
+import javafx.css.CssMetaData;
 import com.sun.javafx.css.converters.EnumConverter;
 import javafx.collections.WeakListChangeListener;
 import com.sun.javafx.scene.control.accessible.AccessibleList;
@@ -60,8 +60,9 @@ import com.sun.javafx.scene.control.skin.ListViewSkin;
 import com.sun.javafx.scene.control.skin.VirtualContainerBase;
 import java.lang.ref.WeakReference;
 import com.sun.javafx.accessible.providers.AccessibleProvider;
-import com.sun.javafx.css.PseudoClass;
+import javafx.css.PseudoClass;
 import javafx.beans.DefaultProperty;
+import javafx.css.StyleableProperty;
 
 /**
  * A ListView displays a horizontal or vertical list of items from which the
@@ -774,8 +775,8 @@ public class ListView<T> extends Control {
             }
 
             @Override
-            public WritableValue<Orientation> getWritableValue(ListView n) {
-                return n.orientationProperty();
+            public StyleableProperty<Orientation> getStyleableProperty(ListView n) {
+                return (StyleableProperty)n.orientationProperty();
             }
         };
             
@@ -806,20 +807,20 @@ public class ListView<T> extends Control {
         return getClassCssMetaData();
     }
 
-    private static final PseudoClass.State PSEUDO_CLASS_VERTICAL =
-            PseudoClass.getState("vertical");
-    private static final PseudoClass.State PSEUDO_CLASS_HORIZONTAL =
-            PseudoClass.getState("horizontal");
+    private static final PseudoClass PSEUDO_CLASS_VERTICAL =
+            PseudoClass.getPseudoClass("vertical");
+    private static final PseudoClass PSEUDO_CLASS_HORIZONTAL =
+            PseudoClass.getPseudoClass("horizontal");
 
     /**
      * {@inheritDoc}
      */
-    @Override public PseudoClass.States getPseudoClassStates() {
-        PseudoClass.States states = super.getPseudoClassStates();
+    @Override public Set<PseudoClass> getPseudoClassStates() {
+        Set<PseudoClass> states = super.getPseudoClassStates();
         if (getOrientation() == Orientation.VERTICAL) {
-            states.addState(PSEUDO_CLASS_VERTICAL);
+            states.add(PSEUDO_CLASS_VERTICAL);
         } else {            
-            states.addState(PSEUDO_CLASS_HORIZONTAL);
+            states.add(PSEUDO_CLASS_HORIZONTAL);
         }
         return states;
     }

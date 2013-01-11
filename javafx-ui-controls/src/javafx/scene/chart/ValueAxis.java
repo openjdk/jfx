@@ -24,7 +24,10 @@
  */
 package javafx.scene.chart;
 
-import com.sun.javafx.css.*;
+import javafx.css.CssMetaData;
+import javafx.css.StyleableBooleanProperty;
+import javafx.css.StyleableDoubleProperty;
+import javafx.css.StyleableIntegerProperty;
 import com.sun.javafx.css.converters.BooleanConverter;
 import com.sun.javafx.css.converters.SizeConverter;
 import java.util.ArrayList;
@@ -32,7 +35,7 @@ import java.util.Collections;
 import java.util.List;
 
 import javafx.beans.property.*;
-import javafx.beans.value.WritableValue;
+import javafx.css.StyleableProperty;
 import javafx.geometry.Side;
 import javafx.scene.shape.LineTo;
 import javafx.scene.shape.MoveTo;
@@ -525,8 +528,8 @@ public abstract class ValueAxis<T extends Number> extends Axis<T> {
             }
 
             @Override
-            public WritableValue<Number> getWritableValue(ValueAxis n) {
-                return n.minorTickLengthProperty();
+            public StyleableProperty<Number> getStyleableProperty(ValueAxis n) {
+                return (StyleableProperty)n.minorTickLengthProperty();
             }
         };
         
@@ -540,8 +543,8 @@ public abstract class ValueAxis<T extends Number> extends Axis<T> {
             }
 
             @Override
-            public WritableValue<Number> getWritableValue(ValueAxis n) {
-                return n.minorTickCountProperty();
+            public StyleableProperty<Number> getStyleableProperty(ValueAxis n) {
+                return (StyleableProperty)n.minorTickCountProperty();
             }
         };
         
@@ -555,8 +558,8 @@ public abstract class ValueAxis<T extends Number> extends Axis<T> {
             }
 
             @Override
-            public WritableValue<Boolean> getWritableValue(ValueAxis n) {
-                return n.minorTickVisibleProperty();
+            public StyleableProperty<Boolean> getStyleableProperty(ValueAxis n) {
+                return (StyleableProperty)n.minorTickVisibleProperty();
             }
         };
 

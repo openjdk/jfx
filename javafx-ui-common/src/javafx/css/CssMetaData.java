@@ -23,31 +23,87 @@
  * questions.
  */
 
-package com.sun.javafx.css;
+package javafx.css;
 
-import com.sun.javafx.css.StyleHelper.StyleCacheKey;
-import com.sun.javafx.css.converters.FontConverter;
-import com.sun.javafx.css.converters.SizeConverter;
-import java.lang.ref.Reference;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
-import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-
 import javafx.scene.Node;
 
-import javafx.beans.value.WritableValue;
-import javafx.scene.Parent;
-import javafx.scene.text.Font;
-import javafx.scene.text.FontPosture;
-import javafx.scene.text.FontWeight;
-
-
+/**
+ * A CssMetaData instance provides information about the CSS style and
+ * provides the hooks that allow CSS to set a property value. 
+ * It encapsulates the CSS property name, the type into which the CSS value 
+ * is converted, and the default value of the property. 
+ * <p>
+ * CssMetaData is the bridge between a value that can be represented 
+ * syntactically in a .css file, and a {@link StyleableProperty}. There is 
+ * a one-to-one correspondence between a CssMetaData and a StyleableProperty.
+ * Typically, the CssMetaData of a will include the CssMetaData of its ancestors. 
+ * During CSS processing, the CSS engine iterates over the Node's CssMetaData, 
+ * looks up the parsed value of each, converts the parsed value, and 
+ * sets the value on the StyleableProperty. 
+ * <p>
+ * The method {@link Node#getCssMetaData()} is called to obtain the 
+ * List&lt;CssMetaData&gt;. This method is called frequently and it is prudent
+ * to return a static list rather than creating the list on each call. By 
+ * convention, node classes that have CssMetaData will implement a
+ * static method {@code getClassCssMetaData()} and it is customary to have
+ * {@code getCssMetaData()} simply return {@code getClassCssMetaData()}. The
+ * purpose of {@code getClassCssMetaData()} is to allow sub-classes to easily
+ * include the CssMetaData of some ancestor.
+ * <p>
+ * This example is a typical implementation. 
+ * <code><pre>
+ * private DoubleProperty gapProperty = new StyleableDoubleProperty(0) {
+ *     {@literal @}Override 
+ *      public CssMetaData getCssMetaData() {
+ *          return GAP_META_DATA;
+ *      }
+ *
+ *      {@literal @}Override
+ *      public Object getBean() {
+ *          return MyWidget.this;
+ *      }
+ *
+ *      {@literal @}Override
+ *      public String getName() {
+ *          return "gap";
+ *      }
+ * };
+ * 
+ * private static final CssMetaData GAP_META_DATA = 
+ *     new CssMetaData<MyWidget, Number>("-my-gap", StyleConverter.getSizeConverter(), 0d) {
+ * 
+ *        {@literal @}Override
+ *        public boolean isSettable(MyWidget node) {
+ *            return node.gapProperty == null || !node.gapProperty.isBound();
+ *        }
+ *    
+ *        {@literal @}Override
+ *        public StyleableProperty<Number> getStyleableProperty(MyWidget node) {
+ *            return node.gapProperty;
+ *        }
+ * };
+ * 
+ * private static final List<CssMetaData> cssMetaDataList; 
+ * static {
+ *     List<CssMetaData> temp = new ArrayList<CssMetaData>(Control.getClassCssMetaData());
+ *     Collections.addAll(temp, GAP_META_DATA);
+ *     cssMetaDataList = Collections.unmodifiableList(temp);
+ * }
+ * 
+ * public static List<CssMetaData> getClassCssMetaData() {
+ *     return cssMetaDataList;
+ * }
+ * 
+ * {@literal @}Override
+ * public List<CssMetaData> getCssMetaData() {
+ *     return getClassCssMetaData();
+ * }
+ * </pre><code>
+ * @param <N> The type of Node
+ * @param <V> The type into which the parsed value is converted. 
+ */
 public abstract class CssMetaData<N extends Node, V> {
     
     /**
@@ -55,77 +111,25 @@ public abstract class CssMetaData<N extends Node, V> {
      * @param node The node on which the property value is being set
      * @param value The value to which the property is set
      */
-    public void set(N node, V value, Origin origin) {
-        final WritableValue<V> writable = getWritableValue(node);
-        assert (writable instanceof StyleableProperty);
-        final StyleableProperty<V> cssProperty = (StyleableProperty<V>)writable;
-        final Origin currentOrigin = cssProperty.getOrigin();    
-        final V currentValue = writable.getValue();
+    public void set(N node, V value, StyleOrigin origin) {
+        
+        final StyleableProperty<V> styleableProperty = getStyleableProperty(node);
+        final StyleOrigin currentOrigin = styleableProperty.getStyleOrigin();  
+        final V currentValue = styleableProperty.getValue();
+        
         // RT-21185: Only apply the style if something has changed. 
         if ((currentOrigin != origin)
             || (currentValue != null 
                 ? currentValue.equals(value) == false 
-                : value != null)
-            ) {
-            cssProperty.applyStyle(origin, value);            
-        }
-    }
-
-    /** @deprecated Use {@link CssMetaData#set(javafx.scene.Node, java.lang.Object, com.sun.javafx.css.Stylesheet.Origin)} */
-    public void set(N node, V value) {
-        set(node, value, null);
-    }    
-
-    /**
-     * Return the CssMetaData associated with the given WritableValue. Will
-     * return null if the WritableValue is not a StyleableProperty.
-     */
-    public static CssMetaData getCssMetaData(WritableValue writableValue) {
-        if (writableValue instanceof StyleableProperty) {
+                : value != null)) {
             
-            return ((StyleableProperty)writableValue).getCssMetaData();
-        }
-        
-        return null;
-    }
-    
-    /**
-     * Return the Stylesheet.Origin associated with the given WritableValue. Will
-     * return null if the WritableValue is not a StyleableProperty.
-     */
-    public static Origin getOrigin(WritableValue writableValue) {
-        if (writableValue instanceof StyleableProperty) {
+            styleableProperty.applyStyle(origin, value);
             
-            return ((StyleableProperty)writableValue).getOrigin();
         }
-        
-        return null;
-    }
-        
-    /**
-     * Return the Styles that match this property for the given Node. The 
-     * list is sorted by descending specificity. 
-     */
-    public List<Style> getMatchingStyles(final Node node) {
-        if (node != null) {
-            return getMatchingStyles(node.impl_getStyleable());
-        }
-        return Collections.EMPTY_LIST;        
     }
 
-    public List<Style> getMatchingStyles(Styleable styleable) {
-        if (styleable != null) {
-            StyleHelper helper = styleable.getNode() != null 
-                    ? styleable.getNode().impl_getStyleHelper()
-                    : null;
-            return (helper != null) 
-                ? helper.getMatchingStyles(styleable, this) 
-                : Collections.EMPTY_LIST; 
-        }
-        return Collections.EMPTY_LIST;
-    }
     /**
-     * Check to see if the corresponding property on the given node is
+     * Check to see if the corresponding property on the given Node is
      * settable. This method is called before any styles are looked up for the
      * given property. It is abstract so that the code can check if the property 
      * is settable without expanding the property. Generally, the property is 
@@ -137,126 +141,12 @@ public abstract class CssMetaData<N extends Node, V> {
     public abstract boolean isSettable(N node);
 
     /**
-     * Return the corresponding <code>javafx.beans.value.WriteableValue</code> for
-     * the given Node. Note that calling this method will cause the property
-     * to be expanded. 
+     * Return the corresponding {@link StyleableProperty} for the given Node. 
+     * Note that calling this method will cause the property to be expanded. 
      * @param node
      * @return 
      */
-    public abstract WritableValue<V> getWritableValue(N node);
-    
-    /**
-     * 
-     * @param node
-     * @return 
-     */
-    public static List<CssMetaData> getStyleables(final Styleable styleable) {
-        
-        return styleable != null 
-            ? styleable.getCssMetaData() 
-            : Collections.EMPTY_LIST;
-    }
-
-    /**
-     * 
-     * @param node
-     * @return 
-     */
-    public static List<CssMetaData> getStyleables(final Node node) {
-        
-        return node != null 
-            ? node.getCssMetaData() 
-            : Collections.EMPTY_LIST;
-    }
-    
-    public static abstract class FONT<T extends Node> extends CssMetaData<T,Font> {
-        
-        public FONT(String property, Font initial) {
-            super(property, FontConverter.getInstance(), initial, true, createSubProperties(property, initial));
-        }
-        
-        private static List<CssMetaData> createSubProperties(String property, Font initial) {
-            
-            Font defaultFont = initial != null ? initial : Font.getDefault();
-            
-            final CssMetaData<Node,Size> SIZE = 
-                new CssMetaData<Node,Size>(property.concat("-size"),
-                    SizeConverter.getInstance(),
-                    new Size(defaultFont.getSize(), SizeUnits.PT),
-                    true) {
-
-                @Override
-                public boolean isSettable(Node node) {
-                    return false;
-                }
-
-                @Override
-                public WritableValue<Size> getWritableValue(Node node) {
-                    return null;
-                }
-                        
-            };
-
-            final CssMetaData<Node,FontWeight> WEIGHT = 
-                new CssMetaData<Node,FontWeight>(property.concat("-weight"),
-                    SizeConverter.getInstance(),
-                    FontWeight.NORMAL,
-                    true) {
-
-                @Override
-                public boolean isSettable(Node node) {
-                    return false;
-                }
-
-                @Override
-                public WritableValue<FontWeight> getWritableValue(Node node) {
-                    return null;
-                }
-                        
-            };
-
-            final CssMetaData<Node,FontPosture> STYLE = 
-                new CssMetaData<Node,FontPosture>(property.concat("-style"),
-                    SizeConverter.getInstance(),
-                    FontPosture.REGULAR,
-                    true) {
-
-                @Override
-                public boolean isSettable(Node node) {
-                    return false;
-                }
-
-                @Override
-                public WritableValue<FontPosture> getWritableValue(Node node) {
-                    return null;
-                }
-                        
-            };
-
-            final CssMetaData<Node,String> FAMILY = 
-                new CssMetaData<Node,String>(property.concat("-family"),
-                    SizeConverter.getInstance(),
-                    defaultFont.getFamily(),
-                    true) {
-
-                @Override
-                public boolean isSettable(Node node) {
-                    return false;
-                }
-
-                @Override
-                public WritableValue<String> getWritableValue(Node node) {
-                    return null;
-                }
-                        
-            };
-            
-            final List<CssMetaData> subProperties = new ArrayList<CssMetaData>();
-            Collections.addAll(subProperties, FAMILY, SIZE, STYLE, WEIGHT);
-            return Collections.unmodifiableList(subProperties);
-            
-        }
-    }
+    public abstract StyleableProperty<V> getStyleableProperty(N node);
             
     private final String property;
     /**
@@ -277,7 +167,7 @@ public abstract class CssMetaData<N extends Node, V> {
     private final V initialValue;
     /**
      * The initial value of a CssMetaData corresponds to the default 
-     * value of the WritableValue in code. 
+     * value of the StyleableProperty in code. 
      * For example, the default value of Shape.fill is Color.BLACK and the
      * initialValue of Shape.StyleableProperties.FILL is also Color.BLACK.
      * <p>

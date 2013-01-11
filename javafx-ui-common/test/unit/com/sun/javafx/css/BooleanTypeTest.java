@@ -26,6 +26,7 @@
 package com.sun.javafx.css;
 
 import static org.junit.Assert.assertEquals;
+import javafx.css.ParsedValue;
 import javafx.scene.text.Font;
 
 import org.junit.Test;
@@ -46,17 +47,17 @@ public class BooleanTypeTest {
         //System.out.println("convert");
         Font font = null;
 
-        ParsedValue< String,Boolean> value = new ParsedValue<String,Boolean>("true", BooleanConverter.getInstance());
+        ParsedValue< String,Boolean> value = new ParsedValueImpl<String,Boolean>("true", BooleanConverter.getInstance());
         Boolean expResult = Boolean.TRUE;
         Boolean result = value.convert(font);
         assertEquals(expResult, result);
 
-        value = value = new ParsedValue<String,Boolean>("false", BooleanConverter.getInstance());
+        value = value = new ParsedValueImpl<String,Boolean>("false", BooleanConverter.getInstance());
         expResult = Boolean.FALSE;
         result = value.convert(font);
         assertEquals(expResult, result);
 
-        value = new ParsedValue<String,Boolean>(null, BooleanConverter.getInstance());
+        value = new ParsedValueImpl<String,Boolean>(null, BooleanConverter.getInstance());
         expResult = Boolean.FALSE;
         result = value.convert(font);
         assertEquals(expResult, result);

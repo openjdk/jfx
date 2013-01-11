@@ -51,9 +51,9 @@ import javafx.scene.shape.Shape;
 import com.sun.javafx.Logging;
 import com.sun.javafx.TempState;
 import com.sun.javafx.binding.ExpressionHelper;
-import com.sun.javafx.css.StyleableBooleanProperty;
-import com.sun.javafx.css.StyleableObjectProperty;
-import com.sun.javafx.css.CssMetaData;
+import javafx.css.StyleableBooleanProperty;
+import javafx.css.StyleableObjectProperty;
+import javafx.css.CssMetaData;
 import com.sun.javafx.css.converters.BooleanConverter;
 import com.sun.javafx.css.converters.InsetsConverter;
 import com.sun.javafx.css.converters.ShapeConverter;
@@ -65,6 +65,7 @@ import com.sun.javafx.scene.DirtyBits;
 import com.sun.javafx.sg.PGNode;
 import com.sun.javafx.sg.PGRegion;
 import com.sun.javafx.tk.Toolkit;
+import javafx.css.StyleableProperty;
 
 /**
  * Region is the base class for all JavaFX Node-based UI Controls, and all layout containers.
@@ -2242,8 +2243,8 @@ public class Region extends Parent {
                 return node.padding == null || !node.padding.isBound();
             }
 
-            @Override public WritableValue<Insets> getWritableValue(Region node) {
-                return node.paddingProperty();
+            @Override public StyleableProperty<Insets> getStyleableProperty(Region node) {
+                return (StyleableProperty)node.paddingProperty();
             }
          };
 
@@ -2257,8 +2258,8 @@ public class Region extends Parent {
                      }
 
                      @Override
-                     public WritableValue<Insets> getWritableValue(Region node) {
-                         return node.opaqueInsetsProperty();
+                     public StyleableProperty<Insets> getStyleableProperty(Region node) {
+                         return (StyleableProperty)node.opaqueInsetsProperty();
                      }
 
                  };
@@ -2274,8 +2275,8 @@ public class Region extends Parent {
                 return !node.background.isBound();
             }
 
-            @Override public WritableValue<Background> getWritableValue(Region node) {
-                return node.background;
+            @Override public StyleableProperty<Background> getStyleableProperty(Region node) {
+                return (StyleableProperty)node.background;
             }
          };
 
@@ -2290,8 +2291,8 @@ public class Region extends Parent {
                      return !node.background.isBound();
                  }
 
-                 @Override public WritableValue<Border> getWritableValue(Region node) {
-                     return node.border;
+                 @Override public StyleableProperty<Border> getStyleableProperty(Region node) {
+                     return (StyleableProperty)node.border;
                  }
              };
 
@@ -2304,8 +2305,8 @@ public class Region extends Parent {
                 return node.shape == null || !node.shape.isBound();
             }
 
-            @Override public WritableValue<Shape> getWritableValue(Region node) {
-                return node.shapeProperty();
+            @Override public StyleableProperty<Shape> getStyleableProperty(Region node) {
+                return (StyleableProperty)node.shapeProperty();
             }
          };
 
@@ -2317,8 +2318,8 @@ public class Region extends Parent {
                 return node.scaleShape == null || !node.scaleShape.isBound();
             }
 
-            @Override public WritableValue<Boolean> getWritableValue(Region node) {
-                return node.scaleShapeProperty();
+            @Override public StyleableProperty<Boolean> getStyleableProperty(Region node) {
+                return (StyleableProperty)node.scaleShapeProperty();
             }
         };
 
@@ -2330,8 +2331,8 @@ public class Region extends Parent {
                 return node.centerShape == null || !node.centerShape.isBound();
             }
 
-            @Override public WritableValue<Boolean> getWritableValue(Region node) {
-                return node.positionShapeProperty();
+            @Override public StyleableProperty<Boolean> getStyleableProperty(Region node) {
+                return (StyleableProperty)node.positionShapeProperty();
             }
         };
 
@@ -2343,8 +2344,8 @@ public class Region extends Parent {
                 return node.cacheShape == null || !node.cacheShape.isBound();
             }
 
-            @Override public WritableValue<Boolean> getWritableValue(Region node) {
-                return node.cacheShapeProperty();
+            @Override public StyleableProperty<Boolean> getStyleableProperty(Region node) {
+                return (StyleableProperty)node.cacheShapeProperty();
             }
         };
 
@@ -2357,8 +2358,8 @@ public class Region extends Parent {
                         !node.snapToPixel.isBound();
             }
 
-            @Override public WritableValue<Boolean> getWritableValue(Region node) {
-                return node.snapToPixelProperty();
+            @Override public StyleableProperty<Boolean> getStyleableProperty(Region node) {
+                return (StyleableProperty)node.snapToPixelProperty();
             }
         };
 

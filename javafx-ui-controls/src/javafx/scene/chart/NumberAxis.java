@@ -39,16 +39,16 @@ import javafx.beans.property.IntegerProperty;
 import javafx.beans.property.SimpleIntegerProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
-import javafx.beans.value.WritableValue;
 import javafx.geometry.Dimension2D;
 import javafx.geometry.Side;
 import javafx.util.Duration;
 import javafx.util.StringConverter;
 
 import com.sun.javafx.charts.ChartLayoutAnimator;
-import com.sun.javafx.css.StyleableDoubleProperty;
-import com.sun.javafx.css.CssMetaData;
+import javafx.css.StyleableDoubleProperty;
+import javafx.css.CssMetaData;
 import com.sun.javafx.css.converters.SizeConverter;
+import javafx.css.StyleableProperty;
 
 /**
  * A axis class that plots a range of numbers with major tick marks every "tickUnit". You can use any Number type with
@@ -424,8 +424,8 @@ public final class NumberAxis extends ValueAxis<Number> {
             }
 
             @Override
-            public WritableValue<Number> getWritableValue(NumberAxis n) {
-                return n.tickUnitProperty();
+            public StyleableProperty<Number> getStyleableProperty(NumberAxis n) {
+                return (StyleableProperty)n.tickUnitProperty();
             }
         };
 

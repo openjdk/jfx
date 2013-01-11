@@ -25,7 +25,7 @@
 
 package com.sun.javafx.scene.control.behavior;
 
-import com.sun.javafx.css.PseudoClass;
+import javafx.css.PseudoClass;;
 import javafx.scene.Node;
 import javafx.scene.control.Control;
 import javafx.scene.control.PopupControl;
@@ -218,10 +218,10 @@ public class TwoLevelFocusBehavior {
         return externalFocus;
     }
 
-    private static final PseudoClass.State INTERNAL_PSEUDOCLASS_STATE = 
-            PseudoClass.getState("internal-focus");
-    private static final PseudoClass.State EXTERNAL_PSEUDOCLASS_STATE = 
-            PseudoClass.getState("external-focus");
+    private static final PseudoClass INTERNAL_PSEUDOCLASS_STATE = 
+            PseudoClass.getPseudoClass("internal-focus");
+    private static final PseudoClass EXTERNAL_PSEUDOCLASS_STATE = 
+            PseudoClass.getPseudoClass("external-focus");
 
     public void setExternalFocus(boolean value) {
         externalFocus = value;

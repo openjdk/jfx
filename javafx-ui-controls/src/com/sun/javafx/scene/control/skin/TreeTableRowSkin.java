@@ -35,15 +35,15 @@ import javafx.beans.property.DoubleProperty;
 import javafx.scene.Node;
 import javafx.scene.control.TreeItem;
 
-import com.sun.javafx.css.StyleableDoubleProperty;
-import com.sun.javafx.css.CssMetaData;
+import javafx.css.StyleableDoubleProperty;
+import javafx.css.CssMetaData;
 import com.sun.javafx.css.converters.SizeConverter;
 import com.sun.javafx.scene.control.behavior.CellBehaviorBase;
 import com.sun.javafx.scene.control.behavior.TreeTableRowBehavior;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
-import javafx.beans.value.WritableValue;
 import javafx.collections.ObservableList;
+import javafx.css.StyleableProperty;
 import javafx.scene.control.Control;
 import javafx.scene.control.SpanModel;
 import javafx.scene.control.TableColumnBase;
@@ -268,9 +268,9 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
                 return p == null || !p.isBound();
             }
 
-            @Override public WritableValue<Number> getWritableValue(TreeTableRow n) {
+            @Override public StyleableProperty<Number> getStyleableProperty(TreeTableRow n) {
                 final TreeTableRowSkin skin = (TreeTableRowSkin) n.getSkin();
-                return skin.indentProperty();
+                return (StyleableProperty)skin.indentProperty();
             }
         };
         

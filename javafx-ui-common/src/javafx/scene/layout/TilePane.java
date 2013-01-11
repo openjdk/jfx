@@ -26,11 +26,11 @@
 
 package javafx.scene.layout;
 
-import com.sun.javafx.css.CssMetaData;
-import com.sun.javafx.css.Origin;
-import com.sun.javafx.css.StyleableDoubleProperty;
-import com.sun.javafx.css.StyleableIntegerProperty;
-import com.sun.javafx.css.StyleableObjectProperty;
+import javafx.css.CssMetaData;
+import javafx.css.StyleOrigin;
+import javafx.css.StyleableDoubleProperty;
+import javafx.css.StyleableIntegerProperty;
+import javafx.css.StyleableObjectProperty;
 import com.sun.javafx.css.converters.EnumConverter;
 import com.sun.javafx.css.converters.SizeConverter;
 import static javafx.geometry.Orientation.HORIZONTAL;
@@ -42,6 +42,7 @@ import java.util.List;
 
 import javafx.beans.property.*;
 import javafx.beans.value.WritableValue;
+import javafx.css.StyleableProperty;
 import javafx.geometry.HPos;
 import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
@@ -915,8 +916,8 @@ public class TilePane extends Pane {
             }
 
             @Override
-            public WritableValue<Pos> getWritableValue(TilePane node) {
-                return node.alignmentProperty();
+            public StyleableProperty<Pos> getStyleableProperty(TilePane node) {
+                return (StyleableProperty)node.alignmentProperty();
             }
         };
          
@@ -924,7 +925,7 @@ public class TilePane extends Pane {
              new CssMetaData<TilePane,Number>("-fx-pref-columns",
                  SizeConverter.getInstance(), 5.0) {
 
-            @Override public void set(TilePane node, Number value, Origin origin) {
+            @Override public void set(TilePane node, Number value, StyleOrigin origin) {
                 super.set(node, value.intValue(), origin);
             }
             
@@ -935,8 +936,8 @@ public class TilePane extends Pane {
             }
 
             @Override
-            public WritableValue<Number> getWritableValue(TilePane node) {
-                return node.prefColumnsProperty();
+            public StyleableProperty<Number> getStyleableProperty(TilePane node) {
+                return (StyleableProperty)node.prefColumnsProperty();
             }
         };
                  
@@ -951,8 +952,8 @@ public class TilePane extends Pane {
             }
 
             @Override
-            public WritableValue<Number> getWritableValue(TilePane node) {
-                return node.hgapProperty();
+            public StyleableProperty<Number> getStyleableProperty(TilePane node) {
+                return (StyleableProperty)node.hgapProperty();
             }
         };
          
@@ -960,7 +961,7 @@ public class TilePane extends Pane {
              new CssMetaData<TilePane,Number>("-fx-pref-rows",
                  SizeConverter.getInstance(), 5.0) {
 
-            @Override public void set(TilePane node, Number value, Origin origin) {
+            @Override public void set(TilePane node, Number value, StyleOrigin origin) {
                 super.set(node, value.intValue(), origin);
             }
             
@@ -971,8 +972,8 @@ public class TilePane extends Pane {
             }
 
             @Override
-            public WritableValue<Number> getWritableValue(TilePane node) {
-                return node.prefRowsProperty();
+            public StyleableProperty<Number> getStyleableProperty(TilePane node) {
+                return (StyleableProperty)node.prefRowsProperty();
             }
         };
 
@@ -988,8 +989,8 @@ public class TilePane extends Pane {
             }
 
             @Override
-            public WritableValue<Pos> getWritableValue(TilePane node) {
-                return node.tileAlignmentProperty();
+            public StyleableProperty<Pos> getStyleableProperty(TilePane node) {
+                return (StyleableProperty)node.tileAlignmentProperty();
             }
          };
          
@@ -1004,8 +1005,8 @@ public class TilePane extends Pane {
             }
 
             @Override
-            public WritableValue<Number> getWritableValue(TilePane node) {
-                return node.prefTileWidthProperty();
+            public StyleableProperty<Number> getStyleableProperty(TilePane node) {
+                return (StyleableProperty)node.prefTileWidthProperty();
             }
         };
 
@@ -1020,8 +1021,8 @@ public class TilePane extends Pane {
             }
 
             @Override
-            public WritableValue<Number> getWritableValue(TilePane node) {
-                return node.prefTileHeightProperty();
+            public StyleableProperty<Number> getStyleableProperty(TilePane node) {
+                return (StyleableProperty)node.prefTileHeightProperty();
             }
          };
 
@@ -1043,8 +1044,8 @@ public class TilePane extends Pane {
                 }
 
                 @Override
-                public WritableValue<Orientation> getWritableValue(TilePane node) {
-                    return node.orientationProperty();
+                public StyleableProperty<Orientation> getStyleableProperty(TilePane node) {
+                    return (StyleableProperty)node.orientationProperty();
                 }
          };
          
@@ -1059,8 +1060,8 @@ public class TilePane extends Pane {
             }
 
             @Override
-            public WritableValue<Number> getWritableValue(TilePane node) {
-                return node.vgapProperty();
+            public StyleableProperty<Number> getStyleableProperty(TilePane node) {
+                return (StyleableProperty)node.vgapProperty();
             }
         };
 

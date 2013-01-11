@@ -28,7 +28,7 @@ import javafx.scene.text.Font;
 
 import com.sun.javafx.Utils;
 import com.sun.javafx.css.StyleConverterImpl;
-import com.sun.javafx.css.ParsedValue;
+import javafx.css.ParsedValue;
 
 /**
  * String type converts embedded unicode characters

@@ -4,7 +4,7 @@
 
 package javafx.scene.control;
 
-import com.sun.javafx.css.CssMetaData;
+import javafx.css.CssMetaData;
 import static javafx.scene.control.ControlTestUtils.*;
 import com.sun.javafx.pgstub.StubToolkit;
 import com.sun.javafx.scene.control.skin.ToolBarSkin;
@@ -13,6 +13,7 @@ import java.util.ArrayList;
 import java.util.List;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
+import javafx.css.StyleableProperty;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.Orientation;
@@ -89,7 +90,7 @@ public class ToolbarTest {
      * CSS related Tests                                                 *
      ********************************************************************/
     @Test public void whenOrientationIsBound_impl_cssSettable_ReturnsFalse() {
-        CssMetaData styleable = CssMetaData.getCssMetaData(toolBar.orientationProperty());
+        CssMetaData styleable = ((StyleableProperty)toolBar.orientationProperty()).getCssMetaData();
         assertTrue(styleable.isSettable(toolBar));
         ObjectProperty<Orientation> other = new SimpleObjectProperty<Orientation>(Orientation.VERTICAL);
         toolBar.orientationProperty().bind(other);
@@ -97,14 +98,14 @@ public class ToolbarTest {
     }
 
     @Test public void whenOrientationIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
-        CssMetaData styleable = CssMetaData.getCssMetaData(toolBar.orientationProperty());
-        styleable.set(toolBar, Orientation.VERTICAL);
+        CssMetaData styleable = ((StyleableProperty)toolBar.orientationProperty()).getCssMetaData();
+        styleable.set(toolBar, Orientation.VERTICAL, null);
         assertTrue(styleable.isSettable(toolBar));
     }
 
     @Test public void canSpecifyOrientationViaCSS() {
-        CssMetaData styleable = CssMetaData.getCssMetaData(toolBar.orientationProperty());
-        styleable.set(toolBar, Orientation.VERTICAL);
+        CssMetaData styleable = ((StyleableProperty)toolBar.orientationProperty()).getCssMetaData();
+        styleable.set(toolBar, Orientation.VERTICAL, null);
         assertSame(Orientation.VERTICAL, toolBar.getOrientation());
     }
 

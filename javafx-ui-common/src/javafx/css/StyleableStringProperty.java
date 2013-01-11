@@ -22,7 +22,7 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-package com.sun.javafx.css;
+package javafx.css;
 
 import javafx.beans.property.StringPropertyBase;
 import javafx.beans.value.ObservableValue;
@@ -40,6 +40,7 @@ import javafx.beans.value.ObservableValue;
  * @see CssMetaData
  * @see StyleableProperty
  */
+@com.sun.javafx.beans.annotations.NoBuilder
 public abstract class StyleableStringProperty 
     extends StringPropertyBase implements StyleableProperty<String> {
 
@@ -62,7 +63,7 @@ public abstract class StyleableStringProperty
     
     /** {@inheritDoc} */
     @Override
-    public void applyStyle(Origin origin, String v) {
+    public void applyStyle(StyleOrigin origin, String v) {
         // call set here in case the set method is overriden
         set(v);
         this.origin = origin;
@@ -72,21 +73,21 @@ public abstract class StyleableStringProperty
     @Override
     public void bind(ObservableValue<? extends String> observable) {
         super.bind(observable);
-        origin = Origin.USER;
+        origin = StyleOrigin.USER;
     }
 
     /** {@inheritDoc} */
     @Override
     public void set(String v) {
         super.set(v);
-        origin = Origin.USER;
+        origin = StyleOrigin.USER;
     }
 
     
     /** {@inheritDoc} */
     @Override
-    public final Origin getOrigin() { return origin; }
+    public final StyleOrigin getStyleOrigin() { return origin; }
 
-    private Origin origin = null;    
+    private StyleOrigin origin = null;    
     
 }

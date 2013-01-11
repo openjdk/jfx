@@ -28,18 +28,19 @@ package javafx.scene.control;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 
 import javafx.beans.property.ObjectProperty;
-import javafx.beans.value.WritableValue;
 import javafx.geometry.HPos;
 import javafx.geometry.Orientation;
 import javafx.geometry.VPos;
 
-import com.sun.javafx.css.StyleableObjectProperty;
-import com.sun.javafx.css.CssMetaData;
-import com.sun.javafx.css.PseudoClass;
+import javafx.css.StyleableObjectProperty;
+import javafx.css.CssMetaData;
+import javafx.css.PseudoClass;
 import com.sun.javafx.css.converters.EnumConverter;
 import com.sun.javafx.scene.control.skin.SeparatorSkin;
+import javafx.css.StyleableProperty;
 
 /**
  * A horizontal or vertical separator line. The visual appearance of this
@@ -81,8 +82,8 @@ public class Separator extends Control {
         // makes it look to css like the user set the value and css will not 
         // override. Initializing focusTraversable by calling set on the 
         // CssMetaData ensures that css will be able to override the value.
-        final CssMetaData prop = CssMetaData.getCssMetaData(focusTraversableProperty());
-        prop.set(this, Boolean.FALSE);            
+        final CssMetaData prop = ((StyleableProperty)focusTraversableProperty()).getCssMetaData();
+        prop.set(this, Boolean.FALSE, null);
     }
 
     /**
@@ -245,8 +246,8 @@ public class Separator extends Control {
             }
 
             @Override
-            public WritableValue<Orientation> getWritableValue(Separator n) {
-                return n.orientationProperty();
+            public StyleableProperty<Orientation> getStyleableProperty(Separator n) {
+                return (StyleableProperty)n.orientationProperty();
             }
         };
         
@@ -261,8 +262,8 @@ public class Separator extends Control {
             }
 
             @Override
-            public WritableValue<HPos> getWritableValue(Separator n) {
-                return n.halignmentProperty();
+            public StyleableProperty<HPos> getStyleableProperty(Separator n) {
+                return (StyleableProperty)n.halignmentProperty();
             }
         };
         
@@ -277,8 +278,8 @@ public class Separator extends Control {
             }
 
             @Override
-            public WritableValue<VPos> getWritableValue(Separator n) {
-                return n.valignmentProperty();
+            public StyleableProperty<VPos> getStyleableProperty(Separator n) {
+                return (StyleableProperty)n.valignmentProperty();
             }
         };
 
@@ -313,16 +314,16 @@ public class Separator extends Control {
         return getClassCssMetaData();
     }
 
-    private static final PseudoClass.State VERTICAL_PSEUDOCLASS_STATE = PseudoClass.getState("vertical");
-    private static final PseudoClass.State HORIZONTAL_PSEUDOCLASS_STATE = PseudoClass.getState("horizontal");
+    private static final PseudoClass VERTICAL_PSEUDOCLASS_STATE = PseudoClass.getPseudoClass("vertical");
+    private static final PseudoClass HORIZONTAL_PSEUDOCLASS_STATE = PseudoClass.getPseudoClass("horizontal");
 
     /**
      * {@inheritDoc}
      */
-    @Override public PseudoClass.States getPseudoClassStates() {
-        PseudoClass.States states = super.getPseudoClassStates();
-        if (getOrientation() == Orientation.VERTICAL) states.addState(VERTICAL_PSEUDOCLASS_STATE);
-        else states.addState(HORIZONTAL_PSEUDOCLASS_STATE);
+    @Override public Set<PseudoClass> getPseudoClassStates() {
+        Set<PseudoClass> states = super.getPseudoClassStates();
+        if (getOrientation() == Orientation.VERTICAL) states.add(VERTICAL_PSEUDOCLASS_STATE);
+        else states.add(HORIZONTAL_PSEUDOCLASS_STATE);
         return states;
     }
 

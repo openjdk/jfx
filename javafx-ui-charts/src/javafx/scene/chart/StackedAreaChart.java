@@ -41,7 +41,7 @@ import javafx.scene.shape.*;
 import javafx.util.Duration;
 import com.sun.javafx.charts.Legend;
 import com.sun.javafx.charts.Legend.LegendItem;
-import com.sun.javafx.css.CssMetaData;
+import javafx.css.CssMetaData;
 import javafx.scene.paint.Color;
 
 /**

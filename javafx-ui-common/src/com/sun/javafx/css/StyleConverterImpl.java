@@ -31,8 +31,9 @@ import java.io.IOException;
 import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.Map;
-import javafx.scene.text.Font;
 import com.sun.javafx.css.converters.EnumConverter;
+import javafx.css.CssMetaData;
+import javafx.css.StyleConverter;
 
 /**
  * Converter converts ParsedValueImpl&lt;F,T&gt; from type F to type T.

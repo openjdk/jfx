@@ -36,7 +36,6 @@ import javafx.beans.property.ObjectPropertyBase;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.StringProperty;
 import javafx.beans.property.StringPropertyBase;
-import javafx.beans.value.WritableValue;
 import javafx.collections.ObservableList;
 import javafx.geometry.Pos;
 import javafx.geometry.Side;
@@ -47,11 +46,12 @@ import javafx.scene.layout.Region;
 
 import com.sun.javafx.charts.ChartLayoutAnimator;
 import com.sun.javafx.charts.Legend;
-import com.sun.javafx.css.StyleableBooleanProperty;
-import com.sun.javafx.css.StyleableObjectProperty;
-import com.sun.javafx.css.CssMetaData;
+import javafx.css.StyleableBooleanProperty;
+import javafx.css.StyleableObjectProperty;
+import javafx.css.CssMetaData;
 import com.sun.javafx.css.converters.BooleanConverter;
 import com.sun.javafx.css.converters.EnumConverter;
+import javafx.css.StyleableProperty;
 import javafx.geometry.NodeOrientation;
 
 /**
@@ -430,8 +430,8 @@ public abstract class Chart extends Region {
             }
 
             @Override
-            public WritableValue<Side> getWritableValue(Chart node) {
-                return node.titleSideProperty();
+            public StyleableProperty<Side> getStyleableProperty(Chart node) {
+                return (StyleableProperty)node.titleSideProperty();
             }
         };
         
@@ -446,8 +446,8 @@ public abstract class Chart extends Region {
             }
 
             @Override
-            public WritableValue<Side> getWritableValue(Chart node) {
-                return node.legendSideProperty();
+            public StyleableProperty<Side> getStyleableProperty(Chart node) {
+                return (StyleableProperty)node.legendSideProperty();
             }
         };
         
@@ -461,8 +461,8 @@ public abstract class Chart extends Region {
             }
 
             @Override
-            public WritableValue<Boolean> getWritableValue(Chart node) {
-                return node.legendVisibleProperty();
+            public StyleableProperty<Boolean> getStyleableProperty(Chart node) {
+                return (StyleableProperty)node.legendVisibleProperty();
             }
         };
 

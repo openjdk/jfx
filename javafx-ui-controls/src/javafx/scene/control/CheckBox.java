@@ -31,9 +31,10 @@ import javafx.beans.property.SimpleBooleanProperty;
 
 import javafx.event.ActionEvent;
 import javafx.geometry.Pos;
+import java.util.Set;
 import com.sun.javafx.scene.control.accessible.AccessibleCheckBox;
 import com.sun.javafx.accessible.providers.AccessibleProvider;
-import com.sun.javafx.css.PseudoClass;
+import javafx.css.PseudoClass;
 import com.sun.javafx.scene.control.skin.CheckBoxSkin;
 
 /**
@@ -242,25 +243,25 @@ public class CheckBox extends ButtonBase {
      **************************************************************************/
 
     private static final String DEFAULT_STYLE_CLASS = "check-box";
-    private static final PseudoClass.State PSEUDO_CLASS_DETERMINATE = 
-            PseudoClass.getState("determinate");
-    private static final PseudoClass.State PSEUDO_CLASS_INDETERMINATE = 
-            PseudoClass.getState("indeterminate");
-    private static final PseudoClass.State PSEUDO_CLASS_SELECTED = 
-            PseudoClass.getState("selected");
+    private static final PseudoClass PSEUDO_CLASS_DETERMINATE = 
+            PseudoClass.getPseudoClass("determinate");
+    private static final PseudoClass PSEUDO_CLASS_INDETERMINATE = 
+            PseudoClass.getPseudoClass("indeterminate");
+    private static final PseudoClass PSEUDO_CLASS_SELECTED = 
+            PseudoClass.getPseudoClass("selected");
 
     /**
      * {@inheritDoc}
      */
-    @Override public PseudoClass.States getPseudoClassStates() {
-        PseudoClass.States states = super.getPseudoClassStates();
+    @Override public Set<PseudoClass> getPseudoClassStates() {
+        Set<PseudoClass> states = super.getPseudoClassStates();
         if (isSelected()) {
-            states.addState(PSEUDO_CLASS_SELECTED);
+            states.add(PSEUDO_CLASS_SELECTED);
         }
         if (isIndeterminate()) {
-            states.addState(PSEUDO_CLASS_INDETERMINATE);
+            states.add(PSEUDO_CLASS_INDETERMINATE);
         } else {
-            states.addState(PSEUDO_CLASS_DETERMINATE);            
+            states.add(PSEUDO_CLASS_DETERMINATE);            
         }
         return states;
     }

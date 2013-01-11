@@ -27,6 +27,7 @@ package com.sun.javafx.css.parser;
 import com.sun.javafx.css.*;
 import java.io.*;
 import java.util.List;
+import javafx.css.ParsedValue;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.LinearGradient;
 import javafx.scene.paint.Paint;

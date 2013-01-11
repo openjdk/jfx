@@ -32,7 +32,6 @@ import java.util.Map;
 import java.util.WeakHashMap;
 
 import javafx.beans.property.DoubleProperty;
-import javafx.beans.value.WritableValue;
 import javafx.geometry.HPos;
 import javafx.geometry.VPos;
 import javafx.scene.Node;
@@ -40,10 +39,11 @@ import javafx.scene.control.TreeCell;
 import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeView;
 
-import com.sun.javafx.css.StyleableDoubleProperty;
-import com.sun.javafx.css.CssMetaData;
+import javafx.css.StyleableDoubleProperty;
+import javafx.css.CssMetaData;
 import com.sun.javafx.css.converters.SizeConverter;
 import com.sun.javafx.scene.control.behavior.TreeCellBehavior;
+import javafx.css.StyleableProperty;
 
 public class TreeCellSkin extends CellSkinBase<TreeCell<?>, TreeCellBehavior> {
 
@@ -234,9 +234,9 @@ public class TreeCellSkin extends CellSkinBase<TreeCell<?>, TreeCellBehavior> {
                 return p == null || !p.isBound();
             }
 
-            @Override public WritableValue<Number> getWritableValue(TreeCell n) {
+            @Override public StyleableProperty<Number> getStyleableProperty(TreeCell n) {
                 final TreeCellSkin skin = (TreeCellSkin) n.getSkin();
-                return skin.indentProperty();
+                return (StyleableProperty)skin.indentProperty();
             }
         };
         

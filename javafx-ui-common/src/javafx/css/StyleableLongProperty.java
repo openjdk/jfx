@@ -22,69 +22,70 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-package com.sun.javafx.css;
+package javafx.css;
 
-import javafx.beans.property.ObjectPropertyBase;
+import javafx.beans.property.LongPropertyBase;
 import javafx.beans.value.ObservableValue;
 
 /**
- * This class extends {@code ObjectPropertyBase} and provides a partial
+ * This class extends {@code LongPropertyBase} and provides a partial
  * implementation of a {@code StyleableProperty}. The method 
  * {@link StyleableProperty#getCssMetaData()} is not implemented. 
  * 
- * This class is used to make a {@link javafx.beans.property.ObjectProperty}, 
- * that would otherwise be implemented as a {@link ObjectPropertyBase}, 
+ * This class is used to make a {@link javafx.beans.property.LongProperty}, 
+ * that would otherwise be implemented as a {@link LongPropertyBase}, 
  * style&#8209;able by CSS.
  * 
- * @see javafx.beans.property.ObjectPropertyBase
+ * @see javafx.beans.property.LongPropertyBase
  * @see CssMetaData
  * @see StyleableProperty
  */
-public abstract class StyleableObjectProperty<T> 
-    extends ObjectPropertyBase<T> implements StyleableProperty<T> {
+@com.sun.javafx.beans.annotations.NoBuilder
+public abstract class StyleableLongProperty 
+    extends LongPropertyBase implements StyleableProperty<Number> {
 
     /**
-     * The constructor of the {@code StyleableObjectProperty}.
+     * The constructor of the {@code StyleableLongProperty}.
      */
-    public StyleableObjectProperty() {
+    public StyleableLongProperty() {
         super();
     }
 
     /**
-     * The constructor of the {@code StyleableObjectProperty}.
+     * The constructor of the {@code StyleableLongProperty}.
      * 
      * @param initialValue
      *            the initial value of the wrapped {@code Object}
      */
-    public StyleableObjectProperty(T initialValue) {
+    public StyleableLongProperty(long initialValue) {
         super(initialValue);
     }
     
     /** {@inheritDoc} */
     @Override
-    public void applyStyle(Origin origin, T v) {
-        set(v);
+    public void applyStyle(StyleOrigin origin, Number v) {
+        setValue(v);
         this.origin = origin;
-    }
-            
-    /** {@inheritDoc} */
-    @Override
-    public void bind(ObservableValue<? extends T> observable) {
-        super.bind(observable);
-        origin = Origin.USER;
-    }
-
-    /** {@inheritDoc} */
-    @Override
-    public void set(T v) {
-        super.set(v);
-        origin = Origin.USER;
     }
     
     /** {@inheritDoc} */
     @Override
-    public final Origin getOrigin() { return origin; }
+    public void bind(ObservableValue<? extends Number> observable) {
+        super.bind(observable);
+        origin = StyleOrigin.USER;
+    }
 
-    private Origin origin = null;    
+    /** {@inheritDoc} */
+    @Override
+    public void set(long v) {
+        super.set(v);
+        origin = StyleOrigin.USER;
+    }
+    
+    /** {@inheritDoc} */
+    @Override
+    public final StyleOrigin getStyleOrigin() { return origin; }
 
+    private StyleOrigin origin = null;    
+    
 }

@@ -30,6 +30,9 @@ import java.util.Collections;
 import java.util.List;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.value.WritableValue;
+import javafx.css.CssMetaData;
+import javafx.css.StyleableDoubleProperty;
+import javafx.css.StyleableProperty;
 
 /** Test Node with styleable property but no getClassCssMetaData method */
 class TestNode extends TestNodeBase {
@@ -84,8 +87,8 @@ class TestNode extends TestNodeBase {
             }
 
             @Override
-            public WritableValue<Number> getWritableValue(TestNode node) {
-                return node.xyzzyProperty();
+            public StyleableProperty<Number> getStyleableProperty(TestNode node) {
+                return (StyleableProperty)node.xyzzyProperty();
             }
                      
          };

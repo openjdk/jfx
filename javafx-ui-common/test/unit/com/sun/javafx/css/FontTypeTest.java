@@ -26,6 +26,7 @@
 package com.sun.javafx.css;
 
 import static org.junit.Assert.assertEquals;
+import javafx.css.ParsedValue;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontPosture;
 import javafx.scene.text.FontWeight;
@@ -55,20 +56,20 @@ public class FontTypeTest {
         //System.out.println("convert");
         Font font = Font.getDefault();
 
-        ParsedValue<String,String> family = new ParsedValue<String,String>(font.getFamily(), null);
+        ParsedValue<String,String> family = new ParsedValueImpl<String,String>(font.getFamily(), null);
 
         ParsedValue<ParsedValue<?,Size>,Double> size =
-                new ParsedValue<ParsedValue<?,Size>,Double>(
-                    new ParsedValue<Size,Size>(new Size(2.0f, SizeUnits.EM), null),
+                new ParsedValueImpl<ParsedValue<?,Size>,Double>(
+                    new ParsedValueImpl<Size,Size>(new Size(2.0f, SizeUnits.EM), null),
                     SizeConverter.getInstance()
                 );
 
         ParsedValue<FontUnits.Style,FontPosture> style =
-                new ParsedValue<FontUnits.Style,FontPosture>(FontUnits.Style.NORMAL, FontConverter.StyleConverter.getInstance());
+                new ParsedValueImpl<FontUnits.Style,FontPosture>(FontUnits.Style.NORMAL, FontConverter.StyleConverter.getInstance());
 
         ParsedValue<FontUnits.Weight,FontWeight> weight =
-                new ParsedValue<FontUnits.Weight,FontWeight>(FontUnits.Weight.NORMAL, FontConverter.WeightConverter.getInstance());
-        ParsedValue<ParsedValue[],Font> value = new ParsedValue<ParsedValue[],Font>(
+                new ParsedValueImpl<FontUnits.Weight,FontWeight>(FontUnits.Weight.NORMAL, FontConverter.WeightConverter.getInstance());
+        ParsedValue<ParsedValue[],Font> value = new ParsedValueImpl<ParsedValue[],Font>(
                 new ParsedValue[] {family, size, weight, style},
                 FontConverter.getInstance()
             );
@@ -78,12 +79,12 @@ public class FontTypeTest {
         checkFont(expResult, result);
 
         size =
-                new ParsedValue<ParsedValue<?,Size>,Double>(
-                    new ParsedValue<Size,Size>(new Size(120, SizeUnits.PERCENT), null),
+                new ParsedValueImpl<ParsedValue<?,Size>,Double>(
+                    new ParsedValueImpl<Size,Size>(new Size(120, SizeUnits.PERCENT), null),
                     SizeConverter.getInstance()
                 );
 
-        value = new ParsedValue<ParsedValue[],Font>(
+        value = new ParsedValueImpl<ParsedValue[],Font>(
                 new ParsedValue[] {family, size, weight, style},
                 FontConverter.getInstance()
             );
@@ -93,12 +94,12 @@ public class FontTypeTest {
         checkFont(expResult, result);
 
         size =
-                new ParsedValue<ParsedValue<?,Size>,Double>(
-                    new ParsedValue<Size,Size>(new Size(font.getSize(), SizeUnits.PT), null),
+                new ParsedValueImpl<ParsedValue<?,Size>,Double>(
+                    new ParsedValueImpl<Size,Size>(new Size(font.getSize(), SizeUnits.PT), null),
                     SizeConverter.getInstance()
                 );
 
-        value = new ParsedValue<ParsedValue[],Font>(
+        value = new ParsedValueImpl<ParsedValue[],Font>(
                 new ParsedValue[] {family, size, weight, style},
                 FontConverter.getInstance()
             );

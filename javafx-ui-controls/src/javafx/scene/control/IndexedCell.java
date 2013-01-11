@@ -25,7 +25,8 @@
 
 package javafx.scene.control;
 
-import com.sun.javafx.css.PseudoClass;
+import java.util.Set;
+import javafx.css.PseudoClass;
 import com.sun.javafx.css.StyleManager;
 import javafx.beans.property.ReadOnlyIntegerProperty;
 import javafx.beans.property.ReadOnlyIntegerWrapper;
@@ -126,18 +127,18 @@ public class IndexedCell<T> extends Cell<T> {
 
     private static final String DEFAULT_STYLE_CLASS = "indexed-cell";
 
-    private static final PseudoClass.State PSEUDO_CLASS_ODD = PseudoClass.getState("odd");
-    private static final PseudoClass.State PSEUDO_CLASS_EVEN = PseudoClass.getState("even");
+    private static final PseudoClass PSEUDO_CLASS_ODD = PseudoClass.getPseudoClass("odd");
+    private static final PseudoClass PSEUDO_CLASS_EVEN = PseudoClass.getPseudoClass("even");
 
     /**
      * {@inheritDoc}
      */
-    @Override public PseudoClass.States getPseudoClassStates() {
-        PseudoClass.States states = super.getPseudoClassStates();
+    @Override public Set<PseudoClass> getPseudoClassStates() {
+        Set<PseudoClass> states = super.getPseudoClassStates();
         if (getIndex() % 2 == 0) {
-            states.addState(PSEUDO_CLASS_EVEN);
+            states.add(PSEUDO_CLASS_EVEN);
         } else {
-            states.addState(PSEUDO_CLASS_ODD);
+            states.add(PSEUDO_CLASS_ODD);
         }
         return states;
     }

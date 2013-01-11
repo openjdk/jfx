@@ -25,9 +25,9 @@
 
 package com.sun.javafx.css;
 
-import java.util.Arrays;
+import javafx.css.StyleOrigin;
+import javafx.css.PseudoClass;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 
 
@@ -41,7 +41,7 @@ class CascadingStyle implements Comparable {
     }
     
     /** State variables, like &quot;hover&quot; or &quot;pressed&quot; */
-    private PseudoClass.States pseudoclasses;
+    private PseudoClassSet pseudoclasses;
 
     /* specificity of the rule that matched */
     private final int specificity;
@@ -58,7 +58,7 @@ class CascadingStyle implements Comparable {
     // internal to Style
     static private Set<String> strSet = new HashSet<String>();
 
-    CascadingStyle(final Style style, PseudoClass.States pseudoclasses, 
+    CascadingStyle(final Style style, PseudoClassSet pseudoclasses, 
             final int specificity, final int ordinal) {
         this.style = style;
         this.pseudoclasses = pseudoclasses;
@@ -83,7 +83,7 @@ class CascadingStyle implements Comparable {
     }
     
     // Wrapper to make StyleHelper's life a little easier
-    Origin getOrigin() {
+    StyleOrigin getOrigin() {
         return getRule().getOrigin();
     }
     
@@ -112,8 +112,8 @@ class CascadingStyle implements Comparable {
             return false;
         }
         
-        // is [foo bar] a subset of [foo bar bang]?
-        return pseudoclasses.isSubsetOf(other.pseudoclasses);
+        // does [foo bar bang] contain all of [foo bar]?
+        return other.pseudoclasses.containsAll(pseudoclasses);
 
     }
 
@@ -147,12 +147,12 @@ class CascadingStyle implements Comparable {
         final Declaration decl = style.getDeclaration();
         final boolean important = decl != null ? decl.isImportant() : false;
         final Rule rule = decl != null ? decl.getRule() : null;
-        final Origin source = rule != null ? rule.getOrigin() : null;
+        final StyleOrigin source = rule != null ? rule.getOrigin() : null;
         
         final Declaration otherDecl = other.style.getDeclaration();
         final boolean otherImportant = otherDecl != null ? otherDecl.isImportant() : false;
         final Rule otherRule = otherDecl != null ? otherDecl.getRule() : null;
-        final Origin otherSource = rule != null ? otherRule.getOrigin() : null;
+        final StyleOrigin otherSource = rule != null ? otherRule.getOrigin() : null;
         
         int c = 0;
         if (this.skinProp && !other.skinProp) {

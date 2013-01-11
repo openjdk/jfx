@@ -28,6 +28,7 @@ package javafx.scene.control;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
@@ -36,19 +37,18 @@ import javafx.beans.property.IntegerProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleObjectProperty;
-import javafx.beans.value.WritableValue;
 
 import javafx.geometry.Orientation;
 import javafx.util.StringConverter;
 
 import com.sun.javafx.Utils;
-import com.sun.javafx.css.CssMetaData;
-import com.sun.javafx.css.Origin;
-import com.sun.javafx.css.PseudoClass;
-import com.sun.javafx.css.StyleableBooleanProperty;
-import com.sun.javafx.css.StyleableDoubleProperty;
-import com.sun.javafx.css.StyleableIntegerProperty;
-import com.sun.javafx.css.StyleableObjectProperty;
+import javafx.css.CssMetaData;
+import javafx.css.StyleOrigin;
+import javafx.css.PseudoClass;
+import javafx.css.StyleableBooleanProperty;
+import javafx.css.StyleableDoubleProperty;
+import javafx.css.StyleableIntegerProperty;
+import javafx.css.StyleableObjectProperty;
 import com.sun.javafx.css.converters.BooleanConverter;
 import com.sun.javafx.css.converters.EnumConverter;
 import com.sun.javafx.css.converters.SizeConverter;
@@ -56,6 +56,7 @@ import com.sun.javafx.css.converters.SizeConverter;
 import com.sun.javafx.scene.control.accessible.AccessibleSlider;
 import com.sun.javafx.accessible.providers.AccessibleProvider;
 import com.sun.javafx.scene.control.skin.SliderSkin;
+import javafx.css.StyleableProperty;
 
 /**
  * The Slider Control is used to display a continuous or discrete range of
@@ -654,8 +655,8 @@ public class Slider extends Control {
             }
 
             @Override
-            public WritableValue<Number> getWritableValue(Slider n) {
-                return n.blockIncrementProperty();
+            public StyleableProperty<Number> getStyleableProperty(Slider n) {
+                return (StyleableProperty)n.blockIncrementProperty();
             }
         };
         
@@ -669,8 +670,8 @@ public class Slider extends Control {
             }
 
             @Override
-            public WritableValue<Boolean> getWritableValue(Slider n) {
-                return n.showTickLabelsProperty();
+            public StyleableProperty<Boolean> getStyleableProperty(Slider n) {
+                return (StyleableProperty)n.showTickLabelsProperty();
             }
         };
                     
@@ -684,8 +685,8 @@ public class Slider extends Control {
             }
 
             @Override
-            public WritableValue<Boolean> getWritableValue(Slider n) {
-                return n.showTickMarksProperty();
+            public StyleableProperty<Boolean> getStyleableProperty(Slider n) {
+                return (StyleableProperty)n.showTickMarksProperty();
             }
         };
             
@@ -699,8 +700,8 @@ public class Slider extends Control {
             }
 
             @Override
-            public WritableValue<Boolean> getWritableValue(Slider n) {
-                return n.snapToTicksProperty();
+            public StyleableProperty<Boolean> getStyleableProperty(Slider n) {
+                return (StyleableProperty)n.snapToTicksProperty();
             }
         };
         
@@ -714,8 +715,8 @@ public class Slider extends Control {
             }
 
             @Override
-            public WritableValue<Number> getWritableValue(Slider n) {
-                return n.majorTickUnitProperty();
+            public StyleableProperty<Number> getStyleableProperty(Slider n) {
+                return (StyleableProperty)n.majorTickUnitProperty();
             }
         };
         
@@ -723,7 +724,7 @@ public class Slider extends Control {
             new CssMetaData<Slider,Number>("-fx-minor-tick-count",
                 SizeConverter.getInstance(), 3.0) {
 
-            @Override public void set(Slider node, Number value, Origin origin) {
+            @Override public void set(Slider node, Number value, StyleOrigin origin) {
                 super.set(node, value.intValue(), origin);
             } 
             
@@ -733,8 +734,8 @@ public class Slider extends Control {
             }
 
             @Override
-            public WritableValue<Number> getWritableValue(Slider n) {
-                return n.minorTickCountProperty();
+            public StyleableProperty<Number> getStyleableProperty(Slider n) {
+                return (StyleableProperty)n.minorTickCountProperty();
             }
         };
         
@@ -755,8 +756,8 @@ public class Slider extends Control {
             }
 
             @Override
-            public WritableValue<Orientation> getWritableValue(Slider n) {
-                return n.orientationProperty();
+            public StyleableProperty<Orientation> getStyleableProperty(Slider n) {
+                return (StyleableProperty)n.orientationProperty();
             }
         };
 
@@ -795,18 +796,18 @@ public class Slider extends Control {
         return getClassCssMetaData();
     }
 
-    private static final PseudoClass.State VERTICAL_PSEUDOCLASS_STATE =
-            PseudoClass.getState("vertical");
-    private static final PseudoClass.State HORIZONTAL_PSEUDOCLASS_STATE =
-            PseudoClass.getState("horizontal");
+    private static final PseudoClass VERTICAL_PSEUDOCLASS_STATE =
+            PseudoClass.getPseudoClass("vertical");
+    private static final PseudoClass HORIZONTAL_PSEUDOCLASS_STATE =
+            PseudoClass.getPseudoClass("horizontal");
 
     /**
      * {@inheritDoc}
      */
-    @Override public PseudoClass.States getPseudoClassStates() {
-        PseudoClass.States states = super.getPseudoClassStates();
-        if (getOrientation() == Orientation.VERTICAL) states.addState(VERTICAL_PSEUDOCLASS_STATE);
-        else states.addState(HORIZONTAL_PSEUDOCLASS_STATE);
+    @Override public Set<PseudoClass> getPseudoClassStates() {
+        Set<PseudoClass> states = super.getPseudoClassStates();
+        if (getOrientation() == Orientation.VERTICAL) states.add(VERTICAL_PSEUDOCLASS_STATE);
+        else states.add(HORIZONTAL_PSEUDOCLASS_STATE);
         return states;
     }
 

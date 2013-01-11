@@ -24,7 +24,7 @@
  */
 package javafx.scene.control.cell;
 
-import com.sun.javafx.css.CssMetaData;
+import javafx.css.CssMetaData;
 import javafx.beans.binding.Bindings;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;

@@ -28,20 +28,21 @@ package javafx.scene.control;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.BooleanPropertyBase;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
-import javafx.beans.value.WritableValue;
 import javafx.scene.Node;
 
-import com.sun.javafx.css.PseudoClass;
-import com.sun.javafx.css.StyleableBooleanProperty;
-import com.sun.javafx.css.CssMetaData;
+import javafx.css.PseudoClass;
+import javafx.css.StyleableBooleanProperty;
+import javafx.css.CssMetaData;
 import com.sun.javafx.css.converters.BooleanConverter;
 import com.sun.javafx.scene.control.skin.TitledPaneSkin;
 import javafx.beans.DefaultProperty;
+import javafx.css.StyleableProperty;
 
 /**
  * <p>A TitledPane is a panel with a title that can be opened and closed.</p>
@@ -265,10 +266,10 @@ public class TitledPane extends Labeled {
 
     private static final String DEFAULT_STYLE_CLASS = "titled-pane";
 
-    private static final PseudoClass.State PSEUDO_CLASS_EXPANDED =
-            PseudoClass.getState("expanded");
-    private static final PseudoClass.State PSEUDO_CLASS_COLLAPSED =
-            PseudoClass.getState("collapsed");
+    private static final PseudoClass PSEUDO_CLASS_EXPANDED =
+            PseudoClass.getPseudoClass("expanded");
+    private static final PseudoClass PSEUDO_CLASS_COLLAPSED =
+            PseudoClass.getPseudoClass("collapsed");
 
 
     private static class StyleableProperties {
@@ -283,8 +284,8 @@ public class TitledPane extends Labeled {
             }
 
             @Override
-            public WritableValue<Boolean> getWritableValue(TitledPane n) {
-                return n.collapsibleProperty();
+            public StyleableProperty<Boolean> getStyleableProperty(TitledPane n) {
+                return (StyleableProperty)n.collapsibleProperty();
             }
         };
                
@@ -298,8 +299,8 @@ public class TitledPane extends Labeled {
             }
 
             @Override
-            public WritableValue<Boolean> getWritableValue(TitledPane n) {
-                return n.animatedProperty();
+            public StyleableProperty<Boolean> getStyleableProperty(TitledPane n) {
+                return (StyleableProperty)n.animatedProperty();
             }
         };
 
@@ -334,10 +335,10 @@ public class TitledPane extends Labeled {
     /**
      * {@inheritDoc}
      */
-    @Override public PseudoClass.States getPseudoClassStates() {
-        PseudoClass.States states = super.getPseudoClassStates();
-        if (isExpanded()) states.addState(PSEUDO_CLASS_EXPANDED);
-        else states.addState(PSEUDO_CLASS_COLLAPSED);
+    @Override public Set<PseudoClass> getPseudoClassStates() {
+        Set<PseudoClass> states = super.getPseudoClassStates();
+        if (isExpanded()) states.add(PSEUDO_CLASS_EXPANDED);
+        else states.add(PSEUDO_CLASS_COLLAPSED);
         return states;
     }
 }

@@ -27,7 +27,8 @@ package com.sun.javafx.css;
 
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.fail;
-
+import javafx.css.CssMetaData;
+import javafx.css.ParsedValue;
 import org.junit.Test;
 
 

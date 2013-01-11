@@ -25,7 +25,7 @@
 
 package com.sun.javafx.css;
 
-import com.sun.javafx.css.Origin;
+import javafx.css.StyleOrigin;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.util.ArrayList;
@@ -88,9 +88,9 @@ public class RuleTest {
         Rule instance = new Rule(Collections.EMPTY_LIST, Collections.EMPTY_LIST);
         Stylesheet stylesheet = new Stylesheet();
         stylesheet.getRules().add(instance);
-        stylesheet.setOrigin(Origin.INLINE);
-        Origin expResult = Origin.INLINE;
-        Origin result = instance.getOrigin();
+        stylesheet.setOrigin(StyleOrigin.INLINE);
+        StyleOrigin expResult = StyleOrigin.INLINE;
+        StyleOrigin result = instance.getOrigin();
         assertEquals(expResult, result);
     }
 
@@ -98,17 +98,17 @@ public class RuleTest {
     public void testGetOriginAfterSettingOriginBeforeAddingRuleToStylesheet() {
         Rule instance = new Rule(Collections.EMPTY_LIST, Collections.EMPTY_LIST);
         Stylesheet stylesheet = new Stylesheet();
-        stylesheet.setOrigin(Origin.INLINE);
+        stylesheet.setOrigin(StyleOrigin.INLINE);
         stylesheet.getRules().add(instance);
-        Origin expResult = Origin.INLINE;
-        Origin result = instance.getOrigin();
+        StyleOrigin expResult = StyleOrigin.INLINE;
+        StyleOrigin result = instance.getOrigin();
         assertEquals(expResult, result);
     }
     
     @Test
     public void testGetOriginWithoutAddingRuleToStylesheet() {
         Rule instance = new Rule(Collections.EMPTY_LIST, Collections.EMPTY_LIST);
-        Origin result = instance.getOrigin();
+        StyleOrigin result = instance.getOrigin();
         assertNull(result);
     }
 
@@ -117,9 +117,9 @@ public class RuleTest {
         Rule instance = new Rule(Collections.EMPTY_LIST, Collections.EMPTY_LIST);
         Stylesheet stylesheet = new Stylesheet();
         stylesheet.getRules().add(instance);
-        stylesheet.setOrigin(Origin.INLINE);
+        stylesheet.setOrigin(StyleOrigin.INLINE);
         stylesheet.getRules().remove(instance);        
-        Origin result = instance.getOrigin();
+        StyleOrigin result = instance.getOrigin();
         assertNull(result);
     }
     

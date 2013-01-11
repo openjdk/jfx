@@ -19,10 +19,11 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 
 import com.sun.javafx.binding.ExpressionHelper;
 import com.sun.javafx.collections.ObservableListWrapper;
-import com.sun.javafx.css.PseudoClass;
+import javafx.css.PseudoClass;
 import com.sun.javafx.css.StyleManager;
 import javafx.scene.control.Pagination;
 import com.sun.javafx.scene.control.ReadOnlyUnbackedObservableList;
@@ -93,9 +94,9 @@ public final class ControlTestUtils {
     }
     
     public static void assertPseudoClassExists(String message, Control control, String pseudoClass) {
-        PseudoClass.States allStates = control.getPseudoClassStates();
-        PseudoClass.State state = PseudoClass.getState(pseudoClass);
-        assertTrue(message, allStates.containsState(state));
+        Set<PseudoClass> allStates = control.getPseudoClassStates();
+        PseudoClass state = PseudoClass.getPseudoClass(pseudoClass);
+        assertTrue(message, allStates.contains(state));
     }
     
     public static void assertPseudoClassDoesNotExist(Control control, String pseudoClass) {
@@ -105,9 +106,9 @@ public final class ControlTestUtils {
     }
 
     public static void assertPseudoClassDoesNotExist(String message, Control control, String pseudoClass) {
-        PseudoClass.States allStates = control.getPseudoClassStates();
-        PseudoClass.State state = PseudoClass.getState(pseudoClass);
-        assertFalse(message, allStates.containsState(state));
+        Set<PseudoClass> allStates = control.getPseudoClassStates();
+        PseudoClass state = PseudoClass.getPseudoClass(pseudoClass);
+        assertFalse(message, allStates.contains(state));
     }    
 
     /****************************************************************************
@@ -120,9 +121,9 @@ public final class ControlTestUtils {
     }
     
     public static void assertPseudoClassExists(String message, Axis axis, String pseudoClass) {
-        PseudoClass.States allStates = axis.getPseudoClassStates();
-        PseudoClass.State state = PseudoClass.getState(pseudoClass);
-        assertTrue(message, allStates.containsState(state));
+        Set<PseudoClass> allStates = axis.getPseudoClassStates();
+        PseudoClass state = PseudoClass.getPseudoClass(pseudoClass);
+        assertTrue(message, allStates.contains(state));
     }
     
     public static void assertPseudoClassDoesNotExist(Axis axis, String pseudoClass) {
@@ -132,9 +133,9 @@ public final class ControlTestUtils {
     }
 
     public static void assertPseudoClassDoesNotExist(String message, Axis axis, String pseudoClass) {
-        PseudoClass.States allStates = axis.getPseudoClassStates();
-        PseudoClass.State state = PseudoClass.getState(pseudoClass);
-        assertFalse(message, allStates.containsState(state));
+        Set<PseudoClass> allStates = axis.getPseudoClassStates();
+        PseudoClass state = PseudoClass.getPseudoClass(pseudoClass);
+        assertFalse(message, allStates.contains(state));
     }    
     
     /*********************************************************************

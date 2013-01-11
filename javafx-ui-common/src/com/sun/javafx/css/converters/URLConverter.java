@@ -29,7 +29,7 @@ import java.net.URL;
 import javafx.scene.text.Font;
 
 import com.sun.javafx.css.StyleConverterImpl;
-import com.sun.javafx.css.ParsedValue;
+import javafx.css.ParsedValue;
 import java.net.MalformedURLException;
 
 /**

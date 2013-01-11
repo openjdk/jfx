@@ -35,6 +35,7 @@ import static javafx.scene.input.KeyCode.DOWN;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -42,7 +43,7 @@ import javafx.scene.control.ChoiceBox;
 import javafx.scene.control.SelectionModel;
 import javafx.scene.input.MouseEvent;
 
-import com.sun.javafx.css.PseudoClass;
+import javafx.css.PseudoClass;
 import com.sun.javafx.scene.control.skin.Utils;
 
 /**
@@ -171,19 +172,19 @@ public class ChoiceBoxBehavior<T> extends BehaviorBase<ChoiceBox<T>> {
         choiceButton.hide();
     }
 
-    private static final PseudoClass.State INTERNAL_PSEUDOCLASS_STATE = 
-            PseudoClass.getState("internal-focus");
-    private static final PseudoClass.State EXTERNAL_PSEUDOCLASS_STATE = 
-            PseudoClass.getState("external-focus");
+    private static final PseudoClass INTERNAL_PSEUDOCLASS_STATE = 
+            PseudoClass.getPseudoClass("internal-focus");
+    private static final PseudoClass EXTERNAL_PSEUDOCLASS_STATE = 
+            PseudoClass.getPseudoClass("external-focus");
 
     /**
      * {@inheritDoc}
      */
-    @Override public PseudoClass.States getPseudoClassStates() {
-        PseudoClass.States states = super.getPseudoClassStates();
+    @Override public Set<PseudoClass> getPseudoClassStates() {
+        Set<PseudoClass> states = super.getPseudoClassStates();
         if (tlFocus != null) {
-            if (tlFocus.isExternalFocus()) states.addState(EXTERNAL_PSEUDOCLASS_STATE);
-            else states.addState(INTERNAL_PSEUDOCLASS_STATE);
+            if (tlFocus.isExternalFocus()) states.add(EXTERNAL_PSEUDOCLASS_STATE);
+            else states.add(INTERNAL_PSEUDOCLASS_STATE);
         }
         return states;
     }

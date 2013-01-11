@@ -26,6 +26,7 @@
 package com.sun.javafx.css;
 
 import static org.junit.Assert.assertEquals;
+import javafx.css.ParsedValue;
 import javafx.scene.Cursor;
 import javafx.scene.text.Font;
 
@@ -44,7 +45,7 @@ public class CursorTypeTest {
      */
     @Test
     public void testConvert() {
-        ParsedValue<String,Cursor> value = new ParsedValue<String,Cursor>("hand", CursorConverter.getInstance());
+        ParsedValue<String,Cursor> value = new ParsedValueImpl<String,Cursor>("hand", CursorConverter.getInstance());
         Font font = null;
         Cursor expResult = Cursor.HAND;
         Cursor result = value.convert(font);

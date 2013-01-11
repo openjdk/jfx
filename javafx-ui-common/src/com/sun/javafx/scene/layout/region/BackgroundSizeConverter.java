@@ -25,7 +25,7 @@
 
 package com.sun.javafx.scene.layout.region;
 
-import com.sun.javafx.css.ParsedValue;
+import javafx.css.ParsedValue;
 import com.sun.javafx.css.Size;
 import com.sun.javafx.css.SizeUnits;
 import com.sun.javafx.css.StyleConverterImpl;

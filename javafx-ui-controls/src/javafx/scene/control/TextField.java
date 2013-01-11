@@ -36,15 +36,16 @@ import javafx.beans.property.IntegerPropertyBase;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ObjectPropertyBase;
 import javafx.beans.value.ChangeListener;
-import javafx.beans.value.WritableValue;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.Pos;
 
 import com.sun.javafx.binding.ExpressionHelper;
-import com.sun.javafx.css.*;
-import com.sun.javafx.css.converters.*;
+import com.sun.javafx.css.converters.EnumConverter;
 import com.sun.javafx.scene.control.skin.TextFieldSkin;
+import javafx.css.CssMetaData;
+import javafx.css.StyleableObjectProperty;
+import javafx.css.StyleableProperty;
 
 
 /**
@@ -270,8 +271,8 @@ public class TextField extends TextInputControl {
                 return (n.alignment == null || !n.alignment.isBound());
             }
 
-            @Override public WritableValue<Pos> getWritableValue(TextField n) {
-                return n.alignmentProperty();
+            @Override public StyleableProperty<Pos> getStyleableProperty(TextField n) {
+                return (StyleableProperty)n.alignmentProperty();
             }
         };
 

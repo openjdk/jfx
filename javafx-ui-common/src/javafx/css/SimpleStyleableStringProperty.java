@@ -22,106 +22,91 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-package com.sun.javafx.css;
+package javafx.css;
 
-import javafx.beans.property.SimpleFloatProperty;
+import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.value.ObservableValue;
 
 /**
- * This class extends {@code SimpleFloatProperty} and provides a full
+ * This class extends {@code SimpleStringProperty} and provides a full
  * implementation of a {@code StyleableProperty}. The method 
  * {@link StyleableProperty#getCssMetaData()} is not implemented. 
  * 
- * This class is used to make a {@link javafx.beans.property.FloatProperty}, 
- * that would otherwise be implemented as a {@link SimpleFloatProperty}, 
+ * This class is used to make a {@link javafx.beans.property.StringProperty}, 
+ * that would otherwise be implemented as a {@link SimpleStringProperty}, 
  * style&#8209;able by CSS.
  * 
- * @see javafx.beans.property.SimpleFloatProperty
+ * @see javafx.beans.property.SimpleStringProperty
  * @see CssMetaData
  * @see StyleableProperty
  */
-public abstract class SimpleStyleableFloatProperty
-    extends SimpleFloatProperty implements StyleableProperty<Float> {
+@com.sun.javafx.beans.annotations.NoBuilder
+public abstract class SimpleStyleableStringProperty
+    extends SimpleStringProperty implements StyleableProperty<String> {
 
     /**
-     * The constructor of the {@code SimpleStyleableFloatProperty}.
+     * The constructor of the {@code SimpleStyleableStringProperty}.
      * @param cssMetaData
      *            the CssMetaData associated with this {@code StyleableProperty}
      */
-    public SimpleStyleableFloatProperty(CssMetaData cssMetaData) {
+    public SimpleStyleableStringProperty(CssMetaData cssMetaData) {
         super();
         this.cssMetaData = cssMetaData;
     }
 
     /**
-     * The constructor of the {@code SimpleStyleableFloatProperty}.
+     * The constructor of the {@code SimpleStyleableStringProperty}.
      *
      * @param cssMetaData
      *            the CssMetaData associated with this {@code StyleableProperty}
      * @param initialValue
      *            the initial value of the wrapped {@code Object}
      */
-    public SimpleStyleableFloatProperty(CssMetaData cssMetaData, float initialValue) {
+    public SimpleStyleableStringProperty(CssMetaData cssMetaData, String initialValue) {
         super(initialValue);
         this.cssMetaData = cssMetaData;
     }
 
     /**
-     * The constructor of the {@code SimpleStyleableFloatProperty}.
+     * The constructor of the {@code SimpleStyleableStringProperty}.
      *
      * @param cssMetaData
      *            the CssMetaData associated with this {@code StyleableProperty}
      * @param bean
-     *            the bean of this {@code FloatProperty}
+     *            the bean of this {@code StringProperty}
      * @param name
-     *            the name of this {@code FloatProperty}
+     *            the name of this {@code StringProperty}
      */
-    public SimpleStyleableFloatProperty(CssMetaData cssMetaData, Object bean, String name) {
+    public SimpleStyleableStringProperty(CssMetaData cssMetaData, Object bean, String name) {
         super(bean, name);
-        this.cssMetaData = cssMetaData;
-    }
-
-    /**
-     * The constructor of the {@code SimpleStyleableFloatProperty}.
-     *
-     * @param cssMetaData
-     *            the CssMetaData associated with this {@code StyleableProperty}
-     * @param bean
-     *            the bean of this {@code FloatProperty}
-     * @param name
-     *            the name of this {@code FloatProperty}
-     * @param initialValue
-     *            the initial value of the wrapped {@code Object}
-     */
-    public SimpleStyleableFloatProperty(CssMetaData cssMetaData, Object bean, String name, float initialValue) {
-        super(bean, name, initialValue);
         this.cssMetaData = cssMetaData;
     }
 
     /** {@inheritDoc} */
     @Override
-    public void applyStyle(Origin origin, Float v) {
-        setValue(v);
+    public void applyStyle(StyleOrigin origin, String v) {
+        // call set here in case the set method is overriden
+        set(v);
         this.origin = origin;
     }
 
     /** {@inheritDoc} */
     @Override
-    public void bind(ObservableValue<? extends Number> observable) {
+    public void bind(ObservableValue<? extends String> observable) {
         super.bind(observable);
-        origin = Origin.USER;
+        origin = StyleOrigin.USER;
     }
 
     /** {@inheritDoc} */
     @Override
-    public void set(float v) {
+    public void set(String v) {
         super.set(v);
-        origin = Origin.USER;
+        origin = StyleOrigin.USER;
     }
 
     /** {@inheritDoc} */
     @Override
-    public final Origin getOrigin() { return origin; }
+    public final StyleOrigin getStyleOrigin() { return origin; }
 
     /** {@inheritDoc} */
     @Override
@@ -129,7 +114,7 @@ public abstract class SimpleStyleableFloatProperty
         return cssMetaData;
     }
 
-    private Origin origin = null;
+    private StyleOrigin origin = null;
     private final CssMetaData cssMetaData;
 
 }

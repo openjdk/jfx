@@ -4,7 +4,7 @@
 
 package javafx.scene.control;
 
-import com.sun.javafx.css.CssMetaData;
+import javafx.css.CssMetaData;
 import com.sun.javafx.pgstub.StubToolkit;
 import static javafx.scene.control.ControlTestUtils.*;
 import javafx.scene.control.Pagination;
@@ -13,6 +13,7 @@ import javafx.beans.property.IntegerProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleIntegerProperty;
 import javafx.beans.property.SimpleObjectProperty;
+import javafx.css.StyleableProperty;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.input.MouseEvent;
@@ -111,7 +112,7 @@ public class PaginationTest {
      * CSS related Tests                                                 *
      ********************************************************************/
     @Test public void whenMaxPageIndicatorCountIsBound_impl_cssSettable_ReturnsFalse() {
-        CssMetaData styleable = CssMetaData.getCssMetaData(pagination.maxPageIndicatorCountProperty());
+        CssMetaData styleable = ((StyleableProperty)pagination.maxPageIndicatorCountProperty()).getCssMetaData();
         assertTrue(styleable.isSettable(pagination));
         IntegerProperty intPr = new SimpleIntegerProperty(10);
         pagination.maxPageIndicatorCountProperty().bind(intPr);
@@ -119,14 +120,14 @@ public class PaginationTest {
     }
 
     @Test public void whenMaxPageIndicatorCountIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
-        CssMetaData styleable = CssMetaData.getCssMetaData(pagination.maxPageIndicatorCountProperty());
-        styleable.set(pagination, 100);
+        CssMetaData styleable = ((StyleableProperty)pagination.maxPageIndicatorCountProperty()).getCssMetaData();
+        styleable.set(pagination, 100, null);
         assertTrue(styleable.isSettable(pagination));
     }
 
     @Test public void canSpecifyMaxPageIndicatorCountViaCSS() {
-        CssMetaData styleable = CssMetaData.getCssMetaData(pagination.maxPageIndicatorCountProperty());
-        styleable.set(pagination, 100);
+        CssMetaData styleable = ((StyleableProperty)pagination.maxPageIndicatorCountProperty()).getCssMetaData();
+        styleable.set(pagination, 100, null);
         assertSame(100, pagination.getMaxPageIndicatorCount());
     }
 

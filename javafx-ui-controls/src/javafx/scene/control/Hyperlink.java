@@ -25,14 +25,16 @@
 
 package javafx.scene.control;
 
+import java.util.Set;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.BooleanPropertyBase;
 import javafx.event.ActionEvent;
 import javafx.scene.Cursor;
 import javafx.scene.Node;
-import com.sun.javafx.css.CssMetaData;
-import com.sun.javafx.css.PseudoClass;
+import javafx.css.CssMetaData;
+import javafx.css.PseudoClass;
 import com.sun.javafx.scene.control.skin.HyperlinkSkin;
+import javafx.css.StyleableProperty;
 
 
 /**
@@ -88,8 +90,8 @@ public class Hyperlink extends ButtonBase {
         // makes it look to css like the user set the value and css will not 
         // override. Initializing cursor by calling set on the 
         // CssMetaData ensures that css will be able to override the value.        
-        final CssMetaData prop = CssMetaData.getCssMetaData(cursorProperty());
-        prop.set(this, Cursor.HAND);
+        final CssMetaData prop = ((StyleableProperty)cursorProperty()).getCssMetaData();
+        prop.set(this, Cursor.HAND, null);
     }
     
     /***************************************************************************
@@ -159,15 +161,15 @@ public class Hyperlink extends ButtonBase {
      **************************************************************************/
 
     private static final String DEFAULT_STYLE_CLASS = "hyperlink";
-    private static final PseudoClass.State PSEUDO_CLASS_VISITED =
-            PseudoClass.getState("visited");
+    private static final PseudoClass PSEUDO_CLASS_VISITED =
+            PseudoClass.getPseudoClass("visited");
 
     /**
      * {@inheritDoc}
      */
-    @Override public PseudoClass.States getPseudoClassStates() {
-        PseudoClass.States states = super.getPseudoClassStates();
-        if (isVisited()) states.addState(PSEUDO_CLASS_VISITED);
+    @Override public Set<PseudoClass> getPseudoClassStates() {
+        Set<PseudoClass> states = super.getPseudoClassStates();
+        if (isVisited()) states.add(PSEUDO_CLASS_VISITED);
         return states;
     }
 

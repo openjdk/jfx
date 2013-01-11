@@ -37,7 +37,6 @@ import javafx.beans.property.ObjectPropertyBase;
 import javafx.beans.property.ReadOnlyDoubleProperty;
 import javafx.beans.property.ReadOnlyDoubleWrapper;
 import javafx.beans.property.SimpleDoubleProperty;
-import javafx.beans.value.WritableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
@@ -46,12 +45,13 @@ import javafx.geometry.Side;
 import javafx.util.Duration;
 
 import com.sun.javafx.charts.ChartLayoutAnimator;
-import com.sun.javafx.css.StyleableBooleanProperty;
-import com.sun.javafx.css.StyleableDoubleProperty;
-import com.sun.javafx.css.CssMetaData;
+import javafx.css.StyleableBooleanProperty;
+import javafx.css.StyleableDoubleProperty;
+import javafx.css.CssMetaData;
 import com.sun.javafx.css.converters.BooleanConverter;
 import com.sun.javafx.css.converters.SizeConverter;
 import java.util.Collections;
+import javafx.css.StyleableProperty;
 
 /**
  * A axis implementation that will works on string categories where each 
@@ -498,8 +498,8 @@ public final class CategoryAxis extends Axis<String> {
             }
 
             @Override
-            public WritableValue<Number> getWritableValue(CategoryAxis n) {
-                return n.startMarginProperty();
+            public StyleableProperty<Number> getStyleableProperty(CategoryAxis n) {
+                return (StyleableProperty)n.startMarginProperty();
             }
         };
         
@@ -513,8 +513,8 @@ public final class CategoryAxis extends Axis<String> {
             }
 
             @Override
-            public WritableValue<Number> getWritableValue(CategoryAxis n) {
-                return n.endMarginProperty();
+            public StyleableProperty<Number> getStyleableProperty(CategoryAxis n) {
+                return (StyleableProperty)n.endMarginProperty();
             }
         };
         
@@ -528,8 +528,8 @@ public final class CategoryAxis extends Axis<String> {
             }
 
             @Override
-            public WritableValue<Boolean> getWritableValue(CategoryAxis n) {
-                return n.gapStartAndEndProperty();
+            public StyleableProperty<Boolean> getStyleableProperty(CategoryAxis n) {
+                return (StyleableProperty)n.gapStartAndEndProperty();
             }
         };
 

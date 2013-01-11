@@ -54,7 +54,6 @@ import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.StringProperty;
 import javafx.beans.property.StringPropertyBase;
 import javafx.beans.value.ChangeListener;
-import javafx.beans.value.WritableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener.Change;
 import javafx.collections.MapChangeListener;
@@ -103,19 +102,20 @@ import com.sun.javafx.beans.event.AbstractNotifyListener;
 import com.sun.javafx.binding.ExpressionHelper;
 import com.sun.javafx.collections.TrackableObservableList;
 import com.sun.javafx.collections.UnmodifiableListSet;
-import com.sun.javafx.css.ParsedValue;
+import com.sun.javafx.css.PseudoClassSet;
+import javafx.css.ParsedValue;
 import com.sun.javafx.css.Selector;
 import com.sun.javafx.css.Style;
-import com.sun.javafx.css.StyleConverter;
+import javafx.css.StyleConverter;
 import com.sun.javafx.css.StyleHelper;
 import com.sun.javafx.css.StyleManager;
 import com.sun.javafx.css.Styleable;
-import com.sun.javafx.css.StyleableBooleanProperty;
-import com.sun.javafx.css.StyleableDoubleProperty;
-import com.sun.javafx.css.StyleableObjectProperty;
-import com.sun.javafx.css.CssMetaData;
-import com.sun.javafx.css.Origin;
-import com.sun.javafx.css.PseudoClass;
+import javafx.css.StyleableBooleanProperty;
+import javafx.css.StyleableDoubleProperty;
+import javafx.css.StyleableObjectProperty;
+import javafx.css.CssMetaData;
+import javafx.css.StyleOrigin;
+import javafx.css.PseudoClass;
 import com.sun.javafx.css.converters.BooleanConverter;
 import com.sun.javafx.css.converters.CursorConverter;
 import com.sun.javafx.css.converters.EffectConverter;
@@ -141,6 +141,7 @@ import com.sun.javafx.scene.transform.TransformUtils;
 import com.sun.javafx.scene.traversal.Direction;
 import com.sun.javafx.sg.PGNode;
 import com.sun.javafx.tk.Toolkit;
+import javafx.css.StyleableProperty;
 import javafx.scene.transform.Affine;
 import javafx.scene.transform.NonInvertibleTransformException;
 import javafx.geometry.NodeOrientation;
@@ -7242,8 +7243,8 @@ public abstract class Node implements EventTarget {
                 }
 
                 @Override
-                public WritableValue<Cursor> getWritableValue(Node node) {
-                    return node.cursorProperty();
+                public StyleableProperty<Cursor> getStyleableProperty(Node node) {
+                    return (StyleableProperty)node.cursorProperty();
                 }
                 
                 @Override
@@ -7263,8 +7264,8 @@ public abstract class Node implements EventTarget {
                 }
 
                 @Override
-                public WritableValue<Effect> getWritableValue(Node node) {
-                    return node.effectProperty();
+                public StyleableProperty<Effect> getStyleableProperty(Node node) {
+                    return (StyleableProperty)node.effectProperty();
                 }
             };
         private static final CssMetaData<Node,Boolean> FOCUS_TRAVERSABLE =
@@ -7277,8 +7278,8 @@ public abstract class Node implements EventTarget {
                 }
 
                 @Override
-                public BooleanProperty getWritableValue(Node node) {
-                    return node.focusTraversableProperty();
+                public StyleableProperty<Boolean> getStyleableProperty(Node node) {
+                    return (StyleableProperty)node.focusTraversableProperty();
                 }
 
                 @Override
@@ -7299,8 +7300,8 @@ public abstract class Node implements EventTarget {
                 }
 
                 @Override
-                public WritableValue<Number> getWritableValue(Node node) {
-                    return node.opacityProperty();
+                public StyleableProperty<Number> getStyleableProperty(Node node) {
+                    return (StyleableProperty)node.opacityProperty();
                 }
             };
         private static final CssMetaData<Node,BlendMode> BLEND_MODE =
@@ -7312,8 +7313,8 @@ public abstract class Node implements EventTarget {
                 }
 
                 @Override
-                public WritableValue<BlendMode> getWritableValue(Node node) {
-                    return node.blendModeProperty();
+                public StyleableProperty<BlendMode> getStyleableProperty(Node node) {
+                    return (StyleableProperty)node.blendModeProperty();
                 }
             };
         private static final CssMetaData<Node,Number> ROTATE =
@@ -7328,8 +7329,8 @@ public abstract class Node implements EventTarget {
                 }
 
                 @Override
-                public WritableValue<Number> getWritableValue(Node node) {
-                    return node.rotateProperty();
+                public StyleableProperty<Number> getStyleableProperty(Node node) {
+                    return (StyleableProperty)node.rotateProperty();
                 }
             };
         private static final CssMetaData<Node,Number> SCALE_X =
@@ -7344,8 +7345,8 @@ public abstract class Node implements EventTarget {
                 }
 
                 @Override
-                public WritableValue<Number> getWritableValue(Node node) {
-                    return node.scaleXProperty();
+                public StyleableProperty<Number> getStyleableProperty(Node node) {
+                    return (StyleableProperty)node.scaleXProperty();
                 }
             };
         private static final CssMetaData<Node,Number> SCALE_Y =
@@ -7360,8 +7361,8 @@ public abstract class Node implements EventTarget {
                 }
 
                 @Override
-                public WritableValue<Number> getWritableValue(Node node) {
-                    return node.scaleYProperty();
+                public StyleableProperty<Number> getStyleableProperty(Node node) {
+                    return (StyleableProperty)node.scaleYProperty();
                 }
             };
         private static final CssMetaData<Node,Number> SCALE_Z =
@@ -7376,8 +7377,8 @@ public abstract class Node implements EventTarget {
                 }
 
                 @Override
-                public WritableValue<Number> getWritableValue(Node node) {
-                    return node.scaleZProperty();
+                public StyleableProperty<Number> getStyleableProperty(Node node) {
+                    return (StyleableProperty)node.scaleZProperty();
                 }
             };
         private static final CssMetaData<Node,Number> TRANSLATE_X =
@@ -7392,8 +7393,8 @@ public abstract class Node implements EventTarget {
                 }
 
                 @Override
-                public WritableValue<Number> getWritableValue(Node node) {
-                    return node.translateXProperty();
+                public StyleableProperty<Number> getStyleableProperty(Node node) {
+                    return (StyleableProperty)node.translateXProperty();
                 }
             };
         private static final CssMetaData<Node,Number> TRANSLATE_Y =
@@ -7408,8 +7409,8 @@ public abstract class Node implements EventTarget {
                 }
 
                 @Override
-                public WritableValue<Number> getWritableValue(Node node) {
-                    return node.translateYProperty();
+                public StyleableProperty<Number> getStyleableProperty(Node node) {
+                    return (StyleableProperty)node.translateYProperty();
                 }
             };
         private static final CssMetaData<Node,Number> TRANSLATE_Z =
@@ -7424,8 +7425,8 @@ public abstract class Node implements EventTarget {
                 }
 
                 @Override
-                public WritableValue<Number> getWritableValue(Node node) {
-                    return node.translateZProperty();
+                public StyleableProperty<Number> getStyleableProperty(Node node) {
+                    return (StyleableProperty)node.translateZProperty();
                 }
             };
         private static final CssMetaData<Node,Boolean> VISIBILITY =
@@ -7448,8 +7449,8 @@ public abstract class Node implements EventTarget {
                 }
 
                 @Override
-                public WritableValue<Boolean> getWritableValue(Node node) {
-                    return node.visibleProperty();
+                public StyleableProperty<Boolean> getStyleableProperty(Node node) {
+                    return (StyleableProperty)node.visibleProperty();
                 }
             };
 
@@ -7508,7 +7509,7 @@ public abstract class Node implements EventTarget {
       * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
       */
      @Deprecated // SB-dependency: RT-21096 has been filed to track this
-     public final ObservableMap<WritableValue, List<Style>> impl_getStyleMap() {
+     public final ObservableMap<StyleableProperty, List<Style>> impl_getStyleMap() {
          return impl_getStyleable().getStyleMap();
      }
 
@@ -7518,7 +7519,7 @@ public abstract class Node implements EventTarget {
       * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
       */
      @Deprecated // SB-dependency: RT-21096 has been filed to track this
-     public final void impl_setStyleMap(ObservableMap<WritableValue, List<Style>> styleMap) {
+     public final void impl_setStyleMap(ObservableMap<StyleableProperty, List<Style>> styleMap) {
          impl_getStyleable().setStyleMap(styleMap);
      }
           
@@ -7539,7 +7540,7 @@ public abstract class Node implements EventTarget {
      * Node has changed. The given parameter is the name of the pseudoclass
      * that has changed.
      */
-    protected void pseudoClassStateChanged(PseudoClass.State pseudoClass) {
+    protected void pseudoClassStateChanged(PseudoClass pseudoClass) {
         // If there is no scene, then we cannot make it dirty, so we'll leave
         // the flag alone
         if (getScene() == null) return;
@@ -7580,7 +7581,7 @@ public abstract class Node implements EventTarget {
     }
 
     // this function primarily exists as a hook to aid in testing
-    boolean isPseudoclassUsed(PseudoClass.State pseudoclass) {
+    boolean isPseudoclassUsed(PseudoClass pseudoclass) {
         return (styleHelper != null) ? styleHelper.isPseudoClassUsed(pseudoclass) : false;
     }
 
@@ -7602,12 +7603,12 @@ public abstract class Node implements EventTarget {
         for (int n=0; n<nStyleables; n++) {
             final CssMetaData styleable = styleables.get(n);
             if (styleable.isSettable(this) == false) continue;
-            final WritableValue writable = styleable.getWritableValue(this);
-            if (writable != null) {
-                final Origin origin = CssMetaData.getOrigin(writable);
-                if (origin != null && origin != Origin.USER) {
+            final StyleableProperty styleableProperty = styleable.getStyleableProperty(this);
+            if (styleableProperty != null) {
+                final StyleOrigin origin = styleableProperty.getStyleOrigin();
+                if (origin != null && origin != StyleOrigin.USER) {
                     // If a property is never set by the user or by CSS, then 
-                    // the Origin of the property is null. So, passing null 
+                    // the StyleOrigin of the property is null. So, passing null 
                     // here makes the property look (to CSS) like it was
                     // initialized but never used.
                     styleable.set(this, styleable.getInitialValue(this), null);
@@ -7768,36 +7769,36 @@ public abstract class Node implements EventTarget {
         return styleHelper;
     }
 
-    private static final PseudoClass.State HOVER_PSEUDOCLASS_STATE = PseudoClass.getState("hover");
-    private static final PseudoClass.State PRESSED_PSEUDOCLASS_STATE = PseudoClass.getState("pressed");
-    private static final PseudoClass.State DISABLED_PSEUDOCLASS_STATE = PseudoClass.getState("disabled");
-    private static final PseudoClass.State FOCUSED_PSEUDOCLASS_STATE = PseudoClass.getState("focused");
-    private static final PseudoClass.State SHOW_MNEMONICS_PSEUDOCLASS_STATE = PseudoClass.getState("show-mnemonics");
+    private static final PseudoClass HOVER_PSEUDOCLASS_STATE = PseudoClass.getPseudoClass("hover");
+    private static final PseudoClass PRESSED_PSEUDOCLASS_STATE = PseudoClass.getPseudoClass("pressed");
+    private static final PseudoClass DISABLED_PSEUDOCLASS_STATE = PseudoClass.getPseudoClass("disabled");
+    private static final PseudoClass FOCUSED_PSEUDOCLASS_STATE = PseudoClass.getPseudoClass("focused");
+    private static final PseudoClass SHOW_MNEMONICS_PSEUDOCLASS_STATE = PseudoClass.getPseudoClass("show-mnemonics");
 
     /**
-     * Gets the current {@link PseudoClass.States} of this node.
+     * Gets the current {@link Set<PseudoClass>} of this node.
      */
-    public PseudoClass.States getPseudoClassStates() {
+    public Set<PseudoClass> getPseudoClassStates() {
 
-        PseudoClass.States mask = PseudoClass.createStatesInstance();
+        Set<PseudoClass> mask = new PseudoClassSet();
         
         if (PSEUDO_CLASS_OVERRIDE_ENABLED && hasProperties()) {
             final Object pseudoClassOverride = getProperties().get(PSEUDO_CLASS_OVERRIDE_KEY);
             if (pseudoClassOverride instanceof String) {
                 final String[] pseudoClasses = ((String)pseudoClassOverride).split("[\\s,]+");
                 for(String pc: pseudoClasses) {
-                    PseudoClass.State state = PseudoClass.getState(pc);
-                    mask.addState(state);
+                    PseudoClass state = PseudoClass.getPseudoClass(pc);
+                    mask.add(state);
                 }
                 return mask;
             }
         }
         
-        if(isHover()) mask.addState(HOVER_PSEUDOCLASS_STATE);
-        if(isPressed()) mask.addState(PRESSED_PSEUDOCLASS_STATE);
-        if(isDisabled()) mask.addState(DISABLED_PSEUDOCLASS_STATE);
-        if(isFocused()) mask.addState(FOCUSED_PSEUDOCLASS_STATE);
-        if(impl_isShowMnemonics()) mask.addState(SHOW_MNEMONICS_PSEUDOCLASS_STATE);
+        if(isHover()) mask.add(HOVER_PSEUDOCLASS_STATE);
+        if(isPressed()) mask.add(PRESSED_PSEUDOCLASS_STATE);
+        if(isDisabled()) mask.add(DISABLED_PSEUDOCLASS_STATE);
+        if(isFocused()) mask.add(FOCUSED_PSEUDOCLASS_STATE);
+        if(impl_isShowMnemonics()) mask.add(SHOW_MNEMONICS_PSEUDOCLASS_STATE);
         return mask;
     }
 

@@ -27,13 +27,12 @@ package com.sun.javafx.css;
 
 import com.sun.javafx.collections.TrackableObservableList;
 import java.io.*;
-import java.net.URI;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 import javafx.collections.ListChangeListener.Change;
 import javafx.collections.ObservableList;
-
+import javafx.css.StyleOrigin;
 
 /**
  * A stylesheet which can apply properties to a tree of objects.  A stylesheet 
@@ -64,11 +63,11 @@ public class Stylesheet {
      * that we can make user important styles have higher priority than
      * author styles
      */
-    private Origin origin = Origin.AUTHOR;
-    public Origin getOrigin() {
+    private StyleOrigin origin = StyleOrigin.AUTHOR;
+    public StyleOrigin getOrigin() {
         return origin;
     }
-    public void setOrigin(Origin origin) {
+    public void setOrigin(StyleOrigin origin) {
         this.origin = origin;
     }
 
@@ -192,7 +191,7 @@ public class Stylesheet {
         throws IOException 
     {
         final int index = is.readShort();
-        this.setOrigin(Origin.valueOf(strings[index]));
+        this.setOrigin(StyleOrigin.valueOf(strings[index]));
         final int nRules = is.readShort();
         List<Rule> persistedRules = new ArrayList<Rule>(nRules);
         for (int n=0; n<nRules; n++) {

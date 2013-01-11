@@ -22,107 +22,108 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-package com.sun.javafx.css;
+package javafx.css;
 
-import javafx.beans.property.SimpleDoubleProperty;
+import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.value.ObservableValue;
 
 /**
- * This class extends {@code SimpleDoubleProperty} and provides a full
+ * This class extends {@code SimpleBooleanProperty} and provides a full
  * implementation of a {@code StyleableProperty}. The method 
  * {@link StyleableProperty#getCssMetaData()} is not implemented. 
  * 
- * This class is used to make a {@link javafx.beans.property.DoubleProperty}, 
- * that would otherwise be implemented as a {@link SimpleDoubleProperty}, 
+ * This class is used to make a {@link javafx.beans.property.BooleanProperty}, 
+ * that would otherwise be implemented as a {@link SimpleBooleanProperty}, 
  * style&#8209;able by CSS.
  * 
- * @see javafx.beans.property.SimpleDoubleProperty
+ * @see javafx.beans.property.SimpleBooleanProperty
  * @see CssMetaData
  * @see StyleableProperty
  */
-public abstract class SimpleStyleableDoubleProperty
-    extends SimpleDoubleProperty implements StyleableProperty<Double> {
+@com.sun.javafx.beans.annotations.NoBuilder
+public abstract class SimpleStyleableBooleanProperty
+    extends SimpleBooleanProperty implements StyleableProperty<Boolean> {
 
     /**
-     * The constructor of the {@code SimpleStyleableDoubleProperty}.
+     * The constructor of the {@code SimpleStyleableBooleanProperty}.
      * @param cssMetaData
      *            the CssMetaData associated with this {@code StyleableProperty}
      */
-    public SimpleStyleableDoubleProperty(CssMetaData cssMetaData) {
+    public SimpleStyleableBooleanProperty(CssMetaData cssMetaData) {
         super();
         this.cssMetaData = cssMetaData;
     }
 
     /**
-     * The constructor of the {@code SimpleStyleableDoubleProperty}.
+     * The constructor of the {@code SimpleStyleableBooleanProperty}.
      *
      * @param cssMetaData
      *            the CssMetaData associated with this {@code StyleableProperty}
      * @param initialValue
      *            the initial value of the wrapped {@code Object}
      */
-    public SimpleStyleableDoubleProperty(CssMetaData cssMetaData, double initialValue) {
+    public SimpleStyleableBooleanProperty(CssMetaData cssMetaData, boolean initialValue) {
         super(initialValue);
         this.cssMetaData = cssMetaData;
     }
 
     /**
-     * The constructor of the {@code SimpleStyleableDoubleProperty}.
+     * The constructor of the {@code SimpleStyleableBooleanProperty}.
      *
      * @param cssMetaData
      *            the CssMetaData associated with this {@code StyleableProperty}
      * @param bean
-     *            the bean of this {@code DoubleProperty}
+     *            the bean of this {@code BooleanProperty}
      * @param name
-     *            the name of this {@code DoubleProperty}
+     *            the name of this {@code BooleanProperty}
      */
-    public SimpleStyleableDoubleProperty(CssMetaData cssMetaData, Object bean, String name) {
+    public SimpleStyleableBooleanProperty(CssMetaData cssMetaData, Object bean, String name) {
         super(bean, name);
         this.cssMetaData = cssMetaData;
     }
 
     /**
-     * The constructor of the {@code SimpleStyleableDoubleProperty}.
+     * The constructor of the {@code SimpleStyleableBooleanProperty}.
      *
      * @param cssMetaData
      *            the CssMetaData associated with this {@code StyleableProperty}
      * @param bean
-     *            the bean of this {@code DoubleProperty}
+     *            the bean of this {@code BooleanProperty}
      * @param name
-     *            the name of this {@code DoubleProperty}
+     *            the name of this {@code BooleanProperty}
      * @param initialValue
      *            the initial value of the wrapped {@code Object}
      */
-    public SimpleStyleableDoubleProperty(CssMetaData cssMetaData, Object bean, String name, double initialValue) {
+    public SimpleStyleableBooleanProperty(CssMetaData cssMetaData, Object bean, String name, boolean initialValue) {
         super(bean, name, initialValue);
         this.cssMetaData = cssMetaData;
     }
 
     /** {@inheritDoc} */
     @Override
-    public void applyStyle(Origin origin, Double v) {
-        setValue(v);
+    public void applyStyle(StyleOrigin origin, Boolean v) {
+        // call set here in case it has been overridden in the javafx.beans.property
+        set(v.booleanValue());
         this.origin = origin;
     }
 
     /** {@inheritDoc} */
     @Override
-    public void bind(ObservableValue<? extends Number> observable) {
+    public void bind(ObservableValue<? extends Boolean> observable) {
         super.bind(observable);
-        origin = Origin.USER;
+        origin = StyleOrigin.USER;
     }
 
     /** {@inheritDoc} */
     @Override
-    public void set(double v) {
+    public void set(boolean v) {
         super.set(v);
-        origin = Origin.USER;
+        origin = StyleOrigin.USER;
     }
-
 
     /** {@inheritDoc} */
     @Override
-    public final Origin getOrigin() { return origin; }
+    public final StyleOrigin getStyleOrigin() { return origin; }
 
     /** {@inheritDoc} */
     @Override
@@ -130,6 +131,7 @@ public abstract class SimpleStyleableDoubleProperty
         return cssMetaData;
     }
 
-    private Origin origin = null;
+    private StyleOrigin origin = null;
     private final CssMetaData cssMetaData;
+
 }

@@ -46,13 +46,14 @@ import javafx.scene.Node;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Line;
 import com.sun.javafx.collections.TrackableObservableList;
-import com.sun.javafx.css.StyleableBooleanProperty;
-import com.sun.javafx.css.StyleableDoubleProperty;
-import com.sun.javafx.css.StyleableObjectProperty;
-import com.sun.javafx.css.CssMetaData;
+import javafx.css.StyleableBooleanProperty;
+import javafx.css.StyleableDoubleProperty;
+import javafx.css.StyleableObjectProperty;
+import javafx.css.CssMetaData;
 import com.sun.javafx.css.converters.BooleanConverter;
 import com.sun.javafx.css.converters.EnumConverter;
 import com.sun.javafx.css.converters.SizeConverter;
+import javafx.css.StyleableProperty;
 
 
 
@@ -1848,8 +1849,8 @@ public class GridPane extends Pane {
             }
 
             @Override
-            public WritableValue<Boolean> getWritableValue(GridPane node) {
-                return node.gridLinesVisibleProperty();
+            public StyleableProperty<Boolean> getStyleableProperty(GridPane node) {
+                return (StyleableProperty)node.gridLinesVisibleProperty();
             }
          };
 
@@ -1863,8 +1864,8 @@ public class GridPane extends Pane {
             }
 
             @Override
-            public WritableValue<Number> getWritableValue(GridPane node) {
-                return node.hgapProperty();
+            public StyleableProperty<Number> getStyleableProperty(GridPane node) {
+                return (StyleableProperty)node.hgapProperty();
             }
 
          };
@@ -1879,8 +1880,8 @@ public class GridPane extends Pane {
             }
 
             @Override
-            public WritableValue<Pos> getWritableValue(GridPane node) {
-                return node.alignmentProperty();
+            public StyleableProperty<Pos> getStyleableProperty(GridPane node) {
+                return (StyleableProperty)node.alignmentProperty();
             }
 
          };
@@ -1895,8 +1896,8 @@ public class GridPane extends Pane {
             }
 
             @Override
-            public WritableValue<Number> getWritableValue(GridPane node) {
-                return node.vgapProperty();
+            public StyleableProperty<Number> getStyleableProperty(GridPane node) {
+                return (StyleableProperty)node.vgapProperty();
             }
 
          };

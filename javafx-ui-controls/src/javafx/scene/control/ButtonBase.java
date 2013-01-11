@@ -24,7 +24,8 @@
  */
 package javafx.scene.control;
 
-import com.sun.javafx.css.PseudoClass;
+import java.util.Set;
+import javafx.css.PseudoClass;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ObjectPropertyBase;
 import javafx.event.ActionEvent;
@@ -179,14 +180,14 @@ public abstract class ButtonBase extends Labeled {
      *                                                                         *
      **************************************************************************/
 
-    private static final PseudoClass.State ARMED_PSEUDOCLASS_STATE = PseudoClass.getState("armed");
+    private static final PseudoClass ARMED_PSEUDOCLASS_STATE = PseudoClass.getPseudoClass("armed");
 
     /**
      * {@inheritDoc}
      */
-    @Override public PseudoClass.States getPseudoClassStates() {
-        PseudoClass.States states = super.getPseudoClassStates();
-        if (isArmed()) states.addState(ARMED_PSEUDOCLASS_STATE);
+    @Override public Set<PseudoClass> getPseudoClassStates() {
+        Set<PseudoClass> states = super.getPseudoClassStates();
+        if (isArmed()) states.add(ARMED_PSEUDOCLASS_STATE);
         return states;
     }
 }

@@ -25,7 +25,7 @@
 
 package javafx.scene.shape;
 
-import com.sun.javafx.css.CssMetaData;
+import javafx.css.CssMetaData;
 import com.sun.javafx.css.converters.PaintConverter;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.DoublePropertyBase;
@@ -43,6 +43,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import javafx.beans.value.WritableValue;
+import javafx.css.StyleableProperty;
 import javafx.scene.paint.Paint;
 
 
@@ -69,10 +70,10 @@ public class Line extends Shape {
         // overriding default values for fill and stroke
         // Set through CSS property so that it appears to be a UA style rather
         // that a USER style so that fill and stroke can still be set from CSS.
-        final CssMetaData fillProp = CssMetaData.getCssMetaData(fillProperty());
-        fillProp.set(this, null);
-        final CssMetaData strokeProp = CssMetaData.getCssMetaData(strokeProperty());
-        strokeProp.set(this, Color.BLACK);
+        final CssMetaData fillProp = ((StyleableProperty)fillProperty()).getCssMetaData();
+        fillProp.set(this, null, null);
+        final CssMetaData strokeProp = ((StyleableProperty)strokeProperty()).getCssMetaData();
+        strokeProp.set(this, Color.BLACK, null);
     }
 
     /**

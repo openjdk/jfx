@@ -10,8 +10,9 @@ import com.sun.javafx.tk.Toolkit;
 import org.junit.Test;
 import javafx.collections.*;
 import javafx.scene.chart.Axis.TickMark;
-import com.sun.javafx.css.ParsedValue;
-import com.sun.javafx.css.CssMetaData;
+import javafx.css.ParsedValue;
+import javafx.css.CssMetaData;
+import javafx.css.StyleableProperty;
 import com.sun.javafx.css.parser.CSSParser;
 
 import javafx.scene.text.Font;
@@ -54,7 +55,7 @@ public class XYChartTest extends ChartTestBase {
         // set tick label font via css and test if ticklabelfont, measure and tick textnode follow.
         ParsedValue pv = CSSParser.getInstance().parseExpr("-fx-tick-label-font","0.916667em System");
         Object val = pv.convert(null);        
-        CssMetaData prop = CssMetaData.getCssMetaData(yaxis.tickLabelFontProperty());
+        CssMetaData prop = ((StyleableProperty)yaxis.tickLabelFontProperty()).getCssMetaData();
         try {
             prop.set(yaxis, val, null);
             // confirm tickLabelFont, measure and tick's textnode all are in sync with -fx-tick-label-font

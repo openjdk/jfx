@@ -25,7 +25,7 @@
 package com.sun.javafx.css;
 
 import java.util.List;
-import javafx.scene.Node;
+import javafx.css.PseudoClass;
 
 /**
  * Used by {@link Rule} to determine whether or not the rule applies to a
@@ -37,7 +37,7 @@ import javafx.scene.Node;
 final class Match implements Comparable {
 
     final Selector selector;
-    final PseudoClass.States pseudoclasses;
+    final PseudoClassSet pseudoclasses;
     final int idCount;
     final int styleClassCount;
     
@@ -47,14 +47,14 @@ final class Match implements Comparable {
     // then pseudoclass count, and finally matching types (i.e., java name count)
     final int specificity;
 
-    Match(final Selector selector, PseudoClass.States pseudoclasses,
+    Match(final Selector selector, PseudoClassSet pseudoclasses,
             final int idCount, final int styleClassCount) {
         assert selector != null;
         this.selector = selector;
         this.idCount = idCount;
         this.styleClassCount = styleClassCount;
         this.pseudoclasses = pseudoclasses;
-        int nPseudoclasses = pseudoclasses.getCount();
+        int nPseudoclasses = pseudoclasses.size();
         
         specificity = (idCount << 8) | (styleClassCount << 4) | nPseudoclasses;
     }
@@ -69,9 +69,9 @@ final class Match implements Comparable {
     public String toString() {
         StringBuilder sb = new StringBuilder();
         sb.append(selector);
-        for(PseudoClass.State s : pseudoclasses.getStates()) {
+        for(PseudoClass s : pseudoclasses.getPseudoClasses()) {
             sb.append(":");
-            sb.append(s.getPseudoClass());
+            sb.append(s.getPseudoClassName());
         }
         sb.append(", ");
         sb.append(idCount);

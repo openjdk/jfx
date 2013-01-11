@@ -24,11 +24,12 @@
  */
 package javafx.scene.control;
 
-import com.sun.javafx.css.CssMetaData;
-import com.sun.javafx.css.PseudoClass;
+import javafx.css.CssMetaData;
+import javafx.css.PseudoClass;
 import com.sun.javafx.scene.control.MultiplePropertyChangeListenerHandler;
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.ObservableList;
 import javafx.event.EventHandler;
@@ -476,7 +477,7 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
     /**
      * {@inheritDoc}
      */
-    @Deprecated public PseudoClass.States getPseudoClassStates() {
+    @Deprecated public Set<PseudoClass> getPseudoClassStates() {
         return null; 
     }
 
