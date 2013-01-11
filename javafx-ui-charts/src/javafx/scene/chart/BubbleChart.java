@@ -108,7 +108,6 @@ public class BubbleChart<X,Y> extends XYChart<X,Y> {
                         StackPane region = (StackPane)item.getNode();
                         if (region.getShape() == null) {
                             ellipse = new Ellipse(getDoubleValue(item.getExtraValue(), 1), getDoubleValue(item.getExtraValue(), 1));
-                            region.setShape(ellipse);
                         } else if (region.getShape() instanceof Ellipse) {
                             ellipse = (Ellipse)region.getShape();
                         } else {
@@ -123,6 +122,7 @@ public class BubbleChart<X,Y> extends XYChart<X,Y> {
                         region.setShape(ellipse);
                         region.setScaleShape(false);
                         region.setCenterShape(false);
+                        region.setCacheShape(false);
                         // position the bubble
                         bubble.setLayoutX(x);
                         bubble.setLayoutY(y);

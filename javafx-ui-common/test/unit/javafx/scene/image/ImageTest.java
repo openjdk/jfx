@@ -447,68 +447,6 @@ public final class ImageTest {
         return lastAsyncImageLoader;
     }
 
-    // lets test following:  ;)
-    // 
-    //  public static boolean impl_isExternalFormatSupported(Class format) {
-    //    return Toolkit.getToolkit().isExternalFormatSupported(format);
-    // }
-    @Test
-    public void isExternalFormatSupportedTest() {
-        toolkit.externalFormatClass = StubToolkit.class;
-        assertFalse(Image.impl_isExternalFormatSupported(null));
-        assertTrue(Image.impl_isExternalFormatSupported(StubToolkit.class));
-        toolkit.externalFormatClass = ImageTest.class;
-        assertFalse(Image.impl_isExternalFormatSupported(StubToolkit.class));
-        assertTrue(Image.impl_isExternalFormatSupported(ImageTest.class));
-    }
-
-    // lets test 
-    //    public Object impl_toExternalImage(Object imgType) {
-    //        return Toolkit.getToolkit().toExternalImage(getPlatformImage(), imgType);
-    //    }
-    @Test
-    public void impl_toExternalImageTest() {
-        final Object fakePlatformImage = "fakePlatformImage";
-        registerImage(fakePlatformImage, 200, 500);
-        final Image image = Image.impl_fromPlatformImage(fakePlatformImage);
-
-        StubPlatformImage spi = (StubPlatformImage) image.impl_getPlatformImage();
-        assertTrue(spi.getSource() == fakePlatformImage);
-
-        final Object format = "image format object";
-        final Object password = "password";
-
-        toolkit.toExternalImagePassword = password;
-
-        Object extImage = image.impl_toExternalImage(format);
-        Object[] data = (Object[]) extImage;
-
-        assertTrue(
-                data.length == 3
-                && data[0] == spi
-                && data[1] == format
-                && data[2] == password);
-    }
-
-    // lets test 
-    //    public Object impl_fromExternalImage(Object image)
-    // it is more comlex
-    // we have to be sure impl_isExternalFormatSupported for image.class.
-    // and until it is not "null" returned
-    @Test
-    public void impl_fromExternalImageTest() {
-        toolkit.externalFormatClass = ImageTest.class;
-        final Object fakeExternalImage = "fakeExternalImage";
-        registerImage(fakeExternalImage, 123, 456);
-
-        assertFalse(Image.impl_isExternalFormatSupported(fakeExternalImage.getClass()));
-        assertNull(Image.impl_fromExternalImage(fakeExternalImage));
-
-        toolkit.externalFormatClass = fakeExternalImage.getClass();
-        final Image image = Image.impl_fromExternalImage(fakeExternalImage);
-        verifyLoadedImage(image, 0, 0, false, false, 123, 456);
-    }
-    
     @Test
     public void createImageFromClasspathTest() {
         final String url = "javafx/scene/image/test.png";
