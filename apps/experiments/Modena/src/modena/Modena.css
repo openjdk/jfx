@@ -364,7 +364,7 @@ is being used to size a border should also be in pixels.
     -fx-background-color: -fx-outer-border, -fx-inner-border, -fx-body-color; 
     -fx-background-insets: 0, 1, 2;
     -fx-background-radius: 5, 4, 3;
-    -fx-padding: 0.333333em 1em 0.333333em 1em; /* 4 12 4 12 */
+    -fx-padding: 0.333333em 1em 0.416667em 1em; /* 4 12 5 12 */
     -fx-text-fill: -fx-text-base-color;
 }
 .button:hover,
@@ -499,7 +499,7 @@ is being used to size a border should also be in pixels.
 .choice-box > .label,
 .menu-button > .label,
 .color-picker > .label {
-    -fx-padding: 0.333333em 0.833333em 0.333333em 0.833333em; /* 4 10 4 10 */
+    -fx-padding: 0.333333em 0.833333em 0.416667em 0.833333em; /* 4 10 5 10 */
     -fx-text-fill: -fx-text-base-color;
 }
 .choice-box > .open-button,
@@ -721,7 +721,7 @@ is being used to size a border should also be in pixels.
     -fx-background-color: -fx-inner-border, -fx-body-color; 
     -fx-background-insets: 1 0 1 1, 2 1 2 2;
     -fx-background-radius: 4 0 0 4, 3 0 0 3;
-    -fx-padding: 0.333333em 0.833333em 0.333333em 0.833333em; /* 4 10 4 10 */
+    -fx-padding: 0.333333em 0.833333em 0.416667em 0.833333em; /* 4 10 5 10 */
 }
 .split-menu-button > .arrow-button {
     -fx-background-color: -fx-inner-border, -fx-body-color; 
@@ -1061,8 +1061,7 @@ is being used to size a border should also be in pixels.
     -fx-background-insets: 0, 1;
     -fx-background-radius: 2, 2;
     -fx-cursor: text;
-    /*-fx-padding: 0.416667em;  5 */
-    -fx-padding: 0.417em 0.333em 0.333em 0.333em; /* 5 4 4 4 */
+    -fx-padding: 0.416667em; /*  5 */
 }
 .text-input:focused {
     -fx-highlight-fill: -fx-accent;
@@ -1465,7 +1464,7 @@ is being used to size a border should also be in pixels.
     -fx-background: transparent;
     -fx-background-color: transparent;
     -fx-text-fill: -fx-text-base-color;
-    -fx-padding: 0.333333em 1em 0.333333em 1em; /* 4 12 4 12 */
+    -fx-padding: 0.333333em 1em 0.416667em 1em; /* 4 12 5 12 */
 }
 .combo-box-base > .arrow-button  {
     -fx-background-radius: 0 5 5 0, 0 4 4 0, 0 3 3 0;
