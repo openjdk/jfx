@@ -234,6 +234,7 @@
                         <PasswordField prefWidth="100.0" promptText="Password" text="password" />
                       </children>
                     </HBox>
+                    <Button mnemonicParsing="false" prefWidth="100.0" text="Button" />
                     <PasswordField maxWidth="100.0" prefWidth="100.0" text="Password" />
                     <TextArea maxWidth="100.0" prefHeight="50.0" prefRowCount="10" prefWidth="100.0" text="Sample" wrapText="true" />
                     <MenuButton maxWidth="100.0" mnemonicParsing="false" prefWidth="100.0" text="Sample">
@@ -294,7 +295,7 @@
                 </Region>
                 <Region maxHeight="-1.0" maxWidth="1.0" prefHeight="-1.0" prefWidth="-1.0" style="-fx-background-color: red;" visible="true">
                   <StackPane.margin>
-                    <Insets left="5.0" />
+                    <Insets left="9.0" />
                   </StackPane.margin>
                 </Region>
               </children>
