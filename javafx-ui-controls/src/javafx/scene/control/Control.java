@@ -737,28 +737,34 @@ public abstract class Control extends Region implements Skinnable {
     }
 
     /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
-     */
-    @Deprecated
-    protected List<CssMetaData> impl_getControlStyleableProperties() {
-        return getClassCssMetaData();
-    }
-
-    /**
-     * {@inheritDoc}
+     * This method returns a {@link List} containing all {@link CssMetaData} for 
+     * both this Control (returned from {@link #getControlCssMetaData()} and its 
+     * {@link Skin}, assuming the {@link #skinProperty() skin property} is a 
+     * {@link SkinBase}. 
+     * 
+     * <p>Developers who wish to provide custom CssMetaData are therefore 
+     * encouraged to override {@link Control#getControlCssMetaData()} or 
+     * {@link SkinBase#getCssMetaData()}, depending on where the CssMetaData 
+     * resides.
      */
     @Override
-    public List<CssMetaData> getCssMetaData() {
+    public final List<CssMetaData> getCssMetaData() {
         if (styleableProperties == null) {
             styleableProperties = new ArrayList<CssMetaData>();
-            styleableProperties.addAll(impl_getControlStyleableProperties());
+            styleableProperties.addAll(getControlCssMetaData());
             
             if (skinBase != null) {
                 styleableProperties.addAll(skinBase.getCssMetaData());
             }
         }
         return styleableProperties;
+    }
+    
+    /**
+     * @return unmodifiable list of the controls css styleable properties
+     */
+    protected List<CssMetaData> getControlCssMetaData() {
+        return getClassCssMetaData();
     }
 
     /**
