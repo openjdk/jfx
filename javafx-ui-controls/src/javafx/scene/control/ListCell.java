@@ -141,20 +141,7 @@ public class ListCell<T> extends IndexedCell<T> {
      */
     private final ListChangeListener itemsListener = new ListChangeListener() {
         @Override public void onChanged(ListChangeListener.Change c) {
-            boolean needsUpdate = false;
-            while (c.next()) {
-                if (!c.wasAdded() && !c.wasRemoved()) {
-                    int idx = getIndex();
-                    needsUpdate = c.getFrom() <= idx && idx <= c.getTo();
-                    break;
-                }
-            }
-
-            if (needsUpdate) {
-                // Only call updateItem if there were items permuted, and only if
-                // the index of the permuted range includes this item.
-                updateItem();
-            }
+            updateItem();
         }
     };
 
