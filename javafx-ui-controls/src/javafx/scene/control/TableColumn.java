@@ -429,10 +429,10 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
                     TableView table = getTableView();
                     if (table == null) return;
                     Map properties = table.getProperties();
-                    if (properties.containsKey(TableViewSkinBase.RECREATE)) {
-                        properties.remove(TableViewSkinBase.RECREATE);
+                    if (properties.containsKey(TableViewSkinBase.REBUILD)) {
+                        properties.remove(TableViewSkinBase.REBUILD);
                     }
-                    properties.put(TableViewSkinBase.RECREATE, Boolean.TRUE);
+                    properties.put(TableViewSkinBase.REBUILD, Boolean.TRUE);
                 }
             };
 

@@ -64,7 +64,7 @@ import javafx.scene.control.TableSelectionModel;
 public abstract class TableViewSkinBase<S, C extends Control, B extends BehaviorBase<C>, I extends IndexedCell> extends VirtualContainerBase<C, B, I> {
     
     public static final String REFRESH = "tableRefreshKey";
-    public static final String RECREATE = "tableRecreateKey";
+    public static final String REBUILD = "tableRebuildKey";
     
 //    protected abstract void requestControlFocus(); // tableView.requestFocus();
     protected abstract TableSelectionModel getSelectionModel(); // tableView.getSelectionModel()
@@ -172,10 +172,10 @@ public abstract class TableViewSkinBase<S, C extends Control, B extends Behavior
                 if (REFRESH.equals(c.getKey())) {
                     refreshView();
                     control.getProperties().remove(REFRESH);
-                } else if (RECREATE.equals(c.getKey())) {
-                    forceCellRecreation = true;
+                } else if (REBUILD.equals(c.getKey())) {
+                    forceCellRebuild = true;
                     refreshView();
-                    control.getProperties().remove(RECREATE);
+                    control.getProperties().remove(REBUILD);
                 }
             }
         });
@@ -202,10 +202,9 @@ public abstract class TableViewSkinBase<S, C extends Control, B extends Behavior
         if ("ROW_FACTORY".equals(p)) {
             Callback<C, I> oldFactory = rowFactory;
             rowFactory = rowFactoryProperty().get();
-
-            // TODO tighten this up
             if (oldFactory != rowFactory) {
-                flow.recreateCells();
+                needCellsRebuilt = true;
+                getSkinnable().requestLayout();
             }
         } else if ("PLACEHOLDER".equals(p)) {
             updatePlaceholderRegionVisibility();
@@ -250,7 +249,8 @@ public abstract class TableViewSkinBase<S, C extends Control, B extends Behavior
             // resizing occurs. It is not ideal, but will work for now.
             // FIXME this is very, very inefficient, but ensures we don't run
             // in to RT-13717.
-            flow.reconfigureCells();
+            needCellsRebuilt = true;
+            getSkinnable().requestLayout();
         }
     };
     
@@ -445,6 +445,9 @@ public abstract class TableViewSkinBase<S, C extends Control, B extends Behavior
         return Math.max(pw, prefHeight * GOLDEN_RATIO_MULTIPLIER);
     }
     
+    private boolean needCellsRebuilt = true;
+    private boolean needCellsReconfigured = false;
+    
     /** {@inheritDoc} */
     @Override protected void layoutChildren(final double x, double y,
             final double w, final double h) {
@@ -452,6 +455,15 @@ public abstract class TableViewSkinBase<S, C extends Control, B extends Behavior
             updateRowCount();
             rowCountDirty = false;
         }
+        
+        if (needCellsRebuilt) {
+            flow.rebuildCells();
+        } else if (needCellsReconfigured) {
+            flow.reconfigureCells();
+        } 
+        
+        needCellsRebuilt = false;
+        needCellsReconfigured = false;
         
         final double baselineOffset = getSkinnable().getLayoutBounds().getHeight() / 2;
 
@@ -563,7 +575,8 @@ public abstract class TableViewSkinBase<S, C extends Control, B extends Behavior
         visibleColCount = getVisibleLeafColumns().size();
 
         updatePlaceholderRegionVisibility();
-        reconfigureCells();
+        needCellsRebuilt = true;
+        getSkinnable().requestLayout();
     }
     
     private void updateVisibleLeafColumnWidthListeners(
@@ -577,7 +590,8 @@ public abstract class TableViewSkinBase<S, C extends Control, B extends Behavior
             TableColumnBase tc = added.get(i);
             tc.widthProperty().addListener(weakWidthListener);
         }
-        flow.reconfigureCells();
+        needCellsRebuilt = true;
+        getSkinnable().requestLayout();
     }
 
     private void updatePlaceholderRegionVisibility() {
@@ -640,11 +654,7 @@ public abstract class TableViewSkinBase<S, C extends Control, B extends Behavior
         getSkinnable().requestLayout();
     }
 
-    private void reconfigureCells() {
-        flow.reconfigureCells();
-    }
-
-    private boolean forceCellRecreation = false;
+    private boolean forceCellRebuild = false;
     
     private void updateRowCount() {
         updatePlaceholderRegionVisibility();
@@ -657,14 +667,15 @@ public abstract class TableViewSkinBase<S, C extends Control, B extends Behavior
         // optimised in the future when time permits.
         flow.setCellCount(newCount);
         
-        if (forceCellRecreation || newCount != oldCount) {
-            // FIXME updateRowCount is called _a lot_. Perhaps we can make recreateCells
+        if (forceCellRebuild || newCount != oldCount) {
+            // FIXME updateRowCount is called _a lot_. Perhaps we can make rebuildCells
             // smarter. Imagine if items has one million items added - do we really
-            // need to recreateCells a million times?
-            flow.recreateCells();
-            forceCellRecreation = false;
+            // need to rebuildCells a million times? Maybe this is better now that
+            // we do rebuildCells instead of recreateCells.
+            needCellsRebuilt = true;
+            forceCellRebuild = false;
         } else {
-            flow.reconfigureCells();
+            needCellsReconfigured = true;
         }
     }
 

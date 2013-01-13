@@ -145,7 +145,7 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeViewB
     }
     
     private boolean needItemCountUpdate = false;
-    private boolean needCellsRecreated = true;
+    private boolean needCellsRebuilt = true;
     private boolean needCellsReconfigured = false;
     
     private EventHandler<TreeModificationEvent> rootListener = new EventHandler<TreeModificationEvent>() {
@@ -160,7 +160,7 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeViewB
                 getSkinnable().requestLayout();
             } else if (e.getEventType().equals(TreeItem.valueChangedEvent())) {
                 // Fix for RT-14971 and RT-15338. 
-                needCellsRecreated = true;
+                needCellsRebuilt = true;
                 getSkinnable().requestLayout();
             } else {
                 // Fix for RT-20090. We are checking to see if the event coming
@@ -220,7 +220,7 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeViewB
         flow.setCellCount(newCount);
         
         if (newCount != oldCount) {
-            needCellsRecreated = true;
+            needCellsRebuilt = true;
         } else {
             needCellsReconfigured = true;
         }
@@ -313,15 +313,14 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeViewB
             needItemCountUpdate = false;
         }
         
-        if (needCellsRecreated) {
-            flow.recreateCells();
-            needCellsRecreated = false;
+        if (needCellsRebuilt) {
+            flow.rebuildCells();
+        } else if (needCellsReconfigured) {
+            flow.reconfigureCells();
         } 
         
-        if (needCellsReconfigured) {
-            flow.reconfigureCells();
-            needCellsReconfigured = false;
-        } 
+        needCellsRebuilt = false;
+        needCellsReconfigured = false;
         
         flow.resizeRelocate(x, y, w, h);
     }
