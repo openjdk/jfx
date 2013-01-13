@@ -54,7 +54,7 @@ import javafx.util.Callback;
 /**
  * Implementation of a virtualized container using a cell based mechanism.
  */
-public class VirtualFlow extends Region {
+public class VirtualFlow<T extends IndexedCell> extends Region {
     /**
      * There are two main complicating factors in the implementation of the
      * VirtualFlow, which are made even more complicated due to the performance
@@ -264,9 +264,9 @@ public class VirtualFlow extends Region {
      * IndexedCell. The VirtualFlow attempts to reuse cells whenever possible
      * and only creates the minimal number of cells necessary.
      */
-    private Callback<VirtualFlow, ? extends IndexedCell> createCell;
-    public Callback<VirtualFlow, ? extends IndexedCell> getCreateCell() { return createCell; }
-    protected void setCreateCell(Callback<VirtualFlow, ? extends IndexedCell> cc) {
+    private Callback<VirtualFlow, T> createCell;
+    public Callback<VirtualFlow, T> getCreateCell() { return createCell; }
+    protected void setCreateCell(Callback<VirtualFlow, T> cc) {
         this.createCell = cc;
 
         if (createCell != null) {
@@ -365,7 +365,7 @@ public class VirtualFlow extends Region {
      * <p>
      * This is package private ONLY FOR TESTING
      */
-    final ArrayLinkedList<IndexedCell> cells = new ArrayLinkedList<IndexedCell>();
+    final ArrayLinkedList<T> cells = new ArrayLinkedList<T>();
 
     /**
      * A structure containing cells that can be reused later. These are cells
@@ -374,14 +374,14 @@ public class VirtualFlow extends Region {
      * <p>
      * This is package private ONLY FOR TESTING
      */
-    final ArrayLinkedList<IndexedCell> pile = new ArrayLinkedList<IndexedCell>();
+    final ArrayLinkedList<T> pile = new ArrayLinkedList<T>();
 
     /**
      * A special cell used to accumulate bounds, such that we reduce object
      * churn. This cell must be recreated whenever the cell factory function
      * changes. This has package access ONLY for testing.
      */
-    IndexedCell accumCell;
+    T accumCell;
 
     /**
      * This group is used for holding the 'accumCell'. 'accumCell' must
@@ -829,7 +829,7 @@ public class VirtualFlow extends Region {
         }
         cell = null;
         
-        IndexedCell firstCell = getFirstVisibleCell();
+        T firstCell = getFirstVisibleCell();
 
         // If no cells need layout, we check other criteria to see if this 
         // layout call is even necessary. If it is found that no layout is 
@@ -1018,7 +1018,7 @@ public class VirtualFlow extends Region {
         // offset is our indication of whether we can lay out additional
         // cells. If the offset is ever < 0, except in the case of the very
         // first cell, then we must quit.
-        IndexedCell cell = null;
+        T cell = null;
 
         while (index >= 0 && (offset > 0 || first)) {
             cell = getAvailableCell(index);
@@ -1076,7 +1076,7 @@ public class VirtualFlow extends Region {
         // off the flow, so we will continue to create and add cells. When the
         // offset becomes greater than the width/height of the flow, then we
         // know we cannot add any more cells.
-        IndexedCell startCell = cells.getLast();
+        T startCell = cells.getLast();
         double offset = getCellPosition(startCell) + getCellLength(startCell);
         int index = startCell.getIndex() + 1;
         boolean filledWithNonEmpty = index <= cellCount;
@@ -1086,7 +1086,7 @@ public class VirtualFlow extends Region {
                 if (offset < viewportLength) filledWithNonEmpty = false;
                 if (! fillEmptyCells) return filledWithNonEmpty;
             }
-            IndexedCell cell = getAvailableCell(index);
+            T cell = getAvailableCell(index);
             setCellIndex(cell, index);
             resizeCellSize(cell); // resize happens after config!
             cells.addLast(cell);
@@ -1107,9 +1107,9 @@ public class VirtualFlow extends Region {
         // one at a time, until either the very last non-empty cells is aligned
         // with the bottom OR we have laid out cell index #0 at the first
         // position.
-        IndexedCell firstCell = cells.getFirst();
+        T firstCell = cells.getFirst();
         index = firstCell.getIndex();
-        IndexedCell lastNonEmptyCell = getLastVisibleCell();
+        T lastNonEmptyCell = getLastVisibleCell();
         double start = getCellPosition(firstCell);
         double end = getCellPosition(lastNonEmptyCell) + getCellLength(lastNonEmptyCell);
         if ((index != 0 || (index == 0 && start < 0)) && fillEmptyCells &&
@@ -1119,7 +1119,7 @@ public class VirtualFlow extends Region {
             double distance = viewportLength - end;
             while (prospectiveEnd < viewportLength && index != 0 && (-start) < distance) {
                 index--;
-                IndexedCell cell = getAvailableCell(index);
+                T cell = getAvailableCell(index);
                 setCellIndex(cell, index);
                 resizeCellSize(cell); // resize must be after config
                 cells.addFirst(cell);
@@ -1140,7 +1140,7 @@ public class VirtualFlow extends Region {
             }
             // Move things
             for (int i = 0; i < cells.size(); i++) {
-                IndexedCell cell = cells.get(i);
+                T cell = cells.get(i);
                 positionCell(cell, getCellPosition(cell) + delta);
             }
 
@@ -1251,7 +1251,7 @@ public class VirtualFlow extends Region {
                     // exactly matches the number of cells laid out. In this case,
                     // we need to check the last cell's layout position + length
                     // to determine if we need the length bar
-                    IndexedCell lastCell = cells.getLast();
+                    T lastCell = cells.getLast();
                     lengthBar.setVisible((getCellPosition(lastCell) + getCellLength(lastCell)) > viewportLength);
                 }
                 
@@ -1279,7 +1279,7 @@ public class VirtualFlow extends Region {
         if (numCellsVisibleOnScreen == -1) {
             numCellsVisibleOnScreen = 0;
             for (int i = 0, max = cells.size(); i < max; i++) {
-                IndexedCell cell = cells.get(i);
+                T cell = cells.get(i);
                 if (cell != null && ! cell.isEmpty()) {
                     sumCellLength += (isVertical ? cell.getHeight() : cell.getWidth());
                     if (sumCellLength > flowLength) {
@@ -1399,7 +1399,7 @@ public class VirtualFlow extends Region {
 
     private void cull() {
         for (int i = cells.size() - 1; i >= 0; i--) {
-            IndexedCell cell = cells.get(i);
+            T cell = cells.get(i);
             double cellSize = getCellLength(cell);
             double cellStart = getCellPosition(cell);
             double cellEnd = cellStart + cellSize;
@@ -1421,18 +1421,18 @@ public class VirtualFlow extends Region {
      * empty cell will be returned. The returned value should not be stored for
      * any reason.
      */
-    IndexedCell getCell(int index) {
+    T getCell(int index) {
         // If there are cells, then we will attempt to get an existing cell
         if (! cells.isEmpty()) {
             // First check the cells that have already been created and are
             // in use. If this call returns a value, then we can use it
-            IndexedCell cell = getVisibleCell(index);
+            T cell = getVisibleCell(index);
             if (cell != null) return cell;
         }
 
         // check the pile
         for (int i = 0; i < pile.size(); i++) {
-            IndexedCell cell = pile.get(i);
+            T cell = pile.get(i);
             if (cell != null && cell.getIndex() == index) {
                 // Note that we don't remove from the pile: if we do it leads
                 // to a severe performance decrease. This seems to be OK, as
@@ -1451,7 +1451,7 @@ public class VirtualFlow extends Region {
         }
 
         // We need to use the accumCell and return that
-        Callback<VirtualFlow,? extends IndexedCell> createCell = getCreateCell();
+        Callback<VirtualFlow,T> createCell = getCreateCell();
         if (accumCell == null && createCell != null) {
             accumCell = createCell.call(this);
             accumCell.getProperties().put(NEW_CELL, null);
@@ -1465,7 +1465,7 @@ public class VirtualFlow extends Region {
     /**
      * After using the accum cell, it needs to be released!
      */
-    private void releaseCell(IndexedCell cell) {
+    private void releaseCell(T cell) {
         if (accumCell != null && cell == accumCell) {
             accumCell.updateIndex(-1);
         }
@@ -1482,7 +1482,7 @@ public class VirtualFlow extends Region {
     double getCellLength(int index) {
         if (fixedCellLength > 0) return fixedCellLength;
         
-        IndexedCell cell = getCell(index);
+        T cell = getCell(index);
         double length = getCellLength(cell);
         releaseCell(cell);
         return length;
@@ -1491,7 +1491,7 @@ public class VirtualFlow extends Region {
     /**
      */
     double getCellBreadth(int index) {
-        IndexedCell cell = getCell(index);
+        T cell = getCell(index);
         double b = getCellBreadth(cell);
         releaseCell(cell);
         return b;
@@ -1500,7 +1500,7 @@ public class VirtualFlow extends Region {
     /**
      * Gets the length of a specific cell
      */
-    private double getCellLength(IndexedCell cell) {
+    private double getCellLength(T cell) {
         if (cell == null) return 0;
         if (fixedCellLength > 0) return fixedCellLength;
 
@@ -1509,7 +1509,7 @@ public class VirtualFlow extends Region {
             : cell.getLayoutBounds().getWidth();
     }
 
-//    private double getCellPrefLength(IndexedCell cell) {
+//    private double getCellPrefLength(T cell) {
 //        return isVertical() ?
 //            cell.prefHeight(-1)
 //            : cell.prefWidth(-1);
@@ -1527,7 +1527,7 @@ public class VirtualFlow extends Region {
     /**
      * Gets the layout position of the cell along the length axis
      */
-    private double getCellPosition(IndexedCell cell) {
+    private double getCellPosition(T cell) {
         if (cell == null) return 0;
 
         return isVertical() ?
@@ -1535,7 +1535,7 @@ public class VirtualFlow extends Region {
             : cell.getLayoutX();
     }
 
-    private void positionCell(IndexedCell cell, double position) {
+    private void positionCell(T cell, double position) {
         if (isVertical()) {
             cell.setLayoutX(0);
             cell.setLayoutY(snapSize(position));
@@ -1545,7 +1545,7 @@ public class VirtualFlow extends Region {
         }
     }
 
-    private void resizeCellSize(IndexedCell cell) {
+    private void resizeCellSize(T cell) {
         if (cell == null) return;
         if (isVertical())
             cell.resize(cell.getWidth(), cell.prefHeight(-1));
@@ -1553,7 +1553,7 @@ public class VirtualFlow extends Region {
             cell.resize(cell.prefWidth(-1), cell.getHeight());
     }
 
-    private void setCellIndex(IndexedCell cell, int index) {
+    private void setCellIndex(T cell, int index) {
         if (cell == null) return;
 
         cell.updateIndex(index);
@@ -1581,13 +1581,13 @@ public class VirtualFlow extends Region {
      * cells from the pile where possible, and will create new cells when
      * necessary.
      */
-    private IndexedCell getAvailableCell(int prefIndex) {
-        IndexedCell cell = null;
+    private T getAvailableCell(int prefIndex) {
+        T cell = null;
         
         // Fix for RT-12822. We try to retrieve the cell from the pile rather
         // than just grab a random cell from the pile (or create another cell).
         for (int i = 0, max = pile.size(); i < max; i++) {
-            IndexedCell _cell = pile.get(i);
+            T _cell = pile.get(i);
             if (_cell != null && _cell.getIndex() == prefIndex) {
                 cell = _cell;
                 pile.remove(i);
@@ -1623,7 +1623,7 @@ public class VirtualFlow extends Region {
      * Puts the given cell onto the pile. This is called whenever a cell has
      * fallen off the flow's start.
      */
-    private void addToPile(IndexedCell cell) {
+    private void addToPile(T cell) {
         cell.setVisible(false);
         cell.setManaged(false);
         pile.addLast(cell);
@@ -1636,16 +1636,16 @@ public class VirtualFlow extends Region {
      * have been created and are in use vs. those that are in the pile or
      * not created.
      */
-    public IndexedCell getVisibleCell(int index) {
+    public T getVisibleCell(int index) {
         if (cells.isEmpty()) return null;
 
         // check the last index
-        IndexedCell lastCell = cells.getLast();
+        T lastCell = cells.getLast();
         int lastIndex = lastCell.getIndex();
         if (index == lastIndex) return lastCell;
 
         // check the first index
-        IndexedCell firstCell = cells.getFirst();
+        T firstCell = cells.getFirst();
         int firstIndex = firstCell.getIndex();
         if (index == firstIndex) return firstCell;
 
@@ -1663,10 +1663,10 @@ public class VirtualFlow extends Region {
      * partially or completely visible. This function may return null if there
      * are no cells, or if the viewport length is 0.
      */
-    public IndexedCell getLastVisibleCell() {
+    public T getLastVisibleCell() {
         if (cells.isEmpty() || viewportLength <= 0) return null;
 
-        IndexedCell cell;
+        T cell;
         for (int i = cells.size() - 1; i >= 0; i--) {
             cell = cells.get(i);
             if (! cell.isEmpty()) {
@@ -1682,16 +1682,16 @@ public class VirtualFlow extends Region {
      * completely visible. This really only ever returns null if there are no
      * cells or the viewport length is 0.
      */
-    public IndexedCell getFirstVisibleCell() {
+    public T getFirstVisibleCell() {
         if (cells.isEmpty() || viewportLength <= 0) return null;
-        IndexedCell cell = cells.getFirst();
+        T cell = cells.getFirst();
         return cell.isEmpty() ? null : cell;
     }
 
-    public IndexedCell getLastVisibleCellWithinViewPort() {
+    public T getLastVisibleCellWithinViewPort() {
         if (cells.isEmpty() || viewportLength <= 0) return null;
 
-        IndexedCell cell;
+        T cell;
         for (int i = cells.size() - 1; i >= 0; i--) {
             cell = cells.get(i);
             if (cell.isEmpty()) continue;
@@ -1704,11 +1704,11 @@ public class VirtualFlow extends Region {
         return null;
     }
 
-    public IndexedCell getFirstVisibleCellWithinViewPort() {
+    public T getFirstVisibleCellWithinViewPort() {
         if (cells.isEmpty() || viewportLength <= 0) return null;
 
         final boolean isVertical = isVertical();
-        IndexedCell cell;
+        T cell;
         for (int i = 0; i < cells.size(); i++) {
             cell = cells.get(i);
             if (cell.isEmpty()) continue;
@@ -1728,7 +1728,7 @@ public class VirtualFlow extends Region {
      * will be positioned at the start of the viewport. The given cell must
      * already be "live". This is bad public API!
      */
-    public void showAsFirst(IndexedCell firstCell) {
+    public void showAsFirst(T firstCell) {
         if (firstCell != null) {
             adjustPixels(getCellPosition(firstCell));
         }
@@ -1739,7 +1739,7 @@ public class VirtualFlow extends Region {
      * will be positioned at the end of the viewport. The given cell must
      * already be "live". This is bad public API!
      */
-    public void showAsLast(IndexedCell lastCell) {
+    public void showAsLast(T lastCell) {
         if (lastCell != null) {
             adjustPixels(getCellPosition(lastCell) + getCellLength(lastCell) - viewportLength);
         }
@@ -1749,7 +1749,7 @@ public class VirtualFlow extends Region {
      * Adjusts the cells such that the selected cell will be fully visible in
      * the viewport (but only just).
      */
-    public void show(IndexedCell cell) {
+    public void show(T cell) {
         if (cell != null) {
             double start = getCellPosition(cell);
             double length = getCellLength(cell);
@@ -1763,12 +1763,12 @@ public class VirtualFlow extends Region {
     }
 
     public void show(int index) {
-        IndexedCell cell = getVisibleCell(index);
+        T cell = getVisibleCell(index);
         if (cell != null) {
             show(cell);
         } else {
             // See if the previous index is a visible cell
-            IndexedCell prev = getVisibleCell(index - 1);
+            T prev = getVisibleCell(index - 1);
             if (prev != null) {
                 // Need to add a new cell and then we can show it
 //                layingOut = true;
@@ -1784,7 +1784,7 @@ public class VirtualFlow extends Region {
                 return;
             }
             // See if the next index is a visible cell
-            IndexedCell next = getVisibleCell(index + 1);
+            T next = getVisibleCell(index + 1);
             if (next != null) {
 //                layingOut = true;
                 cell = getAvailableCell(index);
@@ -1874,12 +1874,12 @@ public class VirtualFlow extends Region {
         int cellsSize = cells.size();
         if (cellsSize > 0) {
             for (int i = 0; i < cellsSize; i++) {
-                IndexedCell cell = cells.get(i);
+                T cell = cells.get(i);
                 positionCell(cell, getCellPosition(cell) - delta);
             }
 
             // Add any necessary leading cells
-            IndexedCell firstCell = cells.getFirst();
+            T firstCell = cells.getFirst();
             int firstIndex = firstCell.getIndex();
             double prevIndexSize = getCellLength(firstIndex - 1);
             addLeadingCells(firstIndex - 1, getCellPosition(firstCell) - prevIndexSize);
@@ -1893,14 +1893,14 @@ public class VirtualFlow extends Region {
                 // Reached the end, but not enough cells to fill up to
                 // the end. So, remove the trailing empty space, and translate
                 // the cells down
-                IndexedCell lastCell = getLastVisibleCell();
+                T lastCell = getLastVisibleCell();
                 double lastCellSize = getCellLength(lastCell);
                 double cellEnd = getCellPosition(lastCell) + lastCellSize;
                 if (cellEnd < viewportLength) {
                     // Reposition the nodes
                     double emptySize = viewportLength - cellEnd;
                     for (int i = 0; i < cells.size(); i++) {
-                        IndexedCell cell = cells.get(i);
+                        T cell = cells.get(i);
                         positionCell(cell, getCellPosition(cell) + emptySize);
                     }
                     adjustPosition(1.0f);

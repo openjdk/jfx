@@ -341,7 +341,7 @@ public abstract class TableViewSkinBase<S, C extends Control, B extends Behavior
      * if this is a horizontal container, then the scrolling will be to the right.
      */
     public int onScrollPageDown() {
-        IndexedCell lastVisibleCell = flow.getLastVisibleCellWithinViewPort();
+        I lastVisibleCell = flow.getLastVisibleCellWithinViewPort();
         if (lastVisibleCell == null) return -1;
         
         int lastVisibleCellIndex = lastVisibleCell.getIndex();
@@ -368,7 +368,7 @@ public abstract class TableViewSkinBase<S, C extends Control, B extends Behavior
      * if this is a horizontal container, then the scrolling will be to the left.
      */
     public int onScrollPageUp() {
-        IndexedCell firstVisibleCell = flow.getFirstVisibleCellWithinViewPort();
+        I firstVisibleCell = flow.getFirstVisibleCellWithinViewPort();
         if (firstVisibleCell == null) return -1;
         
         int firstVisibleCellIndex = firstVisibleCell.getIndex();

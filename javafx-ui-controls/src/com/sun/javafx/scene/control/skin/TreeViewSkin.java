@@ -52,8 +52,8 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeViewB
         // init the VirtualFlow
         flow.setPannable(false);
         flow.setFocusTraversable(getSkinnable().isFocusTraversable());
-        flow.setCreateCell(new Callback<VirtualFlow, TreeCell>() {
-            @Override public TreeCell call(VirtualFlow flow) {
+        flow.setCreateCell(new Callback<VirtualFlow, TreeCell<T>>() {
+            @Override public TreeCell<T> call(VirtualFlow flow) {
                 return TreeViewSkin.this.createCell();
             }
         });
@@ -362,7 +362,7 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeViewB
      * if this is a horizontal container, then the scrolling will be to the right.
      */
     public int onScrollPageDown(int anchor) {
-        IndexedCell lastVisibleCell = flow.getLastVisibleCellWithinViewPort();
+        TreeCell<T> lastVisibleCell = flow.getLastVisibleCellWithinViewPort();
         if (lastVisibleCell == null) return -1;
 
         int newSelectionIndex = -1;
@@ -390,7 +390,7 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeViewB
      * if this is a horizontal container, then the scrolling will be to the left.
      */
     public int onScrollPageUp(int anchor) {
-        IndexedCell firstVisibleCell = flow.getFirstVisibleCellWithinViewPort();
+        TreeCell<T> firstVisibleCell = flow.getFirstVisibleCellWithinViewPort();
         if (firstVisibleCell == null) return -1;
 
         int newSelectionIndex = -1;

@@ -49,7 +49,7 @@ public abstract class VirtualContainerBase<C extends Control, B extends Behavior
     public VirtualContainerBase(final C control, B behavior) {
         super(control, behavior);
         
-        flow = new VirtualFlow();
+        flow = new VirtualFlow<I>();
         handleControlProperties(control);
 
         control.getProperties().addListener(new MapChangeListener<Object, Object>() {
@@ -66,7 +66,7 @@ public abstract class VirtualContainerBase<C extends Control, B extends Behavior
      * The virtualized container which handles the layout and scrolling of
      * all the cells.
      */
-    protected final VirtualFlow flow;
+    protected final VirtualFlow<I> flow;
 
     /**
      * Returns a Cell available to be used in the virtual flow. This means you

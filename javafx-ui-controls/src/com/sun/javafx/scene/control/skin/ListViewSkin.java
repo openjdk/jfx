@@ -58,8 +58,8 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListViewB
         flow.setPannable(false);
         flow.setVertical(getSkinnable().getOrientation() == Orientation.VERTICAL);
         flow.setFocusTraversable(getSkinnable().isFocusTraversable());
-        flow.setCreateCell(new Callback<VirtualFlow, ListCell>() {
-            @Override public ListCell call(VirtualFlow flow) {
+        flow.setCreateCell(new Callback<VirtualFlow, ListCell<T>>() {
+            @Override public ListCell<T> call(VirtualFlow flow) {
                 return ListViewSkin.this.createCell();
             }
         });
@@ -329,7 +329,7 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListViewB
         flow.show(pos);
 
         // Fix for RT-11299
-        IndexedCell cell = flow.getLastVisibleCell();
+        ListCell<T> cell = flow.getLastVisibleCell();
         if (cell == null || cell.getIndex() < pos) {
             flow.setPosition(pos / (double) getItemCount());
         }
@@ -355,7 +355,7 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListViewB
      * if this is a horizontal container, then the scrolling will be to the right.
      */
     private int onScrollPageDown(int anchor) {
-        IndexedCell lastVisibleCell = flow.getLastVisibleCellWithinViewPort();
+        ListCell<T> lastVisibleCell = flow.getLastVisibleCellWithinViewPort();
         if (lastVisibleCell == null) return -1;
 
         int newSelectionIndex = -1;
@@ -383,7 +383,7 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListViewB
      * if this is a horizontal container, then the scrolling will be to the left.
      */
     private int onScrollPageUp(int anchor) {
-        IndexedCell firstVisibleCell = flow.getFirstVisibleCellWithinViewPort();
+        ListCell<T> firstVisibleCell = flow.getFirstVisibleCellWithinViewPort();
         if (firstVisibleCell == null) return -1;
 
         int newSelectionIndex = -1;
