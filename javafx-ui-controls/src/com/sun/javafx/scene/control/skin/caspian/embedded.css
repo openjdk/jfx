@@ -249,16 +249,16 @@
  *
  ******************************************************************************/
 
-.choice-box:external-focus {
-    -fx-border-color: red; 
-    -fx-focus-color: red;
-    -fx-opacity: 0.8;
+.choice-box:focused:external-focus {
+    -fx-background-color: -fx-focus-color, -fx-outer-border, -fx-inner-border, -fx-body-color;
 }
-.choice-box:internal-focus {
-    -fx-border-color: null; 
-    -fx-focus-color: #0093ff;
-    -fx-opacity: 1.0;
+.choice-box:focused:showing {
+    -fx-background-color: -fx-shadow-highlight-color, -fx-outer-border, -fx-inner-border, -fx-body-color;
 }
+.choice-box:focused:internal-focus {
+    -fx-background-color: -fx-shadow-highlight-color, -fx-outer-border, -fx-inner-border, -fx-body-color;
+}
+
 
 .slider:external-focus {
     -fx-border-color: red; 
