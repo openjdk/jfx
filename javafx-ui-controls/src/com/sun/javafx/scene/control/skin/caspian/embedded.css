@@ -260,24 +260,28 @@
 }
 
 
-.slider:external-focus {
-    -fx-border-color: red; 
-    -xfx-focus-color: red;
-    -fx-opacity: 0.8;
+.slider {
+    -fx-background-color: -fx-shadow-highlight-color, -fx-text-box-border, -fx-control-inner-background;
+    -fx-background-color: transparent;
+    -fx-background-insets: 0, 1, 2;
+    -fx-background-radius: 3, 2, 2;
+    -fx-padding: 3 5 5 5;
 }
-.slider:internal-focus {
-    -fx-border-color: null; 
-    -fx-focus-color: #0093ff;
-    -fx-opacity: 1.0;
+.slider:focused:external-focus {
+    -fx-background-color: -fx-focus-color, -fx-text-box-border, -fx-control-inner-background;
+    -fx-background-insets: -0.4, 1, 2;
+    -fx-background-radius: 3.4, 2, 2;
+    -fx-prompt-text-fill: transparent;
+
 }
-.slider:external-focus > .thumb {
-    -xfx-border-color: red; 
-    -fx-focus-color: red;
+.slider:focused:internal-focus {
+    -fx-background-color: transparent;
 }
-.slider:internal-focus > .thumb {
-    -xfx-border-color: null; 
-    -fx-focus-color: #0093ff;
+.slider:focused:external-focus > .thumb {
+    -fx-focus-color: transparent;
 }
+
+
 
 .text-field:external-focus {
     -fx-border-color: red; 
