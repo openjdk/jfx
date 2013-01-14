@@ -186,21 +186,22 @@
                   <children>
                     <HBox alignment="TOP_LEFT" maxHeight="-Infinity" prefHeight="-1.0" prefWidth="-1.0" spacing="3.0" style="">
                       <children>
-                        <TextField prefWidth="100.0" promptText="Textfield" text="Sample" />
-                        <TextArea prefHeight="50.0" prefWidth="100.0" text="Sample" wrapText="true" />
-                        <Button mnemonicParsing="false" text="Button" />
+                        <Button mnemonicParsing="false" prefWidth="100.0" text="Sample" />
+                        <TextField prefWidth="80.0" promptText="Textfield" text="Sample" />
+                        <PasswordField prefWidth="80.0" promptText="Sample" text="" />
+                        <TextArea prefHeight="50.0" prefWidth="80.0" text="Sample" wrapText="true" />
                         <ToggleButton mnemonicParsing="false" prefWidth="90.0" selected="true" text="Toggle">
                           <toggleGroup>
                             <ToggleGroup />
                           </toggleGroup>
                         </ToggleButton>
-                        <MenuButton mnemonicParsing="false" prefWidth="100.0" text="MenuButton">
+                        <MenuButton maxWidth="-1.0" mnemonicParsing="false" prefWidth="90.0" text="MenuButton">
                           <items>
                             <MenuItem mnemonicParsing="false" text="Sample MenuButton Item 1" />
                             <MenuItem mnemonicParsing="false" text="Sample MenuButton Item 2" />
                           </items>
                         </MenuButton>
-                        <SplitMenuButton mnemonicParsing="false" prefWidth="100.0" text="SplitMenuButton">
+                        <SplitMenuButton mnemonicParsing="false" prefWidth="90.0" text="SplitMenuButton">
                           <items>
                             <MenuItem mnemonicParsing="false" text="Sample SplitMenuButton Item 1" />
                             <MenuItem mnemonicParsing="false" text="Sample SplitMenuButton Item 2" />
@@ -231,11 +232,10 @@
                           </items>
                         </ComboBox>
                         <ColorPicker />
-                        <PasswordField prefWidth="100.0" promptText="Password" text="password" />
                       </children>
                     </HBox>
-                    <Button mnemonicParsing="false" prefWidth="100.0" text="Button" />
-                    <PasswordField maxWidth="100.0" prefWidth="100.0" text="Password" />
+                    <TextField maxWidth="100.0" prefWidth="100.0" text="Sample" />
+                    <PasswordField maxWidth="100.0" prefWidth="100.0" promptText="Sample" text="" />
                     <TextArea maxWidth="100.0" prefHeight="50.0" prefRowCount="10" prefWidth="100.0" text="Sample" wrapText="true" />
                     <MenuButton maxWidth="100.0" mnemonicParsing="false" prefWidth="100.0" text="Sample">
                       <items>
@@ -293,7 +293,7 @@
                     <Insets top="18.0" />
                   </StackPane.margin>
                 </Region>
-                <Region maxHeight="-1.0" maxWidth="1.0" prefHeight="-1.0" prefWidth="-1.0" style="-fx-background-color: red;" visible="true">
+                <Region maxHeight="-1.0" maxWidth="1.0" opacity="0.25" prefHeight="-1.0" prefWidth="-1.0" style="-fx-background-color: red;" visible="true">
                   <StackPane.margin>
                     <Insets left="9.0" />
                   </StackPane.margin>

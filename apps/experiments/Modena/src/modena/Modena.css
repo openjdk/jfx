@@ -728,7 +728,7 @@ is being used to size a border should also be in pixels.
     -fx-background-color: -fx-inner-border, -fx-body-color; 
     -fx-background-insets: 1 0 1 1, 2 1 2 2;
     -fx-background-radius: 4 0 0 4, 3 0 0 3;
-    -fx-padding: 0.333333em 0.833333em 0.416667em 0.833333em; /* 4 10 5 10 */
+    -fx-padding: 0.333333em 0.667em 0.416667em 0.667em; /* 4 8 5 8 */
 }
 .split-menu-button > .arrow-button {
     -fx-background-color: -fx-inner-border, -fx-body-color; 
@@ -1075,7 +1075,7 @@ is being used to size a border should also be in pixels.
     -fx-background-insets: 0, 1;
     -fx-background-radius: 4, 3;
     -fx-cursor: text;
-    -fx-padding: 0.416667em 0.666667em 0.416667em 0.666667em; /* 5 8 5 8 */
+    -fx-padding: 0.416667em 0.583em 0.416667em 0.583em; /* 5 7 5 7 */
 }
 .text-input:focused {
     -fx-highlight-fill: -fx-accent;
@@ -1112,7 +1112,7 @@ is being used to size a border should also be in pixels.
     -fx-background-radius: 0 0 3 0;
 }
 .text-area .content {
-    -fx-padding: 0.416667em 0.666667em 0.416667em 0.666667em; /* 5 8 5 8 */
+    -fx-padding: 0.333em 0.583em 0.333em 0.583em; /* 4 7 4 7 */
     -fx-cursor: text;
     -fx-background-color: 
         linear-gradient(from 0px 0px to 0px 4px, derive(-fx-control-inner-background, -8%), -fx-control-inner-background);
