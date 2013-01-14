@@ -3,14 +3,15 @@
 <?import java.lang.*?>
 <?import java.util.*?>
 <?import javafx.collections.*?>
-<?import javafx.geometry.*?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 <?import javafx.scene.paint.*?>
 
-<AnchorPane id="AnchorPane" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="691.0" prefWidth="927.0" xmlns:fx="http://javafx.com/fxml">
+<AnchorPane id="AnchorPane" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="800.0" prefWidth="800.0" xmlns:fx="http://javafx.com/fxml">
   <children>
     <Button layoutX="40.0" layoutY="41.0" mnemonicParsing="false" text="Button" />
+    <CheckBox layoutX="561.0" layoutY="400.0" mnemonicParsing="false" text="CheckBox" />
+    <CheckBox layoutX="561.0" layoutY="367.0" mnemonicParsing="false" selected="true" text="CheckBox" />
     <ComboBox layoutX="234.0" layoutY="41.0" prefWidth="160.0">
       <items>
         <FXCollections fx:factory="observableArrayList">
@@ -22,10 +23,35 @@
     </ComboBox>
     <Hyperlink layoutX="134.0" layoutY="40.0" text="Hyperlink" />
     <Label layoutX="242.0" layoutY="153.0" text="A label" />
+    <ListView layoutX="560.0" layoutY="94.0" prefHeight="216.0" prefWidth="200.0" />
+    <MenuBar layoutX="560.0" layoutY="40.0" prefWidth="200.0">
+      <menus>
+        <Menu mnemonicParsing="false" text="File">
+          <items>
+            <MenuItem mnemonicParsing="false" text="Close" />
+          </items>
+        </Menu>
+        <Menu mnemonicParsing="false" text="Edit">
+          <items>
+            <MenuItem mnemonicParsing="false" text="Delete" />
+          </items>
+        </Menu>
+        <Menu mnemonicParsing="false" text="Help">
+          <items>
+            <MenuItem mnemonicParsing="false" text="About" />
+          </items>
+        </Menu>
+      </menus>
+    </MenuBar>
     <PasswordField layoutX="240.0" layoutY="243.0" prefWidth="138.0" promptText="Password" />
-    <ProgressBar layoutX="291.0" layoutY="291.0" prefWidth="200.0" progress="0.3" />
-    <ProgressIndicator layoutX="435.0" layoutY="45.0" prefHeight="59.0" prefWidth="56.0" progress="0.58" />
-    <ScrollBar layoutX="41.0" layoutY="329.0" prefWidth="493.0" />
+    <ProgressBar layoutX="241.0" layoutY="291.0" prefWidth="200.0" progress="0.3" />
+    <ProgressIndicator layoutX="445.0" layoutY="48.0" prefHeight="59.0" prefWidth="56.0" progress="0.58" />
+    <RadioButton layoutX="587.0" layoutY="121.0" mnemonicParsing="false" text="RadioButton 1">
+      <toggleGroup>
+        <ToggleGroup fx:id="toggle2" />
+      </toggleGroup>
+    </RadioButton>
+    <ScrollBar layoutX="41.0" layoutY="329.0" prefWidth="719.0" />
     <Separator layoutX="41.0" layoutY="129.0" prefWidth="490.0" />
     <Separator layoutX="217.0" layoutY="151.0" orientation="VERTICAL" prefHeight="158.0" />
     <SplitMenuButton layoutX="40.0" layoutY="83.0" mnemonicParsing="false" prefWidth="153.0" text="SplitMenuButton">
@@ -34,19 +60,38 @@
         <MenuItem mnemonicParsing="false" text="Action 2" />
       </items>
     </SplitMenuButton>
-    <TextField layoutX="40.0" layoutY="149.0" prefWidth="160.0" promptText="Textfield" text="Textfield" />
-    <TextArea layoutX="40.0" layoutY="180.0" prefHeight="130.0" prefWidth="160.0" promptText="Text Area" text="Text Area with some text spanning over a few lines." wrapText="true" />
-    <ToggleButton layoutX="241.0" layoutY="196.0" mnemonicParsing="false" prefWidth="90.0" selected="true" text="Toggle">
+    <TextField layoutX="39.0" layoutY="149.0" prefWidth="160.0" promptText="Textfield" />
+    <TextArea layoutX="39.0" layoutY="180.0" prefHeight="130.0" prefWidth="160.0" promptText="Text Area" wrapText="true" />
+    <ToggleButton layoutX="341.0" layoutY="196.0" mnemonicParsing="false" prefWidth="90.0" selected="true" text="Toggle">
       <toggleGroup>
         <ToggleGroup fx:id="toggle1" />
       </toggleGroup>
     </ToggleButton>
-    <ToggleButton layoutX="341.0" layoutY="196.0" mnemonicParsing="false" prefWidth="90.0" selected="false" text="Toggle" toggleGroup="$toggle1" />
-    <ScrollPane layoutX="560.0" layoutY="439.0" prefHeight="194.0" prefWidth="336.9999000000025">
+    <RadioButton layoutX="587.0" layoutY="146.0" mnemonicParsing="false" text="RadioButton 2" toggleGroup="$toggle2" />
+    <ScrollPane layoutX="560.0" layoutY="439.0" prefHeight="330.0" prefWidth="200.0">
       <content>
         <AnchorPane id="Content" minHeight="0.0" minWidth="0.0" prefHeight="400.0" prefWidth="400.0" />
       </content>
     </ScrollPane>
+    <TabPane layoutX="39.0" layoutY="561.0" prefHeight="158.0" prefWidth="454.0" tabClosingPolicy="UNAVAILABLE">
+      <tabs>
+        <Tab text="Tab 1">
+          <content>
+            <AnchorPane id="Content" minHeight="0.0" minWidth="0.0" prefHeight="180.0" prefWidth="200.0" />
+          </content>
+        </Tab>
+        <Tab text="Tab 2">
+          <content>
+            <AnchorPane id="Content" minHeight="0.0" minWidth="0.0" prefHeight="180.0" prefWidth="200.0" />
+          </content>
+        </Tab>
+        <Tab text="Tab 3">
+          <content>
+            <AnchorPane id="Content" minHeight="0.0" minWidth="0.0" prefHeight="180.0" prefWidth="200.0" />
+          </content>
+        </Tab>
+      </tabs>
+    </TabPane>
     <ChoiceBox layoutX="234.0" layoutY="85.0" prefWidth="160.0">
       <items>
         <FXCollections fx:factory="observableArrayList">
@@ -56,28 +101,21 @@
         </FXCollections>
       </items>
     </ChoiceBox>
-    <Slider layoutX="304.0" layoutY="154.0" prefWidth="230.0" />
-    <Slider layoutX="502.0" layoutY="361.0" orientation="VERTICAL" prefHeight="291.0" showTickMarks="true" />
-    <ToggleButton layoutX="441.0" layoutY="196.0" mnemonicParsing="false" prefWidth="90.0" selected="false" text="Toggle">
-      <toggleGroup>
-        <ToggleGroup />
-      </toggleGroup>
-    </ToggleButton>
-    <ComboBox editable="true" layoutX="395.0" layoutY="243.0" prefWidth="136.0001220703125" promptText="Choose">
+    <ToolBar layoutX="39.0" layoutY="738.0" prefWidth="200.0">
       <items>
-        <FXCollections fx:factory="observableArrayList">
-          <String fx:value="Item 1" />
-          <String fx:value="Item 2" />
-          <String fx:value="Item 3" />
-        </FXCollections>
+        <Button mnemonicParsing="false" text="New" />
+        <Button mnemonicParsing="false" text="Delete" />
+        <Button mnemonicParsing="false" text="Save" />
+        <Button mnemonicParsing="false" text="Exit" />
       </items>
-    </ComboBox>
-    <ProgressIndicator layoutX="571.0" layoutY="367.0" prefHeight="59.0" prefWidth="56.0" progress="-1.0" />
-    <SplitPane dividerPositions="0.5086505190311419" focusTraversable="true" layoutX="39.0" layoutY="361.0" orientation="VERTICAL" prefHeight="291.0" prefWidth="447.0">
+    </ToolBar>
+    <Slider layoutX="304.0" layoutY="154.0" prefWidth="230.0" />
+    <Slider layoutX="518.0" layoutY="556.0" orientation="VERTICAL" prefHeight="216.0" showTickMarks="true" />
+    <SplitPane dividerPositions="0.4180327868852459" focusTraversable="true" layoutX="39.0" layoutY="364.0" prefHeight="172.0" prefWidth="490.0">
       <items>
-        <SplitPane dividerPositions="0.49435665914221216" focusTraversable="true" prefHeight="172.0" prefWidth="490.0">
-          <items>
-            <TreeView prefHeight="130.0" prefWidth="179.0" showRoot="false">
+        <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="160.0" prefWidth="100.0">
+          <children>
+            <TreeView prefHeight="158.0" prefWidth="56.0" showRoot="false" AnchorPane.bottomAnchor="20.0" AnchorPane.leftAnchor="20.0" AnchorPane.rightAnchor="20.0" AnchorPane.topAnchor="20.0">
               <root>
                 <TreeItem value="Family">
                   <children>
@@ -112,80 +150,33 @@
                 </TreeItem>
               </root>
             </TreeView>
-            <TableView prefHeight="130.0" prefWidth="241.0">
+          </children>
+        </AnchorPane>
+        <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="160.0" prefWidth="100.0">
+          <children>
+            <TableView prefHeight="158.0" prefWidth="136.0" AnchorPane.bottomAnchor="20.0" AnchorPane.leftAnchor="20.0" AnchorPane.rightAnchor="20.0" AnchorPane.topAnchor="20.0">
               <columns>
                 <TableColumn prefWidth="75.0" text="Column X" />
                 <TableColumn prefWidth="75.0" text="Column X" />
               </columns>
             </TableView>
-          </items>
-        </SplitPane>
-        <ListView prefHeight="130.0" prefWidth="200.0" />
+          </children>
+        </AnchorPane>
       </items>
     </SplitPane>
-    <VBox layoutX="560.0" layoutY="39.0" prefHeight="235.0" prefWidth="337.0" style="-fx-border-color: black; -fx-border-width: 3; -fx-border-insets: -3;&#10;">
-      <children>
-        <MenuBar prefWidth="200.0">
-          <menus>
-            <Menu mnemonicParsing="false" text="File">
-              <items>
-                <MenuItem mnemonicParsing="false" text="Close" />
-              </items>
-            </Menu>
-            <Menu mnemonicParsing="false" text="Edit">
-              <items>
-                <MenuItem mnemonicParsing="false" text="Delete" />
-              </items>
-            </Menu>
-            <Menu mnemonicParsing="false" text="Help">
-              <items>
-                <MenuItem mnemonicParsing="false" text="About" />
-              </items>
-            </Menu>
-          </menus>
-        </MenuBar>
-        <ToolBar prefWidth="200.0">
-          <items>
-            <Button mnemonicParsing="false" text="New" />
-            <Button mnemonicParsing="false" text="Delete" />
-            <Button mnemonicParsing="false" text="Save" />
-            <Button mnemonicParsing="false" text="Exit" />
-          </items>
-        </ToolBar>
-        <TabPane prefHeight="130.0" prefWidth="200.0" tabClosingPolicy="UNAVAILABLE" VBox.vgrow="ALWAYS">
-          <tabs>
-            <Tab text="Tab 1">
-              <content>
-                <VBox prefHeight="200.0" prefWidth="100.0" spacing="6.0">
-                  <children>
-                    <RadioButton mnemonicParsing="false" text="RadioButton 1">
-                      <toggleGroup>
-                        <ToggleGroup fx:id="toggle2" />
-                      </toggleGroup>
-                    </RadioButton>
-                    <RadioButton mnemonicParsing="false" text="RadioButton 2" toggleGroup="$toggle2" />
-                    <CheckBox mnemonicParsing="false" selected="true" text="CheckBox" />
-                    <CheckBox mnemonicParsing="false" text="CheckBox" />
-                  </children>
-                  <padding>
-                    <Insets bottom="10.0" left="10.0" right="10.0" top="10.0" />
-                  </padding>
-                </VBox>
-              </content>
-            </Tab>
-            <Tab text="Tab 2">
-              <content>
-                <AnchorPane id="Content" minHeight="0.0" minWidth="0.0" prefHeight="180.0" prefWidth="200.0" />
-              </content>
-            </Tab>
-            <Tab text="Tab 3">
-              <content>
-                <AnchorPane id="Content" minHeight="0.0" minWidth="0.0" prefHeight="180.0" prefWidth="200.0" />
-              </content>
-            </Tab>
-          </tabs>
-        </TabPane>
-      </children>
-    </VBox>
+    <ToggleButton layoutX="441.0" layoutY="196.0" mnemonicParsing="false" prefWidth="90.0" selected="false" text="Toggle" toggleGroup="$toggle1" />
+    <ComboBox editable="true" layoutX="395.0" layoutY="244.0" prefWidth="136.0001220703125" promptText="Choose">
+      <items>
+        <FXCollections fx:factory="observableArrayList">
+          <String fx:value="Item 1" />
+          <String fx:value="Item 2" />
+          <String fx:value="Item 3" />
+        </FXCollections>
+      </items>
+    </ComboBox>
+    <ProgressIndicator layoutX="680.0" layoutY="361.0" prefHeight="59.0" prefWidth="56.0" progress="-1.0" />
+    <CheckBox layoutX="473.0" layoutY="288.0" mnemonicParsing="false" text="Check" />
+    <RadioButton layoutX="242.0" layoutY="199.0" mnemonicParsing="false" text="r1" toggleGroup="$toggle1" />
+    <RadioButton layoutX="291.0" layoutY="199.0" mnemonicParsing="false" text="r2" toggleGroup="$toggle1" />
   </children>
 </AnchorPane>

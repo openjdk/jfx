@@ -273,13 +273,13 @@
                         </FXCollections>
                       </items>
                     </ComboBox>
-                    <ListView id="library-listview" maxWidth="150.0" minWidth="-1.0" prefHeight="68.0" prefWidth="150.0">
+                    <ListView id="library-listview" maxWidth="150.0" minWidth="-1.0" prefHeight="71.0" prefWidth="150.0">
                       <items>
                         <FXCollections fx:factory="observableArrayList">
-                          <Label text="Sample 1" />
-                          <Label text="Sample 2" />
-                          <Label text="Sample 3" />
-                          <Label text="Sample 4" />
+                          <String fx:value="Sample 1" />
+                          <String fx:value="Sample 2" />
+                          <String fx:value="Sample 3" />
+                          <String fx:value="Sample 4" />
                         </FXCollections>
                       </items>
                       <VBox.margin>
