@@ -310,16 +310,21 @@
 }
 
 
-.text-area:external-focus {
-    -fx-border-color: red; 
-    -fx-focus-color: red;
-    -fx-opacity: 0.8;
+.text-area:focused:external-focus {
+    -fx-background-color: -fx-focus-color, -fx-text-box-border, -fx-control-inner-background;
+    -fx-prompt-text-fill: derive(-fx-control-inner-background,-30%);
 }
-.text-area:internal-focus {
-    -fx-border-color: null; 
-    -fx-focus-color: #0093ff;
-    -fx-opacity: 1.0;
+.text-area:focused:external-focus .caret-handle {
+    -fx-background-color: transparent;
 }
+.text-area:focused:external-focus .selection-handle {
+    -fx-background-color: transparent;
+}
+.text-area:focused:internal-focus {
+    -fx-background-color: -fx-shadow-highlight-color, -fx-text-box-border, -fx-control-inner-background;
+    -fx-prompt-text-fill: transparent;
+}
+
 
 .list-view:external-focus {
     -fx-border-color: red; 
