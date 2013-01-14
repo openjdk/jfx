@@ -294,16 +294,21 @@
     -fx-opacity: 1.0;
 }
 
-.password-field:external-focus {
-    -fx-border-color: red; 
-    -fx-focus-color: red;
-    -fx-opacity: 0.8;
+
+.password-field:focused:external-focus {
+    -fx-background-color: -fx-focus-color, -fx-text-box-border, -fx-control-inner-background;
+    -fx-prompt-text-fill: derive(-fx-control-inner-background,-30%);
 }
-.password-field:internal-focus {
-    -fx-border-color: null; 
-    -fx-focus-color: #0093ff;
-    -fx-opacity: 1.0;
+.password-field:focused:external-focus .caret-handle {
+    -fx-background-color: transparent;
 }
+.password-field:focused:external-focus .selection-handle {
+    -fx-background-color: transparent;
+}
+.password-field:focused:internal-focus {
+    -fx-background-color: -fx-shadow-highlight-color, -fx-text-box-border, -fx-control-inner-background;
+}
+
 
 .text-area:external-focus {
     -fx-border-color: red; 
