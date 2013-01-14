@@ -27,6 +27,8 @@ package com.sun.javafx.scene.control.skin;
 
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
+import javafx.collections.ObservableMap;
+import javafx.collections.WeakListChangeListener;
 import javafx.event.EventHandler;
 import javafx.geometry.Orientation;
 import javafx.scene.Node;
@@ -36,11 +38,8 @@ import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
 import javafx.scene.control.SelectionModel;
 import javafx.scene.input.MouseEvent;
-
-import javafx.collections.WeakListChangeListener;
-import com.sun.javafx.scene.control.behavior.ListViewBehavior;
-import javafx.collections.ObservableMap;
 import javafx.util.Callback;
+import com.sun.javafx.scene.control.behavior.ListViewBehavior;
 
 /**
  *
@@ -59,8 +58,8 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListViewB
         flow.setPannable(false);
         flow.setVertical(getSkinnable().getOrientation() == Orientation.VERTICAL);
         flow.setFocusTraversable(getSkinnable().isFocusTraversable());
-        flow.setCreateCell(new Callback<VirtualFlow, ListCell>() {
-            @Override public ListCell call(VirtualFlow flow) {
+        flow.setCreateCell(new Callback<VirtualFlow, ListCell<T>>() {
+            @Override public ListCell<T> call(VirtualFlow flow) {
                 return ListViewSkin.this.createCell();
             }
         });
@@ -179,6 +178,9 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListViewB
 //        return listViewItems == null ? 0 : listViewItems.size();
         return itemCount;
     }
+    
+    private boolean needCellsRebuilt = true;
+    private boolean needCellsReconfigured = false;
 
     void updateCellCount() {
         if (flow == null) return;
@@ -192,9 +194,15 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListViewB
         flow.setCellCount(newCount);
         
         if (newCount != oldCount) {
-            flow.recreateCells();
+            flow.rebuildCells();
         } else {
             flow.reconfigureCells();
+        }
+        
+        if (newCount != oldCount) {
+            needCellsRebuilt = true;
+        } else {
+            needCellsReconfigured = true;
         }
     }
 
@@ -265,6 +273,15 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListViewB
             itemCountDirty = false;
         }
         
+        if (needCellsRebuilt) {
+            flow.rebuildCells();
+        } else if (needCellsReconfigured) {
+            flow.reconfigureCells();
+        } 
+        
+        needCellsRebuilt = false;
+        needCellsReconfigured = false;
+        
         flow.resizeRelocate(x, y, w, h);
     }
     
@@ -312,7 +329,7 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListViewB
         flow.show(pos);
 
         // Fix for RT-11299
-        IndexedCell cell = flow.getLastVisibleCell();
+        ListCell<T> cell = flow.getLastVisibleCell();
         if (cell == null || cell.getIndex() < pos) {
             flow.setPosition(pos / (double) getItemCount());
         }
@@ -338,7 +355,7 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListViewB
      * if this is a horizontal container, then the scrolling will be to the right.
      */
     private int onScrollPageDown(int anchor) {
-        IndexedCell lastVisibleCell = flow.getLastVisibleCellWithinViewPort();
+        ListCell<T> lastVisibleCell = flow.getLastVisibleCellWithinViewPort();
         if (lastVisibleCell == null) return -1;
 
         int newSelectionIndex = -1;
@@ -366,7 +383,7 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListViewB
      * if this is a horizontal container, then the scrolling will be to the left.
      */
     private int onScrollPageUp(int anchor) {
-        IndexedCell firstVisibleCell = flow.getFirstVisibleCellWithinViewPort();
+        ListCell<T> firstVisibleCell = flow.getFirstVisibleCellWithinViewPort();
         if (firstVisibleCell == null) return -1;
 
         int newSelectionIndex = -1;

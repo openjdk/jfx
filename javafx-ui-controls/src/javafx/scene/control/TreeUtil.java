@@ -68,7 +68,7 @@ class TreeUtil {
         int idx = itemIndex - 1;
 
         TreeItem child;
-        for (int i = 0; i < children.size(); i++) {
+        for (int i = 0, max = children.size(); i < max; i++) {
             child = children.get(i);
             if (idx == 0) return child;
             
@@ -82,8 +82,8 @@ class TreeUtil {
                 idx -= expandedChildCount;
                 continue;
             }
-            
-            TreeItem<T> result = getItem(child, idx ,treeItemCountDirty);
+
+            TreeItem<T> result = getItem(child, idx, treeItemCountDirty);
             if (result != null) return result;
             idx--;
         }

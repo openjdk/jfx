@@ -935,7 +935,7 @@ public abstract class Labeled extends Control {
      * {@inheritDoc}
      */
     @Override
-    public List<CssMetaData> getCssMetaData() {
+    public List<CssMetaData> getControlCssMetaData() {
         return getClassCssMetaData();
     }
 

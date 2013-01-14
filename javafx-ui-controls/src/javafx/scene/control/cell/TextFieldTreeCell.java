@@ -26,9 +26,11 @@ package javafx.scene.control.cell;
 
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
+import javafx.scene.Node;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
 import javafx.scene.control.TreeCell;
+import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeView;
 import javafx.util.Callback;
 import javafx.util.StringConverter;
@@ -205,6 +207,9 @@ public class TextFieldTreeCell<T> extends TreeCell<T> {
     /** {@inheritDoc} */
     @Override public void updateItem(T item, boolean empty) {
         super.updateItem(item, empty);
-        CellUtils.updateItem(this, textField, getConverter());
+        
+        TreeItem<T> treeItem = getTreeItem();
+        Node graphic = treeItem == null ? null : treeItem.getGraphic();
+        CellUtils.updateItem(this, textField, getConverter(), graphic);
     }
 }

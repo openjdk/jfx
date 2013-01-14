@@ -44,43 +44,26 @@ public class TreeTableRowBehavior<T> extends CellBehaviorBase<TreeTableRow<T>> {
     @Override public void mouseReleased(MouseEvent e) {
         super.mouseReleased(e);
         
+        if (e.getButton() != MouseButton.PRIMARY) return;
+        
         TreeTableRow<T> treeTableRow = getControl();
-        TreeTableView<T> tv = treeTableRow.getTreeTableView();
         TreeItem treeItem = treeTableRow.getTreeItem();
-        int index = treeTableRow.getIndex();
-        MultipleSelectionModel sm = tv.getSelectionModel();
-        boolean isAlreadySelected = sm.isSelected(index);
-
+        if (treeItem == null) return;
+        
         // if the user has clicked on the disclosure node, we do nothing other
         // than expand/collapse the tree item (if applicable). We do not do editing!
         Node disclosureNode = treeTableRow.getDisclosureNode();
         if (disclosureNode != null) {
             if (disclosureNode.getBoundsInParent().contains(e.getX(), e.getY())) {
-                if (treeItem != null) {
-                    treeItem.setExpanded(! treeItem.isExpanded());
-                }
+                treeItem.setExpanded(! treeItem.isExpanded());
                 return;
             }
         }
         
-        tv.getSelectionModel().clearAndSelect(index);
-
         // handle editing, which only occurs with the primary mouse button
-        if (e.getButton() == MouseButton.PRIMARY) {
-            if (e.getClickCount() == 1 && isAlreadySelected) {
-                tv.edit(treeItem);
-            } else if (e.getClickCount() == 1) {
-                // cancel editing
-                tv.edit(null);
-            } else if (e.getClickCount() == 2/* && ! getControl().isEditable()*/) {
-                if (treeItem.isLeaf()) {
-                    // attempt to edit
-                    tv.edit(treeItem);
-                } else {
-                    // try to expand/collapse branch tree item
-                    treeItem.setExpanded(! treeItem.isExpanded());
-                }
-            }
+        if (e.getClickCount() == 2) {
+            // try to expand/collapse branch tree item
+            treeItem.setExpanded(! treeItem.isExpanded());
         }
     }
 }

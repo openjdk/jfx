@@ -501,8 +501,11 @@ public class CheckBoxTreeCell<T> extends TreeCell<T> {
             StringConverter c = getConverter();
             Callback<TreeItem<T>, ObservableValue<Boolean>> callback = getSelectedStateCallback();
             
+            TreeItem<T> treeItem = getTreeItem();
+            
             // update the node content
-            setText(c.toString(getTreeItem()));
+            setText(c.toString(treeItem));
+            checkBox.setGraphic(treeItem == null ? null : treeItem.getGraphic());
             setGraphic(checkBox);
             
             // uninstall bindings
@@ -515,15 +518,15 @@ public class CheckBoxTreeCell<T> extends TreeCell<T> {
 
             // install new bindings.
             // We special case things when the TreeItem is a CheckBoxTreeItem
-            if (getTreeItem() instanceof CheckBoxTreeItem) {
-                CheckBoxTreeItem<T> cbti = (CheckBoxTreeItem<T>) getTreeItem();
+            if (treeItem instanceof CheckBoxTreeItem) {
+                CheckBoxTreeItem<T> cbti = (CheckBoxTreeItem<T>) treeItem;
                 booleanProperty = cbti.selectedProperty();
                 checkBox.selectedProperty().bindBidirectional((BooleanProperty)booleanProperty);
                 
                 indeterminateProperty = cbti.indeterminateProperty();
                 checkBox.indeterminateProperty().bindBidirectional(indeterminateProperty);
             } else {
-                booleanProperty = callback.call(getTreeItem());
+                booleanProperty = callback.call(treeItem);
                 if (booleanProperty != null) {
                     checkBox.selectedProperty().bindBidirectional((BooleanProperty)booleanProperty);
                 }

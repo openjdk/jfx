@@ -28,6 +28,7 @@ import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.ObservableList;
 import javafx.event.EventHandler;
+import javafx.scene.Node;
 import javafx.scene.control.Cell;
 import javafx.scene.control.ChoiceBox;
 import javafx.scene.control.ComboBox;
@@ -107,6 +108,13 @@ class CellUtils {
     static <T> void updateItem(
             final Cell<T> cell, ChoiceBox<T> choiceBox, 
             final StringConverter<T> converter) {
+        updateItem(cell, choiceBox, converter, null);
+    }
+    
+    static <T> void updateItem(
+            final Cell<T> cell, ChoiceBox<T> choiceBox, 
+            final StringConverter<T> converter,
+            final Node graphic) {
         if (cell.isEmpty()) {
             cell.setText(null);
             cell.setGraphic(null);
@@ -119,7 +127,7 @@ class CellUtils {
                 cell.setGraphic(choiceBox);
             } else {
                 cell.setText(getItemText(cell, converter));
-                cell.setGraphic(null);
+                cell.setGraphic(graphic);
             }
         }
     };
@@ -149,6 +157,13 @@ class CellUtils {
      **************************************************************************/  
     
     static <T> void updateItem(Cell<T> cell, TextField textField, StringConverter<T> converter) {
+        updateItem(cell, textField, converter, null);
+    }
+    
+    static <T> void updateItem(final Cell<T> cell, 
+                               final TextField textField, 
+                               final StringConverter<T> converter,
+                               final Node graphic) {
         if (cell.isEmpty()) {
             cell.setText(null);
             cell.setGraphic(null);
@@ -161,7 +176,7 @@ class CellUtils {
                 cell.setGraphic(textField);
             } else {
                 cell.setText(getItemText(cell, converter));
-                cell.setGraphic(null);
+                cell.setGraphic(graphic);
             }
         }
     }
@@ -207,11 +222,18 @@ class CellUtils {
     
     /***************************************************************************
      *                                                                         *
-     * TextField convenience                                                   *
+     * ComboBox convenience                                                   *
      *                                                                         *
      **************************************************************************/ 
     
     static <T> void updateItem(Cell<T> cell, ComboBox<T> comboBox, StringConverter<T> converter) {
+        updateItem(cell, comboBox, converter, null);
+    }
+    
+    static <T> void updateItem(final Cell<T> cell, 
+                               final ComboBox<T> comboBox, 
+                               final StringConverter<T> converter,
+                               final Node graphic) {
         if (cell.isEmpty()) {
             cell.setText(null);
             cell.setGraphic(null);
@@ -224,7 +246,7 @@ class CellUtils {
                 cell.setGraphic(comboBox);
             } else {
                 cell.setText(getItemText(cell, converter));
-                cell.setGraphic(null);
+                cell.setGraphic(graphic);
             }
         }
     };
