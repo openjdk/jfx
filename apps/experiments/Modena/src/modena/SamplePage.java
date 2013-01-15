@@ -52,6 +52,7 @@ import javafx.scene.control.ListViewBuilder;
 import javafx.scene.control.MenuButtonBuilder;
 import javafx.scene.control.PasswordFieldBuilder;
 import javafx.scene.control.ProgressBar;
+import javafx.scene.control.ProgressBarBuilder;
 import javafx.scene.control.ProgressIndicator;
 import javafx.scene.control.ProgressIndicatorBuilder;
 import javafx.scene.control.RadioButton;
@@ -373,9 +374,9 @@ public class SamplePage extends GridPane {
                 );
         newDetailedSection(
                 new String[] {"ProgressBar: ", "normal", "disabled", "indeterminate"}, 
-                new ProgressBar(0.6),
-                withState(new ProgressBar(), "disabled"),
-                new ProgressBar(-1)
+                ProgressBarBuilder.create().progress(0.6).prefWidth(200).build(),
+                withState(ProgressBarBuilder.create().progress(0.2).prefWidth(200).build(), "disabled"),
+                ProgressBarBuilder.create().progress(-1).prefWidth(200).build()
                 );
         newDetailedSection(
                 new String[] {"ProgressIndicator: ", "normal 0%", "normal 60%", "normal 100%", "disabled"}, 
