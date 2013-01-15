@@ -139,7 +139,8 @@ public abstract class TablePositionBase<TC extends TableColumnBase> {
     @Override public int hashCode() {
         int hash = 5;
         hash = 79 * hash + this.row;
-        hash = 79 * hash + (getTableColumn() != null ? getTableColumn().hashCode() : 0);
+        TableColumnBase tableColumn = getTableColumn();
+        hash = 79 * hash + (tableColumn != null ? tableColumn.hashCode() : 0); 
         return hash;
     }
 }

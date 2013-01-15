@@ -1087,9 +1087,18 @@ public class ContextMenuContent extends Region {
             // Add the menu item to properties map of this node. Used by QA for testing
             // This allows associating this container with corresponding MenuItem.
             getProperties().put(MenuItem.class, item);
+            
+            item.graphicProperty().addListener(new InvalidationListener() {
+                @Override public void invalidated(Observable o) {
+                    createChildren();
+                    computeVisualMetrics();
+                }
+            });
         }
         
         private void createChildren() {
+            getChildren().clear();
+            
             // draw background region for hover effects. All content (other
             // than Nodes from NodeMenuItems) are set to be mouseTransparent, so
             // this background also acts as the receiver of user input

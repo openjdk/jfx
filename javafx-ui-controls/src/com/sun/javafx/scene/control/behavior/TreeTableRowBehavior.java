@@ -26,6 +26,7 @@ package com.sun.javafx.scene.control.behavior;
 
 import javafx.scene.Node;
 import javafx.scene.control.MultipleSelectionModel;
+import javafx.scene.control.TableSelectionModel;
 import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeTableRow;
 import javafx.scene.control.TreeTableView;
@@ -61,9 +62,19 @@ public class TreeTableRowBehavior<T> extends CellBehaviorBase<TreeTableRow<T>> {
         }
         
         // handle editing, which only occurs with the primary mouse button
-        if (e.getClickCount() == 2) {
-            // try to expand/collapse branch tree item
-            treeItem.setExpanded(! treeItem.isExpanded());
+        int clickCount = e.getClickCount();
+        switch (clickCount) {
+            case 1: // In the case of clicking to the right of the rightmost
+                    // TreeTableCell, we should still support selection, so that
+                    // is what we are doing here.
+                    TreeTableView table = treeTableRow.getTreeTableView();
+                    if (table == null) break;
+                    TableSelectionModel sm = table.getSelectionModel();
+                    if (sm != null) sm.select(treeItem);
+                    break;
+            case 2: // try to expand/collapse branch tree item
+                    treeItem.setExpanded(! treeItem.isExpanded());
+                    break;
         }
     }
 }
