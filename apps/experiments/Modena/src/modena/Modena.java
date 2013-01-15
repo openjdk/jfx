@@ -90,6 +90,7 @@ public class Modena extends Application {
     private Node mosaic;
     private Node heightTest;
     private Stage mainStage;
+    private Color backgroundColor;
     private Color baseColor;
     private Color accentColor;
     private String fontName = null;
@@ -214,6 +215,9 @@ public class Modena extends Application {
                 new Label("Base:"),
                 createBaseColorPicker(),
                 new Separator(),
+                new Label("Background:"),
+                createBackgroundColorPicker(),
+                new Separator(),
                 new Label("Accent:"),
                 createAccentColorPicker(),
                 new Separator(),
@@ -319,6 +323,38 @@ public class Modena extends Application {
         return colorPicker;
     }
     
+    private ColorPicker createBackgroundColorPicker() {
+        ColorPicker colorPicker = new ColorPicker(Color.TRANSPARENT);
+        colorPicker.getCustomColors().addAll(
+                Color.TRANSPARENT,
+                Color.web("#f3622d"),
+                Color.web("#fba71b"),
+                Color.web("#57b757"),
+                Color.web("#41a9c9"),
+                Color.web("#888"),
+                Color.RED,
+                Color.ORANGE,
+                Color.YELLOW,
+                Color.GREEN,
+                Color.CYAN,
+                Color.BLUE,
+                Color.PURPLE,
+                Color.MAGENTA,
+                Color.BLACK
+        );
+        colorPicker.valueProperty().addListener(new ChangeListener<Color>() {
+            @Override public void changed(ObservableValue<? extends Color> observable, Color oldValue, Color c) {
+                if (c == null) {
+                    backgroundColor = null;
+                } else {
+                    backgroundColor = c;
+                }
+                updateCSSOverrides();
+            }
+        });
+        return colorPicker;
+    }
+    
     private ColorPicker createAccentColorPicker() {
         ColorPicker colorPicker = new ColorPicker(Color.web("#0096C9"));
         colorPicker.getCustomColors().addAll(
@@ -357,12 +393,20 @@ public class Modena extends Application {
         cssOverride = ".root {\n";
         System.out.println("baseColor = "+baseColor);
         System.out.println("accentColor = " + accentColor);
+        System.out.println("backgroundColor = " + backgroundColor);
         if (baseColor != null && baseColor != Color.TRANSPARENT) {
             final String color = String.format((Locale) null, "#%02x%02x%02x", 
                     Math.round(baseColor.getRed() * 255), 
                     Math.round(baseColor.getGreen() * 255), 
                     Math.round(baseColor.getBlue() * 255));
             cssOverride += "    -fx-base:"+color+";\n";
+        }
+        if (backgroundColor != null && backgroundColor != Color.TRANSPARENT) {
+            final String color = String.format((Locale) null, "#%02x%02x%02x", 
+                    Math.round(backgroundColor.getRed() * 255), 
+                    Math.round(backgroundColor.getGreen() * 255), 
+                    Math.round(backgroundColor.getBlue() * 255));
+            cssOverride += "    -fx-background:"+color+";\n";
         }
         if (accentColor != null && accentColor != Color.TRANSPARENT) {
             final String color = String.format((Locale) null, "#%02x%02x%02x", 

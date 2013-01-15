@@ -40,6 +40,7 @@ import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.Orientation;
+import javafx.geometry.Side;
 import javafx.scene.GroupBuilder;
 import javafx.scene.Node;
 import javafx.scene.control.Accordion;
@@ -66,6 +67,7 @@ import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.KeyCharacterCombination;
 import javafx.scene.input.KeyCombination;
+import javafx.scene.layout.StackPaneBuilder;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.LineBuilder;
 import javafx.scene.shape.RectangleBuilder;
@@ -104,20 +106,28 @@ public class SamplePageHelpers {
             ).build();
     }
     
-    static TabPane createTabPane(int numOfTabs, int prefWidth, String firstTabText, boolean floating) {
+    static Node createTabPane(int numOfTabs, int prefWidth, String firstTabText, boolean floating, boolean disableFirst, Side side) {
         TabPane tabPane = new TabPane();
+        tabPane.setSide(side);
         if (floating) tabPane.getStyleClass().add("floating");
         for (int i=1; i<=numOfTabs; i++) {
             tabPane.getTabs().add(
                 TabBuilder.create()
                     .text("Tab "+i)
+                    .disable(i==0 && disableFirst)
                     .content(new Label((i==1 && firstTabText!=null)? firstTabText :"Tab "+i+" Content"))
                     .build()
             );
         }
+        if (disableFirst) tabPane.getSelectionModel().select(1);
         tabPane.setPrefWidth(prefWidth);
         tabPane.setPrefHeight(100);
         return tabPane;
+    }
+    
+    static Node wrapBdr(Node node) {
+        return StackPaneBuilder.create().children(node)
+                .style("-fx-border-color: black; -fx-border-width: 3;").build();
     }
     
     static ToolBar createToolBar(boolean vertical, boolean overFlow) {
