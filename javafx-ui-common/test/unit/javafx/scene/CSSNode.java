@@ -214,7 +214,7 @@ public  class CSSNode extends Node {
 
                 @Override
                 protected void invalidated() {
-                    pseudoClassStateChanged(SPECIAL_PSEUDO_CLASS);
+                    pseudoClassStateChanged(SPECIAL_PSEUDO_CLASS, get());
                 }
             };
         }
@@ -249,11 +249,6 @@ public  class CSSNode extends Node {
         return Toolkit.getToolkit().createPGGroup();
     }
 
-    @Override
-    boolean isPseudoclassUsed(PseudoClass pseudoclass) {
-        return true;    
-    }
-    
     public static class StyleableProperties {
         
         public static final CssMetaData<CSSNode,Paint> FILL = 

@@ -227,10 +227,12 @@ public class TwoLevelFocusBehavior {
         externalFocus = value;
 
         if (tlNode != null && tlNode instanceof Control) {
-            ((Control)tlNode).impl_focusPseudoClassChanged();
+            ((Control)tlNode).pseudoClassStateChanged(INTERNAL_PSEUDOCLASS_STATE, !value);
+            ((Control)tlNode).pseudoClassStateChanged(EXTERNAL_PSEUDOCLASS_STATE,  value);
         }
         else if (tlPopup != null) {
-            tlPopup.impl_focusPseudoClassChanged();
+            tlPopup.pseudoClassStateChanged(INTERNAL_PSEUDOCLASS_STATE, !value);
+            tlPopup.pseudoClassStateChanged(EXTERNAL_PSEUDOCLASS_STATE,  value);
         }
     }
 

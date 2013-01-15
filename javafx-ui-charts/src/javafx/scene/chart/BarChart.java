@@ -165,8 +165,8 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
             orientation = Orientation.HORIZONTAL;
         }
         // update css
-        pseudoClassStateChanged(HORIZONTAL_PSEUDOCLASS_STATE);
-        pseudoClassStateChanged(VERTICAL_PSEUDOCLASS_STATE);
+        pseudoClassStateChanged(HORIZONTAL_PSEUDOCLASS_STATE, orientation == Orientation.HORIZONTAL);
+        pseudoClassStateChanged(VERTICAL_PSEUDOCLASS_STATE, orientation == Orientation.VERTICAL);
         setData(data);
     }
 
@@ -555,14 +555,4 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
     private static final PseudoClass HORIZONTAL_PSEUDOCLASS_STATE = 
             PseudoClass.getPseudoClass("horizontal");
 
-    /**
-     * {@inheritDoc}
-     */
-    @Override public Set<PseudoClass> getPseudoClassStates() {
-        Set<PseudoClass> states = super.getPseudoClassStates();
-        if (orientation == Orientation.VERTICAL) states.add(VERTICAL_PSEUDOCLASS_STATE);
-        else states.add(HORIZONTAL_PSEUDOCLASS_STATE);
-        return states;
-
-    }
 }

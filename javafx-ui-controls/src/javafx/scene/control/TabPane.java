@@ -118,6 +118,14 @@ public class TabPane extends Control {
                 }
             }
         });
+        
+        // initialize pseudo-class state
+        Side edge = getSide();
+        pseudoClassStateChanged(TOP_PSEUDOCLASS_STATE, (edge == Side.TOP));
+        pseudoClassStateChanged(RIGHT_PSEUDOCLASS_STATE, (edge == Side.RIGHT));
+        pseudoClassStateChanged(BOTTOM_PSEUDOCLASS_STATE, (edge == Side.BOTTOM));
+        pseudoClassStateChanged(LEFT_PSEUDOCLASS_STATE, (edge == Side.LEFT));
+        
     }
 
     private ObservableList<Tab> tabs = FXCollections.observableArrayList();
@@ -184,15 +192,13 @@ public class TabPane extends Control {
             side = new ObjectPropertyBase<Side>(Side.TOP) {
                 private Side oldSide;
                 @Override protected void invalidated() {
-                    if (oldSide != null) {
-                        pseudoClassStateChanged(oldSide);
-                    }
-
+                    
                     oldSide = get();
 
-                    if (get() != null) {
-                        pseudoClassStateChanged(get());
-                    }
+                    pseudoClassStateChanged(TOP_PSEUDOCLASS_STATE, (oldSide == Side.TOP || oldSide == null));
+                    pseudoClassStateChanged(RIGHT_PSEUDOCLASS_STATE, (oldSide == Side.RIGHT));
+                    pseudoClassStateChanged(BOTTOM_PSEUDOCLASS_STATE, (oldSide == Side.BOTTOM));
+                    pseudoClassStateChanged(LEFT_PSEUDOCLASS_STATE, (oldSide == Side.LEFT));
                 }
 
                 @Override
@@ -590,45 +596,6 @@ public class TabPane extends Control {
     private static final PseudoClass LEFT_PSEUDOCLASS_STATE = PseudoClass.getPseudoClass("left");
     private static final PseudoClass RIGHT_PSEUDOCLASS_STATE = PseudoClass.getPseudoClass("right");
 
-    /**
-     * {@inheritDoc}
-     */
-    @Override public Set<PseudoClass> getPseudoClassStates() {
-        Set<PseudoClass> states = super.getPseudoClassStates();
-        switch(getSide()) {
-            case TOP:
-                states.add(TOP_PSEUDOCLASS_STATE);
-                break;
-            case RIGHT:
-                states.add(RIGHT_PSEUDOCLASS_STATE);
-                break;
-            case BOTTOM:
-                states.add(BOTTOM_PSEUDOCLASS_STATE);
-                break;
-            case LEFT:
-                states.add(LEFT_PSEUDOCLASS_STATE);
-                break;
-        }
-        return states;
-    }
-
-    private void pseudoClassStateChanged(Side side) {
-        PseudoClass state = null;
-        switch(getSide()) {
-            case TOP:
-                pseudoClassStateChanged(TOP_PSEUDOCLASS_STATE);
-                break;
-            case RIGHT:
-                pseudoClassStateChanged(RIGHT_PSEUDOCLASS_STATE);
-                break;
-            case BOTTOM:
-                pseudoClassStateChanged(BOTTOM_PSEUDOCLASS_STATE);
-                break;
-            case LEFT:
-                pseudoClassStateChanged(LEFT_PSEUDOCLASS_STATE);
-                break;
-        }
-    }    
     
     static class TabPaneSelectionModel extends SingleSelectionModel<Tab> {
         private final TabPane tabPane;

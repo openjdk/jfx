@@ -170,7 +170,7 @@ public class ChoiceBox<T> extends Control {
      */
     private ReadOnlyBooleanWrapper showing = new ReadOnlyBooleanWrapper() {
         @Override protected void invalidated() {
-            pseudoClassStateChanged(SHOWING_PSEUDOCLASS_STATE);
+            pseudoClassStateChanged(SHOWING_PSEUDOCLASS_STATE, get());
         }
 
         @Override
@@ -324,15 +324,6 @@ public class ChoiceBox<T> extends Control {
 
     private static final PseudoClass SHOWING_PSEUDOCLASS_STATE =
             PseudoClass.getPseudoClass("showing");
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override public Set<PseudoClass> getPseudoClassStates() {
-        Set<PseudoClass> states = super.getPseudoClassStates();
-        if (isShowing()) states.add(SHOWING_PSEUDOCLASS_STATE);
-        return states;
-    }
 
     // package for testing
     static class ChoiceBoxSelectionModel<T> extends SingleSelectionModel<T> {

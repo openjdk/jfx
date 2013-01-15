@@ -277,22 +277,4 @@ public class ComboBoxBaseBehavior<T> extends BehaviorBase<ComboBoxBase<T>> {
         }
     }
 
-
-    private static final PseudoClass INTERNAL_PSEUDOCLASS_STATE = 
-            PseudoClass.getPseudoClass("internal-focus");
-    private static final PseudoClass EXTERNAL_PSEUDOCLASS_STATE = 
-            PseudoClass.getPseudoClass("external-focus");
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override public Set<PseudoClass> getPseudoClassStates() {
-        Set<PseudoClass> states = super.getPseudoClassStates();
-        if (tlFocus != null) {
-            if (tlFocus.isExternalFocus()) states.add(EXTERNAL_PSEUDOCLASS_STATE);
-            else states.add(INTERNAL_PSEUDOCLASS_STATE);
-        }
-        return states;
-    }
-
 }

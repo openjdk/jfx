@@ -106,7 +106,7 @@ public class Hyperlink extends ButtonBase {
         if (visited == null) {
             visited = new BooleanPropertyBase() {
                 @Override protected void invalidated() {
-                    pseudoClassStateChanged(PSEUDO_CLASS_VISITED);
+                    pseudoClassStateChanged(PSEUDO_CLASS_VISITED, get());
                 }
 
                 @Override
@@ -163,15 +163,6 @@ public class Hyperlink extends ButtonBase {
     private static final String DEFAULT_STYLE_CLASS = "hyperlink";
     private static final PseudoClass PSEUDO_CLASS_VISITED =
             PseudoClass.getPseudoClass("visited");
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override public Set<PseudoClass> getPseudoClassStates() {
-        Set<PseudoClass> states = super.getPseudoClassStates();
-        if (isVisited()) states.add(PSEUDO_CLASS_VISITED);
-        return states;
-    }
 
      /**
       * Hyperlink uses HAND as the default value for cursor. 

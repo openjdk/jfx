@@ -54,6 +54,9 @@ import java.net.URL;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.Set;
+import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.ReadOnlyBooleanProperty;
+import javafx.beans.property.ReadOnlyBooleanWrapper;
 import javafx.geometry.Pos;
 
 class FXDialog extends Stage {
@@ -63,7 +66,7 @@ class FXDialog extends Stage {
 //    private static final URL DIALOGS_CSS_URL = FXAboutDialog.class.getResource("deploydialogs.css");
     
     private BorderPane root;
-    private RootPane decoratedRoot;
+    private StackPane decoratedRoot;
     private HBox windowBtns;
     private Button minButton;
     private Button maxButton;
@@ -123,7 +126,7 @@ class FXDialog extends Stage {
 
         // *** The rest is for adding window decorations ***
 
-        decoratedRoot = new RootPane() {
+        decoratedRoot = new StackPane() {
             @Override protected void layoutChildren() {
                 super.layoutChildren();
                 if (resizeCorner != null) {
@@ -145,8 +148,9 @@ class FXDialog extends Stage {
         decoratedRoot.getStyleClass().addAll("dialog", "decorated-root");
 
         focusedProperty().addListener(new InvalidationListener() {
-            @Override public void invalidated(Observable valueModel) {
-                decoratedRoot.pseudoClassStateChanged(RootPane.PSEUDO_CLASS_ACTIVE_MASK);
+            @Override public void invalidated(Observable valueModel) {                
+                boolean active = ((ReadOnlyBooleanProperty)valueModel).get();
+                decoratedRoot.pseudoClassStateChanged(ACTIVE_PSEUDO_CLASS, active);
             }
         });
 
@@ -287,27 +291,13 @@ class FXDialog extends Stage {
             setPrefSize(17, 17);
         }
     }
+    
+    /***************************************************************************
+     *                                                                         *
+     * Stylesheet Handling                                                     *
+     *                                                                         *
+     **************************************************************************/
+    private static final PseudoClass ACTIVE_PSEUDO_CLASS = PseudoClass.getPseudoClass("active");
 
-    private static class RootPane extends StackPane {
-        /***************************************************************************
-         *                                                                         *
-         * Stylesheet Handling                                                     *
-         *                                                                         *
-         **************************************************************************/
-
-        private static final PseudoClass PSEUDO_CLASS_ACTIVE_MASK = PseudoClass.getPseudoClass("active");
-
-        @Override public Set<PseudoClass> getPseudoClassStates() {
-            Set<PseudoClass> states = super.getPseudoClassStates();
-            if (getScene().getWindow().isFocused()) {
-                states.add(PSEUDO_CLASS_ACTIVE_MASK);
-            }
-            return states;
-        }
-
-        @Override protected void pseudoClassStateChanged(PseudoClass pseudoClass) {
-            super.pseudoClassStateChanged(pseudoClass);
-        }
-    }
 }
 

@@ -67,7 +67,6 @@ import com.sun.javafx.css.StyleHelper.StyleCacheKey;
 import com.sun.javafx.css.parser.CSSParser;
 import javafx.css.CssMetaData;
 import javafx.css.StyleOrigin;
-import javafx.css.PseudoClass;
 import sun.util.logging.PlatformLogger;
 
 /**
@@ -666,12 +665,12 @@ final public class StyleManager {
         for (int n=keyList.size()-1; 0<=n; --n) {
 
             final Reference<Key> ref = keyList.get(n);
-            final Key key = ref.get();
-            if (key == null) {
+            final Key rkey = ref.get();
+            if (rkey == null) {
                 continue;
             }
 
-            final Cache cache = cacheMap.remove(key);
+            final Cache cache = cacheMap.remove(rkey);
         }
     }
     
@@ -1228,7 +1227,7 @@ final public class StyleManager {
     /**
      * Finds matching styles for this Node.
      */
-    StyleMap findMatchingStyles(Node node, PseudoClassSet[] pseudoclassBits) {
+    StyleMap findMatchingStyles(Node node, long[][] pseudoclassBits) {
 
         final int[] indicesOfParentsWithStylesheets =
                 getIndicesOfParentsWithStylesheets(
@@ -1421,7 +1420,7 @@ final public class StyleManager {
             this.cache = new HashMap<Long, StyleMap>();
         }
 
-        private StyleMap getStyleMap(StyleManager owner, Node node, PseudoClassSet[] pseudoclassBits) {
+        private StyleMap getStyleMap(StyleManager owner, Node node, long[][] pseudoclassBits) {
             
             if (rules == null || rules.isEmpty()) {                
                 return StyleMap.EMPTY_MAP;
@@ -1527,7 +1526,7 @@ final public class StyleManager {
 
                         final CascadingStyle s = new CascadingStyle(
                             new Style(match.selector, decl),
-                            match.pseudoclasses,
+                            match.pseudoClasses,
                             match.specificity,
                             // ordinal increments at declaration level since
                             // there may be more than one declaration for the

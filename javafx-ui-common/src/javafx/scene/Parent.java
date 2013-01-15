@@ -53,7 +53,7 @@ import com.sun.javafx.geom.transform.NoninvertibleTransformException;
 import com.sun.javafx.jmx.MXNodeAlgorithm;
 import com.sun.javafx.jmx.MXNodeAlgorithmContext;
 import sun.util.logging.PlatformLogger;
-import com.sun.javafx.scene.CSSFlags;
+import com.sun.javafx.scene.CssFlags;
 import com.sun.javafx.scene.DirtyBits;
 import com.sun.javafx.scene.traversal.TraversalEngine;
 import com.sun.javafx.sg.PGGroup;
@@ -1158,11 +1158,11 @@ public abstract class Parent extends Node {
     @Override protected void impl_processCSS() {
 
         // Nothing to do...
-        if (cssFlag == CSSFlags.CLEAN) return;
+        if (cssFlag == CssFlags.CLEAN) return;
         
         // remember the flag we started with since super.impl_processCSS
         // resets it to CLEAN and we need it for setting children.
-        CSSFlags flag = cssFlag;
+        CssFlags flag = cssFlag;
 
         // Let the super implementation handle CSS for this node
         super.impl_processCSS();

@@ -25,13 +25,13 @@
 
 package com.sun.javafx.css;
 
-import javafx.css.StyleOrigin;
-import javafx.css.PseudoClass;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
+import javafx.css.StyleOrigin;
 
 
-/** A marriage of pseudoclasses (potentially empty) to property and value */
+/** A marriage of pseudo-classes (potentially empty) to property and value */
 class CascadingStyle implements Comparable {
 
     /** */
@@ -41,7 +41,7 @@ class CascadingStyle implements Comparable {
     }
     
     /** State variables, like &quot;hover&quot; or &quot;pressed&quot; */
-    private PseudoClassSet pseudoclasses;
+    private long[] pseudoClasses;
 
     /* specificity of the rule that matched */
     private final int specificity;
@@ -58,10 +58,10 @@ class CascadingStyle implements Comparable {
     // internal to Style
     static private Set<String> strSet = new HashSet<String>();
 
-    CascadingStyle(final Style style, PseudoClassSet pseudoclasses, 
+    CascadingStyle(final Style style, long[] pseudoClasses, 
             final int specificity, final int ordinal) {
         this.style = style;
-        this.pseudoclasses = pseudoclasses;
+        this.pseudoClasses = pseudoClasses;
         this.specificity = specificity;
         this.ordinal = ordinal;
         this.skinProp = "-fx-skin".equals(style.getDeclaration().getProperty());
@@ -113,7 +113,7 @@ class CascadingStyle implements Comparable {
         }
         
         // does [foo bar bang] contain all of [foo bar]?
-        return other.pseudoclasses.containsAll(pseudoclasses);
+        return Arrays.equals(pseudoClasses, other.pseudoClasses);
 
     }
 
@@ -126,7 +126,7 @@ class CascadingStyle implements Comparable {
         int hash = 7;
         final String property = getProperty();
         hash = 47 * hash + (property != null ? property.hashCode() : 0);
-        hash = 47 * hash + (pseudoclasses != null ? pseudoclasses.hashCode() : 0);
+        hash = 47 * hash + (pseudoClasses != null ? pseudoClasses.hashCode() : 0);
         return hash;
     }
 

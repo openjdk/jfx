@@ -753,11 +753,43 @@ public class TreeTableView<S> extends Control {
      */
     public final ObjectProperty<TreeTableViewSelectionModel<S>> selectionModelProperty() {
         if (selectionModel == null) {
-            selectionModel = new SimpleObjectProperty<TreeTableViewSelectionModel<S>>(this, "selectionModel");
+            selectionModel = new SimpleObjectProperty<TreeTableViewSelectionModel<S>>(this, "selectionModel") {
+                
+                TreeTableViewSelectionModel<S> oldValue = null;
+                
+                @Override public void setValue(TreeTableViewSelectionModel<S> value) {
+                    // need to listen to the cellSelectionEnabledProperty
+                    // in order to set pseudo-class state                    
+                    if (oldValue != null) {
+                        oldValue.cellSelectionEnabledProperty().removeListener(cellSelectionModelInvalidationListener);
+                    }
+                    
+                    super.setValue(value);
+                    
+                    if (value != null) {
+                        value.cellSelectionEnabledProperty().addListener(cellSelectionModelInvalidationListener);
+                        // fake invalidation to ensure updated pseudo-class states
+                        cellSelectionModelInvalidationListener.invalidated(value.cellSelectionEnabledProperty());            
+                    }
+                    
+                    oldValue = value;
+                }
+            };
         }
         return selectionModel;
     }
     
+    /* proxy pseudo-class state change from selectionModel's cellSelectionEnabledProperty */
+    private final InvalidationListener cellSelectionModelInvalidationListener = 
+        new InvalidationListener() {
+
+        @Override
+        public void invalidated(Observable o) {
+            boolean isCellSelection = ((BooleanProperty)o).get();
+            pseudoClassStateChanged(PSEUDO_CLASS_CELL_SELECTION,  isCellSelection);
+            pseudoClassStateChanged(PSEUDO_CLASS_ROW_SELECTION,  !isCellSelection);
+        }
+    };
     
     // --- Focus Model
     private ObjectProperty<TreeTableViewFocusModel<S>> focusModel;
@@ -1055,11 +1087,11 @@ public class TreeTableView<S> extends Control {
                 
                         if (oldPolicy != null) {
                             PseudoClass state = PseudoClass.getPseudoClass(oldPolicy.toString());
-                            pseudoClassStateChanged(state);
+                            pseudoClassStateChanged(state, false);
                         }
                         if (get() != null) {
                             PseudoClass state = PseudoClass.getPseudoClass(get().toString());
-                            pseudoClassStateChanged(state);
+                            pseudoClassStateChanged(state, true);
                         }
                         oldPolicy = get();
                     }
@@ -1449,17 +1481,6 @@ public class TreeTableView<S> extends Control {
     private static final PseudoClass PSEUDO_CLASS_ROW_SELECTION = 
             PseudoClass.getPseudoClass("row-selection");
 
-    /**
-     * {@inheritDoc}
-     */
-    @Override public Set<PseudoClass> getPseudoClassStates() {
-        Set<PseudoClass> states = super.getPseudoClassStates();
-        if (getSelectionModel() != null) {
-            if (getSelectionModel().isCellSelectionEnabled()) states.add(PSEUDO_CLASS_CELL_SELECTION);
-            else states.add(PSEUDO_CLASS_ROW_SELECTION);
-        }
-        return states;
-    }
 
     /** {@inheritDoc} */
     @Override protected Skin<?> createDefaultSkin() {
@@ -1604,8 +1625,6 @@ public class TreeTableView<S> extends Control {
                 @Override public void invalidated(Observable o) {
                     isCellSelectionEnabled();
                     clearSelection();
-                    treeTableView.pseudoClassStateChanged(TreeTableView.PSEUDO_CLASS_CELL_SELECTION);
-                    treeTableView.pseudoClassStateChanged(TreeTableView.PSEUDO_CLASS_ROW_SELECTION);
                 }
             });
         }

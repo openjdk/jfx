@@ -178,9 +178,9 @@ final public class SimpleSelector extends Selector {
     }
     
     // a mask of bits corresponding to the pseudoclasses
-    final private PseudoClassSet pseudoClassStates;
+    final private long[] pseudoClassStates;
     
-    PseudoClassSet getPseudoClassStates() {
+    long[] getPseudoClassStates() {
         return pseudoClassStates;
     }
 
@@ -188,12 +188,12 @@ final public class SimpleSelector extends Selector {
      * @return Immutable List&lt;String&gt; of pseudo-classes of the selector
      */
     public List<String> getPseudoclasses() {
-        final List<PseudoClass> pseudoClasses = pseudoClassStates.getPseudoClasses();
-        final List<String> strings = new ArrayList<String>(pseudoClasses.size());
-        for (PseudoClass pseudoClass : pseudoClasses) {
-            strings.add(pseudoClass.getPseudoClassName());
+        final List<PseudoClass> pclasses = PseudoClassSet.getPseudoClasses(pseudoClassStates);
+        final List<String> names = new ArrayList<String>();
+        for (PseudoClass pclass : pclasses) {
+            names.add(pclass.getPseudoClassName());
         }
-        return Collections.unmodifiableList(strings);
+        return Collections.unmodifiableList(names);
     }
         
     // true if name is not a wildcard
@@ -207,7 +207,7 @@ final public class SimpleSelector extends Selector {
 
     // TODO: The parser passes styleClasses as a List. Should be array?
     public SimpleSelector(final String name, final List<String> styleClasses,
-            final List<String> pseudoclasses, final String id)
+            final List<String> pseudoClasses, final String id)
     {
         this.name = name == null ? "*" : name;
         // if name is not null and not empty or wildcard, 
@@ -220,13 +220,16 @@ final public class SimpleSelector extends Selector {
                 : new long[0];
         this.matchOnStyleClass = (this.styleClassMasks.length > 0);
 
-        this.pseudoClassStates = new PseudoClassSet();
-        final int nMax = pseudoclasses != null ? pseudoclasses.size() : 0;
+        final int nMax = pseudoClasses != null ? pseudoClasses.size() : 0;
+        long[] temp = nMax > 0 ? new long[1] : new long[0];
         for(int n=0; n<nMax; n++) { 
-            String pclass = pseudoclasses.get(n);
+            final String pclass = pseudoClasses.get(n);
             if (pclass == null || pclass.isEmpty()) continue;
-            this.pseudoClassStates.add(PseudoClass.getPseudoClass(pclass));
+            final PseudoClassImpl impl = 
+                (PseudoClassImpl)PseudoClassImpl.getPseudoClassImpl(pclass);
+            temp = PseudoClassSet.addPseudoClass(temp, impl.index);
         }
+        this.pseudoClassStates = temp;
 
         this.id = id == null ? "" : id;
         // if id is not null and not empty, then match needs to check id
@@ -283,7 +286,7 @@ final public class SimpleSelector extends Selector {
         // Scene should match wildcard or specific java class name only.
         if (!matchOnStyleClass 
                 && !matchOnId 
-                && (pseudoClassStates == null || pseudoClassStates.isEmpty())) {
+                && (pseudoClassStates == null || pseudoClassStates.length == 0)) {
 
             final String className = scene.getClass().getName();
             final boolean classMatch =
@@ -332,18 +335,25 @@ final public class SimpleSelector extends Selector {
     }
     
     @Override 
-    boolean applies(Node node, PseudoClassSet[] states, int depth) {
+    boolean applies(Node node, long[][] pseudoClasses, int depth) {
 
+        
         final boolean applies = applies(node);
         //
-        // We only need the states if the selector applies to the node.
+        // We only need the pseudo-classes if the selector applies to the node.
         // 
-        assert(states == null || depth < states.length);
-        if (applies && states != null && depth < states.length) {
-            final PseudoClassSet temp = new PseudoClassSet();
-            temp.addAll(states[depth]);
-            temp.addAll(this.pseudoClassStates);
-            states[depth] = temp;
+        if (applies && pseudoClasses != null && depth < pseudoClasses.length) {
+            // make sure states[depth] can hold this selectors pseudo-class states
+            if (pseudoClasses[depth] == null || pseudoClasses[depth].length < pseudoClassStates.length) {
+                long[] temp = new long[pseudoClassStates.length];
+                if (pseudoClasses[depth] != null) {
+                    System.arraycopy(pseudoClasses[depth], 0, temp, 0, pseudoClasses[depth].length);
+                }
+                pseudoClasses[depth] = temp;
+            }
+            for (int n=0; n<pseudoClassStates.length; n++) {
+                pseudoClasses[depth][n] |= this.pseudoClassStates[n];
+            }
         }
         return applies;
     }
@@ -356,10 +366,10 @@ final public class SimpleSelector extends Selector {
     }
     
     @Override
-    boolean stateMatches(final Node node, PseudoClassSet states) {
+    boolean stateMatches(final Node node, long[] states) {
         // [foo bar] matches [foo bar bang], 
         // but [foo bar bang] doesn't match [foo bar]
-        return states.containsAll(pseudoClassStates);
+        return isSubsetOf(pseudoClassStates, states);
     }
 
     /*
@@ -452,11 +462,11 @@ final public class SimpleSelector extends Selector {
                     !Arrays.equals(this.styleClassMasks, other.styleClassMasks))) {
             return false;
         }
-        if (this.pseudoClassStates != null) {
-            return  this.pseudoClassStates.equals(other.pseudoClassStates);
+        if (this.pseudoClassStates != null ? other.pseudoClassStates == null : other.pseudoClassStates != null) {
+            return false;
         } 
         
-        return true;
+        return  Arrays.equals(this.pseudoClassStates,other.pseudoClassStates);
     }
 
     private  int hash = -1;

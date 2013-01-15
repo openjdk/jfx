@@ -102,7 +102,7 @@ import com.sun.javafx.beans.event.AbstractNotifyListener;
 import com.sun.javafx.binding.ExpressionHelper;
 import com.sun.javafx.collections.TrackableObservableList;
 import com.sun.javafx.collections.UnmodifiableListSet;
-import com.sun.javafx.css.PseudoClassSet;
+//import com.sun.javafx.css.PseudoClassSet;
 import javafx.css.ParsedValue;
 import com.sun.javafx.css.Selector;
 import com.sun.javafx.css.Style;
@@ -133,7 +133,7 @@ import com.sun.javafx.jmx.MXNodeAlgorithmContext;
 import sun.util.logging.PlatformLogger;
 import com.sun.javafx.perf.PerformanceTracker;
 import com.sun.javafx.scene.BoundsAccessor;
-import com.sun.javafx.scene.CSSFlags;
+import com.sun.javafx.scene.CssFlags;
 import com.sun.javafx.scene.DirtyBits;
 import com.sun.javafx.scene.EventHandlerProperties;
 import com.sun.javafx.scene.NodeEventDispatcher;
@@ -597,8 +597,8 @@ public abstract class Node implements EventTarget {
                 // listen for when the user sets the PSEUDO_CLASS_OVERRIDE_KEY to new value
                 properties.addListener(new MapChangeListener<Object,Object>(){
                     @Override public void onChanged(Change<? extends Object, ? extends Object> change) {
-                        if (PSEUDO_CLASS_OVERRIDE_KEY.equals(change.getKey()) && getScene() != null && cssFlag != CSSFlags.REAPPLY) {
-                            cssFlag = CSSFlags.UPDATE;
+                        if (PSEUDO_CLASS_OVERRIDE_KEY.equals(change.getKey()) && getScene() != null && cssFlag != CssFlags.REAPPLY) {
+                            cssFlag = CssFlags.UPDATE;
                             notifyParentsOfInvalidatedCSS();
                         }
                     }
@@ -956,9 +956,9 @@ public abstract class Node implements EventTarget {
                     // If the style has changed, then styles of this node
                     // and child nodes might be affected. So if the cssFlag
                     // is not already set to reapply or recalculate, make it so.
-                    if (cssFlag != CSSFlags.REAPPLY ||
-                            cssFlag != CSSFlags.RECALCULATE) {
-                        cssFlag = CSSFlags.RECALCULATE;
+                    if (cssFlag != CssFlags.REAPPLY ||
+                            cssFlag != CssFlags.RECALCULATE) {
+                        cssFlag = CssFlags.RECALCULATE;
                         notifyParentsOfInvalidatedCSS();
                     }
                 }
@@ -1526,7 +1526,7 @@ public abstract class Node implements EventTarget {
 
                 @Override
                 protected void invalidated() {
-                    pseudoClassStateChanged(DISABLED_PSEUDOCLASS_STATE);
+                    pseudoClassStateChanged(DISABLED_PSEUDOCLASS_STATE, get());
                     updateCanReceiveFocus();
                     focusSetDirty(getScene());
                 }
@@ -1632,7 +1632,7 @@ public abstract class Node implements EventTarget {
     // TODO: need to verify whether this is OK to do starting from a node in
     // the scene graph other than the root.
     private void doCSSPass() {
-        if (this.cssFlag != CSSFlags.CLEAN) {
+        if (this.cssFlag != CssFlags.CLEAN) {
             // The dirty bit isn't checked but we must ensure it is cleared.
             // The cssFlag is set to clean in either Node.processCSS or
             // Node.impl_processCSS(boolean)
@@ -2206,7 +2206,11 @@ public abstract class Node implements EventTarget {
         //if (PerformanceTracker.isLoggingEnabled()) {
         //    PerformanceTracker.logEvent("Node.init for [{this}, id=\"{id}\"]");
         //}
-        styleHelper = new StyleHelper(this);
+        styleHelper = new StyleHelper(this) {
+            @Override protected void requestStateTranstion() {
+                Node.this.requestCssStateTransition();
+            }
+        };
         setDirty();
         updateTreeVisible();
         //if (PerformanceTracker.isLoggingEnabled()) {
@@ -5695,9 +5699,9 @@ public abstract class Node implements EventTarget {
                     if (logger.isLoggable(PlatformLogger.FINER)) {
                         logger.finer(this + " hover=" + get());
                     }
-                    pseudoClassStateChanged(HOVER_PSEUDOCLASS_STATE);
+                    pseudoClassStateChanged(HOVER_PSEUDOCLASS_STATE, get());
                 }
-
+                
                 @Override
                 public Object getBean() {
                     return Node.this;
@@ -5736,14 +5740,14 @@ public abstract class Node implements EventTarget {
     private ReadOnlyBooleanWrapper pressedPropertyImpl() {
         if (pressed == null) {
             pressed = new ReadOnlyBooleanWrapper() {
-
+                
                 @Override
                 protected void invalidated() {
                     PlatformLogger logger = Logging.getInputLogger();
                     if (logger.isLoggable(PlatformLogger.FINER)) {
                         logger.finer(this + " pressed=" + get());
                     }
-                    pseudoClassStateChanged(PRESSED_PSEUDOCLASS_STATE);
+                    pseudoClassStateChanged(PRESSED_PSEUDOCLASS_STATE, get());
                 }
 
                 @Override
@@ -6507,7 +6511,7 @@ public abstract class Node implements EventTarget {
             if (valid) {
                 valid = false;
 
-                pseudoClassStateChanged(FOCUSED_PSEUDOCLASS_STATE);
+                pseudoClassStateChanged(FOCUSED_PSEUDOCLASS_STATE, get());
                 PlatformLogger logger = Logging.getFocusLogger();
                 if (logger.isLoggable(PlatformLogger.FINE)) {
                     logger.fine(this + " focused=" + get());
@@ -6898,8 +6902,9 @@ public abstract class Node implements EventTarget {
 
                 @Override
                 protected void invalidated() {
-                    pseudoClassStateChanged(SHOW_MNEMONICS_PSEUDOCLASS_STATE);
+                    pseudoClassStateChanged(SHOW_MNEMONICS_PSEUDOCLASS_STATE, get());
                 }
+                
                 @Override
                 public Object getBean() {
                     return Node.this;
@@ -7528,35 +7533,66 @@ public abstract class Node implements EventTarget {
      * is clean) and what must happen during the next CSS cycle on the
      * scenegraph.
      */
-    CSSFlags cssFlag = CSSFlags.CLEAN;
+    CssFlags cssFlag = CssFlags.CLEAN;
 
     /**
      * Needed for testing.
      */
-    final CSSFlags getCSSFlags() { return cssFlag; }
+    final CssFlags getCSSFlags() { return cssFlag; }
 
-    /**
-     * Used to specify that the list of which pseudoclasses apply to this
-     * Node has changed. The given parameter is the name of the pseudoclass
-     * that has changed.
+    /** 
+     * Called when a CSS pseudo-class change would cause styles to be reapplied.
      */
-    protected void pseudoClassStateChanged(PseudoClass pseudoClass) {
+    private void requestCssStateTransition() {
         // If there is no scene, then we cannot make it dirty, so we'll leave
         // the flag alone
         if (getScene() == null) return;
         // Don't bother doing anything if the cssFlag is not CLEAN.
-        // If the flag indicates a DIRTY_BRANCH, the flag might need to be
-        // changed to UPDATE if the pseudoclass is used. This is necessary
-        // to ensure that impl_processCSS is called on the node.
-        if (cssFlag == CSSFlags.CLEAN || cssFlag == CSSFlags.DIRTY_BRANCH) {
-            // We only want to mark the node as needing an UPDATE if the
-            // pseudoclass is actually used by some CSS rule in the stylesheet.
-            // If not, then we can safely ignore it
-            if (isPseudoclassUsed(pseudoClass)) {
-                cssFlag = CSSFlags.UPDATE;
-                notifyParentsOfInvalidatedCSS();
+        // If the flag indicates a DIRTY_BRANCH, the flag needs to be changed
+        // to UPDATE to ensure that impl_processCSS is called on the node.
+        if (cssFlag == CssFlags.CLEAN || cssFlag == CssFlags.DIRTY_BRANCH) {
+            cssFlag = CssFlags.UPDATE;
+            notifyParentsOfInvalidatedCSS();
+        }
+    }
+    
+    /**
+     * Used to specify that a pseudo-class of this Node has changed. If the
+     * pseudo-class is used in a CSS selector that matches this Node, CSS will
+     * be reapplied.
+     * @param pseudoClass the pseudo-class that has changed state
+     * @param active whether or not the state is active
+     */
+    public final void pseudoClassStateChanged(PseudoClass pseudoClass, boolean active) {
+
+        final Set<PseudoClass> pseudoClassState = styleHelper.getPseudoClassSet();
+        
+        if (active) {
+            pseudoClassState.add(pseudoClass);
+        } else {
+            pseudoClassState.remove(pseudoClass);
+        }
+        
+        if (PSEUDO_CLASS_OVERRIDE_ENABLED && hasProperties()) {
+            final Object pseudoClassOverride = getProperties().get(PSEUDO_CLASS_OVERRIDE_KEY);
+            if (pseudoClassOverride instanceof String) {
+                final String[] pseudoClasses = ((String)pseudoClassOverride).split("[\\s,]+");
+                for(String pc: pseudoClasses) {
+                    PseudoClass state = PseudoClass.getPseudoClass(pc);
+                    pseudoClassState.add(state);
+                }
             }
         }
+    }
+    
+    /**
+     * 
+     * @return An unmodifiable Set of active pseudo-class states
+     */
+    public final Set<PseudoClass> getPseudoClassStates() {
+        
+        final Set<PseudoClass> pseudoClassState = styleHelper.getPseudoClassSet();
+        return Collections.<PseudoClass>unmodifiableSet(pseudoClassState);
     }
 
     // Walks up the tree telling each parent that the pseudo class state of
@@ -7569,21 +7605,21 @@ public abstract class Node implements EventTarget {
             // Scene in doCSSPass().
             getScene().getRoot().impl_markDirty(DirtyBits.NODE_CSS);
         }
-        Parent parent = getParent();
-        while (parent != null) {
-            if (parent.cssFlag == CSSFlags.CLEAN) {
-                parent.cssFlag = CSSFlags.DIRTY_BRANCH;
-                parent = parent.getParent();
+        Parent _parent = getParent();
+        while (_parent != null) {
+            if (_parent.cssFlag == CssFlags.CLEAN) {
+                _parent.cssFlag = CssFlags.DIRTY_BRANCH;
+                _parent = _parent.getParent();
             } else {
-                parent = null;
+                _parent = null;
             }
         }
     }
 
-    // this function primarily exists as a hook to aid in testing
-    boolean isPseudoclassUsed(PseudoClass pseudoclass) {
-        return (styleHelper != null) ? styleHelper.isPseudoClassUsed(pseudoclass) : false;
-    }
+//    // this function primarily exists as a hook to aid in testing
+//    boolean isPseudoclassUsed(PseudoClass pseudoclass) {
+//        return (styleHelper != null) ? styleHelper.isPseudoClassUsed(pseudoclass) : false;
+//    }
 
     /**
      * @treatAsPrivate implementation detail
@@ -7627,9 +7663,9 @@ public abstract class Node implements EventTarget {
         // the flag alone
         if (getScene() == null) return;
         // If the css flag is already "REAPPLY", then do nothing
-        if (cssFlag == CSSFlags.REAPPLY) return;
+        if (cssFlag == CssFlags.REAPPLY) return;
         // Update the flag
-        cssFlag = CSSFlags.REAPPLY;
+        cssFlag = CssFlags.REAPPLY;
 
         // One idiom employed by developers is to, during the layout pass,
         // add or remove nodes from the scene. For example, a ScrollPane
@@ -7650,11 +7686,10 @@ public abstract class Node implements EventTarget {
             case CLEAN:
                 break;
             case DIRTY_BRANCH:     
-                styleHelper.setTransitionStates(getPseudoClassStates());
                 Parent me = (Parent)this;
                 // clear the flag first in case the flag is set to something
                 // other than clean by downstream processing.
-                me.cssFlag = CSSFlags.CLEAN;
+                me.cssFlag = CssFlags.CLEAN;
                 List<Node> children = me.getChildren();
                 for (int i=0, max=children.size(); i<max; i++) {
                     children.get(i).processCSS();
@@ -7687,24 +7722,8 @@ public abstract class Node implements EventTarget {
         // is called, then the code is trying to force css to be applied 
         // in the middle of a pulse.
         //
-        
-        //
-        // Since StyleHelper expects css to be applied top-down, follow
-        // the path from this node to the root and set the transition states. 
-        // The transitionsStates _have_ to be set from the root on down. 
-        final java.util.Stack<Parent> parents = new java.util.Stack<Parent>();
-        Parent parent = getParent();
-        while (parent != null) {
-            parents.push(parent);
-            parent = parent.getParent();
-        }
-        while (parents.isEmpty() == false) {
-            parent = parents.pop();
-            parent.impl_getStyleHelper().setTransitionStates(((Node)parent).getPseudoClassStates());
-        }
-        
-        final boolean flag = (reapply || cssFlag == CSSFlags.REAPPLY);
-        cssFlag = flag ? CSSFlags.REAPPLY : CSSFlags.UPDATE;
+        final boolean flag = (reapply || cssFlag == CssFlags.REAPPLY);
+        cssFlag = flag ? CssFlags.REAPPLY : CssFlags.UPDATE;
         impl_processCSS();
     }
     
@@ -7720,22 +7739,22 @@ public abstract class Node implements EventTarget {
     protected void impl_processCSS() {
         
         // Nothing to do...
-        if (cssFlag == CSSFlags.CLEAN) return;
+        if (cssFlag == CssFlags.CLEAN) return;
 
         final Scene scene = getScene();
         if (scene == null) {
-            cssFlag = CSSFlags.CLEAN;
+            cssFlag = CssFlags.CLEAN;
             return;
         }
 
         // Match new styles if I am told I need to reapply
         // or if my own flag indicates I need to reapply
-        if (cssFlag == CSSFlags.REAPPLY) {
+        if (cssFlag == CssFlags.REAPPLY) {
 
             final StyleManager styleManager = scene.styleManager;
             styleHelper.setStyles(styleManager);
 
-        } else if (cssFlag == CSSFlags.RECALCULATE) {
+        } else if (cssFlag == CssFlags.RECALCULATE) {
             
             final StyleManager styleManager = scene.styleManager;
             styleHelper.inlineStyleChanged(styleManager);
@@ -7744,10 +7763,9 @@ public abstract class Node implements EventTarget {
         
         // Clear the flag first in case the flag is set to something
         // other than clean by downstream processing.
-        cssFlag = CSSFlags.CLEAN;
+        cssFlag = CssFlags.CLEAN;
 
         // Transition to the new state and apply styles
-        styleHelper.setTransitionStates(getPseudoClassStates());
         styleHelper.transitionToState();
     }
     
@@ -7774,33 +7792,6 @@ public abstract class Node implements EventTarget {
     private static final PseudoClass DISABLED_PSEUDOCLASS_STATE = PseudoClass.getPseudoClass("disabled");
     private static final PseudoClass FOCUSED_PSEUDOCLASS_STATE = PseudoClass.getPseudoClass("focused");
     private static final PseudoClass SHOW_MNEMONICS_PSEUDOCLASS_STATE = PseudoClass.getPseudoClass("show-mnemonics");
-
-    /**
-     * Gets the current {@link Set<PseudoClass>} of this node.
-     */
-    public Set<PseudoClass> getPseudoClassStates() {
-
-        Set<PseudoClass> mask = new PseudoClassSet();
-        
-        if (PSEUDO_CLASS_OVERRIDE_ENABLED && hasProperties()) {
-            final Object pseudoClassOverride = getProperties().get(PSEUDO_CLASS_OVERRIDE_KEY);
-            if (pseudoClassOverride instanceof String) {
-                final String[] pseudoClasses = ((String)pseudoClassOverride).split("[\\s,]+");
-                for(String pc: pseudoClasses) {
-                    PseudoClass state = PseudoClass.getPseudoClass(pc);
-                    mask.add(state);
-                }
-                return mask;
-            }
-        }
-        
-        if(isHover()) mask.add(HOVER_PSEUDOCLASS_STATE);
-        if(isPressed()) mask.add(PRESSED_PSEUDOCLASS_STATE);
-        if(isDisabled()) mask.add(DISABLED_PSEUDOCLASS_STATE);
-        if(isFocused()) mask.add(FOCUSED_PSEUDOCLASS_STATE);
-        if(impl_isShowMnemonics()) mask.add(SHOW_MNEMONICS_PSEUDOCLASS_STATE);
-        return mask;
-    }
 
     private static final boolean PSEUDO_CLASS_OVERRIDE_ENABLED = AccessController.doPrivileged(
             new PrivilegedAction<Boolean>() {

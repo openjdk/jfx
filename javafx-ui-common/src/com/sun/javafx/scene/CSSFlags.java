@@ -27,7 +27,7 @@ package com.sun.javafx.scene;
 /**
  * Flags used for processing the CSS pass in the scenegraph
  */
-public enum CSSFlags {
+public enum CssFlags {
     // NOTE: Order is significant as I use a quick ordinal() check for
     // determining whether to continue processing, so these are ranked
     // according to precedence

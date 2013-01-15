@@ -253,7 +253,7 @@ public class CssMetaDataTest {
                     styles.add(
                         new CascadingStyle(
                             new Style(match.selector, declaration), 
-                            match.pseudoclasses,
+                            match.pseudoClasses,
                             match.specificity, 
                             ord++
                         )
@@ -267,18 +267,39 @@ public class CssMetaDataTest {
         
     static int ord = 0;
     static CascadingStyle createCascadingStyle(Selector selector, Declaration declaration) {
-        PseudoClassSet pseudoClassSet = null;
+        
+        long[] pseudoClasses = null;
         if (selector instanceof SimpleSelector) {
-            pseudoClassSet = ((SimpleSelector)selector).getPseudoClassStates();
+            
+            pseudoClasses = ((SimpleSelector)selector).getPseudoClassStates();
         } else {
-            pseudoClassSet = new PseudoClassSet(); 
+            
+            pseudoClasses = new long[0];
             for (SimpleSelector sel : ((CompoundSelector)selector).getSelectors()) {
-                 pseudoClassSet.addAll(sel.getPseudoClassStates());
+                
+                 long[] selectorPseudoClasses = sel.getPseudoClassStates();
+                 if (pseudoClasses.length < selectorPseudoClasses.length) {
+                     
+                     long[] temp = Arrays.copyOf(selectorPseudoClasses, selectorPseudoClasses.length);
+                     for (int n=0; n<pseudoClasses.length; n++) {
+                         temp[n] |= pseudoClasses[n];
+                     }
+                     pseudoClasses = temp;
+                     
+                 } else {
+                     
+                     int nMax = Math.min(selectorPseudoClasses.length, pseudoClasses.length);
+                     for (int n=0; n<nMax; n++) {
+                         pseudoClasses[n] |= selectorPseudoClasses[n];
+                     }                     
+                     
+                 }
             }
         }
+        
         return new CascadingStyle(
             new Style(selector, declaration),
-            pseudoClassSet,
+            pseudoClasses,
             0,
             ord++
         );

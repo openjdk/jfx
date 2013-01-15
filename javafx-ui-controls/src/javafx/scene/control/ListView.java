@@ -424,8 +424,9 @@ public class ListView<T> extends Control {
         if (orientation == null) {
             orientation = new StyleableObjectProperty<Orientation>(Orientation.VERTICAL) {
                 @Override public void invalidated() {
-                    pseudoClassStateChanged(PSEUDO_CLASS_VERTICAL);
-                    pseudoClassStateChanged(PSEUDO_CLASS_HORIZONTAL);
+                    final boolean active = (get() == Orientation.VERTICAL);
+                    pseudoClassStateChanged(PSEUDO_CLASS_VERTICAL,    active);
+                    pseudoClassStateChanged(PSEUDO_CLASS_HORIZONTAL, !active);
                 }
                 
                 @Override 
@@ -811,20 +812,6 @@ public class ListView<T> extends Control {
             PseudoClass.getPseudoClass("vertical");
     private static final PseudoClass PSEUDO_CLASS_HORIZONTAL =
             PseudoClass.getPseudoClass("horizontal");
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override public Set<PseudoClass> getPseudoClassStates() {
-        Set<PseudoClass> states = super.getPseudoClassStates();
-        if (getOrientation() == Orientation.VERTICAL) {
-            states.add(PSEUDO_CLASS_VERTICAL);
-        } else {            
-            states.add(PSEUDO_CLASS_HORIZONTAL);
-        }
-        return states;
-    }
-
 
     /***************************************************************************
      *                                                                         *

@@ -96,6 +96,11 @@ public class ProgressIndicator extends Control {
         prop.set(this, Boolean.FALSE, null); 
         setProgress(progress);
         getStyleClass().setAll(DEFAULT_STYLE_CLASS);
+        
+        // need to initialize pseudo-class state
+        final int c = Double.compare(INDETERMINATE_PROGRESS, progress);
+        pseudoClassStateChanged(PSEUDO_CLASS_INDETERMINATE, c == 0);
+        pseudoClassStateChanged(PSEUDO_CLASS_DETERMINATE,   c != 0);
     }
     /***************************************************************************
      *                                                                         *
@@ -125,8 +130,9 @@ public class ProgressIndicator extends Control {
         if (indeterminate == null) {
             indeterminate = new ReadOnlyBooleanWrapper(true) {
                 @Override protected void invalidated() {
-                    pseudoClassStateChanged(PSEUDO_CLASS_INDETERMINATE);
-                    pseudoClassStateChanged(PSEUDO_CLASS_DETERMINATE);
+                    final boolean active = get();
+                    pseudoClassStateChanged(PSEUDO_CLASS_INDETERMINATE, active);
+                    pseudoClassStateChanged(PSEUDO_CLASS_DETERMINATE,  !active);
                 }
 
                 @Override
@@ -216,17 +222,6 @@ public class ProgressIndicator extends Control {
      */
     private static final PseudoClass PSEUDO_CLASS_INDETERMINATE =
             PseudoClass.getPseudoClass("indeterminate");
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override public Set<PseudoClass> getPseudoClassStates() {
-        Set<PseudoClass> states = super.getPseudoClassStates();
-        if (isIndeterminate()) states.add(PSEUDO_CLASS_INDETERMINATE);
-        else states.add(PSEUDO_CLASS_DETERMINATE);
-        return states;
-    }
-    
     
     /**
       * Most Controls return true for focusTraversable, so Control overrides

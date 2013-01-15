@@ -495,7 +495,7 @@ public class ColorPalette extends StackPane {
             if (selected == null) {
                 selected = new ReadOnlyBooleanWrapper() {
                     @Override protected void invalidated() {
-                        pseudoClassStateChanged(SELECTED_PSEUDOCLASS_STATE);
+                        pseudoClassStateChanged(SELECTED_PSEUDOCLASS_STATE, get());
                     }
 
                     @Override
@@ -513,12 +513,6 @@ public class ColorPalette extends StackPane {
         }
         private final PseudoClass SELECTED_PSEUDOCLASS_STATE =
             PseudoClass.getPseudoClass("selected");
-
-        @Override public Set<PseudoClass> getPseudoClassStates() {
-            Set<PseudoClass> states = super.getPseudoClassStates();
-            if (isSelected()) states.add(SELECTED_PSEUDOCLASS_STATE);
-            return states;
-        }
         
     }
     

@@ -142,7 +142,7 @@ public class MenuButton extends ButtonBase {
     // --- Showing
     private ReadOnlyBooleanWrapper showing = new ReadOnlyBooleanWrapper(this, "showing", false) {
         @Override protected void invalidated() {
-            pseudoClassStateChanged(PSEUDO_CLASS_SHOWING);
+            pseudoClassStateChanged(PSEUDO_CLASS_SHOWING, get());
             super.invalidated();
         }
     };
@@ -180,7 +180,9 @@ public class MenuButton extends ButtonBase {
         if (popupSide == null) {
             popupSide = new ObjectPropertyBase<Side>(Side.BOTTOM) {
                 @Override protected void invalidated() {
-                    pseudoClassStateChanged(PSEUDO_CLASS_OPENVERTICALLY);
+                    final Side side = get();
+                    final boolean active = (side == Side.TOP) || (side == Side.BOTTOM);
+                    pseudoClassStateChanged(PSEUDO_CLASS_OPENVERTICALLY, active);
                 }
 
                 @Override
@@ -252,18 +254,5 @@ public class MenuButton extends ButtonBase {
             PseudoClass.getPseudoClass("openvertically");
     private static final PseudoClass PSEUDO_CLASS_SHOWING = 
             PseudoClass.getPseudoClass("showing");
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override public Set<PseudoClass> getPseudoClassStates() {
-        Set<PseudoClass> states = super.getPseudoClassStates();
-        if (getPopupSide() == Side.TOP || getPopupSide() == Side.BOTTOM)
-            states.add(PSEUDO_CLASS_OPENVERTICALLY);
-        if (isShowing()) {
-            states.add(PSEUDO_CLASS_SHOWING);
-        }
-        return states;
-    }
 
 }

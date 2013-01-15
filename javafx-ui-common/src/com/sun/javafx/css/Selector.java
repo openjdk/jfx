@@ -66,13 +66,13 @@ abstract public class Selector {
     public abstract boolean applies(Node node);
     
     // same as applies, but will return pseudoclass state that it finds along the way
-    abstract boolean applies(Node node, PseudoClassSet[] pseudoclassBits, int bit);
+    abstract boolean applies(Node node, long[][] pseudoclassBits, int bit);
     
     /**
      * Determines whether the current state of the node and its parents
      * matches the pseudo-classes defined (if any) for this selector.
      */
-    abstract boolean stateMatches(Node node, PseudoClassSet state);
+    abstract boolean stateMatches(Node node, long[] state);
 
     private static final int TYPE_SIMPLE = 1;
     private static final int TYPE_COMPOUND = 2;

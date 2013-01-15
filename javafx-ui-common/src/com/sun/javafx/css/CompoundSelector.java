@@ -122,9 +122,18 @@ final public class CompoundSelector extends Selector {
             final Match ancestorMatch = matches(parent, index-1);
             if (ancestorMatch != null) {
 
-                PseudoClassSet allPseudoClasses = new PseudoClassSet();
-                allPseudoClasses.addAll(ancestorMatch.pseudoclasses);
-                allPseudoClasses.addAll(descendantMatch.pseudoclasses);
+                final int nPseudoClasses = 
+                    Math.max(ancestorMatch.pseudoClasses.length, descendantMatch.pseudoClasses.length);
+                long[] allPseudoClasses = new long[nPseudoClasses];
+                
+                for (int n=0; n<ancestorMatch.pseudoClasses.length; n++) {
+                    allPseudoClasses[n] = ancestorMatch.pseudoClasses[n];
+                }
+                
+                for (int n=0; n<descendantMatch.pseudoClasses.length; n++) {
+                    allPseudoClasses[n] |= descendantMatch.pseudoClasses[n];
+                }
+                
                 return new Match(this, 
                         allPseudoClasses,
                         ancestorMatch.idCount + descendantMatch.idCount,
@@ -150,7 +159,12 @@ final public class CompoundSelector extends Selector {
     }
 
     @Override
-    boolean applies(final Node node, PseudoClassSet[] pseudoClassBits, int bit) {
+    boolean applies(final Node node, long[][] pseudoClassBits, int depth) {
+        
+        assert (pseudoClassBits == null || depth < pseudoClassBits.length);        
+        if (pseudoClassBits != null && pseudoClassBits.length <= depth) {
+            return false;
+        }
         
         // 
         // We only care about pseudoclassBits if the selector applies. But in
@@ -158,32 +172,39 @@ final public class CompoundSelector extends Selector {
         // until all the selectors have been checked (in the worse case). So
         // the setting of pseudoclassBits has to be deferred until we know
         // that this compound selector applies. So we'll send a new 
-        // PseudoClassSet instance and if the compound selector applies,
-        // we can just copy the bits back. 
+        // long[] and if the compound selector applies, just copy the bits back. 
         //
-        final PseudoClassSet[] tempBits = pseudoClassBits != null 
-                ? new PseudoClassSet[pseudoClassBits.length] : null;
-        final boolean applies = applies(node, selectors.size()-1, tempBits, bit);
-        if (applies && (tempBits != null)) {
-            assert tempBits.length == pseudoClassBits.length;
-            final int nMax = Math.min(tempBits.length, pseudoClassBits.length);                    
-            for (int n=0; n<nMax; n++) {
-                PseudoClassSet temp = new PseudoClassSet();
-                temp.addAll(pseudoClassBits[n]);
-                temp.addAll(tempBits[n]);
-                pseudoClassBits[n] = temp;
+        final long[][] tempBits = pseudoClassBits != null 
+                ? new long[pseudoClassBits.length][0] : null;
+        final boolean applies = applies(node, selectors.size()-1, tempBits, depth);
+        
+        if (applies && tempBits != null) {
+            
+            for(int n=0; n<pseudoClassBits.length; n++) {
+                long[] bitsOut = pseudoClassBits[n];
+                long[] bitsIn = tempBits[n];
+                if (bitsOut == null || bitsOut.length < bitsIn.length) {
+                    long[] temp = new long[bitsIn.length];
+                    if (bitsOut != null) {
+                        System.arraycopy(bitsOut, 0, temp, 0, bitsOut.length);
+                    }
+                    bitsOut = pseudoClassBits[n] = temp;
+                }
+                for (int b=0; b<bitsIn.length; b++) {
+                    bitsOut[b] |= bitsIn[b];
+                }
             }
         }
         return applies;
     }
 
-    private boolean applies(final Node node, final int index, PseudoClassSet[] pseudoclassBits, int bit) {
+    private boolean applies(final Node node, final int index, long[][] pseudoclassBits, int depth) {
         // If the index is < 0 then we know we don't apply
         if (index < 0) return false;
 
         // Simply check the selector associated with this index and see if it
         // applies to the Node
-        if (! selectors.get(index).applies(node, pseudoclassBits, bit)) return false;
+        if (! selectors.get(index).applies(node, pseudoclassBits, depth)) return false;
 
         // If there are no more selectors to check (ie: index == 0) then we
         // know we know we apply
@@ -203,11 +224,11 @@ final public class CompoundSelector extends Selector {
             if (parent == null) return false;
             // If this call succeeds, then all preceding selectors will have
             // matched due to the recursive nature of the call
-            return applies(parent, index - 1, pseudoclassBits, ++bit);
+            return applies(parent, index - 1, pseudoclassBits, ++depth);
         } else {
              Node parent = node.getParent();
             while (parent != null) {
-                boolean answer = applies(parent, index - 1, pseudoclassBits, ++bit);
+                boolean answer = applies(parent, index - 1, pseudoclassBits, ++depth);
                 // If a call to stateMatches succeeded, then we know that
                 // all preceding selectors will have also matched.
                 if (answer) return true;
@@ -219,11 +240,11 @@ final public class CompoundSelector extends Selector {
     }
 
     @Override
-    boolean stateMatches(final Node node, PseudoClassSet states) {
+    boolean stateMatches(final Node node, long[] states) {
         return stateMatches(node, states, selectors.size()-1);
     }
 
-    private boolean stateMatches(Node node, PseudoClassSet states, int index) {
+    private boolean stateMatches(Node node, long[] states, int index) {
         // If the index is < 0 then we know we don't match
         if (index < 0) return false;
 
@@ -250,7 +271,7 @@ final public class CompoundSelector extends Selector {
             if (selectors.get(index-1).applies(parent)) {
                 final StyleHelper parentStyleHelper = parent.impl_getStyleHelper();
                 if (parentStyleHelper == null) return false;
-                PseudoClassSet parentStates = parentStyleHelper.getPseudoClassState();
+                long[] parentStates = parentStyleHelper.getPseudoClassState();
                 // If this call succeeds, then all preceding selectors will have
                 // matched due to the recursive nature of the call
                 return stateMatches(parent, parentStates, index - 1);
@@ -261,7 +282,7 @@ final public class CompoundSelector extends Selector {
                 if (selectors.get(index-1).applies(parent)) { 
                     final StyleHelper parentStyleHelper = parent.impl_getStyleHelper();
                     if (parentStyleHelper != null) {
-                        PseudoClassSet parentStates = parentStyleHelper.getPseudoClassState();
+                        long[] parentStates = parentStyleHelper.getPseudoClassState();
                         return stateMatches(parent, parentStates, index - 1);
                     } else {
                         // What does it mean for a parent to have a null StyleHelper? 

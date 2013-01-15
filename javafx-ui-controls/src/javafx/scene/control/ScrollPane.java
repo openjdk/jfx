@@ -351,7 +351,7 @@ public class ScrollPane extends Control {
         if (fitToWidth == null) {
             fitToWidth = new StyleableBooleanProperty(false) {
                 @Override public void invalidated() {
-                    pseudoClassStateChanged(FIT_TO_WIDTH_PSEUDOCLASS_STATE);
+                    pseudoClassStateChanged(FIT_TO_WIDTH_PSEUDOCLASS_STATE, get());
                 }
                 
                 @Override
@@ -388,7 +388,7 @@ public class ScrollPane extends Control {
         if (fitToHeight == null) {
             fitToHeight = new StyleableBooleanProperty(false) {
                 @Override public void invalidated() {
-                    pseudoClassStateChanged(FIT_TO_HEIGHT_PSEUDOCLASS_STATE);
+                    pseudoClassStateChanged(FIT_TO_HEIGHT_PSEUDOCLASS_STATE, get());
                 }
 
                 @Override
@@ -427,7 +427,7 @@ public class ScrollPane extends Control {
         if (pannable == null) {
             pannable = new StyleableBooleanProperty(false) {
                 @Override public void invalidated() {
-                    pseudoClassStateChanged(PANNABLE_PSEUDOCLASS_STATE);
+                    pseudoClassStateChanged(PANNABLE_PSEUDOCLASS_STATE, get());
                 }
 
                 @Override
@@ -714,24 +714,6 @@ public class ScrollPane extends Control {
             PseudoClass.getPseudoClass("fitToWidth");
     private static final PseudoClass FIT_TO_HEIGHT_PSEUDOCLASS_STATE =
             PseudoClass.getPseudoClass("fitToHeight");
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override public Set<PseudoClass> getPseudoClassStates() {
-        Set<PseudoClass> states = super.getPseudoClassStates();
-        if (isPannable()) {
-            states.add(PANNABLE_PSEUDOCLASS_STATE);
-        }
-        if (isFitToWidth()) {
-            states.add(FIT_TO_WIDTH_PSEUDOCLASS_STATE);
-        }
-        if (isFitToHeight()) {
-            states.add(FIT_TO_HEIGHT_PSEUDOCLASS_STATE);
-        }
-        return states;
-    }
-    
     
     /**
       * Most Controls return true for focusTraversable, so Control overrides

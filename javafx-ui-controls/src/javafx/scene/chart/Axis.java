@@ -106,10 +106,11 @@ public abstract class Axis<T> extends Region {
     private ObjectProperty<Side> side = new StyleableObjectProperty<Side>(){
         @Override protected void invalidated() {
             // cause refreshTickMarks
-            pseudoClassStateChanged(TOP_PSEUDOCLASS_STATE);
-            pseudoClassStateChanged(RIGHT_PSEUDOCLASS_STATE);
-            pseudoClassStateChanged(BOTTOM_PSEUDOCLASS_STATE);
-            pseudoClassStateChanged(LEFT_PSEUDOCLASS_STATE);
+            Side edge = get();
+            pseudoClassStateChanged(TOP_PSEUDOCLASS_STATE, edge == Side.TOP);
+            pseudoClassStateChanged(RIGHT_PSEUDOCLASS_STATE, edge == Side.RIGHT);
+            pseudoClassStateChanged(BOTTOM_PSEUDOCLASS_STATE, edge == Side.BOTTOM);
+            pseudoClassStateChanged(LEFT_PSEUDOCLASS_STATE, edge == Side.LEFT);
             requestAxisLayout();
         }
         
@@ -1175,45 +1176,17 @@ public abstract class Axis<T> extends Region {
         return getClassCssMetaData();
     }
 
-    /** Pseudoclass indicating this is a vertical Top side Axis. */
+    /** pseudo-class indicating this is a vertical Top side Axis. */
     private static final PseudoClass TOP_PSEUDOCLASS_STATE =
             PseudoClass.getPseudoClass("top");
-    /** Pseudoclass indicating this is a vertical Bottom side Axis. */
+    /** pseudo-class indicating this is a vertical Bottom side Axis. */
     private static final PseudoClass BOTTOM_PSEUDOCLASS_STATE =
             PseudoClass.getPseudoClass("bottom");
-    /** Pseudoclass indicating this is a vertical Left side Axis. */
+    /** pseudo-class indicating this is a vertical Left side Axis. */
     private static final PseudoClass LEFT_PSEUDOCLASS_STATE =
             PseudoClass.getPseudoClass("left");
-    /** Pseudoclass indicating this is a vertical Right side Axis. */
+    /** pseudo-class indicating this is a vertical Right side Axis. */
     private static final PseudoClass RIGHT_PSEUDOCLASS_STATE =
             PseudoClass.getPseudoClass("right");
 
-    /**
-     * {@inheritDoc}
-     */
-    @Override public Set<PseudoClass> getPseudoClassStates() {
-        Set<PseudoClass> states = super.getPseudoClassStates();
-        if (getSide() == null) {
-            // RT-18270 XYChart has not initialized Side values and it could be null
-            // note: We do not have initial default property on creation, as the default
-            // depends on whether it is x, or y axis. hence if we get here - we are 
-            // probably installed directly inside a scene. 
-            setSide(Side.BOTTOM);
-        } 
-        switch(getSide()) {
-            case TOP:
-                states.add(TOP_PSEUDOCLASS_STATE);
-                break;
-            case RIGHT:
-                states.add(RIGHT_PSEUDOCLASS_STATE);
-                break;
-            case BOTTOM:
-                states.add(BOTTOM_PSEUDOCLASS_STATE);
-                break;
-            case LEFT:
-                states.add(LEFT_PSEUDOCLASS_STATE);
-                break;
-        }
-        return states;
-    }
 }

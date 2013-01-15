@@ -512,19 +512,6 @@ public abstract class Control extends Region implements Skinnable {
      **************************************************************************/
 
     /**
-     * {@inheritDoc}
-     */
-    @Override public Set<PseudoClass> getPseudoClassStates() {
-        Set<PseudoClass> states = super.getPseudoClassStates();
-        
-        if (skinBase != null) {
-            states.addAll(skinBase.getPseudoClassStates());
-        }
-        
-        return states;
-    }
-
-    /**
      * Create a new instance of the default skin for this control. This is called to create a skin for the control if
      * no skin is provided via CSS {@code -fx-skin} or set explicitly in a sub-class with {@code  setSkin(...)}.
      *
@@ -691,7 +678,7 @@ public abstract class Control extends Region implements Skinnable {
      * StyleSheet Handling                                                     *
      *                                                                         *
      **************************************************************************/
-
+    
     /**
      * Implementors may specify their own user-agent stylesheet. The return
      * value is a string URL. A relative URL is resolved using the class
@@ -815,16 +802,4 @@ public abstract class Control extends Region implements Skinnable {
         return null; // return a valid value for specific controls accessible objects
     }
 
-    private static final PseudoClass INTERNAL_FOCUS = PseudoClass.getPseudoClass("internal-focus");
-    private static final PseudoClass EXTERNAL_FOCUS = PseudoClass.getPseudoClass("external-focus");
-    /**
-     * The pseudo classes associated with 2-level focus have changed.
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
-     */
-    @Deprecated
-    public  void impl_focusPseudoClassChanged() {
-        pseudoClassStateChanged(INTERNAL_FOCUS);
-        pseudoClassStateChanged(EXTERNAL_FOCUS);
-    }
 }

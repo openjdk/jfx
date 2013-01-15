@@ -151,11 +151,4 @@ public abstract class BehaviorSkinBase<C extends Control, BB extends BehaviorBas
      *                                                                         *
      **************************************************************************/
 
-    /**
-     * {@inheritDoc}
-     */
-    @Override public Set<PseudoClass> getPseudoClassStates() {
-        // check if behaviour can be null...
-        return getBehavior().getPseudoClassStates(); 
-    }    
 }

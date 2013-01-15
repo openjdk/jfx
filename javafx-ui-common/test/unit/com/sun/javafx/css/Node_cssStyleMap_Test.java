@@ -80,7 +80,7 @@ public class Node_cssStyleMap_Test {
             styles.add(
                 new CascadingStyle(
                     new Style(decl.rule.selectors.get(0), decl), 
-                    new PseudoClassSet(),
+                    new long[0],
                     0, 
                     0
                 )

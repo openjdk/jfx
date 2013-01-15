@@ -323,9 +323,12 @@ public class BehaviorBase<C extends Control> {
     }
 
     /**
-     * @see Node#getPseudoClassStates() }
+     * @see Node#pseudoClassStateChanged()
      */
-    public Set<PseudoClass> getPseudoClassStates() {
-        return null;
+    public final void pseudoClassStateChanged(PseudoClass pseudoClass, boolean active) {
+        Control ctl = getControl();
+        if (ctl != null) {
+            ctl.pseudoClassStateChanged(pseudoClass, active);
+        }
     }
 }

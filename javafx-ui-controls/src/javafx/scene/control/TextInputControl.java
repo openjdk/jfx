@@ -201,7 +201,7 @@ public abstract class TextInputControl extends Control {
      */
     private BooleanProperty editable = new SimpleBooleanProperty(this, "editable", true) {
         @Override protected void invalidated() {
-            pseudoClassStateChanged(PSEUDO_CLASS_READONLY);
+            pseudoClassStateChanged(PSEUDO_CLASS_READONLY, get());
         }
     };
     public final boolean isEditable() { return editable.getValue(); }
@@ -1047,14 +1047,4 @@ public abstract class TextInputControl extends Control {
     private static final PseudoClass PSEUDO_CLASS_READONLY
             = PseudoClass.getPseudoClass("readonly");
 
-    /**
-     * {@inheritDoc}
-     */
-    @Override public Set<PseudoClass> getPseudoClassStates() {
-        Set<PseudoClass> states = super.getPseudoClassStates();
-
-        if (!isEditable()) states.add(PSEUDO_CLASS_READONLY);
-
-        return states;
-    }
 }

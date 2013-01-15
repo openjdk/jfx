@@ -148,8 +148,9 @@ public class ToolBar extends Control {
         if (orientation == null) {
             orientation = new StyleableObjectProperty<Orientation>(Orientation.HORIZONTAL) {
                 @Override public void invalidated() {
-                    pseudoClassStateChanged(VERTICAL_PSEUDOCLASS_STATE);
-                    pseudoClassStateChanged(HORIZONTAL_PSEUDOCLASS_STATE);
+                    final boolean isVertical = (get() == Orientation.VERTICAL);
+                    pseudoClassStateChanged(VERTICAL_PSEUDOCLASS_STATE,    isVertical);
+                    pseudoClassStateChanged(HORIZONTAL_PSEUDOCLASS_STATE, !isVertical);
                 }
 
                 @Override
@@ -245,17 +246,6 @@ public class ToolBar extends Control {
     private static final PseudoClass VERTICAL_PSEUDOCLASS_STATE = PseudoClass.getPseudoClass("vertical");
     private static final PseudoClass HORIZONTAL_PSEUDOCLASS_STATE = PseudoClass.getPseudoClass("horizontal");
 
-    /**
-     * {@inheritDoc}
-     */
-    @Override public Set<PseudoClass> getPseudoClassStates() {
-        Set<PseudoClass> states = super.getPseudoClassStates();
-        if (getOrientation() == Orientation.VERTICAL) states.add(VERTICAL_PSEUDOCLASS_STATE);
-        else states.add(HORIZONTAL_PSEUDOCLASS_STATE);
-        return states;
-    }
-
-    
     /**
       * Most Controls return true for focusTraversable, so Control overrides
       * this method to return true, but ToolBar returns false for

@@ -94,7 +94,7 @@ public abstract class ButtonBase extends Labeled {
     public final boolean isArmed() { return armedProperty().get(); }
     private ReadOnlyBooleanWrapper armed = new ReadOnlyBooleanWrapper() {
         @Override protected void invalidated() {
-            pseudoClassStateChanged(ARMED_PSEUDOCLASS_STATE);
+            pseudoClassStateChanged(ARMED_PSEUDOCLASS_STATE, get());
         }
 
         @Override
@@ -182,12 +182,4 @@ public abstract class ButtonBase extends Labeled {
 
     private static final PseudoClass ARMED_PSEUDOCLASS_STATE = PseudoClass.getPseudoClass("armed");
 
-    /**
-     * {@inheritDoc}
-     */
-    @Override public Set<PseudoClass> getPseudoClassStates() {
-        Set<PseudoClass> states = super.getPseudoClassStates();
-        if (isArmed()) states.add(ARMED_PSEUDOCLASS_STATE);
-        return states;
-    }
 }

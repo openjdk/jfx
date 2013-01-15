@@ -76,8 +76,9 @@ public class IndexedCell<T> extends Cell<T> {
     // --- Index
     private ReadOnlyIntegerWrapper index = new ReadOnlyIntegerWrapper(this, "index", -1) {
         @Override protected void invalidated() {
-            pseudoClassStateChanged(PSEUDO_CLASS_EVEN);
-            pseudoClassStateChanged(PSEUDO_CLASS_ODD);
+            boolean active = ((get() % 2) == 0);
+            pseudoClassStateChanged(PSEUDO_CLASS_EVEN,  active);
+            pseudoClassStateChanged(PSEUDO_CLASS_ODD,  !active);
         }
     };
 
@@ -130,16 +131,4 @@ public class IndexedCell<T> extends Cell<T> {
     private static final PseudoClass PSEUDO_CLASS_ODD = PseudoClass.getPseudoClass("odd");
     private static final PseudoClass PSEUDO_CLASS_EVEN = PseudoClass.getPseudoClass("even");
 
-    /**
-     * {@inheritDoc}
-     */
-    @Override public Set<PseudoClass> getPseudoClassStates() {
-        Set<PseudoClass> states = super.getPseudoClassStates();
-        if (getIndex() % 2 == 0) {
-            states.add(PSEUDO_CLASS_EVEN);
-        } else {
-            states.add(PSEUDO_CLASS_ODD);
-        }
-        return states;
-    }
 }

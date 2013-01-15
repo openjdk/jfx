@@ -31,6 +31,7 @@ import java.lang.ref.WeakReference;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.WeakInvalidationListener;
+import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
@@ -123,9 +124,45 @@ public class TreeTableRow<T> extends IndexedCell<T> {
      **************************************************************************/
     
     // --- TreeItem
-    private ReadOnlyObjectWrapper<TreeItem<T>> treeItem = new ReadOnlyObjectWrapper<TreeItem<T>>(this, "treeItem");
-    private void setTreeItem(TreeItem<T> value) { treeItem.set(value); }
+    private ReadOnlyObjectWrapper<TreeItem<T>> treeItem = 
+        new ReadOnlyObjectWrapper<TreeItem<T>>(this, "treeItem") {
+            
+            TreeItem<T> oldValue = null;
+            
+            @Override public void setValue(TreeItem<T> value) {
+                
+                if (oldValue != null) {
+                    oldValue.expandedProperty().removeListener(treeItemExpandedInvalidationListener);
+                }
+                
+                treeItem.set(value); 
+                
+                if (value != null) {
+                    value.expandedProperty().addListener(treeItemExpandedInvalidationListener);
+                    // fake an invalidation to ensure updated pseudo-class state
+                    treeItemExpandedInvalidationListener.invalidated(value.expandedProperty());            
+                }
+                
+                oldValue = value;
+                
+            }
+            
+    };
+    private void setTreeItem(TreeItem<T> value) {
+        treeItem.set(value); 
+    }
     
+    private InvalidationListener treeItemExpandedInvalidationListener = 
+            new InvalidationListener() {
+
+        @Override
+        public void invalidated(Observable o) {
+            final boolean expanded = ((BooleanProperty)o).get();
+            pseudoClassStateChanged(EXPANDED_PSEUDOCLASS_STATE,   expanded);
+            pseudoClassStateChanged(COLLAPSED_PSEUDOCLASS_STATE, !expanded);
+        }
+                
+    };
     /**
      * Returns the TreeItem currently set in this TreeCell.
      */
@@ -418,18 +455,6 @@ public class TreeTableRow<T> extends IndexedCell<T> {
 
     private static final PseudoClass EXPANDED_PSEUDOCLASS_STATE = PseudoClass.getPseudoClass("expanded");
     private static final PseudoClass COLLAPSED_PSEUDOCLASS_STATE = PseudoClass.getPseudoClass("collapsed");
-
-   /**
-     * {@inheritDoc}
-     */
-    @Override public Set<PseudoClass> getPseudoClassStates() {
-        Set<PseudoClass> states = super.getPseudoClassStates();
-        if (getTreeItem() != null && ! getTreeItem().isLeaf()) {
-            if (getTreeItem().isExpanded()) states.add(EXPANDED_PSEUDOCLASS_STATE);
-            else states.add(COLLAPSED_PSEUDOCLASS_STATE);
-        }
-        return states;
-    }
     
     /** {@inheritDoc} */
     @Override protected Skin<?> createDefaultSkin() {

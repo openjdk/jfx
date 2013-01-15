@@ -23,7 +23,7 @@ import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
 
-import com.sun.javafx.scene.CSSFlags;
+import com.sun.javafx.scene.CssFlags;
 import com.sun.javafx.scene.control.skin.VirtualFlow.ArrayLinkedList;
 import java.util.List;
 import javafx.util.Callback;
@@ -757,7 +757,7 @@ public class VirtualFlowTest {
 //        pulse();
 //        for (int i = 0; i < flow.cells.size(); i++) {
 //            IndexedCell cell = flow.cells.get(i);
-//            assertEquals(CSSFlags.CLEAN, cell.impl_getCSSFlags());
+//            assertEquals(CssFlags.CLEAN, cell.impl_getCSSFlags());
 //        }
 //    }
 

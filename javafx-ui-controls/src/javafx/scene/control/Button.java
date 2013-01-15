@@ -120,7 +120,7 @@ public class Button extends ButtonBase {
         if (defaultButton == null) {
             defaultButton = new BooleanPropertyBase(false) {
                 @Override protected void invalidated() {
-                    pseudoClassStateChanged(PSEUDO_CLASS_DEFAULT);
+                    pseudoClassStateChanged(PSEUDO_CLASS_DEFAULT, get());
                 }
 
                 @Override
@@ -154,7 +154,7 @@ public class Button extends ButtonBase {
         if (cancelButton == null) {
             cancelButton = new BooleanPropertyBase(false) {
                 @Override protected void invalidated() {
-                    pseudoClassStateChanged(PSEUDO_CLASS_CANCEL);
+                    pseudoClassStateChanged(PSEUDO_CLASS_CANCEL, get());
                 }
 
                 @Override
@@ -206,16 +206,6 @@ public class Button extends ButtonBase {
             = PseudoClass.getPseudoClass("default");
     private static final PseudoClass PSEUDO_CLASS_CANCEL
             = PseudoClass.getPseudoClass("cancel");
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override public Set<PseudoClass> getPseudoClassStates() {
-        Set<PseudoClass> states = super.getPseudoClassStates();
-        if (isDefaultButton()) states.add(PSEUDO_CLASS_DEFAULT);
-        if (isCancelButton()) states.add(PSEUDO_CLASS_CANCEL);
-        return states;
-    }
     
     private AccessibleButton accButton ;
     /**

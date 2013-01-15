@@ -102,6 +102,9 @@ public class CheckBox extends ButtonBase {
         getStyleClass().setAll(DEFAULT_STYLE_CLASS);
         setAlignment(Pos.CENTER_LEFT);
         setMnemonicParsing(true);     // enable mnemonic auto-parsing by default
+        
+        // initialize pseudo-class state
+        pseudoClassStateChanged(PSEUDO_CLASS_DETERMINATE, true);
     }
     
     /***************************************************************************
@@ -125,8 +128,9 @@ public class CheckBox extends ButtonBase {
         if (indeterminate == null) {
             indeterminate = new BooleanPropertyBase(false) {
                 @Override protected void invalidated() {
-                    pseudoClassStateChanged(PSEUDO_CLASS_DETERMINATE);
-                    pseudoClassStateChanged(PSEUDO_CLASS_INDETERMINATE);
+                    final boolean active = get();
+                    pseudoClassStateChanged(PSEUDO_CLASS_DETERMINATE,  !active);
+                    pseudoClassStateChanged(PSEUDO_CLASS_INDETERMINATE, active);
                 }
 
                 @Override
@@ -158,7 +162,7 @@ public class CheckBox extends ButtonBase {
         if (selected == null) {
             selected = new BooleanPropertyBase() {
                 @Override protected void invalidated() {
-                    pseudoClassStateChanged(PSEUDO_CLASS_SELECTED);
+                    pseudoClassStateChanged(PSEUDO_CLASS_SELECTED, get());
                 }
 
                 @Override
@@ -250,22 +254,6 @@ public class CheckBox extends ButtonBase {
     private static final PseudoClass PSEUDO_CLASS_SELECTED = 
             PseudoClass.getPseudoClass("selected");
 
-    /**
-     * {@inheritDoc}
-     */
-    @Override public Set<PseudoClass> getPseudoClassStates() {
-        Set<PseudoClass> states = super.getPseudoClassStates();
-        if (isSelected()) {
-            states.add(PSEUDO_CLASS_SELECTED);
-        }
-        if (isIndeterminate()) {
-            states.add(PSEUDO_CLASS_INDETERMINATE);
-        } else {
-            states.add(PSEUDO_CLASS_DETERMINATE);            
-        }
-        return states;
-    }
-    
     private AccessibleCheckBox accCheckBox ;
     /**
      * @treatAsPrivate implementation detail

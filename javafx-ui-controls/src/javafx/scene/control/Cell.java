@@ -297,7 +297,7 @@ public class Cell<T> extends Labeled {
          */
         super.focusedProperty().addListener(new InvalidationListener() {
             @Override public void invalidated(Observable property) {
-                pseudoClassStateChanged(PSEUDO_CLASS_FOCUSED); // TODO is this necessary??
+                pseudoClassStateChanged(PSEUDO_CLASS_FOCUSED, isFocused()); // TODO is this necessary??
 
                 // The user has shifted focus, so we should cancel the editing on this cell
                 if (!isFocused() && isEditing()) {
@@ -305,6 +305,9 @@ public class Cell<T> extends Labeled {
                 }
             }
         });
+        
+        // initialize default pseudo-class state
+        pseudoClassStateChanged(PSEUDO_CLASS_EMPTY, true);
     }
     
     
@@ -345,8 +348,9 @@ public class Cell<T> extends Labeled {
     // --- empty
     private ReadOnlyBooleanWrapper empty = new ReadOnlyBooleanWrapper(true) {
         @Override protected void invalidated() {
-            pseudoClassStateChanged(PSEUDO_CLASS_EMPTY);
-            pseudoClassStateChanged(PSEUDO_CLASS_FILLED);
+            final boolean active = get();
+            pseudoClassStateChanged(PSEUDO_CLASS_EMPTY,   active);
+            pseudoClassStateChanged(PSEUDO_CLASS_FILLED, !active);
         }
 
         @Override
@@ -385,7 +389,7 @@ public class Cell<T> extends Labeled {
     // --- selected
     private ReadOnlyBooleanWrapper selected = new ReadOnlyBooleanWrapper() {
         @Override protected void invalidated() {
-            pseudoClassStateChanged(PSEUDO_CLASS_SELECTED);
+            pseudoClassStateChanged(PSEUDO_CLASS_SELECTED, get());
         }
 
         @Override
@@ -602,17 +606,6 @@ public class Cell<T> extends Labeled {
     private static final PseudoClass PSEUDO_CLASS_FILLED =
             PseudoClass.getPseudoClass("filled");
 
-    /**
-     * {@inheritDoc}
-     */
-    @Override public Set<PseudoClass> getPseudoClassStates() {
-        Set<PseudoClass> states = super.getPseudoClassStates();
-        if (isSelected()) states.add(PSEUDO_CLASS_SELECTED);
-        if (isEmpty()) states.add(PSEUDO_CLASS_EMPTY);
-        else states.add(PSEUDO_CLASS_FILLED);
-        return states;
-    }
-    
     /**
       * Most Controls return true for focusTraversable, so Control overrides
       * this method to return true, but Cell returns false for

@@ -369,13 +369,10 @@ public class TreeTableCell<S,T> extends IndexedCell<T> {
         
         // update the pseudo class state regarding whether this is the last
         // visible cell (i.e. the right-most). 
-        boolean old = isLastVisibleColumn;
         isLastVisibleColumn = getTableColumn() != null &&
                 columnIndex != -1 && 
                 columnIndex == tv.getVisibleLeafColumns().size() - 1;
-        if (old != isLastVisibleColumn) {
-            pseudoClassStateChanged(PSEUDO_CLASS_LAST_VISIBLE);
-        }
+        pseudoClassStateChanged(PSEUDO_CLASS_LAST_VISIBLE, isLastVisibleColumn);
     }
 
     private void updateSelection() {

@@ -75,6 +75,9 @@ public class TitledPane extends Labeled {
      */
     public TitledPane() {
         getStyleClass().setAll(DEFAULT_STYLE_CLASS);
+        
+        // initialize pseudo-class state
+        pseudoClassStateChanged(PSEUDO_CLASS_EXPANDED, true);
     }
 
     /**
@@ -82,8 +85,8 @@ public class TitledPane extends Labeled {
      * @param title The title of the TitledPane.
      * @param content The content of the TitledPane.
      */
-    public TitledPane(String title, Node content) {        
-        getStyleClass().setAll(DEFAULT_STYLE_CLASS);
+    public TitledPane(String title, Node content) {  
+        this();
         setText(title);
         setContent(content);
     }
@@ -134,9 +137,9 @@ public class TitledPane extends Labeled {
     // --- Expanded
     private BooleanProperty expanded = new BooleanPropertyBase(true) {
         @Override protected void invalidated() {
-            get();
-            pseudoClassStateChanged(PSEUDO_CLASS_EXPANDED);
-            pseudoClassStateChanged(PSEUDO_CLASS_COLLAPSED);
+            final boolean active = get();
+            pseudoClassStateChanged(PSEUDO_CLASS_EXPANDED,   active);
+            pseudoClassStateChanged(PSEUDO_CLASS_COLLAPSED, !active);
         }
 
         @Override
@@ -332,13 +335,4 @@ public class TitledPane extends Labeled {
         return getClassCssMetaData();
     }
 
-    /**
-     * {@inheritDoc}
-     */
-    @Override public Set<PseudoClass> getPseudoClassStates() {
-        Set<PseudoClass> states = super.getPseudoClassStates();
-        if (isExpanded()) states.add(PSEUDO_CLASS_EXPANDED);
-        else states.add(PSEUDO_CLASS_COLLAPSED);
-        return states;
-    }
 }

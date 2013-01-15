@@ -37,7 +37,7 @@ import javafx.css.PseudoClass;
 final class Match implements Comparable {
 
     final Selector selector;
-    final PseudoClassSet pseudoclasses;
+    final long[] pseudoClasses;
     final int idCount;
     final int styleClassCount;
     
@@ -47,14 +47,14 @@ final class Match implements Comparable {
     // then pseudoclass count, and finally matching types (i.e., java name count)
     final int specificity;
 
-    Match(final Selector selector, PseudoClassSet pseudoclasses,
+    Match(final Selector selector, long[] pseudoclasses,
             final int idCount, final int styleClassCount) {
         assert selector != null;
         this.selector = selector;
         this.idCount = idCount;
         this.styleClassCount = styleClassCount;
-        this.pseudoclasses = pseudoclasses;
-        int nPseudoclasses = pseudoclasses.size();
+        this.pseudoClasses = pseudoclasses;
+        int nPseudoclasses = pseudoclasses.length;
         
         specificity = (idCount << 8) | (styleClassCount << 4) | nPseudoclasses;
     }
@@ -69,7 +69,7 @@ final class Match implements Comparable {
     public String toString() {
         StringBuilder sb = new StringBuilder();
         sb.append(selector);
-        for(PseudoClass s : pseudoclasses.getPseudoClasses()) {
+        for(PseudoClass s : PseudoClassSet.getPseudoClasses(pseudoClasses)) {
             sb.append(":");
             sb.append(s.getPseudoClassName());
         }

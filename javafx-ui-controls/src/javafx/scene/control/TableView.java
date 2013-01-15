@@ -598,11 +598,11 @@ public class TableView<S> extends Control {
                 
                         if (oldPolicy != null) {
                             PseudoClass state = PseudoClass.getPseudoClass(oldPolicy.toString());
-                            pseudoClassStateChanged(state);
+                            pseudoClassStateChanged(state, false);
                         }
                         if (get() != null) {
                             PseudoClass state = PseudoClass.getPseudoClass(get().toString());
-                            pseudoClassStateChanged(state);
+                            pseudoClassStateChanged(state, true);
                         }
                         oldPolicy = get();
                     }
@@ -670,7 +670,29 @@ public class TableView<S> extends Control {
 
     // --- Selection Model
     private ObjectProperty<TableViewSelectionModel<S>> selectionModel 
-            = new SimpleObjectProperty<TableViewSelectionModel<S>>(this, "selectionModel");
+            = new SimpleObjectProperty<TableViewSelectionModel<S>>(this, "selectionModel") {
+
+        TableViewSelectionModel<S> oldValue = null;
+        
+        @Override public void setValue(TableViewSelectionModel<S> value) {
+          
+            
+            if (oldValue != null) {
+                oldValue.cellSelectionEnabledProperty().removeListener(cellSelectionModelInvalidationListener);
+            }
+            
+            super.setValue(value);
+            
+            if (value != null) {
+                value.cellSelectionEnabledProperty().addListener(cellSelectionModelInvalidationListener);
+                // fake an invalidation to ensure updated pseudo-class state
+                cellSelectionModelInvalidationListener.invalidated(value.cellSelectionEnabledProperty());
+            } 
+          
+            oldValue = value;
+        }
+      
+    };
     /**
      * The SelectionModel provides the API through which it is possible
      * to select single or multiple items within a TableView, as  well as inspect
@@ -688,6 +710,17 @@ public class TableView<S> extends Control {
         return selectionModel.get();
     }
 
+    /* proxy pseudo-class state change from selectionModel's cellSelectionEnabledProperty */
+    private final InvalidationListener cellSelectionModelInvalidationListener = 
+        new InvalidationListener() {
+
+        @Override
+        public void invalidated(Observable o) {
+            final boolean isCellSelection = ((BooleanProperty)o).get();
+            pseudoClassStateChanged(PSEUDO_CLASS_CELL_SELECTION,  isCellSelection);
+            pseudoClassStateChanged(PSEUDO_CLASS_ROW_SELECTION,  !isCellSelection);
+        }
+    };
     
     // --- Focus Model
     private ObjectProperty<TableViewFocusModel<S>> focusModel;
@@ -1019,18 +1052,6 @@ public class TableView<S> extends Control {
     private static final PseudoClass PSEUDO_CLASS_ROW_SELECTION = 
             PseudoClass.getPseudoClass("row-selection");
 
-    /**
-     * {@inheritDoc}
-     */
-    @Override public Set<PseudoClass> getPseudoClassStates() {
-        Set<PseudoClass> states = super.getPseudoClassStates();
-        if (getSelectionModel() != null) {
-            if (getSelectionModel().isCellSelectionEnabled()) states.add(PSEUDO_CLASS_CELL_SELECTION);
-            else states.add(PSEUDO_CLASS_ROW_SELECTION);
-        }
-        return states;
-    }
-
 
     /***************************************************************************
      *                                                                         *
@@ -1149,8 +1170,6 @@ public class TableView<S> extends Control {
                 @Override public void invalidated(Observable o) {
                     isCellSelectionEnabled();
                     clearSelection();
-                    tableView.pseudoClassStateChanged(TableView.PSEUDO_CLASS_CELL_SELECTION);
-                    tableView.pseudoClassStateChanged(TableView.PSEUDO_CLASS_ROW_SELECTION);
                 }
             });
             
@@ -2092,4 +2111,5 @@ public class TableView<S> extends Control {
             return tableView.getVisibleLeafColumn(newColumnIndex);
         }
     }
+
 }

@@ -157,7 +157,7 @@ import javafx.css.StyleableProperty;
                             getToggleGroup().clearSelectedToggle();
                         }
                     }
-                    pseudoClassStateChanged(PSEUDO_CLASS_SELECTED);
+                    pseudoClassStateChanged(PSEUDO_CLASS_SELECTED, get());
                 }
 
                 @Override
@@ -248,15 +248,6 @@ import javafx.css.StyleableProperty;
     private static final PseudoClass PSEUDO_CLASS_SELECTED =
             PseudoClass.getPseudoClass("selected");
 
-    /**
-     * {@inheritDoc}
-     */
-    @Override public Set<PseudoClass> getPseudoClassStates() {
-        Set<PseudoClass> states = super.getPseudoClassStates();
-        if (isSelected()) states.add(PSEUDO_CLASS_SELECTED);
-        return states;
-    }
-    
      /**
       * Not everything uses the default value of false for alignment. 
       * This method provides a way to have them return the correct initial value.

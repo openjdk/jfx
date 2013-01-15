@@ -5,6 +5,7 @@
 package com.sun.javafx.css;
 
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import javafx.css.PseudoClass;
 import static org.junit.Assert.*;
@@ -22,7 +23,7 @@ public class PseudoClassTest {
 
     @Before
     public void before() {
-        PseudoClassImpl.stateMap.clear();        
+        PseudoClassImpl.pseudoClassMap.clear();        
     }
     
     @Test
@@ -629,19 +630,111 @@ public class PseudoClassTest {
         
         assertEquals(expected, result);
     }
-    
-    @Test
-    public void testState_getState_throwsIndexOutOfBounds() {
-    
-        int n = 0;
-        try {
-            while (n < 1024) {
-                PseudoClass.getPseudoClass("pseudoClass-"+Integer.toString(n));
-                n += 1;
-            }
-            fail(Integer.toString(n));
-        } catch (IndexOutOfBoundsException exception) {
-            assertEquals(1020, n, 0.000001);
+
+    @Test public void testPseudoClassSet_iterator() {
+        
+        PseudoClass[] pseudoClasses = new PseudoClass[4];
+        PseudoClassSet states = new PseudoClassSet();
+        
+        for (int n=0; n<pseudoClasses.length; n++) {
+            pseudoClasses[n] = PseudoClass.getPseudoClass(Integer.toString(n));
+            states.add(pseudoClasses[n]);
+        };
+        
+        int iterations = 0;
+        Iterator<PseudoClass> iter = states.iterator();
+        while(iter.hasNext()) {
+            
+            iterations += 1;
+            assertTrue (iterations+">"+pseudoClasses.length, iterations <= pseudoClasses.length);
+            
+            PseudoClass pseudoClass = iter.next();
+            assertEquals (pseudoClass, pseudoClasses[iterations-1]);
         }
+        
+        assertTrue (pseudoClasses.length+"!="+iterations, pseudoClasses.length == iterations);
+        
     }
+
+    @Test public void testPseudoClassSet_iterator_withLargeNumberOfPsuedoClasses() {
+        
+        PseudoClass[] pseudoClasses = new PseudoClass[Long.SIZE*3];
+        PseudoClassSet states = new PseudoClassSet();
+        
+        for (int n=0; n<pseudoClasses.length; n++) {
+            pseudoClasses[n] = PseudoClass.getPseudoClass(Integer.toString(n));
+            states.add(pseudoClasses[n]);
+        };
+        
+        int iterations = 0;
+        Iterator<PseudoClass> iter = states.iterator();
+        while(iter.hasNext()) {
+            
+            iterations += 1;
+            assertTrue (iterations+">"+pseudoClasses.length, iterations <= pseudoClasses.length);
+            
+            PseudoClass pseudoClass = iter.next();
+            assertEquals (pseudoClass, pseudoClasses[iterations-1]);
+        }
+        
+        assertTrue (pseudoClasses.length+"!="+iterations, pseudoClasses.length == iterations);
+        
+    }
+
+    @Test public void testPseudoClassSet_iterator_remove() {
+        
+        PseudoClass[] pseudoClasses = new PseudoClass[4];
+        PseudoClassSet states = new PseudoClassSet();
+        
+        for (int n=0; n<pseudoClasses.length; n++) {
+            pseudoClasses[n] = PseudoClass.getPseudoClass(Integer.toString(n));
+            states.add(pseudoClasses[n]);
+        };
+        
+        int iterations = 0;
+        int nPseudoClasses = pseudoClasses.length;
+        Iterator<PseudoClass> iter = states.iterator();
+        while(iter.hasNext()) {
+                     
+            ++iterations; 
+            
+            if ((iterations % 2) == 0) {
+                iter.remove();
+                --nPseudoClasses;
+                assertFalse(states.contains(pseudoClasses[iterations-1]));
+            }
+        }
+        
+        assertTrue (nPseudoClasses+"!="+states.size(), nPseudoClasses == states.size());
+        
+    }
+
+    @Test public void testPseudoClassSet_iterator_remove_withLargeNumberOfPseudoClasses() {
+        
+        PseudoClass[] pseudoClasses = new PseudoClass[Long.SIZE*3];
+        PseudoClassSet states = new PseudoClassSet();
+        
+        for (int n=0; n<pseudoClasses.length; n++) {
+            pseudoClasses[n] = PseudoClass.getPseudoClass(Integer.toString(n));
+            states.add(pseudoClasses[n]);
+        };
+        
+        int iterations = 0;
+        int nPseudoClasses = pseudoClasses.length;
+        Iterator<PseudoClass> iter = states.iterator();
+        while(iter.hasNext()) {
+                        
+            ++iterations;
+            
+            if ((iterations % 2) == 0) {
+                iter.remove();
+                --nPseudoClasses;
+                assertFalse(states.contains(pseudoClasses[iterations-1]));
+            }
+        }
+        
+        assertTrue (nPseudoClasses+"!="+states.size(), nPseudoClasses == states.size());
+        
+    }
+    
 }

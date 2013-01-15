@@ -164,7 +164,7 @@ public abstract class ComboBoxBase<T> extends Control {
     public final boolean isEditable() { return editableProperty().get(); }
     private BooleanProperty editable = new SimpleBooleanProperty(this, "editable", false) {
         @Override protected void invalidated() {
-            pseudoClassStateChanged(PSEUDO_CLASS_EDITABLE);
+            pseudoClassStateChanged(PSEUDO_CLASS_EDITABLE, get());
         }
     };
     
@@ -189,7 +189,7 @@ public abstract class ComboBoxBase<T> extends Control {
         if (showing == null) {
             showing = new ReadOnlyBooleanWrapper(false) {
                 @Override protected void invalidated() {
-                    pseudoClassStateChanged(PSEUDO_CLASS_SHOWING);
+                    pseudoClassStateChanged(PSEUDO_CLASS_SHOWING, get());
                 }
 
                 @Override
@@ -243,7 +243,7 @@ public abstract class ComboBoxBase<T> extends Control {
     public final boolean isArmed() { return armedProperty().get(); }
     private BooleanProperty armed = new SimpleBooleanProperty(this, "armed", false) {
         @Override protected void invalidated() {
-            pseudoClassStateChanged(PSEUDO_CLASS_ARMED);
+            pseudoClassStateChanged(PSEUDO_CLASS_ARMED, get());
         }
     };
     
@@ -439,14 +439,4 @@ public abstract class ComboBoxBase<T> extends Control {
     private static final PseudoClass PSEUDO_CLASS_ARMED =
             PseudoClass.getPseudoClass("armed");
     
-    /**
-     * {@inheritDoc}
-     */
-    @Override public Set<PseudoClass> getPseudoClassStates() {
-        Set<PseudoClass> states = super.getPseudoClassStates();
-        if (isEditable()) states.add(PSEUDO_CLASS_EDITABLE);
-        if (isShowing()) states.add(PSEUDO_CLASS_SHOWING);
-        if (isArmed()) states.add(PSEUDO_CLASS_ARMED);
-        return states;
-    }
 }

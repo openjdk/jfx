@@ -273,8 +273,9 @@ public class Slider extends Control {
         if (orientation == null) {
             orientation = new StyleableObjectProperty<Orientation>(Orientation.HORIZONTAL) {
                 @Override protected void invalidated() {
-                    pseudoClassStateChanged(VERTICAL_PSEUDOCLASS_STATE);
-                    pseudoClassStateChanged(HORIZONTAL_PSEUDOCLASS_STATE);
+                    final boolean vertical = (get() == Orientation.VERTICAL);
+                    pseudoClassStateChanged(VERTICAL_PSEUDOCLASS_STATE,    vertical);
+                    pseudoClassStateChanged(HORIZONTAL_PSEUDOCLASS_STATE, !vertical);
                 }
                 
                 @Override 
@@ -800,16 +801,6 @@ public class Slider extends Control {
             PseudoClass.getPseudoClass("vertical");
     private static final PseudoClass HORIZONTAL_PSEUDOCLASS_STATE =
             PseudoClass.getPseudoClass("horizontal");
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override public Set<PseudoClass> getPseudoClassStates() {
-        Set<PseudoClass> states = super.getPseudoClassStates();
-        if (getOrientation() == Orientation.VERTICAL) states.add(VERTICAL_PSEUDOCLASS_STATE);
-        else states.add(HORIZONTAL_PSEUDOCLASS_STATE);
-        return states;
-    }
 
     private AccessibleSlider accSlider ;
     /**
