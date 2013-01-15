@@ -224,6 +224,7 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeViewB
         } else {
             needCellsReconfigured = true;
         }
+        getSkinnable().requestLayout();
     }
 
     @Override public TreeCell<T> createCell() {
@@ -257,7 +258,7 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeViewB
             
             @Override public void updateItem(Object item, boolean empty) {
                 super.updateItem(item, empty);
-
+                
                 if (item == null || empty) {
                     hbox = null;
                     setText(null);
