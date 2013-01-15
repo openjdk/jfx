@@ -387,7 +387,7 @@ public final class CategoryAxis extends Axis<String> {
     @Override public void invalidateRange(List<String> data) {
         super.invalidateRange(data);
         // Create unique set of category names        
-        LinkedHashSet<String> categoryNames = new LinkedHashSet<String>();
+        List<String> categoryNames = new ArrayList<String>();
         categoryNames.addAll(allDataCategories);
         //RT-21141 allDataCategories needs to be updated based on data -
         // and should maintain the order it originally had for the categories already present.
@@ -396,8 +396,10 @@ public final class CategoryAxis extends Axis<String> {
             if (!data.contains(cat)) categoryNames.remove(cat); 
         }
         // add any new category found in data
-        for(String cat : data) {
-            if (!categoryNames.contains(cat)) categoryNames.add(cat);
+//        for(String cat : data) {
+        for (int i = 0; i < data.size(); i++) {    
+           int len = categoryNames.size();
+           if (!categoryNames.contains(data.get(i))) categoryNames.add((i > len) ? len : i, data.get(i));
         }
         allDataCategories.clear();
         allDataCategories.addAll(categoryNames);
