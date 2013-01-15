@@ -763,7 +763,7 @@ public class ContextMenuContent extends Region {
      */
     double getMenuYOffset(int menuIndex) {
         double offset = 0;
-        if (itemsContainer.getChildren().size() >= menuIndex) {
+        if (itemsContainer.getChildren().size() > menuIndex) {
             offset = getInsets().getTop();
             Node menuitem = itemsContainer.getChildren().get(menuIndex);
             offset += menuitem.getLayoutY() + menuitem.prefHeight(-1);
