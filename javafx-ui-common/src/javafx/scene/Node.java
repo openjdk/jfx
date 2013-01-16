@@ -29,6 +29,7 @@ package javafx.scene;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -597,9 +598,8 @@ public abstract class Node implements EventTarget {
                 // listen for when the user sets the PSEUDO_CLASS_OVERRIDE_KEY to new value
                 properties.addListener(new MapChangeListener<Object,Object>(){
                     @Override public void onChanged(Change<? extends Object, ? extends Object> change) {
-                        if (PSEUDO_CLASS_OVERRIDE_KEY.equals(change.getKey()) && getScene() != null && cssFlag != CssFlags.REAPPLY) {
-                            cssFlag = CssFlags.UPDATE;
-                            notifyParentsOfInvalidatedCSS();
+                        if (PSEUDO_CLASS_OVERRIDE_KEY.equals(change.getKey()) && getScene() != null) {
+                            updatePseudoClassOverride();
                         }
                     }
                 });
@@ -770,6 +770,11 @@ public abstract class Node implements EventTarget {
                 }
             }
             oldScene = _scene;
+            // we need to check if a override has been set, if so we need to apply it to the node now
+            // that it may have a valid scene
+            if (PSEUDO_CLASS_OVERRIDE_ENABLED) {
+                updatePseudoClassOverride();
+            }
         }
 
         @Override
@@ -7584,6 +7589,11 @@ public abstract class Node implements EventTarget {
      * @param active whether or not the state is active
      */
     public final void pseudoClassStateChanged(PseudoClass pseudoClass, boolean active) {
+        // check if a override has been set, if so ignore all calls
+        if (PSEUDO_CLASS_OVERRIDE_ENABLED && hasProperties()) {
+            final Object pseudoClassOverride = getProperties().get(PSEUDO_CLASS_OVERRIDE_KEY);
+            if (pseudoClassOverride instanceof String) return;
+        }
 
         final Set<PseudoClass> pseudoClassState = styleHelper.getPseudoClassSet();
         
@@ -7591,17 +7601,6 @@ public abstract class Node implements EventTarget {
             pseudoClassState.add(pseudoClass);
         } else {
             pseudoClassState.remove(pseudoClass);
-        }
-        
-        if (PSEUDO_CLASS_OVERRIDE_ENABLED && hasProperties()) {
-            final Object pseudoClassOverride = getProperties().get(PSEUDO_CLASS_OVERRIDE_KEY);
-            if (pseudoClassOverride instanceof String) {
-                final String[] pseudoClasses = ((String)pseudoClassOverride).split("[\\s,]+");
-                for(String pc: pseudoClasses) {
-                    PseudoClass state = PseudoClass.getPseudoClass(pc);
-                    pseudoClassState.add(state);
-                }
-            }
         }
     }
     
@@ -7819,6 +7818,23 @@ public abstract class Node implements EventTarget {
                 }
             });
     private static final String PSEUDO_CLASS_OVERRIDE_KEY = "javafx.scene.Node.pseudoClassOverride";
+
+    /**
+     * Called to get current pseudo class override and apply it to this node
+     */
+    private void updatePseudoClassOverride() {
+        if (PSEUDO_CLASS_OVERRIDE_ENABLED && properties != null) {
+            final Object pseudoClassOverride = getProperties().get(PSEUDO_CLASS_OVERRIDE_KEY);
+            if (pseudoClassOverride instanceof String) {
+                final Set<PseudoClass> pseudoClassState = styleHelper.getPseudoClassSet();
+                pseudoClassState.clear();
+                final String[] pseudoClasses = ((String)pseudoClassOverride).split("[\\s,]+");
+                for(String pc: pseudoClasses) {
+                    pseudoClassState.add(PseudoClass.getPseudoClass(pc));
+                }
+            }
+        }
+    }
 
     private static abstract class LazyTransformProperty
             extends ReadOnlyObjectProperty<Transform> {

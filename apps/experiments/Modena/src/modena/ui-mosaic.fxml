@@ -23,7 +23,7 @@
     <Hyperlink layoutX="134.0" layoutY="40.0" text="Hyperlink" />
     <Label layoutX="242.0" layoutY="153.0" text="A label" />
     <PasswordField layoutX="240.0" layoutY="243.0" prefWidth="138.0" promptText="Password" />
-    <ProgressBar layoutX="291.0" layoutY="291.0" prefWidth="200.0" progress="0.3" />
+    <ProgressBar layoutX="240.0" layoutY="291.0" prefWidth="200.0" progress="0.3" />
     <ProgressIndicator layoutX="435.0" layoutY="45.0" prefHeight="59.0" prefWidth="56.0" progress="0.58" />
     <ScrollBar layoutX="41.0" layoutY="329.0" prefWidth="493.0" />
     <Separator layoutX="41.0" layoutY="129.0" prefWidth="490.0" />
@@ -36,12 +36,11 @@
     </SplitMenuButton>
     <TextField layoutX="40.0" layoutY="149.0" prefWidth="160.0" promptText="Textfield" text="Textfield" />
     <TextArea layoutX="40.0" layoutY="180.0" prefHeight="130.0" prefWidth="160.0" promptText="Text Area" text="Text Area with some text spanning over a few lines." wrapText="true" />
-    <ToggleButton layoutX="241.0" layoutY="196.0" mnemonicParsing="false" prefWidth="90.0" selected="true" text="Toggle">
+    <ToggleButton layoutX="341.0" layoutY="196.0" mnemonicParsing="false" prefWidth="90.0" selected="true" text="Toggle">
       <toggleGroup>
         <ToggleGroup fx:id="toggle1" />
       </toggleGroup>
     </ToggleButton>
-    <ToggleButton layoutX="341.0" layoutY="196.0" mnemonicParsing="false" prefWidth="90.0" selected="false" text="Toggle" toggleGroup="$toggle1" />
     <ScrollPane layoutX="560.0" layoutY="439.0" prefHeight="194.0" prefWidth="336.9999000000025">
       <content>
         <AnchorPane id="Content" minHeight="0.0" minWidth="0.0" prefHeight="400.0" prefWidth="400.0" />
@@ -58,11 +57,7 @@
     </ChoiceBox>
     <Slider layoutX="304.0" layoutY="154.0" prefWidth="230.0" />
     <Slider layoutX="502.0" layoutY="361.0" orientation="VERTICAL" prefHeight="291.0" showTickMarks="true" />
-    <ToggleButton layoutX="441.0" layoutY="196.0" mnemonicParsing="false" prefWidth="90.0" selected="false" text="Toggle">
-      <toggleGroup>
-        <ToggleGroup />
-      </toggleGroup>
-    </ToggleButton>
+    <ToggleButton layoutX="441.0" layoutY="196.0" mnemonicParsing="false" prefWidth="90.0" selected="false" text="Toggle" toggleGroup="$toggle1" />
     <ComboBox editable="true" layoutX="395.0" layoutY="243.0" prefWidth="136.0001220703125" promptText="Choose">
       <items>
         <FXCollections fx:factory="observableArrayList">
@@ -187,5 +182,8 @@
         </TabPane>
       </children>
     </VBox>
+    <RadioButton layoutX="240.0" layoutY="199.0" mnemonicParsing="false" text="r1" toggleGroup="$toggle1" />
+    <RadioButton layoutX="290.0" layoutY="199.0" mnemonicParsing="false" text="r2" toggleGroup="$toggle1" />
+    <CheckBox layoutX="471.0" layoutY="294.0" mnemonicParsing="false" selected="true" text="Check" />
   </children>
 </AnchorPane>

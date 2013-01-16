@@ -421,7 +421,8 @@ is being used to size a border should also be in pixels.
 .menu-button:focused,
 .choice-box:focused,
 .color-picker.split-button:focused > .color-picker-label,
-.combo-box-base:focused {
+.combo-box-base:focused,
+.slider:focused .thumb {
     -fx-background-color: -fx-faint-focus-color, -fx-focus-color, -fx-inner-border, -fx-body-color; 
     -fx-background-insets: -2, -0.3, 1, 2;
     -fx-background-radius: 7, 6, 4, 3;
@@ -637,7 +638,8 @@ is being used to size a border should also be in pixels.
     -fx-label-padding: 0.0em 0.0em 0.0em 0.416667em; /* 0 0 0 5 */
     -fx-text-fill: -fx-text-background-color;
 }
-.radio-button > .radio  {
+.radio-button > .radio,
+.radio-button:focused > .radio  {
    -fx-background-radius: 1.0em; /* large value to make sure this remains circular */
    -fx-padding: 0.333333em; /* 4 -- padding from outside edge to the inner black dot */
 }
@@ -751,7 +753,6 @@ is being used to size a border should also be in pixels.
  * ToolBar                                                                     *
  *                                                                             *
  ******************************************************************************/
-
 .tool-bar:vertical {
     -fx-background: derive(-fx-base,-20%);
     -fx-background-color:
@@ -761,7 +762,7 @@ is being used to size a border should also be in pixels.
     -fx-spacing: 0.333em; /* 4 */
     -fx-alignment: TOP_LEFT;
 }
-.tool-bar:horizontal {
+.tool-bar {
     -fx-background-color:
         linear-gradient(to bottom, derive(-fx-base,75%) 0%, -fx-outer-border 90%),
         linear-gradient(to bottom, derive(-fx-base,46.9%) 2%, derive(-fx-base,-2.1%) 95%);
@@ -770,7 +771,7 @@ is being used to size a border should also be in pixels.
     -fx-spacing: 0.333em; /* 4 */
     -fx-alignment: CENTER_LEFT;
 }
-.tool-bar:horizontal > .container > .separator {
+.tool-bar > .container > .separator {
     -fx-orientation: vertical;
 }
 .tool-bar:vertical > .container > .separator {
@@ -794,12 +795,6 @@ is being used to size a border should also be in pixels.
     -fx-effect: dropshadow(two-pass-box , rgba(0, 0, 0, 0.1), 5, 0.0 , 0, 2);
 }
 .slider:focused .thumb {
-    -fx-background-color:
-        -fx-focus-color,
-        derive(-fx-color,-36%),
-        derive(-fx-color,73%),
-        linear-gradient(to top, derive(-fx-color, -19%),derive(-fx-color, -5%));
-    -fx-background-insets: -1.4, 0, 1, 2;
     -fx-background-radius: 1.0em; /* makes sure this remains circular */
 }
 .slider .track {
@@ -2574,7 +2569,7 @@ is being used to size a border should also be in pixels.
     -fx-background-color: rgba(30,30,30,0.8);
     -fx-background-radius: 6px;
     -fx-background-insets: 0;
-    -fx-padding: 0.833333em; /* 10px */
+    -fx-padding: 0.667em 0.75em 0.667em 0.75em; /* 10px */
     -fx-effect: dropshadow( three-pass-box , rgba(0,0,0,0.5) , 10, 0.0 , 0 , 0 );
     -fx-font-size: 0.85em;
 }

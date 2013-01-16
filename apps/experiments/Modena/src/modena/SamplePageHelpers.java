@@ -130,9 +130,10 @@ public class SamplePageHelpers {
                 .style("-fx-border-color: black; -fx-border-width: 3;").build();
     }
     
-    static ToolBar createToolBar(boolean vertical, boolean overFlow) {
+    static ToolBar createToolBar(boolean vertical, boolean overFlow, boolean disabled) {
         ToolBar toolBar = new ToolBar();
         if (vertical) toolBar.setOrientation(Orientation.VERTICAL);
+        if (disabled) toolBar.setDisable(true);
         toolBar.getItems().addAll(
                 new Button("A"),
                 new Button("B"),
