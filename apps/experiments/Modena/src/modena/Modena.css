@@ -421,7 +421,8 @@ is being used to size a border should also be in pixels.
 .menu-button:focused,
 .choice-box:focused,
 .color-picker.split-button:focused > .color-picker-label,
-.combo-box-base:focused {
+.combo-box-base:focused,
+.slider:focused .thumb {
     -fx-background-color: -fx-faint-focus-color, -fx-focus-color, -fx-inner-border, -fx-body-color; 
     -fx-background-insets: -2, -0.3, 1, 2;
     -fx-background-radius: 7, 6, 4, 3;
@@ -794,12 +795,6 @@ is being used to size a border should also be in pixels.
     -fx-effect: dropshadow(two-pass-box , rgba(0, 0, 0, 0.1), 5, 0.0 , 0, 2);
 }
 .slider:focused .thumb {
-    -fx-background-color:
-        -fx-focus-color,
-        derive(-fx-color,-36%),
-        derive(-fx-color,73%),
-        linear-gradient(to top, derive(-fx-color, -19%),derive(-fx-color, -5%));
-    -fx-background-insets: -1.4, 0, 1, 2;
     -fx-background-radius: 1.0em; /* makes sure this remains circular */
 }
 .slider .track {
