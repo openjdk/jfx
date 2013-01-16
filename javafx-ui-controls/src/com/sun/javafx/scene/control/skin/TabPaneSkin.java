@@ -25,7 +25,11 @@
 package com.sun.javafx.scene.control.skin;
 
 import com.sun.javafx.PlatformUtil;
+import com.sun.javafx.css.CssMetaData;
 import com.sun.javafx.css.PseudoClass;
+import com.sun.javafx.css.StyleableObjectProperty;
+import com.sun.javafx.css.converters.EnumConverter;
+
 import javafx.animation.Interpolator;
 import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
@@ -34,7 +38,9 @@ import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.DoublePropertyBase;
+import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleDoubleProperty;
+import javafx.beans.value.WritableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
@@ -51,6 +57,7 @@ import javafx.scene.Node;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Label;
 import javafx.scene.control.MenuItem;
+import javafx.scene.control.SkinBase;
 import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
 import javafx.scene.control.TabPane.TabClosingPolicy;
@@ -76,6 +83,7 @@ import javafx.scene.control.RadioMenuItem;
 import javafx.scene.control.ToggleGroup;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -83,7 +91,40 @@ import java.util.Map;
 import javafx.scene.input.*;
 
 public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
+    public enum TabAnimation {
+        NONE,
+        GROW
+        // In future we could add FADE, ...
+    }
+    
+    private ObjectProperty<TabAnimation> openTabAnimation = new StyleableObjectProperty<TabAnimation>(TabAnimation.GROW) {
+        @Override public CssMetaData getCssMetaData() {
+            return StyleableProperties.OPEN_TAB_ANIMATION;
+        }
+        
+        @Override public Object getBean() {
+            return TabPaneSkin.this;
+        }
 
+        @Override public String getName() {
+            return "openTabAnimation";
+        }
+    };
+    
+    private ObjectProperty<TabAnimation> closeTabAnimation = new StyleableObjectProperty<TabAnimation>(TabAnimation.GROW) {
+        @Override public CssMetaData getCssMetaData() {
+            return StyleableProperties.CLOSE_TAB_ANIMATION;
+        }
+
+        @Override public Object getBean() {
+            return TabPaneSkin.this;
+        }
+
+        @Override public String getName() {
+            return "closeTabAnimation";
+        }
+    };
+    
     private static int getRotation(Side pos) {
         switch (pos) {
             case TOP:
@@ -201,9 +242,8 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
         }
     }
 
-    private Map<Tab, Timeline> closedTab = new HashMap();
-
     private void initializeTabListener() {
+        final Map<Tab, Timeline> closedTab = new HashMap<Tab, Timeline>();
         getSkinnable().getTabs().addListener(new ListChangeListener<Tab>() {
             @Override public void onChanged(final Change<? extends Tab> c) {      
                 while (c.next()) {
@@ -212,19 +252,27 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
                         final TabHeaderSkin tabRegion = tabHeaderArea.getTabHeaderSkin(tab);
                         Timeline closedTabTimeline = null;
                         if (tabRegion != null) {
-                            tabRegion.animating = true;
-                            closedTabTimeline = createTimeline(tabRegion, Duration.millis(ANIMATION_SPEED * 1.5F), 0.0F, new EventHandler<ActionEvent>() {
+                            if( closeTabAnimation.get() == TabAnimation.GROW ) {
+                                tabRegion.animating = true;
+                                closedTabTimeline = createTimeline(tabRegion, Duration.millis(ANIMATION_SPEED * 1.5F), 0.0F, new EventHandler<ActionEvent>() {
 
-                                @Override
-                                public void handle(ActionEvent event) {      
-                                    removeTab(tab);
-                                    closedTab.remove(tab);
-                                    if (getSkinnable().getTabs().isEmpty()) {
-                                        tabHeaderArea.setVisible(false);
+                                    @Override
+                                    public void handle(ActionEvent event) {      
+                                        removeTab(tab);
+                                        closedTab.remove(tab);
+                                        if (getSkinnable().getTabs().isEmpty()) {
+                                            tabHeaderArea.setVisible(false);
+                                        }
                                     }
+                                });
+                                closedTabTimeline.play();    
+                            } else {
+                                removeTab(tab);
+                                closedTab.remove(tab);
+                                if (getSkinnable().getTabs().isEmpty()) {
+                                    tabHeaderArea.setVisible(false);
                                 }
-                            });
-                            closedTabTimeline.play();
+                            }
                         }
                         closedTab.put(tab, closedTabTimeline);
                     }
@@ -253,24 +301,29 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
                         addTabContent(tab);
                         final TabHeaderSkin tabRegion = tabHeaderArea.getTabHeaderSkin(tab);
                         if (tabRegion != null) {
-                            tabRegion.animateNewTab = new Runnable() {
+                            if( openTabAnimation.get() == TabAnimation.GROW ) {
+                                tabRegion.animateNewTab = new Runnable() {
 
-                                @Override
-                                public void run() {
-                                    final double w = snapSize(tabRegion.prefWidth(-1));
-                                    tabRegion.animating = true;
-                                    tabRegion.prefWidth.set(0.0);
-                                    tabRegion.setVisible(true);
-                                    createTimeline(tabRegion, Duration.millis(ANIMATION_SPEED), w, new EventHandler<ActionEvent>() {
+                                    @Override
+                                    public void run() {
+                                        final double w = snapSize(tabRegion.prefWidth(-1));
+                                        tabRegion.animating = true;
+                                        tabRegion.prefWidth.set(0.0);
+                                        tabRegion.setVisible(true);
+                                        createTimeline(tabRegion, Duration.millis(ANIMATION_SPEED), w, new EventHandler<ActionEvent>() {
 
-                                        @Override
-                                        public void handle(ActionEvent event) {
-                                            tabRegion.animating = false;
-                                            tabRegion.inner.requestLayout();
-                                        }
-                                    }).play();
-                                }
-                            };
+                                            @Override
+                                            public void handle(ActionEvent event) {
+                                                tabRegion.animating = false;
+                                                tabRegion.inner.requestLayout();
+                                            }
+                                        }).play();
+                                    }
+                                };    
+                            } else {
+                                tabRegion.setVisible(true);
+                                tabRegion.inner.requestLayout();
+                            }
                         }
                     }
                 }
@@ -482,6 +535,70 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
                 if (content != null) content.setVisible(false);
             }
         }
+    }
+    
+    
+   /**
+    * Super-lazy instantiation pattern from Bill Pugh.
+    * @treatAsPrivate implementation detail
+    */
+   private static class StyleableProperties {
+        private static final List<CssMetaData> STYLEABLES;
+        
+        private final static CssMetaData<TabPane,TabAnimation> OPEN_TAB_ANIMATION = 
+                new CssMetaData<TabPane, TabPaneSkin.TabAnimation>("-fx-open-tab-animation", 
+                    new EnumConverter<TabAnimation>(TabAnimation.class), TabAnimation.GROW) {
+
+            @Override public boolean isSettable(TabPane node) {
+                return true;
+            }
+
+            @Override public WritableValue<TabAnimation> getWritableValue(TabPane node) {
+                TabPaneSkin skin = (TabPaneSkin) node.getSkin();
+                return skin.openTabAnimation;
+            }
+        };
+        
+        private final static CssMetaData<TabPane,TabAnimation> CLOSE_TAB_ANIMATION = 
+                new CssMetaData<TabPane, TabPaneSkin.TabAnimation>("-fx-close-tab-animation", 
+                    new EnumConverter<TabAnimation>(TabAnimation.class), TabAnimation.GROW) {
+
+            @Override public boolean isSettable(TabPane node) {
+                return true;
+            }
+
+            @Override public WritableValue<TabAnimation> getWritableValue(TabPane node) {
+                TabPaneSkin skin = (TabPaneSkin) node.getSkin();
+                return skin.closeTabAnimation;
+            }
+        };
+        
+        static {
+
+           final List<CssMetaData> styleables = 
+               new ArrayList<CssMetaData>(SkinBase.getClassCssMetaData());
+           Collections.addAll(styleables,
+                   OPEN_TAB_ANIMATION,
+                   CLOSE_TAB_ANIMATION
+           );
+           STYLEABLES = Collections.unmodifiableList(styleables);
+
+        }
+    }
+    
+    /**
+     * @return The CssMetaData associated with this class, which may include the
+     * CssMetaData of its super classes.
+     */
+    public static List<CssMetaData> getClassCssMetaData() {
+        return StyleableProperties.STYLEABLES;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override public List<CssMetaData> getCssMetaData() {
+        return getClassCssMetaData();
     }
 
     /**************************************************************************
