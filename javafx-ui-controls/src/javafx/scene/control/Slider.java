@@ -793,7 +793,7 @@ public class Slider extends Control {
      * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
      */
     @Deprecated
-    @Override protected List<CssMetaData> impl_getControlStyleableProperties() {
+    @Override protected List<CssMetaData> getControlCssMetaData() {
         return getClassCssMetaData();
     }
 

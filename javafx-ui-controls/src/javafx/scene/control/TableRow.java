@@ -170,18 +170,19 @@ public class TableRow<T> extends IndexedCell<T> {
                         weakTableViewRef = null;
                     }
 
-                    if (getTableView() != null) {
-                        sm = getTableView().getSelectionModel();
+                    TableView tableView = getTableView();
+                    if (tableView != null) {
+                        sm = tableView.getSelectionModel();
                         if (sm != null) {
                             sm.getSelectedCells().addListener(weakSelectedListener);
                         }
 
-                        fm = getTableView().getFocusModel();
+                        fm = tableView.getFocusModel();
                         if (fm != null) {
                             fm.focusedCellProperty().addListener(weakFocusedListener);
                         }
 
-                        getTableView().editingCellProperty().addListener(weakEditingListener);
+                        tableView.editingCellProperty().addListener(weakEditingListener);
                         
                         weakTableViewRef = new WeakReference<TableView<T>>(get());
                     }

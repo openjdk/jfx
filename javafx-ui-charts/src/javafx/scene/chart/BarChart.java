@@ -39,7 +39,6 @@ import javafx.animation.KeyValue;
 import javafx.animation.ParallelTransition;
 import javafx.animation.Timeline;
 import javafx.beans.property.DoubleProperty;
-import javafx.beans.property.DoublePropertyBase;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
@@ -409,7 +408,7 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
         final double zeroPos = valueAxis.getZeroPosition();
         // update bar positions and sizes
         int catIndex = 0;
-        for (String category : categoryAxis.getCategories()) {
+            for (String category : categoryAxis.getCategories()) {
             int index = 0;
             for (Series<X,Y> series = begin; series != null; series = series.next) {
                 final Data<X,Y> item = getDataItem(series, index, catIndex, category);

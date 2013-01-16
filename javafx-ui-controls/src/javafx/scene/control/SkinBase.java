@@ -64,12 +64,7 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
      */
     private ObservableList<Node> children;
     
-    /**
-     * This is part of the workaround introduced during delomboking. We probably will
-     * want to adjust the way listeners are added rather than continuing to use this
-     * map (although it doesn't really do much harm).
-     */
-    private MultiplePropertyChangeListenerHandler changeListenerHandler;
+    
     
     /***************************************************************************
      *                                                                         *
@@ -91,6 +86,8 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
             event.consume();
         }
     };
+    
+    
     
     /***************************************************************************
      *                                                                         *
@@ -136,11 +133,6 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
 
     /** {@inheritDoc} */
     @Override public void dispose() { 
-        // unhook listeners
-        if (changeListenerHandler != null) {
-            changeListenerHandler.dispose();
-        }
-
 //        control.removeEventHandler(ContextMenuEvent.CONTEXT_MENU_REQUESTED, contextMenuHandler);
 
         this.control = null;
@@ -171,33 +163,6 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
             Node child = children.get(i);
             layoutInArea(child, contentX, contentY, contentWidth, contentHeight, -1, HPos.CENTER, VPos.CENTER);
         }
-    }
-    
-    /**
-     * Subclasses can invoke this method to register that we want to listen to
-     * property change events for the given property.
-     *
-     * @param property
-     * @param reference
-     */
-    protected final void registerChangeListener(ObservableValue property, String reference) {
-        if (changeListenerHandler == null) {
-            changeListenerHandler = new MultiplePropertyChangeListenerHandler(new Callback<String, Void>() {
-                @Override public Void call(String p) {
-                    handleControlPropertyChanged(p);
-                    return null;
-                }
-            });
-        }
-        changeListenerHandler.registerChangeListener(property, reference);
-    }
-    
-    /**
-     * Skin subclasses will override this method to handle changes in corresponding
-     * control's properties.
-     */
-    protected void handleControlPropertyChanged(String propertyReference) {
-        // no-op
     }
     
     /**
@@ -442,8 +407,7 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
     /** 
      * @return The CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
-     */
-    public static List<CssMetaData> getClassCssMetaData() {
+     */    public static List<CssMetaData> getClassCssMetaData() {
         return SkinBase.StyleableProperties.STYLEABLES;
     }
 

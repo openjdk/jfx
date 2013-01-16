@@ -331,7 +331,7 @@ public class TitledPane extends Labeled {
      * {@inheritDoc}
      */
     @Override
-    public List<CssMetaData> getCssMetaData() {
+    public List<CssMetaData> getControlCssMetaData() {
         return getClassCssMetaData();
     }
 

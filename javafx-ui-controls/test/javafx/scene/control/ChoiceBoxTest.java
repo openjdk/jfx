@@ -407,4 +407,13 @@ public class ChoiceBoxTest {
         startApp(pane);
         assertEquals(0, box.getItems().size());
     }
+    
+     @Test public void testSelectingItemBeforeFirstShow() {
+        StackPane pane = new StackPane();
+        pane.getChildren().add(box);
+        box.getItems().addAll("Apple", "Orange", "Banana");
+        box.getSelectionModel().select("Orange");
+        startApp(pane);
+        assertEquals(1, box.getSelectionModel().getSelectedIndex());
+    }
 }

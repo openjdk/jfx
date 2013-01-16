@@ -31,17 +31,6 @@
  *                                                                             *
  ******************************************************************************/
 
-
-
-/*******************************************************************************
- *                                                                             *
- * Label                                                                       *
- *                                                                             *
- ******************************************************************************/
-.label {
-    -fx-font-size: 0.75em; /** 9pt */
-}
-
 /*******************************************************************************
  *                                                                             *
  * PopupMenu                                                                   *
@@ -254,175 +243,122 @@
 
 
 /*******************************************************************************
- *                                                                             *
- * ComboBox                                                                    *
- *                                                                             *
- ******************************************************************************/
-
-.combo-box:external-focus {
-    -fx-border-color: red; 
-    -fx-focus-color: red;
-    -fx-opacity: 0.8;
-}
-.combo-box:internal-focus {
-    -fx-border-color: null; 
-    -fx-focus-color: #0093ff;
-    -fx-opacity: 1.0;
-}
-
-/* Customie the ListCell that appears in the ComboBox button itself */
-.combo-box > .list-cell {
-    -fx-padding: 0.5em 0.725em 0.5em 0.725em;
-    -fx-cell-size: 2em; 
-}
-
-.combo-box-popup > .list-view > .virtual-flow > .clipped-container > .sheet > .list-cell {
-    -fx-cell-size: 2.182em;
-}
-
-
-/*******************************************************************************
- *                                                                             *
- * SplitPane                                                                   *
- *                                                                             *
- ******************************************************************************/
-.split-pane > .split-pane-divider {
-    -fx-padding: 0 0.2725em 0 0.2725em; 
-}
-
-.split-pane > .split-pane-divider > .horizontal-grabber {
-    -fx-padding: 0.636em 0.18em 0.636em 0.18em;
-}
-
-.split-pane > .split-pane-divider > .vertical-grabber {
-    -fx-padding: 0.205em 0.545em 0.205em 0.545em;
-}
-
-
-/*******************************************************************************
- *                                                                             *
- * TabPane                                                                     *
- *                                                                             *
- ******************************************************************************/
-.tab-pane {
-    -fx-tab-min-width: 2.725em;
-    -fx-tab-min-height: 2.725em; 
-    -fx-tab-max-height: 2.725em; 
-}
-
-.tab-pane > .tab-header-area > .headers-region > .tab > .tab-container > .tab-label {
-    -fx-font-size: 1em;
-    -fx-padding: 0 0.545em 0 0.545em;
-}
-
-
-/*******************************************************************************
- *                                                                             *
- * TitledPane                                                                  *
- *                                                                             *
- ******************************************************************************/
-
-
-/*******************************************************************************
- *                                                                             *
- * ListView                                                                    *
- *                                                                             *
- ******************************************************************************/
-.list-view:external-focus {
-    -fx-border-color: red; 
-    -fx-focus-color: red;
-    -fx-opacity: 0.8;
-}
-.list-view:internal-focus {
-    -fx-border-color: null; 
-    -fx-focus-color: #0093ff;
-    -fx-opacity: 1.0;
-}
-
-.list-cell {
-    -fx-cell-size: 2.364em;
-}
-
-
-/*******************************************************************************
  *
  * 2-level focus setting.
  * The visuals aren't ready yet, so currently these are just placeholders.
  *
  ******************************************************************************/
 
-.choice-box:external-focus {
-    -fx-border-color: red; 
-    -fx-focus-color: red;
-    -fx-opacity: 0.8;
+.choice-box:focused:external-focus {
+    -fx-background-color: -fx-focus-color, -fx-outer-border, -fx-inner-border, -fx-body-color;
 }
-.choice-box:internal-focus {
-    -fx-border-color: null; 
-    -fx-focus-color: #0093ff;
-    -fx-opacity: 1.0;
+.choice-box:focused:showing {
+    -fx-background-color: -fx-shadow-highlight-color, -fx-outer-border, -fx-inner-border, -fx-body-color;
 }
-
-.slider:external-focus {
-    -fx-border-color: red; 
-    -xfx-focus-color: red;
-    -fx-opacity: 0.8;
-}
-.slider:internal-focus {
-    -fx-border-color: null; 
-    -fx-focus-color: #0093ff;
-    -fx-opacity: 1.0;
-}
-.slider:external-focus > .thumb {
-    -xfx-border-color: red; 
-    -fx-focus-color: red;
-}
-.slider:internal-focus > .thumb {
-    -xfx-border-color: null; 
-    -fx-focus-color: #0093ff;
+.choice-box:focused:internal-focus {
+    -fx-background-color: -fx-shadow-highlight-color, -fx-outer-border, -fx-inner-border, -fx-body-color;
 }
 
-.text-field:external-focus {
-    -fx-border-color: red; 
-    -fx-focus-color: red;
-    -fx-opacity: 0.8;
+
+.slider {
+    -fx-background-color: -fx-shadow-highlight-color, -fx-text-box-border, -fx-control-inner-background;
+    -fx-background-color: transparent;
+    -fx-background-insets: 0, 1, 2;
+    -fx-background-radius: 3, 2, 2;
+    -fx-padding: 3 5 5 5;
 }
-.text-field:internal-focus {
-    -fx-border-color: null; 
-    -fx-focus-color: #0093ff;
-    -fx-opacity: 1.0;
+.slider:focused:external-focus {
+    -fx-background-color: -fx-focus-color, -fx-text-box-border, -fx-control-inner-background;
+    -fx-background-insets: -0.4, 1, 2;
+    -fx-background-radius: 3.4, 2, 2;
+    -fx-prompt-text-fill: transparent;
+
+}
+.slider:focused:internal-focus {
+    -fx-background-color: transparent;
+}
+.slider:focused:external-focus > .thumb {
+    -fx-focus-color: transparent;
 }
 
-.password-field:external-focus {
-    -fx-border-color: red; 
-    -fx-focus-color: red;
-    -fx-opacity: 0.8;
+
+.text-field:focused:external-focus {
+    -fx-background-color: -fx-focus-color, -fx-text-box-border, -fx-control-inner-background;
+    -fx-prompt-text-fill: derive(-fx-control-inner-background,-30%);
 }
-.password-field:internal-focus {
-    -fx-border-color: null; 
-    -fx-focus-color: #0093ff;
-    -fx-opacity: 1.0;
+.text-field:focused:external-focus .caret-handle {
+    -fx-background-color: transparent;
+}
+.text-field:focused:external-focus .selection-handle {
+    -fx-background-color: transparent;
+}
+.text-field:focused:internal-focus {
+    -fx-background-color: -fx-shadow-highlight-color, -fx-text-box-border, -fx-control-inner-background;
+    -fx-prompt-text-fill: transparent;
 }
 
-.text-area:external-focus {
-    -fx-border-color: red; 
-    -fx-focus-color: red;
-    -fx-opacity: 0.8;
+
+
+.password-field:focused:external-focus {
+    -fx-background-color: -fx-focus-color, -fx-text-box-border, -fx-control-inner-background;
+    -fx-prompt-text-fill: derive(-fx-control-inner-background,-30%);
 }
-.text-area:internal-focus {
-    -fx-border-color: null; 
-    -fx-focus-color: #0093ff;
-    -fx-opacity: 1.0;
+.password-field:focused:external-focus .caret-handle {
+    -fx-background-color: transparent;
+}
+.password-field:focused:external-focus .selection-handle {
+    -fx-background-color: transparent;
+}
+.password-field:focused:internal-focus {
+    -fx-background-color: -fx-shadow-highlight-color, -fx-text-box-border, -fx-control-inner-background;
 }
 
-.table-view:external-focus {
-    -fx-border-color: red; 
-    -fx-focus-color: red;
-    -fx-opacity: 0.8;
+
+.text-area:focused:external-focus {
+    -fx-background-color: -fx-focus-color, -fx-text-box-border, -fx-control-inner-background;
+    -fx-prompt-text-fill: derive(-fx-control-inner-background,-30%);
 }
-.table-view:internal-focus {
-    -fx-border-color: null; 
-    -fx-focus-color: #0093ff;
-    -fx-opacity: 1.0;
+.text-area:focused:external-focus .caret-handle {
+    -fx-background-color: transparent;
+}
+.text-area:focused:external-focus .selection-handle {
+    -fx-background-color: transparent;
+}
+.text-area:focused:internal-focus {
+    -fx-background-color: -fx-shadow-highlight-color, -fx-text-box-border, -fx-control-inner-background;
+    -fx-prompt-text-fill: transparent;
 }
 
+
+.list-view:focused:external-focus {
+    -fx-background-color: -fx-focus-color, -fx-text-box-border, -fx-control-inner-background;
+}
+.list-view:focused:external-focus > .virtual-flow > .clipped-container > .sheet > .list-cell:filled:selected {
+    -fx-background-color: gray;
+}
+.list-view:focused:internal-focus {
+    -fx-background-color: -fx-shadow-highlight-color, -fx-text-box-border, -fx-control-inner-background;
+}
+
+
+.table-view:focused:external-focus {
+    -fx-background-color: -fx-focus-color, -fx-text-box-border, -fx-control-inner-background;
+}
+.table-view:focused:external-focus > .virtual-flow > .clipped-container > .sheet > .table-row-cell:filled:selected {
+    -fx-background-color: gray;
+}
+.table-view:focused:internal-focus {
+    -fx-background-color: -fx-shadow-highlight-color, -fx-text-box-border, -fx-control-inner-background;
+}
+
+
+.combo-box:focused:external-focus {
+    -fx-background-color: -fx-focus-color, -fx-outer-border, -fx-inner-border, -fx-body-color;
+}
+.combo-box:focused:showing {
+    -fx-background-color: -fx-shadow-highlight-color, -fx-outer-border, -fx-inner-border, -fx-body-color;
+}
+.combo-box:focused:internal-focus {
+    -fx-background-color: -fx-shadow-highlight-color, -fx-outer-border, -fx-inner-border, -fx-body-color;
+}
 

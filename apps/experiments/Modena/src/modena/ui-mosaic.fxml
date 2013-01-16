@@ -34,8 +34,8 @@
         <MenuItem mnemonicParsing="false" text="Action 2" />
       </items>
     </SplitMenuButton>
-    <TextField layoutX="39.0" layoutY="149.0" prefWidth="160.0" promptText="Textfield" text="Textfield" />
-    <TextArea layoutX="39.0" layoutY="180.0" prefHeight="130.0" prefWidth="160.0" promptText="Text Area" text="Text Area with some text spanning over a few lines." wrapText="true" />
+    <TextField layoutX="40.0" layoutY="149.0" prefWidth="160.0" promptText="Textfield" text="Textfield" />
+    <TextArea layoutX="40.0" layoutY="180.0" prefHeight="130.0" prefWidth="160.0" promptText="Text Area" text="Text Area with some text spanning over a few lines." wrapText="true" />
     <ToggleButton layoutX="241.0" layoutY="196.0" mnemonicParsing="false" prefWidth="90.0" selected="true" text="Toggle">
       <toggleGroup>
         <ToggleGroup fx:id="toggle1" />

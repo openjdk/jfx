@@ -29,6 +29,7 @@ import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.scene.Node;
 import javafx.scene.control.*;
 import javafx.util.Callback;
 import javafx.util.StringConverter;
@@ -310,6 +311,9 @@ public class ChoiceBoxTreeCell<T> extends TreeCell<T> {
     /** {@inheritDoc} */
     @Override public void updateItem(T item, boolean empty) {
         super.updateItem(item, empty);
-        CellUtils.updateItem(this, choiceBox, getConverter());
+        
+        TreeItem<T> treeItem = getTreeItem();
+        Node graphic = treeItem == null ? null : treeItem.getGraphic();
+        CellUtils.updateItem(this, choiceBox, getConverter(), graphic);
     };
 }

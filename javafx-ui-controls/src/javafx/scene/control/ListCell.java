@@ -141,7 +141,7 @@ public class ListCell<T> extends IndexedCell<T> {
      */
     private final ListChangeListener itemsListener = new ListChangeListener() {
         @Override public void onChanged(ListChangeListener.Change c) {
-            updateItem(); // TODO limit this to only those changes necessary
+            updateItem();
         }
     };
 

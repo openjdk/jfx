@@ -200,7 +200,7 @@ public class MenuBar extends Control {
      * {@inheritDoc}
      */
     @Override
-    public List<CssMetaData> getCssMetaData() {
+    public List<CssMetaData> getControlCssMetaData() {
         return getClassCssMetaData();
     }
 

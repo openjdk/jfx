@@ -3113,17 +3113,17 @@
     -fx-background-radius: 0 5 5 0, 0 4 4 0, 0 3 3 0;
     -fx-padding: 0.5em 0.416667em 0.5em 0.416667em; /* 6 5 6 5  */
 }
-/*    -fx-background-color: null;
-    -fx-background-insets: 0, 1, 2;
-    -fx-background-radius: 0 5 5 0, 0 4 4 0, 0 3 3 0;
-    -fx-padding: 0.5em 0.416667em 0.5em 0.416667em;  6 5 6 5 
-}*/
-/*.combo-box-base.split-button .arrow-button {
+
+.combo-box-base:hover > .arrow-button {
     -fx-background-color: -fx-outer-border, -fx-inner-border, -fx-body-color;
     -fx-background-insets: 0, 1, 2;
     -fx-background-radius: 0 5 5 0, 0 4 4 0, 0 3 3 0;
-    -fx-padding: 0.5em 0.416667em 0.5em 0.416667em;  6 5 6 5 
-}*/
+    -fx-padding: 0.5em 0.416667em 0.5em 0.416667em; /* 6 5 6 5 */
+}
+
+.combo-box-base:showing > .arrow-button {
+    -fx-color: -fx-pressed-base;
+} 
 
 /* ------- ARROW* ------- */
 .combo-box-base > .arrow-button > .arrow,

@@ -90,19 +90,24 @@ public class TreeCellSkin extends CellSkinBase<TreeCell<?>, TreeCellBehavior> {
         }
         return indent; 
     }
+    
+    private boolean disclosureNodeDirty = true;
 
     public TreeCellSkin(TreeCell<?> control) {
         super(control, new TreeCellBehavior(control));
         
-        updateDisclosureNode();
-        
         registerChangeListener(control.treeItemProperty(), "TREE_ITEM");
+        registerChangeListener(control.textProperty(), "TEXT");
+        registerChangeListener(control.graphicProperty(), "GRAPHIC");
     }
     
     @Override protected void handleControlPropertyChanged(String p) {
         super.handleControlPropertyChanged(p);
         if ("TREE_ITEM".equals(p)) {
-            updateDisclosureNode();
+            disclosureNodeDirty = true;
+            getSkinnable().requestLayout();
+        } else if ("TEXT".equals(p) || "GRAPHIC".equals(p)) {
+            getSkinnable().requestLayout();
         }
     }
     
@@ -138,10 +143,17 @@ public class TreeCellSkin extends CellSkinBase<TreeCell<?>, TreeCellBehavior> {
     @Override protected void layoutChildren(double x, final double y,
             double w, final double h) {
         TreeItem treeItem = getSkinnable().getTreeItem();
-        if (treeItem == null) return;
+        // RT-25876: can not null-check here as this prevents empty rows from
+        // being cleaned out.
+        // if (treeItem == null) return;
         
         TreeView tree = getSkinnable().getTreeView();
         if (tree == null) return;
+        
+        if (disclosureNodeDirty) {
+            updateDisclosureNode();
+            disclosureNodeDirty = false;
+        }
         
         Node disclosureNode = getSkinnable().getDisclosureNode();
         
@@ -152,7 +164,7 @@ public class TreeCellSkin extends CellSkinBase<TreeCell<?>, TreeCellBehavior> {
         x += leftMargin;
 
         // position the disclosure node so that it is at the proper indent
-        boolean disclosureVisible = disclosureNode != null && ! treeItem.isLeaf();
+        boolean disclosureVisible = disclosureNode != null && treeItem != null && ! treeItem.isLeaf();
 
         final double defaultDisclosureWidth = maxDisclosureWidthMap.containsKey(tree) ?
             maxDisclosureWidthMap.get(tree) : 18;   // RT-19656: default width of default disclosure node
@@ -180,7 +192,7 @@ public class TreeCellSkin extends CellSkinBase<TreeCell<?>, TreeCellBehavior> {
 
         // determine starting point of the graphic or cell node, and the
         // remaining width available to them
-        final int padding = treeItem.getGraphic() == null ? 0 : 3;
+        final int padding = treeItem != null && treeItem.getGraphic() == null ? 0 : 3;
         x += disclosureWidth + padding;
         w -= (leftMargin + disclosureWidth + padding);
 

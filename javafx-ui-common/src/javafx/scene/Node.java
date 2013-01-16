@@ -7559,7 +7559,27 @@ public abstract class Node implements EventTarget {
     /**
      * Used to specify that a pseudo-class of this Node has changed. If the
      * pseudo-class is used in a CSS selector that matches this Node, CSS will
-     * be reapplied.
+     * be reapplied. Typically, this method is called from the {@code invalidated}
+     * method of a property that is used as a pseudo-class. For example:
+     * <code><pre>
+     * 
+     *     private static final PseudoClass MY_PSEUDO_CLASS_STATE = PseudoClass.getPseudoClass("my-state");
+     *
+     *     BooleanProperty myPseudoClassState = new BooleanPropertyBase(false) {
+     *
+     *           {@literal @}Override public void invalidated() {
+     *                pseudoClassStateChanged(MY_PSEUDO_CLASS_STATE, get());
+     *           }
+     *
+     *           {@literal @}Override public Object getBean() {
+     *               return MyControl.this;
+     *           }
+     *
+     *           {@literal @}Override public String getName() {
+     *               return "myPseudoClassState";
+     *           }
+     *       };
+     * </pre><code>
      * @param pseudoClass the pseudo-class that has changed state
      * @param active whether or not the state is active
      */
@@ -7586,7 +7606,6 @@ public abstract class Node implements EventTarget {
     }
     
     /**
-     * 
      * @return An unmodifiable Set of active pseudo-class states
      */
     public final Set<PseudoClass> getPseudoClassStates() {
