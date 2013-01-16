@@ -46,6 +46,7 @@ import javafx.event.EventTarget;
 import javafx.event.EventType;
 import javafx.scene.Node;
 import javafx.util.Callback;
+import com.sun.javafx.css.Styleable;
 import com.sun.javafx.scene.control.skin.TableViewSkinBase;
 /**
  * A {@link TreeTableView} is made up of a number of TreeTableColumn instances. Each
