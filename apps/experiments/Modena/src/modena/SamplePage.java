@@ -426,15 +426,15 @@ public class SamplePage extends GridPane {
                 );
         newDetailedSection(
                 new String[] {"ToolBar (H):", "normal", "overflow", "disabled"}, 
-                createToolBar(false,false),
-                createToolBar(false,true),
-                withState(createToolBar(false,false), "disabled")
+                createToolBar(false,false,false),
+                createToolBar(false,true,false),
+                createToolBar(false,false,true)
                 );
         newDetailedSection(
                 new String[] {"ToolBar (V):", "normal", "overflow", "disabled"}, 
-                createToolBar(true,false),
-                createToolBar(true,true),
-                withState(createToolBar(true,false), "disabled")
+                createToolBar(true,false,false),
+                createToolBar(true,true,false),
+                createToolBar(true,false,true)
                 );
         newSection(      
                 "Tabs\n(Top):", 

@@ -637,7 +637,8 @@ is being used to size a border should also be in pixels.
     -fx-label-padding: 0.0em 0.0em 0.0em 0.416667em; /* 0 0 0 5 */
     -fx-text-fill: -fx-text-background-color;
 }
-.radio-button > .radio  {
+.radio-button > .radio,
+.radio-button:focused > .radio  {
    -fx-background-radius: 1.0em; /* large value to make sure this remains circular */
    -fx-padding: 0.333333em; /* 4 -- padding from outside edge to the inner black dot */
 }
@@ -751,7 +752,6 @@ is being used to size a border should also be in pixels.
  * ToolBar                                                                     *
  *                                                                             *
  ******************************************************************************/
-
 .tool-bar:vertical {
     -fx-background: derive(-fx-base,-20%);
     -fx-background-color:
