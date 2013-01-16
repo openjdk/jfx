@@ -130,6 +130,11 @@ public class NGRegion extends NGGroup implements PGRegion {
     private boolean centerShape = true;
 
     /**
+     * Whether we should attempt to use region caching for a region with a shape.
+     */
+    private boolean cacheShape = false;
+
+    /**
      * A cached set of the opaque insets as given to us during synchronization. We hold
      * on to this so that we can determine the opaque insets in the computeOpaqueRegion method.
      */
@@ -172,10 +177,11 @@ public class NGRegion extends NGGroup implements PGRegion {
      * @param scaleShape whether to scale the shape
      * @param positionShape whether to center the shape
      */
-    @Override public void updateShape(Object shape, boolean scaleShape, boolean positionShape) {
+    @Override public void updateShape(Object shape, boolean scaleShape, boolean positionShape, boolean cacheShape) {
         this.shape = shape == null ? null : ((NGShape) ((javafx.scene.shape.Shape)shape).impl_getPGNode()).getShape();
         this.scaleShape = scaleShape;
         this.centerShape = positionShape;
+        this.cacheShape = cacheShape;
         invalidateOpaqueRegion();
     }
 
@@ -228,7 +234,7 @@ public class NGRegion extends NGGroup implements PGRegion {
 
         float top=0, right=0, bottom=0, left=0;
         final List<BackgroundFill> fills = background.getFills();
-        backgroundCanBeCached = !PrismSettings.disableRegionCaching && !fills.isEmpty();
+        backgroundCanBeCached = !PrismSettings.disableRegionCaching && !fills.isEmpty() && (shape == null || cacheShape);
         if (backgroundCanBeCached) {
             for (int i = 0, max = fills.size(); i < max; i++) {
                 final BackgroundFill fill = fills.get(i);

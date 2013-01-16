@@ -38,6 +38,46 @@ package javafx.application;
 public enum ConditionalFeature {
 
     /**
+     * Indicates that JavaFX classes providing graphics capabilities are
+     * available on this platform.
+     */
+    GRAPHICS,
+
+    /**
+     * Indicates that JavaFX classes providing UI controls are available on
+     * this platform.
+     */
+    CONTROLS,
+
+    /**
+     * Indicates that the javafx.scene.web packages is available on this
+     * platform.
+     */
+    WEB,
+
+    /**
+     * Indicates that SWT integration is available on the platform. This tests
+     * for SWT integration with JavaFX, but does not test for the presence of
+     * the full SWT library.
+     */
+    SWT,
+
+    /* Indicates that the Swing library is present in the Java Runtime
+     * Environment and that Swing integration with JavaFX is available on the
+     * platform.
+     */
+    SWING,
+
+
+    /* Indicates that XML libraries are present in the JRE and that the FXML
+     * API is available on the platform. Note that it is possible for FXML APIs
+     * to be present but unusable if the underlying Java Runtime Environment
+     * does not have XML support. In this case
+     * Platform.isSupported(ConditionalFeature.FXML) wll return false.
+     */
+    FXML,
+
+    /**
      * Indicates that 3D is available on the platform.
      * If an application attempts to use 3D transforms or a 3D camera on a
      * platform that does not support 3D, then the transform or camera is

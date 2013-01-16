@@ -1160,7 +1160,6 @@ public class Text extends Shape {
             if (impl_mode != Mode.FILL && getStrokeType() != StrokeType.INSIDE) {
                 return super.impl_computeGeomBounds(bounds, tx);
             }
-
             TextLayout layout = getTextLayout();
             bounds = layout.getBounds(getTextSpan(), bounds);
             BaseBounds spanBounds = getSpanBounds();
@@ -1188,7 +1187,20 @@ public class Text extends Shape {
         float width = textBounds.getWidth();
         float height = textBounds.getHeight();
         float wrappingWidth = (float)getWrappingWidth();
-        if (wrappingWidth > width) width = wrappingWidth;
+        if (wrappingWidth > width) {
+            width = wrappingWidth;
+        } else {
+            /* The following adjustment is necessary for the text bounds to be
+             * relative to the same location as the mirrored bounds returned
+             * by layout.getBounds().
+             */
+            if (wrappingWidth > 0) {
+                NodeOrientation orientation = getEffectiveNodeOrientation();
+                if (orientation == NodeOrientation.RIGHT_TO_LEFT) {
+                    x -= width - wrappingWidth;
+                }
+            }
+        }
         textBounds = new RectBounds(x, y, x + width, y + height);
 
         /* handle stroked text */

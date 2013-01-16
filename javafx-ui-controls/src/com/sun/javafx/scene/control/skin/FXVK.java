@@ -49,18 +49,48 @@ import javafx.css.StyleableBooleanProperty;
 import javafx.css.CssMetaData;
 import com.sun.javafx.css.converters.BooleanConverter;
 
+import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.SimpleObjectProperty;
+import javafx.event.EventHandler;
+import javafx.scene.control.Control;
+import javafx.scene.input.KeyEvent;
+
+
 public class FXVK extends Control {
+
+    public enum Type {
+        TEXT,
+        NUMERIC,
+        EMAIL,
+    }
+
+    private final ObjectProperty<Type> type = new SimpleObjectProperty<Type>(this, "type");
+    public final Type getType() { return type.get(); }
+    public final void setType(Type value) { type.set(value); }
+    public final ObjectProperty<Type> typeProperty() { return type; }
+
+
+    private final ObjectProperty<EventHandler<KeyEvent>> onAction =
+            new SimpleObjectProperty<EventHandler<KeyEvent>>(this, "onAction");
+    public final void setOnAction(EventHandler<KeyEvent> value) { onAction.set(value); }
+    public final EventHandler<KeyEvent> getOnAction() { return onAction.get(); }
+    public final ObjectProperty<EventHandler<KeyEvent>> onActionProperty() { return onAction; }
+
 
     final static String[] VK_TYPE_NAMES = new String[] { "text", "numeric", "url", "email" };
     public final static String VK_TYPE_PROP_KEY = "vkType";
 
     String[] chars;
 
-    FXVK() {
-        setNodeOrientation(NodeOrientation.LEFT_TO_RIGHT);
-        getStyleClass().setAll(DEFAULT_STYLE_CLASS);
+    public FXVK() {
+        this(Type.TEXT);
     }
 
+    public FXVK(Type type) {
+        this.type.set(type);
+        setNodeOrientation(NodeOrientation.LEFT_TO_RIGHT);
+        getStyleClass().add(DEFAULT_STYLE_CLASS);
+    }
 
     final ObjectProperty<Node> attachedNodeProperty() {
         if (attachedNode == null) {
@@ -76,46 +106,29 @@ public class FXVK extends Control {
         }
         return attachedNode;
     }
+
     private ObjectProperty<Node> attachedNode;
     final void setAttachedNode(Node value) { attachedNodeProperty().setValue(value); }
     final Node getAttachedNode() { return attachedNode == null ? null : attachedNode.getValue(); }
-
-
-    int vkType;
     static FXVK vk;
-    private static HashMap<Integer, FXVK> vkMap = new HashMap<Integer, FXVK>();
 
     public static void attach(final Node textInput) {
         int type = 0;
         Object typeValue = textInput.getProperties().get(VK_TYPE_PROP_KEY);
+        String typeStr = "";
         if (typeValue instanceof String) {
-            String typeStr = ((String)typeValue).toLowerCase();
-            for (int i = 0; i < VK_TYPE_NAMES.length; i++) {
-                if (typeStr.equals(VK_TYPE_NAMES[i])) {
-                    type = i;
-                    break;
-                }
-            }
+            typeStr = ((String)typeValue).toLowerCase();
         }
 
-        vk = vkMap.get(type);
         if (vk == null) {
-            vk = new FXVK();
-            vk.vkType = type;
+            vk = new FXVK(Type.TEXT);
             vk.setSkin(new FXVKSkin(vk));
-            vkMap.put(type, vk);
-        }
-
-        for (FXVK v : vkMap.values()) {
-            if (v != vk) {
-                v.setAttachedNode(null);
-            }
         }
         vk.setAttachedNode(textInput);
     }
 
     public static void detach() {
-        for (FXVK vk : vkMap.values()) {
+        if (vk != null) {
             vk.setAttachedNode(null);
         }
     }

@@ -87,6 +87,7 @@ import com.sun.javafx.fxml.PropertyNotFoundException;
 import com.sun.javafx.fxml.expression.Expression;
 import com.sun.javafx.fxml.expression.ExpressionValue;
 import com.sun.javafx.fxml.expression.KeyPath;
+import java.net.MalformedURLException;
 
 /**
  * Loads an object hierarchy from an XML document.
@@ -275,171 +276,209 @@ public class FXMLLoader {
         @SuppressWarnings("unchecked")
         public void processPropertyAttribute(Attribute attribute) throws IOException {
             String value = attribute.value;
+            if (isBindingExpression(value)) {
+                // Resolve the expression
+                Expression expression;
 
-            if (value.startsWith(ESCAPE_PREFIX)) {
-                value = value.substring(ESCAPE_PREFIX.length());
-
-                if (value.length() == 0
-                    || !(value.startsWith(ESCAPE_PREFIX)
-                        || value.startsWith(RELATIVE_PATH_PREFIX)
-                        || value.startsWith(RESOURCE_KEY_PREFIX)
-                        || value.startsWith(EXPRESSION_PREFIX)
-                        || value.startsWith(BI_DIRECTIONAL_BINDING_PREFIX))) {
-                    throw new LoadException("Invalid escape sequence.");
+                if (attribute.sourceType != null) {
+                    throw new LoadException("Cannot bind to static property.");
                 }
 
-                applyProperty(attribute.name, attribute.sourceType, value);
-            } else if (value.startsWith(RELATIVE_PATH_PREFIX)) {
-                value = value.substring(RELATIVE_PATH_PREFIX.length());
-
-                if (value.startsWith(RELATIVE_PATH_PREFIX)) {
-                    // The prefix was escaped
-                    warnDeprecatedEscapeSequence(RELATIVE_PATH_PREFIX);
-                    applyProperty(attribute.name, attribute.sourceType, value);
-                } else {
-                    if (value.length() == 0) {
-                        throw new LoadException("Missing relative path.");
-                    }
-
-                    URL location;
-                    if (value.charAt(0) == '/') {
-                        location = classLoader.getResource(value.substring(1));
-                    } else {
-                        if (FXMLLoader.this.location == null) {
-                            throw new LoadException("Base location is undefined.");
-                        }
-
-                        location = new URL(FXMLLoader.this.location, value);
-                    }
-
-                    applyProperty(attribute.name, attribute.sourceType, location);
+                if (!isTyped()) {
+                    throw new LoadException("Cannot bind to untyped object.");
                 }
-            } else if (value.startsWith(RESOURCE_KEY_PREFIX)) {
-                value = value.substring(RESOURCE_KEY_PREFIX.length());
 
-                if (value.startsWith(RESOURCE_KEY_PREFIX)) {
-                    // The prefix was escaped
-                    warnDeprecatedEscapeSequence(RESOURCE_KEY_PREFIX);
-                    applyProperty(attribute.name, attribute.sourceType, value);
-                } else {
-                    if (value.length() == 0) {
-                        throw new LoadException("Missing resource key.");
-                    }
-
-                    // Resolve the resource value
-                    if (resources == null) {
-                        throw new LoadException("No resources specified.");
-                    }
-
-                    if (!resources.containsKey(value)) {
-                        throw new LoadException("Resource \"" + value + "\" not found.");
-                    }
-
-                    applyProperty(attribute.name, attribute.sourceType, resources.getObject(value));
+                // TODO We may want to identify binding properties in processAttribute()
+                // and apply them after build() has been called
+                if (this.value instanceof Builder) {
+                    throw new LoadException("Cannot bind to builder property.");
                 }
-            } else if (value.startsWith(EXPRESSION_PREFIX)) {
-                value = value.substring(EXPRESSION_PREFIX.length());
 
-                if (value.startsWith(EXPRESSION_PREFIX)) {
-                    // The prefix was escaped
-                    warnDeprecatedEscapeSequence(EXPRESSION_PREFIX);
-                    applyProperty(attribute.name, attribute.sourceType, value);
-                } else if (value.equals(NULL_KEYWORD)) {
-                    // The attribute value is null
-                    applyProperty(attribute.name, attribute.sourceType, null);
-                } else {
-                    if (value.length() == 0) {
-                        throw new LoadException("Missing expression.");
-                    }
+                value = value.substring(BINDING_EXPRESSION_PREFIX.length(),
+                        value.length() - 1);
+                expression = Expression.valueOf(value);
 
-                    // Resolve the expression
-                    Expression expression;
-                    if (value.startsWith(BINDING_EXPRESSION_PREFIX)
-                        && value.endsWith(BINDING_EXPRESSION_SUFFIX)) {
-                        if (attribute.sourceType != null) {
-                            throw new LoadException("Cannot bind to static property.");
-                        }
+                // Create the binding
+                BeanAdapter targetAdapter = new BeanAdapter(this.value);
+                ObservableValue<Object> propertyModel = targetAdapter.getPropertyModel(attribute.name);
+                Class<?> type = targetAdapter.getType(attribute.name);
 
-                        if (!isTyped()) {
-                            throw new LoadException("Cannot bind to untyped object.");
-                        }
-
-                        // TODO We may want to identify binding properties in processAttribute()
-                        // and apply them after build() has been called
-                        if (this.value instanceof Builder) {
-                            throw new LoadException("Cannot bind to builder property.");
-                        }
-
-                        value = value.substring(1, value.length() - 1);
-                        expression = Expression.valueOf(value);
-
-                        // Create the binding
-                        BeanAdapter targetAdapter = new BeanAdapter(this.value);
-                        ObservableValue<Object> propertyModel = targetAdapter.getPropertyModel(attribute.name);
-                        Class<?> type = targetAdapter.getType(attribute.name);
-
-                        if (propertyModel instanceof Property<?>) {
-                            ((Property<Object>)propertyModel).bind(new ExpressionValue(namespace, expression, type));
-                        }
-                    } else {
-                        applyProperty(attribute.name, attribute.sourceType, Expression.get(namespace, KeyPath.parse(value)));
-                    }
+                if (propertyModel instanceof Property<?>) {
+                    ((Property<Object>)propertyModel).bind(new ExpressionValue(namespace, expression, type));
                 }
-            } else if (value.startsWith(BI_DIRECTIONAL_BINDING_PREFIX)) {
+            } else if (isBidirectionalBindingExpression(value)) {
                 throw new UnsupportedOperationException("This feature is not currently enabled.");
             } else {
-                Object propertyValue = value;
+                processValue(attribute.sourceType, attribute.name, value);
+            }
+        }
 
-                if (attribute.sourceType == null && isTyped()) {
+        private boolean isBindingExpression(String aValue) {
+            return aValue.startsWith(BINDING_EXPRESSION_PREFIX)
+                   && aValue.endsWith(BINDING_EXPRESSION_SUFFIX);
+        }
+
+        private boolean isBidirectionalBindingExpression(String aValue) {
+            return aValue.startsWith(BI_DIRECTIONAL_BINDING_PREFIX);
+        }
+
+        private boolean processValue(Class sourceType, String propertyName, String aValue)
+            throws LoadException {
+
+            boolean processed = false;
+                //process list or array first
+                if (sourceType == null && isTyped()) {
                     BeanAdapter valueAdapter = getValueAdapter();
-                    Class<?> type = valueAdapter.getType(attribute.name);
+                    Class<?> type = valueAdapter.getType(propertyName);
 
                     if (type == null) {
-                        throw new PropertyNotFoundException("Property \"" + attribute.name
+                        throw new PropertyNotFoundException("Property \"" + propertyName
                             + "\" does not exist" + " or is read-only.");
                     }
 
                     if (List.class.isAssignableFrom(type)
-                        && valueAdapter.isReadOnly(attribute.name)) {
-                        // Split the string and add the values to the list
-                        List<Object> list = (List<Object>)valueAdapter.get(attribute.name);
-                        Type listType = valueAdapter.getGenericType(attribute.name);
-                        Type itemType = (Class<?>)BeanAdapter.getGenericListItemType(listType);
-
-                        if (itemType instanceof ParameterizedType) {
-                            itemType = ((ParameterizedType)itemType).getRawType();
-                        }
-
-                        String stringValue = value.toString();
-                        if (stringValue.length() > 0) {
-                            String[] values = stringValue.split(ARRAY_COMPONENT_DELIMITER);
-
-                            for (int i = 0; i < values.length; i++) {
-                                list.add(BeanAdapter.coerce(values[i].trim(), (Class<?>)itemType));
-                            }
-                        }
-
-                        propertyValue = null;
+                        && valueAdapter.isReadOnly(propertyName)) {
+                        populateListFromString(valueAdapter, propertyName, aValue);
+                        processed = true;
                     } else if (type.isArray()) {
-                        // Split the string and set the values as an array
-                        Class<?> componentType = type.getComponentType();
-
-                        String stringValue = value.toString();
-                        if (stringValue.length() > 0) {
-                            String[] values = stringValue.split(ARRAY_COMPONENT_DELIMITER);
-                            propertyValue = Array.newInstance(componentType, values.length);
-                            for (int i = 0; i < values.length; i++) {
-                                Array.set(propertyValue, i, BeanAdapter.coerce(values[i].trim(),
-                                    type.getComponentType()));
-                            }
-                        } else {
-                            propertyValue = Array.newInstance(componentType, 0);
-                        }
+                        applyProperty(propertyName, sourceType,
+                                populateArrayFromString(type, aValue));
+                        processed = true;
                     }
                 }
+                if (!processed) {
+                    applyProperty(propertyName, sourceType, resolvePrefixedValue(aValue));
+                    processed = true;
+                }
+                return processed;
+        }
 
-                if (propertyValue != null) {
-                    applyProperty(attribute.name, attribute.sourceType, propertyValue);
+        /**
+         * Resolves value prefixed with RELATIVE_PATH_PREFIX and RESOURCE_KEY_PREFIX.
+         */
+        private Object resolvePrefixedValue(String aValue) throws LoadException {
+            if (aValue.startsWith(ESCAPE_PREFIX)) {
+                aValue = aValue.substring(ESCAPE_PREFIX.length());
+
+                if (aValue.length() == 0
+                    || !(aValue.startsWith(ESCAPE_PREFIX)
+                        || aValue.startsWith(RELATIVE_PATH_PREFIX)
+                        || aValue.startsWith(RESOURCE_KEY_PREFIX)
+                        || aValue.startsWith(EXPRESSION_PREFIX)
+                        || aValue.startsWith(BI_DIRECTIONAL_BINDING_PREFIX))) {
+                    throw new LoadException("Invalid escape sequence.");
+                }
+                return aValue;
+            } else if (aValue.startsWith(RELATIVE_PATH_PREFIX)) {
+                aValue = aValue.substring(RELATIVE_PATH_PREFIX.length());
+                if (aValue.length() == 0) {
+                    throw new LoadException("Missing relative path.");
+                }
+                if (aValue.startsWith(RELATIVE_PATH_PREFIX)) {
+                    // The prefix was escaped
+                    warnDeprecatedEscapeSequence(RELATIVE_PATH_PREFIX);
+                    return aValue;
+                } else {
+                    try {
+                        return (aValue.charAt(0) == '/') ?
+                                classLoader.getResource(aValue.substring(1)).toString() :
+                                new URL(FXMLLoader.this.location, aValue).toString();
+                    } catch (MalformedURLException e) {
+                        System.err.println(FXMLLoader.this.location + "/" + aValue);
+                    }
+                }
+            } else if (aValue.startsWith(RESOURCE_KEY_PREFIX)) {
+                aValue = aValue.substring(RESOURCE_KEY_PREFIX.length());
+                if (aValue.length() == 0) {
+                    throw new LoadException("Missing resource key.");
+                }
+                if (aValue.startsWith(RESOURCE_KEY_PREFIX)) {
+                    // The prefix was escaped
+                    warnDeprecatedEscapeSequence(RESOURCE_KEY_PREFIX);
+                    return aValue;
+                } else {
+                    // Resolve the resource value
+                    if (resources == null) {
+                        throw new LoadException("No resources specified.");
+                    }
+                    if (!resources.containsKey(aValue)) {
+                        throw new LoadException("Resource \"" + aValue + "\" not found.");
+                    }
+
+                    return resources.getString(aValue);
+                }
+            } else if (aValue.startsWith(EXPRESSION_PREFIX)) {
+                aValue = aValue.substring(EXPRESSION_PREFIX.length());
+                if (aValue.length() == 0) {
+                    throw new LoadException("Missing expression.");
+                }
+                if (aValue.startsWith(EXPRESSION_PREFIX)) {
+                    // The prefix was escaped
+                    warnDeprecatedEscapeSequence(EXPRESSION_PREFIX);
+                    return aValue;
+                } else if (aValue.equals(NULL_KEYWORD)) {
+                    // The attribute value is null
+                    return null;
+                }
+                return Expression.get(namespace, KeyPath.parse(aValue));
+            }
+            return aValue;
+        }
+
+        /**
+         * Creates an array of given type and populates it with values from
+         * a string where tokens are separated by ARRAY_COMPONENT_DELIMITER.
+         * If token is prefixed with RELATIVE_PATH_PREFIX a value added to
+         * the array becomes relative to document location.
+         */
+        private Object populateArrayFromString(
+                Class<?>type,
+                String stringValue) throws LoadException {
+
+            Object propertyValue = null;
+            // Split the string and set the values as an array
+            Class<?> componentType = type.getComponentType();
+
+            if (stringValue.length() > 0) {
+                String[] values = stringValue.split(ARRAY_COMPONENT_DELIMITER);
+                propertyValue = Array.newInstance(componentType, values.length);
+                for (int i = 0; i < values.length; i++) {
+                    Array.set(propertyValue, i,
+                            BeanAdapter.coerce(resolvePrefixedValue(values[i].trim()),
+                            type.getComponentType()));
+                }
+            } else {
+                propertyValue = Array.newInstance(componentType, 0);
+            }
+            return propertyValue;
+        }
+
+        /**
+         * Populates list with values from a string where tokens are separated
+         * by ARRAY_COMPONENT_DELIMITER. If token is prefixed with RELATIVE_PATH_PREFIX
+         * a value added to the list becomes relative to document location.
+         */
+        private void populateListFromString(
+                BeanAdapter valueAdapter,
+                String listPropertyName,
+                String stringValue) throws LoadException {
+            // Split the string and add the values to the list
+            List<Object> list = (List<Object>)valueAdapter.get(listPropertyName);
+            Type listType = valueAdapter.getGenericType(listPropertyName);
+            Type itemType = (Class<?>)BeanAdapter.getGenericListItemType(listType);
+
+            if (itemType instanceof ParameterizedType) {
+                itemType = ((ParameterizedType)itemType).getRawType();
+            }
+
+            if (stringValue.length() > 0) {
+                String[] values = stringValue.split(ARRAY_COMPONENT_DELIMITER);
+
+                for (String aValue: values) {
+                    aValue = aValue.trim();
+                    list.add(
+                            BeanAdapter.coerce(resolvePrefixedValue(aValue),
+                                               (Class<?>)itemType));
                 }
             }
         }
@@ -919,7 +958,7 @@ public class FXMLLoader {
                 builderFactory, controllerFactory, charset,
                 loaders);
             fxmlLoader.parentLoader = FXMLLoader.this;
-            
+
             if (isCyclic(FXMLLoader.this, fxmlLoader)) {
                 throw new IOException(
                         String.format(
@@ -1090,17 +1129,7 @@ public class FXMLLoader {
 
             Object value;
             if (root == null) {
-                value = (builderFactory == null) ? null : builderFactory.getBuilder(type);
-
-                if (value == null) {
-                    try {
-                        value = type.newInstance();
-                    } catch (InstantiationException exception) {
-                        throw new LoadException(exception);
-                    } catch (IllegalAccessException exception) {
-                        throw new LoadException(exception);
-                    }
-                }
+                throw new LoadException("Root hasn't been set. Use method setRoot() before load.");
             } else {
                 if (!type.isAssignableFrom(root.getClass())) {
                     throw new LoadException("Root is not an instance of "
@@ -1578,7 +1607,7 @@ public class FXMLLoader {
     private ClassLoader classLoader = defaultClassLoader;
     private boolean staticLoad = false;
     private LoadListener loadListener = null;
-    
+
     private FXMLLoader parentLoader;
 
     private XMLStreamReader xmlStreamReader = null;
@@ -1642,7 +1671,7 @@ public class FXMLLoader {
     public static final String RELATIVE_PATH_PREFIX = "@";
     public static final String RESOURCE_KEY_PREFIX = "%";
     public static final String EXPRESSION_PREFIX = "$";
-    public static final String BINDING_EXPRESSION_PREFIX = "{";
+    public static final String BINDING_EXPRESSION_PREFIX = "${";
     public static final String BINDING_EXPRESSION_SUFFIX = "}";
 
     public static final String BI_DIRECTIONAL_BINDING_PREFIX = "#{";
@@ -1831,20 +1860,20 @@ public class FXMLLoader {
                     location.toExternalForm());
         }
         return false;
-    }            
-    
+    }
+
     private boolean isCyclic(
-                            FXMLLoader currentLoader, 
+                            FXMLLoader currentLoader,
                             FXMLLoader node) {
         if (currentLoader == null) {
             return false;
         }
         if (currentLoader.equals(node)) {
             return true;
-        }        
+        }
         return isCyclic(currentLoader.parentLoader, node);
     }
-        
+
     /**
      * Returns the controller associated with the root object.
      */

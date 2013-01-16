@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2012, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,28 +22,17 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-/*
- * To change this template, choose Tools | Templates
- * and open the template in the editor.
- */
 
-package com.sun.javafx.pgstub;
+package javafx.fxml;
 
-import com.sun.javafx.sg.PGRegion;
+import java.io.IOException;
 
-/**
- *
- * @author aim
- */
-public class StubRegion extends StubGroup implements PGRegion {
-    public void setOpaqueInsets(float top, float right, float bottom, float left) {
-    }
-    public void updateBorder(Object border) {
-    }
-    public void updateBackground(Object background) {
-    }
-    public void updateShape(Object shape, boolean scale, boolean center, boolean cacheShape) {
-    }
-    public void setSize(float width, float height) {
+import org.junit.Test;
+
+public class RT_26449Test {
+    @Test(expected=LoadException.class)
+    public void testRootNotSet() throws IOException {
+        FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("rt_26449.fxml"));
+        fxmlLoader.load();
     }
 }

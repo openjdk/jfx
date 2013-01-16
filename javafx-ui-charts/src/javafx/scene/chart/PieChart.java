@@ -24,13 +24,15 @@
  */
 package javafx.scene.chart;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-
+import javafx.animation.Animation;
 import javafx.animation.FadeTransition;
 import javafx.animation.Interpolator;
 import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
+import javafx.animation.Timeline;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.DoublePropertyBase;
@@ -50,11 +52,16 @@ import javafx.event.EventHandler;
 import javafx.geometry.Side;
 import javafx.scene.Node;
 import javafx.scene.layout.Region;
-import javafx.scene.shape.*;
+import javafx.scene.shape.Arc;
+import javafx.scene.shape.ArcTo;
+import javafx.scene.shape.ArcType;
+import javafx.scene.shape.ClosePath;
+import javafx.scene.shape.LineTo;
+import javafx.scene.shape.MoveTo;
+import javafx.scene.shape.Path;
 import javafx.scene.text.Text;
 import javafx.scene.transform.Scale;
 import javafx.util.Duration;
-
 import com.sun.javafx.charts.Legend;
 import com.sun.javafx.charts.Legend.LegendItem;
 import com.sun.javafx.collections.NonIterableChange;
@@ -63,8 +70,6 @@ import javafx.css.StyleableDoubleProperty;
 import javafx.css.CssMetaData;
 import com.sun.javafx.css.converters.BooleanConverter;
 import com.sun.javafx.css.converters.SizeConverter;
-import java.util.ArrayList;
-import javafx.animation.*;
 import javafx.css.StyleableProperty;
 
 /**
@@ -340,7 +345,7 @@ public class PieChart extends Chart {
         // check if symbol has already been created
         if (arcRegion == null) {
             arcRegion = new Region();
-            arcRegion.setPickOnBounds(false); 
+            arcRegion.setPickOnBounds(false);
             item.setNode(arcRegion);
         }
         // Note: not sure if we want to add or check, ie be more careful and efficient here
@@ -607,6 +612,7 @@ public class PieChart extends Chart {
                         arcRegion.setShape(arc);
                         arcRegion.setScaleShape(false);
                         arcRegion.setCenterShape(false);
+                        arcRegion.setCacheShape(false);
                     }
                 }
                 double size = (isClockwise()) ? (-scale * Math.abs(item.getCurrentPieValue())) : (scale * Math.abs(item.getCurrentPieValue()));
