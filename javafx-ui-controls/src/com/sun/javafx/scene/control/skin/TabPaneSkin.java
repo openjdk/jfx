@@ -25,8 +25,10 @@
 package com.sun.javafx.scene.control.skin;
 
 import com.sun.javafx.PlatformUtil;
+import javafx.css.CssMetaData;
 import javafx.css.PseudoClass;
-import com.sun.javafx.css.StyleableObjectProperty;
+import javafx.css.StyleableProperty;
+import javafx.css.StyleableObjectProperty;
 import com.sun.javafx.css.converters.EnumConverter;
 
 import javafx.animation.Interpolator;
@@ -39,7 +41,6 @@ import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.DoublePropertyBase;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleDoubleProperty;
-import javafx.beans.value.WritableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
@@ -554,9 +555,9 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
                 return true;
             }
 
-            @Override public WritableValue<TabAnimation> getWritableValue(TabPane node) {
+            @Override public StyleableProperty<TabAnimation> getStyleableProperty(TabPane node) {
                 TabPaneSkin skin = (TabPaneSkin) node.getSkin();
-                return skin.openTabAnimation;
+                return (StyleableProperty)skin.openTabAnimation;
             }
         };
         
@@ -568,9 +569,9 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
                 return true;
             }
 
-            @Override public WritableValue<TabAnimation> getWritableValue(TabPane node) {
+            @Override public StyleableProperty<TabAnimation> getStyleableProperty(TabPane node) {
                 TabPaneSkin skin = (TabPaneSkin) node.getSkin();
-                return skin.closeTabAnimation;
+                return (StyleableProperty)skin.closeTabAnimation;
             }
         };
         
