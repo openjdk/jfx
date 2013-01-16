@@ -757,22 +757,20 @@ public class TreeTableView<S> extends Control {
                 
                 TreeTableViewSelectionModel<S> oldValue = null;
                 
-                @Override public void setValue(TreeTableViewSelectionModel<S> value) {
+                @Override protected void invalidated() {
                     // need to listen to the cellSelectionEnabledProperty
                     // in order to set pseudo-class state                    
                     if (oldValue != null) {
                         oldValue.cellSelectionEnabledProperty().removeListener(cellSelectionModelInvalidationListener);
                     }
                     
-                    super.setValue(value);
+                    oldValue = get();
                     
-                    if (value != null) {
-                        value.cellSelectionEnabledProperty().addListener(cellSelectionModelInvalidationListener);
+                    if (oldValue != null) {
+                        oldValue.cellSelectionEnabledProperty().addListener(cellSelectionModelInvalidationListener);
                         // fake invalidation to ensure updated pseudo-class states
-                        cellSelectionModelInvalidationListener.invalidated(value.cellSelectionEnabledProperty());            
+                        cellSelectionModelInvalidationListener.invalidated(oldValue.cellSelectionEnabledProperty());            
                     }
-                    
-                    oldValue = value;
                 }
             };
         }

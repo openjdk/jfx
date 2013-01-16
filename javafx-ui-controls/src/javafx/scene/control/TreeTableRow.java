@@ -145,22 +145,20 @@ public class TreeTableRow<T> extends IndexedCell<T> {
             
             TreeItem<T> oldValue = null;
             
-            @Override public void setValue(TreeItem<T> value) {
+            @Override protected void invalidated() {
                 
                 if (oldValue != null) {
                     oldValue.expandedProperty().removeListener(treeItemExpandedInvalidationListener);
                 }
                 
-                treeItem.set(value); 
+                oldValue = get(); 
                 
-                if (value != null) {
-                    value.expandedProperty().addListener(treeItemExpandedInvalidationListener);
+                if (oldValue != null) {
+                    oldValue.expandedProperty().addListener(treeItemExpandedInvalidationListener);
                     // fake an invalidation to ensure updated pseudo-class state
-                    treeItemExpandedInvalidationListener.invalidated(value.expandedProperty());            
+                    treeItemExpandedInvalidationListener.invalidated(oldValue.expandedProperty());            
                 }
-                
-                oldValue = value;
-                
+                                
             }
             
     };

@@ -674,22 +674,19 @@ public class TableView<S> extends Control {
 
         TableViewSelectionModel<S> oldValue = null;
         
-        @Override public void setValue(TableViewSelectionModel<S> value) {
-          
+        @Override protected void invalidated() {
             
             if (oldValue != null) {
                 oldValue.cellSelectionEnabledProperty().removeListener(cellSelectionModelInvalidationListener);
             }
             
-            super.setValue(value);
+            oldValue = get();
             
-            if (value != null) {
-                value.cellSelectionEnabledProperty().addListener(cellSelectionModelInvalidationListener);
+            if (oldValue != null) {
+                oldValue.cellSelectionEnabledProperty().addListener(cellSelectionModelInvalidationListener);
                 // fake an invalidation to ensure updated pseudo-class state
-                cellSelectionModelInvalidationListener.invalidated(value.cellSelectionEnabledProperty());
+                cellSelectionModelInvalidationListener.invalidated(oldValue.cellSelectionEnabledProperty());
             } 
-          
-            oldValue = value;
         }
       
     };
