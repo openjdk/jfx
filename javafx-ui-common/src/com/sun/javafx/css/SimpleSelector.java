@@ -358,7 +358,8 @@ final public class SimpleSelector extends Selector {
         return applies;
     }
 
-    boolean mightApply(final String className, final String id, long[] styleClasses) {
+    // todo - is this used?
+    private boolean mightApply(final String className, final String id, long[] styleClasses) {
         if (matchOnName && nameMatchesAtEnd(className)) return true;
         if (matchOnId   && this.id.equals(id)) return true;
         if (matchOnStyleClass) return matchStyleClasses(styleClasses);
@@ -407,12 +408,6 @@ final public class SimpleSelector extends Selector {
     private boolean matchStyleClasses(long[] nodeStyleClasses) {
         return isSubsetOf(styleClassMasks, nodeStyleClasses);
     }
-
-    /**
-     * A set of current strings. Used to match states and also match styleclasses.
-     * We reuse this set from run to run to help reduce garbage a bit.
-     */
-    static final private Set<String> strSet = new HashSet<String>();
 
     /** 
       * return true if seq1 is a subset of seq2. That is, all the strings

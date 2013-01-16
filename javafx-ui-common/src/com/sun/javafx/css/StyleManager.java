@@ -1434,14 +1434,13 @@ final public class StyleManager {
             // whittles the list down to those rules that apply.
             //
             final Rule[] applicableRules = new Rule[rules.size()];
-            
             //
             // To lookup from the cache, we construct a key from a Long
-            // where the rules that match this particular node are
+            // where the selectors that match this particular node are
             // represented by bits on the Long.
             //
             long key = 0;
-            long mask = 1;
+            int count = 0;
             for (int r = 0, rMax = rules.size(); r < rMax; r++) {
                 
                 final Rule rule = rules.get(r);
@@ -1463,17 +1462,16 @@ final public class StyleManager {
                 // Note also that, if the rule does not apply, the pseudoclassBits
                 // is unchanged. 
                 //
-                if (rule.applies(node, pseudoclassBits)) {
-                    
+                long mask = rule.applies(node, pseudoclassBits);
+                if (mask != 0) {
+                    key |= mask << count;
                     applicableRules[r] = rule;
-                    key = key | mask;
-                    
                 } else {
-                    
                     applicableRules[r] = null;
-                    
                 }
-                mask = mask << 1;
+                count += rule.getSelectors().size(); 
+                assert(count < Long.SIZE);
+                
             }
             
             // nothing matched!
