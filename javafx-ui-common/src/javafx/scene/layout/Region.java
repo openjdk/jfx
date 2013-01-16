@@ -1046,13 +1046,13 @@ public class Region extends Parent {
         }
         return centerShape;
     }
+
     /**
-     * Defines whether the shape is centered within the Region's width or height.
-     * {@code true} means the shape centered within the Region's width and height,
-     * {@code false} means the shape is positioned at its source position.
+     * Defines a hint to the system indicating that the Shape used to define the region's
+     * background is stable and would benefit from caching.
      *
      * @default true
-     * @css position-shape      true | false
+     * @css -fx-cache-shape      true | false
      */
     private BooleanProperty cacheShape = null;
     public final void setCacheShape(boolean value) { cacheShapeProperty().set(value); }
@@ -1864,7 +1864,7 @@ public class Region extends Parent {
         // the shape must be specified before the background which is before the border.
         final boolean shapeChanged = impl_isDirty(DirtyBits.REGION_SHAPE);
         if (shapeChanged) {
-            pg.updateShape(_shape, isScaleShape(), isCenterShape());
+            pg.updateShape(_shape, isScaleShape(), isCenterShape(), isCacheShape());
         }
 
         final boolean backgroundChanged = impl_isDirty(DirtyBits.SHAPE_FILL);

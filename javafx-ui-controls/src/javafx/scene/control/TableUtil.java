@@ -28,7 +28,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import javafx.beans.InvalidationListener;
-import javafx.beans.WeakInvalidationListener;
 import javafx.collections.ListChangeListener;
 
 /**
@@ -37,13 +36,13 @@ import javafx.collections.ListChangeListener;
  */
 class TableUtil {
     
-    static <S> void removeTableColumnListener(List<? extends TableColumnBase<S,?>> list,
+    static void removeTableColumnListener(List<? extends TableColumnBase> list,
                         final InvalidationListener columnVisibleObserver,
                         final InvalidationListener columnSortableObserver,
                         final InvalidationListener columnSortTypeObserver) {
     
         if (list == null) return;
-        for (TableColumnBase<S,?> col : list) {
+        for (TableColumnBase col : list) {
             col.visibleProperty().removeListener(columnVisibleObserver);
             col.sortableProperty().removeListener(columnSortableObserver);
             col.sortTypeProperty().removeListener(columnSortTypeObserver);
@@ -55,13 +54,13 @@ class TableUtil {
         }
     }
 
-    static <S> void addTableColumnListener(List<? extends TableColumnBase<S,?>> list,
+    static void addTableColumnListener(List<? extends TableColumnBase> list,
                         final InvalidationListener columnVisibleObserver,
                         final InvalidationListener columnSortableObserver,
                         final InvalidationListener columnSortTypeObserver) {
         
         if (list == null) return;
-        for (TableColumnBase<S,?> col : list) {
+        for (TableColumnBase col : list) {
             col.visibleProperty().addListener(columnVisibleObserver);
             col.sortableProperty().addListener(columnSortableObserver);
             col.sortTypeProperty().addListener(columnSortTypeObserver);
@@ -73,19 +72,19 @@ class TableUtil {
         }
     }
 
-    static <S> void removeColumnsListener(List<? extends TableColumnBase<S,?>> list, ListChangeListener cl) {
+    static void removeColumnsListener(List<? extends TableColumnBase> list, ListChangeListener cl) {
         if (list == null) return;
 
-        for (TableColumnBase<S,?> col : list) {
+        for (TableColumnBase col : list) {
             col.getColumns().removeListener(cl);
             removeColumnsListener(col.getColumns(), cl);
         }
     }
 
-    static <S> void addColumnsListener(List<? extends TableColumnBase<S,?>> list, ListChangeListener cl) {
+    static void addColumnsListener(List<? extends TableColumnBase> list, ListChangeListener cl) {
         if (list == null) return;
 
-        for (TableColumnBase<S,?> col : list) {
+        for (TableColumnBase col : list) {
             col.getColumns().addListener(cl);
             addColumnsListener(col.getColumns(), cl);
         }

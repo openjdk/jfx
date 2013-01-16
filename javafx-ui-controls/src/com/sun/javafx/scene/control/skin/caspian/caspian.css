@@ -731,7 +731,7 @@
 .hyperlink:focused {
     -fx-color: -fx-focused-base;
     -fx-border-color: -fx-focus-color;
-    -fx-border-style: dotted;
+    -fx-border-style: segments(0.166667em, 0.166667em);
     -fx-border-width: 1px;
 }
 
@@ -1864,16 +1864,8 @@
         linear-gradient(#fefefc, #e6dd71),
         linear-gradient(#fef592, #e5d848);
     -fx-background-insets: 0,1,2;
-    -fx-background-radius: 0 0 13 0;
     -fx-padding: 0.333333em 0.666667em 0.333333em 0.666667em; /* 4 8 4 8 */
     -fx-effect: dropshadow( three-pass-box , rgba(0,0,0,0.6) , 8, 0.0 , 0 , 0 );
-}
-
-.page-corner {
-    -fx-padding: 4.5 4.5 4.5 4.5;
-    -fx-background-color: linear-gradient( from 0% 0% to 50% 50%, #fcf7b6, #a59c31);
-    -fx-shape: "M0,0H9L0,9Z";
-    -fx-effect: dropshadow( three-pass-box , rgba(0,0,0,0.6) , 4 , 0.0 , 0 , 0 );
 }
 
 /*******************************************************************************
@@ -2006,7 +1998,7 @@
  ******************************************************************************/
 
 .progress-indicator {
-    -fx-progress-color: dodgerblue;
+    -fx-indeterminate-segment-count: 8;
 }
 
 .progress-indicator > .determinate-indicator > .indicator {
@@ -2021,8 +2013,8 @@
 
 .progress-indicator > .determinate-indicator > .progress {
     -fx-background-color:
-        linear-gradient(to bottom, derive(-fx-box-border,38%), derive(-fx-box-border,-60%)),
-        linear-gradient(to bottom, derive(-fx-box-border,38%), -fx-box-border);
+        linear-gradient(to bottom, derive(-fx-accent,38%), derive(-fx-accent,-60%)),
+        linear-gradient(to bottom, derive(-fx-accent,20%), -fx-accent);
     -fx-background-insets: 0, 1;
     -fx-padding: 0.75em; /* 9 */
 }
@@ -2047,6 +2039,34 @@
 
 .progress-indicator:disabled {
     -fx-opacity: -fx-disabled-opacity;
+}
+
+.progress-indicator:indeterminate .segment {
+    -fx-background-color: -fx-accent;
+}
+.progress-indicator:indeterminate .segment0 {
+    -fx-shape:"M18.191,4.264l-2.457,1.721l0,0C16.559,7.161,17,8.564,17,10h3C20,7.948,19.369,5.946,18.191,4.264z";
+}
+.progress-indicator:indeterminate .segment1 {
+    -fx-shape:"M11.736,0.152l-0.521,2.955l0,0c1.416,0.249,2.719,0.928,3.734,1.943l2.122-2.121C15.62,1.478,13.758,0.508,11.736,0.152z";
+}
+.progress-indicator:indeterminate .segment2 {
+    -fx-shape:"M10,0C7.947,0,5.945,0.631,4.264,1.809l1.72,2.457l0,0C7.162,3.442,8.563,3,10,3V0z";
+}
+.progress-indicator:indeterminate .segment3 {
+    -fx-shape:"M2.929,2.929C1.478,4.38,0.508,6.242,0.152,8.264l2.955,0.521l0,0C3.356,7.369,4.035,6.066,5.05,5.05l0,0L2.929,2.929z";
+}
+.progress-indicator:indeterminate .segment4 {
+    -fx-shape:"M0,10c0,2.052,0.631,4.055,1.809,5.735l2.458-1.721C3.442,12.838,3,11.437,3,10H0z";
+}
+.progress-indicator:indeterminate .segment5 {
+    -fx-shape:"M8.785,16.894c-1.416-0.25-2.719-0.929-3.735-1.944l0,0l-2.122,2.122c1.451,1.45,3.313,2.42,5.335,2.776L8.785,16.894z";
+}
+.progress-indicator:indeterminate .segment6 {
+    -fx-shape:"M14.016,15.734C12.838,16.558,11.437,17,10,17v3c2.053,0,4.055-0.632,5.736-1.809L14.016,15.734z";
+}
+.progress-indicator:indeterminate .segment7 {
+    -fx-shape:"M16.894,11.215c-0.249,1.415-0.929,2.719-1.944,3.734l2.122,2.122c1.45-1.451,2.421-3.314,2.776-5.335L16.894,11.215z";
 }
 
 /*******************************************************************************
@@ -2312,9 +2332,7 @@
    TableColumn, and a 'filler' area that extends from the right-most column
    to the edge of the tableview, or up to the 'column control' button. */
 .table-view .column-header,
-.table-view .filler,
-.tree-table-view .column-header,
-.tree-table-view .filler{
+.tree-table-view .column-header {
     -fx-text-fill: -fx-selection-bar-text;
 
     /* TODO: for some reason, this doesn't scale. */
@@ -2335,6 +2353,26 @@
     -fx-border-insets: 0 1 1 0, 0 0 0 0;
     -fx-border-width: 0.083333em, 0.083333em;
 }
+
+.table-view .filler,
+.tree-table-view .filler {
+    -fx-size: 25;
+    -fx-border-style: solid;
+    -fx-border-color: 
+        /* 
+          Inner border: we have different colours along the top, right, bottom and left.
+          Refer to RT-12298 for the spec.
+        */
+        derive(-fx-base, 80%) 
+        linear-gradient(to bottom, derive(-fx-base,80%) 20%, derive(-fx-base,-10%) 90%)
+        derive(-fx-base, 10%) 
+        linear-gradient(to bottom, derive(-fx-base,80%) 20%, derive(-fx-base,-10%) 90%),
+        /* Outer border: */
+        transparent transparent -fx-table-header-border-color transparent;
+    -fx-border-insets: 0 0 1 0, 0 0 0 0;
+    -fx-border-width: 0.083333em, 0.083333em 0 0.083333em 0.083333em;
+}
+
 
 .table-view .column-header .sort-order,
 .tree-table-view .column-header .sort-order{
@@ -2629,6 +2667,12 @@
     -fx-background-color: -fx-tab-border-color, -fx-control-inner-background;
     -fx-background-insets: 0, 1 1 0 1;
     -fx-background-radius: 5 5 0 0, 4 4 0 0;
+}
+
+.tab-pane:focused > .tab-header-area > .headers-region > .tab:selected .focus-indicator {
+    -fx-border-style: segments(0.166667em, 0.166667em);
+    -fx-border-width: 1;
+    -fx-border-color: -fx-focus-color;
 }
 
 .tab-pane > .tab-header-area > .headers-region > .tab:disabled {

@@ -34,6 +34,7 @@ import javafx.scene.control.Slider;
 import javafx.scene.layout.StackPane;
 
 import com.sun.javafx.scene.control.behavior.SliderBehavior;
+import javafx.geometry.Insets;
 import javafx.util.StringConverter;
 
 /**
@@ -65,7 +66,7 @@ public class SliderSkin extends BehaviorSkinBase<Slider, SliderBehavior> {
         super(slider, new SliderBehavior(slider));
 
         initialize();
-        requestLayout();
+        slider.requestLayout();
         registerChangeListener(slider.minProperty(), "MIN");
         registerChangeListener(slider.maxProperty(), "MAX");
         registerChangeListener(slider.valueProperty(), "VALUE");
@@ -174,7 +175,7 @@ public class SliderSkin extends BehaviorSkinBase<Slider, SliderBehavior> {
 //            tickLine = null;
         }
 
-        requestLayout();
+        getSkinnable().requestLayout();
     }
 
     @Override protected void handleControlPropertyChanged(String p) {
@@ -184,30 +185,30 @@ public class SliderSkin extends BehaviorSkinBase<Slider, SliderBehavior> {
             if (showTickMarks && tickLine != null) {
                 tickLine.setSide(slider.getOrientation() == Orientation.VERTICAL ? Side.RIGHT : (slider.getOrientation() == null) ? Side.RIGHT: Side.BOTTOM);
             }
-            requestLayout();
+            getSkinnable().requestLayout();
         } else if ("VALUE".equals(p)) {
             positionThumb();
         } else if ("MIN".equals(p) ) {
             if (showTickMarks && tickLine != null) {
                 tickLine.setLowerBound(slider.getMin());
             }
-            requestLayout();
+            getSkinnable().requestLayout();
         } else if ("MAX".equals(p)) {
             if (showTickMarks && tickLine != null) {
                 tickLine.setUpperBound(slider.getMax());
             }
-            requestLayout();
+            getSkinnable().requestLayout();
         } else if ("SHOW_TICK_MARKS".equals(p) || "SHOW_TICK_LABELS".equals(p)) {
             setShowTickMarks(slider.isShowTickMarks(), slider.isShowTickLabels());
         }  else if ("MAJOR_TICK_UNIT".equals(p)) {
             if (tickLine != null) {
                 tickLine.setTickUnit(slider.getMajorTickUnit());
-                requestLayout();
+                getSkinnable().requestLayout();
             }
         } else if ("MINOR_TICK_COUNT".equals(p)) {
             if (tickLine != null) {
                 tickLine.setMinorTickCount(Math.max(slider.getMinorTickCount(),0) + 1);
-                requestLayout();
+                getSkinnable().requestLayout();
             }
         } else if ("TICK_LABEL_FORMATTER".equals(p)) {
             if (tickLine != null) {
@@ -226,11 +227,11 @@ public class SliderSkin extends BehaviorSkinBase<Slider, SliderBehavior> {
      */
     void positionThumb() {
         Slider s = getSkinnable();
-        boolean horizontal = getSkinnable().getOrientation() == Orientation.HORIZONTAL;
+        boolean horizontal = s.getOrientation() == Orientation.HORIZONTAL;
         double lx = (horizontal) ? trackStart + (((trackLength * ((s.getValue() - s.getMin()) /
                 (s.getMax() - s.getMin()))) - thumbWidth/2)) : thumbLeft;
         double ly = (horizontal) ? thumbTop :
-            getInsets().getTop() + trackLength - (trackLength * ((s.getValue() - s.getMin()) /
+            s.getInsets().getTop() + trackLength - (trackLength * ((s.getValue() - s.getMin()) /
                 (s.getMax() - s.getMin()))); //  - thumbHeight/2
         thumb.setLayoutX(lx);
         thumb.setLayoutY(ly);
@@ -240,8 +241,8 @@ public class SliderSkin extends BehaviorSkinBase<Slider, SliderBehavior> {
             final double w, final double h) {
          // calculate the available space
         // resize thumb to preferred size
-        thumbWidth = thumb.prefWidth(-1);
-        thumbHeight = thumb.prefHeight(-1);
+        thumbWidth = snapSize(thumb.prefWidth(-1));
+        thumbHeight = snapSize(thumb.prefHeight(-1));
         thumb.resize(thumbWidth, thumbHeight);
         // we are assuming the is common radius's for all corners on the track
         double trackRadius = track.getBackground() == null ? 0 : track.getBackground().getFills().size() > 0 ?
@@ -249,18 +250,21 @@ public class SliderSkin extends BehaviorSkinBase<Slider, SliderBehavior> {
 
         if (getSkinnable().getOrientation() == Orientation.HORIZONTAL) {
             double tickLineHeight =  (showTickMarks) ? tickLine.prefHeight(-1) : 0;
-            double trackHeight = track.prefHeight(-1);
+            double trackHeight = snapSize(track.prefHeight(-1));
             double trackAreaHeight = Math.max(trackHeight,thumbHeight);
             double totalHeightNeeded = trackAreaHeight  + ((showTickMarks) ? trackToTickGap+tickLineHeight : 0);
             double startY = y + ((h - totalHeightNeeded)/2); // center slider in available height vertically
-            trackLength = w - thumbWidth;
-            trackStart = x + (thumbWidth/2);
+            trackLength = snapSize(w - thumbWidth);
+            trackStart = snapPosition(x + (thumbWidth/2));
             double trackTop = (int)(startY + ((trackAreaHeight-trackHeight)/2));
             thumbTop = (int)(startY + ((trackAreaHeight-thumbHeight)/2));
 
             positionThumb();
             // layout track
-            track.resizeRelocate(trackStart - trackRadius, trackTop , trackLength + trackRadius + trackRadius, trackHeight);
+            track.resizeRelocate((int)(trackStart - trackRadius),
+                                 trackTop ,
+                                 (int)(trackLength + trackRadius + trackRadius),
+                                 trackHeight);
             // layout tick line
             if (showTickMarks) {
                 tickLine.setLayoutX(trackStart);
@@ -276,18 +280,21 @@ public class SliderSkin extends BehaviorSkinBase<Slider, SliderBehavior> {
             }
         } else {
             double tickLineWidth = (showTickMarks) ? tickLine.prefWidth(-1) : 0;
-            double trackWidth = track.prefWidth(-1);
+            double trackWidth = snapSize(track.prefWidth(-1));
             double trackAreaWidth = Math.max(trackWidth,thumbWidth);
             double totalWidthNeeded = trackAreaWidth  + ((showTickMarks) ? trackToTickGap+tickLineWidth : 0) ;
             double startX = x + ((w - totalWidthNeeded)/2); // center slider in available width horizontally
-            trackLength = h - thumbHeight;
-            trackStart = y + (thumbHeight/2);
+            trackLength = snapSize(h - thumbHeight);
+            trackStart = snapPosition(y + (thumbHeight/2));
             double trackLeft = (int)(startX + ((trackAreaWidth-trackWidth)/2));
             thumbLeft = (int)(startX + ((trackAreaWidth-thumbWidth)/2));
 
             positionThumb();
             // layout track
-            track.resizeRelocate(trackLeft, trackStart - trackRadius, trackWidth, trackLength + trackRadius + trackRadius);
+            track.resizeRelocate(trackLeft,
+                                 (int)(trackStart - trackRadius),
+                                 trackWidth,
+                                 (int)(trackLength + trackRadius + trackRadius));
             // layout tick line
             if (showTickMarks) {
                 tickLine.setLayoutX(trackLeft+trackWidth+trackToTickGap);
@@ -309,39 +316,46 @@ public class SliderSkin extends BehaviorSkinBase<Slider, SliderBehavior> {
     }
 
     @Override protected double computeMinWidth(double height) {
+        final Slider s = getSkinnable();
+        final Insets padding = s.getInsets();
         if (getSkinnable().getOrientation() == Orientation.HORIZONTAL) {
-            return (getInsets().getLeft() + minTrackLength() + thumb.minWidth(-1) + getInsets().getRight());
+            return (padding.getLeft() + minTrackLength() + thumb.minWidth(-1) + padding.getRight());
         } else {
-            return(getInsets().getLeft() + thumb.prefWidth(-1) + getInsets().getRight());
+            return(padding.getLeft() + thumb.prefWidth(-1) + padding.getRight());
         }
     }
 
     @Override protected double computeMinHeight(double width) {
+        final Slider s = getSkinnable();
+        final Insets padding = s.getInsets();
          if (getSkinnable().getOrientation() == Orientation.HORIZONTAL) {
-            return(getInsets().getTop() + thumb.prefHeight(-1) + getInsets().getBottom());
+            return(padding.getTop() + thumb.prefHeight(-1) + padding.getBottom());
         } else {
-            return(getInsets().getTop() + minTrackLength() + thumb.prefHeight(-1) + getInsets().getBottom());
+            return(padding.getTop() + minTrackLength() + thumb.prefHeight(-1) + padding.getBottom());
         }
     }
 
     @Override protected double computePrefWidth(double height) {
-        if (getSkinnable().getOrientation() == Orientation.HORIZONTAL) {
+        final Slider s = getSkinnable();
+        if (s.getOrientation() == Orientation.HORIZONTAL) {
             if(showTickMarks) {
                 return Math.max(140, tickLine.prefWidth(-1));
             } else {
                 return 140;
             }
         } else {
-            //return (padding.getLeft()) + Math.max(thumb.prefWidth(-1), track.prefWidth(-1)) + padding.getRight();
-            return (getInsets().getLeft()) + Math.max(thumb.prefWidth(-1), track.prefWidth(-1)) +
-            ((showTickMarks) ? (trackToTickGap+tickLine.prefWidth(-1)) : 0) + getInsets().getRight();
+            final Insets padding = s.getInsets();
+            return (padding.getLeft()) + Math.max(thumb.prefWidth(-1), track.prefWidth(-1)) +
+            ((showTickMarks) ? (trackToTickGap+tickLine.prefWidth(-1)) : 0) + padding.getRight();
         }
     }
 
     @Override protected double computePrefHeight(double width) {
-        if (getSkinnable().getOrientation() == Orientation.HORIZONTAL) {
-            return getInsets().getTop() + Math.max(thumb.prefHeight(-1), track.prefHeight(-1)) +
-             ((showTickMarks) ? (trackToTickGap+tickLine.prefHeight(-1)) : 0)  + getInsets().getBottom();
+        final Slider s = getSkinnable();
+        if (s.getOrientation() == Orientation.HORIZONTAL) {
+            final Insets padding = s.getInsets();
+            return padding.getTop() + Math.max(thumb.prefHeight(-1), track.prefHeight(-1)) +
+             ((showTickMarks) ? (trackToTickGap+tickLine.prefHeight(-1)) : 0)  + padding.getBottom();
         } else {
             if(showTickMarks) {
                 return Math.max(140, tickLine.prefHeight(-1));

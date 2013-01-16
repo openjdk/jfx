@@ -299,6 +299,7 @@ public class TableColumnHeader extends Region {
     private boolean isSortColumn;
     
     private boolean isSizeDirty = false;
+    private boolean sortOrderDotsDirty = false;
     
     boolean isLastVisibleColumn = false;
     private int columnIndex = -1;
@@ -404,7 +405,12 @@ public class TableColumnHeader extends Region {
         if (! isSortingEnabled()) return;
         
         isSortColumn = sortPos != -1;
-        if (! isSortColumn) return;
+        if (! isSortColumn) {
+            if (sortArrow != null) {
+                sortArrow.setVisible(false);
+            }
+            return;
+        }
         
         final int sortColumnCount = getTableViewSkin().getSortOrder().size();
         boolean showSortOrderDots = sortPos <= 3 && sortColumnCount > 1;
@@ -460,7 +466,7 @@ public class TableColumnHeader extends Region {
                 GridPane.setHalignment(arrow, HPos.CENTER);
                 sortArrowGrid.add(sortOrderDots, 1, dotsRow);
 
-                updateSortOrderDots(sortPos);
+                sortOrderDotsDirty = true;
             } else {
                 // only show the arrow
                 sortArrowGrid.add(arrow, 1, 1);
@@ -615,6 +621,9 @@ public class TableColumnHeader extends Region {
         if (isSizeDirty) {
             resize(getTableColumn().getWidth(), getHeight());
             isSizeDirty = false;
+        } else if (sortOrderDotsDirty) {
+            updateSortOrderDots(sortPos);
+            sortOrderDotsDirty = false;
         }
         
         double sortWidth = 0;
@@ -775,7 +784,7 @@ public class TableColumnHeader extends Region {
     protected void columnReorderingComplete(MouseEvent me) {
         // Move col from where it is now to the new position.
         moveColumn(getTableColumn(), newColumnPos);
-
+        
         // cleanup
         getTableHeaderRow().getColumnReorderLine().setTranslateX(0.0F);
         getTableHeaderRow().getColumnReorderLine().setLayoutX(0.0F);

@@ -60,6 +60,12 @@ public class PlatformImpl {
     private static Set<FinishListener> finishListeners =
             new CopyOnWriteArraySet<FinishListener>();
     private final static Object runLaterLock = new Object();
+    private static Boolean isGraphicsSupported;
+    private static Boolean isControlsSupported;
+    private static Boolean isWebSupported;
+    private static Boolean isSWTSupported;
+    private static Boolean isSwingSupported;
+    private static Boolean isFXMLSupported;
 
     /**
      * Set a flag indicating whether this application should show up in the
@@ -336,8 +342,53 @@ public class PlatformImpl {
         }
     }
 
+    private static Boolean checkForClass(String classname) {
+        try {
+            Class.forName(classname, false, PlatformImpl.class.getClassLoader());
+            return Boolean.TRUE;
+        } catch (ClassNotFoundException cnfe) {
+            return Boolean.FALSE;
+        }
+    }
+
     public static boolean isSupported(ConditionalFeature feature) {
-        return Toolkit.getToolkit().isSupported(feature);
+        switch (feature) {
+            case GRAPHICS:
+                if (isGraphicsSupported == null) {
+                    isGraphicsSupported = checkForClass("javafx.stage.Stage");
+                }
+                return isGraphicsSupported;
+            case CONTROLS:
+                if (isControlsSupported == null) {
+                    isControlsSupported = checkForClass(
+                            "javafx.scene.control.Control");
+                }
+                return isControlsSupported;
+            case WEB:
+                if (isWebSupported == null) {
+                    isWebSupported = checkForClass("javafx.scene.web.WebView");
+                }
+                return isWebSupported;
+            case SWT:
+                if (isSWTSupported == null) {
+                    isSWTSupported = checkForClass("javafx.embed.swt.FXCanvas");
+                }
+                return isSWTSupported;
+            case SWING:
+                if (isSwingSupported == null) {
+                    isSwingSupported = checkForClass(
+                            "javafx.embed.swing.JFXPanel");
+                }
+                return isSwingSupported;
+            case FXML:
+                if (isFXMLSupported == null) {
+                    isFXMLSupported = checkForClass("javafx.fxml.FXMLLoader")
+                            && checkForClass("javax.xml.stream.XMLInputFactory");
+                }
+                return isFXMLSupported;
+            default:
+                return Toolkit.getToolkit().isSupported(feature);
+        }
     }
 
     public static interface FinishListener {

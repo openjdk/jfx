@@ -866,24 +866,6 @@ public class PopupControl extends PopupWindow implements Skinnable {
 //    public double getBaselineOffset() { return getSkinNode() == null? 0 : getSkinNode().getBaselineOffset(); }
 
     /**
-     * Called from several places whenever the children of the Control
-     * may need to be updated (principally, when the tool tip changes,
-     * the skin changes, or the skin.node changes).
-     */
-    private void updateChildren() {
-        prefWidthCache = -1;
-        prefHeightCache = -1;
-        minWidthCache = -1;
-        minHeightCache = -1;
-        maxWidthCache = -1;
-        maxHeightCache = -1;
-        skinSizeComputed = false;
-        final Node n = getSkinNode();
-        if (n != null) bridge.getChildren().setAll(n);
-        else bridge.getChildren().clear();
-    }
-
-    /**
      * Create a new instance of the default skin for this control. This is called to create a skin for the control if
      * no skin is provided via CSS {@code -fx-skin} or set explicitly in a sub-class with {@code  setSkin(...)}.
      *
@@ -1095,8 +1077,25 @@ public class PopupControl extends PopupWindow implements Skinnable {
                 if (oldValue != null) oldValue.dispose();
                 // Get the new value, and save it off as the new oldValue
                 oldValue = getValue();
-                // Update the children list with the new skin node
-                updateChildren();
+                
+                prefWidthCache = -1;
+                prefHeightCache = -1;
+                minWidthCache = -1;
+                minHeightCache = -1;
+                maxWidthCache = -1;
+                maxHeightCache = -1;
+                skinSizeComputed = false;
+                final Node n = getSkinNode();
+                if (n != null) bridge.getChildren().setAll(n);
+                else bridge.getChildren().clear();
+
+                // calling impl_reapplyCSS() as the styleable properties may now
+                // be different, as we will now be able to return styleable properties 
+                // belonging to the skin. If impl_reapplyCSS() is not called, the 
+                // getCssMetaData() method is never called, so the 
+                // skin properties are never exposed.
+                impl_reapplyCSS();
+                
                 // DEBUG: Log that we've changed the skin
                 final PlatformLogger logger = Logging.getControlsLogger();
                 if (logger.isLoggable(PlatformLogger.FINEST)) {

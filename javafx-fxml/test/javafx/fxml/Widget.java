@@ -52,6 +52,7 @@ public class Widget {
     private ArrayList<String> styles = new ArrayList<String>();
     private ArrayList<String> values = new ArrayList<String>();
     private float[] ratios = new float[]{};
+    private String[] names = new String[]{};
 
     public static final String ALIGNMENT_KEY = "alignment";
     public static final int TEN = 10;
@@ -144,6 +145,15 @@ public class Widget {
     public void setRatios(float[] ratios) {
         this.ratios = Arrays.copyOf(ratios, ratios.length);
     }
+    
+    public String[] getNames() {
+        return Arrays.copyOf(names, names.length);
+    }
+
+    public void setNames(String[] names) {
+        this.names = Arrays.copyOf(names, names.length);
+    }
+
 
     public static Alignment getAlignment(Widget widget) {
         return (Alignment)widget.getProperties().get(ALIGNMENT_KEY);

@@ -70,6 +70,7 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
         registerChangeListener(control.indexProperty(), "INDEX");
         registerChangeListener(control.treeTableViewProperty(), "TREE_TABLE_VIEW");
         registerChangeListener(control.treeItemProperty(), "TREE_ITEM");
+        registerChangeListener(control.getTreeTableView().treeColumnProperty(), "TREE_COLUMN");
     }
     
     @Override protected void handleControlPropertyChanged(String p) {
@@ -77,13 +78,16 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
 
         if ("INDEX".equals(p)) {
             updateCells = true;
-            requestLayout();
+            getSkinnable().requestLayout();
         } else if ("TREE_TABLE_VIEW".equals(p)) {
             for (int i = 0; i < getChildren().size(); i++) {
                 ((TreeTableCell)getChildren().get(i)).updateTreeTableView(getSkinnable().getTreeTableView());
             }
         } else if ("TREE_ITEM".equals(p)) {
             updateDisclosureNode();
+        } else if ("TREE_COLUMN".equals(p)) {
+            updateCells = true;
+            getSkinnable().requestLayout();
         }
     }
     
@@ -131,6 +135,9 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
         } else if (disclosureNode.getParent() == null) {
             getChildren().add(disclosureNode);
             disclosureNode.toFront();
+            
+            // RT-26625: [TreeView, TreeTableView] can lose arrows while scrolling
+            disclosureNode.impl_processCSS(true);
         } else {
             disclosureNode.toBack();
         }
@@ -175,6 +182,10 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
 
     @Override protected boolean isIndentationRequired() {
         return true;
+    }
+
+    @Override protected TableColumnBase getTreeColumn() {
+        return getSkinnable().getTreeTableView().getTreeColumn();
     }
     
     @Override protected int getIndentationLevel(TreeTableRow<T> control) {

@@ -142,11 +142,11 @@ public abstract class TableViewSkinBase<S, C extends Control, B extends Behavior
 
         tableHeaderRow = createTableHeaderRow();
         tableHeaderRow.setColumnReorderLine(columnReorderLine);
-        tableHeaderRow.setTablePadding(getInsets());
+        tableHeaderRow.setTablePadding(getSkinnable().getInsets());
         tableHeaderRow.setFocusTraversable(false);
         control.paddingProperty().addListener(new InvalidationListener() {
             @Override public void invalidated(Observable valueModel) {
-                tableHeaderRow.setTablePadding(getInsets());
+                tableHeaderRow.setTablePadding(getSkinnable().getInsets());
             }
         });
 
@@ -157,7 +157,7 @@ public abstract class TableViewSkinBase<S, C extends Control, B extends Behavior
 
         tableHeaderRow.reorderingProperty().addListener(new InvalidationListener() {
             @Override public void invalidated(Observable valueModel) {
-                requestLayout();
+                getSkinnable().requestLayout();
             }
         });
 
@@ -184,7 +184,7 @@ public abstract class TableViewSkinBase<S, C extends Control, B extends Behavior
         InvalidationListener widthObserver = new InvalidationListener() {
             @Override public void invalidated(Observable valueModel) {
                 contentWidthDirty = true;
-                requestLayout();
+                getSkinnable().requestLayout();
             }
         };
         flow.widthProperty().addListener(widthObserver);
@@ -212,7 +212,7 @@ public abstract class TableViewSkinBase<S, C extends Control, B extends Behavior
         } else if ("FOCUS_TRAVERSABLE".equals(p)) {
             flow.setFocusTraversable(getSkinnable().isFocusTraversable());
         } else if ("WIDTH".equals(p)) {
-            tableHeaderRow.setTablePadding(getInsets());
+            tableHeaderRow.setTablePadding(getSkinnable().getInsets());
         }
     }
     
@@ -230,7 +230,7 @@ public abstract class TableViewSkinBase<S, C extends Control, B extends Behavior
     private ListChangeListener rowCountListener = new ListChangeListener() {
         @Override public void onChanged(Change c) {
             rowCountDirty = true;
-            requestLayout();
+            getSkinnable().requestLayout();
         }
     };
     
@@ -406,7 +406,7 @@ public abstract class TableViewSkinBase<S, C extends Control, B extends Behavior
         double end = start + col.getWidth();
 
         // determine the width of the table
-        final Insets padding = getPadding();
+        final Insets padding = getSkinnable().getPadding();
         double headerWidth = getSkinnable().getWidth() - padding.getLeft() + padding.getRight();
         
         return (start >= scrollX || end > scrollX) && (start < (headerWidth + scrollX) || end <= (headerWidth + scrollX));
@@ -435,7 +435,8 @@ public abstract class TableViewSkinBase<S, C extends Control, B extends Behavior
             return prefHeight * GOLDEN_RATIO_MULTIPLIER;
         } 
         
-        double pw = getInsets().getLeft() + getInsets().getRight();
+        final Insets padding = getSkinnable().getInsets();
+        double pw = padding.getLeft() + padding.getRight();
         for (int i = 0, max = cols.size(); i < max; i++) {
             TableColumnBase tc = cols.get(i);
             pw += Math.max(tc.getPrefWidth(), tc.getMinWidth());
@@ -552,7 +553,7 @@ public abstract class TableViewSkinBase<S, C extends Control, B extends Behavior
         }
 
         rowCountDirty = true;
-        requestLayout();
+        getSkinnable().requestLayout();
     }
 
     /**
@@ -624,7 +625,9 @@ public abstract class TableViewSkinBase<S, C extends Control, B extends Behavior
         
         if (contentWidth <= 0) {
             // Fix for RT-14855 when there is no content in the TableView.
-            contentWidth = getWidth() - (getInsets().getLeft() + getInsets().getRight());
+            Control c = getSkinnable();
+            Insets padding = c.getInsets();
+            contentWidth = c.getWidth() - (padding.getLeft() + padding.getRight());
         }
 
         // FIXME this isn't perfect, but it prevents RT-14885, which results in
@@ -634,7 +637,7 @@ public abstract class TableViewSkinBase<S, C extends Control, B extends Behavior
 
     private void refreshView() {
         rowCountDirty = true;
-        requestLayout();
+        getSkinnable().requestLayout();
     }
 
     private void reconfigureCells() {
@@ -714,6 +717,9 @@ public abstract class TableViewSkinBase<S, C extends Control, B extends Behavior
     
     private void scrollHorizontally(TableColumnBase col) {
         if (col == null || !col.isVisible()) return;
+        
+        final Control control = getSkinnable();
+        final Insets padding = control.getInsets();
 
         // work out where this column header is, and it's width (start -> end)
         double start = 0;//scrollX;
@@ -724,7 +730,7 @@ public abstract class TableViewSkinBase<S, C extends Control, B extends Behavior
         double end = start + col.getWidth();
 
         // determine the width of the table
-        double headerWidth = getSkinnable().getWidth() - getInsets().getLeft() + getInsets().getRight();
+        double headerWidth = control.getWidth() - padding.getLeft() + padding.getRight();
 
         // determine by how much we need to translate the table to ensure that
         // the start position of this column lines up with the left edge of the

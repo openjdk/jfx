@@ -60,45 +60,7 @@ import com.sun.javafx.css.PseudoClass;
  * Text field behavior.
  */
 public class TextFieldBehavior extends TextInputControlBehavior<TextField> {
-    public static final int SCROLL_RATE = 15;
     private TextFieldSkin skin;
-    private HorizontalDirection scrollDirection = null;
-    private Timeline scrollSelectionTimeline = new Timeline();
-    private EventHandler<ActionEvent> scrollSelectionHandler = new EventHandler<ActionEvent>() {
-        @Override
-        public void handle(ActionEvent event) {
-            TextField textField = getControl();
-
-            IndexRange selection = textField.getSelection();
-            int start = selection.getStart();
-            int end = selection.getEnd();
-
-            switch (scrollDirection) {
-                case RIGHT: {
-                    if (end < textField.getLength()) {
-                        end++;
-                        textField.selectRange(start, end);
-                    }
-
-                    break;
-                }
-
-                case LEFT: {
-                    if (start > 0) {
-                        start--;
-                        textField.selectRange(start, end);
-                    }
-
-                    break;
-                }
-
-                default: {
-                    throw new RuntimeException();
-                }
-            }
-        }
-    };
-
     private ContextMenu contextMenu;
     private TwoLevelFocusBehavior tlFocus;
 
@@ -110,10 +72,6 @@ public class TextFieldBehavior extends TextInputControlBehavior<TextField> {
             contextMenu.getStyleClass().add("text-input-context-menu");
         }
 
-        // Initialize scroll timeline
-        scrollSelectionTimeline.setCycleCount(Timeline.INDEFINITE);
-        List<KeyFrame> scrollTimelineKeyFrames = scrollSelectionTimeline.getKeyFrames();
-        scrollTimelineKeyFrames.add(new KeyFrame(Duration.millis(SCROLL_RATE), scrollSelectionHandler));
         handleFocusChange();
 
         // Register for change events
@@ -278,6 +236,7 @@ public class TextFieldBehavior extends TextInputControlBehavior<TextField> {
                         case 1: mouseSingleClick(hit); break;
                         case 2: mouseDoubleClick(hit); break;
                         case 3: mouseTripleClick(hit); break;
+                        default: // no-op
                     }
                 } else if (e.isShiftDown() && !(e.isControlDown() || e.isAltDown() || e.isMetaDown()) && e.getClickCount() == 1) {
                     // didn't click inside the selection, so select

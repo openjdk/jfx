@@ -73,7 +73,7 @@ public class SeparatorSkin extends BehaviorSkinBase<Separator, BehaviorBase<Sepa
     @Override protected void handleControlPropertyChanged(String p) {
         super.handleControlPropertyChanged(p);
         if ("ORIENTATION".equals(p) || "HALIGNMENT".equals(p) || "VALIGNMENT".equals(p)) {
-            requestLayout();
+            getSkinnable().requestLayout();
         }
     }
 
@@ -91,7 +91,7 @@ public class SeparatorSkin extends BehaviorSkinBase<Separator, BehaviorBase<Sepa
     @Override protected void layoutChildren(final double x, final double y,
             final double w, final double h) {
         final Separator sep = getSkinnable();
-        final Insets p = getInsets();
+        final Insets p = sep.getInsets();
 
         if (sep.getOrientation() == Orientation.HORIZONTAL) {
             // Resize to the content width, and the pref height of the line.
@@ -106,20 +106,26 @@ public class SeparatorSkin extends BehaviorSkinBase<Separator, BehaviorBase<Sepa
     }
 
     @Override protected double computePrefWidth(double h) {
-        double w = getSkinnable().getOrientation() == Orientation.VERTICAL ? line.prefWidth(-1) : DEFAULT_LENGTH;
-        return w + getInsets().getLeft() + getInsets().getRight();
+        final Separator sep = getSkinnable();
+        double w = sep.getOrientation() == Orientation.VERTICAL ? line.prefWidth(-1) : DEFAULT_LENGTH;
+        final Insets padding = sep.getInsets();
+        return w + padding.getLeft() + padding.getRight();
     }
 
     @Override protected double computePrefHeight(double w) {
-        double h = getSkinnable().getOrientation() == Orientation.VERTICAL ? DEFAULT_LENGTH : line.prefHeight(-1);
-        return h + getInsets().getTop() + getInsets().getBottom();
+        final Separator sep = getSkinnable();
+        final Insets padding = sep.getInsets();
+        double h = sep.getOrientation() == Orientation.VERTICAL ? DEFAULT_LENGTH : line.prefHeight(-1);
+        return h + padding.getTop() + padding.getBottom();
     }
 
     @Override protected double computeMaxWidth(double h) {
-        return getSkinnable().getOrientation() == Orientation.VERTICAL ? getSkinnable().prefWidth(h) : Double.MAX_VALUE;
+        final Separator sep = getSkinnable();
+        return sep.getOrientation() == Orientation.VERTICAL ? sep.prefWidth(h) : Double.MAX_VALUE;
     }
 
     @Override protected double computeMaxHeight(double w) {
-        return getSkinnable().getOrientation() == Orientation.VERTICAL ? Double.MAX_VALUE : getSkinnable().prefHeight(w);
+        final Separator sep = getSkinnable();
+        return sep.getOrientation() == Orientation.VERTICAL ? Double.MAX_VALUE : sep.prefHeight(w);
     }
 }

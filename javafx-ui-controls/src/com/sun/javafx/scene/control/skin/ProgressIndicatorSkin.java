@@ -24,18 +24,28 @@
  */
 package com.sun.javafx.scene.control.skin;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import javafx.animation.KeyFrame;
+import javafx.animation.KeyValue;
 import javafx.animation.Timeline;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
+import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.IntegerProperty;
+import javafx.beans.property.ObjectProperty;
+import javafx.beans.value.WritableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.NodeOrientation;
 import javafx.geometry.VPos;
-import javafx.scene.Group;
+import javafx.scene.Node;
 import javafx.scene.control.ProgressIndicator;
+import javafx.scene.control.SkinBase;
+import javafx.scene.layout.Pane;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
@@ -43,26 +53,20 @@ import javafx.scene.paint.Paint;
 import javafx.scene.shape.Arc;
 import javafx.scene.shape.ArcType;
 import javafx.scene.shape.Circle;
-import javafx.scene.shape.SVGPath;
-import javafx.scene.text.Font;
 import javafx.scene.text.Text;
-import javafx.scene.transform.Rotate;
 import javafx.scene.transform.Scale;
 import javafx.util.Duration;
-
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-
-import com.sun.javafx.Utils;
-import com.sun.javafx.css.StyleableObjectProperty;
 import com.sun.javafx.css.CssMetaData;
+import com.sun.javafx.css.Origin;
+import com.sun.javafx.css.StyleableBooleanProperty;
+import com.sun.javafx.css.StyleableIntegerProperty;
+import com.sun.javafx.css.StyleableObjectProperty;
+import com.sun.javafx.css.converters.BooleanConverter;
 import com.sun.javafx.css.converters.PaintConverter;
+import com.sun.javafx.css.converters.SizeConverter;
 import com.sun.javafx.scene.control.behavior.ProgressIndicatorBehavior;
 import com.sun.javafx.scene.control.skin.resources.ControlResources;
-import javafx.beans.property.ObjectProperty;
-import javafx.beans.value.WritableValue;
-import javafx.scene.control.SkinBase;
+import javafx.geometry.Insets;
 
 public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, ProgressIndicatorBehavior<ProgressIndicator>> {
 
@@ -78,13 +82,6 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, P
     private static final Text doneText = new Text(DONE);
     static {
         doneText.getStyleClass().add("text");
-    }
-
-
-    private static final ObservableList<String> paths;
-    static {
-        paths = FXCollections.<String>observableArrayList();
-        paths.addAll("M 18.19152 4.2642355 L 15.734064 5.984965 L 15.734064 5.984965 C  16.55803 7.1617074 17.0 8.563462 17.0 10.0 L 20.0 10.0 C  20.0 7.9478035 19.368612 5.9452963 18.19152 4.2642355 Z", "M 11.736482 0.15192246 L 11.215537 3.1063457 L 11.215537 3.1063457 C  12.63025 3.3557978 13.933962 4.034467 14.949747 5.0502524 L 10.0 10.0 L 17.071068 2.9289322 C  15.619946 1.4778103 13.757501 0.5082826 11.736482 0.15192246 Z", "M 10.0 0.0 C  7.9478035 0.0 5.9452963 0.6313881 4.2642355 1.8084795 L 5.984965 4.265936 L 5.984965 4.265936 C  7.1617074 3.4419718 8.563462 3.0 10.0 3.0 L 10.0 0.0 Z", "M 2.9289322 2.9289322 C  1.4778103 4.380054 0.5082826 6.2424994 0.15192246 8.263518 L 3.1063457 8.784463 L 3.1063457 8.784463 C  3.3557978 7.3697495 4.034467 6.0660377 5.0502524 5.0502524 L 5.0502524 5.0502524 L 2.9289322 2.9289322 Z", "M 0.0 10.0 C  0.0 12.0521965 0.6313881 14.054704 1.8084795 15.7357645 L 10.0 10.0 L 4.265936 14.015035 C  3.4419718 12.838292 3.0 11.436538 3.0 10.0 Z", "M 10.0 10.0 L 8.784463 16.893654 C  7.3697495 16.644201 6.0660377 15.965533 5.050253 14.949747 L 5.0502524 14.949747 L 2.9289322 17.071068 C  4.380054 18.52219 6.2424994 19.491718 8.263518 19.848078 L 10.0 10.0 Z", "M 10.0 10.0 L 14.015035 15.734064 C  12.838292 16.55803 11.436538 17.0 10.0 17.0 L 10.0 20.0 C  12.0521965 20.0 14.054704 19.368612 15.7357645 18.19152 L 10.0 10.0 Z", "M 10.0 10.0 L 16.893654 11.215537 C  16.644201 12.63025 15.965533 13.933962 14.949747 14.949747 L 17.071068 17.071068 C  18.52219 15.619946 19.491718 13.757501 19.848078 11.736482 L 10.0 10.0 Z");
     }
 
     private IndeterminateSpinner spinner;
@@ -111,7 +108,7 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, P
             @Override public void invalidated(Observable valueModel) {
                 if (getSkinnable().isIndeterminate() && timelineNulled && spinner == null) {
                     timelineNulled = false;
-                    spinner = new IndeterminateSpinner(getSkinnable(), ProgressIndicatorSkin.this);
+                    spinner = new IndeterminateSpinner(getSkinnable(), ProgressIndicatorSkin.this, spinEnabled.get(), progressColor.get());
                     getChildren().add(spinner);
                 }
                 
@@ -144,12 +141,12 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, P
                 else {
                     if (getSkinnable().getScene() != null && getSkinnable().isIndeterminate()) {
                         timelineNulled = false;
-                        spinner = new IndeterminateSpinner(getSkinnable(), ProgressIndicatorSkin.this);
+                        spinner = new IndeterminateSpinner(getSkinnable(), ProgressIndicatorSkin.this, spinEnabled.get(), progressColor.get());
                         getChildren().add(spinner);
                         if (getSkinnable().impl_isTreeVisible()) {
                             spinner.indeterminateTimeline.play();
                         }
-                        requestLayout();
+                        getSkinnable().requestLayout();
                     }
                 }
             }
@@ -157,7 +154,7 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, P
         control.sceneProperty().addListener(sceneListener);
 
         initialize();
-        requestLayout();
+        getSkinnable().requestLayout();
     }
 
     private void initialize() {
@@ -167,7 +164,7 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, P
             // clean up determinateIndicator
             determinateIndicator = null;
             // create spinner
-            spinner = new IndeterminateSpinner(control, this);
+            spinner = new IndeterminateSpinner(control, this, spinEnabled.get(), progressColor.get());
             getChildren().clear();
             getChildren().add(spinner);
             if (getSkinnable().impl_isTreeVisible()) {
@@ -180,7 +177,7 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, P
                 spinner = null;
             }
             // create determinateIndicator
-            determinateIndicator = new com.sun.javafx.scene.control.skin.ProgressIndicatorSkin.DeterminateIndicator(control, this);
+            determinateIndicator = new com.sun.javafx.scene.control.skin.ProgressIndicatorSkin.DeterminateIndicator(control, this, progressColor.get());
             getChildren().clear();
             getChildren().add(determinateIndicator);
         }
@@ -188,7 +185,6 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, P
     
     @Override public void dispose() {
         super.dispose();
-        
         if (spinner != null) {
             spinner.indeterminateTimeline.stop();
             spinner = null;
@@ -213,7 +209,6 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, P
      **************************************************************************/
 
     static class DeterminateIndicator extends Region {
-        private Font font;
         private double textGap = 2.0F;
 
         // only update progress text on whole percentages
@@ -227,10 +222,9 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, P
         private StackPane indicator;
         private StackPane progress;
         private StackPane tick;
-        Arc arcShape;
-        Arc arcProgress;
+        private Arc arcShape;
 
-        public DeterminateIndicator(ProgressIndicator control, ProgressIndicatorSkin s) {
+        public DeterminateIndicator(ProgressIndicator control, ProgressIndicatorSkin s, Paint fillOverride) {
             this.control = control;
             this.skin = s;
             
@@ -261,24 +255,14 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, P
             arcShape.setType(ArcType.ROUND);
             arcShape.setStartAngle(90.0F);
 
-            arcProgress = new Arc();
-            arcProgress.setType(ArcType.ROUND);
-            arcProgress.setStartAngle(90.0F);
-            arcProgress.setFill(skin.getProgressColor());
-
             // Our progress pie piece
-            progress = new StackPane() {
-                @Override protected void layoutChildren() {
-                    arcProgress.setFill(skin.getProgressColor());
-                }
-            };
-
+            progress = new StackPane();
             progress.getStyleClass().setAll("progress");
             progress.setScaleShape(false);
             progress.setCenterShape(false);
             progress.setShape(arcShape);
             progress.getChildren().clear();
-            progress.getChildren().addAll(arcProgress);
+            setFillOverride(fillOverride);
 
             // The check mark that's drawn at 100%
             tick = new StackPane();
@@ -286,6 +270,15 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, P
 
             getChildren().setAll(indicator, progress, text, tick);
             updateProgress();
+        }
+
+        private void setFillOverride(Paint fillOverride) {
+            if (fillOverride instanceof Color) {
+                Color c = (Color)fillOverride;
+                progress.setStyle("-fx-background-color: rgba("+((int)(255*c.getRed()))+","+((int)(255*c.getGreen()))+","+((int)(255*c.getBlue()))+","+c.getOpacity()+");");
+            } else {
+                progress.setStyle(null);
+            }
         }
 
         @Override public boolean isAutomaticallyMirrored() {
@@ -301,18 +294,19 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, P
 
             degProgress = (int) (360 * control.getProgress());
             arcShape.setLength(-degProgress);
-            arcProgress.setLength(-degProgress);
             requestLayout();
         }
 
         @Override protected void layoutChildren() {
             // Position and size the circular background
             double doneTextHeight = doneText.getLayoutBounds().getHeight();
+            final Insets controlInsets = control.getInsets();
+            
             /*
             ** use the min of width, or height, keep it a circle
             */
-            double areaW = (control.getWidth() - (skin.getInsets().getLeft() + skin.getInsets().getRight()));
-            double areaH = (control.getHeight() - (skin.getInsets().getTop() + skin.getInsets().getBottom()));
+            double areaW = (control.getWidth() - (controlInsets.getLeft() + controlInsets.getRight()));
+            double areaH = (control.getHeight() - (controlInsets.getTop() + controlInsets.getBottom()));
 
             double radiusW = areaW / 2;
             double radiusH = (areaH-(textGap+doneTextHeight)) / 2;
@@ -325,14 +319,12 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, P
             ** we need to work out the available space between the padding,
             ** and centre the indicator inside it
             */
-            indicator.setLayoutX(skin.getInsets().getLeft()+(radiusW - radius));
-            indicator.setLayoutY(skin.getInsets().getTop()+(radiusH - radius));
+            indicator.setLayoutX(controlInsets.getLeft()+(radiusW - radius));
+            indicator.setLayoutY(controlInsets.getTop()+(radiusH - radius));
 
 
             arcShape.setRadiusX(((indicator.getWidth() - indicator.getInsets().getLeft() - indicator.getInsets().getRight()) / 2));
             arcShape.setRadiusY(arcShape.getRadiusX());
-            arcProgress.setRadiusX(arcShape.getRadiusX()-1);
-            arcProgress.setRadiusY(arcShape.getRadiusY()-1);
 
 
             progress.setLayoutX(indicator.getLayoutX() + radius);
@@ -346,8 +338,8 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, P
             /*
             ** if the % text can't fit anywhere in the bounds then don't display it
             */
-            double textWidth = com.sun.javafx.scene.control.skin.Utils.computeTextWidth(font, text.getText(), 0.0);
-            double textHeight = com.sun.javafx.scene.control.skin.Utils.computeTextHeight(font, text.getText(), 0.0);
+            double textWidth = com.sun.javafx.scene.control.skin.Utils.computeTextWidth(text.getFont(), text.getText(), 0.0);
+            double textHeight = com.sun.javafx.scene.control.skin.Utils.computeTextHeight(text.getFont(), text.getText(), 0.0);
             if (control.getWidth() >= textWidth && control.getHeight() >= textHeight) {
                 if (!text.isVisible()) {
                     text.setVisible(true);
@@ -358,10 +350,10 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, P
                 ** but if it can't then use the padding
                 */
                 if (textWidth > (radiusW*2)) {
-                    text.setLayoutX(skin.getInsets().getLeft()+(radiusW - radius));
+                    text.setLayoutX(controlInsets.getLeft()+(radiusW - radius));
                 }
                 else {
-                    text.setLayoutX(skin.getInsets().getLeft()+((radiusW*2 - textWidth)/2));
+                    text.setLayoutX(controlInsets.getLeft()+((radiusW*2 - textWidth)/2));
                 }
             }
             else {
@@ -381,7 +373,6 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, P
             return getInsets().getTop() + indH + textGap + doneText.getLayoutBounds().getHeight() + getInsets().getBottom();
         }
 
-
         @Override protected double computeMaxWidth(double height) {
             return computePrefWidth(height);
         }
@@ -398,55 +389,63 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, P
      **************************************************************************/
 
     static class IndeterminateSpinner extends Region {
-
         private ProgressIndicator control;
-        protected ProgressIndicatorSkin skin;
+        private ProgressIndicatorSkin skin;
         private IndicatorPaths pathsG;
-        Scale scaleTransform;
-        Rotate rotateTransform;
+        private Timeline indeterminateTimeline;
+        private double angle = 0.0F;
+        private final List<Double> opacities = new ArrayList<Double>();
+        private boolean spinEnabled = false;
+        private Paint fillOverride = null;
 
-        public IndeterminateSpinner(ProgressIndicator control, ProgressIndicatorSkin s) {
+        public IndeterminateSpinner(ProgressIndicator control, ProgressIndicatorSkin s, boolean spinEnabled, Paint fillOverride) {
             this.control = control;
             this.skin = s;
+            this.spinEnabled = spinEnabled;
+            this.fillOverride = fillOverride;
 
             setNodeOrientation(NodeOrientation.LEFT_TO_RIGHT);
             getStyleClass().setAll("spinner");
 
-            skin.segmentColors = FXCollections.<Color>observableArrayList();
-            skin.svgpaths = FXCollections.<SVGPath>observableArrayList();
-            skin.setColors(skin.getProgressColor());
-
             pathsG = new IndicatorPaths(this);
-
-            scaleTransform = new Scale();
-
-            rotateTransform = new Rotate();
-            rotateTransform.setAngle(angle);
-
-            pathsG.getChildren().clear();
-            pathsG.getChildren().addAll(skin.svgpaths);
+            getChildren().add(pathsG);
 
             indeterminateTimeline = new Timeline();
             indeterminateTimeline.setCycleCount(Timeline.INDEFINITE);
+            rebuildTimeline();
 
-            ObservableList<KeyFrame> keyframes = FXCollections.<KeyFrame>observableArrayList();
-            for (int i = 100; i <= 3900; i += 100) {
-                keyframes.add(
-                      new KeyFrame(Duration.millis(i), new EventHandler<ActionEvent>() {
-                              @Override public void handle(ActionEvent event) {
-                                  skin.shiftColors();
-                              }
-                      }));
-            }
-            indeterminateTimeline.getKeyFrames().clear();
-            indeterminateTimeline.getKeyFrames().addAll(keyframes);
-
-            getChildren().clear();
-            getChildren().addAll(pathsG);
-            requestLayout();
+            rebuild();
         }
 
-        void pauseIndicator(boolean pause) {
+        public void setFillOverride(Paint fillOverride) {
+            this.fillOverride = fillOverride;
+            rebuild();
+        }
+
+        public void setSpinEnabled(boolean spinEnabled) {
+            this.spinEnabled = spinEnabled;
+            rebuildTimeline();
+        }
+
+        private void rebuildTimeline() {
+            final ObservableList<KeyFrame> keyFrames = FXCollections.<KeyFrame>observableArrayList();
+            if(spinEnabled) {
+                keyFrames.add(new KeyFrame(Duration.millis(0), new KeyValue(pathsG.rotateProperty(), 360)));
+                keyFrames.add(new KeyFrame(Duration.millis(3900), new KeyValue(pathsG.rotateProperty(), 0)));
+            }
+            for (int i = 100; i <= 3900; i += 100) {
+                keyFrames.add(
+                        new KeyFrame(
+                                Duration.millis(i), new EventHandler<ActionEvent>() {
+                            @Override public void handle(ActionEvent event) {
+                                shiftColors();
+                            }
+                        }));
+            }
+            indeterminateTimeline.getKeyFrames().setAll(keyFrames);
+        }
+
+        private void pauseIndicator(boolean pause) {
             if (indeterminateTimeline != null) {
                 if (pause) {
                     indeterminateTimeline.pause();
@@ -457,99 +456,119 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, P
             }
         }
 
-
-    class IndicatorPaths extends Group {
-        IndeterminateSpinner piSkin;
-        IndicatorPaths(IndeterminateSpinner pi) {
-            super();
-            piSkin = pi;
-            InvalidationListener treeVisibilityListener = new InvalidationListener() {
-                    @Override public void invalidated(Observable valueModel) {
-                        if (piSkin.skin.getSkinnable().impl_isTreeVisible()) {
-                            piSkin.pauseIndicator(false);
+        private class IndicatorPaths extends Pane {
+            IndeterminateSpinner piSkin;
+            IndicatorPaths(IndeterminateSpinner pi) {
+                super();
+                piSkin = pi;
+                InvalidationListener treeVisibilityListener = new InvalidationListener() {
+                        @Override public void invalidated(Observable valueModel) {
+                            if (piSkin.skin.getSkinnable().impl_isTreeVisible()) {
+                                piSkin.pauseIndicator(false);
+                            }
+                            else {
+                                piSkin.pauseIndicator(true);
+                            }
                         }
-                        else {
-                            piSkin.pauseIndicator(true);
+                    };
+                impl_treeVisibleProperty().addListener(treeVisibilityListener);
+            }
+
+            @Override protected double computePrefWidth(double height) {
+                double w = 0;
+                for(Node child: getChildren()) {
+                    if (child instanceof Region) {
+                        Region region = (Region)child;
+                        if (region.getShape() != null) {
+                            w = Math.max(w,region.getShape().getLayoutBounds().getMaxX());
+                        } else {
+                            w = Math.max(w,region.prefWidth(height));
                         }
                     }
-                };
-            impl_treeVisibleProperty().addListener(treeVisibilityListener);
-        }
-    }
+                }
+                return w;
+            }
 
+            @Override protected double computePrefHeight(double width) {
+                double h = 0;
+                for(Node child: getChildren()) {
+                    if (child instanceof Region) {
+                        Region region = (Region)child;
+                        if (region.getShape() != null) {
+                            h = Math.max(h,region.getShape().getLayoutBounds().getMaxY());
+                        } else {
+                            h = Math.max(h,region.prefHeight(width));
+                        }
+                    }
+                }
+                return h;
+            }
+
+            @Override protected void layoutChildren() {
+                // calculate scale
+                double scale = getWidth() / computePrefWidth(-1);
+                for(Node child: getChildren()) {
+                    if (child instanceof Region) {
+                        Region region = (Region)child;
+                        if (region.getShape() != null) {
+                            region.resize(
+                                region.getShape().getLayoutBounds().getMaxX(),
+                                region.getShape().getLayoutBounds().getMaxY()
+                            );
+                            region.getTransforms().setAll(new Scale(scale,scale,0,0));
+                        } else {
+                            region.autosize();
+                        }
+                    }
+                }
+            }
+        }
 
         @Override protected void layoutChildren() {
-            double radiusW = (control.getWidth() - (skin.getInsets().getLeft() + skin.getInsets().getRight())) / 2;
-            double radiusH = (control.getHeight() - (skin.getInsets().getTop() + skin.getInsets().getBottom())) / 2;
-            double radius = Math.min(radiusW, radiusH);
-
-            scaleTransform.setX(radius/10);
-            scaleTransform.setY(radius/10);
-
-            rotateTransform.setPivotX(radius);
-            rotateTransform.setPivotY(radius);
-
-            pathsG.getTransforms().clear();
-            pathsG.getTransforms().addAll(scaleTransform, rotateTransform);
-
-            double diameter = radius*2;
-            pathsG.resize(diameter, diameter);
-
-            pathsG.setLayoutX(skin.getInsets().getLeft()+(radiusW - radius));
-            pathsG.setLayoutY(skin.getInsets().getTop()+(radiusH - radius));
-        }
-
-        private Timeline indeterminateTimeline;
-        private double angle = 0.0F;
-
-
-        @Override protected double computePrefWidth(double height) {
-            return getInsets().getLeft() + doneText.getLayoutBounds().getHeight() + getInsets().getRight();
-        }
-
-        @Override protected double computePrefHeight(double width) {
-            /*
-            ** use the same as the width, to keep it square
-            */
-            return getInsets().getTop() + doneText.getLayoutBounds().getHeight() + getInsets().getBottom();
-        }
-
-        @Override protected double computeMaxWidth(double height) {
-            return computePrefWidth(-1);
-        }
-
-        @Override protected double computeMaxHeight(double width) {
-            return computePrefHeight(-1);
-        }
-    }
-
-    private ObservableList<Color> segmentColors;
-    private ObservableList<SVGPath> svgpaths;
-
-    private void setColors(Paint seedColor) {
-        if (segmentColors != null) {
-            segmentColors.clear();
-            if (seedColor instanceof Color) {
-                final Color c = (Color) seedColor;
-                for (int i = 0; i <= 7; i++) segmentColors.add(Utils.deriveColor(c, -0.2F + 1.2F / 7.0F * i));
-            } else {
-                // as it a Paint we can not derive colors so just use as it
-                for (int i = 0; i <= 7; i++) segmentColors.add((Color)seedColor);
+            Insets controlInsets = control.getInsets();
+            final double w = control.getWidth() - controlInsets.getLeft() - controlInsets.getRight();
+            final double h = control.getHeight() - controlInsets.getTop() - controlInsets.getBottom();
+            final double prefW = pathsG.prefWidth(-1);
+            final double prefH = pathsG.prefHeight(-1);
+            double scaleX = w / prefW;
+            double scale = scaleX;
+            if ((scaleX * prefH) > h) {
+                scale = h / prefH;
             }
+            double indicatorW = prefW * scale;
+            double indicatorH = prefH * scale;
+            pathsG.resizeRelocate((w - indicatorW) / 2, (h - indicatorH) / 2, indicatorW, indicatorH);
+        }
 
-            for (int i = 0; i <= 7; i++) {
-                SVGPath svgpath = new SVGPath();
-                svgpath.setContent(paths.get(i));
-                svgpath.setFill(segmentColors.get(i));
-                svgpaths.add(svgpath);
+        private void rebuild() {
+            // update indeterminate indicator
+            final int segments = skin.indeterminateSegmentCount.get();
+            opacities.clear();
+            pathsG.getChildren().clear();
+            final double step = 0.8/(segments-1);
+            for (int i = 0; i < segments; i++) {
+                Region region = new Region();
+                region.setScaleShape(false);
+                region.setCenterShape(false);
+                region.getStyleClass().addAll("segment", "segment" + i);
+                if (fillOverride instanceof Color) {
+                    Color c = (Color)fillOverride;
+                    region.setStyle("-fx-background-color: rgba("+((int)(255*c.getRed()))+","+((int)(255*c.getGreen()))+","+((int)(255*c.getBlue()))+","+c.getOpacity()+");");
+                } else {
+                    region.setStyle(null);
+                }
+                pathsG.getChildren().add(region);
+                opacities.add(Math.min(1, 0.2 + (i * step)));
             }
         }
-    }
 
-    private void shiftColors() {
-        FXCollections.rotate(segmentColors, -1);
-        for (int i = 0; i <= 7; i++) {
-            svgpaths.get(i).setFill(segmentColors.get(i));
+        private void shiftColors() {
+            if (opacities.size() <= 0) return;
+            final int segments = skin.indeterminateSegmentCount.get();
+            Collections.rotate(opacities, -1);
+            for (int i = 0; i < segments; i++) {
+                pathsG.getChildren().get(i).setOpacity(opacities.get(i));
+            }
         }
     }
 
@@ -558,42 +577,82 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, P
     }
 
     /**
-     * The colour of the progress segment
+     * The colour of the progress segment.
      */
-    private ObjectProperty<Paint> progressColor =            
-            new StyleableObjectProperty<Paint>(Color.DODGERBLUE) {
+    private ObjectProperty<Paint> progressColor =
+            new StyleableObjectProperty<Paint>(null) {
 
-        @Override public void set(Paint newProgressColor) {
-            final Paint color = (newProgressColor instanceof Color)
-                    ? newProgressColor 
-                    : Color.DODGERBLUE;
-            super.set(color);
-        }
-        
-        @Override
-        protected void invalidated() {
-            setColors((Color)progressColor.get());
+                @Override public void set(Paint newProgressColor) {
+                    final Paint color = (newProgressColor instanceof Color)
+                            ? newProgressColor
+                            : null;
+                    super.set(color);
+                }
+
+                @Override protected void invalidated() {
+                    if (spinner!=null) spinner.setFillOverride(get());
+                    if (determinateIndicator!=null) determinateIndicator.setFillOverride(get());
+                }
+
+                @Override public Object getBean() {
+                    return ProgressIndicatorSkin.this;
+                }
+
+                @Override public String getName() {
+                    return "progressColorProperty";
+                }
+
+                @Override public CssMetaData getCssMetaData() {
+                    return StyleableProperties.PROGRESS_COLOR;
+                }
+            };
+
+    /**
+     * The number of segments in the spinner.
+     */
+    private IntegerProperty indeterminateSegmentCount =
+            new StyleableIntegerProperty(8) {
+
+                @Override protected void invalidated() {
+                    if (spinner!=null) spinner.rebuild();
+                }
+
+                @Override public Object getBean() {
+                    return ProgressIndicatorSkin.this;
+                }
+
+                @Override public String getName() {
+                    return "indeterminateSegmentCount";
+                }
+
+                @Override public CssMetaData getCssMetaData() {
+                    return StyleableProperties.PROGRESS_COLOR;
+                }
+            };
+
+    /**
+     * True if the progress indicator should rotate as well as animate opacity.
+     */
+    private final BooleanProperty spinEnabled = new StyleableBooleanProperty(false) {
+        @Override protected void invalidated() {
+            if (spinner!=null) spinner.setSpinEnabled(get());
         }
 
-        @Override
-        public Object getBean() {
+        @Override public CssMetaData getCssMetaData() {
+            return StyleableProperties.LEGEND_VISIBLE;
+        }
+
+        @Override public Object getBean() {
             return ProgressIndicatorSkin.this;
         }
 
-        @Override
-        public String getName() {
-            return "progressColorProperty";
-        }
-
-        @Override
-        public CssMetaData getCssMetaData() {
-            return StyleableProperties.PROGRESS_COLOR;
+        @Override public String getName() {
+            return "spinEnabled";
         }
     };
-        
 
     // *********** Stylesheet Handling *****************************************
-    
+
     /**
      * Super-lazy instantiation pattern from Bill Pugh.
      * @treatAsPrivate implementation detail
@@ -601,12 +660,12 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, P
     private static class StyleableProperties {
         private static final CssMetaData<ProgressIndicator,Paint> PROGRESS_COLOR =
             new CssMetaData<ProgressIndicator,Paint>("-fx-progress-color",
-                PaintConverter.getInstance(), Color.DODGERBLUE) {
+                PaintConverter.getInstance(), null) {
 
             @Override
             public boolean isSettable(ProgressIndicator n) {
                 final ProgressIndicatorSkin skin = (ProgressIndicatorSkin) n.getSkin();
-                return skin.progressColor == null || 
+                return skin.progressColor == null ||
                         !skin.progressColor.isBound();
             }
 
@@ -616,13 +675,48 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, P
                 return skin.progressColor;
             }
         };
+        private static final CssMetaData<ProgressIndicator,Number> INDETERMINATE_SEGMENT_COUNT =
+            new CssMetaData<ProgressIndicator,Number>("-fx-indeterminate-segment-count",
+                                                     SizeConverter.getInstance(), 8) {
+
+            @Override public void set(ProgressIndicator node, Number value, Origin origin) {
+                super.set(node, value.intValue(), origin);
+            }
+
+            @Override public boolean isSettable(ProgressIndicator n) {
+                final ProgressIndicatorSkin skin = (ProgressIndicatorSkin) n.getSkin();
+                return skin.indeterminateSegmentCount == null ||
+                        !skin.indeterminateSegmentCount.isBound();
+            }
+
+            @Override public WritableValue<Number> getWritableValue(ProgressIndicator n) {
+                final ProgressIndicatorSkin skin = (ProgressIndicatorSkin) n.getSkin();
+                return skin.indeterminateSegmentCount;
+            }
+        };
+        private static final CssMetaData<ProgressIndicator,Boolean> LEGEND_VISIBLE =
+            new CssMetaData<ProgressIndicator,Boolean>("-fx-spin-enabled",
+                                           BooleanConverter.getInstance(), Boolean.FALSE) {
+
+                @Override public boolean isSettable(ProgressIndicator node) {
+                    final ProgressIndicatorSkin skin = (ProgressIndicatorSkin) node.getSkin();
+                    return skin.spinEnabled == null || !skin.spinEnabled.isBound();
+                }
+
+                @Override public WritableValue<Boolean> getWritableValue(ProgressIndicator node) {
+                    final ProgressIndicatorSkin skin = (ProgressIndicatorSkin) node.getSkin();
+                    return skin.spinEnabled;
+                }
+            };
 
         public static final List<CssMetaData> STYLEABLES;
         static {
             final List<CssMetaData> styleables = 
                 new ArrayList<CssMetaData>(SkinBase.getClassCssMetaData());
             Collections.addAll(styleables,
-                               PROGRESS_COLOR
+                               PROGRESS_COLOR,
+                               INDETERMINATE_SEGMENT_COUNT,
+                               LEGEND_VISIBLE
             );
             STYLEABLES = Collections.unmodifiableList(styleables);
         }

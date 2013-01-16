@@ -24,10 +24,6 @@
  */
 package javafx.scene.control;
 
-import com.sun.javafx.css.Styleable;
-import com.sun.javafx.css.CssMetaData;
-import com.sun.javafx.event.EventHandlerManager;
-import com.sun.javafx.scene.control.skin.TableViewSkinBase;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -49,6 +45,9 @@ import javafx.event.EventTarget;
 import javafx.event.EventType;
 import javafx.scene.Node;
 import javafx.util.Callback;
+import com.sun.javafx.css.CssMetaData;
+import com.sun.javafx.css.Styleable;
+import com.sun.javafx.scene.control.skin.TableViewSkinBase;
 
 /**
  * A {@link TreeTableView} is made up of a number of TreeTableColumn instances. Each
@@ -728,7 +727,7 @@ public class TreeTableColumn<S,T> extends TableColumnBase<TreeItem<S>,T> impleme
          * @param newValue The value input by the end user.
          */
         public CellEditEvent(TreeTableView<S> table, TreeTablePosition<S,T> pos,
-                EventType<TreeTableColumn.CellEditEvent> eventType, T newValue) {
+                EventType<TreeTableColumn.CellEditEvent<S,T>> eventType, T newValue) {
             super(table, Event.NULL_SOURCE_TARGET, eventType);
 
             if (table == null) {

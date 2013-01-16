@@ -40,13 +40,12 @@ import javafx.geometry.NodeOrientation;
  */
 public class CheckBoxSkin extends LabeledSkinBase<CheckBox, ButtonBehavior<CheckBox>> {
 
-    private StackPane box;
+    private final StackPane box = new StackPane();
     private StackPane innerbox;
 
     public CheckBoxSkin(CheckBox checkbox) {
         super(checkbox, new ButtonBehavior<CheckBox>(checkbox));
 
-        box = new StackPane();
         box.getStyleClass().setAll("box");
         innerbox = new StackPane();
         innerbox.getStyleClass().setAll("mark");
@@ -67,14 +66,15 @@ public class CheckBoxSkin extends LabeledSkinBase<CheckBox, ButtonBehavior<Check
     }
 
     @Override protected double computePrefHeight(double width) {
+        Insets insets = getSkinnable().getInsets();
         return Math.max(super.computePrefHeight(width - box.prefWidth(-1)),
-                        getInsets().getTop() + box.prefHeight(-1) + getInsets().getBottom());
+                        insets.getTop() + box.prefHeight(-1) + insets.getBottom());
     }
 
 
     @Override protected void layoutChildren(final double x, final double y,
             final double w, final double h) {
-        Insets padding = getInsets();
+        Insets padding = getSkinnable().getInsets();
 
         final double boxWidth = box.prefWidth(-1);
         final double boxHeight = box.prefHeight(-1);

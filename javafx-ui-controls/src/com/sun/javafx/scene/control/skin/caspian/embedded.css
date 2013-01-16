@@ -31,6 +31,17 @@
  *                                                                             *
  ******************************************************************************/
 
+
+
+/*******************************************************************************
+ *                                                                             *
+ * Label                                                                       *
+ *                                                                             *
+ ******************************************************************************/
+.label {
+    -fx-font-size: 0.75em; /** 9pt */
+}
+
 /*******************************************************************************
  *                                                                             *
  * PopupMenu                                                                   *
@@ -139,107 +150,95 @@
 }
 
 
+/*******************************************************************************
+ *                                                                             *
+ * ComboBox                                                                    *
+ *                                                                             *
+ ******************************************************************************/
+
+.combo-box:external-focus {
+    -fx-border-color: red; 
+    -fx-focus-color: red;
+    -fx-opacity: 0.8;
+}
+.combo-box:internal-focus {
+    -fx-border-color: null; 
+    -fx-focus-color: #0093ff;
+    -fx-opacity: 1.0;
+}
+
+/* Customie the ListCell that appears in the ComboBox button itself */
+.combo-box > .list-cell {
+    -fx-padding: 0.5em 0.725em 0.5em 0.725em;
+    -fx-cell-size: 2em; 
+}
+
+.combo-box-popup > .list-view > .virtual-flow > .clipped-container > .sheet > .list-cell {
+    -fx-cell-size: 2.182em;
+}
+
 
 /*******************************************************************************
  *                                                                             *
- * Virtual Keyboard                                                            *
+ * SplitPane                                                                   *
  *                                                                             *
  ******************************************************************************/
-.fxvk {
-    -fx-cursor: default;
-    -fx-background-color: #a1a1a1, #d7d7d7, #c2c2c2;
-    -fx-background-insets: 0, 1 0 0 0, 2 0 0 0;
-    -fx-padding: 8 4 10 4;
+.split-pane > .split-pane-divider {
+    -fx-padding: 0 0.2725em 0 0.2725em; 
 }
 
-.fxvk #vbox {
-    -fx-spacing: 8;
+.split-pane > .split-pane-divider > .horizontal-grabber {
+    -fx-padding: 0.636em 0.18em 0.636em 0.18em;
 }
 
-.fxvk #hbox {
-    -fx-spacing: 8;
+.split-pane > .split-pane-divider > .vertical-grabber {
+    -fx-padding: 0.205em 0.545em 0.205em 0.545em;
 }
 
-.fxvk-secondary {
-    -fx-background-color: #ffffff, #ededed;
-    -fx-background-insets: 0, 1;
-    -fx-background-radius: 8;
-    -fx-padding: 10;
-    -fx-effect: dropshadow(three-pass-box, rgba(0, 0, 0, 0.75), 8, 0.0, 0, 0);
+
+/*******************************************************************************
+ *                                                                             *
+ * TabPane                                                                     *
+ *                                                                             *
+ ******************************************************************************/
+.tab-pane {
+    -fx-tab-min-width: 2.725em;
+    -fx-tab-min-height: 2.725em; 
+    -fx-tab-max-height: 2.725em; 
 }
 
-.fxvk .key { 
-    -fx-background-color: #acacac,
-                          linear-gradient(to bottom, #f8f8f8, #acacac),
-                          linear-gradient(to bottom, #dedede, #acacac);
-    -fx-background-insets: 0, 1, 2;
-    -fx-font-weight: bold;
-    -fx-font: bold 36px "Amble";
-    -fx-text-fill: #333333;
-    -fx-padding: 3 3 5 0;
-    -fx-background-radius: 4;
-    -fx-effect: dropshadow(three-pass-box, rgba(0, 0, 0, 0.75), 2, 0.0, 0, 1);
+.tab-pane > .tab-header-area > .headers-region > .tab > .tab-container > .tab-label {
+    -fx-font-size: 1em;
+    -fx-padding: 0 0.545em 0 0.545em;
 }
 
-.fxvk-portrait .key { 
-    -fx-padding: 3 0 5 0;
+
+/*******************************************************************************
+ *                                                                             *
+ * TitledPane                                                                  *
+ *                                                                             *
+ ******************************************************************************/
+
+
+/*******************************************************************************
+ *                                                                             *
+ * ListView                                                                    *
+ *                                                                             *
+ ******************************************************************************/
+.list-view:external-focus {
+    -fx-border-color: red; 
+    -fx-focus-color: red;
+    -fx-opacity: 0.8;
+}
+.list-view:internal-focus {
+    -fx-border-color: null; 
+    -fx-focus-color: #0093ff;
+    -fx-opacity: 1.0;
 }
 
-.fxvk .key:pressed { 
-    -fx-background-color: #464646,
-                          linear-gradient(to bottom, #e8e8e8, #9c9c9c),
-                          linear-gradient(to bottom, #c3c3c3, #888888);
+.list-cell {
+    -fx-cell-size: 2.364em;
 }
-
-.fxvk .multi-char-key { 
-    -fx-font: bold 20px "Amble";
-}
-
-.fxvk .key .label { 
-    -fx-text-fill: #959595;
-    -fx-font: bold 14px "Amble";
-    -fx-alignment: TOP_RIGHT;
-}
-
-.fxvk .multi-char-key .label { 
-    -fx-font: bold 12px "Amble";
-}
-
-.fxvk .special-key { 
-    -fx-background-color: linear-gradient(to bottom, #676767, #404040),
-                          linear-gradient(to bottom, #808080, #3e3e3e),
-                          linear-gradient(to bottom, #686868, #3e3e3e);
-    -fx-background-insets: 0, 1, 2;
-    -fx-font: bold 22px "Amble";
-    -fx-text-fill: white;
-    -fx-padding: 3 0 5 0;
-}
-
-.fxvk .special-key:disabled { 
-    -fx-background-color: #707070;
-}
-
-/* The url based images don't load properly. Using workaround in FXVKSkin instead.
-.fxvk #shift-key {
-    -fx-graphic: url("fxvk-shift-button.png");
-}
-
-.fxvk #capslock-key {
-    -fx-graphic: url("fxvk-capslock-button.png");
-}
-
-.fxvk #shift-key:disabled {
-    -fx-graphic: null;
-}
-
-.fxvk #backspace-key {
-    -fx-graphic: url("fxvk-backspace-button.png");
-}
-
-.fxvk #enter-key {
-    -fx-graphic: url("fxvk-enter-button.png");
-}
-*/
 
 
 /*******************************************************************************
@@ -312,17 +311,6 @@
     -fx-opacity: 1.0;
 }
 
-.list-view:external-focus {
-    -fx-border-color: red; 
-    -fx-focus-color: red;
-    -fx-opacity: 0.8;
-}
-.list-view:internal-focus {
-    -fx-border-color: null; 
-    -fx-focus-color: #0093ff;
-    -fx-opacity: 1.0;
-}
-
 .table-view:external-focus {
     -fx-border-color: red; 
     -fx-focus-color: red;
@@ -334,13 +322,4 @@
     -fx-opacity: 1.0;
 }
 
-.combo-box:external-focus {
-    -fx-border-color: red; 
-    -fx-focus-color: red;
-    -fx-opacity: 0.8;
-}
-.combo-box:internal-focus {
-    -fx-border-color: null; 
-    -fx-focus-color: #0093ff;
-    -fx-opacity: 1.0;
-}
+

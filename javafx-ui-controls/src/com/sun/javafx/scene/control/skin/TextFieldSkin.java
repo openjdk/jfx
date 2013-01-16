@@ -137,7 +137,7 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
         textField.caretPositionProperty().addListener(new ChangeListener<Number>() {
             @Override
             public void changed(ObservableValue<? extends Number> observable, Number oldValue, Number newValue) {
-                if (getWidth() > 0) {
+                if (textField.getWidth() > 0) {
                     updateTextNodeCaretPos(textField.getCaretPosition());
                     if (!isForwardBias()) {
                         setForwardBias(true);
@@ -149,7 +149,7 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
 
         forwardBiasProperty().addListener(new InvalidationListener() {
             @Override public void invalidated(Observable observable) {
-                if (getWidth() > 0) {
+                if (textField.getWidth() > 0) {
                     updateTextNodeCaretPos(textField.getCaretPosition());
                     updateCaretOff();
                 }
@@ -248,7 +248,7 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
                 // I do both so that any cached values for prefWidth/height are cleared.
                 // The problem is that the skin is unmanaged and so calling request layout
                 // doesn't walk up the tree all the way. I think....
-                requestLayout();
+                textField.requestLayout();
                 getSkinnable().requestLayout();
             }
         });
@@ -258,10 +258,10 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
 
         textField.alignmentProperty().addListener(new InvalidationListener() {
             @Override public void invalidated(Observable observable) {
-                if (getWidth() > 0) {
+                if (textField.getWidth() > 0) {
                     updateTextPos();
                     updateCaretOff();
-                    requestLayout();
+                    textField.requestLayout();
                 }
             }
         });
@@ -301,7 +301,7 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
         usePromptText.addListener(new InvalidationListener() {
             @Override public void invalidated(Observable observable) {
                 createPromptNode();
-                requestLayout();
+                textField.requestLayout();
             }
         });
 
@@ -452,7 +452,6 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
 
     @Override protected void handleControlPropertyChanged(String propertyReference) {
         if ("prefColumnCount".equals(propertyReference)) {
-            requestLayout();
             getSkinnable().requestLayout();
         } else {
             super.handleControlPropertyChanged(propertyReference);
@@ -466,7 +465,7 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
         double characterWidth = fontMetrics.get().computeStringWidth("W");
 
         int columnCount = textField.getPrefColumnCount();
-        Insets padding = getInsets();
+        Insets padding = textField.getInsets();
 
         return columnCount * characterWidth + (padding.getLeft() + padding.getRight());
     }
@@ -474,7 +473,7 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
     @Override
     protected double computePrefHeight(double width) {
         double lineHeight = fontMetrics.get().getLineHeight();
-        Insets padding = getInsets();
+        Insets padding = getSkinnable().getInsets();
 
         return lineHeight + (padding.getTop() + padding.getBottom());
     }
@@ -486,7 +485,7 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
     @Override
     public double getBaselineOffset() {
         FontMetrics fontMetrics = super.fontMetrics.get();
-        return getInsets().getTop() + fontMetrics.getAscent();
+        return getSkinnable().getInsets().getTop() + fontMetrics.getAscent();
     }
 
     private void updateTextPos() {
@@ -734,6 +733,9 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
     @Override protected void layoutChildren(final double x, final double y,
                                             final double w, final double h) {
         super.layoutChildren(x, y, w, h);
+        
+        final TextField textField = getSkinnable();
+        final Insets padding = textField.getInsets();
 
         if (textNode != null) {
             double textY;
@@ -757,17 +759,15 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
                 promptNode.setY(textY);
             }
 
-            if (getWidth() > 0) {
+            if (getSkinnable().getWidth() > 0) {
                 updateTextPos();
                 updateCaretOff();
             }
         }
 
         if (PlatformUtil.isEmbedded()) {
-            handleGroup.setLayoutX(getSkinnable().getInsets().getLeft());
-            handleGroup.setLayoutY(getSkinnable().getInsets().getTop());
-
-            TextField textField = getSkinnable();
+            handleGroup.setLayoutX(padding.getLeft());
+            handleGroup.setLayoutY(padding.getTop());
 
             // Resize handles for caret and anchor.
 //            IndexRange selection = textField.getSelection();
@@ -794,7 +794,7 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
     @Override public Point2D getMenuPosition() {
         Point2D p = super.getMenuPosition();
         if (p != null) {
-            Insets padding = getInsets();
+            Insets padding = getSkinnable().getInsets();
             p = new Point2D(Math.max(0, p.getX() - textNode.getLayoutX() - padding.getLeft() + textTranslateX.get()),
                             Math.max(0, p.getY() - textNode.getLayoutY() - padding.getTop()));
         }

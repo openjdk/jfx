@@ -92,7 +92,6 @@ import com.sun.javafx.css.CssMetaData;
 import com.sun.javafx.cursor.CursorFrame;
 import com.sun.javafx.event.EventQueue;
 import com.sun.javafx.geom.PickRay;
-import com.sun.javafx.geom.transform.Affine2D;
 import com.sun.javafx.geom.transform.BaseTransform;
 import sun.util.logging.PlatformLogger;
 import com.sun.javafx.perf.PerformanceTracker;
@@ -325,7 +324,7 @@ public class Scene implements EventTarget {
                     return parent.getChildren(); //was impl_getChildren
                 }
                 public Object renderToImage(Scene scene, Object platformImage) {
-                    return scene.renderToImage(platformImage);
+                    return scene.snapshot(null).impl_getPlatformImage();
                 }
             });
             Toolkit.setSceneAccessor(new Toolkit.SceneAccessor() {
@@ -1029,51 +1028,6 @@ public class Scene implements EventTarget {
         return root;
     }
 
-    /**
-     * This method is superseded by {@link #snapshot(javafx.scene.image.WritableImage)}
-     *
-     * WARNING: This method is not part of the public API and is
-     * subject to change!  It is intended for use by the designer tool only.
-     *
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    // SB-dependency: RT-21222 has been filed to track this
-    // TODO: need to ensure that both SceneBuilder and JDevloper have migrated
-    // to new 2.2 public API before we remove this.
-    @Deprecated
-    public Object renderToImage(Object platformImage) {
-        return renderToImage(platformImage, 1.0f);
-    }
-
-    /**
-     * Renders this {@code Scene} to the given platform-specific image
-     * (e.g. a {@code BufferedImage} in the case of the Swing profile)
-     * using the specified scaling factor.
-     * If {@code platformImage} is null, a new platform-specific image
-     * is returned.
-     * If the contents of the scene have not changed since the last time
-     * this method was called, this method returns null.
-     *
-     * WARNING: This method is not part of the public API and is
-     * subject to change!  It is intended for use by the designer tool only.
-     *
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    public Object renderToImage(Object platformImage, float scale) {
-        if (!paused) {
-            Toolkit.getToolkit().checkFxUserThread();
-        }
-
-        // NOTE: that we no longer use the passed in platform image. Since this
-        // API is deprecated and will be removed in 3.0 this is not a concern.
-        // Also, we used to return a TK image loader and now we return
-        // the actual TK PlatformImage.
-        return doSnapshot(null, scale).impl_getPlatformImage();
-    }
-
     private void doLayoutPassWithoutPulse(int maxAttempts) {
         for (int i = 0; dirtyLayoutRoots.size() > 0 && i != maxAttempts; ++i) {
             layoutDirtyRoots();
@@ -1165,7 +1119,7 @@ public class Scene implements EventTarget {
     /**
      * Implementation method for snapshot
      */
-    private WritableImage doSnapshot(WritableImage img, float scale) {
+    private WritableImage doSnapshot(WritableImage img) {
         // TODO: no need to do CSS, layout or sync in the deferred case,
         // if this scene is attached to a visible stage
         doCSSLayoutSyncForSnapshot(getRoot());
@@ -1173,13 +1127,6 @@ public class Scene implements EventTarget {
         double w = getWidth();
         double h = getHeight();
         BaseTransform transform = BaseTransform.IDENTITY_TRANSFORM;
-        if (scale != 1.0f) {
-            Affine2D tx = new Affine2D();
-            tx.scale(scale, scale);
-            transform = tx;
-            w *= scale;
-            h *= scale;
-        }
 
         return doSnapshot(this, 0, 0, w, h,
                 getRoot(), transform, isDepthBuffer(),
@@ -1268,7 +1215,7 @@ public class Scene implements EventTarget {
             Toolkit.getToolkit().checkFxUserThread();
         }
 
-        return  doSnapshot(image, 1.0f);
+        return doSnapshot(image);
     }
 
     /**
@@ -1330,7 +1277,7 @@ public class Scene implements EventTarget {
         // any of them have been rendered.
         final Runnable snapshotRunnable = new Runnable() {
             @Override public void run() {
-                WritableImage img = doSnapshot(theImage, 1.0f);
+                WritableImage img = doSnapshot(theImage);
 //                System.err.println("Calling snapshot callback");
                 SnapshotResult result = new SnapshotResult(img, Scene.this, null);
                 try {

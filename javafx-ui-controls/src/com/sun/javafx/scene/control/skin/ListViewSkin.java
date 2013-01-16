@@ -140,7 +140,7 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListViewB
             flow.recreateCells();
         } else if ("PARENT".equals(p)) {
             if (getSkinnable().getParent() != null && getSkinnable().isVisible()) {
-                requestLayout();
+                getSkinnable().requestLayout();
             }
         } else if ("FOCUS_TRAVERSABLE".equals(p)) {
             flow.setFocusTraversable(getSkinnable().isFocusTraversable());
@@ -151,7 +151,7 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListViewB
     private final ListChangeListener listViewItemsListener = new ListChangeListener() {
         @Override public void onChanged(Change c) {
             itemCountDirty = true;
-            requestLayout();
+            getSkinnable().requestLayout();
         }
     };
     
@@ -170,7 +170,7 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListViewB
         }
 
         itemCountDirty = true;
-        requestLayout();
+        getSkinnable().requestLayout();
     }
     
     private int itemCount = -1;
