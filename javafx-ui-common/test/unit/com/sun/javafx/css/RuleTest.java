@@ -150,8 +150,8 @@ public class RuleTest {
         System.out.println("applies");
         Node node = null;
         Rule instance = null;
-        boolean expResult = false;
-        boolean result = instance.applies(node, null);
+        long expResult = 0l;
+        long result = instance.applies(node, null);
         assertEquals(expResult, result);
         fail("The test case is a prototype.");
     }
