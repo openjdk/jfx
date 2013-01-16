@@ -51,7 +51,6 @@ import javafx.scene.control.LabelBuilder;
 import javafx.scene.control.ListViewBuilder;
 import javafx.scene.control.MenuButtonBuilder;
 import javafx.scene.control.PasswordFieldBuilder;
-import javafx.scene.control.ProgressBar;
 import javafx.scene.control.ProgressBarBuilder;
 import javafx.scene.control.ProgressIndicator;
 import javafx.scene.control.ProgressIndicatorBuilder;
@@ -81,10 +80,13 @@ import javafx.scene.layout.HBoxBuilder;
 import javafx.scene.layout.VBox;
 import javafx.scene.layout.VBoxBuilder;
 import javafx.scene.paint.Color;
+import javafx.scene.web.HTMLEditor;
+import javafx.scene.web.HTMLEditorBuilder;
 import static modena.SamplePageHelpers.*;
 import static modena.SamplePageTableHelper.*;
 import static modena.SamplePageTreeHelper.*;
 import static modena.SamplePageTreeTableHelper.*;
+import static modena.SamplePageChartHelper.*;
 
 /**
  * Page showing every control in every state
@@ -160,7 +162,6 @@ public class SamplePage extends GridPane {
         newSection("Nice Colors:", 
                 ButtonBuilder.create().text("Button").style("-fx-base: #f3622d;").build(),
                 ButtonBuilder.create().text("Button").style("-fx-base: #fba71b;").build(),
-                ButtonBuilder.create().text("Button").style("-fx-base: #57b757;").build(),
                 ButtonBuilder.create().text("Button").style("-fx-base: #57b757;").build(),
                 ButtonBuilder.create().text("Button").style("-fx-base: #41a9c9;").build(),
                 ButtonBuilder.create().text("Button").style("-fx-base: #888;").build());
@@ -415,6 +416,14 @@ public class SamplePage extends GridPane {
                 withState(TextAreaBuilder.create().text("Focused").prefColumnCount(7).prefRowCount(2).build(), "focused"),
                 withState(TextAreaBuilder.create().text("Disabled").prefColumnCount(8).prefRowCount(2).build(), "disabled")
                 );
+        newSection(      
+                "HTMLEditor:", 
+                HTMLEditorBuilder.create().htmlText("Hello <b>Bold</b> Text").prefWidth(650).prefHeight(120).build()
+                );
+        newSection(      
+                "HTMLEditor\nFocused:", 
+                withState(HTMLEditorBuilder.create().htmlText("<i>Focused</i>").prefWidth(650).prefHeight(120).build(), "focused")
+                );
         newDetailedSection(
                 new String[] {"ToolBar (H):", "normal", "overflow", "disabled"}, 
                 createToolBar(false,false),
@@ -557,6 +566,54 @@ public class SamplePage extends GridPane {
                     ButtonBuilder.create().text("me too").tooltip(new Tooltip("This is a simple Tooltip\nwith more than one line.")).build(),
                     ButtonBuilder.create().text("or me").tooltip(TooltipBuilder.create().text("This is a simple Tooltip\nwith graphic.").graphic(createGraphic()).build()).build()
                 ).build()
+                );
+        newSection(
+                "AreaChart:", 
+                createAreaChart(false)
+                );
+        newSection(
+                "StackedAreaChart:", 
+                createAreaChart(true)
+                );
+        newSection(
+                "BarChart\nSimple:", 
+                createBarChart(false,true)
+                );
+        newSection(
+                "BarChart:", 
+                createBarChart(false, false)
+                );
+        newSection(
+                "BarChart\n(H, Simple):", 
+                createBarChart(true, true)
+                );
+        newSection(
+                "BarChart\n(H):", 
+                createBarChart(true, false)
+                );
+        newSection(
+                "StackedBarChart\nSimple:", 
+                createStackedBarChart(false,true)
+                );
+        newSection(
+                "StackedBarChart\n(H, Simple):", 
+                createStackedBarChart(true, true)
+                );
+        newSection(
+                "BubbleChart:", 
+                createBubbleChart()
+                );
+        newSection(
+                "LineChart:", 
+                createLineChart()
+                );
+        newSection(
+                "PieChar:", 
+                createPieChart()
+                );
+        newSection(
+                "ScatterChart:", 
+                createScatterChart()
                 );
     }
 }

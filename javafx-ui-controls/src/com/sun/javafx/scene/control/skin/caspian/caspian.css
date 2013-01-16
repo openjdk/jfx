@@ -3668,3 +3668,123 @@ Only the properties with values that are different from the TextBox are specifie
     -fx-text-fill: -fx-text-inner-color;
 }
 /** End of hover styles */
+
+/********************************************************************************
+ *                                                                              *
+ * HTMLEditor                                                                   *
+ *                                                                              *
+ ********************************************************************************/
+
+.html-editor {
+    -fx-border-width: 1;
+    -fx-border-style: solid;
+    -fx-padding: 0;
+    -fx-border-color: derive(-fx-base,-35%);
+}
+
+/* Each Toolbar is constructed of two stacked shapes */
+.html-editor > * > .top-toolbar {
+    -fx-background-color:
+        linear-gradient(to bottom, white 10%, derive(-fx-base, 50%) 90%),
+        linear-gradient(to bottom, derive(-fx-base, 65%) 0%, derive(-fx-base, 5%) 90%);
+    -fx-background-insets: 0, 1;
+    -fx-border-color: transparent transparent derive(-fx-base,-20%) transparent, transparent;
+    -fx-border-width: 1, 0;
+    -fx-padding: 0.333em 0.5em 0.333em 0.5em; /* 4 6 4 6;*/
+}
+
+.html-editor > * > .bottom-toolbar {
+    -fx-background-color:
+        linear-gradient(to bottom,  derive(-fx-base, 50%) 10%, derive(-fx-base, -60%) 90%),
+        linear-gradient(to bottom,  derive(-fx-base, 5%) 0%, derive(-fx-base, -15%) 90%);
+    -fx-background-insets: 0, 1;
+    -fx-border-color: transparent derive(-fx-base,50%) transparent derive(-fx-base,50%),
+    transparent transparent derive(-fx-base,-60%) transparent;
+    -fx-border-width: 1, 0;
+    -fx-padding: 0.166667em 0.5em 0.166667em 1.5em; /* 2 6 2 6;*/
+}
+
+/* Note: The Separator is constructed of a 1-pixel shape
+whose borders are styled.  Only the right border is specified
+with a color; the other three borders are transparent.*/
+
+/* Note: This first section of CSS (below) specifies the Separator’s color.
+Specifying the color here ensures the same color for both .top-toolbar
+and .bottom-toolbar Separators, as they will inherit the color. */
+
+.html-editor > * > * > .separator:vertical > .line{
+    -fx-border-style: solid;
+    -fx-background-color: null;
+    -fx-border-color: transparent derive(-fx-base,-35%) transparent transparent; /* #878787 */
+}
+
+/* Note: This next section of CSS (below) specifies the Separator’s length.
+The length of the Separator is determined by adding its -fx-padding values
+to the top and bottom -fx-padding values of the parent toolbar. */
+
+.html-editor > * > .top-toolbar > .separator {
+    -fx-padding: 1 0 1 0;
+}
+
+.html-editor > * > .bottom-toolbar:horizontal {
+    -fx-padding: 0.417em; /* 5px */
+}
+
+.html-editor > * > .bottom-toolbar > .separator {
+    -fx-padding:  1 2 1 2;
+}
+
+.html-editor > * > * > .button {
+    -fx-background-color: null;
+    -fx-background-insets: -1, 0, 1;
+    -fx-background-radius: 0.25em; /* 3 */
+    -fx-padding: 0.25em;  /* 3 */
+    -fx-alignment: CENTER;
+    -fx-graphic-vpos: CENTER;
+}
+
+.html-editor > * > .top-toolbar > .button:hover {
+    -fx-background-color: transparent, derive(-fx-base,-10%), derive(-fx-base,65%);
+}
+
+.html-editor > * > .bottom-toolbar > .button:hover {
+    -fx-background-color: transparent, derive(-fx-base,-25%), derive(-fx-base,15%);
+}
+
+.html-editor > * > * > .toggle-button {
+    -fx-background-color: transparent;
+    -fx-background-insets: -1, 0, 1;
+    -fx-background-radius: 3;
+    -fx-padding: 0.25em;  /* 3 */
+    -fx-alignment: CENTER;
+    -fx-graphic-vpos: CENTER;
+}
+
+.html-editor > * > .top-toolbar > .toggle-button:hover {
+    -fx-background-color: transparent, derive(-fx-base,-10%), derive(-fx-base,65%);
+}
+
+.html-editor > * > .bottom-toolbar > .toggle-button:hover {
+    -fx-background-color: transparent, derive(-fx-base,-25%), derive(-fx-base,15%);
+}
+
+.html-editor > * > .toggle-button:focused {
+    -fx-color: transparent;
+    -fx-background-color: -fx-focus-color, derive(-fx-base,-25%), derive(-fx-base,15%);
+    -fx-background-insets: -1.2, 0, 1;
+    -fx-background-radius: 3.2, 3, 3;
+}
+
+.html-editor > * > * > .toggle-button:selected {
+    -fx-background-color: transparent,
+    linear-gradient(to bottom,  derive(-fx-base, -70%) 10%, derive(-fx-base, -40%) 90%),
+    linear-gradient(to bottom,  derive(-fx-base, -40%) 0%, derive(-fx-base, -20%) 50%, derive(-fx-base, -10%) 98%, derive(-fx-base, -35%) 100%);
+}
+
+.html-editor > * > * > .font-menu-button {
+    -fx-background-radius: 5, 5, 4, 3;
+}
+
+.html-editor > * > * > .font-menu-button .label{
+    -fx-padding: 0.166667em 0.5em 0.25em 0.5em; /* 2 6 3 6 */
+}

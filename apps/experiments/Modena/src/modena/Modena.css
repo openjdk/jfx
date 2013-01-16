@@ -149,6 +149,16 @@ is being used to size a border should also be in pixels.
     /* The opacity level to use for the "disabled" pseudoclass.
      */
     -fx-disabled-opacity: 0.4;
+    
+    /* Chart Color Palette */
+    CHART_COLOR_1: #f3622d;
+    CHART_COLOR_2: #fba71b;
+    CHART_COLOR_3: #57b757;
+    CHART_COLOR_4: #41a9c9;
+    CHART_COLOR_5: #4258c9;
+    CHART_COLOR_6: #9a42c8;
+    CHART_COLOR_7: #c84164;
+    CHART_COLOR_8: #888888;
 
     /***************************************************************************
      *                                                                         *
@@ -172,12 +182,6 @@ is being used to size a border should also be in pixels.
      * TODO: should this be renamed to -fx-armed-base?
      */
     -fx-pressed-base: derive(-fx-base,-6%);
-
-    /* Used to specify the body color for focused objects.  By default, it's
-     * the same as -fx-base (i.e., the body color doesn't change when a control
-     * gets focus).
-     */
-    -fx-focused-base: -fx-base;
 
     /* The color to use for -fx-text-fill when text is to be painted on top of
      * a background filled with the -fx-background color.
@@ -340,7 +344,6 @@ is being used to size a border should also be in pixels.
     /* The colors to use in Pagination */
     -fx-page-bullet-border: #acacac;    
     -fx-page-indicator-hover-border: #accee5;
-    
 
     /***************************************************************************
      *                                                                         *
@@ -419,7 +422,6 @@ is being used to size a border should also be in pixels.
 .choice-box:focused,
 .color-picker.split-button:focused > .color-picker-label,
 .combo-box-base:focused {
-    /*-fx-color: -fx-focused-base; TODO do we want this? */
     -fx-background-color: -fx-faint-focus-color, -fx-focus-color, -fx-inner-border, -fx-body-color; 
     -fx-background-insets: -2, -0.3, 1, 2;
     -fx-background-radius: 7, 6, 4, 3;
@@ -517,7 +519,8 @@ is being used to size a border should also be in pixels.
 .list-view,
 .tree-view,
 .table-view, 
-.tree-table-view {
+.tree-table-view,
+.html-editor {
     -fx-background-color: -fx-box-border, -fx-control-inner-background;
     -fx-background-insets: 0, 1;
     -fx-padding: 1;
@@ -526,7 +529,8 @@ is being used to size a border should also be in pixels.
 .split-pane:focused,
 .list-view:focused,
 .tree-view:focused,
-.tree-table-view:focused {
+.tree-table-view:focused,
+.html-editor:focused {
     -fx-background-color: -fx-faint-focus-color, -fx-focus-color, -fx-control-inner-background; 
     -fx-background-insets: -2, -0.3, 1;
 }
@@ -790,7 +794,6 @@ is being used to size a border should also be in pixels.
     -fx-effect: dropshadow(two-pass-box , rgba(0, 0, 0, 0.1), 5, 0.0 , 0, 2);
 }
 .slider:focused .thumb {
-    -fx-color: -fx-focused-base;
     -fx-background-color:
         -fx-focus-color,
         derive(-fx-color,-36%),
@@ -976,7 +979,13 @@ is being used to size a border should also be in pixels.
     -fx-padding: 0.416667em;  5 
 }*/
 .progress-bar > .bar {
-    -fx-background-color: -fx-accent;
+    /*-fx-background-color: -fx-accent;*/
+    -fx-background-color: linear-gradient(to bottom, 
+            derive(-fx-accent, -7%),
+            derive(-fx-accent, 0%),
+            derive(-fx-accent, -3%),
+            derive(-fx-accent, -9%)
+          );
     -fx-background-insets: 3 3 4 3;
     -fx-background-radius: 0.25em; /* 3px */
     -fx-padding: 1em; /* 12 */
@@ -2565,7 +2574,7 @@ is being used to size a border should also be in pixels.
     -fx-background-color: rgba(30,30,30,0.8);
     -fx-background-radius: 6px;
     -fx-background-insets: 0;
-    -fx-padding: 0.666667em; /* 8 */
+    -fx-padding: 0.833333em; /* 10px */
     -fx-effect: dropshadow( three-pass-box , rgba(0,0,0,0.5) , 10, 0.0 , 0 , 0 );
     -fx-font-size: 0.85em;
 }
@@ -2586,7 +2595,8 @@ is being used to size a border should also be in pixels.
     -fx-font-size: 1.4em;
 }
 .chart-legend {
-   -fx-background-color:  #cccccc, #eeeeee;
+   -fx-background-color: linear-gradient(to bottom, derive(-fx-background, -10%), derive(-fx-background, -5%)),
+        linear-gradient(from 0px 0px to 0px 5px, derive(-fx-background, -5%), derive(-fx-background, 20%));
    -fx-background-insets: 0,1;
    -fx-background-radius: 6,5;
    -fx-padding: 6px;
@@ -2601,7 +2611,7 @@ is being used to size a border should also be in pixels.
 .axis {
     AXIS_COLOR: derive(-fx-background,-20%);
     -fx-tick-label-font-size: 0.833333em; /* 10px */
-    -fx-tick-label-fill: AXIS_COLOR;
+    -fx-tick-label-fill: derive(-fx-text-background-color, 30%);
 }
 .axis:top {
     -fx-border-color: transparent transparent AXIS_COLOR transparent;
@@ -2627,30 +2637,24 @@ is being used to size a border should also be in pixels.
  *                                                                             *
  ******************************************************************************/
 
-.chart-plot-background {
-    -fx-background-color: #f5f5f5;
-}
 .chart-vertical-grid-lines {
-    -fx-stroke: #dddddd;
+    -fx-stroke: derive(-fx-background,-10%);
+    -fx-stroke-dash-array: 0.25em, 0.25em;
 }
 .chart-horizontal-grid-lines {
-    -fx-stroke: #dddddd;
+    -fx-stroke: derive(-fx-background,-10%);
 }
 .chart-alternative-column-fill {
-    -fx-fill: #eeeeee;
-    -fx-stroke: transparent;
-    -fx-stroke-width: 0;
+    -fx-fill: null;
+    -fx-stroke: null;
 }
 .chart-alternative-row-fill {
-    -fx-fill: #eeeeee;
-    -fx-stroke: transparent;
-    -fx-stroke-width: 0;
+    -fx-fill: null;
+    -fx-stroke: null;
 }
-.chart-vertical-zero-line {
-    -fx-stroke: #999999;
-}
+.chart-vertical-zero-line,
 .chart-horizontal-zero-line {
-    -fx-stroke: #999999;
+    -fx-stroke: derive(-fx-text-background-color, 40%);
 }
 
 /*******************************************************************************
@@ -2660,45 +2664,45 @@ is being used to size a border should also be in pixels.
  ******************************************************************************/
 
 .chart-symbol { /* solid circle */
-    -fx-background-color: #f9d900;
+    -fx-background-color: CHART_COLOR_1;
     -fx-background-radius: 5px;
     -fx-padding: 5px;
 }
 .default-color1.chart-symbol { /* solid square */
-    -fx-background-color: #a9e200;
+    -fx-background-color: CHART_COLOR_2;
     -fx-background-radius: 0;
 }
 .default-color2.chart-symbol { /* solid diamond */
-    -fx-background-color: #22bad9;
+    -fx-background-color: CHART_COLOR_3;
     -fx-background-radius: 0;
     -fx-padding: 7px 5px 7px 5px;
     -fx-shape: "M5,0 L10,9 L5,18 L0,9 Z";
 }
 .default-color3.chart-symbol { /* cross */
-    -fx-background-color: #0181e2;
+    -fx-background-color: CHART_COLOR_4;
     -fx-background-radius: 0;
     -fx-background-insets: 0;
     -fx-shape: "M2,0 L5,4 L8,0 L10,0 L10,2 L6,5 L10,8 L10,10 L8,10 L5,6 L2,10 L0,10 L0,8 L4,5 L0,2 L0,0 Z";
 }
 .default-color4.chart-symbol { /* solid triangle */
-    -fx-background-color: #2f357f;
+    -fx-background-color: CHART_COLOR_5;
     -fx-background-radius: 0;
     -fx-background-insets: 0;
     -fx-shape: "M5,0 L10,8 L0,8 Z";
 }
 .default-color5.chart-symbol { /* hollow circle */
-    -fx-background-color: #860061, white;
+    -fx-background-color: CHART_COLOR_6, white;
     -fx-background-insets: 0, 2;
     -fx-background-radius: 5px;
     -fx-padding: 5px;
 }
 .default-color6.chart-symbol { /* hollow square */
-    -fx-background-color: #c62b00, white;
+    -fx-background-color: CHART_COLOR_7, white;
     -fx-background-insets: 0, 2;
     -fx-background-radius: 0;
 }
 .default-color7.chart-symbol { /* hollow diamond */
-    -fx-background-color: #ff5700, white;
+    -fx-background-color: CHART_COLOR_8, white;
     -fx-background-radius: 0;
     -fx-background-insets: 0, 2.5;
     -fx-padding: 7px 5px 7px 5px;
@@ -2719,25 +2723,25 @@ is being used to size a border should also be in pixels.
 }
 .chart-series-line {
     -fx-stroke: #f9d900;
-    -fx-stroke-width: 4px;
-    -fx-effect: dropshadow( two-pass-box , rgba(0,0,0,0.3) , 8, 0.0 , 0 , 3 );
+    -fx-stroke-width: 3px;
+    /*-fx-effect: dropshadow( two-pass-box , rgba(0,0,0,0.3) , 8, 0.0 , 0 , 3 );*/
 }
-.default-color0.chart-line-symbol { -fx-background-color: #f9d900, white; }
-.default-color1.chart-line-symbol { -fx-background-color: #a9e200, white; }
-.default-color2.chart-line-symbol { -fx-background-color: #22bad9, white; }
-.default-color3.chart-line-symbol { -fx-background-color: #0181e2, white; }
-.default-color4.chart-line-symbol { -fx-background-color: #2f357f, white; }
-.default-color5.chart-line-symbol { -fx-background-color: #860061, white; }
-.default-color6.chart-line-symbol { -fx-background-color: #c62b00, white; }
-.default-color7.chart-line-symbol { -fx-background-color: #ff5700, white; }
-.default-color0.chart-series-line { -fx-stroke: #f9d900; }
-.default-color1.chart-series-line { -fx-stroke: #a9e200; }
-.default-color2.chart-series-line { -fx-stroke: #22bad9; }
-.default-color3.chart-series-line { -fx-stroke: #0181e2; }
-.default-color4.chart-series-line { -fx-stroke: #2f357f; }
-.default-color5.chart-series-line { -fx-stroke: #860061; }
-.default-color6.chart-series-line { -fx-stroke: #c62b00; }
-.default-color7.chart-series-line { -fx-stroke: #ff5700; }
+.default-color0.chart-line-symbol { -fx-background-color: CHART_COLOR_1, white; }
+.default-color1.chart-line-symbol { -fx-background-color: CHART_COLOR_2, white; }
+.default-color2.chart-line-symbol { -fx-background-color: CHART_COLOR_3, white; }
+.default-color3.chart-line-symbol { -fx-background-color: CHART_COLOR_4, white; }
+.default-color4.chart-line-symbol { -fx-background-color: CHART_COLOR_5, white; }
+.default-color5.chart-line-symbol { -fx-background-color: CHART_COLOR_6, white; }
+.default-color6.chart-line-symbol { -fx-background-color: CHART_COLOR_7, white; }
+.default-color7.chart-line-symbol { -fx-background-color: CHART_COLOR_8, white; }
+.default-color0.chart-series-line { -fx-stroke: CHART_COLOR_1; }
+.default-color1.chart-series-line { -fx-stroke: CHART_COLOR_2; }
+.default-color2.chart-series-line { -fx-stroke: CHART_COLOR_3; }
+.default-color3.chart-series-line { -fx-stroke: CHART_COLOR_4; }
+.default-color4.chart-series-line { -fx-stroke: CHART_COLOR_5; }
+.default-color5.chart-series-line { -fx-stroke: CHART_COLOR_6; }
+.default-color6.chart-series-line { -fx-stroke: CHART_COLOR_7; }
+.default-color7.chart-series-line { -fx-stroke: CHART_COLOR_8; }
 
 /*******************************************************************************
  *                                                                             *
@@ -2751,38 +2755,38 @@ is being used to size a border should also be in pixels.
     -fx-background-radius: 4px; /* makes sure this remains circular */
     -fx-padding: 3px;
 }
-.default-color0.chart-area-symbol { -fx-background-color: #f9d900, white; }
-.default-color1.chart-area-symbol { -fx-background-color: #a9e200, white; }
-.default-color2.chart-area-symbol { -fx-background-color: #22bad9, white; }
-.default-color3.chart-area-symbol { -fx-background-color: #0181e2, white; }
-.default-color4.chart-area-symbol { -fx-background-color: #2f357f, white; }
-.default-color5.chart-area-symbol { -fx-background-color: #860061, white; }
-.default-color6.chart-area-symbol { -fx-background-color: #c62b00, white; }
-.default-color7.chart-area-symbol { -fx-background-color: #ff5700, white; }
+.default-color0.chart-area-symbol { -fx-background-color: CHART_COLOR_1, white; }
+.default-color1.chart-area-symbol { -fx-background-color: CHART_COLOR_2, white; }
+.default-color2.chart-area-symbol { -fx-background-color: CHART_COLOR_3, white; }
+.default-color3.chart-area-symbol { -fx-background-color: CHART_COLOR_4, white; }
+.default-color4.chart-area-symbol { -fx-background-color: CHART_COLOR_5, white; }
+.default-color5.chart-area-symbol { -fx-background-color: CHART_COLOR_6, white; }
+.default-color6.chart-area-symbol { -fx-background-color: CHART_COLOR_7, white; }
+.default-color7.chart-area-symbol { -fx-background-color: CHART_COLOR_8, white; }
 .chart-series-area-line {
     -fx-stroke: #f9d900;
     -fx-stroke-width: 1px;
 }
-.default-color0.chart-series-area-line { -fx-stroke: #c2a902; }
-.default-color1.chart-series-area-line { -fx-stroke: #88b501; }
-.default-color2.chart-series-area-line { -fx-stroke: #22bad9; }
-.default-color3.chart-series-area-line { -fx-stroke: #0181e2; }
-.default-color4.chart-series-area-line { -fx-stroke: #2f357f; }
-.default-color5.chart-series-area-line { -fx-stroke: #860061; }
-.default-color6.chart-series-area-line { -fx-stroke: #c62b00; }
-.default-color7.chart-series-area-line { -fx-stroke: #ff5700; }
+.default-color0.chart-series-area-line { -fx-stroke: CHART_COLOR_1; }
+.default-color1.chart-series-area-line { -fx-stroke: CHART_COLOR_2; }
+.default-color2.chart-series-area-line { -fx-stroke: CHART_COLOR_3; }
+.default-color3.chart-series-area-line { -fx-stroke: CHART_COLOR_4; }
+.default-color4.chart-series-area-line { -fx-stroke: CHART_COLOR_5; }
+.default-color5.chart-series-area-line { -fx-stroke: CHART_COLOR_6; }
+.default-color6.chart-series-area-line { -fx-stroke: CHART_COLOR_7; }
+.default-color7.chart-series-area-line { -fx-stroke: CHART_COLOR_8; }
 .chart-series-area-fill {
     -fx-stroke: null;
     -fx-fill: #f9d90044;
 }
-.default-color0.chart-series-area-fill { -fx-fill: #f9d90044; }
-.default-color1.chart-series-area-fill { -fx-fill: #a9e20044; }
-.default-color2.chart-series-area-fill { -fx-fill: #22bad944; }
-.default-color3.chart-series-area-fill { -fx-fill: #0181e244; }
-.default-color4.chart-series-area-fill { -fx-fill: #2f357f44; }
-.default-color5.chart-series-area-fill { -fx-fill: #86006144; }
-.default-color6.chart-series-area-fill { -fx-fill: #c62b0044; }
-.default-color7.chart-series-area-fill { -fx-fill: #ff570044; }
+.default-color0.chart-series-area-fill { -fx-fill: CHART_COLOR_1; -fx-opacity: 0.2; }
+.default-color1.chart-series-area-fill { -fx-fill: CHART_COLOR_2; -fx-opacity: 0.2; }
+.default-color2.chart-series-area-fill { -fx-fill: CHART_COLOR_3; -fx-opacity: 0.2; }
+.default-color3.chart-series-area-fill { -fx-fill: CHART_COLOR_4; -fx-opacity: 0.2; }
+.default-color4.chart-series-area-fill { -fx-fill: CHART_COLOR_5; -fx-opacity: 0.2; }
+.default-color5.chart-series-area-fill { -fx-fill: CHART_COLOR_6; -fx-opacity: 0.2; }
+.default-color6.chart-series-area-fill { -fx-fill: CHART_COLOR_7; -fx-opacity: 0.2; }
+.default-color7.chart-series-area-fill { -fx-fill: CHART_COLOR_8; -fx-opacity: 0.2; }
 .area-legend-symbol {
     -fx-padding: 6px;
     -fx-background-radius: 6px; /* makes sure this remains circular */
@@ -2803,14 +2807,14 @@ is being used to size a border should also be in pixels.
     -fx-bubble-fill: #f9d900;
     -fx-background-color: radial-gradient(center 50% 50%, radius 80%, derive(-fx-bubble-fill,20%), derive(-fx-bubble-fill,-30%));
 }
-.default-color0.chart-bubble { -fx-bubble-fill: #f9d900aa; }
-.default-color1.chart-bubble { -fx-bubble-fill: #a9e200aa; }
-.default-color2.chart-bubble { -fx-bubble-fill: #22bad9aa; }
-.default-color3.chart-bubble { -fx-bubble-fill: #0181e2aa; }
-.default-color4.chart-bubble { -fx-bubble-fill: #2f357faa; }
-.default-color5.chart-bubble { -fx-bubble-fill: #860061aa; }
-.default-color6.chart-bubble { -fx-bubble-fill: #c62b00aa; }
-.default-color7.chart-bubble { -fx-bubble-fill: #ff5700aa; }
+.default-color0.chart-bubble { -fx-bubble-fill: CHART_COLOR_1; -fx-opacity: 0.7; }
+.default-color1.chart-bubble { -fx-bubble-fill: CHART_COLOR_2; -fx-opacity: 0.7; }
+.default-color2.chart-bubble { -fx-bubble-fill: CHART_COLOR_3; -fx-opacity: 0.7; }
+.default-color3.chart-bubble { -fx-bubble-fill: CHART_COLOR_4; -fx-opacity: 0.7; }
+.default-color4.chart-bubble { -fx-bubble-fill: CHART_COLOR_5; -fx-opacity: 0.7; }
+.default-color5.chart-bubble { -fx-bubble-fill: CHART_COLOR_6; -fx-opacity: 0.7; }
+.default-color6.chart-bubble { -fx-bubble-fill: CHART_COLOR_7; -fx-opacity: 0.7; }
+.default-color7.chart-bubble { -fx-bubble-fill: CHART_COLOR_8; -fx-opacity: 0.7; }
 
 /*******************************************************************************
  *                                                                             *
@@ -2819,41 +2823,52 @@ is being used to size a border should also be in pixels.
  ******************************************************************************/
 
 /* TODO flip gradient vertical for negative bars */
+/*.chart-bar {
+    -fx-bar-fill: #22bad9;
+    -fx-background-color:   derive(-fx-bar-fill,-30%),
+                            linear-gradient(to bottom, derive(-fx-bar-fill,40%), derive(-fx-bar-fill,10%)),
+                            linear-gradient(to bottom, derive(-fx-bar-fill,10%) ,derive(-fx-bar-fill,-6%));
+    -fx-background-insets: 0,1 1 0 1,2 2 1 2;
+}
+.chart-bar.negative {
+    -fx-background-color:   derive(-fx-bar-fill,-30%),
+                            linear-gradient(to top, derive(-fx-bar-fill,40%), derive(-fx-bar-fill,10%)),
+                            linear-gradient(to top, derive(-fx-bar-fill,10%) ,derive(-fx-bar-fill,-6%));
+    -fx-background-insets: 1 0 0 0,1,2;
+}*/
 .chart-bar {
     -fx-bar-fill: #22bad9;
-    -fx-background-color: linear-gradient(derive(-fx-bar-fill,-30%), derive(-fx-bar-fill,-40%)),
-                          linear-gradient(derive(-fx-bar-fill,80%), derive(-fx-bar-fill, 0%)),
-                          linear-gradient(derive(-fx-bar-fill,30%), derive(-fx-bar-fill,-10%));
-    -fx-background-insets: 0,1,2;
-    -fx-background-radius: 5 5 0 0, 4 4 0 0, 3 3 0 0;
+    -fx-background-color:   linear-gradient(to right, 
+                                derive(-fx-bar-fill, -7%),
+                                derive(-fx-bar-fill, 0%),
+                                derive(-fx-bar-fill, -3%),
+                                derive(-fx-bar-fill, -9%)
+                              );
+    -fx-background-insets: 0;
 }
-
-.negative.chart-bar {
-   -fx-background-color: linear-gradient(to top, derive(-fx-bar-fill,-30%), derive(-fx-bar-fill,-40%)),
-                          linear-gradient(to top, derive(-fx-bar-fill, 80%), derive(-fx-bar-fill,0%)),
-                          linear-gradient(to top, derive(-fx-bar-fill,30%), derive(-fx-bar-fill,-10%));
-   -fx-background-radius: 0 0 5 5, 0 0 4 4, 0 0 3 3;
+.chart-bar.negative {
+    -fx-background-insets: 1 0 0 0;
 }
-.bar-chart:horizontal .chart-bar, .stacked-bar-chart:horizontal .chart-bar {
-    -fx-background-color: linear-gradient(to left, derive(-fx-bar-fill,-30%), derive(-fx-bar-fill,-40%)),
-                          linear-gradient(to left, derive(-fx-bar-fill,80%), derive(-fx-bar-fill, 0%)),
-                          linear-gradient(to left, derive(-fx-bar-fill,30%), derive(-fx-bar-fill,-10%));
-    -fx-background-radius: 0 5 5 0, 0 4 4 0, 0 3 3 0;
+.bar-chart:horizontal .chart-bar {
+    -fx-background-insets: 0 0 0 1;
 }
-.bar-chart:horizontal .negative.chart-bar, .stacked-bar-chart:horizontal .negative.chart-bar {
-    -fx-background-color: linear-gradient(to right, derive(-fx-bar-fill,-30%), derive(-fx-bar-fill,-40%)),
-                          linear-gradient(to right, derive(-fx-bar-fill, 80%), derive(-fx-bar-fill, 0%)),
-                          linear-gradient(to right, derive(-fx-bar-fill,30%), derive(-fx-bar-fill,-10%));
-    -fx-background-radius: 5 0 0 5, 4 0 0 4, 3 0 0 3;
+.bar-chart:horizontal .chart-bar, 
+.stacked-bar-chart:horizontal .chart-bar {
+    -fx-background-color:   linear-gradient(to bottom, 
+                                derive(-fx-bar-fill, -7%),
+                                derive(-fx-bar-fill, 0%),
+                                derive(-fx-bar-fill, -3%),
+                                derive(-fx-bar-fill, -9%)
+                              );
 }
-.default-color0.chart-bar { -fx-bar-fill: #f9d900; }
-.default-color1.chart-bar { -fx-bar-fill: #a9e200; }
-.default-color2.chart-bar { -fx-bar-fill: #22bad9; }
-.default-color3.chart-bar { -fx-bar-fill: #0181e2; }
-.default-color4.chart-bar { -fx-bar-fill: #2f357f; }
-.default-color5.chart-bar { -fx-bar-fill: #860061; }
-.default-color6.chart-bar { -fx-bar-fill: #c62b00; }
-.default-color7.chart-bar { -fx-bar-fill: #ff5700; }
+.default-color0.chart-bar { -fx-bar-fill: CHART_COLOR_1; }
+.default-color1.chart-bar { -fx-bar-fill: CHART_COLOR_2; }
+.default-color2.chart-bar { -fx-bar-fill: CHART_COLOR_3; }
+.default-color3.chart-bar { -fx-bar-fill: CHART_COLOR_4; }
+.default-color4.chart-bar { -fx-bar-fill: CHART_COLOR_5; }
+.default-color5.chart-bar { -fx-bar-fill: CHART_COLOR_6; }
+.default-color6.chart-bar { -fx-bar-fill: CHART_COLOR_7; }
+.default-color7.chart-bar { -fx-bar-fill: CHART_COLOR_8; }
 .bar-legend-symbol {
     -fx-padding: 8px;
 }
@@ -2866,25 +2881,24 @@ is being used to size a border should also be in pixels.
 
 .chart-pie {
     -fx-pie-color: #2f357f;
-    -fx-background-color: radial-gradient(radius 100%, derive(-fx-pie-color,55%), derive(-fx-pie-color,-20%));
-    -fx-background-insets: 0;
-    -fx-border-color: derive(-fx-pie-color,-30%);
+    -fx-background-color: radial-gradient(radius 100%, derive(-fx-pie-color,20%), derive(-fx-pie-color,-10%));
+    -fx-background-insets: 1;
+    -fx-border-color: -fx-background;
 }
 .chart-pie-label {
     -fx-padding: 3px;
 }
 .chart-pie-label-line {
-    -fx-stroke: #aaaaaa;
-    -fx-fill: #aaaaaa;
+    -fx-stroke: derive(-fx-background,-20%);
 }
-.default-color0.chart-pie { -fx-pie-color: #f9d900; }
-.default-color1.chart-pie { -fx-pie-color: #a9e200; }
-.default-color2.chart-pie { -fx-pie-color: #22bad9; }
-.default-color3.chart-pie { -fx-pie-color: #0181e2; }
-.default-color4.chart-pie { -fx-pie-color: #2f357f; }
-.default-color5.chart-pie { -fx-pie-color: #860061; }
-.default-color6.chart-pie { -fx-pie-color: #c62b00; }
-.default-color7.chart-pie { -fx-pie-color: #ff5700; }
+.default-color0.chart-pie { -fx-pie-color: CHART_COLOR_1; }
+.default-color1.chart-pie { -fx-pie-color: CHART_COLOR_2; }
+.default-color2.chart-pie { -fx-pie-color: CHART_COLOR_3; }
+.default-color3.chart-pie { -fx-pie-color: CHART_COLOR_4; }
+.default-color4.chart-pie { -fx-pie-color: CHART_COLOR_5; }
+.default-color5.chart-pie { -fx-pie-color: CHART_COLOR_6; }
+.default-color6.chart-pie { -fx-pie-color: CHART_COLOR_7; }
+.default-color7.chart-pie { -fx-pie-color: CHART_COLOR_8; }
 .negative.chart-pie {
     -fx-pie-color: transparent;
     -fx-background-color: white;
@@ -2894,7 +2908,6 @@ is being used to size a border should also be in pixels.
     -fx-padding: 8px;
     -fx-border-color: null;
 }
-
 
 /*******************************************************************************
  *                                                                             *
@@ -2962,3 +2975,5 @@ is being used to size a border should also be in pixels.
 .tree-table-view /*> column-header-background > nested-column-header >*/ .arrow { doh: true; }
 .tree-table-view .empty-table { doh: true; }
 .axis-minor-tick-mark { doh: true; }
+.chart-horizontal-zero-line { doh: true; }
+.stacked-bar-chart:horizontal .chart-bar { doh: true; }
