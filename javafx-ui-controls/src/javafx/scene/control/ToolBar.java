@@ -113,7 +113,11 @@ public class ToolBar extends Control {
         // override. Initializing focusTraversable by calling set on the 
         // CssMetaData ensures that css will be able to override the value.
         final CssMetaData prop = ((StyleableProperty)focusTraversableProperty()).getCssMetaData();
-        prop.set(this, Boolean.FALSE, null); 
+        prop.set(this, Boolean.FALSE, null);
+        
+        // initialize css pseudo-class state
+        pseudoClassStateChanged(HORIZONTAL_PSEUDOCLASS_STATE, true);
+        
     }
 
     /***************************************************************************
