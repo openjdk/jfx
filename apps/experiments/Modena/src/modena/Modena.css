@@ -761,7 +761,7 @@ is being used to size a border should also be in pixels.
     -fx-spacing: 0.333em; /* 4 */
     -fx-alignment: TOP_LEFT;
 }
-.tool-bar:horizontal {
+.tool-bar {
     -fx-background-color:
         linear-gradient(to bottom, derive(-fx-base,75%) 0%, -fx-outer-border 90%),
         linear-gradient(to bottom, derive(-fx-base,46.9%) 2%, derive(-fx-base,-2.1%) 95%);
@@ -770,7 +770,7 @@ is being used to size a border should also be in pixels.
     -fx-spacing: 0.333em; /* 4 */
     -fx-alignment: CENTER_LEFT;
 }
-.tool-bar:horizontal > .container > .separator {
+.tool-bar > .container > .separator {
     -fx-orientation: vertical;
 }
 .tool-bar:vertical > .container > .separator {
@@ -2574,7 +2574,7 @@ is being used to size a border should also be in pixels.
     -fx-background-color: rgba(30,30,30,0.8);
     -fx-background-radius: 6px;
     -fx-background-insets: 0;
-    -fx-padding: 0.833333em; /* 10px */
+    -fx-padding: 0.667em 0.75em 0.667em 0.75em; /* 10px */
     -fx-effect: dropshadow( three-pass-box , rgba(0,0,0,0.5) , 10, 0.0 , 0 , 0 );
     -fx-font-size: 0.85em;
 }
