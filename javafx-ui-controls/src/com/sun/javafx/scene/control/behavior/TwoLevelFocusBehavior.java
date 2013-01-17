@@ -25,7 +25,7 @@
 
 package com.sun.javafx.scene.control.behavior;
 
-import javafx.css.PseudoClass;;
+import javafx.css.PseudoClass;
 import javafx.scene.Node;
 import javafx.scene.control.Control;
 import javafx.scene.control.PopupControl;
