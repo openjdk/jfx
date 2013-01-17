@@ -286,7 +286,21 @@ public class Modena extends Application {
                     fontSize = 18;
                     updateCSSOverrides();
                 }
-            }).style("-fx-font: 18px \"Segoe UI\";").toggleGroup(tg).build()
+            }).style("-fx-font: 18px \"Segoe UI\";").toggleGroup(tg).build(),
+            RadioMenuItemBuilder.create().text("Embedded Touch (22px)").onAction(new EventHandler<ActionEvent>(){
+                @Override public void handle(ActionEvent event) {
+                    fontName = "Arial";
+                    fontSize = 22;
+                    updateCSSOverrides();
+                }
+            }).style("-fx-font: 22px \"Arial\";").toggleGroup(tg).build(),
+            RadioMenuItemBuilder.create().text("Embedded Small (9px)").onAction(new EventHandler<ActionEvent>(){
+                @Override public void handle(ActionEvent event) {
+                    fontName = "Arial";
+                    fontSize = 9;
+                    updateCSSOverrides();
+                }
+            }).style("-fx-font: 9px \"Arial\";").toggleGroup(tg).build()
         );
         return mb;
     }
