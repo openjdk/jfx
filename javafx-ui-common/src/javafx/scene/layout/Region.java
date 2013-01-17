@@ -2018,15 +2018,13 @@ public class Region extends Parent {
                 return true;
             }
         } else {
-            // TODO need to deal with percentage based widths
             boolean insideOuterEdge = contains(px, py, x1, y1, x2, y2, insets, rad, maxRadius);
-
             if (insideOuterEdge) {
                 boolean outsideInnerEdge = !contains(px, py,
-                    x1 + widths.getLeft(),
-                    y1 + widths.getTop(),
-                    x2 - widths.getRight(),
-                    y2 - widths.getBottom(),
+                    x1 + (widths.isLeftAsPercentage() ? getWidth() * widths.getLeft() : widths.getLeft()),
+                    y1 + (widths.isTopAsPercentage() ? getHeight() * widths.getTop() : widths.getTop()),
+                    x2 - (widths.isRightAsPercentage() ? getWidth() * widths.getRight() : widths.getRight()),
+                    y2 - (widths.isBottomAsPercentage() ? getHeight() * widths.getBottom() : widths.getBottom()),
                     insets, rad, maxRadius);
                 if (outsideInnerEdge) return true;
             }

@@ -921,10 +921,10 @@ public class NGRegion extends NGGroup implements PGRegion {
                     final float bottomInset = (float) insets.getBottom();
                     final float leftInset = (float) insets.getLeft();
 
-                    final float topWidth = (float) widths.getTop();
-                    final float rightWidth = (float) widths.getRight();
-                    final float bottomWidth = (float) widths.getBottom();
-                    final float leftWidth = (float) widths.getLeft();
+                    final float topWidth = (float) (widths.isTopAsPercentage() ? height * widths.getTop() : widths.getTop());
+                    final float rightWidth = (float) (widths.isRightAsPercentage() ? width * widths.getRight() : widths.getRight());
+                    final float bottomWidth = (float) (widths.isBottomAsPercentage() ? height * widths.getBottom() : widths.getBottom());
+                    final float leftWidth = (float) (widths.isLeftAsPercentage() ? width * widths.getLeft() : widths.getLeft());
 
                     final BorderStrokeStyle topStyle = stroke.getTopStyle();
                     final BorderStrokeStyle rightStyle = stroke.getRightStyle();
@@ -1107,15 +1107,23 @@ public class NGRegion extends NGGroup implements PGRegion {
                         final int bottomInset = (int) Math.round(insets.getBottom());
                         final int leftInset = (int) Math.round(insets.getLeft());
 
-                        final int topWidth = (int) Math.round(widths.getTop());
-                        final int rightWidth = (int) Math.round(widths.getRight());
-                        final int bottomWidth = (int) Math.round(widths.getBottom());
-                        final int leftWidth = (int) Math.round(widths.getLeft());
+                        final int topWidth = (int) Math.round(
+                                widths.isTopAsPercentage() ? height * widths.getTop() : widths.getTop());
+                        final int rightWidth = (int) Math.round(
+                                widths.isRightAsPercentage() ? width * widths.getRight() : widths.getRight());
+                        final int bottomWidth = (int) Math.round(
+                                widths.isBottomAsPercentage() ? height * widths.getBottom() : widths.getBottom());
+                        final int leftWidth = (int) Math.round(
+                                widths.isLeftAsPercentage() ? width * widths.getLeft() : widths.getLeft());
 
-                        final int topSlice = (int) Math.round(slices.getTop());
-                        final int rightSlice = (int) Math.round(slices.getRight());
-                        final int bottomSlice = (int) Math.round(slices.getBottom());
-                        final int leftSlice = (int) Math.round(slices.getLeft());
+                        final int topSlice = (int) Math.round(
+                                slices.isTopAsPercentage() ? height * slices.getTop() : slices.getTop());
+                        final int rightSlice = (int) Math.round(
+                                slices.isRightAsPercentage() ? width * slices.getRight() : slices.getRight());
+                        final int bottomSlice = (int) Math.round(
+                                slices.isBottomAsPercentage() ? height * slices.getBottom() : slices.getBottom());
+                        final int leftSlice = (int) Math.round(
+                                slices.isLeftAsPercentage() ? width * slices.getLeft() : slices.getLeft());
 
                         // handle case where region is too small to fit in borders
                         if ((leftInset + leftWidth + rightInset + rightWidth) > width
@@ -1334,19 +1342,20 @@ public class NGRegion extends NGGroup implements PGRegion {
         // Take the first side that isn't.
         final BorderWidths widths = sb.getWidths();
         BorderStrokeStyle bs = sb.getTopStyle();
-        double sbWidth = widths.getTop();
+        double sbWidth = widths.isTopAsPercentage() ? height * widths.getTop() : widths.getTop();
         Object sbFill = sb.getTopStroke().impl_getPlatformPaint();
         if (bs == null) {
             bs = sb.getLeftStyle();
-            sbWidth = widths.getLeft();
+            sbWidth = widths.isLeftAsPercentage() ? width * widths.getLeft() : widths.getLeft();
             sbFill = sb.getLeftStroke().impl_getPlatformPaint();
             if (bs == null) {
                 bs = sb.getBottomStyle();
-                sbWidth = widths.getBottom();
+                sbWidth = widths.isBottomAsPercentage() ? height * widths.getBottom() : widths.getBottom();
                 sbFill = sb.getBottomStroke().impl_getPlatformPaint();
                 if (bs == null) {
                     bs = sb.getRightStyle();
-                    sbWidth = widths.getRight();
+                    sbWidth = widths.isRightAsPercentage() ? width * widths.getRight() : widths.getRight();
+                    sbWidth = widths.isRightAsPercentage() ? width * widths.getRight() : widths.getRight();
                     sbFill = sb.getRightStroke();
                 }
             }
