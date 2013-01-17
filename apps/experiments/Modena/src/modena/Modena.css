@@ -1664,64 +1664,56 @@ is being used to size a border should also be in pixels.
 }
 
 .color-palette {
-     -fx-background-color:
-        derive(-fx-color,-40%),
-        derive(-fx-color,100%),
+    -fx-spacing: 0.833333em; /* 10px */
+    -fx-background-color:
+        derive(-fx-background,-40%),
         linear-gradient(to bottom, 
-        derive(-fx-color,100%) 0%, 
-        derive(-fx-color,50%) 12%, 
-        derive(-fx-color,65%) 88%, 
-        derive(-fx-color,23%) 100%);
-    -fx-background-insets: 0, 1, 2;
-    -fx-background-radius: 0 6 6 6, 0 5 5 5, 0 4 4 4;
-    -fx-padding: 15 15 15 15;
+            derive(-fx-background,10%) 0%, 
+            derive(-fx-background,-5%) 12%, 
+            derive(-fx-background,15%) 88%, 
+            derive(-fx-background,-10%) 100%);
+    -fx-background-insets: 0, 1;
+    -fx-background-radius: 6, 5;
+    -fx-padding: 1em; /* 12 */
     -fx-effect: dropshadow( three-pass-box , rgba(0,0,0,0.6) , 8, 0.0 , 0 , 0 );
 }
-.color-palette > .color-picker-grid > .color-square > .color-rect {
+/*.color-palette > .color-picker-grid > .color-square > .color-rect {
     -fx-stroke: black;
     -fx-stroke-width: 0.4;
     -fx-border-color: black;
-}
+}*/
 .color-palette > .color-picker-grid {
-    -fx-border-color: black;
+    -fx-padding: 0.5px;
+    -fx-snap-to-pixel: false;
 }
 .color-palette > .color-picker-grid > .color-square {
     -fx-background-color: transparent;
-    -fx-background-insets: -1, 0;   
-    -fx-padding: 0.5;
-    -fx-border: black;
+    -fx-padding: 0.5px;
 }
 /* the color over which the user is hovering */
 .color-palette > .color-picker-grid > .color-square:focused, 
 .color-palette > .color-picker-grid > .color-square:selected:focused {
-    -fx-background-color: -fx-focus-color;
+    -fx-background-color: -fx-faint-focus-color, -fx-focus-color;
+    -fx-background-insets: -2,0;
+    -fx-background-radius: 5,0;
+    -fx-scale-x: 1.5;
+    -fx-scale-y: 1.5;
 }
 /* the currently selected color */
 .color-palette > .color-picker-grid > .color-square:selected {
-/*    -fx-background-color: derive(-fx-base, -27%)  #989898 , white, derive(-fx-base, -59%)  #555555 ;*/
     -fx-background-color: black;
 } 
-.color-palette > .separator > .line {
-    -fx-background-color: -fx-pressed-base;
-/*    -fx-background-color: white;*/
-    -fx-padding: 6 0 0 0;
-    -fx-background-insets: 4 -10 0 -10,5 -10 0 -10;
-    -fx-border-style: none;
-    -fx-border-color: null;
-}
 .custom-color-dialog > .color-rect-pane {
     -fx-padding: 15 8 15 15;
-/*    -fx-background-color: -fx-background;*/
 }
 .custom-color-dialog > .controls-pane {
     -fx-padding: 15 15 15 0;
-/*    -fx-background-color: -fx-background;*/
 }
 .custom-color-dialog  {
     -fx-background-color: -fx-background;
 }
 /* -------- Toggle Button ---------------- */
-.custom-color-dialog .controls-pane .toggle-button {
+/*.custom-color-dialog .controls-pane .toggle-button {
     -fx-background-radius: 4, 4, 3, 2;
     -fx-padding: 3 6 3 6;
 }
@@ -1787,17 +1779,18 @@ is being used to size a border should also be in pixels.
 }
 .custom-color-dialog .controls-pane #toggle-button-right:selected, .controls-pane #toggle-button-right:selected:focused {
 	-fx-background-insets: -1.4 -1.4 -1.4 -1, 0 0 0 -1, 1 1 1 0, 1 1 1 0;
-}
-.custom-color-dialog .controls-pane .current-new-color-grid #transparent-current, .controls-pane .current-new-color-grid #transparent-new {
+}*/
+.custom-color-dialog .controls-pane .current-new-color-grid #transparent-current, 
+.controls-pane .current-new-color-grid #transparent-new {
     -fx-background-image: url("pattern-transparent.png"); 
     -fx-background-repeat: repeat;
     -fx-background-size: auto;
     -fx-padding: 9 64 9 64;
 }
 .custom-color-dialog .controls-pane .customcolor-controls-background {
-    -fx-background-color: -fx-text-box-border, -fx-text-box-border, -fx-control-inner-background;
-    -fx-background-insets: 0, 1, 2;
-    -fx-background-radius: 3, 2, 2;
+    -fx-background-color: -fx-text-box-border, -fx-control-inner-background;
+    -fx-background-insets: 0, 1;
+    -fx-background-radius: 3, 2;
     -fx-padding: 3 5 3 5;
 }
 .custom-color-dialog .controls-pane .alpha-settings .text-field {
