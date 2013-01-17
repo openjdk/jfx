@@ -290,6 +290,10 @@ public class Scene implements EventTarget {
     private Scene(Parent root, double width, double height,
             @Default("javafx.scene.paint.Color.WHITE") Paint fill,
             boolean depthBuffer) {
+        if (root == null) {
+            throw new NullPointerException("Root cannot be null");
+        }
+
         Toolkit.getToolkit().checkFxUserThread();
         styleManager = new StyleManager(this);
         setRoot(root);
