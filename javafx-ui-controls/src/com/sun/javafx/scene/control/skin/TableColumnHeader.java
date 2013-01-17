@@ -55,20 +55,7 @@ import javafx.util.Callback;
 import javafx.css.StyleableDoubleProperty;
 import javafx.css.CssMetaData;
 import javafx.css.PseudoClass;
-import com.sun.javafx.css.converters.SizeConverter;
-import com.sun.javafx.scene.control.MultiplePropertyChangeListenerHandler;
-import javafx.collections.WeakListChangeListener;
 import javafx.css.StyleableProperty;
-import javafx.scene.control.TableColumnBase;
-import com.sun.javafx.css.converters.SizeConverter;
-import com.sun.javafx.scene.control.MultiplePropertyChangeListenerHandler;
-import javafx.collections.WeakListChangeListener;
-import javafx.scene.control.TableColumnBase;
-import com.sun.javafx.css.converters.SizeConverter;
-import com.sun.javafx.scene.control.MultiplePropertyChangeListenerHandler;
-import javafx.collections.WeakListChangeListener;
-import javafx.css.StyleableProperty;
-import javafx.scene.control.TableColumnBase;
 import com.sun.javafx.css.converters.SizeConverter;
 import com.sun.javafx.scene.control.MultiplePropertyChangeListenerHandler;
 import javafx.collections.WeakListChangeListener;
@@ -469,6 +456,7 @@ public class TableColumnHeader extends Region {
             } else if (showSortOrderDots) {
                 if (sortOrderDots == null) {
                     sortOrderDots = new HBox(1);
+                    sortOrderDots.getStyleClass().add("sort-order-dots-container");
                 }
 
                 // show the sort order dots
@@ -508,17 +496,19 @@ public class TableColumnHeader extends Region {
         
         sortOrderDots.getChildren().clear();
         
-        double rectWidth = (arrowWidth) / 3.0;
-        double rectHeight = rectWidth * 0.618033987;
-        
         for (int i = 0; i <= sortPos; i++) {
-            Rectangle r = new Rectangle(rectWidth, rectHeight, Color.BLACK);
+            Region r = new Region();
+            r.getStyleClass().add("sort-order-dot");
+            
+            TableColumnBase.SortType sortType = getTableColumn().getSortType();
+            if (sortType != null) {
+                r.getStyleClass().add(sortType.name().toLowerCase());
+            }
+            
             sortOrderDots.getChildren().add(r);
         }
         
-        sortOrderDots.setPadding(new Insets(1, 0, 1, 0));
         sortOrderDots.setAlignment(Pos.TOP_CENTER);
-        sortOrderDots.setMaxHeight(rectHeight + 2);
         sortOrderDots.setMaxWidth(arrowWidth);
     }
     

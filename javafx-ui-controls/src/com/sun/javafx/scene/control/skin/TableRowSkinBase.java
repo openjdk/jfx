@@ -68,7 +68,7 @@ public abstract class TableRowSkinBase<T,
      * disclosureNode width per TreeView. We use WeakHashMap to help prevent
      * any memory leaks.
      */
-    private static final Map<Control, Double> maxDisclosureWidthMap = new WeakHashMap<Control, Double>();
+    static final Map<Control, Double> maxDisclosureWidthMap = new WeakHashMap<Control, Double>();
     
     protected int getIndentationLevel(C control) {
         // TreeTableView.getNodeLevel(control.getTreeTable)
@@ -369,7 +369,7 @@ public abstract class TableRowSkinBase<T,
     }
 
     @Override protected void layoutChildren(double x, final double y,
-            double w, final double h) {
+            final double w, final double h) {
         
         if (isDirty) {
             recreateCells();
@@ -483,8 +483,6 @@ public abstract class TableRowSkinBase<T,
                     // further indentation code starts here
                     ///////////////////////////////////////////
                     if (indentationRequired && column == indentationColumnIndex) {
-                        x += leftMargin;
-                        
                         if (disclosureVisible) {
                             double ph = disclosureNode.prefHeight(disclosureWidth);
                             
@@ -493,16 +491,16 @@ public abstract class TableRowSkinBase<T,
                             } else {
                                 fadeIn(disclosureNode);
                                 disclosureNode.resize(disclosureWidth, ph);
-                                positionInArea(disclosureNode, x, y,
+                                positionInArea(disclosureNode, x + leftMargin, y,
                                         disclosureWidth, h, /*baseline ignored*/0,
                                         HPos.CENTER, VPos.CENTER);
+                                disclosureNode.toFront();
                             }
                         }
                         
                         // determine starting point of the graphic or cell node, and the
                         // remaining width available to them
                         Node graphic = getGraphic();
-                        x += disclosureWidth;
                         
                         if (graphic != null) {
                             graphicWidth = graphic.prefWidth(-1) + 3;
@@ -511,16 +509,12 @@ public abstract class TableRowSkinBase<T,
                                 fadeOut(graphic);
                             } else {
                                 fadeIn(graphic);
-                                positionInArea(graphic, x, y,
+                                positionInArea(graphic, x + leftMargin + disclosureWidth, y,
                                             disclosureWidth, h, /*baseline ignored*/0,
                                             HPos.CENTER, VPos.CENTER);
+                                graphic.toFront();
                             }
-                            
-                            x += graphicWidth;
-                            w -= graphicWidth;
                         }
-                        
-                        w -= (leftMargin + disclosureWidth + graphicWidth);
                     }
                     ///////////////////////////////////////////
                     // further indentation code ends here
@@ -578,27 +572,16 @@ public abstract class TableRowSkinBase<T,
                     // cell spanning code ends here
                     ///////////////////////////////////////////
                     
-                    // a little bit more special code for indentation purposes.
-                    // we use j here to prevent the table cells being sized as
-                    // negative or 0 widths. If this is allowed, the vertical 
-                    // lines for that column are removed from view, which 
-                    // doesn't look right.
-                    double j = width - (leftMargin + disclosureWidth + graphicWidth);
-                    if (indentationRequired && column == indentationColumnIndex) {
-                        // the min width of a table cell is now 1 pixel
-                        tableCell.resize(Math.max(1, j), height);
-                    } else {
-                        tableCell.resize(width, height);
-                    }
+                    tableCell.resize(width, height);
 
-                    if (indentationRequired && column > indentationColumnIndex) {
-                        tableCell.relocate(x - leftMargin - disclosureWidth - graphicWidth, insets.getTop());
+                    if (indentationRequired && column == indentationColumnIndex) {
+                        tableCell.relocate(x, insets.getTop());
                     } else {
                         // if j is a negative number (because the width is smaller
                         // that the left margin and disclosure node), we relocate
                         // the cell to the left (and subtract 1 to take into 
                         // account the minimum 1px width we resize cells to above).
-                        tableCell.relocate(x + Math.min(0, j - 1), insets.getTop());
+                        tableCell.relocate(x, insets.getTop());
                     }
                 } else {
                     if (fixedCellLengthEnabled) {
