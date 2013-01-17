@@ -513,7 +513,4 @@ public class RegionPickTest {
      *************************************************************************/
 
     // TODO implement along with fix for RT-27775
-
-    // TODO need to implement tests / functionality for percentage based width picking,
-    // and percentage based widths in general (RT-27773, RT-27774)
 }
