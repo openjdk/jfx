@@ -962,7 +962,6 @@ is being used to size a border should also be in pixels.
     -fx-indeterminate-bar-animation-time: 2;
 }
 .progress-bar > .bar {
-    /*-fx-background-color: orange;*/
     -fx-background-color: linear-gradient(to bottom, derive(-fx-accent, -7%), derive(-fx-accent, 0%), derive(-fx-accent, -3%), derive(-fx-accent, -9%) );
     -fx-background-insets: 3 3 4 3;
     -fx-background-radius: 0.583em; /* 7 */
