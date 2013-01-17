@@ -42,6 +42,7 @@ import javafx.scene.text.FontWeight;
  * includes the font sub-properties: weight, style, family and size.
  * @param <T> The type of Node
  */
+@com.sun.javafx.beans.annotations.NoBuilder
 public abstract class FontCssMetaData<T extends Node> extends CssMetaData<T, Font> {
 
     /**
