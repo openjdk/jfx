@@ -146,7 +146,7 @@ public abstract class ComboBoxBaseSkin<T> extends BehaviorSkinBase<ComboBoxBase<
                 snapSpace(arrowButtonPadding.getRight()));
         
         if (displayNode != null) {
-            displayNode.resizeRelocate(x, y, w, h);
+            displayNode.resizeRelocate(x, y, w - arrowButtonWidth, h);
         }
         
         if (isButton()) return;

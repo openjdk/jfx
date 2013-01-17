@@ -3172,22 +3172,16 @@ Only the properties with values that are different from the TextBox are specifie
 
 .combo-box-base:editable > .text-field {
     -fx-padding: 3 5 2 5;
-    -fx-background-radius: 4 5 5 4, 3 4 4 3, 2 3 3 2;
-    -fx-background-insets: 0 0 -1 0, 0, 1;
+    -fx-background-radius: 4 0 0 4, 3 0 0 3, 2 0 0 2;
+    -fx-background-insets: 0 0 -1 0, 0, 1 0 1 1;
     -fx-vpos: CENTER;
     -fx-content-display: LEFT;
 }
 
-.combo-box-base:editable > .text-field:focused {
+.combo-box-base:editable:contains-focus {
     -fx-background-color: -fx-focus-color, -fx-outer-border, -fx-control-inner-background;
     -fx-background-radius: 5.4, 3, 2;
     -fx-background-insets: -1.4, 0, 1;
-}
-
-.combo-box-base:editable:focused {
-    -fx-background-color: -fx-shadow-highlight-color, -fx-outer-border, -fx-inner-border, -fx-control-inner-background;
-    -fx-background-radius: 5, 5, 4, 3;
-    -fx-background-insets: 0 0 -1 0, 0, 1, 2;
 }
 
 /* -------------- STYLES FOR THE DEFAULT LISTVIEW-BASED COMBOBOX ------------- */
