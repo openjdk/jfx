@@ -961,53 +961,16 @@ is being used to size a border should also be in pixels.
     -fx-indeterminate-bar-flip: true;
     -fx-indeterminate-bar-animation-time: 2;
 }
-/*.progress-bar > .bar {
-    -fx-background-color: -fx-box-border,-fx-accent;
-    -fx-background-insets: 2, 3;
-    -fx-background-radius: 0.25em, 0.166667em;  3 , 2 
-    -fx-padding: 0.416667em;  5 
-}*/
-/*.progress-bar > .bar {
-    -fx-background-color: -fx-accent;
-    -fx-background-insets: 3 3 4 3;
-    -fx-background-radius: 0.167em;  2 
-    -fx-padding: 0.416667em;  5 
-}*/
 .progress-bar > .bar {
-    /*-fx-background-color: -fx-accent;*/
-    -fx-background-color: linear-gradient(to bottom, 
-            derive(-fx-accent, -7%),
-            derive(-fx-accent, 0%),
-            derive(-fx-accent, -3%),
-            derive(-fx-accent, -9%)
-          );
+    /*-fx-background-color: orange;*/
+    -fx-background-color: linear-gradient(to bottom, derive(-fx-accent, -7%), derive(-fx-accent, 0%), derive(-fx-accent, -3%), derive(-fx-accent, -9%) );
     -fx-background-insets: 3 3 4 3;
-    -fx-background-radius: 0.25em; /* 3px */
-    -fx-padding: 1em; /* 12 */
+    -fx-background-radius: 0.583em; /* 7 */
+    -fx-padding: 9px;
 }
 .progress-bar:indeterminate > .bar {
     -fx-background-color: linear-gradient(to left, transparent, -fx-accent);
 }
-/*.progress-bar > .track {
-    -fx-background-color: 
-          linear-gradient(to bottom, derive(-fx-text-box-border, -10%), -fx-text-box-border),
-        linear-gradient(from 0px 0px to 0px 5px, derive(-fx-control-inner-background, -9%), -fx-control-inner-background);
-    -fx-background-insets: 0, 1;
-    -fx-background-radius: 0.416667em, 0.416667em;  5 
-}*/
-/*.progress-bar > .track {
-      -fx-background-color: 
-          -fx-shadow-highlight-color,
-          linear-gradient(to bottom, derive(-fx-text-box-border, -10%), -fx-text-box-border),
-          linear-gradient(to bottom, 
-            derive(-fx-control-inner-background, -9%),
-            derive(-fx-control-inner-background, 0%),
-            derive(-fx-control-inner-background, -5%),
-            derive(-fx-control-inner-background, -12%)
-          );
-    -fx-background-insets: 0, 0 0 1 0, 1 1 2 1;
-    -fx-background-radius: 0.417em, 0.333em, 0.25em;   5, 4, 3 
-}*/
 .progress-bar > .track {
       -fx-background-color: 
           -fx-shadow-highlight-color,
@@ -1019,7 +982,7 @@ is being used to size a border should also be in pixels.
             derive(-fx-control-inner-background, -9%)
           );
     -fx-background-insets: 0, 0 0 1 0, 1 1 2 1;
-    -fx-background-radius: 0.417em, 0.333em, 0.25em;  /* 5, 4, 3 */
+    -fx-background-radius: 0.833em, 0.750em, 0.667em; /* 10, 9, 8 */
 }
 
 /*******************************************************************************
@@ -1027,6 +990,7 @@ is being used to size a border should also be in pixels.
  * ProgressIndicator                                                           *
  *                                                                             *
  ******************************************************************************/
+
 .progress-indicator {
     -fx-indeterminate-segment-count: 12;
     -fx-spin-enabled: true;
