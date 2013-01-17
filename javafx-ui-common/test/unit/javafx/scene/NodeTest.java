@@ -61,6 +61,9 @@ import org.junit.rules.ExpectedException;
 
 import com.sun.javafx.scene.DirtyBits;
 import com.sun.javafx.sg.PGNode;
+import com.sun.javafx.test.objects.TestScene;
+import com.sun.javafx.test.objects.TestStage;
+import javafx.geometry.BoundingBox;
 import javafx.scene.shape.Circle;
 /**
  * Tests various aspects of Node.
@@ -1027,4 +1030,41 @@ public class NodeTest {
         assertEquals(100.0, sc.getRadius(), 0.01);
         
     }
+
+    @Test
+    public void testLocalToScreen() {
+        Rectangle rect = new Rectangle();
+        Group g = new Group(rect);
+
+        rect.setTranslateX(10);
+        rect.setTranslateY(20);
+
+        TestScene scene = new TestScene(new Group(rect));
+        final TestStage testStage = new TestStage("");
+        testStage.setX(100);
+        testStage.setY(200);
+        scene.set_window(testStage);
+
+        assertEquals(new Point2D(111, 222), rect.localToScreen(new Point2D(1, 2)));
+        assertEquals(new BoundingBox(111, 222, 3, 4), rect.localToScreen(new BoundingBox(1, 2, 3, 4)));
+    }
+
+    @Test
+    public void testScreenToLocal() {
+        Rectangle rect = new Rectangle();
+        Group g = new Group(rect);
+
+        rect.setTranslateX(10);
+        rect.setTranslateY(20);
+
+        TestScene scene = new TestScene(new Group(rect));
+        final TestStage testStage = new TestStage("");
+        testStage.setX(100);
+        testStage.setY(200);
+        scene.set_window(testStage);
+
+        assertEquals(new Point2D(1, 2), rect.screenToLocal(new Point2D(111, 222)));
+        assertEquals(new BoundingBox(1, 2, 3, 4), rect.screenToLocal(new BoundingBox(111, 222, 3, 4)));
+    }
+
 }
