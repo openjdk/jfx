@@ -54,7 +54,7 @@ import javafx.util.Callback;
 
 import javafx.css.StyleableDoubleProperty;
 import javafx.css.CssMetaData;
-import javafx.css.PseudoClass;;
+import javafx.css.PseudoClass;
 import com.sun.javafx.css.converters.SizeConverter;
 import com.sun.javafx.scene.control.MultiplePropertyChangeListenerHandler;
 import javafx.collections.WeakListChangeListener;

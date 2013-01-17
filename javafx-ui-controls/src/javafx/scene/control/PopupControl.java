@@ -46,7 +46,7 @@ import com.sun.javafx.application.PlatformImpl;
 import com.sun.javafx.collections.TrackableObservableList;
 import com.sun.javafx.css.CssError;
 import javafx.css.CssMetaData;
-import javafx.css.PseudoClass;;
+import javafx.css.PseudoClass;
 import com.sun.javafx.css.StyleManager;
 import com.sun.javafx.css.Styleable;
 import javafx.css.StyleableStringProperty;
