@@ -2373,10 +2373,30 @@
     -fx-border-width: 0.083333em, 0.083333em 0 0.083333em 0.083333em;
 }
 
+.table-view .column-header .sort-order-dots-container,
+.tree-table-view .column-header .sort-order-dots-container{
+    -fx-padding: 2 0 2 0;
+}
 
 .table-view .column-header .sort-order,
 .tree-table-view .column-header .sort-order{
     -fx-font-size: 0.916667em; /* 11pt - 1 less than the default font */
+}
+
+.table-view .column-header .sort-order-dot,
+.tree-table-view .column-header .sort-order-dot {
+    -fx-background-color: derive(-fx-mark-highlight-color, 40%), -fx-mark-color;
+    -fx-padding: 0.0625em 0.104em 0.0625em 0.104em;
+}
+
+.table-view .column-header .sort-order-dot.ascending,
+.tree-table-view .column-header .sort-order-dot.ascending {
+    -fx-background-insets: -1 0 1 0, 0; 
+}
+
+.table-view .column-header .sort-order-dot.descending,
+.tree-table-view .column-header .sort-order-dot.descending {
+    -fx-background-insets: 1 0 -1 0, 0; 
 }
 
 .table-view > .column-header-background > .show-hide-columns-button,
