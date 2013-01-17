@@ -2051,7 +2051,7 @@ public class Region extends Parent {
      */
     private boolean contains(final double px, final double py,
                              final double x1, final double y1, final double x2, final double y2,
-                             final Insets insets, final CornerRadii rad, final double maxRadius) {
+                             final Insets insets, CornerRadii rad, final double maxRadius) {
         // These four values are the x0, y0, x1, y1 bounding box after
         // having taken into account the insets of this particular
         // background fill.
@@ -2059,6 +2059,9 @@ public class Region extends Parent {
         final double rry0 = y1 + insets.getTop();
         final double rrx1 = x2 - insets.getRight();
         final double rry1 = y2 - insets.getBottom();
+
+        // Adjust based on whether it is % based radii
+        rad = normalize(rad);
 
         // Check for trivial rejection - point is inside bounding rectangle
         if (px >= rrx0 && py >= rry0 && px <= rrx1 && py <= rry1) {
@@ -2119,6 +2122,27 @@ public class Region extends Parent {
             }
         }
         return false;
+    }
+
+    /**
+     * Direct copy of a method in NGRegion. If NGRegion were part of the core graphics module (coming!)
+     * then this method could be removed.
+     *
+     * @param radii    The radii.
+     * @return Normalized radii.
+     */
+    private CornerRadii normalize(CornerRadii radii) {
+        final double width = getWidth();
+        final double height = getHeight();
+        final double tlvr = radii.isTopLeftVerticalRadiusAsPercentage() ? height * radii.getTopLeftVerticalRadius() : radii.getTopLeftVerticalRadius();
+        final double tlhr = radii.isTopLeftHorizontalRadiusAsPercentage() ? width * radii.getTopLeftHorizontalRadius() : radii.getTopLeftHorizontalRadius();
+        final double trvr = radii.isTopRightVerticalRadiusAsPercentage() ? height * radii.getTopRightVerticalRadius() : radii.getTopRightVerticalRadius();
+        final double trhr = radii.isTopRightHorizontalRadiusAsPercentage() ? width * radii.getTopRightHorizontalRadius() : radii.getTopRightHorizontalRadius();
+        final double brvr = radii.isBottomRightVerticalRadiusAsPercentage() ? height * radii.getBottomRightVerticalRadius() : radii.getBottomRightVerticalRadius();
+        final double brhr = radii.isBottomRightHorizontalRadiusAsPercentage() ? width * radii.getBottomRightHorizontalRadius() : radii.getBottomRightHorizontalRadius();
+        final double blvr = radii.isBottomLeftVerticalRadiusAsPercentage() ? height * radii.getBottomLeftVerticalRadius() : radii.getBottomLeftVerticalRadius();
+        final double blhr = radii.isBottomLeftHorizontalRadiusAsPercentage() ? width * radii.getBottomLeftHorizontalRadius() : radii.getBottomLeftHorizontalRadius();
+        return new CornerRadii(tlhr, tlvr, trvr, trhr, brhr, brvr, blvr, blhr, false, false, false, false, false, false, false, false);
     }
 
     /**

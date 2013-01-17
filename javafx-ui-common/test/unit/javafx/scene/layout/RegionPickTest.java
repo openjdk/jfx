@@ -222,7 +222,8 @@ public class RegionPickTest {
     }
 
     @Test public void pickingRectangularFillWithIndependentRadiusWorks() {
-        region.setBackground(new Background(new BackgroundFill(Color.RED, new CornerRadii(1, 2, 3, 4, false), Insets.EMPTY)));
+        region.setBackground(new Background(new BackgroundFill(Color.RED, new CornerRadii(1, 2, 3, 4, false),
+                                                               Insets.EMPTY)));
         // Check points in the top-left corner area
         assertTrue(region.contains(X, Y + 1));
         assertTrue(region.contains(X + 1, Y));
@@ -252,7 +253,9 @@ public class RegionPickTest {
     }
 
     @Test public void pickingRectangularFillWithIndependentRadiusWorks2() {
-        region.setBackground(new Background(new BackgroundFill(Color.RED, new CornerRadii(1, 2, 3, 4, 5, 6, 7, 8, false, false, false, false, false, false, false, false), Insets.EMPTY)));
+        region.setBackground(new Background(new BackgroundFill(Color.RED,
+            new CornerRadii(1, 2, 3, 4, 5, 6, 7, 8, false, false, false, false, false, false, false, false),
+            Insets.EMPTY)));
         // Check points in the top-left corner area
         assertTrue(region.contains(X, Y + 2));
         assertTrue(region.contains(X + 1, Y));
@@ -282,7 +285,9 @@ public class RegionPickTest {
     }
 
     @Test public void pickingRectangularFillWithIndependentRadiusWithInsetsWorks() {
-        region.setBackground(new Background(new BackgroundFill(Color.RED, new CornerRadii(1, 2, 3, 4, 5, 6, 7, 8, false, false, false, false, false, false, false, false), new Insets(4, 3, 2, 1))));
+        region.setBackground(new Background(new BackgroundFill(Color.RED,
+            new CornerRadii(1, 2, 3, 4, 5, 6, 7, 8, false, false, false, false, false, false, false, false),
+            new Insets(4, 3, 2, 1))));
         // Check points in the top-left corner area
         assertTrue(region.contains(X + 1, Y + 2 + 4));
         assertTrue(region.contains(X + 1 + 1, Y + 4));
@@ -321,7 +326,8 @@ public class RegionPickTest {
      *************************************************************************/
 
     @Test public void pickingRectangularBorderWorks() {
-        region.setBorder(new Border(new BorderStroke(Color.GREEN, BorderStrokeStyle.SOLID, CornerRadii.EMPTY, new BorderWidths(1))));
+        region.setBorder(new Border(new BorderStroke(Color.GREEN, BorderStrokeStyle.SOLID, CornerRadii.EMPTY,
+                                                     new BorderWidths(1))));
         assertFalse(region.contains(LEFT_OF, CENTER_Y));
         assertFalse(region.contains(CENTER_X, ABOVE));
         assertFalse(region.contains(RIGHT_OF, CENTER_Y));
@@ -331,7 +337,8 @@ public class RegionPickTest {
     }
 
     @Test public void pickingRectangularBorderWithThickBorder() {
-        region.setBorder(new Border(new BorderStroke(Color.GREEN, BorderStrokeStyle.SOLID, CornerRadii.EMPTY, new BorderWidths(10))));
+        region.setBorder(new Border(new BorderStroke(Color.GREEN, BorderStrokeStyle.SOLID, CornerRadii.EMPTY,
+                                                     new BorderWidths(10))));
         assertFalse(region.contains(LEFT_OF, CENTER_Y));
         assertFalse(region.contains(CENTER_X, ABOVE));
         assertFalse(region.contains(RIGHT_OF, CENTER_Y));
@@ -344,7 +351,8 @@ public class RegionPickTest {
     }
 
     @Test public void pickingRectangularBorderWithIndependentBorderWidths() {
-        region.setBorder(new Border(new BorderStroke(Color.GREEN, BorderStrokeStyle.SOLID, CornerRadii.EMPTY, new BorderWidths(5, 10, 15, 20))));
+        region.setBorder(new Border(new BorderStroke(Color.GREEN, BorderStrokeStyle.SOLID, CornerRadii.EMPTY,
+                                                     new BorderWidths(5, 10, 15, 20))));
         assertFalse(region.contains(LEFT_OF, CENTER_Y));
         assertFalse(region.contains(CENTER_X, ABOVE));
         assertFalse(region.contains(RIGHT_OF, CENTER_Y));
@@ -373,7 +381,8 @@ public class RegionPickTest {
    }
 
     @Test public void pickingRectangularBorderWithIndependentBorderWidthsAndInsets() {
-        region.setBorder(new Border(new BorderStroke(Color.GREEN, BorderStrokeStyle.SOLID, CornerRadii.EMPTY, new BorderWidths(5, 10, 15, 20), new Insets(1, 2, 3, 4))));
+        region.setBorder(new Border(new BorderStroke(Color.GREEN, BorderStrokeStyle.SOLID, CornerRadii.EMPTY,
+                                                     new BorderWidths(5, 10, 15, 20), new Insets(1, 2, 3, 4))));
         // Top. Test first and last pixels, and one-past
         assertFalse(region.contains(CENTER_X, Y));
         assertTrue(region.contains(CENTER_X, Y+1));
@@ -397,6 +406,72 @@ public class RegionPickTest {
         assertTrue(region.contains(X+4, CENTER_Y));
         assertTrue(region.contains(X+4 + 19, CENTER_Y));
         assertFalse(region.contains(X+4 + 20, CENTER_Y));
+    }
+
+    @Test public void pickingRectangularBorderWithIndependentRadiusWithInsetsWorks() {
+        region.setBorder(new Border(new BorderStroke(Color.RED, BorderStrokeStyle.SOLID,
+            new CornerRadii(1, 2, 3, 4, 5, 6, 7, 8, false, false, false, false, false, false, false, false),
+            new BorderWidths(5, 10, 15, 20), new Insets(4, 3, 2, 1))));
+        // Check points in the top-left corner area
+        assertTrue(region.contains(X + 1, Y + 2 + 4));
+        assertTrue(region.contains(X + 1 + 1, Y + 4));
+        assertTrue(region.contains(X + 1 + 1 - (1 * Math.cos(45)), Y + 2 + 4 - (2 * Math.sin(45))));
+        assertTrue(region.contains(X + 1 + 1 - (.5 * Math.cos(45)), Y + 2 + 4 - (1 * Math.sin(45))));
+        assertFalse(region.contains(X + 1 + 1 - (2 * Math.cos(45)), Y + 2 + 4 - (3 * Math.sin(45))));
+        // Check points in the top-right corner area
+        assertTrue(region.contains(X + WIDTH - 3, Y + 3 + 4));
+        assertTrue(region.contains(X + WIDTH - 4 - 3, Y + 4));
+        assertTrue(region.contains(X + WIDTH - 4 - 3 + (4 * Math.cos(45)), Y + 4 + 3 - (3 * Math.sin(45))));
+        assertTrue(region.contains(X + WIDTH - 4 - 3 + (3 * Math.cos(45)), Y + 4 + 3 - (2 * Math.sin(45))));
+        assertFalse(region.contains(X + WIDTH - 4 - 3 + (5 * Math.cos(45)), Y + 4 + 3 - (4 * Math.sin(45))));
+        // Check points in the bottom-right corner area
+        assertTrue(region.contains(X + WIDTH - 3, Y + HEIGHT - 2 - 6));
+        assertTrue(region.contains(X + WIDTH - 3 - 5, Y + HEIGHT - 2));
+        assertTrue(region.contains(X + WIDTH - 3 - 5 + (5 * Math.cos(45)), Y + HEIGHT - 2 - 6 + (6 * Math.sin(45))));
+        assertTrue(region.contains(X + WIDTH - 3 - 5 + (4 * Math.cos(45)), Y + HEIGHT - 2 - 6 + (5 * Math.sin(45))));
+        assertFalse(region.contains(X + WIDTH - 3 - 5 + (6 * Math.cos(45)), Y + HEIGHT - 2 - 6 + (7 * Math.sin(45))));
+        // Check points in the bottom-left corner area
+        assertTrue(region.contains(X + 1, Y + HEIGHT - 2 - 7));
+        assertTrue(region.contains(X + 1 + 8, Y + HEIGHT - 2));
+        assertTrue(region.contains(X + 1 + 8 - (8 * Math.cos(45)), Y + HEIGHT - 2 - 7 + (7 * Math.sin(45))));
+        assertTrue(region.contains(X + 1 + 8 - (7 * Math.cos(45)), Y + HEIGHT - 2 - 7 + (6 * Math.sin(45))));
+        assertFalse(region.contains(X + 1 + 8 - (9 * Math.cos(45)), Y + HEIGHT - 2 - 7 + (8 * Math.sin(45))));
+        // Check the center
+        assertFalse(region.contains(CENTER_X, CENTER_Y));
+        // TODO Could stand to have more tests testing the inside hit edge
+    }
+
+    @Test public void pickingRectangularBorderWithIndependentPercentageRadiusWithInsetsWorks() {
+        region.setBorder(new Border(new BorderStroke(Color.RED, BorderStrokeStyle.SOLID,
+            new CornerRadii(.01, .02, .03, .04, .05, .06, .07, .08, true, true, true, true, true, true, true, true),
+            new BorderWidths(5, 10, 15, 20), new Insets(4, 3, 2, 1))));
+        // Check points in the top-left corner area
+        assertTrue(region.contains(X + 1, Y + 2 + 4));
+        assertTrue(region.contains(X + 1 + 1, Y + 4));
+        assertTrue(region.contains(X + 1 + 1 - (1 * Math.cos(45)), Y + 2 + 4 - (2 * Math.sin(45))));
+        assertTrue(region.contains(X + 1 + 1 - (.5 * Math.cos(45)), Y + 2 + 4 - (1 * Math.sin(45))));
+        assertFalse(region.contains(X + 1 + 1 - (2 * Math.cos(45)), Y + 2 + 4 - (3 * Math.sin(45))));
+        // Check points in the top-right corner area
+        assertTrue(region.contains(X + WIDTH - 3, Y + 3 + 4));
+        assertTrue(region.contains(X + WIDTH - 4 - 3, Y + 4));
+        assertTrue(region.contains(X + WIDTH - 4 - 3 + (4 * Math.cos(45)), Y + 4 + 3 - (3 * Math.sin(45))));
+        assertTrue(region.contains(X + WIDTH - 4 - 3 + (3 * Math.cos(45)), Y + 4 + 3 - (2 * Math.sin(45))));
+        assertFalse(region.contains(X + WIDTH - 4 - 3 + (5 * Math.cos(45)), Y + 4 + 3 - (4 * Math.sin(45))));
+        // Check points in the bottom-right corner area
+        assertTrue(region.contains(X + WIDTH - 3, Y + HEIGHT - 2 - 6));
+        assertTrue(region.contains(X + WIDTH - 3 - 5, Y + HEIGHT - 2));
+        assertTrue(region.contains(X + WIDTH - 3 - 5 + (5 * Math.cos(45)), Y + HEIGHT - 2 - 6 + (6 * Math.sin(45))));
+        assertTrue(region.contains(X + WIDTH - 3 - 5 + (4 * Math.cos(45)), Y + HEIGHT - 2 - 6 + (5 * Math.sin(45))));
+        assertFalse(region.contains(X + WIDTH - 3 - 5 + (6 * Math.cos(45)), Y + HEIGHT - 2 - 6 + (7 * Math.sin(45))));
+        // Check points in the bottom-left corner area
+        assertTrue(region.contains(X + 1, Y + HEIGHT - 2 - 7));
+        assertTrue(region.contains(X + 1 + 8, Y + HEIGHT - 2));
+        assertTrue(region.contains(X + 1 + 8 - (8 * Math.cos(45)), Y + HEIGHT - 2 - 7 + (7 * Math.sin(45))));
+        assertTrue(region.contains(X + 1 + 8 - (7 * Math.cos(45)), Y + HEIGHT - 2 - 7 + (6 * Math.sin(45))));
+        assertFalse(region.contains(X + 1 + 8 - (9 * Math.cos(45)), Y + HEIGHT - 2 - 7 + (8 * Math.sin(45))));
+        // Check the center
+        assertFalse(region.contains(CENTER_X, CENTER_Y));
+        // TODO Could stand to have more tests testing the inside hit edge
     }
 
     /**************************************************************************

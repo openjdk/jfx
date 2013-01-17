@@ -196,6 +196,7 @@ public class NGRegion extends NGGroup implements PGRegion {
         this.width = width;
         this.height = height;
         invalidateOpaqueRegion();
+        backgroundInsets = null;
     }
 
     /**
@@ -232,23 +233,15 @@ public class NGRegion extends NGGroup implements PGRegion {
         final Background old = background;
         background = b == null ? Background.EMPTY : (Background) b;
 
-        float top=0, right=0, bottom=0, left=0;
         final List<BackgroundFill> fills = background.getFills();
         backgroundCanBeCached = !PrismSettings.disableRegionCaching && !fills.isEmpty() && (shape == null || cacheShape);
         if (backgroundCanBeCached) {
-            for (int i = 0, max = fills.size(); i < max; i++) {
-                final BackgroundFill fill = fills.get(i);
-                final Insets insets = fill.getInsets();
-                final CornerRadii radii = fill.getRadii();
-                top = (float) Math.max(top, insets.getTop() + Math.max(radii.getTopLeftVerticalRadius(), radii.getTopRightVerticalRadius()));
-                right = (float) Math.max(right, insets.getRight() + Math.max(radii.getTopRightHorizontalRadius(), radii.getBottomRightHorizontalRadius()));
-                bottom = (float) Math.max(bottom, insets.getBottom() + Math.max(radii.getBottomRightVerticalRadius(), radii.getBottomLeftVerticalRadius()));
-                left = (float) Math.max(left, insets.getLeft() + Math.max(radii.getTopLeftHorizontalRadius(), radii.getBottomLeftHorizontalRadius()));
-
+            for (int i=0, max=fills.size(); i<max && backgroundCanBeCached; i++) {
                 // We need to now inspect the paint to determine whether we can use a cache for this background.
                 // If a shape is being used, we don't care about gradients (we cache 'em both), but for a rectangle
                 // fill we omit these (so we can do 3-patch scaling). An ImagePattern is deadly to either
                 // (well, only deadly to a shape if it turns out to be a writable image).
+                final BackgroundFill fill = fills.get(i);
                 javafx.scene.paint.Paint paint = fill.getFill();
                 if ((shape == null && paint instanceof RadialGradient) || paint instanceof javafx.scene.paint.ImagePattern) {
                     backgroundCanBeCached = false;
@@ -261,7 +254,7 @@ public class NGRegion extends NGGroup implements PGRegion {
                 }
             }
         }
-        backgroundInsets = new Insets(roundUp(top), roundUp(right), roundUp(bottom), roundUp(left));
+        backgroundInsets = null;
 
         // Only update the geom if the new background is geometrically different from the old
         if (!background.getOutsets().equals(old.getOutsets())) {
@@ -269,6 +262,31 @@ public class NGRegion extends NGGroup implements PGRegion {
         } else {
             visualsChanged();
         }
+    }
+
+    /**
+     * Visits each of the background fills and takes their raddi into account to determine the insets.
+     * The backgroundInsets variable is cleared whenever the fills change, or whenever the size of the
+     * region has changed (because if the size of the region changed and a radius is percentage based
+     * then we need to recompute the insets).
+     */
+    private void updateBackgroundInsets() {
+        float top=0, right=0, bottom=0, left=0;
+        final List<BackgroundFill> fills = background.getFills();
+        for (int i=0, max=fills.size(); i<max; i++) {
+            // We need to now inspect the paint to determine whether we can use a cache for this background.
+            // If a shape is being used, we don't care about gradients (we cache 'em both), but for a rectangle
+            // fill we omit these (so we can do 3-patch scaling). An ImagePattern is deadly to either
+            // (well, only deadly to a shape if it turns out to be a writable image).
+            final BackgroundFill fill = fills.get(i);
+            final Insets insets = fill.getInsets();
+            final CornerRadii radii = normalize(fill.getRadii());
+            top = (float) Math.max(top, insets.getTop() + Math.max(radii.getTopLeftVerticalRadius(), radii.getTopRightVerticalRadius()));
+            right = (float) Math.max(right, insets.getRight() + Math.max(radii.getTopRightHorizontalRadius(), radii.getBottomRightHorizontalRadius()));
+            bottom = (float) Math.max(bottom, insets.getBottom() + Math.max(radii.getBottomRightVerticalRadius(), radii.getBottomLeftVerticalRadius()));
+            left = (float) Math.max(left, insets.getLeft() + Math.max(radii.getTopLeftHorizontalRadius(), radii.getBottomLeftHorizontalRadius()));
+        }
+        backgroundInsets = new Insets(roundUp(top), roundUp(right), roundUp(bottom), roundUp(left));
     }
 
     /**
@@ -596,6 +614,7 @@ public class NGRegion extends NGGroup implements PGRegion {
                 // example, drawing the focus rectangle extends beyond the width of the region).
                 // left + right background insets give us the left / right slice locations, plus 1 pixel for the center.
                 // Round the whole thing up to be a whole number.
+                if (backgroundInsets == null) updateBackgroundInsets();
                 final double leftInset = backgroundInsets.getLeft() + 1;
                 final double rightInset = backgroundInsets.getRight() + 1;
                 int cacheWidth = (int) (leftInset + rightInset);
@@ -674,7 +693,7 @@ public class NGRegion extends NGGroup implements PGRegion {
                                 } else {
                                     // Fix the horizontal and vertical radii if they are percentage based
                                     if (radii.isTopLeftHorizontalRadiusAsPercentage()) tlhr = tlhr * width;
-                                    if (radii.isTopLeftVerticalRadiusAsPercentage()) tlhr = tlhr * height;
+                                    if (radii.isTopLeftVerticalRadiusAsPercentage()) tlvr = tlvr * height;
                                     // The edges are rounded, so we need to compute the arc width and arc height
                                     // and fill a round rect
                                     float arcWidth = tlhr + tlhr;
@@ -691,7 +710,7 @@ public class NGRegion extends NGGroup implements PGRegion {
                                 // TODO document the issue number which will give us a fast path for rendering
                                 // non-uniform corners, and that we want to implement that instead of createPath2
                                 // below in such cases. (RT-26979)
-                                g.fill(createPath(t, l, b, r, radii));
+                                g.fill(createPath(t, l, b, r, normalize(radii)));
                             }
                         }
                     }
@@ -889,7 +908,7 @@ public class NGRegion extends NGGroup implements PGRegion {
                 for (int i = 0, max = strokes.size(); i < max; i++) {
                     final BorderStroke stroke = strokes.get(i);
                     final BorderWidths widths = stroke.getWidths();
-                    final CornerRadii radii = stroke.getRadii();
+                    final CornerRadii radii = normalize(stroke.getRadii());
                     final Insets insets = stroke.getInsets();
 
                     final javafx.scene.paint.Paint topStroke = stroke.getTopStroke();
@@ -1192,6 +1211,18 @@ public class NGRegion extends NGGroup implements PGRegion {
 
     private int roundUp(double d) {
         return (d - (int)d) == 0 ? (int) d : (int) (d + 1);
+    }
+
+    private CornerRadii normalize(CornerRadii radii) {
+        final double tlvr = radii.isTopLeftVerticalRadiusAsPercentage() ? height * radii.getTopLeftVerticalRadius() : radii.getTopLeftVerticalRadius();
+        final double tlhr = radii.isTopLeftHorizontalRadiusAsPercentage() ? width * radii.getTopLeftHorizontalRadius() : radii.getTopLeftHorizontalRadius();
+        final double trvr = radii.isTopRightVerticalRadiusAsPercentage() ? height * radii.getTopRightVerticalRadius() : radii.getTopRightVerticalRadius();
+        final double trhr = radii.isTopRightHorizontalRadiusAsPercentage() ? width * radii.getTopRightHorizontalRadius() : radii.getTopRightHorizontalRadius();
+        final double brvr = radii.isBottomRightVerticalRadiusAsPercentage() ? height * radii.getBottomRightVerticalRadius() : radii.getBottomRightVerticalRadius();
+        final double brhr = radii.isBottomRightHorizontalRadiusAsPercentage() ? width * radii.getBottomRightHorizontalRadius() : radii.getBottomRightHorizontalRadius();
+        final double blvr = radii.isBottomLeftVerticalRadiusAsPercentage() ? height * radii.getBottomLeftVerticalRadius() : radii.getBottomLeftVerticalRadius();
+        final double blhr = radii.isBottomLeftHorizontalRadiusAsPercentage() ? width * radii.getBottomLeftHorizontalRadius() : radii.getBottomLeftHorizontalRadius();
+        return new CornerRadii(tlhr, tlvr, trvr, trhr, brhr, brvr, blvr, blhr, false, false, false, false, false, false, false, false);
     }
 
     /**
