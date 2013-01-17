@@ -146,6 +146,8 @@ import javafx.css.StyleableProperty;
 import javafx.scene.transform.Affine;
 import javafx.scene.transform.NonInvertibleTransformException;
 import javafx.geometry.NodeOrientation;
+import javafx.stage.Stage;
+import javafx.stage.Window;
 
 /**
  * Base class for scene graph nodes. A scene graph is a set of tree data structures
@@ -3622,8 +3624,70 @@ public abstract class Node implements EventTarget {
     }
 
     /**
+     * Transforms a point from the coordinate space of the {@link Screen}
+     * into the local coordinate space of this {@code Node}.
+     * @param screenX x coordinate of a point on a Screen
+     * @param screenY y coordinate of a point on a Screen
+     * @return local Node's coordinates of the point or null if Node is not in a {@link Window}.
+     * Null is also returned if the transformation from local to Scene is not invertible.
+     */
+    public Point2D screenToLocal(double screenX, double screenY) {
+        Scene scene = getScene();
+        Window window = scene.getWindow();
+        if (scene == null || window == null) {
+            return null;
+        }
+        final com.sun.javafx.geom.Point2D tempPt =
+                TempState.getInstance().point;
+        tempPt.setLocation((float)(screenX - scene.getX() - window.getX()),
+                (float)(screenY - scene.getY() - window.getY()));
+        try {
+            sceneToLocal(tempPt);
+        } catch (NoninvertibleTransformException e) {
+            return null;
+        }
+        return new Point2D(tempPt.x, tempPt.y);
+    }
+
+    /**
+     * Transforms a point from the coordinate space of the {@link javafx.scene.Screen}
+     * into the local coordinate space of this {@code Node}.
+     * @param screenPoint a point on a Screen
+     * @return local Node's coordinates of the point or null if Node is not in a {@link Window}.
+     * Null is also returned if the transformation from local to Scene is not invertible.
+     */
+    public Point2D screenToLocal(Point2D screenPoint) {
+        return screenToLocal(screenPoint.getX(), screenPoint.getY());
+    }
+
+    /**
+     * Transforms a rectangle from the coordinate space of the
+     * {@link javafx.scene.Screen} into the local coordinate space of this
+     * {@code Node}.
+     * @param screenBounds bounds on a Screen
+     * @return bounds in the local Node'space or null if Node is not in a {@link Window}.
+     * Null is also returned if the transformation from local to Scene is not invertible.
+     */
+    public Bounds screenToLocal(Bounds screenBounds) {
+        Scene scene = getScene();
+        Window window = scene.getWindow();
+        if (scene == null || window == null) {
+            return null;
+        }
+        Bounds sceneBounds = new BoundingBox(screenBounds.getMinX() - scene.getX() - window.getX(),
+                screenBounds.getMinY() - scene.getY() - window.getY(),
+                screenBounds.getMinZ(),
+                screenBounds.getWidth(), screenBounds.getHeight(), screenBounds.getDepth());
+        return sceneToLocal(sceneBounds);
+    }
+
+    /**
      * Transforms a point from the coordinate space of the {@link Scene}
      * into the local coordinate space of this {@code Node}.
+     * @param sceneX x coordinate of a point on a Scene
+     * @param sceneY y coordinate of a point on a Scene
+     * @return local Node's coordinates of the point or null if Node is not in a {@link Window}.
+     * Null is also returned if the transformation from local to Scene is not invertible.
      */
     public Point2D sceneToLocal(double sceneX, double sceneY) {
         final com.sun.javafx.geom.Point2D tempPt =
@@ -3640,21 +3704,20 @@ public abstract class Node implements EventTarget {
     /**
      * Transforms a point from the coordinate space of the {@link javafx.scene.Scene}
      * into the local coordinate space of this {@code Node}.
+     * @param scenePoint a point on a Scene
+     * @return local Node's coordinates of the point or null if Node is not in a {@link Window}.
+     * Null is also returned if the transformation from local to Scene is not invertible.
      */
     public Point2D sceneToLocal(Point2D scenePoint) {
         return sceneToLocal(scenePoint.getX(), scenePoint.getY());
     }
 
     // Why is this method private?
-    private Point3D sceneToLocal(double x, double y, double z) {
+    private Point3D sceneToLocal(double x, double y, double z) throws NoninvertibleTransformException{
         final com.sun.javafx.geom.Vec3d tempV3D =
                 TempState.getInstance().vec3d;
         tempV3D.set(x, y, z);
-        try {
-            sceneToLocal(tempV3D);
-        } catch (NoninvertibleTransformException e) {
-            return null;
-        }
+        sceneToLocal(tempV3D);
         return new Point3D(tempV3D.x, tempV3D.y, tempV3D.z);
     }
 
@@ -3662,6 +3725,9 @@ public abstract class Node implements EventTarget {
      * Transforms a rectangle from the coordinate space of the
      * {@link javafx.scene.Scene} into the local coordinate space of this
      * {@code Node}.
+     * @param sceneBounds bounds on a Scene
+     * @return bounds in the local Node'space or null if Node is not in a {@link Window}.
+     * Null is also returned if the transformation from local to Scene is not invertible.
      */
     public Bounds sceneToLocal(Bounds sceneBounds) {
         // Do a quick update of localToParentTransform so that we can determine
@@ -3675,20 +3741,80 @@ public abstract class Node implements EventTarget {
 
             return createBoundingBox(p1, p2, p3, p4);
         }
-        Point3D p1 = sceneToLocal(sceneBounds.getMinX(), sceneBounds.getMinY(), sceneBounds.getMinZ());
-        Point3D p2 = sceneToLocal(sceneBounds.getMinX(), sceneBounds.getMinY(), sceneBounds.getMaxZ());
-        Point3D p3 = sceneToLocal(sceneBounds.getMinX(), sceneBounds.getMaxY(), sceneBounds.getMinZ());
-        Point3D p4 = sceneToLocal(sceneBounds.getMinX(), sceneBounds.getMaxY(), sceneBounds.getMaxZ());
-        Point3D p5 = sceneToLocal(sceneBounds.getMaxX(), sceneBounds.getMaxY(), sceneBounds.getMinZ());
-        Point3D p6 = sceneToLocal(sceneBounds.getMaxX(), sceneBounds.getMaxY(), sceneBounds.getMaxZ());
-        Point3D p7 = sceneToLocal(sceneBounds.getMaxX(), sceneBounds.getMinY(), sceneBounds.getMinZ());
-        Point3D p8 = sceneToLocal(sceneBounds.getMaxX(), sceneBounds.getMinY(), sceneBounds.getMaxZ());
-        return createBoundingBox(p1, p2, p3, p4, p5, p6, p7, p8);
+        try {
+            Point3D p1 = sceneToLocal(sceneBounds.getMinX(), sceneBounds.getMinY(), sceneBounds.getMinZ());
+            Point3D p2 = sceneToLocal(sceneBounds.getMinX(), sceneBounds.getMinY(), sceneBounds.getMaxZ());
+            Point3D p3 = sceneToLocal(sceneBounds.getMinX(), sceneBounds.getMaxY(), sceneBounds.getMinZ());
+            Point3D p4 = sceneToLocal(sceneBounds.getMinX(), sceneBounds.getMaxY(), sceneBounds.getMaxZ());
+            Point3D p5 = sceneToLocal(sceneBounds.getMaxX(), sceneBounds.getMaxY(), sceneBounds.getMinZ());
+            Point3D p6 = sceneToLocal(sceneBounds.getMaxX(), sceneBounds.getMaxY(), sceneBounds.getMaxZ());
+            Point3D p7 = sceneToLocal(sceneBounds.getMaxX(), sceneBounds.getMinY(), sceneBounds.getMinZ());
+            Point3D p8 = sceneToLocal(sceneBounds.getMaxX(), sceneBounds.getMinY(), sceneBounds.getMaxZ());
+            return createBoundingBox(p1, p2, p3, p4, p5, p6, p7, p8);
+        } catch (NoninvertibleTransformException e) {
+            return null;
+        }
+    }
+
+    /**
+     * Transforms a point from the local coordinate space of this {@code Node}
+     * into the coordinate space of its {@link javafx.scene.Screen}.
+     * @param localX x coordinate of a point in Node's space
+     * @param localY y coordinate of a point in Node's space
+     * @return screen coordinates of the point or null if Node is not in a {@link Window}
+     */
+    public Point2D localToScreen(double localX, double localY) {
+        Scene scene = getScene();
+        Window window = scene.getWindow();
+        if (scene == null || window == null) {
+            return null;
+        }
+
+        final com.sun.javafx.geom.Point2D tempPt =
+                TempState.getInstance().point;
+        tempPt.setLocation((float)localX, (float)localY);
+        localToScene(tempPt);
+
+        return new Point2D(tempPt.x + scene.getX() + window.getX(),
+                tempPt.y + scene.getY() + window.getY());
+    }
+
+    /**
+     * Transforms a point from the local coordinate space of this {@code Node}
+     * into the coordinate space of its {@link javafx.scene.Screen}.
+     * @param localPoint a point in Node's space
+     * @return screen coordinates of the point or null if Node is not in a {@link Window}
+     */
+    public Point2D localToScreen(Point2D localPoint) {
+        return localToScreen(localPoint.getX(), localPoint.getY());
+    }
+
+    /**
+     * Transforms a bounds from the local coordinate space of this
+     * {@code Node} into the coordinate space of its {@link javafx.scene.Screen}.
+     * @param localBounds bounds in Node's space
+     * @return the bounds in screen coordinates or null if Node is not in a {@link Window}
+     */
+    public Bounds localToScreen(Bounds localBounds) {
+        Scene scene = getScene();
+        Window window = scene.getWindow();
+        if (scene == null || window == null) {
+            return  null;
+        }
+
+        Bounds sceneBounds = localToScene(localBounds);
+        return new BoundingBox(sceneBounds.getMinX() + scene.getX() + window.getX(),
+                sceneBounds.getMinY() + scene.getY() + window.getY(),
+                sceneBounds.getMinZ(),
+                sceneBounds.getWidth(), sceneBounds.getHeight(), sceneBounds.getDepth());
     }
 
     /**
      * Transforms a point from the local coordinate space of this {@code Node}
      * into the coordinate space of its {@link javafx.scene.Scene}.
+     * @param localX x coordinate of a point in Node's space
+     * @param localY y coordinate of a point in Node's space
+     * @return scene coordinates of the point or null if Node is not in a {@link Window}
      */
     public Point2D localToScene(double localX, double localY) {
         final com.sun.javafx.geom.Point2D tempPt =
@@ -3701,6 +3827,8 @@ public abstract class Node implements EventTarget {
     /**
      * Transforms a point from the local coordinate space of this {@code Node}
      * into the coordinate space of its {@link javafx.scene.Scene}.
+     * @param localPoint a point in Node's space
+     * @return scene coordinates of the point or null if Node is not in a {@link Window}
      */
     public Point2D localToScene(Point2D localPoint) {
         return localToScene(localPoint.getX(), localPoint.getY());
@@ -3717,6 +3845,8 @@ public abstract class Node implements EventTarget {
     /**
      * Transforms a bounds from the local coordinate space of this
      * {@code Node} into the coordinate space of its {@link javafx.scene.Scene}.
+     * @param localBounds bounds in Node's space
+     * @return the bounds in the scene coordinates or null if Node is not in a {@link Window}
      */
     public Bounds localToScene(Bounds localBounds) {
         // Do a quick update of localToParentTransform so that we can determine
