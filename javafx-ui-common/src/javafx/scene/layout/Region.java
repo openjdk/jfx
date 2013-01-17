@@ -37,8 +37,11 @@ import javafx.beans.property.ReadOnlyDoubleProperty;
 import javafx.beans.property.ReadOnlyDoubleWrapper;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.value.ChangeListener;
-import javafx.beans.value.WritableValue;
 import javafx.collections.ObservableList;
+import javafx.css.CssMetaData;
+import javafx.css.StyleableBooleanProperty;
+import javafx.css.StyleableObjectProperty;
+import javafx.css.StyleableProperty;
 import javafx.geometry.BoundingBox;
 import javafx.geometry.Bounds;
 import javafx.geometry.HPos;
@@ -51,21 +54,17 @@ import javafx.scene.shape.Shape;
 import com.sun.javafx.Logging;
 import com.sun.javafx.TempState;
 import com.sun.javafx.binding.ExpressionHelper;
-import javafx.css.StyleableBooleanProperty;
-import javafx.css.StyleableObjectProperty;
-import javafx.css.CssMetaData;
 import com.sun.javafx.css.converters.BooleanConverter;
 import com.sun.javafx.css.converters.InsetsConverter;
 import com.sun.javafx.css.converters.ShapeConverter;
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.PickRay;
 import com.sun.javafx.geom.transform.BaseTransform;
-import sun.util.logging.PlatformLogger;
 import com.sun.javafx.scene.DirtyBits;
 import com.sun.javafx.sg.PGNode;
 import com.sun.javafx.sg.PGRegion;
 import com.sun.javafx.tk.Toolkit;
-import javafx.css.StyleableProperty;
+import sun.util.logging.PlatformLogger;
 
 /**
  * Region is the base class for all JavaFX Node-based UI Controls, and all layout containers.
@@ -178,7 +177,7 @@ public class Region extends Parent {
      * @param min The minimum bound
      * @param pref The value to be clamped between the min and max
      * @param max the maximum bound
-     * @return
+     * @return the size bounded by min, pref, and max.
      */
     static double boundedSize(double min, double pref, double max) {
         double a = pref >= min ? pref : min;
@@ -1101,7 +1100,7 @@ public class Region extends Parent {
         setHeight(height);
         PlatformLogger logger = Logging.getLayoutLogger();
         if (logger.isLoggable(PlatformLogger.FINER)) {
-            logger.finer(this.toString()+" resized to "+width+" x "+height);
+            logger.finer(this.toString() + " resized to " + width + " x " + height);
         }
     }
 
@@ -1247,8 +1246,8 @@ public class Region extends Parent {
      * @return the computed preferred width for this region
      */
     @Override protected double computePrefWidth(double height) {
-        double pwidth = super.computePrefWidth(height);
-        return getInsets().getLeft() + pwidth + getInsets().getRight();
+        final double w = super.computePrefWidth(height);
+        return getInsets().getLeft() + w + getInsets().getRight();
     }
 
     /**
@@ -1261,8 +1260,8 @@ public class Region extends Parent {
      * @return the computed preferred height for this region
      */
     @Override protected double computePrefHeight(double width) {
-        double pheight = super.computePrefHeight(width);
-        return getInsets().getTop() + pheight + getInsets().getBottom();
+        final double h = super.computePrefHeight(width);
+        return getInsets().getTop() + h + getInsets().getBottom();
     }
 
     /**
@@ -1929,19 +1928,24 @@ public class Region extends Parent {
         // occurred, so there is no need to test against bound again. We know that the
         // point (localX, localY) falls within the bounds of this node, now we need
         // to determine if it falls within the geometry of this node.
+        // Also note that because Region defaults pickOnBounds to true, this code is
+        // not usually executed. It will only be executed if pickOnBounds is set to false.
 
-        // Establish our top-left and bottom-right corners
-        double bx0 = 0;
-        double by0 = 0;
-        double bx1 = getWidth();
-        double by1 = getHeight();
+        final double x2 = getWidth();
+        final double y2 = getHeight();
+        // Figure out what the maximum possible radius value is.
+        final double maxRadius = Math.min(x2 / 2.0, y2 / 2.0);
 
-        // First check the shape. If it is specified, then we just check the shape
-        // itself. Note that this is not 100% accurate, as the bounds / fills used
-        // for the shape may extend beyond it, but I don't have a quick alternative
-        // handy to use.
-        if (_shape != null && isScaleShape() == false) {
-            return _shape.contains(localX,localY);
+        // First check the shape. Shape could be impacted by scaleShape & positionShape properties.
+        // This is going to be ugly! The problem is that basically all the scale / position operations
+        // have to be implemented here in Region, whereas right now they are all implemented in
+        // NGRegion. Drat. Basically I can't implement this properly until I have a way to get the
+        // geometry backing an arbitrary FX shape. For example, in this case I need an NGShape peer
+        // of this shape so that I can resize it as appropriate for these picking tests.
+        // Lacking that, for now, I will simply check the shape (so that picking works for pie charts)
+        // Bug is filed as RT-27775.
+        if (_shape != null) {
+            return _shape.contains(localX, localY);
         }
 
         // OK, there was no background shape, so I'm going to work on the principle of
@@ -1952,124 +1956,169 @@ public class Region extends Parent {
             final List<BackgroundFill> fills = background.getFills();
             for (int i = 0, max = fills.size(); i < max; i++) {
                 final BackgroundFill bgFill = fills.get(i);
-                final Insets insets = bgFill.getInsets();
-
-                final double rrx0 = bx0 + insets.getLeft();
-                final double rry0 = by0 + insets.getTop();
-                final double rrx1 = bx1 - insets.getRight();
-                final double rry1 = by1 - insets.getBottom();
-
-                // Check for trivial rejection - point is inside bounding rectangle
-                if (localX >= rrx0 && localY >= rry0 && localX < rrx1 && localY < rry1) {
-                    final CornerRadii rad = bgFill.getRadii();
-                    // TODO teach it how to handle vertical
-                    double tlr = rad.getTopLeftHorizontalRadius() / 2;
-                    double trr = rad.getTopRightHorizontalRadius() / 2;
-                    double blr = rad.getBottomLeftHorizontalRadius() / 2;
-                    double brr = rad.getBottomRightHorizontalRadius() / 2;
-
-                    // need to check if pt is outside rounded corners
-                    double x;
-                    double y;
-
-                    if (tlr != 0 && localX < rrx0 + tlr && localY < rry0 + tlr) {
-                        // pt is in top-left corner
-                        x = (localX - (rrx0 + tlr)) / tlr;
-                        y = (localY - (rry0 + tlr)) / tlr;
-
-                    } else if (blr != 0 && localX < rrx0 + blr && localY > rry1 - blr) {
-                        // pt is in bottom-left corner
-                        x = (localX - (rrx0 + blr)) / blr;
-                        y = (localY - (rry1 - blr)) / blr;
-
-                    } else if (trr != 0 && localX > rrx1 - trr && localY < rry0 + trr) {
-                        // pt is in top-right corner
-                        x = (localX - (rrx1 - trr)) / trr;
-                        y = (localY - (rry0 + trr)) / trr;
-
-                    } else if (brr != 0 && localX > rrx1 - brr && localY > rry1 - brr) {
-                        // pt is in bottom-right corner
-                        x = (localX - (rrx1 - brr)) / brr;
-                        y = (localY - (rry1 - brr)) / brr;
-
-                    } else {
-                        // pt within fill and not within area with a rounded corner either because
-                        // there are no rounded corners or the pt doesn't fall inside one
-                        // break and try background images, image border or stroke border
-                        // to determine if the pt is within the area.
-                        break;
-                    }
-
-                    if (x * x + y * y < .50) {
-                        // pt within rounded corner!
-                        return true;
-                    }
-                    // pt outside of rounded corner, so no hit within this fill
+                if (contains(localX, localY, 0, 0, x2, y2, bgFill.getInsets(), bgFill.getRadii(), maxRadius)) {
+                    return true;
                 }
-            }
-
-            // If we are here, then we did not find a BackgroundFill which contains the
-            // point (localX, localY), so we need to check the background images. These are
-            // simpler in that we will simply check the position of the background image.
-            // TODO for now, I am simply going to compare the bounds, but really this should
-            // take into account the background position, repeatX, repeatY, etc.
-            if (localX >= bx0 &&
-                localX <= bx1 &&
-                localY >= by0 &&
-                localY <= by1) {
-                return true;
             }
         }
 
+        // If we are here then either there were no background fills or there were no background
+        // fills which contained the point, and the region is not defined by a shape.
         final Border border = getBorder();
         if (border != null) {
-            // Check all the stroke borders first.
+            // Check all the stroke borders first. If the pick occurs on any stroke border
+            // then we consider the contains test to have passed. Semantically we will treat a Region
+            // with a border as if it were a rectangle with a stroke but no fill.
             final List<BorderStroke> strokes = border.getStrokes();
-            for (int i = 0, max = strokes.size(); i < max; i++) {
-                BorderStroke strokeBorder = strokes.get(i);
-                // TODO This should take into account the border radii, but doesn't
-                final BorderWidths widths = strokeBorder.getWidths();
-                if (borderContains(localX, localY, bx0, by0, bx1, by1,
-                                   widths.getTop(), widths.getRight(), widths.getBottom(), widths.getLeft())) {
+            for (int i=0, max=strokes.size(); i<max; i++) {
+                final BorderStroke strokeBorder = strokes.get(i);
+                if (contains(localX, localY, 0, 0, x2, y2, strokeBorder.getWidths(), false, strokeBorder.getInsets(),
+                             strokeBorder.getRadii(), maxRadius)) {
                     return true;
                 }
-
-                    // TODO I'm not sure what these offsets were...?
-//                Insets offsets = strokeBorder.getOffsets();
-//                if (borderContains(localX, localY,
-//                        bx0 + offsets.getLeft(), by0 + offsets.getTop(),
-//                        bx1 - offsets.getRight(), by1 - offsets.getBottom(),
-//                        strokeBorder.getTopWidth(), strokeBorder.getRightWidth(),
-//                        strokeBorder.getBottomWidth(), strokeBorder.getLeftWidth())) {
-//                     return true;
-//                }
             }
 
+            // Check the image borders. We treat the image border as though it is opaque.
             final List<BorderImage> images = border.getImages();
             for (int i = 0, max = images.size(); i < max; i++) {
-                BorderImage borderImage = images.get(i);
-                // TODO not sure how to handle these
-//                Insets offsets = borderImage.getInsets();
-//                if (borderContains(localX, localY,
-//                        bx0 + offsets.getLeft(), by0 + offsets.getTop(),
-//                        bx1 - offsets.getRight(), by1 - offsets.getBottom(),
-//                        borderImage.getTopWidth(), borderImage.getRightWidth(),
-//                        borderImage.getBottomWidth(), borderImage.getLeftWidth())) {
-//                     return true;
-//                }
+                final BorderImage borderImage = images.get(i);
+                if (contains(localX, localY, 0, 0, x2, y2, borderImage.getWidths(), borderImage.isFilled(),
+                             borderImage.getInsets(), CornerRadii.EMPTY, maxRadius)) {
+                    return true;
+                }
             }
         }
         return false;
     }
 
-    // tests to see if x,y is within border with top, right, bottom, left thicknesses
-    private boolean borderContains(double x, double y,
-                                   double bx0, double by0, double bx1, double by1,
-                                   double top, double right, double bottom, double left) {
+    /**
+     * Basically we will perform two contains tests. For a point to be on the stroke, it must
+     * be within the outermost edge of the stroke, but outside the innermost edge of the stroke.
+     * Unless it is filled, in which case it is really just a normal contains test.
+     *
+     * @param px        The x position of the point to test
+     * @param py        The y position of the point to test
+     * @param x1        The x1 position of the bounds to test
+     * @param y1        The y1 position of the bounds to test
+     * @param x2        The x2 position of the bounds to test
+     * @param y2        The y2 position of the bounds to test
+     * @param widths    The widths of the stroke on each side
+     * @param filled    Whether the area is filled or is just stroked
+     * @param insets    The insets to apply to (x1,y1)-(x2,y2) to get the final bounds to test
+     * @param rad       The corner radii to test with. Must not be null.
+     * @param maxRadius The maximum possible radius value
+     * @return True if (px, py) is within the stroke, taking into account insets and corner radii.
+     */
+    private boolean contains(final double px, final double py,
+                             final double x1, final double y1, final double x2, final double y2,
+                             BorderWidths widths, boolean filled,
+                             final Insets insets, final CornerRadii rad, final double maxRadius) {
+        if (filled) {
+            if (contains(px, py, x1, y1, x2, y2, insets, rad, maxRadius)) {
+                return true;
+            }
+        } else {
+            // TODO need to deal with percentage based widths
+            boolean insideOuterEdge = contains(px, py, x1, y1, x2, y2, insets, rad, maxRadius);
 
-        return (((x >= bx0 && x <= bx0 + left || ((x >= bx1 - right) && x <= bx1)) && y >= by0 && y <= by1) ||
-                (((y >= by0 && y <= by0 + top) || ((y >= by1 - bottom) && y <= by1)) && x >= bx0 && x <= bx1));
+            if (insideOuterEdge) {
+                boolean outsideInnerEdge = !contains(px, py,
+                    x1 + widths.getLeft(),
+                    y1 + widths.getTop(),
+                    x2 - widths.getRight(),
+                    y2 - widths.getBottom(),
+                    insets, rad, maxRadius);
+                if (outsideInnerEdge) return true;
+            }
+        }
+        return false;
+    }
 
+    /**
+     * Determines whether the point (px, py) is contained within the the bounds (x1, y1)-(x2, y2),
+     * after taking into account the insets and the corner radii.
+     *
+     * @param px        The x position of the point to test
+     * @param py        The y position of the point to test
+     * @param x1        The x1 position of the bounds to test
+     * @param y1        The y1 position of the bounds to test
+     * @param x2        The x2 position of the bounds to test
+     * @param y2        The y2 position of the bounds to test
+     * @param insets    The insets to apply to (x1,y1)-(x2,y2) to get the final bounds to test
+     * @param rad       The corner radii to test with. Must not be null.
+     * @param maxRadius The maximum possible radius value
+     * @return True if (px, py) is within the bounds, taking into account insets and corner radii.
+     */
+    private boolean contains(final double px, final double py,
+                             final double x1, final double y1, final double x2, final double y2,
+                             final Insets insets, final CornerRadii rad, final double maxRadius) {
+        // These four values are the x0, y0, x1, y1 bounding box after
+        // having taken into account the insets of this particular
+        // background fill.
+        final double rrx0 = x1 + insets.getLeft();
+        final double rry0 = y1 + insets.getTop();
+        final double rrx1 = x2 - insets.getRight();
+        final double rry1 = y2 - insets.getBottom();
+
+        // Check for trivial rejection - point is inside bounding rectangle
+        if (px >= rrx0 && py >= rry0 && px <= rrx1 && py <= rry1) {
+            // The point was within the index bounding box. Now we need to analyze the
+            // corner radii to see if the point lies within the corners or not. If the
+            // point is within a corner then we reject this one.
+            final double tlhr = Math.min(rad.getTopLeftHorizontalRadius(), maxRadius);
+            if (rad.isUniform() && tlhr == 0) {
+                // This is a simple square! Since we know the point is already within
+                // the insets of this fill, we can simply return true.
+                return true;
+            } else {
+                final double tlvr = Math.min(rad.getTopLeftVerticalRadius(), maxRadius);
+                final double trhr = Math.min(rad.getTopRightHorizontalRadius(), maxRadius);
+                final double trvr = Math.min(rad.getTopRightVerticalRadius(), maxRadius);
+                final double blhr = Math.min(rad.getBottomLeftHorizontalRadius(), maxRadius);
+                final double blvr = Math.min(rad.getBottomLeftVerticalRadius(), maxRadius);
+                final double brhr = Math.min(rad.getBottomRightHorizontalRadius(), maxRadius);
+                final double brvr = Math.min(rad.getBottomRightVerticalRadius(), maxRadius);
+
+                // The four corners can each be described as a quarter of an ellipse
+                double centerX, centerY, a, b;
+
+                if (px <= rrx0 + tlhr && py <= rry0 + tlvr) {
+                    // Point is in the top left corner
+                    centerX = rrx0 + tlhr;
+                    centerY = rry0 + tlvr;
+                    a = tlhr;
+                    b = tlvr;
+                } else if (px >= rrx1 - trhr && py <= rry0 + trvr) {
+                    // Point is in the top right corner
+                    centerX = rrx1 - trhr;
+                    centerY = rry0 + trvr;
+                    a = trhr;
+                    b = trvr;
+                } else if (px >= rrx1 - brhr && py >= rry1 - brvr) {
+                    // Point is in the bottom right corner
+                    centerX = rrx1 - brhr;
+                    centerY = rry1 - brvr;
+                    a = brhr;
+                    b = brvr;
+                } else if (px <= rrx0 + blhr && py >= rry1 - blvr) {
+                    // Point is in the bottom left corner
+                    centerX = rrx0 + blhr;
+                    centerY = rry1 - blvr;
+                    a = blhr;
+                    b = blvr;
+                } else {
+                    // The point must have been in the solid body someplace
+                    return true;
+                }
+
+                double x = px - centerX;
+                double y = py - centerY;
+                double result = ((x*x)/(a*a) + (y*y)/(b*b));
+                // The .0000001 is fudge to help in cases where double arithmetic isn't quite right
+                if (result - .0000001 <= 1) return true;
+            }
+        }
+        return false;
     }
 
     /**
