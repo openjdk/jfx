@@ -330,29 +330,74 @@ public class RegionPickTest {
         assertFalse(region.contains(CENTER_X, CENTER_Y));
     }
 
-    // TODO need to implement a bunch of tests for strokes. See this sample code for ideas:
-    /*
-        final Pane region = new Pane();
-        region.relocate(10, 10);
-        region.setPrefSize(100, 100);
-        final BorderStroke b1 = new BorderStroke(Color.RED, BorderStrokeStyle.SOLID, new CornerRadii(20, 15, 10, 5, false), new BorderWidths(10, 6, 4, 2), new Insets(10, 15, 20, 25));
-        final BorderStroke b2 = new BorderStroke(Color.GREEN, BorderStrokeStyle.SOLID, new CornerRadii(20, 15, 10, 5, false), new BorderWidths(10, 6, 4, 2), new Insets(10, 15, 20, 25));
-        region.setBorder(new Border(b1));
-        region.hoverProperty().addListener(new InvalidationListener() {
-            @Override public void invalidated(Observable observable) {
-                if (region.isHover()) {
-                    region.setBorder(new Border(b2));
-                } else {
-                    region.setBorder(new Border(b1));
-                }
-            }
-        });
-        region.setPickOnBounds(false);
+    @Test public void pickingRectangularBorderWithThickBorder() {
+        region.setBorder(new Border(new BorderStroke(Color.GREEN, BorderStrokeStyle.SOLID, CornerRadii.EMPTY, new BorderWidths(10))));
+        assertFalse(region.contains(LEFT_OF, CENTER_Y));
+        assertFalse(region.contains(CENTER_X, ABOVE));
+        assertFalse(region.contains(RIGHT_OF, CENTER_Y));
+        assertFalse(region.contains(CENTER_X, BELOW));
+        assertFalse(region.contains(CENTER_X, CENTER_Y));
 
-        Group group = new Group();
-        group.getChildren().addAll(region);
-        Scene scene = new Scene(group, 300, 300);
-     */
+        assertTrue(region.contains(X, Y));
+        assertTrue(region.contains(X+5, Y+5));
+        assertFalse(region.contains(X+10, Y+10));
+    }
+
+    @Test public void pickingRectangularBorderWithIndependentBorderWidths() {
+        region.setBorder(new Border(new BorderStroke(Color.GREEN, BorderStrokeStyle.SOLID, CornerRadii.EMPTY, new BorderWidths(5, 10, 15, 20))));
+        assertFalse(region.contains(LEFT_OF, CENTER_Y));
+        assertFalse(region.contains(CENTER_X, ABOVE));
+        assertFalse(region.contains(RIGHT_OF, CENTER_Y));
+        assertFalse(region.contains(CENTER_X, BELOW));
+        assertFalse(region.contains(CENTER_X, CENTER_Y));
+
+        // Top. Test first and last pixels, and one-past
+        assertTrue(region.contains(CENTER_X, Y));
+        assertTrue(region.contains(CENTER_X, Y + 4));
+        assertFalse(region.contains(CENTER_X, Y + 5));
+
+        // Right. Test first and last pixels, and one-past
+        assertTrue(region.contains(WIDTH, CENTER_Y));
+        assertTrue(region.contains(WIDTH - 9, CENTER_Y));
+        assertFalse(region.contains(WIDTH - 10, CENTER_Y));
+
+        // Bottom. Test first and last pixels, and one-past
+        assertTrue(region.contains(CENTER_X, HEIGHT));
+        assertTrue(region.contains(CENTER_X, HEIGHT - 14));
+        assertFalse(region.contains(CENTER_X, HEIGHT - 15));
+
+        // Left. Test first and last pixels, and one-past
+        assertTrue(region.contains(X, CENTER_Y));
+        assertTrue(region.contains(X + 19, CENTER_Y));
+        assertFalse(region.contains(X + 20, CENTER_Y));
+   }
+
+    @Test public void pickingRectangularBorderWithIndependentBorderWidthsAndInsets() {
+        region.setBorder(new Border(new BorderStroke(Color.GREEN, BorderStrokeStyle.SOLID, CornerRadii.EMPTY, new BorderWidths(5, 10, 15, 20), new Insets(1, 2, 3, 4))));
+        // Top. Test first and last pixels, and one-past
+        assertFalse(region.contains(CENTER_X, Y));
+        assertTrue(region.contains(CENTER_X, Y+1));
+        assertTrue(region.contains(CENTER_X, Y+1 + 4));
+        assertFalse(region.contains(CENTER_X, Y+1 + 5));
+
+        // Right. Test first and last pixels, and one-past
+        assertFalse(region.contains(WIDTH-1, CENTER_Y));
+        assertTrue(region.contains(WIDTH-2, CENTER_Y));
+        assertTrue(region.contains(WIDTH-2 - 9, CENTER_Y));
+        assertFalse(region.contains(WIDTH-2 - 10, CENTER_Y));
+
+        // Bottom. Test first and last pixels, and one-past
+        assertFalse(region.contains(CENTER_X, HEIGHT-2));
+        assertTrue(region.contains(CENTER_X, HEIGHT-3));
+        assertTrue(region.contains(CENTER_X, HEIGHT-3 - 14));
+        assertFalse(region.contains(CENTER_X, HEIGHT-3 - 15));
+
+        // Left. Test first and last pixels, and one-past
+        assertFalse(region.contains(X+3, CENTER_Y));
+        assertTrue(region.contains(X+4, CENTER_Y));
+        assertTrue(region.contains(X+4 + 19, CENTER_Y));
+        assertFalse(region.contains(X+4 + 20, CENTER_Y));
+    }
 
     /**************************************************************************
      *                                                                        *
