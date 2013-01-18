@@ -754,7 +754,6 @@ is being used to size a border should also be in pixels.
  *                                                                             *
  ******************************************************************************/
 .tool-bar:vertical {
-    -fx-background: derive(-fx-base,-20%);
     -fx-background-color:
         linear-gradient(to right, derive(-fx-base,0%) 0%, derive(-fx-base,10%) 50%, derive(-fx-base,0%) 100%);
     -fx-background-insets: 0;
