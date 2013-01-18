@@ -25,7 +25,6 @@
 
 package javafx.scene.control;
 
-import com.sun.javafx.scene.control.FocusableTextField;
 import javafx.collections.WeakListChangeListener;
 import com.sun.javafx.scene.control.skin.ComboBoxListViewSkin;
 import javafx.beans.InvalidationListener;
@@ -353,7 +352,7 @@ public class ComboBox<T> extends ComboBoxBase<T> {
     
     
     // --- Editor
-    private FocusableTextField textField;
+    private TextField textField;
     /**
      * The editor for the ComboBox. The editor is null if the ComboBox is not
      * {@link #editableProperty() editable}.
@@ -366,7 +365,7 @@ public class ComboBox<T> extends ComboBoxBase<T> {
     public final ReadOnlyObjectProperty<TextField> editorProperty() { 
         if (editor == null) {
             editor = new ReadOnlyObjectWrapper<TextField>(this, "editor");
-            textField = new FocusableTextField();
+            textField = new TextField();
             editor.set(textField);
         }
         return editor.getReadOnlyProperty(); 
