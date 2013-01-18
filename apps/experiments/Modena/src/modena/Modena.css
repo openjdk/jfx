@@ -1514,7 +1514,7 @@ is being used to size a border should also be in pixels.
     -fx-background-color: -fx-box-border, -fx-inner-border, -fx-body-color;
     -fx-background-insets: 0, 1, 2;
     -fx-background-radius: 5 5 0 0, 4 4 0 0, 3 3 0 0;
-    -fx-padding: 0.166667em 0.833333em 0.25em 0.833333em; /* 2 10 3 10 */
+    -fx-padding: 0.417em 0.75em 0.5em 0.75em; /* 5 9 6 9 */
 }
 .titled-pane:focused > .title {
     -fx-color: -fx-focus-color;
@@ -1523,7 +1523,7 @@ is being used to size a border should also be in pixels.
     -fx-background-color: null;
     -fx-background-insets: 0;
     -fx-background-radius: 0;
-    -fx-padding: 0.0em 0.25em 0.0em 0.0em; /* 0 3 0 0 */
+    -fx-padding: 0.0em 0.583em 0.0em 0.0em; /* 0 7 0 0 */
 }
 .titled-pane > .title > .arrow-button > .arrow {
     -fx-background-color: -fx-mark-highlight-color, -fx-mark-color;

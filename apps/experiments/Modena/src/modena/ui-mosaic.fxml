@@ -4,6 +4,7 @@
 <?import java.util.*?>
 <?import javafx.collections.*?>
 <?import javafx.geometry.*?>
+<?import javafx.scene.chart.*?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 <?import javafx.scene.paint.*?>
@@ -41,28 +42,41 @@
         <ToggleGroup fx:id="toggle1" />
       </toggleGroup>
     </ToggleButton>
-    <Accordion layoutX="693.0" layoutY="362.0">
-      <expandedPane>
-        <TitledPane fx:id="x1" animated="false" expanded="true" text="untitled">
+    <TitledPane animated="false" layoutX="682.0" layoutY="298.0" prefHeight="59.0" prefWidth="216.0" text="Hello World">
+      <content>
+        <AnchorPane id="Content" minHeight="0.0" minWidth="0.0" prefHeight="180.0" prefWidth="200.0" />
+      </content>
+    </TitledPane>
+    <Accordion expandedPane="$null" layoutX="551.0" layoutY="382.0" prefHeight="270.0" prefWidth="347.0">
+      <panes>
+        <TitledPane fx:id="x1" animated="false" expanded="false" text="Empty">
           <content>
             <AnchorPane id="Content" minHeight="0.0" minWidth="0.0" prefHeight="180.0" prefWidth="200.0" />
           </content>
         </TitledPane>
-      </expandedPane>
-      <panes>
-        <fx:reference source="x1" />
-        <TitledPane animated="false" expanded="false" text="untitled">
+        <TitledPane animated="false" expanded="false" text="Chart">
           <content>
             <ScrollPane prefHeight="200.0" prefWidth="200.0">
               <content>
-                <AnchorPane id="Content" minHeight="0.0" minWidth="0.0" prefHeight="200.0" prefWidth="200.0" />
+                <BubbleChart id="BubbleChart" title="My Bubble Chart" titleSide="TOP">
+                  <xAxis>
+                    <NumberAxis side="BOTTOM" />
+                  </xAxis>
+                  <yAxis>
+                    <NumberAxis side="LEFT" />
+                  </yAxis>
+                </BubbleChart>
               </content>
             </ScrollPane>
           </content>
         </TitledPane>
-        <TitledPane animated="false" expanded="false" text="untitled">
+        <TitledPane animated="false" expanded="false" text="Button">
           <content>
-            <AnchorPane id="Content" minHeight="0.0" minWidth="0.0" prefHeight="180.0" prefWidth="200.0" />
+            <AnchorPane id="Content" minHeight="0.0" minWidth="0.0" prefHeight="180.0" prefWidth="200.0">
+              <children>
+                <Button layoutX="140.0" layoutY="89.0" mnemonicParsing="false" text="Button" />
+              </children>
+            </AnchorPane>
           </content>
         </TitledPane>
       </panes>
@@ -88,7 +102,7 @@
         </FXCollections>
       </items>
     </ComboBox>
-    <ProgressIndicator layoutX="571.0" layoutY="367.0" prefHeight="59.0" prefWidth="56.0" progress="-1.0" />
+    <ProgressIndicator layoutX="582.0" layoutY="300.0" prefHeight="59.0" prefWidth="56.0" progress="-1.0" />
     <SplitPane dividerPositions="0.5086505190311419" focusTraversable="true" layoutX="39.0" layoutY="361.0" orientation="VERTICAL" prefHeight="291.0" prefWidth="447.0">
       <items>
         <SplitPane dividerPositions="0.49435665914221216" focusTraversable="true" prefHeight="172.0" prefWidth="490.0">

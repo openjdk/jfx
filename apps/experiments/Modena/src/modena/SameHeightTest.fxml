@@ -190,6 +190,11 @@
                         <TextField prefWidth="80.0" promptText="Textfield" text="Sample" />
                         <PasswordField prefWidth="80.0" promptText="Sample" text="" />
                         <TextArea prefHeight="50.0" prefWidth="80.0" text="Sample" wrapText="true" />
+                        <TitledPane animated="false" prefWidth="80.0" text="Sample">
+                          <content>
+                            <AnchorPane id="Content" minHeight="0.0" minWidth="0.0" prefHeight="40.0" prefWidth="80.0" />
+                          </content>
+                        </TitledPane>
                         <ToggleButton mnemonicParsing="false" prefWidth="90.0" selected="true" text="Toggle">
                           <toggleGroup>
                             <ToggleGroup />
@@ -237,6 +242,16 @@
                     <TextField maxWidth="100.0" prefWidth="100.0" text="Sample" />
                     <PasswordField maxWidth="100.0" prefWidth="100.0" promptText="Sample" text="" />
                     <TextArea maxWidth="100.0" prefHeight="50.0" prefRowCount="10" prefWidth="100.0" text="Sample" wrapText="true" />
+                    <TitledPane animated="false" collapsible="false" maxWidth="100.0" prefWidth="100.0" text="Sample">
+                      <content>
+                        <AnchorPane id="Content" maxWidth="100.0" minHeight="0.0" minWidth="0.0" prefHeight="40.0" prefWidth="100.0" />
+                      </content>
+                    </TitledPane>
+                    <TitledPane animated="false" maxWidth="100.0" prefWidth="100.0" text="Sample">
+                      <content>
+                        <AnchorPane id="Content" maxWidth="100.0" minHeight="0.0" minWidth="0.0" prefHeight="40.0" prefWidth="100.0" />
+                      </content>
+                    </TitledPane>
                     <MenuButton maxWidth="100.0" mnemonicParsing="false" prefWidth="100.0" text="Sample">
                       <items>
                         <MenuItem mnemonicParsing="false" text="Sample MenuButton Item 1" />
