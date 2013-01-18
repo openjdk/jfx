@@ -41,11 +41,32 @@
         <ToggleGroup fx:id="toggle1" />
       </toggleGroup>
     </ToggleButton>
-    <ScrollPane layoutX="560.0" layoutY="439.0" prefHeight="194.0" prefWidth="336.9999000000025">
-      <content>
-        <AnchorPane id="Content" minHeight="0.0" minWidth="0.0" prefHeight="400.0" prefWidth="400.0" />
-      </content>
-    </ScrollPane>
+    <Accordion layoutX="693.0" layoutY="362.0">
+      <expandedPane>
+        <TitledPane fx:id="x1" animated="false" expanded="true" text="untitled">
+          <content>
+            <AnchorPane id="Content" minHeight="0.0" minWidth="0.0" prefHeight="180.0" prefWidth="200.0" />
+          </content>
+        </TitledPane>
+      </expandedPane>
+      <panes>
+        <fx:reference source="x1" />
+        <TitledPane animated="false" expanded="false" text="untitled">
+          <content>
+            <ScrollPane prefHeight="200.0" prefWidth="200.0">
+              <content>
+                <AnchorPane id="Content" minHeight="0.0" minWidth="0.0" prefHeight="200.0" prefWidth="200.0" />
+              </content>
+            </ScrollPane>
+          </content>
+        </TitledPane>
+        <TitledPane animated="false" expanded="false" text="untitled">
+          <content>
+            <AnchorPane id="Content" minHeight="0.0" minWidth="0.0" prefHeight="180.0" prefWidth="200.0" />
+          </content>
+        </TitledPane>
+      </panes>
+    </Accordion>
     <ChoiceBox layoutX="234.0" layoutY="85.0" prefWidth="160.0">
       <items>
         <FXCollections fx:factory="observableArrayList">
