@@ -79,7 +79,6 @@ public class ListCell<T> extends IndexedCell<T> {
      */
     public ListCell() {
         getStyleClass().addAll(DEFAULT_STYLE_CLASS);
-        indexProperty().addListener(indexListener);
     }
 
 
@@ -94,14 +93,6 @@ public class ListCell<T> extends IndexedCell<T> {
      *     or items).                                                          *
      *                                                                         *
      **************************************************************************/
-    
-    private final InvalidationListener indexListener = new InvalidationListener() {
-        @Override public void invalidated(Observable valueModel) {
-            updateItem();
-            updateSelection();
-            updateFocus();
-        }
-    };
 
     /**
      * Listens to the editing index on the ListView. It is possible for the developer
@@ -302,6 +293,14 @@ public class ListCell<T> extends IndexedCell<T> {
      *                                                                         *
      **************************************************************************/
     
+    /** {@inheritDoc} */
+    @Override void indexChanged() {
+        super.indexChanged();
+        updateItem();
+        updateSelection();
+        updateFocus();
+    }
+
     /** {@inheritDoc} */
     @Override protected Skin<?> createDefaultSkin() {
         return new ListCellSkin(this);

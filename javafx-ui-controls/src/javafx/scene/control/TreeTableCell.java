@@ -69,7 +69,7 @@ public class TreeTableCell<S,T> extends IndexedCell<T> {
      */
     public TreeTableCell() {
         getStyleClass().addAll(DEFAULT_STYLE_CLASS);
-        indexProperty().addListener(indexListener);
+        
         updateColumnIndex();
     }
 
@@ -82,19 +82,6 @@ public class TreeTableCell<S,T> extends IndexedCell<T> {
      **************************************************************************/
     
     private boolean itemDirty = false;
-    
-    private final InvalidationListener indexListener = new InvalidationListener() {
-        @Override public void invalidated(Observable valueModel) {
-            // Ideally we would just use the following two lines of code, rather
-            // than the updateItem() call beneath, but if we do this we end up with
-            // RT-22428 where all the columns are collapsed.
-            // itemDirty = true;
-            // requestLayout();
-            updateItem();
-            updateSelection();
-            updateFocus();
-        }
-    };
     
     /*
      * This is the list observer we use to keep an eye on the SelectedCells
@@ -359,6 +346,18 @@ public class TreeTableCell<S,T> extends IndexedCell<T> {
      * Private Implementation                                                  *
      *                                                                         *
      **************************************************************************/
+    
+    @Override void indexChanged() {
+        super.indexChanged();
+        // Ideally we would just use the following two lines of code, rather
+        // than the updateItem() call beneath, but if we do this we end up with
+        // RT-22428 where all the columns are collapsed.
+        // itemDirty = true;
+        // requestLayout();
+        updateItem();
+        updateSelection();
+        updateFocus();
+    }
     
     private boolean isLastVisibleColumn = false;
     private int columnIndex = -1;
