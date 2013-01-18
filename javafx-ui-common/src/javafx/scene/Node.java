@@ -704,6 +704,7 @@ public abstract class Node implements EventTarget {
                     updateTreeVisible();
                     oldParent = newParent;
                     invalidateLocalToSceneTransform();
+                    parentEffectiveOrientationChanged();
                 }
 
                 @Override
@@ -771,6 +772,11 @@ public abstract class Node implements EventTarget {
                     peer.release();
                 }
             }
+            if (getParent() == null) {
+                // if we are the root we need to handle scene change
+                parentEffectiveOrientationChanged();
+            }
+
             oldScene = _scene;
             // we need to check if a override has been set, if so we need to apply it to the node now
             // that it may have a valid scene
@@ -4083,29 +4089,22 @@ public abstract class Node implements EventTarget {
             }
 
             // Check to see whether the node requires mirroring
-            if (getParent() == null) {
-                Scene scene = getScene();
-                if (scene != null && equals(scene.getRoot())) {
-                    // Mirror the root node
-                    if (hasMirroring()) {
-                        double xOffset = scene.getWidth() / 2;
-                        localToParentTx.translate(xOffset, 0, 0);
-                        localToParentTx.scale(-1, 1);
-                        localToParentTx.translate(-xOffset, 0, 0);
-                    }
-                }
-            } else {
-                // Mirror a leaf node
-                if (hasMirroring()) {
-                    double xOffset = impl_getPivotX();
-                    localToParentTx.translate(xOffset, 0, 0);
-                    localToParentTx.scale(-1, 1);
-                    localToParentTx.translate(-xOffset, 0, 0);
-                }
+            if (hasMirroring()) {
+                final double xOffset = getMirroringCenter();
+                localToParentTx.translate(xOffset, 0, 0);
+                localToParentTx.scale(-1, 1);
+                localToParentTx.translate(-xOffset, 0, 0);
             }
-            
+
             transformDirty = false;
         }
+    }
+
+    private double getMirroringCenter() {
+        final Scene sceneValue = getScene();
+        return ((sceneValue != null) && (sceneValue.getRoot() == this))
+                   ? sceneValue.getWidth() / 2
+                   : impl_getPivotX();
     }
 
     /**
@@ -5193,7 +5192,10 @@ public abstract class Node implements EventTarget {
      **************************************************************************/
     
     private ObjectProperty<NodeOrientation> nodeOrientation;
-    
+
+    private NodeOrientation effectiveNodeOrientation;
+    private NodeOrientation automaticNodeOrientation;
+
     public final void setNodeOrientation(NodeOrientation orientation) {
         nodeOrientationProperty().set(orientation);
     }
@@ -5218,16 +5220,7 @@ public abstract class Node implements EventTarget {
             nodeOrientation = new StyleableObjectProperty<NodeOrientation>(NodeOrientation.INHERIT) {
                 @Override
                 protected void invalidated() {
-                    impl_transformsChanged();
-                    // Apply the transform to all the children of this node
-                    if (Node.this instanceof Parent) {
-                        Parent p = (Parent)Node.this;
-                        List<Node> children = p.getChildren();
-                        for (int i = 0, max = children.size(); i < max; i++) {
-                            Node n = p.getChildren().get(i);
-                            n.impl_transformsChanged();
-                        }
-                    }
+                    nodeEffectiveOrientationChanged();
                 }
                 
                 @Override
@@ -5259,9 +5252,13 @@ public abstract class Node implements EventTarget {
      * </p>
      */
     public final NodeOrientation getEffectiveNodeOrientation() {
-        return getEffectiveNodeOrientation(false);
+        if (effectiveNodeOrientation == null) {
+            effectiveNodeOrientation = calcEffectiveNodeOrientation();
+        }
+
+        return effectiveNodeOrientation;
     }
-    
+
     /**
      * Determines whether a node should be mirrored when node orientation
      * is right-to-left.
@@ -5277,36 +5274,90 @@ public abstract class Node implements EventTarget {
     public boolean isAutomaticallyMirrored() {
         return true;
     }
-    
-    NodeOrientation getNodeOrientation(boolean actual) {
-        if (actual && !isAutomaticallyMirrored()) return NodeOrientation.LEFT_TO_RIGHT;
-        return nodeOrientation == null ? NodeOrientation.INHERIT : nodeOrientation.get();
+
+    NodeOrientation getAutomaticNodeOrientation() {
+        if (automaticNodeOrientation == null) {
+            automaticNodeOrientation = calcAutomaticNodeOrientation();
+        }
+
+        return automaticNodeOrientation;
     }
-    
-    final NodeOrientation getEffectiveNodeOrientation(boolean actual) {
-        NodeOrientation orientation = getNodeOrientation(actual);
-        if (orientation == NodeOrientation.INHERIT) {
-            Parent parent = getParent();
-            if (parent != null) return parent.getEffectiveNodeOrientation(actual);
-            Scene scene = getScene();
-            if (scene != null) return scene.getEffectiveNodeOrientation();
+
+    final void parentEffectiveOrientationChanged() {
+        if (getNodeOrientation() == NodeOrientation.INHERIT) {
+            nodeEffectiveOrientationChanged();
+        } else {
+            // mirroring changed
+            impl_transformsChanged();
+        }
+    }
+
+    void nodeEffectiveOrientationChanged() {
+        effectiveNodeOrientation = null;
+        automaticNodeOrientation = null;
+        // mirroring changed
+        impl_transformsChanged();
+    }
+
+    private NodeOrientation calcEffectiveNodeOrientation() {
+        final NodeOrientation nodeOrientationValue = getNodeOrientation();
+        if (nodeOrientationValue != NodeOrientation.INHERIT) {
+            return nodeOrientationValue;
+        }
+
+        final Node parentValue = getParent();
+        if (parentValue != null) {
+            return parentValue.getEffectiveNodeOrientation();
+        }
+
+        final Scene sceneValue = getScene();
+        if (sceneValue != null) {
+            return sceneValue.getEffectiveNodeOrientation();
+        }
+
+        return NodeOrientation.LEFT_TO_RIGHT;
+    }
+
+    private NodeOrientation calcAutomaticNodeOrientation() {
+        if (!isAutomaticallyMirrored()) {
             return NodeOrientation.LEFT_TO_RIGHT;
         }
-        return orientation;
+
+        final NodeOrientation nodeOrientationValue = getNodeOrientation();
+        if (nodeOrientationValue != NodeOrientation.INHERIT) {
+            return nodeOrientationValue;
+        }
+
+        final Node parentValue = getParent();
+        if (parentValue != null) {
+            // automatic node orientation is inherited
+            return parentValue.getAutomaticNodeOrientation();
+        }
+
+        final Scene sceneValue = getScene();
+        if (sceneValue != null) {
+            return sceneValue.getEffectiveNodeOrientation();
+        }
+
+        return NodeOrientation.LEFT_TO_RIGHT;
     }
-    
+
     // Return true if the node needs to be mirrored.
     // A node has mirroring if the orientation differs from the parent
-    private boolean hasMirroring() {
-        Parent parent = getParent();
-        if (parent == null) {
-            return getEffectiveNodeOrientation(true) == NodeOrientation.RIGHT_TO_LEFT;
-        }
-        NodeOrientation orientation = getNodeOrientation(true);
-        if (orientation == NodeOrientation.INHERIT) return false;
-        return orientation != parent.getEffectiveNodeOrientation(true);
+    // package private for testing
+    boolean hasMirroring() {
+        final Parent parentValue = getParent();
+
+        final NodeOrientation thisOrientation =
+                getAutomaticNodeOrientation();
+        final NodeOrientation parentOrientation =
+                (parentValue != null)
+                    ? parentValue.getAutomaticNodeOrientation()
+                    : NodeOrientation.LEFT_TO_RIGHT;
+
+        return thisOrientation != parentOrientation;
     }
-    
+
     /***************************************************************************
      *                                                                         *
      *                       Misc Seldom Used Properties                       *

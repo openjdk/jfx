@@ -43,6 +43,7 @@ import javafx.scene.image.Image;
 import com.sun.javafx.beans.annotations.Default;
 import com.sun.javafx.collections.TrackableObservableList;
 import com.sun.javafx.robot.impl.FXRobotHelper;
+import com.sun.javafx.scene.SceneHelper;
 import com.sun.javafx.stage.StageHelper;
 import com.sun.javafx.stage.StagePeerListener;
 import com.sun.javafx.tk.TKPulseListener;
@@ -493,7 +494,11 @@ public class Stage extends Window {
         }
 
         this.owner = owner;
-
+        
+        final Scene sceneValue = getScene();
+        if (sceneValue != null) {
+            SceneHelper.parentEffectiveOrientationChanged(sceneValue);
+        }
     }
 
     /**

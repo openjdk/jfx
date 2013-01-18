@@ -1222,6 +1222,14 @@ public abstract class Parent extends Node {
         return ((PGGroup) impl_getPGNode());
     }
 
+    @Override
+    void nodeEffectiveOrientationChanged() {
+        super.nodeEffectiveOrientationChanged();
+
+        for (int i = 0, max = children.size(); i < max; ++i) {
+            children.get(i).parentEffectiveOrientationChanged();
+        }
+    }
 
     /***************************************************************************
      *                                                                         *
