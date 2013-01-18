@@ -69,6 +69,7 @@ public class TableRow<T> extends IndexedCell<T> {
      */
     public TableRow() {
         getStyleClass().addAll(DEFAULT_STYLE_CLASS);
+        indexProperty().addListener(indexListener);
     }
 
 
@@ -87,6 +88,22 @@ public class TableRow<T> extends IndexedCell<T> {
      *                                                                         *
      **************************************************************************/
 
+    private final InvalidationListener indexListener = new InvalidationListener() {
+        @Override public void invalidated(Observable valueModel) {
+            int newIndex = getIndex();
+        
+            // Below we check if the index has changed, but we always call updateItem,
+            // as the value in the given index may have changed.
+            updateItem(newIndex);
+
+            if (oldIndex == newIndex) return;
+            oldIndex = newIndex;
+
+            updateSelection();
+            updateFocus();
+        }
+    };
+    
     /*
      * This is the list observer we use to keep an eye on the SelectedCells
      * list in the table view. Because it is possible that the table can
@@ -222,23 +239,6 @@ public class TableRow<T> extends IndexedCell<T> {
      **************************************************************************/
 
     private int oldIndex = -1;
-    
-    /** {@inheritDoc} */
-    @Override void indexChanged() {
-        int newIndex = getIndex();
-        
-        super.indexChanged();
-        
-        // Below we check if the index has changed, but we always call updateItem,
-        // as the value in the given index may have changed.
-        updateItem(newIndex);
-        
-        if (oldIndex == newIndex) return;
-        oldIndex = newIndex;
-        
-        updateSelection();
-        updateFocus();
-    }
     
     private void updateItem(int newIndex) {
         TableView<T> tv = getTableView();

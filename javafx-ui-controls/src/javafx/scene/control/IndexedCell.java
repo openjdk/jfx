@@ -25,9 +25,7 @@
 
 package javafx.scene.control;
 
-import java.util.Set;
 import javafx.css.PseudoClass;
-import com.sun.javafx.css.StyleManager;
 import javafx.beans.property.ReadOnlyIntegerProperty;
 import javafx.beans.property.ReadOnlyIntegerWrapper;
 
@@ -113,12 +111,9 @@ public class IndexedCell<T> extends Cell<T> {
      */
     public void updateIndex(int i) { 
         index.set(i);
-        indexChanged();
     }
     
-    void indexChanged() { 
-        // no-op
-    }
+    
     
     /* *************************************************************************
      *                                                                         *
