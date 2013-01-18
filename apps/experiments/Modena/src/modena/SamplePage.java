@@ -103,7 +103,7 @@ public class SamplePage extends GridPane {
         if (state!=null) node.getProperties().put("javafx.scene.Node.pseudoClassOverride", state);
         Platform.runLater(new Runnable() {
             @Override public void run() {
-                node.lookup(subNodeStyleClass).getProperties().put("javafx.scene.Node.pseudoClassOverride", subNodeState);
+                if (node != null) node.lookup(subNodeStyleClass).getProperties().put("javafx.scene.Node.pseudoClassOverride", subNodeState);
             }
         });
         return node;
@@ -485,8 +485,9 @@ public class SamplePage extends GridPane {
                 withState(createTabPane(5, 200,"Disabled", true, false, Side.RIGHT), "disabled")
                 );
         newDetailedSection(
-                new String[] {"TitledPane:", "normal", "focused", "disabled"}, 
+                new String[] {"TitledPane:", "normal", "not collapsible", "focused", "disabled"}, 
                 TitledPaneBuilder.create().text("Title").content(new Label("Content\nLine2.")).build(),
+                TitledPaneBuilder.create().text("Not Collapsible").content(new Label("Content\nLine2.")).collapsible(false).build(),
                 withState(TitledPaneBuilder.create().text("Title").content(new Label("Content\nLine2.")).build(), "focused"),
                 withState(TitledPaneBuilder.create().text("Title").content(new Label("Content\nLine2.")).build(), "disabled")
                 );
