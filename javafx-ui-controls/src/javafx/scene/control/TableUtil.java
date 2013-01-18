@@ -128,7 +128,6 @@ class TableUtil {
         double totalLowerBound = 0;
         double totalUpperBound = 0;
 
-//        double tableWidth = table.contentWidth;
         if (tableWidth == 0) return false;
 
         /*
@@ -207,18 +206,16 @@ class TableUtil {
 
         isShrinking = delta < 0;
 
-        // need to find the first leaf column of the given column - it is this
+        // need to find the last leaf column of the given column - it is this
         // column that we actually resize from. If this column is a leaf, then we
         // use it.
         TableColumnBase<?,?> leafColumn = column;
         while (leafColumn.getColumns().size() > 0) {
-            leafColumn = leafColumn.getColumns().get(0);
+            leafColumn = leafColumn.getColumns().get(leafColumn.getColumns().size() - 1);
         }
 
         int colPos = visibleLeafColumns.indexOf(leafColumn);
         int endColPos = visibleLeafColumns.size() - 1;
-
-//            System.out.println("resizing " + leafColumn.getText() + ". colPos: " + colPos + ", endColPos: " + endColPos);
 
         // we now can split the observableArrayList into two subobservableArrayLists, representing all
         // columns that should grow, and all columns that should shrink
