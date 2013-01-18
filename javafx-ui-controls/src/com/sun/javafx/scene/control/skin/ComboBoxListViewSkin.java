@@ -168,8 +168,6 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
                         return;
                     }
                 }
-                
-                textField.fireEvent(t);
             }
         });
         
