@@ -32,24 +32,24 @@
 
 /*******************************************************************************
  *                                                                             *
- * THEMEING INSTRUCTIONS                                                       *
+ * THEMING INSTRUCTIONS                                                       *
  *                                                                             *
  *******************************************************************************
 
-TODO: Explain here how themeing works:
+TODO: Explain here how theming works:
 
      * -fx-text-base-color for text on top of -fx-base, -fx-color, and -fx-body-color
      * -fx-text-background-color for text on top of -fx-background
      * -fx-text-inner-color for text on top of -fx-control-inner-color
      * -fx-selection-bar-text for text on top of -fx-selection-bar
 
-RESIZING FOR DIFFERNT SCEEN DPI
+RESIZING FOR DIFFERENT SCREEN DPI
 -------------------------------
 
-When the screen DPI changes Windows will use a differnt font size be default. 
-The default is 12px and the can change to 15px or 18px depending on user 
-preference or screen DPI. On Mac the default is 13px and embbeded will depend 
-on hardware. To make UI controls scale and be the right proportions of each of 
+When the screen DPI changes Windows will use a different font size by default. 
+The default is 12px and can change to 15px or 18px depending on user 
+preference or screen DPI. On Mac the default is 13px and embedded will depend 
+on hardware. To make UI controls scale and be the right proportions for each of 
 these font sizes we base the padding (which controls size of control) on the 
 font size. This is done using the CSS measument unit of a "em" where 
 (1em = font size). The default sizes are based on Windows default of 12px, as
@@ -213,8 +213,8 @@ is being used to size a border should also be in pixels.
     );
      
     /* Lighter than -fx-background and used to provide a small highlight when
-     * needed ontop of -fx-background. This is never a shadow in Modena but
-     * keep -fx-shadow-highlight-color name to be compatable with Caspian.
+     * needed on top of -fx-background. This is never a shadow in Modena but
+     * keep -fx-shadow-highlight-color name to be compatible with Caspian.
      */
     -fx-shadow-highlight-color: ladder(
         -fx-background,
@@ -667,7 +667,7 @@ is being used to size a border should also be in pixels.
     -fx-background-radius: 5, 3, 2, 1;
 }
 .check-box:selected > .box {
-    /* Carefully picked numbers to remain square as scalling */
+    /* Carefully picked numbers to remain square as scaling */
 /**/    -fx-padding: -0.208333em 0 0.208333em 0.23em; /* -2.5 0 2.5 2.76 */
 /**/    -fx-padding: -0.208333em 0.083333em 0.208333em 0.23em; /* -1.5 0 2.5 2.76 */
     -fx-padding: 0.166667em 0.166667em 0.25em 0.25em; /* 2 2 3 3 */
@@ -1366,7 +1366,7 @@ is being used to size a border should also be in pixels.
     -fx-opacity: -fx-disabled-opacity;
 }
 .tab-pane > .tab-header-area > .tab-header-background {
-    /* TODO should not be using text-box-border I tink? */
+    /* TODO should not be using text-box-border I think? */
     -fx-background-color:  
         -fx-outer-border,
         -fx-text-box-border, 
@@ -1438,7 +1438,7 @@ is being used to size a border should also be in pixels.
  *                                                                             *
  ******************************************************************************/
 
-/* Customie the ListCell that appears in the ComboBox button itself */
+/* Customise the ListCell that appears in the ComboBox button itself */
 .combo-box > .list-cell {
     -fx-background: transparent;
     -fx-background-color: transparent;
