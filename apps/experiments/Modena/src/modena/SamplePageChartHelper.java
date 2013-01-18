@@ -51,7 +51,6 @@ import javafx.scene.chart.XYChart;
  * Helper class for creating charts for testing
  */
 public class SamplePageChartHelper {
-    private static final Random RANDOM = new Random(29782198273l);
     
     static Node createAreaChart(Boolean stacked) {
         NumberAxis xAxis = new NumberAxis("X Values", 1.0d, 9.0d, 2.0d);
@@ -102,6 +101,7 @@ public class SamplePageChartHelper {
     }
     
     static Node createBarChart(boolean horizontal, boolean simple, boolean stacked) {
+        final Random RANDOM = new Random(29782198273l);
         String[] years = {"2001","2002","2003"};
         String[] series;
         if (simple) {
@@ -143,6 +143,7 @@ public class SamplePageChartHelper {
     }
     
     static Node createBubbleChart() {
+        final Random RANDOM = new Random(29782198273l);
         NumberAxis xAxis = new NumberAxis();
         xAxis.setLabel("Product");
         NumberAxis yAxis = new NumberAxis();
@@ -192,6 +193,7 @@ public class SamplePageChartHelper {
     }
     
     static Node createScatterChart() {
+        final Random RANDOM = new Random(29782198273l);
         NumberAxis xAxis = new NumberAxis("X-Axis", 0, 8, 1);
         NumberAxis yAxis = new NumberAxis("Y-Axis", -5, 5, 1);
         ObservableList<XYChart.Series> data = FXCollections.observableArrayList();
