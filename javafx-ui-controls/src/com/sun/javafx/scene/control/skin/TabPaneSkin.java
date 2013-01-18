@@ -1048,6 +1048,7 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
 
             final int padding = 2;
             final Region focusIndicator = new Region();
+            focusIndicator.setMouseTransparent(true);
             focusIndicator.getStyleClass().add("focus-indicator");
             
             inner = new StackPane() {

@@ -80,6 +80,7 @@ public class TreeCell<T> extends IndexedCell<T> {
      */
     public TreeCell() {
         getStyleClass().addAll(DEFAULT_STYLE_CLASS);
+        indexProperty().addListener(indexListener);
     }
 
 
@@ -89,6 +90,19 @@ public class TreeCell<T> extends IndexedCell<T> {
      * Callbacks and events                                                    *
      *                                                                         *
      **************************************************************************/
+    
+    private final InvalidationListener indexListener = new InvalidationListener() {
+        @Override public void invalidated(Observable valueModel) {
+            index = getIndex();
+        
+            // when the cell index changes, this may result in the cell
+            // changing state to be selected and/or focused.
+            updateItem();
+            updateSelection();
+            updateFocus();
+            oldIndex = index;
+        }
+    };
     
     private final ListChangeListener selectedListener = new ListChangeListener() {
         @Override public void onChanged(Change c) {
@@ -431,19 +445,6 @@ public class TreeCell<T> extends IndexedCell<T> {
     private int index = -1;
     private int oldIndex = -1;
     private TreeItem<T> treeItemRef;
-    
-    /** {@inheritDoc} */
-    @Override void indexChanged() {
-        super.indexChanged();
-        index = getIndex();
-        
-        // when the cell index changes, this may result in the cell
-        // changing state to be selected and/or focused.
-        updateItem();
-        updateSelection();
-        updateFocus();
-        oldIndex = index;
-    }
     
     private void updateItem() {
         TreeView<T> tv = getTreeView();
