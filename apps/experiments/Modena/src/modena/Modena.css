@@ -2575,6 +2575,14 @@ is being used to size a border should also be in pixels.
 .axis:left {
     -fx-border-color: transparent AXIS_COLOR transparent transparent;
 }
+.axis:top > .axis-label,
+.axis:left > .axis-label { 
+    -fx-padding: 0 0 4px 0; 
+}
+.axis:bottom > .axis-label,
+.axis:right > .axis-label { 
+    -fx-padding: 4px 0 0 0; 
+}
 .axis-tick-mark,
 .axis-minor-tick-mark {
     -fx-fill: null;

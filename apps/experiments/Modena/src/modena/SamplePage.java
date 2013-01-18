@@ -602,7 +602,11 @@ public class SamplePage extends GridPane {
                 );
         newSection(
                 "BubbleChart:", 
-                createBubbleChart()
+                createBubbleChart(false)
+                );
+        newSection(
+                "BubbleChart\nTop & Right Axis:", 
+                createBubbleChart(true)
                 );
         newSection(
                 "LineChart:", 

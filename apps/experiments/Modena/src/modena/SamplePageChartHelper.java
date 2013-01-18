@@ -34,6 +34,7 @@ package modena;
 import java.util.Random;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.geometry.Side;
 import javafx.scene.Node;
 import javafx.scene.chart.AreaChart;
 import javafx.scene.chart.BarChart;
@@ -142,12 +143,16 @@ public class SamplePageChartHelper {
         return barChart;
     }
     
-    static Node createBubbleChart() {
+    static Node createBubbleChart(boolean useRightTopAxis) {
         final Random RANDOM = new Random(29782198273l);
         NumberAxis xAxis = new NumberAxis();
         xAxis.setLabel("Product");
         NumberAxis yAxis = new NumberAxis();
         yAxis.setLabel("Number Bought/Sold");
+        if (useRightTopAxis) {
+            xAxis.setSide(Side.TOP);
+            yAxis.setSide(Side.RIGHT);
+        }
         ObservableList<BubbleChart.Series> bubbleChartData = FXCollections.observableArrayList();
         for (int s=0; s<8; s++) {
             ObservableList<BubbleChart.Data> seriesData = FXCollections.<BubbleChart.Data>observableArrayList();
