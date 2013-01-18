@@ -54,6 +54,7 @@ import javafx.scene.shape.StrokeType;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontPosture;
 import javafx.scene.text.FontWeight;
+import com.sun.javafx.Utils;
 import com.sun.javafx.css.Combinator;
 import com.sun.javafx.css.CompoundSelector;
 import com.sun.javafx.css.CssError;
@@ -1379,6 +1380,8 @@ final public class CSSParser {
             return parseRepeatingImagePattern(root);
         } else if ("ladder".regionMatches(true, 0, fcn, 0, 6)) {
             return parseLadder(root);
+        } else if ("region".regionMatches(true, 0, fcn, 0, 6)) {
+            return parseRegion(root);
         } else if ("url".regionMatches(true, 0, fcn, 0, 3)) {
             return parseURI(root);
         } else {
@@ -3298,7 +3301,28 @@ final public class CSSParser {
         return new ParsedValueImpl<ParsedValue<ParsedValue<?,Size>[],BorderWidths>[],BorderWidths[]> (layers, BorderImageWidthsSequenceConverter.getInstance());
     }
 
+    // parse a Region value
+    // i.e., region(".styleClassForRegion") or region("#idForRegion")
+    public static final String SPECIAL_REGION_URL_PREFIX = "SPECIAL-REGION-URL:";
+    private ParsedValueImpl<String,String> parseRegion(Term root)
+            throws ParseException {
+        // first term in the chain is the function name...
+        final String fn = (root.token != null) ? root.token.getText() : null;
+        if (!"region".regionMatches(true, 0, fn, 0, 6)) {
+            error(root,"Expected \'region\'");
+        }
 
+        Term arg = root.firstArg;
+        if (arg == null) error(root, "Expected \'region(\"<styleclass-or-id-string>\")\'");
+
+        if (arg.token == null ||
+                arg.token.getType() != CSSLexer.STRING ||
+                arg.token.getText() == null ||
+                arg.token.getText().isEmpty())  error(root, "Expected \'region(\"<styleclass-or-id-string>\")\'");
+
+        final String styleClassOrId = SPECIAL_REGION_URL_PREFIX+ Utils.stripQuotes(arg.token.getText());
+        return new ParsedValueImpl<String,String>(styleClassOrId, StringConverter.getInstance());
+    }
 
     // parse a URI value
     // i.e., url("<uri>")
