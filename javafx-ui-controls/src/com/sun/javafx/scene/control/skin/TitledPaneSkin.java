@@ -401,7 +401,7 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane, TitledPaneBehavi
         }
 
         @Override protected double computePrefWidth(double height) {
-            final Insets padding = getSkinnable().getInsets();
+            final Insets padding = getInsets();
             double left = snapSpace(padding.getLeft());
             double right = snapSpace(padding.getRight());
             double arrowWidth = 0;
@@ -415,7 +415,7 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane, TitledPaneBehavi
         }
 
         @Override protected double computePrefHeight(double width) {
-            final Insets padding = getSkinnable().getInsets();
+            final Insets padding = getInsets();
             double top = snapSpace(padding.getTop());
             double bottom = snapSpace(padding.getBottom());
             double arrowHeight = 0;
@@ -429,7 +429,7 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane, TitledPaneBehavi
         }
 
         @Override protected void layoutChildren() {
-            final Insets padding = getSkinnable().getInsets();
+            final Insets padding = getInsets();
             double top = snapSpace(padding.getTop());
             double bottom = snapSpace(padding.getBottom());
             double left = snapSpace(padding.getLeft());
