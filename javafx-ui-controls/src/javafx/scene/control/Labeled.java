@@ -26,12 +26,21 @@
 package javafx.scene.control;
 
 
+import com.sun.javafx.css.Selector;
+import com.sun.javafx.css.SimpleSelector;
+import com.sun.javafx.css.converters.BooleanConverter;
+import com.sun.javafx.css.converters.EnumConverter;
+import com.sun.javafx.css.converters.InsetsConverter;
+import com.sun.javafx.css.converters.PaintConverter;
+import com.sun.javafx.css.converters.SizeConverter;
+import com.sun.javafx.css.converters.StringConverter;
+import com.sun.javafx.css.parser.CSSParser;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import javafx.beans.DefaultProperty;
+
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
@@ -39,14 +48,6 @@ import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
-import javafx.css.CssMetaData;
-import javafx.css.FontCssMetaData;
-import javafx.css.StyleOrigin;
-import javafx.css.StyleableBooleanProperty;
-import javafx.css.StyleableDoubleProperty;
-import javafx.css.StyleableObjectProperty;
-import javafx.css.StyleableProperty;
-import javafx.css.StyleableStringProperty;
 import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
@@ -58,15 +59,17 @@ import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
 import javafx.scene.text.Font;
 import javafx.scene.text.TextAlignment;
-import com.sun.javafx.css.Selector;
-import com.sun.javafx.css.SimpleSelector;
-import com.sun.javafx.css.converters.BooleanConverter;
-import com.sun.javafx.css.converters.EnumConverter;
-import com.sun.javafx.css.converters.InsetsConverter;
-import com.sun.javafx.css.converters.PaintConverter;
-import com.sun.javafx.css.converters.SizeConverter;
-import com.sun.javafx.css.converters.StringConverter;
-import com.sun.javafx.css.parser.CSSParser;
+
+import javafx.beans.DefaultProperty;
+import javafx.css.CssMetaData;
+import javafx.css.FontCssMetaData;
+import javafx.css.StyleOrigin;
+import javafx.css.StyleableBooleanProperty;
+import javafx.css.StyleableDoubleProperty;
+import javafx.css.StyleableObjectProperty;
+import javafx.css.StyleableProperty;
+
+import javafx.css.StyleableStringProperty;
 
 
 /**
@@ -115,16 +118,6 @@ public abstract class Labeled extends Control {
      */
     public Labeled(String text) {
         setText(text);
-    }
-
-    /**
-     * Creates a Labeled with a graphic. This is the same as
-     * creating a basic Label and calling {@link #setGraphic(javafx.scene.Node)}.
-     *
-     * @param graphic The graphic for the label
-     */
-    public Labeled(Node graphic) {
-        setGraphic(graphic);
     }
 
     /**
