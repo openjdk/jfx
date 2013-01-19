@@ -1507,17 +1507,22 @@ is being used to size a border should also be in pixels.
 .titled-pane {
     -fx-text-fill: -fx-text-base-color;
 }
-.titled-pane:focused {
-    -fx-text-fill: white;
-}
 .titled-pane > .title {
     -fx-background-color: -fx-box-border, -fx-inner-border, -fx-body-color;
     -fx-background-insets: 0, 1, 2;
     -fx-background-radius: 5 5 0 0, 4 4 0 0, 3 3 0 0;
     -fx-padding: 0.417em 0.75em 0.5em 0.75em; /* 5 9 6 9 */
-}
-.titled-pane:focused > .title {
-    -fx-color: -fx-focus-color;
+}        
+/* alternative focus using the ring around the entire title area */
+/*.titled-pane:focused > .title {
+    -fx-background-color: -fx-faint-focus-color, -fx-focus-color, -fx-inner-border, -fx-body-color; 
+    -fx-background-insets: 0, 0.7, 2, 3;    
+}*/
+/* focus purely on the arrow */
+.titled-pane:focused > .title > .arrow-button > .arrow {
+    -fx-background-color: -fx-inner-border;
+    -fx-background-insets: 0;
+    -fx-effect: dropshadow(two-pass-box, -fx-focus-color, 2, 1 , 0, 0);
 }
 .titled-pane > .title > .arrow-button {
     -fx-background-color: null;
@@ -1541,9 +1546,8 @@ is being used to size a border should also be in pixels.
     -fx-background-insets: 0, 0 1 1 1;
     -fx-padding: 0.167em;
 }
-.titled-pane:focused > .title > .arrow-button > .arrow {
-    -fx-background-color: white;
-}
+/*fx-background-color: linear-gradient(to bottom, derive(-fx-text-box-border, -10%), -fx-text-box-border),
+        linear-gradient(from 0px 0px to 0px 5px, derive(-fx-control-inner-background, -9%), -fx-control-inner-background);*/
 
 /*******************************************************************************
  *                                                                             *
