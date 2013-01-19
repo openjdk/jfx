@@ -449,6 +449,8 @@ is being used to size a border should also be in pixels.
 .table-view:disabled,
 .tree-table-view:disabled,
 .tab-pane:disabled,
+.titled-pane:disabled > .title,
+.accordion:disabled > .titled-pane > .title,
 .tab-pane > .tab-header-area > .headers-region > .tab:disabled {
     -fx-opacity: -fx-disabled-opacity;
 }
@@ -1512,7 +1514,7 @@ is being used to size a border should also be in pixels.
     -fx-background-insets: 0, 1, 2;
     -fx-background-radius: 5 5 0 0, 4 4 0 0, 3 3 0 0;
     -fx-padding: 0.417em 0.75em 0.5em 0.75em; /* 5 9 6 9 */
-}        
+}
 /* alternative focus using the ring around the entire title area */
 /*.titled-pane:focused > .title {
     -fx-background-color: -fx-faint-focus-color, -fx-focus-color, -fx-inner-border, -fx-body-color; 
@@ -1536,18 +1538,27 @@ is being used to size a border should also be in pixels.
     -fx-padding: 0.25em 0.3125em 0.25em 0.3125em; /* 3 3.75 3 3.75 */
     -fx-shape: "M 0 0 h 7 l -3.5 4 z";
 }
+.titled-pane > .title:hover {
+    -fx-color: -fx-hover-base;
+}
 .titled-pane:collapsed > .title > .arrow-button > .arrow {
     -fx-rotate: -90;
 }
-.titled-pane > *.content {
+/*.titled-pane > *.content {
     -fx-background-color:
         -fx-box-border,
-        linear-gradient(to bottom, derive(-fx-color,-02%), derive(-fx-color,65%) 12%, derive(-fx-color,23%) 88%, derive(-fx-color,50%) 99%, -fx-box-border);
+        linear-gradient(from 0px 0px to 0px 5px, derive(-fx-color, -4%), -fx-color);
     -fx-background-insets: 0, 0 1 1 1;
     -fx-padding: 0.167em;
+}*/
+/* alternative content using a border and a grad to transparent background - why should TitledPane content have a colour? */
+.titled-pane > *.content {
+    -fx-border-color: -fx-box-border;
+    -fx-border-insets: -1 0 0 0;
+    -fx-background-color: linear-gradient(from 0px 0px to 0px 5px, derive(-fx-color, -4%), transparent);
+    -fx-padding: 0.167em;
 }
-/*fx-background-color: linear-gradient(to bottom, derive(-fx-text-box-border, -10%), -fx-text-box-border),
-        linear-gradient(from 0px 0px to 0px 5px, derive(-fx-control-inner-background, -9%), -fx-control-inner-background);*/
+
 
 /*******************************************************************************
  *                                                                             *
@@ -1565,27 +1576,6 @@ is being used to size a border should also be in pixels.
 }
 .accordion > .first-titled-pane > .title {
     -fx-background-insets: 0, 1, 2;
-}
-.accordion > .titled-pane:focused > .title {
-    -fx-color: -fx-focus-color;
-}
-.accordion > .titled-pane:focused {
-    -fx-text-fill: white;
-}
-.accordion > .titled-pane:focused > .title > .arrow-button > .arrow {
-    -fx-background-color: white;
-}
-.accordion > .titled-pane:focused > .titled-pane:collapsed > .title > .arrow-button > .arrow {
-    -fx-background-color: white;
-}
-.accordion > .titled-pane:collapsed:focused > .title {
-    -fx-color: -fx-focus-color;
-}
-.accordion > .titled-pane:expanded:focused > .title {
-    -fx-color: -fx-focus-color;
-}
-.accordion > .titled-pane:hover > .title {
-    -fx-color: -fx-hover-base;
 }
 
 /*******************************************************************************
