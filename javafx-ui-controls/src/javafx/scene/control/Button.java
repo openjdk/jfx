@@ -24,15 +24,13 @@
  */
 package javafx.scene.control;
 
-import java.util.Set;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.BooleanPropertyBase;
+import javafx.css.PseudoClass;
 import javafx.event.ActionEvent;
 import javafx.scene.Node;
-
-import com.sun.javafx.scene.control.accessible.AccessibleButton;
 import com.sun.javafx.accessible.providers.AccessibleProvider;
-import javafx.css.PseudoClass;
+import com.sun.javafx.scene.control.accessible.AccessibleButton;
 import com.sun.javafx.scene.control.skin.ButtonSkin;
 
 /**
@@ -80,6 +78,17 @@ public class Button extends ButtonBase {
     public Button(String text) {
         super(text);
         initialize();
+    }
+
+    /**
+     * Creates a Button with a graphic. This is the same as
+     * creating a Button using the default constructor and calling
+     * {@link #setGraphic(javafx.scene.Node)}.
+     *
+     * @param graphic The graphic for the label
+     */
+    public Button(Node graphic) {
+        super(graphic);
     }
 
     /**

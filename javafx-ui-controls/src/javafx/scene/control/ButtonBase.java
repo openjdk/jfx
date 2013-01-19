@@ -24,15 +24,14 @@
  */
 package javafx.scene.control;
 
-import java.util.Set;
-import javafx.css.PseudoClass;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ObjectPropertyBase;
+import javafx.beans.property.ReadOnlyBooleanProperty;
+import javafx.beans.property.ReadOnlyBooleanWrapper;
+import javafx.css.PseudoClass;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.scene.Node;
-import javafx.beans.property.ReadOnlyBooleanProperty;
-import javafx.beans.property.ReadOnlyBooleanWrapper;
 
 /**
  * Base class for button-like UI Controls, including Hyperlinks, Buttons,
@@ -64,6 +63,17 @@ public abstract class ButtonBase extends Labeled {
      */
     public ButtonBase(String text) {
         super(text);
+    }
+
+    /**
+     * Creates a ButtonBase with a graphic. This is the same as
+     * creating a ButtonBase using the default constructor and calling
+     * {@link #setGraphic(javafx.scene.Node)}.
+     *
+     * @param graphic The graphic for the label
+     */
+    public ButtonBase(Node graphic) {
+        super(graphic);
     }
 
     /**
