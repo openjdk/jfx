@@ -334,7 +334,7 @@ public class MenuBarSkin extends BehaviorSkinBase<MenuBar, BehaviorBase<MenuBar>
         } else {
            acceleratorKeyCombo = KeyCombination.keyCombination("F10");
         }
-        getSkinnable().getParent().getScene().getAccelerators().put(acceleratorKeyCombo, firstMenuRunnable);
+        getSkinnable().getScene().getAccelerators().put(acceleratorKeyCombo, firstMenuRunnable);
         engine = new TraversalEngine(getSkinnable(), false) {
             @Override public void trav(Node node, Direction dir) {
                 direction = dir;
@@ -459,10 +459,9 @@ public class MenuBarSkin extends BehaviorSkinBase<MenuBar, BehaviorBase<MenuBar>
     }
     
     private void rebuildUI() {
-        int index = 0;
         for (Menu m : getSkinnable().getMenus()) {
             // remove action listeners 
-            updateActionListeners(getSkinnable().getMenus().get(index), false);
+            updateActionListeners(m, false);
         }
         for(Node n : container.getChildren()) {
             //Stop observing menu's showing & disable property for changes.
@@ -474,7 +473,6 @@ public class MenuBarSkin extends BehaviorSkinBase<MenuBar, BehaviorBase<MenuBar>
             menuButton.textProperty().unbind();
             menuButton.graphicProperty().unbind();
             menuButton.styleProperty().unbind();
-            index++;
         }
         container.getChildren().clear();
 
@@ -812,14 +810,6 @@ public class MenuBarSkin extends BehaviorSkinBase<MenuBar, BehaviorBase<MenuBar>
         }
     }
     
-    private boolean isAnyMenuSelected() {
-        if (container != null) {
-            for(Node n : container.getChildren()) {
-                if (((MenuButton)n).isFocused()) return true;
-            }
-        }
-        return false;
-    }
     private Menu findPreviousSibling() {
         if (focusedMenuIndex == -1) return null;
         if (focusedMenuIndex == 0) {
