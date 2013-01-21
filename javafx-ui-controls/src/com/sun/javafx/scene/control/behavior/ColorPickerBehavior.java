@@ -91,10 +91,6 @@ public class ColorPickerBehavior extends ComboBoxBaseBehavior<Color> {
         else super.callAction(name);
     }
     
-    private ColorPicker getColorPicker() {
-        return (ColorPicker) getControl();
-    }
-    
      /**************************************************************************
      *                                                                        *
      * Mouse Events                                                           *

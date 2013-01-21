@@ -25,15 +25,14 @@
 
 package com.sun.javafx.scene.control.accessible;
 
-import javafx.beans.InvalidationListener;
-import javafx.beans.Observable;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.scene.control.Control;
+import sun.util.logging.PlatformLogger;
+
 import com.sun.javafx.Logging;
 import com.sun.javafx.accessible.AccessibleNode;
 import com.sun.javafx.accessible.utils.EventIds;
-import sun.util.logging.PlatformLogger;
 
 public class AccessibleControl extends AccessibleNode {
     Control control ;
@@ -41,17 +40,6 @@ public class AccessibleControl extends AccessibleNode {
     {
 	super(control);
         this.control = control ;
-        
-       // Initialize focus listener
-        InvalidationListener focusListener = new InvalidationListener() {
-            @Override public void invalidated(Observable property) {
-                PlatformLogger logger = Logging.getAccessibilityLogger();
-                if (logger.isLoggable(PlatformLogger.FINER)) {
-                    logger.finer(this.toString() + " Focus Change");
-                }
-                fireEvent(EventIds.AUTOMATION_FOCUS_CHANGED);
-        }
-        };
         
         control.focusedProperty().addListener(new ChangeListener<Boolean>() {
 

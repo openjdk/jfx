@@ -35,7 +35,6 @@ import com.sun.javafx.scene.control.skin.ScrollPaneSkin;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Set;
 
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;

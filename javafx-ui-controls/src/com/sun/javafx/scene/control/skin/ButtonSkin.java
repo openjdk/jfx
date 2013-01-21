@@ -25,8 +25,6 @@
 
 package com.sun.javafx.scene.control.skin;
 
-import javafx.event.EventHandler;
-import javafx.geometry.Side;
 import javafx.scene.control.Button;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.input.KeyCode;

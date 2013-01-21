@@ -29,7 +29,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Set;
 
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
@@ -317,13 +316,13 @@ public class ListView<T> extends Control {
                     // FIXME temporary fix for RT-15793. This will need to be
                     // properly fixed when time permits
                     if (getSelectionModel() instanceof ListView.ListViewBitSetSelectionModel) {
-                        ((ListView.ListViewBitSetSelectionModel)getSelectionModel()).updateItemsObserver(oldItems, getItems());
+                        ((ListView.ListViewBitSetSelectionModel<T>)getSelectionModel()).updateItemsObserver(oldItems, getItems());
                     }
                     if (getFocusModel() instanceof ListView.ListViewFocusModel) {
-                        ((ListView.ListViewFocusModel)getFocusModel()).updateItemsObserver(oldItems, getItems());
+                        ((ListView.ListViewFocusModel<T>)getFocusModel()).updateItemsObserver(oldItems, getItems());
                     }
                     if (getSkin() instanceof ListViewSkin) {
-                        ListViewSkin skin = (ListViewSkin) getSkin();
+                        ListViewSkin<?> skin = (ListViewSkin<?>) getSkin();
                         skin.updateListViewItems();
                     }
                     
@@ -738,7 +737,7 @@ public class ListView<T> extends Control {
 
     /** {@inheritDoc} */
     @Override protected Skin<?> createDefaultSkin() {
-        return new ListViewSkin(this);
+        return new ListViewSkin<T>(this);
     }
     
     /***************************************************************************
@@ -951,11 +950,11 @@ public class ListView<T> extends Control {
             }
         };
         
-        private WeakListChangeListener weakItemsContentObserver =
-                new WeakListChangeListener(itemsContentObserver);
+        private WeakListChangeListener<T> weakItemsContentObserver =
+                new WeakListChangeListener<T>(itemsContentObserver);
         
-        private WeakChangeListener weakItemsObserver = 
-                new WeakChangeListener(itemsObserver);
+        private WeakChangeListener<ObservableList<T>> weakItemsObserver = 
+                new WeakChangeListener<ObservableList<T>>(itemsObserver);
         
         private void updateItemsObserver(ObservableList<T> oldList, ObservableList<T> newList) {
             // update listeners
@@ -1129,7 +1128,7 @@ public class ListView<T> extends Control {
             if (listView == null) {
                 itemCount = -1;
             } else {
-                List items = listView.getItems();
+                List<T> items = listView.getItems();
                 itemCount = items == null ? -1 : items.size();
             }
         } 
@@ -1232,7 +1231,7 @@ public class ListView<T> extends Control {
             if (listView == null) {
                 itemCount = -1;
             } else {
-                List items = listView.getItems();
+                List<T> items = listView.getItems();
                 itemCount = items == null ? -1 : items.size();
             }
         } 

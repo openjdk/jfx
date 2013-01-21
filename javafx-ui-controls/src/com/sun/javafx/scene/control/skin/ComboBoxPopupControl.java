@@ -46,7 +46,7 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
     private PopupControl popup;
     public static final String COMBO_BOX_STYLE_CLASS = "combo-box-popup";
 
-    public ComboBoxPopupControl(ComboBoxBase<T> comboBox, final ComboBoxBaseBehavior behavior) {
+    public ComboBoxPopupControl(ComboBoxBase<T> comboBox, final ComboBoxBaseBehavior<T> behavior) {
         super(comboBox, behavior);
     }
     
@@ -103,7 +103,7 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
     private void createPopup() {
         popup = new PopupControl() {
             {
-                setSkin(new Skin() {
+                setSkin(new Skin<Skinnable>() {
                     @Override public Skinnable getSkinnable() { return ComboBoxPopupControl.this.getSkinnable(); }
                     @Override public Node getNode() { return getPopupContent(); }
                     @Override public void dispose() { }

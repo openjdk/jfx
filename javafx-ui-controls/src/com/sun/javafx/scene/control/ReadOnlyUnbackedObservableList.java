@@ -25,6 +25,7 @@
 
 package com.sun.javafx.scene.control;
 
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
@@ -44,12 +45,12 @@ import java.util.Collections;
  * and GenericObservableList.
  *
  */
-public abstract class ReadOnlyUnbackedObservableList<T> implements ObservableList<T> {
+public abstract class ReadOnlyUnbackedObservableList<E> implements ObservableList<E> {
 
-    private ListListenerHelper<T> listenerHelper;
+    private ListListenerHelper<E> listenerHelper;
 
 
-    @Override public abstract T get(int i);
+    @Override public abstract E get(int i);
 
     @Override public abstract int size();
 
@@ -62,15 +63,15 @@ public abstract class ReadOnlyUnbackedObservableList<T> implements ObservableLis
         listenerHelper = ListListenerHelper.removeListener(listenerHelper, listener);
     }
 
-    @Override public void addListener(ListChangeListener<? super T> obs) {
+    @Override public void addListener(ListChangeListener<? super E> obs) {
         listenerHelper = ListListenerHelper.addListener(listenerHelper, obs);
     }
 
-    @Override public void removeListener(ListChangeListener<? super T> obs) {
+    @Override public void removeListener(ListChangeListener<? super E> obs) {
         listenerHelper = ListListenerHelper.removeListener(listenerHelper, obs);
     }
 
-    public void callObservers(Change<T> c) {
+    public void callObservers(Change<E> c) {
         ListListenerHelper.fireValueChangedEvent(listenerHelper, c);
     }
 
@@ -113,28 +114,28 @@ public abstract class ReadOnlyUnbackedObservableList<T> implements ObservableLis
         return size() == 0;
     }
 
-    @Override public ListIterator<T> listIterator() {
-        return new SelectionListIterator(this);
+    @Override public ListIterator<E> listIterator() {
+        return new SelectionListIterator<E>(this);
     }
 
-    @Override public ListIterator<T> listIterator(int index) {
-        return new SelectionListIterator(this, index);
+    @Override public ListIterator<E> listIterator(int index) {
+        return new SelectionListIterator<E>(this, index);
     }
 
     @Override
-    public Iterator<T> iterator() {
-        return new SelectionListIterator(this);
+    public Iterator<E> iterator() {
+        return new SelectionListIterator<E>(this);
     }
 
     /**
      * NOTE: This method does not fulfill the subList contract from Collections,
      * it simply returns a list containing the values in the given range.
      */
-    @Override public List<T> subList(final int fromIndex, final int toIndex) {
+    @Override public List<E> subList(final int fromIndex, final int toIndex) {
         if (fromIndex >= toIndex) return Collections.emptyList();
-        final List<T> outer = this;
-        return new ReadOnlyUnbackedObservableList<T>() {
-            @Override public T get(int i) {
+        final List<E> outer = this;
+        return new ReadOnlyUnbackedObservableList<E>() {
+            @Override public E get(int i) {
                 return outer.get(i + fromIndex);
             }
 
@@ -153,31 +154,32 @@ public abstract class ReadOnlyUnbackedObservableList<T> implements ObservableLis
         return arr;
     }
 
+    @SuppressWarnings("unchecked")
     @Override
     public <T> T[] toArray(T[] a) {
-        T[] arr = a;
-        if (arr.length < size()) {
-            arr = (T[]) new Object[size()];
-        }
+        Object[] elementData = toArray();
+        int size = elementData.length;
         
-        for (int i = 0; i < size(); i++) {
-            arr[i] = (T) get(i);
-        }
-        
-        return arr;
+        if (a.length < size)
+            // Make a new array of a's runtime type, but my contents:
+            return (T[]) Arrays.copyOf(elementData, size, a.getClass());
+        System.arraycopy(elementData, 0, a, 0, size);
+        if (a.length > size)
+            a[size] = null;
+        return a;
     }
 
     @Override
     public String toString() {
         // copied from AbstractCollection
-        Iterator<T> i = iterator();
+        Iterator<E> i = iterator();
         if (! i.hasNext())
             return "[]";
 
         StringBuilder sb = new StringBuilder();
         sb.append('[');
         for (;;) {
-            T e = i.next();
+            E e = i.next();
             sb.append(e == this ? "(this Collection)" : e);
             if (! i.hasNext())
                 return sb.append(']').toString();
@@ -185,35 +187,35 @@ public abstract class ReadOnlyUnbackedObservableList<T> implements ObservableLis
         }
     }
 
-    @Override public boolean add(T e) {
+    @Override public boolean add(E e) {
         throw new UnsupportedOperationException("Not supported.");
     }
 
-    @Override public void add(int index, T element) {
+    @Override public void add(int index, E element) {
         throw new UnsupportedOperationException("Not supported.");
     }
 
-    @Override public boolean addAll(Collection<? extends T> c) {
+    @Override public boolean addAll(Collection<? extends E> c) {
         throw new UnsupportedOperationException("Not supported.");
     }
 
-    @Override public boolean addAll(int index, Collection<? extends T> c) {
+    @Override public boolean addAll(int index, Collection<? extends E> c) {
         throw new UnsupportedOperationException("Not supported.");
     }
 
-    @Override public boolean addAll(T... elements) {
+    @Override public boolean addAll(E... elements) {
         throw new UnsupportedOperationException("Not supported.");
     }
 
-    @Override public T set(int index, T element) {
+    @Override public E set(int index, E element) {
         throw new UnsupportedOperationException("Not supported.");
     }
 
-    @Override public boolean setAll(Collection<? extends T> col) {
+    @Override public boolean setAll(Collection<? extends E> col) {
         throw new UnsupportedOperationException("Not supported.");
     }
 
-    @Override public boolean setAll(T... elements) {
+    @Override public boolean setAll(E... elements) {
         throw new UnsupportedOperationException("Not supported.");
     }
 
@@ -221,7 +223,7 @@ public abstract class ReadOnlyUnbackedObservableList<T> implements ObservableLis
         throw new UnsupportedOperationException("Not supported.");
     }
 
-    @Override public T remove(int index) {
+    @Override public E remove(int index) {
         throw new UnsupportedOperationException("Not supported.");
     }
 
@@ -241,23 +243,23 @@ public abstract class ReadOnlyUnbackedObservableList<T> implements ObservableLis
         throw new UnsupportedOperationException("Not supported.");
     }
 
-    @Override public boolean removeAll(T... elements) {
+    @Override public boolean removeAll(E... elements) {
         throw new UnsupportedOperationException("Not supported.");
     }
 
-    @Override public boolean retainAll(T... elements) {
+    @Override public boolean retainAll(E... elements) {
         throw new UnsupportedOperationException("Not supported.");
     }
 
-    private static class SelectionListIterator<T> implements ListIterator<T> {
+    private static class SelectionListIterator<E> implements ListIterator<E> {
         private int pos;
-        private final ReadOnlyUnbackedObservableList<T> list;
+        private final ReadOnlyUnbackedObservableList<E> list;
 
-        public SelectionListIterator(ReadOnlyUnbackedObservableList<T> list) {
+        public SelectionListIterator(ReadOnlyUnbackedObservableList<E> list) {
             this(list, 0);
         }
 
-        public SelectionListIterator(ReadOnlyUnbackedObservableList<T> list, int pos) {
+        public SelectionListIterator(ReadOnlyUnbackedObservableList<E> list, int pos) {
             this.list = list;
             this.pos = pos;
         }
@@ -266,7 +268,7 @@ public abstract class ReadOnlyUnbackedObservableList<T> implements ObservableLis
             return pos < list.size();
         }
 
-        @Override public T next() {
+        @Override public E next() {
             return list.get(pos++);
         }
 
@@ -274,7 +276,7 @@ public abstract class ReadOnlyUnbackedObservableList<T> implements ObservableLis
             return pos > 0;
         }
 
-        @Override public T previous() {
+        @Override public E previous() {
             return list.get(pos--);
         }
 
@@ -290,11 +292,11 @@ public abstract class ReadOnlyUnbackedObservableList<T> implements ObservableLis
             throw new UnsupportedOperationException("Not supported.");
         }
 
-        @Override public void set(T e) {
+        @Override public void set(E e) {
             throw new UnsupportedOperationException("Not supported.");
         }
 
-        @Override public void add(T e) {
+        @Override public void add(E e) {
             throw new UnsupportedOperationException("Not supported.");
         }
     }

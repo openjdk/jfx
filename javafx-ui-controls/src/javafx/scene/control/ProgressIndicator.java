@@ -25,7 +25,6 @@
 
 package javafx.scene.control;
 
-import java.util.Set;
 import javafx.css.CssMetaData;
 import javafx.css.PseudoClass;
 import com.sun.javafx.scene.control.skin.ProgressIndicatorSkin;

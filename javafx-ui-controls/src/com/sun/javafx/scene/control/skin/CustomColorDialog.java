@@ -24,7 +24,6 @@
  */
 package com.sun.javafx.scene.control.skin;
 
-import javafx.beans.binding.ObjectBinding;
 import javafx.beans.property.*;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
@@ -102,6 +101,8 @@ public class CustomColorDialog extends StackPane {
                 case ESCAPE :
                     dialog.setScene(null);
                     dialog.close();
+            default:
+                break;
             }
         }
     };
@@ -123,7 +124,6 @@ public class CustomColorDialog extends StackPane {
     
     @Override public void layoutChildren() {
         double x = getInsets().getLeft();
-        double y = getInsets().getTop();
         controlsPane.relocate(x+colorRectPane.prefWidth(-1), 0);
     }
     
@@ -157,8 +157,10 @@ public class CustomColorDialog extends StackPane {
                return (height - contentHeight) / 2;
             case BOTTOM:
                return height - contentHeight;
+            default:
+                return 0;
         }
-       return 0;
+       
     }
     
     /* ------------------------------------------------------------------------*/

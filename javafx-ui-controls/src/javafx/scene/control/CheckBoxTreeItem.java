@@ -94,8 +94,8 @@ public class CheckBoxTreeItem<T> extends TreeItem<T> {
     public static <T> EventType<TreeModificationEvent<T>> checkBoxSelectionChangedEvent() {
         return (EventType<TreeModificationEvent<T>>) CHECK_BOX_SELECTION_CHANGED_EVENT;
     }
-    private static final EventType<?> CHECK_BOX_SELECTION_CHANGED_EVENT
-            = new EventType(Event.ANY, "checkBoxSelectionChangedEvent");
+    private static final EventType<? extends Event> CHECK_BOX_SELECTION_CHANGED_EVENT
+            = new EventType<Event>(Event.ANY, "checkBoxSelectionChangedEvent"); 
 
     /***************************************************************************
      *                                                                         *
@@ -293,15 +293,15 @@ public class CheckBoxTreeItem<T> extends TreeItem<T> {
         if (! isLeaf()) {
             for (TreeItem<T> child : getChildren()) {
                 if (child instanceof CheckBoxTreeItem) {
-                    CheckBoxTreeItem<?> cbti = ((CheckBoxTreeItem<?>) child);
+                    CheckBoxTreeItem<T> cbti = ((CheckBoxTreeItem<T>) child);
                     cbti.setSelected(isSelected());
                 }
             }
         }
     }
     
-    private void fireEvent(CheckBoxTreeItem item, boolean selectionChanged) {
-        Event evt = new CheckBoxTreeItem.TreeModificationEvent(CHECK_BOX_SELECTION_CHANGED_EVENT, item, selectionChanged);
+    private void fireEvent(CheckBoxTreeItem<T> item, boolean selectionChanged) {
+        Event evt = new CheckBoxTreeItem.TreeModificationEvent<T>(CHECK_BOX_SELECTION_CHANGED_EVENT, item, selectionChanged);
         Event.fireEvent(this, evt);
     }
     

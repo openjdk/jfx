@@ -48,7 +48,7 @@ public abstract class ComboBoxBaseSkin<T> extends BehaviorSkinBase<ComboBoxBase<
     protected final ComboBoxMode getMode() { return mode; }
     protected final void setMode(ComboBoxMode value) { mode = value; }
     
-    public ComboBoxBaseSkin(final ComboBoxBase<T> comboBox, final ComboBoxBaseBehavior behavior) {
+    public ComboBoxBaseSkin(final ComboBoxBase<T> comboBox, final ComboBoxBaseBehavior<T> behavior) {
         // Call the super method with the ComboBox we were just given in the 
         // constructor, as well as an instance of the behavior class.
         super(comboBox, behavior);
@@ -83,7 +83,7 @@ public abstract class ComboBoxBaseSkin<T> extends BehaviorSkinBase<ComboBoxBase<
     }
     
     protected void focusLost() {
-        ((ComboBoxBase)getSkinnable()).hide();
+        getSkinnable().hide();
     }
     /**
      * This method should return a Node that will be positioned within the

@@ -31,13 +31,11 @@ import static javafx.scene.input.KeyCode.*;
 import static javafx.scene.input.KeyEvent.*;
 
 import com.sun.javafx.Utils;
-import javafx.css.PseudoClass;
 
 import javafx.scene.input.MouseEvent;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 
 import javafx.beans.InvalidationListener;
 import javafx.scene.Node;

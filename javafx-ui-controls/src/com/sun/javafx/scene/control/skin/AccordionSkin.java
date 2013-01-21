@@ -154,7 +154,7 @@ public class AccordionSkin extends BehaviorSkinBase<Accordion, AccordionBehavior
 
         for(Node n: getSkinnable().getPanes()) {
             TitledPane tp = ((TitledPane)n);
-            Skin skin = tp.getSkin();
+            Skin<?> skin = tp.getSkin();
             double ph;
             if (skin instanceof TitledPaneSkin) {
                 ((TitledPaneSkin)skin).setMaxTitledPaneHeightForAccordion(maxTitledPaneHeight);
@@ -201,7 +201,7 @@ public class AccordionSkin extends BehaviorSkinBase<Accordion, AccordionBehavior
 
     private TitledPane expandedPane = null;
     private TitledPane previousPane = null;
-    private Map<TitledPane, ChangeListener>listeners = new HashMap();
+    private Map<TitledPane, ChangeListener<Boolean>>listeners = new HashMap<TitledPane, ChangeListener<Boolean>>();
 
     private void initTitledPaneListeners(List<? extends TitledPane> list) {
         for (final TitledPane tp: list) {

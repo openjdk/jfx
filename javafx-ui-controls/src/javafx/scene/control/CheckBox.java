@@ -31,7 +31,6 @@ import javafx.beans.property.SimpleBooleanProperty;
 
 import javafx.event.ActionEvent;
 import javafx.geometry.Pos;
-import java.util.Set;
 import com.sun.javafx.scene.control.accessible.AccessibleCheckBox;
 import com.sun.javafx.accessible.providers.AccessibleProvider;
 import javafx.css.PseudoClass;

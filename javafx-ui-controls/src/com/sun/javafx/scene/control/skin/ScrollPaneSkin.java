@@ -1071,8 +1071,6 @@ public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehav
     protected void startContentsToViewport() {
         double newPosX = posX;
         double newPosY = posY;
-        double hRange = getSkinnable().getHmax() - getSkinnable().getHmin();
-        double vRange = getSkinnable().getVmax() - getSkinnable().getVmin();
 
         setContentPosX(posX);
         setContentPosY(posY);

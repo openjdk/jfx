@@ -26,10 +26,8 @@ package javafx.scene.control;
 
 import javafx.css.CssMetaData;
 import javafx.css.PseudoClass;
-import com.sun.javafx.scene.control.MultiplePropertyChangeListenerHandler;
 import java.util.Collections;
 import java.util.List;
-import javafx.beans.value.ObservableValue;
 import javafx.collections.ObservableList;
 import javafx.event.EventHandler;
 import javafx.geometry.HPos;
@@ -38,7 +36,6 @@ import javafx.geometry.VPos;
 import javafx.scene.Node;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.Region;
-import javafx.util.Callback;
 
 /**
  *

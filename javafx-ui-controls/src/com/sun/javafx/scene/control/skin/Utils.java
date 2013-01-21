@@ -817,7 +817,7 @@ public class Utils {
                                                 ? KeyCombination.META_DOWN
                                                 : KeyCombination.ALT_DOWN);
 
-                        ObservableList<Mnemonic> mnemonicsList = (ObservableList)scene.getMnemonics().get(mnemonicKeyCombo);
+                        ObservableList<Mnemonic> mnemonicsList = scene.getMnemonics().get(mnemonicKeyCombo);
                         if (mnemonicsList != null) {
                             for (int j = 0 ; j < mnemonicsList.size() ; j++) {
                                 if (mnemonicsList.get(j).getNode() == cmContent.getLabelAt(i)) {
@@ -851,8 +851,9 @@ public class Utils {
                return (height - contentHeight) / 2;
             case BOTTOM:
                return height - contentHeight;
+            default:
+                return 0;
         }
-       return 0;
     }
 
 
