@@ -27,17 +27,24 @@ package com.sun.javafx.pgstub;
 import com.sun.javafx.geom.CameraImpl;
 import com.sun.javafx.geom.PickRay;
 import com.sun.javafx.sg.PGNode;
-import com.sun.javafx.tk.Toolkit;
 import com.sun.javafx.tk.TKScene;
 import com.sun.javafx.tk.TKSceneListener;
 import com.sun.javafx.tk.TKScenePaintListener;
 
 import javafx.scene.input.Dragboard;
 
+import java.security.AccessControlContext;
+
 public class StubScene implements TKScene {
+
     StubStage stage;
     private TKSceneListener listener;
     private Object cursor;
+
+    @Override
+    public void setSecurityContext(AccessControlContext ctx) {
+        // ignore
+    }
 
     public void waitForSynchronization() {
         //ignore

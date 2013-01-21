@@ -24,6 +24,7 @@
  */
 package com.sun.javafx.pgstub;
 
+import java.security.AccessControlContext;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Queue;
@@ -39,6 +40,7 @@ import com.sun.javafx.accessible.providers.AccessibleStageProvider;
  * @author Richard Bair
  */
 public class StubStage implements TKStage {
+
     private NotificationSender notificationSender = new NotificationSender();
 
     @Override
@@ -177,7 +179,7 @@ public class StubStage implements TKStage {
     }
 
     @Override
-    public void initSecurityContext() {
+    public void setSecurityContext(AccessControlContext ctx) {
     }
 
     @Override
@@ -290,7 +292,7 @@ public class StubStage implements TKStage {
     /**
      * Delete accessible native object corresponding to controls
      * 
-     * @param ac 
+     * @param nativeAcc
      * returns native Object
      */
     @Override public void accessibleDestroyBasicProvider(Object nativeAcc) {

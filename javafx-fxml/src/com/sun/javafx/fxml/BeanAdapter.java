@@ -44,6 +44,8 @@ import java.util.Set;
 import java.lang.reflect.*;
 
 import javafx.beans.value.ObservableValue;
+import sun.reflect.misc.FieldUtil;
+import sun.reflect.misc.MethodUtil;
 import sun.reflect.misc.ReflectUtil;
 
 /**
@@ -95,6 +97,7 @@ public class BeanAdapter extends AbstractMap<String, Object> {
     private static HashMap<String, LinkedList<Method>> getClassMethodCache(Class<?> type) {
         HashMap<String, LinkedList<Method>> classMethodCache = new HashMap<String, LinkedList<Method>>();
 
+        ReflectUtil.checkPackageAccess(type);
         Method[] declaredMethods = type.getDeclaredMethods();
         for (int i = 0; i < declaredMethods.length; i++) {
             Method method = declaredMethods[i];
@@ -203,7 +206,7 @@ public class BeanAdapter extends AbstractMap<String, Object> {
         Object value;
         if (getterMethod != null) {
             try {
-                value = getterMethod.invoke(bean);
+                value = MethodUtil.invoke(getterMethod, bean, (Object[]) null);
             } catch (IllegalAccessException exception) {
                 throw new RuntimeException(exception);
             } catch (InvocationTargetException exception) {
@@ -249,7 +252,7 @@ public class BeanAdapter extends AbstractMap<String, Object> {
         }
 
         try {
-            setterMethod.invoke(bean, new Object[] {coerce(value, getType(key))});
+            MethodUtil.invoke(setterMethod, bean, new Object[] { coerce(value, getType(key)) });
         } catch (IllegalAccessException exception) {
             throw new RuntimeException(exception);
         } catch (InvocationTargetException exception) {
@@ -381,7 +384,7 @@ public class BeanAdapter extends AbstractMap<String, Object> {
             throw new NullPointerException();
         }
 
-        Object coercedValue;
+        Object coercedValue = null;
 
         if (value == null) {
             // Null values can only be coerced to null
@@ -473,6 +476,7 @@ public class BeanAdapter extends AbstractMap<String, Object> {
             while (valueOfMethod == null
                 && valueType != null) {
                 try {
+                    ReflectUtil.checkPackageAccess(type); 
                     valueOfMethod = type.getDeclaredMethod(VALUE_OF_METHOD_NAME, valueType);
                 } catch (NoSuchMethodException exception) {
                     // No-op
@@ -494,7 +498,7 @@ public class BeanAdapter extends AbstractMap<String, Object> {
             }
 
             try {
-                coercedValue = valueOfMethod.invoke(null, value);
+                coercedValue = MethodUtil.invoke(valueOfMethod, null, new Object[] { value });
             } catch (IllegalAccessException exception) {
                 throw new RuntimeException(exception);
             } catch (InvocationTargetException exception) {
@@ -532,7 +536,7 @@ public class BeanAdapter extends AbstractMap<String, Object> {
 
         if (getterMethod != null) {
             try {
-                value = (T)getterMethod.invoke(null, target);
+                value = (T) MethodUtil.invoke(getterMethod, null, new Object[] { target } );
             } catch (InvocationTargetException exception) {
                 throw new RuntimeException(exception);
             } catch (IllegalAccessException exception) {
@@ -590,7 +594,7 @@ public class BeanAdapter extends AbstractMap<String, Object> {
 
         // Invoke the setter
         try {
-            setterMethod.invoke(null, target, value);
+            MethodUtil.invoke(setterMethod, null, new Object[] { target, value });
         } catch (InvocationTargetException exception) {
             throw new RuntimeException(exception);
         } catch (IllegalAccessException exception) {
@@ -805,7 +809,7 @@ public class BeanAdapter extends AbstractMap<String, Object> {
 
         Field field;
         try {
-            field = type.getField(name);
+            field = FieldUtil.getField(type, name);
         } catch (NoSuchFieldException exception) {
             throw new IllegalArgumentException(exception);
         }
@@ -845,14 +849,14 @@ public class BeanAdapter extends AbstractMap<String, Object> {
             String isMethodName = IS_PREFIX + key;
 
             try {
-                method = sourceType.getMethod(getMethodName, targetType);
+                method = MethodUtil.getMethod(sourceType, getMethodName, new Class[] { targetType });
             } catch (NoSuchMethodException exception) {
                 // No-op
             }
 
             if (method == null) {
                 try {
-                    method = sourceType.getMethod(isMethodName, targetType);
+                    method = MethodUtil.getMethod(sourceType, isMethodName, new Class[] { targetType });
                 } catch (NoSuchMethodException exception) {
                     // No-op
                 }
@@ -863,14 +867,14 @@ public class BeanAdapter extends AbstractMap<String, Object> {
                 Class<?>[] interfaces = targetType.getInterfaces();
                 for (int i = 0; i < interfaces.length; i++) {
                     try {
-                        method = sourceType.getMethod(getMethodName, interfaces[i]);
+                        method = MethodUtil.getMethod(sourceType, getMethodName, new Class[] { interfaces[i] });
                     } catch (NoSuchMethodException exception) {
                         // No-op
                     }
 
                     if (method == null) {
                         try {
-                            method = sourceType.getMethod(isMethodName, interfaces[i]);
+                            method = MethodUtil.getMethod(sourceType, isMethodName, new Class[] { interfaces[i] });
                         } catch (NoSuchMethodException exception) {
                             // No-op
                         }
@@ -911,7 +915,7 @@ public class BeanAdapter extends AbstractMap<String, Object> {
 
             String setMethodName = SET_PREFIX + key;
             try {
-                method = sourceType.getMethod(setMethodName, targetType, valueType);
+                method = MethodUtil.getMethod(sourceType, setMethodName, new Class[] { targetType, valueType });
             } catch (NoSuchMethodException exception) {
                 // No-op
             }
@@ -921,7 +925,7 @@ public class BeanAdapter extends AbstractMap<String, Object> {
                 Class<?>[] interfaces = targetType.getInterfaces();
                 for (int i = 0; i < interfaces.length; i++) {
                     try {
-                        method = sourceType.getMethod(setMethodName, interfaces[i], valueType);
+                        method = MethodUtil.getMethod(sourceType, setMethodName, new Class[] { interfaces[i], valueType });
                     } catch (NoSuchMethodException exception) {
                         // No-op
                     }
