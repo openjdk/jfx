@@ -43,6 +43,7 @@ import java.net.URLConnection;
 import java.net.URLStreamHandler;
 import java.net.URLStreamHandlerFactory;
 import java.util.Locale;
+import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javafx.application.Application;
@@ -110,6 +111,16 @@ public class Modena extends Application {
     private ToggleButton modenaButton,retinaButton,rtlButton;
     private TabPane contentTabs;
     
+    private static Modena instance;
+
+    public static Modena getInstance() {
+        return instance;
+    }
+    
+    public Map<String, Node> getContent() {
+        return samplePage.getContent();
+    }
+    
     @Override public void start(Stage stage) throws Exception {
         mainStage = stage;
         // set user agent stylesheet
@@ -120,7 +131,9 @@ public class Modena extends Application {
         Scene scene = new Scene(root, 1024, 768);
         scene.getStylesheets().add(testAppCssUrl);
         stage.setScene(scene);
-        stage.show();
+        stage.setTitle("Modena");
+        stage.show(); // see SamplePage.java:110 comment on how test fails without having stage shown
+        instance = this;
     }
     
     private void updateUserAgentStyleSheet() {
@@ -511,7 +524,7 @@ public class Modena extends Application {
     {
         URL.setURLStreamHandlerFactory(new StringURLStreamHandlerFactory());
     }
-    
+
     /**
      * Simple URLConnection that always returns the content of the cssBuffer
      */
