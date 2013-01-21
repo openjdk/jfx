@@ -117,5 +117,16 @@ public enum ConditionalFeature {
      * except Linux systems without the XComposite extension. The
      * XShape extension is used in that case, so the window edges are aliased.
      */
-    TRANSPARENT_WINDOW
+    TRANSPARENT_WINDOW,
+
+    /**
+     *  Indicates that a system supports {@link javafx.stage.StageStyle#UNIFIED}
+     *  <p>
+     *  NOTE: Currently, supported on:
+     *  <ul>
+     *      <li>Windows Vista+: a window is completely filled with the frozen glass effect</li>
+     *      <li>Mac OS X: a window has the brushed-metal textured background</li>
+     *  </ul>
+     */
+    UNIFIED_WINDOW
 }
