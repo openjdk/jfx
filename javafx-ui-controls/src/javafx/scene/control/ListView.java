@@ -48,6 +48,7 @@ import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.event.EventType;
 import javafx.geometry.Orientation;
+import javafx.scene.Node;
 import javafx.util.Callback;
 
 import javafx.css.StyleableObjectProperty;
@@ -721,7 +722,44 @@ public class ListView<T> extends Control {
      *      size of the items list contained within the given ListView.
      */
     public void scrollTo(int index) {
-       getProperties().put(VirtualContainerBase.SCROLL_TO_INDEX_TOP, index);
+        ControlUtils.scrollToIndex(this, index);
+    }
+    
+    /**
+     * Called when there's a request to scroll an index into view using {@link #scrollTo(int)}
+     */
+    private ObjectProperty<EventHandler<ScrollToEvent<Integer>>> onScrollTo;
+    
+    public void setOnScrollTo(EventHandler<ScrollToEvent<Integer>> value) {
+        onScrollToProperty().set(value);
+    }
+    
+    public EventHandler<ScrollToEvent<Integer>> getOnScrollTo() {
+        if( onScrollTo != null ) {
+            return onScrollTo.get();
+        }
+        return null;
+    }
+    
+    public ObjectProperty<EventHandler<ScrollToEvent<Integer>>> onScrollToProperty() {
+        if( onScrollTo == null ) {
+            onScrollTo = new ObjectPropertyBase<EventHandler<ScrollToEvent<Integer>>>() {
+                @Override
+                protected void invalidated() {
+                    setEventHandler(ScrollToEvent.SCROLL_TO_TOP_INDEX, get());
+                }
+                @Override
+                public Object getBean() {
+                    return ListView.this;
+                }
+
+                @Override
+                public String getName() {
+                    return "onScrollTo";
+                }
+            };
+        }
+        return onScrollTo;
     }
 
     private AccessibleList accListView ;

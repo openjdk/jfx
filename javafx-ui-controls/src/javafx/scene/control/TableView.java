@@ -36,6 +36,7 @@ import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.ObjectPropertyBase;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ChangeListener;
@@ -56,6 +57,9 @@ import javafx.css.PseudoClass;
 import com.sun.javafx.scene.control.ReadOnlyUnbackedObservableList;
 import com.sun.javafx.scene.control.TableColumnComparator;
 import javafx.collections.WeakListChangeListener;
+import javafx.event.Event;
+import javafx.event.EventHandler;
+
 import com.sun.javafx.scene.control.skin.TableViewSkin;
 import com.sun.javafx.scene.control.skin.TableViewSkinBase;
 import com.sun.javafx.scene.control.skin.VirtualContainerBase;
@@ -855,7 +859,44 @@ public class TableView<S> extends Control {
      * @param index The index of an item that should be visible to the user.
      */
     public void scrollTo(int index) {
-       getProperties().put(VirtualContainerBase.SCROLL_TO_INDEX_TOP, index);
+       ControlUtils.scrollToIndex(this, index);
+    }
+    
+    /**
+     * Called when there's a request to scroll an index into view using {@link #scrollTo(int)}
+     */
+    private ObjectProperty<EventHandler<ScrollToEvent<Integer>>> onScrollTo;
+    
+    public void setOnScrollTo(EventHandler<ScrollToEvent<Integer>> value) {
+        onScrollToProperty().set(value);
+    }
+    
+    public EventHandler<ScrollToEvent<Integer>> getOnScrollTo() {
+        if( onScrollTo != null ) {
+            return onScrollTo.get();
+        }
+        return null;
+    }
+    
+    public ObjectProperty<EventHandler<ScrollToEvent<Integer>>> onScrollToProperty() {
+        if( onScrollTo == null ) {
+            onScrollTo = new ObjectPropertyBase<EventHandler<ScrollToEvent<Integer>>>() {
+                @Override
+                protected void invalidated() {
+                    setEventHandler(ScrollToEvent.SCROLL_TO_TOP_INDEX, get());
+                }
+                @Override
+                public Object getBean() {
+                    return TableView.this;
+                }
+
+                @Override
+                public String getName() {
+                    return "onScrollTo";
+                }
+            };
+        }
+        return onScrollTo;
     }
 
     /**
