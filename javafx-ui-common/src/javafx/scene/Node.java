@@ -5271,7 +5271,7 @@ public abstract class Node implements EventTarget {
      * orientation without using the automatic transformation.
      * </p>
      */
-    public boolean isAutomaticallyMirrored() {
+    public boolean usesMirroring() {
         return true;
     }
 
@@ -5319,7 +5319,7 @@ public abstract class Node implements EventTarget {
     }
 
     private NodeOrientation calcAutomaticNodeOrientation() {
-        if (!isAutomaticallyMirrored()) {
+        if (!usesMirroring()) {
             return NodeOrientation.LEFT_TO_RIGHT;
         }
 

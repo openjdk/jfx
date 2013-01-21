@@ -284,7 +284,7 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, P
             }
         }
 
-        @Override public boolean isAutomaticallyMirrored() {
+        @Override public boolean usesMirroring() {
             // This is used instead of setting NodeOrientation,
             // allowing the Text node to inherit the current
             // orientation.
