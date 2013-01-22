@@ -78,6 +78,7 @@ public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehav
     private static final double DEFAULT_MIN_SIZE = 36.0;
 
     private static final double DEFAULT_SB_BREADTH = 12.0;
+    private static final double DEFAULT_EMBEDDED_SB_BREADTH = 8.0;
 
     private static final double PAN_THRESHOLD = 0.5;
 
@@ -966,12 +967,22 @@ public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehav
         vsbWidth = snapSize(vsb.prefWidth(-1));
         if (vsbWidth == 0) {
             //            println("*** WARNING ScrollPaneSkin: can't get scroll bar width, using {DEFAULT_SB_BREADTH}");
-            vsbWidth = DEFAULT_SB_BREADTH;
+            if (PlatformUtil.isEmbedded()) {
+                vsbWidth = DEFAULT_EMBEDDED_SB_BREADTH;
+            }
+            else {
+                vsbWidth = DEFAULT_SB_BREADTH;
+            }
         }
         hsbHeight = snapSize(hsb.prefHeight(-1));
         if (hsbHeight == 0) {
             //            println("*** WARNING ScrollPaneSkin: can't get scroll bar height, using {DEFAULT_SB_BREADTH}");
-            hsbHeight = DEFAULT_SB_BREADTH;
+            if (PlatformUtil.isEmbedded()) {
+                hsbHeight = DEFAULT_EMBEDDED_SB_BREADTH;
+            }
+            else {
+                hsbHeight = DEFAULT_SB_BREADTH;
+            }
         }
     }
 
