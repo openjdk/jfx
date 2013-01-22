@@ -147,7 +147,7 @@ public final class Node_hasMirroring_Test {
                                   final Node... childNodes) {
         final Group group = new Group() {
                                     @Override
-                                    public boolean usesMirroring() {
+                                    public boolean isAutomaticallyMirrored() {
                                         return false;
                                     }
                                 };

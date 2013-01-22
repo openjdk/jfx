@@ -84,7 +84,7 @@ public abstract class Chart extends Region {
             final double contentHeight = snapSize(height - (top + bottom));
             layoutChartChildren(snapPosition(top), snapPosition(left),contentWidth,contentHeight);
         }
-        @Override public boolean usesMirroring() {
+        @Override public boolean isAutomaticallyMirrored() {
             return useChartContentMirroring;
         }
     };
