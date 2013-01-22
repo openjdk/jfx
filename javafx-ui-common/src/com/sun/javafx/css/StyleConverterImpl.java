@@ -103,9 +103,4 @@ public class StyleConverterImpl<F, T> extends StyleConverter<F, T> {
         }
         return tmap.get(cname);
     }
-    
-    public String writeJava() {
-        return getClass().getCanonicalName() + ".getInstance()";
-    }
-
 }

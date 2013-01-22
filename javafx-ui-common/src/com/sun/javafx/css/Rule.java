@@ -203,49 +203,4 @@ final public class Rule {
 
         return new Rule(selectors, declarations);
     }
-
-    public static final String NEW_LINE = "\r\n";
-    public static final String INDENT = "    ";
-    public static final String TWO_INDENT = "        ";
-    
-    String writeJava() throws IOException {
-        final String THREE_INDENT = INDENT + TWO_INDENT;
-        final String FOUR_INDENT = TWO_INDENT + TWO_INDENT;
-        
-        StringBuilder sb = new StringBuilder();
-        sb.append("new Rule(");
-        sb.append(NEW_LINE);
-        
-        // selectors
-        sb.append(THREE_INDENT);
-        sb.append("Arrays.<Selector>asList(");
-        for (int i = 0; i < selectors.size(); i++) {
-            Selector sel = selectors.get(i);
-            sb.append(sel.writeJava());
-            
-            if (i < (selectors.size() - 1)) {
-                sb.append(", ");
-            }
-        }
-        sb.append("), ");
-        
-        // declarations
-        sb.append(NEW_LINE);
-        sb.append(THREE_INDENT);
-        sb.append("Arrays.<Declaration>asList(");
-        for (int i = 0; i < declarations.size(); i++) {
-            Declaration decl = declarations.get(i);
-            
-            sb.append(NEW_LINE);
-            sb.append(FOUR_INDENT);
-            sb.append(decl.writeJava());
-            
-            if (i < (declarations.size() - 1)) {
-                sb.append(", ");
-            }
-        }
-        sb.append("))");
-        
-        return sb.toString();
-    }
 }
