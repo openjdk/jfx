@@ -40,6 +40,7 @@ import javafx.event.Event;
 import javafx.event.EventDispatchChain;
 import javafx.event.EventDispatcher;
 import javafx.event.EventHandler;
+import javafx.event.EventType;
 import javafx.geometry.BoundingBox;
 import javafx.geometry.Bounds;
 import javafx.geometry.Orientation;
@@ -48,6 +49,7 @@ import javafx.scene.Node;
 import javafx.scene.control.ScrollBar;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.ScrollPane.ScrollBarPolicy;
+import javafx.scene.control.ScrollToEvent;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.input.ScrollEvent;
 import javafx.scene.input.TouchEvent;
@@ -123,7 +125,7 @@ public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehav
      *                                                                         *
      **************************************************************************/
 
-    public ScrollPaneSkin(ScrollPane scrollpane) {
+    public ScrollPaneSkin(final ScrollPane scrollpane) {
         super(scrollpane, new ScrollPaneBehavior(scrollpane));
         initialize();
         // Register listeners
@@ -136,6 +138,15 @@ public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehav
         registerChangeListener(scrollpane.vvalueProperty(), "VVALUE");
         registerChangeListener(scrollpane.prefViewportWidthProperty(), "PREF_VIEWPORT_WIDTH");
         registerChangeListener(scrollpane.prefViewportHeightProperty(), "PREF_VIEWPORT_HEIGHT");
+        scrollpane.addEventHandler(ScrollToEvent.SCROLL_TO_NODE, new EventHandler<ScrollToEvent<Node>>() {
+
+            @Override
+            public void handle(ScrollToEvent<Node> event) {
+                Node n = event.getScrollTarget();
+                Bounds b = scrollpane.sceneToLocal(n.localToScene(n.getLayoutBounds()));
+                scrollBoundsIntoView(b);
+            }
+        });
     }
 
     private final InvalidationListener nodeListener = new InvalidationListener() {
@@ -614,11 +625,8 @@ public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehav
             getSkinnable().requestLayout();
         }
     }
-
-    /*
-    ** auto-scroll so node is within (0,0),(contentWidth,contentHeight)
-    */
-    @Override public void onTraverse(Node n, Bounds b) {
+    
+    void scrollBoundsIntoView(Bounds b) {
         double dx = 0.0;
         double dy = 0.0;
         boolean needsLayout = false;
@@ -665,6 +673,13 @@ public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehav
         if (needsLayout == true) {
             getSkinnable().requestLayout();
         }
+    }
+
+    /*
+    ** auto-scroll so node is within (0,0),(contentWidth,contentHeight)
+    */
+    @Override public void onTraverse(Node n, Bounds b) {
+        scrollBoundsIntoView(b);
     }
 
     public void hsbIncrement() {
@@ -1071,8 +1086,6 @@ public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehav
     protected void startContentsToViewport() {
         double newPosX = posX;
         double newPosY = posY;
-        double hRange = getSkinnable().getHmax() - getSkinnable().getHmin();
-        double vRange = getSkinnable().getVmax() - getSkinnable().getVmin();
 
         setContentPosX(posX);
         setContentPosY(posY);

@@ -150,12 +150,11 @@ public class TreeTableViewSkin<S> extends TableViewSkinBase<S, TreeTableView<S>,
             // the tree.
             if (! getSkinnable().isShowRoot() && getRoot() != null) {
                  getRoot().setExpanded(true);
-
-                 // update the item count in the flow and behavior instances
-                updateItemCount();
             }
+            // update the item count in the flow and behavior instances
+            updateItemCount();
         } else if ("ROW_FACTORY".equals(p)) {
-            // FIXME can't set treeview cell factory in to a table!
+            flow.recreateCells();
         } else if ("TREE_ITEM_COUNT".equals(p)) {
             updateItemCount();
         }

@@ -93,7 +93,6 @@ import javafx.css.StyleableProperty;
  */
 public abstract class TextInputControlSkin<T extends TextInputControl, B extends TextInputControlBehavior<T>> extends BehaviorSkinBase<T, B> {
 
-    private static final boolean macOS = isMac();
     /**
      * The font to use with this control. In 1.3 and prior we had a font property
      * on the TextInputControl itself, however now we just do it via CSS

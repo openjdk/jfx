@@ -24,7 +24,6 @@
  */
 package javafx.scene.control;
 
-import java.util.Set;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.BooleanPropertyBase;
 import javafx.event.ActionEvent;

@@ -40,7 +40,6 @@ import javafx.event.EventDispatchChain;
 import javafx.event.EventDispatcher;
 import javafx.event.EventHandler;
 import javafx.scene.input.MouseEvent;
-import com.sun.javafx.css.StyleManager;
 
 /**
  * A two level focus handler allows a Control to behave as if it

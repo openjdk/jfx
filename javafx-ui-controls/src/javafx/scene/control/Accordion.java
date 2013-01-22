@@ -25,10 +25,6 @@
 
 package javafx.scene.control;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.ListChangeListener;

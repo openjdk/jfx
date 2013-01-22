@@ -5,17 +5,14 @@
 package com.sun.javafx.scene.control.skin;
 
 import javafx.css.PseudoClass;
-import com.sun.javafx.css.StyleManager;
 import javafx.scene.control.ColorPicker;
 import java.util.List;
-import java.util.Set;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
-import javafx.collections.ListChangeListener.Change;
 import javafx.event.ActionEvent;
 import javafx.event.Event;
 import javafx.event.EventHandler;
@@ -25,7 +22,6 @@ import javafx.geometry.Side;
 import javafx.scene.control.*;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseButton;
-import javafx.scene.input.MouseDragEvent;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.StackPane;
@@ -41,7 +37,6 @@ public class ColorPalette extends StackPane {
     private static final int SQUARE_SIZE = 15;
     private static final int NUM_OF_COLUMNS = 12;
     private static final int NUM_OF_ROWS = 10;
-    private static final int MAX_CUSTOM_ROWS = 3;
     private static final int LABEL_GAP = 2;
     
     private boolean customColorAdded = false;
@@ -268,7 +263,7 @@ public class ColorPalette extends StackPane {
                 if (index -12 >= 0) {
                     prevSquare = (ColorSquare)customColorGrid.getChildren().get(index-12);
                 } else {
-                    int rowIndex = customColorGrid.getRowIndex(customColorGrid.getChildren().get(len-1));
+                    int rowIndex = GridPane.getRowIndex(customColorGrid.getChildren().get(len-1));
                     prevSquare = (ColorSquare)customColorGrid.getChildren().get((rowIndex*NUM_OF_COLUMNS)+index);
                 }
                 prevSquare.requestFocus();
@@ -335,7 +330,7 @@ public class ColorPalette extends StackPane {
                 if (index+12 < len) {
                     prevSquare = (ColorSquare)customColorGrid.getChildren().get(index+12);
                 } else {
-                    int rowIndex = customColorGrid.getRowIndex(customColorGrid.getChildren().get(len-1));
+                    int rowIndex = GridPane.getRowIndex(customColorGrid.getChildren().get(len-1));
                     prevSquare = (ColorSquare)customColorGrid.getChildren().get(index-(rowIndex)*NUM_OF_COLUMNS);
                 }
                 prevSquare.requestFocus();

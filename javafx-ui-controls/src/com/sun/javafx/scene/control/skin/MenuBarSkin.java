@@ -36,7 +36,6 @@ import javafx.beans.property.ReadOnlyProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.ListChangeListener;
-import javafx.collections.ListChangeListener.Change;
 import javafx.collections.MapChangeListener;
 import javafx.collections.ObservableList;
 import javafx.event.EventHandler;
@@ -147,7 +146,7 @@ public class MenuBarSkin extends BehaviorSkinBase<MenuBar, BehaviorBase<MenuBar>
 
         final InvalidationListener focusedStageListener = new InvalidationListener() {
             @Override public void invalidated(Observable ov) {
-                setSystemMenu((Stage)((ReadOnlyProperty)ov).getBean());
+                setSystemMenu((Stage)((ReadOnlyProperty<?>)ov).getBean());
             }
         };
 
@@ -170,10 +169,10 @@ public class MenuBarSkin extends BehaviorSkinBase<MenuBar, BehaviorBase<MenuBar>
         });
     }
 
-    private WeakEventHandler weakSceneKeyEventHandler;
-    private WeakEventHandler weakSceneMouseEventHandler;
-    private EventHandler keyEventHandler;
-    private EventHandler mouseEventHandler;
+    private WeakEventHandler<KeyEvent> weakSceneKeyEventHandler;
+    private WeakEventHandler<MouseEvent> weakSceneMouseEventHandler;
+    private EventHandler<KeyEvent> keyEventHandler;
+    private EventHandler<MouseEvent> mouseEventHandler;
     
     /***************************************************************************
      *                                                                         *
@@ -259,11 +258,13 @@ public class MenuBarSkin extends BehaviorSkinBase<MenuBar, BehaviorBase<MenuBar>
                             unSelectMenus();
                             event.consume();
                             break;
+                    default:
+                        break;
                     }
                 }
             }
         };
-        weakSceneKeyEventHandler = new WeakEventHandler(keyEventHandler);
+        weakSceneKeyEventHandler = new WeakEventHandler<KeyEvent>(keyEventHandler);
         control.getScene().addEventFilter(KeyEvent.KEY_PRESSED, weakSceneKeyEventHandler);
         
         // When we click else where in the scene - menu selection should be cleared.
@@ -275,11 +276,11 @@ public class MenuBarSkin extends BehaviorSkinBase<MenuBar, BehaviorBase<MenuBar>
                 }
             }
         };
-        weakSceneMouseEventHandler = new WeakEventHandler(mouseEventHandler);
+        weakSceneMouseEventHandler = new WeakEventHandler<MouseEvent>(mouseEventHandler);
         control.getScene().addEventFilter(MouseEvent.MOUSE_CLICKED, weakSceneMouseEventHandler);
         
         // When the parent window looses focus - menu selection should be cleared
-        control.getScene().getWindow().focusedProperty().addListener(new WeakChangeListener(new ChangeListener<Boolean>() {
+        control.getScene().getWindow().focusedProperty().addListener(new WeakChangeListener<Boolean>(new ChangeListener<Boolean>() {
             @Override
             public void changed(ObservableValue<? extends Boolean> ov, Boolean t, Boolean t1) {
               if (!t1) {
@@ -540,8 +541,8 @@ public class MenuBarSkin extends BehaviorSkinBase<MenuBar, BehaviorBase<MenuBar>
             menuButton.getItems().setAll(menu.getItems());
             container.getChildren().add(menuButton);
             // listen to changes in menu items & update menuButton items
-            menu.getItems().addListener(new ListChangeListener() {
-                @Override public void onChanged(Change c) {
+            menu.getItems().addListener(new ListChangeListener<MenuItem>() {
+                @Override public void onChanged(Change<? extends MenuItem> c) {
                     while (c.next()) {
                         menuButton.getItems().removeAll(c.getRemoved());
                         menuButton.getItems().addAll(c.getFrom(), c.getAddedSubList());

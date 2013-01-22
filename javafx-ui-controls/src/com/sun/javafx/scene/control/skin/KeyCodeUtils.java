@@ -119,6 +119,8 @@ public class KeyCodeUtils {
             case DIGIT7: return '7';
             case DIGIT8: return '8';
             case DIGIT9: return '9';
+        default:
+            break;
         }
 
         /*
@@ -130,6 +132,8 @@ public class KeyCodeUtils {
                 case BACK_SPACE: return '\u232B';
                 case ESCAPE: return '\u238B';
                 case DELETE: return '\u2326';
+            default:
+                break;
             }
         }
         return 0;

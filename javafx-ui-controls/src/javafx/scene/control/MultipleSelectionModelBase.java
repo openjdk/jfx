@@ -99,8 +99,8 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
             }
         };
         
-        final MappingChange.Map<Integer,?> map = new MappingChange.Map<Integer,Object>() {
-            @Override public Object map(Integer f) {
+        final MappingChange.Map<Integer,T> map = new MappingChange.Map<Integer,T>() {
+            @Override public T map(Integer f) {
                 return getModelItem(f);
             }
         };
@@ -109,7 +109,7 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
             @Override public void onChanged(final Change<? extends Integer> c) {
                 // when the selectedIndices ObservableList changes, we manually call
                 // the observers of the selectedItems ObservableList.
-                selectedItemsSeq.callObservers(new MappingChange(c, map, selectedItemsSeq));
+                selectedItemsSeq.callObservers(new MappingChange<Integer,T>(c, map, selectedItemsSeq));
                 c.reset();
             }
         });
@@ -168,7 +168,7 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
 //        this.selectedIndices.or(rows);
 //    }
 
-    private final ReadOnlyUnbackedObservableList selectedItemsSeq;
+    private final ReadOnlyUnbackedObservableList<T> selectedItemsSeq;
     @Override public ObservableList<T> getSelectedItems() {
         return selectedItemsSeq;
     }
@@ -392,10 +392,10 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
 
             if (rows.length == 0) {
                 // TODO this isn't accurate
-                selectedIndicesSeq.callObservers(new NonIterableChange.SimpleAddChange((int) row, (int) row, selectedIndicesSeq));
+                selectedIndicesSeq.callObservers(new NonIterableChange.SimpleAddChange<Integer>((int) row, (int) row, selectedIndicesSeq));
             } else {
                 // TODO this isn't accurate
-                selectedIndicesSeq.callObservers(new NonIterableChange.SimpleAddChange((int) row, (int) rows[rows.length - 1], selectedIndicesSeq));
+                selectedIndicesSeq.callObservers(new NonIterableChange.SimpleAddChange<Integer>((int) row, (int) rows[rows.length - 1], selectedIndicesSeq));
             }
         }
     }
@@ -411,7 +411,7 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
         // set all selected indices to true
         quietClearSelection();
         selectedIndices.set(0, (int) rowCount, true);
-        selectedIndicesSeq.callObservers(new NonIterableChange.SimpleAddChange(0, (int) rowCount, selectedIndicesSeq));
+        selectedIndicesSeq.callObservers(new NonIterableChange.SimpleAddChange<Integer>(0, (int) rowCount, selectedIndicesSeq));
 
         setSelectedIndex(rowCount - 1);
 

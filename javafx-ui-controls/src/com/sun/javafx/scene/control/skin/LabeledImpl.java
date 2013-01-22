@@ -40,18 +40,15 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import javafx.css.StyleableProperty;
-import javafx.scene.Parent;
 import javafx.scene.layout.Region;
 
 
 public class LabeledImpl extends Label {
 
     public LabeledImpl(final Labeled labeled) {
-        this.shuttler = new Shuttler(this, labeled);
+        new Shuttler(this, labeled);
     }
         
-    final private Shuttler shuttler;
-    
     private static void initialize(Shuttler shuttler, LabeledImpl labeledImpl, Labeled labeled) {
         
         labeledImpl.setText(labeled.getText());

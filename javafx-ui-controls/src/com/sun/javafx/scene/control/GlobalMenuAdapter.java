@@ -33,7 +33,6 @@ import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.event.Event;
 import javafx.event.EventHandler;
-import javafx.scene.Node;
 import javafx.scene.control.CheckMenuItem;
 import javafx.scene.control.CustomMenuItem;
 import javafx.scene.control.Menu;
@@ -168,7 +167,7 @@ public class GlobalMenuAdapter extends Menu implements MenuBase {
         }
         Menu target = (Menu)menu.getParentMenu();
         if(target != null && target.getOnMenuValidation() != null) {
-            Event.fireEvent(target, new Event(target.MENU_VALIDATION_EVENT));
+            Event.fireEvent(target, new Event(MenuItem.MENU_VALIDATION_EVENT));
         }
     }
 
@@ -187,11 +186,11 @@ public class GlobalMenuAdapter extends Menu implements MenuBase {
         @Override
         public void fireValidation() {
             if (menuItem.getOnMenuValidation() != null) {
-                Event.fireEvent(menuItem, new Event(menuItem.MENU_VALIDATION_EVENT));
+                Event.fireEvent(menuItem, new Event(MenuItem.MENU_VALIDATION_EVENT));
             }
             Menu target = (Menu)menuItem.getParentMenu();
             if(target.getOnMenuValidation() != null) {
-                Event.fireEvent(target, new Event(target.MENU_VALIDATION_EVENT));
+                Event.fireEvent(target, new Event(MenuItem.MENU_VALIDATION_EVENT));
             }
         }
     }
@@ -215,7 +214,7 @@ public class GlobalMenuAdapter extends Menu implements MenuBase {
             }
             Menu target = (Menu)menuItem.getParentMenu();
             if(target.getOnMenuValidation() != null) {
-                Event.fireEvent(target, new Event(target.MENU_VALIDATION_EVENT));
+                Event.fireEvent(target, new Event(MenuItem.MENU_VALIDATION_EVENT));
             }
         }
     }
@@ -240,7 +239,7 @@ public class GlobalMenuAdapter extends Menu implements MenuBase {
             }
             Menu target = (Menu)menuItem.getParentMenu();
             if(target.getOnMenuValidation() != null) {
-                Event.fireEvent(target, new Event(target.MENU_VALIDATION_EVENT));
+                Event.fireEvent(target, new Event(MenuItem.MENU_VALIDATION_EVENT));
             }
         }
     }
@@ -261,7 +260,7 @@ public class GlobalMenuAdapter extends Menu implements MenuBase {
             }
             Menu target = (Menu)menuItem.getParentMenu();
             if(target.getOnMenuValidation() != null) {
-                Event.fireEvent(target, new Event(target.MENU_VALIDATION_EVENT));
+                Event.fireEvent(target, new Event(MenuItem.MENU_VALIDATION_EVENT));
             }
         }
     }
@@ -282,7 +281,7 @@ public class GlobalMenuAdapter extends Menu implements MenuBase {
             }
             Menu target = (Menu)menuItem.getParentMenu();
             if(target.getOnMenuValidation() != null) {
-                Event.fireEvent(target, new Event(target.MENU_VALIDATION_EVENT));
+                Event.fireEvent(target, new Event(MenuItem.MENU_VALIDATION_EVENT));
             }
         }
     }

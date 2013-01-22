@@ -35,11 +35,11 @@ import com.sun.javafx.scene.control.skin.ScrollPaneSkin;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Set;
 
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.ObjectPropertyBase;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.beans.property.SimpleObjectProperty;
 
@@ -49,6 +49,8 @@ import javafx.scene.Node;
 
 import javafx.beans.DefaultProperty;
 import javafx.css.StyleableProperty;
+import javafx.event.Event;
+import javafx.event.EventHandler;
 
 /**
  * A Control that provides a scrolled, clipped viewport of its contents. It
@@ -725,6 +727,51 @@ public class ScrollPane extends Control {
     @Deprecated @Override
     protected /*do not make final*/ Boolean impl_cssGetFocusTraversableInitialValue() {
         return Boolean.FALSE;
+    }
+    
+    /**
+     * Scroll the given node into view
+     * @param node the node to scroll into view
+     */
+    public void scrollTo(Node node) {
+        Event.fireEvent(this, new ScrollToEvent<Node>(this, this, ScrollToEvent.SCROLL_TO_NODE, node));        
+    }
+    
+    /**
+     * Called when there's a request to scroll a node into view using {@link #scrollTo(Node)}
+     */
+    private ObjectProperty<EventHandler<ScrollToEvent<Node>>> onScrollTo;
+    
+    public void setOnScrollTo(EventHandler<ScrollToEvent<Node>> value) {
+        onScrollToProperty().set(value);
+    }
+    
+    public EventHandler<ScrollToEvent<Node>> getOnScrollTo() {
+        if( onScrollTo != null ) {
+            return onScrollTo.get();
+        }
+        return null;
+    }
+    
+    public ObjectProperty<EventHandler<ScrollToEvent<Node>>> onScrollToProperty() {
+        if( onScrollTo == null ) {
+            onScrollTo = new ObjectPropertyBase<EventHandler<ScrollToEvent<Node>>>() {
+                @Override
+                protected void invalidated() {
+                    setEventHandler(ScrollToEvent.SCROLL_TO_NODE, get());
+                }
+                @Override
+                public Object getBean() {
+                    return ScrollPane.this;
+                }
+
+                @Override
+                public String getName() {
+                    return "onScrollTo";
+                }
+            };
+        }
+        return onScrollTo;
     }
     
     /**

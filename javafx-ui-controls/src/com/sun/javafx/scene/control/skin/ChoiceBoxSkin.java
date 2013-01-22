@@ -60,8 +60,8 @@ import javafx.geometry.Insets;
  */
     public class ChoiceBoxSkin<T> extends BehaviorSkinBase<ChoiceBox<T>, ChoiceBoxBehavior<T>> {
 
-    public ChoiceBoxSkin(ChoiceBox control) {
-        super(control, new ChoiceBoxBehavior(control));
+    public ChoiceBoxSkin(ChoiceBox<T> control) {
+        super(control, new ChoiceBoxBehavior<T>(control));
         initialize();
         control.requestLayout();
         registerChangeListener(control.selectionModelProperty(), "SELECTION_MODEL");
@@ -71,7 +71,7 @@ import javafx.geometry.Insets;
         registerChangeListener(control.converterProperty(), "CONVERTER");
     }
 
-    private ObservableList<?> choiceBoxItems;
+    private ObservableList<T> choiceBoxItems;
 
     private ContextMenu popup;
 
@@ -84,18 +84,18 @@ import javafx.geometry.Insets;
      * Watch for if the user changes the selected index, and if so, we toggle
      * the selection in the toggle group (so the check shows in the right place)
      */
-    private SelectionModel selectionModel;
+    private SelectionModel<T> selectionModel;
 
     private Label label;
 
-    private final ListChangeListener choiceBoxItemsListener = new ListChangeListener() {
-        @Override public void onChanged(Change c) {
+    private final ListChangeListener<T> choiceBoxItemsListener = new ListChangeListener<T>() {
+        @Override public void onChanged(Change<? extends T> c) {
             while (c.next()) {
                 if (c.getRemovedSize() > 0) {
                     toggleGroup.getToggles().clear();
                     popup.getItems().clear();
                     int i = 0;
-                    for (Object obj : c.getList()) {
+                    for (T obj : c.getList()) {
                         addPopupItem(obj, i);
                         i++;
                     }
@@ -103,7 +103,7 @@ import javafx.geometry.Insets;
                     return;
                 }
                 for (int i = c.getFrom(); i < c.getTo(); i++) {
-                    final Object obj = c.getList().get(i);
+                    final T obj = c.getList().get(i);
                     addPopupItem(obj, i);
                 }
             }
@@ -115,8 +115,8 @@ import javafx.geometry.Insets;
         }
     };
     
-    private final WeakListChangeListener weakChoiceBoxItemsListener =
-            new WeakListChangeListener(choiceBoxItemsListener);
+    private final WeakListChangeListener<T> weakChoiceBoxItemsListener =
+            new WeakListChangeListener<T>(choiceBoxItemsListener);
 
     private void initialize() {
         updateChoiceBoxItems();
@@ -138,7 +138,7 @@ import javafx.geometry.Insets;
         // there after causes Showing to be set to false
         popup.setOnAutoHide(new EventHandler<Event>() {
             @Override public void handle(Event event) {
-                ((ChoiceBox)getSkinnable()).hide();
+                getSkinnable().hide();
             }
         });
         // fix RT-14469 : When tab shifts ChoiceBox focus to another control,
@@ -146,7 +146,7 @@ import javafx.geometry.Insets;
         getSkinnable().focusedProperty().addListener(new ChangeListener<Boolean>() {
             @Override public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
                 if (!newValue) {
-                    ((ChoiceBox)getSkinnable()).hide();
+                    getSkinnable().hide();
                 }
             }
         });
@@ -250,7 +250,7 @@ import javafx.geometry.Insets;
         }
     }
 
-    private void addPopupItem(Object o, int i) {
+    private void addPopupItem(T o, int i) {
         MenuItem popupItem = null;
         if (o instanceof Separator) {
             // We translate the Separator into a SeparatorMenuItem...
@@ -258,7 +258,7 @@ import javafx.geometry.Insets;
         } else if (o instanceof SeparatorMenuItem) {
             popupItem = (SeparatorMenuItem) o;
         } else {
-            StringConverter c = getSkinnable().getConverter();
+            StringConverter<T> c = getSkinnable().getConverter();
             String displayString = (c == null) ? ((o == null) ? "" : o.toString()) :  c.toString(o);
             final RadioMenuItem item = new RadioMenuItem(displayString);
             item.setId("choice-box-menu-item");
@@ -283,7 +283,7 @@ import javafx.geometry.Insets;
         toggleGroup.selectToggle(null);
 
         for (int i = 0; i < choiceBoxItems.size(); i++) {
-            Object o = choiceBoxItems.get(i);
+            T o = choiceBoxItems.get(i);
             addPopupItem(o, i);
         }
     }
@@ -331,7 +331,7 @@ import javafx.geometry.Insets;
         // open button width/height
         double obw = openButton.prefWidth(-1);
 
-        ChoiceBox control = getSkinnable();
+        ChoiceBox<T> control = getSkinnable();
         Insets insets = control.getInsets();
         label.resizeRelocate(insets.getLeft(), insets.getTop(), w, h);
         openButton.resize(obw, openButton.prefHeight(-1));

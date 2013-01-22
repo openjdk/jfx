@@ -61,7 +61,7 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
      * Fields                                                                 *
      *************************************************************************/
 
-    TextInputControl textInputControl;
+    T textInputControl;
 
     /**
      * Used to keep track of the most recent key event. This is used when
@@ -180,7 +180,7 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
             else if ("SelectEndExtend".equals(name)) selectEndExtend();
             else if ("ToParent".equals(name)) forwardToParent(lastEvent);
             /*DEBUG*/else if ("UseVK".equals(name) && isEmbedded()) {
-                ((TextInputControlSkin)textInputControl.getSkin()).toggleUseVK();
+                ((TextInputControlSkin<?,?>)textInputControl.getSkin()).toggleUseVK();
             } else {
                 done = false;
             }
@@ -283,7 +283,7 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
 
     private void nextCharacterVisually(boolean moveRight) {
         if (isMixed()) {
-            TextInputControlSkin skin = (TextInputControlSkin)textInputControl.getSkin();
+            TextInputControlSkin<?,?> skin = (TextInputControlSkin<?,?>)textInputControl.getSkin();
             skin.nextCharacterVisually(moveRight);
         } else if (moveRight != isRTLText()) {
             textInputControl.forward();

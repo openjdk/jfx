@@ -34,22 +34,16 @@ import java.util.Locale;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import javafx.scene.Node;
-import javafx.beans.binding.ObjectBinding;
-import javafx.beans.binding.StringBinding;
 import javafx.event.EventHandler;
 import javafx.scene.control.*;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.StackPane;
 import javafx.scene.shape.Rectangle;
 import com.sun.javafx.scene.control.behavior.ColorPickerBehavior;
-import javafx.beans.InvalidationListener;
-import javafx.beans.Observable;
 import javafx.scene.control.ColorPicker;
 import javafx.beans.property.BooleanProperty;
 import javafx.css.StyleableProperty;
 import javafx.event.ActionEvent;
-import javafx.event.Event;
-import javafx.event.EventType;
 import javafx.scene.paint.Color;
 
 /**
