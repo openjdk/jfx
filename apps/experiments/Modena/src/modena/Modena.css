@@ -1983,7 +1983,7 @@ is being used to size a border should also be in pixels.
 .list-cell:filled:selected:disabled {
     -fx-opacity: -fx-disabled-opacity;
 }
-.list-cell:filled:hover {
+/*.list-cell:filled:hover {
     -fx-background-color: -fx-cell-hover-color;
     -fx-text-fill: -fx-text-inner-color;
 }
@@ -1991,7 +1991,7 @@ is being used to size a border should also be in pixels.
     -fx-background-color: -fx-focus-color, -fx-cell-focus-inner-border, -fx-cell-hover-color;
     -fx-background-insets: 0, 1, 2;
     -fx-text-fill: -fx-text-inner-color;
-}
+}*/
 .list-view:horizontal > .virtual-flow > .clipped-container > .sheet > .list-cell:filled:selected,
 .list-view:horizontal > .virtual-flow > .clipped-container > .sheet > .list-cell:filled:selected:hover {
     -fx-background-color: -fx-selection-bar;
