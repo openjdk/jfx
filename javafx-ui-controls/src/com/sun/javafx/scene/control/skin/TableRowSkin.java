@@ -36,7 +36,6 @@ import javafx.beans.property.ObjectProperty;
 import javafx.collections.ObservableList;
 import javafx.scene.Node;
 import javafx.scene.control.Control;
-import javafx.scene.control.SpanModel;
 import javafx.scene.control.TableColumnBase;
 
 /**
@@ -70,8 +69,8 @@ public class TableRowSkin<T> extends TableRowSkinBase<T, TableRow<T>, CellBehavi
             }
             
             this.tableView = getSkinnable().getTableView();
-            spanModel = tableView.getSpanModel();
-            registerChangeListener(tableView.spanModelProperty(), "SPAN_MODEL");
+//            spanModel = tableView.getSpanModel();
+//            registerChangeListener(tableView.spanModelProperty(), "SPAN_MODEL");
         }
     }
     
@@ -91,9 +90,9 @@ public class TableRowSkin<T> extends TableRowSkinBase<T, TableRow<T>, CellBehavi
         return tableView.getVisibleLeafColumns();
     }
 
-    @Override protected ObjectProperty<SpanModel<T>> spanModelProperty() {
-        return tableView.spanModelProperty();
-    }
+//    @Override protected ObjectProperty<SpanModel<T>> spanModelProperty() {
+//        return tableView.spanModelProperty();
+//    }
 
     @Override protected void updateCell(TableCell<T, ?> cell, TableRow<T> row) {
         cell.updateTableRow(row);

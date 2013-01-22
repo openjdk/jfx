@@ -821,30 +821,30 @@ public class TreeTableView<S> extends Control {
     
     
     
-    // --- Span Model
-    private ObjectProperty<SpanModel<TreeItem<S>>> spanModel 
-            = new SimpleObjectProperty<SpanModel<TreeItem<S>>>(this, "spanModel") {
-
-        @Override protected void invalidated() {
-            ObservableList<String> styleClass = getStyleClass();
-            if (getSpanModel() == null) {
-                styleClass.remove(CELL_SPAN_TABLE_VIEW_STYLE_CLASS);
-            } else if (! styleClass.contains(CELL_SPAN_TABLE_VIEW_STYLE_CLASS)) {
-                styleClass.add(CELL_SPAN_TABLE_VIEW_STYLE_CLASS);
-            }
-        }
-    };
-
-    public final ObjectProperty<SpanModel<TreeItem<S>>> spanModelProperty() {
-        return spanModel;
-    }
-    public final void setSpanModel(SpanModel<TreeItem<S>> value) {
-        spanModelProperty().set(value);
-    }
-
-    public final SpanModel<TreeItem<S>> getSpanModel() {
-        return spanModel.get();
-    }
+//    // --- Span Model
+//    private ObjectProperty<SpanModel<TreeItem<S>>> spanModel 
+//            = new SimpleObjectProperty<SpanModel<TreeItem<S>>>(this, "spanModel") {
+//
+//        @Override protected void invalidated() {
+//            ObservableList<String> styleClass = getStyleClass();
+//            if (getSpanModel() == null) {
+//                styleClass.remove(CELL_SPAN_TABLE_VIEW_STYLE_CLASS);
+//            } else if (! styleClass.contains(CELL_SPAN_TABLE_VIEW_STYLE_CLASS)) {
+//                styleClass.add(CELL_SPAN_TABLE_VIEW_STYLE_CLASS);
+//            }
+//        }
+//    };
+//
+//    public final ObjectProperty<SpanModel<TreeItem<S>>> spanModelProperty() {
+//        return spanModel;
+//    }
+//    public final void setSpanModel(SpanModel<TreeItem<S>> value) {
+//        spanModelProperty().set(value);
+//    }
+//
+//    public final SpanModel<TreeItem<S>> getSpanModel() {
+//        return spanModel.get();
+//    }
     
     
     

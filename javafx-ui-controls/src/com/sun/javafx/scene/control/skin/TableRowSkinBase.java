@@ -44,10 +44,8 @@ import javafx.geometry.Insets;
 import javafx.geometry.VPos;
 import javafx.scene.Group;
 import javafx.scene.Node;
-import javafx.scene.control.CellSpan;
 import javafx.scene.control.Control;
 import javafx.scene.control.IndexedCell;
-import javafx.scene.control.SpanModel;
 import javafx.scene.control.TableColumnBase;
 import javafx.util.Duration;
 
@@ -120,7 +118,7 @@ public abstract class TableRowSkinBase<T,
     protected abstract Control getVirtualFlowOwner(); // return TableView / TreeTableView
     
     protected abstract ObservableList<? extends TableColumnBase/*<T,?>*/> getVisibleLeafColumns();
-    protected abstract ObjectProperty<SpanModel<T>> spanModelProperty();
+//    protected abstract ObjectProperty<SpanModel<T>> spanModelProperty();
     
     protected abstract void updateCell(R cell, C row);  // cell.updateTableRow(skinnable); (i.e cell.updateTableRow(row))
     
@@ -183,8 +181,8 @@ public abstract class TableRowSkinBase<T,
         }
     };
     
-    // spanning support
-    protected SpanModel spanModel;
+//    // spanning support
+//    protected SpanModel spanModel;
     
     // supports variable row heights
     public static <C extends IndexedCell> double getTableRowHeight(int index, C tableRow) {
@@ -221,86 +219,86 @@ public abstract class TableRowSkinBase<T,
         node.setVisible(true);
     }
     
-    // TODO we can optimise this code if we cache the spanTypeArray, which at
-    //      present is created for every query
-    // TODO we can optimise this code if we set a maximum span distance
-    private SpanType getSpanType(final int row, final int column) {
-        SpanType[][] spanTypeArray;
-//        if (spanMap.containsKey(tableView)) {
-//            spanTypeArray = spanMap.get(tableView);
+//    // TODO we can optimise this code if we cache the spanTypeArray, which at
+//    //      present is created for every query
+//    // TODO we can optimise this code if we set a maximum span distance
+//    private SpanType getSpanType(final int row, final int column) {
+//        SpanType[][] spanTypeArray;
+////        if (spanMap.containsKey(tableView)) {
+////            spanTypeArray = spanMap.get(tableView);
+////            
+////            // if we already have an array, lets check it for the result
+////            if (spanTypeArray != null && row < spanTypeArray.length && column < spanTypeArray[0].length) {
+////                SpanType cachedResult = spanTypeArray[row][column];
+////                if (cachedResult != SpanType.UNSET) {
+////                    return cachedResult;
+////                }
+////            }
+////        } else {
+//            int rowCount = itemsProperty().get().size();
+//            int columnCount = getVisibleLeafColumns().size();
+//            spanTypeArray = new SpanType[rowCount][columnCount];
+////            spanMap.put(tableView, spanTypeArray);
 //            
-//            // if we already have an array, lets check it for the result
-//            if (spanTypeArray != null && row < spanTypeArray.length && column < spanTypeArray[0].length) {
-//                SpanType cachedResult = spanTypeArray[row][column];
-//                if (cachedResult != SpanType.UNSET) {
-//                    return cachedResult;
+//            // initialise the array to be SpanType.UNSET
+//            for (int _row = 0; _row < rowCount; _row++) {
+//                for (int _column = 0; _column < columnCount; _column++) {
+//                    spanTypeArray[_row][_column] = SpanType.UNSET;
 //                }
 //            }
-//        } else {
-            int rowCount = itemsProperty().get().size();
-            int columnCount = getVisibleLeafColumns().size();
-            spanTypeArray = new SpanType[rowCount][columnCount];
-//            spanMap.put(tableView, spanTypeArray);
-            
-            // initialise the array to be SpanType.UNSET
-            for (int _row = 0; _row < rowCount; _row++) {
-                for (int _column = 0; _column < columnCount; _column++) {
-                    spanTypeArray[_row][_column] = SpanType.UNSET;
-                }
-            }
+////        }
+//        
+//        if (spanModel == null) {
+//            spanTypeArray[row][column] = SpanType.NONE;
+//            return SpanType.NONE;
 //        }
-        
-        if (spanModel == null) {
-            spanTypeArray[row][column] = SpanType.NONE;
-            return SpanType.NONE;
-        }
-        
-        // for the given row / column position, we need to see if anything in
-        // the spanModel will prevent this column from being shown
-        
-        // Firstly we will check along the x-axis (i.e. whether there is an
-        // earlier TableColumn that covers this column index)
-        int distance = 0;
-        for (int _col = column - 1; _col >= 0; _col--) {
-            distance++;
-            CellSpan cellSpan = getCellSpanAt(spanModel, row, _col);
-            if (cellSpan == null) continue;
-            if (cellSpan.getColumnSpan() > distance) {
-                spanTypeArray[row][column] = SpanType.COLUMN;
-                return SpanType.COLUMN;
-            }
-        }
-        
-        // secondly we'll try along the y-axis
-        distance = 0;
-        for (int _row = row - 1; _row >= 0; _row--) {
-            distance++;
-            CellSpan cellSpan = getCellSpanAt(spanModel, _row, column);
-            if (cellSpan == null) continue;
-            if (cellSpan.getRowSpan() > distance) {
-                spanTypeArray[row][column] = SpanType.ROW;
-                return SpanType.ROW;
-            }
-        }
-        
-        // finally, we have to try diagonally
-        int rowDistance = 0;
-        int columnDistance = 0;
-        for (int _col = column - 1, _row = row - 1; _col >= 0 && _row >= 0; _col--, _row--) {
-            rowDistance++;
-            columnDistance++;
-            CellSpan cellSpan = getCellSpanAt(spanModel, _row, _col);
-            if (cellSpan == null) continue;
-            if (cellSpan.getRowSpan() > rowDistance && 
-                cellSpan.getColumnSpan() > columnDistance) {
-                    spanTypeArray[row][column] = SpanType.BOTH;
-                    return SpanType.BOTH;
-            }
-        }
-        
-        spanTypeArray[row][column] = SpanType.NONE;
-        return SpanType.NONE;
-    }
+//        
+//        // for the given row / column position, we need to see if anything in
+//        // the spanModel will prevent this column from being shown
+//        
+//        // Firstly we will check along the x-axis (i.e. whether there is an
+//        // earlier TableColumn that covers this column index)
+//        int distance = 0;
+//        for (int _col = column - 1; _col >= 0; _col--) {
+//            distance++;
+//            CellSpan cellSpan = getCellSpanAt(spanModel, row, _col);
+//            if (cellSpan == null) continue;
+//            if (cellSpan.getColumnSpan() > distance) {
+//                spanTypeArray[row][column] = SpanType.COLUMN;
+//                return SpanType.COLUMN;
+//            }
+//        }
+//        
+//        // secondly we'll try along the y-axis
+//        distance = 0;
+//        for (int _row = row - 1; _row >= 0; _row--) {
+//            distance++;
+//            CellSpan cellSpan = getCellSpanAt(spanModel, _row, column);
+//            if (cellSpan == null) continue;
+//            if (cellSpan.getRowSpan() > distance) {
+//                spanTypeArray[row][column] = SpanType.ROW;
+//                return SpanType.ROW;
+//            }
+//        }
+//        
+//        // finally, we have to try diagonally
+//        int rowDistance = 0;
+//        int columnDistance = 0;
+//        for (int _col = column - 1, _row = row - 1; _col >= 0 && _row >= 0; _col--, _row--) {
+//            rowDistance++;
+//            columnDistance++;
+//            CellSpan cellSpan = getCellSpanAt(spanModel, _row, _col);
+//            if (cellSpan == null) continue;
+//            if (cellSpan.getRowSpan() > rowDistance && 
+//                cellSpan.getColumnSpan() > columnDistance) {
+//                    spanTypeArray[row][column] = SpanType.BOTH;
+//                    return SpanType.BOTH;
+//            }
+//        }
+//        
+//        spanTypeArray[row][column] = SpanType.NONE;
+//        return SpanType.NONE;
+//    }
     
     
     
@@ -340,9 +338,9 @@ public abstract class TableRowSkinBase<T,
 //        registerChangeListener(control.editingProperty(), "EDITING");
         registerChangeListener(control.itemProperty(), "ITEM");
         
-        // add listener to cell span model
-        spanModel = spanModelProperty().get();
-        registerChangeListener(spanModelProperty(), "SPAN_MODEL");
+//        // add listener to cell span model
+//        spanModel = spanModelProperty().get();
+//        registerChangeListener(spanModelProperty(), "SPAN_MODEL");
     }
 
     @Override protected void handleControlPropertyChanged(String p) {
@@ -361,10 +359,10 @@ public abstract class TableRowSkinBase<T,
             
             // Required to fix RT-24725
             getSkinnable().layout();
-        } else if (p == "SPAN_MODEL") {
-            // TODO update layout based on changes to span model
-            spanModel = spanModelProperty().get();
-            getSkinnable().requestLayout();
+//        } else if (p == "SPAN_MODEL") {
+//            // TODO update layout based on changes to span model
+//            spanModel = spanModelProperty().get();
+//            getSkinnable().requestLayout();
         }
     }
 
@@ -520,57 +518,57 @@ public abstract class TableRowSkinBase<T,
                     // further indentation code ends here
                     ///////////////////////////////////////////
                     
-                    ///////////////////////////////////////////
-                    // cell spanning code starts here
-                    ///////////////////////////////////////////
-                    if (spanModel != null) {
-                        // cell span check - basically, see if there is a cell span
-                        // impacting upon the cell at the given row / column index
-                        SpanType spanType = getSpanType(row, column);
-                        switch (spanType) {
-                            case ROW:
-                            case BOTH: x += width; // fall through is on purpose here
-                            case COLUMN:
-                                hide(tableCell);
-                                tableCell.resize(0, 0);
-                                tableCell.relocate(x, insets.getTop());
-                                continue;          // we don't want to fall through
-                                                   // infact, we return to the loop here
-                            case NONE:
-                            case UNSET:            // fall through and carry on
-                        }
-
-                        CellSpan cellSpan = getCellSpanAt(spanModel, row, column);
-                        if (cellSpan != null) {
-                            if (cellSpan.getColumnSpan() > 1) {
-                                // we need to span multiple columns, so we sum up
-                                // the width of the additional columns, adding it
-                                // to the width variable
-                                for (int i = 1, 
-                                        colSpan = cellSpan.getColumnSpan(), 
-                                        maxColumns = getChildren().size() - column; 
-                                        i < colSpan && i < maxColumns; i++) {
-                                    // calculate the width
-                                    Node adjacentNode = getChildren().get(column + i);
-                                    width += snapSize(adjacentNode.prefWidth(-1));
-                                }
-                            }
-
-                            if (cellSpan.getRowSpan() > 1) {
-                                // we need to span multiple rows, so we sum up
-                                // the height of the additional rows, adding it
-                                // to the height variable
-                                for (int i = 1; i < cellSpan.getRowSpan(); i++) {
-                                    // calculate the height
-                                    double rowHeight = getTableRowHeight(row + i, getSkinnable());
-                                    height += snapSize(rowHeight);
-                                }
-                            }
-                        }
-                    } 
-                    ///////////////////////////////////////////
-                    // cell spanning code ends here
-                    ///////////////////////////////////////////
+//                    ///////////////////////////////////////////
+//                    // cell spanning code starts here
+//                    ///////////////////////////////////////////
+//                    if (spanModel != null) {
+//                        // cell span check - basically, see if there is a cell span
+//                        // impacting upon the cell at the given row / column index
+//                        SpanType spanType = getSpanType(row, column);
+//                        switch (spanType) {
+//                            case ROW:
+//                            case BOTH: x += width; // fall through is on purpose here
+//                            case COLUMN:
+//                                hide(tableCell);
+//                                tableCell.resize(0, 0);
+//                                tableCell.relocate(x, insets.getTop());
+//                                continue;          // we don't want to fall through
+//                                                   // infact, we return to the loop here
+//                            case NONE:
+//                            case UNSET:            // fall through and carry on
+//                        }
+//
+//                        CellSpan cellSpan = getCellSpanAt(spanModel, row, column);
+//                        if (cellSpan != null) {
+//                            if (cellSpan.getColumnSpan() > 1) {
+//                                // we need to span multiple columns, so we sum up
+//                                // the width of the additional columns, adding it
+//                                // to the width variable
+//                                for (int i = 1, 
+//                                        colSpan = cellSpan.getColumnSpan(), 
+//                                        maxColumns = getChildren().size() - column; 
+//                                        i < colSpan && i < maxColumns; i++) {
+//                                    // calculate the width
+//                                    Node adjacentNode = getChildren().get(column + i);
+//                                    width += snapSize(adjacentNode.prefWidth(-1));
+//                                }
+//                            }
+//
+//                            if (cellSpan.getRowSpan() > 1) {
+//                                // we need to span multiple rows, so we sum up
+//                                // the height of the additional rows, adding it
+//                                // to the height variable
+//                                for (int i = 1; i < cellSpan.getRowSpan(); i++) {
+//                                    // calculate the height
+//                                    double rowHeight = getTableRowHeight(row + i, getSkinnable());
+//                                    height += snapSize(rowHeight);
+//                                }
+//                            }
+//                        }
+//                    } 
+//                    ///////////////////////////////////////////
+//                    // cell spanning code ends here
+//                    ///////////////////////////////////////////
                     
                     tableCell.resize(width, height);
 
@@ -599,11 +597,11 @@ public abstract class TableRowSkinBase<T,
         }
     }
     
-    private CellSpan getCellSpanAt(SpanModel spanModel, int row, int column) {
-        T rowObject = itemsProperty().get().get(row);
-        TableColumnBase<T,?> tableColumn = getVisibleLeafColumn(column);
-        return spanModel.getCellSpanAt(row, column, rowObject, tableColumn);
-    }
+//    private CellSpan getCellSpanAt(SpanModel spanModel, int row, int column) {
+//        T rowObject = itemsProperty().get().get(row);
+//        TableColumnBase<T,?> tableColumn = getVisibleLeafColumn(column);
+//        return spanModel.getCellSpanAt(row, column, rowObject, tableColumn);
+//    }
 
     private int columnCount = 0;
     

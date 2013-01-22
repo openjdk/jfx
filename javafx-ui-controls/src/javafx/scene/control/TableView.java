@@ -744,30 +744,30 @@ public class TableView<S> extends Control {
     }
     
     
-    // --- Span Model
-    private ObjectProperty<SpanModel<S>> spanModel 
-            = new SimpleObjectProperty<SpanModel<S>>(this, "spanModel") {
-
-        @Override protected void invalidated() {
-            ObservableList<String> styleClass = getStyleClass();
-            if (getSpanModel() == null) {
-                styleClass.remove(CELL_SPAN_TABLE_VIEW_STYLE_CLASS);
-            } else if (! styleClass.contains(CELL_SPAN_TABLE_VIEW_STYLE_CLASS)) {
-                styleClass.add(CELL_SPAN_TABLE_VIEW_STYLE_CLASS);
-            }
-        }
-    };
-
-    public final ObjectProperty<SpanModel<S>> spanModelProperty() {
-        return spanModel;
-    }
-    public final void setSpanModel(SpanModel<S> value) {
-        spanModelProperty().set(value);
-    }
-
-    public final SpanModel<S> getSpanModel() {
-        return spanModel.get();
-    }
+//    // --- Span Model
+//    private ObjectProperty<SpanModel<S>> spanModel 
+//            = new SimpleObjectProperty<SpanModel<S>>(this, "spanModel") {
+//
+//        @Override protected void invalidated() {
+//            ObservableList<String> styleClass = getStyleClass();
+//            if (getSpanModel() == null) {
+//                styleClass.remove(CELL_SPAN_TABLE_VIEW_STYLE_CLASS);
+//            } else if (! styleClass.contains(CELL_SPAN_TABLE_VIEW_STYLE_CLASS)) {
+//                styleClass.add(CELL_SPAN_TABLE_VIEW_STYLE_CLASS);
+//            }
+//        }
+//    };
+//
+//    public final ObjectProperty<SpanModel<S>> spanModelProperty() {
+//        return spanModel;
+//    }
+//    public final void setSpanModel(SpanModel<S> value) {
+//        spanModelProperty().set(value);
+//    }
+//
+//    public final SpanModel<S> getSpanModel() {
+//        return spanModel.get();
+//    }
     
     // --- Editable
     private BooleanProperty editable;
