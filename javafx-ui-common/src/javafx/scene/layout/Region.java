@@ -37,8 +37,11 @@ import javafx.beans.property.ReadOnlyDoubleProperty;
 import javafx.beans.property.ReadOnlyDoubleWrapper;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.value.ChangeListener;
-import javafx.beans.value.WritableValue;
 import javafx.collections.ObservableList;
+import javafx.css.CssMetaData;
+import javafx.css.StyleableBooleanProperty;
+import javafx.css.StyleableObjectProperty;
+import javafx.css.StyleableProperty;
 import javafx.geometry.BoundingBox;
 import javafx.geometry.Bounds;
 import javafx.geometry.HPos;
@@ -51,21 +54,17 @@ import javafx.scene.shape.Shape;
 import com.sun.javafx.Logging;
 import com.sun.javafx.TempState;
 import com.sun.javafx.binding.ExpressionHelper;
-import javafx.css.StyleableBooleanProperty;
-import javafx.css.StyleableObjectProperty;
-import javafx.css.CssMetaData;
 import com.sun.javafx.css.converters.BooleanConverter;
 import com.sun.javafx.css.converters.InsetsConverter;
 import com.sun.javafx.css.converters.ShapeConverter;
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.PickRay;
 import com.sun.javafx.geom.transform.BaseTransform;
-import sun.util.logging.PlatformLogger;
 import com.sun.javafx.scene.DirtyBits;
 import com.sun.javafx.sg.PGNode;
 import com.sun.javafx.sg.PGRegion;
 import com.sun.javafx.tk.Toolkit;
-import javafx.css.StyleableProperty;
+import sun.util.logging.PlatformLogger;
 
 /**
  * Region is the base class for all JavaFX Node-based UI Controls, and all layout containers.
@@ -1001,7 +1000,7 @@ public class Region extends Parent {
     private BooleanProperty scaleShape = null;
     public final void setScaleShape(boolean value) { scaleShapeProperty().set(value); }
     public final boolean isScaleShape() { return scaleShape == null ? true : scaleShape.get(); }
-    private BooleanProperty scaleShapeProperty() {
+    public final BooleanProperty scaleShapeProperty() {
         if (scaleShape == null) {
             scaleShape = new StyleableBooleanProperty(true) {
                 @Override public Object getBean() { return Region.this; }
@@ -1028,9 +1027,9 @@ public class Region extends Parent {
      * @css position-shape      true | false
      */
     private BooleanProperty centerShape = null;
-    public final void setCenterShape(boolean value) { positionShapeProperty().set(value); }
+    public final void setCenterShape(boolean value) { centerShapeProperty().set(value); }
     public final boolean isCenterShape() { return centerShape == null ? true : centerShape.get(); }
-    private BooleanProperty positionShapeProperty() {
+    public final BooleanProperty centerShapeProperty() {
         if (centerShape == null) {
             centerShape = new StyleableBooleanProperty(true) {
                 @Override public Object getBean() { return Region.this; }
@@ -1058,7 +1057,7 @@ public class Region extends Parent {
     private BooleanProperty cacheShape = null;
     public final void setCacheShape(boolean value) { cacheShapeProperty().set(value); }
     public final boolean isCacheShape() { return cacheShape == null ? true : cacheShape.get(); }
-    private BooleanProperty cacheShapeProperty() {
+    public final BooleanProperty cacheShapeProperty() {
         if (cacheShape == null) {
             cacheShape = new StyleableBooleanProperty(true) {
                 @Override public Object getBean() { return Region.this; }
@@ -2332,7 +2331,7 @@ public class Region extends Parent {
             }
 
             @Override public StyleableProperty<Boolean> getStyleableProperty(Region node) {
-                return (StyleableProperty)node.positionShapeProperty();
+                return (StyleableProperty)node.centerShapeProperty();
             }
         };
 
