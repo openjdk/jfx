@@ -25,26 +25,29 @@
 
 package javafx.scene.control;
 
-import com.sun.javafx.beans.annotations.DuplicateInBuilderProperties;
-import javafx.beans.InvalidationListener;
-import javafx.beans.property.BooleanProperty;
-import javafx.beans.property.DoubleProperty;
-import javafx.beans.property.IntegerProperty;
-import javafx.beans.property.IntegerPropertyBase;
-import javafx.beans.property.SimpleBooleanProperty;
-import javafx.beans.property.SimpleDoubleProperty;
-import javafx.beans.value.ChangeListener;
-import javafx.collections.ListChangeListener;
-import javafx.collections.ObservableList;
 import java.util.AbstractList;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
-
+import javafx.beans.InvalidationListener;
+import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.DoubleProperty;
+import javafx.beans.property.IntegerProperty;
+import javafx.beans.property.SimpleDoubleProperty;
+import javafx.beans.value.ChangeListener;
+import javafx.collections.ListChangeListener;
+import javafx.collections.ObservableList;
+import javafx.css.CssMetaData;
+import javafx.css.StyleConverter;
+import javafx.css.StyleableBooleanProperty;
+import javafx.css.StyleableIntegerProperty;
+import javafx.css.StyleableProperty;
+import com.sun.javafx.beans.annotations.DuplicateInBuilderProperties;
 import com.sun.javafx.binding.ExpressionHelper;
 import com.sun.javafx.collections.ListListenerHelper;
 import com.sun.javafx.collections.NonIterableChange;
+import com.sun.javafx.css.converters.SizeConverter;
 import com.sun.javafx.scene.control.skin.TextAreaSkin;
 
 /**
@@ -472,7 +475,19 @@ public class TextArea extends TextInputControl {
      * then this variable indicates whether the text should wrap onto
      * another line.
      */
-    private BooleanProperty wrapText = new SimpleBooleanProperty(this, "wrapText");
+    private BooleanProperty wrapText = new StyleableBooleanProperty(false) {
+        @Override public Object getBean() {
+            return TextArea.this;
+        }
+
+        @Override public String getName() {
+            return "wrapText";
+        }
+
+        @Override public CssMetaData getCssMetaData() {
+            return StyleableProperties.WRAP_TEXT;
+        }
+    };
     public final BooleanProperty wrapTextProperty() { return wrapText; }
     public final boolean isWrapText() { return wrapText.getValue(); }
     public final void setWrapText(boolean value) { wrapText.setValue(value); }
@@ -482,7 +497,7 @@ public class TextArea extends TextInputControl {
      * The preferred number of text columns. This is used for
      * calculating the {@code TextArea}'s preferred width.
      */
-    private IntegerProperty prefColumnCount = new IntegerPropertyBase(DEFAULT_PREF_COLUMN_COUNT) {
+    private IntegerProperty prefColumnCount = new StyleableIntegerProperty(DEFAULT_PREF_COLUMN_COUNT) {
         @Override
         public void set(int value) {
             if (value < 0) {
@@ -490,6 +505,10 @@ public class TextArea extends TextInputControl {
             }
 
             super.set(value);
+        }
+
+        @Override public CssMetaData getCssMetaData() {
+            return StyleableProperties.PREF_COLUMN_COUNT;
         }
 
         @Override
@@ -511,7 +530,7 @@ public class TextArea extends TextInputControl {
      * The preferred number of text rows. This is used for calculating
      * the {@code TextArea}'s preferred height.
      */
-    private IntegerProperty prefRowCount = new IntegerPropertyBase(DEFAULT_PREF_ROW_COUNT) {
+    private IntegerProperty prefRowCount = new StyleableIntegerProperty(DEFAULT_PREF_ROW_COUNT) {
         @Override
         public void set(int value) {
             if (value < 0) {
@@ -519,6 +538,10 @@ public class TextArea extends TextInputControl {
             }
 
             super.set(value);
+        }
+
+        @Override public CssMetaData getCssMetaData() {
+            return StyleableProperties.PREF_ROW_COUNT;
         }
 
         @Override
@@ -564,5 +587,89 @@ public class TextArea extends TextInputControl {
     /** {@inheritDoc} */
     @Override protected Skin<?> createDefaultSkin() {
         return new TextAreaSkin(this);
+    }
+
+    /***************************************************************************
+     *                                                                         *
+     * Stylesheet Handling                                                     *
+     *                                                                         *
+     **************************************************************************/
+
+     /**
+      * @treatAsPrivate implementation detail
+      */
+    private static class StyleableProperties {
+        private static final CssMetaData<TextArea,Number> PREF_COLUMN_COUNT =
+            new CssMetaData<TextArea,Number>("-fx-pref-column-count",
+                SizeConverter.getInstance(), DEFAULT_PREF_COLUMN_COUNT) {
+
+            @Override
+            public boolean isSettable(TextArea n) {
+                return !n.prefColumnCount.isBound();
+            }
+
+            @Override
+            public StyleableProperty<Number> getStyleableProperty(TextArea n) {
+                return (StyleableProperty)n.prefColumnCountProperty();
+            }
+        };
+
+        private static final CssMetaData<TextArea,Number> PREF_ROW_COUNT =
+            new CssMetaData<TextArea,Number>("-fx-pref-row-count",
+                SizeConverter.getInstance(), DEFAULT_PREF_ROW_COUNT) {
+
+            @Override
+            public boolean isSettable(TextArea n) {
+                return !n.prefRowCount.isBound();
+            }
+
+            @Override
+            public StyleableProperty<Number> getStyleableProperty(TextArea n) {
+                return (StyleableProperty)n.prefRowCountProperty();
+            }
+        };
+
+        private static final CssMetaData<TextArea,Boolean> WRAP_TEXT =
+            new CssMetaData<TextArea,Boolean>("-fx-wrap-text",
+                StyleConverter.getBooleanConverter(), false) {
+
+            @Override
+            public boolean isSettable(TextArea n) {
+                return !n.wrapText.isBound();
+            }
+
+            @Override
+            public StyleableProperty<Boolean> getStyleableProperty(TextArea n) {
+                return (StyleableProperty)n.wrapTextProperty();
+            }
+        };
+
+        private static final List<CssMetaData> STYLEABLES;
+        static {
+            final List<CssMetaData> styleables =
+                new ArrayList<CssMetaData>(TextInputControl.getClassCssMetaData());
+            Collections.addAll(styleables,
+                PREF_COLUMN_COUNT,
+                PREF_ROW_COUNT,
+                WRAP_TEXT
+            );
+            STYLEABLES = Collections.unmodifiableList(styleables);
+        }
+    }
+
+    /**
+     * @return The CssMetaData associated with this class, which may include the
+     * CssMetaData of its super classes.
+     */
+    public static List<CssMetaData> getClassCssMetaData() {
+        return StyleableProperties.STYLEABLES;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public List<CssMetaData> getControlCssMetaData() {
+        return getClassCssMetaData();
     }
 }

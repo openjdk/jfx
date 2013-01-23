@@ -4,19 +4,19 @@
 
 package javafx.scene.control;
 
-import static javafx.scene.control.ControlTestUtils.*;
-import static org.junit.Assert.*;
-
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
-
+import javafx.scene.Scene;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
+
+import static javafx.scene.control.ControlTestUtils.*;
+import static org.junit.Assert.*;
 
 /**
  *
@@ -108,9 +108,22 @@ public class TextFieldTest {
         dummyTxtField.setText("junk");
         assertEquals(dummyTxtField.getText(), "junk");
     }
+
+    /*********************************************************************
+     * Tests for CSS                                                     *
+     ********************************************************************/
+
+    @Test public void prefColumnCountSetFromCSS() {
+        txtField.setStyle("-fx-pref-column-count: 100");
+        Scene s = new Scene(txtField);
+        txtField.impl_processCSS(true);
+        assertEquals(100, txtField.getPrefColumnCount(), 0);
+    }
+
     /*********************************************************************
      * Tests for property binding                                        *
      ********************************************************************/
+
     @Test public void checkPromptTextPropertyBind() {
         StringProperty strPr = new SimpleStringProperty("value");
         txtField.promptTextProperty().bind(strPr);
