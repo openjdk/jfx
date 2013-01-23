@@ -38,6 +38,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLConnection;
 import java.net.URLStreamHandler;
@@ -90,13 +91,26 @@ public class Modena extends Application {
         System.getProperties().put("javafx.pseudoClassOverrideEnabled", "true");
     }
     private static final String testAppCssUrl = Modena.class.getResource("TestApp.css").toExternalForm();
-    private static final String MODENA_STYLESHEET_CONTENT;
-    private static final String CASPIAN_STYLESHEET_CONTENT;
+    private static String MODENA_STYLESHEET_CONTENT;
+    private static String MODENA_STYLESHEET_BASE;
+    private static String CASPIAN_STYLESHEET_CONTENT;
+    private static String CASPIAN_STYLESHEET_BASE;
     static {
-        // these are not supported ways to find the platform themes and may 
-        // change release to release. Just used here for testing.
-        MODENA_STYLESHEET_CONTENT = loadUrl(com.sun.javafx.scene.control.skin.ButtonSkin.class.getResource("modena/modena.css"));
-        CASPIAN_STYLESHEET_CONTENT = loadUrl(com.sun.javafx.scene.control.skin.ButtonSkin.class.getResource("caspian/caspian.css"));
+        try {
+            // these are not supported ways to find the platform themes and may 
+            // change release to release. Just used here for testing.
+            final String caspianUrl = com.sun.javafx.scene.control.skin.ButtonSkin.class.getResource("caspian/caspian.css").toExternalForm();
+            final File modenaCssFile = new File("../../../javafx-ui-controls/src/com/sun/javafx/scene/control/skin/modena/modena.css");
+            String modenaUrl = modenaCssFile.exists() ? 
+                    modenaCssFile.toURI().toURL().toExternalForm() : 
+                    com.sun.javafx.scene.control.skin.ButtonSkin.class.getResource("modena/modena.css").toExternalForm();
+            MODENA_STYLESHEET_BASE = modenaUrl.substring(0,modenaUrl.lastIndexOf('/')+1);
+            MODENA_STYLESHEET_CONTENT = loadUrl(modenaUrl);
+            CASPIAN_STYLESHEET_BASE = caspianUrl.substring(0,caspianUrl.lastIndexOf('/')+1);
+            CASPIAN_STYLESHEET_CONTENT = loadUrl(caspianUrl);
+        } catch (MalformedURLException ex) {
+            Logger.getLogger(Modena.class.getName()).log(Level.SEVERE, null, ex);
+        }
     }
     
     private BorderPane root;
@@ -110,6 +124,7 @@ public class Modena extends Application {
     private String fontName = null;
     private int fontSize = 13;
     private String styleSheetContent = "";
+    private String styleSheetBase = "";
     private ToggleButton modenaButton,retinaButton,rtlButton;
     private TabPane contentTabs;
     
@@ -144,6 +159,7 @@ public class Modena extends Application {
     
     private void updateUserAgentStyleSheet(boolean modena) {
         styleSheetContent = modena ? MODENA_STYLESHEET_CONTENT : CASPIAN_STYLESHEET_CONTENT;
+        styleSheetBase = modena ? MODENA_STYLESHEET_BASE : CASPIAN_STYLESHEET_BASE;
         styleSheetContent += "\n.root {\n";
         System.out.println("baseColor = "+baseColor);
         System.out.println("accentColor = " + accentColor);
@@ -506,10 +522,10 @@ public class Modena extends Application {
     }
     
     /** Utility method to load a URL into a string */
-    private static String loadUrl(URL url) {
+    private static String loadUrl(String url) {
         StringBuilder sb = new StringBuilder();
         try {
-            BufferedReader br = new BufferedReader(new InputStreamReader(url.openStream()));
+            BufferedReader br = new BufferedReader(new InputStreamReader(new URL(url).openStream()));
             String line;
             while ((line = br.readLine()) != null) {
                 sb.append(line);
@@ -547,8 +563,9 @@ public class Modena extends Application {
             @Override protected URLConnection openConnection(URL url) throws IOException {
                 if (url.toString().toLowerCase().endsWith(".css")) {
                     return new StringURLConnection(url);
+                } else {
+                    return new URL(styleSheetBase+url.getFile()).openConnection();
                 }
-                throw new FileNotFoundException();
             }
         };
         @Override public URLStreamHandler createURLStreamHandler(String protocol) {

@@ -3718,6 +3718,13 @@ Only the properties with values that are different from the TextBox are specifie
     -fx-padding: 0.166667em 0.5em 0.166667em 1.5em; /* 2 6 2 6;*/
 }
 
+.html-editor-foreground, .html-editor-background {
+    -fx-color-label-visible: false;
+    -fx-color-rect-x: 0;
+    -fx-color-rect-y: 10;
+    -fx-color-rect-width: 16;
+    -fx-color-rect-height: 5;
+}
 /* Note: The Separator is constructed of a 1-pixel shape
 whose borders are styled.  Only the right border is specified
 with a color; the other three borders are transparent.*/

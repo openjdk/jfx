@@ -370,7 +370,7 @@ is being used to size a border should also be in pixels.
 .check-box > .box,
 .menu-button,
 .choice-box,
-.color-picker.split-button > .color-picker-label,
+.ickericker.split-button > .color-picker-label,
 .combo-box-base,
 .combo-box-base > .arrow-button {
     -fx-background-color: -fx-outer-border, -fx-inner-border, -fx-body-color; 
@@ -1120,6 +1120,84 @@ is being used to size a border should also be in pixels.
     -fx-background-color: 
         linear-gradient(from 0px 0px to 0px 4px, derive(-fx-control-inner-background, -8%), -fx-control-inner-background);
     -fx-background-radius: 3;
+}
+
+/*******************************************************************************
+ *                                                                             *
+ * HTML Editor                                                                    *
+ *                                                                             *
+ ******************************************************************************/
+.html-editor-foreground {
+    -fx-color-label-visible: false;
+    -fx-color-rect-x: 1;
+    -fx-color-rect-y: 1;
+    -fx-color-rect-width: 4;
+    -fx-color-rect-height: 3;
+    -fx-graphic: url("HTMLEditor-Text-Color.png");
+}
+.html-editor-background {
+    -fx-color-label-visible: false;
+    -fx-color-rect-x: 1;
+    -fx-color-rect-y: 1;
+    -fx-color-rect-width: 4;
+    -fx-color-rect-height: 3;
+    -fx-graphic: url("HTMLEditor-Background-Color.png");
+}
+.color-picker.html-editor-foreground > .color-picker-label > .picker-color > .picker-color-rect,
+.color-picker.html-editor-background > .color-picker-label > .picker-color > .picker-color-rect {
+    -fx-stroke: null;
+}
+.html-editor .button ,
+.html-editor .toggle-button {
+    -fx-padding: 0.333333em 0.416667em 0.416667em 0.416667em; /* 4 5 5 5 */
+}
+.html-editor-cut {
+    -fx-graphic: url("HTMLEditor-Cut.png");
+}
+.html-editor-copy {
+    -fx-graphic: url("HTMLEditor-Copy.png");
+}
+.html-editor-paste {
+    -fx-graphic: url("HTMLEditor-Paste.png");
+}
+.html-editor-align-left {
+    -fx-graphic: url("HTMLEditor-Left.png");
+}
+.html-editor-align-center {
+    -fx-graphic: url("HTMLEditor-Center.png");
+}
+.html-editor-align-right {
+    -fx-graphic: url("HTMLEditor-Right.png");
+}
+.html-editor-align-justify {
+    -fx-graphic: url("HTMLEditor-Justify.png");
+}
+.html-editor-outdent {
+    -fx-graphic: url("HTMLEditor-Outdent.png");
+}
+.html-editor-indent {
+    -fx-graphic: url("HTMLEditor-Indent.png");
+}
+.html-editor-bullets {
+    -fx-graphic: url("HTMLEditor-Bullets.png");
+}
+.html-editor-numbers {
+    -fx-graphic: url("HTMLEditor-Numbered.png");
+}
+.html-editor-bold {
+    -fx-graphic: url("HTMLEditor-Bold.png");
+}
+.html-editor-italic {
+    -fx-graphic: url("HTMLEditor-Italic.png");
+}
+.html-editor-underline {
+    -fx-graphic: url("HTMLEditor-Underline.png");
+}
+.html-editor-strike {
+    -fx-graphic: url("HTMLEditor-Strikethrough.png");
+}
+.html-editor-hr {
+    -fx-graphic: url("HTMLEditor-Break.png");
 }
 
 /*******************************************************************************

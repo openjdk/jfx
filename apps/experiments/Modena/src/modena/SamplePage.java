@@ -82,7 +82,6 @@ import javafx.scene.layout.HBoxBuilder;
 import javafx.scene.layout.VBox;
 import javafx.scene.layout.VBoxBuilder;
 import javafx.scene.paint.Color;
-import javafx.scene.web.HTMLEditor;
 import javafx.scene.web.HTMLEditorBuilder;
 import static modena.SamplePageHelpers.*;
 import static modena.SamplePageTableHelper.*;
@@ -108,7 +107,16 @@ public class SamplePage extends GridPane {
         Platform.runLater(new Runnable() {
             @Override public void run() {
                 // TODO: node.lookup(subNodeStyleClass) is null if stage is not shown
-                if (node != null) node.lookup(subNodeStyleClass).getProperties().put("javafx.scene.Node.pseudoClassOverride", subNodeState);
+                if (node != null) {
+                    Node subNode = node.lookup(subNodeStyleClass);
+                    if (subNode != null) {
+                        node.lookup(subNodeStyleClass).getProperties().put("javafx.scene.Node.pseudoClassOverride", subNodeState);
+                    } else {
+                        System.err.println("node = " + node+" node.lookup("+subNodeStyleClass+") = " + subNode);
+                    }
+                } else {
+                    System.err.println("node = " + node);
+                }
             }
         });
         return node;
