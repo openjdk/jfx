@@ -529,7 +529,7 @@
 
 .button:show-mnemonics > .mnemonic-underline {
     -fx-stroke: -fx-text-fill;
-} 
+}
 /*******************************************************************************
  *                                                                             *
  * ToggleButton                                                                *
@@ -3262,6 +3262,7 @@ Only the properties with values that are different from the TextBox are specifie
 }
 
 .color-palette {
+    -fx-spacing: 15px;
      -fx-background-color:
         derive(-fx-color,-40%),
         derive(-fx-color,100%),

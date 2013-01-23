@@ -25,15 +25,15 @@ import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.StackPane;
+import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.shape.StrokeType;
 import javafx.stage.Window;
 
 
-public class ColorPalette extends StackPane {
-    
-    private static final int GAP = 15;
+public class ColorPalette extends VBox {
+
     private static final int SQUARE_SIZE = 15;
     private static final int NUM_OF_COLUMNS = 12;
     private static final int NUM_OF_ROWS = 10;
@@ -133,18 +133,19 @@ public class ColorPalette extends StackPane {
         int customRowIndex = 0;
         int remainingSquares = customSquares.size()%NUM_OF_COLUMNS;
         int numEmpty = (remainingSquares == 0) ? 0 : NUM_OF_COLUMNS - remainingSquares;
-        
+
         customColorGrid.getChildren().clear();
         if (customSquares.isEmpty()) {
-            customColorAdded = false;
             customColorLabel.setVisible(false);
+            customColorLabel.setManaged(false);
             customColorGrid.setVisible(false);
+            customColorGrid.setManaged(false);
             return;
-        }
-        if (!customColorAdded) {
-            customColorAdded = true;
+        } else {
             customColorLabel.setVisible(true);
+            customColorLabel.setManaged(true);
             customColorGrid.setVisible(true);
+            customColorGrid.setManaged(true);
             if (contextMenu == null) {
                 MenuItem item = new MenuItem("Remove Color");
                 item.setOnAction(new EventHandler<ActionEvent>() {
@@ -357,39 +358,39 @@ public class ColorPalette extends StackPane {
     public ColorPickerGrid getColorGrid() {
         return colorPickerGrid;
     }
-    
-    @Override protected void layoutChildren() {
-        double x = getInsets().getLeft();
-        double y = getInsets().getTop();
-//        double popupWidth = cpg.prefWidth(-1) + paddingX+getInsets().getRight();
-//        double popupHeight = cpg.prefHeight(-1) + getInsets().getTop() + getInsets().getBottom();
-        colorPickerGrid.relocate(x, y);
-        y = y+colorPickerGrid.prefHeight(-1)+GAP;
-        if (customColorAdded) {
-            if (customColorLabel.isVisible()) {
-                customColorLabel.resizeRelocate(x, y, colorPickerGrid.prefWidth(-1), customColorLabel.prefHeight(y));
-                y = y+customColorLabel.prefHeight(-1)+LABEL_GAP; 
-            }
-            customColorGrid.relocate(x, y);
-            y = y+customColorGrid.prefHeight(-1)+GAP;
-        }
-        separator.resizeRelocate(x, y, colorPickerGrid.prefWidth(-1), separator.prefHeight(-1));
-        y = y+separator.prefHeight(-1)+GAP;
-        customColorLink.resizeRelocate(x, y, colorPickerGrid.prefWidth(-1), customColorLink.prefHeight(-1));
-    }
-    
-    @Override protected double computePrefWidth(double height) {
-        return getInsets().getLeft() + colorPickerGrid.prefWidth(-1) + getInsets().getRight();
-    }
-    
-    @Override protected double computePrefHeight(double width) {
-        double totalHeight = colorPickerGrid.prefHeight(-1) + GAP + 
-                ((customColorAdded) ? 
-                (customColorGrid.prefHeight(-1)+customColorLabel.prefHeight(-1))+LABEL_GAP+GAP : 0) +
-                separator.prefHeight(-1) + GAP + customColorLink.prefHeight(-1);
-        return getInsets().getTop() + totalHeight + getInsets().getBottom();
-    }
-   
+//
+//    @Override protected void layoutChildren() {
+//        double x = getInsets().getLeft();
+//        double y = getInsets().getTop();
+////        double popupWidth = cpg.prefWidth(-1) + paddingX+getInsets().getRight();
+////        double popupHeight = cpg.prefHeight(-1) + getInsets().getTop() + getInsets().getBottom();
+//        colorPickerGrid.relocate(x, y);
+//        y = y+colorPickerGrid.prefHeight(-1)+GAP;
+//        if (customColorAdded) {
+//            if (customColorLabel.isVisible()) {
+//                customColorLabel.resizeRelocate(x, y, colorPickerGrid.prefWidth(-1), customColorLabel.prefHeight(y));
+//                y = y+customColorLabel.prefHeight(-1)+LABEL_GAP;
+//            }
+//            customColorGrid.relocate(x, y);
+//            y = y+customColorGrid.prefHeight(-1)+GAP;
+//        }
+//        separator.resizeRelocate(x, y, colorPickerGrid.prefWidth(-1), separator.prefHeight(-1));
+//        y = y+separator.prefHeight(-1)+GAP;
+//        customColorLink.resizeRelocate(x, y, colorPickerGrid.prefWidth(-1), customColorLink.prefHeight(-1));
+//    }
+//
+//    @Override protected double computePrefWidth(double height) {
+//        return getInsets().getLeft() + colorPickerGrid.prefWidth(-1) + getInsets().getRight();
+//    }
+//
+//    @Override protected double computePrefHeight(double width) {
+//        double totalHeight = colorPickerGrid.prefHeight(-1) + GAP +
+//                ((customColorAdded) ?
+//                (customColorGrid.prefHeight(-1)+customColorLabel.prefHeight(-1))+LABEL_GAP+GAP : 0) +
+//                separator.prefHeight(-1) + GAP + customColorLink.prefHeight(-1);
+//        return getInsets().getTop() + totalHeight + getInsets().getBottom();
+//    }
+//
     public boolean isCustomColorDialogShowing() {
         if (customColorDialog != null) return customColorDialog.isVisible();
         return false;
@@ -425,7 +426,12 @@ public class ColorPalette extends StackPane {
             Tooltip.install(this, new Tooltip((tooltipStr == null) ? "" : tooltipStr));
           
             rectangle.getStyleClass().add("color-rect");
-            
+
+            addEventHandler(MouseEvent.MOUSE_ENTERED, new EventHandler<MouseEvent>() {
+                @Override public void handle(MouseEvent event) {
+                    toFront();
+                }
+            });
             addEventHandler(MouseEvent.MOUSE_RELEASED, new EventHandler<MouseEvent>() {
                 @Override public void handle(MouseEvent event) {
                     if (!dragDetected && event.getButton() == MouseButton.PRIMARY && event.getClickCount() == 1) {
