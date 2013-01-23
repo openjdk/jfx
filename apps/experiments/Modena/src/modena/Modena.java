@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2012 Oracle and/or its affiliates.
+ * Copyright (c) 2008, 2013 Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -34,7 +34,6 @@ package modena;
 import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -65,6 +64,7 @@ import javafx.scene.control.ColorPicker;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.MenuButton;
+import javafx.scene.control.RadioMenuItem;
 import javafx.scene.control.RadioMenuItemBuilder;
 import javafx.scene.control.ScrollPaneBuilder;
 import javafx.scene.control.Separator;
@@ -136,6 +136,15 @@ public class Modena extends Application {
     
     public Map<String, Node> getContent() {
         return samplePage.getContent();
+    }
+
+    public void setRetinaMode(boolean retinaMode) {
+        if (retinaMode) {
+            contentTabs.getTransforms().setAll(new Scale(2,2));
+        } else {
+            contentTabs.getTransforms().setAll(new Scale(1,1));
+        }
+        contentTabs.requestLayout();
     }
     
     @Override public void start(Stage stage) throws Exception {
@@ -248,12 +257,7 @@ public class Modena extends Application {
                 .onAction(new EventHandler<ActionEvent>(){
                     @Override public void handle(ActionEvent event) {
                         ToggleButton btn = (ToggleButton)event.getSource();
-                        if (btn.isSelected()) {
-                            contentTabs.getTransforms().setAll(new Scale(2,2));
-                        } else {
-                            contentTabs.getTransforms().setAll(new Scale(1,1));
-                        }
-                        contentTabs.requestLayout();
+                        setRetinaMode(btn.isSelected());
                     }
                 })
                 .build();
@@ -352,54 +356,35 @@ public class Modena extends Application {
         mb.getItems().addAll(
             RadioMenuItemBuilder.create().text("System Default").onAction(new EventHandler<ActionEvent>(){
                 @Override public void handle(ActionEvent event) {
-                    fontName = null;
-                    updateUserAgentStyleSheet();
+                    // TODO: This one doesn't work
+//                    fontName = null;
+//                    fontSize = 13;
+//                    updateUserAgentStyleSheet();
                 }
             }).style("-fx-font: 13px System;").toggleGroup(tg).selected(true).build(),
-            RadioMenuItemBuilder.create().text("Mac (13px)").onAction(new EventHandler<ActionEvent>(){
-                @Override public void handle(ActionEvent event) {
-                    fontName = "Lucida Grande";
-                    fontSize = 13;
-                    updateUserAgentStyleSheet();
-                }
-            }).style("-fx-font: 13px \"Lucida Grande\";").toggleGroup(tg).build(),
-            RadioMenuItemBuilder.create().text("Windows 100% (12px)").onAction(new EventHandler<ActionEvent>(){
-                @Override public void handle(ActionEvent event) {
-                    fontName = "Segoe UI";
-                    fontSize = 12;
-                    updateUserAgentStyleSheet();
-                }
-            }).style("-fx-font: 12px \"Segoe UI\";").toggleGroup(tg).build(),
-            RadioMenuItemBuilder.create().text("Windows 125% (15px)").onAction(new EventHandler<ActionEvent>(){
-                @Override public void handle(ActionEvent event) {
-                    fontName = "Segoe UI";
-                    fontSize = 15;
-                    updateUserAgentStyleSheet();
-                }
-            }).style("-fx-font: 15px \"Segoe UI\";").toggleGroup(tg).build(),
-            RadioMenuItemBuilder.create().text("Windows 150% (18px)").onAction(new EventHandler<ActionEvent>(){
-                @Override public void handle(ActionEvent event) {
-                    fontName = "Segoe UI";
-                    fontSize = 18;
-                    updateUserAgentStyleSheet();
-                }
-            }).style("-fx-font: 18px \"Segoe UI\";").toggleGroup(tg).build(),
-            RadioMenuItemBuilder.create().text("Embedded Touch (22px)").onAction(new EventHandler<ActionEvent>(){
-                @Override public void handle(ActionEvent event) {
-                    fontName = "Arial";
-                    fontSize = 22;
-                    updateUserAgentStyleSheet();
-                }
-            }).style("-fx-font: 22px \"Arial\";").toggleGroup(tg).build(),
-            RadioMenuItemBuilder.create().text("Embedded Small (9px)").onAction(new EventHandler<ActionEvent>(){
-                @Override public void handle(ActionEvent event) {
-                    fontName = "Arial";
-                    fontSize = 9;
-                    updateUserAgentStyleSheet();
-                }
-            }).style("-fx-font: 9px \"Arial\";").toggleGroup(tg).build()
+            buildFontRadioMenuItem("Mac (13px)", "Lucida Grande", 13, tg),
+            buildFontRadioMenuItem("Windows 100% (12px)", "Segoe UI", 12, tg),
+            buildFontRadioMenuItem("Windows 125% (15px)", "Segoe UI", 15, tg),
+            buildFontRadioMenuItem("Windows 150% (18px)", "Segoe UI", 18, tg),
+            buildFontRadioMenuItem("Embedded Touch (22px)", "Arial", 22, tg),
+            buildFontRadioMenuItem("Embedded Small (9px)", "Arial", 9, tg)
         );
         return mb;
+    }
+
+    public RadioMenuItem buildFontRadioMenuItem(String name, final String in_fontName, final int in_fontSize, ToggleGroup tg) {
+        return RadioMenuItemBuilder.create().text(name).onAction(new EventHandler<ActionEvent>(){
+                   @Override public void handle(ActionEvent event) {
+                       setFont(in_fontName, in_fontSize);
+                   }
+
+               }).style("-fx-font: " + in_fontSize + "px \"" + in_fontName + "\";").toggleGroup(tg).build();
+    }
+    
+    public void setFont(String in_fontName, int in_fontSize) {
+        fontName = in_fontName;
+        fontSize = in_fontSize;
+        updateUserAgentStyleSheet();
     }
     
     private ColorPicker createBaseColorPicker() {
@@ -423,15 +408,19 @@ public class Modena extends Application {
         );
         colorPicker.valueProperty().addListener(new ChangeListener<Color>() {
             @Override public void changed(ObservableValue<? extends Color> observable, Color oldValue, Color c) {
-                if (c == null) {
-                    baseColor = null;
-                } else {
-                    baseColor = c;
-                }
-                updateUserAgentStyleSheet();
+                setBaseColor(c);
             }
         });
         return colorPicker;
+    }
+    
+    public void setBaseColor(Color c) {
+        if (c == null) {
+            baseColor = null;
+        } else {
+            baseColor = c;
+        }
+        updateUserAgentStyleSheet();
     }
     
     private ColorPicker createBackgroundColorPicker() {
@@ -489,15 +478,19 @@ public class Modena extends Application {
         );
         colorPicker.valueProperty().addListener(new ChangeListener<Color>() {
             @Override public void changed(ObservableValue<? extends Color> observable, Color oldValue, Color c) {
-                if (c == null) {
-                    accentColor = null;
-                } else {
-                    accentColor = c;
-                }
-                updateUserAgentStyleSheet();
+                setAccentColor(c);
             }
         });
         return colorPicker;
+    }
+
+    public void setAccentColor(Color c) {
+        if (c == null) {
+            accentColor = null;
+        } else {
+            accentColor = c;
+        }
+        updateUserAgentStyleSheet();
     }
     
     private EventHandler<ActionEvent> saveBtnHandler = new EventHandler<ActionEvent>() {
