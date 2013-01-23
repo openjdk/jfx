@@ -227,7 +227,7 @@ public final class KeyboardShortcutsHandler extends BasicEventDispatcher {
                     KeyEvent fakeEvent = new KeyEvent(null, event.getTarget(), KeyEvent.KEY_PRESSED,
                                                                 event.getCharacter(),
                                                                 event.getText(),
-                                                                ((KeyCode)event.getCode()).impl_getCode(),
+                                                                event.getCode(),
                                                                 event.isShiftDown(),
                                                                 event.isControlDown(),
                                                                 true,

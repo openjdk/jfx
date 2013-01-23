@@ -8,6 +8,7 @@ import javafx.css.CssMetaData;
 import static javafx.scene.control.ControlTestUtils.*;
 import com.sun.javafx.pgstub.StubToolkit;
 import com.sun.javafx.scene.control.skin.TabPaneSkin;
+import com.sun.javafx.scene.input.KeyCodeMap;
 import com.sun.javafx.tk.Toolkit;
 import javafx.application.Platform;
 import javafx.beans.property.BooleanProperty;
@@ -817,7 +818,7 @@ public class TabPaneTest {
         stage.show();
         stage.requestFocus();
 
-        final KeyEvent tabEvent = new KeyEvent(KeyEvent.KEY_PRESSED, "", "", 0x09,
+        final KeyEvent tabEvent = new KeyEvent(KeyEvent.KEY_PRESSED, "", "", KeyCodeMap.valueOf(0x09),
                                                          false, false, false, false);
         Platform.runLater(new Runnable() {
             @Override public void run() {

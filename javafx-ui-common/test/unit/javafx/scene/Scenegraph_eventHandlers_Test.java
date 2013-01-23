@@ -340,7 +340,7 @@ public final class Scenegraph_eventHandlers_Test {
         }
 
         return new KeyEvent(keyEventType, character, text,
-                                      keyCode.impl_getCode(),
+                                      keyCode,
                                       false, false, false, false);
     }
 

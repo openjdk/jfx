@@ -131,6 +131,7 @@ import javafx.util.Callback;
 
 import static com.sun.javafx.logging.PulseLogger.PULSE_LOGGING_ENABLED;
 import static com.sun.javafx.logging.PulseLogger.PULSE_LOGGER;
+import com.sun.javafx.scene.input.KeyCodeMap;
 import javafx.geometry.NodeOrientation;
 
 /**
@@ -2292,7 +2293,7 @@ public class Scene implements EventTarget {
         {
             String chars = new String(cs);
             String text = chars; // TODO: this must be a text like "HOME", "F1", or "A"
-            KeyEvent keyEvent = new KeyEvent(type, chars, text, key,
+            KeyEvent keyEvent = new KeyEvent(type, chars, text, KeyCodeMap.valueOf(key),
                     shiftDown, controlDown, altDown, metaDown);
             impl_processKeyEvent(keyEvent);
         }
