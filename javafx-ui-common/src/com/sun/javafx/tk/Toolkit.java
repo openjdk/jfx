@@ -25,6 +25,7 @@
 
 package com.sun.javafx.tk;
 
+import com.sun.javafx.scene.SceneHelper;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -827,9 +828,7 @@ public abstract class Toolkit {
             }
         }
         this.getMasterTimer().pause();
-        if (sceneAccessor != null) {
-            sceneAccessor.setPaused(true);
-        }
+        SceneHelper.setPaused(true);
     }
 
     /*
@@ -837,9 +836,7 @@ public abstract class Toolkit {
      * It is used by Scenegraph-JMX bean.
      */
     public void resumeScenes() {
-        if (sceneAccessor != null) {
-            sceneAccessor.setPaused(false);
-        }
+        SceneHelper.setPaused(false);
         this.getMasterTimer().resume();
         Iterator<Window> i = Window.impl_getWindows();
         while (i.hasNext()) {
@@ -881,18 +878,6 @@ public abstract class Toolkit {
             highlightRegions = new HashSet<HighlightRegion>();
         }
         return highlightRegions;
-    }
-
-    // Accessor for scene class
-    public interface SceneAccessor {
-        // Pause all scenes
-        public void setPaused(boolean paused);
-    }
-
-    private static SceneAccessor sceneAccessor = null;
-
-    public static void setSceneAccessor(SceneAccessor accessor) {
-        sceneAccessor = accessor;
     }
 
     public interface WritableImageAccessor {

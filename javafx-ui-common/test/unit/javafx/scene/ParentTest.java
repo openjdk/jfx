@@ -371,6 +371,12 @@ public class ParentTest {
         g.getChildren().add(null);
     }
 
+    @Test(expected=NullPointerException.class)
+    public void testNullCheckIsDoneBeforeTestForDuplicates() {
+        Group g = new Group();
+        g.getChildren().addAll(null, new Rectangle(), null);
+    }
+
     @Test(expected=IllegalArgumentException.class)
     public void testAddingClipNodeTwice() {
         Group g = new Group();

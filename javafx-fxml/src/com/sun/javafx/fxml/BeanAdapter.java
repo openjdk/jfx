@@ -54,7 +54,7 @@ import sun.reflect.misc.ReflectUtil;
  * corresponding property model.
  */
 public class BeanAdapter extends AbstractMap<String, Object> {
-    private Object bean;
+    private final Object bean;
 
     private static ClassLoader contextClassLoader;
     

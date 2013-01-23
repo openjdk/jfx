@@ -409,14 +409,9 @@ public abstract class Parent extends Node {
             }
 
             try {
-                childSet.addAll(newNodes);
-                if (childSet.size() != newLength) {
-                    throw new IllegalArgumentException(
-                            constructExceptionMessage(
-                                "duplicate children added", null));
-                }
-
                 if (childrenModified) {
+                    // check individual children before duplication test
+                    // if done in this order, the exception is more specific
                     for (int i = newNodes.size() - 1; i >= 0; --i ) {
                         Node node = newNodes.get(i);
                         if (node == null) {
@@ -435,6 +430,13 @@ public abstract class Parent extends Node {
                                         "cycle detected", node));
                         }
                     }
+                }
+
+                childSet.addAll(newNodes);
+                if (childSet.size() != newLength) {
+                    throw new IllegalArgumentException(
+                            constructExceptionMessage(
+                                "duplicate children added", null));
                 }
             } catch (RuntimeException e) {
                 //Return children to it's original state
@@ -1220,6 +1222,14 @@ public abstract class Parent extends Node {
         return ((PGGroup) impl_getPGNode());
     }
 
+    @Override
+    void nodeEffectiveOrientationChanged() {
+        super.nodeEffectiveOrientationChanged();
+
+        for (int i = 0, max = children.size(); i < max; ++i) {
+            children.get(i).parentEffectiveOrientationChanged();
+        }
+    }
 
     /***************************************************************************
      *                                                                         *

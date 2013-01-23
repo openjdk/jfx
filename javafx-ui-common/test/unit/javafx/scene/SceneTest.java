@@ -40,7 +40,9 @@ import javafx.scene.layout.VBox;
 
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 /**
  * Tests various aspects of Scene.
@@ -131,14 +133,16 @@ public class SceneTest {
      *                          Scene Content Tests                            *
      *                                                                         *
      **************************************************************************/
-    //TODO(aim): fix once we allow null roots
-//    @Test
-//    public void testDefaultRoot() {
-//        Scene scene = new Scene();
-//
-//        assertTrue(scene.getRoot() != null);
-//        assertTrue(scene.getRoot() instanceof Group);
-//    }
+    @Test(expected=NullPointerException.class)
+    public void testNullRoot() {
+        Scene scene = new Scene(null);
+    }
+
+    @Test(expected=NullPointerException.class)
+    public void testSetNullRoot() {
+        Scene scene = new Scene(new Group());
+        scene.setRoot(null);
+    }
 
     @Test
     public void testRootInitializedInConstructor() {

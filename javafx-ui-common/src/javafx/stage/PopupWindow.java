@@ -53,6 +53,7 @@ import com.sun.javafx.event.EventHandlerManager;
 import com.sun.javafx.event.EventRedirector;
 import com.sun.javafx.event.EventUtil;
 import com.sun.javafx.perf.PerformanceTracker;
+import com.sun.javafx.scene.SceneHelper;
 import com.sun.javafx.stage.FocusUngrabEvent;
 import com.sun.javafx.stage.PopupWindowPeerListener;
 import com.sun.javafx.stage.WindowCloseRequestHandler;
@@ -106,13 +107,14 @@ public abstract class PopupWindow extends Window {
             };
 
     public PopupWindow() {
-        final Scene scene = new Scene(null);
+        final Scene scene = new Scene(new Group());
         scene.setFill(null);
         super.setScene(scene);
 
+        scene.getRoot().layoutBoundsProperty().addListener(rootBoundsListener);
         scene.rootProperty().addListener(
                 new InvalidationListener() {
-                    private Node oldRoot;
+                    private Node oldRoot = scene.getRoot();
 
                     @Override
                     public void invalidated(final Observable observable) {
@@ -133,7 +135,7 @@ public abstract class PopupWindow extends Window {
                         }
                     }
                 });
-        scene.setRoot(new Group());
+        updateDimensions();
     }
 
     /**
@@ -359,6 +361,11 @@ public abstract class PopupWindow extends Window {
             ((PopupWindow)owner).children.add(this);
         }
 
+        final Scene sceneValue = getScene();
+        if (sceneValue != null) {
+            SceneHelper.parentEffectiveOrientationChanged(sceneValue);
+        }
+
         // It is required that the root window exist and be visible to show the popup.
         if (getRootWindow(owner).isShowing()) {
             // We do show() first so that the width and height of the
@@ -449,16 +456,14 @@ public abstract class PopupWindow extends Window {
 
     private void updateDimensions() {
         final Parent rootNode = getScene().getRoot();
-        if (rootNode != null) {
-            final Bounds layoutBounds = rootNode.getLayoutBounds();
+        final Bounds layoutBounds = rootNode.getLayoutBounds();
 
-            // update popup dimensions
-            setWidth(layoutBounds.getMaxX() - layoutBounds.getMinX());
-            setHeight(layoutBounds.getMaxY() - layoutBounds.getMinY());
-            // update transform
-            rootNode.setTranslateX(-layoutBounds.getMinX());
-            rootNode.setTranslateY(-layoutBounds.getMinY());
-        }
+        // update popup dimensions
+        setWidth(layoutBounds.getMaxX() - layoutBounds.getMinX());
+        setHeight(layoutBounds.getMaxY() - layoutBounds.getMinY());
+        // update transform
+        rootNode.setTranslateX(-layoutBounds.getMinX());
+        rootNode.setTranslateY(-layoutBounds.getMinY());
     }
 
     /**

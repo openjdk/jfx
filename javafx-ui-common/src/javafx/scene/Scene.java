@@ -26,6 +26,7 @@
 
 package javafx.scene;
 
+import com.sun.javafx.scene.SceneHelper;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.ArrayList;
@@ -290,6 +291,10 @@ public class Scene implements EventTarget {
     private Scene(Parent root, double width, double height,
             @Default("javafx.scene.paint.Color.WHITE") Paint fill,
             boolean depthBuffer) {
+        if (root == null) {
+            throw new NullPointerException("Root cannot be null");
+        }
+
         Toolkit.getToolkit().checkFxUserThread();
         styleManager = new StyleManager(this);
         setRoot(root);
@@ -327,11 +332,19 @@ public class Scene implements EventTarget {
                     return scene.snapshot(null).impl_getPlatformImage();
                 }
             });
-            Toolkit.setSceneAccessor(new Toolkit.SceneAccessor() {
-                @Override public void setPaused(boolean paused) {
-                    Scene.paused = paused;
-                }
-            });
+            SceneHelper.setSceneAccessor(
+                    new SceneHelper.SceneAccessor() {
+                        @Override
+                        public void setPaused(boolean paused) {
+                            Scene.paused = paused;
+                        }
+                        
+                        @Override
+                        public void parentEffectiveOrientationChanged(
+                                final Scene scene) {
+                            scene.parentEffectiveOrientationChanged();
+                        }
+                    });
         }
 
         // Reserve space for 30 nodes in the dirtyNodes set.
@@ -595,6 +608,7 @@ public class Scene implements EventTarget {
                     if (newWindow != null) {
                         impl_initPeer();
                     }
+                    parentEffectiveOrientationChanged();
 
                     oldWindow = newWindow;
                 }
@@ -5570,7 +5584,8 @@ public class Scene implements EventTarget {
 
     
     private ObjectProperty<NodeOrientation> nodeOrientation;
-    
+    private NodeOrientation effectiveNodeOrientation;
+
     public final void setNodeOrientation(NodeOrientation orientation) {
         nodeOrientationProperty().set(orientation);
     }
@@ -5593,12 +5608,12 @@ public class Scene implements EventTarget {
      */
     public final ObjectProperty<NodeOrientation> nodeOrientationProperty() {
         if (nodeOrientation == null) {
-            nodeOrientation = new StyleableObjectProperty<NodeOrientation>(NodeOrientation.INHERIT) {       
+            nodeOrientation = new StyleableObjectProperty<NodeOrientation>(defaultNodeOrientation) {
                 @Override
                 protected void invalidated() {
-                    
+                    sceneEffectiveOrientationChanged();
                 }
-                
+
                 @Override
                 public Object getBean() {
                     return Scene.this;
@@ -5620,6 +5635,25 @@ public class Scene implements EventTarget {
     }
 
     public final NodeOrientation getEffectiveNodeOrientation() {
+        if (effectiveNodeOrientation == null) {
+            effectiveNodeOrientation = calcEffectiveNodeOrientation();
+        }
+
+        return effectiveNodeOrientation;
+    }
+
+    private void parentEffectiveOrientationChanged() {
+        if (getNodeOrientation() == NodeOrientation.INHERIT) {
+            sceneEffectiveOrientationChanged();
+        }
+    }
+
+    private void sceneEffectiveOrientationChanged() {
+        effectiveNodeOrientation = null;
+        getRoot().parentEffectiveOrientationChanged();
+    }
+
+    private NodeOrientation calcEffectiveNodeOrientation() {
         NodeOrientation orientation = getNodeOrientation();
         if (orientation == NodeOrientation.INHERIT) {
             Window window = getWindow();

@@ -118,7 +118,10 @@ public class ExpressionValue extends ObservableValueBase<Object> {
             this.namespace = namespace;
 
             if (next != null) {
-                next.monitor(Expression.get(namespace, key));
+                Object value = Expression.get(namespace, key);
+                if (value != null) {
+                    next.monitor(value);
+                }
             }
         }
 
@@ -128,7 +131,7 @@ public class ExpressionValue extends ObservableValueBase<Object> {
                 ((ObservableList<Object>)namespace).removeListener(listChangeListener);
             } else if (namespace instanceof ObservableMap<?, ?>) {
                 ((ObservableMap<String, Object>)namespace).removeListener(mapChangeListener);
-            } else {
+            } else if (namespace != null) {
                 BeanAdapter namespaceAdapter = (BeanAdapter)namespace;
                 ObservableValue<Object> propertyModel = namespaceAdapter.getPropertyModel(key);
 
@@ -147,7 +150,10 @@ public class ExpressionValue extends ObservableValueBase<Object> {
         public void remonitor() {
             if (next != null) {
                 next.unmonitor();
-                next.monitor(Expression.get(namespace, key));
+                Object value = Expression.get(namespace, key);
+                if (value != null) {
+                    next.monitor(value);
+                }
             }
         }
     }
