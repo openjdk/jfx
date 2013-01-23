@@ -34,6 +34,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import javafx.application.Application;
 import javafx.application.ConditionalFeature;
 
 import com.sun.javafx.tk.TKListener;
@@ -397,23 +398,54 @@ public class PlatformImpl {
     }
 
     /**
-     *
+     * Set the platform user agent stylesheet to the default.
      */
     public static void setDefaultPlatformUserAgentStylesheet() {
-        AccessController.doPrivileged(
-                new PrivilegedAction() {
-                    @Override public Object run() {
-                        StyleManager.setDefaultUserAgentStylesheet("com/sun/javafx/scene/control/skin/caspian/caspian.css");
+        setPlatformUserAgentStylesheet(Application.CASPIAN);
+    }
 
-                        if (com.sun.javafx.PlatformUtil.isEmbedded()) {
-                            StyleManager.addUserAgentStylesheet("com/sun/javafx/scene/control/skin/caspian/embedded.css");
-
-                            if (com.sun.javafx.Utils.isQVGAScreen()) {
-                                StyleManager.addUserAgentStylesheet("com/sun/javafx/scene/control/skin/caspian/embedded-qvga.css");
+    /**
+     * Set the platform user agent stylesheet to the given URL. This method has special handling for platform theme
+     * name constants.
+     */
+    public static void setPlatformUserAgentStylesheet(String stylesheetUrl) {
+        // check for command line override
+        String overrideStylesheetUrl =
+                AccessController.doPrivileged(
+                        new PrivilegedAction<String>() {
+                            @Override public String run() {
+                                return System.getProperty("javafx.userAgentStylesheetUrl");
                             }
+                        });
+        if (overrideStylesheetUrl != null) stylesheetUrl = overrideStylesheetUrl;
+        // check for named theme constants for modena and caspian
+        if (Application.CASPIAN.equalsIgnoreCase(stylesheetUrl)) {
+            AccessController.doPrivileged(
+                    new PrivilegedAction() {
+                        @Override public Object run() {
+                            StyleManager.setDefaultUserAgentStylesheet("com/sun/javafx/scene/control/skin/caspian/caspian.css");
+
+                            if (com.sun.javafx.PlatformUtil.isEmbedded()) {
+                                StyleManager.addUserAgentStylesheet("com/sun/javafx/scene/control/skin/caspian/embedded.css");
+
+                                if (com.sun.javafx.Utils.isQVGAScreen()) {
+                                    StyleManager.addUserAgentStylesheet("com/sun/javafx/scene/control/skin/caspian/embedded-qvga.css");
+                                }
+                            }
+                            return null;
                         }
-                        return null;
-                    }
-                });
+                    });
+        } else if (Application.MODENA.equalsIgnoreCase(stylesheetUrl)) {
+            System.out.println("Using Modena Theme");
+            AccessController.doPrivileged(
+                    new PrivilegedAction() {
+                        @Override public Object run() {
+                            StyleManager.setDefaultUserAgentStylesheet("com/sun/javafx/scene/control/skin/modena/modena.css");
+                            return null;
+                        }
+                    });
+        } else {
+            StyleManager.setDefaultUserAgentStylesheet(stylesheetUrl);
+        }
     }
 }

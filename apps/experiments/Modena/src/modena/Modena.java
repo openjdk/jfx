@@ -93,7 +93,9 @@ public class Modena extends Application {
     private static final String MODENA_STYLESHEET_CONTENT;
     private static final String CASPIAN_STYLESHEET_CONTENT;
     static {
-        MODENA_STYLESHEET_CONTENT = loadUrl(Modena.class.getResource("Modena.css"));
+        // these are not supported ways to find the platform themes and may 
+        // change release to release. Just used here for testing.
+        MODENA_STYLESHEET_CONTENT = loadUrl(com.sun.javafx.scene.control.skin.ButtonSkin.class.getResource("modena/modena.css"));
         CASPIAN_STYLESHEET_CONTENT = loadUrl(com.sun.javafx.scene.control.skin.ButtonSkin.class.getResource("caspian/caspian.css"));
     }
     
