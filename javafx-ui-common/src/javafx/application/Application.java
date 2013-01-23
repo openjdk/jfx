@@ -120,12 +120,12 @@ public abstract class Application {
      * Constant for user agent stylesheet for the "Caspian" theme. Caspian
      * is the theme that shipped as default in JavaFX 2.x.
      */
-    public static final String CASPIAN = "CASPIAN";
+    public static final String STYLESHEET_CASPIAN = "CASPIAN";
     /**
      * Constant for user agent stylesheet for the "Modena" theme. Modena
      * is the default theme for JavaFX 8.x.
      */
-    public static final String MODENA = "MODENA";
+    public static final String STYLESHEET_MODENA = "MODENA";
 
     /**
      * Launch a standalone application. This method is typically called
