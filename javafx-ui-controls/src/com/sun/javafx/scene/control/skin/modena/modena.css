@@ -394,6 +394,7 @@ is being used to size a border should also be in pixels.
 .color-picker.split-button > .arrow-button:hover,
 .color-picker.split-button > .color-picker-label:hover,
 .combo-box-base:hover,
+.combo-box-base:editable > .arrow-button:hover,
 .tab-pane > .tab-header-area > .control-buttons-tab > .container > .tab-down-button:hover {
     -fx-color: -fx-hover-base;
 }
@@ -411,6 +412,7 @@ is being used to size a border should also be in pixels.
 .scroll-bar > .decrement-button:pressed,
 .choice-box:showing,
 .combo-box-base:showing,
+.combo-box-base:editable:showing > .arrow-button,
 .tab-pane > .tab-header-area > .control-buttons-tab > .container > .tab-down-button:pressed {
     -fx-color: -fx-pressed-base;
 }
@@ -1529,7 +1531,8 @@ is being used to size a border should also be in pixels.
     -fx-padding: 0.5em 0.833333em 0.5em 0.833333em; /* 6 10 6 10 */
     -fx-background-insets: 1 1 1 0, 1, 2;
 }
-.combo-box-base:focused > .arrow-button {
+.combo-box-base:focused > .arrow-button,
+.combo-box-base:editable:contains-focus > .arrow-button {
     -fx-background-color: -fx-focus-color, -fx-inner-border, -fx-body-color; 
 }
 
@@ -1544,15 +1547,19 @@ is being used to size a border should also be in pixels.
  ******************************************************************************/
 
 .combo-box-base:editable > .text-field {
-    -fx-background-radius: 3 4 4 3, 2 3 3 2;
+    -fx-background-color: -fx-control-inner-background;
+    -fx-background-insets: 1 0 1 1;
+    -fx-background-radius: 3 0 0 3;
 }
-.combo-box-base:editable:focused > .text-field {
-    -fx-background-color: -fx-focus-color, -fx-control-inner-background;
-    -fx-background-insets: 0, 1;
-    -fx-background-radius: 3 4 4 3, 2 3 3 2;
+.combo-box-base:editable:contains-focus {
+    -fx-background-color: -fx-faint-focus-color, -fx-focus-color;
+    -fx-background-insets: -2, -0.3;
+    -fx-background-radius: 7, 4 6 6 4;
 }
+.combo-box-base:editable:focused > .text-field,
 .combo-box-base:editable > .text-field:focused  {
-    -fx-background-radius: 7, 3 4 4 3, 2 3 3 2;
+    -fx-background-color: -fx-control-inner-background;
+    -fx-background-insets: 1 0 1 1;
 }
 
 /* -------------- STYLES FOR THE DEFAULT LISTVIEW-BASED COMBOBOX ------------- */

@@ -289,7 +289,7 @@ public class SamplePage extends GridPane {
                 withState(ChoiceBoxBuilder.create(String.class).items(sampleItems()).value("Item B").build(), "hover"),
                 withState(ChoiceBoxBuilder.create(String.class).items(sampleItems()).value("Item B").build(), "showing"),
                 withState(ChoiceBoxBuilder.create(String.class).items(sampleItems()).value("Item B").build(), "focused"),
-                withState(ChoiceBoxBuilder.create(String.class).items(sampleItems()).value("Item C").build(), "disabled")
+                ChoiceBoxBuilder.create(String.class).items(sampleItems()).value("Item C").disable(true).build()
                 );
         newSection(      
                 "ComboBox:", 
@@ -297,16 +297,15 @@ public class SamplePage extends GridPane {
                 withState(ComboBoxBuilder.create(String.class).items(sampleItems()).value("Item B").build(), "hover"),
                 withState(ComboBoxBuilder.create(String.class).items(sampleItems()).value("Item B").build(), "showing"),
                 withState(ComboBoxBuilder.create(String.class).items(sampleItems()).value("Item B").build(), "focused"),
-                withState(ComboBoxBuilder.create(String.class).items(sampleItems()).value("Item C").build(), "disabled")
+                ComboBoxBuilder.create(String.class).items(sampleItems()).value("Item C").disable(true).build()
                 );
         newSection(      
                 "ComboBox\nEditable:", 
                 ComboBoxBuilder.create(String.class).items(sampleItems()).value("Item A").editable(true).build(),
-                withState(ComboBoxBuilder.create(String.class).items(sampleItems()).value("Item B").editable(true).build(), "hover"),
-                withState(ComboBoxBuilder.create(String.class).items(sampleItems()).value("Item B").editable(true).build(), "showing"),
-                withState(ComboBoxBuilder.create(String.class).items(sampleItems()).value("Item B").editable(true).build(), "focused"),
-                withState(ComboBoxBuilder.create(String.class).items(sampleItems()).value("Item B").editable(true).build(), null,".text-field", "focused"),
-                withState(ComboBoxBuilder.create(String.class).items(sampleItems()).value("Item C").editable(true).build(), "disabled")
+                withState(ComboBoxBuilder.create(String.class).items(sampleItems()).value("Item B").editable(true).build(), "editable", ".arrow-button", "hover"),
+                withState(ComboBoxBuilder.create(String.class).items(sampleItems()).value("Item B").editable(true).build(), "editable", ".arrow-button", "pressed"),
+                withState(ComboBoxBuilder.create(String.class).items(sampleItems()).value("Item B").editable(true).build(), "editable,contains-focus"),
+                ComboBoxBuilder.create(String.class).items(sampleItems()).value("Item C").editable(true).disable(true).build()
                 );
         newSection(      
                 "Color Picker:", 
