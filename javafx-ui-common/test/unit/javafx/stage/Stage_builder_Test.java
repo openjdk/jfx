@@ -89,6 +89,7 @@ public final class Stage_builder_Test extends BuilderTestBase {
 
         cfg.addProperty("fullScreen", false);
         cfg.addProperty("iconified", false);
+        cfg.addProperty("maximized", false);
         cfg.addProperty("minWidth", 1.0);
         cfg.addProperty("minHeight", 2.0);
         cfg.addProperty("maxWidth", 3.0);
