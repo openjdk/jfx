@@ -487,6 +487,7 @@ final public class DummyToolkit extends Toolkit {
     public List<File> showFileChooser(TKStage ownerWindow,
                                       String title,
                                       File initialDirectory,
+                                      String initialFileName,
                                       FileChooserType fileChooserType,
                                       List<ExtensionFilter> extensionFilters) {
         throw new UnsupportedOperationException("Not supported yet.");

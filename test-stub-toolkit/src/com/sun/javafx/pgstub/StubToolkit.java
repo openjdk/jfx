@@ -827,13 +827,39 @@ public class StubToolkit extends Toolkit {
         void enableDrop(TKDropTargetListener l);
     }
 
+    public interface CommonDialogsSupport {
+        List<File> showFileChooser(TKStage ownerWindow,
+                                   String title,
+                                   File initialDirectory,
+                                   String initialFileName,
+                                   FileChooserType fileChooserType,
+                                   List<ExtensionFilter> extensionFilters);
+
+        File showDirectoryChooser(TKStage ownerWindow,
+                                  String title,
+                                  File initialDirectory);
+    }
+
+    private CommonDialogsSupport commonDialogsSupport;
+    public void setCommonDialogsSupport(
+            final CommonDialogsSupport commonDialogsSupport) {
+        this.commonDialogsSupport = commonDialogsSupport;
+    }
+
     @Override
     public List<File> showFileChooser(TKStage ownerWindow,
                                       String title,
                                       File initialDirectory,
+                                      String initialFileName,
                                       FileChooserType fileChooserType,
                                       List<ExtensionFilter> extensionFilters) {
-        throw new UnsupportedOperationException("Not supported yet.");
+        return commonDialogsSupport.showFileChooser(
+                                        ownerWindow,
+                                        title,
+                                        initialDirectory,
+                                        initialFileName,
+                                        fileChooserType,
+                                        extensionFilters);
     }
 
 
@@ -841,7 +867,10 @@ public class StubToolkit extends Toolkit {
     public File showDirectoryChooser(TKStage ownerWindow,
                                      String title,
                                      File initialDirectory) {
-        throw new UnsupportedOperationException("Not supported yet.");
+        return commonDialogsSupport.showDirectoryChooser(
+                                        ownerWindow,
+                                        title,
+                                        initialDirectory);
     }
 
     @Override

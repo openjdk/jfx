@@ -796,6 +796,7 @@ public abstract class Toolkit {
             TKStage ownerWindow,
             String title,
             File initialDirectory,
+            String initialFileName,
             FileChooserType fileChooserType,
             List<ExtensionFilter> extensionFilters);
 
