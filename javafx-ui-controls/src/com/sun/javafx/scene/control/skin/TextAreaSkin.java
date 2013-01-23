@@ -754,7 +754,7 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
             promptNode.setManaged(false);
             promptNode.getStyleClass().add("text");
             promptNode.visibleProperty().bind(usePromptText);
-            promptNode.fontProperty().bind(font);
+            promptNode.fontProperty().bind(getSkinnable().fontProperty());
             promptNode.textProperty().bind(getSkinnable().promptTextProperty());
             promptNode.fillProperty().bind(promptTextFill);
         }
@@ -768,7 +768,7 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
         paragraphNode.getStyleClass().add("text");
         paragraphNodes.getChildren().add(i, paragraphNode);
 
-        paragraphNode.fontProperty().bind(font);
+        paragraphNode.fontProperty().bind(textArea.fontProperty());
         paragraphNode.fillProperty().bind(textFill);
         paragraphNode.impl_selectionFillProperty().bind(highlightTextFill);
     }

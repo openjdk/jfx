@@ -420,7 +420,7 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
     
     /** @see Node#pseudoClassStateChanged */
     public final void pseudoClassStateChanged(PseudoClass pseudoClass, boolean active) {
-        Control ctl = (Control)getSkinnable();
+        Control ctl = getSkinnable();
         if (ctl != null) {
             ctl.pseudoClassStateChanged(pseudoClass, active);
         }

@@ -185,7 +185,7 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
         // Add text
         textNode.setManaged(false);
         textNode.getStyleClass().add("text");
-        textNode.fontProperty().bind(font);
+        textNode.fontProperty().bind(textField.fontProperty());
 
         textNode.layoutXProperty().bind(textTranslateX);
         textNode.textProperty().bind(new StringBinding() {
@@ -243,7 +243,7 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
 
         // Be sure to get the control to request layout when the font changes,
         // since this will affect the pref height and pref width.
-        font.addListener(new InvalidationListener() {
+        textField.fontProperty().addListener(new InvalidationListener() {
             @Override public void invalidated(Observable observable) {
                 // I do both so that any cached values for prefWidth/height are cleared.
                 // The problem is that the skin is unmanaged and so calling request layout
@@ -393,7 +393,7 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
         promptNode.setManaged(false);
         promptNode.getStyleClass().add("text");
         promptNode.visibleProperty().bind(usePromptText);
-        promptNode.fontProperty().bind(font);
+        promptNode.fontProperty().bind(getSkinnable().fontProperty());
 
         promptNode.textProperty().bind(getSkinnable().promptTextProperty());
         promptNode.fillProperty().bind(promptTextFill);

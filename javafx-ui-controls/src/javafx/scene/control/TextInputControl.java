@@ -26,13 +26,16 @@
 package javafx.scene.control;
 
 import java.text.BreakIterator;
-import java.util.Set;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import javafx.beans.DefaultProperty;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.binding.IntegerBinding;
 import javafx.beans.binding.StringBinding;
 import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ReadOnlyIntegerProperty;
 import javafx.beans.property.ReadOnlyIntegerWrapper;
 import javafx.beans.property.ReadOnlyObjectProperty;
@@ -45,11 +48,17 @@ import javafx.beans.property.StringProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableStringValue;
 import javafx.beans.value.ObservableValue;
+import javafx.css.CssMetaData;
+import javafx.css.FontCssMetaData;
+import javafx.css.PseudoClass;
+import javafx.css.StyleOrigin;
+import javafx.css.StyleableObjectProperty;
+import javafx.css.StyleableProperty;
 import javafx.scene.input.Clipboard;
 import javafx.scene.input.ClipboardContent;
+import javafx.scene.text.Font;
 import com.sun.javafx.Utils;
 import com.sun.javafx.binding.ExpressionHelper;
-import javafx.css.PseudoClass;
 
 /**
  * Abstract base class for text input controls.
@@ -152,6 +161,59 @@ public abstract class TextInputControl extends Control {
      * Properties                                                              *
      *                                                                         *
      **************************************************************************/
+
+    /**
+     * The default font to use for text in the TextInputControl. If the TextInputControl's text is
+     * rich text then this font may or may not be used depending on the font
+     * information embedded in the rich text, but in any case where a default
+     * font is required, this font will be used.
+     */
+    public final ObjectProperty<Font> fontProperty() {
+        if (font == null) {
+            font = new StyleableObjectProperty<Font>(Font.getDefault()) {
+
+                @Override
+                public void set(Font value) {
+                    final Font oldValue = get();
+                    if (value == null ? oldValue == null : value.equals(oldValue)) {
+                        return;
+                    }
+                    super.set(value);
+                }
+
+                @Override
+                protected void invalidated() {
+                    // RT-20727 - if font is changed by calling setFont, then
+                    // css might need to be reapplied since font size affects
+                    // calculated values for styles with relative values
+                    StyleOrigin origin = ((StyleableProperty)font).getStyleOrigin();
+                    if (origin == null || origin == StyleOrigin.USER) {
+                        TextInputControl.this.impl_reapplyCSS();
+                    }
+                }
+
+                @Override
+                public CssMetaData getCssMetaData() {
+                    return StyleableProperties.FONT;
+                }
+
+                @Override
+                public Object getBean() {
+                    return TextInputControl.this;
+                }
+
+                @Override
+                public String getName() {
+                    return "font";
+                }
+            };
+        }
+        return font;
+    }
+
+    private ObjectProperty<Font> font;
+    public final void setFont(Font value) { fontProperty().setValue(value); }
+    public final Font getFont() { return font == null ? Font.getDefault() : font.getValue(); }
 
     /**
      * The prompt text to display in the {@code TextInputControl}, or
@@ -1036,7 +1098,6 @@ public abstract class TextInputControl extends Control {
     }
 
 
-
     /***************************************************************************
      *                                                                         *
      * Stylesheet Handling                                                     *
@@ -1046,5 +1107,51 @@ public abstract class TextInputControl extends Control {
 
     private static final PseudoClass PSEUDO_CLASS_READONLY
             = PseudoClass.getPseudoClass("readonly");
+
+    /**
+     * @treatAsPrivate implementation detail
+     */
+    private static class StyleableProperties {
+        private static final FontCssMetaData<TextInputControl> FONT =
+            new FontCssMetaData<TextInputControl>("-fx-font", Font.getDefault()) {
+
+            @Override
+            public boolean isSettable(TextInputControl n) {
+                return n.font == null || !n.font.isBound();
+            }
+
+            @Override
+            public StyleableProperty<Font> getStyleableProperty(TextInputControl n) {
+                return (StyleableProperty)n.fontProperty();
+            }
+        };
+
+        private static final List<CssMetaData> STYLEABLES;
+        static {
+            final List<CssMetaData> styleables =
+                new ArrayList<CssMetaData>(Control.getClassCssMetaData());
+            Collections.addAll(
+                    styleables,
+                    FONT
+            );
+            STYLEABLES = Collections.unmodifiableList(styleables);
+        }
+    }
+
+    /**
+     * @return The CssMetaData associated with this class, which may include the
+     * CssMetaData of its super classes.
+     */
+    public static List<CssMetaData> getClassCssMetaData() {
+        return StyleableProperties.STYLEABLES;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public List<CssMetaData> getControlCssMetaData() {
+        return getClassCssMetaData();
+    }
 
 }

@@ -25,27 +25,25 @@
 
 package javafx.scene.control;
 
-import com.sun.javafx.beans.annotations.DuplicateInBuilderProperties;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-
 import javafx.beans.InvalidationListener;
 import javafx.beans.property.IntegerProperty;
 import javafx.beans.property.IntegerPropertyBase;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ObjectPropertyBase;
 import javafx.beans.value.ChangeListener;
-import javafx.event.ActionEvent;
-import javafx.event.EventHandler;
-import javafx.geometry.Pos;
-
-import com.sun.javafx.binding.ExpressionHelper;
-import com.sun.javafx.css.converters.EnumConverter;
-import com.sun.javafx.scene.control.skin.TextFieldSkin;
 import javafx.css.CssMetaData;
 import javafx.css.StyleableObjectProperty;
 import javafx.css.StyleableProperty;
+import javafx.event.ActionEvent;
+import javafx.event.EventHandler;
+import javafx.geometry.Pos;
+import com.sun.javafx.beans.annotations.DuplicateInBuilderProperties;
+import com.sun.javafx.binding.ExpressionHelper;
+import com.sun.javafx.css.converters.EnumConverter;
+import com.sun.javafx.scene.control.skin.TextFieldSkin;
 
 
 /**
@@ -279,7 +277,7 @@ public class TextField extends TextInputControl {
         private static final List<CssMetaData> STYLEABLES;
         static {
             final List<CssMetaData> styleables =
-                new ArrayList<CssMetaData>(Control.getClassCssMetaData());
+                new ArrayList<CssMetaData>(TextInputControl.getClassCssMetaData());
             Collections.addAll(styleables,
                 ALIGNMENT
             );
