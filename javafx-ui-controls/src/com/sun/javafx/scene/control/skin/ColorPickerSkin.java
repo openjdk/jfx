@@ -90,8 +90,6 @@ public class ColorPickerSkin extends ComboBoxPopupControl<Color> {
     private final StyleableStringProperty imageUrl = new StyleableStringProperty() {
         @Override public void applyStyle(StyleOrigin origin, String v) {
             super.applyStyle(origin, v);
-            System.out.println(">>>>>>> imageUrl = "+v);
-
             if (v == null) {
                 // remove old image view
                 if (pickerColorBox.getChildren().size() == 2) pickerColorBox.getChildren().remove(1);
@@ -116,7 +114,6 @@ public class ColorPickerSkin extends ComboBoxPopupControl<Color> {
     };
     private final StyleableDoubleProperty colorRectWidth =  new StyleableDoubleProperty(12) {
         @Override protected void invalidated() {
-            System.out.println("colorRectWidth = " + get());
             if(pickerColorBox!=null) pickerColorBox.requestLayout();
         }
         @Override public CssMetaData getCssMetaData() {
@@ -131,7 +128,6 @@ public class ColorPickerSkin extends ComboBoxPopupControl<Color> {
     };
     private final StyleableDoubleProperty colorRectHeight =  new StyleableDoubleProperty(12) {
         @Override protected void invalidated() {
-            System.out.println("colorRectHeight = " + get());
             if(pickerColorBox!=null) pickerColorBox.requestLayout();
         }
         @Override public CssMetaData getCssMetaData() {
@@ -146,7 +142,6 @@ public class ColorPickerSkin extends ComboBoxPopupControl<Color> {
     };
     private final StyleableDoubleProperty colorRectX =  new StyleableDoubleProperty(0) {
         @Override protected void invalidated() {
-            System.out.println("colorRectX = " + get());
             if(pickerColorBox!=null) pickerColorBox.requestLayout();
         }
         @Override public CssMetaData getCssMetaData() {
@@ -161,7 +156,6 @@ public class ColorPickerSkin extends ComboBoxPopupControl<Color> {
     };
     private final StyleableDoubleProperty colorRectY =  new StyleableDoubleProperty(0) {
         @Override protected void invalidated() {
-            System.out.println("colorRectY = " + get());
             if(pickerColorBox!=null) pickerColorBox.requestLayout();
         }
         @Override public CssMetaData getCssMetaData() {
