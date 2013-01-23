@@ -2570,11 +2570,18 @@
  *                                                                             *
  ******************************************************************************/
 
-.split-pane > * > * > .table-view { -fx-padding: 0px; }
-.split-pane > * > * > .list-view { -fx-padding: 0px; }
-.split-pane > * > * > .tree-view { -fx-padding: 0px; }
-.split-pane > * > * > .scroll-pane { -fx-padding: 0px; }
-.split-pane > * > * > .split-pane {
+.tab-pane > * > .tab-pane,
+.tab-pane > * > .table-view,
+.tab-pane > * > .list-view,
+.tab-pane > * > .tree-view,
+.tab-pane > * > .scroll-pane,
+.tab-pane > * > .split-pane,
+.split-pane > * > .tab-pane,
+.split-pane > * > .table-view,
+.split-pane > * > .list-view,
+.split-pane > * > .tree-view,
+.split-pane > * > .scroll-pane,
+.split-pane > * > .split-pane {
     -fx-background-insets: 0, 0;
     -fx-padding: 0;
  }
@@ -2626,8 +2633,8 @@
 .tab-pane {
     /* -fx-tab-min-width: 4.583em;  55 */
     /* -fx-tab-max-width: 4.583em; 55 */
-    -fx-tab-min-height: 2em; /* 24 */
-    -fx-tab-max-height: 2em; /* 24 */
+    -fx-tab-min-height: 1.75em; /* 21 */
+    -fx-tab-max-height: 1.75em; /* 21 */
 }
 
 .tab-pane > .tab-header-area > .headers-region > .tab > .tab-container > .tab-label {
@@ -2652,7 +2659,8 @@
 /*    -fx-background-color: -fx-shadow-highlight-color, -fx-tab-border-color, -fx-inner-border, -fx-body-color;
     -fx-background-radius: 5 5 0 0, 5 5 0 0, 4 4 0 0, 3 3 0 0;
     -fx-background-insets: 0 0 -1 0, 0, 1, 2;*/
-    -fx-background-insets: 0, 1, 2;
+    /*-fx-background-insets: 0, 1, 2;*/
+    -fx-background-insets: 0 1 1 0, 1 2 1 1, 2 3 1 2;
     -fx-background-radius: 5 5 0 0, 4 4 0 0, 3 3 0 0;
     -fx-padding: 0.083333em 0.5em 0.083333em 0.5em; /* 1 6 1 6 */
 /*    -fx-text-fill: -fx-text-base-color;*/
@@ -2685,7 +2693,7 @@
     -fx-background-radius: 5 5 0 0, 4 4 0 0, 3 3 0 0;
     -fx-background-insets: 0, 1 1 0 1, 2 2 0 2;*/
     -fx-background-color: -fx-tab-border-color, -fx-control-inner-background;
-    -fx-background-insets: 0, 1 1 0 1;
+    -fx-background-insets: 0 1 0 0, 1 2 0 1;
     -fx-background-radius: 5 5 0 0, 4 4 0 0;
 }
 
@@ -2733,10 +2741,6 @@
 .tab-pane:right > .tab-header-area {
     -fx-background-insets: 0, 0 0 0 1;
     -fx-padding: 0.833em 0.416667em 0.166667em 0.0em; /* 10 5 2 0 */
-}
-
-.tab-pane > .tab-header-area > .headers-region {
-    -fx-effect: dropshadow(two-pass-box , rgba(0,0,0,0.6) , 4, 0.0 , 0, 0);
 }
 
 /* TODO: scaling the shape seems to make it way too large */
@@ -2794,13 +2798,13 @@
 
 .tab-pane.floating > .tab-header-area > .headers-region > .tab {
     -fx-background-color: -fx-tab-border-color, -fx-inner-border, -fx-body-color;
-    -fx-background-insets: 0, 1, 2;
+    -fx-background-insets: 0 1 1 0, 1 2 1 1, 2 3 1 2;
     -fx-background-radius: 5 5 0 0, 4 4 0 0, 3 3 0 0;
 }
 
 .tab-pane.floating  > .tab-header-area > .headers-region > .tab:selected {
     -fx-background-color: -fx-tab-border-color, -fx-control-inner-background;
-    -fx-background-insets: 0 0 -1 0, 1 1 -1 1;
+    -fx-background-insets: 0 1 -1 0, 1 2 -1 1;
     -fx-background-radius: 5 5 0 0, 4 4 0 0;
 }
 
