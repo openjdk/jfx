@@ -37,7 +37,24 @@ import org.junit.runners.Parameterized;
 
 
 /**
- *
+ * This test runs Modena app and waits for snapshots obtained from the app content
+ * to match the golden files.
+ * 
+ * Unless they perfectly match test will fail. The following information is collected
+ * for failed comparisons:
+ * current snapshot in build/test/results folder
+ * observed image difference in build/test/results/diffs folder
+ * 
+ * Not all failures necessary mean JavaFX is broken. Here are possible exceptions:
+ * - Animated content can't be compared exactly using this approach.
+ * - Some minor variations in layout/colors are possible.
+ * Manual image comparison is required for all such cases. If observed image is
+ * correct you could copy it to corresponding golden images folder. Golden images
+ * are located in golden/seven, golden/xp, golden/mac or golden/linux folders.
+ * 
+ * This project requires Jemmy libraries which are downloaded from SQE repository
+ * on first run (see build.xml or lib/readme.txt)
+ * 
  * @author akouznet
  */
 @RunWith(Parameterized.class)
