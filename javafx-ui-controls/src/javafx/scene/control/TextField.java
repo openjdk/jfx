@@ -30,11 +30,11 @@ import java.util.Collections;
 import java.util.List;
 import javafx.beans.InvalidationListener;
 import javafx.beans.property.IntegerProperty;
-import javafx.beans.property.IntegerPropertyBase;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ObjectPropertyBase;
 import javafx.beans.value.ChangeListener;
 import javafx.css.CssMetaData;
+import javafx.css.StyleableIntegerProperty;
 import javafx.css.StyleableObjectProperty;
 import javafx.css.StyleableProperty;
 import javafx.event.ActionEvent;
@@ -43,6 +43,7 @@ import javafx.geometry.Pos;
 import com.sun.javafx.beans.annotations.DuplicateInBuilderProperties;
 import com.sun.javafx.binding.ExpressionHelper;
 import com.sun.javafx.css.converters.EnumConverter;
+import com.sun.javafx.css.converters.SizeConverter;
 import com.sun.javafx.scene.control.skin.TextFieldSkin;
 
 
@@ -162,7 +163,7 @@ public class TextField extends TextInputControl {
      * The preferred number of text columns. This is used for
      * calculating the {@code TextField}'s preferred width.
      */
-    private IntegerProperty prefColumnCount = new IntegerPropertyBase(DEFAULT_PREF_COLUMN_COUNT) {
+    private IntegerProperty prefColumnCount = new StyleableIntegerProperty(DEFAULT_PREF_COLUMN_COUNT) {
         @Override
         public void set(int value) {
             if (value < 0) {
@@ -170,6 +171,10 @@ public class TextField extends TextInputControl {
             }
 
             super.set(value);
+        }
+
+        @Override public CssMetaData getCssMetaData() {
+            return StyleableProperties.PREF_COLUMN_COUNT;
         }
 
         @Override
@@ -274,12 +279,28 @@ public class TextField extends TextInputControl {
             }
         };
 
+        private static final CssMetaData<TextField,Number> PREF_COLUMN_COUNT =
+            new CssMetaData<TextField,Number>("-fx-pref-column-count",
+                SizeConverter.getInstance(), DEFAULT_PREF_COLUMN_COUNT) {
+
+            @Override
+            public boolean isSettable(TextField n) {
+                return n.prefColumnCount == null || !n.prefColumnCount.isBound();
+            }
+
+            @Override
+            public StyleableProperty<Number> getStyleableProperty(TextField n) {
+                return (StyleableProperty)n.prefColumnCountProperty();
+            }
+        };
+
         private static final List<CssMetaData> STYLEABLES;
         static {
             final List<CssMetaData> styleables =
                 new ArrayList<CssMetaData>(TextInputControl.getClassCssMetaData());
             Collections.addAll(styleables,
-                ALIGNMENT
+                ALIGNMENT,
+                PREF_COLUMN_COUNT
             );
             STYLEABLES = Collections.unmodifiableList(styleables);
         }
