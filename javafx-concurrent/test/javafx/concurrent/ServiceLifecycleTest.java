@@ -30,11 +30,11 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
+import javafx.concurrent.mocks.MythicalEvent;
 import javafx.concurrent.mocks.SimpleTask;
-import javafx.event.Event;
 import javafx.event.EventHandler;
-import javafx.event.EventType;
 import org.junit.Test;
+
 import static org.junit.Assert.*;
 
 /**
@@ -1558,15 +1558,6 @@ public class ServiceLifecycleTest extends ServiceTestBase {
         });
         svc.fireEvent(new MythicalEvent());
         assertTrue(result.get());
-    }
-    
-    private static final class MythicalEvent extends Event {
-        public static final EventType<MythicalEvent> ANY =
-                new EventType<MythicalEvent>(Event.ANY, "MYTHICAL");
-
-        public MythicalEvent() {
-            super(ANY);
-        }
     }
     
     private static final class MythicalService extends AbstractService {
