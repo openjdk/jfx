@@ -75,6 +75,7 @@ import javafx.geometry.NodeOrientation;
 import javafx.stage.Window;
 
 import com.sun.javafx.scene.control.behavior.TwoLevelFocusPopupBehavior;
+import javafx.beans.property.ReadOnlyBooleanProperty;
 
 /**
  * This is a the SkinBase for PopupMenu based controls so that the CSS parts
@@ -1065,13 +1066,21 @@ public class ContextMenuContent extends Region {
             createChildren();
             
             // listen to changes in the state of certain MenuItem types
+            ReadOnlyBooleanProperty pseudoProperty;
             if (item instanceof Menu) {
-                listen(((Menu)item).showingProperty(), SELECTED_PSEUDOCLASS_STATE);
+                pseudoProperty = ((Menu)item).showingProperty();
+                pseudoClassStateChanged(SELECTED_PSEUDOCLASS_STATE, pseudoProperty.get());
+                listen(pseudoProperty, SELECTED_PSEUDOCLASS_STATE);
             } else if (item instanceof RadioMenuItem) {
-                listen(((RadioMenuItem)item).selectedProperty(), CHECKED_PSEUDOCLASS_STATE);
+                pseudoProperty = ((RadioMenuItem)item).selectedProperty();
+                pseudoClassStateChanged(CHECKED_PSEUDOCLASS_STATE, pseudoProperty.get());
+                listen(pseudoProperty, CHECKED_PSEUDOCLASS_STATE);
             } else if (item instanceof CheckMenuItem) {
-                listen(((CheckMenuItem)item).selectedProperty(), CHECKED_PSEUDOCLASS_STATE);
+                pseudoProperty = ((CheckMenuItem)item).selectedProperty();
+                pseudoClassStateChanged(CHECKED_PSEUDOCLASS_STATE, pseudoProperty.get());
+                listen(pseudoProperty, CHECKED_PSEUDOCLASS_STATE);
             }
+            pseudoClassStateChanged(DISABLED_PSEUDOCLASS_STATE, item.disableProperty().get());
             listen(item.disableProperty(), DISABLED_PSEUDOCLASS_STATE);
             // Add the menu item to properties map of this node. Used by QA for testing
             // This allows associating this container with corresponding MenuItem.
