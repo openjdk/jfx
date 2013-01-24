@@ -49,6 +49,7 @@ import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanPropertyBase;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
 import javafx.beans.property.ReadOnlyObjectProperty;
+import javafx.beans.property.ReadOnlyObjectPropertyBase;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleObjectProperty;
@@ -5190,8 +5191,9 @@ public abstract class Node implements EventTarget {
      *                       Component Orientation Properties                  *
      *                                                                         *
      **************************************************************************/
-    
+
     private ObjectProperty<NodeOrientation> nodeOrientation;
+    private EffectiveOrientationProperty effectiveNodeOrientationProperty;
 
     private NodeOrientation effectiveNodeOrientation;
     private NodeOrientation automaticNodeOrientation;
@@ -5244,13 +5246,6 @@ public abstract class Node implements EventTarget {
         return nodeOrientation;
     }
 
-    /**
-     * Returns the NodeOrientation that is used to draw the node.
-     * <p>
-     * The effective orientation of a node resolves the inheritance of
-     * node orientation, returning either left-to-right or right-to-left.
-     * </p>
-     */
     public final NodeOrientation getEffectiveNodeOrientation() {
         if (effectiveNodeOrientation == null) {
             effectiveNodeOrientation = calcEffectiveNodeOrientation();
@@ -5260,10 +5255,24 @@ public abstract class Node implements EventTarget {
     }
 
     /**
+     * The effective orientation of a node resolves the inheritance of
+     * node orientation, returning either left-to-right or right-to-left.
+     */
+    public final ReadOnlyObjectProperty<NodeOrientation>
+            effectiveNodeOrientationProperty() {
+        if (effectiveNodeOrientationProperty == null) {
+            effectiveNodeOrientationProperty =
+                    new EffectiveOrientationProperty();
+        }
+
+        return effectiveNodeOrientationProperty;
+    }
+
+    /**
      * Determines whether a node should be mirrored when node orientation
      * is right-to-left.
      * <p>
-     * When a node is mirrored, the origin is automtically moved to the
+     * When a node is mirrored, the origin is automatically moved to the
      * top right corner causing the node to layout children and draw from
      * right to left using a mirroring transformation.  Some nodes may wish
      * to draw from right to left without using a transformation.  These
@@ -5295,6 +5304,11 @@ public abstract class Node implements EventTarget {
     void nodeEffectiveOrientationChanged() {
         effectiveNodeOrientation = null;
         automaticNodeOrientation = null;
+
+        if (effectiveNodeOrientationProperty != null) {
+            effectiveNodeOrientationProperty.invalidate();
+        }
+
         // mirroring changed
         impl_transformsChanged();
     }
@@ -5356,6 +5370,28 @@ public abstract class Node implements EventTarget {
                     : NodeOrientation.LEFT_TO_RIGHT;
 
         return thisOrientation != parentOrientation;
+    }
+
+    private final class EffectiveOrientationProperty
+            extends ReadOnlyObjectPropertyBase<NodeOrientation> {
+        @Override
+        public NodeOrientation get() {
+            return getEffectiveNodeOrientation();
+        }
+
+        @Override
+        public Object getBean() {
+            return Node.this;
+        }
+
+        @Override
+        public String getName() {
+            return "effectiveNodeOrientation";
+        }
+
+        public void invalidate() {
+            fireValueChangedEvent();
+        }
     }
 
     /***************************************************************************

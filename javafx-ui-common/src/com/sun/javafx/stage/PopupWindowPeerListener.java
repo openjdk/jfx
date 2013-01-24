@@ -58,6 +58,10 @@ public class PopupWindowPeerListener extends WindowPeerListener {
         // Not applicable for popups
     }
 
+    public void changedMaximized(boolean maximized) {
+        // Not applicable for popups
+    }
+
     public void changedResizable(boolean resizable) {
         // Not applicable for popups
     }

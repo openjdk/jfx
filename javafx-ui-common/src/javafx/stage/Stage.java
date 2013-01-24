@@ -183,6 +183,11 @@ public class Stage extends Window {
         }
 
         @Override
+        public void setMaximized(Stage stage, boolean maximized) {
+            stage.maximizedPropertyImpl().set(maximized);
+        }
+
+        @Override
         public void setResizable(Stage stage, boolean resizable) {
             ((ResizableProperty)stage.resizableProperty()).setNoInvalidate(resizable);
         }
@@ -546,6 +551,11 @@ public class Stage extends Window {
      * assume those attributes.
      * </p>
      * <p>
+     * In case that more {@code Stage} modes are set simultaneously their order
+     * of importance is {@code iconified}, fullScreen, {@code maximized} (from
+     * strongest to weakest).
+     * </p>
+     * <p>
      * The property is read only because it can be changed externally
      * by the underlying platform and therefore must not be bindable.
      * </p>
@@ -685,6 +695,11 @@ public class Stage extends Window {
     /**
      * Defines whether the {@code Stage} is iconified or not.
      * <p>
+     * In case that more {@code Stage} modes are set simultaneously their order
+     * of importance is iconified} {@code fullScreen}, {@code maximized} (from
+     * strongest to weakest).
+     * </p>
+     * <p>
      * The property is read only because it can be changed externally
      * by the underlying platform and therefore must not be bindable.
      * </p>
@@ -712,6 +727,43 @@ public class Stage extends Window {
             iconified = new ReadOnlyBooleanWrapper(Stage.this, "iconified");
         }
         return iconified;
+    }
+
+    /**
+     * Defines whether the {@code Stage} is maximized or not.
+     * <p>
+     * In case that more {@code Stage} modes are set simultaneously their order
+     * of importance is {@code iconified}, {@code fullScreen}, maximized (from
+     * strongest to weakest).
+     * </p>
+     * <p>
+     * The property is read only because it can be changed externally
+     * by the underlying platform and therefore must not be bindable.
+     * </p>
+     *
+     * @defaultValue false
+     */
+    private ReadOnlyBooleanWrapper maximized;
+
+    public final void setMaximized(boolean value) {
+        maximizedPropertyImpl().set(value);
+        if (impl_peer != null)
+            impl_peer.setMaximized(value);
+    }
+
+    public final boolean isMaximized() {
+        return maximized == null ? false : maximized.get();
+    }
+
+    public final ReadOnlyBooleanProperty maximizedProperty() {
+        return maximizedPropertyImpl().getReadOnlyProperty();
+    }
+
+    private final ReadOnlyBooleanWrapper maximizedPropertyImpl() {
+        if (maximized == null) {
+            maximized = new ReadOnlyBooleanWrapper(Stage.this, "maximized");
+        }
+        return maximized;
     }
 
     /**
@@ -985,6 +1037,7 @@ public class Stage extends Window {
             impl_peer.setResizable(isResizable());
             impl_peer.setFullScreen(isFullScreen());
             impl_peer.setIconified(isIconified());
+            impl_peer.setMaximized(isMaximized());
             impl_peer.setTitle(getTitle());
             impl_peer.setMinimumSize((int) Math.ceil(getMinWidth()),
                     (int) Math.ceil(getMinHeight()));

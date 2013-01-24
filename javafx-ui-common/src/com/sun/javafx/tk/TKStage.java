@@ -99,6 +99,8 @@ public interface TKStage {
 
     public void setIconified(boolean iconified);
 
+    public void setMaximized(boolean maximized);
+
     public void setResizable(boolean resizable);
 
     public void setImportant(boolean important);
