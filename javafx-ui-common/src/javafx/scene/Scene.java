@@ -44,6 +44,7 @@ import javafx.beans.DefaultProperty;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.property.ReadOnlyBooleanProperty;
+import javafx.beans.property.ReadOnlyObjectPropertyBase;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.ListChangeListener.Change;
 import javafx.collections.ObservableList;
@@ -5585,6 +5586,8 @@ public class Scene implements EventTarget {
 
     
     private ObjectProperty<NodeOrientation> nodeOrientation;
+    private EffectiveOrientationProperty effectiveNodeOrientationProperty;
+
     private NodeOrientation effectiveNodeOrientation;
 
     public final void setNodeOrientation(NodeOrientation orientation) {
@@ -5643,6 +5646,20 @@ public class Scene implements EventTarget {
         return effectiveNodeOrientation;
     }
 
+    /**
+     * The effective node orientation of a scene resolves the inheritance of
+     * node orientation, returning either left-to-right or right-to-left.
+     */
+    public final ReadOnlyObjectProperty<NodeOrientation>
+            effectiveNodeOrientationProperty() {
+        if (effectiveNodeOrientationProperty == null) {
+            effectiveNodeOrientationProperty =
+                    new EffectiveOrientationProperty();
+        }
+
+        return effectiveNodeOrientationProperty;
+    }
+
     private void parentEffectiveOrientationChanged() {
         if (getNodeOrientation() == NodeOrientation.INHERIT) {
             sceneEffectiveOrientationChanged();
@@ -5651,6 +5668,11 @@ public class Scene implements EventTarget {
 
     private void sceneEffectiveOrientationChanged() {
         effectiveNodeOrientation = null;
+
+        if (effectiveNodeOrientationProperty != null) {
+            effectiveNodeOrientationProperty.invalidate();
+        }
+
         getRoot().parentEffectiveOrientationChanged();
     }
 
@@ -5675,5 +5697,27 @@ public class Scene implements EventTarget {
             return NodeOrientation.LEFT_TO_RIGHT;
         }
         return orientation;
+    }
+
+    private final class EffectiveOrientationProperty
+            extends ReadOnlyObjectPropertyBase<NodeOrientation> {
+        @Override
+        public NodeOrientation get() {
+            return getEffectiveNodeOrientation();
+        }
+
+        @Override
+        public Object getBean() {
+            return Scene.this;
+        }
+
+        @Override
+        public String getName() {
+            return "effectiveNodeOrientation";
+        }
+
+        public void invalidate() {
+            fireValueChangedEvent();
+        }
     }
 }
