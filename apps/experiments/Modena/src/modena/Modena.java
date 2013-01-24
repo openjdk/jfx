@@ -118,6 +118,8 @@ public class Modena extends Application {
     private SamplePage samplePage;
     private Node mosaic;
     private Node heightTest;
+    private Node combinationsTest;
+    private Node customerTest;
     private Stage mainStage;
     private Color backgroundColor;
     private Color baseColor;
@@ -253,7 +255,13 @@ public class Modena extends Application {
                 ).build(),
                 TabBuilder.create().text("Combinations").content(
                     ScrollPaneBuilder.create().content(
-                        heightTest = (Node)FXMLLoader.load(Modena.class.getResource("CombinationTest.fxml"))
+                        combinationsTest = (Node)FXMLLoader.load(Modena.class.getResource("CombinationTest.fxml"))
+                    ).build()
+                ).build(),
+                // Customer example from bug report http://javafx-jira.kenai.com/browse/DTL-5561
+                TabBuilder.create().text("Customer Example").content(
+                    ScrollPaneBuilder.create().content(
+                        customerTest = (Node)FXMLLoader.load(Modena.class.getResource("ScottSelvia.fxml"))
                     ).build()
                 ).build()
             );
@@ -347,6 +355,8 @@ public class Modena extends Application {
             samplePage.getStyleClass().add("needs-background");
             mosaic.getStyleClass().add("needs-background");
             heightTest.getStyleClass().add("needs-background");
+            combinationsTest.getStyleClass().add("needs-background");
+            customerTest.getStyleClass().add("needs-background");
             // apply retina scale
             if (retina) {
                 contentTabs.getTransforms().setAll(new Scale(2,2));
