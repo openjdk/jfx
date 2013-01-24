@@ -250,6 +250,11 @@ public class Modena extends Application {
                     ScrollPaneBuilder.create().content(
                         heightTest = (Node)FXMLLoader.load(Modena.class.getResource("SameHeightTest.fxml"))
                     ).build()
+                ).build(),
+                TabBuilder.create().text("Combinations").content(
+                    ScrollPaneBuilder.create().content(
+                        heightTest = (Node)FXMLLoader.load(Modena.class.getResource("CombinationTest.fxml"))
+                    ).build()
                 ).build()
             );
             contentTabs.getSelectionModel().select(selectedTab);

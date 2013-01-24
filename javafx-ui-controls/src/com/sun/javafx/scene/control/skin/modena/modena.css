@@ -2956,11 +2956,23 @@ is being used to size a border should also be in pixels.
  *                                                                             *
  ******************************************************************************/
 
-.split-pane > * > .table-view { -fx-padding: 0px; }
-.split-pane > * > .list-view { -fx-padding: 0px; }
-.split-pane > * > .tree-view { -fx-padding: 0px; }
-.split-pane > * > .scroll-pane { -fx-padding: 0px; }
-.split-pane > * > .split-pane {
+.tab-pane > * > .table-view,
+.tab-pane > * > .tree-table-view,
+.tab-pane > * > .list-view,
+.tab-pane > * > .tree-view,
+.tab-pane > * > .scroll-pane,
+.tab-pane > * > .split-pane,
+.tab-pane > * > .text-area,
+.tab-pane > * > .html-editor,
+.split-pane > * > .tab-pane,
+.split-pane > * > .table-view,
+.split-pane > * > .tree-table-view,
+.split-pane > * > .list-view,
+.split-pane > * > .tree-view,
+.split-pane > * > .scroll-pane,
+.split-pane > * > .split-pane,
+.split-pane > * > .text-area,
+.split-pane > * > .html-editor {
     -fx-background-insets: 0, 0;
     -fx-padding: 0;
  }
