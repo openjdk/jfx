@@ -267,8 +267,6 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
      *                         State and Functions                            *
      *************************************************************************/
     
-    private int rowCount = 0;
-
     private boolean isShiftDown = false;
     private boolean isCtrlDown = false;
     
@@ -417,12 +415,8 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
         }
     }
     
-    public void setRowCount(int rowCount) {
-        this.rowCount = rowCount;
-    }
-
     private int getRowCount() {
-        return rowCount;
+        return getControl().getItems() == null ? 0 : getControl().getItems().size();
     }
 
     private void clearSelection() {
@@ -687,7 +681,7 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
         int leadIndex = sm.getSelectedIndex();
         
         if (isShiftDown) {
-            leadIndex = hasAnchor() ? sm.getSelectedIndex() : getAnchor();
+            leadIndex = getAnchor() == -1 ? sm.getSelectedIndex() : getAnchor();
         }
 
         sm.clearSelection();
@@ -837,6 +831,7 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
 
         int index = fm.getFocusedIndex();
         sm.selectRange(0, index);
+        fm.focus(0);
 
         if (onMoveToFirstCell != null) onMoveToFirstCell.run();
     }
