@@ -189,7 +189,6 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListViewB
         int newCount = listViewItems == null ? 0 : listViewItems.size();
         
         itemCount = newCount;
-        getBehavior().setRowCount(itemCount);
         
         flow.setCellCount(newCount);
         

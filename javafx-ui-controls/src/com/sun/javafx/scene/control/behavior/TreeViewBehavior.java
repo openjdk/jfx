@@ -783,6 +783,7 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
 
         int index = fm.getFocusedIndex();
         sm.selectRange(0, index);
+        fm.focus(0);
 
         if (onMoveToFirstCell != null) onMoveToFirstCell.run();
     }
