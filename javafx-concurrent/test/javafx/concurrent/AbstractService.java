@@ -37,7 +37,7 @@ package javafx.concurrent;
 public abstract class AbstractService extends Service<String> {
     public final Thread appThread = Thread.currentThread();
     public ServiceTestBase test;
-    public AbstractTask currentTask;
+    private AbstractTask currentTask;
 
     @Override protected final Task<String> createTask() {
         currentTask = createTestTask();
@@ -51,4 +51,6 @@ public abstract class AbstractService extends Service<String> {
         if (Thread.currentThread() != appThread)
             throw new IllegalStateException("Wrong thread on Service");
     }
+
+    public final AbstractTask getCurrentTask() { return currentTask; }
 }
