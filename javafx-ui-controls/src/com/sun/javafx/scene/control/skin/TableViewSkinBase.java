@@ -247,9 +247,10 @@ public abstract class TableViewSkinBase<S, C extends Control, B extends Behavior
         @Override public void invalidated(Observable observable) {
             // This forces the horizontal scrollbar to show when the column
             // resizing occurs. It is not ideal, but will work for now.
-            // FIXME this is very, very inefficient, but ensures we don't run
-            // in to RT-13717.
-            needCellsRebuilt = true;
+            
+            // using 'needCellsReconfigured' here rather than 'needCellsRebuilt'
+            // as otherwise performance suffers massively (RT-27831)
+            needCellsReconfigured = true;
             getSkinnable().requestLayout();
         }
     };
