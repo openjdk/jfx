@@ -2500,10 +2500,6 @@
     -fx-shape: "M 0 0 h 7 l -3.5 4 z";
 }
 
-.titled-pane:collapsed > .title > .arrow-button > .arrow {
-    -fx-rotate: -90;
-}
-
 .titled-pane > *.content {
     -fx-background-color:
         -fx-box-border,
