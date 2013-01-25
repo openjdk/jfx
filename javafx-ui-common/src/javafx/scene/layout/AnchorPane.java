@@ -226,7 +226,16 @@ public class AnchorPane extends Pane {
     public AnchorPane() {
         super();
     }
-    
+
+    /**
+     * Creates an AnchorPane layout with the given children.
+     * @param children    The initial set of children for this pane.
+     */
+    public AnchorPane(Node... children) {
+        super();
+        getChildren().addAll(children);
+    }
+
     @Override protected double computeMinWidth(double height) {
         return computeWidth(true, height);
     }

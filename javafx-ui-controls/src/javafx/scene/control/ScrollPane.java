@@ -25,32 +25,29 @@
 
 package javafx.scene.control;
 
-import javafx.css.CssMetaData;
-import javafx.css.PseudoClass;
-import javafx.css.StyleableBooleanProperty;
-import javafx.css.StyleableObjectProperty;
-import com.sun.javafx.css.converters.BooleanConverter;
-import com.sun.javafx.css.converters.EnumConverter;
-import com.sun.javafx.scene.control.skin.ScrollPaneSkin;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-
+import javafx.beans.DefaultProperty;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ObjectPropertyBase;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.beans.property.SimpleObjectProperty;
-
-import javafx.geometry.BoundingBox;
-import javafx.geometry.Bounds;
-import javafx.scene.Node;
-
-import javafx.beans.DefaultProperty;
+import javafx.css.CssMetaData;
+import javafx.css.PseudoClass;
+import javafx.css.StyleableBooleanProperty;
+import javafx.css.StyleableObjectProperty;
 import javafx.css.StyleableProperty;
 import javafx.event.Event;
 import javafx.event.EventHandler;
+import javafx.geometry.BoundingBox;
+import javafx.geometry.Bounds;
+import javafx.scene.Node;
+import com.sun.javafx.css.converters.BooleanConverter;
+import com.sun.javafx.css.converters.EnumConverter;
+import com.sun.javafx.scene.control.skin.ScrollPaneSkin;
 
 /**
  * A Control that provides a scrolled, clipped viewport of its contents. It
@@ -109,6 +106,16 @@ public class ScrollPane extends Control {
         final CssMetaData prop = ((StyleableProperty)focusTraversableProperty()).getCssMetaData();
         prop.set(this, Boolean.FALSE, null); 
     }
+
+    /**
+     * Creates a new ScrollPane.
+     * @param content the initial content for the ScrollPane
+     */
+    public ScrollPane(Node content) {
+        this();
+        setContent(content);
+    }
+
     /***************************************************************************
      *                                                                         *
      * Properties                                                              *
