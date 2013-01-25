@@ -1931,16 +1931,18 @@ is being used to size a border should also be in pixels.
     -fx-padding: 0.833333em 0em 0.833333em 0em;
 }
 .pagination > .pagination-control > .control-box {
-    -fx-spacing: 4;
+    -fx-spacing: 2;
     -fx-alignment: center;
 }
-.pagination > .pagination-control > .control-box > .left-arrow-button{
-    -fx-background-radius: 0;
-    -fx-padding: 0.166667em 0.416em 0.25em 0.333em;
+.pagination > .pagination-control > .control-box > .left-arrow-button {
+    -fx-background-radius: 5 0 0 5, 4 0 0 4, 3 0 0 3;
+    -fx-background-insets: 0 -4 0 11, 1 -3 1 12, 2 -2 2 13;
+    -fx-padding: 0.166667em 0em 0.25em 1.167em;
 }
 .pagination > .pagination-control > .control-box > .right-arrow-button {
-    -fx-background-radius: 0;
-    -fx-padding: 0.166667em 0.333em 0.25em 0.416em;
+    -fx-background-radius: 0 5 5 0, 0 4 4 0, 0 3 3 0;
+    -fx-background-insets: 0 11 0 -4, 1 12 1 -3, 2 13 2 -2;
+    -fx-padding: 0.166667em 0em 0.25em 0.083em;
 }
 .pagination > .pagination-control .left-arrow {
     -fx-background-color: -fx-mark-highlight-color, -fx-mark-color;
@@ -1965,9 +1967,19 @@ is being used to size a border should also be in pixels.
 .pagination > .pagination-control > .control-box > .bullet-button:selected {   
     -fx-base: -fx-accent;
 }
-.pagination.bullet > .pagination-control > .control-box > .left-arrow-button, 
+.pagination.bullet > .pagination-control > .control-box {
+    -fx-spacing: 0;
+    -fx-alignment: center;
+}
+.pagination.bullet > .pagination-control > .control-box > .left-arrow-button {
+    -fx-background-radius: 4em;
+    -fx-background-insets: 0, 1, 2;
+    -fx-padding: 0 0 0 0.667em; /* 0 0 0 8 */
+} 
 .pagination.bullet > .pagination-control > .control-box > .right-arrow-button {
     -fx-background-radius: 4em;
+    -fx-background-insets: 0, 1, 2;
+    -fx-padding: 0 0 0 0.833em; /* 0 0 0 10 */
 }
 .pagination > .pagination-control > .control-box > .number-button {
     -fx-background-radius: 0;
