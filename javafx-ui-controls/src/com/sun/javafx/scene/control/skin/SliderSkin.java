@@ -34,7 +34,9 @@ import javafx.scene.control.Slider;
 import javafx.scene.layout.StackPane;
 
 import com.sun.javafx.scene.control.behavior.SliderBehavior;
+import javafx.animation.Transition;
 import javafx.geometry.Insets;
+import javafx.util.Duration;
 import javafx.util.StringConverter;
 
 /**
@@ -93,7 +95,9 @@ public class SliderSkin extends BehaviorSkinBase<Slider, SliderBehavior> {
                 if (!thumb.isPressed()) {
                     if (getSkinnable().getOrientation() == Orientation.HORIZONTAL) {
                         getBehavior().trackPress(me, (me.getX() / trackLength));
-                    } else getBehavior().trackPress(me, (me.getY() / trackLength));
+                    } else {
+                        getBehavior().trackPress(me, (me.getY() / trackLength));
+                    }
                 }
             }
         });
@@ -228,13 +232,30 @@ public class SliderSkin extends BehaviorSkinBase<Slider, SliderBehavior> {
     void positionThumb() {
         Slider s = getSkinnable();
         boolean horizontal = s.getOrientation() == Orientation.HORIZONTAL;
-        double lx = (horizontal) ? trackStart + (((trackLength * ((s.getValue() - s.getMin()) /
+        final double endX = (horizontal) ? trackStart + (((trackLength * ((s.getValue() - s.getMin()) /
                 (s.getMax() - s.getMin()))) - thumbWidth/2)) : thumbLeft;
-        double ly = (horizontal) ? thumbTop :
+        final double endY = (horizontal) ? thumbTop :
             s.getInsets().getTop() + trackLength - (trackLength * ((s.getValue() - s.getMin()) /
                 (s.getMax() - s.getMin()))); //  - thumbHeight/2
-        thumb.setLayoutX(lx);
-        thumb.setLayoutY(ly);
+        
+        // lets animate the thumb transition
+        final double startX = thumb.getLayoutX();
+        final double startY = thumb.getLayoutY();
+        Transition transition = new Transition() {
+            {
+                setCycleDuration(Duration.millis(200));
+            }
+            
+            @Override protected void interpolate(double frac) {
+                if (!Double.isNaN(startX)) {
+                    thumb.setLayoutX(startX + frac * (endX - startX));
+                }
+                if (!Double.isNaN(startY)) {
+                    thumb.setLayoutY(startY + frac * (endY - startY));
+                }
+            }
+        };
+        transition.play();
     }
 
     @Override protected void layoutChildren(final double x, final double y,
