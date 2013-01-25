@@ -118,6 +118,7 @@ public class Modena extends Application {
     private SamplePage samplePage;
     private Node mosaic;
     private Node heightTest;
+    private SimpleWindowPage simpleWindows;
     private Node combinationsTest;
     private Node customerTest;
     private Stage mainStage;
@@ -253,6 +254,11 @@ public class Modena extends Application {
                         heightTest = (Node)FXMLLoader.load(Modena.class.getResource("SameHeightTest.fxml"))
                     ).build()
                 ).build(),
+                TabBuilder.create().text("Simple Windows").content(
+                    ScrollPaneBuilder.create().content(
+                        simpleWindows = new SimpleWindowPage()
+                    ).build()
+                ).build(),
                 TabBuilder.create().text("Combinations").content(
                     ScrollPaneBuilder.create().content(
                         combinationsTest = (Node)FXMLLoader.load(Modena.class.getResource("CombinationTest.fxml"))
@@ -357,6 +363,7 @@ public class Modena extends Application {
             heightTest.getStyleClass().add("needs-background");
             combinationsTest.getStyleClass().add("needs-background");
             customerTest.getStyleClass().add("needs-background");
+            simpleWindows.setModena(modena);
             // apply retina scale
             if (retina) {
                 contentTabs.getTransforms().setAll(new Scale(2,2));

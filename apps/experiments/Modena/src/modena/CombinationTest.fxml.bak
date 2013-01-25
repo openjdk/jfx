@@ -169,7 +169,7 @@
             </TableView>
           </items>
         </SplitPane>
-        <SplitPane dividerPositions="0.5167785234899329" focusTraversable="true" prefHeight="50.0" prefWidth="50.0">
+        <SplitPane dividerPositions="0.5167785234899329" focusTraversable="true" prefHeight="-1.0" prefWidth="-1.0">
           <items>
             <TreeView prefHeight="-1.0" prefWidth="-1.0" />
             <ListView prefHeight="-1.0" prefWidth="-1.0" />
