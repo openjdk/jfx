@@ -448,6 +448,15 @@ public abstract class XYChart<X,Y> extends Chart {
 
     // -------------- METHODS ------------------------------------------------------------------------------------------
 
+    @Override public void requestLayout() {
+        super.requestLayout();
+        // RT-22726 Charts legend does not resize correctly
+        Node legend = getLegend();
+        if (legend != null && legend instanceof Region) {
+            ((Region)legend).requestLayout();
+        }
+    }
+    
     /**
      * Gets the size of the data returning 0 if the data is null
      *

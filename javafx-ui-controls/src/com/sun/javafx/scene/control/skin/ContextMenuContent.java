@@ -1266,7 +1266,6 @@ public class ContextMenuContent extends Region {
         private void createNodeMenuItemChildren(final CustomMenuItem item) {
             Node node = ((CustomMenuItem) item).getContent();
             getChildren().add(node);
-            node.getStyleClass().addAll(item.getStyleClass());
             // handle hideOnClick
             node.setOnMouseClicked(new EventHandler<MouseEvent>() {
                 @Override public void handle(MouseEvent event) {
