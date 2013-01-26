@@ -66,8 +66,15 @@ import static com.sun.javafx.logging.PulseLogger.*;
 public abstract class NGNode extends BaseNode<Graphics> {
     protected static float highestPixelScale;
     static {
-        for (Screen s : Screen.getScreens()) {
-            highestPixelScale = Math.max(s.getScale(), highestPixelScale);
+        // TODO: temporary until RT-27958 is fixed. Screens may be null
+        // when running unit tests
+        try {
+            for (Screen s : Screen.getScreens()) {
+                highestPixelScale = Math.max(s.getScale(), highestPixelScale);
+            }
+        } catch (NullPointerException ex) {
+            System.err.println("WARNING: unable to get max pixel scale for screens");
+            highestPixelScale = 1.0f;
         }
     }
 
