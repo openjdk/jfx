@@ -976,12 +976,26 @@ public class Stage extends Window {
             Scene scene = getScene();
             boolean rtl = scene != null && scene.getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT;
 
-            impl_peer = toolkit.createTKStage(getStyle(), isPrimary(),
-                    getModality(), tkStage, rtl);
-            impl_peer.setImportant(isImportant());
+            impl_peer = toolkit.createTKStage(getStyle(), isPrimary(), getModality(), tkStage, rtl);
             peerListener = new StagePeerListener(this, STAGE_ACCESSOR);
             
+           // Insert this into stages so we have a references to all created stages
+            stages.add(this);
+        }
+    }
+
+    
+    /**
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     */
+    @Deprecated
+    @Override protected void impl_visibleChanged(boolean value) {
+        super.impl_visibleChanged(value);
+
+        if (value) {
             // Finish initialization
+            impl_peer.setImportant(isImportant());
             impl_peer.setResizable(isResizable());
             impl_peer.setFullScreen(isFullScreen());
             impl_peer.setIconified(isIconified());
@@ -998,20 +1012,8 @@ public class Stage extends Window {
             if (impl_peer != null) {
                 impl_peer.setIcons(platformImages);
             }
-
-            // Insert this into stages so we have a references to all created stages
-            stages.add(this);
         }
-    }
 
-    
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    @Override protected void impl_visibleChanged(boolean value) {
-        super.impl_visibleChanged(value);
         if (!value && (impl_peer != null)) {
             // Remove form active stage list
             stages.remove(this);

@@ -27,6 +27,7 @@
 package javafx.scene;
 
 import com.sun.javafx.scene.SceneHelper;
+import java.security.AccessControlContext;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.ArrayList;
@@ -181,6 +182,8 @@ public class Scene implements EventTarget {
     private boolean depthBuffer = false;
 
     private int dirtyBits;
+
+    private final AccessControlContext acc = AccessController.getContext();
 
     //Neither width nor height are initialized and will be calculated according to content when this Scene
     //is shown for the first time.
@@ -662,6 +665,7 @@ public class Scene implements EventTarget {
 
         impl_peer = windowPeer.createTKScene(isDepthBuffer());
         PerformanceTracker.logEvent("Scene.initPeer TKScene created");
+        impl_peer.setSecurityContext(acc);
         impl_peer.setTKSceneListener(new ScenePeerListener());
         impl_peer.setTKScenePaintListener(new ScenePeerPaintListener());
         impl_peer.setScene(this);
