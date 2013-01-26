@@ -200,41 +200,68 @@ public class NGCanvas extends NGNode implements PGCanvas {
             }
         }
     }
-    
-    GrowableDataBuffer<Object> thebuf;
-    
-    int tw, th;
-    RenderBuf cv = new RenderBuf(InitType.PRESERVE_UPPER_LEFT);
-    RenderBuf temp = new RenderBuf(InitType.CLEAR);
-    RenderBuf clip = new RenderBuf(InitType.FILL_WHITE);
-    Image tmpImage = Image.fromIntArgbPreData(new int[1], 1, 1);
 
-    Blend blender = new MyBlend(Mode.SRC_OVER, null, null);
+    private static Image TMP_IMAGE = Image.fromIntArgbPreData(new int[1], 1, 1);
+    private static Blend BLENDER = new MyBlend(Mode.SRC_OVER, null, null);
 
-    float globalAlpha = 1.0f;
-    byte fillRule = PGCanvas.FILL_RULE_NON_ZERO;
-    Blend.Mode blendmode = Mode.SRC_OVER;
-    Paint fillPaint = Color.BLACK;
-    Paint strokePaint = Color.BLACK;
-    float linewidth = 1.0f;
-    int linecap = BasicStroke.CAP_SQUARE;
-    int linejoin = BasicStroke.JOIN_MITER;
-    float miterlimit = 10f;
-    BasicStroke stroke = null;
-    Path2D path = new Path2D();
-    NGText ngtext = new NGText();
-    PGFont pgfont = (PGFont) Font.getDefault().impl_getNativeFont();
-    int align = PGCanvas.ALIGN_LEFT;
-    int baseline = VPos.BASELINE.ordinal();
-    Affine2D transform = new Affine2D();
-    Affine2D inverseTransform = new Affine2D();
-    boolean inversedirty;
-    LinkedList<Path2D> clipStack = new LinkedList<Path2D>();
-    Effect effect;
+    private GrowableDataBuffer<Object> thebuf;
+
+    private int tw, th;
+    private RenderBuf cv;
+    private RenderBuf temp;
+    private RenderBuf clip;
+
+    private float globalAlpha;
+    private byte fillRule;
+    private Blend.Mode blendmode;
+    private Paint fillPaint, strokePaint;
+    private float linewidth;
+    private int linecap, linejoin;
+    private float miterlimit;
+    private BasicStroke stroke;
+    private Path2D path;
+    private NGText ngtext;
+    private PGFont pgfont;
+    private int align;
+    private int baseline;
+    private Affine2D transform;
+    private Affine2D inverseTransform;
+    private boolean inversedirty;
+    private LinkedList<Path2D> clipStack;
+    private Effect effect;
+    private int arctype;
+
     static float TEMP_COORDS[] = new float[6];
-    static Arc2D TEMP_ARC = new Arc2D();
-    static RectBounds TEMP_RECTBOUNDS = new RectBounds();
-    int arctype;
+    private static Arc2D TEMP_ARC = new Arc2D();
+    private static RectBounds TEMP_RECTBOUNDS = new RectBounds();
+
+    public NGCanvas() {
+        cv = new RenderBuf(InitType.PRESERVE_UPPER_LEFT);
+        temp = new RenderBuf(InitType.CLEAR);
+        clip = new RenderBuf(InitType.FILL_WHITE);
+
+        globalAlpha = 1.0f;
+        fillRule = PGCanvas.FILL_RULE_NON_ZERO;
+        blendmode = Mode.SRC_OVER;
+        fillPaint = Color.BLACK;
+        strokePaint = Color.BLACK;
+        linewidth = 1.0f;
+        linecap = BasicStroke.CAP_SQUARE;
+        linejoin = BasicStroke.JOIN_MITER;
+        miterlimit = 10f;
+        stroke = null;
+        path = new Path2D();
+        ngtext = new NGText();
+        pgfont = (PGFont) Font.getDefault().impl_getNativeFont();
+        align = PGCanvas.ALIGN_LEFT;
+        baseline = VPos.BASELINE.ordinal();
+        transform = new Affine2D(highestPixelScale, 0, 0,
+                                 highestPixelScale, 0, 0);
+        clipStack = new LinkedList<Path2D>();
+    }
+
+    static final Affine2D TEMP_PATH_TX = new Affine2D();
+    static final int numCoords[] = { 2, 2, 4, 6, 0 };
     Shape untransformedPath = new Shape() {
 
         @Override
@@ -250,9 +277,28 @@ public class NGCanvas extends NGNode implements PGCanvas {
                                           rb.getMaxX() - tx, rb.getMaxY() - ty);
                 }
             }
-            RectBounds bounds = new RectBounds();
-            shapebounds(path, bounds, getInverseTransform());
-            return bounds;
+            // We could use Shape.accumulate, but that method optimizes the
+            // bounds for curves and the optimized code above will simply ask
+            // the path for its bounds - which in this case of a Path2D would
+            // simply accumulate all of the coordinates in the buffer.  So,
+            // we write a simpler accumulator loop here to be consistent with
+            // the optimized case above.
+            float x0 = Float.POSITIVE_INFINITY;
+            float y0 = Float.POSITIVE_INFINITY;
+            float x1 = Float.NEGATIVE_INFINITY;
+            float y1 = Float.NEGATIVE_INFINITY;
+            PathIterator pi = path.getPathIterator(getInverseTransform());
+            while (!pi.isDone()) {
+                int ncoords = numCoords[pi.currentSegment(TEMP_COORDS)];
+                for (int i = 0; i < ncoords; i += 2) {
+                    if (x0 > TEMP_COORDS[i+0]) x0 = TEMP_COORDS[i+0];
+                    if (x1 < TEMP_COORDS[i+0]) x1 = TEMP_COORDS[i+0];
+                    if (y0 > TEMP_COORDS[i+1]) y0 = TEMP_COORDS[i+1];
+                    if (y1 < TEMP_COORDS[i+1]) y1 = TEMP_COORDS[i+1];
+                }
+                pi.next();
+            }
+            return new RectBounds(x0, y0, x1, y1);
         }
 
         @Override
@@ -325,6 +371,10 @@ public class NGCanvas extends NGNode implements PGCanvas {
     };
 
     private Affine2D getInverseTransform() {
+        if (inverseTransform == null) {
+            inverseTransform = new Affine2D();
+            inversedirty = true;
+        }
         if (inversedirty) {
             inverseTransform.setTransform(transform);
             try {
@@ -341,7 +391,7 @@ public class NGCanvas extends NGNode implements PGCanvas {
     protected boolean hasOverlappingContents() {
         return true;
     }
-    
+
     private static void shapebounds(Shape shape, RectBounds bounds,
                                     BaseTransform transform) 
     {
@@ -372,7 +422,11 @@ public class NGCanvas extends NGNode implements PGCanvas {
                 thebuf.resetForWrite();
                 thebuf = null;
             }
-            g.drawTexture(cv.tex, 0, 0, tw, th);
+            float dw = tw / highestPixelScale;
+            float dh = th / highestPixelScale;
+            g.drawTexture(cv.tex,
+                          0, 0, dw, dh,
+                          0, 0, tw, th);
             // Must save the pixels every frame if RTT is volatile.
             cv.save(g, tw, th);
         }
@@ -434,17 +488,17 @@ public class NGCanvas extends NGNode implements PGCanvas {
                                   CompositeMode comp,
                                   RenderBuf destbuf)
     {
-        blender.setTopInput(drawbuf.input);
-        blender.setBottomInput(clipbuf.input);
-        blender.setMode(mode);
-        Rectangle clip;
+        BLENDER.setTopInput(drawbuf.input);
+        BLENDER.setBottomInput(clipbuf.input);
+        BLENDER.setMode(mode);
+        Rectangle blendclip;
         if (bounds != null) {
-            clip = new Rectangle(bounds);
+            blendclip = new Rectangle(bounds);
         } else {
-            clip = null;
+            blendclip = null;
         }
-        applyEffectOnAintoC(null, blender,
-                            BaseTransform.IDENTITY_TRANSFORM, clip,
+        applyEffectOnAintoC(null, BLENDER,
+                            BaseTransform.IDENTITY_TRANSFORM, blendclip,
                             comp, destbuf);
     }
 
@@ -482,7 +536,6 @@ public class NGCanvas extends NGNode implements PGCanvas {
         VPos.BOTTOM.ordinal(),
     };
     private static final Affine2D TEMP_TX = new Affine2D();
-    private static final Affine2D TEMP_PATH_TX = new Affine2D();
     private void renderStream(GrowableDataBuffer buf) {
         while (!buf.isEmpty()) {
             int token = buf.getByte();
@@ -509,11 +562,18 @@ public class NGCanvas extends NGNode implements PGCanvas {
                     path.closePath();
                     break;
                 case PATHEND:
-                    // Not needed?
+                    if (highestPixelScale != 1.0f) {
+                        TEMP_TX.setToScale(highestPixelScale, highestPixelScale);
+                        path.transform(TEMP_TX);
+                    }
                     break;
                 case PUSH_CLIP:
                 {
                     Path2D clippath = (Path2D) buf.getObject();
+                    if (highestPixelScale != 1.0f) {
+                        TEMP_TX.setToScale(highestPixelScale, highestPixelScale);
+                        clippath.transform(TEMP_TX);
+                    }
                     initClip();
                     renderClip(clippath);
                     clipStack.addLast(clippath);
@@ -536,24 +596,28 @@ public class NGCanvas extends NGNode implements PGCanvas {
                 }
                 case PUT_ARGB:
                 {
-                    int x = buf.getInt();
-                    int y = buf.getInt();
+                    float dx1 = buf.getInt();
+                    float dy1 = buf.getInt();
                     int argb = buf.getInt();
-                    tmpImage.setArgb(0, 0, argb);
+                    TMP_IMAGE.setArgb(0, 0, argb);
                     Graphics gr = cv.g;
                     gr.setExtraAlpha(1.0f);
                     gr.setCompositeMode(CompositeMode.SRC);
                     gr.setTransform(BaseTransform.IDENTITY_TRANSFORM);
                     ResourceFactory factory = gr.getResourceFactory();
                     Texture tex =
-                        factory.getCachedTexture(tmpImage, Texture.WrapMode.CLAMP_TO_EDGE);
-                    gr.drawTexture(tex, x, y, 1, 1);
+                        factory.getCachedTexture(TMP_IMAGE, Texture.WrapMode.CLAMP_TO_EDGE);
+                    dx1 *= highestPixelScale;
+                    dy1 *= highestPixelScale;
+                    gr.drawTexture(tex,
+                                   dx1, dy1, dx1 + highestPixelScale, dy1 + highestPixelScale,
+                                   0, 0, 1, 1);
                     break;
                 }
                 case PUT_ARGBPRE_BUF:
                 {
-                    int dx = buf.getInt();
-                    int dy = buf.getInt();
+                    float dx1 = buf.getInt();
+                    float dy1 = buf.getInt();
                     int w  = buf.getInt();
                     int h  = buf.getInt();
                     byte[] data = (byte[]) buf.getObject();
@@ -564,18 +628,26 @@ public class NGCanvas extends NGNode implements PGCanvas {
                         factory.getCachedTexture(img, Texture.WrapMode.CLAMP_TO_EDGE);
                     gr.setTransform(BaseTransform.IDENTITY_TRANSFORM);
                     gr.setCompositeMode(CompositeMode.SRC);
-                    gr.drawTexture(tex, dx, dy, w, h);
+                    float dx2 = dx1 + w;
+                    float dy2 = dy1 + h;
+                    dx1 *= highestPixelScale;
+                    dy1 *= highestPixelScale;
+                    dx2 *= highestPixelScale;
+                    dy2 *= highestPixelScale;
+                    gr.drawTexture(tex,
+                                   dx1, dy1, dx2, dy2,
+                                   0, 0, w, h);
                     gr.setCompositeMode(CompositeMode.SRC_OVER);
                     break;
                 }
                 case TRANSFORM:
                 {
-                    double mxx = buf.getDouble();
-                    double mxy = buf.getDouble();
-                    double mxt = buf.getDouble();
-                    double myx = buf.getDouble();
-                    double myy = buf.getDouble();
-                    double myt = buf.getDouble();
+                    double mxx = buf.getDouble() * highestPixelScale;
+                    double mxy = buf.getDouble() * highestPixelScale;
+                    double mxt = buf.getDouble() * highestPixelScale;
+                    double myx = buf.getDouble() * highestPixelScale;
+                    double myy = buf.getDouble() * highestPixelScale;
+                    double myt = buf.getDouble() * highestPixelScale;
                     transform.setTransform(mxx, myx, mxy, myy, mxt, myt);
                     inversedirty = true;
                     break;
@@ -631,9 +703,18 @@ public class NGCanvas extends NGNode implements PGCanvas {
                 {
                     Effect e = (Effect) buf.getObject();
                     RenderBuf dest = clipStack.isEmpty() ? cv : temp;
+                    BaseTransform tx;
+                    if (highestPixelScale != 1.0f) {
+                        TEMP_TX.setToScale(highestPixelScale, highestPixelScale);
+                        tx = TEMP_TX;
+                        cv.input.setPixelScale(highestPixelScale);
+                    } else {
+                        tx = BaseTransform.IDENTITY_TRANSFORM;
+                    }
                     applyEffectOnAintoC(cv.input, e,
-                                        BaseTransform.IDENTITY_TRANSFORM, null,
+                                        tx, null,
                                         CompositeMode.SRC, dest);
+                    cv.input.setPixelScale(1.0f);
                     if (dest != cv) {
                         blendAthruBintoC(dest, Mode.SRC_IN, clip,
                                          null, CompositeMode.SRC, cv);
@@ -1058,8 +1139,8 @@ public class NGCanvas extends NGNode implements PGCanvas {
     }
 
     public void updateBounds(float w, float h) {
-        this.tw = (int) Math.ceil(w);
-        this.th = (int) Math.ceil(h);
+        this.tw = (int) Math.ceil(w * highestPixelScale);
+        this.th = (int) Math.ceil(h * highestPixelScale);
         geometryChanged();
     }
 
@@ -1154,9 +1235,15 @@ public class NGCanvas extends NGNode implements PGCanvas {
 
     static class EffectInput extends Effect {
         RTTexture tex;
+        float pixelscale;
 
         EffectInput(RTTexture tex) {
             this.tex = tex;
+            this.pixelscale = 1.0f;
+        }
+
+        public void setPixelScale(float scale) {
+            this.pixelscale = scale;
         }
 
         @Override
@@ -1166,7 +1253,14 @@ public class NGCanvas extends NGNode implements PGCanvas {
         {
             Filterable f = PrDrawable.create(fctx, tex);
             Rectangle r = new Rectangle(tex.getContentWidth(), tex.getContentHeight());
-            return new ImageData(fctx, f, r);
+            ImageData id = new ImageData(fctx, f, r);
+            if (pixelscale != 1.0f || !transform.isIdentity()) {
+                Affine2D a2d = new Affine2D();
+                a2d.scale(1.0f / pixelscale, 1.0f / pixelscale);
+                a2d.concatenate(transform);
+                id = id.transform(a2d);
+            }
+            return id;
         }
 
         @Override

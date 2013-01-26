@@ -24,6 +24,7 @@
  */
 package com.sun.javafx.sg.prism;
 
+import com.sun.glass.ui.Screen;
 import java.util.List;
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.Point2D;
@@ -63,6 +64,12 @@ import static com.sun.javafx.logging.PulseLogger.*;
  * Basic implementation of node.
  */
 public abstract class NGNode extends BaseNode<Graphics> {
+    protected static float highestPixelScale;
+    static {
+        for (Screen s : Screen.getScreens()) {
+            highestPixelScale = Math.max(s.getScale(), highestPixelScale);
+        }
+    }
 
     private final static GraphicsPipeline pipeline =
         GraphicsPipeline.getPipeline();
@@ -830,6 +837,9 @@ public abstract class NGNode extends BaseNode<Graphics> {
          */
         @Override
         protected boolean impl_scrollCacheCapable() {
+            if (highestPixelScale > 1.0f) {
+                return false;
+            }
             if (!(node instanceof NGGroup)) {
                 return false;
             }
