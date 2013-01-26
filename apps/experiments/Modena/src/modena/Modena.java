@@ -87,6 +87,7 @@ import javafx.stage.Stage;
 import javax.imageio.ImageIO;
 
 public class Modena extends Application {
+    public static final String TEST = "test";
     static {
         System.getProperties().put("javafx.pseudoClassOverrideEnabled", "true");
     }
@@ -131,6 +132,7 @@ public class Modena extends Application {
     private String styleSheetBase = "";
     private ToggleButton modenaButton,retinaButton,rtlButton;
     private TabPane contentTabs;
+    private boolean test = false;
     private final EventHandler<ActionEvent> rebuild = new EventHandler<ActionEvent>(){
         @Override public void handle(ActionEvent event) { 
             Platform.runLater(new Runnable() {
@@ -162,7 +164,25 @@ public class Modena extends Application {
         contentTabs.requestLayout();
     }
     
+    public void restart() {
+        mainStage.close();
+        root = null;
+        accentColor = null;
+        baseColor = null;
+        backgroundColor = null;
+        fontName = null;
+        fontSize = 13;
+        try {
+            start(new Stage());
+        } catch (Exception ex) {
+            throw new RuntimeException("Failed to start another Modena window", ex);
+        }
+    }
+    
     @Override public void start(Stage stage) throws Exception {
+        if (getParameters().getRaw().contains(TEST)) {
+            test = true;
+        }
         mainStage = stage;
         // set user agent stylesheet
         updateUserAgentStyleSheet(true);
@@ -173,6 +193,7 @@ public class Modena extends Application {
         scene.getStylesheets().add(testAppCssUrl);
         stage.setScene(scene);
         stage.setTitle("Modena");
+//        stage.setIconified(test); // TODO: Blocked by http://javafx-jira.kenai.com/browse/JMY-203
         stage.show(); // see SamplePage.java:110 comment on how test fails without having stage shown
         instance = this;
     }
@@ -272,6 +293,7 @@ public class Modena extends Application {
                 ).build()
             );
             contentTabs.getSelectionModel().select(selectedTab);
+            samplePage.setMouseTransparent(test);
             // height test set selection for 
             Platform.runLater(new Runnable() {
                 @Override public void run() {
@@ -337,7 +359,14 @@ public class Modena extends Application {
                 new Label("Accent:"),
                 createAccentColorPicker(),
                 new Separator(),
-                ButtonBuilder.create().text("Save...").onAction(saveBtnHandler).build()
+                ButtonBuilder.create().text("Save...").onAction(saveBtnHandler).build(),
+                ButtonBuilder.create().text("Restart").onAction(new EventHandler<ActionEvent>() {
+
+                    @Override
+                    public void handle(ActionEvent event) {
+                        restart();
+                    }
+                }).build()
             );
             toolBar.setId("TestAppToolbar");
             // Create content group used for scaleing @2x
