@@ -26,7 +26,6 @@
 package com.sun.javafx.scene.control.skin;
 
 import com.sun.javafx.PlatformUtil;
-import javafx.collections.ObservableList;
 import javafx.event.EventHandler;
 import javafx.geometry.Orientation;
 import javafx.geometry.Point2D;

@@ -29,6 +29,7 @@ import java.util.List;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.IntegerProperty;
 import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.ObjectPropertyBase;
 import javafx.beans.property.SimpleIntegerProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ChangeListener;
@@ -724,9 +725,46 @@ public class TreeView<T> extends Control {
      *      number of the visible items in the TreeView.
      */
     public void scrollTo(int index) {
-       getProperties().put(VirtualContainerBase.SCROLL_TO_INDEX_TOP, index);
+        ControlUtils.scrollToIndex(this, index);
     }
 
+    /**
+     * Called when there's a request to scroll an index into view using {@link #scrollTo(int)}
+     */
+    private ObjectProperty<EventHandler<ScrollToEvent<Integer>>> onScrollTo;
+    
+    public void setOnScrollTo(EventHandler<ScrollToEvent<Integer>> value) {
+        onScrollToProperty().set(value);
+    }
+    
+    public EventHandler<ScrollToEvent<Integer>> getOnScrollTo() {
+        if( onScrollTo != null ) {
+            return onScrollTo.get();
+        }
+        return null;
+    }
+    
+    public ObjectProperty<EventHandler<ScrollToEvent<Integer>>> onScrollToProperty() {
+        if( onScrollTo == null ) {
+            onScrollTo = new ObjectPropertyBase<EventHandler<ScrollToEvent<Integer>>>() {
+                @Override
+                protected void invalidated() {
+                    setEventHandler(ScrollToEvent.SCROLL_TO_TOP_INDEX, get());
+                }
+                @Override
+                public Object getBean() {
+                    return TreeView.this;
+                }
+
+                @Override
+                public String getName() {
+                    return "onScrollTo";
+                }
+            };
+        }
+        return onScrollTo;
+    }
+    
     /**
      * Returns the index position of the given TreeItem, taking into account the
      * current state of each TreeItem (i.e. whether or not it is expanded).

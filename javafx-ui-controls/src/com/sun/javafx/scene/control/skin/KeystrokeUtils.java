@@ -25,7 +25,6 @@
 package com.sun.javafx.scene.control.skin;
 
 import javafx.scene.input.KeyCharacterCombination;
-import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyCodeCombination;
 import javafx.scene.input.KeyCombination;
 

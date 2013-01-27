@@ -125,6 +125,15 @@ public class Pane extends Region {
     }
 
     /**
+     * Creates a Pane layout.
+     * @param children The initial set of children for this pane.
+     */
+    public Pane(Node... children) {
+        super();
+        getChildren().addAll(children);
+    }
+
+    /**
      *
      * @return modifiable list of children.
      */

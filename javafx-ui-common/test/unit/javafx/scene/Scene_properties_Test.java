@@ -31,6 +31,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import javafx.event.Event;
 import javafx.event.EventHandler;
+import javafx.geometry.NodeOrientation;
 import javafx.scene.paint.Color;
 
 import org.junit.runner.RunWith;
@@ -125,7 +126,12 @@ public final class Scene_properties_Test extends PropertiesTestBase {
             config(testScene, "onTouchMoved", null, testEventHandler),
             config(testScene, "onTouchStationary", null, testEventHandler),
             config(testScene, "onInputMethodTextChanged",
-                   null, testEventHandler)
+                   null, testEventHandler),
+            config(testScene,
+                   "nodeOrientation", NodeOrientation.INHERIT,
+                                      NodeOrientation.RIGHT_TO_LEFT,
+                   "effectiveNodeOrientation", NodeOrientation.LEFT_TO_RIGHT,
+                                               NodeOrientation.RIGHT_TO_LEFT)
         });
     }
 

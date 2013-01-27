@@ -25,9 +25,7 @@
 
 package javafx.scene.control;
 
-import java.util.Set;
 import javafx.css.PseudoClass;
-import com.sun.javafx.css.StyleManager;
 import javafx.beans.property.ReadOnlyIntegerProperty;
 import javafx.beans.property.ReadOnlyIntegerWrapper;
 
@@ -116,6 +114,10 @@ public class IndexedCell<T> extends Cell<T> {
         indexChanged();
     }
     
+    /** 
+     * This method is called whenever the index is changed, regardless of whether
+     * the new index is the same as the old index. 
+     */
     void indexChanged() { 
         // no-op
     }

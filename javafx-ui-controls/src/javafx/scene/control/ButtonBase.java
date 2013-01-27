@@ -24,7 +24,6 @@
  */
 package javafx.scene.control;
 
-import java.util.Set;
 import javafx.css.PseudoClass;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ObjectPropertyBase;

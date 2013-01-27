@@ -1,0 +1,58 @@
+<html>
+    <head>
+        <link href="fxml.css" rel="stylesheet"/>
+        <title>FXML FAQ</title>
+        <meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+    </head>
+
+<body>
+<h1>FXML FAQ</h1>
+<p class="subtitle">Last updated: 1/24/2013</p>
+
+<h2>Contents</h2>
+<ol class="contents">
+    <li><a href="#fxmlfactory_network_requests"</a>FXMLLoader shows unexpected network requests in webstart.</li>
+    <li><a href="#setroot_required">Setting root for &lt;fx:root&gt; is required.</a></li>
+    <li><a href="#list_and_arrays_initialization">Can list and array be initialized from an attribute?</a></li>
+    <li><a href="#prefixes_in_list_and_arrays_initialization">Can prefixes '$', '@', '%' be used in list and arrays initialization?</a></li>
+    <li><a href="#dynamic_event_handler">Could be event handler dynamically changed?</a></li>
+</ol>
+
+<ol>
+<li><h4><a name="fxmlloader_network_requests">FXMLLoader shows unexpected network requests in webstart.</a></h4>
+<p>XMLInputFactory looks up its current implementation class name in <span class="code">META-INF/services/javax.xml.stream.XMLInputFactory</span>. If such entry exists in one of application jars the request to the server doesn't happen because the resource is already available from loaded jar.
+    Create an empty file <span class="code">META-INF/services/javax.xml.stream.XMLInputFactory</span> and package it within your application. Factory finder will then get the file but because it is empty providerId==null which causes fallback to the default implementation of <span class="code">XMLInputFactory</span> on jre bootclasspath. </p></li>
+
+<li><h4><a name="setroot_required">Setting root for &lt;fx:root&gt; is required.</a></h4>
+    <p>Look at description of <a href="introduction_to_fxml.html#custom_components">custom components</a>. Setting root before loading fxml file wasn't required. Root was created and set if custom component had default constructor. To be consistent with documentation <span class="code">setRoot()</span> is always required before loading fxml file.</p></li>
+
+<li><h4><a name="list_and_arrays_initialization">Can list and array be initialized from an attribute?</a></h4>
+<p>FXMLLoader is able to initialize list or array property from a string value containing ',' (comma) delimited tokens.
+<pre class="code">
+&lt;VBox stylesheets="style1.css,style2.css,style3.css"/&gt;
+</pre>
+</p></li>
+<li><h4><a name="prefixes_in_list_and_arrays_initialization">Can prefixes '$', '@', '%' be used in list and arrays initialization?</a></h4>
+    <p>FXMLLoader is able to set a list or an array property from a value containing string tokens delimited by "," (list="a, b, c, d"). It can resolve properly tokens prefixed with "@", "%" or "\"
+Something like this list_property="%resource1, %resource2, ..." or stylesheets="@style1.css, @style2.css, ..." where % is resource and @ is relative path.
+</p></li>
+
+<li><h4><a name="dynamic_event_handler">Could be event handler dynamically changed?</a></h4>
+    <p>If you want to wire in events into the FXML elements the event needs to come from the controller or from the embedded scripts. This has been extended so that fxmloader looks to the namespace for event handler.</p>
+    How to put event handler implementation into namespace:
+    <pre class="code">
+     fxmlLoader.getNamespace().put("manualAction", new EventHandler<PropertyChangeEvent<String>>() {
+            public void handle(PropertyChangeEvent<String> stringPropertyChangeEvent) {
+                //handle code here
+            }
+        });
+    </pre>      
+    Reference event handler in fxml:
+    <pre class="code">
+        &lt;Widget onNameChange="$manualAction"/&gt;
+    </pre>
+</li>
+
+</ol>
+</body>
+</html>

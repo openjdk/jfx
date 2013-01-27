@@ -115,8 +115,8 @@ public abstract class MenuButtonSkinBase<C extends MenuButton, B extends MenuBut
 
         getSkinnable().requestLayout();
         
-        control.getItems().addListener(new ListChangeListener() {
-            @Override public void onChanged(Change c) {
+        control.getItems().addListener(new ListChangeListener<MenuItem>() {
+            @Override public void onChanged(Change<? extends MenuItem> c) {
                 while (c.next()) {
                     popup.getItems().removeAll(c.getRemoved());
                     popup.getItems().addAll(c.getFrom(), c.getAddedSubList());
@@ -326,13 +326,6 @@ public abstract class MenuButtonSkinBase<C extends MenuButton, B extends MenuBut
                         e.consume();
                     }
                 });
-        }
-        
-        /**
-         * Fires a new ActionEvent.
-         */
-        public void fire() {
-            button.fire();
         }
     }
 }

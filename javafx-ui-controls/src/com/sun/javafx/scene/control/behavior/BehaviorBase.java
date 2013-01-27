@@ -33,9 +33,7 @@ import javafx.scene.control.Control;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
-import java.util.Set;
 
 import com.sun.javafx.scene.traversal.Direction;
 

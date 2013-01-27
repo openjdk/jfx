@@ -3,15 +3,10 @@ package com.sun.javafx.scene.control.skin;
 import com.sun.javafx.event.EventDispatchChainImpl;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
-import javafx.event.ActionEvent;
 import javafx.event.EventDispatchChain;
-import javafx.event.EventHandler;
-import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.Skin;
 import javafx.scene.control.TextField;
-import javafx.scene.input.InputEvent;
-import javafx.scene.input.KeyEvent;
 
 /**
  */

@@ -35,15 +35,11 @@ import static javafx.scene.input.KeyCode.DOWN;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 import javafx.scene.control.ChoiceBox;
 import javafx.scene.control.SelectionModel;
 import javafx.scene.input.MouseEvent;
 
-import javafx.css.PseudoClass;
 import com.sun.javafx.scene.control.skin.Utils;
 
 /**
@@ -86,16 +82,14 @@ public class ChoiceBoxBehavior<T> extends BehaviorBase<ChoiceBox<T>> {
         else super.callAction(name);
     }
 
-    private TwoLevelFocusComboBehavior tlFocus;
-
-    public ChoiceBoxBehavior(ChoiceBox control) {
+    public ChoiceBoxBehavior(ChoiceBox<T> control) {
         super(control);
         /*
         ** only add this if we're on an embedded
         ** platform that supports 5-button navigation 
         */
         if (Utils.isEmbeddedNonTouch()) {
-            tlFocus = new TwoLevelFocusComboBehavior(control); // needs to be last.
+            new TwoLevelFocusComboBehavior(control); // needs to be last.
         }
     }
 
@@ -104,7 +98,7 @@ public class ChoiceBoxBehavior<T> extends BehaviorBase<ChoiceBox<T>> {
     }
 
     public void select(int index) {
-        SelectionModel sm = getControl().getSelectionModel();
+        SelectionModel<T> sm = getControl().getSelectionModel();
         if (sm == null) return;
 
         sm.select(index);
@@ -123,7 +117,7 @@ public class ChoiceBoxBehavior<T> extends BehaviorBase<ChoiceBox<T>> {
      * potentially arming the Button, this will transfer focus to the box
      */
     @Override public void mousePressed(MouseEvent e) {
-        ChoiceBox choiceButton = getControl();
+        ChoiceBox<T> choiceButton = getControl();
         super.mousePressed(e);
         if (choiceButton.isFocusTraversable()) choiceButton.requestFocus();
     }
@@ -134,7 +128,7 @@ public class ChoiceBoxBehavior<T> extends BehaviorBase<ChoiceBox<T>> {
      * only if the box was armed by a corresponding mouse press.
      */
     @Override public void mouseReleased(MouseEvent e) {
-        ChoiceBox choiceButton = getControl();
+        ChoiceBox<T> choiceButton = getControl();
         super.mouseReleased(e);
         if (choiceButton.isShowing() || !choiceButton.contains(e.getX(), e.getY())) {
             choiceButton.hide(); // hide if already showing 
@@ -150,7 +144,7 @@ public class ChoiceBoxBehavior<T> extends BehaviorBase<ChoiceBox<T>> {
      * press.
      */
     private void keyPressed() {
-        ChoiceBox choiceButton = getControl();
+        ChoiceBox<T> choiceButton = getControl();
         if (!choiceButton.isShowing()) {
             choiceButton.show();
         }
@@ -168,7 +162,7 @@ public class ChoiceBoxBehavior<T> extends BehaviorBase<ChoiceBox<T>> {
      * Invoked when "escape" key is released
      */
     public void cancel() {
-        ChoiceBox choiceButton = getControl();
+        ChoiceBox<T> choiceButton = getControl();
         choiceButton.hide();
     }
 

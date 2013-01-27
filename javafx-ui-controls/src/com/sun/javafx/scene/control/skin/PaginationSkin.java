@@ -44,7 +44,6 @@
 
 package com.sun.javafx.scene.control.skin;
 
-import com.sun.javafx.PlatformUtil;
 import javafx.css.StyleableBooleanProperty;
 import javafx.css.StyleableObjectProperty;
 import javafx.css.CssMetaData;
@@ -63,7 +62,6 @@ import javafx.beans.property.ObjectProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.ListChangeListener;
-import javafx.collections.ListChangeListener.Change;
 import javafx.css.StyleableProperty;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
@@ -389,7 +387,6 @@ public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehav
 
     private static final Interpolator interpolator = Interpolator.SPLINE(0.4829, 0.5709, 0.6803, 0.9928);
     private int currentAnimatedIndex;
-    private int previousAnimatedIndex;
     private boolean hasPendingAnimation = false;
 
     private void animateSwitchPage() {

@@ -769,19 +769,6 @@ public class StubToolkit extends Toolkit {
         throw new UnsupportedOperationException();
     }
 
-    public Class externalFormatClass = StubToolkit.class;
-
-    @Override
-    public boolean isExternalFormatSupported(Class type) {
-        return externalFormatClass == type;
-    }
-
-    public Object toExternalImagePassword = "toExternalImage";
-    @Override
-    public Object toExternalImage(Object o, Object o1) {
-        return new Object [] { o, o1, toExternalImagePassword };
-    }
-
     @Override public Object enterNestedEventLoop(Object key) {
         throw new UnsupportedOperationException("Not supported yet.");
     }

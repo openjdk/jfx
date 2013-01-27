@@ -469,16 +469,6 @@ final public class DummyToolkit extends Toolkit {
     }
 
     @Override
-    public boolean isExternalFormatSupported(Class format) {
-        throw new UnsupportedOperationException("Not supported yet.");
-    }
-
-    @Override
-    public Object toExternalImage(Object platformImg, Object imgType) {
-        throw new UnsupportedOperationException("Not supported yet.");
-    }
-
-    @Override
     public KeyCode getPlatformShortcutKey() {
         throw new UnsupportedOperationException("Not supported yet.");
     }

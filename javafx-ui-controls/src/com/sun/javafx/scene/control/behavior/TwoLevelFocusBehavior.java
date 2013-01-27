@@ -25,7 +25,7 @@
 
 package com.sun.javafx.scene.control.behavior;
 
-import javafx.css.PseudoClass;;
+import javafx.css.PseudoClass;
 import javafx.scene.Node;
 import javafx.scene.control.Control;
 import javafx.scene.control.PopupControl;
@@ -40,7 +40,6 @@ import javafx.event.EventDispatchChain;
 import javafx.event.EventDispatcher;
 import javafx.event.EventHandler;
 import javafx.scene.input.MouseEvent;
-import com.sun.javafx.css.StyleManager;
 
 /**
  * A two level focus handler allows a Control to behave as if it

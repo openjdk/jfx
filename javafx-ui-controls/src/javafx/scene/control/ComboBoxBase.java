@@ -25,7 +25,6 @@
 
 package javafx.scene.control;
 
-import java.util.Set;
 import javafx.css.PseudoClass;
 import javafx.beans.property.*;
 import javafx.event.ActionEvent;

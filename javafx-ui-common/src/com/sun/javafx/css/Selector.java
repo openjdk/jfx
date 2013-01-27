@@ -95,8 +95,6 @@ abstract public class Selector {
             return CompoundSelector.readBinary(is,strings);
     }
     
-    protected abstract String writeJava();
-
     public static Selector createSelector(final String cssSelector) {
         if (cssSelector == null || cssSelector.length() == 0) {
             return null; // actually return a default no-match selector

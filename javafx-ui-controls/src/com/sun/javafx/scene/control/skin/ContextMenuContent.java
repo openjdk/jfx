@@ -32,7 +32,6 @@ package com.sun.javafx.scene.control.skin;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Set;
 
 import javafx.animation.Animation.Status;
 import javafx.animation.KeyFrame;
@@ -110,8 +109,6 @@ public class ContextMenuContent extends Region {
     
     private boolean itemsDirty = true;
     
-    private TwoLevelFocusPopupBehavior tlFocus;
-
     /***************************************************************************
      * Constructors
      **************************************************************************/
@@ -148,7 +145,7 @@ public class ContextMenuContent extends Region {
         ** platform that supports 5-button navigation 
         */
         if (Utils.isEmbeddedNonTouch()) {
-            tlFocus = new TwoLevelFocusPopupBehavior(this);
+            new TwoLevelFocusPopupBehavior(this);
         }
     }
     
@@ -461,7 +458,7 @@ public class ContextMenuContent extends Region {
         });
         
         // RT-19624 calling requestFocus inside layout was casuing repeated layouts.
-        contextMenu.addEventHandler(Menu.ON_SHOWN, new EventHandler() {
+        contextMenu.addEventHandler(Menu.ON_SHOWN, new EventHandler<Event>() {
             @Override public void handle(Event event) {
                 for (Node child : itemsContainer.getChildren()) {
                     if (child instanceof MenuItemContainer) {
@@ -522,6 +519,8 @@ public class ContextMenuContent extends Region {
                         // select the menuitem
                         selectMenuItem();
                         ke.consume();
+                        break;
+                    default:
                         break;
                 }
             }
@@ -745,17 +744,6 @@ public class ContextMenuContent extends Region {
         if (currentFocusedIndex != -1) {
             ((MenuItemContainer)(itemsContainer.getChildren().get(currentFocusedIndex))).requestFocus();
          }
-    }
-
-    private Menu getRootMenu(Menu menu) {
-        if (menu == null || menu.getParentMenu() == null) {
-            return menu;
-        }
-        Menu parentMenu = menu.getParentMenu();
-        while (parentMenu.getParentMenu() != null) {
-            parentMenu = parentMenu.getParentMenu();
-        }
-        return parentMenu;
     }
 
     /*

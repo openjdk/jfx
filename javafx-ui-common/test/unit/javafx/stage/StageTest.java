@@ -339,6 +339,32 @@ public class StageTest {
     }
 
     @Test
+    public void testMaximixedNotLostForAsyncNotifications() {
+        peer.holdNotifications();
+
+        s.setMaximized(true);
+        assertTrue(s.isMaximized());
+
+        s.setMaximized(false);
+        assertFalse(s.isMaximized());
+
+        peer.releaseSingleNotification();
+        assertTrue(s.isMaximized());
+
+        peer.releaseNotifications();
+
+        assertFalse(s.isMaximized());
+    }
+
+    @Test
+    public void testMaximizedNotification() {
+        peer.setMaximized(true);
+        assertTrue(s.isMaximized());
+        peer.setMaximized(false);
+        assertFalse(s.isMaximized());
+    }
+
+    @Test
     public void testBoundsSetAfterPeerIsRecreated() {
         s.setX(20);
         s.setY(50);

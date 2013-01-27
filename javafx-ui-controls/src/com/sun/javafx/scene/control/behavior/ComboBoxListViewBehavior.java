@@ -81,13 +81,13 @@ public class ComboBoxListViewBehavior<T> extends ComboBoxBaseBehavior<T> {
     }
 
     private void selectPrevious() {
-        SelectionModel sm = getComboBox().getSelectionModel();
+        SelectionModel<T> sm = getComboBox().getSelectionModel();
         if (sm == null) return;
         sm.selectPrevious();
     }
     
     private void selectNext() {
-        SelectionModel sm = getComboBox().getSelectionModel();
+        SelectionModel<T> sm = getComboBox().getSelectionModel();
         if (sm == null) return;
         sm.selectNext();
     }

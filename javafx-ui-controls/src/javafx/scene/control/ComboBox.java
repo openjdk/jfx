@@ -25,7 +25,6 @@
 
 package javafx.scene.control;
 
-import com.sun.javafx.scene.control.FocusableTextField;
 import javafx.collections.WeakListChangeListener;
 import com.sun.javafx.scene.control.skin.ComboBoxListViewSkin;
 import javafx.beans.InvalidationListener;
@@ -262,10 +261,10 @@ public class ComboBox<T> extends ComboBoxBase<T> {
             // FIXME temporary fix for RT-15793. This will need to be
             // properly fixed when time permits
             if (getSelectionModel() instanceof ComboBoxSelectionModel) {
-                ((ComboBoxSelectionModel)getSelectionModel()).updateItemsObserver(null, getItems());
+                ((ComboBoxSelectionModel<T>)getSelectionModel()).updateItemsObserver(null, getItems());
             }
             if (getSkin() instanceof ComboBoxListViewSkin) {
-                ComboBoxListViewSkin skin = (ComboBoxListViewSkin) getSkin();
+                ComboBoxListViewSkin<?> skin = (ComboBoxListViewSkin<?>) getSkin();
                 skin.updateListViewItems();
             }
         }
@@ -327,7 +326,7 @@ public class ComboBox<T> extends ComboBoxBase<T> {
             if (oldSM != null) {
                 oldSM.selectedItemProperty().removeListener(selectedItemListener);
             }
-            SingleSelectionModel sm = get();
+            SingleSelectionModel<T> sm = get();
             oldSM = sm;
             if (sm != null) {
                 sm.selectedItemProperty().addListener(selectedItemListener);
@@ -353,7 +352,7 @@ public class ComboBox<T> extends ComboBoxBase<T> {
     
     
     // --- Editor
-    private FocusableTextField textField;
+    private TextField textField;
     /**
      * The editor for the ComboBox. The editor is null if the ComboBox is not
      * {@link #editableProperty() editable}.
@@ -366,7 +365,7 @@ public class ComboBox<T> extends ComboBoxBase<T> {
     public final ReadOnlyObjectProperty<TextField> editorProperty() { 
         if (editor == null) {
             editor = new ReadOnlyObjectWrapper<TextField>(this, "editor");
-            textField = new FocusableTextField();
+            textField = new TextField();
             editor.set(textField);
         }
         return editor.getReadOnlyProperty(); 
@@ -380,7 +379,7 @@ public class ComboBox<T> extends ComboBoxBase<T> {
 
     /** {@inheritDoc} */
     @Override protected Skin<?> createDefaultSkin() {
-        return new ComboBoxListViewSkin(this);
+        return new ComboBoxListViewSkin<T>(this);
     }
     
     /***************************************************************************
@@ -506,11 +505,11 @@ public class ComboBox<T> extends ComboBoxBase<T> {
             }
         };
         
-        private WeakListChangeListener weakItemsContentObserver =
-                new WeakListChangeListener(itemsContentObserver);
+        private WeakListChangeListener<T> weakItemsContentObserver =
+                new WeakListChangeListener<T>(itemsContentObserver);
         
-        private WeakChangeListener weakItemsObserver = 
-                new WeakChangeListener(itemsObserver);
+        private WeakChangeListener<ObservableList<T>> weakItemsObserver = 
+                new WeakChangeListener<ObservableList<T>>(itemsObserver);
         
         private void updateItemsObserver(ObservableList<T> oldList, ObservableList<T> newList) {
             // update listeners

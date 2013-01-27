@@ -25,13 +25,13 @@
 
 package com.sun.javafx.scene.control.skin;
 
-import javafx.collections.MapChangeListener;
+import javafx.event.EventHandler;
+import javafx.geometry.Insets;
 import javafx.scene.control.Control;
 import javafx.scene.control.IndexedCell;
+import javafx.scene.control.ScrollToEvent;
 
 import com.sun.javafx.scene.control.behavior.BehaviorBase;
-import java.util.Map;
-import javafx.geometry.Insets;
 
 /**
  * Parent class to control skins whose contents are virtualized and scrollable.
@@ -43,23 +43,17 @@ import javafx.geometry.Insets;
  */
 public abstract class VirtualContainerBase<C extends Control, B extends BehaviorBase<C>, I extends IndexedCell> extends BehaviorSkinBase<C, B> {
 
-    public static final String SCROLL_TO_INDEX_TOP = "VirtualContainerBase.scrollToIndexTop";
-    public static final String SCROLL_TO_OFFSET = "VirtualContainerBase.scrollToOffset";    
-
     public VirtualContainerBase(final C control, B behavior) {
         super(control, behavior);
-        
         flow = new VirtualFlow<I>();
-        handleControlProperties(control);
+        
+        control.addEventHandler(ScrollToEvent.SCROLL_TO_TOP_INDEX, new EventHandler<ScrollToEvent<Integer>>() {
 
-        control.getProperties().addListener(new MapChangeListener<Object, Object>() {
             @Override
-            public void onChanged(Change<? extends Object, ? extends Object> c) {
-                if (c.wasAdded()) {
-                    handleControlProperties(control);
-                }
+            public void handle(ScrollToEvent<Integer> event) {
+                flow.scrollTo(event.getScrollTarget());
             }
-        });
+        });        
     }
 
     /**
@@ -100,23 +94,4 @@ public abstract class VirtualContainerBase<C extends Control, B extends Behavior
         return height + padding.getTop() + padding.getBottom();
     }
     
-    private void handleControlProperties(C control) {
-        Map<Object, Object>properties = control.getProperties();
-        if (properties.containsKey(SCROLL_TO_INDEX_TOP)) {
-            Object index = properties.get(SCROLL_TO_INDEX_TOP);
-            if (index instanceof Integer) {
-                // we don't want the index to be centered
-                flow.scrollTo((Integer)index);
-            }
-
-            properties.remove(SCROLL_TO_INDEX_TOP);
-        } else if (properties.containsKey(SCROLL_TO_OFFSET)) {
-            Object offset = properties.get(SCROLL_TO_OFFSET);
-            if (offset instanceof Integer) {
-                flow.scrollToOffset((Integer)offset);
-            }
-
-            properties.remove(SCROLL_TO_OFFSET);
-        }        
-    }
 }

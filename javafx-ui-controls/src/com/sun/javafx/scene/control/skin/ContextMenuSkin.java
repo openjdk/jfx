@@ -53,14 +53,12 @@ public class ContextMenuSkin implements Skin<ContextMenu> {
     
     private final Region root;
 
-    private TwoLevelFocusPopupBehavior tlFocus;
-    
     /***/
     public ContextMenuSkin(final ContextMenu popupMenu) {
         this.popupMenu = popupMenu;
         // When a contextMenu is shown, requestFocus on its content to enable
         // keyboard navigation.
-        popupMenu.addEventHandler(Menu.ON_SHOWN, new EventHandler() {
+        popupMenu.addEventHandler(Menu.ON_SHOWN, new EventHandler<Event>() {
             @Override public void handle(Event event) {
                 Node cmContent = popupMenu.getSkin().getNode();
                 if (cmContent != null) cmContent.requestFocus();
@@ -83,7 +81,7 @@ public class ContextMenuSkin implements Skin<ContextMenu> {
         ** platform that supports 5-button navigation 
         */
         if (Utils.isEmbeddedNonTouch()) {
-            tlFocus = new TwoLevelFocusPopupBehavior(popupMenu); // needs to be last.
+            new TwoLevelFocusPopupBehavior(popupMenu); // needs to be last.
         }
     }
 

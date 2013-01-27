@@ -49,7 +49,6 @@ import java.util.Iterator;
 import java.util.List;
 import javafx.geometry.Insets;
 import javafx.geometry.NodeOrientation;
-import javafx.scene.Group;
 
 public class SplitPaneSkin extends BehaviorSkinBase<SplitPane, BehaviorBase<SplitPane>>  {
 
@@ -120,18 +119,18 @@ public class SplitPaneSkin extends BehaviorSkinBase<SplitPane, BehaviorBase<Spli
     }
           
     // This listener is to be removed from 'removed' dividers and added to 'added' dividers
-    class PosPropertyListener implements ChangeListener<Double> {
+    class PosPropertyListener implements ChangeListener<Number> {
         ContentDivider divider;
         
         public PosPropertyListener(ContentDivider divider) {
             this.divider = divider;
         }
         
-        @Override public void changed(ObservableValue observable, Double oldValue, Double newValue) {  
+        @Override public void changed(ObservableValue<? extends Number> observable, Number oldValue, Number newValue) {  
             // If we already know the dividers are in the correct position.  We do not
             // need to recheck their values.
             if (checkDividerPos) {
-                checkDividerPosition(divider, posToDividerPos(divider, newValue), posToDividerPos(divider, oldValue));                
+                checkDividerPosition(divider, posToDividerPos(divider, newValue.doubleValue()), posToDividerPos(divider, oldValue.doubleValue()));                
             }
             getSkinnable().requestLayout();
         }
@@ -205,7 +204,7 @@ public class SplitPaneSkin extends BehaviorSkinBase<SplitPane, BehaviorBase<Spli
         ContentDivider c = new ContentDivider(d);        
         c.setInitialPos(d.getPosition());
         c.setDividerPos(-1);
-        ChangeListener posPropertyListener = new PosPropertyListener(c);
+        ChangeListener<Number> posPropertyListener = new PosPropertyListener(c);
         c.setPosPropertyListener(posPropertyListener);
         d.positionProperty().addListener(posPropertyListener);
         initializeDivderEventHandlers(c);
@@ -935,7 +934,7 @@ public class SplitPaneSkin extends BehaviorSkinBase<SplitPane, BehaviorBase<Spli
         private StackPane grabber;
         private double x;
         private double y;  
-        private ChangeListener listener;
+        private ChangeListener<Number> listener;
 
         public ContentDivider(SplitPane.Divider d) {
             getStyleClass().setAll("split-pane-divider");
@@ -1031,11 +1030,11 @@ public class SplitPaneSkin extends BehaviorSkinBase<SplitPane, BehaviorBase<Spli
             this.y = y;
         }
 
-        public ChangeListener getPosPropertyListener() {
+        public ChangeListener<Number> getPosPropertyListener() {
             return listener;
         }
 
-        public void setPosPropertyListener(ChangeListener listener) {
+        public void setPosPropertyListener(ChangeListener<Number> listener) {
             this.listener = listener;
         }
                 

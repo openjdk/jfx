@@ -32,7 +32,6 @@ import com.sun.javafx.accessible.providers.AccessibleProvider;
 import com.sun.javafx.accessible.providers.SelectionItemProvider;
 import javafx.scene.control.RadioButton;
 import javafx.event.ActionEvent;
-import javafx.event.Event;
 import javafx.event.EventHandler;
 
 public class AccessibleRadioButton extends AccessibleControl implements SelectionItemProvider {

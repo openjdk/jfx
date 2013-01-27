@@ -4,6 +4,7 @@
 <?import java.util.*?>
 <?import javafx.collections.*?>
 <?import javafx.geometry.*?>
+<?import javafx.scene.chart.*?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 <?import javafx.scene.paint.*?>
@@ -41,11 +42,69 @@
         <ToggleGroup fx:id="toggle1" />
       </toggleGroup>
     </ToggleButton>
-    <ScrollPane layoutX="560.0" layoutY="439.0" prefHeight="194.0" prefWidth="336.9999000000025">
+    <TitledPane animated="false" layoutX="682.0" layoutY="298.0" prefHeight="59.0" prefWidth="216.0" text="Hello World">
       <content>
-        <AnchorPane id="Content" minHeight="0.0" minWidth="0.0" prefHeight="400.0" prefWidth="400.0" />
+        <AnchorPane id="Content" minHeight="0.0" minWidth="0.0" prefHeight="180.0" prefWidth="200.0" />
       </content>
-    </ScrollPane>
+    </TitledPane>
+    <Accordion layoutX="551.0" layoutY="382.0" prefHeight="270.0" prefWidth="347.0">
+      <expandedPane>
+        <TitledPane fx:id="x2" animated="true" expanded="true" text="Form">
+          <content>
+            <AnchorPane id="Content" minHeight="0.0" minWidth="0.0" prefHeight="180.0" prefWidth="200.0">
+              <children>
+                <GridPane id="GridPane" hgap="10.0" layoutX="28.0" layoutY="28.0" prefHeight="139.0" prefWidth="288.0" vgap="10.0">
+                  <children>
+                    <Button mnemonicParsing="false" text="Submit" GridPane.columnIndex="1" GridPane.rowIndex="2" />
+                    <TextField prefWidth="160.0" promptText="Name" text="" GridPane.columnIndex="1" GridPane.rowIndex="0" />
+                    <TextArea prefHeight="75.0" prefWidth="160.0" promptText="Address" text="" wrapText="true" GridPane.columnIndex="1" GridPane.rowIndex="1" />
+                    <Label text="Name" GridPane.columnIndex="0" GridPane.rowIndex="0" />
+                    <AnchorPane id="AnchorPane" minHeight="-Infinity" minWidth="-Infinity" prefHeight="-1.0" prefWidth="-1.0" GridPane.columnIndex="0" GridPane.rowIndex="1" GridPane.valignment="TOP">
+                      <children>
+                        <Label layoutX="55.0" layoutY="5.0" text="Address" />
+                      </children>
+                    </AnchorPane>
+                  </children>
+                  <columnConstraints>
+                    <ColumnConstraints halignment="RIGHT" hgrow="SOMETIMES" maxWidth="111.0" minWidth="10.0" prefWidth="65.0" />
+                    <ColumnConstraints halignment="RIGHT" hgrow="SOMETIMES" maxWidth="216.0" minWidth="10.0" prefWidth="213.0" />
+                  </columnConstraints>
+                  <rowConstraints>
+                    <RowConstraints minHeight="10.0" vgrow="SOMETIMES" />
+                    <RowConstraints minHeight="10.0" vgrow="SOMETIMES" />
+                    <RowConstraints minHeight="10.0" vgrow="SOMETIMES" />
+                  </rowConstraints>
+                </GridPane>
+              </children>
+            </AnchorPane>
+          </content>
+        </TitledPane>
+      </expandedPane>
+      <panes>
+        <fx:reference source="x2" />
+        <TitledPane animated="true" expanded="false" text="Chart">
+          <content>
+            <ScrollPane prefHeight="200.0" prefWidth="200.0">
+              <content>
+                <BubbleChart id="BubbleChart" title="My Bubble Chart" titleSide="TOP">
+                  <xAxis>
+                    <NumberAxis side="BOTTOM" />
+                  </xAxis>
+                  <yAxis>
+                    <NumberAxis side="LEFT" />
+                  </yAxis>
+                </BubbleChart>
+              </content>
+            </ScrollPane>
+          </content>
+        </TitledPane>
+        <TitledPane fx:id="x1" animated="true" expanded="false" text="Empty">
+          <content>
+            <AnchorPane id="Content" minHeight="0.0" minWidth="0.0" prefHeight="180.0" prefWidth="200.0" />
+          </content>
+        </TitledPane>
+      </panes>
+    </Accordion>
     <ChoiceBox layoutX="234.0" layoutY="85.0" prefWidth="160.0">
       <items>
         <FXCollections fx:factory="observableArrayList">
@@ -67,7 +126,7 @@
         </FXCollections>
       </items>
     </ComboBox>
-    <ProgressIndicator layoutX="571.0" layoutY="367.0" prefHeight="59.0" prefWidth="56.0" progress="-1.0" />
+    <ProgressIndicator layoutX="582.0" layoutY="300.0" prefHeight="59.0" prefWidth="56.0" progress="-1.0" />
     <SplitPane dividerPositions="0.5086505190311419" focusTraversable="true" layoutX="39.0" layoutY="361.0" orientation="VERTICAL" prefHeight="291.0" prefWidth="447.0">
       <items>
         <SplitPane dividerPositions="0.49435665914221216" focusTraversable="true" prefHeight="172.0" prefWidth="490.0">

@@ -35,7 +35,6 @@ import javafx.beans.Observable;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.IntegerProperty;
 import javafx.beans.property.ObjectProperty;
-import javafx.beans.value.WritableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
@@ -62,14 +61,12 @@ import javafx.css.StyleableObjectProperty;
 import javafx.css.StyleableProperty;
 import javafx.css.StyleableBooleanProperty;
 import javafx.css.StyleableIntegerProperty;
-import javafx.css.StyleableObjectProperty;
 import com.sun.javafx.css.converters.BooleanConverter;
 import com.sun.javafx.css.converters.PaintConverter;
 import com.sun.javafx.css.converters.SizeConverter;
 import com.sun.javafx.scene.control.behavior.ProgressIndicatorBehavior;
 import com.sun.javafx.scene.control.skin.resources.ControlResources;
 import javafx.geometry.Insets;
-import javafx.css.StyleableProperty;
 
 public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, ProgressIndicatorBehavior<ProgressIndicator>> {
 
@@ -220,7 +217,6 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, P
         // only update pie arc to nearest degree
         private int degProgress;
         private ProgressIndicator control;
-        private ProgressIndicatorSkin skin;
         private Text text;
         private StackPane indicator;
         private StackPane progress;
@@ -229,7 +225,6 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, P
 
         public DeterminateIndicator(ProgressIndicator control, ProgressIndicatorSkin s, Paint fillOverride) {
             this.control = control;
-            this.skin = s;
             
             getStyleClass().add("determinate-indicator");
 
@@ -396,7 +391,6 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, P
         private ProgressIndicatorSkin skin;
         private IndicatorPaths pathsG;
         private Timeline indeterminateTimeline;
-        private double angle = 0.0F;
         private final List<Double> opacities = new ArrayList<Double>();
         private boolean spinEnabled = false;
         private Paint fillOverride = null;

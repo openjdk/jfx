@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2012 Oracle and/or its affiliates.
+ * Copyright (c) 2008, 2013 Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -31,16 +31,19 @@
  */
 package modena;
 
+import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLConnection;
 import java.net.URLStreamHandler;
 import java.net.URLStreamHandlerFactory;
 import java.util.Locale;
+import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javafx.application.Application;
@@ -51,6 +54,7 @@ import javafx.embed.swing.SwingFXUtils;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.fxml.FXMLLoader;
+import javafx.geometry.NodeOrientation;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.SnapshotParameters;
@@ -60,6 +64,7 @@ import javafx.scene.control.ColorPicker;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.MenuButton;
+import javafx.scene.control.RadioMenuItem;
 import javafx.scene.control.RadioMenuItemBuilder;
 import javafx.scene.control.ScrollPaneBuilder;
 import javafx.scene.control.Separator;
@@ -69,6 +74,8 @@ import javafx.scene.control.ToggleButton;
 import javafx.scene.control.ToggleButtonBuilder;
 import javafx.scene.control.ToggleGroup;
 import javafx.scene.control.ToolBar;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
 import javafx.scene.image.WritableImage;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBoxBuilder;
@@ -84,6 +91,27 @@ public class Modena extends Application {
         System.getProperties().put("javafx.pseudoClassOverrideEnabled", "true");
     }
     private static final String testAppCssUrl = Modena.class.getResource("TestApp.css").toExternalForm();
+    private static String MODENA_STYLESHEET_CONTENT;
+    private static String MODENA_STYLESHEET_BASE;
+    private static String CASPIAN_STYLESHEET_CONTENT;
+    private static String CASPIAN_STYLESHEET_BASE;
+    static {
+        try {
+            // these are not supported ways to find the platform themes and may 
+            // change release to release. Just used here for testing.
+            final String caspianUrl = com.sun.javafx.scene.control.skin.ButtonSkin.class.getResource("caspian/caspian.css").toExternalForm();
+            final File modenaCssFile = new File("../../../javafx-ui-controls/src/com/sun/javafx/scene/control/skin/modena/modena.css");
+            String modenaUrl = modenaCssFile.exists() ? 
+                    modenaCssFile.toURI().toURL().toExternalForm() : 
+                    com.sun.javafx.scene.control.skin.ButtonSkin.class.getResource("modena/modena.css").toExternalForm();
+            MODENA_STYLESHEET_BASE = modenaUrl.substring(0,modenaUrl.lastIndexOf('/')+1);
+            MODENA_STYLESHEET_CONTENT = loadUrl(modenaUrl);
+            CASPIAN_STYLESHEET_BASE = caspianUrl.substring(0,caspianUrl.lastIndexOf('/')+1);
+            CASPIAN_STYLESHEET_CONTENT = loadUrl(caspianUrl);
+        } catch (MalformedURLException ex) {
+            Logger.getLogger(Modena.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }
     
     private BorderPane root;
     private SamplePage samplePage;
@@ -95,30 +123,95 @@ public class Modena extends Application {
     private Color accentColor;
     private String fontName = null;
     private int fontSize = 13;
-    private String cssOverride = "";
-    private ToggleButton modenaButton,retinaButton;
+    private String styleSheetContent = "";
+    private String styleSheetBase = "";
+    private ToggleButton modenaButton,retinaButton,rtlButton;
     private TabPane contentTabs;
+    
+    private static Modena instance;
+
+    public static Modena getInstance() {
+        return instance;
+    }
+    
+    public Map<String, Node> getContent() {
+        return samplePage.getContent();
+    }
+
+    public void setRetinaMode(boolean retinaMode) {
+        if (retinaMode) {
+            contentTabs.getTransforms().setAll(new Scale(2,2));
+        } else {
+            contentTabs.getTransforms().setAll(new Scale(1,1));
+        }
+        contentTabs.requestLayout();
+    }
     
     @Override public void start(Stage stage) throws Exception {
         mainStage = stage;
+        // set user agent stylesheet
+        updateUserAgentStyleSheet(true);
         // build UI
-        rebuildUI(true, false,0);
+        rebuildUI(true,false,0);
         // show UI
         Scene scene = new Scene(root, 1024, 768);
         scene.getStylesheets().add(testAppCssUrl);
         stage.setScene(scene);
-        stage.show();
+        stage.setTitle("Modena");
+        stage.show(); // see SamplePage.java:110 comment on how test fails without having stage shown
+        instance = this;
+    }
+    
+    private void updateUserAgentStyleSheet() {
+        updateUserAgentStyleSheet(modenaButton.isSelected());
+    }
+    
+    private void updateUserAgentStyleSheet(boolean modena) {
+        styleSheetContent = modena ? MODENA_STYLESHEET_CONTENT : CASPIAN_STYLESHEET_CONTENT;
+        styleSheetBase = modena ? MODENA_STYLESHEET_BASE : CASPIAN_STYLESHEET_BASE;
+        styleSheetContent += "\n.root {\n";
+        System.out.println("baseColor = "+baseColor);
+        System.out.println("accentColor = " + accentColor);
+        System.out.println("backgroundColor = " + backgroundColor);
+        if (baseColor != null && baseColor != Color.TRANSPARENT) {
+            final String color = String.format((Locale) null, "#%02x%02x%02x", 
+                    Math.round(baseColor.getRed() * 255), 
+                    Math.round(baseColor.getGreen() * 255), 
+                    Math.round(baseColor.getBlue() * 255));
+            styleSheetContent += "    -fx-base:"+color+";\n";
+        }
+        if (backgroundColor != null && backgroundColor != Color.TRANSPARENT) {
+            final String color = String.format((Locale) null, "#%02x%02x%02x", 
+                    Math.round(backgroundColor.getRed() * 255), 
+                    Math.round(backgroundColor.getGreen() * 255), 
+                    Math.round(backgroundColor.getBlue() * 255));
+            styleSheetContent += "    -fx-background:"+color+";\n";
+        }
+        if (accentColor != null && accentColor != Color.TRANSPARENT) {
+            final String color = String.format((Locale) null, "#%02x%02x%02x", 
+                    Math.round(accentColor.getRed() * 255), 
+                    Math.round(accentColor.getGreen() * 255), 
+                    Math.round(accentColor.getBlue() * 255));
+            styleSheetContent += "    -fx-accent:"+color+";\n";
+        }
+        if (fontName != null) {
+            styleSheetContent += "    -fx-font:"+fontSize+"px \""+fontName+"\";\n";
+        }
+        styleSheetContent += "}\n";
+        
+        // set white background for caspian
+        if (!modena) {
+            styleSheetContent += ".needs-background {\n-fx-background-color: white;\n}";
+        }
+            
+        // load theme
+        setUserAgentStylesheet("internal:stylesheet"+Math.random()+".css");
+        
+        if (root != null) root.requestLayout();
     }
     
     private void rebuildUI(boolean modena, boolean retina, int selectedTab) {
         try {
-            // load theme
-            if (modena) {
-                setUserAgentStylesheet(
-                        getClass().getResource("Modena.css").toExternalForm());
-            } else {
-                setUserAgentStylesheet(null);
-            }
             if (root == null) {
                 root = new BorderPane();
             } else {
@@ -157,25 +250,14 @@ public class Modena extends Application {
                     }
                 }
             });
-            // set white background for caspian
-            if (!modena) {
-                samplePage.setStyle("-fx-background-color: white;");
-                mosaic.setStyle("-fx-background-color: white;");
-                heightTest.setStyle("-fx-background-color: white;");
-            }
             // Create Toolbar
             retinaButton = ToggleButtonBuilder.create()
-                .text("Retina @2x")
+                .text("@2x")
                 .selected(retina)
                 .onAction(new EventHandler<ActionEvent>(){
                     @Override public void handle(ActionEvent event) {
                         ToggleButton btn = (ToggleButton)event.getSource();
-                        if (btn.isSelected()) {
-                            contentTabs.getTransforms().setAll(new Scale(2,2));
-                        } else {
-                            contentTabs.getTransforms().setAll(new Scale(1,1));
-                        }
-                        contentTabs.requestLayout();
+                        setRetinaMode(btn.isSelected());
                     }
                 })
                 .build();
@@ -189,7 +271,7 @@ public class Modena extends Application {
                             .selected(modena)
                             .onAction(new EventHandler<ActionEvent>(){
                                 @Override public void handle(ActionEvent event) { 
-                                    rebuildUI(true,retinaButton.isSelected(), contentTabs.getSelectionModel().getSelectedIndex());
+                                    updateUserAgentStyleSheet();
                                 }
                             })
                             .styleClass("left-pill")
@@ -200,29 +282,44 @@ public class Modena extends Application {
                             .selected(!modena)
                             .onAction(new EventHandler<ActionEvent>(){
                                 @Override public void handle(ActionEvent event) { 
-                                    rebuildUI(false,retinaButton.isSelected(), contentTabs.getSelectionModel().getSelectedIndex());
+                                    updateUserAgentStyleSheet();
                                 }
                             })
                             .styleClass("right-pill")
                             .build()
                     )
                     .build(),
+                ButtonBuilder.create()
+                    .graphic(new ImageView(new Image(Modena.class.getResource("reload_12x14.png").toString())))
+                    .onAction(new EventHandler<ActionEvent>() {
+                            @Override public void handle(ActionEvent event) {
+                                rebuildUI(modenaButton.isSelected(), retinaButton.isSelected(), 
+                                        contentTabs.getSelectionModel().getSelectedIndex());
+                            }
+                        })
+                    .build(),
+                rtlButton = ToggleButtonBuilder.create()
+                    .text("RTL")
+                    .onAction(new EventHandler<ActionEvent>() {
+                            @Override public void handle(ActionEvent event) {
+                                root.setNodeOrientation(rtlButton.isSelected() ? 
+                                        NodeOrientation.RIGHT_TO_LEFT : NodeOrientation.LEFT_TO_RIGHT);
+                            }
+                        })
+                    .build(),
                 new Separator(),
                 retinaButton,
-                new Separator(),
                 createFontMenu(),
-                new Separator(),
                 new Label("Base:"),
                 createBaseColorPicker(),
-                new Separator(),
                 new Label("Background:"),
                 createBackgroundColorPicker(),
-                new Separator(),
                 new Label("Accent:"),
                 createAccentColorPicker(),
                 new Separator(),
                 ButtonBuilder.create().text("Save...").onAction(saveBtnHandler).build()
             );
+            toolBar.setId("TestAppToolbar");
             // Create content group used for scaleing @2x
             final Pane contentGroup = new Pane() {
                 @Override protected void layoutChildren() {
@@ -240,6 +337,10 @@ public class Modena extends Application {
                     modenaButton.requestFocus();
                 }
             });
+            
+            samplePage.getStyleClass().add("needs-background");
+            mosaic.getStyleClass().add("needs-background");
+            heightTest.getStyleClass().add("needs-background");
             // apply retina scale
             if (retina) {
                 contentTabs.getTransforms().setAll(new Scale(2,2));
@@ -255,40 +356,35 @@ public class Modena extends Application {
         mb.getItems().addAll(
             RadioMenuItemBuilder.create().text("System Default").onAction(new EventHandler<ActionEvent>(){
                 @Override public void handle(ActionEvent event) {
-                    fontName = null;
-                    updateCSSOverrides();
+                    // TODO: This one doesn't work
+//                    fontName = null;
+//                    fontSize = 13;
+//                    updateUserAgentStyleSheet();
                 }
             }).style("-fx-font: 13px System;").toggleGroup(tg).selected(true).build(),
-            RadioMenuItemBuilder.create().text("Mac (13px)").onAction(new EventHandler<ActionEvent>(){
-                @Override public void handle(ActionEvent event) {
-                    fontName = "Lucida Grande";
-                    fontSize = 13;
-                    updateCSSOverrides();
-                }
-            }).style("-fx-font: 13px \"Lucida Grande\";").toggleGroup(tg).build(),
-            RadioMenuItemBuilder.create().text("Windows 100% (12px)").onAction(new EventHandler<ActionEvent>(){
-                @Override public void handle(ActionEvent event) {
-                    fontName = "Segoe UI";
-                    fontSize = 12;
-                    updateCSSOverrides();
-                }
-            }).style("-fx-font: 12px \"Segoe UI\";").toggleGroup(tg).build(),
-            RadioMenuItemBuilder.create().text("Windows 125% (15px)").onAction(new EventHandler<ActionEvent>(){
-                @Override public void handle(ActionEvent event) {
-                    fontName = "Segoe UI";
-                    fontSize = 15;
-                    updateCSSOverrides();
-                }
-            }).style("-fx-font: 15px \"Segoe UI\";").toggleGroup(tg).build(),
-            RadioMenuItemBuilder.create().text("Windows 150% (18px)").onAction(new EventHandler<ActionEvent>(){
-                @Override public void handle(ActionEvent event) {
-                    fontName = "Segoe UI";
-                    fontSize = 18;
-                    updateCSSOverrides();
-                }
-            }).style("-fx-font: 18px \"Segoe UI\";").toggleGroup(tg).build()
+            buildFontRadioMenuItem("Mac (13px)", "Lucida Grande", 13, tg),
+            buildFontRadioMenuItem("Windows 100% (12px)", "Segoe UI", 12, tg),
+            buildFontRadioMenuItem("Windows 125% (15px)", "Segoe UI", 15, tg),
+            buildFontRadioMenuItem("Windows 150% (18px)", "Segoe UI", 18, tg),
+            buildFontRadioMenuItem("Embedded Touch (22px)", "Arial", 22, tg),
+            buildFontRadioMenuItem("Embedded Small (9px)", "Arial", 9, tg)
         );
         return mb;
+    }
+
+    public RadioMenuItem buildFontRadioMenuItem(String name, final String in_fontName, final int in_fontSize, ToggleGroup tg) {
+        return RadioMenuItemBuilder.create().text(name).onAction(new EventHandler<ActionEvent>(){
+                   @Override public void handle(ActionEvent event) {
+                       setFont(in_fontName, in_fontSize);
+                   }
+
+               }).style("-fx-font: " + in_fontSize + "px \"" + in_fontName + "\";").toggleGroup(tg).build();
+    }
+    
+    public void setFont(String in_fontName, int in_fontSize) {
+        fontName = in_fontName;
+        fontSize = in_fontSize;
+        updateUserAgentStyleSheet();
     }
     
     private ColorPicker createBaseColorPicker() {
@@ -312,15 +408,19 @@ public class Modena extends Application {
         );
         colorPicker.valueProperty().addListener(new ChangeListener<Color>() {
             @Override public void changed(ObservableValue<? extends Color> observable, Color oldValue, Color c) {
-                if (c == null) {
-                    baseColor = null;
-                } else {
-                    baseColor = c;
-                }
-                updateCSSOverrides();
+                setBaseColor(c);
             }
         });
         return colorPicker;
+    }
+    
+    public void setBaseColor(Color c) {
+        if (c == null) {
+            baseColor = null;
+        } else {
+            baseColor = c;
+        }
+        updateUserAgentStyleSheet();
     }
     
     private ColorPicker createBackgroundColorPicker() {
@@ -349,7 +449,7 @@ public class Modena extends Application {
                 } else {
                     backgroundColor = c;
                 }
-                updateCSSOverrides();
+                updateUserAgentStyleSheet();
             }
         });
         return colorPicker;
@@ -378,49 +478,19 @@ public class Modena extends Application {
         );
         colorPicker.valueProperty().addListener(new ChangeListener<Color>() {
             @Override public void changed(ObservableValue<? extends Color> observable, Color oldValue, Color c) {
-                if (c == null) {
-                    accentColor = null;
-                } else {
-                    accentColor = c;
-                }
-                updateCSSOverrides();
+                setAccentColor(c);
             }
         });
         return colorPicker;
     }
-    
-    private void updateCSSOverrides() {
-        cssOverride = ".root {\n";
-        System.out.println("baseColor = "+baseColor);
-        System.out.println("accentColor = " + accentColor);
-        System.out.println("backgroundColor = " + backgroundColor);
-        if (baseColor != null && baseColor != Color.TRANSPARENT) {
-            final String color = String.format((Locale) null, "#%02x%02x%02x", 
-                    Math.round(baseColor.getRed() * 255), 
-                    Math.round(baseColor.getGreen() * 255), 
-                    Math.round(baseColor.getBlue() * 255));
-            cssOverride += "    -fx-base:"+color+";\n";
+
+    public void setAccentColor(Color c) {
+        if (c == null) {
+            accentColor = null;
+        } else {
+            accentColor = c;
         }
-        if (backgroundColor != null && backgroundColor != Color.TRANSPARENT) {
-            final String color = String.format((Locale) null, "#%02x%02x%02x", 
-                    Math.round(backgroundColor.getRed() * 255), 
-                    Math.round(backgroundColor.getGreen() * 255), 
-                    Math.round(backgroundColor.getBlue() * 255));
-            cssOverride += "    -fx-background:"+color+";\n";
-        }
-        if (accentColor != null && accentColor != Color.TRANSPARENT) {
-            final String color = String.format((Locale) null, "#%02x%02x%02x", 
-                    Math.round(accentColor.getRed() * 255), 
-                    Math.round(accentColor.getGreen() * 255), 
-                    Math.round(accentColor.getBlue() * 255));
-            cssOverride += "    -fx-accent:"+color+";\n";
-        }
-        if (fontName != null) {
-            cssOverride += "    -fx-font:"+fontSize+"px \""+fontName+"\";\n";
-        }
-        cssOverride += "}\n";
-        System.out.println("cssOverride = " + cssOverride);
-        mainStage.getScene().getStylesheets().setAll(testAppCssUrl,"internal:stylesheet.css");
+        updateUserAgentStyleSheet();
     }
     
     private EventHandler<ActionEvent> saveBtnHandler = new EventHandler<ActionEvent>() {
@@ -444,12 +514,28 @@ public class Modena extends Application {
         launch(args);
     }
     
+    /** Utility method to load a URL into a string */
+    private static String loadUrl(String url) {
+        StringBuilder sb = new StringBuilder();
+        try {
+            BufferedReader br = new BufferedReader(new InputStreamReader(new URL(url).openStream()));
+            String line;
+            while ((line = br.readLine()) != null) {
+                sb.append(line);
+                sb.append('\n');
+            }
+        } catch (IOException ex) {
+            Logger.getLogger(Modena.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        return sb.toString();
+    }
+    
     // =========================================================================
     // URL Handler to create magic "internal:stylesheet.css" url for our css string buffer
     {
         URL.setURLStreamHandlerFactory(new StringURLStreamHandlerFactory());
     }
-    
+
     /**
      * Simple URLConnection that always returns the content of the cssBuffer
      */
@@ -461,7 +547,7 @@ public class Modena extends Application {
         @Override public void connect() throws IOException {}
 
         @Override public InputStream getInputStream() throws IOException {
-            return new ByteArrayInputStream(cssOverride.getBytes("UTF-8"));
+            return new ByteArrayInputStream(styleSheetContent.getBytes("UTF-8"));
         }
     }
     
@@ -470,8 +556,9 @@ public class Modena extends Application {
             @Override protected URLConnection openConnection(URL url) throws IOException {
                 if (url.toString().toLowerCase().endsWith(".css")) {
                     return new StringURLConnection(url);
+                } else {
+                    return new URL(styleSheetBase+url.getFile()).openConnection();
                 }
-                throw new FileNotFoundException();
             }
         };
         @Override public URLStreamHandler createURLStreamHandler(String protocol) {

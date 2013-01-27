@@ -1,0 +1,3 @@
+<?import javafx.fxml.Widget?>
+
+<Widget onNameChange="$manualAction"/>

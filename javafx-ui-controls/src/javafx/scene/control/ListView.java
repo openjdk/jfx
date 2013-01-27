@@ -29,7 +29,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Set;
 
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
@@ -49,6 +48,7 @@ import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.event.EventType;
 import javafx.geometry.Orientation;
+import javafx.scene.Node;
 import javafx.util.Callback;
 
 import javafx.css.StyleableObjectProperty;
@@ -317,13 +317,13 @@ public class ListView<T> extends Control {
                     // FIXME temporary fix for RT-15793. This will need to be
                     // properly fixed when time permits
                     if (getSelectionModel() instanceof ListView.ListViewBitSetSelectionModel) {
-                        ((ListView.ListViewBitSetSelectionModel)getSelectionModel()).updateItemsObserver(oldItems, getItems());
+                        ((ListView.ListViewBitSetSelectionModel<T>)getSelectionModel()).updateItemsObserver(oldItems, getItems());
                     }
                     if (getFocusModel() instanceof ListView.ListViewFocusModel) {
-                        ((ListView.ListViewFocusModel)getFocusModel()).updateItemsObserver(oldItems, getItems());
+                        ((ListView.ListViewFocusModel<T>)getFocusModel()).updateItemsObserver(oldItems, getItems());
                     }
                     if (getSkin() instanceof ListViewSkin) {
-                        ListViewSkin skin = (ListViewSkin) getSkin();
+                        ListViewSkin<?> skin = (ListViewSkin<?>) getSkin();
                         skin.updateListViewItems();
                     }
                     
@@ -722,7 +722,44 @@ public class ListView<T> extends Control {
      *      size of the items list contained within the given ListView.
      */
     public void scrollTo(int index) {
-       getProperties().put(VirtualContainerBase.SCROLL_TO_INDEX_TOP, index);
+        ControlUtils.scrollToIndex(this, index);
+    }
+    
+    /**
+     * Called when there's a request to scroll an index into view using {@link #scrollTo(int)}
+     */
+    private ObjectProperty<EventHandler<ScrollToEvent<Integer>>> onScrollTo;
+    
+    public void setOnScrollTo(EventHandler<ScrollToEvent<Integer>> value) {
+        onScrollToProperty().set(value);
+    }
+    
+    public EventHandler<ScrollToEvent<Integer>> getOnScrollTo() {
+        if( onScrollTo != null ) {
+            return onScrollTo.get();
+        }
+        return null;
+    }
+    
+    public ObjectProperty<EventHandler<ScrollToEvent<Integer>>> onScrollToProperty() {
+        if( onScrollTo == null ) {
+            onScrollTo = new ObjectPropertyBase<EventHandler<ScrollToEvent<Integer>>>() {
+                @Override
+                protected void invalidated() {
+                    setEventHandler(ScrollToEvent.SCROLL_TO_TOP_INDEX, get());
+                }
+                @Override
+                public Object getBean() {
+                    return ListView.this;
+                }
+
+                @Override
+                public String getName() {
+                    return "onScrollTo";
+                }
+            };
+        }
+        return onScrollTo;
     }
 
     private AccessibleList accListView ;
@@ -738,7 +775,7 @@ public class ListView<T> extends Control {
 
     /** {@inheritDoc} */
     @Override protected Skin<?> createDefaultSkin() {
-        return new ListViewSkin(this);
+        return new ListViewSkin<T>(this);
     }
     
     /***************************************************************************
@@ -951,11 +988,11 @@ public class ListView<T> extends Control {
             }
         };
         
-        private WeakListChangeListener weakItemsContentObserver =
-                new WeakListChangeListener(itemsContentObserver);
+        private WeakListChangeListener<T> weakItemsContentObserver =
+                new WeakListChangeListener<T>(itemsContentObserver);
         
-        private WeakChangeListener weakItemsObserver = 
-                new WeakChangeListener(itemsObserver);
+        private WeakChangeListener<ObservableList<T>> weakItemsObserver = 
+                new WeakChangeListener<ObservableList<T>>(itemsObserver);
         
         private void updateItemsObserver(ObservableList<T> oldList, ObservableList<T> newList) {
             // update listeners
@@ -1129,7 +1166,7 @@ public class ListView<T> extends Control {
             if (listView == null) {
                 itemCount = -1;
             } else {
-                List items = listView.getItems();
+                List<T> items = listView.getItems();
                 itemCount = items == null ? -1 : items.size();
             }
         } 
@@ -1232,7 +1269,7 @@ public class ListView<T> extends Control {
             if (listView == null) {
                 itemCount = -1;
             } else {
-                List items = listView.getItems();
+                List<T> items = listView.getItems();
                 itemCount = items == null ? -1 : items.size();
             }
         } 

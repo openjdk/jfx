@@ -133,10 +133,9 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeViewB
             // the tree.
             if (! getSkinnable().isShowRoot() && getRoot() != null) {
                  getRoot().setExpanded(true);
-
-                 // update the item count in the flow and behavior instances
-                updateItemCount();
             }
+            // update the item count in the flow and behavior instances
+            updateItemCount();
         } else if ("CELL_FACTORY".equals(p)) {
             flow.recreateCells();
         } else if ("FOCUS_TRAVERSABLE".equals(p)) {

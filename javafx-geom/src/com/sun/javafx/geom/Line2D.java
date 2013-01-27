@@ -733,7 +733,7 @@ public class Line2D extends Shape {
         bits += java.lang.Float.floatToIntBits(y1) * 37;
         bits += java.lang.Float.floatToIntBits(x2) * 43;
         bits += java.lang.Float.floatToIntBits(y2) * 47;
-        return (bits ^ (bits >> 32));
+        return bits;
     }
 
     @Override

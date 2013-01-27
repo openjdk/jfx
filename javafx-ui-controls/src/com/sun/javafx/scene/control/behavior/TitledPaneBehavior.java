@@ -37,7 +37,6 @@ import javafx.scene.Node;
 import javafx.scene.control.TitledPane;
 import javafx.scene.input.MouseEvent;
 
-import com.sun.javafx.scene.control.skin.AccordionSkin;
 import com.sun.javafx.scene.control.skin.TitledPaneSkin;
 import com.sun.javafx.scene.traversal.Direction;
 

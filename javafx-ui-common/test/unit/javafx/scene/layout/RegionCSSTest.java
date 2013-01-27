@@ -54,6 +54,7 @@ public class RegionCSSTest {
     //
     private Region region;
     private Scene scene;
+    private static final String NL = System.getProperty("line.separator");
 
     private void processCSS() {
         scene.getRoot().impl_processCSS(true);
@@ -475,8 +476,6 @@ public class RegionCSSTest {
     // try "50% left" -- shouldn't work
     // try 3 values... remaining one should be 0
     // If only one value is specified, the second value is assumed to be ???center??? -- whatever this means...
-
-    @Ignore("Bug in Parser sets the proportional hpos / vpos flags when they shouldn't be set")
     @Test public void backgroundImagePosition_right_bottom() {
         region.setStyle(
                 "-fx-background-image: url('javafx/scene/layout/red.png');" +
@@ -491,11 +490,45 @@ public class RegionCSSTest {
         BackgroundImage expected = new BackgroundImage(image.getImage(),
                 BackgroundRepeat.REPEAT, BackgroundRepeat.REPEAT,
                 new BackgroundPosition(Side.RIGHT, 20, false, Side.BOTTOM, 10, false),
-                new BackgroundSize(0, 0, false, false, false, false));
+                new BackgroundSize(AUTO, AUTO, true, true, false, false));
         assertEquals(expected, image);
     }
 
-    @Ignore("This test should work according to the spec, but doesn't.")
+    private static String dump(BackgroundImage image) {
+        StringBuilder b = new StringBuilder("BackgroundImage[");
+        b.append(NL + "  image: " + image.getImage());
+        b.append(NL + "  position: " + dump(image.getPosition()));
+        b.append(NL + "  repeat-x: " + image.getRepeatX());
+        b.append(NL + "  repeat-y: " + image.getRepeatY());
+        b.append(NL + "  size: " + dump(image.getSize()));
+        b.append(NL + "]");
+        return b.toString();
+    }
+    
+    private static String dump(BackgroundSize size) {
+        StringBuilder b = new StringBuilder("BackgroundSize[");
+        b.append(NL + "    width: " + size.getWidth());
+        b.append(NL + "    height: " + size.getHeight());
+        b.append(NL + "    widthAsPercentage: " + size.isHeightAsPercentage());
+        b.append(NL + "    heightAsPercentage: " + size.isWidthAsPercentage());
+        b.append(NL + "    contain: " + size.isContain());
+        b.append(NL + "    cover: " + size.isCover());
+        b.append(NL + "  ]");
+        return b.toString();
+    }
+    
+    private static String dump(BackgroundPosition position) {
+        StringBuilder b = new StringBuilder("BackgroundPosition[");
+        b.append(NL + "    hSide: " + position.getHorizontalSide());
+        b.append(NL + "    hPosition: " + position.getHorizontalPosition());
+        b.append(NL + "    hAsPercentage: " + position.isHorizontalAsPercentage());
+        b.append(NL + "    vSide: " + position.getVerticalSide());
+        b.append(NL + "    vPosition: " + position.getVerticalPosition());
+        b.append(NL + "    vAsPercentage: " + position.isVerticalAsPercentage());
+        b.append(NL + "  ]");
+        return b.toString();
+    }
+    
     @Test public void backgroundImagePosition_bottom_right() {
         region.setStyle(
                 "-fx-background-image: url('javafx/scene/layout/red.png');" +
@@ -510,11 +543,11 @@ public class RegionCSSTest {
         BackgroundImage expected = new BackgroundImage(image.getImage(),
                 BackgroundRepeat.REPEAT, BackgroundRepeat.REPEAT,
                 new BackgroundPosition(Side.RIGHT, 20, false, Side.BOTTOM, 10, false),
-                new BackgroundSize(0, 0, false, false, false, false));
+                new BackgroundSize(AUTO, AUTO, true, true, false, false));
         assertEquals(expected, image);
     }
 
-    @Test @Ignore public void backgroundImagePosition_top() {
+    @Test public void backgroundImagePosition_top() {
         region.setStyle(
                 "-fx-background-image: url('javafx/scene/layout/red.png');" +
                 "-fx-background-position: top;");
@@ -532,7 +565,7 @@ public class RegionCSSTest {
         assertEquals(expected, image);
     }
 
-    @Test  @Ignore public void backgroundImagePosition_left() {
+    @Test  public void backgroundImagePosition_left() {
         region.setStyle(
                 "-fx-background-image: url('javafx/scene/layout/red.png');" +
                 "-fx-background-position: left;");
@@ -604,7 +637,7 @@ public class RegionCSSTest {
         assertEquals(expected, image);
     }
 
-    @Test @Ignore public void backgroundImagePosition_center_top() {
+    @Test public void backgroundImagePosition_center_top() {
         region.setStyle(
                 "-fx-background-image: url('javafx/scene/layout/red.png');" +
                 "-fx-background-position: center top;");
@@ -640,7 +673,7 @@ public class RegionCSSTest {
         assertEquals(expected, image);
     }
 
-    @Test @Ignore public void backgroundImagePosition_Example8_2() {
+    @Test public void backgroundImagePosition_Example8_2() {
         region.setStyle(
                 "-fx-background-image: url('javafx/scene/layout/red.png');" +
                 "-fx-background-position: left top;");
@@ -676,7 +709,7 @@ public class RegionCSSTest {
         assertEquals(expected, image);
     }
 
-    @Test @Ignore public void backgroundImagePosition_Example8_4() {
+    @Test public void backgroundImagePosition_Example8_4() {
         region.setStyle(
                 "-fx-background-image: url('javafx/scene/layout/red.png');" +
                 "-fx-background-position: left 15px;");
@@ -694,7 +727,7 @@ public class RegionCSSTest {
         assertEquals(expected, image);
     }
 
-    @Test @Ignore public void backgroundImagePosition_Example8_5() {
+    @Test public void backgroundImagePosition_Example8_5() {
         region.setStyle(
                 "-fx-background-image: url('javafx/scene/layout/red.png');" +
                 "-fx-background-position: 10px top;");
@@ -712,7 +745,6 @@ public class RegionCSSTest {
         assertEquals(expected, image);
     }
 
-    @Ignore("Parser error. According to the spec this should work.")
     @Test public void backgroundImagePosition_Example8_6() {
         region.setStyle(
                 "-fx-background-image: url('javafx/scene/layout/red.png');" +
@@ -731,7 +763,7 @@ public class RegionCSSTest {
         assertEquals(expected, image);
     }
 
-    @Test @Ignore public void backgroundImagePosition_Example8_7() {
+    @Test public void backgroundImagePosition_Example8_7() {
         region.setStyle(
                 "-fx-background-image: url('javafx/scene/layout/red.png');" +
                 "-fx-background-position: left 10px top;");
@@ -749,7 +781,7 @@ public class RegionCSSTest {
         assertEquals(expected, image);
     }
 
-    @Test @Ignore public void backgroundImagePosition_Example10_1() {
+    @Test public void backgroundImagePosition_Example10_1() {
         region.setStyle(
                 "-fx-background-image: url('javafx/scene/layout/red.png');" +
                 "-fx-background-position: right top;");
@@ -767,7 +799,6 @@ public class RegionCSSTest {
         assertEquals(expected, image);
     }
 
-    @Ignore ("Fails because the parser does not allow out-of-order declaration")
     @Test public void backgroundImagePosition_Example10_2() {
         region.setStyle(
                 "-fx-background-image: url('javafx/scene/layout/red.png');" +

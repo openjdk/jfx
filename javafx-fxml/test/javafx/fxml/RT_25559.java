@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2012, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,32 +22,40 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-package com.preview.javafx.scene.control;
 
-import javafx.scene.control.Label;
+package javafx.fxml;
 
-class UITextArea extends Label {
-    double preferred_width = 360;
+import com.sun.javafx.fxml.PropertyChangeEvent;
+import javafx.event.EventHandler;
+import org.junit.Test;
 
-    /** Creates a new instance of UITextArea
-     */
-    public UITextArea(String text) {
-        setText(text);
-        init();
+import java.io.IOException;
+
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+
+public class RT_25559 {
+
+    @Test
+    public void testControllerFactory() throws IOException {
+        FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("rt_25559.fxml"));
+        final boolean[] ref = new boolean[] {false};
+        fxmlLoader.getNamespace().put("manualAction", new EventHandler<PropertyChangeEvent<String>>() {
+            @Override
+            public void handle(PropertyChangeEvent<String> stringPropertyChangeEvent) {
+                ref[0] = true;
+            }
+        });
+        fxmlLoader.load();
+
+        Widget w = fxmlLoader.getRoot();
+        assertFalse(ref[0]);
+        w.setName("abc");
+        assertTrue(ref[0]);
     }
 
-    /** Creates a new instance of UITextArea with
-     *  specified preferred width.
-     *  This is used by the dialog UI template.
-     */
-    public UITextArea(double my_width) {
-        preferred_width = my_width;
-        init();
+    public static void main(String[] args) throws IOException {
+        new RT_25559().testControllerFactory();
     }
-    
-    private void init() {
-        setPrefWidth(preferred_width);
-        setMinSize(USE_PREF_SIZE, USE_PREF_SIZE);
-        setWrapText(true);
-    }
+
 }
