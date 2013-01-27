@@ -341,12 +341,17 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
         }
     }
     
+    private String initialTextFieldValue = null;
     private TextField getEditableInputNode() {
         if (textField != null) return textField;
         
         textField = comboBox.getEditor();
         textField.setFocusTraversable(true);
         textField.promptTextProperty().bind(comboBox.promptTextProperty());
+
+        // Fix for RT-21406: ComboBox do not show initial text value
+        initialTextFieldValue = textField.getText();
+        // End of fix (see updateDisplayNode below for the related code)
         
         textField.focusedProperty().addListener(new ChangeListener<Boolean>() {
             @Override public void changed(ObservableValue<? extends Boolean> ov, Boolean t, Boolean hasFocus) {
@@ -371,11 +376,18 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
               
         T value = comboBox.getValue();
         if (comboBox.isEditable()) {
-            String stringValue = c.toString(value);
-            if (value == null || stringValue == null) {
-                textField.setText("");
-            } else if (! stringValue.equals(textField.getText())) {
-                textField.setText(stringValue);
+            if (initialTextFieldValue != null && ! initialTextFieldValue.isEmpty()) {
+                // Remainder of fix for RT-21406: ComboBox do not show initial text value
+                textField.setText(initialTextFieldValue);
+                initialTextFieldValue = null;
+                // end of fix
+            } else {
+                String stringValue = c.toString(value);
+                if (value == null || stringValue == null) {
+                    textField.setText("");
+                } else if (! stringValue.equals(textField.getText())) {
+                    textField.setText(stringValue);
+                }
             }
         } else {
             int index = getIndexOfComboBoxValueInItemsList();
