@@ -134,6 +134,7 @@ import com.sun.javafx.jmx.MXNodeAlgorithm;
 import com.sun.javafx.jmx.MXNodeAlgorithmContext;
 import sun.util.logging.PlatformLogger;
 import com.sun.javafx.perf.PerformanceTracker;
+import com.sun.javafx.print.NodeAccess;
 import com.sun.javafx.scene.BoundsAccessor;
 import com.sun.javafx.scene.CssFlags;
 import com.sun.javafx.scene.DirtyBits;
@@ -2178,7 +2179,7 @@ public abstract class Node implements EventTarget {
     public PGNode impl_getPGNode() {
         if (Utils.assertionEnabled()) {
             // Assertion checking code
-            if (!Scene.isPGAccessAllowed()) {
+            if (getScene() != null && !Scene.isPGAccessAllowed()) {
                 java.lang.System.err.println();
                 java.lang.System.err.println("*** unexpected PG access");
                 java.lang.Thread.dumpStack();
@@ -8181,5 +8182,19 @@ public abstract class Node implements EventTarget {
      */
     @Deprecated
     public abstract Object impl_processMXNode(MXNodeAlgorithm alg, MXNodeAlgorithmContext ctx);
+
+    /**
+     * This class is used by printing to get access to a private method.
+     */
+    private static class NodeAccessImpl extends NodeAccess {
+
+        public void layoutNodeForPrinting(Node node) {
+            node.doCSSLayoutSyncForSnapshot();
+        }
+    }
+
+    static {
+        NodeAccess.setNodeAccess(new NodeAccessImpl());
+    }
 }
 
