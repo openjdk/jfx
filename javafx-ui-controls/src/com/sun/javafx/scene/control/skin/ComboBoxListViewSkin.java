@@ -491,7 +491,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
                 if (getSkin() instanceof ListViewSkin) {
                     ListViewSkin skin = (ListViewSkin)getSkin();
                     if (itemCountDirty) {
-                        skin.updateCellCount();
+                        skin.updateRowCount();
                         itemCountDirty = false;
                     }
                     

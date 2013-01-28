@@ -2,29 +2,45 @@ package javafx.scene.control;
 
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
+import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.ReadOnlyObjectProperty;
+import javafx.collections.ObservableMap;
 import javafx.event.Event;
-import javafx.scene.Node;
+import javafx.scene.Scene;
 
 class ControlUtils {
-    private static final String CACHE_KEY = "util.scroll.index";
-    public static void scrollToIndex(final Node node, int index) {
-        if( node.getScene() == null ) {
-            if( ! node.getProperties().containsKey(CACHE_KEY) ) {
-                node.sceneProperty().addListener(new InvalidationListener() {
-                    
-                    @Override
-                    public void invalidated(Observable observable) {
-                        Integer idx = (Integer) node.getProperties().remove(CACHE_KEY);
-                        if( idx != null ) {
-                            Event.fireEvent(node, new ScrollToEvent<Integer>(node, node, ScrollToEvent.SCROLL_TO_TOP_INDEX, idx));    
-                        }
-                        node.sceneProperty().removeListener(this);
+    private static final String SCROLL_TO_KEY = "util.scroll.index";
+
+    private static void installScrollToCallback(final Control control, final Observable property, final int index) {
+        final ObservableMap<Object, Object> properties = control.getProperties();
+            
+        if(! properties.containsKey(SCROLL_TO_KEY)) {
+            property.addListener(new InvalidationListener() {
+                @Override public void invalidated(Observable observable) {
+                    Integer idx = (Integer) properties.remove(SCROLL_TO_KEY);
+                    if(idx != null) {
+                        Event.fireEvent(control, 
+                            new ScrollToEvent<Integer>(control, 
+                                control, 
+                                ScrollToEvent.SCROLL_TO_TOP_INDEX, 
+                                idx));    
                     }
-                });
-            }
-            node.getProperties().put(CACHE_KEY, index);
+                    property.removeListener(this);
+                }
+            });
+        }
+        properties.put(SCROLL_TO_KEY, index);
+    }
+    
+    private ControlUtils() { }
+    
+    public static void scrollToIndex(final Control control, int index) {
+        if(control.getScene() == null) {
+            installScrollToCallback(control, control.sceneProperty(), index);
+        } else if(control.getSkin() == null) {
+            installScrollToCallback(control, control.skinProperty(), index);
         } else {
-            Event.fireEvent(node, new ScrollToEvent<Integer>(node, node, ScrollToEvent.SCROLL_TO_TOP_INDEX, index));  
+            Event.fireEvent(control, new ScrollToEvent<Integer>(control, control, ScrollToEvent.SCROLL_TO_TOP_INDEX, index));  
         }
     }
 }

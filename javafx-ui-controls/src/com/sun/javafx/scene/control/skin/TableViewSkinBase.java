@@ -280,7 +280,6 @@ public abstract class TableViewSkinBase<S, C extends Control, B extends Behavior
      *                                                                         *
      **************************************************************************/
 
-    private boolean rowCountDirty;
     private boolean contentWidthDirty = true;
     
     /**
@@ -452,10 +451,7 @@ public abstract class TableViewSkinBase<S, C extends Control, B extends Behavior
     /** {@inheritDoc} */
     @Override protected void layoutChildren(final double x, double y,
             final double w, final double h) {
-        if (rowCountDirty) {
-            updateRowCount();
-            rowCountDirty = false;
-        }
+        super.layoutChildren(x, y, w, h);
         
         if (needCellsRebuilt) {
             flow.rebuildCells();
@@ -657,7 +653,7 @@ public abstract class TableViewSkinBase<S, C extends Control, B extends Behavior
 
     private boolean forceCellRebuild = false;
     
-    private void updateRowCount() {
+    @Override protected void updateRowCount() {
         updatePlaceholderRegionVisibility();
 
         int oldCount = flow.getCellCount();

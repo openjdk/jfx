@@ -93,7 +93,7 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListViewB
         flow.getVbar().addEventFilter(MouseEvent.MOUSE_PRESSED, ml);
         flow.getHbar().addEventFilter(MouseEvent.MOUSE_PRESSED, ml);
         
-        updateCellCount();
+        updateRowCount();
 
         // init the behavior 'closures'
         getBehavior().setOnFocusPreviousRow(new Runnable() {
@@ -146,10 +146,9 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListViewB
         }
     }
 
-    private boolean itemCountDirty;
     private final ListChangeListener<T> listViewItemsListener = new ListChangeListener<T>() {
         @Override public void onChanged(Change<? extends T> c) {
-            itemCountDirty = true;
+            rowCountDirty = true;
             getSkinnable().requestLayout();
         }
     };
@@ -168,7 +167,7 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListViewB
             listViewItems.addListener(weakListViewItemsListener);
         }
 
-        itemCountDirty = true;
+        rowCountDirty = true;
         getSkinnable().requestLayout();
     }
     
@@ -182,7 +181,7 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListViewB
     private boolean needCellsRebuilt = true;
     private boolean needCellsReconfigured = false;
 
-    void updateCellCount() {
+    @Override protected void updateRowCount() {
         if (flow == null) return;
         
         int oldCount = flow.getCellCount();
@@ -267,10 +266,7 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListViewB
     @Override
     protected void layoutChildren(final double x, final double y,
             final double w, final double h) {
-        if (itemCountDirty) {
-            updateCellCount();
-            itemCountDirty = false;
-        }
+        super.layoutChildren(x, y, w, h);
         
         if (needCellsRebuilt) {
             flow.rebuildCells();
