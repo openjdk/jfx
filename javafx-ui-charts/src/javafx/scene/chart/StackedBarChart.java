@@ -523,29 +523,27 @@ public class StackedBarChart<X, Y> extends XYChart<X, Y> {
     */
     private static class StyleableProperties {
 
-        private static final CssMetaData<StackedBarChart,Number> CATEGORY_GAP = 
-            new CssMetaData<StackedBarChart,Number>("-fx-category-gap",
+        private static final CssMetaData<StackedBarChart<?,?>,Number> CATEGORY_GAP = 
+            new CssMetaData<StackedBarChart<?,?>,Number>("-fx-category-gap",
                 SizeConverter.getInstance(), 10.0)  {
 
             @Override
-            public boolean isSettable(StackedBarChart node) {
+            public boolean isSettable(StackedBarChart<?,?> node) {
                 return node.categoryGap == null || !node.categoryGap.isBound();
             }
 
             @Override
-            public StyleableProperty<Number> getStyleableProperty(StackedBarChart node) {
-                return (StyleableProperty)node.categoryGapProperty();
+            public StyleableProperty<Number> getStyleableProperty(StackedBarChart<?,?> node) {
+                return (StyleableProperty<Number>)node.categoryGapProperty();
             }
         };
 
-        private static final List<CssMetaData> STYLEABLES;
+        private static final List<CssMetaData<? extends Node, ?>> STYLEABLES;
         static {
 
-            final List<CssMetaData> styleables =
-                new ArrayList<CssMetaData>(XYChart.getClassCssMetaData());
-            Collections.addAll(styleables,
-                CATEGORY_GAP
-            );
+            final List<CssMetaData<? extends Node, ?>> styleables =
+                new ArrayList<CssMetaData<? extends Node, ?>>(XYChart.getClassCssMetaData());
+            styleables.add(CATEGORY_GAP);
             STYLEABLES = Collections.unmodifiableList(styleables);
         }
     }
@@ -554,7 +552,7 @@ public class StackedBarChart<X, Y> extends XYChart<X, Y> {
      * @return The CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
      */
-    public static List<CssMetaData> getClassCssMetaData() {
+    public static List<CssMetaData<? extends Node, ?>> getClassCssMetaData() {
         return StyleableProperties.STYLEABLES;
     }
 
@@ -562,7 +560,7 @@ public class StackedBarChart<X, Y> extends XYChart<X, Y> {
      * {@inheritDoc}
      */
     @Override
-    public List<CssMetaData> getCssMetaData() {
+    public List<CssMetaData<? extends Node, ?>> getCssMetaData() {
         return getClassCssMetaData();
     }
 

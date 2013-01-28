@@ -25,6 +25,7 @@
 package javafx.css;
 
 import javafx.beans.value.WritableValue;
+import javafx.scene.Node;
 
 /**
  * StyleableProperty allows a {@link javafx.beans.property} to be styled from
@@ -59,6 +60,6 @@ public interface StyleableProperty<T> extends WritableValue<T> {
      * Reflect back the CssMetaData that corresponds to this 
      * <code>javafx.beans.property.StyleableProperty</code>
      */
-    CssMetaData getCssMetaData();
+    CssMetaData<? extends Node, T> getCssMetaData();
        
 }

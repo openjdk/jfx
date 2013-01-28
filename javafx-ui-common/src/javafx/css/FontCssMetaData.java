@@ -25,10 +25,9 @@
 
 package javafx.css;
 
-import com.sun.javafx.css.Size;
-import com.sun.javafx.css.SizeUnits;
 import com.sun.javafx.css.converters.FontConverter;
 import com.sun.javafx.css.converters.SizeConverter;
+import com.sun.javafx.css.converters.StringConverter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -40,10 +39,10 @@ import javafx.scene.text.FontWeight;
 /**
  * An partial implementation of CssMetaData for Font properties which
  * includes the font sub-properties: weight, style, family and size.
- * @param <T> The type of Node
+ * @param N The type of Node
  */
 @com.sun.javafx.beans.annotations.NoBuilder
-public abstract class FontCssMetaData<T extends Node> extends CssMetaData<T, Font> {
+public abstract class FontCssMetaData<N extends Node> extends CssMetaData<N, Font> {
 
     /**
      * The property name is concatenated with &quot;-weight&quot;,
@@ -73,63 +72,74 @@ public abstract class FontCssMetaData<T extends Node> extends CssMetaData<T, Fon
         super(property, FontConverter.getInstance(), initial, true, createSubProperties(property, initial));
     }
 
-    private static List<CssMetaData> createSubProperties(String property, Font initial) {
-        Font defaultFont = initial != null ? initial : Font.getDefault();
-        final CssMetaData<Node, Size> SIZE = 
-                new CssMetaData<Node, Size>(property.concat("-size"), 
-                SizeConverter.getInstance(), new Size(defaultFont.getSize(), SizeUnits.PT), true) {
+    private static <N extends Node> List<CssMetaData<? extends Node, ?>> createSubProperties(String property, Font initial) {
+        
+        final List<CssMetaData<N, ?>> subProperties = 
+                new ArrayList<CssMetaData<N, ?>>();
+        
+        final Font defaultFont = initial != null ? initial : Font.getDefault();
+        
+        final CssMetaData<N, String> FAMILY = 
+                new CssMetaData<N, String>(property.concat("-family"), 
+                StringConverter.getInstance(), defaultFont.getFamily(), true) {
             @Override
-            public boolean isSettable(Node node) {
+            public boolean isSettable(N node) {
                 return false;
             }
 
             @Override
-            public StyleableProperty<Size> getStyleableProperty(Node node) {
+            public StyleableProperty<String> getStyleableProperty(N node) {
                 return null;
             }
         };
-        final CssMetaData<Node, FontWeight> WEIGHT = 
-                new CssMetaData<Node, FontWeight>(property.concat("-weight"), 
-                SizeConverter.getInstance(), FontWeight.NORMAL, true) {
+        subProperties.add(FAMILY);
+        
+        final CssMetaData<N, Number> SIZE = 
+                new CssMetaData<N, Number>(property.concat("-size"), 
+                SizeConverter.getInstance(), defaultFont.getSize(), true) {
             @Override
-            public boolean isSettable(Node node) {
+            public boolean isSettable(N node) {
                 return false;
             }
 
             @Override
-            public StyleableProperty<FontWeight> getStyleableProperty(Node node) {
+            public StyleableProperty<Number> getStyleableProperty(N node) {
                 return null;
             }
         };
-        final CssMetaData<Node, FontPosture> STYLE = 
-                new CssMetaData<Node, FontPosture>(property.concat("-style"), 
-                SizeConverter.getInstance(), FontPosture.REGULAR, true) {
+        subProperties.add(SIZE);
+        
+        final CssMetaData<N, FontPosture> STYLE = 
+                new CssMetaData<N, FontPosture>(property.concat("-style"), 
+                FontConverter.FontStyleConverter.getInstance(), FontPosture.REGULAR, true) {
             @Override
-            public boolean isSettable(Node node) {
+            public boolean isSettable(N node) {
                 return false;
             }
 
             @Override
-            public StyleableProperty<FontPosture> getStyleableProperty(Node node) {
+            public StyleableProperty<FontPosture> getStyleableProperty(N node) {
                 return null;
             }
         };
-        final CssMetaData<Node, String> FAMILY = 
-                new CssMetaData<Node, String>(property.concat("-family"), 
-                SizeConverter.getInstance(), defaultFont.getFamily(), true) {
+        subProperties.add(STYLE);
+        
+        final CssMetaData<N, FontWeight> WEIGHT = 
+                new CssMetaData<N, FontWeight>(property.concat("-weight"), 
+                FontConverter.FontWeightConverter.getInstance(), FontWeight.NORMAL, true) {
             @Override
-            public boolean isSettable(Node node) {
+            public boolean isSettable(N node) {
                 return false;
             }
 
             @Override
-            public StyleableProperty<String> getStyleableProperty(Node node) {
+            public StyleableProperty<FontWeight> getStyleableProperty(N node) {
                 return null;
             }
         };
-        final List<CssMetaData> subProperties = new ArrayList<CssMetaData>();
-        Collections.addAll(subProperties, FAMILY, SIZE, STYLE, WEIGHT);
-        return Collections.unmodifiableList(subProperties);
+        subProperties.add(WEIGHT);
+        
+        return Collections.<CssMetaData<? extends Node, ?>>unmodifiableList(subProperties);
     }
     
 }

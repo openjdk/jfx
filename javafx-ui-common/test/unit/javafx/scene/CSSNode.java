@@ -24,6 +24,7 @@
  */
 package javafx.scene;
 
+import com.sun.javafx.css.converters.InsetsConverter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -41,6 +42,7 @@ import javafx.css.StyleableObjectProperty;
 import javafx.css.CssMetaData;
 import javafx.css.PseudoClass;
 import com.sun.javafx.css.converters.PaintConverter;
+import com.sun.javafx.css.converters.SizeConverter;
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.jmx.MXNodeAlgorithm;
@@ -261,7 +263,7 @@ public  class CSSNode extends Node {
 
             @Override
             public StyleableProperty<Paint> getStyleableProperty(CSSNode n) {
-                return (StyleableProperty)n.fillProperty();
+                return (StyleableProperty<Paint>)n.fillProperty();
             }
         };
         
@@ -275,12 +277,12 @@ public  class CSSNode extends Node {
 
             @Override
             public StyleableProperty<Paint> getStyleableProperty(CSSNode n) {
-                return (StyleableProperty)n.strokeProperty();
+                return (StyleableProperty<Paint>)n.strokeProperty();
             }
         };
         
         public static final CssMetaData<CSSNode,Number> PADDING = 
-            new CssMetaData<CSSNode,Number>("padding", PaintConverter.getInstance()) {
+            new CssMetaData<CSSNode,Number>("padding", SizeConverter.getInstance()) {
 
             @Override
             public boolean isSettable(CSSNode n) {
@@ -289,17 +291,17 @@ public  class CSSNode extends Node {
 
             @Override
             public StyleableProperty<Number> getStyleableProperty(CSSNode n) {
-                return (StyleableProperty)n.paddingProperty();
+                return (StyleableProperty<Number>)n.paddingProperty();
             }
         };
         
-        private static List<CssMetaData> STYLEABLES;
+        private static List<CssMetaData<? extends Node, ?>> STYLEABLES;
         static {
-            final List<CssMetaData> styleables =
-                new ArrayList<CssMetaData>(Node.getClassCssMetaData());
-            Collections.addAll(styleables,
-                FILL, STROKE, PADDING
-            );
+            final List<CssMetaData<? extends Node, ?>> styleables =
+                new ArrayList<CssMetaData<? extends Node, ?>>(Node.getClassCssMetaData());
+            styleables.add(FILL);
+            styleables.add(STROKE);
+            styleables.add(PADDING);
             
         }
         
@@ -309,15 +311,17 @@ public  class CSSNode extends Node {
      * @return The CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
      */
-    public static List<CssMetaData> getClassCssMetaData() {
+    public static List<CssMetaData<? extends Node, ?>> getClassCssMetaData() {
         return StyleableProperties.STYLEABLES;
     }
 
     /**
      * {@inheritDoc}
+     *
      */
+    
     @Override
-    public List<CssMetaData> getCssMetaData() {
+    public List<CssMetaData<? extends Node, ?>> getCssMetaData() {
         return getClassCssMetaData();
     }
 

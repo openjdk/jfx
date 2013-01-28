@@ -24,11 +24,11 @@
  */
 package com.sun.javafx.css.converters;
 
-import javafx.scene.paint.Color;
-import javafx.scene.text.Font;
-
 import com.sun.javafx.css.StyleConverterImpl;
 import javafx.css.ParsedValue;
+import javafx.css.StyleConverter;
+import javafx.scene.paint.Color;
+import javafx.scene.text.Font;
 
 public final class ColorConverter extends StyleConverterImpl<String, Color> {
 
@@ -37,7 +37,7 @@ public final class ColorConverter extends StyleConverterImpl<String, Color> {
     }
 
     // lazy, thread-safe instatiation
-    public static ColorConverter getInstance() {
+    public static StyleConverter<String, Color> getInstance() {
         return Holder.COLOR_INSTANCE;
     }
 

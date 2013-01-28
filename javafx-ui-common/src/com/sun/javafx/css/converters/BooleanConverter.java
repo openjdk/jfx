@@ -24,10 +24,10 @@
  */
 package com.sun.javafx.css.converters;
 
-import javafx.scene.text.Font;
-
 import com.sun.javafx.css.StyleConverterImpl;
 import javafx.css.ParsedValue;
+import javafx.css.StyleConverter;
+import javafx.scene.text.Font;
 
 public final class BooleanConverter extends StyleConverterImpl<String, Boolean> {
 
@@ -36,7 +36,7 @@ public final class BooleanConverter extends StyleConverterImpl<String, Boolean> 
         static BooleanConverter INSTANCE = new BooleanConverter();
     }
 
-    public static BooleanConverter getInstance() {
+    public static StyleConverter<String, Boolean> getInstance() {
         return Holder.INSTANCE;
     }
 

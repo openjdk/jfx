@@ -24,26 +24,24 @@
  */
 package com.sun.javafx.css.converters;
 
+import com.sun.javafx.css.StringStore;
+import com.sun.javafx.css.StyleConverterImpl;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
-
+import javafx.css.ParsedValue;
 import javafx.scene.text.Font;
 
-import com.sun.javafx.css.StringStore;
-import com.sun.javafx.css.StyleConverterImpl;
-import javafx.css.ParsedValue;
+public final class EnumConverter<E extends Enum<E>> extends StyleConverterImpl<String, E> {
 
-public final class EnumConverter<T extends Enum<T>> extends StyleConverterImpl<String, T> {
+    private final Class<E> enumClass;
 
-    private final Class enumClass;
-
-    public EnumConverter(Class enumClass) {
+    public EnumConverter(Class<E> enumClass) {
         this.enumClass = enumClass;
     }
 
     @Override
-    public T convert(ParsedValue<String, T> value, Font not_used) {
+    public E convert(ParsedValue<String, E> value, Font not_used) {
         if (enumClass == null) {
             return null;
         }
@@ -54,10 +52,10 @@ public final class EnumConverter<T extends Enum<T>> extends StyleConverterImpl<S
         }
         try {
             string = string.replace('-', '_');
-            return (T)Enum.valueOf(enumClass, string.toUpperCase());
+            return Enum.valueOf(enumClass, string.toUpperCase());
         } catch (IllegalArgumentException e) {
             // may throw another IllegalArgumentException
-            return (T)Enum.valueOf(enumClass, string);
+            return Enum.valueOf(enumClass, string);
         }
     }
 
@@ -68,12 +66,14 @@ public final class EnumConverter<T extends Enum<T>> extends StyleConverterImpl<S
         os.writeShort(index);
     }
 
+    @SuppressWarnings("unchecked") // Pending RT-27146
     public EnumConverter(DataInputStream is, String[] strings) {
-        Class eclass = null;
+        Class<E> eclass = null;
         try {
             int index = is.readShort();
             String cname = strings[index];
-            eclass = Class.forName(cname);
+            // Unchecked!
+            eclass = (Class<E>)Class.forName(cname);
         } catch (IOException ioe) {
             System.err.println("EnumConveter caught: " + ioe);
         } catch (ClassNotFoundException cnfe) {

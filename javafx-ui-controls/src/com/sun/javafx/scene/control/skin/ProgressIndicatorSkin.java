@@ -706,10 +706,10 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, P
                 }
             };
 
-        public static final List<CssMetaData> STYLEABLES;
+        public static final List<CssMetaData<? extends Node, ?>> STYLEABLES;
         static {
-            final List<CssMetaData> styleables = 
-                new ArrayList<CssMetaData>(SkinBase.getClassCssMetaData());
+            final List<CssMetaData<? extends Node, ?>> styleables = 
+                new ArrayList<CssMetaData<? extends Node, ?>>(SkinBase.getClassCssMetaData());
             Collections.addAll(styleables,
                                PROGRESS_COLOR,
                                INDETERMINATE_SEGMENT_COUNT,
@@ -723,7 +723,7 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, P
      * @return The CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
      */
-    public static List<CssMetaData> getClassCssMetaData() {
+    public static List<CssMetaData<? extends Node, ?>> getClassCssMetaData() {
         return StyleableProperties.STYLEABLES;
     }
 
@@ -731,7 +731,7 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, P
      * {@inheritDoc}
      */
     @Override
-    public List<CssMetaData> getCssMetaData() {
+    public List<CssMetaData<? extends Node, ?>> getCssMetaData() {
         return getClassCssMetaData();
     }
 

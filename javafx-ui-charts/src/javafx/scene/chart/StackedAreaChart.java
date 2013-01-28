@@ -744,11 +744,11 @@ public class StackedAreaChart<X,Y> extends XYChart<X,Y> {
     
     private static class StyleableProperties {
 
-        private static final List<CssMetaData> STYLEABLES;
+        private static final List<CssMetaData<? extends Node, ?>> STYLEABLES;
         
         static {
-            final List<CssMetaData> styleables =
-                new ArrayList<CssMetaData>(XYChart.getClassCssMetaData());
+            final List<CssMetaData<? extends Node, ?>> styleables =
+                new ArrayList<CssMetaData<? extends Node, ?>>(XYChart.getClassCssMetaData());
 
             STYLEABLES = Collections.unmodifiableList(styleables);
 
@@ -759,14 +759,14 @@ public class StackedAreaChart<X,Y> extends XYChart<X,Y> {
      * @return The CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
      */
-     public static List<CssMetaData> getClassCssMetaData() {
+     public static List<CssMetaData<? extends Node, ?>> getClassCssMetaData() {
          return StyleableProperties.STYLEABLES;
      }
     /**
      * {@inheritDoc}
      */
     @Override
-    public List<CssMetaData> getCssMetaData() {
+    public List<CssMetaData<? extends Node, ?>> getCssMetaData() {
         return getClassCssMetaData();
     }
 

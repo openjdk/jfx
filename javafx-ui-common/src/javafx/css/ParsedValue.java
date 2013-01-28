@@ -80,7 +80,9 @@ public class ParsedValue<V, T> {
      * @return The value converted to the type of the {@link StyleableProperty}
      * @see #getConverter() 
      */
+    @SuppressWarnings("unchecked")
     public T convert(Font font) {
+        // unchecked!
         return (T)((converter != null) ? converter.convert(this, font) : value);
     }
     

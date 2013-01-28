@@ -753,7 +753,7 @@ public class FlowPane extends Pane {
 
             @Override
             public StyleableProperty<Pos> getStyleableProperty(FlowPane node) {
-                return (StyleableProperty)node.alignmentProperty();
+                return (StyleableProperty<Pos>)node.alignmentProperty();
             }
                  
          };
@@ -769,7 +769,7 @@ public class FlowPane extends Pane {
 
             @Override
             public StyleableProperty<HPos> getStyleableProperty(FlowPane node) {
-                return (StyleableProperty)node.columnHalignmentProperty();
+                return (StyleableProperty<HPos>)node.columnHalignmentProperty();
             }
                      
          };
@@ -785,7 +785,7 @@ public class FlowPane extends Pane {
 
             @Override
             public StyleableProperty<Number> getStyleableProperty(FlowPane node) {
-                return (StyleableProperty)node.hgapProperty();
+                return (StyleableProperty<Number>)node.hgapProperty();
             }
                      
          };
@@ -801,7 +801,7 @@ public class FlowPane extends Pane {
 
             @Override
             public StyleableProperty<VPos> getStyleableProperty(FlowPane node) {
-                return (StyleableProperty)node.rowValignmentProperty();
+                return (StyleableProperty<VPos>)node.rowValignmentProperty();
             }
                      
          }; 
@@ -824,7 +824,7 @@ public class FlowPane extends Pane {
 
             @Override
             public StyleableProperty<Orientation> getStyleableProperty(FlowPane node) {
-                return (StyleableProperty)node.orientationProperty();
+                return (StyleableProperty<Orientation>)node.orientationProperty();
             }
                      
          };  
@@ -840,24 +840,23 @@ public class FlowPane extends Pane {
 
             @Override
             public StyleableProperty<Number> getStyleableProperty(FlowPane node) {
-                return (StyleableProperty)node.vgapProperty();
+                return (StyleableProperty<Number>)node.vgapProperty();
             }
                      
          }; 
 
-         private static final List<CssMetaData> STYLEABLES;
+         private static final List<CssMetaData<? extends Node, ?>> STYLEABLES;
          static {
 
-            final List<CssMetaData> styleables =
-                new ArrayList<CssMetaData>(Region.getClassCssMetaData());
-            Collections.addAll(styleables,
-                ALIGNMENT,
-                COLUMN_HALIGNMENT,
-                HGAP,
-                ROW_VALIGNMENT,
-                ORIENTATION,
-                VGAP
-            );
+            final List<CssMetaData<? extends Node, ?>> styleables =
+                new ArrayList<CssMetaData<? extends Node, ?>>(Region.getClassCssMetaData());
+            styleables.add(ALIGNMENT);
+            styleables.add(COLUMN_HALIGNMENT);
+            styleables.add(HGAP);
+            styleables.add(ROW_VALIGNMENT);
+            styleables.add(ORIENTATION);
+            styleables.add(VGAP);
+
             STYLEABLES = Collections.unmodifiableList(styleables);
          }
     }
@@ -867,15 +866,17 @@ public class FlowPane extends Pane {
      * @return The CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
      */
-    public static List<CssMetaData> getClassCssMetaData() {
+    public static List<CssMetaData<? extends Node, ?>> getClassCssMetaData() {
         return StyleableProperties.STYLEABLES;
     }
 
     /**
      * {@inheritDoc}
+     *
      */
+    
     @Override
-    public List<CssMetaData> getCssMetaData() {
+    public List<CssMetaData<? extends Node, ?>> getCssMetaData() {
         return getClassCssMetaData();
     }
 

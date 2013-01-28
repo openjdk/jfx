@@ -15,6 +15,7 @@ import javafx.beans.value.WritableValue;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Cursor;
+import javafx.scene.Node;
 import javafx.scene.control.ContentDisplay;
 import javafx.scene.control.Label;
 import javafx.scene.control.Labeled;
@@ -126,12 +127,12 @@ public class LabeledImplTest {
     private final Configuration configuration;
 
     @Parameters
-    public static Collection data() {
+    public static Collection<Configuration[]> data() {
 
         Collection<Configuration[]> data = new ArrayList<Configuration[]>();
         
-        List<CssMetaData> styleables = LabeledImpl.StyleableProperties.STYLEABLES_TO_MIRROR;
-        for(CssMetaData styleable : styleables) {
+        List<CssMetaData<? extends Node, ?>> styleables = LabeledImpl.StyleableProperties.STYLEABLES_TO_MIRROR;
+        for(CssMetaData<? extends Node, ?> styleable : styleables) {
             
             // LabeledImpl doesn't track -fx-skin since the Labeled
             // isn't necessarily a Label

@@ -394,7 +394,7 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
 
     private static class StyleableProperties {
 
-        private static final List<CssMetaData> STYLEABLES;
+        private static final List<CssMetaData<? extends Node, ?>> STYLEABLES;
 
         static {
             STYLEABLES = Collections.unmodifiableList(Control.getClassCssMetaData());
@@ -404,7 +404,7 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
     /** 
      * @return The CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
-     */    public static List<CssMetaData> getClassCssMetaData() {
+     */    public static List<CssMetaData<? extends Node, ?>> getClassCssMetaData() {
         return SkinBase.StyleableProperties.STYLEABLES;
     }
 
@@ -414,7 +414,7 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
      * @return The CssMetaData associated with this node, which may include the
      * CssMetaData of its super classes.
      */
-    public List<CssMetaData> getCssMetaData() {
+    public List<CssMetaData<? extends Node, ?>> getCssMetaData() {
         return getClassCssMetaData();
     }
     

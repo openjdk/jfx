@@ -24,10 +24,10 @@
  */
 package com.sun.javafx.css.converters;
 
-import javafx.css.ParsedValue;
 import com.sun.javafx.css.ParsedValueImpl;
-import java.net.MalformedURLException;
 import java.net.URL;
+import javafx.css.ParsedValue;
+import javafx.css.StyleConverter;
 import javafx.scene.text.Font;
 import org.junit.*;
 import static org.junit.Assert.*;
@@ -42,7 +42,7 @@ public class URLConverterTest {
      */
     @Test
     public void testGetInstance() {
-        URLConverter result = URLConverter.getInstance();
+        StyleConverter<ParsedValue[],String> result = URLConverter.getInstance();
         assertNotNull(result);
     }
 

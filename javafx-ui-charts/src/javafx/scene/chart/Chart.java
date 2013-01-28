@@ -431,7 +431,7 @@ public abstract class Chart extends Region {
 
             @Override
             public StyleableProperty<Side> getStyleableProperty(Chart node) {
-                return (StyleableProperty)node.titleSideProperty();
+                return (StyleableProperty<Side>)node.titleSideProperty();
             }
         };
         
@@ -447,7 +447,7 @@ public abstract class Chart extends Region {
 
             @Override
             public StyleableProperty<Side> getStyleableProperty(Chart node) {
-                return (StyleableProperty)node.legendSideProperty();
+                return (StyleableProperty<Side>)node.legendSideProperty();
             }
         };
         
@@ -462,19 +462,17 @@ public abstract class Chart extends Region {
 
             @Override
             public StyleableProperty<Boolean> getStyleableProperty(Chart node) {
-                return (StyleableProperty)node.legendVisibleProperty();
+                return (StyleableProperty<Boolean>)node.legendVisibleProperty();
             }
         };
 
-        private static final List<CssMetaData> STYLEABLES;
+        private static final List<CssMetaData<? extends Node, ?>> STYLEABLES;
         static {
-            final List<CssMetaData> styleables = 
-                new ArrayList<CssMetaData>(Region.getClassCssMetaData());
-            Collections.addAll(styleables,
-                TITLE_SIDE,
-                LEGEND_VISIBLE,
-                LEGEND_SIDE
-            );
+            final List<CssMetaData<? extends Node, ?>> styleables = 
+                new ArrayList<CssMetaData<? extends Node, ?>>(Region.getClassCssMetaData());
+            styleables.add(TITLE_SIDE);
+            styleables.add(LEGEND_VISIBLE);
+            styleables.add(LEGEND_SIDE);
             STYLEABLES = Collections.unmodifiableList(styleables);
         }
     }
@@ -483,7 +481,7 @@ public abstract class Chart extends Region {
      * @return The CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
      */
-    public static List<CssMetaData> getClassCssMetaData() {
+    public static List<CssMetaData<? extends Node, ?>> getClassCssMetaData() {
         return StyleableProperties.STYLEABLES;
     }
 
@@ -491,7 +489,7 @@ public abstract class Chart extends Region {
      * {@inheritDoc}
      */
     @Override
-    public List<CssMetaData> getCssMetaData() {
+    public List<CssMetaData<? extends Node, ?>> getCssMetaData() {
         return getClassCssMetaData();
     }
 

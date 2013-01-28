@@ -25,15 +25,16 @@
 
 package com.sun.javafx.css;
 
+import com.sun.javafx.css.converters.EnumConverter;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.Map;
-import com.sun.javafx.css.converters.EnumConverter;
 import javafx.css.CssMetaData;
 import javafx.css.StyleConverter;
+import javafx.scene.Node;
 
 /**
  * Converter converts ParsedValueImpl&lt;F,T&gt; from type F to type T.
@@ -50,7 +51,7 @@ public class StyleConverterImpl<F, T> extends StyleConverter<F, T> {
      * Convert from the constituent values to the target property type.
      * Implemented by Types that have Keys with subKeys.
      */
-    public T convert(Map<CssMetaData,Object> convertedValues) {
+    public T convert(Map<CssMetaData<? extends Node, ?>,Object> convertedValues) {
         return null;
     }
 
@@ -67,9 +68,10 @@ public class StyleConverterImpl<F, T> extends StyleConverter<F, T> {
     }
 
     // map of StyleConverter class name to StyleConverter
-    private static Map<String,StyleConverter> tmap;
+    private static Map<String,StyleConverter<?, ?>> tmap;
 
-    public static StyleConverter readBinary(DataInputStream is, String[] strings)
+    @SuppressWarnings("rawtypes") 
+    public static StyleConverter<?,?> readBinary(DataInputStream is, String[] strings)
             throws IOException {
 
         int index = is.readShort();
@@ -77,11 +79,12 @@ public class StyleConverterImpl<F, T> extends StyleConverter<F, T> {
 
         // Make a new entry in tmap, if necessary
         if (tmap == null || !tmap.containsKey(cname)) {
-            StyleConverter converter = null;
+            StyleConverter<?,?> converter = null;
             try {
-                Class cl = Class.forName(cname);
+                Class<?> cl = Class.forName(cname);
                 // is cl assignable from EnumType.class?
                 if (EnumConverter.class.isAssignableFrom(cl)) {
+                    // rawtype!
                     converter = new EnumConverter(is, strings);
                 } else {
                     Method getInstanceMethod = cl.getMethod("getInstance");
@@ -97,7 +100,7 @@ public class StyleConverterImpl<F, T> extends StyleConverter<F, T> {
             if (converter == null) {
                 System.err.println("could not deserialize " + cname);
             }
-            if (tmap == null) tmap = new HashMap<String,StyleConverter>();
+            if (tmap == null) tmap = new HashMap<String,StyleConverter<?,?>>();
             tmap.put(cname, converter);
             return converter;
         }

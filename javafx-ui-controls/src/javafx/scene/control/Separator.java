@@ -40,6 +40,7 @@ import javafx.css.PseudoClass;
 import com.sun.javafx.css.converters.EnumConverter;
 import com.sun.javafx.scene.control.skin.SeparatorSkin;
 import javafx.css.StyleableProperty;
+import javafx.scene.Node;
 
 /**
  * A horizontal or vertical separator line. The visual appearance of this
@@ -250,7 +251,7 @@ public class Separator extends Control {
 
             @Override
             public StyleableProperty<Orientation> getStyleableProperty(Separator n) {
-                return (StyleableProperty)n.orientationProperty();
+                return (StyleableProperty<Orientation>)n.orientationProperty();
             }
         };
         
@@ -266,7 +267,7 @@ public class Separator extends Control {
 
             @Override
             public StyleableProperty<HPos> getStyleableProperty(Separator n) {
-                return (StyleableProperty)n.halignmentProperty();
+                return (StyleableProperty<HPos>)n.halignmentProperty();
             }
         };
         
@@ -282,19 +283,17 @@ public class Separator extends Control {
 
             @Override
             public StyleableProperty<VPos> getStyleableProperty(Separator n) {
-                return (StyleableProperty)n.valignmentProperty();
+                return (StyleableProperty<VPos>)n.valignmentProperty();
             }
         };
 
-        private static final List<CssMetaData> STYLEABLES;
+        private static final List<CssMetaData<? extends Node, ?>> STYLEABLES;
         static {
-            final List<CssMetaData> styleables =
-                new ArrayList<CssMetaData>(Control.getClassCssMetaData());
-            Collections.addAll(styleables,
-                ORIENTATION,
-                HALIGNMENT,
-                VALIGNMENT
-            );
+            final List<CssMetaData<? extends Node, ?>> styleables =
+                new ArrayList<CssMetaData<? extends Node, ?>>(Control.getClassCssMetaData());
+            styleables.add(ORIENTATION);
+            styleables.add(HALIGNMENT);
+            styleables.add(VALIGNMENT);
             STYLEABLES = Collections.unmodifiableList(styleables);
         }
     }
@@ -303,7 +302,7 @@ public class Separator extends Control {
      * @return The CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
      */
-    public static List<CssMetaData> getClassCssMetaData() {
+    public static List<CssMetaData<? extends Node, ?>> getClassCssMetaData() {
         return Separator.StyleableProperties.STYLEABLES;
     }
 
@@ -313,7 +312,7 @@ public class Separator extends Control {
      * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
      */
     @Deprecated
-    @Override protected List<CssMetaData> getControlCssMetaData() {
+    @Override protected List<CssMetaData<? extends Node, ?>> getControlCssMetaData() {
         return getClassCssMetaData();
     }
 

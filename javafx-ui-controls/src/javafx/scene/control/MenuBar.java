@@ -39,6 +39,7 @@ import javafx.css.CssMetaData;
 import javafx.css.StyleableBooleanProperty;
 import com.sun.javafx.scene.control.skin.MenuBarSkin;
 import javafx.css.StyleableProperty;
+import javafx.scene.Node;
 
 /**
  * <p>
@@ -173,17 +174,15 @@ public class MenuBar extends Control {
             }
 
             @Override public StyleableProperty<Boolean> getStyleableProperty(MenuBar n) {
-                return (StyleableProperty)n.useSystemMenuBarProperty();
+                return (StyleableProperty<Boolean>)n.useSystemMenuBarProperty();
             }
         };
 
-        private static final List<CssMetaData> STYLEABLES;
+        private static final List<CssMetaData<? extends Node, ?>> STYLEABLES;
         static {
-            final List<CssMetaData> styleables =
-                new ArrayList<CssMetaData>(Control.getClassCssMetaData());
-            Collections.addAll(styleables,
-                USE_SYSTEM_MENU_BAR
-            );
+            final List<CssMetaData<? extends Node, ?>> styleables =
+                new ArrayList<CssMetaData<? extends Node, ?>>(Control.getClassCssMetaData());
+            styleables.add(USE_SYSTEM_MENU_BAR);
             STYLEABLES = Collections.unmodifiableList(styleables);
         }
     }
@@ -192,7 +191,7 @@ public class MenuBar extends Control {
      * @return The CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
      */
-    public static List<CssMetaData> getClassCssMetaData() {
+    public static List<CssMetaData<? extends Node, ?>> getClassCssMetaData() {
         return StyleableProperties.STYLEABLES;
     }
 
@@ -200,7 +199,7 @@ public class MenuBar extends Control {
      * {@inheritDoc}
      */
     @Override
-    public List<CssMetaData> getControlCssMetaData() {
+    public List<CssMetaData<? extends Node, ?>> getControlCssMetaData() {
         return getClassCssMetaData();
     }
 

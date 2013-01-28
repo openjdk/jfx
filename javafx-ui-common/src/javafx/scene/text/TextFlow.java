@@ -431,7 +431,7 @@ public class TextFlow extends Pane {
             }
 
             @Override public StyleableProperty<TextAlignment> getStyleableProperty(TextFlow node) {
-                return (StyleableProperty)node.textAlignmentProperty();
+                return (StyleableProperty<TextAlignment>)node.textAlignmentProperty();
             }
          };
 
@@ -445,15 +445,16 @@ public class TextFlow extends Pane {
             }
 
             @Override public StyleableProperty<Number> getStyleableProperty(TextFlow node) {
-                return (StyleableProperty)node.lineSpacingProperty();
+                return (StyleableProperty<Number>)node.lineSpacingProperty();
             }
          };
 
-	 private static final List<CssMetaData> STYLEABLES;
+	 private static final List<CssMetaData<? extends Node, ?>> STYLEABLES;
          static {
-            final List<CssMetaData> styleables =
-                new ArrayList<CssMetaData>(Pane.getClassCssMetaData());
-            Collections.addAll(styleables, TEXT_ALIGNMENT, LINE_SPACING);
+            final List<CssMetaData<? extends Node, ?>> styleables =
+                new ArrayList<CssMetaData<? extends Node, ?>>(Pane.getClassCssMetaData());
+            styleables.add(TEXT_ALIGNMENT); 
+            styleables.add(LINE_SPACING);
             STYLEABLES = Collections.unmodifiableList(styleables);
          }
     }
@@ -462,15 +463,17 @@ public class TextFlow extends Pane {
      * @return The CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
      */
-    public static List<CssMetaData> getClassCssMetaData() {
+    public static List<CssMetaData<? extends Node, ?>> getClassCssMetaData() {
         return StyleableProperties.STYLEABLES;
     }
 
     /**
      * {@inheritDoc}
+     *
      */
+    
     @Override
-    public List<CssMetaData> getCssMetaData() {
+    public List<CssMetaData<? extends Node, ?>> getCssMetaData() {
         return getClassCssMetaData();
     }
 

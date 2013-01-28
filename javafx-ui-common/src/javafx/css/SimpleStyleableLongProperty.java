@@ -26,6 +26,7 @@ package javafx.css;
 
 import javafx.beans.property.SimpleLongProperty;
 import javafx.beans.value.ObservableValue;
+import javafx.scene.Node;
 
 /**
  * This class extends {@code SimpleLongProperty} and provides a full
@@ -49,7 +50,7 @@ public abstract class SimpleStyleableLongProperty
      * @param cssMetaData
      *            the CssMetaData associated with this {@code StyleableProperty}
      */
-    public SimpleStyleableLongProperty(CssMetaData cssMetaData) {
+    public SimpleStyleableLongProperty(CssMetaData<? extends Node, Number> cssMetaData) {
         super();
         this.cssMetaData = cssMetaData;
     }
@@ -62,7 +63,7 @@ public abstract class SimpleStyleableLongProperty
      * @param initialValue
      *            the initial value of the wrapped {@code Object}
      */
-    public SimpleStyleableLongProperty(CssMetaData cssMetaData, long initialValue) {
+    public SimpleStyleableLongProperty(CssMetaData<? extends Node, Number> cssMetaData, long initialValue) {
         super(initialValue);
         this.cssMetaData = cssMetaData;
     }
@@ -77,7 +78,7 @@ public abstract class SimpleStyleableLongProperty
      * @param name
      *            the name of this {@code LongProperty}
      */
-    public SimpleStyleableLongProperty(CssMetaData cssMetaData, Object bean, String name) {
+    public SimpleStyleableLongProperty(CssMetaData<? extends Node, Number> cssMetaData, Object bean, String name) {
         super(bean, name);
         this.cssMetaData = cssMetaData;
     }
@@ -94,7 +95,7 @@ public abstract class SimpleStyleableLongProperty
      * @param initialValue
      *            the initial value of the wrapped {@code Object}
      */
-    public SimpleStyleableLongProperty(CssMetaData cssMetaData, Object bean, String name, long initialValue) {
+    public SimpleStyleableLongProperty(CssMetaData<? extends Node, Number> cssMetaData, Object bean, String name, long initialValue) {
         super(bean, name, initialValue);
         this.cssMetaData = cssMetaData;
     }
@@ -126,11 +127,11 @@ public abstract class SimpleStyleableLongProperty
 
     /** {@inheritDoc} */
     @Override
-    public final CssMetaData getCssMetaData() {
+    public final CssMetaData<? extends Node, Number> getCssMetaData() {
         return cssMetaData;
     }
 
     private StyleOrigin origin = null;
-    private final CssMetaData cssMetaData;
+    private final CssMetaData<? extends Node, Number> cssMetaData;
 
 }

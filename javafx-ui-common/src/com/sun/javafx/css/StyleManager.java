@@ -163,7 +163,7 @@ final public class StyleManager {
      * @return 
      */
     // TODO: is this used anywhere?
-    public static List<CssMetaData> getStyleables(final Styleable styleable) {
+    public static List<CssMetaData<? extends Node, ?>> getStyleables(final Styleable styleable) {
         
         return styleable != null 
             ? styleable.getCssMetaData() 
@@ -176,7 +176,7 @@ final public class StyleManager {
      * @return 
      */
     // TODO: is this used anywhere?
-    public static List<CssMetaData> getStyleables(final Node node) {
+    public static List<CssMetaData<? extends Node, ?>> getStyleables(final Node node) {
         
         return node != null 
             ? node.getCssMetaData() 

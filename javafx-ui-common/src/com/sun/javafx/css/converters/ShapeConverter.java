@@ -24,11 +24,12 @@
  */
 package com.sun.javafx.css.converters;
 
+import com.sun.javafx.css.StyleConverterImpl;
+import javafx.css.ParsedValue;
+import javafx.css.StyleConverter;
 import javafx.scene.shape.SVGPath;
 import javafx.scene.shape.Shape;
 import javafx.scene.text.Font;
-import javafx.css.ParsedValue;
-import com.sun.javafx.css.StyleConverterImpl;
 
 /**
  * Converts an SVG shape string into a Shape object.
@@ -36,7 +37,7 @@ import com.sun.javafx.css.StyleConverterImpl;
 public class ShapeConverter extends StyleConverterImpl<String, Shape> {
     private static final ShapeConverter INSTANCE = new ShapeConverter();
 
-    public static ShapeConverter getInstance() { return INSTANCE; }
+    public static StyleConverter<String, Shape> getInstance() { return INSTANCE; }
 
     @Override public Shape convert(ParsedValue<String, Shape> value, Font font) {
         String svg = value.getValue();

@@ -24,11 +24,11 @@
  */
 package com.sun.javafx.css.converters;
 
-import javafx.scene.Cursor;
-import javafx.scene.text.Font;
-
 import com.sun.javafx.css.StyleConverterImpl;
 import javafx.css.ParsedValue;
+import javafx.css.StyleConverter;
+import javafx.scene.Cursor;
+import javafx.scene.text.Font;
 
 public final class CursorConverter extends StyleConverterImpl<String, Cursor> {
 
@@ -37,7 +37,7 @@ public final class CursorConverter extends StyleConverterImpl<String, Cursor> {
         static CursorConverter INSTANCE = new CursorConverter();
     }
 
-    public static CursorConverter getInstance() {
+    public static StyleConverter<String, Cursor> getInstance() {
         return Holder.INSTANCE;
     }
 

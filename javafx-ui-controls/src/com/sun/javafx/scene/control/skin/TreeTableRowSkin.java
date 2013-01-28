@@ -284,10 +284,10 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
             }
         };
         
-        private static final List<CssMetaData> STYLEABLES;
+        private static final List<CssMetaData<? extends Node, ?>> STYLEABLES;
         static {
-            final List<CssMetaData> styleables =
-                new ArrayList<CssMetaData>(CellSkinBase.getClassCssMetaData());
+            final List<CssMetaData<? extends Node, ?>> styleables =
+                new ArrayList<CssMetaData<? extends Node, ?>>(CellSkinBase.getClassCssMetaData());
             Collections.addAll(styleables,
                 INDENT
             );
@@ -299,7 +299,7 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
      * @return The CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
      */
-    public static List<CssMetaData> getClassCssMetaData() {
+    public static List<CssMetaData<? extends Node, ?>> getClassCssMetaData() {
         return StyleableProperties.STYLEABLES;
     }
 
@@ -307,7 +307,7 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
      * {@inheritDoc}
      */
     @Override
-    public List<CssMetaData> getCssMetaData() {
+    public List<CssMetaData<? extends Node, ?>> getCssMetaData() {
         return getClassCssMetaData();
     }
 

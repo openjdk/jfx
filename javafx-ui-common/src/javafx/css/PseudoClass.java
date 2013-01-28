@@ -25,7 +25,6 @@
 package javafx.css;
 
 import com.sun.javafx.css.PseudoClassImpl;
-import java.util.List;
 
 /**
  * PseudoClass represents one unique pseudo-class state. Introducing a 

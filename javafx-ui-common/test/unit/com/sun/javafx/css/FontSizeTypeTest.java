@@ -25,13 +25,11 @@
 
 package com.sun.javafx.css;
 
-import static org.junit.Assert.assertEquals;
+import com.sun.javafx.css.converters.SizeConverter;
 import javafx.css.ParsedValue;
 import javafx.scene.text.Font;
-
+import static org.junit.Assert.assertEquals;
 import org.junit.Test;
-
-import com.sun.javafx.css.converters.SizeConverter;
 
 
 public class FontSizeTypeTest {
@@ -45,28 +43,28 @@ public class FontSizeTypeTest {
     @Test
     public void testConvertToPixels() {
         ParsedValue<Size,Size> size = new ParsedValueImpl<Size,Size>(new Size(2.0f, SizeUnits.EM), null);
-        ParsedValue<ParsedValue<?,Size>,Double> value = new ParsedValueImpl<ParsedValue<?,Size>,Double>(size, SizeConverter.getInstance());
+        ParsedValue<ParsedValue<?,Size>,Number> value = new ParsedValueImpl<ParsedValue<?,Size>,Number>(size, SizeConverter.getInstance());
         Font font = Font.getDefault();
         double expResult = SizeUnits.EM.pixels(2, 1, font);
-        double result = SizeConverter.getInstance().convert(value, font);
+        double result = SizeConverter.getInstance().convert(value, font).doubleValue();
         assertEquals(expResult, result, 0.01);
 
         size = new ParsedValueImpl<Size,Size>(new Size(120.0f, SizeUnits.PERCENT), null);
-        value = new ParsedValueImpl<ParsedValue<?,Size>,Double>(size, SizeConverter.getInstance());
+        value = new ParsedValueImpl<ParsedValue<?,Size>,Number>(size, SizeConverter.getInstance());
         expResult = SizeUnits.PERCENT.pixels(120, 1, font);
-        result = SizeConverter.getInstance().convert(value, font);
+        result = SizeConverter.getInstance().convert(value, font).doubleValue();
         assertEquals(expResult, result, 0.01);
 
         size = new ParsedValueImpl<Size,Size>(new Size(12.0f, SizeUnits.PT), null);
-        value = new ParsedValueImpl<ParsedValue<?,Size>,Double>(size, SizeConverter.getInstance());
+        value = new ParsedValueImpl<ParsedValue<?,Size>,Number>(size, SizeConverter.getInstance());
         expResult = SizeUnits.PT.pixels(12, 1, font);
-        result = SizeConverter.getInstance().convert(value, font);
+        result = SizeConverter.getInstance().convert(value, font).doubleValue();
         assertEquals(expResult, result, 0.01);
 
         size = new ParsedValueImpl<Size,Size>(new Size(12.0f, SizeUnits.PX), null);
-        value = new ParsedValueImpl<ParsedValue<?,Size>,Double>(size, SizeConverter.getInstance());
+        value = new ParsedValueImpl<ParsedValue<?,Size>,Number>(size, SizeConverter.getInstance());
         expResult = SizeUnits.PX.pixels(12, 1, font);
-        result = SizeConverter.getInstance().convert(value, font);
+        result = SizeConverter.getInstance().convert(value, font).doubleValue();
         assertEquals(expResult, result, 0.01);
     }
 

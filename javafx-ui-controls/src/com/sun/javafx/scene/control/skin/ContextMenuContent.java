@@ -883,17 +883,17 @@ public class ContextMenuContent extends Region {
      /** @treatAsPrivate */
     private static class StyleableProperties {
 
-        private static final List<CssMetaData> STYLEABLES;
+        private static final List<CssMetaData<? extends Node, ?>> STYLEABLES;
         static {
 
-            final List<CssMetaData> styleables =
-                new ArrayList<CssMetaData>(Region.getClassCssMetaData());
+            final List<CssMetaData<? extends Node, ?>> styleables =
+                new ArrayList<CssMetaData<? extends Node, ?>>(Region.getClassCssMetaData());
 
             //
             // SkinBase only has Region's unique StlyleableProperty's, none of Nodes
             // So, we need to add effect back in. The effect property is in a
             // private inner class, so get the property from Node the hard way.
-            final List<CssMetaData> nodeStyleables = Node.getClassCssMetaData();
+            final List<CssMetaData<? extends Node, ?>> nodeStyleables = Node.getClassCssMetaData();
             for(int n=0, max=nodeStyleables.size(); n<max; n++) {
                 CssMetaData styleable = nodeStyleables.get(n);
                 if ("effect".equals(styleable.getProperty())) {
@@ -909,7 +909,7 @@ public class ContextMenuContent extends Region {
      * @return The CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
      */
-    public static List<CssMetaData> getClassCssMetaData() {
+    public static List<CssMetaData<? extends Node, ?>> getClassCssMetaData() {
         return StyleableProperties.STYLEABLES;
     }
 
@@ -917,7 +917,7 @@ public class ContextMenuContent extends Region {
      * {@inheritDoc}
      */
     @Override
-    public List<CssMetaData> getCssMetaData() {
+    public List<CssMetaData<? extends Node, ?>> getCssMetaData() {
         return getClassCssMetaData();
     }
     

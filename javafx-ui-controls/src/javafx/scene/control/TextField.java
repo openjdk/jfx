@@ -45,6 +45,7 @@ import com.sun.javafx.binding.ExpressionHelper;
 import com.sun.javafx.css.converters.EnumConverter;
 import com.sun.javafx.css.converters.SizeConverter;
 import com.sun.javafx.scene.control.skin.TextFieldSkin;
+import javafx.scene.Node;
 
 
 /**
@@ -275,7 +276,7 @@ public class TextField extends TextInputControl {
             }
 
             @Override public StyleableProperty<Pos> getStyleableProperty(TextField n) {
-                return (StyleableProperty)n.alignmentProperty();
+                return (StyleableProperty<Pos>)n.alignmentProperty();
             }
         };
 
@@ -290,18 +291,16 @@ public class TextField extends TextInputControl {
 
             @Override
             public StyleableProperty<Number> getStyleableProperty(TextField n) {
-                return (StyleableProperty)n.prefColumnCountProperty();
+                return (StyleableProperty<Number>)n.prefColumnCountProperty();
             }
         };
 
-        private static final List<CssMetaData> STYLEABLES;
+        private static final List<CssMetaData<? extends Node, ?>> STYLEABLES;
         static {
-            final List<CssMetaData> styleables =
-                new ArrayList<CssMetaData>(TextInputControl.getClassCssMetaData());
-            Collections.addAll(styleables,
-                ALIGNMENT,
-                PREF_COLUMN_COUNT
-            );
+            final List<CssMetaData<? extends Node, ?>> styleables =
+                new ArrayList<CssMetaData<? extends Node, ?>>(TextInputControl.getClassCssMetaData());
+            styleables.add(ALIGNMENT);
+            styleables.add(PREF_COLUMN_COUNT);
             STYLEABLES = Collections.unmodifiableList(styleables);
         }
     }
@@ -310,7 +309,7 @@ public class TextField extends TextInputControl {
      * @return The CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
      */
-    public static List<CssMetaData> getClassCssMetaData() {
+    public static List<CssMetaData<? extends Node, ?>> getClassCssMetaData() {
         return StyleableProperties.STYLEABLES;
     }
 
@@ -318,7 +317,7 @@ public class TextField extends TextInputControl {
      * {@inheritDoc}
      */
     @Override
-    public List<CssMetaData> getControlCssMetaData() {
+    public List<CssMetaData<? extends Node, ?>> getControlCssMetaData() {
         return getClassCssMetaData();
     }
 }

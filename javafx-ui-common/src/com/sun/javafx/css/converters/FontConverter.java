@@ -24,19 +24,19 @@
  */
 package com.sun.javafx.css.converters;
 
-import java.util.Map;
-
-import javafx.scene.text.Font;
-import javafx.scene.text.FontPosture;
-import javafx.scene.text.FontWeight;
-
 import com.sun.javafx.Utils;
 import com.sun.javafx.css.FontUnits;
 import com.sun.javafx.css.Size;
 import com.sun.javafx.css.StyleConverterImpl;
-import javafx.css.ParsedValue;
+import java.util.Map;
 import java.util.Map.Entry;
 import javafx.css.CssMetaData;
+import javafx.css.ParsedValue;
+import javafx.css.StyleConverter;
+import javafx.scene.Node;
+import javafx.scene.text.Font;
+import javafx.scene.text.FontPosture;
+import javafx.scene.text.FontWeight;
 
 public final class FontConverter extends StyleConverterImpl<ParsedValue[], Font> {
 
@@ -45,7 +45,7 @@ public final class FontConverter extends StyleConverterImpl<ParsedValue[], Font>
         static FontConverter INSTANCE = new FontConverter();
     }
 
-    public static FontConverter getInstance() {
+    public static StyleConverter<ParsedValue[], Font> getInstance() {
         return Holder.INSTANCE;
     }
 
@@ -53,7 +53,7 @@ public final class FontConverter extends StyleConverterImpl<ParsedValue[], Font>
         super();
     }
 
-    @Override
+    @Override 
     public Font convert(ParsedValue<ParsedValue[], Font> value, Font font) {
         ParsedValue[] values = value.getValue();
         Font aFont = (font != null) ? font : Font.getDefault();
@@ -62,8 +62,8 @@ public final class FontConverter extends StyleConverterImpl<ParsedValue[], Font>
         // pixels directly in order to pass the multiplier.
         double fsize = aFont.getSize();
         if (values[1] != null) {
-            ParsedValue<?, Size> sizeValue = (ParsedValue<?, Size>) values[1].getValue();
-            Size size = sizeValue.convert(aFont);
+            ParsedValue<?, ?> pv = (ParsedValue<?, ?>) values[1].getValue();
+            Size size = (Size) pv.convert(aFont);
             fsize = size.pixels(aFont.getSize(), aFont);
         }
         FontWeight weight = (values[2] != null) ? (FontWeight) values[2].convert(aFont) : FontWeight.NORMAL;
@@ -73,14 +73,14 @@ public final class FontConverter extends StyleConverterImpl<ParsedValue[], Font>
     }
 
     @Override
-    public Font convert(Map<CssMetaData, Object> convertedValues) {
+    public Font convert(Map<CssMetaData<? extends Node, ?>, Object> convertedValues) {
         Font font = Font.getDefault();
         double size = font.getSize();
         String family = font.getFamily();
         FontWeight weight = FontWeight.NORMAL;
         FontPosture style = FontPosture.REGULAR;
         
-        for (Entry<CssMetaData, Object> entry : convertedValues.entrySet()) {
+        for (Entry<CssMetaData<? extends Node, ?>, Object> entry : convertedValues.entrySet()) {
 
             Object value = entry.getValue();
             if (value == null) {
@@ -106,18 +106,18 @@ public final class FontConverter extends StyleConverterImpl<ParsedValue[], Font>
         return "FontConverter";
     }
 
-    public static final class StyleConverter extends StyleConverterImpl<FontUnits.Style, FontPosture> {
+    public static final class FontStyleConverter extends StyleConverterImpl<FontUnits.Style, FontPosture> {
 
         // lazy, thread-safe instatiation
         private static class Holder {
-            static StyleConverter INSTANCE = new StyleConverter();
+            static FontStyleConverter INSTANCE = new FontStyleConverter();
         }
 
-        public static StyleConverter getInstance() {
+        public static FontStyleConverter getInstance() {
             return Holder.INSTANCE;
         }
 
-        private StyleConverter() {
+        private FontStyleConverter() {
             super();
         }
 
@@ -140,22 +140,22 @@ public final class FontConverter extends StyleConverterImpl<ParsedValue[], Font>
 
         @Override
         public String toString() {
-            return "Font.StyleConverter";
+            return "FontConverter.StyleConverter";
         }
     }
 
-    public static final class WeightConverter extends StyleConverterImpl<FontUnits.Weight, FontWeight> {
+    public static final class FontWeightConverter extends StyleConverterImpl<FontUnits.Weight, FontWeight> {
 
         // lazy, thread-safe instatiation
         private static class Holder {
-            static WeightConverter INSTANCE = new WeightConverter();
+            static FontWeightConverter INSTANCE = new FontWeightConverter();
         }
 
-        public static WeightConverter getInstance() {
+        public static FontWeightConverter getInstance() {
             return Holder.INSTANCE;
         }
 
-        private WeightConverter() {
+        private FontWeightConverter() {
             super();
         }
 
@@ -188,34 +188,34 @@ public final class FontConverter extends StyleConverterImpl<ParsedValue[], Font>
 
         @Override
         public String toString() {
-            return "Font.WeightConverter";
+            return "FontConverter.WeightConverter";
         }
     }
     
-    public static final class SizeConverter extends StyleConverterImpl<ParsedValue<?, Size>, Double> {
+    public static final class FontSizeConverter extends StyleConverterImpl<ParsedValue<?, Size>, Number> {
 
         // lazy, thread-safe instatiation
         private static class Holder {
-            static SizeConverter INSTANCE = new SizeConverter();
+            static FontSizeConverter INSTANCE = new FontSizeConverter();
         }
 
-        public static SizeConverter getInstance() {
+        public static FontSizeConverter getInstance() {
             return Holder.INSTANCE;
         }
 
-        private SizeConverter() {
+        private FontSizeConverter() {
             super();
         }
 
         @Override
-        public Double convert(ParsedValue<ParsedValue<?, Size>, Double> value, Font font) {
+        public Number convert(ParsedValue<ParsedValue<?, Size>, Number> value, Font font) {
             final ParsedValue<?, Size> size = value.getValue();
             return size.convert(font).pixels(font.getSize(), font);
         }
 
         @Override
         public String toString() {
-            return "Font.SizeConverter";
+            return "FontConverter.FontSizeConverter";
         }
     }    
 

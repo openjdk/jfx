@@ -52,6 +52,7 @@ import com.sun.javafx.css.converters.BooleanConverter;
 import com.sun.javafx.css.converters.SizeConverter;
 import java.util.Collections;
 import javafx.css.StyleableProperty;
+import javafx.scene.Node;
 
 /**
  * A axis implementation that will works on string categories where each 
@@ -535,15 +536,13 @@ public final class CategoryAxis extends Axis<String> {
             }
         };
 
-        private static final List<CssMetaData> STYLEABLES;
+        private static final List<CssMetaData<? extends Node, ?>> STYLEABLES;
         static {
-        final List<CssMetaData> styleables =
-            new ArrayList<CssMetaData>(Axis.getClassCssMetaData());
-            Collections.addAll(styleables,
-                START_MARGIN,
-                END_MARGIN,
-                GAP_START_AND_END
-            );
+        final List<CssMetaData<? extends Node, ?>> styleables =
+            new ArrayList<CssMetaData<? extends Node, ?>>(Axis.getClassCssMetaData());
+            styleables.add(START_MARGIN);
+            styleables.add(END_MARGIN);
+            styleables.add(GAP_START_AND_END);
             STYLEABLES = Collections.unmodifiableList(styleables);
         }
     }
@@ -552,7 +551,7 @@ public final class CategoryAxis extends Axis<String> {
      * @return The CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
      */
-    public static List<CssMetaData> getClassCssMetaData() {
+    public static List<CssMetaData<? extends Node, ?>> getClassCssMetaData() {
         return StyleableProperties.STYLEABLES;
     }
 
@@ -560,7 +559,7 @@ public final class CategoryAxis extends Axis<String> {
      * {@inheritDoc}
      */
     @Override
-    public List<CssMetaData> getCssMetaData() {
+    public List<CssMetaData<? extends Node, ?>> getCssMetaData() {
         return getClassCssMetaData();
     }
 

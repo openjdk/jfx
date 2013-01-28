@@ -54,6 +54,7 @@ import javafx.util.Duration;
 import com.sun.javafx.css.converters.BooleanConverter;
 import com.sun.javafx.css.converters.SizeConverter;
 import com.sun.javafx.scene.control.behavior.ProgressBarBehavior;
+import javafx.scene.Node;
 
 
 public class ProgressBarSkin extends BehaviorSkinBase<ProgressBar, ProgressBarBehavior<ProgressBar>> {
@@ -506,7 +507,7 @@ public class ProgressBarSkin extends BehaviorSkinBase<ProgressBar, ProgressBarBe
             @Override
             public StyleableProperty<Number> getStyleableProperty(ProgressBar n) {
                 final ProgressBarSkin skin = (ProgressBarSkin) n.getSkin();
-                return (StyleableProperty)skin.indeterminateBarLengthProperty();
+                return (StyleableProperty<Number>)skin.indeterminateBarLengthProperty();
             }
         };
          
@@ -524,7 +525,7 @@ public class ProgressBarSkin extends BehaviorSkinBase<ProgressBar, ProgressBarBe
             @Override
             public StyleableProperty<Boolean> getStyleableProperty(ProgressBar n) {
                 final ProgressBarSkin skin = (ProgressBarSkin) n.getSkin();
-                return (StyleableProperty)skin.indeterminateBarEscapeProperty();
+                return (StyleableProperty<Boolean>)skin.indeterminateBarEscapeProperty();
             }
         };
          
@@ -542,7 +543,7 @@ public class ProgressBarSkin extends BehaviorSkinBase<ProgressBar, ProgressBarBe
             @Override
             public StyleableProperty<Boolean> getStyleableProperty(ProgressBar n) {
                 final ProgressBarSkin skin = (ProgressBarSkin) n.getSkin();
-                return (StyleableProperty)skin.indeterminateBarFlipProperty();
+                return (StyleableProperty<Boolean>)skin.indeterminateBarFlipProperty();
             }
         }; 
          
@@ -560,21 +561,19 @@ public class ProgressBarSkin extends BehaviorSkinBase<ProgressBar, ProgressBarBe
             @Override
             public StyleableProperty<Number> getStyleableProperty(ProgressBar n) {
                 final ProgressBarSkin skin = (ProgressBarSkin) n.getSkin();
-                return (StyleableProperty)skin.indeterminateBarAnimationTimeProperty();
+                return (StyleableProperty<Number>)skin.indeterminateBarAnimationTimeProperty();
             }
         };
 
-         private static final List<CssMetaData> STYLEABLES;
+         private static final List<CssMetaData<? extends Node, ?>> STYLEABLES;
          static {
 
-            final List<CssMetaData> styleables = 
-                new ArrayList<CssMetaData>(SkinBase.getClassCssMetaData());
-            Collections.addAll(styleables,
-                INDETERMINATE_BAR_LENGTH,
-                INDETERMINATE_BAR_ESCAPE,
-                INDETERMINATE_BAR_FLIP,
-                INDETERMINATE_BAR_ANIMATION_TIME
-            );
+            final List<CssMetaData<? extends Node, ?>> styleables = 
+                new ArrayList<CssMetaData<? extends Node, ?>>(SkinBase.getClassCssMetaData());
+            styleables.add(INDETERMINATE_BAR_LENGTH);
+            styleables.add(INDETERMINATE_BAR_ESCAPE);
+            styleables.add(INDETERMINATE_BAR_FLIP);
+            styleables.add(INDETERMINATE_BAR_ANIMATION_TIME);
             STYLEABLES = Collections.unmodifiableList(styleables);
 
          }
@@ -584,7 +583,7 @@ public class ProgressBarSkin extends BehaviorSkinBase<ProgressBar, ProgressBarBe
      * @return The CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
      */
-    public static List<CssMetaData> getClassCssMetaData() {
+    public static List<CssMetaData<? extends Node, ?>> getClassCssMetaData() {
         return StyleableProperties.STYLEABLES;
     }
 
@@ -592,7 +591,7 @@ public class ProgressBarSkin extends BehaviorSkinBase<ProgressBar, ProgressBarBe
      * {@inheritDoc}
      */
     @Override
-    public List<CssMetaData> getCssMetaData() {
+    public List<CssMetaData<? extends Node, ?>> getCssMetaData() {
         return getClassCssMetaData();
     }
 

@@ -40,6 +40,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import javafx.css.StyleableProperty;
+import javafx.scene.Node;
 import javafx.scene.layout.Region;
 
 
@@ -57,7 +58,7 @@ public class LabeledImpl extends Label {
         labeledImpl.setGraphic(labeled.getGraphic());
         labeled.graphicProperty().addListener(shuttler);
         
-        final List<CssMetaData> styleables = StyleableProperties.STYLEABLES_TO_MIRROR;
+        final List<CssMetaData<? extends Node, ?>> styleables = StyleableProperties.STYLEABLES_TO_MIRROR;
         
         for(int n=0, nMax=styleables.size(); n<nMax; n++) {
             final CssMetaData styleable = styleables.get(n);
@@ -117,7 +118,7 @@ public class LabeledImpl extends Label {
     /** Protected for unit test purposes */
     static final class StyleableProperties {
 
-        static final List<CssMetaData> STYLEABLES_TO_MIRROR;
+        static final List<CssMetaData<? extends Node, ?>> STYLEABLES_TO_MIRROR;
         static {
             //
             // We do this as we only want to mirror the Labeled's keys,
@@ -133,10 +134,10 @@ public class LabeledImpl extends Label {
             // If just this subset were returned (by impl_CSS_STYLEABLE) then
             // -fx-opacity (for example) would be meaningless to the Labeled. 
             // 
-            final List<CssMetaData> labeledStyleables = Labeled.getClassCssMetaData();
-            final List<CssMetaData> parentStyleables = Region.getClassCssMetaData();
-            final List<CssMetaData> styleables = 
-                new ArrayList<CssMetaData>(labeledStyleables);
+            final List<CssMetaData<? extends Node, ?>> labeledStyleables = Labeled.getClassCssMetaData();
+            final List<CssMetaData<? extends Node, ?>> parentStyleables = Region.getClassCssMetaData();
+            final List<CssMetaData<? extends Node, ?>> styleables = 
+                new ArrayList<CssMetaData<? extends Node, ?>>(labeledStyleables);
             styleables.removeAll(parentStyleables);
             STYLEABLES_TO_MIRROR = Collections.unmodifiableList(styleables);
         }

@@ -39,6 +39,7 @@ import com.sun.javafx.scene.control.behavior.CellBehaviorBase;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ReadOnlyDoubleProperty;
 import javafx.css.StyleableProperty;
+import javafx.scene.Node;
 import javafx.scene.control.SkinBase;
 
 
@@ -87,7 +88,7 @@ public class CellSkinBase<C extends Cell, B extends CellBehaviorBase<C>> extends
                     return "cellSize";
                 }
 
-                @Override public CssMetaData getCssMetaData() {
+                @Override public CssMetaData<Cell<?>, Number> getCssMetaData() {
                     return StyleableProperties.CELL_SIZE;
                 }
             }; 
@@ -121,13 +122,13 @@ public class CellSkinBase<C extends Cell, B extends CellBehaviorBase<C>> extends
       * @treatAsPrivate implementation detail
       */
      private static class StyleableProperties {
-         private final static CssMetaData<Cell,Number> CELL_SIZE =
-                new CssMetaData<Cell,Number>("-fx-cell-size",
+         private final static CssMetaData<Cell<?>,Number> CELL_SIZE =
+                new CssMetaData<Cell<?>,Number>("-fx-cell-size",
                  SizeConverter.getInstance(), DEFAULT_CELL_SIZE) {
 
             @Override
-            public void set(Cell node, Number value, StyleOrigin origin) {
-                double size = value == null ? DEFAULT_CELL_SIZE : ((Number)value).doubleValue();
+            public void set(Cell<?> node, Number value, StyleOrigin origin) {
+                double size = value == null ? DEFAULT_CELL_SIZE : value.doubleValue();
                 // guard against a 0 or negative size
                 super.set(node, size <= 0 ? DEFAULT_CELL_SIZE : size, origin);
             }
@@ -141,18 +142,16 @@ public class CellSkinBase<C extends Cell, B extends CellBehaviorBase<C>> extends
             @Override
             public StyleableProperty<Number> getStyleableProperty(Cell n) {
                 final CellSkinBase skin = (CellSkinBase) n.getSkin();
-                return (StyleableProperty)skin.cellSizePropertyImpl();
+                return (StyleableProperty<Number>)skin.cellSizePropertyImpl();
             }
         };
 
-         private static final List<CssMetaData> STYLEABLES;
+         private static final List<CssMetaData<? extends Node, ?>> STYLEABLES;
          static {
 
-            final List<CssMetaData> styleables = 
-                new ArrayList<CssMetaData>(SkinBase.getClassCssMetaData());
-            Collections.addAll(styleables,
-                CELL_SIZE
-            );
+            final List<CssMetaData<? extends Node, ?>> styleables = 
+                new ArrayList<CssMetaData<? extends Node, ?>>(SkinBase.getClassCssMetaData());
+            styleables.add(CELL_SIZE);
             STYLEABLES = Collections.unmodifiableList(styleables);
 
          }
@@ -162,7 +161,7 @@ public class CellSkinBase<C extends Cell, B extends CellBehaviorBase<C>> extends
      * @return The CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
      */
-    public static List<CssMetaData> getClassCssMetaData() {
+    public static List<CssMetaData<? extends Node, ?>> getClassCssMetaData() {
         return StyleableProperties.STYLEABLES;
     }
 
@@ -170,7 +169,7 @@ public class CellSkinBase<C extends Cell, B extends CellBehaviorBase<C>> extends
      * {@inheritDoc}
      */
     @Override
-    public List<CssMetaData> getCssMetaData() {
+    public List<CssMetaData<? extends Node, ?>> getCssMetaData() {
         return getClassCssMetaData();
     }
 

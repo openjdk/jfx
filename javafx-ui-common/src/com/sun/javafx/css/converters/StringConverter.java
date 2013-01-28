@@ -24,11 +24,11 @@
  */
 package com.sun.javafx.css.converters;
 
-import javafx.scene.text.Font;
-
 import com.sun.javafx.Utils;
 import com.sun.javafx.css.StyleConverterImpl;
 import javafx.css.ParsedValue;
+import javafx.css.StyleConverter;
+import javafx.scene.text.Font;
 
 /**
  * String type converts embedded unicode characters
@@ -41,7 +41,7 @@ public final class StringConverter extends StyleConverterImpl<String, String> {
         static SequenceConverter SEQUENCE_INSTANCE = new SequenceConverter();
     }
 
-    public static StringConverter getInstance() {
+    public static StyleConverter<String, String> getInstance() {
         return Holder.INSTANCE;
     }
 

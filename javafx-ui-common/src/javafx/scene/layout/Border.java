@@ -80,6 +80,7 @@ import com.sun.javafx.scene.layout.region.SliceSequenceConverter;
  *
  * @since JavaFX 8
  */
+@SuppressWarnings("unchecked")
 public final class Border {
     static final CssMetaData<Node,Paint[]> BORDER_COLOR =
             new SubCssMetaData<Paint[]>("-fx-border-color",
@@ -125,8 +126,9 @@ public final class Border {
                     InsetsConverter.SequenceConverter.getInstance(),
                     new Insets[] {Insets.EMPTY});
 
-    private static final List<CssMetaData> STYLEABLES =
-            (List<CssMetaData>) (List) Collections.unmodifiableList(
+    private static final List<CssMetaData<? extends Node, ?>> STYLEABLES =
+            (List<CssMetaData<? extends Node, ?>>) (List) Collections.unmodifiableList(
+                    // Unchecked!
                     Arrays.asList(BORDER_COLOR,
                             BORDER_STYLE,
                             BORDER_WIDTH,
@@ -142,7 +144,7 @@ public final class Border {
      * @return The CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
      */
-    public static List<CssMetaData> getClassCssMetaData() {
+    public static List<CssMetaData<? extends Node, ?>> getClassCssMetaData() {
         return STYLEABLES;
     }
 

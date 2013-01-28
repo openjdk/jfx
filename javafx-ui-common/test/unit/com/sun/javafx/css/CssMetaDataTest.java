@@ -65,7 +65,7 @@ public class CssMetaDataTest {
     public CssMetaDataTest() {
     }
     
-    private static CssMetaData get(List<CssMetaData> list, String prop) {
+    private static CssMetaData get(List<CssMetaData<? extends Node, ?>> list, String prop) {
         for (CssMetaData styleable : list) {
             if (prop.equals(styleable.getProperty())) return styleable;
         }
@@ -77,8 +77,8 @@ public class CssMetaDataTest {
     @Test
     public void testGetStyleables_Node() {
         Node node = new TestNode();
-        List<CssMetaData> expResult = TestNode.getClassCssMetaData();
-        List<CssMetaData> result = node.getCssMetaData();
+        List<CssMetaData<? extends Node, ?>> expResult = TestNode.getClassCssMetaData();
+        List<CssMetaData<? extends Node, ?>> result = node.getCssMetaData();
         assertEquals(expResult, result);
     }
 
@@ -90,7 +90,7 @@ public class CssMetaDataTest {
         Node node = new TestNode();
         Styleable styleable = node.impl_getStyleable();
         assertNotNull(styleable);
-        List<CssMetaData> expResult = TestNode.getClassCssMetaData();
+        List<CssMetaData<? extends Node, ?>> expResult = TestNode.getClassCssMetaData();
         List result = styleable.getCssMetaData();
         assertEquals(expResult, result);
     }
@@ -159,7 +159,7 @@ public class CssMetaDataTest {
             }
         };
         
-        List<CssMetaData> list = fontProp.getSubProperties();
+        List<CssMetaData<? extends Node, ?>> list = fontProp.getSubProperties();
         assertNotNull(list);
 
     }
@@ -1188,7 +1188,7 @@ public class CssMetaDataTest {
                 Method m = someClass.getMethod("getClassCssMetaData", (Class[]) null);
 //                Node node = (Node)ctor.newInstance((Object[])null);
                 Node node = (Node)someClass.newInstance();
-                for (CssMetaData styleable : (List<CssMetaData>) m.invoke(null)) {
+                for (CssMetaData styleable : (List<CssMetaData<? extends Node, ?>>) m.invoke(null)) {
                     
                     what = someClass.getName() + " " + styleable.getProperty();
                     WritableValue writable = styleable.getStyleableProperty(node);

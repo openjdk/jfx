@@ -215,10 +215,10 @@ class TestNodeBase extends Node {
             }
         };
         
-        static final List<CssMetaData> STYLEABLES;
+        static final List<CssMetaData<? extends Node, ?>> STYLEABLES;
         static {
-            List<CssMetaData> list = 
-                new ArrayList<CssMetaData>(Node.getClassCssMetaData());
+            List<CssMetaData<? extends Node, ?>> list = 
+                new ArrayList<CssMetaData<? extends Node, ?>>(Node.getClassCssMetaData());
             Collections.addAll(list,                
                 TEST,
                 STRING,
@@ -231,15 +231,17 @@ class TestNodeBase extends Node {
     /**
      * {@inheritDoc}
      */
-    public static List<CssMetaData> getClassCssMetaData() {
+    public static List<CssMetaData<? extends Node, ?>> getClassCssMetaData() {
         return StyleableProperties.STYLEABLES;
     }
 
     /**
      * {@inheritDoc}
+     *
      */
+    
     @Override
-    public List<CssMetaData> getCssMetaData() {
+    public List<CssMetaData<? extends Node, ?>> getCssMetaData() {
         return getClassCssMetaData();
     }
 

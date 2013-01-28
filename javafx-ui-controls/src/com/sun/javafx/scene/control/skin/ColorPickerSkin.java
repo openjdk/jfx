@@ -467,10 +467,10 @@ public class ColorPickerSkin extends ComboBoxPopupControl<Color> {
                     return skin.imageUrl;
                 }
             };
-        private static final List<CssMetaData> STYLEABLES;
+        private static final List<CssMetaData<? extends Node, ?>> STYLEABLES;
         static {
-            final List<CssMetaData> styleables =
-                new ArrayList<CssMetaData>(ComboBoxBaseSkin.getClassCssMetaData());
+            final List<CssMetaData<? extends Node, ?>> styleables =
+                new ArrayList<CssMetaData<? extends Node, ?>>(ComboBoxBaseSkin.getClassCssMetaData());
             Collections.addAll(styleables,
                 COLOR_LABEL_VISIBLE,
                 COLOR_RECT_WIDTH,
@@ -487,7 +487,7 @@ public class ColorPickerSkin extends ComboBoxPopupControl<Color> {
      * @return The CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
      */
-    public static List<CssMetaData> getClassCssMetaData() {
+    public static List<CssMetaData<? extends Node, ?>> getClassCssMetaData() {
         return StyleableProperties.STYLEABLES;
     }
 
@@ -495,7 +495,7 @@ public class ColorPickerSkin extends ComboBoxPopupControl<Color> {
      * {@inheritDoc}
      */
     @Override
-    public List<CssMetaData> getCssMetaData() {
+    public List<CssMetaData<? extends Node, ?>> getCssMetaData() {
         return getClassCssMetaData();
     }
 

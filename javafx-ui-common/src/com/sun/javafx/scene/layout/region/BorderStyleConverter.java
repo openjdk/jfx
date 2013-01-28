@@ -61,11 +61,11 @@ public class BorderStyleConverter  extends StyleConverterImpl<ParsedValue[], Bor
 //                    }, SizeConverter.SequenceConverter.getInstance());
 
 
-    public static final ParsedValueImpl<ParsedValue<?,Size>[],Double[]> NONE = new ParsedValueImpl<ParsedValue<?,Size>[],Double[]>(null, null);
-    public static final ParsedValueImpl<ParsedValue<?,Size>[],Double[]> HIDDEN = new ParsedValueImpl<ParsedValue<?,Size>[],Double[]>(null, null);
-    public static final ParsedValueImpl<ParsedValue<?,Size>[],Double[]> DOTTED = new ParsedValueImpl<ParsedValue<?,Size>[],Double[]>(null, null);
-    public static final ParsedValueImpl<ParsedValue<?,Size>[],Double[]> DASHED = new ParsedValueImpl<ParsedValue<?,Size>[],Double[]>(null, null);
-    public static final ParsedValueImpl<ParsedValue<?,Size>[],Double[]> SOLID = new ParsedValueImpl<ParsedValue<?,Size>[],Double[]>(null, null);
+    public static final ParsedValueImpl<ParsedValue[],Number[]> NONE = new ParsedValueImpl<ParsedValue[],Number[]>(null, null);
+    public static final ParsedValueImpl<ParsedValue[],Number[]> HIDDEN = new ParsedValueImpl<ParsedValue[],Number[]>(null, null);
+    public static final ParsedValueImpl<ParsedValue[],Number[]> DOTTED = new ParsedValueImpl<ParsedValue[],Number[]>(null, null);
+    public static final ParsedValueImpl<ParsedValue[],Number[]> DASHED = new ParsedValueImpl<ParsedValue[],Number[]>(null, null);
+    public static final ParsedValueImpl<ParsedValue[],Number[]> SOLID = new ParsedValueImpl<ParsedValue[],Number[]>(null, null);
 
     /**
      * Convert a sequence of values to a BorderStyle.
@@ -108,7 +108,7 @@ public class BorderStyleConverter  extends StyleConverterImpl<ParsedValue[], Bor
 
         // We have some custom specified value
         ParsedValue<?,Size>[] dash_vals =
-                ((ParsedValue<ParsedValue<?,Size>[],Double[]>)values[0]).getValue();
+                ((ParsedValue<ParsedValue<?,Size>[],Number[]>)values[0]).getValue();
 
         final List<Double> dashes;
         if (dash_vals == null) {

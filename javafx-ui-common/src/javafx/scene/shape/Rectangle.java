@@ -49,6 +49,7 @@ import com.sun.javafx.sg.PGShape.Mode;
 import com.sun.javafx.tk.Toolkit;
 import javafx.beans.property.Property;
 import javafx.css.StyleableProperty;
+import javafx.scene.Node;
 
 
 /**
@@ -429,14 +430,12 @@ public  class Rectangle extends Shape {
 
         };
          
-         private static final List<CssMetaData> STYLEABLES;
+         private static final List<CssMetaData<? extends Node, ?>> STYLEABLES;
          static {
-            final List<CssMetaData> styleables =
-                new ArrayList<CssMetaData>(Shape.getClassCssMetaData());
-            Collections.addAll(styleables,
-                ARC_HEIGHT,
-                ARC_WIDTH
-             );
+            final List<CssMetaData<? extends Node, ?>> styleables =
+                new ArrayList<CssMetaData<? extends Node, ?>>(Shape.getClassCssMetaData());
+            styleables.add(ARC_HEIGHT);
+            styleables.add(ARC_WIDTH);
             STYLEABLES = Collections.unmodifiableList(styleables);
 
          }
@@ -446,15 +445,17 @@ public  class Rectangle extends Shape {
      * @return The CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
      */
-    public static List<CssMetaData> getClassCssMetaData() {
+    public static List<CssMetaData<? extends Node, ?>> getClassCssMetaData() {
         return StyleableProperties.STYLEABLES;
     }
 
     /**
      * {@inheritDoc}
+     *
      */
+    
     @Override
-    public List<CssMetaData> getCssMetaData() {
+    public List<CssMetaData<? extends Node, ?>> getCssMetaData() {
         return getClassCssMetaData();
     }
 

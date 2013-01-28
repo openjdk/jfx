@@ -42,6 +42,7 @@ import com.sun.javafx.css.converters.EnumConverter;
 import com.sun.javafx.css.converters.SizeConverter;
 import com.sun.javafx.scene.control.skin.ScrollBarSkin;
 import javafx.css.StyleableProperty;
+import javafx.scene.Node;
 
 
 /**
@@ -382,7 +383,7 @@ public class ScrollBar extends Control {
 
             @Override
             public StyleableProperty<Orientation> getStyleableProperty(ScrollBar n) {
-                return (StyleableProperty)n.orientationProperty();
+                return (StyleableProperty<Orientation>)n.orientationProperty();
             }
         };
         
@@ -397,7 +398,7 @@ public class ScrollBar extends Control {
 
             @Override
             public StyleableProperty<Number> getStyleableProperty(ScrollBar n) {
-                return (StyleableProperty)n.unitIncrementProperty();
+                return (StyleableProperty<Number>)n.unitIncrementProperty();
             }
                     
         };
@@ -413,20 +414,18 @@ public class ScrollBar extends Control {
 
             @Override
             public StyleableProperty<Number> getStyleableProperty(ScrollBar n) {
-                return (StyleableProperty)n.blockIncrementProperty();
+                return (StyleableProperty<Number>)n.blockIncrementProperty();
             }
                     
         };
         
-        private static final List<CssMetaData> STYLEABLES;
+        private static final List<CssMetaData<? extends Node, ?>> STYLEABLES;
         static {
-            final List<CssMetaData> styleables = 
-                new ArrayList<CssMetaData>(Control.getClassCssMetaData());
-            Collections.addAll(styleables,
-                ORIENTATION,
-                UNIT_INCREMENT,
-                BLOCK_INCREMENT
-            );
+            final List<CssMetaData<? extends Node, ?>> styleables = 
+                new ArrayList<CssMetaData<? extends Node, ?>>(Control.getClassCssMetaData());
+            styleables.add(ORIENTATION);
+            styleables.add(UNIT_INCREMENT);
+            styleables.add(BLOCK_INCREMENT);
             STYLEABLES = Collections.unmodifiableList(styleables);
         }
     }
@@ -435,7 +434,7 @@ public class ScrollBar extends Control {
      * @return The CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
      */
-    public static List<CssMetaData> getClassCssMetaData() {
+    public static List<CssMetaData<? extends Node, ?>> getClassCssMetaData() {
         return StyleableProperties.STYLEABLES;
     }
 
@@ -443,7 +442,7 @@ public class ScrollBar extends Control {
      * {@inheritDoc}
      */
     @Override
-    public List<CssMetaData> getControlCssMetaData() {
+    public List<CssMetaData<? extends Node, ?>> getControlCssMetaData() {
         return getClassCssMetaData();
     }
 

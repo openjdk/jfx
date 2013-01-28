@@ -26,6 +26,7 @@ package javafx.css;
 
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.beans.value.ObservableValue;
+import javafx.scene.Node;
 
 /**
  * This class extends {@code SimpleDoubleProperty} and provides a full
@@ -49,7 +50,7 @@ public abstract class SimpleStyleableDoubleProperty
      * @param cssMetaData
      *            the CssMetaData associated with this {@code StyleableProperty}
      */
-    public SimpleStyleableDoubleProperty(CssMetaData cssMetaData) {
+    public SimpleStyleableDoubleProperty(CssMetaData<? extends Node, Number> cssMetaData) {
         super();
         this.cssMetaData = cssMetaData;
     }
@@ -62,7 +63,7 @@ public abstract class SimpleStyleableDoubleProperty
      * @param initialValue
      *            the initial value of the wrapped {@code Object}
      */
-    public SimpleStyleableDoubleProperty(CssMetaData cssMetaData, double initialValue) {
+    public SimpleStyleableDoubleProperty(CssMetaData<? extends Node, Number> cssMetaData, double initialValue) {
         super(initialValue);
         this.cssMetaData = cssMetaData;
     }
@@ -77,7 +78,7 @@ public abstract class SimpleStyleableDoubleProperty
      * @param name
      *            the name of this {@code DoubleProperty}
      */
-    public SimpleStyleableDoubleProperty(CssMetaData cssMetaData, Object bean, String name) {
+    public SimpleStyleableDoubleProperty(CssMetaData<? extends Node, Number> cssMetaData, Object bean, String name) {
         super(bean, name);
         this.cssMetaData = cssMetaData;
     }
@@ -94,7 +95,7 @@ public abstract class SimpleStyleableDoubleProperty
      * @param initialValue
      *            the initial value of the wrapped {@code Object}
      */
-    public SimpleStyleableDoubleProperty(CssMetaData cssMetaData, Object bean, String name, double initialValue) {
+    public SimpleStyleableDoubleProperty(CssMetaData<? extends Node, Number> cssMetaData, Object bean, String name, double initialValue) {
         super(bean, name, initialValue);
         this.cssMetaData = cssMetaData;
     }
@@ -127,10 +128,10 @@ public abstract class SimpleStyleableDoubleProperty
 
     /** {@inheritDoc} */
     @Override
-    public final CssMetaData getCssMetaData() {
+    public final CssMetaData<? extends Node, Number> getCssMetaData() {
         return cssMetaData;
     }
 
     private StyleOrigin origin = null;
-    private final CssMetaData cssMetaData;
+    private final CssMetaData<? extends Node, Number> cssMetaData;
 }

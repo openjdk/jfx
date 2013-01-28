@@ -11,7 +11,7 @@ import javafx.scene.text.Font;
  * Date: 8/10/12
  * Time: 8:27 PM
  */
-public class BorderImageWidthsSequenceConverter extends StyleConverterImpl<ParsedValue<ParsedValue<?,Size>[], BorderWidths>[], BorderWidths[]> {
+public class BorderImageWidthsSequenceConverter extends StyleConverterImpl<ParsedValue<ParsedValue[], BorderWidths>[], BorderWidths[]> {
     private static final BorderImageWidthsSequenceConverter CONVERTER =
             new BorderImageWidthsSequenceConverter();
 
@@ -20,7 +20,7 @@ public class BorderImageWidthsSequenceConverter extends StyleConverterImpl<Parse
     }
 
     @Override
-    public BorderWidths[] convert(ParsedValue<ParsedValue<ParsedValue<?,Size>[], BorderWidths>[], BorderWidths[]> value, Font font) {
+    public BorderWidths[] convert(ParsedValue<ParsedValue<ParsedValue[], BorderWidths>[], BorderWidths[]> value, Font font) {
         // For 'border-image-slice: 10% fill, 20% 30%', the value arg will be
         // ParsedValue { values: [
         //     ParsedValue { values: [ ParsedValue {parsed: 10%}, ParsedValue {parsed: fill}] } ,
@@ -37,7 +37,7 @@ public class BorderImageWidthsSequenceConverter extends StyleConverterImpl<Parse
         //
         // If the value arg contains multiple layers, unwind the nested
         // values by one level.
-        ParsedValue<ParsedValue<?,Size>[], BorderWidths>[] layers = value.getValue();
+        ParsedValue<ParsedValue[], BorderWidths>[] layers = value.getValue();
         BorderWidths[] widths = new BorderWidths[layers.length];
         for (int l = 0; l < layers.length; l++) {
             widths[l] = BorderImageWidthConverter.getInstance().convert(layers[l], font);

@@ -808,15 +808,15 @@ public class ImageView extends Node {
 
             @Override
             public StyleableProperty<String> getStyleableProperty(ImageView n) {
-                return (StyleableProperty)n.imageUrlProperty();
+                return (StyleableProperty<String>)n.imageUrlProperty();
             }
         };
             
-         private static final List<CssMetaData> STYLEABLES;
+         private static final List<CssMetaData<? extends Node, ?>> STYLEABLES;
          static {
-            final List<CssMetaData> styleables = 
-		new ArrayList<CssMetaData>(Node.getClassCssMetaData());
-            Collections.addAll(styleables, IMAGE);
+            final List<CssMetaData<? extends Node, ?>> styleables = 
+		new ArrayList<CssMetaData<? extends Node, ?>>(Node.getClassCssMetaData());
+            styleables.add(IMAGE);
             STYLEABLES = Collections.unmodifiableList(styleables);
          }
     }
@@ -825,15 +825,17 @@ public class ImageView extends Node {
      * @return The CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
      */
-    public static List<CssMetaData> getClassCssMetaData() {
+    public static List<CssMetaData<? extends Node, ?>> getClassCssMetaData() {
         return StyleableProperties.STYLEABLES;
     }
 
     /**
      * {@inheritDoc}
+     *
      */
+    
     @Override
-    public List<CssMetaData> getCssMetaData() {
+    public List<CssMetaData<? extends Node, ?>> getCssMetaData() {
         return getClassCssMetaData();
     }
 

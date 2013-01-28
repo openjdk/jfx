@@ -220,10 +220,10 @@ public class ToolBar extends Control {
             }
         };
 
-        private static final List<CssMetaData> STYLEABLES;
+        private static final List<CssMetaData<? extends Node, ?>> STYLEABLES;
         static {
-            final List<CssMetaData> styleables =
-                new ArrayList<CssMetaData>(Control.getClassCssMetaData());
+            final List<CssMetaData<? extends Node, ?>> styleables =
+                new ArrayList<CssMetaData<? extends Node, ?>>(Control.getClassCssMetaData());
             Collections.addAll(styleables,
                 ORIENTATION
             );
@@ -235,7 +235,7 @@ public class ToolBar extends Control {
      * @return The CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
      */
-    public static List<CssMetaData> getClassCssMetaData() {
+    public static List<CssMetaData<? extends Node, ?>> getClassCssMetaData() {
         return StyleableProperties.STYLEABLES;
     }
 
@@ -243,7 +243,7 @@ public class ToolBar extends Control {
      * {@inheritDoc}
      */
     @Override
-    public List<CssMetaData> getControlCssMetaData() {
+    public List<CssMetaData<? extends Node, ?>> getControlCssMetaData() {
         return getClassCssMetaData();
     }
 

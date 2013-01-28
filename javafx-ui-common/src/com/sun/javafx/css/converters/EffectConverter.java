@@ -24,15 +24,16 @@
  */
 package com.sun.javafx.css.converters;
 
+import com.sun.javafx.css.Size;
+import com.sun.javafx.css.StyleConverterImpl;
+import javafx.css.ParsedValue;
+import javafx.css.StyleConverter;
 import javafx.scene.effect.BlurType;
 import javafx.scene.effect.DropShadow;
 import javafx.scene.effect.Effect;
 import javafx.scene.effect.InnerShadow;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
-import javafx.css.ParsedValue;
-import com.sun.javafx.css.Size;
-import com.sun.javafx.css.StyleConverterImpl;
 
 public class EffectConverter extends StyleConverterImpl<ParsedValue[], Effect> {
 
@@ -46,7 +47,7 @@ public class EffectConverter extends StyleConverterImpl<ParsedValue[], Effect> {
                 new InnerShadowConverter();
     }
 
-    public static EffectConverter getInstance() {
+    public static StyleConverter<ParsedValue[], Effect> getInstance() {
         return Holder.EFFECT_CONVERTER;
     }
     

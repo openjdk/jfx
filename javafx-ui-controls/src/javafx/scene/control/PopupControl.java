@@ -898,10 +898,10 @@ public class PopupControl extends PopupWindow implements Skinnable {
             }
         };
 
-        private static final List<CssMetaData> STYLEABLES;
+        private static final List<CssMetaData<? extends Node, ?>> STYLEABLES;
         static {
-            final List<CssMetaData> styleables =
-                new ArrayList<CssMetaData>();
+            final List<CssMetaData<? extends Node, ?>> styleables =
+                new ArrayList<CssMetaData<? extends Node, ?>>();
             Collections.addAll(styleables,
                 SKIN
             );
@@ -913,7 +913,7 @@ public class PopupControl extends PopupWindow implements Skinnable {
      * @return The CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
      */
-    public static List<CssMetaData> getClassCssMetaData() {
+    public static List<CssMetaData<? extends Node, ?>> getClassCssMetaData() {
         return StyleableProperties.STYLEABLES;
     }
 
@@ -923,7 +923,7 @@ public class PopupControl extends PopupWindow implements Skinnable {
      * @return The CssMetaData associated with this node, which may include the
      * CssMetaData of its super classes.
      */
-    public List<CssMetaData> getCssMetaData() {
+    public List<CssMetaData<? extends Node, ?>> getCssMetaData() {
         return getClassCssMetaData();
     }
 
@@ -977,7 +977,7 @@ public class PopupControl extends PopupWindow implements Skinnable {
                 * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
                 */
                 @Deprecated @Override
-                public List<CssMetaData> getCssMetaData() {
+                public List<CssMetaData<? extends Node, ?>> getCssMetaData() {
                     return PopupControl.this.getCssMetaData();
                 }                
                 
@@ -997,7 +997,7 @@ public class PopupControl extends PopupWindow implements Skinnable {
         /**
          * {@inheritDoc}
          */
-        public List<CssMetaData> getCssMetaData() {
+        public List<CssMetaData<? extends Node, ?>> getCssMetaData() {
             // see RT-19263
             return PopupControl.this.getCssMetaData();
         }

@@ -84,7 +84,7 @@ public class Node_onInvalidate_Test extends OnInvalidateMethodsTestBase {
 
 
     public static CssMetaData findCssCSSProperty(String propertyName) {
-        final List<CssMetaData> keys = Node.getClassCssMetaData();
+        final List<CssMetaData<? extends Node, ?>> keys = Node.getClassCssMetaData();
         for(CssMetaData styleable : keys) {
             if (styleable.getProperty().equals(propertyName)) return styleable;
         }
