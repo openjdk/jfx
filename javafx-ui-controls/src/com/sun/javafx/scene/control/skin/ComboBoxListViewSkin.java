@@ -25,8 +25,6 @@
 
 package com.sun.javafx.scene.control.skin;
 
-import javafx.collections.WeakListChangeListener;
-import javafx.scene.control.ComboBox;
 import com.sun.javafx.scene.control.behavior.ComboBoxListViewBehavior;
 import java.util.List;
 import javafx.application.Platform;
@@ -36,12 +34,19 @@ import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
+import javafx.collections.WeakListChangeListener;
 import javafx.css.PseudoClass;
 import javafx.event.EventHandler;
 import javafx.event.EventTarget;
 import javafx.scene.Node;
 import javafx.scene.Parent;
-import javafx.scene.control.*;
+import javafx.scene.control.ComboBox;
+import javafx.scene.control.ListCell;
+import javafx.scene.control.ListView;
+import javafx.scene.control.PopupControl;
+import javafx.scene.control.SelectionMode;
+import javafx.scene.control.SelectionModel;
+import javafx.scene.control.TextField;
 import javafx.scene.input.InputEvent;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
@@ -87,15 +92,15 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
      **************************************************************************/
     
     private boolean itemCountDirty;
-    private final ListChangeListener listViewItemsListener = new ListChangeListener() {
-        @Override public void onChanged(ListChangeListener.Change c) {
+    private final ListChangeListener<T> listViewItemsListener = new ListChangeListener<T>() {
+        @Override public void onChanged(ListChangeListener.Change<? extends T> c) {
             itemCountDirty = true;
             getSkinnable().requestLayout();
         }
     };
     
-    private final WeakListChangeListener weakListViewItemsListener =
-            new WeakListChangeListener(listViewItemsListener);
+    private final WeakListChangeListener<T> weakListViewItemsListener =
+            new WeakListChangeListener<T>(listViewItemsListener);
     
     
     
@@ -474,7 +479,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
     private ListView<T> createListView() {
         final ListView<T> listView = new ListView<T>() {
             private boolean isFirstSizeCalculation = true;
-            
+
             @Override protected double computeMinHeight(double width) {
                 return 30;
             }
@@ -509,28 +514,13 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
                 return getListViewPrefHeight();
             }
             
-            @Override 
-            public void impl_processCSS() {
-                
-                //
-                // If the popup doesn't have an owner window, then css won't 
-                // have any stylesheets for the popup yet since the popup gets
-                // the stylesheets from the scene of the owner window.
-                //
-                final PopupControl popup = getPopup();
-                if (popup.getOwnerWindow() == null) return;
-                
-                super.impl_processCSS();
-            }
-            
             private void doCSSCheck() {
-                final PopupControl popup = getPopup();
-                if ((isFirstSizeCalculation || getSkin() == null) && popup.getOwnerWindow() != null) {
+                Parent parent = getPopup().getScene().getRoot();
+                if ((isFirstSizeCalculation || getSkin() == null) && parent.getScene() != null) {
                     // if the skin is null, it means that the css related to the
                     // listview skin hasn't been loaded yet, so we force it here.
                     // This ensures the combobox button is the correct width
                     // when it is first displayed, before the listview is shown.
-                    final Parent parent = getPopup().getScene().getRoot();
                     parent.impl_processCSS(true);
                     isFirstSizeCalculation = false;
                 }
