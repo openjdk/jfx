@@ -705,7 +705,7 @@ public abstract class Node implements EventTarget {
                     updateTreeVisible();
                     oldParent = newParent;
                     invalidateLocalToSceneTransform();
-                    parentEffectiveOrientationChanged();
+                    parentResolvedOrientationInvalidated();
                 }
 
                 @Override
@@ -775,7 +775,7 @@ public abstract class Node implements EventTarget {
             }
             if (getParent() == null) {
                 // if we are the root we need to handle scene change
-                parentEffectiveOrientationChanged();
+                parentResolvedOrientationInvalidated();
             }
 
             oldScene = _scene;
@@ -5195,8 +5195,10 @@ public abstract class Node implements EventTarget {
     private ObjectProperty<NodeOrientation> nodeOrientation;
     private EffectiveOrientationProperty effectiveNodeOrientationProperty;
 
-    private NodeOrientation effectiveNodeOrientation;
-    private NodeOrientation automaticNodeOrientation;
+    private NodeOrientation effectiveNodeOrientation =
+            NodeOrientation.LEFT_TO_RIGHT;
+    private NodeOrientation automaticNodeOrientation =
+            NodeOrientation.LEFT_TO_RIGHT;
 
     public final void setNodeOrientation(NodeOrientation orientation) {
         nodeOrientationProperty().set(orientation);
@@ -5222,7 +5224,7 @@ public abstract class Node implements EventTarget {
             nodeOrientation = new StyleableObjectProperty<NodeOrientation>(NodeOrientation.INHERIT) {
                 @Override
                 protected void invalidated() {
-                    nodeEffectiveOrientationChanged();
+                    nodeResolvedOrientationInvalidated();
                 }
                 
                 @Override
@@ -5247,10 +5249,6 @@ public abstract class Node implements EventTarget {
     }
 
     public final NodeOrientation getEffectiveNodeOrientation() {
-        if (effectiveNodeOrientation == null) {
-            effectiveNodeOrientation = calcEffectiveNodeOrientation();
-        }
-
         return effectiveNodeOrientation;
     }
 
@@ -5285,32 +5283,44 @@ public abstract class Node implements EventTarget {
     }
 
     NodeOrientation getAutomaticNodeOrientation() {
-        if (automaticNodeOrientation == null) {
-            automaticNodeOrientation = calcAutomaticNodeOrientation();
-        }
-
         return automaticNodeOrientation;
     }
 
-    final void parentEffectiveOrientationChanged() {
+    final void parentResolvedOrientationInvalidated() {
         if (getNodeOrientation() == NodeOrientation.INHERIT) {
-            nodeEffectiveOrientationChanged();
+            nodeResolvedOrientationInvalidated();
         } else {
             // mirroring changed
             impl_transformsChanged();
         }
     }
 
-    void nodeEffectiveOrientationChanged() {
-        effectiveNodeOrientation = null;
-        automaticNodeOrientation = null;
+    final void nodeResolvedOrientationInvalidated() {
+        final NodeOrientation oldEffectiveNodeOrientation =
+                effectiveNodeOrientation;
+        final NodeOrientation oldAutomaticNodeOrientation =
+                automaticNodeOrientation;
 
-        if (effectiveNodeOrientationProperty != null) {
+        effectiveNodeOrientation = calcEffectiveNodeOrientation();
+        automaticNodeOrientation = calcAutomaticNodeOrientation();
+
+        if ((effectiveNodeOrientationProperty != null)
+                && (effectiveNodeOrientation != oldEffectiveNodeOrientation)) {
             effectiveNodeOrientationProperty.invalidate();
         }
 
         // mirroring changed
         impl_transformsChanged();
+
+        if ((effectiveNodeOrientation
+                    != oldEffectiveNodeOrientation)
+                || (automaticNodeOrientation != oldAutomaticNodeOrientation)) {
+            nodeResolvedOrientationChanged();
+        }
+    }
+
+    void nodeResolvedOrientationChanged() {
+        // overriden in Parent
     }
 
     private NodeOrientation calcEffectiveNodeOrientation() {
