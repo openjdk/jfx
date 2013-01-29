@@ -502,7 +502,7 @@ public class Stage extends Window {
         
         final Scene sceneValue = getScene();
         if (sceneValue != null) {
-            SceneHelper.parentEffectiveOrientationChanged(sceneValue);
+            SceneHelper.parentEffectiveOrientationInvalidated(sceneValue);
         }
     }
 
