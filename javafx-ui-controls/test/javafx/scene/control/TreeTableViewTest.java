@@ -736,4 +736,36 @@ public class TreeTableViewTest {
         itSupport.setExpanded(true);
         assertEquals(1, treeTableView.getFocusModel().getFocusedIndex());
     }
+    
+    @Test public void test_rt27185() {
+        TreeItem salesDepartment = new TreeItem<String>("Sales Department");
+            salesDepartment.getChildren().addAll(
+                    new TreeItem<String>("Ethan Williams"),
+                    new TreeItem<String>("Emma Jones"),
+                    new TreeItem<String>("Michael Brown"),
+                    new TreeItem<String>("Anna Black"),
+                    new TreeItem<String>("Rodger York"),
+                    new TreeItem<String>("Susan Collins")
+            );
+        TreeItem mikeGraham;
+        TreeItem itSupport = new TreeItem<String>("IT Support");
+            itSupport.getChildren().addAll(
+                    mikeGraham = new TreeItem<String>("Mike Graham"),
+                    new TreeItem<String>("Judy Mayer"),
+                    new TreeItem<String>("Gregory Smith")
+            );
+        
+        TreeItem<String> rootNode = new TreeItem<String>("MyCompany Human Resources");
+        rootNode.getChildren().addAll(salesDepartment, itSupport);
+        rootNode.setExpanded(true);
+        treeTableView.setRoot(rootNode);
+        
+        // start test
+        itSupport.setExpanded(true);
+        treeTableView.getSelectionModel().select(mikeGraham);
+        
+        assertEquals(mikeGraham, treeTableView.getFocusModel().getFocusedItem());
+        salesDepartment.setExpanded(true);
+        assertEquals(mikeGraham, treeTableView.getFocusModel().getFocusedItem());
+    }
 }

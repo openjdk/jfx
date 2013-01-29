@@ -1000,6 +1000,7 @@ public class TreeView<T> extends Control {
                     }
                 }
                 
+                treeView.expandedItemCountDirty = true;
                 shiftSelection(startRow, shift);
             }
         };
@@ -1201,5 +1202,16 @@ public class TreeView<T> extends Control {
 
             return treeView.getTreeItem(index);
         }
+
+        /** {@inheritDoc} */
+        @Override public void focus(int index) {
+            if (treeView.expandedItemCountDirty) {
+                treeView.updateExpandedItemCount(treeView.getRoot());
+            }
+            
+            super.focus(index);
+        }
+        
+        
     }
 }

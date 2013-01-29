@@ -39,6 +39,7 @@ import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 
 import com.sun.javafx.scene.control.ReadOnlyUnbackedObservableList;
+import javafx.application.Platform;
 
 
 /**
@@ -253,8 +254,11 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
         
         // This ensure that the selection remains accurate when a shift occurs.
         if (getFocusedIndex() >= position && getFocusedIndex() > -1 && getFocusedIndex() + shift > -1) {
-            setSelectedIndex(getFocusedIndex() + shift);
-            focus(getFocusedIndex() + shift);
+            final int newFocus = getFocusedIndex() + shift;
+            setSelectedIndex(newFocus);
+ 
+            // removed due to RT-27185
+            // focus(newFocus);
         }
          
         selectedIndicesSeq.callObservers(

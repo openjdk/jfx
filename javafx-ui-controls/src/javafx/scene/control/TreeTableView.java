@@ -1843,6 +1843,7 @@ public class TreeTableView<S> extends Control {
                     }
                 }
                 
+                treeTableView.expandedItemCountDirty = true;
                 shiftSelection(startRow, shift);
             }
         };
@@ -2514,6 +2515,10 @@ public class TreeTableView<S> extends Control {
          * @param index The index of the item to get focus.
          */
         @Override public void focus(int index) {
+            if (treeTableView.expandedItemCountDirty) {
+                treeTableView.updateExpandedItemCount(treeTableView.getRoot());
+            }
+            
             if (index < 0 || index >= getItemCount()) {
                 setFocusedCell(EMPTY_CELL);
             } else {
