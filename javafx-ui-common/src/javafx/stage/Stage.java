@@ -85,6 +85,9 @@ import javafx.beans.value.ObservableValue;
  * minimal platform decorations.</li>
  * </ul>
  * <p>The style must be initialized before the stage is made visible.</p>
+ * <p>On some platforms decorations might not be available. For example, on
+ * some mobile or embedded devices. In these cases a request for a DECORATED or
+ * UTILITY window will be accepted, but no decorations will be shown. </p>
  * 
  * <p><b>Owner</b></p>
  * <p>
@@ -568,8 +571,8 @@ public class Stage extends Window {
      * simulated full-screen window will be used instead; the window will be
      * maximized, made undecorated if possible, and moved to the front.
      * </p>
-     * The user can unconditionally exit full-screen mode at any time by
-     * pressing {@code ESC}.
+     * For desktop profile the user can unconditionally exit full-screen mode
+     * at any time by pressing {@code ESC}.
      * <p>
      * There are differences in behavior between signed and unsigned
      * applications. Signed applications are allowed to enter full-screen
@@ -698,6 +701,10 @@ public class Stage extends Window {
      * In case that more {@code Stage} modes are set simultaneously their order
      * of importance is iconified} {@code fullScreen}, {@code maximized} (from
      * strongest to weakest).
+     * </p>
+     * <p>
+     * On some mobile and embedded platforms setting this property to true will
+     * hide the {@code Stage} but not show an icon for it.
      * </p>
      * <p>
      * The property is read only because it can be changed externally
