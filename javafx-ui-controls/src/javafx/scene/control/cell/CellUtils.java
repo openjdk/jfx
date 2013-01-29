@@ -251,8 +251,9 @@ class CellUtils {
         }
     };
     
-    static <T> ComboBox<T> createComboBox(final Cell<T> cell, ObservableList<T> items) {
+    static <T> ComboBox<T> createComboBox(final Cell<T> cell, final ObservableList<T> items, final StringConverter<T> converter) {
         ComboBox<T> comboBox = new ComboBox<T>(items);
+        comboBox.setConverter(converter);
         comboBox.setMaxWidth(Double.MAX_VALUE);
         comboBox.getSelectionModel().selectedItemProperty().addListener(new ChangeListener<T>() {
             @Override public void changed(ObservableValue<? extends T> ov, T oldValue, T newValue) {
