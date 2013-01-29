@@ -37,10 +37,10 @@
   <key>JVMMainJarName</key>
   <string>DEPLOY_MAIN_JAR_NAME</string>
   <key>JVMOptions</key>
-  <key>NSHighResolutionCapable</key>
-  <string>true</string>
   <array>
 DEPLOY_JVM_OPTIONS
   </array>
+  <key>NSHighResolutionCapable</key>
+  <string>true</string>
  </dict>
 </plist>
