@@ -119,7 +119,7 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeViewB
         registerChangeListener(treeView.cellFactoryProperty(), "CELL_FACTORY");
         registerChangeListener(treeView.focusTraversableProperty(), "FOCUS_TRAVERSABLE");
         
-        updateItemCount();
+        updateRowCount();
     }
     
     @Override protected void handleControlPropertyChanged(String p) {
@@ -135,7 +135,7 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeViewB
                  getRoot().setExpanded(true);
             }
             // update the item count in the flow and behavior instances
-            updateItemCount();
+            updateRowCount();
         } else if ("CELL_FACTORY".equals(p)) {
             flow.recreateCells();
         } else if ("FOCUS_TRAVERSABLE".equals(p)) {
@@ -143,7 +143,7 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeViewB
         }
     }
     
-    private boolean needItemCountUpdate = false;
+//    private boolean needItemCountUpdate = false;
     private boolean needCellsRebuilt = true;
     private boolean needCellsReconfigured = false;
     
@@ -155,7 +155,7 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeViewB
                 // no event being fired to the skin to be informed that the items
                 // had changed. So, here we just watch for the case where the number
                 // of items being added is equal to the number of items being removed.
-                needItemCountUpdate = true;
+                rowCountDirty = true;
                 getSkinnable().requestLayout();
             } else if (e.getEventType().equals(TreeItem.valueChangedEvent())) {
                 // Fix for RT-14971 and RT-15338. 
@@ -167,7 +167,7 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeViewB
                 EventType eventType = e.getEventType();
                 while (eventType != null) {
                     if (eventType.equals(TreeItem.<T>expandedItemCountChangeEvent())) {
-                        needItemCountUpdate = true;
+                        rowCountDirty = true;
                         getSkinnable().requestLayout();
                         break;
                     }
@@ -194,14 +194,14 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeViewB
             getRoot().addEventHandler(TreeItem.<T>treeNotificationEvent(), weakRootListener);
         }
         
-        updateItemCount();
+        updateRowCount();
     }
 
     @Override public int getItemCount() {
         return getSkinnable().getExpandedItemCount();
     }
 
-    private void updateItemCount() {
+    @Override protected void updateRowCount() {
 //        // we're about to recreate all cells - but before that we detach them
 //        // from the TreeView, such that their listeners can be uninstalled.
 //        // If we don't do this, we start to get multiple events firing when
@@ -308,10 +308,7 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeViewB
     @Override
     protected void layoutChildren(final double x, final double y,
             final double w, final double h) {
-        if (needItemCountUpdate) {
-            updateItemCount();
-            needItemCountUpdate = false;
-        }
+        super.layoutChildren(x, y, w, h);
         
         if (needCellsRebuilt) {
             flow.rebuildCells();

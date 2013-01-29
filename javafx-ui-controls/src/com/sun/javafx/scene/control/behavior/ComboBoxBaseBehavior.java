@@ -199,7 +199,9 @@ public class ComboBoxBaseBehavior<T> extends BehaviorBase<ComboBoxBase<T>> {
         // appears below in the autoHide() method.
         if (getControl().isShowing()) {
             hide();
-        } else if (! wasComboBoxButtonClickedForAutoHide && getControl().contains(e.getX(), e.getY())) {
+        } else if (! wasComboBoxButtonClickedForAutoHide 
+                && getControl().contains(e.getX(), e.getY())
+                && e.getButton() == MouseButton.PRIMARY) {
             show();
         } else {
             wasComboBoxButtonClickedForAutoHide = false;

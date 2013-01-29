@@ -85,7 +85,10 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
         } else if ("TREE_ITEM".equals(p)) {
             updateDisclosureNode();
         } else if ("TREE_COLUMN".equals(p)) {
-            updateCells = true;
+            // Fix for RT-27782: Need to set isDirty to true, rather than the 
+            // cheaper updateCells, as otherwise the text indentation will not
+            // be recalculated in TreeTableCellSkin.leftLabelPadding()
+            isDirty = true;
             getSkinnable().requestLayout();
         }
     }
