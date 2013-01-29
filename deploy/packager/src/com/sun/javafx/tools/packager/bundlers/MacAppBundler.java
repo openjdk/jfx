@@ -84,7 +84,7 @@ public class MacAppBundler extends Bundler {
         }
 
         //validate required inputs
-        testRuntime(p, "Contents/Home/jre/lib/jfxrt.jar");
+        testRuntime(p, "Contents/Home/jre/lib/ext/jfxrt.jar");
 
         return true;
     }

@@ -71,7 +71,7 @@ public class LinuxAppBundler extends Bundler {
         }
 
         //validate required inputs
-        testRuntime(p, "lib/jfxrt.jar");
+        testRuntime(p, "lib/ext/fxrt.jar");
         testRuntime(p, "lib/rt.jar");
 
         return true;

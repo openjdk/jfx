@@ -333,7 +333,7 @@ public class RoundRectangle2D extends RectangularShape {
         bits += java.lang.Float.floatToIntBits(height) * 47;
         bits += java.lang.Float.floatToIntBits(arcWidth) * 53;
         bits += java.lang.Float.floatToIntBits(arcHeight) * 59;
-        return (bits ^ (bits >> 32));
+        return bits;
     }
 
     /**

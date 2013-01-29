@@ -523,11 +523,24 @@ public class FXMLLoader {
 
                             eventHandler = new ControllerMethodEventHandler(controller, method);
                         }
+
+                    } else if (value.startsWith(EXPRESSION_PREFIX)) {
+                        value = value.substring(EXPRESSION_PREFIX.length());
+
+                        if (value.length() == 0) {
+                            throw new LoadException("Missing expression reference.");
+                        }
+
+                        Object expression = Expression.get(namespace, KeyPath.parse(value));
+                        if (expression instanceof EventHandler) {
+                            eventHandler = (EventHandler<? extends Event>) expression;
+                        }
+
                     }
 
                     if (eventHandler == null) {
                         if (value.length() == 0) {
-                            throw new LoadException("Missing handler script.");
+                            throw new LoadException("Event Handler not found in Namespace or missing handler script.");
                         }
 
                         if (scriptEngine == null) {

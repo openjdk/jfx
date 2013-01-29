@@ -513,6 +513,7 @@ public class FXVKSkin extends BehaviorSkinBase<FXVK, BehaviorBase<FXVK>> {
         private LetterKey(String letter) {
             this.chars = letter;
             text.setText(this.chars);
+            setId(letter);
         }
 
         public void update(boolean capsDown, boolean shiftDown) {
@@ -541,6 +542,7 @@ public class FXVKSkin extends BehaviorSkinBase<FXVK, BehaviorBase<FXVK>> {
             this.letterChars = this.chars;
             this.altChars = alt;
             text.setText(this.letterChars);
+            setId(letter);
         }
 
         public void update(boolean capsDown, boolean shiftDown) {
@@ -565,6 +567,7 @@ public class FXVKSkin extends BehaviorSkinBase<FXVK, BehaviorBase<FXVK>> {
             this.chars = code;
             text.setText(letter);
             getStyleClass().add("special");
+            setId(letter);
         }
     }
 
@@ -578,6 +581,7 @@ public class FXVKSkin extends BehaviorSkinBase<FXVK, BehaviorBase<FXVK>> {
         private KeyCodeKey(String letter, String c, KeyCode code) {
             super(letter, c);
             this.code = code;
+            setId(letter);
         }
 
         protected KeyEvent event(EventType<KeyEvent> type) {
@@ -608,6 +612,7 @@ public class FXVKSkin extends BehaviorSkinBase<FXVK, BehaviorBase<FXVK>> {
         private KeyboardStateKey(String t) {
             text.setText(t);
             getStyleClass().add("special");
+            setId(t);
         }
     }
 

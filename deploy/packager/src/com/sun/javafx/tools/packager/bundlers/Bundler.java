@@ -149,7 +149,7 @@ public abstract class Bundler {
         if (!rfiles.contains(file)) {
             throw new Bundler.ConfigException(
                     "Java Runtime does not include " + file,
-                    "Make sure ant is using Oracle JDK 7u6 or later.");
+                    "Make sure ant is using Oracle JDK 8 or later.");
         }
     }
 

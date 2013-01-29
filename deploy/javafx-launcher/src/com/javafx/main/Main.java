@@ -70,11 +70,11 @@ import sun.misc.BASE64Decoder;
  *
  *     A. Try loading it directly in case it is on the classpath.
  *     B. If the javafx.runtime.path System Property is set, try
- *        loading it from ${javafx.runtime.path}/lib/jfxrt.jar
- *     C. If on Windows, read the registry key associated with the JavaFX
+ *        loading it from ${javafx.runtime.path}/lib/ext/jfxrt.jar
+ *        (or lib/jfxrt.jar)
+ *     C. Look for a cobundled JavaFX in the current jre
+ *     D. If on Windows, read the registry key associated with the JavaFX
  *        runtime (if running in a 64-bit JVM, use the 64-bit path)
- *     D. Try a few hard-coded relative paths which will allow applications
- *        to be run from the SDK without first having to install the runtime.
  *
  * 4. Create a custom URLClassLoader from the appropriate jar files, and then
  *    call the launchApplication method. If the application class is not a
@@ -184,7 +184,13 @@ public class Main {
             // Add JavaFX runtime jar and deployment jars
             if (jfxRtPath != null) {
                 File jfxRtLibPath = new File(jfxRtPath, "lib");
-                urlList.add(fileToURL(new File(jfxRtLibPath, "jfxrt.jar")));
+                File jfxRtLibExtPath = new File(jfxRtLibPath, "ext");
+                File jfxRtJar = new File(jfxRtLibExtPath, "jfxrt.jar");
+                if (!jfxRtJar.canRead()) {
+                    // Legacy support for old file location
+                    jfxRtJar = new File(jfxRtLibPath, "jfxrt.jar");
+                }
+                urlList.add(fileToURL(jfxRtJar));
                 File deployJar = new File(jfxRtLibPath, "deploy.jar");
                 //in the dev environment deploy.jars will not be part of
                 // built SDK unless it is windows
@@ -241,14 +247,19 @@ public class Main {
     private static Method findLaunchMethodInJar(String jfxRtPathName, String fxClassPath) {
         File jfxRtPath = new File(jfxRtPathName);
 
-        // Verify that we can read <jfxRtPathName>/lib/jfxrt.jar
+        // Verify that we can read <jfxRtPathName>/lib/ext/jfxrt.jar
         File jfxRtLibPath = new File(jfxRtPath, "lib");
-        File jfxRtJar = new File(jfxRtLibPath, "jfxrt.jar");
+        File jfxRtLibExtPath = new File(jfxRtLibPath, "ext");
+        File jfxRtJar = new File(jfxRtLibExtPath, "jfxrt.jar");
         if (!jfxRtJar.canRead()) {
-            if (verbose) {
-                System.err.println("Unable to read " + jfxRtJar.toString());
+            File jfxRtJar2 = new File(jfxRtLibPath, "jfxrt.jar");
+            if (!jfxRtJar2.canRead()) {
+                if (verbose) {
+                    System.err.println("Unable to read " + jfxRtJar.toString()
+                            + " or " + jfxRtJar2.toString());
+                }
+                return null;
             }
-            return null;
         }
 
         return findLaunchMethod(jfxRtPath, fxClassPath);
@@ -742,21 +753,20 @@ public class Main {
     }
 
     // Check the JRE version. Exit with error if < 1.6
-    private static void checkJre() {
-        String javaVersion = System.getProperty("java.version");
+    private static boolean checkJre() {
         if (verbose) {
-            System.err.println("java.version = " + javaVersion);
+            System.err.println("java.version = "
+                    + System.getProperty("java.version"));
             System.err.println("java.runtime.version = "
                     + System.getProperty("java.runtime.version"));
         }
 
-        // NOTE: This could be better, but should last until Java 9.
-        if (!javaVersion.startsWith("1.6")
-                && !javaVersion.startsWith("1.7")
-                && !javaVersion.startsWith("1.8")
-                && !javaVersion.startsWith("1.9")) {
+        // Check for minimum JRE version
+        if (NoJavaFXFallback.isOldJRE()) {
             showFallback(true);
+            return false;
         }
+        return true;
     }
 
     private static Method findLaunchMethod(String fxClassPath) {
@@ -813,29 +823,6 @@ public class Main {
             }
         }
 
-// TODO: remove the following hard-coded paths; they are there so that the
-// apps/experiments will work without having JavaFX pre-installed (or on
-// the Mac)
-
-        // Check the platform registry for this architecture.
-        if (verbose) {
-            System.err.println("5) Look in hardcoded paths");
-        }
-        String[] hardCodedPaths = {
-            "../rt",
-            "../../../../rt", /* this is for sample code in the sdk/apps/src/BrickBreaker/dist */
-            "../../sdk/rt",
-            "../../../artifacts/sdk/rt"
-        };
-
-        for (int i = 0; i < hardCodedPaths.length; i++) {
-            javafxRuntimePath = hardCodedPaths[i];
-            launchMethod = findLaunchMethodInJar(javafxRuntimePath, fxClassPath);
-            if (launchMethod != null) {
-                return launchMethod;
-            }
-        }
-
         return launchMethod;
     }
 
@@ -844,7 +831,9 @@ public class Main {
         verbose = Boolean.getBoolean("javafx.verbose");
 
         // First check the minimum JRE
-        checkJre();
+        if (!checkJre()) {
+            return;
+        }
 
         // Load the main jar manifest attributes
         try {
@@ -906,7 +895,7 @@ public class Main {
                 JApplet japp = null;
 
                 //try to use custom fallback if available
-                if (attrs.getValue(manifestFallbackClass) != null) {
+                if (attrs != null && attrs.getValue(manifestFallbackClass) != null) {
                     Class customFallback = null;
                     try {
                         customFallback = Class.forName(

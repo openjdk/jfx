@@ -25,8 +25,7 @@
 
 package javafx.scene;
 
-import com.sun.javafx.test.OrientationHelper;
-import com.sun.javafx.test.OrientationHelper.StateEncoder;
+import com.sun.javafx.test.NodeOrientationTestBase;
 import java.util.Arrays;
 import java.util.Collection;
 import javafx.geometry.NodeOrientation;
@@ -37,18 +36,29 @@ import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
 
 @RunWith(Parameterized.class)
-public final class Node_effectiveOrientation_Test {
+public final class Node_effectiveOrientation_Test
+        extends NodeOrientationTestBase {
     private final Scene testScene;
     private final String orientationUpdate;
     private final String expectedOrientation;
 
     private static Scene lriiliScene() {
-        return ltrScene(rtlGroup(inhGroup(inhGroup(ltrGroup(inhGroup())))));
+        return ltrScene(
+                   rtlAutGroup(
+                       inhAutGroup(
+                           inhAutGroup(
+                               ltrAutGroup(
+                                   inhAutGroup())))));
     }
 
     private static Scene liirliPrecachedScene() {
         final Scene scene =
-                ltrScene(inhGroup(inhGroup(rtlGroup(ltrGroup(inhGroup())))));
+                ltrScene(
+                    inhAutGroup(
+                        inhAutGroup(
+                            rtlAutGroup(
+                                ltrAutGroup(
+                                    inhAutGroup())))));
         // force caching
         collectOrientation(scene);
         return scene;
@@ -56,7 +66,11 @@ public final class Node_effectiveOrientation_Test {
 
     private static Scene riirliPlugedPrecachedScenegraphScene() {
         final Group root =
-                inhGroup(inhGroup(rtlGroup(ltrGroup(inhGroup()))));
+                inhAutGroup(
+                    inhAutGroup(
+                        rtlAutGroup(
+                            ltrAutGroup(
+                                inhAutGroup()))));
         // force caching
         collectOrientation(root);
 
@@ -65,6 +79,15 @@ public final class Node_effectiveOrientation_Test {
         scene.setRoot(root);
 
         return scene;
+    }
+
+    private static Scene lrIiilScene() {
+        return ltrScene(
+                   rtlAutGroup(
+                       inhManGroup(
+                           inhAutGroup(
+                               inhAutGroup(
+                                   ltrAutGroup())))));
     }
 
     /*
@@ -88,7 +111,10 @@ public final class Node_effectiveOrientation_Test {
                         {
                             riirliPlugedPrecachedScenegraphScene(),
                             "......", "RRRRLL"
-                        }
+                        },
+
+                        { lrIiilScene(), "......", "LRRRRL" },
+                        { lrIiilScene(), ".L....", "LLLLLL" }
                     });
     }
 
@@ -103,35 +129,8 @@ public final class Node_effectiveOrientation_Test {
 
     @Test
     public void effectiveOrientationTest() {
-        OrientationHelper.updateOrientation(testScene, orientationUpdate);
+        updateOrientation(testScene, orientationUpdate);
         assertOrientation(testScene, expectedOrientation);
-    }
-
-    private static Scene ltrScene(final Parent rootNode) {
-        final Scene scene = new Scene(rootNode);
-        scene.setNodeOrientation(NodeOrientation.LEFT_TO_RIGHT);
-        return scene;
-    }
-
-    private static Group ltrGroup(final Node... childNodes) {
-        return group(NodeOrientation.LEFT_TO_RIGHT, childNodes);
-    }
-
-    private static Group rtlGroup(final Node... childNodes) {
-        return group(NodeOrientation.RIGHT_TO_LEFT, childNodes);
-    }
-
-    private static Group inhGroup(final Node... childNodes) {
-        return group(NodeOrientation.INHERIT, childNodes);
-    }
-
-    private static Group group(final NodeOrientation nodeOrientation,
-                               final Node... childNodes) {
-        final Group group = new Group();
-        group.setNodeOrientation(nodeOrientation);
-        group.getChildren().setAll(childNodes);
-
-        return group;
     }
 
     private static void assertOrientation(
@@ -168,13 +167,11 @@ public final class Node_effectiveOrientation_Test {
             };
 
     private static String collectOrientation(final Scene scene) {
-        return OrientationHelper.collectState(scene,
-                                              EFFECTIVE_ORIENTATION_ENCODER);
+        return collectState(scene, EFFECTIVE_ORIENTATION_ENCODER);
     }
 
     private static String collectOrientation(final Node node) {
-        return OrientationHelper.collectState(node,
-                                              EFFECTIVE_ORIENTATION_ENCODER);
+        return collectState(node, EFFECTIVE_ORIENTATION_ENCODER);
     }
 
 }

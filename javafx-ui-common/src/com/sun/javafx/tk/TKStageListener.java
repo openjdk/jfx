@@ -62,6 +62,13 @@ public interface TKStageListener {
     public void changedIconified(boolean iconified);
 
     /**
+     * The stages peer has become maximized or unmaximized
+     *
+     * @param maximized True if the stage's peer is now maximized
+     */
+    public void changedMaximized(boolean maximized);
+
+    /**
      * The stages peer has become resizable or nonresizable
      *
      * @param resizable True if the stage's peer is now resizable

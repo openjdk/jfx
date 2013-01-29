@@ -448,7 +448,7 @@ public class PopupTest {
                             new KeyEvent(null, stage,
                                 KeyEvent.KEY_PRESSED, KeyEvent.CHAR_UNDEFINED,
                                 KeyCode.ESCAPE.getName(),
-                                KeyCode.ESCAPE.impl_getCode(),
+                                KeyCode.ESCAPE,
                                 false, false, false, false));
             assertEquals(0, keyEventCounter.getValue());
 
@@ -466,7 +466,7 @@ public class PopupTest {
                                 KeyEvent.KEY_PRESSED,
                                 KeyEvent.CHAR_UNDEFINED,
                                 KeyCode.ESCAPE.getName(),
-                                KeyCode.ESCAPE.impl_getCode(),
+                                KeyCode.ESCAPE,
                                 false, false, false, false));
             assertEquals(1, keyEventCounter.getValue());
             

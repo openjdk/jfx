@@ -44,6 +44,7 @@ import javafx.beans.DefaultProperty;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.property.ReadOnlyBooleanProperty;
+import javafx.beans.property.ReadOnlyObjectPropertyBase;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.ListChangeListener.Change;
 import javafx.collections.ObservableList;
@@ -131,6 +132,7 @@ import javafx.util.Callback;
 
 import static com.sun.javafx.logging.PulseLogger.PULSE_LOGGING_ENABLED;
 import static com.sun.javafx.logging.PulseLogger.PULSE_LOGGER;
+import com.sun.javafx.scene.input.KeyCodeMap;
 import javafx.geometry.NodeOrientation;
 
 /**
@@ -340,9 +342,9 @@ public class Scene implements EventTarget {
                         }
                         
                         @Override
-                        public void parentEffectiveOrientationChanged(
+                        public void parentEffectiveOrientationInvalidated(
                                 final Scene scene) {
-                            scene.parentEffectiveOrientationChanged();
+                            scene.parentEffectiveOrientationInvalidated();
                         }
                     });
         }
@@ -608,7 +610,7 @@ public class Scene implements EventTarget {
                     if (newWindow != null) {
                         impl_initPeer();
                     }
-                    parentEffectiveOrientationChanged();
+                    parentEffectiveOrientationInvalidated();
 
                     oldWindow = newWindow;
                 }
@@ -2292,7 +2294,7 @@ public class Scene implements EventTarget {
         {
             String chars = new String(cs);
             String text = chars; // TODO: this must be a text like "HOME", "F1", or "A"
-            KeyEvent keyEvent = new KeyEvent(type, chars, text, key,
+            KeyEvent keyEvent = new KeyEvent(type, chars, text, KeyCodeMap.valueOf(key),
                     shiftDown, controlDown, altDown, metaDown);
             impl_processKeyEvent(keyEvent);
         }
@@ -5584,6 +5586,8 @@ public class Scene implements EventTarget {
 
     
     private ObjectProperty<NodeOrientation> nodeOrientation;
+    private EffectiveOrientationProperty effectiveNodeOrientationProperty;
+
     private NodeOrientation effectiveNodeOrientation;
 
     public final void setNodeOrientation(NodeOrientation orientation) {
@@ -5611,7 +5615,7 @@ public class Scene implements EventTarget {
             nodeOrientation = new StyleableObjectProperty<NodeOrientation>(defaultNodeOrientation) {
                 @Override
                 protected void invalidated() {
-                    sceneEffectiveOrientationChanged();
+                    sceneEffectiveOrientationInvalidated();
                 }
 
                 @Override
@@ -5642,15 +5646,34 @@ public class Scene implements EventTarget {
         return effectiveNodeOrientation;
     }
 
-    private void parentEffectiveOrientationChanged() {
+    /**
+     * The effective node orientation of a scene resolves the inheritance of
+     * node orientation, returning either left-to-right or right-to-left.
+     */
+    public final ReadOnlyObjectProperty<NodeOrientation>
+            effectiveNodeOrientationProperty() {
+        if (effectiveNodeOrientationProperty == null) {
+            effectiveNodeOrientationProperty =
+                    new EffectiveOrientationProperty();
+        }
+
+        return effectiveNodeOrientationProperty;
+    }
+
+    private void parentEffectiveOrientationInvalidated() {
         if (getNodeOrientation() == NodeOrientation.INHERIT) {
-            sceneEffectiveOrientationChanged();
+            sceneEffectiveOrientationInvalidated();
         }
     }
 
-    private void sceneEffectiveOrientationChanged() {
+    private void sceneEffectiveOrientationInvalidated() {
         effectiveNodeOrientation = null;
-        getRoot().parentEffectiveOrientationChanged();
+
+        if (effectiveNodeOrientationProperty != null) {
+            effectiveNodeOrientationProperty.invalidate();
+        }
+
+        getRoot().parentResolvedOrientationInvalidated();
     }
 
     private NodeOrientation calcEffectiveNodeOrientation() {
@@ -5674,5 +5697,27 @@ public class Scene implements EventTarget {
             return NodeOrientation.LEFT_TO_RIGHT;
         }
         return orientation;
+    }
+
+    private final class EffectiveOrientationProperty
+            extends ReadOnlyObjectPropertyBase<NodeOrientation> {
+        @Override
+        public NodeOrientation get() {
+            return getEffectiveNodeOrientation();
+        }
+
+        @Override
+        public Object getBean() {
+            return Scene.this;
+        }
+
+        @Override
+        public String getName() {
+            return "effectiveNodeOrientation";
+        }
+
+        public void invalidate() {
+            fireValueChangedEvent();
+        }
     }
 }

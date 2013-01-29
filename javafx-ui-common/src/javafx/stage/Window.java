@@ -64,8 +64,7 @@ import com.sun.javafx.tk.Toolkit;
  * <p>
  *     A top level window within which a scene is hosted, and with which the user
  *     interacts. A Window might be a {@link Stage}, {@link PopupWindow}, or other
- *     such top level. A Window is used also for browser plug-in based deployments
- *     or for mobile deployments.
+ *     such top level. A Window is used also for browser plug-in based deployments.
  * </p>
  *
  */

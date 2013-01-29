@@ -69,6 +69,10 @@ public class WindowPeerListener implements TKStageListener {
         // Overridden in subclasses
     }
 
+    public void changedMaximized(boolean maximized) {
+        // Overridden in subclasses
+    }
+
     public void changedResizable(boolean resizable) {
         // Overridden in subclasses
     }

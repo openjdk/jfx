@@ -43,6 +43,7 @@ import org.junit.runners.Parameterized.Parameters;
 
 import com.sun.javafx.event.EventHandlerManager;
 import com.sun.javafx.test.PropertiesTestBase;
+import javafx.geometry.NodeOrientation;
 
 @RunWith(Parameterized.class)
 public final class Node_properties_Test extends PropertiesTestBase {
@@ -142,6 +143,17 @@ public final class Node_properties_Test extends PropertiesTestBase {
             config(testNode, "eventDispatcher", 
                    null,
                    new EventHandlerManager(null)),
+            config(testNode,
+                   "nodeOrientation", NodeOrientation.INHERIT,
+                                      NodeOrientation.RIGHT_TO_LEFT,
+                   "effectiveNodeOrientation", NodeOrientation.LEFT_TO_RIGHT,
+                                               NodeOrientation.RIGHT_TO_LEFT),
+            config(testParent, "nodeOrientation",
+                       NodeOrientation.LEFT_TO_RIGHT,
+                       NodeOrientation.RIGHT_TO_LEFT,
+                   testNode, "effectiveNodeOrientation",
+                       NodeOrientation.LEFT_TO_RIGHT,
+                       NodeOrientation.RIGHT_TO_LEFT)
         });
     }
 

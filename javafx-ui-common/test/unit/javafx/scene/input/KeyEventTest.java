@@ -25,6 +25,7 @@
 
 package javafx.scene.input;
 
+import com.sun.javafx.scene.input.KeyCodeMap;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -41,12 +42,12 @@ public class KeyEventTest {
     private final Node node2 = new TestNode();
     
     public KeyEvent testKeyEvent(EventTarget target, String character, KeyCode code, boolean shiftDown, boolean controlDown, boolean altDown, boolean metaDown) {
-        return new KeyEvent(null, target, KeyEvent.KEY_PRESSED, character, null, code.impl_getCode(), shiftDown, controlDown, altDown, metaDown);
+        return new KeyEvent(null, target, KeyEvent.KEY_PRESSED, character, null, code, shiftDown, controlDown, altDown, metaDown);
     }
 
     @Test
     public void shouldCreateKeyTypedEvent() {
-        KeyEvent event = new KeyEvent(null, node1, KeyEvent.KEY_TYPED, "A", "A", 0x41, true,
+        KeyEvent event = new KeyEvent(null, node1, KeyEvent.KEY_TYPED, "A", "A", KeyCodeMap.valueOf(0x41), true,
                 false, false, false);
 
         assertSame(node1, event.getTarget());
@@ -62,7 +63,7 @@ public class KeyEventTest {
 
     @Test
     public void shouldCreateKeyReleasedEvent() {
-        KeyEvent event = new KeyEvent(null, node1, KeyEvent.KEY_RELEASED, "A", "A", 0x41, true,
+        KeyEvent event = new KeyEvent(null, node1, KeyEvent.KEY_RELEASED, "A", "A", KeyCodeMap.valueOf(0x41), true,
                 false, false, false);
 
         assertSame(node1, event.getTarget());
@@ -78,7 +79,7 @@ public class KeyEventTest {
 
     @Test
     public void shouldCopyKeyTypedEvent() {
-        KeyEvent original = new KeyEvent(null, node1, KeyEvent.KEY_TYPED, "A", "A", 0x41, true,
+        KeyEvent original = new KeyEvent(null, node1, KeyEvent.KEY_TYPED, "A", "A", KeyCodeMap.valueOf(0x41), true,
                 false, false, false);
         KeyEvent event = original.copyFor(null, node2);
 

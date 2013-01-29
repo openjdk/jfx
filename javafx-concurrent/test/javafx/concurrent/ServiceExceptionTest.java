@@ -25,12 +25,11 @@
 
 package javafx.concurrent;
 
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.concurrent.atomic.AtomicBoolean;
-
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
 import javafx.concurrent.mocks.EpicFailTask;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -63,7 +62,7 @@ public class ServiceExceptionTest extends ServiceTestBase {
     @Override protected AbstractService setupService() {
         return new AbstractService() {
             @Override protected AbstractTask createTestTask() {
-                return new EpicFailTask(exception);
+                return new EpicFailTask(ServiceExceptionTest.this.exception);
             }
         };
     }

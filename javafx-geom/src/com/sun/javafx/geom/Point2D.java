@@ -186,7 +186,7 @@ public class Point2D {
     public int hashCode() {
         int bits = java.lang.Float.floatToIntBits(x);
         bits ^= java.lang.Float.floatToIntBits(y) * 31;
-        return (bits ^ (bits >> 32));
+        return bits;
     }
 
     /**

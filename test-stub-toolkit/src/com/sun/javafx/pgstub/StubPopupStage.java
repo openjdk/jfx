@@ -42,6 +42,11 @@ public class StubPopupStage extends StubStage {
     }
 
     @Override
+    public void setMaximized(boolean maximized) {
+        getNotificationSender().changedMaximized(maximized);
+    }
+
+    @Override
     public void setResizable(boolean resizable) {
         getNotificationSender().changedResizable(resizable);
     }
