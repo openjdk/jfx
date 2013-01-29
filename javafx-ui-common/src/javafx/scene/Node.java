@@ -5196,10 +5196,15 @@ public abstract class Node implements EventTarget {
     private ObjectProperty<NodeOrientation> nodeOrientation;
     private EffectiveOrientationProperty effectiveNodeOrientationProperty;
 
-    private NodeOrientation effectiveNodeOrientation =
-            NodeOrientation.LEFT_TO_RIGHT;
-    private NodeOrientation automaticNodeOrientation =
-            NodeOrientation.LEFT_TO_RIGHT;
+    private static final byte EFFECTIVE_ORIENTATION_LTR = 0;
+    private static final byte EFFECTIVE_ORIENTATION_RTL = 1;
+    private static final byte EFFECTIVE_ORIENTATION_MASK = 1;
+    private static final byte AUTOMATIC_ORIENTATION_LTR = 0;
+    private static final byte AUTOMATIC_ORIENTATION_RTL = 2;
+    private static final byte AUTOMATIC_ORIENTATION_MASK = 2;
+
+    private byte resolvedNodeOrientation =
+            EFFECTIVE_ORIENTATION_LTR | AUTOMATIC_ORIENTATION_LTR;
 
     public final void setNodeOrientation(NodeOrientation orientation) {
         nodeOrientationProperty().set(orientation);
@@ -5250,7 +5255,10 @@ public abstract class Node implements EventTarget {
     }
 
     public final NodeOrientation getEffectiveNodeOrientation() {
-        return effectiveNodeOrientation;
+        return (getEffectiveOrientation(resolvedNodeOrientation)
+                    == EFFECTIVE_ORIENTATION_LTR)
+                       ? NodeOrientation.LEFT_TO_RIGHT
+                       : NodeOrientation.RIGHT_TO_LEFT;
     }
 
     /**
@@ -5283,10 +5291,6 @@ public abstract class Node implements EventTarget {
         return true;
     }
 
-    NodeOrientation getAutomaticNodeOrientation() {
-        return automaticNodeOrientation;
-    }
-
     final void parentResolvedOrientationInvalidated() {
         if (getNodeOrientation() == NodeOrientation.INHERIT) {
             nodeResolvedOrientationInvalidated();
@@ -5297,25 +5301,24 @@ public abstract class Node implements EventTarget {
     }
 
     final void nodeResolvedOrientationInvalidated() {
-        final NodeOrientation oldEffectiveNodeOrientation =
-                effectiveNodeOrientation;
-        final NodeOrientation oldAutomaticNodeOrientation =
-                automaticNodeOrientation;
+        final byte oldResolvedNodeOrientation =
+                resolvedNodeOrientation;
 
-        effectiveNodeOrientation = calcEffectiveNodeOrientation();
-        automaticNodeOrientation = calcAutomaticNodeOrientation();
+        resolvedNodeOrientation =
+                (byte) (calcEffectiveNodeOrientation()
+                            | calcAutomaticNodeOrientation());
 
         if ((effectiveNodeOrientationProperty != null)
-                && (effectiveNodeOrientation != oldEffectiveNodeOrientation)) {
+                && (getEffectiveOrientation(resolvedNodeOrientation)
+                        != getEffectiveOrientation(
+                               oldResolvedNodeOrientation))) {
             effectiveNodeOrientationProperty.invalidate();
         }
 
         // mirroring changed
         impl_transformsChanged();
 
-        if ((effectiveNodeOrientation
-                    != oldEffectiveNodeOrientation)
-                || (automaticNodeOrientation != oldAutomaticNodeOrientation)) {
+        if (resolvedNodeOrientation != oldResolvedNodeOrientation) {
             nodeResolvedOrientationChanged();
         }
     }
@@ -5324,63 +5327,84 @@ public abstract class Node implements EventTarget {
         // overriden in Parent
     }
 
-    private NodeOrientation calcEffectiveNodeOrientation() {
+    private byte calcEffectiveNodeOrientation() {
         final NodeOrientation nodeOrientationValue = getNodeOrientation();
         if (nodeOrientationValue != NodeOrientation.INHERIT) {
-            return nodeOrientationValue;
+            return (nodeOrientationValue == NodeOrientation.LEFT_TO_RIGHT)
+                       ? EFFECTIVE_ORIENTATION_LTR
+                       : EFFECTIVE_ORIENTATION_RTL;
         }
 
         final Node parentValue = getParent();
         if (parentValue != null) {
-            return parentValue.getEffectiveNodeOrientation();
+            return getEffectiveOrientation(parentValue.resolvedNodeOrientation);
         }
 
         final Scene sceneValue = getScene();
         if (sceneValue != null) {
-            return sceneValue.getEffectiveNodeOrientation();
+            return (sceneValue.getEffectiveNodeOrientation()
+                        == NodeOrientation.LEFT_TO_RIGHT)
+                           ? EFFECTIVE_ORIENTATION_LTR
+                           : EFFECTIVE_ORIENTATION_RTL;
         }
 
-        return NodeOrientation.LEFT_TO_RIGHT;
+        return EFFECTIVE_ORIENTATION_LTR;
     }
 
-    private NodeOrientation calcAutomaticNodeOrientation() {
+    private byte calcAutomaticNodeOrientation() {
         if (!isAutomaticallyMirrored()) {
-            return NodeOrientation.LEFT_TO_RIGHT;
+            return AUTOMATIC_ORIENTATION_LTR;
         }
 
         final NodeOrientation nodeOrientationValue = getNodeOrientation();
         if (nodeOrientationValue != NodeOrientation.INHERIT) {
-            return nodeOrientationValue;
+            return (nodeOrientationValue == NodeOrientation.LEFT_TO_RIGHT)
+                       ? AUTOMATIC_ORIENTATION_LTR
+                       : AUTOMATIC_ORIENTATION_RTL;
         }
 
         final Node parentValue = getParent();
         if (parentValue != null) {
             // automatic node orientation is inherited
-            return parentValue.getAutomaticNodeOrientation();
+            return getAutomaticOrientation(parentValue.resolvedNodeOrientation);
         }
 
         final Scene sceneValue = getScene();
         if (sceneValue != null) {
-            return sceneValue.getEffectiveNodeOrientation();
+            return (sceneValue.getEffectiveNodeOrientation()
+                        == NodeOrientation.LEFT_TO_RIGHT)
+                           ? AUTOMATIC_ORIENTATION_LTR
+                           : AUTOMATIC_ORIENTATION_RTL;
         }
 
-        return NodeOrientation.LEFT_TO_RIGHT;
+        return AUTOMATIC_ORIENTATION_LTR;
     }
 
     // Return true if the node needs to be mirrored.
     // A node has mirroring if the orientation differs from the parent
     // package private for testing
-    boolean hasMirroring() {
-        final Parent parentValue = getParent();
+    final boolean hasMirroring() {
+        final Node parentValue = getParent();
 
-        final NodeOrientation thisOrientation =
-                getAutomaticNodeOrientation();
-        final NodeOrientation parentOrientation =
+        final byte thisOrientation =
+                getAutomaticOrientation(resolvedNodeOrientation);
+        final byte parentOrientation =
                 (parentValue != null)
-                    ? parentValue.getAutomaticNodeOrientation()
-                    : NodeOrientation.LEFT_TO_RIGHT;
+                    ? getAutomaticOrientation(
+                          parentValue.resolvedNodeOrientation)
+                    : AUTOMATIC_ORIENTATION_LTR;
 
         return thisOrientation != parentOrientation;
+    }
+
+    private static byte getEffectiveOrientation(
+            final byte resolvedNodeOrientation) {
+        return (byte) (resolvedNodeOrientation & EFFECTIVE_ORIENTATION_MASK);
+    }
+
+    private static byte getAutomaticOrientation(
+            final byte resolvedNodeOrientation) {
+        return (byte) (resolvedNodeOrientation & AUTOMATIC_ORIENTATION_MASK);
     }
 
     private final class EffectiveOrientationProperty
