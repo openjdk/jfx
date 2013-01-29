@@ -15,7 +15,7 @@
     <property environment="env"/>
     
     <!-- Set JFXRT_HOME -->
-    <condition property="JFXRT_HOME" value="../../artifacts/sdk/rt/lib">
+    <condition property="JFXRT_HOME" value="../../artifacts/sdk/rt">
         <not>  
             <isset property="env.JFXRT_HOME"/>
         </not>
