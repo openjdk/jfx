@@ -3,12 +3,15 @@
  */
 package javafx.scene.control;
 
+import java.util.Arrays;
+import java.util.List;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import static javafx.scene.control.ControlTestUtils.assertStyleClassContains;
 import static org.junit.Assert.*;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
+import javafx.beans.property.SimpleStringProperty;
 
 import org.junit.Before;
 import org.junit.Ignore;
@@ -436,5 +439,36 @@ public class TreeViewTest {
         treeView.setRoot(root);
         assertEquals(-1, treeView.getSelectionModel().getSelectedIndex());
         assertNull(treeView.getSelectionModel().getSelectedItem());
+    }
+    
+    @Test public void test_rt27181() {
+        TreeItem salesDepartment = new TreeItem<String>("Sales Department");
+            salesDepartment.getChildren().addAll(
+                    new TreeItem<String>("Ethan Williams"),
+                    new TreeItem<String>("Emma Jones"),
+                    new TreeItem<String>("Michael Brown"),
+                    new TreeItem<String>("Anna Black"),
+                    new TreeItem<String>("Rodger York"),
+                    new TreeItem<String>("Susan Collins")
+            );
+        TreeItem itSupport = new TreeItem<String>("IT Support");
+            itSupport.getChildren().addAll(
+                    new TreeItem<String>("Mike Graham"),
+                    new TreeItem<String>("Judy Mayer"),
+                    new TreeItem<String>("Gregory Smith")
+            );
+        
+        TreeItem<String> rootNode = new TreeItem<String>("MyCompany Human Resources");
+        rootNode.getChildren().addAll(salesDepartment, itSupport);
+        rootNode.setExpanded(true);
+        treeView.setRoot(rootNode);
+        
+        // start test
+        salesDepartment.setExpanded(true);
+        treeView.getSelectionModel().select(salesDepartment);
+        
+        assertEquals(1, treeView.getFocusModel().getFocusedIndex());
+        itSupport.setExpanded(true);
+        assertEquals(1, treeView.getFocusModel().getFocusedIndex());
     }
 }
