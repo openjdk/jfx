@@ -39,6 +39,7 @@ import com.sun.javafx.geom.transform.NoninvertibleTransformException;
 import com.sun.javafx.sg.GrowableDataBuffer;
 import com.sun.javafx.sg.PGCanvas;
 import com.sun.javafx.sg.PGShape;
+import com.sun.javafx.text.TextLayout;
 import com.sun.prism.BasicStroke;
 import com.sun.prism.CompositeMode;
 import com.sun.prism.Graphics;
@@ -220,7 +221,8 @@ public class NGCanvas extends NGNode implements PGCanvas {
     private float miterlimit;
     private BasicStroke stroke;
     private Path2D path;
-    private NGText ngtext;
+    private NGSpan ngtext;
+    private TextLayout textLayout;
     private PGFont pgfont;
     private int align;
     private int baseline;
@@ -251,7 +253,8 @@ public class NGCanvas extends NGNode implements PGCanvas {
         miterlimit = 10f;
         stroke = null;
         path = new Path2D();
-        ngtext = new NGText();
+        ngtext = new NGSpan();
+        textLayout = new TextLayout();
         pgfont = (PGFont) Font.getDefault().impl_getNativeFont();
         align = PGCanvas.ALIGN_LEFT;
         baseline = VPos.BASELINE.ordinal();
@@ -1006,70 +1009,61 @@ public class NGCanvas extends NGNode implements PGCanvas {
             {
                 float x = buf.getFloat();
                 float y = buf.getFloat();
-                float maxw = buf.getFloat();
-                String str = (String) buf.getObject();
+                float maxWidth = buf.getFloat();
+                String string = (String) buf.getObject();
 
-                ngtext.setFont(pgfont);
-                ngtext.helper.setTextOrigin(baseline);
-                ngtext.setText(str);
-
-                float lineWidth = ngtext.helper.getLogicalWidth();
-                // Note this alignment does not correspond to FX Text
-                // alignment. Canvas text is aligned relative to x,y origin.
-                float xOffset = 0.0f;
-
-                // Remind: At present the alignment enumerated constants for
-                // for PGCanvas and NGTextHelper are the same.
-                // i.e. NGTextHelper.ALIGN_RIGHT == PGCanvas.ALIGN_RIGHT
-                // Thus it is okay to pass align variable directly into
-                // helper.setTextAlignment(...). But if either
-                // PGCanvas.ALIGN... or NGTextHelper.ALIGN... change,
-                // without updating the other, then this will be incorrect.
-                ngtext.helper.setTextAlignment(align);
-                if (align != PGCanvas.ALIGN_LEFT) {
-                    if (align == PGCanvas.ALIGN_RIGHT) {
-                        xOffset = -lineWidth;
-                    } else if (align == PGCanvas.ALIGN_CENTER) {
-                        xOffset = -lineWidth * 0.5f;
-                    }
+                textLayout.setContent(string, pgfont);
+                textLayout.setAlignment(align);
+                float xAlign = 0, yAlign = 0;
+                BaseBounds layoutBounds = textLayout.getBounds();
+                float layoutWidth = layoutBounds.getWidth();
+                float layoutHeight = layoutBounds.getHeight();
+                switch (align) {
+                    case ALIGN_RIGHT: xAlign = layoutWidth; break;
+                    case ALIGN_CENTER: xAlign = layoutWidth / 2; break;
                 }
-
-                // Implements: maximum width the text string can have.
-                if (maxw > 0.0 && lineWidth > maxw) {
-                    // Scale according to max linewidth of node
-                    float sx = maxw / lineWidth;
-                    TEMP_TX.setTransform(transform);
-                    x += xOffset * sx;
-                    TEMP_TX.translate(x, y);
-                    TEMP_TX.scale(sx, 1.0);
-                    x = 0.0f;
-                    y = 0.0f;
-                    gr.setTransform(TEMP_TX);
-                } else {
-                    x += xOffset;
+                switch (baseline) {
+                    case BASE_ALPHABETIC: yAlign = -layoutBounds.getMinY(); break;
+                    case BASE_MIDDLE: yAlign = layoutHeight / 2; break;
+                    case BASE_BOTTOM: yAlign = layoutHeight; break;
                 }
-
-                // Fill or Stroke text
-                if (token == FILL_TEXT) {
-                    ngtext.setMode(PGShape.Mode.FILL);
-                    ngtext.setFillPaint(fillPaint);
-                    ngtext.setDrawPaint(null);
-                } else {
-                    ngtext.setMode(PGShape.Mode.STROKE);
-                    BasicStroke s = getStroke();
-                    if (gr != null) {
-                        gr.setStroke(s);
-                    }
-                    ngtext.setDrawStroke(s);
-                    ngtext.setFillPaint(null);
-                    ngtext.setDrawPaint(strokePaint);
-                }
-
-                ngtext.setLocation(x, y);
                 if (bounds != null) {
-                    ngtext.helper.computeContentBounds(bounds, transform);
+                    TEMP_TX.setTransform(transform);
+                    if (maxWidth > 0.0 && layoutWidth > maxWidth) {
+                        float sx = maxWidth / layoutWidth;
+                        TEMP_TX.translate(x - xAlign * sx, y - yAlign);
+                        TEMP_TX.scale(sx, 1);
+                    } else {
+                        TEMP_TX.translate(x - xAlign, y - yAlign);
+                    }
+                    if (token == FILL_TEXT) {
+                        textLayout.getBounds(null, bounds);
+                        TEMP_TX.transform(bounds, bounds);
+                    } else {
+                        int flag = TextLayout.TYPE_TEXT;
+                        Shape textShape = textLayout.getShape(flag, null);
+                        strokebounds(getStroke(), textShape, bounds, TEMP_TX);
+                    }
                 }
                 if (gr != null) {
+                    if (maxWidth > 0.0 && layoutWidth > maxWidth) {
+                        float sx = maxWidth / layoutWidth;
+                        gr.translate(x - xAlign * sx, y - yAlign);
+                        gr.scale(sx, 1);
+                        ngtext.setLayoutLocation(0, 0);
+                    } else {
+                        ngtext.setLayoutLocation(xAlign - x, yAlign - y);
+                    }
+                    if (token == FILL_TEXT) {
+                        ngtext.setMode(PGShape.Mode.FILL);
+                        ngtext.setFillPaint(fillPaint);
+                    } else {
+                        ngtext.setMode(PGShape.Mode.STROKE);
+                        ngtext.setDrawStroke(getStroke());
+                        ngtext.setDrawPaint(strokePaint);
+                    }
+                    ngtext.setFont(pgfont);
+                    ngtext.setGlyphs(textLayout.getRuns());
                     ngtext.renderContent(gr);
                 }
                 break;
