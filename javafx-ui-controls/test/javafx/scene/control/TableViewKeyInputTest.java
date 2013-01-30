@@ -19,7 +19,7 @@ import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
 
-//@Ignore("Disabling tests as they fail with OOM in continuous builds")
+@Ignore("Disabling tests as they fail with OOM in continuous builds")
 public class TableViewKeyInputTest {
     private TableView<String> tableView;
     private TableView.TableViewSelectionModel<String> sm;

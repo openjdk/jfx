@@ -18,7 +18,7 @@ import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
 
-//@Ignore("Disabling tests as they fail with OOM in continuous builds")
+@Ignore("Disabling tests as they fail with OOM in continuous builds")
 public class TreeTableViewKeyInputTest {
     private TreeTableView<String> tableView;
     private TreeTableView.TreeTableViewSelectionModel<String> sm;

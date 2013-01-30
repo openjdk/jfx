@@ -18,7 +18,7 @@ import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
 
-//@Ignore("Disabling tests as they fail with OOM in continuous builds")
+@Ignore("Disabling tests as they fail with OOM in continuous builds")
 public class ListViewKeyInputTest {
     private ListView<String> listView;
     private MultipleSelectionModel<String> sm;
