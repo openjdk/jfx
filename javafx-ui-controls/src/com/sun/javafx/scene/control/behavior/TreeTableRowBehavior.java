@@ -63,18 +63,17 @@ public class TreeTableRowBehavior<T> extends CellBehaviorBase<TreeTableRow<T>> {
         
         // handle editing, which only occurs with the primary mouse button
         int clickCount = e.getClickCount();
-        switch (clickCount) {
-            case 1: // In the case of clicking to the right of the rightmost
-                    // TreeTableCell, we should still support selection, so that
-                    // is what we are doing here.
-                    TreeTableView table = treeTableRow.getTreeTableView();
-                    if (table == null) break;
-                    TableSelectionModel sm = table.getSelectionModel();
-                    if (sm != null) sm.select(treeItem);
-                    break;
-            case 2: // try to expand/collapse branch tree item
-                    treeItem.setExpanded(! treeItem.isExpanded());
-                    break;
+        if (clickCount == 1) {
+            // In the case of clicking to the right of the rightmost
+            // TreeTableCell, we should still support selection, so that
+            // is what we are doing here.
+            TreeTableView table = treeTableRow.getTreeTableView();
+            if (table == null) return;
+            TableSelectionModel sm = table.getSelectionModel();
+            if (sm != null) sm.select(treeItem);
+        } else if (clickCount % 2 == 0) {
+            // try to expand/collapse branch tree item
+            treeItem.setExpanded(! treeItem.isExpanded());
         }
     }
 }
