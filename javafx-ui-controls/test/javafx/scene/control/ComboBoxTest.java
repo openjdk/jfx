@@ -24,6 +24,7 @@ import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.event.Event;
 import javafx.event.EventHandler;
+import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
 import javafx.util.Callback;
@@ -45,6 +46,10 @@ public class ComboBoxTest {
     
     public ListView getListView() {
         return ((ComboBoxListViewSkin)comboBox.getSkin()).getListView();
+    }
+    
+    public Node getDisplayNode() {
+        return ((ComboBoxListViewSkin)comboBox.getSkin()).getDisplayNode();
     }
     
     
@@ -879,6 +884,37 @@ public class ComboBoxTest {
         comboBox.getSelectionModel().select(2);
         item = sm.getSelectedItem();
         assertEquals("2", item);
+        assertEquals(2, sm.getSelectedIndex());
+    }
+    
+    @Test public void test_rt27654() {
+        comboBox.getItems().addAll("0","1","2","3","4","5","6","7","8","9");
+        
+        SingleSelectionModel sm = comboBox.getSelectionModel();
+        
+        Stage stage = new Stage();
+        Scene scene = new Scene(comboBox);
+        stage.setScene(scene);
+        comboBox.impl_processCSS(true);
+        comboBox.show();
+        ListCell<String> buttonCell = (ListCell<String>) getDisplayNode();
+        
+        sm.select(2);
+        assertEquals("2", sm.getSelectedItem());
+        assertEquals("2", comboBox.getValue());
+        assertEquals("2", buttonCell.getText());
+        assertEquals(2, sm.getSelectedIndex());
+        
+        sm.clearSelection();
+        assertNull(sm.getSelectedItem());
+        assertNull(comboBox.getValue());
+        assertEquals("", buttonCell.getText());
+        assertEquals(-1, sm.getSelectedIndex());
+        
+        sm.select(2);
+        assertEquals("2", sm.getSelectedItem());
+        assertEquals("2", comboBox.getValue());
+        assertEquals("2", buttonCell.getText());
         assertEquals(2, sm.getSelectedIndex());
     }
 }

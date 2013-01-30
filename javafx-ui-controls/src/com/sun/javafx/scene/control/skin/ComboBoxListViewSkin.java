@@ -309,10 +309,10 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
     private void updateValue() {
         T newValue = comboBox.getValue();
         
-        SelectionModel sm = listView.getSelectionModel();
+        SelectionModel listViewSM = listView.getSelectionModel();
         
         if (newValue == null) {
-            sm.clearSelection();
+            listViewSM.clearSelection();
         } else {
             // RT-22386: We need to test to see if the value is in the comboBox
             // items list. If it isn't, then we should clear the listview 
@@ -320,16 +320,16 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
             int indexOfNewValue = getIndexOfComboBoxValueInItemsList();
             if (indexOfNewValue == -1) {
                 listSelectionLock = true;
-                sm.clearSelection();
+                listViewSM.clearSelection();
                 listSelectionLock = false;
             } else {
                 int index = comboBox.getSelectionModel().getSelectedIndex();
                 if (index >= 0 && index < comboBox.getItems().size()) {
                     T itemsObj = comboBox.getItems().get(index);
                     if (itemsObj != null && itemsObj.equals(newValue)) {
-                        sm.select(index);
+                        listViewSM.select(index);
                     } else {
-                        sm.select(newValue);
+                        listViewSM.select(newValue);
                     }
                 } else {
                     // just select the first instance of newValue in the list
@@ -339,7 +339,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
                         // exist in the ComboBox items list (part one of fix)
                         updateDisplayNode();
                     } else {
-                        sm.select(listViewIndex);
+                        listViewSM.select(listViewIndex);
                     }
                 }
             }
@@ -397,6 +397,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
         } else {
             int index = getIndexOfComboBoxValueInItemsList();
             if (index > -1) {
+                buttonCell.setItem(null);
                 buttonCell.updateListView(listView);
                 buttonCell.updateIndex(index);
             } else {
