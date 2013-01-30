@@ -148,11 +148,15 @@ public class Text extends Shape {
         InvalidationListener listener = new InvalidationListener() {
             @Override public void invalidated(Observable observable) {
                 checkSpan();
-                checkOrientation();
             }
         };
         parentProperty().addListener(listener);
         managedProperty().addListener(listener);
+        effectiveNodeOrientationProperty().addListener(new InvalidationListener() {
+            @Override public void invalidated(Observable observable) {
+                checkOrientation();
+            }
+        });
         setPickOnBounds(true);
     }
 
@@ -201,12 +205,6 @@ public class Text extends Shape {
                 needsTextLayout();
             }
         }
-    }
-
-    @Deprecated
-    public void impl_transformsChanged() {
-        super.impl_transformsChanged();
-        checkOrientation();
     }
 
     @Override

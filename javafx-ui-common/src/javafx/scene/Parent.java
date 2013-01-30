@@ -1223,11 +1223,9 @@ public abstract class Parent extends Node {
     }
 
     @Override
-    void nodeEffectiveOrientationChanged() {
-        super.nodeEffectiveOrientationChanged();
-
+    void nodeResolvedOrientationChanged() {
         for (int i = 0, max = children.size(); i < max; ++i) {
-            children.get(i).parentEffectiveOrientationChanged();
+            children.get(i).parentResolvedOrientationInvalidated();
         }
     }
 

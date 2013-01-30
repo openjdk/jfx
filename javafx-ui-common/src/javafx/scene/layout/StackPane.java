@@ -28,19 +28,16 @@ package javafx.scene.layout;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-
 import javafx.beans.property.ObjectProperty;
-import javafx.beans.value.WritableValue;
+import javafx.css.CssMetaData;
+import javafx.css.StyleableObjectProperty;
+import javafx.css.StyleableProperty;
 import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
 import javafx.geometry.VPos;
 import javafx.scene.Node;
-
-import javafx.css.StyleableObjectProperty;
-import javafx.css.CssMetaData;
 import com.sun.javafx.css.converters.EnumConverter;
-import javafx.css.StyleableProperty;
 
 /**
  *
@@ -193,6 +190,15 @@ public class StackPane extends Pane {
      */
     public StackPane() {
         super();
+    }
+
+    /**
+     * Creates a StackPane layout with default CENTER alignment.
+     * @param children The initial set of children for this pane.
+     */
+    public StackPane(Node... children) {
+        super();
+        getChildren().addAll(children);
     }
 
     /**

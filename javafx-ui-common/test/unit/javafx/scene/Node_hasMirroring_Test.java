@@ -25,11 +25,9 @@
 
 package javafx.scene;
 
-import com.sun.javafx.test.OrientationHelper;
-import com.sun.javafx.test.OrientationHelper.StateEncoder;
+import com.sun.javafx.test.NodeOrientationTestBase;
 import java.util.Arrays;
 import java.util.Collection;
-import javafx.geometry.NodeOrientation;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -37,7 +35,7 @@ import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
 
 @RunWith(Parameterized.class)
-public final class Node_hasMirroring_Test {
+public final class Node_hasMirroring_Test extends NodeOrientationTestBase {
     private final Scene testScene;
     private final String orientationUpdate;
     private final String expectedMirroring;
@@ -69,6 +67,15 @@ public final class Node_hasMirroring_Test {
                                    rtlAutGroup())))));
     }
 
+    private static Scene lrIiilScene() {
+        return ltrScene(
+                   rtlAutGroup(
+                       inhManGroup(
+                           inhAutGroup(
+                               inhAutGroup(
+                                   ltrAutGroup())))));
+    }
+
     /*
      * Parameters: [testScene], [orientationUpdate], [expectedMirroring]
      */
@@ -85,7 +92,10 @@ public final class Node_hasMirroring_Test {
                         /* effective: LRRRLL, automatic: LRLLLL */
                         { lrIiliScene(), "......", ".MM..." },
                         /* effective: LRLRLR, automatic: LRLLLR */
-                        { lrLRlrScene(), "......", ".MM..M" }
+                        { lrLRlrScene(), "......", ".MM..M" },
+
+                        /* effective: LRRRRL, automatic: LRLRRL */
+                        { lrIiilScene(), "...R..", ".MMM.M" },
                     });
     }
 
@@ -100,61 +110,8 @@ public final class Node_hasMirroring_Test {
 
     @Test
     public void hasMirroringTest() {
-        OrientationHelper.updateOrientation(testScene, orientationUpdate);
+        updateOrientation(testScene, orientationUpdate);
         assertMirroring(testScene, expectedMirroring);
-    }
-
-    private static Scene ltrScene(final Parent rootNode) {
-        final Scene scene = new Scene(rootNode);
-        scene.setNodeOrientation(NodeOrientation.LEFT_TO_RIGHT);
-        return scene;
-    }
-
-    private static Group ltrAutGroup(final Node... childNodes) {
-        return autGroup(NodeOrientation.LEFT_TO_RIGHT, childNodes);
-    }
-
-    private static Group rtlAutGroup(final Node... childNodes) {
-        return autGroup(NodeOrientation.RIGHT_TO_LEFT, childNodes);
-    }
-
-    private static Group inhAutGroup(final Node... childNodes) {
-        return autGroup(NodeOrientation.INHERIT, childNodes);
-    }
-
-    private static Group ltrManGroup(final Node... childNodes) {
-        return manGroup(NodeOrientation.LEFT_TO_RIGHT, childNodes);
-    }
-
-    private static Group rtlManGroup(final Node... childNodes) {
-        return manGroup(NodeOrientation.RIGHT_TO_LEFT, childNodes);
-    }
-
-    private static Group inhManGroup(final Node... childNodes) {
-        return manGroup(NodeOrientation.INHERIT, childNodes);
-    }
-
-    private static Group autGroup(final NodeOrientation nodeOrientation,
-                                  final Node... childNodes) {
-        final Group group = new Group();
-        group.setNodeOrientation(nodeOrientation);
-        group.getChildren().setAll(childNodes);
-
-        return group;
-    }
-
-    private static Group manGroup(final NodeOrientation nodeOrientation,
-                                  final Node... childNodes) {
-        final Group group = new Group() {
-                                    @Override
-                                    public boolean isAutomaticallyMirrored() {
-                                        return false;
-                                    }
-                                };
-        group.setNodeOrientation(nodeOrientation);
-        group.getChildren().setAll(childNodes);
-
-        return group;
     }
 
     private static void assertMirroring(
@@ -184,6 +141,6 @@ public final class Node_hasMirroring_Test {
             };
 
     private static String collectMirroring(final Scene scene) {
-        return OrientationHelper.collectState(scene, HAS_MIRRORING_ENCODER);
+        return collectState(scene, HAS_MIRRORING_ENCODER);
     }
 }

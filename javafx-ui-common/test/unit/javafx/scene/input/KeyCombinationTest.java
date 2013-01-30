@@ -45,39 +45,40 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import com.sun.javafx.pgstub.StubToolkit;
+import com.sun.javafx.scene.input.KeyCodeMap;
 import com.sun.javafx.tk.Toolkit;
 
 
 public class KeyCombinationTest {
     final KeyEvent ctrlAltQEvent = new KeyEvent(null, Event.NULL_SOURCE_TARGET, KeyEvent.KEY_PRESSED, 
-            "q", null, 0x51, false, true, true, false);
+            "q", null, KeyCodeMap.valueOf(0x51), false, true, true, false);
 
     final KeyEvent ctrlAltQUpEvent = new KeyEvent(null, Event.NULL_SOURCE_TARGET, KeyEvent.KEY_RELEASED, 
-            "q", null, 0x51, false, true, true, false);
+            "q", null, KeyCodeMap.valueOf(0x51), false, true, true, false);
 
     final KeyEvent ctrlShiftQEvent = new KeyEvent(null, Event.NULL_SOURCE_TARGET, KeyEvent.KEY_PRESSED, 
-            "Q", null, 0x51, true, true, false, false);
+            "Q", null, KeyCodeMap.valueOf(0x51), true, true, false, false);
 
     final KeyEvent ctrlAltShiftQEvent = new KeyEvent(null, Event.NULL_SOURCE_TARGET, KeyEvent.KEY_PRESSED, 
-            "Q", null, 0x51, true, true, true, false);
+            "Q", null, KeyCodeMap.valueOf(0x51), true, true, true, false);
 
     final KeyEvent alt2Event = new KeyEvent(null, Event.NULL_SOURCE_TARGET, KeyEvent.KEY_PRESSED, 
-            "2", null, 0x32, false, false, true, false);
+            "2", null, KeyCodeMap.valueOf(0x32), false, false, true, false);
 
     final KeyEvent altShift2Event = new KeyEvent(null, Event.NULL_SOURCE_TARGET, KeyEvent.KEY_PRESSED, 
-            "@", null, 0x32, true, false, true, false);
+            "@", null, KeyCodeMap.valueOf(0x32), true, false, true, false);
 
     final KeyEvent altSoftkey0Event = new KeyEvent(null, Event.NULL_SOURCE_TARGET, KeyEvent.KEY_PRESSED, 
-            "~", null, 0x1000, false, false, true, false);
+            "~", null, KeyCodeMap.valueOf(0x1000), false, false, true, false);
 
     final KeyEvent altShiftSoftkey0Event = new KeyEvent(null, Event.NULL_SOURCE_TARGET, KeyEvent.KEY_PRESSED, 
-            "~", null, 0x1000, true, false, true, false);
+            "~", null, KeyCodeMap.valueOf(0x1000), true, false, true, false);
 
     final KeyEvent altShiftPlusEvent = new KeyEvent(null, Event.NULL_SOURCE_TARGET, KeyEvent.KEY_PRESSED, 
-            "~", null, 0x209, true, false, true, false);
+            "~", null, KeyCodeMap.valueOf(0x209), true, false, true, false);
 
     final KeyEvent altShiftQuoteEvent = new KeyEvent(null, Event.NULL_SOURCE_TARGET, KeyEvent.KEY_PRESSED, 
-            "~", null, 0xDE, true, false, true, false);
+            "~", null, KeyCodeMap.valueOf(0xDE), true, false, true, false);
 
     @BeforeClass
     public static void setUpCharToKeyCodeMap() {
@@ -315,15 +316,15 @@ public class KeyCombinationTest {
     public void testKeyCombinationWithShortcutModifier() {
         final KeyEvent ctrlC = new KeyEvent(
                                    KeyEvent.KEY_PRESSED,
-                                   "c", null, 0x43,
+                                   "c", null, KeyCodeMap.valueOf(0x43),
                                    false, true, false, false);
         final KeyEvent metaC = new KeyEvent(
                                    KeyEvent.KEY_PRESSED,
-                                   "c", null, 0x43,
+                                   "c", null, KeyCodeMap.valueOf(0x43),
                                    false, false, false, true);
         final KeyEvent metaAltC = new KeyEvent(
                                    KeyEvent.KEY_PRESSED,
-                                      "c", null, 0x43,
+                                      "c", null, KeyCodeMap.valueOf(0x43),
                                       false, false, true, true);
 
         final KeyCombination shortcutC =

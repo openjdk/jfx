@@ -26,29 +26,26 @@
 
 package javafx.scene.layout;
 
-import javafx.css.StyleableBooleanProperty;
-import javafx.css.StyleableDoubleProperty;
-import javafx.css.StyleableObjectProperty;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
+import javafx.css.CssMetaData;
+import javafx.css.StyleableBooleanProperty;
+import javafx.css.StyleableDoubleProperty;
+import javafx.css.StyleableObjectProperty;
+import javafx.css.StyleableProperty;
+import javafx.geometry.HPos;
 import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
+import javafx.geometry.VPos;
 import javafx.scene.Node;
-
-import javafx.css.CssMetaData;
 import com.sun.javafx.css.converters.BooleanConverter;
 import com.sun.javafx.css.converters.EnumConverter;
 import com.sun.javafx.css.converters.SizeConverter;
-import javafx.beans.value.WritableValue;
-import javafx.css.StyleableProperty;
-import javafx.geometry.HPos;
-import javafx.geometry.VPos;
 
 /**
  * VBox lays out its children in a single vertical column.
@@ -216,6 +213,26 @@ public class VBox extends Pane {
     public VBox(double spacing) {
         this();
         setSpacing(spacing);
+    }
+
+    /**
+     * Creates an VBox layout with spacing = 0.
+     * @param children The initial set of children for this pane.
+     */
+    public VBox(Node... children) {
+        super();
+        getChildren().addAll(children);
+    }
+
+    /**
+     * Creates an VBox layout with the specified spacing between children.
+     * @param spacing the amount of horizontal space between each child
+     * @param children The initial set of children for this pane.
+     */
+    public VBox(double spacing, Node... children) {
+        this();
+        setSpacing(spacing);
+        getChildren().addAll(children);
     }
 
     /**

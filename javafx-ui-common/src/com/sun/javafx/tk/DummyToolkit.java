@@ -469,16 +469,6 @@ final public class DummyToolkit extends Toolkit {
     }
 
     @Override
-    public boolean isExternalFormatSupported(Class format) {
-        throw new UnsupportedOperationException("Not supported yet.");
-    }
-
-    @Override
-    public Object toExternalImage(Object platformImg, Object imgType) {
-        throw new UnsupportedOperationException("Not supported yet.");
-    }
-
-    @Override
     public KeyCode getPlatformShortcutKey() {
         throw new UnsupportedOperationException("Not supported yet.");
     }
@@ -487,6 +477,7 @@ final public class DummyToolkit extends Toolkit {
     public List<File> showFileChooser(TKStage ownerWindow,
                                       String title,
                                       File initialDirectory,
+                                      String initialFileName,
                                       FileChooserType fileChooserType,
                                       List<ExtensionFilter> extensionFilters) {
         throw new UnsupportedOperationException("Not supported yet.");

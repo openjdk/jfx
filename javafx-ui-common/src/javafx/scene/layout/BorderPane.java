@@ -26,6 +26,7 @@
 
 package javafx.scene.layout;
 
+import java.util.List;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ObjectPropertyBase;
 import javafx.geometry.HPos;
@@ -34,8 +35,6 @@ import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
 import javafx.geometry.VPos;
 import javafx.scene.Node;
-
-import java.util.List;
 
 
 /**
@@ -208,6 +207,34 @@ public class BorderPane extends Pane {
      */
     public BorderPane() {
         super();
+    }
+
+    /**
+     * Creates an BorderPane layout with the given Node as the center of the BorderPane.
+     * @param center The node to set as the center of the BorderPane.
+     */
+    public BorderPane(Node center) {
+        super();
+        setCenter(center);
+    }
+
+    /**
+     * Creates an BorderPane layout with the given Nodes to use for each of the main
+     * layout areas of the Border Pane. The top, right, bottom, and left nodes are listed
+     * in clockwise order.
+     * @param center The node to set as the center of the BorderPane.
+     * @param top The node to set as the top of the BorderPane.
+     * @param right The node to set as the right of the BorderPane.
+     * @param bottom The node to set as the bottom of the BorderPane.
+     * @param left The node to set as the left of the BorderPane.
+     */
+    public BorderPane(Node center, Node top, Node right, Node bottom, Node left) {
+        super();
+        setCenter(center);
+        setTop(top);
+        setRight(right);
+        setBottom(bottom);
+        setLeft(left);
     }
 
     /**

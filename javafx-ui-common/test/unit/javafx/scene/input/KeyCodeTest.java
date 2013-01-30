@@ -25,6 +25,7 @@
 
 package javafx.scene.input;
 
+import com.sun.javafx.scene.input.KeyCodeMap;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertSame;
@@ -45,7 +46,7 @@ public class KeyCodeTest {
     @Test
     public void shouldFindCorrectCode() {
         for (KeyCode code : KeyCode.values()) {
-            assertSame(code, KeyCode.valueOf(code.impl_getCode()));
+            assertSame(code, KeyCodeMap.valueOf(code.impl_getCode()));
         }
     }
 }

@@ -299,8 +299,7 @@ public class Region extends Parent {
         super();
         setPickOnBounds(true);
     }
-    
-    
+
     /***************************************************************************
      *                                                                         *
      * Region properties                                                       *

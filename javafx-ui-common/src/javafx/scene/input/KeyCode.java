@@ -1312,19 +1312,14 @@ public enum KeyCode {
         return code;
     }
 
-    private static final Map<Integer, KeyCode> charMap;
+   
     private static final Map<String, KeyCode> nameMap;
     static {
-        charMap = new HashMap<Integer, KeyCode>(KeyCode.values().length);
+        
         nameMap = new HashMap<String, KeyCode>(KeyCode.values().length);
         for (KeyCode c : KeyCode.values()) {
-            charMap.put(c.code, c);
             nameMap.put(c.name, c);
         }
-    }
-
-    static KeyCode valueOf(int code) {
-        return charMap.get(code);
     }
 
     /**

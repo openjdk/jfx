@@ -349,7 +349,7 @@ public class BundleParams {
             return false;
         }
 
-        File jfxJar = new File(jdkRoot, "jre/lib/jfxrt.jar");
+        File jfxJar = new File(jdkRoot, "jre/lib/ext/fxrt.jar");
         if (!jfxJar.exists()) {
             Log.verbose("jfxrt.jar is not found at " + jfxJar.getAbsolutePath());
             return false;

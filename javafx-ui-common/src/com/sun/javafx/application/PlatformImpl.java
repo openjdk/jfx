@@ -67,6 +67,11 @@ public class PlatformImpl {
     private static Boolean isSWTSupported;
     private static Boolean isSwingSupported;
     private static Boolean isFXMLSupported;
+    private static Boolean hasTwoLevelFocus;
+    private static Boolean hasVirtualKeyboard;
+    private static Boolean hasTouch;
+    private static Boolean hasMultiTouch;
+    private static Boolean hasPointer;
 
     /**
      * Set a flag indicating whether this application should show up in the
@@ -107,6 +112,37 @@ public class PlatformImpl {
             runLater(r);
             return;
         }
+        AccessController.doPrivileged(new PrivilegedAction<Void>() {
+            @Override public Void run() {
+                String s = System.getProperty("com.sun.javafx.twoLevelFocus");
+                if (s != null) {
+                    hasTwoLevelFocus = Boolean.valueOf(s);
+                }
+                s = System.getProperty("com.sun.javafx.virtualKeyboard");
+                if (s != null) {
+                    if (s.equalsIgnoreCase("none")) {
+                        hasVirtualKeyboard = false;
+                    } else if (s.equalsIgnoreCase("javafx")) {
+                        hasVirtualKeyboard = true;
+                    } else if (s.equalsIgnoreCase("native")) {
+                        hasVirtualKeyboard = true;
+                    }
+                }
+                s = System.getProperty("com.sun.javafx.touch");
+                if (s != null) {
+                    hasTouch = Boolean.valueOf(s);
+                }
+                s = System.getProperty("com.sun.javafx.multiTouch");
+                if (s != null) {
+                    hasMultiTouch = Boolean.valueOf(s);
+                }
+                s = System.getProperty("com.sun.javafx.pointer");
+                if (s != null) {
+                    hasPointer = Boolean.valueOf(s);
+                }
+                return null;
+            }
+        });
 
         if (!taskbarApplication) {
             AccessController.doPrivileged(new PrivilegedAction<Void>() {
@@ -387,6 +423,31 @@ public class PlatformImpl {
                             && checkForClass("javax.xml.stream.XMLInputFactory");
                 }
                 return isFXMLSupported;
+            case TWO_LEVEL_FOCUS:
+                if (hasTwoLevelFocus == null) {
+                    return Toolkit.getToolkit().isSupported(feature);
+                }
+                return hasTwoLevelFocus;
+            case VIRTUAL_KEYBOARD:
+                if (hasVirtualKeyboard == null) {
+                    return Toolkit.getToolkit().isSupported(feature);
+                }
+                return hasVirtualKeyboard;
+            case INPUT_TOUCH:
+                if (hasTouch == null) {
+                    return Toolkit.getToolkit().isSupported(feature);
+                }
+                return hasTouch;
+            case INPUT_MULTITOUCH:
+                if (hasMultiTouch == null) {
+                    return Toolkit.getToolkit().isSupported(feature);
+                }
+                return hasMultiTouch;
+            case INPUT_POINTER:
+                if (hasPointer == null) {
+                    return Toolkit.getToolkit().isSupported(feature);
+                }
+                return hasPointer;
             default:
                 return Toolkit.getToolkit().isSupported(feature);
         }

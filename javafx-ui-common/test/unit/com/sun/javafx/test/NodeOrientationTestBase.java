@@ -27,12 +27,13 @@ package com.sun.javafx.test;
 
 import java.util.List;
 import javafx.geometry.NodeOrientation;
+import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 
-public final class OrientationHelper {
-    private OrientationHelper() {
+public abstract class NodeOrientationTestBase {
+    protected NodeOrientationTestBase() {
     }
 
     public interface StateEncoder {
@@ -40,8 +41,38 @@ public final class OrientationHelper {
         char map(Node node);
     }
 
-    public static void updateOrientation(final Scene scene,
-                                         final String updateString) {
+    protected static Scene ltrScene(final Parent rootNode) {
+        final Scene scene = new Scene(rootNode);
+        scene.setNodeOrientation(NodeOrientation.LEFT_TO_RIGHT);
+        return scene;
+    }
+
+    protected static Group ltrAutGroup(final Node... childNodes) {
+        return autGroup(NodeOrientation.LEFT_TO_RIGHT, childNodes);
+    }
+
+    protected static Group rtlAutGroup(final Node... childNodes) {
+        return autGroup(NodeOrientation.RIGHT_TO_LEFT, childNodes);
+    }
+
+    protected static Group inhAutGroup(final Node... childNodes) {
+        return autGroup(NodeOrientation.INHERIT, childNodes);
+    }
+
+    protected static Group ltrManGroup(final Node... childNodes) {
+        return manGroup(NodeOrientation.LEFT_TO_RIGHT, childNodes);
+    }
+
+    protected static Group rtlManGroup(final Node... childNodes) {
+        return manGroup(NodeOrientation.RIGHT_TO_LEFT, childNodes);
+    }
+
+    protected static Group inhManGroup(final Node... childNodes) {
+        return manGroup(NodeOrientation.INHERIT, childNodes);
+    }
+
+    protected static void updateOrientation(final Scene scene,
+                                            final String updateString) {
         final NodeOrientation update =
                 decode(updateString.charAt(0));
         if (update != null) {
@@ -54,18 +85,41 @@ public final class OrientationHelper {
         }
     }
 
-    public static String collectState(final Scene scene,
-                                      final StateEncoder encoder) {
+    protected static String collectState(final Scene scene,
+                                         final StateEncoder encoder) {
         final StringBuilder dest = new StringBuilder();
         collectState(dest, scene, encoder);
         return dest.toString();
     }
 
-    public static String collectState(final Node node,
-                                      final StateEncoder encoder) {
+    protected static String collectState(final Node node,
+                                         final StateEncoder encoder) {
         final StringBuilder dest = new StringBuilder();
         collectState(dest, node, encoder);
         return dest.toString();
+    }
+
+    private static Group autGroup(final NodeOrientation nodeOrientation,
+                                  final Node... childNodes) {
+        final Group group = new Group();
+        group.setNodeOrientation(nodeOrientation);
+        group.getChildren().setAll(childNodes);
+
+        return group;
+    }
+
+    private static Group manGroup(final NodeOrientation nodeOrientation,
+                                  final Node... childNodes) {
+        final Group group = new Group() {
+                                    @Override
+                                    public boolean isAutomaticallyMirrored() {
+                                        return false;
+                                    }
+                                };
+        group.setNodeOrientation(nodeOrientation);
+        group.getChildren().setAll(childNodes);
+
+        return group;
     }
 
     private static int updateOrientation(final Node node,
@@ -127,5 +181,4 @@ public final class OrientationHelper {
             }
         }
     }
-
 }
