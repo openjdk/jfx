@@ -43,7 +43,6 @@ import javafx.scene.Parent;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
-import javafx.scene.control.PopupControl;
 import javafx.scene.control.SelectionMode;
 import javafx.scene.control.SelectionModel;
 import javafx.scene.control.TextField;
@@ -403,29 +402,42 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
             } else {
                 // RT-21336 Show the ComboBox value even though it doesn't
                 // exist in the ComboBox items list (part two of fix)
-                updateDisplayText(buttonCell, value, false);
+                boolean empty = updateDisplayText(buttonCell, value, false);
+                
+                // Note that empty boolean collected above. This is used to resolve
+                // RT-27834, where we were getting different styling based on whether
+                // the cell was updated via the updateIndex method above, or just
+                // by directly updating the text. We fake the pseudoclass state
+                // for empty, filled, and selected here.
+                buttonCell.pseudoClassStateChanged(PSEUDO_CLASS_EMPTY,    empty);
+                buttonCell.pseudoClassStateChanged(PSEUDO_CLASS_FILLED,   !empty);
+                buttonCell.pseudoClassStateChanged(PSEUDO_CLASS_SELECTED, true);
             }
         }
     }
     
-    private void updateDisplayText(ListCell<T> cell, T item, boolean empty) {
+    // return a boolean to indicate that the cell is empty (and therefore not filled)
+    private boolean updateDisplayText(ListCell<T> cell, T item, boolean empty) {
         if (empty) {
-            if (buttonCell == null) return;
+            if (cell == null) return true;
             cell.setGraphic(null);
             cell.setText(comboBox.getPromptText() == null ? null : comboBox.getPromptText());
+            return true;
         } else if (item instanceof Node) {
-            Node currentNode = buttonCell.getGraphic();
+            Node currentNode = cell.getGraphic();
             Node newNode = (Node) item;
             if (currentNode == null || ! currentNode.equals(newNode)) {
                 cell.setText(null);
                 cell.setGraphic(newNode);
             }
+            return newNode == null;
         } else {
             // run item through StringConverter if it isn't null
             StringConverter c = comboBox.getConverter();
             String s = item == null ? comboBox.getPromptText() : (c == null ? item.toString() : c.toString(item));
             cell.setText(s);
             cell.setGraphic(null);
+            return s == null || s.isEmpty();
         }
     }
     
@@ -616,4 +628,12 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
      **************************************************************************/
     
     private static PseudoClass CONTAINS_FOCUS_PSEUDOCLASS_STATE = PseudoClass.getPseudoClass("contains-focus");    
+    
+    // These three pseudo class states are duplicated from Cell
+    private static final PseudoClass PSEUDO_CLASS_SELECTED =
+            PseudoClass.getPseudoClass("selected");
+    private static final PseudoClass PSEUDO_CLASS_EMPTY =
+            PseudoClass.getPseudoClass("empty");
+    private static final PseudoClass PSEUDO_CLASS_FILLED =
+            PseudoClass.getPseudoClass("filled");
 }
