@@ -44,8 +44,9 @@ public final class SceneHelper {
         sceneAccessor.setPaused(paused);
     }
 
-    public static void parentEffectiveOrientationChanged(final Scene scene) {
-        sceneAccessor.parentEffectiveOrientationChanged(scene);
+    public static void parentEffectiveOrientationInvalidated(
+            final Scene scene) {
+        sceneAccessor.parentEffectiveOrientationInvalidated(scene);
     }
 
     public static void setSceneAccessor(final SceneAccessor newAccessor) {
@@ -59,7 +60,7 @@ public final class SceneHelper {
     public interface SceneAccessor {
         void setPaused(boolean paused);
 
-        void parentEffectiveOrientationChanged(Scene scene);
+        void parentEffectiveOrientationInvalidated(Scene scene);
     }
 
     private static void forceInit(final Class<?> classToInit) {

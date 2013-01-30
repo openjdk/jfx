@@ -330,6 +330,7 @@ public final class GraphicsContext {
         if (close) {
             buf.putByte(PGCanvas.CLOSEPATH);
         }
+        buf.putByte(PGCanvas.PATHEND);
         buf.putByte(command);
         // Now that we have changed the PG layer path, we need to mark our path dirty.
         markPathDirty();

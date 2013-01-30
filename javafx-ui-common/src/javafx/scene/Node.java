@@ -49,6 +49,7 @@ import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanPropertyBase;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
 import javafx.beans.property.ReadOnlyObjectProperty;
+import javafx.beans.property.ReadOnlyObjectPropertyBase;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleObjectProperty;
@@ -133,6 +134,7 @@ import com.sun.javafx.jmx.MXNodeAlgorithm;
 import com.sun.javafx.jmx.MXNodeAlgorithmContext;
 import sun.util.logging.PlatformLogger;
 import com.sun.javafx.perf.PerformanceTracker;
+import com.sun.javafx.print.NodeAccess;
 import com.sun.javafx.scene.BoundsAccessor;
 import com.sun.javafx.scene.CssFlags;
 import com.sun.javafx.scene.DirtyBits;
@@ -704,7 +706,7 @@ public abstract class Node implements EventTarget {
                     updateTreeVisible();
                     oldParent = newParent;
                     invalidateLocalToSceneTransform();
-                    parentEffectiveOrientationChanged();
+                    parentResolvedOrientationInvalidated();
                 }
 
                 @Override
@@ -774,7 +776,7 @@ public abstract class Node implements EventTarget {
             }
             if (getParent() == null) {
                 // if we are the root we need to handle scene change
-                parentEffectiveOrientationChanged();
+                parentResolvedOrientationInvalidated();
             }
 
             oldScene = _scene;
@@ -2177,7 +2179,7 @@ public abstract class Node implements EventTarget {
     public PGNode impl_getPGNode() {
         if (Utils.assertionEnabled()) {
             // Assertion checking code
-            if (!Scene.isPGAccessAllowed()) {
+            if (getScene() != null && !Scene.isPGAccessAllowed()) {
                 java.lang.System.err.println();
                 java.lang.System.err.println("*** unexpected PG access");
                 java.lang.Thread.dumpStack();
@@ -5190,11 +5192,19 @@ public abstract class Node implements EventTarget {
      *                       Component Orientation Properties                  *
      *                                                                         *
      **************************************************************************/
-    
-    private ObjectProperty<NodeOrientation> nodeOrientation;
 
-    private NodeOrientation effectiveNodeOrientation;
-    private NodeOrientation automaticNodeOrientation;
+    private ObjectProperty<NodeOrientation> nodeOrientation;
+    private EffectiveOrientationProperty effectiveNodeOrientationProperty;
+
+    private static final byte EFFECTIVE_ORIENTATION_LTR = 0;
+    private static final byte EFFECTIVE_ORIENTATION_RTL = 1;
+    private static final byte EFFECTIVE_ORIENTATION_MASK = 1;
+    private static final byte AUTOMATIC_ORIENTATION_LTR = 0;
+    private static final byte AUTOMATIC_ORIENTATION_RTL = 2;
+    private static final byte AUTOMATIC_ORIENTATION_MASK = 2;
+
+    private byte resolvedNodeOrientation =
+            EFFECTIVE_ORIENTATION_LTR | AUTOMATIC_ORIENTATION_LTR;
 
     public final void setNodeOrientation(NodeOrientation orientation) {
         nodeOrientationProperty().set(orientation);
@@ -5220,7 +5230,7 @@ public abstract class Node implements EventTarget {
             nodeOrientation = new StyleableObjectProperty<NodeOrientation>(NodeOrientation.INHERIT) {
                 @Override
                 protected void invalidated() {
-                    nodeEffectiveOrientationChanged();
+                    nodeResolvedOrientationInvalidated();
                 }
                 
                 @Override
@@ -5244,26 +5254,32 @@ public abstract class Node implements EventTarget {
         return nodeOrientation;
     }
 
+    public final NodeOrientation getEffectiveNodeOrientation() {
+        return (getEffectiveOrientation(resolvedNodeOrientation)
+                    == EFFECTIVE_ORIENTATION_LTR)
+                       ? NodeOrientation.LEFT_TO_RIGHT
+                       : NodeOrientation.RIGHT_TO_LEFT;
+    }
+
     /**
-     * Returns the NodeOrientation that is used to draw the node.
-     * <p>
      * The effective orientation of a node resolves the inheritance of
      * node orientation, returning either left-to-right or right-to-left.
-     * </p>
      */
-    public final NodeOrientation getEffectiveNodeOrientation() {
-        if (effectiveNodeOrientation == null) {
-            effectiveNodeOrientation = calcEffectiveNodeOrientation();
+    public final ReadOnlyObjectProperty<NodeOrientation>
+            effectiveNodeOrientationProperty() {
+        if (effectiveNodeOrientationProperty == null) {
+            effectiveNodeOrientationProperty =
+                    new EffectiveOrientationProperty();
         }
 
-        return effectiveNodeOrientation;
+        return effectiveNodeOrientationProperty;
     }
 
     /**
      * Determines whether a node should be mirrored when node orientation
      * is right-to-left.
      * <p>
-     * When a node is mirrored, the origin is automtically moved to the
+     * When a node is mirrored, the origin is automatically moved to the
      * top right corner causing the node to layout children and draw from
      * right to left using a mirroring transformation.  Some nodes may wish
      * to draw from right to left without using a transformation.  These
@@ -5275,87 +5291,142 @@ public abstract class Node implements EventTarget {
         return true;
     }
 
-    NodeOrientation getAutomaticNodeOrientation() {
-        if (automaticNodeOrientation == null) {
-            automaticNodeOrientation = calcAutomaticNodeOrientation();
-        }
-
-        return automaticNodeOrientation;
-    }
-
-    final void parentEffectiveOrientationChanged() {
+    final void parentResolvedOrientationInvalidated() {
         if (getNodeOrientation() == NodeOrientation.INHERIT) {
-            nodeEffectiveOrientationChanged();
+            nodeResolvedOrientationInvalidated();
         } else {
             // mirroring changed
             impl_transformsChanged();
         }
     }
 
-    void nodeEffectiveOrientationChanged() {
-        effectiveNodeOrientation = null;
-        automaticNodeOrientation = null;
+    final void nodeResolvedOrientationInvalidated() {
+        final byte oldResolvedNodeOrientation =
+                resolvedNodeOrientation;
+
+        resolvedNodeOrientation =
+                (byte) (calcEffectiveNodeOrientation()
+                            | calcAutomaticNodeOrientation());
+
+        if ((effectiveNodeOrientationProperty != null)
+                && (getEffectiveOrientation(resolvedNodeOrientation)
+                        != getEffectiveOrientation(
+                               oldResolvedNodeOrientation))) {
+            effectiveNodeOrientationProperty.invalidate();
+        }
+
         // mirroring changed
         impl_transformsChanged();
+
+        if (resolvedNodeOrientation != oldResolvedNodeOrientation) {
+            nodeResolvedOrientationChanged();
+        }
     }
 
-    private NodeOrientation calcEffectiveNodeOrientation() {
+    void nodeResolvedOrientationChanged() {
+        // overriden in Parent
+    }
+
+    private byte calcEffectiveNodeOrientation() {
         final NodeOrientation nodeOrientationValue = getNodeOrientation();
         if (nodeOrientationValue != NodeOrientation.INHERIT) {
-            return nodeOrientationValue;
+            return (nodeOrientationValue == NodeOrientation.LEFT_TO_RIGHT)
+                       ? EFFECTIVE_ORIENTATION_LTR
+                       : EFFECTIVE_ORIENTATION_RTL;
         }
 
         final Node parentValue = getParent();
         if (parentValue != null) {
-            return parentValue.getEffectiveNodeOrientation();
+            return getEffectiveOrientation(parentValue.resolvedNodeOrientation);
         }
 
         final Scene sceneValue = getScene();
         if (sceneValue != null) {
-            return sceneValue.getEffectiveNodeOrientation();
+            return (sceneValue.getEffectiveNodeOrientation()
+                        == NodeOrientation.LEFT_TO_RIGHT)
+                           ? EFFECTIVE_ORIENTATION_LTR
+                           : EFFECTIVE_ORIENTATION_RTL;
         }
 
-        return NodeOrientation.LEFT_TO_RIGHT;
+        return EFFECTIVE_ORIENTATION_LTR;
     }
 
-    private NodeOrientation calcAutomaticNodeOrientation() {
+    private byte calcAutomaticNodeOrientation() {
         if (!isAutomaticallyMirrored()) {
-            return NodeOrientation.LEFT_TO_RIGHT;
+            return AUTOMATIC_ORIENTATION_LTR;
         }
 
         final NodeOrientation nodeOrientationValue = getNodeOrientation();
         if (nodeOrientationValue != NodeOrientation.INHERIT) {
-            return nodeOrientationValue;
+            return (nodeOrientationValue == NodeOrientation.LEFT_TO_RIGHT)
+                       ? AUTOMATIC_ORIENTATION_LTR
+                       : AUTOMATIC_ORIENTATION_RTL;
         }
 
         final Node parentValue = getParent();
         if (parentValue != null) {
             // automatic node orientation is inherited
-            return parentValue.getAutomaticNodeOrientation();
+            return getAutomaticOrientation(parentValue.resolvedNodeOrientation);
         }
 
         final Scene sceneValue = getScene();
         if (sceneValue != null) {
-            return sceneValue.getEffectiveNodeOrientation();
+            return (sceneValue.getEffectiveNodeOrientation()
+                        == NodeOrientation.LEFT_TO_RIGHT)
+                           ? AUTOMATIC_ORIENTATION_LTR
+                           : AUTOMATIC_ORIENTATION_RTL;
         }
 
-        return NodeOrientation.LEFT_TO_RIGHT;
+        return AUTOMATIC_ORIENTATION_LTR;
     }
 
     // Return true if the node needs to be mirrored.
     // A node has mirroring if the orientation differs from the parent
     // package private for testing
-    boolean hasMirroring() {
-        final Parent parentValue = getParent();
+    final boolean hasMirroring() {
+        final Node parentValue = getParent();
 
-        final NodeOrientation thisOrientation =
-                getAutomaticNodeOrientation();
-        final NodeOrientation parentOrientation =
+        final byte thisOrientation =
+                getAutomaticOrientation(resolvedNodeOrientation);
+        final byte parentOrientation =
                 (parentValue != null)
-                    ? parentValue.getAutomaticNodeOrientation()
-                    : NodeOrientation.LEFT_TO_RIGHT;
+                    ? getAutomaticOrientation(
+                          parentValue.resolvedNodeOrientation)
+                    : AUTOMATIC_ORIENTATION_LTR;
 
         return thisOrientation != parentOrientation;
+    }
+
+    private static byte getEffectiveOrientation(
+            final byte resolvedNodeOrientation) {
+        return (byte) (resolvedNodeOrientation & EFFECTIVE_ORIENTATION_MASK);
+    }
+
+    private static byte getAutomaticOrientation(
+            final byte resolvedNodeOrientation) {
+        return (byte) (resolvedNodeOrientation & AUTOMATIC_ORIENTATION_MASK);
+    }
+
+    private final class EffectiveOrientationProperty
+            extends ReadOnlyObjectPropertyBase<NodeOrientation> {
+        @Override
+        public NodeOrientation get() {
+            return getEffectiveNodeOrientation();
+        }
+
+        @Override
+        public Object getBean() {
+            return Node.this;
+        }
+
+        @Override
+        public String getName() {
+            return "effectiveNodeOrientation";
+        }
+
+        public void invalidate() {
+            fireValueChangedEvent();
+        }
     }
 
     /***************************************************************************
@@ -8145,5 +8216,19 @@ public abstract class Node implements EventTarget {
      */
     @Deprecated
     public abstract Object impl_processMXNode(MXNodeAlgorithm alg, MXNodeAlgorithmContext ctx);
+
+    /**
+     * This class is used by printing to get access to a private method.
+     */
+    private static class NodeAccessImpl extends NodeAccess {
+
+        public void layoutNodeForPrinting(Node node) {
+            node.doCSSLayoutSyncForSnapshot();
+        }
+    }
+
+    static {
+        NodeAccess.setNodeAccess(new NodeAccessImpl());
+    }
 }
 

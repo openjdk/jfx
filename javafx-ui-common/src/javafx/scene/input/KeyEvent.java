@@ -32,6 +32,7 @@ import javafx.event.EventType;
 
 import com.sun.javafx.robot.impl.FXRobotHelper;
 import com.sun.javafx.robot.impl.FXRobotHelper.FXRobotInputAccessor;
+import com.sun.javafx.scene.input.KeyCodeMap;
 import javafx.event.Event;
 import javafx.scene.input.ScrollEvent.HorizontalTextScrollUnits;
 import javafx.scene.input.ScrollEvent.VerticalTextScrollUnits;
@@ -117,7 +118,7 @@ public final class KeyEvent extends InputEvent {
                 return keyCode.code;
             }
             @Override public KeyCode getKeyCodeForCode(int code) {
-                return KeyCode.valueOf(code);
+                return KeyCodeMap.valueOf(code);
             }
             @Override public KeyEvent createKeyEvent(
                 EventType<? extends KeyEvent> eventType,
@@ -171,26 +172,8 @@ public final class KeyEvent extends InputEvent {
         FXRobotHelper.setInputAccessor(a);
     }
 
-
     /**
-     * Constructs new KeyEvent event with null source and target.
-     * @param eventType The type of the event.
-     * @param character The character or sequence of characters associated with the event
-     * @param text A String describing the key code
-     * @param code The integer key code
-     * @param shiftDown true if shift modifier was pressed.
-     * @param controlDown true if control modifier was pressed.
-     * @param altDown true if alt modifier was pressed.
-     * @param metaDown true if meta modifier was pressed.
-     */
-    public KeyEvent(EventType<KeyEvent> eventType, String character,
-            String text, int code, boolean shiftDown, boolean controlDown,
-            boolean altDown, boolean metaDown) {
-        this(null, null, eventType, character, text, code, shiftDown, controlDown, altDown, metaDown);
-    }
-
-    /**
-     * Constructs new KeyEvent event.
+     * Constructs new KeyEvent event with null source and target and KeyCode object directly specified.
      * @param source the source of the event. Can be null.
      * @param target the target of the event. Can be null.
      * @param eventType The type of the event.
@@ -203,14 +186,14 @@ public final class KeyEvent extends InputEvent {
      * @param metaDown true if meta modifier was pressed.
      */
     public KeyEvent(Object source, EventTarget target, EventType<KeyEvent> eventType, String character,
-            String text, int code, boolean shiftDown, boolean controlDown,
+            String text, KeyCode code, boolean shiftDown, boolean controlDown,
             boolean altDown, boolean metaDown) {
         super(source, target, eventType);
         boolean isKeyTyped = eventType == KEY_TYPED;
 
         this.character = isKeyTyped ? character : KeyEvent.CHAR_UNDEFINED;
         this.text = isKeyTyped ? "" : text;
-        this.code = isKeyTyped ? KeyCode.UNDEFINED : KeyCode.valueOf(code);
+        this.code = isKeyTyped ? KeyCode.UNDEFINED : code;
         this.shiftDown = shiftDown;
         this.controlDown = controlDown;
         this.altDown = altDown;

@@ -46,8 +46,8 @@ import com.sun.javafx.tk.Toolkit;
  * and feel of the platform UI components which is independent of JavaFX.
  * <p>
  * On some platforms where file access may be restricted or not part of the user
- * model (for example, on some mobile devices), opening a file dialog may always
- * result in a no-op (that is, null file(s) being returned).
+ * model (for example, on some mobile or embedded devices), opening a file
+ * dialog may always result in a no-op (that is, null file(s) being returned).
  * </p>
  * <p>
  * A {@code FileChooser} can be used to invoke file open dialogs for selecting
@@ -240,6 +240,37 @@ public final class FileChooser {
     }
 
     /**
+     * The initial file name for the displayed dialog.
+     * <p>
+     * This property is used mostly in the displayed file save dialogs as the
+     * initial file name for the file being saved. If set for a file open
+     * dialog it will have any impact on the displayed dialog only if the
+     * corresponding platform provides support for such property in its
+     * file open dialogs.
+     * </p>
+     *
+     * @since JavaFX 8.0
+     */
+    private ObjectProperty<String> initialFileName;
+
+    public final void setInitialFileName(final String value) {
+        initialFileNameProperty().set(value);
+    }
+
+    public final String getInitialFileName() {
+        return (initialFileName != null) ? initialFileName.get() : null;
+    }
+
+    public final ObjectProperty<String> initialFileNameProperty() {
+        if (initialFileName == null) {
+            initialFileName =
+                    new SimpleObjectProperty<String>(this, "initialFileName");
+        }
+
+        return initialFileName;
+    }
+
+    /**
      * Specifies the extension filters used in the displayed file dialog.
      */
     private ObservableList<ExtensionFilter> extensionFilters =
@@ -327,6 +358,7 @@ public final class FileChooser {
                 (ownerWindow != null) ? ownerWindow.impl_getPeer() : null,
                 getTitle(),
                 getInitialDirectory(),
+                getInitialFileName(),
                 fileChooserType,
                 extensionFilters);
         

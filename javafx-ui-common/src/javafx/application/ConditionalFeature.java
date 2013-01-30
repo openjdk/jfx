@@ -128,5 +128,69 @@ public enum ConditionalFeature {
      *      <li>Mac OS X: a window has the brushed-metal textured background</li>
      *  </ul>
      */
-    UNIFIED_WINDOW
+    UNIFIED_WINDOW,
+
+    /**
+     * Indicates whether or not controls should use two-level focus. Two-level
+     * focus is when separate operations are needed in some controls to first
+     * enter a control and then to perform operations on the control. Two-level
+     * focus is needed on devices that provide directional arrow keys and a
+     * select key but do not provide keys for navigating between one control
+     * and another. On these devices a focused control may be either internally
+     * focused - in which case arrow keys operate on the control - or
+     * externally focused, in which case arrow keys are used to navigate focus
+     * to other controls.
+     * <p>
+     * On embedded platforms JavaFX makes an attempt to initialize this
+     * ConditionalFeature based on what input peripherals are attached. On
+     * desktop platforms this ConditionalFeature will typically default to
+     * false.
+     */
+     TWO_LEVEL_FOCUS,
+
+    /**
+     * Indicates whether an on-screen virtual keyboard is used for text input.
+     * <p>
+     * On embedded platforms JavaFX makes an attempt to initialize this
+     * ConditionalFeature based on what input peripherals are attached. On
+     * desktop platforms this ConditionalFeature will typically default to
+     * false.
+     */
+     VIRTUAL_KEYBOARD,
+
+    /**
+     * Indicates whether or not a touch screen is attached to the device on
+     * which JavaFX in running.
+     * <p>
+     * On embedded platforms JavaFX makes an attempt to initialize this
+     * ConditionalFeature based on what input peripherals are attached. On
+     * desktop platforms this ConditionalFeature will typically default to
+     * false.
+     */
+     INPUT_TOUCH,
+
+    /**
+     * Indicates whether or not a touch screen providing multi-touch input is
+     * attached to the device on which JavaFX in running.
+     * <p>
+     * On embedded platforms JavaFX makes an attempt to initialize this
+     * ConditionalFeature based on what input peripherals are attached. On
+     * desktop platforms this ConditionalFeature will typically default to
+     * false.
+     * <p>
+     * If INPUT_MULTITOUCH is available then INPUT_TOUCH is also available.
+     */
+     INPUT_MULTITOUCH,
+
+    /**
+     * Indicates whether or not a relative motion pointer device such as a
+     * mouse, trackpad or trackball is attached.
+     * <p>
+     * On embedded platforms JavaFX makes an attempt to initialize this
+     * ConditionalFeature based on what input peripherals are attached. On
+     * desktop platforms this ConditionalFeature will typically default to
+     * true.
+     */
+    INPUT_POINTER
+
 }

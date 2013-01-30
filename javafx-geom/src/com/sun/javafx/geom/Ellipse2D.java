@@ -257,7 +257,7 @@ public class Ellipse2D extends RectangularShape {
         bits += java.lang.Float.floatToIntBits(y) * 37;
         bits += java.lang.Float.floatToIntBits(width) * 43;
         bits += java.lang.Float.floatToIntBits(height) * 47;
-        return (bits ^ (bits >> 32));
+        return bits;
     }
 
     /**

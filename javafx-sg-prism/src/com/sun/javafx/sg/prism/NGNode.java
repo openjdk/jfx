@@ -24,6 +24,7 @@
  */
 package com.sun.javafx.sg.prism;
 
+import com.sun.glass.ui.Screen;
 import java.util.List;
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.Point2D;
@@ -63,6 +64,19 @@ import static com.sun.javafx.logging.PulseLogger.*;
  * Basic implementation of node.
  */
 public abstract class NGNode extends BaseNode<Graphics> {
+    protected static float highestPixelScale;
+    static {
+        // TODO: temporary until RT-27958 is fixed. Screens may be null
+        // when running unit tests
+        try {
+            for (Screen s : Screen.getScreens()) {
+                highestPixelScale = Math.max(s.getScale(), highestPixelScale);
+            }
+        } catch (NullPointerException ex) {
+            System.err.println("WARNING: unable to get max pixel scale for screens");
+            highestPixelScale = 1.0f;
+        }
+    }
 
     private final static GraphicsPipeline pipeline =
         GraphicsPipeline.getPipeline();
@@ -830,6 +844,9 @@ public abstract class NGNode extends BaseNode<Graphics> {
          */
         @Override
         protected boolean impl_scrollCacheCapable() {
+            if (highestPixelScale > 1.0f) {
+                return false;
+            }
             if (!(node instanceof NGGroup)) {
                 return false;
             }

@@ -34,10 +34,6 @@ import javafx.scene.Node;
  * The popup has no decorations, and essentially acts as a specialized
  * scene/window which has no decorations, is transparent, and with a null fill.
  *
- * On Mobile only one popup is visible at any one time. If a popup displays
- * another popup than the first popup is hidden. Once the second popup is hidden
- * the first popup is again displayed and gains focus.
- *
  * @since JavaFX 1.3
  */
 public class Popup extends PopupWindow {

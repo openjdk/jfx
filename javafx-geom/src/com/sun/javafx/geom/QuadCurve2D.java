@@ -960,7 +960,7 @@ public class QuadCurve2D extends Shape {
         bits += java.lang.Float.floatToIntBits(y2) * 47;
         bits += java.lang.Float.floatToIntBits(ctrlx) * 53;
         bits += java.lang.Float.floatToIntBits(ctrly) * 59;
-        return (bits ^ (bits >> 32));
+        return bits;
     }
 
     @Override

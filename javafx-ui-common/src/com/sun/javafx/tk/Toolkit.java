@@ -767,21 +767,7 @@ public abstract class Toolkit {
      */
 
     public abstract Object renderToImage(ImageRenderingContext context);
-
-    /*
-     * This method indicates whether conversion to/from the specified external 
-     * format is possible.
-     */
-    public abstract boolean isExternalFormatSupported(Class format);
     
-    /*
-     * Exports platformImage as external image
-     * @param platformImg - source platformImage image
-     * @param imgType - class or image template for export
-     * @return external image if such export supported, null otherwise
-     */
-    public abstract Object toExternalImage(Object platformImg, Object imgType);
-
     /**
      * Returns the key code for the key which is commonly used on the
      * corresponding platform as a modifier key in shortcuts. For example
@@ -796,6 +782,7 @@ public abstract class Toolkit {
             TKStage ownerWindow,
             String title,
             File initialDirectory,
+            String initialFileName,
             FileChooserType fileChooserType,
             List<ExtensionFilter> extensionFilters);
 

@@ -61,7 +61,7 @@ public class KeyEventFirer {
                 evtType,  // eventType
                 null,     // Character (unused unless KeyCode == KEY_TYPED
                 null,     // text
-                keyCode.impl_getCode(), // KeyCode
+                keyCode, // KeyCode
                 ml.contains(KeyModifier.SHIFT),                                   // shiftDown
                 ml.contains(KeyModifier.CTRL),                                    // ctrlDown
                 ml.contains(KeyModifier.ALT),                                     // altDown

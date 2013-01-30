@@ -363,7 +363,7 @@ public abstract class PopupWindow extends Window {
 
         final Scene sceneValue = getScene();
         if (sceneValue != null) {
-            SceneHelper.parentEffectiveOrientationChanged(sceneValue);
+            SceneHelper.parentEffectiveOrientationInvalidated(sceneValue);
         }
 
         // It is required that the root window exist and be visible to show the popup.

@@ -7,7 +7,7 @@
       <pathelement location="${rt.dist.root.dir}/javafx-anim/dist/javafx-anim.jar"/>
       <pathelement location="${rt.dist.root.dir}/javafx-common/dist/javafx-common.jar"/>
       <pathelement location="${rt.dist.root.dir}/javafx-logging/dist/javafx-logging.jar"/>
-      <pathelement location="${JFXRT_HOME}/jfxrt.jar"/>
+      <pathelement location="${JFXRT_HOME}/lib/ext/jfxrt.jar"/>
     </path>
 
     <!-- .css -> .bss -->

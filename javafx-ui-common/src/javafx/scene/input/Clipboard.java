@@ -108,6 +108,12 @@ import com.sun.javafx.tk.Toolkit;
  *     content.put(DataFormat.PLAIN_TEXT, "other text");
  * </pre></code>
  * <p>
+ * On embedded platforms that do not have their own windowing system, the
+ * Clipboard returned from Clipboard.getSystemClipboard() might not be
+ * accessible from outside the JavaFX application. In this case, the clipboard
+ * returned by Clipboard.getSystemClipboard() can be used for exchange of data
+ * between different parts of one JavaFX application but cannot be used to
+ * exchange data between multiple applications.
  */
 public class Clipboard {
 

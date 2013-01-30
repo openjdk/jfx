@@ -922,12 +922,11 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
      *     <em>This method is safe to be called from any thread.</em>
      * </p>
      *
-     * @param workDone A value from -1 up to max. If the value is greater
-     *                 than max, an illegal argument exception is thrown.
-     *                 If the value passed is -1, then the resulting percent
+     * @param workDone A value from Long.MIN_VALUE up to max. If the value is greater
+     *                 than max, then it will be clamped at max.
+     *                 If the value passed is negative then the resulting percent
      *                 done will be -1 (thus, indeterminate).
-     * @param max A value from -1 to Long.MAX_VALUE. Any value outside this
-     *            range results in an IllegalArgumentException.
+     * @param max A value from Long.MIN_VALUE to Long.MAX_VALUE.
      * @see #updateProgress(double, double)
      */
     protected void updateProgress(long workDone, long max) {
@@ -947,27 +946,34 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
      *     <em>This method is safe to be called from any thread.</em>
      * </p>
      *
-     * @param workDone A value from -1 up to max. If the value is greater
-     *                 than max, an illegal argument exception is thrown.
-     *                 If the value passed is -1, then the resulting percent
-     *                 done will be -1 (thus, indeterminate).
-     * @param max A value from -1 to Double.MAX_VALUE. Any value outside this
-     *            range results in an IllegalArgumentException.
+     * @param workDone A value from Double.MIN_VALUE up to max. If the value is greater
+     *                 than max, then it will be clamped at max.
+     *                 If the value passed is negative, or Infinity, or NaN,
+     *                 then the resulting percentDone will be -1 (thus, indeterminate).
+     * @param max A value from Double.MIN_VALUE to Double.MAX_VALUE. Infinity and NaN are treated as -1.
      * @since 2.2
      */
     protected void updateProgress(double workDone, double max) {
-        // Perform the argument sanity check that workDone is < max
-        if (workDone > max) {
-            throw new IllegalArgumentException("The workDone must be <= the max");
-        }
-
-        // Make sure neither workDone nor max is < -1
-        if (workDone < -1 || max < -1) {
-            throw new IllegalArgumentException("The workDone and max cannot be less than -1");
+        // Adjust Infinity / NaN to be -1 for both workDone and max.
+        if (Double.isInfinite(workDone) || Double.isNaN(workDone)) {
+            workDone = -1;
         }
 
         if (Double.isInfinite(max) || Double.isNaN(max)) {
-            throw new IllegalArgumentException("The max value must not be infinite or NaN");
+            max = -1;
+        }
+
+        if (workDone < 0) {
+            workDone = -1;
+        }
+
+        if (max < 0) {
+            max = -1;
+        }
+
+        // Clamp the workDone if necessary so as not to exceed max
+        if (workDone > max) {
+            workDone = max;
         }
 
         if (isFxApplicationThread()) {

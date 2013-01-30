@@ -36,6 +36,7 @@ public class StagePeerListener extends WindowPeerListener {
 
     public static interface StageAccessor {
         public void setIconified(Stage stage, boolean iconified);
+        public void setMaximized(Stage stage, boolean maximized);
         public void setResizable(Stage stage, boolean resizable);
         public void setFullScreen(Stage stage, boolean fs);
     }
@@ -50,6 +51,11 @@ public class StagePeerListener extends WindowPeerListener {
     @Override
     public void changedIconified(boolean iconified) {
         stageAccessor.setIconified(stage, iconified);
+    }
+
+    @Override
+    public void changedMaximized(boolean maximized) {
+        stageAccessor.setMaximized(stage, maximized);
     }
 
     @Override
