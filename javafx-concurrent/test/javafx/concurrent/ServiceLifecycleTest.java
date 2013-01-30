@@ -54,13 +54,12 @@ public class ServiceLifecycleTest extends ServiceTestBase {
      */
     protected ManualTask task;
 
-    @Override protected AbstractService setupService() {
-        service = new AbstractService() {
+    @Override protected TestServiceFactory setupServiceFactory() {
+        return new TestServiceFactory() {
             @Override protected AbstractTask createTestTask() {
                 return task = new ManualTask();
             }
         };
-        return service;
     }
 
     @Override protected Executor createExecutor() {
@@ -141,7 +140,7 @@ public class ServiceLifecycleTest extends ServiceTestBase {
 
     @Test public void callingStartInReadyStateSchedulesJob() {
         service.start();
-        assertSame(service.getCurrentTask(), executor.scheduled);
+        assertSame(factory.getCurrentTask(), executor.scheduled);
     }
 
     @Test public void callingStartInReadyMovesToScheduledState() {
@@ -152,7 +151,7 @@ public class ServiceLifecycleTest extends ServiceTestBase {
 
     @Test public void callingRestartInReadyStateSchedulesJob() {
         service.restart();
-        assertSame(service.getCurrentTask(), executor.scheduled);
+        assertSame(factory.getCurrentTask(), executor.scheduled);
     }
 
     @Test public void callingRestartInReadyMovesToScheduledState() {
@@ -923,7 +922,7 @@ public class ServiceLifecycleTest extends ServiceTestBase {
         service.start();
         executor.executeScheduled();
         // Events should have happened
-        assertTrue(handlerCalled.get() && service.getCurrentTask().scheduledSemaphore.getQueueLength() == 0);
+        assertTrue(handlerCalled.get() && factory.getCurrentTask().scheduledSemaphore.getQueueLength() == 0);
     }
 
     @Test public void scheduledCalledAfterHandlerEvenIfConsumed() {
@@ -939,7 +938,7 @@ public class ServiceLifecycleTest extends ServiceTestBase {
         service.start();
         executor.executeScheduled();
         // Events should have happened
-        assertTrue(handlerCalled.get() && service.getCurrentTask().scheduledSemaphore.getQueueLength() == 0);
+        assertTrue(handlerCalled.get() && factory.getCurrentTask().scheduledSemaphore.getQueueLength() == 0);
     }
 
     @Test public void onScheduledHandlerCalled() {
@@ -1053,7 +1052,7 @@ public class ServiceLifecycleTest extends ServiceTestBase {
         service.start();
         executor.executeScheduled();
         // Events should have happened
-        assertTrue(handlerCalled.get() && service.getCurrentTask().runningSemaphore.getQueueLength() == 0);
+        assertTrue(handlerCalled.get() && factory.getCurrentTask().runningSemaphore.getQueueLength() == 0);
     }
 
     @Test public void runningCalledAfterHandlerEvenIfConsumed() {
@@ -1069,7 +1068,7 @@ public class ServiceLifecycleTest extends ServiceTestBase {
         service.start();
         executor.executeScheduled();
         // Events should have happened
-        assertTrue(handlerCalled.get() && service.getCurrentTask().runningSemaphore.getQueueLength() == 0);
+        assertTrue(handlerCalled.get() && factory.getCurrentTask().runningSemaphore.getQueueLength() == 0);
     }
 
     @Test public void onRunningHandlerCalled() {
@@ -1185,7 +1184,7 @@ public class ServiceLifecycleTest extends ServiceTestBase {
         executor.executeScheduled();
         task.complete();
         // Events should have happened
-        assertTrue(handlerCalled.get() && service.getCurrentTask().succeededSemaphore.getQueueLength() == 0);
+        assertTrue(handlerCalled.get() && factory.getCurrentTask().succeededSemaphore.getQueueLength() == 0);
     }
 
     @Test public void succeededCalledAfterHandlerEvenIfConsumed() {
@@ -1202,7 +1201,7 @@ public class ServiceLifecycleTest extends ServiceTestBase {
         executor.executeScheduled();
         task.complete();
         // Events should have happened
-        assertTrue(handlerCalled.get() && service.getCurrentTask().succeededSemaphore.getQueueLength() == 0);
+        assertTrue(handlerCalled.get() && factory.getCurrentTask().succeededSemaphore.getQueueLength() == 0);
     }
 
     @Test public void onSucceededHandlerCalled() {
@@ -1322,7 +1321,7 @@ public class ServiceLifecycleTest extends ServiceTestBase {
         executor.executeScheduled();
         task.cancel();
         // Events should have happened
-        assertTrue(handlerCalled.get() && service.getCurrentTask().cancelledSemaphore.getQueueLength() == 0);
+        assertTrue(handlerCalled.get() && factory.getCurrentTask().cancelledSemaphore.getQueueLength() == 0);
     }
 
     @Test public void cancelledCalledAfterHandlerEvenIfConsumed() {
@@ -1339,7 +1338,7 @@ public class ServiceLifecycleTest extends ServiceTestBase {
         executor.executeScheduled();
         task.cancel();
         // Events should have happened
-        assertTrue(handlerCalled.get() && service.getCurrentTask().cancelledSemaphore.getQueueLength() == 0);
+        assertTrue(handlerCalled.get() && factory.getCurrentTask().cancelledSemaphore.getQueueLength() == 0);
     }
 
     @Test public void onCancelledHandlerCalled() {
@@ -1459,7 +1458,7 @@ public class ServiceLifecycleTest extends ServiceTestBase {
         executor.executeScheduled();
         task.fail(new Exception("Quit Now"));
         // Events should have happened
-        assertTrue(handlerCalled.get() && service.getCurrentTask().failedSemaphore.getQueueLength() == 0);
+        assertTrue(handlerCalled.get() && factory.getCurrentTask().failedSemaphore.getQueueLength() == 0);
     }
 
     @Test public void failedCalledAfterHandlerEvenIfConsumed() {
@@ -1475,7 +1474,7 @@ public class ServiceLifecycleTest extends ServiceTestBase {
         executor.executeScheduled();
         task.fail(new Exception("Quit Now"));
         // Events should have happened
-        assertTrue(handlerCalled.get() && service.getCurrentTask().failedSemaphore.getQueueLength() == 0);
+        assertTrue(handlerCalled.get() && factory.getCurrentTask().failedSemaphore.getQueueLength() == 0);
     }
 
     @Test public void onFailedHandlerCalled() {
@@ -1550,23 +1549,36 @@ public class ServiceLifecycleTest extends ServiceTestBase {
 
     @Test public void eventFiredOnSubclassWorks() {
         final AtomicBoolean result = new AtomicBoolean(false);
-        MythicalService svc = new MythicalService();
-        svc.setHandler(new EventHandler<MythicalEvent>() {
-            @Override public void handle(MythicalEvent mythicalEvent) {
-                result.set(true);
+        TestServiceFactory factory = new TestServiceFactory() {
+            @Override protected AbstractTask createTestTask() {
+                return new SimpleTask();
             }
-        });
-        svc.fireEvent(new MythicalEvent());
+
+            @Override protected Service<String> createService() {
+                MythicalService svc = new MythicalService();
+                svc.setHandler(new EventHandler<MythicalEvent>() {
+                    @Override public void handle(MythicalEvent mythicalEvent) {
+                        result.set(true);
+                    }
+                });
+                svc.fireEvent(new MythicalEvent());
+                return svc;
+            }
+        };
+        Service<String> svc = factory.createService();
+        svc.start();
         assertTrue(result.get());
     }
     
-    private static final class MythicalService extends AbstractService {
-        @Override protected AbstractTask createTestTask() {
-            return new SimpleTask();
-        }
-        
+    private static final class MythicalService extends Service<String> {
         public void setHandler(EventHandler<MythicalEvent> h) {
             super.setEventHandler(MythicalEvent.ANY, h);
         }
+
+        @Override protected Task<String> createTask() {
+            return new SimpleTask();
+        }
+
+        @Override void checkThread() { }
     }
 }

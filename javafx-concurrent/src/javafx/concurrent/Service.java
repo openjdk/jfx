@@ -811,8 +811,20 @@ public abstract class Service<V> implements Worker<V>, EventTarget {
     protected abstract Task<V> createTask();
 
     void checkThread() {
-        if (!Platform.isFxApplicationThread()) {
+        if (!isFxApplicationThread()) {
             throw new IllegalStateException("Service must only be used from the FX Application Thread");
         }
+    }
+
+    // This method exists for the sake of testing, so I can subclass and override
+    // this method in the test and not actually use Platform.runLater.
+    void runLater(Runnable r) {
+        Platform.runLater(r);
+    }
+
+    // This method exists for the sake of testing, so I can subclass and override
+    // this method in the test and not actually use Platform.isFxApplicationThread.
+    boolean isFxApplicationThread() {
+        return Platform.isFxApplicationThread();
     }
 }

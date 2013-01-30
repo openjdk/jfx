@@ -59,8 +59,8 @@ public class ServiceExceptionTest extends ServiceTestBase {
         this.exception = th;
     }
 
-    @Override protected AbstractService setupService() {
-        return new AbstractService() {
+    @Override protected TestServiceFactory setupServiceFactory() {
+        return new TestServiceFactory() {
             @Override protected AbstractTask createTestTask() {
                 return new EpicFailTask(ServiceExceptionTest.this.exception);
             }
