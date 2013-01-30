@@ -444,7 +444,52 @@ import static javafx.concurrent.WorkerStateEvent.*;
  * Great care must be taken to <strong>never update shared state from any
  * thread other than the FX Application Thread</strong>.</p>
  *
- * <p>The easiest way to do this is to expose a new property on the Task
+ * <p>The easiest way to do this is to take advantage of the {@link #updateValue(Object)} method.
+ * This method may be called repeatedly from the background thread. Updates are coalesced to
+ * prevent saturation of the FX event queue. This means you can call it as frequently as
+ * you like from the background thread but only the most recent set is ultimately set.</p>
+ *
+ * <pre><code>
+ *     Task&lt;Long&gt; task = new Task&lt;Long&gt;() {
+ *         &#64;Override protected Long call() throws Exception {
+ *             long a=0;
+ *             long b=1;
+ *             for (long i = 0; i &lt; Long.MAX_VALUE; i++){
+ *                 updateValue(a);
+ *                 a += b;
+ *                 b = a - b;
+ *             }
+ *             return a;
+ *         }
+ *     };
+ * </code></pre>
+ *
+ * <p>Another way to do this is to expose a new property on the Task
+ * which will represent the partial result. Then make sure to use
+ * <code>Platform.runLater</code> when updating the partial result.</p>
+ *
+ * <pre><code>
+ *     Task&lt;Long&gt; task = new Task&lt;Long&gt;() {
+ *         &#64;Override protected Long call() throws Exception {
+ *             long a=0;
+ *             long b=1;
+ *             for (long i = 0; i &lt; Long.MAX_VALUE; i++){
+ *                 final long v = a;
+ *                 Platform.runLater(new Runnable() {
+ *                     &#64;Override public void run() {
+ *                         updateValue(v);
+ *                     }
+ *                 }
+ *                 a += b;
+ *                 b = a - b;
+ *             }
+ *             return a;
+ *         }
+ *     };
+ * </code></pre>
+ *
+ * <p>Suppose instead of updating a single value, you want to populate an ObservableList
+ * with results as they are obtained. One approach is to expose a new property on the Task
  * which will represent the partial result. Then make sure to use
  * <code>Platform.runLater</code> when adding new items to the partial
  * result.</p>
@@ -550,21 +595,28 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
      * to the FX application thread and workDone related properties. AtomicReference
      * is used so as to coalesce updates such that we don't flood the event queue.
      */
-    private AtomicReference<ProgressUpdate> progressUpdate = new AtomicReference<ProgressUpdate>();
+    private AtomicReference<ProgressUpdate> progressUpdate = new AtomicReference<>();
 
     /**
      * Used to send message updates in a thread-safe manner from the subclass
      * to the FX application thread. AtomicReference is used so as to coalesce
      * updates such that we don't flood the event queue.
      */
-    private AtomicReference<String> messageUpdate = new AtomicReference<String>();
+    private AtomicReference<String> messageUpdate = new AtomicReference<>();
 
     /**
      * Used to send title updates in a thread-safe manner from the subclass
      * to the FX application thread. AtomicReference is used so as to coalesce
      * updates such that we don't flood the event queue.
      */
-    private AtomicReference<String> titleUpdate = new AtomicReference<String>();
+    private AtomicReference<String> titleUpdate = new AtomicReference<>();
+
+    /**
+     * Used to send value updates in a thread-safe manner from the subclass
+     * to the FX application thread. AtomicReference is used so as to coalesce
+     * updates such that we don't flood the event queue.
+     */
+    private AtomicReference<V> valueUpdate = new AtomicReference<>();
 
     /**
      * Creates a new Task.
@@ -1062,6 +1114,38 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
         }
     }
 
+    /**
+     * Updates the <code>value</code> property. Calls to updateValue
+     * are coalesced and run later on the FX application thread, so calls
+     * to updateValue, even from the FX Application thread, may not
+     * necessarily result in immediate updates to this property, and
+     * intermediate values may be coalesced to save on event
+     * notifications.
+     * <p>
+     *     <em>This method is safe to be called from any thread.</em>
+     * </p>
+     *
+     * @param value the new value
+     * @since 8
+     */
+    protected void updateValue(V value) {
+        if (isFxApplicationThread()) {
+            this.value.set(value);
+        } else {
+            // As with the workDone, it might be that the background thread
+            // will update this value quite frequently, and we need
+            // to throttle the updates so as not to completely clobber
+            // the event dispatching system.
+            if (valueUpdate.getAndSet(value) == null) {
+                runLater(new Runnable() {
+                    @Override public void run() {
+                        Task.this.value.set(valueUpdate.getAndSet(null));
+                    }
+                });
+            }
+        }
+    }
+
     /*
      * IMPLEMENTATION
      */
@@ -1273,7 +1357,7 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
                             // The alternative is not the case, because you
                             // can assume if the result is set, it has
                             // succeeded.
-                            task.setValue(result);
+                            task.updateValue(result);
                             task.setState(State.SUCCEEDED);
                         }
                     });
