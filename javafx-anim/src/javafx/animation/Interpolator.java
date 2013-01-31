@@ -218,14 +218,14 @@ public abstract class Interpolator {
      * value of the tangent at this moment.
      * <p>
      * The interpolation then follows a bezier curve, with 2 control points defined by the specified tangent and
-     * positioned at 1/3 of the duration before the second KeyFrame or after the first KeyFrame.
+     * positioned at 1/3 of the duration before the second KeyFrame or after the first KeyFrame. See the picture above.
      * 
      * @param t1
-     *            The delta time of the in-tangent
+     *            The delta time of the in-tangent, relative to the KeyFrame
      * @param v1
      *            The value of the in-tangent
      * @param t2
-     *            The delta time of the out-tangent
+     *            The delta time of the out-tangent, relative to the KeyFrame
      * @param v2
      *            The value of the out-tangent
      * @return the new tangent interpolator
