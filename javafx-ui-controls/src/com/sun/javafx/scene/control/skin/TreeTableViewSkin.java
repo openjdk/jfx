@@ -135,8 +135,6 @@ public class TreeTableViewSkin<S> extends TableViewSkinBase<S, TreeTableView<S>,
         registerChangeListener(treeTableView.showRootProperty(), "SHOW_ROOT");
         registerChangeListener(treeTableView.rowFactoryProperty(), "ROW_FACTORY");
         registerChangeListener(treeTableView.expandedItemCountProperty(), "TREE_ITEM_COUNT");
-        
-        updateItemCount();
     }
 
     @Override protected void handleControlPropertyChanged(String p) {
@@ -152,11 +150,11 @@ public class TreeTableViewSkin<S> extends TableViewSkinBase<S, TreeTableView<S>,
                  getRoot().setExpanded(true);
             }
             // update the item count in the flow and behavior instances
-            updateItemCount();
+            rowCountDirty = true;
         } else if ("ROW_FACTORY".equals(p)) {
             flow.recreateCells();
         } else if ("TREE_ITEM_COUNT".equals(p)) {
-            updateItemCount();
+            rowCountDirty = true;
         }
     }
     
@@ -179,10 +177,6 @@ public class TreeTableViewSkin<S> extends TableViewSkinBase<S, TreeTableView<S>,
     private final TreeTableView<S> treeTableView;
     private WeakReference<TreeItem> weakRootRef;
     
-    private boolean needItemCountUpdate = false;
-    private boolean needCellsRecreated = true;
-    private boolean needCellsReconfigured = false;
-    
     private EventHandler<TreeItem.TreeModificationEvent> rootListener = new EventHandler<TreeItem.TreeModificationEvent>() {
         @Override public void handle(TreeItem.TreeModificationEvent e) {
             if (e.wasAdded() && e.wasRemoved() && e.getAddedSize() == e.getRemovedSize()) {
@@ -191,11 +185,11 @@ public class TreeTableViewSkin<S> extends TableViewSkinBase<S, TreeTableView<S>,
                 // no event being fired to the skin to be informed that the items
                 // had changed. So, here we just watch for the case where the number
                 // of items being added is equal to the number of items being removed.
-                needItemCountUpdate = true;
+                rowCountDirty = true;
                 getSkinnable().requestLayout();
             } else if (e.getEventType().equals(TreeItem.valueChangedEvent())) {
                 // Fix for RT-14971 and RT-15338. 
-                needCellsRecreated = true;
+                needCellsRebuilt = true;
                 getSkinnable().requestLayout();
             } else {
                 // Fix for RT-20090. We are checking to see if the event coming
@@ -203,7 +197,7 @@ public class TreeTableViewSkin<S> extends TableViewSkinBase<S, TreeTableView<S>,
                 EventType eventType = e.getEventType();
                 while (eventType != null) {
                     if (eventType.equals(TreeItem.<S>expandedItemCountChangeEvent())) {
-                        needItemCountUpdate = true;
+                        rowCountDirty = true;
                         getSkinnable().requestLayout();
                         break;
                     }
@@ -230,7 +224,7 @@ public class TreeTableViewSkin<S> extends TableViewSkinBase<S, TreeTableView<S>,
             getRoot().addEventHandler(TreeItem.<S>treeNotificationEvent(), weakRootListener);
         }
         
-        updateItemCount();
+        rowCountDirty = true;
     }
     
     
@@ -456,26 +450,7 @@ public class TreeTableViewSkin<S> extends TableViewSkinBase<S, TreeTableView<S>,
      *                                                                         *
      **************************************************************************/    
     
-    // handled in TreeViewSkinBase
-    @Override protected void layoutChildren(final double x, final double y,
-            final double w, final double h) {
-        if (needItemCountUpdate) {
-            updateItemCount();
-            needItemCountUpdate = false;
-        }
-        
-        if (needCellsRecreated) {
-            flow.recreateCells();
-            needCellsRecreated = false;
-        } 
-        
-        if (needCellsReconfigured) {
-            flow.reconfigureCells();
-            needCellsReconfigured = false;
-        } 
-        
-        super.layoutChildren(x, y, w, h);
-    }
+
     
     
     /***************************************************************************
@@ -484,17 +459,12 @@ public class TreeTableViewSkin<S> extends TableViewSkinBase<S, TreeTableView<S>,
      *                                                                         *
      **************************************************************************/
     
-//    private TreeItem getRoot() {
-//        return weakRootRef == null ? null : weakRootRef.get();
-//    }
-//    
-//    private void setRoot(TreeItem newRoot) {
-//        weakRootRef = new WeakReference<TreeItem>(newRoot);
-//    }
+    @Override protected void updateRowCount() {
+        updatePlaceholderRegionVisibility();
 
-    private void updateItemCount() {
-//        int oldCount = flow.getCellCount();
         tableBackingList.resetSize();
+        
+        int oldCount = flow.getCellCount();
         int newCount = getItemCount();
         
         // if this is not called even when the count is the same, we get a 
@@ -502,13 +472,12 @@ public class TreeTableViewSkin<S> extends TableViewSkinBase<S, TreeTableView<S>,
         // optimised in the future when time permits.
         flow.setCellCount(newCount);
         
-        // FIXME If we have this if statement here we end up not seeing sorts 
-        // occur immediately, so for now I am disabling it
-//        if (newCount != oldCount) {
-            needCellsRecreated = true;
-//        } else {
-//            needCellsReconfigured = true;
-//        }
+        if (forceCellRebuild || newCount != oldCount) {
+            needCellsReconfigured = true;
+            forceCellRebuild = false;
+        } else {
+            needCellsReconfigured = true;
+        }
     }
 
     /**

@@ -40,8 +40,11 @@ import javafx.css.CssMetaData;
 import com.sun.javafx.css.converters.SizeConverter;
 import com.sun.javafx.scene.control.behavior.CellBehaviorBase;
 import com.sun.javafx.scene.control.behavior.TreeTableRowBehavior;
+import javafx.animation.RotateTransition;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
 import javafx.collections.ObservableList;
 import javafx.css.StyleableProperty;
 import javafx.scene.control.Control;
@@ -49,6 +52,7 @@ import javafx.scene.control.TableColumnBase;
 import javafx.scene.control.TableRow;
 import javafx.scene.control.TreeTableCell;
 import javafx.scene.control.TreeTableColumn;
+import javafx.util.Duration;
 
 /**
  *
@@ -58,16 +62,24 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
     // maps into the TreeTableViewSkin items property via 
     // TreeTableViewSkin.treeItemToListMap
     private SimpleObjectProperty<ObservableList<TreeItem<T>>> itemsProperty;
+    private TreeItem<?> treeItem;
+    private boolean disclosureNodeDirty = true;
+    
+    private final ChangeListener<Boolean> treeItemExpandedListener = new ChangeListener<Boolean>() {
+        @Override public void changed(ObservableValue<? extends Boolean> ov, Boolean t, Boolean isExpanded) {
+            updateDisclosureNodeRotation(true);
+        }
+    };
     
     public TreeTableRowSkin(TreeTableRow<T> control) {
         super(control, new TreeTableRowBehavior<T>(control));
         
         super.init(control);
         
-        updateDisclosureNode();
+        updateTreeItem();
+        updateDisclosureNodeRotation(false);
 
         registerChangeListener(control.indexProperty(), "INDEX");
-        registerChangeListener(control.treeTableViewProperty(), "TREE_TABLE_VIEW");
         registerChangeListener(control.treeItemProperty(), "TREE_ITEM");
         registerChangeListener(control.getTreeTableView().treeColumnProperty(), "TREE_COLUMN");
     }
@@ -77,13 +89,13 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
 
         if ("INDEX".equals(p)) {
             updateCells = true;
-            getSkinnable().requestLayout();
-        } else if ("TREE_TABLE_VIEW".equals(p)) {
-            for (int i = 0; i < getChildren().size(); i++) {
-                ((TreeTableCell)getChildren().get(i)).updateTreeTableView(getSkinnable().getTreeTableView());
-            }
+//            isDirty = true;
+//            getSkinnable().requestLayout();
         } else if ("TREE_ITEM".equals(p)) {
-            updateDisclosureNode();
+//            updateCells = true;
+            updateTreeItem();
+            isDirty = true;
+//            getSkinnable().requestLayout();
         } else if ("TREE_COLUMN".equals(p)) {
             // Fix for RT-27782: Need to set isDirty to true, rather than the 
             // cheaper updateCells, as otherwise the text indentation will not
@@ -121,13 +133,41 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
         return indent; 
     }
     
+    private void updateDisclosureNodeRotation(boolean animate) {
+        if (treeItem == null || treeItem.isLeaf()) return;
+        
+        Node disclosureNode = getSkinnable().getDisclosureNode();
+        if (disclosureNode == null) return;
+        
+        final boolean isExpanded = treeItem.isExpanded();
+        int fromAngle = isExpanded ? 0 : 90;
+        int toAngle = isExpanded ? 90 : 0;
+
+        if (animate) {
+            RotateTransition rt = new RotateTransition(Duration.millis(200), disclosureNode);
+            rt.setFromAngle(fromAngle);
+            rt.setToAngle(toAngle);
+            rt.playFromStart();
+        } else {
+            disclosureNode.setRotate(toAngle);
+        }
+    }
+    
+    private void updateTreeItem() {
+        if (treeItem != null) {
+            treeItem.expandedProperty().removeListener(treeItemExpandedListener);
+        }
+        treeItem = getSkinnable().getTreeItem();
+        if (treeItem != null) {
+            treeItem.expandedProperty().addListener(treeItemExpandedListener);
+        }
+    }
+    
     private void updateDisclosureNode() {
         if (getSkinnable().isEmpty()) return;
 
         Node disclosureNode = getSkinnable().getDisclosureNode();
         if (disclosureNode == null) return;
-        
-        TreeItem treeItem = getSkinnable().getTreeItem();
         
         boolean disclosureVisible = treeItem != null && ! treeItem.isLeaf();
         disclosureNode.setVisible(disclosureVisible);
@@ -148,6 +188,7 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
     private boolean childrenDirty = false;
     @Override protected void updateChildren() {
         super.updateChildren();
+        
         updateDisclosureNode();
         
         if (childrenDirty) {
@@ -163,6 +204,15 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
         }
     }
 
+    @Override protected void layoutChildren(double x, double y, double w, double h) {
+        if (disclosureNodeDirty) {
+            updateDisclosureNode();
+            disclosureNodeDirty = false;
+        }
+        
+        super.layoutChildren(x, y, w, h);
+    }
+    
     @Override protected TreeTableCell<T, ?> getCell(TableColumnBase tcb) {
         TreeTableColumn tableColumn = (TreeTableColumn<T,?>) tcb;
         TreeTableCell cell = (TreeTableCell) tableColumn.getCellFactory().call(tableColumn);
@@ -203,7 +253,6 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
     }
 
     @Override protected boolean isDisclosureNodeVisible() {
-        TreeItem treeItem = getSkinnable().getTreeItem();
         return getDisclosureNode() != null && treeItem != null && ! treeItem.isLeaf();
     }
 
@@ -250,8 +299,6 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
     @Override protected Node getGraphic() {
         TreeTableRow<T> treeTableRow = getSkinnable();
         if (treeTableRow == null) return null;
-        
-        TreeItem<T> treeItem = treeTableRow.getTreeItem();
         if (treeItem == null) return null;
         
         return treeItem.getGraphic();

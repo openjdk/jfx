@@ -1593,6 +1593,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
                 pile.remove(i);
                 break;
             }
+            cell = null;
         }
 
         if (cell == null) {

@@ -2155,8 +2155,7 @@ is being used to size a border should also be in pixels.
 }
 .tree-cell > .tree-disclosure-node,
 .tree-table-row-cell > .tree-disclosure-node {
-    /** put a bit of padding around the disclosure node to make the clicking region larger */
-    -fx-padding: 4 2 4 8;
+    -fx-padding: 4 4 4 4;
     -fx-background-color: transparent;
 }
 .tree-cell > .tree-disclosure-node:disabled,
@@ -2168,10 +2167,6 @@ is being used to size a border should also be in pixels.
     -fx-background-color: -fx-mark-color;
     -fx-padding: 0.333333em; /* 4 */
     -fx-shape: "M 0 -4 L 8 0 L 0 4 z";
-}
-.tree-cell:expanded > .tree-disclosure-node > .arrow,
-.tree-table-row-cell:expanded > .tree-disclosure-node > .arrow {
-    -fx-rotate: 90;
 }
 .tree-cell:filled:selected > .tree-disclosure-node > .arrow,
 .tree-table-row-cell:filled:selected > .tree-disclosure-node > .arrow {
