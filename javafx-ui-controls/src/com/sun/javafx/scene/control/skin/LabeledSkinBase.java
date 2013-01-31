@@ -744,8 +744,6 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
         boolean emptyText = string == null || string.isEmpty();
         double widthPadding = leftPadding() + leftLabelPadding() +
                               rightPadding() + rightLabelPadding();
-        double heightPadding = topPadding() + topLabelPadding() +
-                               bottomPadding() + bottomLabelPadding();
 
         double textWidth = emptyText ? 0 : Utils.computeTextWidth(font, string, 0);
 

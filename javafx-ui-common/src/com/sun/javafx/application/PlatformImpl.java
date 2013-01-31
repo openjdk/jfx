@@ -34,6 +34,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import javafx.application.Application;
 import javafx.application.ConditionalFeature;
 
 import com.sun.javafx.tk.TKListener;
@@ -66,6 +67,11 @@ public class PlatformImpl {
     private static Boolean isSWTSupported;
     private static Boolean isSwingSupported;
     private static Boolean isFXMLSupported;
+    private static Boolean hasTwoLevelFocus;
+    private static Boolean hasVirtualKeyboard;
+    private static Boolean hasTouch;
+    private static Boolean hasMultiTouch;
+    private static Boolean hasPointer;
 
     /**
      * Set a flag indicating whether this application should show up in the
@@ -106,6 +112,37 @@ public class PlatformImpl {
             runLater(r);
             return;
         }
+        AccessController.doPrivileged(new PrivilegedAction<Void>() {
+            @Override public Void run() {
+                String s = System.getProperty("com.sun.javafx.twoLevelFocus");
+                if (s != null) {
+                    hasTwoLevelFocus = Boolean.valueOf(s);
+                }
+                s = System.getProperty("com.sun.javafx.virtualKeyboard");
+                if (s != null) {
+                    if (s.equalsIgnoreCase("none")) {
+                        hasVirtualKeyboard = false;
+                    } else if (s.equalsIgnoreCase("javafx")) {
+                        hasVirtualKeyboard = true;
+                    } else if (s.equalsIgnoreCase("native")) {
+                        hasVirtualKeyboard = true;
+                    }
+                }
+                s = System.getProperty("com.sun.javafx.touch");
+                if (s != null) {
+                    hasTouch = Boolean.valueOf(s);
+                }
+                s = System.getProperty("com.sun.javafx.multiTouch");
+                if (s != null) {
+                    hasMultiTouch = Boolean.valueOf(s);
+                }
+                s = System.getProperty("com.sun.javafx.pointer");
+                if (s != null) {
+                    hasPointer = Boolean.valueOf(s);
+                }
+                return null;
+            }
+        });
 
         if (!taskbarApplication) {
             AccessController.doPrivileged(new PrivilegedAction<Void>() {
@@ -386,6 +423,31 @@ public class PlatformImpl {
                             && checkForClass("javax.xml.stream.XMLInputFactory");
                 }
                 return isFXMLSupported;
+            case TWO_LEVEL_FOCUS:
+                if (hasTwoLevelFocus == null) {
+                    return Toolkit.getToolkit().isSupported(feature);
+                }
+                return hasTwoLevelFocus;
+            case VIRTUAL_KEYBOARD:
+                if (hasVirtualKeyboard == null) {
+                    return Toolkit.getToolkit().isSupported(feature);
+                }
+                return hasVirtualKeyboard;
+            case INPUT_TOUCH:
+                if (hasTouch == null) {
+                    return Toolkit.getToolkit().isSupported(feature);
+                }
+                return hasTouch;
+            case INPUT_MULTITOUCH:
+                if (hasMultiTouch == null) {
+                    return Toolkit.getToolkit().isSupported(feature);
+                }
+                return hasMultiTouch;
+            case INPUT_POINTER:
+                if (hasPointer == null) {
+                    return Toolkit.getToolkit().isSupported(feature);
+                }
+                return hasPointer;
             default:
                 return Toolkit.getToolkit().isSupported(feature);
         }
@@ -397,23 +459,54 @@ public class PlatformImpl {
     }
 
     /**
-     *
+     * Set the platform user agent stylesheet to the default.
      */
     public static void setDefaultPlatformUserAgentStylesheet() {
-        AccessController.doPrivileged(
-                new PrivilegedAction() {
-                    @Override public Object run() {
-                        StyleManager.setDefaultUserAgentStylesheet("com/sun/javafx/scene/control/skin/caspian/caspian.css");
+        setPlatformUserAgentStylesheet(Application.STYLESHEET_CASPIAN);
+    }
 
-                        if (com.sun.javafx.PlatformUtil.isEmbedded()) {
-                            StyleManager.addUserAgentStylesheet("com/sun/javafx/scene/control/skin/caspian/embedded.css");
-
-                            if (com.sun.javafx.Utils.isQVGAScreen()) {
-                                StyleManager.addUserAgentStylesheet("com/sun/javafx/scene/control/skin/caspian/embedded-qvga.css");
+    /**
+     * Set the platform user agent stylesheet to the given URL. This method has special handling for platform theme
+     * name constants.
+     */
+    public static void setPlatformUserAgentStylesheet(String stylesheetUrl) {
+        // check for command line override
+        String overrideStylesheetUrl =
+                AccessController.doPrivileged(
+                        new PrivilegedAction<String>() {
+                            @Override public String run() {
+                                return System.getProperty("javafx.userAgentStylesheetUrl");
                             }
+                        });
+        if (overrideStylesheetUrl != null) stylesheetUrl = overrideStylesheetUrl;
+        // check for named theme constants for modena and caspian
+        if (Application.STYLESHEET_CASPIAN.equalsIgnoreCase(stylesheetUrl)) {
+            AccessController.doPrivileged(
+                    new PrivilegedAction() {
+                        @Override public Object run() {
+                            StyleManager.setDefaultUserAgentStylesheet("com/sun/javafx/scene/control/skin/caspian/caspian.css");
+
+                            if (com.sun.javafx.PlatformUtil.isEmbedded()) {
+                                StyleManager.addUserAgentStylesheet("com/sun/javafx/scene/control/skin/caspian/embedded.css");
+
+                                if (com.sun.javafx.Utils.isQVGAScreen()) {
+                                    StyleManager.addUserAgentStylesheet("com/sun/javafx/scene/control/skin/caspian/embedded-qvga.css");
+                                }
+                            }
+                            return null;
                         }
-                        return null;
-                    }
-                });
+                    });
+        } else if (Application.STYLESHEET_MODENA.equalsIgnoreCase(stylesheetUrl)) {
+            System.out.println("Using Modena Theme");
+            AccessController.doPrivileged(
+                    new PrivilegedAction() {
+                        @Override public Object run() {
+                            StyleManager.setDefaultUserAgentStylesheet("com/sun/javafx/scene/control/skin/modena/modena.css");
+                            return null;
+                        }
+                    });
+        } else {
+            StyleManager.setDefaultUserAgentStylesheet(stylesheetUrl);
+        }
     }
 }

@@ -103,6 +103,16 @@ public class Point3DTest {
     }
 
     @Test
+    public void testMultiplyByNumber() {
+        Point3D p1 = new Point3D(2, 4, 8);
+        Point3D p2 = new Point3D(-1, 3, 6);
+
+        assertEquals(new Point3D(4, 8, 16), p1.multiply(2));
+        assertEquals(new Point3D(1, -3, -6), p2.multiply(-1));
+        assertEquals(new Point3D(0, 0, 0), p1.multiply(0));
+    }
+
+    @Test
     public void testNormalize() {
         Point3D p1 = new Point3D(0, 0, 0);
         Point3D p2 = new Point3D(0, 0, 1);

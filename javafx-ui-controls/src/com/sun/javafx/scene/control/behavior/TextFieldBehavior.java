@@ -94,7 +94,7 @@ public class TextFieldBehavior extends TextInputControlBehavior<TextField> {
 
     private void handleFocusChange() {
         TextField textField = getControl();
-
+        
         if (textField.isFocused()) {
             if (PlatformUtil.isIOS()) {
                 // special handling of focus on iOS is required to allow to
@@ -103,7 +103,7 @@ public class TextFieldBehavior extends TextInputControlBehavior<TextField> {
                 TextInputTypes type = TextInputTypes.TEXT_FIELD;
                 if (textField.getClass().equals(javafx.scene.control.PasswordField.class)) {
                     type = TextInputTypes.PASSWORD_FIELD;
-                } else if (textField.getClass().equals(com.sun.javafx.scene.control.FocusableTextField.class)) {
+                } else if (textField.getParent().getClass().equals(javafx.scene.control.ComboBox.class)) {
                     type = TextInputTypes.EDITABLE_COMBO;
                 }
                 final Bounds bounds = textField.getBoundsInParent();

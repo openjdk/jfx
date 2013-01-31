@@ -4,7 +4,6 @@ import javafx.beans.property.*;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.scene.control.Control;
-import javafx.scene.control.Skin;
 
 /**
  *

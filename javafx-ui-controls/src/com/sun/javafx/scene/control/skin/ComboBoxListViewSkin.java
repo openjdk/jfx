@@ -25,8 +25,6 @@
 
 package com.sun.javafx.scene.control.skin;
 
-import com.sun.javafx.event.EventDispatchChainImpl;
-import com.sun.javafx.scene.control.FocusableTextField;
 import javafx.collections.WeakListChangeListener;
 import javafx.scene.control.ComboBox;
 import com.sun.javafx.scene.control.behavior.ComboBoxListViewBehavior;
@@ -38,6 +36,7 @@ import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
+import javafx.css.PseudoClass;
 import javafx.event.EventHandler;
 import javafx.event.EventTarget;
 import javafx.scene.Node;
@@ -125,8 +124,12 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
         // move focus in to the textfield if the comboBox is editable
         comboBox.focusedProperty().addListener(new ChangeListener<Boolean>() {
             @Override public void changed(ObservableValue<? extends Boolean> ov, Boolean t, Boolean hasFocus) {
-                if (comboBox.isEditable()) {
-                    updateFakeFocus(hasFocus);
+                if (comboBox.isEditable() && hasFocus) {
+                    Platform.runLater(new Runnable() {
+                        @Override public void run() {
+                            textField.requestFocus();
+                        }
+                    });
                 }
             }
         });
@@ -165,8 +168,6 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
                         return;
                     }
                 }
-                
-                textField.fireEvent(t);
             }
         });
         
@@ -347,17 +348,6 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
         textField.setFocusTraversable(true);
         textField.promptTextProperty().bind(comboBox.promptTextProperty());
         
-//        // focus always goes to the comboBox, which then forwards events down 
-//        // to the TextField. This ensures that the ComboBox appears focused
-//        // externally for people listening to the focus property.
-//        // Also, (for RT-21454) set the currently typed text as the value when focus 
-//        // is lost from the ComboBox
-//        textField.addEventFilter(MouseEvent.MOUSE_CLICKED, new EventHandler<MouseEvent>() {
-//            @Override public void handle(MouseEvent t) {
-//                comboBox.requestFocus();
-//                t.consume();
-//            }
-//        });
         textField.focusedProperty().addListener(new ChangeListener<Boolean>() {
             @Override public void changed(ObservableValue<? extends Boolean> ov, Boolean t, Boolean hasFocus) {
                 if (! comboBox.isEditable()) return;
@@ -365,17 +355,14 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
                 // RT-21454 starts here
                 if (! hasFocus) {
                     setTextFromTextFieldIntoComboBoxValue();
+                    pseudoClassStateChanged(CONTAINS_FOCUS_PSEUDOCLASS_STATE, false);
+                } else {
+                    pseudoClassStateChanged(CONTAINS_FOCUS_PSEUDOCLASS_STATE, true);
                 }
             }
         });
 
         return textField;
-    }
-    
-    private void updateFakeFocus(boolean b) {
-        if (textField == null) return;
-        if (! (textField instanceof FocusableTextField)) return;
-        ((FocusableTextField)textField).setFakeFocus(b);
     }
     
     private void updateDisplayNode() {
@@ -615,4 +602,15 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
     public ListView<T> getListView() {
         return listView;
     }
+    
+    
+    
+
+    /***************************************************************************
+     *                                                                         *
+     * Stylesheet Handling                                                     *
+     *                                                                         *
+     **************************************************************************/
+    
+    private static PseudoClass CONTAINS_FOCUS_PSEUDOCLASS_STATE = PseudoClass.getPseudoClass("contains-focus");    
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,14 +27,35 @@ package javafx.concurrent;
 
 import java.security.AccessController;
 import java.security.PrivilegedAction;
-import java.util.concurrent.*;
-import sun.util.logging.PlatformLogger;
-import com.sun.javafx.tk.Toolkit;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.Executor;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import javafx.application.Platform;
-import javafx.beans.property.*;
+import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.DoubleProperty;
+import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.ReadOnlyBooleanProperty;
+import javafx.beans.property.ReadOnlyDoubleProperty;
+import javafx.beans.property.ReadOnlyObjectProperty;
+import javafx.beans.property.ReadOnlyStringProperty;
+import javafx.beans.property.SimpleBooleanProperty;
+import javafx.beans.property.SimpleDoubleProperty;
+import javafx.beans.property.SimpleObjectProperty;
+import javafx.beans.property.SimpleStringProperty;
+import javafx.beans.property.StringProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
-import javafx.event.*;
+import javafx.event.Event;
+import javafx.event.EventDispatchChain;
+import javafx.event.EventHandler;
+import javafx.event.EventTarget;
+import javafx.event.EventType;
+import com.sun.javafx.tk.Toolkit;
+import sun.util.logging.PlatformLogger;
+
 import static javafx.concurrent.WorkerStateEvent.*;
 
 /**
@@ -116,7 +137,21 @@ public abstract class Service<V> implements Worker<V>, EventTarget {
     private static final int THREAD_POOL_SIZE = 32;
     private static final long THREAD_TIME_OUT = 1000;
 
-    private static final BlockingQueue<Runnable> IO_QUEUE = new LinkedBlockingQueue<Runnable>();
+    /**
+     * Because the ThreadPoolExecutor works completely backwards from what we want (ie:
+     * it doesn't increase thread count beyond the core pool size unless the queue is full),
+     * our queue has to be smart in that it will REJECT an item in the queue unless the
+     * thread size in the EXECUTOR is > 32, in which case we will queue up.
+     */
+    private static final BlockingQueue<Runnable> IO_QUEUE = new LinkedBlockingQueue<Runnable>() {
+        @Override public boolean offer(Runnable runnable) {
+            if (EXECUTOR.getPoolSize() < THREAD_POOL_SIZE) {
+                return false;
+            }
+            return super.offer(runnable);
+        }
+    };
+
     // Addition of doPrivileged added due to RT-19580
     private static final ThreadGroup THREAD_GROUP = AccessController.doPrivileged(new PrivilegedAction<ThreadGroup>() {
         @Override public ThreadGroup run() {
@@ -776,8 +811,20 @@ public abstract class Service<V> implements Worker<V>, EventTarget {
     protected abstract Task<V> createTask();
 
     void checkThread() {
-        if (!Platform.isFxApplicationThread()) {
+        if (!isFxApplicationThread()) {
             throw new IllegalStateException("Service must only be used from the FX Application Thread");
         }
+    }
+
+    // This method exists for the sake of testing, so I can subclass and override
+    // this method in the test and not actually use Platform.runLater.
+    void runLater(Runnable r) {
+        Platform.runLater(r);
+    }
+
+    // This method exists for the sake of testing, so I can subclass and override
+    // this method in the test and not actually use Platform.isFxApplicationThread.
+    boolean isFxApplicationThread() {
+        return Platform.isFxApplicationThread();
     }
 }

@@ -40,6 +40,7 @@ import javafx.event.Event;
 import javafx.event.EventDispatchChain;
 import javafx.event.EventDispatcher;
 import javafx.event.EventHandler;
+import javafx.event.EventType;
 import javafx.geometry.BoundingBox;
 import javafx.geometry.Bounds;
 import javafx.geometry.Orientation;
@@ -48,6 +49,7 @@ import javafx.scene.Node;
 import javafx.scene.control.ScrollBar;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.ScrollPane.ScrollBarPolicy;
+import javafx.scene.control.ScrollToEvent;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.input.ScrollEvent;
 import javafx.scene.input.TouchEvent;
@@ -76,6 +78,7 @@ public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehav
     private static final double DEFAULT_MIN_SIZE = 36.0;
 
     private static final double DEFAULT_SB_BREADTH = 12.0;
+    private static final double DEFAULT_EMBEDDED_SB_BREADTH = 8.0;
 
     private static final double PAN_THRESHOLD = 0.5;
 
@@ -123,7 +126,7 @@ public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehav
      *                                                                         *
      **************************************************************************/
 
-    public ScrollPaneSkin(ScrollPane scrollpane) {
+    public ScrollPaneSkin(final ScrollPane scrollpane) {
         super(scrollpane, new ScrollPaneBehavior(scrollpane));
         initialize();
         // Register listeners
@@ -136,6 +139,15 @@ public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehav
         registerChangeListener(scrollpane.vvalueProperty(), "VVALUE");
         registerChangeListener(scrollpane.prefViewportWidthProperty(), "PREF_VIEWPORT_WIDTH");
         registerChangeListener(scrollpane.prefViewportHeightProperty(), "PREF_VIEWPORT_HEIGHT");
+        scrollpane.addEventHandler(ScrollToEvent.SCROLL_TO_NODE, new EventHandler<ScrollToEvent<Node>>() {
+
+            @Override
+            public void handle(ScrollToEvent<Node> event) {
+                Node n = event.getScrollTarget();
+                Bounds b = scrollpane.sceneToLocal(n.localToScene(n.getLayoutBounds()));
+                scrollBoundsIntoView(b);
+            }
+        });
     }
 
     private final InvalidationListener nodeListener = new InvalidationListener() {
@@ -614,11 +626,8 @@ public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehav
             getSkinnable().requestLayout();
         }
     }
-
-    /*
-    ** auto-scroll so node is within (0,0),(contentWidth,contentHeight)
-    */
-    @Override public void onTraverse(Node n, Bounds b) {
+    
+    void scrollBoundsIntoView(Bounds b) {
         double dx = 0.0;
         double dy = 0.0;
         boolean needsLayout = false;
@@ -665,6 +674,13 @@ public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehav
         if (needsLayout == true) {
             getSkinnable().requestLayout();
         }
+    }
+
+    /*
+    ** auto-scroll so node is within (0,0),(contentWidth,contentHeight)
+    */
+    @Override public void onTraverse(Node n, Bounds b) {
+        scrollBoundsIntoView(b);
     }
 
     public void hsbIncrement() {
@@ -951,12 +967,22 @@ public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehav
         vsbWidth = snapSize(vsb.prefWidth(-1));
         if (vsbWidth == 0) {
             //            println("*** WARNING ScrollPaneSkin: can't get scroll bar width, using {DEFAULT_SB_BREADTH}");
-            vsbWidth = DEFAULT_SB_BREADTH;
+            if (PlatformUtil.isEmbedded()) {
+                vsbWidth = DEFAULT_EMBEDDED_SB_BREADTH;
+            }
+            else {
+                vsbWidth = DEFAULT_SB_BREADTH;
+            }
         }
         hsbHeight = snapSize(hsb.prefHeight(-1));
         if (hsbHeight == 0) {
             //            println("*** WARNING ScrollPaneSkin: can't get scroll bar height, using {DEFAULT_SB_BREADTH}");
-            hsbHeight = DEFAULT_SB_BREADTH;
+            if (PlatformUtil.isEmbedded()) {
+                hsbHeight = DEFAULT_EMBEDDED_SB_BREADTH;
+            }
+            else {
+                hsbHeight = DEFAULT_SB_BREADTH;
+            }
         }
     }
 
@@ -1071,8 +1097,6 @@ public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehav
     protected void startContentsToViewport() {
         double newPosX = posX;
         double newPosY = posY;
-        double hRange = getSkinnable().getHmax() - getSkinnable().getHmin();
-        double vRange = getSkinnable().getVmax() - getSkinnable().getVmin();
 
         setContentPosX(posX);
         setContentPosY(posY);

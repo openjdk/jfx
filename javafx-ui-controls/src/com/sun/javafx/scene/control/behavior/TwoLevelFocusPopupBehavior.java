@@ -26,7 +26,6 @@
 package com.sun.javafx.scene.control.behavior;
 
 import javafx.scene.Node;
-import javafx.scene.control.Control;
 import javafx.scene.control.PopupControl;
 
 import javafx.scene.Scene;
@@ -39,7 +38,6 @@ import javafx.event.EventDispatchChain;
 import javafx.event.EventDispatcher;
 import javafx.event.EventHandler;
 import javafx.scene.input.MouseEvent;
-import com.sun.javafx.css.StyleManager;
 
 
 public class TwoLevelFocusPopupBehavior extends TwoLevelFocusBehavior {

@@ -43,7 +43,7 @@ public final class BackgroundPositionConverter extends StyleConverterImpl<Parsed
     public static BackgroundPositionConverter getInstance() {
         return BACKGROUND_POSITION_CONVERTER;
     }
-
+    
     // Disallow instantiation
     private BackgroundPositionConverter() { }
 
@@ -59,12 +59,14 @@ public final class BackgroundPositionConverter extends StyleConverterImpl<Parsed
 
         boolean verticalEdgeProportional =
                 (bottom.getValue() > 0 && bottom.getUnits() == SizeUnits.PERCENT)
-                        || (top.getValue() > 0 && top.getUnits() == SizeUnits.PERCENT);
+                        || (top.getValue() > 0 && top.getUnits() == SizeUnits.PERCENT)
+                        || (top.getValue() == 0 && bottom.getValue() == 0);
 
         // either left or right will be set, not both
         boolean horizontalEdgeProportional =
                 (right.getValue() > 0 && right.getUnits() == SizeUnits.PERCENT)
-                        || ( left.getValue() > 0 && left.getUnits() == SizeUnits.PERCENT);
+                        || ( left.getValue() > 0 && left.getUnits() == SizeUnits.PERCENT)
+                        || (left.getValue() == 0 && right.getValue() == 0);
 
         final double t = top.pixels(font);
         final double r = right.pixels(font);

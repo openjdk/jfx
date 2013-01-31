@@ -31,6 +31,8 @@
  */
 package modena;
 
+import java.util.HashMap;
+import java.util.Map;
 import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
@@ -80,7 +82,6 @@ import javafx.scene.layout.HBoxBuilder;
 import javafx.scene.layout.VBox;
 import javafx.scene.layout.VBoxBuilder;
 import javafx.scene.paint.Color;
-import javafx.scene.web.HTMLEditor;
 import javafx.scene.web.HTMLEditorBuilder;
 import static modena.SamplePageHelpers.*;
 import static modena.SamplePageTableHelper.*;
@@ -94,6 +95,8 @@ import static modena.SamplePageChartHelper.*;
 public class SamplePage extends GridPane {
     private int rowIndex = 0;
     
+    private Map<String, Node> content = new HashMap<>();
+    
     private Node withState(Node node, String state) {
         node.getProperties().put("javafx.scene.Node.pseudoClassOverride", state);
         return node;
@@ -103,7 +106,17 @@ public class SamplePage extends GridPane {
         if (state!=null) node.getProperties().put("javafx.scene.Node.pseudoClassOverride", state);
         Platform.runLater(new Runnable() {
             @Override public void run() {
-                node.lookup(subNodeStyleClass).getProperties().put("javafx.scene.Node.pseudoClassOverride", subNodeState);
+                // TODO: node.lookup(subNodeStyleClass) is null if stage is not shown
+                if (node != null) {
+                    Node subNode = node.lookup(subNodeStyleClass);
+                    if (subNode != null) {
+                        node.lookup(subNodeStyleClass).getProperties().put("javafx.scene.Node.pseudoClassOverride", subNodeState);
+                    } else {
+                        System.err.println("node = " + node+" node.lookup("+subNodeStyleClass+") = " + subNode);
+                    }
+                } else {
+                    System.err.println("node = " + node);
+                }
             }
         });
         return node;
@@ -118,6 +131,7 @@ public class SamplePage extends GridPane {
         setConstraints(sectionLabel, 0, rowIndex);
         setConstraints(box, 1, rowIndex++);
         getChildren().addAll(sectionLabel,box);
+        content.put(name, box);
     }
     
     private void newDetailedSection(String[] labels, Node ...children) {
@@ -137,6 +151,11 @@ public class SamplePage extends GridPane {
         setConstraints(sectionLabel, 0, rowIndex);
         setConstraints(hbox, 1, rowIndex++);
         getChildren().addAll(sectionLabel,hbox);
+        content.put(labels[0], hbox);
+    }
+
+    public Map<String, Node> getContent() {
+        return content;
     }
     
     public SamplePage() {
@@ -270,7 +289,7 @@ public class SamplePage extends GridPane {
                 withState(ChoiceBoxBuilder.create(String.class).items(sampleItems()).value("Item B").build(), "hover"),
                 withState(ChoiceBoxBuilder.create(String.class).items(sampleItems()).value("Item B").build(), "showing"),
                 withState(ChoiceBoxBuilder.create(String.class).items(sampleItems()).value("Item B").build(), "focused"),
-                withState(ChoiceBoxBuilder.create(String.class).items(sampleItems()).value("Item C").build(), "disabled")
+                ChoiceBoxBuilder.create(String.class).items(sampleItems()).value("Item C").disable(true).build()
                 );
         newSection(      
                 "ComboBox:", 
@@ -278,16 +297,15 @@ public class SamplePage extends GridPane {
                 withState(ComboBoxBuilder.create(String.class).items(sampleItems()).value("Item B").build(), "hover"),
                 withState(ComboBoxBuilder.create(String.class).items(sampleItems()).value("Item B").build(), "showing"),
                 withState(ComboBoxBuilder.create(String.class).items(sampleItems()).value("Item B").build(), "focused"),
-                withState(ComboBoxBuilder.create(String.class).items(sampleItems()).value("Item C").build(), "disabled")
+                ComboBoxBuilder.create(String.class).items(sampleItems()).value("Item C").disable(true).build()
                 );
         newSection(      
                 "ComboBox\nEditable:", 
                 ComboBoxBuilder.create(String.class).items(sampleItems()).value("Item A").editable(true).build(),
-                withState(ComboBoxBuilder.create(String.class).items(sampleItems()).value("Item B").editable(true).build(), "hover"),
-                withState(ComboBoxBuilder.create(String.class).items(sampleItems()).value("Item B").editable(true).build(), "showing"),
-                withState(ComboBoxBuilder.create(String.class).items(sampleItems()).value("Item B").editable(true).build(), "focused"),
-                withState(ComboBoxBuilder.create(String.class).items(sampleItems()).value("Item B").editable(true).build(), null,".text-field", "focused"),
-                withState(ComboBoxBuilder.create(String.class).items(sampleItems()).value("Item C").editable(true).build(), "disabled")
+                withState(ComboBoxBuilder.create(String.class).items(sampleItems()).value("Item B").editable(true).build(), "editable", ".arrow-button", "hover"),
+                withState(ComboBoxBuilder.create(String.class).items(sampleItems()).value("Item B").editable(true).build(), "editable", ".arrow-button", "pressed"),
+                withState(ComboBoxBuilder.create(String.class).items(sampleItems()).value("Item B").editable(true).build(), "editable,contains-focus"),
+                ComboBoxBuilder.create(String.class).items(sampleItems()).value("Item C").editable(true).disable(true).build()
                 );
         newSection(      
                 "Color Picker:", 
@@ -485,13 +503,15 @@ public class SamplePage extends GridPane {
                 withState(createTabPane(5, 200,"Disabled", true, false, Side.RIGHT), "disabled")
                 );
         newDetailedSection(
-                new String[] {"TitledPane:", "normal", "focused", "disabled"}, 
+                new String[] {"TitledPane:", "normal", "not collapsible", "hover", "focused", "disabled"}, 
                 TitledPaneBuilder.create().text("Title").content(new Label("Content\nLine2.")).build(),
+                TitledPaneBuilder.create().text("Not Collapsible").content(new Label("Content\nLine2.")).collapsible(false).build(),
+                withState(TitledPaneBuilder.create().text("Title").content(new Label("Content\nLine2.")).build(), "hover"),
                 withState(TitledPaneBuilder.create().text("Title").content(new Label("Content\nLine2.")).build(), "focused"),
                 withState(TitledPaneBuilder.create().text("Title").content(new Label("Content\nLine2.")).build(), "disabled")
                 );
         newDetailedSection(
-                new String[] {"Accordian:", "normal", "hover", "focused", "disabled"}, 
+                new String[] {"Accordion:", "normal", "hover", "focused", "disabled"}, 
                 createAccordion(),
                 withState(createAccordion(), null, ".titled-pane", "hover"),
                 withState(createAccordion(), null, ".titled-pane", "focused"),
@@ -601,7 +621,11 @@ public class SamplePage extends GridPane {
                 );
         newSection(
                 "BubbleChart:", 
-                createBubbleChart()
+                createBubbleChart(false)
+                );
+        newSection(
+                "BubbleChart\nTop & Right Axis:", 
+                createBubbleChart(true)
                 );
         newSection(
                 "LineChart:", 

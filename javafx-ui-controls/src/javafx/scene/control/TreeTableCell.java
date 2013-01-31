@@ -24,7 +24,7 @@
  */
 package javafx.scene.control;
 
-import javafx.css.PseudoClass;;
+import javafx.css.PseudoClass;
 import com.sun.javafx.scene.control.skin.TreeTableCellSkin;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;

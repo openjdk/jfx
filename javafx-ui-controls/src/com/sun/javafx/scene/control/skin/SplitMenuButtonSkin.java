@@ -25,9 +25,7 @@
 
 package com.sun.javafx.scene.control.skin;
 
-import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
-import javafx.scene.control.MenuItem;
 import javafx.scene.control.SplitMenuButton;
 import javafx.scene.input.MouseEvent;
 

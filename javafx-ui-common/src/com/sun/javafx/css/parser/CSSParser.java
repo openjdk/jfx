@@ -54,6 +54,7 @@ import javafx.scene.shape.StrokeType;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontPosture;
 import javafx.scene.text.FontWeight;
+import com.sun.javafx.Utils;
 import com.sun.javafx.css.Combinator;
 import com.sun.javafx.css.CompoundSelector;
 import com.sun.javafx.css.CssError;
@@ -1379,6 +1380,8 @@ final public class CSSParser {
             return parseRepeatingImagePattern(root);
         } else if ("ladder".regionMatches(true, 0, fcn, 0, 6)) {
             return parseLadder(root);
+        } else if ("region".regionMatches(true, 0, fcn, 0, 6)) {
+            return parseRegion(root);
         } else if ("url".regionMatches(true, 0, fcn, 0, 3)) {
             return parseURI(root);
         } else {
@@ -2391,6 +2394,10 @@ final public class CSSParser {
     private final static ParsedValueImpl<Size,Size> ONE_HUNDRED_PERCENT =
             new ParsedValueImpl<Size,Size>(new Size(100f, SizeUnits.PERCENT), null);
 
+    private static boolean isPositionKeyWord(String value) {
+        return "center".equalsIgnoreCase(value) || "top".equalsIgnoreCase(value) || "bottom".equalsIgnoreCase(value) || "left".equalsIgnoreCase(value) || "right".equalsIgnoreCase(value);
+    }
+    
     /*
      * http://www.w3.org/TR/css3-background/#the-background-position
      *
@@ -2428,228 +2435,283 @@ final public class CSSParser {
         Term termFour = (termThree != null) ? termThree.nextInSeries : null;
         Token valueFour = (termFour != null) ? termFour.token : null;
 
+        // are the horizontal and vertical exchanged
+        if( valueOne != null && valueTwo != null && valueThree == null && valueFour == null ) {
+            // 2 values filled
+            String v1 = valueOne.getText();
+            String v2 = valueTwo.getText();
+            if( ("top".equals(v1) || "bottom".equals(v1)) 
+                    && ("left".equals(v2) || "right".equals(v2) || "center".equals(v2)) ) {
+                {
+                    Token tmp = valueTwo;
+                    valueTwo = valueOne;
+                    valueOne = tmp;
+                }
+                
+                {
+                    Term tmp = termTwo;
+                    termTwo = termOne;
+                    termOne = tmp;
+                }
+            }
+        } else if( valueOne != null && valueTwo != null && valueThree != null ) {
+            Term[] termArray = null;
+            Token[] tokeArray = null;
+            // 4 values filled
+            if( valueFour != null ) {
+                if( ("top".equals(valueOne.getText()) || "bottom".equals(valueOne.getText())) 
+                        && ("left".equals(valueThree.getText()) || "right".equals(valueThree.getText())) ) {
+                    // e.g. top 50 left 20
+                    termArray = new Term[] { termThree, termFour, termOne, termTwo };
+                    tokeArray = new Token[] { valueThree, valueFour, valueOne, valueTwo };
+                }
+            } else {
+                if( ("top".equals(valueOne.getText()) || "bottom".equals(valueOne.getText())) ) {
+                    if( ("left".equals(valueTwo.getText()) || "right".equals(valueTwo.getText())) ) {
+                        // e.g. top left 50
+                        termArray = new Term[] { termTwo, termThree, termOne, null };
+                        tokeArray = new Token[] { valueTwo, valueThree, valueOne, null };    
+                    } else {
+                        // e.g. top 50 left
+                        termArray = new Term[] { termThree, termOne, termTwo, null };
+                        tokeArray = new Token[] { valueThree, valueOne, valueTwo, null };
+                    }
+                } 
+            }
+            
+            if( termArray != null ) {
+                termOne = termArray[0];
+                termTwo = termArray[1];
+                termThree = termArray[2];
+                termFour = termArray[3];
+                
+                valueOne = tokeArray[0];
+                valueTwo = tokeArray[1];
+                valueThree = tokeArray[2];
+                valueFour = tokeArray[3];
+            }
+        }
+        
+        
         ParsedValueImpl<?,Size> top, right, bottom, left;
         top = right = bottom = left = ZERO_PERCENT;
-
-        // http://www.w3.org/TR/css3-background/#the-background-position states:
-        // If three or four values are given, then each <percentage> or<length>
-        // represents an offset and must be preceded by a keyword, which specifies
-        // from which edge the offset is given.
-        if (valueTwo != null && valueThree != null) {
-
-            //
-            // to make this a little easier, if there are only three values,
-            // the values are rearranged so that valueOne and valueThree are
-            // the identifiers. So, if valueTwo is an identifier, everything
-            // has to move.
-            //
-            if (valueTwo.getType() == CSSLexer.IDENT) {
-                if (valueFour != null)
-                    error(termTwo, "Unexpected value in \'<bg-position>\'");
-
-                valueFour = valueThree; termFour = termThree;
-                valueThree = valueTwo; termThree = termTwo;
-                valueTwo = null; termTwo = null;
-            }
-
-            // Now valueTwo and valueFour are either null or a size...
-
-            if (valueOne.getType() != CSSLexer.IDENT ||
-                valueOne.getText() == null ||
-                valueOne.getText().isEmpty())
-                error(termOne, "Expected \'center\', \'left\' or \'right\'");
-
-            ParsedValueImpl<?,Size> sizeTwo = null;
-            if (valueTwo != null && isSize(valueTwo)) {
-                sizeTwo = parseSize(termTwo);
-            } else {
-                error(termTwo, "Expected \'<size>\'");
-            }
-
-            if (valueThree.getType() != CSSLexer.IDENT ||
-                valueThree.getText() == null ||
-                valueThree.getText().isEmpty())
-                error(termThree, "Expected \'center\', \'left\' or \'right\'");
-
-            ParsedValueImpl<?,Size> sizeFour = null;
-            if (valueFour != null) {
-                if (isSize(valueFour)) {
-                    sizeFour = parseSize(termFour);
-                } else {
-                    error(termFour, "Expected \'<size>\'");
-                }
-            }
-
-            String keyword = valueOne.getText().toLowerCase();
-
-            if ("center".equals(keyword)) {
-
-                left = FIFTY_PERCENT;
-                if (sizeTwo != null)
-                    error(termTwo, "Unexpected \'<size>\'");
-
-            } else if ("left".equals(keyword)) {
-
-                if (sizeTwo != null) left = sizeTwo;
-                else left = ZERO_PERCENT;
-
-            } else if ("right".equals(keyword)) {
-
-                if (sizeTwo != null) right = sizeTwo;
-                else left = ONE_HUNDRED_PERCENT;
-
-            } else {
-                error(termOne, "Expected \'center\', \'left\' or \'right\'");
-            }
-
-            keyword = valueThree.getText().toLowerCase();
-
-            if ("center".equals(keyword)) {
-
-                top = FIFTY_PERCENT;
-                if (sizeFour != null)
-                    error(termFour, "Unexpected \'<size>\'");
-
-            } else if ("top".equals(keyword)) {
-
-                if (sizeFour != null) top = sizeFour;
-                else top = ZERO_PERCENT;
-
-            } else if ("bottom".equals(keyword)) {
-
-                if (sizeFour != null) bottom = sizeFour;
-                else top = ONE_HUNDRED_PERCENT;
-
-            } else {
-                error(termThree, "Expected \'center\', \'left\' or \'right\'");
-            }
-
-        }
-
-        // http://www.w3.org/TR/css3-background/#the-background-position states:
-        // If two values are given and at least one value is not a keyword, then
-        // the first value represents the horizontal position (or offset) and the
-        // second represents the vertical position (or offset). <percentage> and
-        // <length> values here represent an offset of the top left corner of the
-        // background image from the top left corner of the background positioning
-        // area.
-        else if (valueTwo != null) {
-
-            if (valueOne.getType() == CSSLexer.IDENT) {
-
-                String keyword =
-                        (valueOne.getText() != null) ?
-                            valueOne.getText().toLowerCase() : null;
-
-                if ("center".equals(keyword)) {
-
+        {
+            if(valueOne == null && valueTwo == null && valueThree == null && valueFour == null) {
+                error(term, "No value found for background-position");
+            } else if( valueOne != null && valueTwo == null && valueThree == null && valueFour == null ) {
+                // Only one value
+                String v1 = valueOne.getText();
+                
+                if( "center".equals(v1) ) {
                     left = FIFTY_PERCENT;
-
-                } else if ("left".equals(keyword)) {
-
+                    right = ZERO_PERCENT;
+                    
+                    top = FIFTY_PERCENT;
+                    bottom = ZERO_PERCENT;
+                    
+                } else if("left".equals(v1)) {
                     left = ZERO_PERCENT;
-
-                } else if ("right".equals(keyword)) {
-
+                    right = ZERO_PERCENT;
+                    
+                    top = FIFTY_PERCENT;
+                    bottom = ZERO_PERCENT;
+                    
+                } else if( "right".equals(v1) ) {
                     left = ONE_HUNDRED_PERCENT;
-
-                } else {
-
-                    error(termOne, "Expected \'center\', \'left\' or \'right\'");
-
-                }
-
-            } else if (isSize(valueOne)) {
-                left = parseSize(termOne);
-            } else {
-                error(termOne, "Expected \'<size>\', \'center\', \'left\' or \'right\'");
-            }
-
-
-            if (valueTwo.getType() == CSSLexer.IDENT) {
-
-                String keyword =
-                        (valueTwo.getText() != null) ?
-                            valueTwo.getText().toLowerCase() : null;
-
-                if ("center".equals(keyword)) {
-
+                    right = ZERO_PERCENT;
+                    
                     top = FIFTY_PERCENT;
-
-                } else if ("top".equals(keyword)) {
-
+                    bottom = ZERO_PERCENT;
+                    
+                } else if( "top".equals(v1) ) {
+                    left = FIFTY_PERCENT;
+                    right = ZERO_PERCENT;
+                    
                     top = ZERO_PERCENT;
-
-                } else if ("bottom".equals(keyword)) {
-
-                    top = ONE_HUNDRED_PERCENT;
-
-                } else {
-
-                    error(termTwo, "Expected \'center\', \'left\' or \'right\'");
-
-                }
-
-            } else if (isSize(valueTwo)) {
-
-                top = parseSize(termTwo);
-
-            } else {
-                error(termTwo, "Expected \'<size>\', \'center\', \'left\' or \'right\'");
-            }
-
-        }
-
-        // http://www.w3.org/TR/css3-background/#the-background-position states:
-        // If only one value is specified, the second value is assumed to be 'center'.
-        else {
-
-            if (valueOne.getType() == CSSLexer.IDENT) {
-
-                String keyword =
-                        (valueOne.getText() != null) ?
-                            valueOne.getText().toLowerCase() : null;
-
-                if ("center".equals(keyword)) {
-
+                    bottom = ZERO_PERCENT;
+                    
+                } else if( "bottom".equals(v1) ) {
                     left = FIFTY_PERCENT;
-                    top = FIFTY_PERCENT;
-
-                } else if ("left".equals(keyword)) {
-
-                    left = ZERO_PERCENT;
-                    top = FIFTY_PERCENT;
-
-                } else if ("right".equals(keyword)) {
-
-                    left = ONE_HUNDRED_PERCENT;
-                    top = FIFTY_PERCENT;
-
-                } else if ("top".equals(keyword)) {
-
+                    right = ZERO_PERCENT;
+                    
+                    top = ONE_HUNDRED_PERCENT;
+                    bottom = ZERO_PERCENT;
+                } else {
+                    left = parseSize(termOne);
+                    right = ZERO_PERCENT;
                     top = ZERO_PERCENT;
-                    left = FIFTY_PERCENT;
-
-                } else if ("bottom".equals(keyword)) {
-
-                    top = ONE_HUNDRED_PERCENT;
-                    left = FIFTY_PERCENT;
-
-                } else {
-
-                    error(termOne, "Expected \'center\', \'left\' or \'right\'");
-
+                    bottom = ZERO_PERCENT;
                 }
-
-            } else if (isSize(valueOne)) {
-
-                left = parseSize(termOne);
-                top = FIFTY_PERCENT;
-
+            } else if( valueOne != null && valueTwo != null && valueThree == null && valueFour == null ) {
+                // 2 values
+                String v1 = valueOne.getText().toLowerCase();
+                String v2 = valueTwo.getText().toLowerCase();
+                
+                if( ! isPositionKeyWord(v1) ) {
+                    left = parseSize(termOne);
+                    right = ZERO_PERCENT;
+                    
+                    if( "top".equals(v2) ) {
+                        top = ZERO_PERCENT;
+                        bottom = ZERO_PERCENT;
+                    } else if( "bottom".equals(v2) ) {
+                        top = ONE_HUNDRED_PERCENT;
+                        bottom = ZERO_PERCENT;
+                    } else if( "center".equals(v2) ) {
+                        top = FIFTY_PERCENT;
+                        bottom = ZERO_PERCENT;
+                    } else if( !isPositionKeyWord(v2) ) {
+                        top = parseSize(termTwo);
+                        bottom = ZERO_PERCENT;
+                    } else {
+                        error(termTwo,"Expected 'top', 'bottom', 'center' or <size>");
+                    }
+                } else if( v1.equals("left") || v1.equals("right") ) {
+                    left = v1.equals("right") ? ONE_HUNDRED_PERCENT : ZERO_PERCENT;
+                    right = ZERO_PERCENT;
+                    
+                    if( ! isPositionKeyWord(v2) ) {
+                        top = parseSize(termTwo);
+                        bottom = ZERO_PERCENT;
+                    } else if( v2.equals("top") || v2.equals("bottom") || v2.equals("center") ) {
+                        if( v2.equals("top") ) {
+                            top = ZERO_PERCENT;
+                            bottom = ZERO_PERCENT;
+                        } else if(v2.equals("center")) {
+                            top = FIFTY_PERCENT;
+                            bottom = ZERO_PERCENT;
+                        } else {
+                            top = ONE_HUNDRED_PERCENT;
+                            bottom = ZERO_PERCENT;
+                        }
+                    } else {
+                        error(termTwo,"Expected 'top', 'bottom', 'center' or <size>");
+                    }
+                } else if( v1.equals("center") ) {
+                    left = FIFTY_PERCENT;
+                    right = ZERO_PERCENT;
+                    
+                    if( v2.equals("top") ) {
+                        top = ZERO_PERCENT;
+                        bottom = ZERO_PERCENT;
+                    } else if( v2.equals("bottom") ) {
+                        top = ONE_HUNDRED_PERCENT;
+                        bottom = ZERO_PERCENT;
+                    } else if( v2.equals("center") ) {
+                        top = FIFTY_PERCENT;
+                        bottom = ZERO_PERCENT;
+                    } else if( ! isPositionKeyWord(v2) ) {
+                        top = parseSize(termTwo);
+                        bottom = ZERO_PERCENT;
+                    } else {
+                        error(termTwo,"Expected 'top', 'bottom', 'center' or <size>");
+                    }
+                }
+            } else if( valueOne != null && valueTwo != null && valueThree != null && valueFour == null ) {
+                String v1 = valueOne.getText().toLowerCase();
+                String v2 = valueTwo.getText().toLowerCase();
+                String v3 = valueThree.getText().toLowerCase();
+                
+                if( ! isPositionKeyWord(v1) || "center".equals(v1) ) {
+                    // 1 is horizontal
+                    // means 2 & 3 are vertical
+                    if( "center".equals(v1) ) {
+                        left = FIFTY_PERCENT;        
+                    } else {
+                        left = parseSize(termOne);
+                    }
+                    right = ZERO_PERCENT;
+                    
+                    if( !isPositionKeyWord(v3) ) {
+                        if( "top".equals(v2) ) {
+                            top = parseSize(termThree);
+                            bottom = ZERO_PERCENT;
+                        } else if( "bottom".equals(v2) ) {
+                            top = ZERO_PERCENT;
+                            bottom = parseSize(termThree);
+                        } else {
+                            error(termTwo,"Expected 'top' or 'bottom'");
+                        }    
+                    } else {
+                        error(termThree,"Expected <size>");
+                    }
+                } else if( "left".equals(v1) || "right".equals(v1)  ) {
+                    if( ! isPositionKeyWord(v2) ) {
+                        // 1 & 2 are horizontal
+                        // 3 is vertical
+                        if( "left".equals(v1) ) {
+                            left = parseSize(termTwo);
+                            right = ZERO_PERCENT;
+                        } else {
+                            left = ZERO_PERCENT;
+                            right = parseSize(termTwo);
+                        }
+                        
+                        if( "top".equals(v3) ) {
+                            top = ZERO_PERCENT;
+                            bottom = ZERO_PERCENT;
+                        } else if( "bottom".equals(v3) ) {
+                            top = ONE_HUNDRED_PERCENT;
+                            bottom = ZERO_PERCENT;
+                        } else if( "center".equals(v3) ) {
+                            top = FIFTY_PERCENT;
+                            bottom = ZERO_PERCENT;
+                        } else {
+                            error(termThree,"Expected 'top', 'bottom' or 'center'");
+                        }
+                    } else {
+                        // 1 is horizontal
+                        // 2 & 3 are vertical
+                        if( "left".equals(v1) ) {
+                            left = ZERO_PERCENT;
+                            right = ZERO_PERCENT;
+                        } else {
+                            left = ONE_HUNDRED_PERCENT;
+                            right = ZERO_PERCENT;
+                        }
+                        
+                        if( ! isPositionKeyWord(v3) ) {
+                            if( "top".equals(v2) ) {
+                                top = parseSize(termThree);
+                                bottom = ZERO_PERCENT;
+                            } else if( "bottom".equals(v2) ) {
+                                top = ZERO_PERCENT;
+                                bottom = parseSize(termThree);
+                            } else {
+                                error(termTwo,"Expected 'top' or 'bottom'");
+                            }
+                        } else {
+                            error(termThree,"Expected <size>");
+                        }
+                    }
+                }
             } else {
-                error(termOne, "Expected \'<size>\', \'center\', \'left\' or \'right\'");
+                String v1 = valueOne.getText().toLowerCase();
+                String v2 = valueTwo.getText().toLowerCase();
+                String v3 = valueThree.getText().toLowerCase();
+                String v4 = valueFour.getText().toLowerCase();
+                
+                if( (v1.equals("left") || v1.equals("right")) && (v3.equals("top") || v3.equals("bottom") ) && ! isPositionKeyWord(v2) && ! isPositionKeyWord(v4) ) {
+                    if( v1.equals("left") ) {
+                        left = parseSize(termTwo);
+                        right = ZERO_PERCENT;
+                    } else {
+                        left = ZERO_PERCENT;
+                        right = parseSize(termTwo);
+                    }
+                    
+                    if( v3.equals("top") ) {
+                        top = parseSize(termFour);
+                        bottom = ZERO_PERCENT;
+                    } else {
+                        top = ZERO_PERCENT;
+                        bottom = parseSize(termFour);
+                    }
+                    
+                } else {
+                    error(term,"Expected 'left' or 'right' followed by <size> followed by 'top' or 'bottom' followed by <size>");
+                }
             }
-
         }
 
         ParsedValueImpl<?,Size>[] values = new ParsedValueImpl[] {top, right, bottom, left};
@@ -3298,7 +3360,28 @@ final public class CSSParser {
         return new ParsedValueImpl<ParsedValue<ParsedValue<?,Size>[],BorderWidths>[],BorderWidths[]> (layers, BorderImageWidthsSequenceConverter.getInstance());
     }
 
+    // parse a Region value
+    // i.e., region(".styleClassForRegion") or region("#idForRegion")
+    public static final String SPECIAL_REGION_URL_PREFIX = "SPECIAL-REGION-URL:";
+    private ParsedValueImpl<String,String> parseRegion(Term root)
+            throws ParseException {
+        // first term in the chain is the function name...
+        final String fn = (root.token != null) ? root.token.getText() : null;
+        if (!"region".regionMatches(true, 0, fn, 0, 6)) {
+            error(root,"Expected \'region\'");
+        }
 
+        Term arg = root.firstArg;
+        if (arg == null) error(root, "Expected \'region(\"<styleclass-or-id-string>\")\'");
+
+        if (arg.token == null ||
+                arg.token.getType() != CSSLexer.STRING ||
+                arg.token.getText() == null ||
+                arg.token.getText().isEmpty())  error(root, "Expected \'region(\"<styleclass-or-id-string>\")\'");
+
+        final String styleClassOrId = SPECIAL_REGION_URL_PREFIX+ Utils.stripQuotes(arg.token.getText());
+        return new ParsedValueImpl<String,String>(styleClassOrId, StringConverter.getInstance());
+    }
 
     // parse a URI value
     // i.e., url("<uri>")

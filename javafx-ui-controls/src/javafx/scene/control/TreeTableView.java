@@ -44,6 +44,7 @@ import javafx.beans.WeakInvalidationListener;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.IntegerProperty;
 import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.ObjectPropertyBase;
 import javafx.beans.property.ReadOnlyIntegerProperty;
 import javafx.beans.property.ReadOnlyIntegerWrapper;
 import javafx.beans.property.ReadOnlyObjectProperty;
@@ -820,30 +821,30 @@ public class TreeTableView<S> extends Control {
     
     
     
-    // --- Span Model
-    private ObjectProperty<SpanModel<TreeItem<S>>> spanModel 
-            = new SimpleObjectProperty<SpanModel<TreeItem<S>>>(this, "spanModel") {
-
-        @Override protected void invalidated() {
-            ObservableList<String> styleClass = getStyleClass();
-            if (getSpanModel() == null) {
-                styleClass.remove(CELL_SPAN_TABLE_VIEW_STYLE_CLASS);
-            } else if (! styleClass.contains(CELL_SPAN_TABLE_VIEW_STYLE_CLASS)) {
-                styleClass.add(CELL_SPAN_TABLE_VIEW_STYLE_CLASS);
-            }
-        }
-    };
-
-    public final ObjectProperty<SpanModel<TreeItem<S>>> spanModelProperty() {
-        return spanModel;
-    }
-    public final void setSpanModel(SpanModel<TreeItem<S>> value) {
-        spanModelProperty().set(value);
-    }
-
-    public final SpanModel<TreeItem<S>> getSpanModel() {
-        return spanModel.get();
-    }
+//    // --- Span Model
+//    private ObjectProperty<SpanModel<TreeItem<S>>> spanModel 
+//            = new SimpleObjectProperty<SpanModel<TreeItem<S>>>(this, "spanModel") {
+//
+//        @Override protected void invalidated() {
+//            ObservableList<String> styleClass = getStyleClass();
+//            if (getSpanModel() == null) {
+//                styleClass.remove(CELL_SPAN_TABLE_VIEW_STYLE_CLASS);
+//            } else if (! styleClass.contains(CELL_SPAN_TABLE_VIEW_STYLE_CLASS)) {
+//                styleClass.add(CELL_SPAN_TABLE_VIEW_STYLE_CLASS);
+//            }
+//        }
+//    };
+//
+//    public final ObjectProperty<SpanModel<TreeItem<S>>> spanModelProperty() {
+//        return spanModel;
+//    }
+//    public final void setSpanModel(SpanModel<TreeItem<S>> value) {
+//        spanModelProperty().set(value);
+//    }
+//
+//    public final SpanModel<TreeItem<S>> getSpanModel() {
+//        return spanModel.get();
+//    }
     
     
     
@@ -1243,7 +1244,44 @@ public class TreeTableView<S> extends Control {
      *      number of the visible items in the TreeTableView.
      */
     public void scrollTo(int index) {
-       getProperties().put(VirtualContainerBase.SCROLL_TO_INDEX_TOP, index);
+        ControlUtils.scrollToIndex(this, index);
+    }
+    
+    /**
+     * Called when there's a request to scroll an index into view using {@link #scrollTo(int)}
+     */
+    private ObjectProperty<EventHandler<ScrollToEvent<Integer>>> onScrollTo;
+    
+    public void setOnScrollTo(EventHandler<ScrollToEvent<Integer>> value) {
+        onScrollToProperty().set(value);
+    }
+    
+    public EventHandler<ScrollToEvent<Integer>> getOnScrollTo() {
+        if( onScrollTo != null ) {
+            return onScrollTo.get();
+        }
+        return null;
+    }
+    
+    public ObjectProperty<EventHandler<ScrollToEvent<Integer>>> onScrollToProperty() {
+        if( onScrollTo == null ) {
+            onScrollTo = new ObjectPropertyBase<EventHandler<ScrollToEvent<Integer>>>() {
+                @Override
+                protected void invalidated() {
+                    setEventHandler(ScrollToEvent.SCROLL_TO_TOP_INDEX, get());
+                }
+                @Override
+                public Object getBean() {
+                    return TreeTableView.this;
+                }
+
+                @Override
+                public String getName() {
+                    return "onScrollTo";
+                }
+            };
+        }
+        return onScrollTo;
     }
 
     /**

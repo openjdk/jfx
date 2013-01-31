@@ -31,15 +31,17 @@
  */
 package modena;
 
-import java.io.File;
 import java.text.DateFormat;
 import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Comparator;
 import java.util.Date;
+import java.util.List;
+import java.util.Random;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.value.ObservableValue;
-import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.scene.Node;
 import javafx.scene.control.SelectionMode;
@@ -64,6 +66,39 @@ public class SamplePageTreeTableHelper {
             + ".673c0,0.293-0.237,0.53-0.531,0.53H2.122c-0.293,0-0.53-0.237-0.53-0.53v-9.02h3"
             + ".183V1.592z M0,4.245v10.611c0,0.586,0.475,1.061,1.061,1.061h10.611c0.586,0,1.0"
             + "61-0.475,1.061-1.061V1.061C12.733,0.475,12.258,0,11.672,0H4.245L0,4.245z";
+    private static final DummyFile ROOT;
+    private static final Random RANDOM = new Random(745288528l);
+    private static int directoryCount = 0;
+    private static int fileCount = 0;
+    
+    static {
+        ROOT = createDirectory(0.8);
+    }
+    
+    private static DummyFile createDirectory(double subdirectoryPercentage) {
+        final int numFiles = (int)(3 + (7*RANDOM.nextDouble()));
+        final DummyFile[] files = new DummyFile[numFiles];
+        for(int i=0; i< numFiles; i++) {
+            files[i] = (RANDOM.nextDouble()<subdirectoryPercentage) ? 
+                    createDirectory(subdirectoryPercentage-0.4) :
+                    createFile();
+        }
+        Calendar calendar = Calendar.getInstance();
+        calendar.setTimeInMillis(RANDOM.nextLong());
+        calendar.set(Calendar.YEAR, 2013);
+        return new DummyFile("Directory "+(directoryCount++), calendar.getTime(), files);
+    }
+    
+    private static DummyFile createFile() {
+        Calendar calendar = Calendar.getInstance();
+        calendar.setTimeInMillis(RANDOM.nextLong());
+        calendar.set(Calendar.YEAR, 2013);
+        return new DummyFile(
+            "File "+(fileCount++),
+            (int)(1024*1000*RANDOM.nextDouble()),
+            calendar.getTime()
+        );
+    }
     
     private static Node createFOLDER() { 
         SVGPath sp = new SVGPath();
@@ -84,65 +119,65 @@ public class SamplePageTreeTableHelper {
         treeTableView.setPrefSize(width, 300);
         treeTableView.getSelectionModel().selectRange(5, 8);
         return treeTableView;
-    }
+    } 
     
     private static TreeTableView buildFileBrowserTreeTableView() {
         // create a simple String treeview
-        TreeItem<File> root = new FileTreeItem(new File("/"));
+        TreeItem<DummyFile> root = new FileTreeItem(ROOT);
         root.setExpanded(true);
         
-        final TreeTableView<File> treeTableView = new TreeTableView<File>();
+        final TreeTableView<DummyFile> treeTableView = new TreeTableView<DummyFile>();
         treeTableView.setShowRoot(true);
         treeTableView.setRoot(root);
         
         // --- name column
-        TreeTableColumn<File, String> nameColumn = new TreeTableColumn<File, String>("Name");
+        TreeTableColumn<DummyFile, String> nameColumn = new TreeTableColumn<DummyFile, String>("Name");
         nameColumn.setPrefWidth(300);
-        nameColumn.setCellValueFactory(new Callback<TreeTableColumn.CellDataFeatures<File, String>, ObservableValue<String>>() {
-            @Override public ObservableValue<String> call(TreeTableColumn.CellDataFeatures<File, String> p) {
-                File f = p.getValue().getValue();
-                String text = f.getParentFile() == null ? "/" : f.getName();
+        nameColumn.setCellValueFactory(new Callback<TreeTableColumn.CellDataFeatures<DummyFile, String>, ObservableValue<String>>() {
+            @Override public ObservableValue<String> call(TreeTableColumn.CellDataFeatures<DummyFile, String> p) {
+                DummyFile f = p.getValue().getValue();
+                String text = f == ROOT ? "/" : f.getName();
                 return new ReadOnlyObjectWrapper<String>(text);
             }
         });
 
         // --- size column
-        TreeTableColumn<File, File> sizeColumn = new TreeTableColumn<File, File>("Size");
+        TreeTableColumn<DummyFile, DummyFile> sizeColumn = new TreeTableColumn<DummyFile, DummyFile>("Size");
         sizeColumn.setPrefWidth(100);
-        sizeColumn.setCellValueFactory(new Callback<TreeTableColumn.CellDataFeatures<File, File>, ObservableValue<File>>() {
-            @Override public ObservableValue<File> call(TreeTableColumn.CellDataFeatures<File, File> p) {
-                return new ReadOnlyObjectWrapper<File>(p.getValue().getValue());
+        sizeColumn.setCellValueFactory(new Callback<TreeTableColumn.CellDataFeatures<DummyFile, DummyFile>, ObservableValue<DummyFile>>() {
+            @Override public ObservableValue<DummyFile> call(TreeTableColumn.CellDataFeatures<DummyFile, DummyFile> p) {
+                return new ReadOnlyObjectWrapper<DummyFile>(p.getValue().getValue());
             }
         });
-        sizeColumn.setCellFactory(new Callback<TreeTableColumn<File, File>, TreeTableCell<File, File>>() {
-            @Override public TreeTableCell<File, File> call(final TreeTableColumn<File, File> p) {
-                return new TreeTableCell<File, File>() {
-                    @Override protected void updateItem(File item, boolean empty) {
+        sizeColumn.setCellFactory(new Callback<TreeTableColumn<DummyFile, DummyFile>, TreeTableCell<DummyFile, DummyFile>>() {
+            @Override public TreeTableCell<DummyFile, DummyFile> call(final TreeTableColumn<DummyFile, DummyFile> p) {
+                return new TreeTableCell<DummyFile, DummyFile>() {
+                    @Override protected void updateItem(DummyFile item, boolean empty) {
                         super.updateItem(item, empty);
                         
                         TreeTableView treeTable = p.getTreeTableView();
 
                         // if the File is a directory, it has no size...
-//                        ObservableList<TreeItem<File>> items = p.getTreeTableView().getItems();
+//                        ObservableList<TreeItem<DummyFile>> items = p.getTreeTableView().getItems();
                         if (getIndex() >= treeTable.getExpandedItemCount()) {
                             setText(null);
                         } else {
-                            TreeItem<File> treeItem = treeTable.getTreeItem(getIndex());
+                            TreeItem<DummyFile> treeItem = treeTable.getTreeItem(getIndex());
                             if (item == null || empty || treeItem == null || 
                                     treeItem.getValue() == null || treeItem.getValue().isDirectory()) {
                                 setText(null);
                             } else {
-                                setText(nf.format(item.length()) + " KB");
+                                setText(nf.format(item.getSize()) + " KB");
                             }
                         }
                     }
                 };
             }
         });
-        sizeColumn.setComparator(new Comparator<File>() {
-            @Override public int compare(File f1, File f2) {
-                long s1 = f1.isDirectory() ? 0 : f1.length();
-                long s2 = f2.isDirectory() ? 0 : f2.length();
+        sizeColumn.setComparator(new Comparator<DummyFile>() {
+            @Override public int compare(DummyFile f1, DummyFile f2) {
+                long s1 = f1.isDirectory() ? 0 : f1.getSize();
+                long s2 = f2.isDirectory() ? 0 : f2.getSize();
                 long result = s1 - s2;
                 if (result < 0) {
                     return -1;
@@ -155,16 +190,16 @@ public class SamplePageTreeTableHelper {
         });
         
         // --- modified column
-        TreeTableColumn<File, Date> lastModifiedColumn = new TreeTableColumn<File, Date>("Last Modified");
+        TreeTableColumn<DummyFile, Date> lastModifiedColumn = new TreeTableColumn<DummyFile, Date>("Last Modified");
         lastModifiedColumn.setPrefWidth(130);
-        lastModifiedColumn.setCellValueFactory(new Callback<TreeTableColumn.CellDataFeatures<File, Date>, ObservableValue<Date>>() {
-            @Override public ObservableValue<Date> call(TreeTableColumn.CellDataFeatures<File, Date> p) {
-                return new ReadOnlyObjectWrapper<Date>(new Date(p.getValue().getValue().lastModified()));
+        lastModifiedColumn.setCellValueFactory(new Callback<TreeTableColumn.CellDataFeatures<DummyFile, Date>, ObservableValue<Date>>() {
+            @Override public ObservableValue<Date> call(TreeTableColumn.CellDataFeatures<DummyFile, Date> p) {
+                return new ReadOnlyObjectWrapper<Date>(p.getValue().getValue().getModified());
             }
         });
-        lastModifiedColumn.setCellFactory(new Callback<TreeTableColumn<File, Date>, TreeTableCell<File, Date>>() {
-            @Override public TreeTableCell<File, Date> call(TreeTableColumn<File, Date> p) {
-                return new TreeTableCell<File, Date>() {
+        lastModifiedColumn.setCellFactory(new Callback<TreeTableColumn<DummyFile, Date>, TreeTableCell<DummyFile, Date>>() {
+            @Override public TreeTableCell<DummyFile, Date> call(TreeTableColumn<DummyFile, Date> p) {
+                return new TreeTableCell<DummyFile, Date>() {
                     @Override protected void updateItem(Date item, boolean empty) {
                         super.updateItem(item, empty);
                         
@@ -182,46 +217,71 @@ public class SamplePageTreeTableHelper {
         return treeTableView;
     }
     
-    private static ObservableList<TreeItem<File>> buildChildren(TreeItem<File> TreeItem) {
-        File f = (File) TreeItem.getValue();
-        if (f != null && f.isDirectory()) {
-            File[] files = f.listFiles();
-            if (files != null) {
-                ObservableList<TreeItem<File>> children = FXCollections.observableArrayList();
-                for (File childFile : files) {
-                    children.add(new FileTreeItem(childFile));
-                }
-                return children;
-            }
+    private static class DummyFile {
+        private final String name;
+        private final int size;
+        private final Date modified;
+        private final DummyFile[] children;
+
+        public DummyFile(String name, int size, Date modified) {
+            this.name = name;
+            this.size = size;
+            this.modified = modified;
+            this.children = null;
         }
-        return FXCollections.emptyObservableList();
+        
+        public DummyFile(String name, Date modified, DummyFile[] children) {
+            this.name = name;
+            this.size = 0;
+            this.modified = modified;
+            this.children = children;
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public int getSize() {
+            return size;
+        }
+
+        public Date getModified() {
+            return modified;
+        }
+
+        public DummyFile[] getChildren() {
+            return children;
+        }
+        
+        public boolean isDirectory() {
+            return children != null;
+        }
     }
     
-    private static class FileTreeItem extends TreeItem<File> {
-        private boolean isLeaf;
+    private static class FileTreeItem extends TreeItem<DummyFile> {
         private boolean isFirstTimeChildren = true;
-        private boolean isFirstTimeLeaf = true;
 
-        public FileTreeItem(File value) {
+        public FileTreeItem(DummyFile value) {
             super(value);
 //            setGraphic(value.isFile() ? createFILE() : createFOLDER());
         }
 
-        @Override public ObservableList<TreeItem<File>> getChildren() {
+        @Override public ObservableList<TreeItem<DummyFile>> getChildren() {
             if (isFirstTimeChildren) {
                 isFirstTimeChildren = false;
-                super.getChildren().setAll(buildChildren(this));
+                if(getValue().isDirectory()) {
+                    List<FileTreeItem> childNodes = new ArrayList<FileTreeItem>();
+                    for (DummyFile child: getValue().getChildren()) {
+                        childNodes.add(new FileTreeItem(child));
+                    }
+                    super.getChildren().setAll(childNodes);
+                }
             }
             return super.getChildren();
         }
 
         @Override public boolean isLeaf() {
-            if (isFirstTimeLeaf) {
-                isFirstTimeLeaf = false;
-                File f = (File) getValue();
-                isLeaf = f.isFile();
-            }
-            return isLeaf;
+            return !getValue().isDirectory();
         }
     }
 }

@@ -846,7 +846,7 @@ public class Arc2D extends RectangularShape {
         bits += java.lang.Float.floatToIntBits(start) * 53;
         bits += java.lang.Float.floatToIntBits(extent) * 59;
         bits += getArcType() * 61;
-        return (bits ^ (bits >> 32));
+        return bits;
     }
 
     /**

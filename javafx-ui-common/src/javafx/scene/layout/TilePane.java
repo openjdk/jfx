@@ -26,22 +26,19 @@
 
 package javafx.scene.layout;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import javafx.beans.property.DoubleProperty;
+import javafx.beans.property.IntegerProperty;
+import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.ReadOnlyDoubleProperty;
+import javafx.beans.property.ReadOnlyDoubleWrapper;
 import javafx.css.CssMetaData;
 import javafx.css.StyleOrigin;
 import javafx.css.StyleableDoubleProperty;
 import javafx.css.StyleableIntegerProperty;
 import javafx.css.StyleableObjectProperty;
-import com.sun.javafx.css.converters.EnumConverter;
-import com.sun.javafx.css.converters.SizeConverter;
-import static javafx.geometry.Orientation.HORIZONTAL;
-import static javafx.geometry.Orientation.VERTICAL;
-
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-
-import javafx.beans.property.*;
-import javafx.beans.value.WritableValue;
 import javafx.css.StyleableProperty;
 import javafx.geometry.HPos;
 import javafx.geometry.Insets;
@@ -49,6 +46,10 @@ import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
 import javafx.geometry.VPos;
 import javafx.scene.Node;
+import com.sun.javafx.css.converters.EnumConverter;
+import com.sun.javafx.css.converters.SizeConverter;
+
+import static javafx.geometry.Orientation.*;
 
 
 /**
@@ -176,7 +177,7 @@ import javafx.scene.Node;
  */
 public class TilePane extends Pane {
 
-   /********************************************************************
+    /********************************************************************
      *  BEGIN static methods
      ********************************************************************/
 
@@ -281,6 +282,57 @@ public class TilePane extends Pane {
         setOrientation(orientation);
         setHgap(hgap);
         setVgap(vgap);
+    }
+
+    /**
+     * Creates a horizontal TilePane layout with prefColumn = 5 and hgap/vgap = 0.
+     * @param children The initial set of children for this pane.
+     */
+    public TilePane(Node... children) {
+        super();
+        getChildren().addAll(children);
+    }
+
+    /**
+     * Creates a TilePane layout with the specified orientation,
+     * prefColumn/prefRows = 5 and hgap/vgap = 0.
+     * @param orientation the direction the tiles should flow & wrap
+     * @param children The initial set of children for this pane.
+     */
+    public TilePane(Orientation orientation, Node... children) {
+        super();
+        setOrientation(orientation);
+        getChildren().addAll(children);
+    }
+
+    /**
+     * Creates a horizontal TilePane layout with prefColumn = 5 and the specified
+     * hgap/vgap.
+     * @param hgap the amount of horizontal space between each tile
+     * @param vgap the amount of vertical space between each tile
+     * @param children The initial set of children for this pane.
+     */
+    public TilePane(double hgap, double vgap, Node... children) {
+        super();
+        setHgap(hgap);
+        setVgap(vgap);
+        getChildren().addAll(children);
+    }
+
+    /**
+     * Creates a TilePane layout with the specified orientation, hgap/vgap,
+     * and prefRows/prefColumns = 5.
+     * @param orientation the direction the tiles should flow & wrap
+     * @param hgap the amount of horizontal space between each tile
+     * @param vgap the amount of vertical space between each tile
+     * @param children The initial set of children for this pane.
+     */
+    public TilePane(Orientation orientation, double hgap, double vgap, Node... children) {
+        this();
+        setOrientation(orientation);
+        setHgap(hgap);
+        setVgap(vgap);
+        getChildren().addAll(children);
     }
 
     /**

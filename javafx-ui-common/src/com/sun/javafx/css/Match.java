@@ -47,16 +47,19 @@ final class Match implements Comparable {
     // then pseudoclass count, and finally matching types (i.e., java name count)
     final int specificity;
 
-    Match(final Selector selector, long[] pseudoclasses,
-            final int idCount, final int styleClassCount) {
+    Match(final Selector selector, long[] pseudoClasses,
+            int idCount, int styleClassCount) {
         assert selector != null;
         this.selector = selector;
         this.idCount = idCount;
         this.styleClassCount = styleClassCount;
-        this.pseudoClasses = pseudoclasses;
-        int nPseudoclasses = pseudoclasses.length;
-        
-        specificity = (idCount << 8) | (styleClassCount << 4) | nPseudoclasses;
+        this.pseudoClasses = pseudoClasses;
+        int nPseudoClasses = 0;
+        int nMax = pseudoClasses != null ? pseudoClasses.length : 0;
+        for (int n = 0; n < nMax; n++) {
+            nPseudoClasses += Long.bitCount(pseudoClasses[n]);
+        }
+        specificity = (idCount << 8) | (styleClassCount << 4) | nPseudoClasses;
     }
         
     @Override

@@ -58,6 +58,11 @@ public class NoJavaFXFallback extends JApplet implements ActionListener {
         populate();
     }
 
+    // Package-scope method used to check minimum JRE version
+    static boolean isOldJRE() {
+        return getJavaVersionAsFloat() < 160.18f; //< 6u18
+    }
+
     private static float getJavaVersionAsFloat() {
         String versionString = System.getProperty("java.version", "1.5.0");
 
@@ -95,7 +100,7 @@ public class NoJavaFXFallback extends JApplet implements ActionListener {
     }
 
     private void test() {
-        oldJRE = getJavaVersionAsFloat() < 160.18f; //< 6u18
+        oldJRE = isOldJRE();
         try {
            // if run in browser then should be able to get JSObject
            Class jclass = Class.forName("netscape.javascript.JSObject");

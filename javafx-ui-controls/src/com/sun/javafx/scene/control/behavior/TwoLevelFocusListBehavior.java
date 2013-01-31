@@ -27,8 +27,6 @@ package com.sun.javafx.scene.control.behavior;
 
 import javafx.scene.Node;
 import javafx.scene.Parent;
-import javafx.scene.control.Control;
-import javafx.scene.control.PopupControl;
 
 import javafx.scene.Scene;
 import javafx.scene.input.KeyEvent;
@@ -40,7 +38,6 @@ import javafx.event.EventDispatchChain;
 import javafx.event.EventDispatcher;
 import javafx.event.EventHandler;
 import javafx.scene.input.MouseEvent;
-import com.sun.javafx.css.StyleManager;
 
 import com.sun.javafx.scene.control.skin.ComboBoxPopupControl;
 

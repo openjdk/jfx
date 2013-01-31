@@ -444,7 +444,52 @@ import static javafx.concurrent.WorkerStateEvent.*;
  * Great care must be taken to <strong>never update shared state from any
  * thread other than the FX Application Thread</strong>.</p>
  *
- * <p>The easiest way to do this is to expose a new property on the Task
+ * <p>The easiest way to do this is to take advantage of the {@link #updateValue(Object)} method.
+ * This method may be called repeatedly from the background thread. Updates are coalesced to
+ * prevent saturation of the FX event queue. This means you can call it as frequently as
+ * you like from the background thread but only the most recent set is ultimately set.</p>
+ *
+ * <pre><code>
+ *     Task&lt;Long&gt; task = new Task&lt;Long&gt;() {
+ *         &#64;Override protected Long call() throws Exception {
+ *             long a=0;
+ *             long b=1;
+ *             for (long i = 0; i &lt; Long.MAX_VALUE; i++){
+ *                 updateValue(a);
+ *                 a += b;
+ *                 b = a - b;
+ *             }
+ *             return a;
+ *         }
+ *     };
+ * </code></pre>
+ *
+ * <p>Another way to do this is to expose a new property on the Task
+ * which will represent the partial result. Then make sure to use
+ * <code>Platform.runLater</code> when updating the partial result.</p>
+ *
+ * <pre><code>
+ *     Task&lt;Long&gt; task = new Task&lt;Long&gt;() {
+ *         &#64;Override protected Long call() throws Exception {
+ *             long a=0;
+ *             long b=1;
+ *             for (long i = 0; i &lt; Long.MAX_VALUE; i++){
+ *                 final long v = a;
+ *                 Platform.runLater(new Runnable() {
+ *                     &#64;Override public void run() {
+ *                         updateValue(v);
+ *                     }
+ *                 }
+ *                 a += b;
+ *                 b = a - b;
+ *             }
+ *             return a;
+ *         }
+ *     };
+ * </code></pre>
+ *
+ * <p>Suppose instead of updating a single value, you want to populate an ObservableList
+ * with results as they are obtained. One approach is to expose a new property on the Task
  * which will represent the partial result. Then make sure to use
  * <code>Platform.runLater</code> when adding new items to the partial
  * result.</p>
@@ -550,21 +595,28 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
      * to the FX application thread and workDone related properties. AtomicReference
      * is used so as to coalesce updates such that we don't flood the event queue.
      */
-    private AtomicReference<ProgressUpdate> progressUpdate = new AtomicReference<ProgressUpdate>();
+    private AtomicReference<ProgressUpdate> progressUpdate = new AtomicReference<>();
 
     /**
      * Used to send message updates in a thread-safe manner from the subclass
      * to the FX application thread. AtomicReference is used so as to coalesce
      * updates such that we don't flood the event queue.
      */
-    private AtomicReference<String> messageUpdate = new AtomicReference<String>();
+    private AtomicReference<String> messageUpdate = new AtomicReference<>();
 
     /**
      * Used to send title updates in a thread-safe manner from the subclass
      * to the FX application thread. AtomicReference is used so as to coalesce
      * updates such that we don't flood the event queue.
      */
-    private AtomicReference<String> titleUpdate = new AtomicReference<String>();
+    private AtomicReference<String> titleUpdate = new AtomicReference<>();
+
+    /**
+     * Used to send value updates in a thread-safe manner from the subclass
+     * to the FX application thread. AtomicReference is used so as to coalesce
+     * updates such that we don't flood the event queue.
+     */
+    private AtomicReference<V> valueUpdate = new AtomicReference<>();
 
     /**
      * Creates a new Task.
@@ -922,12 +974,11 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
      *     <em>This method is safe to be called from any thread.</em>
      * </p>
      *
-     * @param workDone A value from -1 up to max. If the value is greater
-     *                 than max, an illegal argument exception is thrown.
-     *                 If the value passed is -1, then the resulting percent
+     * @param workDone A value from Long.MIN_VALUE up to max. If the value is greater
+     *                 than max, then it will be clamped at max.
+     *                 If the value passed is negative then the resulting percent
      *                 done will be -1 (thus, indeterminate).
-     * @param max A value from -1 to Long.MAX_VALUE. Any value outside this
-     *            range results in an IllegalArgumentException.
+     * @param max A value from Long.MIN_VALUE to Long.MAX_VALUE.
      * @see #updateProgress(double, double)
      */
     protected void updateProgress(long workDone, long max) {
@@ -947,27 +998,34 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
      *     <em>This method is safe to be called from any thread.</em>
      * </p>
      *
-     * @param workDone A value from -1 up to max. If the value is greater
-     *                 than max, an illegal argument exception is thrown.
-     *                 If the value passed is -1, then the resulting percent
-     *                 done will be -1 (thus, indeterminate).
-     * @param max A value from -1 to Double.MAX_VALUE. Any value outside this
-     *            range results in an IllegalArgumentException.
+     * @param workDone A value from Double.MIN_VALUE up to max. If the value is greater
+     *                 than max, then it will be clamped at max.
+     *                 If the value passed is negative, or Infinity, or NaN,
+     *                 then the resulting percentDone will be -1 (thus, indeterminate).
+     * @param max A value from Double.MIN_VALUE to Double.MAX_VALUE. Infinity and NaN are treated as -1.
      * @since 2.2
      */
     protected void updateProgress(double workDone, double max) {
-        // Perform the argument sanity check that workDone is < max
-        if (workDone > max) {
-            throw new IllegalArgumentException("The workDone must be <= the max");
-        }
-
-        // Make sure neither workDone nor max is < -1
-        if (workDone < -1 || max < -1) {
-            throw new IllegalArgumentException("The workDone and max cannot be less than -1");
+        // Adjust Infinity / NaN to be -1 for both workDone and max.
+        if (Double.isInfinite(workDone) || Double.isNaN(workDone)) {
+            workDone = -1;
         }
 
         if (Double.isInfinite(max) || Double.isNaN(max)) {
-            throw new IllegalArgumentException("The max value must not be infinite or NaN");
+            max = -1;
+        }
+
+        if (workDone < 0) {
+            workDone = -1;
+        }
+
+        if (max < 0) {
+            max = -1;
+        }
+
+        // Clamp the workDone if necessary so as not to exceed max
+        if (workDone > max) {
+            workDone = max;
         }
 
         if (isFxApplicationThread()) {
@@ -1050,6 +1108,38 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
                     @Override public void run() {
                         final String title = titleUpdate.getAndSet(null);
                         Task.this.title.set(title);
+                    }
+                });
+            }
+        }
+    }
+
+    /**
+     * Updates the <code>value</code> property. Calls to updateValue
+     * are coalesced and run later on the FX application thread, so calls
+     * to updateValue, even from the FX Application thread, may not
+     * necessarily result in immediate updates to this property, and
+     * intermediate values may be coalesced to save on event
+     * notifications.
+     * <p>
+     *     <em>This method is safe to be called from any thread.</em>
+     * </p>
+     *
+     * @param value the new value
+     * @since 8
+     */
+    protected void updateValue(V value) {
+        if (isFxApplicationThread()) {
+            this.value.set(value);
+        } else {
+            // As with the workDone, it might be that the background thread
+            // will update this value quite frequently, and we need
+            // to throttle the updates so as not to completely clobber
+            // the event dispatching system.
+            if (valueUpdate.getAndSet(value) == null) {
+                runLater(new Runnable() {
+                    @Override public void run() {
+                        Task.this.value.set(valueUpdate.getAndSet(null));
                     }
                 });
             }
@@ -1267,7 +1357,7 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
                             // The alternative is not the case, because you
                             // can assume if the result is set, it has
                             // succeeded.
-                            task.setValue(result);
+                            task.updateValue(result);
                             task.setState(State.SUCCEEDED);
                         }
                     });

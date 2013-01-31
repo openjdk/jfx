@@ -29,6 +29,7 @@ import com.sun.javafx.jmx.MXExtension;
 import com.sun.javafx.runtime.SystemProperties;
 import java.io.IOException;
 import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -232,7 +233,20 @@ public class LauncherImpl {
 
         // Verify appClass extends Application
         if (!Application.class.isAssignableFrom(tempClass)) {
-            abort(null, "JavaFX application class %1$s does not extend javafx.application.Application", appClass.getName());
+            // See if it has a main(String[]) method
+            try {
+                Method mainMethod = tempClass.getMethod("main",
+                        new Class[] { (new String[0]).getClass() });
+                mainMethod.invoke(null, new Object[] { args });
+            } catch (NoSuchMethodException ex) {
+                abort(null, "JavaFX application class %1$s does not extend javafx.application.Application", tempClass.getName());
+            } catch (IllegalAccessException ex) {
+                abort(ex, "JavaFX application class %1$s does not extend javafx.application.Application", tempClass.getName());
+            } catch (InvocationTargetException ex) {
+                ex.printStackTrace();
+                abort(null, "Exception running application %1$s", tempClass.getName());
+            }
+            return;
         }
         appClass = tempClass.asSubclass(Application.class);
 

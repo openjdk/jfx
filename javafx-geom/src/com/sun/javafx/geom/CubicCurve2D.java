@@ -1251,7 +1251,7 @@ public class CubicCurve2D extends Shape {
         bits += java.lang.Float.floatToIntBits(ctrly1) * 59;
         bits += java.lang.Float.floatToIntBits(ctrlx2) * 61;
         bits += java.lang.Float.floatToIntBits(ctrly2) * 101;
-        return (bits ^ (bits >> 32));
+        return bits;
     }
 
     @Override

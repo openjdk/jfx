@@ -104,6 +104,7 @@ import javafx.scene.Node;
  * @param <N> The type of Node
  * @param <V> The type into which the parsed value is converted. 
  */
+@com.sun.javafx.beans.annotations.NoBuilder
 public abstract class CssMetaData<N extends Node, V> {
     
     /**

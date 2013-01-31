@@ -25,7 +25,6 @@
 
 package javafx.scene.control;
 
-import java.util.Set;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ObjectPropertyBase;
 import javafx.beans.property.SimpleObjectProperty;
@@ -141,7 +140,7 @@ public class ChoiceBox<T> extends Control {
             if (oldSM != null) {
                 oldSM.selectedItemProperty().removeListener(selectedItemListener);
             }
-            SelectionModel sm = get();
+            SelectionModel<T> sm = get();
             oldSM = sm;
             if (sm != null) {
                 sm.selectedItemProperty().addListener(selectedItemListener);
@@ -313,7 +312,7 @@ public class ChoiceBox<T> extends Control {
 
     /** {@inheritDoc} */
     @Override protected Skin<?> createDefaultSkin() {
-        return new ChoiceBoxSkin(this);
+        return new ChoiceBoxSkin<T>(this);
     }
 
     /***************************************************************************

@@ -45,7 +45,6 @@ import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.ObservableList;
 import javafx.css.StyleableProperty;
 import javafx.scene.control.Control;
-import javafx.scene.control.SpanModel;
 import javafx.scene.control.TableColumnBase;
 import javafx.scene.control.TableRow;
 import javafx.scene.control.TreeTableCell;
@@ -213,9 +212,9 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
         return getSkinnable().getTreeTableView().getVisibleLeafColumns();
     }
 
-    @Override protected ObjectProperty<SpanModel<TreeItem<T>>> spanModelProperty() {
-        return getSkinnable().getTreeTableView().spanModelProperty();
-    }
+//    @Override protected ObjectProperty<SpanModel<TreeItem<T>>> spanModelProperty() {
+//        return getSkinnable().getTreeTableView().spanModelProperty();
+//    }
 
     @Override protected void updateCell(TreeTableCell<T, ?> cell, TreeTableRow<T> row) {
         cell.updateTreeTableRow(row);

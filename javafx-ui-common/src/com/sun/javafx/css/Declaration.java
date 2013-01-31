@@ -149,18 +149,5 @@ final public class Declaration {
         return new Declaration(propertyName, parsedValue, important);
             
     }
-    
-    public String writeJava() {
-        StringBuilder sb = new StringBuilder();
-        sb.append("new Declaration(\"");
-        sb.append(getProperty());
-        sb.append("\", ");
-        sb.append(getParsedValueImpl().writeJava());
-        sb.append(", ");
-        sb.append(isImportant());
-        sb.append(")"); 
-        
-        return sb.toString();
-    }
 }
 

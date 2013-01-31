@@ -28,11 +28,11 @@ package javafx.concurrent;
 import java.util.concurrent.atomic.AtomicBoolean;
 import javafx.concurrent.mocks.EpicFailTask;
 import javafx.concurrent.mocks.InfiniteTask;
+import javafx.concurrent.mocks.MythicalEvent;
 import javafx.concurrent.mocks.SimpleTask;
-import javafx.event.Event;
 import javafx.event.EventHandler;
-import javafx.event.EventType;
 import org.junit.Test;
+
 import static org.junit.Assert.*;
 
 /**
@@ -604,15 +604,6 @@ public class TaskEventTest {
         });
         task.fireEvent(new MythicalEvent());
         assertTrue(result.get());
-    }
-
-    private static final class MythicalEvent extends Event {
-        public static final EventType<MythicalEvent> ANY =
-                new EventType<MythicalEvent>(Event.ANY, "MYTHICAL");
-
-        public MythicalEvent() {
-            super(ANY);
-        }
     }
 
     private static final class MythicalTask extends SimpleTask {

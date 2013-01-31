@@ -736,7 +736,7 @@ public class PackagerLib {
                         "-target", "1.5",
                         "-source", "1.5",
                         "-d", compiledDirName,
-                        "-cp", jfxHome + "/../rt/lib/jfxrt.jar",
+                        "-cp", jfxHome + "/../rt/lib/ext/jfxrt.jar",
                         "@" + tmpFile.getAbsolutePath());
             }
             int ret = execute(
@@ -744,7 +744,7 @@ public class PackagerLib {
                     "-target", "1.5",
                     "-source", "1.5",
                     "-d", compiledDirName,
-                    "-cp", jfxHome + "/../rt/lib/jfxrt.jar",
+                    "-cp", jfxHome + "/../rt/lib/ext/jfxrt.jar",
                     "@" + tmpFile.getAbsolutePath());
             if (ret != 0) {
                 throw new PackagerException("ERR_JavacFailed", Integer.toString(ret));
@@ -1576,7 +1576,7 @@ public class PackagerLib {
         // Strip everything after the last "/" or "\" to get rid of the jar filename
         int lastIndexOfSlash = Math.max(classUrl.lastIndexOf("/"), classUrl.lastIndexOf("\\"));
         String jfxrtPath = classUrl.substring(0, lastIndexOfSlash)
-                    + "/../rt/lib/jfxrt.jar!/";
+                    + "/../rt/lib/ext/jfxrt.jar!/";
 
         return jfxrtPath;
     }

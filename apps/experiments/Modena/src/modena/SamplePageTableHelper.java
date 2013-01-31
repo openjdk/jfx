@@ -41,11 +41,13 @@ import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.collections.SetChangeListener;
 import javafx.event.EventHandler;
 import javafx.scene.Node;
 import javafx.scene.control.SelectionMode;
 import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
+import javafx.scene.control.TableColumnBase;
 import javafx.scene.control.TableView;
 import javafx.scene.control.cell.CheckBoxTableCell;
 import javafx.scene.control.cell.PropertyValueFactory;
@@ -195,18 +197,18 @@ public class SamplePageTableHelper {
         // Columns
         firstNameCol = new TableColumn<Person, String>();
         firstNameCol.setText("First");
-        Rectangle sortNode = new Rectangle(10, 10, Color.RED);
-        sortNode.fillProperty().bind(new ObjectBinding<Paint>() {
-            { bind(firstNameCol.sortTypeProperty()); }
-            @Override protected Paint computeValue() {
-                switch (firstNameCol.getSortType()) {
-                    case ASCENDING: return Color.GREEN;
-                    case DESCENDING: return Color.RED;
-                    default: return Color.BLACK;
-                }
-            }
-        });
-        firstNameCol.setSortNode(sortNode);
+//        Rectangle sortNode = new Rectangle(10, 10, Color.RED);
+//        sortNode.fillProperty().bind(new ObjectBinding<Paint>() {
+//            { bind(firstNameCol.sortTypeProperty()); }
+//            @Override protected Paint computeValue() {
+//                switch (firstNameCol.getSortType()) {
+//                    case ASCENDING: return Color.GREEN;
+//                    case DESCENDING: return Color.RED;
+//                    default: return Color.BLACK;
+//                }
+//            }
+//        });
+//        firstNameCol.setSortNode(sortNode);
         firstNameCol.setCellValueFactory(new PropertyValueFactory<Person,String>("firstName"));
         firstNameCol.setOnEditCommit(new EventHandler<TableColumn.CellEditEvent<Person, String>>() {
             @Override public void handle(TableColumn.CellEditEvent<Person, String> t) {
@@ -217,6 +219,7 @@ public class SamplePageTableHelper {
         lastNameCol = new TableColumn<Person, String>();
         lastNameCol.setGraphic(graphic1);
         lastNameCol.setText("Last");
+        lastNameCol.setSortType(TableColumnBase.SortType.DESCENDING);
         lastNameCol.setCellValueFactory(new Callback<TableColumn.CellDataFeatures<Person, String>, ObservableValue<String>>() {
             public ObservableValue<String> call(TableColumn.CellDataFeatures<Person, String> p) {
                 return p.getValue().lastNameProperty();
@@ -261,6 +264,7 @@ public class SamplePageTableHelper {
         tableView.getColumns().addAll(invitedCol, nameCol, emailCol, countryCol);
         tableView.setPrefSize(width, 300);
         tableView.getSelectionModel().selectRange(2, 5);
+        tableView.getSortOrder().addAll(firstNameCol,lastNameCol,emailCol,countryCol);
         return tableView;
     }
 }

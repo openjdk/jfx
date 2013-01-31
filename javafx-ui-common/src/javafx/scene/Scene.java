@@ -342,9 +342,9 @@ public class Scene implements EventTarget {
                         }
                         
                         @Override
-                        public void parentEffectiveOrientationChanged(
+                        public void parentEffectiveOrientationInvalidated(
                                 final Scene scene) {
-                            scene.parentEffectiveOrientationChanged();
+                            scene.parentEffectiveOrientationInvalidated();
                         }
                     });
         }
@@ -610,7 +610,7 @@ public class Scene implements EventTarget {
                     if (newWindow != null) {
                         impl_initPeer();
                     }
-                    parentEffectiveOrientationChanged();
+                    parentEffectiveOrientationInvalidated();
 
                     oldWindow = newWindow;
                 }
@@ -5615,7 +5615,7 @@ public class Scene implements EventTarget {
             nodeOrientation = new StyleableObjectProperty<NodeOrientation>(defaultNodeOrientation) {
                 @Override
                 protected void invalidated() {
-                    sceneEffectiveOrientationChanged();
+                    sceneEffectiveOrientationInvalidated();
                 }
 
                 @Override
@@ -5660,20 +5660,20 @@ public class Scene implements EventTarget {
         return effectiveNodeOrientationProperty;
     }
 
-    private void parentEffectiveOrientationChanged() {
+    private void parentEffectiveOrientationInvalidated() {
         if (getNodeOrientation() == NodeOrientation.INHERIT) {
-            sceneEffectiveOrientationChanged();
+            sceneEffectiveOrientationInvalidated();
         }
     }
 
-    private void sceneEffectiveOrientationChanged() {
+    private void sceneEffectiveOrientationInvalidated() {
         effectiveNodeOrientation = null;
 
         if (effectiveNodeOrientationProperty != null) {
             effectiveNodeOrientationProperty.invalidate();
         }
 
-        getRoot().parentEffectiveOrientationChanged();
+        getRoot().parentResolvedOrientationInvalidated();
     }
 
     private NodeOrientation calcEffectiveNodeOrientation() {

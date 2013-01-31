@@ -34,6 +34,7 @@ package modena;
 import java.util.Random;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.geometry.Side;
 import javafx.scene.Node;
 import javafx.scene.chart.AreaChart;
 import javafx.scene.chart.BarChart;
@@ -51,7 +52,6 @@ import javafx.scene.chart.XYChart;
  * Helper class for creating charts for testing
  */
 public class SamplePageChartHelper {
-    private static final Random RANDOM = new Random(29782198273l);
     
     static Node createAreaChart(Boolean stacked) {
         NumberAxis xAxis = new NumberAxis("X Values", 1.0d, 9.0d, 2.0d);
@@ -102,6 +102,7 @@ public class SamplePageChartHelper {
     }
     
     static Node createBarChart(boolean horizontal, boolean simple, boolean stacked) {
+        final Random RANDOM = new Random(29782198273l);
         String[] years = {"2001","2002","2003"};
         String[] series;
         if (simple) {
@@ -142,11 +143,16 @@ public class SamplePageChartHelper {
         return barChart;
     }
     
-    static Node createBubbleChart() {
+    static Node createBubbleChart(boolean useRightTopAxis) {
+        final Random RANDOM = new Random(29782198273l);
         NumberAxis xAxis = new NumberAxis();
         xAxis.setLabel("Product");
         NumberAxis yAxis = new NumberAxis();
         yAxis.setLabel("Number Bought/Sold");
+        if (useRightTopAxis) {
+            xAxis.setSide(Side.TOP);
+            yAxis.setSide(Side.RIGHT);
+        }
         ObservableList<BubbleChart.Series> bubbleChartData = FXCollections.observableArrayList();
         for (int s=0; s<8; s++) {
             ObservableList<BubbleChart.Data> seriesData = FXCollections.<BubbleChart.Data>observableArrayList();
@@ -192,6 +198,7 @@ public class SamplePageChartHelper {
     }
     
     static Node createScatterChart() {
+        final Random RANDOM = new Random(29782198273l);
         NumberAxis xAxis = new NumberAxis("X-Axis", 0, 8, 1);
         NumberAxis yAxis = new NumberAxis("Y-Axis", -5, 5, 1);
         ObservableList<XYChart.Series> data = FXCollections.observableArrayList();

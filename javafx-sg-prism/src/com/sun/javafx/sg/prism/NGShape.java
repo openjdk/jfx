@@ -33,6 +33,7 @@ import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.sg.PGShape;
 import com.sun.prism.BasicStroke;
 import com.sun.prism.Graphics;
+import com.sun.prism.PrinterGraphics;
 import com.sun.prism.paint.Paint;
 import com.sun.prism.shape.ShapeRep;
 
@@ -197,23 +198,28 @@ public abstract class NGShape extends NGNode implements PGShape {
             return;
         }
         boolean needs3D = !g.getTransformNoClone().is2D();
-        if (shapeRep == null) {
-            shapeRep = createShapeRep(g, needs3D);
-        } else if (needs3D && !shapeRep.is3DCapable()) {
+        ShapeRep localShapeRep =
+            (g instanceof PrinterGraphics ? null : this.shapeRep);
+        if (localShapeRep == null) {
+            localShapeRep = createShapeRep(g, needs3D);
+        } else if (needs3D && !localShapeRep.is3DCapable()) {
             // TODO: for now we only upgrade from 2D to 3D, i.e., we don't
             // currently go back from a 3D rep to a 2D one... (RT-26983)
-            shapeRep.dispose();
-            shapeRep = createShapeRep(g, true);
+            localShapeRep.dispose();
+            localShapeRep = createShapeRep(g, true);
         }
         Shape shape = getShape();
         if (mode != Mode.STROKE) {
             g.setPaint(fillPaint);
-            shapeRep.fill(g, shape, contentBounds);
+            localShapeRep.fill(g, shape, contentBounds);
         }
         if (mode != Mode.FILL && drawStroke.getLineWidth() > 0) {
             g.setPaint(drawPaint);
             g.setStroke(drawStroke);
-            shapeRep.draw(g, shape, contentBounds);
+            localShapeRep.draw(g, shape, contentBounds);
+        }
+        if (!(g instanceof PrinterGraphics)) {
+            this.shapeRep = localShapeRep;
         }
     }
 

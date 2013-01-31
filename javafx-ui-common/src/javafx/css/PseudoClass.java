@@ -28,18 +28,22 @@ import com.sun.javafx.css.PseudoClassImpl;
 import java.util.List;
 
 /**
- * PseudoClass represents one unique pseudo-class state. There can be at most 1020
- * unique pseudo-classes with the current implementation. Introducing a pseudo-class into
- * a JavaFX class requires implementing {@link javafx.scene.Node#getPseudoClassStates()}
- * and calling the {@link javafx.scene.Node#pseudoClassStateChanged(PseudoClass)}
- * method when the corresponding property changes value. Typically, the
+ * PseudoClass represents one unique pseudo-class state. Introducing a 
+ * pseudo-class into a JavaFX class only requires that the method
+ * {@link javafx.scene.Node#pseudoClassStateChanged(javafx.css.PseudoClass, boolean)}
+ * be called when the pseudo-class state changes. Typically, the
  * {@code pseudoClassStateChanged} method is called from the
- * {@code protected void invalidated()} method of a {@code javafx.beans.property}
- * class.
- * <pre>
- * <b>Example:</b>
- *
+ * {@code protected void invalidated()} method of one of the property base 
+ * classes in the {@code javafx.beans.property} package.
+ * <p>
+ * Note that if a node has a default pseudo-class state, a horizontal orientation
+ * for example, {@code pseudoClassStateChanged} should be called from the 
+ * constructor to set the initial state. 
+ * <p>
+ * The following example would allow &quot;xyzzy&quot; to be used as a
+ *  pseudo-class in a CSS selector.
  * <code>
+ * <pre>
  *  public boolean isMagic() {
  *       return magic.get();
  *   }
@@ -52,7 +56,7 @@ import java.util.List;
  *       new BooleanPropertyBase(false) {
  *
  *       {@literal @}Override protected void invalidated() {
- *           pseudoClassStateChanged(MAGIC_PSEUDO_CLASS);
+ *           pseudoClassStateChanged(MAGIC_PSEUDO_CLASS. get());
  *       }
  *
  *       {@literal @}Override public Object getBean() {
@@ -66,23 +70,15 @@ import java.util.List;
  *
  *   private static final PseudoClass
  *       MAGIC_PSEUDO_CLASS = PseudoClass.getPseudoClassName("xyzzy");
- *
- *   {@literal @}Override public Set<PseudoClass> getPseudoClassStates() {
- *         Set<PseudoClass> states = super.getPseudoClassStates();
- *         if (isMagic()) states.add(MAGIC_PSEUDO_CLASS);
- *         return states;
- *    }
- * </code></pre>
+ * </pre>
+ * </code>
  */
 public abstract class PseudoClass {
 
     /**
      * There is only one PseudoClass instance for a given pseudoClass.
-     * There can be at most 1020 unique pseudo-classes.
      * @return The PseudoClass for the given pseudoClass. Will not return null.
      * @throws IllegalArgumentException if pseudoClass parameter is null or an empty String
-     * @throws IndexOutOfBoundsException if adding the pseudoClass would exceed the
-     *         maximum number of allowable pseudo-classes.
      */
     public static PseudoClass getPseudoClass(String pseudoClass) {
         

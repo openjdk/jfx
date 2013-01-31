@@ -49,7 +49,7 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListViewB
     private ObservableList<T> listViewItems;
 
     public ListViewSkin(final ListView<T> listView) {
-        super(listView, new ListViewBehavior(listView));
+        super(listView, new ListViewBehavior<T>(listView));
 
         updateListViewItems();
 
@@ -67,7 +67,7 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListViewB
         
         // TEMPORARY CODE (RT-24795)
         // we check the TableView to see if a fixed cell length is specified
-        ObservableMap p = listView.getProperties();
+        ObservableMap<Object,Object> p = listView.getProperties();
         String k = VirtualFlow.FIXED_CELL_LENGTH_KEY;
         double fixedCellLength = (Double) (p.containsKey(k) ? p.get(k) : 0.0);
         flow.setFixedCellLength(fixedCellLength);
@@ -147,15 +147,15 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListViewB
     }
 
     private boolean itemCountDirty;
-    private final ListChangeListener listViewItemsListener = new ListChangeListener() {
-        @Override public void onChanged(Change c) {
+    private final ListChangeListener<T> listViewItemsListener = new ListChangeListener<T>() {
+        @Override public void onChanged(Change<? extends T> c) {
             itemCountDirty = true;
             getSkinnable().requestLayout();
         }
     };
     
-    private final WeakListChangeListener weakListViewItemsListener =
-            new WeakListChangeListener(listViewItemsListener);
+    private final WeakListChangeListener<T> weakListViewItemsListener =
+            new WeakListChangeListener<T>(listViewItemsListener);
 
     public void updateListViewItems() {
         if (listViewItems != null) {
@@ -219,9 +219,9 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListViewB
         return cell;
     }
 
-    private ListCell createDefaultCellImpl() {
-        return new ListCell() {
-            @Override public void updateItem(Object item, boolean empty) {
+    private static <T> ListCell<T> createDefaultCellImpl() {
+        return new ListCell<T>() {
+            @Override public void updateItem(T item, boolean empty) {
                 super.updateItem(item, empty);
                 
                 if (empty) {
@@ -296,33 +296,33 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListViewB
     }
     
     private void onFocusPreviousCell() {
-        FocusModel fm = getSkinnable().getFocusModel();
+        FocusModel<T> fm = getSkinnable().getFocusModel();
         if (fm == null) return;
         flow.show(fm.getFocusedIndex());
     }
 
     private void onFocusNextCell() {
-        FocusModel fm = getSkinnable().getFocusModel();
+        FocusModel<T> fm = getSkinnable().getFocusModel();
         if (fm == null) return;
         flow.show(fm.getFocusedIndex());
     }
 
     private void onSelectPreviousCell() {
-        SelectionModel sm = getSkinnable().getSelectionModel();
+        SelectionModel<T> sm = getSkinnable().getSelectionModel();
         if (sm == null) return;
 
         int pos = sm.getSelectedIndex();
         flow.show(pos);
 
         // Fix for RT-11299
-        IndexedCell cell = flow.getFirstVisibleCell();
+        IndexedCell<T> cell = flow.getFirstVisibleCell();
         if (cell == null || pos < cell.getIndex()) {
             flow.setPosition(pos / (double) getItemCount());
         }
     }
 
     private void onSelectNextCell() {
-        SelectionModel sm = getSkinnable().getSelectionModel();
+        SelectionModel<T> sm = getSkinnable().getSelectionModel();
         if (sm == null) return;
 
         int pos = sm.getSelectedIndex();

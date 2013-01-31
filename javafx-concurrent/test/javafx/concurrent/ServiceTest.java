@@ -25,6 +25,7 @@
 
 package javafx.concurrent;
 
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicBoolean;
 import javafx.beans.property.ObjectProperty;
@@ -156,5 +157,42 @@ public class ServiceTest {
     @Test public void titleDefaultsToEmptyString() {
         assertEquals("", service.getTitle());
         assertEquals("", service.titleProperty().get());
+    }
+
+    /******************************************************************
+     * Test that 32 simultaneous services will run concurrently       *
+     *****************************************************************/
+
+    // This test should be reliable. Each of the concurrent tasks takes 1 second to complete
+    // and several micro / milliseconds to get setup and execute. So 2 seconds should be more
+    // than enough time.
+    @Test(timeout = 2000) public void testManyServicesRunConcurrently() throws Exception {
+        final CountDownLatch latch = new CountDownLatch(32);
+        for (int i=0; i<32; i++) {
+            Service<Void> s = new Service<Void>() {
+                @Override void checkThread() { }
+
+                @Override protected Task<Void> createTask() {
+                    return new Task<Void>() {
+                        @Override protected Void call() throws Exception {
+                            Thread.sleep(1000);
+                            latch.countDown();
+                            return null;
+                        }
+
+                        @Override void runLater(Runnable r) {
+                            r.run();
+                        }
+
+                        @Override boolean isFxApplicationThread() {
+                            return true;
+                        }
+                    };
+
+                }
+            };
+            s.start();
+        }
+        latch.await();
     }
 }

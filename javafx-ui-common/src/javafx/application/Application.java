@@ -116,6 +116,16 @@ public class MyApp extends Application {
  * <p><img src="doc-files/Application.png"/></p>
  */
 public abstract class Application {
+    /**
+     * Constant for user agent stylesheet for the "Caspian" theme. Caspian
+     * is the theme that shipped as default in JavaFX 2.x.
+     */
+    public static final String STYLESHEET_CASPIAN = "CASPIAN";
+    /**
+     * Constant for user agent stylesheet for the "Modena" theme. Modena
+     * is the default theme for JavaFX 8.x.
+     */
+    public static final String STYLESHEET_MODENA = "MODENA";
 
     /**
      * Launch a standalone application. This method is typically called
@@ -406,7 +416,9 @@ public abstract class Application {
      * to guarantee consistency you will need to call this method and choose
      * what default you would like for your application. A value of null will
      * restore the platform default stylesheet. This property can also be set
-     * on the command line with {@code -Djavafx.application.userAgentStylesheet=[URL]}
+     * on the command line with {@code -Djavafx.userAgentStylesheetUrl=[URL]}
+     * Setting it on the command line overrides anything set using this method
+     * in code.
      * <p>
      * NOTE: This method must be called on the JavaFX Application Thread.
      * </p>
@@ -419,7 +431,7 @@ public abstract class Application {
         if (url == null) {
             PlatformImpl.setDefaultPlatformUserAgentStylesheet();
         } else {
-            StyleManager.setDefaultUserAgentStylesheet(null, url);
+            PlatformImpl.setPlatformUserAgentStylesheet(url);
         }
     }
 }

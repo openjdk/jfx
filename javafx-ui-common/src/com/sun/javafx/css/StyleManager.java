@@ -1405,19 +1405,50 @@ final public class StyleManager {
 
     }
 
+    
     /**
      * Creates and caches maps of styles, reusing them as often as practical.
      */
     private static class Cache {
 
+        private static class Key {
+            final long[] key;
+
+            Key(long[] key) {
+                this.key = key;
+            }
+            
+            @Override
+            public int hashCode() {
+                int hash = 3;
+                hash = 97 * hash + Arrays.hashCode(this.key);
+                return hash;
+            }
+
+            @Override
+            public boolean equals(Object obj) {
+                if (obj == null) {
+                    return false;
+                }
+                if (getClass() != obj.getClass()) {
+                    return false;
+                }
+                final Key other = (Key) obj;
+                if (!Arrays.equals(this.key, other.key)) {
+                    return false;
+                }
+                return true;
+            }
+            
+        }
         // this must be initialized to the appropriate possible rules when
         // the helper cache is created by the StylesheetContainer
         private final List<Rule> rules;
-        private final Map<Long, StyleMap> cache;
+        private final Map<Key, StyleMap> cache;
 
         Cache(List<Rule> rules) {
             this.rules = rules;
-            this.cache = new HashMap<Long, StyleMap>();
+            this.cache = new HashMap<Key, StyleMap>();
         }
 
         private StyleMap getStyleMap(StyleManager owner, Node node, long[][] pseudoclassBits) {
@@ -1439,8 +1470,9 @@ final public class StyleManager {
             // where the selectors that match this particular node are
             // represented by bits on the Long.
             //
-            long key = 0;
+            long key[] = new long[1];
             int count = 0;
+            int index = 0;
             for (int r = 0, rMax = rules.size(); r < rMax; r++) {
                 
                 final Rule rule = rules.get(r);
@@ -1462,24 +1494,34 @@ final public class StyleManager {
                 // Note also that, if the rule does not apply, the pseudoclassBits
                 // is unchanged. 
                 //
+                
+                final int nSelectors = rule.getSelectors().size();
+                if ((count + nSelectors) > Long.SIZE) {
+                    final long[] temp = new long[key.length+1];
+                    System.arraycopy(key, 0, temp, 0, key.length);
+                    key = temp;
+                    ++index;
+                    count = 0;
+                }
+                
                 long mask = rule.applies(node, pseudoclassBits);
                 if (mask != 0) {
-                    key |= mask << count;
+                    key[index] |= mask << count;
                     applicableRules[r] = rule;
                 } else {
                     applicableRules[r] = null;
                 }
+                
                 count += rule.getSelectors().size(); 
-                assert(count < Long.SIZE);
                 
             }
             
             // nothing matched!
-            if (key == 0) {
+            if (key.length == 1 && key[0] == 0) {
                 return StyleMap.EMPTY_MAP;
             }
             
-            final Long keyObj = Long.valueOf(key);
+            final Key keyObj = new Key(key);
             if (cache.containsKey(keyObj)) {
                 final StyleMap styleMap = cache.get(keyObj);
                 return styleMap;
