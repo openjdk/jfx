@@ -73,7 +73,6 @@ public class TreeTableRow<T> extends IndexedCell<T> {
      */
     public TreeTableRow() {
         getStyleClass().addAll(DEFAULT_STYLE_CLASS);
-        indexProperty().addListener(indexListener);
     }
 
 
@@ -83,19 +82,6 @@ public class TreeTableRow<T> extends IndexedCell<T> {
      * Callbacks and events                                                    *
      *                                                                         *
      **************************************************************************/
-    
-    private final InvalidationListener indexListener = new InvalidationListener() {
-        @Override public void invalidated(Observable valueModel) {
-            index = getIndex();
-        
-            // when the cell index changes, this may result in the cell
-            // changing state to be selected and/or focused.
-            updateItem();
-            updateSelection();
-            updateFocus();
-            oldIndex = index;
-        }
-    };
     
     private final ListChangeListener selectedListener = new ListChangeListener() {
         @Override public void onChanged(ListChangeListener.Change c) {
@@ -281,11 +267,25 @@ public class TreeTableRow<T> extends IndexedCell<T> {
 
 
 
+
     /***************************************************************************
      *                                                                         *
      * Public API                                                              *
      *                                                                         *
      **************************************************************************/
+
+    
+    @Override void indexChanged() {
+        index = getIndex();
+
+        // when the cell index changes, this may result in the cell
+        // changing state to be selected and/or focused.
+        updateItem();
+        updateSelection();
+        updateFocus();
+//        oldIndex = index;
+    }
+    
 
     /** {@inheritDoc} */
     @Override public void startEdit() {
@@ -374,8 +374,6 @@ public class TreeTableRow<T> extends IndexedCell<T> {
      **************************************************************************/
     
     private int index = -1;
-    private int oldIndex = -1;
-    private TreeItem<T> treeItemRef;
     
     private void updateItem() {
         TreeTableView<T> tv = getTreeTableView();
@@ -388,15 +386,15 @@ public class TreeTableRow<T> extends IndexedCell<T> {
         if (valid) {
             // update the TreeCell state.
             // get the new treeItem that is about to go in to the TreeCell
-            treeItemRef = oldIndex != index ? tv.getTreeItem(index) : treeItemRef;
+            TreeItem<T> treeItem = tv.getTreeItem(index);
             
             // For the sake of RT-14279, it is important that the order of these
             // method calls is as shown below. If the order is switched, it is
             // likely that events will be fired where the item is null, even
             // though calling cell.getTreeItem().getValue() returns the value
             // as expected
-            updateTreeItem(treeItemRef);
-            updateItem(treeItemRef == null ? null : treeItemRef.getValue(), false);
+            updateTreeItem(treeItem);
+            updateItem(treeItem == null ? null : treeItem.getValue(), false);
         } else {
             updateTreeItem(null);
             updateItem(null, true);

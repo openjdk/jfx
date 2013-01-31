@@ -445,21 +445,25 @@ public abstract class TableViewSkinBase<S, C extends Control, B extends Behavior
         return Math.max(pw, prefHeight * GOLDEN_RATIO_MULTIPLIER);
     }
     
-    private boolean needCellsRebuilt = true;
-    private boolean needCellsReconfigured = false;
+    protected boolean needCellsRebuilt = true;
+    protected boolean needCellsRecreated = true;
+    protected boolean needCellsReconfigured = false;
     
     /** {@inheritDoc} */
     @Override protected void layoutChildren(final double x, double y,
             final double w, final double h) {
         super.layoutChildren(x, y, w, h);
         
-        if (needCellsRebuilt) {
-            flow.rebuildCells();
+        if (needCellsRecreated) {
+            flow.recreateCells();
         } else if (needCellsReconfigured) {
             flow.reconfigureCells();
+        } else if (needCellsRebuilt) {
+            flow.rebuildCells();
         } 
         
         needCellsRebuilt = false;
+        needCellsRecreated = false;
         needCellsReconfigured = false;
         
         final double baselineOffset = getSkinnable().getLayoutBounds().getHeight() / 2;
@@ -591,7 +595,7 @@ public abstract class TableViewSkinBase<S, C extends Control, B extends Behavior
         getSkinnable().requestLayout();
     }
 
-    private void updatePlaceholderRegionVisibility() {
+    protected final void updatePlaceholderRegionVisibility() {
         boolean visible = visibleColCount == 0 || getItemCount() == 0;
         
         if (visible) {
@@ -651,7 +655,7 @@ public abstract class TableViewSkinBase<S, C extends Control, B extends Behavior
         getSkinnable().requestLayout();
     }
 
-    private boolean forceCellRebuild = false;
+    protected boolean forceCellRebuild = false;
     
     @Override protected void updateRowCount() {
         updatePlaceholderRegionVisibility();

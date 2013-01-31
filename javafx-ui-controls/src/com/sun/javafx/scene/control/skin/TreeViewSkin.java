@@ -202,14 +202,6 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeViewB
     }
 
     @Override protected void updateRowCount() {
-//        // we're about to recreate all cells - but before that we detach them
-//        // from the TreeView, such that their listeners can be uninstalled.
-//        // If we don't do this, we start to get multiple events firing when
-//        // properties on the TreeView trigger listeners in the cells.
-//        for (int i = 0; i < flow.cells.size(); i++) {
-//            ((TreeCell)flow.cells.get(i)).updateTreeView(null);
-//        }
-        
         int oldCount = flow.getCellCount();
         int newCount = getItemCount();
         

@@ -44,7 +44,11 @@ import javafx.css.StyleableProperty;
 import javafx.css.CssMetaData;
 import com.sun.javafx.css.converters.SizeConverter;
 import com.sun.javafx.scene.control.behavior.TreeCellBehavior;
+import javafx.animation.RotateTransition;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
 import javafx.geometry.Insets;
+import javafx.util.Duration;
 
 public class TreeCellSkin extends CellSkinBase<TreeCell<?>, TreeCellBehavior> {
 
@@ -92,9 +96,19 @@ public class TreeCellSkin extends CellSkinBase<TreeCell<?>, TreeCellBehavior> {
     }
     
     private boolean disclosureNodeDirty = true;
+    private TreeItem<?> treeItem;
+    
+    private final ChangeListener<Boolean> treeItemExpandedListener = new ChangeListener<Boolean>() {
+        @Override public void changed(ObservableValue<? extends Boolean> ov, Boolean t, Boolean isExpanded) {
+            updateDisclosureNodeRotation(true);
+        }
+    };
 
     public TreeCellSkin(TreeCell<?> control) {
         super(control, new TreeCellBehavior(control));
+        
+        updateTreeItem();
+        updateDisclosureNodeRotation(false);
         
         registerChangeListener(control.treeItemProperty(), "TREE_ITEM");
         registerChangeListener(control.textProperty(), "TEXT");
@@ -104,10 +118,41 @@ public class TreeCellSkin extends CellSkinBase<TreeCell<?>, TreeCellBehavior> {
     @Override protected void handleControlPropertyChanged(String p) {
         super.handleControlPropertyChanged(p);
         if ("TREE_ITEM".equals(p)) {
+            updateTreeItem();
             disclosureNodeDirty = true;
             getSkinnable().requestLayout();
         } else if ("TEXT".equals(p) || "GRAPHIC".equals(p)) {
             getSkinnable().requestLayout();
+        }
+    }
+    
+    private void updateDisclosureNodeRotation(boolean animate) {
+        if (treeItem == null || treeItem.isLeaf()) return;
+        
+        Node disclosureNode = getSkinnable().getDisclosureNode();
+        if (disclosureNode == null) return;
+        
+        final boolean isExpanded = treeItem.isExpanded();
+        int fromAngle = isExpanded ? 0 : 90;
+        int toAngle = isExpanded ? 90 : 0;
+ 
+        if (animate) {
+            RotateTransition rt = new RotateTransition(Duration.millis(200), disclosureNode);
+            rt.setFromAngle(fromAngle);
+            rt.setToAngle(toAngle);
+            rt.play();
+        } else {
+            disclosureNode.setRotate(toAngle);
+        }
+    }
+    
+    private void updateTreeItem() {
+        if (treeItem != null) {
+            treeItem.expandedProperty().removeListener(treeItemExpandedListener);
+        }
+        treeItem = getSkinnable().getTreeItem();
+        if (treeItem != null) {
+            treeItem.expandedProperty().addListener(treeItemExpandedListener);
         }
     }
     
@@ -116,8 +161,6 @@ public class TreeCellSkin extends CellSkinBase<TreeCell<?>, TreeCellBehavior> {
 
         Node disclosureNode = getSkinnable().getDisclosureNode();
         if (disclosureNode == null) return;
-        
-        TreeItem treeItem = getSkinnable().getTreeItem();
         
         boolean disclosureVisible = treeItem != null && ! treeItem.isLeaf();
         disclosureNode.setVisible(disclosureVisible);
@@ -142,7 +185,6 @@ public class TreeCellSkin extends CellSkinBase<TreeCell<?>, TreeCellBehavior> {
     
     @Override protected void layoutChildren(double x, final double y,
             double w, final double h) {
-        TreeItem treeItem = getSkinnable().getTreeItem();
         // RT-25876: can not null-check here as this prevents empty rows from
         // being cleaned out.
         // if (treeItem == null) return;
@@ -157,7 +199,7 @@ public class TreeCellSkin extends CellSkinBase<TreeCell<?>, TreeCellBehavior> {
         
         Node disclosureNode = getSkinnable().getDisclosureNode();
         
-        int level = TreeView.getNodeLevel(getSkinnable().getTreeItem());
+        int level = TreeView.getNodeLevel(treeItem);
         if (! tree.isShowRoot()) level--;
         double leftMargin = getIndent() * level;
 
@@ -214,7 +256,6 @@ public class TreeCellSkin extends CellSkinBase<TreeCell<?>, TreeCellBehavior> {
         TreeView tree = getSkinnable().getTreeView();
         if (tree == null) return pw;
         
-        TreeItem treeItem = getSkinnable().getTreeItem();
         if (treeItem == null) return pw;
         
         pw = labelWidth;

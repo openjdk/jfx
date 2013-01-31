@@ -262,14 +262,12 @@ public class TreeCellBehavior extends CellBehaviorBase<TreeCell<?>> {
             } else if (e.getClickCount() == 1) {
                 // cancel editing
                 tv.edit(null);
-            } else if (e.getClickCount() == 2/* && ! getControl().isEditable()*/) {
-                if (treeItem.isLeaf()) {
-                    // attempt to edit
-                    tv.edit(treeItem);
-                } else {
-                    // try to expand/collapse branch tree item
-                    treeItem.setExpanded(! treeItem.isExpanded());
-                }
+            } else if (e.getClickCount() == 2 && treeItem.isLeaf()) {
+                // attempt to edit
+                tv.edit(treeItem);
+            } else if (e.getClickCount() % 2 == 0) {
+                // try to expand/collapse branch tree item
+                treeItem.setExpanded(! treeItem.isExpanded());
             }
         }
     }
