@@ -205,20 +205,29 @@ public abstract class Interpolator {
      * 
      * A tangent interpolator defines the behavior to the left and to the right
      * of a key frame, therefore it is only useful within a {@link Timeline}.
+     * If used in a {@link KeyFrame} after a KeyFrame that has different interpolator,
+     * it's treated as if the out-tangent of that KeyFrame was equal to the value in the KeyFrame.
+     *
+     * <p>
+     * <img src="doc-files/tangent_interpolator.png"/>
      * 
+     * <p>
      * The parameters define the tangent of the animation curve for the in
      * tangent (before a key frame) and out tangent (after a key frame). Each
      * tangent is specified with a pair, the distance to the key frame and the
      * value of the tangent at this moment.
+     * <p>
+     * The interpolation then follows a bezier curve, with 2 control points defined by the specified tangent and
+     * positioned at 1/3 of the duration before the second KeyFrame or after the first KeyFrame.
      * 
      * @param t1
      *            The delta time of the in-tangent
      * @param v1
-     *            The value of the in-tangent, in degrees
+     *            The value of the in-tangent
      * @param t2
      *            The delta time of the out-tangent
      * @param v2
-     *            The value of the out-tangent, in degrees
+     *            The value of the out-tangent
      * @return the new tangent interpolator
      */
     public static Interpolator TANGENT(Duration t1, double v1, Duration t2,
@@ -237,7 +246,7 @@ public abstract class Interpolator {
      * @param t
      *            The delta time of the tangent
      * @param v
-     *            The value of the tangent, in degrees
+     *            The value of the tangent
      * @return the new Tangent interpolator
      */
     public static Interpolator TANGENT(Duration t, double v) {
