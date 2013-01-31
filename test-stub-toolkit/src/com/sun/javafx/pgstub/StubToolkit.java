@@ -92,7 +92,6 @@ import com.sun.javafx.sg.PGShape.StrokeLineCap;
 import com.sun.javafx.sg.PGShape.StrokeLineJoin;
 import com.sun.javafx.sg.PGShape.StrokeType;
 import com.sun.javafx.sg.PGSpan;
-import com.sun.javafx.sg.PGText;
 import com.sun.javafx.sg.PGWebView;
 import com.sun.javafx.tk.FileChooserType;
 import com.sun.javafx.tk.FontLoader;
@@ -426,10 +425,6 @@ public class StubToolkit extends Toolkit {
 
     @Override public PGGroup createPGGroup() {
         return new StubGroup();
-    }
-
-    @Override public PGText createPGText() {
-        return new StubText();
     }
 
     @Override public PGSpan createPGSpan() {
