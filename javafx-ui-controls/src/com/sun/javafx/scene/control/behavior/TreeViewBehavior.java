@@ -63,41 +63,24 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
         
         TREE_VIEW_BINDINGS.add(new KeyBinding(SPACE, "SelectAllToFocus").shift());
         
-        TREE_VIEW_BINDINGS.add(new KeyBinding(HOME, "FocusFirstRow").ctrl());
-        TREE_VIEW_BINDINGS.add(new KeyBinding(END, "FocusLastRow").ctrl());
+        TREE_VIEW_BINDINGS.add(new KeyBinding(HOME, "FocusFirstRow").shortcut());
+        TREE_VIEW_BINDINGS.add(new KeyBinding(END, "FocusLastRow").shortcut());
 
         TREE_VIEW_BINDINGS.add(new KeyBinding(PAGE_UP, "ScrollUp"));
         TREE_VIEW_BINDINGS.add(new KeyBinding(PAGE_DOWN, "ScrollDown"));
-
-        if (PlatformUtil.isMac()) {
-            TREE_VIEW_BINDINGS.add(new KeyBinding(A, "SelectAll").meta());
-            TREE_VIEW_BINDINGS.add(new KeyBinding(SPACE, "toggleFocusOwnerSelection").ctrl().meta());
-            TREE_VIEW_BINDINGS.add(new KeyBinding(PAGE_UP, "FocusPageUp").meta());
-            TREE_VIEW_BINDINGS.add(new KeyBinding(PAGE_DOWN, "FocusPageDown").meta());
-            TREE_VIEW_BINDINGS.add(new KeyBinding(UP, "FocusPreviousRow").meta());
-            TREE_VIEW_BINDINGS.add(new KeyBinding(DOWN, "FocusNextRow").meta());
-            
-            TREE_VIEW_BINDINGS.add(new KeyBinding(UP, "DiscontinuousSelectPreviousRow").meta().shift());
-            TREE_VIEW_BINDINGS.add(new KeyBinding(DOWN, "DiscontinuousSelectNextRow").meta().shift());
-            TREE_VIEW_BINDINGS.add(new KeyBinding(PAGE_UP, "DiscontinuousSelectPageUp").meta().shift());
-            TREE_VIEW_BINDINGS.add(new KeyBinding(PAGE_DOWN, "DiscontinuousSelectPageDown").meta().shift());
-            TREE_VIEW_BINDINGS.add(new KeyBinding(HOME, "DiscontinuousSelectAllToFirstRow").meta().shift());
-            TREE_VIEW_BINDINGS.add(new KeyBinding(END, "DiscontinuousSelectAllToLastRow").meta().shift());
-        } else {
-            TREE_VIEW_BINDINGS.add(new KeyBinding(A, "SelectAll").ctrl());
-            TREE_VIEW_BINDINGS.add(new KeyBinding(SPACE, "toggleFocusOwnerSelection").ctrl());
-            TREE_VIEW_BINDINGS.add(new KeyBinding(PAGE_UP, "FocusPageUp").ctrl());
-            TREE_VIEW_BINDINGS.add(new KeyBinding(PAGE_DOWN, "FocusPageDown").ctrl());
-            TREE_VIEW_BINDINGS.add(new KeyBinding(UP, "FocusPreviousRow").ctrl());
-            TREE_VIEW_BINDINGS.add(new KeyBinding(DOWN, "FocusNextRow").ctrl());
-            
-            TREE_VIEW_BINDINGS.add(new KeyBinding(UP, "DiscontinuousSelectPreviousRow").ctrl().shift());
-            TREE_VIEW_BINDINGS.add(new KeyBinding(DOWN, "DiscontinuousSelectNextRow").ctrl().shift());
-            TREE_VIEW_BINDINGS.add(new KeyBinding(PAGE_UP, "DiscontinuousSelectPageUp").ctrl().shift());
-            TREE_VIEW_BINDINGS.add(new KeyBinding(PAGE_DOWN, "DiscontinuousSelectPageDown").ctrl().shift());
-            TREE_VIEW_BINDINGS.add(new KeyBinding(HOME, "DiscontinuousSelectAllToFirstRow").ctrl().shift());
-            TREE_VIEW_BINDINGS.add(new KeyBinding(END, "DiscontinuousSelectAllToLastRow").ctrl().shift());
-        }
+        
+        TREE_VIEW_BINDINGS.add(new KeyBinding(A, "SelectAll").shortcut());
+        TREE_VIEW_BINDINGS.add(new KeyBinding(SPACE, "toggleFocusOwnerSelection").shortcut());
+        TREE_VIEW_BINDINGS.add(new KeyBinding(PAGE_UP, "FocusPageUp").shortcut());
+        TREE_VIEW_BINDINGS.add(new KeyBinding(PAGE_DOWN, "FocusPageDown").shortcut());
+        TREE_VIEW_BINDINGS.add(new KeyBinding(UP, "FocusPreviousRow").shortcut());
+        TREE_VIEW_BINDINGS.add(new KeyBinding(DOWN, "FocusNextRow").shortcut());
+        TREE_VIEW_BINDINGS.add(new KeyBinding(UP, "DiscontinuousSelectPreviousRow").shortcut().shift());
+        TREE_VIEW_BINDINGS.add(new KeyBinding(DOWN, "DiscontinuousSelectNextRow").shortcut().shift());
+        TREE_VIEW_BINDINGS.add(new KeyBinding(PAGE_UP, "DiscontinuousSelectPageUp").shortcut().shift());
+        TREE_VIEW_BINDINGS.add(new KeyBinding(PAGE_DOWN, "DiscontinuousSelectPageDown").shortcut().shift());
+        TREE_VIEW_BINDINGS.add(new KeyBinding(HOME, "DiscontinuousSelectAllToFirstRow").shortcut().shift());
+        TREE_VIEW_BINDINGS.add(new KeyBinding(END, "DiscontinuousSelectAllToLastRow").shortcut().shift());
 
         TREE_VIEW_BINDINGS.add(new KeyBinding(LEFT, "CollapseRow"));
         TREE_VIEW_BINDINGS.add(new KeyBinding(KP_LEFT, "CollapseRow"));

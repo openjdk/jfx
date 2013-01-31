@@ -62,10 +62,10 @@ public class KeyEventFirer {
                 null,     // Character (unused unless KeyCode == KEY_TYPED
                 null,     // text
                 keyCode, // KeyCode
-                ml.contains(KeyModifier.SHIFT),                                   // shiftDown
-                ml.contains(KeyModifier.CTRL),                                    // ctrlDown
-                ml.contains(KeyModifier.ALT),                                     // altDown
-                ml.contains(KeyModifier.META) || ml.contains(KeyModifier.CMD)    // metaData
+                ml.contains(KeyModifier.SHIFT),    // shiftDown
+                ml.contains(KeyModifier.CTRL),     // ctrlDown
+                ml.contains(KeyModifier.ALT),      // altDown
+                ml.contains(KeyModifier.CMD)       // metaData
                 ); 
     }
 }

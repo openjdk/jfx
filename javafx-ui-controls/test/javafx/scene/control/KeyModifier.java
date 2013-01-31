@@ -9,9 +9,6 @@ public enum KeyModifier {
     SHIFT,
     CTRL,
     ALT,
-    META,
-    
-    // For Mac OS
     CMD;
     
     /**

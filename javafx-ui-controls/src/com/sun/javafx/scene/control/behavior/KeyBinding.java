@@ -25,6 +25,7 @@
 
 package com.sun.javafx.scene.control.behavior;
 
+import com.sun.javafx.Utils;
 import static com.sun.javafx.scene.control.behavior.OptionalBoolean.ANY;
 import static com.sun.javafx.scene.control.behavior.OptionalBoolean.FALSE;
 import static com.sun.javafx.scene.control.behavior.OptionalBoolean.TRUE;
@@ -42,7 +43,7 @@ import javafx.scene.input.KeyEvent;
  * or 0 in the case where there is no match.
  *
  * Note that this API is, at present, quite odd in that you use a constructor
- * and then use shift(), ctrl(), alt(), or meta() separately. It gave me an
+ * and then use shift(), ctrl(), alt(), or shortcut() separately. It gave me an
  * object-literal like approach but isn't ideal. We will want some builder
  * approach here (similar as in other places).
  */
@@ -53,7 +54,7 @@ public class KeyBinding {
     private OptionalBoolean shift = FALSE;
     private OptionalBoolean ctrl = FALSE;
     private OptionalBoolean alt = FALSE;
-    private OptionalBoolean meta = FALSE;
+    private OptionalBoolean shortcut = FALSE;
 
     public KeyBinding(KeyCode code, String action) {
         this.code = code;
@@ -93,12 +94,12 @@ public class KeyBinding {
         return this;
     }
 
-    public KeyBinding meta() {
-        return meta(TRUE);
+    public KeyBinding shortcut() {
+        return shortcut(TRUE);
     }
 
-    public KeyBinding meta(OptionalBoolean value) {
-        meta = value;
+    public KeyBinding shortcut(OptionalBoolean value) {
+        shortcut = value;
         return this;
     }
 
@@ -108,7 +109,7 @@ public class KeyBinding {
     public final OptionalBoolean getShift() { return shift; }
     public final OptionalBoolean getCtrl() { return ctrl; }
     public final OptionalBoolean getAlt() { return alt; }
-    public final OptionalBoolean getMeta() { return meta; }
+    public final OptionalBoolean getShortcut() { return shortcut; }
 
     public int getSpecificity(Control control, KeyEvent event) {
         int s = 0;
@@ -116,7 +117,7 @@ public class KeyBinding {
         if (!shift.equals(event.isShiftDown())) return 0; else if (shift != ANY) s++;
         if (!ctrl.equals(event.isControlDown())) return 0; else if (shift != ANY) s++;
         if (!alt.equals(event.isAltDown())) return 0; else if (shift != ANY) s++;
-        if (!meta.equals(event.isMetaDown())) return 0; else if (shift != ANY) s++;
+        if (!shortcut.equals(event.isShortcutDown())) return 0; else if (shift != ANY) s++;
         if (eventType != null && eventType != event.getEventType()) return 0; else s++;
         // We can now trivially accept it
         return s;
@@ -124,7 +125,8 @@ public class KeyBinding {
 
     @Override public String toString() {
         return "KeyBinding [code=" + code + ", shift=" + shift +
-                ", ctrl=" + ctrl + ", alt=" + alt + ", meta=" + meta +
-                ", type=" + eventType + ", action=" + action + "]";
+                ", ctrl=" + ctrl + ", alt=" + alt + 
+                ", shortcut=" + shortcut + ", type=" + eventType + 
+                ", action=" + action + "]";
     }
 }

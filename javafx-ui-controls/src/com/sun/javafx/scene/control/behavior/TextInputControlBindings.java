@@ -76,35 +76,35 @@ public class TextInputControlBindings {
             BINDINGS.add(new KeyBinding(HOME, KEY_PRESSED,       "SelectHomeExtend").shift());
             BINDINGS.add(new KeyBinding(END, KEY_PRESSED,        "SelectEndExtend").shift());
 
-            BINDINGS.add(new KeyBinding(HOME, KEY_PRESSED,       "Home").meta());
-            BINDINGS.add(new KeyBinding(END, KEY_PRESSED,        "End").meta());
-            BINDINGS.add(new KeyBinding(LEFT, KEY_PRESSED,       "Home").meta());
-            BINDINGS.add(new KeyBinding(KP_LEFT, KEY_PRESSED,    "Home").meta());
-            BINDINGS.add(new KeyBinding(RIGHT, KEY_PRESSED,      "End").meta());
-            BINDINGS.add(new KeyBinding(KP_RIGHT, KEY_PRESSED,   "End").meta());
+            BINDINGS.add(new KeyBinding(HOME, KEY_PRESSED,       "Home").shortcut());
+            BINDINGS.add(new KeyBinding(END, KEY_PRESSED,        "End").shortcut());
+            BINDINGS.add(new KeyBinding(LEFT, KEY_PRESSED,       "Home").shortcut());
+            BINDINGS.add(new KeyBinding(KP_LEFT, KEY_PRESSED,    "Home").shortcut());
+            BINDINGS.add(new KeyBinding(RIGHT, KEY_PRESSED,      "End").shortcut());
+            BINDINGS.add(new KeyBinding(KP_RIGHT, KEY_PRESSED,   "End").shortcut());
             BINDINGS.add(new KeyBinding(LEFT, KEY_PRESSED,       "LeftWord").alt());
             BINDINGS.add(new KeyBinding(KP_LEFT, KEY_PRESSED,    "LeftWord").alt());
             BINDINGS.add(new KeyBinding(RIGHT, KEY_PRESSED,      "RightWord").alt());
             BINDINGS.add(new KeyBinding(KP_RIGHT, KEY_PRESSED,   "RightWord").alt());
-            BINDINGS.add(new KeyBinding(DELETE, KEY_PRESSED,     "DeleteNextWord").meta());
-            BINDINGS.add(new KeyBinding(BACK_SPACE, KEY_PRESSED, "DeletePreviousWord").meta());
-            BINDINGS.add(new KeyBinding(X, KEY_PRESSED,          "Cut").meta());
-            BINDINGS.add(new KeyBinding(C, KEY_PRESSED,          "Copy").meta());
-            BINDINGS.add(new KeyBinding(INSERT, KEY_PRESSED,     "Copy").meta());
-            BINDINGS.add(new KeyBinding(V, KEY_PRESSED,          "Paste").meta());
-            BINDINGS.add(new KeyBinding(HOME, KEY_PRESSED,       "SelectHome").shift().meta());
-            BINDINGS.add(new KeyBinding(END, KEY_PRESSED,        "SelectEnd").shift().meta());
-            BINDINGS.add(new KeyBinding(LEFT, KEY_PRESSED,       "SelectHomeExtend").shift().meta());
-            BINDINGS.add(new KeyBinding(KP_LEFT, KEY_PRESSED,    "SelectHomeExtend").shift().meta());
-            BINDINGS.add(new KeyBinding(RIGHT, KEY_PRESSED,      "SelectEndExtend").shift().meta());
-            BINDINGS.add(new KeyBinding(KP_RIGHT, KEY_PRESSED,   "SelectEndExtend").shift().meta());
-            BINDINGS.add(new KeyBinding(A, KEY_PRESSED,          "SelectAll").meta());
+            BINDINGS.add(new KeyBinding(DELETE, KEY_PRESSED,     "DeleteNextWord").shortcut());
+            BINDINGS.add(new KeyBinding(BACK_SPACE, KEY_PRESSED, "DeletePreviousWord").shortcut());
+            BINDINGS.add(new KeyBinding(X, KEY_PRESSED,          "Cut").shortcut());
+            BINDINGS.add(new KeyBinding(C, KEY_PRESSED,          "Copy").shortcut());
+            BINDINGS.add(new KeyBinding(INSERT, KEY_PRESSED,     "Copy").shortcut());
+            BINDINGS.add(new KeyBinding(V, KEY_PRESSED,          "Paste").shortcut());
+            BINDINGS.add(new KeyBinding(HOME, KEY_PRESSED,       "SelectHome").shift().shortcut());
+            BINDINGS.add(new KeyBinding(END, KEY_PRESSED,        "SelectEnd").shift().shortcut());
+            BINDINGS.add(new KeyBinding(LEFT, KEY_PRESSED,       "SelectHomeExtend").shift().shortcut());
+            BINDINGS.add(new KeyBinding(KP_LEFT, KEY_PRESSED,    "SelectHomeExtend").shift().shortcut());
+            BINDINGS.add(new KeyBinding(RIGHT, KEY_PRESSED,      "SelectEndExtend").shift().shortcut());
+            BINDINGS.add(new KeyBinding(KP_RIGHT, KEY_PRESSED,   "SelectEndExtend").shift().shortcut());
+            BINDINGS.add(new KeyBinding(A, KEY_PRESSED,          "SelectAll").shortcut());
             BINDINGS.add(new KeyBinding(LEFT, KEY_PRESSED,       "SelectLeftWord").shift().alt());
             BINDINGS.add(new KeyBinding(KP_LEFT, KEY_PRESSED,    "SelectLeftWord").shift().alt());
             BINDINGS.add(new KeyBinding(RIGHT, KEY_PRESSED,      "SelectRightWord").shift().alt());
             BINDINGS.add(new KeyBinding(KP_RIGHT, KEY_PRESSED,   "SelectRightWord").shift().alt());
-            BINDINGS.add(new KeyBinding(Z, KEY_PRESSED,          "Undo").meta());
-            BINDINGS.add(new KeyBinding(Z, KEY_PRESSED,          "Redo").shift().meta());
+            BINDINGS.add(new KeyBinding(Z, KEY_PRESSED,          "Undo").shortcut());
+            BINDINGS.add(new KeyBinding(Z, KEY_PRESSED,          "Redo").shift().shortcut());
         } else {
             BINDINGS.add(new KeyBinding(HOME, KEY_PRESSED,       "SelectHome").shift());
             BINDINGS.add(new KeyBinding(END, KEY_PRESSED,        "SelectEnd").shift());
@@ -144,7 +144,7 @@ public class TextInputControlBindings {
                 .alt(OptionalBoolean.ANY)
                 .shift(OptionalBoolean.ANY)
                 .ctrl(OptionalBoolean.ANY)
-                .meta(OptionalBoolean.ANY));
+                .shortcut(OptionalBoolean.ANY));
         // Traversal Bindings
         BINDINGS.add(new KeyBinding(TAB, "TraverseNext"));
         BINDINGS.add(new KeyBinding(TAB, "TraversePrevious").shift());

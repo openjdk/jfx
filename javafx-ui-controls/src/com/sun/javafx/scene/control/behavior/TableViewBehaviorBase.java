@@ -121,50 +121,31 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
         TABLE_VIEW_BINDINGS.add(new KeyBinding(RIGHT, "AlsoSelectRightCell").shift());
         TABLE_VIEW_BINDINGS.add(new KeyBinding(KP_RIGHT, "AlsoSelectRightCell").shift());
 
+        TABLE_VIEW_BINDINGS.add(new KeyBinding(UP, "FocusPreviousRow").shortcut());
+        TABLE_VIEW_BINDINGS.add(new KeyBinding(DOWN, "FocusNextRow").shortcut());
+        TABLE_VIEW_BINDINGS.add(new KeyBinding(RIGHT, "FocusRightCell").shortcut());
+        TABLE_VIEW_BINDINGS.add(new KeyBinding(KP_RIGHT, "FocusRightCell").shortcut());
+        TABLE_VIEW_BINDINGS.add(new KeyBinding(LEFT, "FocusLeftCell").shortcut());
+        TABLE_VIEW_BINDINGS.add(new KeyBinding(KP_LEFT, "FocusLeftCell").shortcut());
+        TABLE_VIEW_BINDINGS.add(new KeyBinding(A, "SelectAll").shortcut());
+        TABLE_VIEW_BINDINGS.add(new KeyBinding(HOME, "FocusFirstRow").shortcut());
+        TABLE_VIEW_BINDINGS.add(new KeyBinding(END, "FocusLastRow").shortcut());
+        TABLE_VIEW_BINDINGS.add(new KeyBinding(PAGE_UP, "FocusPageUp").shortcut());
+        TABLE_VIEW_BINDINGS.add(new KeyBinding(PAGE_DOWN, "FocusPageDown").shortcut());
+
+        TABLE_VIEW_BINDINGS.add(new KeyBinding(UP, "DiscontinuousSelectPreviousRow").shortcut().shift());
+        TABLE_VIEW_BINDINGS.add(new KeyBinding(DOWN, "DiscontinuousSelectNextRow").shortcut().shift());
+        TABLE_VIEW_BINDINGS.add(new KeyBinding(LEFT, "DiscontinuousSelectPreviousColumn").shortcut().shift());
+        TABLE_VIEW_BINDINGS.add(new KeyBinding(RIGHT, "DiscontinuousSelectNextColumn").shortcut().shift());
+        TABLE_VIEW_BINDINGS.add(new KeyBinding(PAGE_UP, "DiscontinuousSelectPageUp").shortcut().shift());
+        TABLE_VIEW_BINDINGS.add(new KeyBinding(PAGE_DOWN, "DiscontinuousSelectPageDown").shortcut().shift());
+        TABLE_VIEW_BINDINGS.add(new KeyBinding(HOME, "DiscontinuousSelectAllToFirstRow").shortcut().shift());
+        TABLE_VIEW_BINDINGS.add(new KeyBinding(END, "DiscontinuousSelectAllToLastRow").shortcut().shift());
+        
         if (PlatformUtil.isMac()) {
-            TABLE_VIEW_BINDINGS.add(new KeyBinding(UP, "FocusPreviousRow").meta());
-            TABLE_VIEW_BINDINGS.add(new KeyBinding(DOWN, "FocusNextRow").meta());
-            TABLE_VIEW_BINDINGS.add(new KeyBinding(RIGHT, "FocusRightCell").meta());
-            TABLE_VIEW_BINDINGS.add(new KeyBinding(KP_RIGHT, "FocusRightCell").meta());
-            TABLE_VIEW_BINDINGS.add(new KeyBinding(LEFT, "FocusLeftCell").meta());
-            TABLE_VIEW_BINDINGS.add(new KeyBinding(KP_LEFT, "FocusLeftCell").meta());
-            TABLE_VIEW_BINDINGS.add(new KeyBinding(A, "SelectAll").meta());
-            TABLE_VIEW_BINDINGS.add(new KeyBinding(HOME, "FocusFirstRow").meta());
-            TABLE_VIEW_BINDINGS.add(new KeyBinding(END, "FocusLastRow").meta());
-            TABLE_VIEW_BINDINGS.add(new KeyBinding(SPACE, "toggleFocusOwnerSelection").ctrl().meta());
-            TABLE_VIEW_BINDINGS.add(new KeyBinding(PAGE_UP, "FocusPageUp").meta());
-            TABLE_VIEW_BINDINGS.add(new KeyBinding(PAGE_DOWN, "FocusPageDown").meta());
-            
-            TABLE_VIEW_BINDINGS.add(new KeyBinding(UP, "DiscontinuousSelectPreviousRow").meta().shift());
-            TABLE_VIEW_BINDINGS.add(new KeyBinding(DOWN, "DiscontinuousSelectNextRow").meta().shift());
-            TABLE_VIEW_BINDINGS.add(new KeyBinding(LEFT, "DiscontinuousSelectPreviousColumn").meta().shift());
-            TABLE_VIEW_BINDINGS.add(new KeyBinding(RIGHT, "DiscontinuousSelectNextColumn").meta().shift());
-            TABLE_VIEW_BINDINGS.add(new KeyBinding(PAGE_UP, "DiscontinuousSelectPageUp").meta().shift());
-            TABLE_VIEW_BINDINGS.add(new KeyBinding(PAGE_DOWN, "DiscontinuousSelectPageDown").meta().shift());
-            TABLE_VIEW_BINDINGS.add(new KeyBinding(HOME, "DiscontinuousSelectAllToFirstRow").meta().shift());
-            TABLE_VIEW_BINDINGS.add(new KeyBinding(END, "DiscontinuousSelectAllToLastRow").meta().shift());
+            TABLE_VIEW_BINDINGS.add(new KeyBinding(SPACE, "toggleFocusOwnerSelection").ctrl().shortcut());
         } else {
-            TABLE_VIEW_BINDINGS.add(new KeyBinding(UP, "FocusPreviousRow").ctrl());
-            TABLE_VIEW_BINDINGS.add(new KeyBinding(DOWN, "FocusNextRow").ctrl());
-            TABLE_VIEW_BINDINGS.add(new KeyBinding(RIGHT, "FocusRightCell").ctrl());
-            TABLE_VIEW_BINDINGS.add(new KeyBinding(KP_RIGHT, "FocusRightCell").ctrl());
-            TABLE_VIEW_BINDINGS.add(new KeyBinding(LEFT, "FocusLeftCell").ctrl());
-            TABLE_VIEW_BINDINGS.add(new KeyBinding(KP_LEFT, "FocusLeftCell").ctrl());
-            TABLE_VIEW_BINDINGS.add(new KeyBinding(A, "SelectAll").ctrl());
-            TABLE_VIEW_BINDINGS.add(new KeyBinding(HOME, "FocusFirstRow").ctrl());
-            TABLE_VIEW_BINDINGS.add(new KeyBinding(END, "FocusLastRow").ctrl());
             TABLE_VIEW_BINDINGS.add(new KeyBinding(SPACE, "toggleFocusOwnerSelection").ctrl());
-            TABLE_VIEW_BINDINGS.add(new KeyBinding(PAGE_UP, "FocusPageUp").ctrl());
-            TABLE_VIEW_BINDINGS.add(new KeyBinding(PAGE_DOWN, "FocusPageDown").ctrl());
-            
-            TABLE_VIEW_BINDINGS.add(new KeyBinding(UP, "DiscontinuousSelectPreviousRow").ctrl().shift());
-            TABLE_VIEW_BINDINGS.add(new KeyBinding(DOWN, "DiscontinuousSelectNextRow").ctrl().shift());
-            TABLE_VIEW_BINDINGS.add(new KeyBinding(LEFT, "DiscontinuousSelectPreviousColumn").ctrl().shift());
-            TABLE_VIEW_BINDINGS.add(new KeyBinding(RIGHT, "DiscontinuousSelectNextColumn").ctrl().shift());
-            TABLE_VIEW_BINDINGS.add(new KeyBinding(PAGE_UP, "DiscontinuousSelectPageUp").ctrl().shift());
-            TABLE_VIEW_BINDINGS.add(new KeyBinding(PAGE_DOWN, "DiscontinuousSelectPageDown").ctrl().shift());
-            TABLE_VIEW_BINDINGS.add(new KeyBinding(HOME, "DiscontinuousSelectAllToFirstRow").ctrl().shift());
-            TABLE_VIEW_BINDINGS.add(new KeyBinding(END, "DiscontinuousSelectAllToLastRow").ctrl().shift());
         }
 
         TABLE_VIEW_BINDINGS.add(new KeyBinding(ENTER, "Activate"));

@@ -74,9 +74,9 @@ import javafx.scene.input.KeyCode;
  * by {@code +} then followed by the accelerator character (e.g.,
  * {@code Ctrl+Shift+K}). The legal modifier designations are as follows (case
  * insensitive, and not to be translated): {@code Ctrl}, {@code Alt},
- * {@code Shift}, {@code Meta}. If an {@code @} appears twice in a row in the
- * string, it will be treated as a single {@code @} and not as the accelerator
- * delimiter.
+ * {@code Shift} and {@code Shortcut}. If an {@code @} appears 
+ * twice in a row in the string, it will be treated as a single {@code @} and 
+ * not as the accelerator delimiter.
  * <p></li>
  * </ul>
  * 
@@ -210,13 +210,13 @@ public class TextBinding {
     public boolean getAlt() {
         return alt;
     }
-
+    
     /**
-     * for accelerator : is the meta key needed?
+     * for accelerator : is the shortcut key needed?
      */ 
-    private boolean meta = false;
-    public boolean getMeta() {
-        return meta;
+    private boolean shortcut = false;
+    public boolean getShortcut() {
+        return shortcut;
     }
 
     /**
@@ -323,7 +323,7 @@ public class TextBinding {
         boolean controlDown = false;
         boolean altDown = false;
         boolean shiftDown = false;
-        boolean metaDown = false;
+        boolean shortcutDown = false;
         boolean parseFail = false;
         StringTokenizer tokenizer = new StringTokenizer(s, "+");
         while (!parseFail && tokenizer.hasMoreTokens()) {
@@ -343,8 +343,8 @@ public class TextBinding {
                       case SHIFT:
                         shiftDown = true;
                         break;
-                      case META:
-                        metaDown = true;
+                      case SHORTCUT:
+                        shortcutDown = true;
                         break;
                       default:
                         text = null;
@@ -374,10 +374,9 @@ public class TextBinding {
                         shift = true;
                         result.shift();
                     }
-                    
-                    if (metaDown) {
-                        meta = true;
-                        result.meta();
+                    if (shortcutDown) {
+                        shortcut = true;
+                        result.shortcut();
                     }
                 }
             }

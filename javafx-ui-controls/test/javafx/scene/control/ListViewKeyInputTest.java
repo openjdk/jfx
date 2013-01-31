@@ -3,6 +3,7 @@
  */
 package javafx.scene.control;
 
+import com.sun.javafx.Utils;
 import com.sun.javafx.scene.control.behavior.ListViewAnchorRetriever;
 import static org.junit.Assert.*;
 
@@ -211,7 +212,11 @@ public class ListViewKeyInputTest {
         sm.clearAndSelect(0);
         keyboard.doDownArrowPress(KeyModifier.getShortcutKey());    // move focus to 1
         keyboard.doDownArrowPress(KeyModifier.getShortcutKey());    // move focus to 2
-        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey());  // select 2
+        if (Utils.isMac()) {
+            keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey(), KeyModifier.CTRL);  // select 2
+        } else {
+            keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey());  // select 2
+        }
         assertTrue(isSelected(0, 2));
         assertTrue(isNotSelected(1));
         assertTrue(isAnchor(2));
@@ -222,7 +227,11 @@ public class ListViewKeyInputTest {
         sm.clearAndSelect(2);
         keyboard.doUpArrowPress(KeyModifier.getShortcutKey());    // move focus to 1
         keyboard.doUpArrowPress(KeyModifier.getShortcutKey());    // move focus to 0
-        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey());  // select 0
+        if (Utils.isMac()) {
+            keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey(), KeyModifier.CTRL);  // select 0
+        } else {
+            keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey());  // select 0
+        }
         assertTrue(isSelected(0, 2));
         assertTrue(isNotSelected(1));
         assertTrue(isAnchor(0));
