@@ -24,6 +24,7 @@
  */
 package javafx.stage;
 
+import java.security.AccessControlContext;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.Iterator;
@@ -115,6 +116,8 @@ public class Window implements EventTarget {
         );
         return iterator;
     }
+
+    private final AccessControlContext acc = AccessController.getContext();
 
     protected Window() {
         // necessary for WindowCloseRequestHandler
@@ -699,6 +702,8 @@ public class Window implements EventTarget {
             Toolkit tk = Toolkit.getToolkit();
             if (impl_peer != null) {
                 if (newVisible) {
+                    impl_peer.setSecurityContext(acc);
+
                     if (peerListener == null) {
                         peerListener = new WindowPeerListener(Window.this);
                     }
@@ -709,12 +714,6 @@ public class Window implements EventTarget {
                     impl_peer.setTKStageListener(peerListener);
                     // Register pulse listener
                     tk.addStageTkPulseListener(peerBoundsConfigurator);
-
-                    // This method must be called from init or postinit
-                    // to make sure that the runtime knows the security
-                    // context of where this stage was created and
-                    // initialized
-                    impl_peer.initSecurityContext();
 
                     if (getScene() != null) {
                         getScene().impl_initPeer();

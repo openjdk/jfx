@@ -25,6 +25,11 @@
 
 package javafx.fxml;
 
+import com.sun.javafx.fxml.BeanAdapter;
+import com.sun.javafx.fxml.builder.JavaFXFontBuilder;
+import com.sun.javafx.fxml.builder.JavaFXImageBuilder;
+import com.sun.javafx.fxml.builder.JavaFXSceneBuilder;
+import com.sun.javafx.fxml.builder.URLBuilder;
 import java.lang.reflect.Array;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -32,6 +37,7 @@ import java.lang.reflect.Modifier;
 import java.net.URL;
 import java.util.AbstractMap;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -41,21 +47,18 @@ import java.util.Map;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.collections.ObservableMap;
 import javafx.scene.Node;
-import javafx.util.Builder;
-import javafx.util.BuilderFactory;
-
-import com.sun.javafx.fxml.BeanAdapter;
-import com.sun.javafx.fxml.builder.*;
-import java.util.Arrays;
 import javafx.scene.Scene;
 import javafx.scene.image.Image;
 import javafx.scene.text.Font;
 import javafx.scene.web.WebView;
+import javafx.util.Builder;
+import javafx.util.BuilderFactory;
+import sun.reflect.misc.ConstructorUtil;
+import sun.reflect.misc.MethodUtil;
 
 /**
  * JavaFX builder factory.
@@ -139,7 +142,7 @@ public final class JavaFXBuilderFactory implements BuilderFactory {
                     //
                     boolean hasDefaultConstructor;
                     try {
-                        type.getConstructor();
+                        ConstructorUtil.getConstructor(type, new Class[] {});
                         // found!
                         // forces the factory  to return a builder if there is one.
                         // TODO: delete the line below when we are sure that both
@@ -214,7 +217,7 @@ final class JavaFXBuilder {
 
         private ObjectBuilder() {
             try {
-                builder = createMethod.invoke(null);
+                builder = MethodUtil.invoke(createMethod, null, NO_ARGS);
             } catch (Exception e) {
                 //TODO
                 throw new RuntimeException("Creation of the builder " + builderClass.getName() + " failed.", e);
@@ -231,7 +234,7 @@ final class JavaFXBuilder {
 
             Object res;
             try {
-                res = buildMethod.invoke(builder, NO_ARGS);
+                res = MethodUtil.invoke(buildMethod, builder, NO_ARGS);
                 // TODO:
                 // temporary special case for Node properties until
                 // platform builders are fixed
@@ -312,7 +315,7 @@ final class JavaFXBuilder {
                         value = array;
                     }
 
-                    m.invoke(builder, new Object[] {BeanAdapter.coerce(value, type)});
+                    MethodUtil.invoke(m, builder, new Object[] { BeanAdapter.coerce(value, type) });
                 } catch (Exception e) {
                     Logger.getLogger(JavaFXBuilder.class.getName()).log(Level.WARNING,
                         "Method " + m.getName() + " failed", e);
@@ -340,8 +343,8 @@ final class JavaFXBuilder {
                 Class<?> target = getTargetClass();
                 String suffix = Character.toUpperCase(propName.charAt(0)) + propName.substring(1);
                 try {
-                    getter = target.getMethod("get"+ suffix, NO_SIG);
-                    setter = target.getMethod("set"+ suffix, getter.getReturnType());
+                    getter = MethodUtil.getMethod(target, "get"+ suffix, NO_SIG);
+                    setter = MethodUtil.getMethod(target, "set"+ suffix, new Class[] { getter.getReturnType() });
                 } catch (Exception x) {
                 }
                 if (getter != null) {
@@ -436,8 +439,8 @@ final class JavaFXBuilder {
 
     JavaFXBuilder(Class<?> builderClass) throws NoSuchMethodException, InstantiationException, IllegalAccessException {
         this.builderClass = builderClass;
-        createMethod = builderClass.getMethod("create");
-        buildMethod = builderClass.getMethod("build");
+        createMethod = MethodUtil.getMethod(builderClass, "create", NO_SIG);
+        buildMethod = MethodUtil.getMethod(builderClass, "build", NO_SIG);
         assert Modifier.isStatic(createMethod.getModifiers());
         assert !Modifier.isStatic(buildMethod.getModifiers());
     }
@@ -452,7 +455,7 @@ final class JavaFXBuilder {
             name = Character.toUpperCase(name.charAt(0)) + name.substring(1);
         }
 
-        for (Method m : builderClass.getMethods()) {
+        for (Method m : MethodUtil.getMethods(builderClass)) {
             if (m.getName().equals(name)) {
                 return m;
             }

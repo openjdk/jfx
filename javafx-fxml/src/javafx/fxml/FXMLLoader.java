@@ -88,6 +88,11 @@ import com.sun.javafx.fxml.expression.Expression;
 import com.sun.javafx.fxml.expression.ExpressionValue;
 import com.sun.javafx.fxml.expression.KeyPath;
 import java.net.MalformedURLException;
+import java.util.Locale;
+import sun.reflect.misc.ConstructorUtil;
+import sun.reflect.misc.FieldUtil;
+import sun.reflect.misc.MethodUtil;
+import sun.reflect.misc.ReflectUtil;
 
 /**
  * Loads an object hierarchy from an XML document.
@@ -775,7 +780,7 @@ public class FXMLLoader {
 
                         try {
                             if (controllerFactory == null) {
-                                setController(type.newInstance());
+                                setController(ReflectUtil.newInstance(type));
                             } else {
                                 setController(controllerFactory.call(type));
                             }
@@ -836,13 +841,13 @@ public class FXMLLoader {
             } else if (factory != null) {
                 Method factoryMethod;
                 try {
-                    factoryMethod = type.getMethod(factory);
+                    factoryMethod = MethodUtil.getMethod(type, factory, new Class[] {});
                 } catch (NoSuchMethodException exception) {
                     throw new LoadException(exception);
                 }
 
                 try {
-                    value = factoryMethod.invoke(null);
+                    value = MethodUtil.invoke(factoryMethod, null, new Object [] {});
                 } catch (IllegalAccessException exception) {
                     throw new LoadException(exception);
                 } catch (InvocationTargetException exception) {
@@ -853,7 +858,7 @@ public class FXMLLoader {
 
                 if (value == null) {
                     try {
-                        value = type.newInstance();
+                        value = ReflectUtil.newInstance(type);
                     } catch (InstantiationException exception) {
                         throw new LoadException(exception);
                     } catch (IllegalAccessException exception) {
@@ -935,7 +940,8 @@ public class FXMLLoader {
                         loadListener.readInternalAttribute(localName, value);
                     }
 
-                    resources = ResourceBundle.getBundle(value);
+                    resources = ResourceBundle.getBundle(value, Locale.getDefault(), 
+                            FXMLLoader.this.resources.getClass().getClassLoader());
                 } else if (localName.equals(INCLUDE_CHARSET_ATTRIBUTE)) {
                     if (loadListener != null) {
                         loadListener.readInternalAttribute(localName, value);
@@ -1082,7 +1088,7 @@ public class FXMLLoader {
 
             Constructor<?> constructor = null;
             try {
-                constructor = sourceValueType.getConstructor(sourceValueType);
+                constructor = ConstructorUtil.getConstructor(sourceValueType, new Class[] { sourceValueType });
             } catch (NoSuchMethodException exception) {
                 // No-op
             }
@@ -1090,6 +1096,7 @@ public class FXMLLoader {
             Object value;
             if (constructor != null) {
                 try {
+                    ReflectUtil.checkPackageAccess(sourceValueType);
                     value = constructor.newInstance(sourceValue);
                 } catch (InstantiationException exception) {
                     throw new LoadException(exception);
@@ -1470,9 +1477,9 @@ public class FXMLLoader {
         public void handle(Event event) {
             try {
                 if (typed) {
-                    method.invoke(controller, event);
+                    MethodUtil.invoke(method, controller, new Object[] { event });
                 } else {
-                    method.invoke(controller);
+                    MethodUtil.invoke(method, controller, new Object[] {});
                 }
             } catch (InvocationTargetException exception) {
                 throw new RuntimeException(exception);
@@ -1705,7 +1712,7 @@ public class FXMLLoader {
         defaultClassLoader = Thread.currentThread().getContextClassLoader();
 
         if (defaultClassLoader == null) {
-            defaultClassLoader = ClassLoader.getSystemClassLoader();
+            throw new NullPointerException();
         }
     }
 
@@ -2238,7 +2245,7 @@ public class FXMLLoader {
 
                 if (initializeMethod != null) {
                     try {
-                        initializeMethod.invoke(controller);
+                        MethodUtil.invoke(initializeMethod, controller, new Object [] {});
                     } catch (IllegalAccessException exception) {
                         // TODO Throw when Initializable is deprecated/removed
                         // throw new LoadException(exception);
@@ -2596,7 +2603,7 @@ public class FXMLLoader {
             Class<?> type = controllerType;
 
             while (type != Object.class) {
-                Field[] fields = type.getDeclaredFields();
+                Field[] fields = FieldUtil.getDeclaredFields(type);
 
                 for (int i = 0; i < fields.length; i++) {
                     Field field = fields[i];
@@ -2634,6 +2641,7 @@ public class FXMLLoader {
             Class<?> type = controllerType;
 
             while (type != Object.class) {
+                ReflectUtil.checkPackageAccess(type);
                 Method[] methods = type.getDeclaredMethods();
 
                 for (int i = 0; i < methods.length; i++) {
@@ -2710,6 +2718,7 @@ public class FXMLLoader {
      * This method now delegates to {@link #getDefaultClassLoader()}.
      */
     public static Class<?> loadType(String className) throws ClassNotFoundException {
+        ReflectUtil.checkPackageAccess(className);
         return Class.forName(className, true, defaultClassLoader);
     }
 
