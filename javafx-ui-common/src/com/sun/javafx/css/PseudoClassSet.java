@@ -557,14 +557,14 @@ class PseudoClassSet implements Set<PseudoClass> {
         final int index = (pseudoClassIndex / Long.SIZE);
         final long bit   = 1l << (pseudoClassIndex % Long.SIZE);
         
-        if (pseudoClasses == null || pseudoClasses.length < index) {
-            long[] temp = new long[index];
+        long[] temp = pseudoClasses;
+        if (temp == null || temp.length <= index) {
+            temp = new long[index+1];
             System.arraycopy(pseudoClasses, 0, temp, 0, pseudoClasses.length);
-            pseudoClasses = temp;
         }
         
-        pseudoClasses[index] |= bit;       
-        return pseudoClasses;
+        temp[index] |= bit;       
+        return temp;
    }
    
    static boolean containsPseudoClass(long[] pseudoClasses, int pseudoClassIndex) {
