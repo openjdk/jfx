@@ -439,7 +439,7 @@
                 <assertions>
                     <enable/>
                 </assertions>
-                <jvmarg line="${run.jvmargs}"/>
+                <jvmarg line="${run.jvmargs} -XX:-UseSplitVerifier"/>
             </junit>
             <fail if="tests.failed"/>
         </sequential>

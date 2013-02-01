@@ -108,6 +108,16 @@ public class Point2DTest {
     }
 
     @Test
+    public void testMultiplyByNumber() {
+        Point2D p1 = new Point2D(2, 4);
+        Point2D p2 = new Point2D(-1, 3);
+
+        assertEquals(new Point2D(4, 8), p1.multiply(2));
+        assertEquals(new Point2D(1, -3), p2.multiply(-1));
+        assertEquals(new Point2D(0, 0), p1.multiply(0));
+    }
+
+    @Test
     public void testNormalize() {
         Point2D p1 = new Point2D(0, 0);
         Point2D p2 = new Point2D(0, 1);

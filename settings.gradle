@@ -1,0 +1,9 @@
+include 'build-tools', 'base', 'graphics', 'controls', 'swing', 'swt', /*'web',*/ 'fxml' /*, 'media' */
+project(':base').projectDir = file('modules/base')
+project(':graphics').projectDir = file('modules/graphics')
+project(':controls').projectDir = file('modules/controls')
+project(':swing').projectDir = file('modules/swing')
+project(':swt').projectDir = file('modules/swt')
+/*project(':media').projectDir = file('modules/media')*/
+//project(':web').projectDir = file('modules/web')
+project(':fxml').projectDir = file('modules/fxml')

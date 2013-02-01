@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,18 +25,34 @@
 package com.sun.javafx.pgstub;
 
 import com.sun.javafx.sg.PGText;
-import com.sun.javafx.sg.PGTextHelper;
 
 public class StubText extends StubShape implements PGText {
 
-    StubTextHelper helper = null;
-    public PGTextHelper getTextHelper() {
-        if (helper == null) {
-            helper = new StubTextHelper();
-        }
-        return helper;
+    @Override
+    public void setGlyphs(Object[] glyphs) {
     }
 
-    public void updateText() {
+    @Override
+    public void setLayoutLocation(float x, float y) {
+    }
+
+    @Override
+    public void setFont(Object font) {
+    }
+
+    @Override
+    public void setFontSmoothingType(int fontSmoothingType) {
+    }
+
+    @Override
+    public void setUnderline(boolean underline) {
+    }
+
+    @Override
+    public void setStrikethrough(boolean strikethrough) {
+    }
+
+    @Override
+    public void setSelection(int start, int end, Object color) {
     }
 }

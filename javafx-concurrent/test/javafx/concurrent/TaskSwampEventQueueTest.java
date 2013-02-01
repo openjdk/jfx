@@ -52,7 +52,7 @@ public class TaskSwampEventQueueTest {
 
     @Before public void setup() {
         barrier = new CyclicBarrier(2);
-        eventQueue = new ArrayList<Runnable>();
+        eventQueue = new ArrayList<>();
         task = new AbstractTask() {
             @Override protected String call() throws Exception {
                 for (int i=0; i<1000; i++) {

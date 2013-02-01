@@ -34,22 +34,32 @@ package javafx.concurrent;
  * tested. It will simply run the given command immediately, and makes
  * sure the checkThread does nothing.
  */
-public abstract class AbstractService extends Service<String> {
+public abstract class TestServiceFactory {
     public final Thread appThread = Thread.currentThread();
     public ServiceTestBase test;
-    private AbstractTask currentTask;
+    protected AbstractTask currentTask;
 
-    @Override protected final Task<String> createTask() {
-        currentTask = createTestTask();
-        currentTask.test = test;
-        return currentTask;
-    }
-    
     protected abstract AbstractTask createTestTask();
+    protected Service<String> createService() {
+        return new Service<String>() {
+            @Override protected Task<String> createTask() {
+                currentTask = createTestTask();
+                currentTask.test = test;
+                return currentTask;
+            }
 
-    @Override void checkThread() {
-        if (Thread.currentThread() != appThread)
-            throw new IllegalStateException("Wrong thread on Service");
+            @Override boolean isFxApplicationThread() {
+                return Thread.currentThread() == appThread;
+            }
+
+            @Override void runLater(Runnable r) {
+                if (test != null) {
+                    test.eventQueue.add(r);
+                } else {
+                    super.runLater(r);
+                }
+            }
+        };
     }
 
     public final AbstractTask getCurrentTask() { return currentTask; }

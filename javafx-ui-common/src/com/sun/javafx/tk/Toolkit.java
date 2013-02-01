@@ -95,7 +95,6 @@ import com.sun.javafx.sg.PGRectangle;
 import com.sun.javafx.sg.PGRegion;
 import com.sun.javafx.sg.PGSVGPath;
 import com.sun.javafx.sg.PGShape;
-import com.sun.javafx.sg.PGSpan;
 import com.sun.javafx.sg.PGText;
 import com.sun.javafx.PlatformUtil;
 import com.sun.javafx.sg.PGCanvas;
@@ -630,10 +629,9 @@ public abstract class Toolkit {
     public abstract PGImageView createPGImageView();
     public abstract PGMediaView createPGMediaView();
     public abstract PGGroup createPGGroup();
-    public abstract PGText createPGText();
     public abstract PGRegion createPGRegion();
     public abstract PGCanvas createPGCanvas();
-    public abstract PGSpan createPGSpan();
+    public abstract PGText createPGText();
     public abstract PGWebView createPGWebView();
 
     public abstract Object createSVGPathObject(SVGPath svgpath);

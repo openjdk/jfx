@@ -80,7 +80,7 @@ import com.sun.javafx.scene.text.TextLayout;
 import com.sun.javafx.scene.text.TextLayoutFactory;
 import com.sun.javafx.scene.text.TextSpan;
 import com.sun.javafx.sg.PGNode;
-import com.sun.javafx.sg.PGSpan;
+import com.sun.javafx.sg.PGText;
 import com.sun.javafx.sg.PGShape.Mode;
 import com.sun.javafx.tk.Toolkit;
 import com.sun.javafx.accessible.providers.AccessibleProvider;
@@ -134,11 +134,11 @@ public class Text extends Shape {
     @Deprecated
     @Override
     protected final PGNode impl_createPGNode() {
-        return Toolkit.getToolkit().createPGSpan();
+        return Toolkit.getToolkit().createPGText();
     }
 
-    private PGSpan getPGSpan() {
-        return (PGSpan) impl_getPGNode();
+    private PGText getPGText() {
+        return (PGText) impl_getPGNode();
     }
 
     /**
@@ -1426,7 +1426,7 @@ public class Text extends Shape {
 
     @SuppressWarnings("deprecation")
     private void updatePGText() {
-        PGSpan peer = getPGSpan();
+        PGText peer = getPGText();
         if (impl_isDirty(DirtyBits.TEXT_ATTRS)) {
             peer.setUnderline(isUnderline());
             peer.setStrikethrough(isStrikethrough());

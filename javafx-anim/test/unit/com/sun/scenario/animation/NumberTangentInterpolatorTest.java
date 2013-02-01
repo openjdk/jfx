@@ -47,15 +47,15 @@ public class NumberTangentInterpolatorTest {
 	public void testCreate() {
 		final NumberTangentInterpolator interpolator1 = NumberTangentInterpolator.create(Math.PI, Duration.millis(2000));
 		assertEquals(Math.PI, interpolator1.getInValue(), EPSILON_DOUBLE);
-		assertEquals(2000.0, interpolator1.getInMillis(), EPSILON_DOUBLE);
+		assertEquals(12000.0, interpolator1.getInTicks(), EPSILON_DOUBLE);
 		assertEquals(Math.PI, interpolator1.getOutValue(), EPSILON_DOUBLE);
-		assertEquals(2000.0, interpolator1.getOutMillis(), EPSILON_DOUBLE);
+		assertEquals(12000.0, interpolator1.getOutTicks(), EPSILON_DOUBLE);
 
 		final NumberTangentInterpolator interpolator2 = NumberTangentInterpolator.create(Math.E, Duration.millis(500), -Math.PI, Duration.millis(1000));
 		assertEquals(Math.E, interpolator2.getInValue(), EPSILON_DOUBLE);
-		assertEquals(500.0, interpolator2.getInMillis(), EPSILON_DOUBLE);
+		assertEquals(3000.0, interpolator2.getInTicks(), EPSILON_DOUBLE);
 		assertEquals(-Math.PI, interpolator2.getOutValue(), EPSILON_DOUBLE);
-		assertEquals(1000.0, interpolator2.getOutMillis(), EPSILON_DOUBLE);
+		assertEquals(6000.0, interpolator2.getOutTicks(), EPSILON_DOUBLE);
 	}
 	
 	@Test

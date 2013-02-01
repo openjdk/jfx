@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2012, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,13 +25,15 @@
 
 package com.sun.javafx.sg;
 
-/* Sync from Helper, used on the FX thread, to the node peer,
- * used on the Prism thread.
- * The state that is synced is already digested for rendering,
- * to minimise the sync cost, which is an extra burden.
- * Immutable data (Strings) can be passed by reference.
+/** 
+ * 
  */
 public interface PGText extends PGShape {
-    public PGTextHelper getTextHelper();
-    public void updateText();
+    public void setGlyphs(Object[] glyphs);
+    public void setLayoutLocation(float x, float y);
+    public void setFont(Object font);
+    public void setFontSmoothingType(int fontSmoothingType);
+    public void setUnderline(boolean underline);
+    public void setStrikethrough(boolean strikethrough);
+    public void setSelection(int start, int end, Object color);
 }

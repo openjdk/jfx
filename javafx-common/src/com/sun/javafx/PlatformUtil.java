@@ -247,7 +247,8 @@ public class PlatformUtil {
             // Strip everything after the last "/" or "\" to get rid of the jar filename
             int lastIndexOfSlash = Math.max(
                     s.lastIndexOf('/'), s.lastIndexOf('\\'));
-            return new File(new URL(s.substring(0, lastIndexOfSlash + 1)).getPath());
+            return new File(new URL(s.substring(0, lastIndexOfSlash + 1)).getPath())
+                    .getParentFile();
         } catch (MalformedURLException e) {
             return null;
         }
@@ -255,7 +256,9 @@ public class PlatformUtil {
 
     private static void loadProperties() {
         final String vmname = System.getProperty("java.vm.name");
+        final String arch = System.getProperty("os.arch");
         if (! (javafxPlatform != null ||
+                (arch != null && arch.equals("arm")) ||
                 (vmname != null && vmname.indexOf("Embedded") > 0))) {
             return;
         }
