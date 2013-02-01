@@ -28,7 +28,7 @@ package com.sun.javafx.sg;
 /** 
  * 
  */
-public interface PGSpan extends PGShape {
+public interface PGText extends PGShape {
     public void setGlyphs(Object[] glyphs);
     public void setLayoutLocation(float x, float y);
     public void setFont(Object font);

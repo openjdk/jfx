@@ -35,16 +35,16 @@ import com.sun.javafx.geom.RoundRectangle2D;
 import com.sun.javafx.geom.Shape;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.scene.text.GlyphList;
-import com.sun.javafx.sg.PGSpan;
+import com.sun.javafx.sg.PGText;
 import com.sun.javafx.text.TextRun;
 import com.sun.prism.Graphics;
 import com.sun.prism.paint.Color;
 
-public class NGSpan extends NGShape implements PGSpan {
+public class NGText extends NGShape implements PGText {
 
     static final BaseTransform IDENT = BaseTransform.IDENTITY_TRANSFORM;
 
-    public NGSpan() {
+    public NGText() {
     }
 
     private GlyphList[] runs;

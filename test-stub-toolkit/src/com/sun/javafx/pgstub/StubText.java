@@ -24,9 +24,9 @@
  */
 package com.sun.javafx.pgstub;
 
-import com.sun.javafx.sg.PGSpan;
+import com.sun.javafx.sg.PGText;
 
-public class StubSpan extends StubShape implements PGSpan {
+public class StubText extends StubShape implements PGText {
 
     @Override
     public void setGlyphs(Object[] glyphs) {

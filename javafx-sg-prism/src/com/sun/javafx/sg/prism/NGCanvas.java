@@ -221,7 +221,7 @@ public class NGCanvas extends NGNode implements PGCanvas {
     private float miterlimit;
     private BasicStroke stroke;
     private Path2D path;
-    private NGSpan ngtext;
+    private NGText ngtext;
     private TextLayout textLayout;
     private PGFont pgfont;
     private int align;
@@ -253,7 +253,7 @@ public class NGCanvas extends NGNode implements PGCanvas {
         miterlimit = 10f;
         stroke = null;
         path = new Path2D();
-        ngtext = new NGSpan();
+        ngtext = new NGText();
         textLayout = new TextLayout();
         pgfont = (PGFont) Font.getDefault().impl_getNativeFont();
         align = PGCanvas.ALIGN_LEFT;
