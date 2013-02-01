@@ -22,13 +22,63 @@ import org.junit.Test;
 
 public class TreeViewTest {
     private TreeView<String> treeView;
+    
+    // sample data #1
     private TreeItem<String> root;
     private TreeItem<String> child1;
     private TreeItem<String> child2;
     private TreeItem<String> child3;
     
+    // sample data #1
+    private TreeItem<String> myCompanyRootNode;
+        private TreeItem<String> salesDepartment;
+            private TreeItem<String> ethanWilliams;
+            private TreeItem<String> emmaJones;
+            private TreeItem<String> michaelBrown;
+            private TreeItem<String> annaBlack;
+            private TreeItem<String> rodgerYork;
+            private TreeItem<String> susanCollins;
+
+        private TreeItem<String> itSupport;
+            private TreeItem<String> mikeGraham;
+            private TreeItem<String> judyMayer;
+            private TreeItem<String> gregorySmith;
+    
     @Before public void setup() {
         treeView = new TreeView<String>();
+        
+        // build sample data #2, even though it may not be used...
+        myCompanyRootNode = new TreeItem<String>("MyCompany Human Resources");
+        salesDepartment = new TreeItem<String>("Sales Department");
+            ethanWilliams = new TreeItem<String>("Ethan Williams");
+            emmaJones = new TreeItem<String>("Emma Jones");
+            michaelBrown = new TreeItem<String>("Michael Brown");
+            annaBlack = new TreeItem<String>("Anna Black");
+            rodgerYork = new TreeItem<String>("Rodger York");
+            susanCollins = new TreeItem<String>("Susan Collins");
+
+        itSupport = new TreeItem<String>("IT Support");
+            mikeGraham = new TreeItem<String>("Mike Graham");
+            judyMayer = new TreeItem<String>("Judy Mayer");
+            gregorySmith = new TreeItem<String>("Gregory Smith");
+            
+        myCompanyRootNode.getChildren().setAll(
+            salesDepartment,
+            itSupport
+        );
+        salesDepartment.getChildren().setAll(
+            ethanWilliams,
+            emmaJones,
+            michaelBrown, 
+            annaBlack,
+            rodgerYork,
+            susanCollins
+        );
+        itSupport.getChildren().setAll(
+            mikeGraham,
+            judyMayer,
+            gregorySmith
+        );
     }
 
     private void installChildren() {
@@ -445,26 +495,8 @@ public class TreeViewTest {
     }
     
     @Test public void test_rt27181() {
-        TreeItem salesDepartment = new TreeItem<String>("Sales Department");
-            salesDepartment.getChildren().addAll(
-                    new TreeItem<String>("Ethan Williams"),
-                    new TreeItem<String>("Emma Jones"),
-                    new TreeItem<String>("Michael Brown"),
-                    new TreeItem<String>("Anna Black"),
-                    new TreeItem<String>("Rodger York"),
-                    new TreeItem<String>("Susan Collins")
-            );
-        TreeItem itSupport = new TreeItem<String>("IT Support");
-            itSupport.getChildren().addAll(
-                    new TreeItem<String>("Mike Graham"),
-                    new TreeItem<String>("Judy Mayer"),
-                    new TreeItem<String>("Gregory Smith")
-            );
-        
-        TreeItem<String> rootNode = new TreeItem<String>("MyCompany Human Resources");
-        rootNode.getChildren().addAll(salesDepartment, itSupport);
-        rootNode.setExpanded(true);
-        treeView.setRoot(rootNode);
+        myCompanyRootNode.setExpanded(true);
+        treeView.setRoot(myCompanyRootNode);
         
         // start test
         salesDepartment.setExpanded(true);
@@ -476,27 +508,8 @@ public class TreeViewTest {
     }
     
     @Test public void test_rt27185() {
-        TreeItem salesDepartment = new TreeItem<String>("Sales Department");
-            salesDepartment.getChildren().addAll(
-                    new TreeItem<String>("Ethan Williams"),
-                    new TreeItem<String>("Emma Jones"),
-                    new TreeItem<String>("Michael Brown"),
-                    new TreeItem<String>("Anna Black"),
-                    new TreeItem<String>("Rodger York"),
-                    new TreeItem<String>("Susan Collins")
-            );
-        TreeItem mikeGraham;
-        TreeItem itSupport = new TreeItem<String>("IT Support");
-            itSupport.getChildren().addAll(
-                    mikeGraham = new TreeItem<String>("Mike Graham"),
-                    new TreeItem<String>("Judy Mayer"),
-                    new TreeItem<String>("Gregory Smith")
-            );
-        
-        TreeItem<String> rootNode = new TreeItem<String>("MyCompany Human Resources");
-        rootNode.getChildren().addAll(salesDepartment, itSupport);
-        rootNode.setExpanded(true);
-        treeView.setRoot(rootNode);
+        myCompanyRootNode.setExpanded(true);
+        treeView.setRoot(myCompanyRootNode);
         
         // start test
         itSupport.setExpanded(true);
@@ -505,5 +518,25 @@ public class TreeViewTest {
         assertEquals(mikeGraham, treeView.getFocusModel().getFocusedItem());
         salesDepartment.setExpanded(true);
         assertEquals(mikeGraham, treeView.getFocusModel().getFocusedItem());
+    }
+    
+    @Ignore("Bug hasn't been fixed yet")
+    @Test public void test_rt28114() {
+        myCompanyRootNode.setExpanded(true);
+        treeView.setRoot(myCompanyRootNode);
+        
+        // start test
+        itSupport.setExpanded(true);
+        treeView.getSelectionModel().select(itSupport);
+        assertEquals(itSupport, treeView.getFocusModel().getFocusedItem());
+        assertEquals(itSupport, treeView.getSelectionModel().getSelectedItem());
+        assertTrue(! itSupport.isLeaf());
+        assertTrue(itSupport.isExpanded());
+        
+        itSupport.getChildren().remove(mikeGraham);
+        assertEquals(itSupport, treeView.getFocusModel().getFocusedItem());
+        assertEquals(itSupport, treeView.getSelectionModel().getSelectedItem());
+        assertTrue(itSupport.isLeaf());
+        assertTrue(!itSupport.isExpanded());
     }
 }
