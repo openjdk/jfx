@@ -4250,8 +4250,10 @@ final public class CSSParser {
 
         while(true) {
 
+            // if current is null, then term returned null
             final int ttype =
-                (currentToken != null) ? currentToken.getType() : Token.INVALID;
+                (current != null && currentToken != null) 
+                    ? currentToken.getType() : Token.INVALID;
 
             if (ttype == Token.INVALID) {
                 skipExpr(lexer);
