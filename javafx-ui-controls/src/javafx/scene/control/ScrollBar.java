@@ -314,7 +314,7 @@ public class ScrollBar extends Control {
         // figure out the "value" associated with the specified position
         double posValue = ((getMax() - getMin()) * Utils.clamp(0, position, 1))+getMin();
         double newValue;
-        if (posValue != getValue()) {
+        if (Double.compare(posValue, getValue()) != 0) {
             if (posValue > getValue()) {
                 newValue = getValue() + getBlockIncrement();
             }
