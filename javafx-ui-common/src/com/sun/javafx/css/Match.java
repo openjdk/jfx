@@ -26,6 +26,8 @@ package com.sun.javafx.css;
 
 import java.util.List;
 import javafx.css.PseudoClass;
+import static javafx.geometry.NodeOrientation.*;
+
 
 /**
  * Used by {@link Rule} to determine whether or not the rule applies to a
@@ -58,6 +60,12 @@ final class Match implements Comparable {
         int nMax = pseudoClasses != null ? pseudoClasses.length : 0;
         for (int n = 0; n < nMax; n++) {
             nPseudoClasses += Long.bitCount(pseudoClasses[n]);
+        }
+        if (selector instanceof SimpleSelector) {
+            final SimpleSelector simple = (SimpleSelector)selector;
+            if (simple.getNodeOrientation() != INHERIT) {
+                nPseudoClasses += 1;
+            }
         }
         specificity = (idCount << 8) | (styleClassCount << 4) | nPseudoClasses;
     }

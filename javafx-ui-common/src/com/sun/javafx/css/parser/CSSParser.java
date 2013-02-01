@@ -99,6 +99,7 @@ import com.sun.javafx.scene.layout.region.RepeatStruct;
 import com.sun.javafx.scene.layout.region.RepeatStructConverter;
 import com.sun.javafx.scene.layout.region.SliceSequenceConverter;
 import com.sun.javafx.scene.layout.region.StrokeBorderPaintConverter;
+import javafx.geometry.NodeOrientation;
 
 final public class CSSParser {
     static boolean EXIT_ON_ERROR = false;
@@ -3966,7 +3967,7 @@ final public class CSSParser {
         String isel = ""; // id selector
         List<String>  csels = null; // class selector
         List<String> pclasses = null; // pseudoclasses
-
+        
         while (true) {
 
             final int ttype =
@@ -4001,18 +4002,24 @@ final public class CSSParser {
 
                 case CSSLexer.COLON:
                     currentToken = nextToken(lexer);
-                    if (currentToken != null &&
-                        currentToken.getType() == CSSLexer.IDENT) {
-                        if (pclasses == null) {
-                            pclasses = new ArrayList<String>();
-                        }
+                    if (currentToken != null && pclasses == null) {
+                        pclasses = new ArrayList<String>();
+                    }
+                     
+                    if (currentToken.getType() == CSSLexer.IDENT) {
                         pclasses.add(currentToken.getText());
+                    } else if (currentToken.getType() == CSSLexer.FUNCTION){
+                        String pclass = functionalPseudo(lexer);
+                        pclasses.add(pclass);
                     } else {
                         currentToken = Token.INVALID_TOKEN;
+                    }
+
+                    if (currentToken.getType() == Token.INVALID) {
                         return null;
                     }
                     break;
-
+                    
                 case CSSLexer.NL:
                 case CSSLexer.WS:
                 case CSSLexer.COMMA:
@@ -4026,7 +4033,7 @@ final public class CSSParser {
 
 
             }
-
+            
             // get the next token, but don't skip whitespace
             // since it may be a combinator
             currentToken = lexer.nextToken();
@@ -4035,7 +4042,47 @@ final public class CSSParser {
             }
         }
     }
+    
+    // From http://www.w3.org/TR/selectors/#grammar
+    //  functional_pseudo
+    //      : FUNCTION S* expression ')'
+    //      ;
+    //  expression
+    //      /* In CSS3, the expressions are identifiers, strings, */
+    //      /* or of the form "an+b" */
+    //      : [ [ PLUS | '-' | DIMENSION | NUMBER | STRING | IDENT ] S* ]+
+    //      ;
+    private String functionalPseudo(CSSLexer lexer) {
 
+        // TODO: This is not how we should handle functional pseudo-classes in the long-run!
+        
+        StringBuilder pclass = new StringBuilder(currentToken.getText());
+        
+        while(true) {
+            
+            currentToken = nextToken(lexer);
+            
+            switch(currentToken.getType()) {
+                
+                // TODO: lexer doesn't really scan right and isn't CSS3,
+                // so PLUS, '-', NUMBER, etc are all useless at this point.
+                case CSSLexer.STRING:
+                case CSSLexer.IDENT:
+                    pclass.append(currentToken.getText());
+                    break;
+                    
+                case CSSLexer.RPAREN:
+                    pclass.append(')');
+                    return pclass.toString();
+                    
+                default:
+                    currentToken = Token.INVALID_TOKEN;
+                    return null;
+            }
+        }
+        
+    }
+    
     private Combinator combinator(CSSLexer lexer) {
 
         Combinator combinator = null;

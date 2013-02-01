@@ -30,7 +30,8 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.*;
 import javafx.css.PseudoClass;
-
+import javafx.geometry.NodeOrientation;
+import static javafx.geometry.NodeOrientation.*;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 
@@ -193,6 +194,13 @@ final public class SimpleSelector extends Selector {
         for (PseudoClass pclass : pclasses) {
             names.add(pclass.getPseudoClassName());
         }
+        
+        if (nodeOrientation == RIGHT_TO_LEFT) {
+            names.add("dir(rtl)");
+        } else if (nodeOrientation == LEFT_TO_RIGHT) {
+            names.add("dir(ltr)");
+        }
+                    
         return Collections.unmodifiableList(names);
     }
         
@@ -205,6 +213,15 @@ final public class SimpleSelector extends Selector {
     // true if style class given
     final private boolean matchOnStyleClass;
 
+    // dir(ltr) or dir(rtl), otherwise inherit
+    final private NodeOrientation nodeOrientation;
+    
+    // Used in Match. If nodeOrientation is ltr or rtl, 
+    // then count it as a pseudoclass
+    NodeOrientation getNodeOrientation() {
+        return nodeOrientation;
+    }
+    
     // TODO: The parser passes styleClasses as a List. Should be array?
     public SimpleSelector(final String name, final List<String> styleClasses,
             final List<String> pseudoClasses, final String id)
@@ -221,16 +238,25 @@ final public class SimpleSelector extends Selector {
         this.matchOnStyleClass = (this.styleClassMasks.length > 0);
 
         final int nMax = pseudoClasses != null ? pseudoClasses.size() : 0;
-        long[] temp = nMax > 0 ? new long[1] : new long[0];
+        long[] temp = new long[0];
+        NodeOrientation dir = NodeOrientation.INHERIT;
         for(int n=0; n<nMax; n++) { 
             final String pclass = pseudoClasses.get(n);
             if (pclass == null || pclass.isEmpty()) continue;
+            
+            // TODO: This is not how we should handle functional pseudo-classes in the long-run!
+            if ("dir(".regionMatches(true, 0, pclass, 0, 4)) {
+                final boolean rtl = "dir(rtl)".equalsIgnoreCase(pclass);
+                dir = rtl ? RIGHT_TO_LEFT : LEFT_TO_RIGHT;
+                continue;
+            }
+            
             final PseudoClassImpl impl = 
                 (PseudoClassImpl)PseudoClassImpl.getPseudoClassImpl(pclass);
             temp = PseudoClassSet.addPseudoClass(temp, impl.index);
         }
         this.pseudoClassStates = temp;
-
+        this.nodeOrientation = dir;
         this.id = id == null ? "" : id;
         // if id is not null and not empty, then match needs to check id
         this.matchOnId = (id != null && !("".equals(id)));
@@ -255,7 +281,7 @@ final public class SimpleSelector extends Selector {
         this.matchOnStyleClass = other.matchOnStyleClass;
         
         this.pseudoClassStates = other.pseudoClassStates;
-        
+        this.nodeOrientation = other.nodeOrientation;
         this.id = other.id;
         this.matchOnId = other.matchOnId;
     }
@@ -303,6 +329,20 @@ final public class SimpleSelector extends Selector {
 
     @Override 
     public boolean applies(Node node) {
+        
+        // handle functional pseudo-class :dir()
+        // INHERIT applies to both :dir(rtl) and :dir(ltr)
+        if (nodeOrientation != INHERIT) {
+            
+            final Scene scene = node.getScene();
+            final NodeOrientation effectiveNodeOrientation =
+                    scene.getEffectiveNodeOrientation();
+            
+            if (effectiveNodeOrientation != INHERIT &&
+                    effectiveNodeOrientation != nodeOrientation) {
+                return false;
+            }
+        }
         
         // if the selector has an id,
         // then bail if it doesn't match the node's id
@@ -498,6 +538,7 @@ final public class SimpleSelector extends Selector {
             sbuf.append(':');
             sbuf.append(pseudoclasses.get(n));
         }
+            
         return sbuf.toString();
     }
 
