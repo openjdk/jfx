@@ -22,121 +22,125 @@
  *  - cagsrc double vs cagsrc float. Do we need to have both? We never use cagsrc.float now, so only
  *    if we intended to use it on low end systems would we bother compiling with it, not sure we care.
  */
+
+defaultTasks = ["generate"]
+RTDir = "."
+FXDir = "../javafx"
 task generate << {
     // Copy over the new gradle build files
     copy {
-        from "."
-        into "../javafx"
+        from RTDir
+        into FXDir
         include "build.gradle", "settings.gradle"
     }
 
     // Create the build-tools project
     copy {
-        from "rt/javafx-annotation-processor/src",
-             "rt/decora-compiler/src"
-        into "../javafx/build-tools/src/main/java"
+        from "${RTDir}/javafx-annotation-processor/src",
+             "${RTDir}/decora-compiler/src"
+        into "${FXDir}/build-tools/src/main/java"
         exclude "META-INF/**", "**/*.properties", "**/*.stg", "**/JSL.g"
     }
     copy {
-        from "rt/javafx-annotation-processor/src",
-             "rt/decora-compiler/src"
-        into "../javafx/build-tools/src/main/resources"
+        from "${RTDir}/javafx-annotation-processor/src",
+             "${RTDir}/decora-compiler/src"
+        into "${FXDir}/build-tools/src/main/resources"
         include "META-INF/**", "**/*.properties", "**/*.stg"
     }
     copy {
-        from "rt/decora-compiler/src/com/sun/scenario/effect/compiler/JSL.g"
-        into "../javafx/build-tools/src/main/antlr"
+        from "${RTDir}/decora-compiler/src/com/sun/scenario/effect/compiler/JSL.g"
+        into "${FXDir}/build-tools/src/main/antlr"
     }
 
     // Create the base module
     copy {
-        from "rt/javafx-util-converter/src",
-             "rt/javafx-anim/src",
-             "rt/javafx-common/src",
-             "rt/javafx-logging/src"
-        into "../javafx/modules/base/src/main/java"
+        from "${RTDir}/javafx-util-converter/src",
+             "${RTDir}/javafx-anim/src",
+             "${RTDir}/javafx-common/src",
+             "${RTDir}/javafx-logging/src"
+        into "${FXDir}/modules/base/src/main/java"
         exclude "com/sun/javafx/beans/annotations/**",
                 "com/sun/javafx/collections/annotations/**"
                 "**/*.properties"
     }
     copy {
-        from "rt/javafx-util-converter/src",
-             "rt/javafx-anim/src",
-             "rt/javafx-common/src",
-             "rt/javafx-logging/src"
-        into "../javafx/modules/base/src/main/resources"
+        from "${RTDir}/javafx-util-converter/src",
+             "${RTDir}/javafx-anim/src",
+             "${RTDir}/javafx-common/src",
+             "${RTDir}/javafx-logging/src"
+        into "${FXDir}/modules/base/src/main/resources"
         include "**/*.properties"
     }
     copy {
-        from "rt/javafx-common/build-tools"
-        into "../javafx/modules/base/src/main/version-info"
+        from "${RTDir}/javafx-common/build-tools"
+        into "${FXDir}/modules/base/src/main/version-info"
     }
     copy {
-        from "rt/javafx-util-converter/test",
-             "rt/javafx-anim/test/unit", // TODO also has functional tests
-             "rt/javafx-common/test/unit"
-        into "../javafx/modules/base/src/test/java"
+        from "${RTDir}/javafx-util-converter/test",
+             "${RTDir}/javafx-anim/test/unit", // TODO also has functional tests
+             "${RTDir}/javafx-common/test/unit"
+        into "${FXDir}/modules/base/src/test/java"
     }
 
     // Create the graphics module
     copy {
-        from "rt/javafx-ui-common/src",
-             "rt/javafx-concurrent/src",
-             "rt/javafx-geom/src",
-             "rt/javafx-geom/cagsrc.double",
-             "rt/javafx-sg-common/src",
-             "rt/javafx-sg-prism/src",
-             "rt/pisces/src"
-        into "../javafx/modules/graphics/src/main/java"
+        from "${RTDir}/javafx-ui-common/src",
+             "${RTDir}/javafx-concurrent/src",
+             "${RTDir}/javafx-geom/src",
+             "${RTDir}/javafx-geom/cagsrc.double",
+             "${RTDir}/javafx-sg-common/src",
+             "${RTDir}/javafx-sg-prism/src",
+             "${RTDir}/pisces/src"
+        into "${FXDir}/modules/graphics/src/main/java"
         exclude "com/sun/scenario/effect/compiler/JSL.g",
                 "com/sun/javafx/css/parser/jfxCssLexer.g",
                 "com/sun/javafx/css/parser/jfxCssParser.g",
                 "**/*.properties"
     }
     copy {
-        from "rt/javafx-ui-common/src",
-             "rt/javafx-concurrent/src",
-             "rt/javafx-geom/src",
-             "rt/javafx-geom/cagsrc.double",
-             "rt/javafx-sg-common/src",
-             "rt/javafx-sg-prism/src",
-             "rt/pisces/src"
-        into "../javafx/modules/graphics/src/main/resources"
+        from "${RTDir}/javafx-ui-common/src",
+             "${RTDir}/javafx-concurrent/src",
+             "${RTDir}/javafx-geom/src",
+             "${RTDir}/javafx-geom/cagsrc.double",
+             "${RTDir}/javafx-sg-common/src",
+             "${RTDir}/javafx-sg-prism/src",
+             "${RTDir}/pisces/src"
+        into "${FXDir}/modules/graphics/src/main/resources"
         include "**/*.properties"
     }
 
     copy {
-        from "rt/javafx-ui-common/src/com/sun/javafx/css/parser/jfxCssLexer.g",
-             "rt/javafx-ui-common/src/com/sun/javafx/css/parser/jfxCssParser.g"
-        into "../javafx/modules/graphics/src/main/antlr"
+        from "${RTDir}/javafx-ui-common/src/com/sun/javafx/css/parser/jfxCssLexer.g",
+             "${RTDir}/javafx-ui-common/src/com/sun/javafx/css/parser/jfxCssParser.g"
+        into "${FXDir}/modules/graphics/src/main/antlr"
     }
 
     copy {
-        from "rt/javafx-beans-dt/src"
-        into "../javafx/modules/graphics/src/main/dt"
+        from "${RTDir}/javafx-beans-dt/src"
+        into "${FXDir}/modules/graphics/src/main/dt"
     }
     copy {
-        from "rt/javafx-designtime/src"
-        into "../javafx/modules/graphics/src/main/dt"
+        from "${RTDir}/javafx-designtime/src"
+        into "${FXDir}/modules/graphics/src/main/dt"
         include "javafx/scene/ParentDesignInfo.java", "javafx/scene/layout/**", "com/**"
     }
 
     // Create the controls module
     copy {
-        from "rt/javafx-ui-charts/src",
-             "rt/javafx-ui-controls/src"
-        into "../javafx/modules/controls/src/main/java"
+        from "${RTDir}/javafx-ui-charts/src",
+             "${RTDir}/javafx-ui-controls/src"
+        into "${FXDir}/modules/controls/src/main/java"
         exclude "**/*.properties", "**/*.css"
     }
     copy {
-        from "rt/javafx-ui-charts/src",
-             "rt/javafx-ui-controls/src"
-        into "../javafx/modules/controls/src/main/resources"
+        from "${RTDir}/javafx-ui-charts/src",
+             "${RTDir}/javafx-ui-controls/src"
+        into "${FXDir}/modules/controls/src/main/resources"
         include "**/*.properties", "**/*.css"
     }
     copy {
-        from "rt/javafx-designtime/src"
-        into "../javafx/modules/controls/src/main/dt"
+        from "${RTDir}/javafx-designtime/src"
+        into "${FXDir}/modules/controls/src/main/dt"
         include "javafx/scene/control/**"
     }
 
@@ -148,7 +152,7 @@ task generate << {
 
     // Create the fxml module
     copy {
-        from "rt/javafx-fxml/src"
-        into "../javafx/modules/fxml/src/main/java"
+        from "${RTDir}/javafx-fxml/src"
+        into "${FXDir}/modules/fxml/src/main/java"
     }
 }
