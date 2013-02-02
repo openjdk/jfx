@@ -98,6 +98,24 @@ public class PieChart extends Chart {
     private final ListChangeListener<Data> dataChangeListener = new ListChangeListener<Data>() {
         @Override public void onChanged(Change<? extends Data> c) {
             while(c.next()) {
+                // RT-28090 Probably a sort happened, just reorder the pointers.
+                if (c.wasPermutated()) {
+                    Data ptr = begin;
+                    for(int i = 0; i < getData().size(); i++) {
+                        Data item = getData().get(i);
+                        if (i == 0) {
+                            begin = item;
+                            ptr = begin;
+                            begin.next = null;
+                        } else {
+                            ptr.next = item;
+                            item.next = null;
+                            ptr = item;
+                        }
+                    }
+                    requestChartLayout();
+                    return;
+                }
             // recreate linked list & set chart on new data
             for(int i=c.getFrom(); i<c.getTo(); i++) {
                 getData().get(i).setChart(PieChart.this);
