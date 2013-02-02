@@ -15,6 +15,7 @@
  *  - Pushing results to a repo?
  *  - VersionInfo needs to be parameterized so hudson can produce valid values
  *  - partial builds for compileXXX shaders isn't working (they also get compiled)
+ *  - ServiceWithSecurityManagerTest fails to complete when run from gradle.
  */
 defaultTasks = ["assemble"]
 
@@ -76,6 +77,7 @@ project(":build-tools") {
         antlr3 "org.antlr:antlr-runtime:3.4"
         antlr3 "org.antlr:stringtemplate:4.0.2@jar"
         antlr3 "org.antlr:antlr:3.4@jar"
+        testCompile "junit:junit:4.8.2"
     }
 
     task generateGrammarSource(type: JavaExec) {
@@ -134,6 +136,7 @@ project(":graphics") {
         compile project(":base"), project(":build-tools")
         compile ":$swtFileName:"
         compile files(rootDir.toString() + "/../crap/plugin_exports.jar")
+        testCompile "junit:junit:4.8.2"
     }
 
     task compileJSL(description: "Compile Java Shader Language (JSL) files") { }
@@ -187,6 +190,10 @@ project(":graphics") {
         into "build/resources/main"
     }
     processResources.dependsOn copyShaders
+//
+//    test {
+//        systemProperty "javafx.toolkit", "com.sun.javafx.pgstub.StubToolkit"
+//    }
 
     // TODO Need to compile the Decora SSE Natives now! I don't yet know how to compile natives
 }

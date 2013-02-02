@@ -27,6 +27,9 @@ defaultTasks = ["generate"]
 RTDir = "."
 FXDir = "../javafx"
 task generate << {
+    def excludeResources = ["META-INF/**", "**/*.properties", "**/*.stg", "**/*.g", "**/*.css", "**/*.html", "**/*.png", "**/*.jpg"]
+    def includeResources = ["META-INF/**", "**/*.properties", "**/*.stg", "**/*.css", "**/*.html", "**/*.png", "**/*.jpg"]
+
     // Copy over the new gradle build files
     copy {
         from RTDir
@@ -39,17 +42,27 @@ task generate << {
         from "${RTDir}/javafx-annotation-processor/src",
              "${RTDir}/decora-compiler/src"
         into "${FXDir}/build-tools/src/main/java"
-        exclude "META-INF/**", "**/*.properties", "**/*.stg", "**/JSL.g"
+        exclude excludeResources
     }
     copy {
         from "${RTDir}/javafx-annotation-processor/src",
              "${RTDir}/decora-compiler/src"
         into "${FXDir}/build-tools/src/main/resources"
-        include "META-INF/**", "**/*.properties", "**/*.stg"
+        include includeResources
     }
     copy {
         from "${RTDir}/decora-compiler/src/com/sun/scenario/effect/compiler/JSL.g"
         into "${FXDir}/build-tools/src/main/antlr"
+    }
+    copy {
+        from "${RTDir}/decora-compiler/test"
+        into "${FXDir}/build-tools/src/test/java"
+        exclude excludeResources
+    }
+    copy {
+        from "${RTDir}/decora-compiler/test"
+        into "${FXDir}/build-tools/src/test/resources"
+        include includeResources
     }
 
     // Create the base module
@@ -61,7 +74,7 @@ task generate << {
         into "${FXDir}/modules/base/src/main/java"
         exclude "com/sun/javafx/beans/annotations/**",
                 "com/sun/javafx/collections/annotations/**"
-                "**/*.properties"
+        exclude excludeResources
     }
     copy {
         from "${RTDir}/javafx-util-converter/src",
@@ -69,7 +82,7 @@ task generate << {
              "${RTDir}/javafx-common/src",
              "${RTDir}/javafx-logging/src"
         into "${FXDir}/modules/base/src/main/resources"
-        include "**/*.properties"
+        include includeResources
     }
     copy {
         from "${RTDir}/javafx-common/build-tools"
@@ -80,6 +93,14 @@ task generate << {
              "${RTDir}/javafx-anim/test/unit", // TODO also has functional tests
              "${RTDir}/javafx-common/test/unit"
         into "${FXDir}/modules/base/src/test/java"
+        exclude excludeResources
+    }
+    copy {
+        from "${RTDir}/javafx-util-converter/test",
+             "${RTDir}/javafx-anim/test/unit", // TODO also has functional tests
+             "${RTDir}/javafx-common/test/unit"
+        into "${FXDir}/modules/base/src/test/resources"
+        include includeResources
     }
 
     // Create the graphics module
@@ -94,8 +115,8 @@ task generate << {
         into "${FXDir}/modules/graphics/src/main/java"
         exclude "com/sun/scenario/effect/compiler/JSL.g",
                 "com/sun/javafx/css/parser/jfxCssLexer.g",
-                "com/sun/javafx/css/parser/jfxCssParser.g",
-                "**/*.properties"
+                "com/sun/javafx/css/parser/jfxCssParser.g"
+        exclude excludeResources
     }
     copy {
         from "${RTDir}/javafx-ui-common/src",
@@ -106,7 +127,27 @@ task generate << {
              "${RTDir}/javafx-sg-prism/src",
              "${RTDir}/pisces/src"
         into "${FXDir}/modules/graphics/src/main/resources"
-        include "**/*.properties"
+        include includeResources
+    }
+    copy {
+        from "${RTDir}/javafx-ui-common/test/unit",
+             "${RTDir}/javafx-concurrent/test",
+             "${RTDir}/javafx-geom/test",
+             "${RTDir}/javafx-sg-common/test",
+             "${RTDir}/javafx-sg-prism/test",
+             "${RTDir}/test-stub-toolkit/src"
+        into "${FXDir}/modules/graphics/src/test/java"
+        exclude excludeResources
+    }
+    copy {
+        from "${RTDir}/javafx-ui-common/test/unit",
+             "${RTDir}/javafx-concurrent/test",
+             "${RTDir}/javafx-geom/test",
+             "${RTDir}/javafx-sg-common/test",
+             "${RTDir}/javafx-sg-prism/test",
+             "${RTDir}/test-stub-toolkit/src"
+        into "${FXDir}/modules/graphics/src/test/resources"
+        include includeResources
     }
 
     copy {
@@ -130,13 +171,13 @@ task generate << {
         from "${RTDir}/javafx-ui-charts/src",
              "${RTDir}/javafx-ui-controls/src"
         into "${FXDir}/modules/controls/src/main/java"
-        exclude "**/*.properties", "**/*.css"
+        exclude excludeResources
     }
     copy {
         from "${RTDir}/javafx-ui-charts/src",
              "${RTDir}/javafx-ui-controls/src"
         into "${FXDir}/modules/controls/src/main/resources"
-        include "**/*.properties", "**/*.css"
+        include includeResources
     }
     copy {
         from "${RTDir}/javafx-designtime/src"
@@ -154,5 +195,11 @@ task generate << {
     copy {
         from "${RTDir}/javafx-fxml/src"
         into "${FXDir}/modules/fxml/src/main/java"
+        exclude excludeResources
+    }
+    copy {
+        from "${RTDir}/javafx-fxml/src"
+        into "${FXDir}/modules/fxml/src/main/resources"
+        include includeResources
     }
 }
