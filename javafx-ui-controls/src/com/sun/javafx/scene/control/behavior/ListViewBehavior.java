@@ -359,7 +359,7 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
         ** only add this if we're on an embedded
         ** platform that supports 5-button navigation 
         */
-        if (Utils.isEmbeddedNonTouch()) {
+        if (Utils.isTwoLevelFocus()) {
             tlFocus = new TwoLevelFocusListBehavior(control); // needs to be last.
         }
     }

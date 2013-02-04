@@ -145,7 +145,7 @@ public class ContextMenuContent extends Region {
         ** only add this if we're on an embedded
         ** platform that supports 5-button navigation 
         */
-        if (Utils.isEmbeddedNonTouch()) {
+        if (Utils.isTwoLevelFocus()) {
             new TwoLevelFocusPopupBehavior(this);
         }
     }

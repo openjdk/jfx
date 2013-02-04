@@ -72,7 +72,7 @@ public class ComboBoxBaseBehavior<T> extends BehaviorBase<ComboBoxBase<T>> {
         ** only add this if we're on an embedded
         ** platform that supports 5-button navigation 
         */
-        if (com.sun.javafx.scene.control.skin.Utils.isEmbeddedNonTouch()) {
+        if (com.sun.javafx.scene.control.skin.Utils.isTwoLevelFocus()) {
             tlFocus = new TwoLevelFocusComboBehavior(comboBox); // needs to be last.
         }
     }
@@ -108,7 +108,7 @@ public class ComboBoxBaseBehavior<T> extends BehaviorBase<ComboBoxBase<T>> {
         } else {
             COMBO_BOX_BASE_BINDINGS.add(new KeyBinding(SPACE, KEY_PRESSED, PRESS_ACTION));
             COMBO_BOX_BASE_BINDINGS.add(new KeyBinding(SPACE, KEY_RELEASED, RELEASE_ACTION));
-            if (com.sun.javafx.scene.control.skin.Utils.isEmbeddedNonTouch()) {
+            if (com.sun.javafx.scene.control.skin.Utils.isTwoLevelFocus()) {
                 COMBO_BOX_BASE_BINDINGS.add(new KeyBinding(ENTER, KEY_PRESSED, PRESS_ACTION));
                 COMBO_BOX_BASE_BINDINGS.add(new KeyBinding(ENTER, KEY_RELEASED, RELEASE_ACTION));
             }
@@ -144,7 +144,7 @@ public class ComboBoxBaseBehavior<T> extends BehaviorBase<ComboBoxBase<T>> {
      * press.
      */
     private void keyPressed() {
-        if (com.sun.javafx.scene.control.skin.Utils.isEmbeddedNonTouch()) {
+        if (com.sun.javafx.scene.control.skin.Utils.isTwoLevelFocus()) {
             show();
             if (tlFocus != null) {
                 tlFocus.setExternalFocus(false);
@@ -163,7 +163,7 @@ public class ComboBoxBaseBehavior<T> extends BehaviorBase<ComboBoxBase<T>> {
      * to fire if it was armed by a keyPress.
      */
     private void keyReleased() {
-        if (!com.sun.javafx.scene.control.skin.Utils.isEmbeddedNonTouch()) {
+        if (!com.sun.javafx.scene.control.skin.Utils.isTwoLevelFocus()) {
             if (keyDown) {
                 keyDown = false;
                 if (getControl().isArmed()) {

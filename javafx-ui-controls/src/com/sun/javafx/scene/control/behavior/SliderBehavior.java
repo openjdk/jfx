@@ -113,7 +113,7 @@ public class SliderBehavior extends BehaviorBase<Slider> {
         ** only add this if we're on an embedded
         ** platform that supports 5-button navigation 
         */
-        if (com.sun.javafx.scene.control.skin.Utils.isEmbeddedNonTouch()) {
+        if (com.sun.javafx.scene.control.skin.Utils.isTwoLevelFocus()) {
             tlFocus = new TwoLevelFocusBehavior(slider); // needs to be last.
         }
     }

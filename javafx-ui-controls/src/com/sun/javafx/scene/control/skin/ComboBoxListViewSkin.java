@@ -157,7 +157,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
                         ** don't consume this if we're on an embedded
                         ** platform that supports 5-button navigation 
                         */
-                        if (!Utils.isEmbeddedNonTouch()) {
+                        if (!Utils.isTwoLevelFocus()) {
                             t.consume();
                         }
                         return;

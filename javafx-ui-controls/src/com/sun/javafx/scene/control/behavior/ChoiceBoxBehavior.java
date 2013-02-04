@@ -60,7 +60,7 @@ public class ChoiceBoxBehavior<T> extends BehaviorBase<ChoiceBox<T>> {
         CHOICE_BUTTON_BINDINGS.add(new KeyBinding(SPACE, KEY_PRESSED, "Press"));
         CHOICE_BUTTON_BINDINGS.add(new KeyBinding(SPACE, KEY_RELEASED, "Release"));
 
-        if (Utils.isEmbeddedNonTouch()) {
+        if (Utils.isTwoLevelFocus()) {
             CHOICE_BUTTON_BINDINGS.add(new KeyBinding(ENTER, KEY_PRESSED, "Press"));
             CHOICE_BUTTON_BINDINGS.add(new KeyBinding(ENTER, KEY_RELEASED, "Release"));
         }
@@ -88,7 +88,7 @@ public class ChoiceBoxBehavior<T> extends BehaviorBase<ChoiceBox<T>> {
         ** only add this if we're on an embedded
         ** platform that supports 5-button navigation 
         */
-        if (Utils.isEmbeddedNonTouch()) {
+        if (Utils.isTwoLevelFocus()) {
             new TwoLevelFocusComboBehavior(control); // needs to be last.
         }
     }
