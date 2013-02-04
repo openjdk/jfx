@@ -454,7 +454,7 @@ public abstract class Animation {
 
     public final ObjectProperty<Duration> delayProperty() {
         if (delay == null) {
-            delay = new ObjectPropertyBase<Duration>() {
+            delay = new ObjectPropertyBase<Duration>(DEFAULT_DELAY) {
 
                 @Override
                 public Object getBean() {
