@@ -3,6 +3,7 @@
  */
 package javafx.scene.control;
 
+import com.sun.javafx.Utils;
 import com.sun.javafx.scene.control.behavior.TreeViewAnchorRetriever;
 import static org.junit.Assert.*;
 

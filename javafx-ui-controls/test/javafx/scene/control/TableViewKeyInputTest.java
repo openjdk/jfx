@@ -3,6 +3,7 @@
  */
 package javafx.scene.control;
 
+import com.sun.javafx.Utils;
 import com.sun.javafx.scene.control.behavior.ListViewAnchorRetriever;
 import com.sun.javafx.scene.control.behavior.TableViewAnchorRetriever;
 import static org.junit.Assert.*;
@@ -229,7 +230,9 @@ public class TableViewKeyInputTest {
         sm.clearAndSelect(0);
         keyboard.doDownArrowPress(KeyModifier.getShortcutKey());    // move focus to 1
         keyboard.doDownArrowPress(KeyModifier.getShortcutKey());    // move focus to 2
-        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey());  // select 2
+        keyboard.doKeyPress(KeyCode.SPACE, 
+                KeyModifier.getShortcutKey(),
+                (Utils.isMac()  ? KeyModifier.CTRL : null));  // select 2
         assertTrue(isSelected(0, 2));
         assertTrue(isNotSelected(1));
         assertTrue(isAnchor(2));
@@ -240,7 +243,9 @@ public class TableViewKeyInputTest {
         sm.clearAndSelect(2);
         keyboard.doUpArrowPress(KeyModifier.getShortcutKey());    // move focus to 1
         keyboard.doUpArrowPress(KeyModifier.getShortcutKey());    // move focus to 0
-        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey());  // select 0
+        keyboard.doKeyPress(KeyCode.SPACE, 
+                KeyModifier.getShortcutKey(),
+                (Utils.isMac()  ? KeyModifier.CTRL : null));  // select 0
         assertTrue(isSelected(0, 2));
         assertTrue(isNotSelected(1));
         assertTrue(isAnchor(0));
@@ -283,7 +288,9 @@ public class TableViewKeyInputTest {
         sm.clearAndSelect(5);
         assertTrue(isSelected(5));
         assertTrue(fm.isFocused(5));
-        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey());
+        keyboard.doKeyPress(KeyCode.SPACE, 
+                KeyModifier.getShortcutKey(),
+                (Utils.isMac()  ? KeyModifier.CTRL : null));
         assertTrue(isNotSelected(5));
         assertTrue(debug(), fm.isFocused(5));
         assertTrue(isAnchor(5));
@@ -405,11 +412,15 @@ public class TableViewKeyInputTest {
         sm.clearAndSelect(0);
         keyboard.doDownArrowPress(KeyModifier.getShortcutKey());    // move focus to 1
         keyboard.doDownArrowPress(KeyModifier.getShortcutKey());    // move focus to 2
-        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey());  // select 2
+        keyboard.doKeyPress(KeyCode.SPACE, 
+                KeyModifier.getShortcutKey(),
+                (Utils.isMac()  ? KeyModifier.CTRL : null));  // select 2
         
         keyboard.doUpArrowPress(KeyModifier.getShortcutKey());    // move focus to 1
         keyboard.doUpArrowPress(KeyModifier.getShortcutKey());    // move focus to 0
-        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey());  // deselect 0
+        keyboard.doKeyPress(KeyCode.SPACE, 
+                KeyModifier.getShortcutKey(),
+                (Utils.isMac()  ? KeyModifier.CTRL : null));  // deselect 0
         assertTrue(isSelected(2));
         assertTrue(isNotSelected(0, 1));
         assertTrue(isAnchor(0));
@@ -420,11 +431,15 @@ public class TableViewKeyInputTest {
         sm.clearAndSelect(2);
         keyboard.doUpArrowPress(KeyModifier.getShortcutKey());    // move focus to 1
         keyboard.doUpArrowPress(KeyModifier.getShortcutKey());    // move focus to 0
-        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey());  // select 0
+        keyboard.doKeyPress(KeyCode.SPACE, 
+                KeyModifier.getShortcutKey(),
+                (Utils.isMac()  ? KeyModifier.CTRL : null));  // select 0
         
         keyboard.doDownArrowPress(KeyModifier.getShortcutKey());    // move focus to 1
         keyboard.doDownArrowPress(KeyModifier.getShortcutKey());    // move focus to 2
-        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey());  // deselect 2
+        keyboard.doKeyPress(KeyCode.SPACE, 
+                KeyModifier.getShortcutKey(),
+                (Utils.isMac()  ? KeyModifier.CTRL : null));  // deselect 2
         assertTrue(isSelected(0));
         assertTrue(isNotSelected(1, 2));
         assertTrue(isAnchor(2));
@@ -435,11 +450,15 @@ public class TableViewKeyInputTest {
         sm.clearAndSelect(0);
         keyboard.doDownArrowPress(KeyModifier.getShortcutKey());    // move focus to 1
         keyboard.doDownArrowPress(KeyModifier.getShortcutKey());    // move focus to 2
-        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey());  // select 2
+        keyboard.doKeyPress(KeyCode.SPACE, 
+                KeyModifier.getShortcutKey(),
+                (Utils.isMac()  ? KeyModifier.CTRL : null));  // select 2
         
         keyboard.doDownArrowPress(KeyModifier.getShortcutKey());    // move focus to 3
         keyboard.doDownArrowPress(KeyModifier.getShortcutKey());    // move focus to 4
-        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey());  // select 4
+        keyboard.doKeyPress(KeyCode.SPACE, 
+                KeyModifier.getShortcutKey(),
+                (Utils.isMac()  ? KeyModifier.CTRL : null));  // select 4
         assertTrue(isSelected(0, 2, 4));
         assertTrue(isNotSelected(1, 3, 5));
         assertTrue(isAnchor(4));
@@ -450,11 +469,15 @@ public class TableViewKeyInputTest {
         sm.clearAndSelect(4);
         keyboard.doUpArrowPress(KeyModifier.getShortcutKey());    // move focus to 3
         keyboard.doUpArrowPress(KeyModifier.getShortcutKey());    // move focus to 2
-        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey());  // select 2
+        keyboard.doKeyPress(KeyCode.SPACE, 
+                KeyModifier.getShortcutKey(),
+                (Utils.isMac()  ? KeyModifier.CTRL : null));  // select 2
         
         keyboard.doUpArrowPress(KeyModifier.getShortcutKey());    // move focus to 1
         keyboard.doUpArrowPress(KeyModifier.getShortcutKey());    // move focus to 0
-        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey());  // select 0
+        keyboard.doKeyPress(KeyCode.SPACE, 
+                KeyModifier.getShortcutKey(),
+                (Utils.isMac()  ? KeyModifier.CTRL : null));  // select 0
         assertTrue(isSelected(0, 2, 4));
         assertTrue(isNotSelected(1, 3));
         assertTrue(isAnchor(0));
@@ -487,7 +510,9 @@ public class TableViewKeyInputTest {
         sm.clearAndSelect(0);
         keyboard.doDownArrowPress(KeyModifier.getShortcutKey());    // move focus to 1
         keyboard.doDownArrowPress(KeyModifier.getShortcutKey());    // move focus to 2
-        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey());  // select 2, keeping 0 selected
+        keyboard.doKeyPress(KeyCode.SPACE, 
+                KeyModifier.getShortcutKey(),
+                (Utils.isMac()  ? KeyModifier.CTRL : null));  // select 2, keeping 0 selected
         assertTrue(isSelected(0, 2));
         assertTrue(isNotSelected(1, 3));
         assertTrue(isAnchor(2));
@@ -505,7 +530,9 @@ public class TableViewKeyInputTest {
         sm.clearAndSelect(4);
         keyboard.doUpArrowPress(KeyModifier.getShortcutKey());    // move focus to 3
         keyboard.doUpArrowPress(KeyModifier.getShortcutKey());    // move focus to 2
-        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey());  // select 2, keeping 4 selected
+        keyboard.doKeyPress(KeyCode.SPACE, 
+                KeyModifier.getShortcutKey(),
+                (Utils.isMac()  ? KeyModifier.CTRL : null));  // select 2, keeping 4 selected
         assertTrue(isSelected(2, 4));
         assertTrue(isNotSelected(0, 1, 3));
         assertTrue(isAnchor(2));
@@ -564,7 +591,9 @@ public class TableViewKeyInputTest {
         sm.clearAndSelect(0);
         keyboard.doDownArrowPress(KeyModifier.getShortcutKey());    // move focus to 1
         keyboard.doDownArrowPress(KeyModifier.getShortcutKey());    // move focus to 2
-        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey());  // select 0,2
+        keyboard.doKeyPress(KeyCode.SPACE, 
+                KeyModifier.getShortcutKey(),
+                (Utils.isMac()  ? KeyModifier.CTRL : null));  // select 0,2
         assertTrue(isSelected(0, 2));
         assertTrue(isNotSelected(1, 3));
         assertTrue(isAnchor(2));
@@ -582,7 +611,9 @@ public class TableViewKeyInputTest {
         sm.clearAndSelect(5);
         keyboard.doUpArrowPress(KeyModifier.getShortcutKey());    // move focus to 4
         keyboard.doUpArrowPress(KeyModifier.getShortcutKey());    // move focus to 3
-        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey());  // select 3,5
+        keyboard.doKeyPress(KeyCode.SPACE, 
+                KeyModifier.getShortcutKey(),
+                (Utils.isMac()  ? KeyModifier.CTRL : null));  // select 3,5
         assertTrue(isSelected(3,5));
         assertTrue(isNotSelected(0,1,2,4));
         assertTrue(isAnchor(3));
@@ -601,7 +632,9 @@ public class TableViewKeyInputTest {
         sm.clearAndSelect(0);
         keyboard.doDownArrowPress(KeyModifier.getShortcutKey());    // move focus to 1
         keyboard.doDownArrowPress(KeyModifier.getShortcutKey());    // move focus to 2
-        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey());  // select 0,2
+        keyboard.doKeyPress(KeyCode.SPACE, 
+                KeyModifier.getShortcutKey(),
+                (Utils.isMac()  ? KeyModifier.CTRL : null));  // select 0,2
         assertTrue(isSelected(0,2));
         assertTrue(isNotSelected(1,3,4));
         assertTrue(isAnchor(2));
@@ -620,7 +653,9 @@ public class TableViewKeyInputTest {
         sm.clearAndSelect(0);
         keyboard.doDownArrowPress(KeyModifier.getShortcutKey());    // move focus to 1
         keyboard.doDownArrowPress(KeyModifier.getShortcutKey());    // move focus to 2
-        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey());  // select 0,2
+        keyboard.doKeyPress(KeyCode.SPACE, 
+                KeyModifier.getShortcutKey(),
+                (Utils.isMac()  ? KeyModifier.CTRL : null));  // select 0,2
         assertTrue(isSelected(0,2));
         assertTrue(isNotSelected(1,3,4));
         assertTrue(isAnchor(2));
@@ -638,7 +673,9 @@ public class TableViewKeyInputTest {
         sm.clearAndSelect(5);
         keyboard.doUpArrowPress(KeyModifier.getShortcutKey());    // move focus to 4
         keyboard.doUpArrowPress(KeyModifier.getShortcutKey());    // move focus to 3
-        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey());  // select 3,5
+        keyboard.doKeyPress(KeyCode.SPACE, 
+                KeyModifier.getShortcutKey(),
+                (Utils.isMac()  ? KeyModifier.CTRL : null));  // select 3,5
         assertTrue(isSelected(3,5));
         assertTrue(isNotSelected(1,2,4));
         assertTrue(isAnchor(3));
@@ -656,7 +693,9 @@ public class TableViewKeyInputTest {
         sm.clearAndSelect(5);
         keyboard.doUpArrowPress(KeyModifier.getShortcutKey());    // move focus to 4
         keyboard.doUpArrowPress(KeyModifier.getShortcutKey());    // move focus to 3
-        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey());  // select 3,5
+        keyboard.doKeyPress(KeyCode.SPACE, 
+                KeyModifier.getShortcutKey(),
+                (Utils.isMac()  ? KeyModifier.CTRL : null));  // select 3,5
         assertTrue(isSelected(3,5));
         assertTrue(isNotSelected(0,1,2,4));
         assertTrue(isAnchor(3));
@@ -722,7 +761,9 @@ public class TableViewKeyInputTest {
         sm.clearAndSelect(0);
         keyboard.doDownArrowPress(KeyModifier.getShortcutKey());
         keyboard.doDownArrowPress(KeyModifier.getShortcutKey());
-        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey());
+        keyboard.doKeyPress(KeyCode.SPACE, 
+                KeyModifier.getShortcutKey(),
+                (Utils.isMac()  ? KeyModifier.CTRL : null));
         assertTrue(isSelected(0,2));
         assertTrue(isAnchor(2));
         
@@ -789,7 +830,9 @@ public class TableViewKeyInputTest {
         sm.clearAndSelect(0);
         keyboard.doDownArrowPress(KeyModifier.getShortcutKey());
         keyboard.doDownArrowPress(KeyModifier.getShortcutKey());
-        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey());
+        keyboard.doKeyPress(KeyCode.SPACE, 
+                KeyModifier.getShortcutKey(),
+                (Utils.isMac()  ? KeyModifier.CTRL : null));
         assertTrue(isSelected(0,2));
         assertTrue(isAnchor(2));
         
@@ -804,7 +847,9 @@ public class TableViewKeyInputTest {
         sm.clearAndSelect(5);
         keyboard.doUpArrowPress(KeyModifier.getShortcutKey());
         keyboard.doUpArrowPress(KeyModifier.getShortcutKey());
-        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey());
+        keyboard.doKeyPress(KeyCode.SPACE, 
+                KeyModifier.getShortcutKey(),
+                (Utils.isMac()  ? KeyModifier.CTRL : null));
         assertTrue(isSelected(3,5));
         assertTrue(isAnchor(3));
         
@@ -820,7 +865,9 @@ public class TableViewKeyInputTest {
         sm.clearAndSelect(0);
         keyboard.doDownArrowPress(KeyModifier.getShortcutKey());
         keyboard.doDownArrowPress(KeyModifier.getShortcutKey());
-        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey());
+        keyboard.doKeyPress(KeyCode.SPACE, 
+                KeyModifier.getShortcutKey(),
+                (Utils.isMac()  ? KeyModifier.CTRL : null));
         assertTrue(isSelected(0,2));
         assertTrue(isAnchor(2));
         
@@ -843,7 +890,9 @@ public class TableViewKeyInputTest {
         sm.clearAndSelect(5);
         keyboard.doUpArrowPress(KeyModifier.getShortcutKey());
         keyboard.doUpArrowPress(KeyModifier.getShortcutKey());
-        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey());
+        keyboard.doKeyPress(KeyCode.SPACE, 
+                KeyModifier.getShortcutKey(),
+                (Utils.isMac()  ? KeyModifier.CTRL : null));
         assertTrue(isSelected(3,5));
         assertTrue(isAnchor(3));
         
@@ -866,7 +915,9 @@ public class TableViewKeyInputTest {
 //        sm.clearAndSelect(0);
 //        keyboard.doDownArrowPress(KeyModifier.getShortcutKey());
 //        keyboard.doDownArrowPress(KeyModifier.getShortcutKey());
-//        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey());
+//        keyboard.doKeyPress(KeyCode.SPACE, 
+//                KeyModifier.getShortcutKey(),
+//                (Utils.isMac()  ? KeyModifier.CTRL : null));
 //        assertTrue(isSelected(0,2));
 //        assertTrue(isAnchor(2));
 //        // end of similarities
@@ -881,7 +932,9 @@ public class TableViewKeyInputTest {
         sm.clearAndSelect(10);
         keyboard.doUpArrowPress(KeyModifier.getShortcutKey());
         keyboard.doUpArrowPress(KeyModifier.getShortcutKey());
-        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey());
+        keyboard.doKeyPress(KeyCode.SPACE, 
+                KeyModifier.getShortcutKey(),
+                (Utils.isMac()  ? KeyModifier.CTRL : null));
         assertTrue(debug(), isSelected(8,10));
         assertTrue(isAnchor(8));
         
@@ -895,7 +948,9 @@ public class TableViewKeyInputTest {
 //        sm.clearAndSelect(0);
 //        keyboard.doDownArrowPress(KeyModifier.getShortcutKey());
 //        keyboard.doDownArrowPress(KeyModifier.getShortcutKey());
-//        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey());
+//        keyboard.doKeyPress(KeyCode.SPACE, 
+//                KeyModifier.getShortcutKey(),
+//                (Utils.isMac()  ? KeyModifier.CTRL : null));
 //        assertTrue(isSelected(0,2));
 //        assertTrue(isAnchor(2));
 //        
@@ -917,7 +972,9 @@ public class TableViewKeyInputTest {
         sm.clearAndSelect(0);
         keyboard.doDownArrowPress(KeyModifier.getShortcutKey());
         keyboard.doDownArrowPress(KeyModifier.getShortcutKey());
-        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey());
+        keyboard.doKeyPress(KeyCode.SPACE, 
+                KeyModifier.getShortcutKey(),
+                (Utils.isMac()  ? KeyModifier.CTRL : null));
         assertTrue(isSelected(0,2));
         assertTrue(isAnchor(2));
         
@@ -931,7 +988,9 @@ public class TableViewKeyInputTest {
         sm.clearAndSelect(8);
         keyboard.doUpArrowPress(KeyModifier.getShortcutKey());
         keyboard.doUpArrowPress(KeyModifier.getShortcutKey());
-        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey());
+        keyboard.doKeyPress(KeyCode.SPACE, 
+                KeyModifier.getShortcutKey(),
+                (Utils.isMac()  ? KeyModifier.CTRL : null));
         assertTrue(isSelected(6,8));
         assertTrue(isAnchor(6));
         
@@ -957,7 +1016,9 @@ public class TableViewKeyInputTest {
         sm.clearAndSelect(0);
         keyboard.doDownArrowPress(KeyModifier.getShortcutKey());
         keyboard.doDownArrowPress(KeyModifier.getShortcutKey());
-        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey());
+        keyboard.doKeyPress(KeyCode.SPACE, 
+                KeyModifier.getShortcutKey(),
+                (Utils.isMac()  ? KeyModifier.CTRL : null));
         assertTrue(isSelected(0,2));
         assertTrue(isAnchor(2));
         
@@ -973,7 +1034,9 @@ public class TableViewKeyInputTest {
         assertTrue(isAnchor(2));
         
         keyboard.doUpArrowPress(KeyModifier.getShortcutKey());
-        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey());
+        keyboard.doKeyPress(KeyCode.SPACE, 
+                KeyModifier.getShortcutKey(),
+                (Utils.isMac()  ? KeyModifier.CTRL : null));
         assertTrue(isSelected(1,2,3,4));
         assertTrue(isAnchor(0));
         assertTrue(fm.isFocused(0));
@@ -991,7 +1054,9 @@ public class TableViewKeyInputTest {
         sm.select(0, col0);
         keyboard.doRightArrowPress(KeyModifier.getShortcutKey());
         keyboard.doRightArrowPress(KeyModifier.getShortcutKey());
-        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey());
+        keyboard.doKeyPress(KeyCode.SPACE, 
+                KeyModifier.getShortcutKey(),
+                (Utils.isMac()  ? KeyModifier.CTRL : null));
         assertTrue(sm.isSelected(0,col0));
         assertTrue(sm.isSelected(0,col2));
         assertTrue(isAnchor(0,2));
@@ -1012,7 +1077,9 @@ public class TableViewKeyInputTest {
         sm.select(0, col4);
         keyboard.doLeftArrowPress(KeyModifier.getShortcutKey());
         keyboard.doLeftArrowPress(KeyModifier.getShortcutKey());
-        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey());
+        keyboard.doKeyPress(KeyCode.SPACE, 
+                KeyModifier.getShortcutKey(),
+                (Utils.isMac()  ? KeyModifier.CTRL : null));
         assertTrue(sm.isSelected(0,col4));
         assertTrue(sm.isSelected(0,col2));
         assertTrue(isAnchor(0,2));
@@ -1033,7 +1100,9 @@ public class TableViewKeyInputTest {
         sm.select(0, col0);
         keyboard.doRightArrowPress(KeyModifier.getShortcutKey());
         keyboard.doRightArrowPress(KeyModifier.getShortcutKey());
-        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey());
+        keyboard.doKeyPress(KeyCode.SPACE, 
+                KeyModifier.getShortcutKey(),
+                (Utils.isMac()  ? KeyModifier.CTRL : null));
         assertTrue(sm.isSelected(0,col0));
         assertTrue(sm.isSelected(0,col2));
         assertTrue(isAnchor(0,2));
@@ -1064,7 +1133,9 @@ public class TableViewKeyInputTest {
         sm.select(0, col4);
         keyboard.doLeftArrowPress(KeyModifier.getShortcutKey());
         keyboard.doLeftArrowPress(KeyModifier.getShortcutKey());
-        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey());
+        keyboard.doKeyPress(KeyCode.SPACE, 
+                KeyModifier.getShortcutKey(),
+                (Utils.isMac()  ? KeyModifier.CTRL : null));
         assertTrue(sm.isSelected(0,col4));
         assertTrue(sm.isSelected(0,col2));
         assertTrue(isAnchor(0,2));
@@ -1095,7 +1166,9 @@ public class TableViewKeyInputTest {
         sm.select(0, col1);
         keyboard.doDownArrowPress(KeyModifier.getShortcutKey());
         keyboard.doDownArrowPress(KeyModifier.getShortcutKey());
-        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey());
+        keyboard.doKeyPress(KeyCode.SPACE, 
+                KeyModifier.getShortcutKey(),
+                (Utils.isMac()  ? KeyModifier.CTRL : null));
         assertTrue(sm.isSelected(0,col1));
         assertTrue(sm.isSelected(2,col1));
         assertTrue(isAnchor(2,1));
@@ -1116,7 +1189,9 @@ public class TableViewKeyInputTest {
         sm.select(5, col1);
         keyboard.doUpArrowPress(KeyModifier.getShortcutKey());
         keyboard.doUpArrowPress(KeyModifier.getShortcutKey());
-        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey());
+        keyboard.doKeyPress(KeyCode.SPACE, 
+                KeyModifier.getShortcutKey(),
+                (Utils.isMac()  ? KeyModifier.CTRL : null));
         assertTrue(sm.isSelected(5,col1));
         assertTrue(sm.isSelected(3,col1));
         assertTrue(isAnchor(3,1));
@@ -1137,7 +1212,9 @@ public class TableViewKeyInputTest {
         sm.select(0, col1);
         keyboard.doDownArrowPress(KeyModifier.getShortcutKey());
         keyboard.doDownArrowPress(KeyModifier.getShortcutKey());
-        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey());
+        keyboard.doKeyPress(KeyCode.SPACE, 
+                KeyModifier.getShortcutKey(),
+                (Utils.isMac()  ? KeyModifier.CTRL : null));
         assertTrue(sm.isSelected(0,col1));
         assertTrue(sm.isSelected(2,col1));
         assertTrue(isAnchor(2,1));
@@ -1168,7 +1245,9 @@ public class TableViewKeyInputTest {
         sm.select(5, col1);
         keyboard.doUpArrowPress(KeyModifier.getShortcutKey());
         keyboard.doUpArrowPress(KeyModifier.getShortcutKey());
-        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey());
+        keyboard.doKeyPress(KeyCode.SPACE, 
+                KeyModifier.getShortcutKey(),
+                (Utils.isMac()  ? KeyModifier.CTRL : null));
         assertTrue(sm.isSelected(5,col1));
         assertTrue(sm.isSelected(3,col1));
         assertTrue(isAnchor(3,1));
@@ -1201,7 +1280,9 @@ public class TableViewKeyInputTest {
         sm.select(0, col1);
         keyboard.doDownArrowPress(KeyModifier.getShortcutKey());
         keyboard.doDownArrowPress(KeyModifier.getShortcutKey());
-        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey());
+        keyboard.doKeyPress(KeyCode.SPACE, 
+                KeyModifier.getShortcutKey(),
+                (Utils.isMac()  ? KeyModifier.CTRL : null));
         assertTrue(sm.isSelected(0,col1));
         assertTrue(sm.isSelected(2,col1));
         assertTrue(isAnchor(2,1));
@@ -1222,7 +1303,9 @@ public class TableViewKeyInputTest {
         sm.select(n, col1);
         keyboard.doUpArrowPress(KeyModifier.getShortcutKey());
         keyboard.doUpArrowPress(KeyModifier.getShortcutKey());
-        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey());
+        keyboard.doKeyPress(KeyCode.SPACE, 
+                KeyModifier.getShortcutKey(),
+                (Utils.isMac()  ? KeyModifier.CTRL : null));
         assertTrue(sm.isSelected(n,col1));
         assertTrue(sm.isSelected(n - 2,col1));
         assertTrue(isAnchor(n - 2,1));
@@ -1261,7 +1344,9 @@ public class TableViewKeyInputTest {
         sm.select(0, col1);
         keyboard.doDownArrowPress(KeyModifier.getShortcutKey());
         keyboard.doDownArrowPress(KeyModifier.getShortcutKey());
-        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey());
+        keyboard.doKeyPress(KeyCode.SPACE, 
+                KeyModifier.getShortcutKey(),
+                (Utils.isMac()  ? KeyModifier.CTRL : null));
         assertTrue(sm.isSelected(0,col1));
         assertTrue(sm.isSelected(2,col1));
         assertTrue(isAnchor(2,1));
@@ -1285,7 +1370,9 @@ public class TableViewKeyInputTest {
         assertTrue(isAnchor(2,1));
         
         keyboard.doUpArrowPress(KeyModifier.getShortcutKey());
-        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey());
+        keyboard.doKeyPress(KeyCode.SPACE, 
+                KeyModifier.getShortcutKey(),
+                (Utils.isMac()  ? KeyModifier.CTRL : null));
         assertFalse(sm.isSelected(0,col1));
         assertTrue(sm.isSelected(1,col1));
         assertTrue(sm.isSelected(2,col1));
@@ -1302,7 +1389,9 @@ public class TableViewKeyInputTest {
 //        sm.select(3, col1);
 //        keyboard.doRightArrowPress(KeyModifier.getShortcutKey());
 //        keyboard.doRightArrowPress(KeyModifier.getShortcutKey());
-//        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey());
+//        keyboard.doKeyPress(KeyCode.SPACE, 
+//                KeyModifier.getShortcutKey(),
+//                (Utils.isMac()  ? KeyModifier.CTRL : null));
 //        assertTrue(sm.isSelected(3,col1));
 //        assertTrue(sm.isSelected(3,col3));
 //        assertTrue(isAnchor(3,3));
@@ -1490,10 +1579,14 @@ public class TableViewKeyInputTest {
         sm.clearAndSelect(1);                          // select 1
         keyboard.doDownArrowPress(KeyModifier.getShortcutKey());   // shift focus to 2
         keyboard.doDownArrowPress(KeyModifier.getShortcutKey());   // shift focus to 3
-        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey()); // set anchor, and also select, 3
+        keyboard.doKeyPress(KeyCode.SPACE, 
+                KeyModifier.getShortcutKey(),
+                (Utils.isMac()  ? KeyModifier.CTRL : null)); // set anchor, and also select, 3
         keyboard.doDownArrowPress(KeyModifier.getShortcutKey());   // shift focus to 4
         keyboard.doDownArrowPress(KeyModifier.getShortcutKey());   // shift focus to 5
-        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey()); // set anchor, and also select, 5
+        keyboard.doKeyPress(KeyCode.SPACE, 
+                KeyModifier.getShortcutKey(),
+                (Utils.isMac()  ? KeyModifier.CTRL : null)); // set anchor, and also select, 5
         
         assertTrue(isSelected(1, 3, 5));
         assertTrue(isNotSelected(0, 2, 4));

@@ -232,7 +232,7 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
         // so that we know when they enter/leave multiple selection mode. This
         // changes what happens when certain key combinations are pressed.
         isShiftDown = e.getEventType() == KeyEvent.KEY_PRESSED && e.isShiftDown();
-        isCtrlDown = e.getEventType() == KeyEvent.KEY_PRESSED && e.isControlDown();
+        isShortcutDown = e.getEventType() == KeyEvent.KEY_PRESSED && e.isShortcutDown();
         
         super.callActionForEvent(e);
     }
@@ -242,7 +242,7 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
      *************************************************************************/
     
     private boolean isShiftDown = false;
-    private boolean isCtrlDown = false;
+    private boolean isShortcutDown = false;
     
     private Callback<Integer, Integer> onScrollPageUp;
     private Callback<Integer, Integer> onScrollPageDown;
@@ -446,7 +446,7 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
         
         fm.focusPrevious();
         
-        if (! isCtrlDown || getAnchor() == -1) {
+        if (! isShortcutDown || getAnchor() == -1) {
             setAnchor(fm.getFocusedIndex());
         }
         
@@ -462,7 +462,7 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
         
         fm.focusNext();
         
-        if (! isCtrlDown || getAnchor() == -1) {
+        if (! isShortcutDown || getAnchor() == -1) {
             setAnchor(fm.getFocusedIndex());
         }
         

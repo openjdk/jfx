@@ -207,7 +207,7 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
         // so that we know when they enter/leave multiple selection mode. This
         // changes what happens when certain key combinations are pressed.
         isShiftDown = e.getEventType() == KeyEvent.KEY_PRESSED && e.isShiftDown();
-        isCtrlDown = e.getEventType() == KeyEvent.KEY_PRESSED && e.isControlDown();
+        isShortcutDown = e.getEventType() == KeyEvent.KEY_PRESSED && e.isShortcutDown();
         
         super.callActionForEvent(e);
     }
@@ -220,7 +220,7 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
      *                                                                        *  
      *************************************************************************/
     
-    protected boolean isCtrlDown = false;
+    protected boolean isShortcutDown = false;
     protected boolean isShiftDown = false;
     protected boolean selectionPathDeviated = false;
     protected boolean selectionChanging = false;
@@ -516,7 +516,7 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
             fm.focusPrevious();
         }
         
-        if (! isCtrlDown || getAnchor() == null) {
+        if (! isShortcutDown || getAnchor() == null) {
             setAnchor(fm.getFocusedIndex(), null);
         }
 
@@ -536,7 +536,7 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
             fm.focusNext();
         }
         
-        if (! isCtrlDown || getAnchor() == null) {
+        if (! isShortcutDown || getAnchor() == null) {
             setAnchor(fm.getFocusedIndex(), null);
         }
         
