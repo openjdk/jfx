@@ -3,15 +3,8 @@
  */
 package javafx.scene.control;
 
-import javafx.css.CssMetaData;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-
 import java.util.Arrays;
 import java.util.Collection;
-
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.property.BooleanProperty;
@@ -20,15 +13,19 @@ import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
+import javafx.css.CssMetaData;
 import javafx.css.StyleableProperty;
+import javafx.scene.Scene;
 import javafx.scene.input.Clipboard;
 import javafx.scene.input.ClipboardContent;
-
+import javafx.scene.text.Font;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
+
+import static org.junit.Assert.*;
 
 /**
  */
@@ -92,6 +89,17 @@ public class TextInputControlTest {
 
     @Test public void selectionEndDefaultsToZero() {
         assertEquals(0, textInput.getSelection().getEnd());
+    }
+
+    /*********************************************************************
+     * Tests for CSS                                                     *
+     ********************************************************************/
+
+    @Test public void fontSetFromCSS() {
+        textInput.setStyle("-fx-font: 24 Helvetica");
+        Scene s = new Scene(textInput);
+        textInput.impl_processCSS(true);
+        assertEquals(Font.font("Helvetica", 24), textInput.getFont());
     }
 
     /******************************************************

@@ -828,11 +828,11 @@ public class TableColumnHeader extends Region {
             }
         };
 
-         private static final List<CssMetaData> STYLEABLES;
+         private static final List<CssMetaData<? extends Node, ?>> STYLEABLES;
          static {
 
-            final List<CssMetaData> styleables = 
-                new ArrayList<CssMetaData>(Region.getClassCssMetaData());
+            final List<CssMetaData<? extends Node, ?>> styleables = 
+                new ArrayList<CssMetaData<? extends Node, ?>>(Region.getClassCssMetaData());
             Collections.addAll(styleables,
                 SIZE
             );
@@ -845,7 +845,7 @@ public class TableColumnHeader extends Region {
      * @return The CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
      */
-    public static List<CssMetaData> getClassCssMetaData() {
+    public static List<CssMetaData<? extends Node, ?>> getClassCssMetaData() {
         return StyleableProperties.STYLEABLES;
     }
 
@@ -853,7 +853,7 @@ public class TableColumnHeader extends Region {
      * {@inheritDoc}
      */
     @Override
-    public List<CssMetaData> getCssMetaData() {
+    public List<CssMetaData<? extends Node, ?>> getCssMetaData() {
         return getClassCssMetaData();
     }
 

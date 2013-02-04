@@ -44,6 +44,7 @@ import javafx.event.WeakEventHandler;
 import com.sun.javafx.scene.control.skin.TreeViewSkin;
 import com.sun.javafx.scene.control.skin.VirtualContainerBase;
 import java.lang.ref.WeakReference;
+import javafx.application.Platform;
 import javafx.beans.DefaultProperty;
 import javafx.beans.property.ReadOnlyIntegerProperty;
 import javafx.beans.property.ReadOnlyIntegerWrapper;
@@ -999,6 +1000,7 @@ public class TreeView<T> extends Control {
                     }
                 }
                 
+                treeView.expandedItemCountDirty = true;
                 shiftSelection(startRow, shift);
             }
         };
@@ -1141,12 +1143,12 @@ public class TreeView<T> extends Control {
                 int row = treeView.getRow(e.getTreeItem());
                 int shift = 0;
                 if (e.wasExpanded()) {
-                    if (row > getFocusedIndex()) {
+                    if (row < getFocusedIndex()) {
                         // need to shuffle selection by the number of visible children
                         shift = e.getTreeItem().getExpandedDescendentCount(false) - 1;
                     }
                 } else if (e.wasCollapsed()) {
-                    if (row > getFocusedIndex()) {
+                    if (row < getFocusedIndex()) {
                         // need to shuffle selection by the number of visible children
                         // that were just hidden
                         shift = - e.getTreeItem().previousExpandedDescendentCount + 1;
@@ -1176,7 +1178,14 @@ public class TreeView<T> extends Control {
                     }
                 }
                 
-                focus(getFocusedIndex() + shift);
+                if(shift != 0) {
+                    final int newFocus = getFocusedIndex() + shift;
+                    Platform.runLater(new Runnable() {
+                        @Override public void run() {
+                            focus(newFocus);
+                        }
+                    });
+                } 
             }
         };
         
@@ -1193,5 +1202,16 @@ public class TreeView<T> extends Control {
 
             return treeView.getTreeItem(index);
         }
+
+        /** {@inheritDoc} */
+        @Override public void focus(int index) {
+            if (treeView.expandedItemCountDirty) {
+                treeView.updateExpandedItemCount(treeView.getRoot());
+            }
+            
+            super.focus(index);
+        }
+        
+        
     }
 }

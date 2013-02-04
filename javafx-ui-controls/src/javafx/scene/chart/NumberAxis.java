@@ -49,6 +49,7 @@ import javafx.css.StyleableDoubleProperty;
 import javafx.css.CssMetaData;
 import com.sun.javafx.css.converters.SizeConverter;
 import javafx.css.StyleableProperty;
+import javafx.scene.Node;
 
 /**
  * A axis class that plots a range of numbers with major tick marks every "tickUnit". You can use any Number type with
@@ -429,13 +430,11 @@ public final class NumberAxis extends ValueAxis<Number> {
             }
         };
 
-        private static final List<CssMetaData> STYLEABLES;
+        private static final List<CssMetaData<? extends Node, ?>> STYLEABLES;
         static {
-           final List<CssMetaData> styleables = 
-               new ArrayList<CssMetaData>(ValueAxis.getClassCssMetaData());
-           Collections.addAll(styleables,
-                TICK_UNIT
-            );
+           final List<CssMetaData<? extends Node, ?>> styleables = 
+               new ArrayList<CssMetaData<? extends Node, ?>>(ValueAxis.getClassCssMetaData());
+           styleables.add(TICK_UNIT);
            STYLEABLES = Collections.unmodifiableList(styleables);
         }
     }
@@ -444,7 +443,7 @@ public final class NumberAxis extends ValueAxis<Number> {
      * @return The CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
      */
-    public static List<CssMetaData> getClassCssMetaData() {
+    public static List<CssMetaData<? extends Node, ?>> getClassCssMetaData() {
         return StyleableProperties.STYLEABLES;
     }
 
@@ -452,7 +451,7 @@ public final class NumberAxis extends ValueAxis<Number> {
      * {@inheritDoc}
      */
     @Override
-    public List<CssMetaData> getCssMetaData() {
+    public List<CssMetaData<? extends Node, ?>> getCssMetaData() {
         return getClassCssMetaData();
     }
 

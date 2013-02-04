@@ -1503,4 +1503,55 @@ public class TableViewKeyInputTest {
         assertTrue(isSelected(4, 5));
         assertTrue(isNotSelected(0, 1, 2, 3));
     }
+    
+    @Test public void test_rt14451_1() {
+        sm.clearAndSelect(5);                          
+
+        keyboard.doKeyPress(KeyCode.HOME, KeyModifier.SHIFT); 
+        assertTrue(isSelected(0,1,2,3,4,5));
+        assertTrue(isNotSelected(6,7,8,9));
+        
+        keyboard.doKeyPress(KeyCode.END, KeyModifier.SHIFT); 
+        assertTrue(isNotSelected(0,1,2,3,4));
+        assertTrue(isSelected(5,6,7,8,9));
+        
+        keyboard.doKeyPress(KeyCode.HOME, KeyModifier.SHIFT); 
+        assertTrue(isSelected(0,1,2,3,4,5));
+        assertTrue(debug(), isNotSelected(6,7,8,9));
+    } 
+    
+    @Test public void test_rt14451_2() {
+        sm.clearAndSelect(5);                          
+
+        keyboard.doKeyPress(KeyCode.END, KeyModifier.SHIFT); 
+        assertTrue(isNotSelected(0,1,2,3,4));
+        assertTrue(isSelected(5,6,7,8,9));
+        
+        keyboard.doKeyPress(KeyCode.HOME, KeyModifier.SHIFT); 
+        assertTrue(isSelected(0,1,2,3,4,5));
+        assertTrue(debug(), isNotSelected(6,7,8,9));
+        
+        keyboard.doKeyPress(KeyCode.END, KeyModifier.SHIFT); 
+        assertTrue(isNotSelected(0,1,2,3,4));
+        assertTrue(isSelected(5,6,7,8,9));
+    } 
+    
+    @Test public void test_rt26835_1() {
+        sm.clearAndSelect(5);                          
+        keyboard.doKeyPress(KeyCode.HOME, KeyModifier.getShortcutKey()); 
+        assertTrue(fm.isFocused(0));
+    } 
+    
+    @Test public void test_rt26835_2() {
+        sm.clearAndSelect(5);                          
+        keyboard.doKeyPress(KeyCode.END, KeyModifier.getShortcutKey()); 
+        assertTrue(debug(), fm.isFocused(tableView.getItems().size() - 1));
+    } 
+    
+    @Test public void test_rt27175() {
+        sm.clearAndSelect(5);                          
+        keyboard.doKeyPress(KeyCode.HOME, KeyModifier.SHIFT, KeyModifier.getShortcutKey()); 
+        assertTrue(debug(), fm.isFocused(0));
+        assertTrue(isSelected(0,1,2,3,4,5));
+    }
 }

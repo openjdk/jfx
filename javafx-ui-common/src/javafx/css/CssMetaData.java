@@ -56,7 +56,7 @@ import javafx.scene.Node;
  * <code><pre>
  * private DoubleProperty gapProperty = new StyleableDoubleProperty(0) {
  *     {@literal @}Override 
- *      public CssMetaData getCssMetaData() {
+ *      public CssMetaData{@literal <}MyWidget,Number{@literal >} getCssMetaData() {
  *          return GAP_META_DATA;
  *      }
  *
@@ -72,7 +72,7 @@ import javafx.scene.Node;
  * };
  * 
  * private static final CssMetaData GAP_META_DATA = 
- *     new CssMetaData<MyWidget, Number>("-my-gap", StyleConverter.getSizeConverter(), 0d) {
+ *     new CssMetaData{@literal <}MyWidget,Number{@literal >}("-my-gap", StyleConverter.getSizeConverter(), 0d) {
  * 
  *        {@literal @}Override
  *        public boolean isSettable(MyWidget node) {
@@ -80,24 +80,25 @@ import javafx.scene.Node;
  *        }
  *    
  *        {@literal @}Override
- *        public StyleableProperty<Number> getStyleableProperty(MyWidget node) {
- *            return node.gapProperty;
+ *        public StyleableProperty{@literal <}Number{@literal >} getStyleableProperty(MyWidget node) {
+ *            return (StyleableProperty{@literal <}Number{@literal >})node.gapProperty;
  *        }
  * };
  * 
- * private static final List<CssMetaData> cssMetaDataList; 
+ * private static final List{@literal <}CssMetaData{@literal <}? extends Node, ?{@literal >}{@literal >} cssMetaDataList; 
  * static {
- *     List<CssMetaData> temp = new ArrayList<CssMetaData>(Control.getClassCssMetaData());
- *     Collections.addAll(temp, GAP_META_DATA);
+ *     List{@literal <}CssMetaData{@literal <}? extends Node, ?{@literal >}{@literal >} temp =
+ *         new ArrayList{@literal <}CssMetaData{@literal <}? extends Node, ?{@literal >}{@literal >}(Control.getClassCssMetaData());
+ *     temp.add(GAP_META_DATA);
  *     cssMetaDataList = Collections.unmodifiableList(temp);
  * }
  * 
- * public static List<CssMetaData> getClassCssMetaData() {
+ * public static List{@literal <}CssMetaData{@literal <}? extends Node, ?{@literal >}{@literal >} getClassCssMetaData() {
  *     return cssMetaDataList;
  * }
  * 
  * {@literal @}Override
- * public List<CssMetaData> getCssMetaData() {
+ * public List{@literal <}CssMetaData{@literal <}? extends Node, ?{@literal >}{@literal >} getCssMetaData() {
  *     return getClassCssMetaData();
  * }
  * </pre><code>
@@ -157,11 +158,11 @@ public abstract class CssMetaData<N extends Node, V> {
         return property;
     }
 
-    private final StyleConverter converter;
+    private final StyleConverter<?,V> converter;
     /**
      * @return The CSS converter that handles conversion from a CSS value to a Java Object
      */
-    public final StyleConverter getConverter() {
+    public final StyleConverter<?,V> getConverter() {
         return converter;
     }
 
@@ -184,12 +185,12 @@ public abstract class CssMetaData<N extends Node, V> {
         return initialValue;
     }
     
-    private final List<CssMetaData> subProperties;
+    private final List<CssMetaData<? extends Node, ?>> subProperties;
     /**
      * The sub-properties refers to the constituent properties of this property,
      * if any. For example, "-fx-font-weight" is sub-property of "-fx-font".
      */
-    public final List<CssMetaData> getSubProperties() {
+    public final List<CssMetaData<? extends Node, ?>> getSubProperties() {
         return subProperties;
     }
 
@@ -216,10 +217,10 @@ public abstract class CssMetaData<N extends Node, V> {
      */
     protected CssMetaData(
             final String property, 
-            final StyleConverter converter, 
+            final StyleConverter<?,V> converter, 
             final V initialValue, 
             boolean inherits, 
-            final List<CssMetaData> subProperties) {        
+            final List<CssMetaData<? extends Node, ?>> subProperties) {        
         
         this.property = property;
         this.converter = converter;
@@ -227,8 +228,9 @@ public abstract class CssMetaData<N extends Node, V> {
         this.inherits = inherits;
         this.subProperties = subProperties != null ? Collections.unmodifiableList(subProperties) : null;        
         
-        if (this.property == null || this.converter == null) 
+        if (this.property == null || this.converter == null) {
             throw new IllegalArgumentException("neither property nor converter can be null");
+        }
     }
 
     /**
@@ -240,7 +242,7 @@ public abstract class CssMetaData<N extends Node, V> {
      */
     protected CssMetaData(
             final String property, 
-            final StyleConverter converter, 
+            final StyleConverter<?,V> converter, 
             final V initialValue, 
             boolean inherits) {
         this(property, converter, initialValue, inherits, null);
@@ -255,7 +257,7 @@ public abstract class CssMetaData<N extends Node, V> {
      */
     protected CssMetaData(
             final String property, 
-            final StyleConverter converter, 
+            final StyleConverter<?,V> converter, 
             final V initialValue) {
         this(property, converter, initialValue, false, null);
     }
@@ -269,7 +271,7 @@ public abstract class CssMetaData<N extends Node, V> {
      */
     protected CssMetaData(
             final String property, 
-            final StyleConverter converter) {
+            final StyleConverter<?,V> converter) {
         this(property, converter, null, false, null);
     }
 
@@ -281,7 +283,7 @@ public abstract class CssMetaData<N extends Node, V> {
         if (getClass() != obj.getClass()) {
             return false;
         }
-        final CssMetaData<N, V> other = (CssMetaData<N, V>) obj;
+        final CssMetaData<? extends Node, ?> other = (CssMetaData<? extends Node, ?>) obj;
         if ((this.property == null) ? (other.property != null) : !this.property.equals(other.property)) {
             return false;
         }

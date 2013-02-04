@@ -126,10 +126,14 @@ is being used to size a border should also be in pixels.
 
     /* A bright blue for highlighting/accenting objects.  For example: selected
      * text; selected items in menus, lists, trees, and tables; progress bars */
-    -fx-accent: #0096C9;
-    
+    /*-fx-accent: #0096C9;*/
+    -fx-accent: #3D8AD6;
+
     /* Default buttons color, this is similar to accent but more subtle */
-    -fx-default-button: #4fb6d6;
+    /*-fx-default-button: #4fb6d6;*/
+    /*-fx-default-button: #8ed2e5;*/
+    -fx-default-button: #a0d2fd;
+    /*-fx-default-button: #5daaf5;*/
 
     /* A bright blue for the focus indicator of objects. Typically used as the
      * first color in -fx-background-color for the "focused" pseudo-class. Also
@@ -238,9 +242,9 @@ is being used to size a border should also be in pixels.
      * -fx-background-color list as a thin highlight inside the outer border.
      * Insets are typically 1.
      */
-    -fx-inner-border: linear-gradient(to bottom, derive(-fx-color,75%), derive(-fx-color,2%));
+    -fx-inner-border: linear-gradient(to bottom, derive(-fx-color,55%), derive(-fx-color,2%));
 
-    -fx-inner-border-horizontal: linear-gradient(to right, derive(-fx-color,75%), derive(-fx-color,2%));
+    -fx-inner-border-horizontal: linear-gradient(to right, derive(-fx-color,55%), derive(-fx-color,2%));
 /*    -fx-inner-border-horizontal: linear-gradient(
         to right,
         ladder(-fx-color, 
@@ -251,14 +255,15 @@ is being used to size a border should also be in pixels.
                derive(-fx-color,-10%) 80%) 100%
     );*/
 
-    -fx-inner-border-bottomup: linear-gradient(
-        to top,
-        ladder(-fx-color, 
-               derive(-fx-color,80%) 60%, 
-               white 82%) 0%,
-        ladder(-fx-color, 
-               derive(-fx-color,20%) 10%, 
-               derive(-fx-color,-10%) 80%) 100%);
+    -fx-inner-border-bottomup: linear-gradient(to top, derive(-fx-color,55%), derive(-fx-color,2%));
+    /*-fx-inner-border-bottomup: linear-gradient(*/
+        /*to top,*/
+        /*ladder(-fx-color,*/
+        /*derive(-fx-color,80%) 60%,*/
+        /*white 82%) 0%,*/
+        /*ladder(-fx-color,*/
+        /*derive(-fx-color,20%) 10%,*/
+        /*derive(-fx-color,-10%) 80%) 100%);*/
 
     /* A gradient that goes from a little lighter than -fx-color at the top to
      * a little darker than -fx-color at the bottom and is used to fill the
@@ -1288,9 +1293,16 @@ is being used to size a border should also be in pixels.
 .menu-bar {
     -fx-padding: 0.0em 0.666667em 0.0em 0.666667em; /* 0 8 0 8 */
     -fx-spacing: 0.166667em; /* 2 */
-    -fx-base: derive(#d0d0d0,-70%);
-    -fx-background-color: linear-gradient(to bottom, derive(-fx-color,50%), derive(-fx-color,-30%)), -fx-body-color;
-    -fx-background-insets: 0, 1 0 1 0;
+    /*-fx-base: derive(#d0d0d0,-70%);*/
+    /*-fx-background-color: linear-gradient(to bottom, derive(-fx-color,50%), derive(-fx-color,-30%)), -fx-body-color;*/
+    /*-fx-background-insets: 0, 1 0 1 0;*/
+    -fx-background-color:
+        linear-gradient(to bottom, derive(-fx-base,75%) 0%, -fx-outer-border 90%),
+        linear-gradient(to bottom, derive(-fx-base,46.9%) 2%, derive(-fx-base,-2.1%) 95%);
+    -fx-background-insets: 0 0 0 0, 1 0 1 0;
+    /*-fx-background-color:*/
+        /*linear-gradient(to bottom, derive(-fx-base,46.9%) 2%, derive(-fx-base,5%) 95%);*/
+    /*-fx-background-insets: 0;*/
     -fx-background-radius: 0, 0 ;
 }
 /* Show nothing for background of normal menu button in a menu bar */
@@ -1626,16 +1638,6 @@ is being used to size a border should also be in pixels.
 .titled-pane > .title:hover {
     -fx-color: -fx-hover-base;
 }
-.titled-pane:collapsed > .title > .arrow-button > .arrow {
-    -fx-rotate: -90;
-}
-/*.titled-pane > *.content {
-    -fx-background-color:
-        -fx-box-border,
-        linear-gradient(from 0px 0px to 0px 5px, derive(-fx-color, -4%), -fx-color);
-    -fx-background-insets: 0, 0 1 1 1;
-    -fx-padding: 0.167em;
-}*/
 /* alternative content using a border and a grad to transparent background - why should TitledPane content have a colour? */
 .titled-pane > *.content {
     -fx-border-color: -fx-box-border;
@@ -1929,16 +1931,18 @@ is being used to size a border should also be in pixels.
     -fx-padding: 0.833333em 0em 0.833333em 0em;
 }
 .pagination > .pagination-control > .control-box {
-    -fx-spacing: 4;
+    -fx-spacing: 2;
     -fx-alignment: center;
 }
-.pagination > .pagination-control > .control-box > .left-arrow-button{
-    -fx-background-radius: 0;
-    -fx-padding: 0.166667em 0.416em 0.25em 0.333em;
+.pagination > .pagination-control > .control-box > .left-arrow-button {
+    -fx-background-radius: 5 0 0 5, 4 0 0 4, 3 0 0 3;
+    -fx-background-insets: 0 -4 0 11, 1 -3 1 12, 2 -2 2 13;
+    -fx-padding: 0.166667em 0em 0.25em 1.167em;
 }
 .pagination > .pagination-control > .control-box > .right-arrow-button {
-    -fx-background-radius: 0;
-    -fx-padding: 0.166667em 0.333em 0.25em 0.416em;
+    -fx-background-radius: 0 5 5 0, 0 4 4 0, 0 3 3 0;
+    -fx-background-insets: 0 11 0 -4, 1 12 1 -3, 2 13 2 -2;
+    -fx-padding: 0.166667em 0em 0.25em 0.083em;
 }
 .pagination > .pagination-control .left-arrow {
     -fx-background-color: -fx-mark-highlight-color, -fx-mark-color;
@@ -1963,9 +1967,19 @@ is being used to size a border should also be in pixels.
 .pagination > .pagination-control > .control-box > .bullet-button:selected {   
     -fx-base: -fx-accent;
 }
-.pagination.bullet > .pagination-control > .control-box > .left-arrow-button, 
+.pagination.bullet > .pagination-control > .control-box {
+    -fx-spacing: 0;
+    -fx-alignment: center;
+}
+.pagination.bullet > .pagination-control > .control-box > .left-arrow-button {
+    -fx-background-radius: 4em;
+    -fx-background-insets: 0, 1, 2;
+    -fx-padding: 0 0 0 0.667em; /* 0 0 0 8 */
+} 
 .pagination.bullet > .pagination-control > .control-box > .right-arrow-button {
     -fx-background-radius: 4em;
+    -fx-background-insets: 0, 1, 2;
+    -fx-padding: 0 0 0 0.833em; /* 0 0 0 10 */
 }
 .pagination > .pagination-control > .control-box > .number-button {
     -fx-background-radius: 0;
@@ -2956,61 +2970,23 @@ is being used to size a border should also be in pixels.
  *                                                                             *
  ******************************************************************************/
 
-.split-pane > * > .table-view { -fx-padding: 0px; }
-.split-pane > * > .list-view { -fx-padding: 0px; }
-.split-pane > * > .tree-view { -fx-padding: 0px; }
-.split-pane > * > .scroll-pane { -fx-padding: 0px; }
-.split-pane > * > .split-pane {
+.tab-pane > * > .table-view,
+.tab-pane > * > .tree-table-view,
+.tab-pane > * > .list-view,
+.tab-pane > * > .tree-view,
+.tab-pane > * > .scroll-pane,
+.tab-pane > * > .split-pane,
+.tab-pane > * > .text-area,
+.tab-pane > * > .html-editor,
+.split-pane > * > .tab-pane,
+.split-pane > * > .table-view,
+.split-pane > * > .tree-table-view,
+.split-pane > * > .list-view,
+.split-pane > * > .tree-view,
+.split-pane > * > .scroll-pane,
+.split-pane > * > .split-pane,
+.split-pane > * > .text-area,
+.split-pane > * > .html-editor {
     -fx-background-insets: 0, 0;
     -fx-padding: 0;
  }
- 
- /* ############################################################################
-    # Workaround for RT-27627                                                  #
-    ############################################################################ */
- 
-.choice-box > .open-button > .arrow { doh: true; }
-.split-menu-button:openvertically > .arrow-button > .arrow { doh: true; }
-.tab-pane > .tab-header-area > .control-buttons-tab > .container > .tab-down-button > .arrow { doh: true; }
-.tree-table-view { doh: true; }
-.tree-table-view:focused { doh: true; }
-.tree-table-view > .virtual-flow > .scroll-bar:vertical { doh: true; }
-.tree-table-view > .virtual-flow > .scroll-bar:horizontal { doh: true; }
-.tree-table-view > .virtual-flow > .corner { doh: true; }
-.tree-table-row-cell:focused { doh: true; }
-.tree-table-view:focused > .virtual-flow > .clipped-container > .sheet > .tree-table-row-cell:filled:focused:selected { doh: true; }
-.tree-table-view:focused > .virtual-flow > .clipped-container > .sheet > .tree-table-row-cell:filled:selected > .tree-table-cell { doh: true; }
-.tree-table-view:focused > .virtual-flow > .clipped-container > .sheet > .tree-table-row-cell:filled:selected { doh: true; }
-.tree-table-view:row-selection:focused > .virtual-flow > .clipped-container > .sheet > .tree-table-row-cell:filled:focused:selected:hover{ doh: true; }
-.tree-table-row-cell:filled:selected:focused { doh: true; }
-.tree-table-row-cell:filled:selected { doh: true; }
-.tree-table-row-cell:selected:disabled { doh: true; }
-.tree-table-view:row-selection > .virtual-flow > .clipped-container > .sheet > .tree-table-row-cell:filled:hover { doh: true; }
-.tree-table-view:row-selection > .virtual-flow > .clipped-container > .sheet > .tree-table-row-cell:filled:focused:hover { doh: true; }
-.tree-table-view:constrained-resize > .virtual-flow > .clipped-container > .sheet > .tree-table-row-cell > .tree-table-cell:last-visible { doh: true; }
-.tree-table-view:constrained-resize > .column-header:last-visible { doh: true; }
-.tree-table-view:constrained-resize .filler { doh: true; }
-.tree-table-view:focused > .virtual-flow > .clipped-container > .sheet > .tree-table-row-cell > .tree-table-cell:focused { doh: true; }
-.tree-table-view:focused > .virtual-flow > .clipped-container > .sheet > .tree-table-row-cell:filled .tree-table-cell:focused:selected { doh: true; }
-.tree-table-view:focused > .virtual-flow > .clipped-container > .sheet > .tree-table-row-cell:filled > .tree-table-cell:selected { doh: true; }
-.tree-table-view:cell-selection > .virtual-flow > .clipped-container > .sheet > .tree-table-row-cell:filled > .tree-table-cell:hover:selected { doh: true; }
-.tree-table-view:focused > .virtual-flow > .clipped-container > .sheet > .tree-table-row-cell:filled > .tree-table-cell:focused:selected:hover{ doh: true; }
-.tree-table-row-cell:filled > .tree-table-cell:selected:focused { doh: true; }
-.tree-table-row-cell:filled > .tree-table-cell:selected { doh: true; }
-.tree-table-cell:selected:disabled { doh: true; }
-.tree-table-view:cell-selection > .virtual-flow > .clipped-container > .sheet > .tree-table-row-cell:filled > .tree-table-cell:hover { doh: true; }
-.tree-table-view:cell-selection > .virtual-flow > .clipped-container > .sheet > .tree-table-row-cell:filled > .tree-table-cell:focused:hover { doh: true; }
-.tree-table-view .column-resize-line { doh: true; }
-.tree-table-view > .column-header-background { doh: true; }
-.tree-table-view .column-header { doh: true; }
-.tree-table-view .filler { doh: true; }
-.tree-table-view .column-header .sort-order{ doh: true; }
-.tree-table-view > .column-header-background > .show-hide-columns-button{ doh: true; }
-.tree-table-view .show-hide-column-image { doh: true; }
-.tree-table-view .column-drag-header { doh: true; }
-.tree-table-view .column-overlay { doh: true; }
-.tree-table-view /*> column-header-background > nested-column-header >*/ .arrow { doh: true; }
-.tree-table-view .empty-table { doh: true; }
-.axis-minor-tick-mark { doh: true; }
-.chart-horizontal-zero-line { doh: true; }
-.stacked-bar-chart:horizontal .chart-bar { doh: true; }

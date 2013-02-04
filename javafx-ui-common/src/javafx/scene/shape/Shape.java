@@ -563,7 +563,7 @@ public abstract class Shape extends Node {
 
             @Override
             public StyleableProperty<Paint> getStyleableProperty(Shape node) {
-                return (StyleableProperty)node.fillProperty();
+                return (StyleableProperty<Paint>)node.fillProperty();
             }
 
             @Override
@@ -590,7 +590,7 @@ public abstract class Shape extends Node {
 
             @Override
             public StyleableProperty<Boolean> getStyleableProperty(Shape node) {
-                return (StyleableProperty)node.smoothProperty();
+                return (StyleableProperty<Boolean>)node.smoothProperty();
             }
 
         };
@@ -610,7 +610,7 @@ public abstract class Shape extends Node {
 
             @Override
             public StyleableProperty<Paint> getStyleableProperty(Shape node) {
-                return (StyleableProperty)node.strokeProperty();
+                return (StyleableProperty<Paint>)node.strokeProperty();
             }
             
             @Override
@@ -637,8 +637,8 @@ public abstract class Shape extends Node {
         * </p>
         * @see StrokeAttributes#dashArray
         */    
-        private static final CssMetaData<Shape,Double[]> STROKE_DASH_ARRAY =
-            new CssMetaData<Shape,Double[]>("-fx-stroke-dash-array",
+        private static final CssMetaData<Shape,Number[]> STROKE_DASH_ARRAY =
+            new CssMetaData<Shape,Number[]>("-fx-stroke-dash-array",
                 SizeConverter.SequenceConverter.getInstance(), 
                 new Double[0]) {
 
@@ -648,8 +648,8 @@ public abstract class Shape extends Node {
             }
 
             @Override
-            public StyleableProperty<Double[]> getStyleableProperty(final Shape node) {
-                return (StyleableProperty)node.getStrokeAttributes().cssDashArrayProperty();
+            public StyleableProperty<Number[]> getStyleableProperty(final Shape node) {
+                return (StyleableProperty<Number[]>)node.getStrokeAttributes().cssDashArrayProperty();
             }
 
         };
@@ -670,7 +670,7 @@ public abstract class Shape extends Node {
 
             @Override
             public StyleableProperty<Number> getStyleableProperty(Shape node) {
-                return (StyleableProperty)node.strokeDashOffsetProperty();
+                return (StyleableProperty<Number>)node.strokeDashOffsetProperty();
             }
 
         };
@@ -692,7 +692,7 @@ public abstract class Shape extends Node {
 
             @Override
             public StyleableProperty<StrokeLineCap> getStyleableProperty(Shape node) {
-                return (StyleableProperty)node.strokeLineCapProperty();
+                return (StyleableProperty<StrokeLineCap>)node.strokeLineCapProperty();
             }
 
         };
@@ -714,7 +714,7 @@ public abstract class Shape extends Node {
 
             @Override
             public StyleableProperty<StrokeLineJoin> getStyleableProperty(Shape node) {
-                return (StyleableProperty)node.strokeLineJoinProperty();
+                return (StyleableProperty<StrokeLineJoin>)node.strokeLineJoinProperty();
             }
 
         };
@@ -736,7 +736,7 @@ public abstract class Shape extends Node {
 
             @Override
             public StyleableProperty<StrokeType> getStyleableProperty(Shape node) {
-                return (StyleableProperty)node.strokeTypeProperty();
+                return (StyleableProperty<StrokeType>)node.strokeTypeProperty();
             }
 
 
@@ -758,7 +758,7 @@ public abstract class Shape extends Node {
 
             @Override
             public StyleableProperty<Number> getStyleableProperty(Shape node) {
-                return (StyleableProperty)node.strokeMiterLimitProperty();
+                return (StyleableProperty<Number>)node.strokeMiterLimitProperty();
             }
 
         };
@@ -767,7 +767,7 @@ public abstract class Shape extends Node {
         * @css -fx-stroke-width: <a href="#typesize" class="typelink">&lt;size&gt;</a>
         * @see #strokeWidthProperty() 
         */        
-        private static final CssMetaData STROKE_WIDTH =
+        private static final CssMetaData<Shape,Number> STROKE_WIDTH =
             new CssMetaData<Shape,Number>("-fx-stroke-width",
                 SizeConverter.getInstance(), 1.0) {
 
@@ -779,27 +779,25 @@ public abstract class Shape extends Node {
 
             @Override
             public StyleableProperty<Number> getStyleableProperty(Shape node) {
-                return (StyleableProperty)node.strokeWidthProperty();
+                return (StyleableProperty<Number>)node.strokeWidthProperty();
             }
 
         };         
-         private static final List<CssMetaData> STYLEABLES;
+         private static final List<CssMetaData<? extends Node, ?>> STYLEABLES;
          static {
 
-            final List<CssMetaData> styleables =
-                new ArrayList<CssMetaData>(Node.getClassCssMetaData());
-            Collections.addAll(styleables,
-                FILL,
-                SMOOTH,
-                STROKE,
-                STROKE_DASH_ARRAY,
-                STROKE_DASH_OFFSET,
-                STROKE_LINE_CAP,
-                STROKE_LINE_JOIN,
-                STROKE_TYPE,
-                STROKE_MITER_LIMIT,
-                STROKE_WIDTH
-            );
+            final List<CssMetaData<? extends Node, ?>> styleables =
+                new ArrayList<CssMetaData<? extends Node, ?>>(Node.getClassCssMetaData());
+            styleables.add(FILL);
+            styleables.add(SMOOTH);
+            styleables.add(STROKE);
+            styleables.add(STROKE_DASH_ARRAY);
+            styleables.add(STROKE_DASH_OFFSET);
+            styleables.add(STROKE_LINE_CAP);
+            styleables.add(STROKE_LINE_JOIN);
+            styleables.add(STROKE_TYPE);
+            styleables.add(STROKE_MITER_LIMIT);
+            styleables.add(STROKE_WIDTH);
             STYLEABLES = Collections.unmodifiableList(styleables);
          }
     }
@@ -808,15 +806,17 @@ public abstract class Shape extends Node {
      * @return The CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
      */
-    public static List<CssMetaData> getClassCssMetaData() {
+    public static List<CssMetaData<? extends Node, ?>> getClassCssMetaData() {
         return StyleableProperties.STYLEABLES;
     }
 
     /**
      * {@inheritDoc}
+     *
      */
+    
     @Override
-    public List<CssMetaData> getCssMetaData() {
+    public List<CssMetaData<? extends Node, ?>> getCssMetaData() {
         return getClassCssMetaData();
     }
 
@@ -1381,19 +1381,21 @@ public abstract class Shape extends Node {
             return dashArray;
         }
         
-        private ObjectProperty<Double[]> cssDashArray = null;
-        private ObjectProperty<Double[]> cssDashArrayProperty() {
+        private ObjectProperty<Number[]> cssDashArray = null;
+        private ObjectProperty<Number[]> cssDashArrayProperty() {
             if (cssDashArray == null) {
-                cssDashArray = new StyleableObjectProperty<Double[]>() 
+                cssDashArray = new StyleableObjectProperty<Number[]>() 
                 {
 
                     @Override
-                    public void set(Double[] v) {
+                    public void set(Number[] v) {
                         
                         ObservableList<Double> list = dashArrayProperty();
                         list.clear();
                         if (v != null && v.length > 0) {
-                            list.addAll(v);
+                            for (int n=0; n<v.length; n++) {
+                                list.add(v[n].doubleValue());
+                            }
                         }
                         
                         // no need to hold onto the array
@@ -1453,7 +1455,7 @@ public abstract class Shape extends Node {
             return (dashArray != null);
         }
 
-        private void invalidated(final CssMetaData propertyCssKey) {
+        private void invalidated(final CssMetaData<Shape, ?> propertyCssKey) {
             impl_markDirty(DirtyBits.SHAPE_STROKEATTRS);
             strokeAttributesDirty = true;
             if (propertyCssKey != StyleableProperties.STROKE_DASH_OFFSET) {

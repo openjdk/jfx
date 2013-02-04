@@ -602,7 +602,7 @@ public class TreeTableColumn<S,T> extends TableColumnBase<TreeItem<S>,T> impleme
                     return getTreeTableView() == null ? null : getTreeTableView().impl_getStyleable();
                 }
 
-                @Override public List<CssMetaData> getCssMetaData() {
+                @Override public List<CssMetaData<? extends Node, ?>> getCssMetaData() {
                     return Collections.EMPTY_LIST;
                 }                
 

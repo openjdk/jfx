@@ -51,6 +51,9 @@ import com.sun.javafx.scene.control.behavior.TitledPaneBehavior;
 import com.sun.javafx.scene.traversal.Direction;
 import com.sun.javafx.scene.traversal.TraversalEngine;
 import com.sun.javafx.scene.traversal.TraverseListener;
+import javafx.beans.binding.Binding;
+import javafx.beans.binding.Bindings;
+import javafx.beans.binding.DoubleBinding;
 import javafx.geometry.Insets;
 import javafx.scene.control.Accordion;
 import javafx.scene.control.Labeled;
@@ -350,6 +353,15 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane, TitledPaneBehavi
             arrow.setId("arrow");
             arrow.getStyleClass().setAll("arrow");
             arrowRegion.getChildren().setAll(arrow);
+            
+            // RT-13294: TitledPane : add animation to the title arrow
+            arrow.rotateProperty().bind(new DoubleBinding() {
+                { bind(transitionProperty()); }
+
+                @Override protected double computeValue() {
+                    return -90 * (1.0 - getTransition());
+                }
+            });
 
             setAlignment(Pos.CENTER_LEFT);
 
@@ -478,7 +490,7 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane, TitledPaneBehavi
                 return textWidth + labeled.getGraphicTextGap() + graphic.prefWidth(-1) + widthPadding;
             } else {
                 return Math.max(textWidth, graphic.prefWidth(-1)) + widthPadding;
-    }
+            }
         }
 
         // Copied from LabeledSkinBase because the padding from TitledPane was being

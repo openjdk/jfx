@@ -597,7 +597,7 @@ public class MenuItem implements EventTarget {
 
                 
                 @Override
-                public List<CssMetaData> getCssMetaData() {
+                public List<CssMetaData<? extends Node, ?>> getCssMetaData() {
                     return Collections.EMPTY_LIST;
                 }                
 

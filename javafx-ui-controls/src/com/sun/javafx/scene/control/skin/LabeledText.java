@@ -12,6 +12,7 @@ import javafx.css.CssMetaData;
 import javafx.css.FontCssMetaData;
 import javafx.css.StyleOrigin;
 import javafx.css.StyleableProperty;
+import javafx.scene.Node;
 import javafx.scene.control.Labeled;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
@@ -65,7 +66,7 @@ public class LabeledText extends Text {
      * @return The CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
      */
-    public static List<CssMetaData> getClassCssMetaData() {
+    public static List<CssMetaData<? extends Node, ?>> getClassCssMetaData() {
         return StyleableProperties.STYLEABLES;
     }
 
@@ -73,7 +74,7 @@ public class LabeledText extends Text {
      * {@inheritDoc}
      */
     @Override
-    public List<CssMetaData> getCssMetaData() {
+    public List<CssMetaData<? extends Node, ?>> getCssMetaData() {
         return getClassCssMetaData();
     }
 
@@ -94,7 +95,7 @@ public class LabeledText extends Text {
                 // inline style, this inline style should override values
                 // from lesser origins.
                 //
-                StyleableProperty<Font> prop = (StyleableProperty)node.labeled.fontProperty();
+                StyleableProperty<Font> prop = (StyleableProperty<Font>)node.labeled.fontProperty();
                 StyleOrigin propOrigin = prop.getStyleOrigin();
 
                 //
@@ -117,7 +118,7 @@ public class LabeledText extends Text {
 
            @Override
            public StyleableProperty<Font> getStyleableProperty(LabeledText node) {
-               return node.labeled != null ? (StyleableProperty)node.labeled.fontProperty() : null;
+               return node.labeled != null ? (StyleableProperty<Font>)node.labeled.fontProperty() : null;
            }
        };
 
@@ -133,7 +134,8 @@ public class LabeledText extends Text {
                 // inline style, this inline style should override values
                 // from lesser origins.
                 //
-                StyleableProperty<Paint> prop = (StyleableProperty)node.labeled.textFillProperty();
+                StyleableProperty<Paint> prop = 
+                        (StyleableProperty<Paint>)node.labeled.textFillProperty();
                 StyleOrigin propOrigin = prop.getStyleOrigin();
 
                 //
@@ -156,7 +158,7 @@ public class LabeledText extends Text {
 
            @Override
            public StyleableProperty<Paint> getStyleableProperty(LabeledText node) {
-               return (StyleableProperty)node.labeled.textFillProperty();
+               return (StyleableProperty<Paint>)node.labeled.textFillProperty();
            }
        };
 
@@ -172,7 +174,8 @@ public class LabeledText extends Text {
                 // inline style, this inline style should override values
                 // from lesser origins.
                 //
-                StyleableProperty<TextAlignment> prop = (StyleableProperty)node.labeled.textAlignmentProperty();
+                StyleableProperty<TextAlignment> prop = 
+                        (StyleableProperty<TextAlignment>)node.labeled.textAlignmentProperty();
                 StyleOrigin propOrigin = prop.getStyleOrigin();
 
                 //
@@ -195,7 +198,7 @@ public class LabeledText extends Text {
 
             @Override
             public StyleableProperty<TextAlignment> getStyleableProperty(LabeledText node) {
-                return (StyleableProperty)node.labeled.textAlignmentProperty();
+                return (StyleableProperty<TextAlignment>)node.labeled.textAlignmentProperty();
             }
         };
 
@@ -211,7 +214,8 @@ public class LabeledText extends Text {
                 // inline style, this inline style should override values
                 // from lesser origins.
                 //
-                StyleableProperty<Boolean> prop = (StyleableProperty)node.labeled.underlineProperty();
+                StyleableProperty<Boolean> prop = 
+                        (StyleableProperty<Boolean>)node.labeled.underlineProperty();
                 StyleOrigin propOrigin = prop.getStyleOrigin();
 
                 //
@@ -234,7 +238,7 @@ public class LabeledText extends Text {
 
             @Override
             public StyleableProperty<Boolean> getStyleableProperty(LabeledText node) {
-                return (StyleableProperty)node.labeled.underlineProperty();
+                return (StyleableProperty<Boolean>)node.labeled.underlineProperty();
             }
         };
 
@@ -250,7 +254,8 @@ public class LabeledText extends Text {
                 // inline style, this inline style should override values
                 // from lesser origins.
                 //
-                StyleableProperty<Number> prop = (StyleableProperty)node.labeled.lineSpacingProperty();
+                StyleableProperty<Number> prop = 
+                        (StyleableProperty<Number>)node.labeled.lineSpacingProperty();
                 StyleOrigin propOrigin = prop.getStyleOrigin();
 
                 //
@@ -273,15 +278,15 @@ public class LabeledText extends Text {
 
             @Override
             public StyleableProperty<Number> getStyleableProperty(LabeledText node) {
-                return (StyleableProperty)node.labeled.lineSpacingProperty();
+                return (StyleableProperty<Number>)node.labeled.lineSpacingProperty();
             }
         };
 
-       private static final List<CssMetaData> STYLEABLES;
+       private static final List<CssMetaData<? extends Node, ?>> STYLEABLES;
        static {
 
-           final List<CssMetaData> styleables =
-               new ArrayList<CssMetaData>(Text.getClassCssMetaData());
+           final List<CssMetaData<? extends Node, ?>> styleables =
+               new ArrayList<CssMetaData<? extends Node, ?>>(Text.getClassCssMetaData());
 
            for (int n=0,nMax=styleables.size(); n<nMax; n++) {
                final String prop = styleables.get(n).getProperty();

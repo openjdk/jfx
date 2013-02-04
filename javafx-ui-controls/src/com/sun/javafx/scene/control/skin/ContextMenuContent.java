@@ -75,6 +75,7 @@ import javafx.geometry.NodeOrientation;
 import javafx.stage.Window;
 
 import com.sun.javafx.scene.control.behavior.TwoLevelFocusPopupBehavior;
+import javafx.beans.property.ReadOnlyBooleanProperty;
 
 /**
  * This is a the SkinBase for PopupMenu based controls so that the CSS parts
@@ -882,17 +883,17 @@ public class ContextMenuContent extends Region {
      /** @treatAsPrivate */
     private static class StyleableProperties {
 
-        private static final List<CssMetaData> STYLEABLES;
+        private static final List<CssMetaData<? extends Node, ?>> STYLEABLES;
         static {
 
-            final List<CssMetaData> styleables =
-                new ArrayList<CssMetaData>(Region.getClassCssMetaData());
+            final List<CssMetaData<? extends Node, ?>> styleables =
+                new ArrayList<CssMetaData<? extends Node, ?>>(Region.getClassCssMetaData());
 
             //
             // SkinBase only has Region's unique StlyleableProperty's, none of Nodes
             // So, we need to add effect back in. The effect property is in a
             // private inner class, so get the property from Node the hard way.
-            final List<CssMetaData> nodeStyleables = Node.getClassCssMetaData();
+            final List<CssMetaData<? extends Node, ?>> nodeStyleables = Node.getClassCssMetaData();
             for(int n=0, max=nodeStyleables.size(); n<max; n++) {
                 CssMetaData styleable = nodeStyleables.get(n);
                 if ("effect".equals(styleable.getProperty())) {
@@ -908,7 +909,7 @@ public class ContextMenuContent extends Region {
      * @return The CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
      */
-    public static List<CssMetaData> getClassCssMetaData() {
+    public static List<CssMetaData<? extends Node, ?>> getClassCssMetaData() {
         return StyleableProperties.STYLEABLES;
     }
 
@@ -916,7 +917,7 @@ public class ContextMenuContent extends Region {
      * {@inheritDoc}
      */
     @Override
-    public List<CssMetaData> getCssMetaData() {
+    public List<CssMetaData<? extends Node, ?>> getCssMetaData() {
         return getClassCssMetaData();
     }
     
@@ -1065,13 +1066,21 @@ public class ContextMenuContent extends Region {
             createChildren();
             
             // listen to changes in the state of certain MenuItem types
+            ReadOnlyBooleanProperty pseudoProperty;
             if (item instanceof Menu) {
-                listen(((Menu)item).showingProperty(), SELECTED_PSEUDOCLASS_STATE);
+                pseudoProperty = ((Menu)item).showingProperty();
+                pseudoClassStateChanged(SELECTED_PSEUDOCLASS_STATE, pseudoProperty.get());
+                listen(pseudoProperty, SELECTED_PSEUDOCLASS_STATE);
             } else if (item instanceof RadioMenuItem) {
-                listen(((RadioMenuItem)item).selectedProperty(), CHECKED_PSEUDOCLASS_STATE);
+                pseudoProperty = ((RadioMenuItem)item).selectedProperty();
+                pseudoClassStateChanged(CHECKED_PSEUDOCLASS_STATE, pseudoProperty.get());
+                listen(pseudoProperty, CHECKED_PSEUDOCLASS_STATE);
             } else if (item instanceof CheckMenuItem) {
-                listen(((CheckMenuItem)item).selectedProperty(), CHECKED_PSEUDOCLASS_STATE);
+                pseudoProperty = ((CheckMenuItem)item).selectedProperty();
+                pseudoClassStateChanged(CHECKED_PSEUDOCLASS_STATE, pseudoProperty.get());
+                listen(pseudoProperty, CHECKED_PSEUDOCLASS_STATE);
             }
+            pseudoClassStateChanged(DISABLED_PSEUDOCLASS_STATE, item.disableProperty().get());
             listen(item.disableProperty(), DISABLED_PSEUDOCLASS_STATE);
             // Add the menu item to properties map of this node. Used by QA for testing
             // This allows associating this container with corresponding MenuItem.
@@ -1257,7 +1266,6 @@ public class ContextMenuContent extends Region {
         private void createNodeMenuItemChildren(final CustomMenuItem item) {
             Node node = ((CustomMenuItem) item).getContent();
             getChildren().add(node);
-            node.getStyleClass().addAll(item.getStyleClass());
             // handle hideOnClick
             node.setOnMouseClicked(new EventHandler<MouseEvent>() {
                 @Override public void handle(MouseEvent event) {

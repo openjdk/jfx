@@ -29,34 +29,26 @@ import com.sun.javafx.css.StyleHelper.StyleCacheBucket;
 import com.sun.javafx.css.StyleHelper.StyleCacheKey;
 import com.sun.javafx.css.converters.FontConverter;
 import com.sun.javafx.css.converters.SizeConverter;
-import com.sun.javafx.css.parser.CSSParser;
 import com.sun.javafx.tk.Toolkit;
-import javafx.scene.paint.Color;
-import java.lang.ref.Reference;
-import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import javafx.beans.property.SimpleBooleanProperty;
-import javafx.beans.property.ObjectProperty;
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
-import javafx.css.StyleOrigin;
-import javafx.css.StyleableProperty;
-import javafx.css.ParsedValue;
-import javafx.css.PseudoClass;
 import javafx.collections.FXCollections;
 import javafx.collections.MapChangeListener;
+import javafx.css.ParsedValue;
+import javafx.css.StyleOrigin;
+import javafx.css.StyleableProperty;
 import javafx.scene.Group;
 import javafx.scene.Scene;
+import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Font;
 import javafx.scene.text.Text;
 import javafx.stage.Stage;
-import org.junit.Test;
 import static org.junit.Assert.*;
+import org.junit.Test;
 
 
 public class Node_cssStyleMap_Test {
@@ -117,7 +109,7 @@ public class Node_cssStyleMap_Test {
         Collections.addAll(declsNoState, 
             new Declaration("-fx-fill", new ParsedValueImpl<Color,Color>(Color.RED, null), false),
             new Declaration("-fx-stroke", new ParsedValueImpl<Color,Color>(Color.YELLOW, null), false),
-            new Declaration("-fx-stroke-width", new ParsedValueImpl<ParsedValue<?,Size>,Double>(
+            new Declaration("-fx-stroke-width", new ParsedValueImpl<ParsedValue<?,Size>,Number>(
                 new ParsedValueImpl<Size,Size>(new Size(3d, SizeUnits.PX), null), 
                 SizeConverter.getInstance()), false)
         );
@@ -152,11 +144,11 @@ public class Node_cssStyleMap_Test {
         final List<CascadingStyle> stylesDisabledState = createStyleList(declsDisabledState);
         
         // add to this list on wasAdded, check bean on wasRemoved.
-        final List<StyleableProperty> beans = new ArrayList<StyleableProperty>();
+        final List<StyleableProperty<?>> beans = new ArrayList<StyleableProperty<?>>();
         
         Rectangle rect = new Rectangle(50,50);
         rect.getStyleClass().add("rect");
-        rect.impl_setStyleMap(FXCollections.observableMap(new HashMap<StyleableProperty, List<Style>>()));
+        rect.impl_setStyleMap(FXCollections.observableMap(new HashMap<StyleableProperty<?>, List<Style>>()));
         rect.impl_getStyleMap().addListener(new MapChangeListener<StyleableProperty, List<Style>>() {
 
             public void onChanged(MapChangeListener.Change<? extends StyleableProperty, ? extends List<Style>> change) {
@@ -221,7 +213,7 @@ public class Node_cssStyleMap_Test {
 
         final List<Declaration> rootDecls = new ArrayList<Declaration>();
         Collections.addAll(rootDecls, 
-            new Declaration("-fx-font-size", new ParsedValueImpl<ParsedValue<?,Size>,Double>(
+            new Declaration("-fx-font-size", new ParsedValueImpl<ParsedValue<?,Size>,Number>(
                 new ParsedValueImpl<Size,Size>(new Size(12, SizeUnits.PX), null), 
                 SizeConverter.getInstance()), false)
         );
@@ -248,7 +240,7 @@ public class Node_cssStyleMap_Test {
         
         final ParsedValue[] fontValues = new ParsedValue[] {
             new ParsedValueImpl<String,String>("system", null),
-            new ParsedValueImpl<ParsedValue<?,Size>,Double>(
+            new ParsedValueImpl<ParsedValue<?,Size>,Number>(
                 new ParsedValueImpl<Size,Size>(new Size(1.5, SizeUnits.EM), null),
                 SizeConverter.getInstance()
             ), 
@@ -280,7 +272,7 @@ public class Node_cssStyleMap_Test {
 //        expecteds.addAll(rootDecls);
         expecteds.addAll(textDecls);
         text.getStyleClass().add("text");
-        text.impl_setStyleMap(FXCollections.observableMap(new HashMap<StyleableProperty, List<Style>>()));
+        text.impl_setStyleMap(FXCollections.observableMap(new HashMap<StyleableProperty<?>, List<Style>>()));
         text.impl_getStyleMap().addListener(new MapChangeListener<StyleableProperty, List<Style>>() {
 
             // a little different than the other tests since we should end up 

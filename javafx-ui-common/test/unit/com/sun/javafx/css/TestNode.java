@@ -29,10 +29,10 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import javafx.beans.property.DoubleProperty;
-import javafx.beans.value.WritableValue;
 import javafx.css.CssMetaData;
 import javafx.css.StyleableDoubleProperty;
 import javafx.css.StyleableProperty;
+import javafx.scene.Node;
 
 /** Test Node with styleable property but no getClassCssMetaData method */
 class TestNode extends TestNodeBase {
@@ -53,7 +53,7 @@ class TestNode extends TestNodeBase {
                 }
 
                 @Override
-                public CssMetaData getCssMetaData() {
+                public CssMetaData<TestNode, Number> getCssMetaData() {
                     return StyleableProperties.XYZZY;
                 }
                 
@@ -88,16 +88,16 @@ class TestNode extends TestNodeBase {
 
             @Override
             public StyleableProperty<Number> getStyleableProperty(TestNode node) {
-                return (StyleableProperty)node.xyzzyProperty();
+                return (StyleableProperty<Number>)node.xyzzyProperty();
             }
                      
          };
             
-         private static final List<CssMetaData> STYLEABLES;
+         private static final List<CssMetaData<? extends Node, ?>> STYLEABLES;
          static {
-            final List<CssMetaData> styleables = 
-		new ArrayList<CssMetaData>(TestNodeBase.getClassCssMetaData());
-            Collections.addAll(styleables, XYZZY);
+            final List<CssMetaData<? extends Node, ?>> styleables = 
+		new ArrayList<CssMetaData<? extends Node, ?>>(TestNodeBase.getClassCssMetaData());
+            styleables.add(XYZZY);
             STYLEABLES = Collections.unmodifiableList(styleables);
          }
     }
@@ -106,15 +106,17 @@ class TestNode extends TestNodeBase {
      * @return The CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
      */
-    public static List<CssMetaData> getClassCssMetaData() {
+    public static List<CssMetaData<? extends Node, ?>> getClassCssMetaData() {
         return StyleableProperties.STYLEABLES;
     }
 
     /**
      * {@inheritDoc}
+     *
      */
+    
     @Override
-    public List<CssMetaData> getCssMetaData() {
+    public List<CssMetaData<? extends Node, ?>> getCssMetaData() {
         return getClassCssMetaData();
     }
 

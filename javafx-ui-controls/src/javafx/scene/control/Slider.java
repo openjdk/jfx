@@ -56,6 +56,7 @@ import com.sun.javafx.scene.control.accessible.AccessibleSlider;
 import com.sun.javafx.accessible.providers.AccessibleProvider;
 import com.sun.javafx.scene.control.skin.SliderSkin;
 import javafx.css.StyleableProperty;
+import javafx.scene.Node;
 
 /**
  * The Slider Control is used to display a continuous or discrete range of
@@ -656,7 +657,7 @@ public class Slider extends Control {
 
             @Override
             public StyleableProperty<Number> getStyleableProperty(Slider n) {
-                return (StyleableProperty)n.blockIncrementProperty();
+                return (StyleableProperty<Number>)n.blockIncrementProperty();
             }
         };
         
@@ -671,7 +672,7 @@ public class Slider extends Control {
 
             @Override
             public StyleableProperty<Boolean> getStyleableProperty(Slider n) {
-                return (StyleableProperty)n.showTickLabelsProperty();
+                return (StyleableProperty<Boolean>)n.showTickLabelsProperty();
             }
         };
                     
@@ -686,7 +687,7 @@ public class Slider extends Control {
 
             @Override
             public StyleableProperty<Boolean> getStyleableProperty(Slider n) {
-                return (StyleableProperty)n.showTickMarksProperty();
+                return (StyleableProperty<Boolean>)n.showTickMarksProperty();
             }
         };
             
@@ -701,7 +702,7 @@ public class Slider extends Control {
 
             @Override
             public StyleableProperty<Boolean> getStyleableProperty(Slider n) {
-                return (StyleableProperty)n.snapToTicksProperty();
+                return (StyleableProperty<Boolean>)n.snapToTicksProperty();
             }
         };
         
@@ -716,7 +717,7 @@ public class Slider extends Control {
 
             @Override
             public StyleableProperty<Number> getStyleableProperty(Slider n) {
-                return (StyleableProperty)n.majorTickUnitProperty();
+                return (StyleableProperty<Number>)n.majorTickUnitProperty();
             }
         };
         
@@ -735,7 +736,7 @@ public class Slider extends Control {
 
             @Override
             public StyleableProperty<Number> getStyleableProperty(Slider n) {
-                return (StyleableProperty)n.minorTickCountProperty();
+                return (StyleableProperty<Number>)n.minorTickCountProperty();
             }
         };
         
@@ -757,23 +758,22 @@ public class Slider extends Control {
 
             @Override
             public StyleableProperty<Orientation> getStyleableProperty(Slider n) {
-                return (StyleableProperty)n.orientationProperty();
+                return (StyleableProperty<Orientation>)n.orientationProperty();
             }
         };
 
-        private static final List<CssMetaData> STYLEABLES;
+        private static final List<CssMetaData<? extends Node, ?>> STYLEABLES;
         static {
-            final List<CssMetaData> styleables = 
-                new ArrayList<CssMetaData>(Control.getClassCssMetaData());
-            Collections.addAll(styleables,
-                BLOCK_INCREMENT,
-                SHOW_TICK_LABELS,
-                SHOW_TICK_MARKS,
-                SNAP_TO_TICKS,
-                MAJOR_TICK_UNIT,
-                MINOR_TICK_COUNT,
-                ORIENTATION
-            );
+            final List<CssMetaData<? extends Node, ?>> styleables = 
+                new ArrayList<CssMetaData<? extends Node, ?>>(Control.getClassCssMetaData());
+            styleables.add(BLOCK_INCREMENT);
+            styleables.add(SHOW_TICK_LABELS);
+            styleables.add(SHOW_TICK_MARKS);
+            styleables.add(SNAP_TO_TICKS);
+            styleables.add(MAJOR_TICK_UNIT);
+            styleables.add(MINOR_TICK_COUNT);
+            styleables.add(ORIENTATION);
+            
             STYLEABLES = Collections.unmodifiableList(styleables);
         }
     }
@@ -782,7 +782,7 @@ public class Slider extends Control {
      * @return The CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
      */
-    public static List<CssMetaData> getClassCssMetaData() {
+    public static List<CssMetaData<? extends Node, ?>> getClassCssMetaData() {
         return StyleableProperties.STYLEABLES;
     }
 
@@ -792,7 +792,7 @@ public class Slider extends Control {
      * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
      */
     @Deprecated
-    @Override protected List<CssMetaData> getControlCssMetaData() {
+    @Override protected List<CssMetaData<? extends Node, ?>> getControlCssMetaData() {
         return getClassCssMetaData();
     }
 

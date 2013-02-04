@@ -173,12 +173,6 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
 //        TABLE_VIEW_BINDINGS.add(new KeyBinding(SPACE, "Activate").ctrl());
         
         TABLE_VIEW_BINDINGS.add(new KeyBinding(ESCAPE, "CancelEdit"));
-
-        if (PlatformUtil.isMac()) {
-            TABLE_VIEW_BINDINGS.add(new KeyBinding(BACK_SLASH, "ClearSelection").meta());
-        } else {
-            TABLE_VIEW_BINDINGS.add(new KeyBinding(BACK_SLASH, "ClearSelection").ctrl());
-        }
     }
 
     @Override protected void callAction(String name) {
@@ -1187,12 +1181,14 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
         
         if (! sm.isCellSelectionEnabled()) {
             sm.selectRange(0, index);
+            fm.focus(0);
         } else {
             for (int i = 0; i < index; i++) {
                 sm.select(i, getFocusedCell().getTableColumn());
             }
+            fm.focus(0, getFocusedCell().getTableColumn());
         }
-
+        
         if (onMoveToFirstCell != null) onMoveToFirstCell.run();
     }
     

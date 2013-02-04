@@ -87,27 +87,29 @@ import javafx.stage.Stage;
 import javax.imageio.ImageIO;
 
 public class Modena extends Application {
+    public static final String TEST = "test";
     static {
         System.getProperties().put("javafx.pseudoClassOverrideEnabled", "true");
     }
     private static final String testAppCssUrl = Modena.class.getResource("TestApp.css").toExternalForm();
-    private static String MODENA_STYLESHEET_CONTENT;
+    private static String MODENA_STYLESHEET_URL;
     private static String MODENA_STYLESHEET_BASE;
-    private static String CASPIAN_STYLESHEET_CONTENT;
+    private static String CASPIAN_STYLESHEET_URL;
     private static String CASPIAN_STYLESHEET_BASE;
     static {
         try {
             // these are not supported ways to find the platform themes and may 
             // change release to release. Just used here for testing.
-            final String caspianUrl = com.sun.javafx.scene.control.skin.ButtonSkin.class.getResource("caspian/caspian.css").toExternalForm();
+            final File caspianCssFile = new File("../../../javafx-ui-controls/src/com/sun/javafx/scene/control/skin/caspian/caspian.css");
+            CASPIAN_STYLESHEET_URL = caspianCssFile.exists() ? 
+                    caspianCssFile.toURI().toURL().toExternalForm() :
+                    com.sun.javafx.scene.control.skin.ButtonSkin.class.getResource("caspian/caspian.css").toExternalForm();
             final File modenaCssFile = new File("../../../javafx-ui-controls/src/com/sun/javafx/scene/control/skin/modena/modena.css");
-            String modenaUrl = modenaCssFile.exists() ? 
+            MODENA_STYLESHEET_URL = modenaCssFile.exists() ? 
                     modenaCssFile.toURI().toURL().toExternalForm() : 
                     com.sun.javafx.scene.control.skin.ButtonSkin.class.getResource("modena/modena.css").toExternalForm();
-            MODENA_STYLESHEET_BASE = modenaUrl.substring(0,modenaUrl.lastIndexOf('/')+1);
-            MODENA_STYLESHEET_CONTENT = loadUrl(modenaUrl);
-            CASPIAN_STYLESHEET_BASE = caspianUrl.substring(0,caspianUrl.lastIndexOf('/')+1);
-            CASPIAN_STYLESHEET_CONTENT = loadUrl(caspianUrl);
+            MODENA_STYLESHEET_BASE = MODENA_STYLESHEET_URL.substring(0,MODENA_STYLESHEET_URL.lastIndexOf('/')+1);
+            CASPIAN_STYLESHEET_BASE = CASPIAN_STYLESHEET_URL.substring(0,CASPIAN_STYLESHEET_URL.lastIndexOf('/')+1);
         } catch (MalformedURLException ex) {
             Logger.getLogger(Modena.class.getName()).log(Level.SEVERE, null, ex);
         }
@@ -117,6 +119,9 @@ public class Modena extends Application {
     private SamplePage samplePage;
     private Node mosaic;
     private Node heightTest;
+    private SimpleWindowPage simpleWindows;
+    private Node combinationsTest;
+    private Node customerTest;
     private Stage mainStage;
     private Color backgroundColor;
     private Color baseColor;
@@ -127,6 +132,18 @@ public class Modena extends Application {
     private String styleSheetBase = "";
     private ToggleButton modenaButton,retinaButton,rtlButton;
     private TabPane contentTabs;
+    private boolean test = false;
+    private final EventHandler<ActionEvent> rebuild = new EventHandler<ActionEvent>(){
+        @Override public void handle(ActionEvent event) { 
+            Platform.runLater(new Runnable() {
+                @Override public void run() {
+                    updateUserAgentStyleSheet();
+                    rebuildUI(modenaButton.isSelected(), retinaButton.isSelected(), 
+                            contentTabs.getSelectionModel().getSelectedIndex());
+                }
+            });
+        }
+    };
     
     private static Modena instance;
 
@@ -147,7 +164,25 @@ public class Modena extends Application {
         contentTabs.requestLayout();
     }
     
+    public void restart() {
+        mainStage.close();
+        root = null;
+        accentColor = null;
+        baseColor = null;
+        backgroundColor = null;
+        fontName = null;
+        fontSize = 13;
+        try {
+            start(new Stage());
+        } catch (Exception ex) {
+            throw new RuntimeException("Failed to start another Modena window", ex);
+        }
+    }
+    
     @Override public void start(Stage stage) throws Exception {
+        if (getParameters().getRaw().contains(TEST)) {
+            test = true;
+        }
         mainStage = stage;
         // set user agent stylesheet
         updateUserAgentStyleSheet(true);
@@ -158,6 +193,7 @@ public class Modena extends Application {
         scene.getStylesheets().add(testAppCssUrl);
         stage.setScene(scene);
         stage.setTitle("Modena");
+//        stage.setIconified(test); // TODO: Blocked by http://javafx-jira.kenai.com/browse/JMY-203
         stage.show(); // see SamplePage.java:110 comment on how test fails without having stage shown
         instance = this;
     }
@@ -167,7 +203,9 @@ public class Modena extends Application {
     }
     
     private void updateUserAgentStyleSheet(boolean modena) {
-        styleSheetContent = modena ? MODENA_STYLESHEET_CONTENT : CASPIAN_STYLESHEET_CONTENT;
+        styleSheetContent = modena ? 
+                loadUrl(MODENA_STYLESHEET_URL) : 
+                loadUrl(CASPIAN_STYLESHEET_URL);
         styleSheetBase = modena ? MODENA_STYLESHEET_BASE : CASPIAN_STYLESHEET_BASE;
         styleSheetContent += "\n.root {\n";
         System.out.println("baseColor = "+baseColor);
@@ -236,9 +274,26 @@ public class Modena extends Application {
                     ScrollPaneBuilder.create().content(
                         heightTest = (Node)FXMLLoader.load(Modena.class.getResource("SameHeightTest.fxml"))
                     ).build()
+                ).build(),
+                TabBuilder.create().text("Simple Windows").content(
+                    ScrollPaneBuilder.create().content(
+                        simpleWindows = new SimpleWindowPage()
+                    ).build()
+                ).build(),
+                TabBuilder.create().text("Combinations").content(
+                    ScrollPaneBuilder.create().content(
+                        combinationsTest = (Node)FXMLLoader.load(Modena.class.getResource("CombinationTest.fxml"))
+                    ).build()
+                ).build(),
+                // Customer example from bug report http://javafx-jira.kenai.com/browse/DTL-5561
+                TabBuilder.create().text("Customer Example").content(
+                    ScrollPaneBuilder.create().content(
+                        customerTest = (Node)FXMLLoader.load(Modena.class.getResource("ScottSelvia.fxml"))
+                    ).build()
                 ).build()
             );
             contentTabs.getSelectionModel().select(selectedTab);
+            samplePage.setMouseTransparent(test);
             // height test set selection for 
             Platform.runLater(new Runnable() {
                 @Override public void run() {
@@ -269,34 +324,21 @@ public class Modena extends Application {
                             .text("Modena")
                             .toggleGroup(themesToggleGroup)
                             .selected(modena)
-                            .onAction(new EventHandler<ActionEvent>(){
-                                @Override public void handle(ActionEvent event) { 
-                                    updateUserAgentStyleSheet();
-                                }
-                            })
+                            .onAction(rebuild)
                             .styleClass("left-pill")
                             .build(),
                         ToggleButtonBuilder.create()
                             .text("Caspian")
                             .toggleGroup(themesToggleGroup)
                             .selected(!modena)
-                            .onAction(new EventHandler<ActionEvent>(){
-                                @Override public void handle(ActionEvent event) { 
-                                    updateUserAgentStyleSheet();
-                                }
-                            })
+                            .onAction(rebuild)
                             .styleClass("right-pill")
                             .build()
                     )
                     .build(),
                 ButtonBuilder.create()
                     .graphic(new ImageView(new Image(Modena.class.getResource("reload_12x14.png").toString())))
-                    .onAction(new EventHandler<ActionEvent>() {
-                            @Override public void handle(ActionEvent event) {
-                                rebuildUI(modenaButton.isSelected(), retinaButton.isSelected(), 
-                                        contentTabs.getSelectionModel().getSelectedIndex());
-                            }
-                        })
+                    .onAction(rebuild)
                     .build(),
                 rtlButton = ToggleButtonBuilder.create()
                     .text("RTL")
@@ -317,7 +359,14 @@ public class Modena extends Application {
                 new Label("Accent:"),
                 createAccentColorPicker(),
                 new Separator(),
-                ButtonBuilder.create().text("Save...").onAction(saveBtnHandler).build()
+                ButtonBuilder.create().text("Save...").onAction(saveBtnHandler).build(),
+                ButtonBuilder.create().text("Restart").onAction(new EventHandler<ActionEvent>() {
+
+                    @Override
+                    public void handle(ActionEvent event) {
+                        restart();
+                    }
+                }).build()
             );
             toolBar.setId("TestAppToolbar");
             // Create content group used for scaleing @2x
@@ -341,6 +390,9 @@ public class Modena extends Application {
             samplePage.getStyleClass().add("needs-background");
             mosaic.getStyleClass().add("needs-background");
             heightTest.getStyleClass().add("needs-background");
+            combinationsTest.getStyleClass().add("needs-background");
+            customerTest.getStyleClass().add("needs-background");
+            simpleWindows.setModena(modena);
             // apply retina scale
             if (retina) {
                 contentTabs.getTransforms().setAll(new Scale(2,2));

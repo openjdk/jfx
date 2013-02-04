@@ -745,10 +745,10 @@ final public class CSSParser {
              return parseBorderImageWidthLayers(root);
         } else if ("-fx-padding".equals(prop)) {
             ParsedValueImpl<?,Size>[] sides = parseSizeSeries(root);
-            return new ParsedValueImpl<ParsedValue<?,Size>[],Insets>(sides, InsetsConverter.getInstance());
+            return new ParsedValueImpl<ParsedValue[],Insets>(sides, InsetsConverter.getInstance());
         } else if ("-fx-label-padding".equals(prop)) {
             ParsedValueImpl<?,Size>[] sides = parseSizeSeries(root);
-            return new ParsedValueImpl<ParsedValue<?,Size>[],Insets>(sides, InsetsConverter.getInstance());
+            return new ParsedValueImpl<ParsedValue[],Insets>(sides, InsetsConverter.getInstance());
         } else if (prop.endsWith("font-family")) {
             return parseFontFamily(root);
         } else if (prop.endsWith("font-size")) {
@@ -777,7 +777,7 @@ final public class CSSParser {
                 term = term.nextInSeries;
             }
 
-            return new ParsedValueImpl<ParsedValue<?,Size>[],Double[]>(segments,SequenceConverter.getInstance());
+            return new ParsedValueImpl<ParsedValue[],Number[]>(segments,SequenceConverter.getInstance());
 
         } else if ("-fx-stroke-line-join".equals(prop)) {
             // TODO: Figure out a way that these properties don't need to be
@@ -838,8 +838,8 @@ final public class CSSParser {
         case CSSLexer.GRAD:
         case CSSLexer.RAD:
         case CSSLexer.TURN:
-            ParsedValueImpl sizeValue = new ParsedValueImpl<Size,Double>(size(token), null);
-            value = new ParsedValueImpl<ParsedValue<?,Size>, Double>(sizeValue, SizeConverter.getInstance());
+            ParsedValueImpl sizeValue = new ParsedValueImpl<Size,Number>(size(token), null);
+            value = new ParsedValueImpl<ParsedValue<?,Size>, Number>(sizeValue, SizeConverter.getInstance());
             break;
         case CSSLexer.STRING:
         case CSSLexer.IDENT:
@@ -2322,38 +2322,38 @@ final public class CSSParser {
 
     // A series of inset or sets of four inset values
     // <size> | <size> <size> <size> <size> [ , [ <size> | <size> <size> <size> <size>] ]*
-    private ParsedValueImpl<ParsedValue<ParsedValue<?,Size>[],Insets>[], Insets[]> parseInsetsLayers(Term root)
+    private ParsedValueImpl<ParsedValue<ParsedValue[],Insets>[], Insets[]> parseInsetsLayers(Term root)
             throws ParseException {
 
         int nLayers = numberOfLayers(root);
 
         Term temp = root;
         int layer = 0;
-        ParsedValueImpl<ParsedValue<?,Size>[],Insets>[] layers = new ParsedValueImpl[nLayers];
+        ParsedValueImpl<ParsedValue[],Insets>[] layers = new ParsedValueImpl[nLayers];
 
         while(temp != null) {
             ParsedValueImpl<?,Size>[] sides = parseSizeSeries(temp);
-            layers[layer++] = new ParsedValueImpl<ParsedValue<?,Size>[],Insets>(sides, InsetsConverter.getInstance());
+            layers[layer++] = new ParsedValueImpl<ParsedValue[],Insets>(sides, InsetsConverter.getInstance());
             while(temp.nextInSeries != null) {
                 temp = temp.nextInSeries;
             }
             temp = nextLayer(temp);
         }
 
-        return new ParsedValueImpl<ParsedValue<ParsedValue<?,Size>[],Insets>[], Insets[]>(layers, InsetsConverter.SequenceConverter.getInstance());
+        return new ParsedValueImpl<ParsedValue<ParsedValue[],Insets>[], Insets[]>(layers, InsetsConverter.SequenceConverter.getInstance());
     }
 
     // A single inset (1, 2, 3, or 4 digits)
     // <size> | <size> <size> <size> <size>
-    private ParsedValueImpl<ParsedValue<?,Size>[],Insets> parseInsetsLayer(Term root)
+    private ParsedValueImpl<ParsedValue[],Insets> parseInsetsLayer(Term root)
             throws ParseException {
 
         Term temp = root;
-        ParsedValueImpl<ParsedValue<?,Size>[],Insets> layer = null;
+        ParsedValueImpl<ParsedValue[],Insets> layer = null;
 
         while(temp != null) {
             ParsedValueImpl<?,Size>[] sides = parseSizeSeries(temp);
-            layer = new ParsedValueImpl<ParsedValue<?,Size>[],Insets>(sides, InsetsConverter.getInstance());
+            layer = new ParsedValueImpl<ParsedValue[],Insets>(sides, InsetsConverter.getInstance());
             while(temp.nextInSeries != null) {
                 temp = temp.nextInSeries;
             }
@@ -2363,25 +2363,25 @@ final public class CSSParser {
     }
 
     // <size> | <size> <size> <size> <size>
-    private ParsedValueImpl<ParsedValue<ParsedValue<?,Size>[],Margins>[], Margins[]> parseMarginsLayers(Term root)
+    private ParsedValueImpl<ParsedValue<ParsedValue[],Margins>[], Margins[]> parseMarginsLayers(Term root)
             throws ParseException {
 
         int nLayers = numberOfLayers(root);
 
         Term temp = root;
         int layer = 0;
-        ParsedValueImpl<ParsedValue<?,Size>[],Margins>[] layers = new ParsedValueImpl[nLayers];
+        ParsedValueImpl<ParsedValue[],Margins>[] layers = new ParsedValueImpl[nLayers];
 
         while(temp != null) {
             ParsedValueImpl<?,Size>[] sides = parseSizeSeries(temp);
-            layers[layer++] = new ParsedValueImpl<ParsedValue<?,Size>[],Margins>(sides, Margins.Converter.getInstance());
+            layers[layer++] = new ParsedValueImpl<ParsedValue[],Margins>(sides, Margins.Converter.getInstance());
             while(temp.nextInSeries != null) {
                 temp = temp.nextInSeries;
             }
             temp = nextLayer(temp);
         }
 
-        return new ParsedValueImpl<ParsedValue<ParsedValue<?,Size>[],Margins>[], Margins[]>(layers, Margins.SequenceConverter.getInstance());
+        return new ParsedValueImpl<ParsedValue<ParsedValue[],Margins>[], Margins[]>(layers, Margins.SequenceConverter.getInstance());
     }
 
     /* Constant for background position */
@@ -2416,7 +2416,7 @@ final public class CSSParser {
      * returned ParsedValueImpl is [size, size, size, size] with the semantics
      * [top offset, right offset, bottom offset left offset]
      */
-    private ParsedValueImpl<ParsedValue<?,Size>[], BackgroundPosition> parseBackgroundPosition(Term term)
+    private ParsedValueImpl<ParsedValue[], BackgroundPosition> parseBackgroundPosition(Term term)
         throws ParseException {
 
         if (term.token == null ||
@@ -2715,21 +2715,21 @@ final public class CSSParser {
         }
 
         ParsedValueImpl<?,Size>[] values = new ParsedValueImpl[] {top, right, bottom, left};
-        return new ParsedValueImpl<ParsedValue<?,Size>[], BackgroundPosition>(values, BackgroundPositionConverter.getInstance());
+        return new ParsedValueImpl<ParsedValue[], BackgroundPosition>(values, BackgroundPositionConverter.getInstance());
     }
 
-    private ParsedValueImpl<ParsedValue<ParsedValue<?,Size>[], BackgroundPosition>[], BackgroundPosition[]>
+    private ParsedValueImpl<ParsedValue<ParsedValue[], BackgroundPosition>[], BackgroundPosition[]>
             parseBackgroundPositionLayers(final Term root) throws ParseException {
 
         int nLayers = numberOfLayers(root);
-        ParsedValueImpl<ParsedValue<?,Size>[], BackgroundPosition>[] layers = new ParsedValueImpl[nLayers];
+        ParsedValueImpl<ParsedValue[], BackgroundPosition>[] layers = new ParsedValueImpl[nLayers];
         int layer = 0;
         Term term = root;
         while (term != null) {
             layers[layer++] = parseBackgroundPosition(term);
             term = nextLayer(term);
         }
-        return new ParsedValueImpl<ParsedValue<ParsedValue<?,Size>[], BackgroundPosition>[], BackgroundPosition[]>(layers, LayeredBackgroundPositionConverter.getInstance());
+        return new ParsedValueImpl<ParsedValue<ParsedValue[], BackgroundPosition>[], BackgroundPosition[]>(layers, LayeredBackgroundPositionConverter.getInstance());
     }
 
     /*
@@ -3011,11 +3011,11 @@ final public class CSSParser {
             throws ParseException {
 
 
-        ParsedValue<ParsedValue<?, Size>[],Double[]> dashStyle = null;
-        ParsedValue<ParsedValue<?,Size>,Double> dashPhase = null;
+        ParsedValue<ParsedValue[],Number[]> dashStyle = null;
+        ParsedValue<ParsedValue<?,Size>,Number> dashPhase = null;
         ParsedValue<String,StrokeType> strokeType = null;
         ParsedValue<String,StrokeLineJoin> strokeLineJoin = null;
-        ParsedValue<ParsedValue<?,Size>,Double> strokeMiterLimit = null;
+        ParsedValue<ParsedValue<?,Size>,Number> strokeMiterLimit = null;
         ParsedValue<String,StrokeLineCap> strokeLineCap = null;
 
         Term term = root;
@@ -3035,7 +3035,7 @@ final public class CSSParser {
                  !isSize(term.token)) error(term, "Expected \'<size>\'");
 
             ParsedValueImpl<?,Size> sizeVal = parseSize(term);
-            dashPhase = new ParsedValueImpl<ParsedValue<?,Size>,Double>(sizeVal,SizeConverter.getInstance());
+            dashPhase = new ParsedValueImpl<ParsedValue<?,Size>,Number>(sizeVal,SizeConverter.getInstance());
 
             prev = term;
             term = term.nextInSeries;
@@ -3108,13 +3108,13 @@ final public class CSSParser {
     //
     // segments(<size> [, <size>]+) | <border-style>
     //
-    private ParsedValue<ParsedValue<?,Size>[],Double[]> dashStyle(final Term root) throws ParseException {
+    private ParsedValue<ParsedValue[],Number[]> dashStyle(final Term root) throws ParseException {
 
         if (root.token == null) error(root, "Expected \'<dash-style>\'");
 
         final int ttype = root.token.getType();
 
-        ParsedValue<ParsedValue<?,Size>[],Double[]>  segments = null;
+        ParsedValue<ParsedValue[],Number[]>  segments = null;
         if (ttype == CSSLexer.IDENT) {
             segments = borderStyle(root);
         } else if (ttype == CSSLexer.FUNCTION) {
@@ -3129,7 +3129,7 @@ final public class CSSParser {
     /*
     <border-style> = none | hidden | dotted | dashed | solid | double | groove | ridge | inset | outset
     */
-    private ParsedValue<ParsedValue<?,Size>[],Double[]>  borderStyle(Term root)
+    private ParsedValue<ParsedValue[],Number[]>  borderStyle(Term root)
             throws ParseException {
 
         if (root.token == null ||
@@ -3169,7 +3169,7 @@ final public class CSSParser {
         return BorderStyleConverter.SOLID;
     }
 
-    private ParsedValueImpl<ParsedValue<?,Size>[],Double[]> segments(Term root)
+    private ParsedValueImpl<ParsedValue[],Number[]> segments(Term root)
             throws ParseException {
 
         // first term in the chain is the function name...
@@ -3189,7 +3189,7 @@ final public class CSSParser {
             arg = arg.nextArg;
         }
 
-        return new ParsedValueImpl<ParsedValue<?,Size>[],Double[]>(segments,SizeConverter.SequenceConverter.getInstance());
+        return new ParsedValueImpl<ParsedValue[],Number[]>(segments,SizeConverter.SequenceConverter.getInstance());
 
     }
 
@@ -3212,7 +3212,7 @@ final public class CSSParser {
     // Root term is the term just after the line-join keyword
     // Returns an array of two Values or null.
     // ParsedValueImpl[0] is ParsedValueImpl<StrokeLineJoin,StrokeLineJoin>
-    // ParsedValueImpl[1] is ParsedValueImpl<Value<?,Size>,Double> if miter limit is given, null otherwise.
+    // ParsedValueImpl[1] is ParsedValueImpl<Value<?,Size>,Number> if miter limit is given, null otherwise.
     // If the token is not a StrokeLineJoin, then null is returned.
     private ParsedValueImpl[] parseStrokeLineJoin(final Term root)
         throws ParseException {
@@ -3226,7 +3226,7 @@ final public class CSSParser {
             ParsedValueImpl<String,StrokeLineJoin> strokeLineJoin =
                     new ParsedValueImpl<String,StrokeLineJoin>(keyword, new EnumConverter(StrokeLineJoin.class));
 
-            ParsedValueImpl<ParsedValue<?,Size>,Double> strokeMiterLimit = null;
+            ParsedValueImpl<ParsedValue<?,Size>,Number> strokeMiterLimit = null;
             if ("miter".equals(keyword)) {
 
                 Term next = root.nextInSeries;
@@ -3236,7 +3236,7 @@ final public class CSSParser {
 
                     root.nextInSeries = next.nextInSeries;
                     ParsedValueImpl<?,Size> sizeVal = parseSize(next);
-                    strokeMiterLimit = new ParsedValueImpl<ParsedValue<?,Size>,Double>(sizeVal,SizeConverter.getInstance());
+                    strokeMiterLimit = new ParsedValueImpl<ParsedValue<?,Size>,Number>(sizeVal,SizeConverter.getInstance());
                 }
 
             }
@@ -3296,7 +3296,7 @@ final public class CSSParser {
         if (inset < 4) insets[3] = insets[1]; // left = right
 
         ParsedValueImpl[] values = new ParsedValueImpl[] {
-                new ParsedValueImpl<ParsedValue<?,Size>[],Insets>(insets, InsetsConverter.getInstance()),
+                new ParsedValueImpl<ParsedValue[],Insets>(insets, InsetsConverter.getInstance()),
                 new ParsedValueImpl<Boolean,Boolean>(fill, null)
         };
         return new ParsedValueImpl<ParsedValue[], BorderImageSlices>(values, BorderImageSliceConverter.getInstance());
@@ -3320,7 +3320,7 @@ final public class CSSParser {
      * http://www.w3.org/TR/css3-background/#border-image-width
      * [ <length> | <percentage> | <number> | auto ]{1,4}
      */
-    private ParsedValueImpl<ParsedValue<?,Size>[], BorderWidths> parseBorderImageWidth(final Term root)
+    private ParsedValueImpl<ParsedValue[], BorderWidths> parseBorderImageWidth(final Term root)
             throws ParseException {
 
         Term term = root;
@@ -3343,21 +3343,21 @@ final public class CSSParser {
         if (inset < 3) insets[2] = insets[0]; // bottom = top
         if (inset < 4) insets[3] = insets[1]; // left = right
 
-        return new ParsedValueImpl<ParsedValue<?,Size>[], BorderWidths>(insets, BorderImageWidthConverter.getInstance());
+        return new ParsedValueImpl<ParsedValue[], BorderWidths>(insets, BorderImageWidthConverter.getInstance());
     }
 
-    private ParsedValueImpl<ParsedValue<ParsedValue<?,Size>[],BorderWidths>[],BorderWidths[]>
+    private ParsedValueImpl<ParsedValue<ParsedValue[],BorderWidths>[],BorderWidths[]>
         parseBorderImageWidthLayers(final Term root) throws ParseException {
 
         int nLayers = numberOfLayers(root);
-        ParsedValueImpl<ParsedValue<?,Size>[], BorderWidths>[] layers = new ParsedValueImpl[nLayers];
+        ParsedValueImpl<ParsedValue[], BorderWidths>[] layers = new ParsedValueImpl[nLayers];
         int layer = 0;
         Term term = root;
         while (term != null) {
             layers[layer++] = parseBorderImageWidth(term);
             term = nextLayer(term);
         }
-        return new ParsedValueImpl<ParsedValue<ParsedValue<?,Size>[],BorderWidths>[],BorderWidths[]> (layers, BorderImageWidthsSequenceConverter.getInstance());
+        return new ParsedValueImpl<ParsedValue<ParsedValue[],BorderWidths>[],BorderWidths[]> (layers, BorderImageWidthsSequenceConverter.getInstance());
     }
 
     // parse a Region value
@@ -3436,7 +3436,7 @@ final public class CSSParser {
     ////////////////////////////////////////////////////////////////////////////
 
     /* http://www.w3.org/TR/css3-fonts/#font-size-the-font-size-property */
-    private ParsedValueImpl<ParsedValue<?,Size>,Double> parseFontSize(final Term root) throws ParseException {
+    private ParsedValueImpl<ParsedValue<?,Size>,Number> parseFontSize(final Term root) throws ParseException {
 
         if (root == null) return null;
         final Token token = root.token;
@@ -3479,7 +3479,7 @@ final public class CSSParser {
         }
 
         ParsedValueImpl<?,Size> svalue = new ParsedValueImpl<Size,Size>(size, null);
-        return new ParsedValueImpl<ParsedValue<?,Size>,Double>(svalue, FontConverter.SizeConverter.getInstance());
+        return new ParsedValueImpl<ParsedValue<?,Size>,Number>(svalue, FontConverter.FontSizeConverter.getInstance());
     }
 
     /* http://www.w3.org/TR/css3-fonts/#font-style-the-font-style-property */
@@ -3507,7 +3507,7 @@ final public class CSSParser {
             return null;
         }
 
-        return new ParsedValueImpl<FontUnits.Style,FontPosture>(style, FontConverter.StyleConverter.getInstance());
+        return new ParsedValueImpl<FontUnits.Style,FontPosture>(style, FontConverter.FontStyleConverter.getInstance());
     }
 
     /* http://www.w3.org/TR/css3-fonts/#font-weight-the-font-weight-property */
@@ -3551,7 +3551,7 @@ final public class CSSParser {
         } else {
 	    error(root, "Expected \'<font-weight>\'");
 	}
-        return new ParsedValueImpl<FontUnits.Weight,FontWeight>(weight, FontConverter.WeightConverter.getInstance());
+        return new ParsedValueImpl<FontUnits.Weight,FontWeight>(weight, FontConverter.FontWeightConverter.getInstance());
     }
 
     private ParsedValueImpl<String,String>  parseFontFamily(Term root) throws ParseException {
@@ -3619,7 +3619,7 @@ final public class CSSParser {
             token = term.token;
         }
 
-        ParsedValueImpl<ParsedValue<?,Size>,Double> fsize = parseFontSize(term);
+        ParsedValueImpl<ParsedValue<?,Size>,Number> fsize = parseFontSize(term);
         if (fsize == null) error(root, "Expected \'<size>\'");
 
         ParsedValueImpl<FontUnits.Style,FontPosture> fstyle = null;

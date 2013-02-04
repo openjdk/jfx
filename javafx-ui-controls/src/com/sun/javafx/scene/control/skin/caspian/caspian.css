@@ -1002,7 +1002,7 @@
     -fx-background-color: -fx-shadow-highlight-color, -fx-outer-border, -fx-inner-border, -fx-body-color;
     -fx-background-insets: 0 0 -1 0, 0, 1, 2;
     -fx-background-radius: 5, 5, 4, 3;
-    -fx-padding: 0.0em 0.5em 0.0em 0.0em; /* 0 6 0 0 */
+    -fx-padding: 0;
     -fx-alignment: CENTER;
     -fx-content-display: LEFT;
 }
@@ -1029,7 +1029,7 @@
 
 .choice-box > .open-button {
     -fx-background-color: null;
-    -fx-padding: 0.083333em 0.0em 0.0em 0.666667em; /* 1 0 0 8 */
+    -fx-padding: 0.083333em 0.666667em 0 0; /* 1 0 0 8 */
 }
 
 .choice-box > .open-button > .arrow {
@@ -1364,7 +1364,7 @@
     -fx-background-color: -fx-shadow-highlight-color, -fx-text-box-border, -fx-control-inner-background;
     -fx-background-insets: 0, 1, 2;
     -fx-background-radius: 3, 2, 2;
-    -fx-padding: 3 5 3 5;
+    -fx-padding: 0.25em 0.416667em  0.333333em 0.416667em; /* 3 5 4 5 */
     -fx-text-fill: -fx-text-inner-color;
     -fx-prompt-text-fill: derive(-fx-control-inner-background,-30%);
     -fx-cursor: text;
@@ -1732,7 +1732,7 @@
     -fx-text-fill: -fx-text-base-color; 
     
     /* The MenuButton skin uses an inner Label part */
-    -fx-padding: 0.166667em 1.5em 0.25em 0.833333em; /* 2 18 3 10 */
+    -fx-padding: 0.166667em 0.667em 0.25em 0.833333em; /* 2 8 3 10 */
 }
 
 .menu-button:focused {
@@ -1753,7 +1753,7 @@
 .menu-button > .arrow-button {
     -fx-background-insets: 0;
     -fx-background-radius: 0;
-    -fx-padding: 0.5em 0.416667em 0.5em 0.0em; /* 6 5 6 0 */
+    -fx-padding: 0.5em 0.667em 0.5em 0.0em; /* 6 8 6 0 */
 }
 
 .menu-button > .arrow-button > .arrow {
@@ -1812,14 +1812,14 @@
     -fx-background-color:  -fx-outer-border, -fx-inner-border, -fx-body-color;
     -fx-background-insets: 0, 1 0 1 1, 2 1 2 2;
     -fx-background-radius: 5 0 0 5, 4 0 0 4, 3 0 0 3;
-    -fx-padding: 0.166667em 1.5em 0.25em 0.833333em; /* 2 18 3 10 */
+    -fx-padding: 0.166667em 0.667em 0.25em 0.833333em; /* 2 8 3 10 */
 }
 
 .split-menu-button > .arrow-button {
     -fx-background-color: -fx-outer-border, -fx-inner-border, -fx-body-color;
     -fx-background-insets: 0, 1, 2;
     -fx-background-radius: 0 5 5 0, 0 4 4 0, 0 3 3 0;
-    -fx-padding: 0.5em 0.416667em 0.5em 0.416667em; /* 6 5 6 5 */
+    -fx-padding: 0.5em 0.667em 0.5em 0.667em; /* 6 8 6 8 */
 }
 
 .split-menu-button > .arrow-button:hover {
@@ -2500,10 +2500,6 @@
     -fx-shape: "M 0 0 h 7 l -3.5 4 z";
 }
 
-.titled-pane:collapsed > .title > .arrow-button > .arrow {
-    -fx-rotate: -90;
-}
-
 .titled-pane > *.content {
     -fx-background-color:
         -fx-box-border,
@@ -2570,11 +2566,18 @@
  *                                                                             *
  ******************************************************************************/
 
-.split-pane > * > * > .table-view { -fx-padding: 0px; }
-.split-pane > * > * > .list-view { -fx-padding: 0px; }
-.split-pane > * > * > .tree-view { -fx-padding: 0px; }
-.split-pane > * > * > .scroll-pane { -fx-padding: 0px; }
-.split-pane > * > * > .split-pane {
+.tab-pane > * > .tab-pane,
+.tab-pane > * > .table-view,
+.tab-pane > * > .list-view,
+.tab-pane > * > .tree-view,
+.tab-pane > * > .scroll-pane,
+.tab-pane > * > .split-pane,
+.split-pane > * > .tab-pane,
+.split-pane > * > .table-view,
+.split-pane > * > .list-view,
+.split-pane > * > .tree-view,
+.split-pane > * > .scroll-pane,
+.split-pane > * > .split-pane {
     -fx-background-insets: 0, 0;
     -fx-padding: 0;
  }
@@ -2626,8 +2629,8 @@
 .tab-pane {
     /* -fx-tab-min-width: 4.583em;  55 */
     /* -fx-tab-max-width: 4.583em; 55 */
-    -fx-tab-min-height: 2em; /* 24 */
-    -fx-tab-max-height: 2em; /* 24 */
+    -fx-tab-min-height: 1.75em; /* 21 */
+    -fx-tab-max-height: 1.75em; /* 21 */
 }
 
 .tab-pane > .tab-header-area > .headers-region > .tab > .tab-container > .tab-label {
@@ -2652,7 +2655,8 @@
 /*    -fx-background-color: -fx-shadow-highlight-color, -fx-tab-border-color, -fx-inner-border, -fx-body-color;
     -fx-background-radius: 5 5 0 0, 5 5 0 0, 4 4 0 0, 3 3 0 0;
     -fx-background-insets: 0 0 -1 0, 0, 1, 2;*/
-    -fx-background-insets: 0, 1, 2;
+    /*-fx-background-insets: 0, 1, 2;*/
+    -fx-background-insets: 0 1 1 0, 1 2 1 1, 2 3 1 2;
     -fx-background-radius: 5 5 0 0, 4 4 0 0, 3 3 0 0;
     -fx-padding: 0.083333em 0.5em 0.083333em 0.5em; /* 1 6 1 6 */
 /*    -fx-text-fill: -fx-text-base-color;*/
@@ -2685,7 +2689,7 @@
     -fx-background-radius: 5 5 0 0, 4 4 0 0, 3 3 0 0;
     -fx-background-insets: 0, 1 1 0 1, 2 2 0 2;*/
     -fx-background-color: -fx-tab-border-color, -fx-control-inner-background;
-    -fx-background-insets: 0, 1 1 0 1;
+    -fx-background-insets: 0 1 0 0, 1 2 0 1;
     -fx-background-radius: 5 5 0 0, 4 4 0 0;
 }
 
@@ -2733,10 +2737,6 @@
 .tab-pane:right > .tab-header-area {
     -fx-background-insets: 0, 0 0 0 1;
     -fx-padding: 0.833em 0.416667em 0.166667em 0.0em; /* 10 5 2 0 */
-}
-
-.tab-pane > .tab-header-area > .headers-region {
-    -fx-effect: dropshadow(two-pass-box , rgba(0,0,0,0.6) , 4, 0.0 , 0, 0);
 }
 
 /* TODO: scaling the shape seems to make it way too large */
@@ -2794,13 +2794,13 @@
 
 .tab-pane.floating > .tab-header-area > .headers-region > .tab {
     -fx-background-color: -fx-tab-border-color, -fx-inner-border, -fx-body-color;
-    -fx-background-insets: 0, 1, 2;
+    -fx-background-insets: 0 1 1 0, 1 2 1 1, 2 3 1 2;
     -fx-background-radius: 5 5 0 0, 4 4 0 0, 3 3 0 0;
 }
 
 .tab-pane.floating  > .tab-header-area > .headers-region > .tab:selected {
     -fx-background-color: -fx-tab-border-color, -fx-control-inner-background;
-    -fx-background-insets: 0 0 -1 0, 1 1 -1 1;
+    -fx-background-insets: 0 1 -1 0, 1 2 -1 1;
     -fx-background-radius: 5 5 0 0, 4 4 0 0;
 }
 
@@ -3131,14 +3131,14 @@
     -fx-background-color: -fx-outer-border, -fx-inner-border, -fx-body-color;
     -fx-background-insets: 0, 1, 2;
     -fx-background-radius: 0 5 5 0, 0 4 4 0, 0 3 3 0;
-    -fx-padding: 0.5em 0.416667em 0.5em 0.416667em; /* 6 5 6 5  */
+    -fx-padding: 0 0.667em 0 0.667em; /* 6 8 6 8 */
+    /*-fx-padding: 0; *//* 6 8 6 8 */
 }
 
 .combo-box-base:hover > .arrow-button {
     -fx-background-color: -fx-outer-border, -fx-inner-border, -fx-body-color;
     -fx-background-insets: 0, 1, 2;
     -fx-background-radius: 0 5 5 0, 0 4 4 0, 0 3 3 0;
-    -fx-padding: 0.5em 0.416667em 0.5em 0.416667em; /* 6 5 6 5 */
 }
 
 .combo-box-base:showing > .arrow-button {
@@ -3171,11 +3171,11 @@ all inherit from Menu Control's popup-menu. --- */
 Only the properties with values that are different from the TextBox are specified here. ---*/
 
 .combo-box-base:editable > .text-field {
-    -fx-padding: 3 5 2 5;
+    -fx-padding: 0.166667em 0.416667em 0.25em 0.416667em; /* 2 5 3 5 */
+    /*-fx-padding: 0px;*/
+    /*-fx-background-color: yellow;*/
     -fx-background-radius: 4 0 0 4, 3 0 0 3, 2 0 0 2;
     -fx-background-insets: 0 0 -1 0, 0, 1 0 1 1;
-    -fx-vpos: CENTER;
-    -fx-content-display: LEFT;
 }
 
 .combo-box-base:editable:contains-focus {
@@ -3191,7 +3191,7 @@ Only the properties with values that are different from the TextBox are specifie
     -fx-background: transparent;
     -fx-background-color: transparent;
     -fx-text-fill: -fx-text-base-color;
-    -fx-padding: 3 0 2 7;
+    -fx-padding: 0.25em 0 0.166667em 0.583333em; /* 3 0 2 7 */
     -fx-cell-size: 1.7500em; /* 21 */
 }
 
@@ -3222,15 +3222,14 @@ Only the properties with values that are different from the TextBox are specifie
 
 /* -------------------------- STYLES FOR THE COLOR-PICKER CONTROL ----- */
 
+.color-picker {
+    -fx-color-rect-width: 0.916667em; /* 11px */
+    -fx-color-rect-height: 0.916667em; /* 11px */
+}
 .color-picker > .arrow-button {
     -fx-background-color: null;
     -fx-background-insets: 0, 1, 2;
     -fx-background-radius: 0 5 5 0, 0 4 4 0, 0 3 3 0;
-    -fx-padding: 0.5em 0.416667em 0.5em 0.416667em; /* 6 5 6 5 */
-}
-
-.color-picker > .color-picker-label > .text {
-    -fx-padding: 0.0em 0.833333em 0.0em 0.0em;  /* 0 10 0 0 */
 }
 
 .color-picker > .split-button > .arrow-button {
@@ -3253,12 +3252,13 @@ Only the properties with values that are different from the TextBox are specifie
 }
 
 .color-picker > .color-picker-label > .picker-color {
-    -fx-padding: 4;
+    -fx-padding: 0.416667em 0.333333em 0.416667em 0.333333em; /* 5 4 5 4 */
     -fx-background-color: null;
 }
 
 .color-picker > .color-picker-label > .picker-color > .picker-color-rect {
     -fx-stroke: -fx-pressed-base;
+    -fx-stroke-type: inside;
 }
 
 .color-palette {
@@ -3696,7 +3696,13 @@ Only the properties with values that are different from the TextBox are specifie
     -fx-padding: 0;
     -fx-border-color: derive(-fx-base,-35%);
 }
-
+.html-editor .button,
+.html-editor .toggle-button {
+    -fx-padding: 0.333333em 0.833333em 0.416667em 0.833333em; /* 2 10 3 10 */
+}
+.html-editor .combo-box > .list-cell {
+    -fx-cell-size: 2.0833em; /* 21 */
+}
 /* Each Toolbar is constructed of two stacked shapes */
 .html-editor > * > .top-toolbar {
     -fx-background-color:
@@ -3725,6 +3731,11 @@ Only the properties with values that are different from the TextBox are specifie
     -fx-color-rect-y: 10;
     -fx-color-rect-width: 16;
     -fx-color-rect-height: 5;
+    -fx-padding: 0;
+}
+.html-editor-foreground > .color-picker-label,
+.html-editor-background > .color-picker-label {
+    -fx-padding: 0 0 -0.083333em 0;
 }
 /* Note: The Separator is constructed of a 1-pixel shape
 whose borders are styled.  Only the right border is specified

@@ -1056,19 +1056,25 @@ public class TreeViewKeyInputTest {
     }
     
     // Test 20 (TreeView test cases)
+    // NOTE: this used to be isSelected but changed when we removed functionality
+    // for KeyCode.SLASH. Rather than remove the test I'm now testing to make
+    // sure it does nothing.
     @Test public void testCtrlForwardSlashToSelectAll() {
         sm.clearAndSelect(1);
         keyboard.doKeyPress(KeyCode.SLASH, KeyModifier.getShortcutKey());
-        assertTrue(isSelected(0,1,2,3,4,5,6,7,8,9));
+        assertTrue(isSelected(1));
+        assertTrue(isNotSelected(0,2,3,4,5,6,7,8,9));
     }
     
     // Test 21 (TreeView test cases)
-    @Ignore("Not yet working")
+    // NOTE: this used to be isNotSelected but changed when we removed functionality
+    // for KeyCode.BACK_SLASH. Rather than remove the test I'm now testing to make
+    // sure it does nothing.
     @Test public void testCtrlBackSlashToClearSelection() {
         sm.selectAll();
         fm.focus(1);
         keyboard.doKeyPress(KeyCode.BACK_SLASH, KeyModifier.getShortcutKey());
-        assertTrue(isNotSelected(0,1,2,3,4,5,6,7,8,9));
+        assertTrue(isSelected(0,1,2,3,4,5,6,7,8,9));
         assertTrue(fm.isFocused(1));
     }
     
@@ -1143,5 +1149,56 @@ public class TreeViewKeyInputTest {
         keyboard.doUpArrowPress(KeyModifier.SHIFT);   
         assertTrue(isSelected(4, 5));
         assertTrue(isNotSelected(0, 1, 2, 3));
+    }
+    
+    @Test public void test_rt14451_1() {
+        sm.clearAndSelect(5);                          
+
+        keyboard.doKeyPress(KeyCode.HOME, KeyModifier.SHIFT); 
+        assertTrue(isSelected(0,1,2,3,4,5));
+        assertTrue(isNotSelected(6,7,8,9));
+        
+        keyboard.doKeyPress(KeyCode.END, KeyModifier.SHIFT); 
+        assertTrue(isNotSelected(0,1,2,3,4));
+        assertTrue(isSelected(5,6,7,8,9));
+        
+        keyboard.doKeyPress(KeyCode.HOME, KeyModifier.SHIFT); 
+        assertTrue(isSelected(0,1,2,3,4,5));
+        assertTrue(debug(), isNotSelected(6,7,8,9));
+    } 
+    
+    @Test public void test_rt14451_2() {
+        sm.clearAndSelect(5);                          
+
+        keyboard.doKeyPress(KeyCode.END, KeyModifier.SHIFT); 
+        assertTrue(isNotSelected(0,1,2,3,4));
+        assertTrue(isSelected(5,6,7,8,9));
+        
+        keyboard.doKeyPress(KeyCode.HOME, KeyModifier.SHIFT); 
+        assertTrue(isSelected(0,1,2,3,4,5));
+        assertTrue(debug(), isNotSelected(6,7,8,9));
+        
+        keyboard.doKeyPress(KeyCode.END, KeyModifier.SHIFT); 
+        assertTrue(isNotSelected(0,1,2,3,4));
+        assertTrue(isSelected(5,6,7,8,9));
+    } 
+    
+    @Test public void test_rt26835_1() {
+        sm.clearAndSelect(5);                          
+        keyboard.doKeyPress(KeyCode.HOME, KeyModifier.getShortcutKey()); 
+        assertTrue(fm.isFocused(0));
+    } 
+    
+    @Test public void test_rt26835_2() {
+        sm.clearAndSelect(5);                          
+        keyboard.doKeyPress(KeyCode.END, KeyModifier.getShortcutKey()); 
+        assertTrue(debug(), fm.isFocused(getItemCount()));
+    } 
+    
+    @Test public void test_rt27175() {
+        sm.clearAndSelect(5);                          
+        keyboard.doKeyPress(KeyCode.HOME, KeyModifier.SHIFT, KeyModifier.getShortcutKey()); 
+        assertTrue(debug(), fm.isFocused(0));
+        assertTrue(isSelected(0,1,2,3,4,5));
     }
 }

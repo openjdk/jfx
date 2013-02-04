@@ -225,7 +225,7 @@ public class TreeCellBehavior extends CellBehaviorBase<TreeCell<?>> {
                         // We add this row to the current selection
                         sm.select(index);
                     }
-                } else if (event.isShiftDown()) {
+                } else if (event.isShiftDown() && event.getClickCount() == 1) {
                     // we add all rows between the current selection focus and
                     // this row (inclusive) to the current selection.
                     final int focusedIndex = getAnchor(treeView);

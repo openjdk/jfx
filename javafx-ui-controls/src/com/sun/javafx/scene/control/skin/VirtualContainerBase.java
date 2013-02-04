@@ -42,15 +42,22 @@ import com.sun.javafx.scene.control.behavior.BehaviorBase;
  * @profile common
  */
 public abstract class VirtualContainerBase<C extends Control, B extends BehaviorBase<C>, I extends IndexedCell> extends BehaviorSkinBase<C, B> {
+    
+    protected boolean rowCountDirty;
 
     public VirtualContainerBase(final C control, B behavior) {
         super(control, behavior);
         flow = new VirtualFlow<I>();
         
         control.addEventHandler(ScrollToEvent.SCROLL_TO_TOP_INDEX, new EventHandler<ScrollToEvent<Integer>>() {
-
-            @Override
-            public void handle(ScrollToEvent<Integer> event) {
+            @Override public void handle(ScrollToEvent<Integer> event) {
+                // Fix for RT-24630: The row count in VirtualFlow was incorrect
+                // (normally zero), so the scrollTo call was misbehaving.
+                if (rowCountDirty) {
+                    // update row count before we do a scroll
+                    updateRowCount();
+                    rowCountDirty = false;
+                }
                 flow.scrollTo(event.getScrollTarget());
             }
         });        
@@ -77,6 +84,8 @@ public abstract class VirtualContainerBase<C extends Control, B extends Behavior
      * that are currently hidden because they are out of view.
      */
     public abstract int getItemCount();
+    
+    protected abstract void updateRowCount();
 
     double getMaxCellWidth(int rowsToCount) {
         final Insets padding = getSkinnable().getInsets();
@@ -93,5 +102,11 @@ public abstract class VirtualContainerBase<C extends Control, B extends Behavior
         final Insets padding = getSkinnable().getInsets();
         return height + padding.getTop() + padding.getBottom();
     }
-    
+
+    @Override protected void layoutChildren(double x, double y, double w, double h) {
+        if (rowCountDirty) {
+            updateRowCount();
+            rowCountDirty = false;
+        }
+    }
 }

@@ -66,13 +66,13 @@ public class ParsedValueTest {
         ///System.out.println("convert");
         Font font = Font.getDefault();
         Size size = new Size(1.0f, SizeUnits.EM);
-        ParsedValue<ParsedValue<?,Size>,Double> value =
-            new ParsedValueImpl<ParsedValue<?,Size>,Double>(
+        ParsedValue<ParsedValue<?,Size>,Number> value =
+            new ParsedValueImpl<ParsedValue<?,Size>,Number>(
                 new ParsedValueImpl<Size,Size>(new Size(1.0f, SizeUnits.EM), null),
                 SizeConverter.getInstance());
 
         double expResult = font.getSize();
-        double result = value.convert(font);
+        double result = value.convert(font).doubleValue();
         assertEquals(expResult, result, 0.01);
     }
 
@@ -81,13 +81,13 @@ public class ParsedValueTest {
 
         Font font = Font.getDefault();
         Size size = new Size(1.0f, SizeUnits.EM);
-        ParsedValue<ParsedValue<?,Size>,Double> value1 =
-            new ParsedValueImpl<ParsedValue<?,Size>,Double>(
+        ParsedValue<ParsedValue<?,Size>,Number> value1 =
+            new ParsedValueImpl<ParsedValue<?,Size>,Number>(
                 new ParsedValueImpl<Size,Size>(new Size(1.0f, SizeUnits.EM), null),
                 SizeConverter.getInstance());
 
-        ParsedValue<ParsedValue<?,Size>,Double> value2 =
-            new ParsedValueImpl<ParsedValue<?,Size>,Double>(
+        ParsedValue<ParsedValue<?,Size>,Number> value2 =
+            new ParsedValueImpl<ParsedValue<?,Size>,Number>(
                 new ParsedValueImpl<Size,Size>(new Size(1.0f, SizeUnits.EM), null),
                 null);
 
@@ -95,31 +95,31 @@ public class ParsedValueTest {
         assertTrue(value1.equals(value2));
 
         value1 =
-            new ParsedValueImpl<ParsedValue<?,Size>,Double>(
+            new ParsedValueImpl<ParsedValue<?,Size>,Number>(
                 new ParsedValueImpl<Size,Size>(new Size(1.0f, SizeUnits.EM), null),
                 SizeConverter.getInstance());
 
         value2 =
-            new ParsedValueImpl<ParsedValue<?,Size>,Double>(
+            new ParsedValueImpl<ParsedValue<?,Size>,Number>(
                 new ParsedValueImpl<Size,Size>(new Size(2.0f, SizeUnits.EM), null),
                 SizeConverter.getInstance());
 
         assertFalse(value1.equals(value2));
 
         value2 =
-            new ParsedValueImpl<ParsedValue<?,Size>,Double>(
+            new ParsedValueImpl<ParsedValue<?,Size>,Number>(
                 new ParsedValueImpl<Size,Size>(new Size(1.0f, SizeUnits.PX), null),
                 SizeConverter.getInstance());
 
         assertFalse(value1.equals(value2));
 
         value2 =
-            new ParsedValueImpl<ParsedValue<?,Size>,Double>(null, null);
+            new ParsedValueImpl<ParsedValue<?,Size>,Number>(null, null);
 
         assertFalse(value1.equals(value2));
 
-        ParsedValue<ParsedValue<?,Size>[],Double[]> value3 =
-                new ParsedValueImpl<ParsedValue<?,Size>[],Double[]>(
+        ParsedValue<ParsedValue[],Number[]> value3 =
+                new ParsedValueImpl<ParsedValue[],Number[]>(
                     new ParsedValueImpl[] {
                         new ParsedValueImpl<Size,Size>(new Size(1.0f, SizeUnits.EM), null),
                         new ParsedValueImpl<Size,Size>(new Size(2.0f, SizeUnits.EM), null)
@@ -129,8 +129,8 @@ public class ParsedValueTest {
         assertFalse(value1.equals(value3));
         assertFalse(value3.equals(value1));
 
-        ParsedValue<ParsedValue<?,Size>[],Double[]> value4 =
-                new ParsedValueImpl<ParsedValue<?,Size>[],Double[]>(
+        ParsedValue<ParsedValue[],Number[]> value4 =
+                new ParsedValueImpl<ParsedValue[],Number[]>(
                     new ParsedValueImpl[] {
                         new ParsedValueImpl<Size,Size>(new Size(1.0f, SizeUnits.EM), null),
                         new ParsedValueImpl<Size,Size>(new Size(2.0f, SizeUnits.EM), null)
@@ -140,7 +140,7 @@ public class ParsedValueTest {
         assertTrue(value3.equals(value4));
 
         value4 =
-                new ParsedValueImpl<ParsedValue<?,Size>[],Double[]>(
+                new ParsedValueImpl<ParsedValue[],Number[]>(
                     new ParsedValueImpl[] {
                         new ParsedValueImpl<Size,Size>(new Size(2.0f, SizeUnits.EM), null),
                         null
@@ -150,7 +150,7 @@ public class ParsedValueTest {
         assertFalse(value3.equals(value4));
 
         value4 =
-                new ParsedValueImpl<ParsedValue<?,Size>[],Double[]>(
+                new ParsedValueImpl<ParsedValue[],Number[]>(
                     new ParsedValueImpl[] {
                         new ParsedValueImpl<Size,Size>(new Size(1.0f, SizeUnits.EM), null),
                         new ParsedValueImpl<Size,Size>(new Size(2.0f, SizeUnits.EM), null),
@@ -161,7 +161,7 @@ public class ParsedValueTest {
         assertFalse(value3.equals(value4));
 
         value4 =
-                new ParsedValueImpl<ParsedValue<?,Size>[],Double[]>(
+                new ParsedValueImpl<ParsedValue[],Number[]>(
                     new ParsedValueImpl[] {
                         null
                     }, SizeConverter.SequenceConverter.getInstance()
@@ -170,15 +170,15 @@ public class ParsedValueTest {
         assertFalse(value3.equals(value4));
 
         value4 =
-                new ParsedValueImpl<ParsedValue<?,Size>[],Double[]>(
+                new ParsedValueImpl<ParsedValue[],Number[]>(
                     null,
                     SizeConverter.SequenceConverter.getInstance()
                 );
 
         assertFalse(value3.equals(value4));
 
-        ParsedValue<ParsedValue<?,Size>[][],Double[][]> value5 =
-                new ParsedValueImpl<ParsedValue<?,Size>[][],Double[][]>(
+        ParsedValue<ParsedValue[][],Number[][]> value5 =
+                new ParsedValueImpl<ParsedValue[][],Number[][]>(
                     new ParsedValueImpl[][] {
                         new ParsedValueImpl[] {
                             new ParsedValueImpl<Size,Size>(new Size(1.0f, SizeUnits.EM), null),
@@ -196,8 +196,8 @@ public class ParsedValueTest {
         assertFalse(value5.equals(value1));
         assertFalse(value5.equals(value3));
 
-        ParsedValue<ParsedValue<?,Size>[][],Double[][]> value6 =
-                new ParsedValueImpl<ParsedValue<?,Size>[][],Double[][]>(
+        ParsedValue<ParsedValue[][],Number[][]> value6 =
+                new ParsedValueImpl<ParsedValue[][],Number[][]>(
                     new ParsedValueImpl[][] {
                         new ParsedValueImpl[] {
                             new ParsedValueImpl<Size,Size>(new Size(1.0f, SizeUnits.EM), null),
@@ -213,7 +213,7 @@ public class ParsedValueTest {
         assertTrue(value5.equals(value6));
 
         value6 =
-                new ParsedValueImpl<ParsedValue<?,Size>[][],Double[][]>(
+                new ParsedValueImpl<ParsedValue[][],Number[][]>(
                     new ParsedValueImpl[][] {
                         new ParsedValueImpl[] {
                             new ParsedValueImpl<Size,Size>(new Size(1.0f, SizeUnits.EM), null),
@@ -230,7 +230,7 @@ public class ParsedValueTest {
         assertFalse(value5.equals(value6));
 
         value6 =
-                new ParsedValueImpl<ParsedValue<?,Size>[][],Double[][]>(
+                new ParsedValueImpl<ParsedValue[][],Number[][]>(
                     new ParsedValueImpl[][] {
                         new ParsedValueImpl[] {
                             new ParsedValueImpl<Size,Size>(new Size(1.0f, SizeUnits.EM), null),
@@ -246,7 +246,7 @@ public class ParsedValueTest {
         assertFalse(value5.equals(value6));
 
         value6 =
-                new ParsedValueImpl<ParsedValue<?,Size>[][],Double[][]>(
+                new ParsedValueImpl<ParsedValue[][],Number[][]>(
                     new ParsedValueImpl[][] {
                         new ParsedValueImpl[] {
                             new ParsedValueImpl<Size,Size>(new Size(1.0f, SizeUnits.EM), null),
@@ -284,14 +284,14 @@ public class ParsedValueTest {
         Size size = new Size(1.0f, SizeUnits.EM);
         
         ParsedValueImpl parsedValue =
-            new ParsedValueImpl<ParsedValue<?,Size>,Double>(
+            new ParsedValueImpl<ParsedValue<?,Size>,Number>(
                 new ParsedValueImpl<Size,Size>(new Size(1.0f, SizeUnits.EM), null),
                 SizeConverter.getInstance());
 
         writeBinary(parsedValue);
         
         parsedValue =
-                new ParsedValueImpl<ParsedValue<?,Size>[],Double[]>(
+                new ParsedValueImpl<ParsedValue[],Number[]>(
                     new ParsedValueImpl[] {
                         new ParsedValueImpl<Size,Size>(new Size(1.0f, SizeUnits.EM), null),
                         new ParsedValueImpl<Size,Size>(new Size(2.0f, SizeUnits.EM), null)
@@ -301,7 +301,7 @@ public class ParsedValueTest {
         writeBinary(parsedValue);
         
         parsedValue =
-                new ParsedValueImpl<ParsedValue<?,Size>[][],Double[][]>(
+                new ParsedValueImpl<ParsedValue[][],Number[][]>(
                     new ParsedValueImpl[][] {
                         new ParsedValueImpl[] {
                             new ParsedValueImpl<Size,Size>(new Size(1.0f, SizeUnits.EM), null),
@@ -317,7 +317,7 @@ public class ParsedValueTest {
         writeBinary(parsedValue);
         
         parsedValue =
-                new ParsedValueImpl<ParsedValue<?,Size>[][],Double[][]>(
+                new ParsedValueImpl<ParsedValue[][],Number[][]>(
                     new ParsedValueImpl[][] {
                         new ParsedValueImpl[] {
                             new ParsedValueImpl<Size,Size>(new Size(1.0f, SizeUnits.EM), null),
@@ -333,7 +333,7 @@ public class ParsedValueTest {
         writeBinary(parsedValue);
         
         parsedValue =
-                new ParsedValueImpl<ParsedValue<?,Size>[][],Double[][]>(
+                new ParsedValueImpl<ParsedValue[][],Number[][]>(
                     new ParsedValueImpl[][] {
                         new ParsedValueImpl[] {
                             new ParsedValueImpl<Size,Size>(new Size(1.0f, SizeUnits.EM), null),
@@ -347,7 +347,7 @@ public class ParsedValueTest {
         
     }
 
-    private void writeAndReadBinary(ParsedValueImpl parsedValue) {
+    private void writeAndReadBinary(ParsedValueImpl<?,?> parsedValue) {
 
         try {
             StringStore stringStore = new StringStore();
@@ -358,7 +358,7 @@ public class ParsedValueTest {
             String[] strings = stringStore.strings.toArray(new String[]{});
             ByteArrayInputStream bais = new ByteArrayInputStream(baos.toByteArray());
             DataInputStream dis = new DataInputStream(bais);
-            ParsedValue pv = ParsedValueImpl.readBinary(dis, strings);
+            ParsedValue<?,?> pv = ParsedValueImpl.readBinary(dis, strings);
             org.junit.Assert.assertEquals(parsedValue, pv);
         } catch (IOException ioe) {
             org.junit.Assert.fail(parsedValue.toString());
@@ -374,14 +374,14 @@ public class ParsedValueTest {
         Size size = new Size(1.0f, SizeUnits.EM);
         
         ParsedValueImpl parsedValue =
-            new ParsedValueImpl<ParsedValue<?,Size>,Double>(
+            new ParsedValueImpl<ParsedValue<?,Size>,Number>(
                 new ParsedValueImpl<Size,Size>(new Size(1.0f, SizeUnits.EM), null),
                 SizeConverter.getInstance());
 
         writeAndReadBinary(parsedValue);
         
         parsedValue =
-                new ParsedValueImpl<ParsedValue<?,Size>[],Double[]>(
+                new ParsedValueImpl<ParsedValue[],Number[]>(
                     new ParsedValueImpl[] {
                         new ParsedValueImpl<Size,Size>(new Size(1.0f, SizeUnits.EM), null),
                         new ParsedValueImpl<Size,Size>(new Size(2.0f, SizeUnits.EM), null)
@@ -391,7 +391,7 @@ public class ParsedValueTest {
         writeAndReadBinary(parsedValue);
         
         parsedValue =
-                new ParsedValueImpl<ParsedValue<?,Size>[][],Double[][]>(
+                new ParsedValueImpl<ParsedValue[][],Number[][]>(
                     new ParsedValueImpl[][] {
                         new ParsedValueImpl[] {
                             new ParsedValueImpl<Size,Size>(new Size(1.0f, SizeUnits.EM), null),
@@ -407,7 +407,7 @@ public class ParsedValueTest {
         writeAndReadBinary(parsedValue);
         
         parsedValue =
-                new ParsedValueImpl<ParsedValue<?,Size>[][],Double[][]>(
+                new ParsedValueImpl<ParsedValue[][],Number[][]>(
                     new ParsedValueImpl[][] {
                         new ParsedValueImpl[] {
                             new ParsedValueImpl<Size,Size>(new Size(1.0f, SizeUnits.EM), null),
@@ -423,7 +423,7 @@ public class ParsedValueTest {
         writeAndReadBinary(parsedValue);
         
         parsedValue =
-                new ParsedValueImpl<ParsedValue<?,Size>[][],Double[][]>(
+                new ParsedValueImpl<ParsedValue[][],Number[][]>(
                     new ParsedValueImpl[][] {
                         new ParsedValueImpl[] {
                             new ParsedValueImpl<Size,Size>(new Size(1.0f, SizeUnits.EM), null),

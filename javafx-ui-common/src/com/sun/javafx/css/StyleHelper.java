@@ -99,7 +99,7 @@ public abstract class StyleHelper {
         CssMetaData styleableFontProperty = null;
         CssMetaData styleableThatInherits = null;
         
-        final List<CssMetaData> props = node.getCssMetaData();
+        final List<CssMetaData<? extends Node, ?>> props = node.getCssMetaData();
         final int pMax = props != null ? props.size() : 0;
         for (int p=0; p<pMax; p++) {
             final CssMetaData prop = props.get(p);
@@ -974,7 +974,7 @@ return sb.toString();
         //
         // if this node has a style map, then we'll populate it.
         // 
-        final Map<StyleableProperty, List<Style>> styleMap = node.impl_getStyleMap();
+        final Map<StyleableProperty<?>, List<Style>> styleMap = node.impl_getStyleMap();
 
         //
         // If someone is watching the styles, then we have to take the slow path.
@@ -1001,7 +1001,7 @@ return sb.toString();
 //                inlineStyles == null;
         } 
         
-        final List<CssMetaData> styleables = node.getCssMetaData();
+        final List<CssMetaData<? extends Node, ?>> styleables = node.getCssMetaData();
         
         // Used in the for loop below, and a convenient place to stop when debugging.
         final int max = styleables.size();
@@ -1216,7 +1216,7 @@ return sb.toString();
         // are no matching styles for this property. We will then either SKIP
         // or we will INHERIT. We will inspect the default value for the styleable,
         // and if it is INHERIT then we will inherit otherwise we just skip it.
-        final List<CssMetaData> subProperties = styleable.getSubProperties();
+        final List<CssMetaData<? extends Node, ?>> subProperties = styleable.getSubProperties();
         final int numSubProperties = (subProperties != null) ? subProperties.size() : 0;
         if (style == null) {
             
@@ -2389,7 +2389,7 @@ return sb.toString();
 
         getMatchingStyles(node, styleableProperty, styleList);
 
-        List<CssMetaData> subProperties = styleableProperty.getSubProperties();
+        List<CssMetaData<? extends Node, ?>> subProperties = styleableProperty.getSubProperties();
         if (subProperties != null) {
             for (int n=0,nMax=subProperties.size(); n<nMax; n++) {
                 final CssMetaData subProperty = subProperties.get(n);

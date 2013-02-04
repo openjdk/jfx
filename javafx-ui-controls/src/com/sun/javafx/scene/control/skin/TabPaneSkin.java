@@ -545,7 +545,7 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
     * @treatAsPrivate implementation detail
     */
    private static class StyleableProperties {
-        private static final List<CssMetaData> STYLEABLES;
+        private static final List<CssMetaData<? extends Node, ?>> STYLEABLES;
         
         private final static CssMetaData<TabPane,TabAnimation> OPEN_TAB_ANIMATION = 
                 new CssMetaData<TabPane, TabPaneSkin.TabAnimation>("-fx-open-tab-animation", 
@@ -577,8 +577,8 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
         
         static {
 
-           final List<CssMetaData> styleables = 
-               new ArrayList<CssMetaData>(SkinBase.getClassCssMetaData());
+           final List<CssMetaData<? extends Node, ?>> styleables = 
+               new ArrayList<CssMetaData<? extends Node, ?>>(SkinBase.getClassCssMetaData());
            Collections.addAll(styleables,
                    OPEN_TAB_ANIMATION,
                    CLOSE_TAB_ANIMATION
@@ -592,14 +592,14 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
      * @return The CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
      */
-    public static List<CssMetaData> getClassCssMetaData() {
+    public static List<CssMetaData<? extends Node, ?>> getClassCssMetaData() {
         return StyleableProperties.STYLEABLES;
     }
 
     /**
      * {@inheritDoc}
      */
-    @Override public List<CssMetaData> getCssMetaData() {
+    @Override public List<CssMetaData<? extends Node, ?>> getCssMetaData() {
         return getClassCssMetaData();
     }
 

@@ -25,7 +25,6 @@
 package com.sun.javafx.css;
 
 import java.util.List;
-import javafx.beans.value.WritableValue;
 import javafx.collections.ObservableMap;
 import javafx.css.CssMetaData;
 import javafx.css.StyleableProperty;
@@ -83,7 +82,7 @@ public abstract class Styleable {
      * The CssMetaData's of this Styleable
      * @return 
      */
-    public abstract List<CssMetaData> getCssMetaData(); 
+    public abstract List<CssMetaData<? extends Node, ?>> getCssMetaData(); 
         
     /**
      * A Styleable typically wraps a Node that is going to be styled by CSS.
@@ -95,14 +94,14 @@ public abstract class Styleable {
       * @treatAsPrivate implementation detail
       * @deprecated This is an experimental API that is not intended for use
       */
-     private ObservableMap<StyleableProperty, List<Style>> styleMap;
+     private ObservableMap<StyleableProperty<?>, List<Style>> styleMap;
      
      /**
       * RT-17293
       * @treatAsPrivate implementation detail
       * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
       */
-     public ObservableMap<StyleableProperty, List<Style>> getStyleMap() {
+     public ObservableMap<StyleableProperty<?>, List<Style>> getStyleMap() {
          return styleMap;
      }
 
@@ -111,7 +110,7 @@ public abstract class Styleable {
       * @treatAsPrivate implementation detail
       * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
       */
-     public void setStyleMap(ObservableMap<StyleableProperty, List<Style>> styleMap) {
+     public void setStyleMap(ObservableMap<StyleableProperty<?>, List<Style>> styleMap) {
          this.styleMap = styleMap;
      }
     

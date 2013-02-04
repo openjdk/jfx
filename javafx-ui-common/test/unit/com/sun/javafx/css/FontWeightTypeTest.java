@@ -47,13 +47,13 @@ public class FontWeightTypeTest {
     @Test
     public void testConvert() {
         ParsedValue<Weight,FontWeight> value =
-                new ParsedValueImpl<Weight,FontWeight>(Weight.BOLD, FontConverter.WeightConverter.getInstance());
+                new ParsedValueImpl<Weight,FontWeight>(Weight.BOLD, FontConverter.FontWeightConverter.getInstance());
         Font font = null;
         FontWeight expResult = FontWeight.BOLD;
         FontWeight result = value.convert(font);
         assertEquals(expResult, result);
 
-        value = new ParsedValueImpl<Weight,FontWeight>(Weight.NORMAL, FontConverter.WeightConverter.getInstance());
+        value = new ParsedValueImpl<Weight,FontWeight>(Weight.NORMAL, FontConverter.FontWeightConverter.getInstance());
         expResult = FontWeight.NORMAL;
         result = value.convert(font);
         assertEquals(expResult, result);

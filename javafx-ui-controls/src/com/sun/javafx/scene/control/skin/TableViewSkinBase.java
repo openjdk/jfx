@@ -247,9 +247,10 @@ public abstract class TableViewSkinBase<S, C extends Control, B extends Behavior
         @Override public void invalidated(Observable observable) {
             // This forces the horizontal scrollbar to show when the column
             // resizing occurs. It is not ideal, but will work for now.
-            // FIXME this is very, very inefficient, but ensures we don't run
-            // in to RT-13717.
-            needCellsRebuilt = true;
+            
+            // using 'needCellsReconfigured' here rather than 'needCellsRebuilt'
+            // as otherwise performance suffers massively (RT-27831)
+            needCellsReconfigured = true;
             getSkinnable().requestLayout();
         }
     };
@@ -279,7 +280,6 @@ public abstract class TableViewSkinBase<S, C extends Control, B extends Behavior
      *                                                                         *
      **************************************************************************/
 
-    private boolean rowCountDirty;
     private boolean contentWidthDirty = true;
     
     /**
@@ -451,10 +451,7 @@ public abstract class TableViewSkinBase<S, C extends Control, B extends Behavior
     /** {@inheritDoc} */
     @Override protected void layoutChildren(final double x, double y,
             final double w, final double h) {
-        if (rowCountDirty) {
-            updateRowCount();
-            rowCountDirty = false;
-        }
+        super.layoutChildren(x, y, w, h);
         
         if (needCellsRebuilt) {
             flow.rebuildCells();
@@ -656,7 +653,7 @@ public abstract class TableViewSkinBase<S, C extends Control, B extends Behavior
 
     private boolean forceCellRebuild = false;
     
-    private void updateRowCount() {
+    @Override protected void updateRowCount() {
         updatePlaceholderRegionVisibility();
 
         int oldCount = flow.getCellCount();

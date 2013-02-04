@@ -26,6 +26,7 @@ package javafx.css;
 
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.value.ObservableValue;
+import javafx.scene.Node;
 
 /**
  * This class extends {@code SimpleBooleanProperty} and provides a full
@@ -49,7 +50,7 @@ public abstract class SimpleStyleableBooleanProperty
      * @param cssMetaData
      *            the CssMetaData associated with this {@code StyleableProperty}
      */
-    public SimpleStyleableBooleanProperty(CssMetaData cssMetaData) {
+    public SimpleStyleableBooleanProperty(CssMetaData<? extends Node, Boolean> cssMetaData) {
         super();
         this.cssMetaData = cssMetaData;
     }
@@ -62,7 +63,7 @@ public abstract class SimpleStyleableBooleanProperty
      * @param initialValue
      *            the initial value of the wrapped {@code Object}
      */
-    public SimpleStyleableBooleanProperty(CssMetaData cssMetaData, boolean initialValue) {
+    public SimpleStyleableBooleanProperty(CssMetaData<? extends Node, Boolean> cssMetaData, boolean initialValue) {
         super(initialValue);
         this.cssMetaData = cssMetaData;
     }
@@ -77,7 +78,7 @@ public abstract class SimpleStyleableBooleanProperty
      * @param name
      *            the name of this {@code BooleanProperty}
      */
-    public SimpleStyleableBooleanProperty(CssMetaData cssMetaData, Object bean, String name) {
+    public SimpleStyleableBooleanProperty(CssMetaData<? extends Node, Boolean> cssMetaData, Object bean, String name) {
         super(bean, name);
         this.cssMetaData = cssMetaData;
     }
@@ -94,7 +95,7 @@ public abstract class SimpleStyleableBooleanProperty
      * @param initialValue
      *            the initial value of the wrapped {@code Object}
      */
-    public SimpleStyleableBooleanProperty(CssMetaData cssMetaData, Object bean, String name, boolean initialValue) {
+    public SimpleStyleableBooleanProperty(CssMetaData<? extends Node, Boolean> cssMetaData, Object bean, String name, boolean initialValue) {
         super(bean, name, initialValue);
         this.cssMetaData = cssMetaData;
     }
@@ -127,11 +128,11 @@ public abstract class SimpleStyleableBooleanProperty
 
     /** {@inheritDoc} */
     @Override
-    public final CssMetaData getCssMetaData() {
+    public final CssMetaData<? extends Node, Boolean> getCssMetaData() {
         return cssMetaData;
     }
 
     private StyleOrigin origin = null;
-    private final CssMetaData cssMetaData;
+    private final CssMetaData<? extends Node, Boolean> cssMetaData;
 
 }

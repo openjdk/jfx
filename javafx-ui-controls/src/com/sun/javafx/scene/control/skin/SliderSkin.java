@@ -34,7 +34,9 @@ import javafx.scene.control.Slider;
 import javafx.scene.layout.StackPane;
 
 import com.sun.javafx.scene.control.behavior.SliderBehavior;
+import javafx.animation.Transition;
 import javafx.geometry.Insets;
+import javafx.util.Duration;
 import javafx.util.StringConverter;
 
 /**
@@ -60,6 +62,7 @@ public class SliderSkin extends BehaviorSkinBase<Slider, SliderBehavior> {
 
     private StackPane thumb;
     private StackPane track;
+    private boolean trackClicked = false;
 //    private double visibleAmount = 16;
 
     public SliderSkin(Slider slider) {
@@ -91,9 +94,13 @@ public class SliderSkin extends BehaviorSkinBase<Slider, SliderBehavior> {
          track.setOnMousePressed( new EventHandler<javafx.scene.input.MouseEvent>() {
             @Override public void handle(javafx.scene.input.MouseEvent me) {
                 if (!thumb.isPressed()) {
+                    trackClicked = true;
                     if (getSkinnable().getOrientation() == Orientation.HORIZONTAL) {
                         getBehavior().trackPress(me, (me.getX() / trackLength));
-                    } else getBehavior().trackPress(me, (me.getY() / trackLength));
+                    } else {
+                        getBehavior().trackPress(me, (me.getY() / trackLength));
+                    }
+                    trackClicked = false;
                 }
             }
         });
@@ -187,7 +194,8 @@ public class SliderSkin extends BehaviorSkinBase<Slider, SliderBehavior> {
             }
             getSkinnable().requestLayout();
         } else if ("VALUE".equals(p)) {
-            positionThumb();
+            // only animate thumb if the track was clicked - not if the thumb is dragged
+            positionThumb(trackClicked);
         } else if ("MIN".equals(p) ) {
             if (showTickMarks && tickLine != null) {
                 tickLine.setLowerBound(slider.getMin());
@@ -225,16 +233,38 @@ public class SliderSkin extends BehaviorSkinBase<Slider, SliderBehavior> {
     /**
      * Called when ever either min, max or value changes, so thumb's layoutX, Y is recomputed.
      */
-    void positionThumb() {
+    void positionThumb(final boolean animate) {
         Slider s = getSkinnable();
         boolean horizontal = s.getOrientation() == Orientation.HORIZONTAL;
-        double lx = (horizontal) ? trackStart + (((trackLength * ((s.getValue() - s.getMin()) /
+        final double endX = (horizontal) ? trackStart + (((trackLength * ((s.getValue() - s.getMin()) /
                 (s.getMax() - s.getMin()))) - thumbWidth/2)) : thumbLeft;
-        double ly = (horizontal) ? thumbTop :
+        final double endY = (horizontal) ? thumbTop :
             s.getInsets().getTop() + trackLength - (trackLength * ((s.getValue() - s.getMin()) /
                 (s.getMax() - s.getMin()))); //  - thumbHeight/2
-        thumb.setLayoutX(lx);
-        thumb.setLayoutY(ly);
+        
+        if (animate) {
+            // lets animate the thumb transition
+            final double startX = thumb.getLayoutX();
+            final double startY = thumb.getLayoutY();
+            Transition transition = new Transition() {
+                {
+                    setCycleDuration(Duration.millis(200));
+                }
+
+                @Override protected void interpolate(double frac) {
+                    if (!Double.isNaN(startX)) {
+                        thumb.setLayoutX(startX + frac * (endX - startX));
+                    }
+                    if (!Double.isNaN(startY)) {
+                        thumb.setLayoutY(startY + frac * (endY - startY));
+                    }
+                }
+            };
+            transition.play();
+        } else {
+            thumb.setLayoutX(endX);
+            thumb.setLayoutY(endY);
+        }
     }
 
     @Override protected void layoutChildren(final double x, final double y,
@@ -259,7 +289,7 @@ public class SliderSkin extends BehaviorSkinBase<Slider, SliderBehavior> {
             double trackTop = (int)(startY + ((trackAreaHeight-trackHeight)/2));
             thumbTop = (int)(startY + ((trackAreaHeight-thumbHeight)/2));
 
-            positionThumb();
+            positionThumb(false);
             // layout track
             track.resizeRelocate((int)(trackStart - trackRadius),
                                  trackTop ,
@@ -289,7 +319,7 @@ public class SliderSkin extends BehaviorSkinBase<Slider, SliderBehavior> {
             double trackLeft = (int)(startX + ((trackAreaWidth-trackWidth)/2));
             thumbLeft = (int)(startX + ((trackAreaWidth-thumbWidth)/2));
 
-            positionThumb();
+            positionThumb(false);
             // layout track
             track.resizeRelocate(trackLeft,
                                  (int)(trackStart - trackRadius),

@@ -24,6 +24,11 @@
  */
 package com.sun.javafx.css.converters;
 
+import com.sun.javafx.css.Size;
+import com.sun.javafx.css.SizeUnits;
+import com.sun.javafx.css.StyleConverterImpl;
+import javafx.css.ParsedValue;
+import javafx.css.StyleConverter;
 import javafx.scene.image.Image;
 import javafx.scene.paint.CycleMethod;
 import javafx.scene.paint.ImagePattern;
@@ -32,11 +37,6 @@ import javafx.scene.paint.Paint;
 import javafx.scene.paint.RadialGradient;
 import javafx.scene.paint.Stop;
 import javafx.scene.text.Font;
-
-import com.sun.javafx.css.Size;
-import com.sun.javafx.css.SizeUnits;
-import com.sun.javafx.css.StyleConverterImpl;
-import javafx.css.ParsedValue;
 
 
 public final class PaintConverter extends StyleConverterImpl<ParsedValue<?, Paint>, Paint> {
@@ -51,7 +51,7 @@ public final class PaintConverter extends StyleConverterImpl<ParsedValue<?, Pain
         static RadialGradientConverter RADIAL_GRADIENT_INSTANCE = new RadialGradientConverter();
     }
 
-    public static PaintConverter getInstance() {
+    public static StyleConverter<ParsedValue<?, Paint>, Paint> getInstance() {
         return Holder.INSTANCE;
     }
 
@@ -112,14 +112,14 @@ public final class PaintConverter extends StyleConverterImpl<ParsedValue<?, Pain
             super();
         }
 
-        @Override
+        @Override 
         public Paint convert(ParsedValue<ParsedValue[], Paint> value, Font font) {
             ParsedValue[] values = value.getValue();
             int v = 0;
-            final Size startX = ((ParsedValue<?, Size>) values[v++]).convert(font);
-            final Size startY = ((ParsedValue<?, Size>) values[v++]).convert(font);
-            final Size endX = ((ParsedValue<?, Size>) values[v++]).convert(font);
-            final Size endY = ((ParsedValue<?, Size>) values[v++]).convert(font);
+            final Size startX = (Size) values[v++].convert(font);
+            final Size startY = (Size) values[v++].convert(font);
+            final Size endX = (Size) values[v++].convert(font);
+            final Size endY = (Size) values[v++].convert(font);
             boolean proportional = startX.getUnits() == SizeUnits.PERCENT && startX.getUnits() == startY.getUnits() && startX.getUnits() == endX.getUnits() && startX.getUnits() == endY.getUnits();
             final CycleMethod cycleMethod = (CycleMethod) values[v++].convert(font);
             final Stop[] stops = new Stop[values.length - v];
@@ -148,23 +148,24 @@ public final class PaintConverter extends StyleConverterImpl<ParsedValue<?, Pain
         @Override
         public Paint convert(ParsedValue<ParsedValue[], Paint> value, Font font) {
             ParsedValue[] values = value.getValue();
-            ParsedValue<ParsedValue[],String> url = values[0];
+            ParsedValue<?,?> urlParsedValue = values[0];
+            String url = (String) urlParsedValue.convert(font);
             if (values.length == 1) {
-                return new ImagePattern(new Image(url.convert(font)));
+                return new ImagePattern(new Image(url));
             }
 
-            ParsedValue<?, Size> x = values[1];
-            ParsedValue<?, Size> y = values[2];
-            ParsedValue<?, Size> w = values[3];
-            ParsedValue<?, Size> h = values[4];
+            Size x = (Size) values[1].convert(font);
+            Size y = (Size) values[2].convert(font);
+            Size w = (Size) values[3].convert(font);
+            Size h = (Size) values[4].convert(font);
             boolean p = values.length < 6 ? true : (Boolean) values[5].getValue();
 
             return new ImagePattern(
-                    new Image(url.convert(font)),
-                    x.convert(font).getValue(),
-                    y.convert(font).getValue(),
-                    w.convert(font).getValue(),
-                    h.convert(font).getValue(), p);
+                    new Image(url),
+                    x.getValue(),
+                    y.getValue(),
+                    w.getValue(),
+                    h.getValue(), p);
         }
 
         @Override
@@ -186,8 +187,8 @@ public final class PaintConverter extends StyleConverterImpl<ParsedValue<?, Pain
         @Override
         public Paint convert(ParsedValue<ParsedValue[], Paint> value, Font font) {
             ParsedValue[] values = value.getValue();
-            ParsedValue<ParsedValue[],String> url = values[0];
-            String u = url.convert(font);
+            ParsedValue<?, ?> url = values[0];
+            String u = (String) url.convert(font);
             // If u is null, then we failed to locate the image associated with the url specified in the CSS file.
             if (u == null) return null;
             final Image image = new Image(u);
@@ -219,11 +220,11 @@ public final class PaintConverter extends StyleConverterImpl<ParsedValue<?, Pain
             // proportional, we need to get to the Size. getValue() will
             // return ParsedValue<?,Size>, so getValue().convert(font) will
             // give us the size.
-            final Size focusAngle = values[v++] != null ? ((ParsedValue<?, Size>) values[v-1]).convert(font) : null;
-            final Size focusDistance = values[v++] != null ? ((ParsedValue<?, Size>) values[v-1]).convert(font) : null;
-            final Size centerX = values[v++] != null ? ((ParsedValue<?, Size>) values[v-1]).convert(font) : null;
-            final Size centerY = values[v++] != null ? ((ParsedValue<?, Size>) values[v-1]).convert(font) : null;
-            final Size radius = ((ParsedValue<?, Size>) values[v++]).convert(font);
+            final Size focusAngle = values[v++] != null ? (Size) values[v-1].convert(font) : null;
+            final Size focusDistance = values[v++] != null ? (Size) values[v-1].convert(font) : null;
+            final Size centerX = values[v++] != null ? (Size) values[v-1].convert(font) : null;
+            final Size centerY = values[v++] != null ? (Size) values[v-1].convert(font) : null;
+            final Size radius = (Size) values[v++].convert(font);
             boolean proportional = radius.getUnits().equals(SizeUnits.PERCENT);
             boolean unitsAgree = centerX != null ? proportional == centerX.getUnits().equals(SizeUnits.PERCENT) : true;
             unitsAgree = unitsAgree && centerY != null ? proportional == centerY.getUnits().equals(SizeUnits.PERCENT) : true;

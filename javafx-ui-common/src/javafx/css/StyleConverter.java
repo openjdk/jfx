@@ -35,8 +35,10 @@ import com.sun.javafx.css.converters.PaintConverter;
 import com.sun.javafx.css.converters.SizeConverter;
 import com.sun.javafx.css.converters.StringConverter;
 import com.sun.javafx.css.converters.URLConverter;
+import javafx.geometry.Insets;
 import javafx.scene.effect.Effect;
 import javafx.scene.paint.Color;
+import javafx.scene.paint.Paint;
 import javafx.scene.text.Font;
 
 /**
@@ -51,14 +53,16 @@ import javafx.scene.text.Font;
 public class StyleConverter<F, T> {
 
     /**
-     * Convert from the parsed CSS value to the target property type.
+     * Convert from the parsed CSS value to the target property type. 
      *
      * @param value        The {@link ParsedValue} to convert
      * @param font         The {@link Font} to use when converting a
      * <a href="http://www.w3.org/TR/css3-values/#relative-lengths">relative</a>
      * value.
      */
+    @SuppressWarnings("unchecked")
     public T convert(ParsedValue<F,T> value, Font font) {
+        // unchecked!
         return (T) value.getValue();
     }
 
@@ -66,7 +70,7 @@ public class StyleConverter<F, T> {
      * @return A {@code StyleConverter} that converts &quot;true&quot; or &quot;false&quot; to {@code Boolean}
      * @see Boolean#valueOf(java.lang.String) 
      */
-    public static StyleConverter getBooleanConverter() {
+    public static StyleConverter<String,Boolean> getBooleanConverter() {
         return BooleanConverter.getInstance();
     }
     
@@ -75,7 +79,7 @@ public class StyleConverter<F, T> {
      * representation of a web color to a {@code Color}
      * @see Color#web(java.lang.String) 
      */
-    public static StyleConverter getColorConverter() {
+    public static StyleConverter<String,Color> getColorConverter() {
         return ColorConverter.getInstance();
     }
     
@@ -84,7 +88,7 @@ public class StyleConverter<F, T> {
      * of an {@code Effect} to an {@code Effect}
      * @see Effect
      */
-    public static StyleConverter getEffectConverter() {
+    public static StyleConverter<ParsedValue[], Effect> getEffectConverter() {
         return EffectConverter.getInstance();
     }
     
@@ -93,9 +97,11 @@ public class StyleConverter<F, T> {
      * of an {@code Enum} to an {@code Enum}
      * @see Enum#valueOf(java.lang.Class, java.lang.String) 
      */
-    public static StyleConverter getEnumConverter(Class enumClass) {        
+    public static <E extends Enum<E>> StyleConverter<String, ? extends Enum<?>> getEnumConverter(Class<E> enumClass) {        
         // TODO: reuse EnumConverter instances
-        return new EnumConverter(enumClass);
+        EnumConverter<E> converter;
+        converter = new EnumConverter<E>(enumClass);
+        return converter;
     }    
 
     /** 
@@ -103,7 +109,7 @@ public class StyleConverter<F, T> {
      * of a {@code Font} to an {@code Font}. 
      * @see Font#font(java.lang.String, javafx.scene.text.FontWeight, javafx.scene.text.FontPosture, double)  
      */
-    public static StyleConverter getFontConverter() {
+    public static StyleConverter<ParsedValue[], Font> getFontConverter() {
         return FontConverter.getInstance();
     }
     
@@ -111,7 +117,7 @@ public class StyleConverter<F, T> {
      * @return A {@code StyleConverter} that converts a [&lt;length&gt; |
      * &lt;percentage&gt;]{1,4} to an {@code Insets}. 
      */
-    public static StyleConverter getInsetsConverter() {
+    public static StyleConverter<ParsedValue[], Insets> getInsetsConverter() {
         return InsetsConverter.getInstance();
     }
 
@@ -119,7 +125,7 @@ public class StyleConverter<F, T> {
      * @return A {@code StyleConverter} that converts a parsed representation
      * of a {@code Paint} to a {@code Paint}.
      */
-    public static StyleConverter getPaintConverter() {
+    public static StyleConverter<ParsedValue<?, Paint>, Paint> getPaintConverter() {
         return PaintConverter.getInstance();
     }
     
@@ -143,7 +149,7 @@ public class StyleConverter<F, T> {
      * of a CSS length or number value to a {@code Number} that is an instance
      * of {@code Double}. 
      */
-    public static StyleConverter getSizeConverter() {
+    public static StyleConverter<?, Number> getSizeConverter() {
         return SizeConverter.getInstance();
     }
     
@@ -152,7 +158,7 @@ public class StyleConverter<F, T> {
      * @return A {@code StyleConverter} that converts a representation of a
      * CSS string value to a {@code String}.
      */
-    public static StyleConverter getStringConverter() {
+    public static StyleConverter<String,String> getStringConverter() {
         return StringConverter.getInstance();
     }
     
@@ -161,7 +167,7 @@ public class StyleConverter<F, T> {
      * @return A {@code StyleConverter} that converts a representation of a
      * CSS URL value to a {@code String}.
      */
-    public static StyleConverter getUrlConverter() {
+    public static StyleConverter<ParsedValue[], String> getUrlConverter() {
         return URLConverter.getInstance();
     }
     

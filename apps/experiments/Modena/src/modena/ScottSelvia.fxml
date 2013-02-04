@@ -1,0 +1,495 @@
+<?xml version="1.0" encoding="UTF-8"?> 
+
+<?import java.lang.*?> 
+<?import java.util.*?> 
+<?import javafx.collections.*?> 
+<?import javafx.scene.control.*?> 
+<?import javafx.scene.layout.*?> 
+<?import javafx.scene.paint.*?> 
+<?import javafx.scene.text.*?> 
+
+<!-- Customer test case from bug http://javafx-jira.kenai.com/browse/DTL-5561 -->
+<AnchorPane id="AnchorPane" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="768.0" prefWidth="1024.0" xmlns:fx="http://javafx.com/fxml"> 
+  <children> 
+    <TabPane fx:id="tabPane" prefHeight="712.0" prefWidth="996.0" tabClosingPolicy="UNAVAILABLE" AnchorPane.bottomAnchor="42.0" AnchorPane.leftAnchor="14.0" AnchorPane.rightAnchor="14.0" AnchorPane.topAnchor="14.0"> 
+      <tabs> 
+        <Tab fx:id="tabDS" text="Firmographic Search"> 
+          <content> 
+            <AnchorPane id="Content" minHeight="0.0" minWidth="0.0" prefHeight="672.0" prefWidth="996.0"> 
+              <children> 
+                <Accordion prefHeight="667.0" prefWidth="968.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="14.0" AnchorPane.rightAnchor="14.0" AnchorPane.topAnchor="14.0"> 
+                  <expandedPane> 
+                    <TitledPane fx:id="titlePaneDSSearch" animated="false" graphicTextGap="4.0" prefHeight="664.0" prefWidth="968.0" text="Search Options:">
+                      <content> 
+                        <AnchorPane id="Content" minHeight="0.0" minWidth="0.0" prefHeight="494.0" prefWidth="964.0"> 
+                          <children> 
+                            <Label fx:id="lblDSCompanyName" alignment="CENTER_RIGHT" contentDisplay="CENTER" layoutX="7.0" layoutY="13.0" prefWidth="102.0" text="Company Name:"> 
+                              <labelFor> 
+                                <TextField fx:id="txtDSCompanyName" layoutX="117.0" layoutY="11.0" prefWidth="200.0" promptText="Enter Company Name" /> 
+                              </labelFor> 
+                            </Label> 
+                            <fx:reference source="txtDSCompanyName" /> 
+                            <VBox id="VBoxDSCompanyName" alignment="CENTER_LEFT" layoutX="323.0" layoutY="11.0" prefWidth="91.0" spacing="5.0"> 
+                              <children> 
+                                <RadioButton fx:id="rbtnDSCompanyNameEquals" mnemonicParsing="false" selected="true" text="Equals"> 
+                                  <toggleGroup> 
+                                    <ToggleGroup fx:id="tGrpDSCompanyName" /> 
+                                  </toggleGroup> 
+                                </RadioButton> 
+                                <RadioButton fx:id="rbtnDSCompanyNameStartsWith" mnemonicParsing="false" text="Starts With" toggleGroup="$tGrpDSCompanyName" /> 
+                                <RadioButton fx:id="rbtnDSCompanyNameContains" mnemonicParsing="false" text="Contains" toggleGroup="$tGrpDSCompanyName" /> 
+                                <RadioButton fx:id="rbtnDSCompanyNameEndsWith" mnemonicParsing="false" text="Ends With" toggleGroup="$tGrpDSCompanyName" /> 
+                              </children> 
+                            </VBox> 
+                            <Label fx:id="lblDSContactName" alignment="CENTER_RIGHT" layoutX="14.0" layoutY="101.0" prefWidth="96.0" text="Contact Name:"> 
+                              <labelFor> 
+                                <TextField fx:id="txtDSContactName" layoutX="117.0" layoutY="98.0" prefWidth="200.0" promptText="Enter Contact Name" text="" /> 
+                              </labelFor> 
+                            </Label> 
+                            <fx:reference source="txtDSContactName" /> 
+                            <VBox id="VBoxDSContactName" alignment="CENTER_LEFT" layoutX="323.0" layoutY="98.0" prefWidth="91.0" spacing="5.0"> 
+                              <children> 
+                                <RadioButton fx:id="rbtnDSContactNameEquals" mnemonicParsing="false" selected="true" text="Equals"> 
+                                  <toggleGroup> 
+                                    <ToggleGroup fx:id="tGrpDSContactName" /> 
+                                  </toggleGroup> 
+                                </RadioButton> 
+                                <RadioButton fx:id="rbtnDSContactNameStartsWith" mnemonicParsing="false" text="Starts With" toggleGroup="$tGrpDSContactName" /> 
+                                <RadioButton fx:id="rbtnDSContactNameContains" mnemonicParsing="false" text="Contains" toggleGroup="$tGrpDSContactName" /> 
+                                <RadioButton fx:id="rbtnDSContactNameEndsWith" mnemonicParsing="false" text="Ends With" toggleGroup="$tGrpDSContactName" /> 
+                              </children> 
+                            </VBox> 
+                            <Label fx:id="lblDSAddress" alignment="CENTER_RIGHT" layoutX="14.0" layoutY="189.0" prefWidth="96.0" text="Address:"> 
+                              <labelFor> 
+                                <TextField fx:id="txtDSAddress" layoutX="117.0" layoutY="187.0" prefWidth="200.0" promptText="Enter Address" /> 
+                              </labelFor> 
+                            </Label> 
+                            <fx:reference source="txtDSAddress" /> 
+                            <VBox id="VBoxDSAddress" alignment="CENTER_LEFT" layoutX="323.0" layoutY="187.0" spacing="5.0"> 
+                              <children> 
+                                <RadioButton fx:id="rbtnDSAddrEquals" mnemonicParsing="false" selected="true" text="Equals"> 
+                                  <toggleGroup> 
+                                    <ToggleGroup fx:id="tGrpDSAddress" /> 
+                                  </toggleGroup> 
+                                </RadioButton> 
+                                <RadioButton fx:id="rbtnDSAddrStartsWith" mnemonicParsing="false" text="Starts With" toggleGroup="$tGrpDSAddress" /> 
+                                <RadioButton fx:id="rbtnDSAddrContains" mnemonicParsing="false" text="Contains" toggleGroup="$tGrpDSAddress" /> 
+                                <RadioButton fx:id="rbtnDSAddrEndsWith" mnemonicParsing="false" text="Ends With" toggleGroup="$tGrpDSAddress" /> 
+                              </children> 
+                            </VBox> 
+                            <Label fx:id="lblDSCity" alignment="CENTER_RIGHT" layoutX="14.0" layoutY="274.0" prefWidth="96.0" text="City:"> 
+                              <labelFor> 
+                                <TextField fx:id="txtDSCity" layoutX="117.0" layoutY="272.0" prefWidth="200.0" promptText="Enter City" /> 
+                              </labelFor> 
+                            </Label> 
+                            <fx:reference source="txtDSCity" /> 
+                            <VBox id="VBoxDSCity" alignment="CENTER_LEFT" layoutX="323.0" layoutY="275.0" spacing="5.0"> 
+                              <children> 
+                                <RadioButton fx:id="rbtnDSCityEquals" mnemonicParsing="false" selected="true" text="Equals"> 
+                                  <toggleGroup> 
+                                    <ToggleGroup fx:id="tGrpDSCity" /> 
+                                  </toggleGroup> 
+                                </RadioButton> 
+                                <RadioButton fx:id="rbtnDSCityStartsWith" mnemonicParsing="false" text="Starts With" toggleGroup="$tGrpDSCity" /> 
+                                <RadioButton fx:id="rbtnDSCityContains" mnemonicParsing="false" text="Contains" toggleGroup="$tGrpDSCity" /> 
+                                <RadioButton fx:id="rbtnDSCityEndsWith" mnemonicParsing="false" text="Ends With" toggleGroup="$tGrpDSCity" /> 
+                              </children> 
+                            </VBox> 
+                            <Label fx:id="lblDSCounty" alignment="CENTER_RIGHT" layoutX="14.0" layoutY="362.0" prefWidth="96.0" text="County:"> 
+                              <labelFor> 
+                                <TextField fx:id="txtDSCounty" layoutX="117.0" layoutY="360.0" prefWidth="200.0" promptText="Enter County Name" /> 
+                              </labelFor> 
+                            </Label> 
+                            <fx:reference source="txtDSCounty" /> 
+                            <VBox id="VBoxDSCounty" alignment="CENTER_LEFT" layoutX="323.0" layoutY="360.0" spacing="5.0"> 
+                              <children> 
+                                <RadioButton fx:id="rbtnDSCountyEquals" mnemonicParsing="false" selected="true" text="Equals"> 
+                                  <toggleGroup> 
+                                    <ToggleGroup fx:id="tGrpDSCounty" /> 
+                                  </toggleGroup> 
+                                </RadioButton> 
+                                <RadioButton fx:id="rbtnDSCountyStartsWith" mnemonicParsing="false" text="Starts With" toggleGroup="$tGrpDSCounty" /> 
+                                <RadioButton fx:id="rbtnDSCountyContains" mnemonicParsing="false" text="Contains" toggleGroup="$tGrpDSCounty" /> 
+                                <RadioButton fx:id="rbtnDSCountyEndsWith" mnemonicParsing="false" text="Ends With" toggleGroup="$tGrpDSCounty" /> 
+                              </children> 
+                            </VBox> 
+                            <Label fx:id="lblDSState" alignment="CENTER_RIGHT" layoutX="14.0" layoutY="390.0" prefWidth="96.0" text="State:"> 
+                              <labelFor> 
+                                <TextField fx:id="txtDSState" layoutX="117.0" layoutY="388.0" prefWidth="34.0" text="" />
+                              </labelFor> 
+                            </Label> 
+                            <fx:reference source="txtDSState" /> 
+                            <Label fx:id="lblDSZipCode" alignment="CENTER_RIGHT" layoutX="14.0" layoutY="417.0" prefWidth="96.0" text="Zip Code:"> 
+                              <labelFor> 
+                                <TextField fx:id="txtDSZipCode" layoutX="117.0" layoutY="415.0" prefWidth="77.0" text="" /> 
+                              </labelFor> 
+                            </Label> 
+                            <fx:reference source="txtDSZipCode" /> 
+                            <Label fx:id="lblDSPhone" alignment="CENTER_RIGHT" layoutX="14.0" layoutY="444.0" prefWidth="96.0" text="Phone:"> 
+                              <labelFor> 
+                                <TextField fx:id="txtDSPhone" layoutX="117.0" layoutY="442.0" prefWidth="81.0" text="" /> 
+                              </labelFor> 
+                            </Label> 
+                            <fx:reference source="txtDSPhone" /> 
+                            <Label fx:id="lblDSEmail" alignment="CENTER_RIGHT" layoutX="14.0" layoutY="471.0" prefWidth="96.0" text="Email:"> 
+                              <labelFor> 
+                                <TextField fx:id="txtDSEmail" layoutX="117.0" layoutY="469.0" prefWidth="200.0" promptText="Enter Email Address" /> 
+                              </labelFor> 
+                            </Label> 
+                            <fx:reference source="txtDSEmail" /> 
+                            <VBox id="VBoxDSEmail" alignment="CENTER_LEFT" layoutX="323.0" layoutY="469.0" spacing="5.0"> 
+                              <children> 
+                                <RadioButton fx:id="rbtnDSEmailEquals" mnemonicParsing="false" selected="true" text="Equals"> 
+                                  <toggleGroup> 
+                                    <ToggleGroup fx:id="tGrpDSEmail" /> 
+                                  </toggleGroup> 
+                                </RadioButton> 
+                                <RadioButton fx:id="rbtnDSEmailStartsWith" mnemonicParsing="false" text="Starts With" toggleGroup="$tGrpDSEmail" /> 
+                                <RadioButton fx:id="rbtnDSEmailContains" mnemonicParsing="false" text="Contains" toggleGroup="$tGrpDSEmail" /> 
+                                <RadioButton fx:id="rbtnDSEmailEndsWith" mnemonicParsing="false" text="Ends With" toggleGroup="$tGrpDSEmail" /> 
+                              </children> 
+                            </VBox> 
+                            <Label fx:id="lblDSSalesSize" alignment="CENTER_RIGHT" layoutX="426.0" layoutY="11.0" prefWidth="75.0" text="Sales Size:"> 
+                              <labelFor> 
+                                <ListView fx:id="lviewDSSalesSize" layoutX="507.0" layoutY="11.0" prefHeight="85.0" prefWidth="181.0"> 
+                                  <items> 
+                                    <FXCollections fx:factory="observableArrayList"> 
+                                      <String fx:value="Unknown" /> 
+                                      <String fx:value="Less than $500,000" /> 
+                                      <String fx:value="$500,000 - $999,999" /> 
+                                      <String fx:value="$1,000,000 - $1,999,999" /> 
+                                      <String fx:value="$2,000,000 - $4,999,999" /> 
+                                      <String fx:value="$5,000,000 - $9,999,999" /> 
+                                      <String fx:value="$10,000,000 - $49,999,999" /> 
+                                      <String fx:value="$50,000,000 - $99,999,999" /> 
+                                      <String fx:value="$100,000,000 - $499,999,999" /> 
+                                      <String fx:value="$500,000,000 - $999,999,999" /> 
+                                      <String fx:value="$1,000,000,000 - Plus" /> 
+                                    </FXCollections> 
+                                  </items> 
+                                </ListView> 
+                              </labelFor> 
+                            </Label> 
+                            <fx:reference source="lviewDSSalesSize" /> 
+                            <Label fx:id="lblDSEmployeeSize" alignment="CENTER_RIGHT" layoutX="703.0" layoutY="11.0" text="Employee Size:"> 
+                              <labelFor> 
+                                <ListView fx:id="lviewDSEmployeeSize" layoutX="791.0" layoutY="11.0" prefHeight="85.0" prefWidth="92.0"> 
+                                  <items> 
+                                    <FXCollections fx:factory="observableArrayList"> 
+                                      <String fx:value="Unknown" /> 
+                                      <String fx:value="Less than 5" /> 
+                                      <String fx:value="5 - 9" /> 
+                                      <String fx:value="10 - 19" /> 
+                                      <String fx:value="20 - 49" /> 
+                                      <String fx:value="50 - 99" /> 
+                                      <String fx:value="100 - 249" /> 
+                                      <String fx:value="250 - 499" /> 
+                                      <String fx:value="500 - 999" /> 
+                                      <String fx:value="1,000 Plus" /> 
+                                    </FXCollections> 
+                                  </items> 
+                                </ListView> 
+                              </labelFor> 
+                            </Label> 
+                            <fx:reference source="lviewDSEmployeeSize" /> 
+                            <Label fx:id="lblDSNAICSCode" alignment="CENTER_RIGHT" layoutX="426.0" layoutY="110.0" prefHeight="-1.0" prefWidth="75.0" text="NAICS Code:"> 
+                              <labelFor> 
+                                <ComboBox fx:id="cmbDSNAICSCode" layoutX="507.0" layoutY="108.0" prefHeight="21.0" prefWidth="53.0" promptText="ID"> 
+                                  <items> 
+                                    <FXCollections fx:factory="observableArrayList"> 
+                                      <String fx:value="01" /> 
+                                      <String fx:value="02" /> 
+                                      <String fx:value="03" /> 
+                                      <String fx:value="04" /> 
+                                      <String fx:value="05" /> 
+                                      <String fx:value="06" /> 
+                                    </FXCollections> 
+                                  </items> 
+                                </ComboBox> 
+                              </labelFor> 
+                            </Label> 
+                            <fx:reference source="cmbDSNAICSCode" /> 
+                            <ListView fx:id="lviewDSNAICSCode" layoutX="568.0" layoutY="108.0" prefHeight="220.0" prefWidth="388.0"> 
+                              <items> 
+                                <FXCollections fx:factory="observableArrayList"> 
+                                  <String fx:value="Men's and Boys' Cut and Sew Underwear and Nightwear Manufact" /> 
+                                  <String fx:value="Women's and Girls' Cut and Sew Other Outerwear Manufacturing" /> 
+                                  <String fx:value="Personal Leather Good (except Women's Handbag and Purse) Man" /> 
+                                  <String fx:value="Laminated Aluminum Foil Manufacturing for Flexible Packaging" /> 
+                                  <String fx:value="Urethane and Other Foam Product (except Polystyrene) Manufac" /> 
+                                  <String fx:value="All Other Miscellaneous Nonmetallic Mineral Product Manufact" /> 
+                                  <String fx:value="Lawn and Garden Tractor and Home Lawn and Garden Equipment M" /> 
+                                  <String fx:value="Air-Conditioning and Warm Air Heating Equipment and Commerci" /> 
+                                  <String fx:value="Computer Terminal and Other Computer Peripheral Equipment Ma" />
+                                  <String fx:value="All Other Miscellaneous Electrical Equipment and Component M" /> 
+                                </FXCollections> 
+                              </items> 
+                            </ListView> 
+                            <Label fx:id="lblDSSICCode" alignment="CENTER_RIGHT" layoutX="426.0" layoutY="345.0" prefWidth="75.0" text="SIC Code:"> 
+                              <labelFor> 
+                                <ComboBox fx:id="cmbDSSICCode" layoutX="507.0" layoutY="342.0" prefHeight="21.0" prefWidth="52.0" promptText="ID"> 
+                                  <items> 
+                                    <FXCollections fx:factory="observableArrayList"> 
+                                      <String fx:value="01" /> 
+                                      <String fx:value="02" /> 
+                                      <String fx:value="03" /> 
+                                      <String fx:value="04" /> 
+                                      <String fx:value="05" /> 
+                                      <String fx:value="06" /> 
+                                    </FXCollections> 
+                                  </items> 
+                                </ComboBox> 
+                              </labelFor> 
+                            </Label> 
+                            <fx:reference source="cmbDSSICCode" /> 
+                            <ListView fx:id="lviewDSSICCode" layoutX="568.0" layoutY="342.0" prefHeight="195.0" prefWidth="388.0"> 
+                              <items> 
+                                <FXCollections fx:factory="observableArrayList"> 
+                                  <String fx:value="Men's and Boys' Cut and Sew Underwear and Nightwear Manufact" /> 
+                                  <String fx:value="Women's and Girls' Cut and Sew Other Outerwear Manufacturing" /> 
+                                  <String fx:value="Personal Leather Good (except Women's Handbag and Purse) Man" /> 
+                                  <String fx:value="Laminated Aluminum Foil Manufacturing for Flexible Packaging" /> 
+                                  <String fx:value="Urethane and Other Foam Product (except Polystyrene) Manufac" /> 
+                                  <String fx:value="All Other Miscellaneous Nonmetallic Mineral Product Manufact" /> 
+                                  <String fx:value="Lawn and Garden Tractor and Home Lawn and Garden Equipment M" /> 
+                                  <String fx:value="Air-Conditioning and Warm Air Heating Equipment and Commerci" /> 
+                                  <String fx:value="Computer Terminal and Other Computer Peripheral Equipment Ma" />
+                                  <String fx:value="All Other Miscellaneous Electrical Equipment and Component M" /> 
+                                </FXCollections> 
+                              </items> 
+                            </ListView> 
+                            <FlowPane alignment="BOTTOM_CENTER" minHeight="21.0" prefHeight="42.0" prefWidth="939.0" AnchorPane.bottomAnchor="8.0" AnchorPane.leftAnchor="14.0" AnchorPane.rightAnchor="11.0"> 
+                              <children> 
+                                <HBox id="HBox" alignment="CENTER" spacing="5.0"> 
+                                  <children> 
+                                    <Button id="brnCount" fx:id="btnDSCount" mnemonicParsing="false" text="Count" /> 
+                                    <TextField fx:id="txtDSCount" editable="false" prefWidth="90.0" /> 
+                                    <Button fx:id="btnDSDisplay" mnemonicParsing="false" text="Display" /> 
+                                    <ProgressIndicator fx:id="pIndDSProgress" progress="0.0" /> 
+                                  </children> 
+                                </HBox> 
+                              </children> 
+                            </FlowPane> 
+                            <Button fx:id="btnDSSearchClear" mnemonicParsing="false" text="Clear" AnchorPane.bottomAnchor="16.0" AnchorPane.rightAnchor="8.0" /> 
+                          </children> 
+                        </AnchorPane> 
+                      </content> 
+                    </TitledPane> 
+                  </expandedPane> 
+                  <panes> 
+                    <fx:reference source="titlePaneDSSearch" /> 
+                    <TitledPane fx:id="titlePaneDSResults" animated="false" prefHeight="525.0" prefWidth="968.0" text="Search Results"> 
+                      <content> 
+                        <AnchorPane id="Content" minHeight="0.0" minWidth="0.0" prefHeight="561.0" prefWidth="964.0"> 
+                          <children> 
+                            <TableView fx:id="tblViewDSResults" prefHeight="560.0" prefWidth="939.0" tableMenuButtonVisible="true" AnchorPane.bottomAnchor="45.0" AnchorPane.leftAnchor="14.0" AnchorPane.rightAnchor="11.0" AnchorPane.topAnchor="14.0"> 
+                              <!-- 
+                              <columns> 
+                                <TableColumn prefWidth="75.0" text="Column X" /> 
+                                <TableColumn prefWidth="75.0" text="Column X" /> 
+                              </columns> 
+                              --> 
+                            </TableView> 
+                            <FlowPane alignment="BOTTOM_CENTER" prefHeight="22.0" prefWidth="938.0" AnchorPane.bottomAnchor="12.0" AnchorPane.leftAnchor="14.0" AnchorPane.rightAnchor="12.0"> 
+                              <children> 
+                                <Button fx:id="btnDSResultsLoad" mnemonicParsing="false" text="Load into Salesforce.com" /> 
+                              </children> 
+                            </FlowPane> 
+                            <HBox id="HBox" alignment="CENTER" spacing="5.0" AnchorPane.bottomAnchor="12.0" AnchorPane.leftAnchor="14.0"> 
+                              <children> 
+                                <Button fx:id="btnDSResultsSelectAll" mnemonicParsing="false" text="Select All" /> 
+                                <Button fx:id="btnDSResultsDeselectAll" mnemonicParsing="false" text="Deselect All" /> 
+                                <TextField fx:id="txtDSResults" editable="false" prefWidth="90.0" /> 
+                                <ProgressBar fx:id="pBarDSProgress" prefWidth="99.0" progress="0.0" /> 
+                              </children> 
+                            </HBox> 
+                            <Button fx:id="btnDSResultsClear" mnemonicParsing="false" text="Clear" AnchorPane.bottomAnchor="12.0" AnchorPane.rightAnchor="14.0" /> 
+                            <Label fx:id="lblDSLoadStatus" prefWidth="316.0" text="Status" AnchorPane.bottomAnchor="15.0" AnchorPane.rightAnchor="71.0" /> 
+                          </children> 
+                        </AnchorPane> 
+                      </content> 
+                    </TitledPane> 
+                  </panes> 
+                </Accordion> 
+              </children> 
+            </AnchorPane> 
+          </content> 
+        </Tab> 
+        <Tab fx:id="tabAD" text="Append Firmographics"> 
+          <content> 
+            <AnchorPane id="Content" minHeight="0.0" minWidth="0.0" prefHeight="180.0" prefWidth="200.0"> 
+              <children> 
+                <TitledPane fx:id="titlePaneADCRMSearch" animated="false" collapsible="false" prefHeight="667.0" prefWidth="969.0" text="Salesforce.com CRM Record" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="14.0" AnchorPane.rightAnchor="14.0" AnchorPane.topAnchor="14.0"> 
+                  <content> 
+                    <AnchorPane id="Content" minHeight="0.0" minWidth="0.0" prefHeight="180.0" prefWidth="200.0"> 
+                      <children> 
+                        <Label fx:id="lblADCompanyName" alignment="CENTER_RIGHT" layoutX="14.0" layoutY="14.0" prefWidth="115.0" text="Company Name:" /> 
+                        <TextField fx:id="txtADCompanyName" layoutX="135.0" layoutY="11.0" prefWidth="413.0" promptText="Enter Company Name" /> 
+                        <Label fx:id="lblADContactName" alignment="CENTER_RIGHT" layoutX="14.0" layoutY="43.0" prefWidth="115.0" text="Contact Name:" /> 
+                        <TextField fx:id="txtADContactName" layoutX="135.0" layoutY="40.0" prefWidth="413.0" promptText="Enter Contact Name" /> 
+                        <Label fx:id="lblADAddress1" alignment="CENTER_RIGHT" layoutX="14.0" layoutY="71.0" prefWidth="115.0" text="Address 1:" /> 
+                        <TextField fx:id="txtADAddress1" layoutX="135.0" layoutY="68.0" prefWidth="413.0" promptText="Enter Address" /> 
+                        <Label fx:id="lblADAddress2" alignment="CENTER_RIGHT" layoutX="14.0" layoutY="102.0" prefWidth="115.0" text="Address 2:" /> 
+                        <TextField fx:id="txtADAddress2" layoutX="135.0" layoutY="98.0" prefWidth="413.0" promptText="Enter Address" /> 
+                        <Label fx:id="lblADCity" alignment="CENTER_RIGHT" layoutX="14.0" layoutY="129.0" prefWidth="115.0" text="City:" /> 
+                        <TextField fx:id="txtADCity" layoutX="135.0" layoutY="125.0" prefWidth="284.0" promptText="Enter City" /> 
+                        <Label fx:id="lblADState" alignment="CENTER_RIGHT" layoutX="14.0" layoutY="159.0" prefWidth="115.0" text="State:" /> 
+                        <TextField fx:id="txtADState" layoutX="135.0" layoutY="156.0" prefWidth="39.0" /> 
+                        <Label fx:id="lblADZipCode" alignment="CENTER_RIGHT" layoutX="14.0" layoutY="190.0" prefWidth="115.0" text="Zip Code:" /> 
+                        <TextField fx:id="txtADZipCode" layoutX="135.0" layoutY="187.0" prefWidth="88.0" /> 
+                        <Label fx:id="lblADPhone" alignment="CENTER_RIGHT" layoutX="14.0" layoutY="220.0" prefWidth="115.0" text="Phone:" /> 
+                        <TextField fx:id="txtADPhone" layoutX="135.0" layoutY="216.0" prefWidth="88.0" /> 
+                        <Label fx:id="lblADAddressKey" alignment="CENTER_RIGHT" layoutX="553.0" layoutY="68.0" prefWidth="157.0" text="Address Key:" /> 
+                        <Label fx:id="lblADHouseholdKey" alignment="CENTER_RIGHT" layoutX="553.0" layoutY="12.0" prefWidth="157.0" text="Site Key:" /> 
+                        <Label fx:id="lblADIndividualKey" alignment="CENTER_RIGHT" layoutX="553.0" layoutY="40.0" prefWidth="157.0" text="Contact Key:" /> 
+                        <Label fx:id="lblADAddrKeyWithSuiteKey" alignment="CENTER_RIGHT" layoutX="553.0" layoutY="97.0" prefWidth="157.0" text="Address Key w/Suite:" /> 
+                        <TextField fx:id="txtADAddressKey" editable="false" layoutX="726.0" layoutY="65.0" prefWidth="115.0" /> 
+                        <TextField fx:id="txtADHouseholdKey" editable="false" layoutX="726.0" layoutY="9.0" prefWidth="115.0" /> 
+                        <TextField fx:id="txtADIndividualKey" editable="false" layoutX="726.0" layoutY="37.0" prefWidth="115.0" /> 
+                        <TextField fx:id="txtADAddrKeyWithSuiteKey" editable="false" layoutX="726.0" layoutY="93.0" prefWidth="115.0" /> 
+                        <Label fx:id="lblADLooseMatchKey" alignment="CENTER_RIGHT" layoutX="553.0" layoutY="123.0" prefWidth="157.0" text="Business Relationship Key:" /> 
+                        <TextField fx:id="txtADLooseMatchKey" layoutX="726.0" layoutY="119.0" prefWidth="115.0" />
+                        <TabPane id="tapPaneAD" fx:id="tabPaneAD" prefHeight="373.0" prefWidth="939.0" tabClosingPolicy="UNAVAILABLE" AnchorPane.bottomAnchor="14.0" AnchorPane.leftAnchor="14.0" AnchorPane.rightAnchor="14.0" AnchorPane.topAnchor="254.0"> 
+                          <tabs> 
+                            <Tab fx:id="tabADMatchResults" text="Match Results"> 
+                              <content> 
+                                <AnchorPane id="Content" minHeight="0.0" minWidth="0.0" prefHeight="180.0" prefWidth="200.0"> 
+                                  <children> 
+                                    <TableView fx:id="tblViewADResults" editable="false" prefHeight="268.0" prefWidth="906.0" tableMenuButtonVisible="true" AnchorPane.bottomAnchor="61.0" AnchorPane.leftAnchor="16.0" AnchorPane.rightAnchor="14.0" AnchorPane.topAnchor="13.0"> 
+                                      <!-- 
+                          <columns> 
+                            <TableColumn prefWidth="75.0" text="Column X" /> 
+                            <TableColumn prefWidth="75.0" text="Column X" /> 
+                          </columns> 
+                          --> 
+                                    </TableView> 
+                                    <FlowPane alignment="BOTTOM_CENTER" hgap="10.0" prefHeight="46.0" prefWidth="908.0" AnchorPane.bottomAnchor="14.0" AnchorPane.leftAnchor="14.0" AnchorPane.rightAnchor="14.0"> 
+                                      <children> 
+                                        <Button fx:id="btnADSearch" mnemonicParsing="false" text="Display Matched Records" /> 
+                                        <ProgressIndicator fx:id="pIndADProgress" progress="0.0" /> 
+                                      </children> 
+                                    </FlowPane> 
+                                    <Button fx:id="btnADResultsClear" mnemonicParsing="false" text="Clear" AnchorPane.bottomAnchor="22.0" AnchorPane.rightAnchor="14.0" /> 
+                                    <Button fx:id="btnADDisplay" mnemonicParsing="false" text="Display Firmographic Data" AnchorPane.bottomAnchor="22.0" AnchorPane.leftAnchor="14.0" /> 
+                                  </children> 
+                                </AnchorPane> 
+                              </content> 
+                            </Tab> 
+                            <Tab fx:id="tabADDataFields" text="Firmographic Data"> 
+                              <content> 
+                                <AnchorPane id="Content" minHeight="0.0" minWidth="0.0" prefHeight="180.0" prefWidth="200.0"> 
+                                  <children> 
+                                    <TableView fx:id="tblViewADFields" prefHeight="290.0" prefWidth="908.0" AnchorPane.bottomAnchor="38.0" AnchorPane.leftAnchor="14.0" AnchorPane.rightAnchor="14.0" AnchorPane.topAnchor="14.0"> 
+                                      <!-- 
+                                      <columns> 
+                                        <TableColumn prefWidth="75.0" text="Column X" /> 
+                                        <TableColumn prefWidth="75.0" text="Column X" /> 
+                                      </columns> 
+                                      --> 
+                                    </TableView> 
+                                    <FlowPane alignment="BOTTOM_CENTER" prefHeight="22.0" prefWidth="908.0" AnchorPane.bottomAnchor="5.0" AnchorPane.leftAnchor="14.0" AnchorPane.rightAnchor="14.0"> 
+                                      <children> 
+                                        <Button fx:id="btnADAppend" mnemonicParsing="false" text="Append Firmographic Data" /> 
+                                      </children> 
+                                    </FlowPane> 
+                                  </children> 
+                                </AnchorPane> 
+                              </content> 
+                            </Tab> 
+                          </tabs> 
+                        </TabPane> 
+                        <Label alignment="CENTER_RIGHT" layoutX="386.0" layoutY="156.0" prefWidth="144.0" text="DataMentors Drive Time:" /> 
+                        <ListView fx:id="lviewDriveTimeResults" layoutX="546.0" layoutY="151.0" prefHeight="84.0" prefWidth="295.0"> 
+                          <items> 
+                            <FXCollections fx:factory="observableArrayList"> 
+                              <String fx:value="" /> 
+                            </FXCollections> 
+                          </items> 
+                        </ListView> 
+                        <Button fx:id="btnADDriveTimeCalc" layoutX="396.0" layoutY="185.0" mnemonicParsing="false" prefWidth="134.0" text="Calculate" /> 
+                      </children> 
+                    </AnchorPane> 
+                  </content> 
+                </TitledPane> 
+              </children> 
+            </AnchorPane> 
+          </content> 
+        </Tab> 
+        <Tab fx:id="tabCS" text="Customer Search"> 
+          <content> 
+            <AnchorPane id="Content" minHeight="0.0" minWidth="0.0" prefHeight="180.0" prefWidth="200.0"> 
+              <children> 
+                <TitledPane fx:id="titlePaneCSSearch" animated="false" collapsible="false" prefHeight="667.0" prefWidth="969.0" text="BB&amp;T CIF Record" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="14.0" AnchorPane.rightAnchor="14.0" AnchorPane.topAnchor="14.0"> 
+                  <content> 
+                    <AnchorPane id="Content" minHeight="0.0" minWidth="0.0" prefHeight="180.0" prefWidth="200.0"> 
+                      <children> 
+                        <Label fx:id="lblCSName" alignment="CENTER_RIGHT" layoutX="14.0" layoutY="14.0" prefWidth="115.0" text="Name:" /> 
+                        <TextField fx:id="txtCSName" layoutX="135.0" layoutY="11.0" prefWidth="413.0" promptText="Enter Name" /> 
+                        <Label fx:id="lblCSAddress1" alignment="CENTER_RIGHT" layoutX="14.0" layoutY="44.0" prefWidth="115.0" text="Address 1:" /> 
+                        <TextField fx:id="txtCSAddress1" layoutX="135.0" layoutY="41.0" prefWidth="413.0" promptText="Enter Address" /> 
+                        <Label fx:id="lblCSAddress2" alignment="CENTER_RIGHT" layoutX="14.0" layoutY="75.0" prefWidth="115.0" text="Address 2:" /> 
+                        <TextField fx:id="txtCSAddress2" layoutX="135.0" layoutY="71.0" prefWidth="413.0" promptText="Enter Address" /> 
+                        <Label fx:id="lblCSCity" alignment="CENTER_RIGHT" layoutX="14.0" layoutY="102.0" prefWidth="115.0" text="City:" /> 
+                        <TextField fx:id="txtCSCity" layoutX="135.0" layoutY="98.0" prefWidth="284.0" promptText="Enter City" /> 
+                        <Label fx:id="lblCSState" alignment="CENTER_RIGHT" layoutX="14.0" layoutY="132.0" prefWidth="115.0" text="State:" /> 
+                        <TextField fx:id="txtCSState" layoutX="135.0" layoutY="129.0" prefWidth="39.0" /> 
+                        <Label fx:id="lblCSZipCode" alignment="CENTER_RIGHT" layoutX="14.0" layoutY="163.0" prefWidth="115.0" text="Zip Code:" /> 
+                        <TextField fx:id="txtCSZipCode" layoutX="135.0" layoutY="160.0" prefWidth="88.0" /> 
+                        <Label fx:id="lblCSPhone" alignment="CENTER_RIGHT" layoutX="14.0" layoutY="193.0" prefWidth="115.0" text="Phone:" /> 
+                        <TextField fx:id="txtCSPhone" layoutX="135.0" layoutY="189.0" prefWidth="88.0" /> 
+                        <Label fx:id="lblCSAcctType" alignment="CENTER_RIGHT" layoutX="14.0" layoutY="223.0" prefWidth="115.0" text="Account Type:" /> 
+                        <TextField fx:id="txtCSAcctType" layoutX="135.0" layoutY="219.0" prefWidth="88.0" /> 
+                        <Label fx:id="lblCSRealStype" alignment="CENTER_RIGHT" layoutX="261.0" layoutY="132.0" prefWidth="115.0" text="Real SType:" visible="false" /> 
+                        <TextField fx:id="txtCSRealStype" focusTraversable="false" layoutX="382.0" layoutY="128.0" prefWidth="88.0" visible="false" /> 
+                        <Label fx:id="lblCSUniqueNumber" alignment="CENTER_RIGHT" layoutX="261.0" layoutY="161.0" prefWidth="115.0" text="Unique Number:" visible="false" /> 
+                        <TextField fx:id="txtCSUniqueNumber" focusTraversable="false" layoutX="382.0" layoutY="157.0" prefWidth="88.0" visible="false" /> 
+                        <Label fx:id="lblCSURIL1" alignment="CENTER_RIGHT" layoutX="261.0" layoutY="189.0" prefWidth="115.0" text="URIL1:" visible="false" /> 
+                        <TextField fx:id="txtCSURIL1" focusTraversable="false" layoutX="382.0" layoutY="186.0" prefWidth="88.0" visible="false" /> 
+                        <Label fx:id="lblCSMatchAddrFlag" alignment="CENTER_RIGHT" layoutX="261.0" layoutY="219.0" prefWidth="115.0" text="Match Address Flag:" /> 
+                        <TextField fx:id="txtCSMatchAddrFlag" layoutX="382.0" layoutY="216.0" prefWidth="88.0" /> 
+                        <Label fx:id="lblCSIDNumber" alignment="CENTER_RIGHT" layoutX="496.0" layoutY="131.0" prefWidth="115.0" text="ID Number:" visible="false" /> 
+                        <TextField fx:id="txtCSIDNumber" focusTraversable="false" layoutX="617.0" layoutY="128.0" prefWidth="88.0" visible="false" /> 
+                        <Label fx:id="lblCSMatchingL1" alignment="CENTER_RIGHT" layoutX="496.0" layoutY="161.0" prefWidth="115.0" text="Matching L1:" visible="false" /> 
+                        <TextField fx:id="txtCSMatchingL1" focusTraversable="false" layoutX="617.0" layoutY="158.0" prefWidth="88.0" visible="false" /> 
+                        <Label fx:id="lblCSDNBNumberL1" alignment="CENTER_RIGHT" layoutX="496.0" layoutY="192.0" prefWidth="115.0" text="DNB Number:" visible="false" /> 
+                        <TextField fx:id="txtCSDNBNumberL1" focusTraversable="false" layoutX="617.0" layoutY="189.0" prefWidth="88.0" visible="false" /> 
+                        <Label fx:id="lblCSAddressKey" alignment="CENTER_RIGHT" layoutX="553.0" layoutY="68.0" prefWidth="152.0" text="Address Key:" /> 
+                        <TextField fx:id="txtCSAddressKey" editable="false" layoutX="726.0" layoutY="65.0" prefWidth="115.0" /> 
+                        <Label fx:id="lblCSHouseholdKey" alignment="CENTER_RIGHT" layoutX="553.0" layoutY="12.0" prefWidth="152.0" text="Household/Business Key:" /> 
+                        <TextField fx:id="txtCSHouseholdKey" editable="false" layoutX="726.0" layoutY="9.0" prefWidth="115.0" /> 
+                        <Label fx:id="lblCSIndividualKey" alignment="CENTER_RIGHT" layoutX="553.0" layoutY="40.0" prefWidth="152.0" text="Individual/Contact Key:" /> 
+                        <TextField fx:id="txtCSIndividualKey" editable="false" layoutX="726.0" layoutY="37.0" prefWidth="115.0" /> 
+                        <Label fx:id="lblCSSuperGroupKey" alignment="CENTER_RIGHT" layoutX="553.0" layoutY="98.0" prefWidth="152.0" text="Super Group Key:" /> 
+                        <TextField fx:id="txtCSSuperGroupKey" editable="false" layoutX="726.0" layoutY="95.0" prefWidth="115.0" /> 
+                        <TableView fx:id="tblViewCSResults" editable="false" prefHeight="334.0" prefWidth="936.0" tableMenuButtonVisible="true" AnchorPane.bottomAnchor="54.0" AnchorPane.leftAnchor="14.0" AnchorPane.rightAnchor="14.0" AnchorPane.topAnchor="253.0"> 
+                          <!-- 
+                          <columns> 
+                            <TableColumn prefWidth="75.0" text="Column X" /> 
+                            <TableColumn prefWidth="75.0" text="Column X" /> 
+                          </columns> 
+                          --> 
+                        </TableView> 
+                        <FlowPane alignment="BOTTOM_CENTER" hgap="10.0" prefHeight="46.0" prefWidth="936.0" AnchorPane.bottomAnchor="8.0" AnchorPane.leftAnchor="14.0" AnchorPane.rightAnchor="14.0"> 
+                          <children> 
+                            <Button fx:id="btnCSSearch" mnemonicParsing="false" text="Search CIF Database" /> 
+                            <ProgressIndicator fx:id="pIndCSProgress" progress="0.0" /> 
+                          </children> 
+                        </FlowPane> 
+                        <Button fx:id="btnCSResultsClear" mnemonicParsing="false" text="Clear" AnchorPane.bottomAnchor="16.0" AnchorPane.rightAnchor="14.0" /> 
+                      </children> 
+                    </AnchorPane> 
+                  </content> 
+                </TitledPane> 
+              </children> 
+            </AnchorPane> 
+          </content> 
+        </Tab> 
+      </tabs> 
+    </TabPane> 
+    <FlowPane alignment="BOTTOM_CENTER" prefHeight="22.0" prefWidth="1050.0" AnchorPane.bottomAnchor="10.0" AnchorPane.leftAnchor="29.0" AnchorPane.rightAnchor="27.0"> 
+      <children> 
+        <Button fx:id="btnExit" mnemonicParsing="false" text="Exit" /> 
+      </children> 
+    </FlowPane> 
+  </children> 
+</AnchorPane> 

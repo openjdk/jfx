@@ -85,6 +85,10 @@ public abstract class TableRowSkinBase<T,
         return false;
     }
     
+    /**
+     * Returns the table column that should show the disclosure nodes and / or
+     * a graphic. By default this is the left-most column.
+     */
     protected TableColumnBase getTreeColumn() {
         return null;
     }

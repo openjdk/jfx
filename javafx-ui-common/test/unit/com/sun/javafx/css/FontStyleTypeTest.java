@@ -47,7 +47,7 @@ public class FontStyleTypeTest {
     @Test
     public void testConvert() {
         ParsedValue<Style,FontPosture> value =
-                new ParsedValueImpl<Style,FontPosture>(Style.ITALIC, FontConverter.StyleConverter.getInstance());
+                new ParsedValueImpl<Style,FontPosture>(Style.ITALIC, FontConverter.FontStyleConverter.getInstance());
         Font font = null;
         FontPosture expResult = FontPosture.ITALIC;
         FontPosture result = value.convert(font);

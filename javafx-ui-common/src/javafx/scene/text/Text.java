@@ -87,6 +87,7 @@ import com.sun.javafx.accessible.providers.AccessibleProvider;
 import com.sun.javafx.accessible.AccessibleNode;
 import javafx.css.FontCssMetaData;
 import javafx.css.StyleableProperty;
+import javafx.scene.Node;
 
 /**
  * The {@code Text} class defines a node that displays a text.
@@ -1276,7 +1277,7 @@ public class Text extends Shape {
 
             @Override
             public StyleableProperty<Font> getStyleableProperty(Text node) {
-                return (StyleableProperty)node.fontProperty();
+                return (StyleableProperty<Font>)node.fontProperty();
             }
          };
 
@@ -1293,7 +1294,7 @@ public class Text extends Shape {
 
             @Override
             public StyleableProperty<Boolean> getStyleableProperty(Text node) {
-                return (StyleableProperty)node.underlineProperty();
+                return (StyleableProperty<Boolean>)node.underlineProperty();
             }
          };
 
@@ -1310,7 +1311,7 @@ public class Text extends Shape {
 
             @Override
             public StyleableProperty<Boolean> getStyleableProperty(Text node) {
-                return (StyleableProperty)node.strikethroughProperty();
+                return (StyleableProperty<Boolean>)node.strikethroughProperty();
             }
          };
 
@@ -1329,7 +1330,7 @@ public class Text extends Shape {
 
             @Override
             public StyleableProperty<TextAlignment> getStyleableProperty(Text node) {
-                return (StyleableProperty)node.textAlignmentProperty();
+                return (StyleableProperty<TextAlignment>)node.textAlignmentProperty();
             }
          };
 
@@ -1347,7 +1348,7 @@ public class Text extends Shape {
 
             @Override
             public StyleableProperty<VPos> getStyleableProperty(Text node) {
-                return (StyleableProperty)node.textOriginProperty();
+                return (StyleableProperty<VPos>)node.textOriginProperty();
             }
          };
 
@@ -1368,7 +1369,7 @@ public class Text extends Shape {
             public StyleableProperty<FontSmoothingType>
                                  getStyleableProperty(Text node) {
 
-                return (StyleableProperty)node.fontSmoothingTypeProperty();
+                return (StyleableProperty<FontSmoothingType>)node.fontSmoothingTypeProperty();
             }
          };
 
@@ -1386,23 +1387,21 @@ public class Text extends Shape {
 
             @Override
             public StyleableProperty<Number> getStyleableProperty(Text node) {
-                return (StyleableProperty)node.lineSpacingProperty();
+                return (StyleableProperty<Number>)node.lineSpacingProperty();
             }
          };
 
-	 private final static List<CssMetaData> STYLEABLES;
+	 private final static List<CssMetaData<? extends Node, ?>> STYLEABLES;
          static {
-            final List<CssMetaData> styleables =
-                new ArrayList<CssMetaData>(Shape.getClassCssMetaData());
-            Collections.addAll(styleables,
-                FONT,
-                UNDERLINE,
-                STRIKETHROUGH,
-                TEXT_ALIGNMENT,
-                TEXT_ORIGIN,
-                FONT_SMOOTHING_TYPE,
-                LINE_SPACING
-            );
+            final List<CssMetaData<? extends Node, ?>> styleables =
+                new ArrayList<CssMetaData<? extends Node, ?>>(Shape.getClassCssMetaData());
+            styleables.add(FONT);
+            styleables.add(UNDERLINE);
+            styleables.add(STRIKETHROUGH);
+            styleables.add(TEXT_ALIGNMENT);
+            styleables.add(TEXT_ORIGIN);
+            styleables.add(FONT_SMOOTHING_TYPE);
+            styleables.add(LINE_SPACING);
             STYLEABLES = Collections.unmodifiableList(styleables);
          }
     }
@@ -1411,15 +1410,17 @@ public class Text extends Shape {
      * @return The CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
      */
-    public static List<CssMetaData> getClassCssMetaData() {
+    public static List<CssMetaData<? extends Node, ?>> getClassCssMetaData() {
         return StyleableProperties.STYLEABLES;
     }
 
     /**
      * {@inheritDoc}
+     *
      */
+    
     @Override
-    public List<CssMetaData> getCssMetaData() {
+    public List<CssMetaData<? extends Node, ?>> getCssMetaData() {
         return getClassCssMetaData();
     }
 

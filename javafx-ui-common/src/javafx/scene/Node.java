@@ -7456,7 +7456,7 @@ public abstract class Node implements EventTarget {
                 }
 
                 @Override
-                public List<CssMetaData> getCssMetaData() {
+                public List<CssMetaData<? extends Node, ?>> getCssMetaData() {
                     return Node.this.getCssMetaData();
                 }                
                 
@@ -7506,7 +7506,7 @@ public abstract class Node implements EventTarget {
 
                 @Override
                 public StyleableProperty<Cursor> getStyleableProperty(Node node) {
-                    return (StyleableProperty)node.cursorProperty();
+                    return (StyleableProperty<Cursor>)node.cursorProperty();
                 }
                 
                 @Override
@@ -7527,7 +7527,7 @@ public abstract class Node implements EventTarget {
 
                 @Override
                 public StyleableProperty<Effect> getStyleableProperty(Node node) {
-                    return (StyleableProperty)node.effectProperty();
+                    return (StyleableProperty<Effect>)node.effectProperty();
                 }
             };
         private static final CssMetaData<Node,Boolean> FOCUS_TRAVERSABLE =
@@ -7541,7 +7541,7 @@ public abstract class Node implements EventTarget {
 
                 @Override
                 public StyleableProperty<Boolean> getStyleableProperty(Node node) {
-                    return (StyleableProperty)node.focusTraversableProperty();
+                    return (StyleableProperty<Boolean>)node.focusTraversableProperty();
                 }
 
                 @Override
@@ -7563,7 +7563,7 @@ public abstract class Node implements EventTarget {
 
                 @Override
                 public StyleableProperty<Number> getStyleableProperty(Node node) {
-                    return (StyleableProperty)node.opacityProperty();
+                    return (StyleableProperty<Number>)node.opacityProperty();
                 }
             };
         private static final CssMetaData<Node,BlendMode> BLEND_MODE =
@@ -7576,7 +7576,7 @@ public abstract class Node implements EventTarget {
 
                 @Override
                 public StyleableProperty<BlendMode> getStyleableProperty(Node node) {
-                    return (StyleableProperty)node.blendModeProperty();
+                    return (StyleableProperty<BlendMode>)node.blendModeProperty();
                 }
             };
         private static final CssMetaData<Node,Number> ROTATE =
@@ -7592,7 +7592,7 @@ public abstract class Node implements EventTarget {
 
                 @Override
                 public StyleableProperty<Number> getStyleableProperty(Node node) {
-                    return (StyleableProperty)node.rotateProperty();
+                    return (StyleableProperty<Number>)node.rotateProperty();
                 }
             };
         private static final CssMetaData<Node,Number> SCALE_X =
@@ -7608,7 +7608,7 @@ public abstract class Node implements EventTarget {
 
                 @Override
                 public StyleableProperty<Number> getStyleableProperty(Node node) {
-                    return (StyleableProperty)node.scaleXProperty();
+                    return (StyleableProperty<Number>)node.scaleXProperty();
                 }
             };
         private static final CssMetaData<Node,Number> SCALE_Y =
@@ -7624,7 +7624,7 @@ public abstract class Node implements EventTarget {
 
                 @Override
                 public StyleableProperty<Number> getStyleableProperty(Node node) {
-                    return (StyleableProperty)node.scaleYProperty();
+                    return (StyleableProperty<Number>)node.scaleYProperty();
                 }
             };
         private static final CssMetaData<Node,Number> SCALE_Z =
@@ -7640,7 +7640,7 @@ public abstract class Node implements EventTarget {
 
                 @Override
                 public StyleableProperty<Number> getStyleableProperty(Node node) {
-                    return (StyleableProperty)node.scaleZProperty();
+                    return (StyleableProperty<Number>)node.scaleZProperty();
                 }
             };
         private static final CssMetaData<Node,Number> TRANSLATE_X =
@@ -7656,7 +7656,7 @@ public abstract class Node implements EventTarget {
 
                 @Override
                 public StyleableProperty<Number> getStyleableProperty(Node node) {
-                    return (StyleableProperty)node.translateXProperty();
+                    return (StyleableProperty<Number>)node.translateXProperty();
                 }
             };
         private static final CssMetaData<Node,Number> TRANSLATE_Y =
@@ -7672,7 +7672,7 @@ public abstract class Node implements EventTarget {
 
                 @Override
                 public StyleableProperty<Number> getStyleableProperty(Node node) {
-                    return (StyleableProperty)node.translateYProperty();
+                    return (StyleableProperty<Number>)node.translateYProperty();
                 }
             };
         private static final CssMetaData<Node,Number> TRANSLATE_Z =
@@ -7688,7 +7688,7 @@ public abstract class Node implements EventTarget {
 
                 @Override
                 public StyleableProperty<Number> getStyleableProperty(Node node) {
-                    return (StyleableProperty)node.translateZProperty();
+                    return (StyleableProperty<Number>)node.translateZProperty();
                 }
             };
         private static final CssMetaData<Node,Boolean> VISIBILITY =
@@ -7712,29 +7712,29 @@ public abstract class Node implements EventTarget {
 
                 @Override
                 public StyleableProperty<Boolean> getStyleableProperty(Node node) {
-                    return (StyleableProperty)node.visibleProperty();
+                    return (StyleableProperty<Boolean>)node.visibleProperty();
                 }
             };
 
-         private static final List<CssMetaData> STYLEABLES;
+         private static final List<CssMetaData<? extends Node, ?>> STYLEABLES;
 
          static {
 
-             final List<CssMetaData> styleables = new ArrayList<CssMetaData>();
-             Collections.addAll(styleables, 
-                 CURSOR,
-                 EFFECT,
-                 FOCUS_TRAVERSABLE,
-                 OPACITY,
-                 BLEND_MODE,
-                 ROTATE,
-                 SCALE_X,
-                 SCALE_Y,
-                 SCALE_Z,
-                 TRANSLATE_X,
-                 TRANSLATE_Y,
-                 TRANSLATE_Z,
-                 VISIBILITY);
+             final List<CssMetaData<? extends Node, ?>> styleables = 
+                     new ArrayList<CssMetaData<? extends Node, ?>>();
+             styleables.add(CURSOR); 
+             styleables.add(EFFECT);
+             styleables.add(FOCUS_TRAVERSABLE);
+             styleables.add(OPACITY);
+             styleables.add(BLEND_MODE);
+             styleables.add(ROTATE);
+             styleables.add(SCALE_X);
+             styleables.add(SCALE_Y);
+             styleables.add(SCALE_Z);
+             styleables.add(TRANSLATE_X);
+             styleables.add(TRANSLATE_Y);
+             styleables.add(TRANSLATE_Z);
+             styleables.add(VISIBILITY);
              STYLEABLES = Collections.unmodifiableList(styleables);
 
          }
@@ -7744,7 +7744,7 @@ public abstract class Node implements EventTarget {
      * @return The CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
      */
-    public static List<CssMetaData> getClassCssMetaData() {
+    public static List<CssMetaData<? extends Node, ?>> getClassCssMetaData() {
         //
         // Super-lazy instantiation pattern from Bill Pugh. StyleableProperties 
         // is referenced no earlier (and therefore loaded no earlier by the 
@@ -7758,10 +7758,12 @@ public abstract class Node implements EventTarget {
     /**
      * This method should delegate to {@link Node#getClassCssMetaData()} so that
      * a Node's CssMetaData can be accessed without the need for reflection.
+     *
      * @return The CssMetaData associated with this node, which may include the
      * CssMetaData of its super classes.
      */
-    public List<CssMetaData> getCssMetaData() {
+    
+    public List<CssMetaData<? extends Node, ?>> getCssMetaData() {
         return getClassCssMetaData();
     }
      
@@ -7771,7 +7773,7 @@ public abstract class Node implements EventTarget {
       * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
       */
      @Deprecated // SB-dependency: RT-21096 has been filed to track this
-     public final ObservableMap<StyleableProperty, List<Style>> impl_getStyleMap() {
+     public final ObservableMap<StyleableProperty<?>, List<Style>> impl_getStyleMap() {
          return impl_getStyleable().getStyleMap();
      }
 
@@ -7781,7 +7783,7 @@ public abstract class Node implements EventTarget {
       * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
       */
      @Deprecated // SB-dependency: RT-21096 has been filed to track this
-     public final void impl_setStyleMap(ObservableMap<StyleableProperty, List<Style>> styleMap) {
+     public final void impl_setStyleMap(ObservableMap<StyleableProperty<?>, List<Style>> styleMap) {
          impl_getStyleable().setStyleMap(styleMap);
      }
           
@@ -7904,12 +7906,12 @@ public abstract class Node implements EventTarget {
         // a parent or from the scene. This has to be done before calling 
         // impl_reapplyCSS.
         //
-        final List<CssMetaData> styleables = getCssMetaData();
-        final int nStyleables = styleables != null ? styleables.size() : 0;
+        final List<CssMetaData<? extends Node, ?>> metaDataList = getCssMetaData();
+        final int nStyleables = metaDataList != null ? metaDataList.size() : 0;
         for (int n=0; n<nStyleables; n++) {
-            final CssMetaData styleable = styleables.get(n);
-            if (styleable.isSettable(this) == false) continue;
-            final StyleableProperty styleableProperty = styleable.getStyleableProperty(this);
+            final CssMetaData metaData = metaDataList.get(n);
+            if (metaData.isSettable(this) == false) continue;
+            final StyleableProperty<?> styleableProperty = metaData.getStyleableProperty(this);
             if (styleableProperty != null) {
                 final StyleOrigin origin = styleableProperty.getStyleOrigin();
                 if (origin != null && origin != StyleOrigin.USER) {
@@ -7917,7 +7919,7 @@ public abstract class Node implements EventTarget {
                     // the StyleOrigin of the property is null. So, passing null 
                     // here makes the property look (to CSS) like it was
                     // initialized but never used.
-                    styleable.set(this, styleable.getInitialValue(this), null);
+                    metaData.set(this, metaData.getInitialValue(this), null);
                 }
             }
         }        

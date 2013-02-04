@@ -26,6 +26,7 @@ package javafx.css;
 
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ObservableValue;
+import javafx.scene.Node;
 
 /**
  * This class extends {@code SimpleObjectProperty} and provides a full
@@ -49,7 +50,7 @@ public abstract class SimpleStyleableObjectProperty<T>
      * @param cssMetaData
      *            the CssMetaData associated with this {@code StyleableProperty}
      */
-    public SimpleStyleableObjectProperty(CssMetaData cssMetaData) {
+    public SimpleStyleableObjectProperty(CssMetaData<? extends Node, T> cssMetaData) {
         super();
         this.cssMetaData = cssMetaData;
     }
@@ -62,7 +63,7 @@ public abstract class SimpleStyleableObjectProperty<T>
      * @param initialValue
      *            the initial value of the wrapped {@code Object}
      */
-    public SimpleStyleableObjectProperty(CssMetaData cssMetaData, T initialValue) {
+    public SimpleStyleableObjectProperty(CssMetaData<? extends Node, T> cssMetaData, T initialValue) {
         super(initialValue);
         this.cssMetaData = cssMetaData;
     }
@@ -77,7 +78,7 @@ public abstract class SimpleStyleableObjectProperty<T>
      * @param name
      *            the name of this {@code ObjectProperty}
      */
-    public SimpleStyleableObjectProperty(CssMetaData cssMetaData, Object bean, String name) {
+    public SimpleStyleableObjectProperty(CssMetaData<? extends Node, T> cssMetaData, Object bean, String name) {
         super(bean, name);
         this.cssMetaData = cssMetaData;
     }
@@ -109,10 +110,10 @@ public abstract class SimpleStyleableObjectProperty<T>
 
     /** {@inheritDoc} */
     @Override
-    public final CssMetaData getCssMetaData() {
+    public final CssMetaData<? extends Node, T> getCssMetaData() {
         return cssMetaData;
     }
 
     private StyleOrigin origin = null;
-    private final CssMetaData cssMetaData;
+    private final CssMetaData<? extends Node, T> cssMetaData;
 }

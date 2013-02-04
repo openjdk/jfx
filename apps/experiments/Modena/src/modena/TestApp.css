@@ -44,3 +44,17 @@
      );;
     -fx-padding: 20;
 }
+.macWindow {
+    -fx-border-image-source: url("mac-window-frame.png"); 
+    -fx-border-image-slice: 49 49 71 49;
+    -fx-border-image-width: 49 49 71 49;
+    -fx-border-image-repeat: stretch;
+    -fx-font: 13px "Lucida Grande";
+}
+.windowsWindow {
+    -fx-border-image-source: url("windows8-window-frame.png"); 
+    -fx-border-image-slice: 49 49 71 49;
+    -fx-border-image-width: 49 49 71 49;
+    -fx-border-image-repeat: stretch;
+    -fx-font: 12px "Segoe UI";
+}

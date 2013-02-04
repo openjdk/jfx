@@ -24,13 +24,12 @@
  */
 package com.sun.javafx.css.converters;
 
-import java.net.URL;
-
-import javafx.scene.text.Font;
-
 import com.sun.javafx.css.StyleConverterImpl;
-import javafx.css.ParsedValue;
 import java.net.MalformedURLException;
+import java.net.URL;
+import javafx.css.ParsedValue;
+import javafx.css.StyleConverter;
+import javafx.scene.text.Font;
 
 /**
  * Convert url("<path>") a URL string resolved relative to the location of the stylesheet.
@@ -43,7 +42,7 @@ public final class URLConverter extends StyleConverterImpl<ParsedValue[], String
         static SequenceConverter SEQUENCE_INSTANCE = new SequenceConverter();
     }
 
-    public static URLConverter getInstance() {
+    public static StyleConverter<ParsedValue[], String> getInstance() {
         return Holder.INSTANCE;
     }
 

@@ -330,7 +330,7 @@ public class ComboBoxTableCell<S,T> extends TableCell<S,T> {
         }
         
         if (comboBox == null) {
-            comboBox = createComboBox(this, items);
+            comboBox = createComboBox(this, items, getConverter());
             comboBox.editableProperty().bind(comboBoxEditableProperty());
         }
         

@@ -40,6 +40,10 @@ import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.value.ObservableBooleanValue;
 import javafx.beans.value.ObservableObjectValue;
 import javafx.collections.ObservableList;
+import javafx.css.CssMetaData;
+import javafx.css.StyleableBooleanProperty;
+import javafx.css.StyleableObjectProperty;
+import javafx.css.StyleableProperty;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.NodeOrientation;
@@ -70,13 +74,9 @@ import javafx.scene.shape.Path;
 import javafx.scene.shape.PathElement;
 import javafx.scene.shape.Shape;
 import javafx.scene.shape.VLineTo;
-import javafx.scene.text.Font;
 import javafx.stage.Window;
 import javafx.util.Duration;
 import com.sun.javafx.PlatformUtil;
-import javafx.css.StyleableBooleanProperty;
-import javafx.css.StyleableObjectProperty;
-import javafx.css.CssMetaData;
 import com.sun.javafx.css.converters.BooleanConverter;
 import com.sun.javafx.css.converters.PaintConverter;
 import com.sun.javafx.scene.control.behavior.TextInputControlBehavior;
@@ -85,42 +85,13 @@ import com.sun.javafx.tk.Toolkit;
 
 import static com.sun.javafx.PlatformUtil.*;
 import static com.sun.javafx.scene.control.skin.resources.ControlResources.*;
-import javafx.css.FontCssMetaData;
-import javafx.css.StyleableProperty;
 
 /**
  * Abstract base class for text input skins.
  */
 public abstract class TextInputControlSkin<T extends TextInputControl, B extends TextInputControlBehavior<T>> extends BehaviorSkinBase<T, B> {
 
-    /**
-     * The font to use with this control. In 1.3 and prior we had a font property
-     * on the TextInputControl itself, however now we just do it via CSS
-     */
-    protected final ObjectProperty<Font> font = new StyleableObjectProperty<Font>(Font.getDefault()) {
-
-        @Override
-        public Object getBean() {
-            return TextInputControlSkin.this;
-        }
-
-        @Override
-        public String getName() {
-            return "font";
-        }
-
-        @Override
-        public CssMetaData getCssMetaData() {
-            return StyleableProperties.FONT;
-        }
-    };
-    protected final ObservableObjectValue<FontMetrics> fontMetrics = new ObjectBinding<FontMetrics>() {
-        { bind(font); }
-        @Override protected FontMetrics computeValue() {
-            invalidateMetrics();
-            return Toolkit.getToolkit().getFontLoader().getFontMetrics(font.get());
-        }
-    };
+    protected final ObservableObjectValue<FontMetrics> fontMetrics;
 
     /**
      * The fill to use for the text under normal conditions
@@ -291,6 +262,14 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
 
     public TextInputControlSkin(final T textInput, final B behavior) {
         super(textInput, behavior);
+
+        fontMetrics = new ObjectBinding<FontMetrics>() {
+            { bind(textInput.fontProperty()); }
+            @Override protected FontMetrics computeValue() {
+                invalidateMetrics();
+                return Toolkit.getToolkit().getFontLoader().getFontMetrics(textInput.getFont());
+            }
+        };
 
         caretTimeline.setCycleCount(Timeline.INDEFINITE);
         caretTimeline.getKeyFrames().addAll(
@@ -685,22 +664,6 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
     }
 
     private static class StyleableProperties {
-        private static final CssMetaData<TextInputControl,Font> FONT =
-           new FontCssMetaData<TextInputControl>("-fx-font", Font.getDefault()) {
-
-            @Override
-            public boolean isSettable(TextInputControl n) {
-                final TextInputControlSkin skin = (TextInputControlSkin) n.getSkin();
-                return skin.font == null || !skin.font.isBound();
-            }
-
-            @Override
-            public StyleableProperty<Font> getStyleableProperty(TextInputControl n) {
-                final TextInputControlSkin skin = (TextInputControlSkin) n.getSkin();
-                return (StyleableProperty)skin.font;
-            }
-        };
-        
         private static final CssMetaData<TextInputControl,Paint> TEXT_FILL =
             new CssMetaData<TextInputControl,Paint>("-fx-text-fill",
                 PaintConverter.getInstance(), Color.BLACK) {
@@ -786,11 +749,10 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
             }
         };
 
-        private static final List<CssMetaData> STYLEABLES;
+        private static final List<CssMetaData<? extends Node, ?>> STYLEABLES;
         static {
-            List<CssMetaData> styleables = new ArrayList<CssMetaData>(SkinBase.getClassCssMetaData());
+            List<CssMetaData<? extends Node, ?>> styleables = new ArrayList<CssMetaData<? extends Node, ?>>(SkinBase.getClassCssMetaData());
             Collections.addAll(styleables,
-                FONT,
                 TEXT_FILL,
                 PROMPT_TEXT_FILL,
                 HIGHLIGHT_FILL,
@@ -806,7 +768,7 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
      * @return The CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
      */
-    public static List<CssMetaData> getClassCssMetaData() {
+    public static List<CssMetaData<? extends Node, ?>> getClassCssMetaData() {
         return StyleableProperties.STYLEABLES;
     }
 
@@ -814,7 +776,7 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
      * {@inheritDoc}
      */
     @Override
-    public List<CssMetaData> getCssMetaData() {
+    public List<CssMetaData<? extends Node, ?>> getCssMetaData() {
         return getClassCssMetaData();
     }
 

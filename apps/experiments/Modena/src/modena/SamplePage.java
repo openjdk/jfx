@@ -171,7 +171,7 @@ public class SamplePage extends GridPane {
                 withState(new Button("Focused & Armed"), "focused, armed"),
                 withState(new Button("Disabled"), "disabled"));
         newSection("Default Button:", 
-                withState(new Button("Button"), "default, hover"),
+                ButtonBuilder.create().text("Button").defaultButton(true).build(),
                 withState(new Button("Hover"), "default, hover"),
                 withState(new Button("Armed"), "default, armed"),
                 withState(new Button("Focused"), "default, focused"),

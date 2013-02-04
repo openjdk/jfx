@@ -24,14 +24,14 @@
  */
 package com.sun.javafx.css.converters;
 
-import javafx.scene.text.Font;
-
 import com.sun.javafx.css.Size;
 import com.sun.javafx.css.StyleConverterImpl;
 import javafx.css.ParsedValue;
+import javafx.css.StyleConverter;
+import javafx.scene.text.Font;
 
-/* Convert a Size to Double */
-public final class SizeConverter extends StyleConverterImpl<ParsedValue<?, Size>, Double> {
+/* Convert a Size to Number */
+public final class SizeConverter extends StyleConverterImpl<ParsedValue<?, Size>, Number> {
 
     // lazy, thread-safe instatiation
     private static class Holder {
@@ -39,7 +39,7 @@ public final class SizeConverter extends StyleConverterImpl<ParsedValue<?, Size>
         static SequenceConverter SEQUENCE_INSTANCE = new SequenceConverter();
     }
 
-    public static SizeConverter getInstance() {
+    public static StyleConverter<ParsedValue<?, Size>, Number> getInstance() {
         return Holder.INSTANCE;
     }
 
@@ -48,7 +48,7 @@ public final class SizeConverter extends StyleConverterImpl<ParsedValue<?, Size>
     }
 
     @Override
-    public Double convert(ParsedValue<ParsedValue<?, Size>, Double> value, Font font) {
+    public Number convert(ParsedValue<ParsedValue<?, Size>, Number> value, Font font) {
         ParsedValue<?, Size> size = value.getValue();
         return size.convert(font).pixels(font);
     }
@@ -59,9 +59,9 @@ public final class SizeConverter extends StyleConverterImpl<ParsedValue<?, Size>
     }
 
     /*
-     * Convert [<size>]+ to an array of Double[].
+     * Convert [<size>]+ to an array of Number[].
      */
-    public static final class SequenceConverter extends StyleConverterImpl<ParsedValue<?, Size>[], Double[]> {
+    public static final class SequenceConverter extends StyleConverterImpl<ParsedValue[], Number[]> {
 
         public static SequenceConverter getInstance() {
             return Holder.SEQUENCE_INSTANCE;
@@ -72,11 +72,11 @@ public final class SizeConverter extends StyleConverterImpl<ParsedValue<?, Size>
         }
 
         @Override
-        public Double[] convert(ParsedValue<ParsedValue<?, Size>[], Double[]> value, Font font) {
-            ParsedValue<?, Size>[] sizes = value.getValue();
-            Double[] doubles = new Double[sizes.length];
+        public Number[] convert(ParsedValue<ParsedValue[], Number[]> value, Font font) {
+            ParsedValue[] sizes = value.getValue();
+            Number[] doubles = new Number[sizes.length];
             for (int i = 0; i < sizes.length; i++) {
-                doubles[i] = sizes[i].convert(font).pixels(font);
+                doubles[i] = ((Size)sizes[i].convert(font)).pixels(font);
             }
             return doubles;
         }

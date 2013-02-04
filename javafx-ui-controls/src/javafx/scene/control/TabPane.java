@@ -46,6 +46,7 @@ import com.sun.javafx.css.converters.SizeConverter;
 import com.sun.javafx.scene.control.skin.TabPaneSkin;
 import javafx.beans.DefaultProperty;
 import javafx.css.StyleableProperty;
+import javafx.scene.Node;
 
 /**
  * <p>A control that allows switching between a group of {@link Tab Tabs}.  Only one tab
@@ -512,7 +513,7 @@ public class TabPane extends Control {
 
             @Override
             public StyleableProperty<Number> getStyleableProperty(TabPane n) {
-                return (StyleableProperty)n.tabMinWidthProperty();
+                return (StyleableProperty<Number>)n.tabMinWidthProperty();
             }
         };
 
@@ -527,7 +528,7 @@ public class TabPane extends Control {
 
             @Override
             public StyleableProperty<Number> getStyleableProperty(TabPane n) {
-                return (StyleableProperty)n.tabMaxWidthProperty();
+                return (StyleableProperty<Number>)n.tabMaxWidthProperty();
             }
         };
 
@@ -542,7 +543,7 @@ public class TabPane extends Control {
 
             @Override
             public StyleableProperty<Number> getStyleableProperty(TabPane n) {
-                return (StyleableProperty)n.tabMinHeightProperty();
+                return (StyleableProperty<Number>)n.tabMinHeightProperty();
             }
         };
 
@@ -557,20 +558,18 @@ public class TabPane extends Control {
 
             @Override
             public StyleableProperty<Number> getStyleableProperty(TabPane n) {
-                return (StyleableProperty)n.tabMaxHeightProperty();
+                return (StyleableProperty<Number>)n.tabMaxHeightProperty();
             }
         };
 
-        private static final List<CssMetaData> STYLEABLES;
+        private static final List<CssMetaData<? extends Node, ?>> STYLEABLES;
         static {
-            final List<CssMetaData> styleables =
-                new ArrayList<CssMetaData>(Control.getClassCssMetaData());
-            Collections.addAll(styleables,
-                TAB_MIN_WIDTH,
-                TAB_MAX_WIDTH,
-                TAB_MIN_HEIGHT,
-                TAB_MAX_HEIGHT
-            );
+            final List<CssMetaData<? extends Node, ?>> styleables =
+                new ArrayList<CssMetaData<? extends Node, ?>>(Control.getClassCssMetaData());
+            styleables.add(TAB_MIN_WIDTH);
+            styleables.add(TAB_MAX_WIDTH);
+            styleables.add(TAB_MIN_HEIGHT);
+            styleables.add(TAB_MAX_HEIGHT);
             STYLEABLES = Collections.unmodifiableList(styleables);
         }
     }
@@ -579,7 +578,7 @@ public class TabPane extends Control {
      * @return The CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
      */
-    public static List<CssMetaData> getClassCssMetaData() {
+    public static List<CssMetaData<? extends Node, ?>> getClassCssMetaData() {
         return StyleableProperties.STYLEABLES;
     }
 
@@ -587,7 +586,7 @@ public class TabPane extends Control {
      * {@inheritDoc}
      */
     @Override
-    public List<CssMetaData> getControlCssMetaData() {
+    public List<CssMetaData<? extends Node, ?>> getControlCssMetaData() {
         return getClassCssMetaData();
     }
 

@@ -580,7 +580,7 @@ public class HBox extends Pane {
 
             @Override
             public StyleableProperty<Pos> getStyleableProperty(HBox node) {
-                return (StyleableProperty)node.alignmentProperty();
+                return (StyleableProperty<Pos>)node.alignmentProperty();
             }
                      
          };
@@ -597,7 +597,7 @@ public class HBox extends Pane {
 
             @Override
             public StyleableProperty<Boolean> getStyleableProperty(HBox node) {
-                return (StyleableProperty)node.fillHeightProperty();
+                return (StyleableProperty<Boolean>)node.fillHeightProperty();
             }
                      
          };
@@ -613,20 +613,18 @@ public class HBox extends Pane {
 
             @Override
             public StyleableProperty<Number> getStyleableProperty(HBox node) {
-                return (StyleableProperty)node.spacingProperty();
+                return (StyleableProperty<Number>)node.spacingProperty();
             }
                      
          };
 
-         private static final List<CssMetaData> STYLEABLES;
+         private static final List<CssMetaData<? extends Node, ?>> STYLEABLES;
          static {
-            final List<CssMetaData> styleables =
-                new ArrayList<CssMetaData>(Pane.getClassCssMetaData());
-            Collections.addAll(styleables,
-                FILL_HEIGHT,
-                ALIGNMENT,
-                SPACING
-            );
+            final List<CssMetaData<? extends Node, ?>> styleables =
+                new ArrayList<CssMetaData<? extends Node, ?>>(Pane.getClassCssMetaData());
+            styleables.add(FILL_HEIGHT);
+            styleables.add(ALIGNMENT);
+            styleables.add(SPACING);
             STYLEABLES = Collections.unmodifiableList(styleables);
          }
     }
@@ -635,15 +633,17 @@ public class HBox extends Pane {
      * @return The CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
      */
-    public static List<CssMetaData> getClassCssMetaData() {
+    public static List<CssMetaData<? extends Node, ?>> getClassCssMetaData() {
         return StyleableProperties.STYLEABLES;
     }
 
     /**
      * {@inheritDoc}
+     *
      */
+    
     @Override
-    public List<CssMetaData> getCssMetaData() {
+    public List<CssMetaData<? extends Node, ?>> getCssMetaData() {
         return getClassCssMetaData();
     }
 

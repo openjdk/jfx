@@ -617,7 +617,7 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
 
                 
                 @Override
-                public List<CssMetaData> getCssMetaData() {
+                public List<CssMetaData<? extends Node, ?>> getCssMetaData() {
                     return Collections.EMPTY_LIST;
                 }                
 

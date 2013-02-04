@@ -8,15 +8,15 @@ import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleDoubleProperty;
-import static javafx.scene.control.ControlTestUtils.*;
-import static org.junit.Assert.*;
-
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
-
+import javafx.scene.Scene;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
+
+import static javafx.scene.control.ControlTestUtils.*;
+import static org.junit.Assert.*;
 
 /**
  *
@@ -116,9 +116,36 @@ public class TextAreaTest {
         dummyTxtArea.setText("junk");
         assertEquals(dummyTxtArea.getText(), "junk");
     }
+
+    /*********************************************************************
+     * Tests for CSS                                                     *
+     ********************************************************************/
+
+    @Test public void wrapTextSetFromCSS() {
+        txtArea.setStyle("-fx-wrap-text: true");
+        Scene s = new Scene(txtArea);
+        txtArea.impl_processCSS(true);
+        assertTrue(txtArea.isWrapText());
+    }
+
+    @Test public void prefColumnCountSetFromCSS() {
+        txtArea.setStyle("-fx-pref-column-count: 100");
+        Scene s = new Scene(txtArea);
+        txtArea.impl_processCSS(true);
+        assertEquals(100, txtArea.getPrefColumnCount(), 0);
+    }
+
+    @Test public void prefRowCountSetFromCSS() {
+        txtArea.setStyle("-fx-pref-row-count: 100");
+        Scene s = new Scene(txtArea);
+        txtArea.impl_processCSS(true);
+        assertEquals(100, txtArea.getPrefRowCount(), 0);
+    }
+
     /*********************************************************************
      * Tests for property binding                                        *
      ********************************************************************/
+
     @Test public void checkPromptTextPropertyBind() {
         StringProperty strPr = new SimpleStringProperty("value");
         txtArea.promptTextProperty().bind(strPr);

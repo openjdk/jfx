@@ -37,6 +37,7 @@ import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+import javafx.application.Platform;
 import javafx.beans.DefaultProperty;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
@@ -1842,6 +1843,7 @@ public class TreeTableView<S> extends Control {
                     }
                 }
                 
+                treeTableView.expandedItemCountDirty = true;
                 shiftSelection(startRow, shift);
             }
         };
@@ -2358,12 +2360,12 @@ public class TreeTableView<S> extends Control {
                 int row = treeTableView.getRow(e.getTreeItem());
                 int shift = 0;
                 if (e.wasExpanded()) {
-                    if (row > getFocusedIndex()) {
+                    if (row < getFocusedIndex()) {
                         // need to shuffle selection by the number of visible children
                         shift = e.getTreeItem().getExpandedDescendentCount(false) - 1;
                     }
                 } else if (e.wasCollapsed()) {
-                    if (row > getFocusedIndex()) {
+                    if (row < getFocusedIndex()) {
                         // need to shuffle selection by the number of visible children
                         // that were just hidden
                         shift = - e.getTreeItem().previousExpandedDescendentCount + 1;
@@ -2393,7 +2395,14 @@ public class TreeTableView<S> extends Control {
                     }
                 }
                 
-                focus(getFocusedIndex() + shift);
+                if(shift != 0) {
+                    final int newFocus = getFocusedIndex() + shift;
+                    Platform.runLater(new Runnable() {
+                        @Override public void run() {
+                            focus(newFocus);
+                        }
+                    });
+                } 
             }
         };
         
@@ -2506,6 +2515,10 @@ public class TreeTableView<S> extends Control {
          * @param index The index of the item to get focus.
          */
         @Override public void focus(int index) {
+            if (treeTableView.expandedItemCountDirty) {
+                treeTableView.updateExpandedItemCount(treeTableView.getRoot());
+            }
+            
             if (index < 0 || index >= getItemCount()) {
                 setFocusedCell(EMPTY_CELL);
             } else {

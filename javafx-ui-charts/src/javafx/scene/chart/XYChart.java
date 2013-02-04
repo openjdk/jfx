@@ -448,6 +448,15 @@ public abstract class XYChart<X,Y> extends Chart {
 
     // -------------- METHODS ------------------------------------------------------------------------------------------
 
+    @Override public void requestLayout() {
+        super.requestLayout();
+        // RT-22726 Charts legend does not resize correctly
+        Node legend = getLegend();
+        if (legend != null && legend instanceof Region) {
+            ((Region)legend).requestLayout();
+        }
+    }
+    
     /**
      * Gets the size of the data returning 0 if the data is null
      *
@@ -1038,114 +1047,112 @@ public abstract class XYChart<X,Y> extends Chart {
     // -------------- STYLESHEET HANDLING ------------------------------------------------------------------------------
 
     private static class StyleableProperties {
-        private static final CssMetaData<XYChart,Boolean> HORIZONTAL_GRID_LINE_VISIBLE =
-            new CssMetaData<XYChart,Boolean>("-fx-horizontal-grid-lines-visible",
+        private static final CssMetaData<XYChart<?,?>,Boolean> HORIZONTAL_GRID_LINE_VISIBLE =
+            new CssMetaData<XYChart<?,?>,Boolean>("-fx-horizontal-grid-lines-visible",
                 BooleanConverter.getInstance(), Boolean.TRUE) {
 
             @Override
-            public boolean isSettable(XYChart node) {
+            public boolean isSettable(XYChart<?,?> node) {
                 return node.horizontalGridLinesVisible == null ||
                         !node.horizontalGridLinesVisible.isBound();
             }
 
             @Override
-            public StyleableProperty<Boolean> getStyleableProperty(XYChart node) {
-                return (StyleableProperty)node.horizontalGridLinesVisibleProperty();
+            public StyleableProperty<Boolean> getStyleableProperty(XYChart<?,?> node) {
+                return (StyleableProperty<Boolean>)node.horizontalGridLinesVisibleProperty();
             }
         };
         
-        private static final CssMetaData<XYChart,Boolean> HORIZONTAL_ZERO_LINE_VISIBLE =
-            new CssMetaData<XYChart,Boolean>("-fx-horizontal-zero-line-visible",
+        private static final CssMetaData<XYChart<?,?>,Boolean> HORIZONTAL_ZERO_LINE_VISIBLE =
+            new CssMetaData<XYChart<?,?>,Boolean>("-fx-horizontal-zero-line-visible",
                 BooleanConverter.getInstance(), Boolean.TRUE) {
 
             @Override
-            public boolean isSettable(XYChart node) {
+            public boolean isSettable(XYChart<?,?> node) {
                 return node.horizontalZeroLineVisible == null ||
                         !node.horizontalZeroLineVisible.isBound();
             }
 
             @Override
-            public StyleableProperty<Boolean> getStyleableProperty(XYChart node) {
-                return (StyleableProperty)node.horizontalZeroLineVisibleProperty();
+            public StyleableProperty<Boolean> getStyleableProperty(XYChart<?,?> node) {
+                return (StyleableProperty<Boolean>)node.horizontalZeroLineVisibleProperty();
             }
         };
         
-        private static final CssMetaData<XYChart,Boolean> ALTERNATIVE_ROW_FILL_VISIBLE =
-            new CssMetaData<XYChart,Boolean>("-fx-alternative-row-fill-visible",
+        private static final CssMetaData<XYChart<?,?>,Boolean> ALTERNATIVE_ROW_FILL_VISIBLE =
+            new CssMetaData<XYChart<?,?>,Boolean>("-fx-alternative-row-fill-visible",
                 BooleanConverter.getInstance(), Boolean.TRUE) {
 
             @Override
-            public boolean isSettable(XYChart node) {
+            public boolean isSettable(XYChart<?,?> node) {
                 return node.alternativeRowFillVisible == null ||
                         !node.alternativeRowFillVisible.isBound();
             }
 
             @Override
-            public StyleableProperty<Boolean> getStyleableProperty(XYChart node) {
-                return (StyleableProperty)node.alternativeRowFillVisibleProperty();
+            public StyleableProperty<Boolean> getStyleableProperty(XYChart<?,?> node) {
+                return (StyleableProperty<Boolean>)node.alternativeRowFillVisibleProperty();
             }
         };
         
-        private static final CssMetaData<XYChart,Boolean> VERTICAL_GRID_LINE_VISIBLE =
-            new CssMetaData<XYChart,Boolean>("-fx-vertical-grid-lines-visible",
+        private static final CssMetaData<XYChart<?,?>,Boolean> VERTICAL_GRID_LINE_VISIBLE =
+            new CssMetaData<XYChart<?,?>,Boolean>("-fx-vertical-grid-lines-visible",
                 BooleanConverter.getInstance(), Boolean.TRUE) {
 
             @Override
-            public boolean isSettable(XYChart node) {
+            public boolean isSettable(XYChart<?,?> node) {
                 return node.verticalGridLinesVisible == null ||
                         !node.verticalGridLinesVisible.isBound();
             }
 
             @Override
-            public StyleableProperty<Boolean> getStyleableProperty(XYChart node) {
-                return (StyleableProperty)node.verticalGridLinesVisibleProperty();
+            public StyleableProperty<Boolean> getStyleableProperty(XYChart<?,?> node) {
+                return (StyleableProperty<Boolean>)node.verticalGridLinesVisibleProperty();
             }
         };
         
-        private static final CssMetaData<XYChart,Boolean> VERTICAL_ZERO_LINE_VISIBLE =
-            new CssMetaData<XYChart,Boolean>("-fx-vertical-zero-line-visible",
+        private static final CssMetaData<XYChart<?,?>,Boolean> VERTICAL_ZERO_LINE_VISIBLE =
+            new CssMetaData<XYChart<?,?>,Boolean>("-fx-vertical-zero-line-visible",
                 BooleanConverter.getInstance(), Boolean.TRUE) {
 
             @Override
-            public boolean isSettable(XYChart node) {
+            public boolean isSettable(XYChart<?,?> node) {
                 return node.verticalZeroLineVisible == null ||
                         !node.verticalZeroLineVisible.isBound();
             }
 
             @Override
-            public StyleableProperty<Boolean> getStyleableProperty(XYChart node) {
-                return (StyleableProperty)node.verticalZeroLineVisibleProperty();
+            public StyleableProperty<Boolean> getStyleableProperty(XYChart<?,?> node) {
+                return (StyleableProperty<Boolean>)node.verticalZeroLineVisibleProperty();
             }
         };
         
-        private static final CssMetaData<XYChart,Boolean> ALTERNATIVE_COLUMN_FILL_VISIBLE =
-            new CssMetaData<XYChart,Boolean>("-fx-alternative-column-fill-visible",
+        private static final CssMetaData<XYChart<?,?>,Boolean> ALTERNATIVE_COLUMN_FILL_VISIBLE =
+            new CssMetaData<XYChart<?,?>,Boolean>("-fx-alternative-column-fill-visible",
                 BooleanConverter.getInstance(), Boolean.TRUE) {
 
             @Override
-            public boolean isSettable(XYChart node) {
+            public boolean isSettable(XYChart<?,?> node) {
                 return node.alternativeColumnFillVisible == null ||
                         !node.alternativeColumnFillVisible.isBound();
             }
 
             @Override
-            public StyleableProperty<Boolean> getStyleableProperty(XYChart node) {
-                return (StyleableProperty)node.alternativeColumnFillVisibleProperty();
+            public StyleableProperty<Boolean> getStyleableProperty(XYChart<?,?> node) {
+                return (StyleableProperty<Boolean>)node.alternativeColumnFillVisibleProperty();
             }
         };
 
-        private static final List<CssMetaData> STYLEABLES;
+        private static final List<CssMetaData<? extends Node, ?>> STYLEABLES;
         static {
-            final List<CssMetaData> styleables = 
-                new ArrayList<CssMetaData>(Chart.getClassCssMetaData());
-            Collections.addAll(styleables,
-                HORIZONTAL_GRID_LINE_VISIBLE,
-                HORIZONTAL_ZERO_LINE_VISIBLE,
-                ALTERNATIVE_ROW_FILL_VISIBLE,
-                VERTICAL_GRID_LINE_VISIBLE,
-                VERTICAL_ZERO_LINE_VISIBLE,
-                ALTERNATIVE_COLUMN_FILL_VISIBLE
-            );
+            final List<CssMetaData<? extends Node, ?>> styleables = 
+                new ArrayList<CssMetaData<? extends Node, ?>>(Chart.getClassCssMetaData());
+            styleables.add(HORIZONTAL_GRID_LINE_VISIBLE);
+            styleables.add(HORIZONTAL_ZERO_LINE_VISIBLE);
+            styleables.add(ALTERNATIVE_ROW_FILL_VISIBLE);
+            styleables.add(VERTICAL_GRID_LINE_VISIBLE);
+            styleables.add(VERTICAL_ZERO_LINE_VISIBLE);
+            styleables.add(ALTERNATIVE_COLUMN_FILL_VISIBLE);
             STYLEABLES = Collections.unmodifiableList(styleables);
         }
     }
@@ -1154,7 +1161,7 @@ public abstract class XYChart<X,Y> extends Chart {
      * @return The CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
      */
-    public static List<CssMetaData> getClassCssMetaData() {
+    public static List<CssMetaData<? extends Node, ?>> getClassCssMetaData() {
         return StyleableProperties.STYLEABLES;
     }
 
@@ -1162,7 +1169,7 @@ public abstract class XYChart<X,Y> extends Chart {
      * {@inheritDoc}
      */
     @Override
-    public List<CssMetaData> getCssMetaData() {
+    public List<CssMetaData<? extends Node, ?>> getCssMetaData() {
         return getClassCssMetaData();
     }
 

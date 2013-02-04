@@ -89,7 +89,7 @@ public abstract class Control extends Region implements Skinnable {
      *                                                                         *
      **************************************************************************/  
     
-    private List<CssMetaData> styleableProperties;
+    private List<CssMetaData<? extends Node, ?>> styleableProperties;
 
     /**
      * A private reference directly to the SkinBase instance that is used as the
@@ -699,17 +699,15 @@ public abstract class Control extends Region implements Skinnable {
 
             @Override
             public StyleableProperty<String> getStyleableProperty(Control n) {
-                return (StyleableProperty)n.skinClassNameProperty();
+                return (StyleableProperty<String>)n.skinClassNameProperty();
             }
         };
 
-        private static final List<CssMetaData> STYLEABLES;
+        private static final List<CssMetaData<? extends Node, ?>> STYLEABLES;
         static {
-            final List<CssMetaData> styleables =
-                new ArrayList<CssMetaData>(Region.getClassCssMetaData());
-            Collections.addAll(styleables,
-                SKIN
-            );
+            final List<CssMetaData<? extends Node, ?>> styleables =
+                new ArrayList<CssMetaData<? extends Node, ?>>(Region.getClassCssMetaData());
+            styleables.add(SKIN);
             STYLEABLES = Collections.unmodifiableList(styleables);
         }
     }
@@ -718,7 +716,7 @@ public abstract class Control extends Region implements Skinnable {
      * @return The CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
      */
-    public static List<CssMetaData> getClassCssMetaData() {
+    public static List<CssMetaData<? extends Node, ?>> getClassCssMetaData() {
         return StyleableProperties.STYLEABLES;
     }
 
@@ -734,9 +732,9 @@ public abstract class Control extends Region implements Skinnable {
      * resides.
      */
     @Override
-    public final List<CssMetaData> getCssMetaData() {
+    public final List<CssMetaData<? extends Node, ?>> getCssMetaData() {
         if (styleableProperties == null) {
-            styleableProperties = new ArrayList<CssMetaData>();
+            styleableProperties = new ArrayList<CssMetaData<? extends Node, ?>>();
             styleableProperties.addAll(getControlCssMetaData());
             
             if (skinBase != null) {
@@ -749,7 +747,7 @@ public abstract class Control extends Region implements Skinnable {
     /**
      * @return unmodifiable list of the controls css styleable properties
      */
-    protected List<CssMetaData> getControlCssMetaData() {
+    protected List<CssMetaData<? extends Node, ?>> getControlCssMetaData() {
         return getClassCssMetaData();
     }
 

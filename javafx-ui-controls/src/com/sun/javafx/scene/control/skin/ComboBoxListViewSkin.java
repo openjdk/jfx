@@ -25,8 +25,6 @@
 
 package com.sun.javafx.scene.control.skin;
 
-import javafx.collections.WeakListChangeListener;
-import javafx.scene.control.ComboBox;
 import com.sun.javafx.scene.control.behavior.ComboBoxListViewBehavior;
 import java.util.List;
 import javafx.application.Platform;
@@ -36,12 +34,18 @@ import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
+import javafx.collections.WeakListChangeListener;
 import javafx.css.PseudoClass;
 import javafx.event.EventHandler;
 import javafx.event.EventTarget;
 import javafx.scene.Node;
 import javafx.scene.Parent;
-import javafx.scene.control.*;
+import javafx.scene.control.ComboBox;
+import javafx.scene.control.ListCell;
+import javafx.scene.control.ListView;
+import javafx.scene.control.SelectionMode;
+import javafx.scene.control.SelectionModel;
+import javafx.scene.control.TextField;
 import javafx.scene.input.InputEvent;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
@@ -87,15 +91,15 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
      **************************************************************************/
     
     private boolean itemCountDirty;
-    private final ListChangeListener listViewItemsListener = new ListChangeListener() {
-        @Override public void onChanged(ListChangeListener.Change c) {
+    private final ListChangeListener<T> listViewItemsListener = new ListChangeListener<T>() {
+        @Override public void onChanged(ListChangeListener.Change<? extends T> c) {
             itemCountDirty = true;
             getSkinnable().requestLayout();
         }
     };
     
-    private final WeakListChangeListener weakListViewItemsListener =
-            new WeakListChangeListener(listViewItemsListener);
+    private final WeakListChangeListener<T> weakListViewItemsListener =
+            new WeakListChangeListener<T>(listViewItemsListener);
     
     
     
@@ -304,10 +308,10 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
     private void updateValue() {
         T newValue = comboBox.getValue();
         
-        SelectionModel sm = listView.getSelectionModel();
+        SelectionModel listViewSM = listView.getSelectionModel();
         
         if (newValue == null) {
-            sm.clearSelection();
+            listViewSM.clearSelection();
         } else {
             // RT-22386: We need to test to see if the value is in the comboBox
             // items list. If it isn't, then we should clear the listview 
@@ -315,16 +319,16 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
             int indexOfNewValue = getIndexOfComboBoxValueInItemsList();
             if (indexOfNewValue == -1) {
                 listSelectionLock = true;
-                sm.clearSelection();
+                listViewSM.clearSelection();
                 listSelectionLock = false;
             } else {
                 int index = comboBox.getSelectionModel().getSelectedIndex();
                 if (index >= 0 && index < comboBox.getItems().size()) {
                     T itemsObj = comboBox.getItems().get(index);
                     if (itemsObj != null && itemsObj.equals(newValue)) {
-                        sm.select(index);
+                        listViewSM.select(index);
                     } else {
-                        sm.select(newValue);
+                        listViewSM.select(newValue);
                     }
                 } else {
                     // just select the first instance of newValue in the list
@@ -334,19 +338,24 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
                         // exist in the ComboBox items list (part one of fix)
                         updateDisplayNode();
                     } else {
-                        sm.select(listViewIndex);
+                        listViewSM.select(listViewIndex);
                     }
                 }
             }
         }
     }
     
+    private String initialTextFieldValue = null;
     private TextField getEditableInputNode() {
         if (textField != null) return textField;
         
         textField = comboBox.getEditor();
         textField.setFocusTraversable(true);
         textField.promptTextProperty().bind(comboBox.promptTextProperty());
+
+        // Fix for RT-21406: ComboBox do not show initial text value
+        initialTextFieldValue = textField.getText();
+        // End of fix (see updateDisplayNode below for the related code)
         
         textField.focusedProperty().addListener(new ChangeListener<Boolean>() {
             @Override public void changed(ObservableValue<? extends Boolean> ov, Boolean t, Boolean hasFocus) {
@@ -371,43 +380,64 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
               
         T value = comboBox.getValue();
         if (comboBox.isEditable()) {
-            String stringValue = c.toString(value);
-            if (value == null || stringValue == null) {
-                textField.setText("");
-            } else if (! stringValue.equals(textField.getText())) {
-                textField.setText(stringValue);
+            if (initialTextFieldValue != null && ! initialTextFieldValue.isEmpty()) {
+                // Remainder of fix for RT-21406: ComboBox do not show initial text value
+                textField.setText(initialTextFieldValue);
+                initialTextFieldValue = null;
+                // end of fix
+            } else {
+                String stringValue = c.toString(value);
+                if (value == null || stringValue == null) {
+                    textField.setText("");
+                } else if (! stringValue.equals(textField.getText())) {
+                    textField.setText(stringValue);
+                }
             }
         } else {
             int index = getIndexOfComboBoxValueInItemsList();
             if (index > -1) {
+                buttonCell.setItem(null);
                 buttonCell.updateListView(listView);
                 buttonCell.updateIndex(index);
             } else {
                 // RT-21336 Show the ComboBox value even though it doesn't
                 // exist in the ComboBox items list (part two of fix)
-                updateDisplayText(buttonCell, value, false);
+                boolean empty = updateDisplayText(buttonCell, value, false);
+                
+                // Note that empty boolean collected above. This is used to resolve
+                // RT-27834, where we were getting different styling based on whether
+                // the cell was updated via the updateIndex method above, or just
+                // by directly updating the text. We fake the pseudoclass state
+                // for empty, filled, and selected here.
+                buttonCell.pseudoClassStateChanged(PSEUDO_CLASS_EMPTY,    empty);
+                buttonCell.pseudoClassStateChanged(PSEUDO_CLASS_FILLED,   !empty);
+                buttonCell.pseudoClassStateChanged(PSEUDO_CLASS_SELECTED, true);
             }
         }
     }
     
-    private void updateDisplayText(ListCell<T> cell, T item, boolean empty) {
+    // return a boolean to indicate that the cell is empty (and therefore not filled)
+    private boolean updateDisplayText(ListCell<T> cell, T item, boolean empty) {
         if (empty) {
-            if (buttonCell == null) return;
+            if (cell == null) return true;
             cell.setGraphic(null);
             cell.setText(comboBox.getPromptText() == null ? null : comboBox.getPromptText());
+            return true;
         } else if (item instanceof Node) {
-            Node currentNode = buttonCell.getGraphic();
+            Node currentNode = cell.getGraphic();
             Node newNode = (Node) item;
             if (currentNode == null || ! currentNode.equals(newNode)) {
                 cell.setText(null);
                 cell.setGraphic(newNode);
             }
+            return newNode == null;
         } else {
             // run item through StringConverter if it isn't null
             StringConverter c = comboBox.getConverter();
             String s = item == null ? comboBox.getPromptText() : (c == null ? item.toString() : c.toString(item));
             cell.setText(s);
             cell.setGraphic(null);
+            return s == null || s.isEmpty();
         }
     }
     
@@ -462,7 +492,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
     private ListView<T> createListView() {
         final ListView<T> listView = new ListView<T>() {
             private boolean isFirstSizeCalculation = true;
-            
+
             @Override protected double computeMinHeight(double width) {
                 return 30;
             }
@@ -474,7 +504,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
                 if (getSkin() instanceof ListViewSkin) {
                     ListViewSkin skin = (ListViewSkin)getSkin();
                     if (itemCountDirty) {
-                        skin.updateCellCount();
+                        skin.updateRowCount();
                         itemCountDirty = false;
                     }
                     
@@ -497,28 +527,13 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
                 return getListViewPrefHeight();
             }
             
-            @Override 
-            public void impl_processCSS() {
-                
-                //
-                // If the popup doesn't have an owner window, then css won't 
-                // have any stylesheets for the popup yet since the popup gets
-                // the stylesheets from the scene of the owner window.
-                //
-                final PopupControl popup = getPopup();
-                if (popup.getOwnerWindow() == null) return;
-                
-                super.impl_processCSS();
-            }
-            
             private void doCSSCheck() {
-                final PopupControl popup = getPopup();
-                if ((isFirstSizeCalculation || getSkin() == null) && popup.getOwnerWindow() != null) {
+                Parent parent = getPopup().getScene().getRoot();
+                if ((isFirstSizeCalculation || getSkin() == null) && parent.getScene() != null) {
                     // if the skin is null, it means that the css related to the
                     // listview skin hasn't been loaded yet, so we force it here.
                     // This ensures the combobox button is the correct width
                     // when it is first displayed, before the listview is shown.
-                    final Parent parent = getPopup().getScene().getRoot();
                     parent.impl_processCSS(true);
                     isFirstSizeCalculation = false;
                 }
@@ -613,4 +628,12 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
      **************************************************************************/
     
     private static PseudoClass CONTAINS_FOCUS_PSEUDOCLASS_STATE = PseudoClass.getPseudoClass("contains-focus");    
+    
+    // These three pseudo class states are duplicated from Cell
+    private static final PseudoClass PSEUDO_CLASS_SELECTED =
+            PseudoClass.getPseudoClass("selected");
+    private static final PseudoClass PSEUDO_CLASS_EMPTY =
+            PseudoClass.getPseudoClass("empty");
+    private static final PseudoClass PSEUDO_CLASS_FILLED =
+            PseudoClass.getPseudoClass("filled");
 }

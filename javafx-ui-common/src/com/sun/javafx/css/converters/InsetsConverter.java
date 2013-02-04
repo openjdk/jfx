@@ -24,12 +24,12 @@
  */
 package com.sun.javafx.css.converters;
 
-import javafx.geometry.Insets;
-import javafx.scene.text.Font;
-
 import com.sun.javafx.css.Size;
 import com.sun.javafx.css.StyleConverterImpl;
 import javafx.css.ParsedValue;
+import javafx.css.StyleConverter;
+import javafx.geometry.Insets;
+import javafx.scene.text.Font;
 
 /**
  * Convert <size>{1,4} to Insets. The size values are interpreted as
@@ -38,7 +38,7 @@ import javafx.css.ParsedValue;
  * If there is only top and right, then bottom is set to top and left is set to right.
  * If top, right and bottom are given, then left is set to right.
  */
-public final class InsetsConverter extends StyleConverterImpl<ParsedValue<?, Size>[], Insets> {
+public final class InsetsConverter extends StyleConverterImpl<ParsedValue[], Insets> {
 
     // lazy, thread-safe instatiation
     private static class Holder {
@@ -46,7 +46,7 @@ public final class InsetsConverter extends StyleConverterImpl<ParsedValue<?, Siz
         static SequenceConverter SEQUENCE_INSTANCE = new SequenceConverter();
     }
 
-    public static InsetsConverter getInstance() {
+    public static StyleConverter<ParsedValue[], Insets> getInstance() {
         return Holder.INSTANCE;
     }
 
@@ -55,12 +55,12 @@ public final class InsetsConverter extends StyleConverterImpl<ParsedValue<?, Siz
     }
 
     @Override
-    public Insets convert(ParsedValue<ParsedValue<?, Size>[], Insets> value, Font font) {
-        ParsedValue<?, Size>[] sides = value.getValue();
-        double top = sides[0].convert(font).pixels(font);
-        double right = (sides.length > 1) ? sides[1].convert(font).pixels(font) : top;
-        double bottom = (sides.length > 2) ? sides[2].convert(font).pixels(font) : top;
-        double left = (sides.length > 3) ? sides[3].convert(font).pixels(font) : right;
+    public Insets convert(ParsedValue<ParsedValue[], Insets> value, Font font) {
+        ParsedValue[] sides = value.getValue();
+        double top = ((Size)sides[0].convert(font)).pixels(font);
+        double right = (sides.length > 1) ? ((Size)sides[1].convert(font)).pixels(font) : top;
+        double bottom = (sides.length > 2) ? ((Size)sides[2].convert(font)).pixels(font) : top;
+        double left = (sides.length > 3) ? ((Size)sides[3].convert(font)).pixels(font) : right;
         return new Insets(top, right, bottom, left);
     }
 
@@ -72,7 +72,7 @@ public final class InsetsConverter extends StyleConverterImpl<ParsedValue<?, Siz
     /**
      * Convert a <size>{1,4} [,<size>{1,4}]*  an Insets[]
      */
-    public static final class SequenceConverter extends StyleConverterImpl<ParsedValue<ParsedValue<?, Size>[], Insets>[], Insets[]> {
+    public static final class SequenceConverter extends StyleConverterImpl<ParsedValue<ParsedValue[], Insets>[], Insets[]> {
 
         public static SequenceConverter getInstance() {
             return Holder.SEQUENCE_INSTANCE;
@@ -83,8 +83,8 @@ public final class InsetsConverter extends StyleConverterImpl<ParsedValue<?, Siz
         }
 
         @Override
-        public Insets[] convert(ParsedValue<ParsedValue<ParsedValue<?, Size>[], Insets>[], Insets[]> value, Font font) {
-            ParsedValue<ParsedValue<?, Size>[], Insets>[] layers = value.getValue();
+        public Insets[] convert(ParsedValue<ParsedValue<ParsedValue[], Insets>[], Insets[]> value, Font font) {
+            ParsedValue<ParsedValue[], Insets>[] layers = value.getValue();
             Insets[] insets = new Insets[layers.length];
             for (int layer = 0; layer < layers.length; layer++) {
                 insets[layer] = InsetsConverter.getInstance().convert(layers[layer], font);

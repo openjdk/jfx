@@ -77,7 +77,7 @@ public class Margins {
     /**
      * Convert a sequence of sizes to an Margins
      */
-    public static final class Converter extends StyleConverterImpl<ParsedValue<?, Size>[], Margins> {
+    public static final class Converter extends StyleConverterImpl<ParsedValue[], Margins> {
 
         public static Converter getInstance() {
             return Holder.CONVERTER_INSTANCE;
@@ -88,7 +88,7 @@ public class Margins {
         }
 
         @Override
-        public Margins convert(ParsedValue<ParsedValue<?, Size>[], Margins> value, Font font) {
+        public Margins convert(ParsedValue<ParsedValue[], Margins> value, Font font) {
             ParsedValue<?, Size>[] sides = value.getValue();
             Size topSz = (sides.length > 0) ? sides[0].convert(font) : new Size(0.0F, SizeUnits.PX);
             Size rightSz = (sides.length > 1) ? sides[1].convert(font) : topSz;
@@ -144,7 +144,7 @@ public class Margins {
     /**
      * Convert a sequence of sizes to an Insets
      */
-    public static final class SequenceConverter extends StyleConverterImpl<ParsedValue<ParsedValue<?, Size>[], Margins>[], Margins[]> {
+    public static final class SequenceConverter extends StyleConverterImpl<ParsedValue<ParsedValue[], Margins>[], Margins[]> {
 
         public static SequenceConverter getInstance() {
             return Holder.SEQUENCE_CONVERTER_INSTANCE;
@@ -155,8 +155,8 @@ public class Margins {
         }
 
         @Override
-        public Margins[] convert(ParsedValue<ParsedValue<ParsedValue<?, Size>[], Margins>[], Margins[]> value, Font font) {
-            ParsedValue<ParsedValue<?, Size>[], Margins>[] layers = value.getValue();
+        public Margins[] convert(ParsedValue<ParsedValue<ParsedValue[], Margins>[], Margins[]> value, Font font) {
+            ParsedValue<ParsedValue[], Margins>[] layers = value.getValue();
             Margins[] margins = new Margins[layers.length];
             for (int layer = 0; layer < layers.length; layer++) {
                 margins[layer] = Converter.getInstance().convert(layers[layer], font);
