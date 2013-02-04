@@ -858,17 +858,6 @@ public class Utils {
         }
     }
 
-
-    private static final boolean embeddedNonTouch;
-    static {
-        embeddedNonTouch = AccessController.doPrivileged(new PrivilegedAction<Boolean>() {
-            @Override public Boolean run() {
-                return Boolean.getBoolean("com.sun.javafx.isEmbeddedNonTouch");
-            }
-        });
-    }
-
-
     /*
     ** Returns true if the platform is to use Two-Level-Focus.
     ** This is in the Util class to ease any changes in
