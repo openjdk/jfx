@@ -115,7 +115,7 @@ public abstract class TableColumnBase<S,T> implements EventTarget {
             if (obj1 == null) return -1;
             if (obj2 == null) return 1;
             
-            if (obj1 instanceof Comparable) {
+            if (obj1 instanceof Comparable && (obj1.getClass() == obj2.getClass() || obj1.getClass().isAssignableFrom(obj2.getClass()))) {
                 return ((Comparable)obj1).compareTo(obj2);
             }
 
