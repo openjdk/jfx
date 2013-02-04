@@ -81,7 +81,6 @@ import com.sun.javafx.sg.PGSVGPath;
 import com.sun.javafx.sg.PGShape.StrokeLineCap;
 import com.sun.javafx.sg.PGShape.StrokeLineJoin;
 import com.sun.javafx.sg.PGShape.StrokeType;
-import com.sun.javafx.sg.PGSpan;
 import com.sun.javafx.sg.PGText;
 import com.sun.javafx.sg.PGWebView;
 import com.sun.scenario.DelayedRunnable;
@@ -380,11 +379,6 @@ final public class DummyToolkit extends Toolkit {
 
     @Override
     public PGText createPGText() {
-        throw new UnsupportedOperationException("Not supported yet.");
-    }
-
-    @Override
-    public PGSpan createPGSpan() {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 

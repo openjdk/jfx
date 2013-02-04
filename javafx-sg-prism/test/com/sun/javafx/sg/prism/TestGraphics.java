@@ -105,13 +105,7 @@ public class TestGraphics extends BaseGraphics {
     public void setNodeBounds(RectBounds bounds) {
     }
 
-    public void drawString(String str, FontStrike strike, float x, float y) {
-    }
-
     @Override public void drawString(GlyphList gl, FontStrike strike, float x, float y, Color selectColor, int selectStart, int selectEnd) {
-    }
-
-    public void drawString(String str, FontStrike strike, float x, float y, Color selectColor, int selectStart, int selectEnd) {
     }
 
     @Override public void drawTexture(Texture tex, float x, float y, float w, float h) {

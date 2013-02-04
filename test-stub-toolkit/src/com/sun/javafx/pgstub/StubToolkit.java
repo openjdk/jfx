@@ -91,7 +91,6 @@ import com.sun.javafx.sg.PGSVGPath;
 import com.sun.javafx.sg.PGShape.StrokeLineCap;
 import com.sun.javafx.sg.PGShape.StrokeLineJoin;
 import com.sun.javafx.sg.PGShape.StrokeType;
-import com.sun.javafx.sg.PGSpan;
 import com.sun.javafx.sg.PGText;
 import com.sun.javafx.sg.PGWebView;
 import com.sun.javafx.tk.FileChooserType;
@@ -432,10 +431,6 @@ public class StubToolkit extends Toolkit {
         return new StubText();
     }
 
-    @Override public PGSpan createPGSpan() {
-        return new StubSpan();
-    }
-
     /*
      * additional testing functions
      */
@@ -461,6 +456,10 @@ public class StubToolkit extends Toolkit {
 
     private TKClipboard clipboard = new TKClipboard() {
         private Map<DataFormat, Object> map = new HashMap<DataFormat, Object>();
+        private Image image;
+        private double offsetX;
+        private double offsetY;
+
         @Override public Set<DataFormat> getContentTypes() {
             return map.keySet();
         }
@@ -489,6 +488,36 @@ public class StubToolkit extends Toolkit {
         }
     
         @Override public void initSecurityContext() {
+        }
+
+        @Override
+        public void setDragView(Image image) {
+            this.image = image;
+        }
+
+        @Override
+        public void setDragViewOffsetX(double offsetX) {
+            this.offsetX = offsetX;
+        }
+
+        @Override
+        public void setDragViewOffsetY(double offsetY) {
+            this.offsetY = offsetY;
+        }
+
+        @Override
+        public Image getDragView() {
+            return image;
+        }
+
+        @Override
+        public double getDragViewOffsetX() {
+            return offsetX;
+        }
+
+        @Override
+        public double getDragViewOffsetY() {
+            return offsetY;
         }
     };
 

@@ -24,6 +24,11 @@
  */
 package javafx.animation;
 
+import com.sun.javafx.animation.TickCalculation;
+import com.sun.scenario.animation.shared.InterpolationInterval;
+import javafx.beans.property.Property;
+import javafx.beans.property.SimpleLongProperty;
+import javafx.util.Duration;
 import static org.junit.Assert.assertEquals;
 
 import org.junit.Test;
@@ -256,6 +261,25 @@ public class InterpolatorTest {
         assertEquals(1.5, i.interpolate(1.0, 2.0, 0.5), EPSILON);
         assertEquals(1.8, i.interpolate(1.0, 2.0, 0.8), EPSILON);
         assertEquals(2.0, i.interpolate(1.0, 2.0, 1.0), EPSILON);
+    }
+
+    @Test
+    public void testTANGENT_Linear() {
+        SimpleLongProperty property = new SimpleLongProperty();
+
+        Interpolator i0 = Interpolator.TANGENT(Duration.seconds(1), 20);
+        Interpolator i1 = Interpolator.TANGENT(Duration.seconds(1), 40);
+
+        InterpolationInterval interval = InterpolationInterval.create(new KeyValue(property, 60L, i1),
+                TickCalculation.fromDuration(Duration.seconds(3)),
+                new KeyValue(property, 0L, i0), TickCalculation.fromDuration(Duration.seconds(3)));
+
+        interval.interpolate(1.0/3.0);
+        assertEquals(20L, (long)property.getValue());
+        interval.interpolate(1.0/2.0);
+        assertEquals(30L, (long)property.getValue());
+        interval.interpolate(2.0/3.0);
+        assertEquals(40L, (long)property.getValue());
     }
     
     private static class DummyInterpolatable implements Interpolatable<DummyInterpolatable> {

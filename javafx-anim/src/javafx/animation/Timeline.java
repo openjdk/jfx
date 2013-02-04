@@ -50,6 +50,9 @@ import com.sun.scenario.animation.shared.TimelineClipCore;
  * time interval elapsed, it does not guarantee the timing when {@code KeyFrame}
  * is processed.
  * <p>
+ * The {@link #cycleDurationProperty()} will be set to the largest time value
+ * of Timeline's keyFrames.
+ * <p>
  * If a {@code KeyFrame} is not provided for the {@code time==0s} instant, one
  * will be synthesized using the target values that are current at the time
  * {@link #play()} or {@link #playFromStart()} is called.

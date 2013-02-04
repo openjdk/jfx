@@ -10,6 +10,8 @@
       <module fileurl="file://$PROJECT_DIR$/javafx-ui-controls/javafx-ui-controls.iml" filepath="$PROJECT_DIR$/javafx-ui-controls/javafx-ui-controls.iml" group="Controls" />
       <module fileurl="file://$PROJECT_DIR$/javafx-util-converter/javafx-util-converter.iml" filepath="$PROJECT_DIR$/javafx-util-converter/javafx-util-converter.iml" group="Core" />
       <module fileurl="file://$PROJECT_DIR$/test-stub-toolkit/test-stub-toolkit.iml" filepath="$PROJECT_DIR$/test-stub-toolkit/test-stub-toolkit.iml" group="Tools" />
+      <module fileurl="file://$PROJECT_DIR$/javafx-embed-swing/javafx-embed-swing.iml" filepath="$PROJECT_DIR$/javafx-embed-swing/javafx-embed-swing.iml" />
+      <module fileurl="file://$PROJECT_DIR$/javafx-embed-swt/javafx-embed-swt.iml" filepath="$PROJECT_DIR$/javafx-embed-swt/javafx-embed-swt.iml" />
     </modules>
   </component>
 </project>

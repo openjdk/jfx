@@ -99,16 +99,17 @@ public final class PageLayout {
                double topMargin, double bottomMargin) {
 
         if (paper == null || orient == null ||
-            lMargin < 0 || rMargin < 0 || tMargin < 0 || bMargin < 0) {
+            leftMargin < 0 || rightMargin < 0 ||
+            topMargin < 0 || bottomMargin < 0) {
             throw new IllegalArgumentException("Illegal parameters");
         }
         if (orient == PORTRAIT || orient == REVERSE_PORTRAIT) {
-            if (lMargin+rMargin > paper.getWidth() ||
-                tMargin+bMargin > paper.getHeight()) {
+            if (leftMargin+rightMargin > paper.getWidth() ||
+                topMargin+bottomMargin > paper.getHeight()) {
                 throw new IllegalArgumentException("Bad margins");
             }
-        } else if (lMargin+rMargin > paper.getHeight() ||
-                   tMargin+bMargin > paper.getWidth()) {
+        } else if (leftMargin+rightMargin > paper.getHeight() ||
+                   topMargin+bottomMargin > paper.getWidth()) {
             throw new IllegalArgumentException("Bad margins");
         }
         this.paper = paper;

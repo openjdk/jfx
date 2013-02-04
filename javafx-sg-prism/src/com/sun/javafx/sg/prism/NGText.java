@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2012, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,217 +24,154 @@
  */
 package com.sun.javafx.sg.prism;
 
+import com.sun.javafx.font.FontResource;
+import com.sun.javafx.font.FontStrike;
+import com.sun.javafx.font.PGFont;
 import com.sun.javafx.geom.BaseBounds;
+import com.sun.javafx.geom.Path2D;
+import com.sun.javafx.geom.Point2D;
 import com.sun.javafx.geom.RectBounds;
 import com.sun.javafx.geom.RoundRectangle2D;
 import com.sun.javafx.geom.Shape;
 import com.sun.javafx.geom.transform.BaseTransform;
+import com.sun.javafx.scene.text.GlyphList;
 import com.sun.javafx.sg.PGText;
-import com.sun.javafx.sg.PGTextHelper;
 import com.sun.javafx.text.TextRun;
-import com.sun.javafx.text.TextLine;
 import com.sun.prism.Graphics;
 import com.sun.prism.paint.Color;
-import com.sun.prism.paint.Paint;
-import com.sun.javafx.font.FontResource;
-import com.sun.javafx.font.FontStrike;
-import static com.sun.javafx.sg.prism.NGTextHelper.IDENT;
 
 public class NGText extends NGShape implements PGText {
 
-    /*
-     * There are two TextHelper instances for a Text node.
-     * One for use on the FX thread (etc).
-     * The other to be used on the Prism thread by this node when rendering.
-     * Essentially all state resides on the Helper node the NGText node.
-     * The SG Text node updates its copy and that is synced to the NGText
-     * node's copy during the pulse.
-     * Any work done by the sgTextHelper such as calculation line breaks
-     * is copied over to the local helper to avoid re-doing the work.
-     */
-    NGTextHelper helper = null;       // used by NGText
-    NGTextHelper sgTextHelper = null; // used by SG Text node.
+    static final BaseTransform IDENT = BaseTransform.IDENTITY_TRANSFORM;
 
     public NGText() {
-        helper = new NGTextHelper();
-        sgTextHelper = new NGTextHelper();
     }
 
-    public PGTextHelper getTextHelper() {
-        return sgTextHelper;
+    private GlyphList[] runs;
+    @Override public void setGlyphs(Object[] glyphs) {
+        this.runs = (GlyphList[])glyphs;
+        geometryChanged();
     }
 
-    /**
-     * Webview is directly using NGText.
-     * So to set properties it still needs to set them on the NGNode
-     * This means we need keep the setters it needs and forward
-     * to the helper.
-     * Please : nobody else call these and don't add any more!
-     */
-    public void setText(String text) {
-        helper.setText(text);
+    private float layoutX, layoutY;
+    @Override public void setLayoutLocation(float x, float y) {
+        layoutX = x;
+        layoutY = y;
+        geometryChanged();
     }
 
-    public void setFont(Object font) {
-        helper.setFont(font);
-    }
-
-    public void setLocation(float x, float y) {
-        helper.setLocation(x, y);
-    }
-    /* END unapproved webview support */
-
-    public void geometryChanged() {
-        super.geometryChanged();
-        helper.geometryChangedTextValid();
-    }
-
-    public void locationChanged() {
-        super.locationChanged();
-        helper.geometryChangedTextValid();
-    }
-
-    public void updateText() {
-        sgTextHelper.sync(helper);
-        if (sgTextHelper.isGeometryChanged()) {
-            super.geometryChanged();
-            helper.resetGeometryChanged();
-            sgTextHelper.resetGeometryChanged();
+    private PGFont font;
+    @Override public void setFont(Object font) {
+        if (font != null && font.equals(this.font)) {
+            return;
         }
-        if (sgTextHelper.isLocationChanged()) {
-            super.locationChanged();
-            helper.resetLocationChanged();
-            sgTextHelper.resetLocationChanged();
-        }
+        this.font = (PGFont)font;
+        this.fontStrike = null;
+        this.identityStrike = null;
+        geometryChanged();
     }
 
+    private int fontSmoothingType;
+    @Override public void setFontSmoothingType(int fontSmoothingType) {
+        this.fontSmoothingType = fontSmoothingType;
+        geometryChanged();
+    }
+
+    private boolean underline;
+    @Override public void setUnderline(boolean underline) {
+        this.underline = underline;
+        geometryChanged();
+    }
+
+    private boolean strikethrough;
+    @Override public void setStrikethrough(boolean strikethrough) {
+        this.strikethrough = strikethrough;
+        geometryChanged();
+    }
+
+    private Object selectionPaint;
+    private int selectionStart;
+    private int selectionEnd;
+    @Override public void setSelection(int start, int end, Object color) {
+        selectionPaint = color;
+        selectionStart = start;
+        selectionEnd = end;
+        geometryChanged();
+    }
+
+    private static double EPSILON = 0.01;
+    private FontStrike fontStrike = null;
+    private FontStrike identityStrike = null;
+    private double[] strikeMat = new double[4];
     private FontStrike getStrike(BaseTransform xform) {
-        return helper.getStrike(xform);
+        int smoothingType = fontSmoothingType;
+        if (getMode() == Mode.STROKE_FILL) {
+             // When there's a stroke, we want the glyph to be unhinted to match
+             // the stroke. This currently means it must be grayscale.
+             smoothingType = FontResource.AA_GREYSCALE;
+        }
+        if (xform.isIdentity()) {
+            if (identityStrike == null ||
+                smoothingType != identityStrike.getAAMode()) {
+                identityStrike = font.getStrike(IDENT, smoothingType);
+            }
+            return identityStrike;
+        }
+        // REMIND: need to enhance this, to take other rendering attributes.
+        if (fontStrike == null ||
+            fontStrike.getSize() != font.getSize() ||
+            (xform.getMxy() == 0 && strikeMat[1] != 0) ||
+            (xform.getMyx() == 0 && strikeMat[2] != 0) ||
+            (Math.abs(strikeMat[0] - xform.getMxx()) > EPSILON) ||
+            (Math.abs(strikeMat[1] - xform.getMxy()) > EPSILON) ||
+            (Math.abs(strikeMat[2] - xform.getMyx()) > EPSILON) ||
+            (Math.abs(strikeMat[3] - xform.getMyy()) > EPSILON) ||
+            smoothingType != fontStrike.getAAMode())
+        {
+            fontStrike = font.getStrike(xform, smoothingType);
+            strikeMat[0] = xform.getMxx();
+            strikeMat[1] = xform.getMxy();
+            strikeMat[2] = xform.getMyx();
+            strikeMat[3] = xform.getMyy();
+        }
+        return fontStrike;
     }
 
-    /**
-     * Get text shape including decoration. This function does not transform or
-     * render shape.
-     *
-     * @param translateShape if true will translate shape to x, y, and correct
-     * VPos.
-     * @return the shape
-     */
-    private Shape getShape(boolean translateShape) {
-        return helper.getShape(translateShape);
-    }
-
-    @Override
-    public Shape getShape() {
-        return getShape(true);
-    }
-
-    private void drawDecoration(Graphics g,
-                                float x, float y, 
-                                float width, float height) {
-
-        RoundRectangle2D rect = new RoundRectangle2D();
-        rect.x = x;
-        rect.y = y;
-        rect.width = width;
-        rect.height = height;
-
-        Paint oldPaint = g.getPaint();
-
-        if (mode != Mode.FILL) {
-            g.setPaint(drawPaint);
-            g.setStroke(drawStroke);
-            g.draw(rect);
+    @Override public Shape getShape() {
+        if (runs == null) {
+            return new Path2D();
         }
-        if (mode != Mode.STROKE) {
-            g.setPaint(fillPaint);
-            g.fill(rect);
-        }
-
-        // Restore old paint
-        if (g.getPaint() != oldPaint) {
-            g.setPaint(oldPaint);
-        }
-    }
-    
-    private void drawLayout(Graphics g, FontStrike strike, float x, float y) {
-        TextLine[] lines = helper.lines;
-        NGTextHelper.Selection selection = helper.getSelection();
-        Color selectionColor = null;
-        int selectionStart = -1;
-        int selectionEnd = -1;
-        if (selection != null && !selection.isEmpty() &&
-            selection.fillPaint != fillPaint &&
-            selection.fillPaint instanceof Color) {
-            selectionColor = (Color)selection.fillPaint;
-            selectionStart = selection.start;
-            selectionEnd = selection.end;
-        }
-
-        BaseBounds clipBds = null;
-        if (getClipNode() != null) {
-            clipBds = new RectBounds();
-            clipBds = getClippedBounds(clipBds, IDENT);
-        }
-
-        float lineY = y;
-        for (int i = 0; i < lines.length; i++) {
-            TextLine line = lines[i];
-            RectBounds bounds = line.getBounds();
-            float lineHeight = bounds.getHeight();
-            
-            // Probably sufficient to use dsc+ldg rather than
-            // lineheight so this is an abundance of caution.
-            if (clipBds != null) {
-                if (lineY - lineHeight > clipBds.getMaxY()) {
-                    break;
-                }
-                if (lineY + lineHeight < clipBds.getMinY()) {
-                    lineY += lineHeight;
-                    continue;
-                }
+        FontStrike strike = getStrike(IDENT);
+        Path2D outline = new Path2D();
+        for (int i = 0; i < runs.length; i++) {
+            GlyphList run = runs[i];
+            Point2D pt = run.getLocation();
+            float x = pt.x - layoutX;
+            float y = pt.y - layoutY;
+            BaseTransform t = BaseTransform.getTranslateInstance(x, y);
+            outline.append(strike.getOutline(run, t), false);
+            if (underline) {
+                RoundRectangle2D rect = new RoundRectangle2D();
+                rect.x = x;
+                rect.y = y + strike.getUnderLineOffset();
+                rect.width = run.getWidth();
+                rect.height = strike.getUnderLineThickness();
+                outline.append(rect, false);
             }
-            
-            TextRun[] runs = line.getRuns();
-            float lineX = x + bounds.getMinX();
-            float lineWidth = bounds.getWidth();
-            if (helper.underline) {
-                float offset = strike.getUnderLineOffset();
-                float thickness = strike.getUnderLineThickness();
-                drawDecoration(g, lineX, lineY + offset, lineWidth, thickness);
+            if (strikethrough) {
+                RoundRectangle2D rect = new RoundRectangle2D();
+                rect.x = x;
+                rect.y = y + strike.getStrikethroughOffset();
+                rect.width = run.getWidth();
+                rect.height = strike.getStrikethroughThickness();
+                outline.append(rect, false);
             }
-            if (helper.strikethrough) {
-                float offset = strike.getStrikethroughOffset();
-                float thickness = strike.getStrikethroughThickness();
-                drawDecoration(g, lineX, lineY + offset, lineWidth, thickness);
-            }
-            for (int j = 0; j < runs.length; j++) {
-                TextRun run = runs[j];
-                if (clipBds != null) {
-                    if (lineX > clipBds.getMaxX()) {
-                        break;
-                    }
-                    if (lineX < clipBds.getMinX()) {
-                        lineX += run.getWidth();
-                        continue;
-                    }
-                }
-                if (run.getGlyphCount() > 0) {
-                    int start = run.getStart();
-                    g.drawString(run, strike, lineX, lineY,
-                                 selectionColor,
-                                 selectionStart - start,
-                                 selectionEnd - start);
-                }
-                lineX += run.getWidth();
-            }
-            lineY += lineHeight;
         }
+        return outline;
     }
 
     private boolean drawingEffect = false;
-    @Override
-    protected void renderEffect(Graphics g) {
+    @Override protected void renderEffect(Graphics g) {
         /* Text as pre-composed image glyphs must be rendered in
          * device space because otherwise pixelisation effects are
          * very apparent.
@@ -266,22 +203,24 @@ public class NGText extends NGShape implements PGText {
         }
     }
 
-    @Override
-    protected void renderContent(Graphics g) {
+    private static int FILL        = 1 << 1;
+    private static int SHAPE_FILL  = 1 << 2;
+    private static int TEXT        = 1 << 3;
+    private static int DECORATION  = 1 << 4;
+    @Override protected void renderContent(Graphics g) {
         if (mode == Mode.EMPTY) return;
-        String text = helper.getText();
-        if (text.isEmpty()) return;
+        if (runs == null || runs.length == 0) return;
 
-        helper.validateText();
-
+        BaseTransform tx = g.getTransformNoClone();
         // Render this text node as geometry if it is 3D transformed
-        if (!g.getTransformNoClone().is2D()) {
+        if (!tx.is2D()) {
             super.renderContent(g);
             return;
         }
-        
-        FontStrike localStrike = getStrike(g.getTransformNoClone());
-        if (localStrike.getAAMode() == FontResource.AA_LCD ||
+
+        FontStrike strike = getStrike(tx);
+
+        if (strike.getAAMode() == FontResource.AA_LCD ||
                 (fillPaint != null && fillPaint.isProportional()) ||
                 (drawPaint != null && drawPaint.isProportional()))
         {
@@ -293,34 +232,102 @@ public class NGText extends NGShape implements PGText {
              * setNodeBounds for LCD text rendering and is required for correct
              * proportional gradient.
              */
-            BaseBounds bds = helper.computeBoundsLogical(null, IDENT, true);
+            BaseBounds bds = getContentBounds(new RectBounds(), IDENT);
             g.setNodeBounds((RectBounds)bds);
         }
-        if (mode != Mode.STROKE &&
-            !localStrike.drawAsShapes() && !drawingEffect) {
-            
-            g.setPaint(fillPaint);
-            float ty = helper.getY() + helper.getYAdjustment();
-            drawLayout(g, localStrike, helper.getX(), ty);
-            
+
+        Color selectionColor = null;
+        if (selectionStart != selectionEnd && selectionPaint instanceof Color) {
+            selectionColor = (Color)selectionPaint;
         }
-        /* If its FILL or FILL_STROKE, and we have one or other of these
-         * other conditions, then instead use this path for painting.
-         */
-        else if (mode != Mode.STROKE &&
-                 (localStrike.drawAsShapes() || drawingEffect)) {
-            g.setPaint(fillPaint);
-            g.fill(getShape(true));
+        
+        BaseBounds clipBds = null;
+        if (getClipNode() != null) {
+            // Note: this clip does not including any clip in the ancestors.
+            clipBds = getClippedBounds(new RectBounds(), IDENT);
         }
-        /* Finally, if there's a STROKE, ie if the mode is either STROKE
-         * or STROKE_FILL, we need to stroke.
-         */
+
+        // FILL or STROKE_FILL
+        if (mode != Mode.STROKE) {
+            g.setPaint(fillPaint);
+            int op = TEXT;
+            op |= strike.drawAsShapes() || drawingEffect ? SHAPE_FILL : FILL;
+            renderText(g, strike, clipBds, selectionColor, op);
+            
+            // Splitting decoration from text rendering is important in order
+            // to group common render states together, for fast performance.
+            if (underline || strikethrough) {
+                op = DECORATION | SHAPE_FILL;
+                renderText(g, strike, clipBds, selectionColor, op);
+            }
+        }
+
+        // STROKE or STROKE_FILL
         if (mode != Mode.FILL) {
             g.setPaint(drawPaint);
             g.setStroke(drawStroke);
-            // REMIND: take clipBds into account in getting the shape to render
-            g.draw(getShape(true));
+            int op = TEXT;
+            if (underline || strikethrough) {
+                op |= DECORATION;
+            }
+            renderText(g, strike, clipBds, selectionColor, op);
         }
         g.setNodeBounds(null);
+    }
+
+    private void renderText(Graphics g, FontStrike strike, BaseBounds clipBds,
+                            Color selectionColor, int op) {
+        for (int i = 0; i < runs.length; i++) {
+            TextRun run = (TextRun)runs[i];
+            RectBounds lineBounds = run.getLineBounds();
+            Point2D pt = run.getLocation();
+            float x = pt.x - layoutX;
+            float y = pt.y - layoutY;
+            if (clipBds != null) {
+                if (y > clipBds.getMaxY()) break;
+                if (y + lineBounds.getHeight() < clipBds.getMinY()) continue;
+                if (x > clipBds.getMaxX()) continue;
+                if (x + run.getWidth() < clipBds.getMinX()) continue;
+            }
+            y -= lineBounds.getMinY();
+
+            if ((op & TEXT) != 0) {
+                if ((op & FILL) != 0) {
+                    int start = run.getStart();
+                    g.drawString(run, strike, x, y,
+                                 selectionColor,
+                                 selectionStart - start,
+                                 selectionEnd - start);
+                } else {
+                    BaseTransform t = BaseTransform.getTranslateInstance(x, y);
+                    if ((op & SHAPE_FILL) != 0) {
+                        g.fill(strike.getOutline(run, t));
+                    } else {
+                        g.draw(strike.getOutline(run, t));
+                    }
+                }
+
+            }
+            if ((op & DECORATION) != 0) {
+                if (underline) {
+                    float offset = strike.getUnderLineOffset();
+                    float thickness = strike.getUnderLineThickness();
+                    if ((op & SHAPE_FILL) != 0) {
+                        g.fillRect(x, y + offset, run.getWidth(), thickness);
+                    } else {
+                        g.drawRect(x, y + offset, run.getWidth(), thickness);
+                    }
+                }
+                if (strikethrough) {
+                    float offset = strike.getStrikethroughOffset();
+                    float thickness = strike.getStrikethroughThickness();
+                    if ((op & SHAPE_FILL) != 0) {
+                        g.fillRect(x, y + offset, run.getWidth(), thickness);
+                    } else {
+                        g.drawRect(x, y + offset, run.getWidth(), thickness);
+                    }
+                }                
+            }
+        }
     }
 }

@@ -37,12 +37,14 @@ import org.junit.Before;
 public abstract class ServiceTestBase {
     protected final ConcurrentLinkedQueue<Runnable> eventQueue =
             new ConcurrentLinkedQueue<Runnable>();
-    protected AbstractService service;
+    protected TestServiceFactory factory;
+    protected Service<String> service;
     
-    protected abstract AbstractService setupService();
+    protected abstract TestServiceFactory setupServiceFactory();
     protected Executor createExecutor() {
         return new Executor() {
             @Override public void execute(final Runnable command) {
+                if (command == null) Thread.dumpStack();
                 new Thread() {
                     @Override public void run() {
                         try {
@@ -59,8 +61,9 @@ public abstract class ServiceTestBase {
     }
     
     @Before public void setup() {
-        service = setupService();
-        service.test = this;
+        factory = setupServiceFactory();
+        factory.test = this;
+        service = factory.createService();
         service.setExecutor(createExecutor());
     }
 

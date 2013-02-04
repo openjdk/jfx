@@ -178,6 +178,16 @@ public class Point3D {
     }
 
     /**
+     * Returns a point with the coordinates of this point multiplied
+     * by the specified factor
+     * @param factor the factor multiplying the coordinates
+     * @return the point with multiplied coordinates
+     */
+    public Point3D multiply(double factor) {
+        return new Point3D(getX() * factor, getY() * factor, getZ() * factor);
+    }
+
+    /**
      * Normalizes the relative magnitude vector represented by this instance.
      * Returns a vector with the same direction and magnitude equal to 1.
      * If this is a zero vector, a zero vector is returned.

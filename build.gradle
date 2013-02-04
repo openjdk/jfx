@@ -1,0 +1,225 @@
+/**
+ * The build script for JavaFX.
+ *
+ * Tasks to complete:
+ *  - special tasks for common needs, such as:
+ *      - updating copyright headers
+ *      - stripping trailing whitespace (?)
+ *  - checkstyle
+ *  - findbugs
+ *  - re needs?
+ *  - testing
+ *  - build check -- making sure the final artifact has the right bits
+ *  - API change check
+ *  - JavaDoc
+ *  - Pushing results to a repo?
+ *  - VersionInfo needs to be parameterized so hudson can produce valid values
+ *  - partial builds for compileXXX shaders isn't working (they also get compiled)
+ *  - ServiceWithSecurityManagerTest fails to complete when run from gradle.
+ */
+defaultTasks = ["assemble"]
+
+/******************************************************************************
+ *        Utility methods, variables                                          *
+ *****************************************************************************/
+String osName = System.properties["os.name"].toLowerCase();
+
+def swtFileName = { ->
+    String fileName = "";
+    if (osName.contains("mac") || osName.contains("darwin")) {
+        fileName = "org.eclipse.swt.cocoa.macosx.x86_64_3.7.2.v3740f.jar"
+    } else if (osName.contains("windows")) {
+        fileName = "org.eclipse.swt.win32.win32.x86_3.7.2.v3740f.jar"
+//                fileName = "org.eclipse.swt.win32.win32.x86_64_3.7.2.v3740f.jar"
+    } else if (osName.contains("linux")) {
+        fileName = "org.eclipse.swt.gtk.linux.x86_3.7.2.v3740f.jar"
+//                fileName = "org.eclipse.swt.gtk.linux.x86_64_3.7.2.v3740f.jar"
+    }
+    return fileName;
+}
+
+/******************************************************************************
+ *        Project definitions (dependencies, etc)                             *
+ *****************************************************************************/
+
+allprojects {
+    apply plugin: "java"
+    sourceCompatibility = 1.7 // NOTE: Cannot make 1.8 or testing doesn't work because ASM 4.0 used by gradle doesn't support 1.8 yet (not even in nightlies)
+    tasks.withType(Compile) { compile ->
+        compile.options.compilerArgs = ["-XDignore.symbol.file"]
+        /* The following 4 lines are a workaround for the fact that presently Gradle can't set the -XDignore.symbol.file
+           flag, because it appears that the Javac API is lacking support for it */
+        compile.options.debug = true
+        compile.options.fork = true
+        compile.options.forkOptions.executable = System.env["JAVA_HOME"] ? System.env["JAVA_HOME"] + "/bin/javac" : "javac"
+        compile.options.warnings = false
+    }
+    repositories {
+        mavenCentral()
+        ivy {
+            url "http://download.eclipse.org/eclipse/updates/3.7/R-3.7.2-201202080800/plugins/"
+            layout "pattern", {
+                artifact "[artifact]"
+            }
+        }
+    }
+}
+
+project(":build-tools") {
+    // Workaround for lack of Antrl 3 support in Gradle. By defining a configuration,
+    // we can then give it a class path and use that classpath to execute a java command
+    configurations {
+        antlr3
+    }
+
+    dependencies {
+        compile "org.antlr:antlr-runtime:3.4"
+        antlr3 "org.antlr:antlr-runtime:3.4"
+        antlr3 "org.antlr:stringtemplate:4.0.2@jar"
+        antlr3 "org.antlr:antlr:3.4@jar"
+        testCompile "junit:junit:4.8.2"
+    }
+
+    task generateGrammarSource(type: JavaExec) {
+        description = "Generate JSL parser from Antlr3 grammars"
+        def dest = "build/generated-src/antlr/com/sun/scenario/effect/compiler"
+        def src = "src/main/antlr"
+        inputs.dir file(src)
+        outputs.dir file(dest)
+        def grammars = fileTree(src).include("**/*.g")
+        main = "org.antlr.Tool"
+        classpath = configurations.antlr3
+        args = ["-o", dest, grammars.files].flatten()
+    }
+
+    compileJava {
+        dependsOn generateGrammarSource
+        source "build/generated-src/antlr/com/sun/scenario/effect/compiler"
+    }
+}
+
+project(":base") {
+    // TODO need to transform the VersionInfo in the src/build prior to compilation
+    dependencies {
+        compile project(":build-tools")
+        testCompile "junit:junit:4.8.2"
+    }
+
+    mkdir "build/generated-src/version-info"
+    def replacements = [BUILD_TIMESTAMP: new java.util.Date(),
+        HUDSON_JOB_NAME: "not_hudson",
+        HUDSON_BUILD_NUMBER: "0000",
+        PROMOTED_BUILD_NUMBER: "00",
+        PRODUCT_NAME: "javafx", // OpenJFX
+        RAW_VERSION: "8.0.0",
+        RELEASE_NAME: "8.0",
+        RELEASE_MILESTONE: "ea"];
+    task processVersion(type: Copy, description: "Replace params in VersionInfo and copy file to destination") {
+        from "src/main/version-info"
+        into "build/generated-src/version-info/com/sun/javafx/runtime"
+        filter {line->
+            replacements.each() {k, v ->
+                line = line.replace("@${k}@", v.toString());
+            }
+            line
+        }
+    }
+
+    sourceSets.main.java.srcDirs = ["src/main/java", "build/generated-src/version-info"]
+    compileJava.dependsOn processVersion
+}
+
+project(":graphics") {
+    sourceSets.main.java.srcDirs = ["src/main/java", "src/main/dt", "src/main/jsl-generator"]
+
+    dependencies {
+        compile project(":base"), project(":build-tools")
+        compile ":$swtFileName:"
+        compile files(rootDir.toString() + "/../crap/plugin_exports.jar")
+        testCompile "junit:junit:4.8.2"
+    }
+
+    task compileJSL(description: "Compile Java Shader Language (JSL) files") { }
+    classes.dependsOn compileJSL
+
+    // TODO need to exclude sources from jsl-generator in the file jar!
+    [[fileName: "ColorAdjust", generator: "CompileJSL", outputs: "-all"],
+            [fileName: "Brightpass", generator: "CompileJSL", outputs: "-all"],
+            [fileName: "SepiaTone", generator: "CompileJSL", outputs: "-all"],
+            [fileName: "PerspectiveTransform", generator: "CompileJSL", outputs: "-all"],
+            [fileName: "DisplacementMap", generator: "CompileJSL", outputs: "-all"],
+            [fileName: "InvertMask", generator: "CompileJSL", outputs: "-all"],
+            [fileName: "Blend", generator: "CompileBlend", outputs: "-all"],
+            [fileName: "PhongLighting", generator: "CompilePhong", outputs: "-all"],
+            [fileName: "LinearConvolve", generator: "CompileLinearConvolve", outputs: "-hw"],
+            [fileName: "LinearConvolveShadow", generator: "CompileLinearConvolve", outputs: "-hw"]].each { settings ->
+        task "compile$settings.fileName"(dependsOn: compileJava, type: JavaExec) {
+            description = "Generate $settings.fileName shader from JSL"
+            mkdir "modules/graphics/build/generated-src/jsl"
+            def destinationDir = "build/generated-src/jsl"
+            def sourceDir = "src/main/jsl"
+            inputs.dir file(sourceDir)
+            outputs.dir file(destinationDir)
+            main = settings.generator
+            classpath = configurations.compile
+            classpath += files("modules/graphics/build/classes/main")
+            args = ["-i", sourceDir, "-o", destinationDir, "-pkg", "com/sun/scenario/effect", "$settings.outputs", "$settings.fileName"].flatten()
+        }
+        compileJSL.dependsOn "compile$settings.fileName"
+    }
+
+    task compileDecoraJava(dependsOn: compileJSL, type: JavaCompile) {
+        description = "Compile Java-based Decora-JSL files"
+        classpath = configurations.compile
+        classpath += files("build/classes/main")
+        source = ["build/generated-src/jsl/decora-jsw/build/gensrc",
+                "build/generated-src/jsl/decora-prism-ps/build/gensrc",
+                "build/generated-src/jsl/decora-sse/build/gensrc"]
+        destinationDir = file("build/classes/main")
+    }
+    classes.dependsOn compileDecoraJava
+
+    task copyShaders(dependsOn: compileJSL, type: Copy, description: "Copy hlsl / frag shaders to build/resources/main") {
+        from("build/generated-src/jsl/decora-d3d/build/gensrc") {
+            include "**/*.hlsl"
+        }
+        from("build/generated-src/jsl/decora-es2/bulid/gensrc") {
+            include("**/*.frag")
+        }
+
+        into "build/resources/main"
+    }
+    processResources.dependsOn copyShaders
+//
+//    test {
+//        systemProperty "javafx.toolkit", "com.sun.javafx.pgstub.StubToolkit"
+//    }
+
+    // TODO Need to compile the Decora SSE Natives now! I don't yet know how to compile natives
+}
+
+project(":controls") {
+    dependencies {
+        compile project(":build-tools"), project(":base"), project(":graphics")
+    }
+}
+
+project(":swing") {
+    dependencies {
+        compile project(":build-tools"), project(":base"), project(":graphics")
+    }
+}
+
+project(":swt") {
+    dependencies {
+        compile project(":build-tools"), project(":base"), project(":graphics")
+        compile ":$swtFileName:"
+    }
+}
+
+project(":fxml") {
+    dependencies {
+        compile project(":build-tools"), project(":base"), project(":graphics"),
+                project(":controls"), /*project(":media"), project(":web"),*/ project(":swt"), project(":swing")
+    }
+}
