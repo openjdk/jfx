@@ -1201,4 +1201,21 @@ public class TreeViewKeyInputTest {
         assertTrue(debug(), fm.isFocused(0));
         assertTrue(isSelected(0,1,2,3,4,5));
     }
+    
+    @Ignore("Bug not yet fixed")
+    @Test public void test_rt28065() {
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+        
+        treeView.getSelectionModel().select(0);
+        assertEquals(0, treeView.getSelectionModel().getSelectedIndex());
+        assertEquals(root, treeView.getSelectionModel().getSelectedItem());
+        assertEquals(0, treeView.getFocusModel().getFocusedIndex());
+        assertEquals(root, treeView.getFocusModel().getFocusedItem());
+        
+        keyboard.doKeyPress(KeyCode.A, KeyModifier.getShortcutKey());
+        assertEquals(0, treeView.getSelectionModel().getSelectedIndex());
+        assertEquals(root, treeView.getSelectionModel().getSelectedItem());
+        assertEquals(0, treeView.getFocusModel().getFocusedIndex());
+        assertEquals(root, treeView.getFocusModel().getFocusedItem());
+    }
 }
