@@ -204,14 +204,16 @@ public class ImageView extends Node {
                                                 oldImage.getHeight() != _image.getHeight());
 
                     if (needsListeners) {
-                        oldImage.impl_platformImageProperty().removeListener(platformImageChangeListener.getWeakListener());
+                        Toolkit.getImageAccessor().getImageProperty(oldImage).
+                                removeListener(platformImageChangeListener.getWeakListener());
                     }
 
                     needsListeners = _image != null && (_image.isAnimation() || _image.getProgress() < 1);
                     oldImage = _image;
 
                     if (needsListeners) {
-                        _image.impl_platformImageProperty().addListener(platformImageChangeListener.getWeakListener());
+                        Toolkit.getImageAccessor().getImageProperty(_image).
+                                addListener(platformImageChangeListener.getWeakListener());
                     }
                     if (dimensionChanged) {
                         impl_geomChanged();

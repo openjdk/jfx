@@ -1458,7 +1458,7 @@ public class Text extends Shape {
             int length = getTextInternal().length();
             if (0 <= start && start < end  && end <= length) {
                 Paint fill = impl_selectionFillProperty().get();
-                fillObj = fill != null ? fill.impl_getPlatformPaint() : null;
+                fillObj = fill != null ? Toolkit.getPaintAccessor().getPlatformPaint(fill) : null;
             }
             peer.setSelection(start, end, fillObj);
         }

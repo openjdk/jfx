@@ -1760,18 +1760,14 @@ public class Color extends Paint implements Interpolatable<Color> { // final
         this.blue = blue;
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    @Override public Object impl_getPlatformPaint() {
+    @Override
+    Object acc_getPlatformPaint() {
         if (platformPaint == null) {
             platformPaint = Toolkit.getToolkit().getPaint(this);
         }
         return platformPaint;
     }
-
+    
     /**
      * @inheritDoc
      */

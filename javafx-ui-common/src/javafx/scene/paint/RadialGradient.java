@@ -289,12 +289,8 @@ public final class RadialGradient extends Paint {
         return true;
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    @Override public Object impl_getPlatformPaint() {
+    @Override
+    Object acc_getPlatformPaint() {
         if (platformPaint == null) {
             platformPaint = Toolkit.getToolkit().getPaint(this);
         }
@@ -494,5 +490,5 @@ public final class RadialGradient extends Paint {
         return new RadialGradient(angle, distance, centerX.value, centerY.value,
                                   radius.value, radius.proportional, method, stops);
     }
-
+    
 }

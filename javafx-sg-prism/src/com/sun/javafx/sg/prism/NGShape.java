@@ -70,7 +70,9 @@ public abstract class NGShape extends NGNode implements PGShape {
     }
 
     public void setFillPaint(Object fillPaint) {
-        if (fillPaint != this.fillPaint) {
+        if (fillPaint != this.fillPaint || 
+                (this.fillPaint != null && this.fillPaint.isMutable())) 
+        {           
             this.fillPaint = (Paint) fillPaint;
             visualsChanged();
         }
@@ -81,7 +83,9 @@ public abstract class NGShape extends NGNode implements PGShape {
     }
 
     public void setDrawPaint(Object drawPaint) {
-        if (drawPaint != this.drawPaint) {
+        if (drawPaint != this.drawPaint || 
+                (this.drawPaint != null && this.drawPaint.isMutable())) 
+        {
             this.drawPaint = (Paint) drawPaint;
             visualsChanged();
         }

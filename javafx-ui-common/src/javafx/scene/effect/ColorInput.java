@@ -39,6 +39,7 @@ import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.RectBounds;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.scene.BoundsAccessor;
+import com.sun.javafx.tk.Toolkit;
 
 
 /**
@@ -76,7 +77,8 @@ public class ColorInput extends Effect {
 
     @Override
     com.sun.scenario.effect.Flood impl_createImpl() {
-        return new com.sun.scenario.effect.Flood(Color.RED.impl_getPlatformPaint());
+        return new com.sun.scenario.effect.Flood(
+                Toolkit.getPaintAccessor().getPlatformPaint(Color.RED));
     };
     /**
      * The {@code Paint} used to flood the region.
@@ -310,7 +312,7 @@ public class ColorInput extends Effect {
     void impl_update() {
         com.sun.scenario.effect.Flood peer =
                 (com.sun.scenario.effect.Flood) impl_getImpl();
-        peer.setPaint(getPaint().impl_getPlatformPaint());
+        peer.setPaint(Toolkit.getPaintAccessor().getPlatformPaint(getPaint()));
         peer.setFloodBounds(new RectBounds(
                 (float)getX(), (float)getY(),
                 (float)(getX() + getWidth()),

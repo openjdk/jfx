@@ -451,7 +451,7 @@ public class ImageCursor extends Cursor {
             return;
         }
 
-        toImage.impl_platformImageProperty().addListener(getImageListener());
+        Toolkit.getImageAccessor().getImageProperty(toImage).addListener(getImageListener());
     }
 
     private void unbindImage(final Image fromImage) {
@@ -459,7 +459,7 @@ public class ImageCursor extends Cursor {
             return;
         }
 
-        fromImage.impl_platformImageProperty().removeListener(getImageListener());
+        Toolkit.getImageAccessor().getImageProperty(fromImage).removeListener(getImageListener());
     }
 
     private static boolean needsDelayedInitialization(final Image[] images) {
