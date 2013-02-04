@@ -90,8 +90,8 @@ public class TablePosition<S,T> extends TablePositionBase<TableColumn<S,T>> {
      * is -1 if the TableView or TableColumn instances are null.
      */
     @Override public int getColumn() {
-        TableView tableView = getTableView();
-        TableColumn tableColumn = getTableColumn();
+        TableView<S> tableView = getTableView();
+        TableColumn<S,T> tableColumn = getTableColumn();
         return tableView == null || tableColumn == null ? -1 : 
                 tableView.getVisibleLeafIndex(tableColumn);
     }

@@ -26,7 +26,6 @@
 package javafx.scene.control;
 
 
-import javafx.css.PseudoClass;
 import javafx.css.StyleableBooleanProperty;
 import javafx.css.StyleableDoubleProperty;
 import javafx.css.StyleableObjectProperty;
@@ -588,7 +587,6 @@ public class Tooltip extends PopupControl {
                     @Override
                     protected void invalidated() {
 
-                        String imageUrl = null;
                         if (get() != null) {
                             URL url = null;
                             try {

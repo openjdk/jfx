@@ -42,7 +42,6 @@ import javafx.event.EventType;
 import javafx.scene.Node;
 
 import com.sun.javafx.event.EventHandlerManager;
-import com.sun.javafx.scene.control.TableColumnComparator;
 import java.util.Comparator;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
@@ -349,7 +348,7 @@ public class TreeItem<T> implements EventTarget { //, Comparable<TreeItem<T>> {
     
     private final EventHandler<TreeModificationEvent<Object>> itemListener = 
         new EventHandler<TreeModificationEvent<Object>>() {
-            @Override public void handle(TreeModificationEvent event) {
+            @Override public void handle(TreeModificationEvent<Object> event) {
                 expandedDescendentCountDirty = true;
             }
     };
@@ -387,7 +386,7 @@ public class TreeItem<T> implements EventTarget { //, Comparable<TreeItem<T>> {
     // when all children are collapsed.
     int previousExpandedDescendentCount = 1;
     
-    Comparator lastComparator = null;
+    Comparator<TreeItem<T>> lastComparator = null;
     TreeSortMode lastSortMode = null;
     
     
@@ -532,7 +531,7 @@ public class TreeItem<T> implements EventTarget { //, Comparable<TreeItem<T>> {
         if (expanded == null) {
             expanded = new BooleanPropertyBase() {
                 @Override protected void invalidated() {
-                    EventType evtType = isExpanded() ?
+                    EventType<?> evtType = isExpanded() ?
                         BRANCH_EXPANDED_EVENT : BRANCH_COLLAPSED_EVENT;
                     
                     fireEvent(new TreeModificationEvent<T>(evtType, TreeItem.this, isExpanded()));
@@ -725,7 +724,7 @@ public class TreeItem<T> implements EventTarget { //, Comparable<TreeItem<T>> {
         return "TreeItem [ value: " + getValue() + " ]";
     }
 
-    private void fireEvent(TreeModificationEvent evt) {
+    private void fireEvent(TreeModificationEvent<T> evt) {
         Event.fireEvent(this, evt);
     }
 
@@ -808,7 +807,7 @@ public class TreeItem<T> implements EventTarget { //, Comparable<TreeItem<T>> {
         TreeItem<T> rootNode = getRoot();
         
         TreeSortMode sortMode = rootNode.lastSortMode;
-        Comparator comparator = rootNode.lastComparator;
+        Comparator<TreeItem<T>> comparator = rootNode.lastComparator;
         
         if (comparator != null && comparator != lastComparator) {
             lastComparator = comparator;
@@ -816,7 +815,7 @@ public class TreeItem<T> implements EventTarget { //, Comparable<TreeItem<T>> {
         }
     }
     
-    private void runSort(ObservableList<TreeItem<T>> children, Comparator comparator, TreeSortMode sortMode) {
+    private void runSort(ObservableList<TreeItem<T>> children, Comparator<TreeItem<T>> comparator, TreeSortMode sortMode) {
         if (sortMode == ALL_DESCENDANTS) {
             doSort(children, comparator);
         } else if (sortMode == ONLY_FIRST_LEVEL) {
@@ -997,7 +996,7 @@ public class TreeItem<T> implements EventTarget { //, Comparable<TreeItem<T>> {
         /**
          * Returns the TreeItem upon which this event occurred.
          */
-        @Override public TreeItem getSource() {
+        @Override public TreeItem<T> getSource() {
             return this.treeItem;
         }
         

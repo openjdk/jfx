@@ -39,7 +39,6 @@ import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 
 import com.sun.javafx.scene.control.ReadOnlyUnbackedObservableList;
-import javafx.application.Platform;
 
 
 /**

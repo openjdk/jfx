@@ -315,7 +315,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
     private void updateValue() {
         T newValue = comboBox.getValue();
         
-        SelectionModel listViewSM = listView.getSelectionModel();
+        SelectionModel<T> listViewSM = listView.getSelectionModel();
         
         if (newValue == null) {
             listViewSM.clearSelection();
@@ -440,7 +440,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
             return newNode == null;
         } else {
             // run item through StringConverter if it isn't null
-            StringConverter c = comboBox.getConverter();
+            StringConverter<T> c = comboBox.getConverter();
             String s = item == null ? comboBox.getPromptText() : (c == null ? item.toString() : c.toString(item));
             cell.setText(s);
             cell.setGraphic(null);
@@ -509,7 +509,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
                 
                 double pw;
                 if (getSkin() instanceof ListViewSkin) {
-                    ListViewSkin skin = (ListViewSkin)getSkin();
+                    ListViewSkin<?> skin = (ListViewSkin<?>)getSkin();
                     if (itemCountDirty) {
                         skin.updateRowCount();
                         itemCountDirty = false;
@@ -603,7 +603,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
         double ph;
         if (listView.getSkin() instanceof VirtualContainerBase) {
             int maxRows = comboBox.getVisibleRowCount();
-            VirtualContainerBase skin = (VirtualContainerBase)listView.getSkin();
+            VirtualContainerBase<?,?,?> skin = (VirtualContainerBase<?,?,?>)listView.getSkin();
             ph = skin.getVirtualFlowPreferredHeight(maxRows);
         } else {
             double ch = comboBoxItems.size() * 25;

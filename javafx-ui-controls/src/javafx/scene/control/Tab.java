@@ -781,7 +781,7 @@ public class Tab implements EventTarget {
 
                 @Override
                 public List<CssMetaData<? extends Node, ?>> getCssMetaData() {
-                    return Collections.EMPTY_LIST;
+                    return Collections.emptyList();
                 }                
 
                 @Override
