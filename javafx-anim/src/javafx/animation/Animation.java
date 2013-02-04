@@ -53,6 +53,7 @@ import com.sun.scenario.animation.shared.ClipEnvelopeFactory;
 
 import static com.sun.javafx.animation.TickCalculation.fromDuration;
 import com.sun.scenario.animation.AbstractMasterTimer;
+import javafx.beans.property.ObjectPropertyBase;
 
 /**
  * The class {@code Animation} provides the core functionality of all animations
@@ -318,11 +319,8 @@ public abstract class Animation {
     /**
      * Read-only variable to indicate the duration of one cycle of this
      * {@code Animation}: the time it takes to play from time 0 to the
-     * {@code KeyFrame} with the largest time (at the default {@code rate} of
+     * end of the Animation (at the default {@code rate} of
      * 1.0).
-     * 
-     * <p>
-     * This is set to the largest time value of its keyFrames.
      * 
      * @defaultValue 0ms
      */
@@ -331,6 +329,9 @@ public abstract class Animation {
 
     protected final void setCycleDuration(Duration value) {
         if ((cycleDuration != null) || (!DEFAULT_CYCLE_DURATION.equals(value))) {
+            if (value.lessThan(Duration.ZERO)) {
+                throw new IllegalArgumentException("Cycle duration cannot be negative");
+            }
             ((AnimationReadOnlyProperty<Duration>)cycleDurationProperty()).set(value);
             updateTotalDuration();
         }
@@ -433,6 +434,8 @@ public abstract class Animation {
 
     /**
      * Delays the start of an animation.
+     *
+     * Cannot be negative. Setting to a negative number will result in {@link IllegalArgumentException}.
      * 
      * @defaultValue 0ms
      */
@@ -451,7 +454,31 @@ public abstract class Animation {
 
     public final ObjectProperty<Duration> delayProperty() {
         if (delay == null) {
-            delay = new SimpleObjectProperty<Duration>(this, "delay", DEFAULT_DELAY);
+            delay = new ObjectPropertyBase<Duration>() {
+
+                @Override
+                public Object getBean() {
+                    return Animation.this;
+                }
+
+                @Override
+                public String getName() {
+                    return "delay";
+                }
+
+                @Override
+                protected void invalidated() {
+                        final Duration newDuration = get();
+                        if (newDuration.lessThan(Duration.ZERO)) {
+                            if (isBound()) {
+                                unbind();
+                            }
+                            set(Duration.ZERO);
+                            throw new IllegalArgumentException("Cannot set delay to negative value. Setting to Duration.ZERO");
+                        }
+                }
+                
+            };
         }
         return delay;
     }
