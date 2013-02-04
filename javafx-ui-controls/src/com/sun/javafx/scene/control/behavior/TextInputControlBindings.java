@@ -144,7 +144,7 @@ public class TextInputControlBindings {
                 .alt(OptionalBoolean.ANY)
                 .shift(OptionalBoolean.ANY)
                 .ctrl(OptionalBoolean.ANY)
-                .shortcut(OptionalBoolean.ANY));
+                .meta(OptionalBoolean.ANY));
         // Traversal Bindings
         BINDINGS.add(new KeyBinding(TAB, "TraverseNext"));
         BINDINGS.add(new KeyBinding(TAB, "TraversePrevious").shift());

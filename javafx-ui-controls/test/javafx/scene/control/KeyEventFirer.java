@@ -65,7 +65,7 @@ public class KeyEventFirer {
                 ml.contains(KeyModifier.SHIFT),    // shiftDown
                 ml.contains(KeyModifier.CTRL),     // ctrlDown
                 ml.contains(KeyModifier.ALT),      // altDown
-                ml.contains(KeyModifier.CMD)       // metaData
+                ml.contains(KeyModifier.META)      // metaData
                 ); 
     }
 }
