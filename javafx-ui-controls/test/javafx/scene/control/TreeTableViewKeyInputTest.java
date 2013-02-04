@@ -2086,4 +2086,21 @@ public class TreeTableViewKeyInputTest {
         assertTrue(debug(), fm.isFocused(0));
         assertTrue(isSelected(0,1,2,3,4,5));
     } 
+    
+    @Ignore("Bug not yet fixed")
+    @Test public void test_rt28065() {
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+        
+        tableView.getSelectionModel().select(0);
+        assertEquals(0, tableView.getSelectionModel().getSelectedIndex());
+        assertEquals(root, tableView.getSelectionModel().getSelectedItem());
+        assertEquals(0, tableView.getFocusModel().getFocusedIndex());
+        assertEquals(root, tableView.getFocusModel().getFocusedItem());
+        
+        keyboard.doKeyPress(KeyCode.A, KeyModifier.getShortcutKey());
+        assertEquals(0, tableView.getSelectionModel().getSelectedIndex());
+        assertEquals(root, tableView.getSelectionModel().getSelectedItem());
+        assertEquals(0, tableView.getFocusModel().getFocusedIndex());
+        assertEquals(root, tableView.getFocusModel().getFocusedItem());
+    }
 }

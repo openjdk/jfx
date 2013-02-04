@@ -90,8 +90,8 @@ public class TreeTablePosition<S,T> extends TablePositionBase<TreeTableColumn<S,
      * is -1 if the TreeTableView or TreeTableColumn instances are null.
      */
     @Override public int getColumn() {
-        TreeTableView tableView = getTreeTableView();
-        TreeTableColumn tableColumn = getTableColumn();
+        TreeTableView<S> tableView = getTreeTableView();
+        TreeTableColumn<S,T> tableColumn = getTableColumn();
         return tableView == null || tableColumn == null ? -1 : 
                 tableView.getVisibleLeafIndex(tableColumn);
     }

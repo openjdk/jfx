@@ -1554,4 +1554,22 @@ public class TableViewKeyInputTest {
         assertTrue(debug(), fm.isFocused(0));
         assertTrue(isSelected(0,1,2,3,4,5));
     }
+    
+    @Ignore("Bug not yet fixed")
+    @Test public void test_rt28065() {
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+        tableView.getItems().setAll("Apple", "Orange", "Banana");
+        
+        tableView.getSelectionModel().select(0);
+        assertEquals(0, tableView.getSelectionModel().getSelectedIndex());
+        assertEquals("Apple", tableView.getSelectionModel().getSelectedItem());
+        assertEquals(0, tableView.getFocusModel().getFocusedIndex());
+        assertEquals("Apple", tableView.getFocusModel().getFocusedItem());
+        
+        keyboard.doKeyPress(KeyCode.A, KeyModifier.getShortcutKey());
+        assertEquals(0, tableView.getSelectionModel().getSelectedIndex());
+        assertEquals("Apple", tableView.getSelectionModel().getSelectedItem());
+        assertEquals(0, tableView.getFocusModel().getFocusedIndex());
+        assertEquals("Apple", tableView.getFocusModel().getFocusedItem());
+    }
 }

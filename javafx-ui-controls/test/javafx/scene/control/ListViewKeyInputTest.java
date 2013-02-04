@@ -5,6 +5,7 @@ package javafx.scene.control;
 
 import com.sun.javafx.Utils;
 import com.sun.javafx.scene.control.behavior.ListViewAnchorRetriever;
+import com.sun.javafx.tk.Toolkit;
 import static org.junit.Assert.*;
 
 import java.util.List;
@@ -519,13 +520,13 @@ public class ListViewKeyInputTest {
     } 
     
     // test 36
-    @Test public void testCtrlUpTwiceThenShiftDown() {
+    @Test public void testCtrlUpThriceThenShiftDown() {
         sm.clearAndSelect(3);
         keyboard.doUpArrowPress(KeyModifier.getShortcutKey());    // move focus to 2
         keyboard.doUpArrowPress(KeyModifier.getShortcutKey());    // move focus to 1
         keyboard.doUpArrowPress(KeyModifier.getShortcutKey());    // move focus to 0
-        keyboard.doKeyPress(KeyCode.DOWN, KeyModifier.SHIFT);  // select 1,2,3
-        assertTrue(isSelected(1, 2, 3));
+        keyboard.doDownArrowPress(KeyModifier.SHIFT);  // select 1,2,3
+        assertTrue(debug(), isSelected(1, 2, 3));
         assertTrue(isNotSelected(0));
     } 
     
@@ -977,5 +978,23 @@ public class ListViewKeyInputTest {
         keyboard.doKeyPress(KeyCode.HOME, KeyModifier.SHIFT, KeyModifier.getShortcutKey()); 
         assertTrue(debug(), fm.isFocused(0));
         assertTrue(isSelected(0,1,2,3,4,5));
+    }
+    
+    @Ignore("Bug not yet fixed")
+    @Test public void test_rt28065() {
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+        listView.getItems().setAll("Apple", "Orange", "Banana");
+        
+        listView.getSelectionModel().select(0);
+        assertEquals(0, listView.getSelectionModel().getSelectedIndex());
+        assertEquals("Apple", listView.getSelectionModel().getSelectedItem());
+        assertEquals(0, listView.getFocusModel().getFocusedIndex());
+        assertEquals("Apple", listView.getFocusModel().getFocusedItem());
+        
+        keyboard.doKeyPress(KeyCode.A, KeyModifier.getShortcutKey());
+        assertEquals(0, listView.getSelectionModel().getSelectedIndex());
+        assertEquals("Apple", listView.getSelectionModel().getSelectedItem());
+        assertEquals(0, listView.getFocusModel().getFocusedIndex());
+        assertEquals("Apple", listView.getFocusModel().getFocusedItem());
     }
 }

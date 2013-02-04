@@ -71,7 +71,7 @@ public abstract class OrientedKeyBinding extends KeyBinding {
 
     @Override public String toString() {
         return "OrientedKeyBinding [code=" + getCode() + ", shift=" + getShift() +
-                ", ctrl=" + getCtrl() + ", alt=" + getAlt() + ", shortcut=" + getShortcut() +
+                ", ctrl=" + getCtrl() + ", alt=" + getAlt() + ", meta=" + getMeta() +
                 ", type=" + getType() + ", vertical=" + vertical +
                 ", action=" + getAction() + "]";
     }

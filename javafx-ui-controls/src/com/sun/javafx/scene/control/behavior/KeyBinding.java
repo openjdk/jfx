@@ -29,6 +29,7 @@ import com.sun.javafx.Utils;
 import static com.sun.javafx.scene.control.behavior.OptionalBoolean.ANY;
 import static com.sun.javafx.scene.control.behavior.OptionalBoolean.FALSE;
 import static com.sun.javafx.scene.control.behavior.OptionalBoolean.TRUE;
+import com.sun.javafx.tk.Toolkit;
 import javafx.event.EventType;
 import javafx.scene.control.Control;
 import javafx.scene.input.KeyCode;
@@ -43,7 +44,7 @@ import javafx.scene.input.KeyEvent;
  * or 0 in the case where there is no match.
  *
  * Note that this API is, at present, quite odd in that you use a constructor
- * and then use shift(), ctrl(), alt(), or shortcut() separately. It gave me an
+ * and then use shift(), ctrl(), alt(), or meta() separately. It gave me an
  * object-literal like approach but isn't ideal. We will want some builder
  * approach here (similar as in other places).
  */
@@ -54,7 +55,7 @@ public class KeyBinding {
     private OptionalBoolean shift = FALSE;
     private OptionalBoolean ctrl = FALSE;
     private OptionalBoolean alt = FALSE;
-    private OptionalBoolean shortcut = FALSE;
+    private OptionalBoolean meta = FALSE;
 
     public KeyBinding(KeyCode code, String action) {
         this.code = code;
@@ -93,14 +94,43 @@ public class KeyBinding {
         alt = value;
         return this;
     }
-
-    public KeyBinding shortcut() {
-        return shortcut(TRUE);
+    
+    public KeyBinding meta() {
+        return meta(TRUE);
     }
 
-    public KeyBinding shortcut(OptionalBoolean value) {
-        shortcut = value;
+    public KeyBinding meta(OptionalBoolean value) {
+        meta = value;
         return this;
+    }
+    
+    public KeyBinding shortcut() {
+        if (Toolkit.getToolkit().getClass().getName().endsWith("StubToolkit")) {
+            // FIXME: We've hit the terrible StubToolkit (which only appears 
+            // during testing). We will dumb down what we do here
+            if (Utils.isMac()) {
+                return meta();
+            } else {
+                return ctrl();
+            }
+        } else {
+            switch (Toolkit.getToolkit().getPlatformShortcutKey()) {
+                case SHIFT:
+                    return shift();
+
+                case CONTROL:
+                    return ctrl();
+
+                case ALT:
+                    return alt();
+
+                case META:
+                    return meta();
+
+                default:
+                    return this;
+            }
+        }
     }
 
     public final KeyCode getCode() { return code; }
@@ -109,7 +139,7 @@ public class KeyBinding {
     public final OptionalBoolean getShift() { return shift; }
     public final OptionalBoolean getCtrl() { return ctrl; }
     public final OptionalBoolean getAlt() { return alt; }
-    public final OptionalBoolean getShortcut() { return shortcut; }
+    public final OptionalBoolean getMeta() { return meta; }
 
     public int getSpecificity(Control control, KeyEvent event) {
         int s = 0;
@@ -117,7 +147,7 @@ public class KeyBinding {
         if (!shift.equals(event.isShiftDown())) return 0; else if (shift != ANY) s++;
         if (!ctrl.equals(event.isControlDown())) return 0; else if (shift != ANY) s++;
         if (!alt.equals(event.isAltDown())) return 0; else if (shift != ANY) s++;
-        if (!shortcut.equals(event.isShortcutDown())) return 0; else if (shift != ANY) s++;
+        if (!meta.equals(event.isMetaDown())) return 0; else if (shift != ANY) s++;
         if (eventType != null && eventType != event.getEventType()) return 0; else s++;
         // We can now trivially accept it
         return s;
@@ -126,7 +156,7 @@ public class KeyBinding {
     @Override public String toString() {
         return "KeyBinding [code=" + code + ", shift=" + shift +
                 ", ctrl=" + ctrl + ", alt=" + alt + 
-                ", shortcut=" + shortcut + ", type=" + eventType + 
+                ", meta=" + meta + ", type=" + eventType + 
                 ", action=" + action + "]";
     }
 }

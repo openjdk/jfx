@@ -159,7 +159,6 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
     
     protected /*final*/ String matchActionForEvent(KeyEvent e) {
         String action = super.matchActionForEvent(e);
-        System.out.println("action: " + action);
         if (action != null) {
             if (e.getCode() == LEFT || e.getCode() == KP_LEFT) {
                 if (getControl().getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT) {

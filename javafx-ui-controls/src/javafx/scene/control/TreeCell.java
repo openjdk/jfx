@@ -24,7 +24,6 @@
  */
 package javafx.scene.control;
 
-import java.util.Set;
 import javafx.css.PseudoClass;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
@@ -104,8 +103,8 @@ public class TreeCell<T> extends IndexedCell<T> {
         }
     };
     
-    private final ListChangeListener selectedListener = new ListChangeListener() {
-        @Override public void onChanged(Change c) {
+    private final ListChangeListener<Integer> selectedListener = new ListChangeListener<Integer>() {
+        @Override public void onChanged(Change<? extends Integer> c) {
             updateSelection();
         }
     };
@@ -114,10 +113,10 @@ public class TreeCell<T> extends IndexedCell<T> {
      * Listens to the selectionModel property on the TreeView. Whenever the entire model is changed,
      * we have to unhook the weakSelectedListener and update the selection.
      */
-    private final ChangeListener selectionModelPropertyListener = new ChangeListener<MultipleSelectionModel>() {
-        @Override public void changed(ObservableValue observable,
-                                      MultipleSelectionModel oldValue,
-                                      MultipleSelectionModel newValue) {
+    private final ChangeListener<MultipleSelectionModel<TreeItem<T>>> selectionModelPropertyListener = new ChangeListener<MultipleSelectionModel<TreeItem<T>>>() {
+        @Override public void changed(ObservableValue<? extends MultipleSelectionModel<TreeItem<T>>> observable,
+                                      MultipleSelectionModel<TreeItem<T>> oldValue,
+                                      MultipleSelectionModel<TreeItem<T>> newValue) {
             if (oldValue != null) {
                 oldValue.getSelectedIndices().removeListener(weakSelectedListener);
             }
@@ -138,10 +137,10 @@ public class TreeCell<T> extends IndexedCell<T> {
      * Listens to the focusModel property on the TreeView. Whenever the entire model is changed,
      * we have to unhook the weakFocusedListener and update the focus.
      */
-    private final ChangeListener focusModelPropertyListener = new ChangeListener<FocusModel>() {
-        @Override public void changed(ObservableValue observable,
-                                      FocusModel oldValue,
-                                      FocusModel newValue) {
+    private final ChangeListener<FocusModel<TreeItem<T>>> focusModelPropertyListener = new ChangeListener<FocusModel<TreeItem<T>>>() {
+        @Override public void changed(ObservableValue<? extends FocusModel<TreeItem<T>>> observable,
+                                      FocusModel<TreeItem<T>> oldValue,
+                                      FocusModel<TreeItem<T>> newValue) {
             if (oldValue != null) {
                 oldValue.focusedIndexProperty().removeListener(weakFocusedListener);
             }
@@ -162,17 +161,17 @@ public class TreeCell<T> extends IndexedCell<T> {
         @Override public void invalidated(Observable valueModel) {
             // necessary to update the disclosure node in the skin when the
             // leaf property changes
-            TreeItem treeItem = getTreeItem();
+            TreeItem<T> treeItem = getTreeItem();
             if (treeItem != null) {
                 requestLayout();
             }
         }
     };
     
-    private final WeakListChangeListener weakSelectedListener = new WeakListChangeListener(selectedListener);
-    private final WeakChangeListener weakSelectionModelPropertyListener = new WeakChangeListener(selectionModelPropertyListener);
+    private final WeakListChangeListener<Integer> weakSelectedListener = new WeakListChangeListener<Integer>(selectedListener);
+    private final WeakChangeListener<MultipleSelectionModel<TreeItem<T>>> weakSelectionModelPropertyListener = new WeakChangeListener<MultipleSelectionModel<TreeItem<T>>>(selectionModelPropertyListener);
     private final WeakInvalidationListener weakFocusedListener = new WeakInvalidationListener(focusedListener);
-    private final WeakChangeListener weakFocusModelPropertyListener = new WeakChangeListener(focusModelPropertyListener);
+    private final WeakChangeListener<FocusModel<TreeItem<T>>> weakFocusModelPropertyListener = new WeakChangeListener<FocusModel<TreeItem<T>>>(focusModelPropertyListener);
     private final WeakInvalidationListener weakEditingListener = new WeakInvalidationListener(editingListener);
     private final WeakInvalidationListener weakLeafListener = new WeakInvalidationListener(leafListener);
     
@@ -265,8 +264,8 @@ public class TreeCell<T> extends IndexedCell<T> {
     private ReadOnlyObjectWrapper<TreeView<T>> treeView = new ReadOnlyObjectWrapper<TreeView<T>>() {
         private WeakReference<TreeView<T>> weakTreeViewRef;
         @Override protected void invalidated() {
-            MultipleSelectionModel sm;
-            FocusModel fm;
+            MultipleSelectionModel<TreeItem<T>> sm;
+            FocusModel<TreeItem<T>> fm;
             
             if (weakTreeViewRef != null) {
                 TreeView<T> oldTreeView = weakTreeViewRef.get();
@@ -290,7 +289,7 @@ public class TreeCell<T> extends IndexedCell<T> {
                 weakTreeViewRef = null;
             }
 
-            TreeView treeView = get();
+            TreeView<T> treeView = get();
             if (treeView != null) {
                 sm = treeView.getSelectionModel();
                 if (sm != null) {
@@ -381,8 +380,8 @@ public class TreeCell<T> extends IndexedCell<T> {
      /** {@inheritDoc} */
     @Override public void commitEdit(T newValue) {
         if (! isEditing()) return;
-        final TreeItem treeItem = getTreeItem();
-        final TreeView tree = getTreeView();
+        final TreeItem<T> treeItem = getTreeItem();
+        final TreeView<T> tree = getTreeView();
         if (tree != null) {
             // Inform the TreeView of the edit being ready to be committed.
             tree.fireEvent(new TreeView.EditEvent<T>(tree,
@@ -414,7 +413,7 @@ public class TreeCell<T> extends IndexedCell<T> {
     @Override public void cancelEdit() {
         if (! isEditing()) return;
         
-        TreeView tree = getTreeView();
+        TreeView<T> tree = getTreeView();
 
         super.cancelEdit();
 
@@ -493,9 +492,9 @@ public class TreeCell<T> extends IndexedCell<T> {
     private boolean updateEditingIndex = true;
     private void updateEditing() {
         final int index = getIndex();
-        final TreeView tree = getTreeView();
-        final TreeItem treeItem = getTreeItem();
-        final TreeItem editItem = tree == null ? null : tree.getEditingItem();
+        final TreeView<T> tree = getTreeView();
+        final TreeItem<T> treeItem = getTreeItem();
+        final TreeItem<T> editItem = tree == null ? null : tree.getEditingItem();
         final boolean editing = isEditing();
         
         if (index == -1 || tree == null || treeItem == null) return;
@@ -551,7 +550,7 @@ public class TreeCell<T> extends IndexedCell<T> {
      *      for developers or designers to access this function directly.
      */
     public final void updateTreeItem(TreeItem<T> treeItem) {
-        TreeItem _treeItem = getTreeItem();
+        TreeItem<T> _treeItem = getTreeItem();
         if (_treeItem != null) {
             _treeItem.leafProperty().removeListener(weakLeafListener);
         }

@@ -204,7 +204,7 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
             new Callback<TableColumn<?,?>, TableCell<?,?>>() {
                 
         @Override public TableCell<?,?> call(TableColumn<?,?> param) {
-            return new TableCell() {
+            return new TableCell<Object,Object>() {
                 @Override protected void updateItem(Object item, boolean empty) {
                     if (item == getItem()) return;
 
@@ -297,7 +297,7 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
         }
     };
     
-    private ListChangeListener columnsListener = new ListChangeListener<TableColumn<S,?>>() {
+    private ListChangeListener<TableColumn<S,?>> columnsListener = new ListChangeListener<TableColumn<S,?>>() {
         @Override public void onChanged(Change<? extends TableColumn<S,?>> c) {
             while (c.next()) {
                 // update the TableColumn.tableView property
@@ -324,8 +324,8 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
         }
     };
     
-    private WeakListChangeListener weakColumnsListener = 
-            new WeakListChangeListener(columnsListener);
+    private WeakListChangeListener<TableColumn<S,?>> weakColumnsListener = 
+            new WeakListChangeListener<TableColumn<S,?>>(columnsListener);
 
     
     
@@ -428,7 +428,7 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
                 @Override protected void invalidated() {
                     TableView table = getTableView();
                     if (table == null) return;
-                    Map properties = table.getProperties();
+                    Map<Object,Object> properties = table.getProperties();
                     if (properties.containsKey(TableViewSkinBase.REBUILD)) {
                         properties.remove(TableViewSkinBase.REBUILD);
                     }
@@ -618,13 +618,13 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
                 
                 @Override
                 public List<CssMetaData<? extends Node, ?>> getCssMetaData() {
-                    return Collections.EMPTY_LIST;
+                    return Collections.emptyList();
                 }                
 
                 @Override
                 public Node getNode() {
                     if (! (getTableView().getSkin() instanceof TableViewSkin)) return null;
-                    TableViewSkin skin = (TableViewSkin) getTableView().getSkin();
+                    TableViewSkin<?> skin = (TableViewSkin<?>) getTableView().getSkin();
                     
                     TableHeaderRow tableHeader = skin.getTableHeaderRow();
                     NestedTableColumnHeader rootHeader = tableHeader.getRootHeader();
@@ -740,7 +740,7 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
          * @param newValue The value input by the end user.
          */
         public CellEditEvent(TableView<S> table, TablePosition<S,T> pos,
-                EventType<CellEditEvent> eventType, T newValue) {
+                EventType<CellEditEvent<S,T>> eventType, T newValue) {
             super(table, Event.NULL_SOURCE_TARGET, eventType);
 
             if (table == null) {

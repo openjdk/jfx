@@ -4,7 +4,6 @@ import javafx.event.Event;
 import javafx.event.EventTarget;
 import javafx.event.EventType;
 import javafx.scene.Node;
-import javafx.scene.control.*;
 
 /**
  * Event related to {@link ScrollPane} and virtualised controls such as 

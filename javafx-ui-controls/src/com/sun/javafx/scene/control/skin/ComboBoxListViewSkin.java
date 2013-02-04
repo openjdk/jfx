@@ -26,12 +26,14 @@
 package com.sun.javafx.scene.control.skin;
 
 import com.sun.javafx.scene.control.behavior.ComboBoxListViewBehavior;
+import java.util.Collections;
 import java.util.List;
 import javafx.application.Platform;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
+import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.collections.WeakListChangeListener;
@@ -70,13 +72,13 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
      **************************************************************************/    
     
     private final ComboBox<T> comboBox;
+    private ObservableList<T> comboBoxItems;
     
     private ListCell<T> buttonCell;
     private Callback<ListView<T>, ListCell<T>> cellFactory;
     private TextField textField;
     
     private final ListView<T> listView;
-    
     private ObservableList<T> listViewItems;
     
     private boolean listSelectionLock = false;
@@ -112,6 +114,8 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
     public ComboBoxListViewSkin(final ComboBox<T> comboBox) {
         super(comboBox, new ComboBoxListViewBehavior<T>(comboBox));
         this.comboBox = comboBox;
+        updateComboBoxItems();
+        
         this.listView = createListView();
         this.textField = getEditableInputNode();
         
@@ -211,6 +215,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
         super.handleControlPropertyChanged(p);
         
         if ("ITEMS".equals(p)) {
+            updateComboBoxItems();
             updateListViewItems();
         } else if ("PROMPT_TEXT".equals(p)) {
             updateDisplayNode();
@@ -244,15 +249,17 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
         return displayNode;
     }
     
-    /**
-     * 
-     */
+    private void updateComboBoxItems() {
+        comboBoxItems = comboBox.getItems();
+        comboBoxItems = comboBoxItems == null ? FXCollections.<T>emptyObservableList() : comboBoxItems;
+    }
+    
     public void updateListViewItems() {
         if (listViewItems != null) {
             listViewItems.removeListener(weakListViewItemsListener);
         }
 
-        this.listViewItems = comboBox.getItems();
+        this.listViewItems = comboBoxItems;
         listView.setItems(null);
         listView.setItems(listViewItems);
 
@@ -308,7 +315,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
     private void updateValue() {
         T newValue = comboBox.getValue();
         
-        SelectionModel listViewSM = listView.getSelectionModel();
+        SelectionModel<T> listViewSM = listView.getSelectionModel();
         
         if (newValue == null) {
             listViewSM.clearSelection();
@@ -323,8 +330,8 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
                 listSelectionLock = false;
             } else {
                 int index = comboBox.getSelectionModel().getSelectedIndex();
-                if (index >= 0 && index < comboBox.getItems().size()) {
-                    T itemsObj = comboBox.getItems().get(index);
+                if (index >= 0 && index < comboBoxItems.size()) {
+                    T itemsObj = comboBoxItems.get(index);
                     if (itemsObj != null && itemsObj.equals(newValue)) {
                         listViewSM.select(index);
                     } else {
@@ -332,7 +339,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
                     }
                 } else {
                     // just select the first instance of newValue in the list
-                    int listViewIndex = listView.getItems().indexOf(newValue);
+                    int listViewIndex = comboBoxItems.indexOf(newValue);
                     if (listViewIndex == -1) {
                         // RT-21336 Show the ComboBox value even though it doesn't
                         // exist in the ComboBox items list (part one of fix)
@@ -433,7 +440,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
             return newNode == null;
         } else {
             // run item through StringConverter if it isn't null
-            StringConverter c = comboBox.getConverter();
+            StringConverter<T> c = comboBox.getConverter();
             String s = item == null ? comboBox.getPromptText() : (c == null ? item.toString() : c.toString(item));
             cell.setText(s);
             cell.setGraphic(null);
@@ -460,7 +467,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
     
     private int getIndexOfComboBoxValueInItemsList() {
         T value = comboBox.getValue();
-        int index = comboBox.getItems().indexOf(value);
+        int index = comboBoxItems.indexOf(value);
         return index;
     }
     
@@ -502,7 +509,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
                 
                 double pw;
                 if (getSkin() instanceof ListViewSkin) {
-                    ListViewSkin skin = (ListViewSkin)getSkin();
+                    ListViewSkin<?> skin = (ListViewSkin<?>)getSkin();
                     if (itemCountDirty) {
                         skin.updateRowCount();
                         itemCountDirty = false;
@@ -596,10 +603,10 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
         double ph;
         if (listView.getSkin() instanceof VirtualContainerBase) {
             int maxRows = comboBox.getVisibleRowCount();
-            VirtualContainerBase skin = (VirtualContainerBase)listView.getSkin();
+            VirtualContainerBase<?,?,?> skin = (VirtualContainerBase<?,?,?>)listView.getSkin();
             ph = skin.getVirtualFlowPreferredHeight(maxRows);
         } else {
-            double ch = comboBox.getItems().size() * 25;
+            double ch = comboBoxItems.size() * 25;
             ph = Math.min(ch, 200);
         }
         

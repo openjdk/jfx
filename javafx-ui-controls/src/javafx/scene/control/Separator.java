@@ -156,7 +156,7 @@ public class Separator extends Control {
 
     public final ObjectProperty<HPos> halignmentProperty() {
         if (halignment == null) {
-            halignment = new StyleableObjectProperty(HPos.CENTER) {
+            halignment = new StyleableObjectProperty<HPos>(HPos.CENTER) {
 
                 @Override
                 public Object getBean() {
@@ -194,7 +194,7 @@ public class Separator extends Control {
 
     public final ObjectProperty<VPos> valignmentProperty() {
         if (valignment == null) {
-            valignment = new StyleableObjectProperty(VPos.CENTER) {
+            valignment = new StyleableObjectProperty<VPos>(VPos.CENTER) {
 
                 @Override
                 public Object getBean() {
