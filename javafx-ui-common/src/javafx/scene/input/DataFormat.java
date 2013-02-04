@@ -82,6 +82,20 @@ public class DataFormat {
     public static final DataFormat FILES = new DataFormat("application/x-java-file-list", "java.file-list");
 
     /**
+     * Data format used internally, represents dragged image. Making this
+     * a private field prevents user from creating this DataFormat and breaking
+     * our drag view implementation.
+     */
+    private static final DataFormat DRAG_IMAGE = new DataFormat("application/x-java-drag-image");
+
+    /**
+     * Data format used internally, represents offset in the dragged image.
+     * Making this a private field prevents user from creating this DataFormat
+     * and breaking our drag view implementation.
+     */
+    private static final DataFormat DRAG_IMAGE_OFFSET = new DataFormat("application/x-java-drag-image-offset");
+    
+    /**
      * A set of identifiers, typically mime types, for this DataFormat. 
      * In most cases this will be a single String.
      */

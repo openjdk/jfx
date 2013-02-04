@@ -25,6 +25,7 @@
 package com.sun.javafx.tk;
 
 import java.util.Set;
+import javafx.scene.image.Image;
 
 import javafx.scene.input.DataFormat;
 import javafx.scene.input.TransferMode;
@@ -78,4 +79,40 @@ public interface TKClipboard {
      * is properly initialized.
      */
     public void initSecurityContext();
+
+    /**
+     * Sets the visual representation of data being transfered in a drag and drop gesture.
+     * @param image image to use for the drag view
+     */
+    public void setDragView(Image image);
+
+    /**
+     * Sets the x position of the cursor of the drag view image.
+     * @param offsetX x position of the cursor over the image
+     */
+    public void setDragViewOffsetX(double offsetX);
+
+    /**
+     * Sets the y position of the cursor of the drag view image.
+     * @param offsetY x position of the cursor over the image
+     */    
+    public void setDragViewOffsetY(double offsetY);
+
+    /**
+     * Gets the image used as a drag view.
+     * @return the image used as a drag view
+     */
+    public Image getDragView();
+
+    /**
+     * Gets the x position of the cursor of the drag view image.
+     * @return x position of the cursor over the image
+     */
+    public double getDragViewOffsetX();
+
+    /**
+     * Gets the y position of the cursor of the drag view image.
+     * @return y position of the cursor over the image
+     */
+    public double getDragViewOffsetY();
 }
