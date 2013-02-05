@@ -357,7 +357,7 @@ public final class ImageTest {
 
         image.widthProperty().addListener(widthInvalidationCounter);
         image.heightProperty().addListener(heightInvalidationCounter);
-        image.impl_platformImageProperty().addListener(plImageInvalidationCounter);
+        Toolkit.getImageAccessor().getImageProperty(image).addListener(plImageInvalidationCounter);
 
         assertEquals(0, image.getWidth(), 0);
         assertEquals(0, image.getHeight(), 0);
@@ -391,7 +391,7 @@ public final class ImageTest {
 
         image.widthProperty().addListener(imageChecker);
         image.heightProperty().addListener(imageChecker);
-        image.impl_platformImageProperty().addListener(imageChecker);
+        Toolkit.getImageAccessor().getImageProperty(image).addListener(imageChecker);
 
         assertEquals(0, image.getWidth(), 0);
         assertEquals(0, image.getHeight(), 0);

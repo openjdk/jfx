@@ -25,6 +25,7 @@
 
 package javafx.scene.paint;
 
+import com.sun.javafx.tk.Toolkit;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -176,9 +177,9 @@ public class LinearGradientTest {
         LinearGradient gradient = new LinearGradient(1, 2, 3, 4, true,
                 CycleMethod.REPEAT, noStop);
         
-        Object paint = gradient.impl_getPlatformPaint();
+        Object paint = Toolkit.getPaintAccessor().getPlatformPaint(gradient);
         assertNotNull(paint);
-        assertSame(paint, gradient.impl_getPlatformPaint());
+        assertSame(paint, Toolkit.getPaintAccessor().getPlatformPaint(gradient));
     }
 
     @Test(expected=NullPointerException.class)
