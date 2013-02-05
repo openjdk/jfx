@@ -202,19 +202,20 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeViewB
     }
 
     @Override protected void updateRowCount() {
-        int oldCount = flow.getCellCount();
+//        int oldCount = flow.getCellCount();
         int newCount = getItemCount();
         
         // if this is not called even when the count is the same, we get a 
         // memory leak in VirtualFlow.sheet.children. This can probably be 
         // optimised in the future when time permits.
         flow.setCellCount(newCount);
-        
-        if (newCount != oldCount) {
-            needCellsRebuilt = true;
-        } else {
-            needCellsReconfigured = true;
-        }
+
+        // Ideally we would be more nuanced here, toggling a cheaper needs* 
+        // field, but if we do we hit issues such as those identified in 
+        // RT-27852, where the expended item count of the new root equals the
+        // EIC of the old root, which would lead to the visuals not updating
+        // properly. 
+        needCellsRebuilt = true;
         getSkinnable().requestLayout();
     }
 

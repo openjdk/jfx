@@ -224,7 +224,7 @@ public class TreeTableViewSkin<S> extends TableViewSkinBase<S, TreeTableView<S>,
             getRoot().addEventHandler(TreeItem.<S>treeNotificationEvent(), weakRootListener);
         }
         
-        rowCountDirty = true;
+        updateRowCount();
     }
     
     
