@@ -10,6 +10,8 @@
 	<classpathentry kind="src" path="javafx-anim/build/builders"/>
 	<classpathentry kind="src" path="javafx-anim/test/unit"/>
 	<classpathentry kind="src" path="javafx-annotation-processor/src"/>
+	<classpathentry kind="src" path="javafx-beans/src"/>
+	<classpathentry kind="src" path="javafx-beans/test"/>
 	<classpathentry kind="src" path="javafx-beans-dt/src"/>
 	<classpathentry kind="src" path="javafx-beans-dt/test"/>
 	<classpathentry kind="src" path="javafx-concurrent/src"/>
@@ -51,6 +53,7 @@
 	<classpathentry kind="con" path="org.eclipse.jdt.junit.JUNIT_CONTAINER/4"/>
 	<classpathentry kind="lib" path="../import/antlr-3.1.3/antlr-3.1.3/lib/antlr-3.1.3.jar"/>
 	<classpathentry kind="lib" path="../import/findbugs-2.0.1/findbugs-2.0.1/lib/ant.jar"/>
+	<classpathentry kind="lib" path="../import/swt-3.7.1/swt-debug.jar"/>
 	<classpathentry kind="src" path="/rt-closed"/>
 	<classpathentry kind="src" path="/media"/>
 	<classpathentry kind="output" path="bin"/>
