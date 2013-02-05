@@ -1103,13 +1103,19 @@ return sb.toString();
 
                 try {
                     cssMetaData.set(node, value, calculatedValue.origin);
-
+                    
                     if (styleMap != null) {
                         StyleableProperty styleableProperty = cssMetaData.getStyleableProperty(node);                            
                         styleMap.put(styleableProperty, styleList);
                     }
                     
                 } catch (Exception e) {
+
+                    // RT-27155: if setting value raises exception, reset value 
+                    // the value to initial and thereafter skip setting the property
+                    cssMetaData.set(node, cssMetaData.getInitialValue(node), null);
+                    cacheEntry.put(property, SKIP);
+                    
                     List<CssError> errors = null;
                     if ((errors = StyleManager.getErrors()) != null) {
                         final String msg = String.format("Failed to set css [%s] due to %s\n", cssMetaData, e.getMessage());
