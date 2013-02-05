@@ -25,6 +25,7 @@
 package com.sun.javafx.sg;
 
 import com.sun.javafx.geom.BaseBounds;
+import com.sun.javafx.geom.DirtyRegionContainer;
 import junit.framework.Assert;
 import javafx.scene.shape.Rectangle;
 import org.junit.Test;

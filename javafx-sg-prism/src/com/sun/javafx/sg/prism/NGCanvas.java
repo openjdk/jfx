@@ -28,6 +28,8 @@ package com.sun.javafx.sg.prism;
 import com.sun.javafx.font.PGFont;
 import com.sun.javafx.geom.Arc2D;
 import com.sun.javafx.geom.BaseBounds;
+import com.sun.javafx.geom.DirtyRegionContainer;
+import com.sun.javafx.geom.DirtyRegionPool;
 import com.sun.javafx.geom.Path2D;
 import com.sun.javafx.geom.PathIterator;
 import com.sun.javafx.geom.RectBounds;
@@ -1206,6 +1208,12 @@ public class NGCanvas extends NGNode implements PGCanvas {
         public boolean reducesOpaquePixels() {
             return false;
         }
+
+        @Override
+        public DirtyRegionContainer getDirtyRegions(Effect defaultInput, DirtyRegionPool regionPool) {
+            return null; // Never called
+        }
+
     }
 
     static class MyBlend extends Blend {
@@ -1273,5 +1281,9 @@ public class NGCanvas extends NGNode implements PGCanvas {
             return false;
         }
         
+        @Override
+        public DirtyRegionContainer getDirtyRegions(Effect defaultInput, DirtyRegionPool regionPool) {
+            return null; // Never called
+        }
     }
 }

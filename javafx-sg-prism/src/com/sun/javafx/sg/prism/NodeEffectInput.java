@@ -28,6 +28,8 @@ import com.sun.scenario.effect.Effect;
 import com.sun.scenario.effect.FilterContext;
 import com.sun.scenario.effect.ImageData;
 import com.sun.javafx.geom.BaseBounds;
+import com.sun.javafx.geom.DirtyRegionContainer;
+import com.sun.javafx.geom.DirtyRegionPool;
 import com.sun.javafx.geom.RectBounds;
 import com.sun.javafx.geom.Rectangle;
 import com.sun.javafx.geom.transform.BaseTransform;
@@ -227,4 +229,8 @@ public class NodeEffectInput extends BaseNodeEffectInput {
         return false;
     }
     
+    @Override
+    public DirtyRegionContainer getDirtyRegions(Effect defaultInput, DirtyRegionPool regionPool) {
+        return null; // Never called
+    }
 }

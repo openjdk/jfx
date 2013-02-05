@@ -77,6 +77,8 @@ public abstract class BaseBounds {
 
     public abstract float getMaxZ();
 
+    public abstract void translate(float x, float y, float z);
+
     public abstract Vec2f getMin(Vec2f min);
 
     public abstract Vec2f getMax(Vec2f max);

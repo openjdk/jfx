@@ -22,7 +22,7 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-package com.sun.javafx.sg;
+package com.sun.javafx.geom;
 
 import java.util.Deque;
 import java.util.LinkedList;

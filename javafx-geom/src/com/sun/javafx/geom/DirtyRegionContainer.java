@@ -23,11 +23,10 @@
  * questions.
  */
 
-package com.sun.javafx.sg;
+package com.sun.javafx.geom;
 
-import com.sun.javafx.geom.RectBounds;
+import com.sun.javafx.geom.transform.BaseTransform;
 import java.util.Arrays;
-
 /**
  * Container for array of dirty regions. This container internally holds
  * pointer to the first empty dirty region in the array and index of last
@@ -130,6 +129,10 @@ public final class DirtyRegionContainer {
     public RectBounds getDirtyRegion(int index) {
         return dirtyRegions[index];
     }
+    
+    public void setDirtyRegion(int index, RectBounds region) {
+        dirtyRegions[index] = region;
+    }
 
     /**
      * Adds new dirty region to the array.
@@ -203,6 +206,25 @@ public final class DirtyRegionContainer {
                 dest[to++] = null;
             } else {
                 dest[to++].deriveWithNewBounds(rb);
+            }
+        }
+    }
+    
+    public boolean checkAndClearRegion(int index) {
+        boolean removed = false;
+        if (dirtyRegions[index].isEmpty()) {
+            System.arraycopy(dirtyRegions, index + 1, dirtyRegions, index, emptyIndex - index - 1);
+            --emptyIndex;
+            removed = true;
+        }        
+        
+        return removed;
+    }
+
+    public void grow(int horizontal, int vertical) {
+        if (horizontal != 0 || vertical != 0) {
+            for (int i = 0; i < emptyIndex; i++) {
+                getDirtyRegion(i).grow(horizontal, vertical);
             }
         }
     }

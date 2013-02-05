@@ -22,11 +22,10 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-package com.sun.javafx.sg;
+package com.sun.javafx.geom;
 
 import junit.framework.Assert;
 import org.junit.Test;
-import com.sun.javafx.geom.RectBounds;
 
 public class DirtyRegionContainerTest {
 

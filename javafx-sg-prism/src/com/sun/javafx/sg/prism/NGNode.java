@@ -27,6 +27,8 @@ package com.sun.javafx.sg.prism;
 import com.sun.glass.ui.Screen;
 import java.util.List;
 import com.sun.javafx.geom.BaseBounds;
+import com.sun.javafx.geom.DirtyRegionContainer;
+import com.sun.javafx.geom.DirtyRegionPool;
 import com.sun.javafx.geom.Point2D;
 import com.sun.javafx.geom.RectBounds;
 import com.sun.javafx.geom.Rectangle;
@@ -36,7 +38,6 @@ import com.sun.javafx.sg.BaseCacheFilter;
 import com.sun.javafx.sg.BaseEffectFilter;
 import com.sun.javafx.sg.BaseNode;
 import com.sun.javafx.sg.BaseNodeEffectInput;
-import com.sun.javafx.sg.DirtyRegionContainer;
 import com.sun.javafx.sg.NodePath;
 import com.sun.javafx.sg.PGNode;
 import com.sun.prism.CompositeMode;
@@ -981,5 +982,9 @@ public abstract class NGNode extends BaseNode<Graphics> {
             return false;
         }
         
+        @Override
+        public DirtyRegionContainer getDirtyRegions(Effect defaultInput, DirtyRegionPool regionPool) {
+            return null; //Never called
+        }
     }
 }
