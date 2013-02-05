@@ -917,4 +917,35 @@ public class ComboBoxTest {
         assertEquals("2", buttonCell.getText());
         assertEquals(2, sm.getSelectedIndex());
     }
+    
+    @Test public void test_rt24412() {
+        SingleSelectionModel sm = comboBox.getSelectionModel();
+        
+        Stage stage = new Stage();
+        Scene scene = new Scene(comboBox);
+        stage.setScene(scene);
+        comboBox.impl_processCSS(true);
+        comboBox.show();
+        ListCell<String> buttonCell = (ListCell<String>) getDisplayNode();
+        
+        comboBox.getItems().setAll("0","1","2","3","4","5","6","7","8","9");
+        
+        sm.select("2");
+        assertEquals("2", sm.getSelectedItem());
+        assertEquals("2", comboBox.getValue());
+        assertEquals("2", buttonCell.getText());
+        assertEquals(2, sm.getSelectedIndex());
+        
+        sm.clearSelection();
+        assertNull(sm.getSelectedItem());
+        assertNull(comboBox.getValue());
+        assertEquals("", buttonCell.getText());
+        assertEquals(-1, sm.getSelectedIndex());
+        
+        sm.select("2");
+        assertEquals("2", sm.getSelectedItem());
+        assertEquals("2", comboBox.getValue());
+        assertEquals("2", buttonCell.getText());
+        assertEquals(2, sm.getSelectedIndex());
+    }
 }
