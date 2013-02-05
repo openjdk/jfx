@@ -418,6 +418,17 @@ public abstract class XYChart<X,Y> extends Chart {
         if(xAxis.getSide() == null) xAxis.setSide(Side.BOTTOM);
         this.yAxis = yAxis;
         if(yAxis.getSide() == null) yAxis.setSide(Side.LEFT);
+        // RT-23123 autoranging leads to charts incorrect appearance.
+        xAxis.autoRangingProperty().addListener(new ChangeListener<Boolean>() {
+            public void changed(ObservableValue<? extends Boolean> ov, Boolean t, Boolean t1) {
+                updateAxisRange();
+            }
+        });
+        yAxis.autoRangingProperty().addListener(new ChangeListener<Boolean>() {
+            public void changed(ObservableValue<? extends Boolean> ov, Boolean t, Boolean t1) {
+                updateAxisRange();
+            }
+        });
         // add initial content to chart content
         getChartChildren().addAll(plotBackground,plotArea,xAxis,yAxis);
         // We don't want plotArea or plotContent to autoSize or do layout
