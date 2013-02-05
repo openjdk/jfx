@@ -100,7 +100,7 @@
         <java-data xmlns="http://www.netbeans.org/ns/freeform-project-java/2">
             <compilation-unit>
                 <package-root>${src.dir}</package-root>
-                <classpath mode="compile">../../rt-closed/javafx-beans/dist/javafx-beans.jar</classpath>
+                <classpath mode="compile">../javafx-beans/dist/javafx-beans.jar</classpath>
                 <built-to>dist/javafx-annotation-processor.jar</built-to>
                 <source-level>1.5</source-level>
             </compilation-unit>

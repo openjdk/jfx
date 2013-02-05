@@ -62,6 +62,7 @@
         <ant antfile="${rt.root.dir}/javafx-concurrent/build.xml" target="jar" inheritAll="false"/>
         <ant antfile="${rt.root.dir}/javafx-logging/build.xml" target="jar" inheritAll="false"/>
         <ant antfile="${rt.root.dir}/javafx-anim/build.xml" target="jar" inheritAll="false"/>
+        <ant antfile="${rt.root.dir}/javafx-beans/build.xml" target="jar" inheritAll="false"/>
         <ant antfile="${rt.root.dir}/javafx-common/build.xml" target="jar" inheritAll="false"/>
         <ant antfile="${rt.root.dir}/javafx-annotation-processor/build.xml" target="jar" inheritAll="false"/>
         <ant antfile="${rt.root.dir}/javafx-sg-common/build.xml" target="jar" inheritAll="false"/>
@@ -93,6 +94,7 @@
         <ant antfile="${rt.root.dir}/javafx-ui-charts/build.xml" target="test" inheritAll="false"/>
         <ant antfile="${rt.root.dir}/javafx-logging/build.xml" target="test" inheritAll="false"/>
         <ant antfile="${rt.root.dir}/javafx-anim/build.xml" target="test" inheritAll="false"/>
+        <ant antfile="${rt.root.dir}/javafx-beans/build.xml" target="test" inheritAll="false"/>
         <ant antfile="${rt.root.dir}/javafx-common/build.xml" target="test" inheritAll="false"/>
         <ant antfile="${rt.root.dir}/javafx-annotation-processor/build.xml" target="test" inheritAll="false"/>
         <ant antfile="${rt.root.dir}/javafx-sg-common/build.xml" target="test" inheritAll="false"/>
@@ -124,6 +126,7 @@
         <ant antfile="${rt.root.dir}/javafx-ui-charts/build.xml" target="clean" inheritAll="false"/>
         <ant antfile="${rt.root.dir}/javafx-logging/build.xml" target="clean" inheritAll="false"/>
         <ant antfile="${rt.root.dir}/javafx-anim/build.xml" target="clean" inheritAll="false"/>
+        <ant antfile="${rt.root.dir}/javafx-beans/build.xml" target="clean" inheritAll="false"/>
         <ant antfile="${rt.root.dir}/javafx-common/build.xml" target="clean" inheritAll="false"/>
         <ant antfile="${rt.root.dir}/javafx-annotation-processor/build.xml" target="clean" inheritAll="false"/>
         <ant antfile="${rt.root.dir}/javafx-sg-common/build.xml" target="clean" inheritAll="false"/>

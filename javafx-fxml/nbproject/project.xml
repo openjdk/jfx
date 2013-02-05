@@ -116,7 +116,7 @@
         <java-data xmlns="http://www.netbeans.org/ns/freeform-project-java/3">
             <compilation-unit>
                 <package-root>${src.dir}</package-root>
-                <classpath mode="compile">../../rt/javafx-logging/dist/javafx-logging.jar;../../rt/javafx-common/dist/javafx-common.jar;../../rt-closed/javafx-beans/dist/javafx-beans.jar;../javafx-ui-common/dist/javafx-ui-common.jar;../javafx-ui-controls/dist/javafx-ui-controls.jar;../javafx-ui-charts/dist/javafx-ui-charts.jar;../../rt-closed/javafx-ui-webnode/dist/javafx-ui-webnode.jar</classpath>
+                <classpath mode="compile">../../rt/javafx-logging/dist/javafx-logging.jar;../../rt/javafx-common/dist/javafx-common.jar;../javafx-beans/dist/javafx-beans.jar;../javafx-ui-common/dist/javafx-ui-common.jar;../javafx-ui-controls/dist/javafx-ui-controls.jar;../javafx-ui-charts/dist/javafx-ui-charts.jar;../../rt-closed/javafx-ui-webnode/dist/javafx-ui-webnode.jar</classpath>
                 <built-to>dist/javafx-fxml.jar</built-to>
                 <source-level>1.6</source-level>
             </compilation-unit>

@@ -1,0 +1,101 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>javafx.beans.value</title>
+</head>
+<body>
+	<p>The package {@code javafx.beans.value} contains the two
+		fundamental interfaces {@link javafx.beans.value.ObservableValue} and {@link
+		javafx.beans.value.WritableValue} and all of its sub-interfaces.</p>
+
+	<h1>ObservableValue</h1>
+	An ObservableValue wraps a value that can be read and observed for
+	invalidations and changes. Listeners have to implement either {@link
+	javafx.beans.InvalidationListener} or {@link javafx.beans.value.ChangeListener}. To allow
+	working with primitive types directly a number of sub-interfaces are
+	defined.
+	<table summary="ObservableValue">
+		<tr>
+			<th>Type</th>
+			<th>Sub-interface of ObservableValue</th>
+		</tr>
+		<tr>
+			<td>{@code boolean}</td>
+			<td>{@link javafx.beans.value.ObservableBooleanValue}</td>
+		</tr>
+		<tr>
+			<td>{@code double}</td>
+			<td>{@link javafx.beans.value.ObservableDoubleValue}</td>
+		</tr>
+		<tr>
+			<td>{@code float}</td>
+			<td>{@link javafx.beans.value.ObservableFloatValue}</td>
+		</tr>
+		<tr>
+			<td>{@code int}</td>
+			<td>{@link javafx.beans.value.ObservableIntegerValue}</td>
+		</tr>
+		<tr>
+			<td>{@code long}</td>
+			<td>{@link javafx.beans.value.ObservableLongValue}</td>
+		</tr>
+		<tr>
+			<td>{@code double}, {@code float}, {@code int}, {@code long}</td>
+			<td>{@link javafx.beans.value.ObservableNumberValue}</td>
+		</tr>
+		<tr>
+			<td>{@code Object}</td>
+			<td>{@link javafx.beans.value.ObservableObjectValue}</td>
+		</tr>
+		<tr>
+			<td>{@code String}</td>
+			<td>{@link javafx.beans.value.ObservableStringValue}</td>
+		</tr>
+	</table>
+
+	<h1>WritableValue</h1>
+	A WritableValue wraps a value that can be read and set. As with {@code
+	ObservableValues}, a number of sub-interfaces are defined to work with
+	primitive types directly.
+	<table summary="WritableValue">
+		<tr>
+			<th>Type</th>
+			<th>Sub-interface of WritableValue</th>
+		</tr>
+		<tr>
+			<td>{@code boolean}</td>
+			<td>{@link javafx.beans.value.WritableBooleanValue}</td>
+		</tr>
+		<tr>
+			<td>{@code double}</td>
+			<td>{@link javafx.beans.value.WritableDoubleValue}</td>
+		</tr>
+		<tr>
+			<td>{@code float}</td>
+			<td>{@link javafx.beans.value.WritableFloatValue}</td>
+		</tr>
+		<tr>
+			<td>{@code int}</td>
+			<td>{@link javafx.beans.value.WritableIntegerValue}</td>
+		</tr>
+		<tr>
+			<td>{@code long}</td>
+			<td>{@link javafx.beans.value.WritableLongValue}</td>
+		</tr>
+		<tr>
+			<td>{@code double}, {@code float}, {@code int}, {@code long}</td>
+			<td>{@link javafx.beans.value.WritableNumberValue}</td>
+		</tr>
+		<tr>
+			<td>{@code Object}</td>
+			<td>{@link javafx.beans.value.WritableObjectValue}</td>
+		</tr>
+		<tr>
+			<td>{@code String}</td>
+			<td>{@link javafx.beans.value.WritableStringValue}</td>
+		</tr>
+	</table>
+
+</body>
+</html>

@@ -5,7 +5,7 @@
     <property name="runtime.dist.root.dir" value="../../rt-closed" />    
     <property name="rt.dist.root.dir" value="../../rt" />
     <path id="javac.closed.classpath.path" path="
-        ${runtime.dist.root.dir}/javafx-beans/dist/javafx-beans.jar:
+        ${rt.dist.root.dir}/javafx-beans/dist/javafx-beans.jar:
         ${rt.dist.root.dir}/javafx-geom/dist/javafx-geom.jar:
         ${rt.dist.root.dir}/javafx-logging/dist/javafx-logging.jar:
         ${rt.dist.root.dir}/javafx-anim/dist/javafx-anim.jar:

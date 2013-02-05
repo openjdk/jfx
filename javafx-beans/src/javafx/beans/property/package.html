@@ -1,0 +1,37 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>javafx.beans.property</title>
+</head>
+<body>
+	<p>The package {@code javafx.beans.property} defines read-only
+		properties and writable properties, plus a number of implementations.
+	</p>
+	<h1>Read-only Properties</h1>
+	<p>Read-only properties have two getters, {@code get()} returns the
+		primitive value, {@code getValue()} returns the boxed value.</p>
+	<p>It is possible to observe read-only properties for changes. They
+		define methods to add and remove {@link
+		javafx.beans.InvalidationListener InvalidationListeners} and {@link
+		javafx.beans.value.ChangeListener ChangeListeners}.</p>
+	<p>To get the context of a read-only property, two methods {@code
+		getBean()} and {@code getName()} are defined. They return the
+		containing bean and the name of a property.</p>
+
+	<h1>Writable Properties</h1>
+	<p>In addition to the functionality defined for read-only
+		properties, writable properties contain the following methods.</p>
+	<p>A writable property defines two setters in addition to the
+		getters defined for read-only properties. The setter {@code set()}
+		takes a primitive value, the second setter {@code setValue()} takes
+		the boxed value.</p>
+	<p>All properties can be bound to {@link
+		javafx.beans.value.ObservableValue ObservableValues} of the same type,
+		which means that the property will always contain the same value as
+		the bound {@code ObservableValue}. It is also possible to define a
+		bidirectional binding between two properties, so that both properties
+		always contain the same value. If one of the properties changes, the
+		other one will be updated.</p>
+</body>
+</html>

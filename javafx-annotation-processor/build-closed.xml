@@ -6,7 +6,7 @@
     <property name="rt.dist.root.dir" value="../../rt" />    
     <path id="javac.closed.classpath.path" path="
         ${import.javac.jar}:
-        ${runtime.dist.root.dir}/javafx-beans/dist/javafx-beans.jar:
+        ${rt.dist.root.dir}/javafx-beans/dist/javafx-beans.jar:
         ${rt.dist.root.dir}/javafx-common/dist/javafx-common.jar" />
     <property name="javac.classpath" refid="javac.closed.classpath.path"/>
     

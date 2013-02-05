@@ -3,7 +3,7 @@
 
     <path id="class-path-ref">
       <pathelement location="${rt.dist.root.dir}/javafx-ui-common/dist/javafx-ui-common.jar"/>
-      <pathelement location="${runtime.dist.root.dir}/javafx-beans/dist/javafx-beans.jar"/>
+      <pathelement location="${rt.dist.root.dir}/javafx-beans/dist/javafx-beans.jar"/>
       <pathelement location="${rt.dist.root.dir}/javafx-anim/dist/javafx-anim.jar"/>
       <pathelement location="${rt.dist.root.dir}/javafx-common/dist/javafx-common.jar"/>
       <pathelement location="${rt.dist.root.dir}/javafx-logging/dist/javafx-logging.jar"/>
