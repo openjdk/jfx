@@ -355,6 +355,7 @@ public class PieChart extends Chart {
             );
         } else {
             item.setCurrentPieValue(item.getPieValue());
+            requestChartLayout(); // RT-23091 
         }
     }
 

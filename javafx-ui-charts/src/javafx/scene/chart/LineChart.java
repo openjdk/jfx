@@ -272,16 +272,18 @@ public class LineChart<X,Y> extends XYChart<X,Y> {
                 item.setYValue(series.getData().get(last).getYValue());
             } else {
                 // fade out symbol
-                symbol.setOpacity(0);
-                FadeTransition ft = new FadeTransition(Duration.millis(500),symbol);
-                ft.setToValue(0);
-                ft.setOnFinished(new EventHandler<ActionEvent>() {
-                    @Override public void handle(ActionEvent actionEvent) {
-                        getPlotChildren().remove(symbol);
-                        removeDataItemFromDisplay(series, item);
-                    }
-                });
-                ft.play();
+                if (symbol != null) {
+                    symbol.setOpacity(0);
+                    FadeTransition ft = new FadeTransition(Duration.millis(500),symbol);
+                    ft.setToValue(0);
+                    ft.setOnFinished(new EventHandler<ActionEvent>() {
+                        @Override public void handle(ActionEvent actionEvent) {
+                            getPlotChildren().remove(symbol);
+                            removeDataItemFromDisplay(series, item);
+                        }
+                    });
+                    ft.play();
+                }
             }
             if (animate) {
                 dataRemoveTimeline = createDataRemoveTimeline(item, symbol, series);
@@ -290,7 +292,7 @@ public class LineChart<X,Y> extends XYChart<X,Y> {
                 dataRemoveTimeline.play();
             }
         } else {
-            getPlotChildren().remove(symbol);
+            if (symbol != null) getPlotChildren().remove(symbol);
             removeDataItemFromDisplay(series, item);
         }
         //Note: better animation here, point should move from old position to new position at center point between prev and next symbols
@@ -444,7 +446,7 @@ public class LineChart<X,Y> extends XYChart<X,Y> {
                 item.getCurrentX())),
                 new KeyFrame(Duration.millis(500), new EventHandler<ActionEvent>() {
                     @Override public void handle(ActionEvent actionEvent) {
-                        getPlotChildren().remove(symbol);
+                        if (symbol != null) getPlotChildren().remove(symbol);
                         removeDataItemFromDisplay(series, item);
                     }
                 },

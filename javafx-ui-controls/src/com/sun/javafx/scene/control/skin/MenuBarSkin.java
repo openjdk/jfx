@@ -738,8 +738,10 @@ public class MenuBarSkin extends BehaviorSkinBase<MenuBar, BehaviorBase<MenuBar>
 
     private boolean isMenuEmpty(Menu menu) {
         boolean retVal = true;
-        for (MenuItem m : menu.getItems()) {
-            if (m.isVisible()) retVal = false;
+        if (menu != null) {
+            for (MenuItem m : menu.getItems()) {
+                if (m != null && m.isVisible()) retVal = false;
+            }
         }
         return retVal;
     }
