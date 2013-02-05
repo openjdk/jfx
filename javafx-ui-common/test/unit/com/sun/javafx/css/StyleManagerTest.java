@@ -47,7 +47,7 @@ public class StyleManagerTest {
 //        
 //        System.setProperty("binary.css", "false");
 //        String url = getClass().getResource("HonorDeveloperSettingsTest_UA.css").toExternalForm();
-//        StyleManager.setDefaultUserAgentStylesheet(url);
+//        StyleManager.getInstance().setDefaultUserAgentStylesheet(url);
 //        
 //        Stage stage = new Stage();
 //        stage.setScene(scene);
@@ -55,34 +55,10 @@ public class StyleManagerTest {
     }
     
     @Test
-    public void testMethod_getStyleManager() {
+    public void testMethod_getInstance() {
         Scene scene = new Scene(new Group());
-        StyleManager sm = StyleManager.getStyleManager(scene);
-        assert (scene == sm.getOwner());
+        StyleManager sm = StyleManager.getInstance();
+        assertNotNull(sm);
     }
-    
-    @Test
-    public void testMethod_getStyleManager_forPopup() {
-        Popup popup = new Popup();
-        Scene scene = popup.getScene();
-        StyleManager sm = StyleManager.getStyleManager(scene);
-        assert (scene == sm.getOwner());
-    }
-    
-    @Test
-    public void testRootStyleManager() {
-        StubToolkit toolkit = (StubToolkit) Toolkit.getToolkit();
-        Stage stage = new Stage();
         
-        Scene rootScene = new Scene(new Group());
-        stage.setScene(rootScene);
-        
-        Popup popup = new Popup();
-        popup.show(stage);
-        Scene scene = popup.getScene();        
-
-        StyleManager sm = StyleManager.getStyleManager(scene);
-        assert (rootScene == sm.getPopupOwnerScene());
-    }
-    
 }

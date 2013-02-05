@@ -30,10 +30,6 @@ public class PopupControlTest {
 
     @Before public void setup() {
         popup = new PopupControl();
-        // PopupControl normally gets its stylesheet from the owner scene.
-        popup.getScene().getStylesheets().add(
-            TooltipSkin.class.getResource("caspian/caspian.css").toExternalForm()
-        );
     }
 
     /*********************************************************************

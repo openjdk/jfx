@@ -70,7 +70,7 @@ public class Node_effectiveOrientation_Css_Test {
                 ".rect:dir(ltr) { -fx-fill: #00ff00; }" +
                 ".rect { -fx-fill: #0000ff; }" 
         );
-        StyleManager.setDefaultUserAgentStylesheet(stylesheet);
+        StyleManager.getInstance().setDefaultUserAgentStylesheet(stylesheet);
 
         Rectangle rect = new Rectangle();
         rect.getStyleClass().add("rect");
@@ -90,7 +90,7 @@ public class Node_effectiveOrientation_Css_Test {
                 ".rect:dir(ltr) { -fx-fill: #00ff00; }" +
                 ".rect { -fx-fill: #0000ff; }" 
         );
-        StyleManager.setDefaultUserAgentStylesheet(stylesheet);
+        StyleManager.getInstance().setDefaultUserAgentStylesheet(stylesheet);
 
         Rectangle rect = new Rectangle();
         rect.getStyleClass().add("rect");
@@ -111,7 +111,7 @@ public class Node_effectiveOrientation_Css_Test {
                 ".root:dir(ltr) .rect { -fx-fill: #00ff00; }" +
                 ".root .rect { -fx-fill: #0000ff; }" 
         );
-        StyleManager.setDefaultUserAgentStylesheet(stylesheet);
+        StyleManager.getInstance().setDefaultUserAgentStylesheet(stylesheet);
 
         Rectangle rect = new Rectangle();
         rect.getStyleClass().add("rect");
@@ -131,7 +131,7 @@ public class Node_effectiveOrientation_Css_Test {
                 ".root:dir(ltr) .rect { -fx-fill: #00ff00; }" +
                 ".root .rect { -fx-fill: #0000ff; }" 
         );
-        StyleManager.setDefaultUserAgentStylesheet(stylesheet);
+        StyleManager.getInstance().setDefaultUserAgentStylesheet(stylesheet);
 
         Rectangle rect = new Rectangle();
         rect.getStyleClass().add("rect");
@@ -152,7 +152,7 @@ public class Node_effectiveOrientation_Css_Test {
                 ".root .rect:dir(ltr) { -fx-fill: #00ff00; }" +
                 ".root .rect { -fx-fill: #0000ff; }" 
         );
-        StyleManager.setDefaultUserAgentStylesheet(stylesheet);
+        StyleManager.getInstance().setDefaultUserAgentStylesheet(stylesheet);
 
         Rectangle rect = new Rectangle();
         rect.getStyleClass().add("rect");
@@ -172,7 +172,7 @@ public class Node_effectiveOrientation_Css_Test {
                 ".root .rect:dir(ltr) { -fx-fill: #00ff00; }" +
                 ".root .rect { -fx-fill: #0000ff; }" 
         );
-        StyleManager.setDefaultUserAgentStylesheet(stylesheet);
+        StyleManager.getInstance().setDefaultUserAgentStylesheet(stylesheet);
 
         Rectangle rect = new Rectangle();
         rect.getStyleClass().add("rect");
@@ -193,7 +193,7 @@ public class Node_effectiveOrientation_Css_Test {
                 ".rect:dir(ltr) { -fx-fill: #00ff00; }" +
                 ".rect { -fx-fill: #0000ff; }" 
         );
-        StyleManager.setDefaultUserAgentStylesheet(stylesheet);
+        StyleManager.getInstance().setDefaultUserAgentStylesheet(stylesheet);
 
         Rectangle rect = new Rectangle();
         rect.getStyleClass().add("rect");

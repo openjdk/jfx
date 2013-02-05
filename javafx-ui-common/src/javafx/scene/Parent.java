@@ -1082,13 +1082,11 @@ public abstract class Parent extends Node {
 
                 // Notify the StyleManager if stylesheets change. This Parent's
                 // styleManager will get recreated in impl_processCSS.
-                final StyleManager sm = scene.styleManager;
-                if (sm != null) {
-                    sm.stylesheetsChanged(Parent.this, c);
-                }
+                StyleManager.getInstance().stylesheetsChanged(Parent.this, c);
                 
                 // RT-9784 - if stylesheet is removed, reset styled properties to 
                 // their initial value.
+                c.reset();
                 while(c.next()) {
                     if (c.wasRemoved() == false) {
                         continue;

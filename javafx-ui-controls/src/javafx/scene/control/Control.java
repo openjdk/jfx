@@ -236,7 +236,7 @@ public abstract class Control extends Region implements Skinnable {
             if (skinClassName == null) {
                 final String url = Control.this.getUserAgentStylesheet();
                 if (url != null) {
-                    StyleManager.addUserAgentStylesheet(url);
+                    StyleManager.getInstance().addUserAgentStylesheet(url);
                 }
             }
             // if someone calls setSkin, we need to make it look like they 
@@ -812,7 +812,7 @@ public abstract class Control extends Region implements Skinnable {
         if (skinClassNameProperty().get() == null) {
             final String url = Control.this.getUserAgentStylesheet();
             if (url != null) {
-                StyleManager.addUserAgentStylesheet(url);
+                StyleManager.getInstance().addUserAgentStylesheet(url);
             }
         }
 

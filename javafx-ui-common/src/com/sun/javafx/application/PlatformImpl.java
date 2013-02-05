@@ -493,13 +493,13 @@ public class PlatformImpl {
             AccessController.doPrivileged(
                     new PrivilegedAction() {
                         @Override public Object run() {
-                            StyleManager.setDefaultUserAgentStylesheet("com/sun/javafx/scene/control/skin/caspian/caspian.css");
+                            StyleManager.getInstance().setDefaultUserAgentStylesheet("com/sun/javafx/scene/control/skin/caspian/caspian.css");
 
                             if (com.sun.javafx.PlatformUtil.isEmbedded()) {
-                                StyleManager.addUserAgentStylesheet("com/sun/javafx/scene/control/skin/caspian/embedded.css");
+                                StyleManager.getInstance().addUserAgentStylesheet("com/sun/javafx/scene/control/skin/caspian/embedded.css");
 
                                 if (com.sun.javafx.Utils.isQVGAScreen()) {
-                                    StyleManager.addUserAgentStylesheet("com/sun/javafx/scene/control/skin/caspian/embedded-qvga.css");
+                                    StyleManager.getInstance().addUserAgentStylesheet("com/sun/javafx/scene/control/skin/caspian/embedded-qvga.css");
                                 }
                             }
                             return null;
@@ -510,12 +510,12 @@ public class PlatformImpl {
             AccessController.doPrivileged(
                     new PrivilegedAction() {
                         @Override public Object run() {
-                            StyleManager.setDefaultUserAgentStylesheet("com/sun/javafx/scene/control/skin/modena/modena.css");
+                            StyleManager.getInstance().setDefaultUserAgentStylesheet("com/sun/javafx/scene/control/skin/modena/modena.css");
                             return null;
                         }
                     });
         } else {
-            StyleManager.setDefaultUserAgentStylesheet(stylesheetUrl);
+            StyleManager.getInstance().setDefaultUserAgentStylesheet(stylesheetUrl);
         }
     }
 }

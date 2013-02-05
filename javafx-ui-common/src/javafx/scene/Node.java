@@ -8023,12 +8023,12 @@ public abstract class Node implements EventTarget {
         // or if my own flag indicates I need to reapply
         if (cssFlag == CssFlags.REAPPLY) {
 
-            final StyleManager styleManager = scene.styleManager;
+            final StyleManager styleManager = StyleManager.getInstance();
             styleHelper.setStyles(styleManager);
 
         } else if (cssFlag == CssFlags.RECALCULATE) {
             
-            final StyleManager styleManager = scene.styleManager;
+            final StyleManager styleManager = StyleManager.getInstance();
             styleHelper.inlineStyleChanged(styleManager);
             
         }

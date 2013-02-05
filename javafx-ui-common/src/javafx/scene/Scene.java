@@ -301,7 +301,6 @@ public class Scene implements EventTarget {
         }
 
         Toolkit.getToolkit().checkFxUserThread();
-        styleManager = new StyleManager(this);
         setRoot(root);
         init(width, height, depthBuffer);
         setFill(fill);
@@ -1358,7 +1357,7 @@ public class Scene implements EventTarget {
     private final ObservableList<String> stylesheets  = new TrackableObservableList<String>() {
         @Override
         protected void onChanged(Change<String> c) {
-            styleManager.stylesheetsChanged(c);
+            StyleManager.getInstance().stylesheetsChanged(Scene.this, c);
             // RT-9784 - if stylesheet is removed, reset styled properties to 
             // their initial value.
             c.reset();
@@ -1383,11 +1382,6 @@ public class Scene implements EventTarget {
      */
     public final ObservableList<String> getStylesheets() { return stylesheets; }
 
-    /* 
-     * StyleManager manages stylesheets and mapping styles to Nodes
-     */
-    final StyleManager styleManager;
-        
     /**
      * Retrieves the depth buffer attribute for this scene.
      * @return the depth buffer attribute.

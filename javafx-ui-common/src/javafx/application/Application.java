@@ -391,7 +391,7 @@ public abstract class Application {
                 }
             });
         if (userAgentStylesheet != null) {
-            StyleManager.setDefaultUserAgentStylesheet(null, userAgentStylesheet);
+            StyleManager.getInstance().setDefaultUserAgentStylesheet(null, userAgentStylesheet);
         }
     }
 

@@ -311,7 +311,7 @@ public class CssMetaDataTest {
         
         final Stylesheet stylesheet = new Stylesheet();
         stylesheet.setOrigin(StyleOrigin.USER_AGENT);
-        StyleManager.setDefaultUserAgentStylesheet(stylesheet);
+        StyleManager.getInstance().getInstance().setDefaultUserAgentStylesheet(stylesheet);
         
         final List<Rule> rules = stylesheet.getRules();
         
@@ -396,7 +396,7 @@ public class CssMetaDataTest {
         stage.show();
         
         final CssMetaData FILL = get(rectangle.getCssMetaData(), "-fx-fill");
-        final List<Style> actuals = StyleManager.getMatchingStyles(FILL, rectangle);
+        final List<Style> actuals = StyleManager.getInstance().getInstance().getMatchingStyles(FILL, rectangle);
 
 //        System.err.println("matchingStyles: " + matchingStyles);
 //        System.err.println("expecteds: " + expecteds);
@@ -416,7 +416,7 @@ public class CssMetaDataTest {
         
         final Stylesheet stylesheet = new Stylesheet();
         stylesheet.setOrigin(StyleOrigin.USER_AGENT);
-        StyleManager.setDefaultUserAgentStylesheet(stylesheet);
+        StyleManager.getInstance().getInstance().setDefaultUserAgentStylesheet(stylesheet);
         
         final List<Rule> rules = stylesheet.getRules();
         
@@ -516,7 +516,7 @@ public class CssMetaDataTest {
         stage.show();        
                 
         final CssMetaData FILL = get(rectangle.getCssMetaData(), "-fx-fill");
-        final List<Style> actuals = StyleManager.getMatchingStyles(FILL, rectangle);
+        final List<Style> actuals = StyleManager.getInstance().getInstance().getMatchingStyles(FILL, rectangle);
 
 //        System.err.println("matchingStyles: " + matchingStyles);
 //        System.err.println("expecteds: " + expecteds);
@@ -539,7 +539,7 @@ public class CssMetaDataTest {
         
         final Stylesheet stylesheet = new Stylesheet();
         stylesheet.setOrigin(StyleOrigin.USER_AGENT);
-        StyleManager.setDefaultUserAgentStylesheet(stylesheet);
+        StyleManager.getInstance().getInstance().setDefaultUserAgentStylesheet(stylesheet);
         
         final List<Rule> rules = stylesheet.getRules();
         
@@ -639,7 +639,7 @@ public class CssMetaDataTest {
         stage.show();
 
         final CssMetaData FILL = get(rectangle.getCssMetaData(), "-fx-fill");
-        final List<Style> actuals = StyleManager.getMatchingStyles(FILL, rectangle);
+        final List<Style> actuals = StyleManager.getInstance().getInstance().getMatchingStyles(FILL, rectangle);
                 
 //        System.err.println("matchingStyles: " + matchingStyles);
 //        System.err.println("expecteds: " + expecteds);
@@ -662,7 +662,7 @@ public class CssMetaDataTest {
 
         final Stylesheet stylesheet = new Stylesheet();
         stylesheet.setOrigin(StyleOrigin.USER_AGENT);
-        StyleManager.setDefaultUserAgentStylesheet(stylesheet);
+        StyleManager.getInstance().getInstance().setDefaultUserAgentStylesheet(stylesheet);
         
         final List<Rule> rules = stylesheet.getRules();
         
@@ -766,7 +766,7 @@ public class CssMetaDataTest {
         stage.show();
         
         final CssMetaData FILL = get(rectangle.getCssMetaData(), "-fx-fill");
-        final List<Style> actuals = StyleManager.getMatchingStyles(FILL, rectangle);
+        final List<Style> actuals = StyleManager.getInstance().getInstance().getMatchingStyles(FILL, rectangle);
 
 //        System.err.println("matchingStyles: " + matchingStyles);
 //        System.err.println("expecteds: " + expecteds);
@@ -789,7 +789,7 @@ public class CssMetaDataTest {
         
         final Stylesheet stylesheet = new Stylesheet();
         stylesheet.setOrigin(StyleOrigin.USER_AGENT);
-        StyleManager.setDefaultUserAgentStylesheet(stylesheet);
+        StyleManager.getInstance().getInstance().setDefaultUserAgentStylesheet(stylesheet);
         
         final List<Rule> rules = stylesheet.getRules();
         
@@ -877,7 +877,7 @@ public class CssMetaDataTest {
         stage.show();
                 
         final CssMetaData FILL = get(rectangle.getCssMetaData(), "-fx-fill");
-        final List<Style> actuals = StyleManager.getMatchingStyles(FILL, rectangle);
+        final List<Style> actuals = StyleManager.getInstance().getInstance().getMatchingStyles(FILL, rectangle);
 
 //        System.err.println("matchingStyles: " + matchingStyles);
 //        System.err.println("expecteds: " + expecteds);
@@ -897,7 +897,7 @@ public class CssMetaDataTest {
         
         final Stylesheet stylesheet = new Stylesheet();
         stylesheet.setOrigin(StyleOrigin.USER_AGENT);
-        StyleManager.setDefaultUserAgentStylesheet(stylesheet);
+        StyleManager.getInstance().setDefaultUserAgentStylesheet(stylesheet);
         
         final List<Rule> rules = stylesheet.getRules();
         
@@ -985,7 +985,7 @@ public class CssMetaDataTest {
         stage.show();
                 
         final CssMetaData FILL = get(rectangle.getCssMetaData(), "-fx-fill");
-        final List<Style> actuals = StyleManager.getMatchingStyles(FILL, rectangle);
+        final List<Style> actuals = StyleManager.getInstance().getMatchingStyles(FILL, rectangle);
 
 //        System.err.println("matchingStyles: " + matchingStyles);
 //        System.err.println("expecteds: " + expecteds);
@@ -1003,7 +1003,7 @@ public class CssMetaDataTest {
 
         final Stylesheet stylesheet = new Stylesheet();
         stylesheet.setOrigin(StyleOrigin.USER_AGENT);
-        StyleManager.setDefaultUserAgentStylesheet(stylesheet);
+        StyleManager.getInstance().setDefaultUserAgentStylesheet(stylesheet);
         
         final List<Rule> rules = stylesheet.getRules();
         
@@ -1064,7 +1064,7 @@ public class CssMetaDataTest {
         stage.show();
                 
         final CssMetaData FONT = get(text.getCssMetaData(), "-fx-font");
-        final List<Style> actuals = StyleManager.getMatchingStyles(FONT, text);
+        final List<Style> actuals = StyleManager.getInstance().getMatchingStyles(FONT, text);
 
 //        System.err.println("matchingStyles: " + matchingStyles);
 //        System.err.println("expecteds: " + expecteds);
@@ -1083,7 +1083,7 @@ public class CssMetaDataTest {
 
         final Stylesheet stylesheet = new Stylesheet();
         stylesheet.setOrigin(StyleOrigin.USER_AGENT);
-        StyleManager.setDefaultUserAgentStylesheet(stylesheet);        
+        StyleManager.getInstance().setDefaultUserAgentStylesheet(stylesheet);        
                 
         final List<Rule> rules = stylesheet.getRules();
         
@@ -1148,7 +1148,7 @@ public class CssMetaDataTest {
         stage.show();
                         
         final CssMetaData FONT = get(text.getCssMetaData(), "-fx-font");
-        final List<Style> actuals = StyleManager.getMatchingStyles(FONT, text);
+        final List<Style> actuals = StyleManager.getInstance().getMatchingStyles(FONT, text);
 
 //        System.err.println("matchingStyles: " + matchingStyles);
 //        System.err.println("expecteds: " + expecteds);
@@ -1306,7 +1306,7 @@ public class CssMetaDataTest {
                 ".text { -fx-fill: -fx-color; }" 
         );
         stylesheet.setOrigin(StyleOrigin.USER_AGENT);
-        StyleManager.setDefaultUserAgentStylesheet(stylesheet);        
+        StyleManager.getInstance().setDefaultUserAgentStylesheet(stylesheet);        
        
         final Text text = new Text("HelloWorld");
         text.getStyleClass().add("text");
@@ -1325,7 +1325,7 @@ public class CssMetaDataTest {
         stage.show();
 
         CssMetaData prop = ((StyleableProperty)text.fillProperty()).getCssMetaData();
-        List list = StyleManager.getMatchingStyles(prop, text);
+        List list = StyleManager.getInstance().getMatchingStyles(prop, text);
         
         assertEquals(3, list.size(), 0);
                 

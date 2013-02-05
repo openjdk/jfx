@@ -183,7 +183,7 @@ public class Node_cssStyleMap_Test {
 
         Group root = new Group();
         root.getChildren().add(rect);
-        StyleManager.setDefaultUserAgentStylesheet(stylesheet);        
+        StyleManager.getInstance().setDefaultUserAgentStylesheet(stylesheet);        
         Scene scene = new Scene(root);
         Stage stage = new Stage();
         stage.setScene(scene);
@@ -289,7 +289,7 @@ public class Node_cssStyleMap_Test {
             }
         });
              
-        StyleManager.setDefaultUserAgentStylesheet(stylesheet);        
+        StyleManager.getInstance().setDefaultUserAgentStylesheet(stylesheet);        
         Scene scene = new Scene(group);
         Stage stage = new Stage();
         stage.setScene(scene);
