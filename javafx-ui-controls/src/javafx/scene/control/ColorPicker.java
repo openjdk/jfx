@@ -78,23 +78,36 @@ import com.sun.javafx.scene.control.skin.ColorPickerSkin;
  */
 public class ColorPicker extends ComboBoxBase<Color> {
 
+    /**
+     * The style class to specify a Button like appearance of ColorPicker control. 
+     */
     public static final String STYLE_CLASS_BUTTON = "button";
+    
+    /**
+     * The style class to specify a SplitMenuButton like appearance of ColorPicker control. 
+     */
     public static final String STYLE_CLASS_SPLIT_BUTTON = "split-button";
     
     /**
      * The custom colors added to the Color Palette by the user.
      */
     private ObservableList<Color> customColors = FXCollections.<Color>observableArrayList();
+    /**
+     * Gets the list of custom colors added to the Color Palette by the user. 
+     */
     public final ObservableList<Color>  getCustomColors() {
         return customColors;
     } 
  
+    /**
+     * Creates a default ColorPicker instance with a selected color set to white.
+     */
     public ColorPicker() {
         this(Color.WHITE);
     }
     
     /**
-     * 
+     * Creates a ColorPicker instance and sets the selected color to the given color.
      * @param color to be set as the currently selected color of the ColorPicker.
      */
     public ColorPicker(Color color) {
