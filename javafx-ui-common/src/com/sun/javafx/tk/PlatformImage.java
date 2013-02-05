@@ -38,6 +38,16 @@ import javafx.scene.image.WritablePixelFormat;
  */
 public interface PlatformImage {
     /**
+     * Gets the scale representing how large an area a 72DPI virtual
+     * pixel covers in terms of the pixels of this image.
+     * A 72DPI platform image would return 1.0f.
+     * A 144DPI platform image would return 2.0f.
+     * 
+     * @return the number of actual image pixels per 72DPI virtual pixel
+     */
+    public float getPixelScale();
+
+    /**
      * @param x X coordinate of pixel
      * @param y Y coordinate of pixel
      * @return the non-premultiplied pixel in integer ARGB component ordering.

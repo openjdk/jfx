@@ -47,7 +47,8 @@ public class NGImageView extends NGNode implements PGImageView {
     // Coords will be null if there was no viewport specified.
     // In case when we draw a huge image, coords are never null.
     private Coords coords;
-    private ViewPort viewport;
+    private ViewPort reqviewport;  // ViewPort requested by ImageView
+    private ViewPort imgviewport;  // ViewPort scaled to the current image
     
     private boolean renderable = false;
     private boolean coordsOK = false;
@@ -56,15 +57,16 @@ public class NGImageView extends NGNode implements PGImageView {
         coordsOK = false;
         coords = null;
         compoundCoords = null;
+        imgviewport = null;
         geometryChanged();
     }
     
     public void setViewport(float vx, float vy, float vw, float vh, float cw, float ch)
     {
         if (vw > 0 && vh > 0) {
-            viewport = new ViewPort(vx, vy, vw, vh);
+            reqviewport = new ViewPort(vx, vy, vw, vh);
         } else {
-            viewport = null;
+            reqviewport = null;
         }
 
         this.w = cw;
@@ -76,17 +78,18 @@ public class NGImageView extends NGNode implements PGImageView {
     private void calculatePositionAndClipping() {
         renderable = false;
         coordsOK = true;
-        
-        if (viewport == null) {
+
+        if (reqviewport == null) {
             renderable = image != null;
             return;
         }
-        
+
         float iw = image.getWidth();
         float ih = image.getHeight();
         if (iw == 0 || ih == 0) return;
+        imgviewport = reqviewport.getScaledVersion(image.getPixelScale());
 
-        coords = viewport.getClippedCoords(iw, ih, w, h);
+        coords = imgviewport.getClippedCoords(iw, ih, w, h);
         renderable = coords != null;
     }
     
@@ -141,6 +144,7 @@ public class NGImageView extends NGNode implements PGImageView {
         if (image == newImage) return;
         
         boolean needsInvalidate = newImage == null || image == null
+                || image.getPixelScale() != newImage.getPixelScale()
                 || image.getHeight() != newImage.getHeight()
                 || image.getWidth() != newImage.getWidth();
         

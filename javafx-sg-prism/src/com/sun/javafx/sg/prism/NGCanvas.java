@@ -991,6 +991,13 @@ public class NGCanvas extends NGNode implements PGCanvas {
                     sy = buf.getFloat();
                     sw = buf.getFloat();
                     sh = buf.getFloat();
+                    float ps = img.getPixelScale();
+                    if (ps != 1.0f) {
+                        sx *= ps;
+                        sy *= ps;
+                        sw *= ps;
+                        sh *= ps;
+                    }
                 }
                 if (bounds != null) {
                     bounds.setBounds(dx, dy, dx+dw, dy+dh);

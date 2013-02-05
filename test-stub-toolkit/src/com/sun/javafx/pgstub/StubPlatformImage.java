@@ -47,6 +47,11 @@ public final class StubPlatformImage implements PlatformImage {
         return frame;
     }
 
+    @Override
+    public float getPixelScale() {
+        return 1.0f;
+    }
+
     public StubImageLoader getImageLoader() {
         return imageLoader;
     }

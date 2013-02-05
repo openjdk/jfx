@@ -62,6 +62,11 @@ public class StubFilterable implements Filterable {
     }
 
     @Override
+    public float getPixelScale() {
+        return image.getPixelScale();
+    }
+
+    @Override
     public void flush() {
     }
 

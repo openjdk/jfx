@@ -747,9 +747,10 @@ public class Image {
             if (loader.getFrameCount() > 1) {
                 makeAnimationTimeline(loader);
             } else {
-                setPlatformImageWH(loader.getFrame(0),
-                                   loader.getWidth(),
-                                   loader.getHeight());
+                PlatformImage pi = loader.getFrame(0);
+                double w = loader.getWidth() / pi.getPixelScale();
+                double h = loader.getHeight() / pi.getPixelScale();
+                setPlatformImageWH(pi, w, h);
             }
         } else {
             setError(true);
@@ -784,7 +785,9 @@ public class Image {
         // the last frame is shown, the wrap around is "instantaneous"
         keyFrames.add(createPlatformImageSetKeyFrame(duration, zeroFrame));
 
-        setPlatformImageWH(zeroFrame, loader.getWidth(), loader.getHeight());
+        double w = loader.getWidth() / zeroFrame.getPixelScale();
+        double h = loader.getHeight() / zeroFrame.getPixelScale();
+        setPlatformImageWH(zeroFrame, w, h);
         timeline.play();
     }
 
