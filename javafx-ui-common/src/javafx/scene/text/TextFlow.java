@@ -114,7 +114,7 @@ import javafx.css.StyleableProperty;
  * <tr><td></td><th>width</th><th>height</th></tr>
  * <tr><th>minimum</th>
  * <td>left/right insets</td>
- * <td>top/bottom insets</td></tr>
+ * <td>top/bottom insets plus the height of the text content</td></tr>
  * <tr><th>preferred</th>
  * <td>left/right insets plus the width of the text content</td>
  * <td>top/bottom insets plus the height of the text content</td></tr>
@@ -204,6 +204,10 @@ public class TextFlow extends Pane {
         double top = snapSpace(insets.getTop());
         double bottom = snapSpace(insets.getBottom());
         return top + height + bottom;
+    }
+
+    @Override protected double computeMinHeight(double width) {
+        return computePrefHeight(width);
     }
 
     @Override public void requestLayout() {

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<project name="javafx-embed-swt" default="jar" basedir=".">
+    <description>Builds, tests, and jars the closed version of the javafx-embed-swt project.</description>
+    
+    <import file="../build-defs.xml"/>
+
+    <property name="rt.dist.root.dir" value="../../rt" />
+    <property name="runtime.dist.root.dir" value="../../rt-closed" />    
+    <path id="javac.closed.classpath.path" path="
+        ${swt.path}/swt.jar:
+        ${import.swt.jar}:
+        ${runtime.dist.root.dir}/glass/dist/glass.jar:
+        ${rt.dist.root.dir}/javafx-common/dist/javafx-common.jar:
+        ${rt.dist.root.dir}/javafx-ui-common/dist/javafx-ui-common.jar"
+     />
+    <property name="javac.classpath" refid="javac.closed.classpath.path"/>
+    
+    <import file="build-common.xml"/>
+</project>

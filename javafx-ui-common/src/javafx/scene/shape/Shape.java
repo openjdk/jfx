@@ -39,6 +39,7 @@ import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
 
 import com.sun.javafx.Utils;
+import com.sun.javafx.beans.event.AbstractNotifyListener;
 import com.sun.javafx.collections.TrackableObservableList;
 import javafx.css.StyleableBooleanProperty;
 import javafx.css.StyleableDoubleProperty;
@@ -59,6 +60,7 @@ import com.sun.javafx.sg.PGNode;
 import com.sun.javafx.sg.PGShape;
 import com.sun.javafx.sg.PGShape.Mode;
 import com.sun.javafx.tk.Toolkit;
+import javafx.beans.Observable;
 import javafx.beans.property.Property;
 import javafx.collections.ListChangeListener.Change;
 import javafx.css.StyleableProperty;
@@ -386,18 +388,38 @@ public abstract class Shape extends Node {
     private ObjectProperty<Paint> fill;
 
 
-    public final void setFill(Paint value) {
+    public final void setFill(Paint value) {       
         fillProperty().set(value);
     }
-
+   
     public final Paint getFill() {
         return fill == null ? Color.BLACK : fill.get();
     }
 
-    public final ObjectProperty<Paint> fillProperty() {
+    Paint old_fill;
+    public final ObjectProperty<Paint> fillProperty() {              
         if (fill == null) {
             fill = new StyleableObjectProperty<Paint>(Color.BLACK) {
+                
+                boolean needsListener = false;
+                
                 @Override public void invalidated() {
+                    
+                    Paint _fill = get();
+                    
+                    if (needsListener) {
+                        Toolkit.getPaintAccessor().
+                                removeListener(old_fill, platformImageChangeListener);
+                    }
+                    needsListener = _fill != null &&
+                            Toolkit.getPaintAccessor().isMutable(_fill);
+                    old_fill = _fill;
+                    
+                    if (needsListener) {
+                        Toolkit.getPaintAccessor().
+                                addListener(_fill, platformImageChangeListener);
+                    }       
+                    
                     impl_markDirty(DirtyBits.SHAPE_FILL);
                     checkModeChanged();
                 }
@@ -435,14 +457,45 @@ public abstract class Shape extends Node {
         strokeProperty().set(value);
     }
 
+    private final AbstractNotifyListener platformImageChangeListener =
+            new AbstractNotifyListener() {
+        @Override
+        public void invalidated(Observable valueModel) {
+            impl_markDirty(DirtyBits.SHAPE_FILL);
+            impl_markDirty(DirtyBits.SHAPE_STROKE);
+            impl_geomChanged();
+            checkModeChanged();           
+        }
+    };
+       
     public final Paint getStroke() {
         return stroke == null ? null : stroke.get();
     }
 
+    Paint old_stroke;
     public final ObjectProperty<Paint> strokeProperty() {
         if (stroke == null) {
             stroke = new StyleableObjectProperty<Paint>() {
+
+                boolean needsListener = false;
+
                 @Override public void invalidated() {
+
+                    Paint _stroke = get();
+
+                    if (needsListener) {
+                        Toolkit.getPaintAccessor().
+                                removeListener(old_stroke, platformImageChangeListener);
+                    }
+                    needsListener = _stroke != null &&
+                            Toolkit.getPaintAccessor().isMutable(_stroke);
+                    old_stroke = _stroke;
+
+                    if (needsListener) {
+                        Toolkit.getPaintAccessor().
+                                addListener(_stroke, platformImageChangeListener);
+                    }
+
                     impl_markDirty(DirtyBits.SHAPE_STROKE);
                     checkModeChanged();
                 }
@@ -878,12 +931,14 @@ public abstract class Shape extends Node {
 
         if (impl_isDirty(DirtyBits.SHAPE_FILL)) {
             Paint localFill = getFill();
-            getPGShape().setFillPaint(localFill == null ? null : localFill.impl_getPlatformPaint());
+            getPGShape().setFillPaint(localFill == null ? null :
+                    Toolkit.getPaintAccessor().getPlatformPaint(localFill));
         }
 
         if (impl_isDirty(DirtyBits.SHAPE_STROKE)) {
             Paint localStroke = getStroke();
-            getPGShape().setDrawPaint(localStroke == null ? null : localStroke.impl_getPlatformPaint());
+            getPGShape().setDrawPaint(localStroke == null ? null :
+                    Toolkit.getPaintAccessor().getPlatformPaint(localStroke));
         }
 
         if (impl_isDirty(DirtyBits.NODE_SMOOTH)) {

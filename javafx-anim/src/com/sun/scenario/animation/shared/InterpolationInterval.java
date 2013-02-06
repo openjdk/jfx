@@ -24,6 +24,7 @@
  */
 package com.sun.scenario.animation.shared;
 
+import com.sun.javafx.animation.TickCalculation;
 import javafx.animation.Interpolator;
 import javafx.animation.KeyValue;
 import javafx.beans.value.WritableBooleanValue;
@@ -146,7 +147,7 @@ public abstract class InterpolationInterval {
             final double p2Delta = (interpolator == null) ? 0 : (interpolator
                     .getInValue() - p3)
                     * duration
-                    / interpolator.getInMillis()
+                    / interpolator.getInTicks()
                     / 3;
             p2 = p3 + p2Delta;
         }
@@ -165,7 +166,7 @@ public abstract class InterpolationInterval {
             final double p2Delta = (interpolator == null) ? 0 : (interpolator
                     .getInValue() - p3)
                     * duration
-                    / interpolator.getInMillis()
+                    / interpolator.getInTicks()
                     / 3;
             p2 = p3 + p2Delta;
         }
@@ -183,7 +184,7 @@ public abstract class InterpolationInterval {
             p0 = leftValue;
             final double p1Delta = (leftInterpolator == null) ? 0
                     : (leftInterpolator.getOutValue() - p0) * duration
-                            / leftInterpolator.getOutMillis() / 3;
+                            / leftInterpolator.getOutTicks() / 3;
             p1 = p0 + p1Delta;
         }
     }

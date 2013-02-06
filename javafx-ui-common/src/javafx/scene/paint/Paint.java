@@ -25,6 +25,9 @@
 
 package javafx.scene.paint;
 
+import com.sun.javafx.beans.event.AbstractNotifyListener;
+import com.sun.javafx.tk.Toolkit;
+
 /**
  * Base class for a color or gradients used to fill shapes and backgrounds when
  * rendering the scene graph.
@@ -34,9 +37,47 @@ public abstract class Paint {
      * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
-    @Deprecated
-    public abstract Object impl_getPlatformPaint();
+    static {
+        Toolkit.setPaintAccessor(new Toolkit.PaintAccessor() {
 
+            @Override
+            public boolean isMutable(Paint paint) {
+                return paint.acc_isMutable();
+            }
+
+            @Override
+            public Object getPlatformPaint(Paint paint) {
+                return paint.acc_getPlatformPaint();
+            }
+
+            @Override
+            public void addListener(Paint paint, AbstractNotifyListener platformChangeListener) {
+                paint.acc_addListener(platformChangeListener);
+            }
+            
+            @Override
+            public void removeListener(Paint paint, AbstractNotifyListener platformChangeListener) {
+                paint.acc_removeListener(platformChangeListener);
+            }
+            
+            
+        });
+    }
+    
+    boolean acc_isMutable() {
+        return false;
+    }
+
+    abstract Object acc_getPlatformPaint();
+    
+    void acc_addListener(AbstractNotifyListener platformChangeListener) {
+        throw new UnsupportedOperationException("Not Supported.");
+    }
+
+    void acc_removeListener(AbstractNotifyListener platformChangeListener) {
+        throw new UnsupportedOperationException("Not Supported.");
+    }
+    
     /**
      * Gets whether this Paint is completely opaque. An opaque paint is one that
      * has no alpha component in any of its colors. It may be possible for a Paint
@@ -48,7 +89,7 @@ public abstract class Paint {
      *         it cannot be determined.
      */
     public abstract boolean isOpaque();
-
+      
     /**
      * Creates a paint value from a string representation. Recognizes strings 
      * representing {@code Color}, {@code RadialGradient} or {@code LinearGradient}.

@@ -28,6 +28,8 @@ package com.sun.javafx.sg.prism;
 import com.sun.javafx.font.PGFont;
 import com.sun.javafx.geom.Arc2D;
 import com.sun.javafx.geom.BaseBounds;
+import com.sun.javafx.geom.DirtyRegionContainer;
+import com.sun.javafx.geom.DirtyRegionPool;
 import com.sun.javafx.geom.Path2D;
 import com.sun.javafx.geom.PathIterator;
 import com.sun.javafx.geom.RectBounds;
@@ -221,7 +223,7 @@ public class NGCanvas extends NGNode implements PGCanvas {
     private float miterlimit;
     private BasicStroke stroke;
     private Path2D path;
-    private NGSpan ngtext;
+    private NGText ngtext;
     private TextLayout textLayout;
     private PGFont pgfont;
     private int align;
@@ -253,7 +255,7 @@ public class NGCanvas extends NGNode implements PGCanvas {
         miterlimit = 10f;
         stroke = null;
         path = new Path2D();
-        ngtext = new NGSpan();
+        ngtext = new NGText();
         textLayout = new TextLayout();
         pgfont = (PGFont) Font.getDefault().impl_getNativeFont();
         align = PGCanvas.ALIGN_LEFT;
@@ -989,6 +991,13 @@ public class NGCanvas extends NGNode implements PGCanvas {
                     sy = buf.getFloat();
                     sw = buf.getFloat();
                     sh = buf.getFloat();
+                    float ps = img.getPixelScale();
+                    if (ps != 1.0f) {
+                        sx *= ps;
+                        sy *= ps;
+                        sw *= ps;
+                        sh *= ps;
+                    }
                 }
                 if (bounds != null) {
                     bounds.setBounds(dx, dy, dx+dw, dy+dh);
@@ -1206,6 +1215,12 @@ public class NGCanvas extends NGNode implements PGCanvas {
         public boolean reducesOpaquePixels() {
             return false;
         }
+
+        @Override
+        public DirtyRegionContainer getDirtyRegions(Effect defaultInput, DirtyRegionPool regionPool) {
+            return null; // Never called
+        }
+
     }
 
     static class MyBlend extends Blend {
@@ -1273,5 +1288,9 @@ public class NGCanvas extends NGNode implements PGCanvas {
             return false;
         }
         
+        @Override
+        public DirtyRegionContainer getDirtyRegions(Effect defaultInput, DirtyRegionPool regionPool) {
+            return null; // Never called
+        }
     }
 }

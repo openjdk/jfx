@@ -494,6 +494,14 @@ public class RectBounds extends BaseBounds {
     }
     
     @Override
+    public void translate(float x, float y, float z) {
+        setMinX(getMinX() + x);
+        setMinY(getMinY() + y);
+        setMaxX(getMaxX() + x);
+        setMaxY(getMaxY() + y);
+    }
+
+    @Override
     public boolean equals(Object obj) {
         if (obj == null) return false;
         if (getClass() != obj.getClass()) return false;

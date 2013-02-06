@@ -58,6 +58,7 @@ import com.sun.javafx.tk.TKDragSourceListener;
 import com.sun.javafx.tk.TKDropTargetListener;
 import com.sun.javafx.tk.Toolkit;
 import com.sun.javafx.test.MouseEventGenerator;
+import javafx.scene.image.Image;
 
 public class DragAndDropTest {
     
@@ -1091,6 +1092,187 @@ public class DragAndDropTest {
         assertEquals(2, counter);
     }
     
+    /************************************************************************/
+    /*                              DRAGVIEW                                */
+    /************************************************************************/
+    @Test
+    public void startDragShouldNotBeCalledIfNothingPutOnDragboardWithDragView() {
+        final Node n = oneNode();
+        final MouseEventGenerator gen = new MouseEventGenerator();
+        final Image img = new Image("file:testImg_" + 100 + "x" + 100 + ".png");
+        
+        n.setOnMousePressed(doDetect);
+        n.setOnDragDetected(new EventHandler<MouseEvent>() {
+            @Override public void handle(MouseEvent event) {
+                Dragboard db = n.startDragAndDrop(TransferMode.COPY);
+                db.setDragView(img);
+                db.setDragViewOffsetX(20);
+                db.setDragViewOffsetX(15);
+            }
+        });
+
+        n.getScene().impl_processMouseEvent(
+                gen.generateMouseEvent(MouseEvent.MOUSE_PRESSED, 50, 50));
+        n.getScene().impl_processMouseEvent(
+                gen.generateMouseEvent(MouseEvent.MOUSE_DRAGGED, 50, 50));
+        n.getScene().impl_processMouseEvent(
+                gen.generateMouseEvent(MouseEvent.MOUSE_RELEASED, 50, 50));
+
+        assertFalse(toolkit.dragging);
+    }
+    
+    @Test
+    public void startDragShouldBeCalledIfStringPutOnDragboardsWithDragView() {
+        final Node n = oneNode();
+        final MouseEventGenerator gen = new MouseEventGenerator();
+        final Image img = new Image("file:testImg_" + 100 + "x" + 100 + ".png");
+        
+        dragSource = n;
+        n.setOnMousePressed(doDetect);
+        n.setOnDragDetected( new EventHandler<MouseEvent>() {
+            @Override public void handle(MouseEvent event) {
+                Dragboard db = dragSource.startDragAndDrop(TransferMode.ANY);
+                ClipboardContent cc = new ClipboardContent();
+                cc.putString("Hello");
+                db.setContent(cc);
+                db.setDragView(img);
+                db.setDragViewOffsetX(20);
+                db.setDragViewOffsetX(15);
+            }
+        });
+
+        n.getScene().impl_processMouseEvent(
+                gen.generateMouseEvent(MouseEvent.MOUSE_PRESSED, 50, 50));
+
+        assertTrue(toolkit.dragging);
+    }
+
+    @Test
+    public void changeDragViewInParentHandlerShouldBePossible() {
+        final Node n = oneNode();
+        final Node parent = n.getParent();
+        final MouseEventGenerator gen = new MouseEventGenerator();
+        final Image img = new Image("file:testImg_" + 100 + "x" + 100 + ".png");
+        final Image imgParent = new Image("file:testImg_" + 200 + "x" + 200 + ".png");
+        
+        dragSource = n;
+        n.setOnMousePressed(doDetect);
+        n.setOnDragDetected( new EventHandler<MouseEvent>() {
+            @Override public void handle(MouseEvent event) {
+                Dragboard db = dragSource.startDragAndDrop(TransferMode.ANY);
+                ClipboardContent cc = new ClipboardContent();
+                cc.putString("Hello");
+                db.setContent(cc);
+                db.setDragView(img);
+                db.setDragViewOffsetX(20);
+                db.setDragViewOffsetY(15);
+            }
+        });
+
+        parent.setOnDragDetected( new EventHandler<MouseEvent>() {
+            @Override public void handle(MouseEvent event) {
+                Dragboard db = dragSource.startDragAndDrop(TransferMode.ANY);
+                ClipboardContent cc = new ClipboardContent();
+                cc.putString("HelloParent");
+                db.setContent(cc);
+
+                assertEquals(img, db.getDragView());
+                assertEquals(20, db.getDragViewOffsetX(), 1e-10);
+                assertEquals(15, db.getDragViewOffsetY(), 1e-10);
+ 
+                db.setDragView(imgParent);
+                db.setDragViewOffsetX(40);
+                db.setDragViewOffsetY(55);
+                
+                assertEquals(imgParent, db.getDragView());
+                assertEquals(40, db.getDragViewOffsetX(), 1e-10);
+                assertEquals(55, db.getDragViewOffsetY(), 1e-10);
+            }
+        });
+
+        n.getScene().impl_processMouseEvent(
+                gen.generateMouseEvent(MouseEvent.MOUSE_PRESSED, 50, 50));
+    }
+
+    @Test
+    public void settingDragViewAndCursorPositionShouldReturnSameResults() {
+        final Node n = oneNode();
+        final Node parent = n.getParent();
+        final MouseEventGenerator gen = new MouseEventGenerator();
+        final Image img = new Image("file:testImg_" + 100 + "x" + 100 + ".png");
+        final Image imgParent = new Image("file:testImg_" + 200 + "x" + 200 + ".png");
+        
+        dragSource = n;
+        n.setOnMousePressed(doDetect);
+        n.setOnDragDetected( new EventHandler<MouseEvent>() {
+            @Override public void handle(MouseEvent event) {
+                Dragboard db = dragSource.startDragAndDrop(TransferMode.ANY);
+                ClipboardContent cc = new ClipboardContent();
+                cc.putString("Hello");
+                db.setContent(cc);
+                db.setDragView(img, 20, 15);
+            }
+        });
+
+        parent.setOnDragDetected( new EventHandler<MouseEvent>() {
+            @Override public void handle(MouseEvent event) {
+                Dragboard db = dragSource.startDragAndDrop(TransferMode.ANY);
+                ClipboardContent cc = new ClipboardContent();
+                cc.putString("HelloParent");
+                db.setContent(cc);
+
+                assertEquals(img, db.getDragView());
+                assertEquals(20, db.getDragViewOffsetX(), 1e-10);
+                assertEquals(15, db.getDragViewOffsetY(), 1e-10);
+ 
+                db.setDragView(imgParent);
+                db.setDragViewOffsetX(40);
+                db.setDragViewOffsetY(55);
+                
+                assertEquals(imgParent, db.getDragView());
+                assertEquals(40, db.getDragViewOffsetX(), 1e-10);
+                assertEquals(55, db.getDragViewOffsetY(), 1e-10);
+            }
+        });
+
+        n.getScene().impl_processMouseEvent(
+                gen.generateMouseEvent(MouseEvent.MOUSE_PRESSED, 50, 50));
+    }
+
+    @Test
+    public void dragViewShouldBeClearedInSubsequentDragDetectedCall() {
+        final Node n = oneNode();
+        final MouseEventGenerator gen = new MouseEventGenerator();
+        final Image img = new Image("file:testImg_" + 100 + "x" + 100 + ".png");
+        
+        dragSource = n;
+        n.setOnMousePressed(doDetect);
+        n.setOnDragDetected( new EventHandler<MouseEvent>() {
+            @Override public void handle(MouseEvent event) {
+                Dragboard db = dragSource.startDragAndDrop(TransferMode.ANY);                
+
+                assertNull(db.getDragView());
+                assertEquals(0, db.getDragViewOffsetX(), 1e-10);
+                assertEquals(0, db.getDragViewOffsetY(), 1e-10);
+
+                ClipboardContent cc = new ClipboardContent();
+                cc.putString("Hello");
+                db.setContent(cc);
+                db.setDragView(img);
+                db.setDragViewOffsetX(20);
+                db.setDragViewOffsetX(15);
+            }
+        });
+
+        n.getScene().impl_processMouseEvent(
+                gen.generateMouseEvent(MouseEvent.MOUSE_PRESSED, 50, 50));
+        n.getScene().impl_processMouseEvent(
+                gen.generateMouseEvent(MouseEvent.MOUSE_DRAGGED, 40, 40));
+        n.getScene().impl_processMouseEvent(
+                gen.generateMouseEvent(MouseEvent.MOUSE_RELEASED, 55, 55));
+        n.getScene().impl_processMouseEvent(
+                gen.generateMouseEvent(MouseEvent.MOUSE_PRESSED, 81, 81));
+    }
     
     /************************************************************************/
     /*                             HELPER CODE                              */
@@ -1190,6 +1372,9 @@ public class DragAndDropTest {
 
         private List<Pair<DataFormat, Object>> content;
         private Set<TransferMode> transferModes;
+        private Image image;
+        private double offsetX;
+        private double offsetY;
         
         @Override
         public Object getContent(DataFormat df) {
@@ -1233,6 +1418,41 @@ public class DragAndDropTest {
         
         @Override public void initSecurityContext() {
         }
+
+        @Override
+        public void setDragView(Image image) {
+            this.image = image;
+        }
+
+        @Override
+        public void setDragViewOffsetX(double offsetX) {
+            this.offsetX = offsetX;
+        }
+
+        @Override
+        public void setDragViewOffsetY(double offsetY) {
+            this.offsetY = offsetY;
+        }
+
+        @Override
+        public Image getDragView() {
+            return image;
+        }
+
+        @Override
+        public double getDragViewOffsetX() {
+            return offsetX;
+        }
+
+        @Override
+        public double getDragViewOffsetY() {
+            return offsetY;
+        }
+
+        public void flush() {
+            image = null;
+            offsetX = offsetY = 0;
+        }
     }
     
     private class DndToolkit implements StubToolkit.DndDelegate {
@@ -1264,6 +1484,7 @@ public class DragAndDropTest {
         public void startDrag(TKScene scene, Set<TransferMode> tm, 
                 TKDragSourceListener l, Dragboard dragboard) {
             ((ClipboardImpl) db.impl_getPeer()).setTransferModes(tm);
+            ((ClipboardImpl) db.impl_getPeer()).flush();
             dragging = true;
             srcListener = l;
         }

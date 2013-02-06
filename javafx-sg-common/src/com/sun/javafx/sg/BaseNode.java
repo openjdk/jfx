@@ -26,12 +26,17 @@ package com.sun.javafx.sg;
 
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.BoxBounds;
+import com.sun.javafx.geom.DirtyRegionContainer;
+import com.sun.javafx.geom.DirtyRegionPool;
+import com.sun.javafx.geom.Rectangle;
 import com.sun.javafx.geom.RectBounds;
 import com.sun.javafx.geom.transform.Affine3D;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.geom.transform.GeneralTransform3D;
 import com.sun.scenario.effect.Blend;
 import com.sun.scenario.effect.Effect;
+import com.sun.scenario.effect.FilterContext;
+import com.sun.scenario.effect.ImageData;
 import java.util.List;
 
 import static com.sun.javafx.logging.PulseLogger.PULSE_LOGGING_ENABLED;
@@ -977,11 +982,6 @@ public abstract class BaseNode<G> implements PGNode {
 
         int status = DirtyRegionContainer.DTR_OK;
 
-        // Temporary fix for effects - render full groups with effects
-        if (effectFilter != null) {
-            return accumulateNodeDirtyRegion(clip, dirtyRegionTemp, dirtyRegionContainer, tx, pvTx);
-        }
-
         if (dirtyChildrenAccumulated > DIRTY_CHILDREN_ACCUMULATED_THRESHOLD) {
             status = accumulateNodeDirtyRegion(clip, dirtyRegionTemp, dirtyRegionContainer, tx, pvTx);
             return status;
@@ -1028,7 +1028,11 @@ public abstract class BaseNode<G> implements PGNode {
         //and possibly save a few intersects() calls        
         
         DirtyRegionContainer originalDirtyRegion = null;
-        if (clipNode != null) {
+        if (effectFilter != null) {
+            renderTx = BaseTransform.IDENTITY_TRANSFORM;
+            originalDirtyRegion = dirtyRegionContainer;
+            dirtyRegionContainer = regionPool.checkOut();
+        } else if (clipNode != null) {
             originalDirtyRegion = dirtyRegionContainer;
             myClip = new RectBounds();
             BaseBounds clipBounds = clipNode.getCompleteBounds(myClip, renderTx);
@@ -1070,7 +1074,23 @@ public abstract class BaseNode<G> implements PGNode {
             }
         }
 
+        if (effectFilter != null && status == DirtyRegionContainer.DTR_OK) {
+            //apply effect on effect dirty regions
+            applyEffect(effectFilter, dirtyRegionContainer, regionPool);
+            
+            if (clipNode != null) {
+                myClip = new RectBounds();
+                BaseBounds clipBounds = clipNode.getCompleteBounds(myClip, renderTx);
+                applyClip(clipBounds, dirtyRegionContainer);
+            }
 
+            //apply transform on effect dirty regions
+            applyTransform(tx, dirtyRegionContainer);
+            
+            originalDirtyRegion.merge(dirtyRegionContainer);
+            regionPool.checkIn(dirtyRegionContainer);
+        }
+            
         // If the process of applying the transform caused renderTx to not equal
         // tx, then there is no point restoring it since it will be a different
         // reference and will therefore be gc'd.
@@ -1084,7 +1104,7 @@ public abstract class BaseNode<G> implements PGNode {
         // this group into the dirty region. If the bounds of the group exceeds
         // the bounds of the dirty region, then we end up returning null in the
         // end. But the implementation of accumulateNodeDirtyRegion handles this.
-        if (clipNode != null) {
+        if (clipNode != null && effectFilter == null) {
             if (status == DirtyRegionContainer.DTR_INVALID) {
                 status = accumulateNodeDirtyRegion(clip, dirtyRegionTemp, originalDirtyRegion, tx, pvTx);
             } else {
@@ -1263,4 +1283,87 @@ public abstract class BaseNode<G> implements PGNode {
 
     public void release() {
     }
+    
+    public void applyTransform(final BaseTransform tx, DirtyRegionContainer drc) {
+        for (int i = 0; i < drc.size(); i++) {
+            drc.setDirtyRegion(i, (RectBounds) tx.transform(drc.getDirtyRegion(i), drc.getDirtyRegion(i)));
+            if (drc.checkAndClearRegion(i)) {
+                --i;
+            }
+        }
+    }
+    
+    public void applyClip(final BaseBounds clipBounds, DirtyRegionContainer drc) {
+        for (int i = 0; i < drc.size(); i++) {
+            drc.getDirtyRegion(i).intersectWith(clipBounds);
+            if (drc.checkAndClearRegion(i)) {
+                --i;
+            }
+        }
+    }
+
+    public void applyEffect(final BaseEffectFilter effectFilter, DirtyRegionContainer drc, DirtyRegionPool regionPool) {
+        Effect effect = effectFilter.getEffect();
+        EffectDirtyBoundsHelper helper = EffectDirtyBoundsHelper.getInstance();
+        helper.setInputBounds(contentBounds);
+        helper.setDirtyRegions(drc);
+        final DirtyRegionContainer effectDrc = effect.getDirtyRegions(helper, regionPool);
+        drc.deriveWithNewContainer(effectDrc);
+        regionPool.checkIn(effectDrc);
+    }
+    
+    private static class EffectDirtyBoundsHelper extends Effect {
+        private BaseBounds bounds;
+        private static EffectDirtyBoundsHelper instance = null;
+        private DirtyRegionContainer drc;
+
+        public void setInputBounds(BaseBounds inputBounds) {
+            bounds = inputBounds;
+        }
+
+        @Override
+        public ImageData filter(FilterContext fctx, 
+                BaseTransform transform,
+                Rectangle outputClip,
+                Object renderHelper,
+                Effect defaultInput) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public BaseBounds getBounds(BaseTransform transform, Effect defaultInput) {
+            return bounds;
+        }
+
+        @Override
+        public Effect.AccelType getAccelType(FilterContext fctx) {
+            return null;
+        }
+
+        public static EffectDirtyBoundsHelper getInstance() {
+            if (instance == null) {
+                instance = new EffectDirtyBoundsHelper();
+            }
+            return instance;
+        }
+
+        @Override
+        public boolean reducesOpaquePixels() {
+            return true;
+        }
+
+        private void setDirtyRegions(DirtyRegionContainer drc) {
+            this.drc = drc;
+        }
+
+        @Override
+        public DirtyRegionContainer getDirtyRegions(Effect defaultInput, DirtyRegionPool regionPool) {
+            DirtyRegionContainer ret = regionPool.checkOut();
+            ret.deriveWithNewContainer(drc);
+
+            return ret;
+        }
+
+    }
+
 }

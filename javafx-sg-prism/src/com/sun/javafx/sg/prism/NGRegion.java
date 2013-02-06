@@ -58,6 +58,7 @@ import com.sun.javafx.sg.BaseNode;
 import com.sun.javafx.sg.NodePath;
 import com.sun.javafx.sg.PGNode;
 import com.sun.javafx.sg.PGRegion;
+import com.sun.javafx.tk.Toolkit;
 import com.sun.prism.BasicStroke;
 import com.sun.prism.Graphics;
 import com.sun.prism.Image;
@@ -148,6 +149,13 @@ public class NGRegion extends NGGroup implements PGRegion {
      */
     private float width, height;
 
+    /**
+     * Simple Helper Function for cleanup.
+     */
+    static Paint getPlatformPaint(javafx.scene.paint.Paint paint) {
+        return (Paint)Toolkit.getPaintAccessor().getPlatformPaint(paint);
+    }
+    
     /**
      * Determined when a background is set on the region, this flag indicates whether this
      * background can be cached. As of this time, the only backgrounds which can be cached
@@ -523,7 +531,7 @@ public class NGRegion extends NGGroup implements PGRegion {
                         final BackgroundFill fill = fills.get(i);
                         // Get the paint for this BackgroundFill. It should not be possible
                         // for it to ever be null
-                        final Paint paint = (Paint) fill.getFill().impl_getPlatformPaint();
+                        final Paint paint = getPlatformPaint(fill.getFill());
                         assert paint != null;
                         g.setPaint(paint);
                         // Adjust the box within which we will fit the shape based on the
@@ -553,9 +561,9 @@ public class NGRegion extends NGGroup implements PGRegion {
                         final RectBounds bounds = translatedShape.getBounds();
                         ImagePattern pattern = image.getSize().isCover() ?
                                 new ImagePattern(prismImage, bounds.getMinX(), bounds.getMinY(),
-                                                 bounds.getWidth(), bounds.getHeight(), false) :
+                                                 bounds.getWidth(), bounds.getHeight(), false, false) :
                                 new ImagePattern(prismImage, bounds.getMinX(), bounds.getMinY(),
-                                                 prismImage.getWidth(), prismImage.getHeight(), false);
+                                                 prismImage.getWidth(), prismImage.getHeight(), false, false);
                         g.setPaint(pattern);
                         // Go ahead and finally fill!
                         g.fill(translatedShape);
@@ -679,7 +687,7 @@ public class NGRegion extends NGGroup implements PGRegion {
                         // width and will not paint it. TODO we need to document this fact (RT-26924)
                         if (w > 0 && h > 0) {
                             // Could optimize this such that if paint is transparent then we go no further.
-                            final Paint paint = (Paint) fill.getFill().impl_getPlatformPaint();
+                            final Paint paint = getPlatformPaint(fill.getFill());
                             g.setPaint(paint);
                             final CornerRadii radii = fill.getRadii();
                             if (radii.isUniform()) {
@@ -1004,7 +1012,7 @@ public class NGRegion extends NGGroup implements PGRegion {
                         // cases and will in those cases be doing more work than necessary.
                         // TODO make sure CSS uses TRANSPARENT and NONE when possible (RT-26943)
                         if (topStroke != Color.TRANSPARENT && topStyle != BorderStrokeStyle.NONE) {
-                            g.setPaint((Paint) topStroke.impl_getPlatformPaint());
+                            g.setPaint(getPlatformPaint(topStroke));
                             if (BorderStrokeStyle.SOLID == topStyle) {
                                 g.fillRect(leftInset, topInset, width - leftInset - rightInset, topWidth);
                             } else {
@@ -1014,7 +1022,7 @@ public class NGRegion extends NGGroup implements PGRegion {
                         }
 
                         if (rightStroke != Color.TRANSPARENT && rightStyle != BorderStrokeStyle.NONE) {
-                            g.setPaint((Paint) rightStroke.impl_getPlatformPaint());
+                            g.setPaint(getPlatformPaint(rightStroke));
                             if (BorderStrokeStyle.SOLID == rightStyle) {
                                 g.fillRect(width - rightInset - rightWidth, topInset,
                                            rightWidth, height - topInset - bottomInset);
@@ -1025,7 +1033,7 @@ public class NGRegion extends NGGroup implements PGRegion {
                         }
 
                         if (bottomStroke != Color.TRANSPARENT && bottomStyle != BorderStrokeStyle.NONE) {
-                            g.setPaint((Paint) bottomStroke.impl_getPlatformPaint());
+                            g.setPaint(getPlatformPaint(bottomStroke));
                             if (BorderStrokeStyle.SOLID == bottomStyle) {
                                 g.fillRect(leftInset, height - bottomInset - bottomWidth,
                                         width - leftInset - rightInset, bottomWidth);
@@ -1036,7 +1044,7 @@ public class NGRegion extends NGGroup implements PGRegion {
                         }
 
                         if (leftStroke != Color.TRANSPARENT && leftStyle != BorderStrokeStyle.NONE) {
-                            g.setPaint((Paint) leftStroke.impl_getPlatformPaint());
+                            g.setPaint(getPlatformPaint(leftStroke));
                             if (BorderStrokeStyle.SOLID == leftStyle) {
                                 g.fillRect(leftInset, topInset, leftWidth, height - topInset - bottomInset);
                             } else {
@@ -1071,22 +1079,22 @@ public class NGRegion extends NGGroup implements PGRegion {
 
                         if (topStyle != BorderStrokeStyle.NONE) {
                             g.setStroke(createStroke(topStyle, topWidth, totalLineLength));
-                            g.setPaint((Paint) topStroke.impl_getPlatformPaint());
+                            g.setPaint(getPlatformPaint(topStroke));
                             g.draw(paths[0]);
                         }
                         if (rightStyle != BorderStrokeStyle.NONE) {
                             g.setStroke(createStroke(rightStyle, rightWidth, totalLineLength));
-                            g.setPaint((Paint) rightStroke.impl_getPlatformPaint());
+                            g.setPaint(getPlatformPaint(rightStroke));
                             g.draw(paths[1]);
                         }
                         if (bottomStyle != BorderStrokeStyle.NONE) {
                             g.setStroke(createStroke(bottomStyle, bottomWidth, totalLineLength));
-                            g.setPaint((Paint) bottomStroke.impl_getPlatformPaint());
+                            g.setPaint(getPlatformPaint(bottomStroke));
                             g.draw(paths[2]);
                         }
                         if (leftStyle != BorderStrokeStyle.NONE) {
                             g.setStroke(createStroke(leftStyle, leftWidth, totalLineLength));
-                            g.setPaint((Paint) leftStroke.impl_getPlatformPaint());
+                            g.setPaint(getPlatformPaint(leftStroke));
                             g.draw(paths[3]);
                         }
                     }
@@ -1343,15 +1351,15 @@ public class NGRegion extends NGGroup implements PGRegion {
         final BorderWidths widths = sb.getWidths();
         BorderStrokeStyle bs = sb.getTopStyle();
         double sbWidth = widths.isTopAsPercentage() ? height * widths.getTop() : widths.getTop();
-        Object sbFill = sb.getTopStroke().impl_getPlatformPaint();
+        Object sbFill = getPlatformPaint(sb.getTopStroke());
         if (bs == null) {
             bs = sb.getLeftStyle();
             sbWidth = widths.isLeftAsPercentage() ? width * widths.getLeft() : widths.getLeft();
-            sbFill = sb.getLeftStroke().impl_getPlatformPaint();
+            sbFill = getPlatformPaint(sb.getLeftStroke());
             if (bs == null) {
                 bs = sb.getBottomStyle();
                 sbWidth = widths.isBottomAsPercentage() ? height * widths.getBottom() : widths.getBottom();
-                sbFill = sb.getBottomStroke().impl_getPlatformPaint();
+                sbFill = getPlatformPaint(sb.getBottomStroke());
                 if (bs == null) {
                     bs = sb.getRightStyle();
                     sbWidth = widths.isRightAsPercentage() ? width * widths.getRight() : widths.getRight();
@@ -1632,7 +1640,7 @@ public class NGRegion extends NGGroup implements PGRegion {
             if (srcX != 0 || srcY != 0 || srcW != img.getWidth() || srcH != img.getHeight()) {
                 img = img.createSubImage(srcX, srcY, srcW, srcH);
             }
-            g.setPaint(new ImagePattern(img, 0, 0, tileWidth, tileHeight, false));
+            g.setPaint(new ImagePattern(img, 0, 0, tileWidth, tileHeight, false, false));
             g.fillRect(regionX, regionY, regionWidth, regionHeight);
         } else {
             // If SPACE repeat mode is being used, then we need to take special action if there is not enough

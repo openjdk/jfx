@@ -141,6 +141,16 @@ public class Point2D {
     }
 
     /**
+     * Returns a point with the coordinates of this point multiplied
+     * by the specified factor
+     * @param factor the factor multiplying the coordinates
+     * @return the point with multiplied coordinates
+     */
+    public Point2D multiply(double factor) {
+        return new Point2D(getX() * factor, getY() * factor);
+    }
+
+    /**
      * Returns a point with the coordinates of the specified point subtracted
      * from the coordinates of this point.
      * @param point the point whose coordinates are to be subtracted

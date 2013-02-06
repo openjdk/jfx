@@ -40,6 +40,7 @@ import com.sun.javafx.image.PixelUtils;
 import com.sun.javafx.image.impl.ByteBgraPre;
 import com.sun.javafx.sg.GrowableDataBuffer;
 import com.sun.javafx.sg.PGCanvas;
+import com.sun.javafx.tk.Toolkit;
 import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
@@ -112,7 +113,7 @@ public final class GraphicsContext {
     State curState;
     LinkedList<State> stateStack;
     LinkedList<Path2D> clipStack;
-
+  
     GraphicsContext(Canvas theCanvas) {
         this.theCanvas = theCanvas;
         this.path = new Path2D();
@@ -255,7 +256,7 @@ public final class GraphicsContext {
     private void writePaint(Paint p, byte command) {
         GrowableDataBuffer buf = getBuffer();
         buf.putByte(command);
-        buf.putObject(p.impl_getPlatformPaint());
+        buf.putObject(Toolkit.getPaintAccessor().getPlatformPaint(p));
     }
 
     private void writeArcType(ArcType closure) {

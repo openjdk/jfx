@@ -25,8 +25,9 @@
 
 package javafx.scene.paint;
 
-import javafx.scene.image.Image;
+import com.sun.javafx.beans.event.AbstractNotifyListener;
 import com.sun.javafx.tk.Toolkit;
+import javafx.scene.image.Image;
 
 /**
  * <p>The {@code ImagePattern} class fills a shape with an image pattern. The
@@ -265,13 +266,25 @@ public final class ImagePattern extends Paint {
         this.proportional = proportional;
     }
 
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    @Override public Object impl_getPlatformPaint() {
-        if (platformPaint == null) {
+    @Override
+    boolean acc_isMutable() {
+        return Toolkit.getImageAccessor().isAnimation(image);
+    }
+
+    @Override
+    void acc_addListener(AbstractNotifyListener platformChangeListener) {
+        Toolkit.getImageAccessor().getImageProperty(image)
+                .addListener(platformChangeListener);
+    }
+
+    @Override
+    void acc_removeListener(AbstractNotifyListener platformChangeListener) {
+        Toolkit.getImageAccessor().getImageProperty(image)
+                .removeListener(platformChangeListener);
+    }
+
+    @Override Object acc_getPlatformPaint() {
+        if (acc_isMutable() || platformPaint == null) {
             platformPaint = Toolkit.getToolkit().getPaint(this);
         }
         return platformPaint;

@@ -1,0 +1,327 @@
+/*
+ * Copyright (c) 2011, 2012, Oracle and/or its affiliates. All rights reserved.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.  Oracle designates this
+ * particular file as subject to the "Classpath" exception as provided
+ * by Oracle in the LICENSE file that accompanied this code.
+ *
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
+ *
+ * You should have received a copy of the GNU General Public License version
+ * 2 along with this work; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+ * or visit www.oracle.com if you need additional information or have any
+ * questions.
+ */
+package javafx.beans.property;
+
+import com.sun.javafx.binding.ListExpressionHelper;
+import javafx.beans.InvalidationListener;
+import javafx.beans.Observable;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
+import javafx.collections.ListChangeListener;
+import javafx.collections.ObservableList;
+
+/**
+ * The class {@code ListPropertyBase} is the base class for a property
+ * wrapping an {@link javafx.collections.ObservableList}.
+ *
+ * It provides all the functionality required for a property except for the
+ * {@link #getBean()} and {@link #getName()} methods, which must be implemented
+ * by extending classes.
+ *
+ * @see javafx.collections.ObservableList
+ * @see ListProperty
+ *
+ * @param <E> the type of the {@code List} elements
+ */
+public abstract class ListPropertyBase<E> extends ListProperty<E> {
+
+    private final ListChangeListener<E> listChangeListener = new ListChangeListener<E>() {
+        @Override
+        public void onChanged(Change<? extends E> change) {
+            invalidateProperties();
+            invalidated();
+            fireValueChangedEvent(change);
+        }
+    };
+
+    private ObservableList<E> value;
+    private ObservableValue<? extends ObservableList<E>> observable = null;
+    private InvalidationListener listener = null;
+    private boolean valid = true;
+    private ListExpressionHelper<E> helper = null;
+
+    private SizeProperty size0;
+    private EmptyProperty empty0;
+
+    /**
+     * The Constructor of {@code ListPropertyBase}
+     */
+    public ListPropertyBase() {}
+
+    /**
+     * The constructor of the {@code ListPropertyBase}.
+     *
+     * @param initialValue
+     *            the initial value of the wrapped value
+     */
+    public ListPropertyBase(ObservableList<E> initialValue) {
+        this.value = initialValue;
+        if (initialValue != null) {
+            initialValue.addListener(listChangeListener);
+        }
+    }
+
+    @Override
+    public ReadOnlyIntegerProperty sizeProperty() {
+        if (size0 == null) {
+            size0 = new SizeProperty();
+        }
+        return size0;
+    }
+
+    private class SizeProperty extends ReadOnlyIntegerPropertyBase {
+        @Override
+        public int get() {
+            return size();
+        }
+
+        @Override
+        public Object getBean() {
+            return ListPropertyBase.this;
+        }
+
+        @Override
+        public String getName() {
+            return "size";
+        }
+
+        protected void fireValueChangedEvent() {
+            super.fireValueChangedEvent();
+        }
+    }
+
+    @Override
+    public ReadOnlyBooleanProperty emptyProperty() {
+        if (empty0 == null) {
+            empty0 = new EmptyProperty();
+        }
+        return empty0;
+    }
+
+    private class EmptyProperty extends ReadOnlyBooleanPropertyBase {
+
+        @Override
+        public boolean get() {
+            return isEmpty();
+        }
+
+        @Override
+        public Object getBean() {
+            return ListPropertyBase.this;
+        }
+
+        @Override
+        public String getName() {
+            return "empty";
+        }
+
+        protected void fireValueChangedEvent() {
+            super.fireValueChangedEvent();
+        }
+    }
+
+    @Override
+    public void addListener(InvalidationListener listener) {
+        helper = ListExpressionHelper.addListener(helper, this, listener);
+    }
+
+    @Override
+    public void removeListener(InvalidationListener listener) {
+        helper = ListExpressionHelper.removeListener(helper, listener);
+    }
+
+    @Override
+    public void addListener(ChangeListener<? super ObservableList<E>> listener) {
+        helper = ListExpressionHelper.addListener(helper, this, listener);
+    }
+
+    @Override
+    public void removeListener(ChangeListener<? super ObservableList<E>> listener) {
+        helper = ListExpressionHelper.removeListener(helper, listener);
+    }
+
+    @Override
+    public void addListener(ListChangeListener<? super E> listener) {
+        helper = ListExpressionHelper.addListener(helper, this, listener);
+    }
+
+    @Override
+    public void removeListener(ListChangeListener<? super E> listener) {
+        helper = ListExpressionHelper.removeListener(helper, listener);
+    }
+
+    /**
+     * Sends notifications to all attached
+     * {@link javafx.beans.InvalidationListener InvalidationListeners},
+     * {@link javafx.beans.value.ChangeListener ChangeListeners}, and
+     * {@link javafx.collections.ListChangeListener}.
+     *
+     * This method is called when the value is changed, either manually by
+     * calling {@link #set(ObservableList)} or in case of a bound property, if the
+     * binding becomes invalid.
+     */
+    protected void fireValueChangedEvent() {
+        ListExpressionHelper.fireValueChangedEvent(helper);
+    }
+
+    /**
+     * Sends notifications to all attached
+     * {@link javafx.beans.InvalidationListener InvalidationListeners},
+     * {@link javafx.beans.value.ChangeListener ChangeListeners}, and
+     * {@link javafx.collections.ListChangeListener}.
+     *
+     * This method is called when the content of the list changes.
+     *
+     * @param change the change that needs to be propagated
+     */
+    protected void fireValueChangedEvent(ListChangeListener.Change<? extends E> change) {
+        ListExpressionHelper.fireValueChangedEvent(helper, change);
+    }
+
+    private void invalidateProperties() {
+        if (size0 != null) {
+            size0.fireValueChangedEvent();
+        }
+        if (empty0 != null) {
+            empty0.fireValueChangedEvent();
+        }
+    }
+
+    private void markInvalid(ObservableList<E> oldValue) {
+        if (valid) {
+            if (oldValue != null) {
+                oldValue.removeListener(listChangeListener);
+            }
+            valid = false;
+            invalidateProperties();
+            invalidated();
+            fireValueChangedEvent();
+        }
+    }
+
+
+
+    /**
+     * The method {@code invalidated()} can be overridden to receive
+     * invalidation notifications. This is the preferred option in
+     * {@code Objects} defining the property, because it requires less memory.
+     *
+     * The default implementation is empty.
+     */
+    protected void invalidated() {
+    }
+
+    @Override
+    public ObservableList<E> get() {
+        if (!valid) {
+            value = observable == null ? value : observable.getValue();
+            valid = true;
+            if (value != null) {
+                value.addListener(listChangeListener);
+            }
+        }
+        return value;
+    }
+
+    @Override
+    public void set(ObservableList<E> newValue) {
+        if (isBound()) {
+            throw new java.lang.RuntimeException("A bound value cannot be set.");
+        }
+        if (value != newValue) {
+            final ObservableList<E> oldValue = value;
+            value = newValue;
+            markInvalid(oldValue);
+        }
+    }
+
+    @Override
+    public boolean isBound() {
+        return observable != null;
+    }
+
+    @Override
+    public void bind(final ObservableValue<? extends ObservableList<E>> newObservable) {
+        if (newObservable == null) {
+            throw new NullPointerException("Cannot bind to null");
+        }
+
+        if (!newObservable.equals(observable)) {
+            unbind();
+            observable = newObservable;
+            if (listener == null) {
+                listener = new Listener();
+            }
+            observable.addListener(listener);
+            markInvalid(value);
+        }
+    }
+
+    @Override
+    public void unbind() {
+        if (observable != null) {
+            value = observable.getValue();
+            observable.removeListener(listener);
+            observable = null;
+        }
+    }
+
+    /**
+     * Returns a string representation of this {@code ListPropertyBase} object.
+     * @return a string representation of this {@code ListPropertyBase} object.
+     */
+    @Override
+    public String toString() {
+        final Object bean = getBean();
+        final String name = getName();
+        final StringBuilder result = new StringBuilder("ListProperty [");
+        if (bean != null) {
+            result.append("bean: ").append(bean).append(", ");
+        }
+        if ((name != null) && (!name.equals(""))) {
+            result.append("name: ").append(name).append(", ");
+        }
+        if (isBound()) {
+            result.append("bound, ");
+            if (valid) {
+                result.append("value: ").append(get());
+            } else {
+                result.append("invalid");
+            }
+        } else {
+            result.append("value: ").append(get());
+        }
+        result.append("]");
+        return result.toString();
+    }
+
+    private class Listener implements InvalidationListener {
+        @Override
+        public void invalidated(Observable valueModel) {
+            markInvalid(value);
+        }
+    }
+
+}

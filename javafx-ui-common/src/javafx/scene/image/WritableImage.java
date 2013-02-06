@@ -155,7 +155,7 @@ public class WritableImage extends Image {
         if (writer == null) {
             writer = new PixelWriter() {
                 ReadOnlyObjectProperty<PlatformImage> pimgprop =
-                    impl_platformImageProperty();
+                    acc_platformImageProperty();
 
                 @Override
                 public PixelFormat getPixelFormat() {

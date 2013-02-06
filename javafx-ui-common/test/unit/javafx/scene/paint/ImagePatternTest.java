@@ -85,9 +85,9 @@ public class ImagePatternTest {
     public void testImpl_getPlatformPaint() {
         ImagePattern pattern = new ImagePattern(createImage());
 
-        Object paint = pattern.impl_getPlatformPaint();
+        Object paint = Toolkit.getPaintAccessor().getPlatformPaint(pattern);
         assertNotNull(paint);
-        assertSame(paint, pattern.impl_getPlatformPaint());
+        assertSame(paint, Toolkit.getPaintAccessor().getPlatformPaint(pattern));
     }
 
 

@@ -24,6 +24,7 @@
  */
 package com.sun.scenario.animation;
 
+import com.sun.javafx.animation.TickCalculation;
 import javafx.animation.Interpolator;
 import javafx.util.Duration;
 
@@ -33,14 +34,18 @@ public abstract class NumberTangentInterpolator extends Interpolator {
 
     public abstract double getOutValue();
 
-    public abstract double getInMillis();
+    public abstract double getInTicks();
 
-    public abstract double getOutMillis();
+    public abstract double getOutTicks();
 
     public static NumberTangentInterpolator create(final double inValue,
             final Duration inDuration, final double outValue,
             final Duration outDuration) {
         return new NumberTangentInterpolator() {
+
+            private final long inTicks = TickCalculation.fromDuration(inDuration);
+            private final long outTicks = TickCalculation.fromDuration(outDuration);
+
             @Override
             public double getInValue() {
                 return inValue;
@@ -52,13 +57,13 @@ public abstract class NumberTangentInterpolator extends Interpolator {
             }
 
             @Override
-            public double getInMillis() {
-                return inDuration.toMillis();
+            public double getInTicks() {
+                return inTicks;
             }
 
             @Override
-            public double getOutMillis() {
-                return outDuration.toMillis();
+            public double getOutTicks() {
+                return outTicks;
             }
 
             @Override
@@ -73,6 +78,9 @@ public abstract class NumberTangentInterpolator extends Interpolator {
     public static NumberTangentInterpolator create(final double value,
             final Duration duration) {
         return new NumberTangentInterpolator() {
+
+        private final long ticks = TickCalculation.fromDuration(duration);
+
             @Override
             public double getInValue() {
                 return value;
@@ -84,13 +92,13 @@ public abstract class NumberTangentInterpolator extends Interpolator {
             }
 
             @Override
-            public double getInMillis() {
-                return duration.toMillis();
+            public double getInTicks() {
+                return ticks;
             }
 
             @Override
-            public double getOutMillis() {
-                return duration.toMillis();
+            public double getOutTicks() {
+                return ticks;
             }
 
             @Override

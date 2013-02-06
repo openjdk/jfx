@@ -95,9 +95,9 @@ import com.sun.javafx.sg.PGRectangle;
 import com.sun.javafx.sg.PGRegion;
 import com.sun.javafx.sg.PGSVGPath;
 import com.sun.javafx.sg.PGShape;
-import com.sun.javafx.sg.PGSpan;
 import com.sun.javafx.sg.PGText;
 import com.sun.javafx.PlatformUtil;
+import com.sun.javafx.beans.event.AbstractNotifyListener;
 import com.sun.javafx.sg.PGCanvas;
 import com.sun.javafx.sg.PGWebView;
 import com.sun.scenario.DelayedRunnable;
@@ -106,6 +106,7 @@ import com.sun.scenario.effect.AbstractShadow.ShadowMode;
 import com.sun.scenario.effect.Color4f;
 import com.sun.scenario.effect.FilterContext;
 import com.sun.scenario.effect.Filterable;
+import javafx.beans.property.ReadOnlyObjectProperty;
 
 
 public abstract class Toolkit {
@@ -508,7 +509,7 @@ public abstract class Toolkit {
         if (stops.size() == 2) {
             Color c = stops.get(0).getColor();
             if (c.equals(stops.get(1).getColor())) {
-                return c.impl_getPlatformPaint();
+                return Toolkit.getPaintAccessor().getPlatformPaint(c);
             }
         }
         return null;
@@ -630,10 +631,9 @@ public abstract class Toolkit {
     public abstract PGImageView createPGImageView();
     public abstract PGMediaView createPGMediaView();
     public abstract PGGroup createPGGroup();
-    public abstract PGText createPGText();
     public abstract PGRegion createPGRegion();
     public abstract PGCanvas createPGCanvas();
-    public abstract PGSpan createPGSpan();
+    public abstract PGText createPGText();
     public abstract PGWebView createPGWebView();
 
     public abstract Object createSVGPathObject(SVGPath svgpath);
@@ -880,6 +880,38 @@ public abstract class Toolkit {
 
     public static WritableImageAccessor getWritableImageAccessor() {
         return writableImageAccessor;
+    }
+    
+    public interface PaintAccessor {
+        public boolean isMutable(Paint paint);
+        public Object getPlatformPaint(Paint paint);
+        public void addListener(Paint paint, AbstractNotifyListener platformChangeListener);
+        public void removeListener(Paint paint, AbstractNotifyListener platformChangeListener);
+    }
+
+    private static PaintAccessor paintAccessor = null;
+
+    public static void setPaintAccessor(PaintAccessor accessor) {
+        paintAccessor = accessor;
+    }
+
+    public static PaintAccessor getPaintAccessor() {
+        return paintAccessor;
+    }
+    
+    public interface ImageAccessor {
+        public boolean isAnimation(Image image);
+        public ReadOnlyObjectProperty<PlatformImage>getImageProperty(Image image);
+    }
+    
+    private static ImageAccessor imageAccessor = null;
+
+    public static void setImageAccessor(ImageAccessor accessor) {
+        imageAccessor = accessor;
+    }
+
+    public static ImageAccessor getImageAccessor() {
+        return imageAccessor;
     }
 
 }

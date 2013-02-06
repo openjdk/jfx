@@ -129,6 +129,9 @@ public final class PathTransition extends Transition {
      * granularity depends on the underlying operating system and will in
      * general be larger. For example animations on desktop systems usually run
      * with a maximum of 60fps which gives a granularity of ~17 ms.
+     *
+     * Setting duration to value lower than {@link Duration#ZERO} will result
+     * in {@link IllegalArgumentException}.
      * 
      * @defaultValue 400ms
      */
@@ -151,7 +154,15 @@ public final class PathTransition extends Transition {
 
                 @Override
                 public void invalidated() {
-                    setCycleDuration(getDuration());
+                    try {
+                        setCycleDuration(getDuration());
+                    } catch (IllegalArgumentException e) {
+                        if (isBound()) {
+                            unbind();
+                        }
+                        set(getCycleDuration());
+                        throw e;
+                    }
                 }
 
                 @Override

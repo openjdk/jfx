@@ -106,6 +106,23 @@ Image image4 = new Image("file:flower.png", 0, 100, false, false);
  */
 public class Image {
 
+    static {
+        Toolkit.setImageAccessor(new Toolkit.ImageAccessor() {
+
+            @Override
+            public boolean isAnimation(Image image) {
+                return image.isAnimation();
+            }
+            
+            @Override
+            public ReadOnlyObjectProperty<PlatformImage>
+                    getImageProperty(Image image)
+            {
+                return image.acc_platformImageProperty();
+            }
+        });
+    }
+
     // Matches strings that start with a valid URI scheme
     private static final String URL_QUICKMATCH = "^\\p{Alpha}[\\p{Alnum}+.-]*:.*$";
     /**
@@ -461,12 +478,8 @@ public class Image {
     public final Object impl_getPlatformImage() {
         return platformImage == null ? null : platformImage.get();
     }
-
-    /**
-     * @treatAsPrivate implementation detail
-     */
-    @Deprecated
-    public final ReadOnlyObjectProperty<PlatformImage> impl_platformImageProperty() {
+    
+    final ReadOnlyObjectProperty<PlatformImage> acc_platformImageProperty() {
         return platformImagePropertyImpl();
     }
 
@@ -734,9 +747,10 @@ public class Image {
             if (loader.getFrameCount() > 1) {
                 makeAnimationTimeline(loader);
             } else {
-                setPlatformImageWH(loader.getFrame(0),
-                                   loader.getWidth(),
-                                   loader.getHeight());
+                PlatformImage pi = loader.getFrame(0);
+                double w = loader.getWidth() / pi.getPixelScale();
+                double h = loader.getHeight() / pi.getPixelScale();
+                setPlatformImageWH(pi, w, h);
             }
         } else {
             setError(true);
@@ -771,7 +785,9 @@ public class Image {
         // the last frame is shown, the wrap around is "instantaneous"
         keyFrames.add(createPlatformImageSetKeyFrame(duration, zeroFrame));
 
-        setPlatformImageWH(zeroFrame, loader.getWidth(), loader.getHeight());
+        double w = loader.getWidth() / zeroFrame.getPixelScale();
+        double h = loader.getHeight() / zeroFrame.getPixelScale();
+        setPlatformImageWH(zeroFrame, w, h);
         timeline.play();
     }
 

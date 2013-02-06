@@ -24,6 +24,7 @@
  */
 package com.sun.javafx.sg.prism;
 
+import com.sun.javafx.geom.DirtyRegionContainer;
 import com.sun.javafx.geom.RectBounds;
 import com.sun.javafx.geom.Rectangle;
 import com.sun.javafx.geom.transform.BaseTransform;
@@ -31,7 +32,6 @@ import com.sun.javafx.geom.transform.GeneralTransform3D;
 import com.sun.javafx.sg.BaseCacheFilter;
 import com.sun.javafx.sg.BaseNode;
 import com.sun.javafx.sg.DirtyHint;
-import com.sun.javafx.sg.DirtyRegionContainer;
 import com.sun.javafx.sg.NodePath;
 import com.sun.javafx.sg.PGGroup;
 import com.sun.javafx.sg.PGNode;
