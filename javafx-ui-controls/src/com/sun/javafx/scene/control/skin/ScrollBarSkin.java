@@ -445,8 +445,8 @@ public class ScrollBarSkin extends BehaviorSkinBase<ScrollBar, ScrollBarBehavior
         }
 
         final Insets padding = s.getInsets();
-        thumb.setTranslateX( s.getOrientation() == Orientation.VERTICAL ? padding.getLeft() : trackPos + padding.getLeft());
-        thumb.setTranslateY( s.getOrientation() == Orientation.VERTICAL ? trackPos + padding.getTop() : padding.getTop());
+        thumb.setTranslateX( snapPosition(s.getOrientation() == Orientation.VERTICAL ? padding.getLeft() : trackPos + padding.getLeft()));
+        thumb.setTranslateY( snapPosition(s.getOrientation() == Orientation.VERTICAL ? trackPos + padding.getTop() : padding.getTop()));
     }
 
     @Override protected void layoutChildren(final double x, final double y,
