@@ -617,7 +617,7 @@ public abstract class Node implements EventTarget {
      * @return true if node has properties.
      */
      public boolean hasProperties() {
-        return properties != null;
+        return properties != null && !properties.isEmpty();
     }
 
     /**
