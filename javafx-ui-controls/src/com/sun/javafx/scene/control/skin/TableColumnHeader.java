@@ -412,6 +412,10 @@ public class TableColumnHeader extends Region {
             return;
         }
         
+        // RT-28016: if the tablecolumn is not a visible leaf column, we should ignore this
+        int visibleLeafIndex = skin.getVisibleLeafIndex(getTableColumn());
+        if (visibleLeafIndex == -1) return;
+        
         final int sortColumnCount = getTableViewSkin().getSortOrder().size();
         boolean showSortOrderDots = sortPos <= 3 && sortColumnCount > 1;
         
