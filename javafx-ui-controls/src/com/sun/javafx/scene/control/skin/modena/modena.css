@@ -127,20 +127,30 @@ is being used to size a border should also be in pixels.
     /* A bright blue for highlighting/accenting objects.  For example: selected
      * text; selected items in menus, lists, trees, and tables; progress bars */
     /*-fx-accent: #0096C9;*/
-    -fx-accent: #3D8AD6;
+    /*-fx-accent: #3D8AD6;*/
+    /*-fx-accent: #0083C9;*/
+    /*-fx-accent: #E8490F;*/
+    /*-fx-accent: #f25f29;*/
+    /*-fx-accent: #057DBC;*/
+    -fx-accent: #0096C9;
 
     /* Default buttons color, this is similar to accent but more subtle */
     /*-fx-default-button: #4fb6d6;*/
     /*-fx-default-button: #8ed2e5;*/
-    -fx-default-button: #a0d2fd;
+    /*-fx-default-button: -fx-accent;*/
+    -fx-default-button: #ABD8ED;
     /*-fx-default-button: #5daaf5;*/
+    /*-fx-default-button: -fx-accent;*/
 
     /* A bright blue for the focus indicator of objects. Typically used as the
      * first color in -fx-background-color for the "focused" pseudo-class. Also
      * typically used with insets of -1.4 to provide a glowing effect.
      */
-    -fx-focus-color: #f25f29;
-    -fx-faint-focus-color: #f25f2933;
+    /*-fx-focus-color: #f25f29;*/
+    /*-fx-faint-focus-color: #f25f2933;*/
+    /*-fx-focus-color: #00AEFB;*/
+    -fx-focus-color: #039ED3;
+    -fx-faint-focus-color: #039ED322;
 
     /* The color that is used in styling controls. The default value is based
      * on -fx-base, but is changed by pseudoclasses to change the base color.
@@ -153,7 +163,7 @@ is being used to size a border should also be in pixels.
     /* The opacity level to use for the "disabled" pseudoclass.
      */
     -fx-disabled-opacity: 0.4;
-    
+
     /* Chart Color Palette */
     CHART_COLOR_1: #f3622d;
     CHART_COLOR_2: #fba71b;
@@ -215,20 +225,20 @@ is being used to size a border should also be in pixels.
         black 10%,
         derive(-fx-background, -15%) 30%
     );
-     
+
     /* Lighter than -fx-background and used to provide a small highlight when
      * needed on top of -fx-background. This is never a shadow in Modena but
      * keep -fx-shadow-highlight-color name to be compatible with Caspian.
      */
     -fx-shadow-highlight-color: ladder(
         -fx-background,
-        rgba(255,255,255,0.2) 0%,
-        rgba(255,255,255,0.2) 20%,
-        rgba(255,255,255,0.2) 70%,
-        rgba(255,255,255,1) 90%,
-        rgba(255,255,255,1) 100%
+        rgba(255,255,255,0.07) 0%,
+        rgba(255,255,255,0.07) 20%,
+        rgba(255,255,255,0.07) 70%,
+        rgba(255,255,255,0.7) 90%,
+        rgba(255,255,255,0.75) 100%
       );
-    
+
     /* A gradient that goes from a little darker than -fx-color on the top to
      * even more darker than -fx-color on the bottom.  Typically is the second
      * color in the -fx-background-color list as the small thin border around
@@ -242,16 +252,36 @@ is being used to size a border should also be in pixels.
      * -fx-background-color list as a thin highlight inside the outer border.
      * Insets are typically 1.
      */
-    -fx-inner-border: linear-gradient(to bottom, derive(-fx-color,55%), derive(-fx-color,2%));
+    /*-fx-inner-border: linear-gradient(to bottom,*/
+                /*ladder(*/
+                    /*-fx-color,*/
+                    /*derive(-fx-color,20%) 0%,*/
+                    /*derive(-fx-color,20%) 40%,*/
+                    /*derive(-fx-color,25%) 60%,*/
+                    /*derive(-fx-color,55%) 80%,*/
+                    /*derive(-fx-color,75%) 100%*/
+                /*),*/
+                /*derive(-fx-color,2%));*/
+    -fx-inner-border: linear-gradient(to bottom,
+                ladder(
+                    -fx-color,
+                    derive(-fx-color,30%) 0%,
+                    derive(-fx-color,25%) 20%,
+                    derive(-fx-color,25%) 40%,
+                    derive(-fx-color,30%) 60%,
+                    derive(-fx-color,55%) 80%,
+                    derive(-fx-color,75%) 100%
+                ),
+                derive(-fx-color,2%));
 
     -fx-inner-border-horizontal: linear-gradient(to right, derive(-fx-color,55%), derive(-fx-color,2%));
 /*    -fx-inner-border-horizontal: linear-gradient(
         to right,
-        ladder(-fx-color, 
-               derive(-fx-color,80%) 60%, 
+        ladder(-fx-color,
+               derive(-fx-color,80%) 60%,
                white 82%) 0%,
-        ladder(-fx-color, 
-               derive(-fx-color,20%) 10%, 
+        ladder(-fx-color,
+               derive(-fx-color,20%) 10%,
                derive(-fx-color,-10%) 80%) 100%
     );*/
 
@@ -285,7 +315,7 @@ is being used to size a border should also be in pixels.
         -fx-dark-text-color  59%,
         -fx-mid-text-color   60%
     );
-    
+
     /* The color to use as -fx-text-fill when painting text on top of
      * backgrounds filled with -fx-control-inner-background.
      */
@@ -340,14 +370,14 @@ is being used to size a border should also be in pixels.
     -fx-background-radius: inherit;
     -fx-background-insets: inherit;
     -fx-padding: inherit;
-    
+
     /* The color to use in ListView/TreeView/TableView to indicate hover. */
     -fx-cell-hover-color: #cce3f4;
-    
+
     -fx-cell-focus-inner-border: #85b9de;
-    
+
     /* The colors to use in Pagination */
-    -fx-page-bullet-border: #acacac;    
+    -fx-page-bullet-border: #acacac;
     -fx-page-indicator-hover-border: #accee5;
 
     /***************************************************************************
@@ -355,7 +385,7 @@ is being used to size a border should also be in pixels.
      * Set the default background color for the scene                          *
      *                                                                         *
      **************************************************************************/
-    
+
     -fx-background-color: -fx-background;
 }
 
@@ -377,11 +407,11 @@ is being used to size a border should also be in pixels.
 .choice-box,
 .ickericker.split-button > .color-picker-label,
 .combo-box-base,
-.combo-box-base > .arrow-button {
-    -fx-background-color: -fx-outer-border, -fx-inner-border, -fx-body-color; 
-    -fx-background-insets: 0, 1, 2;
-    -fx-background-radius: 5, 4, 3;
-    -fx-padding: 0.333333em 0.666667em 0.416667em 0.666667em; /* 4 8 5 8 */
+.combo-box-base:editable > .arrow-button{
+    -fx-background-color: -fx-shadow-highlight-color, -fx-outer-border, -fx-inner-border, -fx-body-color;
+    -fx-background-insets: 0 0 -1 0, 0, 1, 2;
+    -fx-background-radius: 3px, 3px, 2px, 1px;
+    -fx-padding: 0.333333em 0.666667em 0.333333em 0.666667em; /* 4 8 4 8 */
     -fx-text-fill: -fx-text-base-color;
 }
 .button:hover,
@@ -432,7 +462,7 @@ is being used to size a border should also be in pixels.
 .slider:focused .thumb {
     -fx-background-color: -fx-faint-focus-color, -fx-focus-color, -fx-inner-border, -fx-body-color; 
     -fx-background-insets: -2, -0.3, 1, 2;
-    -fx-background-radius: 7, 6, 4, 3;
+    -fx-background-radius: 5, 4, 2, 1;
 }
 
 /* ====   DISABLED THINGS   ================================================= */
@@ -587,21 +617,21 @@ is being used to size a border should also be in pixels.
 
 .button.left-pill,
 .toggle-button.left-pill {
-    -fx-background-radius: 5 0 0 5, 4 0 0 4, 3 0 0 3;
-    -fx-background-insets: 0, 1 0 1 1, 2 1 2 2;
+    -fx-background-radius: 3 0 0 3, 3 0 0 3, 2 0 0 2, 1 0 0 1;
+    -fx-background-insets: 0 0 -1 0, 0, 1 0 1 1, 2 1 2 2;
 }
 .button.center-pill,
 .toggle-button.center-pill {
     -fx-background-radius: 0;
-    -fx-background-insets: 0, 1 0 1 1, 2 1 2 2;
+    -fx-background-insets: 0 0 -1 0, 0, 1 0 1 1, 2 1 2 2;
 }
 .button.right-pill,
 .toggle-button.right-pill {
-    -fx-background-radius: 0 5 5 0, 0 4 4 0, 0 3 3 0;
+    -fx-background-radius: 0 3 3 0, 0 3 3 0, 0 2 2 0, 0 1 1 0;
 }
 .button.left-pill:focused,
 .toggle-button.left-pill:focused {
-    -fx-background-radius: 7 0 0 7, 6 0 0 6, 4 0 0 4, 3 0 0 3;
+    -fx-background-radius: 5 0 0 5, 4 0 0 4, 2 0 0 2, 1 0 0 1;
     -fx-background-insets: -2 0 -2 -2, -0.3 0 -0.3 -0.3, 1, 2;
 }
 .button.center-pill:focused,
@@ -611,20 +641,21 @@ is being used to size a border should also be in pixels.
 }
 .button.right-pill:focused,
 .toggle-button.right-pill:focused {
-    -fx-background-radius: 0 7 7 0, 0 6 6 0, 0 4 4 0, 0 3 3 0;
+    -fx-background-radius: 0 5 5 0, 0 4 4 0, 0 2 2 0, 0 1 1 0;
     -fx-background-insets: -2 -2 -2 0, -0.3 -0.3 -0.3 0, 1, 2;
 }
 
 /* ====   SELECTED TOGGLE   ================================================= */
 
 .toggle-button:selected {
-        -fx-background-color: 
+        -fx-background-color:
+            -fx-shadow-highlight-color,
             linear-gradient(to bottom, derive(-fx-outer-border, -20%), -fx-outer-border),
             linear-gradient(to bottom, 
                     derive(-fx-text-box-border, -10%) 0%, 
                     derive(-fx-text-box-border, -2%) 20%,
                     derive(-fx-text-box-border, 5%) 50%);
-    -fx-background-insets: 0, 1;
+    -fx-background-insets: 0 0 -1 0, 0, 1;
 }
 .toggle-button:selected:focused {
     -fx-background-color: 
@@ -634,7 +665,7 @@ is being used to size a border should also be in pixels.
                     derive(-fx-text-box-border, -2%) 20%,
                     derive(-fx-text-box-border, 5%) 50%);
     -fx-background-insets: -2, -0.3, 1;
-    -fx-background-radius: 7, 6, 4;
+    -fx-background-radius: 5, 4, 2;
 }
 
 /*******************************************************************************
@@ -734,26 +765,25 @@ is being used to size a border should also be in pixels.
 .split-menu-button {
     -fx-background-color: -fx-outer-border; 
     -fx-background-insets: 0;
-    -fx-background-radius: 5;
+    -fx-background-radius: 3;
     -fx-padding: 0;
 }
 .split-menu-button:focused {
     -fx-background-color: -fx-faint-focus-color, -fx-focus-color; 
     -fx-background-insets: -2, -0.3;
-    -fx-background-radius: 7, 6;
+    -fx-background-radius: 5, 4;
 }
 .split-menu-button > .label {
     -fx-text-fill: -fx-text-base-color;
     -fx-background-color: -fx-inner-border, -fx-body-color; 
     -fx-background-insets: 1 0 1 1, 2 1 2 2;
-    -fx-background-radius: 4 0 0 4, 3 0 0 3;
+    -fx-background-radius: 2 0 0 2, 1 0 0 1;
     -fx-padding: 0.333333em 0.667em 0.416667em 0.667em; /* 4 8 5 8 */
 }
 .split-menu-button > .arrow-button {
     -fx-background-color: -fx-inner-border, -fx-body-color; 
     -fx-background-insets: 1, 2;
-    -fx-background-radius: 4, 3;
-    -fx-background-radius: 0 4 4 0, 0 3 3 0;
+    -fx-background-radius: 0 2 2 0, 0 1 1 0;
     -fx-padding: 0.5em 0.833333em 0.5em 0.833333em; /* 6 10 6 10 */
 }
 
@@ -762,6 +792,7 @@ is being used to size a border should also be in pixels.
  * ToolBar                                                                     *
  *                                                                             *
  ******************************************************************************/
+
 .tool-bar:vertical {
     -fx-background-color:
         linear-gradient(to right, derive(-fx-base,0%) 0%, derive(-fx-base,10%) 50%, derive(-fx-base,0%) 100%);
@@ -816,7 +847,7 @@ is being used to size a border should also be in pixels.
             derive(-fx-control-inner-background, -12%)
           );
     -fx-background-insets: 0 0 -1 0, 0, 1;
-    -fx-background-radius: 5, 4, 3;
+    -fx-background-radius: 0.25em, 0.25em, 0.166667em; /* 3 3 2 */
     -fx-padding: 0.25em; /* 3 */
 }
 .slider:vertical .track {
@@ -841,6 +872,7 @@ is being used to size a border should also be in pixels.
  * ScrollBar                                                                   *
  *                                                                             *
  ******************************************************************************/
+
 .scroll-bar:horizontal {
     -fx-background-color: linear-gradient(to bottom, derive(-fx-base,-3%), derive(-fx-base,5%) 50%, derive(-fx-base,-3%));
 }
@@ -853,7 +885,8 @@ is being used to size a border should also be in pixels.
 .scroll-bar > .thumb {
     -fx-background-color: -fx-outer-border, -fx-inner-border, -fx-body-color; 
     -fx-background-insets: 1, 2, 3;
-    -fx-background-radius: 0.416667em, 0.333333em, 0.25em; /* 5, 4,3 */
+    /*-fx-background-radius: 0.416667em, 0.333333em, 0.25em; *//* 5, 4,3 */
+    -fx-background-radius: 3, 2, 1;
 }
 .scroll-bar:vertical > .thumb {
     -fx-background-color: -fx-outer-border, -fx-inner-border, -fx-body-color-to-right; 
@@ -928,14 +961,17 @@ is being used to size a border should also be in pixels.
     -fx-padding: 0;
 }
 .scroll-pane.edge-to-edge > .scroll-bar,
-.tab-pane > * > .scroll-pane > .scroll-bar {
+.tab-pane > * > .scroll-pane > .scroll-bar,
+.titled-pane > * > * > .scroll-pane > .scroll-bar {
     -fx-background-insets: 0;
     -fx-padding: 0;
 }
 .scroll-pane.edge-to-edge > .scroll-bar > .increment-button, 
 .scroll-pane.edge-to-edge > .scroll-bar > .decrement-button,
 .tab-pane > * > .scroll-pane > .scroll-bar > .increment-button, 
-.tab-pane > * > .scroll-pane > .scroll-bar > .decrement-button {
+.tab-pane > * > .scroll-pane > .scroll-bar > .decrement-button,
+.titled-pane > * > * > .scroll-pane > .scroll-bar > .increment-button,
+.titled-pane > * > * > .scroll-pane > .scroll-bar > .decrement-button {
     -fx-padding: 0.25em; /* 3px */
 }
 
@@ -972,8 +1008,9 @@ is being used to size a border should also be in pixels.
 .progress-bar > .bar {
     -fx-background-color: linear-gradient(to bottom, derive(-fx-accent, -7%), derive(-fx-accent, 0%), derive(-fx-accent, -3%), derive(-fx-accent, -9%) );
     -fx-background-insets: 3 3 4 3;
-    -fx-background-radius: 0.583em; /* 7 */
-    -fx-padding: 9px;
+    /*-fx-background-radius: 0.583em; *//* 7 */
+    -fx-background-radius: 2;
+    -fx-padding: 0.75em;
 }
 .progress-bar:indeterminate > .bar {
     -fx-background-color: linear-gradient(to left, transparent, -fx-accent);
@@ -989,7 +1026,8 @@ is being used to size a border should also be in pixels.
             derive(-fx-control-inner-background, -9%)
           );
     -fx-background-insets: 0, 0 0 1 0, 1 1 2 1;
-    -fx-background-radius: 0.833em, 0.750em, 0.667em; /* 10, 9, 8 */
+    /*-fx-background-radius: 0.833em, 0.750em, 0.667em; *//* 10, 9, 8 */
+    -fx-background-radius: 4, 3, 2; /* 10, 9, 8 */
 }
 
 /*******************************************************************************
@@ -1083,7 +1121,7 @@ is being used to size a border should also be in pixels.
     -fx-background-color: linear-gradient(to bottom, derive(-fx-text-box-border, -10%), -fx-text-box-border),
         linear-gradient(from 0px 0px to 0px 5px, derive(-fx-control-inner-background, -9%), -fx-control-inner-background);
     -fx-background-insets: 0, 1;
-    -fx-background-radius: 4, 3;
+    -fx-background-radius: 3, 2;
     -fx-cursor: text;
     -fx-padding: 0.416667em 0.583em 0.416667em 0.583em; /* 5 7 5 7 */
 }
@@ -1093,7 +1131,7 @@ is being used to size a border should also be in pixels.
     -fx-background-color: -fx-faint-focus-color, -fx-focus-color, 
         linear-gradient(from 0px 0px to 0px 5px, derive(-fx-control-inner-background, -9%), -fx-control-inner-background); 
     -fx-background-insets: -2, -0.3, 1;
-    -fx-background-radius: 6, 3.4, 2, 2;
+    -fx-background-radius: 5, 4, 2, 2;
     -fx-prompt-text-fill: transparent;
 }
 
@@ -1113,27 +1151,28 @@ is being used to size a border should also be in pixels.
     -fx-background-color: null;
 }
 .text-area > .scroll-pane > .scroll-bar:horizontal {
-    -fx-background-radius: 0 0 3 3;
+    -fx-background-radius: 0 0 2 2;
 }
 .text-area > .scroll-pane > .scroll-bar:vertical {
-    -fx-background-radius: 0 3 3 0;
+    -fx-background-radius: 0 2 2 0;
 }
 .text-area > .scroll-pane > .corner {
-    -fx-background-radius: 0 0 3 0;
+    -fx-background-radius: 0 0 2 0;
 }
 .text-area .content {
     -fx-padding: 0.333em 0.583em 0.333em 0.583em; /* 4 7 4 7 */
     -fx-cursor: text;
     -fx-background-color: 
         linear-gradient(from 0px 0px to 0px 4px, derive(-fx-control-inner-background, -8%), -fx-control-inner-background);
-    -fx-background-radius: 3;
+    -fx-background-radius: 2;
 }
 
 /*******************************************************************************
  *                                                                             *
- * HTML Editor                                                                    *
+ * HTML Editor                                                                 *
  *                                                                             *
  ******************************************************************************/
+
 .html-editor-foreground {
     -fx-color-label-visible: false;
     -fx-color-rect-x: 1;
@@ -1427,7 +1466,7 @@ is being used to size a border should also be in pixels.
 }
 .tab-pane > .tab-header-area > .headers-region > .tab {
     -fx-background-insets: 0 1 1 0, 1 2 1 1, 2 3 1 2;
-    -fx-background-radius: 5 5 0 0, 4 4 0 0, 3 3 0 0;
+    -fx-background-radius: 3 3 0 0, 2 2 0 0, 1 1 0 0;
     -fx-padding: 0.083333em 0.5em 0.083333em 0.5em; /* 1 6 1 6 */
 }
 .tab-pane > .tab-header-area > .headers-region > .tab:top {
@@ -1539,13 +1578,9 @@ is being used to size a border should also be in pixels.
     -fx-padding: 0.333333em 0.666667em 0.416667em 0.666667em; /* 4 8 5 8 */
 }
 .combo-box-base > .arrow-button  {
-    -fx-background-radius: 0 5 5 0, 0 4 4 0, 0 3 3 0;
+    -fx-background-radius: 0 3 3 0, 0 2 2 0, 0 1 1 0;
     -fx-padding: 0.5em 0.833333em 0.5em 0.833333em; /* 6 10 6 10 */
-    -fx-background-insets: 1 1 1 0, 1, 2;
-}
-.combo-box-base:focused > .arrow-button,
-.combo-box-base:editable:contains-focus > .arrow-button {
-    -fx-background-color: -fx-focus-color, -fx-inner-border, -fx-body-color; 
+    -fx-background-color: transparent;
 }
 
 /*******************************************************************************
@@ -1558,15 +1593,24 @@ is being used to size a border should also be in pixels.
  *                                                                             *
  ******************************************************************************/
 
+.combo-box-base:editable > .arrow-button  {
+    -fx-background-color: -fx-outer-border, -fx-inner-border, -fx-body-color;
+    -fx-background-insets: 1 1 1 0, 1, 2;
+    -fx-background-radius: 0 3 3 0, 0 2 2 0, 0 1 1 0;
+}
+.combo-box-base:editable:contains-focus > .arrow-button {
+    -fx-background-color: -fx-focus-color, -fx-inner-border, -fx-body-color;
+    -fx-background-insets: 0, 1, 2;
+}
 .combo-box-base:editable > .text-field {
     -fx-background-color: -fx-control-inner-background;
     -fx-background-insets: 1 0 1 1;
-    -fx-background-radius: 3 0 0 3;
+    -fx-background-radius: 2 0 0 2;
 }
 .combo-box-base:editable:contains-focus {
     -fx-background-color: -fx-faint-focus-color, -fx-focus-color;
     -fx-background-insets: -2, -0.3;
-    -fx-background-radius: 7, 4 6 6 4;
+    -fx-background-radius: 5, 4;
 }
 .combo-box-base:editable:focused > .text-field,
 .combo-box-base:editable > .text-field:focused  {
@@ -1609,7 +1653,7 @@ is being used to size a border should also be in pixels.
 .titled-pane > .title {
     -fx-background-color: -fx-box-border, -fx-inner-border, -fx-body-color;
     -fx-background-insets: 0, 1, 2;
-    -fx-background-radius: 5 5 0 0, 4 4 0 0, 3 3 0 0;
+    -fx-background-radius: 3 3 0 0, 2 2 0 0, 1 1 0 0;
     -fx-padding: 0.417em 0.75em 0.5em 0.75em; /* 5 9 6 9 */
 }
 /* alternative focus using the ring around the entire title area */
@@ -1619,9 +1663,8 @@ is being used to size a border should also be in pixels.
 }*/
 /* focus purely on the arrow */
 .titled-pane:focused > .title > .arrow-button > .arrow {
-    -fx-background-color: -fx-inner-border;
-    -fx-background-insets: 0;
-    -fx-effect: dropshadow(two-pass-box, -fx-focus-color, 2, 1 , 0, 0);
+    -fx-background-color: -fx-faint-focus-color, -fx-focus-color, -fx-mark-color;
+    -fx-background-insets: -2 -4 -4 -4, -0.3 -1 -1 -1, 1;
 }
 .titled-pane > .title > .arrow-button {
     -fx-background-color: null;
@@ -1643,7 +1686,6 @@ is being used to size a border should also be in pixels.
     -fx-border-color: -fx-box-border;
     -fx-border-insets: -1 0 0 0;
     -fx-background-color: linear-gradient(from 0px 0px to 0px 5px, derive(-fx-color, -4%), transparent);
-    -fx-padding: 0.167em;
 }
 
 
@@ -1693,13 +1735,22 @@ is being used to size a border should also be in pixels.
 
 .color-picker > .arrow-button {
     -fx-background-color: null !important;
-    -fx-padding: 0.5em 0.833333em 0.5em 0; /* 6 10 6 0 */
+    -fx-padding: 0.5em 0.833333em 0.5em 0; /*  6 10 6 0 */
+}
+.color-picker.split-button > .arrow-button  {
+    -fx-background-color: -fx-outer-border, -fx-inner-border, -fx-body-color !important;
+    -fx-background-insets: 1 1 1 0, 1, 2;
+    -fx-background-radius: 0 3 3 0, 0 2 2 0, 0 1 1 0;
+}
+.color-picker.split-button:focused > .arrow-button {
+    -fx-background-color: -fx-focus-color, -fx-inner-border, -fx-body-color !important;
+    -fx-background-insets: 0, 1, 2;
 }
 .color-picker.split-button > .color-picker-label{
     -fx-background-color: null !important;
 }
 .color-picker.split-button > .arrow-button {
-    -fx-background-color: -fx-outer-border, -fx-inner-border, -fx-body-color !important;
+    /*-fx-background-color: -fx-outer-border, -fx-inner-border, -fx-body-color !important;*/
     -fx-padding: 0.5em 0.833333em 0.5em 0.833333em; /* 6 10 6 10 */
 }
 .color-picker > .color-picker-label > .picker-color > .picker-color-rect {
@@ -1848,67 +1899,67 @@ is being used to size a border should also be in pixels.
 .custom-color-dialog .controls-pane .current-new-color-grid .label {
     -fx-padding: 0 0 0 5;
 }
-.custom-color-dialog .input-field {
-    -fx-background-color: -fx-text-box-border, -fx-control-inner-background;
-    -fx-background-insets: 0, 1;
-    -fx-background-radius: 2, 2;
-    -fx-padding: 3 5 3 5;
-    -fx-prompt-text-fill: derive(-fx-control-inner-background,-30%);
-    -fx-cursor: text;
-}
-.custom-color-dialog .input-field:focused {
-    -fx-background-color: -fx-focus-color, -fx-text-box-border, -fx-control-inner-background;
-    -fx-background-insets: -0.4, 1, 2;
-    -fx-background-radius: 3.4, 2, 2;
-}
-.custom-color-dialog .input-field:disabled {
-    -fx-opacity: -fx-disabled-opacity;
-}
-.custom-color-dialog .integer-field {
-    -fx-background-color: -fx-text-box-border, -fx-control-inner-background;
-    -fx-background-insets: 0, 1;
-    -fx-background-radius: 2, 2;
-    -fx-padding: 3 5 3 5;
-    -fx-prompt-text-fill: derive(-fx-control-inner-background,-30%);
-    -fx-cursor: text;
-}
-.custom-color-dialog .integer-field:focused {
-    -fx-background-color: -fx-focus-color, -fx-text-box-border, -fx-control-inner-background;
-    -fx-background-insets: -0.4, 1, 2;
-    -fx-background-radius: 3.4, 2, 2;
-}
-.custom-color-dialog .double-field {
-    -fx-background-color: -fx-text-box-border, -fx-control-inner-background;
-    -fx-background-insets: 0, 1;
-    -fx-background-radius: 2, 2;
-    -fx-padding: 3 5 3 5;
-    -fx-prompt-text-fill: derive(-fx-control-inner-background,-30%);
-    -fx-cursor: text;
-}
-.custom-color-dialog .double-field:focused {
-    -fx-background-color: -fx-focus-color, -fx-text-box-border, -fx-control-inner-background;
-    -fx-background-insets: -0.4, 1, 2;
-    -fx-background-radius: 3.4, 2, 2;
-}
-.custom-color-dialog .double-field:disabled {
-    -fx-opacity: -fx-disabled-opacity;
-}
-.custom-color-dialog .webcolor-field {
-    -fx-background-color: -fx-text-box-border, -fx-control-inner-background;
-    -fx-background-insets: 0, 1;
-    -fx-background-radius: 2, 2;
-    -fx-padding: 3 5 3 5;
-    -fx-prompt-text-fill: derive(-fx-control-inner-background,-30%);
-    -fx-cursor: text;
-}
-.custom-color-dialog .webcolor-field:focused {
-    -fx-background-color: -fx-focus-color, -fx-text-box-border, -fx-control-inner-background;
-    -fx-background-insets: -0.4, 1, 2;
-    -fx-background-radius: 3.4, 2, 2;
-}
-.custom-color-dialog .webcolor-field:disabled {
-    -fx-opacity: -fx-disabled-opacity;
-}
+/*.custom-color-dialog .input-field {*/
+    /*-fx-background-color: -fx-text-box-border, -fx-control-inner-background;*/
+    /*-fx-background-insets: 0, 1;*/
+    /*-fx-background-radius: 2, 2;*/
+    /*-fx-padding: 3 5 3 5;*/
+    /*-fx-prompt-text-fill: derive(-fx-control-inner-background,-30%);*/
+    /*-fx-cursor: text;*/
+/*}*/
+/*.custom-color-dialog .input-field:focused {*/
+    /*-fx-background-color: -fx-focus-color, -fx-text-box-border, -fx-control-inner-background;*/
+    /*-fx-background-insets: -0.4, 1, 2;*/
+    /*-fx-background-radius: 3.4, 2, 2;*/
+/*}*/
+/*.custom-color-dialog .input-field:disabled {*/
+    /*-fx-opacity: -fx-disabled-opacity;*/
+/*}*/
+/*.custom-color-dialog .integer-field {*/
+    /*-fx-background-color: -fx-text-box-border, -fx-control-inner-background;*/
+    /*-fx-background-insets: 0, 1;*/
+    /*-fx-background-radius: 2, 2;*/
+    /*-fx-padding: 3 5 3 5;*/
+    /*-fx-prompt-text-fill: derive(-fx-control-inner-background,-30%);*/
+    /*-fx-cursor: text;*/
+/*}*/
+/*.custom-color-dialog .integer-field:focused {*/
+    /*-fx-background-color: -fx-focus-color, -fx-text-box-border, -fx-control-inner-background;*/
+    /*-fx-background-insets: -0.4, 1, 2;*/
+    /*-fx-background-radius: 3.4, 2, 2;*/
+/*}*/
+/*.custom-color-dialog .double-field {*/
+    /*-fx-background-color: -fx-text-box-border, -fx-control-inner-background;*/
+    /*-fx-background-insets: 0, 1;*/
+    /*-fx-background-radius: 2, 2;*/
+    /*-fx-padding: 3 5 3 5;*/
+    /*-fx-prompt-text-fill: derive(-fx-control-inner-background,-30%);*/
+    /*-fx-cursor: text;*/
+/*}*/
+/*.custom-color-dialog .double-field:focused {*/
+    /*-fx-background-color: -fx-focus-color, -fx-text-box-border, -fx-control-inner-background;*/
+    /*-fx-background-insets: -0.4, 1, 2;*/
+    /*-fx-background-radius: 3.4, 2, 2;*/
+/*}*/
+/*.custom-color-dialog .double-field:disabled {*/
+    /*-fx-opacity: -fx-disabled-opacity;*/
+/*}*/
+/*.custom-color-dialog .webcolor-field {*/
+    /*-fx-background-color: -fx-text-box-border, -fx-control-inner-background;*/
+    /*-fx-background-insets: 0, 1;*/
+    /*-fx-background-radius: 2, 2;*/
+    /*-fx-padding: 3 5 3 5;*/
+    /*-fx-prompt-text-fill: derive(-fx-control-inner-background,-30%);*/
+    /*-fx-cursor: text;*/
+/*}*/
+/*.custom-color-dialog .webcolor-field:focused {*/
+    /*-fx-background-color: -fx-focus-color, -fx-text-box-border, -fx-control-inner-background;*/
+    /*-fx-background-insets: -0.4, 1, 2;*/
+    /*-fx-background-radius: 3.4, 2, 2;*/
+/*}*/
+/*.custom-color-dialog .webcolor-field:disabled {*/
+    /*-fx-opacity: -fx-disabled-opacity;*/
+/*}*/
 
 /*******************************************************************************
  *                                                                             *
@@ -1935,13 +1986,13 @@ is being used to size a border should also be in pixels.
     -fx-alignment: center;
 }
 .pagination > .pagination-control > .control-box > .left-arrow-button {
-    -fx-background-radius: 5 0 0 5, 4 0 0 4, 3 0 0 3;
-    -fx-background-insets: 0 -4 0 11, 1 -3 1 12, 2 -2 2 13;
+    -fx-background-radius: 3 0 0 3, 3 0 0 3, 2 0 0 2, 1 0 0 1;
+    -fx-background-insets: 0 -4 -1 11, 0 -4 0 11, 1 -3 1 12, 2 -2 2 13;
     -fx-padding: 0.166667em 0em 0.25em 1.167em;
 }
 .pagination > .pagination-control > .control-box > .right-arrow-button {
-    -fx-background-radius: 0 5 5 0, 0 4 4 0, 0 3 3 0;
-    -fx-background-insets: 0 11 0 -4, 1 12 1 -3, 2 13 2 -2;
+    -fx-background-radius: 0 3 3 0, 0 3 3 0, 0 2 2 0, 0 1 1 0;
+    -fx-background-insets: 0 11 -1 -4, 0 11 0 -4, 1 12 1 -3, 2 13 2 -2;
     -fx-padding: 0.166667em 0em 0.25em 0.083em;
 }
 .pagination > .pagination-control .left-arrow {
@@ -1984,7 +2035,7 @@ is being used to size a border should also be in pixels.
 .pagination > .pagination-control > .control-box > .number-button {
     -fx-background-radius: 0;
     -fx-padding: 0.166667em 0.25em 0.25em 0.333em;
-    -fx-background-color: -fx-outer-border, -fx-inner-border, -fx-body-color;
+    -fx-background-color: -fx-shadow-highlight-color, -fx-outer-border, -fx-inner-border, -fx-body-color;
 }
 .pagination > .pagination-control > .control-box > .number-button:selected {   
     -fx-base: -fx-accent;
@@ -2118,7 +2169,7 @@ is being used to size a border should also be in pixels.
     -fx-background-color: -fx-control-inner-background;
     -fx-padding: 0.25em; /* 3 */
     -fx-text-fill: -fx-text-inner-color;
-    -fx-indent: 80;
+    -fx-indent: 1em;
 }
 .tree-cell .label {
     -fx-padding: 0.0em 0.0em 0.0em 0.25em; /* 0 0 0 3 */
@@ -2537,6 +2588,7 @@ is being used to size a border should also be in pixels.
     -fx-background-color: -fx-control-inner-background;
     -fx-padding: 0.0em; /* 0 */
     -fx-text-fill: -fx-text-inner-color;
+    -fx-indent: 1em;
 }
 .tree-table-cell {
     -fx-padding: 0.166667em; /* 2px, plus border adds 1px */
@@ -2633,10 +2685,11 @@ is being used to size a border should also be in pixels.
     -fx-font-size: 1.4em;
 }
 .chart-legend {
-   -fx-background-color: linear-gradient(to bottom, derive(-fx-background, -10%), derive(-fx-background, -5%)),
+   -fx-background-color: -fx-shadow-highlight-color,
+        linear-gradient(to bottom, derive(-fx-background, -10%), derive(-fx-background, -5%)),
         linear-gradient(from 0px 0px to 0px 5px, derive(-fx-background, -5%), derive(-fx-background, 20%));
-   -fx-background-insets: 0,1;
-   -fx-background-radius: 6,5;
+   -fx-background-insets: 0 0 -1 0, 0,1;
+   -fx-background-radius: 4,4,3;
    -fx-padding: 6px;
 }
 
@@ -2985,3 +3038,26 @@ is being used to size a border should also be in pixels.
     -fx-background-insets: 0, 0;
     -fx-padding: 0;
  }
+.titled-pane > * > * > .split-pane,
+.titled-pane > * > * > .text-area,
+.titled-pane > * > * > .html-editor,
+.titled-pane > * > * > .list-view,
+.titled-pane > * > * > .tree-view,
+.titled-pane > * > * > .table-view,
+.titled-pane > * > * > .tree-table-view,
+.titled-pane > * > * > .scroll-pane {
+    -fx-background-color: null;
+    -fx-background-insets: 0, 0;
+    -fx-padding: 0;
+}
+.titled-pane > * > * > AnchorPane,
+.titled-pane > * > * > BorderPane,
+.titled-pane > * > * > FlowPane,
+.titled-pane > * > * > GridPane,
+.titled-pane > * > * > HBox,
+.titled-pane > * > * > Pane,
+.titled-pane > * > * > StackPane,
+.titled-pane > * > * > TilePane,
+.titled-pane > * > * > VBox {
+    -fx-padding: 0.8em;
+}
