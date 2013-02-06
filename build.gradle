@@ -190,10 +190,25 @@ project(":graphics") {
         into "build/resources/main"
     }
     processResources.dependsOn copyShaders
-//
-//    test {
+
+    test {
 //        systemProperty "javafx.toolkit", "com.sun.javafx.pgstub.StubToolkit"
-//    }
+        enableAssertions = true
+        testLogging.exceptionFormat = "full"
+        forkEvery = 1
+        // show standard out and standard error of the test JVM(s) on the console
+//        testLogging.showStandardStreams = true
+
+        // listen to events in the test execution lifecycle
+//        beforeTest { descriptor ->
+//           logger.lifecycle("Running test: " + descriptor)
+//        }
+
+        // listen to standard out and standard error of the test JVM(s)
+//        onOutput { descriptor, event ->
+//           logger.lifecycle("Test: " + descriptor + " produced standard out/err: " + event.message )
+//        }
+    }
 
     // TODO Need to compile the Decora SSE Natives now! I don't yet know how to compile natives
 }
