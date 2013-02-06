@@ -123,9 +123,13 @@ public class SamplePage extends GridPane {
     }
     
     private void newSection(String name, Node ...children) {
+        newSection(name, 10, children);
+    }
+    
+    private void newSection(String name, int spacing, Node ...children) {
         Label sectionLabel = new Label(name);
         sectionLabel.getStyleClass().add("section-label");
-        HBox box = new HBox(10);
+        HBox box = new HBox(spacing);
         box.getStyleClass().add("section-border");
         box.getChildren().addAll(children);
         setConstraints(sectionLabel, 0, rowIndex);
@@ -184,6 +188,18 @@ public class SamplePage extends GridPane {
                 ButtonBuilder.create().text("Button").style("-fx-base: #57b757;").build(),
                 ButtonBuilder.create().text("Button").style("-fx-base: #41a9c9;").build(),
                 ButtonBuilder.create().text("Button").style("-fx-base: #888;").build());
+        newSection("Greys:",0, 
+                createGreyButton(0),
+                createGreyButton(0.1),
+                createGreyButton(0.2),
+                createGreyButton(0.3),
+                createGreyButton(0.4),
+                createGreyButton(0.5),
+                createGreyButton(0.6),
+                createGreyButton(0.7),
+                createGreyButton(0.8),
+                createGreyButton(0.9),
+                createGreyButton(1));
         ToggleGroup tg1 = new ToggleGroup();
         ToggleGroup tg2 = new ToggleGroup();
         ToggleGroup tg3 = new ToggleGroup();
@@ -337,7 +353,7 @@ public class SamplePage extends GridPane {
                 SplitMenuButtonBuilder.create().items(createMenuItems(20)).text("right").popupSide(Side.RIGHT).build(),
                 SplitMenuButtonBuilder.create().items(createMenuItems(20)).text("normal").build(),
                 withState(SplitMenuButtonBuilder.create().items(createMenuItems(20)).text("hover").build(),null,".label", "hover"),
-                withState(SplitMenuButtonBuilder.create().items(createMenuItems(20)).text("armed").build(),null,".label", "armed")
+                withState(SplitMenuButtonBuilder.create().items(createMenuItems(20)).text("armed").build(),"armed",".label", "armed")
                 );
         newSection(      
                 "SplitMenuButton\nMore:", 

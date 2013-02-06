@@ -52,9 +52,14 @@
                 <RadioButton id="RadioButton2" mnemonicParsing="false" selected="true" text="RadioButton 2" toggleGroup="$toggle2" GridPane.columnIndex="0" GridPane.rowIndex="1" />
                 <CheckBox mnemonicParsing="false" selected="true" text="CheckBox" GridPane.columnIndex="0" GridPane.rowIndex="2" />
                 <CheckBox mnemonicParsing="false" text="CheckBox" GridPane.columnIndex="0" GridPane.rowIndex="3" GridPane.valignment="TOP" />
-                <HBox id="HBox" alignment="CENTER" spacing="15.0" GridPane.columnIndex="0" GridPane.columnSpan="2" GridPane.rowIndex="4">
+                <HBox id="HBox" alignment="CENTER" spacing="5.0" GridPane.columnIndex="0" GridPane.columnSpan="2" GridPane.rowIndex="4">
                   <children>
-                    <ProgressBar maxWidth="1.7976931348623157E308" prefWidth="-1.0" progress="0.68" HBox.hgrow="ALWAYS" />
+                    <ProgressBar maxWidth="1.7976931348623157E308" prefWidth="-1.0" progress="0.68" HBox.hgrow="ALWAYS">
+                      <HBox.margin>
+                        <Insets right="5.0" />
+                      </HBox.margin>
+                    </ProgressBar>
+                    <Button mnemonicParsing="false" text="Cancel" />
                     <Button defaultButton="true" mnemonicParsing="false" text="Save..." />
                   </children>
                 </HBox>

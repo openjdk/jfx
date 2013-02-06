@@ -39,12 +39,14 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
+import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
 import javafx.geometry.Side;
 import javafx.scene.GroupBuilder;
 import javafx.scene.Node;
 import javafx.scene.control.Accordion;
 import javafx.scene.control.Button;
+import javafx.scene.control.ButtonBuilder;
 import javafx.scene.control.CheckMenuItem;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListView;
@@ -67,6 +69,7 @@ import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.KeyCharacterCombination;
 import javafx.scene.input.KeyCombination;
+import javafx.scene.layout.StackPane;
 import javafx.scene.layout.StackPaneBuilder;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.LineBuilder;
@@ -270,5 +273,15 @@ public class SamplePageHelpers {
     
     static ImageView createGraphic() {
         return new ImageView(recorder48);
+    }
+    
+    static Node createGreyButton(double percentageGrey) {
+        int grey = (int)(percentageGrey*255);
+        int percentage = (int)(percentageGrey * 100);
+        StackPane sp = new StackPane();
+        sp.setStyle("-fx-base: rgba("+grey+","+grey+","+grey+",1); -fx-background-color: -fx-background;");
+        sp.setPadding(new Insets(8));
+        sp.getChildren().add(ButtonBuilder.create().text(percentage+"%").build());
+        return sp;
     }
 }

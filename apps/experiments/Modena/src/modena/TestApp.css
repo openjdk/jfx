@@ -51,10 +51,25 @@
     -fx-border-image-repeat: stretch;
     -fx-font: 13px "Lucida Grande";
 }
-.windowsWindow {
+.windows7Window {
+    -fx-border-image-source: url("windows7-window-frame.png"); 
+    -fx-border-image-slice: 49 49 71 49;
+    -fx-border-image-width: 49 49 71 49;
+    -fx-border-image-repeat: stretch;
+    -fx-font: 12px "Segoe UI";
+}
+.windows8Window {
     -fx-border-image-source: url("windows8-window-frame.png"); 
     -fx-border-image-slice: 49 49 71 49;
     -fx-border-image-width: 49 49 71 49;
     -fx-border-image-repeat: stretch;
     -fx-font: 12px "Segoe UI";
+}
+.ubuntuWindow {
+    -fx-border-image-source: url("ubuntu-window-frame.png"); 
+    -fx-border-image-slice: 49 49 71 49;
+    -fx-border-image-width: 49 49 71 49;
+    -fx-border-image-repeat: stretch;
+    /*-fx-font: 15px "Ubuntu";*/
+    -fx-font: 13px "Lucida Sans";
 }

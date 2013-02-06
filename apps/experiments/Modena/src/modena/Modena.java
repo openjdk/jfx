@@ -418,6 +418,7 @@ public class Modena extends Application {
             buildFontRadioMenuItem("Windows 100% (12px)", "Segoe UI", 12, tg),
             buildFontRadioMenuItem("Windows 125% (15px)", "Segoe UI", 15, tg),
             buildFontRadioMenuItem("Windows 150% (18px)", "Segoe UI", 18, tg),
+            buildFontRadioMenuItem("Linux (13px)", "Lucida Sans", 13, tg),
             buildFontRadioMenuItem("Embedded Touch (22px)", "Arial", 22, tg),
             buildFontRadioMenuItem("Embedded Small (9px)", "Arial", 9, tg)
         );

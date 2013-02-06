@@ -50,14 +50,58 @@
     </TitledPane>
     <Accordion layoutX="39.0" layoutY="358.0" minWidth="345.0" prefHeight="554.0" prefWidth="857.0">
       <expandedPane>
-        <TitledPane id="x1" fx:id="x3" animated="true" expanded="true" text="VBox">
+        <TitledPane id="x2" fx:id="x3" animated="true" expanded="true" text="Split Pane No Padding">
           <content>
-            <VBox prefHeight="200.0" prefWidth="100.0">
-              <children>
-                <Button mnemonicParsing="false" text="Button" />
-                <Button mnemonicParsing="false" text="Button" />
-              </children>
-            </VBox>
+            <SplitPane dividerPositions="0.5060975609756098" focusTraversable="true" maxHeight="1.7976931348623157E308" orientation="VERTICAL" prefHeight="-1.0" prefWidth="-1.0">
+              <items>
+                <SplitPane dividerPositions="0.49705535924617195" focusTraversable="true" prefHeight="172.0" prefWidth="490.0">
+                  <items>
+                    <TreeView prefHeight="130.0" prefWidth="179.0" showRoot="false">
+                      <root>
+                        <TreeItem value="Family">
+                          <children>
+                            <TreeItem value="Grandparent A">
+                              <children>
+                                <TreeItem value="Parent A">
+                                  <children>
+                                    <TreeItem value="Child A" />
+                                  </children>
+                                </TreeItem>
+                              </children>
+                            </TreeItem>
+                            <TreeItem value="Grandparent B">
+                              <children>
+                                <TreeItem value="Parent B">
+                                  <children>
+                                    <TreeItem value="Child B" />
+                                  </children>
+                                </TreeItem>
+                              </children>
+                            </TreeItem>
+                            <TreeItem value="Grandparent C">
+                              <children>
+                                <TreeItem value="Parent C">
+                                  <children>
+                                    <TreeItem value="Child C" />
+                                  </children>
+                                </TreeItem>
+                              </children>
+                            </TreeItem>
+                          </children>
+                        </TreeItem>
+                      </root>
+                    </TreeView>
+                    <TableView prefHeight="130.0" prefWidth="241.0">
+                      <columns>
+                        <TableColumn prefWidth="75.0" text="Column X" />
+                        <TableColumn prefWidth="75.0" text="Column X" />
+                      </columns>
+                    </TableView>
+                  </items>
+                </SplitPane>
+                <ListView prefHeight="130.0" prefWidth="200.0" />
+              </items>
+            </SplitPane>
           </content>
         </TitledPane>
       </expandedPane>
@@ -199,64 +243,10 @@
         <TitledPane id="x1" animated="true" expanded="false" text="Empty">
           <content>
             <AnchorPane id="Content" minHeight="0.0" minWidth="0.0" prefHeight="180.0" prefWidth="200.0">
-              <padding>
-                <Insets top="10.0" />
-              </padding>
+              <children>
+                <Button layoutX="0.0" layoutY="0.0" mnemonicParsing="false" text="Button" />
+              </children>
             </AnchorPane>
-          </content>
-        </TitledPane>
-        <TitledPane id="x2" animated="true" expanded="false" text="Split Pane No Padding">
-          <content>
-            <SplitPane dividerPositions="0.5060975609756098" focusTraversable="true" maxHeight="1.7976931348623157E308" orientation="VERTICAL" prefHeight="-1.0" prefWidth="-1.0">
-              <items>
-                <SplitPane dividerPositions="0.49705535924617195" focusTraversable="true" prefHeight="172.0" prefWidth="490.0">
-                  <items>
-                    <TreeView prefHeight="130.0" prefWidth="179.0" showRoot="false">
-                      <root>
-                        <TreeItem value="Family">
-                          <children>
-                            <TreeItem value="Grandparent A">
-                              <children>
-                                <TreeItem value="Parent A">
-                                  <children>
-                                    <TreeItem value="Child A" />
-                                  </children>
-                                </TreeItem>
-                              </children>
-                            </TreeItem>
-                            <TreeItem value="Grandparent B">
-                              <children>
-                                <TreeItem value="Parent B">
-                                  <children>
-                                    <TreeItem value="Child B" />
-                                  </children>
-                                </TreeItem>
-                              </children>
-                            </TreeItem>
-                            <TreeItem value="Grandparent C">
-                              <children>
-                                <TreeItem value="Parent C">
-                                  <children>
-                                    <TreeItem value="Child C" />
-                                  </children>
-                                </TreeItem>
-                              </children>
-                            </TreeItem>
-                          </children>
-                        </TreeItem>
-                      </root>
-                    </TreeView>
-                    <TableView prefHeight="130.0" prefWidth="241.0">
-                      <columns>
-                        <TableColumn prefWidth="75.0" text="Column X" />
-                        <TableColumn prefWidth="75.0" text="Column X" />
-                      </columns>
-                    </TableView>
-                  </items>
-                </SplitPane>
-                <ListView prefHeight="130.0" prefWidth="200.0" />
-              </items>
-            </SplitPane>
           </content>
         </TitledPane>
         <fx:reference source="x3" />
