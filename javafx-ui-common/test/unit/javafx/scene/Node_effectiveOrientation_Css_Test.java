@@ -40,6 +40,7 @@ import org.junit.Before;
 /**
  * Test :dir functional pseudo-class 
  */
+@org.junit.Ignore
 public class Node_effectiveOrientation_Css_Test {
     
     private Group root;
