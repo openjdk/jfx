@@ -115,7 +115,15 @@ task generate << {
 
     // Create the graphics module
     copy {
-        from "${RTDir}/javafx-ui-common/src",
+        from "${RTDir}/decora-d3d/src",
+             "${RTDir}/decora-es2/src",
+             "${RTDir}/decora-jsw/src",
+             "${RTDir}/decora-prism/src",
+             "${RTDir}/decora-prism-ps/src",
+             "${RTDir}/decora-prism-sw/src",
+             "${RTDir}/decora-runtime/src",
+             "${RTDir}/decora-sse/src",
+             "${RTDir}/javafx-ui-common/src",
              "${RTDir}/javafx-concurrent/src",
              "${RTDir}/javafx-geom/src",
              "${RTDir}/javafx-geom/cagsrc.double",
@@ -129,7 +137,15 @@ task generate << {
         exclude excludeResources
     }
     copy {
-        from "${RTDir}/javafx-ui-common/src",
+        from "${RTDir}/decora-d3d/src",
+             "${RTDir}/decora-es2/src",
+             "${RTDir}/decora-jsw/src",
+             "${RTDir}/decora-prism/src",
+             "${RTDir}/decora-prism-ps/src",
+             "${RTDir}/decora-prism-sw/src",
+             "${RTDir}/decora-runtime/src",
+             "${RTDir}/decora-sse/src",
+             "${RTDir}/javafx-ui-common/src",
              "${RTDir}/javafx-concurrent/src",
              "${RTDir}/javafx-geom/src",
              "${RTDir}/javafx-geom/cagsrc.double",
@@ -186,6 +202,24 @@ task generate << {
         include "javafx/scene/ParentDesignInfo.java", "javafx/scene/layout/**", "com/**"
     }
 
+    ["decora-d3d-native", "decora-sse-native"].each { dir ->
+        copy {
+            from "${RTDir}/${dir}"
+            into "${FXDir}/modules/graphics/src/main/${dir}"
+        }
+    }
+
+    copy {
+        from "${RTDir}/decora-runtime/jsl"
+        into "${FXDir}/modules/graphics/src/main/jsl"
+    }
+
+    copy {
+        from "${RTDir}/decora-runtime/generator"
+        into "${FXDir}/modules/graphics/src/main/jsl-generator"
+    }
+
+
     // Create the controls module
     copy {
         from "${RTDir}/javafx-ui-charts/src",
@@ -203,6 +237,18 @@ task generate << {
         from "${RTDir}/javafx-designtime/src"
         into "${FXDir}/modules/controls/src/main/dt"
         include "javafx/scene/control/**"
+    }
+    copy {
+        from "${RTDir}/javafx-ui-charts/test",
+             "${RTDir}/javafx-ui-controls/test"
+        into "${FXDir}/modules/controls/src/test/java"
+        exclude excludeResources
+    }
+    copy {
+        from "${RTDir}/javafx-ui-charts/test",
+             "${RTDir}/javafx-ui-controls/test"
+        into "${FXDir}/modules/controls/src/test/java"
+        include includeResources
     }
 
     // Create the web module
@@ -232,14 +278,14 @@ task generate << {
     }
 
     // Create the fxml module
-    copy {
-        from "${RTDir}/javafx-fxml/src"
-        into "${FXDir}/modules/fxml/src/main/java"
-        exclude excludeResources
-    }
-    copy {
-        from "${RTDir}/javafx-fxml/src"
-        into "${FXDir}/modules/fxml/src/main/resources"
-        include includeResources
-    }
+//    copy {
+//        from "${RTDir}/javafx-fxml/src"
+//        into "${FXDir}/modules/fxml/src/main/java"
+//        exclude excludeResources
+//    }
+//    copy {
+//        from "${RTDir}/javafx-fxml/src"
+//        into "${FXDir}/modules/fxml/src/main/resources"
+//        include includeResources
+//    }
 }

@@ -1,0 +1,49 @@
+/*
+ * Copyright (c) 2011, 2013 Oracle and/or its affiliates. All rights reserved.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.  Oracle designates this
+ * particular file as subject to the "Classpath" exception as provided
+ * by Oracle in the LICENSE file that accompanied this code.
+ *
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
+ *
+ * You should have received a copy of the GNU General Public License version
+ * 2 along with this work; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+ * or visit www.oracle.com if you need additional information or have any
+ * questions.
+ */
+float4 blend_hard_light(float4 bot, float4 top)
+{
+    float4 res;
+    res.a = bot.a + top.a - (bot.a * top.a);
+    float halftopa = 0.5*top.a;
+    if (top.r > halftopa) {
+        res.r = top.r +
+           bot.a*(top.r - top.a) - bot.r*(2.0*top.r - top.a - 1.0);
+    } else {
+        res.r = 2.0*bot.r*top.r + bot.r*(1.0 - top.a) + top.r*(1.0 - bot.a);
+    }
+    if (top.g > halftopa) {
+        res.g = top.g +
+           bot.a*(top.g - top.a) - bot.g*(2.0*top.g - top.a - 1.0);
+    } else {
+        res.g = 2.0*bot.g*top.g + bot.g*(1.0 - top.a) + top.g*(1.0 - bot.a);
+    }
+    if (top.b > halftopa) {
+        res.b = top.b +
+           bot.a*(top.b - top.a) - bot.b*(2.0*top.b - top.a - 1.0);
+    } else {
+        res.b = 2.0*bot.b*top.b + bot.b*(1.0 - top.a) + top.b*(1.0 - bot.a);
+    }
+    return res;
+}

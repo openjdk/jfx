@@ -1,0 +1,80 @@
+/*
+ * Copyright (c) 2011, 2013 Oracle and/or its affiliates. All rights reserved.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.  Oracle designates this
+ * particular file as subject to the "Classpath" exception as provided
+ * by Oracle in the LICENSE file that accompanied this code.
+ *
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
+ *
+ * You should have received a copy of the GNU General Public License version
+ * 2 along with this work; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+ * or visit www.oracle.com if you need additional information or have any
+ * questions.
+ */
+<<
+private float[][] getITX() {
+    PerspectiveTransformState state = (PerspectiveTransformState)
+        AccessHelper.getState(getEffect());
+    return state.getITX();
+}
+
+private float[] getTx0() {
+    Rectangle ib = getInputBounds(0);
+    Rectangle nb = getInputNativeBounds(0);
+    float scalex = (float) ib.width / (float) nb.width;
+    float itx0[] = getITX()[0];
+    return new float[] { itx0[0] * scalex, itx0[1] * scalex, itx0[2] * scalex };
+}
+private float[] getTx1() {
+    Rectangle ib = getInputBounds(0);
+    Rectangle nb = getInputNativeBounds(0);
+    float scaley = (float) ib.height / (float) nb.height;
+    float itx1[] = getITX()[1];
+    return new float[] { itx1[0] * scaley, itx1[1] * scaley, itx1[2] * scaley };
+}
+private float[] getTx2() {
+    return getITX()[2];
+}
+
+@Override
+public int getTextureCoordinates(int inputIndex, float coords[],
+                                 float srcX, float srcY,
+                                 float srcNativeWidth,
+                                 float srcNativeHeight,
+                                 Rectangle dstBounds,
+                                 com.sun.javafx.geom.transform.BaseTransform transform)
+{
+    coords[0] = dstBounds.x;
+    coords[1] = dstBounds.y;
+    coords[2] = dstBounds.x + dstBounds.width;
+    coords[3] = dstBounds.y + dstBounds.height;
+    return 4;
+}
+>>
+
+param lsampler baseImg;
+param float3 tx0;
+param float3 tx1;
+param float3 tx2;
+
+void main()
+{
+    float3 p1;
+    float3 p2;
+    p1 = float3(pos0.x, pos0.y, 1.0);
+    p2.z = dot(p1, tx2);
+    p2.x = dot(p1, tx0) / p2.z;
+    p2.y = dot(p1, tx1) / p2.z;
+    color = sample(baseImg, p2.xy);
+}

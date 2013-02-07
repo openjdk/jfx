@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="decora-jsw" default="jar" basedir=".">
+  <description>Builds, tests, and runs the project decora-jsw.</description>
+
+  <import file="../build-defs.xml"/>
+
+  <target name="jar" depends="init">
+    <build-project>
+      <addedsrcdirs>
+        <pathelement location="build/gensrc"/>
+      </addedsrcdirs>
+      <addedsrcfiles>
+        <fileset dir="build/gensrc" excludes="${build.classes.excludes}"/>
+      </addedsrcfiles>
+    </build-project>
+  </target>
+
+</project>

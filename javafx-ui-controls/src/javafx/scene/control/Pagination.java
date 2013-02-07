@@ -25,19 +25,22 @@
 
 package javafx.scene.control;
 
-import javafx.css.StyleableIntegerProperty;
-import javafx.css.CssMetaData;
-import javafx.css.StyleOrigin;
-import com.sun.javafx.css.converters.SizeConverter;
-import com.sun.javafx.scene.control.skin.PaginationSkin;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import javafx.beans.DefaultProperty;
-import javafx.beans.property.*;
+import javafx.beans.property.IntegerProperty;
+import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.SimpleIntegerProperty;
+import javafx.beans.property.SimpleObjectProperty;
+import javafx.css.CssMetaData;
+import javafx.css.StyleOrigin;
+import javafx.css.StyleableIntegerProperty;
 import javafx.css.StyleableProperty;
 import javafx.scene.Node;
 import javafx.util.Callback;
+import com.sun.javafx.css.converters.SizeConverter;
+import com.sun.javafx.scene.control.skin.PaginationSkin;
 
 /**
  * <p>

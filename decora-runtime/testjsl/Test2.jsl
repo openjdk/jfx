@@ -1,0 +1,17 @@
+/*
+ * Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
+ */
+// Verifies that the same function can be called from two different functions
+
+float myfunc(float val)
+{
+    return clamp(val, 0.0, 1.0);
+}
+
+void main()
+{
+    // NOTE: commented out until we fix the compiler to better handle this case
+    //float funcres = myfunc(1.5);
+    //funcres = clamp(funcres, 0.25, 0.75);
+    color = float4(0.0);
+}
