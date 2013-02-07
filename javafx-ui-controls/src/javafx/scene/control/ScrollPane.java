@@ -741,7 +741,7 @@ public class ScrollPane extends Control {
      * @param node the node to scroll into view
      */
     public void scrollTo(Node node) {
-        Event.fireEvent(this, new ScrollToEvent<Node>(this, this, ScrollToEvent.SCROLL_TO_NODE, node));        
+        Event.fireEvent(this, new ScrollToEvent<Node>(this, this, ScrollToEvent.scrollToNode(), node));        
     }
     
     /**
@@ -763,17 +763,15 @@ public class ScrollPane extends Control {
     public ObjectProperty<EventHandler<ScrollToEvent<Node>>> onScrollToProperty() {
         if( onScrollTo == null ) {
             onScrollTo = new ObjectPropertyBase<EventHandler<ScrollToEvent<Node>>>() {
-                @Override
-                protected void invalidated() {
-                    setEventHandler(ScrollToEvent.SCROLL_TO_NODE, get());
+                @Override protected void invalidated() {
+                    setEventHandler(ScrollToEvent.scrollToNode(), get());
                 }
-                @Override
-                public Object getBean() {
+                
+                @Override public Object getBean() {
                     return ScrollPane.this;
                 }
 
-                @Override
-                public String getName() {
+                @Override public String getName() {
                     return "onScrollTo";
                 }
             };

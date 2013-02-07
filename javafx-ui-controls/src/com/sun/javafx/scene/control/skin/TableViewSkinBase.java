@@ -51,11 +51,13 @@ import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.value.WeakChangeListener;
 import javafx.collections.ObservableMap;
+import javafx.event.EventHandler;
 import javafx.geometry.HPos;
 import javafx.geometry.VPos;
 import javafx.scene.control.Control;
 import javafx.scene.control.IndexedCell;
 import javafx.scene.control.ResizeFeaturesBase;
+import javafx.scene.control.ScrollToEvent;
 import javafx.scene.control.TableColumnBase;
 import javafx.scene.control.TableFocusModel;
 import javafx.scene.control.TablePositionBase;
@@ -179,6 +181,12 @@ public abstract class TableViewSkinBase<S, C extends Control, B extends Behavior
                 }
             }
         });
+        
+        control.addEventHandler(ScrollToEvent.<TableColumnBase>scrollToColumn(), new EventHandler<ScrollToEvent<TableColumnBase>>() {
+            @Override public void handle(ScrollToEvent<TableColumnBase> event) {
+                scrollHorizontally(event.getScrollTarget());
+            }
+        });   
 
         // flow and flow.vbar width observer
         InvalidationListener widthObserver = new InvalidationListener() {
@@ -741,7 +749,7 @@ public abstract class TableViewSkinBase<S, C extends Control, B extends Behavior
         }
         double end = start + col.getWidth();
 
-        // determine the width of the table
+        // determine the visible width of the table
         double headerWidth = control.getWidth() - padding.getLeft() + padding.getRight();
 
         // determine by how much we need to translate the table to ensure that
@@ -755,7 +763,7 @@ public abstract class TableViewSkinBase<S, C extends Control, B extends Behavior
         if (start < pos && start >= 0) {
             newPos = start;
         } else {
-            double delta = start < 0 || end > headerWidth ? start : 0;
+            double delta = start < 0 || end > headerWidth ? start - pos : 0;
             newPos = pos + delta > max ? max : pos + delta;
         }
 

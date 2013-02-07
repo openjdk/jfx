@@ -726,7 +726,21 @@ public class ListView<T> extends Control {
     }
     
     /**
+     * Scrolls the TableView so that the given object is visible within the viewport.
+     * @param object The object that should be visible to the user.
+     */
+    public void scrollTo(T object) {
+        if( getItems() != null ) {
+            int idx = getItems().indexOf(object);
+            if( idx >= 0 ) {
+                ControlUtils.scrollToIndex(this, idx);        
+            }
+        }
+    }
+    
+    /**
      * Called when there's a request to scroll an index into view using {@link #scrollTo(int)}
+     * or {@link #scrollTo(S)}
      */
     private ObjectProperty<EventHandler<ScrollToEvent<Integer>>> onScrollTo;
     
@@ -744,17 +758,15 @@ public class ListView<T> extends Control {
     public ObjectProperty<EventHandler<ScrollToEvent<Integer>>> onScrollToProperty() {
         if( onScrollTo == null ) {
             onScrollTo = new ObjectPropertyBase<EventHandler<ScrollToEvent<Integer>>>() {
-                @Override
-                protected void invalidated() {
-                    setEventHandler(ScrollToEvent.SCROLL_TO_TOP_INDEX, get());
+                @Override protected void invalidated() {
+                    setEventHandler(ScrollToEvent.scrollToTopIndex(), get());
                 }
-                @Override
-                public Object getBean() {
+                
+                @Override public Object getBean() {
                     return ListView.this;
                 }
 
-                @Override
-                public String getName() {
+                @Override public String getName() {
                     return "onScrollTo";
                 }
             };
