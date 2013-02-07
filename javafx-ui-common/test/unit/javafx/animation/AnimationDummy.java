@@ -26,9 +26,9 @@ package javafx.animation;
 
 import javafx.util.Duration;
 
-public class AnimationMock extends Animation {
+public class AnimationDummy extends Animation {
 	
-	public AnimationMock(Duration duration) {
+	public AnimationDummy(Duration duration) {
 		setCycleDuration(duration);
 	}
 
