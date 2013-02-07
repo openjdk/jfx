@@ -34,6 +34,7 @@ package modena;
 import java.util.HashMap;
 import java.util.Map;
 import javafx.application.Platform;
+import javafx.css.PseudoClass;
 import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
@@ -83,11 +84,11 @@ import javafx.scene.layout.VBox;
 import javafx.scene.layout.VBoxBuilder;
 import javafx.scene.paint.Color;
 import javafx.scene.web.HTMLEditorBuilder;
+import static modena.SamplePageChartHelper.*;
 import static modena.SamplePageHelpers.*;
 import static modena.SamplePageTableHelper.*;
 import static modena.SamplePageTreeHelper.*;
 import static modena.SamplePageTreeTableHelper.*;
-import static modena.SamplePageChartHelper.*;
 
 /**
  * Page showing every control in every state
@@ -98,19 +99,27 @@ public class SamplePage extends GridPane {
     private Map<String, Node> content = new HashMap<>();
     
     private Node withState(Node node, String state) {
-        node.getProperties().put("javafx.scene.Node.pseudoClassOverride", state);
+        if (node != null && state != null) {
+            // stop user from being able to change state
+            node.setMouseTransparent(true);
+            node.setFocusTraversable(false);
+            // set state to chosen state
+            final String[] pseudoClasses = (state).split("[\\s,]+");
+            for (String pseudoClass : pseudoClasses) {
+                node.pseudoClassStateChanged(PseudoClass.getPseudoClass(pseudoClass), true);
+            }
+        }
         return node;
     }
     
     private Node withState(final Node node, final String state, final String subNodeStyleClass, final String subNodeState) {
-        if (state!=null) node.getProperties().put("javafx.scene.Node.pseudoClassOverride", state);
+        withState(node, state);
         Platform.runLater(new Runnable() {
             @Override public void run() {
-                // TODO: node.lookup(subNodeStyleClass) is null if stage is not shown
                 if (node != null) {
                     Node subNode = node.lookup(subNodeStyleClass);
                     if (subNode != null) {
-                        node.lookup(subNodeStyleClass).getProperties().put("javafx.scene.Node.pseudoClassOverride", subNodeState);
+                        withState(node.lookup(subNodeStyleClass), subNodeState);
                     } else {
                         System.err.println("node = " + node+" node.lookup("+subNodeStyleClass+") = " + subNode);
                     }
