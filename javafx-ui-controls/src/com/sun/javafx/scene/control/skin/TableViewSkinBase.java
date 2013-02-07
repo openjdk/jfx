@@ -66,7 +66,7 @@ import javafx.scene.control.TableSelectionModel;
 public abstract class TableViewSkinBase<S, C extends Control, B extends BehaviorBase<C>, I extends IndexedCell> extends VirtualContainerBase<C, B, I> {
     
     public static final String REFRESH = "tableRefreshKey";
-    public static final String REBUILD = "tableRebuildKey";
+    public static final String RECREATE = "tableRecreateKey";
     
 //    protected abstract void requestControlFocus(); // tableView.requestFocus();
     protected abstract TableSelectionModel getSelectionModel(); // tableView.getSelectionModel()
@@ -174,10 +174,10 @@ public abstract class TableViewSkinBase<S, C extends Control, B extends Behavior
                 if (REFRESH.equals(c.getKey())) {
                     refreshView();
                     control.getProperties().remove(REFRESH);
-                } else if (REBUILD.equals(c.getKey())) {
-                    forceCellRebuild = true;
+                } else if (RECREATE.equals(c.getKey())) {
+                    forceCellRecreate = true;
                     refreshView();
-                    control.getProperties().remove(REBUILD);
+                    control.getProperties().remove(RECREATE);
                 }
             }
         });
@@ -663,7 +663,7 @@ public abstract class TableViewSkinBase<S, C extends Control, B extends Behavior
         getSkinnable().requestLayout();
     }
 
-    protected boolean forceCellRebuild = false;
+    protected boolean forceCellRecreate = false;
     
     @Override protected void updateRowCount() {
         updatePlaceholderRegionVisibility();
@@ -676,13 +676,15 @@ public abstract class TableViewSkinBase<S, C extends Control, B extends Behavior
         // optimised in the future when time permits.
         flow.setCellCount(newCount);
         
-        if (forceCellRebuild || newCount != oldCount) {
+        if (forceCellRecreate) {
+            needCellsRecreated = true;
+            forceCellRecreate = false;
+        } else if (newCount != oldCount) {
             // FIXME updateRowCount is called _a lot_. Perhaps we can make rebuildCells
             // smarter. Imagine if items has one million items added - do we really
             // need to rebuildCells a million times? Maybe this is better now that
             // we do rebuildCells instead of recreateCells.
             needCellsRebuilt = true;
-            forceCellRebuild = false;
         } else {
             needCellsReconfigured = true;
         }
