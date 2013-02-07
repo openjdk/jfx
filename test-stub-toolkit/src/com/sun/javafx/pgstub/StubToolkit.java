@@ -36,29 +36,26 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-
 import javafx.geometry.Dimension2D;
 import javafx.scene.image.Image;
 import javafx.scene.input.DataFormat;
 import javafx.scene.input.DragEvent;
 import javafx.scene.input.Dragboard;
-import javafx.scene.input.InputMethodEvent;
 import javafx.scene.input.InputMethodRequests;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
-import javafx.scene.input.MouseEvent;
 import javafx.scene.input.TransferMode;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.ImagePattern;
 import javafx.scene.paint.LinearGradient;
 import javafx.scene.paint.RadialGradient;
+import javafx.scene.shape.FillRule;
 import javafx.scene.shape.PathElement;
 import javafx.scene.shape.SVGPath;
-import javafx.scene.text.Text;
 import javafx.stage.FileChooser.ExtensionFilter;
 import javafx.stage.Modality;
 import javafx.stage.StageStyle;
-
+import javafx.util.Pair;
 import com.sun.javafx.application.PlatformImpl;
 import com.sun.javafx.embed.HostInterface;
 import com.sun.javafx.geom.ParallelCameraImpl;
@@ -80,7 +77,6 @@ import com.sun.javafx.sg.PGEllipse;
 import com.sun.javafx.sg.PGGroup;
 import com.sun.javafx.sg.PGImageView;
 import com.sun.javafx.sg.PGLine;
-import com.sun.javafx.sg.PGMediaView;
 import com.sun.javafx.sg.PGPath;
 import com.sun.javafx.sg.PGPolygon;
 import com.sun.javafx.sg.PGPolyline;
@@ -92,7 +88,6 @@ import com.sun.javafx.sg.PGShape.StrokeLineCap;
 import com.sun.javafx.sg.PGShape.StrokeLineJoin;
 import com.sun.javafx.sg.PGShape.StrokeType;
 import com.sun.javafx.sg.PGText;
-import com.sun.javafx.sg.PGWebView;
 import com.sun.javafx.tk.FileChooserType;
 import com.sun.javafx.tk.FontLoader;
 import com.sun.javafx.tk.ImageLoader;
@@ -112,8 +107,6 @@ import com.sun.scenario.DelayedRunnable;
 import com.sun.scenario.animation.AbstractMasterTimer;
 import com.sun.scenario.effect.FilterContext;
 import com.sun.scenario.effect.Filterable;
-import javafx.scene.shape.FillRule;
-import javafx.util.Pair;
 
 /**
  * A Toolkit implementation for use with Testing.
@@ -419,10 +412,6 @@ public class StubToolkit extends Toolkit {
         return new StubImageView();
     }
 
-    @Override public PGMediaView createPGMediaView() {
-        return new StubMediaView();
-    }
-
     @Override public PGGroup createPGGroup() {
         return new StubGroup();
     }
@@ -438,7 +427,7 @@ public class StubToolkit extends Toolkit {
         firePulse();
     }
 
-   public boolean isPulseRequested() {
+    public boolean isPulseRequested() {
         return pulseRequested;
     }
 
@@ -824,10 +813,6 @@ public class StubToolkit extends Toolkit {
     @Override
     public PGCanvas createPGCanvas() {
         return new StubCanvas();
-    }
-
-    @Override public PGWebView createPGWebView() {
-        return new StubWebView();
     }
 
     public interface DndDelegate {

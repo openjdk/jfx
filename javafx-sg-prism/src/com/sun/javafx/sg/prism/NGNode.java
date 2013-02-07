@@ -88,7 +88,7 @@ public abstract class NGNode extends BaseNode<Graphics> {
     private RectBounds opaqueRegion = null;
     private boolean opaqueRegionInvalid = true;
 
-    NGNode() { }
+    protected NGNode() { }
 
     /***************************************************************************
      *                                                                         *

@@ -39,6 +39,12 @@ task generate << {
 
     // Create the build-tools project
     copy {
+        from "${RTDir}/javafx-beans/src"
+        into "${FXDir}/build-tools/src/main/java"
+        include "com/sun/javafx/beans/annotations/**",
+                "com/sun/javafx/collections/annotations/**"
+    }
+    copy {
         from "${RTDir}/javafx-annotation-processor/src",
              "${RTDir}/decora-compiler/src"
         into "${FXDir}/build-tools/src/main/java"
@@ -67,7 +73,8 @@ task generate << {
 
     // Create the base module
     copy {
-        from "${RTDir}/javafx-util-converter/src",
+        from "${RTDir}/javafx-beans/src",
+             "${RTDir}/javafx-util-converter/src",
              "${RTDir}/javafx-anim/src",
              "${RTDir}/javafx-common/src",
              "${RTDir}/javafx-logging/src"
@@ -77,7 +84,8 @@ task generate << {
         exclude excludeResources
     }
     copy {
-        from "${RTDir}/javafx-util-converter/src",
+        from "${RTDir}/javafx-beans/src",
+             "${RTDir}/javafx-util-converter/src",
              "${RTDir}/javafx-anim/src",
              "${RTDir}/javafx-common/src",
              "${RTDir}/javafx-logging/src"
@@ -89,14 +97,16 @@ task generate << {
         into "${FXDir}/modules/base/src/main/version-info"
     }
     copy {
-        from "${RTDir}/javafx-util-converter/test",
+        from "${RTDir}/javafx-beans/test",
+             "${RTDir}/javafx-util-converter/test",
              "${RTDir}/javafx-anim/test/unit", // TODO also has functional tests
              "${RTDir}/javafx-common/test/unit"
         into "${FXDir}/modules/base/src/test/java"
         exclude excludeResources
     }
     copy {
-        from "${RTDir}/javafx-util-converter/test",
+        from "${RTDir}/javafx-beans/test",
+             "${RTDir}/javafx-util-converter/test",
              "${RTDir}/javafx-anim/test/unit", // TODO also has functional tests
              "${RTDir}/javafx-common/test/unit"
         into "${FXDir}/modules/base/src/test/resources"
@@ -130,23 +140,33 @@ task generate << {
         include includeResources
     }
     copy {
-        from "${RTDir}/javafx-ui-common/test/unit",
-             "${RTDir}/javafx-concurrent/test",
+        from "${RTDir}/javafx-concurrent/test",
              "${RTDir}/javafx-geom/test",
              "${RTDir}/javafx-sg-common/test",
-             "${RTDir}/javafx-sg-prism/test",
-             "${RTDir}/test-stub-toolkit/src"
+             "${RTDir}/javafx-sg-prism/test"
         into "${FXDir}/modules/graphics/src/test/java"
         exclude excludeResources
     }
     copy {
-        from "${RTDir}/javafx-ui-common/test/unit",
-             "${RTDir}/javafx-concurrent/test",
+        from "${RTDir}/javafx-concurrent/test",
              "${RTDir}/javafx-geom/test",
              "${RTDir}/javafx-sg-common/test",
-             "${RTDir}/javafx-sg-prism/test",
-             "${RTDir}/test-stub-toolkit/src"
+             "${RTDir}/javafx-sg-prism/test"
         into "${FXDir}/modules/graphics/src/test/resources"
+        include includeResources
+    }
+    // Because we have tests that need to be run with StubToolkit vs. Quantum,
+    // and others that need Quantum, we have to split them apart
+    copy {
+        from "${RTDir}/javafx-ui-common/test/unit",
+             "${RTDir}/test-stub-toolkit/src"
+        into "${FXDir}/modules/graphics/src/test/testsWithStubToolkit"
+        exclude excludeResources
+    }
+    copy {
+        from "${RTDir}/javafx-ui-common/test/unit",
+             "${RTDir}/test-stub-toolkit/src"
+        into "${FXDir}/modules/graphics/src/test/resourcesWithStubToolkit"
         include includeResources
     }
 
@@ -188,8 +208,28 @@ task generate << {
     // Create the web module
 
     // Create the swing module
+    copy {
+        from "${RTDir}/javafx-embed-swing/src"
+        into "${FXDir}/modules/swing/src/main/java"
+        exclude excludeResources
+    }
+    copy {
+        from "${RTDir}/javafx-embed-swing/src"
+        into "${FXDir}/modules/swing/src/main/java"
+        include includeResources
+    }
 
     // Create the swt module
+    copy {
+        from "${RTDir}/javafx-embed-swt/src"
+        into "${FXDir}/modules/swt/src/main/java"
+        exclude excludeResources
+    }
+    copy {
+        from "${RTDir}/javafx-embed-swt/src"
+        into "${FXDir}/modules/swt/src/main/java"
+        include includeResources
+    }
 
     // Create the fxml module
     copy {

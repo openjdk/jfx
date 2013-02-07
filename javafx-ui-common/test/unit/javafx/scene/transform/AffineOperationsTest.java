@@ -87,6 +87,10 @@ public class AffineOperationsTest {
     private static final Affine a3d_complex = new Affine( 2,  3,  4,  5,
                                                           6,  7,  8,  9,
                                                          10, 11, 12, 13);
+    private static final Affine a3d_complex_noninvertible =
+                                                     new Affine( 2,  3,  4,  5,
+                                                                 6,  7,  8,  9,
+                                                                10, 11, 12, 13);
     private static final Affine shearRotatesToIdentity1 = new Affine(0, -1, 0,
                                                                      1,  0, 0);
     private static final Affine shearRotatesToIdentity2 = new Affine(0, 1, 0,
@@ -156,19 +160,20 @@ public class AffineOperationsTest {
             { a3d_only3d },                 // 15
             { a3d_translate_only },         // 16
             { a3d_complex },                // 17
-            { shearRotatesToIdentity1 },    // 18
-            { shearRotatesToIdentity2 },    // 19
-            { scaleRotatesToIdentity },     // 20
-            { scr_tr_rotatesToTr },         // 21
-            { translate_only },             // 22
-            { nonInv_translate },           // 23
-            { nonInv_scale },               // 24
-            { nonInv_shear },               // 25
-            { nonInv_sh_sc_tr },            // 26
-            { nonInv_sh_sc },               // 27
-            { nonInv_sh_tr },               // 28
-            { nonInv_sc_tr },               // 29
-            { zero },                       // 30
+            { a3d_complex_noninvertible },  // 18
+            { shearRotatesToIdentity1 },    // 19
+            { shearRotatesToIdentity2 },    // 20
+            { scaleRotatesToIdentity },     // 21
+            { scr_tr_rotatesToTr },         // 22
+            { translate_only },             // 23
+            { nonInv_translate },           // 24
+            { nonInv_scale },               // 25
+            { nonInv_shear },               // 26
+            { nonInv_sh_sc_tr },            // 27
+            { nonInv_sh_sc },               // 28
+            { nonInv_sh_tr },               // 29
+            { nonInv_sc_tr },               // 30
+            { zero },                       // 31
         });
     }
 
@@ -2691,5 +2696,18 @@ public class AffineOperationsTest {
     public void testSetElementNullType() {
         Affine a = affine.clone();
         a.setElement(null, 0, 0, 0);
+    }
+
+    @Test public void nonInvertibleExceptionShoudCancelAtomicOperation() {
+        Affine a = affine.clone();
+        try {
+            a.invert();
+        } catch (NonInvertibleTransformException e) {
+            try {
+                a.append(a);
+            } catch (Throwable t) {
+                fail("Internal state broken: " + t);
+            }
+        }
     }
 }

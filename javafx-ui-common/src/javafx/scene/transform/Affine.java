@@ -1435,6 +1435,7 @@ public class Affine extends Transform {
                         mxz * (myx * mzy - mzx * myy);
 
                 if (det == 0.0) {
+                    atomicChange.cancel();
                     throw new NonInvertibleTransformException("Determinant is 0");
                 }
 

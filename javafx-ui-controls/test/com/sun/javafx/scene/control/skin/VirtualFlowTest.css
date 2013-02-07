@@ -3,9 +3,9 @@
  * index changes, so as to test some scenarios.
  */
 .indexed-cell:odd {
-    text-fill: BLUE
+    text-fill: BLUE;
 }
 
 .indexed-cell {
-    text-fill: BLACK
+    text-fill: BLACK;
 }
