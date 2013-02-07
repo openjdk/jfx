@@ -36,6 +36,7 @@ import javafx.scene.input.ScrollEvent;
 import com.sun.javafx.Utils;
 import com.sun.javafx.scene.control.behavior.ScrollBarBehavior;
 import javafx.geometry.Insets;
+import javafx.scene.layout.Region;
 
 public class ScrollBarSkin extends BehaviorSkinBase<ScrollBar, ScrollBarBehavior> {
 
@@ -559,36 +560,48 @@ public class ScrollBarSkin extends BehaviorSkinBase<ScrollBar, ScrollBarBehavior
             }
         }
     }
-}
+    
+    private static class EndButton extends Region {
+        private Region arrow;
 
-class EndButton extends StackPane {
+        private EndButton(String styleClass, String arrowStyleClass) {
+            getStyleClass().setAll(styleClass);
+            arrow = new Region();
+            arrow.getStyleClass().setAll(arrowStyleClass);
+            getChildren().setAll(arrow);
+            requestLayout();
+        }
 
-    private StackPane arrow;
+        @Override protected void layoutChildren() {
+            final Insets insets = getInsets();
+            final double top = insets.getTop();
+            final double left = insets.getLeft();
+            final double bottom = insets.getBottom();
+            final double right = insets.getRight();
+            
+            double aw = arrow.prefWidth(-1);
+            double ah = arrow.prefHeight(-1);
+            
+            double yPos = (getHeight() - (top + bottom + ah)) / 2.0;
+            double xPos = (getWidth() - (left + right + aw)) / 2.0;
 
-    public EndButton(String styleClass, String arrowStyleClass) {
-        getStyleClass().setAll(styleClass);
-        arrow = new StackPane();
-        arrow.getStyleClass().setAll(arrowStyleClass);
-        getChildren().clear();
-        getChildren().addAll(arrow);
-        requestLayout();
-    }
+            arrow.resizeRelocate(xPos + left, yPos + top, aw, ah);
+        }
 
-    @Override protected void layoutChildren() {
-        double aw = arrow.prefWidth(-1);
-        double ah = arrow.prefHeight(-1);
+        @Override protected double computeMinHeight(double width) {
+            return prefHeight(-1);
+        }
 
-        double Ypos = (getHeight() - (getInsets().getTop()+getInsets().getBottom() + ah))/2;
-        double Xpos = (getWidth() - (getInsets().getLeft()+getInsets().getRight() + aw))/2;
+        @Override protected double computeMinWidth(double height) {
+            return prefWidth(-1);
+        }
 
-        arrow.resizeRelocate(Xpos+getInsets().getLeft(), Ypos+getInsets().getBottom(), aw, ah);
-    }
-
-    @Override protected double computeMinHeight(double width) {
-        return prefHeight(-1);
-    }
-
-    @Override protected double computeMinWidth(double height) {
-        return prefWidth(-1);
+        @Override protected double computePrefWidth(double height) {
+            return arrow.prefWidth(height) + getInsets().getLeft() + getInsets().getRight();
+        }
+        
+        @Override protected double computePrefHeight(double width) {
+            return arrow.prefHeight(width) + getInsets().getTop() + getInsets().getBottom();
+        }
     }
 }

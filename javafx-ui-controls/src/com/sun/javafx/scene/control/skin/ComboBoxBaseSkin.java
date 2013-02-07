@@ -41,7 +41,7 @@ public abstract class ComboBoxBaseSkin<T> extends BehaviorSkinBase<ComboBoxBase<
     private Node displayNode; // this is normally either label or textField
     
     protected StackPane arrowButton;
-    protected StackPane arrow;
+    protected Region arrow;
     
     /** The mode in which this control will be represented. */
     private ComboBoxMode mode = ComboBoxMode.COMBOBOX;
@@ -54,7 +54,7 @@ public abstract class ComboBoxBaseSkin<T> extends BehaviorSkinBase<ComboBoxBase<
         super(comboBox, behavior);
         
         // open button / arrow
-        arrow = new StackPane();
+        arrow = new Region();
         arrow.setFocusTraversable(false);
         arrow.getStyleClass().setAll("arrow");
         arrow.setMaxWidth(Region.USE_PREF_SIZE);
