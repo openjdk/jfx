@@ -161,6 +161,8 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
         if (treeItem != null) {
             treeItem.expandedProperty().addListener(treeItemExpandedListener);
         }
+        
+        updateDisclosureNodeRotation(false);
     }
     
     private void updateDisclosureNode() {

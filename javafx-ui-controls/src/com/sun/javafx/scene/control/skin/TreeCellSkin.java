@@ -154,6 +154,8 @@ public class TreeCellSkin extends CellSkinBase<TreeCell<?>, TreeCellBehavior> {
         if (treeItem != null) {
             treeItem.expandedProperty().addListener(treeItemExpandedListener);
         }
+        
+        updateDisclosureNodeRotation(false);
     }
     
     private void updateDisclosureNode() {
