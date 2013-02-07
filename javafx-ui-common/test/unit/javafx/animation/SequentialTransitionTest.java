@@ -54,9 +54,9 @@ public class SequentialTransitionTest {
 	@Before
 	public void setUp() {
 		node = new Rectangle();
-		child1 = new AnimationMock(ONE_SEC);
-		child2 = new AnimationMock(TWO_SECS);
-		child3 = new AnimationMock(THREE_SECS);
+		child1 = new AnimationDummy(ONE_SEC);
+		child2 = new AnimationDummy(TWO_SECS);
+		child3 = new AnimationDummy(THREE_SECS);
 	}
 	
 	@Test
