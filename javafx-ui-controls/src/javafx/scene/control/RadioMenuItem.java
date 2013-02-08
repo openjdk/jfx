@@ -147,7 +147,7 @@ public class RadioMenuItem extends MenuItem implements Toggle {
                         old.getToggles().remove(RadioMenuItem.this);
                     }
                     old = get();
-                    if (get() != null) {
+                    if (get() != null && !get().getToggles().contains(RadioMenuItem.this)) {
                         get().getToggles().add(RadioMenuItem.this);
                     }
                 }

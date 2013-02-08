@@ -311,11 +311,13 @@ public final class CategoryAxis extends Axis<String> {
         // TODO check if we can display all categories
         final double newCategorySpacing = calculateNewSpacing(length,allDataCategories);
         final double newFirstPos = calculateNewFirstPos(length, newCategorySpacing);
-        double tickLabelRotation = 0;
-        double requiredLengthToDisplay = calculateRequiredSize(vertical,tickLabelRotation);
-        if (requiredLengthToDisplay > length) {
-            // change text to vertical
-            tickLabelRotation = 90;
+        double tickLabelRotation = getTickLabelRotation();
+        if (length >= 0) {
+            double requiredLengthToDisplay = calculateRequiredSize(vertical,tickLabelRotation);
+            if (requiredLengthToDisplay > length) {
+                // change text to vertical
+                tickLabelRotation = 90;
+            }
         }
         return new Object[]{allDataCategories, newCategorySpacing, newFirstPos, tickLabelRotation};
     }
