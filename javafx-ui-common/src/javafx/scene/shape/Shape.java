@@ -63,6 +63,7 @@ import com.sun.javafx.tk.Toolkit;
 import javafx.beans.Observable;
 import javafx.beans.property.Property;
 import javafx.collections.ListChangeListener.Change;
+import javafx.css.Styleable;
 import javafx.css.StyleableProperty;
 
 
@@ -425,7 +426,7 @@ public abstract class Shape extends Node {
                 }
                 
                 @Override
-                public CssMetaData getCssMetaData() {
+                public CssMetaData<Shape,Paint> getCssMetaData() {
                     return StyleableProperties.FILL;
                 }
 
@@ -501,7 +502,7 @@ public abstract class Shape extends Node {
                 }
                 
                 @Override
-                public CssMetaData getCssMetaData() {
+                public CssMetaData<Shape,Paint> getCssMetaData() {
                     return StyleableProperties.STROKE;
                 }
 
@@ -546,7 +547,7 @@ public abstract class Shape extends Node {
                 }
                 
                 @Override
-                public CssMetaData getCssMetaData() {
+                public CssMetaData<Shape,Boolean> getCssMetaData() {
                     return StyleableProperties.SMOOTH;
                 }
 
@@ -836,11 +837,11 @@ public abstract class Shape extends Node {
             }
 
         };         
-         private static final List<CssMetaData<? extends Node, ?>> STYLEABLES;
+         private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
          static {
 
-            final List<CssMetaData<? extends Node, ?>> styleables =
-                new ArrayList<CssMetaData<? extends Node, ?>>(Node.getClassCssMetaData());
+            final List<CssMetaData<? extends Styleable, ?>> styleables =
+                new ArrayList<CssMetaData<? extends Styleable, ?>>(Node.getClassCssMetaData());
             styleables.add(FILL);
             styleables.add(SMOOTH);
             styleables.add(STROKE);
@@ -859,7 +860,7 @@ public abstract class Shape extends Node {
      * @return The CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
      */
-    public static List<CssMetaData<? extends Node, ?>> getClassCssMetaData() {
+    public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
         return StyleableProperties.STYLEABLES;
     }
 
@@ -868,8 +869,9 @@ public abstract class Shape extends Node {
      *
      */
     
+    
     @Override
-    public List<CssMetaData<? extends Node, ?>> getCssMetaData() {
+    public List<CssMetaData<? extends Styleable, ?>> getCssMetaData() {
         return getClassCssMetaData();
     }
 
@@ -1229,7 +1231,7 @@ public abstract class Shape extends Node {
                     }
                 
                     @Override
-                    public CssMetaData getCssMetaData() {
+                    public CssMetaData<Shape,StrokeType> getCssMetaData() {
                         return StyleableProperties.STROKE_TYPE;
                     }
 
@@ -1262,7 +1264,7 @@ public abstract class Shape extends Node {
                     }
                 
                     @Override
-                    public CssMetaData getCssMetaData() {
+                    public CssMetaData<Shape,Number> getCssMetaData() {
                         return StyleableProperties.STROKE_WIDTH;
                     }
 
@@ -1297,7 +1299,7 @@ public abstract class Shape extends Node {
                     }
                 
                     @Override
-                    public CssMetaData getCssMetaData() {
+                    public CssMetaData<Shape,StrokeLineJoin> getCssMetaData() {
                         return StyleableProperties.STROKE_LINE_JOIN;
                     }
 
@@ -1332,7 +1334,7 @@ public abstract class Shape extends Node {
                     }
                 
                     @Override
-                    public CssMetaData getCssMetaData() {
+                    public CssMetaData<Shape,StrokeLineCap> getCssMetaData() {
                         return StyleableProperties.STROKE_LINE_CAP;
                     }
 
@@ -1367,7 +1369,7 @@ public abstract class Shape extends Node {
                     }
                 
                     @Override
-                    public CssMetaData getCssMetaData() {
+                    public CssMetaData<Shape,Number> getCssMetaData() {
                         return StyleableProperties.STROKE_MITER_LIMIT;
                     }
 
@@ -1403,7 +1405,7 @@ public abstract class Shape extends Node {
                     }
                 
                     @Override
-                    public CssMetaData getCssMetaData() {
+                    public CssMetaData<Shape,Number> getCssMetaData() {
                         return StyleableProperties.STROKE_DASH_OFFSET;
                     }
 
@@ -1473,7 +1475,7 @@ public abstract class Shape extends Node {
                     }
 
                     @Override
-                    public CssMetaData getCssMetaData() {
+                    public CssMetaData<Shape,Number[]> getCssMetaData() {
                         return StyleableProperties.STROKE_DASH_ARRAY;
                     }
                 };

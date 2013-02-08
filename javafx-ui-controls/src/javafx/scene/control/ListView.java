@@ -48,7 +48,6 @@ import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.event.EventType;
 import javafx.geometry.Orientation;
-import javafx.scene.Node;
 import javafx.util.Callback;
 
 import javafx.css.StyleableObjectProperty;
@@ -62,6 +61,7 @@ import java.lang.ref.WeakReference;
 import com.sun.javafx.accessible.providers.AccessibleProvider;
 import javafx.css.PseudoClass;
 import javafx.beans.DefaultProperty;
+import javafx.css.Styleable;
 import javafx.css.StyleableProperty;
 
 /**
@@ -430,7 +430,7 @@ public class ListView<T> extends Control {
                 }
                 
                 @Override 
-                public CssMetaData getCssMetaData() {
+                public CssMetaData<ListView<?>,Orientation> getCssMetaData() {
                     return ListView.StyleableProperties.ORIENTATION;
                 }
                 
@@ -796,8 +796,8 @@ public class ListView<T> extends Control {
 
     /** @treatAsPrivate */
     private static class StyleableProperties {
-        private static final CssMetaData<ListView,Orientation> ORIENTATION = 
-            new CssMetaData<ListView,Orientation>("-fx-orientation",
+        private static final CssMetaData<ListView<?>,Orientation> ORIENTATION = 
+            new CssMetaData<ListView<?>,Orientation>("-fx-orientation",
                 new EnumConverter<Orientation>(Orientation.class), 
                 Orientation.VERTICAL) {
 
@@ -812,19 +812,18 @@ public class ListView<T> extends Control {
                 return n.orientation == null || !n.orientation.isBound();
             }
 
+            @SuppressWarnings("unchecked") // orientationProperty() is a StyleableProperty<Orientation>
             @Override
             public StyleableProperty<Orientation> getStyleableProperty(ListView n) {
-                return (StyleableProperty)n.orientationProperty();
+                return (StyleableProperty<Orientation>)n.orientationProperty();
             }
         };
             
-        private static final List<CssMetaData<? extends Node, ?>> STYLEABLES;
+        private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
         static {
-            final List<CssMetaData<? extends Node, ?>> styleables =
-                new ArrayList<CssMetaData<? extends Node, ?>>(Control.getClassCssMetaData());
-            Collections.addAll(styleables,
-                ORIENTATION
-            );
+            final List<CssMetaData<? extends Styleable, ?>> styleables =
+                new ArrayList<CssMetaData<? extends Styleable, ?>>(Control.getClassCssMetaData());
+            styleables.add(ORIENTATION);
             STYLEABLES = Collections.unmodifiableList(styleables);
         }
     }
@@ -833,7 +832,7 @@ public class ListView<T> extends Control {
      * @return The CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
      */
-    public static List<CssMetaData<? extends Node, ?>> getClassCssMetaData() {
+    public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
         return StyleableProperties.STYLEABLES;
     }
 
@@ -841,7 +840,7 @@ public class ListView<T> extends Control {
      * {@inheritDoc}
      */
     @Override
-    public List<CssMetaData<? extends Node, ?>> getControlCssMetaData() {
+    public List<CssMetaData<? extends Styleable, ?>> getControlCssMetaData() {
         return getClassCssMetaData();
     }
 

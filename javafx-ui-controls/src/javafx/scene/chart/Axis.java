@@ -24,6 +24,7 @@
  */
 package javafx.scene.chart;
 
+import javafx.css.Styleable;
 import javafx.css.CssMetaData;
 import javafx.css.PseudoClass;
 import javafx.css.StyleableBooleanProperty;
@@ -36,7 +37,6 @@ import com.sun.javafx.css.converters.SizeConverter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Set;
 
 import javafx.animation.FadeTransition;
 import javafx.beans.binding.DoubleExpression;
@@ -53,7 +53,6 @@ import javafx.geometry.Bounds;
 import javafx.geometry.Dimension2D;
 import javafx.geometry.Pos;
 import javafx.geometry.Side;
-import javafx.scene.Node;
 import javafx.scene.control.Label;
 import javafx.scene.layout.Region;
 import javafx.scene.paint.Color;
@@ -116,7 +115,7 @@ public abstract class Axis<T> extends Region {
         }
         
         @Override
-        public CssMetaData getCssMetaData() {
+        public CssMetaData<Axis<?>,Side> getCssMetaData() {
             return StyleableProperties.SIDE;
         }
 
@@ -163,7 +162,7 @@ public abstract class Axis<T> extends Region {
         }
 
         @Override
-        public CssMetaData getCssMetaData() {
+        public CssMetaData<Axis<?>,Boolean> getCssMetaData() {
             return StyleableProperties.TICK_MARK_VISIBLE;
         }
         @Override
@@ -191,7 +190,7 @@ public abstract class Axis<T> extends Region {
         }
         
         @Override
-        public CssMetaData getCssMetaData() {
+        public CssMetaData<Axis<?>,Boolean> getCssMetaData() {
             return StyleableProperties.TICK_LABELS_VISIBLE;
         }
 
@@ -221,7 +220,7 @@ public abstract class Axis<T> extends Region {
         }
 
         @Override
-        public CssMetaData getCssMetaData() {
+        public CssMetaData<Axis<?>,Number> getCssMetaData() {
             return StyleableProperties.TICK_LENGTH;
         }        
         @Override
@@ -274,7 +273,7 @@ public abstract class Axis<T> extends Region {
         }
 
         @Override 
-        public CssMetaData getCssMetaData() {
+        public CssMetaData<Axis<?>,Font> getCssMetaData() {
             return StyleableProperties.TICK_LABEL_FONT;
         }
         
@@ -299,7 +298,7 @@ public abstract class Axis<T> extends Region {
         }
 
         @Override
-        public CssMetaData getCssMetaData() {
+        public CssMetaData<Axis<?>,Paint> getCssMetaData() {
             return StyleableProperties.TICK_LABEL_FILL;
         }
         
@@ -324,7 +323,7 @@ public abstract class Axis<T> extends Region {
         }
 
         @Override
-        public CssMetaData getCssMetaData() {
+        public CssMetaData<Axis<?>,Number> getCssMetaData() {
             return StyleableProperties.TICK_LABEL_TICK_GAP;
         }
         
@@ -1039,8 +1038,8 @@ public abstract class Axis<T> extends Region {
 
     /** @treatAsPrivate implementation detail */
     private static class StyleableProperties {
-        private static final CssMetaData<Axis,Side> SIDE =
-            new CssMetaData<Axis,Side>("-fx-side",
+        private static final CssMetaData<Axis<?>,Side> SIDE =
+            new CssMetaData<Axis<?>,Side>("-fx-side",
                 new EnumConverter<Side>(Side.class)) {
 
             @Override
@@ -1048,14 +1047,15 @@ public abstract class Axis<T> extends Region {
                 return n.side == null || !n.side.isBound();
             }
 
+            @SuppressWarnings("unchecked") // sideProperty() is StyleableProperty<Side>              
             @Override
             public StyleableProperty<Side> getStyleableProperty(Axis n) {
                 return (StyleableProperty<Side>)n.sideProperty();
             }
         };
         
-        private static final CssMetaData<Axis,Number> TICK_LENGTH =
-            new CssMetaData<Axis,Number>("-fx-tick-length",
+        private static final CssMetaData<Axis<?>,Number> TICK_LENGTH =
+            new CssMetaData<Axis<?>,Number>("-fx-tick-length",
                 SizeConverter.getInstance(), 8.0) {
 
             @Override
@@ -1069,8 +1069,8 @@ public abstract class Axis<T> extends Region {
             }
         };
         
-        private static final CssMetaData<Axis,Font> TICK_LABEL_FONT =
-            new FontCssMetaData<Axis>("-fx-tick-label-font",
+        private static final CssMetaData<Axis<?>,Font> TICK_LABEL_FONT =
+            new FontCssMetaData<Axis<?>>("-fx-tick-label-font",
                 Font.font("system", 8.0)) {
 
             @Override
@@ -1078,14 +1078,15 @@ public abstract class Axis<T> extends Region {
                 return n.tickLabelFont == null || !n.tickLabelFont.isBound();
             }
 
+            @SuppressWarnings("unchecked") // tickLabelFontProperty() is StyleableProperty<Font>              
             @Override
             public StyleableProperty<Font> getStyleableProperty(Axis n) {
                 return (StyleableProperty<Font>)n.tickLabelFontProperty();
             }
         };
 
-        private static final CssMetaData<Axis,Paint> TICK_LABEL_FILL =
-            new CssMetaData<Axis,Paint>("-fx-tick-label-fill",
+        private static final CssMetaData<Axis<?>,Paint> TICK_LABEL_FILL =
+            new CssMetaData<Axis<?>,Paint>("-fx-tick-label-fill",
                 PaintConverter.getInstance(), Color.BLACK) {
 
             @Override
@@ -1093,14 +1094,15 @@ public abstract class Axis<T> extends Region {
                 return n.tickLabelFill == null | !n.tickLabelFill.isBound();
             }
 
+            @SuppressWarnings("unchecked") // tickLabelFillProperty() is StyleableProperty<Paint>            
             @Override
             public StyleableProperty<Paint> getStyleableProperty(Axis n) {
                 return (StyleableProperty<Paint>)n.tickLabelFillProperty();
             }
         };
         
-        private static final CssMetaData<Axis,Number> TICK_LABEL_TICK_GAP =
-            new CssMetaData<Axis,Number>("-fx-tick-label-gap",
+        private static final CssMetaData<Axis<?>,Number> TICK_LABEL_TICK_GAP =
+            new CssMetaData<Axis<?>,Number>("-fx-tick-label-gap",
                 SizeConverter.getInstance(), 3.0) {
 
             @Override
@@ -1114,8 +1116,8 @@ public abstract class Axis<T> extends Region {
             }
         };
         
-        private static final CssMetaData<Axis,Boolean> TICK_MARK_VISIBLE =
-            new CssMetaData<Axis,Boolean>("-fx-tick-mark-visible",
+        private static final CssMetaData<Axis<?>,Boolean> TICK_MARK_VISIBLE =
+            new CssMetaData<Axis<?>,Boolean>("-fx-tick-mark-visible",
                 BooleanConverter.getInstance(), Boolean.TRUE) {
 
             @Override
@@ -1129,8 +1131,8 @@ public abstract class Axis<T> extends Region {
             }
         };
         
-        private static final CssMetaData<Axis,Boolean> TICK_LABELS_VISIBLE =
-            new CssMetaData<Axis,Boolean>("-fx-tick-labels-visible",
+        private static final CssMetaData<Axis<?>,Boolean> TICK_LABELS_VISIBLE =
+            new CssMetaData<Axis<?>,Boolean>("-fx-tick-labels-visible",
                 BooleanConverter.getInstance(), Boolean.TRUE) {
 
             @Override
@@ -1144,10 +1146,10 @@ public abstract class Axis<T> extends Region {
             }
         };
 
-        private static final List<CssMetaData<? extends Node, ?>> STYLEABLES;
+        private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
         static {
-        final List<CssMetaData<? extends Node, ?>> styleables =
-            new ArrayList<CssMetaData<? extends Node, ?>>(Region.getClassCssMetaData());
+        final List<CssMetaData<? extends Styleable, ?>> styleables =
+            new ArrayList<CssMetaData<? extends Styleable, ?>>(Region.getClassCssMetaData());
             styleables.add(SIDE);
             styleables.add(TICK_LENGTH);
             styleables.add(TICK_LABEL_FONT);
@@ -1163,7 +1165,7 @@ public abstract class Axis<T> extends Region {
      * @return The CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
      */
-    public static List<CssMetaData<? extends Node, ?>> getClassCssMetaData() {
+    public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
         return StyleableProperties.STYLEABLES;
     }
 
@@ -1171,7 +1173,7 @@ public abstract class Axis<T> extends Region {
      * {@inheritDoc}
      */
     @Override
-    public List<CssMetaData<? extends Node, ?>> getCssMetaData() {
+    public List<CssMetaData<? extends Styleable, ?>> getCssMetaData() {
         return getClassCssMetaData();
     }
 

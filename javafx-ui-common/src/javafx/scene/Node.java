@@ -111,7 +111,7 @@ import com.sun.javafx.css.Style;
 import javafx.css.StyleConverter;
 import com.sun.javafx.css.StyleHelper;
 import com.sun.javafx.css.StyleManager;
-import com.sun.javafx.css.Styleable;
+import javafx.css.Styleable;
 import javafx.css.StyleableBooleanProperty;
 import javafx.css.StyleableDoubleProperty;
 import javafx.css.StyleableObjectProperty;
@@ -362,7 +362,7 @@ import javafx.stage.Window;
  * Guide</a>.
  */
 @IDProperty("id")
-public abstract class Node implements EventTarget {
+public abstract class Node implements EventTarget, Styleable {
 
      static {
           PerformanceTracker.logEvent("Node class loaded");
@@ -7402,58 +7402,38 @@ public abstract class Node implements EventTarget {
      *                                                                         *
      **************************************************************************/
 
-    private Styleable styleable; 
-    /**
-     * RT-19263
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
-     */    
-    @Deprecated // SB-dependency: RT-21094 has been filed to track this
-    public final Styleable impl_getStyleable() {
+
+    /** 
+     * {@inheritDoc} 
+     * @return {@code getClass().getName()} without the package name
+     */
+    @Override
+    public String getTypeSelector() {
         
-        if (styleable == null) {
-            styleable = new Styleable() {
-
-                Styleable styleableParent = null;
-
-                @Override
-                public String getId() {
-                    return Node.this.getId();
-                }
-
-                @Override
-                public List<String> getStyleClass() {
-                    return Node.this.getStyleClass();
-                }
-
-                @Override
-                public String getStyle() {
-                    return Node.this.getStyle();
-                }
-
-                @Override
-                public Styleable getStyleableParent() {
-                    Parent parent = null;
-                    if (styleableParent == null && (parent = Node.this.getParent()) != null) {
-                        styleableParent = parent.impl_getStyleable();
-                    };
-                    return styleableParent;
-                }
-
-                @Override
-                public List<CssMetaData<? extends Node, ?>> getCssMetaData() {
-                    return Node.this.getCssMetaData();
-                }                
-                
-                @Override
-                public Node getNode() {
-                    return Node.this;
-                }
-
-           };
+        final Class<?> clazz = getClass();
+        final Package pkg = clazz.getPackage();
+        
+        // package could be null. not likely, but could be.
+        int plen = 0;
+        if (pkg != null) {
+            plen = pkg.getName().length();
         }
-        return styleable;
+                
+        final int clen = clazz.getName().length();
+        final int pos = (0 < plen && plen < clen) ? plen + 1 : 0;
+        
+        return clazz.getName().substring(pos);
     }
+
+    /** 
+     * {@inheritDoc} 
+     * @return {@code getParent()}
+     */
+    @Override
+    public Styleable getStyleableParent() {
+        return getParent();
+    }
+
          
      /**
       * Not everything uses the default value of false for focusTraversable. 
@@ -7701,12 +7681,12 @@ public abstract class Node implements EventTarget {
                 }
             };
 
-         private static final List<CssMetaData<? extends Node, ?>> STYLEABLES;
+         private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
 
          static {
 
-             final List<CssMetaData<? extends Node, ?>> styleables = 
-                     new ArrayList<CssMetaData<? extends Node, ?>>();
+             final List<CssMetaData<? extends Styleable, ?>> styleables = 
+                     new ArrayList<CssMetaData<? extends Styleable, ?>>();
              styleables.add(CURSOR); 
              styleables.add(EFFECT);
              styleables.add(FOCUS_TRAVERSABLE);
@@ -7729,7 +7709,7 @@ public abstract class Node implements EventTarget {
      * @return The CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
      */
-    public static List<CssMetaData<? extends Node, ?>> getClassCssMetaData() {
+    public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
         //
         // Super-lazy instantiation pattern from Bill Pugh. StyleableProperties 
         // is referenced no earlier (and therefore loaded no earlier by the 
@@ -7748,7 +7728,8 @@ public abstract class Node implements EventTarget {
      * CssMetaData of its super classes.
      */
     
-    public List<CssMetaData<? extends Node, ?>> getCssMetaData() {
+    @Override
+    public List<CssMetaData<? extends Styleable, ?>> getCssMetaData() {
         return getClassCssMetaData();
     }
      
@@ -7759,7 +7740,7 @@ public abstract class Node implements EventTarget {
       */
      @Deprecated // SB-dependency: RT-21096 has been filed to track this
      public final ObservableMap<StyleableProperty<?>, List<Style>> impl_getStyleMap() {
-         return impl_getStyleable().getStyleMap();
+         return styleHelper.getObservableStyleMap();
      }
 
      /**
@@ -7769,7 +7750,7 @@ public abstract class Node implements EventTarget {
       */
      @Deprecated // SB-dependency: RT-21096 has been filed to track this
      public final void impl_setStyleMap(ObservableMap<StyleableProperty<?>, List<Style>> styleMap) {
-         impl_getStyleable().setStyleMap(styleMap);
+         styleHelper.setObservableStyleMap(styleMap);
      }
           
     /**
@@ -7885,7 +7866,7 @@ public abstract class Node implements EventTarget {
         // a parent or from the scene. This has to be done before calling 
         // impl_reapplyCSS.
         //
-        final List<CssMetaData<? extends Node, ?>> metaDataList = getCssMetaData();
+        final List<CssMetaData<? extends Styleable, ?>> metaDataList = getCssMetaData();
         final int nStyleables = metaDataList != null ? metaDataList.size() : 0;
         for (int n=0; n<nStyleables; n++) {
             final CssMetaData metaData = metaDataList.get(n);

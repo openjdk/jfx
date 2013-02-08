@@ -25,6 +25,7 @@
 
 package com.sun.javafx.css;
 
+import javafx.css.Styleable;
 import java.lang.ref.Reference;
 import java.lang.ref.WeakReference;
 import java.net.URL;

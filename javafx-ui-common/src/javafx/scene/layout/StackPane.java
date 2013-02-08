@@ -38,6 +38,7 @@ import javafx.geometry.Pos;
 import javafx.geometry.VPos;
 import javafx.scene.Node;
 import com.sun.javafx.css.converters.EnumConverter;
+import javafx.css.Styleable;
 
 /**
  *
@@ -215,7 +216,7 @@ public class StackPane extends Pane {
                 }
 
                 @Override
-                public CssMetaData getCssMetaData() {
+                public CssMetaData<StackPane, Pos> getCssMetaData() {
                     return StyleableProperties.ALIGNMENT;
                 }
 
@@ -370,10 +371,10 @@ public class StackPane extends Pane {
             }
         };
 
-         private static final List<CssMetaData<? extends Node, ?>> STYLEABLES;
+         private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
          static {
-            final List<CssMetaData<? extends Node, ?>> styleables =
-                new ArrayList<CssMetaData<? extends Node, ?>>(Region.getClassCssMetaData());
+            final List<CssMetaData<? extends Styleable, ?>> styleables =
+                new ArrayList<CssMetaData<? extends Styleable, ?>>(Region.getClassCssMetaData());
             styleables.add(ALIGNMENT);
             STYLEABLES = Collections.unmodifiableList(styleables);
          }
@@ -383,7 +384,7 @@ public class StackPane extends Pane {
      * @return The CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
      */
-    public static List<CssMetaData<? extends Node, ?>> getClassCssMetaData() {
+    public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
         return StyleableProperties.STYLEABLES;
     }
 
@@ -392,8 +393,9 @@ public class StackPane extends Pane {
      *
      */
     
+    
     @Override
-    public List<CssMetaData<? extends Node, ?>> getCssMetaData() {
+    public List<CssMetaData<? extends Styleable, ?>> getCssMetaData() {
         return getClassCssMetaData();
     }
 

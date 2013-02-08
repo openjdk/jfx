@@ -47,7 +47,7 @@ import com.sun.javafx.css.CssError;
 import javafx.css.CssMetaData;
 import javafx.css.PseudoClass;
 import com.sun.javafx.css.StyleManager;
-import com.sun.javafx.css.Styleable;
+import javafx.css.Styleable;
 import javafx.css.StyleableStringProperty;
 import com.sun.javafx.css.converters.StringConverter;
 import com.sun.javafx.scene.control.Logging;
@@ -57,7 +57,7 @@ import sun.util.logging.PlatformLogger;
 /**
  * An extension of PopupWindow that allows for CSS styling.
  */
-public class PopupControl extends PopupWindow implements Skinnable {
+public class PopupControl extends PopupWindow implements Skinnable, Styleable {
 
     /**
      * Sentinel value which can be passed to a control's setMinWidth(), setMinHeight(),
@@ -161,7 +161,7 @@ public class PopupControl extends PopupWindow implements Skinnable {
      *         method or {@code null}, if no id has been assigned.
      * @defaultValue null
      */
-    public final String getId() { return id.get(); }
+    @Override public final String getId() { return id.get(); }
 
     /**
      * A list of String identifiers which can be used to logically group
@@ -202,7 +202,7 @@ public class PopupControl extends PopupWindow implements Skinnable {
      * Returns the list of String identifiers that make up the styleClass
      * for this PopupControl. 
      */
-    public final ObservableList<String> getStyleClass() { return styleClass; }
+    @Override public final ObservableList<String> getStyleClass() { return styleClass; }
 
     /**
      * A string representation of the CSS style associated with this
@@ -242,7 +242,7 @@ public class PopupControl extends PopupWindow implements Skinnable {
      *         If this {@code PopupControl} does not have an inline style,
      *         an empty String is returned.
      */
-    public final String getStyle() { return style.get(); }
+    @Override public final String getStyle() { return style.get(); }
     public final StringProperty styleProperty() { return style; }
 
     @Override public final ObjectProperty<Skin<?>> skinProperty() { 
@@ -897,10 +897,10 @@ public class PopupControl extends PopupWindow implements Skinnable {
             }
         };
 
-        private static final List<CssMetaData<? extends Node, ?>> STYLEABLES;
+        private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
         static {
-            final List<CssMetaData<? extends Node, ?>> styleables =
-                new ArrayList<CssMetaData<? extends Node, ?>>();
+            final List<CssMetaData<? extends Styleable, ?>> styleables =
+                new ArrayList<CssMetaData<? extends Styleable, ?>>();
             Collections.addAll(styleables,
                 SKIN
             );
@@ -912,7 +912,7 @@ public class PopupControl extends PopupWindow implements Skinnable {
      * @return The CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
      */
-    public static List<CssMetaData<? extends Node, ?>> getClassCssMetaData() {
+    public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
         return StyleableProperties.STYLEABLES;
     }
 
@@ -922,7 +922,7 @@ public class PopupControl extends PopupWindow implements Skinnable {
      * @return The CssMetaData associated with this node, which may include the
      * CssMetaData of its super classes.
      */
-    public List<CssMetaData<? extends Node, ?>> getCssMetaData() {
+    public List<CssMetaData<? extends Styleable, ?>> getCssMetaData() {
         return getClassCssMetaData();
     }
 
@@ -934,69 +934,35 @@ public class PopupControl extends PopupWindow implements Skinnable {
     }
     
     /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     * {@inheritDoc}
+     * @return "PopupControl"
      */
-    @Deprecated
-    protected Styleable styleable; 
+    @Override
+    public String getTypeSelector() {
+        return "PopupControl";
+    }
     
     /**
-     * RT-19263
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
+     * {@inheritDoc}
+     * @return null
      */
-    @Deprecated // SB-dependency: RT-21094 has been filed to track this
-    public Styleable impl_getStyleable() {
-        if (styleable == null) {
-            styleable = new Styleable() {
+    @Override
+    public Styleable getStyleableParent() {
+        return null;
+    }
 
-                @Override
-                public String getId() {
-                    return PopupControl.this.getId();
-                }
-
-                @Override
-                public List<String> getStyleClass() {
-                    return PopupControl.this.getStyleClass();
-                }
-
-                @Override
-                public String getStyle() {
-                    return PopupControl.this.getStyle();
-                }
-
-                @Override
-                public Styleable getStyleableParent() {
-                    return null;
-                }
-
-                /**
-                * RT-19263
-                * @treatAsPrivate implementation detail
-                * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
-                */
-                @Deprecated @Override
-                public List<CssMetaData<? extends Node, ?>> getCssMetaData() {
-                    return PopupControl.this.getCssMetaData();
-                }                
-                
-                @Override
-                public Node getNode() {
-                    return bridge;
-                }
-
-            };
-        }
-        return styleable;
-    }    
-
+   // SB-dependency: RT-21094 has been filed to track this
+   public Node impl_styleableGetNode() {
+        return bridge;
+    }
+   
     protected class CSSBridge extends Group {
         private String currentSkinClassName = null;
         
         /**
          * {@inheritDoc}
          */
-        public List<CssMetaData<? extends Node, ?>> getCssMetaData() {
+        public List<CssMetaData<? extends Styleable, ?>> getCssMetaData() {
             // see RT-19263
             return PopupControl.this.getCssMetaData();
         }
@@ -1156,7 +1122,7 @@ public class PopupControl extends PopupWindow implements Skinnable {
                     }
 
                     @Override
-                    public CssMetaData getCssMetaData() {
+                    public CssMetaData<CSSBridge,String> getCssMetaData() {
                         return StyleableProperties.SKIN;
                     }
 

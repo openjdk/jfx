@@ -62,6 +62,7 @@ import javafx.beans.property.ObjectProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.ListChangeListener;
+import javafx.css.Styleable;
 import javafx.css.StyleableProperty;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
@@ -538,7 +539,7 @@ public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehav
                 }
 
                 @Override
-                public CssMetaData getCssMetaData() {
+                public CssMetaData<Pagination,Boolean> getCssMetaData() {
                     return StyleableProperties.ARROWS_VISIBLE;
                 }
 
@@ -568,7 +569,7 @@ public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehav
                 }
 
                 @Override
-                public CssMetaData getCssMetaData() {
+                public CssMetaData<Pagination,Boolean> getCssMetaData() {
                     return StyleableProperties.PAGE_INFORMATION_VISIBLE;
                 }
 
@@ -598,7 +599,7 @@ public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehav
                 }
 
                 @Override
-                public CssMetaData getCssMetaData() {
+                public CssMetaData<Pagination,Side> getCssMetaData() {
                     return StyleableProperties.PAGE_INFORMATION_ALIGNMENT;
                 }
 
@@ -628,7 +629,7 @@ public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehav
                 }
 
                 @Override
-                public CssMetaData getCssMetaData() {
+                public CssMetaData<Pagination,Boolean> getCssMetaData() {
                     return StyleableProperties.TOOLTIP_VISIBLE;
                 }
 
@@ -1258,7 +1259,7 @@ public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehav
             @Override
             public StyleableProperty<Boolean> getStyleableProperty(Pagination n) {
                 final PaginationSkin skin = (PaginationSkin) n.getSkin();
-                return (StyleableProperty)skin.arrowsVisibleProperty();
+                return (StyleableProperty<Boolean>)skin.arrowsVisibleProperty();
             }
         };
 
@@ -1275,7 +1276,7 @@ public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehav
             @Override
             public StyleableProperty<Boolean> getStyleableProperty(Pagination n) {
                 final PaginationSkin skin = (PaginationSkin) n.getSkin();
-                return (StyleableProperty)skin.pageInformationVisibleProperty();
+                return (StyleableProperty<Boolean>)skin.pageInformationVisibleProperty();
             }
         };
 
@@ -1292,7 +1293,7 @@ public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehav
             @Override
             public StyleableProperty<Side> getStyleableProperty(Pagination n) {
                 final PaginationSkin skin = (PaginationSkin) n.getSkin();
-                return (StyleableProperty)skin.pageInformationAlignmentProperty();
+                return (StyleableProperty<Side>)skin.pageInformationAlignmentProperty();
             }
         };
 
@@ -1309,20 +1310,18 @@ public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehav
             @Override
             public StyleableProperty<Boolean> getStyleableProperty(Pagination n) {
                 final PaginationSkin skin = (PaginationSkin) n.getSkin();
-                return (StyleableProperty)skin.tooltipVisibleProperty();
+                return (StyleableProperty<Boolean>)skin.tooltipVisibleProperty();
             }
         };
 
-        private static final List<CssMetaData<? extends Node, ?>> STYLEABLES;
+        private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
         static {
-            final List<CssMetaData<? extends Node, ?>> styleables =
-                new ArrayList<CssMetaData<? extends Node, ?>>(SkinBase.getClassCssMetaData());
-            Collections.addAll(styleables,
-                ARROWS_VISIBLE,
-                PAGE_INFORMATION_VISIBLE,
-                PAGE_INFORMATION_ALIGNMENT,
-                TOOLTIP_VISIBLE
-            );
+            final List<CssMetaData<? extends Styleable, ?>> styleables =
+                new ArrayList<CssMetaData<? extends Styleable, ?>>(SkinBase.getClassCssMetaData());
+            styleables.add(ARROWS_VISIBLE);
+            styleables.add(PAGE_INFORMATION_VISIBLE);
+            styleables.add(PAGE_INFORMATION_ALIGNMENT);
+            styleables.add(TOOLTIP_VISIBLE);
             STYLEABLES = Collections.unmodifiableList(styleables);
         }
     }
@@ -1331,7 +1330,7 @@ public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehav
      * @return The CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
      */
-    public static List<CssMetaData<? extends Node, ?>> getClassCssMetaData() {
+    public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
         return StyleableProperties.STYLEABLES;
     }
 
@@ -1339,7 +1338,7 @@ public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehav
      * {@inheritDoc}
      */
     @Override
-    public List<CssMetaData<? extends Node, ?>> getCssMetaData() {
+    public List<CssMetaData<? extends Styleable, ?>> getCssMetaData() {
         return getClassCssMetaData();
     }
 

@@ -29,6 +29,7 @@ import javafx.css.PseudoClass;
 import java.util.Collections;
 import java.util.List;
 import javafx.collections.ObservableList;
+import javafx.css.Styleable;
 import javafx.event.EventHandler;
 import javafx.geometry.HPos;
 import javafx.geometry.Insets;
@@ -394,7 +395,7 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
 
     private static class StyleableProperties {
 
-        private static final List<CssMetaData<? extends Node, ?>> STYLEABLES;
+        private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
 
         static {
             STYLEABLES = Collections.unmodifiableList(Control.getClassCssMetaData());
@@ -404,7 +405,7 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
     /** 
      * @return The CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
-     */    public static List<CssMetaData<? extends Node, ?>> getClassCssMetaData() {
+     */    public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
         return SkinBase.StyleableProperties.STYLEABLES;
     }
 
@@ -414,7 +415,7 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
      * @return The CssMetaData associated with this node, which may include the
      * CssMetaData of its super classes.
      */
-    public List<CssMetaData<? extends Node, ?>> getCssMetaData() {
+    public List<CssMetaData<? extends Styleable, ?>> getCssMetaData() {
         return getClassCssMetaData();
     }
     

@@ -39,7 +39,6 @@ import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.DoublePropertyBase;
-import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
@@ -70,7 +69,6 @@ import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
-import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.transform.Rotate;
 import javafx.util.Duration;
@@ -88,8 +86,8 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import javafx.beans.property.ObjectProperty;
+import javafx.css.Styleable;
 import javafx.scene.input.*;
 
 public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
@@ -100,7 +98,7 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
     }
     
     private ObjectProperty<TabAnimation> openTabAnimation = new StyleableObjectProperty<TabAnimation>(TabAnimation.GROW) {
-        @Override public CssMetaData getCssMetaData() {
+        @Override public CssMetaData<TabPane,TabAnimation> getCssMetaData() {
             return StyleableProperties.OPEN_TAB_ANIMATION;
         }
         
@@ -114,7 +112,7 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
     };
     
     private ObjectProperty<TabAnimation> closeTabAnimation = new StyleableObjectProperty<TabAnimation>(TabAnimation.GROW) {
-        @Override public CssMetaData getCssMetaData() {
+        @Override public CssMetaData<TabPane,TabAnimation> getCssMetaData() {
             return StyleableProperties.CLOSE_TAB_ANIMATION;
         }
 
@@ -545,7 +543,7 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
     * @treatAsPrivate implementation detail
     */
    private static class StyleableProperties {
-        private static final List<CssMetaData<? extends Node, ?>> STYLEABLES;
+        private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
         
         private final static CssMetaData<TabPane,TabAnimation> OPEN_TAB_ANIMATION = 
                 new CssMetaData<TabPane, TabPaneSkin.TabAnimation>("-fx-open-tab-animation", 
@@ -557,7 +555,7 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
 
             @Override public StyleableProperty<TabAnimation> getStyleableProperty(TabPane node) {
                 TabPaneSkin skin = (TabPaneSkin) node.getSkin();
-                return (StyleableProperty)skin.openTabAnimation;
+                return (StyleableProperty<TabAnimation>)skin.openTabAnimation;
             }
         };
         
@@ -571,18 +569,16 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
 
             @Override public StyleableProperty<TabAnimation> getStyleableProperty(TabPane node) {
                 TabPaneSkin skin = (TabPaneSkin) node.getSkin();
-                return (StyleableProperty)skin.closeTabAnimation;
+                return (StyleableProperty<TabAnimation>)skin.closeTabAnimation;
             }
         };
         
         static {
 
-           final List<CssMetaData<? extends Node, ?>> styleables = 
-               new ArrayList<CssMetaData<? extends Node, ?>>(SkinBase.getClassCssMetaData());
-           Collections.addAll(styleables,
-                   OPEN_TAB_ANIMATION,
-                   CLOSE_TAB_ANIMATION
-           );
+           final List<CssMetaData<? extends Styleable, ?>> styleables = 
+               new ArrayList<CssMetaData<? extends Styleable, ?>>(SkinBase.getClassCssMetaData());
+           styleables.add(OPEN_TAB_ANIMATION);
+           styleables.add(CLOSE_TAB_ANIMATION);
            STYLEABLES = Collections.unmodifiableList(styleables);
 
         }
@@ -592,14 +588,14 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
      * @return The CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
      */
-    public static List<CssMetaData<? extends Node, ?>> getClassCssMetaData() {
+    public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
         return StyleableProperties.STYLEABLES;
     }
 
     /**
      * {@inheritDoc}
      */
-    @Override public List<CssMetaData<? extends Node, ?>> getCssMetaData() {
+    @Override public List<CssMetaData<? extends Styleable, ?>> getCssMetaData() {
         return getClassCssMetaData();
     }
 

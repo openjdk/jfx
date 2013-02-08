@@ -51,6 +51,7 @@ import javafx.css.StyleableObjectProperty;
 import javafx.css.StyleableStringProperty;
 import com.sun.javafx.css.converters.StringConverter;
 import com.sun.javafx.scene.control.Logging;
+import javafx.css.Styleable;
 import javafx.css.StyleableProperty;
 import sun.util.logging.PlatformLogger;
 
@@ -141,7 +142,7 @@ public abstract class Control extends Region implements Skinnable {
      *                                                                         *
      **************************************************************************/  
     
-    private List<CssMetaData<? extends Node, ?>> styleableProperties;
+    private List<CssMetaData<? extends Styleable, ?>> styleableProperties;
 
     /**
      * A private reference directly to the SkinBase instance that is used as the
@@ -302,7 +303,11 @@ public abstract class Control extends Region implements Skinnable {
             }
         }
 
-        @Override 
+        // This method should be CssMetaData<Control,Skin> getCssMetaData(),
+        // but SKIN is CssMetaData<Control,String>. This does not matter to 
+        // the CSS code which doesn't care about the actual type. Hence,
+        // we'll suppress the warnings
+        @Override @SuppressWarnings({"unchecked", "rawtype"})
         public CssMetaData getCssMetaData() {
             return StyleableProperties.SKIN;
         }
@@ -396,10 +401,11 @@ public abstract class Control extends Region implements Skinnable {
     protected Control() {
         // focusTraversable is styleable through css. Calling setFocusTraversable
         // makes it look to css like the user set the value and css will not 
-        // override. Initializing focusTraversable by calling set on the 
-        // CssMetaData ensures that css will be able to override the value.        
-        final CssMetaData prop = ((StyleableProperty)focusTraversableProperty()).getCssMetaData();
-        prop.set(this, Boolean.TRUE, null);  
+        // override. Initializing focusTraversable by calling applyStyle
+        // with null for StyleOrigin ensures that css will be able to override
+        // the value.        
+        final StyleableProperty<Boolean> prop = (StyleableProperty<Boolean>)focusTraversableProperty();
+        prop.applyStyle(null, Boolean.TRUE);
         
         // we add a listener for menu request events to show the context menu
         // that may be set on the Control
@@ -649,7 +655,7 @@ public abstract class Control extends Region implements Skinnable {
                 }
 
                 @Override
-                public CssMetaData getCssMetaData() {
+                public CssMetaData<Control,String> getCssMetaData() {
                     return StyleableProperties.SKIN;
                 }
                 
@@ -755,10 +761,10 @@ public abstract class Control extends Region implements Skinnable {
             }
         };
 
-        private static final List<CssMetaData<? extends Node, ?>> STYLEABLES;
+        private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
         static {
-            final List<CssMetaData<? extends Node, ?>> styleables =
-                new ArrayList<CssMetaData<? extends Node, ?>>(Region.getClassCssMetaData());
+            final List<CssMetaData<? extends Styleable, ?>> styleables =
+                new ArrayList<CssMetaData<? extends Styleable, ?>>(Region.getClassCssMetaData());
             styleables.add(SKIN);
             STYLEABLES = Collections.unmodifiableList(styleables);
         }
@@ -768,7 +774,7 @@ public abstract class Control extends Region implements Skinnable {
      * @return The CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
      */
-    public static List<CssMetaData<? extends Node, ?>> getClassCssMetaData() {
+    public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
         return StyleableProperties.STYLEABLES;
     }
 
@@ -784,9 +790,9 @@ public abstract class Control extends Region implements Skinnable {
      * resides.
      */
     @Override
-    public final List<CssMetaData<? extends Node, ?>> getCssMetaData() {
+    public final List<CssMetaData<? extends Styleable, ?>> getCssMetaData() {
         if (styleableProperties == null) {
-            styleableProperties = new ArrayList<CssMetaData<? extends Node, ?>>();
+            styleableProperties = new ArrayList<CssMetaData<? extends Styleable, ?>>();
             styleableProperties.addAll(getControlCssMetaData());
             
             if (skinBase != null) {
@@ -799,7 +805,7 @@ public abstract class Control extends Region implements Skinnable {
     /**
      * @return unmodifiable list of the controls css styleable properties
      */
-    protected List<CssMetaData<? extends Node, ?>> getControlCssMetaData() {
+    protected List<CssMetaData<? extends Styleable, ?>> getControlCssMetaData() {
         return getClassCssMetaData();
     }
 

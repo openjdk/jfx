@@ -70,6 +70,7 @@ import com.sun.javafx.scene.control.behavior.ToolBarBehavior;
 import com.sun.javafx.scene.traversal.Direction;
 import com.sun.javafx.scene.traversal.TraversalEngine;
 import com.sun.javafx.scene.traversal.TraverseListener;
+import javafx.css.Styleable;
 import javafx.geometry.Insets;
 
 public class ToolBarSkin extends BehaviorSkinBase<ToolBar, ToolBarBehavior> implements TraverseListener {
@@ -174,7 +175,7 @@ public class ToolBarSkin extends BehaviorSkinBase<ToolBar, ToolBarBehavior> impl
                 }
 
                 @Override
-                public CssMetaData getCssMetaData() {
+                public CssMetaData<ToolBar,Number> getCssMetaData() {
                     return StyleableProperties.SPACING;
                 }
             };
@@ -216,7 +217,7 @@ public class ToolBarSkin extends BehaviorSkinBase<ToolBar, ToolBarBehavior> impl
                 }
 
                 @Override
-                public CssMetaData getCssMetaData() {
+                public CssMetaData<ToolBar,Pos> getCssMetaData() {
                     return StyleableProperties.ALIGNMENT;
                 }
             };
@@ -656,7 +657,7 @@ public class ToolBarSkin extends BehaviorSkinBase<ToolBar, ToolBarBehavior> impl
             @Override
             public StyleableProperty<Number> getStyleableProperty(ToolBar n) {
                 final ToolBarSkin skin = (ToolBarSkin) n.getSkin();
-                return (StyleableProperty)skin.spacingProperty();
+                return (StyleableProperty<Number>)skin.spacingProperty();
             }
         };
          
@@ -673,30 +674,28 @@ public class ToolBarSkin extends BehaviorSkinBase<ToolBar, ToolBarBehavior> impl
             @Override
             public StyleableProperty<Pos> getStyleableProperty(ToolBar n) {
                 final ToolBarSkin skin = (ToolBarSkin) n.getSkin();
-                return (StyleableProperty)skin.boxAlignmentProperty();
+                return (StyleableProperty<Pos>)skin.boxAlignmentProperty();
             }
         };
 
          
-         private static final List<CssMetaData<? extends Node, ?>> STYLEABLES;
+         private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
          static {
 
-            final List<CssMetaData<? extends Node, ?>> styleables =
-                new ArrayList<CssMetaData<? extends Node, ?>>(SkinBase.getClassCssMetaData());
+            final List<CssMetaData<? extends Styleable, ?>> styleables =
+                new ArrayList<CssMetaData<? extends Styleable, ?>>(SkinBase.getClassCssMetaData());
             
             // StackPane also has -fx-alignment. Replace it with 
             // ToolBarSkin's. 
             // TODO: Really should be able to reference StackPane.StyleableProperties.ALIGNMENT
             final String alignmentProperty = ALIGNMENT.getProperty();
             for (int n=0, nMax=styleables.size(); n<nMax; n++) {
-                final CssMetaData prop = styleables.get(n);
+                final CssMetaData<?,?> prop = styleables.get(n);
                 if (alignmentProperty.equals(prop.getProperty())) styleables.remove(prop);
             }
             
-            Collections.addAll(styleables,
-                SPACING, 
-                ALIGNMENT
-            );
+            styleables.add(SPACING);
+            styleables.add(ALIGNMENT);
             STYLEABLES = Collections.unmodifiableList(styleables);
 
          }
@@ -706,7 +705,7 @@ public class ToolBarSkin extends BehaviorSkinBase<ToolBar, ToolBarBehavior> impl
      * @return The CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
      */
-    public static List<CssMetaData<? extends Node, ?>> getClassCssMetaData() {
+    public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
         return StyleableProperties.STYLEABLES;
     }
 
@@ -714,7 +713,7 @@ public class ToolBarSkin extends BehaviorSkinBase<ToolBar, ToolBarBehavior> impl
      * {@inheritDoc}
      */
     @Override
-    public List<CssMetaData<? extends Node, ?>> getCssMetaData() {
+    public List<CssMetaData<? extends Styleable, ?>> getCssMetaData() {
         return getClassCssMetaData();
     }
 

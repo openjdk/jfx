@@ -24,16 +24,16 @@
 
 package javafx.scene.layout;
 
+import com.sun.javafx.css.StyleConverterImpl;
+import com.sun.javafx.scene.layout.region.RepeatStruct;
 import java.util.Map;
+import javafx.css.CssMetaData;
+import javafx.css.ParsedValue;
+import javafx.css.StyleConverter;
+import javafx.css.Styleable;
 import javafx.geometry.Insets;
 import javafx.scene.image.Image;
 import javafx.scene.paint.Paint;
-import javafx.css.ParsedValue;
-import javafx.css.CssMetaData;
-import com.sun.javafx.css.StyleConverterImpl;
-import com.sun.javafx.scene.layout.region.RepeatStruct;
-import javafx.css.StyleConverter;
-import javafx.scene.Node;
 
 /**
  * Converts the CSS for -fx-background items into a Background.
@@ -42,7 +42,7 @@ class BackgroundConverter extends StyleConverterImpl<ParsedValue[], Background> 
 
     static final StyleConverter<ParsedValue[], Background> INSTANCE = new BackgroundConverter();
 
-    @Override public Background convert(Map<CssMetaData<? extends Node, ?>,Object> convertedValues) {
+    @Override public Background convert(Map<CssMetaData<? extends Styleable, ?>,Object> convertedValues) {
         final Paint[] fills = (Paint[]) convertedValues.get(Background.BACKGROUND_COLOR);
         final String[] imageUrls = (String[]) convertedValues.get(Background.BACKGROUND_IMAGE);
         final boolean hasFills = fills != null && fills.length > 0;

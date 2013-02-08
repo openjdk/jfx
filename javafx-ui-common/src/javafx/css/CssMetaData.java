@@ -106,16 +106,16 @@ import javafx.scene.Node;
  * @param <V> The type into which the parsed value is converted. 
  */
 @com.sun.javafx.beans.annotations.NoBuilder
-public abstract class CssMetaData<N extends Node, V> {
+public abstract class CssMetaData<S extends Styleable, V> {
     
     /**
      * Set the value of the corresponding property on the given Node.
-     * @param node The node on which the property value is being set
+     * @param styleable The Styleable on which the property value is being set
      * @param value The value to which the property is set
      */
-    public void set(N node, V value, StyleOrigin origin) {
+    public void set(S styleable, V value, StyleOrigin origin) {
         
-        final StyleableProperty<V> styleableProperty = getStyleableProperty(node);
+        final StyleableProperty<V> styleableProperty = getStyleableProperty(styleable);
         final StyleOrigin currentOrigin = styleableProperty.getStyleOrigin();  
         final V currentValue = styleableProperty.getValue();
         
@@ -137,18 +137,19 @@ public abstract class CssMetaData<N extends Node, V> {
      * is settable without expanding the property. Generally, the property is 
      * settable if it is not null or is not bound. 
      * 
-     * @param node The node on which the property value is being set
+     * @param styleable The Styleable on which the property value is being set
      * @return true if the property can be set.
      */
-    public abstract boolean isSettable(N node);
+    public abstract boolean isSettable(S styleable);
 
     /**
      * Return the corresponding {@link StyleableProperty} for the given Node. 
      * Note that calling this method will cause the property to be expanded. 
-     * @param node
-     * @return 
+     * @param styleable The Styleable for which the property is returned
+     * @return The StyleableProperty corresponding to this CssMetaData for the
+     * given Styleable
      */
-    public abstract StyleableProperty<V> getStyleableProperty(N node);
+    public abstract StyleableProperty<V> getStyleableProperty(S styleable);
             
     private final String property;
     /**
@@ -181,16 +182,16 @@ public abstract class CssMetaData<N extends Node, V> {
      * applied.
      * @return The initial value of the property, possibly null
      */
-    public V getInitialValue(N node) {
+    public V getInitialValue(S styleable) {
         return initialValue;
     }
     
-    private final List<CssMetaData<? extends Node, ?>> subProperties;
+    private final List<CssMetaData<? extends Styleable, ?>> subProperties;
     /**
      * The sub-properties refers to the constituent properties of this property,
      * if any. For example, "-fx-font-weight" is sub-property of "-fx-font".
      */
-    public final List<CssMetaData<? extends Node, ?>> getSubProperties() {
+    public final List<CssMetaData<? extends Styleable, ?>> getSubProperties() {
         return subProperties;
     }
 
@@ -220,7 +221,7 @@ public abstract class CssMetaData<N extends Node, V> {
             final StyleConverter<?,V> converter, 
             final V initialValue, 
             boolean inherits, 
-            final List<CssMetaData<? extends Node, ?>> subProperties) {        
+            final List<CssMetaData<? extends Styleable, ?>> subProperties) {        
         
         this.property = property;
         this.converter = converter;
@@ -283,7 +284,7 @@ public abstract class CssMetaData<N extends Node, V> {
         if (getClass() != obj.getClass()) {
             return false;
         }
-        final CssMetaData<? extends Node, ?> other = (CssMetaData<? extends Node, ?>) obj;
+        final CssMetaData<? extends Styleable, ?> other = (CssMetaData<? extends Styleable, ?>) obj;
         if ((this.property == null) ? (other.property != null) : !this.property.equals(other.property)) {
             return false;
         }

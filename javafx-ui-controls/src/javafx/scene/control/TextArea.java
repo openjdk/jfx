@@ -49,7 +49,7 @@ import com.sun.javafx.collections.ListListenerHelper;
 import com.sun.javafx.collections.NonIterableChange;
 import com.sun.javafx.css.converters.SizeConverter;
 import com.sun.javafx.scene.control.skin.TextAreaSkin;
-import javafx.scene.Node;
+import javafx.css.Styleable;
 
 /**
  * Text input component that allows a user to enter multiple lines of
@@ -485,7 +485,7 @@ public class TextArea extends TextInputControl {
             return "wrapText";
         }
 
-        @Override public CssMetaData getCssMetaData() {
+        @Override public CssMetaData<TextArea,Boolean> getCssMetaData() {
             return StyleableProperties.WRAP_TEXT;
         }
     };
@@ -508,7 +508,7 @@ public class TextArea extends TextInputControl {
             super.set(value);
         }
 
-        @Override public CssMetaData getCssMetaData() {
+        @Override public CssMetaData<TextArea,Number> getCssMetaData() {
             return StyleableProperties.PREF_COLUMN_COUNT;
         }
 
@@ -541,7 +541,7 @@ public class TextArea extends TextInputControl {
             super.set(value);
         }
 
-        @Override public CssMetaData getCssMetaData() {
+        @Override public CssMetaData<TextArea,Number> getCssMetaData() {
             return StyleableProperties.PREF_ROW_COUNT;
         }
 
@@ -645,10 +645,10 @@ public class TextArea extends TextInputControl {
             }
         };
 
-        private static final List<CssMetaData<? extends Node, ?>> STYLEABLES;
+        private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
         static {
-            final List<CssMetaData<? extends Node, ?>> styleables =
-                new ArrayList<CssMetaData<? extends Node, ?>>(TextInputControl.getClassCssMetaData());
+            final List<CssMetaData<? extends Styleable, ?>> styleables =
+                new ArrayList<CssMetaData<? extends Styleable, ?>>(TextInputControl.getClassCssMetaData());
             styleables.add(PREF_COLUMN_COUNT);
             styleables.add(PREF_ROW_COUNT);
             styleables.add(WRAP_TEXT);
@@ -660,7 +660,7 @@ public class TextArea extends TextInputControl {
      * @return The CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
      */
-    public static List<CssMetaData<? extends Node, ?>> getClassCssMetaData() {
+    public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
         return StyleableProperties.STYLEABLES;
     }
 
@@ -668,7 +668,7 @@ public class TextArea extends TextInputControl {
      * {@inheritDoc}
      */
     @Override
-    public List<CssMetaData<? extends Node, ?>> getControlCssMetaData() {
+    public List<CssMetaData<? extends Styleable, ?>> getControlCssMetaData() {
         return getClassCssMetaData();
     }
 }

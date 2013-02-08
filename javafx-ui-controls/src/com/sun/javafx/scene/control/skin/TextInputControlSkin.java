@@ -85,6 +85,7 @@ import com.sun.javafx.tk.Toolkit;
 
 import static com.sun.javafx.PlatformUtil.*;
 import static com.sun.javafx.scene.control.skin.resources.ControlResources.*;
+import javafx.css.Styleable;
 
 /**
  * Abstract base class for text input skins.
@@ -110,7 +111,7 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
         }
 
         @Override
-        public CssMetaData getCssMetaData() {
+        public CssMetaData<TextInputControl,Paint> getCssMetaData() {
             return StyleableProperties.TEXT_FILL;
         }
     };
@@ -128,7 +129,7 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
         }
 
         @Override
-        public CssMetaData getCssMetaData() {
+        public CssMetaData<TextInputControl,Paint> getCssMetaData() {
             return StyleableProperties.PROMPT_TEXT_FILL;
         }
     };
@@ -153,7 +154,7 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
         }
 
         @Override
-        public CssMetaData getCssMetaData() {
+        public CssMetaData<TextInputControl,Paint> getCssMetaData() {
             return StyleableProperties.HIGHLIGHT_FILL;
         }
     };
@@ -175,7 +176,7 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
         }
 
         @Override
-        public CssMetaData getCssMetaData() {
+        public CssMetaData<TextInputControl,Paint> getCssMetaData() {
             return StyleableProperties.HIGHLIGHT_TEXT_FILL;
         }
     };
@@ -193,7 +194,7 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
         }
 
         @Override
-        public CssMetaData getCssMetaData() {
+        public CssMetaData<TextInputControl,Boolean> getCssMetaData() {
             return StyleableProperties.DISPLAY_CARET;
         }
     };
@@ -674,10 +675,10 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
                 return skin.textFill == null || !skin.textFill.isBound();
             }
 
-            @Override
+            @Override @SuppressWarnings("unchecked") 
             public StyleableProperty<Paint> getStyleableProperty(TextInputControl n) {
-                final TextInputControlSkin skin = (TextInputControlSkin) n.getSkin();
-                return (StyleableProperty)skin.textFill;
+                final TextInputControlSkin skin = (TextInputControlSkin) n.getSkin();                
+                return (StyleableProperty<Paint>)skin.textFill;
             }
         };
        
@@ -691,10 +692,10 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
                 return skin.promptTextFill == null || !skin.promptTextFill.isBound();
             }
 
-            @Override
+            @Override @SuppressWarnings("unchecked") 
             public StyleableProperty<Paint> getStyleableProperty(TextInputControl n) {
                 final TextInputControlSkin skin = (TextInputControlSkin) n.getSkin();
-                return (StyleableProperty)skin.promptTextFill;
+                return (StyleableProperty<Paint>)skin.promptTextFill;
             }
         };
         
@@ -708,10 +709,10 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
                 return skin.highlightFill == null || !skin.highlightFill.isBound();
             }
 
-            @Override
+            @Override @SuppressWarnings("unchecked") 
             public StyleableProperty<Paint> getStyleableProperty(TextInputControl n) {
                 final TextInputControlSkin skin = (TextInputControlSkin) n.getSkin();
-                return (StyleableProperty)skin.highlightFill;
+                return (StyleableProperty<Paint>)skin.highlightFill;
             }
         };
         
@@ -725,10 +726,10 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
                 return skin.highlightTextFill == null || !skin.highlightTextFill.isBound();
             }
 
-            @Override
+            @Override @SuppressWarnings("unchecked") 
             public StyleableProperty<Paint> getStyleableProperty(TextInputControl n) {
                 final TextInputControlSkin skin = (TextInputControlSkin) n.getSkin();
-                return (StyleableProperty)skin.highlightTextFill;
+                return (StyleableProperty<Paint>)skin.highlightTextFill;
             }
         };
         
@@ -742,23 +743,22 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
                 return skin.displayCaret == null || !skin.displayCaret.isBound();
             }
 
-            @Override
+            @Override @SuppressWarnings("unchecked") 
             public StyleableProperty<Boolean> getStyleableProperty(TextInputControl n) {
                 final TextInputControlSkin skin = (TextInputControlSkin) n.getSkin();
-                return (StyleableProperty)skin.displayCaret;
+                return (StyleableProperty<Boolean>)skin.displayCaret;
             }
         };
 
-        private static final List<CssMetaData<? extends Node, ?>> STYLEABLES;
+        private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
         static {
-            List<CssMetaData<? extends Node, ?>> styleables = new ArrayList<CssMetaData<? extends Node, ?>>(SkinBase.getClassCssMetaData());
-            Collections.addAll(styleables,
-                TEXT_FILL,
-                PROMPT_TEXT_FILL,
-                HIGHLIGHT_FILL,
-                HIGHLIGHT_TEXT_FILL,
-                DISPLAY_CARET
-            );
+            List<CssMetaData<? extends Styleable, ?>> styleables = 
+                new ArrayList<CssMetaData<? extends Styleable, ?>>(SkinBase.getClassCssMetaData());
+            styleables.add(TEXT_FILL);
+            styleables.add(PROMPT_TEXT_FILL);
+            styleables.add(HIGHLIGHT_FILL);
+            styleables.add(HIGHLIGHT_TEXT_FILL);
+            styleables.add(DISPLAY_CARET);
 
             STYLEABLES = Collections.unmodifiableList(styleables);
         }
@@ -768,7 +768,7 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
      * @return The CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
      */
-    public static List<CssMetaData<? extends Node, ?>> getClassCssMetaData() {
+    public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
         return StyleableProperties.STYLEABLES;
     }
 
@@ -776,7 +776,7 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
      * {@inheritDoc}
      */
     @Override
-    public List<CssMetaData<? extends Node, ?>> getCssMetaData() {
+    public List<CssMetaData<? extends Styleable, ?>> getCssMetaData() {
         return getClassCssMetaData();
     }
 

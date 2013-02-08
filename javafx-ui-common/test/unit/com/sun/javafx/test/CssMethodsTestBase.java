@@ -36,6 +36,7 @@ import org.junit.Test;
 import javafx.css.StyleConverter;
 import javafx.css.CssMetaData;
 import java.util.List;
+import javafx.css.Styleable;
 import javafx.css.StyleableProperty;
 
 public abstract class CssMethodsTestBase {
@@ -113,10 +114,10 @@ public abstract class CssMethodsTestBase {
         return new Object[] { configuration };
     }
     
-    private static CssMetaData<? extends Node, ?> getCssMetaData(Node node, String cssProperty) {
+    private static CssMetaData<? extends Styleable, ?> getCssMetaData(Node node, String cssProperty) {
         
-        List<CssMetaData<? extends Node, ?>> styleables = node.getCssMetaData();
-        for(CssMetaData<? extends Node, ?> styleable : styleables) {
+        List<CssMetaData<? extends Styleable, ?>> styleables = node.getCssMetaData();
+        for(CssMetaData<? extends Styleable, ?> styleable : styleables) {
             if (styleable.getProperty().equals(cssProperty)) {
                 return styleable;
             }

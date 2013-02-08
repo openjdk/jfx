@@ -30,7 +30,6 @@ import java.util.Collections;
 import java.util.List;
 
 import javafx.beans.Observable;
-import javafx.beans.value.WritableValue;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.Node;
 
@@ -50,6 +49,7 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import javafx.beans.DefaultProperty;
 import javafx.beans.property.*;
+import javafx.css.Styleable;
 import javafx.css.StyleableProperty;
 import javafx.geometry.NodeOrientation;
 
@@ -279,7 +279,7 @@ public class ImageView extends Node {
                 }
 
                 @Override
-                public CssMetaData getCssMetaData() {
+                public CssMetaData<ImageView,String> getCssMetaData() {
                     return StyleableProperties.IMAGE;
                 }
                 
@@ -814,10 +814,10 @@ public class ImageView extends Node {
             }
         };
             
-         private static final List<CssMetaData<? extends Node, ?>> STYLEABLES;
+         private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
          static {
-            final List<CssMetaData<? extends Node, ?>> styleables = 
-		new ArrayList<CssMetaData<? extends Node, ?>>(Node.getClassCssMetaData());
+            final List<CssMetaData<? extends Styleable, ?>> styleables = 
+		new ArrayList<CssMetaData<? extends Styleable, ?>>(Node.getClassCssMetaData());
             styleables.add(IMAGE);
             STYLEABLES = Collections.unmodifiableList(styleables);
          }
@@ -827,7 +827,7 @@ public class ImageView extends Node {
      * @return The CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
      */
-    public static List<CssMetaData<? extends Node, ?>> getClassCssMetaData() {
+    public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
         return StyleableProperties.STYLEABLES;
     }
 
@@ -836,8 +836,9 @@ public class ImageView extends Node {
      *
      */
     
+    
     @Override
-    public List<CssMetaData<? extends Node, ?>> getCssMetaData() {
+    public List<CssMetaData<? extends Styleable, ?>> getCssMetaData() {
         return getClassCssMetaData();
     }
 

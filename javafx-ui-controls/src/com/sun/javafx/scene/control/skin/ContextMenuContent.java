@@ -76,6 +76,7 @@ import javafx.stage.Window;
 
 import com.sun.javafx.scene.control.behavior.TwoLevelFocusPopupBehavior;
 import javafx.beans.property.ReadOnlyBooleanProperty;
+import javafx.css.Styleable;
 
 /**
  * This is a the SkinBase for PopupMenu based controls so that the CSS parts
@@ -883,19 +884,19 @@ public class ContextMenuContent extends Region {
      /** @treatAsPrivate */
     private static class StyleableProperties {
 
-        private static final List<CssMetaData<? extends Node, ?>> STYLEABLES;
+        private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
         static {
 
-            final List<CssMetaData<? extends Node, ?>> styleables =
-                new ArrayList<CssMetaData<? extends Node, ?>>(Region.getClassCssMetaData());
+            final List<CssMetaData<? extends Styleable, ?>> styleables =
+                new ArrayList<CssMetaData<? extends Styleable, ?>>(Region.getClassCssMetaData());
 
             //
             // SkinBase only has Region's unique StlyleableProperty's, none of Nodes
             // So, we need to add effect back in. The effect property is in a
             // private inner class, so get the property from Node the hard way.
-            final List<CssMetaData<? extends Node, ?>> nodeStyleables = Node.getClassCssMetaData();
+            final List<CssMetaData<? extends Styleable, ?>> nodeStyleables = Node.getClassCssMetaData();
             for(int n=0, max=nodeStyleables.size(); n<max; n++) {
-                CssMetaData styleable = nodeStyleables.get(n);
+                CssMetaData<? extends Styleable, ?> styleable = nodeStyleables.get(n);
                 if ("effect".equals(styleable.getProperty())) {
                     styleables.add(styleable);
                     break;
@@ -909,7 +910,7 @@ public class ContextMenuContent extends Region {
      * @return The CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
      */
-    public static List<CssMetaData<? extends Node, ?>> getClassCssMetaData() {
+    public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
         return StyleableProperties.STYLEABLES;
     }
 
@@ -917,7 +918,7 @@ public class ContextMenuContent extends Region {
      * {@inheritDoc}
      */
     @Override
-    public List<CssMetaData<? extends Node, ?>> getCssMetaData() {
+    public List<CssMetaData<? extends Styleable, ?>> getCssMetaData() {
         return getClassCssMetaData();
     }
     

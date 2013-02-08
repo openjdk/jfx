@@ -69,7 +69,7 @@ import com.sun.javafx.css.SimpleSelector;
 import com.sun.javafx.css.Size;
 import com.sun.javafx.css.SizeUnits;
 import com.sun.javafx.css.StyleManager;
-import com.sun.javafx.css.Styleable;
+import javafx.css.Styleable;
 import com.sun.javafx.css.Stylesheet;
 import com.sun.javafx.css.converters.BooleanConverter;
 import com.sun.javafx.css.converters.EffectConverter;

@@ -24,17 +24,17 @@
 
 package javafx.scene.layout;
 
-import java.util.Map;
-import javafx.geometry.Insets;
-import javafx.scene.image.Image;
-import javafx.scene.paint.Paint;
-import javafx.css.ParsedValue;
 import com.sun.javafx.css.StyleConverterImpl;
-import javafx.css.CssMetaData;
 import com.sun.javafx.scene.layout.region.BorderImageSlices;
 import com.sun.javafx.scene.layout.region.Margins;
 import com.sun.javafx.scene.layout.region.RepeatStruct;
-import javafx.scene.Node;
+import java.util.Map;
+import javafx.css.CssMetaData;
+import javafx.css.ParsedValue;
+import javafx.css.Styleable;
+import javafx.geometry.Insets;
+import javafx.scene.image.Image;
+import javafx.scene.paint.Paint;
 
 /**
  */
@@ -51,7 +51,7 @@ class BorderConverter extends StyleConverterImpl<ParsedValue[], Border> {
     private BorderConverter() { }
 
     @Override
-    public Border convert(Map<CssMetaData<? extends Node, ?>, Object> convertedValues) {
+    public Border convert(Map<CssMetaData<? extends Styleable, ?>, Object> convertedValues) {
         final Paint[][] strokeFills = (Paint[][])convertedValues.get(Border.BORDER_COLOR);
         final String[] imageUrls = (String[]) convertedValues.get(Border.BORDER_IMAGE_SOURCE);
         final boolean hasStrokes = strokeFills != null && strokeFills.length > 0;

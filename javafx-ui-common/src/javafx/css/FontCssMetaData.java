@@ -42,7 +42,7 @@ import javafx.scene.text.FontWeight;
  * @param N The type of Node
  */
 @com.sun.javafx.beans.annotations.NoBuilder
-public abstract class FontCssMetaData<N extends Node> extends CssMetaData<N, Font> {
+public abstract class FontCssMetaData<S extends Styleable> extends CssMetaData<S, Font> {
 
     /**
      * The property name is concatenated with &quot;-weight&quot;,
@@ -72,74 +72,74 @@ public abstract class FontCssMetaData<N extends Node> extends CssMetaData<N, Fon
         super(property, FontConverter.getInstance(), initial, true, createSubProperties(property, initial));
     }
 
-    private static <N extends Node> List<CssMetaData<? extends Node, ?>> createSubProperties(String property, Font initial) {
+    private static <S extends Styleable> List<CssMetaData<? extends Styleable, ?>> createSubProperties(String property, Font initial) {
         
-        final List<CssMetaData<N, ?>> subProperties = 
-                new ArrayList<CssMetaData<N, ?>>();
+        final List<CssMetaData<S, ?>> subProperties = 
+                new ArrayList<CssMetaData<S, ?>>();
         
         final Font defaultFont = initial != null ? initial : Font.getDefault();
         
-        final CssMetaData<N, String> FAMILY = 
-                new CssMetaData<N, String>(property.concat("-family"), 
+        final CssMetaData<S, String> FAMILY = 
+                new CssMetaData<S, String>(property.concat("-family"), 
                 StringConverter.getInstance(), defaultFont.getFamily(), true) {
             @Override
-            public boolean isSettable(N node) {
+            public boolean isSettable(S styleable) {
                 return false;
             }
 
             @Override
-            public StyleableProperty<String> getStyleableProperty(N node) {
+            public StyleableProperty<String> getStyleableProperty(S styleable) {
                 return null;
             }
         };
         subProperties.add(FAMILY);
         
-        final CssMetaData<N, Number> SIZE = 
-                new CssMetaData<N, Number>(property.concat("-size"), 
+        final CssMetaData<S, Number> SIZE = 
+                new CssMetaData<S, Number>(property.concat("-size"), 
                 SizeConverter.getInstance(), defaultFont.getSize(), true) {
             @Override
-            public boolean isSettable(N node) {
+            public boolean isSettable(S styleable) {
                 return false;
             }
 
             @Override
-            public StyleableProperty<Number> getStyleableProperty(N node) {
+            public StyleableProperty<Number> getStyleableProperty(S styleable) {
                 return null;
             }
         };
         subProperties.add(SIZE);
         
-        final CssMetaData<N, FontPosture> STYLE = 
-                new CssMetaData<N, FontPosture>(property.concat("-style"), 
+        final CssMetaData<S, FontPosture> STYLE = 
+                new CssMetaData<S, FontPosture>(property.concat("-style"), 
                 FontConverter.FontStyleConverter.getInstance(), FontPosture.REGULAR, true) {
             @Override
-            public boolean isSettable(N node) {
+            public boolean isSettable(S styleable) {
                 return false;
             }
 
             @Override
-            public StyleableProperty<FontPosture> getStyleableProperty(N node) {
+            public StyleableProperty<FontPosture> getStyleableProperty(S styleable) {
                 return null;
             }
         };
         subProperties.add(STYLE);
         
-        final CssMetaData<N, FontWeight> WEIGHT = 
-                new CssMetaData<N, FontWeight>(property.concat("-weight"), 
+        final CssMetaData<S, FontWeight> WEIGHT = 
+                new CssMetaData<S, FontWeight>(property.concat("-weight"), 
                 FontConverter.FontWeightConverter.getInstance(), FontWeight.NORMAL, true) {
             @Override
-            public boolean isSettable(N node) {
+            public boolean isSettable(S styleable) {
                 return false;
             }
 
             @Override
-            public StyleableProperty<FontWeight> getStyleableProperty(N node) {
+            public StyleableProperty<FontWeight> getStyleableProperty(S styleable) {
                 return null;
             }
         };
         subProperties.add(WEIGHT);
         
-        return Collections.<CssMetaData<? extends Node, ?>>unmodifiableList(subProperties);
+        return Collections.<CssMetaData<? extends Styleable, ?>>unmodifiableList(subProperties);
     }
     
 }

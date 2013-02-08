@@ -41,6 +41,7 @@ import javafx.css.CssMetaData;
 import javafx.css.PseudoClass;
 import com.sun.javafx.css.converters.EnumConverter;
 import com.sun.javafx.scene.control.skin.ToolBarSkin;
+import javafx.css.Styleable;
 import javafx.css.StyleableProperty;
 
 /**
@@ -167,7 +168,7 @@ public class ToolBar extends Control {
                 }
 
                 @Override
-                public CssMetaData getCssMetaData() {
+                public CssMetaData<ToolBar,Orientation> getCssMetaData() {
                     return StyleableProperties.ORIENTATION;
                 }
             };
@@ -215,17 +216,15 @@ public class ToolBar extends Control {
 
             @Override
             public StyleableProperty<Orientation> getStyleableProperty(ToolBar n) {
-                return (StyleableProperty)n.orientationProperty();
+                return (StyleableProperty<Orientation>)n.orientationProperty();
             }
         };
 
-        private static final List<CssMetaData<? extends Node, ?>> STYLEABLES;
+        private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
         static {
-            final List<CssMetaData<? extends Node, ?>> styleables =
-                new ArrayList<CssMetaData<? extends Node, ?>>(Control.getClassCssMetaData());
-            Collections.addAll(styleables,
-                ORIENTATION
-            );
+            final List<CssMetaData<? extends Styleable, ?>> styleables =
+                new ArrayList<CssMetaData<? extends Styleable, ?>>(Control.getClassCssMetaData());
+            styleables.add(ORIENTATION);
             STYLEABLES = Collections.unmodifiableList(styleables);
         }
     }
@@ -234,7 +233,7 @@ public class ToolBar extends Control {
      * @return The CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
      */
-    public static List<CssMetaData<? extends Node, ?>> getClassCssMetaData() {
+    public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
         return StyleableProperties.STYLEABLES;
     }
 
@@ -242,7 +241,7 @@ public class ToolBar extends Control {
      * {@inheritDoc}
      */
     @Override
-    public List<CssMetaData<? extends Node, ?>> getControlCssMetaData() {
+    public List<CssMetaData<? extends Styleable, ?>> getControlCssMetaData() {
         return getClassCssMetaData();
     }
 

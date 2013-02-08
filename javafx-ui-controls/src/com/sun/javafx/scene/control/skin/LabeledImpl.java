@@ -39,36 +39,38 @@ import javafx.css.StyleOrigin;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import javafx.css.Styleable;
 import javafx.css.StyleableProperty;
-import javafx.scene.Node;
 import javafx.scene.layout.Region;
 
 
 public class LabeledImpl extends Label {
 
     public LabeledImpl(final Labeled labeled) {
-        new Shuttler(this, labeled);
+        shuttler = new Shuttler(this, labeled);
     }
-        
+    private final Shuttler shuttler;
+    
     private static void initialize(Shuttler shuttler, LabeledImpl labeledImpl, Labeled labeled) {
-        
+    
         labeledImpl.setText(labeled.getText());
         labeled.textProperty().addListener(shuttler);
         
         labeledImpl.setGraphic(labeled.getGraphic());
         labeled.graphicProperty().addListener(shuttler);
         
-        final List<CssMetaData<? extends Node, ?>> styleables = StyleableProperties.STYLEABLES_TO_MIRROR;
+        final List<CssMetaData<? extends Styleable, ?>> styleables = StyleableProperties.STYLEABLES_TO_MIRROR;
         
         for(int n=0, nMax=styleables.size(); n<nMax; n++) {
-            final CssMetaData styleable = styleables.get(n);
+            @SuppressWarnings("unchecked")
+            final CssMetaData<Styleable,Object> styleable = (CssMetaData<Styleable,Object>)styleables.get(n);
             
             // the Labeled isn't necessarily a Label, so skip the skin or
             // we'll get an argument type mismatch on the invocation of the
             // skin constructor. 
             if ("-fx-skin".equals(styleable.getProperty())) continue;
             
-            final StyleableProperty fromVal = styleable.getStyleableProperty(labeled);
+            final StyleableProperty<?> fromVal = styleable.getStyleableProperty(labeled);
             if (fromVal instanceof Observable) {
                 // listen for changes to this property
                 ((Observable)fromVal).addListener(shuttler);
@@ -105,8 +107,9 @@ public class LabeledImpl extends Label {
                 }
                 
             } else if (valueModel instanceof StyleableProperty) { 
-                StyleableProperty styleableProperty = (StyleableProperty)valueModel;
-                CssMetaData cssMetaData = styleableProperty.getCssMetaData();
+                StyleableProperty<?> styleableProperty = (StyleableProperty)valueModel;
+                @SuppressWarnings("unchecked")
+                CssMetaData<Styleable,Object> cssMetaData = (CssMetaData<Styleable,Object>)styleableProperty.getCssMetaData();
                 if (cssMetaData != null) {
                     StyleOrigin origin = styleableProperty.getStyleOrigin();
                     cssMetaData.set(labeledImpl, styleableProperty.getValue(), origin);
@@ -118,7 +121,7 @@ public class LabeledImpl extends Label {
     /** Protected for unit test purposes */
     static final class StyleableProperties {
 
-        static final List<CssMetaData<? extends Node, ?>> STYLEABLES_TO_MIRROR;
+        static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES_TO_MIRROR;
         static {
             //
             // We do this as we only want to mirror the Labeled's keys,
@@ -134,10 +137,10 @@ public class LabeledImpl extends Label {
             // If just this subset were returned (by impl_CSS_STYLEABLE) then
             // -fx-opacity (for example) would be meaningless to the Labeled. 
             // 
-            final List<CssMetaData<? extends Node, ?>> labeledStyleables = Labeled.getClassCssMetaData();
-            final List<CssMetaData<? extends Node, ?>> parentStyleables = Region.getClassCssMetaData();
-            final List<CssMetaData<? extends Node, ?>> styleables = 
-                new ArrayList<CssMetaData<? extends Node, ?>>(labeledStyleables);
+            final List<CssMetaData<? extends Styleable, ?>> labeledStyleables = Labeled.getClassCssMetaData();
+            final List<CssMetaData<? extends Styleable, ?>> parentStyleables = Region.getClassCssMetaData();
+            final List<CssMetaData<? extends Styleable, ?>> styleables = 
+                new ArrayList<CssMetaData<? extends Styleable, ?>>(labeledStyleables);
             styleables.removeAll(parentStyleables);
             STYLEABLES_TO_MIRROR = Collections.unmodifiableList(styleables);
         }

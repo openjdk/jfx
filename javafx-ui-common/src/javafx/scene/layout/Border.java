@@ -43,6 +43,7 @@ import com.sun.javafx.scene.layout.region.Margins;
 import com.sun.javafx.scene.layout.region.RepeatStruct;
 import com.sun.javafx.scene.layout.region.RepeatStructConverter;
 import com.sun.javafx.scene.layout.region.SliceSequenceConverter;
+import javafx.css.Styleable;
 
 /**
  * The Border of a {@link Region}. A Border is an immutable object which
@@ -126,8 +127,8 @@ public final class Border {
                     InsetsConverter.SequenceConverter.getInstance(),
                     new Insets[] {Insets.EMPTY});
 
-    private static final List<CssMetaData<? extends Node, ?>> STYLEABLES =
-            (List<CssMetaData<? extends Node, ?>>) (List) Collections.unmodifiableList(
+    private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES =
+            (List<CssMetaData<? extends Styleable, ?>>) (List) Collections.unmodifiableList(
                     // Unchecked!
                     Arrays.asList(BORDER_COLOR,
                             BORDER_STYLE,
@@ -144,7 +145,7 @@ public final class Border {
      * @return The CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
      */
-    public static List<CssMetaData<? extends Node, ?>> getClassCssMetaData() {
+    public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
         return STYLEABLES;
     }
 

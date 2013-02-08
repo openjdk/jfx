@@ -43,6 +43,7 @@ import com.sun.javafx.scene.layout.region.LayeredBackgroundPositionConverter;
 import com.sun.javafx.scene.layout.region.LayeredBackgroundSizeConverter;
 import com.sun.javafx.scene.layout.region.RepeatStruct;
 import com.sun.javafx.scene.layout.region.RepeatStructConverter;
+import javafx.css.Styleable;
 
 /**
  * The Background of a {@link Region}. A Background is an immutable object which
@@ -102,8 +103,8 @@ public final class Background {
                     LayeredBackgroundSizeConverter.getInstance(),
                     new BackgroundSize[] { BackgroundSize.DEFAULT } );
 
-    private static final List<CssMetaData<? extends Node, ?>> STYLEABLES =
-            (List<CssMetaData<? extends Node, ?>>) (List) Collections.unmodifiableList(
+    private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES =
+            (List<CssMetaData<? extends Styleable, ?>>) (List) Collections.unmodifiableList(
                     // Unchecked!
                     Arrays.asList(BACKGROUND_COLOR,
                             BACKGROUND_INSETS,
@@ -117,7 +118,7 @@ public final class Background {
      * @return The CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
      */
-    public static List<CssMetaData<? extends Node, ?>> getClassCssMetaData() {
+    public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
         return STYLEABLES;
     }
 

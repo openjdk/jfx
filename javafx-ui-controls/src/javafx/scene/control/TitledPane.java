@@ -41,6 +41,7 @@ import javafx.css.CssMetaData;
 import com.sun.javafx.css.converters.BooleanConverter;
 import com.sun.javafx.scene.control.skin.TitledPaneSkin;
 import javafx.beans.DefaultProperty;
+import javafx.css.Styleable;
 import javafx.css.StyleableProperty;
 
 /**
@@ -185,7 +186,7 @@ public class TitledPane extends Labeled {
         }
 
         @Override
-        public CssMetaData getCssMetaData() {
+        public CssMetaData<TitledPane,Boolean> getCssMetaData() {
             return StyleableProperties.ANIMATED;
         }
         
@@ -225,7 +226,7 @@ public class TitledPane extends Labeled {
         }
 
         @Override
-        public CssMetaData getCssMetaData() {
+        public CssMetaData<TitledPane,Boolean> getCssMetaData() {
             return StyleableProperties.COLLAPSIBLE;
         }
         
@@ -287,7 +288,7 @@ public class TitledPane extends Labeled {
 
             @Override
             public StyleableProperty<Boolean> getStyleableProperty(TitledPane n) {
-                return (StyleableProperty)n.collapsibleProperty();
+                return (StyleableProperty<Boolean>)n.collapsibleProperty();
             }
         };
                
@@ -302,18 +303,16 @@ public class TitledPane extends Labeled {
 
             @Override
             public StyleableProperty<Boolean> getStyleableProperty(TitledPane n) {
-                return (StyleableProperty)n.animatedProperty();
+                return (StyleableProperty<Boolean>)n.animatedProperty();
             }
         };
 
-        private static final List<CssMetaData<? extends Node, ?>> STYLEABLES;
+        private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
         static {
-            final List<CssMetaData<? extends Node, ?>> styleables =
-                new ArrayList<CssMetaData<? extends Node, ?>>(Labeled.getClassCssMetaData());
-            Collections.addAll(styleables,
-                COLLAPSIBLE,
-                ANIMATED
-            );
+            final List<CssMetaData<? extends Styleable, ?>> styleables =
+                new ArrayList<CssMetaData<? extends Styleable, ?>>(Labeled.getClassCssMetaData());
+            styleables.add(COLLAPSIBLE);
+            styleables.add(ANIMATED);
             STYLEABLES = Collections.unmodifiableList(styleables);
         }
     }
@@ -322,7 +321,7 @@ public class TitledPane extends Labeled {
      * @return The CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
      */
-    public static List<CssMetaData<? extends Node, ?>> getClassCssMetaData() {
+    public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
         return StyleableProperties.STYLEABLES;
     }
 
@@ -330,7 +329,7 @@ public class TitledPane extends Labeled {
      * {@inheritDoc}
      */
     @Override
-    public List<CssMetaData<? extends Node, ?>> getControlCssMetaData() {
+    public List<CssMetaData<? extends Styleable, ?>> getControlCssMetaData() {
         return getClassCssMetaData();
     }
 

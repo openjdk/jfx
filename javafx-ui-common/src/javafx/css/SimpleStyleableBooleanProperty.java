@@ -50,7 +50,7 @@ public abstract class SimpleStyleableBooleanProperty
      * @param cssMetaData
      *            the CssMetaData associated with this {@code StyleableProperty}
      */
-    public SimpleStyleableBooleanProperty(CssMetaData<? extends Node, Boolean> cssMetaData) {
+    public SimpleStyleableBooleanProperty(CssMetaData<? extends Styleable, Boolean> cssMetaData) {
         super();
         this.cssMetaData = cssMetaData;
     }
@@ -63,7 +63,7 @@ public abstract class SimpleStyleableBooleanProperty
      * @param initialValue
      *            the initial value of the wrapped {@code Object}
      */
-    public SimpleStyleableBooleanProperty(CssMetaData<? extends Node, Boolean> cssMetaData, boolean initialValue) {
+    public SimpleStyleableBooleanProperty(CssMetaData<? extends Styleable, Boolean> cssMetaData, boolean initialValue) {
         super(initialValue);
         this.cssMetaData = cssMetaData;
     }
@@ -78,7 +78,7 @@ public abstract class SimpleStyleableBooleanProperty
      * @param name
      *            the name of this {@code BooleanProperty}
      */
-    public SimpleStyleableBooleanProperty(CssMetaData<? extends Node, Boolean> cssMetaData, Object bean, String name) {
+    public SimpleStyleableBooleanProperty(CssMetaData<? extends Styleable, Boolean> cssMetaData, Object bean, String name) {
         super(bean, name);
         this.cssMetaData = cssMetaData;
     }
@@ -95,7 +95,7 @@ public abstract class SimpleStyleableBooleanProperty
      * @param initialValue
      *            the initial value of the wrapped {@code Object}
      */
-    public SimpleStyleableBooleanProperty(CssMetaData<? extends Node, Boolean> cssMetaData, Object bean, String name, boolean initialValue) {
+    public SimpleStyleableBooleanProperty(CssMetaData<? extends Styleable, Boolean> cssMetaData, Object bean, String name, boolean initialValue) {
         super(bean, name, initialValue);
         this.cssMetaData = cssMetaData;
     }
@@ -128,11 +128,11 @@ public abstract class SimpleStyleableBooleanProperty
 
     /** {@inheritDoc} */
     @Override
-    public final CssMetaData<? extends Node, Boolean> getCssMetaData() {
+    public final CssMetaData<? extends Styleable, Boolean> getCssMetaData() {
         return cssMetaData;
     }
 
     private StyleOrigin origin = null;
-    private final CssMetaData<? extends Node, Boolean> cssMetaData;
+    private final CssMetaData<? extends Styleable, Boolean> cssMetaData;
 
 }
