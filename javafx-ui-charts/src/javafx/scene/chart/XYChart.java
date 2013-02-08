@@ -70,6 +70,15 @@ import javafx.css.StyleableProperty;
  * Chart base class for all 2 axis charts. It is responsible for drawing the two
  * axes and the plot content. It contains a list of all content in the plot and
  * implementations of XYChart can add nodes to this list that need to be rendered.
+ * 
+ * <p>It is possible to install Tooltips on data items / symbols. 
+ * For example the following code snippet installs Tooltip on the 1st data item.
+ * 
+ * <pre><code>
+ *  XYChart.Data item = ( XYChart.Data)series.getData().get(0);
+ *  Tooltip.install(item.getNode(), new Tooltip("Symbol-0"));
+ * </code></pre>
+ *
  */
 public abstract class XYChart<X,Y> extends Chart {
 
