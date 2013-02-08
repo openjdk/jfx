@@ -763,9 +763,9 @@ is being used to size a border should also be in pixels.
  ******************************************************************************/
 
 .split-menu-button {
-    -fx-background-color: -fx-outer-border; 
-    -fx-background-insets: 0;
-    -fx-background-radius: 3;
+    -fx-background-color: -fx-shadow-highlight-color, -fx-outer-border; 
+    -fx-background-insets: 0 0 -1 0, 0;
+    -fx-background-radius: 3, 3;
     -fx-padding: 0;
 }
 .split-menu-button:focused {
