@@ -26,8 +26,10 @@ package javafx.scene;
 
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.BoxBounds;
+import com.sun.javafx.geom.Rectangle;
 import com.sun.javafx.geom.transform.Affine3D;
 import com.sun.javafx.geom.transform.BaseTransform;
+import com.sun.javafx.geom.transform.GeneralTransform3D;
 import com.sun.javafx.jmx.MXNodeAlgorithm;
 import com.sun.javafx.jmx.MXNodeAlgorithmContext;
 import com.sun.javafx.scene.DirtyBits;
@@ -173,5 +175,19 @@ public abstract class Camera extends Node {
     @Override
     public Object impl_processMXNode(MXNodeAlgorithm alg, MXNodeAlgorithmContext ctx) {
         throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    // NOTE: This can only be called during scenegraph sync time by Scene only.
+    GeneralTransform3D computeProjViewTx(GeneralTransform3D tx, double sceneWidth, double sceneHeight) {
+        // TODO: Need to cache value at PG update time
+        PGCamera pgCamera = (PGCamera) impl_getPGNode();
+        return pgCamera.getScreenProjViewTx(tx, sceneWidth, sceneHeight);
+    }
+
+    // NOTE: This can only be called during scenegraph sync time by Scene only.
+    Rectangle getViewport(Rectangle vp) {
+        // TODO: Need to cache value at PG update time
+        PGCamera pgCamera = (PGCamera) impl_getPGNode();
+        return pgCamera.getViewport(vp);
     }
 }

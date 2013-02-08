@@ -29,7 +29,6 @@ package javafx.scene;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -104,7 +103,6 @@ import com.sun.javafx.beans.event.AbstractNotifyListener;
 import com.sun.javafx.binding.ExpressionHelper;
 import com.sun.javafx.collections.TrackableObservableList;
 import com.sun.javafx.collections.UnmodifiableListSet;
-//import com.sun.javafx.css.PseudoClassSet;
 import javafx.css.ParsedValue;
 import com.sun.javafx.css.Selector;
 import com.sun.javafx.css.Style;
@@ -125,12 +123,15 @@ import com.sun.javafx.css.converters.EnumConverter;
 import com.sun.javafx.css.converters.SizeConverter;
 import com.sun.javafx.effect.EffectDirtyBits;
 import com.sun.javafx.geom.BaseBounds;
+import com.sun.javafx.geom.BoxBounds;
 import com.sun.javafx.geom.PickRay;
 import com.sun.javafx.geom.RectBounds;
+import com.sun.javafx.geom.Rectangle;
 import com.sun.javafx.geom.transform.Affine3D;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.geom.transform.NoninvertibleTransformException;
 import com.sun.javafx.geom.Vec3d;
+import com.sun.javafx.geom.transform.GeneralTransform3D;
 import com.sun.javafx.jmx.MXNodeAlgorithm;
 import com.sun.javafx.jmx.MXNodeAlgorithmContext;
 import sun.util.logging.PlatformLogger;
@@ -146,11 +147,8 @@ import com.sun.javafx.scene.transform.TransformUtils;
 import com.sun.javafx.scene.traversal.Direction;
 import com.sun.javafx.sg.PGNode;
 import com.sun.javafx.tk.Toolkit;
-import javafx.beans.property.ReadOnlyDoubleProperty;
-import javafx.beans.property.ReadOnlyDoubleWrapper;
 import javafx.css.StyleableProperty;
 import javafx.geometry.NodeOrientation;
-import javafx.stage.Stage;
 import javafx.stage.Window;
 
 /**
@@ -2805,14 +2803,66 @@ public abstract class Node implements EventTarget {
      * LOD Helper related APIs 
      * TODO: (RT-26535) Implement LOD helper
      *                                                                         *
-     **************************************************************************/    
+     **************************************************************************/
     /**
      * Returns the area of this {@code Node} projected onto the 
      * physical screen in pixel units.
      */
     public double computeAreaInScreen() {
-        // TODO: Implement computeAreaInScreen
-        return 0.0; // For now
+        return impl_computeAreaInScreen();
+    }
+
+    private GeneralTransform3D projtx = new GeneralTransform3D();
+    private Rectangle viewport = new Rectangle();
+
+    /*
+     * Help application or utility to implement LOD support by returning the
+     * projected area of a Node in pixel unit. The projected area is not clipped.
+     */
+    private double impl_computeAreaInScreen() {
+        Scene scene = getScene();
+        if (scene != null) {
+            Bounds bounds = getBoundsInLocal();
+            Camera camera = scene.getCamera();
+            boolean isPerspective = camera instanceof PerspectiveCamera ? true : false;
+
+            // NOTE: Viewing frustrum check is now only for perspective camera
+            // TODO: Need to hook up parallel camera's nearClip and farClip.
+            if (isPerspective && (bounds.getMinZ() > camera.getFarClip()
+                || bounds.getMaxZ() < camera.getNearClip())) {
+                return 0;
+            }
+
+            projtx = scene.getProjViewTx(projtx);
+            viewport = scene.getViewport(viewport);
+
+            Transform localToSceneTx = getLocalToSceneTransform();            
+            Affine3D localToSceneTransform = new Affine3D();
+            localToSceneTx.impl_apply(localToSceneTransform);
+            
+            BaseBounds localBounds = new BoxBounds((float) bounds.getMinX(),
+                                                   (float) bounds.getMinY(),
+                                                   (float) bounds.getMinZ(),
+                                                   (float) bounds.getMaxX(),
+                                                   (float) bounds.getMaxY(),
+                                                   (float) bounds.getMaxZ());
+            
+            // The product of projViewTx * localToSceneTransform
+            GeneralTransform3D tx = projtx.mul(localToSceneTransform);
+
+            // Transform localBounds to projected bounds
+            localBounds = tx.transform(localBounds, localBounds);
+            double area = localBounds.getWidth() * localBounds.getHeight();
+
+            // Use viewing frustum culling against canonical view volume
+            // to check whether object is outside the viewing frustrum
+            if (isPerspective) {
+                localBounds.intersectWith(-1, -1, 0, 1, 1, 1);   
+                area = (localBounds.getWidth() < 0 || localBounds.getHeight() < 0) ? 0 : area;
+            }
+            return area * (viewport.width / 2 * viewport.height / 2);
+        }
+        return 0;
     }
     
     /* *************************************************************************

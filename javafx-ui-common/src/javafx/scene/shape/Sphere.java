@@ -77,12 +77,15 @@ public class Sphere extends Shape3D {
      * of divisions.
      * The resolution is defined in terms of number of subdivisions along the
      * sphere's axes. More divisions lead to more finely tesselated objects.
+     *
+     * Note that divisions should be at least 1. Any value less than that will be
+     * clamped to 1.
      * 
      * @param radius Radius
      * @param divisions Divisions     
      */
     public Sphere(double radius, int divisions) {
-        this.divisions = divisions;
+        this.divisions = divisions < 1 ? 1: divisions;
         setRadius(radius);
     }
 

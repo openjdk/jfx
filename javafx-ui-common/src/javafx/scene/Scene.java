@@ -90,7 +90,6 @@ import javafx.util.Duration;
 import com.sun.javafx.Logging;
 import com.sun.javafx.Utils;
 import com.sun.javafx.beans.annotations.Default;
-import com.sun.javafx.beans.event.AbstractNotifyListener;
 import com.sun.javafx.collections.TrackableObservableList;
 import com.sun.javafx.css.StyleManager;
 import javafx.css.StyleableObjectProperty;
@@ -98,8 +97,10 @@ import javafx.css.CssMetaData;
 import com.sun.javafx.cursor.CursorFrame;
 import com.sun.javafx.event.EventQueue;
 import com.sun.javafx.geom.PickRay;
+import com.sun.javafx.geom.Rectangle;
 import com.sun.javafx.geom.Vec3d;
 import com.sun.javafx.geom.transform.BaseTransform;
+import com.sun.javafx.geom.transform.GeneralTransform3D;
 import sun.util.logging.PlatformLogger;
 import com.sun.javafx.perf.PerformanceTracker;
 import com.sun.javafx.robot.impl.FXRobotHelper;
@@ -2111,6 +2112,38 @@ public class Scene implements EventTarget {
         public final int getMask() { return mask; }
     }
 
+    private Camera defaultCamera = new ParallelCamera();
+    // TODO: RT-28290 - Camera's parameters need to be computed on the FX layer
+    // Should remove once we move the camera's projViewTx computation to the FX side
+    private Rectangle viewport = new Rectangle();
+    private GeneralTransform3D projViewTx = new GeneralTransform3D();
+
+    private void snapshotCameraParameters() {
+        Camera cam = getCamera();
+        if (cam == null) {
+            cam = defaultCamera;
+        }
+        
+        projViewTx = cam.computeProjViewTx(projViewTx, getWidth(), getHeight());
+        viewport = cam.getViewport(viewport);
+    }
+
+    GeneralTransform3D getProjViewTx(GeneralTransform3D pTx) {
+        if (pTx == null) {
+            pTx = new GeneralTransform3D();
+        }
+        pTx.set(projViewTx);
+        return pTx;
+    }
+
+    Rectangle getViewport(Rectangle vp) {
+        if (vp == null) {
+            vp = new Rectangle();
+        }
+        vp.setBounds(viewport);
+        return vp;
+    }
+
     //INNER CLASSES
 
     /*******************************************************************************
@@ -2153,7 +2186,9 @@ public class Scene implements EventTarget {
                 }
                 dirtyNodesSize = 0;
             }
-            
+
+            snapshotCameraParameters();
+
             Scene.inSynchronizer = false;
         }
 

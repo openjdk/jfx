@@ -59,10 +59,12 @@ import javafx.util.Pair;
 import com.sun.javafx.application.PlatformImpl;
 import com.sun.javafx.embed.HostInterface;
 import com.sun.javafx.geom.BaseBounds;
+import com.sun.javafx.geom.Rectangle;
 import com.sun.javafx.geom.Path2D;
 import com.sun.javafx.geom.Shape;
 import com.sun.javafx.geom.transform.Affine3D;
 import com.sun.javafx.geom.transform.BaseTransform;
+import com.sun.javafx.geom.transform.GeneralTransform3D;
 import com.sun.javafx.menu.MenuBase;
 import com.sun.javafx.perf.PerformanceTracker;
 import com.sun.javafx.runtime.async.AsyncOperation;
@@ -862,6 +864,8 @@ public class StubToolkit extends Toolkit {
     @Override
     public PGParallelCamera createPGParallelCamera() {
         return new PGParallelCamera() {
+            @Override public GeneralTransform3D getScreenProjViewTx(GeneralTransform3D tx, double w, double h) { return null; }
+            @Override public Rectangle getViewport(Rectangle vp) { return null; }
             @Override public void setNearClip(float f) {}
             @Override public void setFarClip(float f) {}
             @Override public void setWorldTransform(Affine3D ad) {}
@@ -883,6 +887,8 @@ public class StubToolkit extends Toolkit {
     @Override
     public PGPerspectiveCamera createPGPerspectiveCamera(boolean fixedEyePosition) {
         return new PGPerspectiveCamera() {
+            @Override public GeneralTransform3D getScreenProjViewTx(GeneralTransform3D tx, double w, double h) { return null; }
+            @Override public Rectangle getViewport(Rectangle vp) { return null; }
             @Override public void setFieldOfView(float f) {}
             @Override public void setVerticalFieldOfView(boolean bln) {}
             @Override public void setNearClip(float f) {}

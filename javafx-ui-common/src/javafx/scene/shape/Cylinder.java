@@ -78,13 +78,16 @@ public class Cylinder extends Shape3D {
     /**
      * Creates a new instance of {@code Cylinder} of a given radius, height, and
      * divisions. Resolution defaults to 15 divisions along X and Z axis.
+     *
+     * Note that divisions should be at least 1. Any value less than that will be
+     * clamped to 1.
      * 
      * @param radius Radius
      * @param height Height
      * @param divisions Divisions 
      */
     public Cylinder (double radius, double height, int divisions) {
-        this.divisions = divisions;
+        this.divisions = divisions < 1 ? 1 : divisions;
         setRadius(radius);
         setHeight(height);
     }
