@@ -63,24 +63,60 @@
  ******************************************************************************/
 
 .scroll-bar {
-    -fx-opacity: 50%;
+    -fx-opacity: 100%;
+}
+.scroll-bar:horizontal,
+.scroll-bar:horizontal:focused {
+    -fx-background-insets: 1 0 -1 0, 0, 1;
+    -fx-background-color: transparent;
 }
 
+.scroll-bar:vertical,
+.scroll-bar:vertical:focused {
+    -fx-background-insets: 0 -1 0 1, 0, 1;
+    -fx-background-color: transparent;
+}
+
+.scroll-bar:horizontal > .track-background {
+    -fx-background-radius: 1.0em;
+    -fx-opacity: 10%;
+    -fx-background-color: #000000;
+}
+.scroll-bar:vertical > .track-background {
+    -fx-background-radius: 1.0em;
+    -fx-opacity: 10%;
+    -fx-background-color: #000000;
+}
 .scroll-bar:horizontal .thumb {
-    -fx-background-color: blue;
+    -fx-opacity: 75%;
+    -fx-background-color: #a0a0a0;
 }
-
 .scroll-bar:vertical .thumb {
-    -fx-background-color: blue;
+    -fx-opacity: 75%;
+    -fx-background-color: #a0a0a0;
+}
+.scroll-bar .track {
+    -fx-background-color: transparent;
+}
+.scroll-bar .track-background {
+    -fx-background-color: transparent;
 }
 
-.scroll-bar:horizontal .track {
-    -fx-background-color: skyblue;
+.scroll-bar:horizontal > .track {
+    -xfx-background-color: transparent;
+    -fx-opacity: 10%;
+    -fx-background-color: #000000;
+}
+.scroll-bar:vertical > .track {
+    -fx-opacity: 10%;
+    -fx-background-color: #000000;
+}
+.scroll-bar:horizontal > .track-background {
+    -fx-opacity: 10%;
+    -fx-background-color: #000000;
 }
 
-.scroll-bar:vertical .track {
-    -fx-background-color: skyblue;
-}
+
 
 /*******************************************************************************
  *                                                                             *
@@ -137,14 +173,6 @@
     -fx-background-color: #000000;
 }
 .scroll-pane > .scroll-bar:vertical > .track {
-    -fx-opacity: 10%;
-    -fx-background-color: #000000;
-}
-.scroll-pane > .scroll-bar:horizontal > .track-background {
-    -fx-opacity: 10%;
-    -fx-background-color: #000000;
-}
-.scroll-pane > .scroll-bar:vertical > .track-background {
     -fx-opacity: 10%;
     -fx-background-color: #000000;
 }

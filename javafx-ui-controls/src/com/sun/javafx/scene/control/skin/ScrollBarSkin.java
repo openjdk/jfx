@@ -334,10 +334,14 @@ public class ScrollBarSkin extends BehaviorSkinBase<ScrollBar, ScrollBarBehavior
      *                                                                         *
      **************************************************************************/
 
+    private static final double DEFAULT_EMBEDDED_SB_BREADTH = 8.0;
+
     /*
      * Gets the breadth of the scrollbar. The "breadth" is the distance
      * across the scrollbar, i.e. if vertical the width, otherwise the height.
-     * This is determined by the greater of the breadths of the end-buttons.
+     * On desktop this is determined by the greater of the breadths of the end-buttons.
+     * Embedded doesn't have end-buttons, so currently we use a default breadth.
+     * We should change this when we get width/height css properties.
      */
     double getBreadth() {
         final Insets padding = getSkinnable().getInsets();
@@ -351,9 +355,9 @@ public class ScrollBarSkin extends BehaviorSkinBase<ScrollBar, ScrollBarBehavior
         }
         else {
             if (getSkinnable().getOrientation() == Orientation.VERTICAL) {
-                return Math.max(padding.getLeft()+padding.getRight(), padding.getLeft()+padding.getRight());
+                return Math.max(DEFAULT_EMBEDDED_SB_BREADTH+padding.getLeft()+padding.getRight(), DEFAULT_EMBEDDED_SB_BREADTH+padding.getLeft()+padding.getRight());
             } else {
-                return Math.max(padding.getTop()+padding.getBottom(), padding.getTop()+padding.getBottom());
+                return Math.max(DEFAULT_EMBEDDED_SB_BREADTH+padding.getTop()+padding.getBottom(), DEFAULT_EMBEDDED_SB_BREADTH+padding.getTop()+padding.getBottom());
             }
         }
     }
