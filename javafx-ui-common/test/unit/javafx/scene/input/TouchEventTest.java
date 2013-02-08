@@ -728,6 +728,162 @@ public class TouchEventTest {
     }
 
     @Test
+    public void shouldCompute3dCoordinates() {
+        Scene scene = createScene();
+        Rectangle rect =
+                (Rectangle) scene.getRoot().getChildrenUnmodifiable().get(0);
+        rect.setTranslateZ(50);
+
+        touched = 0;
+        rect.addEventHandler(TouchEvent.ANY, new EventHandler<TouchEvent>() {
+            @Override public void handle(TouchEvent event) {
+                touched++;
+                assertEquals(110, event.getTouchPoint().getX(), 0.00001);
+                assertEquals(110, event.getTouchPoint().getY(), 0.00001);
+                assertEquals(0, event.getTouchPoint().getZ(), 0.00001);
+            }
+        });
+
+        scene.addEventHandler(TouchEvent.ANY, new EventHandler<TouchEvent>() {
+            @Override public void handle(TouchEvent event) {
+                touched++;
+                assertEquals(110, event.getTouchPoint().getX(), 0.00001);
+                assertEquals(110, event.getTouchPoint().getY(), 0.00001);
+                assertEquals(50, event.getTouchPoint().getZ(), 0.00001);
+            }
+        });
+
+        ((StubScene) scene.impl_getPeer()).getListener().touchEventBegin(
+                System.currentTimeMillis(), 1, true, true, false, true, false);
+        ((StubScene) scene.impl_getPeer()).getListener().touchEventNext(
+                TouchPoint.State.PRESSED, 1, 110, 110, 110, 110);
+        ((StubScene) scene.impl_getPeer()).getListener().touchEventEnd();
+
+        ((StubScene) scene.impl_getPeer()).getListener().touchEventBegin(
+                System.currentTimeMillis(), 1, true, false, true, false, true);
+        ((StubScene) scene.impl_getPeer()).getListener().touchEventNext(
+                TouchPoint.State.STATIONARY, 1, 110, 110, 110, 110);
+        ((StubScene) scene.impl_getPeer()).getListener().touchEventEnd();
+
+        ((StubScene) scene.impl_getPeer()).getListener().touchEventBegin(
+                System.currentTimeMillis(), 1, true, false, true, true, false);
+        ((StubScene) scene.impl_getPeer()).getListener().touchEventNext(
+                TouchPoint.State.RELEASED, 1, 110, 110, 110, 110);
+        ((StubScene) scene.impl_getPeer()).getListener().touchEventEnd();
+
+        assertEquals(6, touched);
+    }
+
+    @Test
+    public void touchPointsShouldHaveCorrectPickResult() {
+        Scene scene = createScene();
+
+        final Rectangle rect1 =
+                (Rectangle) scene.getRoot().getChildrenUnmodifiable().get(0);
+
+        final Rectangle rect2 =
+                (Rectangle) scene.getRoot().getChildrenUnmodifiable().get(1);
+
+        touched = 0;
+        rect1.addEventHandler(TouchEvent.ANY, new EventHandler<TouchEvent>() {
+            @Override public void handle(TouchEvent event) {
+                touched++;
+                assertSame(rect1, event.getTouchPoint().getTarget());
+                assertSame(rect2, event.getTouchPoints().get(1).getTarget());
+                PickResult res1 = event.getTouchPoint().getPickResult();
+                PickResult res2 = event.getTouchPoints().get(1).getPickResult();
+                switch(touched) {
+                    case 1:
+                        assertNotNull(res1);
+                        assertSame(rect1, res1.getIntersectedNode());
+                        assertEquals(110, res1.getIntersectedPoint().getX(), 0.00001);
+                        assertEquals(110, res1.getIntersectedPoint().getY(), 0.00001);
+                        assertEquals(0, res1.getIntersectedPoint().getZ(), 0.00001);
+
+                        assertNotNull(res2);
+                        assertSame(rect2, res2.getIntersectedNode());
+                        assertEquals(220, res2.getIntersectedPoint().getX(), 0.00001);
+                        assertEquals(220, res2.getIntersectedPoint().getY(), 0.00001);
+                        assertEquals(0, res1.getIntersectedPoint().getZ(), 0.00001);
+                        break;
+                    case 3:
+                        assertNotNull(res1);
+                        assertSame(rect2, res1.getIntersectedNode());
+                        assertEquals(220, res1.getIntersectedPoint().getX(), 0.00001);
+                        assertEquals(220, res1.getIntersectedPoint().getY(), 0.00001);
+                        assertEquals(0, res1.getIntersectedPoint().getZ(), 0.00001);
+
+                        assertNotNull(res2);
+                        assertSame(rect1, res2.getIntersectedNode());
+                        assertEquals(110, res2.getIntersectedPoint().getX(), 0.00001);
+                        assertEquals(110, res2.getIntersectedPoint().getY(), 0.00001);
+                        assertEquals(0, res1.getIntersectedPoint().getZ(), 0.00001);
+                        break;
+                    default:
+                        fail("Wrong event delivered");
+                }
+            }
+        });
+        rect2.addEventHandler(TouchEvent.ANY, new EventHandler<TouchEvent>() {
+            @Override public void handle(TouchEvent event) {
+                touched++;
+                assertSame(rect2, event.getTouchPoint().getTarget());
+                assertSame(rect1, event.getTouchPoints().get(0).getTarget());
+                PickResult res2 = event.getTouchPoint().getPickResult();
+                PickResult res1 = event.getTouchPoints().get(0).getPickResult();
+                switch(touched) {
+                    case 2:
+                        assertNotNull(res1);
+                        assertSame(rect1, res1.getIntersectedNode());
+                        assertEquals(110, res1.getIntersectedPoint().getX(), 0.00001);
+                        assertEquals(110, res1.getIntersectedPoint().getY(), 0.00001);
+                        assertEquals(0, res1.getIntersectedPoint().getZ(), 0.00001);
+
+                        assertNotNull(res2);
+                        assertSame(rect2, res2.getIntersectedNode());
+                        assertEquals(220, res2.getIntersectedPoint().getX(), 0.00001);
+                        assertEquals(220, res2.getIntersectedPoint().getY(), 0.00001);
+                        assertEquals(0, res1.getIntersectedPoint().getZ(), 0.00001);
+                        break;
+                    case 4:
+                        assertNotNull(res1);
+                        assertSame(rect2, res1.getIntersectedNode());
+                        assertEquals(220, res1.getIntersectedPoint().getX(), 0.00001);
+                        assertEquals(220, res1.getIntersectedPoint().getY(), 0.00001);
+                        assertEquals(0, res1.getIntersectedPoint().getZ(), 0.00001);
+
+                        assertNotNull(res2);
+                        assertSame(rect1, res2.getIntersectedNode());
+                        assertEquals(110, res2.getIntersectedPoint().getX(), 0.00001);
+                        assertEquals(110, res2.getIntersectedPoint().getY(), 0.00001);
+                        assertEquals(0, res1.getIntersectedPoint().getZ(), 0.00001);
+                        break;
+                    default:
+                        fail("Wrong event delivered");
+                }
+            }
+        });
+
+        ((StubScene) scene.impl_getPeer()).getListener().touchEventBegin(
+                System.currentTimeMillis(), 2, true, true, false, true, false);
+        ((StubScene) scene.impl_getPeer()).getListener().touchEventNext(
+                TouchPoint.State.PRESSED, 1, 110, 110, 110, 110);
+        ((StubScene) scene.impl_getPeer()).getListener().touchEventNext(
+                TouchPoint.State.PRESSED, 2, 220, 220, 220, 220);
+        ((StubScene) scene.impl_getPeer()).getListener().touchEventEnd();
+
+        ((StubScene) scene.impl_getPeer()).getListener().touchEventBegin(
+                System.currentTimeMillis(), 2, true, true, false, true, false);
+        ((StubScene) scene.impl_getPeer()).getListener().touchEventNext(
+                TouchPoint.State.MOVED, 1, 220, 220, 220, 220);
+        ((StubScene) scene.impl_getPeer()).getListener().touchEventNext(
+                TouchPoint.State.MOVED, 2, 110, 110, 110, 110);
+        ((StubScene) scene.impl_getPeer()).getListener().touchEventEnd();
+
+        assertEquals(4, touched);
+    }
+
+    @Test
     public void testTouchPointsBelongsTo() {
         final Scene scene = createScene();
 

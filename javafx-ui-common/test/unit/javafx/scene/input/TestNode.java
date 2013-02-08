@@ -26,6 +26,7 @@
 package javafx.scene.input;
 
 import javafx.geometry.Point2D;
+import javafx.geometry.Point3D;
 import javafx.scene.Node;
 
 import com.sun.javafx.geom.BaseBounds;
@@ -57,6 +58,16 @@ public class TestNode extends Node {
     @Override
     public Point2D localToScene(double x, double y) {
         return new Point2D(x + offsetInScene, y + offsetInScene);
+    }
+
+    @Override
+    public Point3D sceneToLocal(double x, double y, double z) {
+        return new Point3D(x - offsetInScene, y - offsetInScene, z);
+    }
+
+    @Override
+    public Point3D localToScene(double x, double y, double z) {
+        return new Point3D(x + offsetInScene, y + offsetInScene, z);
     }
 
     @Override

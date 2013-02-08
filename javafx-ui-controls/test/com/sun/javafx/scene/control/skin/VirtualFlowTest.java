@@ -913,7 +913,7 @@ public class VirtualFlowTest {
                           0, 0,
                           ScrollEvent.HorizontalTextScrollUnits.NONE, 0.0,
                           ScrollEvent.VerticalTextScrollUnits.LINES, -1.0,
-                          0));
+                          0, null));
 
         assertTrue(originalValue != flow.getPosition());
     }

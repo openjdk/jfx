@@ -38,6 +38,7 @@ public class RotateEventTest {
 
     private boolean rotated;
     private boolean rotated2;
+    private PickResult pickRes;
     
     @Test
     public void shouldDeliverRotateEventToPickedNode() {
@@ -291,6 +292,105 @@ public class RotateEventTest {
     }
 
     @Test
+    public void shouldCompute3dCoordinates() {
+        Scene scene = createScene();
+        Rectangle rect =
+                (Rectangle) scene.getRoot().getChildrenUnmodifiable().get(0);
+        rect.setTranslateZ(50);
+
+        rotated = false;
+        rotated2 = false;
+        rect.setOnRotate(new EventHandler<RotateEvent>() {
+            @Override public void handle(RotateEvent event) {
+                assertEquals(150, event.getX(), 0.00001);
+                assertEquals(150, event.getY(), 0.00001);
+                assertEquals(0, event.getZ(), 0.00001);
+                rotated = true;
+            }
+        });
+
+        scene.setOnRotate(new EventHandler<RotateEvent>() {
+            @Override public void handle(RotateEvent event) {
+                assertEquals(150, event.getX(), 0.00001);
+                assertEquals(150, event.getY(), 0.00001);
+                assertEquals(50, event.getZ(), 0.00001);
+                rotated2 = true;
+            }
+        });
+
+        ((StubScene) scene.impl_getPeer()).getListener().rotateEvent(
+                RotateEvent.ROTATE, 1, 1,
+                150, 150, 150, 150, false, false, false, false, false, false);
+
+        assertTrue(rotated);
+        assertTrue(rotated2);
+    }
+
+    @Test
+    public void shouldContainPickResult() {
+        Scene scene = createScene();
+        Rectangle rect1 =
+                (Rectangle) scene.getRoot().getChildrenUnmodifiable().get(0);
+        Rectangle rect2 =
+                (Rectangle) scene.getRoot().getChildrenUnmodifiable().get(1);
+
+        rect1.addEventHandler(RotateEvent.ANY, new EventHandler<RotateEvent>() {
+            @Override public void handle(RotateEvent event) {
+                pickRes = event.getPickResult();
+                rotated = true;
+            }
+        });
+        rect2.addEventHandler(RotateEvent.ANY, new EventHandler<RotateEvent>() {
+            @Override public void handle(RotateEvent event) {
+                pickRes = event.getPickResult();
+                rotated2 = true;
+            }
+        });
+
+        rotated = false;
+        rotated2 = false;
+        pickRes = null;
+        ((StubScene) scene.impl_getPeer()).getListener().rotateEvent(
+                RotateEvent.ROTATION_STARTED, 2, 3,
+                150, 150, 150, 150, true, false, true, false, true, false);
+        assertTrue(rotated);
+        assertFalse(rotated2);
+        assertNotNull(pickRes);
+        assertSame(rect1, pickRes.getIntersectedNode());
+        assertEquals(150, pickRes.getIntersectedPoint().getX(), 0.00001);
+        assertEquals(150, pickRes.getIntersectedPoint().getY(), 0.00001);
+        assertEquals(0, pickRes.getIntersectedPoint().getZ(), 0.00001);
+
+        rotated = false;
+        rotated2 = false;
+        pickRes = null;
+        ((StubScene) scene.impl_getPeer()).getListener().rotateEvent(
+                RotateEvent.ROTATE, 2, 3,
+                250, 250, 250, 250, true, false, true, false, true, false);
+        assertTrue(rotated);
+        assertFalse(rotated2);
+        assertNotNull(pickRes);
+        assertSame(rect2, pickRes.getIntersectedNode());
+        assertEquals(250, pickRes.getIntersectedPoint().getX(), 0.00001);
+        assertEquals(250, pickRes.getIntersectedPoint().getY(), 0.00001);
+        assertEquals(0, pickRes.getIntersectedPoint().getZ(), 0.00001);
+
+        rotated = false;
+        rotated2 = false;
+        pickRes = null;
+        ((StubScene) scene.impl_getPeer()).getListener().rotateEvent(
+                RotateEvent.ROTATION_FINISHED, 2, 3,
+                250, 250, 250, 250, true, false, true, false, true, false);
+        assertTrue(rotated);
+        assertFalse(rotated2);
+        assertNotNull(pickRes);
+        assertSame(rect2, pickRes.getIntersectedNode());
+        assertEquals(250, pickRes.getIntersectedPoint().getX(), 0.00001);
+        assertEquals(250, pickRes.getIntersectedPoint().getY(), 0.00001);
+        assertEquals(0, pickRes.getIntersectedPoint().getZ(), 0.00001);
+    }
+
+    @Test
     public void unknownLocationShouldBeReplacedByMouseLocation() {
         Scene scene = createScene();
         Rectangle rect1 =
@@ -432,7 +532,7 @@ public class RotateEventTest {
         RotateEvent e = new RotateEvent(RotateEvent.ROTATE,
             100, 100, 200, 200,
             false, false, false, false,
-            true, false, 10, 20);
+            true, false, 10, 20, null);
 
         String s = e.toString();
 

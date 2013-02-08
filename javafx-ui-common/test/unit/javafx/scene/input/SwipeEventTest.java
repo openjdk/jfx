@@ -37,6 +37,7 @@ import static org.junit.Assert.*;
 public class SwipeEventTest {
 
     private boolean swiped;
+    private boolean swiped2;
 
     @Test
     public void shouldDeliverSwipeLeftEventToPickedNode() {
@@ -140,6 +141,68 @@ public class SwipeEventTest {
     }
 
     @Test
+    public void shouldCompute3dCoordinates() {
+        Scene scene = createScene();
+        Rectangle rect =
+                (Rectangle) scene.getRoot().getChildrenUnmodifiable().get(0);
+        rect.setTranslateZ(50);
+
+        swiped = false;
+        swiped2 = false;
+        rect.setOnSwipeLeft(new EventHandler<SwipeEvent>() {
+            @Override public void handle(SwipeEvent event) {
+                assertEquals(150, event.getX(), 0.00001);
+                assertEquals(150, event.getY(), 0.00001);
+                assertEquals(0, event.getZ(), 0.00001);
+                swiped = true;
+            }
+        });
+
+        scene.setOnSwipeLeft(new EventHandler<SwipeEvent>() {
+            @Override public void handle(SwipeEvent event) {
+                assertEquals(150, event.getX(), 0.00001);
+                assertEquals(150, event.getY(), 0.00001);
+                assertEquals(50, event.getZ(), 0.00001);
+                swiped2 = true;
+            }
+        });
+
+        ((StubScene) scene.impl_getPeer()).getListener().swipeEvent(
+                SwipeEvent.SWIPE_LEFT, 1, 150, 150, 150, 150,
+                false, false, false, false, false);
+
+        assertTrue(swiped);
+        assertTrue(swiped2);
+    }
+
+    @Test
+    public void shouldContainPickResult() {
+        Scene scene = createScene();
+        final Rectangle rect =
+                (Rectangle) scene.getRoot().getChildrenUnmodifiable().get(0);
+
+        swiped = false;
+
+        rect.setOnSwipeUp(new EventHandler<SwipeEvent>() {
+            @Override public void handle(SwipeEvent event) {
+                PickResult pickRes = event.getPickResult();
+                assertNotNull(pickRes);
+                assertSame(rect, pickRes.getIntersectedNode());
+                assertEquals(151, pickRes.getIntersectedPoint().getX(), 0.00001);
+                assertEquals(152, pickRes.getIntersectedPoint().getY(), 0.00001);
+                assertEquals(0, pickRes.getIntersectedPoint().getZ(), 0.00001);
+                swiped = true;
+            }
+        });
+
+        ((StubScene) scene.impl_getPeer()).getListener().swipeEvent(
+                SwipeEvent.SWIPE_UP, 3, 151, 152, 153, 154,
+                false, false, false, false, false);
+
+        assertTrue(swiped);
+    }
+
+    @Test
     public void handlingAnyShouldGetAllTypes() {
         Scene scene = createScene();
         Rectangle rect =
@@ -218,7 +281,7 @@ public class SwipeEventTest {
         SwipeEvent e = new SwipeEvent(SwipeEvent.SWIPE_RIGHT,
             100, 100, 200, 200,
             false, false, false, false,
-            true, 3);
+            true, 3, null);
 
         String s = e.toString();
 

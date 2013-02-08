@@ -130,6 +130,7 @@ import com.sun.javafx.geom.RectBounds;
 import com.sun.javafx.geom.transform.Affine3D;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.geom.transform.NoninvertibleTransformException;
+import com.sun.javafx.geom.Vec3d;
 import com.sun.javafx.jmx.MXNodeAlgorithm;
 import com.sun.javafx.jmx.MXNodeAlgorithmContext;
 import sun.util.logging.PlatformLogger;
@@ -140,13 +141,14 @@ import com.sun.javafx.scene.CssFlags;
 import com.sun.javafx.scene.DirtyBits;
 import com.sun.javafx.scene.EventHandlerProperties;
 import com.sun.javafx.scene.NodeEventDispatcher;
+import com.sun.javafx.scene.input.PickResultChooser;
 import com.sun.javafx.scene.transform.TransformUtils;
 import com.sun.javafx.scene.traversal.Direction;
 import com.sun.javafx.sg.PGNode;
 import com.sun.javafx.tk.Toolkit;
+import javafx.beans.property.ReadOnlyDoubleProperty;
+import javafx.beans.property.ReadOnlyDoubleWrapper;
 import javafx.css.StyleableProperty;
-import javafx.scene.transform.Affine;
-import javafx.scene.transform.NonInvertibleTransformException;
 import javafx.geometry.NodeOrientation;
 import javafx.stage.Stage;
 import javafx.stage.Window;
@@ -2800,6 +2802,21 @@ public abstract class Node implements EventTarget {
 
     /* *************************************************************************
      *                                                                         *
+     * LOD Helper related APIs 
+     * TODO: (RT-26535) Implement LOD helper
+     *                                                                         *
+     **************************************************************************/    
+    /**
+     * Returns the area of this {@code Node} projected onto the 
+     * physical screen in pixel units.
+     */
+    public double computeAreaInScreen() {
+        // TODO: Implement computeAreaInScreen
+        return 0.0; // For now
+    }
+    
+    /* *************************************************************************
+     *                                                                         *
      * Bounds related APIs                                                     *
      *                                                                         *
      **************************************************************************/
@@ -3720,8 +3737,38 @@ public abstract class Node implements EventTarget {
         return sceneToLocal(scenePoint.getX(), scenePoint.getY());
     }
 
-    // Why is this method private?
-    private Point3D sceneToLocal(double x, double y, double z) throws NoninvertibleTransformException{
+    /**
+     * Transforms a point from the coordinate space of the {@link javafx.scene.Scene}
+     * into the local coordinate space of this {@code Node}.
+     * @param scenePoint a point on a Scene
+     * @return local Node's coordinates of the point or null if Node is not in a {@link Window}.
+     * Null is also returned if the transformation from local to Scene is not invertible.
+     */
+    public Point3D sceneToLocal(Point3D scenePoint) {
+        return sceneToLocal(scenePoint.getX(), scenePoint.getY(), scenePoint.getZ());
+    }
+
+    /**
+     * Transforms a point from the coordinate space of the {@link javafx.scene.Scene}
+     * into the local coordinate space of this {@code Node}.
+     * @param sceneX x coordinate of a point on a Scene
+     * @param sceneY y coordinate of a point on a Scene
+     * @param sceneZ z coordinate of a point on a Scene
+     * @return local Node's coordinates of the point or null if Node is not in a {@link Window}.
+     * Null is also returned if the transformation from local to Scene is not invertible.
+     */
+    public Point3D sceneToLocal(double sceneX, double sceneY, double sceneZ) {
+        try {
+            return sceneToLocal0(sceneX, sceneY, sceneZ);
+        } catch (NoninvertibleTransformException ex) {
+            return null;
+        }
+    }
+
+    /**
+     * Internal method to transform a point from scene to local coordinates.
+     */
+    private Point3D sceneToLocal0(double x, double y, double z) throws NoninvertibleTransformException {
         final com.sun.javafx.geom.Vec3d tempV3D =
                 TempState.getInstance().vec3d;
         tempV3D.set(x, y, z);
@@ -3750,14 +3797,14 @@ public abstract class Node implements EventTarget {
             return createBoundingBox(p1, p2, p3, p4);
         }
         try {
-            Point3D p1 = sceneToLocal(sceneBounds.getMinX(), sceneBounds.getMinY(), sceneBounds.getMinZ());
-            Point3D p2 = sceneToLocal(sceneBounds.getMinX(), sceneBounds.getMinY(), sceneBounds.getMaxZ());
-            Point3D p3 = sceneToLocal(sceneBounds.getMinX(), sceneBounds.getMaxY(), sceneBounds.getMinZ());
-            Point3D p4 = sceneToLocal(sceneBounds.getMinX(), sceneBounds.getMaxY(), sceneBounds.getMaxZ());
-            Point3D p5 = sceneToLocal(sceneBounds.getMaxX(), sceneBounds.getMaxY(), sceneBounds.getMinZ());
-            Point3D p6 = sceneToLocal(sceneBounds.getMaxX(), sceneBounds.getMaxY(), sceneBounds.getMaxZ());
-            Point3D p7 = sceneToLocal(sceneBounds.getMaxX(), sceneBounds.getMinY(), sceneBounds.getMinZ());
-            Point3D p8 = sceneToLocal(sceneBounds.getMaxX(), sceneBounds.getMinY(), sceneBounds.getMaxZ());
+            Point3D p1 = sceneToLocal0(sceneBounds.getMinX(), sceneBounds.getMinY(), sceneBounds.getMinZ());
+            Point3D p2 = sceneToLocal0(sceneBounds.getMinX(), sceneBounds.getMinY(), sceneBounds.getMaxZ());
+            Point3D p3 = sceneToLocal0(sceneBounds.getMinX(), sceneBounds.getMaxY(), sceneBounds.getMinZ());
+            Point3D p4 = sceneToLocal0(sceneBounds.getMinX(), sceneBounds.getMaxY(), sceneBounds.getMaxZ());
+            Point3D p5 = sceneToLocal0(sceneBounds.getMaxX(), sceneBounds.getMaxY(), sceneBounds.getMinZ());
+            Point3D p6 = sceneToLocal0(sceneBounds.getMaxX(), sceneBounds.getMaxY(), sceneBounds.getMaxZ());
+            Point3D p7 = sceneToLocal0(sceneBounds.getMaxX(), sceneBounds.getMinY(), sceneBounds.getMinZ());
+            Point3D p8 = sceneToLocal0(sceneBounds.getMaxX(), sceneBounds.getMinY(), sceneBounds.getMaxZ());
             return createBoundingBox(p1, p2, p3, p4, p5, p6, p7, p8);
         } catch (NoninvertibleTransformException e) {
             return null;
@@ -3842,7 +3889,19 @@ public abstract class Node implements EventTarget {
         return localToScene(localPoint.getX(), localPoint.getY());
     }
 
-    private Point3D localToScene(double x, double y, double z) {
+    /**
+     * Transforms a point from the local coordinate space of this {@code Node}
+     * into the coordinate space of its {@link javafx.scene.Scene}.
+     */
+    public Point3D localToScene(Point3D localPoint) {
+        return localToScene(localPoint.getX(), localPoint.getY(), localPoint.getZ());
+    }
+
+    /**
+     * Transforms a point from the local coordinate space of this {@code Node}
+     * into the coordinate space of its {@link javafx.scene.Scene}.
+     */
+    public Point3D localToScene(double x, double y, double z) {
         final com.sun.javafx.geom.Vec3d tempV3D =
                 TempState.getInstance().vec3d;
         tempV3D.set(x, y, z);
@@ -3904,10 +3963,22 @@ public abstract class Node implements EventTarget {
         return parentToLocal(parentPoint.getX(), parentPoint.getY());
     }
 
-    private Point3D parentToLocal(double x, double y, double z) {
+    /**
+     * Transforms a point from the coordinate space of the parent into the
+     * local coordinate space of this {@code Node}.
+     */
+    public Point3D parentToLocal(Point3D parentPoint) {
+        return parentToLocal(parentPoint.getX(), parentPoint.getY(), parentPoint.getZ());
+    }
+
+    /**
+     * Transforms a point from the coordinate space of the parent into the
+     * local coordinate space of this {@code Node}.
+     */
+    public Point3D parentToLocal(double parentX, double parentY, double parentZ) {
         final com.sun.javafx.geom.Vec3d tempV3D =
                 TempState.getInstance().vec3d;
-        tempV3D.set(x, y, z);
+        tempV3D.set(parentX, parentY, parentZ);
         try {
             parentToLocal(tempV3D);
         } catch (NoninvertibleTransformException e) {
@@ -3963,7 +4034,19 @@ public abstract class Node implements EventTarget {
         return localToParent(localPoint.getX(), localPoint.getY());
     }
 
-    private Point3D localToParent(double x, double y, double z) {
+    /**
+     * Transforms a point from the local coordinate space of this {@code Node}
+     * into the coordinate space of its parent.
+     */
+    public Point3D localToParent(Point3D localPoint) {
+        return localToParent(localPoint.getX(), localPoint.getY(), localPoint.getZ());
+    }
+
+    /**
+     * Transforms a point from the local coordinate space of this {@code Node}
+     * into the coordinate space of its parent.
+     */
+    public Point3D localToParent(double x, double y, double z) {
         final com.sun.javafx.geom.Vec3d tempV3D =
                 TempState.getInstance().vec3d;
         tempV3D.set(x, y, z);
@@ -4179,11 +4262,11 @@ public abstract class Node implements EventTarget {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-    public final Node impl_pickNode(double parentX, double parentY) {
+    public final void impl_pickNode(double parentX, double parentY, PickResultChooser result) {
 
         // In some conditions we can omit picking this node or subgraph
         if (!isVisible() || isDisable() || isMouseTransparent()) {
-            return null;
+            return;
         }
 
         final com.sun.javafx.geom.Point2D tempPt =
@@ -4194,13 +4277,13 @@ public abstract class Node implements EventTarget {
         try {
             parentToLocal(tempPt);
         } catch (NoninvertibleTransformException e) {
-            return null;
+            return;
         }
 
         // Delegate to a function which can be overridden by subclasses which
         // actually does the pick. The implementation is markedly different
         // for leaf nodes vs. parent nodes vs. region nodes.
-        return impl_pickNodeLocal(tempPt.x, tempPt.y);
+        impl_pickNodeLocal(tempPt.x, tempPt.y, result);
     }
 
     /**
@@ -4211,11 +4294,10 @@ public abstract class Node implements EventTarget {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-    protected Node impl_pickNodeLocal(double localX, double localY) {
+    protected void impl_pickNodeLocal(double localX, double localY, PickResultChooser result) {
         if (contains(localX, localY)) {
-            return this;
+            result.offer(this, Double.POSITIVE_INFINITY, new Point3D(localX, localY, 0));
         }
-        return null;
     }
 
     /**
@@ -4226,26 +4308,23 @@ public abstract class Node implements EventTarget {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-    protected Node impl_pickNodeLocal(PickRay localPickRay) {
-        if (impl_intersects(localPickRay)) {
-            return this;
-        }
-        return null;
+    protected void impl_pickNodeLocal(PickRay localPickRay, PickResultChooser result) {
+        impl_intersects(localPickRay, result);
     }
 
     /**
      * Finds a top-most child node that intersects the given ray.
      *
-     * Returns the picked node, null if no such node was found.
+     * The result argument is used for storing the picking result.
      * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-    public final Node impl_pickNode(PickRay pickRay) {
+    public final void impl_pickNode(PickRay pickRay, PickResultChooser result) {
 
         // In some conditions we can omit picking this node or subgraph
         if (!isVisible() || isDisable() || isMouseTransparent()) {
-            return null;
+            return;
         }
 
         final BaseTransform tempPickTx = TempState.getInstance().pickTx;
@@ -4262,7 +4341,7 @@ public abstract class Node implements EventTarget {
         // Delegate to a function which can be overridden by subclasses which
         // actually does the pick. The implementation is markedly different
         // for leaf nodes vs. parent nodes vs. region nodes.
-        return impl_pickNodeLocal(localPickRay);
+        impl_pickNodeLocal(localPickRay, result);
     }
 
     /**
@@ -4270,6 +4349,9 @@ public abstract class Node implements EventTarget {
      * local coordinate space of this {@code Node}, intersects the
      * shape of this {@code Node}. Note that this method does not take visibility
      * into account; the test is based on the geometry of this {@code Node} only.
+     * <p>
+     * The pickResult is updated if the found intersection is closer than
+     * the currently held one.
      * <p>
      * Note that this is a conditional feature. See
      * {@link javafx.application.ConditionalFeature#SCENE3D ConditionalFeature.SCENE3D}
@@ -4279,7 +4361,31 @@ public abstract class Node implements EventTarget {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-    protected final boolean impl_intersects(PickRay pickRay) {
+    protected final boolean impl_intersects(PickRay pickRay, PickResultChooser pickResult) {
+        double boundsDistance = impl_intersectsBounds(pickRay);
+        if (boundsDistance >= 0.0) {
+            if (isPickOnBounds()) {
+                pickResult.offer(this, boundsDistance, PickResultChooser.computePoint(pickRay, boundsDistance));
+                return true;
+            } else {
+                return impl_computeIntersects(pickRay, pickResult);
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Computes the intersection of the pickRay with this node.
+     * The pickResult argument is updated if the found intersection
+     * is closer than the passed one. On the other hand, the return value
+     * specifies whether the intersection exists, regardless of its comparison
+     * with the given pickResult.
+     *
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     */
+    @Deprecated
+    protected boolean impl_computeIntersects(PickRay pickRay, PickResultChooser pickResult) {
         double origZ = pickRay.getOriginNoClone().z;
         double dirZ = pickRay.getDirectionNoClone().z;
         // Handle the case where pickRay is almost parallel to the Z-plane
@@ -4289,8 +4395,94 @@ public abstract class Node implements EventTarget {
         double t = -origZ / dirZ;
         double x = pickRay.getOriginNoClone().x + (pickRay.getDirectionNoClone().x * t);
         double y = pickRay.getOriginNoClone().y + (pickRay.getDirectionNoClone().y * t);
-        return contains((float) x, (float) y); // was contentContains, the difference is that effect / clip are included
+
+        if (contains((float) x, (float) y)) {
+            pickResult.offer(this, t, PickResultChooser.computePoint(pickRay, t));
+            return true;
+        }
+        return false;
     }
+
+    /**
+     * Computes the intersection of the pickRay with the bounds of this node.
+     * The return value is the distance between the camera and the intersection
+     * point, measured in pickRay direction magnitudes. If there is
+     * no intersection, it returns a negative value.
+     *
+     * @param pickRay The pick ray
+     * @return Distance of the intersection point, a negative number if there
+     *         is no intersection
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     */
+    @Deprecated
+    protected final double impl_intersectsBounds(PickRay pickRay) {
+
+        final Vec3d dir = pickRay.getDirectionNoClone();
+        final double invDirX = dir.x == 0 ? Double.POSITIVE_INFINITY : (1.0 / dir.x);
+        final double invDirY = dir.y == 0 ? Double.POSITIVE_INFINITY : (1.0 / dir.y);
+        final double invDirZ = dir.z == 0 ? Double.POSITIVE_INFINITY : (1.0 / dir.z);
+        final Vec3d origin = pickRay.getOriginNoClone();
+        final double originX = origin.x;
+        final double originY = origin.y;
+        final double originZ = origin.z;
+        final boolean signX = invDirX < 0.0;
+        final boolean signY = invDirY < 0.0;
+        final boolean signZ = invDirZ < 0.0;
+
+        final TempState tempState = TempState.getInstance();
+        BaseBounds tempBounds = tempState.bounds;
+
+        tempBounds = getLocalBounds(tempBounds,
+                                    BaseTransform.IDENTITY_TRANSFORM);
+
+        final double minX = tempBounds.getMinX();
+        final double minY = tempBounds.getMinY();
+        final double minZ = tempBounds.getMinZ();
+        final double maxX = tempBounds.getMaxX();
+        final double maxY = tempBounds.getMaxY();
+        final double maxZ = tempBounds.getMaxZ();
+
+        double tmin = ((signX ? maxX : minX) - originX) * invDirX;
+        double tmax = ((signX ? minX : maxX) - originX) * invDirX;
+        final double tymin = ((signY ? maxY : minY) - originY) * invDirY;
+        final double tymax = ((signY ? minY : maxY) - originY) * invDirY;
+
+        if ((tmin > tymax) || (tymin > tmax)) {
+            return -1.0;
+        }
+        if (tymin > tmin) {
+            tmin = tymin;
+        }
+        if (tymax < tmax) {
+            tmax = tymax;
+        }
+
+        final double tzmin = ((signZ ? maxZ : minZ) - originZ) * invDirZ;
+        final double tzmax = ((signZ ? minZ : maxZ) - originZ) * invDirZ;
+
+        if ((tmin > tzmax) || (tzmin > tmax)) {
+            return -1;
+        }
+        if (tzmin > tmin) {
+            tmin = tzmin;
+        }
+        if (tzmax < tmax) {
+            tmax = tzmax;
+        }
+
+        if (tmin < 0.0) {
+            if (tmax >= 0.0) {
+                // we are inside bounds
+                return 0.0;
+            } else {
+                return -1.0;
+            }
+        }
+
+        return tmin;
+    }
+
 
     // Good to find a home for commonly use util. code such as EPS.
     // and almostZero. This code currently defined in multiple places,

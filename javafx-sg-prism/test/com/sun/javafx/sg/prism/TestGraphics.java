@@ -36,6 +36,7 @@ import com.sun.prism.BasicStroke;
 import com.sun.prism.Graphics;
 import com.sun.prism.Image;
 import com.sun.prism.MediaFrame;
+import com.sun.prism.MeshFactory;
 import com.sun.prism.PixelFormat;
 import com.sun.prism.Presentable;
 import com.sun.prism.PresentableState;
@@ -205,6 +206,10 @@ public class TestGraphics extends BaseGraphics {
         @Override public void removeFactoryListener(ResourceFactoryListener l) { }
         @Override public RenderingContext createRenderingContext(PresentableState pstate) { return null; }
         @Override public void dispose() { }
+
+        @Override public MeshFactory get3DFactory() {
+            throw new UnsupportedOperationException("Not supported yet.");
+        }
     }
     
     private static class TestRenderTarget implements RenderTarget {

@@ -102,6 +102,9 @@ public final class RotateEvent extends GestureEvent {
      * @param inertia if represents inertia of an already finished gesture.
      * @param angle the rotational angle
      * @param totalAngle the cumulative rotational angle
+     * @param pickResult pick result. Can be null, in this case a 2D pick result
+     *                   without any further values is constructed
+     *                   based on the scene coordinates and the target
      */
     public RotateEvent(Object source, EventTarget target,
             final EventType<RotateEvent> eventType,
@@ -112,10 +115,12 @@ public final class RotateEvent extends GestureEvent {
             boolean altDown,
             boolean metaDown,
             boolean direct,
-            boolean inertia, double angle, double totalAngle) {
+            boolean inertia, double angle, double totalAngle,
+            PickResult pickResult) {
 
         super(source, target, eventType, x, y, screenX, screenY,
-                shiftDown, controlDown, altDown, metaDown, direct, inertia);
+                shiftDown, controlDown, altDown, metaDown, direct, inertia,
+                pickResult);
         this.angle = angle;
         this.totalAngle = totalAngle;
     }
@@ -135,6 +140,9 @@ public final class RotateEvent extends GestureEvent {
      * @param inertia if represents inertia of an already finished gesture.
      * @param angle the rotational angle
      * @param totalAngle the cumulative rotational angle
+     * @param pickResult pick result. Can be null, in this case a 2D pick result
+     *                   without any further values is constructed
+     *                   based on the scene coordinates
      */
     public RotateEvent(final EventType<RotateEvent> eventType,
             double x, double y,
@@ -144,9 +152,10 @@ public final class RotateEvent extends GestureEvent {
             boolean altDown,
             boolean metaDown,
             boolean direct,
-            boolean inertia, double angle, double totalAngle) {
+            boolean inertia, double angle, double totalAngle,
+            PickResult pickResult) {
         this(null, null, eventType, x, y, screenX, screenY, shiftDown, controlDown,
-                altDown, metaDown, direct, inertia, angle, totalAngle);
+                altDown, metaDown, direct, inertia, angle, totalAngle, pickResult);
     }
 
     private final double angle;
@@ -187,7 +196,8 @@ public final class RotateEvent extends GestureEvent {
 
         sb.append(", angle = ").append(getAngle());
         sb.append(", totalAngle = ").append(getTotalAngle());
-        sb.append(", x = ").append(getX()).append(", y = ").append(getY());
+        sb.append(", x = ").append(getX()).append(", y = ").append(getY())
+                .append(", z = ").append(getZ());
         sb.append(isDirect() ? ", direct" : ", indirect");
 
         if (isInertia()) {
@@ -209,6 +219,7 @@ public final class RotateEvent extends GestureEvent {
         if (isShortcutDown()) {
             sb.append(", shortcutDown");
         }
+        sb.append(", pickResult = ").append(getPickResult());
 
         return sb.append("]").toString();
     }

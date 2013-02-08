@@ -535,7 +535,7 @@ public class MouseDragEventTest {
     @Test
     public void shouldGetNonEmptyDescription() {
         String s = MouseEvent.copyForMouseDragEvent(new MouseEvent(MouseEvent.MOUSE_MOVED, 10, 20, 20, 30, MouseButton.NONE, 0,
-                true, true, true, true, true, true, true, true, true), null, null, MouseDragEvent.ANY, null)
+                true, true, true, true, true, true, true, true, true), null, null, MouseDragEvent.ANY, null, null)
                 .toString();
         assertNotNull(s);
         assertFalse(s.isEmpty());

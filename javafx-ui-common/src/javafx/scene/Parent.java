@@ -52,9 +52,11 @@ import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.geom.transform.NoninvertibleTransformException;
 import com.sun.javafx.jmx.MXNodeAlgorithm;
 import com.sun.javafx.jmx.MXNodeAlgorithmContext;
+import javafx.geometry.Point3D;
 import sun.util.logging.PlatformLogger;
 import com.sun.javafx.scene.CssFlags;
 import com.sun.javafx.scene.DirtyBits;
+import com.sun.javafx.scene.input.PickResultChooser;
 import com.sun.javafx.scene.traversal.TraversalEngine;
 import com.sun.javafx.sg.PGGroup;
 import com.sun.javafx.sg.PGNode;
@@ -665,19 +667,18 @@ public abstract class Parent extends Node {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-    @Override protected Node impl_pickNodeLocal(double localX, double localY) {
+    @Override protected void impl_pickNodeLocal(double localX, double localY, PickResultChooser result) {
         if (containsBounds(localX, localY)) {
             for (int i = children.size()-1; i >= 0; i--) {
-                Node picked = children.get(i).impl_pickNode(localX, localY);
-                if (picked != null) {
-                    return picked;
+                children.get(i).impl_pickNode(localX, localY, result);
+                if (!result.isEmpty()) {
+                    return;
                 }
             }
             if (isPickOnBounds()) {
-                return this;
+                result.offer(this, Double.POSITIVE_INFINITY, new Point3D(localX, localY, 0));
             }
         }
-        return null;
     }
 
     /**
@@ -685,15 +686,23 @@ public abstract class Parent extends Node {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-    @Override protected Node impl_pickNodeLocal(PickRay pickRay) {
-        for (int i = children.size()-1; i >= 0; i--) {
-            Node picked = children.get(i).impl_pickNode(pickRay);
+    @Override protected void impl_pickNodeLocal(PickRay pickRay, PickResultChooser result) {
 
-            if (picked != null) {
-                return picked;
+        double boundsDistance = impl_intersectsBounds(pickRay);
+
+        if (boundsDistance >= 0) {
+            final boolean checkAll = getScene().isDepthBuffer();
+            for (int i = children.size()-1; i >= 0; i--) {
+                children.get(i).impl_pickNode(pickRay, result);
+                if (!checkAll && !result.isEmpty()) {
+                    return;
+                }
+            }
+
+            if (isPickOnBounds()) {
+                result.offer(this, boundsDistance, PickResultChooser.computePoint(pickRay, boundsDistance));
             }
         }
-        return null;
     }
 
     @Override boolean isConnected() {

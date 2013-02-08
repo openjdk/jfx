@@ -30,7 +30,7 @@ import java.util.Set;
 import javafx.event.Event;
 import javafx.event.EventTarget;
 import javafx.event.EventType;
-import javafx.geometry.Point2D;
+import javafx.geometry.Point3D;
 
 import com.sun.javafx.scene.input.InputEventUtils;
 import java.io.IOException;
@@ -372,11 +372,14 @@ public final class DragEvent extends InputEvent {
      * @param transferMode the transfer mode of the event.
      * @param gestureSource the source of the DnD gesture of the event.
      * @param gestureTarget the target of the DnD gesture of the event.
+     * @param pickResult pick result. Can be null, in this case a 2D pick result
+     *                   without any further values is constructed
+     *                   based on the scene coordinates and the target
      */
     public DragEvent(Object source, EventTarget target, EventType<DragEvent> eventType, Dragboard dragboard,
             double x, double y,
             double screenX, double screenY, TransferMode transferMode,
-            Object gestureSource, Object gestureTarget) {
+            Object gestureSource, Object gestureTarget, PickResult pickResult) {
         super(source, target, eventType);
         this.gestureSource = gestureSource;
         this.gestureTarget = gestureTarget;
@@ -388,6 +391,12 @@ public final class DragEvent extends InputEvent {
         this.sceneY = y;
         this.transferMode = transferMode;
         this.dragboard = dragboard;
+        this.pickResult = pickResult != null ? pickResult : new PickResult(
+                eventType == DRAG_DONE ? null : target, x, y);
+        final Point3D p = InputEventUtils.recomputeCoordinates(this.pickResult, null);
+        this.x = p.getX();
+        this.y = p.getY();
+        this.z = p.getZ();
     }
 
     /**
@@ -401,13 +410,16 @@ public final class DragEvent extends InputEvent {
      * @param transferMode the transfer mode of the event.
      * @param gestureSource the source of the DnD gesture of the event.
      * @param gestureTarget the target of the DnD gesture of the event.
+     * @param pickResult pick result. Can be null, in this case a 2D pick result
+     *                   without any further values is constructed
+     *                   based on the scene coordinates
      */
     public DragEvent(EventType<DragEvent> eventType, Dragboard dragboard,
             double x, double y,
             double screenX, double screenY, TransferMode transferMode,
-            Object gestureSource, Object gestureTarget) {
+            Object gestureSource, Object gestureTarget, PickResult pickResult) {
         this(null, null, eventType, dragboard, x, y, screenX, screenY, transferMode,
-                gestureSource, gestureTarget);
+                gestureSource, gestureTarget, pickResult);
     }
 
     /**
@@ -423,11 +435,12 @@ public final class DragEvent extends InputEvent {
             return;
         }
 
-        final Point2D newCoordinates = InputEventUtils.recomputeCoordinates(
-                new Point2D(sceneX, sceneY), null, newSource);
+        final Point3D newCoordinates = InputEventUtils.recomputeCoordinates(
+                pickResult, newSource);
 
         newEvent.x = newCoordinates.getX();
         newEvent.y = newCoordinates.getY();
+        newEvent.z = newCoordinates.getZ();
     }
     
     @Override
@@ -490,6 +503,23 @@ public final class DragEvent extends InputEvent {
     }
 
     /**
+     * Depth z position of the event relative to the
+     * origin of the MouseEvent's node.
+     */
+    private transient double z;
+
+    /**
+     * Depth position of the event relative to the
+     * origin of the MouseEvent's source.
+     *
+     * @return depth position of the event relative to the
+     * origin of the MouseEvent's source.
+     */
+    public final double getZ() {
+        return z;
+    }
+
+    /**
      * Absolute horizontal x position of the event.
      */
     private final double screenX;
@@ -528,6 +558,8 @@ public final class DragEvent extends InputEvent {
      * origin of the {@code Scene} that contains the DragEvent's source.
      * If the node is not in a {@code Scene}, then the value is relative to
      * the boundsInParent of the root-most parent of the DragEvent's node.
+     * Note that in 3D scene, this represents the flat coordinates after
+     * applying the projection transformations.
      * 
      * @return horizontal position of the event relative to the
      * origin of the {@code Scene} that contains the DragEvent's source
@@ -549,12 +581,29 @@ public final class DragEvent extends InputEvent {
      * origin of the {@code Scene} that contains the DragEvent's source.
      * If the node is not in a {@code Scene}, then the value is relative to
      * the boundsInParent of the root-most parent of the DragEvent's node.
+     * Note that in 3D scene, this represents the flat coordinates after
+     * applying the projection transformations.
      * 
      * @return vertical position of the event relative to the
      * origin of the {@code Scene} that contains the DragEvent's source
      */
     public final double getSceneY() {
         return sceneY;
+    }
+
+    /**
+     * Information about the pick if the picked {@code Node} is a
+     * {@code Shape3D} node and its pickOnBounds is false.
+     */
+    private PickResult pickResult;
+
+    /**
+     * Returns information about the pick.
+     *
+     * @return new PickResult object that contains information about the pick
+     */
+    public final PickResult getPickResult() {
+        return pickResult;
     }
 
     /**

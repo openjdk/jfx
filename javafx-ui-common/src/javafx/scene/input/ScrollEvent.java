@@ -151,6 +151,9 @@ public final class ScrollEvent extends GestureEvent {
      * @param textDeltaYUnits units for vertical text-based scroll amount
      * @param textDeltaY vertical text-based scroll amount
      * @param touchCount number of touch points
+     * @param pickResult pick result. Can be null, in this case a 2D pick result
+     *                   without any further values is constructed
+     *                   based on the scene coordinates and the target
      */
     public ScrollEvent(Object source, EventTarget target,
             final EventType<ScrollEvent> eventType,
@@ -166,10 +169,11 @@ public final class ScrollEvent extends GestureEvent {
             double totalDeltaX, double totalDeltaY,
             HorizontalTextScrollUnits textDeltaXUnits, double textDeltaX,
             VerticalTextScrollUnits textDeltaYUnits, double textDeltaY,
-            int touchCount) {
+            int touchCount, PickResult pickResult) {
 
         super(source, target, eventType, x, y, screenX, screenY,
-                shiftDown, controlDown, altDown, metaDown, direct, inertia);
+                shiftDown, controlDown, altDown, metaDown, direct, inertia,
+                pickResult);
         this.deltaX = deltaX;
         this.deltaY = deltaY;
         this.totalDeltaX = totalDeltaX;
@@ -203,6 +207,9 @@ public final class ScrollEvent extends GestureEvent {
      * @param textDeltaYUnits units for vertical text-based scroll amount
      * @param textDeltaY vertical text-based scroll amount
      * @param touchCount number of touch points
+     * @param pickResult pick result. Can be null, in this case a 2D pick result
+     *                   without any further values is constructed
+     *                   based on the scene coordinates
      */
     public ScrollEvent(final EventType<ScrollEvent> eventType,
             double x, double y,
@@ -217,10 +224,12 @@ public final class ScrollEvent extends GestureEvent {
             double gestureDeltaX, double gestureDeltaY,
             HorizontalTextScrollUnits textDeltaXUnits, double textDeltaX,
             VerticalTextScrollUnits textDeltaYUnits, double textDeltaY,
-            int touchCount) {
+            int touchCount,
+            PickResult pickResult) {
         this(null, null, eventType, x, y, screenX, screenY, shiftDown, controlDown,
                 altDown, metaDown, direct, inertia, deltaX, deltaY, gestureDeltaX,
-                gestureDeltaY, textDeltaXUnits, textDeltaX, textDeltaYUnits, textDeltaY, touchCount);
+                gestureDeltaY, textDeltaXUnits, textDeltaX, textDeltaYUnits, textDeltaY, 
+                touchCount, pickResult);
     }
     
     
@@ -391,7 +400,8 @@ public final class ScrollEvent extends GestureEvent {
         sb.append(", textDeltaYUnits = ").append(getTextDeltaYUnits())
                 .append(", textDeltaY = ").append(getTextDeltaY());
         sb.append(", touchCount = ").append(getTouchCount());
-        sb.append(", x = ").append(getX()).append(", y = ").append(getY());
+        sb.append(", x = ").append(getX()).append(", y = ").append(getY())
+                .append(", z = ").append(getZ());
         sb.append(isDirect() ? ", direct" : ", indirect");
 
         if (isInertia()) {
@@ -413,6 +423,7 @@ public final class ScrollEvent extends GestureEvent {
         if (isShortcutDown()) {
             sb.append(", shortcutDown");
         }
+        sb.append(", pickResult = ").append(getPickResult());
 
         return sb.append("]").toString();
     }

@@ -305,7 +305,7 @@ public class ScrollPaneSkinTest {
                           0.0, -50.0, 0.0, -50.0,
                           ScrollEvent.HorizontalTextScrollUnits.NONE, 10.0,
                           ScrollEvent.VerticalTextScrollUnits.NONE, 10.0,
-                          0));
+                          0, null));
 
         /*
         ** did it work?
@@ -674,7 +674,8 @@ public class ScrollPaneSkinTest {
             false,
             false,
             false,
-            1
+            1,
+            null
             ));
 
         /*
@@ -741,7 +742,8 @@ public class ScrollPaneSkinTest {
             false,
             false,
             false,
-            1
+            1,
+            null
             ));
 
          /*

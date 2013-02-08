@@ -962,6 +962,19 @@ public class MouseTest {
         assertTrue(scene.smallSquareTracker.released);
     }
 
+    @Test
+    public void topMostNodeShouldBePickedWithDepthBuffer() {
+        SimpleTestScene scene = new SimpleTestScene(true);
+        MouseEventGenerator generator = new MouseEventGenerator();
+
+        scene.processEvent(generator.generateMouseEvent(
+                MouseEvent.MOUSE_MOVED, 250, 250));
+
+        assertFalse(scene.smallSquareTracker.wasMoved());
+        assertTrue(scene.bigSquareTracker.wasMoved());
+        assertTrue(scene.groupTracker.wasMoved());
+    }
+
     private static class SimpleTestScene {
 
         MouseEventTracker sceneTracker;
@@ -972,12 +985,20 @@ public class MouseTest {
         private Scene scene;
 
         public SimpleTestScene() {
+            this(false);
+        }
+
+        public SimpleTestScene(boolean depthBuffer) {
             final Group root = new Group();
-            scene = new Scene(root, 400, 400);
+            scene = new Scene(root, 400, 400, depthBuffer);
+            if (depthBuffer) {
+                scene.setCamera(new PerspectiveCamera());
+            }
 
             Group group = new Group();
             Rectangle bigSquare = new Rectangle(100, 100, 200, 200);
             Rectangle smallSquare = new Rectangle(200, 200, 100, 100);
+            bigSquare.setTranslateZ(-1);
 
             smallSquare.setCursor(Cursor.HAND);
             group.setCursor(Cursor.TEXT);

@@ -27,10 +27,10 @@ package com.sun.javafx.scene.input;
 
 import java.util.Arrays;
 import java.util.List;
-import java.util.ArrayList;
 import java.util.Collections;
-import javafx.geometry.Point2D;
+import javafx.geometry.Point3D;
 import javafx.scene.Node;
+import javafx.scene.input.PickResult;
 import javafx.scene.input.TransferMode;
 
 /**
@@ -45,51 +45,61 @@ public class InputEventUtils {
      * @param newSource Node to whose coordinate system to recompute
      * @return the recomputed coordinates
      */
-    public static Point2D recomputeCoordinates(Point2D coordinates,
-            Object oldSource, Object newSource) {
+    public static Point3D recomputeCoordinates(PickResult result,
+            Object newSource) {
 
-        final Node oldSourceNode =
-                (oldSource instanceof Node) ? (Node) oldSource : null;
+        Point3D coordinates = result.getIntersectedPoint();
+        if (coordinates == null) {
+            return new Point3D(Double.NaN, Double.NaN, Double.NaN);
+        }
+
+        final Node oldSourceNode = result.getIntersectedNode();
 
         final Node newSourceNode =
                 (newSource instanceof Node) ? (Node) newSource : null;
 
         double newX = coordinates.getX();
         double newY = coordinates.getY();
+        double newZ = coordinates.getZ();
 
         if (newSourceNode != null) {
             if (oldSourceNode != null) {
-                Point2D pt = oldSourceNode.localToScene(newX, newY);
+                Point3D pt = oldSourceNode.localToScene(newX, newY, newZ);
                 pt = newSourceNode.sceneToLocal(pt);
                 if (pt != null) {
                     newX = pt.getX();
                     newY = pt.getY();
+                    newZ = pt.getZ();
                 } else {
                     newX = Double.NaN;
                     newY = Double.NaN;
+                    newZ = Double.NaN;
                 }
             } else {
                 // assume that since no node was in the evt, then it was in
                 // terms of the scene
-                Point2D pt = newSourceNode.sceneToLocal(newX, newY);
+                Point3D pt = newSourceNode.sceneToLocal(newX, newY, newZ);
                 if (pt != null) {
                     newX = pt.getX();
                     newY = pt.getY();
+                    newZ = pt.getZ();
                 } else {
                     newX = Double.NaN;
                     newY = Double.NaN;
+                    newZ = Double.NaN;
                 }
             }
         } else {
             if (oldSourceNode != null) {
                 // recomputing from old source's local bounds to scene bounds
-                Point2D pt = oldSourceNode.localToScene(newX, newY);
+                Point3D pt = oldSourceNode.localToScene(newX, newY, newZ);
                 newX = pt.getX();
                 newY = pt.getY();
+                newZ = pt.getZ();
             }
         }
 
-        return new Point2D(newX, newY);
+        return new Point3D(newX, newY, newZ);
     }
 
     private static final List<TransferMode> TM_ANY =

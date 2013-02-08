@@ -346,14 +346,14 @@ public final class Scenegraph_eventHandlers_Test {
 
     private static Event createContextMenuEvent() {
         return new ContextMenuEvent(ContextMenuEvent.CONTEXT_MENU_REQUESTED, 10, 10,
-          10, 10, false);
+          10, 10, false, null);
     }
 
     private static Event createSwipeEvent(final EventType<SwipeEvent> type) {
         return new SwipeEvent(
                 type,
                 100, 100, 100, 100,
-                false, false, false, false, true, 1);
+                false, false, false, false, true, 1, null);
     }
 
     private static void setEventHandler(

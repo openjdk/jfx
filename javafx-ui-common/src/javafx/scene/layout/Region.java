@@ -47,6 +47,7 @@ import javafx.geometry.Bounds;
 import javafx.geometry.HPos;
 import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
+import javafx.geometry.Point3D;
 import javafx.geometry.VPos;
 import javafx.scene.Node;
 import javafx.scene.Parent;
@@ -61,6 +62,7 @@ import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.PickRay;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.scene.DirtyBits;
+import com.sun.javafx.scene.input.PickResultChooser;
 import com.sun.javafx.sg.PGNode;
 import com.sun.javafx.sg.PGRegion;
 import com.sun.javafx.tk.Toolkit;
@@ -2148,20 +2150,19 @@ public class Region extends Parent {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-    @Override protected Node impl_pickNodeLocal(double localX, double localY) {
+    @Override protected void impl_pickNodeLocal(double localX, double localY, PickResultChooser result) {
         if (containsBounds(localX, localY)) {
             ObservableList<Node> children = getChildren();
             for (int i = children.size() - 1; i >= 0; i--) {
-                Node picked = children.get(i).impl_pickNode(localX, localY);
-                if (picked != null) {
-                    return picked;
+                children.get(i).impl_pickNode(localX, localY, result);
+                if (!result.isEmpty()) {
+                    return;
                 }
             }
             if (contains(localX, localY)) {
-                return this;
+                result.offer(this, Double.POSITIVE_INFINITY, new Point3D(localX, localY, 0));
             }
         }
-        return null;
     }
 
     /**
@@ -2170,22 +2171,23 @@ public class Region extends Parent {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-    @Override protected Node impl_pickNodeLocal(PickRay pickRay) {
-        if (impl_intersects(pickRay)) {
+    @Override protected void impl_pickNodeLocal(PickRay pickRay, PickResultChooser result) {
+
+        double boundsDistance = impl_intersectsBounds(pickRay);
+
+        if (boundsDistance >= 0) {
+            final boolean checkAll = getScene().isDepthBuffer();
+
             ObservableList<Node> children = getChildren();
-
-            for (int i = children.size() - 1; i >= 0; i--) {
-                Node picked = children.get(i).impl_pickNode(pickRay);
-
-                if (picked != null) {
-                    return picked;
+            for (int i = children.size()-1; i >= 0; i--) {
+                children.get(i).impl_pickNode(pickRay, result);
+                if (!checkAll && !result.isEmpty()) {
+                    return;
                 }
             }
 
-            return this;
+            result.offer(this, boundsDistance, PickResultChooser.computePoint(pickRay, boundsDistance));
         }
-
-        return null;
     }
 
     private Bounds boundingBox;

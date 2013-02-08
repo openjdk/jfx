@@ -24,8 +24,8 @@
  */
 package com.sun.javafx.tk;
 
-import com.sun.javafx.geom.CameraImpl;
 import com.sun.javafx.geom.PickRay;
+import com.sun.javafx.sg.PGCamera;
 import com.sun.javafx.sg.PGNode;
 import javafx.scene.input.Dragboard;
 
@@ -64,7 +64,7 @@ public interface TKScene {
 
     public void markDirty();
 
-    public void setCamera(CameraImpl camera);
+    public void setCamera(PGCamera camera);
 
     public PickRay computePickRay(float x, float y, PickRay pickRay);
 

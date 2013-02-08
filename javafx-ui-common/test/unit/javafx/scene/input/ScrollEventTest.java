@@ -38,6 +38,7 @@ public class ScrollEventTest {
 
     private boolean scrolled;
     private boolean scrolled2;
+    private PickResult pickRes;
     
     @Test
     public void shouldDeliverScrollEventToPickedNode() {
@@ -386,6 +387,120 @@ public class ScrollEventTest {
     }
 
     @Test
+    public void shouldCompute3dCoordinates() {
+        Scene scene = createScene();
+        Rectangle rect =
+                (Rectangle) scene.getRoot().getChildrenUnmodifiable().get(0);
+        rect.setTranslateZ(50);
+
+        scrolled = false;
+        scrolled2 = false;
+        rect.setOnScroll(new EventHandler<ScrollEvent>() {
+            @Override public void handle(ScrollEvent event) {
+                assertEquals(150, event.getX(), 0.00001);
+                assertEquals(150, event.getY(), 0.00001);
+                assertEquals(0, event.getZ(), 0.00001);
+                scrolled = true;
+            }
+        });
+
+        scene.setOnScroll(new EventHandler<ScrollEvent>() {
+            @Override public void handle(ScrollEvent event) {
+                assertEquals(150, event.getX(), 0.00001);
+                assertEquals(150, event.getY(), 0.00001);
+                assertEquals(50, event.getZ(), 0.00001);
+                scrolled2 = true;
+            }
+        });
+
+        ((StubScene) scene.impl_getPeer()).getListener().scrollEvent(
+                ScrollEvent.SCROLL, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+                150, 150, 150, 150, false, false, false, false, false, false);
+
+        assertTrue(scrolled);
+        assertTrue(scrolled2);
+    }
+
+    @Test
+    public void shouldContainPickResult() {
+        Scene scene = createScene();
+        Rectangle rect1 =
+                (Rectangle) scene.getRoot().getChildrenUnmodifiable().get(0);
+        Rectangle rect2 =
+                (Rectangle) scene.getRoot().getChildrenUnmodifiable().get(1);
+
+        rect1.addEventHandler(ScrollEvent.ANY, new EventHandler<ScrollEvent>() {
+            @Override public void handle(ScrollEvent event) {
+                pickRes = event.getPickResult();
+                scrolled = true;
+            }
+        });
+        rect2.addEventHandler(ScrollEvent.ANY, new EventHandler<ScrollEvent>() {
+            @Override public void handle(ScrollEvent event) {
+                pickRes = event.getPickResult();
+                scrolled2 = true;
+            }
+        });
+
+        scrolled = false;
+        scrolled2 = false;
+        pickRes = null;
+        ((StubScene) scene.impl_getPeer()).getListener().scrollEvent(
+                ScrollEvent.SCROLL_STARTED, 2, 3, 4, 6, 33, 33, 0, 1, 1, 3, 3,
+                150, 150, 150, 150, true, false, true, false, true, false);
+        assertTrue(scrolled);
+        assertFalse(scrolled2);
+        assertNotNull(pickRes);
+        assertSame(rect1, pickRes.getIntersectedNode());
+        assertEquals(150, pickRes.getIntersectedPoint().getX(), 0.00001);
+        assertEquals(150, pickRes.getIntersectedPoint().getY(), 0.00001);
+        assertEquals(0, pickRes.getIntersectedPoint().getZ(), 0.00001);
+
+        scrolled = false;
+        scrolled2 = false;
+        pickRes = null;
+        ((StubScene) scene.impl_getPeer()).getListener().scrollEvent(
+                ScrollEvent.SCROLL, 2, 3, 4, 6, 33, 33, 0, 1, 1, 3, 3,
+                250, 250, 250, 250, true, false, true, false, true, false);
+        assertTrue(scrolled);
+        assertFalse(scrolled2);
+        assertNotNull(pickRes);
+        assertSame(rect2, pickRes.getIntersectedNode());
+        assertEquals(250, pickRes.getIntersectedPoint().getX(), 0.00001);
+        assertEquals(250, pickRes.getIntersectedPoint().getY(), 0.00001);
+        assertEquals(0, pickRes.getIntersectedPoint().getZ(), 0.00001);
+
+        scrolled = false;
+        scrolled2 = false;
+        pickRes = null;
+        ((StubScene) scene.impl_getPeer()).getListener().scrollEvent(
+                ScrollEvent.SCROLL_FINISHED, 2, 3, 4, 6, 33, 33, 0, 1, 1, 3, 3,
+                250, 250, 250, 250, true, false, true, false, true, false);
+        assertTrue(scrolled);
+        assertFalse(scrolled2);
+        assertNotNull(pickRes);
+        assertSame(rect2, pickRes.getIntersectedNode());
+        assertEquals(250, pickRes.getIntersectedPoint().getX(), 0.00001);
+        assertEquals(250, pickRes.getIntersectedPoint().getY(), 0.00001);
+        assertEquals(0, pickRes.getIntersectedPoint().getZ(), 0.00001);
+
+        // inertia
+        scrolled = false;
+        scrolled2 = false;
+        pickRes = null;
+        ((StubScene) scene.impl_getPeer()).getListener().scrollEvent(
+                ScrollEvent.SCROLL, 2, 3, 4, 6, 33, 33, 0, 1, 1, 3, 3,
+                250, 250, 250, 250, true, false, true, false, true, true);
+        assertTrue(scrolled);
+        assertFalse(scrolled2);
+        assertNotNull(pickRes);
+        assertSame(rect2, pickRes.getIntersectedNode());
+        assertEquals(250, pickRes.getIntersectedPoint().getX(), 0.00001);
+        assertEquals(250, pickRes.getIntersectedPoint().getY(), 0.00001);
+        assertEquals(0, pickRes.getIntersectedPoint().getZ(), 0.00001);
+    }
+
+    @Test
     public void shouldPickForMouseWheelDuringInertia() {
         Scene scene = createScene();
         Rectangle rect1 =
@@ -587,7 +702,7 @@ public class ScrollEventTest {
             false, false, false, false,
             true, false, 10, 10, 20, 20,ScrollEvent.HorizontalTextScrollUnits.NONE, 0,
             ScrollEvent.VerticalTextScrollUnits.NONE, 0,
-            3);
+            3, null);
 
         String s = e.toString();
 

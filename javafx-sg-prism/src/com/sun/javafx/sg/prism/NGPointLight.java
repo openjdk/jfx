@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2012, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,10 +22,16 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
+package com.sun.javafx.sg.prism;
 
-package com.sun.javafx.geom;
+import com.sun.javafx.sg.PGPointLight;
 
-public interface PerspectiveCameraImpl extends CameraImpl {
+/**
+ * TODO: 3D - Need documentation
+ */
+public class NGPointLight extends NGLightBase implements PGPointLight {
 
-    public void setFieldOfView(float fieldOfView);
+    public NGPointLight() {
+    }
+
 }

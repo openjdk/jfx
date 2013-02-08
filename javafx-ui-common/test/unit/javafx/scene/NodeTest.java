@@ -60,6 +60,7 @@ import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
 import com.sun.javafx.scene.DirtyBits;
+import com.sun.javafx.scene.input.PickResultChooser;
 import com.sun.javafx.sg.PGNode;
 import com.sun.javafx.test.objects.TestScene;
 import com.sun.javafx.test.objects.TestStage;
@@ -244,8 +245,12 @@ public class NodeTest {
         Scene scene = new Scene(new Group());
         scene.getRoot().getChildren().add(rect);
 
-        assertSame(rect, rect.impl_pickNode(50, 50));
-        assertNull(rect.impl_pickNode(0, 0));
+        PickResultChooser res = new PickResultChooser();
+        rect.impl_pickNode(50, 50, res);
+        assertSame(rect, res.getIntersectedNode());
+        res = new PickResultChooser();
+        rect.impl_pickNode(0, 0, res);
+        assertNull(res.getIntersectedNode());
     }
 
     @Test public void testPickingNodeDirectlyWithTransforms() {
@@ -259,8 +264,12 @@ public class NodeTest {
         Scene scene = new Scene(new Group());
         scene.getRoot().getChildren().add(rect);
 
-        assertSame(rect, rect.impl_pickNode(50, 50));
-        assertNull(rect.impl_pickNode(0, 0));
+        PickResultChooser res = new PickResultChooser();
+        rect.impl_pickNode(50, 50, res);
+        assertSame(rect, res.getIntersectedNode());
+        res = new PickResultChooser();
+        rect.impl_pickNode(0, 0, res);
+        assertNull(res.getIntersectedNode());
     }
 
     @Test public void testEffectSharedOnNodes() {

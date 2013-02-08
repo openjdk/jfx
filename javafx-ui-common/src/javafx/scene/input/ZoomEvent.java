@@ -103,6 +103,9 @@ public final class ZoomEvent extends GestureEvent {
      * @param inertia if represents inertia of an already finished gesture.
      * @param zoomFactor zoom amount
      * @param totalZoomFactor cumulative zoom amount
+     * @param pickResult pick result. Can be null, in this case a 2D pick result
+     *                   without any further values is constructed
+     *                   based on the scene coordinates and the target
      */
     public ZoomEvent(Object source, EventTarget target, final EventType<ZoomEvent> eventType,
             double x, double y,
@@ -114,10 +117,11 @@ public final class ZoomEvent extends GestureEvent {
             boolean direct,
             boolean inertia,
             double zoomFactor,
-            double totalZoomFactor) {
+            double totalZoomFactor,
+            PickResult pickResult) {
 
         super(source, target, eventType, x, y, screenX, screenY,
-                shiftDown, controlDown, altDown, metaDown, direct, inertia);
+                shiftDown, controlDown, altDown, metaDown, direct, inertia, pickResult);
         this.zoomFactor = zoomFactor;
         this.totalZoomFactor = totalZoomFactor;
     }
@@ -138,6 +142,9 @@ public final class ZoomEvent extends GestureEvent {
      * @param inertia if represents inertia of an already finished gesture.
      * @param zoomFactor zoom amount
      * @param totalZoomFactor cumulative zoom amount
+     * @param pickResult pick result. Can be null, in this case a 2D pick result
+     *                   without any further values is constructed
+     *                   based on the scene coordinates
      */
     public ZoomEvent(final EventType<ZoomEvent> eventType,
             double x, double y,
@@ -149,9 +156,11 @@ public final class ZoomEvent extends GestureEvent {
             boolean direct,
             boolean inertia,
             double zoomFactor,
-            double totalZoomFactor) {
+            double totalZoomFactor,
+            PickResult pickResult) {
         this(null, null, eventType, x, y, screenX, screenY, shiftDown, controlDown,
-                altDown, metaDown, direct, inertia, zoomFactor, totalZoomFactor);
+                altDown, metaDown, direct, inertia, zoomFactor, totalZoomFactor,
+                pickResult);
     }
 
     private final double zoomFactor;
@@ -194,7 +203,8 @@ public final class ZoomEvent extends GestureEvent {
 
         sb.append(", zoomFactor = ").append(getZoomFactor());
         sb.append(", totalZoomFactor = ").append(getTotalZoomFactor());
-        sb.append(", x = ").append(getX()).append(", y = ").append(getY());
+        sb.append(", x = ").append(getX()).append(", y = ").append(getY())
+                .append(", z = ").append(getZ());
         sb.append(isDirect() ? ", direct" : ", indirect");
 
         if (isInertia()) {
@@ -216,6 +226,7 @@ public final class ZoomEvent extends GestureEvent {
         if (isShortcutDown()) {
             sb.append(", shortcutDown");
         }
+        sb.append(", pickResult = ").append(getPickResult());
 
         return sb.append("]").toString();
     }

@@ -450,7 +450,6 @@ public class PickRay {
         t.transform(origin, origin);
         t.transform(endPt, endPt);
         direction.sub(endPt, origin);
-        direction.normalize();
     }
 
     public PickRay project(BaseTransform inversetx,

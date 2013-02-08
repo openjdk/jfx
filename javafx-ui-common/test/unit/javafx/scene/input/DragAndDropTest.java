@@ -26,6 +26,7 @@ package javafx.scene.input;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
@@ -1274,6 +1275,108 @@ public class DragAndDropTest {
                 gen.generateMouseEvent(MouseEvent.MOUSE_PRESSED, 81, 81));
     }
     
+    /************************************************************************/
+    /*                             PICK RESULT                              */
+    /************************************************************************/
+
+    @Test
+    public void shouldCompute3dCoordinates() {
+        Node n = twoNodes()[0];
+        n.setTranslateZ(50);
+        dragSource = n;
+
+        MouseEventGenerator gen = new MouseEventGenerator();
+
+        counter = 0;
+        n.setOnMousePressed(doDetect);
+        n.setOnDragDetected(stringSource(TransferMode.ANY));
+        n.setOnDragOver(new EventHandler<DragEvent>() {
+            @Override public void handle(DragEvent event) {
+                counter++;
+                assertEquals(52, event.getX(), 0.00001);
+                assertEquals(52, event.getY(), 0.00001);
+                assertEquals(0, event.getZ(), 0.00001);
+            }
+        });
+
+        n.getScene().setOnDragOver(new EventHandler<DragEvent>() {
+            @Override public void handle(DragEvent event) {
+                counter++;
+                assertEquals(52, event.getX(), 0.00001);
+                assertEquals(52, event.getY(), 0.00001);
+                assertEquals(50, event.getZ(), 0.00001);
+            }
+        });
+
+        n.getScene().impl_processMouseEvent(
+                gen.generateMouseEvent(MouseEvent.MOUSE_PRESSED, 50, 50));
+        toolkit.dragTo(52, 52, TransferMode.COPY);
+        toolkit.drop(252, 52, TransferMode.COPY);
+        toolkit.done(TransferMode.COPY);
+
+        assertEquals(2, counter);
+    }
+
+    @Test
+    public void dragEventsHavePickResult() {
+        final Node[] nodes = twoNodes();
+        final Node n1 = nodes[0];
+        final Node n2 = nodes[1];
+        final MouseEventGenerator gen = new MouseEventGenerator();
+
+        dragSource = n1;
+        n1.setOnMousePressed(doDetect);
+        n1.setOnDragDetected(stringSource(TransferMode.ANY));
+        n1.setOnDragOver(new EventHandler<DragEvent>() {
+            @Override public void handle(DragEvent event) {
+                PickResult pickRes = event.getPickResult();
+                assertNotNull(pickRes);
+                assertSame(n1, pickRes.getIntersectedNode());
+                assertEquals(52, pickRes.getIntersectedPoint().getX(), 0.00001);
+                assertEquals(52, pickRes.getIntersectedPoint().getY(), 0.00001);
+                assertEquals(0, pickRes.getIntersectedPoint().getZ(), 0.00001);
+                counter++;
+            }
+        });
+        EventHandler<DragEvent> switchNodeHandler = new EventHandler<DragEvent>() {
+            @Override public void handle(DragEvent event) {
+                PickResult pickRes = event.getPickResult();
+                assertNotNull(pickRes);
+                assertSame(n2, pickRes.getIntersectedNode());
+                assertEquals(252, pickRes.getIntersectedPoint().getX(), 0.00001);
+                assertEquals(52, pickRes.getIntersectedPoint().getY(), 0.00001);
+                assertEquals(0, pickRes.getIntersectedPoint().getZ(), 0.00001);
+                event.acceptTransferModes(TransferMode.COPY);
+                counter++;
+            }
+        };
+        n1.setOnDragExited(switchNodeHandler);
+        n2.setOnDragEntered(switchNodeHandler);
+        n2.setOnDragOver(switchNodeHandler);
+        n2.setOnDragDropped(switchNodeHandler);
+        n1.setOnDragDone(new EventHandler<DragEvent>() {
+            @Override public void handle(DragEvent event) {
+                PickResult pickRes = event.getPickResult();
+                assertNotNull(pickRes);
+                assertNull(pickRes.getIntersectedNode());
+                assertEquals(0, pickRes.getIntersectedPoint().getX(), 0.00001);
+                assertEquals(0, pickRes.getIntersectedPoint().getY(), 0.00001);
+                assertEquals(0, pickRes.getIntersectedPoint().getZ(), 0.00001);
+                counter++;
+            }
+        });
+
+        n1.getScene().impl_processMouseEvent(
+                gen.generateMouseEvent(MouseEvent.MOUSE_PRESSED, 50, 50));
+        toolkit.dragTo(52, 52, TransferMode.COPY);
+        toolkit.dragTo(252, 52, TransferMode.COPY);
+        toolkit.drop(252, 52, TransferMode.COPY);
+        toolkit.done(TransferMode.COPY);
+
+        assertEquals(6, counter);
+    }
+
+
     /************************************************************************/
     /*                             HELPER CODE                              */
     /************************************************************************/

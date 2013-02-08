@@ -30,7 +30,7 @@ import com.sun.javafx.scene.input.InputEventUtils;
 import java.io.IOException;
 import javafx.event.EventTarget;
 import javafx.event.EventType;
-import javafx.geometry.Point2D;
+import javafx.geometry.Point3D;
 import javafx.scene.Node;
 
 // PENDING_DOC_REVIEW
@@ -61,43 +61,50 @@ public class ContextMenuEvent extends InputEvent {
      * @param source the source of the event. Can be null.
      * @param target the target of the event. Can be null.
      * @param eventType The type of the event.
-     * @param x The x with respect to the source. Should be in scene coordinates if source == null or source is not a Node.
-     * @param y The y with respect to the source. Should be in scene coordinates if source == null or source is not a Node.
+     * @param x The x with respect to the scene
+     * @param y The y with respect to the scene
      * @param screenX The x coordinate relative to screen.
      * @param screenY The y coordinate relative to screen.
      * @param keyboardTrigger true if this event was triggered by keyboard.
+     * @param pickResult pick result. Can be null, in this case a 2D pick result
+     *                   without any further values is constructed
+     *                   based on the scene coordinates and the target
      */
     public ContextMenuEvent(Object source, EventTarget target, EventType<ContextMenuEvent> eventType, double x, double y,
-            double screenX, double screenY, boolean keyboardTrigger) {
+            double screenX, double screenY, boolean keyboardTrigger,
+            PickResult pickResult) {
         super(source, target, eventType);
-        this.x = x;
-        this.y = y;
-        if (source != null && source instanceof Node) {
-            Node sourceNode = (Node) source;
-            Point2D localToScene = sourceNode.localToScene(x, y);
-            this.sceneX = localToScene.getX();
-            this.sceneY = localToScene.getY();
-        } else {
-            this.sceneX = x;
-            this.sceneY = y;
-        }
         this.screenX = screenX;
         this.screenY = screenY;
+        this.sceneX = x;
+        this.sceneY = y;
+        this.x = x;
+        this.y = y;
+        this.pickResult = pickResult != null ? pickResult : new PickResult(target, x, y);
+        final Point3D p = InputEventUtils.recomputeCoordinates(this.pickResult, null);
+        this.x = p.getX();
+        this.y = p.getY();
+        this.z = p.getZ();
         this.keyboardTrigger = keyboardTrigger;
      }
 
     /**
      * Constructs new ContextMenu event with empty source and target.
      * @param eventType The type of the event.
-     * @param x The x with respect to the screen.
-     * @param y The y with respect to the screen.
+     * @param x The x with respect to the scene.
+     * @param y The y with respect to the scene.
      * @param screenX The x coordinate relative to screen.
      * @param screenY The y coordinate relative to screen.
      * @param keyboardTrigger true if this event was triggered by keyboard.
+     * @param pickResult pick result. Can be null, in this case a 2D pick result
+     *                   without any further values is constructed
+     *                   based on the scene coordinates
      */
     public ContextMenuEvent(EventType<ContextMenuEvent> eventType, double x, double y,
-            double screenX, double screenY, boolean keyboardTrigger) {
-        this(null, null, eventType, x, y, screenX, screenY, keyboardTrigger);
+            double screenX, double screenY, boolean keyboardTrigger,
+            PickResult pickResult) {
+        this(null, null, eventType, x, y, screenX, screenY, keyboardTrigger,
+                pickResult);
     }
 
     /**
@@ -108,11 +115,12 @@ public class ContextMenuEvent extends InputEvent {
      */
     private void recomputeCoordinatesToSource(ContextMenuEvent newEvent, Object newSource) {
 
-        final Point2D newCoordinates = InputEventUtils.recomputeCoordinates(
-                new Point2D(sceneX, sceneY), null, newSource);
+        final Point3D newCoordinates = InputEventUtils.recomputeCoordinates(
+                pickResult, newSource);
 
         newEvent.x = newCoordinates.getX();
         newEvent.y = newCoordinates.getY();
+        newEvent.z = newCoordinates.getZ();
     }
 
     @Override
@@ -180,6 +188,23 @@ public class ContextMenuEvent extends InputEvent {
     }
 
     /**
+     * Depth z position of the event relative to the
+     * origin of the MouseEvent's node.
+     */
+    private transient double z;
+
+    /**
+     * Depth position of the event relative to the
+     * origin of the MouseEvent's source.
+     *
+     * @return depth position of the event relative to the
+     * origin of the MouseEvent's source.
+     */
+    public final double getZ() {
+        return z;
+    }
+
+    /**
      * Absolute horizontal x position of the event.
      */
     private final double screenX;
@@ -224,6 +249,8 @@ public class ContextMenuEvent extends InputEvent {
      * the boundsInParent of the root-most parent of the ContextMenuEvent's node.
      * For more information about this event's coordinate semantics please see
      * the general description of {@link ContextMenuEvent}.
+     * Note that in 3D scene, this represents the flat coordinates after
+     * applying the projection transformations.
      *
      * @return horizontal position of the event relative to the
      * origin of the {@code Scene} that contains the ContextMenuEvent's source
@@ -247,12 +274,29 @@ public class ContextMenuEvent extends InputEvent {
      * the boundsInParent of the root-most parent of the ContextMenuEvent's node.
      * For more information about this event's coordinate semantics please see
      * the general description of {@link ContextMenuEvent}.
+     * Note that in 3D scene, this represents the flat coordinates after
+     * applying the projection transformations.
      *
      * @return vertical position of the event relative to the
      * origin of the {@code Scene} that contains the ContextMenuEvent's source
      */
     public final double getSceneY() {
         return sceneY;
+    }
+
+    /**
+     * Information about the pick if the picked {@code Node} is a
+     * {@code Shape3D} node and its pickOnBounds is false.
+     */
+    private PickResult pickResult;
+
+    /**
+     * Returns information about the pick.
+     *
+     * @return new PickResult object that contains information about the pick
+     */
+    public final PickResult getPickResult() {
+        return pickResult;
     }
 
     /**
@@ -267,7 +311,9 @@ public class ContextMenuEvent extends InputEvent {
         sb.append(", eventType = ").append(getEventType());
         sb.append(", consumed = ").append(isConsumed());
 
-        sb.append(", x = ").append(getX()).append(", y = ").append(getY());
+        sb.append(", x = ").append(getX()).append(", y = ").append(getY())
+                .append(", z = ").append(getZ());
+        sb.append(", pickResult = ").append(getPickResult());
 
         return sb.append("]").toString();
     }

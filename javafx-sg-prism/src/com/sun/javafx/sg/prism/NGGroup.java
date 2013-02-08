@@ -471,4 +471,9 @@ public class NGGroup extends NGNode implements PGGroup {
                              mzx, mzy, mzz, mzt);
         }
     }
+
+    @Override
+    NodeType getNodeType() {
+        return NodeType.NODE_NONE;
+    }
 }

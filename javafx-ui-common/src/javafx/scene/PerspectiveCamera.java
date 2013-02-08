@@ -25,12 +25,14 @@
 
 package javafx.scene;
 
-import javafx.beans.property.DoubleProperty;
-import javafx.beans.property.DoublePropertyBase;
-
-import com.sun.javafx.geom.CameraImpl;
-import com.sun.javafx.geom.PerspectiveCameraImpl;
+import com.sun.javafx.scene.DirtyBits;
+import com.sun.javafx.sg.PGNode;
+import com.sun.javafx.sg.PGPerspectiveCamera;
 import com.sun.javafx.tk.Toolkit;
+import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.DoubleProperty;
+import javafx.beans.property.SimpleBooleanProperty;
+import javafx.beans.property.SimpleDoubleProperty;
 
 
 
@@ -49,13 +51,17 @@ import com.sun.javafx.tk.Toolkit;
  * @since JavaFX 1.3
  */
 public  class PerspectiveCamera extends Camera {   
+
+    private boolean fixedEyePosition = false;
+
     /**
-     * Specifies the vertical angle of the camera's projection.
+     * Specifies the field of view angle of the camera's projection plane,
+     * measured in degrees.
      *
      * @defaultValue 30.0
      */
     private DoubleProperty fieldOfView;
-
+    
     public final void setFieldOfView(double value){
         fieldOfViewProperty().set(value);
     }
@@ -66,48 +72,99 @@ public  class PerspectiveCamera extends Camera {
 
     public final DoubleProperty fieldOfViewProperty() {
         if (fieldOfView == null) {
-            fieldOfView = new DoublePropertyBase(30) {
-
+            fieldOfView = new SimpleDoubleProperty(PerspectiveCamera.this, "fieldOfView", 30) {
                 @Override
                 protected void invalidated() {
-                    markDirty();
-                }
-
-                @Override
-                public Object getBean() {
-                    return PerspectiveCamera.this;
-                }
-
-                @Override
-                public String getName() {
-                    return "fieldOfView";
+                    impl_markDirty(DirtyBits.NODE_CAMERA);
                 }
             };
         }
         return fieldOfView;
     }
 
-    public PerspectiveCamera() {
-        markDirty();
+    /**
+     * Defines whether the {@code fieldOfView} property is to apply to the vertical 
+     * dimension of the projection plane. If it is false, {@code fieldOfView} is to 
+     * apply to the horizontal dimension of the projection plane.
+     *
+     * @defaultValue true
+     * @since JavaFX 8
+     */
+    private BooleanProperty verticalFieldOfView;
+
+    public final void setVerticalFieldOfView(boolean value) {
+        verticalFieldOfViewProperty().set(value);
     }
 
-    @Override
-    CameraImpl createPlatformCamera() {
-        return Toolkit.getToolkit().createPerspectiveCamera();
+    public final boolean isVerticalFieldOfView() {
+        return verticalFieldOfView == null ? true : verticalFieldOfView.get();
     }
 
-    @Override void update() {
-        if (isDirty()) {
-            PerspectiveCameraImpl perspectiveCameraImpl = (PerspectiveCameraImpl) getPlatformCamera();
-            perspectiveCameraImpl.setFieldOfView((float)getFieldOfView());
-            clearDirty();
+    public final BooleanProperty verticalFieldOfViewProperty() {
+        if (verticalFieldOfView == null) {
+            verticalFieldOfView = new SimpleBooleanProperty(PerspectiveCamera.this, "verticalFieldOfView", true) {
+                @Override
+                protected void invalidated() {
+                    impl_markDirty(DirtyBits.NODE_CAMERA);
+                }
+            };
         }
+        return verticalFieldOfView;
+    }
+
+    public PerspectiveCamera() {
+    }
+
+   /**
+    * Construct a PerspectiveCamera that may fix its eye position at (0, 0, 0),
+    * in its coordinate space, regardless in the change in the dimension
+    * of the projection area (or Window resize) if {@code fixedEyePosition} is true. 
+    *
+    * @since JavaFX 8
+    */
+    public PerspectiveCamera(boolean fixedEyePosition) {
+        this.fixedEyePosition = fixedEyePosition;
+    }
+
+    public final boolean isFixedEyePosition() {
+        return fixedEyePosition;
     }
 
     @Override Camera copy() {
-        PerspectiveCamera c = new PerspectiveCamera();
+        PerspectiveCamera c = new PerspectiveCamera(fixedEyePosition);
+        c.setNearClip(getNearClip());
+        c.setFarClip(getFarClip());
         c.setFieldOfView(getFieldOfView());
         return c;
     }
 
+    /**
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     */
+    @Deprecated
+    @Override
+    protected PGNode impl_createPGNode() {
+        PGPerspectiveCamera pgCamera = Toolkit.getToolkit().createPGPerspectiveCamera(fixedEyePosition);    
+        pgCamera.setNearClip((float) getNearClip());
+        pgCamera.setFarClip((float) getFarClip());
+        pgCamera.setFieldOfView((float) getFieldOfView());
+        return pgCamera;
+    }
+
+    /**
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     */
+    @Deprecated
+    @Override
+    public void impl_updatePG() {
+        super.impl_updatePG();
+//        System.err.println("XXXXXXXX PerspectiveCamera.impl_updatePG() XXXXXXXX");
+        PGPerspectiveCamera pgPerspectiveCamera = (PGPerspectiveCamera)impl_getPGNode();
+        if (impl_isDirty(DirtyBits.NODE_CAMERA)) {
+            pgPerspectiveCamera.setVerticalFieldOfView(isVerticalFieldOfView());
+            pgPerspectiveCamera.setFieldOfView((float) getFieldOfView());
+        }
+    }
 }

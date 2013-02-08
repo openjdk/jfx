@@ -58,10 +58,10 @@ import javafx.stage.StageStyle;
 import javafx.util.Pair;
 import com.sun.javafx.application.PlatformImpl;
 import com.sun.javafx.embed.HostInterface;
-import com.sun.javafx.geom.ParallelCameraImpl;
+import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.Path2D;
-import com.sun.javafx.geom.PerspectiveCameraImpl;
 import com.sun.javafx.geom.Shape;
+import com.sun.javafx.geom.transform.Affine3D;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.menu.MenuBase;
 import com.sun.javafx.perf.PerformanceTracker;
@@ -69,15 +69,26 @@ import com.sun.javafx.runtime.async.AsyncOperation;
 import com.sun.javafx.runtime.async.AsyncOperationListener;
 import com.sun.javafx.scene.text.HitInfo;
 import com.sun.javafx.scene.text.TextLayoutFactory;
+import com.sun.javafx.sg.PGAmbientLight;
 import com.sun.javafx.sg.PGArc;
+import com.sun.javafx.sg.PGBox;
 import com.sun.javafx.sg.PGCanvas;
 import com.sun.javafx.sg.PGCircle;
 import com.sun.javafx.sg.PGCubicCurve;
+import com.sun.javafx.sg.PGCylinder;
 import com.sun.javafx.sg.PGEllipse;
 import com.sun.javafx.sg.PGGroup;
 import com.sun.javafx.sg.PGImageView;
+import com.sun.javafx.sg.PGLightBase;
 import com.sun.javafx.sg.PGLine;
+import com.sun.javafx.sg.PGMeshView;
+import com.sun.javafx.sg.PGNode;
+import com.sun.javafx.sg.PGNode.CacheHint;
+import com.sun.javafx.sg.PGParallelCamera;
 import com.sun.javafx.sg.PGPath;
+import com.sun.javafx.sg.PGPerspectiveCamera;
+import com.sun.javafx.sg.PGPhongMaterial;
+import com.sun.javafx.sg.PGPointLight;
 import com.sun.javafx.sg.PGPolygon;
 import com.sun.javafx.sg.PGPolyline;
 import com.sun.javafx.sg.PGQuadCurve;
@@ -87,7 +98,9 @@ import com.sun.javafx.sg.PGSVGPath;
 import com.sun.javafx.sg.PGShape.StrokeLineCap;
 import com.sun.javafx.sg.PGShape.StrokeLineJoin;
 import com.sun.javafx.sg.PGShape.StrokeType;
+import com.sun.javafx.sg.PGSphere;
 import com.sun.javafx.sg.PGText;
+import com.sun.javafx.sg.PGTriangleMesh;
 import com.sun.javafx.tk.FileChooserType;
 import com.sun.javafx.tk.FontLoader;
 import com.sun.javafx.tk.ImageLoader;
@@ -105,6 +118,7 @@ import com.sun.javafx.tk.Toolkit;
 import com.sun.prism.BasicStroke;
 import com.sun.scenario.DelayedRunnable;
 import com.sun.scenario.animation.AbstractMasterTimer;
+import com.sun.scenario.effect.Blend.Mode;
 import com.sun.scenario.effect.FilterContext;
 import com.sun.scenario.effect.Filterable;
 
@@ -762,16 +776,6 @@ public class StubToolkit extends Toolkit {
     }
 
     @Override
-    public PerspectiveCameraImpl createPerspectiveCamera() {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public ParallelCameraImpl createParallelCamera() {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
     public void installInputMethodRequests(TKScene scene, InputMethodRequests requests) {
         // just do nothing here.
     }
@@ -813,6 +817,105 @@ public class StubToolkit extends Toolkit {
     @Override
     public PGCanvas createPGCanvas() {
         return new StubCanvas();
+    }
+
+    @Override
+    public PGBox createPGBox() {
+        return new StubBox();
+    }
+
+    @Override
+    public PGCylinder createPGCylinder() {
+        return new StubCylinder();
+    }
+
+    @Override
+    public PGSphere createPGSphere() {
+        return new StubSphere();
+    }
+
+    @Override
+    public PGTriangleMesh createPGTriangleMesh() {
+        return new StubTriangleMesh();
+    }
+
+    @Override
+    public PGMeshView createPGMeshView() {
+        return new StubMeshView();
+    }
+
+    @Override
+    public PGPhongMaterial createPGPhongMaterial() {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public PGAmbientLight createPGAmbientLight() {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public PGPointLight createPGPointLight() {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public PGParallelCamera createPGParallelCamera() {
+        return new PGParallelCamera() {
+            @Override public void setNearClip(float f) {}
+            @Override public void setFarClip(float f) {}
+            @Override public void setWorldTransform(Affine3D ad) {}
+            @Override public void setTransformMatrix(BaseTransform bt) {}
+            @Override public void setContentBounds(BaseBounds bb) {}
+            @Override public void setTransformedBounds(BaseBounds bb, boolean bln) {}
+            @Override public void setVisible(boolean bln) {}
+            @Override public void setOpacity(float f) {}
+            @Override public void setNodeBlendMode(Mode mode) {}
+            @Override public void setDepthTest(boolean bln) {}
+            @Override public void setClipNode(PGNode pgnode) {}
+            @Override public void setCachedAsBitmap(boolean bln, CacheHint ch) {}
+            @Override public void setEffect(Object o) {}
+            @Override public void effectChanged() {}
+            @Override public void release() {}
+        };
+    }
+
+    @Override
+    public PGPerspectiveCamera createPGPerspectiveCamera(boolean fixedEyePosition) {
+        return new PGPerspectiveCamera() {
+            @Override public void setFieldOfView(float f) {}
+            @Override public void setVerticalFieldOfView(boolean bln) {}
+            @Override public void setNearClip(float f) {}
+            @Override public void setFarClip(float f) {}
+            @Override public void setWorldTransform(Affine3D ad) {}
+            @Override public void setTransformMatrix(BaseTransform bt) {}
+            @Override public void setContentBounds(BaseBounds bb) {}
+            @Override public void setTransformedBounds(BaseBounds bb, boolean bln) {}
+            @Override public void setVisible(boolean bln) {}
+            @Override public void setOpacity(float f) {}
+            @Override public void setNodeBlendMode(Mode mode) {}
+            @Override public void setDepthTest(boolean bln) {}
+            @Override public void setClipNode(PGNode pgnode) {}
+            @Override public void setCachedAsBitmap(boolean bln, CacheHint ch) {}
+            @Override public void setEffect(Object o) {}
+            @Override public void effectChanged() {}
+            @Override public void release() {}
+        };
+    }
+
+    @Override
+    public List<PGLightBase> getLightsInScene() {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public boolean isLightsDirty() {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public void setLightsDirty(boolean lightsDirty) {
+        throw new UnsupportedOperationException("Not supported yet.");
     }
 
     public interface DndDelegate {

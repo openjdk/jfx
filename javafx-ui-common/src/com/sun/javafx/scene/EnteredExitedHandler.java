@@ -62,18 +62,14 @@ public class EnteredExitedHandler extends BasicEventDispatcher {
 
             if (event.getEventType() == MouseDragEvent.MOUSE_DRAG_ENTERED_TARGET) {
                 eventTypeModified = true;
-                return MouseEvent.copyForMouseDragEvent((MouseDragEvent) event,
-                                eventSource, event.getTarget(),
-                                MouseDragEvent.MOUSE_DRAG_ENTERED,
-                                ((MouseDragEvent) event).getGestureSource());
+                return ((MouseDragEvent) event).copyFor(eventSource,
+                        event.getTarget(), MouseDragEvent.MOUSE_DRAG_ENTERED);
             }
 
             if (event.getEventType() == MouseDragEvent.MOUSE_DRAG_EXITED_TARGET) {
                 eventTypeModified = true;
-                return MouseEvent.copyForMouseDragEvent((MouseDragEvent) event,
-                                eventSource, event.getTarget(),
-                                MouseDragEvent.MOUSE_DRAG_EXITED,
-                                ((MouseDragEvent) event).getGestureSource());
+                return ((MouseDragEvent) event).copyFor(eventSource,
+                        event.getTarget(), MouseDragEvent.MOUSE_DRAG_EXITED);
             }
 
             if (event.getEventType() == DragEvent.DRAG_ENTERED_TARGET) {
@@ -108,18 +104,14 @@ public class EnteredExitedHandler extends BasicEventDispatcher {
 
             if (event.getEventType() == MouseDragEvent.MOUSE_DRAG_ENTERED) {
                 eventTypeModified = true;
-                return MouseEvent.copyForMouseDragEvent((MouseDragEvent) event,
-                                eventSource, event.getTarget(),
-                                MouseDragEvent.MOUSE_DRAG_ENTERED_TARGET,
-                                ((MouseDragEvent) event).getGestureSource());
+                return ((MouseDragEvent) event).copyFor(eventSource,
+                        event.getTarget(), MouseDragEvent.MOUSE_DRAG_ENTERED_TARGET);
             }
 
             if (event.getEventType() == MouseDragEvent.MOUSE_DRAG_EXITED) {
                 eventTypeModified = true;
-                return MouseEvent.copyForMouseDragEvent((MouseDragEvent) event,
-                                eventSource, event.getTarget(),
-                                MouseDragEvent.MOUSE_DRAG_EXITED_TARGET,
-                                ((MouseDragEvent) event).getGestureSource());
+                return ((MouseDragEvent) event).copyFor(eventSource,
+                        event.getTarget(), MouseDragEvent.MOUSE_DRAG_EXITED_TARGET);
             }
 
             if (event.getEventType() == DragEvent.DRAG_ENTERED) {

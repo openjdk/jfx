@@ -1774,4 +1774,9 @@ public class NGRegion extends NGGroup implements PGRegion {
         }
         return ratio;
     }
+
+    @Override
+    NodeType getNodeType() {
+        return NodeType.NODE_2D;
+    }
 }

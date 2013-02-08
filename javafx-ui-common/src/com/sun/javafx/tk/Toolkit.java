@@ -65,10 +65,7 @@ import javafx.stage.Window;
 import com.sun.javafx.PlatformUtil;
 import com.sun.javafx.beans.event.AbstractNotifyListener;
 import com.sun.javafx.embed.HostInterface;
-import com.sun.javafx.geom.CameraImpl;
-import com.sun.javafx.geom.ParallelCameraImpl;
 import com.sun.javafx.geom.Path2D;
-import com.sun.javafx.geom.PerspectiveCameraImpl;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.jmx.HighlightRegion;
 import com.sun.javafx.perf.PerformanceTracker;
@@ -79,6 +76,7 @@ import com.sun.javafx.scene.SceneHelper;
 import com.sun.javafx.scene.text.HitInfo;
 import com.sun.javafx.scene.text.TextLayoutFactory;
 import com.sun.javafx.sg.PGArc;
+import com.sun.javafx.sg.PGBox;
 import com.sun.javafx.sg.PGCanvas;
 import com.sun.javafx.sg.PGCircle;
 import com.sun.javafx.sg.PGCubicCurve;
@@ -96,6 +94,17 @@ import com.sun.javafx.sg.PGRegion;
 import com.sun.javafx.sg.PGSVGPath;
 import com.sun.javafx.sg.PGShape;
 import com.sun.javafx.sg.PGText;
+import com.sun.javafx.sg.PGAmbientLight;
+import com.sun.javafx.sg.PGCamera;
+import com.sun.javafx.sg.PGCylinder;
+import com.sun.javafx.sg.PGLightBase;
+import com.sun.javafx.sg.PGMeshView;
+import com.sun.javafx.sg.PGParallelCamera;
+import com.sun.javafx.sg.PGPerspectiveCamera;
+import com.sun.javafx.sg.PGPhongMaterial;
+import com.sun.javafx.sg.PGPointLight;
+import com.sun.javafx.sg.PGSphere;
+import com.sun.javafx.sg.PGTriangleMesh;
 import com.sun.scenario.DelayedRunnable;
 import com.sun.scenario.animation.AbstractMasterTimer;
 import com.sun.scenario.effect.AbstractShadow.ShadowMode;
@@ -498,9 +507,6 @@ public abstract class Toolkit {
     //to be used for testing only
     public abstract void waitFor(Task t);
 
-    public abstract PerspectiveCameraImpl createPerspectiveCamera();
-    public abstract ParallelCameraImpl createParallelCamera();
-
     private Object checkSingleColor(List<Stop> stops) {
         if (stops.size() == 2) {
             Color c = stops.get(0).getColor();
@@ -633,6 +639,30 @@ public abstract class Toolkit {
     public abstract Object createSVGPathObject(SVGPath svgpath);
     public abstract Path2D createSVGPath2D(SVGPath svgpath);
 
+    // 3D API support for FX 8
+    // Shapes and mesh
+    public abstract PGBox createPGBox();
+    public abstract PGCylinder createPGCylinder();
+    public abstract PGSphere createPGSphere();
+    public abstract PGTriangleMesh createPGTriangleMesh();
+    public abstract PGMeshView createPGMeshView();
+
+    // Material
+    public abstract PGPhongMaterial createPGPhongMaterial();
+    
+    // Lights
+    public abstract PGAmbientLight createPGAmbientLight();
+    public abstract PGPointLight createPGPointLight();   
+    
+    // Cameras
+    public abstract PGParallelCamera createPGParallelCamera();   
+    public abstract PGPerspectiveCamera createPGPerspectiveCamera(boolean fixedEyePosition);
+    
+    // TODO: Need to evaluate the lighting logic
+    public abstract List<PGLightBase> getLightsInScene();
+    public abstract boolean isLightsDirty();
+    public abstract void setLightsDirty(boolean lightsDirty);
+
     /**
      * Tests whether the pixel on the given coordinates in the given image
      * is non-empty (not fully transparent). Return value is not defined
@@ -721,7 +751,7 @@ public abstract class Toolkit {
         // Rendering parameters either from Scene or SnapShotParams
         public boolean depthBuffer;
         public Object platformPaint;
-        public CameraImpl camera;
+        public PGCamera camera;
 
         // PlatformImage into which to render or null
         public Object platformImage;

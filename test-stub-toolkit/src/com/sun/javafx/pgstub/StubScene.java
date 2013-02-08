@@ -24,8 +24,9 @@
  */
 package com.sun.javafx.pgstub;
 
-import com.sun.javafx.geom.CameraImpl;
 import com.sun.javafx.geom.PickRay;
+import com.sun.javafx.geom.Vec3d;
+import com.sun.javafx.sg.PGCamera;
 import com.sun.javafx.sg.PGNode;
 import com.sun.javafx.tk.TKScene;
 import com.sun.javafx.tk.TKSceneListener;
@@ -70,12 +71,18 @@ public class StubScene implements TKScene {
         // ignore
     }
 
-    public void setCamera(CameraImpl ci) {
+    public void setCamera(PGCamera ci) {
         // ignore
     }
 
     public PickRay computePickRay(float x, float y, PickRay pickRay) {
-        throw new UnsupportedOperationException();
+        // static parallel pickray ignoring camera and everything
+        if (pickRay == null) {
+            pickRay = new PickRay();
+        }
+        pickRay.setOrigin(new Vec3d(x, y, -1000));
+        pickRay.setDirection(new Vec3d(0, 0, 1000));
+        return pickRay;
     }
 
     public void setFillPaint(Object fillPaint) {

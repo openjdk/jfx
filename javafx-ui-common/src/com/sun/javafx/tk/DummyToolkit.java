@@ -47,9 +47,7 @@ import javafx.stage.FileChooser.ExtensionFilter;
 import javafx.stage.Modality;
 import javafx.stage.StageStyle;
 import com.sun.javafx.embed.HostInterface;
-import com.sun.javafx.geom.ParallelCameraImpl;
 import com.sun.javafx.geom.Path2D;
-import com.sun.javafx.geom.PerspectiveCameraImpl;
 import com.sun.javafx.geom.Shape;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.perf.PerformanceTracker;
@@ -57,15 +55,24 @@ import com.sun.javafx.runtime.async.AsyncOperation;
 import com.sun.javafx.runtime.async.AsyncOperationListener;
 import com.sun.javafx.scene.text.HitInfo;
 import com.sun.javafx.scene.text.TextLayoutFactory;
+import com.sun.javafx.sg.PGAmbientLight;
 import com.sun.javafx.sg.PGArc;
+import com.sun.javafx.sg.PGBox;
 import com.sun.javafx.sg.PGCanvas;
 import com.sun.javafx.sg.PGCircle;
 import com.sun.javafx.sg.PGCubicCurve;
+import com.sun.javafx.sg.PGCylinder;
 import com.sun.javafx.sg.PGEllipse;
 import com.sun.javafx.sg.PGGroup;
 import com.sun.javafx.sg.PGImageView;
+import com.sun.javafx.sg.PGLightBase;
 import com.sun.javafx.sg.PGLine;
+import com.sun.javafx.sg.PGMeshView;
+import com.sun.javafx.sg.PGParallelCamera;
 import com.sun.javafx.sg.PGPath;
+import com.sun.javafx.sg.PGPerspectiveCamera;
+import com.sun.javafx.sg.PGPhongMaterial;
+import com.sun.javafx.sg.PGPointLight;
 import com.sun.javafx.sg.PGPolygon;
 import com.sun.javafx.sg.PGPolyline;
 import com.sun.javafx.sg.PGQuadCurve;
@@ -75,7 +82,9 @@ import com.sun.javafx.sg.PGSVGPath;
 import com.sun.javafx.sg.PGShape.StrokeLineCap;
 import com.sun.javafx.sg.PGShape.StrokeLineJoin;
 import com.sun.javafx.sg.PGShape.StrokeType;
+import com.sun.javafx.sg.PGSphere;
 import com.sun.javafx.sg.PGText;
+import com.sun.javafx.sg.PGTriangleMesh;
 import com.sun.scenario.DelayedRunnable;
 import com.sun.scenario.animation.AbstractMasterTimer;
 import com.sun.scenario.effect.FilterContext;
@@ -190,16 +199,6 @@ final public class DummyToolkit extends Toolkit {
 
     @Override
     public void waitFor(Task t) {
-        throw new UnsupportedOperationException("Not supported yet.");
-    }
-
-    @Override
-    public PerspectiveCameraImpl createPerspectiveCamera() {
-        throw new UnsupportedOperationException("Not supported yet.");
-    }
-
-    @Override
-    public ParallelCameraImpl createParallelCamera() {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
@@ -484,6 +483,71 @@ final public class DummyToolkit extends Toolkit {
 
     @Override
     public void requestNextPulse() {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public PGBox createPGBox() {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public PGCylinder createPGCylinder() {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public PGSphere createPGSphere() {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public PGTriangleMesh createPGTriangleMesh() {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public PGMeshView createPGMeshView() {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public PGPhongMaterial createPGPhongMaterial() {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public PGAmbientLight createPGAmbientLight() {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public PGPointLight createPGPointLight() {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public PGParallelCamera createPGParallelCamera() {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public PGPerspectiveCamera createPGPerspectiveCamera(boolean fixedEyePosition) {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public List<PGLightBase> getLightsInScene() {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public boolean isLightsDirty() {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public void setLightsDirty(boolean lightsDirty) {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 }
