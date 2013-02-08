@@ -407,7 +407,7 @@ is being used to size a border should also be in pixels.
 .choice-box,
 .ickericker.split-button > .color-picker-label,
 .combo-box-base,
-.combo-box-base:editable > .arrow-button{
+.combo-box-base:editable > .arrow-button {
     -fx-background-color: -fx-shadow-highlight-color, -fx-outer-border, -fx-inner-border, -fx-body-color;
     -fx-background-insets: 0 0 -1 0, 0, 1, 2;
     -fx-background-radius: 3px, 3px, 2px, 1px;
@@ -549,7 +549,7 @@ is being used to size a border should also be in pixels.
 }
 .choice-box > .open-button,
 .menu-button > .arrow-button {
-    -fx-padding: 0.5em 0.833333em 0.5em 0.0em; /* 6 10 6 0 */
+    -fx-padding: 0.5em 0.667em 0.5em 0.0em; /* 6 8 6 0 */
 }
 
 /* ====   BOX LIKE THINGS   ================================================= */
@@ -784,7 +784,7 @@ is being used to size a border should also be in pixels.
     -fx-background-color: -fx-inner-border, -fx-body-color; 
     -fx-background-insets: 1, 2;
     -fx-background-radius: 0 2 2 0, 0 1 1 0;
-    -fx-padding: 0.5em 0.833333em 0.5em 0.833333em; /* 6 10 6 10 */
+    -fx-padding: 0.5em 0.667em 0.5em 0.667em; /* 6 8 6 8 */
 }
 
 /*******************************************************************************
@@ -1610,7 +1610,7 @@ is being used to size a border should also be in pixels.
 }
 .combo-box-base > .arrow-button  {
     -fx-background-radius: 0 3 3 0, 0 2 2 0, 0 1 1 0;
-    -fx-padding: 0.5em 0.833333em 0.5em 0.833333em; /* 6 10 6 10 */
+    -fx-padding: 0.5em 0.667em 0.5em 0.833333em; /* 6 8 6 10 */
     -fx-background-color: transparent;
 }
 
@@ -1766,7 +1766,7 @@ is being used to size a border should also be in pixels.
 
 .color-picker > .arrow-button {
     -fx-background-color: null !important;
-    -fx-padding: 0.5em 0.833333em 0.5em 0; /*  6 10 6 0 */
+    -fx-padding: 0.5em 0.667em 0.5em 0; /*  6 8 6 0 */
 }
 .color-picker.split-button > .arrow-button  {
     -fx-background-color: -fx-outer-border, -fx-inner-border, -fx-body-color !important;
