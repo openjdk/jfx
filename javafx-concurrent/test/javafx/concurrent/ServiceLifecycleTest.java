@@ -33,6 +33,7 @@ import javafx.beans.value.ObservableValue;
 import javafx.concurrent.mocks.MythicalEvent;
 import javafx.concurrent.mocks.SimpleTask;
 import javafx.event.EventHandler;
+import org.junit.After;
 import org.junit.Test;
 
 import static org.junit.Assert.*;
@@ -64,6 +65,10 @@ public class ServiceLifecycleTest extends ServiceTestBase {
 
     @Override protected Executor createExecutor() {
         return executor = new ManualExecutor(super.createExecutor());
+    }
+
+    @After public void tearDown() {
+        if (task != null) task.finish.set(true);
     }
 
     /**
@@ -130,6 +135,7 @@ public class ServiceLifecycleTest extends ServiceTestBase {
 
         @Override
         public boolean cancel(boolean mayInterruptIfRunning) {
+            finish.set(true);
             return failToCancel ? false : super.cancel(mayInterruptIfRunning);
         }
     }

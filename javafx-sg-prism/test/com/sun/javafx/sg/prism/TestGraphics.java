@@ -38,6 +38,7 @@ import com.sun.prism.Image;
 import com.sun.prism.MediaFrame;
 import com.sun.prism.PixelFormat;
 import com.sun.prism.Presentable;
+import com.sun.prism.PresentableState;
 import com.sun.prism.RTTexture;
 import com.sun.prism.RenderTarget;
 import com.sun.prism.RenderingContext;
@@ -194,7 +195,7 @@ public class TestGraphics extends BaseGraphics {
                 @Override public void setOpaque(boolean opaque) { }
             };
         }
-        @Override public Presentable createPresentable(View view) { return null; }
+        @Override public Presentable createPresentable(PresentableState pstate) { return null; }
         @Override public VertexBuffer createVertexBuffer(int maxQuads) { return null; }
         @Override public ShapeRep createPathRep(boolean needs3D) { return null; }
         @Override public ShapeRep createRoundRectRep(boolean needs3D) { return null; }
@@ -202,7 +203,7 @@ public class TestGraphics extends BaseGraphics {
         @Override public ShapeRep createArcRep(boolean needs3D) { return null; }
         @Override public void addFactoryListener(ResourceFactoryListener l) { }
         @Override public void removeFactoryListener(ResourceFactoryListener l) { }
-        @Override public RenderingContext createRenderingContext(View view) { return null; }
+        @Override public RenderingContext createRenderingContext(PresentableState pstate) { return null; }
         @Override public void dispose() { }
     }
     

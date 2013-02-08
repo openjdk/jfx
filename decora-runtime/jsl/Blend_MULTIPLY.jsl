@@ -1,0 +1,52 @@
+/*
+ * Copyright (c) 2011, 2013 Oracle and/or its affiliates. All rights reserved.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.  Oracle designates this
+ * particular file as subject to the "Classpath" exception as provided
+ * by Oracle in the LICENSE file that accompanied this code.
+ *
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
+ *
+ * You should have received a copy of the GNU General Public License version
+ * 2 along with this work; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+ * or visit www.oracle.com if you need additional information or have any
+ * questions.
+ */
+// Nominally res.C = bot.C * top.C
+// This works find for the color components, especially if the pixels
+// are opaque, but when the alpha is less than opaque then the result
+// gets a little more complicated.
+// First, note that we calculate the above with premultiplied components
+// such that the effective equation is really:
+//     res.C = bot.C * bot.a * top.C * top.a
+// Next, note that as alpha goes to zero, the operation should approach
+// a non-operation (NOP).  Unfortunately, the effect of smaller alphas
+// on this equation is to drive it towards zero.  Thus, as alpha goes
+// to zero, the result goes towards black, rather than going towards
+// the other operand.
+// To adjust for lowering alphas, we simply add back in the "unaffected"
+// portions of the other operands, as in:
+//    res.C = product + unaltered_top + unaltered_bottom
+//    res.C = bot.C*top.C + top.C*(1-bot.a) + bot.C*(1-top.a)
+// A: res.C = top.C * (bot.C + 1 - bot.a) + bot.C * (1 - top.a)
+// Note that for alphas we want:
+//    res.a = bot.a + top.a - bot.a * top.a
+// If we simply perform the above equation (A) on alpha as well, we get:
+//    res.a = top.a * (bot.a + 1 - bot.a) + bot.a * (1 - top.a)
+//    res.a = top.a * (1) + bot.a - bot.a * top.a
+//    res.a = bot.a + top.a - bot.a * top.a
+// This means we can apply equation (A) on all components for simplicity.
+float4 blend_multiply(float4 bot, float4 top)
+{
+    return bot * (top + 1.0 - top.a) + top * (1.0 - bot.a);
+}

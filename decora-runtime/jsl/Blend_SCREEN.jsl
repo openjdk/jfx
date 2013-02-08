@@ -1,0 +1,55 @@
+/*
+ * Copyright (c) 2011, 2013 Oracle and/or its affiliates. All rights reserved.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.  Oracle designates this
+ * particular file as subject to the "Classpath" exception as provided
+ * by Oracle in the LICENSE file that accompanied this code.
+ *
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
+ *
+ * You should have received a copy of the GNU General Public License version
+ * 2 along with this work; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+ * or visit www.oracle.com if you need additional information or have any
+ * questions.
+ */
+//res = 1 - (1-b)(1-t)
+//res = 1 - (1-b-t+bt)
+//res = 1 - 1+b+t-bt
+//res = b+t-bt
+// Note that when alpha is zero, then the values in t and b are 0.0 which
+// means the values in the expressions (1-t) and (1-b) end up being 1.0.
+// These values naturally cause smaller alphas to affect the result less
+// and less without any adjustments:
+// As t.a => 0:
+//   res = 1 - (1-b)*1 = 1-1+b = b
+//   res = b + 0 - b*0 = b
+// And as b.a => 0:
+//   res = 1 - 1*(1-t) = 1-1+t = t
+//   res = 0 + t - 0*t = t
+// Another way to prove this is that it is the application of the multiply
+// equation (A) above on (t.a - t.rgb) and (b.a - b.rgb) and the result
+// again inverted against res.a, thus we get:
+//   res.C = res.a - [mul(bot.a - bot.C, top.a - top.C)]
+//   res.C = res.a - (top.a-top.C)*((bot.a-bot.C) + 1 - bot.a)
+//                 - (bot.a-bot.C)*(1 - top.a)
+//   res.C = rA - (tA-tC)(bA-bC+1-bA) - (bA-bC)(1-tA)
+//   res.C = rA - (tA-tC)(1-bC) - (bA-bC)(1-tA)
+//   res.C = rA - tA + tC + tAbC - bCtC - bA + bC + bAtA - tAbC
+//   res.C = rA - bA - tA + bAtA + bC + tC - bCtC
+//   res.A = bA + tA - bAtA
+//   res.C = bA+tA-bAtA - bA - tA + bAtA + bC + tC - bCtC
+//   res.C = bC + tC - bCtC
+float4 blend_screen(float4 bot, float4 top)
+{
+    return bot + top - bot * top;
+}

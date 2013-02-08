@@ -45,7 +45,7 @@ public abstract class ServiceTestBase {
         return new Executor() {
             @Override public void execute(final Runnable command) {
                 if (command == null) Thread.dumpStack();
-                new Thread() {
+                Thread th = new Thread() {
                     @Override public void run() {
                         try {
                             command.run();
@@ -55,7 +55,9 @@ public abstract class ServiceTestBase {
                             eventQueue.add(new Sentinel());
                         }
                     }
-                }.start();
+                };
+                th.setDaemon(true);
+                th.start();
             }
         };
     }

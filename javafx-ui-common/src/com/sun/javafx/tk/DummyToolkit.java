@@ -30,26 +30,22 @@ import java.io.InputStream;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-
 import javafx.geometry.Dimension2D;
 import javafx.scene.image.Image;
-import javafx.scene.input.DragEvent;
 import javafx.scene.input.Dragboard;
-import javafx.scene.input.InputMethodEvent;
 import javafx.scene.input.InputMethodRequests;
+import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
-import javafx.scene.input.MouseEvent;
 import javafx.scene.input.TransferMode;
 import javafx.scene.paint.Color;
+import javafx.scene.paint.ImagePattern;
 import javafx.scene.paint.LinearGradient;
 import javafx.scene.paint.RadialGradient;
 import javafx.scene.shape.PathElement;
 import javafx.scene.shape.SVGPath;
-import javafx.scene.text.Text;
 import javafx.stage.FileChooser.ExtensionFilter;
 import javafx.stage.Modality;
 import javafx.stage.StageStyle;
-
 import com.sun.javafx.embed.HostInterface;
 import com.sun.javafx.geom.ParallelCameraImpl;
 import com.sun.javafx.geom.Path2D;
@@ -59,7 +55,6 @@ import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.perf.PerformanceTracker;
 import com.sun.javafx.runtime.async.AsyncOperation;
 import com.sun.javafx.runtime.async.AsyncOperationListener;
-import javafx.scene.paint.ImagePattern;
 import com.sun.javafx.scene.text.HitInfo;
 import com.sun.javafx.scene.text.TextLayoutFactory;
 import com.sun.javafx.sg.PGArc;
@@ -70,7 +65,6 @@ import com.sun.javafx.sg.PGEllipse;
 import com.sun.javafx.sg.PGGroup;
 import com.sun.javafx.sg.PGImageView;
 import com.sun.javafx.sg.PGLine;
-import com.sun.javafx.sg.PGMediaView;
 import com.sun.javafx.sg.PGPath;
 import com.sun.javafx.sg.PGPolygon;
 import com.sun.javafx.sg.PGPolyline;
@@ -82,12 +76,10 @@ import com.sun.javafx.sg.PGShape.StrokeLineCap;
 import com.sun.javafx.sg.PGShape.StrokeLineJoin;
 import com.sun.javafx.sg.PGShape.StrokeType;
 import com.sun.javafx.sg.PGText;
-import com.sun.javafx.sg.PGWebView;
 import com.sun.scenario.DelayedRunnable;
 import com.sun.scenario.animation.AbstractMasterTimer;
 import com.sun.scenario.effect.FilterContext;
 import com.sun.scenario.effect.Filterable;
-import javafx.scene.input.KeyCode;
 
 /**
  * A stubbed out Toolkit that provides no useful implementation. This is used
@@ -368,11 +360,6 @@ final public class DummyToolkit extends Toolkit {
     }
 
     @Override
-    public PGMediaView createPGMediaView() {
-        throw new UnsupportedOperationException("Not supported yet.");
-    }
-
-    @Override
     public PGGroup createPGGroup() {
         throw new UnsupportedOperationException("Not supported yet.");
     }
@@ -389,11 +376,6 @@ final public class DummyToolkit extends Toolkit {
 
     @Override
     public PGCanvas createPGCanvas() {
-        throw new UnsupportedOperationException("Not supported yet.");
-    }
-
-    @Override
-    public PGWebView createPGWebView() {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 

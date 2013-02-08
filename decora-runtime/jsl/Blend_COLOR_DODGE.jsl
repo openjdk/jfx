@@ -1,0 +1,70 @@
+/*
+ * Copyright (c) 2011, 2013 Oracle and/or its affiliates. All rights reserved.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.  Oracle designates this
+ * particular file as subject to the "Classpath" exception as provided
+ * by Oracle in the LICENSE file that accompanied this code.
+ *
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
+ *
+ * You should have received a copy of the GNU General Public License version
+ * 2 along with this work; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+ * or visit www.oracle.com if you need additional information or have any
+ * questions.
+ */
+float4 blend_color_dodge(float4 bot, float4 top)
+{
+    float4 res;
+    res.a = bot.a + top.a - (bot.a * top.a);
+    res.rgb = (1.0 - top.a)*bot.rgb + (1.0 - bot.a)*top.rgb;
+
+    float proda = bot.a*top.a;
+    float3 tmp;
+
+    if (bot.r == 0.0) {
+        tmp.r = 0.0;
+    } else if (top.a == top.r) {
+        tmp.r = proda;
+    } else {
+        tmp.r = top.a*top.a*bot.r/(top.a - top.r);
+        if (tmp.r > proda) {
+            tmp.r = proda;
+        }
+    }
+
+    if (bot.g == 0.0) {
+        tmp.g = 0.0;
+    } else if (top.a == top.g) {
+        tmp.g = proda;
+    } else {
+        tmp.g = top.a*top.a*bot.g/(top.a - top.g);
+        if (tmp.g > proda) {
+            tmp.g = proda;
+        }
+    }
+
+    if (bot.b == 0.0) {
+        tmp.b = 0.0;
+    } else if (top.a == top.b) {
+        tmp.b = proda;
+    } else {
+        tmp.b = top.a*top.a*bot.b/(top.a - top.b);
+        if (tmp.b > proda) {
+            tmp.b = proda;
+        }
+    }
+
+    res.rgb = res.rgb + tmp;
+
+    return res;
+}

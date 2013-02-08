@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2012, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2013 Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,26 +22,7 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-package javafx.animation;
-
-import javafx.util.Duration;
-
-public class AnimationMock extends Animation {
-	
-	public AnimationMock(Duration duration) {
-		setCycleDuration(duration);
-	}
-
-	@Override
-	public void impl_playTo(long currentTicks, long cycleTicks) {
-		// TODO Auto-generated method stub
-
-	}
-
-	@Override
-	public void impl_jumpTo(long currentTicks, long cycleTicks, boolean forceJump) {
-		// TODO Auto-generated method stub
-
-	}
-
+float4 blend_src_atop(float4 bot, float4 top)
+{
+    return (top * bot.a) + (bot * (1.0 - top.a));
 }

@@ -25,14 +25,8 @@
 
 package javafx.concurrent;
 
-import java.io.File;
-import java.io.FilePermission;
-import java.lang.reflect.ReflectPermission;
-import java.security.AccessController;
 import java.security.Permission;
-import java.util.Properties;
-import java.util.PropertyPermission;
-import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.runner.RunWith;
 import org.junit.runners.BlockJUnit4ClassRunner;
 import org.junit.runners.model.FrameworkMethod;
@@ -50,6 +44,7 @@ import sun.awt.AWTSecurityManager;
  * related tests on lots of different unit tests.
  */
 @RunWith(ServiceWithSecurityManagerTest.ServiceTestRunner.class)
+@Ignore("This class doesn't appear to run correctly, often s.evaluate isn't called. Likely bogus test at present.")
 public class ServiceWithSecurityManagerTest extends ServiceLifecycleTest {
     
     public static final class ServiceTestRunner extends BlockJUnit4ClassRunner {

@@ -190,10 +190,12 @@ project(":graphics") {
         into "build/resources/main"
     }
     processResources.dependsOn copyShaders
-//
-//    test {
-//        systemProperty "javafx.toolkit", "com.sun.javafx.pgstub.StubToolkit"
-//    }
+
+    test {
+        enableAssertions = true
+        testLogging.exceptionFormat = "full"
+        forkEvery = 1
+    }
 
     // TODO Need to compile the Decora SSE Natives now! I don't yet know how to compile natives
 }
@@ -217,9 +219,16 @@ project(":swt") {
     }
 }
 
-project(":fxml") {
-    dependencies {
-        compile project(":build-tools"), project(":base"), project(":graphics"),
-                project(":controls"), /*project(":media"), project(":web"),*/ project(":swt"), project(":swing")
-    }
-}
+//project(":web") {
+//    dependencies {
+//        compile project(":build-tools"), project(":base"), project(":graphics"),
+//                project(":controls"), /*project(":media"),*/ project(":swt"), project(":swing")
+//    }
+//}
+//
+//project(":fxml") {
+//    dependencies {
+//        compile project(":build-tools"), project(":base"), project(":graphics"),
+//                project(":controls"), /*project(":media"),*/ project(":web"), project(":swt"), project(":swing")
+//    }
+//}

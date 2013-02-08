@@ -1,0 +1,18 @@
+/*
+ * Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
+ */
+// Verifies that the same variable name can appear in two different functions
+
+float myfunc()
+{
+    float myres = 3.0 * 4.0;
+    return myres;
+}
+
+void main()
+{
+    // NOTE: commented out until we fix the compiler to better handle this case
+    //float myres = 1.0 * 2.0;
+    float funcres = myfunc();
+    color = float4(0.0);
+}

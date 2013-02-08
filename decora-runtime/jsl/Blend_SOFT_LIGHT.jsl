@@ -1,0 +1,88 @@
+/*
+ * Copyright (c) 2011, 2013 Oracle and/or its affiliates. All rights reserved.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.  Oracle designates this
+ * particular file as subject to the "Classpath" exception as provided
+ * by Oracle in the LICENSE file that accompanied this code.
+ *
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
+ *
+ * You should have received a copy of the GNU General Public License version
+ * 2 along with this work; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+ * or visit www.oracle.com if you need additional information or have any
+ * questions.
+ */
+float dofx(float f, float sqrtf)
+{
+    float d;
+    if (f <= 0.25) {
+        d = ((16.0*f - 12.0)*f + 4.0)*f;
+    } else {
+        d = sqrtf;
+    }
+    return d;
+}
+
+float4 blend_soft_light(float4 bot, float4 top)
+{
+    float4 res;
+    res.a = bot.a + top.a - (bot.a * top.a);
+
+    // Calculate non-premultiplied colors
+    float3 bot_np = bot.rgb / bot.a;
+    float3 top_np = top.rgb / top.a;
+
+    // Pre-compute D(bot_np.c) term for when top_np.c > 0.5 and bot_np.c > 0.25
+    float sqrtf = sqrt(bot_np.r);
+    float dr = dofx(bot_np.r, sqrtf);
+    sqrtf = sqrt(bot_np.g);
+    float dg = dofx(bot_np.g, sqrtf);
+    sqrtf = sqrt(bot_np.b);
+    float db = dofx(bot_np.b, sqrtf);
+
+    if (bot.a == 0.0) {
+        res.r = top.r;
+    } else if (top.a == 0.0) {
+        res.r = bot.r;
+    } else if (top_np.r <= 0.5) {
+        res.r = bot.r + (1.0 - bot.a)*top.r -
+            top.a*bot.r*(1.0 - 2.0*top_np.r)*(1.0 - bot_np.r);
+    } else {
+        res.r = bot.r + (1.0 - bot.a)*top.r +
+            (2.0*top.r - top.a)*(bot.a*dr - bot.r);
+    }
+    if (bot.a == 0.0) {
+        res.g = top.g;
+    } else if (top.a == 0.0) {
+        res.g = bot.g;
+    } else if (top_np.g <= 0.5) {
+        res.g = bot.g + (1.0 - bot.a)*top.g -
+            top.a*bot.g*(1.0 - 2.0*top_np.g)*(1.0 - bot_np.g);
+    } else {
+        res.g = bot.g + (1.0 - bot.a)*top.g +
+            (2.0*top.g - top.a)*(bot.a*dg - bot.g);
+    }
+    if (bot.a == 0.0) {
+        res.b = top.b;
+    } else if (top.a == 0.0) {
+        res.b = bot.b;
+    } else if (top_np.b <= 0.5) {
+        res.b = bot.b + (1.0 - bot.a)*top.b -
+            top.a*bot.b*(1.0 - 2.0*top_np.b)*(1.0 - bot_np.b);
+    } else {
+        res.b = bot.b + (1.0 - bot.a)*top.b +
+            (2.0*top.b - top.a)*(bot.a*db - bot.b);
+    }
+
+    return res;
+}

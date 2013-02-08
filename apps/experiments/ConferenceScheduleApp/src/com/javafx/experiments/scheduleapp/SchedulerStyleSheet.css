@@ -281,7 +281,7 @@
     -fx-font-size: 12px;
     -fx-font-weight: bold;
     -fx-padding: 2;
-    -fx-alignment: top-left
+    -fx-alignment: top-left;
 }
 .catalog-session-speaker {
     -fx-font-size: 12px;
@@ -306,7 +306,7 @@
 .scroll-pane {
     -fx-background-color: null;
     -fx-background-insets: 0;
-    -fx-skin: "com.javafx.experiments.scheduleapp.control.ScrollPaneSkin3"
+    -fx-skin: "com.javafx.experiments.scheduleapp.control.ScrollPaneSkin3";
 }
 
 /* ****** SESSION FILTER *************************************************************************** */
