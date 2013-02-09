@@ -674,6 +674,15 @@ public class Rectangle {
         return super.equals(obj);
     }
 
+    @Override
+    public int hashCode() {
+        int bits = java.lang.Float.floatToIntBits(x);
+        bits += java.lang.Float.floatToIntBits(y) * 37;
+        bits += java.lang.Float.floatToIntBits(width) * 43;
+        bits += java.lang.Float.floatToIntBits(height) * 47;
+        return bits;
+    }
+
     /**
      * Returns a <code>String</code> representing this
      * <code>Rectangle</code> and its values.

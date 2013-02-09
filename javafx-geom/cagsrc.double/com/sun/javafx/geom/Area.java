@@ -470,15 +470,15 @@ public class Area extends Shape {
 
     /**
      * Tests whether the geometries of the two <code>Area</code> objects
-     * are equal.
+     * cover the same area.
      * This method will return false if the argument is null.
      * @param   other  the <code>Area</code> to be compared to this
      *          <code>Area</code>
-     * @return  <code>true</code> if the two geometries are equal;
+     * @return  <code>true</code> if the two geometries are equivalent;
      *          <code>false</code> otherwise.
      * @since 1.2
      */
-    public boolean equals(Area other) {
+    public boolean isEquivalent(Area other) {
         // REMIND: A *much* simpler operation should be possible...
         // Should be able to do a curve-wise comparison since all Areas
         // should evaluate their curves in the same top-down order.
