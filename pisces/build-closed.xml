@@ -9,6 +9,5 @@
         ${rt.dist.root.dir}/javafx-geom/dist/javafx-geom.jar" />
     <property name="javac.classpath" refid="javac.closed.classpath.path"/>
     
-    <import file="../build-defs.xml"/>
     <import file="build-common.xml"/>
 </project>

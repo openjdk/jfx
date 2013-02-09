@@ -49,19 +49,19 @@
       -->
 
     <target name="build-compiler">
-      <ant antfile="decora-compiler/build.xml" target="jar" inheritAll="false"/>
+      <ant antfile="decora-compiler/build-closed.xml" target="jar" inheritAll="false"/>
     </target>
 
     <target name="build-runtime">
-      <ant antfile="decora-runtime/build.xml" target="jar" inheritAll="false"/>
+      <ant antfile="decora-runtime/build-closed.xml" target="jar" inheritAll="false"/>
     </target>
 
     <target name="build-jsw">
-      <ant antfile="decora-jsw/build.xml" target="jar" inheritAll="false"/>
+      <ant antfile="decora-jsw/build-closed.xml" target="jar" inheritAll="false"/>
     </target>
 
     <target name="build-sse" if="include.sse">
-      <ant antfile="decora-sse/build.xml" target="jar" inheritAll="false"/>
+      <ant antfile="decora-sse/build-closed.xml" target="jar" inheritAll="false"/>
     </target>
 
     <target name="dist" depends="init">
@@ -96,19 +96,19 @@
       -->
 
     <target name="clean-compiler">
-      <ant antfile="decora-compiler/build.xml" target="clean" inheritAll="false"/>
+      <ant antfile="decora-compiler/build-closed.xml" target="clean" inheritAll="false"/>
     </target>
 
     <target name="clean-runtime">
-      <ant antfile="decora-runtime/build.xml" target="clean" inheritAll="false"/>
+      <ant antfile="decora-runtime/build-closed.xml" target="clean" inheritAll="false"/>
     </target>
 
     <target name="clean-jsw">
-      <ant antfile="decora-jsw/build.xml" target="clean" inheritAll="false"/>
+      <ant antfile="decora-jsw/build-closed.xml" target="clean" inheritAll="false"/>
     </target>
 
     <target name="clean-sse" if="include.sse">
-      <ant antfile="decora-sse/build.xml" target="clean" inheritAll="false"/>
+      <ant antfile="decora-sse/build-closed.xml" target="clean" inheritAll="false"/>
     </target>
 
     <target name="clean" depends="init">

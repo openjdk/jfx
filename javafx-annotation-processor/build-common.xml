@@ -8,7 +8,6 @@
     <!-- copy over the manifest stuff -->
     <mkdir dir="${build.classes.dir}/META-INF" />
     <mkdir dir="${build.classes.dir}/META-INF/services" />
-    <!--<echo file="${build.classes.dir}/META-INF/services/javax.annotation.processing.Processor">lombok.javac.apt.Processor</echo>-->
     <build-project />
   </target>
 

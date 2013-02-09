@@ -25,7 +25,7 @@
  * questions.
  */
 --> 
-<project name="JavaFX Runtime" default="dist" basedir=".">
+<project name="JavaFX" default="dist" basedir=".">
     <description>Builds, tests, and runs the project JavaFX Runtime</description>
 
     <import file="../build-defs.xml"/>
@@ -38,43 +38,65 @@
         <fail message="Ant version 1.7.1 or later is required to build JavaFX.">
             <condition><not><antversion atleast="1.7.1"/></not></condition>
         </fail>
+        <condition property="isLinuxOrSolaris">
+            <or>
+              <istrue value="${isLinux}"/>
+              <istrue value="${isSolaris}"/>
+            </or>
+        </condition>
+
+        <property name="try.sse" value="true"/>
+        <!-- only build decora-sse on Windows and Mac OS X -->
+        <condition property="include.sse">
+            <or>
+                <istrue value="${isWindows}"/>
+                <istrue value="${isMacOSX}"/>
+            </or>
+        </condition>
+        
+        <!-- only build decora-d3d if on Windows -->
+        <condition property="include.d3d">
+            <istrue value="${isWindows}"/>
+        </condition>
+
+        <condition property="sse.native.lib.file"
+                   value="libdecora-sse.dylib"
+                   else="decora-sse.dll">
+            <istrue value="${isMacOSX}"/>
+        </condition>
     </target>
 
     <!--
         Build targets...
       -->
 
-    <!--
-    <fileset dir="${rt.root.dir}" id="rt.binaries.to.be.copied">
-        <include name="javafx-beans-dt/dist/javafx-beans-dt.jar"/>
-        <include name="javafx-concurrent/dist/javafx-concurrent.jar"/>
-        <include name="javafx-designtime/dist/javafx-designtime.jar"/>
-        <include name="javafx-ui-controls/dist/javafx-ui-controls.jar"/>
-        <include name="javafx-ui-charts/dist/javafx-ui-charts.jar"/>
-        <include name="javafx-ui-common/dist/javafx-ui-common.jar"/> 
-        <include name="javafx-util-converter/dist/javafx-util-converter.jar"/>
-    </fileset>
-    -->
-
     <target name="jar" depends="init">
-        <ant antfile="${rt.root.dir}/javafx-beans-dt/build.xml" target="jar" inheritAll="false"/>
-        <ant antfile="${rt.root.dir}/javafx-util-converter/build.xml" target="jar" inheritAll="false"/>
-        <ant antfile="${rt.root.dir}/javafx-concurrent/build.xml" target="jar" inheritAll="false"/>
-        <ant antfile="${rt.root.dir}/javafx-logging/build.xml" target="jar" inheritAll="false"/>
-        <ant antfile="${rt.root.dir}/javafx-anim/build.xml" target="jar" inheritAll="false"/>
-        <ant antfile="${rt.root.dir}/javafx-beans/build.xml" target="jar" inheritAll="false"/>
         <ant antfile="${rt.root.dir}/javafx-common/build.xml" target="jar" inheritAll="false"/>
+        <ant antfile="${rt.root.dir}/javafx-logging/build.xml" target="jar" inheritAll="false"/>
+        <ant antfile="${rt.root.dir}/javafx-beans/build.xml" target="jar" inheritAll="false"/>
         <ant antfile="${rt.root.dir}/javafx-annotation-processor/build.xml" target="jar" inheritAll="false"/>
-        <ant antfile="${rt.root.dir}/javafx-sg-common/build.xml" target="jar" inheritAll="false"/>
+        <ant antfile="${rt.root.dir}/javafx-util-converter/build.xml" target="jar" inheritAll="false"/>
+        <ant antfile="${rt.root.dir}/javafx-anim/build.xml" target="jar" inheritAll="false"/>
         <ant antfile="${rt.root.dir}/javafx-geom/build.xml" target="jar" inheritAll="false"/>
-        <ant antfile="${rt.root.dir}/javafx-sg-prism/build.xml" target="jar" inheritAll="false"/>
-        <ant antfile="${rt.root.dir}/javafx-ui-common/build.xml" target="jar" inheritAll="false"/>
         <ant antfile="${rt.root.dir}/pisces/build.xml" target="jar" inheritAll="false"/>
-        <!--<ant antfile="${rt.root.dir}/javafx-designtime/build.xml" target="jar" inheritAll="false"/>-->
+        <ant antfile="${rt.root.dir}/decora-compiler/build.xml" target="jar" inheritAll="false"/>
+        <ant antfile="${rt.root.dir}/decora-runtime/build.xml" target="jar" inheritAll="false"/>
+        <ant antfile="${rt.root.dir}/javafx-sg-common/build.xml" target="jar" inheritAll="false"/>
+        <ant antfile="${rt.root.dir}/javafx-ui-common/build.xml" target="jar" inheritAll="false"/>
+        <ant antfile="${rt.root.dir}/javafx-concurrent/build.xml" target="jar" inheritAll="false"/>
+        <ant antfile="${rt.root.dir}/decora-prism/build.xml" target="jar" inheritAll="false"/>
+        <ant antfile="${rt.root.dir}/javafx-sg-prism/build.xml" target="jar" inheritAll="false"/>
+        <ant antfile="${rt.root.dir}/javafx-embed-swing/build.xml" target="jar" inheritAll="false"/>
         <ant antfile="${rt.root.dir}/javafx-ui-controls/build.xml" target="jar" inheritAll="false"/>
         <ant antfile="${rt.root.dir}/javafx-ui-charts/build.xml" target="jar" inheritAll="false"/>
+        <ant antfile="${rt.root.dir}/decora-d3d/build.xml" target="jar" inheritAll="false"/>
+        <ant antfile="${rt.root.dir}/decora-es2/build.xml" target="jar" inheritAll="false"/>
+        <ant antfile="${rt.root.dir}/decora-jsw/build.xml" target="jar" inheritAll="false"/>
+        <ant antfile="${rt.root.dir}/decora-prism-sw/build.xml" target="jar" inheritAll="false"/>
+        <ant antfile="${rt.root.dir}/decora-prism-ps/build.xml" target="jar" inheritAll="false"/>
+        <ant antfile="${rt.root.dir}/decora-sse/build.xml" target="jar" inheritAll="false"/>
+        <ant antfile="${rt.root.dir}/javafx-beans-dt/build.xml" target="jar" inheritAll="false"/>
         <ant antfile="${rt.root.dir}/javafx-fxml/build.xml" target="jar" inheritAll="false"/>
-        <ant antfile="${rt.root.dir}/javafx-embed-swing/build.xml" target="jar" inheritAll="false"/>
         <antcall target="jar-javafx-embed-swt"/>
     </target>
 
@@ -151,6 +173,7 @@
     <target name="dist" depends="jar">
         <echo>Creating merged openjfxrt.jar file</echo>
         <mkdir dir="dist" />
+        <delete file="dist/openjfxrt.jar" />
         <jar destfile="dist/openjfxrt.jar">
             <zipgroupfileset dir="." includes="**/dist/*.jar" /> 
         </jar>

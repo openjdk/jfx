@@ -4,10 +4,7 @@
     
     <property name="runtime.dist.root.dir" value="../../rt-closed" />    
     <property name="rt.dist.root.dir" value="../../rt" />    
-    <path id="javac.closed.classpath.path" path="
-        ${rt.dist.root.dir}/javafx-geom/dist/javafx-geom.jar:
-        ${runtime.dist.root.dir}/javafx-font/dist/javafx-font.jar:
-        ${rt.dist.root.dir}/pisces/dist/pisces.jar" />
+    <path id="javac.closed.classpath.path" path="" />
     <property name="javac.classpath" refid="javac.closed.classpath.path"/>
     
     <import file="../build-defs.xml"/>

@@ -2,6 +2,6 @@
 <project name="decora-prism" default="default" basedir=".">
   <description>Builds, tests, and runs the project decora-prism.</description>
 
-  <import file="../build-defs.xml"/>
+  <import file="build-common.xml"/>
 
 </project>

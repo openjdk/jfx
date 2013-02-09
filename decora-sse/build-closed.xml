@@ -23,16 +23,19 @@
   ~ or visit www.oracle.com if you need additional information or have any
   ~ questions.
   -->
+<project name="decora-sse" default="jar" basedir=".">
+    <description>Builds, tests, and jars the closed version of the decora-sse project.</description>
 
-<project name="decora-compiler" default="jar" basedir=".">
-  <description>Builds, tests, and runs the project decora-compiler.</description>
+    <property name="runtime.dist.root.dir" value="../../rt-closed" />
+    <property name="rt.dist.root.dir" value="../../rt" />
+    <property name="base.dir" value="${basedir}"/>
+    <property name="jsl.dir" value="jsl"/>
+    <path id="javac.closed.classpath.path" path="
+        ${rt.dist.root.dir}/javafx-common/dist/javafx-common.jar:
+        ${rt.dist.root.dir}/javafx-geom/dist/javafx-geom.jar:
+        ${rt.dist.root.dir}/decora-runtime/dist/decora-runtime.jar:
+        ${runtime.dist.root.dir}/glass/glass-mat/dist/glass.jar" />
+    <property name="javac.classpath" refid="javac.closed.classpath.path"/>
 
-  <property name="base.dir" value="."/>
-  <property file="../base.properties"/>
-  <property name="import.antlr.classpath" value="
-    ${rt.dist.root.dir}/../lib/antlr-3.1.3.jar:
-    ${rt.dist.root.dir}/../lib/antlr-runtime-3.1.3.jar:
-    ${rt.dist.root.dir}/../lib/stringtemplate-3.2.jar"/>
-
-  <import file="build-common.xml"/>
+    <import file="build-common.xml"/>
 </project>

@@ -5,4 +5,5 @@
       <debug-selected-file-in-test/>
   </target>
     
+  <import file="../build-defs.xml"/>
 </project>

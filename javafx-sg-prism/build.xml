@@ -2,6 +2,5 @@
 <project name="javafx-sg-prism" default="jar" basedir=".">
     <description>Builds, tests, and runs the OpenJFX javafx-sg-prism project.</description>
 
-    <import file="../build-defs.xml"/>
     <import file="build-common.xml"/>
 </project>

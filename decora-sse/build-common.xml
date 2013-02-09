@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="decora-sse-common" default="jar" basedir=".">
+  <description>Builds, tests, and runs the project decora-sse.</description>
+
+  <property name="cpp.dir" value="../decora-sse-native"/>
+  <property name="gen.cpp.dir" value="../decora-sse-native/build/gensrc"/>
+  <property name="native.lib.dir" value="../decora-sse-native/dist"/>
+
+  <target name="-pre-init">
+    <!-- NOTE: generalize these tests once we add support for Linux/Solaris -->
+    <condition property="native.lib.file"
+               value="libdecora-sse.dylib"
+               else="decora-sse.dll">
+      <istrue value="${isMacOSX}"/>
+    </condition>
+  </target>
+
+  <target name="check-native">
+    <uptodate property="native.uptodate" targetfile="${native.lib.dir}/${native.lib.file}" >
+      <srcfiles dir="${cpp.dir}" includes="*.cc"/>
+      <srcfiles dir="${cpp.dir}" includes="*.h"/>
+      <srcfiles dir="${gen.cpp.dir}" includes="*.cc"/>
+    </uptodate>
+  </target>
+
+  <target name="compile-native" depends="check-native" unless="native.uptodate">
+    <ant antfile="build-${os_name}.xml" target="compile-native" inheritAll="true"/>
+  </target>
+
+  <target name="jar" depends="init">
+    <build-project>
+      <addedsrcdirs>
+        <pathelement location="build/gensrc"/>
+      </addedsrcdirs>
+      <addedsrcfiles>
+        <fileset dir="build/gensrc" excludes="${build.classes.excludes}"/>
+      </addedsrcfiles>
+    </build-project>
+    <antcall target="compile-native"/>
+    <jar destfile="${dist.dir}/decora-sse-native.jar"
+         basedir="${native.lib.dir}"
+         includes="${native.lib.file}"/>
+  </target>
+
+  <target name="clean">
+    <clean-project/>
+    <ant antfile="build-${os_name}.xml" target="clean-native" inheritAll="true"/>
+  </target>
+  <import file="../build-defs.xml"/>
+
+</project>

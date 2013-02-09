@@ -24,15 +24,42 @@
   ~ questions.
   -->
 
-<project name="decora-compiler" default="jar" basedir=".">
+<project name="decora-compiler-common" default="jar" basedir=".">
   <description>Builds, tests, and runs the project decora-compiler.</description>
 
-  <property name="base.dir" value="."/>
-  <property file="../base.properties"/>
-  <property name="import.antlr.classpath" value="
-    ${rt.dist.root.dir}/../lib/antlr-3.1.3.jar:
-    ${rt.dist.root.dir}/../lib/antlr-runtime-3.1.3.jar:
-    ${rt.dist.root.dir}/../lib/stringtemplate-3.2.jar"/>
+  <property name="antlr.grammar.pkg" value="com/sun/scenario/effect/compiler"/>
+  <property name="antlr.grammar.file" value="${base.dir}/src/${antlr.grammar.pkg}/JSL.g"/>
+  <property name="antlr.generated.dir" value="${base.dir}/build/gensrc/${antlr.grammar.pkg}"/>
 
-  <import file="build-common.xml"/>
+  <target name="check-parser">
+    <uptodate property="parser.uptodate"
+              srcfile="${antlr.grammar.file}"
+              targetfile="${antlr.generated.dir}/JSLParser.java" />
+  </target>
+
+  <target name="compile-parser" depends="check-parser" unless="parser.uptodate">
+    <mkdir dir="${antlr.generated.dir}"/>
+    <java fork="yes" classname="org.antlr.Tool" classpath="${import.antlr.classpath}">
+      <arg value="-Xconversiontimeout"/>
+      <arg value="20000"/>
+      <arg value="-fo"/>
+      <arg value="${antlr.generated.dir}"/>
+      <arg value="-lib"/>
+      <arg value="${antlr.generated.dir}"/>
+      <arg value="${antlr.grammar.file}"/>
+    </java>
+  </target>
+
+  <target name="jar" depends="init,compile-parser">
+    <build-project>
+      <addedsrcdirs>
+        <pathelement location="build/gensrc"/>
+      </addedsrcdirs>
+      <addedsrcfiles>
+        <fileset dir="build/gensrc" excludes="${build.classes.excludes}"/>
+      </addedsrcfiles>
+    </build-project>
+  </target>
+
+  <import file="../build-defs.xml"/>
 </project>

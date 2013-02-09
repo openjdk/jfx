@@ -20,6 +20,5 @@
         ${runtime.dist.root.dir}/glass/glass-mat/dist/glass.jar" />
     <property name="javac.classpath" refid="javac.closed.classpath.path"/>
     
-    <import file="../build-defs.xml"/>
     <import file="build-common.xml"/>
 </project>

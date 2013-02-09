@@ -3,7 +3,6 @@
   <description>Builds, tests, and runs the project javafx-beans-dt.</description>
 
   <import file="../build-defs.xml"/>
-  <echo message="rt.dist.root.dir=${rt.dist.root.dir}"/>
   <target name="debug-test-file" depends="jar">
       <debug-selected-file-in-test/>
   </target>

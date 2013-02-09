@@ -23,16 +23,30 @@
   ~ or visit www.oracle.com if you need additional information or have any
   ~ questions.
   -->
-
 <project name="decora-compiler" default="jar" basedir=".">
-  <description>Builds, tests, and runs the project decora-compiler.</description>
+    <description>Builds, tests, and jars the closed version of the decora-compiler project.</description>
 
-  <property name="base.dir" value="."/>
-  <property file="../base.properties"/>
-  <property name="import.antlr.classpath" value="
-    ${rt.dist.root.dir}/../lib/antlr-3.1.3.jar:
-    ${rt.dist.root.dir}/../lib/antlr-runtime-3.1.3.jar:
-    ${rt.dist.root.dir}/../lib/stringtemplate-3.2.jar"/>
+    <property name="base.dir" value="."/>
+    <property file="../base.properties" />
+    <property name="runtime.dist.root.dir" value="../../rt-closed" />
+    <property name="rt.dist.root.dir" value="../../rt" />
+    <path id="javac.closed.classpath.path" path="
+        ${runtime.deps.dir}/antlr277.jar:
+        ${runtime.deps.dir}/antlr-runtime.jar:
+        ${runtime.deps.dir}/stringtemplate.jar" />
+    <property name="javac.classpath" refid="javac.closed.classpath.path"/>
 
-  <import file="build-common.xml"/>
+    <import file="../build-defs.xml"/>
+    <import file="build-common.xml"/>
+
+  <target name="jar" depends="init,compile-parser">
+    <build-project>
+      <addedsrcdirs>
+        <pathelement location="build/gensrc"/>
+      </addedsrcdirs>
+      <addedsrcfiles>
+        <fileset dir="build/gensrc" excludes="${build.classes.excludes}"/>
+      </addedsrcfiles>
+    </build-project>
+  </target>
 </project>

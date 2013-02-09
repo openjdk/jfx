@@ -7,8 +7,7 @@
     <path id="javac.closed.classpath.path" path="
         ${rt.dist.root.dir}/javafx-geom/dist/javafx-geom.jar:
         ${rt.dist.root.dir}/javafx-logging/dist/javafx-logging.jar:
-        ${rt.dist.root.dir}/decora-runtime/dist/decora-runtime.jar:
-        ${runtime.dist.root.dir}/webkit/dist/webkit.jar" />
+        ${rt.dist.root.dir}/decora-runtime/dist/decora-runtime.jar" />
     <property name="javac.classpath" refid="javac.closed.classpath.path"/>
     
     <import file="../build-defs.xml"/>
