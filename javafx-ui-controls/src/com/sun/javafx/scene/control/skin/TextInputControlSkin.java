@@ -28,6 +28,8 @@ package com.sun.javafx.scene.control.skin;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import javafx.application.ConditionalFeature;
+import javafx.application.Platform;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.beans.InvalidationListener;
@@ -242,7 +244,7 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
     }
 
 
-    private static boolean useFXVK = isEmbedded();
+    private static boolean useFXVK = Platform.isSupported(ConditionalFeature.VIRTUAL_KEYBOARD);
 
     /* For testing only */
     static int vkType = -1;
