@@ -32,6 +32,7 @@ import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import java.security.AccessControlContext;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -1478,7 +1479,11 @@ public class DragAndDropTest {
         private Image image;
         private double offsetX;
         private double offsetY;
-        
+
+        @Override
+        public void setSecurityContext(AccessControlContext ctx) {
+        }
+
         @Override
         public Object getContent(DataFormat df) {
             for (Pair<DataFormat, Object> pair : content) {
@@ -1519,9 +1524,6 @@ public class DragAndDropTest {
             return true;
         }
         
-        @Override public void initSecurityContext() {
-        }
-
         @Override
         public void setDragView(Image image) {
             this.image = image;
@@ -1564,7 +1566,7 @@ public class DragAndDropTest {
         TKDragSourceListener srcListener;
         TKDragGestureListener gstrListener;
         TKDropTargetListener trgListener;
-        Dragboard db;
+        TKClipboard db;
 
         @Override
         public void registerListener(TKDragGestureListener l) {
@@ -1578,16 +1580,16 @@ public class DragAndDropTest {
         
         
         @Override
-        public Dragboard createDragboard() {
-            db = new Dragboard(new ClipboardImpl());
+        public TKClipboard createDragboard() {
+            db = new ClipboardImpl();
             return db;
         }
 
         @Override
         public void startDrag(TKScene scene, Set<TransferMode> tm, 
                 TKDragSourceListener l, Dragboard dragboard) {
-            ((ClipboardImpl) db.impl_getPeer()).setTransferModes(tm);
-            ((ClipboardImpl) db.impl_getPeer()).flush();
+            ((ClipboardImpl)db).setTransferModes(tm);
+            ((ClipboardImpl)db).flush();
             dragging = true;
             srcListener = l;
         }
@@ -1602,15 +1604,15 @@ public class DragAndDropTest {
         }
         
         public TransferMode dragTo(double x, double y, TransferMode tm) {
-            return trgListener.dragOver(x, y, x, y, tm, db);
+            return trgListener.dragOver(x, y, x, y, tm);
         }
         
         public TransferMode drop(double x, double y, TransferMode tm) {
-            return trgListener.drop(x, y, x, y, tm, db);
+            return trgListener.drop(x, y, x, y, tm);
         }
         
         public void done(TransferMode tm) {
-            srcListener.dragDropEnd(0, 0, 0, 0, tm, db);
+            srcListener.dragDropEnd(0, 0, 0, 0, tm);
         }
         
         public void stopDrag() {

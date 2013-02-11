@@ -30,6 +30,7 @@ package com.sun.javafx.pgstub;
 
 import java.io.File;
 import java.io.InputStream;
+import java.security.AccessControlContext;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -465,6 +466,10 @@ public class StubToolkit extends Toolkit {
         private double offsetX;
         private double offsetY;
 
+        @Override
+        public void setSecurityContext(AccessControlContext ctx) {
+        }
+
         @Override public Set<DataFormat> getContentTypes() {
             return map.keySet();
         }
@@ -492,9 +497,6 @@ public class StubToolkit extends Toolkit {
             return modes;
         }
     
-        @Override public void initSecurityContext() {
-        }
-
         @Override
         public void setDragView(Image image) {
             this.image = image;
@@ -536,7 +538,7 @@ public class StubToolkit extends Toolkit {
         return null;
     }
 
-    public static Dragboard createDragboard() {
+    public static TKClipboard createDragboard() {
         StubToolkit tk = (StubToolkit)Toolkit.getToolkit();
         if (tk.dndDelegate != null) {
             return tk.dndDelegate.createDragboard();
@@ -928,7 +930,7 @@ public class StubToolkit extends Toolkit {
         void startDrag(TKScene scene, Set<TransferMode> tm,
                 TKDragSourceListener l, Dragboard dragboard);
 
-        Dragboard createDragboard();
+        TKClipboard createDragboard();
 
         DragEvent convertDragEventToFx(Object event, Dragboard dragboard);
 

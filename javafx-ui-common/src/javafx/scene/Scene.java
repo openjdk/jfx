@@ -2653,48 +2653,58 @@ public class Scene implements EventTarget {
      ******************************************************************************/
 
     class DropTargetListener implements TKDropTargetListener {
+
         /*
          * This function is called when an drag operation enters a valid drop target.
          * This may be from either an internal or external dnd operation.
          */
         @Override
         public TransferMode dragEnter(double x, double y, double screenX, double screenY,
-                                      TransferMode transferMode, Dragboard dragboard)
+                                      TransferMode transferMode)
         {
             if (dndGesture == null) {
                 dndGesture = new DnDGesture();
             }
+            Dragboard dragboard = Dragboard.impl_createDragboard(impl_peer, false);
+            dndGesture.dragboard = dragboard;
             DragEvent dragEvent =
-                    new DragEvent(DragEvent.ANY, dragboard, x, y, screenX, screenY, 
+                    new DragEvent(DragEvent.ANY, dndGesture.dragboard, x, y, screenX, screenY,
                             transferMode, null, null, pick(x, y));
             return dndGesture.processTargetEnterOver(dragEvent);
         }
 
         @Override
         public TransferMode dragOver(double x, double y, double screenX, double screenY,
-                                     TransferMode transferMode, Dragboard dragboard)
+                                     TransferMode transferMode)
         {
             if (Scene.this.dndGesture == null) {
                 System.err.println("GOT A dragOver when dndGesture is null!");
                 return null;
             } else {
+                if (dndGesture.dragboard == null) {
+                    throw new RuntimeException("dndGesture.dragboard is null in dragOver");
+                }
                 DragEvent dragEvent =
-                        new DragEvent(DragEvent.ANY, dragboard, x, y, screenX, screenY, 
+                        new DragEvent(DragEvent.ANY, dndGesture.dragboard, x, y, screenX, screenY,
                                 transferMode, null, null, pick(x, y));
                 return dndGesture.processTargetEnterOver(dragEvent);
             }
         }
 
         @Override
-        public void dragExit(double x, double y, double screenX, double screenY, Dragboard dragboard) {
+        public void dragExit(double x, double y, double screenX, double screenY) {
             if (dndGesture == null) {
                 System.err.println("GOT A dragExit when dndGesture is null!");
             } else {
+                if (dndGesture.dragboard == null) {
+                    throw new RuntimeException("dndGesture.dragboard is null in dragExit");
+                }
                 DragEvent dragEvent =
-                        new DragEvent(DragEvent.ANY, dragboard, x, y, screenX, screenY, 
+                        new DragEvent(DragEvent.ANY, dndGesture.dragboard, x, y, screenX, screenY,
                                 null, null, null, pick(x, y));
                 dndGesture.processTargetExit(dragEvent);
                 if (dndGesture.source == null) {
+                    dndGesture.dragboard = null;
                     dndGesture = null;
                 }
             }
@@ -2703,17 +2713,21 @@ public class Scene implements EventTarget {
 
         @Override
         public TransferMode drop(double x, double y, double screenX, double screenY,
-                                  TransferMode transferMode, Dragboard dragboard)
+                                  TransferMode transferMode)
         {
             if (dndGesture == null) {
                 System.err.println("GOT A drop when dndGesture is null!");
                 return null;
             } else {
+                if (dndGesture.dragboard == null) {
+                    throw new RuntimeException("dndGesture.dragboard is null in dragDrop");
+                }
                 DragEvent dragEvent =
-                        new DragEvent(DragEvent.ANY, dragboard, x, y, screenX, screenY, 
-                                null, null, null, pick(x, y));
+                        new DragEvent(DragEvent.ANY, dndGesture.dragboard, x, y, screenX, screenY,
+                                transferMode, null, null, pick(x, y));
                 TransferMode tm = dndGesture.processTargetDrop(dragEvent);
                 if (dndGesture.source == null) {
+                    dndGesture.dragboard = null;
                     dndGesture = null;
                 }
                 return tm;
@@ -2722,10 +2736,10 @@ public class Scene implements EventTarget {
     }
 
     class DragGestureListener implements TKDragGestureListener {
+
        @Override
-       public void dragGestureRecognized(double x, double y, double screenX, double screenY,
-                                         int button, Dragboard dragboard)
-       {
+       public void dragGestureRecognized(double x, double y, double screenX, double screenY, int button) {
+           Dragboard dragboard = Dragboard.impl_createDragboard(impl_peer, false);
            dndGesture = new DnDGesture();
            dndGesture.dragboard = dragboard;
            // TODO: support mouse buttons in DragEvent
@@ -2781,8 +2795,7 @@ public class Scene implements EventTarget {
          */
         private void dragDetectedProcessed() {
             dragDetected = DragDetectedState.DONE;
-            final boolean hasContent = dragboard != null
-                    && dragboard.impl_contentPut();
+            final boolean hasContent = (dragboard != null) && (dragboard.impl_contentPut());
             if (hasContent) {
                 /* start DnD */
                 Toolkit.getToolkit().startDrag(Scene.this.impl_peer,
@@ -2906,7 +2919,7 @@ public class Scene implements EventTarget {
             final EventTarget pickedTarget = tmpTargetWrapper.getEventTarget();
 
             if (dragboard == null) {
-                dragboard = createDragboard(de);
+                dragboard = createDragboard(de, false);
             }
 
             de = new DragEvent(de.getSource(), pickedTarget, de.getEventType(),
@@ -2964,7 +2977,7 @@ public class Scene implements EventTarget {
                     acceptedTransferMode, source, potentialTarget, de.getPickResult());
 
             if (dragboard == null) {
-                dragboard = createDragboard(de);
+                dragboard = createDragboard(de, false);
             }
 
             handleExitEnter(de, tmpTargetWrapper);
@@ -3070,7 +3083,7 @@ public class Scene implements EventTarget {
             if (t.isEmpty()) {
                 dragboard = null;
             } else if (dragboard == null) {
-                dragboard = createDragboard(null);
+                dragboard = createDragboard(null, true);
             }
             this.source = source;
             potentialTarget = source;
@@ -3085,7 +3098,7 @@ public class Scene implements EventTarget {
             fullPDRSource = source;
         }
 
-        private Dragboard createDragboard(final DragEvent de) {
+        private Dragboard createDragboard(final DragEvent de, boolean isDragSource) {
             Dragboard dragboard = null;
             if (de != null) {
                 dragboard = de.getDragboard();
@@ -3093,7 +3106,7 @@ public class Scene implements EventTarget {
                     return dragboard;
                 }
             }
-            return Scene.this.impl_peer.createDragboard();
+            return Dragboard.impl_createDragboard(Scene.this.impl_peer, isDragSource);
         }
     }
 
@@ -3110,11 +3123,14 @@ public class Scene implements EventTarget {
 
         @Override
         public void dragDropEnd(double x, double y, double screenX, double screenY,
-                                TransferMode transferMode, Dragboard dragboard)
+                                TransferMode transferMode)
         {
             if (dndGesture != null) {
+                if (dndGesture.dragboard == null) {
+                    throw new RuntimeException("dndGesture.dragboard is null in dragDropEnd");
+                }
                 DragEvent dragEvent =
-                        new DragEvent(DragEvent.ANY, dragboard, x, y, screenX, screenY, 
+                        new DragEvent(DragEvent.ANY, dndGesture.dragboard, x, y, screenX, screenY,
                         transferMode, null, null, null);
                 dndGesture.processDropEnd(dragEvent);
                 dndGesture = null;

@@ -83,5 +83,5 @@ public interface TKScene {
     
     public void entireSceneNeedsRepaint();
     
-    public Dragboard createDragboard();
+    public TKClipboard createDragboard(boolean isDragSource);
 }

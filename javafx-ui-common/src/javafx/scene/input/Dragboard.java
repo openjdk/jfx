@@ -27,6 +27,7 @@ package javafx.scene.input;
 import java.util.Set;
 
 import com.sun.javafx.tk.TKClipboard;
+import com.sun.javafx.tk.TKScene;
 import javafx.scene.image.Image;
 
 /**
@@ -60,8 +61,8 @@ public final class Dragboard extends Clipboard {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-    public static Dragboard impl_create(TKClipboard peer) {
-        return new Dragboard(peer);
+    public static Dragboard impl_createDragboard(TKScene scene, boolean isDragSource) {
+        return new Dragboard(scene.createDragboard(isDragSource));
     }
 
     // PENDING_DOC_REVIEW

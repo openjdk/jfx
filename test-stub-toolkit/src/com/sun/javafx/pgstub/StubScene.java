@@ -28,6 +28,7 @@ import com.sun.javafx.geom.PickRay;
 import com.sun.javafx.geom.Vec3d;
 import com.sun.javafx.sg.PGCamera;
 import com.sun.javafx.sg.PGNode;
+import com.sun.javafx.tk.TKClipboard;
 import com.sun.javafx.tk.TKScene;
 import com.sun.javafx.tk.TKSceneListener;
 import com.sun.javafx.tk.TKScenePaintListener;
@@ -111,7 +112,7 @@ public class StubScene implements TKScene {
     }
 
     @Override
-    public Dragboard createDragboard() {
+    public TKClipboard createDragboard(boolean isDragSource) {
         return StubToolkit.createDragboard();
     }
 
