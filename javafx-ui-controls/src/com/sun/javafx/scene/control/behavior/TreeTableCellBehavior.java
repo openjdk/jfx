@@ -24,11 +24,17 @@
  */
 package com.sun.javafx.scene.control.behavior;
 
+import javafx.scene.control.MultipleSelectionModel;
 import javafx.scene.control.TableColumnBase;
 import javafx.scene.control.TablePositionBase;
+import javafx.scene.control.TableSelectionModel;
+import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeTableCell;
 import javafx.scene.control.TreeTableColumn;
 import javafx.scene.control.TreeTableView;
+import javafx.scene.control.TreeView;
+import javafx.scene.input.MouseButton;
+import javafx.scene.input.MouseEvent;
 
 /**
  */
@@ -105,5 +111,36 @@ public class TreeTableCellBehavior extends TableCellBehaviorBase<TreeTableCell> 
     /** @{@inheritDoc} */
     @Override void edit(int row, TableColumnBase tc) {
         getTableControl().edit(row, (TreeTableColumn)tc);
+    }
+    
+    @Override protected void simpleSelect(MouseEvent e) {
+        TreeTableView tv = getControl().getTreeTableView();
+        TreeItem treeItem = getControl().getTreeTableRow().getTreeItem();
+        int index = getControl().getIndex();
+        TreeTableColumn column = getTableColumn();
+        TableSelectionModel sm = tv.getSelectionModel();
+        
+        if (! sm.isCellSelectionEnabled()) return;
+        
+        boolean isAlreadySelected = sm.isSelected(index, column);
+
+        sm.clearAndSelect(index, column);
+
+        // handle editing, which only occurs with the primary mouse button
+        if (e.getButton() == MouseButton.PRIMARY) {
+            if (e.getClickCount() == 1 && isAlreadySelected) {
+                tv.edit(index, column);
+            } else if (e.getClickCount() == 1) {
+                // cancel editing
+                tv.edit(-1, null);
+            } else if (e.getClickCount() == 2 && treeItem.isLeaf()) {
+                // attempt to edit
+                tv.edit(index, column);
+            } else if (e.getClickCount() % 2 == 0) {
+                // try to expand/collapse branch tree item
+                System.out.println("is expanded: " + treeItem.isExpanded() + " -> " + ! treeItem.isExpanded());
+                treeItem.setExpanded(! treeItem.isExpanded());
+            }
+        }
     }
 }

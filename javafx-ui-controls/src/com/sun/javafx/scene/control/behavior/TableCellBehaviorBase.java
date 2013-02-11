@@ -268,8 +268,7 @@ public abstract class TableCellBehaviorBase<T extends IndexedCell> extends CellB
         }
     }
 
-    private void simpleSelect(MouseEvent e) {
-//        TreeTableView tv = getControl().getTreeTableView();
+    protected void simpleSelect(MouseEvent e) {
         TableSelectionModel sm = getSelectionModel();
         int row = getControl().getIndex();
         TableColumnBase column = getTableColumn();
