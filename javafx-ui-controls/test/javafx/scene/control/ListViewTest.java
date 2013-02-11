@@ -382,4 +382,26 @@ public class ListViewTest {
         assertEquals(-1, listView.getSelectionModel().getSelectedIndex());
         assertNull(listView.getSelectionModel().getSelectedItem());
     }
+    
+    @Test public void test_rt27820_1() {
+        listView.getItems().setAll("Apple", "Orange");
+        listView.getSelectionModel().select(0);
+        assertEquals(1, listView.getSelectionModel().getSelectedItems().size());
+        assertEquals("Apple", listView.getSelectionModel().getSelectedItem());
+        
+        listView.getItems().clear();
+        assertEquals(0, listView.getSelectionModel().getSelectedItems().size());
+        assertNull(listView.getSelectionModel().getSelectedItem());
+    }
+    
+    @Test public void test_rt27820_2() {
+        listView.getItems().setAll("Apple", "Orange");
+        listView.getSelectionModel().select(1);
+        assertEquals(1, listView.getSelectionModel().getSelectedItems().size());
+        assertEquals("Orange", listView.getSelectionModel().getSelectedItem());
+        
+        listView.getItems().clear();
+        assertEquals(0, listView.getSelectionModel().getSelectedItems().size());
+        assertNull(listView.getSelectionModel().getSelectedItem());
+    }
 }

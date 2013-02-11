@@ -427,4 +427,26 @@ public class TableViewTest {
         assertEquals(-1, table.getSelectionModel().getSelectedIndex());
         assertNull(table.getSelectionModel().getSelectedItem());
     }
+    
+    @Test public void test_rt27820_1() {
+        table.getItems().setAll("Apple", "Orange");
+        table.getSelectionModel().select(0);
+        assertEquals(1, table.getSelectionModel().getSelectedItems().size());
+        assertEquals("Apple", table.getSelectionModel().getSelectedItem());
+        
+        table.getItems().clear();
+        assertEquals(0, table.getSelectionModel().getSelectedItems().size());
+        assertNull(table.getSelectionModel().getSelectedItem());
+    }
+    
+    @Test public void test_rt27820_2() {
+        table.getItems().setAll("Apple", "Orange");
+        table.getSelectionModel().select(1);
+        assertEquals(1, table.getSelectionModel().getSelectedItems().size());
+        assertEquals("Orange", table.getSelectionModel().getSelectedItem());
+        
+        table.getItems().clear();
+        assertEquals(0, table.getSelectionModel().getSelectedItems().size());
+        assertNull(table.getSelectionModel().getSelectedItem());
+    }
 }

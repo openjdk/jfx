@@ -977,8 +977,7 @@ public class ListView<T> extends Control {
                 
                 while (c.next()) {
                     if (listView.getItems() == null || listView.getItems().isEmpty()) {
-                        setSelectedIndex(-1);
-                        focus(-1);
+                        clearSelection();
                     } else if (getSelectedIndex() == -1 && getSelectedItem() != null) {
                         int newIndex = listView.getItems().indexOf(getSelectedItem());
                         if (newIndex != -1) {

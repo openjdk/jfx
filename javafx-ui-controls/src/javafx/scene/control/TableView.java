@@ -1383,7 +1383,7 @@ public class TableView<S> extends Control {
         final ListChangeListener<S> itemsContentListener = new ListChangeListener<S>() {
             @Override public void onChanged(Change<? extends S> c) {
                 if (tableView.getItems() == null || tableView.getItems().isEmpty()) {
-                    setSelectedIndex(-1);
+                    clearSelection();
                 } else if (getSelectedIndex() == -1 && getSelectedItem() != null) {
                     int newIndex = tableView.getItems().indexOf(getSelectedItem());
                     if (newIndex != -1) {

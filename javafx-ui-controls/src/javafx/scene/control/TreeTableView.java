@@ -1838,7 +1838,7 @@ public class TreeTableView<S> extends Control {
         private ChangeListener rootPropertyListener = new ChangeListener<TreeItem<S>>() {
             @Override public void changed(ObservableValue<? extends TreeItem<S>> observable, 
                     TreeItem<S> oldValue, TreeItem<S> newValue) {
-                setSelectedIndex(-1);
+                clearSelection();
                 updateTreeEventListener(oldValue, newValue);
             }
         };
