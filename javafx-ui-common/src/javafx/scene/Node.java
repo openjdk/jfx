@@ -2812,9 +2812,6 @@ public abstract class Node implements EventTarget {
         return impl_computeAreaInScreen();
     }
 
-    private GeneralTransform3D projtx = new GeneralTransform3D();
-    private Rectangle viewport = new Rectangle();
-
     /*
      * Help application or utility to implement LOD support by returning the
      * projected area of a Node in pixel unit. The projected area is not clipped.
@@ -2833,11 +2830,17 @@ public abstract class Node implements EventTarget {
                 return 0;
             }
 
-            projtx = scene.getProjViewTx(projtx);
+            GeneralTransform3D projViewTx = TempState.getInstance().projViewTx;          
+            projViewTx = scene.getProjViewTx(projViewTx);
+            Rectangle viewport = TempState.getInstance().viewport;
             viewport = scene.getViewport(viewport);
 
-            Transform localToSceneTx = getLocalToSceneTransform();            
-            Affine3D localToSceneTransform = new Affine3D();
+            Transform localToSceneTx = getLocalToSceneTransform();
+
+            // We need to set tempTx to identity since it is a recycled transform.
+            // This is because impl_apply is a matrix concatenation operation. 
+            Affine3D localToSceneTransform = TempState.getInstance().tempTx;
+            localToSceneTransform.setToIdentity();
             localToSceneTx.impl_apply(localToSceneTransform);
             
             BaseBounds localBounds = new BoxBounds((float) bounds.getMinX(),
@@ -2848,7 +2851,7 @@ public abstract class Node implements EventTarget {
                                                    (float) bounds.getMaxZ());
             
             // The product of projViewTx * localToSceneTransform
-            GeneralTransform3D tx = projtx.mul(localToSceneTransform);
+            GeneralTransform3D tx = projViewTx.mul(localToSceneTransform);
 
             // Transform localBounds to projected bounds
             localBounds = tx.transform(localBounds, localBounds);
