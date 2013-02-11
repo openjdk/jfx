@@ -132,8 +132,8 @@ public final class ScrollEvent extends GestureEvent {
      * @param source the source of the event. Can be null.
      * @param target the target of the event. Can be null.
      * @param eventType The type of the event.
-     * @param x The x with respect to the source. Should be in scene coordinates if source == null or source is not a Node.
-     * @param y The y with respect to the source. Should be in scene coordinates if source == null or source is not a Node.
+     * @param x The x with respect to the scene.
+     * @param y The y with respect to the scene.
      * @param screenX The x coordinate relative to screen.
      * @param screenY The y coordinate relative to screen.
      * @param shiftDown true if shift modifier was pressed.

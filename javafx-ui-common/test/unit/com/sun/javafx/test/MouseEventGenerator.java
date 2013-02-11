@@ -52,7 +52,7 @@ public final class MouseEventGenerator {
 
         MouseEvent event = new MouseEvent(type, x, y, x, y, button,
                 1, false, false, false, false, primaryButtonDown,
-                false, false, false, false);
+                false, false, false, false, false, null);
 
         return event;
     }

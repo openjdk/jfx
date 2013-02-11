@@ -1610,13 +1610,11 @@ public class Scene implements EventTarget {
                     x2, y2, xAbs, yAbs, isKeyboardTrigger, res);
             Event.fireEvent(eventTarget, context);
         }
-        if (!isKeyboardTrigger) Scene.inMousePick = false;
+        Scene.inMousePick = false;
     }
 
     private void processGestureEvent(GestureEvent e, TouchGesture gesture) {
         EventTarget pickedTarget = null;
-
-        inMousePick = true;
 
         if (e.getEventType() == ZoomEvent.ZOOM_STARTED ||
                 e.getEventType() == RotateEvent.ROTATION_STARTED ||
@@ -1656,34 +1654,10 @@ public class Scene implements EventTarget {
                 e.getEventType() == ScrollEvent.SCROLL_FINISHED) {
             gesture.finished = true;
         }
-
-        inMousePick = false;
     }
 
     private void processTouchEvent(TouchEvent e, TouchPoint[] touchPoints) {
         inMousePick = true;
-        // pick targets for all touch points
-        for (TouchPoint tp : touchPoints) {
-            EventTarget pickedTarget = touchTargets.get(tp.getId());
-            if (pickedTarget == null) {
-                pickedTarget = tp.getPickResult().getIntersectedNode();
-                if (pickedTarget == null) {
-                    pickedTarget = this;
-                }
-            } else {
-                tp.grab(pickedTarget);
-            }
-
-            if (tp.getState() == TouchPoint.State.PRESSED) {
-                tp.grab(pickedTarget);
-                touchTargets.put(tp.getId(), pickedTarget);
-            } else if (tp.getState() == TouchPoint.State.RELEASED) {
-                touchTargets.remove(tp.getId());
-            }
-
-            tp.impl_setTarget(pickedTarget);
-        }
-
         touchEventSetId++;
 
         List<TouchPoint> touchList = Arrays.asList(touchPoints);
@@ -1713,7 +1687,7 @@ public class Scene implements EventTarget {
 
                 TouchEvent te = new TouchEvent(type, tp, touchList,
                         touchEventSetId, e.isShiftDown(), e.isControlDown(),
-                        e.isAltDown(), e.isMetaDown(), e.isDirect());
+                        e.isAltDown(), e.isMetaDown());
 
                 Event.fireEvent(tp.getTarget(), te);
             }
@@ -2378,7 +2352,7 @@ public class Scene implements EventTarget {
         {
             MouseEvent mouseEvent = new MouseEvent(type, x, y, screenX, screenY, button, clickCount,
                     shiftDown, controlDown, altDown, metaDown,
-                    primaryDown, middleDown, secondaryDown, synthesized, popupTrigger);
+                    primaryDown, middleDown, secondaryDown, synthesized, popupTrigger, false, null);
             impl_processMouseEvent(mouseEvent);
         }
 
@@ -2460,6 +2434,7 @@ public class Scene implements EventTarget {
                 screenY = cursorScreenPos.getY();
             } 
 
+            inMousePick = true;
             Scene.this.processGestureEvent(new ScrollEvent(
                     eventType,
                     x, y, screenX, screenY, 
@@ -2469,6 +2444,7 @@ public class Scene implements EventTarget {
                     totalScrollX * xMultiplier, totalScrollY * yMultiplier,
                     xUnits, xText, yUnits, yText, touchCount, pick(x, y)),
                     scrollGesture);
+            inMousePick = false;
         }
 
         @Override
@@ -2496,12 +2472,14 @@ public class Scene implements EventTarget {
                 screenY = cursorScreenPos.getY();
             }
 
+            inMousePick = true;
             Scene.this.processGestureEvent(new ZoomEvent(eventType,
                     x, y, screenX, screenY,
                     _shiftDown, _controlDown, _altDown, _metaDown, 
                     _direct, _inertia,
                     zoomFactor, totalZoomFactor, pick(x, y)),
                     zoomGesture);
+            inMousePick = false;
         }
 
         @Override
@@ -2528,11 +2506,13 @@ public class Scene implements EventTarget {
                 screenY = cursorScreenPos.getY();
             }
 
+            inMousePick = true;
             Scene.this.processGestureEvent(new RotateEvent(
                     eventType, x, y, screenX, screenY,
                     _shiftDown, _controlDown, _altDown, _metaDown, 
                     _direct, _inertia, angle, totalAngle, pick(x, y)),
                     rotateGesture);
+            inMousePick = false;
 
         }
 
@@ -2554,11 +2534,13 @@ public class Scene implements EventTarget {
                 screenY = cursorScreenPos.getY();
             }
 
+            inMousePick = true;
             Scene.this.processGestureEvent(new SwipeEvent(
                     eventType, x, y, screenX, screenY,
                     _shiftDown, _controlDown, _altDown, _metaDown, _direct, 
                     touchCount, pick(x, y)),
                     swipeGesture);
+            inMousePick = false;
         }
 
         @Override
@@ -2567,9 +2549,13 @@ public class Scene implements EventTarget {
                 boolean _shiftDown, boolean _controlDown,
                 boolean _altDown, boolean _metaDown) {
 
+            if (!isDirect) {
+                nextTouchEvent = null;
+                return;
+            }
             nextTouchEvent = new TouchEvent(
                     TouchEvent.ANY, null, null, 0,
-                    _shiftDown, _controlDown, _altDown, _metaDown, isDirect);
+                    _shiftDown, _controlDown, _altDown, _metaDown);
             if (touchPoints == null || touchPoints.length != touchCount) {
                 touchPoints = new TouchPoint[touchCount];
             }
@@ -2581,6 +2567,11 @@ public class Scene implements EventTarget {
                 TouchPoint.State state, long touchId,
                 int x, int y, int xAbs, int yAbs) {
 
+            inMousePick = true;
+            if (nextTouchEvent == null) {
+                // ignore indirect touch events
+                return;
+            }
             touchPointIndex++;
             int id = (state == TouchPoint.State.PRESSED
                     ? touchMap.add(touchId) :  touchMap.get(touchId));
@@ -2593,20 +2584,48 @@ public class Scene implements EventTarget {
                 throw new RuntimeException("Too many touch points reported");
             }
 
-            touchPoints[order] = TouchPoint.impl_touchPoint(id, state,
-                    x, y, xAbs, yAbs, pick(x, y));
+            // pick target
+            boolean isGrabbed = false;
+            PickResult pickRes = pick(x, y);
+            EventTarget pickedTarget = touchTargets.get(id);
+            if (pickedTarget == null) {
+                pickedTarget = pickRes.getIntersectedNode();
+                if (pickedTarget == null) {
+                    pickedTarget = Scene.this;
+                }
+            } else {
+                isGrabbed = true;
+            }
+
+            TouchPoint tp = new TouchPoint(id, state,
+                    x, y, xAbs, yAbs, pickedTarget, pickRes);
+
+            touchPoints[order] = tp;
+
+            if (isGrabbed) {
+                tp.grab(pickedTarget);
+            }
+            if (tp.getState() == TouchPoint.State.PRESSED) {
+                tp.grab(pickedTarget);
+                touchTargets.put(tp.getId(), pickedTarget);
+            } else if (tp.getState() == TouchPoint.State.RELEASED) {
+                touchTargets.remove(tp.getId());
+            }
+            inMousePick = false;
         }
 
         @Override
         public void touchEventEnd() {
+            if (nextTouchEvent == null) {
+                // ignore indirect touch events
+                return;
+            }
+
             if (touchPointIndex != touchPoints.length) {
                 throw new RuntimeException("Wrong number of touch points reported");
             }
 
-            // for now we don't want to process indirect touch events
-            if (nextTouchEvent.isDirect()) {
-                Scene.this.processTouchEvent(nextTouchEvent, touchPoints);
-            }
+            Scene.this.processTouchEvent(nextTouchEvent, touchPoints);
 
             if (touchMap.cleanup()) {
                 // gesture finished
@@ -2846,7 +2865,8 @@ public class Scene implements EventTarget {
             MouseEvent me = new MouseEvent(
                     MouseEvent.DRAG_DETECTED, de.getX(), de.getY(),
                     de.getSceneX(), de.getScreenY(), MouseButton.PRIMARY, 1,
-                    false, false, false, false, false, true, false, false, false);
+                    false, false, false, false, false, true, false, false, false,
+                    false, de.getPickResult());
 
             processingDragDetected();
 
@@ -2866,8 +2886,10 @@ public class Scene implements EventTarget {
                 return;
             }
 
-            de = de.copyFor(de.getSource(), source, source, target,
-                    DragEvent.DRAG_DONE);
+            de = new DragEvent(de.getSource(), source, DragEvent.DRAG_DONE,
+                    de.getDragboard(), de.getSceneX(), de.getSceneY(),
+                    de.getScreenX(), de.getScreenY(),
+                    de.getTransferMode(), source, target, de.getPickResult());
 
             Event.fireEvent(source, de);
 
@@ -2887,13 +2909,17 @@ public class Scene implements EventTarget {
                 dragboard = createDragboard(de);
             }
 
-            de = de.copyFor(de.getSource(), pickedTarget, source,
-                    potentialTarget, dragboard);
+            de = new DragEvent(de.getSource(), pickedTarget, de.getEventType(),
+                    dragboard, de.getSceneX(), de.getSceneY(),
+                    de.getScreenX(), de.getScreenY(),
+                    de.getTransferMode(), source, potentialTarget, de.getPickResult());
 
             handleExitEnter(de, tmpTargetWrapper);
 
-            de = de.copyFor(de.getSource(), pickedTarget, source,
-                    potentialTarget, DragEvent.DRAG_OVER);
+            de = new DragEvent(de.getSource(), pickedTarget, DragEvent.DRAG_OVER,
+                    de.getDragboard(), de.getSceneX(), de.getSceneY(),
+                    de.getScreenX(), de.getScreenY(),
+                    de.getTransferMode(), source, potentialTarget, de.getPickResult());
 
             fireEvent(pickedTarget, de);
 
@@ -2932,9 +2958,10 @@ public class Scene implements EventTarget {
             pick(tmpTargetWrapper, de.getSceneX(), de.getSceneY());
             final EventTarget pickedTarget = tmpTargetWrapper.getEventTarget();
 
-            de = de.copyFor(de.getSource(), pickedTarget, source,
-                    potentialTarget, acceptedTransferMode,
-                    DragEvent.DRAG_DROPPED);
+            de = new DragEvent(de.getSource(), pickedTarget, DragEvent.DRAG_DROPPED,
+                    de.getDragboard(), de.getSceneX(), de.getSceneY(),
+                    de.getScreenX(), de.getScreenY(),
+                    acceptedTransferMode, source, potentialTarget, de.getPickResult());
 
             if (dragboard == null) {
                 dragboard = createDragboard(de);

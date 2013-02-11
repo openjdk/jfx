@@ -303,23 +303,6 @@ public final class DragEvent extends InputEvent {
      * @param target the new target of the copied event
      * @param gestureSource the new gesture source.
      * @param gestureTarget the new gesture target.
-     * @param dragboard the new dragboard
-     * @return the event copy with the fields
-     */
-    public DragEvent copyFor(Object source, EventTarget target,
-            Object gestureSource, Object gestureTarget, Dragboard dragboard) {
-        DragEvent e = copyFor(source, target, gestureSource, gestureTarget,
-                (EventType) null);
-        e.dragboard = dragboard;
-        return e;
-    }
-
-    /**
-     * Creates a copy of the given drag event with the given fields substituted.
-     * @param source the new source of the copied event
-     * @param target the new target of the copied event
-     * @param gestureSource the new gesture source.
-     * @param gestureTarget the new gesture target.
      * @param eventType the new eventType
      * @return the event copy with the fields
      */
@@ -327,46 +310,24 @@ public final class DragEvent extends InputEvent {
             Object gestureSource, Object gestureTarget,
             EventType<DragEvent> eventType) {
 
-        return copyFor(source, target, gestureSource, gestureTarget, getTransferMode(), eventType);
-    }
-
-    /**
-     * Creates a copy of the given drag event with the given fields substituted.
-     * @param source the new source of the copied event
-     * @param target the new target of the copied event
-     * @param gestureSource the new gesture source of the copied event.
-     * @param gestureTarget the new gesture target of the copied event.
-     * @param transferMode the new transfer mde
-     * @param eventType the new eventType
-     * @return the event copy with the fields
-     */
-    public DragEvent copyFor(Object source, EventTarget target,
-            Object gestureSource, Object gestureTarget, TransferMode transferMode,
-            EventType<DragEvent> eventType) {
-
         DragEvent copyEvent = copyFor(source, target, eventType);
         recomputeCoordinatesToSource(copyEvent, source);
-        if (transferMode != null) {
-            copyEvent.transferMode = transferMode;
-        }
         copyEvent.gestureSource = gestureSource;
         copyEvent.gestureTarget = gestureTarget;
-        if (eventType == DragEvent.DRAG_DROPPED
-                || eventType == DragEvent.DRAG_DONE) {
-            copyEvent.state.accepted = transferMode != null;
-            copyEvent.state.acceptedTrasferMode = transferMode;
-        }
         return copyEvent;
     }
 
     /**
      * Constructs new DragEvent event.
+     * For DRAG_DROPPED and DRAG_DONE event types, the {@code accepted} state
+     * and {@code acceptedTransferMode} are set according to the passed
+     * {@code transferMode}.
      * @param source the source of the event. Can be null.
      * @param target the target of the event. Can be null.
      * @param eventType The type of the event.
      * @param dragboard the dragboard of the event.
-     * @param x The x with respect to the source. Should be in scene coordinates if source == null or source is not a Node.
-     * @param y The y with respect to the source. Should be in scene coordinates if source == null or source is not a Node.
+     * @param x The x with respect to the scene.
+     * @param y The y with respect to the scene.
      * @param screenX The x coordinate relative to screen.
      * @param screenY The y coordinate relative to screen.
      * @param transferMode the transfer mode of the event.
@@ -391,6 +352,13 @@ public final class DragEvent extends InputEvent {
         this.sceneY = y;
         this.transferMode = transferMode;
         this.dragboard = dragboard;
+
+        if (eventType == DragEvent.DRAG_DROPPED
+                || eventType == DragEvent.DRAG_DONE) {
+            state.accepted = transferMode != null;
+            state.acceptedTrasferMode = transferMode;
+        }
+
         this.pickResult = pickResult != null ? pickResult : new PickResult(
                 eventType == DRAG_DONE ? null : target, x, y);
         final Point3D p = InputEventUtils.recomputeCoordinates(this.pickResult, null);

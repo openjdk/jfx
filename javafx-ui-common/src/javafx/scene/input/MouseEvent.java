@@ -318,48 +318,8 @@ public class MouseEvent extends InputEvent {
                 _eventType, _x, _y, _screenX, _screenY,
                 _button, _clickCount,
                 _shiftDown, _controlDown, _altDown, _metaDown,
-                _primaryButtonDown, _middleButtonDown, _secondaryButtonDown, _synthesized, _popupTrigger);
-    }
-
-    /**
-     * Constructs new MouseEvent event with null source and target.
-     * Still since press is set to false.
-     * @param eventType The type of the event.
-     * @param x The x with respect to the scene.
-     * @param y The y with respect to the scene.
-     * @param screenX The x coordinate relative to screen.
-     * @param screenY The y coordinate relative to screen.
-     * @param button the mouse button used
-     * @param clickCount number of click counts
-     * @param shiftDown true if shift modifier was pressed.
-     * @param controlDown true if control modifier was pressed.
-     * @param altDown true if alt modifier was pressed.
-     * @param metaDown true if meta modifier was pressed.
-     * @param primaryButtonDown true if primary button was pressed.
-     * @param middleButtonDown true if middle button was pressed.
-     * @param secondaryButtonDown true if secondary button was pressed.
-     * @param synthesized if this event was synthesized
-     * @param popupTrigger whether this event denotes a popup trigger for current platform
-     */
-    public MouseEvent(
-            EventType<? extends MouseEvent> eventType,
-            double x, double y,
-            double screenX, double screenY,
-            MouseButton button,
-            int clickCount,
-            boolean shiftDown,
-            boolean controlDown,
-            boolean altDown,
-            boolean metaDown,
-            boolean primaryButtonDown,
-            boolean middleButtonDown,
-            boolean secondaryButtonDown,
-            boolean synthesized,
-            boolean popupTrigger) {
-        this(eventType, x, y, screenX, screenY, button, clickCount,
-                shiftDown, controlDown, altDown, metaDown,
-                primaryButtonDown, middleButtonDown, secondaryButtonDown,
-                synthesized, popupTrigger, false, null);
+                _primaryButtonDown, _middleButtonDown, _secondaryButtonDown, 
+                _synthesized, _popupTrigger, false, null);
     }
 
     /**
@@ -381,7 +341,9 @@ public class MouseEvent extends InputEvent {
      * @param synthesized if this event was synthesized
      * @param popupTrigger whether this event denotes a popup trigger for current platform
      * @param stillSincePress see {@link #isStillSincePress() }
-     * @param pickResult pick result
+     * @param pickResult pick result. Can be null, in this case a 2D pick result
+     *                   without any further values is constructed
+     *                   based on the scene coordinates
      */
     public MouseEvent(
             EventType<? extends MouseEvent> eventType,

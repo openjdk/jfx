@@ -42,7 +42,7 @@ public class MouseEventTest {
     private final MouseEvent doubleclick = new MouseEvent(
             MouseEvent.MOUSE_CLICKED,
             11, 12, 13, 14, MouseButton.PRIMARY, 2,
-            true, false, true, false, false, true, false, false, true);
+            true, false, true, false, false, true, false, false, true, false, null);
 
     @Test
     public void shouldCreateDoubleClickMouseEvent() {

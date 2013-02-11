@@ -1460,6 +1460,8 @@ public class TouchEventTest {
         ((StubScene) scene.impl_getPeer()).getListener().touchEventEnd();
     }
 
+    // Reenable once indirect events are used
+    @Ignore("For now we've decided to ingore indirect events completely.")
     @Test(expected=RuntimeException.class)
     public void shouldThrowREOnLostIndirectRelease() {
         Scene scene = createScene();

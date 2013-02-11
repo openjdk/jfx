@@ -104,12 +104,11 @@ public final class TouchEvent extends InputEvent {
      * @param controlDown true if control modifier was pressed.
      * @param altDown true if alt modifier was pressed.
      * @param metaDown true if meta modifier was pressed.
-     * @param direct true if the event was caused by direct input device. See {@link #isDirect() }
      */
     public TouchEvent(Object source, EventTarget target, EventType<TouchEvent> eventType,
             TouchPoint touchPoint, List<TouchPoint> touchPoints, int eventSetId,
             boolean shiftDown, boolean controlDown, boolean altDown,
-            boolean metaDown, boolean direct) {
+            boolean metaDown) {
         super(source, target, eventType);
         this.touchPoints = touchPoints != null ? Collections.unmodifiableList(touchPoints) : null;
         this.eventSetId = eventSetId;
@@ -118,7 +117,6 @@ public final class TouchEvent extends InputEvent {
         this.altDown = altDown;
         this.metaDown = metaDown;
         this.touchPoint = touchPoint;
-        this.isDirect = direct;
     }
 
     /**
@@ -136,9 +134,9 @@ public final class TouchEvent extends InputEvent {
     public TouchEvent(EventType<TouchEvent> eventType,
             TouchPoint touchPoint, List<TouchPoint> touchPoints, int eventSetId,
             boolean shiftDown, boolean controlDown, boolean altDown,
-            boolean metaDown, boolean direct) {
+            boolean metaDown) {
         this(null, null, eventType, touchPoint, touchPoints, eventSetId,
-                shiftDown, controlDown, altDown, metaDown, direct);
+                shiftDown, controlDown, altDown, metaDown);
     }
 
     /**
@@ -193,17 +191,6 @@ public final class TouchEvent extends InputEvent {
         return (EventType<TouchEvent>) super.getEventType();
     }
     
-    
-
-    // isDirect doesn't currently have public getter because we are currently
-    // ignoring indirect touch events and claim that touch events always
-    // represent a direct touch-screen action
-    private final boolean isDirect;
-
-    public boolean isDirect() {
-        return isDirect;
-    }
-
     private final int eventSetId;
 
     /**

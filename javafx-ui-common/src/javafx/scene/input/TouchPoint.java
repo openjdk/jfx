@@ -57,9 +57,21 @@ public final class TouchPoint implements Serializable{
     private transient EventTarget target;
     private transient Object source;
 
-    private TouchPoint(int id, State state, double x, double y, double screenX,
-            double screenY, PickResult pickResult) {
-        this.target = null;
+    /**
+     * Creates new instance of TouchPoint.
+     * @param id ID of the new touch point
+     * @param state state of the new touch point
+     * @param x The x with respect to the scene.
+     * @param y The y with respect to the scene.
+     * @param screenX The x coordinate relative to screen.
+     * @param screenY The y coordinate relative to screen.
+     * @param pickResult pick result. Can be null, in this case a 2D pick result
+     *                   without any further values is constructed
+     *                   based on the scene coordinates and target
+     */
+    public TouchPoint(int id, State state, double x, double y, double screenX,
+            double screenY, EventTarget target, PickResult pickResult) {
+        this.target = target;
         this.id = id;
         this.state = state;
         this.x = x;
@@ -126,18 +138,11 @@ public final class TouchPoint implements Serializable{
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-    public void impl_setTarget(EventTarget target) {
-        this.target = target;
-    }
-
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
     public void impl_reset() {
-        x = sceneX;
-        y = sceneY;
+        final Point3D p = InputEventUtils.recomputeCoordinates(pickResult, null);
+        x = p.getX();
+        y = p.getY();
+        z = p.getZ();
     }
 
     private EventTarget grabbed = null;
@@ -343,17 +348,6 @@ public final class TouchPoint implements Serializable{
         sb.append(", pickResult = ").append(getPickResult());
 
         return sb.append("]").toString();
-    }
-
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    public static TouchPoint impl_touchPoint(
-            int id, State state, double x, double y, double screenX, double screenY,
-            PickResult pickResult) {
-        return new TouchPoint(id, state, x, y, screenX, screenY, pickResult);
     }
 
     private void readObject(java.io.ObjectInputStream in)

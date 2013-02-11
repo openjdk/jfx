@@ -148,7 +148,9 @@ public final class KeyEvent extends InputEvent {
                                            middleButtonDown,
                                            secondaryButtonDown,
                                            false,
-                                           popupTrigger
+                                           popupTrigger,
+                                           false,
+                                           null
                                            );
             }
 
