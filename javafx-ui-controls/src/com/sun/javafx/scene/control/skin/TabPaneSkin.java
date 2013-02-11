@@ -1053,31 +1053,33 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
             
             inner = new StackPane() {
                 @Override protected void layoutChildren() {
-                    Side tabPosition = getSkinnable().getSide();
-                    double paddingTop = snapSize(getInsets().getTop());
-                    double paddingRight = snapSize(getInsets().getRight());
-                    double paddingBottom = snapSize(getInsets().getBottom());
-                    double paddingLeft = snapSize(getInsets().getLeft());
-                    double w = getWidth() - paddingLeft + paddingRight;
-                    double h = getHeight() - paddingTop + paddingBottom;
-
-                    double prefLabelWidth = snapSize(label.prefWidth(-1));
-                    double prefLabelHeight = snapSize(label.prefHeight(-1));
+                    final Insets insets = getInsets();
+                    final TabPane skinnable = getSkinnable();
                     
+                    final double paddingTop = snapSize(insets.getTop());
+                    final double paddingRight = snapSize(insets.getRight());
+                    final double paddingBottom = snapSize(insets.getBottom());
+                    final double paddingLeft = snapSize(insets.getLeft());
+                    final double w = getWidth() - (paddingLeft + paddingRight);
+                    final double h = getHeight() - (paddingTop + paddingBottom);
+
+                    final double prefLabelWidth = snapSize(label.prefWidth(-1));
+                    final double prefLabelHeight = snapSize(label.prefHeight(-1));
+                    
+                    final double closeBtnWidth = showCloseButton() ? snapSize(closeBtn.prefWidth(-1)) : 0;
+                    final double closeBtnHeight = showCloseButton() ? snapSize(closeBtn.prefHeight(-1)) : 0;
+                    final double minWidth = snapSize(skinnable.getTabMinWidth());
+                    final double maxWidth = snapSize(skinnable.getTabMaxWidth());
+                    final double minHeight = snapSize(skinnable.getTabMinHeight());
+                    final double maxHeight = snapSize(skinnable.getTabMaxHeight());
+
                     double labelAreaWidth = prefLabelWidth;
                     double labelAreaHeight = prefLabelHeight;
-                    double closeBtnWidth = showCloseButton() ? snapSize(closeBtn.prefWidth(-1)) : 0;
-                    double closeBtnHeight = showCloseButton() ? snapSize(closeBtn.prefHeight(-1)) : 0;
-                    double minWidth = snapSize(getSkinnable().getTabMinWidth());
-                    double maxWidth = snapSize(getSkinnable().getTabMaxWidth());
-                    double minHeight = snapSize(getSkinnable().getTabMinHeight());
-                    double maxHeight = snapSize(getSkinnable().getTabMaxHeight());
-
-                    double childrenWidth = labelAreaWidth + closeBtnWidth;
-                    double childrenHeight = Math.max(labelAreaHeight, closeBtnHeight);
-
                     double labelWidth = prefLabelWidth;
                     double labelHeight = prefLabelHeight;
+                    
+                    final double childrenWidth = labelAreaWidth + closeBtnWidth;
+                    final double childrenHeight = Math.max(labelAreaHeight, closeBtnHeight);
                     
                     if (childrenWidth > maxWidth && maxWidth != Double.MAX_VALUE) {
                         labelAreaWidth = maxWidth - closeBtnWidth;
@@ -1107,7 +1109,13 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
                     
                     
                     double labelStartX = paddingLeft;
-                    double closeBtnStartX = (maxWidth != Double.MAX_VALUE ? maxWidth : w) - paddingRight - closeBtnWidth;
+                    
+                    // If maxWidth is less than Double.MAX_VALUE, the user has 
+                    // clamped the max width, but we should
+                    // position the close button at the end of the tab, 
+                    // which may not necessarily be the entire width of the
+                    // provided max width.
+                    double closeBtnStartX = (maxWidth < Double.MAX_VALUE ? Math.min(w, maxWidth) : w) - paddingRight - closeBtnWidth;
                     
                     positionInArea(label, labelStartX, paddingTop, labelAreaWidth, h,
                             /*baseline ignored*/0, HPos.CENTER, VPos.CENTER);
@@ -1118,7 +1126,11 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
                                 /*baseline ignored*/0, HPos.CENTER, VPos.CENTER);
                     }
                     
-                    focusIndicator.resizeRelocate(label.getLayoutX() - padding, Math.min(label.getLayoutY(), closeBtn.isVisible() ? closeBtn.getLayoutY() : Double.MAX_VALUE) - padding, labelWidth + closeBtnWidth + padding*2, Math.max(labelHeight,closeBtnHeight) + padding*2);
+                    focusIndicator.resizeRelocate(
+                            label.getLayoutX() - padding, 
+                            Math.min(label.getLayoutY(), closeBtn.isVisible() ? closeBtn.getLayoutY() : Double.MAX_VALUE) - padding, 
+                            labelWidth + closeBtnWidth + padding * 2,
+                            Math.max(labelHeight, closeBtnHeight) + padding*2);
                 }
             };
             inner.getStyleClass().add("tab-container");
