@@ -1,4 +1,4 @@
-package test.javax.print;
+package test.javafx.print;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
