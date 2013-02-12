@@ -49,7 +49,7 @@ public abstract class VirtualContainerBase<C extends Control, B extends Behavior
         super(control, behavior);
         flow = new VirtualFlow<I>();
         
-        control.addEventHandler(ScrollToEvent.SCROLL_TO_TOP_INDEX, new EventHandler<ScrollToEvent<Integer>>() {
+        control.addEventHandler(ScrollToEvent.scrollToTopIndex(), new EventHandler<ScrollToEvent<Integer>>() {
             @Override public void handle(ScrollToEvent<Integer> event) {
                 // Fix for RT-24630: The row count in VirtualFlow was incorrect
                 // (normally zero), so the scrollTo call was misbehaving.

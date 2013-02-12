@@ -472,9 +472,11 @@ public class TreeTableViewSkin<S> extends TableViewSkinBase<S, TreeTableView<S>,
         // optimised in the future when time permits.
         flow.setCellCount(newCount);
         
-        if (forceCellRebuild || newCount != oldCount) {
+        if (forceCellRecreate) {
+            needCellsRecreated = true;
+            forceCellRecreate = false;
+        } else if (newCount != oldCount) {
             needCellsReconfigured = true;
-            forceCellRebuild = false;
         } else {
             needCellsReconfigured = true;
         }

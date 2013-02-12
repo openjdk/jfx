@@ -117,7 +117,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
         updateComboBoxItems();
         
         this.listView = createListView();
-        this.textField = getEditableInputNode();
+        this.textField = comboBox.isEditable() ? getEditableInputNode() : null;
         
         // Fix for RT-21207. Additional code related to this bug is further below.
         this.listView.setManaged(false);
@@ -187,7 +187,6 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
         registerChangeListener(comboBox.cellFactoryProperty(), "CELL_FACTORY");
         registerChangeListener(comboBox.visibleRowCountProperty(), "VISIBLE_ROW_COUNT");
         registerChangeListener(comboBox.converterProperty(), "CONVERTER");
-        registerChangeListener(comboBox.editorProperty(), "EDITOR");
         registerChangeListener(comboBox.buttonCellProperty(), "BUTTON_CELL");
         registerChangeListener(comboBox.valueProperty(), "VALUE");
     }
@@ -239,7 +238,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
     @Override public Node getDisplayNode() {
         Node displayNode;
         if (comboBox.isEditable()) {
-            displayNode = textField;
+            displayNode = getEditableInputNode();
         } else {
             displayNode = buttonCell;
         }
@@ -497,7 +496,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
     }
     
     private ListView<T> createListView() {
-        final ListView<T> listView = new ListView<T>() {
+        final ListView<T> _listView = new ListView<T>() {
             private boolean isFirstSizeCalculation = true;
 
             @Override protected double computeMinHeight(double width) {
@@ -535,22 +534,21 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
             }
             
             private void doCSSCheck() {
-                Parent parent = getPopup().getScene().getRoot();
-                if ((isFirstSizeCalculation || getSkin() == null) && parent.getScene() != null) {
+                if (listView != null && listView.getScene() != null && (isFirstSizeCalculation || getSkin() == null)) {
                     // if the skin is null, it means that the css related to the
                     // listview skin hasn't been loaded yet, so we force it here.
                     // This ensures the combobox button is the correct width
                     // when it is first displayed, before the listview is shown.
-                    parent.impl_processCSS(true);
+                    listView.impl_processCSS(true);
                     isFirstSizeCalculation = false;
                 }
             }
         };
 
-        listView.setId("list-view");
-        listView.getSelectionModel().setSelectionMode(SelectionMode.SINGLE);
+        _listView.setId("list-view");
+        _listView.getSelectionModel().setSelectionMode(SelectionMode.SINGLE);
 
-        listView.getSelectionModel().selectedIndexProperty().addListener(new InvalidationListener() {
+        _listView.getSelectionModel().selectedIndexProperty().addListener(new InvalidationListener() {
              @Override public void invalidated(Observable o) {
                  if (listSelectionLock) return;
                  int index = listView.getSelectionModel().getSelectedIndex();
@@ -565,7 +563,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
             }
         });
         
-        listView.addEventFilter(MouseEvent.MOUSE_RELEASED, new EventHandler<MouseEvent>() {
+        _listView.addEventFilter(MouseEvent.MOUSE_RELEASED, new EventHandler<MouseEvent>() {
             @Override public void handle(MouseEvent t) {
                 // RT-18672: Without checking if the user is clicking in the 
                 // scrollbar area of the ListView, the comboBox will hide. Therefore,
@@ -585,7 +583,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
             }
         });
 
-        listView.setOnKeyPressed(new EventHandler<KeyEvent>() {
+        _listView.setOnKeyPressed(new EventHandler<KeyEvent>() {
             @Override public void handle(KeyEvent t) {
                 // TODO move to behavior, when (or if) this class becomes a SkinBase
                 if (t.getCode() == KeyCode.ENTER || 
@@ -596,7 +594,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
             }
         });
         
-        return listView;
+        return _listView;
     }
     
     private double getListViewPrefHeight() {

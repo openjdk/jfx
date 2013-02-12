@@ -750,7 +750,7 @@ public class TreeView<T> extends Control {
             onScrollTo = new ObjectPropertyBase<EventHandler<ScrollToEvent<Integer>>>() {
                 @Override
                 protected void invalidated() {
-                    setEventHandler(ScrollToEvent.SCROLL_TO_TOP_INDEX, get());
+                    setEventHandler(ScrollToEvent.scrollToTopIndex(), get());
                 }
                 @Override
                 public Object getBean() {
@@ -940,7 +940,7 @@ public class TreeView<T> extends Control {
         private ChangeListener rootPropertyListener = new ChangeListener<TreeItem<T>>() {
             @Override public void changed(ObservableValue<? extends TreeItem<T>> observable, 
                     TreeItem<T> oldValue, TreeItem<T> newValue) {
-                setSelectedIndex(-1);
+                clearSelection();
                 updateTreeEventListener(oldValue, newValue);
             }
         };

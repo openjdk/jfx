@@ -420,10 +420,10 @@ public class TreeTableColumn<S,T> extends TableColumnBase<TreeItem<S>,T> impleme
                     TreeTableView table = getTreeTableView();
                     if (table == null) return;
                     Map properties = table.getProperties();
-                    if (properties.containsKey(TableViewSkinBase.REBUILD)) {
-                        properties.remove(TableViewSkinBase.REBUILD);
+                    if (properties.containsKey(TableViewSkinBase.RECREATE)) {
+                        properties.remove(TableViewSkinBase.RECREATE);
                     }
-                    properties.put(TableViewSkinBase.REBUILD, Boolean.TRUE);
+                    properties.put(TableViewSkinBase.RECREATE, Boolean.TRUE);
                 }
             };
     public final void setCellFactory(Callback<TreeTableColumn<S,T>, TreeTableCell<S,T>> value) {

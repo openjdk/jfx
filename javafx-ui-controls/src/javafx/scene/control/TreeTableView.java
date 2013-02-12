@@ -1267,9 +1267,64 @@ public class TreeTableView<S> extends Control {
     public ObjectProperty<EventHandler<ScrollToEvent<Integer>>> onScrollToProperty() {
         if( onScrollTo == null ) {
             onScrollTo = new ObjectPropertyBase<EventHandler<ScrollToEvent<Integer>>>() {
+                @Override protected void invalidated() {
+                    setEventHandler(ScrollToEvent.scrollToTopIndex(), get());
+                }
+                
+                @Override public Object getBean() {
+                    return TreeTableView.this;
+                }
+
+                @Override public String getName() {
+                    return "onScrollTo";
+                }
+            };
+        }
+        return onScrollTo;
+    }
+
+    /**
+     * Scrolls the TreeTableView so that the given column is visible within the viewport.
+     * @param column The column that should be visible to the user.
+     */
+    public void scrollToColumn(TableColumn<S, ?> column) {
+        ControlUtils.scrollToColumn(this, column);
+    }
+    
+    /**
+     * Scrolls the TreeTableView so that the given index is visible within the viewport.
+     * @param columnIndex The index of a column that should be visible to the user.
+     */
+    public void scrollToColumnIndex(int columnIndex) {
+        if( getColumns() != null ) {
+            ControlUtils.scrollToColumn(this, getColumns().get(columnIndex));
+        }
+    }
+    
+    /**
+     * Called when there's a request to scroll a column into view using {@link #scrollToColumn(TableColumn)} 
+     * or {@link #scrollToColumnIndex(int)}
+     */
+    private ObjectProperty<EventHandler<ScrollToEvent<TreeTableColumn<S, ?>>>> onScrollToColumn;
+    
+    public void setOnScrollToColumn(EventHandler<ScrollToEvent<TreeTableColumn<S, ?>>> value) {
+        onScrollToColumnProperty().set(value);
+    }
+    
+    public EventHandler<ScrollToEvent<TreeTableColumn<S, ?>>> getOnScrollToColumn() {
+        if( onScrollToColumn != null ) {
+            return onScrollToColumn.get();
+        }
+        return null;
+    }
+    
+    public ObjectProperty<EventHandler<ScrollToEvent<TreeTableColumn<S, ?>>>> onScrollToColumnProperty() {
+        if( onScrollToColumn == null ) {
+            onScrollToColumn = new ObjectPropertyBase<EventHandler<ScrollToEvent<TreeTableColumn<S, ?>>>>() {
                 @Override
                 protected void invalidated() {
-                    setEventHandler(ScrollToEvent.SCROLL_TO_TOP_INDEX, get());
+                    EventType<ScrollToEvent<TreeTableColumn<S, ?>>> type = ScrollToEvent.scrollToColumn();
+                    setEventHandler(type, get());
                 }
                 @Override
                 public Object getBean() {
@@ -1278,13 +1333,13 @@ public class TreeTableView<S> extends Control {
 
                 @Override
                 public String getName() {
-                    return "onScrollTo";
+                    return "onScrollToColumn";
                 }
             };
         }
-        return onScrollTo;
+        return onScrollToColumn;
     }
-
+    
     /**
      * Returns the index position of the given TreeItem, taking into account the
      * current state of each TreeItem (i.e. whether or not it is expanded).
@@ -1783,7 +1838,7 @@ public class TreeTableView<S> extends Control {
         private ChangeListener rootPropertyListener = new ChangeListener<TreeItem<S>>() {
             @Override public void changed(ObservableValue<? extends TreeItem<S>> observable, 
                     TreeItem<S> oldValue, TreeItem<S> newValue) {
-                setSelectedIndex(-1);
+                clearSelection();
                 updateTreeEventListener(oldValue, newValue);
             }
         };

@@ -25,6 +25,7 @@
 
 package com.sun.javafx.scene.control.skin;
 
+import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -212,7 +213,8 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
 
     private BooleanProperty blink = new SimpleBooleanProperty(this, "blink", true);
     protected ObservableBooleanValue caretVisible;
-    private Timeline caretTimeline = new Timeline();
+    private CaretBlinking caretBlinking = new CaretBlinking(blink);
+
     /**
      * A path, provided by the textNode, which represents the caret.
      * I assume this has to be updated whenever the caretPosition
@@ -271,21 +273,6 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
                 return Toolkit.getToolkit().getFontLoader().getFontMetrics(textInput.getFont());
             }
         };
-
-        caretTimeline.setCycleCount(Timeline.INDEFINITE);
-        caretTimeline.getKeyFrames().addAll(
-            new KeyFrame(Duration.ZERO, new EventHandler<ActionEvent>() {
-                @Override public void handle(ActionEvent event) {
-                    blink.set(false);
-                }
-            }),
-            new KeyFrame(Duration.seconds(.5), new EventHandler<ActionEvent>() {
-                @Override public void handle(ActionEvent event) {
-                    blink.set(true);
-                }
-            }),
-            new KeyFrame(Duration.seconds(1))
-        );
 
         /**
          * The caret is visible when the text box is focused AND when the selection
@@ -416,11 +403,6 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
         });
     }
     
-    @Override public void dispose() {
-        caretTimeline.stop();
-        caretTimeline = null;
-    }
-
     // For PasswordFieldSkin
     protected String maskText(String txt) {
         return txt;
@@ -593,10 +575,57 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
 
     public void setCaretAnimating(boolean value) {
         if (value) {
-            caretTimeline.play();
+            caretBlinking.start();
         } else {
-            caretTimeline.stop();
+            caretBlinking.stop();
             blink.set(true);
+        }
+    }
+
+    private static final class CaretBlinking {
+        private final Timeline caretTimeline;
+        private final WeakReference<BooleanProperty> blinkPropertyRef;
+
+        public CaretBlinking(final BooleanProperty blinkProperty) {
+            blinkPropertyRef =
+                    new WeakReference<BooleanProperty>(blinkProperty);
+
+            caretTimeline = new Timeline();
+            caretTimeline.setCycleCount(Timeline.INDEFINITE);
+            caretTimeline.getKeyFrames().addAll(
+                new KeyFrame(Duration.ZERO,
+                             new EventHandler<ActionEvent>() {
+                                 @Override
+                                 public void handle(final ActionEvent event) {
+                                     setBlink(false);
+                                 }
+                             }),
+                new KeyFrame(Duration.seconds(.5),
+                             new EventHandler<ActionEvent>() {
+                                 @Override
+                                 public void handle(final ActionEvent event) {
+                                     setBlink(true);
+                                 }
+                             }),
+                new KeyFrame(Duration.seconds(1)));
+        }
+
+        public void start() {
+            caretTimeline.play();
+        }
+
+        public void stop() {
+            caretTimeline.stop();
+        }
+
+        private void setBlink(final boolean value) {
+            final BooleanProperty blinkProperty = blinkPropertyRef.get();
+            if (blinkProperty == null) {
+                caretTimeline.stop();
+                return;
+            }
+
+            blinkProperty.set(value);
         }
     }
 

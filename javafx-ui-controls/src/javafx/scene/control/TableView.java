@@ -59,6 +59,7 @@ import com.sun.javafx.scene.control.TableColumnComparator;
 import javafx.collections.WeakListChangeListener;
 import javafx.event.Event;
 import javafx.event.EventHandler;
+import javafx.event.EventType;
 
 import com.sun.javafx.scene.control.skin.TableViewSkin;
 import com.sun.javafx.scene.control.skin.TableViewSkinBase;
@@ -863,7 +864,21 @@ public class TableView<S> extends Control {
     }
     
     /**
+     * Scrolls the TableView so that the given object is visible within the viewport.
+     * @param object The object that should be visible to the user.
+     */
+    public void scrollTo(S object) {
+        if( getItems() != null ) {
+            int idx = getItems().indexOf(object);
+            if( idx >= 0 ) {
+                ControlUtils.scrollToIndex(this, idx);        
+            }
+        }
+    }
+    
+    /**
      * Called when there's a request to scroll an index into view using {@link #scrollTo(int)}
+     * or {@link #scrollTo(Object)}
      */
     private ObjectProperty<EventHandler<ScrollToEvent<Integer>>> onScrollTo;
     
@@ -883,7 +898,7 @@ public class TableView<S> extends Control {
             onScrollTo = new ObjectPropertyBase<EventHandler<ScrollToEvent<Integer>>>() {
                 @Override
                 protected void invalidated() {
-                    setEventHandler(ScrollToEvent.SCROLL_TO_TOP_INDEX, get());
+                    setEventHandler(ScrollToEvent.scrollToTopIndex(), get());
                 }
                 @Override
                 public Object getBean() {
@@ -898,7 +913,62 @@ public class TableView<S> extends Control {
         }
         return onScrollTo;
     }
+    
+    /**
+     * Scrolls the TableView so that the given column is visible within the viewport.
+     * @param column The column that should be visible to the user.
+     */
+    public void scrollToColumn(TableColumn<S, ?> column) {
+        ControlUtils.scrollToColumn(this, column);
+    }
+    
+    /**
+     * Scrolls the TableView so that the given index is visible within the viewport.
+     * @param columnIndex The index of a column that should be visible to the user.
+     */
+    public void scrollToColumnIndex(int columnIndex) {
+        if( getColumns() != null ) {
+            ControlUtils.scrollToColumn(this, getColumns().get(columnIndex));
+        }
+    }
+    
+    /**
+     * Called when there's a request to scroll a column into view using {@link #scrollToColumn(TableColumn)} 
+     * or {@link #scrollToColumnIndex(int)}
+     */
+    private ObjectProperty<EventHandler<ScrollToEvent<TableColumn<S, ?>>>> onScrollToColumn;
+    
+    public void setOnScrollToColumn(EventHandler<ScrollToEvent<TableColumn<S, ?>>> value) {
+        onScrollToColumnProperty().set(value);
+    }
+    
+    public EventHandler<ScrollToEvent<TableColumn<S, ?>>> getOnScrollToColumn() {
+        if( onScrollToColumn != null ) {
+            return onScrollToColumn.get();
+        }
+        return null;
+    }
+    
+    public ObjectProperty<EventHandler<ScrollToEvent<TableColumn<S, ?>>>> onScrollToColumnProperty() {
+        if( onScrollToColumn == null ) {
+            onScrollToColumn = new ObjectPropertyBase<EventHandler<ScrollToEvent<TableColumn<S, ?>>>>() {
+                @Override protected void invalidated() {
+                    EventType<ScrollToEvent<TableColumn<S, ?>>> type = ScrollToEvent.scrollToColumn();
+                    setEventHandler(type, get());
+                }
+                
+                @Override public Object getBean() {
+                    return TableView.this;
+                }
 
+                @Override public String getName() {
+                    return "onScrollToColumn";
+                }
+            };
+        }
+        return onScrollToColumn;
+    }
+    
     /**
      * Applies the currently installed resize policy against the given column,
      * resizing it based on the delta value provided.
@@ -1313,7 +1383,7 @@ public class TableView<S> extends Control {
         final ListChangeListener<S> itemsContentListener = new ListChangeListener<S>() {
             @Override public void onChanged(Change<? extends S> c) {
                 if (tableView.getItems() == null || tableView.getItems().isEmpty()) {
-                    setSelectedIndex(-1);
+                    clearSelection();
                 } else if (getSelectedIndex() == -1 && getSelectedItem() != null) {
                     int newIndex = tableView.getItems().indexOf(getSelectedItem());
                     if (newIndex != -1) {
