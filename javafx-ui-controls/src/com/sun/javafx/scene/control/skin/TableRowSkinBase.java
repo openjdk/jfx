@@ -401,7 +401,7 @@ public abstract class TableRowSkinBase<T,
                 // Determine the column in which we want to put the disclosure node.
                 // By default it is null, which means the 0th column should be
                 // where the indentation occurs.
-                TableColumnBase treeColumn = getTreeColumn();
+                TableColumnBase<?,?> treeColumn = getTreeColumn();
                 indentationColumnIndex = treeColumn == null ? 0 : visibleLeafColumns.indexOf(treeColumn);
                 indentationColumnIndex = indentationColumnIndex < 0 ? 0 : indentationColumnIndex;
                 
@@ -415,12 +415,16 @@ public abstract class TableRowSkinBase<T,
                 final double defaultDisclosureWidth = maxDisclosureWidthMap.containsKey(c) ?
                     maxDisclosureWidthMap.get(c) : 0;
                 disclosureWidth = defaultDisclosureWidth;
-
-                if (disclosureVisible) {
-                    disclosureNode = getDisclosureNode();
-                    disclosureWidth = disclosureNode.prefWidth(h);
-                    if (disclosureWidth > defaultDisclosureWidth) {
-                        maxDisclosureWidthMap.put(c, disclosureWidth);
+                
+                disclosureNode = getDisclosureNode();
+                if (disclosureNode != null) {
+                    disclosureNode.setVisible(disclosureVisible);
+                    
+                    if (disclosureVisible) {
+                        disclosureWidth = disclosureNode.prefWidth(h);
+                        if (disclosureWidth > defaultDisclosureWidth) {
+                            maxDisclosureWidthMap.put(c, disclosureWidth);
+                        }
                     }
                 }
             }

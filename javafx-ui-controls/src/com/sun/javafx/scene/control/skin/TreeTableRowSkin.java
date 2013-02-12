@@ -38,7 +38,6 @@ import javafx.scene.control.TreeItem;
 import javafx.css.StyleableDoubleProperty;
 import javafx.css.CssMetaData;
 import com.sun.javafx.css.converters.SizeConverter;
-import com.sun.javafx.scene.control.behavior.CellBehaviorBase;
 import com.sun.javafx.scene.control.behavior.TreeTableRowBehavior;
 import javafx.animation.RotateTransition;
 import javafx.beans.property.ObjectProperty;
@@ -211,6 +210,11 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
         if (disclosureNodeDirty) {
             updateDisclosureNode();
             disclosureNodeDirty = false;
+        }
+        
+        Node disclosureNode = getDisclosureNode();
+        if (disclosureNode != null && disclosureNode.getScene() == null) {
+            updateDisclosureNode();
         }
         
         super.layoutChildren(x, y, w, h);
