@@ -272,9 +272,9 @@ is being used to size a border should also be in pixels.
                     derive(-fx-color,55%) 80%,
                     derive(-fx-color,75%) 100%
                 ),
-                derive(-fx-color,-9%));
+                derive(-fx-color,-8%));
 
-    -fx-inner-border-horizontal: linear-gradient(to right, derive(-fx-color,55%), derive(-fx-color,2%));
+    -fx-inner-border-horizontal: linear-gradient(to right, derive(-fx-color,55%), derive(-fx-color,-8%));
 /*    -fx-inner-border-horizontal: linear-gradient(
         to right,
         ladder(-fx-color,
@@ -285,7 +285,7 @@ is being used to size a border should also be in pixels.
                derive(-fx-color,-10%) 80%) 100%
     );*/
 
-    -fx-inner-border-bottomup: linear-gradient(to top, derive(-fx-color,55%), derive(-fx-color,2%));
+    -fx-inner-border-bottomup: linear-gradient(to top, derive(-fx-color,55%), derive(-fx-color,-8%));
     /*-fx-inner-border-bottomup: linear-gradient(*/
         /*to top,*/
         /*ladder(-fx-color,*/
@@ -301,7 +301,14 @@ is being used to size a border should also be in pixels.
      * in the -fx-background-color list and represents main body of the control.
      * Insets are typically 2.
      */
-    -fx-body-color: linear-gradient(to bottom, derive(-fx-color,10%) ,derive(-fx-color,-6%));
+    /*-fx-body-color: linear-gradient(to bottom, derive(-fx-color,10%) ,derive(-fx-color,-6%));*/
+    -fx-body-color: linear-gradient(to bottom,
+            ladder(
+                -fx-color,
+                derive(-fx-color,15%) 75%,
+                derive(-fx-color,10%) 80%,
+            ),
+            derive(-fx-color,-6%));
     -fx-body-color-bottomup: linear-gradient(to top, derive(-fx-color,10%) ,derive(-fx-color,-6%));
     -fx-body-color-to-right: linear-gradient(to right, derive(-fx-color,10%) ,derive(-fx-color,-6%));
 
