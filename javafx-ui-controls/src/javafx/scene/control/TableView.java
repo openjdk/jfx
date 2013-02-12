@@ -501,6 +501,15 @@ public class TableView<S> extends Control {
         }
     };
     
+    /* proxy pseudo-class state change from selectionModel's cellSelectionEnabledProperty */
+    private final InvalidationListener cellSelectionModelInvalidationListener = new InvalidationListener() {
+        @Override public void invalidated(Observable o) {
+            final boolean isCellSelection = ((BooleanProperty)o).get();
+            pseudoClassStateChanged(PSEUDO_CLASS_CELL_SELECTION,  isCellSelection);
+            pseudoClassStateChanged(PSEUDO_CLASS_ROW_SELECTION,  !isCellSelection);
+        }
+    };
+    
     
     private final WeakInvalidationListener weakColumnVisibleObserver = 
             new WeakInvalidationListener(columnVisibleObserver);
@@ -513,6 +522,9 @@ public class TableView<S> extends Control {
     
     private final WeakListChangeListener weakColumnsObserver = 
             new WeakListChangeListener(columnsObserver);
+    
+    private final WeakInvalidationListener weakCellSelectionModelInvalidationListener = 
+            new WeakInvalidationListener(cellSelectionModelInvalidationListener);
     
     /***************************************************************************
      *                                                                         *
@@ -682,19 +694,19 @@ public class TableView<S> extends Control {
         @Override protected void invalidated() {
             
             if (oldValue != null) {
-                oldValue.cellSelectionEnabledProperty().removeListener(cellSelectionModelInvalidationListener);
+                oldValue.cellSelectionEnabledProperty().removeListener(weakCellSelectionModelInvalidationListener);
             }
             
             oldValue = get();
             
             if (oldValue != null) {
-                oldValue.cellSelectionEnabledProperty().addListener(cellSelectionModelInvalidationListener);
+                oldValue.cellSelectionEnabledProperty().addListener(weakCellSelectionModelInvalidationListener);
                 // fake an invalidation to ensure updated pseudo-class state
-                cellSelectionModelInvalidationListener.invalidated(oldValue.cellSelectionEnabledProperty());
+                weakCellSelectionModelInvalidationListener.invalidated(oldValue.cellSelectionEnabledProperty());
             } 
         }
-      
     };
+    
     /**
      * The SelectionModel provides the API through which it is possible
      * to select single or multiple items within a TableView, as  well as inspect
@@ -712,17 +724,6 @@ public class TableView<S> extends Control {
         return selectionModel.get();
     }
 
-    /* proxy pseudo-class state change from selectionModel's cellSelectionEnabledProperty */
-    private final InvalidationListener cellSelectionModelInvalidationListener = 
-        new InvalidationListener() {
-
-        @Override
-        public void invalidated(Observable o) {
-            final boolean isCellSelection = ((BooleanProperty)o).get();
-            pseudoClassStateChanged(PSEUDO_CLASS_CELL_SELECTION,  isCellSelection);
-            pseudoClassStateChanged(PSEUDO_CLASS_ROW_SELECTION,  !isCellSelection);
-        }
-    };
     
     // --- Focus Model
     private ObjectProperty<TableViewFocusModel<S>> focusModel;
