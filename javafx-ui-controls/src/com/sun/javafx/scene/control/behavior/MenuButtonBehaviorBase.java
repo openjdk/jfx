@@ -38,6 +38,7 @@ import java.util.List;
 
 import javafx.geometry.Side;
 import javafx.scene.control.MenuButton;
+import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 
 /**
@@ -153,7 +154,9 @@ public abstract class MenuButtonBehaviorBase<C extends MenuButton> extends Butto
             if (control.isShowing()) {
                 control.hide();
             } else {
-                control.show();
+                if (e.getButton() == MouseButton.PRIMARY) {
+                    control.show();    
+                }
             }
         }
     }
