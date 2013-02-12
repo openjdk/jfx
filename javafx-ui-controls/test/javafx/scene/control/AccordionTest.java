@@ -129,6 +129,7 @@ public class AccordionTest {
         assertSame(b, accordion.getExpandedPane());
     }
 
+    @org.junit.Ignore("Pending: RT-28356")
     @Test public void checkComputedHeight_RT19025() {
         TitledPane a = new TitledPane("A", new javafx.scene.shape.Rectangle(50, 100));
         TitledPane b = new TitledPane("B", new javafx.scene.shape.Rectangle(50, 100));
@@ -142,7 +143,6 @@ public class AccordionTest {
         root.setPrefSize(100, 300);
         root.getChildren().add(accordion);
         show();
-                
         root.impl_reapplyCSS();
         root.autosize();
         root.layout();

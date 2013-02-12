@@ -306,7 +306,7 @@ is being used to size a border should also be in pixels.
             ladder(
                 -fx-color,
                 derive(-fx-color,15%) 75%,
-                derive(-fx-color,10%) 80%,
+                derive(-fx-color,10%) 80%
             ),
             derive(-fx-color,-6%));
     -fx-body-color-bottomup: linear-gradient(to top, derive(-fx-color,10%) ,derive(-fx-color,-6%));
@@ -1725,6 +1725,7 @@ is being used to size a border should also be in pixels.
     -fx-border-insets: -1 0 0 0;
     -fx-background-color: linear-gradient(from 0px 0px to 0px 5px, derive(-fx-color, -4%), transparent);
 }
+
 
 
 /*******************************************************************************
