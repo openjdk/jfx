@@ -142,7 +142,6 @@ public class AccordionTest {
         root.setPrefSize(100, 300);
         root.getChildren().add(accordion);
         show();
-                
         root.impl_reapplyCSS();
         root.autosize();
         root.layout();

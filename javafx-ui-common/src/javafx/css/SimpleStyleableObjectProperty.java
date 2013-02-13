@@ -50,7 +50,7 @@ public abstract class SimpleStyleableObjectProperty<T>
      * @param cssMetaData
      *            the CssMetaData associated with this {@code StyleableProperty}
      */
-    public SimpleStyleableObjectProperty(CssMetaData<? extends Node, T> cssMetaData) {
+    public SimpleStyleableObjectProperty(CssMetaData<? extends Styleable, T> cssMetaData) {
         super();
         this.cssMetaData = cssMetaData;
     }
@@ -63,7 +63,7 @@ public abstract class SimpleStyleableObjectProperty<T>
      * @param initialValue
      *            the initial value of the wrapped {@code Object}
      */
-    public SimpleStyleableObjectProperty(CssMetaData<? extends Node, T> cssMetaData, T initialValue) {
+    public SimpleStyleableObjectProperty(CssMetaData<? extends Styleable, T> cssMetaData, T initialValue) {
         super(initialValue);
         this.cssMetaData = cssMetaData;
     }
@@ -78,7 +78,7 @@ public abstract class SimpleStyleableObjectProperty<T>
      * @param name
      *            the name of this {@code ObjectProperty}
      */
-    public SimpleStyleableObjectProperty(CssMetaData<? extends Node, T> cssMetaData, Object bean, String name) {
+    public SimpleStyleableObjectProperty(CssMetaData<? extends Styleable, T> cssMetaData, Object bean, String name) {
         super(bean, name);
         this.cssMetaData = cssMetaData;
     }
@@ -110,10 +110,10 @@ public abstract class SimpleStyleableObjectProperty<T>
 
     /** {@inheritDoc} */
     @Override
-    public final CssMetaData<? extends Node, T> getCssMetaData() {
+    public final CssMetaData<? extends Styleable, T> getCssMetaData() {
         return cssMetaData;
     }
 
     private StyleOrigin origin = null;
-    private final CssMetaData<? extends Node, T> cssMetaData;
+    private final CssMetaData<? extends Styleable, T> cssMetaData;
 }

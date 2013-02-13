@@ -66,6 +66,7 @@ import com.sun.javafx.css.converters.PaintConverter;
 import com.sun.javafx.css.converters.SizeConverter;
 import com.sun.javafx.scene.control.behavior.ProgressIndicatorBehavior;
 import com.sun.javafx.scene.control.skin.resources.ControlResources;
+import javafx.css.Styleable;
 import javafx.geometry.Insets;
 
 public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, ProgressIndicatorBehavior<ProgressIndicator>> {
@@ -599,7 +600,7 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, P
                     return "progressColorProperty";
                 }
 
-                @Override public CssMetaData getCssMetaData() {
+                @Override public CssMetaData<ProgressIndicator,Paint> getCssMetaData() {
                     return StyleableProperties.PROGRESS_COLOR;
                 }
             };
@@ -622,8 +623,8 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, P
                     return "indeterminateSegmentCount";
                 }
 
-                @Override public CssMetaData getCssMetaData() {
-                    return StyleableProperties.PROGRESS_COLOR;
+                @Override public CssMetaData<ProgressIndicator,Number> getCssMetaData() {
+                    return StyleableProperties.INDETERMINATE_SEGMENT_COUNT;
                 }
             };
 
@@ -635,7 +636,7 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, P
             if (spinner!=null) spinner.setSpinEnabled(get());
         }
 
-        @Override public CssMetaData getCssMetaData() {
+        @Override public CssMetaData<ProgressIndicator,Boolean> getCssMetaData() {
             return StyleableProperties.LEGEND_VISIBLE;
         }
 
@@ -669,7 +670,7 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, P
             @Override
             public StyleableProperty<Paint> getStyleableProperty(ProgressIndicator n) {
                 final ProgressIndicatorSkin skin = (ProgressIndicatorSkin) n.getSkin();
-                return (StyleableProperty)skin.progressColor;
+                return (StyleableProperty<Paint>)skin.progressColor;
             }
         };
         private static final CssMetaData<ProgressIndicator,Number> INDETERMINATE_SEGMENT_COUNT =
@@ -688,7 +689,7 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, P
 
             @Override public StyleableProperty<Number> getStyleableProperty(ProgressIndicator n) {
                 final ProgressIndicatorSkin skin = (ProgressIndicatorSkin) n.getSkin();
-                return (StyleableProperty)skin.indeterminateSegmentCount;
+                return (StyleableProperty<Number>)skin.indeterminateSegmentCount;
             }
         };
         private static final CssMetaData<ProgressIndicator,Boolean> LEGEND_VISIBLE =
@@ -702,19 +703,17 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, P
 
                 @Override public StyleableProperty<Boolean> getStyleableProperty(ProgressIndicator node) {
                     final ProgressIndicatorSkin skin = (ProgressIndicatorSkin) node.getSkin();
-                    return (StyleableProperty)skin.spinEnabled;
+                    return (StyleableProperty<Boolean>)skin.spinEnabled;
                 }
             };
 
-        public static final List<CssMetaData<? extends Node, ?>> STYLEABLES;
+        public static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
         static {
-            final List<CssMetaData<? extends Node, ?>> styleables = 
-                new ArrayList<CssMetaData<? extends Node, ?>>(SkinBase.getClassCssMetaData());
-            Collections.addAll(styleables,
-                               PROGRESS_COLOR,
-                               INDETERMINATE_SEGMENT_COUNT,
-                               LEGEND_VISIBLE
-            );
+            final List<CssMetaData<? extends Styleable, ?>> styleables = 
+                new ArrayList<CssMetaData<? extends Styleable, ?>>(SkinBase.getClassCssMetaData());
+            styleables.add(PROGRESS_COLOR);
+            styleables.add(INDETERMINATE_SEGMENT_COUNT);
+            styleables.add(LEGEND_VISIBLE);
             STYLEABLES = Collections.unmodifiableList(styleables);
         }
     }
@@ -723,7 +722,7 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, P
      * @return The CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
      */
-    public static List<CssMetaData<? extends Node, ?>> getClassCssMetaData() {
+    public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
         return StyleableProperties.STYLEABLES;
     }
 
@@ -731,7 +730,7 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, P
      * {@inheritDoc}
      */
     @Override
-    public List<CssMetaData<? extends Node, ?>> getCssMetaData() {
+    public List<CssMetaData<? extends Styleable, ?>> getCssMetaData() {
         return getClassCssMetaData();
     }
 

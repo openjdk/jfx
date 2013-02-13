@@ -70,6 +70,7 @@ import javafx.css.StyleableDoubleProperty;
 import javafx.css.CssMetaData;
 import com.sun.javafx.css.converters.BooleanConverter;
 import com.sun.javafx.css.converters.SizeConverter;
+import javafx.css.Styleable;
 import javafx.css.StyleableProperty;
 
 /**
@@ -218,7 +219,7 @@ public class PieChart extends Chart {
             return "startAngle";
         }
 
-        public CssMetaData getCssMetaData() {
+        public CssMetaData<PieChart,Number> getCssMetaData() {
             return StyleableProperties.START_ANGLE;
         }
     };
@@ -243,7 +244,7 @@ public class PieChart extends Chart {
             return "clockwise";
         }
 
-        public CssMetaData getCssMetaData() {
+        public CssMetaData<PieChart,Boolean> getCssMetaData() {
             return StyleableProperties.CLOCKWISE;
         }
     };
@@ -269,7 +270,7 @@ public class PieChart extends Chart {
             return "labelLineLength";
         }
 
-        public CssMetaData getCssMetaData() {
+        public CssMetaData<PieChart,Number> getCssMetaData() {
             return StyleableProperties.LABEL_LINE_LENGTH;
         }
     };
@@ -294,7 +295,7 @@ public class PieChart extends Chart {
             return "labelsVisible";
         }
 
-        public CssMetaData getCssMetaData() {
+        public CssMetaData<PieChart,Boolean> getCssMetaData() {
             return StyleableProperties.LABELS_VISIBLE;
         }
     };
@@ -955,11 +956,11 @@ public class PieChart extends Chart {
             }
         };
 
-         private static final List<CssMetaData<? extends Node, ?>> STYLEABLES;
+         private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
          static {
 
-            final List<CssMetaData<? extends Node, ?>> styleables =
-                new ArrayList<CssMetaData<? extends Node, ?>>(Chart.getClassCssMetaData());
+            final List<CssMetaData<? extends Styleable, ?>> styleables =
+                new ArrayList<CssMetaData<? extends Styleable, ?>>(Chart.getClassCssMetaData());
             styleables.add(CLOCKWISE);
             styleables.add(LABELS_VISIBLE);
             styleables.add(LABEL_LINE_LENGTH);
@@ -972,7 +973,7 @@ public class PieChart extends Chart {
      * @return The CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
      */
-    public static List<CssMetaData<? extends Node, ?>> getClassCssMetaData() {
+    public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
         return StyleableProperties.STYLEABLES;
     }
 
@@ -980,7 +981,7 @@ public class PieChart extends Chart {
      * {@inheritDoc}
      */
     @Override
-    public List<CssMetaData<? extends Node, ?>> getCssMetaData() {
+    public List<CssMetaData<? extends Styleable, ?>> getCssMetaData() {
         return getClassCssMetaData();
     }
 

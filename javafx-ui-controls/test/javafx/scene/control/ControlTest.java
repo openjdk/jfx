@@ -23,6 +23,7 @@ import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.shape.Rectangle;
 import com.sun.javafx.scene.control.Logging;
+import javafx.css.Styleable;
 import javafx.css.StyleableProperty;
 import org.junit.Before;
 import org.junit.Ignore;
@@ -998,7 +999,7 @@ public class ControlTest {
                 Method m = someClass.getMethod("getClassCssMetaData", (Class[]) null);
 //                Node node = (Node)ctor.newInstance((Object[])null);
                 Node node = (Node)someClass.newInstance();
-                for (CssMetaData styleable : (List<CssMetaData<? extends Node, ?>>) m.invoke(null)) {
+                for (CssMetaData styleable : (List<CssMetaData<? extends Styleable, ?>>) m.invoke(null)) {
                     
                     what = someClass.getName() + " " + styleable.getProperty();
                     WritableValue writable = styleable.getStyleableProperty(node);

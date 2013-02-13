@@ -13,15 +13,35 @@ public class ScrollToEvent<T> extends Event {
     /**
      * This event occurs if the user requests scrolling a node into view.
      */
-    public static final EventType<ScrollToEvent<Node>> SCROLL_TO_NODE = 
+    @SuppressWarnings("unchecked")
+    public static EventType<ScrollToEvent<Node>> scrollToNode() {
+        return SCROLL_TO_NODE;
+    }
+    private static final EventType<ScrollToEvent<Node>> SCROLL_TO_NODE = 
             new EventType<ScrollToEvent<Node>>(Event.ANY, "SCROLL_TO_NODE");
     
     /**
      * This event occurs if the user requests scrolling a given index into view.
      */
-    public static final EventType<ScrollToEvent<Integer>> SCROLL_TO_TOP_INDEX = 
+    @SuppressWarnings("unchecked")
+    public static EventType<ScrollToEvent<Integer>> scrollToTopIndex() {
+        return SCROLL_TO_TOP_INDEX;
+    }
+    private static final EventType<ScrollToEvent<Integer>> SCROLL_TO_TOP_INDEX = 
             new EventType<ScrollToEvent<Integer>>(Event.ANY, "SCROLL_TO_TOP_INDEX");
+    
 
+    /**
+     * This event occurs if the user requests scrolling a {@link TableColumnBase}
+     * (i.e. {@link TableColumn} or {@link TreeTableColumn}) into view.
+     */
+    @SuppressWarnings("unchecked")
+    public static <T extends TableColumnBase<?, ?>> EventType<ScrollToEvent<T>> scrollToColumn() {
+        return (EventType<ScrollToEvent<T>>) SCROLL_TO_COLUMN;
+    }
+    private static final EventType<?> SCROLL_TO_COLUMN = 
+            new EventType(Event.ANY, "SCROLL_TO_COLUMN");
+    
     private static final long serialVersionUID = -8557345736849482516L;
     
     private final T scrollTarget;

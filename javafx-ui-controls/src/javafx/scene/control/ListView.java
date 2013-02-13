@@ -48,7 +48,6 @@ import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.event.EventType;
 import javafx.geometry.Orientation;
-import javafx.scene.Node;
 import javafx.util.Callback;
 
 import javafx.css.StyleableObjectProperty;
@@ -62,6 +61,7 @@ import java.lang.ref.WeakReference;
 import com.sun.javafx.accessible.providers.AccessibleProvider;
 import javafx.css.PseudoClass;
 import javafx.beans.DefaultProperty;
+import javafx.css.Styleable;
 import javafx.css.StyleableProperty;
 
 /**
@@ -430,7 +430,7 @@ public class ListView<T> extends Control {
                 }
                 
                 @Override 
-                public CssMetaData getCssMetaData() {
+                public CssMetaData<ListView<?>,Orientation> getCssMetaData() {
                     return ListView.StyleableProperties.ORIENTATION;
                 }
                 
@@ -726,7 +726,21 @@ public class ListView<T> extends Control {
     }
     
     /**
+     * Scrolls the TableView so that the given object is visible within the viewport.
+     * @param object The object that should be visible to the user.
+     */
+    public void scrollTo(T object) {
+        if( getItems() != null ) {
+            int idx = getItems().indexOf(object);
+            if( idx >= 0 ) {
+                ControlUtils.scrollToIndex(this, idx);        
+            }
+        }
+    }
+    
+    /**
      * Called when there's a request to scroll an index into view using {@link #scrollTo(int)}
+     * or {@link #scrollTo(S)}
      */
     private ObjectProperty<EventHandler<ScrollToEvent<Integer>>> onScrollTo;
     
@@ -744,17 +758,15 @@ public class ListView<T> extends Control {
     public ObjectProperty<EventHandler<ScrollToEvent<Integer>>> onScrollToProperty() {
         if( onScrollTo == null ) {
             onScrollTo = new ObjectPropertyBase<EventHandler<ScrollToEvent<Integer>>>() {
-                @Override
-                protected void invalidated() {
-                    setEventHandler(ScrollToEvent.SCROLL_TO_TOP_INDEX, get());
+                @Override protected void invalidated() {
+                    setEventHandler(ScrollToEvent.scrollToTopIndex(), get());
                 }
-                @Override
-                public Object getBean() {
+                
+                @Override public Object getBean() {
                     return ListView.this;
                 }
 
-                @Override
-                public String getName() {
+                @Override public String getName() {
                     return "onScrollTo";
                 }
             };
@@ -796,8 +808,8 @@ public class ListView<T> extends Control {
 
     /** @treatAsPrivate */
     private static class StyleableProperties {
-        private static final CssMetaData<ListView,Orientation> ORIENTATION = 
-            new CssMetaData<ListView,Orientation>("-fx-orientation",
+        private static final CssMetaData<ListView<?>,Orientation> ORIENTATION = 
+            new CssMetaData<ListView<?>,Orientation>("-fx-orientation",
                 new EnumConverter<Orientation>(Orientation.class), 
                 Orientation.VERTICAL) {
 
@@ -812,19 +824,18 @@ public class ListView<T> extends Control {
                 return n.orientation == null || !n.orientation.isBound();
             }
 
+            @SuppressWarnings("unchecked") // orientationProperty() is a StyleableProperty<Orientation>
             @Override
             public StyleableProperty<Orientation> getStyleableProperty(ListView n) {
-                return (StyleableProperty)n.orientationProperty();
+                return (StyleableProperty<Orientation>)n.orientationProperty();
             }
         };
             
-        private static final List<CssMetaData<? extends Node, ?>> STYLEABLES;
+        private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
         static {
-            final List<CssMetaData<? extends Node, ?>> styleables =
-                new ArrayList<CssMetaData<? extends Node, ?>>(Control.getClassCssMetaData());
-            Collections.addAll(styleables,
-                ORIENTATION
-            );
+            final List<CssMetaData<? extends Styleable, ?>> styleables =
+                new ArrayList<CssMetaData<? extends Styleable, ?>>(Control.getClassCssMetaData());
+            styleables.add(ORIENTATION);
             STYLEABLES = Collections.unmodifiableList(styleables);
         }
     }
@@ -833,7 +844,7 @@ public class ListView<T> extends Control {
      * @return The CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
      */
-    public static List<CssMetaData<? extends Node, ?>> getClassCssMetaData() {
+    public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
         return StyleableProperties.STYLEABLES;
     }
 
@@ -841,7 +852,7 @@ public class ListView<T> extends Control {
      * {@inheritDoc}
      */
     @Override
-    public List<CssMetaData<? extends Node, ?>> getControlCssMetaData() {
+    public List<CssMetaData<? extends Styleable, ?>> getControlCssMetaData() {
         return getClassCssMetaData();
     }
 
@@ -965,8 +976,7 @@ public class ListView<T> extends Control {
                 
                 while (c.next()) {
                     if (listView.getItems() == null || listView.getItems().isEmpty()) {
-                        setSelectedIndex(-1);
-                        focus(-1);
+                        clearSelection();
                     } else if (getSelectedIndex() == -1 && getSelectedItem() != null) {
                         int newIndex = listView.getItems().indexOf(getSelectedItem());
                         if (newIndex != -1) {

@@ -36,6 +36,7 @@ import javafx.scene.input.ScrollEvent;
 import com.sun.javafx.Utils;
 import com.sun.javafx.scene.control.behavior.ScrollBarBehavior;
 import javafx.geometry.Insets;
+import javafx.scene.layout.Region;
 
 public class ScrollBarSkin extends BehaviorSkinBase<ScrollBar, ScrollBarBehavior> {
 
@@ -334,10 +335,14 @@ public class ScrollBarSkin extends BehaviorSkinBase<ScrollBar, ScrollBarBehavior
      *                                                                         *
      **************************************************************************/
 
+    private static final double DEFAULT_EMBEDDED_SB_BREADTH = 8.0;
+
     /*
      * Gets the breadth of the scrollbar. The "breadth" is the distance
      * across the scrollbar, i.e. if vertical the width, otherwise the height.
-     * This is determined by the greater of the breadths of the end-buttons.
+     * On desktop this is determined by the greater of the breadths of the end-buttons.
+     * Embedded doesn't have end-buttons, so currently we use a default breadth.
+     * We should change this when we get width/height css properties.
      */
     double getBreadth() {
         final Insets padding = getSkinnable().getInsets();
@@ -351,9 +356,9 @@ public class ScrollBarSkin extends BehaviorSkinBase<ScrollBar, ScrollBarBehavior
         }
         else {
             if (getSkinnable().getOrientation() == Orientation.VERTICAL) {
-                return Math.max(padding.getLeft()+padding.getRight(), padding.getLeft()+padding.getRight());
+                return Math.max(DEFAULT_EMBEDDED_SB_BREADTH+padding.getLeft()+padding.getRight(), DEFAULT_EMBEDDED_SB_BREADTH+padding.getLeft()+padding.getRight());
             } else {
-                return Math.max(padding.getTop()+padding.getBottom(), padding.getTop()+padding.getBottom());
+                return Math.max(DEFAULT_EMBEDDED_SB_BREADTH+padding.getTop()+padding.getBottom(), DEFAULT_EMBEDDED_SB_BREADTH+padding.getTop()+padding.getBottom());
             }
         }
     }
@@ -445,8 +450,8 @@ public class ScrollBarSkin extends BehaviorSkinBase<ScrollBar, ScrollBarBehavior
         }
 
         final Insets padding = s.getInsets();
-        thumb.setTranslateX( s.getOrientation() == Orientation.VERTICAL ? padding.getLeft() : trackPos + padding.getLeft());
-        thumb.setTranslateY( s.getOrientation() == Orientation.VERTICAL ? trackPos + padding.getTop() : padding.getTop());
+        thumb.setTranslateX( snapPosition(s.getOrientation() == Orientation.VERTICAL ? padding.getLeft() : trackPos + padding.getLeft()));
+        thumb.setTranslateY( snapPosition(s.getOrientation() == Orientation.VERTICAL ? trackPos + padding.getTop() : padding.getTop()));
     }
 
     @Override protected void layoutChildren(final double x, final double y,
@@ -559,36 +564,48 @@ public class ScrollBarSkin extends BehaviorSkinBase<ScrollBar, ScrollBarBehavior
             }
         }
     }
-}
+    
+    private static class EndButton extends Region {
+        private Region arrow;
 
-class EndButton extends StackPane {
+        private EndButton(String styleClass, String arrowStyleClass) {
+            getStyleClass().setAll(styleClass);
+            arrow = new Region();
+            arrow.getStyleClass().setAll(arrowStyleClass);
+            getChildren().setAll(arrow);
+            requestLayout();
+        }
 
-    private StackPane arrow;
+        @Override protected void layoutChildren() {
+            final Insets insets = getInsets();
+            final double top = insets.getTop();
+            final double left = insets.getLeft();
+            final double bottom = insets.getBottom();
+            final double right = insets.getRight();
+            
+            double aw = arrow.prefWidth(-1);
+            double ah = arrow.prefHeight(-1);
+            
+            double yPos = (getHeight() - (top + bottom + ah)) / 2.0;
+            double xPos = (getWidth() - (left + right + aw)) / 2.0;
 
-    public EndButton(String styleClass, String arrowStyleClass) {
-        getStyleClass().setAll(styleClass);
-        arrow = new StackPane();
-        arrow.getStyleClass().setAll(arrowStyleClass);
-        getChildren().clear();
-        getChildren().addAll(arrow);
-        requestLayout();
-    }
+            arrow.resizeRelocate(xPos + left, yPos + top, aw, ah);
+        }
 
-    @Override protected void layoutChildren() {
-        double aw = arrow.prefWidth(-1);
-        double ah = arrow.prefHeight(-1);
+        @Override protected double computeMinHeight(double width) {
+            return prefHeight(-1);
+        }
 
-        double Ypos = (getHeight() - (getInsets().getTop()+getInsets().getBottom() + ah))/2;
-        double Xpos = (getWidth() - (getInsets().getLeft()+getInsets().getRight() + aw))/2;
+        @Override protected double computeMinWidth(double height) {
+            return prefWidth(-1);
+        }
 
-        arrow.resizeRelocate(Xpos+getInsets().getLeft(), Ypos+getInsets().getBottom(), aw, ah);
-    }
-
-    @Override protected double computeMinHeight(double width) {
-        return prefHeight(-1);
-    }
-
-    @Override protected double computeMinWidth(double height) {
-        return prefWidth(-1);
+        @Override protected double computePrefWidth(double height) {
+            return arrow.prefWidth(height) + getInsets().getLeft() + getInsets().getRight();
+        }
+        
+        @Override protected double computePrefHeight(double width) {
+            return arrow.prefHeight(width) + getInsets().getTop() + getInsets().getBottom();
+        }
     }
 }

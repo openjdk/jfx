@@ -41,7 +41,7 @@ import javafx.event.EventTarget;
 import javafx.event.EventType;
 import javafx.scene.Node;
 
-import com.sun.javafx.css.Styleable;
+import javafx.css.Styleable;
 import com.sun.javafx.event.EventHandlerManager;
 import java.util.Collections;
 import java.util.HashMap;
@@ -63,7 +63,7 @@ import javafx.collections.ObservableMap;
  * on a Tab in the TabPane the Tab content becomes visible to the user.</p>
  */
 @DefaultProperty("content")
-public class Tab implements EventTarget {
+public class Tab implements EventTarget, Styleable {
 
     /***************************************************************************
      *                                                                         *
@@ -101,13 +101,14 @@ public class Tab implements EventTarget {
      * Sets the id of this tab. This simple string identifier is useful for
      * finding a specific Tab within the {@code TabPane}. The default value is {@code null}.
      */
-    public final void setId(String value) { idProperty().set(value); }
+   public final void setId(String value) { idProperty().set(value); }
 
     /**
      * The id of this tab.
      *
      * @return The id of the tab.
      */
+    @Override
     public final String getId() { return id == null ? null : id.get(); }
 
     /**
@@ -133,13 +134,14 @@ public class Tab implements EventTarget {
      * platforms. It is recommended to use a standalone CSS file instead.
      *     
      */
-    public final void setStyle(String value) { styleProperty().set(value); }
+   public final void setStyle(String value) { styleProperty().set(value); }
 
     /**
      * The CSS style string associated to this tab.
      *
      * @return The CSS style string associated to this tab.
      */
+    @Override
     public final String getStyle() { return style == null ? null : style.get(); }
 
     /**
@@ -706,6 +708,7 @@ public class Tab implements EventTarget {
      *
      * @see <a href="http://www.w3.org/TR/css3-selectors/#class-html">CSS3 class selectors</a>
      */
+    @Override
     public ObservableList<String> getStyleClass() {
         return styleClass;
     }
@@ -739,58 +742,33 @@ public class Tab implements EventTarget {
     private static final String DEFAULT_STYLE_CLASS = "tab";
     
     /**
-     * RT-19263
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an experimental API that is not intended for general 
-     * use and is subject to change in future versions
+     * {@inheritDoc}
+     * @return "Tab"
      */
-    protected Styleable styleable; 
-    
+   @Override
+    public String getTypeSelector() {
+        return "Tab";
+    }
+
     /**
-     * RT-19263
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
+     * {@inheritDoc}
+     * @return {@code getTabPane()}
      */
-    @Deprecated // SB-dependency: RT-21094 has been filed to track this
-    public Styleable impl_getStyleable() {
-        
-        if (styleable == null) {
-            styleable = new Styleable() {
+    @Override
+    public Styleable getStyleableParent() {
+        return getTabPane();
+    }
 
-                @Override
-                public String getId() {
-                    return Tab.this.getId();
-                }
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public List<CssMetaData<? extends Styleable, ?>> getCssMetaData() {
+        return getClassCssMetaData();
+    }                
 
-                @Override
-                public List<String> getStyleClass() {
-                    return Tab.this.getStyleClass();
-                }
-
-                @Override
-                public String getStyle() {
-                    return Tab.this.getStyle();
-                }
-
-                @Override
-                public Styleable getStyleableParent() {
-                    return getTabPane() != null 
-                        ? getTabPane().impl_getStyleable()
-                        : null;
-                }
-
-                @Override
-                public List<CssMetaData<? extends Node, ?>> getCssMetaData() {
-                    return Collections.emptyList();
-                }                
-
-                @Override
-                public Node getNode() {
-                    return null;
-                }
-
-            };
-        }
-        return styleable;
-    }    
+   public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
+        return Collections.emptyList();
+    }                
+    
 }

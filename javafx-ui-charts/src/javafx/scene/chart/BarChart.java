@@ -54,6 +54,7 @@ import javafx.css.StyleableDoubleProperty;
 import javafx.css.CssMetaData;
 import javafx.css.PseudoClass;
 import com.sun.javafx.css.converters.SizeConverter;
+import javafx.css.Styleable;
 import javafx.css.StyleableProperty;
 
 /**
@@ -92,7 +93,7 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
             return "barGap";
         }
 
-        public CssMetaData getCssMetaData() {
+        public CssMetaData<BarChart<?,?>,Number> getCssMetaData() {
             return StyleableProperties.BAR_GAP;
         }
     };
@@ -117,7 +118,7 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
             return "categoryGap";
         }
 
-        public CssMetaData getCssMetaData() {
+        public CssMetaData<BarChart<?,?>,Number> getCssMetaData() {
             return StyleableProperties.CATEGORY_GAP;
         }
     };
@@ -531,11 +532,11 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
             }
         };
 
-         private static final List<CssMetaData<? extends Node, ?>> STYLEABLES;
+         private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
          static {
 
-            final List<CssMetaData<? extends Node, ?>> styleables =
-                new ArrayList<CssMetaData<? extends Node, ?>>(XYChart.getClassCssMetaData());
+            final List<CssMetaData<? extends Styleable, ?>> styleables =
+                new ArrayList<CssMetaData<? extends Styleable, ?>>(XYChart.getClassCssMetaData());
             styleables.add(BAR_GAP);
             styleables.add(CATEGORY_GAP);
             STYLEABLES = Collections.unmodifiableList(styleables);
@@ -546,7 +547,7 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
      * @return The CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
      */
-    public static List<CssMetaData<? extends Node, ?>> getClassCssMetaData() {
+    public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
         return StyleableProperties.STYLEABLES;
     }
 
@@ -554,7 +555,7 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
      * {@inheritDoc}
      */
     @Override
-    public List<CssMetaData<? extends Node, ?>> getCssMetaData() {
+    public List<CssMetaData<? extends Styleable, ?>> getCssMetaData() {
         return getClassCssMetaData();
     }
 

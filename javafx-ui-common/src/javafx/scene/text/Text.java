@@ -86,8 +86,8 @@ import com.sun.javafx.tk.Toolkit;
 import com.sun.javafx.accessible.providers.AccessibleProvider;
 import com.sun.javafx.accessible.AccessibleNode;
 import javafx.css.FontCssMetaData;
+import javafx.css.Styleable;
 import javafx.css.StyleableProperty;
-import javafx.scene.Node;
 
 /**
  * The {@code Text} class defines a node that displays a text.
@@ -522,7 +522,7 @@ public class Text extends Shape {
             font = new StyleableObjectProperty<Font>(Font.getDefault()) {
                 @Override public Object getBean() { return Text.this; }
                 @Override public String getName() { return "font"; }
-                @Override public CssMetaData getCssMetaData() {
+                @Override public CssMetaData<Text,Font> getCssMetaData() {
                     return StyleableProperties.FONT;
                 }
                 @Override public void invalidated() {
@@ -751,7 +751,7 @@ public class Text extends Shape {
                                                (FontSmoothingType.GRAY) {
                 @Override public Object getBean() { return Text.this; }
                 @Override public String getName() { return "fontSmoothingType"; }
-                @Override public CssMetaData getCssMetaData() {
+                @Override public CssMetaData<Text,FontSmoothingType> getCssMetaData() {
                     return StyleableProperties.FONT_SMOOTHING_TYPE;
                 }
                 @Override public void invalidated() {
@@ -1391,10 +1391,10 @@ public class Text extends Shape {
             }
          };
 
-	 private final static List<CssMetaData<? extends Node, ?>> STYLEABLES;
+	 private final static List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
          static {
-            final List<CssMetaData<? extends Node, ?>> styleables =
-                new ArrayList<CssMetaData<? extends Node, ?>>(Shape.getClassCssMetaData());
+            final List<CssMetaData<? extends Styleable, ?>> styleables =
+                new ArrayList<CssMetaData<? extends Styleable, ?>>(Shape.getClassCssMetaData());
             styleables.add(FONT);
             styleables.add(UNDERLINE);
             styleables.add(STRIKETHROUGH);
@@ -1410,7 +1410,7 @@ public class Text extends Shape {
      * @return The CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
      */
-    public static List<CssMetaData<? extends Node, ?>> getClassCssMetaData() {
+    public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
         return StyleableProperties.STYLEABLES;
     }
 
@@ -1419,8 +1419,9 @@ public class Text extends Shape {
      *
      */
     
+    
     @Override
-    public List<CssMetaData<? extends Node, ?>> getCssMetaData() {
+    public List<CssMetaData<? extends Styleable, ?>> getCssMetaData() {
         return getClassCssMetaData();
     }
 

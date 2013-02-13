@@ -60,6 +60,6 @@ public interface StyleableProperty<T> extends WritableValue<T> {
      * Reflect back the CssMetaData that corresponds to this 
      * <code>javafx.beans.property.StyleableProperty</code>
      */
-    CssMetaData<? extends Node, T> getCssMetaData();
+    CssMetaData<? extends Styleable, T> getCssMetaData();
        
 }

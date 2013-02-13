@@ -51,6 +51,7 @@ import javafx.css.CssMetaData;
 import com.sun.javafx.css.converters.BooleanConverter;
 import com.sun.javafx.css.converters.SizeConverter;
 import java.util.Collections;
+import javafx.css.Styleable;
 import javafx.css.StyleableProperty;
 import javafx.scene.Node;
 
@@ -80,7 +81,7 @@ public final class CategoryAxis extends Axis<String> {
             requestAxisLayout();
         }
 
-        @Override public CssMetaData getCssMetaData() {
+        @Override public CssMetaData<CategoryAxis,Number> getCssMetaData() {
             return StyleableProperties.START_MARGIN;
         }
         
@@ -105,7 +106,7 @@ public final class CategoryAxis extends Axis<String> {
         }
 
 
-        @Override public CssMetaData getCssMetaData() {
+        @Override public CssMetaData<CategoryAxis,Number> getCssMetaData() {
             return StyleableProperties.END_MARGIN;
         }
 
@@ -132,7 +133,7 @@ public final class CategoryAxis extends Axis<String> {
         }
 
 
-        @Override public CssMetaData getCssMetaData() {
+        @Override public CssMetaData<CategoryAxis,Boolean> getCssMetaData() {
             return StyleableProperties.GAP_START_AND_END;
         }
         
@@ -311,11 +312,13 @@ public final class CategoryAxis extends Axis<String> {
         // TODO check if we can display all categories
         final double newCategorySpacing = calculateNewSpacing(length,allDataCategories);
         final double newFirstPos = calculateNewFirstPos(length, newCategorySpacing);
-        double tickLabelRotation = 0;
-        double requiredLengthToDisplay = calculateRequiredSize(vertical,tickLabelRotation);
-        if (requiredLengthToDisplay > length) {
-            // change text to vertical
-            tickLabelRotation = 90;
+        double tickLabelRotation = getTickLabelRotation();
+        if (length >= 0) {
+            double requiredLengthToDisplay = calculateRequiredSize(vertical,tickLabelRotation);
+            if (requiredLengthToDisplay > length) {
+                // change text to vertical
+                tickLabelRotation = 90;
+            }
         }
         return new Object[]{allDataCategories, newCategorySpacing, newFirstPos, tickLabelRotation};
     }
@@ -502,7 +505,7 @@ public final class CategoryAxis extends Axis<String> {
 
             @Override
             public StyleableProperty<Number> getStyleableProperty(CategoryAxis n) {
-                return (StyleableProperty)n.startMarginProperty();
+                return (StyleableProperty<Number>)n.startMarginProperty();
             }
         };
         
@@ -517,7 +520,7 @@ public final class CategoryAxis extends Axis<String> {
 
             @Override
             public StyleableProperty<Number> getStyleableProperty(CategoryAxis n) {
-                return (StyleableProperty)n.endMarginProperty();
+                return (StyleableProperty<Number>)n.endMarginProperty();
             }
         };
         
@@ -532,14 +535,14 @@ public final class CategoryAxis extends Axis<String> {
 
             @Override
             public StyleableProperty<Boolean> getStyleableProperty(CategoryAxis n) {
-                return (StyleableProperty)n.gapStartAndEndProperty();
+                return (StyleableProperty<Boolean>)n.gapStartAndEndProperty();
             }
         };
 
-        private static final List<CssMetaData<? extends Node, ?>> STYLEABLES;
+        private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
         static {
-        final List<CssMetaData<? extends Node, ?>> styleables =
-            new ArrayList<CssMetaData<? extends Node, ?>>(Axis.getClassCssMetaData());
+        final List<CssMetaData<? extends Styleable, ?>> styleables =
+            new ArrayList<CssMetaData<? extends Styleable, ?>>(Axis.getClassCssMetaData());
             styleables.add(START_MARGIN);
             styleables.add(END_MARGIN);
             styleables.add(GAP_START_AND_END);
@@ -551,7 +554,7 @@ public final class CategoryAxis extends Axis<String> {
      * @return The CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
      */
-    public static List<CssMetaData<? extends Node, ?>> getClassCssMetaData() {
+    public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
         return StyleableProperties.STYLEABLES;
     }
 
@@ -559,7 +562,7 @@ public final class CategoryAxis extends Axis<String> {
      * {@inheritDoc}
      */
     @Override
-    public List<CssMetaData<? extends Node, ?>> getCssMetaData() {
+    public List<CssMetaData<? extends Styleable, ?>> getCssMetaData() {
         return getClassCssMetaData();
     }
 

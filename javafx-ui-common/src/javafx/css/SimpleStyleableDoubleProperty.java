@@ -50,7 +50,7 @@ public abstract class SimpleStyleableDoubleProperty
      * @param cssMetaData
      *            the CssMetaData associated with this {@code StyleableProperty}
      */
-    public SimpleStyleableDoubleProperty(CssMetaData<? extends Node, Number> cssMetaData) {
+    public SimpleStyleableDoubleProperty(CssMetaData<? extends Styleable, Number> cssMetaData) {
         super();
         this.cssMetaData = cssMetaData;
     }
@@ -63,7 +63,7 @@ public abstract class SimpleStyleableDoubleProperty
      * @param initialValue
      *            the initial value of the wrapped {@code Object}
      */
-    public SimpleStyleableDoubleProperty(CssMetaData<? extends Node, Number> cssMetaData, double initialValue) {
+    public SimpleStyleableDoubleProperty(CssMetaData<? extends Styleable, Number> cssMetaData, double initialValue) {
         super(initialValue);
         this.cssMetaData = cssMetaData;
     }
@@ -78,7 +78,7 @@ public abstract class SimpleStyleableDoubleProperty
      * @param name
      *            the name of this {@code DoubleProperty}
      */
-    public SimpleStyleableDoubleProperty(CssMetaData<? extends Node, Number> cssMetaData, Object bean, String name) {
+    public SimpleStyleableDoubleProperty(CssMetaData<? extends Styleable, Number> cssMetaData, Object bean, String name) {
         super(bean, name);
         this.cssMetaData = cssMetaData;
     }
@@ -95,7 +95,7 @@ public abstract class SimpleStyleableDoubleProperty
      * @param initialValue
      *            the initial value of the wrapped {@code Object}
      */
-    public SimpleStyleableDoubleProperty(CssMetaData<? extends Node, Number> cssMetaData, Object bean, String name, double initialValue) {
+    public SimpleStyleableDoubleProperty(CssMetaData<? extends Styleable, Number> cssMetaData, Object bean, String name, double initialValue) {
         super(bean, name, initialValue);
         this.cssMetaData = cssMetaData;
     }
@@ -128,10 +128,10 @@ public abstract class SimpleStyleableDoubleProperty
 
     /** {@inheritDoc} */
     @Override
-    public final CssMetaData<? extends Node, Number> getCssMetaData() {
+    public final CssMetaData<? extends Styleable, Number> getCssMetaData() {
         return cssMetaData;
     }
 
     private StyleOrigin origin = null;
-    private final CssMetaData<? extends Node, Number> cssMetaData;
+    private final CssMetaData<? extends Styleable, Number> cssMetaData;
 }

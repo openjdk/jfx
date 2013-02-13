@@ -24,6 +24,7 @@
  */
 package com.sun.javafx.css;
 
+import javafx.css.Styleable;
 import java.lang.ref.Reference;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
@@ -49,6 +50,7 @@ import com.sun.javafx.css.converters.FontConverter;
 import com.sun.javafx.css.parser.CSSParser;
 import java.util.Collection;
 import java.util.Set;
+import javafx.collections.ObservableMap;
 import javafx.css.FontCssMetaData;
 import javafx.css.PseudoClass;
 import javafx.css.StyleConverter;
@@ -99,7 +101,7 @@ public abstract class StyleHelper {
         CssMetaData styleableFontProperty = null;
         CssMetaData styleableThatInherits = null;
         
-        final List<CssMetaData<? extends Node, ?>> props = node.getCssMetaData();
+        final List<CssMetaData<? extends Styleable, ?>> props = node.getCssMetaData();
         final int pMax = props != null ? props.size() : 0;
         for (int p=0; p<pMax; p++) {
             final CssMetaData prop = props.get(p);
@@ -787,14 +789,6 @@ return sb.toString();
     /**
      * Get the mapping of property to style from Node.style for this node.
      */
-    private static Map<String,CascadingStyle> getInlineStyleMap(Node node) {
-
-        return getInlineStyleMap(node.impl_getStyleable());
-    }
-
-    /**
-     * Get the mapping of property to style from Node.style for this node.
-     */
     private static Map<String,CascadingStyle> getInlineStyleMap(Styleable styleable) {
         
         final String inlineStyles = styleable.getStyle();
@@ -918,7 +912,23 @@ return sb.toString();
         }
         
     }
-        
+
+    ObservableMap<StyleableProperty<?>, List<Style>> observableStyleMap;
+     /**
+      * RT-17293
+      */
+     public final ObservableMap<StyleableProperty<?>, List<Style>> getObservableStyleMap() {
+         return observableStyleMap;
+     }
+
+     /**
+      * RT-17293
+      */
+     public final void setObservableStyleMap(ObservableMap<StyleableProperty<?>, List<Style>> observableStyleMap) {
+         this.observableStyleMap = observableStyleMap;
+     }
+          
+    
     /**
      * Called by the Node whenever it has transitioned from one set of
      * pseudoclass states to another. This function will then lookup the
@@ -972,14 +982,9 @@ return sb.toString();
         final Map<String,CascadingStyle> inlineStyles = StyleHelper.getInlineStyleMap(node);
         
         //
-        // if this node has a style map, then we'll populate it.
-        // 
-        final Map<StyleableProperty<?>, List<Style>> styleMap = node.impl_getStyleMap();
-
-        //
         // If someone is watching the styles, then we have to take the slow path.
         //
-        boolean fastpath = styleMap == null && inlineStyles == null;
+        boolean fastpath = observableStyleMap == null && inlineStyles == null;
         
         if (cacheEntry.font == null) {
             final CalculatedValue font = 
@@ -1001,7 +1006,7 @@ return sb.toString();
 //                inlineStyles == null;
         } 
         
-        final List<CssMetaData<? extends Node, ?>> styleables = node.getCssMetaData();
+        final List<CssMetaData<? extends Styleable, ?>> styleables = node.getCssMetaData();
         
         // Used in the for loop below, and a convenient place to stop when debugging.
         final int max = styleables.size();
@@ -1015,10 +1020,10 @@ return sb.toString();
 
             final CssMetaData cssMetaData = styleables.get(n);
             
-            if (styleMap != null) {
+            if (observableStyleMap != null) {
                 StyleableProperty styleableProperty = cssMetaData.getStyleableProperty(node);
-                if (styleableProperty != null && styleMap.containsKey(styleableProperty)) {
-                    styleMap.remove(styleableProperty);
+                if (styleableProperty != null && observableStyleMap.containsKey(styleableProperty)) {
+                    observableStyleMap.remove(styleableProperty);
                 }
             }
             
@@ -1031,7 +1036,7 @@ return sb.toString();
             
             // Create a List to hold the Styles if the node has 
             // a Map<WritableValue, List<Style>>
-            final List<Style> styleList = (styleMap != null) 
+            final List<Style> styleList = (observableStyleMap != null) 
                     ? new ArrayList<Style>() 
                     : null;
 
@@ -1104,9 +1109,9 @@ return sb.toString();
                 try {
                     cssMetaData.set(node, value, calculatedValue.origin);
                     
-                    if (styleMap != null) {
+                    if (observableStyleMap != null) {
                         StyleableProperty styleableProperty = cssMetaData.getStyleableProperty(node);                            
-                        styleMap.put(styleableProperty, styleList);
+                        observableStyleMap.put(styleableProperty, styleList);
                     }
                     
                 } catch (Exception e) {
@@ -1222,7 +1227,7 @@ return sb.toString();
         // are no matching styles for this property. We will then either SKIP
         // or we will INHERIT. We will inspect the default value for the styleable,
         // and if it is INHERIT then we will inherit otherwise we just skip it.
-        final List<CssMetaData<? extends Node, ?>> subProperties = styleable.getSubProperties();
+        final List<CssMetaData<? extends Styleable, ?>> subProperties = styleable.getSubProperties();
         final int numSubProperties = (subProperties != null) ? subProperties.size() : 0;
         if (style == null) {
             
@@ -1769,7 +1774,7 @@ return sb.toString();
                     LOGGER.warning(msg);
                     LOGGER.fine("node = " + node.toString());
                     LOGGER.fine("cssMetaData = " + cssMetaData);
-                    LOGGER.fine("styles = " + getMatchingStyles(node.impl_getStyleable(), cssMetaData));
+                    LOGGER.fine("styles = " + getMatchingStyles(node, cssMetaData));
                 }
                 return SKIP;
             } catch (IllegalArgumentException iae) {
@@ -2395,7 +2400,7 @@ return sb.toString();
 
         getMatchingStyles(node, styleableProperty, styleList);
 
-        List<CssMetaData<? extends Node, ?>> subProperties = styleableProperty.getSubProperties();
+        List<CssMetaData<? extends Styleable, ?>> subProperties = styleableProperty.getSubProperties();
         if (subProperties != null) {
             for (int n=0,nMax=subProperties.size(); n<nMax; n++) {
                 final CssMetaData subProperty = subProperties.get(n);
@@ -2424,8 +2429,8 @@ return sb.toString();
             Styleable parent = node;
             while (parent != null) {
                 
-                StyleHelper parentHelper = parent.getNode() != null
-                        ? parent.getNode().impl_getStyleHelper()
+                StyleHelper parentHelper = (parent instanceof Node) ?
+                        ((Parent)parent).impl_getStyleHelper()
                         : null;
                 
                 if (parentHelper != null) {
@@ -2479,8 +2484,8 @@ return sb.toString();
             if (styleableProperty.isInherits()) {
                 parent = node.getStyleableParent();
                 while (parent != null) {
-                    StyleHelper parentHelper = parent.getNode() != null 
-                            ? parent.getNode().impl_getStyleHelper()
+                    StyleHelper parentHelper = parent instanceof Node 
+                            ? ((Node)parent).impl_getStyleHelper()
                             : null;
                     if (parentHelper != null) {
                         parentHelper.getMatchingStyles(parent, styleableProperty, styleList); 
@@ -2506,8 +2511,8 @@ return sb.toString();
                 // gather up any and all styles that contain this value as a property
                 Styleable parent = node;
                 do {
-                    final StyleHelper helper = parent.getNode() != null 
-                            ? parent.getNode().impl_getStyleHelper()
+                    final StyleHelper helper = parent instanceof Node 
+                            ? ((Node)parent).impl_getStyleHelper()
                             : null;
                     if (helper != null) {
                                              

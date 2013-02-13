@@ -539,4 +539,36 @@ public class TreeViewTest {
         assertTrue(itSupport.isLeaf());
         assertTrue(!itSupport.isExpanded());
     }
+    
+    @Test public void test_rt27820_1() {
+        TreeItem root = new TreeItem("root");
+        root.setExpanded(true);
+        TreeItem child = new TreeItem("child");
+        root.getChildren().add(child);
+        treeView.setRoot(root);
+        
+        treeView.getSelectionModel().select(0);
+        assertEquals(1, treeView.getSelectionModel().getSelectedItems().size());
+        assertEquals(root, treeView.getSelectionModel().getSelectedItem());
+        
+        treeView.setRoot(null);
+        assertEquals(0, treeView.getSelectionModel().getSelectedItems().size());
+        assertNull(treeView.getSelectionModel().getSelectedItem());
+    }
+    
+    @Test public void test_rt27820_2() {
+        TreeItem root = new TreeItem("root");
+        root.setExpanded(true);
+        TreeItem child = new TreeItem("child");
+        root.getChildren().add(child);
+        treeView.setRoot(root);
+        
+        treeView.getSelectionModel().select(1);
+        assertEquals(1, treeView.getSelectionModel().getSelectedItems().size());
+        assertEquals(child, treeView.getSelectionModel().getSelectedItem());
+        
+        treeView.setRoot(null);
+        assertEquals(0, treeView.getSelectionModel().getSelectedItems().size());
+        assertNull(treeView.getSelectionModel().getSelectedItem());
+    }
 }

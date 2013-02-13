@@ -33,6 +33,7 @@ import java.util.Map.Entry;
 import javafx.css.CssMetaData;
 import javafx.css.ParsedValue;
 import javafx.css.StyleConverter;
+import javafx.css.Styleable;
 import javafx.scene.Node;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontPosture;
@@ -73,14 +74,14 @@ public final class FontConverter extends StyleConverterImpl<ParsedValue[], Font>
     }
 
     @Override
-    public Font convert(Map<CssMetaData<? extends Node, ?>, Object> convertedValues) {
+    public Font convert(Map<CssMetaData<? extends Styleable, ?>, Object> convertedValues) {
         Font font = Font.getDefault();
         double size = font.getSize();
         String family = font.getFamily();
         FontWeight weight = FontWeight.NORMAL;
         FontPosture style = FontPosture.REGULAR;
         
-        for (Entry<CssMetaData<? extends Node, ?>, Object> entry : convertedValues.entrySet()) {
+        for (Entry<CssMetaData<? extends Styleable, ?>, Object> entry : convertedValues.entrySet()) {
 
             Object value = entry.getValue();
             if (value == null) {

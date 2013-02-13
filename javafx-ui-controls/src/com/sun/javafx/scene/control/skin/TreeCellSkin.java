@@ -47,6 +47,7 @@ import com.sun.javafx.scene.control.behavior.TreeCellBehavior;
 import javafx.animation.RotateTransition;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
+import javafx.css.Styleable;
 import javafx.geometry.Insets;
 import javafx.util.Duration;
 
@@ -87,7 +88,7 @@ public class TreeCellSkin extends CellSkinBase<TreeCell<?>, TreeCellBehavior> {
                     return "indent";
                 }
 
-                @Override public CssMetaData getCssMetaData() {
+                @Override public CssMetaData<TreeCell<?>,Number> getCssMetaData() {
                     return StyleableProperties.INDENT;
                 }
             };
@@ -154,6 +155,8 @@ public class TreeCellSkin extends CellSkinBase<TreeCell<?>, TreeCellBehavior> {
         if (treeItem != null) {
             treeItem.expandedProperty().addListener(treeItemExpandedListener);
         }
+        
+        updateDisclosureNodeRotation(false);
     }
     
     private void updateDisclosureNode() {
@@ -283,8 +286,8 @@ public class TreeCellSkin extends CellSkinBase<TreeCell<?>, TreeCellBehavior> {
     /** @treatAsPrivate */
     private static class StyleableProperties {
         
-        private static final CssMetaData<TreeCell,Number> INDENT = 
-            new CssMetaData<TreeCell,Number>("-fx-indent",
+        private static final CssMetaData<TreeCell<?>,Number> INDENT = 
+            new CssMetaData<TreeCell<?>,Number>("-fx-indent",
                 SizeConverter.getInstance(), 10.0) {
                     
             @Override public boolean isSettable(TreeCell n) {
@@ -294,17 +297,15 @@ public class TreeCellSkin extends CellSkinBase<TreeCell<?>, TreeCellBehavior> {
 
             @Override public StyleableProperty<Number> getStyleableProperty(TreeCell n) {
                 final TreeCellSkin skin = (TreeCellSkin) n.getSkin();
-                return (StyleableProperty)skin.indentProperty();
+                return (StyleableProperty<Number>)skin.indentProperty();
             }
         };
         
-        private static final List<CssMetaData<? extends Node, ?>> STYLEABLES;
+        private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
         static {
-            final List<CssMetaData<? extends Node, ?>> styleables =
-                new ArrayList<CssMetaData<? extends Node, ?>>(CellSkinBase.getClassCssMetaData());
-            Collections.addAll(styleables,
-                INDENT
-            );
+            final List<CssMetaData<? extends Styleable, ?>> styleables =
+                new ArrayList<CssMetaData<? extends Styleable, ?>>(CellSkinBase.getClassCssMetaData());
+            styleables.add(INDENT);
             STYLEABLES = Collections.unmodifiableList(styleables);
         }
     }
@@ -313,7 +314,7 @@ public class TreeCellSkin extends CellSkinBase<TreeCell<?>, TreeCellBehavior> {
      * @return The CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
      */
-    public static List<CssMetaData<? extends Node, ?>> getClassCssMetaData() {
+    public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
         return StyleableProperties.STYLEABLES;
     }
 
@@ -321,7 +322,7 @@ public class TreeCellSkin extends CellSkinBase<TreeCell<?>, TreeCellBehavior> {
      * {@inheritDoc}
      */
     @Override
-    public List<CssMetaData<? extends Node, ?>> getCssMetaData() {
+    public List<CssMetaData<? extends Styleable, ?>> getCssMetaData() {
         return getClassCssMetaData();
     }
 }

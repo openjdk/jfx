@@ -12,16 +12,22 @@
 
     <!-- .css -> .bss -->
     <target name="check-binary-css">
-      <uptodate property="binaryCssUpToDate" targetfile="${basedir}/${build.dir}/classes/com/sun/javafx/scene/control/skin/caspian/caspian.bss">
-        <srcfiles dir="${basedir}/${src.dir}/com/sun/javafx/scene/control/skin/caspian" includes="*.css"/>
+      <uptodate property="binaryCssUpToDate">
+        <srcfiles dir="${basedir}/${src.dir}" includes="**/*.css"/>
+        <mapper type="regexp" from="(.*)/(.*)\.css$$" to="${basedir}/${build.dir}/classes/\1/\2.bss"/>
       </uptodate>
     </target>
 
-
     <target name="-pre-init" depends="check-binary-css" unless="binaryCssUpToDate">
       <mkdir dir="${basedir}/${build.dir}/classes/com/sun/javafx/scene/control/skin/caspian"/>
+      <mkdir dir="${basedir}/${build.dir}/classes/com/sun/javafx/scene/control/skin/modena"/>
 
       <!-- compile all .css files in the build dir to .bss files, for faster startup -->
+      <java classname="com.sun.javafx.css.parser.Css2Bin" fork="true" failonerror="true" classpathref="class-path-ref">
+        <jvmarg value="-Djavafx.toolkit=com.sun.javafx.tk.DummyToolkit"/>
+        <arg value="${basedir}/${src.dir}/com/sun/javafx/scene/control/skin/modena/modena.css"/>
+        <arg value="${basedir}/${build.dir}/classes/com/sun/javafx/scene/control/skin/modena/modena.bss"/>
+      </java>
       <java classname="com.sun.javafx.css.parser.Css2Bin" fork="true" failonerror="true" classpathref="class-path-ref">
         <jvmarg value="-Djavafx.toolkit=com.sun.javafx.tk.DummyToolkit"/>
         <arg value="${basedir}/${src.dir}/com/sun/javafx/scene/control/skin/caspian/caspian.css"/>
