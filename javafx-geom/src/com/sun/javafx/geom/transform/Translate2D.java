@@ -130,6 +130,35 @@ public class Translate2D extends BaseTransform {
     }
 
     @Override
+    public Vec3d deltaTransform(Vec3d src, Vec3d dst) {
+        if (dst == null) {
+            dst = new Vec3d();
+        }
+        dst.set(src);
+        return dst;
+    }
+
+    @Override
+    public Vec3d inverseTransform(Vec3d src, Vec3d dst) {
+        if (dst == null) {
+            dst = new Vec3d();
+        }
+        dst.x = src.x - mxt;
+        dst.y = src.y - myt;
+        dst.z = src.z;
+        return dst;
+    }
+
+    @Override
+    public Vec3d inverseDeltaTransform(Vec3d src, Vec3d dst) {
+        if (dst == null) {
+            dst = new Vec3d();
+        }
+        dst.set(src);
+        return dst;
+    }
+
+    @Override
     public void transform(float[] srcPts, int srcOff,
                           float[] dstPts, int dstOff,
                           int numPts)

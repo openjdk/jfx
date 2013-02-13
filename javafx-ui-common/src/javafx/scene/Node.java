@@ -4380,21 +4380,30 @@ public abstract class Node implements EventTarget {
             return;
         }
 
-        final BaseTransform tempPickTx = TempState.getInstance().pickTx;
+        final Vec3d o = pickRay.getOriginNoClone();
+        final double ox = o.x;
+        final double oy = o.y;
+        final double oz = o.z;
+        final Vec3d d = pickRay.getDirectionNoClone();
+        final double dx = d.x;
+        final double dy = d.y;
+        final double dz = d.z;
 
-        getLocalToParentTransform(tempPickTx);
+        updateLocalToParentTransform();
         try {
-            tempPickTx.invert();
+            localToParentTx.inverseTransform(o, o);
+            localToParentTx.inverseDeltaTransform(d, d);
         } catch (NoninvertibleTransformException e) {
             throw new RuntimeException(e);
         }
-        PickRay localPickRay = pickRay.copy();
-        localPickRay.transform(tempPickTx);
 
         // Delegate to a function which can be overridden by subclasses which
         // actually does the pick. The implementation is markedly different
         // for leaf nodes vs. parent nodes vs. region nodes.
-        impl_pickNodeLocal(localPickRay, result);
+        impl_pickNodeLocal(pickRay, result);
+
+        pickRay.setOrigin(ox, oy, oz);
+        pickRay.setDirection(dx, dy, dz);
     }
 
     /**
@@ -4472,68 +4481,115 @@ public abstract class Node implements EventTarget {
     protected final double impl_intersectsBounds(PickRay pickRay) {
 
         final Vec3d dir = pickRay.getDirectionNoClone();
-        final double invDirX = dir.x == 0 ? Double.POSITIVE_INFINITY : (1.0 / dir.x);
-        final double invDirY = dir.y == 0 ? Double.POSITIVE_INFINITY : (1.0 / dir.y);
-        final double invDirZ = dir.z == 0 ? Double.POSITIVE_INFINITY : (1.0 / dir.z);
-        final Vec3d origin = pickRay.getOriginNoClone();
-        final double originX = origin.x;
-        final double originY = origin.y;
-        final double originZ = origin.z;
-        final boolean signX = invDirX < 0.0;
-        final boolean signY = invDirY < 0.0;
-        final boolean signZ = invDirZ < 0.0;
+        if (dir.x == 0.0 && dir.y == 0.0) {
+            // fast path for the usual 2D picking
 
-        final TempState tempState = TempState.getInstance();
-        BaseBounds tempBounds = tempState.bounds;
+            if (dir.z == 0.0) {
+                return -1;
+            }
 
-        tempBounds = getLocalBounds(tempBounds,
-                                    BaseTransform.IDENTITY_TRANSFORM);
+            final Vec3d origin = pickRay.getOriginNoClone();
+            final double originX = origin.x;
+            final double originY = origin.y;
+            final double originZ = origin.z;
 
-        final double minX = tempBounds.getMinX();
-        final double minY = tempBounds.getMinY();
-        final double minZ = tempBounds.getMinZ();
-        final double maxX = tempBounds.getMaxX();
-        final double maxY = tempBounds.getMaxY();
-        final double maxZ = tempBounds.getMaxZ();
+            final TempState tempState = TempState.getInstance();
+            BaseBounds tempBounds = tempState.bounds;
 
-        double tmin = ((signX ? maxX : minX) - originX) * invDirX;
-        double tmax = ((signX ? minX : maxX) - originX) * invDirX;
-        final double tymin = ((signY ? maxY : minY) - originY) * invDirY;
-        final double tymax = ((signY ? minY : maxY) - originY) * invDirY;
+            tempBounds = getLocalBounds(tempBounds,
+                                        BaseTransform.IDENTITY_TRANSFORM);
 
-        if ((tmin > tymax) || (tymin > tmax)) {
-            return -1.0;
-        }
-        if (tymin > tmin) {
-            tmin = tymin;
-        }
-        if (tymax < tmax) {
-            tmax = tymax;
-        }
+            if (originX < tempBounds.getMinX() ||
+                    originX > tempBounds.getMaxX() ||
+                    originY < tempBounds.getMinY() ||
+                    originY > tempBounds.getMaxY()) {
+                return -1;
+            }
 
-        final double tzmin = ((signZ ? maxZ : minZ) - originZ) * invDirZ;
-        final double tzmax = ((signZ ? minZ : maxZ) - originZ) * invDirZ;
+            final double invDirZ = 1.0 / dir.z;
+            final boolean signZ = invDirZ < 0.0;
 
-        if ((tmin > tzmax) || (tzmin > tmax)) {
-            return -1;
-        }
-        if (tzmin > tmin) {
-            tmin = tzmin;
-        }
-        if (tzmax < tmax) {
-            tmax = tzmax;
-        }
+            final double minZ = tempBounds.getMinZ();
+            final double maxZ = tempBounds.getMaxZ();
+            final double tmin = ((signZ ? maxZ : minZ) - originZ) * invDirZ;
+            final double tmax = ((signZ ? minZ : maxZ) - originZ) * invDirZ;
 
-        if (tmin < 0.0) {
-            if (tmax >= 0.0) {
-                // we are inside bounds
-                return 0.0;
-            } else {
+            if (tmin < 0.0) {
+                if (tmax >= 0.0) {
+                    // we are inside bounds
+                    return 0.0;
+                } else {
+                    return -1.0;
+                }
+            }
+
+            return tmin;
+
+        } else {
+            
+            final double invDirX = dir.x == 0 ? Double.POSITIVE_INFINITY : (1.0 / dir.x);
+            final double invDirY = dir.y == 0 ? Double.POSITIVE_INFINITY : (1.0 / dir.y);
+            final double invDirZ = dir.z == 0 ? Double.POSITIVE_INFINITY : (1.0 / dir.z);
+            final Vec3d origin = pickRay.getOriginNoClone();
+            final double originX = origin.x;
+            final double originY = origin.y;
+            final double originZ = origin.z;
+            final boolean signX = invDirX < 0.0;
+            final boolean signY = invDirY < 0.0;
+            final boolean signZ = invDirZ < 0.0;
+
+            final TempState tempState = TempState.getInstance();
+            BaseBounds tempBounds = tempState.bounds;
+
+            tempBounds = getLocalBounds(tempBounds,
+                                        BaseTransform.IDENTITY_TRANSFORM);
+
+            final double minX = tempBounds.getMinX();
+            final double minY = tempBounds.getMinY();
+            final double maxX = tempBounds.getMaxX();
+            final double maxY = tempBounds.getMaxY();
+
+            double tmin = ((signX ? maxX : minX) - originX) * invDirX;
+            double tmax = ((signX ? minX : maxX) - originX) * invDirX;
+            final double tymin = ((signY ? maxY : minY) - originY) * invDirY;
+            final double tymax = ((signY ? minY : maxY) - originY) * invDirY;
+
+            if ((tmin > tymax) || (tymin > tmax)) {
                 return -1.0;
             }
-        }
+            if (tymin > tmin) {
+                tmin = tymin;
+            }
+            if (tymax < tmax) {
+                tmax = tymax;
+            }
 
-        return tmin;
+            final double minZ = tempBounds.getMinZ();
+            final double maxZ = tempBounds.getMaxZ();
+            final double tzmin = ((signZ ? maxZ : minZ) - originZ) * invDirZ;
+            final double tzmax = ((signZ ? minZ : maxZ) - originZ) * invDirZ;
+
+            if ((tmin > tzmax) || (tzmin > tmax)) {
+                return -1;
+            }
+            if (tzmin > tmin) {
+                tmin = tzmin;
+            }
+            if (tzmax < tmax) {
+                tmax = tzmax;
+            }
+
+            if (tmin < 0.0) {
+                if (tmax >= 0.0) {
+                    // we are inside bounds
+                    return 0.0;
+                } else {
+                    return -1.0;
+                }
+            }
+
+            return tmin;
+        }
     }
 
 

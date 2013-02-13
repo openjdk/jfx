@@ -87,6 +87,27 @@ public final class Identity extends BaseTransform {
         return dst;
     }
 
+    @Override
+    public Vec3d deltaTransform(Vec3d src, Vec3d dst) {
+        if (dst == null) return new Vec3d(src);
+        dst.set(src);
+        return dst;
+    }
+
+    @Override
+    public Vec3d inverseTransform(Vec3d src, Vec3d dst) {
+        if (dst == null) return new Vec3d(src);
+        dst.set(src);
+        return dst;
+    }
+
+    @Override
+    public Vec3d inverseDeltaTransform(Vec3d src, Vec3d dst) {
+        if (dst == null) return new Vec3d(src);
+        dst.set(src);
+        return dst;
+    }
+
     public void transform(float[] srcPts, int srcOff,
                           float[] dstPts, int dstOff,
                           int numPts)
