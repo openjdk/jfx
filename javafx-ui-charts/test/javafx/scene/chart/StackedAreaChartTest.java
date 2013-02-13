@@ -78,7 +78,7 @@ public class StackedAreaChartTest extends ChartTestBase {
         return sb;
     }
     
-    @Test @Ignore("pending RT-28373")
+    @Test 
     public void testSeriesAdd() {
         startApp();
         ac.getData().addAll(series1);

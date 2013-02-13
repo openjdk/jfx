@@ -80,7 +80,7 @@ public class StackedBarChartTest extends ChartTestBase {
          assertEquals(6, sbc.getPlotChildren().size());
     }
     
-    @Test @Ignore("pending RT-28373")
+    @Test
     public void testSeriesAdd() {
         startApp();
         sbc.getData().addAll(series1, series2, series3);

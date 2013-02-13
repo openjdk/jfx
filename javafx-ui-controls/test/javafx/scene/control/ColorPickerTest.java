@@ -130,7 +130,6 @@ public class ColorPickerTest {
         assertEquals(colorPicker, colorPicker.onActionProperty().getBean());
     }
     
-    @org.junit.Ignore("Pending RT-28358")
     @Test public void ensureCanSelectColorFromPalette() {
          final MouseEventGenerator generator = new MouseEventGenerator();
          ColorPickerSkin skin = (ColorPickerSkin)colorPicker.getSkin();

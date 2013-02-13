@@ -471,7 +471,7 @@ public class PlatformImpl {
      * Set the platform user agent stylesheet to the default.
      */
     public static void setDefaultPlatformUserAgentStylesheet() {
-        setPlatformUserAgentStylesheet(Application.STYLESHEET_MODENA);
+        setPlatformUserAgentStylesheet(Application.STYLESHEET_CASPIAN);
     }
 
     /**
