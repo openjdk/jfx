@@ -1692,7 +1692,7 @@ is being used to size a border should also be in pixels.
     -fx-background-color: -fx-box-border, -fx-inner-border, -fx-body-color;
     -fx-background-insets: 0, 1, 2;
     -fx-background-radius: 3 3 0 0, 2 2 0 0, 1 1 0 0;
-    -fx-padding: 0.417em 0.75em 0.5em 0.75em; /* 5 9 6 9 */
+    -fx-padding: 0.417em 0.75em 0.417em 0.75em; /* 5 9 5 9 */
 }
 /* alternative focus using the ring around the entire title area */
 /*.titled-pane:focused > .title {
