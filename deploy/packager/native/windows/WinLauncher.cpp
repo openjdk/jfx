@@ -464,9 +464,7 @@ bool startJVM(TCHAR* basedir, TCHAR* appFolder, TCHAR* jar, int argCount, LPTSTR
             jobjectArray args = env->NewObjectArray(argCount - startArgIndex, stringClass, NULL);
             for(int i=startArgIndex; i<argCount; i++) {
                 size_t inLen = (size_t) wcslen(szArgList[i]);
-                //convert argument to ASCII string as this is what CreateJVM needs
-                wcstombs_s(&outlen, argvalueASCII, sizeof(argvalueASCII), szArgList[i], inLen + 1);
-                env->SetObjectArrayElement(args, i-startArgIndex, env->NewStringUTF(argvalueASCII));
+                env->SetObjectArrayElement(args, i-startArgIndex, env->NewString((jchar*)szArgList[i], inLen));
             }
             env->CallStaticVoidMethod(cls, mid, args);
         } else {
