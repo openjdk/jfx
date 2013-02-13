@@ -28,6 +28,7 @@ import javafx.scene.NodeTest;
 import static org.junit.Assert.assertEquals;
 
 import org.junit.Test;
+import static org.junit.Assert.*;
 
 public class CubicCurveTest {
 
@@ -136,5 +137,11 @@ public class CubicCurveTest {
     @Test public void testBoundPropertySync_endY() throws Exception {
         NodeTest.assertDoublePropertySynced(new CubicCurve(),
                 "endY", "y2", 300.0);
+    }
+
+    @Test public void toStringShouldReturnNonEmptyString() {
+        String s = new CubicCurve().toString();
+        assertNotNull(s);
+        assertFalse(s.isEmpty());
     }
 }

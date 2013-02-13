@@ -1829,4 +1829,54 @@ public class Text extends Shape {
         }
     }
 
+    /**
+     * Returns a string representation of this {@code Text} object.
+     * @return a string representation of this {@code Text} object.
+     */
+    @Override
+    public String toString() {
+        final StringBuilder sb = new StringBuilder("Text[");
+
+        String id = getId();
+        if (id != null) {
+            sb.append("id=").append(id).append(", ");
+        }
+
+        sb.append("text=\"").append(getText()).append("\"");
+        sb.append(", x=").append(getX());
+        sb.append(", y=").append(getY());
+        sb.append(", alignment=").append(getTextAlignment());
+        sb.append(", origin=").append(getTextOrigin());
+        sb.append(", boundsType=").append(getBoundsType());
+
+        double spacing = getLineSpacing();
+        if (spacing != DEFAULT_LINE_SPACING) {
+            sb.append(", lineSpacing=").append(spacing);
+        }
+
+        double wrap = getWrappingWidth();
+        if (wrap != 0) {
+            sb.append(", wrappingWidth=").append(wrap);
+        }
+
+        sb.append(", font=").append(getFont());
+        sb.append(", fontSmoothingType=").append(getFontSmoothingType());
+
+        if (isStrikethrough()) {
+            sb.append(", strikethrough");
+        }
+        if (isUnderline()) {
+            sb.append(", underline");
+        }
+
+        sb.append(", fill=").append(getFill());
+
+        Paint stroke = getStroke();
+        if (stroke != null) {
+            sb.append(", stroke=").append(stroke);
+            sb.append(", strokeWidth=").append(getStrokeWidth());
+        }
+
+        return sb.append("]").toString();
+    }
 }

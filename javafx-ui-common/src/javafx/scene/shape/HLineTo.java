@@ -122,5 +122,16 @@ public class HLineTo extends PathElement {
             path.lineTo((float)(path.getCurrentX() + getX()), path.getCurrentY());
         }
     }
+
+    /**
+     * Returns a string representation of this {@code HLineTo} object.
+     * @return a string representation of this {@code HLineTo} object.
+     */
+    @Override
+    public String toString() {
+        final StringBuilder sb = new StringBuilder("HLineTo[");
+        sb.append("x=").append(getX());
+        return sb.append("]").toString();
+    }
 }
 

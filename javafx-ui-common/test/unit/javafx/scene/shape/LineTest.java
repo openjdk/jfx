@@ -27,6 +27,7 @@ package javafx.scene.shape;
 import javafx.scene.NodeTest;
 
 import org.junit.Test;
+import static org.junit.Assert.*;
 
 public class LineTest {
 
@@ -82,5 +83,11 @@ public class LineTest {
         NodeTest.assertDoublePropertySynced(
                 new Line(0.0 ,0.0, 100.0, 100.0),
                 "endY", "y2", 300.0);
+    }
+
+    @Test public void toStringShouldReturnNonEmptyString() {
+        String s = new Line().toString();
+        assertNotNull(s);
+        assertFalse(s.isEmpty());
     }
 }

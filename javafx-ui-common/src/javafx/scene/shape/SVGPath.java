@@ -35,6 +35,7 @@ import com.sun.javafx.scene.DirtyBits;
 import com.sun.javafx.sg.PGNode;
 import com.sun.javafx.sg.PGSVGPath;
 import com.sun.javafx.tk.Toolkit;
+import javafx.scene.paint.Paint;
 
 /**
  * The {@code SVGPath} class represents a simple shape that is constructed by
@@ -205,7 +206,25 @@ public  class SVGPath extends Shape {
      */
     @Override
     public String toString() {
-        return "SVGPath[" + getContent() + "]";
+        final StringBuilder sb = new StringBuilder("SVGPath[");
+
+        String id = getId();
+        if (id != null) {
+            sb.append("id=").append(id).append(", ");
+        }
+
+        sb.append("content=\"").append(getContent()).append("\"");
+
+        sb.append(", fill=").append(getFill());
+        sb.append(", fillRule=").append(getFillRule());
+
+        Paint stroke = getStroke();
+        if (stroke != null) {
+            sb.append(", stroke=").append(stroke);
+            sb.append(", strokeWidth=").append(getStrokeWidth());
+        }
+
+        return sb.append("]").toString();
     }
 
     private Path2D createSVGPath2D() {

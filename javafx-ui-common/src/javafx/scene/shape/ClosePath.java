@@ -52,4 +52,13 @@ public class ClosePath extends PathElement {
     @Override public void impl_addTo(Path2D path) {
         path.closePath();
     }
+
+    /**
+     * Returns a string representation of this {@code ArcTo} object.
+     * @return a string representation of this {@code ArcTo} object.
+     */
+    @Override
+    public String toString() {
+        return "ClosePath";
+    }
 }

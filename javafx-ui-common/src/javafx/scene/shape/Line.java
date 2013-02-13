@@ -441,5 +441,31 @@ public class Line extends Shape {
         return Color.BLACK;
     }    
     
+    /**
+     * Returns a string representation of this {@code Line} object.
+     * @return a string representation of this {@code Line} object.
+     */
+    @Override
+    public String toString() {
+        final StringBuilder sb = new StringBuilder("Line[");
+
+        String id = getId();
+        if (id != null) {
+            sb.append("id=").append(id).append(", ");
+        }
+
+        sb.append("startX=").append(getStartX());
+        sb.append(", startY=").append(getStartY());
+        sb.append(", endX=").append(getEndX());
+        sb.append(", endY=").append(getEndY());
+
+        Paint stroke = getStroke();
+        if (stroke != null) {
+            sb.append(", stroke=").append(stroke);
+            sb.append(", strokeWidth=").append(getStrokeWidth());
+        }
+
+        return sb.append("]").toString();
+    }
 }
 

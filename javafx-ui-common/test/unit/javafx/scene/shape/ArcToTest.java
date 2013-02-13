@@ -36,6 +36,7 @@ import javafx.scene.NodeTest;
 import javafx.scene.Scene;
 
 import org.junit.Test;
+import static org.junit.Assert.*;
 
 import com.sun.javafx.geom.Path2D;
 import com.sun.javafx.geom.PathIterator;
@@ -81,6 +82,12 @@ public class ArcToTest {
 
     @Test public void testDoublePropertySynced_Y() throws Exception {
         checkSyncedProperty("y", Coords.Y, 200.0);
+    }
+
+    @Test public void toStringShouldReturnNonEmptyString() {
+        String s = new ArcTo().toString();
+        assertNotNull(s);
+        assertFalse(s.isEmpty());
     }
 
     private void checkSyncedProperty(String propertyName, Coords coord, double expected)

@@ -26,6 +26,8 @@
 package javafx.scene.shape;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.scene.Group;
@@ -71,5 +73,11 @@ public class HLineToTest {
         int segType = it.currentSegment(coords);
         assertEquals(segType, PathIterator.SEG_LINETO);
         assertEquals(expected, coords[0], 0.001);
+    }
+
+    @Test public void toStringShouldReturnNonEmptyString() {
+        String s = new HLineTo().toString();
+        assertNotNull(s);
+        assertFalse(s.isEmpty());
     }
 }

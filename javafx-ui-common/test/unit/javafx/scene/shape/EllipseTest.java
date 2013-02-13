@@ -93,4 +93,10 @@ public class EllipseTest {
         assertSimilar(TestHelper.box(30, 90,
                 original.getHeight(), original.getWidth()), e.getBoundsInParent());
     }
+
+    @Test public void toStringShouldReturnNonEmptyString() {
+        String s = new Ellipse().toString();
+        assertNotNull(s);
+        assertFalse(s.isEmpty());
+    }
 }

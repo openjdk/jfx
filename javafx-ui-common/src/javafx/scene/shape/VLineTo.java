@@ -122,4 +122,15 @@ public  class VLineTo extends PathElement {
             path.lineTo(path.getCurrentX(), (float)(path.getCurrentY() + getY()));
         }
     }
+
+    /**
+     * Returns a string representation of this {@code VLineTo} object.
+     * @return a string representation of this {@code VLineTo} object.
+     */
+    @Override
+    public String toString() {
+        final StringBuilder sb = new StringBuilder("VLineTo[");
+        sb.append("y=").append(getY());
+        return sb.append("]").toString();
+    }
 }

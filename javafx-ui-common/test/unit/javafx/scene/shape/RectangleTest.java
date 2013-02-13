@@ -145,4 +145,10 @@ public class RectangleTest {
         assertSimilar(TestHelper.box(45, 105,
                 original.getHeight(), original.getWidth()), r.getBoundsInParent());
     }
+
+    @Test public void toStringShouldReturnNonEmptyString() {
+        String s = new Rectangle().toString();
+        assertNotNull(s);
+        assertFalse(s.isEmpty());
+    }
 }

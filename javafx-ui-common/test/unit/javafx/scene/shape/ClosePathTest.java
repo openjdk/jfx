@@ -25,7 +25,9 @@
 
 package javafx.scene.shape;
 
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertNotNull;
 
 import org.junit.Test;
 
@@ -41,7 +43,13 @@ public class ClosePathTest {
         assertTrue(pgPath.isClosed());
                 
     }
-    
+
+    @Test public void toStringShouldReturnNonEmptyString() {
+        String s = new ClosePath().toString();
+        assertNotNull(s);
+        assertFalse(s.isEmpty());
+    }
+
     private class StubPathImpl extends StubPath {
 
         boolean closed = false;

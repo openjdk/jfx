@@ -219,4 +219,29 @@ public  class Polyline extends Shape {
         return Color.BLACK;
     }    
     
+    /**
+     * Returns a string representation of this {@code Polyline} object.
+     * @return a string representation of this {@code Polyline} object.
+     */
+    @Override
+    public String toString() {
+        final StringBuilder sb = new StringBuilder("Polyline[");
+
+        String id = getId();
+        if (id != null) {
+            sb.append("id=").append(id).append(", ");
+        }
+
+        sb.append("points=").append(getPoints());
+
+        sb.append(", fill=").append(getFill());
+
+        Paint stroke = getStroke();
+        if (stroke != null) {
+            sb.append(", stroke=").append(stroke);
+            sb.append(", strokeWidth=").append(getStrokeWidth());
+        }
+
+        return sb.append("]").toString();
+    }
 }

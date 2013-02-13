@@ -35,6 +35,7 @@ import com.sun.javafx.geom.Path2D;
 import com.sun.javafx.geom.PathIterator;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.sg.PGPath;
+import javafx.scene.paint.Paint;
 
 // PENDING_DOC_REVIEW
 /**
@@ -541,5 +542,30 @@ public class ArcTo extends PathElement {
             pgPath.addArcTo(arcX, arcY, arcW, arcH,
                             arcStart, arcExtent, (float) xAxisRotationR);
         }
+    }
+
+    /**
+     * Returns a string representation of this {@code ArcTo} object.
+     * @return a string representation of this {@code ArcTo} object.
+     */
+    @Override
+    public String toString() {
+        final StringBuilder sb = new StringBuilder("ArcTo[");
+
+        sb.append("x=").append(getX());
+        sb.append(", y=").append(getY());
+        sb.append(", radiusX=").append(getRadiusX());
+        sb.append(", radiusY=").append(getRadiusY());
+        sb.append(", xAxisRotation=").append(getXAxisRotation());
+
+        if (isLargeArcFlag()) {
+            sb.append(", lartArcFlag");
+        }
+
+        if (isSweepFlag()) {
+            sb.append(", sweepFlag");
+        }
+
+        return sb.append("]").toString();
     }
 }
