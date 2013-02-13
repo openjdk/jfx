@@ -61,6 +61,7 @@
 	<classpathentry kind="src" path="decora-runtime/generator"/>
 	<classpathentry kind="src" path="decora-runtime/test"/>
 	<classpathentry kind="src" path="decora-sse/src"/>
+	<classpathentry kind="src" path="decora-sse/build/gensrc"/>
 	<classpathentry kind="src" path="pisces/src"/>
 	<classpathentry kind="src" path="test-stub-toolkit/src"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
@@ -69,6 +70,5 @@
 	<classpathentry kind="lib" path="../import/findbugs-2.0.1/findbugs-2.0.1/lib/ant.jar"/>
 	<classpathentry kind="lib" path="../import/swt-3.7.1/swt-debug.jar"/>
 	<classpathentry kind="src" path="/rt-closed"/>
-	<classpathentry kind="src" path="/media"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
