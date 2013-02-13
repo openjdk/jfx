@@ -20,6 +20,11 @@
         </Label>
         <HBox maxHeight="-Infinity" prefHeight="-1.0" prefWidth="-1.0" spacing="3.0" style="">
           <children>
+            <TitledPane animated="false" expanded="false" prefWidth="80.0" text="TitledPane">
+              <content>
+                <AnchorPane id="Content" minHeight="0.0" minWidth="0.0" prefHeight="40.0" prefWidth="80.0" />
+              </content>
+            </TitledPane>
             <Button mnemonicParsing="false" text="Button" />
             <ToggleButton mnemonicParsing="false" prefWidth="90.0" selected="true" text="Toggle">
               <toggleGroup>
@@ -75,6 +80,11 @@
         </HBox>
         <HBox maxHeight="-Infinity" prefHeight="-1.0" prefWidth="-1.0" spacing="3.0" style="-fx-border-color: #f09f9b transparent #f09f9b transparent;" VBox.margin="$x1">
           <children>
+            <TitledPane animated="false" expanded="false" prefWidth="80.0" text="TitledPane">
+              <content>
+                <AnchorPane id="Content" minHeight="0.0" minWidth="0.0" prefHeight="40.0" prefWidth="80.0" />
+              </content>
+            </TitledPane>
             <Button mnemonicParsing="false" text="Button" />
             <ToggleButton mnemonicParsing="false" prefWidth="90.0" selected="true" text="Toggle">
               <toggleGroup>
