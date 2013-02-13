@@ -951,6 +951,11 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
         return null;
     }
 
+    /**
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     */
+    @Deprecated    
    // SB-dependency: RT-21094 has been filed to track this
    public Node impl_styleableGetNode() {
         return bridge;

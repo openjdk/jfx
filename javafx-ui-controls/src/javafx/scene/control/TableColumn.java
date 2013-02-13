@@ -604,6 +604,11 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
         return Collections.emptyList();
     }                
    
+    /**
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     */
+    @Deprecated    
     // SB-dependency: RT-21094 has been filed to track this   
    public Node impl_styleableGetNode() {
         if (! (getTableView().getSkin() instanceof TableViewSkin)) return null;

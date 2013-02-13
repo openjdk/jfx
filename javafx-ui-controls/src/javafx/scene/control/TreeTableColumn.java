@@ -593,6 +593,11 @@ public class TreeTableColumn<S,T> extends TableColumnBase<TreeItem<S>,T> impleme
         return Collections.emptyList();
     }                
 
+    /**
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     */
+    @Deprecated    
     // TODO implement
     // SB-dependency: RT-21094 has been filed to track this
     public Node impl_styleableGetNode() {
