@@ -24,7 +24,6 @@
     <import file="../build-defs.xml"/>
     <import file="build-common.xml"/>
 
-    <target name="test" depends="javafx-ui-common-common.test"/>
     <target name="-pre-coverage" depends="javafx-ui-common-common.-pre-coverage"/>
 
 </project>
