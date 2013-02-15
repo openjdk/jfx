@@ -625,31 +625,32 @@ is being used to size a border should also be in pixels.
 .button.left-pill,
 .toggle-button.left-pill {
     -fx-background-radius: 3 0 0 3, 3 0 0 3, 2 0 0 2, 1 0 0 1;
-    -fx-background-insets: 0 0 -1 0, 0, 1 0 1 1, 2 1 2 2;
+    -fx-background-insets: 0 0 -1 0, 0, 1, 2;
 }
 .button.center-pill,
 .toggle-button.center-pill {
     -fx-background-radius: 0;
-    -fx-background-insets: 0 0 -1 0, 0, 1 0 1 1, 2 1 2 2;
+    -fx-background-insets: 0 0 -1 0, 0 0 0 0, 1 1 1 0, 2 2 2 1 ;
 }
 .button.right-pill,
 .toggle-button.right-pill {
     -fx-background-radius: 0 3 3 0, 0 3 3 0, 0 2 2 0, 0 1 1 0;
+    -fx-background-insets: 0 0 -1 0, 0, 1 1 1 0, 2 2 2 1 ;
 }
 .button.left-pill:focused,
 .toggle-button.left-pill:focused {
-    -fx-background-radius: 5 0 0 5, 4 0 0 4, 2 0 0 2, 1 0 0 1;
-    -fx-background-insets: -2 0 -2 -2, -0.3 0 -0.3 -0.3, 1, 2;
+    -fx-background-radius: 4 0 0 4, 3 0 0 3, 2 0 0 2, 1 0 0 1;
+    -fx-background-insets: -0.2 0 -0.2 1, 1 1 1 2, 2 2 2 3, 3 3 3 4;
 }
 .button.center-pill:focused,
 .toggle-button.center-pill:focused {
     -fx-background-radius: 0;
-    -fx-background-insets: -2 0 -1 0, -0.3 0 -0.3 0, 1, 2;
+    -fx-background-insets: -0.2 0 -0.2 -1, 1 1 1 0, 2 2 2 1, 3 3 3 2;
 }
 .button.right-pill:focused,
 .toggle-button.right-pill:focused {
     -fx-background-radius: 0 5 5 0, 0 4 4 0, 0 2 2 0, 0 1 1 0;
-    -fx-background-insets: -2 -2 -2 0, -0.3 -0.3 -0.3 0, 1, 2;
+    -fx-background-insets: -0.2 -0.2 -0.2 -1, 1 1 1 0, 2 2 2 1, 3 3 3 2;
 }
 
 /* ====   SELECTED TOGGLE   ================================================= */
@@ -1221,6 +1222,14 @@ is being used to size a border should also be in pixels.
     -fx-background-color: 
         linear-gradient(from 0px 0px to 0px 4px, derive(-fx-control-inner-background, -8%), -fx-control-inner-background);
     -fx-background-radius: 2;
+}
+.text-area:focused .content {
+    -fx-background-color: 
+        -fx-control-inner-background,
+        -fx-faint-focus-color,
+        linear-gradient(from 0px 0px to 0px 5px, derive(-fx-control-inner-background, -9%), -fx-control-inner-background);
+    -fx-background-insets: 0, 1, 2;
+    -fx-background-radius: 2, 1, 0;
 }
 
 /*******************************************************************************
