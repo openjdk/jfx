@@ -29,6 +29,8 @@
 
 package com.sun.javafx.scene.control.skin;
 
+import java.security.AccessController;
+import java.security.PrivilegedAction;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -580,7 +582,14 @@ public class ContextMenuContent extends Region {
                 // of its content, then do nothing similar to the submenu case.
                 // walk thru all windows open to see if if this context menu is
                 // the owner window for another context menu, if so return.
-                Iterator<Window> iter = Window.impl_getWindows(); 
+                final Iterator<Window> iter =
+                        AccessController.doPrivileged(
+                                new PrivilegedAction<Iterator<Window>>() {
+                                    @Override
+                                    public Iterator<Window> run() {
+                                        return Window.impl_getWindows();
+                                    }
+                                });
                 while(iter.hasNext()) {
                     Window w = iter.next();
                     if (w instanceof ContextMenu && !(contextMenu == w)) {

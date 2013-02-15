@@ -970,7 +970,14 @@ final public class StyleManager {
 
         clearCache();
         
-        final Iterator<Window> windows = Window.impl_getWindows();
+        final Iterator<Window> windows =
+                AccessController.doPrivileged(
+                        new PrivilegedAction<Iterator<Window>>() {
+                            @Override
+                            public Iterator<Window> run() {
+                                return Window.impl_getWindows();
+                            }
+                        });
         while (windows.hasNext()) {
             final Window window = windows.next();
             final Scene scene = window.getScene();
