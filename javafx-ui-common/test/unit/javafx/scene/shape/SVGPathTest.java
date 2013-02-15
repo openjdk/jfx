@@ -31,6 +31,7 @@ import javafx.beans.property.StringProperty;
 import javafx.scene.NodeTest;
 
 import org.junit.Test;
+import static org.junit.Assert.*;
 
 import com.sun.javafx.geom.Path2D;
 import com.sun.javafx.pgstub.StubSVGPath;
@@ -77,5 +78,11 @@ public class SVGPathTest {
         // internal shape might have changed, getting it again
         geometry = (Path2D)((StubSVGPath)svgPath.impl_getPGSVGPath()).getGeometry();
         assertEquals(Path2D.WIND_NON_ZERO, geometry.getWindingRule());
+    }
+
+    @Test public void toStringShouldReturnNonEmptyString() {
+        String s = new SVGPath().toString();
+        assertNotNull(s);
+        assertFalse(s.isEmpty());
     }
 }

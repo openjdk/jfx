@@ -25,6 +25,8 @@
 package javafx.scene.text;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import javafx.geometry.VPos;
 import javafx.scene.NodeTest;
 
@@ -215,4 +217,9 @@ public class TextTest {
 //                 "textAlignment", "textAlignment", TextAlignment.RIGHT);
 //     }
 
+    @Test public void toStringShouldReturnNonEmptyString() {
+        String s = new Text().toString();
+        assertNotNull(s);
+        assertFalse(s.isEmpty());
+    }
 }

@@ -764,6 +764,66 @@ public abstract class AffineBase extends BaseTransform {
         /* NOTREACHED */
     }
 
+    /**
+     * Transforms the specified <code>src</code> vector and stores the result
+     * in <code>dst</code> vector, without applying the translation elements.
+     * If <code>dst</code> is <code>null</code>, a new {@link Vec3d}
+     * object is allocated and then the result of the transformation is
+     * stored in this object.
+     * In either case, <code>dst</code>, which contains the
+     * transformed vector, is returned for convenience.
+     * If <code>src</code> and <code>dst</code> are the same
+     * object, the input vector is correctly overwritten with
+     * the transformed vector.
+     * @param src the specified <code>Vec3d</code> to be transformed
+     * @param dst the specified <code>Vec3d</code> that stores the
+     * result of transforming <code>src</code>
+     * @return the <code>dst</code> vector after transforming
+     * <code>src</code> and storing the result in <code>dst</code>.
+     * @since 8.0
+     */
+    public Vec3d deltaTransform(Vec3d src, Vec3d dst) {
+        if (dst == null) {
+            dst = new Vec3d();
+        }
+        // Copy source coords into local variables in case src == dst
+        double x = src.x;
+        double y = src.y;
+        double z = src.z;
+        // assert(APPLY_3D was dealt with at a higher level)
+        switch (state) {
+        default:
+            stateError();
+            /* NOTREACHED */
+        case (APPLY_SHEAR | APPLY_SCALE | APPLY_TRANSLATE):
+        case (APPLY_SHEAR | APPLY_SCALE):
+            dst.x = x * mxx + y * mxy ;
+            dst.y = x * myx + y * myy;
+            dst.z = z;
+            return dst;
+        case (APPLY_SHEAR | APPLY_TRANSLATE):
+        case (APPLY_SHEAR):
+            dst.x = y * mxy;
+            dst.y = x * myx;
+            dst.z = z;
+            return dst;
+        case (APPLY_SCALE | APPLY_TRANSLATE):
+        case (APPLY_SCALE):
+            dst.x = x * mxx;
+            dst.y = y * myy;
+            dst.z = z;
+            return dst;
+        case (APPLY_TRANSLATE):
+        case (APPLY_IDENTITY):
+            dst.x = x;
+            dst.y = y;
+            dst.z = z;
+            return dst;
+        }
+
+        /* NOTREACHED */
+    }
+
     private BaseBounds transform2DBounds(RectBounds src, RectBounds dst) {
         switch (state & APPLY_2D_MASK) {
         default:
@@ -1571,6 +1631,7 @@ public abstract class AffineBase extends BaseTransform {
      * @exception NoninvertibleTransformException  if the matrix cannot be
      *                                         inverted.
      */
+    @Override
     public Vec3d inverseTransform(Vec3d src, Vec3d dst)
         throws NoninvertibleTransformException
     {
@@ -1621,6 +1682,74 @@ public abstract class AffineBase extends BaseTransform {
         case (APPLY_TRANSLATE):
             dst.set((x - mxt), (y - myt), z);
             return dst;
+        case (APPLY_IDENTITY):
+            dst.set(x, y, z);
+            return dst;
+        }
+
+        /* NOTREACHED */
+    }
+
+    /**
+     * Inverse transforms the specified <code>src</code> vector and stores the
+     * result in <code>dst</code> vector (without applying the translation
+     * elements).
+     * If <code>dst</code> is <code>null</code>, a new
+     * <code>Vec3d</code> object is allocated and then the result of the
+     * transform is stored in this object.
+     * In either case, <code>dst</code>, which contains the transformed
+     * vector, is returned for convenience.
+     * If <code>src</code> and <code>dst</code> are the same
+     * object, the input vector is correctly overwritten with the
+     * transformed vector.
+     * @param src the vector to be inverse transformed
+     * @param dst the resulting transformed vector
+     * @return <code>dst</code>, which contains the result of the
+     * inverse transform.
+     * @exception NoninvertibleTransformException  if the matrix cannot be
+     *                                         inverted.
+     * @since 8.0
+     */
+    @Override
+    public Vec3d inverseDeltaTransform(Vec3d src, Vec3d dst)
+        throws NoninvertibleTransformException
+    {
+        if (dst == null) {
+            dst = new Vec3d();
+        }
+        // Copy source coords into local variables in case src == dst
+        double x = src.x;
+        double y = src.y;
+        double z = src.z;
+        // assert(APPLY_3D was dealt with at a higher level)
+        switch (state) {
+        default:
+            stateError();
+            /* NOTREACHED */
+        case (APPLY_SHEAR | APPLY_SCALE | APPLY_TRANSLATE):
+        case (APPLY_SHEAR | APPLY_SCALE):
+            double det = mxx * myy - mxy * myx;
+            if (det == 0 || Math.abs(det) <= Double.MIN_VALUE) {
+                throw new NoninvertibleTransformException("Determinant is "+
+                                                          det);
+            }
+            dst.set(((x * myy - y * mxy) / det), ((y * mxx - x * myx) / det), z);
+            return dst;
+        case (APPLY_SHEAR | APPLY_TRANSLATE):
+        case (APPLY_SHEAR):
+            if (mxy == 0.0 || myx == 0.0) {
+                throw new NoninvertibleTransformException("Determinant is 0");
+            }
+            dst.set((y / myx), (x / mxy), z);
+            return dst;
+        case (APPLY_SCALE | APPLY_TRANSLATE):
+        case (APPLY_SCALE):
+            if (mxx == 0.0 || myy == 0.0) {
+                throw new NoninvertibleTransformException("Determinant is 0");
+            }
+            dst.set((x / mxx), (y / myy), z);
+            return dst;
+        case (APPLY_TRANSLATE):
         case (APPLY_IDENTITY):
             dst.set(x, y, z);
             return dst;

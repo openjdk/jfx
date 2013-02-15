@@ -57,7 +57,7 @@ public class PPSDrawable extends PrDrawable {
     }
 
     public boolean isLost() {
-        return rtt == null || rtt.getNativeDestHandle() == 0L;
+        return rtt == null || rtt.isSurfaceLost();
     }
 
     public void flush() {

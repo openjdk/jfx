@@ -34,6 +34,7 @@ import com.sun.javafx.scene.DirtyBits;
 import com.sun.javafx.sg.PGNode;
 import com.sun.javafx.sg.PGQuadCurve;
 import com.sun.javafx.tk.Toolkit;
+import javafx.scene.paint.Paint;
 
 
 /**
@@ -375,6 +376,37 @@ public  class QuadCurve extends Shape {
                 (float)getControlX(),
                 (float)getControlY());
         }
+    }
+
+    /**
+     * Returns a string representation of this {@code QuadCurve} object.
+     * @return a string representation of this {@code QuadCurve} object.
+     */
+    @Override
+    public String toString() {
+        final StringBuilder sb = new StringBuilder("QuadCurve[");
+
+        String id = getId();
+        if (id != null) {
+            sb.append("id=").append(id).append(", ");
+        }
+
+        sb.append("startX=").append(getStartX());
+        sb.append(", startY=").append(getStartY());
+        sb.append(", controlX=").append(getControlX());
+        sb.append(", controlY=").append(getControlY());
+        sb.append(", endX=").append(getEndX());
+        sb.append(", endY=").append(getEndY());
+
+        sb.append(", fill=").append(getFill());
+
+        Paint stroke = getStroke();
+        if (stroke != null) {
+            sb.append(", stroke=").append(stroke);
+            sb.append(", strokeWidth=").append(getStrokeWidth());
+        }
+
+        return sb.append("]").toString();
     }
 }
 

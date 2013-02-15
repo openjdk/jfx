@@ -171,5 +171,17 @@ public class MoveTo extends PathElement {
                         (float)(path.getCurrentY() + getY()));
         }
     }
+
+    /**
+     * Returns a string representation of this {@code MoveTo} object.
+     * @return a string representation of this {@code MoveTo} object.
+     */
+    @Override
+    public String toString() {
+        final StringBuilder sb = new StringBuilder("MoveTo[");
+        sb.append("x=").append(getX());
+        sb.append(", y=").append(getY());
+        return sb.append("]").toString();
+    }
 }
 

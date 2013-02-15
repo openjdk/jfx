@@ -26,6 +26,7 @@
 package com.sun.javafx.geom;
 
 import com.sun.javafx.geom.transform.BaseTransform;
+import com.sun.javafx.geom.transform.NoninvertibleTransformException;
 
 /**
  * A ray used for picking.
@@ -62,6 +63,17 @@ public class PickRay {
         this.origin.set(origin);
     }
 
+    /**
+     * Sets the origin of the pick ray in world coordinates.
+     *
+     * @param x the origin X coordinate
+     * @param y the origin Y coordinate
+     * @param z the origin Z coordinate
+     */
+    public void setOrigin(double x, double y, double z) {
+        this.origin.set(x, y, z);
+    }
+
     public Vec3d getOrigin(Vec3d rv) {
         if (rv == null) {
             rv = new Vec3d();
@@ -82,6 +94,17 @@ public class PickRay {
      */
     public void setDirection(Vec3d direction) {
         this.direction.set(direction);
+    }
+
+    /**
+     * Sets the direction of the pick ray. The vector need not be normalized.
+     *
+     * @param x the direction X magnitude
+     * @param y the direction Y magnitude
+     * @param z the direction Z magnitude
+     */
+    public void setDirection(double x, double y, double z) {
+        this.direction.set(x, y, z);
     }
 
     public Vec3d getDirection(Vec3d rv) {
@@ -443,13 +466,15 @@ public class PickRay {
 
     }
 
-    private final Vec3d endPt = new Vec3d();
-
     public void transform(BaseTransform t) {
-        endPt.add(origin, direction);
         t.transform(origin, origin);
-        t.transform(endPt, endPt);
-        direction.sub(endPt, origin);
+        t.deltaTransform(direction, direction);
+    }
+
+    public void inverseTransform(BaseTransform t) 
+            throws NoninvertibleTransformException {
+        t.inverseTransform(origin, origin);
+        t.inverseDeltaTransform(direction, direction);
     }
 
     public PickRay project(BaseTransform inversetx,

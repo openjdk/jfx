@@ -281,5 +281,21 @@ public  class QuadCurveTo extends PathElement {
                     (float)(getY()+dy));
         }
     }
+
+    /**
+     * Returns a string representation of this {@code CubicCurveTo} object.
+     * @return a string representation of this {@code CubicCurveTo} object.
+     */
+    @Override
+    public String toString() {
+        final StringBuilder sb = new StringBuilder("CubicCurveTo[");
+
+        sb.append("x=").append(getX());
+        sb.append(", y=").append(getY());
+        sb.append(", controlX=").append(getControlX());
+        sb.append(", controlY=").append(getControlY());
+
+        return sb.append("]").toString();
+    }
 }
 

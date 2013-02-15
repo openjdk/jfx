@@ -374,5 +374,23 @@ public class CubicCurveTo extends PathElement {
                          (float)(getX()+dx), (float)(getY()+dy));
         }
     }
+
+    /**
+     * Returns a string representation of this {@code CubicCurveTo} object.
+     * @return a string representation of this {@code CubicCurveTo} object.
+     */
+    @Override
+    public String toString() {
+        final StringBuilder sb = new StringBuilder("CubicCurveTo[");
+
+        sb.append("x=").append(getX());
+        sb.append(", y=").append(getY());
+        sb.append(", controlX1=").append(getControlX1());
+        sb.append(", controlY1=").append(getControlY1());
+        sb.append(", controlX2=").append(getControlX2());
+        sb.append(", controlY2=").append(getControlY2());
+
+        return sb.append("]").toString();
+    }
 }
 

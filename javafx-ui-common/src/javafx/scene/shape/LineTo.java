@@ -173,5 +173,17 @@ public class LineTo extends PathElement {
                         (float)(path.getCurrentY() + getY()));
         }
     }
+
+    /**
+     * Returns a string representation of this {@code LineTo} object.
+     * @return a string representation of this {@code LineTo} object.
+     */
+    @Override
+    public String toString() {
+        final StringBuilder sb = new StringBuilder("LineTo[");
+        sb.append("x=").append(getX());
+        sb.append(", y=").append(getY());
+        return sb.append("]").toString();
+    }
 }
 

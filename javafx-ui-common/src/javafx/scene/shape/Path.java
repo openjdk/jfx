@@ -364,5 +364,31 @@ public class Path extends Shape {
     protected Paint impl_cssGetStrokeInitialValue() {
         return Color.BLACK;
     }    
-    
+
+    /**
+     * Returns a string representation of this {@code Path} object.
+     * @return a string representation of this {@code Path} object.
+     */
+    @Override
+    public String toString() {
+        final StringBuilder sb = new StringBuilder("Path[");
+
+        String id = getId();
+        if (id != null) {
+            sb.append("id=").append(id).append(", ");
+        }
+
+        sb.append("elements=").append(getElements());
+
+        sb.append(", fill=").append(getFill());
+        sb.append(", fillRule=").append(getFillRule());
+
+        Paint stroke = getStroke();
+        if (stroke != null) {
+            sb.append(", stroke=").append(stroke);
+            sb.append(", strokeWidth=").append(getStrokeWidth());
+        }
+
+        return sb.append("]").toString();
+    }
 }

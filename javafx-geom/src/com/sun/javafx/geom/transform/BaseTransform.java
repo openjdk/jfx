@@ -366,6 +366,11 @@ public abstract class BaseTransform implements CanTransformVec3d{
     public abstract Point2D inverseTransform(Point2D src, Point2D dst)
         throws NoninvertibleTransformException;
     public abstract Vec3d transform(Vec3d src, Vec3d dst);
+    public abstract Vec3d deltaTransform(Vec3d src, Vec3d dst);
+    public abstract Vec3d inverseTransform(Vec3d src, Vec3d dst)
+        throws NoninvertibleTransformException;
+    public abstract Vec3d inverseDeltaTransform(Vec3d src, Vec3d dst)
+        throws NoninvertibleTransformException;
 
     public abstract void transform(float[] srcPts, int srcOff,
                                    float[] dstPts, int dstOff,

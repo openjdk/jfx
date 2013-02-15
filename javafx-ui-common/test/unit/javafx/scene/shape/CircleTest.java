@@ -131,4 +131,9 @@ public class CircleTest {
                 2 * original.getWidth(), 1.5 * original.getHeight()), c.getBoundsInParent());
     }
 
+    @Test public void toStringShouldReturnNonEmptyString() {
+        String s = new Circle().toString();
+        assertNotNull(s);
+        assertFalse(s.isEmpty());
+    }
 }

@@ -46,7 +46,7 @@ import javafx.stage.Stage;
 import static org.junit.Assert.*;
 import org.junit.Test;
 
-public class MouseTest3D {
+public class Mouse3DTest {
 
     private static final int NOFACE = PickResult.FACE_UNDEFINED;
 

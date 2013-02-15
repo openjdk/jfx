@@ -553,4 +553,33 @@ public  class Rectangle extends Shape {
                 (float)getArcHeight());
         }
     }
+
+    /**
+     * Returns a string representation of this {@code Rectangle} object.
+     * @return a string representation of this {@code Rectangle} object.
+     */
+    @Override
+    public String toString() {
+        final StringBuilder sb = new StringBuilder("Rectangle[");
+
+        String id = getId();
+        if (id != null) {
+            sb.append("id=").append(id).append(", ");
+        }
+
+        sb.append("x=").append(getX());
+        sb.append(", y=").append(getY());
+        sb.append(", width=").append(getWidth());
+        sb.append(", height=").append(getHeight());
+
+        sb.append(", fill=").append(getFill());
+
+        Paint stroke = getStroke();
+        if (stroke != null) {
+            sb.append(", stroke=").append(stroke);
+            sb.append(", strokeWidth=").append(getStrokeWidth());
+        }
+
+        return sb.append("]").toString();
+    }
 }

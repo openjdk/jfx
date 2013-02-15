@@ -28,7 +28,7 @@ package javafx.scene.shape;
 import javafx.scene.NodeTest;
 
 import org.junit.Test;
-
+import static org.junit.Assert.*;
 
 public class ArcTest {
 
@@ -101,5 +101,11 @@ public class ArcTest {
         NodeTest.assertDoublePropertySynced(
                 new Arc(10.0, 10.0, 100.0, 100.0, 0.0, 0.0),
                 "centerX", "centerX", 350.0);
+    }
+
+    @Test public void toStringShouldReturnNonEmptyString() {
+        String s = new Arc().toString();
+        assertNotNull(s);
+        assertFalse(s.isEmpty());
     }
 }

@@ -28,6 +28,8 @@ package javafx.scene.shape;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertFalse;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.scene.Group;
@@ -136,5 +138,11 @@ public class PathTest {
         // internal shape might have changed, getting it again
         geometry = (Path2D) ((StubPath)path.impl_getPGPath()).getGeometry();
         assertEquals(Path2D.WIND_NON_ZERO, geometry.getWindingRule());
+    }
+
+    @Test public void toStringShouldReturnNonEmptyString() {
+        String s = new Path().toString();
+        assertNotNull(s);
+        assertFalse(s.isEmpty());
     }
 }

@@ -386,6 +386,23 @@ public class Affine3D extends AffineBase {
     }
 
     @Override
+    public Vec3d deltaTransform(Vec3d src, Vec3d dst) {
+        if ((state & APPLY_3D) == 0) {
+            return super.deltaTransform(src, dst);
+        }
+        if (dst == null) {
+            dst = new Vec3d();
+        }
+        double x = src.x;
+        double y = src.y;
+        double z = src.z;
+        dst.x = mxx * x + mxy * y + mxz * z;
+        dst.y = myx * x + myy * y + myz * z;
+        dst.z = mzx * x + mzy * y + mzz * z;
+        return dst;
+    }
+
+    @Override
     public void inverseTransform(float[] srcPts, int srcOff,
                                  float[] dstPts, int dstOff,
                                  int numPts)
@@ -451,6 +468,18 @@ public class Affine3D extends AffineBase {
         }
     }
     
+    @Override
+    public Vec3d inverseDeltaTransform(Vec3d src, Vec3d dst)
+        throws NoninvertibleTransformException
+    {
+        if ((state & APPLY_3D) == 0) {
+            return super.inverseDeltaTransform(src, dst);
+        } else {
+            // TODO: Optimize... (RT-26800)
+            return createInverse().deltaTransform(src, dst);
+        }
+    }
+
     @Override
     public BaseBounds inverseTransform(BaseBounds bounds, BaseBounds result)
         throws NoninvertibleTransformException

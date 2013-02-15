@@ -35,6 +35,7 @@ import com.sun.javafx.scene.DirtyBits;
 import com.sun.javafx.sg.PGArc;
 import com.sun.javafx.sg.PGNode;
 import com.sun.javafx.tk.Toolkit;
+import javafx.scene.paint.Paint;
 
 
 /**
@@ -440,5 +441,37 @@ public class Arc extends Shape {
                 (float)getLength(),
                 toPGArcType(getType()));
         }
+    }
+
+    /**
+     * Returns a string representation of this {@code Arc} object.
+     * @return a string representation of this {@code Arc} object.
+     */
+    @Override
+    public String toString() {
+        final StringBuilder sb = new StringBuilder("Arc[");
+
+        String id = getId();
+        if (id != null) {
+            sb.append("id=").append(id).append(", ");
+        }
+
+        sb.append("centerX=").append(getCenterX());
+        sb.append(", centerY=").append(getCenterY());
+        sb.append(", radiusX=").append(getRadiusX());
+        sb.append(", radiusY=").append(getRadiusY());
+        sb.append(", startAngle=").append(getStartAngle());
+        sb.append(", length=").append(getLength());
+        sb.append(", type=").append(getType());
+
+        sb.append(", fill=").append(getFill());
+
+        Paint stroke = getStroke();
+        if (stroke != null) {
+            sb.append(", stroke=").append(stroke);
+            sb.append(", strokeWidth=").append(getStrokeWidth());
+        }
+
+        return sb.append("]").toString();
     }
 }

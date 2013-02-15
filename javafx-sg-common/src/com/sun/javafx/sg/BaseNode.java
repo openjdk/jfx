@@ -33,6 +33,7 @@ import com.sun.javafx.geom.RectBounds;
 import com.sun.javafx.geom.transform.Affine3D;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.geom.transform.GeneralTransform3D;
+import com.sun.javafx.geom.transform.NoninvertibleTransformException;
 import com.sun.scenario.effect.Blend;
 import com.sun.scenario.effect.Effect;
 import com.sun.scenario.effect.FilterContext;
@@ -1029,6 +1030,17 @@ public abstract class BaseNode<G> implements PGNode {
         
         DirtyRegionContainer originalDirtyRegion = null;
         if (effectFilter != null) {
+            try {
+                myClip = new RectBounds();
+                BaseBounds myClipBaseBounds = renderTx.inverseTransform(clip, TEMP_BOUNDS);
+                myClip.setBounds(myClipBaseBounds.getMinX(),
+                                 myClipBaseBounds.getMinY(),
+                                 myClipBaseBounds.getMaxX(),
+                                 myClipBaseBounds.getMaxY());
+            } catch (NoninvertibleTransformException ex) {
+                return DirtyRegionContainer.DTR_OK;
+            }
+
             renderTx = BaseTransform.IDENTITY_TRANSFORM;
             originalDirtyRegion = dirtyRegionContainer;
             dirtyRegionContainer = regionPool.checkOut();
