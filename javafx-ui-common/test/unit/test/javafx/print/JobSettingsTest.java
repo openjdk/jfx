@@ -19,7 +19,7 @@ public class JobSettingsTest {
   @Test public void dummyTest() {
   }
 
-/*
+
   private PrinterJob job;
 
   @Before
@@ -238,5 +238,5 @@ public class JobSettingsTest {
      assertEquals(collation, js.getCollation());
     
   }
-*/
+
 }

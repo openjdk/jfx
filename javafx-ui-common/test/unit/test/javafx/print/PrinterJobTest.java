@@ -19,7 +19,7 @@ public class PrinterJobTest {
   @Test public void dummyTest() {
   }
 
-/*
+
   private PrinterJob job;
 
   @Before
@@ -59,5 +59,5 @@ public class PrinterJobTest {
      printerProp.set(printer);
      assertEquals(printer, printerProp.get());
   }
-*/
+
 }
