@@ -26,9 +26,8 @@
 package com.sun.scenario.effect.impl.prism;
 
 import com.sun.javafx.geom.Rectangle;
-import com.sun.scenario.effect.impl.hw.Texture;
 
-public class PrTexture implements Texture {
+public class PrTexture {
 
     private final com.sun.prism.Texture tex;
     private final Rectangle bounds;
@@ -43,10 +42,6 @@ public class PrTexture implements Texture {
 
     public Rectangle getNativeBounds() {
         return bounds;
-    }
-
-    public long getNativeSourceHandle() {
-        return tex.getNativeSourceHandle();
     }
 
     public com.sun.prism.Texture getTextureObject() {

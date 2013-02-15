@@ -179,7 +179,6 @@ public class TestGraphics extends BaseGraphics {
                 @Override public int getContentY() { return 0; }
                 @Override public int getContentWidth() { return width; }
                 @Override public int getContentHeight() { return height; }
-                @Override public long getNativeSourceHandle() { return 0; }
                 @Override public int getLastImageSerial() { return 0; }
                 @Override public void setLastImageSerial(int serial) { }
                 @Override public void update(Image img) { }
@@ -192,7 +191,6 @@ public class TestGraphics extends BaseGraphics {
                 @Override public boolean getLinearFiltering() { return false; }
                 @Override public void setLinearFiltering(boolean linear) { }
                 @Override public void dispose() { }
-                @Override public long getNativeDestHandle() { return 0; }
                 @Override public void setOpaque(boolean opaque) { }
             };
         }
@@ -213,10 +211,6 @@ public class TestGraphics extends BaseGraphics {
     }
     
     private static class TestRenderTarget implements RenderTarget {
-
-        public long getNativeDestHandle() {
-            return 0;
-        }
 
         public Screen getAssociatedScreen() {
             return null;

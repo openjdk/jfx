@@ -67,7 +67,7 @@ public class PSWDrawable extends PrDrawable implements HeapImage {
     }
 
     public boolean isLost() {
-        return rtt == null || rtt.getNativeDestHandle() == 0L;
+        return rtt == null || rtt.isSurfaceLost();
     }
 
     public void flush() {
