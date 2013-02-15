@@ -91,15 +91,8 @@ public class ButtonBehavior<C extends ButtonBase> extends BehaviorBase<C> {
 
     protected static final List<KeyBinding> BUTTON_BINDINGS = new ArrayList<KeyBinding>();
     static {
-        if (PlatformUtil.isMac()) {
             BUTTON_BINDINGS.add(new KeyBinding(SPACE, KEY_PRESSED, PRESS_ACTION));
             BUTTON_BINDINGS.add(new KeyBinding(SPACE, KEY_RELEASED, RELEASE_ACTION));
-        } else {
-            BUTTON_BINDINGS.add(new KeyBinding(ENTER, KEY_PRESSED, PRESS_ACTION));
-            BUTTON_BINDINGS.add(new KeyBinding(ENTER, KEY_RELEASED, RELEASE_ACTION));
-            BUTTON_BINDINGS.add(new KeyBinding(SPACE, KEY_PRESSED, PRESS_ACTION));
-            BUTTON_BINDINGS.add(new KeyBinding(SPACE, KEY_RELEASED, RELEASE_ACTION));
-        }
     }
 
     @Override protected List<KeyBinding> createKeyBindings() {
