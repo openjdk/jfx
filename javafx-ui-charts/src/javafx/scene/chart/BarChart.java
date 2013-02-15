@@ -420,7 +420,7 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
         final double avilableBarSpace = catSpace - (getCategoryGap() + getBarGap());
         final double barWidth = (avilableBarSpace / getSeriesSize()) - getBarGap();
         final double barOffset = -((catSpace - getCategoryGap()) / 2);
-        final double zeroPos = valueAxis.getZeroPosition();
+        final double zeroPos = valueAxis.getDisplayPosition(valueAxis.getLowerBound());
         // update bar positions and sizes
         int catIndex = 0;
             for (String category : categoryAxis.getCategories()) {
