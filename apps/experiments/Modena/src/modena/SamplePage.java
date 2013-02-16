@@ -329,7 +329,7 @@ public class SamplePage extends GridPane {
                 ComboBoxBuilder.create(String.class).items(sampleItems()).value("Item A").editable(true).build(),
                 withState(ComboBoxBuilder.create(String.class).items(sampleItems()).value("Item B").editable(true).build(), "editable", ".arrow-button", "hover"),
                 withState(ComboBoxBuilder.create(String.class).items(sampleItems()).value("Item B").editable(true).build(), "editable", ".arrow-button", "pressed"),
-                withState(ComboBoxBuilder.create(String.class).items(sampleItems()).value("Item B").editable(true).build(), "editable,contains-focus"),
+                withState(ComboBoxBuilder.create(String.class).items(sampleItems()).value("Item B").editable(true).build(), "editable,contains-focus", ".text-field", "focused"),
                 ComboBoxBuilder.create(String.class).items(sampleItems()).value("Item C").editable(true).disable(true).build()
                 );
         newSection(      
