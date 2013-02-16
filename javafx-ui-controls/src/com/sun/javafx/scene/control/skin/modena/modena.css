@@ -1298,7 +1298,7 @@ is being used to size a border should also be in pixels.
         -fx-control-inner-background;
     -fx-background-insets: 0, 1;
     -fx-padding: 0.333333em 0.083333em 0.333333em 0.083333em; /* 4 1 8 1 */
-    /*-fx-effect: dropshadow( three-pass-box , rgba(0,0,0,0.5) , 8, 0.0 , 0 , 8 );*/
+    -fx-effect: dropshadow( three-pass-box , rgba(0,0,0,0.5) , 8, 0.0 , 0 , 8 );
 }
 .context-menu > .separator {
     -fx-padding: 0.0em 0.333333em 0.0em 0.333333em; /* 0 4 0 4 */

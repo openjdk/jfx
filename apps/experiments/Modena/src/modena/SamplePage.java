@@ -34,6 +34,7 @@ package modena;
 import java.util.HashMap;
 import java.util.Map;
 import javafx.application.Platform;
+import javafx.collections.ObservableList;
 import javafx.css.PseudoClass;
 import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
@@ -97,39 +98,6 @@ public class SamplePage extends GridPane {
     private int rowIndex = 0;
     
     private Map<String, Node> content = new HashMap<>();
-    
-    private Node withState(Node node, String state) {
-        if (node != null && state != null) {
-            // stop user from being able to change state
-            node.setMouseTransparent(true);
-            node.setFocusTraversable(false);
-            // set state to chosen state
-            final String[] pseudoClasses = (state).split("[\\s,]+");
-            for (String pseudoClass : pseudoClasses) {
-                node.pseudoClassStateChanged(PseudoClass.getPseudoClass(pseudoClass), true);
-            }
-        }
-        return node;
-    }
-    
-    private Node withState(final Node node, final String state, final String subNodeStyleClass, final String subNodeState) {
-        withState(node, state);
-        Platform.runLater(new Runnable() {
-            @Override public void run() {
-                if (node != null) {
-                    Node subNode = node.lookup(subNodeStyleClass);
-                    if (subNode != null) {
-                        withState(node.lookup(subNodeStyleClass), subNodeState);
-                    } else {
-                        System.err.println("node = " + node+" node.lookup("+subNodeStyleClass+") = " + subNode);
-                    }
-                } else {
-                    System.err.println("node = " + node);
-                }
-            }
-        });
-        return node;
-    }
     
     private void newSection(String name, Node ...children) {
         newSection(name, 10, children);
@@ -242,47 +210,51 @@ public class SamplePage extends GridPane {
                         ToggleButtonBuilder.create().text("Right").styleClass("right-pill").toggleGroup(tg4).selected(true).build()
                     )
                     .build());
+        ToggleGroup tg5 = new ToggleGroup();
+        ToggleGroup tg6 = new ToggleGroup();
+        ToggleGroup tg7 = new ToggleGroup();
+        ToggleGroup tg8 = new ToggleGroup();
         newSection("Pill Toggle\nButtons\nFocused:", 
                 HBoxBuilder.create()
                     .children(
-                        withState(ToggleButtonBuilder.create().text("L").styleClass("left-pill").toggleGroup(tg1).build(),"focused"),
-                        ToggleButtonBuilder.create().text("C").styleClass("center-pill").toggleGroup(tg1).build(),
-                        ToggleButtonBuilder.create().text("R").styleClass("right-pill").toggleGroup(tg1).build()
+                        withState(ToggleButtonBuilder.create().text("L").styleClass("left-pill").toggleGroup(tg5).build(),"focused"),
+                        ToggleButtonBuilder.create().text("C").styleClass("center-pill").toggleGroup(tg5).build(),
+                        ToggleButtonBuilder.create().text("R").styleClass("right-pill").toggleGroup(tg5).build()
                     )
                     .build(),
                 HBoxBuilder.create()
                     .children(
-                        ToggleButtonBuilder.create().text("L").styleClass("left-pill").toggleGroup(tg1).build(),
-                        withState(ToggleButtonBuilder.create().text("C").styleClass("center-pill").toggleGroup(tg1).build(),"focused"),
-                        ToggleButtonBuilder.create().text("R").styleClass("right-pill").toggleGroup(tg1).build()
+                        ToggleButtonBuilder.create().text("L").styleClass("left-pill").toggleGroup(tg5).build(),
+                        withState(ToggleButtonBuilder.create().text("C").styleClass("center-pill").toggleGroup(tg5).build(),"focused"),
+                        ToggleButtonBuilder.create().text("R").styleClass("right-pill").toggleGroup(tg5).build()
                     )
                     .build(),
                 HBoxBuilder.create()
                     .children(
-                        ToggleButtonBuilder.create().text("L").styleClass("left-pill").toggleGroup(tg1).build(),
-                        ToggleButtonBuilder.create().text("C").styleClass("center-pill").toggleGroup(tg1).build(),
-                        withState(ToggleButtonBuilder.create().text("R").styleClass("right-pill").toggleGroup(tg1).build(),"focused")
+                        ToggleButtonBuilder.create().text("L").styleClass("left-pill").toggleGroup(tg5).build(),
+                        ToggleButtonBuilder.create().text("C").styleClass("center-pill").toggleGroup(tg5).build(),
+                        withState(ToggleButtonBuilder.create().text("R").styleClass("right-pill").toggleGroup(tg5).build(),"focused")
                     )
                     .build(),
                 HBoxBuilder.create()
                     .children(
-                        withState(ToggleButtonBuilder.create().text("L").styleClass("left-pill").toggleGroup(tg2).selected(true).build(),"focused"),
-                        ToggleButtonBuilder.create().text("C").styleClass("center-pill").toggleGroup(tg2).build(),
-                        ToggleButtonBuilder.create().text("R").styleClass("right-pill").toggleGroup(tg2).build()
+                        withState(ToggleButtonBuilder.create().text("L").styleClass("left-pill").toggleGroup(tg6).selected(true).build(),"focused"),
+                        ToggleButtonBuilder.create().text("C").styleClass("center-pill").toggleGroup(tg6).build(),
+                        ToggleButtonBuilder.create().text("R").styleClass("right-pill").toggleGroup(tg6).build()
                     )
                     .build(),
                 HBoxBuilder.create()
                     .children(
-                        ToggleButtonBuilder.create().text("L").styleClass("left-pill").toggleGroup(tg3).build(),
-                        withState(ToggleButtonBuilder.create().text("C").styleClass("center-pill").toggleGroup(tg3).selected(true).build(),"focused"),
-                        ToggleButtonBuilder.create().text("R").styleClass("right-pill").toggleGroup(tg3).build()
+                        ToggleButtonBuilder.create().text("L").styleClass("left-pill").toggleGroup(tg7).build(),
+                        withState(ToggleButtonBuilder.create().text("C").styleClass("center-pill").toggleGroup(tg7).selected(true).build(),"focused"),
+                        ToggleButtonBuilder.create().text("R").styleClass("right-pill").toggleGroup(tg7).build()
                     )
                     .build(),
                 HBoxBuilder.create()
                     .children(
-                        ToggleButtonBuilder.create().text("L").styleClass("left-pill").toggleGroup(tg4).build(),
-                        ToggleButtonBuilder.create().text("C").styleClass("center-pill").toggleGroup(tg4).build(),
-                        withState(ToggleButtonBuilder.create().text("R").styleClass("right-pill").toggleGroup(tg4).selected(true).build(),"focused")
+                        ToggleButtonBuilder.create().text("L").styleClass("left-pill").toggleGroup(tg8).build(),
+                        ToggleButtonBuilder.create().text("C").styleClass("center-pill").toggleGroup(tg8).build(),
+                        withState(ToggleButtonBuilder.create().text("R").styleClass("right-pill").toggleGroup(tg8).selected(true).build(),"focused")
                     )
                     .build());
         newSection("ToggleButton:", 
@@ -351,9 +323,12 @@ public class SamplePage extends GridPane {
                 withState(new Hyperlink("F & Hover"), "focused, hover"),
                 withState(new Hyperlink("F & Armed"), "focused, armed"),
                 withState(new Hyperlink("Disabled"), "disabled"));
+        ObservableList<String> choiceBoxLongList = sampleItems(200);
+        choiceBoxLongList.add(100, "Long List");
         newSection(      
                 "ChoiceBox:", 
                 ChoiceBoxBuilder.create(String.class).items(sampleItems()).value("Item A").build(),
+                ChoiceBoxBuilder.create(String.class).items(choiceBoxLongList).value("Long List").build(),
                 withState(ChoiceBoxBuilder.create(String.class).items(sampleItems()).value("Item B").build(), "hover"),
                 withState(ChoiceBoxBuilder.create(String.class).items(sampleItems()).value("Item B").build(), "showing"),
                 withState(ChoiceBoxBuilder.create(String.class).items(sampleItems()).value("Item B").build(), "focused"),
@@ -362,6 +337,7 @@ public class SamplePage extends GridPane {
         newSection(      
                 "ComboBox:", 
                 ComboBoxBuilder.create(String.class).items(sampleItems()).value("Item A").build(),
+                ComboBoxBuilder.create(String.class).items(choiceBoxLongList).value("Long List").build(),
                 withState(ComboBoxBuilder.create(String.class).items(sampleItems()).value("Item B").build(), "hover"),
                 withState(ComboBoxBuilder.create(String.class).items(sampleItems()).value("Item B").build(), "showing"),
                 withState(ComboBoxBuilder.create(String.class).items(sampleItems()).value("Item B").build(), "focused"),
@@ -613,15 +589,21 @@ public class SamplePage extends GridPane {
                 );
         newDetailedSection(
                 new String[] {"ListView\n2 items\nsingle selection:", "normal", "focused", "disabled"}, 
-                createListView(3, false, false),
-                withState(createListView(3, false, false), "focused"),
-                createListView(3, false, true)
+                createListView(3, false, false, false),
+                withState(createListView(3, false, false, false), "focused"),
+                createListView(3, false, true, false)
                 );
         newDetailedSection(
                 new String[] {"ListView\n10,000 items\nmultiple selection:","normal", "focused", "disabled"}, 
-                createListView(10000, true, false),
-                withState(createListView(10000, true, false), "focused"),
-                createListView(10000, true, true)
+                createListView(10000, true, false, false),
+                withState(createListView(10000, true, false, false), "focused"),
+                createListView(10000, true, true, false)
+                );
+        newDetailedSection(
+                new String[] {"ListView (H)\n10,000 items\nmultiple selection:","normal", "focused", "disabled"}, 
+                createListView(10000, true, false, true),
+                withState(createListView(10000, true, false, true), "focused"),
+                createListView(10000, true, true, true)
                 );
         newSection(
                 "TableView:", 
@@ -655,6 +637,18 @@ public class SamplePage extends GridPane {
                     ButtonBuilder.create().text("or me").tooltip(TooltipBuilder.create().text("This is a simple Tooltip\nwith graphic.").graphic(createGraphic()).build()).build()
                 ).build()
                 );
+        
+        
+        newSection(
+                "MenuBar:", 
+                createMenuBar()
+                );
+        newSection(
+                "Menu:", 
+                createInlineMenu()
+                );
+        
+        
         newSection(
                 "AreaChart:", 
                 createAreaChart(false)
