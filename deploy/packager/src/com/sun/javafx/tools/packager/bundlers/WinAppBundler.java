@@ -85,7 +85,7 @@ public class WinAppBundler extends Bundler {
         }
 
         //validate required inputs
-        testRuntime(p, "lib\\ext\\jfxrt.jar");
+        testRuntime(p, new String[] {"lib\\ext\\jfxrt.jar", "lib\\jfxrt.jar"});
 
         return true;
     }

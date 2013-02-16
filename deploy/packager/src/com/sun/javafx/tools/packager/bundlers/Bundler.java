@@ -141,16 +141,19 @@ public abstract class Bundler {
     public abstract boolean bundle(BundleParams p, File outdir);
 
     //helper method to test if required files are present in the runtime
-    void testRuntime(BundleParams p, String file) throws ConfigException {
+    void testRuntime(BundleParams p, String[] file) throws ConfigException {
         if (p.runtime == null) {
             return; //null runtime is ok (request to use system)
         }
         Set<String> rfiles = p.runtime.getIncludedFiles();
-        if (!rfiles.contains(file)) {
-            throw new Bundler.ConfigException(
-                    "Java Runtime does not include " + file,
-                    "Make sure ant is using Oracle JDK 8 or later.");
+        for (int i = 0; i < file.length; i++) {
+            if (rfiles.contains(file[i])) {
+                return;
+            }
         }
+        throw new Bundler.ConfigException(
+                "Java Runtime does not include " + file,
+                "Make sure ant is using Oracle JDK 8 or later.");
     }
 
     protected Class baseResourceLoader = null;

@@ -35,8 +35,7 @@ public class BundleParamsTest extends TestCase {
     }
 
     public void testValidateRuntimeLocation() {
-        //File jh = new File(System.getProperty("java.home"));
-        File jh = new File("/Library/Java/JavaVirtualMachines/jdk1.7.0_07.jdk/Contents/Home/jre");
+        File jh = new File(System.getProperty("java.home"));
 
         assertNotNull("Expect java.home to be ok.",
                 BundleParams.validateRuntimeLocation(jh));
