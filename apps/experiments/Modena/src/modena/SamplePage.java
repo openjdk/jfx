@@ -242,6 +242,49 @@ public class SamplePage extends GridPane {
                         ToggleButtonBuilder.create().text("Right").styleClass("right-pill").toggleGroup(tg4).selected(true).build()
                     )
                     .build());
+        newSection("Pill Toggle\nButtons\nFocused:", 
+                HBoxBuilder.create()
+                    .children(
+                        withState(ToggleButtonBuilder.create().text("L").styleClass("left-pill").toggleGroup(tg1).build(),"focused"),
+                        ToggleButtonBuilder.create().text("C").styleClass("center-pill").toggleGroup(tg1).build(),
+                        ToggleButtonBuilder.create().text("R").styleClass("right-pill").toggleGroup(tg1).build()
+                    )
+                    .build(),
+                HBoxBuilder.create()
+                    .children(
+                        ToggleButtonBuilder.create().text("L").styleClass("left-pill").toggleGroup(tg1).build(),
+                        withState(ToggleButtonBuilder.create().text("C").styleClass("center-pill").toggleGroup(tg1).build(),"focused"),
+                        ToggleButtonBuilder.create().text("R").styleClass("right-pill").toggleGroup(tg1).build()
+                    )
+                    .build(),
+                HBoxBuilder.create()
+                    .children(
+                        ToggleButtonBuilder.create().text("L").styleClass("left-pill").toggleGroup(tg1).build(),
+                        ToggleButtonBuilder.create().text("C").styleClass("center-pill").toggleGroup(tg1).build(),
+                        withState(ToggleButtonBuilder.create().text("R").styleClass("right-pill").toggleGroup(tg1).build(),"focused")
+                    )
+                    .build(),
+                HBoxBuilder.create()
+                    .children(
+                        withState(ToggleButtonBuilder.create().text("L").styleClass("left-pill").toggleGroup(tg2).selected(true).build(),"focused"),
+                        ToggleButtonBuilder.create().text("C").styleClass("center-pill").toggleGroup(tg2).build(),
+                        ToggleButtonBuilder.create().text("R").styleClass("right-pill").toggleGroup(tg2).build()
+                    )
+                    .build(),
+                HBoxBuilder.create()
+                    .children(
+                        ToggleButtonBuilder.create().text("L").styleClass("left-pill").toggleGroup(tg3).build(),
+                        withState(ToggleButtonBuilder.create().text("C").styleClass("center-pill").toggleGroup(tg3).selected(true).build(),"focused"),
+                        ToggleButtonBuilder.create().text("R").styleClass("right-pill").toggleGroup(tg3).build()
+                    )
+                    .build(),
+                HBoxBuilder.create()
+                    .children(
+                        ToggleButtonBuilder.create().text("L").styleClass("left-pill").toggleGroup(tg4).build(),
+                        ToggleButtonBuilder.create().text("C").styleClass("center-pill").toggleGroup(tg4).build(),
+                        withState(ToggleButtonBuilder.create().text("R").styleClass("right-pill").toggleGroup(tg4).selected(true).build(),"focused")
+                    )
+                    .build());
         newSection("ToggleButton:", 
                 new ToggleButton("Button"),
                 withState(new ToggleButton("Hover"), "hover"),
