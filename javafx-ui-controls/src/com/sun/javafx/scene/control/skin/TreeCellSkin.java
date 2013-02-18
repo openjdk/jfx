@@ -273,9 +273,10 @@ public class TreeCellSkin extends CellSkinBase<TreeCell<?>, TreeCellBehavior> {
 
         // include the disclosure node width
         Node disclosureNode = getSkinnable().getDisclosureNode();
+        double disclosureNodePrefWidth = disclosureNode == null ? 0 : disclosureNode.prefWidth(-1);
         final double defaultDisclosureWidth = maxDisclosureWidthMap.containsKey(tree) ?
                 maxDisclosureWidthMap.get(tree) : 0;
-        pw += Math.max(defaultDisclosureWidth, disclosureNode.prefWidth(-1));
+        pw += Math.max(defaultDisclosureWidth, disclosureNodePrefWidth);
 
         return pw;
     }
