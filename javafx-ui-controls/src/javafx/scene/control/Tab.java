@@ -43,10 +43,14 @@ import javafx.scene.Node;
 
 import javafx.css.Styleable;
 import com.sun.javafx.event.EventHandlerManager;
+
+import java.lang.ref.WeakReference;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import javafx.beans.DefaultProperty;
+import javafx.beans.InvalidationListener;
+import javafx.beans.Observable;
 import javafx.beans.property.BooleanPropertyBase;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
@@ -221,11 +225,32 @@ public class Tab implements EventTarget, Styleable {
 
     private ReadOnlyObjectWrapper<TabPane> tabPanePropertyImpl() {
         if (tabPane == null) {
-            tabPane = new ReadOnlyObjectWrapper<TabPane>(this, "tabPane");
+            tabPane = new ReadOnlyObjectWrapper<TabPane>(this, "tabPane") {
+                private WeakReference<TabPane> oldParent;
+                                
+                @Override protected void invalidated() {
+                    if(oldParent != null && oldParent.get() != null) {
+                        oldParent.get().disabledProperty().removeListener(parentDisabledChangedListener);
+                    }
+                    updateDisabled();
+                    TabPane newParent = get();
+                    if (newParent != null) {
+                        newParent.disabledProperty().addListener(parentDisabledChangedListener);
+                    }
+                    oldParent = new WeakReference<TabPane>(newParent);
+                    super.invalidated();
+                }
+            };
         }
         return tabPane;
     }
 
+    private final InvalidationListener parentDisabledChangedListener = new InvalidationListener() {
+        @Override public void invalidated(Observable valueModel) {
+            updateDisabled();
+        }
+    };
+    
     private StringProperty text;
 
     /**
