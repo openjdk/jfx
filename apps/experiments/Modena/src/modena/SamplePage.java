@@ -409,14 +409,16 @@ public class SamplePage extends GridPane {
                 withState(SliderBuilder.create().min(0).max(100).value(50).orientation(Orientation.VERTICAL).build(), "disabled"),
                 SliderBuilder.create().min(0).max(100).value(50).showTickMarks(true).showTickLabels(true).orientation(Orientation.VERTICAL).build());
         newDetailedSection(
-                new String[] {"Scrollbar - H: ", "normal", "small", "big thumb"}, 
+                new String[] {"Scrollbar - H: ", "normal", "focused", "small", "big thumb"}, 
                 new ScrollBar(),
+                withState(ScrollBarBuilder.create().build(), "focused"),
                 ScrollBarBuilder.create().minWidth(30).prefWidth(30).build(),
                 ScrollBarBuilder.create().visibleAmount(60).max(100).build()
                 );
         newDetailedSection(
-                new String[] {"Scrollbar - V: ", "normal", "small", "btn hover", "btn pressed", ".thumb hover", ".thumb pressed"}, 
+                new String[] {"Scrollbar - V: ", "normal", "focused", "small", "btn hover", "btn pressed", ".thumb hover", ".thumb pressed"}, 
                 withState(ScrollBarBuilder.create().orientation(Orientation.VERTICAL).build(), "vertical"),
+                withState(ScrollBarBuilder.create().orientation(Orientation.VERTICAL).build(), "focused"),
                 withState(ScrollBarBuilder.create().orientation(Orientation.VERTICAL).minHeight(30).prefHeight(30).build(), "vertical"),
                 withState(ScrollBarBuilder.create().orientation(Orientation.VERTICAL).build(), "vertical", ".decrement-button", "hover"),
                 withState(ScrollBarBuilder.create().orientation(Orientation.VERTICAL).build(), "vertical", ".decrement-button", "pressed"),
