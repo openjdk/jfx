@@ -67,7 +67,10 @@ public class PickRay {
         // what is the Z coordinate of the origin. Also the reported distance
         // is always an infinity so it doesn't matter what is the magnitude
         // of the direction.
-        setOrigin(x, y, 0);
+        // Right now we need the (origin+direction) point be in the XY plane
+        // for correct picking of the scene. This requirement will be removed
+        // when the projection plane is properly used for the intersection.
+        setOrigin(x, y, -1);
         setDirection(0, 0, 1);
         parallel = true;
     }

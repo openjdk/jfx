@@ -117,6 +117,10 @@ public class PickAndContainsTest {
         assertFalse(r0.contains(pickX, pickY));
         assertFalse(r1.contains(pickX, pickY));
         assertTrue(r2.contains(pickX, pickY));
+
+        pickX = 120;
+        pickY = 110;
+        assertSame(r0, scene.test_pick(pickX, pickY));
     }
 
     @Test

@@ -1373,6 +1373,39 @@ public class Mouse3DTest {
                 NOFACE, null);
     }
 
+    @Test
+    public void shouldPickRectRotatedIn3DByParallelCamera() {
+        MouseEventGenerator g = new MouseEventGenerator();
+        Rectangle r = rect().rotate('y', 45).handleMove(me);
+
+        Scene s = scene(group(r), parallel(), true).handleMove(sme);
+
+        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 10, 50));
+
+        MouseEvent e = me.event;
+        assertNull(e);
+
+        e = sme.event;
+        assertNotNull(e);
+        assertCoordinates(e, 10, 50, 10, 50, 0);
+        assertPickResult(e.getPickResult(), null, point(10, 50, 0), 
+                Double.POSITIVE_INFINITY, NOFACE, null);
+        sme.clear();
+
+        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 30, 50));
+        e = me.event;
+        assertNotNull(e);
+        assertCoordinates(e, 30, 50, 21.71572, 50, 0);
+        assertPickResult(e.getPickResult(), r, point(21.71572, 50, 0), 
+                Double.POSITIVE_INFINITY, NOFACE, null);
+
+        e = sme.event;
+        assertNotNull(e);
+        assertCoordinates(e, 30, 50, 30, 50, 20);
+        assertPickResult(e.getPickResult(), r, point(21.71572, 50, 0),
+                Double.POSITIVE_INFINITY, NOFACE, null);
+    }
+
 
     /*****************  Scenegraph-generated events ********************/
 
