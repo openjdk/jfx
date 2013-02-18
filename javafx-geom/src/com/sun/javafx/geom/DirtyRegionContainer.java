@@ -229,6 +229,12 @@ public final class DirtyRegionContainer {
         }
     }
 
+    public void roundOut() {
+        for (int i = 0; i < emptyIndex; ++i) {
+            dirtyRegions[i].roundOut();
+        }
+    }
+
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
