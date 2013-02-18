@@ -617,18 +617,30 @@ is being used to size a border should also be in pixels.
 }
 .button.left-pill:focused,
 .toggle-button.left-pill:focused {
-    -fx-background-radius: 4 0 0 4, 3 0 0 3, 2 0 0 2, 1 0 0 1;
-    -fx-background-insets: -0.2 0 -0.2 1, 1 1 1 2, 2 2 2 3, 3 3 3 4;
+    -fx-background-insets: -0.2 0 -0.2 -0.2, 1, 2, -1.4 0 -1.4 -1.4, 2.6;
+    -fx-background-radius: 3 0 0 3, 2 0 0 2, 1 0 0 1, 4 0 0 4, 1 0 0 1;
 }
 .button.center-pill:focused,
 .toggle-button.center-pill:focused {
-    -fx-background-radius: 0;
-    -fx-background-insets: -0.2 0 -0.2 -1, 1 1 1 0, 2 2 2 1, 3 3 3 2;
+    -fx-background-insets: -0.2 0 -0.2 -1, 1 1 1 0, 2 2 2 1, -1.4 0 -1.4 -1, 2.6 2.6 2.6 1.6;
+    -fx-background-radius: 0, 0, 0, 0, 0;
 }
 .button.right-pill:focused,
 .toggle-button.right-pill:focused {
-    -fx-background-radius: 0 5 5 0, 0 4 4 0, 0 2 2 0, 0 1 1 0;
-    -fx-background-insets: -0.2 -0.2 -0.2 -1, 1 1 1 0, 2 2 2 1, 3 3 3 2;
+    -fx-background-insets: -0.2 -0.2 -0.2 -1, 1 1 1 0, 2 2 2 1, -1.4 -1.4 -1.4 -1, 2.6 2.6 2.6 1.6;
+    -fx-background-radius: 0 3 3 0, 0 2 2 0, 0 1 1 0, 0 4 4 0, 0 1 1 0;
+}
+.toggle-button:selected.left-pill:focused {
+    -fx-background-insets: -0.2 0 -0.2 -0.2, 1, -1.4 0 -1.4 -1.4, 2.6;
+    -fx-background-radius: 3 0 0 3, 2 0 0 2, 4 0 0 4, 0;
+}
+.toggle-button:selected.center-pill:focused {
+    -fx-background-insets: -0.2 0 -0.2 -1, 1 1 1 0, -1.4 0 -1.4 -1, 2.6 2.6 2.6 1.6;
+    -fx-background-radius: 0, 0, 0, 0;
+}
+.toggle-button:selected.right-pill:focused {
+    -fx-background-insets: -0.2 -0.2 -0.2 -1, 1 1 1 0, -1.4 -1.4 -1.4 -1, 2.6 2.6 2.6 1.6;
+    -fx-background-radius: 0 3 3 0, 0 2 2 0, 0 4 4 0, 0;
 }
 
 /* ====   SELECTED TOGGLE   ================================================= */
@@ -775,14 +787,14 @@ is being used to size a border should also be in pixels.
     -fx-background-radius: 3;
 }
 .split-menu-button:focused > .label {
-    -fx-background-color: -fx-inner-border, -fx-faint-focus-color, -fx-body-color; 
-    -fx-background-insets: 1 0 1 1, 2 1 2 2, 3 2 3 3;
-    -fx-background-radius: 2 0 0 2, 1 0 0 1, 0;
+    -fx-background-color: -fx-inner-border, -fx-body-color, -fx-faint-focus-color, -fx-body-color; 
+    -fx-background-insets: 1 0 1 1, 2 1 2 2, -1.4 0 -1.4 -1.4, 2.6 1.6 2.6 2.6;
+    -fx-background-radius: 2 0 0 2, 1 0 0 1, 4 0 0 4, 0;
 }
 .split-menu-button:focused > .arrow-button {
-    -fx-background-color: -fx-inner-border, -fx-faint-focus-color, -fx-body-color; 
-    -fx-background-insets: 1, 2, 3;
-    -fx-background-radius: 0 2 2 0, 0 1 1 0, 0 1 1 0;
+    -fx-background-color: -fx-inner-border, -fx-body-color, -fx-faint-focus-color, -fx-body-color; 
+    -fx-background-insets: 1, 2, -1.4, 2.6;
+    -fx-background-radius: 0 2 2 0, 0 1 1 0, 0 4 4 0, 0;
 }
 
 /*******************************************************************************
