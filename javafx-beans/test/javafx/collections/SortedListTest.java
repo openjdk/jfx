@@ -373,7 +373,7 @@ public class SortedListTest {
             E first = get(0); 
             backingList.set(0, get(size() - 1)); 
             backingList.set(size() -1, first); 
-            callObservers(new SimplePermutationChange(0, size(), new int[] {2, 1, 0}, this)); 
+            fireChange(new SimplePermutationChange(0, size(), new int[] {2, 1, 0}, this));
         } 
          
     } 

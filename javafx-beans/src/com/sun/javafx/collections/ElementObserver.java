@@ -24,6 +24,7 @@
  */
 package com.sun.javafx.collections;
 
+import javafx.collections.ObservableListBase;
 import java.util.IdentityHashMap;
 import java.util.Iterator;
 import java.util.RandomAccess;
@@ -56,12 +57,14 @@ final class ElementObserver<E> {
     }
 
     private Callback<E, Observable[]> extractor;
-    private final BaseObservableList<E> list;
+    private final Callback<E, InvalidationListener> listenerGenerator;
+    private final ObservableListBase<E> list;
     private IdentityHashMap<E, ElementObserver.ElementsMapElement> elementsMap =
             new IdentityHashMap<E, ElementObserver.ElementsMapElement>();
 
-    ElementObserver(Callback<E, Observable[]> extractor, BaseObservableList<E> list) {
+    ElementObserver(Callback<E, Observable[]> extractor, Callback<E, InvalidationListener> listenerGenerator, ObservableListBase<E> list) {
         this.extractor = extractor;
+        this.listenerGenerator = listenerGenerator;
         this.list = list;
     }
 
@@ -71,30 +74,7 @@ final class ElementObserver<E> {
             if (elementsMap.containsKey(e)) {
                 elementsMap.get(e).increment();
             } else {
-                InvalidationListener listener = new InvalidationListener() {
-
-                    @Override
-                    public void invalidated(Observable observable) {
-                        list.beginChange();
-                        int i = 0;
-                        if (list instanceof RandomAccess) {
-                            final int size = list.size();
-                            for (; i < size; ++i) {
-                                if (list.get(i) == e) {
-                                    list.nextUpdate(i);
-                                }
-                            }
-                        } else {
-                            for (Iterator<?> it = list.iterator(); it.hasNext();) {
-                                if (it.next() == e) {
-                                    list.nextUpdate(i);
-                                }
-                                ++i;
-                            }
-                        }
-                        list.endChange();
-                    }
-                };
+                InvalidationListener listener = listenerGenerator.call(e);
                 for (Observable o : extractor.call(e)) {
                     o.addListener(listener);
                 }

@@ -23,12 +23,12 @@
  * questions.
  */
 
-package com.sun.javafx.collections;
+package javafx.collections;
 
+import com.sun.javafx.collections.ObservableListWrapper;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import javafx.collections.MockListObserver;
 import org.junit.Before;
 import org.junit.Test;
 import static org.junit.Assert.*;

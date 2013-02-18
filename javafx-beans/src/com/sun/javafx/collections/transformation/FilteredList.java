@@ -376,7 +376,7 @@ public final class FilteredList<E> extends TransformationList<E, E> implements F
     private void refilter() {
         ensureSize(source.size());
         List<E> removed = null;
-        if (hasListChangeListener()) {
+        if (hasListeners()) {
             removed = new ArrayList<E>(this);
         }
         size = 0;
@@ -388,8 +388,8 @@ public final class FilteredList<E> extends TransformationList<E, E> implements F
             }
             ++i;
         }
-        if (hasListChangeListener()) {
-            callObservers(new GenericAddRemoveChange<E>(0, size, removed, this));
+        if (hasListeners()) {
+            fireChange(new GenericAddRemoveChange<E>(0, size, removed, this));
         }
     }
     

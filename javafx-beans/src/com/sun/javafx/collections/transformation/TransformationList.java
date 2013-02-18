@@ -24,7 +24,7 @@
  */
 package com.sun.javafx.collections.transformation;
 
-import com.sun.javafx.collections.BaseObservableList;
+import javafx.collections.ObservableListBase;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ListChangeListener.Change;
 import javafx.collections.ObservableList;
@@ -42,7 +42,7 @@ import javafx.collections.WeakListChangeListener;
  * @param <E> the type parameter of this list
  * @param <F> the upper bound of the type of the source list
  */
-public abstract class TransformationList<E, F> extends BaseObservableList<E> implements ObservableList<E> {
+public abstract class TransformationList<E, F> extends ObservableListBase<E> implements ObservableList<E> {
 
     /**
      * Contains the source list of this transformation list.

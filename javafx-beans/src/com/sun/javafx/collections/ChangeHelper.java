@@ -27,8 +27,8 @@ package com.sun.javafx.collections;
 import java.util.Arrays;
 import java.util.List;
 
-class ChangeHelper {
-    static String addRemoveChangeToString(int from, int to, List<?> list, List<?> removed) {
+public class ChangeHelper {
+    public static String addRemoveChangeToString(int from, int to, List<?> list, List<?> removed) {
         StringBuilder b = new StringBuilder();
                 
         if (removed.isEmpty()) {
@@ -47,11 +47,11 @@ class ChangeHelper {
         return b.toString();
     }
 
-    static String permChangeToString(int[] permutation) {
+    public static String permChangeToString(int[] permutation) {
         return "permutated by " + Arrays.toString(permutation);
     }
 
-    static String updateChangeToString(int from, int to) {
+    public static String updateChangeToString(int from, int to) {
         return "updated at range [" + from + ", " + to + ")";
     }
 }

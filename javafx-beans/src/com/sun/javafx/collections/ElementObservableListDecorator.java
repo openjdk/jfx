@@ -24,11 +24,13 @@
  */
 package com.sun.javafx.collections;
 
+import javafx.collections.ObservableListBase;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.RandomAccess;
+import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ListChangeListener.Change;
@@ -36,7 +38,7 @@ import javafx.collections.ObservableList;
 import javafx.collections.WeakListChangeListener;
 import javafx.util.Callback;
 
-public final class ElementObservableListDecorator<E> extends BaseObservableList<E> implements ObservableList<E> {
+public final class ElementObservableListDecorator<E> extends ObservableListBase<E> implements ObservableList<E> {
 
     private final ObservableList<E> decoratedList;
     private final ListChangeListener<E> listener;
@@ -45,7 +47,36 @@ public final class ElementObservableListDecorator<E> extends BaseObservableList<
 
     public ElementObservableListDecorator(ObservableList<E> decorated,
             Callback<E, Observable[]> extractor) {
-        this.observer = new ElementObserver<E>(extractor, this);
+        this.observer = new ElementObserver<E>(extractor, new Callback<E, InvalidationListener>() {
+
+            @Override
+            public InvalidationListener call(final E e) {
+                return new InvalidationListener() {
+
+                    @Override
+                    public void invalidated(Observable observable) {
+                        beginChange();
+                        int i = 0;
+                        if (decoratedList instanceof RandomAccess) {
+                            final int size = size();
+                            for (; i < size; ++i) {
+                                if (get(i) == e) {
+                                    nextUpdate(i);
+                                }
+                            }
+                        } else {
+                            for (Iterator<?> it = iterator(); it.hasNext();) {
+                                if (it.next() == e) {
+                                    nextUpdate(i);
+                                }
+                                ++i;
+                            }
+                        }
+                        endChange();
+                    }
+                };
+            }
+        }, this);
         this.decoratedList = decorated;
         final int sz = decoratedList.size();
         for (int i = 0; i < sz; ++i) {
@@ -75,7 +106,7 @@ public final class ElementObservableListDecorator<E> extends BaseObservableList<
                     }
                 }
                 c.reset();
-                callObservers(c);
+                fireChange(c);
             }
         };
         this.decoratedList.addListener(new WeakListChangeListener<E> (listener));
