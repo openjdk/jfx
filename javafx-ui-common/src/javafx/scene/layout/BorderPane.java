@@ -532,7 +532,7 @@ public class BorderPane extends Pane {
 
         double topHeight = 0;
         Insets topMargin = null;
-        if (t != null) {
+        if (t != null && t.isManaged()) {
             topMargin = getNodeMargin(t);
             if (getContentBias() == Orientation.VERTICAL) {
                 topHeight = heights[0] == -1 ? t.prefHeight(-1) : heights[0];
@@ -545,7 +545,7 @@ public class BorderPane extends Pane {
 
         double bottomHeight = 0;
         Insets bottomMargin = null;
-        if (b != null) {
+        if (b != null && b.isManaged()) {
             bottomMargin = getNodeMargin(b);
             if (getContentBias() == Orientation.VERTICAL) {
                 bottomHeight = heights[4] == -1 ? b.prefHeight(-1) : heights[4];
@@ -558,7 +558,7 @@ public class BorderPane extends Pane {
 
         double leftWidth = 0;
         Insets leftMargin = null;
-        if (l != null) {
+        if (l != null && l.isManaged()) {
             leftMargin = getNodeMargin(l);
             if (getContentBias() == Orientation.HORIZONTAL) {
                 leftWidth =  widths[0] == -1 ? l.prefWidth(-1) : widths[0];
@@ -571,7 +571,7 @@ public class BorderPane extends Pane {
 
         double rightWidth = 0;
         Insets rightMargin = null;
-        if (r != null) {
+        if (r != null && r.isManaged()) {
             rightMargin = getNodeMargin(r);
             if (getContentBias() == Orientation.HORIZONTAL) {
                 rightWidth = widths[2] == -1 ? r.prefWidth(-1) : widths[2];
@@ -582,7 +582,7 @@ public class BorderPane extends Pane {
             }
         }
 
-        if (t != null) {
+        if (t != null && t.isManaged()) {
             Pos alignment = getAlignment(t);
             topHeight = Math.min(topHeight, insideHeight);
             layoutInArea(t, insideX, insideY, insideWidth, topHeight, 0/*ignore baseline*/,
@@ -591,7 +591,7 @@ public class BorderPane extends Pane {
                     alignment != null? alignment.getVpos() : VPos.TOP);
         }
 
-        if (b != null) {
+        if (b != null && b.isManaged() ) {
             Pos alignment = getAlignment(b);
             bottomHeight = Math.min(bottomHeight, insideHeight - topHeight);
             layoutInArea(b, insideX, insideY + insideHeight - bottomHeight,
@@ -601,7 +601,7 @@ public class BorderPane extends Pane {
                     alignment != null? alignment.getVpos() : VPos.BOTTOM);
         }
         
-        if (l != null) {
+        if (l != null && l.isManaged()) {
             Pos alignment = getAlignment(l);
             leftWidth = Math.min(leftWidth, insideWidth);
             layoutInArea(l, insideX, insideY + topHeight,
@@ -611,7 +611,7 @@ public class BorderPane extends Pane {
                     alignment != null? alignment.getVpos() : VPos.TOP);
         }
 
-        if (r != null) {
+        if (r != null && r.isManaged()) {
             Pos alignment = getAlignment(r);
             rightWidth = Math.min(rightWidth, insideWidth - leftWidth);
             layoutInArea(r, insideX + insideWidth - rightWidth, insideY + topHeight,
@@ -621,8 +621,9 @@ public class BorderPane extends Pane {
                     alignment != null? alignment.getVpos() : VPos.TOP);
         }
 
-        if (c != null) {
+        if (c != null && c.isManaged()) {
             Pos alignment = getAlignment(c);
+            
             layoutInArea(c, insideX + leftWidth, insideY + topHeight,
                     insideWidth - leftWidth - rightWidth,
                     insideHeight - topHeight - bottomHeight, 0/*ignore baseline*/,
