@@ -2166,7 +2166,7 @@ public class Region extends Parent {
                 }
             }
 
-            result.offer(this, boundsDistance, PickResultChooser.computePoint(pickRay, boundsDistance));
+            impl_intersects(pickRay, result);
         }
     }
 
