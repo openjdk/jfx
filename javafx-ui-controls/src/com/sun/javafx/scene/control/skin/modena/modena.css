@@ -1816,7 +1816,7 @@ is being used to size a border should also be in pixels.
 }
 .color-picker.split-button > .arrow-button {
     /*-fx-background-color: -fx-outer-border, -fx-inner-border, -fx-body-color !important;*/
-    -fx-padding: 0.5em 0.833333em 0.5em 0.833333em; /* 6 10 6 10 */
+    -fx-padding: 0.5em 0.667em 0.5em 0.667em; /* 6 8 6 8 */
 }
 .color-picker > .color-picker-label > .picker-color > .picker-color-rect {
     -fx-stroke: -fx-box-border;
