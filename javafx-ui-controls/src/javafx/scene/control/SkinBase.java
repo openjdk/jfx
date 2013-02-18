@@ -28,6 +28,8 @@ import javafx.css.CssMetaData;
 import javafx.css.PseudoClass;
 import java.util.Collections;
 import java.util.List;
+import javafx.beans.InvalidationListener;
+import javafx.beans.Observable;
 import javafx.collections.ObservableList;
 import javafx.css.Styleable;
 import javafx.event.EventHandler;
@@ -109,6 +111,15 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
         
         // Default behavior for controls is to consume all mouse events
         consumeMouseEvents(true);
+        
+        // RT-28337: request layout on prefWidth / prefHeight changes
+        InvalidationListener prefSizeListener = new InvalidationListener() {
+            @Override public void invalidated(Observable o) {
+                control.requestLayout();
+            }
+        };
+        this.control.prefWidthProperty().addListener(prefSizeListener);
+        this.control.prefHeightProperty().addListener(prefSizeListener);
     }
     
     
