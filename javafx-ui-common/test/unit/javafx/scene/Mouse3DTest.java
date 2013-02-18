@@ -1374,6 +1374,29 @@ public class Mouse3DTest {
     }
 
     @Test
+    public void shouldPickRectTranslatedAlongZByParallelCamera() {
+        MouseEventGenerator g = new MouseEventGenerator();
+        Rectangle r = rect().handleMove(me);
+        r.setTranslateZ(70);
+
+        Scene s = scene(group(r), parallel(), true).handleMove(sme);
+
+        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 10, 50));
+
+        MouseEvent e = me.event;
+        assertNotNull(e);
+        assertCoordinates(e, 10, 50, 10, 50, 0);
+        assertPickResult(e.getPickResult(), r, point(10, 50, 0),
+                Double.POSITIVE_INFINITY, NOFACE, null);
+
+        e = sme.event;
+        assertNotNull(e);
+        assertCoordinates(e, 10, 50, 10, 50, 70);
+        assertPickResult(e.getPickResult(), r, point(10, 50, 0),
+                Double.POSITIVE_INFINITY, NOFACE, null);
+    }
+
+    @Test
     public void shouldPickRectRotatedIn3DByParallelCamera() {
         MouseEventGenerator g = new MouseEventGenerator();
         Rectangle r = rect().rotate('y', 45).handleMove(me);
