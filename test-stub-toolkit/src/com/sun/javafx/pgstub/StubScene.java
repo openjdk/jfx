@@ -28,6 +28,7 @@ import com.sun.javafx.geom.PickRay;
 import com.sun.javafx.geom.Vec3d;
 import com.sun.javafx.sg.PGCamera;
 import com.sun.javafx.sg.PGNode;
+import com.sun.javafx.sg.PGPerspectiveCamera;
 import com.sun.javafx.tk.TKClipboard;
 import com.sun.javafx.tk.TKScene;
 import com.sun.javafx.tk.TKSceneListener;
@@ -42,6 +43,7 @@ public class StubScene implements TKScene {
     StubStage stage;
     private TKSceneListener listener;
     private Object cursor;
+    private PGCamera camera;
 
     @Override
     public void setSecurityContext(AccessControlContext ctx) {
@@ -73,16 +75,22 @@ public class StubScene implements TKScene {
     }
 
     public void setCamera(PGCamera ci) {
-        // ignore
+        camera = ci;
     }
 
     public PickRay computePickRay(float x, float y, PickRay pickRay) {
-        // static parallel pickray ignoring camera and everything
         if (pickRay == null) {
             pickRay = new PickRay();
         }
-        pickRay.setOrigin(new Vec3d(x, y, -1000));
-        pickRay.setDirection(new Vec3d(0, 0, 1000));
+        if (camera instanceof PGPerspectiveCamera) {
+            pickRay.setOrigin(new Vec3d(x, y, -1000));
+            pickRay.setDirection(new Vec3d(0, 0, 1000));
+            pickRay.setPicksNegativeDistances(false);
+        } else {
+            pickRay.setOrigin(new Vec3d(x, y, 0));
+            pickRay.setDirection(new Vec3d(0, 0, 1));
+            pickRay.setPicksNegativeDistances(true);
+        }
         return pickRay;
     }
 
