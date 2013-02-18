@@ -83,13 +83,9 @@ public class StubScene implements TKScene {
             pickRay = new PickRay();
         }
         if (camera instanceof PGPerspectiveCamera) {
-            pickRay.setOrigin(new Vec3d(x, y, -1000));
-            pickRay.setDirection(new Vec3d(0, 0, 1000));
-            pickRay.setPicksNegativeDistances(false);
+            pickRay.set(new Vec3d(x, y, -1000), new Vec3d(0, 0, 1000));
         } else {
-            pickRay.setOrigin(new Vec3d(x, y, 0));
-            pickRay.setDirection(new Vec3d(0, 0, 1));
-            pickRay.setPicksNegativeDistances(true);
+            pickRay.set(x, y);
         }
         return pickRay;
     }
