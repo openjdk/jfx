@@ -23,20 +23,20 @@
  * questions.
  */
 
-package com.sun.javafx.collections;
+package javafx.collections;
 
+import com.sun.javafx.collections.ChangeHelper;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
 import javafx.collections.ListChangeListener.Change;
-import javafx.collections.ObservableList;
 
 final class ListChangeBuilder<E> {
 
     private static final int[] EMPTY_PERM = new int[0];
-    private final BaseObservableList<E> list;
+    private final ObservableListBase<E> list;
     private int changeLock;
     private List<SubChange<E>> addRemoveChanges;
     private List<SubChange<E>> updateChanges;
@@ -186,7 +186,7 @@ final class ListChangeBuilder<E> {
         }
     }
 
-    public ListChangeBuilder(BaseObservableList<E> list) {
+    ListChangeBuilder(ObservableListBase<E> list) {
         this.list = list;
     }
 
@@ -228,7 +228,7 @@ final class ListChangeBuilder<E> {
         
     }
 
-    public void nextRemove(int idx, List<E> removed) {
+    public void nextRemove(int idx, List<? extends E> removed) {
         checkState();
         
         for (int i = 0; i < removed.size(); ++i) {
@@ -332,7 +332,7 @@ final class ListChangeBuilder<E> {
         }
     }
 
-    public void nextReplace(int from, int to, List<E> removed) {
+    public void nextReplace(int from, int to, List<? extends E> removed) {
         nextRemove(from, removed);
         nextAdd(from, to);
     }
@@ -367,13 +367,13 @@ final class ListChangeBuilder<E> {
                     (addRemoveChanges != null ? addRemoveChanges.size() : 0) + (permutationChange != null ? 1 : 0);
             if (totalSize == 1) {
                 if (addRemoveNotEmpty) {
-                    list.callObservers(new SingleChange<E>(finalizeSubChange(addRemoveChanges.get(0)), list));
+                    list.fireChange(new SingleChange<E>(finalizeSubChange(addRemoveChanges.get(0)), list));
                     addRemoveChanges.clear();
                 } else if (updateNotEmpty) {
-                    list.callObservers(new SingleChange<E>(finalizeSubChange(updateChanges.get(0)), list));
+                    list.fireChange(new SingleChange<E>(finalizeSubChange(updateChanges.get(0)), list));
                     updateChanges.clear();
                 } else {
-                    list.callObservers(new SingleChange<E>(finalizeSubChange(permutationChange), list));
+                    list.fireChange(new SingleChange<E>(finalizeSubChange(permutationChange), list));
                     permutationChange = null;
                 }
             } else {
@@ -409,7 +409,7 @@ final class ListChangeBuilder<E> {
                         }
                     }
                 }
-                list.callObservers(new IterableChange<E>(finalizeSubChangeArray(array), list));
+                list.fireChange(new IterableChange<E>(finalizeSubChangeArray(array), list));
                 if (addRemoveChanges != null) addRemoveChanges.clear();
                 if (updateChanges != null) updateChanges.clear();
                 permutationChange = null;
@@ -452,7 +452,7 @@ final class ListChangeBuilder<E> {
         private final SubChange<E> change;
         private boolean onChange;
 
-        public SingleChange(SubChange<E> change, BaseObservableList<E> list) {
+        public SingleChange(SubChange<E> change, ObservableListBase<E> list) {
             super(list);
             this.change = change;
         }

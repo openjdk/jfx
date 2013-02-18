@@ -23,7 +23,7 @@
  * questions.
  */
 
-package com.sun.javafx.collections;
+package javafx.collections;
 
 import java.util.Collection;
 import java.util.Iterator;
@@ -31,10 +31,54 @@ import java.util.List;
 import java.util.ListIterator;
 
 /**
+ * Abstract class that serves as a base class for {@link ObservableList} implementations that are modifiable.
  *
- * @author martin
+ * To implement a modifiable {@code ObservableList} class, you just need to implement the following set of methods:
+ * <ul>
+ * <li> {@link #get(int)  get(int)}
+ * <li> {@link #size() size()}
+ * <li> {@link #doAdd(int, java.lang.Object) doAdd(int, Object)}
+ * <li> {@link #doRemove(int) doRemove(int)}
+ * <li> {@link #doSet(int, java.lang.Object) doSet(int, Object)}
+ * </ul>
+ *
+ * and the notifications and built and fired automatically for you.
+ *
+ * <p>Example of a simple {@code ObservableList} delegating to another {@code List} would look like this:
+ *
+ * <pre>
+ *
+ *   <strong>public class</strong> ArrayObservableList&lt;E&gt; <strong>extends</strong> ModifiableObservableList&lt;E&gt; {
+ *
+ *   <strong>private final List</strong>&lt;E&gt; delegate = new <strong>ArrayList</strong>&lt;&gt;();
+ *
+ *   <strong>public E</strong> get(int index) {
+ *       <strong>return</strong> delegate.get(index);
+ *   }
+ *
+ *   <strong>public int</strong> size() {
+ *       <strong>return</strong> delegate.size();
+ *   }
+ *
+ *   <strong>protected void</strong> doAdd(<strong>int</strong> index, <strong>E</strong> element) {
+ *       delegate.add(index, element);
+ *   }
+ *
+ *   <strong>protected E</strong> doSet(<strong>int</strong> index, <strong>E</strong> element) {
+ *       <strong>return</strong> delegate.set(index, element);
+ *   }
+ *
+ *   <strong>protected E</strong> doRemove(<strong>int</strong> index) {
+ *       <strong>return</strong> delegate.remove(index);
+ *   }
+ *
+ * </pre>
+ *
+ * @param <E> the type of the elements contained in the List
+ * @see ObservableListBase
+ * @since 8.0
  */
-public abstract class BaseModifiableObservableList<E> extends BaseObservableList<E> {
+public abstract class ModifiableObservableListBase<E> extends ObservableListBase<E> {
 
     @Override
     public boolean setAll(Collection<? extends E> col) {
@@ -151,10 +195,50 @@ public abstract class BaseModifiableObservableList<E> extends BaseObservableList
     @Override
     public abstract int size();
 
+    /**
+     * Adds the {@code element} to the List at the position of {@code index}.
+     *
+     * <p>For the description of possible exceptions, please refer to the documentation
+     * of {@link #add(java.lang.Object) } method.
+     *
+     * @param index the position where to add the element
+     * @param element the element that will be added
+
+     * @throws ClassCastException
+     * @throws NullPointerException
+     * @throws IllegalArgumentException
+     * @throws IndexOutOfBoundsException if the index is out of range
+     *         (<tt>index &lt; 0 || index &gt; size()</tt>)
+     */
     protected abstract void doAdd(int index, E element);
 
+    /**
+     * Sets the {@code element} in the List at the position of {@code index}.
+     *
+     * <p>For the description of possible exceptions, please refer to the documentation
+     * of {@link #set(int, java.lang.Object) } method.
+     * 
+     * @param index the position where to set the element
+     * @param element the element that will be set at the specified position
+     * @return the old element at the specified position
+     *
+     * @throws ClassCastException
+     * @throws NullPointerException
+     * @throws IllegalArgumentException
+     * @throws IndexOutOfBoundsException if the index is out of range
+     *         (<tt>index &lt; 0 || index &gt;= size()</tt>)
+     */
     protected abstract E doSet(int index, E element);
 
+    /**
+     * Removes the element at position of {@code index}.
+     *
+     * @param index the index of the removed element
+     * @return the removed element
+     *
+     * @throws IndexOutOfBoundsException if the index is out of range
+     *         (<tt>index &lt; 0 || index &gt;= size()</tt>)
+     */
     protected abstract E doRemove(int index);
 
     private class SubObservableList implements List<E> {

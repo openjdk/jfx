@@ -25,7 +25,6 @@
 
 package javafx.collections;
 
-import com.sun.javafx.collections.BaseObservableList;
 import com.sun.javafx.collections.ListListenerHelper;
 import com.sun.javafx.collections.MapListenerHelper;
 import com.sun.javafx.collections.SetListenerHelper;
@@ -842,7 +841,7 @@ public class FXCollections {
 
     }
 
-    private static class UnmodifiableObservableListImpl<T> extends BaseObservableList<T> implements ObservableList<T> {
+    private static class UnmodifiableObservableListImpl<T> extends ObservableListBase<T> implements ObservableList<T> {
 
         private final ObservableList<T> backingList;
         private final ListChangeListener<T> listener;
@@ -853,7 +852,7 @@ public class FXCollections {
 
                 @Override
                 public void onChanged(Change<? extends T> c) {
-                    callObservers(new SourceAdapterChange<T>(UnmodifiableObservableListImpl.this, c));
+                    fireChange(new SourceAdapterChange<T>(UnmodifiableObservableListImpl.this, c));
                 }
             };
             this.backingList.addListener(new WeakListChangeListener<T>(listener));
@@ -1165,7 +1164,7 @@ public class FXCollections {
 
     }
 
-    private static class CheckedObservableList<T> extends BaseObservableList<T> implements ObservableList<T> {
+    private static class CheckedObservableList<T> extends ObservableListBase<T> implements ObservableList<T> {
 
         private final ObservableList<T> list;
         private final Class<T> type;
@@ -1181,7 +1180,7 @@ public class FXCollections {
 
                 @Override
                 public void onChanged(Change<? extends T> c) {
-                    callObservers(new SourceAdapterChange<T>(CheckedObservableList.this, c));
+                    fireChange(new SourceAdapterChange<T>(CheckedObservableList.this, c));
                 }
             };
             list.addListener(new WeakListChangeListener<T>(listener));
