@@ -963,8 +963,21 @@ public class MouseTest {
     }
 
     @Test
-    public void topMostNodeShouldBePickedWithDepthBuffer() {
-        SimpleTestScene scene = new SimpleTestScene(true);
+    public void topMostNodeShouldBePickedWithDepthBufferByPerspectiveCamera() {
+        SimpleTestScene scene = new SimpleTestScene(true, true);
+        MouseEventGenerator generator = new MouseEventGenerator();
+
+        scene.processEvent(generator.generateMouseEvent(
+                MouseEvent.MOUSE_MOVED, 250, 250));
+
+        assertFalse(scene.smallSquareTracker.wasMoved());
+        assertTrue(scene.bigSquareTracker.wasMoved());
+        assertTrue(scene.groupTracker.wasMoved());
+    }
+
+    @Test
+    public void topMostNodeShouldBePickedWithDepthBufferByParallelCamera() {
+        SimpleTestScene scene = new SimpleTestScene(true, false);
         MouseEventGenerator generator = new MouseEventGenerator();
 
         scene.processEvent(generator.generateMouseEvent(
@@ -985,13 +998,13 @@ public class MouseTest {
         private Scene scene;
 
         public SimpleTestScene() {
-            this(false);
+            this(false, false);
         }
 
-        public SimpleTestScene(boolean depthBuffer) {
+        public SimpleTestScene(boolean depthBuffer, boolean perspective) {
             final Group root = new Group();
             scene = new Scene(root, 400, 400, depthBuffer);
-            if (depthBuffer) {
+            if (perspective) {
                 scene.setCamera(new PerspectiveCamera());
             }
 
