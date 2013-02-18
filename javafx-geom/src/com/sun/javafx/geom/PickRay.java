@@ -34,6 +34,7 @@ import com.sun.javafx.geom.transform.NoninvertibleTransformException;
 public class PickRay {
     private Vec3d origin = new Vec3d();
     private Vec3d direction = new Vec3d();
+    private boolean parallel = false;
 
 //    static final double EPS = 1.0e-13;
     static final double EPS = 1.0e-5f;
@@ -41,17 +42,45 @@ public class PickRay {
     public PickRay() { }
 
     public PickRay(Vec3d origin, Vec3d direction) {
+        set(origin, direction);
+    }
+
+    public PickRay(double x, double y) {
+        set(x, y);
+    }
+
+    public PickRay(Vec3d origin, Vec3d direction, boolean parallel) {
         setOrigin(origin);
         setDirection(direction);
+        this.parallel = parallel;
     }
+
+    public final void set(Vec3d origin, Vec3d direction) {
+        setOrigin(origin);
+        setDirection(direction);
+        parallel = false;
+    }
+
+    public final void set(double x, double y) {
+        // Right now the parallel camera picks nodes even on negative distances
+        // (behind the camera). Therefore, it doesn't matter
+        // what is the Z coordinate of the origin. Also the reported distance
+        // is always an infinity so it doesn't matter what is the magnitude
+        // of the direction.
+        setOrigin(x, y, 0);
+        setDirection(0, 0, 1);
+        parallel = true;
+    }
+
 
     public void setPickRay(PickRay other) {
         setOrigin(other.origin);
         setDirection(other.direction);
+        parallel = other.parallel;
     }
 
     public PickRay copy() {
-        return new PickRay(origin, direction);
+        return new PickRay(origin, direction, parallel);
     }
 
     /**
@@ -117,6 +146,10 @@ public class PickRay {
 
     public Vec3d getDirectionNoClone() {
         return direction;
+    }
+
+    public boolean isParallel() {
+        return parallel;
     }
 
     public double distance(Vec3d iPnt) {

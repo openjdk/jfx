@@ -667,30 +667,11 @@ public abstract class Parent extends Node {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-    @Override protected void impl_pickNodeLocal(double localX, double localY, PickResultChooser result) {
-        if (containsBounds(localX, localY)) {
-            for (int i = children.size()-1; i >= 0; i--) {
-                children.get(i).impl_pickNode(localX, localY, result);
-                if (!result.isEmpty()) {
-                    return;
-                }
-            }
-            if (isPickOnBounds()) {
-                result.offer(this, Double.POSITIVE_INFINITY, new Point3D(localX, localY, 0));
-            }
-        }
-    }
-
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
     @Override protected void impl_pickNodeLocal(PickRay pickRay, PickResultChooser result) {
 
         double boundsDistance = impl_intersectsBounds(pickRay);
 
-        if (boundsDistance >= 0) {
+        if (!Double.isNaN(boundsDistance)) {
             final boolean checkAll = getScene().isDepthBuffer();
             for (int i = children.size()-1; i >= 0; i--) {
                 children.get(i).impl_pickNode(pickRay, result);

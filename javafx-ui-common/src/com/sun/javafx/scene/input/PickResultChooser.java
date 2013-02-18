@@ -66,13 +66,20 @@ public class PickResultChooser {
     /**
      * Converts the current content of this instance to the unmodifiable
      * PickResult.
+     * @param publishDistance Whether to publish the distance. If set to
+     *        {@code false}, {@code POSITIVE_INFINITY} will be used instead
+     *        of the distance. This is intended for a parallel camera
+     *        that has no position.
+     *
      * @return PickResult containing the current values of this chooser
      */
-    public PickResult toPickResult() {
+    public PickResult toPickResult(boolean publishDistance) {
         if (empty) {
             return null;
         }
-        return new PickResult(node, point, distance, face, texCoord);
+        return new PickResult(node, point,
+                publishDistance ? distance : Double.POSITIVE_INFINITY,
+                face, texCoord);
     }
 
     /**

@@ -1713,7 +1713,7 @@ public class Scene implements EventTarget {
      */
     Node test_pick(double x, double y) {
         inMousePick = true;
-        PickResult result = mouseHandler.pickNode(x, y);
+        PickResult result = mouseHandler.pickNode(new PickRay(x, y));
         inMousePick = false;
         if (result != null) {
             return result.getIntersectedNode();
@@ -1742,35 +1742,24 @@ public class Scene implements EventTarget {
     }
 
     private void pick(TargetWrapper target, final double x, final double y) {
-        if (pickingCamera instanceof PerspectiveCamera) {
-            final PickRay pickRay = new PickRay();
-            Scene.this.impl_peer.computePickRay(
-                    (float)x, (float)y, pickRay);
-            final double mag = pickRay.getDirectionNoClone().length();
-            pickRay.getDirectionNoClone().normalize();
-            final PickResult res = mouseHandler.pickNode(pickRay);
-            if (res != null) {
-                target.setNodeResult(res);
-            } else {
-                //TODO: is this the intersection with projection plane?
-                Vec3d o = pickRay.getOriginNoClone();
-                Vec3d d = pickRay.getDirectionNoClone();
-                target.setSceneResult(new PickResult(
-                        null, new Point3D(
-                        o.x + mag * d.x,
-                        o.y + mag * d.y,
-                        o.z + mag * d.z), mag),
-                        isInScene(x, y) ? this : null);
-            }
+        final PickRay pickRay = Scene.this.impl_peer.computePickRay(
+                (float)x, (float)y, null);
+        final double mag = pickRay.getDirectionNoClone().length();
+        pickRay.getDirectionNoClone().normalize();
+        final PickResult res = mouseHandler.pickNode(pickRay);
+        if (res != null) {
+            target.setNodeResult(res);
         } else {
-            final PickResult res = mouseHandler.pickNode(x, y);
-            if (res != null) {
-                target.setNodeResult(res);
-            } else {
-                target.setSceneResult(new PickResult(null, new Point3D(x, y, 0),
-                        Double.POSITIVE_INFINITY),
-                        isInScene(x, y) ? this : null);
-            }
+            //TODO: is this the intersection with projection plane?
+            Vec3d o = pickRay.getOriginNoClone();
+            Vec3d d = pickRay.getDirectionNoClone();
+            target.setSceneResult(new PickResult(
+                    null, new Point3D(
+                    o.x + mag * d.x,
+                    o.y + mag * d.y,
+                    o.z + mag * d.z), 
+                    pickRay.isParallel() ? Double.POSITIVE_INFINITY : mag),
+                    isInScene(x, y) ? this : null);
         }
     }
 
@@ -3636,16 +3625,10 @@ public class Scene implements EventTarget {
             }
         }
 
-        private PickResult pickNode(double x, double y) {
-            PickResultChooser r = new PickResultChooser();
-            Scene.this.getRoot().impl_pickNode(x, y, r);
-            return r.toPickResult();
-        }
-
         private PickResult pickNode(PickRay pickRay) {
             PickResultChooser r = new PickResultChooser();
             Scene.this.getRoot().impl_pickNode(pickRay, r);
-            return r.toPickResult();
+            return r.toPickResult(!pickRay.isParallel());
         }
     }
 

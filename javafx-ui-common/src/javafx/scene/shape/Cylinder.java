@@ -251,6 +251,8 @@ public class Cylinder extends Shape3D {
         final double discriminant = b * b - 4 * a * c;
 
         double t0, t1, t = Double.POSITIVE_INFINITY;
+        final double minDistance = pickRay.isParallel()
+                ? Double.NEGATIVE_INFINITY : 0.0;
 
         if (discriminant >= 0 && (dirX != 0.0 || dirZ != 0.0)) {
             // the line hits the infinite cylinder
@@ -267,11 +269,11 @@ public class Cylinder extends Shape3D {
                 t1 = temp;
             }
 
-            // let's see if the hit is in front of us and withing the cylinder's height
+            // let's see if the hit is in front of us and within the cylinder's height
             final double y0 = originY + t0 * dirY;
-            if (t0 < 0 || y0 < -halfHeight || y0 > halfHeight || cullFace == CullFace.FRONT) {
+            if (t0 < minDistance || y0 < -halfHeight || y0 > halfHeight || cullFace == CullFace.FRONT) {
                 final double y1 = originY + t1 * dirY;
-                if (t1 >= 0 && y1 >= -halfHeight && y1 <= halfHeight) {
+                if (t1 >= minDistance && y1 >= -halfHeight && y1 <= halfHeight) {
                     if (cullFace != CullFace.BACK || exactPicking) {
                         // t0 is outside or behind but t1 hits.
 
@@ -305,7 +307,7 @@ public class Cylinder extends Shape3D {
                 t1 = tBottom;
             }
 
-            if (t0 > 0 && t0 < t && cullFace != CullFace.FRONT) {
+            if (t0 > minDistance && t0 < t && cullFace != CullFace.FRONT) {
                 final double tX = originX + dirX * t0;
                 final double tZ = originZ + dirZ * t0;
                 if (tX * tX + tZ * tZ <= r * r) {
@@ -314,7 +316,7 @@ public class Cylinder extends Shape3D {
                 }
             }
 
-            if (t1 > 0 && t1 < t && (cullFace != CullFace.BACK || exactPicking)) {
+            if (t1 > minDistance && t1 < t && (cullFace != CullFace.BACK || exactPicking)) {
                 final double tX = originX + dirX * t1;
                 final double tZ = originZ + dirZ * t1;
                 if (tX * tX + tZ * tZ <= r * r) {
@@ -324,7 +326,7 @@ public class Cylinder extends Shape3D {
             }
         }
 
-        if (t == Double.POSITIVE_INFINITY) {
+        if (Double.isInfinite(t) || Double.isNaN(t)) {
             // no hit
             return false;
         }
@@ -333,7 +335,7 @@ public class Cylinder extends Shape3D {
             return mesh.impl_computeIntersects(pickRay, pickResult, this, cullFace, false);
         }
 
-        if (pickResult.isCloser(t)) {
+        if (pickResult != null && pickResult.isCloser(t)) {
             final Point3D point = PickResultChooser.computePoint(pickRay, t);
 
             Point2D txCoords;

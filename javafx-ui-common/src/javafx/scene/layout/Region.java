@@ -2151,32 +2151,11 @@ public class Region extends Parent {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-    @Override protected void impl_pickNodeLocal(double localX, double localY, PickResultChooser result) {
-        if (containsBounds(localX, localY)) {
-            ObservableList<Node> children = getChildren();
-            for (int i = children.size() - 1; i >= 0; i--) {
-                children.get(i).impl_pickNode(localX, localY, result);
-                if (!result.isEmpty()) {
-                    return;
-                }
-            }
-            if (contains(localX, localY)) {
-                result.offer(this, Double.POSITIVE_INFINITY, new Point3D(localX, localY, 0));
-            }
-        }
-    }
-
-    /**
-     * Some skins relying on this
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
     @Override protected void impl_pickNodeLocal(PickRay pickRay, PickResultChooser result) {
 
         double boundsDistance = impl_intersectsBounds(pickRay);
 
-        if (boundsDistance >= 0) {
+        if (!Double.isNaN(boundsDistance)) {
             final boolean checkAll = getScene().isDepthBuffer();
 
             ObservableList<Node> children = getChildren();

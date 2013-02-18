@@ -233,9 +233,9 @@ public class Box extends Shape3D {
         final double hHeight = h / 2.0;
         final double hDepth = d / 2.0;
         final Vec3d dir = pickRay.getDirectionNoClone();
-        final double invDirX = dir.x == 0 ? Double.POSITIVE_INFINITY : (1.0 / dir.x);
-        final double invDirY = dir.y == 0 ? Double.POSITIVE_INFINITY : (1.0 / dir.y);
-        final double invDirZ = dir.z == 0 ? Double.POSITIVE_INFINITY : (1.0 / dir.z);
+        final double invDirX = dir.x == 0.0 ? Double.POSITIVE_INFINITY : (1.0 / dir.x);
+        final double invDirY = dir.y == 0.0 ? Double.POSITIVE_INFINITY : (1.0 / dir.y);
+        final double invDirZ = dir.z == 0.0 ? Double.POSITIVE_INFINITY : (1.0 / dir.z);
         final Vec3d origin = pickRay.getOriginNoClone();
         final double originX = origin.x;
         final double originY = origin.y;
@@ -244,46 +244,78 @@ public class Box extends Shape3D {
         final boolean signY = invDirY < 0.0;
         final boolean signZ = invDirZ < 0.0;
 
-        double t0 = ((signX ? hWidth : -hWidth) - originX) * invDirX;
-        double t1 = ((signX ? -hWidth : hWidth) - originX) * invDirX;
-        char side0 = 'x';
-        char side1 = 'x';
+        double t0 = Double.NEGATIVE_INFINITY;
+        double t1 = Double.POSITIVE_INFINITY;
+        char side0 = '0';
+        char side1 = '0';
 
-        final double ty0 = ((signY ? hHeight : -hHeight) - originY) * invDirY;
-        final double ty1 = ((signY ? -hHeight : hHeight) - originY) * invDirY;
-
-        if ((t0 > ty1) || (ty0 > t1)) {
-            return false;
-        }
-        if (ty0 > t0) {
-            side0 = 'y';
-            t0 = ty0;
-        }
-        if (ty1 < t1) {
-            side1 = 'y';
-            t1 = ty1;
+        if (Double.isInfinite(invDirX)) {
+            if (-hWidth <= originX && hWidth >= originX) {
+                // move on, we are inside for the whole length
+            } else {
+                return false;
+            }
+        } else {
+            t0 = ((signX ? hWidth : -hWidth) - originX) * invDirX;
+            t1 = ((signX ? -hWidth : hWidth) - originX) * invDirX;
+            side0 = 'x';
+            side1 = 'x';
         }
 
-        double tz0 = ((signZ ? hDepth : -hDepth) - originZ) * invDirZ;
-        double tz1 = ((signZ ? -hDepth : hDepth) - originZ) * invDirZ;
+        if (Double.isInfinite(invDirY)) {
+            if (-hHeight <= originY && hHeight >= originY) {
+                // move on, we are inside for the whole length
+            } else {
+                return false;
+            }
+        } else {
+            final double ty0 = ((signY ? hHeight : -hHeight) - originY) * invDirY;
+            final double ty1 = ((signY ? -hHeight : hHeight) - originY) * invDirY;
 
-        if ((t0 > tz1) || (tz0 > t1)) {
-            return false;
+            if ((t0 > ty1) || (ty0 > t1)) {
+                return false;
+            }
+            if (ty0 > t0) {
+                side0 = 'y';
+                t0 = ty0;
+            }
+            if (ty1 < t1) {
+                side1 = 'y';
+                t1 = ty1;
+            }
         }
-        if (tz0 > t0) {
-            side0 = signZ ? 'Z' : 'z';
-            t0 = tz0;
-        }
-        if (tz1 < t1) {
-            side1 = signZ ? 'z' : 'Z';
-            t1 = tz1;
+
+        if (Double.isInfinite(invDirZ)) {
+            if (-hDepth <= originZ && hDepth >= originZ) {
+                // move on, we are inside for the whole length
+            } else {
+                return false;
+            }
+        } else {
+            double tz0 = ((signZ ? hDepth : -hDepth) - originZ) * invDirZ;
+            double tz1 = ((signZ ? -hDepth : hDepth) - originZ) * invDirZ;
+
+            if ((t0 > tz1) || (tz0 > t1)) {
+                return false;
+            }
+            if (tz0 > t0) {
+                side0 = signZ ? 'Z' : 'z';
+                t0 = tz0;
+            }
+            if (tz1 < t1) {
+                side1 = signZ ? 'z' : 'Z';
+                t1 = tz1;
+            }
         }
 
         char side = side0;
         double t = t0;
         final CullFace cullFace = getCullFace();
-        if (t0 < 0.0 || cullFace == CullFace.FRONT) {
-            if (t1 >= 0.0 && cullFace != CullFace.BACK) {
+        final double minDistance = pickRay.isParallel()
+                ? Double.NEGATIVE_INFINITY : 0.0;
+
+        if (t0 < minDistance || cullFace == CullFace.FRONT) {
+            if (t1 >= minDistance && cullFace != CullFace.BACK) {
                 side = side1;
                 t = t1;
             } else {
@@ -291,7 +323,12 @@ public class Box extends Shape3D {
             }
         }
 
-        if (pickResult.isCloser(t)) {
+        if (Double.isInfinite(t) || Double.isNaN(t)) {
+            // We've got a nonsense pick ray or box size.
+            return false;
+        }
+
+        if (pickResult != null && pickResult.isCloser(t)) {
             Point3D point = PickResultChooser.computePoint(pickRay, t);
 
             Point2D txtCoords = null;
@@ -312,6 +349,10 @@ public class Box extends Shape3D {
                 txtCoords = new Point2D(
                         0.5 - point.getY() / h,
                         0.5 - point.getX() / w);
+            } else {
+                // No hit with any of the planes. We must have had a zero
+                // pick ray direction vector. Should never happen.
+                return false;
             }
 
             pickResult.offer(this, t, PickResult.FACE_UNDEFINED, point, txtCoords);

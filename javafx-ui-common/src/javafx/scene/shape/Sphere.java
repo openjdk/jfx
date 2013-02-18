@@ -224,14 +224,16 @@ public class Sphere extends Shape3D {
             t1 = temp;
         }
 
-        if (t1 < 0) {
+        if (t1 < 0.0 && !pickRay.isParallel()) {
             // the sphere is behind us
             return false;
         }
 
         double t = t0;
         final CullFace cullFace = getCullFace();
-        if (t0 < 0 || cullFace == CullFace.FRONT) {
+        final double minDistance = pickRay.isParallel()
+                ? Double.NEGATIVE_INFINITY : 0.0;
+        if (t0 < minDistance || cullFace == CullFace.FRONT) {
             if (getCullFace() != CullFace.BACK) {
                 // picking the back wall
                 t = t1;
@@ -245,11 +247,16 @@ public class Sphere extends Shape3D {
             }
         }
 
+        if (Double.isInfinite(t) || Double.isNaN(t)) {
+            // We've got a nonsense pick ray or sphere size.
+            return false;
+        }
+
         if (exactPicking) {
             return mesh.impl_computeIntersects(pickRay, pickResult, this, cullFace, false);
         }
 
-        if (pickResult.isCloser(t)) {
+        if (pickResult != null && pickResult.isCloser(t)) {
             final Point3D point = PickResultChooser.computePoint(pickRay, t);
 
             // computing texture coords
