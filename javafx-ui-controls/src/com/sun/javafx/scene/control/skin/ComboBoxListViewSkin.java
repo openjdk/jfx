@@ -63,6 +63,8 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
     // This may one day become a property on the ComboBox itself.
     private static final String COMBO_BOX_ROWS_TO_MEASURE_WIDTH_KEY = "comboBoxRowsToMeasureWidth";
     
+    private static final String EMPTY_TEXT_CELL = "empty-text-cell";
+    
     
     
     /***************************************************************************
@@ -275,7 +277,9 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
     }
     
     @Override protected double computePrefWidth(double height) {
-        double pw = listView.prefWidth(height);
+        double superPrefWidth = super.computePrefWidth(height);
+        double listViewWidth = listView.prefWidth(height);
+        double pw = Math.max(superPrefWidth, listViewWidth);
         
         reconfigurePopup();
         
@@ -403,7 +407,6 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
             int index = getIndexOfComboBoxValueInItemsList();
             if (index > -1) {
                 buttonCell.setItem(null);
-                buttonCell.updateListView(listView);
                 buttonCell.updateIndex(index);
             } else {
                 // RT-21336 Show the ComboBox value even though it doesn't
@@ -427,7 +430,19 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
         if (empty) {
             if (cell == null) return true;
             cell.setGraphic(null);
-            cell.setText(comboBox.getPromptText() == null ? null : comboBox.getPromptText());
+            
+            final List<T> items = comboBox.getItems();
+            final int index = cell.getIndex();
+            final boolean isEmptyTextCell = index == 0 && (items == null || items.isEmpty());
+            String s = isEmptyTextCell ? comboBox.getEmptyText() : "";
+            cell.setText(s);
+            
+            if (isEmptyTextCell) {
+                cell.getStyleClass().add(EMPTY_TEXT_CELL);
+            } else {
+                cell.getStyleClass().remove(EMPTY_TEXT_CELL);
+            }
+            
             return true;
         } else if (item instanceof Node) {
             Node currentNode = cell.getGraphic();
@@ -474,7 +489,8 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
         buttonCell = comboBox.getButtonCell() != null ? 
                 comboBox.getButtonCell() : getDefaultCellFactory().call(listView);
         buttonCell.setMouseTransparent(true);
-    }
+        buttonCell.updateListView(listView);
+    } 
 
     private void updateCellFactory() {
         Callback<ListView<T>, ListCell<T>> cf = comboBox.getCellFactory();
@@ -518,6 +534,10 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
                     if (comboBox.getProperties().containsKey(COMBO_BOX_ROWS_TO_MEASURE_WIDTH_KEY)) {
                         rowsToMeasure = (Integer) comboBox.getProperties().get(COMBO_BOX_ROWS_TO_MEASURE_WIDTH_KEY);
                     }
+                    
+                    // We want to measure at least the first row, in case we have
+                    // a very long emptyText cell, for example.
+                    rowsToMeasure = Math.max(rowsToMeasure, 1);
                     
                     pw = Math.max(comboBox.getWidth(), skin.getMaxCellWidth(rowsToMeasure) + 30);
                 } else {

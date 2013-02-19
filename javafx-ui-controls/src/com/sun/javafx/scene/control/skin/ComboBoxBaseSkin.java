@@ -158,7 +158,10 @@ public abstract class ComboBoxBaseSkin<T> extends BehaviorSkinBase<ComboBoxBase<
     }
     
     @Override protected double computePrefWidth(double height) {
-        if (displayNode == null) updateDisplayArea();
+        if (displayNode == null) {
+            updateDisplayArea();
+        }
+        
         final Insets arrowButtonPadding = arrowButton.getInsets();
         final double arrowWidth = snapSize(arrow.prefWidth(-1));
         final double arrowButtonWidth = (isButton()) ? 0 : 

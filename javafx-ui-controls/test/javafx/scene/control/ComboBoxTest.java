@@ -109,6 +109,10 @@ public class ComboBoxTest {
         assertEquals("", comboBox.getPromptText());
     }
     
+    @Test public void noArgConstructor_emptyTextIsEmptyString() {
+        assertEquals("", comboBox.getEmptyText());
+    }
+    
     @Test public void noArgConstructor_armedIsFalse() {
         assertFalse(comboBox.isArmed());
     }
@@ -174,6 +178,11 @@ public class ComboBoxTest {
     @Test public void singleArgConstructor_promptTextIsEmptyString() {
         final ComboBox<String> b2 = new ComboBox<String>(FXCollections.observableArrayList("Hi"));
         assertEquals("", b2.getPromptText());
+    }
+    
+    @Test public void singleArgConstructor_emptyTextIsEmptyString() {
+        final ComboBox<String> b2 = new ComboBox<String>(FXCollections.observableArrayList("Hi"));
+        assertEquals("", b2.getEmptyText());
     }
     
     @Test public void singleArgConstructor_armedIsFalse() {
@@ -503,6 +512,10 @@ public class ComboBoxTest {
         assertTrue(comboBox.promptTextProperty().getName().equals("promptText"));
     }
     
+    @Test public void checkEmptyTextPropertyName() {
+        assertTrue(comboBox.emptyTextProperty().getName().equals("emptyText"));
+    }
+    
     @Test public void checkValuePropertyName() {
         assertTrue(comboBox.valueProperty().getName().equals("value"));
     }
@@ -677,6 +690,22 @@ public class ComboBoxTest {
         assertEquals("Test123", comboBox.getPromptText());
     }
     
+    @Test public void ensureCanSetEmptyText() {
+        comboBox.setEmptyText("Test 1 2 3");
+        assertEquals("Test 1 2 3", comboBox.getEmptyText());
+    }
+    
+    @Test public void ensureCanSetEmptyTextToNull() {
+        assertEquals("", comboBox.getEmptyText());
+        comboBox.setEmptyText(null);
+        assertEquals(null, comboBox.getEmptyText());
+    }
+    
+    @Test public void ensureEmptyTextDoesNotStripNewlines() {
+        comboBox.setEmptyText("Test\n1\n2\n3");
+        assertEquals("Test\n1\n2\n3", comboBox.getEmptyText());
+    }
+    
     @Test public void ensureCanToggleArmed() {
         assertFalse(comboBox.isArmed());
         comboBox.arm();
@@ -721,10 +750,19 @@ public class ComboBoxTest {
     @Test public void checkValuePropertyBind() {
         StringProperty strPr = new SimpleStringProperty("value");
         comboBox.valueProperty().bind(strPr);
-        assertTrue("PromptText cannot be bound", comboBox.getValue().equals("value"));
+        assertTrue("value cannot be bound", comboBox.getValue().equals("value"));
         strPr.setValue("newvalue");
-        assertTrue("PromptText cannot be bound", comboBox.getValue().equals("newvalue"));
+        assertTrue("value cannot be bound", comboBox.getValue().equals("newvalue"));
     }
+    
+    @Test public void checkEmptyTextPropertyBind() {
+        StringProperty strPr = new SimpleStringProperty("value");
+        comboBox.emptyTextProperty().bind(strPr);
+        assertTrue("EmptyText cannot be bound", comboBox.getEmptyText().equals("value"));
+        strPr.setValue("newvalue");
+        assertTrue("EmptyText cannot be bound", comboBox.getEmptyText().equals("newvalue"));
+    }
+    
     
     
     /*********************************************************************

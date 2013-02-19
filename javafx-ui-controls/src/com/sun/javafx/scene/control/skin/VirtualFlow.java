@@ -2097,7 +2097,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
     
     double getMaxCellWidth(int rowsToCount) {
         double max = 0.0;
-        int rows = rowsToCount == -1 ? cellCount : Math.min(rowsToCount, cellCount);
+        int rows = rowsToCount == -1 ? cellCount : rowsToCount; //Math.min(rowsToCount, cellCount);
         for (int i = 0; i < rows; i++) {
             max = Math.max(max, getCellBreadth(i));
         }
