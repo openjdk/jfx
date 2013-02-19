@@ -140,22 +140,24 @@ public class ButtonSkin extends LabeledSkinBase<Button, ButtonBehavior<Button>> 
     private KeyCodeCombination cancelAcceleratorKeyCodeCombination;
 
     private void setCancelButton(boolean value) {
-        KeyCode acceleratorCode = KeyCode.ESCAPE;
-        cancelAcceleratorKeyCodeCombination = new KeyCodeCombination(acceleratorCode);
+        Scene scene = getSkinnable().getScene();
+        if (scene != null) {
+            KeyCode acceleratorCode = KeyCode.ESCAPE;
+            cancelAcceleratorKeyCodeCombination = new KeyCodeCombination(acceleratorCode);
         
-        if (! value) {
-            /*
-            ** first check of there's a default button already
-            */
-            Runnable oldDefault = getSkinnable().getParent().getScene().getAccelerators().get(cancelAcceleratorKeyCodeCombination);
-            if (!defaultButtonRunnable.equals(oldDefault)) {
+            if (!value) {
                 /*
-                ** is it us?
+                ** first check of there's a cancel button already
                 */
-                getSkinnable().getParent().getScene().getAccelerators().remove(cancelAcceleratorKeyCodeCombination);
-            }
-        }        
-        getSkinnable().getParent().getScene().getAccelerators().put(cancelAcceleratorKeyCodeCombination, cancelButtonRunnable);
+                Runnable oldCancel = scene.getAccelerators().get(cancelAcceleratorKeyCodeCombination);
+                if (!cancelButtonRunnable.equals(oldCancel)) {
+                    /*
+                    ** is it us?
+                    */
+                    scene.getAccelerators().remove(cancelAcceleratorKeyCodeCombination);
+                }
+            }        
+            scene.getAccelerators().put(cancelAcceleratorKeyCodeCombination, cancelButtonRunnable);
+        }
     }
-
 }
