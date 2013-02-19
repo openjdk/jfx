@@ -136,7 +136,7 @@ import com.sun.javafx.jmx.MXNodeAlgorithm;
 import com.sun.javafx.jmx.MXNodeAlgorithmContext;
 import sun.util.logging.PlatformLogger;
 import com.sun.javafx.perf.PerformanceTracker;
-import com.sun.javafx.print.NodeAccess;
+import com.sun.javafx.scene.NodeAccess;
 import com.sun.javafx.scene.BoundsAccessor;
 import com.sun.javafx.scene.CssFlags;
 import com.sun.javafx.scene.DirtyBits;
@@ -8455,10 +8455,12 @@ public abstract class Node implements EventTarget, Styleable {
     public abstract Object impl_processMXNode(MXNodeAlgorithm alg, MXNodeAlgorithmContext ctx);
 
     /**
-     * This class is used by printing to get access to a private method.
+     * This class is used by classes in different packages to get access to
+     * private and package private methods.
      */
     private static class NodeAccessImpl extends NodeAccess {
 
+        @Override
         public void layoutNodeForPrinting(Node node) {
             node.doCSSLayoutSyncForSnapshot();
         }

@@ -23,7 +23,7 @@
  * questions.
  */
 
-package com.sun.javafx.print;
+package com.sun.javafx.scene;
 
 import javafx.scene.Node;
 
