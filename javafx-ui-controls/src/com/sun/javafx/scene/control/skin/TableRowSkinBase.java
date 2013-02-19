@@ -139,14 +139,14 @@ public abstract class TableRowSkinBase<T,
         if (column < 0 || column >= visibleLeafColumns.size()) return null;
         return visibleLeafColumns.get(column);
     }
-
-    private static enum SpanType {
-        NONE,
-        COLUMN,
-        ROW,
-        BOTH,
-        UNSET;
-    }
+    
+//    private static enum SpanType {
+//        NONE,
+//        COLUMN,
+//        ROW,
+//        BOTH,
+//        UNSET;
+//    }
     
     // Specifies the number of times we will call 'recreateCells()' before we blow
     // out the cellsMap structure and rebuild all cells. This helps to prevent
