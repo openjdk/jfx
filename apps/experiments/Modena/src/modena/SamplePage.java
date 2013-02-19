@@ -639,18 +639,16 @@ public class SamplePage extends GridPane {
                     ButtonBuilder.create().text("or me").tooltip(TooltipBuilder.create().text("This is a simple Tooltip\nwith graphic.").graphic(createGraphic()).build()).build()
                 ).build()
                 );
-        
-        
         newSection(
-                "MenuBar:", 
-                createMenuBar()
+                "MenuBar & ContextMenu:", 
+                createMenuBar(),
+                createContextMenu()
                 );
         newSection(
-                "Menu:", 
-                createInlineMenu()
+                "Menus:", 
+                createInlineMenu(false),
+                createInlineMenu(true)
                 );
-        
-        
         newSection(
                 "AreaChart:", 
                 createAreaChart(false)

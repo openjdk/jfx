@@ -350,7 +350,6 @@ is being used to size a border should also be in pixels.
     );
 
     /* These are needed for Popup */
-    -fx-background-color: inherit;
     -fx-background-radius: inherit;
     -fx-background-insets: inherit;
     -fx-padding: inherit;
@@ -708,13 +707,13 @@ is being used to size a border should also be in pixels.
 }
 .check-box:selected > .box {
     /* Carefully picked numbers to remain square as scaling */
-/**/    -fx-padding: -0.208333em 0 0.208333em 0.23em; /* -2.5 0 2.5 2.76 */
-/**/    -fx-padding: -0.208333em 0.083333em 0.208333em 0.23em; /* -1.5 0 2.5 2.76 */
+    /*-fx-padding: -0.208333em 0 0.208333em 0.23em;  -2.5 0 2.5 2.76 */
+    /*-fx-padding: -0.208333em 0.083333em 0.208333em 0.23em;  -1.5 0 2.5 2.76 */
     -fx-padding: 0.166667em 0.166667em 0.25em 0.25em; /* 2 2 3 3 */
 }
 .check-box:selected > .box > .mark {
     -fx-background-color: transparent;
-/**/    -fx-padding: 0.666667em 0.583333em 0.666667em 0.5em; /* 7 7 6 5 */
+    /*-fx-padding: 0.666667em 0.583333em 0.666667em 0.5em;  7 7 6 5 */
     -fx-padding: 0.416667em 0.416667em 0.5em 0.5em; /* 5 5 6 6 */
     -fx-shape: "M-0.25,6.083c0.843-0.758,4.583,4.833,5.75,4.833S14.5-1.5,15.917-0.917c1.292,0.532-8.75,17.083-10.5,17.083C3,16.167-1.083,6.833-0.25,6.083z";
 }
@@ -930,7 +929,7 @@ is being used to size a border should also be in pixels.
 }
 .scroll-bar > .thumb {
     -fx-background-color: -fx-outer-border, -fx-inner-border, -fx-body-color; 
-    -fx-background-insets: 1, 2, 3;
+    /*-fx-background-insets: 1, 2, 3;*/
     -fx-background-insets: 2, 3, 4;
     /*-fx-background-radius: 0.416667em, 0.333333em, 0.25em; *//* 5, 4,3 */
     -fx-background-radius: 3, 2, 1;
@@ -958,25 +957,25 @@ is being used to size a border should also be in pixels.
     -fx-background-color: -fx-mark-highlight-color,derive(-fx-base,-45%);
 }
 .scroll-bar:horizontal > .increment-button > .increment-arrow {
-    -fx-padding: 0.583333em 0.416667em 0 0; /* 7 5 0 0 */
+    /*-fx-padding: 0.583333em 0.416667em 0 0; *//* 7 5 0 0 */
     -fx-padding: 0.75em 0.416667em 0 0; /* 9 5 0 0 */
     -fx-shape: "M0.315,1.457l1.414-1.414L5.686,4L1.729,7.957L0.315,6.543L2.857,4L0.315,1.457z";
     -fx-background-insets: 2 0 -2 0, 0;
 }
 .scroll-bar:vertical > .increment-button > .increment-arrow {
-    -fx-padding: 0.416667em 0.583333em 0 0 ; /* 5 7 0 0 */
+    /*-fx-padding: 0.416667em 0.583333em 0 0 ; *//* 5 7 0 0 */
     -fx-padding: 0.416667em 0.75em 0 0 ; /* 5 9 0 0 */
     -fx-shape: "M6.543,0.315l1.414,1.414L4,5.686L0.043,1.729l1.414-1.414L4,2.858L6.543,0.315z";
     -fx-background-insets: 2 0 -2 0, 0;
 }
 .scroll-bar:horizontal > .decrement-button > .decrement-arrow {
-    -fx-padding: 0.583333em 0.416667em 0 0; /* 7 5 0 0 */
+    /*-fx-padding: 0.583333em 0.416667em 0 0; *//* 7 5 0 0 */
     -fx-padding: 0.75em 0.416667em 0 0; /* 9 5 0 0 */
     -fx-shape: "M5.686,6.543L4.271,7.957L0.314,4l3.957-3.957l1.414,1.414L3.143,4L5.686,6.543z";
     -fx-background-insets: 2 0 -2 0, 0;
 }
 .scroll-bar:vertical > .decrement-button > .decrement-arrow {
-    -fx-padding: 0.416667em 0.583333em 0 0; /* 5 7 0 0 */
+    /*-fx-padding: 0.416667em 0.583333em 0 0; *//* 5 7 0 0 */
     -fx-padding: 0.416667em 0.75em 0 0; /* 5 9 0 0 */
     -fx-shape: "M1.457,5.563L0.042,4.149L4,0.193l3.957,3.957L6.543,5.563L4,3.021L1.457,5.563z";
     -fx-background-insets: 2 0 -2 0, 0;
@@ -1178,7 +1177,7 @@ is being used to size a border should also be in pixels.
     -fx-background-insets: 0, 1;
     -fx-background-radius: 3, 2;
     -fx-cursor: text;
-    -fx-padding: 0.333333em 0.583em 0.333333em 0.583em; /* 5 7 4 7 */
+    /*-fx-padding: 0.333333em 0.583em 0.333333em 0.583em; *//* 5 7 4 7 */
     -fx-padding: 0.385em 0.583em 0.385em 0.583em; /* 5 7 4 7 */
 }
 .text-input:focused {
@@ -1421,15 +1420,16 @@ is being used to size a border should also be in pixels.
 .menu-bar > .container > .menu-button > .label {
     -fx-padding: 0;
 }
-.menu-bar > .container > .menu-button:hover, .menu-bar > .container > .menu-button:focused, .menu-bar > .container > .menu-button:showing {
-    -fx-background: -fx-accent;
+.menu-bar > .container > .menu-button:hover,
+.menu-bar > .container > .menu-button:focused,
+.menu-bar > .container > .menu-button:showing {
+    -fx-background: -fx-selection-bar;
     -fx-background-color: -fx-selection-bar;
-    -fx-text-fill: -fx-selection-bar-text;
 }
-.menu-bar > .container > .menu-button:hover {
-    -fx-background: -fx-accent;
-    -fx-background-color: -fx-selection-bar;
-    -fx-text-fill: -fx-selection-bar-text;
+.menu-bar > .container > .menu-button:hover > .label,
+.menu-bar > .container > .menu-button:focused > .label,
+.menu-bar > .container > .menu-button:showing  > .label {
+    -fx-text-fill: -fx-selection-bar-text !important;
 }
 .menu-bar:show-mnemonics > .mnemonic-underline {
     -fx-stroke: -fx-text-fill;
@@ -1588,7 +1588,7 @@ is being used to size a border should also be in pixels.
     -fx-background-insets: 0, 0 0 0 1, 1;
 }
 .tab-pane:top > .tab-header-area {
-    -fx-padding: 0.416667em 0.166667em 0.0em 0.416667em; /* 5 2 0 5 */
+    /*-fx-padding: 0.416667em 0.166667em 0.0em 0.416667em; *//* 5 2 0 5 */
     -fx-padding: 0.416667em 5 0.0em 0.416667em; /* 5 2 0 5 */
 }
 .tab-pane:bottom > .tab-header-area {
@@ -1956,6 +1956,7 @@ is being used to size a border should also be in pixels.
 }*/
 .custom-color-dialog .controls-pane .current-new-color-grid #transparent-current, 
 .controls-pane .current-new-color-grid #transparent-new {
+    /* TODO remove this for Modena? */
     -fx-background-image: url("pattern-transparent.png"); 
     -fx-background-repeat: repeat;
     -fx-background-size: auto;

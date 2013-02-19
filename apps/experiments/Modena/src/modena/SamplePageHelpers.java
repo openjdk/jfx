@@ -31,9 +31,7 @@
  */
 package modena;
 
-import com.sun.javafx.scene.control.skin.ContextMenuContent;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import javafx.application.Platform;
 import javafx.beans.InvalidationListener;
@@ -41,8 +39,6 @@ import javafx.beans.Observable;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.css.PseudoClass;
-import javafx.event.ActionEvent;
-import javafx.event.EventHandler;
 import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
 import javafx.geometry.Side;
@@ -51,7 +47,6 @@ import javafx.scene.Node;
 import javafx.scene.control.Accordion;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonBuilder;
-import javafx.scene.control.CheckBoxTreeItemBuilder;
 import javafx.scene.control.CheckMenuItem;
 import javafx.scene.control.CheckMenuItemBuilder;
 import javafx.scene.control.ContextMenu;
@@ -60,7 +55,6 @@ import javafx.scene.control.ListView;
 import javafx.scene.control.Menu;
 import javafx.scene.control.MenuBar;
 import javafx.scene.control.MenuItem;
-import javafx.scene.control.MultipleSelectionModel;
 import javafx.scene.control.Pagination;
 import javafx.scene.control.RadioMenuItemBuilder;
 import javafx.scene.control.SelectionMode;
@@ -69,11 +63,9 @@ import javafx.scene.control.SeparatorMenuItem;
 import javafx.scene.control.SplitPane;
 import javafx.scene.control.TabBuilder;
 import javafx.scene.control.TabPane;
-import javafx.scene.control.TableView;
 import javafx.scene.control.TextField;
 import javafx.scene.control.TitledPaneBuilder;
 import javafx.scene.control.ToolBar;
-import javafx.scene.control.Tooltip;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.KeyCharacterCombination;
@@ -269,40 +261,66 @@ public class SamplePageHelpers {
     }
     
     static MenuBar createMenuBar() {
-        MenuBar mb = new MenuBar();
+        final MenuBar mb = new MenuBar();
         mb.getMenus().addAll(
             createMenu("File"),
             createMenu("Edit"),
             createMenu("View"),
             createMenu("Help")
         );
+//        mb.setMouseTransparent(true);
+        Platform.runLater(new Runnable() {
+            @Override public void run() {
+                // get second menu and force into hover state
+                new ArrayList<Node>(mb.lookupAll(".menu")).get(1).pseudoClassStateChanged(PseudoClass.getPseudoClass("hover"), true);
+            }
+        });
         return  mb;
     }
     
     static Menu createMenu(String name) {
         Menu m = new Menu(name);
-        m.getItems().addAll(createMenuContents(false));
+        m.getStyleClass().add(name);
+        m.getItems().addAll(createMenuContents());
         return  m;
     }
     
-    static Node createInlineMenu() {
-        // create a hacked menu so we can put it inline in our test page
-        final ContextMenu menu = new ContextMenu(createMenuContents(true));
-        final ContextMenuContent cmc = new ContextMenuContent(menu);
-        cmc.setMouseTransparent(true);
-//        cmc.setMinHeight(150);
-//        cmc.setPrefHeight(150);
-        StackPane contextMenu = new StackPane();
-        contextMenu.getChildren().add(cmc);
-//        contextMenu.getStyleClass().add("context-menu");
-        cmc.getStyleClass().add("context-menu");
+    static Node createContextMenu() {
+        Button b = new Button("ContextMenu Right Click Me");
+        b.setContextMenu(new ContextMenu(createMenuContents()));
+        return b;
+    }
+    
+    static Node createInlineMenu(final boolean selectAll) {
+        // create a context menu so we can put it inline in our test page
+        final ContextMenu menu = new ContextMenu(createMenuContents());
+        // create a place holder container
+        final StackPane contextMenu = new StackPane();
+        // show context menu then steal and place inline
         Platform.runLater(new Runnable() {
             @Override public void run() {
-                menu.show(cmc,-1000,-1000);
+                menu.show(contextMenu,-1000,-1000);
                 menu.hide();
                 Platform.runLater(new Runnable() {
                     @Override public void run() {
-                        cmc.lookup(".OpenMenuItem").pseudoClassStateChanged(PseudoClass.getPseudoClass("focused"), true);
+                        final Node menuContent = menu.getSkin().getNode();
+                        contextMenu.getChildren().add(menuContent);
+                        menuContent.setMouseTransparent(true);
+//                        System.out.println("menuContent = " + menuContent);
+//                        System.out.println("menuContent.lookupAll(\".menu-item\") = " + menuContent.lookupAll(".menu-item"));
+                        
+//                        Platform.runLater(new Runnable() {
+//                            @Override public void run() {
+////                        if (selectAll) {
+////                            for (Node n: menuContent.lookupAll(".menu-item")) {
+////                                n.pseudoClassStateChanged(PseudoClass.getPseudoClass("hover"), true);
+////                            }
+////                        } else {
+//                            new ArrayList<Node>(menuContent.lookupAll(".menu-item")).get(2)
+//                                    .pseudoClassStateChanged(PseudoClass.getPseudoClass("hover"), true);
+////                        }
+//                            }
+//                        });
                     }
                 });
             }
@@ -310,7 +328,7 @@ public class SamplePageHelpers {
         return contextMenu;
     }
     
-    static MenuItem[] createMenuContents(boolean forcedStates) {
+    static MenuItem[] createMenuContents() {
         List<MenuItem> menuItems = new ArrayList<>();
 //        Menu menu11 = makeMenu("_New", new ImageView(new Image(getClass().getResourceAsStream("about_16.png"))));
 //        final Menu menu11 = new Menu("_New", new ImageView(new Image("helloworld/about_16.png")));
