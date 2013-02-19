@@ -25,8 +25,8 @@
 
 package com.sun.javafx.geom;
 
-import com.sun.javafx.geom.transform.BaseTransform;
 import java.util.Arrays;
+
 /**
  * Container for array of dirty regions. This container internally holds
  * pointer to the first empty dirty region in the array and index of last
@@ -42,11 +42,7 @@ public final class DirtyRegionContainer {
     private int emptyIndex;
     
     public DirtyRegionContainer(int count) {
-        dirtyRegions = new RectBounds[count];
-        for (int i = 0; i < count; i++) {
-            dirtyRegions[i] = new RectBounds();
-        }
-        emptyIndex = 0;
+        initDirtyRegions(count);
     }
 
     @Override
@@ -86,7 +82,7 @@ public final class DirtyRegionContainer {
             return this;
         }
         if (regions.length > maxSpace()) {
-            dirtyRegions = new RectBounds[regions.length];
+            initDirtyRegions(regions.length);
         }
 
         regioncopy(regions, 0, dirtyRegions, 0, regions.length);
@@ -102,12 +98,20 @@ public final class DirtyRegionContainer {
         }
 
         if (other.maxSpace() > maxSpace()) {
-            dirtyRegions = new RectBounds[other.maxSpace()];
+            initDirtyRegions(other.maxSpace());
         }
         
         regioncopy(other.dirtyRegions, 0, dirtyRegions, 0, other.emptyIndex);
         emptyIndex = other.emptyIndex;
         return this;
+    }
+
+    private void initDirtyRegions(int count) {
+        dirtyRegions = new RectBounds[count];
+        for (int i = 0; i < count; i++) {
+            dirtyRegions[i] = new RectBounds();
+        }
+        emptyIndex = 0;
     }
 
     public DirtyRegionContainer copy() {
@@ -203,7 +207,7 @@ public final class DirtyRegionContainer {
         for (int i = 0; i < length; i++) {
             rb = src[from++];
             if (rb == null) {
-                dest[to++] = null;
+                dest[to++].makeEmpty();
             } else {
                 dest[to++].deriveWithNewBounds(rb);
             }
