@@ -3180,7 +3180,7 @@ Only the properties with values that are different from the TextBox are specifie
 
 /* -------------- STYLES FOR THE DEFAULT LISTVIEW-BASED COMBOBOX ------------- */
 
-/* Customie the ListCell that appears in the ComboBox button itself */
+/* Customise the ListCell that appears in the ComboBox button itself */
 .combo-box > .list-cell {
     -fx-background: transparent;
     -fx-background-color: transparent;
@@ -3212,6 +3212,10 @@ Only the properties with values that are different from the TextBox are specifie
 .combo-box-popup  > .list-view > .virtual-flow > .clipped-container > .sheet > .list-cell:filled:hover {
     -fx-background-color: -fx-cell-hover-color;
     -fx-text-fill: -fx-text-inner-color;
+}
+
+.combo-box-popup > .list-view > .virtual-flow > .clipped-container > .sheet > .empty-text-cell {
+    -fx-text-fill: derive(-fx-control-inner-background,-30%);
 }
 
 /* -------------------------- STYLES FOR THE COLOR-PICKER CONTROL ----- */
