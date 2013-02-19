@@ -2206,11 +2206,7 @@ public abstract class Node implements EventTarget, Styleable {
         //if (PerformanceTracker.isLoggingEnabled()) {
         //    PerformanceTracker.logEvent("Node.init for [{this}, id=\"{id}\"]");
         //}
-        styleHelper = new StyleHelper(this) {
-            @Override protected void requestStateTranstion() {
-                Node.this.requestCssStateTransition();
-            }
-        };
+        styleHelper = new StyleHelper(this);
         setDirty();
         updateTreeVisible();
         //if (PerformanceTracker.isLoggingEnabled()) {
@@ -8054,22 +8050,21 @@ public abstract class Node implements EventTarget, Styleable {
      * @param active whether or not the state is active
      */
     public final void pseudoClassStateChanged(PseudoClass pseudoClass, boolean active) {
-        final Set<PseudoClass> pseudoClassState = styleHelper.getPseudoClassSet();
         
-        if (active) {
-            pseudoClassState.add(pseudoClass);
-        } else {
-            pseudoClassState.remove(pseudoClass);
-        }
-    }
+        final boolean isTransition = styleHelper.pseudoClassStateChanged(pseudoClass, active);
+        if (isTransition) {
+            requestCssStateTransition();
+        }            
+        
+   }
     
     /**
      * @return An unmodifiable Set of active pseudo-class states
      */
     public final Set<PseudoClass> getPseudoClassStates() {
         
-        final Set<PseudoClass> pseudoClassState = styleHelper.getPseudoClassSet();
-        return Collections.<PseudoClass>unmodifiableSet(pseudoClassState);
+        return styleHelper.getPseudoClassState();
+        
     }
 
     // Walks up the tree telling each parent that the pseudo class state of
@@ -8229,12 +8224,12 @@ public abstract class Node implements EventTarget, Styleable {
         if (cssFlag == CssFlags.REAPPLY) {
 
             final StyleManager styleManager = StyleManager.getInstance();
-            styleHelper.setStyles(styleManager);
+            styleHelper.setStyles(this);
 
         } else if (cssFlag == CssFlags.RECALCULATE) {
             
             final StyleManager styleManager = StyleManager.getInstance();
-            styleHelper.inlineStyleChanged(styleManager);
+            styleHelper.inlineStyleChanged(this);
             
         }
         
@@ -8243,7 +8238,7 @@ public abstract class Node implements EventTarget, Styleable {
         cssFlag = CssFlags.CLEAN;
 
         // Transition to the new state and apply styles
-        styleHelper.transitionToState();
+        styleHelper.transitionToState(this);
     }
     
     /**

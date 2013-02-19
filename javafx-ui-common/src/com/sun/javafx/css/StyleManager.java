@@ -58,8 +58,6 @@ import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.text.Font;
 import javafx.stage.Window;
-import com.sun.javafx.css.StyleHelper.StyleCacheBucket;
-import com.sun.javafx.css.StyleHelper.StyleCacheKey;
 import com.sun.javafx.css.parser.CSSParser;
 import java.util.Map.Entry;
 import java.util.Set;
@@ -195,24 +193,21 @@ final public class StyleManager {
     Map<List<String>, Map<Key, Cache>> getCacheMap() { return masterCacheMap; }
 
     /*
-     * The StyleHelper's cached values are relevant only for a given scene.
-     * Since a StylesheetContainer is created for a Scene with stylesheets,
-     * it makes sense that the container should own the valueCache. This
-     * way, each scene gets its own valueCache.
      */
-    private final Map<StyleCacheKey, StyleCacheBucket> styleCache =
-            new HashMap<StyleCacheKey, StyleCacheBucket>();
+    private final Map<StyleCache.Key, StyleCache> styleCache =
+            new HashMap<StyleCache.Key, StyleCache>();
     
     /** StyleHelper uses this cache. */
-    Map<StyleCacheKey, StyleCacheBucket> getStyleCache() { return styleCache; }
+    StyleCache getStyleCache(StyleCache.Key key) { 
+
+        StyleCache cache = styleCache.get(key);
+        if (cache == null) {
+            cache = new StyleCache();
+            styleCache.put(new StyleCache.Key(key), cache);
+        }
+        return cache;
+    }
     
-    /*
-     * A simple counter used to generate a unique id for a StyleMap. 
-     * This unique id is used by StyleHelper in figuring out which 
-     * style cache to use.
-     */
-    private int smapCount;
-       
    /**
      * This stylesheet represents the "default" set of styles for the entire
      * platform. This is typically only set by the UI Controls module, and
@@ -489,6 +484,7 @@ final public class StyleManager {
             
             Entry<List<String>, Map<Key, Cache>> entry = iter.next();
             List<String> containerList = entry.getKey();
+            if (containerList == null) continue;
             
             if (containerList.contains(sc.fname)) {
                 containerList.remove(sc.fname);
@@ -983,14 +979,18 @@ final public class StyleManager {
     }
     
     private void clearCache() {
-        styleCache.clear();
+        
         masterCacheMap.clear();
-        smapCount = 0;
+        styleCache.clear();
+        
+        styleMapList.clear();
+        baseStyleMapId = styleMapId;
+        // totally arbitrary
+        if (baseStyleMapId > Integer.MAX_VALUE*7/8) {
+            baseStyleMapId = styleMapId = 0;
+        }
     }
 
-    private long nextSmapId() {
-        return ++smapCount;
-    }
 
     //
     // recurse so that stylesheets of Parents closest to the root are
@@ -1291,22 +1291,54 @@ final public class StyleManager {
     //
     ////////////////////////////////////////////////////////////////////////////
 
+    /*
+     * A simple counter used to generate a unique id for a StyleMap. 
+     * This unique id is used by StyleHelper in figuring out which 
+     * style cache to use.
+     */
+    private int styleMapId = 0;
+    
+    private List<StyleMap> styleMapList = new ArrayList<StyleMap>();
+    private int baseStyleMapId = 0;
+
+    private int nextSmapId() {
+        return ++styleMapId;
+    }
+       
+    private void addStyleMap(StyleMap smap) {
+        assert ((smap.id - baseStyleMapId - 1) == styleMapList.size());
+        styleMapList.add(smap);
+    }
+    
+    StyleMap getStyleMap(int smapId) {
+        
+        if (smapId == StyleMap.EMPTY_MAP.id) return StyleMap.EMPTY_MAP;
+        
+        final int smapCount = styleMapList.size();
+        final int correctedId = smapId - baseStyleMapId - 1;
+        
+        if (correctedId < 0 || smapCount <= correctedId) return null;
+        return styleMapList.get(correctedId);
+    }
+    
     //
     // Used by StyleHelper. The key uniquely identifies this style map.
     // These keys are used by StyleHelper in creating its StyleCacheKey.
     // The StyleCacheKey is used to lookup calculated values in cache.
     //
     static class StyleMap {
-        final long uniqueId; // unique per container
-        final Map<String, List<CascadingStyle>> map;
-        private StyleMap(long key, Map<String, List<CascadingStyle>> map) {
-            this.uniqueId = key;
+        
+        private StyleMap(int id, Map<String, List<CascadingStyle>> map) {
+            this.id = id;
             this.map  = map;
         }
         
         static final StyleMap EMPTY_MAP = 
             new StyleMap(0, Collections.<String,List<CascadingStyle>>emptyMap());
 
+        final int id; // unique per container
+        final Map<String, List<CascadingStyle>> map;
+        
     }
 
     
@@ -1348,11 +1380,11 @@ final public class StyleManager {
         // this must be initialized to the appropriate possible rules when
         // the helper cache is created by the StylesheetContainer
         private final List<Rule> rules;
-        private final Map<Key, StyleMap> cache;
+        private final Map<Key, Integer> cache;
 
         Cache(List<Rule> rules) {
             this.rules = rules;
-            this.cache = new HashMap<Key, StyleMap>();
+            this.cache = new HashMap<Key, Integer>();
         }
 
         private StyleMap getStyleMap(StyleManager owner, Node node, long[][] pseudoclassBits) {
@@ -1427,7 +1459,8 @@ final public class StyleManager {
             
             final Key keyObj = new Key(key);
             if (cache.containsKey(keyObj)) {
-                final StyleMap styleMap = cache.get(keyObj);
+                Integer id = cache.get(keyObj);
+                final StyleMap styleMap = id != null ? owner.getStyleMap(id.intValue()) : null;
                 return styleMap;
             }
 
@@ -1506,8 +1539,10 @@ final public class StyleManager {
                 list.add(style);
             }
 
-            final StyleMap styleMap = new StyleMap(owner.nextSmapId(), smap);
-            cache.put(keyObj, styleMap);
+            final int id = owner.nextSmapId();
+            final StyleMap styleMap = new StyleMap(id, smap);
+            owner.addStyleMap(styleMap);
+            cache.put(keyObj, Integer.valueOf(id));
             return styleMap;
         }
 

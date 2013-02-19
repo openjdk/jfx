@@ -271,7 +271,7 @@ final public class CompoundSelector extends Selector {
             if (selectors.get(index-1).applies(parent)) {
                 final StyleHelper parentStyleHelper = parent.impl_getStyleHelper();
                 if (parentStyleHelper == null) return false;
-                long[] parentStates = parentStyleHelper.getPseudoClassState();
+                long[] parentStates = parentStyleHelper.getPseudoClassBits();
                 // If this call succeeds, then all preceding selectors will have
                 // matched due to the recursive nature of the call
                 return stateMatches(parent, parentStates, index - 1);
@@ -282,7 +282,7 @@ final public class CompoundSelector extends Selector {
                 if (selectors.get(index-1).applies(parent)) { 
                     final StyleHelper parentStyleHelper = parent.impl_getStyleHelper();
                     if (parentStyleHelper != null) {
-                        long[] parentStates = parentStyleHelper.getPseudoClassState();
+                        long[] parentStates = parentStyleHelper.getPseudoClassBits();
                         return stateMatches(parent, parentStates, index - 1);
                     } else {
                         // What does it mean for a parent to have a null StyleHelper? 

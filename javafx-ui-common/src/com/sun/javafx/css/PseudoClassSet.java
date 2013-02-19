@@ -40,15 +40,6 @@ import javafx.css.PseudoClass;
  */
 class PseudoClassSet implements Set<PseudoClass> {
 
-    /**
-     * This method is called when a pseudo-class is added or removed and 
-     * that pseudo-class is used by a matching selector. This notifies 
-     * the StyleHelper that it should request the node to do a CSS state
-     * transition.
-     */
-    protected void requestStateTransition() { 
-    }
-    
     /** {@inheritDoc} */
     @Override
     public int size() {
@@ -194,14 +185,6 @@ class PseudoClassSet implements Set<PseudoClass> {
         
         // if index[element] == temp, then the bit was already set
         final boolean modified = (pseudoClasses[element] != temp);
-        if (modified && element < triggerStates.length) {
-            final long m = triggerStates[element];
-            final boolean isTransition = (m & bit) == bit;
-            if (isTransition) {
-                requestStateTransition();
-            }
-        }
-
         return modified;
     }
 
@@ -229,15 +212,6 @@ class PseudoClassSet implements Set<PseudoClass> {
 
         // if index[element] == temp, then the bit was not there
         final boolean modified = (pseudoClasses[element] != temp);
-
-        if (modified && element < triggerStates.length) {
-            final long m = triggerStates[element];
-            final boolean isTransition = (m & bit) == bit;
-            if (isTransition) {
-                requestStateTransition();
-            }
-        }
-
         return modified;
     }
 
@@ -350,9 +324,6 @@ class PseudoClassSet implements Set<PseudoClass> {
             if (modified) {
                 this.pseudoClasses = union;
             }
-            if (triggerTransition) {
-                requestStateTransition();
-            }
             return modified;
         }
         
@@ -401,10 +372,6 @@ class PseudoClassSet implements Set<PseudoClass> {
                 }
                 
                 maskOne[n] = temp; 
-            }
-            
-            if (triggerTransition) {
-                requestStateTransition();
             }
             
             return modified;
@@ -459,10 +426,6 @@ class PseudoClassSet implements Set<PseudoClass> {
                 maskOne[n] = temp;
             }
 
-            if (triggerTransition) {
-                requestStateTransition();
-            }
-            
             return modified;            
         }
         
@@ -489,6 +452,24 @@ class PseudoClassSet implements Set<PseudoClass> {
     @Override
     public void clear() {
         pseudoClasses = new long[1];
+    }
+    
+    boolean isTransition(PseudoClass e) {
+
+        boolean isTransition = false;
+        
+        PseudoClassImpl impl = cast(e);
+
+        final int element = impl.index / Long.SIZE;
+        final long bit = 1l << (impl.index % Long.SIZE);
+        
+        if (element < triggerStates.length) {
+            final long m = triggerStates[element];
+            isTransition = (m & bit) == bit;
+        }
+        
+        return isTransition;
+        
     }
 
     /** @return The list of PseudoClass that are represented by this States object */

@@ -32,7 +32,7 @@ import javafx.css.StyleOrigin;
 
 
 /** A marriage of pseudo-classes (potentially empty) to property and value */
-class CascadingStyle implements Comparable {
+class CascadingStyle implements Comparable<CascadingStyle> {
 
     /** */
     private final Style style;
@@ -135,8 +135,7 @@ class CascadingStyle implements Comparable {
      * sorted before less specific ones.
      */
     @Override
-    public int compareTo(Object otherStyle) {
-        CascadingStyle other = (CascadingStyle)otherStyle;
+    public int compareTo(CascadingStyle other) {
 
         //
         // Important styles take the cake
