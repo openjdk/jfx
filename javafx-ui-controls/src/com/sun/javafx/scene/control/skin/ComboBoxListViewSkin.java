@@ -535,10 +535,6 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
                         rowsToMeasure = (Integer) comboBox.getProperties().get(COMBO_BOX_ROWS_TO_MEASURE_WIDTH_KEY);
                     }
                     
-                    // We want to measure at least the first row, in case we have
-                    // a very long emptyText cell, for example.
-                    rowsToMeasure = Math.max(rowsToMeasure, 1);
-                    
                     pw = Math.max(comboBox.getWidth(), skin.getMaxCellWidth(rowsToMeasure) + 30);
                 } else {
                     pw = Math.max(100, comboBox.getWidth());
