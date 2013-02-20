@@ -1358,15 +1358,6 @@ is being used to size a border should also be in pixels.
 .menu:show-mnemonics > .mnemonic-underline {
     -fx-stroke: -fx-text-fill;
 }
-/* This hides the down arrow that would show on a menu placed in a menubar */
-.menu-bar > .container > .menu > .arrow-button > .arrow {
-    -fx-padding: 0;
-    -fx-background-color: transparent;
-    -fx-shape: null;
-}
-.menu-bar > .container > .menu > .arrow-button {
-    -fx-padding: 0;
-}
 .menu > .arrow {
     -fx-background-color: -fx-mark-color;
     -fx-shape: "M0,-4L4,0L0,4Z";
@@ -1419,6 +1410,15 @@ is being used to size a border should also be in pixels.
 /* Change padding of menu buttons when in menu bar */
 .menu-bar > .container > .menu-button > .label {
     -fx-padding: 0;
+}
+/* Hide the down arrow for a menu placed in a menubar */
+.menu-bar > .container > .menu-button > .arrow-button > .arrow {
+    -fx-padding: 0.167em 0 0.250em 0; /* 2 0 3 0 */
+    -fx-background-color: transparent;
+    -fx-shape: null;
+}
+.menu-bar > .container > .menu > .arrow-button {
+    -fx-padding: 0.500em 0 0.500em 0; /* 6 0 6 0 */
 }
 .menu-bar > .container > .menu-button:hover,
 .menu-bar > .container > .menu-button:focused,
