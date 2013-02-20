@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -31,7 +31,6 @@ import java.util.List;
 
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
-import javafx.beans.value.WritableValue;
 import javafx.geometry.HPos;
 import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
@@ -52,6 +51,7 @@ import com.sun.javafx.scene.text.TextLayout;
 import com.sun.javafx.scene.text.TextLayoutFactory;
 import com.sun.javafx.scene.text.TextSpan;
 import com.sun.javafx.tk.Toolkit;
+import javafx.css.Styleable;
 import javafx.css.StyleableProperty;
 
 /**
@@ -354,7 +354,7 @@ public class TextFlow extends Pane {
                 new StyleableObjectProperty<TextAlignment>(TextAlignment.LEFT) {
                 @Override public Object getBean() { return TextFlow.this; }
                 @Override public String getName() { return "textAlignment"; }
-                @Override public CssMetaData getCssMetaData() {
+                @Override public CssMetaData<TextFlow, TextAlignment> getCssMetaData() {
                     return StyleableProperties.TEXT_ALIGNMENT;
                 }
                 @Override public void invalidated() {
@@ -392,7 +392,7 @@ public class TextFlow extends Pane {
                 new StyleableDoubleProperty(0) {
                 @Override public Object getBean() { return TextFlow.this; }
                 @Override public String getName() { return "lineSpacing"; }
-                @Override public CssMetaData getCssMetaData() {
+                @Override public CssMetaData<TextFlow, Number> getCssMetaData() {
                     return StyleableProperties.LINE_SPACING;
                 }
                 @Override public void invalidated() {
@@ -453,10 +453,10 @@ public class TextFlow extends Pane {
             }
          };
 
-	 private static final List<CssMetaData<? extends Node, ?>> STYLEABLES;
+	 private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
          static {
-            final List<CssMetaData<? extends Node, ?>> styleables =
-                new ArrayList<CssMetaData<? extends Node, ?>>(Pane.getClassCssMetaData());
+            final List<CssMetaData<? extends Styleable, ?>> styleables =
+                new ArrayList<CssMetaData<? extends Styleable, ?>>(Pane.getClassCssMetaData());
             styleables.add(TEXT_ALIGNMENT); 
             styleables.add(LINE_SPACING);
             STYLEABLES = Collections.unmodifiableList(styleables);
@@ -467,7 +467,7 @@ public class TextFlow extends Pane {
      * @return The CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
      */
-    public static List<CssMetaData<? extends Node, ?>> getClassCssMetaData() {
+    public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
         return StyleableProperties.STYLEABLES;
     }
 
@@ -476,8 +476,9 @@ public class TextFlow extends Pane {
      *
      */
     
+    
     @Override
-    public List<CssMetaData<? extends Node, ?>> getCssMetaData() {
+    public List<CssMetaData<? extends Styleable, ?>> getCssMetaData() {
         return getClassCssMetaData();
     }
 

@@ -1,0 +1,159 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="decora" default="dist" basedir=".">
+    <description>Builds, tests, and runs the project decora.</description>
+
+    <import file="../build-defs.xml"/>
+    
+
+    <!--
+        Platform specific checks...
+      -->
+
+    <target name="init">
+      <condition property="isLinuxOrSolaris">
+        <or>
+          <istrue value="${isLinux}"/>
+          <istrue value="${isSolaris}"/>
+        </or>
+      </condition>
+
+      <property name="try.sse" value="true"/>
+      <!-- only build decora-sse on Windows and Mac OS X -->
+      <condition property="include.sse">
+        <and>
+          <istrue value="${try.sse}"/>
+          <isfalse value="${skip.decora.native.builds}"/>
+          <or>
+            <istrue value="${isWindows}"/>
+            <istrue value="${isMacOSX}"/>
+          </or>
+        </and>
+      </condition>
+ 
+      <condition property="sse.native.lib.file"
+                 value="libdecora-sse.dylib"
+                 else="decora-sse.dll">
+        <istrue value="${isMacOSX}"/>
+      </condition>
+
+      <fileset dir="${basedir}" id="decora.binaries.to.be.copied">
+        <include name="decora-runtime/dist/decora-runtime.jar"/>
+        <include name="decora-jsw/dist/decora-jsw.jar"/>
+        <include name="decora-sse/dist/decora-sse.jar" if="include.sse"/>
+      </fileset>
+    </target>
+
+
+    <!--
+        Build targets...
+      -->
+
+    <target name="build-compiler">
+      <ant antfile="decora-compiler/build-closed.xml" target="jar" inheritAll="false"/>
+    </target>
+
+    <target name="build-runtime">
+      <ant antfile="decora-runtime/build-closed.xml" target="jar" inheritAll="false"/>
+    </target>
+
+    <target name="build-jsw">
+      <ant antfile="decora-jsw/build-closed.xml" target="jar" inheritAll="false"/>
+    </target>
+
+    <target name="build-sse" if="include.sse">
+      <ant antfile="decora-sse/build-closed.xml" target="jar" inheritAll="false"/>
+    </target>
+
+    <target name="dist" depends="init">
+      <antcall target="build-compiler"/>
+      <antcall target="build-runtime"/>
+      <antcall target="build-jsw"/>
+      <antcall target="build-sse"/>
+      <copy todir="${jfx.sdk.desktop.dir}" flatten="true">
+        <fileset refid="decora.binaries.to.be.copied"/>
+        <fileset dir="${basedir}">
+          <include name="decora-sse-native/dist/${sse.native.lib.file}" if="include.sse"/>
+        </fileset>
+      </copy>
+    </target>
+
+    <target name="deploy-sse" if="include.sse" depends="platform-jars">
+      <copy tofile="${jfx.deployed.desktop.dir}/decora-sse-natives-${platform}.jar">
+        <fileset file="decora-sse/dist/decora-sse-native.jar"/>
+      </copy>      
+    </target>
+
+    <target name="deploy" depends="init">
+      <copy todir="${jfx.deployed.desktop.dir}" flatten="true">
+        <fileset refid="decora.binaries.to.be.copied"/>
+      </copy>
+      <antcall target="deploy-sse"/>
+    </target>
+    
+
+    <!--
+        Clean-up targets...
+      -->
+
+    <target name="clean-compiler">
+      <ant antfile="decora-compiler/build-closed.xml" target="clean" inheritAll="false"/>
+    </target>
+
+    <target name="clean-runtime">
+      <ant antfile="decora-runtime/build-closed.xml" target="clean" inheritAll="false"/>
+    </target>
+
+    <target name="clean-jsw">
+      <ant antfile="decora-jsw/build-closed.xml" target="clean" inheritAll="false"/>
+    </target>
+
+    <target name="clean-sse" if="include.sse">
+      <ant antfile="decora-sse/build-closed.xml" target="clean" inheritAll="false"/>
+    </target>
+
+    <target name="clean" depends="init">
+      <antcall target="clean-compiler"/>
+      <antcall target="clean-runtime"/>
+      <antcall target="clean-jsw"/>
+      <antcall target="clean-sse"/>
+    </target>
+
+    <!-- Mac specific fat binary stripping -->
+  <macrodef name="platform-jar-from-universal" description="build jar with stripped native libs">
+        <attribute name="arch" description="target architecture"/>
+        <attribute name="srcdir" description="directory with universal binaries"/>
+        <attribute name="jarname" description="name of jar for universal binaries"/>
+        <attribute name="destdir" description="directory for final jar"/>
+
+        <sequential>
+           <tempfile property="tmp.dir" prefix="lipo-"/>
+
+           <mkdir dir="${tmp.dir}"/>
+           <apply executable="lipo">
+              <srcfile/>
+              <arg value="-extract"/>
+              <arg value="@{arch}"/>
+              <arg value="-output"/>
+              <targetfile/>
+              <fileset dir="@{srcdir}" includes="*.dylib"/>
+              <mapper type="glob" from="*" to="${tmp.dir}/*"/>
+           </apply>
+           <jar file="${tmp.dir}/@{jarname}">
+              <fileset dir="${tmp.dir}" includes="*.dylib"/>
+           </jar>
+           <move todir="@{destdir}">
+               <fileset file="${tmp.dir}/@{jarname}"/>
+               <mapper type="glob" from="*-universal.jar" to="*-@{arch}.jar" />
+           </move>
+           <delete dir="${tmp.dir}"/>
+         </sequential>
+    </macrodef>
+
+    <target name="platform-jars" if="isMacOSX">
+        <echo message="deploy native (arch specific)"/>
+        <platform-jar-from-universal arch="i386" srcdir="decora-sse-native/dist"
+            destdir="${jfx.deployed.desktop.dir}" jarname="decora-sse-natives-${platform}.jar"/>
+        <platform-jar-from-universal arch="x86_64" srcdir="decora-sse-native/dist"
+            destdir="${jfx.deployed.desktop.dir}" jarname="decora-sse-natives-${platform}.jar"/>
+    </target>  
+</project>

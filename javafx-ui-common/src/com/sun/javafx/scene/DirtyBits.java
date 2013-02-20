@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2007, 2012, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2007, 2013, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -42,7 +42,9 @@ public enum DirtyBits {
     NODE_CSS,
 
     // Dirty bits for various subclasses of Node
-    NODE_GEOMETRY,  // Used by ImageView, MediaView, and subclasses of Shape
+    NODE_GEOMETRY,  // Used by ImageView, MediaView, and subclasses of Shape and Shape3D
+    NODE_CULLFACE, // Used by Shape3D
+    NODE_DRAWMODE, // Used by Shape3D
     NODE_SMOOTH,    // Used by ImageView, MediaView, and subclasses of Shape
     NODE_VIEWPORT,  // Used by ImageView and MediaView
     NODE_CONTENTS,  // Used by ImageView, MediaView, Text, WebView, and subclasses of Shape
@@ -74,6 +76,22 @@ public enum DirtyBits {
 
     // Dirty bits for various subclasses of Effect
     EFFECT_EFFECT,    // Used when Effect is dirty
+
+    // Dirty bits for Camera class
+    NODE_CAMERA,
+    NODE_CAMERA_TRANSFORM,
+    
+    // Dirty bits for Light class
+    NODE_LIGHT,
+    NODE_LIGHT_TRANSFORM,
+    
+    // Dirty bits for Material class (non Node type)
+    MATERIAL,
+    MATERIAL_PROPERTY,
+
+    // Dirty bits for Mesh class (non Node type)
+    MESH,
+    MESH_GEOM,
 
     // NOTE: The following MUST be the last enum value in this class. The ordinal
     // of this enum indicates the number of dirty bits in this set, exclusive of

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,6 +22,7 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
+
 package com.sun.javafx.scene.control.skin;
 
 import com.sun.javafx.PlatformUtil;
@@ -48,8 +49,6 @@ import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
-import javafx.scene.paint.Color;
-import javafx.scene.shape.Rectangle;
 import javafx.util.Callback;
 
 import javafx.css.StyleableDoubleProperty;
@@ -59,6 +58,7 @@ import javafx.css.StyleableProperty;
 import com.sun.javafx.css.converters.SizeConverter;
 import com.sun.javafx.scene.control.MultiplePropertyChangeListenerHandler;
 import javafx.collections.WeakListChangeListener;
+import javafx.css.Styleable;
 import javafx.scene.control.TableColumnBase;
 
 
@@ -264,7 +264,7 @@ public class TableColumnHeader extends Region {
                     return "size";
                 }
 
-                @Override public CssMetaData getCssMetaData() {
+                @Override public CssMetaData<TableColumnHeader,Number> getCssMetaData() {
                     return StyleableProperties.SIZE;
                 }
             };
@@ -411,6 +411,10 @@ public class TableColumnHeader extends Region {
             }
             return;
         }
+        
+        // RT-28016: if the tablecolumn is not a visible leaf column, we should ignore this
+        int visibleLeafIndex = skin.getVisibleLeafIndex(getTableColumn());
+        if (visibleLeafIndex == -1) return;
         
         final int sortColumnCount = getTableViewSkin().getSortOrder().size();
         boolean showSortOrderDots = sortPos <= 3 && sortColumnCount > 1;
@@ -824,18 +828,16 @@ public class TableColumnHeader extends Region {
 
             @Override
             public StyleableProperty<Number> getStyleableProperty(TableColumnHeader n) {
-                return (StyleableProperty)n.sizeProperty();
+                return (StyleableProperty<Number>)n.sizeProperty();
             }
         };
 
-         private static final List<CssMetaData<? extends Node, ?>> STYLEABLES;
+         private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
          static {
 
-            final List<CssMetaData<? extends Node, ?>> styleables = 
-                new ArrayList<CssMetaData<? extends Node, ?>>(Region.getClassCssMetaData());
-            Collections.addAll(styleables,
-                SIZE
-            );
+            final List<CssMetaData<? extends Styleable, ?>> styleables = 
+                new ArrayList<CssMetaData<? extends Styleable, ?>>(Region.getClassCssMetaData());
+            styleables.add(SIZE);
             STYLEABLES = Collections.unmodifiableList(styleables);
 
          }
@@ -845,7 +847,7 @@ public class TableColumnHeader extends Region {
      * @return The CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
      */
-    public static List<CssMetaData<? extends Node, ?>> getClassCssMetaData() {
+    public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
         return StyleableProperties.STYLEABLES;
     }
 
@@ -853,7 +855,7 @@ public class TableColumnHeader extends Region {
      * {@inheritDoc}
      */
     @Override
-    public List<CssMetaData<? extends Node, ?>> getCssMetaData() {
+    public List<CssMetaData<? extends Styleable, ?>> getCssMetaData() {
         return getClassCssMetaData();
     }
 

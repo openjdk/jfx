@@ -3,7 +3,7 @@
  * ORACLE PROPRIETARY/CONFIDENTIAL. Use is subject to license terms.
  */
 
-#include "afxres.h"
+#include "windows.h"
 
 // Need 2 defines so macro argument to XSTR will get expanded before quoting.
 #define XSTR(x) STR(x)

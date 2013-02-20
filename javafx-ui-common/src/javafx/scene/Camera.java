@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2012, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,13 +22,23 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
+
 package javafx.scene;
 
-import javafx.beans.property.BooleanProperty;
-import javafx.beans.property.SimpleBooleanProperty;
-import javafx.beans.value.ObservableBooleanValue;
-
-import com.sun.javafx.geom.CameraImpl;
+import com.sun.javafx.geom.BaseBounds;
+import com.sun.javafx.geom.BoxBounds;
+import com.sun.javafx.geom.Rectangle;
+import com.sun.javafx.geom.transform.Affine3D;
+import com.sun.javafx.geom.transform.BaseTransform;
+import com.sun.javafx.geom.transform.GeneralTransform3D;
+import com.sun.javafx.jmx.MXNodeAlgorithm;
+import com.sun.javafx.jmx.MXNodeAlgorithmContext;
+import com.sun.javafx.scene.DirtyBits;
+import com.sun.javafx.sg.PGCamera;
+import javafx.beans.InvalidationListener;
+import javafx.beans.Observable;
+import javafx.beans.property.DoubleProperty;
+import javafx.beans.property.SimpleDoubleProperty;
 
 
 /**
@@ -36,37 +46,149 @@ import com.sun.javafx.geom.CameraImpl;
  *
  * @since JavaFX 1.3
  */
-public abstract class Camera {
+public abstract class Camera extends Node {
+   
+    private Affine3D localToSceneTx = new Affine3D();
 
-    private CameraImpl platformCamera;
+    protected Camera() {
+        this.localToSceneTransformProperty().addListener(new InvalidationListener() {
+            @Override
+            public void invalidated(Observable observable) {
+                impl_markDirty(DirtyBits.NODE_CAMERA_TRANSFORM);
+            }
+        });
+    }
 
-    CameraImpl getPlatformCamera() {
-        if (platformCamera == null) {
-            platformCamera = createPlatformCamera();
+    /**
+     * Specifies the near clipping plane of this {@code Camera} in the local
+     * coordinate system of this node.
+     *
+     * @defaultValue 0.1
+     * @since JavaFX 8
+     */
+    private DoubleProperty nearClip;
+
+    public final void setNearClip(double value){
+        nearClipProperty().set(value);
+    }
+
+    public final double getNearClip() {
+        return nearClip == null ? 0.1 : nearClip.get();
+    }
+
+    public final DoubleProperty nearClipProperty() {
+        if (nearClip == null) {
+            nearClip = new SimpleDoubleProperty(Camera.this, "nearClip", 0.1) {
+                @Override
+                protected void invalidated() {
+                    impl_markDirty(DirtyBits.NODE_CAMERA);
+                }
+            };
         }
-        return platformCamera;
+        return nearClip;
     }
 
-    abstract CameraImpl createPlatformCamera();
+    /**
+     * Specifies the far clipping plane of this {@code Camera} in the local
+     * coordinate system of this node.
+     * <p>
+     *
+     * @defaultValue 100.0
+     * @since JavaFX 8
+     */
+    private DoubleProperty farClip;
 
-    abstract void update();
-    private BooleanProperty dirty = new SimpleBooleanProperty(this, "dirty");
-
-    final ObservableBooleanValue dirtyProperty() { return dirty; }
-
-    final boolean isDirty() {
-        return dirty.get();
+    public final void setFarClip(double value){
+        farClipProperty().set(value);
     }
 
-    final void markDirty() {
-        dirty.set(true);
+    public final double getFarClip() {
+        return farClip == null ? 100.0 : farClip.get();
     }
 
-    final void clearDirty() {
-        dirty.set(false);
+    public final DoubleProperty farClipProperty() {
+        if (farClip == null) {
+            farClip = new SimpleDoubleProperty(Camera.this, "farClip", 100.0) {
+                @Override
+                protected void invalidated() {
+                    impl_markDirty(DirtyBits.NODE_CAMERA);
+                }
+            };
+        }
+        return farClip;
+    }
+    
+    PGCamera getPlatformCamera() {
+        return (PGCamera) impl_getPGNode();
     }
 
     Camera copy() {
         return this;
+    }
+
+    /**
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     */
+    @Deprecated
+    @Override
+    public void impl_updatePG() {
+        super.impl_updatePG();
+        PGCamera pgCamera = (PGCamera)impl_getPGNode();
+        if (impl_isDirty(DirtyBits.NODE_CAMERA)) {
+            pgCamera.setNearClip((float) getNearClip());
+            pgCamera.setFarClip((float) getFarClip());
+        }
+        if (impl_isDirty(DirtyBits.NODE_CAMERA_TRANSFORM)) {
+            localToSceneTx.setToIdentity();
+            getLocalToSceneTransform().impl_apply(localToSceneTx);
+            // TODO: 3D - For now, we are treating the scene as world.
+            // This may need to change for the fixed eye position case.
+            pgCamera.setWorldTransform(localToSceneTx);
+        }
+    }
+
+    /**
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     */
+    @Deprecated
+    @Override
+    public BaseBounds impl_computeGeomBounds(BaseBounds bounds, BaseTransform tx) {
+        return new BoxBounds(0, 0, 0, 0, 0, 0);
+    }
+
+    /**
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     */
+    @Deprecated
+    @Override
+    protected boolean impl_computeContains(double localX, double localY) {
+        return false;
+    }
+
+    /**
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     */
+    @Deprecated
+    @Override
+    public Object impl_processMXNode(MXNodeAlgorithm alg, MXNodeAlgorithmContext ctx) {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    // NOTE: This can only be called during scenegraph sync time by Scene only.
+    GeneralTransform3D computeProjViewTx(GeneralTransform3D tx, double sceneWidth, double sceneHeight) {
+        // TODO: Need to cache value at PG update time
+        PGCamera pgCamera = (PGCamera) impl_getPGNode();
+        return pgCamera.getScreenProjViewTx(tx, sceneWidth, sceneHeight);
+    }
+
+    // NOTE: This can only be called during scenegraph sync time by Scene only.
+    Rectangle getViewport(Rectangle vp) {
+        // TODO: Need to cache value at PG update time
+        PGCamera pgCamera = (PGCamera) impl_getPGNode();
+        return pgCamera.getViewport(vp);
     }
 }

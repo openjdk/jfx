@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -59,7 +59,7 @@ import javafx.scene.input.ClipboardContent;
 import javafx.scene.text.Font;
 import com.sun.javafx.Utils;
 import com.sun.javafx.binding.ExpressionHelper;
-import javafx.scene.Node;
+import javafx.css.Styleable;
 
 /**
  * Abstract base class for text input controls.
@@ -194,7 +194,7 @@ public abstract class TextInputControl extends Control {
                 }
 
                 @Override
-                public CssMetaData getCssMetaData() {
+                public CssMetaData<TextInputControl,Font> getCssMetaData() {
                     return StyleableProperties.FONT;
                 }
 
@@ -1127,10 +1127,10 @@ public abstract class TextInputControl extends Control {
             }
         };
 
-        private static final List<CssMetaData<? extends Node, ?>> STYLEABLES;
+        private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
         static {
-            final List<CssMetaData<? extends Node, ?>> styleables =
-                new ArrayList<CssMetaData<? extends Node, ?>>(Control.getClassCssMetaData());
+            final List<CssMetaData<? extends Styleable, ?>> styleables =
+                new ArrayList<CssMetaData<? extends Styleable, ?>>(Control.getClassCssMetaData());
             styleables.add(FONT);
             STYLEABLES = Collections.unmodifiableList(styleables);
         }
@@ -1140,7 +1140,7 @@ public abstract class TextInputControl extends Control {
      * @return The CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
      */
-    public static List<CssMetaData<? extends Node, ?>> getClassCssMetaData() {
+    public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
         return StyleableProperties.STYLEABLES;
     }
 
@@ -1148,7 +1148,7 @@ public abstract class TextInputControl extends Control {
      * {@inheritDoc}
      */
     @Override
-    public List<CssMetaData<? extends Node, ?>> getControlCssMetaData() {
+    public List<CssMetaData<? extends Styleable, ?>> getControlCssMetaData() {
         return getClassCssMetaData();
     }
 

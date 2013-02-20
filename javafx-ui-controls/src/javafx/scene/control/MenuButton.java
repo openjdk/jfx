@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -114,6 +114,9 @@ public class MenuButton extends ButtonBase {
         }
         getStyleClass().setAll(DEFAULT_STYLE_CLASS);
         setMnemonicParsing(true);     // enable mnemonic auto-parsing by default
+        // the default value for popupSide = Side.BOTTOM therefor
+        // PSEUDO_CLASS_OPENVERTICALLY should be set from the start.
+        pseudoClassStateChanged(PSEUDO_CLASS_OPENVERTICALLY, true);
     }
 
     /***************************************************************************

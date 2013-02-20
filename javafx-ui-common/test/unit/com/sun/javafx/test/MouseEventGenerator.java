@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,6 +22,7 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
+
 package com.sun.javafx.test;
 
 import javafx.event.EventType;
@@ -52,7 +53,7 @@ public final class MouseEventGenerator {
 
         MouseEvent event = new MouseEvent(type, x, y, x, y, button,
                 1, false, false, false, false, primaryButtonDown,
-                false, false, false, false);
+                false, false, false, false, false, null);
 
         return event;
     }

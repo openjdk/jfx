@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2012, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -42,7 +42,7 @@ public class MouseEventTest {
     private final MouseEvent doubleclick = new MouseEvent(
             MouseEvent.MOUSE_CLICKED,
             11, 12, 13, 14, MouseButton.PRIMARY, 2,
-            true, false, true, false, false, true, false, false, true);
+            true, false, true, false, false, true, false, false, true, false, null);
 
     @Test
     public void shouldCreateDoubleClickMouseEvent() {

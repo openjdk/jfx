@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2012, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,6 +22,7 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
+
 package com.sun.javafx.css.converters;
 
 import com.sun.javafx.Utils;
@@ -33,6 +34,7 @@ import java.util.Map.Entry;
 import javafx.css.CssMetaData;
 import javafx.css.ParsedValue;
 import javafx.css.StyleConverter;
+import javafx.css.Styleable;
 import javafx.scene.Node;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontPosture;
@@ -73,14 +75,14 @@ public final class FontConverter extends StyleConverterImpl<ParsedValue[], Font>
     }
 
     @Override
-    public Font convert(Map<CssMetaData<? extends Node, ?>, Object> convertedValues) {
+    public Font convert(Map<CssMetaData<? extends Styleable, ?>, Object> convertedValues) {
         Font font = Font.getDefault();
         double size = font.getSize();
         String family = font.getFamily();
         FontWeight weight = FontWeight.NORMAL;
         FontPosture style = FontPosture.REGULAR;
         
-        for (Entry<CssMetaData<? extends Node, ?>, Object> entry : convertedValues.entrySet()) {
+        for (Entry<CssMetaData<? extends Styleable, ?>, Object> entry : convertedValues.entrySet()) {
 
             Object value = entry.getValue();
             if (value == null) {

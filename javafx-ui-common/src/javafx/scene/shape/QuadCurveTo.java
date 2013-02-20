@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2012, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -280,6 +280,22 @@ public  class QuadCurveTo extends PathElement {
                     (float)(getX()+dx),
                     (float)(getY()+dy));
         }
+    }
+
+    /**
+     * Returns a string representation of this {@code CubicCurveTo} object.
+     * @return a string representation of this {@code CubicCurveTo} object.
+     */
+    @Override
+    public String toString() {
+        final StringBuilder sb = new StringBuilder("CubicCurveTo[");
+
+        sb.append("x=").append(getX());
+        sb.append(", y=").append(getY());
+        sb.append(", controlX=").append(getControlX());
+        sb.append(", controlY=").append(getControlY());
+
+        return sb.append("]").toString();
     }
 }
 

@@ -1,0 +1,77 @@
+/*
+ * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.  Oracle designates this
+ * particular file as subject to the "Classpath" exception as provided
+ * by Oracle in the LICENSE file that accompanied this code.
+ *
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
+ *
+ * You should have received a copy of the GNU General Public License version
+ * 2 along with this work; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+ * or visit www.oracle.com if you need additional information or have any
+ * questions.
+ */
+
+//
+// Add mode is misleadingly named as it is not equivalent to "Additive" mode but
+// is instead a linear dodge. The blend equation is defined by
+//
+// B(Bc', Tc') = min(1.0, Bc' + Tc')
+//
+// where Bc' and Tc' are the non-premultiplied bottom and top colors, respectively.
+// In our case the colors are premultiplied so this condition is equivalent to
+// min(Ba x Ta, Ba x Tc + Ta x Bc).
+//
+// Actually, you can rewrite the equations to maximize their similarity and see
+// that you have:
+//
+// Rc = (1-Ta)Bc + (1-Ba)Tc + BaTa*min(1.0, Bc/Ba + Tc/Ta)
+//     = Bc - TaBc + Tc - BaTc + min(BaTa, TaBc + BaTc)
+//
+// for (BaTa) being smaller (or equal) we get:
+//
+// Rc = Bc + Tc - TaBc - BaTc + BaTa
+//    = Bc + Tc - (BaTc + TaBc - TaBa)
+// [Note that (BaTc + TaBc - TaBa) is >= 0]
+//
+// for (TaBc + BaTc) being smaller (or equal) we get:
+//
+// Rc = Bc + Tc - TaBc - BaTc + TaBc + BaTc
+//    = Bc + Tc + 0
+// [Note that (BaTc + TaBc - TaBa) is <= 0]
+//
+// So, we subtract that last term, unless it is less than zero (we don't want to
+// produce an answer that is greater than Tc+Bc ever).  This would let you use
+// vector math to compute that term, then a vector min or max to make sure it is
+// clipped at 0.  Also, note that the alpha equation is (Ta + Ba - TaBa) and if
+// we compute (BaTa + TaBa - TaBa == TaBa) then we end up with the value we need
+// to subtract for alpha as well (and it is never less than 0) and so we can
+// symmetrically use this equation for all components.
+//
+// So, this equation works too:
+//
+//     R = max(BTa + TBa - TaBa, 0.0)
+//
+// or in code:
+//
+//     float4 mix = max(bot*top.a + top*bot.a - top.a*bot.a, 0.0);
+//     return bot + top - mix;
+//
+float4 blend_add(float4 bot, float4 top)
+{
+    // Separate the expression defining "mix" from the return statement to
+    // circumvent a JSL parsing limitation.
+    float4 mix = max(bot*top.a + top*bot.a - top.a*bot.a, 0.0);
+    return bot + top - mix;
+}

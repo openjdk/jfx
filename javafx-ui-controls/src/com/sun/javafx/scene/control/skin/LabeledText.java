@@ -1,3 +1,28 @@
+/*
+ * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.  Oracle designates this
+ * particular file as subject to the "Classpath" exception as provided
+ * by Oracle in the LICENSE file that accompanied this code.
+ *
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
+ *
+ * You should have received a copy of the GNU General Public License version
+ * 2 along with this work; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+ * or visit www.oracle.com if you need additional information or have any
+ * questions.
+ */
+
 package com.sun.javafx.scene.control.skin;
 
 import com.sun.javafx.css.converters.BooleanConverter;
@@ -11,8 +36,8 @@ import java.util.List;
 import javafx.css.CssMetaData;
 import javafx.css.FontCssMetaData;
 import javafx.css.StyleOrigin;
+import javafx.css.Styleable;
 import javafx.css.StyleableProperty;
-import javafx.scene.Node;
 import javafx.scene.control.Labeled;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
@@ -66,7 +91,7 @@ public class LabeledText extends Text {
      * @return The CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
      */
-    public static List<CssMetaData<? extends Node, ?>> getClassCssMetaData() {
+    public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
         return StyleableProperties.STYLEABLES;
     }
 
@@ -74,7 +99,7 @@ public class LabeledText extends Text {
      * {@inheritDoc}
      */
     @Override
-    public List<CssMetaData<? extends Node, ?>> getCssMetaData() {
+    public List<CssMetaData<? extends Styleable, ?>> getCssMetaData() {
         return getClassCssMetaData();
     }
 
@@ -282,11 +307,11 @@ public class LabeledText extends Text {
             }
         };
 
-       private static final List<CssMetaData<? extends Node, ?>> STYLEABLES;
+       private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
        static {
 
-           final List<CssMetaData<? extends Node, ?>> styleables =
-               new ArrayList<CssMetaData<? extends Node, ?>>(Text.getClassCssMetaData());
+           final List<CssMetaData<? extends Styleable, ?>> styleables =
+               new ArrayList<CssMetaData<? extends Styleable, ?>>(Text.getClassCssMetaData());
 
            for (int n=0,nMax=styleables.size(); n<nMax; n++) {
                final String prop = styleables.get(n).getProperty();

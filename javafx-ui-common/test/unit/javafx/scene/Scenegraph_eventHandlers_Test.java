@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2012, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -346,14 +346,14 @@ public final class Scenegraph_eventHandlers_Test {
 
     private static Event createContextMenuEvent() {
         return new ContextMenuEvent(ContextMenuEvent.CONTEXT_MENU_REQUESTED, 10, 10,
-          10, 10, false);
+          10, 10, false, null);
     }
 
     private static Event createSwipeEvent(final EventType<SwipeEvent> type) {
         return new SwipeEvent(
                 type,
                 100, 100, 100, 100,
-                false, false, false, false, true, 1);
+                false, false, false, false, true, 1, null);
     }
 
     private static void setEventHandler(

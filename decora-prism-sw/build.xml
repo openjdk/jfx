@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="decora-prism-sw" default="jar" basedir=".">
+  <description>Builds, tests, and runs the project decora-prism-sw.</description>
+
+  <import file="build-common.xml"/>
+
+</project>

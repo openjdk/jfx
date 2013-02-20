@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2000, 2012, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2000, 2013, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,6 +26,7 @@
 package javafx.scene.input;
 
 import javafx.geometry.Point2D;
+import javafx.geometry.Point3D;
 import javafx.scene.Node;
 
 import com.sun.javafx.geom.BaseBounds;
@@ -57,6 +58,16 @@ public class TestNode extends Node {
     @Override
     public Point2D localToScene(double x, double y) {
         return new Point2D(x + offsetInScene, y + offsetInScene);
+    }
+
+    @Override
+    public Point3D sceneToLocal(double x, double y, double z) {
+        return new Point3D(x - offsetInScene, y - offsetInScene, z);
+    }
+
+    @Override
+    public Point3D localToScene(double x, double y, double z) {
+        return new Point3D(x + offsetInScene, y + offsetInScene, z);
     }
 
     @Override

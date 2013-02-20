@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2012, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,7 @@
 
 package com.sun.javafx.css;
 
+import javafx.css.Styleable;
 import java.io.FileNotFoundException;
 import java.io.FilePermission;
 import java.io.IOException;
@@ -133,7 +134,7 @@ final public class StyleManager {
      */
     public static List<Style> getMatchingStyles(CssMetaData cssMetaData, Node node) {
         if (node != null && cssMetaData != null) {
-            return getMatchingStyles(cssMetaData, node.impl_getStyleable());
+            return getMatchingStyles(cssMetaData, node);
         }
         return Collections.<Style>emptyList();
     }
@@ -144,8 +145,8 @@ final public class StyleManager {
      */
     public static List<Style> getMatchingStyles(CssMetaData cssMetaData, Styleable styleable) {
         if (styleable != null && cssMetaData != null) {
-            StyleHelper helper = styleable.getNode() != null 
-                    ? styleable.getNode().impl_getStyleHelper()
+            StyleHelper helper = styleable instanceof Node 
+                    ? ((Node)styleable).impl_getStyleHelper()
                     : null;
             return (helper != null) 
                 ? helper.getMatchingStyles(styleable, cssMetaData) 
@@ -160,11 +161,11 @@ final public class StyleManager {
      * @return 
      */
     // TODO: is this used anywhere?
-    public static List<CssMetaData<? extends Node, ?>> getStyleables(final Styleable styleable) {
+    public static List<CssMetaData<? extends Styleable, ?>> getStyleables(final Styleable styleable) {
         
         return styleable != null 
             ? styleable.getCssMetaData() 
-            : Collections.<CssMetaData<? extends Node, ?>>emptyList();
+            : Collections.<CssMetaData<? extends Styleable, ?>>emptyList();
     }
 
     /**
@@ -173,11 +174,11 @@ final public class StyleManager {
      * @return 
      */
     // TODO: is this used anywhere?
-    public static List<CssMetaData<? extends Node, ?>> getStyleables(final Node node) {
+    public static List<CssMetaData<? extends Styleable, ?>> getStyleables(final Node node) {
         
         return node != null 
             ? node.getCssMetaData() 
-            : Collections.<CssMetaData<? extends Node, ?>>emptyList();
+            : Collections.<CssMetaData<? extends Styleable, ?>>emptyList();
     }
          
     private StyleManager() {                

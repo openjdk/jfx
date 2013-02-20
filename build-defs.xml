@@ -39,9 +39,6 @@
     <property file="project.properties"/>
     <property file="../common.properties"/>
 
-    <!-- Create a class path for the lombok annotation processor. Note that
-         this HAS to exist or the path won't get translated correctly to the
-         OS specific form (read: Windows) and the windows build will break. -->
     <path id="id.processor.path" path="${javac.processorpath}"/>
 
     <!-- create a class path for cobertura for code test coverage analysis -->
@@ -109,24 +106,6 @@
         <test-single/>
     </target>
 
-    <property name="delomboked.src.dir" value="${build.dir}/src-delomboked"/>
-    <property name="delomboked.src.zip" value="${dist.dir}/${ant.project.name}-src.zip"/>
-    <condition property="is.delombok.needed">
-        <or>
-            <not>
-                <available file="${delomboked.src.zip}"/>
-            </not>
-            <not>
-                <uptodate srcfile="${dist.dir}/${ant.project.name}.jar"
-                          targetfile="${delomboked.src.zip}"/>
-            </not>
-        </or>
-    </condition>
-
-    <target name="delombok" if="is.delombok.needed">
-        <do-delombok/>
-    </target>
-
     <!--
 
         Main project level macros for doing all of the common tasks. These
@@ -154,7 +133,7 @@
             <mkdir dir="${build.classes.dir}"/>
 
             <condition property="processor.flag" value="" else="-processorpath ${toString:id.processor.path}">
-                <isset property="disable-lombok"/>
+                <isset property="disable.builders"/>
             </condition>
 
             <!-- compile .java source files -->
@@ -233,7 +212,7 @@
             <mkdir dir="${build.test.classes.dir}"/>
 
             <condition property="processor.flag" value="" else="-processorpath ${toString:id.processor.path}">
-                <isset property="disable-lombok"/>
+                <isset property="disable.builders"/>
             </condition>
 
             <!-- compile .java test sources -->
@@ -337,39 +316,6 @@
                     <jvmarg value="-Xrunjdwp:transport=dt_socket,address=${jpda.address}"/>
                 </addedjvmargs>
             </run-junit>
-        </sequential>
-    </macrodef>
-
-    <!-- generate delombok-ed sources with annotations expanded for easier debugging -->
-    <macrodef name="do-delombok">
-        <attribute name="name" default="${ant.project.name}"/>
-        <element name="addedsrcfiles" optional="true"/>
-        <sequential>
-            <property name="src.dir.location" location="${src.dir}"/>
-            <echo>Running delombok on sources in ${src.dir.location}</echo>
-
-            <delete dir="${build.dir}/${jfx.delomboked.src.dir.name}"/>
-            <java classname="lombok.core.Main" fork="true" failonerror="true">
-                <classpath>
-                    <!-- lombok-0.9.3 generates a NPE when processing certain javafx bean annotations,
-                         so use a more recent version for delombok-ing -->
-                    <pathelement location="${jfx.root.dir}/rt-closed/build/deps/lombok-trunk.jar"/>
-                    <pathelement path="${javac.classpath}"/>
-                    <pathelement path="${dist.dir}/@{name}.jar"/>
-                    <pathelement location="${jfx.root.dir}/rt-closed/build/deps/javafx-beans.jar"/>
-                    <pathelement location="${jfx.root.dir}/rt/build/deps/javafx-annotation-processor.jar"/>
-                </classpath>
-                <arg value="delombok"/>
-                <arg value="-d"/>
-                <arg value="${delomboked.src.dir}"/>
-                <arg value="${src.dir}"/>
-            </java>
-
-            <!-- create a zip of delombok-ed sources -->
-            <jar destfile="${delomboked.src.zip}">
-                <fileset dir="${delomboked.src.dir}"/>
-                <addedsrcfiles/>
-            </jar>
         </sequential>
     </macrodef>
 

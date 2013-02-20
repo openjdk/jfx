@@ -1,3 +1,28 @@
+/*
+ * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.  Oracle designates this
+ * particular file as subject to the "Classpath" exception as provided
+ * by Oracle in the LICENSE file that accompanied this code.
+ *
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
+ *
+ * You should have received a copy of the GNU General Public License version
+ * 2 along with this work; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+ * or visit www.oracle.com if you need additional information or have any
+ * questions.
+ */
+
 package javafx.scene.control;
 
 import javafx.event.Event;
@@ -13,15 +38,35 @@ public class ScrollToEvent<T> extends Event {
     /**
      * This event occurs if the user requests scrolling a node into view.
      */
-    public static final EventType<ScrollToEvent<Node>> SCROLL_TO_NODE = 
+    @SuppressWarnings("unchecked")
+    public static EventType<ScrollToEvent<Node>> scrollToNode() {
+        return SCROLL_TO_NODE;
+    }
+    private static final EventType<ScrollToEvent<Node>> SCROLL_TO_NODE = 
             new EventType<ScrollToEvent<Node>>(Event.ANY, "SCROLL_TO_NODE");
     
     /**
      * This event occurs if the user requests scrolling a given index into view.
      */
-    public static final EventType<ScrollToEvent<Integer>> SCROLL_TO_TOP_INDEX = 
+    @SuppressWarnings("unchecked")
+    public static EventType<ScrollToEvent<Integer>> scrollToTopIndex() {
+        return SCROLL_TO_TOP_INDEX;
+    }
+    private static final EventType<ScrollToEvent<Integer>> SCROLL_TO_TOP_INDEX = 
             new EventType<ScrollToEvent<Integer>>(Event.ANY, "SCROLL_TO_TOP_INDEX");
+    
 
+    /**
+     * This event occurs if the user requests scrolling a {@link TableColumnBase}
+     * (i.e. {@link TableColumn} or {@link TreeTableColumn}) into view.
+     */
+    @SuppressWarnings("unchecked")
+    public static <T extends TableColumnBase<?, ?>> EventType<ScrollToEvent<T>> scrollToColumn() {
+        return (EventType<ScrollToEvent<T>>) SCROLL_TO_COLUMN;
+    }
+    private static final EventType<?> SCROLL_TO_COLUMN = 
+            new EventType(Event.ANY, "SCROLL_TO_COLUMN");
+    
     private static final long serialVersionUID = -8557345736849482516L;
     
     private final T scrollTarget;

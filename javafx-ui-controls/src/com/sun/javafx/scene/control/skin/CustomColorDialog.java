@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,6 +22,7 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
+
 package com.sun.javafx.scene.control.skin;
 
 import javafx.beans.property.*;
@@ -250,18 +251,20 @@ public class CustomColorDialog extends StackPane {
         };
          
         private void updateRGBColor() {
-            setColor(Color.rgb(red.get(), green.get(), blue.get(), clamp(alpha.get() / 100)));
-            hue.set(getColor().getHue());
-            sat.set(getColor().getSaturation() * 100);
-            bright.set(getColor().getBrightness() * 100);
+            Color newColor = Color.rgb(red.get(), green.get(), blue.get(), clamp(alpha.get() / 100));
+            hue.set(newColor.getHue());
+            sat.set(newColor.getSaturation() * 100);
+            bright.set(newColor.getBrightness() * 100);
+            setColor(newColor);
         }
         
         private void updateHSBColor() {
-            setColor(Color.hsb(hue.get(), clamp(sat.get() / 100), 
-                            clamp(bright.get() / 100), clamp(alpha.get() / 100)));
-            red.set(doubleToInt(getColor().getRed()));
-            green.set(doubleToInt(getColor().getGreen()));
-            blue.set(doubleToInt(getColor().getBlue()));
+            Color newColor = Color.hsb(hue.get(), clamp(sat.get() / 100), 
+                            clamp(bright.get() / 100), clamp(alpha.get() / 100));
+            red.set(doubleToInt(newColor.getRed()));
+            green.set(doubleToInt(newColor.getGreen()));
+            blue.set(doubleToInt(newColor.getBlue()));
+            setColor(newColor);
         }
        
         private void colorChanged() {

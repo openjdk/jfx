@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -21,42 +21,27 @@
  * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
  * or visit www.oracle.com if you need additional information or have any
  * questions.
- * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
- *
- * This code is free software; you can redistribute it and/or modify it
- * under the terms of the GNU General Public License version 2 only, as
- * published by the Free Software Foundation.
- *
- * This code is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
- * version 2 for more details (a copy is included in the LICENSE file that
- * accompanied this code).
- *
- * You should have received a copy of the GNU General Public License version
- * 2 along with this work; if not, write to the Free Software Foundation,
- * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
- *
- * Please contact Sun Microsystems, Inc., 4150 Network Circle, Santa Clara,
- * CA 95054 USA or visit www.sun.com if you need additional information or
- * have any questions.
  */
 
 package javafx.scene.control;
 
-import javafx.css.StyleableIntegerProperty;
-import javafx.css.CssMetaData;
-import javafx.css.StyleOrigin;
-import com.sun.javafx.css.converters.SizeConverter;
-import com.sun.javafx.scene.control.skin.PaginationSkin;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import javafx.beans.DefaultProperty;
-import javafx.beans.property.*;
+import javafx.beans.property.IntegerProperty;
+import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.SimpleIntegerProperty;
+import javafx.beans.property.SimpleObjectProperty;
+import javafx.css.CssMetaData;
+import javafx.css.StyleOrigin;
+import javafx.css.StyleableIntegerProperty;
+import javafx.css.Styleable;
 import javafx.css.StyleableProperty;
 import javafx.scene.Node;
 import javafx.util.Callback;
+import com.sun.javafx.css.converters.SizeConverter;
+import com.sun.javafx.scene.control.skin.PaginationSkin;
 
 /**
  * <p>
@@ -206,7 +191,7 @@ public class Pagination extends Control {
                 }
 
                 @Override
-                public CssMetaData getCssMetaData() {
+                public CssMetaData<Pagination,Number> getCssMetaData() {
                     return StyleableProperties.MAX_PAGE_INDICATOR_COUNT;
                 }
 
@@ -352,16 +337,14 @@ public class Pagination extends Control {
 
             @Override
             public StyleableProperty<Number> getStyleableProperty(Pagination n) {
-                return (StyleableProperty)n.maxPageIndicatorCountProperty();
+                return (StyleableProperty<Number>)n.maxPageIndicatorCountProperty();
             }
         };
-        private static final List<CssMetaData<? extends Node, ?>> STYLEABLES;
+        private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
         static {
-            final List<CssMetaData<? extends Node, ?>> styleables =
-                new ArrayList<CssMetaData<? extends Node, ?>>(Control.getClassCssMetaData());
-            Collections.addAll(styleables,
-                MAX_PAGE_INDICATOR_COUNT
-            );
+            final List<CssMetaData<? extends Styleable, ?>> styleables =
+                new ArrayList<CssMetaData<? extends Styleable, ?>>(Control.getClassCssMetaData());
+            styleables.add(MAX_PAGE_INDICATOR_COUNT);
             STYLEABLES = Collections.unmodifiableList(styleables);
         }
     }
@@ -370,7 +353,7 @@ public class Pagination extends Control {
      * @return The CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
      */
-    public static List<CssMetaData<? extends Node, ?>> getClassCssMetaData() {
+    public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
         return StyleableProperties.STYLEABLES;
     }
 
@@ -378,7 +361,7 @@ public class Pagination extends Control {
      * {@inheritDoc}
      */
     @Override
-    public List<CssMetaData<? extends Node, ?>> getControlCssMetaData() {
+    public List<CssMetaData<? extends Styleable, ?>> getControlCssMetaData() {
         return getClassCssMetaData();
     }
 

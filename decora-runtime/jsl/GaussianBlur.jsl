@@ -1,0 +1,98 @@
+/*
+ * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.  Oracle designates this
+ * particular file as subject to the "Classpath" exception as provided
+ * by Oracle in the LICENSE file that accompanied this code.
+ *
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
+ *
+ * You should have received a copy of the GNU General Public License version
+ * 2 along with this work; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+ * or visit www.oracle.com if you need additional information or have any
+ * questions.
+ */
+
+<<
+private FloatBuffer kvals;
+
+private static int getPad(float radius) {
+    return (int)Math.ceil(radius);
+}
+
+private int getKernelSize() {
+    int r = getPad(getEffect().getRadius());
+    return (r * 2) + 1;
+}
+
+private FloatBuffer getKvals() {
+    float radius = getEffect().getRadius();
+    int r = getPad(radius);
+    int klen = (r * 2) + 1;
+
+    float xoff, yoff;
+    if (getPass() == 0) {
+        // horizontal pass
+        xoff = 1f / getInputNativeBounds(0).width;
+        yoff = 0f;
+    } else {
+        // vertical pass
+        xoff = 0f;
+        yoff = 1f / getInputNativeBounds(0).height;
+    }
+
+    if (kvals == null) {
+        kvals = BufferUtil.newFloatBuffer(127*4);
+    }
+    kvals.clear();
+    float sigma = radius / 3;
+    float sigma22 = 2 * sigma * sigma;
+    if (sigma22 < Float.MIN_VALUE) {
+        // Avoid divide by 0 below (it can generate NaN values).
+        sigma22 = Float.MIN_VALUE;
+    }
+    float total = 0.0f;
+    for (int row = -r; row <= r; row++) {
+        float kval = (float)Math.exp(-(row * row) / sigma22);
+        kvals.put(row * xoff);
+        kvals.put(row * yoff);
+        kvals.put(kval);
+        kvals.put(0f); // unused
+        total += kval;
+    }
+    for (int i = 2; i < klen * 4; i += 4) {
+        kvals.put(i, kvals.get(i) / total);
+    }
+    kvals.rewind();
+    return kvals;
+}
+>>
+
+param sampler baseImg;
+const int MAX_KERNEL_SIZE = 127;
+// value for each location in the convolution kernel:
+//   kvals[i].x = offsetX[i]
+//   kvals[i].y = offsetY[i]
+//   kvals[i].z = kernel[i]
+param float4 kvals[MAX_KERNEL_SIZE];
+param int kernelSize;
+
+void main()
+{
+    int i;
+    float4 sum = float4(0.0);
+    unroll(%d, 10) for (i = 0; i < kernelSize; i++) {
+        sum += kvals[i].z * sample(baseImg, pos0 + kvals[i].xy);
+    }
+    color = sum;
+}

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2000, 2012, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2000, 2013, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,11 +22,13 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
+
 package javafx.scene.input;
 
 import java.util.Set;
 
 import com.sun.javafx.tk.TKClipboard;
+import com.sun.javafx.tk.TKScene;
 import javafx.scene.image.Image;
 
 /**
@@ -60,8 +62,8 @@ public final class Dragboard extends Clipboard {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-    public static Dragboard impl_create(TKClipboard peer) {
-        return new Dragboard(peer);
+    public static Dragboard impl_createDragboard(TKScene scene, boolean isDragSource) {
+        return new Dragboard(scene.createDragboard(isDragSource));
     }
 
     // PENDING_DOC_REVIEW

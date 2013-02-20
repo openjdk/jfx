@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2012, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -36,6 +36,7 @@ import com.sun.javafx.sg.PGEllipse;
 import com.sun.javafx.sg.PGNode;
 import com.sun.javafx.sg.PGShape.Mode;
 import com.sun.javafx.tk.Toolkit;
+import javafx.scene.paint.Paint;
 
 
 /**
@@ -347,5 +348,34 @@ public class Ellipse extends Shape {
                 (float)getRadiusX(),
                 (float)getRadiusY());
         }
+    }
+
+    /**
+     * Returns a string representation of this {@code Ellipse} object.
+     * @return a string representation of this {@code Ellipse} object.
+     */
+    @Override
+    public String toString() {
+        final StringBuilder sb = new StringBuilder("Ellipse[");
+
+        String id = getId();
+        if (id != null) {
+            sb.append("id=").append(id).append(", ");
+        }
+
+        sb.append("centerX=").append(getCenterX());
+        sb.append(", centerY=").append(getCenterY());
+        sb.append(", radiusX=").append(getRadiusX());
+        sb.append(", radiusY=").append(getRadiusY());
+
+        sb.append(", fill=").append(getFill());
+
+        Paint stroke = getStroke();
+        if (stroke != null) {
+            sb.append(", stroke=").append(stroke);
+            sb.append(", strokeWidth=").append(getStrokeWidth());
+        }
+
+        return sb.append("]").toString();
     }
 }

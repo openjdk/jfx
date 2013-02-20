@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2012, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,6 +30,7 @@ import static com.sun.javafx.test.TestHelper.box;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertNotNull;
 import javafx.collections.ObservableList;
 import javafx.scene.NodeTest;
 
@@ -141,5 +142,11 @@ public class PolygonTest {
         for (; i < pgPoints.length; ++i) {
             assertEquals(expectedPoints[i], pgPoints[i], 0);
         }
+    }
+
+    @Test public void toStringShouldReturnNonEmptyString() {
+        String s = new Polygon().toString();
+        assertNotNull(s);
+        assertFalse(s.isEmpty());
     }
 }

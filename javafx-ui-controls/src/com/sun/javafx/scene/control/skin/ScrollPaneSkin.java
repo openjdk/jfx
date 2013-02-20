@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -138,10 +138,9 @@ public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehav
         registerChangeListener(scrollpane.vvalueProperty(), "VVALUE");
         registerChangeListener(scrollpane.prefViewportWidthProperty(), "PREF_VIEWPORT_WIDTH");
         registerChangeListener(scrollpane.prefViewportHeightProperty(), "PREF_VIEWPORT_HEIGHT");
-        scrollpane.addEventHandler(ScrollToEvent.SCROLL_TO_NODE, new EventHandler<ScrollToEvent<Node>>() {
-
-            @Override
-            public void handle(ScrollToEvent<Node> event) {
+        
+        scrollpane.addEventHandler(ScrollToEvent.scrollToNode(), new EventHandler<ScrollToEvent<Node>>() {
+            @Override public void handle(ScrollToEvent<Node> event) {
                 Node n = event.getScrollTarget();
                 Bounds b = scrollpane.sceneToLocal(n.localToScene(n.getLayoutBounds()));
                 scrollBoundsIntoView(b);

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -48,6 +48,7 @@ import javafx.scene.Node;
 import com.sun.javafx.css.converters.BooleanConverter;
 import com.sun.javafx.css.converters.EnumConverter;
 import com.sun.javafx.scene.control.skin.ScrollPaneSkin;
+import javafx.css.Styleable;
 
 /**
  * A Control that provides a scrolled, clipped viewport of its contents. It
@@ -101,10 +102,9 @@ public class ScrollPane extends Control {
         getStyleClass().setAll(DEFAULT_STYLE_CLASS);
         // focusTraversable is styleable through css. Calling setFocusTraversable
         // makes it look to css like the user set the value and css will not 
-        // override. Initializing focusTraversable by calling set on the 
-        // CssMetaData ensures that css will be able to override the value.
-        final CssMetaData prop = ((StyleableProperty)focusTraversableProperty()).getCssMetaData();
-        prop.set(this, Boolean.FALSE, null); 
+        // override. Initializing focusTraversable by calling applyStyle with
+        // null StyleOrigin ensures that css will be able to override the value.
+        ((StyleableProperty<Boolean>)focusTraversableProperty()).applyStyle(null, Boolean.FALSE); 
     }
 
     /**
@@ -138,7 +138,7 @@ public class ScrollPane extends Control {
             hbarPolicy = new StyleableObjectProperty<ScrollBarPolicy>(ScrollBarPolicy.AS_NEEDED) {
 
                 @Override
-                public CssMetaData getCssMetaData() {
+                public CssMetaData<ScrollPane,ScrollBarPolicy> getCssMetaData() {
                     return StyleableProperties.HBAR_POLICY;
                 }
 
@@ -172,7 +172,7 @@ public class ScrollPane extends Control {
             vbarPolicy = new StyleableObjectProperty<ScrollBarPolicy>(ScrollBarPolicy.AS_NEEDED) {
 
                 @Override
-                public CssMetaData getCssMetaData() {
+                public CssMetaData<ScrollPane,ScrollBarPolicy> getCssMetaData() {
                     return StyleableProperties.VBAR_POLICY;
                 }
 
@@ -364,7 +364,7 @@ public class ScrollPane extends Control {
                 }
                 
                 @Override
-                public CssMetaData getCssMetaData() {
+                public CssMetaData<ScrollPane,Boolean> getCssMetaData() {
                     return StyleableProperties.FIT_TO_WIDTH;
                 }
 
@@ -401,7 +401,7 @@ public class ScrollPane extends Control {
                 }
 
                 @Override
-                public CssMetaData getCssMetaData() {
+                public CssMetaData<ScrollPane,Boolean> getCssMetaData() {
                     return StyleableProperties.FIT_TO_HEIGHT;
                 }
 
@@ -440,7 +440,7 @@ public class ScrollPane extends Control {
                 }
 
                 @Override
-                public CssMetaData getCssMetaData() {
+                public CssMetaData<ScrollPane,Boolean> getCssMetaData() {
                     return StyleableProperties.PANNABLE;
                 }
                 
@@ -621,7 +621,7 @@ public class ScrollPane extends Control {
 
             @Override
             public StyleableProperty<ScrollBarPolicy> getStyleableProperty(ScrollPane n) {
-                return (StyleableProperty)n.hbarPolicyProperty();
+                return (StyleableProperty<ScrollBarPolicy>)n.hbarPolicyProperty();
             }
         };
                 
@@ -637,7 +637,7 @@ public class ScrollPane extends Control {
 
             @Override
             public StyleableProperty<ScrollBarPolicy> getStyleableProperty(ScrollPane n) {
-                return (StyleableProperty)n.vbarPolicyProperty();
+                return (StyleableProperty<ScrollBarPolicy>)n.vbarPolicyProperty();
             }
         };
                 
@@ -652,7 +652,7 @@ public class ScrollPane extends Control {
 
             @Override
             public StyleableProperty<Boolean> getStyleableProperty(ScrollPane n) {
-                return (StyleableProperty)n.fitToWidthProperty();
+                return (StyleableProperty<Boolean>)n.fitToWidthProperty();
             }
         };
                 
@@ -667,7 +667,7 @@ public class ScrollPane extends Control {
 
             @Override
             public StyleableProperty<Boolean> getStyleableProperty(ScrollPane n) {
-                return (StyleableProperty)n.fitToHeightProperty();
+                return (StyleableProperty<Boolean>)n.fitToHeightProperty();
             }
         };
                 
@@ -682,21 +682,19 @@ public class ScrollPane extends Control {
 
             @Override
             public StyleableProperty<Boolean> getStyleableProperty(ScrollPane n) {
-                return (StyleableProperty)n.pannableProperty();
+                return (StyleableProperty<Boolean>)n.pannableProperty();
             }
         };
 
-        private static final List<CssMetaData<? extends Node, ?>> STYLEABLES;
+        private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
         static {
-            final List<CssMetaData<? extends Node, ?>> styleables = 
-                new ArrayList<CssMetaData<? extends Node, ?>>(Control.getClassCssMetaData());
-            Collections.addAll(styleables,
-                HBAR_POLICY,
-                VBAR_POLICY,
-                FIT_TO_WIDTH,
-                FIT_TO_HEIGHT,
-                PANNABLE
-            );
+            final List<CssMetaData<? extends Styleable, ?>> styleables = 
+                new ArrayList<CssMetaData<? extends Styleable, ?>>(Control.getClassCssMetaData());
+            styleables.add(HBAR_POLICY);
+            styleables.add(VBAR_POLICY);
+            styleables.add(FIT_TO_WIDTH);
+            styleables.add(FIT_TO_HEIGHT);
+            styleables.add(PANNABLE);
             STYLEABLES = Collections.unmodifiableList(styleables);
         }
     }
@@ -705,7 +703,7 @@ public class ScrollPane extends Control {
      * @return The CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
      */
-    public static List<CssMetaData<? extends Node, ?>> getClassCssMetaData() {
+    public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
         return StyleableProperties.STYLEABLES;
     }
 
@@ -713,7 +711,7 @@ public class ScrollPane extends Control {
      * {@inheritDoc}
      */
     @Override
-    public List<CssMetaData<? extends Node, ?>> getControlCssMetaData() {
+    public List<CssMetaData<? extends Styleable, ?>> getControlCssMetaData() {
         return getClassCssMetaData();
     }
 
@@ -741,7 +739,7 @@ public class ScrollPane extends Control {
      * @param node the node to scroll into view
      */
     public void scrollTo(Node node) {
-        Event.fireEvent(this, new ScrollToEvent<Node>(this, this, ScrollToEvent.SCROLL_TO_NODE, node));        
+        Event.fireEvent(this, new ScrollToEvent<Node>(this, this, ScrollToEvent.scrollToNode(), node));        
     }
     
     /**
@@ -763,17 +761,15 @@ public class ScrollPane extends Control {
     public ObjectProperty<EventHandler<ScrollToEvent<Node>>> onScrollToProperty() {
         if( onScrollTo == null ) {
             onScrollTo = new ObjectPropertyBase<EventHandler<ScrollToEvent<Node>>>() {
-                @Override
-                protected void invalidated() {
-                    setEventHandler(ScrollToEvent.SCROLL_TO_NODE, get());
+                @Override protected void invalidated() {
+                    setEventHandler(ScrollToEvent.scrollToNode(), get());
                 }
-                @Override
-                public Object getBean() {
+                
+                @Override public Object getBean() {
                     return ScrollPane.this;
                 }
 
-                @Override
-                public String getName() {
+                @Override public String getName() {
                     return "onScrollTo";
                 }
             };

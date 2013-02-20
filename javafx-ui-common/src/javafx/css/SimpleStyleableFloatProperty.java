@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2012, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,6 +22,7 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
+
 package javafx.css;
 
 import javafx.beans.property.SimpleFloatProperty;
@@ -50,7 +51,7 @@ public abstract class SimpleStyleableFloatProperty
      * @param cssMetaData
      *            the CssMetaData associated with this {@code StyleableProperty}
      */
-    public SimpleStyleableFloatProperty(CssMetaData<? extends Node, Number> cssMetaData) {
+    public SimpleStyleableFloatProperty(CssMetaData<? extends Styleable, Number> cssMetaData) {
         super();
         this.cssMetaData = cssMetaData;
     }
@@ -63,7 +64,7 @@ public abstract class SimpleStyleableFloatProperty
      * @param initialValue
      *            the initial value of the wrapped {@code Object}
      */
-    public SimpleStyleableFloatProperty(CssMetaData<? extends Node, Number> cssMetaData, float initialValue) {
+    public SimpleStyleableFloatProperty(CssMetaData<? extends Styleable, Number> cssMetaData, float initialValue) {
         super(initialValue);
         this.cssMetaData = cssMetaData;
     }
@@ -78,7 +79,7 @@ public abstract class SimpleStyleableFloatProperty
      * @param name
      *            the name of this {@code FloatProperty}
      */
-    public SimpleStyleableFloatProperty(CssMetaData<? extends Node, Number> cssMetaData, Object bean, String name) {
+    public SimpleStyleableFloatProperty(CssMetaData<? extends Styleable, Number> cssMetaData, Object bean, String name) {
         super(bean, name);
         this.cssMetaData = cssMetaData;
     }
@@ -95,7 +96,7 @@ public abstract class SimpleStyleableFloatProperty
      * @param initialValue
      *            the initial value of the wrapped {@code Object}
      */
-    public SimpleStyleableFloatProperty(CssMetaData<? extends Node, Number> cssMetaData, Object bean, String name, float initialValue) {
+    public SimpleStyleableFloatProperty(CssMetaData<? extends Styleable, Number> cssMetaData, Object bean, String name, float initialValue) {
         super(bean, name, initialValue);
         this.cssMetaData = cssMetaData;
     }
@@ -127,11 +128,11 @@ public abstract class SimpleStyleableFloatProperty
 
     /** {@inheritDoc} */
     @Override
-    public final CssMetaData<? extends Node, Number> getCssMetaData() {
+    public final CssMetaData<? extends Styleable, Number> getCssMetaData() {
         return cssMetaData;
     }
 
     private StyleOrigin origin = null;
-    private final CssMetaData<? extends Node, Number> cssMetaData;
+    private final CssMetaData<? extends Styleable, Number> cssMetaData;
 
 }

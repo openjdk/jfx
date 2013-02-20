@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2012, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,8 +27,10 @@ package com.sun.javafx;
 
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.RectBounds;
+import com.sun.javafx.geom.Rectangle;
 import com.sun.javafx.geom.transform.Affine3D;
 import com.sun.javafx.geom.transform.BaseTransform;
+import com.sun.javafx.geom.transform.GeneralTransform3D;
 
 /**************************************************************************
  *                                                                        *
@@ -59,12 +61,6 @@ public final class TempState {
     public final Affine3D leafTx = new Affine3D();
 
     /**
-     * A temporary affine transform used by the snapshot code in scene or
-     * node.
-     */
-    public final Affine3D snapshotTx = new Affine3D();
-
-    /**
      * A temporary point used for picking and other purposes.
      */
     public final com.sun.javafx.geom.Point2D point =
@@ -73,6 +69,24 @@ public final class TempState {
     public final com.sun.javafx.geom.Vec3d vec3d =
         new com.sun.javafx.geom.Vec3d(0, 0, 0);
 
+
+    /**
+     * A temporary general transform used by LOD helper method, in node, 
+     * to compute area in scene.
+     */
+    public final GeneralTransform3D projViewTx = new GeneralTransform3D();
+
+    /**
+     * A temporary rectangle used by LOD helper method, in node, 
+     * to snapshot viewport.
+     */
+    public final Rectangle viewport = new Rectangle();
+
+   /**
+     * A temporary affine transform used by the LOD helper method to get an 
+     * affine transform.
+     */
+    public final Affine3D tempTx = new Affine3D();
 
     private static final ThreadLocal<TempState> tempStateRef =
             new ThreadLocal<TempState>() {

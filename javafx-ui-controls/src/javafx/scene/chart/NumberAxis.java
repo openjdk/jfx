@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,6 +22,7 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
+
 package javafx.scene.chart;
 
 import java.text.DecimalFormat;
@@ -48,8 +49,8 @@ import com.sun.javafx.charts.ChartLayoutAnimator;
 import javafx.css.StyleableDoubleProperty;
 import javafx.css.CssMetaData;
 import com.sun.javafx.css.converters.SizeConverter;
+import javafx.css.Styleable;
 import javafx.css.StyleableProperty;
-import javafx.scene.Node;
 
 /**
  * A axis class that plots a range of numbers with major tick marks every "tickUnit". You can use any Number type with
@@ -114,7 +115,7 @@ public final class NumberAxis extends ValueAxis<Number> {
         }
         
         @Override
-        public CssMetaData getCssMetaData() {
+        public CssMetaData<NumberAxis,Number> getCssMetaData() {
             return StyleableProperties.TICK_UNIT;
         }
 
@@ -426,14 +427,14 @@ public final class NumberAxis extends ValueAxis<Number> {
 
             @Override
             public StyleableProperty<Number> getStyleableProperty(NumberAxis n) {
-                return (StyleableProperty)n.tickUnitProperty();
+                return (StyleableProperty<Number>)n.tickUnitProperty();
             }
         };
 
-        private static final List<CssMetaData<? extends Node, ?>> STYLEABLES;
+        private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
         static {
-           final List<CssMetaData<? extends Node, ?>> styleables = 
-               new ArrayList<CssMetaData<? extends Node, ?>>(ValueAxis.getClassCssMetaData());
+           final List<CssMetaData<? extends Styleable, ?>> styleables = 
+               new ArrayList<CssMetaData<? extends Styleable, ?>>(ValueAxis.getClassCssMetaData());
            styleables.add(TICK_UNIT);
            STYLEABLES = Collections.unmodifiableList(styleables);
         }
@@ -443,7 +444,7 @@ public final class NumberAxis extends ValueAxis<Number> {
      * @return The CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
      */
-    public static List<CssMetaData<? extends Node, ?>> getClassCssMetaData() {
+    public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
         return StyleableProperties.STYLEABLES;
     }
 
@@ -451,7 +452,7 @@ public final class NumberAxis extends ValueAxis<Number> {
      * {@inheritDoc}
      */
     @Override
-    public List<CssMetaData<? extends Node, ?>> getCssMetaData() {
+    public List<CssMetaData<? extends Styleable, ?>> getCssMetaData() {
         return getClassCssMetaData();
     }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -46,6 +46,7 @@ import javafx.css.CssMetaData;
 import javafx.css.PseudoClass;
 import com.sun.javafx.css.converters.EnumConverter;
 import com.sun.javafx.scene.control.skin.SplitPaneSkin;
+import javafx.css.Styleable;
 import javafx.css.StyleableProperty;
 
 /**
@@ -169,10 +170,9 @@ public class SplitPane extends Control {
         getStyleClass().setAll(DEFAULT_STYLE_CLASS);
         // focusTraversable is styleable through css. Calling setFocusTraversable
         // makes it look to css like the user set the value and css will not 
-        // override. Initializing focusTraversable by calling set on the 
-        // CssMetaData ensures that css will be able to override the value.
-        final CssMetaData prop = ((StyleableProperty)focusTraversableProperty()).getCssMetaData();
-        prop.set(this, Boolean.FALSE, null); 
+        // override. Initializing focusTraversable by calling applyStyle with a
+        // null StyleOrigin ensures that css will be able to override the value.
+        ((StyleableProperty<Boolean>)focusTraversableProperty()).applyStyle(null, Boolean.FALSE); 
 
         items.addListener(new ListChangeListener<Node>() {
             @Override public void onChanged(Change<? extends Node> c) {
@@ -257,7 +257,7 @@ public class SplitPane extends Control {
                     pseudoClassStateChanged(HORIZONTAL_PSEUDOCLASS_STATE, !isVertical);
                 }
                 
-                @Override public CssMetaData getCssMetaData() {
+                @Override public CssMetaData<SplitPane,Orientation> getCssMetaData() {
                     return StyleableProperties.ORIENTATION;
                 }
                 
@@ -395,17 +395,15 @@ public class SplitPane extends Control {
 
             @Override
             public StyleableProperty<Orientation> getStyleableProperty(SplitPane n) {
-                return (StyleableProperty)n.orientationProperty();
+                return (StyleableProperty<Orientation>)n.orientationProperty();
             }
         };
 
-        private static final List<CssMetaData<? extends Node, ?>> STYLEABLES;
+        private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
         static {
-            final List<CssMetaData<? extends Node, ?>> styleables =
-                new ArrayList<CssMetaData<? extends Node, ?>>(Control.getClassCssMetaData());
-            Collections.addAll(styleables,
-                ORIENTATION
-            );
+            final List<CssMetaData<? extends Styleable, ?>> styleables =
+                new ArrayList<CssMetaData<? extends Styleable, ?>>(Control.getClassCssMetaData());
+            styleables.add(ORIENTATION);
             STYLEABLES = Collections.unmodifiableList(styleables);
         }
     }
@@ -414,7 +412,7 @@ public class SplitPane extends Control {
      * @return The CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
      */
-    public static List<CssMetaData<? extends Node, ?>> getClassCssMetaData() {
+    public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
         return StyleableProperties.STYLEABLES;
     }
 
@@ -422,7 +420,7 @@ public class SplitPane extends Control {
      * {@inheritDoc}
      */
     @Override
-    public List<CssMetaData<? extends Node, ?>> getControlCssMetaData() {
+    public List<CssMetaData<? extends Styleable, ?>> getControlCssMetaData() {
         return getClassCssMetaData();
     }
 

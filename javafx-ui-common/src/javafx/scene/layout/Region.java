@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2012, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -47,6 +47,7 @@ import javafx.geometry.Bounds;
 import javafx.geometry.HPos;
 import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
+import javafx.geometry.Point3D;
 import javafx.geometry.VPos;
 import javafx.scene.Node;
 import javafx.scene.Parent;
@@ -61,9 +62,11 @@ import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.PickRay;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.scene.DirtyBits;
+import com.sun.javafx.scene.input.PickResultChooser;
 import com.sun.javafx.sg.PGNode;
 import com.sun.javafx.sg.PGRegion;
 import com.sun.javafx.tk.Toolkit;
+import javafx.css.Styleable;
 import sun.util.logging.PlatformLogger;
 
 /**
@@ -2148,44 +2151,23 @@ public class Region extends Parent {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-    @Override protected Node impl_pickNodeLocal(double localX, double localY) {
-        if (containsBounds(localX, localY)) {
+    @Override protected void impl_pickNodeLocal(PickRay pickRay, PickResultChooser result) {
+
+        double boundsDistance = impl_intersectsBounds(pickRay);
+
+        if (!Double.isNaN(boundsDistance)) {
+            final boolean checkAll = getScene().isDepthBuffer();
+
             ObservableList<Node> children = getChildren();
-            for (int i = children.size() - 1; i >= 0; i--) {
-                Node picked = children.get(i).impl_pickNode(localX, localY);
-                if (picked != null) {
-                    return picked;
-                }
-            }
-            if (contains(localX, localY)) {
-                return this;
-            }
-        }
-        return null;
-    }
-
-    /**
-     * Some skins relying on this
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    @Override protected Node impl_pickNodeLocal(PickRay pickRay) {
-        if (impl_intersects(pickRay)) {
-            ObservableList<Node> children = getChildren();
-
-            for (int i = children.size() - 1; i >= 0; i--) {
-                Node picked = children.get(i).impl_pickNode(pickRay);
-
-                if (picked != null) {
-                    return picked;
+            for (int i = children.size()-1; i >= 0; i--) {
+                children.get(i).impl_pickNode(pickRay, result);
+                if (!checkAll && !result.isEmpty()) {
+                    return;
                 }
             }
 
-            return this;
+            impl_intersects(pickRay, result);
         }
-
-        return null;
     }
 
     private Bounds boundingBox;
@@ -2433,11 +2415,11 @@ public class Region extends Parent {
             }
         };
 
-         private static final List<CssMetaData<? extends Node, ?>> STYLEABLES;
+         private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
          static {
 
-            final List<CssMetaData<? extends Node, ?>> styleables =
-                new ArrayList<CssMetaData<? extends Node, ?>>(Parent.getClassCssMetaData());
+            final List<CssMetaData<? extends Styleable, ?>> styleables =
+                new ArrayList<CssMetaData<? extends Styleable, ?>>(Parent.getClassCssMetaData());
             styleables.add(PADDING);
             styleables.add(BACKGROUND);
             styleables.add(BORDER);
@@ -2454,7 +2436,7 @@ public class Region extends Parent {
      * @return The CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
      */
-    public static List<CssMetaData<? extends Node, ?>> getClassCssMetaData() {
+    public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
         return StyleableProperties.STYLEABLES;
     }
 
@@ -2463,8 +2445,9 @@ public class Region extends Parent {
      *
      */
     
+    
     @Override
-    public List<CssMetaData<? extends Node, ?>> getCssMetaData() {
+    public List<CssMetaData<? extends Styleable, ?>> getCssMetaData() {
         return getClassCssMetaData();
     }
 

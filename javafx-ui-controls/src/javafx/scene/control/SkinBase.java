@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,13 +22,17 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
+
 package javafx.scene.control;
 
 import javafx.css.CssMetaData;
 import javafx.css.PseudoClass;
 import java.util.Collections;
 import java.util.List;
+import javafx.beans.InvalidationListener;
+import javafx.beans.Observable;
 import javafx.collections.ObservableList;
+import javafx.css.Styleable;
 import javafx.event.EventHandler;
 import javafx.geometry.HPos;
 import javafx.geometry.Insets;
@@ -108,6 +112,15 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
         
         // Default behavior for controls is to consume all mouse events
         consumeMouseEvents(true);
+        
+        // RT-28337: request layout on prefWidth / prefHeight changes
+        InvalidationListener prefSizeListener = new InvalidationListener() {
+            @Override public void invalidated(Observable o) {
+                control.requestLayout();
+            }
+        };
+        this.control.prefWidthProperty().addListener(prefSizeListener);
+        this.control.prefHeightProperty().addListener(prefSizeListener);
     }
     
     
@@ -394,7 +407,7 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
 
     private static class StyleableProperties {
 
-        private static final List<CssMetaData<? extends Node, ?>> STYLEABLES;
+        private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
 
         static {
             STYLEABLES = Collections.unmodifiableList(Control.getClassCssMetaData());
@@ -404,7 +417,7 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
     /** 
      * @return The CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
-     */    public static List<CssMetaData<? extends Node, ?>> getClassCssMetaData() {
+     */    public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
         return SkinBase.StyleableProperties.STYLEABLES;
     }
 
@@ -414,7 +427,7 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
      * @return The CssMetaData associated with this node, which may include the
      * CssMetaData of its super classes.
      */
-    public List<CssMetaData<? extends Node, ?>> getCssMetaData() {
+    public List<CssMetaData<? extends Styleable, ?>> getCssMetaData() {
         return getClassCssMetaData();
     }
     

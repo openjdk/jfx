@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2012, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,10 +25,14 @@
 
 package com.sun.javafx.collections;
 
+import javafx.collections.ModifiableObservableListBase;
 import com.sun.javafx.collections.NonIterableChange.SimplePermutationChange;
 import java.util.Collection;
 import java.util.Comparator;
+import java.util.Iterator;
 import java.util.List;
+import java.util.RandomAccess;
+import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.collections.ObservableList;
 import javafx.util.Callback;
@@ -37,7 +41,7 @@ import javafx.util.Callback;
  * A List wrapper class that implements observability.
  *
  */
-public class ObservableListWrapper<E> extends BaseModifiableObservableList<E> implements ObservableList<E>, SortableList<E> {
+public class ObservableListWrapper<E> extends ModifiableObservableListBase<E> implements ObservableList<E>, SortableList<E> {
 
     private final List<E> backingList;
 
@@ -50,7 +54,36 @@ public class ObservableListWrapper<E> extends BaseModifiableObservableList<E> im
 
     public ObservableListWrapper(List<E> list, Callback<E, Observable[]> extractor) {
         backingList = list;
-        this.elementObserver = new ElementObserver(extractor, this);
+        this.elementObserver = new ElementObserver(extractor, new Callback<E, InvalidationListener>() {
+
+            @Override
+            public InvalidationListener call(final E e) {
+                return new InvalidationListener() {
+
+                    @Override
+                    public void invalidated(Observable observable) {
+                        beginChange();
+                        int i = 0;
+                        if (backingList instanceof RandomAccess) {
+                            final int size = size();
+                            for (; i < size; ++i) {
+                                if (get(i) == e) {
+                                    nextUpdate(i);
+                                }
+                            }
+                        } else {
+                            for (Iterator<?> it = iterator(); it.hasNext();) {
+                                if (it.next() == e) {
+                                    nextUpdate(i);
+                                }
+                                ++i;
+                            }
+                        }
+                        endChange();
+                    }
+                };
+            }
+        }, this);
         final int sz = backingList.size();
         for (int i = 0; i < sz; ++i) {
             elementObserver.attachListener(backingList.get(i));
@@ -116,13 +149,13 @@ public class ObservableListWrapper<E> extends BaseModifiableObservableList<E> im
                 elementObserver.detachListener(get(i));
             }
         }
-        if (hasListChangeListener()) {
+        if (hasListeners()) {
             beginChange();
             nextRemove(0, this);
         }
         backingList.clear();
         ++modCount;
-        if (hasListChangeListener()) {
+        if (hasListeners()) {
             endChange();
         }
     }
@@ -175,7 +208,7 @@ public class ObservableListWrapper<E> extends BaseModifiableObservableList<E> im
             return;
         }
         int[] perm = getSortHelper().sort((List<? extends Comparable>)backingList);
-        callObservers(new SimplePermutationChange<E>(0, size(), perm, this));
+        fireChange(new SimplePermutationChange<E>(0, size(), perm, this));
     }
 
     @Override
@@ -184,7 +217,7 @@ public class ObservableListWrapper<E> extends BaseModifiableObservableList<E> im
             return;
         }
         int[] perm = getSortHelper().sort(backingList, comparator);
-        callObservers(new SimplePermutationChange<E>(0, size(), perm, this));
+        fireChange(new SimplePermutationChange<E>(0, size(), perm, this));
     }
 
     private SortHelper getSortHelper() {

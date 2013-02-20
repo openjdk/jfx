@@ -1,6 +1,28 @@
 /*
- * Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.  Oracle designates this
+ * particular file as subject to the "Classpath" exception as provided
+ * by Oracle in the LICENSE file that accompanied this code.
+ *
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
+ *
+ * You should have received a copy of the GNU General Public License version
+ * 2 along with this work; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+ * or visit www.oracle.com if you need additional information or have any
+ * questions.
  */
+
 package javafx.scene.control;
 
 import com.sun.javafx.tk.Toolkit;
@@ -15,6 +37,10 @@ import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
+import javafx.scene.Group;
+import javafx.scene.Scene;
+import javafx.stage.Stage;
+import javafx.util.Callback;
 
 import org.junit.Before;
 import org.junit.Ignore;
@@ -538,5 +564,81 @@ public class TreeViewTest {
         assertEquals(itSupport, treeView.getSelectionModel().getSelectedItem());
         assertTrue(itSupport.isLeaf());
         assertTrue(!itSupport.isExpanded());
+    }
+    
+    @Test public void test_rt27820_1() {
+        TreeItem root = new TreeItem("root");
+        root.setExpanded(true);
+        TreeItem child = new TreeItem("child");
+        root.getChildren().add(child);
+        treeView.setRoot(root);
+        
+        treeView.getSelectionModel().select(0);
+        assertEquals(1, treeView.getSelectionModel().getSelectedItems().size());
+        assertEquals(root, treeView.getSelectionModel().getSelectedItem());
+        
+        treeView.setRoot(null);
+        assertEquals(0, treeView.getSelectionModel().getSelectedItems().size());
+        assertNull(treeView.getSelectionModel().getSelectedItem());
+    }
+    
+    @Test public void test_rt27820_2() {
+        TreeItem root = new TreeItem("root");
+        root.setExpanded(true);
+        TreeItem child = new TreeItem("child");
+        root.getChildren().add(child);
+        treeView.setRoot(root);
+        
+        treeView.getSelectionModel().select(1);
+        assertEquals(1, treeView.getSelectionModel().getSelectedItems().size());
+        assertEquals(child, treeView.getSelectionModel().getSelectedItem());
+        
+        treeView.setRoot(null);
+        assertEquals(0, treeView.getSelectionModel().getSelectedItems().size());
+        assertNull(treeView.getSelectionModel().getSelectedItem());
+    }
+    
+    @Test public void test_rt28390() {
+        // There should be no NPE when a TreeView is shown and the disclosure
+        // node is null in a TreeCell
+        TreeItem root = new TreeItem("root");
+        treeView.setRoot(root);
+        
+        // install a custom cell factory that forces the disclosure node to be
+        // null (because by default a null disclosure node will be replaced by
+        // a non-null one).
+        treeView.setCellFactory(new Callback() {
+            @Override public Object call(Object p) {
+                TreeCell treeCell = new TreeCell() {
+                    {
+                        disclosureNodeProperty().addListener(new ChangeListener() {
+                            @Override public void changed(ObservableValue ov, Object t, Object t1) {
+                                setDisclosureNode(null);
+                            }
+                        });
+                    }
+                    
+                    @Override protected void updateItem(Object item, boolean empty) {
+                        super.updateItem(item, empty);
+                        setText(item == null ? "" : item.toString());
+                    }
+                };
+                treeCell.setDisclosureNode(null);
+                return treeCell;
+            }
+        });
+        
+        try {
+            Group group = new Group();
+            group.getChildren().setAll(treeView);
+            Scene scene = new Scene(group);
+            Stage stage = new Stage();
+            stage.setScene(scene);
+            stage.show();
+        } catch (NullPointerException e) {
+            System.out.println("A null disclosure node is valid, so we shouldn't have an NPE here.");
+            e.printStackTrace();
+            assertTrue(false);
+        }
     }
 }

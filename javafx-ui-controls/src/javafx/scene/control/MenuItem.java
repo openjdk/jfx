@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,7 +26,7 @@
 package javafx.scene.control;
 
 import com.sun.javafx.beans.IDProperty;
-import com.sun.javafx.css.Styleable;
+import javafx.css.Styleable;
 import javafx.css.CssMetaData;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
@@ -96,7 +96,7 @@ menu.getItems().add(menuItem);
  * @see Menu
  */
 @IDProperty("id")
-public class MenuItem implements EventTarget {
+public class MenuItem implements EventTarget, Styleable {
 
     /***************************************************************************
      *                                                                         *
@@ -159,7 +159,7 @@ public class MenuItem implements EventTarget {
      */
     private StringProperty id;
     public final void setId(String value) { idProperty().set(value); }
-    public final String getId() { return id == null ? null : id.get(); }
+    @Override public final String getId() { return id == null ? null : id.get(); }
     public final StringProperty idProperty() {
         if (id == null) {
             id = new SimpleStringProperty(this, "id");
@@ -175,7 +175,7 @@ public class MenuItem implements EventTarget {
      */
     private StringProperty style;
     public final void setStyle(String value) { styleProperty().set(value); }
-    public final String getStyle() { return style == null ? null : style.get(); }
+    @Override public final String getStyle() { return style == null ? null : style.get(); }
     public final StringProperty styleProperty() {
         if (style == null) {
             style = new SimpleStringProperty(this, "style");
@@ -446,7 +446,7 @@ public class MenuItem implements EventTarget {
      *                                                                         *
      **************************************************************************/
     
-    public ObservableList<String> getStyleClass() {
+    @Override public ObservableList<String> getStyleClass() {
         return styleClass;
     }
     
@@ -547,91 +547,60 @@ public class MenuItem implements EventTarget {
     private static final String DEFAULT_STYLE_CLASS = "menu-item";
 
     /**
-     * RT-19263
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an experimental API that is not intended for general 
-     * use and is subject to change in future versions
+     * {@inheritDoc}
+     * @return "MenuItem"
      */
-    @Deprecated
-    protected Styleable styleable; 
-        
+    @Override
+    public String getTypeSelector() {
+        return "MenuItem";
+    }
+
     /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an experimental API that is not intended for general 
-     * use and is subject to change in future versions
+     * {@inheritDoc}
+     * @return {@code getParentMenu()}, or {@code getParentPopup()} 
+     * if {@code parentMenu} is null
      */
-    @Deprecated // SB-dependency: RT-21094 has been filed to track this
-    public Styleable impl_getStyleable() {
+    @Override
+    public Styleable getStyleableParent() {
         
-        if (styleable == null) {
-            styleable = new Styleable() {
-
-                @Override
-                public String getId() {
-                    return MenuItem.this.getId();
-                }
-
-                @Override
-                public List<String> getStyleClass() {
-                    return MenuItem.this.getStyleClass();
-                }
-
-                @Override
-                public String getStyle() {
-                    return MenuItem.this.getStyle();
-                }
-
-                @Override
-                public Styleable getStyleableParent() {
-                    Menu parentMenu = MenuItem.this.getParentMenu();
-                    ContextMenu parentPopup = MenuItem.this.getParentPopup();
-                    
-                    if(parentMenu == null) {
-                        return parentPopup != null 
-                            ? parentPopup.impl_getStyleable()
-                            : null;
-                    } else {
-                        return parentMenu.impl_getStyleable();
-                    }
-                }
-
-                
-                @Override
-                public List<CssMetaData<? extends Node, ?>> getCssMetaData() {
-                    return Collections.emptyList();
-                }                
-
-                @Override
-                public Node getNode() {
-                    // Fix for RT-20582. We dive into the visual representation
-                    // of this MenuItem so that we may return it to the caller.
-                    ContextMenu parentPopup = MenuItem.this.getParentPopup();
-                    if (parentPopup == null || ! (parentPopup.getSkin() instanceof ContextMenuSkin)) return null;
-                    
-                    ContextMenuSkin skin = (ContextMenuSkin) parentPopup.getSkin();
-                    if (! (skin.getNode() instanceof ContextMenuContent)) return null;
-                    
-                    ContextMenuContent content = (ContextMenuContent) skin.getNode();
-                    Parent nodes = content.getItemsContainer();
-                    
-                    MenuItem desiredMenuItem = MenuItem.this;
-                    List<Node> childrenNodes = nodes.getChildrenUnmodifiable();
-                    for (int i = 0; i < childrenNodes.size(); i++) {
-                        if (! (childrenNodes.get(i) instanceof ContextMenuContent.MenuItemContainer)) continue;
-                        
-                        ContextMenuContent.MenuItemContainer MenuRow = 
-                                (ContextMenuContent.MenuItemContainer) childrenNodes.get(i);
-                        
-                        if (desiredMenuItem.equals(MenuRow.getItem())) {
-                            return MenuRow;
-                        }
-                    }
-                    
-                    return null;
-                }
-
-            };
+        if(getParentMenu() == null) {
+            return getParentPopup();
+        } else {
+            return getParentMenu();
         }
-        return styleable;
-    }    
+    }
+
+
+    @Override
+    public List<CssMetaData<? extends Styleable, ?>> getCssMetaData() {
+        return Collections.emptyList();
+    }                
+
+    public Node impl_styleableGetNode() {
+        // Fix for RT-20582. We dive into the visual representation
+        // of this MenuItem so that we may return it to the caller.
+        ContextMenu parentPopup = MenuItem.this.getParentPopup();
+        if (parentPopup == null || ! (parentPopup.getSkin() instanceof ContextMenuSkin)) return null;
+
+        ContextMenuSkin skin = (ContextMenuSkin) parentPopup.getSkin();
+        if (! (skin.getNode() instanceof ContextMenuContent)) return null;
+
+        ContextMenuContent content = (ContextMenuContent) skin.getNode();
+        Parent nodes = content.getItemsContainer();
+
+        MenuItem desiredMenuItem = MenuItem.this;
+        List<Node> childrenNodes = nodes.getChildrenUnmodifiable();
+        for (int i = 0; i < childrenNodes.size(); i++) {
+            if (! (childrenNodes.get(i) instanceof ContextMenuContent.MenuItemContainer)) continue;
+
+            ContextMenuContent.MenuItemContainer MenuRow = 
+                    (ContextMenuContent.MenuItemContainer) childrenNodes.get(i);
+
+            if (desiredMenuItem.equals(MenuRow.getItem())) {
+                return MenuRow;
+            }
+        }
+
+        return null;
+    }
 }

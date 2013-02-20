@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2012, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,7 +23,6 @@
  * questions.
  */
 
-
 package javafx.scene;
 
 import com.sun.javafx.scene.SceneHelper;
@@ -39,6 +38,7 @@ import java.util.Map;
 import java.util.Set;
 
 import com.sun.javafx.runtime.SystemProperties;
+import com.sun.javafx.scene.input.PickResultChooser;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.beans.DefaultProperty;
@@ -58,6 +58,7 @@ import javafx.event.EventHandler;
 import javafx.event.EventTarget;
 import javafx.event.EventType;
 import javafx.geometry.Point2D;
+import javafx.geometry.Point3D;
 import javafx.scene.input.ContextMenuEvent;
 import javafx.scene.input.DragEvent;
 import javafx.scene.input.Dragboard;
@@ -72,6 +73,7 @@ import javafx.scene.input.Mnemonic;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseDragEvent;
 import javafx.scene.input.MouseEvent;
+import javafx.scene.input.PickResult;
 import javafx.scene.input.RotateEvent;
 import javafx.scene.input.ScrollEvent;
 import javafx.scene.input.SwipeEvent;
@@ -87,7 +89,6 @@ import javafx.util.Duration;
 import com.sun.javafx.Logging;
 import com.sun.javafx.Utils;
 import com.sun.javafx.beans.annotations.Default;
-import com.sun.javafx.beans.event.AbstractNotifyListener;
 import com.sun.javafx.collections.TrackableObservableList;
 import com.sun.javafx.css.StyleManager;
 import javafx.css.StyleableObjectProperty;
@@ -95,7 +96,10 @@ import javafx.css.CssMetaData;
 import com.sun.javafx.cursor.CursorFrame;
 import com.sun.javafx.event.EventQueue;
 import com.sun.javafx.geom.PickRay;
+import com.sun.javafx.geom.Rectangle;
+import com.sun.javafx.geom.Vec3d;
 import com.sun.javafx.geom.transform.BaseTransform;
+import com.sun.javafx.geom.transform.GeneralTransform3D;
 import sun.util.logging.PlatformLogger;
 import com.sun.javafx.perf.PerformanceTracker;
 import com.sun.javafx.robot.impl.FXRobotHelper;
@@ -291,6 +295,41 @@ public class Scene implements EventTarget {
      */
     public Scene(Parent root, @Default("-1") double width, @Default("-1") double height, boolean depthBuffer) {
         this(root, width, height, Color.WHITE, depthBuffer);
+    }
+    
+    /**
+     * Constructs a scene consisting of a root, with a dimension of width and
+     * height, specifies whether a depth buffer is created for this scene and 
+     * specifies whether scene anti-aliasing is requested.
+     *
+     * @param root The root node of the scene graph
+     * @param width The width of the scene
+     * @param height The height of the scene
+     * @param depthBuffer The depth buffer flag
+     * @param antiAliasing The scene anti-aliasing flag
+     * <p>
+     * The depthBuffer and antiAliasing flags are conditional feature and the default 
+     * value for both are false. See
+     * {@link javafx.application.ConditionalFeature#SCENE3D ConditionalFeature.SCENE3D}
+     * for more information.
+     *
+     * @throws IllegalStateException if this constructor is called on a thread
+     * other than the JavaFX Application Thread.
+     * @throws NullPointerException if root is null
+     *
+     * @see javafx.scene.Node#setDepthTest(DepthTest)
+     */
+    public Scene(Parent root, @Default("-1") double width, @Default("-1") double height,
+            boolean depthBuffer, boolean antiAliasing) {
+
+        // TODO: Support scene anti-aliasing using MSAA.
+        this(root, width, height, Color.WHITE, depthBuffer);
+
+        try {
+            throw new UnsupportedOperationException("Unsupported Scene constructor --- *** antiAliasing ***");
+        } catch (UnsupportedOperationException ex) {
+            ex.printStackTrace();
+        }
     }
 
     private Scene(Parent root, double width, double height,
@@ -579,6 +618,14 @@ public class Scene implements EventTarget {
             return scenePulseListener;
         }
         return null;
+    }
+
+    /**
+     * Return true if this {@code Scene} is anti-aliased otherwise false.
+     */
+    public boolean isAntiAliasing() {
+        //TODO: 3D - Implement this method.
+        return false; // For now
     }
 
     /**
@@ -879,20 +926,12 @@ public class Scene implements EventTarget {
         return camera == null ? null : camera.get();
     }
 
-    private Camera oldCamera;
     public final ObjectProperty<Camera> cameraProperty() {
         if (camera == null) {
             camera = new ObjectPropertyBase<Camera>() {
 
                 @Override
                 protected void invalidated() {
-                    if (oldCamera != null) {
-                        oldCamera.dirtyProperty().removeListener(cameraChangeListener.getWeakListener());
-                    }
-                    oldCamera = get();
-                    if (get() != null) {
-                        get().dirtyProperty().addListener(cameraChangeListener.getWeakListener());
-                    }
                     markDirty(DirtyBits.CAMERA_DIRTY);
                 }
 
@@ -909,16 +948,6 @@ public class Scene implements EventTarget {
         }
         return camera;
     }
-
-    private final AbstractNotifyListener cameraChangeListener =
-            new AbstractNotifyListener() {
-
-        @Override public void invalidated(Observable valueModel) {
-            if (getCamera().isDirty()) {
-                markDirty(DirtyBits.CAMERA_DIRTY);
-            }
-        }
-    };
 
     /**
      * Defines the background fill of this {@code Scene}. Both a {@code null}
@@ -1113,7 +1142,7 @@ public class Scene implements EventTarget {
         context.root = root.impl_getPGNode();
         context.platformPaint = fill == null ? null : tk.getPaint(fill);
         if (camera != null) {
-            camera.update();
+            camera.impl_updatePG();
             context.camera = camera.getPlatformCamera();
         } else {
             context.camera = null;
@@ -1542,8 +1571,8 @@ public class Scene implements EventTarget {
     }
 
     private void processMenuEvent(double x2, double y2, double xAbs, double yAbs, boolean isKeyboardTrigger) {
-        final EventTarget eventTarget;
-        if (!isKeyboardTrigger) Scene.inMousePick = true;
+        EventTarget eventTarget = null;
+        Scene.inMousePick = true;
         if (isKeyboardTrigger) {
             Node sceneFocusOwner = getFocusOwner();
 
@@ -1564,22 +1593,27 @@ public class Scene implements EventTarget {
 
             xAbs = x2 + xOffset;
             yAbs = y2 + yOffset;
-            
-        } else {
-            eventTarget = pick(x2, y2);
         }
+
+        final PickResult res = pick(x2, y2);
+
+        if (!isKeyboardTrigger) {
+            eventTarget = res.getIntersectedNode();
+            if (eventTarget == null) {
+                eventTarget = this;
+            }
+        }
+
         if (eventTarget != null) {
             ContextMenuEvent context = new ContextMenuEvent(ContextMenuEvent.CONTEXT_MENU_REQUESTED,
-                    x2, y2, xAbs, yAbs, isKeyboardTrigger);
+                    x2, y2, xAbs, yAbs, isKeyboardTrigger, res);
             Event.fireEvent(eventTarget, context);
         }
-        if (!isKeyboardTrigger) Scene.inMousePick = false;
+        Scene.inMousePick = false;
     }
 
     private void processGestureEvent(GestureEvent e, TouchGesture gesture) {
         EventTarget pickedTarget = null;
-
-        inMousePick = true;
 
         if (e.getEventType() == ZoomEvent.ZOOM_STARTED ||
                 e.getEventType() == RotateEvent.ROTATION_STARTED ||
@@ -1591,7 +1625,10 @@ public class Scene implements EventTarget {
         if (gesture.target != null && (!gesture.finished || e.isInertia())) {
             pickedTarget = gesture.target;
         } else {
-            pickedTarget = pick(e.getX(), e.getY());
+            pickedTarget = e.getPickResult().getIntersectedNode();
+            if (pickedTarget == null) {
+                pickedTarget = this;
+            }
         }
 
         if (e.getEventType() == ZoomEvent.ZOOM_STARTED ||
@@ -1616,31 +1653,10 @@ public class Scene implements EventTarget {
                 e.getEventType() == ScrollEvent.SCROLL_FINISHED) {
             gesture.finished = true;
         }
-
-        inMousePick = false;
     }
 
     private void processTouchEvent(TouchEvent e, TouchPoint[] touchPoints) {
         inMousePick = true;
-        // pick targets for all touch points
-        for (TouchPoint tp : touchPoints) {
-            EventTarget pickedTarget = touchTargets.get(tp.getId());
-            if (pickedTarget == null) {
-                pickedTarget = pick(tp.getX(), tp.getY());
-            } else {
-                tp.grab(pickedTarget);
-            }
-
-            if (tp.getState() == TouchPoint.State.PRESSED) {
-                tp.grab(pickedTarget);
-                touchTargets.put(tp.getId(), pickedTarget);
-            } else if (tp.getState() == TouchPoint.State.RELEASED) {
-                touchTargets.remove(tp.getId());
-            }
-
-            tp.impl_setTarget(pickedTarget);
-        }
-
         touchEventSetId++;
 
         List<TouchPoint> touchList = Arrays.asList(touchPoints);
@@ -1670,7 +1686,7 @@ public class Scene implements EventTarget {
 
                 TouchEvent te = new TouchEvent(type, tp, touchList,
                         touchEventSetId, e.isShiftDown(), e.isControlDown(),
-                        e.isAltDown(), e.isMetaDown(), e.isDirect());
+                        e.isAltDown(), e.isMetaDown());
 
                 Event.fireEvent(tp.getTarget(), te);
             }
@@ -1696,45 +1712,53 @@ public class Scene implements EventTarget {
      */
     Node test_pick(double x, double y) {
         inMousePick = true;
-        Node pickedNode = mouseHandler.pickNode(x, y);
+        PickResult result = mouseHandler.pickNode(new PickRay(x, y));
         inMousePick = false;
-        return pickedNode;
+        if (result != null) {
+            return result.getIntersectedNode();
+        }
+        return null;
     }
 
-    private EventTarget pick(final double x, final double y) {
+    private PickResult pick(final double x, final double y) {
         pick(tmpTargetWrapper, x, y);
-        return tmpTargetWrapper.getEventTarget();
+        return tmpTargetWrapper.getResult();
+    }
+
+    private boolean isInScene(double x, double y) {
+        if (x < 0 || y < 0 || x > getWidth() || y > getHeight())  {
+            return false;
+        }
+
+        Window w = getWindow();
+        if (w instanceof Stage
+                && ((Stage) w).getStyle() == StageStyle.TRANSPARENT
+                && getFill() == null) {
+            return false;
+        }
+
+        return true;
     }
 
     private void pick(TargetWrapper target, final double x, final double y) {
-        Node n = null;
-
-        if (pickingCamera instanceof PerspectiveCamera) {
-            final PickRay pickRay = new PickRay();
-            Scene.this.impl_peer.computePickRay(
-                    (float)x, (float)y, pickRay);
-            n = mouseHandler.pickNode(pickRay);
+        final PickRay pickRay = Scene.this.impl_peer.computePickRay(
+                (float)x, (float)y, null);
+        final double mag = pickRay.getDirectionNoClone().length();
+        pickRay.getDirectionNoClone().normalize();
+        final PickResult res = mouseHandler.pickNode(pickRay);
+        if (res != null) {
+            target.setNodeResult(res);
         } else {
-            n = mouseHandler.pickNode(x, y);
-        }
-
-        if (n != null) {
-            target.setNode(n);
-        } else if (
-                x >= 0 && y >= 0 &&
-                x <= getWidth() &&
-                y <= getHeight())  {
-
-            Window w = getWindow();
-            if (w instanceof Stage
-                    && ((Stage) w).getStyle() == StageStyle.TRANSPARENT
-                    && getFill() == null) {
-                target.clear();
-            }
-
-            target.setScene(this);
-        } else {
-            target.clear();
+            //TODO: is this the intersection with projection plane?
+            Vec3d o = pickRay.getOriginNoClone();
+            Vec3d d = pickRay.getDirectionNoClone();
+            target.setSceneResult(new PickResult(
+                    null, new Point3D(
+                    o.x + mag * d.x,
+                    o.y + mag * d.y,
+                    o.z + mag * d.z), 
+                    pickRay.isParallel() ? Double.POSITIVE_INFINITY : mag),
+                    isInScene(x, y) ? this : null);
         }
     }
 
@@ -2050,6 +2074,38 @@ public class Scene implements EventTarget {
         public final int getMask() { return mask; }
     }
 
+    private Camera defaultCamera = new ParallelCamera();
+    // TODO: RT-28290 - Camera's parameters need to be computed on the FX layer
+    // Should remove once we move the camera's projViewTx computation to the FX side
+    private Rectangle viewport = new Rectangle();
+    private GeneralTransform3D projViewTx = new GeneralTransform3D();
+
+    private void snapshotCameraParameters() {
+        Camera cam = getCamera();
+        if (cam == null) {
+            cam = defaultCamera;
+        }
+        
+        projViewTx = cam.computeProjViewTx(projViewTx, getWidth(), getHeight());
+        viewport = cam.getViewport(viewport);
+    }
+
+    GeneralTransform3D getProjViewTx(GeneralTransform3D pTx) {
+        if (pTx == null) {
+            pTx = new GeneralTransform3D();
+        }
+        pTx.set(projViewTx);
+        return pTx;
+    }
+
+    Rectangle getViewport(Rectangle vp) {
+        if (vp == null) {
+            vp = new Rectangle();
+        }
+        vp.setBounds(viewport);
+        return vp;
+    }
+
     //INNER CLASSES
 
     /*******************************************************************************
@@ -2092,7 +2148,9 @@ public class Scene implements EventTarget {
                 }
                 dirtyNodesSize = 0;
             }
-            
+
+            snapshotCameraParameters();
+
             Scene.inSynchronizer = false;
         }
 
@@ -2134,14 +2192,14 @@ public class Scene implements EventTarget {
 
             // new camera was set on the scene
             if (isDirty(DirtyBits.CAMERA_DIRTY)) {
-                if (getCamera() != null) {
-                    getCamera().update();
-                    impl_peer.setCamera(getCamera().getPlatformCamera());
-                    pickingCamera = getCamera();
-                } else {
-                    impl_peer.setCamera(null);
-                    pickingCamera = null;
-                }
+                Camera camera = getCamera();
+                pickingCamera = camera;
+                if (camera != null) {
+                    camera.impl_updatePG();
+                    impl_peer.setCamera(camera.getPlatformCamera());
+                 } else {
+                     impl_peer.setCamera(null);
+                 }
             }
 
             clearDirty();
@@ -2282,7 +2340,7 @@ public class Scene implements EventTarget {
         {
             MouseEvent mouseEvent = new MouseEvent(type, x, y, screenX, screenY, button, clickCount,
                     shiftDown, controlDown, altDown, metaDown,
-                    primaryDown, middleDown, secondaryDown, synthesized, popupTrigger);
+                    primaryDown, middleDown, secondaryDown, synthesized, popupTrigger, false, null);
             impl_processMouseEvent(mouseEvent);
         }
 
@@ -2364,6 +2422,7 @@ public class Scene implements EventTarget {
                 screenY = cursorScreenPos.getY();
             } 
 
+            inMousePick = true;
             Scene.this.processGestureEvent(new ScrollEvent(
                     eventType,
                     x, y, screenX, screenY, 
@@ -2371,7 +2430,9 @@ public class Scene implements EventTarget {
                     _direct, _inertia,
                     scrollX * xMultiplier, scrollY * yMultiplier,
                     totalScrollX * xMultiplier, totalScrollY * yMultiplier,
-                    xUnits, xText, yUnits, yText, touchCount), scrollGesture);
+                    xUnits, xText, yUnits, yText, touchCount, pick(x, y)),
+                    scrollGesture);
+            inMousePick = false;
         }
 
         @Override
@@ -2399,12 +2460,14 @@ public class Scene implements EventTarget {
                 screenY = cursorScreenPos.getY();
             }
 
+            inMousePick = true;
             Scene.this.processGestureEvent(new ZoomEvent(eventType,
                     x, y, screenX, screenY,
                     _shiftDown, _controlDown, _altDown, _metaDown, 
                     _direct, _inertia,
-                    zoomFactor, totalZoomFactor),
+                    zoomFactor, totalZoomFactor, pick(x, y)),
                     zoomGesture);
+            inMousePick = false;
         }
 
         @Override
@@ -2431,11 +2494,13 @@ public class Scene implements EventTarget {
                 screenY = cursorScreenPos.getY();
             }
 
+            inMousePick = true;
             Scene.this.processGestureEvent(new RotateEvent(
                     eventType, x, y, screenX, screenY,
                     _shiftDown, _controlDown, _altDown, _metaDown, 
-                    _direct, _inertia, angle, totalAngle),
+                    _direct, _inertia, angle, totalAngle, pick(x, y)),
                     rotateGesture);
+            inMousePick = false;
 
         }
 
@@ -2457,10 +2522,13 @@ public class Scene implements EventTarget {
                 screenY = cursorScreenPos.getY();
             }
 
+            inMousePick = true;
             Scene.this.processGestureEvent(new SwipeEvent(
                     eventType, x, y, screenX, screenY,
-                    _shiftDown, _controlDown, _altDown, _metaDown, _direct, touchCount),
+                    _shiftDown, _controlDown, _altDown, _metaDown, _direct, 
+                    touchCount, pick(x, y)),
                     swipeGesture);
+            inMousePick = false;
         }
 
         @Override
@@ -2469,9 +2537,13 @@ public class Scene implements EventTarget {
                 boolean _shiftDown, boolean _controlDown,
                 boolean _altDown, boolean _metaDown) {
 
+            if (!isDirect) {
+                nextTouchEvent = null;
+                return;
+            }
             nextTouchEvent = new TouchEvent(
                     TouchEvent.ANY, null, null, 0,
-                    _shiftDown, _controlDown, _altDown, _metaDown, isDirect);
+                    _shiftDown, _controlDown, _altDown, _metaDown);
             if (touchPoints == null || touchPoints.length != touchCount) {
                 touchPoints = new TouchPoint[touchCount];
             }
@@ -2483,6 +2555,11 @@ public class Scene implements EventTarget {
                 TouchPoint.State state, long touchId,
                 int x, int y, int xAbs, int yAbs) {
 
+            inMousePick = true;
+            if (nextTouchEvent == null) {
+                // ignore indirect touch events
+                return;
+            }
             touchPointIndex++;
             int id = (state == TouchPoint.State.PRESSED
                     ? touchMap.add(touchId) :  touchMap.get(touchId));
@@ -2495,20 +2572,48 @@ public class Scene implements EventTarget {
                 throw new RuntimeException("Too many touch points reported");
             }
 
-            touchPoints[order] = TouchPoint.impl_touchPoint(id, state,
-                    x, y, xAbs, yAbs);
+            // pick target
+            boolean isGrabbed = false;
+            PickResult pickRes = pick(x, y);
+            EventTarget pickedTarget = touchTargets.get(id);
+            if (pickedTarget == null) {
+                pickedTarget = pickRes.getIntersectedNode();
+                if (pickedTarget == null) {
+                    pickedTarget = Scene.this;
+                }
+            } else {
+                isGrabbed = true;
+            }
+
+            TouchPoint tp = new TouchPoint(id, state,
+                    x, y, xAbs, yAbs, pickedTarget, pickRes);
+
+            touchPoints[order] = tp;
+
+            if (isGrabbed) {
+                tp.grab(pickedTarget);
+            }
+            if (tp.getState() == TouchPoint.State.PRESSED) {
+                tp.grab(pickedTarget);
+                touchTargets.put(tp.getId(), pickedTarget);
+            } else if (tp.getState() == TouchPoint.State.RELEASED) {
+                touchTargets.remove(tp.getId());
+            }
+            inMousePick = false;
         }
 
         @Override
         public void touchEventEnd() {
+            if (nextTouchEvent == null) {
+                // ignore indirect touch events
+                return;
+            }
+
             if (touchPointIndex != touchPoints.length) {
                 throw new RuntimeException("Wrong number of touch points reported");
             }
 
-            // for now we don't want to process indirect touch events
-            if (nextTouchEvent.isDirect()) {
-                Scene.this.processTouchEvent(nextTouchEvent, touchPoints);
-            }
+            Scene.this.processTouchEvent(nextTouchEvent, touchPoints);
 
             if (touchMap.cleanup()) {
                 // gesture finished
@@ -2536,45 +2641,58 @@ public class Scene implements EventTarget {
      ******************************************************************************/
 
     class DropTargetListener implements TKDropTargetListener {
+
         /*
          * This function is called when an drag operation enters a valid drop target.
          * This may be from either an internal or external dnd operation.
          */
         @Override
         public TransferMode dragEnter(double x, double y, double screenX, double screenY,
-                                      TransferMode transferMode, Dragboard dragboard)
+                                      TransferMode transferMode)
         {
             if (dndGesture == null) {
                 dndGesture = new DnDGesture();
             }
+            Dragboard dragboard = Dragboard.impl_createDragboard(impl_peer, false);
+            dndGesture.dragboard = dragboard;
             DragEvent dragEvent =
-                    new DragEvent(DragEvent.ANY, dragboard, x, y, screenX, screenY, transferMode, null, null);
+                    new DragEvent(DragEvent.ANY, dndGesture.dragboard, x, y, screenX, screenY,
+                            transferMode, null, null, pick(x, y));
             return dndGesture.processTargetEnterOver(dragEvent);
         }
 
         @Override
         public TransferMode dragOver(double x, double y, double screenX, double screenY,
-                                     TransferMode transferMode, Dragboard dragboard)
+                                     TransferMode transferMode)
         {
             if (Scene.this.dndGesture == null) {
                 System.err.println("GOT A dragOver when dndGesture is null!");
                 return null;
             } else {
+                if (dndGesture.dragboard == null) {
+                    throw new RuntimeException("dndGesture.dragboard is null in dragOver");
+                }
                 DragEvent dragEvent =
-                        new DragEvent(DragEvent.ANY, dragboard, x, y, screenX, screenY, transferMode, null, null);
+                        new DragEvent(DragEvent.ANY, dndGesture.dragboard, x, y, screenX, screenY,
+                                transferMode, null, null, pick(x, y));
                 return dndGesture.processTargetEnterOver(dragEvent);
             }
         }
 
         @Override
-        public void dragExit(double x, double y, double screenX, double screenY, Dragboard dragboard) {
+        public void dragExit(double x, double y, double screenX, double screenY) {
             if (dndGesture == null) {
                 System.err.println("GOT A dragExit when dndGesture is null!");
             } else {
+                if (dndGesture.dragboard == null) {
+                    throw new RuntimeException("dndGesture.dragboard is null in dragExit");
+                }
                 DragEvent dragEvent =
-                        new DragEvent(DragEvent.ANY, dragboard, x, y, screenX, screenY, null, null, null);
+                        new DragEvent(DragEvent.ANY, dndGesture.dragboard, x, y, screenX, screenY,
+                                null, null, null, pick(x, y));
                 dndGesture.processTargetExit(dragEvent);
                 if (dndGesture.source == null) {
+                    dndGesture.dragboard = null;
                     dndGesture = null;
                 }
             }
@@ -2583,16 +2701,21 @@ public class Scene implements EventTarget {
 
         @Override
         public TransferMode drop(double x, double y, double screenX, double screenY,
-                                  TransferMode transferMode, Dragboard dragboard)
+                                  TransferMode transferMode)
         {
             if (dndGesture == null) {
                 System.err.println("GOT A drop when dndGesture is null!");
                 return null;
             } else {
+                if (dndGesture.dragboard == null) {
+                    throw new RuntimeException("dndGesture.dragboard is null in dragDrop");
+                }
                 DragEvent dragEvent =
-                        new DragEvent(DragEvent.ANY, dragboard, x, y, screenX, screenY, null, null, null);
+                        new DragEvent(DragEvent.ANY, dndGesture.dragboard, x, y, screenX, screenY,
+                                transferMode, null, null, pick(x, y));
                 TransferMode tm = dndGesture.processTargetDrop(dragEvent);
                 if (dndGesture.source == null) {
+                    dndGesture.dragboard = null;
                     dndGesture = null;
                 }
                 return tm;
@@ -2601,16 +2724,16 @@ public class Scene implements EventTarget {
     }
 
     class DragGestureListener implements TKDragGestureListener {
+
        @Override
-       public void dragGestureRecognized(double x, double y, double screenX, double screenY,
-                                         int button, Dragboard dragboard)
-       {
+       public void dragGestureRecognized(double x, double y, double screenX, double screenY, int button) {
+           Dragboard dragboard = Dragboard.impl_createDragboard(impl_peer, false);
            dndGesture = new DnDGesture();
            dndGesture.dragboard = dragboard;
            // TODO: support mouse buttons in DragEvent
-           DragEvent dragEvent = new DragEvent(DragEvent.ANY, dragboard, x, y, screenX, screenY, null, null, null);
-           final EventTarget pickedNode = pick(dragEvent.getX(), dragEvent.getY());
-           dndGesture.processRecognized(pickedNode, dragEvent);
+           DragEvent dragEvent = new DragEvent(DragEvent.ANY, dragboard, x, y, screenX, screenY, 
+                   null, null, null, pick(x, y));
+           dndGesture.processRecognized(dragEvent);
            dndGesture = null;
         }
     }
@@ -2660,8 +2783,7 @@ public class Scene implements EventTarget {
          */
         private void dragDetectedProcessed() {
             dragDetected = DragDetectedState.DONE;
-            final boolean hasContent = dragboard != null
-                    && dragboard.impl_contentPut();
+            final boolean hasContent = (dragboard != null) && (dragboard.impl_contentPut());
             if (hasContent) {
                 /* start DnD */
                 Toolkit.getToolkit().startDrag(Scene.this.impl_peer,
@@ -2740,15 +2862,17 @@ public class Scene implements EventTarget {
          * the publicly visible drag and drop API, as it is responsible for calling
          * the Node.onDragSourceRecognized function.
          */
-        private boolean processRecognized(EventTarget target, DragEvent de) {
+        private boolean processRecognized(DragEvent de) {
             MouseEvent me = new MouseEvent(
                     MouseEvent.DRAG_DETECTED, de.getX(), de.getY(),
                     de.getSceneX(), de.getScreenY(), MouseButton.PRIMARY, 1,
-                    false, false, false, false, false, true, false, false, false);
+                    false, false, false, false, false, true, false, false, false,
+                    false, de.getPickResult());
 
             processingDragDetected();
 
-            fireEvent(target, me);
+            final EventTarget target = de.getPickResult().getIntersectedNode();
+            fireEvent(target != null ? target : Scene.this, me);
 
             dragDetectedProcessed();
 
@@ -2763,8 +2887,10 @@ public class Scene implements EventTarget {
                 return;
             }
 
-            de = de.copyFor(de.getSource(), source, source, target,
-                    DragEvent.DRAG_DONE);
+            de = new DragEvent(de.getSource(), source, DragEvent.DRAG_DONE,
+                    de.getDragboard(), de.getSceneX(), de.getSceneY(),
+                    de.getScreenX(), de.getScreenY(),
+                    de.getTransferMode(), source, target, de.getPickResult());
 
             Event.fireEvent(source, de);
 
@@ -2777,20 +2903,24 @@ public class Scene implements EventTarget {
         }
 
         private TransferMode processTargetEnterOver(DragEvent de) {
-            pick(tmpTargetWrapper, de.getX(), de.getY());
+            pick(tmpTargetWrapper, de.getSceneX(), de.getSceneY());
             final EventTarget pickedTarget = tmpTargetWrapper.getEventTarget();
 
             if (dragboard == null) {
-                dragboard = createDragboard(de);
+                dragboard = createDragboard(de, false);
             }
 
-            de = de.copyFor(de.getSource(), pickedTarget, source,
-                    potentialTarget, dragboard);
+            de = new DragEvent(de.getSource(), pickedTarget, de.getEventType(),
+                    dragboard, de.getSceneX(), de.getSceneY(),
+                    de.getScreenX(), de.getScreenY(),
+                    de.getTransferMode(), source, potentialTarget, de.getPickResult());
 
             handleExitEnter(de, tmpTargetWrapper);
 
-            de = de.copyFor(de.getSource(), pickedTarget, source,
-                    potentialTarget, DragEvent.DRAG_OVER);
+            de = new DragEvent(de.getSource(), pickedTarget, DragEvent.DRAG_OVER,
+                    de.getDragboard(), de.getSceneX(), de.getSceneY(),
+                    de.getScreenX(), de.getScreenY(),
+                    de.getTransferMode(), source, potentialTarget, de.getPickResult());
 
             fireEvent(pickedTarget, de);
 
@@ -2826,15 +2956,16 @@ public class Scene implements EventTarget {
         }
 
         private TransferMode processTargetDrop(DragEvent de) {
-            pick(tmpTargetWrapper, de.getX(), de.getY());
+            pick(tmpTargetWrapper, de.getSceneX(), de.getSceneY());
             final EventTarget pickedTarget = tmpTargetWrapper.getEventTarget();
 
-            de = de.copyFor(de.getSource(), pickedTarget, source,
-                    potentialTarget, acceptedTransferMode,
-                    DragEvent.DRAG_DROPPED);
+            de = new DragEvent(de.getSource(), pickedTarget, DragEvent.DRAG_DROPPED,
+                    de.getDragboard(), de.getSceneX(), de.getSceneY(),
+                    de.getScreenX(), de.getScreenY(),
+                    acceptedTransferMode, source, potentialTarget, de.getPickResult());
 
             if (dragboard == null) {
-                dragboard = createDragboard(de);
+                dragboard = createDragboard(de, false);
             }
 
             handleExitEnter(de, tmpTargetWrapper);
@@ -2913,7 +3044,8 @@ public class Scene implements EventTarget {
 
                 // cancel drag and drop
                 DragEvent de = new DragEvent(
-                        source, source, DragEvent.DRAG_DONE, dragboard, 0, 0, 0, 0, null, source, null);
+                        source, source, DragEvent.DRAG_DONE, dragboard, 0, 0, 0, 0, 
+                        null, source, null, null);
                 if (source != null) {
                     Event.fireEvent(source, de);
                 }
@@ -2939,7 +3071,7 @@ public class Scene implements EventTarget {
             if (t.isEmpty()) {
                 dragboard = null;
             } else if (dragboard == null) {
-                dragboard = createDragboard(null);
+                dragboard = createDragboard(null, true);
             }
             this.source = source;
             potentialTarget = source;
@@ -2954,7 +3086,7 @@ public class Scene implements EventTarget {
             fullPDRSource = source;
         }
 
-        private Dragboard createDragboard(final DragEvent de) {
+        private Dragboard createDragboard(final DragEvent de, boolean isDragSource) {
             Dragboard dragboard = null;
             if (de != null) {
                 dragboard = de.getDragboard();
@@ -2962,7 +3094,7 @@ public class Scene implements EventTarget {
                     return dragboard;
                 }
             }
-            return Scene.this.impl_peer.createDragboard();
+            return Dragboard.impl_createDragboard(Scene.this.impl_peer, isDragSource);
         }
     }
 
@@ -2979,11 +3111,15 @@ public class Scene implements EventTarget {
 
         @Override
         public void dragDropEnd(double x, double y, double screenX, double screenY,
-                                TransferMode transferMode, Dragboard dragboard)
+                                TransferMode transferMode)
         {
             if (dndGesture != null) {
+                if (dndGesture.dragboard == null) {
+                    throw new RuntimeException("dndGesture.dragboard is null in dragDropEnd");
+                }
                 DragEvent dragEvent =
-                        new DragEvent(DragEvent.ANY, dragboard, x, y, screenX, screenY, transferMode, null, null);
+                        new DragEvent(DragEvent.ANY, dndGesture.dragboard, x, y, screenX, screenY,
+                        transferMode, null, null, null);
                 dndGesture.processDropEnd(dragEvent);
                 dndGesture = null;
             }
@@ -3098,12 +3234,12 @@ public class Scene implements EventTarget {
                 lastPress = cc;
             }
 
-            return new MouseEvent(e.getEventType(), e.getX(), e.getY(),
+            return new MouseEvent(e.getEventType(), e.getSceneX(), e.getSceneY(),
                     e.getScreenX(), e.getScreenY(), e.getButton(),
                     cc != null && e.getEventType() != MouseEvent.MOUSE_MOVED ? cc.get() : 0,
                     e.isShiftDown(), e.isControlDown(), e.isAltDown(), e.isMetaDown(),
                     e.isPrimaryButtonDown(), e.isMiddleButtonDown(), e.isSecondaryButtonDown(),
-                    e.isSynthesized(), e.isPopupTrigger(), still);
+                    e.isSynthesized(), e.isPopupTrigger(), still, e.getPickResult());
         }
 
         private void postProcess(MouseEvent e, TargetWrapper target, TargetWrapper pickedTarget) {
@@ -3130,7 +3266,7 @@ public class Scene implements EventTarget {
                             cc.get(),
                             e.isShiftDown(), e.isControlDown(), e.isAltDown(), e.isMetaDown(),
                             e.isPrimaryButtonDown(), e.isMiddleButtonDown(), e.isSecondaryButtonDown(),
-                            e.isSynthesized(), e.isPopupTrigger(), lastPress.isStill());
+                            e.isSynthesized(), e.isPopupTrigger(), lastPress.isStill(), e.getPickResult());
                     Event.fireEvent(clickedTarget, click);
                 }
             }
@@ -3212,7 +3348,7 @@ public class Scene implements EventTarget {
                 Event.fireEvent(entered, MouseEvent.copyForMouseDragEvent(e,
                         entered, entered,
                         MouseDragEvent.MOUSE_DRAG_EXITED_TARGET,
-                        fullPDRSource));
+                        fullPDRSource, e.getPickResult()));
             }
             fullPDRSource = null;
             fullPDRCurrentEventTargets.clear();
@@ -3305,9 +3441,17 @@ public class Scene implements EventTarget {
                 middleButtonDown = e.isMiddleButtonDown();
             }
 
-            if (e.getEventType() != MouseEvent.MOUSE_EXITED) {
-                pick(tmpTargetWrapper, e.getX(), e.getY());
-            } else {
+            pick(tmpTargetWrapper, e.getSceneX(), e.getSceneY());
+            PickResult res = tmpTargetWrapper.getResult();
+            if (res != null) {
+                e = new MouseEvent(e.getEventType(), e.getSceneX(), e.getSceneY(),
+                    e.getScreenX(), e.getScreenY(), e.getButton(), e.getClickCount(),
+                    e.isShiftDown(), e.isControlDown(), e.isAltDown(), e.isMetaDown(),
+                    e.isPrimaryButtonDown(), e.isMiddleButtonDown(), e.isSecondaryButtonDown(),
+                    e.isSynthesized(), e.isPopupTrigger(), e.isStillSincePress(), res);
+            }
+
+            if (e.getEventType() == MouseEvent.MOUSE_EXITED) {
                 tmpTargetWrapper.clear();
             }
 
@@ -3393,7 +3537,8 @@ public class Scene implements EventTarget {
 
         private void processFullPDR(MouseEvent e, boolean onPulse) {
 
-            pick(fullPDRTmpTargetWrapper, e.getX(), e.getY());
+            pick(fullPDRTmpTargetWrapper, e.getSceneX(), e.getSceneY());
+            final PickResult result = fullPDRTmpTargetWrapper.getResult();
 
             final EventTarget eventTarget = fullPDRTmpTargetWrapper.getEventTarget();
 
@@ -3417,7 +3562,7 @@ public class Scene implements EventTarget {
                     Event.fireEvent(exitedEventTarget, MouseEvent.copyForMouseDragEvent(e,
                             exitedEventTarget, exitedEventTarget,
                             MouseDragEvent.MOUSE_DRAG_EXITED_TARGET,
-                            fullPDRSource));
+                            fullPDRSource, result));
                 }
 
                 for (; j >= 0; j--) {
@@ -3425,7 +3570,7 @@ public class Scene implements EventTarget {
                     Event.fireEvent(enteredEventTarget, MouseEvent.copyForMouseDragEvent(e,
                             enteredEventTarget, enteredEventTarget,
                             MouseDragEvent.MOUSE_DRAG_ENTERED_TARGET,
-                            fullPDRSource));
+                            fullPDRSource, result));
                 }
 
                 fullPDRCurrentTarget = eventTarget;
@@ -3440,13 +3585,13 @@ public class Scene implements EventTarget {
                     Event.fireEvent(eventTarget, MouseEvent.copyForMouseDragEvent(e,
                             eventTarget, eventTarget,
                             MouseDragEvent.MOUSE_DRAG_OVER,
-                            fullPDRSource));
+                            fullPDRSource, result));
                 }
                 if (e.getEventType() == MouseEvent.MOUSE_RELEASED) {
                     Event.fireEvent(eventTarget, MouseEvent.copyForMouseDragEvent(e,
                             eventTarget, eventTarget,
                             MouseDragEvent.MOUSE_DRAG_RELEASED,
-                            fullPDRSource));
+                            fullPDRSource, result));
                 }
             }
         }
@@ -3479,12 +3624,10 @@ public class Scene implements EventTarget {
             }
         }
 
-        private Node pickNode(double x, double y) {
-            return Scene.this.getRoot().impl_pickNode(x, y);
-        }
-
-        private Node pickNode(PickRay pickRay) {
-            return Scene.this.getRoot().impl_pickNode(pickRay);
+        private PickResult pickNode(PickRay pickRay) {
+            PickResultChooser r = new PickResultChooser();
+            Scene.this.getRoot().impl_pickNode(pickRay, r);
+            return r.toPickResult(!pickRay.isParallel());
         }
     }
 
@@ -5510,6 +5653,7 @@ public class Scene implements EventTarget {
     private static class TargetWrapper {
         private Scene scene;
         private Node node;
+        private PickResult result;
 
         /**
          * Fills the list with the target and all its parents (including scene)
@@ -5546,19 +5690,33 @@ public class Scene implements EventTarget {
 
         public void clear() {
             set(null, null);
+            result = null;
         }
 
-        public void setScene(Scene scene) {
-            set(null, scene);
+        public void setNodeResult(PickResult result) {
+            if (result != null) {
+                this.result = result;
+                final Node n = result.getIntersectedNode();
+                set(n, n.getScene());
+            }
         }
 
-        public void setNode(Node node) {
-            set(node, node.getScene());
+        // Pass null scene if the mouse is outside of the window content
+        public void setSceneResult(PickResult result, Scene scene) {
+            if (result != null) {
+                this.result = result;
+                set(null, scene);
+            }
+        }
+
+        public PickResult getResult() {
+            return result;
         }
 
         public void copy(TargetWrapper tw) {
             node = tw.node;
             scene = tw.scene;
+            result = tw.result;
         }
 
         private void set(Node n, Scene s) {

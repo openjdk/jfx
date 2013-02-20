@@ -1,5 +1,5 @@
- /*
- * Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
+/*
+ * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,6 +22,7 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
+
 package javafx.scene.control;
 
 import javafx.css.CssMetaData;
@@ -41,12 +42,16 @@ import javafx.event.EventTarget;
 import javafx.event.EventType;
 import javafx.scene.Node;
 
-import com.sun.javafx.css.Styleable;
+import javafx.css.Styleable;
 import com.sun.javafx.event.EventHandlerManager;
+
+import java.lang.ref.WeakReference;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import javafx.beans.DefaultProperty;
+import javafx.beans.InvalidationListener;
+import javafx.beans.Observable;
 import javafx.beans.property.BooleanPropertyBase;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
@@ -63,7 +68,7 @@ import javafx.collections.ObservableMap;
  * on a Tab in the TabPane the Tab content becomes visible to the user.</p>
  */
 @DefaultProperty("content")
-public class Tab implements EventTarget {
+public class Tab implements EventTarget, Styleable {
 
     /***************************************************************************
      *                                                                         *
@@ -101,13 +106,14 @@ public class Tab implements EventTarget {
      * Sets the id of this tab. This simple string identifier is useful for
      * finding a specific Tab within the {@code TabPane}. The default value is {@code null}.
      */
-    public final void setId(String value) { idProperty().set(value); }
+   public final void setId(String value) { idProperty().set(value); }
 
     /**
      * The id of this tab.
      *
      * @return The id of the tab.
      */
+    @Override
     public final String getId() { return id == null ? null : id.get(); }
 
     /**
@@ -133,13 +139,14 @@ public class Tab implements EventTarget {
      * platforms. It is recommended to use a standalone CSS file instead.
      *     
      */
-    public final void setStyle(String value) { styleProperty().set(value); }
+   public final void setStyle(String value) { styleProperty().set(value); }
 
     /**
      * The CSS style string associated to this tab.
      *
      * @return The CSS style string associated to this tab.
      */
+    @Override
     public final String getStyle() { return style == null ? null : style.get(); }
 
     /**
@@ -219,11 +226,32 @@ public class Tab implements EventTarget {
 
     private ReadOnlyObjectWrapper<TabPane> tabPanePropertyImpl() {
         if (tabPane == null) {
-            tabPane = new ReadOnlyObjectWrapper<TabPane>(this, "tabPane");
+            tabPane = new ReadOnlyObjectWrapper<TabPane>(this, "tabPane") {
+                private WeakReference<TabPane> oldParent;
+                                
+                @Override protected void invalidated() {
+                    if(oldParent != null && oldParent.get() != null) {
+                        oldParent.get().disabledProperty().removeListener(parentDisabledChangedListener);
+                    }
+                    updateDisabled();
+                    TabPane newParent = get();
+                    if (newParent != null) {
+                        newParent.disabledProperty().addListener(parentDisabledChangedListener);
+                    }
+                    oldParent = new WeakReference<TabPane>(newParent);
+                    super.invalidated();
+                }
+            };
         }
         return tabPane;
     }
 
+    private final InvalidationListener parentDisabledChangedListener = new InvalidationListener() {
+        @Override public void invalidated(Observable valueModel) {
+            updateDisabled();
+        }
+    };
+    
     private StringProperty text;
 
     /**
@@ -706,6 +734,7 @@ public class Tab implements EventTarget {
      *
      * @see <a href="http://www.w3.org/TR/css3-selectors/#class-html">CSS3 class selectors</a>
      */
+    @Override
     public ObservableList<String> getStyleClass() {
         return styleClass;
     }
@@ -739,58 +768,33 @@ public class Tab implements EventTarget {
     private static final String DEFAULT_STYLE_CLASS = "tab";
     
     /**
-     * RT-19263
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an experimental API that is not intended for general 
-     * use and is subject to change in future versions
+     * {@inheritDoc}
+     * @return "Tab"
      */
-    protected Styleable styleable; 
-    
+   @Override
+    public String getTypeSelector() {
+        return "Tab";
+    }
+
     /**
-     * RT-19263
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
+     * {@inheritDoc}
+     * @return {@code getTabPane()}
      */
-    @Deprecated // SB-dependency: RT-21094 has been filed to track this
-    public Styleable impl_getStyleable() {
-        
-        if (styleable == null) {
-            styleable = new Styleable() {
+    @Override
+    public Styleable getStyleableParent() {
+        return getTabPane();
+    }
 
-                @Override
-                public String getId() {
-                    return Tab.this.getId();
-                }
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public List<CssMetaData<? extends Styleable, ?>> getCssMetaData() {
+        return getClassCssMetaData();
+    }                
 
-                @Override
-                public List<String> getStyleClass() {
-                    return Tab.this.getStyleClass();
-                }
-
-                @Override
-                public String getStyle() {
-                    return Tab.this.getStyle();
-                }
-
-                @Override
-                public Styleable getStyleableParent() {
-                    return getTabPane() != null 
-                        ? getTabPane().impl_getStyleable()
-                        : null;
-                }
-
-                @Override
-                public List<CssMetaData<? extends Node, ?>> getCssMetaData() {
-                    return Collections.emptyList();
-                }                
-
-                @Override
-                public Node getNode() {
-                    return null;
-                }
-
-            };
-        }
-        return styleable;
-    }    
+   public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
+        return Collections.emptyList();
+    }                
+    
 }

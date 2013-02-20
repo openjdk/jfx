@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2012, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,7 +29,6 @@ package javafx.scene;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -104,14 +103,13 @@ import com.sun.javafx.beans.event.AbstractNotifyListener;
 import com.sun.javafx.binding.ExpressionHelper;
 import com.sun.javafx.collections.TrackableObservableList;
 import com.sun.javafx.collections.UnmodifiableListSet;
-//import com.sun.javafx.css.PseudoClassSet;
 import javafx.css.ParsedValue;
 import com.sun.javafx.css.Selector;
 import com.sun.javafx.css.Style;
 import javafx.css.StyleConverter;
 import com.sun.javafx.css.StyleHelper;
 import com.sun.javafx.css.StyleManager;
-import com.sun.javafx.css.Styleable;
+import javafx.css.Styleable;
 import javafx.css.StyleableBooleanProperty;
 import javafx.css.StyleableDoubleProperty;
 import javafx.css.StyleableObjectProperty;
@@ -125,30 +123,32 @@ import com.sun.javafx.css.converters.EnumConverter;
 import com.sun.javafx.css.converters.SizeConverter;
 import com.sun.javafx.effect.EffectDirtyBits;
 import com.sun.javafx.geom.BaseBounds;
+import com.sun.javafx.geom.BoxBounds;
 import com.sun.javafx.geom.PickRay;
 import com.sun.javafx.geom.RectBounds;
+import com.sun.javafx.geom.Rectangle;
 import com.sun.javafx.geom.transform.Affine3D;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.geom.transform.NoninvertibleTransformException;
+import com.sun.javafx.geom.Vec3d;
+import com.sun.javafx.geom.transform.GeneralTransform3D;
 import com.sun.javafx.jmx.MXNodeAlgorithm;
 import com.sun.javafx.jmx.MXNodeAlgorithmContext;
 import sun.util.logging.PlatformLogger;
 import com.sun.javafx.perf.PerformanceTracker;
-import com.sun.javafx.print.NodeAccess;
+import com.sun.javafx.scene.NodeAccess;
 import com.sun.javafx.scene.BoundsAccessor;
 import com.sun.javafx.scene.CssFlags;
 import com.sun.javafx.scene.DirtyBits;
 import com.sun.javafx.scene.EventHandlerProperties;
 import com.sun.javafx.scene.NodeEventDispatcher;
+import com.sun.javafx.scene.input.PickResultChooser;
 import com.sun.javafx.scene.transform.TransformUtils;
 import com.sun.javafx.scene.traversal.Direction;
 import com.sun.javafx.sg.PGNode;
 import com.sun.javafx.tk.Toolkit;
 import javafx.css.StyleableProperty;
-import javafx.scene.transform.Affine;
-import javafx.scene.transform.NonInvertibleTransformException;
 import javafx.geometry.NodeOrientation;
-import javafx.stage.Stage;
 import javafx.stage.Window;
 
 /**
@@ -362,7 +362,7 @@ import javafx.stage.Window;
  * Guide</a>.
  */
 @IDProperty("id")
-public abstract class Node implements EventTarget {
+public abstract class Node implements EventTarget, Styleable {
 
      static {
           PerformanceTracker.logEvent("Node class loaded");
@@ -598,16 +598,6 @@ public abstract class Node implements EventTarget {
      public final ObservableMap<Object, Object> getProperties() {
         if (properties == null) {
             properties = FXCollections.observableMap(new HashMap<Object, Object>());
-            if (PSEUDO_CLASS_OVERRIDE_ENABLED) {
-                // listen for when the user sets the PSEUDO_CLASS_OVERRIDE_KEY to new value
-                properties.addListener(new MapChangeListener<Object,Object>(){
-                    @Override public void onChanged(Change<? extends Object, ? extends Object> change) {
-                        if (PSEUDO_CLASS_OVERRIDE_KEY.equals(change.getKey()) && getScene() != null) {
-                            updatePseudoClassOverride();
-                        }
-                    }
-                });
-            }
         }
         return properties;
     }
@@ -617,7 +607,7 @@ public abstract class Node implements EventTarget {
      * @return true if node has properties.
      */
      public boolean hasProperties() {
-        return properties != null;
+        return properties != null && !properties.isEmpty();
     }
 
     /**
@@ -780,11 +770,6 @@ public abstract class Node implements EventTarget {
             }
 
             oldScene = _scene;
-            // we need to check if a override has been set, if so we need to apply it to the node now
-            // that it may have a valid scene
-            if (PSEUDO_CLASS_OVERRIDE_ENABLED) {
-                updatePseudoClassOverride();
-            }
         }
 
         @Override
@@ -2800,6 +2785,76 @@ public abstract class Node implements EventTarget {
 
     /* *************************************************************************
      *                                                                         *
+     * LOD Helper related APIs 
+     * TODO: (RT-26535) Implement LOD helper
+     *                                                                         *
+     **************************************************************************/
+    /**
+     * Returns the area of this {@code Node} projected onto the 
+     * physical screen in pixel units.
+     */
+    public double computeAreaInScreen() {
+        return impl_computeAreaInScreen();
+    }
+
+    /*
+     * Help application or utility to implement LOD support by returning the
+     * projected area of a Node in pixel unit. The projected area is not clipped.
+     */
+    private double impl_computeAreaInScreen() {
+        Scene scene = getScene();
+        if (scene != null) {
+            Bounds bounds = getBoundsInLocal();
+            Camera camera = scene.getCamera();
+            boolean isPerspective = camera instanceof PerspectiveCamera ? true : false;
+
+            // NOTE: Viewing frustrum check is now only for perspective camera
+            // TODO: Need to hook up parallel camera's nearClip and farClip.
+            if (isPerspective && (bounds.getMinZ() > camera.getFarClip()
+                || bounds.getMaxZ() < camera.getNearClip())) {
+                return 0;
+            }
+
+            GeneralTransform3D projViewTx = TempState.getInstance().projViewTx;          
+            projViewTx = scene.getProjViewTx(projViewTx);
+            Rectangle viewport = TempState.getInstance().viewport;
+            viewport = scene.getViewport(viewport);
+
+            Transform localToSceneTx = getLocalToSceneTransform();
+
+            // We need to set tempTx to identity since it is a recycled transform.
+            // This is because impl_apply is a matrix concatenation operation. 
+            Affine3D localToSceneTransform = TempState.getInstance().tempTx;
+            localToSceneTransform.setToIdentity();
+            localToSceneTx.impl_apply(localToSceneTransform);
+            
+            BaseBounds localBounds = new BoxBounds((float) bounds.getMinX(),
+                                                   (float) bounds.getMinY(),
+                                                   (float) bounds.getMinZ(),
+                                                   (float) bounds.getMaxX(),
+                                                   (float) bounds.getMaxY(),
+                                                   (float) bounds.getMaxZ());
+            
+            // The product of projViewTx * localToSceneTransform
+            GeneralTransform3D tx = projViewTx.mul(localToSceneTransform);
+
+            // Transform localBounds to projected bounds
+            localBounds = tx.transform(localBounds, localBounds);
+            double area = localBounds.getWidth() * localBounds.getHeight();
+
+            // Use viewing frustum culling against canonical view volume
+            // to check whether object is outside the viewing frustrum
+            if (isPerspective) {
+                localBounds.intersectWith(-1, -1, 0, 1, 1, 1);   
+                area = (localBounds.getWidth() < 0 || localBounds.getHeight() < 0) ? 0 : area;
+            }
+            return area * (viewport.width / 2 * viewport.height / 2);
+        }
+        return 0;
+    }
+    
+    /* *************************************************************************
+     *                                                                         *
      * Bounds related APIs                                                     *
      *                                                                         *
      **************************************************************************/
@@ -3720,8 +3775,38 @@ public abstract class Node implements EventTarget {
         return sceneToLocal(scenePoint.getX(), scenePoint.getY());
     }
 
-    // Why is this method private?
-    private Point3D sceneToLocal(double x, double y, double z) throws NoninvertibleTransformException{
+    /**
+     * Transforms a point from the coordinate space of the {@link javafx.scene.Scene}
+     * into the local coordinate space of this {@code Node}.
+     * @param scenePoint a point on a Scene
+     * @return local Node's coordinates of the point or null if Node is not in a {@link Window}.
+     * Null is also returned if the transformation from local to Scene is not invertible.
+     */
+    public Point3D sceneToLocal(Point3D scenePoint) {
+        return sceneToLocal(scenePoint.getX(), scenePoint.getY(), scenePoint.getZ());
+    }
+
+    /**
+     * Transforms a point from the coordinate space of the {@link javafx.scene.Scene}
+     * into the local coordinate space of this {@code Node}.
+     * @param sceneX x coordinate of a point on a Scene
+     * @param sceneY y coordinate of a point on a Scene
+     * @param sceneZ z coordinate of a point on a Scene
+     * @return local Node's coordinates of the point or null if Node is not in a {@link Window}.
+     * Null is also returned if the transformation from local to Scene is not invertible.
+     */
+    public Point3D sceneToLocal(double sceneX, double sceneY, double sceneZ) {
+        try {
+            return sceneToLocal0(sceneX, sceneY, sceneZ);
+        } catch (NoninvertibleTransformException ex) {
+            return null;
+        }
+    }
+
+    /**
+     * Internal method to transform a point from scene to local coordinates.
+     */
+    private Point3D sceneToLocal0(double x, double y, double z) throws NoninvertibleTransformException {
         final com.sun.javafx.geom.Vec3d tempV3D =
                 TempState.getInstance().vec3d;
         tempV3D.set(x, y, z);
@@ -3750,14 +3835,14 @@ public abstract class Node implements EventTarget {
             return createBoundingBox(p1, p2, p3, p4);
         }
         try {
-            Point3D p1 = sceneToLocal(sceneBounds.getMinX(), sceneBounds.getMinY(), sceneBounds.getMinZ());
-            Point3D p2 = sceneToLocal(sceneBounds.getMinX(), sceneBounds.getMinY(), sceneBounds.getMaxZ());
-            Point3D p3 = sceneToLocal(sceneBounds.getMinX(), sceneBounds.getMaxY(), sceneBounds.getMinZ());
-            Point3D p4 = sceneToLocal(sceneBounds.getMinX(), sceneBounds.getMaxY(), sceneBounds.getMaxZ());
-            Point3D p5 = sceneToLocal(sceneBounds.getMaxX(), sceneBounds.getMaxY(), sceneBounds.getMinZ());
-            Point3D p6 = sceneToLocal(sceneBounds.getMaxX(), sceneBounds.getMaxY(), sceneBounds.getMaxZ());
-            Point3D p7 = sceneToLocal(sceneBounds.getMaxX(), sceneBounds.getMinY(), sceneBounds.getMinZ());
-            Point3D p8 = sceneToLocal(sceneBounds.getMaxX(), sceneBounds.getMinY(), sceneBounds.getMaxZ());
+            Point3D p1 = sceneToLocal0(sceneBounds.getMinX(), sceneBounds.getMinY(), sceneBounds.getMinZ());
+            Point3D p2 = sceneToLocal0(sceneBounds.getMinX(), sceneBounds.getMinY(), sceneBounds.getMaxZ());
+            Point3D p3 = sceneToLocal0(sceneBounds.getMinX(), sceneBounds.getMaxY(), sceneBounds.getMinZ());
+            Point3D p4 = sceneToLocal0(sceneBounds.getMinX(), sceneBounds.getMaxY(), sceneBounds.getMaxZ());
+            Point3D p5 = sceneToLocal0(sceneBounds.getMaxX(), sceneBounds.getMaxY(), sceneBounds.getMinZ());
+            Point3D p6 = sceneToLocal0(sceneBounds.getMaxX(), sceneBounds.getMaxY(), sceneBounds.getMaxZ());
+            Point3D p7 = sceneToLocal0(sceneBounds.getMaxX(), sceneBounds.getMinY(), sceneBounds.getMinZ());
+            Point3D p8 = sceneToLocal0(sceneBounds.getMaxX(), sceneBounds.getMinY(), sceneBounds.getMaxZ());
             return createBoundingBox(p1, p2, p3, p4, p5, p6, p7, p8);
         } catch (NoninvertibleTransformException e) {
             return null;
@@ -3842,7 +3927,19 @@ public abstract class Node implements EventTarget {
         return localToScene(localPoint.getX(), localPoint.getY());
     }
 
-    private Point3D localToScene(double x, double y, double z) {
+    /**
+     * Transforms a point from the local coordinate space of this {@code Node}
+     * into the coordinate space of its {@link javafx.scene.Scene}.
+     */
+    public Point3D localToScene(Point3D localPoint) {
+        return localToScene(localPoint.getX(), localPoint.getY(), localPoint.getZ());
+    }
+
+    /**
+     * Transforms a point from the local coordinate space of this {@code Node}
+     * into the coordinate space of its {@link javafx.scene.Scene}.
+     */
+    public Point3D localToScene(double x, double y, double z) {
         final com.sun.javafx.geom.Vec3d tempV3D =
                 TempState.getInstance().vec3d;
         tempV3D.set(x, y, z);
@@ -3904,10 +4001,22 @@ public abstract class Node implements EventTarget {
         return parentToLocal(parentPoint.getX(), parentPoint.getY());
     }
 
-    private Point3D parentToLocal(double x, double y, double z) {
+    /**
+     * Transforms a point from the coordinate space of the parent into the
+     * local coordinate space of this {@code Node}.
+     */
+    public Point3D parentToLocal(Point3D parentPoint) {
+        return parentToLocal(parentPoint.getX(), parentPoint.getY(), parentPoint.getZ());
+    }
+
+    /**
+     * Transforms a point from the coordinate space of the parent into the
+     * local coordinate space of this {@code Node}.
+     */
+    public Point3D parentToLocal(double parentX, double parentY, double parentZ) {
         final com.sun.javafx.geom.Vec3d tempV3D =
                 TempState.getInstance().vec3d;
-        tempV3D.set(x, y, z);
+        tempV3D.set(parentX, parentY, parentZ);
         try {
             parentToLocal(tempV3D);
         } catch (NoninvertibleTransformException e) {
@@ -3963,7 +4072,19 @@ public abstract class Node implements EventTarget {
         return localToParent(localPoint.getX(), localPoint.getY());
     }
 
-    private Point3D localToParent(double x, double y, double z) {
+    /**
+     * Transforms a point from the local coordinate space of this {@code Node}
+     * into the coordinate space of its parent.
+     */
+    public Point3D localToParent(Point3D localPoint) {
+        return localToParent(localPoint.getX(), localPoint.getY(), localPoint.getZ());
+    }
+
+    /**
+     * Transforms a point from the local coordinate space of this {@code Node}
+     * into the coordinate space of its parent.
+     */
+    public Point3D localToParent(double x, double y, double z) {
         final com.sun.javafx.geom.Vec3d tempV3D =
                 TempState.getInstance().vec3d;
         tempV3D.set(x, y, z);
@@ -4172,38 +4293,6 @@ public abstract class Node implements EventTarget {
     }
 
     /**
-     * Finds a top-most child node that contains the given coordinates.
-     *
-     * Returns the picked node, null if no such node was found.
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    public final Node impl_pickNode(double parentX, double parentY) {
-
-        // In some conditions we can omit picking this node or subgraph
-        if (!isVisible() || isDisable() || isMouseTransparent()) {
-            return null;
-        }
-
-        final com.sun.javafx.geom.Point2D tempPt =
-                TempState.getInstance().point;
-
-        // convert to local coordinates
-        tempPt.setLocation((float)parentX, (float)parentY);
-        try {
-            parentToLocal(tempPt);
-        } catch (NoninvertibleTransformException e) {
-            return null;
-        }
-
-        // Delegate to a function which can be overridden by subclasses which
-        // actually does the pick. The implementation is markedly different
-        // for leaf nodes vs. parent nodes vs. region nodes.
-        return impl_pickNodeLocal(tempPt.x, tempPt.y);
-    }
-
-    /**
      * Finds a top-most child node that contains the given local coordinates.
      *
      * Returns the picked node, null if no such node was found.
@@ -4211,58 +4300,49 @@ public abstract class Node implements EventTarget {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-    protected Node impl_pickNodeLocal(double localX, double localY) {
-        if (contains(localX, localY)) {
-            return this;
-        }
-        return null;
-    }
-
-    /**
-     * Finds a top-most child node that contains the given local coordinates.
-     *
-     * Returns the picked node, null if no such node was found.
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    protected Node impl_pickNodeLocal(PickRay localPickRay) {
-        if (impl_intersects(localPickRay)) {
-            return this;
-        }
-        return null;
+    protected void impl_pickNodeLocal(PickRay localPickRay, PickResultChooser result) {
+        impl_intersects(localPickRay, result);
     }
 
     /**
      * Finds a top-most child node that intersects the given ray.
      *
-     * Returns the picked node, null if no such node was found.
+     * The result argument is used for storing the picking result.
      * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-    public final Node impl_pickNode(PickRay pickRay) {
+    public final void impl_pickNode(PickRay pickRay, PickResultChooser result) {
 
         // In some conditions we can omit picking this node or subgraph
         if (!isVisible() || isDisable() || isMouseTransparent()) {
-            return null;
+            return;
         }
 
-        final BaseTransform tempPickTx = TempState.getInstance().pickTx;
+        final Vec3d o = pickRay.getOriginNoClone();
+        final double ox = o.x;
+        final double oy = o.y;
+        final double oz = o.z;
+        final Vec3d d = pickRay.getDirectionNoClone();
+        final double dx = d.x;
+        final double dy = d.y;
+        final double dz = d.z;
 
-        getLocalToParentTransform(tempPickTx);
+        updateLocalToParentTransform();
         try {
-            tempPickTx.invert();
-        } catch (NoninvertibleTransformException e) {
-            throw new RuntimeException(e);
-        }
-        PickRay localPickRay = pickRay.copy();
-        localPickRay.transform(tempPickTx);
+            localToParentTx.inverseTransform(o, o);
+            localToParentTx.inverseDeltaTransform(d, d);
 
-        // Delegate to a function which can be overridden by subclasses which
-        // actually does the pick. The implementation is markedly different
-        // for leaf nodes vs. parent nodes vs. region nodes.
-        return impl_pickNodeLocal(localPickRay);
+            // Delegate to a function which can be overridden by subclasses which
+            // actually does the pick. The implementation is markedly different
+            // for leaf nodes vs. parent nodes vs. region nodes.
+            impl_pickNodeLocal(pickRay, result);
+        } catch (NoninvertibleTransformException e) {
+            // in this case we just don't pick anything
+        }
+
+        pickRay.setOrigin(ox, oy, oz);
+        pickRay.setDirection(dx, dy, dz);
     }
 
     /**
@@ -4270,6 +4350,9 @@ public abstract class Node implements EventTarget {
      * local coordinate space of this {@code Node}, intersects the
      * shape of this {@code Node}. Note that this method does not take visibility
      * into account; the test is based on the geometry of this {@code Node} only.
+     * <p>
+     * The pickResult is updated if the found intersection is closer than
+     * the currently held one.
      * <p>
      * Note that this is a conditional feature. See
      * {@link javafx.application.ConditionalFeature#SCENE3D ConditionalFeature.SCENE3D}
@@ -4279,7 +4362,31 @@ public abstract class Node implements EventTarget {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-    protected final boolean impl_intersects(PickRay pickRay) {
+    protected final boolean impl_intersects(PickRay pickRay, PickResultChooser pickResult) {
+        double boundsDistance = impl_intersectsBounds(pickRay);
+        if (!Double.isNaN(boundsDistance)) {
+            if (isPickOnBounds()) {
+                pickResult.offer(this, boundsDistance, PickResultChooser.computePoint(pickRay, boundsDistance));
+                return true;
+            } else {
+                return impl_computeIntersects(pickRay, pickResult);
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Computes the intersection of the pickRay with this node.
+     * The pickResult argument is updated if the found intersection
+     * is closer than the passed one. On the other hand, the return value
+     * specifies whether the intersection exists, regardless of its comparison
+     * with the given pickResult.
+     *
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     */
+    @Deprecated
+    protected boolean impl_computeIntersects(PickRay pickRay, PickResultChooser pickResult) {
         double origZ = pickRay.getOriginNoClone().z;
         double dirZ = pickRay.getDirectionNoClone().z;
         // Handle the case where pickRay is almost parallel to the Z-plane
@@ -4289,8 +4396,186 @@ public abstract class Node implements EventTarget {
         double t = -origZ / dirZ;
         double x = pickRay.getOriginNoClone().x + (pickRay.getDirectionNoClone().x * t);
         double y = pickRay.getOriginNoClone().y + (pickRay.getDirectionNoClone().y * t);
-        return contains((float) x, (float) y); // was contentContains, the difference is that effect / clip are included
+
+        if (contains((float) x, (float) y)) {
+            if (pickResult != null) {
+                pickResult.offer(this, t, PickResultChooser.computePoint(pickRay, t));
+            }
+            return true;
+        }
+        return false;
     }
+
+    /**
+     * Computes the intersection of the pickRay with the bounds of this node.
+     * The return value is the distance between the camera and the intersection
+     * point, measured in pickRay direction magnitudes. If there is
+     * no intersection, it returns NaN.
+     *
+     * @param pickRay The pick ray
+     * @return Distance of the intersection point, a NaN if there
+     *         is no intersection
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     */
+    @Deprecated
+    protected final double impl_intersectsBounds(PickRay pickRay) {
+
+        final Vec3d dir = pickRay.getDirectionNoClone();
+        double tmin, tmax;
+
+        final Vec3d origin = pickRay.getOriginNoClone();
+        final double originX = origin.x;
+        final double originY = origin.y;
+        final double originZ = origin.z;
+
+        final TempState tempState = TempState.getInstance();
+        BaseBounds tempBounds = tempState.bounds;
+
+        tempBounds = getLocalBounds(tempBounds,
+                                    BaseTransform.IDENTITY_TRANSFORM);
+
+        if (dir.x == 0.0 && dir.y == 0.0) {
+            // fast path for the usual 2D picking
+
+            if (dir.z == 0.0) {
+                return Double.NaN;
+            }
+
+            if (originX < tempBounds.getMinX() ||
+                    originX > tempBounds.getMaxX() ||
+                    originY < tempBounds.getMinY() ||
+                    originY > tempBounds.getMaxY()) {
+                return Double.NaN;
+            }
+
+            final double invDirZ = 1.0 / dir.z;
+            final boolean signZ = invDirZ < 0.0;
+
+            final double minZ = tempBounds.getMinZ();
+            final double maxZ = tempBounds.getMaxZ();
+            tmin = ((signZ ? maxZ : minZ) - originZ) * invDirZ;
+            tmax = ((signZ ? minZ : maxZ) - originZ) * invDirZ;
+
+        } else {
+            
+            final double invDirX = dir.x == 0.0 ? Double.POSITIVE_INFINITY : (1.0 / dir.x);
+            final double invDirY = dir.y == 0.0 ? Double.POSITIVE_INFINITY : (1.0 / dir.y);
+            final double invDirZ = dir.z == 0.0 ? Double.POSITIVE_INFINITY : (1.0 / dir.z);
+            final boolean signX = invDirX < 0.0;
+            final boolean signY = invDirY < 0.0;
+            final boolean signZ = invDirZ < 0.0;
+            final double minX = tempBounds.getMinX();
+            final double minY = tempBounds.getMinY();
+            final double maxX = tempBounds.getMaxX();
+            final double maxY = tempBounds.getMaxY();
+
+            tmin = Double.NEGATIVE_INFINITY;
+            tmax = Double.POSITIVE_INFINITY;
+            if (Double.isInfinite(invDirX)) {
+                if (minX <= originX && maxX >= originX) {
+                    // move on, we are inside for the whole length
+                } else {
+                    return Double.NaN;
+                }
+            } else {
+                tmin = ((signX ? maxX : minX) - originX) * invDirX;
+                tmax = ((signX ? minX : maxX) - originX) * invDirX;
+            }
+
+            if (Double.isInfinite(invDirY)) {
+                if (minY <= originY && maxY >= originY) {
+                    // move on, we are inside for the whole length
+                } else {
+                    return Double.NaN;
+                }
+            } else {
+                final double tymin = ((signY ? maxY : minY) - originY) * invDirY;
+                final double tymax = ((signY ? minY : maxY) - originY) * invDirY;
+
+                if ((tmin > tymax) || (tymin > tmax)) {
+                    return Double.NaN;
+                }
+                if (tymin > tmin) {
+                    tmin = tymin;
+                }
+                if (tymax < tmax) {
+                    tmax = tymax;
+                }
+            }
+
+            final double minZ = tempBounds.getMinZ();
+            final double maxZ = tempBounds.getMaxZ();
+            if (Double.isInfinite(invDirZ)) {
+                if (minZ <= originZ && maxZ >= originZ) {
+                    // move on, we are inside for the whole length
+                } else {
+                    return Double.NaN;
+                }
+            } else {
+                final double tzmin = ((signZ ? maxZ : minZ) - originZ) * invDirZ;
+                final double tzmax = ((signZ ? minZ : maxZ) - originZ) * invDirZ;
+
+                if ((tmin > tzmax) || (tzmin > tmax)) {
+                    return Double.NaN;
+                }
+                if (tzmin > tmin) {
+                    tmin = tzmin;
+                }
+                if (tzmax < tmax) {
+                    tmax = tzmax;
+                }
+            }
+        }
+
+        // For clip we use following semantics: pick the node normally
+        // if there is an intersection with the clip node. We don't consider
+        // clip node distance.
+        Node clip = getClip();
+        if (clip != null) {
+            final double dirX = dir.x;
+            final double dirY = dir.y;
+            final double dirZ = dir.z;
+
+            clip.updateLocalToParentTransform();
+
+            boolean hitClip = true;
+            try {
+                clip.localToParentTx.inverseTransform(origin, origin);
+                clip.localToParentTx.inverseDeltaTransform(dir, dir);
+            } catch (NoninvertibleTransformException e) {
+                hitClip = false;
+            }
+            hitClip = hitClip && clip.impl_intersects(pickRay, null);
+            pickRay.setOrigin(originX, originY, originZ);
+            pickRay.setDirection(dirX, dirY, dirZ);
+
+            if (!hitClip) {
+                return Double.NaN;
+            }
+        }
+
+        if (Double.isInfinite(tmin) || Double.isNaN(tmin)) {
+            // We've got a nonsense pick ray or bounds.
+            return Double.NaN;
+        }
+
+        if (pickRay.isParallel()) {
+            return tmin;
+        }
+
+        if (tmin < 0.0) {
+            if (tmax >= 0.0) {
+                // we are inside bounds
+                return 0.0;
+            } else {
+                return Double.NaN;
+            }
+        }
+
+        return tmin;
+    }
+
 
     // Good to find a home for commonly use util. code such as EPS.
     // and almostZero. This code currently defined in multiple places,
@@ -7417,58 +7702,38 @@ public abstract class Node implements EventTarget {
      *                                                                         *
      **************************************************************************/
 
-    private Styleable styleable; 
-    /**
-     * RT-19263
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
-     */    
-    @Deprecated // SB-dependency: RT-21094 has been filed to track this
-    public final Styleable impl_getStyleable() {
+
+    /** 
+     * {@inheritDoc} 
+     * @return {@code getClass().getName()} without the package name
+     */
+    @Override
+    public String getTypeSelector() {
         
-        if (styleable == null) {
-            styleable = new Styleable() {
-
-                Styleable styleableParent = null;
-
-                @Override
-                public String getId() {
-                    return Node.this.getId();
-                }
-
-                @Override
-                public List<String> getStyleClass() {
-                    return Node.this.getStyleClass();
-                }
-
-                @Override
-                public String getStyle() {
-                    return Node.this.getStyle();
-                }
-
-                @Override
-                public Styleable getStyleableParent() {
-                    Parent parent = null;
-                    if (styleableParent == null && (parent = Node.this.getParent()) != null) {
-                        styleableParent = parent.impl_getStyleable();
-                    };
-                    return styleableParent;
-                }
-
-                @Override
-                public List<CssMetaData<? extends Node, ?>> getCssMetaData() {
-                    return Node.this.getCssMetaData();
-                }                
-                
-                @Override
-                public Node getNode() {
-                    return Node.this;
-                }
-
-           };
+        final Class<?> clazz = getClass();
+        final Package pkg = clazz.getPackage();
+        
+        // package could be null. not likely, but could be.
+        int plen = 0;
+        if (pkg != null) {
+            plen = pkg.getName().length();
         }
-        return styleable;
+                
+        final int clen = clazz.getName().length();
+        final int pos = (0 < plen && plen < clen) ? plen + 1 : 0;
+        
+        return clazz.getName().substring(pos);
     }
+
+    /** 
+     * {@inheritDoc} 
+     * @return {@code getParent()}
+     */
+    @Override
+    public Styleable getStyleableParent() {
+        return getParent();
+    }
+
          
      /**
       * Not everything uses the default value of false for focusTraversable. 
@@ -7716,12 +7981,12 @@ public abstract class Node implements EventTarget {
                 }
             };
 
-         private static final List<CssMetaData<? extends Node, ?>> STYLEABLES;
+         private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
 
          static {
 
-             final List<CssMetaData<? extends Node, ?>> styleables = 
-                     new ArrayList<CssMetaData<? extends Node, ?>>();
+             final List<CssMetaData<? extends Styleable, ?>> styleables = 
+                     new ArrayList<CssMetaData<? extends Styleable, ?>>();
              styleables.add(CURSOR); 
              styleables.add(EFFECT);
              styleables.add(FOCUS_TRAVERSABLE);
@@ -7744,7 +8009,7 @@ public abstract class Node implements EventTarget {
      * @return The CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
      */
-    public static List<CssMetaData<? extends Node, ?>> getClassCssMetaData() {
+    public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
         //
         // Super-lazy instantiation pattern from Bill Pugh. StyleableProperties 
         // is referenced no earlier (and therefore loaded no earlier by the 
@@ -7763,7 +8028,8 @@ public abstract class Node implements EventTarget {
      * CssMetaData of its super classes.
      */
     
-    public List<CssMetaData<? extends Node, ?>> getCssMetaData() {
+    @Override
+    public List<CssMetaData<? extends Styleable, ?>> getCssMetaData() {
         return getClassCssMetaData();
     }
      
@@ -7774,7 +8040,7 @@ public abstract class Node implements EventTarget {
       */
      @Deprecated // SB-dependency: RT-21096 has been filed to track this
      public final ObservableMap<StyleableProperty<?>, List<Style>> impl_getStyleMap() {
-         return impl_getStyleable().getStyleMap();
+         return styleHelper.getObservableStyleMap();
      }
 
      /**
@@ -7784,7 +8050,7 @@ public abstract class Node implements EventTarget {
       */
      @Deprecated // SB-dependency: RT-21096 has been filed to track this
      public final void impl_setStyleMap(ObservableMap<StyleableProperty<?>, List<Style>> styleMap) {
-         impl_getStyleable().setStyleMap(styleMap);
+         styleHelper.setObservableStyleMap(styleMap);
      }
           
     /**
@@ -7843,12 +8109,6 @@ public abstract class Node implements EventTarget {
      * @param active whether or not the state is active
      */
     public final void pseudoClassStateChanged(PseudoClass pseudoClass, boolean active) {
-        // check if a override has been set, if so ignore all calls
-        if (PSEUDO_CLASS_OVERRIDE_ENABLED && hasProperties()) {
-            final Object pseudoClassOverride = getProperties().get(PSEUDO_CLASS_OVERRIDE_KEY);
-            if (pseudoClassOverride instanceof String) return;
-        }
-
         final Set<PseudoClass> pseudoClassState = styleHelper.getPseudoClassSet();
         
         if (active) {
@@ -7906,7 +8166,7 @@ public abstract class Node implements EventTarget {
         // a parent or from the scene. This has to be done before calling 
         // impl_reapplyCSS.
         //
-        final List<CssMetaData<? extends Node, ?>> metaDataList = getCssMetaData();
+        final List<CssMetaData<? extends Styleable, ?>> metaDataList = getCssMetaData();
         final int nStyleables = metaDataList != null ? metaDataList.size() : 0;
         for (int n=0; n<nStyleables; n++) {
             final CssMetaData metaData = metaDataList.get(n);
@@ -7996,7 +8256,28 @@ public abstract class Node implements EventTarget {
         //
         final boolean flag = (reapply || cssFlag == CssFlags.REAPPLY);
         cssFlag = flag ? CssFlags.REAPPLY : CssFlags.UPDATE;
-        impl_processCSS();
+        
+        //
+        // RT-28394 - need to see if any ancestor has a flag other than clean
+        // If so, process css from the top-most css-dirty node
+        // 
+        Node topMost = this;
+        Node _parent = getParent();
+        while (_parent != null) {
+            if (_parent.cssFlag != CssFlags.CLEAN) {
+                topMost = _parent;
+            } 
+            _parent = _parent.getParent();
+        } 
+        
+        _parent = this;
+        while (_parent != topMost) {
+            if (_parent.cssFlag == CssFlags.CLEAN) {
+                _parent.cssFlag = CssFlags.DIRTY_BRANCH;                    
+            }
+            _parent = _parent.getParent();
+        }
+        topMost.processCSS();
     }
     
     /**
@@ -8009,7 +8290,7 @@ public abstract class Node implements EventTarget {
      */
     @Deprecated // SB-dependency: RT-21206 has been filed to track this    
     protected void impl_processCSS() {
-        
+
         // Nothing to do...
         if (cssFlag == CssFlags.CLEAN) return;
 
@@ -8064,31 +8345,6 @@ public abstract class Node implements EventTarget {
     private static final PseudoClass DISABLED_PSEUDOCLASS_STATE = PseudoClass.getPseudoClass("disabled");
     private static final PseudoClass FOCUSED_PSEUDOCLASS_STATE = PseudoClass.getPseudoClass("focused");
     private static final PseudoClass SHOW_MNEMONICS_PSEUDOCLASS_STATE = PseudoClass.getPseudoClass("show-mnemonics");
-
-    private static final boolean PSEUDO_CLASS_OVERRIDE_ENABLED = AccessController.doPrivileged(
-            new PrivilegedAction<Boolean>() {
-                public Boolean run() {
-                    return Boolean.getBoolean("javafx.pseudoClassOverrideEnabled");
-                }
-            });
-    private static final String PSEUDO_CLASS_OVERRIDE_KEY = "javafx.scene.Node.pseudoClassOverride";
-
-    /**
-     * Called to get current pseudo class override and apply it to this node
-     */
-    private void updatePseudoClassOverride() {
-        if (PSEUDO_CLASS_OVERRIDE_ENABLED && properties != null) {
-            final Object pseudoClassOverride = getProperties().get(PSEUDO_CLASS_OVERRIDE_KEY);
-            if (pseudoClassOverride instanceof String) {
-                final Set<PseudoClass> pseudoClassState = styleHelper.getPseudoClassSet();
-                pseudoClassState.clear();
-                final String[] pseudoClasses = ((String)pseudoClassOverride).split("[\\s,]+");
-                for(String pc: pseudoClasses) {
-                    pseudoClassState.add(PseudoClass.getPseudoClass(pc));
-                }
-            }
-        }
-    }
 
     private static abstract class LazyTransformProperty
             extends ReadOnlyObjectProperty<Transform> {
@@ -8220,10 +8476,12 @@ public abstract class Node implements EventTarget {
     public abstract Object impl_processMXNode(MXNodeAlgorithm alg, MXNodeAlgorithmContext ctx);
 
     /**
-     * This class is used by printing to get access to a private method.
+     * This class is used by classes in different packages to get access to
+     * private and package private methods.
      */
     private static class NodeAccessImpl extends NodeAccess {
 
+        @Override
         public void layoutNodeForPrinting(Node node) {
             node.doCSSLayoutSyncForSnapshot();
         }

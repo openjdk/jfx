@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,6 +22,7 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
+
 package com.sun.javafx.scene.control.behavior;
 
 import javafx.scene.Node;
@@ -60,6 +61,11 @@ public class TreeTableRowBehavior<T> extends CellBehaviorBase<TreeTableRow<T>> {
                 return;
             }
         }
+
+        TreeTableView table = treeTableRow.getTreeTableView();
+        if (table == null) return;
+        final TableSelectionModel sm = table.getSelectionModel();
+        if (sm == null || sm.isCellSelectionEnabled()) return;
         
         // handle editing, which only occurs with the primary mouse button
         int clickCount = e.getClickCount();
@@ -67,10 +73,7 @@ public class TreeTableRowBehavior<T> extends CellBehaviorBase<TreeTableRow<T>> {
             // In the case of clicking to the right of the rightmost
             // TreeTableCell, we should still support selection, so that
             // is what we are doing here.
-            TreeTableView table = treeTableRow.getTreeTableView();
-            if (table == null) return;
-            TableSelectionModel sm = table.getSelectionModel();
-            if (sm != null) sm.select(treeItem);
+            sm.select(treeItem);
         } else if (clickCount % 2 == 0) {
             // try to expand/collapse branch tree item
             treeItem.setExpanded(! treeItem.isExpanded());

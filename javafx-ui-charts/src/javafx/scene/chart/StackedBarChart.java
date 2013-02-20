@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2012, Oracle  and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,13 +22,13 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
+
 package javafx.scene.chart;
 
 
 import java.util.*;
 import javafx.animation.*;
 import javafx.beans.property.DoubleProperty;
-import javafx.beans.property.SimpleDoubleProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
@@ -42,8 +42,7 @@ import javafx.css.StyleableDoubleProperty;
 import javafx.css.CssMetaData;
 import javafx.css.PseudoClass;
 import com.sun.javafx.css.converters.SizeConverter;
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
+import javafx.css.Styleable;
 import javafx.css.StyleableProperty;
 
 
@@ -82,7 +81,7 @@ public class StackedBarChart<X, Y> extends XYChart<X, Y> {
             return "categoryGap";
         }
 
-        public CssMetaData getCssMetaData() {
+        public CssMetaData<StackedBarChart<?,?>,Number> getCssMetaData() {
             return StackedBarChart.StyleableProperties.CATEGORY_GAP;
         }
     };
@@ -538,11 +537,11 @@ public class StackedBarChart<X, Y> extends XYChart<X, Y> {
             }
         };
 
-        private static final List<CssMetaData<? extends Node, ?>> STYLEABLES;
+        private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
         static {
 
-            final List<CssMetaData<? extends Node, ?>> styleables =
-                new ArrayList<CssMetaData<? extends Node, ?>>(XYChart.getClassCssMetaData());
+            final List<CssMetaData<? extends Styleable, ?>> styleables =
+                new ArrayList<CssMetaData<? extends Styleable, ?>>(XYChart.getClassCssMetaData());
             styleables.add(CATEGORY_GAP);
             STYLEABLES = Collections.unmodifiableList(styleables);
         }
@@ -552,7 +551,7 @@ public class StackedBarChart<X, Y> extends XYChart<X, Y> {
      * @return The CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
      */
-    public static List<CssMetaData<? extends Node, ?>> getClassCssMetaData() {
+    public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
         return StyleableProperties.STYLEABLES;
     }
 
@@ -560,7 +559,7 @@ public class StackedBarChart<X, Y> extends XYChart<X, Y> {
      * {@inheritDoc}
      */
     @Override
-    public List<CssMetaData<? extends Node, ?>> getCssMetaData() {
+    public List<CssMetaData<? extends Styleable, ?>> getCssMetaData() {
         return getClassCssMetaData();
     }
 

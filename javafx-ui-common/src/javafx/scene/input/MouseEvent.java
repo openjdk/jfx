@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2012, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,14 +23,13 @@
  * questions.
  */
 
-
 package javafx.scene.input;
 
 import com.sun.javafx.tk.Toolkit;
 import javafx.event.Event;
 import javafx.event.EventTarget;
 import javafx.event.EventType;
-import javafx.geometry.Point2D;
+import javafx.geometry.Point3D;
 import javafx.scene.Node;
 
 import com.sun.javafx.scene.input.InputEventUtils;
@@ -252,11 +251,12 @@ public class MouseEvent extends InputEvent {
      */
     void recomputeCoordinatesToSource(MouseEvent oldEvent, Object newSource) {
 
-        final Point2D newCoordinates = InputEventUtils.recomputeCoordinates(
-                new Point2D(oldEvent.x, oldEvent.y), oldEvent.source, newSource);
+        final Point3D newCoordinates = InputEventUtils.recomputeCoordinates(
+                pickResult, newSource);
 
         x = newCoordinates.getX();
         y = newCoordinates.getY();
+        z = newCoordinates.getZ();
     }
 
     @Override
@@ -317,48 +317,8 @@ public class MouseEvent extends InputEvent {
                 _eventType, _x, _y, _screenX, _screenY,
                 _button, _clickCount,
                 _shiftDown, _controlDown, _altDown, _metaDown,
-                _primaryButtonDown, _middleButtonDown, _secondaryButtonDown, _synthesized, _popupTrigger);
-    }
-
-    /**
-     * Constructs new MouseEvent event with null source and target.
-     * Still since press is set to false.
-     * @param eventType The type of the event.
-     * @param x The x with respect to the scene.
-     * @param y The y with respect to the scene.
-     * @param screenX The x coordinate relative to screen.
-     * @param screenY The y coordinate relative to screen.
-     * @param button the mouse button used
-     * @param clickCount number of click counts
-     * @param shiftDown true if shift modifier was pressed.
-     * @param controlDown true if control modifier was pressed.
-     * @param altDown true if alt modifier was pressed.
-     * @param metaDown true if meta modifier was pressed.
-     * @param primaryButtonDown true if primary button was pressed.
-     * @param middleButtonDown true if middle button was pressed.
-     * @param secondaryButtonDown true if secondary button was pressed.
-     * @param synthesized if this event was synthesized
-     * @param popupTrigger whether this event denotes a popup trigger for current platform
-     */
-    public MouseEvent(
-            EventType<? extends MouseEvent> eventType,
-            double x, double y,
-            double screenX, double screenY,
-            MouseButton button,
-            int clickCount,
-            boolean shiftDown,
-            boolean controlDown,
-            boolean altDown,
-            boolean metaDown,
-            boolean primaryButtonDown,
-            boolean middleButtonDown,
-            boolean secondaryButtonDown,
-            boolean synthesized,
-            boolean popupTrigger) {
-        this(eventType, x, y, screenX, screenY, button, clickCount,
-                shiftDown, controlDown, altDown, metaDown,
-                primaryButtonDown, middleButtonDown, secondaryButtonDown,
-                synthesized, popupTrigger, false);
+                _primaryButtonDown, _middleButtonDown, _secondaryButtonDown, 
+                _synthesized, _popupTrigger, false, null);
     }
 
     /**
@@ -380,6 +340,9 @@ public class MouseEvent extends InputEvent {
      * @param synthesized if this event was synthesized
      * @param popupTrigger whether this event denotes a popup trigger for current platform
      * @param stillSincePress see {@link #isStillSincePress() }
+     * @param pickResult pick result. Can be null, in this case a 2D pick result
+     *                   without any further values is constructed
+     *                   based on the scene coordinates
      */
     public MouseEvent(
             EventType<? extends MouseEvent> eventType,
@@ -396,11 +359,12 @@ public class MouseEvent extends InputEvent {
             boolean secondaryButtonDown,
             boolean synthesized,
             boolean popupTrigger,
-            boolean stillSincePress) {
+            boolean stillSincePress,
+            PickResult pickResult) {
         this(null, null, eventType, x, y, screenX, screenY, button, clickCount,
                 shiftDown, controlDown, altDown, metaDown,
                 primaryButtonDown, middleButtonDown, secondaryButtonDown,
-                synthesized, popupTrigger, stillSincePress);
+                synthesized, popupTrigger, stillSincePress, pickResult);
     }
 
     /**
@@ -424,6 +388,9 @@ public class MouseEvent extends InputEvent {
      * @param synthesized if this event was synthesized
      * @param popupTrigger whether this event denotes a popup trigger for current platform
      * @param stillSincePress see {@link #isStillSincePress() }
+     * @param pickResult pick result. Can be null, in this case a 2D pick result
+     *                   without any further values is constructed
+     *                   based on the scene coordinates and target
      */
     public MouseEvent(Object source, EventTarget target,
             EventType<? extends MouseEvent> eventType,
@@ -440,7 +407,8 @@ public class MouseEvent extends InputEvent {
             boolean secondaryButtonDown,
             boolean synthesized,
             boolean popupTrigger,
-            boolean stillSincePress) {
+            boolean stillSincePress,
+            PickResult pickResult) {
         super(source, target, eventType);
         this.x = x;
         this.y = y;
@@ -460,6 +428,12 @@ public class MouseEvent extends InputEvent {
         this.synthesized = synthesized;
         this.stillSincePress = stillSincePress;
         this.popupTrigger = popupTrigger;
+        this.pickResult = pickResult;
+        this.pickResult = pickResult != null ? pickResult : new PickResult(target, x, y);
+        final Point3D p = InputEventUtils.recomputeCoordinates(this.pickResult, null);
+        this.x = p.getX();
+        this.y = p.getY();
+        this.z = p.getZ();
     }
 
     /**
@@ -469,18 +443,22 @@ public class MouseEvent extends InputEvent {
      * @param target the new target of the copied event
      * @param type the new MouseDragEvent type
      * @param gestureSource the new source of the gesture
+     * @param pickResult pick result. Can be null, in this case a 2D pick result
+     *                   without any further values is constructed
+     *                   based on the scene coordinates
      * @return new MouseDragEvent that was created from MouseEvent
      */
     public static MouseDragEvent copyForMouseDragEvent(
             MouseEvent e,
             Object source, EventTarget target,
             EventType<MouseDragEvent> type,
-            Object gestureSource) {
+            Object gestureSource, PickResult pickResult) {
         MouseDragEvent ev = new MouseDragEvent(source, target,
-                type, e.x, e.y, e.screenX, e.screenY,
+                type, e.sceneX, e.sceneY, e.screenX, e.screenY,
                 e.button, e.clickCount, e.shiftDown, e.controlDown,
                 e.altDown, e.metaDown, e.primaryButtonDown, e.middleButtonDown,
-                e.secondaryButtonDown, e.synthesized, e.popupTrigger, gestureSource);
+                e.secondaryButtonDown, e.synthesized, e.popupTrigger,
+                pickResult, gestureSource);
         ev.recomputeCoordinatesToSource(e, source);
         return ev;
     }
@@ -543,6 +521,23 @@ public class MouseEvent extends InputEvent {
     }
 
     /**
+     * Depth z position of the event relative to the
+     * origin of the MouseEvent's node.
+     */
+    private transient double z;
+
+    /**
+     * Depth position of the event relative to the
+     * origin of the MouseEvent's source.
+     *
+     * @return depth position of the event relative to the
+     * origin of the MouseEvent's source.
+     */
+    public final double getZ() {
+        return z;
+    }
+
+    /**
      * Absolute horizontal x position of the event.
      */
     private final double screenX;
@@ -581,6 +576,8 @@ public class MouseEvent extends InputEvent {
      * origin of the {@code Scene} that contains the MouseEvent's source.
      * If the node is not in a {@code Scene}, then the value is relative to
      * the boundsInParent of the root-most parent of the MouseEvent's node.
+     * Note that in 3D scene, this represents the flat coordinates after
+     * applying the projection transformations.
      * 
      * @return horizontal position of the event relative to the
      * origin of the {@code Scene} that contains the MouseEvent's source
@@ -602,6 +599,8 @@ public class MouseEvent extends InputEvent {
      * origin of the {@code Scene} that contains the MouseEvent's source.
      * If the node is not in a {@code Scene}, then the value is relative to
      * the boundsInParent of the root-most parent of the MouseEvent's node.
+     * Note that in 3D scene, this represents the flat coordinates after
+     * applying the projection transformations.
      * 
      * @return vertical position of the event relative to the
      * origin of the {@code Scene} that contains the MouseEvent's source
@@ -869,7 +868,8 @@ public class MouseEvent extends InputEvent {
         sb.append(", eventType = ").append(getEventType());
         sb.append(", consumed = ").append(isConsumed());
 
-        sb.append(", x = ").append(getX()).append(", y = ").append(getY());
+        sb.append(", x = ").append(getX()).append(", y = ").append(getY())
+                .append(", z = ").append(getZ());
 
         if (getButton() != null) {
             sb.append(", button = ").append(getButton());
@@ -904,10 +904,26 @@ public class MouseEvent extends InputEvent {
         if (isSynthesized()) {
             sb.append(", synthesized");
         }
+        sb.append(", pickResult = ").append(getPickResult());
 
         return sb.append("]").toString();
     }
 
+    /**
+     * Information about the pick if the picked {@code Node} is a
+     * {@code Shape3D} node and its pickOnBounds is false.
+     */
+    private PickResult pickResult;
+
+    /**
+     * Returns information about the pick.
+     * 
+     * @return new PickResult object that contains information about the pick
+     */
+    public final PickResult getPickResult() {
+        return pickResult;
+    }
+    
     /**
      * These properties need to live in a separate object shared among all the
      * copied events to make sure that the values are propagated to the

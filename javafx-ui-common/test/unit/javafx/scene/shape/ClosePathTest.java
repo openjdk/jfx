@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2012, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,7 +25,9 @@
 
 package javafx.scene.shape;
 
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertNotNull;
 
 import org.junit.Test;
 
@@ -41,7 +43,13 @@ public class ClosePathTest {
         assertTrue(pgPath.isClosed());
                 
     }
-    
+
+    @Test public void toStringShouldReturnNonEmptyString() {
+        String s = new ClosePath().toString();
+        assertNotNull(s);
+        assertFalse(s.isEmpty());
+    }
+
     private class StubPathImpl extends StubPath {
 
         boolean closed = false;

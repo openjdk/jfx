@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2012, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,6 +22,7 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
+
 package com.sun.javafx.css;
 
 import com.sun.javafx.css.converters.BooleanConverter;
@@ -46,6 +47,7 @@ import com.sun.javafx.jmx.MXNodeAlgorithm;
 import com.sun.javafx.jmx.MXNodeAlgorithmContext;
 import com.sun.javafx.sg.PGNode;
 import javafx.beans.value.WritableValue;
+import javafx.css.Styleable;
 import javafx.css.StyleableProperty;
 
 /** Test Node with styleable properties and an getClassCssMetaData method */
@@ -215,10 +217,10 @@ class TestNodeBase extends Node {
             }
         };
         
-        static final List<CssMetaData<? extends Node, ?>> STYLEABLES;
+        static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
         static {
-            List<CssMetaData<? extends Node, ?>> list = 
-                new ArrayList<CssMetaData<? extends Node, ?>>(Node.getClassCssMetaData());
+            List<CssMetaData<? extends Styleable, ?>> list = 
+                new ArrayList<CssMetaData<? extends Styleable, ?>>(Node.getClassCssMetaData());
             Collections.addAll(list,                
                 TEST,
                 STRING,
@@ -231,7 +233,7 @@ class TestNodeBase extends Node {
     /**
      * {@inheritDoc}
      */
-    public static List<CssMetaData<? extends Node, ?>> getClassCssMetaData() {
+    public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
         return StyleableProperties.STYLEABLES;
     }
 
@@ -240,8 +242,9 @@ class TestNodeBase extends Node {
      *
      */
     
+    
     @Override
-    public List<CssMetaData<? extends Node, ?>> getCssMetaData() {
+    public List<CssMetaData<? extends Styleable, ?>> getCssMetaData() {
         return getClassCssMetaData();
     }
 

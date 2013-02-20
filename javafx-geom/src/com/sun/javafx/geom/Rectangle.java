@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1995, 2012, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 1995, 2013, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -672,6 +672,15 @@ public class Rectangle {
                     (height == r.height));
         }
         return super.equals(obj);
+    }
+
+    @Override
+    public int hashCode() {
+        int bits = java.lang.Float.floatToIntBits(x);
+        bits += java.lang.Float.floatToIntBits(y) * 37;
+        bits += java.lang.Float.floatToIntBits(width) * 43;
+        bits += java.lang.Float.floatToIntBits(height) * 47;
+        return bits;
     }
 
     /**

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2012, Oracle  and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,6 +22,7 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
+
 package javafx.scene.chart;
 
 
@@ -42,7 +43,7 @@ import javafx.util.Duration;
 import com.sun.javafx.charts.Legend;
 import com.sun.javafx.charts.Legend.LegendItem;
 import javafx.css.CssMetaData;
-import javafx.scene.paint.Color;
+import javafx.css.Styleable;
 
 /**
  * StackedAreaChart is a variation of {@link AreaChart} that displays trends of the 
@@ -735,7 +736,7 @@ public class StackedAreaChart<X,Y> extends XYChart<X,Y> {
     }
 
     // To indicate if the data point belongs to the current or the previous series.
-    enum PartOf { 
+    private static enum PartOf { 
         CURRENT,
         PREVIOUS
     }
@@ -744,11 +745,11 @@ public class StackedAreaChart<X,Y> extends XYChart<X,Y> {
     
     private static class StyleableProperties {
 
-        private static final List<CssMetaData<? extends Node, ?>> STYLEABLES;
+        private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
         
         static {
-            final List<CssMetaData<? extends Node, ?>> styleables =
-                new ArrayList<CssMetaData<? extends Node, ?>>(XYChart.getClassCssMetaData());
+            final List<CssMetaData<? extends Styleable, ?>> styleables =
+                new ArrayList<CssMetaData<? extends Styleable, ?>>(XYChart.getClassCssMetaData());
 
             STYLEABLES = Collections.unmodifiableList(styleables);
 
@@ -759,14 +760,14 @@ public class StackedAreaChart<X,Y> extends XYChart<X,Y> {
      * @return The CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
      */
-     public static List<CssMetaData<? extends Node, ?>> getClassCssMetaData() {
+     public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
          return StyleableProperties.STYLEABLES;
      }
     /**
      * {@inheritDoc}
      */
     @Override
-    public List<CssMetaData<? extends Node, ?>> getCssMetaData() {
+    public List<CssMetaData<? extends Styleable, ?>> getCssMetaData() {
         return getClassCssMetaData();
     }
 

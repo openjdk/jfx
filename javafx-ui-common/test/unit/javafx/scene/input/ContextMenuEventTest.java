@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2012, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,6 +22,7 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
+
 package javafx.scene.input;
 
 import com.sun.javafx.pgstub.StubScene;
@@ -94,5 +95,75 @@ public class ContextMenuEventTest {
 
         ((StubScene) scene.impl_getPeer()).getListener().menuEvent(
                 101, 102, 201, 202, true);
+    }
+
+    @Test
+    public void shouldCompute3dCoordinates() {
+        Rectangle rect = new Rectangle(100, 100);
+        rect.setTranslateX(100);
+        rect.setTranslateY(100);
+        rect.setTranslateZ(50);
+        Group root = new Group(rect, new Rectangle(0, 0));
+        Scene scene = new Scene(root);
+        Stage stage = new Stage();
+        stage.setScene(scene);
+        stage.show();
+        rect.requestFocus();
+
+        rect.setOnContextMenuRequested(new EventHandler<ContextMenuEvent>() {
+            @Override public void handle(ContextMenuEvent event) {
+                assertEquals(1.0, event.getX(), 0.0001);
+                assertEquals(101, event.getSceneX(), 0.0001);
+                assertEquals(201, event.getScreenX(), 0.0001);
+                assertEquals(2.0, event.getY(), 0.0001);
+                assertEquals(102, event.getSceneY(), 0.0001);
+                assertEquals(202, event.getScreenY(), 0.0001);
+                assertEquals(0, event.getZ(), 0.0001);
+                assertFalse(event.isKeyboardTrigger());
+            }
+        });
+
+        scene.setOnContextMenuRequested(new EventHandler<ContextMenuEvent>() {
+            @Override public void handle(ContextMenuEvent event) {
+                assertEquals(101.0, event.getX(), 0.0001);
+                assertEquals(101, event.getSceneX(), 0.0001);
+                assertEquals(201, event.getScreenX(), 0.0001);
+                assertEquals(102.0, event.getY(), 0.0001);
+                assertEquals(102, event.getSceneY(), 0.0001);
+                assertEquals(202, event.getScreenY(), 0.0001);
+                assertEquals(50, event.getZ(), 0.0001);
+                assertFalse(event.isKeyboardTrigger());
+            }
+        });
+
+        ((StubScene) scene.impl_getPeer()).getListener().menuEvent(
+                101, 102, 201, 202, false);
+    }
+
+    @Test public void pickResultIsFromEventCoordinates() {
+        final Rectangle rect = new Rectangle(100, 100);
+        rect.setTranslateX(100);
+        rect.setTranslateY(100);
+        Group root = new Group(rect);
+        Scene scene = new Scene(root);
+        Stage stage = new Stage();
+        stage.setScene(scene);
+        stage.show();
+        rect.requestFocus();
+
+        rect.setOnContextMenuRequested(new EventHandler<ContextMenuEvent>() {
+            @Override public void handle(ContextMenuEvent event) {
+                PickResult pickRes = event.getPickResult();
+                assertNotNull(pickRes);
+                assertSame(rect, pickRes.getIntersectedNode());
+                assertEquals(25, pickRes.getIntersectedPoint().getX(), 0.00001);
+                assertEquals(50, pickRes.getIntersectedPoint().getY(), 0.00001);
+                assertEquals(0, pickRes.getIntersectedPoint().getZ(), 0.00001);
+            }
+        });
+
+        ((StubScene) scene.impl_getPeer()).getListener().menuEvent(
+                1330, 1350, 1340, 1360, true);
+
     }
 }

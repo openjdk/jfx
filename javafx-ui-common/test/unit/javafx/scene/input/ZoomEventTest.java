@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,6 +22,7 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
+
 package javafx.scene.input;
 
 import com.sun.javafx.pgstub.StubScene;
@@ -38,6 +39,7 @@ public class ZoomEventTest {
 
     private boolean zoomed;
     private boolean zoomed2;
+    private PickResult pickRes;
     
     @Test
     public void shouldDeliverZoomEventToPickedNode() {
@@ -291,6 +293,105 @@ public class ZoomEventTest {
     }
 
     @Test
+    public void shouldCompute3dCoordinates() {
+        Scene scene = createScene();
+        Rectangle rect =
+                (Rectangle) scene.getRoot().getChildrenUnmodifiable().get(0);
+        rect.setTranslateZ(50);
+
+        zoomed = false;
+        zoomed2 = false;
+        rect.setOnZoom(new EventHandler<ZoomEvent>() {
+            @Override public void handle(ZoomEvent event) {
+                assertEquals(150, event.getX(), 0.00001);
+                assertEquals(150, event.getY(), 0.00001);
+                assertEquals(0, event.getZ(), 0.00001);
+                zoomed = true;
+            }
+        });
+
+        scene.setOnZoom(new EventHandler<ZoomEvent>() {
+            @Override public void handle(ZoomEvent event) {
+                assertEquals(150, event.getX(), 0.00001);
+                assertEquals(150, event.getY(), 0.00001);
+                assertEquals(50, event.getZ(), 0.00001);
+                zoomed2 = true;
+            }
+        });
+
+        ((StubScene) scene.impl_getPeer()).getListener().zoomEvent(
+                ZoomEvent.ZOOM, 1, 1,
+                150, 150, 150, 150, false, false, false, false, false, false);
+
+        assertTrue(zoomed);
+        assertTrue(zoomed2);
+    }
+
+    @Test
+    public void shouldContainPickResult() {
+        Scene scene = createScene();
+        Rectangle rect1 =
+                (Rectangle) scene.getRoot().getChildrenUnmodifiable().get(0);
+        Rectangle rect2 =
+                (Rectangle) scene.getRoot().getChildrenUnmodifiable().get(1);
+
+        rect1.addEventHandler(ZoomEvent.ANY, new EventHandler<ZoomEvent>() {
+            @Override public void handle(ZoomEvent event) {
+                zoomed = true;
+                pickRes = event.getPickResult();
+            }
+        });
+        rect2.addEventHandler(ZoomEvent.ANY, new EventHandler<ZoomEvent>() {
+            @Override public void handle(ZoomEvent event) {
+                zoomed2 = true;
+                pickRes = event.getPickResult();
+            }
+        });
+
+        zoomed = false;
+        zoomed2 = false;
+        pickRes = null;
+        ((StubScene) scene.impl_getPeer()).getListener().zoomEvent(
+                ZoomEvent.ZOOM_STARTED, 2, 3,
+                150, 150, 150, 150, true, false, true, false, true, false);
+        assertTrue(zoomed);
+        assertFalse(zoomed2);
+        assertNotNull(pickRes);
+        assertSame(rect1, pickRes.getIntersectedNode());
+        assertEquals(150, pickRes.getIntersectedPoint().getX(), 0.00001);
+        assertEquals(150, pickRes.getIntersectedPoint().getY(), 0.00001);
+        assertEquals(0, pickRes.getIntersectedPoint().getZ(), 0.00001);
+
+        zoomed = false;
+        zoomed2 = false;
+        pickRes = null;
+        ((StubScene) scene.impl_getPeer()).getListener().zoomEvent(
+                ZoomEvent.ZOOM, 2, 3,
+                250, 250, 250, 250, true, false, true, false, true, false);
+        assertTrue(zoomed);
+        assertFalse(zoomed2);
+        assertNotNull(pickRes);
+        assertSame(rect2, pickRes.getIntersectedNode());
+        assertEquals(250, pickRes.getIntersectedPoint().getX(), 0.00001);
+        assertEquals(250, pickRes.getIntersectedPoint().getY(), 0.00001);
+        assertEquals(0, pickRes.getIntersectedPoint().getZ(), 0.00001);
+
+        zoomed = false;
+        zoomed2 = false;
+        pickRes = null;
+        ((StubScene) scene.impl_getPeer()).getListener().zoomEvent(
+                ZoomEvent.ZOOM_FINISHED, 2, 3,
+                250, 250, 250, 250, true, false, true, false, true, false);
+        assertTrue(zoomed);
+        assertFalse(zoomed2);
+        assertNotNull(pickRes);
+        assertSame(rect2, pickRes.getIntersectedNode());
+        assertEquals(250, pickRes.getIntersectedPoint().getX(), 0.00001);
+        assertEquals(250, pickRes.getIntersectedPoint().getY(), 0.00001);
+        assertEquals(0, pickRes.getIntersectedPoint().getZ(), 0.00001);
+    }
+
+    @Test
     public void unknownLocationShouldBeReplacedByMouseLocation() {
         Scene scene = createScene();
         Rectangle rect1 =
@@ -433,7 +534,7 @@ public class ZoomEventTest {
         ZoomEvent e = new ZoomEvent(ZoomEvent.ZOOM,
             100, 100, 200, 200,
             false, false, false, false,
-            true, false, 10, 20);
+            true, false, 10, 20, null);
 
         String s = e.toString();
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2012, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,6 +26,8 @@
 package javafx.scene.shape;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 
 import java.lang.reflect.Method;
 
@@ -70,6 +72,12 @@ public class QuadCurveToTest {
 
    @Test public void testDoublePropertySynced_ControlY() throws Exception {
         checkSyncedProperty("controlY", Coords.CONTROL_Y, 22.2);
+    }
+
+    @Test public void toStringShouldReturnNonEmptyString() {
+        String s = new QuadCurveTo().toString();
+        assertNotNull(s);
+        assertFalse(s.isEmpty());
     }
 
     private void checkSyncedProperty(String propertyName, Coords coord, double expected) throws Exception {

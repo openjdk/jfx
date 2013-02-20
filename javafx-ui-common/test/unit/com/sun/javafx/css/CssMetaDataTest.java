@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2012, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,7 @@
 
 package com.sun.javafx.css;
 
+import javafx.css.Styleable;
 import java.io.File;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -65,7 +66,7 @@ public class CssMetaDataTest {
     public CssMetaDataTest() {
     }
     
-    private static CssMetaData get(List<CssMetaData<? extends Node, ?>> list, String prop) {
+    private static CssMetaData get(List<CssMetaData<? extends Styleable, ?>> list, String prop) {
         for (CssMetaData styleable : list) {
             if (prop.equals(styleable.getProperty())) return styleable;
         }
@@ -77,8 +78,8 @@ public class CssMetaDataTest {
     @Test
     public void testGetStyleables_Node() {
         Node node = new TestNode();
-        List<CssMetaData<? extends Node, ?>> expResult = TestNode.getClassCssMetaData();
-        List<CssMetaData<? extends Node, ?>> result = node.getCssMetaData();
+        List<CssMetaData<? extends Styleable, ?>> expResult = TestNode.getClassCssMetaData();
+        List<CssMetaData<? extends Styleable, ?>> result = node.getCssMetaData();
         assertEquals(expResult, result);
     }
 
@@ -88,9 +89,9 @@ public class CssMetaDataTest {
     @Test
     public void testGetStyleables_Styleable() {
         Node node = new TestNode();
-        Styleable styleable = node.impl_getStyleable();
+        Styleable styleable = node;
         assertNotNull(styleable);
-        List<CssMetaData<? extends Node, ?>> expResult = TestNode.getClassCssMetaData();
+        List<CssMetaData<? extends Styleable, ?>> expResult = TestNode.getClassCssMetaData();
         List result = styleable.getCssMetaData();
         assertEquals(expResult, result);
     }
@@ -159,7 +160,7 @@ public class CssMetaDataTest {
             }
         };
         
-        List<CssMetaData<? extends Node, ?>> list = fontProp.getSubProperties();
+        List<CssMetaData<? extends Styleable, ?>> list = fontProp.getSubProperties();
         assertNotNull(list);
 
     }
@@ -1188,7 +1189,7 @@ public class CssMetaDataTest {
                 Method m = someClass.getMethod("getClassCssMetaData", (Class[]) null);
 //                Node node = (Node)ctor.newInstance((Object[])null);
                 Node node = (Node)someClass.newInstance();
-                for (CssMetaData styleable : (List<CssMetaData<? extends Node, ?>>) m.invoke(null)) {
+                for (CssMetaData styleable : (List<CssMetaData<? extends Styleable, ?>>) m.invoke(null)) {
                     
                     what = someClass.getName() + " " + styleable.getProperty();
                     WritableValue writable = styleable.getStyleableProperty(node);

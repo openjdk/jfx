@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2012, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,7 +29,7 @@ import com.sun.javafx.scene.input.InputEventUtils;
 import java.io.IOException;
 import java.io.Serializable;
 import javafx.event.EventTarget;
-import javafx.geometry.Point2D;
+import javafx.geometry.Point3D;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 
@@ -57,9 +57,21 @@ public final class TouchPoint implements Serializable{
     private transient EventTarget target;
     private transient Object source;
 
-    private TouchPoint(int id, State state, double x, double y, double screenX,
-            double screenY) {
-        this.target = null;
+    /**
+     * Creates new instance of TouchPoint.
+     * @param id ID of the new touch point
+     * @param state state of the new touch point
+     * @param x The x with respect to the scene.
+     * @param y The y with respect to the scene.
+     * @param screenX The x coordinate relative to screen.
+     * @param screenY The y coordinate relative to screen.
+     * @param pickResult pick result. Can be null, in this case a 2D pick result
+     *                   without any further values is constructed
+     *                   based on the scene coordinates and target
+     */
+    public TouchPoint(int id, State state, double x, double y, double screenX,
+            double screenY, EventTarget target, PickResult pickResult) {
+        this.target = target;
         this.id = id;
         this.state = state;
         this.x = x;
@@ -68,6 +80,11 @@ public final class TouchPoint implements Serializable{
         this.sceneY = y;
         this.screenX = screenX;
         this.screenY = screenY;
+        this.pickResult = pickResult != null ? pickResult : new PickResult(target, x, y);
+        final Point3D p = InputEventUtils.recomputeCoordinates(this.pickResult, null);
+        this.x = p.getX();
+        this.y = p.getY();
+        this.z = p.getZ();
     }
 
     /**
@@ -78,11 +95,12 @@ public final class TouchPoint implements Serializable{
      */
     void recomputeToSource(Object oldSource, Object newSource) {
 
-        final Point2D newCoordinates = InputEventUtils.recomputeCoordinates(
-                new Point2D(sceneX, sceneY), null, newSource);
+        final Point3D newCoordinates = InputEventUtils.recomputeCoordinates(
+                pickResult, newSource);
 
         x = newCoordinates.getX();
         y = newCoordinates.getY();
+        z = newCoordinates.getZ();
 
         source = newSource;
     }
@@ -120,18 +138,11 @@ public final class TouchPoint implements Serializable{
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-    public void impl_setTarget(EventTarget target) {
-        this.target = target;
-    }
-
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
     public void impl_reset() {
-        x = sceneX;
-        y = sceneY;
+        final Point3D p = InputEventUtils.recomputeCoordinates(pickResult, null);
+        x = p.getX();
+        y = p.getY();
+        z = p.getZ();
     }
 
     private EventTarget grabbed = null;
@@ -227,6 +238,23 @@ public final class TouchPoint implements Serializable{
         return y;
     }
 
+    /**
+     * Depth z position of the event relative to the
+     * origin of the MouseEvent's node.
+     */
+    private transient double z;
+
+    /**
+     * Depth position of the event relative to the
+     * origin of the MouseEvent's source.
+     *
+     * @return depth position of the event relative to the
+     * origin of the MouseEvent's source.
+     */
+    public final double getZ() {
+        return z;
+    }
+
     private double screenX;
 
     /**
@@ -254,6 +282,8 @@ public final class TouchPoint implements Serializable{
      * origin of the {@code Scene} that contains the TouchEvent's source.
      * If the node is not in a {@code Scene}, then the value is relative to
      * the boundsInParent of the root-most parent of the TouchEvent's node.
+     * Note that in 3D scene, this represents the flat coordinates after
+     * applying the projection transformations.
      *
      * @return the horizontal position of the touch point relative to the
      * origin of the {@code Scene} that contains the TouchEvent's source
@@ -269,12 +299,29 @@ public final class TouchPoint implements Serializable{
      * origin of the {@code Scene} that contains the TouchEvent's source.
      * If the node is not in a {@code Scene}, then the value is relative to
      * the boundsInParent of the root-most parent of the TouchEvent's node.
+     * Note that in 3D scene, this represents the flat coordinates after
+     * applying the projection transformations.
      *
      * @return the vertical position of the touch point relative to the
      * origin of the {@code Scene} that contains the TouchEvent's source
      */
     public final double getSceneY() {
         return sceneY;
+    }
+
+    /**
+     * Information about the pick if the picked {@code Node} is a
+     * {@code Shape3D} node and its pickOnBounds is false.
+     */
+    private PickResult pickResult;
+
+    /**
+     * Returns information about the pick.
+     *
+     * @return new PickResult object that contains information about the pick
+     */
+    public final PickResult getPickResult() {
+        return pickResult;
     }
 
     /**
@@ -296,19 +343,11 @@ public final class TouchPoint implements Serializable{
         sb.append("state = ").append(getState());
         sb.append(", id = ").append(getId());
         sb.append(", target = ").append(getTarget());
-        sb.append(", x = ").append(getX()).append(", y = ").append(getY());
+        sb.append(", x = ").append(getX()).append(", y = ").append(getY())
+                .append(", z = ").append(getZ());
+        sb.append(", pickResult = ").append(getPickResult());
 
         return sb.append("]").toString();
-    }
-
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    public static TouchPoint impl_touchPoint(
-            int id, State state, double x, double y, double screenX, double screenY) {
-        return new TouchPoint(id, state, x, y, screenX, screenY);
     }
 
     private void readObject(java.io.ObjectInputStream in)

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2012, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -41,6 +41,7 @@ import org.junit.runners.Parameterized.Parameters;
 import javafx.css.CssMetaData;
 import com.sun.javafx.scene.DirtyBits;
 import com.sun.javafx.test.OnInvalidateMethodsTestBase;
+import javafx.css.Styleable;
 
 @RunWith(Parameterized.class)
 public class Node_onInvalidate_Test extends OnInvalidateMethodsTestBase {
@@ -84,7 +85,7 @@ public class Node_onInvalidate_Test extends OnInvalidateMethodsTestBase {
 
 
     public static CssMetaData findCssCSSProperty(String propertyName) {
-        final List<CssMetaData<? extends Node, ?>> keys = Node.getClassCssMetaData();
+        final List<CssMetaData<? extends Styleable, ?>> keys = Node.getClassCssMetaData();
         for(CssMetaData styleable : keys) {
             if (styleable.getProperty().equals(propertyName)) return styleable;
         }

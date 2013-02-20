@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2012, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -33,6 +33,7 @@ import com.sun.javafx.scene.DirtyBits;
 import com.sun.javafx.sg.PGCubicCurve;
 import com.sun.javafx.sg.PGNode;
 import com.sun.javafx.tk.Toolkit;
+import javafx.scene.paint.Paint;
 
 
 /**
@@ -472,6 +473,39 @@ public class CubicCurve extends Shape {
                 (float)getControlX2(),
                 (float)getControlY2());
         }
+    }
+
+    /**
+     * Returns a string representation of this {@code CubicCurve} object.
+     * @return a string representation of this {@code CubicCurve} object.
+     */
+    @Override
+    public String toString() {
+        final StringBuilder sb = new StringBuilder("CubicCurve[");
+
+        String id = getId();
+        if (id != null) {
+            sb.append("id=").append(id).append(", ");
+        }
+
+        sb.append("startX=").append(getStartX());
+        sb.append(", startY=").append(getStartY());
+        sb.append(", controlX1=").append(getControlX1());
+        sb.append(", controlY1=").append(getControlY1());
+        sb.append(", controlX2=").append(getControlX2());
+        sb.append(", controlY2=").append(getControlY2());
+        sb.append(", endX=").append(getEndX());
+        sb.append(", endY=").append(getEndY());
+
+        sb.append(", fill=").append(getFill());
+
+        Paint stroke = getStroke();
+        if (stroke != null) {
+            sb.append(", stroke=").append(stroke);
+            sb.append(", strokeWidth=").append(getStrokeWidth());
+        }
+
+        return sb.append("]").toString();
     }
 }
 

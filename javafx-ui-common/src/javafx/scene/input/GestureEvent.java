@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2012, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -31,7 +31,7 @@ import java.io.IOException;
 import javafx.event.Event;
 import javafx.event.EventTarget;
 import javafx.event.EventType;
-import javafx.geometry.Point2D;
+import javafx.geometry.Point3D;
 
 /**
  * An event indicating gesture input. Gestures are typically caused by
@@ -61,7 +61,7 @@ public class GestureEvent extends InputEvent {
      */
     @Deprecated
     protected GestureEvent(final EventType<? extends GestureEvent> eventType) {
-        this(eventType, 0, 0, 0, 0, false, false, false, false, false, false);
+        this(eventType, 0, 0, 0, 0, false, false, false, false, false, false, null);
     }
 
     /**
@@ -84,8 +84,8 @@ public class GestureEvent extends InputEvent {
      * @param source the source of the event. Can be null.
      * @param target the target of the event. Can be null.
      * @param eventType The type of the event.
-     * @param x The x with respect to the source. Should be in scene coordinates if source == null or source is not a Node.
-     * @param y The y with respect to the source. Should be in scene coordinates if source == null or source is not a Node.
+     * @param x The x with respect to the scene.
+     * @param y The y with respect to the scene.
      * @param screenX The x coordinate relative to screen.
      * @param screenY The y coordinate relative to screen.
      * @param shiftDown true if shift modifier was pressed.
@@ -94,11 +94,14 @@ public class GestureEvent extends InputEvent {
      * @param metaDown true if meta modifier was pressed.
      * @param direct true if the event was caused by direct input device. See {@link #isDirect() }
      * @param inertia if represents inertia of an already finished gesture.
+     * @param pickResult pick result. Can be null, in this case a 2D pick result
+     *                   without any further values is constructed
+     *                   based on the scene coordinates and the target
      */
     protected GestureEvent(Object source, EventTarget target, final EventType<? extends GestureEvent> eventType,
             double x, double y, double screenX, double screenY,
             boolean shiftDown, boolean controlDown, boolean altDown,
-            boolean metaDown, boolean direct, boolean inertia) {
+            boolean metaDown, boolean direct, boolean inertia, PickResult pickResult) {
         super(source, target, eventType);
         this.x = x;
         this.y = y;
@@ -112,6 +115,11 @@ public class GestureEvent extends InputEvent {
         this.metaDown = metaDown;
         this.direct = direct;
         this.inertia = inertia;
+        this.pickResult = pickResult != null ? pickResult : new PickResult(target, x, y);
+        final Point3D p = InputEventUtils.recomputeCoordinates(this.pickResult, null);
+        this.x = p.getX();
+        this.y = p.getY();
+        this.z = p.getZ();
     }
 
     /**
@@ -127,12 +135,17 @@ public class GestureEvent extends InputEvent {
      * @param metaDown true if meta modifier was pressed.
      * @param direct true if the event was caused by direct input device. See {@link #isDirect() }
      * @param inertia if represents inertia of an already finished gesture.
+     * @param pickResult pick result. Can be null, in this case a 2D pick result
+     *                   without any further values is constructed
+     *                   based on the scene coordinates
      */
     protected GestureEvent(final EventType<? extends GestureEvent> eventType,
             double x, double y, double screenX, double screenY,
             boolean shiftDown, boolean controlDown, boolean altDown,
-            boolean metaDown, boolean direct, boolean inertia) {
-        this(null, null, eventType, x, y, screenX, screenY, shiftDown, controlDown, altDown, metaDown, direct, inertia);
+            boolean metaDown, boolean direct, boolean inertia,
+            PickResult pickResult) {
+        this(null, null, eventType, x, y, screenX, screenY, shiftDown, controlDown,
+                altDown, metaDown, direct, inertia, pickResult);
     }
 
     /**
@@ -143,11 +156,12 @@ public class GestureEvent extends InputEvent {
      */
     private void recomputeCoordinatesToSource(GestureEvent newEvent, Object newSource) {
 
-        final Point2D newCoordinates = InputEventUtils.recomputeCoordinates(
-                new Point2D(sceneX, sceneY), null, newSource);
+        final Point3D newCoordinates = InputEventUtils.recomputeCoordinates(
+                pickResult, newSource);
 
         newEvent.x = newCoordinates.getX();
         newEvent.y = newCoordinates.getY();
+        newEvent.z = newCoordinates.getZ();
     }
 
     /**
@@ -190,6 +204,23 @@ public class GestureEvent extends InputEvent {
         return y;
     }
 
+    /**
+     * Depth z position of the event relative to the
+     * origin of the MouseEvent's node.
+     */
+    private transient double z;
+
+    /**
+     * Depth position of the event relative to the
+     * origin of the MouseEvent's source.
+     *
+     * @return depth position of the event relative to the
+     * origin of the MouseEvent's source.
+     */
+    public final double getZ() {
+        return z;
+    }
+
     private final double screenX;
 
     /**
@@ -221,6 +252,8 @@ public class GestureEvent extends InputEvent {
      * origin of the {@code Scene} that contains the event's source.
      * If the node is not in a {@code Scene}, then the value is relative to
      * the boundsInParent of the root-most parent of the event's node.
+     * Note that in 3D scene, this represents the flat coordinates after
+     * applying the projection transformations.
      *
      * @return the horizontal position of the event relative to the
      * origin of the {@code Scene} that contains the event's source
@@ -238,6 +271,8 @@ public class GestureEvent extends InputEvent {
      * origin of the {@code Scene} that contains the event's source.
      * If the node is not in a {@code Scene}, then the value is relative to
      * the boundsInParent of the root-most parent of the event's node.
+     * Note that in 3D scene, this represents the flat coordinates after
+     * applying the projection transformations.
      *
      * @return the vertical position of the event relative to the
      * origin of the {@code Scene} that contains the event's source
@@ -315,6 +350,21 @@ public class GestureEvent extends InputEvent {
     }
 
     /**
+     * Information about the pick if the picked {@code Node} is a
+     * {@code Shape3D} node and its pickOnBounds is false.
+     */
+    private PickResult pickResult;
+
+    /**
+     * Returns information about the pick.
+     *
+     * @return new PickResult object that contains information about the pick
+     */
+    public final PickResult getPickResult() {
+        return pickResult;
+    }
+
+    /**
      * Indicates whether or not the host platform common shortcut modifier is
      * down on this event. This common shortcut modifier is a modifier key which
      * is used commonly in shortcuts on the host platform. It is for example
@@ -354,7 +404,8 @@ public class GestureEvent extends InputEvent {
         sb.append(", eventType = ").append(getEventType());
         sb.append(", consumed = ").append(isConsumed());
 
-        sb.append(", x = ").append(getX()).append(", y = ").append(getY());
+        sb.append(", x = ").append(getX()).append(", y = ").append(getY())
+                .append(", z = ").append(getZ());
         sb.append(isDirect() ? ", direct" : ", indirect");
 
         if (isInertia()) {
@@ -376,6 +427,7 @@ public class GestureEvent extends InputEvent {
         if (isShortcutDown()) {
             sb.append(", shortcutDown");
         }
+        sb.append(", pickResult = ").append(getPickResult());
 
         return sb.append("]").toString();
     }

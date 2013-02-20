@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2012, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -131,4 +131,9 @@ public class CircleTest {
                 2 * original.getWidth(), 1.5 * original.getHeight()), c.getBoundsInParent());
     }
 
+    @Test public void toStringShouldReturnNonEmptyString() {
+        String s = new Circle().toString();
+        assertNotNull(s);
+        assertFalse(s.isEmpty());
+    }
 }

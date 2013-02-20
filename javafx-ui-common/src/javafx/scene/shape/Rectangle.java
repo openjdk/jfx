@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2012, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -33,7 +33,6 @@ import java.util.List;
 
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.DoublePropertyBase;
-import javafx.beans.value.WritableValue;
 import javafx.scene.paint.Paint;
 
 import javafx.css.StyleableDoubleProperty;
@@ -47,9 +46,8 @@ import com.sun.javafx.sg.PGNode;
 import com.sun.javafx.sg.PGRectangle;
 import com.sun.javafx.sg.PGShape.Mode;
 import com.sun.javafx.tk.Toolkit;
-import javafx.beans.property.Property;
+import javafx.css.Styleable;
 import javafx.css.StyleableProperty;
-import javafx.scene.Node;
 
 
 /**
@@ -309,7 +307,7 @@ public  class Rectangle extends Shape {
                 }
                 
                 @Override 
-                public CssMetaData getCssMetaData() {
+                public CssMetaData<Rectangle, Number> getCssMetaData() {
                     return StyleableProperties.ARC_WIDTH;
                 }
 
@@ -356,7 +354,7 @@ public  class Rectangle extends Shape {
                 }
 
                 @Override 
-                public CssMetaData getCssMetaData() {
+                public CssMetaData<Rectangle, Number> getCssMetaData() {
                     return StyleableProperties.ARC_HEIGHT;
                 }
                 
@@ -410,7 +408,7 @@ public  class Rectangle extends Shape {
 
             @Override
             public StyleableProperty<Number> getStyleableProperty(Rectangle node) {
-                return (StyleableProperty)node.arcHeightProperty();
+                return (StyleableProperty<Number>)node.arcHeightProperty();
             }
 
         };         
@@ -425,15 +423,15 @@ public  class Rectangle extends Shape {
 
             @Override
             public StyleableProperty<Number> getStyleableProperty(Rectangle node) {
-                return (StyleableProperty)node.arcWidthProperty();
+                return (StyleableProperty<Number>)node.arcWidthProperty();
             }
 
         };
          
-         private static final List<CssMetaData<? extends Node, ?>> STYLEABLES;
+         private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
          static {
-            final List<CssMetaData<? extends Node, ?>> styleables =
-                new ArrayList<CssMetaData<? extends Node, ?>>(Shape.getClassCssMetaData());
+            final List<CssMetaData<? extends Styleable, ?>> styleables =
+                new ArrayList<CssMetaData<? extends Styleable, ?>>(Shape.getClassCssMetaData());
             styleables.add(ARC_HEIGHT);
             styleables.add(ARC_WIDTH);
             STYLEABLES = Collections.unmodifiableList(styleables);
@@ -445,7 +443,7 @@ public  class Rectangle extends Shape {
      * @return The CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
      */
-    public static List<CssMetaData<? extends Node, ?>> getClassCssMetaData() {
+    public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
         return StyleableProperties.STYLEABLES;
     }
 
@@ -454,8 +452,9 @@ public  class Rectangle extends Shape {
      *
      */
     
+    
     @Override
-    public List<CssMetaData<? extends Node, ?>> getCssMetaData() {
+    public List<CssMetaData<? extends Styleable, ?>> getCssMetaData() {
         return getClassCssMetaData();
     }
 
@@ -553,5 +552,34 @@ public  class Rectangle extends Shape {
                 (float)getArcWidth(),
                 (float)getArcHeight());
         }
+    }
+
+    /**
+     * Returns a string representation of this {@code Rectangle} object.
+     * @return a string representation of this {@code Rectangle} object.
+     */
+    @Override
+    public String toString() {
+        final StringBuilder sb = new StringBuilder("Rectangle[");
+
+        String id = getId();
+        if (id != null) {
+            sb.append("id=").append(id).append(", ");
+        }
+
+        sb.append("x=").append(getX());
+        sb.append(", y=").append(getY());
+        sb.append(", width=").append(getWidth());
+        sb.append(", height=").append(getHeight());
+
+        sb.append(", fill=").append(getFill());
+
+        Paint stroke = getStroke();
+        if (stroke != null) {
+            sb.append(", stroke=").append(stroke);
+            sb.append(", strokeWidth=").append(getStrokeWidth());
+        }
+
+        return sb.append("]").toString();
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2012, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -373,7 +373,7 @@ public class SortedListTest {
             E first = get(0); 
             backingList.set(0, get(size() - 1)); 
             backingList.set(size() -1, first); 
-            callObservers(new SimplePermutationChange(0, size(), new int[] {2, 1, 0}, this)); 
+            fireChange(new SimplePermutationChange(0, size(), new int[] {2, 1, 0}, this));
         } 
          
     } 

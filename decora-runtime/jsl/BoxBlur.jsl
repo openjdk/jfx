@@ -1,0 +1,94 @@
+/*
+ * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.  Oracle designates this
+ * particular file as subject to the "Classpath" exception as provided
+ * by Oracle in the LICENSE file that accompanied this code.
+ *
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
+ *
+ * You should have received a copy of the GNU General Public License version
+ * 2 along with this work; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+ * or visit www.oracle.com if you need additional information or have any
+ * questions.
+ */
+
+<<
+private FloatBuffer offsets;
+
+private float getScale() {
+    return 1.0f / getCount();
+}
+
+private int getCount() {
+    return getEffect().getRadius() * 2 + 1;
+}
+
+private FloatBuffer getOffsets() {
+    int r = getEffect().getRadius();
+    int klen = (r * 2) + 1;
+
+    float xoff, yoff;
+    if (getPass() == 0) {
+        // horizontal pass
+        xoff = 1f / getInputNativeBounds(0).width;
+        yoff = 0f;
+    } else {
+        // vertical pass
+        xoff = 0f;
+        yoff = 1f / getInputNativeBounds(0).height;
+    }
+
+    if (offsets == null) {
+        offsets = BufferUtil.newFloatBuffer(129*4);
+    }
+    offsets.clear();
+    for (int row = -r; row <= r; row++) {
+        offsets.put(row * xoff);
+        offsets.put(row * yoff);
+        offsets.put(0f); // unused
+        offsets.put(0f); // unused
+    }
+    int limit = r * 2 + 1;
+    limit = 10 * ((limit + 9) / 10);
+    if (limit > 129) limit = 129;
+    limit *= 4;
+    while (offsets.position() < limit) {
+        offsets.put(2f);
+        offsets.put(2f);
+        offsets.put(0f);
+        offsets.put(0f);
+    }
+    offsets.rewind();
+    return offsets;
+}
+>>
+
+param sampler img;
+param int count;
+const int MAX_KERNEL_SIZE = 129;
+// value for each location in the offsets array:
+//   offsets[i].x = offsetX[i]
+//   offsets[i].y = offsetY[i]
+param float4 offsets[MAX_KERNEL_SIZE];
+param float scale;
+
+void main()
+{
+    int i;
+    float4 tmp = float4(0.0, 0.0, 0.0, 0.0);
+    unroll (%d, 0) for (i = 0; i < count; i++) {
+        tmp += sample(img, pos0 + offsets[i].xy);
+    }
+    color = scale * tmp;
+}

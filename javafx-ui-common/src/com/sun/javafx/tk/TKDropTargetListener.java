@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2012, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2013, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,7 +25,6 @@
 
 package com.sun.javafx.tk;
 
-import javafx.scene.input.Dragboard;
 import javafx.scene.input.TransferMode;
 
 /**
@@ -46,7 +45,7 @@ public interface TKDropTargetListener {
      * @return transfer mode chosen by potential target
      */
     public TransferMode dragEnter(double x, double y, double screenX, double screenY,
-                                  TransferMode transferMode, Dragboard dragboard);
+                                  TransferMode transferMode);
 
     /**
      * Called during a drag gesture, while the mouse pointer is still
@@ -55,14 +54,13 @@ public interface TKDropTargetListener {
      * @return transfer mode chosen by potential target
      */
     public TransferMode dragOver(double x, double y, double screenX, double screenY,
-                                 TransferMode transferMode, Dragboard dragboard);
+                                 TransferMode transferMode);
 
     /**
      * Called during a drag gesture, when the mouse pointer exits
      * the operable part of the Scene.
      */
-    public void dragExit(double x, double y, double screenX, double screenY,
-                         Dragboard dragboard);
+    public void dragExit(double x, double y, double screenX, double screenY);
 
     /**
      * Called when the drag gesture is being terminated with a drop on
@@ -95,5 +93,5 @@ public interface TKDropTargetListener {
      * @return transfer mode chosen by target
      */
     public TransferMode drop(double x, double y, double screenX, double screenY,
-                             TransferMode transferMode, Dragboard dragboard);
+                             TransferMode transferMode);
 }

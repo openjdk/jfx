@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,7 @@
 
 package com.sun.javafx.scene.control.skin;
 
+import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.input.KeyCode;
@@ -115,45 +116,48 @@ public class ButtonSkin extends LabeledSkinBase<Button, ButtonBehavior<Button>> 
     private KeyCodeCombination defaultAcceleratorKeyCodeCombination;
     
     private void setDefaultButton(boolean value) {
+        Scene scene = getSkinnable().getScene();
+        if (scene != null) {
+            KeyCode acceleratorCode = KeyCode.ENTER;
+            defaultAcceleratorKeyCodeCombination = new KeyCodeCombination(acceleratorCode);
 
-        KeyCode acceleratorCode = KeyCode.ENTER;
-        defaultAcceleratorKeyCodeCombination = 
-                new KeyCodeCombination(acceleratorCode);
-
-        if (! value) {
-            /*
-            ** first check of there's a default button already
-            */
-            Runnable oldDefault = getSkinnable().getParent().getScene().getAccelerators().get(defaultAcceleratorKeyCodeCombination);
-            if (!defaultButtonRunnable.equals(oldDefault)) {
+            if (!value) {
                 /*
-                ** is it us?
+                ** first check of there's a default button already
                 */
-                getSkinnable().getParent().getScene().getAccelerators().remove(defaultAcceleratorKeyCodeCombination);
+                Runnable oldDefault = scene.getAccelerators().get(defaultAcceleratorKeyCodeCombination);
+                if (!defaultButtonRunnable.equals(oldDefault)) {
+                    /*
+                    ** is it us?
+                    */
+                    scene.getAccelerators().remove(defaultAcceleratorKeyCodeCombination);
+                }
             }
+            scene.getAccelerators().put(defaultAcceleratorKeyCodeCombination, defaultButtonRunnable);
         }
-        getSkinnable().getParent().getScene().getAccelerators().put(defaultAcceleratorKeyCodeCombination, defaultButtonRunnable);
     }
 
     private KeyCodeCombination cancelAcceleratorKeyCodeCombination;
 
     private void setCancelButton(boolean value) {
-        KeyCode acceleratorCode = KeyCode.ESCAPE;
-        cancelAcceleratorKeyCodeCombination = new KeyCodeCombination(acceleratorCode);
+        Scene scene = getSkinnable().getScene();
+        if (scene != null) {
+            KeyCode acceleratorCode = KeyCode.ESCAPE;
+            cancelAcceleratorKeyCodeCombination = new KeyCodeCombination(acceleratorCode);
         
-        if (! value) {
-            /*
-            ** first check of there's a default button already
-            */
-            Runnable oldDefault = getSkinnable().getParent().getScene().getAccelerators().get(cancelAcceleratorKeyCodeCombination);
-            if (!defaultButtonRunnable.equals(oldDefault)) {
+            if (!value) {
                 /*
-                ** is it us?
+                ** first check of there's a cancel button already
                 */
-                getSkinnable().getParent().getScene().getAccelerators().remove(cancelAcceleratorKeyCodeCombination);
-            }
-        }        
-        getSkinnable().getParent().getScene().getAccelerators().put(cancelAcceleratorKeyCodeCombination, cancelButtonRunnable);
+                Runnable oldCancel = scene.getAccelerators().get(cancelAcceleratorKeyCodeCombination);
+                if (!cancelButtonRunnable.equals(oldCancel)) {
+                    /*
+                    ** is it us?
+                    */
+                    scene.getAccelerators().remove(cancelAcceleratorKeyCodeCombination);
+                }
+            }        
+            scene.getAccelerators().put(cancelAcceleratorKeyCodeCombination, cancelButtonRunnable);
+        }
     }
-
 }

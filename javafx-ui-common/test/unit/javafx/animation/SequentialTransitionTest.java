@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2012, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,6 +22,7 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
+
 package javafx.animation;
 
 import static org.junit.Assert.assertEquals;
@@ -54,9 +55,9 @@ public class SequentialTransitionTest {
 	@Before
 	public void setUp() {
 		node = new Rectangle();
-		child1 = new AnimationMock(ONE_SEC);
-		child2 = new AnimationMock(TWO_SECS);
-		child3 = new AnimationMock(THREE_SECS);
+		child1 = new AnimationDummy(ONE_SEC);
+		child2 = new AnimationDummy(TWO_SECS);
+		child3 = new AnimationDummy(THREE_SECS);
 	}
 	
 	@Test

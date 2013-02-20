@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,11 +22,15 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
+
 package com.sun.javafx.pgstub;
 
-import com.sun.javafx.geom.CameraImpl;
 import com.sun.javafx.geom.PickRay;
+import com.sun.javafx.geom.Vec3d;
+import com.sun.javafx.sg.PGCamera;
 import com.sun.javafx.sg.PGNode;
+import com.sun.javafx.sg.PGPerspectiveCamera;
+import com.sun.javafx.tk.TKClipboard;
 import com.sun.javafx.tk.TKScene;
 import com.sun.javafx.tk.TKSceneListener;
 import com.sun.javafx.tk.TKScenePaintListener;
@@ -40,6 +44,7 @@ public class StubScene implements TKScene {
     StubStage stage;
     private TKSceneListener listener;
     private Object cursor;
+    private PGCamera camera;
 
     @Override
     public void setSecurityContext(AccessControlContext ctx) {
@@ -70,12 +75,20 @@ public class StubScene implements TKScene {
         // ignore
     }
 
-    public void setCamera(CameraImpl ci) {
-        // ignore
+    public void setCamera(PGCamera ci) {
+        camera = ci;
     }
 
     public PickRay computePickRay(float x, float y, PickRay pickRay) {
-        throw new UnsupportedOperationException();
+        if (pickRay == null) {
+            pickRay = new PickRay();
+        }
+        if (camera instanceof PGPerspectiveCamera) {
+            pickRay.set(new Vec3d(x, y, -1000), new Vec3d(0, 0, 1000));
+        } else {
+            pickRay.set(x, y);
+        }
+        return pickRay;
     }
 
     public void setFillPaint(Object fillPaint) {
@@ -104,7 +117,7 @@ public class StubScene implements TKScene {
     }
 
     @Override
-    public Dragboard createDragboard() {
+    public TKClipboard createDragboard(boolean isDragSource) {
         return StubToolkit.createDragboard();
     }
 

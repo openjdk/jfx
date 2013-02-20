@@ -1,5 +1,5 @@
 /**
- * The build script for JavaFX.
+ * The main build script for JavaFX.
  *
  * Tasks to complete:
  *  - special tasks for common needs, such as:
@@ -43,17 +43,25 @@ def swtFileName = { ->
  *****************************************************************************/
 
 allprojects {
+    // All of our projects are java projects
     apply plugin: "java"
-    sourceCompatibility = 1.7 // NOTE: Cannot make 1.8 or testing doesn't work because ASM 4.0 used by gradle doesn't support 1.8 yet (not even in nightlies)
+    // NOTE: Cannot make 1.8 or testing doesn't work because ASM 4.0 used by
+    // gradle doesn't support 1.8 yet (not even in nightlies)
+    sourceCompatibility = 1.7
+    // The following block is a workaround for the fact that presently Gradle
+    // can't set the -XDignore.symbol.file flag, because it appears that the
+    // Javac API is lacking support for it. So what we'll do is find any Compile
+    // task and manually provide the options necessary to fire up the
+    // compiler with the right settings
     tasks.withType(Compile) { compile ->
         compile.options.compilerArgs = ["-XDignore.symbol.file"]
-        /* The following 4 lines are a workaround for the fact that presently Gradle can't set the -XDignore.symbol.file
-           flag, because it appears that the Javac API is lacking support for it */
         compile.options.debug = true
         compile.options.fork = true
         compile.options.forkOptions.executable = System.env["JAVA_HOME"] ? System.env["JAVA_HOME"] + "/bin/javac" : "javac"
         compile.options.warnings = false
     }
+    // Setup the repositories that we'll download libraries from. Maven Central is
+    // just easy for most things. The custom "ivy" repo is for downloading SWT
     repositories {
         mavenCentral()
         ivy {
@@ -65,6 +73,9 @@ allprojects {
     }
 }
 
+// The build-tools project contains the annotation processor that is used to generate the
+// builders, the decora compiler used for effects, and various annotations we use for FXML
+// etc. Nothing in build-tools should *ever* be shipped with the runtime.
 project(":build-tools") {
     // Workaround for lack of Antrl 3 support in Gradle. By defining a configuration,
     // we can then give it a class path and use that classpath to execute a java command
@@ -190,10 +201,12 @@ project(":graphics") {
         into "build/resources/main"
     }
     processResources.dependsOn copyShaders
-//
-//    test {
-//        systemProperty "javafx.toolkit", "com.sun.javafx.pgstub.StubToolkit"
-//    }
+
+    test {
+        enableAssertions = true
+        testLogging.exceptionFormat = "full"
+        forkEvery = 1
+    }
 
     // TODO Need to compile the Decora SSE Natives now! I don't yet know how to compile natives
 }
@@ -217,9 +230,16 @@ project(":swt") {
     }
 }
 
-project(":fxml") {
-    dependencies {
-        compile project(":build-tools"), project(":base"), project(":graphics"),
-                project(":controls"), /*project(":media"), project(":web"),*/ project(":swt"), project(":swing")
-    }
-}
+//project(":web") {
+//    dependencies {
+//        compile project(":build-tools"), project(":base"), project(":graphics"),
+//                project(":controls"), /*project(":media"),*/ project(":swt"), project(":swing")
+//    }
+//}
+//
+//project(":fxml") {
+//    dependencies {
+//        compile project(":build-tools"), project(":base"), project(":graphics"),
+//                project(":controls"), /*project(":media"),*/ project(":web"), project(":swt"), project(":swing")
+//    }
+//}

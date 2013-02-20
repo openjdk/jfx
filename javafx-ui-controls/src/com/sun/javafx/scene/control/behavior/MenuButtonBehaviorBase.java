@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -38,6 +38,7 @@ import java.util.List;
 
 import javafx.geometry.Side;
 import javafx.scene.control.MenuButton;
+import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 
 /**
@@ -153,7 +154,9 @@ public abstract class MenuButtonBehaviorBase<C extends MenuButton> extends Butto
             if (control.isShowing()) {
                 control.hide();
             } else {
-                control.show();
+                if (e.getButton() == MouseButton.PRIMARY) {
+                    control.show();    
+                }
             }
         }
     }

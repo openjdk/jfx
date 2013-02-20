@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2012, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,7 @@
 
 package javafx.scene;
 
+import com.sun.javafx.geom.PickRay;
 import com.sun.javafx.pgstub.StubGroup;
 import com.sun.javafx.pgstub.StubCircle;
 import static org.junit.Assert.assertEquals;
@@ -60,6 +61,7 @@ import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
 import com.sun.javafx.scene.DirtyBits;
+import com.sun.javafx.scene.input.PickResultChooser;
 import com.sun.javafx.sg.PGNode;
 import com.sun.javafx.test.objects.TestScene;
 import com.sun.javafx.test.objects.TestStage;
@@ -244,8 +246,12 @@ public class NodeTest {
         Scene scene = new Scene(new Group());
         scene.getRoot().getChildren().add(rect);
 
-        assertSame(rect, rect.impl_pickNode(50, 50));
-        assertNull(rect.impl_pickNode(0, 0));
+        PickResultChooser res = new PickResultChooser();
+        rect.impl_pickNode(new PickRay(50, 50), res);
+        assertSame(rect, res.getIntersectedNode());
+        res = new PickResultChooser();
+        rect.impl_pickNode(new PickRay(0, 0), res);
+        assertNull(res.getIntersectedNode());
     }
 
     @Test public void testPickingNodeDirectlyWithTransforms() {
@@ -259,8 +265,12 @@ public class NodeTest {
         Scene scene = new Scene(new Group());
         scene.getRoot().getChildren().add(rect);
 
-        assertSame(rect, rect.impl_pickNode(50, 50));
-        assertNull(rect.impl_pickNode(0, 0));
+        PickResultChooser res = new PickResultChooser();
+        rect.impl_pickNode(new PickRay(50, 50), res);
+        assertSame(rect, res.getIntersectedNode());
+        res = new PickResultChooser();
+        rect.impl_pickNode(new PickRay(0, 0), res);
+        assertNull(res.getIntersectedNode());
     }
 
     @Test public void testEffectSharedOnNodes() {

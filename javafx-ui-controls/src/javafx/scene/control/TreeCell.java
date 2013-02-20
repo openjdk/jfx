@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,6 +22,7 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
+
 package javafx.scene.control;
 
 import javafx.css.PseudoClass;
@@ -168,12 +169,23 @@ public class TreeCell<T> extends IndexedCell<T> {
         }
     };
     
+    /* proxy pseudo-class state change from treeItem's expandedProperty */
+    private final InvalidationListener treeItemExpandedInvalidationListener = new InvalidationListener() {
+        @Override public void invalidated(Observable o) {
+            boolean isExpanded = ((BooleanProperty)o).get();
+            pseudoClassStateChanged(EXPANDED_PSEUDOCLASS_STATE,   isExpanded);
+            pseudoClassStateChanged(COLLAPSED_PSEUDOCLASS_STATE, !isExpanded);
+        }
+    };
+    
     private final WeakListChangeListener<Integer> weakSelectedListener = new WeakListChangeListener<Integer>(selectedListener);
     private final WeakChangeListener<MultipleSelectionModel<TreeItem<T>>> weakSelectionModelPropertyListener = new WeakChangeListener<MultipleSelectionModel<TreeItem<T>>>(selectionModelPropertyListener);
     private final WeakInvalidationListener weakFocusedListener = new WeakInvalidationListener(focusedListener);
     private final WeakChangeListener<FocusModel<TreeItem<T>>> weakFocusModelPropertyListener = new WeakChangeListener<FocusModel<TreeItem<T>>>(focusModelPropertyListener);
     private final WeakInvalidationListener weakEditingListener = new WeakInvalidationListener(editingListener);
     private final WeakInvalidationListener weakLeafListener = new WeakInvalidationListener(leafListener);
+    private final WeakInvalidationListener weakTreeItemExpandedInvalidationListener =
+            new WeakInvalidationListener(treeItemExpandedInvalidationListener);
     
     
     
@@ -190,17 +202,16 @@ public class TreeCell<T> extends IndexedCell<T> {
             TreeItem<T> oldValue = null;
             
             @Override protected void invalidated() {
-                
                 if (oldValue != null) {
-                    oldValue.expandedProperty().removeListener(treeItemExpandedInvalidationListener);
+                    oldValue.expandedProperty().removeListener(weakTreeItemExpandedInvalidationListener);
                 }
                 
                 oldValue = get(); 
                 
                 if (oldValue != null) {
-                    oldValue.expandedProperty().addListener(treeItemExpandedInvalidationListener);
+                    oldValue.expandedProperty().addListener(weakTreeItemExpandedInvalidationListener);
                     // fake an invalidation to ensure updated pseudo-class state
-                    treeItemExpandedInvalidationListener.invalidated(oldValue.expandedProperty());            
+                    weakTreeItemExpandedInvalidationListener.invalidated(oldValue.expandedProperty());            
                 }
                 
             }
@@ -221,19 +232,6 @@ public class TreeCell<T> extends IndexedCell<T> {
     public final ReadOnlyObjectProperty<TreeItem<T>> treeItemProperty() { return treeItem.getReadOnlyProperty(); }
 
 
-    /* proxy pseudo-class state change from treeItem's expandedProperty */
-    private final InvalidationListener treeItemExpandedInvalidationListener = 
-        new InvalidationListener() {
-
-        @Override
-        public void invalidated(Observable o) {
-            boolean isExpanded = ((BooleanProperty)o).get();
-            pseudoClassStateChanged(EXPANDED_PSEUDOCLASS_STATE,   isExpanded);
-            pseudoClassStateChanged(COLLAPSED_PSEUDOCLASS_STATE, !isExpanded);
-        }
-    };
-    
-    
     
     // --- Disclosure Node
     private ObjectProperty<Node> disclosureNode = new SimpleObjectProperty<Node>(this, "disclosureNode");

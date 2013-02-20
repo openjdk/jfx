@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2012, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,9 +22,12 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
+
 package javafx.scene.text;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import javafx.geometry.VPos;
 import javafx.scene.NodeTest;
 
@@ -215,4 +218,9 @@ public class TextTest {
 //                 "textAlignment", "textAlignment", TextAlignment.RIGHT);
 //     }
 
+    @Test public void toStringShouldReturnNonEmptyString() {
+        String s = new Text().toString();
+        assertNotNull(s);
+        assertFalse(s.isEmpty());
+    }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -314,8 +314,10 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
 
                 if (labeledNode != null) {
                     Mnemonic myMnemonic = new Mnemonic(labeledNode, mnemonicKeyCombo);
-                    mnemonicScene = labeledNode.getParent().getScene();
-                    mnemonicScene.addMnemonic(myMnemonic);
+                    mnemonicScene = labeledNode.getScene();
+                    if (mnemonicScene != null) {
+                        mnemonicScene.addMnemonic(myMnemonic);
+                    }
                 }
             }
         }
@@ -365,6 +367,9 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
                         labeledNode = labeled;
                     }
 
+                    if (labeledNode == null) {
+                        labeledNode = labeled;
+                    }
                     mnemonicIndex = bindings.getMnemonicIndex() ;
                 }
             }
@@ -408,8 +413,8 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
 
                     if (labeledNode != null) {
                         Mnemonic myMnemonic = new Mnemonic(labeledNode, mnemonicKeyCombo);
-                        if (labeledNode.getParent() != null) {
-                            mnemonicScene = labeledNode.getParent().getScene();
+                        mnemonicScene = labeledNode.getScene();
+                        if (mnemonicScene != null) {
                             mnemonicScene.addMnemonic(myMnemonic);
                         }
                     }

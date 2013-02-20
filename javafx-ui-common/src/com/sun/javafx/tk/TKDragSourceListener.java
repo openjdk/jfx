@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2012, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,7 +25,6 @@
 
 package com.sun.javafx.tk;
 
-import javafx.scene.input.Dragboard;
 import javafx.scene.input.TransferMode;
 
 /**
@@ -35,6 +34,5 @@ import javafx.scene.input.TransferMode;
  */
 public interface TKDragSourceListener {
 
-    void dragDropEnd(double x, double y, double screenX, double screenY,
-                     TransferMode transferMode, Dragboard dragboard);
+    void dragDropEnd(double x, double y, double screenX, double screenY, TransferMode transferMode);
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2012, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -34,6 +34,7 @@ import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ListChangeListener.Change;
 import javafx.collections.ObservableList;
+import javafx.css.Styleable;
 import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.NodeTest;
@@ -133,7 +134,7 @@ public class ShapeTest {
     @Test public void testGetStrokeDashArrayViaCSSPropertyIsNotNull() {
         Rectangle rect = new Rectangle();
         Double[] actual = null;
-        List<CssMetaData<? extends Node, ?>> styleables = rect.getCssMetaData();
+        List<CssMetaData<? extends Styleable, ?>> styleables = rect.getCssMetaData();
         for (CssMetaData styleable : styleables) {
             if ("-fx-stroke-dash-array".equals(styleable.getProperty())) {
                 WritableValue writable = styleable.getStyleableProperty(rect);
@@ -149,7 +150,7 @@ public class ShapeTest {
         Rectangle rect = new Rectangle();
         rect.getStrokeDashArray().addAll(5d, 7d, 1d, 3d);
         Double[] actuals = null;
-        List<CssMetaData<? extends Node, ?>> styleables = rect.getCssMetaData();
+        List<CssMetaData<? extends Styleable, ?>> styleables = rect.getCssMetaData();
         
         for (CssMetaData styleable : styleables) {
             if ("-fx-stroke-dash-array".equals(styleable.getProperty())) {
@@ -166,7 +167,7 @@ public class ShapeTest {
         
         Rectangle rect = new Rectangle();
         List<Double> actual = null;
-        List<CssMetaData<? extends Node, ?>> styleables = rect.getCssMetaData();
+        List<CssMetaData<? extends Styleable, ?>> styleables = rect.getCssMetaData();
         
         for (CssMetaData styleable : styleables) {
             if ("-fx-stroke-dash-array".equals(styleable.getProperty())) {

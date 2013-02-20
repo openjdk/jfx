@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2012, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,6 +22,7 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
+
 package com.sun.javafx.sg.prism;
 
 import com.sun.glass.ui.Screen;
@@ -88,7 +89,7 @@ public abstract class NGNode extends BaseNode<Graphics> {
     private RectBounds opaqueRegion = null;
     private boolean opaqueRegionInvalid = true;
 
-    NGNode() { }
+    protected NGNode() { }
 
     /***************************************************************************
      *                                                                         *
@@ -335,8 +336,32 @@ public abstract class NGNode extends BaseNode<Graphics> {
      *                                                                         *
      **************************************************************************/
 
+    // TODO: 3D - Reconsider the NodeType interface.
+    // At the very least it needs to be documented.
+    enum NodeType {
+        NODE_NONE, NODE_2D, NODE_3D
+    }
+
+    // TODO: 3D - Reconsider the NodeType interface.
+    // At the very least it needs to be documented.
+    NodeType getNodeType() {
+        return NodeType.NODE_2D;
+    }
+    
+    protected final boolean configureRenderer(Graphics g) {
+        switch (getNodeType()) {
+            case NODE_2D: return g.beginRender2D();
+            case NODE_3D: return g.beginRender3D();
+        }
+        return true;
+    }
+    
     @Override
     protected void doRender(Graphics g) {
+        // check if the renderer configured properly
+        if (!configureRenderer(g))
+            return;
+        
         boolean preCullingTurnedOff = false;
         if (PrismSettings.dirtyOptsEnabled) {
             if (g.hasPreCullingBits()) {

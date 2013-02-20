@@ -10,8 +10,7 @@ build/
 bin/
 dist/
 test.keystore
-^webrev/
-^webrev\.zip$
+^webrev*
 nbproject/private/
 target/
 ^.*~$

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2012, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,6 +22,7 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
+
 package com.sun.javafx.sg;
 
 import com.sun.javafx.geom.BaseBounds;
@@ -33,6 +34,7 @@ import com.sun.javafx.geom.RectBounds;
 import com.sun.javafx.geom.transform.Affine3D;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.geom.transform.GeneralTransform3D;
+import com.sun.javafx.geom.transform.NoninvertibleTransformException;
 import com.sun.scenario.effect.Blend;
 import com.sun.scenario.effect.Effect;
 import com.sun.scenario.effect.FilterContext;
@@ -1029,6 +1031,17 @@ public abstract class BaseNode<G> implements PGNode {
         
         DirtyRegionContainer originalDirtyRegion = null;
         if (effectFilter != null) {
+            try {
+                myClip = new RectBounds();
+                BaseBounds myClipBaseBounds = renderTx.inverseTransform(clip, TEMP_BOUNDS);
+                myClip.setBounds(myClipBaseBounds.getMinX(),
+                                 myClipBaseBounds.getMinY(),
+                                 myClipBaseBounds.getMaxX(),
+                                 myClipBaseBounds.getMaxY());
+            } catch (NoninvertibleTransformException ex) {
+                return DirtyRegionContainer.DTR_OK;
+            }
+
             renderTx = BaseTransform.IDENTITY_TRANSFORM;
             originalDirtyRegion = dirtyRegionContainer;
             dirtyRegionContainer = regionPool.checkOut();

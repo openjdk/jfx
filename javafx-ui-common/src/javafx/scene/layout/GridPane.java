@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2012, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,7 +23,6 @@
  * questions.
  */
 
-
 package javafx.scene.layout;
 
 import java.util.ArrayList;
@@ -32,7 +31,6 @@ import java.util.List;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
-import javafx.beans.value.WritableValue;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ListChangeListener.Change;
 import javafx.collections.ObservableList;
@@ -53,6 +51,7 @@ import javafx.css.CssMetaData;
 import com.sun.javafx.css.converters.BooleanConverter;
 import com.sun.javafx.css.converters.EnumConverter;
 import com.sun.javafx.css.converters.SizeConverter;
+import javafx.css.Styleable;
 import javafx.css.StyleableProperty;
 
 
@@ -678,7 +677,7 @@ public class GridPane extends Pane {
                 }
 
                 @Override
-                public CssMetaData getCssMetaData() {
+                public CssMetaData<GridPane, Number> getCssMetaData() {
                     return StyleableProperties.HGAP;
                 }
 
@@ -712,7 +711,7 @@ public class GridPane extends Pane {
                 }
 
                 @Override
-                public CssMetaData getCssMetaData() {
+                public CssMetaData<GridPane, Number> getCssMetaData() {
                     return StyleableProperties.VGAP;
                 }
 
@@ -746,7 +745,7 @@ public class GridPane extends Pane {
                 }
 
                 @Override
-                public CssMetaData getCssMetaData() {
+                public CssMetaData<GridPane, Pos> getCssMetaData() {
                     return StyleableProperties.ALIGNMENT;
                 }
 
@@ -793,7 +792,7 @@ public class GridPane extends Pane {
                 }
 
                 @Override
-                public CssMetaData getCssMetaData() {
+                public CssMetaData<GridPane, Boolean> getCssMetaData() {
                     return StyleableProperties.GRID_LINES_VISIBLE;
                 }
 
@@ -1902,11 +1901,11 @@ public class GridPane extends Pane {
 
          };
 
-         private static final List<CssMetaData<? extends Node, ?>> STYLEABLES;
+         private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
          static {
 
-            final List<CssMetaData<? extends Node, ?>> styleables =
-                    new ArrayList<CssMetaData<? extends Node, ?>>(Region.getClassCssMetaData());
+            final List<CssMetaData<? extends Styleable, ?>> styleables =
+                    new ArrayList<CssMetaData<? extends Styleable, ?>>(Region.getClassCssMetaData());
             styleables.add(GRID_LINES_VISIBLE);
             styleables.add(HGAP);
             styleables.add(ALIGNMENT);
@@ -1920,7 +1919,7 @@ public class GridPane extends Pane {
      * @return The CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
      */
-    public static List<CssMetaData<? extends Node, ?>> getClassCssMetaData() {
+    public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
         return StyleableProperties.STYLEABLES;
     }
 
@@ -1929,8 +1928,9 @@ public class GridPane extends Pane {
      *
      */
     
+    
     @Override
-    public List<CssMetaData<? extends Node, ?>> getCssMetaData() {
+    public List<CssMetaData<? extends Styleable, ?>> getCssMetaData() {
         return getClassCssMetaData();
     }
 

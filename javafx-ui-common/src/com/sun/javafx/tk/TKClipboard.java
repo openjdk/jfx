@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2012, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,8 +22,10 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
+
 package com.sun.javafx.tk;
 
+import java.security.AccessControlContext;
 import java.util.Set;
 import javafx.scene.image.Image;
 
@@ -37,6 +39,12 @@ import javafx.util.Pair;
  * callers (and so forth).
  */
 public interface TKClipboard {
+
+    /**
+     * This method is used to set security context of the Stage.
+     */
+    public void setSecurityContext(AccessControlContext ctx);
+
     /**
      * Gets the set of DataFormat types on this Clipboard instance which have
      * associated data registered on the clipboard. This set will always
@@ -74,12 +82,6 @@ public interface TKClipboard {
     // for DnD
     public Set<TransferMode> getTransferModes();
     
-    /**
-     * Set up the security context to ensure that the clipboard access context
-     * is properly initialized.
-     */
-    public void initSecurityContext();
-
     /**
      * Sets the visual representation of data being transfered in a drag and drop gesture.
      * @param image image to use for the drag view

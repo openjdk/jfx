@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -17,6 +17,7 @@
  * You should have received a copy of the GNU General Public License version
  * 2 along with this work; if not, write to the Free Software Foundation,
  * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
  * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
  * or visit www.oracle.com if you need additional information or have any
  * questions.
@@ -24,17 +25,17 @@
 
 package javafx.scene.layout;
 
-import java.util.Map;
-import javafx.geometry.Insets;
-import javafx.scene.image.Image;
-import javafx.scene.paint.Paint;
-import javafx.css.ParsedValue;
 import com.sun.javafx.css.StyleConverterImpl;
-import javafx.css.CssMetaData;
 import com.sun.javafx.scene.layout.region.BorderImageSlices;
 import com.sun.javafx.scene.layout.region.Margins;
 import com.sun.javafx.scene.layout.region.RepeatStruct;
-import javafx.scene.Node;
+import java.util.Map;
+import javafx.css.CssMetaData;
+import javafx.css.ParsedValue;
+import javafx.css.Styleable;
+import javafx.geometry.Insets;
+import javafx.scene.image.Image;
+import javafx.scene.paint.Paint;
 
 /**
  */
@@ -51,7 +52,7 @@ class BorderConverter extends StyleConverterImpl<ParsedValue[], Border> {
     private BorderConverter() { }
 
     @Override
-    public Border convert(Map<CssMetaData<? extends Node, ?>, Object> convertedValues) {
+    public Border convert(Map<CssMetaData<? extends Styleable, ?>, Object> convertedValues) {
         final Paint[][] strokeFills = (Paint[][])convertedValues.get(Border.BORDER_COLOR);
         final String[] imageUrls = (String[]) convertedValues.get(Border.BORDER_IMAGE_SOURCE);
         final boolean hasStrokes = strokeFills != null && strokeFills.length > 0;

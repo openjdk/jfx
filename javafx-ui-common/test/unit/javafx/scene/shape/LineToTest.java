@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2012, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,6 +26,8 @@
 package javafx.scene.shape;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.scene.Group;
@@ -89,5 +91,11 @@ public class LineToTest {
         int segType = it.currentSegment(coords);
         assertEquals(segType, PathIterator.SEG_LINETO);
         assertEquals(expected, coords[1], 0.001);
+    }
+
+    @Test public void toStringShouldReturnNonEmptyString() {
+        String s = new LineTo().toString();
+        assertNotNull(s);
+        assertFalse(s.isEmpty());
     }
 }

@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="decora-d3d-common" default="jar" basedir=".">
+  <description>Builds, tests, and runs the project decora-d3d.</description>
+
+  <property name="jfx.build.needs.visual.studio" value="true"/>
+  <property name="jfx.build.needs.make.utility" value="true"/>
+
+  <property name="hlsl.dir" value="build/gensrc/com/sun/scenario/effect/impl/hw/d3d/hlsl"/>
+  <target name="hlsl-to-obj">
+    <apply executable="${dxsdk.path}/utilities/bin/x86/fxc"
+           dest="${hlsl.dir}" dir="${hlsl.dir}"
+           parallel="false" failonerror="true">
+      <arg value="/nologo"/>
+      <arg value="/T"/>
+      <arg value="ps_3_0"/>
+      <arg value="/Fo"/>
+      <targetfile/>
+      <srcfile/>
+      <fileset dir="${hlsl.dir}" includes="*.hlsl"/>
+      <mapper type="glob" from="*.hlsl" to="*.obj"/>
+    </apply>
+  </target>
+
+  <target name="check-native">
+    <condition property="native.uptodate">
+      <and>
+        <uptodate srcfile="${cpp.dir}/D3DShader.h"
+                  targetfile="${dll.file}" />
+        <uptodate srcfile="${cpp.dir}/D3DShader.cc"
+                  targetfile="${dll.file}" />
+        <uptodate srcfile="${cpp.dir}/D3DRenderer.h"
+                  targetfile="${dll.file}" />
+        <uptodate srcfile="${cpp.dir}/D3DRenderer.cc"
+                  targetfile="${dll.file}" />
+        <uptodate srcfile="${cpp.dir}/D3DVB.cc"
+                  targetfile="${dll.file}" />
+        <uptodate srcfile="${cpp.dir}/D3DVB.h"
+                  targetfile="${dll.file}" />
+        <uptodate srcfile="${cpp.dir}/D3DDecora.h"
+                  targetfile="${dll.file}" />
+        <uptodate srcfile="${cpp.dir}/Trace.h"
+                  targetfile="${dll.file}" />
+        <uptodate srcfile="${cpp.dir}/Trace.cc"
+                  targetfile="${dll.file}" />
+        <uptodate srcfile="${cpp.dir}/PassThroughVS.hlsl"
+                  targetfile="${dll.file}" />
+      </and>
+    </condition>
+  </target>
+
+  <target name="jar" depends="init" if="include.d3d">
+    <antcall target="hlsl-to-obj"/>
+    <build-project>
+      <addedsrcdirs>
+        <pathelement location="build/gensrc"/>
+      </addedsrcdirs>
+      <addedsrcfiles>
+        <fileset dir="build/gensrc" excludes="${build.classes.excludes}"/>
+      </addedsrcfiles>
+    </build-project>
+  </target>
+
+  <target name="clean">
+    <get-cygwin-path/>
+    <clean-project/>
+  </target>
+
+    <target name="test" depends="-init-test,jar" if="include.d3d">
+        <test-project excludes="${test.excludes}"/>
+    </target>
+
+    <target name="test-single" depends="jar" if="include.d3d">
+        <test-single/>
+    </target>
+
+  <import file="../build-defs.xml"/>
+</project>

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -55,6 +55,7 @@ import com.sun.javafx.css.converters.SizeConverter;
 import com.sun.javafx.scene.control.accessible.AccessibleSlider;
 import com.sun.javafx.accessible.providers.AccessibleProvider;
 import com.sun.javafx.scene.control.skin.SliderSkin;
+import javafx.css.Styleable;
 import javafx.css.StyleableProperty;
 import javafx.scene.Node;
 
@@ -279,7 +280,7 @@ public class Slider extends Control {
                 }
                 
                 @Override 
-                public CssMetaData getCssMetaData() {
+                public CssMetaData<Slider,Orientation> getCssMetaData() {
                     return StyleableProperties.ORIENTATION;
                 }
 
@@ -318,7 +319,7 @@ public class Slider extends Control {
 
                 
                 @Override 
-                public CssMetaData getCssMetaData() {
+                public CssMetaData<Slider,Boolean> getCssMetaData() {
                     return StyleableProperties.SHOW_TICK_LABELS;
                 }
 
@@ -353,7 +354,7 @@ public class Slider extends Control {
 
                 
                 @Override 
-                public CssMetaData getCssMetaData() {
+                public CssMetaData<Slider,Boolean> getCssMetaData() {
                     return StyleableProperties.SHOW_TICK_MARKS;
                 }
 
@@ -404,7 +405,7 @@ public class Slider extends Control {
                 }
                 
                 @Override 
-                public CssMetaData getCssMetaData() {
+                public CssMetaData<Slider,Number> getCssMetaData() {
                     return StyleableProperties.MAJOR_TICK_UNIT;
                 }
 
@@ -441,7 +442,7 @@ public class Slider extends Control {
 
                 
                 @Override 
-                public CssMetaData getCssMetaData() {
+                public CssMetaData<Slider,Number> getCssMetaData() {
                     return StyleableProperties.MINOR_TICK_COUNT;
                 }
 
@@ -477,7 +478,7 @@ public class Slider extends Control {
             snapToTicks = new StyleableBooleanProperty(false) {
                 
                 @Override 
-                public CssMetaData getCssMetaData() {
+                public CssMetaData<Slider,Boolean> getCssMetaData() {
                     return StyleableProperties.SNAP_TO_TICKS;
                 }
 
@@ -536,7 +537,7 @@ public class Slider extends Control {
             blockIncrement = new StyleableDoubleProperty(10) {
 
                 @Override 
-                public CssMetaData getCssMetaData() {
+                public CssMetaData<Slider,Number> getCssMetaData() {
                     return StyleableProperties.BLOCK_INCREMENT;
                 }
 
@@ -762,10 +763,10 @@ public class Slider extends Control {
             }
         };
 
-        private static final List<CssMetaData<? extends Node, ?>> STYLEABLES;
+        private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
         static {
-            final List<CssMetaData<? extends Node, ?>> styleables = 
-                new ArrayList<CssMetaData<? extends Node, ?>>(Control.getClassCssMetaData());
+            final List<CssMetaData<? extends Styleable, ?>> styleables = 
+                new ArrayList<CssMetaData<? extends Styleable, ?>>(Control.getClassCssMetaData());
             styleables.add(BLOCK_INCREMENT);
             styleables.add(SHOW_TICK_LABELS);
             styleables.add(SHOW_TICK_MARKS);
@@ -782,7 +783,7 @@ public class Slider extends Control {
      * @return The CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
      */
-    public static List<CssMetaData<? extends Node, ?>> getClassCssMetaData() {
+    public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
         return StyleableProperties.STYLEABLES;
     }
 
@@ -792,7 +793,7 @@ public class Slider extends Control {
      * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
      */
     @Deprecated
-    @Override protected List<CssMetaData<? extends Node, ?>> getControlCssMetaData() {
+    @Override protected List<CssMetaData<? extends Styleable, ?>> getControlCssMetaData() {
         return getClassCssMetaData();
     }
 

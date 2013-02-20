@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2012, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,7 +23,6 @@
  * questions.
  */
 
-
 package javafx.scene.layout;
 
 import java.util.ArrayList;
@@ -46,6 +45,7 @@ import javafx.scene.Node;
 import com.sun.javafx.css.converters.BooleanConverter;
 import com.sun.javafx.css.converters.EnumConverter;
 import com.sun.javafx.css.converters.SizeConverter;
+import javafx.css.Styleable;
 
 /**
  * VBox lays out its children in a single vertical column.
@@ -257,7 +257,7 @@ public class VBox extends Pane {
                 }
 
                 @Override
-                public CssMetaData getCssMetaData() {
+                public CssMetaData<VBox, Number> getCssMetaData() {
                     return StyleableProperties.SPACING;
                 }
             };
@@ -291,7 +291,7 @@ public class VBox extends Pane {
                 }
 
                 @Override
-                public CssMetaData getCssMetaData() {
+                public CssMetaData<VBox, Pos> getCssMetaData() {
                     return StyleableProperties.ALIGNMENT;
                 }
             };
@@ -327,7 +327,7 @@ public class VBox extends Pane {
                 }
 
                 @Override
-                public CssMetaData getCssMetaData() {
+                public CssMetaData<VBox, Boolean> getCssMetaData() {
                     return StyleableProperties.FILL_WIDTH;
                 }
             };
@@ -583,10 +583,10 @@ public class VBox extends Pane {
             }
         };
 
-         private static final List<CssMetaData<? extends Node, ?>> STYLEABLES;
+         private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
          static {
-            final List<CssMetaData<? extends Node, ?>> styleables = 
-                new ArrayList<CssMetaData<? extends Node, ?>>(Region.getClassCssMetaData());
+            final List<CssMetaData<? extends Styleable, ?>> styleables = 
+                new ArrayList<CssMetaData<? extends Styleable, ?>>(Region.getClassCssMetaData());
             styleables.add(ALIGNMENT);
             styleables.add(FILL_WIDTH);
             styleables.add(SPACING);
@@ -598,7 +598,7 @@ public class VBox extends Pane {
      * @return The CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
      */
-    public static List<CssMetaData<? extends Node, ?>> getClassCssMetaData() {
+    public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
         return StyleableProperties.STYLEABLES;
     }
 
@@ -607,8 +607,9 @@ public class VBox extends Pane {
      *
      */
     
+    
     @Override
-    public List<CssMetaData<? extends Node, ?>> getCssMetaData() {
+    public List<CssMetaData<? extends Styleable, ?>> getCssMetaData() {
         return getClassCssMetaData();
     }
 

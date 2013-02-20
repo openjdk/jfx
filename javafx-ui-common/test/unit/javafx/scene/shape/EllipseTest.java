@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2012, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -92,5 +92,11 @@ public class EllipseTest {
         e.setRotate(90);
         assertSimilar(TestHelper.box(30, 90,
                 original.getHeight(), original.getWidth()), e.getBoundsInParent());
+    }
+
+    @Test public void toStringShouldReturnNonEmptyString() {
+        String s = new Ellipse().toString();
+        assertNotNull(s);
+        assertFalse(s.isEmpty());
     }
 }

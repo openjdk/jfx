@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2012, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -183,7 +183,7 @@ public final class SortedList<E> extends TransformationList<E, E> implements Sor
             sorted[size + i - from] = new Element<E>(source.get(i), i);
         }
         size += to - from;
-        callObservers(new SimpleAddChange<E>(size - to + from, size, this));
+        fireChange(new SimpleAddChange<E>(size - to + from, size, this));
     }
 
     private void insertOneSorted(E e, int idx) {
@@ -196,7 +196,7 @@ public final class SortedList<E> extends TransformationList<E, E> implements Sor
         System.arraycopy(sorted, pos, sorted, pos + 1, size - pos);
         sorted[pos] = new Element<E>(e, idx);
         ++size;
-        callObservers(new SimpleAddChange<E>(pos, pos + 1, this));
+        fireChange(new SimpleAddChange<E>(pos, pos + 1, this));
         
     }
 
@@ -205,7 +205,7 @@ public final class SortedList<E> extends TransformationList<E, E> implements Sor
         System.arraycopy(sorted, pos + 1, sorted, pos, size - pos - 1);
         --size;
         updateIndices(from + 1, - 1);
-        callObservers(new SimpleRemovedChange<E>(pos, pos, e, this));
+        fireChange(new SimpleRemovedChange<E>(pos, pos, e, this));
     }
 
     private void updateUnsorted(Change<? extends E> c) {
@@ -253,7 +253,7 @@ public final class SortedList<E> extends TransformationList<E, E> implements Sor
             }
         }
         
-        callObservers(new GenericAddRemoveChange<E>(lo, hi, Collections.unmodifiableList(toBeRemoved), this));
+        fireChange(new GenericAddRemoveChange<E>(lo, hi, Collections.unmodifiableList(toBeRemoved), this));
     } 
     
     private void updateSorted(Change<? extends E> c) {
@@ -319,7 +319,7 @@ public final class SortedList<E> extends TransformationList<E, E> implements Sor
                 ++hi;
             }
         }
-        callObservers(new GenericAddRemoveChange<E>(lo, hi, Collections.unmodifiableList(toBeRemoved), this));
+        fireChange(new GenericAddRemoveChange<E>(lo, hi, Collections.unmodifiableList(toBeRemoved), this));
     }
     
     private void updateIndices(int from, int difference) {
@@ -477,7 +477,7 @@ public final class SortedList<E> extends TransformationList<E, E> implements Sor
     
     private void doSortWithPermutationChange() {
         int[] perm = getSortHelper().sort(sorted, 0, size, comparator);
-        callObservers(new SimplePermutationChange<E>(0, size, perm, this));
+        fireChange(new SimplePermutationChange<E>(0, size, perm, this));
     }
 
     @Override

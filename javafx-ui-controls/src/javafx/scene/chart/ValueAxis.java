@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,6 +22,7 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
+
 package javafx.scene.chart;
 
 import javafx.css.CssMetaData;
@@ -35,9 +36,9 @@ import java.util.Collections;
 import java.util.List;
 
 import javafx.beans.property.*;
+import javafx.css.Styleable;
 import javafx.css.StyleableProperty;
 import javafx.geometry.Side;
-import javafx.scene.Node;
 import javafx.scene.shape.LineTo;
 import javafx.scene.shape.MoveTo;
 import javafx.scene.shape.Path;
@@ -93,7 +94,7 @@ public abstract class ValueAxis<T extends Number> extends Axis<T> {
         }
 
         @Override
-        public CssMetaData getCssMetaData() {
+        public CssMetaData<ValueAxis<? extends Number>,Boolean> getCssMetaData() {
             return StyleableProperties.MINOR_TICK_VISIBLE;
         }
     };
@@ -198,7 +199,7 @@ public abstract class ValueAxis<T extends Number> extends Axis<T> {
         }
 
         @Override
-        public CssMetaData getCssMetaData() {
+        public CssMetaData<ValueAxis<? extends Number>,Number> getCssMetaData() {
             return StyleableProperties.MINOR_TICK_LENGTH;
         }
     };
@@ -231,7 +232,7 @@ public abstract class ValueAxis<T extends Number> extends Axis<T> {
         }
 
         @Override
-        public CssMetaData getCssMetaData() {
+        public CssMetaData<ValueAxis<? extends Number>,Number> getCssMetaData() {
             return StyleableProperties.MINOR_TICK_COUNT;
         }
     };
@@ -518,56 +519,56 @@ public abstract class ValueAxis<T extends Number> extends Axis<T> {
     // -------------- STYLESHEET HANDLING ------------------------------------------------------------------------------
 
      /** @treatAsPrivate implementation detail */
-    private static class StyleableProperties {
-        private static final CssMetaData<ValueAxis<?>,Number> MINOR_TICK_LENGTH =
-            new CssMetaData<ValueAxis<?>,Number>("-fx-minor-tick-length",
+    private static class StyleableProperties  {
+        private  static final CssMetaData<ValueAxis<? extends Number>,Number> MINOR_TICK_LENGTH =
+            new CssMetaData<ValueAxis<? extends Number>,Number>("-fx-minor-tick-length",
                 SizeConverter.getInstance(), 5.0) {
 
             @Override
-            public boolean isSettable(ValueAxis<?> n) {
+            public boolean isSettable(ValueAxis<? extends Number> n) {
                 return n.minorTickLength == null || !n.minorTickLength.isBound();
             }
 
             @Override
-            public StyleableProperty<Number> getStyleableProperty(ValueAxis<?> n) {
+            public StyleableProperty<Number> getStyleableProperty(ValueAxis<? extends Number> n) {
                 return (StyleableProperty<Number>)n.minorTickLengthProperty();
             }
         };
         
-        private static final CssMetaData<ValueAxis<?>,Number> MINOR_TICK_COUNT =
-            new CssMetaData<ValueAxis<?>,Number>("-fx-minor-tick-count",
+        private static final CssMetaData<ValueAxis<? extends Number>,Number> MINOR_TICK_COUNT =
+            new CssMetaData<ValueAxis<? extends Number>,Number>("-fx-minor-tick-count",
                 SizeConverter.getInstance(), 5) {
 
             @Override
-            public boolean isSettable(ValueAxis<?> n) {
+            public boolean isSettable(ValueAxis<? extends Number> n) {
                 return n.minorTickCount == null || !n.minorTickCount.isBound();
             }
 
             @Override
-            public StyleableProperty<Number> getStyleableProperty(ValueAxis<?> n) {
+            public StyleableProperty<Number> getStyleableProperty(ValueAxis<? extends Number> n) {
                 return (StyleableProperty<Number>)n.minorTickCountProperty();
             }
         };
         
-         private static final CssMetaData<ValueAxis<?>,Boolean> MINOR_TICK_VISIBLE =
-            new CssMetaData<ValueAxis<?>,Boolean>("-fx-minor-tick-visible",
+         private static final CssMetaData<ValueAxis<? extends Number>,Boolean> MINOR_TICK_VISIBLE =
+            new CssMetaData<ValueAxis<? extends Number>,Boolean>("-fx-minor-tick-visible",
                  BooleanConverter.getInstance(), Boolean.TRUE) {
 
             @Override
-            public boolean isSettable(ValueAxis<?> n) {
+            public boolean isSettable(ValueAxis<? extends Number> n) {
                 return n.minorTickVisible == null || !n.minorTickVisible.isBound();
             }
 
             @Override
-            public StyleableProperty<Boolean> getStyleableProperty(ValueAxis<?> n) {
+            public StyleableProperty<Boolean> getStyleableProperty(ValueAxis<? extends Number> n) {
                 return (StyleableProperty<Boolean>)n.minorTickVisibleProperty();
             }
         };
 
-        private static final List<CssMetaData<? extends Node, ?>> STYLEABLES;
+        private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
          static {
-            final List<CssMetaData<? extends Node, ?>> styleables =
-                new ArrayList<CssMetaData<? extends Node, ?>>(Axis.getClassCssMetaData());
+            final List<CssMetaData<? extends Styleable, ?>> styleables =
+                new ArrayList<CssMetaData<? extends Styleable, ?>>(Axis.getClassCssMetaData());
             styleables.add(MINOR_TICK_COUNT);
             styleables.add(MINOR_TICK_LENGTH);
             styleables.add(MINOR_TICK_COUNT);
@@ -580,7 +581,7 @@ public abstract class ValueAxis<T extends Number> extends Axis<T> {
      * @return The CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
      */
-    public static List<CssMetaData<? extends Node, ?>> getClassCssMetaData() {
+    public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
         return StyleableProperties.STYLEABLES;
     }
 
@@ -588,7 +589,7 @@ public abstract class ValueAxis<T extends Number> extends Axis<T> {
      * {@inheritDoc}
      */
     @Override
-    public List<CssMetaData<? extends Node, ?>> getCssMetaData() {
+    public List<CssMetaData<? extends Styleable, ?>> getCssMetaData() {
         return getClassCssMetaData();
     }
 

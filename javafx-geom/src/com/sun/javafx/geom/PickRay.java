@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2007, 2012, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2007, 2013, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,6 +26,7 @@
 package com.sun.javafx.geom;
 
 import com.sun.javafx.geom.transform.BaseTransform;
+import com.sun.javafx.geom.transform.NoninvertibleTransformException;
 
 /**
  * A ray used for picking.
@@ -33,6 +34,7 @@ import com.sun.javafx.geom.transform.BaseTransform;
 public class PickRay {
     private Vec3d origin = new Vec3d();
     private Vec3d direction = new Vec3d();
+    private boolean parallel = false;
 
 //    static final double EPS = 1.0e-13;
     static final double EPS = 1.0e-5f;
@@ -40,17 +42,48 @@ public class PickRay {
     public PickRay() { }
 
     public PickRay(Vec3d origin, Vec3d direction) {
+        set(origin, direction);
+    }
+
+    public PickRay(double x, double y) {
+        set(x, y);
+    }
+
+    public PickRay(Vec3d origin, Vec3d direction, boolean parallel) {
         setOrigin(origin);
         setDirection(direction);
+        this.parallel = parallel;
     }
+
+    public final void set(Vec3d origin, Vec3d direction) {
+        setOrigin(origin);
+        setDirection(direction);
+        parallel = false;
+    }
+
+    public final void set(double x, double y) {
+        // Right now the parallel camera picks nodes even on negative distances
+        // (behind the camera). Therefore, it doesn't matter
+        // what is the Z coordinate of the origin. Also the reported distance
+        // is always an infinity so it doesn't matter what is the magnitude
+        // of the direction.
+        // Right now we need the (origin+direction) point be in the XY plane
+        // for correct picking of the scene. This requirement will be removed
+        // when the projection plane is properly used for the intersection.
+        setOrigin(x, y, -1);
+        setDirection(0, 0, 1);
+        parallel = true;
+    }
+
 
     public void setPickRay(PickRay other) {
         setOrigin(other.origin);
         setDirection(other.direction);
+        parallel = other.parallel;
     }
 
     public PickRay copy() {
-        return new PickRay(origin, direction);
+        return new PickRay(origin, direction, parallel);
     }
 
     /**
@@ -60,6 +93,17 @@ public class PickRay {
      */
     public void setOrigin(Vec3d origin) {
         this.origin.set(origin);
+    }
+
+    /**
+     * Sets the origin of the pick ray in world coordinates.
+     *
+     * @param x the origin X coordinate
+     * @param y the origin Y coordinate
+     * @param z the origin Z coordinate
+     */
+    public void setOrigin(double x, double y, double z) {
+        this.origin.set(x, y, z);
     }
 
     public Vec3d getOrigin(Vec3d rv) {
@@ -84,6 +128,17 @@ public class PickRay {
         this.direction.set(direction);
     }
 
+    /**
+     * Sets the direction of the pick ray. The vector need not be normalized.
+     *
+     * @param x the direction X magnitude
+     * @param y the direction Y magnitude
+     * @param z the direction Z magnitude
+     */
+    public void setDirection(double x, double y, double z) {
+        this.direction.set(x, y, z);
+    }
+
     public Vec3d getDirection(Vec3d rv) {
         if (rv == null) {
             rv = new Vec3d();
@@ -94,6 +149,10 @@ public class PickRay {
 
     public Vec3d getDirectionNoClone() {
         return direction;
+    }
+
+    public boolean isParallel() {
+        return parallel;
     }
 
     public double distance(Vec3d iPnt) {
@@ -443,14 +502,15 @@ public class PickRay {
 
     }
 
-    private final Vec3d endPt = new Vec3d();
-
     public void transform(BaseTransform t) {
-        endPt.add(origin, direction);
         t.transform(origin, origin);
-        t.transform(endPt, endPt);
-        direction.sub(endPt, origin);
-        direction.normalize();
+        t.deltaTransform(direction, direction);
+    }
+
+    public void inverseTransform(BaseTransform t) 
+            throws NoninvertibleTransformException {
+        t.inverseTransform(origin, origin);
+        t.inverseDeltaTransform(direction, direction);
     }
 
     public PickRay project(BaseTransform inversetx,

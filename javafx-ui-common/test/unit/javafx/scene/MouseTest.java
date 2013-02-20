@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2000, 2012, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2000, 2013, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -962,6 +962,32 @@ public class MouseTest {
         assertTrue(scene.smallSquareTracker.released);
     }
 
+    @Test
+    public void topMostNodeShouldBePickedWithDepthBufferByPerspectiveCamera() {
+        SimpleTestScene scene = new SimpleTestScene(true, true);
+        MouseEventGenerator generator = new MouseEventGenerator();
+
+        scene.processEvent(generator.generateMouseEvent(
+                MouseEvent.MOUSE_MOVED, 250, 250));
+
+        assertFalse(scene.smallSquareTracker.wasMoved());
+        assertTrue(scene.bigSquareTracker.wasMoved());
+        assertTrue(scene.groupTracker.wasMoved());
+    }
+
+    @Test
+    public void topMostNodeShouldBePickedWithDepthBufferByParallelCamera() {
+        SimpleTestScene scene = new SimpleTestScene(true, false);
+        MouseEventGenerator generator = new MouseEventGenerator();
+
+        scene.processEvent(generator.generateMouseEvent(
+                MouseEvent.MOUSE_MOVED, 250, 250));
+
+        assertFalse(scene.smallSquareTracker.wasMoved());
+        assertTrue(scene.bigSquareTracker.wasMoved());
+        assertTrue(scene.groupTracker.wasMoved());
+    }
+
     private static class SimpleTestScene {
 
         MouseEventTracker sceneTracker;
@@ -972,12 +998,20 @@ public class MouseTest {
         private Scene scene;
 
         public SimpleTestScene() {
+            this(false, false);
+        }
+
+        public SimpleTestScene(boolean depthBuffer, boolean perspective) {
             final Group root = new Group();
-            scene = new Scene(root, 400, 400);
+            scene = new Scene(root, 400, 400, depthBuffer);
+            if (perspective) {
+                scene.setCamera(new PerspectiveCamera());
+            }
 
             Group group = new Group();
             Rectangle bigSquare = new Rectangle(100, 100, 200, 200);
             Rectangle smallSquare = new Rectangle(200, 200, 100, 100);
+            bigSquare.setTranslateZ(-1);
 
             smallSquare.setCursor(Cursor.HAND);
             group.setCursor(Cursor.TEXT);

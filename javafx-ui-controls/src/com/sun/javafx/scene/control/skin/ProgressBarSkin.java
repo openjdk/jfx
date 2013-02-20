@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,6 +22,7 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
+
 package com.sun.javafx.scene.control.skin;
 
 import java.util.ArrayList;
@@ -54,7 +55,7 @@ import javafx.util.Duration;
 import com.sun.javafx.css.converters.BooleanConverter;
 import com.sun.javafx.css.converters.SizeConverter;
 import com.sun.javafx.scene.control.behavior.ProgressBarBehavior;
-import javafx.scene.Node;
+import javafx.css.Styleable;
 
 
 public class ProgressBarSkin extends BehaviorSkinBase<ProgressBar, ProgressBarBehavior<ProgressBar>> {
@@ -89,7 +90,7 @@ public class ProgressBarSkin extends BehaviorSkinBase<ProgressBar, ProgressBarBe
                 }
 
                 @Override
-                public CssMetaData getCssMetaData() {
+                public CssMetaData<ProgressBar,Number> getCssMetaData() {
                     return StyleableProperties.INDETERMINATE_BAR_LENGTH;
                 }
             
@@ -119,7 +120,7 @@ public class ProgressBarSkin extends BehaviorSkinBase<ProgressBar, ProgressBarBe
                 }
 
                 @Override
-                public CssMetaData getCssMetaData() {
+                public CssMetaData<ProgressBar,Boolean> getCssMetaData() {
                     return StyleableProperties.INDETERMINATE_BAR_ESCAPE;
                 }
             
@@ -150,7 +151,7 @@ public class ProgressBarSkin extends BehaviorSkinBase<ProgressBar, ProgressBarBe
                 }
 
                 @Override
-                public CssMetaData getCssMetaData() {
+                public CssMetaData<ProgressBar,Boolean> getCssMetaData() {
                     return StyleableProperties.INDETERMINATE_BAR_FLIP;
                 }
                         
@@ -183,7 +184,7 @@ public class ProgressBarSkin extends BehaviorSkinBase<ProgressBar, ProgressBarBe
                 }
 
                 @Override
-                public CssMetaData getCssMetaData() {
+                public CssMetaData<ProgressBar,Number> getCssMetaData() {
                     return StyleableProperties.INDETERMINATE_BAR_ANIMATION_TIME;
                 }
             
@@ -565,11 +566,11 @@ public class ProgressBarSkin extends BehaviorSkinBase<ProgressBar, ProgressBarBe
             }
         };
 
-         private static final List<CssMetaData<? extends Node, ?>> STYLEABLES;
+         private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
          static {
 
-            final List<CssMetaData<? extends Node, ?>> styleables = 
-                new ArrayList<CssMetaData<? extends Node, ?>>(SkinBase.getClassCssMetaData());
+            final List<CssMetaData<? extends Styleable, ?>> styleables = 
+                new ArrayList<CssMetaData<? extends Styleable, ?>>(SkinBase.getClassCssMetaData());
             styleables.add(INDETERMINATE_BAR_LENGTH);
             styleables.add(INDETERMINATE_BAR_ESCAPE);
             styleables.add(INDETERMINATE_BAR_FLIP);
@@ -583,7 +584,7 @@ public class ProgressBarSkin extends BehaviorSkinBase<ProgressBar, ProgressBarBe
      * @return The CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
      */
-    public static List<CssMetaData<? extends Node, ?>> getClassCssMetaData() {
+    public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
         return StyleableProperties.STYLEABLES;
     }
 
@@ -591,7 +592,7 @@ public class ProgressBarSkin extends BehaviorSkinBase<ProgressBar, ProgressBarBe
      * {@inheritDoc}
      */
     @Override
-    public List<CssMetaData<? extends Node, ?>> getCssMetaData() {
+    public List<CssMetaData<? extends Styleable, ?>> getCssMetaData() {
         return getClassCssMetaData();
     }
 

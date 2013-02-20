@@ -14,7 +14,7 @@
         ${rt.dist.root.dir}/javafx-common/dist/javafx-common.jar:
         ${runtime.dist.root.dir}/javafx-mx-common/dist/javafx-mx-common.jar:
         ${rt.dist.root.dir}/javafx-sg-common/dist/javafx-sg-common.jar:
-        ${runtime.dist.root.dir}/decora-runtime/dist/decora-runtime.jar:
+        ${rt.dist.root.dir}/decora-runtime/dist/decora-runtime.jar:
         ${runtime.deps.dir}/plugin_exports.jar:
         ${runtime.dist.root.dir}/aria/dist/aria.jar:
         ${runtime.dist.root.dir}/javafx-accessible/dist/javafx-accessible.jar:
@@ -24,7 +24,6 @@
     <import file="../build-defs.xml"/>
     <import file="build-common.xml"/>
 
-    <target name="test" depends="javafx-ui-common-common.test"/>
     <target name="-pre-coverage" depends="javafx-ui-common-common.-pre-coverage"/>
 
 </project>

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2007, 2012, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2007, 2013, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -251,11 +251,12 @@ public class GeneralTransform3D implements CanTransformVec3d{
      * to Clipping Coordinates (CC).
      * Note that the field of view is specified in radians.
      *
-     * @param fovy specifies the field of view in the y direction, in radians
+     * @param verticalFOV specifies whether the fov is vertical (Y direction).
+     * 
+     * @param fov specifies the field of view in radians
      *
-     * @param aspect specifies the aspect ratio and thus the field of
-     * view in the x direction. The aspect ratio is the ratio of x to y,
-     * or width to height.
+     * @param aspect specifies the aspect ratio. The aspect ratio is the ratio
+     * of width to height.
      *
      * @param zNear the distance to the frustum's near clipping plane.
      * This value must be positive, (the value -zNear is the location of the
@@ -265,19 +266,20 @@ public class GeneralTransform3D implements CanTransformVec3d{
      *
      * @return this transform
      */
-    public GeneralTransform3D perspective(double fovy, double aspect, double zNear, double zFar) {
+    public GeneralTransform3D perspective(boolean verticalFOV, 
+            double fov, double aspect, double zNear, double zFar) {
         double sine;
         double cotangent;
         double deltaZ;
-        double half_fov = fovy * 0.5;
+        double half_fov = fov * 0.5;
 
         deltaZ = zFar - zNear;
         sine = Math.sin(half_fov);
 
         cotangent = Math.cos(half_fov) / sine;
 
-        mat[0] = cotangent / aspect;
-        mat[5] = cotangent;
+        mat[0] = verticalFOV ? cotangent / aspect : cotangent;
+        mat[5] = verticalFOV ? cotangent : cotangent * aspect;
         mat[10] = -(zFar + zNear) / deltaZ;
         mat[11] = -2.0 * zNear * zFar / deltaZ;
         mat[14] = -1.0;

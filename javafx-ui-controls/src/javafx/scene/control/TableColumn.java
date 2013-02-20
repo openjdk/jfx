@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,11 +22,10 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
+
 package javafx.scene.control;
 
 import com.sun.javafx.beans.annotations.DuplicateInBuilderProperties;
-import com.sun.javafx.css.Styleable;
-import javafx.css.CssMetaData;
 import com.sun.javafx.scene.control.skin.NestedTableColumnHeader;
 import com.sun.javafx.scene.control.skin.TableColumnHeader;
 import com.sun.javafx.scene.control.skin.TableHeaderRow;
@@ -38,6 +37,8 @@ import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
+import javafx.css.CssMetaData;
+import javafx.css.Styleable;
 import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.event.EventTarget;
@@ -429,10 +430,10 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
                     TableView table = getTableView();
                     if (table == null) return;
                     Map<Object,Object> properties = table.getProperties();
-                    if (properties.containsKey(TableViewSkinBase.REBUILD)) {
-                        properties.remove(TableViewSkinBase.REBUILD);
+                    if (properties.containsKey(TableViewSkinBase.RECREATE)) {
+                        properties.remove(TableViewSkinBase.RECREATE);
                     }
-                    properties.put(TableViewSkinBase.REBUILD, Boolean.TRUE);
+                    properties.put(TableViewSkinBase.RECREATE, Boolean.TRUE);
                 }
             };
 
@@ -575,87 +576,71 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
     private static final String DEFAULT_STYLE_CLASS = "table-column";
 
     /**
-     * RT-19263
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an experimental API that is not intended for general 
-     * use and is subject to change in future versions
+     * {@inheritDoc}
+     * @return "TableColumn"
      */
-    @Deprecated
-    protected Styleable styleable; 
-       
+    @Override
+    public String getTypeSelector() {
+        return "TableColumn";
+    }
+
     /**
-     * RT-19263
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an experimental API that is not intended for general 
-     * use and is subject to change in future versions
+     * {@inheritDoc}
+     * @return {@code getTableView()}
      */
-    @Deprecated // SB-dependency: RT-21094 has been filed to track this
-    public Styleable impl_getStyleable() {
-        
-        if (styleable == null) {
-            styleable = new Styleable() {
+    @Override
+    public Styleable getStyleableParent() {
+        return getTableView();    }
 
-                @Override
-                public String getId() {
-                    return TableColumn.this.getId();
-                }
 
-                @Override
-                public List<String> getStyleClass() {
-                    return TableColumn.this.getStyleClass();
-                }
+    /**
+     * {@inheritDoc}
+    */
+    @Override
+    public List<CssMetaData<? extends Styleable, ?>> getCssMetaData() {
+        return getClassCssMetaData();
+    }                
 
-                @Override
-                public String getStyle() {
-                    return TableColumn.this.getStyle();
-                }
+   public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
+        return Collections.emptyList();
+    }                
+   
+    /**
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     */
+    @Deprecated    
+    // SB-dependency: RT-21094 has been filed to track this   
+   public Node impl_styleableGetNode() {
+        if (! (getTableView().getSkin() instanceof TableViewSkin)) return null;
+        TableViewSkin<?> skin = (TableViewSkin<?>) getTableView().getSkin();
 
-                @Override
-                public Styleable getStyleableParent() {
-                    return getTableView() == null ? null : getTableView().impl_getStyleable();
-                }
+        TableHeaderRow tableHeader = skin.getTableHeaderRow();
+        NestedTableColumnHeader rootHeader = tableHeader.getRootHeader();
 
-                
-                @Override
-                public List<CssMetaData<? extends Node, ?>> getCssMetaData() {
-                    return Collections.emptyList();
-                }                
+        // we now need to do a search for the header. We'll go depth-first.
+        return scan(rootHeader);
+    }
 
-                @Override
-                public Node getNode() {
-                    if (! (getTableView().getSkin() instanceof TableViewSkin)) return null;
-                    TableViewSkin<?> skin = (TableViewSkin<?>) getTableView().getSkin();
-                    
-                    TableHeaderRow tableHeader = skin.getTableHeaderRow();
-                    NestedTableColumnHeader rootHeader = tableHeader.getRootHeader();
-                    
-                    // we now need to do a search for the header. We'll go depth-first.
-                    return scan(rootHeader);
-                }
-                
-                private TableColumnHeader scan(TableColumnHeader header) {
-                    // firstly test that the parent isn't what we are looking for
-                    if (TableColumn.this.equals(header.getTableColumn())) {
-                        return header;
-                    }
-                    
-                    if (header instanceof NestedTableColumnHeader) {
-                        NestedTableColumnHeader parent = (NestedTableColumnHeader) header;
-                        for (int i = 0; i < parent.getColumnHeaders().size(); i++) {
-                            TableColumnHeader result = scan(parent.getColumnHeaders().get(i));
-                            if (result != null) {
-                                return result;
-                            }
-                        }
-                    }
-                    
-                    return null;
-                }
-            };
+    private TableColumnHeader scan(TableColumnHeader header) {
+        // firstly test that the parent isn't what we are looking for
+        if (TableColumn.this.equals(header.getTableColumn())) {
+            return header;
         }
-        return styleable;
-    }   
-    
+
+        if (header instanceof NestedTableColumnHeader) {
+            NestedTableColumnHeader parent = (NestedTableColumnHeader) header;
+            for (int i = 0; i < parent.getColumnHeaders().size(); i++) {
+                TableColumnHeader result = scan(parent.getColumnHeaders().get(i));
+                if (result != null) {
+                    return result;
+                }
+            }
+        }
+
+        return null;
+    }
+
     
     
     /***************************************************************************

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2012, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -348,6 +348,34 @@ public class Circle extends Shape {
                 (float)getCenterY(),
                 (float)getRadius());
         }
+    }
+
+    /**
+     * Returns a string representation of this {@code Circle} object.
+     * @return a string representation of this {@code Circle} object.
+     */
+    @Override
+    public String toString() {
+        final StringBuilder sb = new StringBuilder("Circle[");
+
+        String id = getId();
+        if (id != null) {
+            sb.append("id=").append(id).append(", ");
+        }
+
+        sb.append("centerX=").append(getCenterX());
+        sb.append(", centerY=").append(getCenterY());
+        sb.append(", radius=").append(getRadius());
+
+        sb.append(", fill=").append(getFill());
+
+        Paint stroke = getStroke();
+        if (stroke != null) {
+            sb.append(", stroke=").append(stroke);
+            sb.append(", strokeWidth=").append(getStrokeWidth());
+        }
+
+        return sb.append("]").toString();
     }
 }
 

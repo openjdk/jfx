@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2011, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2013, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,6 +22,7 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
+
 package javafx.scene.control;
 
 import java.util.List;
@@ -750,7 +751,7 @@ public class TreeView<T> extends Control {
             onScrollTo = new ObjectPropertyBase<EventHandler<ScrollToEvent<Integer>>>() {
                 @Override
                 protected void invalidated() {
-                    setEventHandler(ScrollToEvent.SCROLL_TO_TOP_INDEX, get());
+                    setEventHandler(ScrollToEvent.scrollToTopIndex(), get());
                 }
                 @Override
                 public Object getBean() {
@@ -940,7 +941,7 @@ public class TreeView<T> extends Control {
         private ChangeListener rootPropertyListener = new ChangeListener<TreeItem<T>>() {
             @Override public void changed(ObservableValue<? extends TreeItem<T>> observable, 
                     TreeItem<T> oldValue, TreeItem<T> newValue) {
-                setSelectedIndex(-1);
+                clearSelection();
                 updateTreeEventListener(oldValue, newValue);
             }
         };

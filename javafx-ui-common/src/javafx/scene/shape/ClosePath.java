@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2012, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -51,5 +51,14 @@ public class ClosePath extends PathElement {
     @Deprecated
     @Override public void impl_addTo(Path2D path) {
         path.closePath();
+    }
+
+    /**
+     * Returns a string representation of this {@code ArcTo} object.
+     * @return a string representation of this {@code ArcTo} object.
+     */
+    @Override
+    public String toString() {
+        return "ClosePath";
     }
 }

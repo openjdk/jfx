@@ -1,0 +1,80 @@
+/*
+ * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.  Oracle designates this
+ * particular file as subject to the "Classpath" exception as provided
+ * by Oracle in the LICENSE file that accompanied this code.
+ *
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
+ *
+ * You should have received a copy of the GNU General Public License version
+ * 2 along with this work; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+ * or visit www.oracle.com if you need additional information or have any
+ * questions.
+ */
+
+<<
+private float[] getSampletx() {
+    return new float[] {
+        getEffect().getOffsetX(),
+        getEffect().getOffsetY(),
+        getEffect().getScaleX(),
+        getEffect().getScaleY(),
+    };
+}
+private float[] getImagetx() {
+    float inset = getEffect().getWrap() ? 0.5f : 0f;
+    return new float[] {
+        inset / getInputNativeBounds(0).width,
+        inset / getInputNativeBounds(0).height,
+        (getInputBounds(0).width-2*inset) / getInputNativeBounds(0).width,
+        (getInputBounds(0).height-2*inset) / getInputNativeBounds(0).height,
+    };
+}
+private float getWrap() {
+    return getEffect().getWrap() ? 1f : 0f;
+}
+
+@Override
+protected Object getSamplerData(int i) {
+    return getEffect().getMapData();
+}
+
+@Override
+public int getTextureCoordinates(int inputIndex, float coords[],
+                                 float srcX, float srcY,
+                                 float srcNativeWidth,
+                                 float srcNativeHeight,
+                                 Rectangle dstBounds,
+                                 com.sun.javafx.geom.transform.BaseTransform transform)
+{
+    coords[0] = coords[1] = 0f;
+    coords[2] = coords[3] = 1f;
+    return 4;
+}
+>>
+
+param lsampler origImg;
+param fsampler mapImg;
+param float4 sampletx;
+param float4 imagetx;
+param float wrap;
+
+void main()
+{
+    float4 off = sample(mapImg, pos1);
+    float2 loc = pos0 + sampletx.zw * (off.xy + sampletx.xy);
+    loc -= wrap * floor(loc);
+    loc = imagetx.xy + (loc * imagetx.zw);
+    color = sample(origImg, loc);
+}

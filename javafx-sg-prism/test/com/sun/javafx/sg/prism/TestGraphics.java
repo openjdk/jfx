@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,6 +22,7 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
+
 package com.sun.javafx.sg.prism;
 
 import java.nio.Buffer;
@@ -36,8 +37,10 @@ import com.sun.prism.BasicStroke;
 import com.sun.prism.Graphics;
 import com.sun.prism.Image;
 import com.sun.prism.MediaFrame;
+import com.sun.prism.MeshFactory;
 import com.sun.prism.PixelFormat;
 import com.sun.prism.Presentable;
+import com.sun.prism.PresentableState;
 import com.sun.prism.RTTexture;
 import com.sun.prism.RenderTarget;
 import com.sun.prism.RenderingContext;
@@ -177,7 +180,6 @@ public class TestGraphics extends BaseGraphics {
                 @Override public int getContentY() { return 0; }
                 @Override public int getContentWidth() { return width; }
                 @Override public int getContentHeight() { return height; }
-                @Override public long getNativeSourceHandle() { return 0; }
                 @Override public int getLastImageSerial() { return 0; }
                 @Override public void setLastImageSerial(int serial) { }
                 @Override public void update(Image img) { }
@@ -190,11 +192,10 @@ public class TestGraphics extends BaseGraphics {
                 @Override public boolean getLinearFiltering() { return false; }
                 @Override public void setLinearFiltering(boolean linear) { }
                 @Override public void dispose() { }
-                @Override public long getNativeDestHandle() { return 0; }
                 @Override public void setOpaque(boolean opaque) { }
             };
         }
-        @Override public Presentable createPresentable(View view) { return null; }
+        @Override public Presentable createPresentable(PresentableState pstate) { return null; }
         @Override public VertexBuffer createVertexBuffer(int maxQuads) { return null; }
         @Override public ShapeRep createPathRep(boolean needs3D) { return null; }
         @Override public ShapeRep createRoundRectRep(boolean needs3D) { return null; }
@@ -202,15 +203,15 @@ public class TestGraphics extends BaseGraphics {
         @Override public ShapeRep createArcRep(boolean needs3D) { return null; }
         @Override public void addFactoryListener(ResourceFactoryListener l) { }
         @Override public void removeFactoryListener(ResourceFactoryListener l) { }
-        @Override public RenderingContext createRenderingContext(View view) { return null; }
+        @Override public RenderingContext createRenderingContext(PresentableState pstate) { return null; }
         @Override public void dispose() { }
+
+        @Override public MeshFactory get3DFactory() {
+            throw new UnsupportedOperationException("Not supported yet.");
+        }
     }
     
     private static class TestRenderTarget implements RenderTarget {
-
-        public long getNativeDestHandle() {
-            return 0;
-        }
 
         public Screen getAssociatedScreen() {
             return null;

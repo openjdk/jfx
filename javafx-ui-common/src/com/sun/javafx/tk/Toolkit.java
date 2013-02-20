@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2012, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,7 +25,6 @@
 
 package com.sun.javafx.tk;
 
-import com.sun.javafx.scene.SceneHelper;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -39,8 +38,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.WeakHashMap;
 import java.util.concurrent.CountDownLatch;
-
 import javafx.application.ConditionalFeature;
+import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.geometry.Dimension2D;
 import javafx.scene.Scene;
 import javafx.scene.effect.BlurType;
@@ -63,29 +62,28 @@ import javafx.stage.FileChooser.ExtensionFilter;
 import javafx.stage.Modality;
 import javafx.stage.StageStyle;
 import javafx.stage.Window;
-
+import com.sun.javafx.PlatformUtil;
+import com.sun.javafx.beans.event.AbstractNotifyListener;
 import com.sun.javafx.embed.HostInterface;
-import com.sun.javafx.geom.CameraImpl;
-import com.sun.javafx.geom.ParallelCameraImpl;
 import com.sun.javafx.geom.Path2D;
-import com.sun.javafx.geom.PerspectiveCameraImpl;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.jmx.HighlightRegion;
-import sun.util.logging.PlatformLogger;
 import com.sun.javafx.perf.PerformanceTracker;
 import com.sun.javafx.runtime.VersionInfo;
 import com.sun.javafx.runtime.async.AsyncOperation;
 import com.sun.javafx.runtime.async.AsyncOperationListener;
+import com.sun.javafx.scene.SceneHelper;
 import com.sun.javafx.scene.text.HitInfo;
 import com.sun.javafx.scene.text.TextLayoutFactory;
 import com.sun.javafx.sg.PGArc;
+import com.sun.javafx.sg.PGBox;
+import com.sun.javafx.sg.PGCanvas;
 import com.sun.javafx.sg.PGCircle;
 import com.sun.javafx.sg.PGCubicCurve;
 import com.sun.javafx.sg.PGEllipse;
 import com.sun.javafx.sg.PGGroup;
 import com.sun.javafx.sg.PGImageView;
 import com.sun.javafx.sg.PGLine;
-import com.sun.javafx.sg.PGMediaView;
 import com.sun.javafx.sg.PGNode;
 import com.sun.javafx.sg.PGPath;
 import com.sun.javafx.sg.PGPolygon;
@@ -96,17 +94,24 @@ import com.sun.javafx.sg.PGRegion;
 import com.sun.javafx.sg.PGSVGPath;
 import com.sun.javafx.sg.PGShape;
 import com.sun.javafx.sg.PGText;
-import com.sun.javafx.PlatformUtil;
-import com.sun.javafx.beans.event.AbstractNotifyListener;
-import com.sun.javafx.sg.PGCanvas;
-import com.sun.javafx.sg.PGWebView;
+import com.sun.javafx.sg.PGAmbientLight;
+import com.sun.javafx.sg.PGCamera;
+import com.sun.javafx.sg.PGCylinder;
+import com.sun.javafx.sg.PGLightBase;
+import com.sun.javafx.sg.PGMeshView;
+import com.sun.javafx.sg.PGParallelCamera;
+import com.sun.javafx.sg.PGPerspectiveCamera;
+import com.sun.javafx.sg.PGPhongMaterial;
+import com.sun.javafx.sg.PGPointLight;
+import com.sun.javafx.sg.PGSphere;
+import com.sun.javafx.sg.PGTriangleMesh;
 import com.sun.scenario.DelayedRunnable;
 import com.sun.scenario.animation.AbstractMasterTimer;
 import com.sun.scenario.effect.AbstractShadow.ShadowMode;
 import com.sun.scenario.effect.Color4f;
 import com.sun.scenario.effect.FilterContext;
 import com.sun.scenario.effect.Filterable;
-import javafx.beans.property.ReadOnlyObjectProperty;
+import sun.util.logging.PlatformLogger;
 
 
 public abstract class Toolkit {
@@ -502,9 +507,6 @@ public abstract class Toolkit {
     //to be used for testing only
     public abstract void waitFor(Task t);
 
-    public abstract PerspectiveCameraImpl createPerspectiveCamera();
-    public abstract ParallelCameraImpl createParallelCamera();
-
     private Object checkSingleColor(List<Stop> stops) {
         if (stops.size() == 2) {
             Color c = stops.get(0).getColor();
@@ -629,15 +631,37 @@ public abstract class Toolkit {
     public abstract PGQuadCurve createPGQuadCurve();
     public abstract PGRectangle createPGRectangle();
     public abstract PGImageView createPGImageView();
-    public abstract PGMediaView createPGMediaView();
     public abstract PGGroup createPGGroup();
     public abstract PGRegion createPGRegion();
     public abstract PGCanvas createPGCanvas();
     public abstract PGText createPGText();
-    public abstract PGWebView createPGWebView();
 
     public abstract Object createSVGPathObject(SVGPath svgpath);
     public abstract Path2D createSVGPath2D(SVGPath svgpath);
+
+    // 3D API support for FX 8
+    // Shapes and mesh
+    public abstract PGBox createPGBox();
+    public abstract PGCylinder createPGCylinder();
+    public abstract PGSphere createPGSphere();
+    public abstract PGTriangleMesh createPGTriangleMesh();
+    public abstract PGMeshView createPGMeshView();
+
+    // Material
+    public abstract PGPhongMaterial createPGPhongMaterial();
+    
+    // Lights
+    public abstract PGAmbientLight createPGAmbientLight();
+    public abstract PGPointLight createPGPointLight();   
+    
+    // Cameras
+    public abstract PGParallelCamera createPGParallelCamera();   
+    public abstract PGPerspectiveCamera createPGPerspectiveCamera(boolean fixedEyePosition);
+    
+    // TODO: Need to evaluate the lighting logic
+    public abstract List<PGLightBase> getLightsInScene();
+    public abstract boolean isLightsDirty();
+    public abstract void setLightsDirty(boolean lightsDirty);
 
     /**
      * Tests whether the pixel on the given coordinates in the given image
@@ -727,7 +751,7 @@ public abstract class Toolkit {
         // Rendering parameters either from Scene or SnapShotParams
         public boolean depthBuffer;
         public Object platformPaint;
-        public CameraImpl camera;
+        public PGCamera camera;
 
         // PlatformImage into which to render or null
         public Object platformImage;

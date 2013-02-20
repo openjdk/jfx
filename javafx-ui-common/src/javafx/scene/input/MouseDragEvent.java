@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2000, 2012, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2000, 2013, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,6 +22,7 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
+
 package javafx.scene.input;
 
 import javafx.event.EventTarget;
@@ -130,8 +131,8 @@ public final class MouseDragEvent extends MouseEvent{
      * @param source the source of the event. Can be null.
      * @param target the target of the event. Can be null.
      * @param eventType The type of the event.
-     * @param x The x with respect to the source. Should be in scene coordinates if source == null or source is not a Node.
-     * @param y The y with respect to the source. Should be in scene coordinates if source == null or source is not a Node.
+     * @param x The x with respect to the scene.
+     * @param y The y with respect to the scene.
      * @param screenX The x coordinate relative to screen.
      * @param screenY The y coordinate relative to screen.
      * @param button the mouse button used
@@ -145,6 +146,9 @@ public final class MouseDragEvent extends MouseEvent{
      * @param secondaryButtonDown true if secondary button was pressed.
      * @param synthesized if this event was synthesized
      * @param popupTrigger whether this event denotes a popup trigger for current platform
+     * @param pickResult pick result. Can be null, in this case a 2D pick result
+     *                   without any further values is constructed
+     *                   based on the scene coordinates and target
      * @param gestureSource source object of the ongoing gesture.
      */
     public MouseDragEvent(Object source, EventTarget target, EventType<MouseDragEvent> eventType,
@@ -152,12 +156,12 @@ public final class MouseDragEvent extends MouseEvent{
             MouseButton button, int clickCount,
             boolean shiftDown, boolean controlDown, boolean altDown, boolean metaDown,
             boolean primaryButtonDown, boolean middleButtonDown, boolean secondaryButtonDown,
-            boolean synthesized, boolean popupTrigger,
+            boolean synthesized, boolean popupTrigger, PickResult pickResult,
             Object gestureSource) {
         super(source, target, eventType, x, y, screenX, screenY, button,
                 clickCount, shiftDown, controlDown, altDown, metaDown,
                 primaryButtonDown, middleButtonDown, secondaryButtonDown,
-                synthesized, popupTrigger, false);
+                synthesized, popupTrigger, false, pickResult);
         this.gestureSource = gestureSource;
     }
 
@@ -180,6 +184,9 @@ public final class MouseDragEvent extends MouseEvent{
      * @param secondaryButtonDown true if secondary button was pressed.
      * @param synthesized if this event was synthesized
      * @param popupTrigger whether this event denotes a popup trigger for current platform
+     * @param pickResult pick result. Can be null, in this case a 2D pick result
+     *                   without any further values is constructed
+     *                   based on the scene coordinates
      * @param gestureSource source object of the ongoing gesture.
      */
     public MouseDragEvent(EventType<MouseDragEvent> eventType,
@@ -187,11 +194,12 @@ public final class MouseDragEvent extends MouseEvent{
             MouseButton button, int clickCount,
             boolean shiftDown, boolean controlDown, boolean altDown, boolean metaDown,
             boolean primaryButtonDown, boolean middleButtonDown, boolean secondaryButtonDown,
-            boolean synthesized, boolean popupTrigger,
+            boolean synthesized, boolean popupTrigger, PickResult pickResult,
             Object gestureSource) {
         this(null, null, eventType, x, y, screenX, screenY, button, clickCount,
                 shiftDown, controlDown, altDown, metaDown, primaryButtonDown,
-                middleButtonDown, secondaryButtonDown, synthesized, popupTrigger, gestureSource);
+                middleButtonDown, secondaryButtonDown, synthesized, popupTrigger, 
+                pickResult, gestureSource);
      }
 
    
@@ -220,7 +228,8 @@ public final class MouseDragEvent extends MouseEvent{
         sb.append(", eventType = ").append(getEventType());
         sb.append(", consumed = ").append(isConsumed());
 
-        sb.append(", x = ").append(getX()).append(", y = ").append(getY());
+        sb.append(", x = ").append(getX()).append(", y = ").append(getY())
+                .append(", z = ").append(getZ());
 
         if (getButton() != null) {
             sb.append(", button = ").append(getButton());
@@ -255,6 +264,7 @@ public final class MouseDragEvent extends MouseEvent{
         if (isSynthesized()) {
             sb.append(", synthesized");
         }
+        sb.append(", pickResult = ").append(getPickResult());
 
         return sb.append("]").toString();
     }

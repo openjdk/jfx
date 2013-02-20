@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2012, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -121,6 +121,17 @@ public class HLineTo extends PathElement {
         } else {
             path.lineTo((float)(path.getCurrentX() + getX()), path.getCurrentY());
         }
+    }
+
+    /**
+     * Returns a string representation of this {@code HLineTo} object.
+     * @return a string representation of this {@code HLineTo} object.
+     */
+    @Override
+    public String toString() {
+        final StringBuilder sb = new StringBuilder("HLineTo[");
+        sb.append("x=").append(getX());
+        return sb.append("]").toString();
     }
 }
 

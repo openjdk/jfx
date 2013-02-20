@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -47,6 +47,8 @@ import com.sun.javafx.scene.control.behavior.TreeCellBehavior;
 import javafx.animation.RotateTransition;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
+import javafx.beans.value.WeakChangeListener;
+import javafx.css.Styleable;
 import javafx.geometry.Insets;
 import javafx.util.Duration;
 
@@ -87,7 +89,7 @@ public class TreeCellSkin extends CellSkinBase<TreeCell<?>, TreeCellBehavior> {
                     return "indent";
                 }
 
-                @Override public CssMetaData getCssMetaData() {
+                @Override public CssMetaData<TreeCell<?>,Number> getCssMetaData() {
                     return StyleableProperties.INDENT;
                 }
             };
@@ -103,6 +105,8 @@ public class TreeCellSkin extends CellSkinBase<TreeCell<?>, TreeCellBehavior> {
             updateDisclosureNodeRotation(true);
         }
     };
+    private final WeakChangeListener<Boolean> weakTreeItemExpandedListener = 
+            new WeakChangeListener(treeItemExpandedListener);
 
     public TreeCellSkin(TreeCell<?> control) {
         super(control, new TreeCellBehavior(control));
@@ -148,12 +152,14 @@ public class TreeCellSkin extends CellSkinBase<TreeCell<?>, TreeCellBehavior> {
     
     private void updateTreeItem() {
         if (treeItem != null) {
-            treeItem.expandedProperty().removeListener(treeItemExpandedListener);
+            treeItem.expandedProperty().removeListener(weakTreeItemExpandedListener);
         }
         treeItem = getSkinnable().getTreeItem();
         if (treeItem != null) {
-            treeItem.expandedProperty().addListener(treeItemExpandedListener);
+            treeItem.expandedProperty().addListener(weakTreeItemExpandedListener);
         }
+        
+        updateDisclosureNodeRotation(false);
     }
     
     private void updateDisclosureNode() {
@@ -267,9 +273,10 @@ public class TreeCellSkin extends CellSkinBase<TreeCell<?>, TreeCellBehavior> {
 
         // include the disclosure node width
         Node disclosureNode = getSkinnable().getDisclosureNode();
+        double disclosureNodePrefWidth = disclosureNode == null ? 0 : disclosureNode.prefWidth(-1);
         final double defaultDisclosureWidth = maxDisclosureWidthMap.containsKey(tree) ?
                 maxDisclosureWidthMap.get(tree) : 0;
-        pw += Math.max(defaultDisclosureWidth, disclosureNode.prefWidth(-1));
+        pw += Math.max(defaultDisclosureWidth, disclosureNodePrefWidth);
 
         return pw;
     }
@@ -283,8 +290,8 @@ public class TreeCellSkin extends CellSkinBase<TreeCell<?>, TreeCellBehavior> {
     /** @treatAsPrivate */
     private static class StyleableProperties {
         
-        private static final CssMetaData<TreeCell,Number> INDENT = 
-            new CssMetaData<TreeCell,Number>("-fx-indent",
+        private static final CssMetaData<TreeCell<?>,Number> INDENT = 
+            new CssMetaData<TreeCell<?>,Number>("-fx-indent",
                 SizeConverter.getInstance(), 10.0) {
                     
             @Override public boolean isSettable(TreeCell n) {
@@ -294,17 +301,15 @@ public class TreeCellSkin extends CellSkinBase<TreeCell<?>, TreeCellBehavior> {
 
             @Override public StyleableProperty<Number> getStyleableProperty(TreeCell n) {
                 final TreeCellSkin skin = (TreeCellSkin) n.getSkin();
-                return (StyleableProperty)skin.indentProperty();
+                return (StyleableProperty<Number>)skin.indentProperty();
             }
         };
         
-        private static final List<CssMetaData<? extends Node, ?>> STYLEABLES;
+        private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
         static {
-            final List<CssMetaData<? extends Node, ?>> styleables =
-                new ArrayList<CssMetaData<? extends Node, ?>>(CellSkinBase.getClassCssMetaData());
-            Collections.addAll(styleables,
-                INDENT
-            );
+            final List<CssMetaData<? extends Styleable, ?>> styleables =
+                new ArrayList<CssMetaData<? extends Styleable, ?>>(CellSkinBase.getClassCssMetaData());
+            styleables.add(INDENT);
             STYLEABLES = Collections.unmodifiableList(styleables);
         }
     }
@@ -313,7 +318,7 @@ public class TreeCellSkin extends CellSkinBase<TreeCell<?>, TreeCellBehavior> {
      * @return The CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
      */
-    public static List<CssMetaData<? extends Node, ?>> getClassCssMetaData() {
+    public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
         return StyleableProperties.STYLEABLES;
     }
 
@@ -321,7 +326,7 @@ public class TreeCellSkin extends CellSkinBase<TreeCell<?>, TreeCellBehavior> {
      * {@inheritDoc}
      */
     @Override
-    public List<CssMetaData<? extends Node, ?>> getCssMetaData() {
+    public List<CssMetaData<? extends Styleable, ?>> getCssMetaData() {
         return getClassCssMetaData();
     }
 }

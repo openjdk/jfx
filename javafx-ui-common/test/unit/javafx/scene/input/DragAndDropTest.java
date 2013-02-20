@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2000, 2012, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2000, 2013, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,15 +22,18 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
+
 package javafx.scene.input;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import java.security.AccessControlContext;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -1275,6 +1278,108 @@ public class DragAndDropTest {
     }
     
     /************************************************************************/
+    /*                             PICK RESULT                              */
+    /************************************************************************/
+
+    @Test
+    public void shouldCompute3dCoordinates() {
+        Node n = twoNodes()[0];
+        n.setTranslateZ(50);
+        dragSource = n;
+
+        MouseEventGenerator gen = new MouseEventGenerator();
+
+        counter = 0;
+        n.setOnMousePressed(doDetect);
+        n.setOnDragDetected(stringSource(TransferMode.ANY));
+        n.setOnDragOver(new EventHandler<DragEvent>() {
+            @Override public void handle(DragEvent event) {
+                counter++;
+                assertEquals(52, event.getX(), 0.00001);
+                assertEquals(52, event.getY(), 0.00001);
+                assertEquals(0, event.getZ(), 0.00001);
+            }
+        });
+
+        n.getScene().setOnDragOver(new EventHandler<DragEvent>() {
+            @Override public void handle(DragEvent event) {
+                counter++;
+                assertEquals(52, event.getX(), 0.00001);
+                assertEquals(52, event.getY(), 0.00001);
+                assertEquals(50, event.getZ(), 0.00001);
+            }
+        });
+
+        n.getScene().impl_processMouseEvent(
+                gen.generateMouseEvent(MouseEvent.MOUSE_PRESSED, 50, 50));
+        toolkit.dragTo(52, 52, TransferMode.COPY);
+        toolkit.drop(252, 52, TransferMode.COPY);
+        toolkit.done(TransferMode.COPY);
+
+        assertEquals(2, counter);
+    }
+
+    @Test
+    public void dragEventsHavePickResult() {
+        final Node[] nodes = twoNodes();
+        final Node n1 = nodes[0];
+        final Node n2 = nodes[1];
+        final MouseEventGenerator gen = new MouseEventGenerator();
+
+        dragSource = n1;
+        n1.setOnMousePressed(doDetect);
+        n1.setOnDragDetected(stringSource(TransferMode.ANY));
+        n1.setOnDragOver(new EventHandler<DragEvent>() {
+            @Override public void handle(DragEvent event) {
+                PickResult pickRes = event.getPickResult();
+                assertNotNull(pickRes);
+                assertSame(n1, pickRes.getIntersectedNode());
+                assertEquals(52, pickRes.getIntersectedPoint().getX(), 0.00001);
+                assertEquals(52, pickRes.getIntersectedPoint().getY(), 0.00001);
+                assertEquals(0, pickRes.getIntersectedPoint().getZ(), 0.00001);
+                counter++;
+            }
+        });
+        EventHandler<DragEvent> switchNodeHandler = new EventHandler<DragEvent>() {
+            @Override public void handle(DragEvent event) {
+                PickResult pickRes = event.getPickResult();
+                assertNotNull(pickRes);
+                assertSame(n2, pickRes.getIntersectedNode());
+                assertEquals(252, pickRes.getIntersectedPoint().getX(), 0.00001);
+                assertEquals(52, pickRes.getIntersectedPoint().getY(), 0.00001);
+                assertEquals(0, pickRes.getIntersectedPoint().getZ(), 0.00001);
+                event.acceptTransferModes(TransferMode.COPY);
+                counter++;
+            }
+        };
+        n1.setOnDragExited(switchNodeHandler);
+        n2.setOnDragEntered(switchNodeHandler);
+        n2.setOnDragOver(switchNodeHandler);
+        n2.setOnDragDropped(switchNodeHandler);
+        n1.setOnDragDone(new EventHandler<DragEvent>() {
+            @Override public void handle(DragEvent event) {
+                PickResult pickRes = event.getPickResult();
+                assertNotNull(pickRes);
+                assertNull(pickRes.getIntersectedNode());
+                assertEquals(0, pickRes.getIntersectedPoint().getX(), 0.00001);
+                assertEquals(0, pickRes.getIntersectedPoint().getY(), 0.00001);
+                assertEquals(0, pickRes.getIntersectedPoint().getZ(), 0.00001);
+                counter++;
+            }
+        });
+
+        n1.getScene().impl_processMouseEvent(
+                gen.generateMouseEvent(MouseEvent.MOUSE_PRESSED, 50, 50));
+        toolkit.dragTo(52, 52, TransferMode.COPY);
+        toolkit.dragTo(252, 52, TransferMode.COPY);
+        toolkit.drop(252, 52, TransferMode.COPY);
+        toolkit.done(TransferMode.COPY);
+
+        assertEquals(6, counter);
+    }
+
+
+    /************************************************************************/
     /*                             HELPER CODE                              */
     /************************************************************************/
     
@@ -1375,7 +1480,11 @@ public class DragAndDropTest {
         private Image image;
         private double offsetX;
         private double offsetY;
-        
+
+        @Override
+        public void setSecurityContext(AccessControlContext ctx) {
+        }
+
         @Override
         public Object getContent(DataFormat df) {
             for (Pair<DataFormat, Object> pair : content) {
@@ -1416,9 +1525,6 @@ public class DragAndDropTest {
             return true;
         }
         
-        @Override public void initSecurityContext() {
-        }
-
         @Override
         public void setDragView(Image image) {
             this.image = image;
@@ -1461,7 +1567,7 @@ public class DragAndDropTest {
         TKDragSourceListener srcListener;
         TKDragGestureListener gstrListener;
         TKDropTargetListener trgListener;
-        Dragboard db;
+        TKClipboard db;
 
         @Override
         public void registerListener(TKDragGestureListener l) {
@@ -1475,16 +1581,16 @@ public class DragAndDropTest {
         
         
         @Override
-        public Dragboard createDragboard() {
-            db = new Dragboard(new ClipboardImpl());
+        public TKClipboard createDragboard() {
+            db = new ClipboardImpl();
             return db;
         }
 
         @Override
         public void startDrag(TKScene scene, Set<TransferMode> tm, 
                 TKDragSourceListener l, Dragboard dragboard) {
-            ((ClipboardImpl) db.impl_getPeer()).setTransferModes(tm);
-            ((ClipboardImpl) db.impl_getPeer()).flush();
+            ((ClipboardImpl)db).setTransferModes(tm);
+            ((ClipboardImpl)db).flush();
             dragging = true;
             srcListener = l;
         }
@@ -1492,20 +1598,22 @@ public class DragAndDropTest {
         @Override
         public DragEvent convertDragEventToFx(Object event, Dragboard dragboard) {
             DragEvent de = (DragEvent) event;
-            return de.copyFor(de.getSource(), de.getTarget(), 
-                    de.getGestureSource(), de.getGestureTarget(), dragboard);
+            return new DragEvent(de.getSource(), de.getTarget(), de.getEventType(),
+                    dragboard, de.getSceneX(), de.getSceneY(),
+                    de.getScreenX(), de.getScreenY(), de.getTransferMode(),
+                    de.getGestureSource(), de.getGestureTarget(), de.getPickResult());
         }
         
         public TransferMode dragTo(double x, double y, TransferMode tm) {
-            return trgListener.dragOver(x, y, x, y, tm, db);
+            return trgListener.dragOver(x, y, x, y, tm);
         }
         
         public TransferMode drop(double x, double y, TransferMode tm) {
-            return trgListener.drop(x, y, x, y, tm, db);
+            return trgListener.drop(x, y, x, y, tm);
         }
         
         public void done(TransferMode tm) {
-            srcListener.dragDropEnd(0, 0, 0, 0, tm, db);
+            srcListener.dragDropEnd(0, 0, 0, 0, tm);
         }
         
         public void stopDrag() {

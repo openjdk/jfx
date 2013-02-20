@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,6 +22,7 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
+
 package javafx.scene.control;
 
 import java.text.Collator;
@@ -36,6 +37,7 @@ import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.css.Styleable;
 import javafx.event.Event;
 import javafx.event.EventDispatchChain;
 import javafx.event.EventHandler;
@@ -89,7 +91,7 @@ import javafx.collections.ObservableMap;
  * @see TreeTableColumn
  * @see TablePositionBase
  */
-public abstract class TableColumnBase<S,T> implements EventTarget {
+public abstract class TableColumnBase<S,T> implements EventTarget, Styleable {
     
     /***************************************************************************
      *                                                                         *
@@ -264,7 +266,7 @@ public abstract class TableColumnBase<S,T> implements EventTarget {
      */
     private StringProperty id;
     public final void setId(String value) { idProperty().set(value); }
-    public final String getId() { return id == null ? null : id.get(); }
+    @Override public final String getId() { return id == null ? null : id.get(); }
     public final StringProperty idProperty() {
         if (id == null) {
             id = new SimpleStringProperty(this, "id");
@@ -287,7 +289,7 @@ public abstract class TableColumnBase<S,T> implements EventTarget {
      */
     private StringProperty style;
     public final void setStyle(String value) { styleProperty().set(value); }
-    public final String getStyle() { return style == null ? null : style.get(); }
+    @Override public final String getStyle() { return style == null ? null : style.get(); }
     public final StringProperty styleProperty() {
         if (style == null) {
             style = new SimpleStringProperty(this, "style");
@@ -307,7 +309,7 @@ public abstract class TableColumnBase<S,T> implements EventTarget {
      * @see <a href="http://www.w3.org/TR/css3-selectors/#class-html">CSS3 class selectors</a>
      * @since 2.2
      */
-    public ObservableList<String> getStyleClass() {
+    @Override public ObservableList<String> getStyleClass() {
         return styleClass;
     }
     

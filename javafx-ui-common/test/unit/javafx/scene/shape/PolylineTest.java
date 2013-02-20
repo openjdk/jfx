@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2012, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -34,6 +34,7 @@ import javafx.collections.ObservableList;
 import javafx.scene.NodeTest;
 
 import org.junit.Test;
+import static org.junit.Assert.*;
 
 import com.sun.javafx.pgstub.StubPolyline;
 
@@ -138,5 +139,11 @@ public final class PolylineTest {
         for (; i < pgPoints.length; ++i) {
             assertEquals(expectedPoints[i], pgPoints[i], 0);
         }
+    }
+
+    @Test public void toStringShouldReturnNonEmptyString() {
+        String s = new Polyline().toString();
+        assertNotNull(s);
+        assertFalse(s.isEmpty());
     }
 }

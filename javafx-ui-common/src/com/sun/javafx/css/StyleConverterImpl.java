@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2012, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -34,6 +34,7 @@ import java.util.HashMap;
 import java.util.Map;
 import javafx.css.CssMetaData;
 import javafx.css.StyleConverter;
+import javafx.css.Styleable;
 import javafx.scene.Node;
 
 /**
@@ -51,7 +52,7 @@ public class StyleConverterImpl<F, T> extends StyleConverter<F, T> {
      * Convert from the constituent values to the target property type.
      * Implemented by Types that have Keys with subKeys.
      */
-    public T convert(Map<CssMetaData<? extends Node, ?>,Object> convertedValues) {
+    public T convert(Map<CssMetaData<? extends Styleable, ?>,Object> convertedValues) {
         return null;
     }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2012, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,6 +22,7 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
+
 package javafx.scene.input;
 
 import javafx.event.EventTarget;
@@ -94,8 +95,8 @@ public final class SwipeEvent extends GestureEvent {
      * @param source the source of the event. Can be null.
      * @param target the target of the event. Can be null.
      * @param eventType The type of the event.
-     * @param x The x with respect to the source. Should be in scene coordinates if source == null or source is not a Node.
-     * @param y The y with respect to the source. Should be in scene coordinates if source == null or source is not a Node.
+     * @param x The x with respect to the scene.
+     * @param y The y with respect to the scene.
      * @param screenX The x coordinate relative to screen.
      * @param screenY The y coordinate relative to screen.
      * @param shiftDown true if shift modifier was pressed.
@@ -104,6 +105,9 @@ public final class SwipeEvent extends GestureEvent {
      * @param metaDown true if meta modifier was pressed.
      * @param direct true if the event was caused by direct input device. See {@link #isDirect() }
      * @param touchCount number of touch points
+     * @param pickResult pick result. Can be null, in this case a 2D pick result
+     *                   without any further values is constructed
+     *                   based on the scene coordinates and the target
      */
     public SwipeEvent(Object source, EventTarget target,
             final EventType<SwipeEvent> eventType,
@@ -114,10 +118,12 @@ public final class SwipeEvent extends GestureEvent {
             boolean altDown,
             boolean metaDown,
             boolean direct,
-            int touchCount) {
+            int touchCount,
+            PickResult pickResult) {
 
         super(source, target, eventType, x, y, screenX, screenY,
-                shiftDown, controlDown, altDown, metaDown, direct, false);
+                shiftDown, controlDown, altDown, metaDown, direct, false,
+                pickResult);
         this.touchCount = touchCount;
     }
 
@@ -134,6 +140,9 @@ public final class SwipeEvent extends GestureEvent {
      * @param metaDown true if meta modifier was pressed.
      * @param direct true if the event was caused by direct input device. See {@link #isDirect() }
      * @param touchCount number of touch points
+     * @param pickResult pick result. Can be null, in this case a 2D pick result
+     *                   without any further values is constructed
+     *                   based on the scene coordinates
      */
     public SwipeEvent(final EventType<SwipeEvent> eventType,
             double x, double y,
@@ -143,9 +152,10 @@ public final class SwipeEvent extends GestureEvent {
             boolean altDown,
             boolean metaDown,
             boolean direct,
-            int touchCount) {
+            int touchCount,
+            PickResult pickResult) {
         this(null, null, eventType, x, y, screenX, screenY, shiftDown, controlDown,
-                altDown, metaDown, direct, touchCount);
+                altDown, metaDown, direct, touchCount, pickResult);
     }
 
     private final int touchCount;
@@ -171,7 +181,8 @@ public final class SwipeEvent extends GestureEvent {
         sb.append(", consumed = ").append(isConsumed());
         sb.append(", touchCount = ").append(getTouchCount());
 
-        sb.append(", x = ").append(getX()).append(", y = ").append(getY());
+        sb.append(", x = ").append(getX()).append(", y = ").append(getY())
+                .append(", z = ").append(getZ());
         sb.append(isDirect() ? ", direct" : ", indirect");
 
         if (isShiftDown()) {
@@ -189,6 +200,7 @@ public final class SwipeEvent extends GestureEvent {
         if (isShortcutDown()) {
             sb.append(", shortcutDown");
         }
+        sb.append(", pickResult = ").append(getPickResult());
 
         return sb.append("]").toString();
     }

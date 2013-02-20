@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2012, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,7 +22,6 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-
 
 package javafx.scene.input;
 
@@ -148,7 +147,9 @@ public final class KeyEvent extends InputEvent {
                                            middleButtonDown,
                                            secondaryButtonDown,
                                            false,
-                                           popupTrigger
+                                           popupTrigger,
+                                           false,
+                                           null
                                            );
             }
 
@@ -166,7 +167,7 @@ public final class KeyEvent extends InputEvent {
                         shiftDown, controlDown, altDown, metaDown, false, false,
                         scrollX, scrollY, 0, 0,
                         xTextUnits, xText, yTextUnits, yText,
-                        0);
+                        0, null);
             }
         };
         FXRobotHelper.setInputAccessor(a);

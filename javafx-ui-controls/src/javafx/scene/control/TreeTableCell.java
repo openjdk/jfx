@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2011, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,6 +22,7 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
+
 package javafx.scene.control;
 
 import javafx.css.PseudoClass;
@@ -89,8 +90,8 @@ public class TreeTableCell<S,T> extends IndexedCell<T> {
      * be mutated, we create this observer here, and add/remove it from the
      * storeTableView method.
      */
-    private ListChangeListener<TablePosition> selectedListener = new ListChangeListener<TablePosition>() {
-        @Override public void onChanged(Change<? extends TablePosition> c) {
+    private ListChangeListener<TreeTablePosition<S,T>> selectedListener = new ListChangeListener<TreeTablePosition<S,T>>() {
+        @Override public void onChanged(Change<? extends TreeTablePosition<S,T>> c) {
             updateSelection();
         }
     };
@@ -116,22 +117,22 @@ public class TreeTableCell<S,T> extends IndexedCell<T> {
         }
     };
     
-    private ListChangeListener<TableColumn<S,T>> visibleLeafColumnsListener = new ListChangeListener<TableColumn<S,T>>() {
-        @Override public void onChanged(Change<? extends TableColumn<S,T>> c) {
+    private ListChangeListener<TreeTableColumn<S,?>> visibleLeafColumnsListener = new ListChangeListener<TreeTableColumn<S,?>>() {
+        @Override public void onChanged(Change<? extends TreeTableColumn<S,?>> c) {
             updateColumnIndex();
         }
     };
     
-    private final WeakListChangeListener weakSelectedListener = 
-            new WeakListChangeListener(selectedListener);
+    private final WeakListChangeListener<TreeTablePosition<S,T>> weakSelectedListener = 
+            new WeakListChangeListener<TreeTablePosition<S,T>>(selectedListener);
     private final WeakInvalidationListener weakFocusedListener = 
             new WeakInvalidationListener(focusedListener);
     private final WeakInvalidationListener weaktableRowUpdateObserver = 
             new WeakInvalidationListener(tableRowUpdateObserver);
     private final WeakInvalidationListener weakEditingListener = 
             new WeakInvalidationListener(editingListener);
-    private final WeakListChangeListener weakVisibleLeafColumnsListener =
-            new WeakListChangeListener(visibleLeafColumnsListener);
+    private final WeakListChangeListener<TreeTableColumn<S,?>> weakVisibleLeafColumnsListener =
+            new WeakListChangeListener<TreeTableColumn<S,?>>(visibleLeafColumnsListener);
 
     
     /***************************************************************************
@@ -241,8 +242,8 @@ public class TreeTableCell<S,T> extends IndexedCell<T> {
 
     /** {@inheritDoc} */
     @Override public void startEdit() {
-        final TreeTableView table = getTreeTableView();
-        final TreeTableColumn column = getTableColumn();
+        final TreeTableView<S> table = getTreeTableView();
+        final TreeTableColumn<S,T> column = getTableColumn();
         if (! isEditable() ||
                 (table != null && ! table.isEditable()) ||
                 (column != null && ! getTableColumn().isEditable())) {
@@ -258,7 +259,7 @@ public class TreeTableCell<S,T> extends IndexedCell<T> {
             CellEditEvent editEvent = new CellEditEvent(
                 table,
                 table.getEditingCell(),
-                TableColumn.editStartEvent(),
+                TreeTableColumn.editStartEvent(),
                 null
             );
 
@@ -270,13 +271,13 @@ public class TreeTableCell<S,T> extends IndexedCell<T> {
     @Override public void commitEdit(T newValue) {
         if (! isEditing()) return;
         
-        final TreeTableView table = getTreeTableView();
+        final TreeTableView<S> table = getTreeTableView();
         if (table != null) {
             // Inform the TableView of the edit being ready to be committed.
             CellEditEvent editEvent = new CellEditEvent(
                 table,
                 table.getEditingCell(),
-                TableColumn.editCommitEvent(),
+                TreeTableColumn.editCommitEvent(),
                 newValue
             );
 
@@ -301,19 +302,19 @@ public class TreeTableCell<S,T> extends IndexedCell<T> {
     @Override public void cancelEdit() {
         if (! isEditing()) return;
 
-        final TreeTableView table = getTreeTableView();
+        final TreeTableView<S> table = getTreeTableView();
 
         super.cancelEdit();
 
         // reset the editing index on the TableView
         if (table != null) {
-            TreeTablePosition editingCell = table.getEditingCell();
+            TreeTablePosition<S,?> editingCell = table.getEditingCell();
             if (updateEditingIndex) table.edit(-1, null);
 
             CellEditEvent editEvent = new CellEditEvent(
                 table,
                 editingCell,
-                TableColumn.editCancelEvent(),
+                TreeTableColumn.editCancelEvent(),
                 null
             );
 

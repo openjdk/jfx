@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2000, 2012, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2000, 2013, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,6 +26,8 @@
 package javafx.scene.input;
 
 import java.io.File;
+import java.security.AccessControlContext;
+import java.security.AccessController;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -158,6 +160,8 @@ public class Clipboard {
      */
 
     private static Clipboard systemClipboard = null;
+
+    private final AccessControlContext acc = AccessController.getContext();
     
     /**
      * Gets the current system clipboard, through which data can be stored and
@@ -179,7 +183,7 @@ public class Clipboard {
         if (peer == null) {
             throw new NullPointerException();
         }
-        peer.initSecurityContext();
+        peer.setSecurityContext(acc);
         this.peer = peer;
     }
 
@@ -190,7 +194,7 @@ public class Clipboard {
      */
     public final void clear() {
         setContent(null);
-    };
+    }
 
     /**
      * Gets the set of DataFormat types on this Clipboard instance which have

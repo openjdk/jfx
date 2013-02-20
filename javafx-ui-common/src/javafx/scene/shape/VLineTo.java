@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2012, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -121,5 +121,16 @@ public  class VLineTo extends PathElement {
         } else {
             path.lineTo(path.getCurrentX(), (float)(path.getCurrentY() + getY()));
         }
+    }
+
+    /**
+     * Returns a string representation of this {@code VLineTo} object.
+     * @return a string representation of this {@code VLineTo} object.
+     */
+    @Override
+    public String toString() {
+        final StringBuilder sb = new StringBuilder("VLineTo[");
+        sb.append("y=").append(getY());
+        return sb.append("]").toString();
     }
 }

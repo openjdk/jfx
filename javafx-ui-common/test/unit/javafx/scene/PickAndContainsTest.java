@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2012, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,6 +22,7 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
+
 package javafx.scene;
 
 import static org.junit.Assert.assertFalse;
@@ -117,6 +118,10 @@ public class PickAndContainsTest {
         assertFalse(r0.contains(pickX, pickY));
         assertFalse(r1.contains(pickX, pickY));
         assertTrue(r2.contains(pickX, pickY));
+
+        pickX = 120;
+        pickY = 110;
+        assertSame(r0, scene.test_pick(pickX, pickY));
     }
 
     @Test
@@ -151,6 +156,10 @@ public class PickAndContainsTest {
         assertFalse(r0.contains(pickX, pickY));
         assertFalse(r1.contains(pickX, pickY));
         assertTrue(r2.contains(pickX, pickY));
+
+        pickX = 120;
+        pickY = 110;
+        assertSame(r0, scene.test_pick(pickX, pickY));
     }
 
     @Test

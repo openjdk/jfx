@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2012, Oracle  and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,6 +22,7 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
+
 package javafx.scene.chart;
 
 import java.util.ArrayList;
@@ -51,8 +52,8 @@ import javafx.css.StyleableObjectProperty;
 import javafx.css.CssMetaData;
 import com.sun.javafx.css.converters.BooleanConverter;
 import com.sun.javafx.css.converters.EnumConverter;
+import javafx.css.Styleable;
 import javafx.css.StyleableProperty;
-import javafx.geometry.NodeOrientation;
 
 /**
  * Base class for all charts. It has 3 parts the title, legend and chartContent. The chart content is populated by the
@@ -126,7 +127,7 @@ public abstract class Chart extends Region {
         }
         
         @Override
-        public CssMetaData getCssMetaData() {
+        public CssMetaData<Chart,Side> getCssMetaData() {
             return StyleableProperties.TITLE_SIDE;
         }
 
@@ -183,7 +184,7 @@ public abstract class Chart extends Region {
         }
             
         @Override
-        public CssMetaData getCssMetaData() {
+        public CssMetaData<Chart,Boolean> getCssMetaData() {
             return StyleableProperties.LEGEND_VISIBLE;
         }
 
@@ -215,7 +216,7 @@ public abstract class Chart extends Region {
         }
         
         @Override
-        public CssMetaData getCssMetaData() {
+        public CssMetaData<Chart,Side> getCssMetaData() {
             return StyleableProperties.LEGEND_SIDE;
         }
 
@@ -466,10 +467,10 @@ public abstract class Chart extends Region {
             }
         };
 
-        private static final List<CssMetaData<? extends Node, ?>> STYLEABLES;
+        private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
         static {
-            final List<CssMetaData<? extends Node, ?>> styleables = 
-                new ArrayList<CssMetaData<? extends Node, ?>>(Region.getClassCssMetaData());
+            final List<CssMetaData<? extends Styleable, ?>> styleables = 
+                new ArrayList<CssMetaData<? extends Styleable, ?>>(Region.getClassCssMetaData());
             styleables.add(TITLE_SIDE);
             styleables.add(LEGEND_VISIBLE);
             styleables.add(LEGEND_SIDE);
@@ -481,7 +482,7 @@ public abstract class Chart extends Region {
      * @return The CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
      */
-    public static List<CssMetaData<? extends Node, ?>> getClassCssMetaData() {
+    public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
         return StyleableProperties.STYLEABLES;
     }
 
@@ -489,7 +490,7 @@ public abstract class Chart extends Region {
      * {@inheritDoc}
      */
     @Override
-    public List<CssMetaData<? extends Node, ?>> getCssMetaData() {
+    public List<CssMetaData<? extends Styleable, ?>> getCssMetaData() {
         return getClassCssMetaData();
     }
 

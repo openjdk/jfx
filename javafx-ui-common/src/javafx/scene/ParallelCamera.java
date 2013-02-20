@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2012, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,7 +25,8 @@
 
 package javafx.scene;
 
-import com.sun.javafx.geom.CameraImpl;
+import com.sun.javafx.sg.PGNode;
+import com.sun.javafx.sg.PGParallelCamera;
 import com.sun.javafx.tk.Toolkit;
 
 /**
@@ -45,12 +46,24 @@ import com.sun.javafx.tk.Toolkit;
 public class ParallelCamera extends Camera {
 
     @Override
-    CameraImpl createPlatformCamera() {
-        return Toolkit.getToolkit().createParallelCamera();
+    Camera copy() {
+        ParallelCamera c = new ParallelCamera();
+        c.setNearClip(getNearClip());
+        c.setFarClip(getFarClip());
+        return c;
     }
 
+    /**
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     */
+    @Deprecated
     @Override
-    void update() {
+    protected PGNode impl_createPGNode() {
+        PGParallelCamera pgCamera = Toolkit.getToolkit().createPGParallelCamera();
+        pgCamera.setNearClip((float) getNearClip());
+        pgCamera.setFarClip((float) getFarClip());
+        return pgCamera;
     }
 
 }

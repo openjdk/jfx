@@ -9,4 +9,6 @@
     <clean-project/>
   </target>
 
+  <import file="../build-defs.xml"/>
+
 </project>

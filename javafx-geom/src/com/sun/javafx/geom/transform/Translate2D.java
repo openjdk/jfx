@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2012, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -126,6 +126,35 @@ public class Translate2D extends BaseTransform {
         dst.x = src.x + mxt;
         dst.y = src.y + myt;
         dst.z = src.z;
+        return dst;
+    }
+
+    @Override
+    public Vec3d deltaTransform(Vec3d src, Vec3d dst) {
+        if (dst == null) {
+            dst = new Vec3d();
+        }
+        dst.set(src);
+        return dst;
+    }
+
+    @Override
+    public Vec3d inverseTransform(Vec3d src, Vec3d dst) {
+        if (dst == null) {
+            dst = new Vec3d();
+        }
+        dst.x = src.x - mxt;
+        dst.y = src.y - myt;
+        dst.z = src.z;
+        return dst;
+    }
+
+    @Override
+    public Vec3d inverseDeltaTransform(Vec3d src, Vec3d dst) {
+        if (dst == null) {
+            dst = new Vec3d();
+        }
+        dst.set(src);
         return dst;
     }
 
