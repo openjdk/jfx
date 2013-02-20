@@ -301,6 +301,11 @@
                 <MenuItem mnemonicParsing="false" text="Delete" />
               </items>
             </Menu>
+            <Menu mnemonicParsing="false" text="ABCqypgj">
+              <items>
+                <MenuItem mnemonicParsing="false" text="ABCqypgj" />
+              </items>
+            </Menu>
             <Menu mnemonicParsing="false" text="Help">
               <items>
                 <MenuItem mnemonicParsing="false" text="About" />
