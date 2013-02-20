@@ -47,6 +47,7 @@ import com.sun.javafx.scene.control.behavior.TreeCellBehavior;
 import javafx.animation.RotateTransition;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
+import javafx.beans.value.WeakChangeListener;
 import javafx.css.Styleable;
 import javafx.geometry.Insets;
 import javafx.util.Duration;
@@ -104,6 +105,8 @@ public class TreeCellSkin extends CellSkinBase<TreeCell<?>, TreeCellBehavior> {
             updateDisclosureNodeRotation(true);
         }
     };
+    private final WeakChangeListener<Boolean> weakTreeItemExpandedListener = 
+            new WeakChangeListener(treeItemExpandedListener);
 
     public TreeCellSkin(TreeCell<?> control) {
         super(control, new TreeCellBehavior(control));
@@ -149,11 +152,11 @@ public class TreeCellSkin extends CellSkinBase<TreeCell<?>, TreeCellBehavior> {
     
     private void updateTreeItem() {
         if (treeItem != null) {
-            treeItem.expandedProperty().removeListener(treeItemExpandedListener);
+            treeItem.expandedProperty().removeListener(weakTreeItemExpandedListener);
         }
         treeItem = getSkinnable().getTreeItem();
         if (treeItem != null) {
-            treeItem.expandedProperty().addListener(treeItemExpandedListener);
+            treeItem.expandedProperty().addListener(weakTreeItemExpandedListener);
         }
         
         updateDisclosureNodeRotation(false);
@@ -270,9 +273,10 @@ public class TreeCellSkin extends CellSkinBase<TreeCell<?>, TreeCellBehavior> {
 
         // include the disclosure node width
         Node disclosureNode = getSkinnable().getDisclosureNode();
+        double disclosureNodePrefWidth = disclosureNode == null ? 0 : disclosureNode.prefWidth(-1);
         final double defaultDisclosureWidth = maxDisclosureWidthMap.containsKey(tree) ?
                 maxDisclosureWidthMap.get(tree) : 0;
-        pw += Math.max(defaultDisclosureWidth, disclosureNode.prefWidth(-1));
+        pw += Math.max(defaultDisclosureWidth, disclosureNodePrefWidth);
 
         return pw;
     }

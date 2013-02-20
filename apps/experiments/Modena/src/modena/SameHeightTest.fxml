@@ -353,14 +353,20 @@
             </HBox>
             <HBox id="HBox" alignment="CENTER_RIGHT" spacing="10.0">
               <children>
-                <Label text="Label" />
+                <Label text="ColorPicker" />
                 <ColorPicker prefWidth="150.0" />
+              </children>
+            </HBox>
+            <HBox id="HBox" alignment="CENTER_RIGHT" spacing="10.0">
+              <children>
+                <Label text="Split ColorPicker" />
+                <ColorPicker prefWidth="150.0" styleClass="split-button" />
               </children>
             </HBox>
           </children>
         </VBox>
-        <Region layoutX="284.0" layoutY="0.0" maxHeight="-1.0" maxWidth="1.0" opacity="0.4" prefHeight="250.0" prefWidth="1.0" style="-fx-background-color: red;" visible="true" />
-        <Region layoutX="303.0" layoutY="0.0" maxHeight="-1.0" maxWidth="1.0" opacity="0.4" prefHeight="250.0" prefWidth="1.0" style="-fx-background-color: red;" visible="true" />
+        <Region layoutX="284.0" layoutY="0.0" maxHeight="-1.0" maxWidth="1.0" opacity="0.4" prefHeight="300.0" prefWidth="1.0" style="-fx-background-color: red;" visible="true" />
+        <Region layoutX="303.0" layoutY="0.0" maxHeight="-1.0" maxWidth="1.0" opacity="0.4" prefHeight="300.0" prefWidth="1.0" style="-fx-background-color: red;" visible="true" />
       </children>
     </AnchorPane>
   </children>

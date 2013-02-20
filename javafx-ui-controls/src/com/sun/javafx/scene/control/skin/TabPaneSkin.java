@@ -92,7 +92,7 @@ import javafx.css.Styleable;
 import javafx.scene.input.*;
 
 public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
-    public enum TabAnimation {
+    private static enum TabAnimation {
         NONE,
         GROW
         // In future we could add FADE, ...

@@ -13,6 +13,7 @@
 <AnchorPane id="AnchorPane" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="935.0" prefWidth="927.0" xmlns:fx="http://javafx.com/fxml">
   <children>
     <Button layoutX="40.0" layoutY="41.0" mnemonicParsing="false" text="Button" />
+    <Hyperlink layoutX="134.0" layoutY="40.0" text="Hyperlink" />
     <ComboBox layoutX="234.0" layoutY="41.0" prefWidth="160.0">
       <items>
         <FXCollections fx:factory="observableArrayList">
@@ -22,27 +23,49 @@
         </FXCollections>
       </items>
     </ComboBox>
-    <Hyperlink layoutX="134.0" layoutY="40.0" text="Hyperlink" />
-    <Label layoutX="242.0" layoutY="153.0" text="A label" />
-    <PasswordField layoutX="240.0" layoutY="243.0" prefWidth="138.0" promptText="Password" />
-    <ProgressBar layoutX="240.0" layoutY="291.0" prefWidth="200.0" progress="0.3" />
-    <ProgressIndicator layoutX="435.0" layoutY="45.0" prefHeight="59.0" prefWidth="56.0" progress="0.58" />
-    <ScrollBar layoutX="41.0" layoutY="329.0" prefWidth="493.0" />
-    <Separator layoutX="41.0" layoutY="129.0" prefWidth="490.0" />
-    <Separator layoutX="217.0" layoutY="151.0" orientation="VERTICAL" prefHeight="158.0" />
     <SplitMenuButton layoutX="40.0" layoutY="83.0" mnemonicParsing="false" prefWidth="153.0" text="SplitMenuButton">
       <items>
         <MenuItem mnemonicParsing="false" text="Action 1" />
         <MenuItem mnemonicParsing="false" text="Action 2" />
       </items>
     </SplitMenuButton>
+    <ChoiceBox layoutX="234.0" layoutY="85.0" prefWidth="160.0">
+      <items>
+        <FXCollections fx:factory="observableArrayList">
+          <String fx:value="Item 1" />
+          <String fx:value="Item 2" />
+          <String fx:value="Item 3" />
+        </FXCollections>
+      </items>
+    </ChoiceBox>
+    <ProgressIndicator layoutX="435.0" layoutY="45.0" prefHeight="59.0" prefWidth="56.0" progress="0.58" />
     <TextField layoutX="40.0" layoutY="149.0" prefWidth="160.0" promptText="Textfield" text="Textfield" />
     <TextArea layoutX="40.0" layoutY="180.0" prefHeight="130.0" prefWidth="160.0" promptText="Text Area" text="Text Area with some text spanning over a few lines." wrapText="true" />
-    <ToggleButton layoutX="341.0" layoutY="196.0" mnemonicParsing="false" prefWidth="90.0" selected="true" text="Toggle">
+    <Label layoutX="242.0" layoutY="153.0" text="A label" />
+    <Separator layoutX="41.0" layoutY="129.0" prefWidth="490.0" />
+    <Separator layoutX="217.0" layoutY="151.0" orientation="VERTICAL" prefHeight="158.0" />
+    <Slider layoutX="304.0" layoutY="154.0" prefWidth="230.0" />
+    <RadioButton layoutX="240.0" layoutY="199.0" mnemonicParsing="false" text="r1">
       <toggleGroup>
         <ToggleGroup fx:id="toggle1" />
       </toggleGroup>
-    </ToggleButton>
+    </RadioButton>
+    <RadioButton layoutX="290.0" layoutY="199.0" mnemonicParsing="false" text="r2" toggleGroup="$toggle1" />
+    <ToggleButton layoutX="341.0" layoutY="196.0" mnemonicParsing="false" prefWidth="90.0" selected="true" text="Toggle" toggleGroup="$toggle1" />
+    <ToggleButton layoutX="441.0" layoutY="196.0" mnemonicParsing="false" prefWidth="90.0" selected="false" text="Toggle" toggleGroup="$toggle1" />
+    <PasswordField layoutX="240.0" layoutY="243.0" prefWidth="138.0" promptText="Password" />
+    <ComboBox editable="true" layoutX="395.0" layoutY="243.0" prefWidth="136.0001220703125" promptText="Choose">
+      <items>
+        <FXCollections fx:factory="observableArrayList">
+          <String fx:value="Item 1" />
+          <String fx:value="Item 2" />
+          <String fx:value="Item 3" />
+        </FXCollections>
+      </items>
+    </ComboBox>
+    <CheckBox layoutX="471.0" layoutY="294.0" mnemonicParsing="false" selected="true" text="Check" />
+    <ProgressBar layoutX="240.0" layoutY="291.0" prefWidth="200.0" progress="0.3" />
+    <ScrollBar layoutX="41.0" layoutY="329.0" prefWidth="493.0" />
     <TitledPane animated="false" layoutX="656.0" layoutY="287.0" prefHeight="59.0" prefWidth="216.0" text="Hello World">
       <content>
         <AnchorPane id="Content" minHeight="0.0" minWidth="0.0" prefHeight="180.0" prefWidth="200.0" />
@@ -66,7 +89,7 @@
           <content>
             <StackPane prefHeight="150.0" prefWidth="200.0">
               <children>
-                <SplitPane dividerPositions="0.5210084033613446" focusTraversable="true" maxHeight="-Infinity" orientation="VERTICAL" prefHeight="191.0" prefWidth="447.0">
+                <SplitPane dividerPositions="0.5185185185185185" focusTraversable="true" maxHeight="-Infinity" orientation="VERTICAL" prefHeight="191.0" prefWidth="447.0">
                   <items>
                     <SplitPane dividerPositions="0.4969097651421508" focusTraversable="true" prefHeight="172.0" prefWidth="490.0">
                       <items>
@@ -207,7 +230,7 @@
         </TitledPane>
         <TitledPane id="x2" animated="true" expanded="false" text="Split Pane No Padding">
           <content>
-            <SplitPane dividerPositions="0.5060975609756098" focusTraversable="true" maxHeight="1.7976931348623157E308" orientation="VERTICAL" prefHeight="-1.0" prefWidth="-1.0">
+            <SplitPane dividerPositions="0.5065359477124183" focusTraversable="true" maxHeight="1.7976931348623157E308" orientation="VERTICAL" prefHeight="-1.0" prefWidth="-1.0">
               <items>
                 <SplitPane dividerPositions="0.49705535924617195" focusTraversable="true" prefHeight="172.0" prefWidth="490.0">
                   <items>
@@ -262,27 +285,7 @@
         <fx:reference source="x3" />
       </panes>
     </Accordion>
-    <ChoiceBox layoutX="234.0" layoutY="85.0" prefWidth="160.0">
-      <items>
-        <FXCollections fx:factory="observableArrayList">
-          <String fx:value="Item 1" />
-          <String fx:value="Item 2" />
-          <String fx:value="Item 3" />
-        </FXCollections>
-      </items>
-    </ChoiceBox>
-    <Slider layoutX="304.0" layoutY="154.0" prefWidth="230.0" />
     <Slider layoutX="541.0" layoutY="34.0" orientation="VERTICAL" prefHeight="240.0" showTickMarks="true" />
-    <ToggleButton layoutX="441.0" layoutY="196.0" mnemonicParsing="false" prefWidth="90.0" selected="false" text="Toggle" toggleGroup="$toggle1" />
-    <ComboBox editable="true" layoutX="395.0" layoutY="243.0" prefWidth="136.0001220703125" promptText="Choose">
-      <items>
-        <FXCollections fx:factory="observableArrayList">
-          <String fx:value="Item 1" />
-          <String fx:value="Item 2" />
-          <String fx:value="Item 3" />
-        </FXCollections>
-      </items>
-    </ComboBox>
     <ProgressIndicator layoutX="582.0" layoutY="287.0" prefHeight="52.0" prefWidth="46.0" progress="-1.0" />
     <VBox layoutX="582.0" layoutY="39.0" prefHeight="235.0" prefWidth="315.0" style="-fx-border-color: black; -fx-border-width: 3; -fx-border-insets: -3;&#10;">
       <children>
@@ -296,6 +299,11 @@
             <Menu mnemonicParsing="false" text="Edit">
               <items>
                 <MenuItem mnemonicParsing="false" text="Delete" />
+              </items>
+            </Menu>
+            <Menu mnemonicParsing="false" text="ABCqypgj">
+              <items>
+                <MenuItem mnemonicParsing="false" text="ABCqypgj" />
               </items>
             </Menu>
             <Menu mnemonicParsing="false" text="Help">
@@ -348,8 +356,5 @@
         </TabPane>
       </children>
     </VBox>
-    <RadioButton layoutX="240.0" layoutY="199.0" mnemonicParsing="false" text="r1" toggleGroup="$toggle1" />
-    <RadioButton layoutX="290.0" layoutY="199.0" mnemonicParsing="false" text="r2" toggleGroup="$toggle1" />
-    <CheckBox layoutX="471.0" layoutY="294.0" mnemonicParsing="false" selected="true" text="Check" />
   </children>
 </AnchorPane>

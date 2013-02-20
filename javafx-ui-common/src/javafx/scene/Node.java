@@ -8256,7 +8256,28 @@ public abstract class Node implements EventTarget, Styleable {
         //
         final boolean flag = (reapply || cssFlag == CssFlags.REAPPLY);
         cssFlag = flag ? CssFlags.REAPPLY : CssFlags.UPDATE;
-        impl_processCSS();
+        
+        //
+        // RT-28394 - need to see if any ancestor has a flag other than clean
+        // If so, process css from the top-most css-dirty node
+        // 
+        Node topMost = this;
+        Node _parent = getParent();
+        while (_parent != null) {
+            if (_parent.cssFlag != CssFlags.CLEAN) {
+                topMost = _parent;
+            } 
+            _parent = _parent.getParent();
+        } 
+        
+        _parent = this;
+        while (_parent != topMost) {
+            if (_parent.cssFlag == CssFlags.CLEAN) {
+                _parent.cssFlag = CssFlags.DIRTY_BRANCH;                    
+            }
+            _parent = _parent.getParent();
+        }
+        topMost.processCSS();
     }
     
     /**
@@ -8269,7 +8290,7 @@ public abstract class Node implements EventTarget, Styleable {
      */
     @Deprecated // SB-dependency: RT-21206 has been filed to track this    
     protected void impl_processCSS() {
-        
+
         // Nothing to do...
         if (cssFlag == CssFlags.CLEAN) return;
 

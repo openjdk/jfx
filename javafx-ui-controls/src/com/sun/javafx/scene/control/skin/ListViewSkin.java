@@ -148,6 +148,15 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListViewB
 
     private final ListChangeListener<T> listViewItemsListener = new ListChangeListener<T>() {
         @Override public void onChanged(Change<? extends T> c) {
+            // RT-28397: Support for when an item is replaced with itself (but
+            // updated internal values that should be shown visually)
+            while (c.next()) {
+                if (c.wasReplaced()) {
+                    itemCount = 0;
+                    break;
+                }
+            }
+            
             rowCountDirty = true;
             getSkinnable().requestLayout();
         }
@@ -184,18 +193,12 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListViewB
     @Override protected void updateRowCount() {
         if (flow == null) return;
         
-        int oldCount = flow.getCellCount();
+        int oldCount = itemCount;
         int newCount = listViewItems == null ? 0 : listViewItems.size();
         
         itemCount = newCount;
         
         flow.setCellCount(newCount);
-        
-        if (newCount != oldCount) {
-            flow.rebuildCells();
-        } else {
-            flow.reconfigureCells();
-        }
         
         if (newCount != oldCount) {
             needCellsRebuilt = true;

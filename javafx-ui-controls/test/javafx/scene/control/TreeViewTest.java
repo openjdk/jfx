@@ -37,6 +37,10 @@ import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
+import javafx.scene.Group;
+import javafx.scene.Scene;
+import javafx.stage.Stage;
+import javafx.util.Callback;
 
 import org.junit.Before;
 import org.junit.Ignore;
@@ -592,5 +596,49 @@ public class TreeViewTest {
         treeView.setRoot(null);
         assertEquals(0, treeView.getSelectionModel().getSelectedItems().size());
         assertNull(treeView.getSelectionModel().getSelectedItem());
+    }
+    
+    @Test public void test_rt28390() {
+        // There should be no NPE when a TreeView is shown and the disclosure
+        // node is null in a TreeCell
+        TreeItem root = new TreeItem("root");
+        treeView.setRoot(root);
+        
+        // install a custom cell factory that forces the disclosure node to be
+        // null (because by default a null disclosure node will be replaced by
+        // a non-null one).
+        treeView.setCellFactory(new Callback() {
+            @Override public Object call(Object p) {
+                TreeCell treeCell = new TreeCell() {
+                    {
+                        disclosureNodeProperty().addListener(new ChangeListener() {
+                            @Override public void changed(ObservableValue ov, Object t, Object t1) {
+                                setDisclosureNode(null);
+                            }
+                        });
+                    }
+                    
+                    @Override protected void updateItem(Object item, boolean empty) {
+                        super.updateItem(item, empty);
+                        setText(item == null ? "" : item.toString());
+                    }
+                };
+                treeCell.setDisclosureNode(null);
+                return treeCell;
+            }
+        });
+        
+        try {
+            Group group = new Group();
+            group.getChildren().setAll(treeView);
+            Scene scene = new Scene(group);
+            Stage stage = new Stage();
+            stage.setScene(scene);
+            stage.show();
+        } catch (NullPointerException e) {
+            System.out.println("A null disclosure node is valid, so we shouldn't have an NPE here.");
+            e.printStackTrace();
+            assertTrue(false);
+        }
     }
 }
