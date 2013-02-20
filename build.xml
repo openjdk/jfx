@@ -94,10 +94,14 @@
         <ant antfile="${rt.root.dir}/decora-jsw/build.xml" target="jar" inheritAll="false"/>
         <ant antfile="${rt.root.dir}/decora-prism-sw/build.xml" target="jar" inheritAll="false"/>
         <ant antfile="${rt.root.dir}/decora-prism-ps/build.xml" target="jar" inheritAll="false"/>
-        <ant antfile="${rt.root.dir}/decora-sse/build.xml" target="jar" inheritAll="false"/>
+        <antcall target="jar-decora-sse"/>
         <ant antfile="${rt.root.dir}/javafx-beans-dt/build.xml" target="jar" inheritAll="false"/>
         <ant antfile="${rt.root.dir}/javafx-fxml/build.xml" target="jar" inheritAll="false"/>
         <antcall target="jar-javafx-embed-swt"/>
+    </target>
+
+    <target name="jar-decora-sse" if="include.sse">
+        <ant antfile="${rt.root.dir}/decora-sse/build.xml" target="jar" inheritAll="false"/>
     </target>
 
     <target name="jar-javafx-embed-swt" if="swt.available">
