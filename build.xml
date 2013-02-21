@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
 /*
- * Copyright (c) 2009, 2012, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2013, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -33,17 +33,15 @@
 
     <property name="rt.root.dir" location="${basedir}/../rt"/>
 
-    <target name="init">
+    <target name="init" depends="-init-defs,-init-platform-defs">
         <!-- ensure version 1.7.1 of ant -->
         <fail message="Ant version 1.7.1 or later is required to build JavaFX.">
             <condition><not><antversion atleast="1.7.1"/></not></condition>
         </fail>
-        <condition property="isLinuxOrSolaris">
-            <or>
-              <istrue value="${isLinux}"/>
-              <istrue value="${isSolaris}"/>
-            </or>
-        </condition>
+
+        <property name="openjfx.dist.dir" value="dist${cross.name.suffix}"/>
+        <property name="openjfx.dist.bin.dir" value="${openjfx.dist.dir}/${platform.nativelibs.dir.name}"/>
+        <property name="openjfx.dist.lib.dir" value="${openjfx.dist.dir}/lib"/>
 
         <property name="try.sse" value="true"/>
         <!-- only build decora-sse on Windows and Mac OS X -->
@@ -73,6 +71,7 @@
     <target name="jar" depends="init">
         <ant antfile="${rt.root.dir}/javafx-common/build.xml" target="jar" inheritAll="false"/>
         <ant antfile="${rt.root.dir}/javafx-logging/build.xml" target="jar" inheritAll="false"/>
+        <ant antfile="${rt.root.dir}/glass/build.xml" target="jar" inheritAll="false"/>
         <ant antfile="${rt.root.dir}/javafx-beans/build.xml" target="jar" inheritAll="false"/>
         <ant antfile="${rt.root.dir}/javafx-annotation-processor/build.xml" target="jar" inheritAll="false"/>
         <ant antfile="${rt.root.dir}/javafx-util-converter/build.xml" target="jar" inheritAll="false"/>
@@ -89,7 +88,7 @@
         <ant antfile="${rt.root.dir}/javafx-embed-swing/build.xml" target="jar" inheritAll="false"/>
         <ant antfile="${rt.root.dir}/javafx-ui-controls/build.xml" target="jar" inheritAll="false"/>
         <ant antfile="${rt.root.dir}/javafx-ui-charts/build.xml" target="jar" inheritAll="false"/>
-        <ant antfile="${rt.root.dir}/decora-d3d/build.xml" target="jar" inheritAll="false"/>
+        <antcall target="jar-decora-d3d"/>
         <ant antfile="${rt.root.dir}/decora-es2/build.xml" target="jar" inheritAll="false"/>
         <ant antfile="${rt.root.dir}/decora-jsw/build.xml" target="jar" inheritAll="false"/>
         <ant antfile="${rt.root.dir}/decora-prism-sw/build.xml" target="jar" inheritAll="false"/>
@@ -98,6 +97,10 @@
         <ant antfile="${rt.root.dir}/javafx-beans-dt/build.xml" target="jar" inheritAll="false"/>
         <ant antfile="${rt.root.dir}/javafx-fxml/build.xml" target="jar" inheritAll="false"/>
         <antcall target="jar-javafx-embed-swt"/>
+    </target>
+
+    <target name="jar-decora-d3d" if="include.d3d">
+        <ant antfile="${rt.root.dir}/decora-d3d/build.xml" target="jar" inheritAll="false"/>
     </target>
 
     <target name="jar-decora-sse" if="include.sse">
@@ -145,6 +148,7 @@
     <target name="clean" depends="init">
         <delete dir="${build.dir}"/>
         <delete dir="dist"/>
+        <ant antfile="${rt.root.dir}/glass/build.xml" target="clean" inheritAll="false"/>
         <ant antfile="${rt.root.dir}/javafx-beans-dt/build.xml" target="clean" inheritAll="false"/>
         <ant antfile="${rt.root.dir}/javafx-concurrent/build.xml" target="clean" inheritAll="false"/>
         <!--<ant antfile="${rt.root.dir}/javafx-designtime/build.xml" target="clean" inheritAll="false"/>-->
@@ -163,7 +167,21 @@
         <ant antfile="${rt.root.dir}/javafx-util-converter/build.xml" target="clean" inheritAll="false"/>
         <ant antfile="${rt.root.dir}/javafx-fxml/build.xml" target="clean" inheritAll="false"/>
         <ant antfile="${rt.root.dir}/javafx-embed-swing/build.xml" target="clean" inheritAll="false"/>
+        <antcall target="clean-decora-d3d"/>
+        <ant antfile="${rt.root.dir}/decora-es2/build.xml" target="clean" inheritAll="false"/>
+        <ant antfile="${rt.root.dir}/decora-jsw/build.xml" target="clean" inheritAll="false"/>
+        <ant antfile="${rt.root.dir}/decora-prism-sw/build.xml" target="clean" inheritAll="false"/>
+        <ant antfile="${rt.root.dir}/decora-prism-ps/build.xml" target="clean" inheritAll="false"/>
+        <antcall target="clean-decora-sse"/>
         <antcall target="clean-javafx-embed-swt"/>
+    </target>
+
+    <target name="clean-decora-d3d" if="include.d3d">
+        <ant antfile="${rt.root.dir}/decora-d3d/build.xml" target="clean" inheritAll="false"/>
+    </target>
+
+    <target name="clean-decora-sse" if="include.sse">
+        <ant antfile="${rt.root.dir}/decora-sse/build.xml" target="clean" inheritAll="false"/>
     </target>
 
     <target name="clean-javafx-embed-swt" if="swt.available">
@@ -172,15 +190,30 @@
  
     <!--
         Create an openjfxrt.jar file...
-      -->   
+      -->
+
+    <fileset id="openjfx.dist.jars" dir=".">
+        <include name="glass/dist/lib/*.jar"/>
+        <include name="*/dist/*.jar"/>
+    </fileset>
+
+    <fileset id="openjfx.dist.binaries" dir=".">
+        <include name="glass/dist${cross.name.suffix}/bin/*"/>
+    </fileset>
     
     <target name="dist" depends="jar">
         <echo>Creating merged openjfxrt.jar file</echo>
-        <mkdir dir="dist" />
-        <delete file="dist/openjfxrt.jar" />
-        <jar destfile="dist/openjfxrt.jar">
-            <zipgroupfileset dir="." includes="**/dist/*.jar" /> 
+        <mkdir dir="${openjfx.dist.lib.dir}"/>
+        <delete file="${openjfx.dist.lib.dir}/openjfxrt.jar"/>
+        <jar destfile="${openjfx.dist.lib.dir}/openjfxrt.jar">
+            <zipgroupfileset refid="openjfx.dist.jars"/>
         </jar>
+        <echo>Copying binaries</echo>
+        <mkdir dir="${openjfx.dist.bin.dir}"/>
+        <delete file="${openjfx.dist.bin.dir}/*"/>
+        <copy todir="${openjfx.dist.bin.dir}" flatten="true">
+            <fileset refid="openjfx.dist.binaries"/>
+        </copy>
     </target>
     
     <target name="default" depends="dist" />

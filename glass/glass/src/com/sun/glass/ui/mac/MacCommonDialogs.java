@@ -1,0 +1,89 @@
+/*
+ * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.  Oracle designates this
+ * particular file as subject to the "Classpath" exception as provided
+ * by Oracle in the LICENSE file that accompanied this code.
+ *
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
+ *
+ * You should have received a copy of the GNU General Public License version
+ * 2 along with this work; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+ * or visit www.oracle.com if you need additional information or have any
+ * questions.
+ */
+package com.sun.glass.ui.mac;
+
+import com.sun.glass.ui.Application;
+import com.sun.glass.ui.CommonDialogs.Type;
+import com.sun.glass.ui.CommonDialogs.ExtensionFilter;
+import com.sun.glass.ui.Window;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
+
+import java.io.File;
+import java.util.List;
+import java.util.ArrayList;
+
+/**
+ * MacOSX platform implementation class for CommonDialogs.
+ */
+final class MacCommonDialogs {
+
+    private native static void _initIDs();
+    static {
+        _initIDs();
+    }
+    
+    private static native List<File> _showFileOpenChooser(long owner, String folder, String title,
+                                                    boolean multipleMode, Object[] extensions);
+    private static native List<File> _showFileSaveChooser(long owner, String folder, String filename, String title,
+                                                    Object[] extensions);
+
+    private static native File _showFolderChooser(String folder, String title);
+
+    static List<File> showFileChooser_impl(Window owner, String folder, String filename, String title, int type,
+                                         boolean multipleMode, ExtensionFilter[] extensionFilters) {
+        List<String> list = new ArrayList<String>();
+        for (ExtensionFilter extension : extensionFilters) {
+            for (String suffix : extension.getExtensions()) {
+                list.add(suffix);
+            }
+        }
+        Object extensions[] = list.toArray();
+
+        final long ownerPtr = owner != null ? owner.getNativeWindow() : 0L;
+        
+        if (type == Type.OPEN) {
+            return _showFileOpenChooser(ownerPtr, folder, title, multipleMode, extensions);
+        } else if (type == Type.SAVE) {
+            return _showFileSaveChooser(ownerPtr, folder, filename, title, extensions);
+        } else {
+            return null;
+        }
+    }
+    
+    static File showFolderChooser_impl() {
+        return _showFolderChooser(null, null);
+    }
+
+    static boolean isFileNSURLEnabled() {
+        // The check is dynamic since an app may want to toggle it dynamically.
+        // The performance is not critical for FileChoosers.
+        return AccessController.doPrivileged(new PrivilegedAction<Boolean>() {
+            public Boolean run() {
+                return Boolean.getBoolean("glass.macosx.enableFileNSURL");
+            }
+        });
+    }
+}

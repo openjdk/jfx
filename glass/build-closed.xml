@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<project name="glass" default="dist" basedir=".">
+
+    <description>Builds, tests, and runs the OpenJFX Glass project.</description>
+
+    <property name="rt.dist.root.dir" location="${basedir}/../../rt" />
+    <property name="runtime.dist.root.dir" location="${basedir}/../../rt-closed" />
+
+    <property name="jfx.accessible.dir" value="${runtime.dist.root.dir}/javafx-accessible"/>
+    <property name="jfx.accessible.jar" value="${jfx.accessible.dir}/dist/javafx-accessible.jar"/>
+
+    <import file="build-common.xml"/>
+
+    <fileset dir="${basedir}" id="glass.libraries.to.be.copied">
+      <include name="glass/dist/glass.jar"/>
+    </fileset>
+
+    <target name="copy-sdk-binaries-macosx" if="isMacOSX">
+      <copy todir="${jfx.sdk.desktop.dir}" flatten="true">
+        <fileset dir="${basedir}">
+          <include name="glass-lib-macosx/dist/*"/>
+        </fileset>
+      </copy>
+    </target>
+    
+    <target name="copy-sdk-binaries-ios" if="isIOS">
+      <copy todir="${jfx.sdk.desktop.dir}" flatten="true">
+        <fileset dir="${basedir}">
+          <include name="glass-lib-ios/dist/*"/>
+        </fileset>
+      </copy>
+    </target>
+    
+    <target name="copy-sdk-binaries-windows" if="isWindows">
+      <copy todir="${jfx.sdk.desktop.dir}" flatten="true">
+        <fileset dir="${basedir}">
+          <include name="glass-lib-windows/dist/glass.dll"/>
+        </fileset>
+      </copy>
+    </target>
+
+    <target name="copy-sdk-binaries-linux-lens" if="cross.glass.buildGlassLens">
+      <copy todir="${jfx.sdk.desktop.dir}" flatten="true">
+        <fileset dir="${basedir}">
+          <include name="glass-lib-lens/dist${cross.name.suffix}/*.so"/>
+        </fileset>
+      </copy>
+    </target>
+
+    <target name="copy-sdk-binaries-linux-gtk" unless="cross.glass.dontBuildGlassGTK">
+      <copy todir="${jfx.sdk.desktop.dir}" flatten="true">
+        <fileset dir="${basedir}">
+          <include name="glass-lib-gtk/dist${cross.name.suffix}/libglass.so"/>
+        </fileset>
+      </copy>
+    </target>
+
+    <target name="copy-sdk-binaries-linux" if="isLinux">
+      <antcall target="copy-sdk-binaries-linux-gtk"/>
+      <antcall target="copy-sdk-binaries-linux-lens"/>
+    </target>
+
+    <target name="copy-sdk-binaries" depends="glass-dist">
+      <copy todir="${jfx.sdk.desktop.dir}" flatten="true">
+        <fileset refid="glass.libraries.to.be.copied"/>
+      </copy>
+      <antcall target="copy-sdk-binaries-linux"/>
+      <antcall target="copy-sdk-binaries-macosx"/>
+      <antcall target="copy-sdk-binaries-ios"/>
+      <antcall target="copy-sdk-binaries-windows"/>
+    </target>
+
+    <target name="dist" depends="glass-dist">
+      <antcall target="copy-sdk-binaries"/>
+    </target>
+
+</project>

@@ -137,7 +137,7 @@
             <compilation-unit>
                 <package-root>${test.dir}</package-root>
                 <unit-tests/>
-                <classpath mode="compile">../javafx-beans/dist/javafx-beans.jar:../../rt/javafx-geom/dist/javafx-geom.jar:../../rt/javafx-anim/dist/javafx-anim.jar:../../rt/javafx-common/dist/javafx-common.jar:../../rt-closed/javafx-mx-common/dist/javafx-mx-common.jar:../../rt-closed/glass/glass-mat/dist/glass.jar:../../rt-closed/build/deps/plugin_exports.jar:../test-stub-toolkit/dist/test-stub-toolkit.jar:../../rt-closed/prism-common/dist/prism-common.jar:build/classes:${jfx.sdk.rt.jar}:../../rt-closed/build/deps/junit.jar:../../artifacts/sdk/rt/lib/ext/jfxrt.jar</classpath>
+                <classpath mode="compile">../javafx-beans/dist/javafx-beans.jar:../../rt/javafx-geom/dist/javafx-geom.jar:../../rt/javafx-anim/dist/javafx-anim.jar:../../rt/javafx-common/dist/javafx-common.jar:../../rt-closed/javafx-mx-common/dist/javafx-mx-common.jar:../../rt/glass/dist/lib/glass.jar:../../rt-closed/build/deps/plugin_exports.jar:../test-stub-toolkit/dist/test-stub-toolkit.jar:../../rt-closed/prism-common/dist/prism-common.jar:build/classes:${jfx.sdk.rt.jar}:../../rt-closed/build/deps/junit.jar:../../artifacts/sdk/rt/lib/ext/jfxrt.jar</classpath>
                 <built-to>${build.test.classes.dir}</built-to>
                 <source-level>1.6</source-level>
             </compilation-unit>

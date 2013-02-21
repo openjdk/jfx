@@ -17,7 +17,7 @@
         ${rt.dist.root.dir}/decora-runtime/dist/decora-runtime.jar:
         ${rt.dist.root.dir}/decora-prism/dist/decora-prism.jar:
         ${runtime.deps.dir}/jfxmedia.jar:
-        ${runtime.dist.root.dir}/glass/glass-mat/dist/glass.jar" />
+        ${rt.dist.root.dir}/glass/dist/lib/glass.jar" />
     <property name="javac.classpath" refid="javac.closed.classpath.path"/>
     
     <import file="build-common.xml"/>
