@@ -27,6 +27,7 @@ package com.sun.javafx.scene.input;
 
 import com.sun.javafx.geom.PickRay;
 import com.sun.javafx.geom.Vec3d;
+import com.sun.javafx.scene.NodeAccess;
 import javafx.geometry.Point2D;
 import javafx.geometry.Point3D;
 import javafx.scene.Node;
@@ -42,7 +43,8 @@ public class PickResultChooser {
     private int face = -1;
     private Point3D point;
     private Point2D texCoord;
-    boolean empty = true;
+    private boolean empty = true;
+    private boolean closed = false;
 
     /**
      * Helper method for computing intersected point.
@@ -101,6 +103,17 @@ public class PickResultChooser {
     }
 
     /**
+     * Returns true if this chooser has been closed. The chooser is closed when
+     * it is clear that no further result can be accepted (due to disabled
+     * depth testing).
+     * @return true if this chooser has been closed.
+     * @see close()
+     */
+    public boolean isClosed() {
+        return closed;
+    }
+
+    /**
      * Offers an intersection. If the given intersection is closer to the camera
      * than the current one (the distance is smaller), this instance is updated
      * to hold the given values.
@@ -112,16 +125,7 @@ public class PickResultChooser {
      * @return true if the offered intersection has been used
      */
     public boolean offer(Node node, double distance, int face, Point3D point, Point2D texCoord) {
-        if (distance < this.distance || empty) {
-            this.node = node;
-            this.distance = distance;
-            this.face = face;
-            this.point = point;
-            this.texCoord = texCoord;
-            this.empty = false;
-            return true;
-        }
-        return false;
+        return processOffer(node, distance, point, face, texCoord);
     }
 
     /**
@@ -138,16 +142,41 @@ public class PickResultChooser {
      * @return true if the offered intersection has been used
      */
     public boolean offer(Node node, double distance, Point3D point) {
-        if (distance < this.distance || empty) {
+        return processOffer(node, distance, point, PickResult.FACE_UNDEFINED, null);
+    }
+
+    /**
+     * Process an offered intersection.
+     * @see PickResultChooser#offer(javafx.scene.Node, double, int, javafx.geometry.Point3D, javafx.geometry.Point2D)
+     * @see PickResultChooser#offer(javafx.scene.Node, double, javafx.geometry.Point3D)
+     * @param node The intersected node
+     * @param distance The intersected distance measured in pickRay direction magnitudes
+     * @param point The intersection point
+     * @param face The intersected face
+     * @param texCoord The intersected texture coordinates
+     * @return true if the offered intersection has been used
+     */
+    private boolean processOffer(Node node, double distance, Point3D point, int face, Point2D texCoord) {
+
+        final boolean hasDepthTest = node.getScene().isDepthBuffer()
+                && NodeAccess.getNodeAccess().isDerivedDepthTest(node);
+
+        boolean accepted = false;
+        if ((empty || (hasDepthTest && distance < this.distance)) && !closed) {
             this.node = node;
             this.distance = distance;
-            this.face = PickResult.FACE_UNDEFINED;
+            this.face = face;
             this.point = point;
-            this.texCoord = null;
+            this.texCoord = texCoord;
             this.empty = false;
-            return true;
+            accepted = true;
         }
-        return false;
+
+        if (!hasDepthTest) {
+            this.closed = true;
+        }
+
+        return accepted;
     }
 
     /**

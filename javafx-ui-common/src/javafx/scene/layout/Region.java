@@ -2156,12 +2156,10 @@ public class Region extends Parent {
         double boundsDistance = impl_intersectsBounds(pickRay);
 
         if (!Double.isNaN(boundsDistance)) {
-            final boolean checkAll = getScene().isDepthBuffer();
-
             ObservableList<Node> children = getChildren();
             for (int i = children.size()-1; i >= 0; i--) {
                 children.get(i).impl_pickNode(pickRay, result);
-                if (!checkAll && !result.isEmpty()) {
+                if (result.isClosed()) {
                     return;
                 }
             }

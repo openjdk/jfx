@@ -4295,7 +4295,7 @@ public abstract class Node implements EventTarget, Styleable {
     /**
      * Finds a top-most child node that contains the given local coordinates.
      *
-     * Returns the picked node, null if no such node was found.
+     * The result argument is used for storing the picking result.
      * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
@@ -8484,6 +8484,11 @@ public abstract class Node implements EventTarget, Styleable {
         @Override
         public void layoutNodeForPrinting(Node node) {
             node.doCSSLayoutSyncForSnapshot();
+        }
+
+        @Override
+        public boolean isDerivedDepthTest(Node node) {
+            return node.isDerivedDepthTest();
         }
     }
 
