@@ -45,6 +45,7 @@ public class PseudoClassTest {
     @Before
     public void before() {
         PseudoClassImpl.pseudoClassMap.clear();        
+        PseudoClassImpl.pseudoClasses.clear();        
     }
     
     @Test

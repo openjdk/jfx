@@ -23,7 +23,7 @@
  * questions.
  */
 
-package com.sun.javafx.print;
+package com.sun.javafx.scene;
 
 import javafx.scene.Node;
 
@@ -45,4 +45,5 @@ public abstract class NodeAccess {
     }
 
     public abstract void layoutNodeForPrinting(Node node);
+    public abstract boolean isDerivedDepthTest(Node node);
 }

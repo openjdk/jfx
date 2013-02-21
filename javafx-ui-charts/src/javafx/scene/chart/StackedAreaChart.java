@@ -736,7 +736,7 @@ public class StackedAreaChart<X,Y> extends XYChart<X,Y> {
     }
 
     // To indicate if the data point belongs to the current or the previous series.
-    enum PartOf { 
+    private static enum PartOf { 
         CURRENT,
         PREVIOUS
     }

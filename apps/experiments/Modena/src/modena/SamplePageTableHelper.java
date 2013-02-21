@@ -142,12 +142,6 @@ public class SamplePageTableHelper {
     }
 
     private static ObservableList<Person> data = FXCollections.<Person>observableArrayList();
-    private final static TableColumn<Person, String> firstNameCol;
-    private final static TableColumn<Person, String> lastNameCol;
-    private final static TableColumn<Person, String> nameCol;
-    private final static TableColumn<Person, String> emailCol;
-    private final static TableColumn<Person, String> countryCol;
-    private final static TableColumn<Person, Boolean> invitedCol;
     
     static {
         // Data
@@ -194,6 +188,11 @@ public class SamplePageTableHelper {
             new Person("Mia",       "Robinson" )
         );
 
+    }
+    
+    static TableView createTableView(int width) {
+        TableColumn<Person, String> firstNameCol, lastNameCol, nameCol, emailCol, countryCol;
+        TableColumn<Person, Boolean> invitedCol;
         // Columns
         firstNameCol = new TableColumn<Person, String>();
         firstNameCol.setText("First");
@@ -253,9 +252,8 @@ public class SamplePageTableHelper {
                 return new CheckBoxTableCell<Person, Boolean>();
             }
         });
-    }
-    
-    static TableView createTableView(int width) {
+        
+        
         TableView<Person> tableView = new TableView<Person>();
         tableView.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
         tableView.getSelectionModel().setCellSelectionEnabled(false);

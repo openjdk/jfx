@@ -26,6 +26,8 @@
 package com.sun.javafx.scene.control.skin;
 
 import java.util.ArrayList;
+import javafx.animation.KeyFrame;
+import javafx.animation.Timeline;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.property.BooleanProperty;
@@ -33,6 +35,7 @@ import javafx.beans.property.BooleanPropertyBase;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.ObservableList;
+import javafx.event.ActionEvent;
 import javafx.event.Event;
 import javafx.event.EventDispatchChain;
 import javafx.event.EventDispatcher;
@@ -46,15 +49,23 @@ import javafx.scene.control.IndexedCell;
 import javafx.scene.control.ScrollBar;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.input.ScrollEvent;
+import javafx.scene.input.TouchEvent;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.shape.Rectangle;
 import javafx.util.Callback;
+import javafx.util.Duration;
+
+import com.sun.javafx.PlatformUtil;
 
 /**
  * Implementation of a virtualized container using a cell based mechanism.
  */
 public class VirtualFlow<T extends IndexedCell> extends Region {
+
+    private boolean touchDetected = false;
+    private boolean mouseDown = false;
+
     /**
      * There are two main complicating factors in the implementation of the
      * VirtualFlow, which are made even more complicated due to the performance
@@ -504,6 +515,11 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         */
         setOnScroll(new EventHandler<javafx.scene.input.ScrollEvent>() {
             @Override public void handle(ScrollEvent event) {
+                if (PlatformUtil.isEmbedded()) {
+                    if (touchDetected == false &&  mouseDown == false ) {
+                        startSBReleasedAnimation();
+                    }
+                }
                 /*
                 ** calculate the delta in the direction of the flow.
                 */ 
@@ -577,6 +593,10 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         addEventFilter(MouseEvent.MOUSE_PRESSED, new EventHandler<MouseEvent>() {
             @Override
             public void handle(MouseEvent e) {
+                mouseDown = true;
+                if (PlatformUtil.isEmbedded()) {
+                    scrollBarOn();
+                }
                 if (isFocusTraversable()) {
                     requestFocus();
                 }
@@ -593,9 +613,21 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
                         || hbar.getBoundsInParent().contains(e.getX(), e.getY()));
             }
         });
+        addEventFilter(MouseEvent.MOUSE_RELEASED, new EventHandler<MouseEvent>() {
+            @Override
+            public void handle(MouseEvent e) {
+                mouseDown = false;
+                if (PlatformUtil.isEmbedded()) {
+                    startSBReleasedAnimation();
+                }
+            }
+        });
         addEventFilter(MouseEvent.MOUSE_DRAGGED, new EventHandler<MouseEvent>() {
             @Override
             public void handle(MouseEvent e) {
+                if (PlatformUtil.isEmbedded()) {
+                    scrollBarOn();
+                }
                 if (! isPanning || ! isPannable()) return;
 
                 // With panning enabled, we support panning in both vertical
@@ -707,6 +739,27 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
                 }
             }
         });
+
+
+        /*
+        ** there are certain animations that need to know if the touch is
+        ** happening.....
+        */
+        setOnTouchPressed(new EventHandler<TouchEvent>() {
+            @Override public void handle(TouchEvent e) {
+                touchDetected = true;
+                scrollBarOn();
+            }
+        });
+
+        setOnTouchReleased(new EventHandler<TouchEvent>() {
+            @Override public void handle(TouchEvent e) {
+                touchDetected = false;
+                startSBReleasedAnimation();
+            }
+        });
+
+
     }
 
     void updateHbar() {
@@ -822,13 +875,24 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         // that is the first time the layout would occur otherwise.
         Cell cell;
         boolean cellNeedsLayout = false;
-        for (int i = 0; i < cells.size(); i++) {
-            cell = cells.get(i);
-            cellNeedsLayout = cell.isNeedsLayout();
-            if (cellNeedsLayout) break;
+
+        if (PlatformUtil.isEmbedded()) {
+            if ((tempVisibility == true && (hbar.isVisible() == false || vbar.isVisible() == false)) ||
+                (tempVisibility == false && (hbar.isVisible() == true || vbar.isVisible() == true))) {
+                cellNeedsLayout = true;
+            }
+        }
+
+        if (!cellNeedsLayout) {
+            for (int i = 0; i < cells.size(); i++) {
+                cell = cells.get(i);
+                cellNeedsLayout = cell.isNeedsLayout();
+                if (cellNeedsLayout) break;
+            }
         }
         cell = null;
         
+
         T firstCell = getFirstVisibleCell();
 
         // If no cells need layout, we check other criteria to see if this 
@@ -1204,11 +1268,18 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         // breadth bar are needed and adjust the viewport dimensions
         // accordingly. If during layout we find that one or the other of the
         // bars actually is needed, then we will perform a cleanup pass
-        if (needBreadthBar) viewportLength -= breadthBarLength;
-        if (needLengthBar) viewportBreadth -= lengthBarBreadth;
 
-        breadthBar.setVisible(needBreadthBar);
-        lengthBar.setVisible(needLengthBar);
+        if (!PlatformUtil.isEmbedded()) {
+            if (needBreadthBar) viewportLength -= breadthBarLength;
+            if (needLengthBar) viewportBreadth -= lengthBarBreadth;
+
+            breadthBar.setVisible(needBreadthBar);
+            lengthBar.setVisible(needLengthBar);
+        }
+        else {
+            breadthBar.setVisible(needBreadthBar && tempVisibility);
+            lengthBar.setVisible(needLengthBar && tempVisibility);
+        }
     }
 
     @Override protected void setWidth(double value) {
@@ -1245,27 +1316,42 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
                 // If cellCount is > than cells.size(), then we know we need the
                 // length bar.
                 if (cellCount > cellsSize) {
-                    lengthBar.setVisible(true);
+                    if (!PlatformUtil.isEmbedded()) {
+                        lengthBar.setVisible(true);
+                    }
+                    else {
+                        lengthBar.setVisible(tempVisibility);
+                    }
                 } else if (cellCount == cellsSize) {
                     // We must check a corner case here where the cell count
                     // exactly matches the number of cells laid out. In this case,
                     // we need to check the last cell's layout position + length
                     // to determine if we need the length bar
                     T lastCell = cells.getLast();
-                    lengthBar.setVisible((getCellPosition(lastCell) + getCellLength(lastCell)) > viewportLength);
+                    if (!PlatformUtil.isEmbedded()) {
+                        lengthBar.setVisible((getCellPosition(lastCell) + getCellLength(lastCell)) > viewportLength);
+                    }
+                    else {
+                        lengthBar.setVisible(((getCellPosition(lastCell) + getCellLength(lastCell)) > viewportLength) && tempVisibility);
+                    }
                 }
                 
                 // If the bar is needed, adjust the viewportBreadth
-                if (lengthBar.isVisible()) {
+                if (lengthBar.isVisible() && !PlatformUtil.isEmbedded()) {
                     viewportBreadth -= lengthBarBreadth;
                 }
             }
             
             if (! breadthBar.isVisible()) {
                 final boolean visible = maxPrefBreadth > viewportBreadth;
-                breadthBar.setVisible(visible);
-                if (visible) {
-                    viewportLength -= breadthBarLength;
+                if (!PlatformUtil.isEmbedded()) {
+                    breadthBar.setVisible(visible);
+                    if (visible) {
+                        viewportLength -= breadthBarLength;
+                    }
+                }
+                else {
+                    breadthBar.setVisible(visible && tempVisibility);
                 }
             }
         }
@@ -1296,12 +1382,23 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
             /*
             ** Positioning the ScrollBar
             */
-            if (isVertical) {
-                hbar.resizeRelocate(0, viewportLength,
+            if (!PlatformUtil.isEmbedded()) {
+                if (isVertical) {
+                    hbar.resizeRelocate(0, viewportLength,
                         viewportBreadth, hbar.prefHeight(viewportBreadth));
-            } else {
-                vbar.resizeRelocate(viewportLength, 0,
+                } else {
+                    vbar.resizeRelocate(viewportLength, 0,
                         vbar.prefWidth(viewportBreadth), viewportBreadth);
+                }
+            }
+            else {
+                if (isVertical) {
+                    hbar.resizeRelocate(0, (viewportLength-hbar.getHeight()),
+                        viewportBreadth, hbar.prefHeight(viewportBreadth));
+                } else {
+                    vbar.resizeRelocate((viewportLength-vbar.getWidth()), 0,
+                        vbar.prefWidth(viewportBreadth), viewportBreadth);
+                }
             }
 
             // There was a weird bug where the newMax would sometimes go < 0
@@ -1348,16 +1445,33 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
             /*
             ** Positioning the ScrollBar
             */
-            if (isVertical) {
-                vbar.resizeRelocate(viewportBreadth, 0, vbar.prefWidth(viewportLength), viewportLength);
-            } else {
-                hbar.resizeRelocate(0, viewportBreadth, viewportLength, hbar.prefHeight(-1));
+            if (!PlatformUtil.isEmbedded()) {
+                if (isVertical) {
+                    vbar.resizeRelocate(viewportBreadth, 0, vbar.prefWidth(viewportLength), viewportLength);
+                } else {
+                    hbar.resizeRelocate(0, viewportBreadth, viewportLength, hbar.prefHeight(-1));
+                }
+            }
+            else {
+                if (isVertical) {
+                    vbar.resizeRelocate((viewportBreadth-vbar.getWidth()), 0, vbar.prefWidth(viewportLength), viewportLength);
+                } else {
+                    hbar.resizeRelocate(0, (viewportBreadth-hbar.getHeight()), viewportLength, hbar.prefHeight(-1));
+                }
             }
         }
 
         if (corner.isVisible()) {
-            corner.resize(vbar.getWidth(), hbar.getHeight());
-            corner.relocate(hbar.getLayoutX() + hbar.getWidth(), vbar.getLayoutY() + vbar.getHeight());
+            if (!PlatformUtil.isEmbedded()) {
+                corner.resize(vbar.getWidth(), hbar.getHeight());
+                corner.relocate(hbar.getLayoutX() + hbar.getWidth(), vbar.getLayoutY() + vbar.getHeight());
+            }
+            else {
+                corner.resize(vbar.getWidth(), hbar.getHeight());
+                corner.relocate(hbar.getLayoutX() + (hbar.getWidth()-vbar.getWidth()), vbar.getLayoutY() + (vbar.getHeight()-hbar.getHeight()));
+                hbar.resize(hbar.getWidth()-vbar.getWidth(), hbar.getHeight());
+                vbar.resize(vbar.getWidth(), vbar.getHeight()-hbar.getHeight());
+            }
         }
 
         clipView.resize(snapSize(isVertical ? viewportBreadth : viewportLength),
@@ -1983,7 +2097,9 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
     
     double getMaxCellWidth(int rowsToCount) {
         double max = 0.0;
-        int rows = rowsToCount == -1 ? cellCount : Math.min(rowsToCount, cellCount);
+        
+        // we always measure at least one row
+        int rows = Math.max(1, rowsToCount == -1 ? cellCount : rowsToCount); 
         for (int i = 0; i < rows; i++) {
             max = Math.max(max, getCellBreadth(i));
         }
@@ -2339,5 +2455,48 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
                 return cell;
             }
         }
+    }
+
+    Timeline sbTouchTimeline;
+    KeyFrame sbTouchKF1;
+    KeyFrame sbTouchKF2;
+    Timeline contentsToViewTimeline;
+    KeyFrame contentsToViewKF1;
+    KeyFrame contentsToViewKF2;
+    KeyFrame contentsToViewKF3;
+
+    private boolean tempVisibility = false;
+
+
+    protected void startSBReleasedAnimation() {
+        if (sbTouchTimeline == null) {
+            /*
+            ** timeline to leave the scrollbars visible for a short
+            ** while after a scroll/drag
+            */
+            sbTouchTimeline = new Timeline();
+            sbTouchKF1 = new KeyFrame(Duration.millis(0), new EventHandler<ActionEvent>() {
+                @Override public void handle(ActionEvent event) {
+                    tempVisibility = true;
+                    requestLayout();
+                }
+            });
+
+            sbTouchKF2 = new KeyFrame(Duration.millis(500), new EventHandler<ActionEvent>() {
+                @Override public void handle(ActionEvent event) {
+                    if (touchDetected == false && mouseDown == false) {
+                        tempVisibility = false;
+                        requestLayout();
+                    }
+                }
+            });
+            sbTouchTimeline.getKeyFrames().addAll(sbTouchKF1, sbTouchKF2);
+        }
+        sbTouchTimeline.playFromStart();
+    }
+
+    protected void scrollBarOn() {
+        tempVisibility = true;
+        requestLayout();
     }
 }

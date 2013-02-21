@@ -114,10 +114,24 @@ public class TreeTableRow<T> extends IndexedCell<T> {
         }
     };
     
-    private final WeakListChangeListener<Integer> weakSelectedListener = new WeakListChangeListener<Integer>(selectedListener);
-    private final WeakInvalidationListener weakFocusedListener = new WeakInvalidationListener(focusedListener);
-    private final WeakInvalidationListener weakEditingListener = new WeakInvalidationListener(editingListener);
-    private final WeakInvalidationListener weakLeafListener = new WeakInvalidationListener(leafListener);
+    private final InvalidationListener treeItemExpandedInvalidationListener = new InvalidationListener() {
+        @Override public void invalidated(Observable o) {
+            final boolean expanded = ((BooleanProperty)o).get();
+            pseudoClassStateChanged(EXPANDED_PSEUDOCLASS_STATE,   expanded);
+            pseudoClassStateChanged(COLLAPSED_PSEUDOCLASS_STATE, !expanded);
+        }
+    };
+    
+    private final WeakListChangeListener<Integer> weakSelectedListener = 
+            new WeakListChangeListener<Integer>(selectedListener);
+    private final WeakInvalidationListener weakFocusedListener = 
+            new WeakInvalidationListener(focusedListener);
+    private final WeakInvalidationListener weakEditingListener = 
+            new WeakInvalidationListener(editingListener);
+    private final WeakInvalidationListener weakLeafListener = 
+            new WeakInvalidationListener(leafListener);
+    private final WeakInvalidationListener weakTreeItemExpandedInvalidationListener = 
+            new WeakInvalidationListener(treeItemExpandedInvalidationListener);
     
     
     
@@ -134,37 +148,23 @@ public class TreeTableRow<T> extends IndexedCell<T> {
             TreeItem<T> oldValue = null;
             
             @Override protected void invalidated() {
-                
                 if (oldValue != null) {
-                    oldValue.expandedProperty().removeListener(treeItemExpandedInvalidationListener);
+                    oldValue.expandedProperty().removeListener(weakTreeItemExpandedInvalidationListener);
                 }
                 
                 oldValue = get(); 
                 
                 if (oldValue != null) {
-                    oldValue.expandedProperty().addListener(treeItemExpandedInvalidationListener);
+                    oldValue.expandedProperty().addListener(weakTreeItemExpandedInvalidationListener);
                     // fake an invalidation to ensure updated pseudo-class state
-                    treeItemExpandedInvalidationListener.invalidated(oldValue.expandedProperty());            
+                    weakTreeItemExpandedInvalidationListener.invalidated(oldValue.expandedProperty());            
                 }
-                                
             }
-            
     };
     private void setTreeItem(TreeItem<T> value) {
         treeItem.set(value); 
     }
     
-    private InvalidationListener treeItemExpandedInvalidationListener = 
-            new InvalidationListener() {
-
-        @Override
-        public void invalidated(Observable o) {
-            final boolean expanded = ((BooleanProperty)o).get();
-            pseudoClassStateChanged(EXPANDED_PSEUDOCLASS_STATE,   expanded);
-            pseudoClassStateChanged(COLLAPSED_PSEUDOCLASS_STATE, !expanded);
-        }
-                
-    };
     /**
      * Returns the TreeItem currently set in this TreeCell.
      */

@@ -672,10 +672,9 @@ public abstract class Parent extends Node {
         double boundsDistance = impl_intersectsBounds(pickRay);
 
         if (!Double.isNaN(boundsDistance)) {
-            final boolean checkAll = getScene().isDepthBuffer();
             for (int i = children.size()-1; i >= 0; i--) {
                 children.get(i).impl_pickNode(pickRay, result);
-                if (!checkAll && !result.isEmpty()) {
+                if (result.isClosed()) {
                     return;
                 }
             }

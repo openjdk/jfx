@@ -33,12 +33,12 @@ package modena;
 
 import java.util.ArrayList;
 import java.util.List;
+import javafx.application.Platform;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
-import javafx.event.ActionEvent;
-import javafx.event.EventHandler;
+import javafx.css.PseudoClass;
 import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
 import javafx.geometry.Side;
@@ -48,23 +48,24 @@ import javafx.scene.control.Accordion;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonBuilder;
 import javafx.scene.control.CheckMenuItem;
+import javafx.scene.control.CheckMenuItemBuilder;
+import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListView;
 import javafx.scene.control.Menu;
+import javafx.scene.control.MenuBar;
 import javafx.scene.control.MenuItem;
-import javafx.scene.control.MultipleSelectionModel;
 import javafx.scene.control.Pagination;
+import javafx.scene.control.RadioMenuItemBuilder;
 import javafx.scene.control.SelectionMode;
 import javafx.scene.control.Separator;
 import javafx.scene.control.SeparatorMenuItem;
 import javafx.scene.control.SplitPane;
 import javafx.scene.control.TabBuilder;
 import javafx.scene.control.TabPane;
-import javafx.scene.control.TableView;
 import javafx.scene.control.TextField;
 import javafx.scene.control.TitledPaneBuilder;
 import javafx.scene.control.ToolBar;
-import javafx.scene.control.Tooltip;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.KeyCharacterCombination;
@@ -80,6 +81,39 @@ import javafx.util.Callback;
  * Helper static methods for Sample Page
  */
 public class SamplePageHelpers {
+    
+    static <T extends Node> T withState(T node, String state) {
+        if (node != null && state != null) {
+            // stop user from being able to change state
+            node.setMouseTransparent(true);
+            node.setFocusTraversable(false);
+            // set state to chosen state
+            final String[] pseudoClasses = (state).split("[\\s,]+");
+            for (String pseudoClass : pseudoClasses) {
+                node.pseudoClassStateChanged(PseudoClass.getPseudoClass(pseudoClass), true);
+            }
+        }
+        return node;
+    }
+    
+    static <T extends Node> T withState(final T node, final String state, final String subNodeStyleClass, final String subNodeState) {
+        withState(node, state);
+        Platform.runLater(new Runnable() {
+            @Override public void run() {
+                if (node != null) {
+                    Node subNode = node.lookup(subNodeStyleClass);
+                    if (subNode != null) {
+                        withState(node.lookup(subNodeStyleClass), subNodeState);
+                    } else {
+                        System.err.println("node = " + node+" node.lookup("+subNodeStyleClass+") = " + subNode);
+                    }
+                } else {
+                    System.err.println("node = " + node);
+                }
+            }
+        });
+        return node;
+    }
     
     private static final String[] LETTERS = new String[]{"A","B","C","D","E","F","G","H","I","J","K","L","M","N","O","P","Q","R","S","T","U","V","W","X","Y","Z"};
     
@@ -196,10 +230,11 @@ public class SamplePageHelpers {
         return pagination;
     }
     
-    static ListView<String> createListView(int numOfItems, boolean multipleSelection, boolean disable) {
+    static ListView<String> createListView(int numOfItems, boolean multipleSelection, boolean disable, boolean horiz) {
         ListView<String> listView = new ListView<String>();
+        if (horiz) listView.setOrientation(Orientation.HORIZONTAL);
         listView.setPrefHeight((24*7)+4);
-        listView.setPrefWidth(140);
+        listView.setPrefWidth(horiz ? 200 : 140);
         listView.getItems().addAll(sampleItems(numOfItems));
         listView.setDisable(disable);
         if (multipleSelection) {
@@ -225,16 +260,88 @@ public class SamplePageHelpers {
         return items.toArray(new MenuItem[items.size()]);
     }
     
-    static Object[] createMenuContents() {
-        List menuItems = new ArrayList();
+    static MenuBar createMenuBar() {
+        final MenuBar mb = new MenuBar();
+        mb.getMenus().addAll(
+            createMenu("File"),
+            createMenu("Edit"),
+            createMenu("View"),
+            createMenu("Help")
+        );
+//        mb.setMouseTransparent(true);
+        Platform.runLater(new Runnable() {
+            @Override public void run() {
+                // get second menu and force into hover state
+                new ArrayList<Node>(mb.lookupAll(".menu")).get(1).pseudoClassStateChanged(PseudoClass.getPseudoClass("hover"), true);
+            }
+        });
+        return  mb;
+    }
+    
+    static Menu createMenu(String name) {
+        Menu m = new Menu(name);
+        m.getStyleClass().add(name);
+        m.getItems().addAll(createMenuContents());
+        return  m;
+    }
+    
+    static Node createContextMenu() {
+        Button b = new Button("ContextMenu Right Click Me");
+        b.setContextMenu(new ContextMenu(createMenuContents()));
+        return b;
+    }
+    
+    static Node createInlineMenu(final boolean selectAll) {
+        // create a context menu so we can put it inline in our test page
+        final ContextMenu menu = new ContextMenu(createMenuContents());
+        // create a place holder container
+        final StackPane contextMenu = new StackPane();
+        // show context menu then steal and place inline
+        Platform.runLater(new Runnable() {
+            @Override public void run() {
+                menu.show(contextMenu,-1000,-1000);
+                menu.hide();
+                Platform.runLater(new Runnable() {
+                    @Override public void run() {
+                        final Node menuContent = menu.getSkin().getNode();
+                        contextMenu.getChildren().add(menuContent);
+                        menuContent.setMouseTransparent(true);
+//                        System.out.println("menuContent = " + menuContent);
+//                        System.out.println("menuContent.lookupAll(\".menu-item\") = " + menuContent.lookupAll(".menu-item"));
+                        
+//                        Platform.runLater(new Runnable() {
+//                            @Override public void run() {
+////                        if (selectAll) {
+////                            for (Node n: menuContent.lookupAll(".menu-item")) {
+////                                n.pseudoClassStateChanged(PseudoClass.getPseudoClass("hover"), true);
+////                            }
+////                        } else {
+//                            new ArrayList<Node>(menuContent.lookupAll(".menu-item")).get(2)
+//                                    .pseudoClassStateChanged(PseudoClass.getPseudoClass("hover"), true);
+////                        }
+//                            }
+//                        });
+                    }
+                });
+            }
+        });
+        return contextMenu;
+    }
+    
+    static MenuItem[] createMenuContents() {
+        List<MenuItem> menuItems = new ArrayList<>();
 //        Menu menu11 = makeMenu("_New", new ImageView(new Image(getClass().getResourceAsStream("about_16.png"))));
-        final Menu menu11 = new Menu("_New", new ImageView(new Image("helloworld/about_16.png")));
-        MenuItem menu12 = new MenuItem("_Open", new ImageView(new Image("helloworld/folder_16.png")));
+//        final Menu menu11 = new Menu("_New", new ImageView(new Image("helloworld/about_16.png")));
+//        MenuItem menu12 = new MenuItem("_Open", new ImageView(new Image("helloworld/folder_16.png")));
+        final Menu menu11 = new Menu("_New");
+        MenuItem menu12 = new MenuItem("_Open");
+        menu12.getStyleClass().add("OpenMenuItem");
         menu12.setAccelerator(new KeyCharacterCombination("]", 
                 KeyCombination.SHIFT_DOWN, KeyCombination.META_DOWN));
         Menu menu13 = new Menu("_Submenu");
-        CheckMenuItem showMessagesItem = new CheckMenuItem("Enable onShowing/onHiding _messages", 
-                                             new ImageView(new Image("helloworld/about_16.png")));
+//        CheckMenuItem showMessagesItem = new CheckMenuItem("Enable onShowing/onHiding _messages", 
+//                                             new ImageView(new Image("helloworld/about_16.png")));
+        CheckMenuItem showMessagesItem = new CheckMenuItem("Enable onShowing/onHiding _messages");
         MenuItem menu15 = new MenuItem("E_xit");
         final String change[] = {"Change Text", "Change Back"};
         final MenuItem menu16 = new MenuItem(change[0]);
@@ -243,10 +350,16 @@ public class SamplePageHelpers {
         menuItems.add(menu11);
         menuItems.add(menu12);
         menuItems.add(menu13);
-        menuItems.add(showMessagesItem);
+//        menuItems.add(showMessagesItem);
+        menuItems.add(menu16);
+        menuItems.add(new SeparatorMenuItem());
+        menuItems.add(CheckMenuItemBuilder.create().text("Check").build());
+        menuItems.add(CheckMenuItemBuilder.create().text("Check Selected").selected(true).build());
+        menuItems.add(new SeparatorMenuItem());
+        menuItems.add(RadioMenuItemBuilder.create().text("Radio").build());
+        menuItems.add(RadioMenuItemBuilder.create().text("Radio Selected").selected(true).build());
         menuItems.add(new SeparatorMenuItem());
         menuItems.add(menu15);
-        menuItems.add(menu16);
 
         // --- Menu 11 submenu
         final MenuItem menu111 = new MenuItem("blah");
@@ -266,7 +379,7 @@ public class SamplePageHelpers {
         MenuItem menu132 = new MenuItem("Item _2");
         menu13.getItems().addAll(menu131, menu132);
         
-        return menuItems.toArray();
+        return menuItems.toArray(new MenuItem[menuItems.size()]);
     }
     
     static final Image recorder48 = new Image(SamplePageHelpers.class.getResource("recorder-icon-48.png").toExternalForm());

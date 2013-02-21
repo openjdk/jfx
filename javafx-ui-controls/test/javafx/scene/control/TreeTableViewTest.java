@@ -32,9 +32,15 @@ import static javafx.scene.control.ControlTestUtils.assertStyleClassContains;
 import static org.junit.Assert.*;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.scene.Group;
+import javafx.scene.Scene;
 import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.stage.Stage;
+import javafx.util.Callback;
 
 import org.junit.Before;
 import org.junit.Ignore;
@@ -855,5 +861,49 @@ public class TreeTableViewTest {
         treeTableView.setRoot(null);
         assertEquals(0, treeTableView.getSelectionModel().getSelectedItems().size());
         assertNull(treeTableView.getSelectionModel().getSelectedItem());
+    }
+    
+    @Test public void test_rt28390() {
+        // There should be no NPE when a TreeTableView is shown and the disclosure
+        // node is null in a TreeCell
+        TreeItem root = new TreeItem("root");
+        treeTableView.setRoot(root);
+        
+        // install a custom cell factory that forces the disclosure node to be
+        // null (because by default a null disclosure node will be replaced by
+        // a non-null one).
+        treeTableView.setRowFactory(new Callback() {
+            @Override public Object call(Object p) {
+                TreeTableRow treeCell = new TreeTableRow() {
+                    {
+                        disclosureNodeProperty().addListener(new ChangeListener() {
+                            @Override public void changed(ObservableValue ov, Object t, Object t1) {
+                                setDisclosureNode(null);
+                            }
+                        });
+                    }
+                    
+                    @Override protected void updateItem(Object item, boolean empty) {
+                        super.updateItem(item, empty);
+                        setText(item == null ? "" : item.toString());
+                    }
+                };
+                treeCell.setDisclosureNode(null);
+                return treeCell;
+            }
+        });
+        
+        try {
+            Group group = new Group();
+            group.getChildren().setAll(treeTableView);
+            Scene scene = new Scene(group);
+            Stage stage = new Stage();
+            stage.setScene(scene);
+            stage.show();
+        } catch (NullPointerException e) {
+            System.out.println("A null disclosure node is valid, so we shouldn't have an NPE here.");
+            e.printStackTrace();
+            assertTrue(false);
+        }
     }
 }

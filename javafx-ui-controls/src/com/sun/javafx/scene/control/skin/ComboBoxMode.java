@@ -26,10 +26,9 @@
 package com.sun.javafx.scene.control.skin;
 
 /**
- *
- * @author paru
+ * Indicates what the look of the ColorPicker control should be. 
  */
-public enum ComboBoxMode {
+enum ComboBoxMode {
     
      /**
      * The default look with display and arrow button.

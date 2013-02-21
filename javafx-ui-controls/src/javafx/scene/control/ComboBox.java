@@ -371,6 +371,22 @@ public class ComboBox<T> extends ComboBoxBase<T> {
         return editor.getReadOnlyProperty(); 
     }
 
+    
+    // --- empty text
+    /**
+     * The {@code ComboBox} empty text to display, or <tt>null</tt> if no 
+     * empty text is displayed. Empty text is shown in the ComboBox popup area
+     * when the items list is null or empty. This is different than the 
+     * {@link #emptyTextProperty() emptyText} property, which is shown in the
+     * ComboBox Button / TextField area when there is no user-input value.
+     */
+    private StringProperty emptyText = new SimpleStringProperty(this, "emptyText", "");
+    public final StringProperty emptyTextProperty() { return emptyText; }
+    public final String getEmptyText() { return emptyText.get(); }
+    public final void setEmptyText(String value) { emptyText.set(value); }
+    
+    
+    
     /***************************************************************************
      *                                                                         *
      * Methods                                                                 *
@@ -381,6 +397,8 @@ public class ComboBox<T> extends ComboBoxBase<T> {
     @Override protected Skin<?> createDefaultSkin() {
         return new ComboBoxListViewSkin<T>(this);
     }
+    
+    
     
     /***************************************************************************
      *                                                                         *

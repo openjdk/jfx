@@ -136,7 +136,7 @@ import com.sun.javafx.jmx.MXNodeAlgorithm;
 import com.sun.javafx.jmx.MXNodeAlgorithmContext;
 import sun.util.logging.PlatformLogger;
 import com.sun.javafx.perf.PerformanceTracker;
-import com.sun.javafx.print.NodeAccess;
+import com.sun.javafx.scene.NodeAccess;
 import com.sun.javafx.scene.BoundsAccessor;
 import com.sun.javafx.scene.CssFlags;
 import com.sun.javafx.scene.DirtyBits;
@@ -4295,7 +4295,7 @@ public abstract class Node implements EventTarget, Styleable {
     /**
      * Finds a top-most child node that contains the given local coordinates.
      *
-     * Returns the picked node, null if no such node was found.
+     * The result argument is used for storing the picking result.
      * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
@@ -8256,7 +8256,28 @@ public abstract class Node implements EventTarget, Styleable {
         //
         final boolean flag = (reapply || cssFlag == CssFlags.REAPPLY);
         cssFlag = flag ? CssFlags.REAPPLY : CssFlags.UPDATE;
-        impl_processCSS();
+        
+        //
+        // RT-28394 - need to see if any ancestor has a flag other than clean
+        // If so, process css from the top-most css-dirty node
+        // 
+        Node topMost = this;
+        Node _parent = getParent();
+        while (_parent != null) {
+            if (_parent.cssFlag != CssFlags.CLEAN) {
+                topMost = _parent;
+            } 
+            _parent = _parent.getParent();
+        } 
+        
+        _parent = this;
+        while (_parent != topMost) {
+            if (_parent.cssFlag == CssFlags.CLEAN) {
+                _parent.cssFlag = CssFlags.DIRTY_BRANCH;                    
+            }
+            _parent = _parent.getParent();
+        }
+        topMost.processCSS();
     }
     
     /**
@@ -8269,7 +8290,7 @@ public abstract class Node implements EventTarget, Styleable {
      */
     @Deprecated // SB-dependency: RT-21206 has been filed to track this    
     protected void impl_processCSS() {
-        
+
         // Nothing to do...
         if (cssFlag == CssFlags.CLEAN) return;
 
@@ -8455,12 +8476,19 @@ public abstract class Node implements EventTarget, Styleable {
     public abstract Object impl_processMXNode(MXNodeAlgorithm alg, MXNodeAlgorithmContext ctx);
 
     /**
-     * This class is used by printing to get access to a private method.
+     * This class is used by classes in different packages to get access to
+     * private and package private methods.
      */
     private static class NodeAccessImpl extends NodeAccess {
 
+        @Override
         public void layoutNodeForPrinting(Node node) {
             node.doCSSLayoutSyncForSnapshot();
+        }
+
+        @Override
+        public boolean isDerivedDepthTest(Node node) {
+            return node.isDerivedDepthTest();
         }
     }
 

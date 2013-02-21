@@ -450,5 +450,22 @@ public class TabTest {
         assertTrue(tab.isDisable());
     }
     
-
+    @Test public void setDisableAndSeeDisabledValue() {
+        tab.setDisable(true);
+        assertTrue(tab.isDisabled());
+    }
+    
+    @Test public void setDisableOnTabPaneAndSeeValue() {
+        dummyTabPane.getTabs().add(tab);
+        assertFalse(tab.isDisable());
+        assertFalse(tab.isDisabled());
+        
+        dummyTabPane.setDisable(true);
+        assertFalse(tab.isDisable());
+        assertTrue(tab.isDisabled());
+        
+        dummyTabPane.setDisable(false);
+        assertFalse(tab.isDisable());
+        assertFalse(tab.isDisabled());
+    }
 }

@@ -57,6 +57,8 @@ import javafx.beans.binding.DoubleBinding;
 import javafx.geometry.Insets;
 import javafx.scene.control.Accordion;
 import javafx.scene.control.Labeled;
+import javafx.scene.control.ContextMenu;
+import javafx.scene.input.MouseButton;
 import javafx.scene.text.Font;
 
 public class TitledPaneSkin extends LabeledSkinBase<TitledPane, TitledPaneBehavior>  {
@@ -367,6 +369,11 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane, TitledPaneBehavi
 
             setOnMouseReleased(new EventHandler<MouseEvent>() {
                 @Override public void handle(MouseEvent e) {
+                    if( e.getButton() != MouseButton.PRIMARY ) return;
+                    ContextMenu contextMenu = getSkinnable().getContextMenu() ;
+                    if (contextMenu != null) {
+                        contextMenu.hide() ;
+                    }
                     if (getSkinnable().isCollapsible() && getSkinnable().isFocused()) {
                         getBehavior().toggle();
                     }

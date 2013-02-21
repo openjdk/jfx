@@ -1230,15 +1230,189 @@ public class Mouse3DTest {
         MouseEventGenerator g = new MouseEventGenerator();
         MeshView m = meshXY().handleMove(me);
         m.setTranslateZ(-500);
+        m.setTranslateX(-30);
         Scene s = scene(group(m, box(), sphere(), cylinder(), meshXY()), perspective(), true);
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 60, 20));
+        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 30, 20));
 
         MouseEvent e = me.event;
         assertNotNull(e);
-        assertCoordinates(e, 60, 20, 60, 20, 0);
+        assertCoordinates(e, 30, 20, 60, 20, 0);
         assertPickResult(e.getPickResult(),
                 m, point(60, 20, 0), 500, 0, point(0.6, 0.2));
     }
+
+    @Test
+    public void shouldPickNodeWithDepthTestDisabledCoveredBySibling() {
+        MouseEventGenerator g = new MouseEventGenerator();
+        MeshView m = meshXY();
+        m.setTranslateZ(-500);
+        m.setTranslateX(-30);
+
+        Box b = box().handleMove(me);
+        b.setDepthTest(DepthTest.DISABLE);
+
+        Scene s = scene(group(m, b), perspective(), true);
+        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 30, 20));
+
+        MouseEvent e = me.event;
+        assertNotNull(e);
+        assertCoordinates(e, 30, 20, 30, 20, -200);
+        assertPickResult(e.getPickResult(),
+                b, point(30, 20, -200), 800, NOFACE, point(0.2, 0.4));
+    }
+
+    @Test
+    public void shouldPickNodeCoveringCloserSiblingWithDepthTestDisabled() {
+        MouseEventGenerator g = new MouseEventGenerator();
+        MeshView m = meshXY();
+        m.setTranslateZ(-500);
+        m.setTranslateX(-30);
+        m.setDepthTest(DepthTest.DISABLE);
+
+        Box b = box().handleMove(me);
+        b.setDepthTest(DepthTest.ENABLE);
+
+        Scene s = scene(group(m, b), perspective(), true);
+        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 30, 20));
+
+        MouseEvent e = me.event;
+        assertNotNull(e);
+        assertCoordinates(e, 30, 20, 30, 20, -200);
+        assertPickResult(e.getPickResult(),
+                b, point(30, 20, -200), 800, NOFACE, point(0.2, 0.4));
+    }
+
+    @Test
+    public void shouldPickNodeWithDisabledDepthtestCoveredByOtherNode() {
+        MouseEventGenerator g = new MouseEventGenerator();
+
+        Box closer = box();
+        closer.setTranslateZ(-10);
+
+        Box b = box().handleMove(me);
+        b.setDepthTest(DepthTest.DISABLE);
+
+        Scene s = scene(group(group(closer), group(b)), perspective(), true);
+        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 30, 20));
+
+        MouseEvent e = me.event;
+        assertNotNull(e);
+        assertCoordinates(e, 30, 20, 30, 20, -200);
+        assertPickResult(e.getPickResult(),
+                b, point(30, 20, -200), 800, NOFACE, point(0.2, 0.4));
+    }
+
+    @Test
+    public void shouldPickNodeCoveringNodeWithDisabledDepthtest() {
+        MouseEventGenerator g = new MouseEventGenerator();
+
+        Box b1 = box();
+
+        Box b = box();
+        b.setDepthTest(DepthTest.DISABLE);
+
+        Box b2 = box().handleMove(me);
+        b2.setTranslateZ(-10);
+
+        Scene s = scene(group(group(b1), group(b), group(b2)), perspective(), true);
+        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 30, 20));
+
+        MouseEvent e = me.event;
+        assertNotNull(e);
+        assertCoordinates(e, 30, 20, 30, 20, -200);
+        assertPickResult(e.getPickResult(),
+                b2, point(30, 20, -200), 790, NOFACE, point(0.2, 0.4));
+    }
+
+    @Test
+    public void shouldPickByOrderIfParentsDepthTestDisabled() {
+        MouseEventGenerator g = new MouseEventGenerator();
+        MeshView m = meshXY();
+        m.setTranslateZ(-500);
+        m.setTranslateX(-30);
+
+        Box b = box().handleMove(me);
+
+        Group parent = group(m, b);
+        parent.setDepthTest(DepthTest.DISABLE);
+        
+        Scene s = scene(parent, perspective(), true);
+        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 30, 20));
+
+        MouseEvent e = me.event;
+        assertNotNull(e);
+        assertCoordinates(e, 30, 20, 30, 20, -200);
+        assertPickResult(e.getPickResult(),
+                b, point(30, 20, -200), 800, NOFACE, point(0.2, 0.4));
+    }
+
+    @Test
+    public void depthTestShouldHaveNoEffectWithoutDepthBuffer() {
+        MouseEventGenerator g = new MouseEventGenerator();
+        MeshView m = meshXY();
+        m.setTranslateZ(-500);
+        m.setTranslateX(-30);
+        m.setDepthTest(DepthTest.ENABLE);
+
+        Box b = box().handleMove(me);
+        b.setDepthTest(DepthTest.ENABLE);
+
+        Scene s = scene(group(m, b), perspective(), false);
+        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 30, 20));
+
+        MouseEvent e = me.event;
+        assertNotNull(e);
+        assertCoordinates(e, 30, 20, 30, 20, -200);
+        assertPickResult(e.getPickResult(),
+                b, point(30, 20, -200), 800, NOFACE, point(0.2, 0.4));
+    }
+
+    @Test
+    public void disabledDepthTestShouldNotInfluencePickingIfNotPicked() {
+        MouseEventGenerator g = new MouseEventGenerator();
+
+        Box b1 = box().handleMove(me);
+        b1.setDepthTest(DepthTest.ENABLE);
+
+        Box b2 = box();
+        b2.setTranslateX(500);
+        b2.setDepthTest(DepthTest.DISABLE);
+
+        Scene s = scene(group(b1, b2), perspective(), false);
+        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 30, 20));
+
+        MouseEvent e = me.event;
+        assertNotNull(e);
+        assertCoordinates(e, 30, 20, 30, 20, -200);
+        assertPickResult(e.getPickResult(),
+                b1, point(30, 20, -200), 800, NOFACE, point(0.2, 0.4));
+    }
+
+    @Test
+    public void disabledDepthTestShouldNotInfluencePickingIfNotPickedByNonEmptyResult() {
+        MouseEventGenerator g = new MouseEventGenerator();
+
+        Box odd = box();
+        odd.setTranslateZ(10);
+
+        Box b1 = box().handleMove(me);
+        b1.setDepthTest(DepthTest.ENABLE);
+
+        Box b2 = box();
+        b2.setTranslateX(500);
+        b2.setDepthTest(DepthTest.DISABLE);
+
+        Scene s = scene(group(b1, b2, odd), perspective(), true);
+        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 30, 20));
+
+        MouseEvent e = me.event;
+        assertNotNull(e);
+        assertCoordinates(e, 30, 20, 30, 20, -200);
+        assertPickResult(e.getPickResult(),
+                b1, point(30, 20, -200), 800, NOFACE, point(0.2, 0.4));
+    }
+
+
 
 
     /*****************  SCENE picking ********************/
