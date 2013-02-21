@@ -1,11 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <classpath>
+	<classpathentry kind="src" path="apps/experiments/Modena/src"/>
 	<classpathentry kind="src" path="decora-compiler/build/gensrc"/>
 	<classpathentry kind="src" path="decora-compiler/src"/>
 	<classpathentry kind="src" path="deploy/javafx-deploy/src"/>
 	<classpathentry kind="src" path="deploy/javafx-launcher/src"/>
 	<classpathentry kind="src" path="deploy/packager/src"/>
-	<classpathentry kind="src" path="deploy/packager/test"/>	
+	<classpathentry kind="src" path="deploy/packager/test"/>
+	<classpathentry kind="src" path="glass/glass/src"/>
 	<classpathentry kind="src" path="javafx-anim/src"/>
 	<classpathentry kind="src" path="javafx-anim/build/builders"/>
 	<classpathentry kind="src" path="javafx-anim/test/unit"/>
