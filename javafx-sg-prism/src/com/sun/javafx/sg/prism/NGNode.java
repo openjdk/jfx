@@ -33,6 +33,7 @@ import com.sun.javafx.geom.DirtyRegionPool;
 import com.sun.javafx.geom.Point2D;
 import com.sun.javafx.geom.RectBounds;
 import com.sun.javafx.geom.Rectangle;
+import com.sun.javafx.geom.transform.Affine3D;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.geom.transform.GeneralTransform3D;
 import com.sun.javafx.sg.BaseCacheFilter;
@@ -753,6 +754,7 @@ public abstract class NGNode extends BaseNode<Graphics> {
         // Garbage-reduction variables:
         private final RectBounds TEMP_BOUNDS = new RectBounds();
         private static final DirtyRegionContainer TEMP_CONTAINER = new DirtyRegionContainer(1);
+        private static final Affine3D TEMP_CACHEFILTER_TRANSFORM = new Affine3D();
         private RTTexture tempTexture;
 
         CacheFilter(BaseNode node, CacheHint cacheHint) {
@@ -800,19 +802,20 @@ public abstract class NGNode extends BaseNode<Graphics> {
             
             if (image != null) {
                 Graphics g = image.createGraphics();
+                TEMP_CACHEFILTER_TRANSFORM.setToIdentity();
+                TEMP_CACHEFILTER_TRANSFORM.translate(-cacheBounds.x, -cacheBounds.y);
+                if (xform != null) {
+                    TEMP_CACHEFILTER_TRANSFORM.concatenate(xform);
+                }
                 if (dirtyBounds != null) {
-                    xform.transform(dirtyBounds, dirtyBounds);
                     TEMP_CONTAINER.deriveWithNewRegion((RectBounds)TEMP_BOUNDS.deriveWithNewBounds(dirtyBounds));
                     // Culling might save us a lot when there's a dirty region
-                    node.doPreCulling(TEMP_CONTAINER, xform, null);
+                    node.doPreCulling(TEMP_CONTAINER, TEMP_CACHEFILTER_TRANSFORM, null);
                     g.setHasPreCullingBits(true);
                     g.setClipRectIndex(0);
                     g.setClipRect(dirtyBounds);
                 }
-                g.translate(-cacheBounds.x, -cacheBounds.y);
-                if (xform != null) {
-                    g.transform(xform);
-                }
+                g.transform(TEMP_CACHEFILTER_TRANSFORM);
                 if (node.getClipNode() != null) {
                     ((NGNode)node).renderClip(g);
                 } else if (node.getEffectFilter() != null) {
@@ -870,9 +873,6 @@ public abstract class NGNode extends BaseNode<Graphics> {
          */
         @Override
         protected boolean impl_scrollCacheCapable() {
-            if (highestPixelScale > 1.0f) {
-                return false;
-            }
             if (!(node instanceof NGGroup)) {
                 return false;
             }
