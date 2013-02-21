@@ -1376,6 +1376,11 @@ public abstract class Node implements EventTarget, Styleable {
      * the {@link Scene} is true (meaning that the
      * {@link Scene} has an associated depth buffer)
      * <p>
+     * Depth test comparison is only done among nodes with depthTest enabled.
+     * A node with depthTest disabled does not read, test, or write the depth buffer,
+     * that is to say its Z value will not be considered for depth testing
+     * with other nodes.
+     * <p>
      * Note that this is a conditional feature. See
      * {@link javafx.application.ConditionalFeature#SCENE3D ConditionalFeature.SCENE3D}
      * for more information.
