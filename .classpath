@@ -1,8 +1,27 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <classpath>
+	<!--
+	<classpathentry kind="src" path="apps/experiments/ConferenceScheduleApp/src"/>
+	<classpathentry kind="src" path="apps/experiments/ModenaTest/test"/>
+	-->
 	<classpathentry kind="src" path="apps/experiments/Modena/src"/>
 	<classpathentry kind="src" path="decora-compiler/build/gensrc"/>
 	<classpathentry kind="src" path="decora-compiler/src"/>
+	<classpathentry kind="src" path="decora-d3d/src"/>
+	<classpathentry kind="src" path="decora-d3d/build/gensrc"/>
+	<classpathentry kind="src" path="decora-es2/src"/>
+	<classpathentry kind="src" path="decora-es2/build/gensrc"/>
+	<classpathentry kind="src" path="decora-jsw/build/gensrc"/>
+	<classpathentry kind="src" path="decora-jsw/src"/>
+	<classpathentry kind="src" path="decora-prism-ps/build/gensrc"/>
+	<classpathentry kind="src" path="decora-prism-ps/src"/>
+	<classpathentry kind="src" path="decora-prism-sw/src"/>
+	<classpathentry kind="src" path="decora-prism/src"/>
+	<classpathentry kind="src" path="decora-runtime/src"/>
+	<classpathentry kind="src" path="decora-runtime/generator"/>
+	<classpathentry kind="src" path="decora-runtime/test"/>
+	<classpathentry kind="src" path="decora-sse/src"/>
+	<classpathentry kind="src" path="decora-sse/build/gensrc"/>
 	<classpathentry kind="src" path="deploy/javafx-deploy/src"/>
 	<classpathentry kind="src" path="deploy/javafx-launcher/src"/>
 	<classpathentry kind="src" path="deploy/packager/src"/>
@@ -27,6 +46,8 @@
 	<!--
 	<classpathentry kind="src" path="javafx-designtime/test"/>
 	-->
+	<classpathentry kind="src" path="javafx-embed-swing/src"/>
+	<classpathentry kind="src" path="javafx-embed-swt/src"/>
 	<classpathentry kind="src" path="javafx-fxml/src"/>
 	<classpathentry kind="src" path="javafx-fxml/test"/>
 	<classpathentry kind="src" path="javafx-geom/src"/>
@@ -47,30 +68,18 @@
 	<classpathentry kind="src" path="javafx-ui-controls/build/builders"/>
 	<classpathentry kind="src" path="javafx-util-converter/src"/>
 	<classpathentry kind="src" path="javafx-util-converter/test"/>
-	<classpathentry kind="src" path="javafx-embed-swing/src"/>
-	<classpathentry kind="src" path="javafx-embed-swt/src"/>
-	<classpathentry kind="src" path="decora-d3d/src"/>
-	<classpathentry kind="src" path="decora-d3d/build/gensrc"/>
-	<classpathentry kind="src" path="decora-es2/src"/>
-	<classpathentry kind="src" path="decora-es2/build/gensrc"/>
-	<classpathentry kind="src" path="decora-jsw/build/gensrc"/>
-	<classpathentry kind="src" path="decora-jsw/src"/>
-	<classpathentry kind="src" path="decora-prism-ps/build/gensrc"/>
-	<classpathentry kind="src" path="decora-prism-ps/src"/>
-	<classpathentry kind="src" path="decora-prism-sw/src"/>
-	<classpathentry kind="src" path="decora-prism/src"/>
-	<classpathentry kind="src" path="decora-runtime/src"/>
-	<classpathentry kind="src" path="decora-runtime/generator"/>
-	<classpathentry kind="src" path="decora-runtime/test"/>
-	<classpathentry kind="src" path="decora-sse/src"/>
-	<classpathentry kind="src" path="decora-sse/build/gensrc"/>
 	<classpathentry kind="src" path="pisces/src"/>
 	<classpathentry kind="src" path="test-stub-toolkit/src"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.junit.JUNIT_CONTAINER/4"/>
 	<classpathentry kind="lib" path="../import/antlr-3.1.3/antlr-3.1.3/lib/antlr-3.1.3.jar"/>
 	<classpathentry kind="lib" path="../import/findbugs-2.0.1/findbugs-2.0.1/lib/ant.jar"/>
-	<classpathentry kind="lib" path="../import/swt-3.7.1/swt-debug.jar"/>
 	<classpathentry kind="src" path="/rt-closed"/>
+	<classpathentry kind="src" path="/org.eclipse.swt">
+		<attributes>
+			<attribute name="optional" value="true"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="../import/swt-3.7.1/swt-debug.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
