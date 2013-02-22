@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2012, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,40 +22,36 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-
 package com.sun.javafx.css;
 
-import javafx.css.PseudoClass;
+import javafx.css.StyleOrigin;
 
-/**
- * Implementation details of {@link javafx.css.PseudoClass}
- */
-final class PseudoClassImpl extends PseudoClass {
+public final class CalculatedValue {
 
+    public static final CalculatedValue SKIP = new CalculatedValue(new int[0], null, false);
 
-    PseudoClassImpl(String pseudoClassName, int index) {
-        this.pseudoClassName = pseudoClassName;
-        this.index = index;
+    public CalculatedValue(Object value, StyleOrigin origin, boolean relative) {
+            
+        this.value = value;            
+        this.origin = origin;
+        this.relative = relative;
+        
     }
 
-    /** @return the pseudo-class state */
-    @Override
-    public String getPseudoClassName() {
-        return pseudoClassName;
+    public Object getValue() {
+        return value;
     }
 
-    /** @return the pseudo-class state */
-    @Override public String toString() {
-        return pseudoClassName;
+    public StyleOrigin getOrigin() {
+        return origin;
     }
 
-    public int getIndex() {
-       return index;
+    public boolean isRelative() {
+        return relative;
     }
 
-    private final String pseudoClassName;
-
-    // index of this PseudoClass in pseudoClasses list.
-    private final int index;
-   
+    private final Object value;
+    private final StyleOrigin origin;
+    private final boolean relative;
+        
 }

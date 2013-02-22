@@ -25,8 +25,6 @@
 
 package com.sun.javafx.css;
 
-import com.sun.javafx.css.StyleHelper.StyleCacheBucket;
-import com.sun.javafx.css.StyleHelper.StyleCacheKey;
 import com.sun.javafx.css.converters.FontConverter;
 import com.sun.javafx.css.converters.SizeConverter;
 import com.sun.javafx.tk.Toolkit;
@@ -72,7 +70,7 @@ public class Node_cssStyleMap_Test {
             styles.add(
                 new CascadingStyle(
                     new Style(decl.rule.selectors.get(0), decl), 
-                    new long[0],
+                    new PseudoClassState(),
                     0, 
                     0
                 )
@@ -231,8 +229,8 @@ public class Node_cssStyleMap_Test {
 
         final List<CascadingStyle> rootStyles = createStyleList(rootDecls);
         final Map<String,List<CascadingStyle>> rootStyleMap = createStyleMap(rootStyles);
-        final Map<StyleCacheKey, StyleCacheBucket> styleCache = 
-            new HashMap<StyleHelper.StyleCacheKey, StyleHelper.StyleCacheBucket>();
+        final Map<StyleCache.Key, StyleCache> styleCache = 
+            new HashMap<StyleCache.Key, StyleCache>();
         
         group = new Group();
         group.getStyleClass().add("root");

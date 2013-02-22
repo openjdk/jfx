@@ -40,101 +40,101 @@ public final class SelectorPartitioning {
      * SimpleSelector uses long[] for StyleClass. This wraps the long[]
      * so that it can be used as a key in the selector maps.
     */
-    private final static class StyleClassKey {
-        
-        private final long[] bits;
-        private final static long[] EMPTY_BITS = new long[0];
-        private final static StyleClassKey WILDCARD = new StyleClassKey(EMPTY_BITS);
-        
-        private StyleClassKey(long[] bits) {
-            this.bits = (bits != null) ? new long[bits.length] : EMPTY_BITS;
-            System.arraycopy(bits, 0, this.bits, 0, bits.length);
-        }
-        
-        /*
-         * Test that all the bits of this key are present in the other. Given
-         * <pre>
-         * {@code
-         * Key k1 = new Key(0x5);
-         * Key k2 = new Key(0x4);}</pre> {@code k1.isSubset(k2) } returns false
-         * and {@code k2.isSubset(k1) } returns true; <p> Note that one cannot
-         * assume if {@code x.isSubsetOf(y) == false }
-         * that {@code y.isSuperSetOf(x) == true } since <i>x</i> and <i>y</i>
-         * might be disjoint.
-         *
-         * @return true if this Key is a subset of the other.
-         */
-        private boolean isSubsetOf(StyleClassKey other) {
-        
-            // they are a subset if both are empty
-            if (bits.length == 0 && other.bits.length == 0) return true;
-
-            // [foo bar] cannot be a subset of [foo]
-            if (bits.length > other.bits.length) return false;
-
-            // is [foo bar] a subset of [foo bar bang]?
-            for (int n=0, max=bits.length; n<max; n++) {
-                if ((bits[n] & other.bits[n]) != bits[n]) return false;
-            }
-            return true;
-
-        }
-
-        /*
-         * return true if this seq1 is a superset of seq2. That is to say
-         * that all the bits seq2 of the other key are present in seq1. Given
-         * <pre>
-         * {@code
-         * Key k1 = new Key(0x5);
-         * Key k2 = new Key(0x4);}</pre> {@code k1.isSupersetOf(k2) } returns
-         * true and {@code k2.isSupersetOf(k1) } returns false <p> Note that one
-         * cannot assume if {@code x.isSubsetOf(y) == false }
-         * that {@code y.isSuperSetOf(x) == true } since <i>x</i> and <i>y</i>
-         * might be disjoint.
-         */
-        private boolean isSupersetOf(StyleClassKey other) {
-            
-            // [foo] cannot be a superset of [foo  bar]
-            // nor can [foo] be a superset of [foo]
-            if (bits.length < other.bits.length) return false;
-
-            // is [foo bar bang] a superset of [foo bar]?
-            for (int n=0, max=other.bits.length; n<max; n++) {
-                if ((bits[n] & other.bits[n]) != other.bits[n]) return false;
-            }
-            return true;
-
-        }
-        
-        //
-        // Need hashCode since StyleClassKey is used as a key in a Map.
-        // 
-        @Override
-        public int hashCode() {
-            int hash = 7;
-            hash = 41 * hash + Arrays.hashCode(this.bits);
-            return hash;
-        }
-
-        //
-        // Need equals since StyleClassKey is used as a key in a Map.
-        // 
-        @Override
-        public boolean equals(Object obj) {
-            if (obj == null) {
-                return false;
-            }
-            if (getClass() != obj.getClass()) {
-                return false;
-            }
-            final StyleClassKey other = (StyleClassKey) obj;
-            if (!Arrays.equals(this.bits, other.bits)) {
-                return false;
-            }
-            return true;
-        }
-        
-    }
+//    private final static class StyleClassKey {
+//        
+//        private final long[] bits;
+//        private final static long[] EMPTY_BITS = new long[0];
+//        private final static StyleClassKey WILDCARD = new StyleClassKey(EMPTY_BITS);
+//        
+//        private StyleClassKey(long[] bits) {
+//            this.bits = (bits != null) ? new long[bits.length] : EMPTY_BITS;
+//            System.arraycopy(bits, 0, this.bits, 0, bits.length);
+//        }
+//        
+//        /*
+//         * Test that all the bits of this key are present in the other. Given
+//         * <pre>
+//         * {@code
+//         * Key k1 = new Key(0x5);
+//         * Key k2 = new Key(0x4);}</pre> {@code k1.isSubset(k2) } returns false
+//         * and {@code k2.isSubset(k1) } returns true; <p> Note that one cannot
+//         * assume if {@code x.isSubsetOf(y) == false }
+//         * that {@code y.isSuperSetOf(x) == true } since <i>x</i> and <i>y</i>
+//         * might be disjoint.
+//         *
+//         * @return true if this Key is a subset of the other.
+//         */
+//        private boolean isSubsetOf(StyleClassKey other) {
+//        
+//            // they are a subset if both are empty
+//            if (bits.length == 0 && other.bits.length == 0) return true;
+//
+//            // [foo bar] cannot be a subset of [foo]
+//            if (bits.length > other.bits.length) return false;
+//
+//            // is [foo bar] a subset of [foo bar bang]?
+//            for (int n=0, max=bits.length; n<max; n++) {
+//                if ((bits[n] & other.bits[n]) != bits[n]) return false;
+//            }
+//            return true;
+//
+//        }
+//
+//        /*
+//         * return true if this seq1 is a superset of seq2. That is to say
+//         * that all the bits seq2 of the other key are present in seq1. Given
+//         * <pre>
+//         * {@code
+//         * Key k1 = new Key(0x5);
+//         * Key k2 = new Key(0x4);}</pre> {@code k1.isSupersetOf(k2) } returns
+//         * true and {@code k2.isSupersetOf(k1) } returns false <p> Note that one
+//         * cannot assume if {@code x.isSubsetOf(y) == false }
+//         * that {@code y.isSuperSetOf(x) == true } since <i>x</i> and <i>y</i>
+//         * might be disjoint.
+//         */
+//        private boolean isSupersetOf(StyleClassKey other) {
+//            
+//            // [foo] cannot be a superset of [foo  bar]
+//            // nor can [foo] be a superset of [foo]
+//            if (bits.length < other.bits.length) return false;
+//
+//            // is [foo bar bang] a superset of [foo bar]?
+//            for (int n=0, max=other.bits.length; n<max; n++) {
+//                if ((bits[n] & other.bits[n]) != other.bits[n]) return false;
+//            }
+//            return true;
+//
+//        }
+//        
+//        //
+//        // Need hashCode since StyleClassKey is used as a key in a Map.
+//        // 
+//        @Override
+//        public int hashCode() {
+//            int hash = 7;
+//            hash = 41 * hash + Arrays.hashCode(this.bits);
+//            return hash;
+//        }
+//
+//        //
+//        // Need equals since StyleClassKey is used as a key in a Map.
+//        // 
+//        @Override
+//        public boolean equals(Object obj) {
+//            if (obj == null) {
+//                return false;
+//            }
+//            if (getClass() != obj.getClass()) {
+//                return false;
+//            }
+//            final StyleClassKey other = (StyleClassKey) obj;
+//            if (!Arrays.equals(this.bits, other.bits)) {
+//                return false;
+//            }
+//            return true;
+//        }
+//        
+//    }
     
     /*
      * Wrapper so that we can have Map<ParitionKey, Partition> even though
@@ -380,11 +380,11 @@ public final class SelectorPartitioning {
                 ? new PartitionKey(selectorType)
                 : null;
         
-        final long[] selectorStyleClass = simpleSelector.getStyleClassMasks();
+        final Set<StyleClass> selectorStyleClass = simpleSelector.getStyleClassSet();
         final boolean hasStyleClass = 
-            (selectorStyleClass != null && selectorStyleClass.length > 0);
+            (selectorStyleClass != null && selectorStyleClass.size() > 0);
         final PartitionKey styleClassKey = hasStyleClass 
-                ? new PartitionKey<StyleClassKey>(new StyleClassKey(selectorStyleClass))
+                ? new PartitionKey<Set<StyleClass>>(selectorStyleClass)
                 : null;
         
         final int c = 
@@ -428,7 +428,7 @@ public final class SelectorPartitioning {
     }
     
     /** Get the list of rules that match this selector. Package accessible */
-    List<Rule> match(String selectorId, String selectorType, long[] selectorStyleClass) {
+    List<Rule> match(String selectorId, String selectorType, Set<StyleClass> selectorStyleClass) {
         
         final boolean hasId = 
             (selectorId != null && selectorId.isEmpty() == false);
@@ -443,9 +443,9 @@ public final class SelectorPartitioning {
                 : null;
         
         final boolean hasStyleClass = 
-            (selectorStyleClass != null && selectorStyleClass.length > 0);
+            (selectorStyleClass != null && selectorStyleClass.size() > 0);
         final PartitionKey styleClassKey = hasStyleClass 
-                ? new PartitionKey<StyleClassKey>(new StyleClassKey(selectorStyleClass))
+                ? new PartitionKey<Set<StyleClass>>(selectorStyleClass)
                 : null;
         
         int c = 
@@ -476,10 +476,10 @@ public final class SelectorPartitioning {
                                 slot.copyRules(ruleData);
 
                                 if ((c & STYLECLASS_BIT) == STYLECLASS_BIT) {
-                                    StyleClassKey key = (StyleClassKey)styleClassKey.key;
+                                    Set<StyleClass> key = (Set<StyleClass>)styleClassKey.key;
                                     for (Slot s : slot.referents.values()) {
-                                        StyleClassKey other = (StyleClassKey)s.partition.key.key;
-                                        if (other.isSubsetOf(key)) {
+                                        Set<StyleClass> other = (Set<StyleClass>)s.partition.key.key;
+                                        if (key.containsAll(other)) {
                                             s.copyRules(ruleData);
                                         }
                                     }
@@ -516,10 +516,10 @@ public final class SelectorPartitioning {
                             partition.copyRules(ruleData);
 
                             if ((c & STYLECLASS_BIT) == STYLECLASS_BIT) {
-                                StyleClassKey key = (StyleClassKey)styleClassKey.key;
+                                Set<StyleClass> key = (Set<StyleClass>)styleClassKey.key;
                                 for (Slot s : partition.slots.values()) {
-                                    StyleClassKey other = (StyleClassKey)s.partition.key.key;
-                                    if (other.isSubsetOf(key)) {
+                                    Set<StyleClass> other = (Set<StyleClass>)s.partition.key.key;
+                                    if (key.containsAll(other)) {
                                         s.copyRules(ruleData);
                                     }
                                 }
