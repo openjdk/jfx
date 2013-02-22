@@ -7,33 +7,39 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		23AE06EC16D6D14900509584 /* GlassApplication.h in Headers */ = {isa = PBXBuildFile; fileRef = 23AE06D016D6D14800509584 /* GlassApplication.h */; };
+		23AE06ED16D6D14900509584 /* GlassApplication.m in Sources */ = {isa = PBXBuildFile; fileRef = 23AE06D116D6D14900509584 /* GlassApplication.m */; };
+		23AE06EE16D6D14900509584 /* GlassCursor.m in Sources */ = {isa = PBXBuildFile; fileRef = 23AE06D216D6D14900509584 /* GlassCursor.m */; };
+		23AE06EF16D6D14900509584 /* GlassDragDelegate.h in Headers */ = {isa = PBXBuildFile; fileRef = 23AE06D316D6D14900509584 /* GlassDragDelegate.h */; };
+		23AE06F016D6D14900509584 /* GlassDragDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 23AE06D416D6D14900509584 /* GlassDragDelegate.m */; };
+		23AE06F116D6D14900509584 /* GlassGestureSupport.m in Sources */ = {isa = PBXBuildFile; fileRef = 23AE06D516D6D14900509584 /* GlassGestureSupport.m */; };
+		23AE06F216D6D14900509584 /* GlassHelper.h in Headers */ = {isa = PBXBuildFile; fileRef = 23AE06D616D6D14900509584 /* GlassHelper.h */; };
+		23AE06F316D6D14900509584 /* GlassHelper.m in Sources */ = {isa = PBXBuildFile; fileRef = 23AE06D716D6D14900509584 /* GlassHelper.m */; };
+		23AE06F416D6D14900509584 /* GlassKey.m in Sources */ = {isa = PBXBuildFile; fileRef = 23AE06D816D6D14900509584 /* GlassKey.m */; };
+		23AE06F516D6D14900509584 /* GlassMacros.h in Headers */ = {isa = PBXBuildFile; fileRef = 23AE06D916D6D14900509584 /* GlassMacros.h */; };
+		23AE06F616D6D14900509584 /* GlassPasteboard.h in Headers */ = {isa = PBXBuildFile; fileRef = 23AE06DA16D6D14900509584 /* GlassPasteboard.h */; };
+		23AE06F716D6D14900509584 /* GlassPasteboard.m in Sources */ = {isa = PBXBuildFile; fileRef = 23AE06DB16D6D14900509584 /* GlassPasteboard.m */; };
+		23AE06F816D6D14900509584 /* GlassRobot.m in Sources */ = {isa = PBXBuildFile; fileRef = 23AE06DC16D6D14900509584 /* GlassRobot.m */; };
+		23AE06F916D6D14900509584 /* GlassScreen.m in Sources */ = {isa = PBXBuildFile; fileRef = 23AE06DD16D6D14900509584 /* GlassScreen.m */; };
+		23AE06FA16D6D14900509584 /* GlassStatics.h in Headers */ = {isa = PBXBuildFile; fileRef = 23AE06DE16D6D14900509584 /* GlassStatics.h */; };
+		23AE06FB16D6D14900509584 /* GlassStatics.m in Sources */ = {isa = PBXBuildFile; fileRef = 23AE06DF16D6D14900509584 /* GlassStatics.m */; };
+		23AE06FC16D6D14900509584 /* GlassTimer.h in Headers */ = {isa = PBXBuildFile; fileRef = 23AE06E016D6D14900509584 /* GlassTimer.h */; };
+		23AE06FD16D6D14900509584 /* GlassTimer.m in Sources */ = {isa = PBXBuildFile; fileRef = 23AE06E116D6D14900509584 /* GlassTimer.m */; };
+		23AE06FE16D6D14900509584 /* GlassView.h in Headers */ = {isa = PBXBuildFile; fileRef = 23AE06E216D6D14900509584 /* GlassView.h */; };
+		23AE06FF16D6D14900509584 /* GlassView.m in Sources */ = {isa = PBXBuildFile; fileRef = 23AE06E316D6D14900509584 /* GlassView.m */; };
+		23AE070016D6D14900509584 /* GlassViewController.h in Headers */ = {isa = PBXBuildFile; fileRef = 23AE06E416D6D14900509584 /* GlassViewController.h */; };
+		23AE070116D6D14900509584 /* GlassViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 23AE06E516D6D14900509584 /* GlassViewController.m */; };
+		23AE070216D6D14900509584 /* GlassViewDelegate.h in Headers */ = {isa = PBXBuildFile; fileRef = 23AE06E616D6D14900509584 /* GlassViewDelegate.h */; };
+		23AE070316D6D14900509584 /* GlassViewDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 23AE06E716D6D14900509584 /* GlassViewDelegate.m */; };
+		23AE070416D6D14900509584 /* GlassViewGL.h in Headers */ = {isa = PBXBuildFile; fileRef = 23AE06E816D6D14900509584 /* GlassViewGL.h */; };
+		23AE070516D6D14900509584 /* GlassViewGL.m in Sources */ = {isa = PBXBuildFile; fileRef = 23AE06E916D6D14900509584 /* GlassViewGL.m */; };
+		23AE070616D6D14900509584 /* GlassWindow.h in Headers */ = {isa = PBXBuildFile; fileRef = 23AE06EA16D6D14900509584 /* GlassWindow.h */; };
+		23AE070716D6D14900509584 /* GlassWindow.m in Sources */ = {isa = PBXBuildFile; fileRef = 23AE06EB16D6D14900509584 /* GlassWindow.m */; };
+		23AE070916D6D15800509584 /* common.h in Headers */ = {isa = PBXBuildFile; fileRef = 23AE070816D6D15800509584 /* common.h */; };
+		23AE070B16D6D17200509584 /* glass_Prefix.pch in Headers */ = {isa = PBXBuildFile; fileRef = 23AE070A16D6D17200509584 /* glass_Prefix.pch */; };
 		84AE77D0157372CF009ECC6C /* CoreMotion.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 84AE77CF157372CF009ECC6C /* CoreMotion.framework */; };
 		84AE784215751D48009ECC6C /* CoreLocation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 84AE784115751D48009ECC6C /* CoreLocation.framework */; };
-		A5337B4615F0FB8D00ACCAD3 /* GlassTimer.h in Headers */ = {isa = PBXBuildFile; fileRef = A5337B4415F0FB8D00ACCAD3 /* GlassTimer.h */; };
-		A5337B4715F0FB8D00ACCAD3 /* GlassTimer.m in Sources */ = {isa = PBXBuildFile; fileRef = A5337B4515F0FB8D00ACCAD3 /* GlassTimer.m */; };
-		AA747D9F0F9514B9006C5449 /* glass_Prefix.pch in Headers */ = {isa = PBXBuildFile; fileRef = AA747D9E0F9514B9006C5449 /* glass_Prefix.pch */; };
 		AACBBE4A0F95108600F1A2B1 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AACBBE490F95108600F1A2B1 /* Foundation.framework */; };
-		BDA572181591A6B4004E2C91 /* GlassApplication.h in Headers */ = {isa = PBXBuildFile; fileRef = BDA572021591A6B4004E2C91 /* GlassApplication.h */; };
-		BDA572191591A6B4004E2C91 /* GlassApplication.m in Sources */ = {isa = PBXBuildFile; fileRef = BDA572031591A6B4004E2C91 /* GlassApplication.m */; };
-		BDA5721A1591A6B4004E2C91 /* GlassCursor.m in Sources */ = {isa = PBXBuildFile; fileRef = BDA572041591A6B4004E2C91 /* GlassCursor.m */; };
-		BDA5721B1591A6B4004E2C91 /* GlassGestureSupport.m in Sources */ = {isa = PBXBuildFile; fileRef = BDA572051591A6B4004E2C91 /* GlassGestureSupport.m */; };
-		BDA5721C1591A6B4004E2C91 /* GlassHelper.h in Headers */ = {isa = PBXBuildFile; fileRef = BDA572061591A6B4004E2C91 /* GlassHelper.h */; };
-		BDA5721D1591A6B4004E2C91 /* GlassHelper.m in Sources */ = {isa = PBXBuildFile; fileRef = BDA572071591A6B4004E2C91 /* GlassHelper.m */; };
-		BDA5721F1591A6B4004E2C91 /* GlassKey.m in Sources */ = {isa = PBXBuildFile; fileRef = BDA572091591A6B4004E2C91 /* GlassKey.m */; };
-		BDA572201591A6B4004E2C91 /* GlassMacros.h in Headers */ = {isa = PBXBuildFile; fileRef = BDA5720A1591A6B4004E2C91 /* GlassMacros.h */; };
-		BDA572211591A6B4004E2C91 /* GlassScreen.m in Sources */ = {isa = PBXBuildFile; fileRef = BDA5720B1591A6B4004E2C91 /* GlassScreen.m */; };
-		BDA572221591A6B4004E2C91 /* GlassStatics.h in Headers */ = {isa = PBXBuildFile; fileRef = BDA5720C1591A6B4004E2C91 /* GlassStatics.h */; };
-		BDA572231591A6B4004E2C91 /* GlassStatics.m in Sources */ = {isa = PBXBuildFile; fileRef = BDA5720D1591A6B4004E2C91 /* GlassStatics.m */; };
-		BDA572241591A6B4004E2C91 /* GlassView.h in Headers */ = {isa = PBXBuildFile; fileRef = BDA5720E1591A6B4004E2C91 /* GlassView.h */; };
-		BDA572251591A6B4004E2C91 /* GlassView.m in Sources */ = {isa = PBXBuildFile; fileRef = BDA5720F1591A6B4004E2C91 /* GlassView.m */; };
-		BDA572261591A6B4004E2C91 /* GlassViewController.h in Headers */ = {isa = PBXBuildFile; fileRef = BDA572101591A6B4004E2C91 /* GlassViewController.h */; };
-		BDA572271591A6B4004E2C91 /* GlassViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = BDA572111591A6B4004E2C91 /* GlassViewController.m */; };
-		BDA572281591A6B4004E2C91 /* GlassViewDelegate.h in Headers */ = {isa = PBXBuildFile; fileRef = BDA572121591A6B4004E2C91 /* GlassViewDelegate.h */; };
-		BDA572291591A6B4004E2C91 /* GlassViewDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = BDA572131591A6B4004E2C91 /* GlassViewDelegate.m */; };
-		BDA5722A1591A6B4004E2C91 /* GlassViewGL.h in Headers */ = {isa = PBXBuildFile; fileRef = BDA572141591A6B4004E2C91 /* GlassViewGL.h */; };
-		BDA5722B1591A6B4004E2C91 /* GlassViewGL.m in Sources */ = {isa = PBXBuildFile; fileRef = BDA572151591A6B4004E2C91 /* GlassViewGL.m */; };
-		BDA5722C1591A6B4004E2C91 /* GlassWindow.h in Headers */ = {isa = PBXBuildFile; fileRef = BDA572161591A6B4004E2C91 /* GlassWindow.h */; };
-		BDA5722D1591A6B4004E2C91 /* GlassWindow.m in Sources */ = {isa = PBXBuildFile; fileRef = BDA572171591A6B4004E2C91 /* GlassWindow.m */; };
 		BDA5722F1591A6C4004E2C91 /* common.h in Headers */ = {isa = PBXBuildFile; fileRef = BDA5722E1591A6C4004E2C91 /* common.h */; };
 		BDA572641592015A004E2C91 /* com_sun_glass_events_DndEvent.h in Headers */ = {isa = PBXBuildFile; fileRef = BDA572301592015A004E2C91 /* com_sun_glass_events_DndEvent.h */; };
 		BDA572651592015A004E2C91 /* com_sun_glass_events_KeyEvent.h in Headers */ = {isa = PBXBuildFile; fileRef = BDA572311592015A004E2C91 /* com_sun_glass_events_KeyEvent.h */; };
@@ -83,45 +89,46 @@
 		BDA572941592015A004E2C91 /* com_sun_glass_ui_Window_TrackingRectangle.h in Headers */ = {isa = PBXBuildFile; fileRef = BDA572601592015A004E2C91 /* com_sun_glass_ui_Window_TrackingRectangle.h */; };
 		BDA572951592015A004E2C91 /* com_sun_glass_ui_Window_UndecoratedMoveResizeHelper.h in Headers */ = {isa = PBXBuildFile; fileRef = BDA572611592015A004E2C91 /* com_sun_glass_ui_Window_UndecoratedMoveResizeHelper.h */; };
 		BDA572971592015A004E2C91 /* com_sun_glass_ui_Window.h in Headers */ = {isa = PBXBuildFile; fileRef = BDA572631592015A004E2C91 /* com_sun_glass_ui_Window.h */; };
-		BDF9B80F15EBAEC1001C32A2 /* GlassRobot.m in Sources */ = {isa = PBXBuildFile; fileRef = BDF9B80D15EBAEC1001C32A2 /* GlassRobot.m */; };
 		C67E331A161197C900383C7B /* com_sun_glass_ui_ios_IosPasteboard.h in Headers */ = {isa = PBXBuildFile; fileRef = C67E3319161197C900383C7B /* com_sun_glass_ui_ios_IosPasteboard.h */; };
 		C67E331D16119C6C00383C7B /* CoreFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C67E331C16119C6C00383C7B /* CoreFoundation.framework */; };
-		C6822CCC1612E5D80029FDC4 /* GlassDragDelegate.h in Headers */ = {isa = PBXBuildFile; fileRef = C6822CCA1612E5D80029FDC4 /* GlassDragDelegate.h */; };
-		C6822CCD1612E5D80029FDC4 /* GlassDragDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = C6822CCB1612E5D80029FDC4 /* GlassDragDelegate.m */; };
-		C68B9934160CAE160027216C /* GlassPasteboard.h in Headers */ = {isa = PBXBuildFile; fileRef = C68B9932160CAE160027216C /* GlassPasteboard.h */; };
-		C68B9935160CAE160027216C /* GlassPasteboard.m in Sources */ = {isa = PBXBuildFile; fileRef = C68B9933160CAE160027216C /* GlassPasteboard.m */; };
 		C6D7200113B334BF0012D459 /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C6D7200013B334BF0012D459 /* UIKit.framework */; };
 		C6D7200313B334D40012D459 /* OpenGLES.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C6D7200213B334D40012D459 /* OpenGLES.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		23AE06D016D6D14800509584 /* GlassApplication.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = GlassApplication.h; path = src/GlassApplication.h; sourceTree = "<group>"; };
+		23AE06D116D6D14900509584 /* GlassApplication.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = GlassApplication.m; path = src/GlassApplication.m; sourceTree = "<group>"; };
+		23AE06D216D6D14900509584 /* GlassCursor.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = GlassCursor.m; path = src/GlassCursor.m; sourceTree = "<group>"; };
+		23AE06D316D6D14900509584 /* GlassDragDelegate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = GlassDragDelegate.h; path = src/GlassDragDelegate.h; sourceTree = "<group>"; };
+		23AE06D416D6D14900509584 /* GlassDragDelegate.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = GlassDragDelegate.m; path = src/GlassDragDelegate.m; sourceTree = "<group>"; };
+		23AE06D516D6D14900509584 /* GlassGestureSupport.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = GlassGestureSupport.m; path = src/GlassGestureSupport.m; sourceTree = "<group>"; };
+		23AE06D616D6D14900509584 /* GlassHelper.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = GlassHelper.h; path = src/GlassHelper.h; sourceTree = "<group>"; };
+		23AE06D716D6D14900509584 /* GlassHelper.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = GlassHelper.m; path = src/GlassHelper.m; sourceTree = "<group>"; };
+		23AE06D816D6D14900509584 /* GlassKey.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = GlassKey.m; path = src/GlassKey.m; sourceTree = "<group>"; };
+		23AE06D916D6D14900509584 /* GlassMacros.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = GlassMacros.h; path = src/GlassMacros.h; sourceTree = "<group>"; };
+		23AE06DA16D6D14900509584 /* GlassPasteboard.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = GlassPasteboard.h; path = src/GlassPasteboard.h; sourceTree = "<group>"; };
+		23AE06DB16D6D14900509584 /* GlassPasteboard.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = GlassPasteboard.m; path = src/GlassPasteboard.m; sourceTree = "<group>"; };
+		23AE06DC16D6D14900509584 /* GlassRobot.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = GlassRobot.m; path = src/GlassRobot.m; sourceTree = "<group>"; };
+		23AE06DD16D6D14900509584 /* GlassScreen.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = GlassScreen.m; path = src/GlassScreen.m; sourceTree = "<group>"; };
+		23AE06DE16D6D14900509584 /* GlassStatics.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = GlassStatics.h; path = src/GlassStatics.h; sourceTree = "<group>"; };
+		23AE06DF16D6D14900509584 /* GlassStatics.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = GlassStatics.m; path = src/GlassStatics.m; sourceTree = "<group>"; };
+		23AE06E016D6D14900509584 /* GlassTimer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = GlassTimer.h; path = src/GlassTimer.h; sourceTree = "<group>"; };
+		23AE06E116D6D14900509584 /* GlassTimer.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = GlassTimer.m; path = src/GlassTimer.m; sourceTree = "<group>"; };
+		23AE06E216D6D14900509584 /* GlassView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = GlassView.h; path = src/GlassView.h; sourceTree = "<group>"; };
+		23AE06E316D6D14900509584 /* GlassView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = GlassView.m; path = src/GlassView.m; sourceTree = "<group>"; };
+		23AE06E416D6D14900509584 /* GlassViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = GlassViewController.h; path = src/GlassViewController.h; sourceTree = "<group>"; };
+		23AE06E516D6D14900509584 /* GlassViewController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = GlassViewController.m; path = src/GlassViewController.m; sourceTree = "<group>"; };
+		23AE06E616D6D14900509584 /* GlassViewDelegate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = GlassViewDelegate.h; path = src/GlassViewDelegate.h; sourceTree = "<group>"; };
+		23AE06E716D6D14900509584 /* GlassViewDelegate.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = GlassViewDelegate.m; path = src/GlassViewDelegate.m; sourceTree = "<group>"; };
+		23AE06E816D6D14900509584 /* GlassViewGL.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = GlassViewGL.h; path = src/GlassViewGL.h; sourceTree = "<group>"; };
+		23AE06E916D6D14900509584 /* GlassViewGL.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = GlassViewGL.m; path = src/GlassViewGL.m; sourceTree = "<group>"; };
+		23AE06EA16D6D14900509584 /* GlassWindow.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = GlassWindow.h; path = src/GlassWindow.h; sourceTree = "<group>"; };
+		23AE06EB16D6D14900509584 /* GlassWindow.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = GlassWindow.m; path = src/GlassWindow.m; sourceTree = "<group>"; };
+		23AE070816D6D15800509584 /* common.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = common.h; path = src/common.h; sourceTree = "<group>"; };
+		23AE070A16D6D17200509584 /* glass_Prefix.pch */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = glass_Prefix.pch; path = src/glass_Prefix.pch; sourceTree = "<group>"; };
 		84AE77CF157372CF009ECC6C /* CoreMotion.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreMotion.framework; path = System/Library/Frameworks/CoreMotion.framework; sourceTree = SDKROOT; };
 		84AE784115751D48009ECC6C /* CoreLocation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreLocation.framework; path = System/Library/Frameworks/CoreLocation.framework; sourceTree = SDKROOT; };
-		A5337B4415F0FB8D00ACCAD3 /* GlassTimer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = GlassTimer.h; path = src/com/sun/glass/ui/GlassTimer.h; sourceTree = "<group>"; };
-		A5337B4515F0FB8D00ACCAD3 /* GlassTimer.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = GlassTimer.m; path = src/com/sun/glass/ui/GlassTimer.m; sourceTree = "<group>"; };
-		AA747D9E0F9514B9006C5449 /* glass_Prefix.pch */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = glass_Prefix.pch; sourceTree = "<group>"; };
 		AACBBE490F95108600F1A2B1 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
-		BDA572021591A6B4004E2C91 /* GlassApplication.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = GlassApplication.h; path = src/com/sun/glass/ui/GlassApplication.h; sourceTree = "<group>"; };
-		BDA572031591A6B4004E2C91 /* GlassApplication.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = GlassApplication.m; path = src/com/sun/glass/ui/GlassApplication.m; sourceTree = "<group>"; };
-		BDA572041591A6B4004E2C91 /* GlassCursor.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = GlassCursor.m; path = src/com/sun/glass/ui/GlassCursor.m; sourceTree = "<group>"; };
-		BDA572051591A6B4004E2C91 /* GlassGestureSupport.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = GlassGestureSupport.m; path = src/com/sun/glass/ui/GlassGestureSupport.m; sourceTree = "<group>"; };
-		BDA572061591A6B4004E2C91 /* GlassHelper.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = GlassHelper.h; path = src/com/sun/glass/ui/GlassHelper.h; sourceTree = "<group>"; };
-		BDA572071591A6B4004E2C91 /* GlassHelper.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = GlassHelper.m; path = src/com/sun/glass/ui/GlassHelper.m; sourceTree = "<group>"; };
-		BDA572091591A6B4004E2C91 /* GlassKey.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = GlassKey.m; path = src/com/sun/glass/ui/GlassKey.m; sourceTree = "<group>"; };
-		BDA5720A1591A6B4004E2C91 /* GlassMacros.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = GlassMacros.h; path = src/com/sun/glass/ui/GlassMacros.h; sourceTree = "<group>"; };
-		BDA5720B1591A6B4004E2C91 /* GlassScreen.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = GlassScreen.m; path = src/com/sun/glass/ui/GlassScreen.m; sourceTree = "<group>"; };
-		BDA5720C1591A6B4004E2C91 /* GlassStatics.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = GlassStatics.h; path = src/com/sun/glass/ui/GlassStatics.h; sourceTree = "<group>"; };
-		BDA5720D1591A6B4004E2C91 /* GlassStatics.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = GlassStatics.m; path = src/com/sun/glass/ui/GlassStatics.m; sourceTree = "<group>"; };
-		BDA5720E1591A6B4004E2C91 /* GlassView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = GlassView.h; path = src/com/sun/glass/ui/GlassView.h; sourceTree = "<group>"; };
-		BDA5720F1591A6B4004E2C91 /* GlassView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = GlassView.m; path = src/com/sun/glass/ui/GlassView.m; sourceTree = "<group>"; };
-		BDA572101591A6B4004E2C91 /* GlassViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = GlassViewController.h; path = src/com/sun/glass/ui/GlassViewController.h; sourceTree = "<group>"; };
-		BDA572111591A6B4004E2C91 /* GlassViewController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = GlassViewController.m; path = src/com/sun/glass/ui/GlassViewController.m; sourceTree = "<group>"; };
-		BDA572121591A6B4004E2C91 /* GlassViewDelegate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = GlassViewDelegate.h; path = src/com/sun/glass/ui/GlassViewDelegate.h; sourceTree = "<group>"; };
-		BDA572131591A6B4004E2C91 /* GlassViewDelegate.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = GlassViewDelegate.m; path = src/com/sun/glass/ui/GlassViewDelegate.m; sourceTree = "<group>"; };
-		BDA572141591A6B4004E2C91 /* GlassViewGL.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = GlassViewGL.h; path = src/com/sun/glass/ui/GlassViewGL.h; sourceTree = "<group>"; };
-		BDA572151591A6B4004E2C91 /* GlassViewGL.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = GlassViewGL.m; path = src/com/sun/glass/ui/GlassViewGL.m; sourceTree = "<group>"; };
-		BDA572161591A6B4004E2C91 /* GlassWindow.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = GlassWindow.h; path = src/com/sun/glass/ui/GlassWindow.h; sourceTree = "<group>"; };
-		BDA572171591A6B4004E2C91 /* GlassWindow.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = GlassWindow.m; path = src/com/sun/glass/ui/GlassWindow.m; sourceTree = "<group>"; };
 		BDA5722E1591A6C4004E2C91 /* common.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = common.h; path = src/com/sun/glass/ui/common.h; sourceTree = "<group>"; };
 		BDA572301592015A004E2C91 /* com_sun_glass_events_DndEvent.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = com_sun_glass_events_DndEvent.h; path = build/com_sun_glass_events_DndEvent.h; sourceTree = "<group>"; };
 		BDA572311592015A004E2C91 /* com_sun_glass_events_KeyEvent.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = com_sun_glass_events_KeyEvent.h; path = build/com_sun_glass_events_KeyEvent.h; sourceTree = "<group>"; };
@@ -171,17 +178,11 @@
 		BDA572601592015A004E2C91 /* com_sun_glass_ui_Window_TrackingRectangle.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = com_sun_glass_ui_Window_TrackingRectangle.h; path = build/com_sun_glass_ui_Window_TrackingRectangle.h; sourceTree = "<group>"; };
 		BDA572611592015A004E2C91 /* com_sun_glass_ui_Window_UndecoratedMoveResizeHelper.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = com_sun_glass_ui_Window_UndecoratedMoveResizeHelper.h; path = build/com_sun_glass_ui_Window_UndecoratedMoveResizeHelper.h; sourceTree = "<group>"; };
 		BDA572631592015A004E2C91 /* com_sun_glass_ui_Window.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = com_sun_glass_ui_Window.h; path = build/com_sun_glass_ui_Window.h; sourceTree = "<group>"; };
-		BDF9B80D15EBAEC1001C32A2 /* GlassRobot.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = GlassRobot.m; path = src/com/sun/glass/ui/GlassRobot.m; sourceTree = "<group>"; };
 		C67E3319161197C900383C7B /* com_sun_glass_ui_ios_IosPasteboard.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = com_sun_glass_ui_ios_IosPasteboard.h; path = build/com_sun_glass_ui_ios_IosPasteboard.h; sourceTree = "<group>"; };
 		C67E331C16119C6C00383C7B /* CoreFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreFoundation.framework; path = System/Library/Frameworks/CoreFoundation.framework; sourceTree = SDKROOT; };
-		C6822CCA1612E5D80029FDC4 /* GlassDragDelegate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = GlassDragDelegate.h; path = src/com/sun/glass/ui/GlassDragDelegate.h; sourceTree = "<group>"; };
-		C6822CCB1612E5D80029FDC4 /* GlassDragDelegate.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = GlassDragDelegate.m; path = src/com/sun/glass/ui/GlassDragDelegate.m; sourceTree = "<group>"; };
-		C68B9932160CAE160027216C /* GlassPasteboard.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = GlassPasteboard.h; path = src/com/sun/glass/ui/GlassPasteboard.h; sourceTree = "<group>"; };
-		C68B9933160CAE160027216C /* GlassPasteboard.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = GlassPasteboard.m; path = src/com/sun/glass/ui/GlassPasteboard.m; sourceTree = "<group>"; };
 		C6D7200013B334BF0012D459 /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = System/Library/Frameworks/UIKit.framework; sourceTree = SDKROOT; };
 		C6D7200213B334D40012D459 /* OpenGLES.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = OpenGLES.framework; path = System/Library/Frameworks/OpenGLES.framework; sourceTree = SDKROOT; };
 		D2AAC07E0554694100DB518D /* libglass.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libglass.a; sourceTree = BUILT_PRODUCTS_DIR; };
-		D9DCA96C153D65160024804A /* iPadKeyboardInputAccView.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; path = iPadKeyboardInputAccView.xib; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -237,34 +238,35 @@
 		08FB77AEFE84172EC02AAC07 /* Classes */ = {
 			isa = PBXGroup;
 			children = (
-				C68B9932160CAE160027216C /* GlassPasteboard.h */,
-				C68B9933160CAE160027216C /* GlassPasteboard.m */,
-				A5337B4415F0FB8D00ACCAD3 /* GlassTimer.h */,
-				A5337B4515F0FB8D00ACCAD3 /* GlassTimer.m */,
-				BDA572021591A6B4004E2C91 /* GlassApplication.h */,
-				BDA572031591A6B4004E2C91 /* GlassApplication.m */,
-				BDA572041591A6B4004E2C91 /* GlassCursor.m */,
-				BDA572051591A6B4004E2C91 /* GlassGestureSupport.m */,
-				BDA572061591A6B4004E2C91 /* GlassHelper.h */,
-				BDA572071591A6B4004E2C91 /* GlassHelper.m */,
-				BDA572091591A6B4004E2C91 /* GlassKey.m */,
-				BDA5720A1591A6B4004E2C91 /* GlassMacros.h */,
-				BDF9B80D15EBAEC1001C32A2 /* GlassRobot.m */,
-				BDA5720B1591A6B4004E2C91 /* GlassScreen.m */,
-				BDA5720C1591A6B4004E2C91 /* GlassStatics.h */,
-				BDA5720D1591A6B4004E2C91 /* GlassStatics.m */,
-				BDA5720E1591A6B4004E2C91 /* GlassView.h */,
-				BDA5720F1591A6B4004E2C91 /* GlassView.m */,
-				BDA572101591A6B4004E2C91 /* GlassViewController.h */,
-				BDA572111591A6B4004E2C91 /* GlassViewController.m */,
-				BDA572121591A6B4004E2C91 /* GlassViewDelegate.h */,
-				BDA572131591A6B4004E2C91 /* GlassViewDelegate.m */,
-				BDA572141591A6B4004E2C91 /* GlassViewGL.h */,
-				BDA572151591A6B4004E2C91 /* GlassViewGL.m */,
-				BDA572161591A6B4004E2C91 /* GlassWindow.h */,
-				BDA572171591A6B4004E2C91 /* GlassWindow.m */,
-				C6822CCA1612E5D80029FDC4 /* GlassDragDelegate.h */,
-				C6822CCB1612E5D80029FDC4 /* GlassDragDelegate.m */,
+				23AE070816D6D15800509584 /* common.h */,
+				23AE06D016D6D14800509584 /* GlassApplication.h */,
+				23AE06D116D6D14900509584 /* GlassApplication.m */,
+				23AE06D216D6D14900509584 /* GlassCursor.m */,
+				23AE06D316D6D14900509584 /* GlassDragDelegate.h */,
+				23AE06D416D6D14900509584 /* GlassDragDelegate.m */,
+				23AE06D516D6D14900509584 /* GlassGestureSupport.m */,
+				23AE06D616D6D14900509584 /* GlassHelper.h */,
+				23AE06D716D6D14900509584 /* GlassHelper.m */,
+				23AE06D816D6D14900509584 /* GlassKey.m */,
+				23AE06D916D6D14900509584 /* GlassMacros.h */,
+				23AE06DA16D6D14900509584 /* GlassPasteboard.h */,
+				23AE06DB16D6D14900509584 /* GlassPasteboard.m */,
+				23AE06DC16D6D14900509584 /* GlassRobot.m */,
+				23AE06DD16D6D14900509584 /* GlassScreen.m */,
+				23AE06DE16D6D14900509584 /* GlassStatics.h */,
+				23AE06DF16D6D14900509584 /* GlassStatics.m */,
+				23AE06E016D6D14900509584 /* GlassTimer.h */,
+				23AE06E116D6D14900509584 /* GlassTimer.m */,
+				23AE06E216D6D14900509584 /* GlassView.h */,
+				23AE06E316D6D14900509584 /* GlassView.m */,
+				23AE06E416D6D14900509584 /* GlassViewController.h */,
+				23AE06E516D6D14900509584 /* GlassViewController.m */,
+				23AE06E616D6D14900509584 /* GlassViewDelegate.h */,
+				23AE06E716D6D14900509584 /* GlassViewDelegate.m */,
+				23AE06E816D6D14900509584 /* GlassViewGL.h */,
+				23AE06E916D6D14900509584 /* GlassViewGL.m */,
+				23AE06EA16D6D14900509584 /* GlassWindow.h */,
+				23AE06EB16D6D14900509584 /* GlassWindow.m */,
 			);
 			name = Classes;
 			sourceTree = "<group>";
@@ -272,8 +274,7 @@
 		32C88DFF0371C24200C91783 /* Other Sources */ = {
 			isa = PBXGroup;
 			children = (
-				AA747D9E0F9514B9006C5449 /* glass_Prefix.pch */,
-				D9DCA96C153D65160024804A /* iPadKeyboardInputAccView.xib */,
+				23AE070A16D6D17200509584 /* glass_Prefix.pch */,
 			);
 			name = "Other Sources";
 			sourceTree = "<group>";
@@ -342,16 +343,6 @@
 			isa = PBXHeadersBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				AA747D9F0F9514B9006C5449 /* glass_Prefix.pch in Headers */,
-				BDA572181591A6B4004E2C91 /* GlassApplication.h in Headers */,
-				BDA5721C1591A6B4004E2C91 /* GlassHelper.h in Headers */,
-				BDA572201591A6B4004E2C91 /* GlassMacros.h in Headers */,
-				BDA572221591A6B4004E2C91 /* GlassStatics.h in Headers */,
-				BDA572241591A6B4004E2C91 /* GlassView.h in Headers */,
-				BDA572261591A6B4004E2C91 /* GlassViewController.h in Headers */,
-				BDA572281591A6B4004E2C91 /* GlassViewDelegate.h in Headers */,
-				BDA5722A1591A6B4004E2C91 /* GlassViewGL.h in Headers */,
-				BDA5722C1591A6B4004E2C91 /* GlassWindow.h in Headers */,
 				BDA5722F1591A6C4004E2C91 /* common.h in Headers */,
 				BDA572641592015A004E2C91 /* com_sun_glass_events_DndEvent.h in Headers */,
 				BDA572651592015A004E2C91 /* com_sun_glass_events_KeyEvent.h in Headers */,
@@ -401,10 +392,21 @@
 				BDA572941592015A004E2C91 /* com_sun_glass_ui_Window_TrackingRectangle.h in Headers */,
 				BDA572951592015A004E2C91 /* com_sun_glass_ui_Window_UndecoratedMoveResizeHelper.h in Headers */,
 				BDA572971592015A004E2C91 /* com_sun_glass_ui_Window.h in Headers */,
-				A5337B4615F0FB8D00ACCAD3 /* GlassTimer.h in Headers */,
-				C68B9934160CAE160027216C /* GlassPasteboard.h in Headers */,
 				C67E331A161197C900383C7B /* com_sun_glass_ui_ios_IosPasteboard.h in Headers */,
-				C6822CCC1612E5D80029FDC4 /* GlassDragDelegate.h in Headers */,
+				23AE06EC16D6D14900509584 /* GlassApplication.h in Headers */,
+				23AE06EF16D6D14900509584 /* GlassDragDelegate.h in Headers */,
+				23AE06F216D6D14900509584 /* GlassHelper.h in Headers */,
+				23AE06F516D6D14900509584 /* GlassMacros.h in Headers */,
+				23AE06F616D6D14900509584 /* GlassPasteboard.h in Headers */,
+				23AE06FA16D6D14900509584 /* GlassStatics.h in Headers */,
+				23AE06FC16D6D14900509584 /* GlassTimer.h in Headers */,
+				23AE06FE16D6D14900509584 /* GlassView.h in Headers */,
+				23AE070016D6D14900509584 /* GlassViewController.h in Headers */,
+				23AE070216D6D14900509584 /* GlassViewDelegate.h in Headers */,
+				23AE070416D6D14900509584 /* GlassViewGL.h in Headers */,
+				23AE070616D6D14900509584 /* GlassWindow.h in Headers */,
+				23AE070916D6D15800509584 /* common.h in Headers */,
+				23AE070B16D6D17200509584 /* glass_Prefix.pch in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -461,22 +463,22 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				BDA572191591A6B4004E2C91 /* GlassApplication.m in Sources */,
-				BDA5721A1591A6B4004E2C91 /* GlassCursor.m in Sources */,
-				BDA5721B1591A6B4004E2C91 /* GlassGestureSupport.m in Sources */,
-				BDA5721D1591A6B4004E2C91 /* GlassHelper.m in Sources */,
-				BDA5721F1591A6B4004E2C91 /* GlassKey.m in Sources */,
-				BDA572211591A6B4004E2C91 /* GlassScreen.m in Sources */,
-				BDA572231591A6B4004E2C91 /* GlassStatics.m in Sources */,
-				BDA572251591A6B4004E2C91 /* GlassView.m in Sources */,
-				BDA572271591A6B4004E2C91 /* GlassViewController.m in Sources */,
-				BDA572291591A6B4004E2C91 /* GlassViewDelegate.m in Sources */,
-				BDA5722B1591A6B4004E2C91 /* GlassViewGL.m in Sources */,
-				BDA5722D1591A6B4004E2C91 /* GlassWindow.m in Sources */,
-				BDF9B80F15EBAEC1001C32A2 /* GlassRobot.m in Sources */,
-				A5337B4715F0FB8D00ACCAD3 /* GlassTimer.m in Sources */,
-				C68B9935160CAE160027216C /* GlassPasteboard.m in Sources */,
-				C6822CCD1612E5D80029FDC4 /* GlassDragDelegate.m in Sources */,
+				23AE06ED16D6D14900509584 /* GlassApplication.m in Sources */,
+				23AE06EE16D6D14900509584 /* GlassCursor.m in Sources */,
+				23AE06F016D6D14900509584 /* GlassDragDelegate.m in Sources */,
+				23AE06F116D6D14900509584 /* GlassGestureSupport.m in Sources */,
+				23AE06F316D6D14900509584 /* GlassHelper.m in Sources */,
+				23AE06F416D6D14900509584 /* GlassKey.m in Sources */,
+				23AE06F716D6D14900509584 /* GlassPasteboard.m in Sources */,
+				23AE06F816D6D14900509584 /* GlassRobot.m in Sources */,
+				23AE06F916D6D14900509584 /* GlassScreen.m in Sources */,
+				23AE06FB16D6D14900509584 /* GlassStatics.m in Sources */,
+				23AE06FD16D6D14900509584 /* GlassTimer.m in Sources */,
+				23AE06FF16D6D14900509584 /* GlassView.m in Sources */,
+				23AE070116D6D14900509584 /* GlassViewController.m in Sources */,
+				23AE070316D6D14900509584 /* GlassViewDelegate.m in Sources */,
+				23AE070516D6D14900509584 /* GlassViewGL.m in Sources */,
+				23AE070716D6D14900509584 /* GlassWindow.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -495,7 +497,7 @@
 				GCC_MODEL_TUNING = G5;
 				GCC_OPTIMIZATION_LEVEL = 0;
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
-				GCC_PREFIX_HEADER = glass_Prefix.pch;
+				GCC_PREFIX_HEADER = src/glass_Prefix.pch;
 				GCC_VERSION = com.apple.compilers.llvm.clang.1_0;
 				INSTALL_PATH = /usr/local/lib;
 				ONLY_ACTIVE_ARCH = YES;
@@ -515,7 +517,7 @@
 				DSTROOT = /tmp/glass_lib_ios.dst;
 				GCC_MODEL_TUNING = G5;
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
-				GCC_PREFIX_HEADER = glass_Prefix.pch;
+				GCC_PREFIX_HEADER = src/glass_Prefix.pch;
 				GCC_VERSION = com.apple.compilers.llvm.clang.1_0;
 				INSTALL_PATH = /usr/local/lib;
 				ONLY_ACTIVE_ARCH = YES;
