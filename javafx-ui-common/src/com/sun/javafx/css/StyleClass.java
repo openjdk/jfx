@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2012, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,34 +24,34 @@
  */
 package com.sun.javafx.css;
 
-import javafx.css.StyleOrigin;
+/**
+ * 
+ */
+final class StyleClass {
 
-public final class CalculatedValue {
 
-    public static final CalculatedValue SKIP = new CalculatedValue(new int[0], null, false);
-
-    public CalculatedValue(Object value, StyleOrigin origin, boolean relative) {
-            
-        this.value = value;            
-        this.origin = origin;
-        this.relative = relative;
-        
+    StyleClass(String styleClassName, int index) {
+        this.styleClassName = styleClassName;
+        this.index = index;
     }
 
-    public Object getValue() {
-        return value;
+    /** @return the style-class */
+    public String getStyleClassName() {
+        return styleClassName;
     }
 
-    public StyleOrigin getOrigin() {
-        return origin;
+    /** @return the style-class */
+    @Override public String toString() {
+        return styleClassName;
     }
 
-    public boolean isRelative() {
-        return relative;
+    public int getIndex() {
+       return index;
     }
 
-    private final Object value;
-    private final StyleOrigin origin;
-    private final boolean relative;
-        
+    private final String styleClassName;
+
+    // index of this StyleClass in styleClasses list.
+    private final int index;
+   
 }

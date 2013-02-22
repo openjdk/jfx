@@ -26,16 +26,12 @@
 package com.sun.javafx.css;
 
 import com.sun.javafx.css.parser.CSSParser;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
 import javafx.scene.paint.Color;
 import org.junit.Test;
 import static org.junit.Assert.*;
-import org.junit.Before;
 
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -206,7 +202,7 @@ public class SelectorPartitioningTest {
                 
         SimpleSelector simple = simpleData.selector;
         
-        List<Rule> matched = instance.match(simple.getId(), simple.getName(), simple.getStyleClassMasks());
+        List<Rule> matched = instance.match(simple.getId(), simple.getName(), simple.getStyleClassSet());
         
         assertEquals(1,matched.size());
         Rule rule = matched.get(0);
@@ -228,7 +224,7 @@ public class SelectorPartitioningTest {
                 
         SimpleSelector simple = complexData.selector;
         
-        List<Rule> matched = instance.match(simple.getId(), simple.getName(), simple.getStyleClassMasks());
+        List<Rule> matched = instance.match(simple.getId(), simple.getName(), simple.getStyleClassSet());
         assertEquals(complexData.matches, matched.size());
         
         for(Rule rule : matched) {

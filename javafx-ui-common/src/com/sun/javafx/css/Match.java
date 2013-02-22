@@ -36,10 +36,10 @@ import static javafx.geometry.NodeOrientation.*;
 /**
  * Returned by {@link Selector#matches} in the event of a match.
  */
-final class Match implements Comparable {
+final class Match implements Comparable<Match> {
 
     final Selector selector;
-    final long[] pseudoClasses;
+    final PseudoClassState pseudoClasses;
     final int idCount;
     final int styleClassCount;
     
@@ -49,18 +49,14 @@ final class Match implements Comparable {
     // then pseudoclass count, and finally matching types (i.e., java name count)
     final int specificity;
 
-    Match(final Selector selector, long[] pseudoClasses,
+    Match(final Selector selector, PseudoClassState pseudoClasses,
             int idCount, int styleClassCount) {
         assert selector != null;
         this.selector = selector;
         this.idCount = idCount;
         this.styleClassCount = styleClassCount;
         this.pseudoClasses = pseudoClasses;
-        int nPseudoClasses = 0;
-        int nMax = pseudoClasses != null ? pseudoClasses.length : 0;
-        for (int n = 0; n < nMax; n++) {
-            nPseudoClasses += Long.bitCount(pseudoClasses[n]);
-        }
+        int nPseudoClasses = pseudoClasses != null ? pseudoClasses.size() : 0;
         if (selector instanceof SimpleSelector) {
             final SimpleSelector simple = (SimpleSelector)selector;
             if (simple.getNodeOrientation() != INHERIT) {
@@ -71,26 +67,8 @@ final class Match implements Comparable {
     }
         
     @Override
-    public int compareTo(Object o) {
-        Match m = (Match)o;
-        return specificity - m.specificity;
+    public int compareTo(Match o) {
+        return specificity - o.specificity;
     }
 
-    @Override
-    public String toString() {
-        StringBuilder sb = new StringBuilder();
-        sb.append(selector);
-        for(PseudoClass s : PseudoClassSet.getPseudoClasses(pseudoClasses)) {
-            sb.append(":");
-            sb.append(s.getPseudoClassName());
-        }
-        sb.append(", ");
-        sb.append(idCount);
-        sb.append(", ");
-        sb.append(styleClassCount);
-        sb.append(", 0x");
-        sb.append(Integer.toHexString(specificity));
-
-        return sb.toString();
-    }
 }

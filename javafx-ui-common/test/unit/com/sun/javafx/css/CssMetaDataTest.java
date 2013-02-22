@@ -53,6 +53,8 @@ import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.jmx.MXNodeAlgorithm;
 import com.sun.javafx.jmx.MXNodeAlgorithmContext;
 import com.sun.javafx.sg.PGNode;
+import java.util.Set;
+import javafx.css.PseudoClass;
 import javafx.scene.Scene;
 import javafx.scene.text.Text;
 import javafx.stage.Stage;
@@ -269,32 +271,17 @@ public class CssMetaDataTest {
     static int ord = 0;
     static CascadingStyle createCascadingStyle(Selector selector, Declaration declaration) {
         
-        long[] pseudoClasses = null;
+        Set<PseudoClass> pseudoClasses = null;
         if (selector instanceof SimpleSelector) {
             
             pseudoClasses = ((SimpleSelector)selector).getPseudoClassStates();
         } else {
             
-            pseudoClasses = new long[0];
+            pseudoClasses = new PseudoClassState();
             for (SimpleSelector sel : ((CompoundSelector)selector).getSelectors()) {
                 
-                 long[] selectorPseudoClasses = sel.getPseudoClassStates();
-                 if (pseudoClasses.length < selectorPseudoClasses.length) {
-                     
-                     long[] temp = Arrays.copyOf(selectorPseudoClasses, selectorPseudoClasses.length);
-                     for (int n=0; n<pseudoClasses.length; n++) {
-                         temp[n] |= pseudoClasses[n];
-                     }
-                     pseudoClasses = temp;
-                     
-                 } else {
-                     
-                     int nMax = Math.min(selectorPseudoClasses.length, pseudoClasses.length);
-                     for (int n=0; n<nMax; n++) {
-                         pseudoClasses[n] |= selectorPseudoClasses[n];
-                     }                     
-                     
-                 }
+                 Set<PseudoClass> selectorPseudoClasses = sel.getPseudoClassStates();
+                 pseudoClasses.addAll(selectorPseudoClasses);
             }
         }
         
@@ -397,7 +384,7 @@ public class CssMetaDataTest {
         stage.show();
         
         final CssMetaData FILL = get(rectangle.getCssMetaData(), "-fx-fill");
-        final List<Style> actuals = StyleManager.getInstance().getInstance().getMatchingStyles(FILL, rectangle);
+        final List<Style> actuals = Node.impl_getMatchingStyles(FILL, rectangle);
 
 //        System.err.println("matchingStyles: " + matchingStyles);
 //        System.err.println("expecteds: " + expecteds);
@@ -517,7 +504,7 @@ public class CssMetaDataTest {
         stage.show();        
                 
         final CssMetaData FILL = get(rectangle.getCssMetaData(), "-fx-fill");
-        final List<Style> actuals = StyleManager.getInstance().getInstance().getMatchingStyles(FILL, rectangle);
+        final List<Style> actuals = Node.impl_getMatchingStyles(FILL, rectangle);
 
 //        System.err.println("matchingStyles: " + matchingStyles);
 //        System.err.println("expecteds: " + expecteds);
@@ -640,7 +627,7 @@ public class CssMetaDataTest {
         stage.show();
 
         final CssMetaData FILL = get(rectangle.getCssMetaData(), "-fx-fill");
-        final List<Style> actuals = StyleManager.getInstance().getInstance().getMatchingStyles(FILL, rectangle);
+        final List<Style> actuals = Node.impl_getMatchingStyles(FILL, rectangle);
                 
 //        System.err.println("matchingStyles: " + matchingStyles);
 //        System.err.println("expecteds: " + expecteds);
@@ -767,7 +754,7 @@ public class CssMetaDataTest {
         stage.show();
         
         final CssMetaData FILL = get(rectangle.getCssMetaData(), "-fx-fill");
-        final List<Style> actuals = StyleManager.getInstance().getInstance().getMatchingStyles(FILL, rectangle);
+        final List<Style> actuals = Node.impl_getMatchingStyles(FILL, rectangle);
 
 //        System.err.println("matchingStyles: " + matchingStyles);
 //        System.err.println("expecteds: " + expecteds);
@@ -878,7 +865,7 @@ public class CssMetaDataTest {
         stage.show();
                 
         final CssMetaData FILL = get(rectangle.getCssMetaData(), "-fx-fill");
-        final List<Style> actuals = StyleManager.getInstance().getInstance().getMatchingStyles(FILL, rectangle);
+        final List<Style> actuals = Node.impl_getMatchingStyles(FILL, rectangle);
 
 //        System.err.println("matchingStyles: " + matchingStyles);
 //        System.err.println("expecteds: " + expecteds);
@@ -986,7 +973,7 @@ public class CssMetaDataTest {
         stage.show();
                 
         final CssMetaData FILL = get(rectangle.getCssMetaData(), "-fx-fill");
-        final List<Style> actuals = StyleManager.getInstance().getMatchingStyles(FILL, rectangle);
+        final List<Style> actuals = Node.impl_getMatchingStyles(FILL, rectangle);
 
 //        System.err.println("matchingStyles: " + matchingStyles);
 //        System.err.println("expecteds: " + expecteds);
@@ -1065,7 +1052,7 @@ public class CssMetaDataTest {
         stage.show();
                 
         final CssMetaData FONT = get(text.getCssMetaData(), "-fx-font");
-        final List<Style> actuals = StyleManager.getInstance().getMatchingStyles(FONT, text);
+        final List<Style> actuals = Node.impl_getMatchingStyles(FONT, text);
 
 //        System.err.println("matchingStyles: " + matchingStyles);
 //        System.err.println("expecteds: " + expecteds);
@@ -1149,7 +1136,7 @@ public class CssMetaDataTest {
         stage.show();
                         
         final CssMetaData FONT = get(text.getCssMetaData(), "-fx-font");
-        final List<Style> actuals = StyleManager.getInstance().getMatchingStyles(FONT, text);
+        final List<Style> actuals = Node.impl_getMatchingStyles(FONT, text);
 
 //        System.err.println("matchingStyles: " + matchingStyles);
 //        System.err.println("expecteds: " + expecteds);
@@ -1326,7 +1313,7 @@ public class CssMetaDataTest {
         stage.show();
 
         CssMetaData prop = ((StyleableProperty)text.fillProperty()).getCssMetaData();
-        List list = StyleManager.getInstance().getMatchingStyles(prop, text);
+        List list = Node.impl_getMatchingStyles(prop, text);
         
         assertEquals(3, list.size(), 0);
                 

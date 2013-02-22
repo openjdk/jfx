@@ -24,25 +24,18 @@
  */
 package com.sun.javafx.css;
 
-import com.sun.javafx.css.parser.CSSParser;
-import com.sun.javafx.tk.Toolkit;
-import java.io.IOException;
-import java.net.URL;
 import static org.junit.Assert.*;
 import javafx.scene.Cursor;
 import javafx.scene.Group;
 import javafx.scene.Scene;
-import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontSmoothingType;
 import javafx.scene.text.Text;
 import javafx.stage.Stage;
 import javafx.stage.Window;
-import javafx.beans.value.*;
 
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -240,7 +233,7 @@ public class HonorDeveloperSettingsTest {
         
         String url = getClass().getResource("HonorDeveloperSettingsTest_AUTHOR.css").toExternalForm();
         scene.getStylesheets().add(url);
-        Toolkit.getToolkit().firePulse();
+        scene.getRoot().impl_processCSS(true);
         assertEquals(20, rect.getStrokeWidth(), 0.00001);
         
     }
@@ -253,7 +246,7 @@ public class HonorDeveloperSettingsTest {
         String url = getClass().getResource("HonorDeveloperSettingsTest_AUTHOR.css").toExternalForm();
         scene.getStylesheets().add(url);
            
-        Toolkit.getToolkit().firePulse();
+        scene.getRoot().impl_processCSS(true);
         //
         // Stroke width is set to 1em in the author stylesheet. If 
         // RT-20145 is not working, then the code will pick up the 20px
@@ -272,7 +265,7 @@ public class HonorDeveloperSettingsTest {
         
         scene.getRoot().setStyle("-fx-font: 18 Amble;");
        
-        Toolkit.getToolkit().firePulse();
+        scene.getRoot().impl_processCSS(true);
         
         //
         // If RT-20513 is not working, then the code will _not_ 
@@ -292,7 +285,7 @@ public class HonorDeveloperSettingsTest {
         
         scene.getRoot().setStyle("-fx-font: 18 Amble;");
         
-        Toolkit.getToolkit().firePulse();
+        scene.getRoot().impl_processCSS(true);
                 
         assertEquals(14, text.getStrokeWidth(), 0.00001);
         
@@ -304,7 +297,7 @@ public class HonorDeveloperSettingsTest {
         text.setId("rt-20686-ua");
         text.setFontSmoothingType(FontSmoothingType.LCD);
         
-        Toolkit.getToolkit().firePulse();
+        scene.getRoot().impl_processCSS(true);
          
         assertEquals(FontSmoothingType.LCD, text.getFontSmoothingType());
         
@@ -318,7 +311,7 @@ public class HonorDeveloperSettingsTest {
         text.setId("rt-20686-author");
         text.setFontSmoothingType(FontSmoothingType.GRAY);
         
-        Toolkit.getToolkit().firePulse();
+        scene.getRoot().impl_processCSS(true);
                 
         assertEquals(FontSmoothingType.LCD, text.getFontSmoothingType());
         
@@ -330,7 +323,7 @@ public class HonorDeveloperSettingsTest {
         // text  has id "text". still, inline style should win out. 
         text.setStyle("-fx-font-size: 24;");
 
-        Toolkit.getToolkit().firePulse();
+        scene.getRoot().impl_processCSS(true);
 
         double size = text.getFont().getSize();
         assertEquals(24, size, .0001);
@@ -346,7 +339,7 @@ public class HonorDeveloperSettingsTest {
         // want text to get font style from .root
         text.setId(null);
         
-        Toolkit.getToolkit().firePulse();
+        scene.getRoot().impl_processCSS(true);
                 
         double size = text.getFont().getSize();
         assertEquals(20, size, .0001);
@@ -363,7 +356,7 @@ public class HonorDeveloperSettingsTest {
         text.setId(null);        
         text.setStyle("-fx-font-size: 24;");
 
-        Toolkit.getToolkit().firePulse();
+        scene.getRoot().impl_processCSS(true);
                
         double size = text.getFont().getSize();
         assertEquals(24, size, .0001);
@@ -382,7 +375,7 @@ public class HonorDeveloperSettingsTest {
         Group g = (Group)scene.getRoot();
         g.setStyle("-fx-font-size: 32;");
         
-        Toolkit.getToolkit().firePulse();
+        g.impl_processCSS(true);
                 
         double size = text.getFont().getSize();
         assertEquals(32, size, .0001);

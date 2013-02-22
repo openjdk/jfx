@@ -97,12 +97,13 @@ public final class StyleCache {
     
     public static final class Key {
         
-        public Key(int[] styleMapIds) {
-            this.styleMapIds = Arrays.copyOf(styleMapIds, styleMapIds.length);
+        public Key(int[] styleMapIds, int count) {
+            this.styleMapIds = new int[count];
+            System.arraycopy(styleMapIds, 0, this.styleMapIds, 0, count);
         }
         
         public Key(Key other) {
-            this.styleMapIds = Arrays.copyOf(other.styleMapIds, other.styleMapIds.length);
+            this(other.styleMapIds, other.styleMapIds != null ? other.styleMapIds.length : 0);
         }
 
         @Override

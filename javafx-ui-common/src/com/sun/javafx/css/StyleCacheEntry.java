@@ -27,6 +27,8 @@ package com.sun.javafx.css;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
+import javafx.css.PseudoClass;
 import javafx.css.StyleOrigin;
 
 /**
@@ -47,12 +49,12 @@ public final class StyleCacheEntry {
         this.values = new HashMap<String,CalculatedValue>();
     }
     
-    public CalculatedValue getRelativeFont() {
-        return relativeFont;
+    public CalculatedValue getFont() {
+        return font;
     }
     
-    public void setRelativeFont(CalculatedValue relativeFont) {
-        this.relativeFont = relativeFont;
+    public void setFont(CalculatedValue font) {
+        this.font = font;
     }
     
     public CalculatedValue get(String property) {
@@ -79,8 +81,8 @@ public final class StyleCacheEntry {
         final boolean isLocal =
             (cv.getOrigin() == StyleOrigin.INLINE || cv.getOrigin() == StyleOrigin.USER)            
             || (cv.isRelative() &&
-                (relativeFont.getOrigin() == StyleOrigin.INLINE || 
-                 relativeFont.getOrigin() == StyleOrigin.USER));
+                (font.getOrigin() == StyleOrigin.INLINE || 
+                 font.getOrigin() == StyleOrigin.USER));
                 
 
         if (isLocal) {
@@ -116,17 +118,20 @@ public final class StyleCacheEntry {
     
     public final static class Key {
 
-        private final long[][] pseudoClassStates;
+        private final Set<PseudoClass>[] pseudoClassStates;
     
-        public Key(long[][] pseudoClassStates) {
-            this.pseudoClassStates = pseudoClassStates;
+        public Key(Set<PseudoClass>[] pseudoClassStates, int count) {
+                        
+            this.pseudoClassStates = new PseudoClassState[count];
+            
+            for (int n=0; n<count; n++) {
+                this.pseudoClassStates[n] = new PseudoClassState();
+                this.pseudoClassStates[n].addAll(pseudoClassStates[n]);
+            }
         }
         
         private Key(Key other) {
-            this.pseudoClassStates = new long[other.pseudoClassStates.length][0];
-            for (int n=0; n<other.pseudoClassStates.length; n++) {
-                this.pseudoClassStates[n] = Arrays.copyOf(other.pseudoClassStates[n], other.pseudoClassStates[n].length);                
-            }
+            this(other.pseudoClassStates, other.pseudoClassStates != null ? other.pseudoClassStates.length : 0);
         }
 
         @Override
@@ -136,12 +141,9 @@ public final class StyleCacheEntry {
             
             for (int i=0; i<iMax; i++) {
                 
-                final long[] states = pseudoClassStates[i];
-                if (states == null) continue;
-                
-                for (int j=0; j<states.length; j++) {
-                    final long l = states[j];
-                    hash = 67 * hash + (int)(l^(l>>>32));
+                final Set<PseudoClass> states = pseudoClassStates[i];
+                if (states != null) {                
+                    hash = 67 * hash + states.hashCode();
                 }
             }
             return hash;
@@ -173,25 +175,12 @@ public final class StyleCacheEntry {
             
             for (int i=0; i<pseudoClassStates.length; i++) {
                 
-                final long[] ts = pseudoClassStates[i];
-                final long[] os = other.pseudoClassStates[i];
+                final Set<PseudoClass> this_pcs = pseudoClassStates[i];
+                final Set<PseudoClass> other_pcs = other.pseudoClassStates[i];
                 
                 // if one is null, the other must be too
-                if ((ts == null) ^ (os == null)) {
+                if (this_pcs == null ? other_pcs != null : !this_pcs.equals(other_pcs)) {
                     return false;
-                }
-                
-                // if one is null, the other is too
-                if (ts == null) {
-                    continue;
-                }
-                
-                if (ts.length != os.length) {
-                    return false;
-                }
-                
-                for (int j=0; j<ts.length; j++) {
-                    if (ts[j] != os[j]) return false;
                 }
             }
             
@@ -203,5 +192,5 @@ public final class StyleCacheEntry {
     private final StyleCache.Key sharedCacheKey;
     private final StyleCacheEntry.Key sharedEntryKey;
     private final Map<String,CalculatedValue> values;
-    private CalculatedValue  relativeFont; // for use in converting relative sizes
+    private CalculatedValue  font; // for use in converting font relative sizes
 }

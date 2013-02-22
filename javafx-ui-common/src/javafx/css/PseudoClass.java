@@ -24,7 +24,7 @@
  */
 package javafx.css;
 
-import com.sun.javafx.css.PseudoClassImpl;
+import com.sun.javafx.css.PseudoClassState;
 
 /**
  * PseudoClass represents one unique pseudo-class state. Introducing a 
@@ -81,7 +81,7 @@ public abstract class PseudoClass {
      */
     public static PseudoClass getPseudoClass(String pseudoClass) {
         
-        final PseudoClass instance = PseudoClassImpl.getPseudoClassImpl(pseudoClass);
+        final PseudoClass instance = PseudoClassState.getPseudoClass(pseudoClass);
         return instance;
     }
 

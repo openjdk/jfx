@@ -23,7 +23,8 @@ public class PseudoClassTest {
 
     @Before
     public void before() {
-        PseudoClassImpl.pseudoClassMap.clear();        
+        PseudoClassState.pseudoClassMap.clear();        
+        PseudoClassState.pseudoClasses.clear();       
     }
     
     @Test
@@ -35,7 +36,7 @@ public class PseudoClassTest {
 
     @Test
     public void testCreateStatesInstance() {
-        PseudoClassSet result = new PseudoClassSet();
+        PseudoClassState result = new PseudoClassState();
         assertNotNull(result);
     }
 
@@ -73,29 +74,40 @@ public class PseudoClassTest {
     }
 
     @Test
-    public void testPseudoClassSet_add() {
+    public void testPseudoClassState_add() {
         String pseudoClass = "xyzzy";
         PseudoClass state = PseudoClass.getPseudoClass(pseudoClass);
-        PseudoClassSet states = new PseudoClassSet();
+        PseudoClassState states = new PseudoClassState();
         states.add(state);
-        List<PseudoClass> stateList = states.getPseudoClasses();
+        
+        List<PseudoClass> stateList = new ArrayList<PseudoClass>();
+        Iterator<PseudoClass> iter = states.iterator();
+        while (iter.hasNext()) {
+            stateList.add(iter.next());
+        }
+        
         assertTrue(stateList.contains(state));
     }
 
     @Test
-    public void testPseudoClassSet_add_multipleStates() {
+    public void testPseudoClassState_add_multipleStates() {
         String[] pseudoClasses = new String[] {
             "one", "two", "three", "four", "five"
         };
         
-        PseudoClassSet states = new PseudoClassSet();
+        PseudoClassState states = new PseudoClassState();
         
         for (int n=0; n<pseudoClasses.length; n++) {
             PseudoClass state = PseudoClass.getPseudoClass(pseudoClasses[n]);
             states.add(state);
         }
         
-        List<PseudoClass> stateList = states.getPseudoClasses();
+        List<PseudoClass> stateList = new ArrayList<PseudoClass>();
+        Iterator<PseudoClass> iter = states.iterator();
+        while (iter.hasNext()) {
+            stateList.add(iter.next());
+        }
+
         for (int n=0; n<pseudoClasses.length; n++) {
             PseudoClass state = PseudoClass.getPseudoClass(pseudoClasses[n]);
             assertTrue(stateList.contains(state));
@@ -104,12 +116,12 @@ public class PseudoClassTest {
     }
     
     @Test
-    public void testPseudoClassSet_contains() {
+    public void testPseudoClassState_contains() {
         String[] pseudoClasses = new String[] {
             "one", "two", "three", "four", "five"
         };
         
-        PseudoClassSet states = new PseudoClassSet();
+        PseudoClassState states = new PseudoClassState();
         
         for (int n=0; n<pseudoClasses.length; n++) {
             PseudoClass state = PseudoClass.getPseudoClass(pseudoClasses[n]);
@@ -124,7 +136,7 @@ public class PseudoClassTest {
     }
     
     @Test
-    public void testPseudoClassSet_contains_negativeTest() {
+    public void testPseudoClassState_contains_negativeTest() {
         String[] pseudoClasses = new String[] {
             "one", "two", "three", "four", "five"
         };
@@ -133,7 +145,7 @@ public class PseudoClassTest {
             "six", "seven", "eight"
         };
         
-        PseudoClassSet states = new PseudoClassSet();
+        PseudoClassState states = new PseudoClassState();
         
         for (int n=0; n<pseudoClasses.length; n++) {
             PseudoClass state = PseudoClass.getPseudoClass(pseudoClasses[n]);
@@ -148,12 +160,12 @@ public class PseudoClassTest {
     }
 
     @Test
-    public void testPseudoClassSet_contains_null() {
+    public void testPseudoClassState_contains_null() {
         String[] pseudoClasses = new String[] {
             "one", "two", "three", "four", "five"
         };
         
-        PseudoClassSet states = new PseudoClassSet();
+        PseudoClassState states = new PseudoClassState();
         
         for (int n=0; n<pseudoClasses.length; n++) {
             PseudoClass state = PseudoClass.getPseudoClass(pseudoClasses[n]);
@@ -165,7 +177,7 @@ public class PseudoClassTest {
     }
     
     @Test
-    public void testPseudoClassSet_removeState() {
+    public void testPseudoClassState_removeState() {
         String[] pseudoClasses = new String[] {
             "one", "two", "three", "four", "five"
         };
@@ -174,7 +186,7 @@ public class PseudoClassTest {
             "one", "two", "four", "five"
         };
         
-        PseudoClassSet states = new PseudoClassSet();
+        PseudoClassState states = new PseudoClassState();
         
         for (int n=0; n<pseudoClasses.length; n++) {
             PseudoClass state = PseudoClass.getPseudoClass(pseudoClasses[n]);
@@ -194,13 +206,13 @@ public class PseudoClassTest {
     }
 
     @Test
-    public void testPseudoClassSet_containsAll() {
+    public void testPseudoClassState_containsAll() {
         
         String[] setA = new String[] {
             "zero", "one"
         };
         
-        PseudoClassSet aStates = new PseudoClassSet();
+        PseudoClassState aStates = new PseudoClassState();
         for(int n=0; n<setA.length; n++) {
             aStates.add(PseudoClass.getPseudoClass(setA[n]));
         }
@@ -208,7 +220,7 @@ public class PseudoClassTest {
         String[] setB = new String[] {
             "zero", "one", "two", "three"            
         };
-        PseudoClassSet bStates = new PseudoClassSet();
+        PseudoClassState bStates = new PseudoClassState();
         for(int n=0; n<setB.length; n++) {
             bStates.add(PseudoClass.getPseudoClass(setB[n]));
         }
@@ -217,13 +229,13 @@ public class PseudoClassTest {
     }    
 
     @Test
-    public void testPseudoClassSet_containsAll_negativeTest() {
+    public void testPseudoClassState_containsAll_negativeTest() {
         
         String[] setA = new String[] {
             "zero", "one", "two", "three" 
         };
         
-        PseudoClassSet aStates = new PseudoClassSet();
+        PseudoClassState aStates = new PseudoClassState();
         for(int n=0; n<setA.length; n++) {
             aStates.add(PseudoClass.getPseudoClass(setA[n]));
         }
@@ -231,7 +243,7 @@ public class PseudoClassTest {
         String[] setB = new String[] {
             "zero", "one"            
         };
-        PseudoClassSet bStates = new PseudoClassSet();
+        PseudoClassState bStates = new PseudoClassState();
         for(int n=0; n<setB.length; n++) {
             bStates.add(PseudoClass.getPseudoClass(setB[n]));
         }
@@ -240,13 +252,13 @@ public class PseudoClassTest {
     }    
 
     @Test
-    public void testPseudoClassSet_containsAll_whenSetsAreEqual() {
+    public void testPseudoClassState_containsAll_whenSetsAreEqual() {
         
         String[] setA = new String[] {
             "zero", "one", "two", "three" 
         };
         
-        PseudoClassSet aStates = new PseudoClassSet();
+        PseudoClassState aStates = new PseudoClassState();
         for(int n=0; n<setA.length; n++) {
             aStates.add(PseudoClass.getPseudoClass(setA[n]));
         }
@@ -254,7 +266,7 @@ public class PseudoClassTest {
         String[] setB = new String[] {
             "zero", "one", "two", "three"            
         };
-        PseudoClassSet bStates = new PseudoClassSet();
+        PseudoClassState bStates = new PseudoClassState();
         for(int n=0; n<setB.length; n++) {
             bStates.add(PseudoClass.getPseudoClass(setB[n]));
         }
@@ -263,13 +275,13 @@ public class PseudoClassTest {
     }    
 
     @Test
-    public void testPseudoClassSet_containsAll_whenSetsDisjoint() {
+    public void testPseudoClassState_containsAll_whenSetsDisjoint() {
         
         String[] setA = new String[] {
             "zero", "one", "two", "three" 
         };
         
-        PseudoClassSet aStates = new PseudoClassSet();
+        PseudoClassState aStates = new PseudoClassState();
         for(int n=0; n<setA.length; n++) {
             aStates.add(PseudoClass.getPseudoClass(setA[n]));
         }
@@ -277,7 +289,7 @@ public class PseudoClassTest {
         String[] setB = new String[] {
             "four", "five", "six", "seven"            
         };
-        PseudoClassSet bStates = new PseudoClassSet();
+        PseudoClassState bStates = new PseudoClassState();
         for(int n=0; n<setB.length; n++) {
             bStates.add(PseudoClass.getPseudoClass(setB[n]));
         }
@@ -286,7 +298,7 @@ public class PseudoClassTest {
     }        
         
     @Test
-    public void testPseudoClassSet_size() {
+    public void testPseudoClassState_size() {
         
         String[] pseudoClasses = new String[] {
             "one", "two", "three", "four", "five"
@@ -294,7 +306,7 @@ public class PseudoClassTest {
 
         int expected = 5;
         
-        PseudoClassSet states = new PseudoClassSet();
+        PseudoClassState states = new PseudoClassState();
         
         for (int n=0; n<pseudoClasses.length; n++) {
             PseudoClass state = PseudoClass.getPseudoClass(pseudoClasses[n]);
@@ -305,7 +317,7 @@ public class PseudoClassTest {
     }
     
     @Test
-    public void testPseudoClassSet_size_afterRemove() {
+    public void testPseudoClassState_size_afterRemove() {
         
         String[] pseudoClasses = new String[] {
             "one", "two", "three", "four", "five"
@@ -313,7 +325,7 @@ public class PseudoClassTest {
 
         int expected = 4;
         
-        PseudoClassSet states = new PseudoClassSet();
+        PseudoClassState states = new PseudoClassState();
         
         for (int n=0; n<pseudoClasses.length; n++) {
             PseudoClass state = PseudoClass.getPseudoClass(pseudoClasses[n]);
@@ -326,7 +338,7 @@ public class PseudoClassTest {
     }
 
     @Test
-    public void testPseudoClassSet_size_afterRemoveOnEmpty() {
+    public void testPseudoClassState_size_afterRemoveOnEmpty() {
         
         String[] pseudoClasses = new String[] {
             "one", "two", "three", "four", "five"
@@ -334,7 +346,7 @@ public class PseudoClassTest {
 
         int expected = 0;
         
-        PseudoClassSet states = new PseudoClassSet();
+        PseudoClassState states = new PseudoClassState();
         
         for (int n=0; n<pseudoClasses.length; n++) {
             PseudoClass state = PseudoClass.getPseudoClass(pseudoClasses[n]);
@@ -350,7 +362,7 @@ public class PseudoClassTest {
     }
 
     @Test
-    public void testPseudoClassSet_size_afterAddWhenAlreadyContains() {
+    public void testPseudoClassState_size_afterAddWhenAlreadyContains() {
         
         String[] pseudoClasses = new String[] {
             "one", "two", "three", "four", "five"
@@ -358,7 +370,7 @@ public class PseudoClassTest {
 
         int expected = 5;
         
-        PseudoClassSet states = new PseudoClassSet();
+        PseudoClassState states = new PseudoClassState();
         
         for (int n=0; n<pseudoClasses.length; n++) {
             PseudoClass state = PseudoClass.getPseudoClass(pseudoClasses[n]);
@@ -372,21 +384,21 @@ public class PseudoClassTest {
     }
 
     @Test
-    public void testPseudoClassSet_isEmpty() {
-        PseudoClassSet states = new PseudoClassSet();
+    public void testPseudoClassState_isEmpty() {
+        PseudoClassState states = new PseudoClassState();
         assertTrue(states.isEmpty());
     }
 
     @Test
-    public void testPseudoClassSet_isEmpty_negativeTest() {
-        PseudoClassSet states = new PseudoClassSet();
+    public void testPseudoClassState_isEmpty_negativeTest() {
+        PseudoClassState states = new PseudoClassState();
         states.add(PseudoClass.getPseudoClass("pseudo-class"));
         assertTrue(states.isEmpty() == false);
     }
     
     @Test
-    public void testPseudoClassSet_isEmpty_whenBitMaskLengthGreaterThanOne() {
-        PseudoClassSet states = new PseudoClassSet();
+    public void testPseudoClassState_isEmpty_whenBitMaskLengthGreaterThanOne() {
+        PseudoClassState states = new PseudoClassState();
         PseudoClass state = null;
         try {
             for(int n=0; n<512; n++) {
@@ -401,13 +413,13 @@ public class PseudoClassTest {
     }
     
     @Test
-    public void testPseudoClassSet_equals() {
+    public void testPseudoClassState_equals() {
         
         String[] setA = new String[] {
             "zero", "one", "two", "three"
         };
         
-        PseudoClassSet aStates = new PseudoClassSet();
+        PseudoClassState aStates = new PseudoClassState();
         for(int n=0; n<setA.length; n++) {
             aStates.add(PseudoClass.getPseudoClass(setA[n]));
         }
@@ -415,7 +427,7 @@ public class PseudoClassTest {
         String[] setB = new String[] {
             "zero", "one", "two", "three"            
         };
-        PseudoClassSet bStates = new PseudoClassSet();
+        PseudoClassState bStates = new PseudoClassState();
         for(int n=0; n<setB.length; n++) {
             bStates.add(PseudoClass.getPseudoClass(setB[n]));
         }
@@ -424,13 +436,13 @@ public class PseudoClassTest {
     }    
     
     @Test
-    public void testPseudoClassSet_equals_negativeTest() {
+    public void testPseudoClassState_equals_negativeTest() {
         
         String[] setA = new String[] {
             "zero", "one", "two", "three"
         };
         
-        PseudoClassSet aStates = new PseudoClassSet();
+        PseudoClassState aStates = new PseudoClassState();
         for(int n=0; n<setA.length; n++) {
             aStates.add(PseudoClass.getPseudoClass(setA[n]));
         }
@@ -438,7 +450,7 @@ public class PseudoClassTest {
         String[] setB = new String[] {
             "zero", "one", "two", "four"            
         };
-        PseudoClassSet bStates = new PseudoClassSet();
+        PseudoClassState bStates = new PseudoClassState();
         for(int n=0; n<setB.length; n++) {
             bStates.add(PseudoClass.getPseudoClass(setB[n]));
         }
@@ -447,13 +459,13 @@ public class PseudoClassTest {
     }    
 
     @Test
-    public void testPseudoClassSet_retainAll() {
+    public void testPseudoClassState_retainAll() {
         
         String[] setA = new String[] {
             "zero", "one", "two", "three"
         };
         
-        PseudoClassSet aStates = new PseudoClassSet();
+        PseudoClassState aStates = new PseudoClassState();
         for(int n=0; n<setA.length; n++) {
             aStates.add(PseudoClass.getPseudoClass(setA[n]));
         }
@@ -461,7 +473,7 @@ public class PseudoClassTest {
         String[] setB = new String[] {
             "four", "five", "one", "two", "three"
         };
-        PseudoClassSet bStates = new PseudoClassSet();
+        PseudoClassState bStates = new PseudoClassState();
         for(int n=0; n<setB.length; n++) {
             bStates.add(PseudoClass.getPseudoClass(setB[n]));
         }
@@ -471,7 +483,11 @@ public class PseudoClassTest {
         };
         
         aStates.retainAll(bStates);
-        List<PseudoClass> states = aStates.getPseudoClasses();
+        List<PseudoClass> states = new ArrayList<PseudoClass>();
+        Iterator<PseudoClass> iter = aStates.iterator();
+        while (iter.hasNext()) {
+            states.add(iter.next());
+        }
         
         assertEquals(expected.length, states.size(), 0.000001);
         
@@ -482,34 +498,42 @@ public class PseudoClassTest {
     }
     
     @Test
-    public void testPseudoClassSet_retainAll_withEmptyStates() {
+    public void testPseudoClassState_retainAll_withEmptyStates() {
         
-        PseudoClassSet bStates = new PseudoClassSet();
-        PseudoClassSet aStates = new PseudoClassSet();        
+        PseudoClassState bStates = new PseudoClassState();
+        PseudoClassState aStates = new PseudoClassState();        
         aStates.retainAll(bStates);
-        List<PseudoClass> states = aStates.getPseudoClasses();
+        List<PseudoClass> states = new ArrayList<PseudoClass>();
+        Iterator<PseudoClass> iter = aStates.iterator();
+        while (iter.hasNext()) {
+            states.add(iter.next());
+        }
         assertEquals(0, states.size(), 0.000001);
     }
     
     @Test
-    public void testPseudoClassSet_retainAll_withNullArg() {
+    public void testPseudoClassState_retainAll_withNullArg() {
         
-        PseudoClassSet aStates = new PseudoClassSet();
-        PseudoClassSet bStates = null;
+        PseudoClassState aStates = new PseudoClassState();
+        PseudoClassState bStates = null;
         aStates.retainAll(bStates);
-        List<PseudoClass> states = aStates.getPseudoClasses();
+        List<PseudoClass> states = new ArrayList<PseudoClass>();
+        Iterator<PseudoClass> iter = aStates.iterator();
+        while (iter.hasNext()) {
+            states.add(iter.next());
+        }
         assertEquals(0, states.size(), 0.000001);
         
     }
     
     @Test
-    public void testPseudoClassSet_retainAll_disjointYieldsEmpty() {
+    public void testPseudoClassState_retainAll_disjointYieldsEmpty() {
         
         String[] setA = new String[] {
             "zero", "one", "two", "three"
         };
         
-        PseudoClassSet aStates = new PseudoClassSet();
+        PseudoClassState aStates = new PseudoClassState();
         for(int n=0; n<setA.length; n++) {
             aStates.add(PseudoClass.getPseudoClass(setA[n]));
         }
@@ -517,7 +541,7 @@ public class PseudoClassTest {
         String[] setB = new String[] {
             "four", "five"
         };
-        PseudoClassSet bStates = new PseudoClassSet();
+        PseudoClassState bStates = new PseudoClassState();
         for(int n=0; n<setB.length; n++) {
             bStates.add(PseudoClass.getPseudoClass(setB[n]));
         }
@@ -525,7 +549,11 @@ public class PseudoClassTest {
         String[] expected = new String[0];
         
         aStates.retainAll(bStates);
-        List<PseudoClass> states = aStates.getPseudoClasses();
+        List<PseudoClass> states = new ArrayList<PseudoClass>();
+        Iterator<PseudoClass> iter = aStates.iterator();
+        while (iter.hasNext()) {
+            states.add(iter.next());
+        }
         
         assertEquals(expected.length, states.size(), 0.000001);
         
@@ -536,13 +564,13 @@ public class PseudoClassTest {
     }
     
     @Test
-    public void testPseudoClassSet_addAll() {
+    public void testPseudoClassState_addAll() {
         
         String[] setA = new String[] {
             "zero", "one", "two", "three"
         };
         
-        PseudoClassSet aStates = new PseudoClassSet();
+        PseudoClassState aStates = new PseudoClassState();
         for(int n=0; n<setA.length; n++) {
             aStates.add(PseudoClass.getPseudoClass(setA[n]));
         }
@@ -550,7 +578,7 @@ public class PseudoClassTest {
         String[] setB = new String[] {
             "four", "five"
         };
-        PseudoClassSet bStates = new PseudoClassSet();
+        PseudoClassState bStates = new PseudoClassState();
         for(int n=0; n<setB.length; n++) {
             bStates.add(PseudoClass.getPseudoClass(setB[n]));
         }
@@ -561,7 +589,11 @@ public class PseudoClassTest {
         };
         
         aStates.addAll(bStates);
-        List<PseudoClass> states = aStates.getPseudoClasses();
+        List<PseudoClass> states = new ArrayList<PseudoClass>();
+        Iterator<PseudoClass> iter = aStates.iterator();
+        while (iter.hasNext()) {
+            states.add(iter.next());
+        }
         
         assertEquals(expected.length, states.size(), 0.000001);
         
@@ -572,58 +604,74 @@ public class PseudoClassTest {
     }
     
     @Test
-    public void testPseudoClassSet_addAll_withEmptyStates() {
+    public void testPseudoClassState_addAll_withEmptyStates() {
         
-        PseudoClassSet bStates = new PseudoClassSet();
-        PseudoClassSet aStates = new PseudoClassSet();        
+        PseudoClassState bStates = new PseudoClassState();
+        PseudoClassState aStates = new PseudoClassState();        
         aStates.addAll(bStates);
-        List<PseudoClass> states = aStates.getPseudoClasses();
+        List<PseudoClass> states = new ArrayList<PseudoClass>();
+        Iterator<PseudoClass> iter = aStates.iterator();
+        while (iter.hasNext()) {
+            states.add(iter.next());
+        }
         assertEquals(0, states.size(), 0.000001);
     }
     
     @Test
-    public void testPseudoClassSet_addAll_withNullArgs() {
+    public void testPseudoClassState_addAll_withNullArgs() {
         
-        PseudoClassSet aStates = new PseudoClassSet();
-        PseudoClassSet bStates = null;
+        PseudoClassState aStates = new PseudoClassState();
+        PseudoClassState bStates = null;
         aStates.addAll(bStates);
-        List<PseudoClass> states = aStates.getPseudoClasses();
+        List<PseudoClass> states = new ArrayList<PseudoClass>();
+        Iterator<PseudoClass> iter = aStates.iterator();
+        while (iter.hasNext()) {
+            states.add(iter.next());
+        }
         assertEquals(0, states.size(), 0.000001);
         
     }
     
     @Test
-    public void testPseudoClassSet_getPseudoClasses() {
+    public void testPseudoClassState_getPseudoClasses() {
         
         String[] pseudoClasses = new String[] {
             "zero", "one", "two", "three"
         };
         List<PseudoClass> expected = new ArrayList<PseudoClass>();
-        PseudoClassSet states = new PseudoClassSet();
+        PseudoClassState states = new PseudoClassState();
         for(int n=0; n<pseudoClasses.length; n++) {
             PseudoClass state = PseudoClass.getPseudoClass(pseudoClasses[n]);
             states.add(state);
             expected.add(state);            
         }
         
-        List<PseudoClass> stateList = states.getPseudoClasses();
+        List<PseudoClass> stateList = new ArrayList<PseudoClass>();
+        Iterator<PseudoClass> iter = states.iterator();
+        while (iter.hasNext()) {
+            stateList.add(iter.next());
+        }
         
         assertTrue(expected.containsAll(stateList));
     }
         
     @Test
-    public void testPseudoClassSet_toString() {
+    public void testPseudoClassState_toString() {
         
         String[] pseudoClasses = new String[] {
             "zero", "one", "two", "three"
         };
         
-        PseudoClassSet states = new PseudoClassSet();
+        PseudoClassState states = new PseudoClassState();
         for(int n=0; n<pseudoClasses.length; n++) {
             states.add(PseudoClass.getPseudoClass(pseudoClasses[n]));
         }
         
-        List<PseudoClass> stateList = states.getPseudoClasses();
+        List<PseudoClass> stateList = new ArrayList<PseudoClass>();
+        Iterator<PseudoClass> iter = states.iterator();
+        while (iter.hasNext()) {
+            stateList.add(iter.next());
+        }
         String expected = stateList.toString();
         
         String result = states.toString();
@@ -631,10 +679,10 @@ public class PseudoClassTest {
         assertEquals(expected, result);
     }
 
-    @Test public void testPseudoClassSet_iterator() {
+    @Test public void testPseudoClassState_iterator() {
         
         PseudoClass[] pseudoClasses = new PseudoClass[4];
-        PseudoClassSet states = new PseudoClassSet();
+        PseudoClassState states = new PseudoClassState();
         
         for (int n=0; n<pseudoClasses.length; n++) {
             pseudoClasses[n] = PseudoClass.getPseudoClass(Integer.toString(n));
@@ -656,10 +704,10 @@ public class PseudoClassTest {
         
     }
 
-    @Test public void testPseudoClassSet_iterator_withLargeNumberOfPsuedoClasses() {
+    @Test public void testPseudoClassState_iterator_withLargeNumberOfPsuedoClasses() {
         
         PseudoClass[] pseudoClasses = new PseudoClass[Long.SIZE*3];
-        PseudoClassSet states = new PseudoClassSet();
+        PseudoClassState states = new PseudoClassState();
         
         for (int n=0; n<pseudoClasses.length; n++) {
             pseudoClasses[n] = PseudoClass.getPseudoClass(Integer.toString(n));
@@ -681,10 +729,10 @@ public class PseudoClassTest {
         
     }
 
-    @Test public void testPseudoClassSet_iterator_remove() {
+    @Test public void testPseudoClassState_iterator_remove() {
         
         PseudoClass[] pseudoClasses = new PseudoClass[4];
-        PseudoClassSet states = new PseudoClassSet();
+        PseudoClassState states = new PseudoClassState();
         
         for (int n=0; n<pseudoClasses.length; n++) {
             pseudoClasses[n] = PseudoClass.getPseudoClass(Integer.toString(n));
@@ -709,10 +757,10 @@ public class PseudoClassTest {
         
     }
 
-    @Test public void testPseudoClassSet_iterator_remove_withLargeNumberOfPseudoClasses() {
+    @Test public void testPseudoClassState_iterator_remove_withLargeNumberOfPseudoClasses() {
         
         PseudoClass[] pseudoClasses = new PseudoClass[Long.SIZE*3];
-        PseudoClassSet states = new PseudoClassSet();
+        PseudoClassState states = new PseudoClassState();
         
         for (int n=0; n<pseudoClasses.length; n++) {
             pseudoClasses[n] = PseudoClass.getPseudoClass(Integer.toString(n));

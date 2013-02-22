@@ -32,7 +32,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import javafx.scene.Node;
-import javafx.scene.Scene;
 import org.junit.AfterClass;
 import org.junit.Test;
 import static org.junit.Assert.*;
@@ -130,17 +129,6 @@ public class RuleTest {
         Rule instance = null;
         List expResult = null;
         List result = instance.matches(node);
-        assertEquals(expResult, result);
-        fail("The test case is a prototype.");
-    }
-
-    @Ignore @Test
-    public void testMatches_Scene() {
-        System.out.println("matches");
-        Scene scene = null;
-        Rule instance = null;
-        List expResult = null;
-        List result = instance.matches(scene);
         assertEquals(expResult, result);
         fail("The test case is a prototype.");
     }

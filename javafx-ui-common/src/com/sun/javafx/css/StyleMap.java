@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2012, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2012, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,36 +22,35 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
+
 package com.sun.javafx.css;
 
-import javafx.css.StyleOrigin;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
 
-public final class CalculatedValue {
+/**
+ * A map of property name to the cascading styles that match a node.
+ */
+public final class StyleMap {
 
-    public static final CalculatedValue SKIP = new CalculatedValue(new int[0], null, false);
+    public static final StyleMap EMPTY_MAP = 
+        new StyleMap(-1, Collections.<String,List<CascadingStyle>>emptyMap());
 
-    public CalculatedValue(Object value, StyleOrigin origin, boolean relative) {
-            
-        this.value = value;            
-        this.origin = origin;
-        this.relative = relative;
+    /** Only StyleManager creates StyleMap */
+    StyleMap(int id, Map<String, List<CascadingStyle>> map) {
+        this.id = id;
+        this.map  = map;
+    }
+
+    public int getId() {
+        return id;
+    }
+
+    public Map<String, List<CascadingStyle>> getMap() {
+        return map;
+    }
         
-    }
-
-    public Object getValue() {
-        return value;
-    }
-
-    public StyleOrigin getOrigin() {
-        return origin;
-    }
-
-    public boolean isRelative() {
-        return relative;
-    }
-
-    private final Object value;
-    private final StyleOrigin origin;
-    private final boolean relative;
-        
+    private final int id; // unique per container
+    private final Map<String, List<CascadingStyle>> map;            
 }

@@ -196,13 +196,22 @@ public class ParsedValueImpl<V, T> extends ParsedValue<V,T> {
      * nulled out after this ParsedValueImpl object has been converted in the 
      * StyleHelper.lookup method. 
      */
-    ParsedValueImpl resolved;
+    private ParsedValueImpl resolved;
+
+    public ParsedValueImpl getResolved() {
+        return resolved;
+    }
+
+    public void setResolved(ParsedValueImpl resolved) {
+        if (resolved == null) nullResolved();
+        this.resolved = resolved;
+    }
 
     /*
      * Null out the resolved field after this ParsedValueImpl object has been converted.
      * Called from StyleHelper.lookup.
      */
-    void nullResolved() {
+    private void nullResolved() {
 
         if (resolved == this || resolved == null) return;
 

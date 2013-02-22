@@ -34,7 +34,6 @@ import java.util.Set;
 import javafx.css.PseudoClass;
 
 import javafx.scene.Node;
-import javafx.scene.Scene;
 
 /**
  * Used by CSSRule to determine whether or not the rule applies to a 
@@ -61,18 +60,18 @@ abstract public class Selector {
      *      for no match
      */
     abstract Match matches(Node node);
-    abstract Match matches(Scene scene);
+
     // same as the matches method expect return true/false rather than a match
     public abstract boolean applies(Node node);
     
     // same as applies, but will return pseudoclass state that it finds along the way
-    abstract boolean applies(Node node, long[][] pseudoclassBits, int bit);
+    abstract boolean applies(Node node, Set<PseudoClass>[] triggerStates, int bit);
     
     /**
      * Determines whether the current state of the node and its parents
      * matches the pseudo-classes defined (if any) for this selector.
      */
-    abstract boolean stateMatches(Node node, long[] state);
+    public abstract boolean stateMatches(Node node, Set<PseudoClass> state);
 
     private static final int TYPE_SIMPLE = 1;
     private static final int TYPE_COMPOUND = 2;
