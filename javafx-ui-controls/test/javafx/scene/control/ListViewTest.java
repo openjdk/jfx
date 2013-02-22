@@ -25,11 +25,14 @@
 
 package javafx.scene.control;
 
+import com.sun.javafx.scene.control.skin.ListViewSkin;
+import com.sun.javafx.scene.control.skin.VirtualFlow;
+import com.sun.javafx.scene.control.test.ControlAsserts;
+import com.sun.javafx.scene.control.test.Person;
+import com.sun.javafx.tk.Toolkit;
 import static javafx.scene.control.ControlTestUtils.assertStyleClassContains;
 import static org.junit.Assert.*;
 import java.util.Arrays;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
@@ -37,6 +40,10 @@ import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.scene.Group;
+import javafx.scene.Scene;
+import javafx.scene.layout.Region;
+import javafx.stage.Stage;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -49,6 +56,7 @@ public class ListViewTest {
         listView = new ListView<String>();
         sm = listView.getSelectionModel();
     }
+    
     
     /*********************************************************************
      * Tests for the constructors                                        *
@@ -425,5 +433,27 @@ public class ListViewTest {
         listView.getItems().clear();
         assertEquals(0, listView.getSelectionModel().getSelectedItems().size());
         assertNull(listView.getSelectionModel().getSelectedItem());
+    }
+    
+    @Test public void test_rt28534() {
+        ListView<Person> list = new ListView<Person>();
+        list.setItems(FXCollections.observableArrayList(
+            new Person("Jacob", "Smith", "jacob.smith@example.com"),
+            new Person("Isabella", "Johnson", "isabella.johnson@example.com"),
+            new Person("Ethan", "Williams", "ethan.williams@example.com"),
+            new Person("Emma", "Jones", "emma.jones@example.com"),
+            new Person("Michael", "Brown", "michael.brown@example.com")));
+        
+        ControlAsserts.assertRowsNotEmpty(list, 0, 5); // rows 0 - 5 should be filled
+        ControlAsserts.assertRowsEmpty(list, 5, -1); // rows 5+ should be empty
+        
+        // now we replace the data and expect the cells that have no data
+        // to be empty
+        list.setItems(FXCollections.observableArrayList(
+            new Person("*_*Emma", "Jones", "emma.jones@example.com"),
+            new Person("_Michael", "Brown", "michael.brown@example.com")));
+        
+        ControlAsserts.assertRowsNotEmpty(list, 0, 2); // rows 0 - 2 should be filled
+        ControlAsserts.assertRowsEmpty(list, 2, -1); // rows 2+ should be empty
     }
 }
