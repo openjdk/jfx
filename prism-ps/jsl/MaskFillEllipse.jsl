@@ -1,0 +1,78 @@
+/*
+ * Copyright (c) 2009, 2013, Oracle and/or its affiliates. All rights reserved.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.  Oracle designates this
+ * particular file as subject to the "Classpath" exception as provided
+ * by Oracle in the LICENSE file that accompanied this code.
+ *
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
+ *
+ * You should have received a copy of the GNU General Public License version
+ * 2 along with this work; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+ * or visit www.oracle.com if you need additional information or have any
+ * questions.
+ */
+
+// Read MaskFillCircle for a description of why using the squares of the
+// distances is a reasonable approximation for antialiased edges.
+
+// This shader expects the coordinates to be in the "eccentric ellipse"
+// coordinate system, which is the coordinate system were [-1,-1] to [+1,+1]
+// maps onto [-arcradx, -arcrady] to [+arcradx, +arcrady] relative to the
+// center of the ellipse.
+
+// Note that the distance squared is ecctco.x^2 + ecctco.y^2 which is
+// just dot(ecctco, ecctco).  We now need to figure out how much that
+// value varies when moving in or out by a pixel.  Along the y axis the
+// y coordinate changes by 1/arcradiusy for each pixel we move in or out.
+// Along the x axis the x coordinate changes by 1/arcradiusx per pixel.
+// To figure out the local deltas of how much x and y changes as we move by
+// pixel distances towards the center we need to dot product those values with
+// the sin,cos of the angle of the vector.  Near the edge of the ellipse
+// the ecctco vector should have a length near to 1.0 and so the values
+// themselves become the x=cos, y=sin.  Thus we simply need to multiply
+// the ecctco value with the inverted radii:
+// vector moved per pixel towards the center = ecctco * invarcradii
+
+// Remembering that we are comparing to the square of the distance from the
+// center we look at how much variation there is in the square of the values
+// within half a pixel of the radius:
+// (r+halfpix)^2 = r^2 + 2r*halfpix + halfpix^2
+// (r-halfpix)^2 = r^2 - 2r*halfpix + halfpix^2
+// The total size of this range is 4r*halfpix = 2r*pix
+// and since r = 1 this is just 2*pixelsize
+
+// We need to map (r+halfpix)^2 to 0.0 coverage and (r-halfpix)^2 to 1.0.
+// So, we have:
+// [(r+hp)^2 - d^2] / [(r+hp)^2 - (r-hp)^2]
+// [rr + 2r*hp + hp*hp - (xx+yy)] / (2r*pix)
+// [1.0 + pix + 0.25*pix*pix - dd] / (2*pix)
+// 1/2pix + 0.5 + 0.125*pix - dd/2pix
+// 0.5 + 0.125*pix + (1.0 - dd)/2pix
+
+// Finally note that the size of the pixel vector would technically be:
+// len(xy/radiusxy) = sqrt(x/rx * x/rx + y/ry * y/ry)
+// but since x and y approximate cos and sin and since cos^2 + sin^2 = 1
+// then this is just a linear blend of the 1/rx and 1/ry values in the
+// appropriate ratios as determined by the direction to the sample point.
+// As a result, using dot(ecctco, invarcradii) is a close enough measurement
+// to the size of a pixel distance along the line from the center to the
+// sample point that we can use this in the equations below and avoid the
+// cost of the square and sqrt.
+
+float mask(float2 ecctco, float2 invarcradii)
+{
+    float ecclensq = dot(ecctco, ecctco);
+    float pix = dot(abs(ecctco), invarcradii);
+    return clamp(0.5 + (1.0 + 0.25*pix*pix - ecclensq)/(2.0*pix), 0.0, 1.0);
+}

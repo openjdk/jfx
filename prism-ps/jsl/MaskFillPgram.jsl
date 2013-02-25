@@ -1,0 +1,110 @@
+/*
+ * Copyright (c) 2009, 2013, Oracle and/or its affiliates. All rights reserved.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.  Oracle designates this
+ * particular file as subject to the "Classpath" exception as provided
+ * by Oracle in the LICENSE file that accompanied this code.
+ *
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
+ *
+ * You should have received a copy of the GNU General Public License version
+ * 2 along with this work; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+ * or visit www.oracle.com if you need additional information or have any
+ * questions.
+ */
+
+/*
+ * To determine pixel coverage for a parallelogram we need to determine our
+ * distance to the edges of the figure.  Any pixel that is half a pixel
+ * outside of the parallelogram has no area in common with the parallelogram
+ * so its coverage value should be 0.0.  Any pixel that is half a pixel
+ * inside the parallelogram is entirely inside the parallelogram (assuming
+ * it is wider than a pixel) and so the coverage value should be 1.0.
+ * Pixels directly on the edge are half inside and half outside and so
+ * their coverage should be 0.5.  Any pixel that is within half a pixel
+ * of an edge would then have a fractional coverage value that linearly
+ * interpolates from 0.0 at half a pixel outside to 1.0 at half a pixel
+ * inside.  A pixel on a corner of the parallelogram is half inside in
+ * one direction and also half inside in the other and, combined, has only
+ * 25% total coverage.  Similarly, any pixel near a corner has a total
+ * combined coverage that can be obtained by multiplying its partial
+ * coverage values in both directions together.
+ *
+ * To aid in this calculation, the texture coordinates are set up with the
+ * following properties:
+ *
+ * The X texture coordinate has the same value all along one edge of the
+ * parallelogram.  Since the opposite edge is parallel to the first, the
+ * X texture coordinate will also have a single common value along the
+ * opposite edge.  This coordinate will vary as you move in any direction
+ * that is not parallel to these 2 edges and the rate at which it varies
+ * can be set up so that it increases and decreases 1:1 with the number of
+ * pixels that you move perpendicular to those edges.  This lets us
+ * calculate the distance to either edge simply by subtracting the X texture
+ * coordinate from either of the values that it has at the 2 edges and the
+ * resulting difference will be the distance to the edge in pixels.  In order
+ * to simplify things, we arrange for the value to be 0.0 at the center of
+ * the parallelogram so that the value at either edge is the same in
+ * magnitude, but opposite in sign.
+ *
+ * The Y texture coordinate is set up to have the same properties, but for
+ * the other pair of parallelogram edges (parallel to each other, but not
+ * to the first pair that are tracked in X).
+ *
+ * When all is done, the texture coordinates are 0, 0 at the center of the
+ * parallelogram, +j or -j at all points along one pair of edges and
+ * +k or -k along the other pair.  We communicate these j and k constants
+ * in the secondary X and Y texture coordinates.  Viewing the parallelogram
+ * as an aligned rectangle, the values would then distribute like this:
+ *
+ *    (-j,-k)             (+j,-k)
+ *       +-------------------+
+ *       |                   |
+ *       |                   |
+ *       |                   |
+ *       |       (0,0)       |
+ *       |                   |
+ *       |                   |
+ *       |                   |
+ *       +-------------------+
+ *    (-j,+k)             (+j,+k)
+ *
+ * A transformed parallelogram may be distorted from the above figure,
+ * but the j and k values will be distorted along with it so that the
+ * left edge will have the value of -j everywhere regardless of its
+ * orientation - and similarly for the +j, -k, and +k edges.
+ *
+ * Taking the absolute value of the texture coordinates and then comparing
+ * to (subtracting from) +j+0.5 and +k+0.5 will then produce the distances
+ * to the nearest pair of edges, biased so that it is 0.0 at the point
+ * outside those edges where the contribution drops to zero, 0.5 at the
+ * edge, and 1.0 at the point inside where its coverage is full.
+ *
+ * @param tco the X and Y texture coordinates that vary according to
+ *            the diagram above
+ * @param tcc the j and k constant values from the above diagram that
+ *            convey the distances from the center to the 2 pairs of
+ *            edges
+ */
+float mask(float2 tco, float2 tcc)
+{
+    float2 cov = clamp(tcc + 0.5 - abs(tco), 0.0, 1.0);
+    // The tcc values are essentially half the size of the parallelogram
+    // If the pgram is less than a pixel wide (in either direction), then
+    // that is the maximum coverage that any pixel can receive (in that
+    // particular direction), so we need to clip the pixel coverages
+    // against these dimensions (i.e. tcc * 2).
+    // Technically this step could be eliminated if the wh are both >= 1.0
+    cov = min(cov, tcc * 2.0);
+    return cov.x * cov.y;
+}

@@ -1,0 +1,372 @@
+/*
+ * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.  Oracle designates this
+ * particular file as subject to the "Classpath" exception as provided
+ * by Oracle in the LICENSE file that accompanied this code.
+ *
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
+ *
+ * You should have received a copy of the GNU General Public License version
+ * 2 along with this work; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+ * or visit www.oracle.com if you need additional information or have any
+ * questions.
+ */
+
+package com.sun.prism.impl;
+
+import com.sun.javafx.PlatformUtil;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.Properties;
+import java.util.StringTokenizer;
+
+/**
+ * Contains the runtime arguments used by Prism.
+ */
+public final class PrismSettings {
+
+    public static final boolean verbose;
+    public static final boolean debug;
+    public static final boolean trace;
+    public static final boolean printAllocs;
+    public static final boolean isVsyncEnabled;
+    public static final boolean dirtyOptsEnabled;
+    public static final boolean occlusionCullingEnabled;
+    public static final boolean threadCheck;
+    public static final boolean cacheSimpleShapes;
+    public static final boolean cacheComplexShapes;
+    public static final boolean tessShapes;
+    public static final boolean tessShapesAA;
+    public static final boolean useNewImageLoader;
+    public static final List<String> tryOrder;
+    public static final int numSamples;
+    public static final int prismStatFrequency;
+    public static final boolean doPiscesText;
+    public static final boolean doOpenPiscesText;
+    public static final boolean doNativePisces;
+    public static final boolean doT2KText;
+    public static final String refType;
+    public static final boolean forceRepaint;
+    public static final boolean isEmbededDevice;
+    public static final boolean noFallback;
+    public static final boolean showDirtyRegions;
+    public static final boolean showCull;
+    public static final boolean shutdownHook;
+    public static final int minTextureSize;
+    public static final int dirtyRegionCount;
+    public static final boolean disableBadDriverWarning;
+    public static final boolean forceGPU;
+    public static final int maxTextureSize;
+    public static final int primTextureSize;
+    public static final boolean disableRegionCaching;
+    public static final boolean forcePow2;
+    public static final boolean noClampToZero;
+    public static final boolean disableD3D9Ex;
+    public static final boolean allowHiDPIScaling;
+
+    private PrismSettings() {
+    }
+
+    private static void printBooleanOption(boolean opt, String trueStr) {
+        if (opt) {
+            System.out.println(trueStr);
+        } else {
+            System.out.print("Not ");
+            System.out.print(Character.toLowerCase(trueStr.charAt(0)));
+            System.out.println(trueStr.substring(1));
+        }
+    }
+
+    static {
+        final Properties systemProperties =
+                (Properties) AccessController.doPrivileged(
+                                 new PrivilegedAction() {
+                                     @Override
+                                     public Object run() {
+                                         return System.getProperties();
+                                     }
+                                 });
+
+        /* Vsync */
+        isVsyncEnabled  = getBoolean(systemProperties, "prism.vsync", true)
+                              && !getBoolean(systemProperties,
+                                             "javafx.animation.fullspeed",
+                                             false);
+
+        /* Dirty region optimizations */
+        dirtyOptsEnabled = getBoolean(systemProperties, "prism.dirtyopts",
+                                      true);
+        occlusionCullingEnabled =
+                dirtyOptsEnabled && getBoolean(systemProperties,
+                                               "prism.occlusion.culling",
+                                               true);
+
+        dirtyRegionCount = getInt(systemProperties, "prism.dirtyregioncount",
+                                  6, null);
+
+        /* Dirty region optimizations */
+        threadCheck = getBoolean(systemProperties, "prism.threadcheck", false);
+
+        /* Force scene repaint on every frame */
+        showDirtyRegions = getBoolean(systemProperties, "prism.showdirty",
+                                      false);
+
+        /* marks all nodes with color green=render gray=culloff */
+        showCull = getBoolean(systemProperties, "prism.showcull",
+                              false);
+
+        /* Force scene repaint on every frame */
+        forceRepaint = getBoolean(systemProperties, "prism.forcerepaint",
+                                  false);
+
+        /* disable fallback to another toolkit if prism coudln't be init-ed */
+        noFallback = getBoolean(systemProperties, "prism.noFallback", false);
+
+        /* Shape caching optimizations */
+        String cache = systemProperties.getProperty("prism.cacheshapes",
+                                                    "complex");
+        if ("all".equals(cache) || "true".equals(cache)) {
+            cacheSimpleShapes = true;
+            cacheComplexShapes = true;
+        } else if ("complex".equals(cache)) {
+            cacheSimpleShapes = false;
+            cacheComplexShapes = true;
+        } else {
+            cacheSimpleShapes = false;
+            cacheComplexShapes = false;
+        }
+
+        /* Shape tesselation options */
+        tessShapesAA = getBoolean(systemProperties, "prism.tessaa", false);
+        tessShapes = tessShapesAA || getBoolean(systemProperties, "prism.tess",
+                                                false);
+
+        /* New javafx-iio image loader */
+        useNewImageLoader = getBoolean(systemProperties, "prism.newiio", true);
+
+        /* Verbose output*/
+        verbose = getBoolean(systemProperties, "prism.verbose", false);
+
+        /* Prism statistics print frequency, <=0 means "do not print" */
+        prismStatFrequency =
+                getInt(systemProperties, "prism.printStats",
+                       0, 1, "Try -Dprism.printStats=<true or number>");
+
+        /* Debug output*/
+        debug = getBoolean(systemProperties, "prism.debug", false);
+
+        /* Trace output*/
+        trace = getBoolean(systemProperties, "prism.trace", false);
+
+        /* Print texture allocation data */
+        printAllocs = getBoolean(systemProperties, "prism.printallocs", false);
+
+        /* Disable bad driver check warning */
+        disableBadDriverWarning = getBoolean(systemProperties,
+                                             "prism.disableBadDriverWarning",
+                                             false);
+
+        /* Force GPU, if GPU is PS 3 capable, disable GPU qualification check. */
+        forceGPU = getBoolean(systemProperties, "prism.forceGPU", false);
+
+        String order = systemProperties.getProperty("prism.order");
+        String[] tryOrderArr;
+        if (order != null) {
+            tryOrderArr = split(order, ",");
+        } else {
+            if (PlatformUtil.isWindows()) {
+                tryOrderArr = new String[] { "d3d", "sw" };
+            } else if (PlatformUtil.isMac()) {
+                tryOrderArr = new String[] { "es2", "sw" };
+            } else if (PlatformUtil.isIOS()) {
+                tryOrderArr = new String[] { "es2" };
+            } else if (PlatformUtil.isLinux()) {
+                tryOrderArr = new String[] { "es2", "sw" };
+            } else {
+                tryOrderArr = new String[] { "sw" };
+            }
+        }
+
+        tryOrder = Collections.unmodifiableList(Arrays.asList(tryOrderArr));
+
+        /* Multisampling in the form -Dprism.multisample=<true|2|4|8> */
+        numSamples = getInt(systemProperties, "prism.multisample",
+                            0, 2, "Try -Dprism.multisample=<true|2|4|8>");
+        if (numSamples > 0) {
+            System.out.println("Enabling multisampling with " +
+                               numSamples + " samples per pixel");
+        }
+
+        String npprop = systemProperties.getProperty("prism.nativepisces");
+        if (npprop == null) {
+            doNativePisces = PlatformUtil.isEmbedded() || !PlatformUtil.isLinux();
+        } else {
+            doNativePisces = Boolean.parseBoolean(npprop);
+        }
+
+        /* Setting for text. t2k is the default.
+         */
+        String text = systemProperties.getProperty("prism.text", "t2k");
+        doPiscesText = "pisces".equals(text);
+        doOpenPiscesText = "openpisces".equals(text);
+        doT2KText = !doPiscesText && !doOpenPiscesText;
+        if (doT2KText) {
+             text = "t2k";
+        }
+        String primtex = systemProperties.getProperty("prism.primtextures");
+        if (primtex == null) {
+            primTextureSize = PlatformUtil.isEmbedded() ? -1 : 0;
+        } else if (primtex.equals("true")) {
+            primTextureSize = -1;
+        } else if (primtex.equals("false")) {
+            primTextureSize = 0;
+        } else {
+            primTextureSize =
+                    parseInt(primtex, 0,
+                             "Try -Dprism.primtextures=[true|false|<number>]");
+        }
+
+        /* Setting for reference type used by Disposer */
+        refType = systemProperties.getProperty("prism.reftype");
+
+        /* shutdown the pipeline on System.exit, ^c - needed with X11, so linux default is true */
+        shutdownHook = getBoolean(systemProperties, "prism.shutdownHook",
+                                  PlatformUtil.isUnix());
+
+        isEmbededDevice = getBoolean(systemProperties, "prism.device", false);
+
+        forcePow2 = getBoolean(systemProperties, "prism.forcepowerof2", false);
+        noClampToZero = getBoolean(systemProperties, "prism.noclamptozero", false);
+        
+        allowHiDPIScaling = getBoolean(systemProperties, "prism.allowhidpi", true);
+
+        if (verbose) {
+            System.out.print("Prism pipeline init order: ");
+            for (String s : tryOrder) {
+                System.out.print(s+" ");
+            }
+            System.out.println("");
+            System.out.println("Using " + text + " for text rasterization");
+            String piscestype = (doNativePisces ? "native" : "java");
+            System.out.println("Using " + piscestype + "-based Pisces rasterizer");
+            printBooleanOption(dirtyOptsEnabled, "Using dirty region optimizations");
+            if (primTextureSize == 0) {
+                System.out.println("Not using texture mask for primitives");
+            } else if (primTextureSize < 0) {
+                System.out.println("Using system sized mask for primitives");
+            } else {
+                System.out.println("Using "+primTextureSize+" sized mask for primitives");
+            }
+            printBooleanOption(forcePow2, "Forcing power of 2 sizes for textures");
+            printBooleanOption(!noClampToZero, "Using hardware CLAMP_TO_ZERO mode");
+            printBooleanOption(allowHiDPIScaling, "Opting in for HiDPI pixel scaling");
+        }
+
+        /*
+         * Setting for maximum texture size. Default is 4096.
+         * This will clamp the limit reported by the card to the specified
+         * value. A value of <= 0 will disable this clamping, causing the
+         * limit reported by the card to be used without modification.
+         *
+         * See RT-21998. This is a workaround for the fact that we don't
+         * yet handle the case where a texture allocation fails during
+         * rendering of a very large tiled image.
+         */
+        int size = getInt(systemProperties, "prism.maxTextureSize",
+                          4096, "Try -Dprism.maxTextureSize=<number>");
+
+        if (size <= 0) {
+            size = Integer.MAX_VALUE;
+        }
+        maxTextureSize = size;
+
+        /*
+         * Check minimum texture size
+         * This is a workaround for the bugs seen on device creating small textures (see TVP-256)
+         * This value should not be set normally.
+         */
+        minTextureSize = isEmbededDevice
+                             ? getInt(systemProperties, "prism.mintexturesize",
+                                      0, "Try -Dprism.mintexturesize=<number>")
+                             : 0;
+
+        disableRegionCaching = getBoolean(systemProperties,
+                                          "prism.disableRegionCaching",
+                                          false);
+
+        disableD3D9Ex = getBoolean(systemProperties, "prism.disableD3D9Ex", false);
+    }
+
+    private static int parseInt(String s, int dflt, int trueDflt,
+                                String errMsg) {
+        return "true".equalsIgnoreCase(s)
+                   ? trueDflt
+                   : parseInt(s, dflt, errMsg);
+    }
+
+    private static int parseInt(String s, int dflt, String errMsg) {
+        if (s != null) {
+            try {
+                return Integer.parseInt(s);
+            } catch (Exception e) {
+                if (errMsg != null) {
+                    System.err.println(errMsg);
+                }
+            }
+        }
+
+        return dflt;
+    }
+
+    /* A simple version of String.split(), since that isn't available on CDC */
+    private static String[] split(String str, String delim) {
+        StringTokenizer st = new StringTokenizer(str, delim);
+        String[] ret = new String[st.countTokens()];
+        int i = 0;
+        while (st.hasMoreTokens()) {
+            ret[i++] = st.nextToken();
+        }
+        return ret;
+    }
+
+    private static boolean getBoolean(Properties properties,
+                                      String key,
+                                      boolean dflt) {
+        final String strval = properties.getProperty(key);
+        return (strval != null) ? Boolean.parseBoolean(strval) : dflt;
+    }
+
+    private static int getInt(Properties properties,
+                              String key,
+                              int dflt,
+                              int trueDflt,
+                              String errMsg) {
+        return parseInt(properties.getProperty(key),
+                        dflt,
+                        trueDflt,
+                        errMsg);
+    }
+
+    private static int getInt(Properties properties,
+                              String key,
+                              int dflt,
+                              String errMsg) {
+        return parseInt(properties.getProperty(key),
+                        dflt,
+                        errMsg);
+    }
+}

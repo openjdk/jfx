@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="prism-common" default="jar" basedir=".">
+    <description>Builds, tests, and runs the OpenJFX prism-common project.</description>
+
+    <import file="../build-defs.xml"/>
+    <import file="build-common.xml"/>
+
+    <target name="jar" depends="prism-common-common.jar"/>
+    <target name="clean" depends="prism-common-common.clean"/>
+
+</project>

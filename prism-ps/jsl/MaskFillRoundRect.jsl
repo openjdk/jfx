@@ -1,0 +1,52 @@
+/*
+ * Copyright (c) 2009, 2013, Oracle and/or its affiliates. All rights reserved.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.  Oracle designates this
+ * particular file as subject to the "Classpath" exception as provided
+ * by Oracle in the LICENSE file that accompanied this code.
+ *
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
+ *
+ * You should have received a copy of the GNU General Public License version
+ * 2 along with this work; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+ * or visit www.oracle.com if you need additional information or have any
+ * questions.
+ */
+
+// oflatdim.x is the width of the non-round center portion of the round rect
+// oflatdim.y is the height of the non-round center portion of the round rect
+// oinvarcradii.x is the inverse of the xradius of the corner ellipse
+// oinvarcradii.y is the inverse of the yradius of the corner ellipse
+// total round rect dimensions are (oflatdim+oarcdim)
+param float2 oinvarcradii;
+
+float mask(float2 tco, float2 oflatdim)
+{
+    // Create an adjusted vector to represent the location of this point
+    // relative to a distorted ellipse representing the rounded corners
+    // of the roundrect in the eccentric coordinates of that ellipse as
+    // defined in MaskFillEllipse.jsl.
+    // Points in the non-rounded interior of the round rect will be
+    // mapped onto the axes (or center) of the resulting ellipse.
+    // This all happens in a 5 step equation.
+    // 1 - collapse the quadrants into the non-negative one using abs()
+    // 2 - subtract the extents of the flat part of the round rect
+    // 3 - collapse negative numbers onto 0.0 using max(..., 0.0)
+    // 4 - convert to the eccentric coordinates by multiplying by 1/arcradii.
+    float2 absecctco = max(abs(tco) - oflatdim, 0.001) * oinvarcradii;
+    // p is now normalized to an ellipse-relative eccentric coordinate vector
+    // Now apply the equations from FillEllipse.jsl
+    float ecclensq = dot(absecctco, absecctco);
+    float pix = dot(absecctco / ecclensq, oinvarcradii);
+    return clamp(0.5 + (1.0 + 0.25*pix*pix - ecclensq)/(2.0*pix), 0.0, 1.0);
+}
