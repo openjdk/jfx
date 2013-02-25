@@ -8316,16 +8316,25 @@ public abstract class Node implements EventTarget, Styleable {
             return;
         }
 
-        // Match new styles if I am told I need to reapply
-        // or if my own flag indicates I need to reapply
         if (cssFlag == CssFlags.REAPPLY) {
-
+            
+            // Match new styles if my own indicates I need to reapply
             styleHelper = CssStyleHelper.createStyleHelper(this);
 
         } else if (cssFlag == CssFlags.RECALCULATE) {
-
+            
+            // Recalculate means that the in-line style has changed.
             if (styleHelper != null) {
                 styleHelper.inlineStyleChanged(this);
+            } else {
+                // If there isn't a styleHelper now, there might need to be.
+                // Note that it is not necessary to REAPPLY css to children
+                // since the stylesheets haven't changed. The children only
+                // need to RECALCULATE their styles. A child that didn't
+                // have a styleHelper before will drop into this block, but if
+                // there are no matching style or inline styles, the child's
+                // styleHelper will still be null.
+                styleHelper = CssStyleHelper.createStyleHelper(this);                
             }
             
         }

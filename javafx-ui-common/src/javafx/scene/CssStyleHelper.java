@@ -313,7 +313,7 @@ final class CssStyleHelper {
             
             // do we have any styles at all now?
             final String inlineStyle = node.getStyle();
-            if(inlineStyle == null && inlineStyle.isEmpty()) {
+            if(inlineStyle == null || inlineStyle.isEmpty()) {
 
                 final Map<String, List<CascadingStyle>> smap = getStyleMap();            
                 if (smap == null || smap.isEmpty()) {
@@ -333,15 +333,15 @@ final class CssStyleHelper {
             
             
         } else {
+            // if cacheMetaData was null
             final String inlineStyle = node.getStyle();
             if (inlineStyle == null || inlineStyle.isEmpty()) {
                 return;
             }
-            // if we don't have a localStyleCache, that means this 
+            // if we don't have a cacheMetaData, that means this 
             // node doesn't have any applicable styles and it didn't
             // have an inline style before. If it did have an inline
-            // style before, then there would be an smap, albeit an
-            // an empty one. See setStyles for this bit of logic. 
+            // style before, then there would be cacheMetaData.  
             // But now the  node does have an inline style and so it
             // needs to have an smap and localStyleCache for the logic
             // in transitionToState to work. 
