@@ -26,6 +26,7 @@
 package javafx.css;
 
 import java.util.List;
+import javafx.collections.ObservableList;
 
 /** 
  * Styleable comprises the minimal interface required for an object to be 
@@ -61,7 +62,7 @@ public interface Styleable {
      * 
      * @see <a href="http://www.w3.org/TR/css3-selectors/#class-html">CSS3 class selectors</a> 
      */ 
-   List<String> getStyleClass(); 
+   ObservableList<String> getStyleClass(); 
 
     /** 
      * A string representation of the CSS style associated with this 
