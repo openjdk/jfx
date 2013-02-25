@@ -25,6 +25,8 @@
 
 package javafx.scene.control;
 
+import com.sun.javafx.scene.control.test.ControlAsserts;
+import com.sun.javafx.scene.control.test.Person;
 import com.sun.javafx.tk.Toolkit;
 import java.util.Arrays;
 import java.util.List;
@@ -39,6 +41,7 @@ import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.scene.Group;
 import javafx.scene.Scene;
+import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.stage.Stage;
 import javafx.util.Callback;
 
@@ -640,5 +643,30 @@ public class TreeViewTest {
             e.printStackTrace();
             assertTrue(false);
         }
+    }
+    
+    @Test public void test_rt28534() {
+        TreeItem root = new TreeItem("root");
+        root.getChildren().setAll(
+                new TreeItem(new Person("Jacob", "Smith", "jacob.smith@example.com")),
+                new TreeItem(new Person("Isabella", "Johnson", "isabella.johnson@example.com")),
+                new TreeItem(new Person("Ethan", "Williams", "ethan.williams@example.com")),
+                new TreeItem(new Person("Emma", "Jones", "emma.jones@example.com")),
+                new TreeItem(new Person("Michael", "Brown", "michael.brown@example.com")));
+        root.setExpanded(true);
+        
+        TreeView<Person> tree = new TreeView<Person>(root);
+        
+        ControlAsserts.assertRowsNotEmpty(tree, 0, 6); // rows 0 - 6 should be filled
+        ControlAsserts.assertRowsEmpty(tree, 6, -1); // rows 6+ should be empty
+        
+        // now we replace the data and expect the cells that have no data
+        // to be empty
+        root.getChildren().setAll(
+                new TreeItem(new Person("*_*Emma", "Jones", "emma.jones@example.com")),
+                new TreeItem(new Person("_Michael", "Brown", "michael.brown@example.com")));
+        
+        ControlAsserts.assertRowsNotEmpty(tree, 0, 3); // rows 0 - 3 should be filled
+        ControlAsserts.assertRowsEmpty(tree, 3, -1); // rows 3+ should be empty
     }
 }

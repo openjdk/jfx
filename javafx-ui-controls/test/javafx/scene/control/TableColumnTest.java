@@ -56,6 +56,7 @@ import java.util.Comparator;
 import java.util.List;
 
 import com.sun.javafx.property.PropertyReference;
+import com.sun.javafx.scene.control.test.Person;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -381,7 +382,7 @@ public class TableColumnTest {
     @Test public void cellValueFactoryCanBeSpecified() {
         CellValueFactory<Person,String> factory = new CellValueFactory<Person,String>() {
             @Override public ObservableValue<String> call(TableColumn.CellDataFeatures<Person, String> param) {
-                return param.getValue().nameProperty();
+                return param.getValue().firstNameProperty();
             }
         };
 
@@ -393,7 +394,7 @@ public class TableColumnTest {
     @Test public void cellValueFactoryCanBeResetToNull() {
         CellValueFactory<Person,String> factory = new CellValueFactory<Person,String>() {
             @Override public ObservableValue<String> call(TableColumn.CellDataFeatures<Person, String> param) {
-                return param.getValue().nameProperty();
+                return param.getValue().firstNameProperty();
             }
         };
 
@@ -414,7 +415,7 @@ public class TableColumnTest {
     @Test public void cellValueFactoryCanBeBound() {
         CellValueFactory<Person,String> factory = new CellValueFactory<Person,String>() {
             @Override public ObservableValue<String> call(TableColumn.CellDataFeatures<Person, String> param) {
-                return param.getValue().nameProperty();
+                return param.getValue().firstNameProperty();
             }
         };
         ObjectProperty<CellValueFactory<Person,String>> other =
@@ -992,7 +993,7 @@ public class TableColumnTest {
         table.getColumns().add(column);
         column.setCellValueFactory(new CellValueFactory<Person, String>() {
             @Override public ObservableValue<String> call(TableColumn.CellDataFeatures<Person, String> param) {
-                return param.getValue().nameProperty();
+                return param.getValue().firstNameProperty();
             }
         });
         assertEquals("Humphrey McPhee", column.getCellData(0));
@@ -1002,7 +1003,7 @@ public class TableColumnTest {
         table.getColumns().add(column);
         column.setCellValueFactory(new CellValueFactory<Person, String>() {
             @Override public ObservableValue<String> call(TableColumn.CellDataFeatures<Person, String> param) {
-                return param.getValue().nameProperty();
+                return param.getValue().firstNameProperty();
             }
         });
         assertEquals("Humphrey McPhee", column.getCellData(table.getItems().get(0)));
@@ -1014,7 +1015,7 @@ public class TableColumnTest {
         column.setCellValueFactory(new CellValueFactory<Person, String>() {
             @Override public ObservableValue<String> call(TableColumn.CellDataFeatures<Person, String> param) {
                 passed[0] = param.getTableView() == table;
-                return param.getValue().nameProperty();
+                return param.getValue().firstNameProperty();
             }
         });
         column.getCellData(table.getItems().get(0));
@@ -1027,7 +1028,7 @@ public class TableColumnTest {
         column.setCellValueFactory(new CellValueFactory<Person, String>() {
             @Override public ObservableValue<String> call(TableColumn.CellDataFeatures<Person, String> param) {
                 passed[0] = param.getTableColumn() == column;
-                return param.getValue().nameProperty();
+                return param.getValue().firstNameProperty();
             }
         });
         column.getCellData(table.getItems().get(0));
@@ -1040,7 +1041,7 @@ public class TableColumnTest {
         column.setCellValueFactory(new CellValueFactory<Person,String>() {
             @Override public ObservableValue<String> call(TableColumn.CellDataFeatures<Person, String> param) {
                 passed[0] = param.getValue() == table.getItems().get(0);
-                return param.getValue().nameProperty();
+                return param.getValue().firstNameProperty();
             }
         });
         column.getCellData(table.getItems().get(0));
@@ -1062,14 +1063,14 @@ public class TableColumnTest {
         table.getColumns().add(column);
         column.setCellValueFactory(new CellValueFactory<Person, String>() {
             @Override public ObservableValue<String> call(TableColumn.CellDataFeatures<Person, String> param) {
-                return param.getValue().nameProperty();
+                return param.getValue().firstNameProperty();
             }
         });
         TablePosition<Person,String> pos = new TablePosition<Person, String>(table, 0, column);
         EventType<TableColumn.CellEditEvent<Person,String>> eventType = TableColumn.editCommitEvent();
         column.getOnEditCommit().handle(new TableColumn.CellEditEvent<Person,String>(
                 table, pos, (EventType)eventType, "Richard Bair"));
-        assertEquals("Richard Bair", table.getItems().get(0).getName());
+        assertEquals("Richard Bair", table.getItems().get(0).getFirstName());
     }
 
     @Test public void defaultOnEditCommitHandlerWillIgnoreReadOnlyValue() {
@@ -1092,7 +1093,7 @@ public class TableColumnTest {
         table.getColumns().add(column);
         column.setCellValueFactory(new CellValueFactory<Person, String>() {
             @Override public ObservableValue<String> call(TableColumn.CellDataFeatures<Person, String> param) {
-                return param.getValue().nameProperty();
+                return param.getValue().firstNameProperty();
             }
         });
         TablePosition<Person,String> pos = new TablePosition<Person, String>(table, 0, column);
@@ -1106,7 +1107,7 @@ public class TableColumnTest {
         table.getColumns().add(column);
         column.setCellValueFactory(new CellValueFactory<Person, String>() {
             @Override public ObservableValue<String> call(TableColumn.CellDataFeatures<Person, String> param) {
-                return param.getValue().nameProperty();
+                return param.getValue().firstNameProperty();
             }
         });
         TablePosition<Person,String> pos = new TablePosition<Person, String>(table, 0, column);
@@ -1119,28 +1120,28 @@ public class TableColumnTest {
         table.getColumns().add(column);
         column.setCellValueFactory(new CellValueFactory<Person, String>() {
             @Override public ObservableValue<String> call(TableColumn.CellDataFeatures<Person, String> param) {
-                return param.getValue().nameProperty();
+                return param.getValue().firstNameProperty();
             }
         });
         TablePosition<Person,String> pos = new TablePosition<Person, String>(table, -1, column);
         EventType<TableColumn.CellEditEvent<Person,String>> eventType = TableColumn.editCommitEvent();
         column.getOnEditCommit().handle(new TableColumn.CellEditEvent<Person,String>(
                 table, pos, (EventType)eventType, "Richard Bair"));
-        assertEquals("Humphrey McPhee", table.getItems().get(0).getName());
+        assertEquals("Humphrey McPhee", table.getItems().get(0).getFirstName());
     }
 
     @Test public void defaultOnEditCommitHandlerDealsWithInvalidTablePosition_indexIsTooLarge() {
         table.getColumns().add(column);
         column.setCellValueFactory(new CellValueFactory<Person, String>() {
             @Override public ObservableValue<String> call(TableColumn.CellDataFeatures<Person, String> param) {
-                return param.getValue().nameProperty();
+                return param.getValue().firstNameProperty();
             }
         });
         TablePosition<Person,String> pos = new TablePosition<Person, String>(table, 100, column);
         EventType<TableColumn.CellEditEvent<Person,String>> eventType = TableColumn.editCommitEvent();
         column.getOnEditCommit().handle(new TableColumn.CellEditEvent<Person, String>(
                 table, pos, (EventType) eventType, "Richard Bair"));
-        assertEquals("Humphrey McPhee", table.getItems().get(0).getName());
+        assertEquals("Humphrey McPhee", table.getItems().get(0).getFirstName());
     }
 
     /*********************************************************************
@@ -1211,8 +1212,8 @@ public class TableColumnTest {
         table.getColumns().add(column);
         TableCell<Person,String> cell = column.getCellFactory().call(column);
         cell.updateIndex(0);
-        cell.updateItem(table.getItems().get(0).getName(), false);
-        assertEquals(table.getItems().get(0).getName(), cell.getText());
+        cell.updateItem(table.getItems().get(0).getFirstName(), false);
+        assertEquals(table.getItems().get(0).getFirstName(), cell.getText());
     }
 
     @Test public void defaultCellFactorySetsTextToNullWhenItemIsNull() {
@@ -1220,7 +1221,7 @@ public class TableColumnTest {
         TableCell<Person,String> cell = column.getCellFactory().call(column);
         // First have to set to a value, or it short-cuts
         cell.updateIndex(0);
-        cell.updateItem(table.getItems().get(0).getName(), false);
+        cell.updateItem(table.getItems().get(0).getFirstName(), false);
         // Now we're good to go
         table.getItems().set(0, null);
         cell.updateItem(null, false);
@@ -1231,7 +1232,7 @@ public class TableColumnTest {
         table.getColumns().add(column);
         TableCell<Person,String> cell = column.getCellFactory().call(column);
         cell.updateIndex(0);
-        cell.updateItem(table.getItems().get(0).getName(), false);
+        cell.updateItem(table.getItems().get(0).getFirstName(), false);
         assertNull(cell.getGraphic());
     }
 
@@ -1274,27 +1275,6 @@ public class TableColumnTest {
         // change sibling width
         // change parent width
 
-
-    public static class Person {
-        public Person() { }
-        public Person(String name, int age) {
-            setName(name);
-            this.age.set(age);
-        }
-
-        private final StringProperty name = new SimpleStringProperty();
-        public final String getName() {return name.get();}
-        public void setName(String value) {name.set(value);}
-        public StringProperty nameProperty() {return name;}
-
-        private final ReadOnlyIntegerWrapper age = new ReadOnlyIntegerWrapper();
-        public final int getAge() {return age.get();}
-        public ReadOnlyIntegerProperty ageProperty() {return age.getReadOnlyProperty();}
-
-        @Override public String toString() {
-            return getName();
-        }
-    }
 
     public interface CellValueFactory<S,T> extends Callback<TableColumn.CellDataFeatures<S,T>, ObservableValue<T>> {
     }

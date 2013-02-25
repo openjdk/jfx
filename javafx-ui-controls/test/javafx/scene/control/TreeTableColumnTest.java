@@ -25,6 +25,12 @@
 
 package javafx.scene.control;
 
+import com.sun.javafx.scene.control.skin.TableViewSkin;
+import com.sun.javafx.scene.control.skin.TreeTableViewSkin;
+import com.sun.javafx.scene.control.skin.VirtualFlow;
+import com.sun.javafx.scene.control.test.ControlAsserts;
+import com.sun.javafx.scene.control.test.Person;
+import com.sun.javafx.tk.Toolkit;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleBooleanProperty;
@@ -44,12 +50,16 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import javafx.beans.property.BooleanProperty;
+import javafx.collections.FXCollections;
+import javafx.scene.Group;
+import javafx.scene.Scene;
+import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.scene.layout.Region;
+import javafx.stage.Stage;
 
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
-
-import javafx.scene.control.TableColumnTest.Person;
 
 import static org.junit.Assert.*;
 
@@ -62,41 +72,22 @@ public class TreeTableColumnTest {
 
     private TreeTableColumn<Person,String> column;
     private TreeTableView<Person> table;
-//    private ObservableList<Person> model;
+    private TreeItem<Person> root;
     
-//    private static ObservableList<String> data = FXCollections.<String>observableArrayList();
-//    private static final String ROW_1_VALUE = "Row 1";
-//    private static final String ROW_2_VALUE = "Row 2";
-//    private static final String ROW_5_VALUE = "Row 5";
-//    private static final String ROW_20_VALUE = "Row 20";
-    private static final TreeItem<Person> root;
-//    private static final TreeItem<String> ROW_2_TREE_VALUE;
-//    private static final TreeItem<String> ROW_5_TREE_VALUE;
-    
-    static {
-//        data.addAll(ROW_1_VALUE, ROW_2_VALUE, "Long Row 3", "Row 4", ROW_5_VALUE, "Row 6",
-//                "Row 7", "Row 8", "Row 9", "Row 10", "Row 11", "Row 12", "Row 13",
-//                "Row 14", "Row 15", "Row 16", "Row 17", "Row 18", "Row 19", ROW_20_VALUE);
-//        
+    @Before public void setup() {
         root = new TreeItem<Person>(null);
         root.setExpanded(true);
         
-        root.getChildren().addAll(
+        root.getChildren().setAll(
                 new TreeItem(new Person("Humphrey McPhee", 76)),
                 new TreeItem(new Person("Justice Caldwell", 30)),
                 new TreeItem(new Person("Orrin Davies", 30)),
                 new TreeItem(new Person("Emma Wilson", 8)));
-//        for (int i = 1; i < data.size(); i++) {
-//            root.getChildren().add(new TreeItem<String>(data.get(i)));
-//        }
-//        ROW_2_TREE_VALUE = root.getChildren().get(0);
-//        ROW_5_TREE_VALUE = root.getChildren().get(3);
-    }
-
-    @Before public void setup() {
+        
         column = new TreeTableColumn<Person,String>("");
         table = new TreeTableView<Person>(root);
     }
+    
 
     /*********************************************************************
      * Tests for the constructors                                        *
@@ -395,7 +386,7 @@ public class TreeTableColumnTest {
     @Test public void cellValueFactoryCanBeSpecified() {
         CellValueFactory<Person,String> factory = new CellValueFactory<Person,String>() {
             @Override public ObservableValue<String> call(TreeTableColumn.CellDataFeatures<Person, String> param) {
-                return param.getValue().getValue().nameProperty();
+                return param.getValue().getValue().firstNameProperty();
             }
         };
 
@@ -407,7 +398,7 @@ public class TreeTableColumnTest {
     @Test public void cellValueFactoryCanBeResetToNull() {
         CellValueFactory<Person,String> factory = new CellValueFactory<Person,String>() {
             @Override public ObservableValue<String> call(TreeTableColumn.CellDataFeatures<Person, String> param) {
-                return param.getValue().getValue().nameProperty();
+                return param.getValue().getValue().firstNameProperty();
             }
         };
 
@@ -428,7 +419,7 @@ public class TreeTableColumnTest {
     @Test public void cellValueFactoryCanBeBound() {
         CellValueFactory<Person,String> factory = new CellValueFactory<Person,String>() {
             @Override public ObservableValue<String> call(TreeTableColumn.CellDataFeatures<Person, String> param) {
-                return param.getValue().getValue().nameProperty();
+                return param.getValue().getValue().firstNameProperty();
             }
         };
         ObjectProperty<CellValueFactory<Person,String>> other =
@@ -1006,7 +997,7 @@ public class TreeTableColumnTest {
         table.getColumns().add(column);
         column.setCellValueFactory(new CellValueFactory<Person, String>() {
             @Override public ObservableValue<String> call(TreeTableColumn.CellDataFeatures<Person, String> param) {
-                return param.getValue().getValue().nameProperty();
+                return param.getValue().getValue().firstNameProperty();
             }
         });
         assertEquals("Humphrey McPhee", column.getCellData(1));
@@ -1016,7 +1007,7 @@ public class TreeTableColumnTest {
 //        table.getColumns().add(column);
 //        column.setCellValueFactory(new CellValueFactory<Person, String>() {
 //            @Override public ObservableValue<String> call(TreeTableColumn.CellDataFeatures<Person, String> param) {
-//                return param.getValue().getValue().nameProperty();
+//                return param.getValue().getValue().firstNameProperty();
 //            }
 //        });
 //        assertEquals("Humphrey McPhee", column.getCellData(table.getItems().get(0)));
@@ -1028,7 +1019,7 @@ public class TreeTableColumnTest {
 //        column.setCellValueFactory(new CellValueFactory<Person, String>() {
 //            @Override public ObservableValue<String> call(TreeTableColumn.CellDataFeatures<Person, String> param) {
 //                passed[0] = param.getTreeTableView() == table;
-//                return param.getValue().getValue().nameProperty();
+//                return param.getValue().getValue().firstNameProperty();
 //            }
 //        });
 //        column.getCellData(table.getItems().get(0));
@@ -1041,7 +1032,7 @@ public class TreeTableColumnTest {
 //        column.setCellValueFactory(new CellValueFactory<Person, String>() {
 //            @Override public ObservableValue<String> call(TreeTableColumn.CellDataFeatures<Person, String> param) {
 //                passed[0] = param.getTreeTableColumn() == column;
-//                return param.getValue().getValue().nameProperty();
+//                return param.getValue().getValue().firstNameProperty();
 //            }
 //        });
 //        column.getCellData(table.getItems().get(0));
@@ -1054,7 +1045,7 @@ public class TreeTableColumnTest {
 //        column.setCellValueFactory(new CellValueFactory<Person,String>() {
 //            @Override public ObservableValue<String> call(TreeTableColumn.CellDataFeatures<Person, String> param) {
 //                passed[0] = param.getValue() == table.getItems().get(0);
-//                return param.getValue().nameProperty();
+//                return param.getValue().firstNameProperty();
 //            }
 //        });
 //        column.getCellData(table.getItems().get(0));
@@ -1076,7 +1067,7 @@ public class TreeTableColumnTest {
 //        table.getColumns().add(column);
 //        column.setCellValueFactory(new CellValueFactory<Person, String>() {
 //            @Override public ObservableValue<String> call(TreeTableColumn.CellDataFeatures<Person, String> param) {
-//                return param.getValue().getValue().nameProperty();
+//                return param.getValue().getValue().firstNameProperty();
 //            }
 //        });
 //        TreeTablePosition<Person,String> pos = new TreeTablePosition<Person, String>(table, 0, column);
@@ -1106,7 +1097,7 @@ public class TreeTableColumnTest {
         table.getColumns().add(column);
         column.setCellValueFactory(new CellValueFactory<Person, String>() {
             @Override public ObservableValue<String> call(TreeTableColumn.CellDataFeatures<Person, String> param) {
-                return param.getValue().getValue().nameProperty();
+                return param.getValue().getValue().firstNameProperty();
             }
         });
         TreeTablePosition<Person,String> pos = new TreeTablePosition<Person, String>(table, 0, column);
@@ -1120,7 +1111,7 @@ public class TreeTableColumnTest {
         table.getColumns().add(column);
         column.setCellValueFactory(new CellValueFactory<Person, String>() {
             @Override public ObservableValue<String> call(TreeTableColumn.CellDataFeatures<Person, String> param) {
-                return param.getValue().getValue().nameProperty();
+                return param.getValue().getValue().firstNameProperty();
             }
         });
         TreeTablePosition<Person,String> pos = new TreeTablePosition<Person, String>(table, 0, column);
@@ -1133,7 +1124,7 @@ public class TreeTableColumnTest {
 //        table.getColumns().add(column);
 //        column.setCellValueFactory(new CellValueFactory<Person, String>() {
 //            @Override public ObservableValue<String> call(TreeTableColumn.CellDataFeatures<Person, String> param) {
-//                return param.getValue().getValue().nameProperty();
+//                return param.getValue().getValue().firstNameProperty();
 //            }
 //        });
 //        TreeTablePosition<Person,String> pos = new TreeTablePosition<Person, String>(table, -1, column);
@@ -1147,7 +1138,7 @@ public class TreeTableColumnTest {
 //        table.getColumns().add(column);
 //        column.setCellValueFactory(new CellValueFactory<Person, String>() {
 //            @Override public ObservableValue<String> call(TreeTableColumn.CellDataFeatures<Person, String> param) {
-//                return param.getValue().getValue().nameProperty();
+//                return param.getValue().getValue().firstNameProperty();
 //            }
 //        });
 //        TreeTablePosition<Person,String> pos = new TreeTablePosition<Person, String>(table, 100, column);
@@ -1282,33 +1273,9 @@ public class TreeTableColumnTest {
         assertNull(cell.getText());
     }
 
-    // column with null cellValueFactory still updates item when row item changes
-
-    // children widths always add up to parent width
-        // change sibling width
-        // change parent width
+    
 
 
-//    public static class Person {
-//        public Person() { }
-//        public Person(String name, int age) {
-//            setName(name);
-//            this.age.set(age);
-//        }
-//
-//        private final StringProperty name = new SimpleStringProperty();
-//        public final String getName() {return name.get();}
-//        public void setName(String value) {name.set(value);}
-//        public StringProperty nameProperty() {return name;}
-//
-//        private final ReadOnlyIntegerWrapper age = new ReadOnlyIntegerWrapper();
-//        public final int getAge() {return age.get();}
-//        public ReadOnlyIntegerProperty ageProperty() {return age.getReadOnlyProperty();}
-//
-//        @Override public String toString() {
-//            return getName();
-//        }
-//    }
 
     public interface CellValueFactory<S,T> extends Callback<TreeTableColumn.CellDataFeatures<S,T>, ObservableValue<T>> {
     }
