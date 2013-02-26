@@ -67,6 +67,8 @@ public class BuildSamplesList {
         // generate code chunks so we have all samples in ALL_SAMPLES
         final String rootCategoryCode = rootCategory.generateCode();
         final String samplesArrayCode = sampleArrayToCode(highlightedSamples);
+        // check if we want to write
+        if (samplesSourceFile == null) return allSamples;
         // write
         PrintWriter fout = null;
         try {

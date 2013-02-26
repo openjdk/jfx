@@ -139,6 +139,7 @@ public class BuildEnsembleSearchIndex {
             final String docPageUrl = (foundUrl.startsWith("http") ? foundUrl : baseUrl + foundUrl);
             if ("http://docs.oracle.com/javafx/2/api/javafx/scene/doc-files/cssref.html".equals(docPageUrl) || 
                     "http://docs.oracle.com/javafx/2/api/index.html".equals(docPageUrl) ||
+                    "http://www.oracle.com/technetwork/java/javafx/downloads/supportedconfigurations-1506746.html".equals(docPageUrl) ||
                     "http://docs.oracle.com/javafx/2/api/javafx/fxml/doc-files/introduction_to_fxml.html".equals(docPageUrl)) {
                 continue;
             }

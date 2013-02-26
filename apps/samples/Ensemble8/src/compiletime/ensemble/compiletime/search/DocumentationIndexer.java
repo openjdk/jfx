@@ -89,30 +89,31 @@ public class DocumentationIndexer {
     public static DocPage parseDocsPage(final String url, String content) throws Exception {
         // fix links like <a href=init-window-big.gif> to <a href="init-window-big.gif">
         content = content.replaceAll("<a href=([^\">]+)>", "<a href=\"$1\">");
-        content = content.replaceAll("type=\"text/css\" media=\"screen\"", "");
-        content = content.replaceAll("<meta [^>]+>", "");
-        content = content.replaceAll("<input [^>]+>", "");
-        content = content.replaceAll("target=_top", "");
-        content = content.replaceAll("xWebsiteObjectType <Matches> `Data File`", "");
-        content = content.replaceAll("<hr>", "<hr/>");
-        content = content.replaceAll("&", "&amp;");
-        content = content.replaceAll("<span class=red>", "<span class=\"red\">");
+//        content = content.replaceAll("type=\"text/css\" media=\"screen\"", "");
+//        content = content.replaceAll("<meta [^>]+>", "");
+//        content = content.replaceAll("<input [^>]+>", "");
+//        content = content.replaceAll("target=_top", "");
+//        content = content.replaceAll("xWebsiteObjectType <Matches> `Data File`", "");
+//        content = content.replaceAll("<hr>", "<hr/>");
+//        content = content.replaceAll("&", "&amp;");
+//        content = content.replaceAll("<span class=red>", "<span class=\"red\">");
         
-//        try {
+        try {
         DocHandler handler = new DocHandler(url);
         XMLReader xmlParser = XMLReaderFactory.createXMLReader();
         xmlParser.setContentHandler(handler);
         xmlParser.setEntityResolver(handler);
         xmlParser.parse(new InputSource(new StringReader(content)));
         return handler.getDocPage();
-//        } catch (Exception e) {
-//            System.out.println("----------------------------------------------------------------------");
-//            System.out.println("content = " + content);
-//            System.out.println("----------");
-//            e.printStackTrace(System.out);
-//            System.out.println("----------------------------------------------------------------------");
-//            throw e;
-//        }
+        } catch (Exception e) {
+            System.out.println("----------------------------------------------------------------------");
+            System.out.println("url = "+url);
+            System.out.println("content = \n" + content);
+            System.out.println("----------");
+            e.printStackTrace(System.out);
+            System.out.println("----------------------------------------------------------------------");
+            throw e;
+        }
     }
     
     public static void main(String[] args) throws Exception {
