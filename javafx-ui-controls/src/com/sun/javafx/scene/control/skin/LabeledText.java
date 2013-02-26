@@ -33,6 +33,7 @@ import com.sun.javafx.css.converters.SizeConverter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+
 import javafx.css.CssMetaData;
 import javafx.css.FontCssMetaData;
 import javafx.css.StyleOrigin;
@@ -44,6 +45,7 @@ import javafx.scene.paint.Paint;
 import javafx.scene.text.Font;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextAlignment;
+import javafx.scene.text.TextBoundsType;
 
 /**
  * LabeledText allows the Text to be styled by the CSS properties of Labeled
@@ -72,6 +74,7 @@ public class LabeledText extends Text {
        this.setTextAlignment(this.labeled.getTextAlignment());
        this.setUnderline(this.labeled.isUnderline());
        this.setLineSpacing(this.labeled.getLineSpacing());
+       this.setBoundsType(TextBoundsType.VISUAL); /*!!!!*/
 
        //
        // Bind the state of this Text object to that of the Labeled.
