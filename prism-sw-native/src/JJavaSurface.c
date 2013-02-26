@@ -134,6 +134,9 @@ surface_acquire(AbstractSurface* surface, JNIEnv* env, jobject surfaceHandle) {
                                 ((JavaSurface *) surface)->javaArrayFieldID);
     surface->super.data =
         (void *)(*env)->GetPrimitiveArrayCritical(env, ((JavaSurface *) surface)->dataHandle, NULL);
+    if (surface->super.data == NULL) {
+        setMemErrorFlag();
+    }
 }
 
 static void

@@ -204,12 +204,19 @@ JNIEXPORT void JNICALL Java_com_sun_pisces_PiscesRenderer_setLinearGradientImpl(
                                     fieldIds[RENDERER_NATIVE_PTR]));
 
     ramp = (*env)->GetIntArrayElements(env, jramp, NULL);
+    if (ramp != NULL) {
+        rdr->_gradient_cycleMethod = cycleMethod;
+        renderer_setLinearGradient(rdr, x0, y0, x1, y1,
+                                   ramp, &gradientTransform);
+        (*env)->ReleaseIntArrayElements(env, jramp, ramp, 0);
+    } else {
+        setMemErrorFlag();
+    }
 
-    rdr->_gradient_cycleMethod = cycleMethod;
-    renderer_setLinearGradient(rdr, x0, y0, x1, y1,
-                               ramp, &gradientTransform);
-
-    (*env)->ReleaseIntArrayElements(env, jramp, ramp, 0);
+    if (JNI_TRUE == readAndClearMemErrorFlag()) {
+        JNI_ThrowNew(env, "java/lang/OutOfMemoryError",
+                     "Allocation of internal renderer buffer failed.");
+    }
 }
 
 /*
@@ -232,12 +239,19 @@ JNIEXPORT void JNICALL Java_com_sun_pisces_PiscesRenderer_setRadialGradientImpl(
                                     fieldIds[RENDERER_NATIVE_PTR]));
 
     ramp = (*env)->GetIntArrayElements(env, jramp, NULL);
+    if (ramp != NULL) {
+        rdr->_gradient_cycleMethod = cycleMethod;
+        renderer_setRadialGradient(rdr, cx, cy, fx, fy, radius,
+                                   ramp, &gradientTransform);
+        (*env)->ReleaseIntArrayElements(env, jramp, ramp, 0);
+    } else {
+        setMemErrorFlag();
+    }
 
-    rdr->_gradient_cycleMethod = cycleMethod;
-    renderer_setRadialGradient(rdr, cx, cy, fx, fy, radius,
-                               ramp, &gradientTransform);
-
-    (*env)->ReleaseIntArrayElements(env, jramp, ramp, 0);
+    if (JNI_TRUE == readAndClearMemErrorFlag()) {
+        JNI_ThrowNew(env, "java/lang/OutOfMemoryError",
+                     "Allocation of internal renderer buffer failed.");
+    }
 }
 
 /*
@@ -251,30 +265,29 @@ JNIEXPORT void JNICALL Java_com_sun_pisces_PiscesRenderer_setTexture
 {
     Renderer* rdr;
     Transform6 textureTransform;
-
     jint *data;
-    jint *alloc_data;
-    jboolean throw_exc = JNI_FALSE;
 
     transform_get6(&textureTransform, env, jTransform);
 
     rdr = (Renderer*)JLongToPointer((*env)->GetLongField(env, this, fieldIds[RENDERER_NATIVE_PTR]));
 
     data = (jint*)(*env)->GetPrimitiveArrayCritical(env, dataArray, NULL);
-
-    alloc_data = my_malloc(jint, width * height);
-    if (alloc_data != NULL) {
-        memcpy(alloc_data, data, sizeof(jint) * width * height);
-        renderer_setTexture(rdr, PAINT_TEXTURE8888, alloc_data, width, height, width, repeat, JNI_TRUE, 
-            &textureTransform, JNI_TRUE, hasAlpha,
-            0, 0, width-1, height-1);
+    if (data != NULL) {
+        jint *alloc_data = my_malloc(jint, width * height);
+        if (alloc_data != NULL) {
+            memcpy(alloc_data, data, sizeof(jint) * width * height);
+            renderer_setTexture(rdr, PAINT_TEXTURE8888, alloc_data, width, height, width, repeat, JNI_TRUE, 
+                &textureTransform, JNI_TRUE, hasAlpha,
+                0, 0, width-1, height-1);
+        } else {
+            setMemErrorFlag();
+        }
+        (*env)->ReleasePrimitiveArrayCritical(env, dataArray, data, 0);
     } else {
-        throw_exc = JNI_TRUE;
+        setMemErrorFlag();
     }
 
-    (*env)->ReleasePrimitiveArrayCritical(env, dataArray, data, 0);
-
-    if (throw_exc == JNI_TRUE) {
+    if (JNI_TRUE == readAndClearMemErrorFlag()) {
         JNI_ThrowNew(env, "java/lang/OutOfMemoryError",
             "Allocation of internal renderer buffer failed.");
     }
@@ -469,7 +482,7 @@ JNIEXPORT void JNICALL Java_com_sun_pisces_PiscesRenderer_fillRect
         // emit fractional top line
         if (tfrac) {
             if (rdr->_genPaint) {
-                jint l = (x_to - x_from + 1) * sizeof(jint);
+                size_t l = (x_to - x_from + 1);
                 ALLOC3(rdr->_paint, jint, l);
                 rdr->_genPaint(rdr, 1);
             }
@@ -484,7 +497,7 @@ JNIEXPORT void JNICALL Java_com_sun_pisces_PiscesRenderer_fillRect
         while (rows_to_render_by_loop > 0) {
             rows_being_rendered = MIN(rows_to_render_by_loop, NUM_ALPHA_ROWS);
             if (rdr->_genPaint) {
-                jint l = (x_to - x_from + 1) * rows_being_rendered * sizeof(jint);
+                size_t l = (x_to - x_from + 1) * rows_being_rendered;
                 ALLOC3(rdr->_paint, jint, l);
                 rdr->_genPaint(rdr, rows_being_rendered);
             }
@@ -499,13 +512,18 @@ JNIEXPORT void JNICALL Java_com_sun_pisces_PiscesRenderer_fillRect
         // emit fractional bottom line
         if (bfrac) {
             if (rdr->_genPaint) {
-                jint l = (x_to - x_from + 1) * sizeof(jint);
+                size_t l = (x_to - x_from + 1);
                 ALLOC3(rdr->_paint, jint, l);
                 rdr->_genPaint(rdr, 1);
             }
             rdr->_emitLine(rdr, 1, bfrac);
         }
         RELEASE_SURFACE(surface, env, surfaceHandle);
+
+        if (JNI_TRUE == readAndClearMemErrorFlag()) {
+            JNI_ThrowNew(env, "java/lang/OutOfMemoryError",
+                "Allocation of internal renderer buffer failed.");
+        }
     }
 }
 
@@ -521,47 +539,63 @@ JNIEXPORT void JNICALL Java_com_sun_pisces_PiscesRenderer_emitAndClearAlphaRow
     Renderer* rdr;
     Surface* surface;
     jobject surfaceHandle;
-    
-    jbyte* alphaMap = (jbyte*)(*env)->GetPrimitiveArrayCritical(env, jAlphaMap, NULL);
-    jint* alphaRow = (jint*)(*env)->GetPrimitiveArrayCritical(env, jAlphaDeltas, NULL);
+    jbyte* alphaMap;
     
     rdr = (Renderer*)JLongToPointer((*env)->GetLongField(env, this, fieldIds[RENDERER_NATIVE_PTR]));
     
     SURFACE_FROM_RENDERER(surface, env, surfaceHandle, this);
     ACQUIRE_SURFACE(surface, env, surfaceHandle);
     INVALIDATE_RENDERER_SURFACE(rdr);
-    VALIDATE_BLITTING(rdr); 
-    
-    rdr->_minTouched = x_from;
-    rdr->_maxTouched = x_to;
-    rdr->_currX = x_from;
-    rdr->_currY = y;
+    VALIDATE_BLITTING(rdr);
 
-    rdr->_rowAAOffset = 0;
-    rdr->_rowNum = rowNum;
-    
-    rdr->alphaMap = alphaMap;
-    rdr->_rowAAInt = alphaRow;
-    rdr->_alphaWidth = x_to - x_from + 1;
-    rdr->_alphaOffset = 0;
-    
-    rdr->_currImageOffset = y * surface->width;
-    rdr->_imageScanlineStride = surface->width;
-    rdr->_imagePixelStride = 1;
-    
-    if (rdr->_genPaint) {
-        jint l = (x_to - x_from + 1)*sizeof(jint);
-        ALLOC3(rdr->_paint, jint, l);
-        rdr->_genPaint(rdr, 1);
+    alphaMap = (jbyte*)(*env)->GetPrimitiveArrayCritical(env, jAlphaMap, NULL);
+    if (alphaMap != NULL)
+    {
+        jint* alphaRow = (jint*)(*env)->GetPrimitiveArrayCritical(env, jAlphaDeltas, NULL);
+        if (alphaRow != NULL)
+        {
+            rdr->_minTouched = x_from;
+            rdr->_maxTouched = x_to;
+            rdr->_currX = x_from;
+            rdr->_currY = y;
+        
+            rdr->_rowAAOffset = 0;
+            rdr->_rowNum = rowNum;
+            
+            rdr->alphaMap = alphaMap;
+            rdr->_rowAAInt = alphaRow;
+            rdr->_alphaWidth = x_to - x_from + 1;
+            rdr->_alphaOffset = 0;
+            
+            rdr->_currImageOffset = y * surface->width;
+            rdr->_imageScanlineStride = surface->width;
+            rdr->_imagePixelStride = 1;
+            
+            if (rdr->_genPaint) {
+                size_t l = (x_to - x_from + 1);
+                ALLOC3(rdr->_paint, jint, l);
+                rdr->_genPaint(rdr, 1);
+            }
+        
+            rdr->_emitRows(rdr, 1);
+            
+            rdr->_rowAAInt = NULL;
+            (*env)->ReleasePrimitiveArrayCritical(env, jAlphaDeltas, alphaRow, 0);
+        } else {
+            setMemErrorFlag();
+        }
+        
+        (*env)->ReleasePrimitiveArrayCritical(env, jAlphaMap, alphaMap, 0);
+    } else {
+        setMemErrorFlag();
     }
 
-    rdr->_emitRows(rdr, 1);
-    
     RELEASE_SURFACE(surface, env, surfaceHandle);
-    
-    rdr->_rowAAInt = NULL;
-    (*env)->ReleasePrimitiveArrayCritical(env, jAlphaDeltas, alphaRow, 0);
-    (*env)->ReleasePrimitiveArrayCritical(env, jAlphaMap, alphaMap, 0);
+
+    if (JNI_TRUE == readAndClearMemErrorFlag()) {
+        JNI_ThrowNew(env, "java/lang/OutOfMemoryError",
+            "Allocation of internal renderer buffer failed.");
+    }
 }
 
 /*
@@ -593,67 +627,80 @@ JNIEXPORT void JNICALL Java_com_sun_pisces_PiscesRenderer_drawImage
     if (maxX >= minX && maxY >= minY)
     {
         Transform6 textureTransform;
-        jint* data = (jint*)(*env)->GetPrimitiveArrayCritical(env, dataArray, NULL);
-    
+        jint* data;
+
         transform_get6(&textureTransform, env, jTransform);
-        renderer_setTexture(rdr, PAINT_IMAGE, data + offset, width, height, stride, 
-            repeat, JNI_TRUE, &textureTransform, JNI_FALSE, hasAlpha,
-            interpolateMinX, interpolateMinY, interpolateMaxX, interpolateMaxY);
-        
+
         SURFACE_FROM_RENDERER(surface, env, surfaceHandle, this);
         ACQUIRE_SURFACE(surface, env, surfaceHandle);
-        INVALIDATE_RENDERER_SURFACE(rdr);
-        VALIDATE_BLITTING(rdr);
-        
-        rdr->_minTouched = minX;
-        rdr->_maxTouched = maxX;
-        rdr->_currX = minX;
-        rdr->_currY = minY;
-    
-        rdr->alphaMap = NULL;
-        rdr->_rowAAInt = NULL;
-        rdr->_alphaWidth = maxX - minX + 1;
-        rdr->_alphaOffset = (minY - bboxY) * width + minX - bboxX;
-        
-        rdr->_imageScanlineStride = surface->width;
-        rdr->_imagePixelStride = 1;
-        rdr->_rowNum = 0;
-    
-        rowsToBeRendered = maxY - minY + 1;
-        
-        if (!scanLineAlphaDiff) {
-            for (i = 0; i < NUM_ALPHA_ROWS; i++) {
-                rdr->_scanLineAlpha[i] = topOpacity;
-            }
-        }
-        
-        while (rowsToBeRendered > 0) {
-            rowsBeingRendered = MIN(rowsToBeRendered, NUM_ALPHA_ROWS);
-        
-            if (scanLineAlphaDiff) {
-                // scanLineAlpha
-                jfloat scanLineAlphaInc = ((jfloat)scanLineAlphaDiff) / bboxH;
-                for (i = 0; i < rowsBeingRendered; i++) {
-                    rdr->_scanLineAlpha[i] = (jint)(topOpacity - scanLineAlphaInc * (rdr->_rowNum + i));
-                }
-            } 
-    
-            rdr->_currImageOffset = rdr->_currY * surface->width;
-            if (rdr->_genPaint) {
-                jint l = (bboxW * rowsBeingRendered)*sizeof(jint);
-                ALLOC3(rdr->_paint, jint, l);
-                rdr->_genPaint(rdr, rowsBeingRendered);
-            }
-            rdr->_emitRows(rdr, rowsBeingRendered);
-            rdr->_rowNum += rowsBeingRendered;
-            rowsToBeRendered -= rowsBeingRendered;
+
+        data = (jint*)(*env)->GetPrimitiveArrayCritical(env, dataArray, NULL);
+        if (data != NULL) {
+            renderer_setTexture(rdr, PAINT_IMAGE, data + offset, width, height, stride, 
+                repeat, JNI_TRUE, &textureTransform, JNI_FALSE, hasAlpha,
+                interpolateMinX, interpolateMinY, interpolateMaxX, interpolateMaxY);
+
+            INVALIDATE_RENDERER_SURFACE(rdr);
+            VALIDATE_BLITTING(rdr);
+            
+            rdr->_minTouched = minX;
+            rdr->_maxTouched = maxX;
             rdr->_currX = minX;
-            rdr->_currY += rowsBeingRendered;
-        }
+            rdr->_currY = minY;
         
+            rdr->alphaMap = NULL;
+            rdr->_rowAAInt = NULL;
+            rdr->_alphaWidth = maxX - minX + 1;
+            rdr->_alphaOffset = (minY - bboxY) * width + minX - bboxX;
+            
+            rdr->_imageScanlineStride = surface->width;
+            rdr->_imagePixelStride = 1;
+            rdr->_rowNum = 0;
+        
+            rowsToBeRendered = maxY - minY + 1;
+            
+            if (!scanLineAlphaDiff) {
+                for (i = 0; i < NUM_ALPHA_ROWS; i++) {
+                    rdr->_scanLineAlpha[i] = topOpacity;
+                }
+            }
+            
+            while (rowsToBeRendered > 0) {
+                rowsBeingRendered = MIN(rowsToBeRendered, NUM_ALPHA_ROWS);
+            
+                if (scanLineAlphaDiff) {
+                    // scanLineAlpha
+                    jfloat scanLineAlphaInc = ((jfloat)scanLineAlphaDiff) / bboxH;
+                    for (i = 0; i < rowsBeingRendered; i++) {
+                        rdr->_scanLineAlpha[i] = (jint)(topOpacity - scanLineAlphaInc * (rdr->_rowNum + i));
+                    }
+                } 
+        
+                rdr->_currImageOffset = rdr->_currY * surface->width;
+                if (rdr->_genPaint) {
+                    size_t l = (maxX - minX + 1) * rowsBeingRendered;
+                    ALLOC3(rdr->_paint, jint, l);
+                    rdr->_genPaint(rdr, rowsBeingRendered);
+                }
+                rdr->_emitRows(rdr, rowsBeingRendered);
+                rdr->_rowNum += rowsBeingRendered;
+                rowsToBeRendered -= rowsBeingRendered;
+                rdr->_currX = minX;
+                rdr->_currY += rowsBeingRendered;
+            }
+            
+            rdr->_texture_intData = NULL;
+            (*env)->ReleasePrimitiveArrayCritical(env, dataArray, data, 0);
+        } else {
+            setMemErrorFlag();
+        }
+
         RELEASE_SURFACE(surface, env, surfaceHandle);
-        rdr->_texture_intData = NULL;
-        (*env)->ReleasePrimitiveArrayCritical(env, dataArray, data, 0);
+
+        if (JNI_TRUE == readAndClearMemErrorFlag()) {
+            JNI_ThrowNew(env, "java/lang/OutOfMemoryError",
+                         "Allocation of internal renderer buffer failed.");
+        }
     }
 }
 
@@ -716,53 +763,65 @@ static void fillAlphaMask(Renderer* rdr, jint minX, jint minY, jint maxX, jint m
     
     if (maxX >= minX && maxY >= minY)
     {
-        jbyte* mask = (jbyte*)(*env)->GetPrimitiveArrayCritical(env, jmask, NULL);
-        jint width = maxX - minX + 1;
-        jint height = maxY - minY + 1;
-        
-        renderer_setMask(rdr, maskType, mask, maskWidth, maskHeight, JNI_FALSE);
-        
+        jbyte* mask;
+
         SURFACE_FROM_RENDERER(surface, env, surfaceHandle, this);
         ACQUIRE_SURFACE(surface, env, surfaceHandle);
-        INVALIDATE_RENDERER_SURFACE(rdr);
-        VALIDATE_BLITTING(rdr);
-        
-        rdr->_minTouched = minX;
-        rdr->_maxTouched = maxX;
-        rdr->_currX = minX;
-        rdr->_currY = minY;
-        
-        rdr->_alphaWidth = width;
-        
-        rdr->_imageScanlineStride = surface->width;
-        rdr->_imagePixelStride = 1;
-        rdr->_rowNum = 0;
-        rdr->_maskOffset = offset;
-        
-        rowsToBeRendered = height;
-        
-        while (rowsToBeRendered > 0) {
-            rowsBeingRendered = 1; //MIN(rowsToBeRendered, NUM_ALPHA_ROWS);
+
+        mask = (jbyte*)(*env)->GetPrimitiveArrayCritical(env, jmask, NULL);
+        if (mask != NULL) {
+            jint width = maxX - minX + 1;
+            jint height = maxY - minY + 1;
+
+            renderer_setMask(rdr, maskType, mask, maskWidth, maskHeight, JNI_FALSE);
+
+            INVALIDATE_RENDERER_SURFACE(rdr);
+            VALIDATE_BLITTING(rdr);
+
+            rdr->_minTouched = minX;
+            rdr->_maxTouched = maxX;
+            rdr->_currX = minX;
+            rdr->_currY = minY;
             
-            rdr->_currImageOffset = rdr->_currY * surface->width;
-            if (rdr->_genPaint) {
-                jint l = (width * rowsBeingRendered)*sizeof(jint);
-                ALLOC3(rdr->_paint, jint, l);
-                rdr->_genPaint(rdr, rowsBeingRendered);
+            rdr->_alphaWidth = width;
+            
+            rdr->_imageScanlineStride = surface->width;
+            rdr->_imagePixelStride = 1;
+            rdr->_rowNum = 0;
+            rdr->_maskOffset = offset;
+            
+            rowsToBeRendered = height;
+            
+            while (rowsToBeRendered > 0) {
+                rowsBeingRendered = 1; //MIN(rowsToBeRendered, NUM_ALPHA_ROWS);
+                
+                rdr->_currImageOffset = rdr->_currY * surface->width;
+                if (rdr->_genPaint) {
+                    size_t l = (width * rowsBeingRendered);
+                    ALLOC3(rdr->_paint, jint, l);
+                    rdr->_genPaint(rdr, rowsBeingRendered);
+                }
+                rdr->_emitRows(rdr, rowsBeingRendered);
+            
+                rdr->_maskOffset += maskWidth;
+                rdr->_rowNum += rowsBeingRendered;
+                rowsToBeRendered -= rowsBeingRendered;
+                rdr->_currX = x;
+                rdr->_currY += rowsBeingRendered;
             }
-            rdr->_emitRows(rdr, rowsBeingRendered);
-        
-            rdr->_maskOffset += maskWidth;
-            rdr->_rowNum += rowsBeingRendered;
-            rowsToBeRendered -= rowsBeingRendered;
-            rdr->_currX = x;
-            rdr->_currY += rowsBeingRendered;
+
+            renderer_removeMask(rdr);
+            (*env)->ReleasePrimitiveArrayCritical(env, jmask, mask, 0);
+        } else {
+            setMemErrorFlag();
         }
-        
+
         RELEASE_SURFACE(surface, env, surfaceHandle);
-        
-        renderer_removeMask(rdr);
-        (*env)->ReleasePrimitiveArrayCritical(env, jmask, mask, 0);
+
+        if (JNI_TRUE == readAndClearMemErrorFlag()) {
+            JNI_ThrowNew(env, "java/lang/OutOfMemoryError",
+                         "Allocation of internal renderer buffer failed.");
+        }
     }
 }
 

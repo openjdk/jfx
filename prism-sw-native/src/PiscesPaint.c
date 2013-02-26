@@ -333,8 +333,13 @@ static INLINE jboolean isInBounds(jint *a, jlong *la, jint min, jint max, jboole
     jint aval = *a;
     if (aval < min || aval > max) {
         if (repeat) {
-            *la = lmod(*la, max << 16);
-            *a = (jint)(*la >> 16);
+            if (max > 0) {
+                *la = lmod(*la, max << 16);
+                *a = (jint)(*la >> 16);
+            } else {
+                *la = 0;
+                *a = 0;
+            }
         } else {
             inBounds = XNI_FALSE;
         }

@@ -321,7 +321,7 @@ typedef struct _Renderer {
     
     // Paint buffer
     jint *_paint;
-    jint _paint_length;
+    size_t _paint_length;
 
     // Paint transform
     Transform6 _paint_transform;
