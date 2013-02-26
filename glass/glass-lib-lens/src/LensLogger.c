@@ -25,6 +25,8 @@
  
 #include "LensCommon.h"
 
+#include <assert.h>
+#include <execinfo.h>
 #include <sys/types.h>
 #include <linux/unistd.h>
 #include <sys/syscall.h>
@@ -43,12 +45,19 @@ static jmethodID glass_log_fine;
 static jmethodID glass_log_finer;
 static jmethodID glass_log_finest;
 
+/* If a log message (including its file name and line number) contains one of
+ * the backtraceTags, a stack dump will be output at that point.
+ * backtraceTags are defined as a comma-separated list in the environment
+ * variable LENS_BACKTRACE */
+static char **backtraceTags = NULL;
+
 void glass_logger_init(JavaVM *vm, JNIEnv *env) {
     jclass c_LensLogger;
     jclass c_PlatformLogger;
     jmethodID m_getLogger;
     jmethodID m_getLevel;
     jobject logger;
+    const char *lensBacktrace = getenv("LENS_BACKTRACE");
     glass_vm = vm;
     glass_log_level = 0x7fffffff; // Integer.MAX_VALUE, meaning no logging
     c_LensLogger = (*env)->FindClass(env, "com/sun/glass/ui/lens/LensLogger");
@@ -107,6 +116,69 @@ void glass_logger_init(JavaVM *vm, JNIEnv *env) {
         glass_log_level = (*env)->CallIntMethod(env, glass_logger, m_getLevel);
     }
     GLASS_LOG_INFO("Log level %i", glass_log_level);
+    // Check LENS_BACKTRACE for backtrace tags
+    if (lensBacktrace) {
+        int tagCount;
+        int tagIndex = 0;
+        int index;
+        int i;
+        char *s = strdup(lensBacktrace);
+        int sLen = strlen(lensBacktrace);
+        if (s == NULL) {
+            fprintf(stderr, "Backtrace disabled, no memory for tags\n");
+        } else {
+            fprintf(stderr, "LENS_BACKTRACE: %s\n", s);
+            // tokenize the tag list in-place and count the tags
+            tagCount = 1;
+            for (index = 0; index < sLen; index++) {
+                if (s[index] == ',') {
+                    if (index > 0 && s[index - 1] == '\\') { // escaped comma
+                        // un-escape the comma by shifting the rest of the
+                        // string left one character
+                        int j;
+                        for (j = index; s[j] != '\000'; j++) {
+                            s[j - 1] = s[j];
+                        }
+                        sLen --;
+                        s[sLen] = '\000';
+                    } else { // comma separator
+                        s[index] = '\000';
+                        tagCount++;
+                    }
+                }
+            }
+            // set up backtraceTags as a null-terminated list of tags
+            backtraceTags = (char **) calloc(tagCount + 1, sizeof(char *));
+            if (backtraceTags == NULL) {
+                fprintf(stderr, "Backtrace disabled, no memory for tags\n");
+            } else {
+                tagIndex = 0;
+                backtraceTags[tagIndex] = s;
+                for (index = 0; index < sLen; index++) {
+                    if (s[index] == '\000') {
+                        if (strlen(backtraceTags[tagIndex]) == 0) {
+                            // an empty string cannot be a tag. skip this tag.
+                            backtraceTags[tagIndex] = s + index + 1;
+                        } else {
+                            backtraceTags[++tagIndex] = s + index + 1;
+                        }
+                    }
+                }
+                if (strlen(backtraceTags[0]) == 0) {
+                    fprintf(stderr,
+                            "LENS_BACKTRACE ignored, it does not define any tags\n");
+                    free(backtraceTags);
+                    backtraceTags = NULL;
+                } else {
+                    backtraceTags[tagIndex + 1] = NULL;
+                    for (tagIndex = 0; backtraceTags[tagIndex]; tagIndex++) {
+                        fprintf(stderr, "LENS_BACKTRACE[%i]='%s'\n",
+                                tagIndex, backtraceTags[tagIndex]);
+                    }
+                }
+            }
+        }
+    } // if (lensBacktrace)
 }
 
 void glass_logf(
@@ -136,6 +208,19 @@ void glass_logf(
     length += vsnprintf(buffer + length, sizeof(buffer) - length,
                         format, argList);
     va_end(argList);
+
+    if (backtraceTags) {
+        int i;
+        for (i = 0; backtraceTags[i] != NULL; i++) {
+            if (strstr(buffer, backtraceTags[i]) != NULL) {
+                fprintf(stderr, "LENS_BACKTRACE: Start backtrace on on tag '%s'\n",
+                        backtraceTags[i]);
+                glass_backtrace();
+                fprintf(stderr, "LENS_BACKTRACE: End backtrace\n");
+                break;
+            }
+        }
+    }
 
     // Get a JNIEnv, either by looking it up or by attaching this thread
     // to the VM.
@@ -186,7 +271,7 @@ void glass_logf(
     (*env)->DeleteLocalRef(env, s);
     if (attachedThread) {
         // If we attached this thread to the VM in order to make a JNI call
-        // the we should detach it again. This is going to kill performance
+        // then we should detach it again. This is going to kill performance
         // but bad performance in logging will be better than having logging
         // have the side effect of leaving the thread attached.
         (*glass_vm)->DetachCurrentThread(glass_vm);
@@ -195,5 +280,111 @@ void glass_logf(
         (*env)->Throw(env, pendingException);
         (*env)->DeleteLocalRef(env, pendingException);
     }
+}
+
+void glass_backtrace() {
+    JNIEnv *env;
+    int i;
+    void *stack[128];
+    int depth = backtrace(stack, 128);
+    fflush(stdout); // get stderr and stdout in sync
+    // C backtrace
+    for (i = 0; i < depth; i++) {
+        fprintf(stderr, "LENS_BACKTRACE: ");
+        backtrace_symbols_fd(stack + i, 1, STDERR_FILENO);
+    }
+    // Java backtrace
+    (*glass_vm)->GetEnv(glass_vm, (void **) &env, JNI_VERSION_1_6);
+    if (env) {
+        jthrowable pendingException = (*env)->ExceptionOccurred(env);
+        jclass throwableClass, stackTraceElementClass, threadClass;
+        jobject throwable, thread, threadName;
+        jarray stackTraceElements;
+        jmethodID constructor, fillInStackTrace, getStackTrace;
+        jmethodID stackTraceElementToString;
+        jmethodID currentThread, getName;
+        int stackTraceLength;
+        int i;
+        const char *nameChars;
+        if (pendingException != NULL) {
+            (*env)->ExceptionClear(env);
+        }
+
+        // We could just throw a new exception and call ExceptionDescribe to
+        // get a stack trace. Instead we call
+        //   new Throwable().fillInStackTrace().getStackTrace()
+        // and print out each StackTraceElement separately. This gets neater
+        // output and makes sure that all output goes to stderr.
+
+        throwableClass = (*env)->FindClass(env, "java/lang/Throwable");
+        assert(throwableClass);
+        stackTraceElementClass = (*env)->FindClass(env, "java/lang/StackTraceElement");
+        assert(stackTraceElementClass);
+        threadClass = (*env)->FindClass(env, "java/lang/Thread");
+        assert(threadClass);
+        constructor = (*env)->GetMethodID(env, throwableClass, "<init>", "()V");
+        assert(constructor);
+        fillInStackTrace = (*env)->GetMethodID(env, throwableClass,
+                                               "fillInStackTrace",
+                                               "()Ljava/lang/Throwable;");
+        assert(fillInStackTrace);
+        getStackTrace = (*env)->GetMethodID(env, throwableClass,
+                                            "getStackTrace",
+                                            "()[Ljava/lang/StackTraceElement;");
+        assert(getStackTrace);
+        stackTraceElementToString = (*env)->GetMethodID(
+                env, stackTraceElementClass, "toString", "()Ljava/lang/String;");
+        assert(stackTraceElementToString);
+        currentThread = (*env)->GetStaticMethodID(env, threadClass,
+                                                  "currentThread",
+                                                  "()Ljava/lang/Thread;");
+        assert(currentThread);
+        getName = (*env)->GetMethodID(env, threadClass,
+                                      "getName", "()Ljava/lang/String;");
+        assert(getName);
+
+        throwable = (*env)->NewObject(env, throwableClass, constructor);
+        assert(throwable);
+        (*env)->DeleteLocalRef(env,
+                              (*env)->CallObjectMethod(env, throwable,
+                                                     fillInStackTrace));
+        stackTraceElements = (*env)->CallObjectMethod(env,
+                                                      throwable, getStackTrace);
+        assert(stackTraceElements);
+        stackTraceLength = (*env)->GetArrayLength(env, stackTraceElements);
+        for (i = 0; i < stackTraceLength; i++) {
+            jobject stackTraceElement = (*env)->GetObjectArrayElement(
+                    env, stackTraceElements, i);
+            jstring s;
+            const char *cs;
+            assert(stackTraceElement);
+            s = (jstring) (*env)->CallObjectMethod(env, stackTraceElement,
+                                                   stackTraceElementToString);
+            cs = (*env)->GetStringUTFChars(env, s, NULL);
+            assert(cs);
+            fprintf(stderr, "LENS_BACKTRACE: %s\n", cs);
+            (*env)->ReleaseStringUTFChars(env, s, cs);
+            (*env)->DeleteLocalRef(env, s);
+            (*env)->DeleteLocalRef(env, stackTraceElement);
+        }
+        (*env)->DeleteLocalRef(env, stackTraceElements);
+        (*env)->DeleteLocalRef(env, throwable);
+        (*env)->DeleteLocalRef(env, throwableClass);
+        if (pendingException != NULL) {
+            (*env)->Throw(env, pendingException);
+            (*env)->DeleteLocalRef(env, pendingException);
+        }
+        thread = (*env)->CallStaticObjectMethod(env, threadClass, currentThread);
+        threadName = (*env)->CallObjectMethod(env, thread, getName);
+        nameChars = (*env)->GetStringUTFChars(env, threadName, NULL);
+        assert(nameChars);
+        fprintf(stderr, "LENS_BACKTRACE: Java thread '%s'\n", nameChars);
+        (*env)->ReleaseStringUTFChars(env, threadName, nameChars);
+        (*env)->DeleteLocalRef(env, threadName);
+        (*env)->DeleteLocalRef(env, thread);
+    } else {
+        fprintf(stderr, "LENS_BACKTRACE: Not a Java thread\n");
+    }
+    fflush(stderr);
 }
 

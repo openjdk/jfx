@@ -89,21 +89,6 @@ extern jmethodID mat_jWindowNotifyFocus;
  */
 void glass_throw_exception_by_name(JNIEnv *env, const char *name, const char *msg);
 
-#define DEBUG_PRINT_STACK(env,msg)                                  \
-    {                                                               \
-        jclass ex = (*env)->FindClass(env, "java/lang/Exception");  \
-        jthrowable exc;                                             \
-        if (ex != NULL) {                                           \
-            if ( (*env)->ThrowNew(env, ex, msg) ==0 ) {             \
-                exc = (*env)->ExceptionOccurred(env);               \
-                if (exc != NULL) {                                  \
-                    (*env)->ExceptionDescribe(env);                 \
-                    (*env)->ExceptionClear(env);                    \
-                }                                                   \
-            }                                                       \
-        }                                                           \
-    } //end of DEBUG_PRINT_STACK
-
 #define CHECK_AND_RET_VOID(ENV)                                             \
     {                                                                       \
         if ((*ENV)->ExceptionCheck(ENV) == JNI_TRUE) {                      \
@@ -1452,6 +1437,12 @@ void glass_logf(int level,
                 const char *file,
                 int line,
                 const char *format, ...);
+
+
+/**
+ * Write a C and Java backtrace to stderr
+ */
+void glass_backtrace();
 
 /**
  * The logging level.
