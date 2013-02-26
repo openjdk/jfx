@@ -25,6 +25,8 @@
 
 package javafx.scene.control;
 
+import com.sun.javafx.scene.control.test.ControlAsserts;
+import com.sun.javafx.scene.control.test.Person;
 import static javafx.scene.control.ControlTestUtils.assertStyleClassContains;
 import static org.junit.Assert.*;
 
@@ -32,8 +34,6 @@ import java.util.Arrays;
 
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.scene.control.cell.PropertyValueFactory;
@@ -50,6 +50,7 @@ public class TableViewTest {
         table = new TableView<String>();
         sm = table.getSelectionModel();
     }
+    
 
     /*********************************************************************
      * Tests for the constructors                                        *
@@ -469,5 +470,38 @@ public class TableViewTest {
         table.getItems().clear();
         assertEquals(0, table.getSelectionModel().getSelectedItems().size());
         assertNull(table.getSelectionModel().getSelectedItem());
+    }
+    
+    @Test public void test_rt28534() {
+        TableView<Person> table = new TableView<Person>();
+        table.setItems(FXCollections.observableArrayList(
+            new Person("Jacob", "Smith", "jacob.smith@example.com"),
+            new Person("Isabella", "Johnson", "isabella.johnson@example.com"),
+            new Person("Ethan", "Williams", "ethan.williams@example.com"),
+            new Person("Emma", "Jones", "emma.jones@example.com"),
+            new Person("Michael", "Brown", "michael.brown@example.com")));
+        
+        TableColumn firstNameCol = new TableColumn("First Name");
+        firstNameCol.setCellValueFactory(new PropertyValueFactory<Person, String>("firstName"));
+
+        TableColumn lastNameCol = new TableColumn("Last Name");
+        lastNameCol.setCellValueFactory(new PropertyValueFactory<Person, String>("lastName"));
+
+        TableColumn emailCol = new TableColumn("Email");
+        emailCol.setCellValueFactory(new PropertyValueFactory<Person, String>("email"));
+
+        table.getColumns().addAll(firstNameCol, lastNameCol, emailCol);
+        
+        ControlAsserts.assertRowsNotEmpty(table, 0, 5); // rows 0 - 5 should be filled
+        ControlAsserts.assertRowsEmpty(table, 5, -1); // rows 5+ should be empty
+        
+        // now we replace the data and expect the cells that have no data
+        // to be empty
+        table.setItems(FXCollections.observableArrayList(
+            new Person("*_*Emma", "Jones", "emma.jones@example.com"),
+            new Person("_Michael", "Brown", "michael.brown@example.com")));
+        
+        ControlAsserts.assertRowsNotEmpty(table, 0, 2); // rows 0 - 2 should be filled
+        ControlAsserts.assertRowsEmpty(table, 2, -1); // rows 2+ should be empty
     }
 }

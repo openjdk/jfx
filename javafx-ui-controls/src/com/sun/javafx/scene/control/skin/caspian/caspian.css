@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2011, Oracle and/or its affiliates. All rights reserved. 
+ * Copyright (c) 2009, 2011, Oracle anis/or its affiliates. All rights reserved. 
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER. 
  *  
  * This code is free software; you can redistribute it and/or modify it 
@@ -1663,7 +1663,7 @@
 
 .tree-cell > .tree-disclosure-node,
 .tree-table-row-cell > .tree-disclosure-node {
-    -fx-padding: 4 4 4 4;
+    -fx-padding: 4 2 4 8;
     -fx-background-color: transparent;
 }
 
@@ -1677,6 +1677,11 @@
     -fx-background-color: -fx-mark-color;
     -fx-padding: 0.333333em; /* 4 */
     -fx-shape: "M 0 -4 L 8 0 L 0 4 z";
+}
+
+.tree-cell:expanded > .tree-disclosure-node > .arrow,
+.tree-table-row-cell:expanded > .tree-disclosure-node > .arrow {
+    -fx-rotate: 90;
 }
 
 .tree-cell:filled:selected > .tree-disclosure-node > .arrow,

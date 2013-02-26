@@ -38,8 +38,10 @@ import com.sun.javafx.property.PropertyReference;
 import com.sun.javafx.scene.control.skin.TableCellSkin;
 import javafx.collections.WeakListChangeListener;
 import java.lang.ref.WeakReference;
+import java.util.List;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
+import javafx.collections.FXCollections;
 
 import javafx.scene.control.TableColumn.CellEditEvent;
 
@@ -488,31 +490,28 @@ public class TableCell<S,T> extends IndexedCell<T> {
             currentObservableValue.removeListener(weaktableRowUpdateObserver);
         }
         
+        // get the total number of items in the data model
+        final TableView tableView = getTableView();
+        final List<T> items = tableView == null ? FXCollections.emptyObservableList() : tableView.getItems();
+        final TableColumn tableColumn = getTableColumn();
+        final int itemCount = items.size();
+        final int index = getIndex();
+        
         // there is a whole heap of reasons why we should just punt...
-        if (getIndex() < 0 || 
+        if (index >= itemCount ||
+                index < 0 || 
                 columnIndex < 0 ||
                 !isVisible() ||
-                getTableColumn() == null || 
-                !getTableColumn().isVisible() || 
-                getTableView().getItems() == null) {
-            return;
-        }
-        
-        // get the total number of items in the data model
-        int itemCount = getTableView().getItems().size();
-        
-        if (getIndex() >= itemCount) {
+                tableColumn == null || 
+                !tableColumn.isVisible()) {
             updateItem(null, true);
             return;
         } else {
-            if (getIndex() < itemCount) {
-                currentObservableValue = getTableColumn().getCellObservableValue(getIndex());
-            }
-
+            currentObservableValue = tableColumn.getCellObservableValue(index);
             T value = currentObservableValue == null ? null : currentObservableValue.getValue();
             
             // update the 'item' property of this cell.
-            updateItem(value, value == null);
+            updateItem(value, false);
         }
         
         if (currentObservableValue == null) {
