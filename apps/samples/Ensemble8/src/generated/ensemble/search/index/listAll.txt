@@ -1,0 +1,10 @@
+_f.fdt:6352647
+_f.fdx:98764
+_f.fnm:116
+_f.frq:400407
+_f.nrm:111109
+_f.prx:369476
+_f.tii:15579
+_f.tis:1031019
+segments.gen:20
+segments_g:233
