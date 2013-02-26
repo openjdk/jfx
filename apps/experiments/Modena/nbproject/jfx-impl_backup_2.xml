@@ -185,10 +185,15 @@
             </or>
         </condition>
         <condition property="have-jdk7-css2bin-bug">
-            <!-- as of NB7.3 release date the external css-to-bss converter is unreliable in almost all JDK7/8 versions -->
             <or>
-                <contains string="${version-output}" substring="java version &quot;1.7"/>
-                <contains string="${version-output}" substring="java version &quot;1.8"/>
+                <contains string="${version-output}" substring="java version &quot;1.7.0_04"/>
+                <contains string="${version-output}" substring="java version &quot;1.7.0_05"/>
+                <contains string="${version-output}" substring="java version &quot;1.7.0_06"/>
+                <contains string="${version-output}" substring="java version &quot;1.7.0_07"/>
+                <contains string="${version-output}" substring="java version &quot;1.7.0_08"/>
+                <contains string="${version-output}" substring="java version &quot;1.7.0_09"/>
+                <contains string="${version-output}" substring="java version &quot;1.7.0_10"/>
+                <contains string="${version-output}" substring="java version &quot;1.7.0_11"/>
             </or>
         </condition>
         <property name="jdk-version-checked-in-jfximpl" value="true"/>
@@ -490,84 +495,154 @@
     </target>
 
     <target name="-check-jfxrt-in-fxrt" depends="-check-property-javafx.runtime" if="javafx.runtime.defined">
-        <condition property="do.set.jfxrt.in.fxrt">
+        <condition property="do.set.jfxrt.in.fxrt.old">
             <and>
                 <not><isset property="jfxrt.jar.location"/></not>
                 <available file="${javafx.runtime}${file.separator}lib${file.separator}jfxrt.jar"/>
             </and>
         </condition>
+        <condition property="do.set.jfxrt.in.fxrt.new">
+            <and>
+                <not><isset property="do.set.jfxrt.in.fxrt.old"/></not>
+                <not><isset property="jfxrt.jar.location"/></not>
+                <available file="${javafx.runtime}${file.separator}lib${file.separator}ext${file.separator}jfxrt.jar"/>
+            </and>
+        </condition>
     </target>
-    <target name="-set-jfxrt-in-fxrt" depends="-check-jfxrt-in-fxrt" if="do.set.jfxrt.in.fxrt">
+    <target name="-set-jfxrt-in-fxrt-old" depends="-check-jfxrt-in-fxrt" if="do.set.jfxrt.in.fxrt.old">
         <property name="jfxrt.jar.location" value="${javafx.runtime}${file.separator}lib${file.separator}jfxrt.jar"/>
     </target>
+    <target name="-set-jfxrt-in-fxrt-new" depends="-set-jfxrt-in-fxrt-old,-check-jfxrt-in-fxrt" if="do.set.jfxrt.in.fxrt.new">
+        <property name="jfxrt.jar.location" value="${javafx.runtime}${file.separator}lib${file.separator}ext${file.separator}jfxrt.jar"/>
+    </target>
     <target name="-check-jfxrt-in-fxsdk-jre" depends="-check-property-javafx.sdk" if="javafx.sdk.defined">
-        <condition property="do.set.jfxrt.in.fxsdk.jre">
+        <condition property="do.set.jfxrt.in.fxsdk.jre.old">
             <and>
                 <not><isset property="jfxrt.jar.location"/></not>
                 <available file="${javafx.sdk}${file.separator}jre${file.separator}lib${file.separator}jfxrt.jar"/>
             </and>
         </condition>
+        <condition property="do.set.jfxrt.in.fxsdk.jre.new">
+            <and>
+                <not><isset property="do.set.jfxrt.in.fxsdk.jre.old"/></not>
+                <not><isset property="jfxrt.jar.location"/></not>
+                <available file="${javafx.sdk}${file.separator}jre${file.separator}lib${file.separator}ext${file.separator}jfxrt.jar"/>
+            </and>
+        </condition>
     </target>
-    <target name="-set-jfxrt-in-fxsdk-jre" depends="-set-jfxrt-in-fxrt,-check-jfxrt-in-fxsdk-jre" if="do.set.jfxrt.in.fxsdk.jre">
+    <target name="-set-jfxrt-in-fxsdk-jre-old" depends="-set-jfxrt-in-fxrt-new,-check-jfxrt-in-fxsdk-jre" if="do.set.jfxrt.in.fxsdk.jre.old">
         <property name="jfxrt.jar.location" value="${javafx.sdk}${file.separator}jre${file.separator}lib${file.separator}jfxrt.jar"/>
     </target>
+    <target name="-set-jfxrt-in-fxsdk-jre-new" depends="-set-jfxrt-in-fxsdk-jre-old,-check-jfxrt-in-fxsdk-jre" if="do.set.jfxrt.in.fxsdk.jre.new">
+        <property name="jfxrt.jar.location" value="${javafx.sdk}${file.separator}jre${file.separator}lib${file.separator}ext${file.separator}jfxrt.jar"/>
+    </target>
     <target name="-check-jfxrt-in-fxsdk-rt" depends="-check-property-javafx.sdk" if="javafx.sdk.defined">
-        <condition property="do.set.jfxrt.in.fxsdk.rt">
+        <condition property="do.set.jfxrt.in.fxsdk.rt.old">
             <and>
                 <not><isset property="jfxrt.jar.location"/></not>
                 <available file="${javafx.sdk}${file.separator}rt${file.separator}lib${file.separator}jfxrt.jar"/>
             </and>
         </condition>
+        <condition property="do.set.jfxrt.in.fxsdk.rt.new">
+            <and>
+                <not><isset property="do.set.jfxrt.in.fxsdk.rt.old"/></not>
+                <not><isset property="jfxrt.jar.location"/></not>
+                <available file="${javafx.sdk}${file.separator}rt${file.separator}lib${file.separator}ext${file.separator}jfxrt.jar"/>
+            </and>
+        </condition>
     </target>
-    <target name="-set-jfxrt-in-fxsdk-rt" depends="-set-jfxrt-in-fxsdk-jre,-check-jfxrt-in-fxsdk-rt" if="do.set.jfxrt.in.fxsdk.rt">
+    <target name="-set-jfxrt-in-fxsdk-rt-old" depends="-set-jfxrt-in-fxsdk-jre-new,-check-jfxrt-in-fxsdk-rt" if="do.set.jfxrt.in.fxsdk.rt.old">
         <property name="jfxrt.jar.location" value="${javafx.sdk}${file.separator}rt${file.separator}lib${file.separator}jfxrt.jar"/>
     </target>
+    <target name="-set-jfxrt-in-fxsdk-rt-new" depends="-set-jfxrt-in-fxsdk-rt-old,-check-jfxrt-in-fxsdk-rt" if="do.set.jfxrt.in.fxsdk.rt.new">
+        <property name="jfxrt.jar.location" value="${javafx.sdk}${file.separator}rt${file.separator}lib${file.separator}ext${file.separator}jfxrt.jar"/>
+    </target>
     <target name="-check-jfxrt-in-platform-home-jre" if="platform.home">
-        <condition property="do.set.jfxrt.in.platform.home.jre">
+        <condition property="do.set.jfxrt.in.platform.home.jre.old">
             <and>
                 <not><isset property="jfxrt.jar.location"/></not>
                 <available file="${platform.home}${file.separator}jre${file.separator}lib${file.separator}jfxrt.jar"/>
             </and>
         </condition>
+        <condition property="do.set.jfxrt.in.platform.home.jre.new">
+            <and>
+                <not><isset property="do.set.jfxrt.in.platform.home.jre.old"/></not>
+                <not><isset property="jfxrt.jar.location"/></not>
+                <available file="${platform.home}${file.separator}jre${file.separator}lib${file.separator}ext${file.separator}jfxrt.jar"/>
+            </and>
+        </condition>
     </target>
-    <target name="-set-jfxrt-in-platform-home-jre" depends="-set-jfxrt-in-fxsdk-rt,-check-jfxrt-in-platform-home-jre" if="do.set.jfxrt.in.platform.home.jre">
+    <target name="-set-jfxrt-in-platform-home-jre-old" depends="-set-jfxrt-in-fxsdk-rt-new,-check-jfxrt-in-platform-home-jre" if="do.set.jfxrt.in.platform.home.jre.old">
         <property name="jfxrt.jar.location" value="${platform.home}${file.separator}jre${file.separator}lib${file.separator}jfxrt.jar"/>
     </target>
+    <target name="-set-jfxrt-in-platform-home-jre-new" depends="-set-jfxrt-in-platform-home-jre-old,-check-jfxrt-in-platform-home-jre" if="do.set.jfxrt.in.platform.home.jre.new">
+        <property name="jfxrt.jar.location" value="${platform.home}${file.separator}jre${file.separator}lib${file.separator}ext${file.separator}jfxrt.jar"/>
+    </target>
     <target name="-check-jfxrt-in-platform-home-rt" if="platform.home">
-        <condition property="do.set.jfxrt.in.platform.home.rt">
+        <condition property="do.set.jfxrt.in.platform.home.rt.old">
             <and>
                 <not><isset property="jfxrt.jar.location"/></not>
                 <available file="${platform.home}${file.separator}rt${file.separator}lib${file.separator}jfxrt.jar"/>
             </and>
         </condition>
+        <condition property="do.set.jfxrt.in.platform.home.rt.new">
+            <and>
+                <not><isset property="do.set.jfxrt.in.platform.home.rt.old"/></not>
+                <not><isset property="jfxrt.jar.location"/></not>
+                <available file="${platform.home}${file.separator}rt${file.separator}lib${file.separator}ext${file.separator}jfxrt.jar"/>
+            </and>
+        </condition>
     </target>
-    <target name="-set-jfxrt-in-platform-home-rt" depends="-set-jfxrt-in-platform-home-jre,-check-jfxrt-in-platform-home-rt" if="do.set.jfxrt.in.platform.home.rt">
+    <target name="-set-jfxrt-in-platform-home-rt-old" depends="-set-jfxrt-in-platform-home-jre-new,-check-jfxrt-in-platform-home-rt" if="do.set.jfxrt.in.platform.home.rt.old">
         <property name="jfxrt.jar.location" value="${platform.home}${file.separator}rt${file.separator}lib${file.separator}jfxrt.jar"/>
     </target>
+    <target name="-set-jfxrt-in-platform-home-rt-new" depends="-set-jfxrt-in-platform-home-rt-old,-check-jfxrt-in-platform-home-rt" if="do.set.jfxrt.in.platform.home.rt.new">
+        <property name="jfxrt.jar.location" value="${platform.home}${file.separator}rt${file.separator}lib${file.separator}ext${file.separator}jfxrt.jar"/>
+    </target>
     <target name="-check-jfxrt-in-jre" unless="jfxrt.jar.location">
-        <condition property="do.set.jfxrt.in.jre">
+        <condition property="do.set.jfxrt.in.jre.old">
             <and>
                 <not><isset property="jfxrt.jar.location"/></not>
                 <available file="${java.home}${file.separator}lib${file.separator}jfxrt.jar"/>
             </and>
         </condition>
-    </target>
-    <target name="-set-jfxrt-in-jre" depends="-set-jfxrt-in-platform-home-rt,-check-jfxrt-in-jre" if="do.set.jfxrt.in.jre">
-        <property name="jfxrt.jar.location" value="${java.home}${file.separator}lib${file.separator}jfxrt.jar"/>
-    </target>
-    <target name="-check-jfxrt-in-envjdk-jre" unless="jfxrt.jar.location">
-        <property environment="env"/>
-        <condition property="do.set.jfxrt.in.envjdk.jre">
+        <condition property="do.set.jfxrt.in.jre.new">
             <and>
-                <not><isset property="ant-javafx.jar.location"/></not>
-                <available file="${env.JAVA_HOME}${file.separator}jre${file.separator}lib${file.separator}jfxrt.jar"/>
+                <not><isset property="do.set.jfxrt.in.jre.old"/></not>
+                <not><isset property="jfxrt.jar.location"/></not>
+                <available file="${java.home}${file.separator}lib${file.separator}ext${file.separator}jfxrt.jar"/>
             </and>
         </condition>
     </target>
-    <target name="-set-jfxrt-in-envjdk-jre" depends="-set-jfxrt-in-jre,-check-jfxrt-in-envjdk-jre" if="do.set.jfxrt.in.envjdk.jre">
+    <target name="-set-jfxrt-in-jre-old" depends="-set-jfxrt-in-platform-home-rt-new,-check-jfxrt-in-jre" if="do.set.jfxrt.in.jre.old">
+        <property name="jfxrt.jar.location" value="${java.home}${file.separator}lib${file.separator}jfxrt.jar"/>
+    </target>
+    <target name="-set-jfxrt-in-jre-new" depends="-set-jfxrt-in-jre-old,-check-jfxrt-in-jre" if="do.set.jfxrt.in.jre.new">
+        <property name="jfxrt.jar.location" value="${java.home}${file.separator}lib${file.separator}ext${file.separator}jfxrt.jar"/>
+    </target>
+    <target name="-check-jfxrt-in-envjdk-jre" unless="jfxrt.jar.location">
+        <property environment="env"/>
+        <condition property="do.set.jfxrt.in.envjdk.jre.old">
+            <and>
+                <not><isset property="jfxrt.jar.location"/></not>
+                <available file="${env.JAVA_HOME}${file.separator}jre${file.separator}lib${file.separator}jfxrt.jar"/>
+            </and>
+        </condition>
+        <condition property="do.set.jfxrt.in.envjdk.jre.new">
+            <and>
+                <not><isset property="do.set.jfxrt.in.envjdk.jre.old"/></not>
+                <not><isset property="jfxrt.jar.location"/></not>
+                <available file="${env.JAVA_HOME}${file.separator}jre${file.separator}lib${file.separator}ext${file.separator}jfxrt.jar"/>
+            </and>
+        </condition>
+    </target>
+    <target name="-set-jfxrt-in-envjdk-jre-old" depends="-set-jfxrt-in-jre-new,-check-jfxrt-in-envjdk-jre" if="do.set.jfxrt.in.envjdk.jre.old">
         <property name="jfxrt.jar.location" value="${env.JAVA_HOME}${file.separator}jre${file.separator}lib${file.separator}jfxrt.jar"/>
     </target>
-    <target name="-pre-check-jfx-runtime" depends="-set-jfxrt-in-envjdk-jre">
+    <target name="-set-jfxrt-in-envjdk-jre-new" depends="-set-jfxrt-in-envjdk-jre-old,-check-jfxrt-in-envjdk-jre" if="do.set.jfxrt.in.envjdk.jre.new">
+        <property name="jfxrt.jar.location" value="${env.JAVA_HOME}${file.separator}jre${file.separator}lib${file.separator}ext${file.separator}jfxrt.jar"/>
+    </target>
+    <target name="-pre-check-jfx-runtime" depends="-set-jfxrt-in-envjdk-jre-new">
         <echo message="jfxrt.jar.location = ${jfxrt.jar.location}" level="verbose"/>
     </target>
 
@@ -575,13 +650,20 @@
         <condition property="jfx-runtime-available">
             <and>
                 <or>
-                    <isset property="do.set.jfxrt.in.fxrt"/>
-                    <isset property="do.set.jfxrt.in.fxsdk.jre"/>
-                    <isset property="do.set.jfxrt.in.fxsdk.rt"/>
-                    <isset property="do.set.jfxrt.in.platform.home.jre"/>
-                    <isset property="do.set.jfxrt.in.platform.home.rt"/>
-                    <isset property="do.set.jfxrt.in.jre"/>
-                    <isset property="do.set.jfxrt.in.envjdk.jre"/>
+                    <isset property="do.set.jfxrt.in.fxrt.old"/>
+                    <isset property="do.set.jfxrt.in.fxrt.new"/>
+                    <isset property="do.set.jfxrt.in.fxsdk.jre.old"/>
+                    <isset property="do.set.jfxrt.in.fxsdk.jre.new"/>
+                    <isset property="do.set.jfxrt.in.fxsdk.rt.old"/>
+                    <isset property="do.set.jfxrt.in.fxsdk.rt.new"/>
+                    <isset property="do.set.jfxrt.in.platform.home.jre.old"/>
+                    <isset property="do.set.jfxrt.in.platform.home.jre.new"/>
+                    <isset property="do.set.jfxrt.in.platform.home.rt.old"/>
+                    <isset property="do.set.jfxrt.in.platform.home.rt.new"/>
+                    <isset property="do.set.jfxrt.in.jre.old"/>
+                    <isset property="do.set.jfxrt.in.jre.new"/>
+                    <isset property="do.set.jfxrt.in.envjdk.jre.old"/>
+                    <isset property="do.set.jfxrt.in.envjdk.jre.new"/>
                 </or>
                 <isset property="jfxrt.jar.location"/>
             </and>
