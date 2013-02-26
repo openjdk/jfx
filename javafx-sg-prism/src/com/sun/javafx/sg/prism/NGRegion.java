@@ -47,6 +47,7 @@ import javafx.scene.paint.RadialGradient;
 import javafx.scene.shape.StrokeLineCap;
 import javafx.scene.shape.StrokeLineJoin;
 import javafx.scene.shape.StrokeType;
+import com.sun.javafx.application.PlatformImpl;
 import com.sun.javafx.geom.Path2D;
 import com.sun.javafx.geom.RectBounds;
 import com.sun.javafx.geom.Shape;
@@ -691,7 +692,9 @@ public class NGRegion extends NGGroup implements PGRegion {
                             final Paint paint = getPlatformPaint(fill.getFill());
                             g.setPaint(paint);
                             final CornerRadii radii = fill.getRadii();
-                            if (radii.isUniform()) {
+                            // This is a workaround for RT-28435 so we use path rasterizer for small radius's We are
+                            // keeping old rendering
+                            if (radii.isUniform() && !(!PlatformImpl.isCaspain() && radii.getTopLeftHorizontalRadius() <= 4)) {
                                 // If the radii is uniform then we know every corner matches, so we can do some
                                 // faster rendering paths.
                                 float tlhr = (float) radii.getTopLeftHorizontalRadius();

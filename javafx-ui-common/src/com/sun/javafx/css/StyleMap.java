@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2012, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,37 +25,32 @@
 
 package com.sun.javafx.css;
 
-import javafx.css.PseudoClass;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
 
 /**
- * Implementation details of {@link javafx.css.PseudoClass}
+ * A map of property name to the cascading styles that match a node.
  */
-final class PseudoClassImpl extends PseudoClass {
+public final class StyleMap {
 
+    public static final StyleMap EMPTY_MAP = 
+        new StyleMap(-1, Collections.<String,List<CascadingStyle>>emptyMap());
 
-    PseudoClassImpl(String pseudoClassName, int index) {
-        this.pseudoClassName = pseudoClassName;
-        this.index = index;
+    /** Only StyleManager creates StyleMap */
+    StyleMap(int id, Map<String, List<CascadingStyle>> map) {
+        this.id = id;
+        this.map  = map;
     }
 
-    /** @return the pseudo-class state */
-    @Override
-    public String getPseudoClassName() {
-        return pseudoClassName;
+    public int getId() {
+        return id;
     }
 
-    /** @return the pseudo-class state */
-    @Override public String toString() {
-        return pseudoClassName;
+    public Map<String, List<CascadingStyle>> getMap() {
+        return map;
     }
-
-    public int getIndex() {
-       return index;
-    }
-
-    private final String pseudoClassName;
-
-    // index of this PseudoClass in pseudoClasses list.
-    private final int index;
-   
+        
+    private final int id; // unique per container
+    private final Map<String, List<CascadingStyle>> map;            
 }

@@ -134,23 +134,24 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
     }
     
     private void updateDisclosureNodeRotation(boolean animate) {
-        if (treeItem == null || treeItem.isLeaf()) return;
-        
-        Node disclosureNode = getSkinnable().getDisclosureNode();
-        if (disclosureNode == null) return;
-        
-        final boolean isExpanded = treeItem.isExpanded();
-        int fromAngle = isExpanded ? 0 : 90;
-        int toAngle = isExpanded ? 90 : 0;
-
-        if (animate) {
-            RotateTransition rt = new RotateTransition(Duration.millis(200), disclosureNode);
-            rt.setFromAngle(fromAngle);
-            rt.setToAngle(toAngle);
-            rt.playFromStart();
-        } else {
-            disclosureNode.setRotate(toAngle);
-        }
+        // no-op, this is now handled in CSS (although we no longer animate)
+//        if (treeItem == null || treeItem.isLeaf()) return;
+//        
+//        Node disclosureNode = getSkinnable().getDisclosureNode();
+//        if (disclosureNode == null) return;
+//        
+//        final boolean isExpanded = treeItem.isExpanded();
+//        int fromAngle = isExpanded ? 0 : 90;
+//        int toAngle = isExpanded ? 90 : 0;
+//
+//        if (animate) {
+//            RotateTransition rt = new RotateTransition(Duration.millis(200), disclosureNode);
+//            rt.setFromAngle(fromAngle);
+//            rt.setToAngle(toAngle);
+//            rt.playFromStart();
+//        } else {
+//            disclosureNode.setRotate(toAngle);
+//        }
     }
     
     private void updateTreeItem() {

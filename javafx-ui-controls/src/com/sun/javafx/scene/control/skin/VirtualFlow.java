@@ -450,6 +450,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
 
     public VirtualFlow() {
         getStyleClass().add("virtual-flow");
+        setId("virtual-flow");
 
         // initContent
         // --- sheet

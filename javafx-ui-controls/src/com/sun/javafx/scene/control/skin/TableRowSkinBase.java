@@ -42,7 +42,6 @@ import javafx.collections.ObservableMap;
 import javafx.geometry.HPos;
 import javafx.geometry.Insets;
 import javafx.geometry.VPos;
-import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.control.Control;
 import javafx.scene.control.IndexedCell;
@@ -188,32 +187,32 @@ public abstract class TableRowSkinBase<T,
 //    // spanning support
 //    protected SpanModel spanModel;
     
-    // supports variable row heights
-    public static <C extends IndexedCell> double getTableRowHeight(int index, C tableRow) {
-        if (index < 0) {
-            return DEFAULT_CELL_SIZE;
-        }
-        
-        Group virtualFlowSheet = (Group) tableRow.getParent();
-        Node node = tableRow.getParent().getParent().getParent();
-        if (node instanceof VirtualFlow) {
-            ObservableList<Node> children = virtualFlowSheet.getChildren();
-            
-            if (index < children.size()) {
-                return children.get(index).prefHeight(tableRow.getWidth());
-            }
-        }
-        
-        return DEFAULT_CELL_SIZE;
-    }
-    
-    /**
-     * Used in layoutChildren to specify that the node is not visible due to spanning.
-     */
-    private void hide(Node node) {
-        node.setManaged(false);
-        node.setVisible(false);
-    }
+//    // supports variable row heights
+//    public static <C extends IndexedCell> double getTableRowHeight(int index, C tableRow) {
+//        if (index < 0) {
+//            return DEFAULT_CELL_SIZE;
+//        }
+//        
+//        Group virtualFlowSheet = (Group) tableRow.getParent();
+//        Node node = tableRow.getParent().getParent().getParent();
+//        if (node instanceof VirtualFlow) {
+//            ObservableList<Node> children = virtualFlowSheet.getChildren();
+//            
+//            if (index < children.size()) {
+//                return children.get(index).prefHeight(tableRow.getWidth());
+//            }
+//        }
+//        
+//        return DEFAULT_CELL_SIZE;
+//    }
+//    
+//    /**
+//     * Used in layoutChildren to specify that the node is not visible due to spanning.
+//     */
+//    private void hide(Node node) {
+//        node.setManaged(false);
+//        node.setVisible(false);
+//    }
     
     /**
      * Used in layoutChildren to specify that the node is now visible.
@@ -448,8 +447,8 @@ public abstract class TableRowSkinBase<T,
              * where expected in cases where the vertical height exceeds the 
              * number of items.
              */
-            int row = getSkinnable().getIndex();
-            if (row < 0/* || row >= itemsProperty().get().size()*/) return;
+            int index = getSkinnable().getIndex();
+            if (index < 0/* || row >= itemsProperty().get().size()*/) return;
             
             for (int column = 0, max = cells.size(); column < max; column++) {
                 R tableCell = cells.get(column);
@@ -663,66 +662,50 @@ public abstract class TableRowSkinBase<T,
 
         C skinnable = getSkinnable();
         int skinnableIndex = skinnable.getIndex();
-//        TableView<T> table = skinnable.getTableView();
-//        if (table != null) {
-            List<? extends TableColumnBase/*<T,?>*/> visibleLeafColumns = getVisibleLeafColumns();
-            for (int i = 0, max = visibleLeafColumns.size(); i < max; i++) {
-                TableColumnBase<T,?> col = visibleLeafColumns.get(i);
-                R cell = cellsMap.get(col);
-                if (cell == null) continue;
+        List<? extends TableColumnBase/*<T,?>*/> visibleLeafColumns = getVisibleLeafColumns();
+        for (int i = 0, max = visibleLeafColumns.size(); i < max; i++) {
+            TableColumnBase<T,?> col = visibleLeafColumns.get(i);
+            R cell = cellsMap.get(col);
+            if (cell == null) continue;
 
-                updateCell(cell, skinnable);
-                cell.updateIndex(skinnableIndex);
-                cells.add(cell);
-            }
-//        }
+            updateCell(cell, skinnable);
+            cell.updateIndex(skinnableIndex);
+            cells.add(cell);
+        }
 
         // update children of each row
         if (! fixedCellLengthEnabled && resetChildren) {
-            ObservableList<Node> children = getChildren();
-//            if (showColumns) {
-                children.setAll(cells);
-//            } else {
-//                children.clear();
-//
-//                if (!isIgnoreText() || !isIgnoreGraphic()) {
-//                    children.add(skinnable);
-//                }
-//            }
+            getChildren().setAll(cells);
         }
     }
     
     @Override protected double computePrefWidth(double height) {
-//        if (showColumns) {
-            double prefWidth = 0.0F;
-            
-            boolean isIndentationRequired = isIndentationRequired();
-            if (isIndentationRequired) {
-                // Do calculations for disclosure node and indentation.
-                // Firstly, indentation
-                int indentationLevel = getIndentationLevel(getSkinnable());
-                if (! isShowRoot()) indentationLevel--;
-                final double indentationPerLevel = getIndentationPerLevel();
-                prefWidth += indentationLevel * indentationPerLevel;
-                
-                // Secondl, the disclosure node width
-                Control c = getVirtualFlowOwner();
-                final double defaultDisclosureWidth = 
-                    maxDisclosureWidthMap.containsKey(c) ? maxDisclosureWidthMap.get(c) : 0;
-                Node disclosureNode = getDisclosureNode();
-                prefWidth += Math.max(defaultDisclosureWidth, disclosureNode == null ? 0 : disclosureNode.prefWidth(-1));
-            }
+        double prefWidth = 0.0F;
 
-            List<? extends TableColumnBase/*<T,?>*/> visibleLeafColumns = getVisibleLeafColumns();
-            for (int i = 0, max = visibleLeafColumns.size(); i < max; i++) {
-                TableColumnBase<T,?> tableColumn = visibleLeafColumns.get(i);
-                prefWidth += tableColumn.getWidth();
-            }
+        boolean isIndentationRequired = isIndentationRequired();
+        if (isIndentationRequired) {
+            // Do calculations for disclosure node and indentation.
+            // Firstly, indentation
+            int indentationLevel = getIndentationLevel(getSkinnable());
+            if (! isShowRoot()) indentationLevel--;
+            final double indentationPerLevel = getIndentationPerLevel();
+            prefWidth += indentationLevel * indentationPerLevel;
 
-            return prefWidth;
-//        } else {
-//            return super.computePrefWidth(height);
-//        }
+            // Secondl, the disclosure node width
+            Control c = getVirtualFlowOwner();
+            final double defaultDisclosureWidth = 
+                maxDisclosureWidthMap.containsKey(c) ? maxDisclosureWidthMap.get(c) : 0;
+            Node disclosureNode = getDisclosureNode();
+            prefWidth += Math.max(defaultDisclosureWidth, disclosureNode == null ? 0 : disclosureNode.prefWidth(-1));
+        }
+
+        List<? extends TableColumnBase/*<T,?>*/> visibleLeafColumns = getVisibleLeafColumns();
+        for (int i = 0, max = visibleLeafColumns.size(); i < max; i++) {
+            TableColumnBase<T,?> tableColumn = visibleLeafColumns.get(i);
+            prefWidth += tableColumn.getWidth();
+        }
+
+        return prefWidth;
     }
     
     @Override protected double computePrefHeight(double width) {
@@ -730,38 +713,25 @@ public abstract class TableRowSkinBase<T,
             return fixedCellLength;
         }
         
-//        if (showColumns) {
-            // Support for RT-18467: making it easier to specify a height for
-            // cells via CSS, where the desired height is less than the height
-            // of the TableCells. Essentially, -fx-cell-size is given higher
-            // precedence now
-            if (getCellSize() < CellSkinBase.DEFAULT_CELL_SIZE) {
-                return getCellSize();
-            }
-            
-            // FIXME according to profiling, this method is slow and should
-            // be optimised
-            double prefHeight = 0.0f;
-            final int count = cells.size();
-            for (int i=0; i<count; i++) {
-                final R tableCell = cells.get(i);
-                prefHeight = Math.max(prefHeight, tableCell.prefHeight(-1));
-            }
-            double ph = Math.max(prefHeight, Math.max(getCellSize(), getSkinnable().minHeight(-1)));
-            return ph;
-//        } else {
-//            double pref = super.computePrefHeight(width);
-//            Node d = getDisclosureNode();
-//            return (d == null) ? pref : Math.max(d.prefHeight(-1), pref);
-//        }
-    }
+        // Support for RT-18467: making it easier to specify a height for
+        // cells via CSS, where the desired height is less than the height
+        // of the TableCells. Essentially, -fx-cell-size is given higher
+        // precedence now
+        if (getCellSize() < CellSkinBase.DEFAULT_CELL_SIZE) {
+            return getCellSize();
+        }
 
-//    private void updateTableViewSkin() {
-//        TableView tableView = getSkinnable().getTableView();
-//        if (tableView.getSkin() instanceof TableViewSkin) {
-//            tableViewSkin = (TableViewSkin)tableView.getSkin();
-//        }
-//    }
+        // FIXME according to profiling, this method is slow and should
+        // be optimised
+        double prefHeight = 0.0f;
+        final int count = cells.size();
+        for (int i=0; i<count; i++) {
+            final R tableCell = cells.get(i);
+            prefHeight = Math.max(prefHeight, tableCell.prefHeight(-1));
+        }
+        double ph = Math.max(prefHeight, Math.max(getCellSize(), getSkinnable().minHeight(-1)));
+        return ph;
+    }
     
     private static final Duration FADE_DURATION = Duration.millis(200);
     

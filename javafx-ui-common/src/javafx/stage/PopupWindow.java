@@ -106,6 +106,20 @@ public abstract class PopupWindow extends Window {
                 }
             };
 
+    /**
+     * RT-28454: When a parent node or parent window we are associated with is not 
+     * visible anymore, possibly because the scene was not valid anymore, we should hide.
+     */
+    private final ChangeListener<Boolean> ownerNodeListener = new ChangeListener<Boolean>() {
+        @Override public void changed(
+                ObservableValue<? extends Boolean> observable, 
+                Boolean oldValue, Boolean newValue) {
+            if (oldValue && !newValue) {
+                hide();
+            }
+        }
+    };
+    
     public PopupWindow() {
         final Scene scene = new Scene(new Group());
         scene.setFill(null);
@@ -322,7 +336,12 @@ public abstract class PopupWindow extends Window {
         validateOwnerWindow(newOwnerWindow);
 
         this.ownerNode.set(ownerNode);
-
+        
+        // RT-28454 PopupWindow should disappear when owner node is not visible
+        if (ownerNode != null) { 
+            ownerNode.visibleProperty().addListener(ownerNodeListener);
+        }
+       
         setX(screenX);
         setY(screenY);
         showImpl(newOwnerWindow);
@@ -360,12 +379,16 @@ public abstract class PopupWindow extends Window {
         if (owner instanceof PopupWindow) {
             ((PopupWindow)owner).children.add(this);
         }
+        // RT-28454 PopupWindow should disappear when owner node is not visible
+        if (owner != null) {
+            owner.showingProperty().addListener(ownerNodeListener);
+        }
 
         final Scene sceneValue = getScene();
         if (sceneValue != null) {
             SceneHelper.parentEffectiveOrientationInvalidated(sceneValue);
         }
-
+        
         // It is required that the root window exist and be visible to show the popup.
         if (getRootWindow(owner).isShowing()) {
             // We do show() first so that the width and height of the
@@ -395,6 +418,9 @@ public abstract class PopupWindow extends Window {
         }
         children.clear();
         super.hide();
+        // RT-28454 when popup hides, remove listeners; these are added when the popup shows.
+        if (getOwnerWindow() != null) getOwnerWindow().showingProperty().removeListener(ownerNodeListener);
+        if (getOwnerNode() != null) getOwnerNode().visibleProperty().removeListener(ownerNodeListener);
     }
 
     /**

@@ -474,11 +474,40 @@ public class PlatformImpl {
         setPlatformUserAgentStylesheet(Application.STYLESHEET_CASPIAN);
     }
 
+    private static boolean isModena = false;
+    private static boolean isCaspian = false;
+
+    /**
+     * Current Platform User Agent Stylesheet is Modena.
+     *
+     * Note: Please think hard before using this as we really want to avoid special cases in the platform for specific
+     * themes. This was added to allow tempory work arounds in the platform for bugs.
+     *
+     * @return true if using modena stylesheet
+     */
+    public static boolean isModena() {
+        return isModena;
+    }
+
+    /**
+     * Current Platform User Agent Stylesheet is Caspian.
+     *
+     * Note: Please think hard before using this as we really want to avoid special cases in the platform for specific
+     * themes. This was added to allow tempory work arounds in the platform for bugs.
+     *
+     * @return true if using caspian stylesheet
+     */
+    public static boolean isCaspain() {
+        return isCaspian;
+    }
+
     /**
      * Set the platform user agent stylesheet to the given URL. This method has special handling for platform theme
      * name constants.
      */
     public static void setPlatformUserAgentStylesheet(String stylesheetUrl) {
+        isModena = Application.STYLESHEET_MODENA.equals(stylesheetUrl);
+        isCaspian = Application.STYLESHEET_CASPIAN.equals(stylesheetUrl);
         // check for command line override
         String overrideStylesheetUrl =
                 AccessController.doPrivileged(

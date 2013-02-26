@@ -103,12 +103,11 @@ import com.sun.javafx.beans.event.AbstractNotifyListener;
 import com.sun.javafx.binding.ExpressionHelper;
 import com.sun.javafx.collections.TrackableObservableList;
 import com.sun.javafx.collections.UnmodifiableListSet;
+import com.sun.javafx.css.PseudoClassState;
 import javafx.css.ParsedValue;
 import com.sun.javafx.css.Selector;
 import com.sun.javafx.css.Style;
 import javafx.css.StyleConverter;
-import com.sun.javafx.css.StyleHelper;
-import com.sun.javafx.css.StyleManager;
 import javafx.css.Styleable;
 import javafx.css.StyleableBooleanProperty;
 import javafx.css.StyleableDoubleProperty;
@@ -893,6 +892,7 @@ public abstract class Node implements EventTarget, Styleable {
         }
     };
     
+    @Override
     public final ObservableList<String> getStyleClass() { 
         return styleClass; 
     }
@@ -2206,11 +2206,6 @@ public abstract class Node implements EventTarget, Styleable {
         //if (PerformanceTracker.isLoggingEnabled()) {
         //    PerformanceTracker.logEvent("Node.init for [{this}, id=\"{id}\"]");
         //}
-        styleHelper = new StyleHelper(this) {
-            @Override protected void requestStateTranstion() {
-                Node.this.requestCssStateTransition();
-            }
-        };
         setDirty();
         updateTreeVisible();
         //if (PerformanceTracker.isLoggingEnabled()) {
@@ -8033,6 +8028,26 @@ public abstract class Node implements EventTarget, Styleable {
         return getClassCssMetaData();
     }
      
+    /**
+     * @return  The Styles that match this CSS property for the given Node. The 
+     * list is sorted by descending specificity. 
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
+     */
+     @Deprecated // SB-dependency: RT-21096 has been filed to track this
+    public static List<Style> impl_getMatchingStyles(CssMetaData cssMetaData, Styleable styleable) {
+        if (styleable != null && cssMetaData != null && styleable instanceof Node) {
+            
+            Node node = (Node)styleable;
+            
+            if (node.styleHelper != null) { 
+                return node.styleHelper.getMatchingStyles(node, cssMetaData);
+            }
+            
+        }
+        return Collections.<Style>emptyList();
+    }    
+    
      /**
       * RT-17293
       * @treatAsPrivate implementation detail
@@ -8109,22 +8124,28 @@ public abstract class Node implements EventTarget, Styleable {
      * @param active whether or not the state is active
      */
     public final void pseudoClassStateChanged(PseudoClass pseudoClass, boolean active) {
-        final Set<PseudoClass> pseudoClassState = styleHelper.getPseudoClassSet();
         
-        if (active) {
-            pseudoClassState.add(pseudoClass);
-        } else {
-            pseudoClassState.remove(pseudoClass);
-        }
-    }
+        final boolean modified = active 
+                ? pseudoClassStates.add(pseudoClass) 
+                : pseudoClassStates.remove(pseudoClass);
+        
+        if (modified && styleHelper != null) {
+            final boolean isTransition = styleHelper.pseudoClassStateChanged(pseudoClass);
+            if (isTransition) {
+                requestCssStateTransition();
+            }            
+        }        
+   }
     
+    // package so that StyleHelper can get at it
+    final Set<PseudoClass> pseudoClassStates = new PseudoClassState();
     /**
      * @return An unmodifiable Set of active pseudo-class states
      */
     public final Set<PseudoClass> getPseudoClassStates() {
         
-        final Set<PseudoClass> pseudoClassState = styleHelper.getPseudoClassSet();
-        return Collections.<PseudoClass>unmodifiableSet(pseudoClassState);
+        return Collections.unmodifiableSet(pseudoClassStates);
+        
     }
 
     // Walks up the tree telling each parent that the pseudo class state of
@@ -8147,11 +8168,6 @@ public abstract class Node implements EventTarget, Styleable {
             }
         }
     }
-
-//    // this function primarily exists as a hook to aid in testing
-//    boolean isPseudoclassUsed(PseudoClass pseudoclass) {
-//        return (styleHelper != null) ? styleHelper.isPseudoClassUsed(pseudoclass) : false;
-//    }
 
     /**
      * @treatAsPrivate implementation detail
@@ -8300,17 +8316,26 @@ public abstract class Node implements EventTarget, Styleable {
             return;
         }
 
-        // Match new styles if I am told I need to reapply
-        // or if my own flag indicates I need to reapply
         if (cssFlag == CssFlags.REAPPLY) {
-
-            final StyleManager styleManager = StyleManager.getInstance();
-            styleHelper.setStyles(styleManager);
+            
+            // Match new styles if my own indicates I need to reapply
+            styleHelper = CssStyleHelper.createStyleHelper(this);
 
         } else if (cssFlag == CssFlags.RECALCULATE) {
             
-            final StyleManager styleManager = StyleManager.getInstance();
-            styleHelper.inlineStyleChanged(styleManager);
+            // Recalculate means that the in-line style has changed.
+            if (styleHelper != null) {
+                styleHelper.inlineStyleChanged(this);
+            } else {
+                // If there isn't a styleHelper now, there might need to be.
+                // Note that it is not necessary to REAPPLY css to children
+                // since the stylesheets haven't changed. The children only
+                // need to RECALCULATE their styles. A child that didn't
+                // have a styleHelper before will drop into this block, but if
+                // there are no matching style or inline styles, the child's
+                // styleHelper will still be null.
+                styleHelper = CssStyleHelper.createStyleHelper(this);                
+            }
             
         }
         
@@ -8319,27 +8344,18 @@ public abstract class Node implements EventTarget, Styleable {
         cssFlag = CssFlags.CLEAN;
 
         // Transition to the new state and apply styles
-        styleHelper.transitionToState();
+        if (styleHelper != null) {
+            styleHelper.transitionToState(this);
+        }
     }
-    
+        
     /**
      * A StyleHelper for this node.
      * A StyleHelper contains all the css styles for this node
      * and knows how to apply them when our state changes.
      */
-    private final StyleHelper styleHelper;
-    
-
-    /**
-     * Get this nodes StyleHelper
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    public StyleHelper impl_getStyleHelper() {
-        return styleHelper;
-    }
-
+    CssStyleHelper styleHelper;
+        
     private static final PseudoClass HOVER_PSEUDOCLASS_STATE = PseudoClass.getPseudoClass("hover");
     private static final PseudoClass PRESSED_PSEUDOCLASS_STATE = PseudoClass.getPseudoClass("pressed");
     private static final PseudoClass DISABLED_PSEUDOCLASS_STATE = PseudoClass.getPseudoClass("disabled");

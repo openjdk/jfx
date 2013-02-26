@@ -58,12 +58,11 @@ import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.text.Font;
 import javafx.stage.Window;
-import com.sun.javafx.css.StyleHelper.StyleCacheBucket;
-import com.sun.javafx.css.StyleHelper.StyleCacheKey;
 import com.sun.javafx.css.parser.CSSParser;
 import java.util.Map.Entry;
 import java.util.Set;
 import javafx.css.CssMetaData;
+import javafx.css.PseudoClass;
 import javafx.css.StyleOrigin;
 import sun.util.logging.PlatformLogger;
 
@@ -127,34 +126,7 @@ final public class StyleManager {
     public static StyleManager getInstance() {   
         return InstanceHolder.INSTANCE;
     }
-        
-    /**
-     * @return  The Styles that match this CSS property for the given Node. The 
-     * list is sorted by descending specificity. 
-     */
-    public static List<Style> getMatchingStyles(CssMetaData cssMetaData, Node node) {
-        if (node != null && cssMetaData != null) {
-            return getMatchingStyles(cssMetaData, node);
-        }
-        return Collections.<Style>emptyList();
-    }
-
-    /**
-     * @return  The Styles that match this CSS property for the given Styleable. The 
-     * list is sorted by descending specificity. 
-     */
-    public static List<Style> getMatchingStyles(CssMetaData cssMetaData, Styleable styleable) {
-        if (styleable != null && cssMetaData != null) {
-            StyleHelper helper = styleable instanceof Node 
-                    ? ((Node)styleable).impl_getStyleHelper()
-                    : null;
-            return (helper != null) 
-                ? helper.getMatchingStyles(styleable, cssMetaData) 
-                : Collections.<Style>emptyList(); 
-        }
-        return Collections.<Style>emptyList();
-    }    
- 
+         
     /**
      * 
      * @param node
@@ -195,24 +167,21 @@ final public class StyleManager {
     Map<List<String>, Map<Key, Cache>> getCacheMap() { return masterCacheMap; }
 
     /*
-     * The StyleHelper's cached values are relevant only for a given scene.
-     * Since a StylesheetContainer is created for a Scene with stylesheets,
-     * it makes sense that the container should own the valueCache. This
-     * way, each scene gets its own valueCache.
      */
-    private final Map<StyleCacheKey, StyleCacheBucket> styleCache =
-            new HashMap<StyleCacheKey, StyleCacheBucket>();
+    private final Map<StyleCache.Key, StyleCache> styleCache =
+            new HashMap<StyleCache.Key, StyleCache>();
     
     /** StyleHelper uses this cache. */
-    Map<StyleCacheKey, StyleCacheBucket> getStyleCache() { return styleCache; }
+    StyleCache getStyleCache(StyleCache.Key key) { 
+
+        StyleCache cache = styleCache.get(key);
+        if (cache == null) {
+            cache = new StyleCache();
+            styleCache.put(new StyleCache.Key(key), cache);
+        }
+        return cache;
+    }
     
-    /*
-     * A simple counter used to generate a unique id for a StyleMap. 
-     * This unique id is used by StyleHelper in figuring out which 
-     * style cache to use.
-     */
-    private int smapCount;
-       
    /**
      * This stylesheet represents the "default" set of styles for the entire
      * platform. This is typically only set by the UI Controls module, and
@@ -489,6 +458,7 @@ final public class StyleManager {
             
             Entry<List<String>, Map<Key, Cache>> entry = iter.next();
             List<String> containerList = entry.getKey();
+            if (containerList == null) continue;
             
             if (containerList.contains(sc.fname)) {
                 containerList.remove(sc.fname);
@@ -983,14 +953,18 @@ final public class StyleManager {
     }
     
     private void clearCache() {
-        styleCache.clear();
+        
         masterCacheMap.clear();
-        smapCount = 0;
+        styleCache.clear();
+        
+        styleMapList.clear();
+        baseStyleMapId = styleMapId;
+        // totally arbitrary
+        if (baseStyleMapId > Integer.MAX_VALUE*7/8) {
+            baseStyleMapId = styleMapId = 0;
+        }
     }
 
-    private long nextSmapId() {
-        return ++smapCount;
-    }
 
     //
     // recurse so that stylesheets of Parents closest to the root are
@@ -1099,13 +1073,13 @@ final public class StyleManager {
     }
     
     // reuse key to avoid creation of numerous small objects
-    private final Key key = new Key();
-    private final List<String> masterKey = new ArrayList<String>();
-    
+    private Key key = null;
+    private List<String> masterKey = null;        
+
     /**
      * Finds matching styles for this Node.
      */
-    StyleMap findMatchingStyles(Node node, long[][] pseudoclassBits) {
+    public StyleMap findMatchingStyles(Node node, Set<PseudoClass>[] triggerStates) {
         
         final Scene scene = node.getScene();
         if (scene == null) {
@@ -1136,65 +1110,69 @@ final public class StyleManager {
                 && userAgentStylesheets.isEmpty()) {
             return StyleMap.EMPTY_MAP;
         }
-                
-        if (hasSceneStylesheets) {
-            for (StylesheetContainer container : sceneStylesheets) {
+        
+        if (masterKey == null) {
+            masterKey = new ArrayList<String>();
+        }         
+
+        if (userAgentStylesheets.isEmpty() == false) {
+            for(int n=0, nMax=userAgentStylesheets.size(); n<nMax; n++) {
+                final StylesheetContainer container = userAgentStylesheets.get(n);
                 masterKey.add(container.fname);
-            };
-        }
-        if (hasParentStylesheets) {
-            for (StylesheetContainer container : parentStylesheets) {
-                masterKey.add(container.fname);
-            };
+            }
         }
         
-        Map<Key, Cache> cacheMap = masterCacheMap.get(
-                masterKey.isEmpty() ? null : masterKey
-        );
-                
+        if (hasSceneStylesheets) {
+            for(int n=0, nMax=sceneStylesheets.size(); n<nMax; n++) {
+                final StylesheetContainer container = sceneStylesheets.get(n);
+                masterKey.add(container.fname);
+            }
+        }
+        
+        if (hasParentStylesheets) {
+            for(int n=0, nMax=parentStylesheets.size(); n<nMax; n++) {
+                final StylesheetContainer container = parentStylesheets.get(n);
+                masterKey.add(container.fname);
+            }
+        }
+
+        assert(masterKey.isEmpty() == false);
+        Map<Key, Cache> cacheMap = masterCacheMap.get(masterKey);
+        
+        if (cacheMap != null) {
+            // masterKey is reused, so clear it for next use
+            masterKey.clear();
+        } else {
+            cacheMap = new HashMap<Key, Cache>();
+            masterCacheMap.put(masterKey, cacheMap);
+            masterKey = null;
+        }
+        
         final String name = node.getClass().getName();
         final int dotPos = name.lastIndexOf('.');
         final String cname = name.substring(dotPos+1);  // want Foo, not bada.bing.Foo
         final String id = node.getId();
-        final long[] styleClassBits = node.impl_getStyleHelper().getStyleClassBits();
+        final List<String> styleClasses = node.getStyleClass();
+
+        if (key == null) {
+            key = new Key();
+        }
         
         key.className = cname;
         key.id = id;
-        key.styleClass = styleClassBits;
-
-        Cache cache = cacheMap != null ? cacheMap.get(key) : null;
-        
-        if (cacheMap == null) {
-            
-            cacheMap = new HashMap<Key, Cache>();
-            
-            List<String> newMasterKey = null;
-            if (masterKey.isEmpty() == false) {
-                newMasterKey = new ArrayList<String>(masterKey);
-            } else {
-                newMasterKey = null;
-            }
-            
-            masterCacheMap.put(newMasterKey, cacheMap);
+        for(int n=0, nMax=styleClasses.size(); n<nMax; n++) {
+            key.styleClasses.add(StyleClassSet.getStyleClass(styleClasses.get(n)));
         }
-        masterKey.clear();
-        
-        // the key is an instance variable and so we need to null the
-        // key.styleClass to prevent holding a hard reference to the
-        // styleClass (and its StyleHelper)
-        key.styleClass = null;
 
-        // If the cache is null, then we need to create a new Cache and
-        // add it to the cache map
-        if (cache == null) {
+        Cache cache = cacheMap.get(key);
+                
+        if (cache != null) {
+            // key will be reused, so clear the styleClasses for next use
+            key.styleClasses.clear();
+        } else {
 
-            final Key newKey = new Key();
-            newKey.className = cname;
-            newKey.id = id;
-            newKey.styleClass = 
-                styleClassBits != null 
-                    ? Arrays.copyOf(styleClassBits, styleClassBits.length) 
-                    : null;
+            // If the cache is null, then we need to create a new Cache and
+            // add it to the cache map
             
             // Construct the list of Rules that could possibly apply
             final List<Rule> rules = new ArrayList<Rule>();
@@ -1206,7 +1184,7 @@ final public class StyleManager {
                     
                     if (container != null && container.selectorPartitioning != null) {
                         final List<Rule> matchingRules = 
-                                container.selectorPartitioning.match(id, cname, styleClassBits);
+                                container.selectorPartitioning.match(id, cname, key.styleClasses);
                         rules.addAll(matchingRules);
                     }
                 }
@@ -1218,9 +1196,9 @@ final public class StyleManager {
                 for(int n=0, nMax=sceneStylesheets.size(); n<nMax; n++) {
                     final StylesheetContainer container = sceneStylesheets.get(n);
                     if (container != null && container.selectorPartitioning != null) {
-                        container.keys.add(newKey); // remember that this stylesheet was used in this cache
+                        container.keys.add(key); // remember that this stylesheet was used in this cache
                         final List<Rule> matchingRules = 
-                                container.selectorPartitioning.match(id, cname, styleClassBits);
+                                container.selectorPartitioning.match(id, cname, key.styleClasses);
                         rules.addAll(matchingRules);
                     }
                 }
@@ -1231,10 +1209,10 @@ final public class StyleManager {
                 final int nMax = parentStylesheets == null ? 0 : parentStylesheets.size();
                 for(int n=0; n<nMax; n++) {
                     final StylesheetContainer container = parentStylesheets.get(n);
-                    container.keys.add(newKey); // remember that this stylesheet was used in this cache
+                    container.keys.add(key); // remember that this stylesheet was used in this cache
                     if (container.selectorPartitioning != null) {
                         final List<Rule> matchingRules = 
-                                container.selectorPartitioning.match(id, cname, styleClassBits);
+                                container.selectorPartitioning.match(id, cname, key.styleClasses);
                         rules.addAll(matchingRules);
                     }
                 }
@@ -1242,14 +1220,16 @@ final public class StyleManager {
             
             // create a new Cache from these rules.
             cache = new Cache(rules);   
-            cacheMap.put(newKey, cache);
+            cacheMap.put(key, cache);
             
+            // cause a new Key to be created the next time this method is called
+            key = null;
         }
 
         //
         // Create a style helper for this node from the styles that match. 
         //
-        StyleMap smap = cache.getStyleMap(this, node, pseudoclassBits);
+        StyleMap smap = cache.getStyleMap(this, node, triggerStates);
         
         return smap;        
     }
@@ -1291,25 +1271,37 @@ final public class StyleManager {
     //
     ////////////////////////////////////////////////////////////////////////////
 
-    //
-    // Used by StyleHelper. The key uniquely identifies this style map.
-    // These keys are used by StyleHelper in creating its StyleCacheKey.
-    // The StyleCacheKey is used to lookup calculated values in cache.
-    //
-    static class StyleMap {
-        final long uniqueId; // unique per container
-        final Map<String, List<CascadingStyle>> map;
-        private StyleMap(long key, Map<String, List<CascadingStyle>> map) {
-            this.uniqueId = key;
-            this.map  = map;
+    /*
+     * A simple counter used to generate a unique id for a StyleMap. 
+     * This unique id is used by StyleHelper in figuring out which 
+     * style cache to use.
+     */
+    private int styleMapId = 0;
+    
+    private List<StyleMap> styleMapList = new ArrayList<StyleMap>();
+    private int baseStyleMapId = 0;
+
+    private int nextSmapId() {
+        styleMapId = baseStyleMapId + styleMapList.size();
+        return styleMapId;
+    }
+       
+    private void addStyleMap(StyleMap smap) {
+        assert ((smap.getId() - baseStyleMapId) == styleMapList.size());
+        styleMapList.add(smap);
+    }
+    
+    public StyleMap getStyleMap(int smapId) {
+        
+        final int correctedId = smapId - baseStyleMapId;
+        
+        if (0 <= correctedId && correctedId < styleMapList.size()) {
+            return styleMapList.get(correctedId);
         }
         
-        static final StyleMap EMPTY_MAP = 
-            new StyleMap(0, Collections.<String,List<CascadingStyle>>emptyMap());
-
+        return StyleMap.EMPTY_MAP;
     }
-
-    
+        
     /**
      * Creates and caches maps of styles, reusing them as often as practical.
      */
@@ -1348,14 +1340,14 @@ final public class StyleManager {
         // this must be initialized to the appropriate possible rules when
         // the helper cache is created by the StylesheetContainer
         private final List<Rule> rules;
-        private final Map<Key, StyleMap> cache;
+        private final Map<Key, Integer> cache;
 
         Cache(List<Rule> rules) {
             this.rules = rules;
-            this.cache = new HashMap<Key, StyleMap>();
+            this.cache = new HashMap<Key, Integer>();
         }
 
-        private StyleMap getStyleMap(StyleManager owner, Node node, long[][] pseudoclassBits) {
+        private StyleMap getStyleMap(StyleManager owner, Node node, Set<PseudoClass>[] triggerStates) {
             
             if (rules == null || rules.isEmpty()) {                
                 return StyleMap.EMPTY_MAP;
@@ -1382,12 +1374,12 @@ final public class StyleManager {
                 final Rule rule = rules.get(r);
 
                 //
-                // This particular flavor of applies takes a long[] and fills 
-                // in the pseudoclass states from the selectors where they apply
-                // to a node. This is an expedient to looking the applies loop
-                // a second time on the matching rules. This has to be done 
-                // ahead of the cache lookup since not all nodes that have the 
-                // same set of rules will have the same node hierarchy. 
+                // This particular flavor of applies takes a PseudoClassState[]
+                // fills in the pseudo-class states from the selectors where 
+                // they apply to a node. This is an expedient to looking the
+                // applies loopa second time on the matching rules. This has to
+                // be done ahead of the cache lookup since not all nodes that
+                // have the same set of rules will have the same node hierarchy. 
                 // 
                 // For example, if I have .foo:hover:focused .bar:selected {...}
                 // and the "bar" node is 4 away from the root and the foo
@@ -1395,7 +1387,7 @@ final public class StyleManager {
                 // [selected, 0, hover:focused, 0]
                 // Note that the states run from leaf to root. This is how
                 // the code in StyleHelper expects things. 
-                // Note also that, if the rule does not apply, the pseudoclassBits
+                // Note also that, if the rule does not apply, the triggerStates
                 // is unchanged. 
                 //
                 
@@ -1408,7 +1400,8 @@ final public class StyleManager {
                     count = 0;
                 }
                 
-                long mask = rule.applies(node, pseudoclassBits);
+                long mask = rule.applies(node, triggerStates);
+                
                 if (mask != 0) {
                     key[index] |= mask << count;
                     applicableRules[r] = rule;
@@ -1427,7 +1420,8 @@ final public class StyleManager {
             
             final Key keyObj = new Key(key);
             if (cache.containsKey(keyObj)) {
-                final StyleMap styleMap = cache.get(keyObj);
+                Integer id = cache.get(keyObj);
+                final StyleMap styleMap = id != null ? owner.getStyleMap(id.intValue()) : null;
                 return styleMap;
             }
 
@@ -1506,8 +1500,10 @@ final public class StyleManager {
                 list.add(style);
             }
 
-            final StyleMap styleMap = new StyleMap(owner.nextSmapId(), smap);
-            cache.put(keyObj, styleMap);
+            final int id = owner.nextSmapId();
+            final StyleMap styleMap = new StyleMap(id, smap);
+            owner.addStyleMap(styleMap);
+            cache.put(keyObj, Integer.valueOf(id));
             return styleMap;
         }
 
@@ -1524,8 +1520,12 @@ final public class StyleManager {
         // necessary.
         String className;
         String id;
-        long[] styleClass;
+        final StyleClassSet styleClasses;
 
+        private Key() {
+            styleClasses = new StyleClassSet();
+        }
+        
         @Override
         public boolean equals(Object o) {
             if (this == o) {
@@ -1542,23 +1542,7 @@ final public class StyleManager {
                     return false;
                 }
 
-                if (styleClass == null ? other.styleClass != null : other.styleClass == null) {
-                    
-                    return false;
-                    
-                } else if (styleClass != null) {
-        
-                    if (styleClass.length != other.styleClass.length) {
-                        return false;
-                    }
-
-                    for (int n=0, max=styleClass.length; n<max; n++) {
-                        if (styleClass[n] != other.styleClass[n]) {
-                            return false;
-                        }
-                    }
-                    
-                }
+                return this.styleClasses.equals(other.styleClasses);
             }
             return true;
         }
@@ -1568,13 +1552,8 @@ final public class StyleManager {
             int hash = 7;
             hash = 29 * hash + (this.className != null ? this.className.hashCode() : 0);
             hash = 29 * hash + (this.id != null ? this.id.hashCode() : 0);
-            hash = 29 * hash + Arrays.hashCode(this.styleClass);
+            hash = 29 * hash + this.styleClasses.hashCode();
             return hash;
-        }
-
-        @Override
-        public String toString() {
-            return "Key ["+className+", "+String.valueOf(id)+", "+String.valueOf(SimpleSelector.getStyleClassStrings(styleClass))+"]";
         }
 
     }

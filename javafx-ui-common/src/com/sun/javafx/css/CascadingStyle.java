@@ -28,20 +28,21 @@ package com.sun.javafx.css;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
+import javafx.css.PseudoClass;
 import javafx.css.StyleOrigin;
 
 
 /** A marriage of pseudo-classes (potentially empty) to property and value */
-class CascadingStyle implements Comparable {
+public class CascadingStyle implements Comparable<CascadingStyle> {
 
     /** */
     private final Style style;
-    Style getStyle() {
+    public Style getStyle() {
         return style;
     }
     
     /** State variables, like &quot;hover&quot; or &quot;pressed&quot; */
-    private long[] pseudoClasses;
+    private Set<PseudoClass> pseudoClasses;
 
     /* specificity of the rule that matched */
     private final int specificity;
@@ -58,7 +59,7 @@ class CascadingStyle implements Comparable {
     // internal to Style
     static private Set<String> strSet = new HashSet<String>();
 
-    CascadingStyle(final Style style, long[] pseudoClasses, 
+    public CascadingStyle(final Style style, Set<PseudoClass> pseudoClasses, 
             final int specificity, final int ordinal) {
         this.style = style;
         this.pseudoClasses = pseudoClasses;
@@ -68,33 +69,33 @@ class CascadingStyle implements Comparable {
     }
         
     // Wrapper to make StyleHelper's life a little easier
-    String getProperty() {
+    public String getProperty() {
         return style.getDeclaration().getProperty();
     }
     
     // Wrapper to make StyleHelper's life a little easier
-    Selector getSelector() {
+    public Selector getSelector() {
         return style.getSelector();
     }
     
     // Wrapper to make StyleHelper's life a little easier
-    Rule getRule() {
+    public Rule getRule() {
         return style.getDeclaration().getRule();
     }
     
     // Wrapper to make StyleHelper's life a little easier
-    StyleOrigin getOrigin() {
+    public StyleOrigin getOrigin() {
         return getRule().getOrigin();
     }
     
     // Wrapper to make StyleHelper's life a little easier
-    ParsedValueImpl getParsedValueImpl() {
+    public ParsedValueImpl getParsedValueImpl() {
         return style.getDeclaration().getParsedValueImpl();
     }
     
     /**
      * When testing equality against another Style, we only care about
-     * the property and pseudoclasses. In other words, we only care about
+     * the property and pseudo-classes. In other words, we only care about
      * where the style is applied, not what is applied.
      */
     @Override public boolean equals(Object obj) {
@@ -113,7 +114,11 @@ class CascadingStyle implements Comparable {
         }
         
         // does [foo bar bang] contain all of [foo bar]?
-        return Arrays.equals(pseudoClasses, other.pseudoClasses);
+        if (pseudoClasses == null ? other.pseudoClasses != null : !pseudoClasses.containsAll(other.pseudoClasses)) {
+            return false;            
+        }
+        
+        return true;
 
     }
 
@@ -135,8 +140,7 @@ class CascadingStyle implements Comparable {
      * sorted before less specific ones.
      */
     @Override
-    public int compareTo(Object otherStyle) {
-        CascadingStyle other = (CascadingStyle)otherStyle;
+    public int compareTo(CascadingStyle other) {
 
         //
         // Important styles take the cake

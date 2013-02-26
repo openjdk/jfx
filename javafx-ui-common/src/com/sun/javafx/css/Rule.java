@@ -30,12 +30,12 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
+import java.util.Set;
 import javafx.collections.ListChangeListener.Change;
 import javafx.collections.ObservableList;
-import javafx.css.StyleOrigin;
 import javafx.css.PseudoClass;
+import javafx.css.StyleOrigin;
 
 import javafx.scene.Node;
 import javafx.scene.Scene;
@@ -126,24 +126,12 @@ final public class Rule {
         return matches;
     }
 
-    final List<Match> matches(Scene scene) {
-        List<Match> matches = new ArrayList<Match>();
-        for (int i = 0; i < selectors.size(); i++) {
-            Selector sel = selectors.get(i);
-            Match match = sel.matches(scene);
-            if (match != null) {
-                matches.add(match);
-            }
-        }
-        return matches;
-    }
-
     // Return mask of selectors that match
-    long applies(Node node, long[][] pseudoclassBits) {
+    long applies(Node node, Set<PseudoClass>[] triggerStates) {
         long mask = 0;
         for (int i = 0; i < selectors.size(); i++) {
             Selector sel = selectors.get(i);
-            if (sel.applies(node, pseudoclassBits, 0)) {                
+            if (sel.applies(node, triggerStates, 0)) {                
                 mask |= 1l << i;
             }
         }

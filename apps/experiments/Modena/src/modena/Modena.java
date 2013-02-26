@@ -203,6 +203,16 @@ public class Modena extends Application {
     }
     
     private void updateUserAgentStyleSheet(boolean modena) {
+        if (!modena &&
+            (baseColor == null || baseColor == Color.TRANSPARENT) &&
+            (backgroundColor == null || backgroundColor == Color.TRANSPARENT) &&
+            (accentColor == null || accentColor == Color.TRANSPARENT) &&
+            (fontName == null)) {
+            // no customizations
+            System.out.println("USING NO CUSTIMIZATIONS TO CSS, stylesheet = "+(modena?"modena":"caspian"));
+            setUserAgentStylesheet(modena ? Application.STYLESHEET_MODENA : Application.STYLESHEET_CASPIAN);
+            return;
+        }
         styleSheetContent = modena ? 
                 loadUrl(MODENA_STYLESHEET_URL) : 
                 loadUrl(CASPIAN_STYLESHEET_URL);

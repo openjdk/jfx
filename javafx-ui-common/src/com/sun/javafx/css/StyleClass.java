@@ -22,40 +22,36 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-
 package com.sun.javafx.css;
 
-import javafx.css.PseudoClass;
-
 /**
- * Implementation details of {@link javafx.css.PseudoClass}
+ * 
  */
-final class PseudoClassImpl extends PseudoClass {
+final class StyleClass {
 
 
-    PseudoClassImpl(String pseudoClassName, int index) {
-        this.pseudoClassName = pseudoClassName;
+    StyleClass(String styleClassName, int index) {
+        this.styleClassName = styleClassName;
         this.index = index;
     }
 
-    /** @return the pseudo-class state */
-    @Override
-    public String getPseudoClassName() {
-        return pseudoClassName;
+    /** @return the style-class */
+    public String getStyleClassName() {
+        return styleClassName;
     }
 
-    /** @return the pseudo-class state */
+    /** @return the style-class */
     @Override public String toString() {
-        return pseudoClassName;
+        return styleClassName;
     }
 
     public int getIndex() {
        return index;
     }
 
-    private final String pseudoClassName;
+    private final String styleClassName;
 
-    // index of this PseudoClass in pseudoClasses list.
+    // index of this StyleClass in styleClasses list.
     private final int index;
    
 }

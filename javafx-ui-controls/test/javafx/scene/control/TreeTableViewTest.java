@@ -25,6 +25,8 @@
 
 package javafx.scene.control;
 
+import com.sun.javafx.scene.control.test.ControlAsserts;
+import com.sun.javafx.scene.control.test.Person;
 import java.util.Arrays;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
@@ -39,6 +41,7 @@ import javafx.collections.ObservableList;
 import javafx.scene.Group;
 import javafx.scene.Scene;
 import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.scene.control.cell.TreeItemPropertyValueFactory;
 import javafx.stage.Stage;
 import javafx.util.Callback;
 
@@ -905,5 +908,41 @@ public class TreeTableViewTest {
             e.printStackTrace();
             assertTrue(false);
         }
+    }
+    
+    @Test public void test_rt28534() {
+        TreeItem root = new TreeItem("root");
+        root.getChildren().setAll(
+                new TreeItem(new Person("Jacob", "Smith", "jacob.smith@example.com")),
+                new TreeItem(new Person("Isabella", "Johnson", "isabella.johnson@example.com")),
+                new TreeItem(new Person("Ethan", "Williams", "ethan.williams@example.com")),
+                new TreeItem(new Person("Emma", "Jones", "emma.jones@example.com")),
+                new TreeItem(new Person("Michael", "Brown", "michael.brown@example.com")));
+        root.setExpanded(true);
+        
+        TreeTableView<Person> table = new TreeTableView<Person>(root);
+        
+        TreeTableColumn firstNameCol = new TreeTableColumn("First Name");
+        firstNameCol.setCellValueFactory(new TreeItemPropertyValueFactory<Person, String>("firstName"));
+
+        TreeTableColumn lastNameCol = new TreeTableColumn("Last Name");
+        lastNameCol.setCellValueFactory(new TreeItemPropertyValueFactory<Person, String>("lastName"));
+
+        TreeTableColumn emailCol = new TreeTableColumn("Email");
+        emailCol.setCellValueFactory(new TreeItemPropertyValueFactory<Person, String>("email"));
+
+        table.getColumns().addAll(firstNameCol, lastNameCol, emailCol);
+
+        ControlAsserts.assertRowsNotEmpty(table, 0, 6); // rows 0 - 6 should be filled
+        ControlAsserts.assertRowsEmpty(table, 6, -1); // rows 6+ should be empty
+        
+        // now we replace the data and expect the cells that have no data
+        // to be empty
+        root.getChildren().setAll(
+                new TreeItem(new Person("*_*Emma", "Jones", "emma.jones@example.com")),
+                new TreeItem(new Person("_Michael", "Brown", "michael.brown@example.com")));
+        
+        ControlAsserts.assertRowsNotEmpty(table, 0, 3); // rows 0 - 3 should be filled
+        ControlAsserts.assertRowsEmpty(table, 3, -1); // rows 3+ should be empty
     }
 }

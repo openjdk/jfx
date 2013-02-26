@@ -91,7 +91,7 @@ import javafx.geometry.Insets;
     private final ListChangeListener<T> choiceBoxItemsListener = new ListChangeListener<T>() {
         @Override public void onChanged(Change<? extends T> c) {
             while (c.next()) {
-                if (c.getRemovedSize() > 0) {
+                if (c.getRemovedSize() > 0 || c.wasPermutated()) {
                     toggleGroup.getToggles().clear();
                     popup.getItems().clear();
                     int i = 0;
@@ -99,12 +99,11 @@ import javafx.geometry.Insets;
                         addPopupItem(obj, i);
                         i++;
                     }
-                    getSkinnable().requestLayout(); // RT-18052
-                    return;
-                }
-                for (int i = c.getFrom(); i < c.getTo(); i++) {
-                    final T obj = c.getList().get(i);
-                    addPopupItem(obj, i);
+                } else {
+                    for (int i = c.getFrom(); i < c.getTo(); i++) {
+                        final T obj = c.getList().get(i);
+                        addPopupItem(obj, i);
+                    }
                 }
             }
             updateSelection();
