@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<project name="glass-lib-gtk" default="default" basedir=".">
+
+    <description>Builds, tests, and runs the project Glass (GTK)</description>
+
+    <property name="jfx.build.needs.gcc.compiler" value="true"/>
+    <property name="jfx.build.needs.make.utility" value="true"/>
+
+    <import file="../../../build-defs.xml"/>
+
+    <property name="glass-lib.build.dir" value="./build"/>
+    <property name="glass-lib.jheaders.dir" value="${glass-lib.build.dir}/include"/>
+    <property name="glass-lib.dist.dir" value="./dist"/>
+
+    <property name="glass.class.dir" value="../glass/build/classes"/>
+    
+    <target name="default" depends="jheaders,compile-native"/>
+    
+    <target name="jheaders">
+	<mkdir dir="${glass-lib.jheaders.dir}" />
+        <javah destdir="${glass-lib.jheaders.dir}" classpath="${glass.class.dir}" force="yes">
+            <class name="com.sun.glass.events.DndEvent"/>
+            <class name="com.sun.glass.events.KeyEvent"/>
+            <class name="com.sun.glass.events.MouseEvent"/>
+            <class name="com.sun.glass.events.ViewEvent"/>
+            <class name="com.sun.glass.events.WindowEvent"/>
+            <class name="com.sun.glass.ui.Application"/>
+            <class name="com.sun.glass.ui.Cursor"/>
+            <class name="com.sun.glass.ui.Menu"/>
+            <class name="com.sun.glass.ui.MenuBar"/>
+            <class name="com.sun.glass.ui.MenuItem"/>
+            <class name="com.sun.glass.ui.Pixels"/>
+            <class name="com.sun.glass.ui.Screen"/>
+            <class name="com.sun.glass.ui.Size"/>
+            <class name="com.sun.glass.ui.Timer"/>
+            <class name="com.sun.glass.ui.View"/>
+            <class name="com.sun.glass.ui.View$Capability"/>
+            <class name="com.sun.glass.ui.Window"/>
+            <class name="com.sun.glass.ui.Window$Level"/>
+            <class name="com.sun.glass.ui.gtk.GtkApplication"/>
+            <class name="com.sun.glass.ui.gtk.GtkTimer"/>
+            <class name="com.sun.glass.ui.gtk.GtkWindow"/>
+            <class name="com.sun.glass.ui.gtk.GtkView"/>
+            <class name="com.sun.glass.ui.gtk.GtkPixels"/>
+            <class name="com.sun.glass.ui.gtk.GtkCursor"/>
+            <class name="com.sun.glass.ui.gtk.GtkRobot"/>
+            <class name="com.sun.glass.ui.gtk.GtkSystemClipboard"/>
+            <class name="com.sun.glass.ui.gtk.GtkCommonDialogs"/>
+            <class name="com.sun.glass.ui.gtk.GtkDnDClipboard"/>
+            <class name="com.sun.glass.events.WindowEvent"/>
+        </javah>
+    </target>
+
+    <target name="compile-native">
+      <exec executable="make" failonerror="true">
+        <arg value="JDK_HOME=${platform.home}"/>
+        <arg value="DIST_DIR=${glass-lib.dist.dir}"/>
+        <arg value="BUILD_DIR=${glass-lib.build.dir}"/>
+        <arg value="EXTRA_CFLAGS=${extra_cflags}"/>
+        <arg value="EXTRA_LDFLAGS=${extra_ldflags}"/>
+        <arg value="all"/>
+      </exec>
+      <copy todir="${glass.dist.bin.dir}">
+        <fileset dir="${glass-lib.dist.dir}"/>
+      </copy>
+    </target>
+
+    <target name="clean">
+	<exec executable="make" failonerror="true">
+	  <arg value="clean"/>
+	</exec>
+        <delete dir="build"/>
+        <delete dir="dist"/>
+    </target>
+</project>

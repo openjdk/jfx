@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="prism-common" default="all" basedir=".">
+
+  <target name="compile-native">
+    <exec executable="make" dir="../prism-common-native" failonerror="true">
+      <arg value="DIST_DIR=${native.dist.dir}"/>
+      <arg value="BUILD_DIR=${native.build.dir}"/>
+      <arg value="PRISM_COM_CP=${prismcom.classes.dir}"/>
+      <arg value="JDK_HOME=${platform.home}"/>
+      <arg value="all"/>
+    </exec>
+  </target>
+
+  <target name="clean-native">
+    <exec executable="make" dir="../prism-common-native" failonerror="true">
+      <arg value="DIST_DIR=${native.dist.dir}"/>
+      <arg value="BUILD_DIR=${native.build.dir}"/>
+      <arg value="clean"/>
+    </exec>
+  </target>
+
+</project>

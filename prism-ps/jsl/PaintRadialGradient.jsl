@@ -1,0 +1,66 @@
+/*
+ * Copyright (c) 2009, 2013, Oracle and/or its affiliates. All rights reserved.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.  Oracle designates this
+ * particular file as subject to the "Classpath" exception as provided
+ * by Oracle in the LICENSE file that accompanied this code.
+ *
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
+ *
+ * You should have received a copy of the GNU General Public License version
+ * 2 along with this work; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+ * or visit www.oracle.com if you need additional information or have any
+ * questions.
+ */
+
+/*
+ * To simplify the code and to make it easier to upload a number of
+ * uniform values at once, we pack a bunch of scalar (float) values
+ * into float3 values below.  Here's how the values are related:
+ *
+ *   m0.x = m00
+ *   m0.y = m01
+ *   m0.z = m02
+ *   m0.w = Ray origin for x
+ *
+ *   m1.x = m10
+ *   m1.y = m11
+ *   m1.z = m12
+ *   m1.w = Ray origin for y
+ *
+ *   perspVec = Vector used for Perspective Divide
+ *   precalc.x = focusX
+ *   precalc.y = 1.0 - (focusX * focusX)
+ *   precalc.z = 1.0 / precalc.z
+ */
+param float4 m0;
+param float4 m1;
+param float3 precalc;
+param float3 perspVec;
+ 
+float4 paint(float2 winCoord)
+{
+    /*
+     * The following code is derived from Daniel Rice's whitepaper on
+     * radial gradient performance (attached to the bug report for 6521533).
+     * Refer to that document as well as the setup code in the Java-level
+     * setRadialGradientPaint() method for more details.
+     */
+    float3 fragCoord = float3(winCoord.x, winCoord.y, 1.0);
+    float wdist = dot(fragCoord, perspVec);
+    float x = dot(fragCoord, m0.xyz)/wdist + m0.w;
+    float y = dot(fragCoord, m1.xyz)/wdist + m1.w;
+    float xfx = x - precalc.x;
+    float dist = (precalc.x*xfx + sqrt(xfx*xfx + y*y*precalc.y))*precalc.z;
+    return cycle%s(dist);
+}

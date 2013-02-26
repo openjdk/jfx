@@ -1,0 +1,58 @@
+/*
+ * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.  Oracle designates this
+ * particular file as subject to the "Classpath" exception as provided
+ * by Oracle in the LICENSE file that accompanied this code.
+ *
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
+ *
+ * You should have received a copy of the GNU General Public License version
+ * 2 along with this work; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+ * or visit www.oracle.com if you need additional information or have any
+ * questions.
+ */
+
+// See MaskFillPgram.jsl for a description of the coordinate system in which
+// this is executed.
+// In the case of this shader:
+// dim.x is set to the radius of the circle in pixels, and
+// dim.y is set to the smaller of 1.0 or the area of the ellipse
+//          (which is the maximum pixel coverage for any pixel)
+float mask(float2 tco, float2 dim)
+{
+    // The canonical equation for "distance to the circle" would be:
+    // sqrt(x^2 + y^2) - r
+    // Since sqrt is relatively expensive (shaders are fast, but a sqrt
+    // per pixel adds up), we look at the square of the distance instead.
+    // Note that if you are within half a pixel of the radius, the square
+    // of the distance will be:
+    // (r-.5)^2 = r^2 - r + .25 <= d^2 <= (r+.5)^2 = r^2 + r + .25
+    // with only a very slight variation from the .25 constant, you are
+    // within +/- d from the d^2 value.  The other problem to contend
+    // with is that we are using the squared distance which is "close to"
+    // linear in such a small range, but has a small curve to it.  The
+    // curve is small enough at small radii like r=1 to look pleasing
+    // to the eye, and only gets closer to linear as the radius increases.
+    // We calculate the distance to the texture coordinate squared, and scale
+    // so that [ro, ri] = [r*r + r + .25, r*r - r + 0.25] maps to coverage
+    // values of [0, 1].
+    // distance = (ro - d) / (ro - ri)
+    //   = (r*r + r + .25 - (x*x + y*y)) / (r*r + r + .25 - (r*r - r + .25))
+    //   = (r*r + r + .25 - (x*x + y*y)) / (2r)
+    //   = r/2 + 0.5 + .125/r - (x*x + y*y)/2r
+    //   = 0.5 * [r + 1 + .25/r - (x*x + y*y)/r]
+    //   = 0.5 * [r + 1 - (x*x + y*y - .25)/r]
+    float lensq = dot(tco, tco);
+    return clamp(0.5 * (dim.x + 1.0 - (lensq - 0.25)/dim.x), 0.0, dim.y);
+}

@@ -60,20 +60,20 @@ public abstract class BaseCacheFilter {
     private static final Rectangle TEMP_RECT = new Rectangle();
 
     /**
-     * Compute the dirty region that must be re-rendered after scrollign
+     * Compute the dirty region that must be re-rendered after scrolling
      */
     private Rectangle computeDirtyRegionForTranslate() {
         if (lastXDelta != 0) {
             if (lastXDelta > 0) {
                 TEMP_RECT.setBounds(0, 0, (int)lastXDelta, cacheBounds.height);
             } else {
-                TEMP_RECT.setBounds(cacheBounds.width + (int)lastXDelta, 0, cacheBounds.width, cacheBounds.height);
+                TEMP_RECT.setBounds(cacheBounds.width + (int)lastXDelta, 0, -(int)lastXDelta, cacheBounds.height);
             }
         } else {
             if (lastYDelta > 0) {
                 TEMP_RECT.setBounds(0, 0, cacheBounds.width, (int)lastYDelta);
             } else {
-                TEMP_RECT.setBounds(0, cacheBounds.height + (int)lastYDelta, cacheBounds.width, cacheBounds.height);
+                TEMP_RECT.setBounds(0, cacheBounds.height + (int)lastYDelta, cacheBounds.width, -(int)lastYDelta);
             }
         }
         return TEMP_RECT;
@@ -121,8 +121,7 @@ public abstract class BaseCacheFilter {
 
     protected BaseCacheFilter(BaseNode node, CacheHint cacheHint) {
         this.node = node;
-        this.scrollCacheState = cacheHint == CacheHint.DEFAULT ? 
-                ScrollCacheState.CHECKING_PRECONDITIONS : ScrollCacheState.DISABLED;
+        this.scrollCacheState = ScrollCacheState.CHECKING_PRECONDITIONS;
         setHint(cacheHint);
     }
 
@@ -207,6 +206,10 @@ public abstract class BaseCacheFilter {
         double[] xformInfo = unmatrix(xform);
         boolean isUnsupported = unsupported(xformInfo);
 
+        
+        lastXDelta = lastXDelta * xformInfo[0];
+        lastYDelta = lastYDelta * xformInfo[1];
+
         if (needToRenderCache(fctx, xform, xformInfo)) {
             invalidate();
             // Update the cachedXform to the current xform (ignoring translate).
@@ -289,6 +292,14 @@ public abstract class BaseCacheFilter {
         return false;
     }
 
+    private boolean isXformScrollCacheCapable(double[] xformInfo) {
+        if (unsupported(xformInfo)) {
+            return false;
+        }
+        double rotate = xformInfo[2];
+        return rotateHint || rotate == 0;
+    }
+
     /*
      * Do we need to regenerate the cached image?
      */
@@ -306,7 +317,7 @@ public abstract class BaseCacheFilter {
                 return true;
             }
             if (scrollCacheState == ScrollCacheState.CHECKING_PRECONDITIONS) {
-                if (impl_scrollCacheCapable()) {
+                if (impl_scrollCacheCapable() && isXformScrollCacheCapable(xformInfo)) {
                     scrollCacheState = ScrollCacheState.ENABLED;
                 } else {
                     scrollCacheState = ScrollCacheState.DISABLED;
@@ -454,15 +465,17 @@ public abstract class BaseCacheFilter {
     double[] unmatrix(BaseTransform xform) {
         double[] retVal = new double[3];
 
-        double[][] row = {{xform.getMxx(),xform.getMxy()},
-                          {xform.getMyx(),xform.getMyy()}};
+        double[][] row = {{xform.getMxx(), xform.getMxy()},
+            {xform.getMyx(), xform.getMyy()}};
+        final double xSignum = Math.signum(row[0][0]);
+        final double ySignum = Math.signum(row[1][1]);
 
         // Compute X scale factor and normalize first row.
         // tran[U_SCALEX] = V3Length(&row[0]);
         // row[0] = *V3Scale(&row[0], 1.0);
 
-        double scaleX = v2length(row[0]);
-        v2scale(row[0], 1.0);
+        double scaleX = xSignum * v2length(row[0]);
+        v2scale(row[0], xSignum);
 
         // Compute XY shear factor and make 2nd row orthogonal to 1st.
         // tran[U_SHEARXY] = V3Dot(&row[0], &row[1]);
@@ -479,39 +492,8 @@ public abstract class BaseCacheFilter {
         // V3Scale(&row[1], 1.0);
         // tran[U_SHEARXY] /= tran[U_SCALEY];
 
-        double scaleY = v2length(row[1]);
-        v2scale(row[1], 1.0);
-        shearXY /= scaleY;
-
-        // [ Here we leave out computing the XZ and YZ shears, the Z scale, and
-        //   normalizing the (non-existent) 3rd row. ]
-        //
-        // At this point, the matrix (in rows[]) is orthonormal.
-        // Check for a coordinate system flip.  If the determinant
-        // is -1, then negate the matrix and the scaling factors.
-        //
-        // if ( V3Dot( &row[0], V3Cross( &row[1], &row[2], &pdum3) ) < 0 )
-        //     for ( i = 0; i < 3; i++ ) {
-        //         tran[U_SCALEX+i] *= -1;
-        //         row[i].x *= -1;
-        //         row[i].y *= -1;
-        //         row[i].z *= -1;
-        //     }
-        // }
-        //
-        // Will we ever see a "coordinate system flip"? (RT-23965)
-        //
-        // If determinant is -1 (<0?)
-        if (((row[0][0] * row[1][1]) - (row[0][1] * row[1][0])) < 0) {
-            // Negate the matrix and the scaling factors
-            //System.out.println("NEGATING THE MATRIX");
-            scaleX *= -1;
-            scaleY *= -1;
-            row[0][0] *= -1;
-            row[0][1] *= -1;
-            row[1][0] *= -1;
-            row[1][1] *= -1;
-        }
+        double scaleY = ySignum * v2length(row[1]);
+        v2scale(row[1], ySignum);
 
         // Now extract the rotation. (This is new code, not from the Gem.)
         //

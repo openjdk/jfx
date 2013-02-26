@@ -6,7 +6,7 @@
     <property name="rt.dist.root.dir" value="../../rt" />    
     <path id="javac.closed.classpath.path" path="
         ${rt.dist.root.dir}/javafx-logging/dist/javafx-logging.jar:
-        ${runtime.dist.root.dir}/glass/glass-mat/dist/glass.jar" />
+        ${rt.dist.root.dir}/glass/dist/lib/glass.jar" />
     <property name="javac.classpath" refid="javac.closed.classpath.path"/>
     
     <import file="../build-defs.xml"/>

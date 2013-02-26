@@ -45,4 +45,5 @@ public abstract class NodeAccess {
     }
 
     public abstract void layoutNodeForPrinting(Node node);
+    public abstract boolean isDerivedDepthTest(Node node);
 }

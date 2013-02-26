@@ -27,6 +27,7 @@ package com.sun.javafx.sg.prism;
 
 import com.sun.javafx.font.FontResource;
 import com.sun.javafx.font.FontStrike;
+import com.sun.javafx.font.Metrics;
 import com.sun.javafx.font.PGFont;
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.Path2D;
@@ -151,20 +152,25 @@ public class NGText extends NGShape implements PGText {
             float y = pt.y - layoutY;
             BaseTransform t = BaseTransform.getTranslateInstance(x, y);
             outline.append(strike.getOutline(run, t), false);
+            Metrics metrics = null;
             if (underline) {
+                metrics = strike.getMetrics();
                 RoundRectangle2D rect = new RoundRectangle2D();
                 rect.x = x;
-                rect.y = y + strike.getUnderLineOffset();
+                rect.y = y + metrics.getUnderLineOffset();
                 rect.width = run.getWidth();
-                rect.height = strike.getUnderLineThickness();
+                rect.height = metrics.getUnderLineThickness();
                 outline.append(rect, false);
             }
             if (strikethrough) {
+                if (metrics == null) {
+                    metrics = strike.getMetrics();
+                }
                 RoundRectangle2D rect = new RoundRectangle2D();
                 rect.x = x;
-                rect.y = y + strike.getStrikethroughOffset();
+                rect.y = y + metrics.getStrikethroughOffset();
                 rect.width = run.getWidth();
-                rect.height = strike.getStrikethroughThickness();
+                rect.height = metrics.getStrikethroughThickness();
                 outline.append(rect, false);
             }
         }
@@ -310,9 +316,10 @@ public class NGText extends NGShape implements PGText {
 
             }
             if ((op & DECORATION) != 0) {
+                Metrics metrics = strike.getMetrics();
                 if (underline) {
-                    float offset = strike.getUnderLineOffset();
-                    float thickness = strike.getUnderLineThickness();
+                    float offset = metrics.getUnderLineOffset();
+                    float thickness = metrics.getUnderLineThickness();
                     if ((op & SHAPE_FILL) != 0) {
                         g.fillRect(x, y + offset, run.getWidth(), thickness);
                     } else {
@@ -320,8 +327,8 @@ public class NGText extends NGShape implements PGText {
                     }
                 }
                 if (strikethrough) {
-                    float offset = strike.getStrikethroughOffset();
-                    float thickness = strike.getStrikethroughThickness();
+                    float offset = metrics.getStrikethroughOffset();
+                    float thickness = metrics.getStrikethroughThickness();
                     if ((op & SHAPE_FILL) != 0) {
                         g.fillRect(x, y + offset, run.getWidth(), thickness);
                     } else {

@@ -34,7 +34,7 @@
         ${rt.dist.root.dir}/javafx-common/dist/javafx-common.jar:
         ${rt.dist.root.dir}/javafx-geom/dist/javafx-geom.jar:
         ${rt.dist.root.dir}/decora-runtime/dist/decora-runtime.jar:
-        ${runtime.dist.root.dir}/glass/glass-mat/dist/glass.jar" />
+        ${rt.dist.root.dir}/glass/dist/lib/glass.jar" />
     <property name="javac.classpath" refid="javac.closed.classpath.path"/>
 
     <import file="build-common.xml"/>

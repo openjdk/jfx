@@ -10,7 +10,7 @@
     <path id="javac.closed.classpath.path" path="
         ${swt.path}/swt.jar:
         ${import.swt.jar}:
-        ${runtime.dist.root.dir}/glass/dist/glass.jar:
+        ${rt.dist.root.dir}/glass/dist/lib/glass.jar:
         ${rt.dist.root.dir}/javafx-common/dist/javafx-common.jar:
         ${rt.dist.root.dir}/javafx-ui-common/dist/javafx-ui-common.jar"
      />

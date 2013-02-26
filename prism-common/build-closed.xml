@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="prism-common" default="jar" basedir=".">
+    <description>Builds, tests, and jars the closed version of the prism-common project.</description>
+
+    <property name="rt.dist.root.dir" value="../../rt" />
+    <property name="runtime.dist.root.dir" value="../../rt-closed" />
+    <path id="javac.closed.classpath.path" path="
+        ${rt.dist.root.dir}/javafx-geom/dist/javafx-geom.jar:
+        ${runtime.dist.root.dir}/javafx-font/dist/javafx-font.jar:
+        ${rt.dist.root.dir}/javafx-common/dist/javafx-common.jar:
+        ${rt.dist.root.dir}/javafx-logging/dist/javafx-logging.jar:
+        ${rt.dist.root.dir}/pisces/dist/pisces.jar:
+        ${rt.dist.root.dir}/javafx-ui-common/dist/javafx-ui-common.jar:
+        ${runtime.dist.root.dir}/javafx-iio/dist/javafx-iio.jar:
+        ${rt.dist.root.dir}/prism-util/dist/prism-util.jar:
+        ${rt.dist.root.dir}/glass/dist/lib/glass.jar" />
+    <property name="javac.classpath" refid="javac.closed.classpath.path"/>
+
+    <import file="../build-defs.xml"/>
+    <import file="build-common.xml"/>
+
+    <target name="jar" depends="prism-common-common.jar"/>
+    <target name="clean" depends="prism-common-common.clean"/>
+
+</project>

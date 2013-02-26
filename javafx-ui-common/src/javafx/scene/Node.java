@@ -1376,6 +1376,11 @@ public abstract class Node implements EventTarget, Styleable {
      * the {@link Scene} is true (meaning that the
      * {@link Scene} has an associated depth buffer)
      * <p>
+     * Depth test comparison is only done among nodes with depthTest enabled.
+     * A node with depthTest disabled does not read, test, or write the depth buffer,
+     * that is to say its Z value will not be considered for depth testing
+     * with other nodes.
+     * <p>
      * Note that this is a conditional feature. See
      * {@link javafx.application.ConditionalFeature#SCENE3D ConditionalFeature.SCENE3D}
      * for more information.
@@ -4290,7 +4295,7 @@ public abstract class Node implements EventTarget, Styleable {
     /**
      * Finds a top-most child node that contains the given local coordinates.
      *
-     * Returns the picked node, null if no such node was found.
+     * The result argument is used for storing the picking result.
      * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
@@ -8500,6 +8505,11 @@ public abstract class Node implements EventTarget, Styleable {
         @Override
         public void layoutNodeForPrinting(Node node) {
             node.doCSSLayoutSyncForSnapshot();
+        }
+
+        @Override
+        public boolean isDerivedDepthTest(Node node) {
+            return node.isDerivedDepthTest();
         }
     }
 

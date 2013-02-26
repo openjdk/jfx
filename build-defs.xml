@@ -15,12 +15,11 @@
     <property environment="env"/>
     
     <!-- Set JFXRT_HOME -->
-    <condition property="JFXRT_HOME" value="../../artifacts/sdk/rt">
-        <not>  
-            <isset property="env.JFXRT_HOME"/>
-        </not>
+    <condition property="JFXRT_HOME"
+               value="${env.JFXRT_HOME}"
+               else="../../artifacts/sdk/rt">
+        <isset property="env.JFXRT_HOME"/>
     </condition>
-    <property name="JFXRT_HOME" value="${env.JFXRT_HOME}" />
     
     <!--
         Note that .properties files are loaded relative to the basedir of
@@ -54,13 +53,11 @@
     <!--
     <propertycopy name="javac.debuglevel" from="${ant.project.name}.javac.debuglevel" silent="true" override="true"/>
     -->
-    
-    <!--
 
+    <!--
         Default targets for all subprojects are defined below.  These can
         be overridden in each subproject's build.xml file if necessary;
         if left unspecified, the default behavior will be used as defined here.
-
     -->
 
     <target name="-pre-init">

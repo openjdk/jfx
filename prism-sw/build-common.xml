@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="prism-sw-common" default="jar" basedir=".">
+
+  <property name="cpp.dir" value="../prism-sw-native"/>
+
+  <!-- NOTE: the following properties are passed to the native makefile and
+       are overridden by the tv build -->
+  <property name="native.dist.dir" value="../prism-sw-native/dist${cross.name.suffix}"/>
+  <property name="native.build.dir" value="../prism-sw-native/build${cross.name.suffix}"/>
+  <property name="native.makefile" value="Makefile"/>
+  <property name="nativelib.suffix.macosx" value=".dylib"/>
+  <property name="prism-sw.classes.dir" value="../prism-sw/build/classes"/>
+
+  <target name="get-libname-macosx" if="isMacOSX">
+    <property name="native.lib.file" value="libprism-sw${nativelib.suffix.macosx}"/>
+  </target>
+  <target name="get-libname-linux" if="isLinux">
+    <property name="native.lib.file" value="libprism-sw.so"/>
+  </target>
+  <target name="get-libname-solaris" if="isSolaris">
+    <property name="native.lib.file" value="libprism-sw.so"/>
+  </target>
+  <target name="get-libname-windows" if="isWindows">
+    <property name="native.lib.file" value="prism-sw.dll"/>
+  </target>
+  <target name="get-libname" depends="get-libname-macosx,get-libname-linux,get-libname-solaris,get-libname-windows"/>
+
+  <target name="-local-pre-init" depends="get-libname"/>
+
+  <target name="check-native">
+    <uptodate property="native.uptodate" targetfile="${native.dist.dir}/${native.lib.file}" >
+      <srcfiles dir="${cpp.dir}/include" includes="*.h"/>
+      <srcfiles dir="${cpp.dir}/include" includes="*.inl"/>
+      <srcfiles dir="${cpp.dir}/src" includes="*.c"/>
+    </uptodate>
+  </target>
+
+  <target name="compile-native" depends="check-native" unless="native.uptodate">
+    <ant antfile="build-${os_name}.xml" target="compile-native" inheritAll="true"/>
+  </target>
+
+  <target name="jar" depends="-local-pre-init,init">
+    <build-project/>
+    <antcall target="compile-native"/>
+    <jar destfile="${dist.dir}/prism-sw-native.jar"
+         basedir="${native.dist.dir}"
+         includes="${native.lib.file}"/>
+  </target>
+
+  <target name="clean">
+    <clean-project/>
+    <ant antfile="build-${os_name}.xml" target="clean-native" inheritAll="true"/>
+  </target>
+
+</project>

@@ -1,0 +1,149 @@
+/*
+ * Copyright (c) 2008, 2013 Oracle and/or its affiliates.
+ * All rights reserved. Use is subject to license terms.
+ *
+ * This file is available and licensed under the following license:
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ *
+ *  - Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ *  - Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in
+ *    the documentation and/or other materials provided with the distribution.
+ *  - Neither the name of Oracle Corporation nor the names of its
+ *    contributors may be used to endorse or promote products derived
+ *    from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+#media-pane {
+    -fx-background-color: black;
+}
+
+#player-pane {
+    -fx-background-color: black;
+}
+
+.button {
+    -fx-background-color: null;
+    -fx-background-insets: 0;
+    -fx-background-radius: 0;
+    -fx-padding: 0;
+    -fx-text-fill: -fx-text-base-color;
+    -fx-alignment: CENTER;
+    -fx-content-display: graphic-only;
+}
+
+#media-slider .track {
+    -fx-background-color: null;
+    -fx-background-insets: 1 0 -1 0, 0, 1;
+    -fx-background-radius: 2.5, 2.5, 1.5;
+    -fx-padding: 0.208333em; 
+    -fx-background-image: url("/ensemble/samples/shared-resources/slider.png");
+    -fx-background-image-width: 10;
+    -fx-background-image-slice: 0 fill;
+}
+
+#media-slider .thumb {
+    -fx-background-color: null;
+    -fx-background-insets: 0, 1, 2;
+    -fx-background-radius: 1.0em; /* makes sure this remains circular */
+    -fx-padding: 0.583333em; /* 7 */
+    -fx-border-image-source: url("/ensemble/samples/shared-resources/thumb_default.png");
+    -fx-border-image-width: 10;
+    -fx-border-image-slice: 0 fill;
+}
+
+#media-slider:armed .thumb {
+    -fx-color: null;
+    -fx-background-color: null;
+    -fx-border-color: null;
+    -fx-border-image-source: url("/ensemble/samples/shared-resources/thumb_pressed.png");
+    -fx-border-image-width: 10;
+    -fx-border-image-slice: 0 fill;
+    -fx-background-insets: -1.4, 0, 1, 2;
+    -fx-background-radius: 1.0em; /* makes sure this remains circular */
+}
+
+#media-slider .thumb:hover {
+    -fx-color: null;
+    -fx-background-color: null;
+    -fx-border-color: null;
+    -fx-border-image-source: url("/ensemble/samples/shared-resources/thumb_hover.png");
+    -fx-border-image-width: 10;
+    -fx-border-image-slice: 0 fill;
+}
+
+#back-button {
+    -fx-graphic: url("/ensemble/samples/shared-resources/button_default_back.png");
+}
+
+#back-button:hover {
+    -fx-graphic: url("/ensemble/samples/shared-resources/button_hover_back.png");
+}
+
+#back-button:armed {
+    -fx-graphic: url("/ensemble/samples/shared-resources/button_pressed_back.png");
+}
+
+#stop-button {
+    -fx-graphic: url("/ensemble/samples/shared-resources/button_default_stop.png");
+}
+
+#stop-button:hover {
+    -fx-graphic: url("/ensemble/samples/shared-resources/button_hover_stop.png");
+}
+
+#stop-button:armed {
+    -fx-graphic: url("/ensemble/samples/shared-resources/button_pressed_stop.png");
+}
+
+#play-button {
+    -fx-graphic: url("/ensemble/samples/shared-resources/button_default_play.png");
+}
+
+#play-button:hover {
+    -fx-graphic: url("/ensemble/samples/shared-resources/button_hover_play.png");
+}
+
+#play-button:armed {
+    -fx-graphic: url("/ensemble/samples/shared-resources/button_pressed_play.png");
+}
+
+#pause-button {
+    -fx-graphic: url("/ensemble/samples/shared-resources/button_default_pause.png");
+}
+
+#pause-button:hover {
+    -fx-graphic: url("/ensemble/samples/shared-resources/button_hover_pause.png");
+}
+
+#pause-button:armed {
+    -fx-graphic: url("/ensemble/samples/shared-resources/button_pressed_pause.png");
+}
+
+#forward-button {
+    -fx-graphic: url("/ensemble/samples/shared-resources/button_default_forward.png");
+}
+
+#forward-button:hover {
+    -fx-graphic: url("/ensemble/samples/shared-resources/button_hover_forward.png");
+}
+
+#forward-button:armed {
+    -fx-graphic: url("/ensemble/samples/shared-resources/button_pressed_forward.png");
+}
+

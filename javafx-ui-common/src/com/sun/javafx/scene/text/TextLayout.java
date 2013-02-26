@@ -64,7 +64,7 @@ public interface TextLayout {
 
     public static final int TYPE_TEXT           = 1 << 0;
     public static final int TYPE_UNDERLINE      = 1 << 1;
-    public static final int TYPE_STRIKETHROUGHT = 1 << 2;
+    public static final int TYPE_STRIKETHROUGH = 1 << 2;
     public static final int TYPE_BASELINE       = 1 << 3;
     public static final int TYPE_TOP            = 1 << 4;
     public static final int TYPE_BEARINGS       = 1 << 5;

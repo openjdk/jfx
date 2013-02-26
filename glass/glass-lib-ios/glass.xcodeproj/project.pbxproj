@@ -1,0 +1,610 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 46;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		23AE06EC16D6D14900509584 /* GlassApplication.h in Headers */ = {isa = PBXBuildFile; fileRef = 23AE06D016D6D14800509584 /* GlassApplication.h */; };
+		23AE06ED16D6D14900509584 /* GlassApplication.m in Sources */ = {isa = PBXBuildFile; fileRef = 23AE06D116D6D14900509584 /* GlassApplication.m */; };
+		23AE06EE16D6D14900509584 /* GlassCursor.m in Sources */ = {isa = PBXBuildFile; fileRef = 23AE06D216D6D14900509584 /* GlassCursor.m */; };
+		23AE06EF16D6D14900509584 /* GlassDragDelegate.h in Headers */ = {isa = PBXBuildFile; fileRef = 23AE06D316D6D14900509584 /* GlassDragDelegate.h */; };
+		23AE06F016D6D14900509584 /* GlassDragDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 23AE06D416D6D14900509584 /* GlassDragDelegate.m */; };
+		23AE06F116D6D14900509584 /* GlassGestureSupport.m in Sources */ = {isa = PBXBuildFile; fileRef = 23AE06D516D6D14900509584 /* GlassGestureSupport.m */; };
+		23AE06F216D6D14900509584 /* GlassHelper.h in Headers */ = {isa = PBXBuildFile; fileRef = 23AE06D616D6D14900509584 /* GlassHelper.h */; };
+		23AE06F316D6D14900509584 /* GlassHelper.m in Sources */ = {isa = PBXBuildFile; fileRef = 23AE06D716D6D14900509584 /* GlassHelper.m */; };
+		23AE06F416D6D14900509584 /* GlassKey.m in Sources */ = {isa = PBXBuildFile; fileRef = 23AE06D816D6D14900509584 /* GlassKey.m */; };
+		23AE06F516D6D14900509584 /* GlassMacros.h in Headers */ = {isa = PBXBuildFile; fileRef = 23AE06D916D6D14900509584 /* GlassMacros.h */; };
+		23AE06F616D6D14900509584 /* GlassPasteboard.h in Headers */ = {isa = PBXBuildFile; fileRef = 23AE06DA16D6D14900509584 /* GlassPasteboard.h */; };
+		23AE06F716D6D14900509584 /* GlassPasteboard.m in Sources */ = {isa = PBXBuildFile; fileRef = 23AE06DB16D6D14900509584 /* GlassPasteboard.m */; };
+		23AE06F816D6D14900509584 /* GlassRobot.m in Sources */ = {isa = PBXBuildFile; fileRef = 23AE06DC16D6D14900509584 /* GlassRobot.m */; };
+		23AE06F916D6D14900509584 /* GlassScreen.m in Sources */ = {isa = PBXBuildFile; fileRef = 23AE06DD16D6D14900509584 /* GlassScreen.m */; };
+		23AE06FA16D6D14900509584 /* GlassStatics.h in Headers */ = {isa = PBXBuildFile; fileRef = 23AE06DE16D6D14900509584 /* GlassStatics.h */; };
+		23AE06FB16D6D14900509584 /* GlassStatics.m in Sources */ = {isa = PBXBuildFile; fileRef = 23AE06DF16D6D14900509584 /* GlassStatics.m */; };
+		23AE06FC16D6D14900509584 /* GlassTimer.h in Headers */ = {isa = PBXBuildFile; fileRef = 23AE06E016D6D14900509584 /* GlassTimer.h */; };
+		23AE06FD16D6D14900509584 /* GlassTimer.m in Sources */ = {isa = PBXBuildFile; fileRef = 23AE06E116D6D14900509584 /* GlassTimer.m */; };
+		23AE06FE16D6D14900509584 /* GlassView.h in Headers */ = {isa = PBXBuildFile; fileRef = 23AE06E216D6D14900509584 /* GlassView.h */; };
+		23AE06FF16D6D14900509584 /* GlassView.m in Sources */ = {isa = PBXBuildFile; fileRef = 23AE06E316D6D14900509584 /* GlassView.m */; };
+		23AE070016D6D14900509584 /* GlassViewController.h in Headers */ = {isa = PBXBuildFile; fileRef = 23AE06E416D6D14900509584 /* GlassViewController.h */; };
+		23AE070116D6D14900509584 /* GlassViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 23AE06E516D6D14900509584 /* GlassViewController.m */; };
+		23AE070216D6D14900509584 /* GlassViewDelegate.h in Headers */ = {isa = PBXBuildFile; fileRef = 23AE06E616D6D14900509584 /* GlassViewDelegate.h */; };
+		23AE070316D6D14900509584 /* GlassViewDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 23AE06E716D6D14900509584 /* GlassViewDelegate.m */; };
+		23AE070416D6D14900509584 /* GlassViewGL.h in Headers */ = {isa = PBXBuildFile; fileRef = 23AE06E816D6D14900509584 /* GlassViewGL.h */; };
+		23AE070516D6D14900509584 /* GlassViewGL.m in Sources */ = {isa = PBXBuildFile; fileRef = 23AE06E916D6D14900509584 /* GlassViewGL.m */; };
+		23AE070616D6D14900509584 /* GlassWindow.h in Headers */ = {isa = PBXBuildFile; fileRef = 23AE06EA16D6D14900509584 /* GlassWindow.h */; };
+		23AE070716D6D14900509584 /* GlassWindow.m in Sources */ = {isa = PBXBuildFile; fileRef = 23AE06EB16D6D14900509584 /* GlassWindow.m */; };
+		23AE070916D6D15800509584 /* common.h in Headers */ = {isa = PBXBuildFile; fileRef = 23AE070816D6D15800509584 /* common.h */; };
+		23AE070B16D6D17200509584 /* glass_Prefix.pch in Headers */ = {isa = PBXBuildFile; fileRef = 23AE070A16D6D17200509584 /* glass_Prefix.pch */; };
+		84AE77D0157372CF009ECC6C /* CoreMotion.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 84AE77CF157372CF009ECC6C /* CoreMotion.framework */; };
+		84AE784215751D48009ECC6C /* CoreLocation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 84AE784115751D48009ECC6C /* CoreLocation.framework */; };
+		AACBBE4A0F95108600F1A2B1 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AACBBE490F95108600F1A2B1 /* Foundation.framework */; };
+		BDA5722F1591A6C4004E2C91 /* common.h in Headers */ = {isa = PBXBuildFile; fileRef = BDA5722E1591A6C4004E2C91 /* common.h */; };
+		BDA572641592015A004E2C91 /* com_sun_glass_events_DndEvent.h in Headers */ = {isa = PBXBuildFile; fileRef = BDA572301592015A004E2C91 /* com_sun_glass_events_DndEvent.h */; };
+		BDA572651592015A004E2C91 /* com_sun_glass_events_KeyEvent.h in Headers */ = {isa = PBXBuildFile; fileRef = BDA572311592015A004E2C91 /* com_sun_glass_events_KeyEvent.h */; };
+		BDA572661592015A004E2C91 /* com_sun_glass_events_MouseEvent.h in Headers */ = {isa = PBXBuildFile; fileRef = BDA572321592015A004E2C91 /* com_sun_glass_events_MouseEvent.h */; };
+		BDA572681592015A004E2C91 /* com_sun_glass_events_SwipeGesture.h in Headers */ = {isa = PBXBuildFile; fileRef = BDA572341592015A004E2C91 /* com_sun_glass_events_SwipeGesture.h */; };
+		BDA572691592015A004E2C91 /* com_sun_glass_events_TouchEvent.h in Headers */ = {isa = PBXBuildFile; fileRef = BDA572351592015A004E2C91 /* com_sun_glass_events_TouchEvent.h */; };
+		BDA5726A1592015A004E2C91 /* com_sun_glass_events_ViewEvent.h in Headers */ = {isa = PBXBuildFile; fileRef = BDA572361592015A004E2C91 /* com_sun_glass_events_ViewEvent.h */; };
+		BDA5726B1592015A004E2C91 /* com_sun_glass_events_WindowEvent.h in Headers */ = {isa = PBXBuildFile; fileRef = BDA572371592015A004E2C91 /* com_sun_glass_events_WindowEvent.h */; };
+		BDA5726D1592015A004E2C91 /* com_sun_glass_ui_Application_EventHandler.h in Headers */ = {isa = PBXBuildFile; fileRef = BDA572391592015A004E2C91 /* com_sun_glass_ui_Application_EventHandler.h */; };
+		BDA5726E1592015A004E2C91 /* com_sun_glass_ui_Application.h in Headers */ = {isa = PBXBuildFile; fileRef = BDA5723A1592015A004E2C91 /* com_sun_glass_ui_Application.h */; };
+		BDA5726F1592015A004E2C91 /* com_sun_glass_ui_Clipboard.h in Headers */ = {isa = PBXBuildFile; fileRef = BDA5723B1592015A004E2C91 /* com_sun_glass_ui_Clipboard.h */; };
+		BDA572701592015A004E2C91 /* com_sun_glass_ui_CommonDialogs_ExtensionFilter.h in Headers */ = {isa = PBXBuildFile; fileRef = BDA5723C1592015A004E2C91 /* com_sun_glass_ui_CommonDialogs_ExtensionFilter.h */; };
+		BDA572711592015A004E2C91 /* com_sun_glass_ui_CommonDialogs_Type.h in Headers */ = {isa = PBXBuildFile; fileRef = BDA5723D1592015A004E2C91 /* com_sun_glass_ui_CommonDialogs_Type.h */; };
+		BDA572721592015A004E2C91 /* com_sun_glass_ui_CommonDialogs.h in Headers */ = {isa = PBXBuildFile; fileRef = BDA5723E1592015A004E2C91 /* com_sun_glass_ui_CommonDialogs.h */; };
+		BDA572731592015A004E2C91 /* com_sun_glass_ui_Cursor.h in Headers */ = {isa = PBXBuildFile; fileRef = BDA5723F1592015A004E2C91 /* com_sun_glass_ui_Cursor.h */; };
+		BDA572741592015A004E2C91 /* com_sun_glass_ui_ios_IosApplication.h in Headers */ = {isa = PBXBuildFile; fileRef = BDA572401592015A004E2C91 /* com_sun_glass_ui_ios_IosApplication.h */; };
+		BDA572751592015A004E2C91 /* com_sun_glass_ui_ios_IosClipboardDelegate.h in Headers */ = {isa = PBXBuildFile; fileRef = BDA572411592015A004E2C91 /* com_sun_glass_ui_ios_IosClipboardDelegate.h */; };
+		BDA572761592015A004E2C91 /* com_sun_glass_ui_ios_IosCommonDialogs.h in Headers */ = {isa = PBXBuildFile; fileRef = BDA572421592015A004E2C91 /* com_sun_glass_ui_ios_IosCommonDialogs.h */; };
+		BDA572771592015A004E2C91 /* com_sun_glass_ui_ios_IosCursor.h in Headers */ = {isa = PBXBuildFile; fileRef = BDA572431592015A004E2C91 /* com_sun_glass_ui_ios_IosCursor.h */; };
+		BDA572781592015A004E2C91 /* com_sun_glass_ui_ios_IosGestureSupport.h in Headers */ = {isa = PBXBuildFile; fileRef = BDA572441592015A004E2C91 /* com_sun_glass_ui_ios_IosGestureSupport.h */; };
+		BDA572791592015A004E2C91 /* com_sun_glass_ui_ios_IosMenuBarDelegate.h in Headers */ = {isa = PBXBuildFile; fileRef = BDA572451592015A004E2C91 /* com_sun_glass_ui_ios_IosMenuBarDelegate.h */; };
+		BDA5727A1592015A004E2C91 /* com_sun_glass_ui_ios_IosMenuDelegate.h in Headers */ = {isa = PBXBuildFile; fileRef = BDA572461592015A004E2C91 /* com_sun_glass_ui_ios_IosMenuDelegate.h */; };
+		BDA5727B1592015A004E2C91 /* com_sun_glass_ui_ios_IosPixels.h in Headers */ = {isa = PBXBuildFile; fileRef = BDA572471592015A004E2C91 /* com_sun_glass_ui_ios_IosPixels.h */; };
+		BDA5727C1592015A004E2C91 /* com_sun_glass_ui_ios_IosPlatformFactory.h in Headers */ = {isa = PBXBuildFile; fileRef = BDA572481592015A004E2C91 /* com_sun_glass_ui_ios_IosPlatformFactory.h */; };
+		BDA5727D1592015A004E2C91 /* com_sun_glass_ui_ios_IosRobot.h in Headers */ = {isa = PBXBuildFile; fileRef = BDA572491592015A004E2C91 /* com_sun_glass_ui_ios_IosRobot.h */; };
+		BDA5727E1592015A004E2C91 /* com_sun_glass_ui_ios_IosScreen.h in Headers */ = {isa = PBXBuildFile; fileRef = BDA5724A1592015A004E2C91 /* com_sun_glass_ui_ios_IosScreen.h */; };
+		BDA5727F1592015A004E2C91 /* com_sun_glass_ui_ios_IosTimer.h in Headers */ = {isa = PBXBuildFile; fileRef = BDA5724B1592015A004E2C91 /* com_sun_glass_ui_ios_IosTimer.h */; };
+		BDA572801592015A004E2C91 /* com_sun_glass_ui_ios_IosView.h in Headers */ = {isa = PBXBuildFile; fileRef = BDA5724C1592015A004E2C91 /* com_sun_glass_ui_ios_IosView.h */; };
+		BDA572811592015A004E2C91 /* com_sun_glass_ui_ios_IosWindow.h in Headers */ = {isa = PBXBuildFile; fileRef = BDA5724D1592015A004E2C91 /* com_sun_glass_ui_ios_IosWindow.h */; };
+		BDA572821592015A004E2C91 /* com_sun_glass_ui_Menu_EventHandler.h in Headers */ = {isa = PBXBuildFile; fileRef = BDA5724E1592015A004E2C91 /* com_sun_glass_ui_Menu_EventHandler.h */; };
+		BDA572831592015A004E2C91 /* com_sun_glass_ui_Menu.h in Headers */ = {isa = PBXBuildFile; fileRef = BDA5724F1592015A004E2C91 /* com_sun_glass_ui_Menu.h */; };
+		BDA572841592015A004E2C91 /* com_sun_glass_ui_MenuBar.h in Headers */ = {isa = PBXBuildFile; fileRef = BDA572501592015A004E2C91 /* com_sun_glass_ui_MenuBar.h */; };
+		BDA572851592015A004E2C91 /* com_sun_glass_ui_MenuItem_Callback.h in Headers */ = {isa = PBXBuildFile; fileRef = BDA572511592015A004E2C91 /* com_sun_glass_ui_MenuItem_Callback.h */; };
+		BDA572861592015A004E2C91 /* com_sun_glass_ui_MenuItem.h in Headers */ = {isa = PBXBuildFile; fileRef = BDA572521592015A004E2C91 /* com_sun_glass_ui_MenuItem.h */; };
+		BDA572871592015A004E2C91 /* com_sun_glass_ui_Pen.h in Headers */ = {isa = PBXBuildFile; fileRef = BDA572531592015A004E2C91 /* com_sun_glass_ui_Pen.h */; };
+		BDA572881592015A004E2C91 /* com_sun_glass_ui_Pixels_Format.h in Headers */ = {isa = PBXBuildFile; fileRef = BDA572541592015A004E2C91 /* com_sun_glass_ui_Pixels_Format.h */; };
+		BDA572891592015A004E2C91 /* com_sun_glass_ui_Pixels.h in Headers */ = {isa = PBXBuildFile; fileRef = BDA572551592015A004E2C91 /* com_sun_glass_ui_Pixels.h */; };
+		BDA5728A1592015A004E2C91 /* com_sun_glass_ui_Screen_SettingsChangedCallback.h in Headers */ = {isa = PBXBuildFile; fileRef = BDA572561592015A004E2C91 /* com_sun_glass_ui_Screen_SettingsChangedCallback.h */; };
+		BDA5728B1592015A004E2C91 /* com_sun_glass_ui_Screen.h in Headers */ = {isa = PBXBuildFile; fileRef = BDA572571592015A004E2C91 /* com_sun_glass_ui_Screen.h */; };
+		BDA5728C1592015A004E2C91 /* com_sun_glass_ui_Timer.h in Headers */ = {isa = PBXBuildFile; fileRef = BDA572581592015A004E2C91 /* com_sun_glass_ui_Timer.h */; };
+		BDA5728D1592015A004E2C91 /* com_sun_glass_ui_View_Capability.h in Headers */ = {isa = PBXBuildFile; fileRef = BDA572591592015A004E2C91 /* com_sun_glass_ui_View_Capability.h */; };
+		BDA5728E1592015A004E2C91 /* com_sun_glass_ui_View_EventHandler.h in Headers */ = {isa = PBXBuildFile; fileRef = BDA5725A1592015A004E2C91 /* com_sun_glass_ui_View_EventHandler.h */; };
+		BDA572901592015A004E2C91 /* com_sun_glass_ui_View.h in Headers */ = {isa = PBXBuildFile; fileRef = BDA5725C1592015A004E2C91 /* com_sun_glass_ui_View.h */; };
+		BDA572911592015A004E2C91 /* com_sun_glass_ui_Window_EventHandler.h in Headers */ = {isa = PBXBuildFile; fileRef = BDA5725D1592015A004E2C91 /* com_sun_glass_ui_Window_EventHandler.h */; };
+		BDA572921592015A004E2C91 /* com_sun_glass_ui_Window_Level.h in Headers */ = {isa = PBXBuildFile; fileRef = BDA5725E1592015A004E2C91 /* com_sun_glass_ui_Window_Level.h */; };
+		BDA572931592015A004E2C91 /* com_sun_glass_ui_Window_State.h in Headers */ = {isa = PBXBuildFile; fileRef = BDA5725F1592015A004E2C91 /* com_sun_glass_ui_Window_State.h */; };
+		BDA572941592015A004E2C91 /* com_sun_glass_ui_Window_TrackingRectangle.h in Headers */ = {isa = PBXBuildFile; fileRef = BDA572601592015A004E2C91 /* com_sun_glass_ui_Window_TrackingRectangle.h */; };
+		BDA572951592015A004E2C91 /* com_sun_glass_ui_Window_UndecoratedMoveResizeHelper.h in Headers */ = {isa = PBXBuildFile; fileRef = BDA572611592015A004E2C91 /* com_sun_glass_ui_Window_UndecoratedMoveResizeHelper.h */; };
+		BDA572971592015A004E2C91 /* com_sun_glass_ui_Window.h in Headers */ = {isa = PBXBuildFile; fileRef = BDA572631592015A004E2C91 /* com_sun_glass_ui_Window.h */; };
+		C67E331A161197C900383C7B /* com_sun_glass_ui_ios_IosPasteboard.h in Headers */ = {isa = PBXBuildFile; fileRef = C67E3319161197C900383C7B /* com_sun_glass_ui_ios_IosPasteboard.h */; };
+		C67E331D16119C6C00383C7B /* CoreFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C67E331C16119C6C00383C7B /* CoreFoundation.framework */; };
+		C6D7200113B334BF0012D459 /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C6D7200013B334BF0012D459 /* UIKit.framework */; };
+		C6D7200313B334D40012D459 /* OpenGLES.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C6D7200213B334D40012D459 /* OpenGLES.framework */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		23AE06D016D6D14800509584 /* GlassApplication.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = GlassApplication.h; path = src/GlassApplication.h; sourceTree = "<group>"; };
+		23AE06D116D6D14900509584 /* GlassApplication.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = GlassApplication.m; path = src/GlassApplication.m; sourceTree = "<group>"; };
+		23AE06D216D6D14900509584 /* GlassCursor.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = GlassCursor.m; path = src/GlassCursor.m; sourceTree = "<group>"; };
+		23AE06D316D6D14900509584 /* GlassDragDelegate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = GlassDragDelegate.h; path = src/GlassDragDelegate.h; sourceTree = "<group>"; };
+		23AE06D416D6D14900509584 /* GlassDragDelegate.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = GlassDragDelegate.m; path = src/GlassDragDelegate.m; sourceTree = "<group>"; };
+		23AE06D516D6D14900509584 /* GlassGestureSupport.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = GlassGestureSupport.m; path = src/GlassGestureSupport.m; sourceTree = "<group>"; };
+		23AE06D616D6D14900509584 /* GlassHelper.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = GlassHelper.h; path = src/GlassHelper.h; sourceTree = "<group>"; };
+		23AE06D716D6D14900509584 /* GlassHelper.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = GlassHelper.m; path = src/GlassHelper.m; sourceTree = "<group>"; };
+		23AE06D816D6D14900509584 /* GlassKey.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = GlassKey.m; path = src/GlassKey.m; sourceTree = "<group>"; };
+		23AE06D916D6D14900509584 /* GlassMacros.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = GlassMacros.h; path = src/GlassMacros.h; sourceTree = "<group>"; };
+		23AE06DA16D6D14900509584 /* GlassPasteboard.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = GlassPasteboard.h; path = src/GlassPasteboard.h; sourceTree = "<group>"; };
+		23AE06DB16D6D14900509584 /* GlassPasteboard.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = GlassPasteboard.m; path = src/GlassPasteboard.m; sourceTree = "<group>"; };
+		23AE06DC16D6D14900509584 /* GlassRobot.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = GlassRobot.m; path = src/GlassRobot.m; sourceTree = "<group>"; };
+		23AE06DD16D6D14900509584 /* GlassScreen.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = GlassScreen.m; path = src/GlassScreen.m; sourceTree = "<group>"; };
+		23AE06DE16D6D14900509584 /* GlassStatics.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = GlassStatics.h; path = src/GlassStatics.h; sourceTree = "<group>"; };
+		23AE06DF16D6D14900509584 /* GlassStatics.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = GlassStatics.m; path = src/GlassStatics.m; sourceTree = "<group>"; };
+		23AE06E016D6D14900509584 /* GlassTimer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = GlassTimer.h; path = src/GlassTimer.h; sourceTree = "<group>"; };
+		23AE06E116D6D14900509584 /* GlassTimer.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = GlassTimer.m; path = src/GlassTimer.m; sourceTree = "<group>"; };
+		23AE06E216D6D14900509584 /* GlassView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = GlassView.h; path = src/GlassView.h; sourceTree = "<group>"; };
+		23AE06E316D6D14900509584 /* GlassView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = GlassView.m; path = src/GlassView.m; sourceTree = "<group>"; };
+		23AE06E416D6D14900509584 /* GlassViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = GlassViewController.h; path = src/GlassViewController.h; sourceTree = "<group>"; };
+		23AE06E516D6D14900509584 /* GlassViewController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = GlassViewController.m; path = src/GlassViewController.m; sourceTree = "<group>"; };
+		23AE06E616D6D14900509584 /* GlassViewDelegate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = GlassViewDelegate.h; path = src/GlassViewDelegate.h; sourceTree = "<group>"; };
+		23AE06E716D6D14900509584 /* GlassViewDelegate.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = GlassViewDelegate.m; path = src/GlassViewDelegate.m; sourceTree = "<group>"; };
+		23AE06E816D6D14900509584 /* GlassViewGL.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = GlassViewGL.h; path = src/GlassViewGL.h; sourceTree = "<group>"; };
+		23AE06E916D6D14900509584 /* GlassViewGL.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = GlassViewGL.m; path = src/GlassViewGL.m; sourceTree = "<group>"; };
+		23AE06EA16D6D14900509584 /* GlassWindow.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = GlassWindow.h; path = src/GlassWindow.h; sourceTree = "<group>"; };
+		23AE06EB16D6D14900509584 /* GlassWindow.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = GlassWindow.m; path = src/GlassWindow.m; sourceTree = "<group>"; };
+		23AE070816D6D15800509584 /* common.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = common.h; path = src/common.h; sourceTree = "<group>"; };
+		23AE070A16D6D17200509584 /* glass_Prefix.pch */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = glass_Prefix.pch; path = src/glass_Prefix.pch; sourceTree = "<group>"; };
+		84AE77CF157372CF009ECC6C /* CoreMotion.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreMotion.framework; path = System/Library/Frameworks/CoreMotion.framework; sourceTree = SDKROOT; };
+		84AE784115751D48009ECC6C /* CoreLocation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreLocation.framework; path = System/Library/Frameworks/CoreLocation.framework; sourceTree = SDKROOT; };
+		AACBBE490F95108600F1A2B1 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
+		BDA5722E1591A6C4004E2C91 /* common.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = common.h; path = src/com/sun/glass/ui/common.h; sourceTree = "<group>"; };
+		BDA572301592015A004E2C91 /* com_sun_glass_events_DndEvent.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = com_sun_glass_events_DndEvent.h; path = build/com_sun_glass_events_DndEvent.h; sourceTree = "<group>"; };
+		BDA572311592015A004E2C91 /* com_sun_glass_events_KeyEvent.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = com_sun_glass_events_KeyEvent.h; path = build/com_sun_glass_events_KeyEvent.h; sourceTree = "<group>"; };
+		BDA572321592015A004E2C91 /* com_sun_glass_events_MouseEvent.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = com_sun_glass_events_MouseEvent.h; path = build/com_sun_glass_events_MouseEvent.h; sourceTree = "<group>"; };
+		BDA572341592015A004E2C91 /* com_sun_glass_events_SwipeGesture.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = com_sun_glass_events_SwipeGesture.h; path = build/com_sun_glass_events_SwipeGesture.h; sourceTree = "<group>"; };
+		BDA572351592015A004E2C91 /* com_sun_glass_events_TouchEvent.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = com_sun_glass_events_TouchEvent.h; path = build/com_sun_glass_events_TouchEvent.h; sourceTree = "<group>"; };
+		BDA572361592015A004E2C91 /* com_sun_glass_events_ViewEvent.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = com_sun_glass_events_ViewEvent.h; path = build/com_sun_glass_events_ViewEvent.h; sourceTree = "<group>"; };
+		BDA572371592015A004E2C91 /* com_sun_glass_events_WindowEvent.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = com_sun_glass_events_WindowEvent.h; path = build/com_sun_glass_events_WindowEvent.h; sourceTree = "<group>"; };
+		BDA572391592015A004E2C91 /* com_sun_glass_ui_Application_EventHandler.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = com_sun_glass_ui_Application_EventHandler.h; path = build/com_sun_glass_ui_Application_EventHandler.h; sourceTree = "<group>"; };
+		BDA5723A1592015A004E2C91 /* com_sun_glass_ui_Application.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = com_sun_glass_ui_Application.h; path = build/com_sun_glass_ui_Application.h; sourceTree = "<group>"; };
+		BDA5723B1592015A004E2C91 /* com_sun_glass_ui_Clipboard.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = com_sun_glass_ui_Clipboard.h; path = build/com_sun_glass_ui_Clipboard.h; sourceTree = "<group>"; };
+		BDA5723C1592015A004E2C91 /* com_sun_glass_ui_CommonDialogs_ExtensionFilter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = com_sun_glass_ui_CommonDialogs_ExtensionFilter.h; path = build/com_sun_glass_ui_CommonDialogs_ExtensionFilter.h; sourceTree = "<group>"; };
+		BDA5723D1592015A004E2C91 /* com_sun_glass_ui_CommonDialogs_Type.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = com_sun_glass_ui_CommonDialogs_Type.h; path = build/com_sun_glass_ui_CommonDialogs_Type.h; sourceTree = "<group>"; };
+		BDA5723E1592015A004E2C91 /* com_sun_glass_ui_CommonDialogs.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = com_sun_glass_ui_CommonDialogs.h; path = build/com_sun_glass_ui_CommonDialogs.h; sourceTree = "<group>"; };
+		BDA5723F1592015A004E2C91 /* com_sun_glass_ui_Cursor.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = com_sun_glass_ui_Cursor.h; path = build/com_sun_glass_ui_Cursor.h; sourceTree = "<group>"; };
+		BDA572401592015A004E2C91 /* com_sun_glass_ui_ios_IosApplication.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = com_sun_glass_ui_ios_IosApplication.h; path = build/com_sun_glass_ui_ios_IosApplication.h; sourceTree = "<group>"; };
+		BDA572411592015A004E2C91 /* com_sun_glass_ui_ios_IosClipboardDelegate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = com_sun_glass_ui_ios_IosClipboardDelegate.h; path = build/com_sun_glass_ui_ios_IosClipboardDelegate.h; sourceTree = "<group>"; };
+		BDA572421592015A004E2C91 /* com_sun_glass_ui_ios_IosCommonDialogs.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = com_sun_glass_ui_ios_IosCommonDialogs.h; path = build/com_sun_glass_ui_ios_IosCommonDialogs.h; sourceTree = "<group>"; };
+		BDA572431592015A004E2C91 /* com_sun_glass_ui_ios_IosCursor.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = com_sun_glass_ui_ios_IosCursor.h; path = build/com_sun_glass_ui_ios_IosCursor.h; sourceTree = "<group>"; };
+		BDA572441592015A004E2C91 /* com_sun_glass_ui_ios_IosGestureSupport.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = com_sun_glass_ui_ios_IosGestureSupport.h; path = build/com_sun_glass_ui_ios_IosGestureSupport.h; sourceTree = "<group>"; };
+		BDA572451592015A004E2C91 /* com_sun_glass_ui_ios_IosMenuBarDelegate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = com_sun_glass_ui_ios_IosMenuBarDelegate.h; path = build/com_sun_glass_ui_ios_IosMenuBarDelegate.h; sourceTree = "<group>"; };
+		BDA572461592015A004E2C91 /* com_sun_glass_ui_ios_IosMenuDelegate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = com_sun_glass_ui_ios_IosMenuDelegate.h; path = build/com_sun_glass_ui_ios_IosMenuDelegate.h; sourceTree = "<group>"; };
+		BDA572471592015A004E2C91 /* com_sun_glass_ui_ios_IosPixels.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = com_sun_glass_ui_ios_IosPixels.h; path = build/com_sun_glass_ui_ios_IosPixels.h; sourceTree = "<group>"; };
+		BDA572481592015A004E2C91 /* com_sun_glass_ui_ios_IosPlatformFactory.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = com_sun_glass_ui_ios_IosPlatformFactory.h; path = build/com_sun_glass_ui_ios_IosPlatformFactory.h; sourceTree = "<group>"; };
+		BDA572491592015A004E2C91 /* com_sun_glass_ui_ios_IosRobot.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = com_sun_glass_ui_ios_IosRobot.h; path = build/com_sun_glass_ui_ios_IosRobot.h; sourceTree = "<group>"; };
+		BDA5724A1592015A004E2C91 /* com_sun_glass_ui_ios_IosScreen.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = com_sun_glass_ui_ios_IosScreen.h; path = build/com_sun_glass_ui_ios_IosScreen.h; sourceTree = "<group>"; };
+		BDA5724B1592015A004E2C91 /* com_sun_glass_ui_ios_IosTimer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = com_sun_glass_ui_ios_IosTimer.h; path = build/com_sun_glass_ui_ios_IosTimer.h; sourceTree = "<group>"; };
+		BDA5724C1592015A004E2C91 /* com_sun_glass_ui_ios_IosView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = com_sun_glass_ui_ios_IosView.h; path = build/com_sun_glass_ui_ios_IosView.h; sourceTree = "<group>"; };
+		BDA5724D1592015A004E2C91 /* com_sun_glass_ui_ios_IosWindow.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = com_sun_glass_ui_ios_IosWindow.h; path = build/com_sun_glass_ui_ios_IosWindow.h; sourceTree = "<group>"; };
+		BDA5724E1592015A004E2C91 /* com_sun_glass_ui_Menu_EventHandler.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = com_sun_glass_ui_Menu_EventHandler.h; path = build/com_sun_glass_ui_Menu_EventHandler.h; sourceTree = "<group>"; };
+		BDA5724F1592015A004E2C91 /* com_sun_glass_ui_Menu.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = com_sun_glass_ui_Menu.h; path = build/com_sun_glass_ui_Menu.h; sourceTree = "<group>"; };
+		BDA572501592015A004E2C91 /* com_sun_glass_ui_MenuBar.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = com_sun_glass_ui_MenuBar.h; path = build/com_sun_glass_ui_MenuBar.h; sourceTree = "<group>"; };
+		BDA572511592015A004E2C91 /* com_sun_glass_ui_MenuItem_Callback.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = com_sun_glass_ui_MenuItem_Callback.h; path = build/com_sun_glass_ui_MenuItem_Callback.h; sourceTree = "<group>"; };
+		BDA572521592015A004E2C91 /* com_sun_glass_ui_MenuItem.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = com_sun_glass_ui_MenuItem.h; path = build/com_sun_glass_ui_MenuItem.h; sourceTree = "<group>"; };
+		BDA572531592015A004E2C91 /* com_sun_glass_ui_Pen.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = com_sun_glass_ui_Pen.h; path = build/com_sun_glass_ui_Pen.h; sourceTree = "<group>"; };
+		BDA572541592015A004E2C91 /* com_sun_glass_ui_Pixels_Format.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = com_sun_glass_ui_Pixels_Format.h; path = build/com_sun_glass_ui_Pixels_Format.h; sourceTree = "<group>"; };
+		BDA572551592015A004E2C91 /* com_sun_glass_ui_Pixels.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = com_sun_glass_ui_Pixels.h; path = build/com_sun_glass_ui_Pixels.h; sourceTree = "<group>"; };
+		BDA572561592015A004E2C91 /* com_sun_glass_ui_Screen_SettingsChangedCallback.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = com_sun_glass_ui_Screen_SettingsChangedCallback.h; path = build/com_sun_glass_ui_Screen_SettingsChangedCallback.h; sourceTree = "<group>"; };
+		BDA572571592015A004E2C91 /* com_sun_glass_ui_Screen.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = com_sun_glass_ui_Screen.h; path = build/com_sun_glass_ui_Screen.h; sourceTree = "<group>"; };
+		BDA572581592015A004E2C91 /* com_sun_glass_ui_Timer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = com_sun_glass_ui_Timer.h; path = build/com_sun_glass_ui_Timer.h; sourceTree = "<group>"; };
+		BDA572591592015A004E2C91 /* com_sun_glass_ui_View_Capability.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = com_sun_glass_ui_View_Capability.h; path = build/com_sun_glass_ui_View_Capability.h; sourceTree = "<group>"; };
+		BDA5725A1592015A004E2C91 /* com_sun_glass_ui_View_EventHandler.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = com_sun_glass_ui_View_EventHandler.h; path = build/com_sun_glass_ui_View_EventHandler.h; sourceTree = "<group>"; };
+		BDA5725C1592015A004E2C91 /* com_sun_glass_ui_View.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = com_sun_glass_ui_View.h; path = build/com_sun_glass_ui_View.h; sourceTree = "<group>"; };
+		BDA5725D1592015A004E2C91 /* com_sun_glass_ui_Window_EventHandler.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = com_sun_glass_ui_Window_EventHandler.h; path = build/com_sun_glass_ui_Window_EventHandler.h; sourceTree = "<group>"; };
+		BDA5725E1592015A004E2C91 /* com_sun_glass_ui_Window_Level.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = com_sun_glass_ui_Window_Level.h; path = build/com_sun_glass_ui_Window_Level.h; sourceTree = "<group>"; };
+		BDA5725F1592015A004E2C91 /* com_sun_glass_ui_Window_State.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = com_sun_glass_ui_Window_State.h; path = build/com_sun_glass_ui_Window_State.h; sourceTree = "<group>"; };
+		BDA572601592015A004E2C91 /* com_sun_glass_ui_Window_TrackingRectangle.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = com_sun_glass_ui_Window_TrackingRectangle.h; path = build/com_sun_glass_ui_Window_TrackingRectangle.h; sourceTree = "<group>"; };
+		BDA572611592015A004E2C91 /* com_sun_glass_ui_Window_UndecoratedMoveResizeHelper.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = com_sun_glass_ui_Window_UndecoratedMoveResizeHelper.h; path = build/com_sun_glass_ui_Window_UndecoratedMoveResizeHelper.h; sourceTree = "<group>"; };
+		BDA572631592015A004E2C91 /* com_sun_glass_ui_Window.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = com_sun_glass_ui_Window.h; path = build/com_sun_glass_ui_Window.h; sourceTree = "<group>"; };
+		C67E3319161197C900383C7B /* com_sun_glass_ui_ios_IosPasteboard.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = com_sun_glass_ui_ios_IosPasteboard.h; path = build/com_sun_glass_ui_ios_IosPasteboard.h; sourceTree = "<group>"; };
+		C67E331C16119C6C00383C7B /* CoreFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreFoundation.framework; path = System/Library/Frameworks/CoreFoundation.framework; sourceTree = SDKROOT; };
+		C6D7200013B334BF0012D459 /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = System/Library/Frameworks/UIKit.framework; sourceTree = SDKROOT; };
+		C6D7200213B334D40012D459 /* OpenGLES.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = OpenGLES.framework; path = System/Library/Frameworks/OpenGLES.framework; sourceTree = SDKROOT; };
+		D2AAC07E0554694100DB518D /* libglass.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libglass.a; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		D2AAC07C0554694100DB518D /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C67E331D16119C6C00383C7B /* CoreFoundation.framework in Frameworks */,
+				AACBBE4A0F95108600F1A2B1 /* Foundation.framework in Frameworks */,
+				C6D7200113B334BF0012D459 /* UIKit.framework in Frameworks */,
+				C6D7200313B334D40012D459 /* OpenGLES.framework in Frameworks */,
+				84AE77D0157372CF009ECC6C /* CoreMotion.framework in Frameworks */,
+				84AE784215751D48009ECC6C /* CoreLocation.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		034768DFFF38A50411DB9C8B /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				D2AAC07E0554694100DB518D /* libglass.a */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		0867D691FE84028FC02AAC07 /* glass_lib_ios */ = {
+			isa = PBXGroup;
+			children = (
+				DCAAEFD3146840B40073D528 /* Headers */,
+				08FB77AEFE84172EC02AAC07 /* Classes */,
+				32C88DFF0371C24200C91783 /* Other Sources */,
+				0867D69AFE84028FC02AAC07 /* Frameworks */,
+				034768DFFF38A50411DB9C8B /* Products */,
+			);
+			name = glass_lib_ios;
+			sourceTree = "<group>";
+		};
+		0867D69AFE84028FC02AAC07 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				C67E331C16119C6C00383C7B /* CoreFoundation.framework */,
+				84AE784115751D48009ECC6C /* CoreLocation.framework */,
+				84AE77CF157372CF009ECC6C /* CoreMotion.framework */,
+				AACBBE490F95108600F1A2B1 /* Foundation.framework */,
+				C6D7200013B334BF0012D459 /* UIKit.framework */,
+				C6D7200213B334D40012D459 /* OpenGLES.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		08FB77AEFE84172EC02AAC07 /* Classes */ = {
+			isa = PBXGroup;
+			children = (
+				23AE070816D6D15800509584 /* common.h */,
+				23AE06D016D6D14800509584 /* GlassApplication.h */,
+				23AE06D116D6D14900509584 /* GlassApplication.m */,
+				23AE06D216D6D14900509584 /* GlassCursor.m */,
+				23AE06D316D6D14900509584 /* GlassDragDelegate.h */,
+				23AE06D416D6D14900509584 /* GlassDragDelegate.m */,
+				23AE06D516D6D14900509584 /* GlassGestureSupport.m */,
+				23AE06D616D6D14900509584 /* GlassHelper.h */,
+				23AE06D716D6D14900509584 /* GlassHelper.m */,
+				23AE06D816D6D14900509584 /* GlassKey.m */,
+				23AE06D916D6D14900509584 /* GlassMacros.h */,
+				23AE06DA16D6D14900509584 /* GlassPasteboard.h */,
+				23AE06DB16D6D14900509584 /* GlassPasteboard.m */,
+				23AE06DC16D6D14900509584 /* GlassRobot.m */,
+				23AE06DD16D6D14900509584 /* GlassScreen.m */,
+				23AE06DE16D6D14900509584 /* GlassStatics.h */,
+				23AE06DF16D6D14900509584 /* GlassStatics.m */,
+				23AE06E016D6D14900509584 /* GlassTimer.h */,
+				23AE06E116D6D14900509584 /* GlassTimer.m */,
+				23AE06E216D6D14900509584 /* GlassView.h */,
+				23AE06E316D6D14900509584 /* GlassView.m */,
+				23AE06E416D6D14900509584 /* GlassViewController.h */,
+				23AE06E516D6D14900509584 /* GlassViewController.m */,
+				23AE06E616D6D14900509584 /* GlassViewDelegate.h */,
+				23AE06E716D6D14900509584 /* GlassViewDelegate.m */,
+				23AE06E816D6D14900509584 /* GlassViewGL.h */,
+				23AE06E916D6D14900509584 /* GlassViewGL.m */,
+				23AE06EA16D6D14900509584 /* GlassWindow.h */,
+				23AE06EB16D6D14900509584 /* GlassWindow.m */,
+			);
+			name = Classes;
+			sourceTree = "<group>";
+		};
+		32C88DFF0371C24200C91783 /* Other Sources */ = {
+			isa = PBXGroup;
+			children = (
+				23AE070A16D6D17200509584 /* glass_Prefix.pch */,
+			);
+			name = "Other Sources";
+			sourceTree = "<group>";
+		};
+		DCAAEFD3146840B40073D528 /* Headers */ = {
+			isa = PBXGroup;
+			children = (
+				C67E3319161197C900383C7B /* com_sun_glass_ui_ios_IosPasteboard.h */,
+				BDA572301592015A004E2C91 /* com_sun_glass_events_DndEvent.h */,
+				BDA572311592015A004E2C91 /* com_sun_glass_events_KeyEvent.h */,
+				BDA572321592015A004E2C91 /* com_sun_glass_events_MouseEvent.h */,
+				BDA572341592015A004E2C91 /* com_sun_glass_events_SwipeGesture.h */,
+				BDA572351592015A004E2C91 /* com_sun_glass_events_TouchEvent.h */,
+				BDA572361592015A004E2C91 /* com_sun_glass_events_ViewEvent.h */,
+				BDA572371592015A004E2C91 /* com_sun_glass_events_WindowEvent.h */,
+				BDA572391592015A004E2C91 /* com_sun_glass_ui_Application_EventHandler.h */,
+				BDA5723A1592015A004E2C91 /* com_sun_glass_ui_Application.h */,
+				BDA5723B1592015A004E2C91 /* com_sun_glass_ui_Clipboard.h */,
+				BDA5723C1592015A004E2C91 /* com_sun_glass_ui_CommonDialogs_ExtensionFilter.h */,
+				BDA5723D1592015A004E2C91 /* com_sun_glass_ui_CommonDialogs_Type.h */,
+				BDA5723E1592015A004E2C91 /* com_sun_glass_ui_CommonDialogs.h */,
+				BDA5723F1592015A004E2C91 /* com_sun_glass_ui_Cursor.h */,
+				BDA572401592015A004E2C91 /* com_sun_glass_ui_ios_IosApplication.h */,
+				BDA572411592015A004E2C91 /* com_sun_glass_ui_ios_IosClipboardDelegate.h */,
+				BDA572421592015A004E2C91 /* com_sun_glass_ui_ios_IosCommonDialogs.h */,
+				BDA572431592015A004E2C91 /* com_sun_glass_ui_ios_IosCursor.h */,
+				BDA572441592015A004E2C91 /* com_sun_glass_ui_ios_IosGestureSupport.h */,
+				BDA572451592015A004E2C91 /* com_sun_glass_ui_ios_IosMenuBarDelegate.h */,
+				BDA572461592015A004E2C91 /* com_sun_glass_ui_ios_IosMenuDelegate.h */,
+				BDA572471592015A004E2C91 /* com_sun_glass_ui_ios_IosPixels.h */,
+				BDA572481592015A004E2C91 /* com_sun_glass_ui_ios_IosPlatformFactory.h */,
+				BDA572491592015A004E2C91 /* com_sun_glass_ui_ios_IosRobot.h */,
+				BDA5724A1592015A004E2C91 /* com_sun_glass_ui_ios_IosScreen.h */,
+				BDA5724B1592015A004E2C91 /* com_sun_glass_ui_ios_IosTimer.h */,
+				BDA5724C1592015A004E2C91 /* com_sun_glass_ui_ios_IosView.h */,
+				BDA5724D1592015A004E2C91 /* com_sun_glass_ui_ios_IosWindow.h */,
+				BDA5724E1592015A004E2C91 /* com_sun_glass_ui_Menu_EventHandler.h */,
+				BDA5724F1592015A004E2C91 /* com_sun_glass_ui_Menu.h */,
+				BDA572501592015A004E2C91 /* com_sun_glass_ui_MenuBar.h */,
+				BDA572511592015A004E2C91 /* com_sun_glass_ui_MenuItem_Callback.h */,
+				BDA572521592015A004E2C91 /* com_sun_glass_ui_MenuItem.h */,
+				BDA572531592015A004E2C91 /* com_sun_glass_ui_Pen.h */,
+				BDA572541592015A004E2C91 /* com_sun_glass_ui_Pixels_Format.h */,
+				BDA572551592015A004E2C91 /* com_sun_glass_ui_Pixels.h */,
+				BDA572561592015A004E2C91 /* com_sun_glass_ui_Screen_SettingsChangedCallback.h */,
+				BDA572571592015A004E2C91 /* com_sun_glass_ui_Screen.h */,
+				BDA572581592015A004E2C91 /* com_sun_glass_ui_Timer.h */,
+				BDA572591592015A004E2C91 /* com_sun_glass_ui_View_Capability.h */,
+				BDA5725A1592015A004E2C91 /* com_sun_glass_ui_View_EventHandler.h */,
+				BDA5725C1592015A004E2C91 /* com_sun_glass_ui_View.h */,
+				BDA5725D1592015A004E2C91 /* com_sun_glass_ui_Window_EventHandler.h */,
+				BDA5725E1592015A004E2C91 /* com_sun_glass_ui_Window_Level.h */,
+				BDA5725F1592015A004E2C91 /* com_sun_glass_ui_Window_State.h */,
+				BDA572601592015A004E2C91 /* com_sun_glass_ui_Window_TrackingRectangle.h */,
+				BDA572611592015A004E2C91 /* com_sun_glass_ui_Window_UndecoratedMoveResizeHelper.h */,
+				BDA572631592015A004E2C91 /* com_sun_glass_ui_Window.h */,
+				BDA5722E1591A6C4004E2C91 /* common.h */,
+			);
+			name = Headers;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXHeadersBuildPhase section */
+		D2AAC07A0554694100DB518D /* Headers */ = {
+			isa = PBXHeadersBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				BDA5722F1591A6C4004E2C91 /* common.h in Headers */,
+				BDA572641592015A004E2C91 /* com_sun_glass_events_DndEvent.h in Headers */,
+				BDA572651592015A004E2C91 /* com_sun_glass_events_KeyEvent.h in Headers */,
+				BDA572661592015A004E2C91 /* com_sun_glass_events_MouseEvent.h in Headers */,
+				BDA572681592015A004E2C91 /* com_sun_glass_events_SwipeGesture.h in Headers */,
+				BDA572691592015A004E2C91 /* com_sun_glass_events_TouchEvent.h in Headers */,
+				BDA5726A1592015A004E2C91 /* com_sun_glass_events_ViewEvent.h in Headers */,
+				BDA5726B1592015A004E2C91 /* com_sun_glass_events_WindowEvent.h in Headers */,
+				BDA5726D1592015A004E2C91 /* com_sun_glass_ui_Application_EventHandler.h in Headers */,
+				BDA5726E1592015A004E2C91 /* com_sun_glass_ui_Application.h in Headers */,
+				BDA5726F1592015A004E2C91 /* com_sun_glass_ui_Clipboard.h in Headers */,
+				BDA572701592015A004E2C91 /* com_sun_glass_ui_CommonDialogs_ExtensionFilter.h in Headers */,
+				BDA572711592015A004E2C91 /* com_sun_glass_ui_CommonDialogs_Type.h in Headers */,
+				BDA572721592015A004E2C91 /* com_sun_glass_ui_CommonDialogs.h in Headers */,
+				BDA572731592015A004E2C91 /* com_sun_glass_ui_Cursor.h in Headers */,
+				BDA572741592015A004E2C91 /* com_sun_glass_ui_ios_IosApplication.h in Headers */,
+				BDA572751592015A004E2C91 /* com_sun_glass_ui_ios_IosClipboardDelegate.h in Headers */,
+				BDA572761592015A004E2C91 /* com_sun_glass_ui_ios_IosCommonDialogs.h in Headers */,
+				BDA572771592015A004E2C91 /* com_sun_glass_ui_ios_IosCursor.h in Headers */,
+				BDA572781592015A004E2C91 /* com_sun_glass_ui_ios_IosGestureSupport.h in Headers */,
+				BDA572791592015A004E2C91 /* com_sun_glass_ui_ios_IosMenuBarDelegate.h in Headers */,
+				BDA5727A1592015A004E2C91 /* com_sun_glass_ui_ios_IosMenuDelegate.h in Headers */,
+				BDA5727B1592015A004E2C91 /* com_sun_glass_ui_ios_IosPixels.h in Headers */,
+				BDA5727C1592015A004E2C91 /* com_sun_glass_ui_ios_IosPlatformFactory.h in Headers */,
+				BDA5727D1592015A004E2C91 /* com_sun_glass_ui_ios_IosRobot.h in Headers */,
+				BDA5727E1592015A004E2C91 /* com_sun_glass_ui_ios_IosScreen.h in Headers */,
+				BDA5727F1592015A004E2C91 /* com_sun_glass_ui_ios_IosTimer.h in Headers */,
+				BDA572801592015A004E2C91 /* com_sun_glass_ui_ios_IosView.h in Headers */,
+				BDA572811592015A004E2C91 /* com_sun_glass_ui_ios_IosWindow.h in Headers */,
+				BDA572821592015A004E2C91 /* com_sun_glass_ui_Menu_EventHandler.h in Headers */,
+				BDA572831592015A004E2C91 /* com_sun_glass_ui_Menu.h in Headers */,
+				BDA572841592015A004E2C91 /* com_sun_glass_ui_MenuBar.h in Headers */,
+				BDA572851592015A004E2C91 /* com_sun_glass_ui_MenuItem_Callback.h in Headers */,
+				BDA572861592015A004E2C91 /* com_sun_glass_ui_MenuItem.h in Headers */,
+				BDA572871592015A004E2C91 /* com_sun_glass_ui_Pen.h in Headers */,
+				BDA572881592015A004E2C91 /* com_sun_glass_ui_Pixels_Format.h in Headers */,
+				BDA572891592015A004E2C91 /* com_sun_glass_ui_Pixels.h in Headers */,
+				BDA5728A1592015A004E2C91 /* com_sun_glass_ui_Screen_SettingsChangedCallback.h in Headers */,
+				BDA5728B1592015A004E2C91 /* com_sun_glass_ui_Screen.h in Headers */,
+				BDA5728C1592015A004E2C91 /* com_sun_glass_ui_Timer.h in Headers */,
+				BDA5728D1592015A004E2C91 /* com_sun_glass_ui_View_Capability.h in Headers */,
+				BDA5728E1592015A004E2C91 /* com_sun_glass_ui_View_EventHandler.h in Headers */,
+				BDA572901592015A004E2C91 /* com_sun_glass_ui_View.h in Headers */,
+				BDA572911592015A004E2C91 /* com_sun_glass_ui_Window_EventHandler.h in Headers */,
+				BDA572921592015A004E2C91 /* com_sun_glass_ui_Window_Level.h in Headers */,
+				BDA572931592015A004E2C91 /* com_sun_glass_ui_Window_State.h in Headers */,
+				BDA572941592015A004E2C91 /* com_sun_glass_ui_Window_TrackingRectangle.h in Headers */,
+				BDA572951592015A004E2C91 /* com_sun_glass_ui_Window_UndecoratedMoveResizeHelper.h in Headers */,
+				BDA572971592015A004E2C91 /* com_sun_glass_ui_Window.h in Headers */,
+				C67E331A161197C900383C7B /* com_sun_glass_ui_ios_IosPasteboard.h in Headers */,
+				23AE06EC16D6D14900509584 /* GlassApplication.h in Headers */,
+				23AE06EF16D6D14900509584 /* GlassDragDelegate.h in Headers */,
+				23AE06F216D6D14900509584 /* GlassHelper.h in Headers */,
+				23AE06F516D6D14900509584 /* GlassMacros.h in Headers */,
+				23AE06F616D6D14900509584 /* GlassPasteboard.h in Headers */,
+				23AE06FA16D6D14900509584 /* GlassStatics.h in Headers */,
+				23AE06FC16D6D14900509584 /* GlassTimer.h in Headers */,
+				23AE06FE16D6D14900509584 /* GlassView.h in Headers */,
+				23AE070016D6D14900509584 /* GlassViewController.h in Headers */,
+				23AE070216D6D14900509584 /* GlassViewDelegate.h in Headers */,
+				23AE070416D6D14900509584 /* GlassViewGL.h in Headers */,
+				23AE070616D6D14900509584 /* GlassWindow.h in Headers */,
+				23AE070916D6D15800509584 /* common.h in Headers */,
+				23AE070B16D6D17200509584 /* glass_Prefix.pch in Headers */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXHeadersBuildPhase section */
+
+/* Begin PBXNativeTarget section */
+		D2AAC07D0554694100DB518D /* glass */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 1DEB921E08733DC00010E9CD /* Build configuration list for PBXNativeTarget "glass" */;
+			buildPhases = (
+				D2AAC07A0554694100DB518D /* Headers */,
+				D2AAC07B0554694100DB518D /* Sources */,
+				D2AAC07C0554694100DB518D /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = glass;
+			productName = glass_lib_ios;
+			productReference = D2AAC07E0554694100DB518D /* libglass.a */;
+			productType = "com.apple.product-type.library.static";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		0867D690FE84028FC02AAC07 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				ORGANIZATIONNAME = Oracle;
+			};
+			buildConfigurationList = 1DEB922208733DC00010E9CD /* Build configuration list for PBXProject "glass" */;
+			compatibilityVersion = "Xcode 3.2";
+			developmentRegion = English;
+			hasScannedForEncodings = 1;
+			knownRegions = (
+				English,
+				Japanese,
+				French,
+				German,
+			);
+			mainGroup = 0867D691FE84028FC02AAC07 /* glass_lib_ios */;
+			productRefGroup = 034768DFFF38A50411DB9C8B /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				D2AAC07D0554694100DB518D /* glass */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXSourcesBuildPhase section */
+		D2AAC07B0554694100DB518D /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				23AE06ED16D6D14900509584 /* GlassApplication.m in Sources */,
+				23AE06EE16D6D14900509584 /* GlassCursor.m in Sources */,
+				23AE06F016D6D14900509584 /* GlassDragDelegate.m in Sources */,
+				23AE06F116D6D14900509584 /* GlassGestureSupport.m in Sources */,
+				23AE06F316D6D14900509584 /* GlassHelper.m in Sources */,
+				23AE06F416D6D14900509584 /* GlassKey.m in Sources */,
+				23AE06F716D6D14900509584 /* GlassPasteboard.m in Sources */,
+				23AE06F816D6D14900509584 /* GlassRobot.m in Sources */,
+				23AE06F916D6D14900509584 /* GlassScreen.m in Sources */,
+				23AE06FB16D6D14900509584 /* GlassStatics.m in Sources */,
+				23AE06FD16D6D14900509584 /* GlassTimer.m in Sources */,
+				23AE06FF16D6D14900509584 /* GlassView.m in Sources */,
+				23AE070116D6D14900509584 /* GlassViewController.m in Sources */,
+				23AE070316D6D14900509584 /* GlassViewDelegate.m in Sources */,
+				23AE070516D6D14900509584 /* GlassViewGL.m in Sources */,
+				23AE070716D6D14900509584 /* GlassWindow.m in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		1DEB921F08733DC00010E9CD /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = "$(ARCHS_STANDARD_32_BIT)";
+				COPY_PHASE_STRIP = NO;
+				DSTROOT = /tmp/glass_lib_ios.dst;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_ENABLE_FIX_AND_CONTINUE = YES;
+				GCC_MODEL_TUNING = G5;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PRECOMPILE_PREFIX_HEADER = YES;
+				GCC_PREFIX_HEADER = src/glass_Prefix.pch;
+				GCC_VERSION = com.apple.compilers.llvm.clang.1_0;
+				INSTALL_PATH = /usr/local/lib;
+				ONLY_ACTIVE_ARCH = YES;
+				PRIVATE_HEADERS_FOLDER_PATH = "";
+				PRODUCT_NAME = glass;
+				PUBLIC_HEADERS_FOLDER_PATH = "";
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALID_ARCHS = "armv7 i386";
+			};
+			name = Debug;
+		};
+		1DEB922008733DC00010E9CD /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = "$(ARCHS_STANDARD_32_BIT)";
+				DSTROOT = /tmp/glass_lib_ios.dst;
+				GCC_MODEL_TUNING = G5;
+				GCC_PRECOMPILE_PREFIX_HEADER = YES;
+				GCC_PREFIX_HEADER = src/glass_Prefix.pch;
+				GCC_VERSION = com.apple.compilers.llvm.clang.1_0;
+				INSTALL_PATH = /usr/local/lib;
+				ONLY_ACTIVE_ARCH = YES;
+				PRIVATE_HEADERS_FOLDER_PATH = "";
+				PRODUCT_NAME = glass;
+				PUBLIC_HEADERS_FOLDER_PATH = "";
+				VALID_ARCHS = "armv7 i386";
+			};
+			name = Release;
+		};
+		1DEB922308733DC00010E9CD /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = "$(ARCHS_STANDARD_32_BIT)";
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				GCC_C_LANGUAGE_STANDARD = c99;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					USE_GLASS_CHECK,
+					"GLASS_IOS_DEBUG=1",
+					"$(EXTRA_CFLAGS)",
+				);
+				GCC_VERSION = com.apple.compilers.llvm.clang.1_0;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				HEADER_SEARCH_PATHS = /System/Library/Frameworks/JavaVM.framework/Headers;
+				ONLY_ACTIVE_ARCH = YES;
+				OTHER_LDFLAGS = "-ObjC";
+				PREBINDING = NO;
+				PROVISIONING_PROFILE = "";
+				SDKROOT = iphoneos;
+				USER_HEADER_SEARCH_PATHS = /System/Library/Frameworks/JavaVM.framework/Headers;
+				VALID_ARCHS = "armv7 i386";
+			};
+			name = Debug;
+		};
+		1DEB922408733DC00010E9CD /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = "$(ARCHS_STANDARD_32_BIT)";
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				COPY_PHASE_STRIP = NO;
+				DEPLOYMENT_LOCATION = NO;
+				GCC_C_LANGUAGE_STANDARD = c99;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					USE_GLASS_CHECK,
+					"GLASS_IOS_DEBUG=0",
+					"$(EXTRA_CFLAGS)",
+				);
+				GCC_VERSION = com.apple.compilers.llvm.clang.1_0;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				HEADER_SEARCH_PATHS = /System/Library/Frameworks/JavaVM.framework/Headers;
+				ONLY_ACTIVE_ARCH = YES;
+				OTHER_LDFLAGS = "-ObjC";
+				PREBINDING = YES;
+				PROVISIONING_PROFILE = "";
+				SDKROOT = iphoneos;
+				STRIP_INSTALLED_PRODUCT = NO;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				USER_HEADER_SEARCH_PATHS = /System/Library/Frameworks/JavaVM.framework/Headers;
+				VALID_ARCHS = "armv7 i386";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		1DEB921E08733DC00010E9CD /* Build configuration list for PBXNativeTarget "glass" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				1DEB921F08733DC00010E9CD /* Debug */,
+				1DEB922008733DC00010E9CD /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		1DEB922208733DC00010E9CD /* Build configuration list for PBXProject "glass" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				1DEB922308733DC00010E9CD /* Debug */,
+				1DEB922408733DC00010E9CD /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 0867D690FE84028FC02AAC07 /* Project object */;
+}

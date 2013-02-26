@@ -1,0 +1,164 @@
+/*
+ * Copyright (c) 2008, 2013 Oracle and/or its affiliates.
+ * All rights reserved. Use is subject to license terms.
+ *
+ * This file is available and licensed under the following license:
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ *
+ *  - Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ *  - Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in
+ *    the documentation and/or other materials provided with the distribution.
+ *  - Neither the name of Oracle Corporation nor the names of its
+ *    contributors may be used to endorse or promote products derived
+ *    from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+.chart-bar {
+    -fx-background-color: #69de01;
+    -fx-background-insets: 0;
+    -fx-background-radius: 0;
+}
+.data0.chart-bar { -fx-background-color: #69de01; }
+.data1.chart-bar { -fx-background-color: #69de01; }
+.data2.chart-bar { -fx-background-color: #69de01; }
+.data3.chart-bar { -fx-background-color: #69de01; }
+.data4.chart-bar { -fx-background-color: #69de01; }
+.data5.chart-bar { -fx-background-color: #69de01; }
+.data6.chart-bar { -fx-background-color: #69de01; }
+.data7.chart-bar { -fx-background-color: #69de01; }
+.data8.chart-bar { -fx-background-color: #75e101; }
+.data9.chart-bar { -fx-background-color: #75e101; }
+.data10.chart-bar { -fx-background-color: #75e101; }
+.data11.chart-bar { -fx-background-color: #75e101; }
+.data12.chart-bar { -fx-background-color: #75e101; }
+.data13.chart-bar { -fx-background-color: #75e101; }
+.data14.chart-bar { -fx-background-color: #75e101; }
+.data15.chart-bar { -fx-background-color: #75e101; }
+.data16.chart-bar { -fx-background-color: #86e701; }
+.data17.chart-bar { -fx-background-color: #86e701; }
+.data18.chart-bar { -fx-background-color: #86e701; }
+.data19.chart-bar { -fx-background-color: #86e701; }
+.data20.chart-bar { -fx-background-color: #86e701; }
+.data21.chart-bar { -fx-background-color: #86e701; }
+.data22.chart-bar { -fx-background-color: #86e701; }
+.data23.chart-bar { -fx-background-color: #86e701; }
+.data24.chart-bar { -fx-background-color: #9aee01; }
+.data25.chart-bar { -fx-background-color: #9aee01; }
+.data26.chart-bar { -fx-background-color: #9aee01; }
+.data27.chart-bar { -fx-background-color: #9aee01; }
+.data28.chart-bar { -fx-background-color: #9aee01; }
+.data29.chart-bar { -fx-background-color: #9aee01; }
+.data30.chart-bar { -fx-background-color: #9aee01; }
+.data31.chart-bar { -fx-background-color: #9aee01; }
+.data32.chart-bar { -fx-background-color: #b0f000; }
+.data33.chart-bar { -fx-background-color: #b0f000; }
+.data34.chart-bar { -fx-background-color: #b0f000; }
+.data35.chart-bar { -fx-background-color: #b0f000; }
+.data36.chart-bar { -fx-background-color: #b0f000; }
+.data37.chart-bar { -fx-background-color: #b0f000; }
+.data38.chart-bar { -fx-background-color: #b0f000; }
+.data39.chart-bar { -fx-background-color: #b0f000; }
+.data40.chart-bar { -fx-background-color: #c6f000; }
+.data41.chart-bar { -fx-background-color: #c6f000; }
+.data42.chart-bar { -fx-background-color: #c6f000; }
+.data43.chart-bar { -fx-background-color: #c6f000; }
+.data44.chart-bar { -fx-background-color: #c6f000; }
+.data45.chart-bar { -fx-background-color: #c6f000; }
+.data46.chart-bar { -fx-background-color: #c6f000; }
+.data47.chart-bar { -fx-background-color: #c6f000; }
+.data48.chart-bar { -fx-background-color: #dbf000; }
+.data49.chart-bar { -fx-background-color: #dbf000; }
+.data50.chart-bar { -fx-background-color: #dbf000; }
+.data51.chart-bar { -fx-background-color: #dbf000; }
+.data52.chart-bar { -fx-background-color: #dbf000; }
+.data53.chart-bar { -fx-background-color: #dbf000; }
+.data54.chart-bar { -fx-background-color: #dbf000; }
+.data55.chart-bar { -fx-background-color: #dbf000; }
+.data56.chart-bar { -fx-background-color: #edf000; }
+.data57.chart-bar { -fx-background-color: #edf000; }
+.data58.chart-bar { -fx-background-color: #edf000; }
+.data59.chart-bar { -fx-background-color: #edf000; }
+.data60.chart-bar { -fx-background-color: #edf000; }
+.data61.chart-bar { -fx-background-color: #edf000; }
+.data62.chart-bar { -fx-background-color: #edf000; }
+.data63.chart-bar { -fx-background-color: #edf000; }
+.data64.chart-bar { -fx-background-color: #fbf002; }
+.data65.chart-bar { -fx-background-color: #fbf002; }
+.data66.chart-bar { -fx-background-color: #fbf002; }
+.data67.chart-bar { -fx-background-color: #fbf002; }
+.data68.chart-bar { -fx-background-color: #fbf002; }
+.data69.chart-bar { -fx-background-color: #fbf002; }
+.data70.chart-bar { -fx-background-color: #fbf002; }
+.data71.chart-bar { -fx-background-color: #fbf002; }
+.data72.chart-bar { -fx-background-color: #ffe500; }
+.data73.chart-bar { -fx-background-color: #ffe500; }
+.data74.chart-bar { -fx-background-color: #ffe500; }
+.data75.chart-bar { -fx-background-color: #ffe500; }
+.data76.chart-bar { -fx-background-color: #ffe500; }
+.data77.chart-bar { -fx-background-color: #ffe500; }
+.data78.chart-bar { -fx-background-color: #ffe500; }
+.data79.chart-bar { -fx-background-color: #ffe500; }
+.data80.chart-bar { -fx-background-color: #ffca00; }
+.data81.chart-bar { -fx-background-color: #ffca00; }
+.data82.chart-bar { -fx-background-color: #ffca00; }
+.data83.chart-bar { -fx-background-color: #ffca00; }
+.data84.chart-bar { -fx-background-color: #ffca00; }
+.data85.chart-bar { -fx-background-color: #ffca00; }
+.data86.chart-bar { -fx-background-color: #ffca00; }
+.data87.chart-bar { -fx-background-color: #ffca00; }
+.data88.chart-bar { -fx-background-color: #ffa700; }
+.data89.chart-bar { -fx-background-color: #ffa700; }
+.data90.chart-bar { -fx-background-color: #ffa700; }
+.data91.chart-bar { -fx-background-color: #ffa700; }
+.data92.chart-bar { -fx-background-color: #ffa700; }
+.data93.chart-bar { -fx-background-color: #ffa700; }
+.data94.chart-bar { -fx-background-color: #ffa700; }
+.data95.chart-bar { -fx-background-color: #ffa700; }
+.data96.chart-bar { -fx-background-color: #ff8100; }
+.data97.chart-bar { -fx-background-color: #ff8100; }
+.data98.chart-bar { -fx-background-color: #ff8100; }
+.data99.chart-bar { -fx-background-color: #ff8100; }
+.data100.chart-bar { -fx-background-color: #ff8100; }
+.data101.chart-bar { -fx-background-color: #ff8100; }
+.data102.chart-bar { -fx-background-color: #ff8100; }
+.data103.chart-bar { -fx-background-color: #ff8100; }
+.data104.chart-bar { -fx-background-color: #ff5900; }
+.data105.chart-bar { -fx-background-color: #ff5900; }
+.data106.chart-bar { -fx-background-color: #ff5900; }
+.data107.chart-bar { -fx-background-color: #ff5900; }
+.data108.chart-bar { -fx-background-color: #ff5900; }
+.data109.chart-bar { -fx-background-color: #ff5900; }
+.data110.chart-bar { -fx-background-color: #ff5900; }
+.data111.chart-bar { -fx-background-color: #ff5900; }
+.data112.chart-bar { -fx-background-color: #ff3400; }
+.data113.chart-bar { -fx-background-color: #ff3400; }
+.data114.chart-bar { -fx-background-color: #ff3400; }
+.data115.chart-bar { -fx-background-color: #ff3400; }
+.data116.chart-bar { -fx-background-color: #ff3400; }
+.data117.chart-bar { -fx-background-color: #ff3400; }
+.data118.chart-bar { -fx-background-color: #ff3400; }
+.data119.chart-bar { -fx-background-color: #ff3400; }
+.data120.chart-bar { -fx-background-color: #ff1600; }
+.data121.chart-bar { -fx-background-color: #ff1600; }
+.data122.chart-bar { -fx-background-color: #ff1600; }
+.data123.chart-bar { -fx-background-color: #ff1600; }
+.data124.chart-bar { -fx-background-color: #ff1600; }
+.data125.chart-bar { -fx-background-color: #ff1600; }
+.data126.chart-bar { -fx-background-color: #ff1600; }
+.data127.chart-bar { -fx-background-color: #ff1600; }

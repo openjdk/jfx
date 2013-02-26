@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://www.netbeans.org/ns/project/1">
+    <type>org.netbeans.modules.ant.freeform</type>
+    <configuration>
+        <general-data xmlns="http://www.netbeans.org/ns/freeform-project/1">
+            <!-- Do not use Project Properties customizer when editing this file manually. -->
+            <name>prism-null</name>
+            <properties>
+                <property-file>../base.properties</property-file>
+                <property-file>project.properties</property-file>
+                <property-file>../common.properties</property-file>
+            </properties>
+            <folders>
+                <source-folder>
+                    <label>Source Packages</label>
+                    <type>java</type>
+                    <location>${src.dir}</location>
+                </source-folder>
+                <source-folder>
+                    <label>Test Packages</label>
+                    <type>java</type>
+                    <location>${test.dir}</location>
+                </source-folder>
+            </folders>
+            <ide-actions>
+                <action name="build">
+                    <target>jar</target>
+                </action>
+                <action name="clean">
+                    <target>clean</target>
+                </action>
+                <action name="test">
+                    <target>test</target>
+                </action>
+                <action name="rebuild">
+                    <target>clean</target>
+                    <target>jar</target>
+                </action>
+                <action name="run.single">
+                    <target>test-single</target>
+                    <context>
+                        <property>run.file</property>
+                        <folder>${test.dir}</folder>
+                        <pattern>\.java$</pattern>
+                        <format>relative-path</format>
+                        <arity>
+                            <one-file-only/>
+                        </arity>
+                    </context>
+                </action>
+                <action name="test.single">
+                    <target>test-single</target>
+                    <context>
+                        <property>run.file</property>
+                        <folder>${test.dir}</folder>
+                        <pattern>\.java$</pattern>
+                        <format>relative-path</format>
+                        <arity>
+                            <one-file-only/>
+                        </arity>
+                    </context>
+                </action>
+            </ide-actions>
+            <export>
+                <type>jar</type>
+                <location>dist/prism-null.jar</location>
+                <build-target>jar</build-target>
+            </export>
+            <export>
+                <type>folder</type>
+                <location>${build.test.classes.dir}</location>
+                <build-target>jar</build-target>
+            </export>
+            <view>
+                <items>
+                    <source-folder style="packages">
+                        <label>Source Packages</label>
+                        <location>${src.dir}</location>
+                    </source-folder>
+                    <source-folder style="packages">
+                        <label>Test Packages</label>
+                        <location>${test.dir}</location>
+                    </source-folder>
+                    <source-file>
+                        <location>build.xml</location>
+                    </source-file>
+                </items>
+                <context-menu>
+                    <ide-action name="build"/>
+                    <ide-action name="rebuild"/>
+                    <ide-action name="clean"/>
+                    <ide-action name="test"/>
+                </context-menu>
+            </view>
+            <subprojects/>
+        </general-data>
+        <java-data xmlns="http://www.netbeans.org/ns/freeform-project-java/2">
+            <compilation-unit>
+                <package-root>${src.dir}</package-root>
+                <classpath mode="compile">${javac.classpath}</classpath>
+                <built-to>dist/prism-null.jar</built-to>
+                <source-level>1.5</source-level>
+            </compilation-unit>
+            <compilation-unit>
+                <package-root>${test.dir}</package-root>
+                <unit-tests/>
+                <classpath mode="compile">${javac.test.classpath}</classpath>
+                <built-to>${build.test.classes.dir}</built-to>
+                <source-level>1.5</source-level>
+            </compilation-unit>
+        </java-data>
+    </configuration>
+</project>
