@@ -130,6 +130,36 @@ public class LongPropertyTest {
         assertEquals("LongProperty [name: My name, value: " + VALUE_1 + "]", v5.toString());
     }
     
+    @Test
+    public void testAsObject() {
+        final LongProperty valueModel = new SimpleLongProperty();
+        final ObjectProperty<Long> exp = valueModel.asObject();
+
+        assertEquals(Long.valueOf(0L), exp.getValue());
+        valueModel.set(-4354L);
+        assertEquals(Long.valueOf(-4354L), exp.getValue());
+        valueModel.set(5L);
+        assertEquals(Long.valueOf(5L), exp.getValue());
+        
+        exp.set(10L);
+        assertEquals(10L, valueModel.longValue());
+    }
+    
+    @Test
+    public void testObjectToLong() {
+        final ObjectProperty<Long> valueModel = new SimpleObjectProperty<Long>();
+        final LongProperty exp = LongProperty.longProperty(valueModel);
+
+        assertEquals(0L, exp.longValue());
+        valueModel.set(-4354L);
+        assertEquals(-4354L, exp.longValue());
+        valueModel.set(5L);
+        assertEquals(5L, exp.longValue());
+        
+        exp.set(10L);
+        assertEquals(Long.valueOf(10L), valueModel.getValue());
+    }
+    
     private class LongPropertyStub extends LongProperty {
         
         private final Object bean;

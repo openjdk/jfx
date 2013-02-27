@@ -32,9 +32,12 @@ import javafx.beans.binding.FloatBinding;
 import javafx.beans.binding.IntegerBinding;
 import javafx.beans.binding.IntegerExpression;
 import javafx.beans.binding.LongBinding;
+import javafx.beans.binding.ObjectExpression;
 import javafx.beans.property.IntegerProperty;
 import javafx.beans.property.SimpleIntegerProperty;
 import javafx.beans.value.ObservableIntegerValueStub;
+import javafx.beans.value.ObservableValue;
+import javafx.beans.value.ObservableValueStub;
 import javafx.collections.FXCollections;
 
 import org.junit.Before;
@@ -179,6 +182,36 @@ public class IntegerExpressionTest {
 
         // make sure we do not create unnecessary bindings
         assertEquals(op1, IntegerExpression.integerExpression(op1));
+    }
+    
+    @Test
+    public void testAsObject() { 
+        final ObservableIntegerValueStub valueModel = new ObservableIntegerValueStub();
+        final ObjectExpression<Integer> exp = IntegerExpression.integerExpression(valueModel).asObject();
+        
+        assertEquals(Integer.valueOf(0), exp.getValue());
+        valueModel.set(data);
+        assertEquals(Integer.valueOf(data), exp.getValue());
+        valueModel.set(integer1);
+        assertEquals(Integer.valueOf(integer1), exp.getValue());
+    }
+    
+    @Test
+    public void testObjectToInteger() {
+        final ObservableValueStub<Integer> valueModel = new ObservableValueStub<Integer>();
+        final IntegerExpression exp = IntegerExpression.integerExpression(valueModel);
+
+        assertTrue(exp instanceof IntegerBinding);
+        assertEquals(FXCollections.singletonObservableList(valueModel), ((IntegerBinding)exp).getDependencies());
+
+        assertEquals(0, exp.intValue());
+        valueModel.set(data);
+        assertEquals(data, exp.intValue());
+        valueModel.set(integer1);
+        assertEquals(integer1, exp.intValue());
+
+        // make sure we do not create unnecessary bindings
+        assertEquals(op1, IntegerExpression.integerExpression((ObservableValue)op1));
     }
 
     @Test(expected=NullPointerException.class)

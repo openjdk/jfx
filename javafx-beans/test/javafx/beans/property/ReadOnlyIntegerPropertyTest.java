@@ -29,7 +29,9 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import javafx.beans.InvalidationListener;
+import javafx.beans.binding.ObjectExpression;
 import javafx.beans.value.ChangeListener;
+import static org.junit.Assert.assertEquals;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -151,6 +153,30 @@ public class ReadOnlyIntegerPropertyTest {
         final ReadOnlyIntegerProperty v6 = new ReadOnlyIntegerPropertyStub(null, name);
         assertEquals("ReadOnlyIntegerProperty [name: My name, value: " + DEFAULT + "]", v6.toString());
         
+    }
+    
+    @Test
+    public void testAsObject() {
+        final ReadOnlyIntegerWrapper valueModel = new ReadOnlyIntegerWrapper();
+        final ReadOnlyObjectProperty<Integer> exp = valueModel.getReadOnlyProperty().asObject();
+
+        assertEquals(Integer.valueOf(0), exp.getValue());
+        valueModel.set(-4354);
+        assertEquals(Integer.valueOf(-4354), exp.getValue());
+        valueModel.set(5);
+        assertEquals(Integer.valueOf(5), exp.getValue());
+    }
+    
+    @Test
+    public void testObjectToInteger() {
+        final ReadOnlyObjectWrapper<Integer> valueModel = new ReadOnlyObjectWrapper<Integer>();
+        final ReadOnlyIntegerProperty exp = ReadOnlyIntegerProperty.readOnlyIntegerProperty(valueModel.getReadOnlyProperty());
+
+        assertEquals(0, exp.intValue());
+        valueModel.set(-4354);
+        assertEquals(-4354, exp.intValue());
+        valueModel.set(5);
+        assertEquals(5, exp.intValue());
     }
     
     private static class ReadOnlyIntegerPropertyStub extends ReadOnlyIntegerProperty {

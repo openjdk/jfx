@@ -29,6 +29,7 @@ import javafx.beans.value.ObservableLongValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import com.sun.javafx.collections.annotations.ReturnsUnmodifiableCollection;
+import javafx.beans.value.ObservableValue;
 
 /**
  * A {@code LongExpression} is a {@link javafx.beans.value.ObservableLongValue}
@@ -105,8 +106,66 @@ public abstract class LongExpression extends NumberExpressionBase implements
                     public ObservableList<ObservableLongValue> getDependencies() {
                         return FXCollections.singletonObservableList(value);
                     }
-                };
+        };
     }
+
+    /**
+     * Returns a {@code LongExpression} that wraps an
+     * {@link javafx.beans.value.ObservableValue}. If the
+     * {@code ObservableValue} is already a {@code LongExpression}, it
+     * will be returned. Otherwise a new
+     * {@link javafx.beans.binding.LongBinding} is created that is bound to
+     * the {@code ObservableValue}.
+     * 
+     * <p>
+     * Note: this method can be used to convert an {@link ObjectExpression} or
+     * {@link javafx.beans.property.ObjectProperty} of specific number type to LongExpression, which
+     * is essentially an {@code ObservableValue<Number>}. See sample below.
+     * 
+     * <blockquote><pre>
+     *   LongProperty longProperty = new SimpleLongProperty(1L);
+     *   ObjectProperty&lt;Long&gt; objectProperty = new SimpleObjectProperty&lt;&gt;(2L);
+     *   BooleanBinding binding = longProperty.greaterThan(LongExpression.longExpression(objectProperty));
+     * </pre></blockquote>
+     * 
+     * Note: null values will be interpreted as 0L
+     * 
+     * @param value
+     *            The source {@code ObservableValue}
+     * @return A {@code LongExpression} that wraps the
+     *         {@code ObservableValue} if necessary
+     * @throws NullPointerException
+     *             if {@code value} is {@code null}
+     */
+    public static <T extends Number> LongExpression longExpression(final ObservableValue<T> value) {
+        if (value == null) {
+            throw new NullPointerException("Value must be specified.");
+        }
+        return (value instanceof LongExpression) ? (LongExpression) value
+                : new LongBinding() {
+            {
+                super.bind(value);
+            }
+
+            @Override
+            public void dispose() {
+                super.unbind(value);
+            }
+
+            @Override
+            protected long computeValue() {
+                final T val = value.getValue();
+                return val == null ? 0L : val.longValue();
+            }
+
+            @Override
+            @ReturnsUnmodifiableCollection
+            public ObservableList<ObservableValue<T>> getDependencies() {
+                return FXCollections.singletonObservableList(value);
+            }
+        };
+    }
+
 
     @Override
     public LongBinding negate() {
@@ -191,5 +250,31 @@ public abstract class LongExpression extends NumberExpressionBase implements
     @Override
     public LongBinding divide(final int other) {
         return (LongBinding) Bindings.divide(this, other);
+    }
+    
+    /**
+     * Creates an {@link javafx.beans.binding.ObjectExpression} that holds the value
+     * of this {@code LongExpression}. If the
+     * value of this {@code LongExpression} changes, the value of the
+     * {@code ObjectExpression} will be updated automatically.
+     * 
+     * @return the new {@code ObjectExpression}
+     */
+    public ObjectExpression<Long> asObject() {
+        return new ObjectBinding<Long>() {
+            {
+                bind(LongExpression.this);
+            }
+
+            @Override
+            public void dispose() {
+                unbind(LongExpression.this);
+            }
+            
+            @Override
+            protected Long computeValue() {
+                return LongExpression.this.getValue();
+            }
+        };
     }
 }

@@ -29,10 +29,13 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import javafx.beans.binding.BooleanBinding;
 import javafx.beans.binding.BooleanExpression;
+import javafx.beans.binding.ObjectExpression;
 import javafx.beans.binding.StringBinding;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.value.ObservableBooleanValueStub;
+import javafx.beans.value.ObservableValue;
+import javafx.beans.value.ObservableValueStub;
 import javafx.binding.DependencyUtils;
 import javafx.collections.FXCollections;
 
@@ -145,6 +148,18 @@ public class BooleanExpressionTest {
     }
     
     @Test
+    public void testAsObject() { 
+        final ObservableBooleanValueStub valueModel = new ObservableBooleanValueStub();
+        final ObjectExpression<Boolean> exp = BooleanExpression.booleanExpression(valueModel).asObject();
+        
+        assertEquals(Boolean.FALSE, exp.get());
+        valueModel.set(true);
+        assertEquals(Boolean.TRUE, exp.get());
+        valueModel.set(false);
+        assertEquals(Boolean.FALSE, exp.get());
+    }
+    
+    @Test
     public void testFactory() {
         final ObservableBooleanValueStub valueModel = new ObservableBooleanValueStub();
         final BooleanExpression exp = BooleanExpression.booleanExpression(valueModel);
@@ -160,6 +175,24 @@ public class BooleanExpressionTest {
 
         // make sure we do not create unnecessary bindings
         assertEquals(op1, BooleanExpression.booleanExpression(op1));
+    }
+    
+    @Test
+    public void testObjectToBoolean() {
+        final ObservableValueStub<Boolean> valueModel = new ObservableValueStub<Boolean>();
+        final BooleanExpression exp = BooleanExpression.booleanExpression(valueModel);
+        
+        assertTrue(exp instanceof BooleanBinding);
+        assertEquals(FXCollections.singletonObservableList(valueModel), ((BooleanBinding)exp).getDependencies());
+
+        assertEquals(false, exp.get());
+        valueModel.set(true);
+        assertEquals(true, exp.get());
+        valueModel.set(false);
+        assertEquals(false, exp.get());
+
+        // make sure we do not create unnecessary bindings
+        assertEquals(op1, BooleanExpression.booleanExpression((ObservableValue)op1));
     }
 
     @Test(expected=NullPointerException.class)

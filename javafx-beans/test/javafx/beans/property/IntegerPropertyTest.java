@@ -130,6 +130,38 @@ public class IntegerPropertyTest {
         assertEquals("IntegerProperty [name: My name, value: " + VALUE_1 + "]", v5.toString());
     }
     
+    @Test
+    public void testAsObject() {
+        final IntegerProperty valueModel = new SimpleIntegerProperty();
+        final ObjectProperty<Integer> exp = valueModel.asObject();
+        
+        assertEquals(Integer.valueOf(0), exp.getValue());
+        valueModel.set(-4354);
+        assertEquals(Integer.valueOf(-4354), exp.getValue());
+        valueModel.set(5);
+        assertEquals(Integer.valueOf(5), exp.getValue());
+        
+        exp.set(10);
+        assertEquals(10, valueModel.intValue());
+
+    }
+    
+    @Test
+    public void testObjectToInteger() {
+        final ObjectProperty<Integer> valueModel = new SimpleObjectProperty<Integer>();
+        final IntegerProperty exp = IntegerProperty.integerProperty(valueModel);
+        
+        assertEquals(0, exp.intValue());
+        valueModel.set(-4354);
+        assertEquals(-4354, exp.intValue());
+        valueModel.set(5);
+        assertEquals(5, exp.intValue());
+        
+        exp.set(10);
+        assertEquals(Integer.valueOf(10), valueModel.getValue());
+
+    }
+    
     private class IntegerPropertyStub extends IntegerProperty {
         
         private final Object bean;

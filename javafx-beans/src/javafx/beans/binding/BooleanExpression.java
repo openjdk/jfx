@@ -31,6 +31,7 @@ import javafx.collections.ObservableList;
 
 import com.sun.javafx.binding.StringFormatter;
 import com.sun.javafx.collections.annotations.ReturnsUnmodifiableCollection;
+import javafx.beans.value.ObservableValue;
 
 /**
  * A {@code BooleanExpression} is a
@@ -90,6 +91,52 @@ public abstract class BooleanExpression implements ObservableBooleanValue {
                         return FXCollections.singletonObservableList(value);
                     }
                 };
+    }
+    
+    /**
+     * Returns a {@code BooleanExpression} that wraps an
+     * {@link javafx.beans.value.ObservableValue}. If the
+     * {@code ObservableValue} is already a {@code BooleanExpression}, it
+     * will be returned. Otherwise a new
+     * {@link javafx.beans.binding.BooleanBinding} is created that is bound to
+     * the {@code ObservableValue}.
+     * 
+     * Note: null values will be interpreted as "false".
+     * 
+     * @param value
+     *            The source {@code ObservableValue}
+     * @return A {@code BooleanExpression} that wraps the
+     *         {@code ObservableValue} if necessary
+     * @throws NullPointerException
+     *             if {@code value} is {@code null}
+     */
+    public static BooleanExpression booleanExpression(final ObservableValue<Boolean> value) {
+        if (value == null) {
+            throw new NullPointerException("Value must be specified.");
+        }
+        return (value instanceof BooleanExpression) ? (BooleanExpression) value
+                : new BooleanBinding() {
+            {
+                super.bind(value);
+            }
+
+            @Override
+            public void dispose() {
+                super.unbind(value);
+            }
+
+            @Override
+            protected boolean computeValue() {
+                final Boolean val = value.getValue();
+                return val == null ? false : val;
+            }
+
+            @Override
+            @ReturnsUnmodifiableCollection
+            public ObservableList<ObservableValue<Boolean>> getDependencies() {
+                return FXCollections.singletonObservableList(value);
+            }
+        };
     }
 
     /**
@@ -162,7 +209,7 @@ public abstract class BooleanExpression implements ObservableBooleanValue {
 
     /**
      * Creates a {@link javafx.beans.binding.StringBinding} that holds the value
-     * of the {@code BooleanExpression} turned into a {@code String}. If the
+     * of this {@code BooleanExpression} turned into a {@code String}. If the
      * value of this {@code BooleanExpression} changes, the value of the
      * {@code StringBinding} will be updated automatically.
      * 
@@ -170,5 +217,31 @@ public abstract class BooleanExpression implements ObservableBooleanValue {
      */
     public StringBinding asString() {
         return (StringBinding) StringFormatter.convert(this);
+    }
+    
+    /**
+     * Creates an {@link javafx.beans.binding.ObjectExpression} that holds the value
+     * of this {@code BooleanExpression}. If the
+     * value of this {@code BooleanExpression} changes, the value of the
+     * {@code ObjectExpression} will be updated automatically.
+     * 
+     * @return the new {@code ObjectExpression}
+     */
+    public ObjectExpression<Boolean> asObject() {
+        return new ObjectBinding<Boolean>() {
+            {
+                bind(BooleanExpression.this);
+            }
+
+            @Override
+            public void dispose() {
+                unbind(BooleanExpression.this);
+            }
+
+            @Override
+            protected Boolean computeValue() {
+                return BooleanExpression.this.getValue();
+            }
+        };
     }
 }

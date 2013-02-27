@@ -117,7 +117,7 @@ public abstract class ReadOnlyListProperty<E> extends ListExpression<E>
             final ReadOnlyListProperty other = (ReadOnlyListProperty) obj;
             final Object bean2 = other.getBean();
             final String name2 = other.getName();
-            return (bean1 == bean2) && ((name1 == null)? name2 == null : name1.equals(name2));
+            return (bean1 == bean2) && name1.equals(name2);
         }
         return false;
     }

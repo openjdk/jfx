@@ -108,6 +108,44 @@ public abstract class BidirectionalBinding<T> implements ChangeListener<T>, Weak
             ((ObservableValue) property2).removeListener(binding);
         }
     }
+    
+    public static BidirectionalBinding bindNumber(Property<Integer> property1, IntegerProperty property2) {
+        return bindNumber(property1, (Property<Number>)property2);
+    }
+    
+    public static BidirectionalBinding bindNumber(Property<Long> property1, LongProperty property2) {
+        return bindNumber(property1, (Property<Number>)property2);
+    }
+    
+    public static BidirectionalBinding bindNumber(Property<Float> property1, FloatProperty property2) {
+        return bindNumber(property1, (Property<Number>)property2);
+    }
+    
+    public static BidirectionalBinding bindNumber(Property<Double> property1, DoubleProperty property2) {
+        return bindNumber(property1, (Property<Number>)property2);
+    }
+
+    private static <T extends Number> BidirectionalBinding bindNumber(Property<T> property1, Property<Number> property2) {
+        checkParameters(property1, property2);
+        
+        final BidirectionalBinding<Number> binding = new TypedNumberBidirectionalBinding<T>(property1, property2);
+        
+        property1.setValue((T)property2.getValue());
+        property1.addListener(binding);
+        property2.addListener(binding);
+        return binding;
+    }
+    
+    public static <T extends Number> void unbindNumber(Property<T> property1, Property<Number> property2) {
+        checkParameters(property1, property2);
+        final BidirectionalBinding binding = new UntypedGenericBidirectionalBinding(property1, property2);
+        if (property1 instanceof ObservableValue) {
+            ((ObservableValue) property1).removeListener(binding);
+        }
+        if (property2 instanceof Observable) {
+            ((ObservableValue) property2).removeListener(binding);
+        }
+    }
 
     private final int cachedHashCode;
 
@@ -446,6 +484,55 @@ public abstract class BidirectionalBinding<T> implements ChangeListener<T>, Weak
                             property2.setValue(property1.getValue());
                         } else {
                             property1.setValue(property2.getValue());
+                        }
+                    } finally {
+                        updating = false;
+                    }
+                }
+            }
+        }
+    }
+    
+    private static class TypedNumberBidirectionalBinding<T extends Number> extends BidirectionalBinding<Number> {
+        private final WeakReference<Property<T>> propertyRef1;
+        private final WeakReference<Property<Number>> propertyRef2;
+        private boolean updating = false;
+
+        private TypedNumberBidirectionalBinding(Property<T> property1, Property<Number> property2) {
+            super(property1, property2);
+            propertyRef1 = new WeakReference<Property<T>>(property1);
+            propertyRef2 = new WeakReference<Property<Number>>(property2);
+        }
+
+        @Override
+        protected Property<T> getProperty1() {
+            return propertyRef1.get();
+        }
+
+        @Override
+        protected Property<Number> getProperty2() {
+            return propertyRef2.get();
+        }
+
+        @Override
+        public void changed(ObservableValue<? extends Number> sourceProperty, Number oldValue, Number newValue) {
+            if (!updating) {
+                final Property<T> property1 = propertyRef1.get();
+                final Property<Number> property2 = propertyRef2.get();
+                if ((property1 == null) || (property2 == null)) {
+                    if (property1 != null) {
+                        property1.removeListener(this);
+                    }
+                    if (property2 != null) {
+                        property2.removeListener(this);
+                    }
+                } else {
+                    try {
+                        updating = true;
+                        if (property1.equals(sourceProperty)) {
+                            property2.setValue(property1.getValue());
+                        } else {
+                            property1.setValue((T)property2.getValue());
                         }
                     } finally {
                         updating = false;

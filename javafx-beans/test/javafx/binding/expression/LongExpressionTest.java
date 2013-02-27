@@ -31,9 +31,12 @@ import javafx.beans.binding.DoubleBinding;
 import javafx.beans.binding.FloatBinding;
 import javafx.beans.binding.LongBinding;
 import javafx.beans.binding.LongExpression;
+import javafx.beans.binding.ObjectExpression;
 import javafx.beans.property.LongProperty;
 import javafx.beans.property.SimpleLongProperty;
 import javafx.beans.value.ObservableLongValueStub;
+import javafx.beans.value.ObservableValue;
+import javafx.beans.value.ObservableValueStub;
 import javafx.collections.FXCollections;
 
 import org.junit.Before;
@@ -178,6 +181,36 @@ public class LongExpressionTest {
 
         // make sure we do not create unnecessary bindings
         assertEquals(op1, LongExpression.longExpression(op1));
+    }
+    
+    @Test
+    public void testAsObject() { 
+        final ObservableLongValueStub valueModel = new ObservableLongValueStub();
+        final ObjectExpression<Long> exp = LongExpression.longExpression(valueModel).asObject();
+        
+        assertEquals(Long.valueOf(0L), exp.getValue());
+        valueModel.set(data);
+        assertEquals(Long.valueOf(data), exp.getValue());
+        valueModel.set(long1);
+        assertEquals(Long.valueOf(long1), exp.getValue());
+    }
+    
+    @Test
+    public void testObjectToLong() {
+        final ObservableValueStub<Long> valueModel = new ObservableValueStub<Long>();
+        final LongExpression exp = LongExpression.longExpression(valueModel);
+
+        assertTrue(exp instanceof LongBinding);
+        assertEquals(FXCollections.singletonObservableList(valueModel), ((LongBinding)exp).getDependencies());
+
+        assertEquals(0L, exp.longValue());
+        valueModel.set(data);
+        assertEquals(data, exp.longValue());
+        valueModel.set(long1);
+        assertEquals(long1, exp.longValue());
+
+        // make sure we do not create unnecessary bindings
+        assertEquals(op1, LongExpression.longExpression((ObservableValue)op1));
     }
 
     @Test(expected=NullPointerException.class)

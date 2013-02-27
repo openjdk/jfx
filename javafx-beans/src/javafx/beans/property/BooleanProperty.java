@@ -25,6 +25,7 @@
 
 package javafx.beans.property;
 
+import com.sun.javafx.binding.BidirectionalBinding;
 import javafx.beans.binding.Bindings;
 import javafx.beans.value.ObservableValue;
 import javafx.beans.value.WritableBooleanValue;
@@ -101,5 +102,90 @@ public abstract class BooleanProperty extends ReadOnlyBooleanProperty implements
         }
         result.append("value: ").append(get()).append("]");
         return result.toString();
+    }
+    
+    /**
+     * Returns a {@code BooleanProperty} that wraps a
+     * {@link javafx.beans.property.Property}. If the
+     * {@code Property} is already a {@code BooleanProperty}, it
+     * will be returned. Otherwise a new
+     * {@code BooleanProperty} is created that is bound to
+     * the {@code Property}.
+     * 
+     * Note: null values in the source property will be interpreted as "false"
+     * 
+     * @param property
+     *            The source {@code Property}
+     * @return A {@code BooleanProperty} that wraps the
+     *         {@code Property} if necessary
+     * @throws NullPointerException
+     *             if {@code value} is {@code null}
+     */
+    public static BooleanProperty booleanProperty(final Property<Boolean> property) {
+        if (property == null) {
+            throw new NullPointerException("Property cannot be null");
+        }
+        return property instanceof BooleanProperty ? (BooleanProperty)property : new BooleanPropertyBase() {
+            {
+                BidirectionalBinding.bind(property, this);
+            }
+
+            @Override
+            public Object getBean() {
+                return null; // Virtual property, no bean
+            }
+
+            @Override
+            public String getName() {
+                return property.getName();
+            }
+            
+            @Override
+            protected void finalize() throws Throwable {
+                try {
+                    BidirectionalBinding.unbind(property, this);
+                } finally {
+                    super.finalize();
+                }
+            }
+        };
+    }
+    
+    /**
+     * Creates an {@link javafx.beans.property.ObjectProperty} that holds the value
+     * of this {@code BooleanProperty}. If the
+     * value of this {@code BooleanProperty} changes, the value of the
+     * {@code ObjectProperty} will be updated automatically.
+     * 
+     * @return the new {@code ObjectProperty}
+     */
+    @Override
+    public ObjectProperty<Boolean> asObject() {
+        return new ObjectPropertyBase<Boolean> () {
+            
+            {
+                BidirectionalBinding.bind(this, BooleanProperty.this);
+            }
+
+            @Override
+            public Object getBean() {
+                return null; // Virtual property, does not exist on a bean
+            }
+
+            @Override
+            public String getName() {
+                return BooleanProperty.this.getName();
+            }
+
+            @Override
+            protected void finalize() throws Throwable {
+                try {
+                    BidirectionalBinding.unbind(this, BooleanProperty.this);
+                } finally {
+                    super.finalize();
+                }
+            }
+
+        };
     }
 }
