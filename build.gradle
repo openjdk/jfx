@@ -258,6 +258,78 @@ project(":graphics:native") {
         compile project(":graphics")
     }
 
+//    task compileGlassLibGTK(type:Exec, dependsOn:configurations.compile) {
+//        inputs.dir "src/main/glass-lib-gtk"
+//        outputs.dir "build/main/glass-lib-gtk"
+//        outputs.dir "build/libs"
+//        workingDir "src/main/glass-lib-gtk"
+//        environment([
+//                "BUILD_DIR"            : "../../../build/main/glass-lib-gtk",
+//                "DIST_DIR"             : "../../../build/libs"
+////                "DECORA_SSE_CLASS_DIR" : "../../../../build/classes/main",
+//        ])
+//        commandLine "make"
+//    }
+
+//    task compileGlassLibiOS(type:Exec, dependsOn:configurations.compile) {
+//        inputs.dir "src/main/glass-lib-ios"
+//        outputs.dir "build/main/glass-lib-ios"
+//        outputs.dir "build/libs"
+//        workingDir "src/main/glass-lib-ios"
+//        environment([
+//                "BUILD_DIR"            : "../../../build/main/glass-lib-ios",
+//                "DIST_DIR"             : "../../../build/libs"
+////                "DECORA_SSE_CLASS_DIR" : "../../../../build/classes/main",
+//        ])
+//        commandLine "make"
+//    }
+//
+//    task compileGlassLibLens(type:Exec, dependsOn:configurations.compile) {
+//        inputs.dir "src/main/glass-lib-lens"
+//        outputs.dir "build/main/glass-lib-lens"
+//        outputs.dir "build/libs"
+//        workingDir "src/main/glass-lib-lens"
+//        environment([
+//                "BUILD_DIR"            : "../../../build/main/glass-lib-lens",
+//                "DIST_DIR"             : "../../../build/libs"
+////                "DECORA_SSE_CLASS_DIR" : "../../../../build/classes/main",
+//        ])
+//        commandLine "make"
+//    }
+
+    task compileGlassLibMacOS(type:Exec, dependsOn:configurations.compile) {
+        inputs.dir "src/main/glass-lib-macosx"
+        inputs.dir "src/main/glass-lib-macosx/src"
+        outputs.dir "build/main/glass-lib-macosx"
+        outputs.dir "build/libs/glass-lib-macosx"
+        workingDir "src/main/glass-lib-macosx"
+        mkdir "build/libs/glass-lib-macosx"
+        environment([
+                "MACOSX_SDK_PATH"      : "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.7.sdk",
+                "JDK_HOME"             : JDK_HOME,
+                "CONF"                 : "Release", // TODO Release or Debug! should be settable
+                "BUILD_DIR"            : "../../../build/main/glass-lib-macosx",
+                "DIST_DIR"             : "../../../build/libs",
+                "CLASS_DIR"            : "../../../../build/classes/main",
+                "SRC_DIR"              : "src",
+                "OUT_LIB"              : "../../../build/libs/glass-lib-macosx/libglass.dylib"
+        ])
+        commandLine "make", "all"
+    }
+
+//    task compileGlassLibWindows(type:Exec, dependsOn:configurations.compile) {
+//        inputs.dir "src/main/glass-lib-windows"
+//        outputs.dir "build/main/glass-lib-windows"
+//        outputs.dir "build/libs"
+//        workingDir "src/main/glass-lib-windows"
+//        environment([
+//                "BUILD_DIR"            : "../../../build/main/glass-lib-windows",
+//                "DIST_DIR"             : "../../../build/libs"
+////                "DECORA_SSE_CLASS_DIR" : "../../../../build/classes/main",
+//        ])
+//        commandLine "make"
+//    }
+
     task compileDecoraSSENative(type:Exec, dependsOn:configurations.compile) {
         inputs.dir "src/main/decora-sse-native"
         outputs.dir "build/main/decora-sse-native"
@@ -299,7 +371,8 @@ project(":graphics:native") {
         ])
         commandLine "make"
     }
-    classes.dependsOn compileDecoraSSENative, compilePrismCommon, compilePrismSW
+    classes.dependsOn compileDecoraSSENative, compilePrismCommon, compilePrismSW,
+            compileGlassLibMacOS
 }
 
 project(":graphics:effects-jsl") {

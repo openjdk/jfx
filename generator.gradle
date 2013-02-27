@@ -228,6 +228,14 @@ task generate << {
         include "*.stg"
     }
 
+    ["glass-lib-gtk", "glass-lib-ios", "glass-lib-lens", "glass-lib-macosx", "glass-lib-windows"].each { dir ->
+        copy {
+            from "${RTDir}/glass/${dir}"
+            into "${FXDir}/modules/graphics/native/src/main/${dir}"
+            exclude "build", "dist", "*.iml"
+        }
+    }
+
     ["decora-d3d-native", "decora-sse-native", "prism-common-native", "prism-sw-native"].each { dir ->
         copy {
             from "${RTDir}/${dir}"
