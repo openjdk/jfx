@@ -1015,7 +1015,7 @@ public class NGRegion extends NGGroup implements PGRegion {
                         // TRANSPARENT and a style that is effectively NONE, but we are not checking for those
                         // cases and will in those cases be doing more work than necessary.
                         // TODO make sure CSS uses TRANSPARENT and NONE when possible (RT-26943)
-                        if (topStroke != Color.TRANSPARENT && topStyle != BorderStrokeStyle.NONE) {
+                        if (!(topStroke instanceof Color && ((Color)topStroke).getOpacity() == 0f) && topStyle != BorderStrokeStyle.NONE) {
                             g.setPaint(getPlatformPaint(topStroke));
                             if (BorderStrokeStyle.SOLID == topStyle) {
                                 g.fillRect(leftInset, topInset, width - leftInset - rightInset, topWidth);
@@ -1025,7 +1025,7 @@ public class NGRegion extends NGGroup implements PGRegion {
                             }
                         }
 
-                        if (rightStroke != Color.TRANSPARENT && rightStyle != BorderStrokeStyle.NONE) {
+                        if (!(rightStroke instanceof Color && ((Color)rightStroke).getOpacity() == 0f) && rightStyle != BorderStrokeStyle.NONE) {
                             g.setPaint(getPlatformPaint(rightStroke));
                             if (BorderStrokeStyle.SOLID == rightStyle) {
                                 g.fillRect(width - rightInset - rightWidth, topInset,
@@ -1036,7 +1036,7 @@ public class NGRegion extends NGGroup implements PGRegion {
                             }
                         }
 
-                        if (bottomStroke != Color.TRANSPARENT && bottomStyle != BorderStrokeStyle.NONE) {
+                        if (!(bottomStroke instanceof Color && ((Color)bottomStroke).getOpacity() == 0f) && bottomStyle != BorderStrokeStyle.NONE) {
                             g.setPaint(getPlatformPaint(bottomStroke));
                             if (BorderStrokeStyle.SOLID == bottomStyle) {
                                 g.fillRect(leftInset, height - bottomInset - bottomWidth,
@@ -1047,7 +1047,7 @@ public class NGRegion extends NGGroup implements PGRegion {
                             }
                         }
 
-                        if (leftStroke != Color.TRANSPARENT && leftStyle != BorderStrokeStyle.NONE) {
+                        if (!(leftStroke instanceof Color && ((Color)leftStroke).getOpacity() == 0f) && leftStyle != BorderStrokeStyle.NONE) {
                             g.setPaint(getPlatformPaint(leftStroke));
                             if (BorderStrokeStyle.SOLID == leftStyle) {
                                 g.fillRect(leftInset, topInset, leftWidth, height - topInset - bottomInset);
