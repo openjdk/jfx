@@ -39,9 +39,9 @@ import org.apache.tools.ant.types.DataType;
  *
  * Examples:
  * <pre>
- *    &lt;info vendor="Uncle Joe" description="Test program">
- *       &lt;splash href="customsplash.gif>
- *    &lt;/info>
+ *    &lt;info vendor="Uncle Joe" description="Test program"&gt;
+ *       &lt;splash href="customsplash.gif&gt;
+ *    &lt;/info&gt;
  * </pre>
  *
  * @ant.type name="info" category="javafx"

@@ -40,15 +40,15 @@ import org.apache.tools.ant.BuildException;
  *
  * Examples:
  * <pre>
- *        &lt;fx:fileset dir="dist" includes="app.jar"/>
+ *        &lt;fx:fileset dir="dist" includes="app.jar"/&gt;
  * </pre>
  * Defines set consisting of single jar file (type will be detected based on extension)
  * that is applicable to all OS/arch combinations and needed for application startup.
  * <p>
  * <pre>
- *        &lt;fx:fileset dir="dist" neededFor="preloader" os="windows">
- *            &lt;include name="*.jar"/>
- *        &lt;/fx:fileset>
+ *        &lt;fx:fileset dir="dist" neededFor="preloader" os="windows"&gt;
+ *            &lt;include name="*.jar"/&gt;
+ *        &lt;/fx:fileset&gt;
  * </pre>
  * All the jars in the "dist" folder for Windows platfrom only. These jars needed
  * to be available to launch preloader.

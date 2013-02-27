@@ -36,17 +36,17 @@ import org.apache.tools.ant.types.DataType;
  *
  * Examples:
  * <pre>
- *    &lt;fx:platform javafx="2.0" j2se="7.0"/>
+ *    &lt;fx:platform javafx="2.0" j2se="7.0"/&gt;
  * </pre>
  * Application need JavaFX Runtime version 2.0 or later and JRE version 7.0 or later.
  *
  * Examples:
  * <pre>
- *    &lt;fx:platform javafx="2.0">
- *       &lt;jvmarg value="-Xmx400m"/>
- *       &lt;jvmarg value="-verbose:jni"/>
- *       &lt;property name="purpose" value="sample"/>
- *    &lt;/fx:platform>
+ *    &lt;fx:platform javafx="2.0"&gt;
+ *       &lt;jvmarg value="-Xmx400m"/&gt;
+ *       &lt;jvmarg value="-verbose:jni"/&gt;
+ *       &lt;property name="purpose" value="sample"/&gt;
+ *    &lt;/fx:platform&gt;
  * </pre>
  * Application need JavaFX Runtime version 2.0 and need to be run in JVM launched
  * with "-Xmx400 -verbose:jni -Dpurpose=sample".
