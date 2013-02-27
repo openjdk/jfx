@@ -140,28 +140,28 @@ public class ExpressionHelperUtility {
         try {
             final Class clazz = Class.forName(EXPRESSION_HELPER_SINGLE_CHANGE);
             if (clazz.isAssignableFrom(helperClass)) {
-                return (List<ChangeListener<? super T>>)(Object)getChangeListenerFromSingleChangeClass(clazz, helper);
+                return getChangeListenerFromSingleChangeClass(clazz, helper);
             }
         } catch (ClassNotFoundException ex) { }
         
         try {
             final Class clazz = Class.forName(LIST_EXPRESSION_HELPER_SINGLE_CHANGE);
             if (clazz.isAssignableFrom(helperClass)) {
-                return (List<ChangeListener<? super T>>)(Object)getChangeListenerFromSingleChangeClass(clazz, helper);
+                return getChangeListenerFromSingleChangeClass(clazz, helper);
             }
         } catch (ClassNotFoundException ex) { }
         
         try {
             final Class clazz = Class.forName(MAP_EXPRESSION_HELPER_SINGLE_CHANGE);
             if (clazz.isAssignableFrom(helperClass)) {
-                return (List<ChangeListener<? super T>>)(Object)getChangeListenerFromSingleChangeClass(clazz, helper);
+                return getChangeListenerFromSingleChangeClass(clazz, helper);
             }
         } catch (ClassNotFoundException ex) { }
         
         try {
             final Class clazz = Class.forName(SET_EXPRESSION_HELPER_SINGLE_CHANGE);
             if (clazz.isAssignableFrom(helperClass)) {
-                return (List<ChangeListener<? super T>>)(Object)getChangeListenerFromSingleChangeClass(clazz, helper);
+                return getChangeListenerFromSingleChangeClass(clazz, helper);
             }
         } catch (ClassNotFoundException ex) { }
 
@@ -170,28 +170,28 @@ public class ExpressionHelperUtility {
         try {
             final Class clazz = Class.forName(EXPRESSION_HELPER_GENERIC);
             if (clazz.isAssignableFrom(helperClass)) {
-                return (List<ChangeListener<? super T>>)(Object)getChangeListenerFromGenericClass(clazz, helper);
+                return getChangeListenerFromGenericClass(clazz, helper);
             }
         } catch (ClassNotFoundException ex) { }
         
         try {
             final Class clazz = Class.forName(LIST_EXPRESSION_HELPER_GENERIC);
             if (clazz.isAssignableFrom(helperClass)) {
-                return (List<ChangeListener<? super T>>)(Object)getChangeListenerFromGenericClass(clazz, helper);
+                return getChangeListenerFromGenericClass(clazz, helper);
             }
         } catch (ClassNotFoundException ex) { }
         
         try {
             final Class clazz = Class.forName(MAP_EXPRESSION_HELPER_GENERIC);
             if (clazz.isAssignableFrom(helperClass)) {
-                return (List<ChangeListener<? super T>>)(Object)getChangeListenerFromGenericClass(clazz, helper);
+                return getChangeListenerFromGenericClass(clazz, helper);
             }
         } catch (ClassNotFoundException ex) { }
         
         try {
             final Class clazz = Class.forName(SET_EXPRESSION_HELPER_GENERIC);
             if (clazz.isAssignableFrom(helperClass)) {
-                return (List<ChangeListener<? super T>>)(Object)getChangeListenerFromGenericClass(clazz, helper);
+                return getChangeListenerFromGenericClass(clazz, helper);
             }
         } catch (ClassNotFoundException ex) { }
         
@@ -353,28 +353,28 @@ public class ExpressionHelperUtility {
         return Collections.emptyList();
     }
 
-    private static List<ChangeListener> getChangeListenerFromSingleChangeClass(Class clazz, Object helper) {
-        try {
-            final Field field = clazz.getDeclaredField("listener");
-            field.setAccessible(true);
-            final ChangeListener listener = (ChangeListener)field.get(helper);
-            return Arrays.asList(listener);
-        } catch (Exception ex) { }
-        return Collections.emptyList();
-    }
+    private static <T> List<ChangeListener<? super T>> getChangeListenerFromSingleChangeClass(Class clazz, Object helper) { 
+        try { 
+            final Field field = clazz.getDeclaredField("listener"); 
+            field.setAccessible(true); 
+            final ChangeListener<? super T> listener = (ChangeListener)field.get(helper); 
+            return Arrays.<ChangeListener<? super T>>asList(listener); 
+        } catch (Exception ex) { } 
+        return Collections.emptyList(); 
+    } 
 
-    private static List<ChangeListener> getChangeListenerFromGenericClass(Class clazz, Object helper) {
-        try {
-            final Field field = clazz.getDeclaredField("changeListeners");
-            field.setAccessible(true);
-            final ChangeListener[] listeners = (ChangeListener[])field.get(helper);
-            if (listeners != null) {
-                final Field sizeField = clazz.getDeclaredField("changeSize");
-                sizeField.setAccessible(true);
-                final int size = sizeField.getInt(helper);
-                return Arrays.asList(Arrays.copyOf(listeners, size));
-            }
-        } catch (Exception ex) { }
-        return Collections.emptyList();
-    }
+    private static <T> List<ChangeListener<? super T>> getChangeListenerFromGenericClass(Class clazz, Object helper) { 
+        try { 
+            final Field field = clazz.getDeclaredField("changeListeners"); 
+            field.setAccessible(true); 
+            final ChangeListener<? super T>[] listeners = (ChangeListener[])field.get(helper); 
+            if (listeners != null) { 
+                final Field sizeField = clazz.getDeclaredField("changeSize"); 
+                sizeField.setAccessible(true); 
+                final int size = sizeField.getInt(helper); 
+                return Arrays.asList(Arrays.copyOf(listeners, size)); 
+            } 
+        } catch (Exception ex) { } 
+        return Collections.emptyList(); 
+    } 
 }
