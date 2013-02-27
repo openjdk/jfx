@@ -137,7 +137,7 @@ JNI_OnLoad(JavaVM *jvm, void *reserved)
     jGtkPixelsCls = (jclass) env->NewGlobalRef(env->FindClass("com/sun/glass/ui/gtk/GtkPixels"));
     jGtkPixelsInit = env->GetMethodID(jGtkPixelsCls, "<init>", "(IILjava/nio/ByteBuffer;)V");
 
-    jScreenCls = env->FindClass("com/sun/glass/ui/Screen");
+    jScreenCls = (jclass) env->NewGlobalRef(env->FindClass("com/sun/glass/ui/Screen"));
     jScreenInit = env->GetMethodID(jScreenCls, "<init>", "()V");
     jScreenNotifySettingsChanged = env->GetStaticMethodID(jScreenCls, "notifySettingsChanged", "()V");
     jScreenGetScreenForLocation = env->GetStaticMethodID(jScreenCls, "getScreenForLocation","(II)Lcom/sun/glass/ui/Screen;");
