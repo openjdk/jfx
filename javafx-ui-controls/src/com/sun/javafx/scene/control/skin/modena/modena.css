@@ -1716,7 +1716,7 @@ is being used to size a border should also be in pixels.
     -fx-background-color: -fx-cell-hover-color;
     -fx-text-fill: -fx-text-inner-color;
 }
-.combo-box-popup > .list-view > .virtual-flow > .clipped-container > .sheet > .empty-text-cell {
+.combo-box-popup > .list-view > .placeholder > .label {
     -fx-text-fill: derive(-fx-control-inner-background,-30%);
 }
 
