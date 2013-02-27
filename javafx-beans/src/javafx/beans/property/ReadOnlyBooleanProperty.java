@@ -25,6 +25,9 @@
 
 package javafx.beans.property;
 
+import javafx.beans.InvalidationListener;
+import javafx.beans.Observable;
+import javafx.beans.WeakInvalidationListener;
 import javafx.beans.binding.BooleanExpression;
 
 /**
@@ -58,7 +61,7 @@ public abstract class ReadOnlyBooleanProperty extends BooleanExpression
             final ReadOnlyBooleanProperty other = (ReadOnlyBooleanProperty) obj;
             final Object bean2 = other.getBean();
             final String name2 = other.getName();
-            return (bean1 == bean2) && ((name1 == null)? name2 == null : name1.equals(name2));
+            return (bean1 == bean2) && name1.equals(name2);
         }
         return false;
     }
@@ -100,5 +103,108 @@ public abstract class ReadOnlyBooleanProperty extends BooleanExpression
         result.append("value: ").append(get()).append("]");
         return result.toString();
     }
+    
+    /**
+     * Returns a {@code ReadOnlyBooleanProperty} that wraps a
+     * {@link javafx.beans.property.ReadOnlyProperty}. If the
+     * {@code ReadOnlyProperty} is already a {@code ReadOnlyBooleanProperty}, it
+     * will be returned. Otherwise a new
+     * {@code ReadOnlyBooleanProperty} is created that is bound to
+     * the {@code ReadOnlyProperty}.
+     * 
+     * Note: null values will be interpreted as "false"
+     * 
+     * @param property
+     *            The source {@code ReadOnlyProperty}
+     * @return A {@code ReadOnlyBooleanProperty} that wraps the
+     *         {@code ReadOnlyProperty} if necessary
+     * @throws NullPointerException
+     *             if {@code value} is {@code null}
+     */
+    public static ReadOnlyBooleanProperty readOnlyBooleanProperty(final ReadOnlyProperty<Boolean> property) {
+        if (property == null) {
+            throw new NullPointerException("Property cannot be null");
+        }
+        
+        return property instanceof ReadOnlyBooleanProperty ? (ReadOnlyBooleanProperty) property
+                : new ReadOnlyBooleanPropertyBase() {
+            private boolean valid = true;
+            private final InvalidationListener listener = new InvalidationListener() {
+                @Override
+                public void invalidated(Observable observable) {
+                    if (valid) {
+                        valid = false;
+                        fireValueChangedEvent();
+                    }
+                }
+            };
+
+            {
+                property.addListener(new WeakInvalidationListener(listener));
+            }
+
+            @Override
+            public boolean get() {
+                valid = true;
+                final Boolean value = property.getValue();
+                return value == null ? false : value;
+            }
+
+            @Override
+            public Object getBean() {
+                return null; // Virtual property, no bean
+            }
+
+            @Override
+            public String getName() {
+                return property.getName();
+            }
+        };
+    }
+    
+    /**
+     * Creates a {@link javafx.beans.property.ReadOnlyObjectProperty} that holds the value
+     * of this {@code ReadOnlyBooleanProperty}. If the
+     * value of this {@code ReadOnlyBooleanProperty} changes, the value of the
+     * {@code ReadOnlyObjectProperty} will be updated automatically.
+     * 
+     * @return the new {@code ReadOnlyObjectProperty}
+     */
+    @Override
+    public ReadOnlyObjectProperty<Boolean> asObject() {
+        return new ReadOnlyObjectPropertyBase<Boolean>() {
+
+            private boolean valid = true;
+            private final InvalidationListener listener = new InvalidationListener() {
+                @Override
+                public void invalidated(Observable observable) {
+                    if (valid) {
+                        valid = false;
+                        fireValueChangedEvent();
+                    }
+                }
+            };
+
+            {
+                ReadOnlyBooleanProperty.this.addListener(new WeakInvalidationListener(listener));
+            }
+            
+            @Override
+            public Object getBean() {
+                return null; // Virtual property, does not exist on a bean
+            }
+
+            @Override
+            public String getName() {
+                return ReadOnlyBooleanProperty.this.getName();
+            }
+
+            @Override
+            public Boolean get() {
+                valid = true;
+                return ReadOnlyBooleanProperty.this.getValue();
+            }
+        };
+    };
 
 }

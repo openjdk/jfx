@@ -25,14 +25,17 @@
 
 package javafx.binding.expression;
 
-import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import javafx.beans.binding.DoubleBinding;
 import javafx.beans.binding.DoubleExpression;
+import javafx.beans.binding.ObjectExpression;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.beans.value.ObservableDoubleValueStub;
+import javafx.beans.value.ObservableValue;
+import javafx.beans.value.ObservableValueStub;
 import javafx.collections.FXCollections;
+import static org.junit.Assert.assertEquals;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -159,6 +162,18 @@ public class DoubleExpressionTest {
         final DoubleBinding binding6 = op1.divide(byte1);
         assertEquals(data / byte1, binding6.doubleValue(), EPSILON);
     }
+    
+    @Test
+    public void testAsObject() { 
+        final ObservableDoubleValueStub valueModel = new ObservableDoubleValueStub();
+        final ObjectExpression<Double> exp = DoubleExpression.doubleExpression(valueModel).asObject();
+        
+        assertEquals(0.0, exp.getValue(), EPSILON);
+        valueModel.set(data);
+        assertEquals(data, exp.getValue(), EPSILON);
+        valueModel.set(double1);
+        assertEquals(double1, exp.getValue(), EPSILON);
+    }
 
     @Test
     public void testFactory() {
@@ -176,6 +191,24 @@ public class DoubleExpressionTest {
 
         // make sure we do not create unnecessary bindings
         assertEquals(op1, DoubleExpression.doubleExpression(op1));
+    }
+    
+    @Test
+    public void testObjectToDouble() {
+        final ObservableValueStub<Double> valueModel = new ObservableValueStub<Double>();
+        final DoubleExpression exp = DoubleExpression.doubleExpression(valueModel);
+
+        assertTrue(exp instanceof DoubleBinding);
+        assertEquals(FXCollections.singletonObservableList(valueModel), ((DoubleBinding)exp).getDependencies());
+
+        assertEquals(0.0, exp.doubleValue(), EPSILON);
+        valueModel.set(data);
+        assertEquals(data, exp.doubleValue(), EPSILON);
+        valueModel.set(double1);
+        assertEquals(double1, exp.doubleValue(), EPSILON);
+
+        // make sure we do not create unnecessary bindings
+        assertEquals(op1, DoubleExpression.doubleExpression((ObservableValue)op1));
     }
 
     @Test(expected=NullPointerException.class)

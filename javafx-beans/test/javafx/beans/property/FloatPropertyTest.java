@@ -131,6 +131,37 @@ public class FloatPropertyTest {
         assertEquals("FloatProperty [name: My name, value: " + VALUE_1 + "]", v5.toString());
     }
     
+    @Test
+    public void testAsObject() {
+        final FloatProperty valueModel = new SimpleFloatProperty();
+        final ObjectProperty<Float> exp = valueModel.asObject();
+
+        assertEquals(0.0f, exp.getValue(), EPSILON);
+        valueModel.set(-4354.3f);
+        assertEquals(-4354.3f, exp.getValue(), EPSILON);
+        valueModel.set(5e11f);
+        assertEquals(5e11f, exp.getValue(), EPSILON);
+        
+        exp.set(1234.0f);
+        assertEquals(1234.0f, valueModel.floatValue(), EPSILON);
+        
+    }
+    
+    @Test
+    public void testObjectToFloat() {
+        final ObjectProperty<Float> valueModel = new SimpleObjectProperty<Float>();
+        final FloatProperty exp = FloatProperty.floatProperty(valueModel);
+
+        assertEquals(0.0f, exp.floatValue(), EPSILON);
+        valueModel.set(-4354.3f);
+        assertEquals(-4354.3f, exp.floatValue(), EPSILON);
+        valueModel.set(5e11f);
+        assertEquals(5e11f, exp.floatValue(), EPSILON);
+        
+        exp.set(1234.0f);
+        assertEquals(1234.0f, valueModel.getValue(), EPSILON);
+    }
+    
     private class FloatPropertyStub extends FloatProperty {
         
         private final Object bean;

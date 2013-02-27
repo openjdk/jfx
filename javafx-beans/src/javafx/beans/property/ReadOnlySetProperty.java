@@ -117,7 +117,7 @@ public abstract class ReadOnlySetProperty<E> extends SetExpression<E> implements
             final ReadOnlySetProperty other = (ReadOnlySetProperty) obj;
             final Object bean2 = other.getBean();
             final String name2 = other.getName();
-            return (bean1 == bean2) && ((name1 == null)? name2 == null : name1.equals(name2));
+            return (bean1 == bean2) && name1.equals(name2);
         }
         return false;
     }

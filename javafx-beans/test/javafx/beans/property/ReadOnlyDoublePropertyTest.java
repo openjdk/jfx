@@ -29,7 +29,9 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import javafx.beans.InvalidationListener;
+import javafx.beans.binding.ObjectExpression;
 import javafx.beans.value.ChangeListener;
+import static org.junit.Assert.assertEquals;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -37,6 +39,7 @@ import org.junit.Test;
 public class ReadOnlyDoublePropertyTest {
 
     private static final double DEFAULT = 0.0;
+    private static final float EPSILON = 1e-6f;
 
     @Before
     public void setUp() throws Exception {
@@ -151,6 +154,31 @@ public class ReadOnlyDoublePropertyTest {
         final ReadOnlyDoubleProperty v6 = new ReadOnlyDoublePropertyStub(null, name);
         assertEquals("ReadOnlyDoubleProperty [name: My name, value: " + DEFAULT + "]", v6.toString());
         
+    }
+    
+    @Test
+    public void testAsObject() {
+        final ReadOnlyDoubleWrapper valueModel = new ReadOnlyDoubleWrapper();
+        final ReadOnlyObjectProperty<Double> exp = valueModel.getReadOnlyProperty().asObject();
+
+        assertEquals(0.0, exp.getValue(), EPSILON);
+        valueModel.set(-4354.3);
+        assertEquals(-4354.3, exp.getValue(), EPSILON);
+        valueModel.set(5e11);
+        assertEquals(5e11, exp.getValue(), EPSILON);
+    }
+    
+    @Test
+    public void testObjectToDouble() {
+        final ReadOnlyObjectWrapper<Double> valueModel = new ReadOnlyObjectWrapper<Double>();
+        final ReadOnlyDoubleProperty exp = ReadOnlyDoubleProperty.readOnlyDoubleProperty(valueModel.getReadOnlyProperty());
+        
+
+        assertEquals(0.0, exp.doubleValue(), EPSILON);
+        valueModel.set(-4354.3);
+        assertEquals(-4354.3, exp.doubleValue(), EPSILON);
+        valueModel.set(5e11);
+        assertEquals(5e11, exp.doubleValue(), EPSILON);
     }
     
     private static class ReadOnlyDoublePropertyStub extends ReadOnlyDoubleProperty {

@@ -30,6 +30,7 @@ import javafx.beans.InvalidationListener;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import com.sun.javafx.binding.ErrorLoggingUtiltity;
+import javafx.beans.binding.ObjectExpression;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Ignore;
@@ -128,6 +129,36 @@ public class BooleanPropertyTest {
         assertEquals("BooleanProperty [name: My name, value: " + DEFAULT + "]", v5.toString());
         v5.set(VALUE_1);
         assertEquals("BooleanProperty [name: My name, value: " + VALUE_1 + "]", v5.toString());
+    }
+    
+    @Test
+    public void testAsObject() {
+        final BooleanProperty valueModel = new SimpleBooleanProperty();
+        final ObjectProperty<Boolean> exp = valueModel.asObject();
+
+        assertEquals(Boolean.FALSE, exp.get());
+        valueModel.set(true);
+        assertEquals(Boolean.TRUE, exp.get());
+        valueModel.set(false);
+        assertEquals(Boolean.FALSE, exp.get());
+        
+        exp.set(Boolean.TRUE);
+        assertEquals(true, valueModel.get());
+    }
+    
+    @Test
+    public void testObjectToBoolean() {
+        final ObjectProperty<Boolean> valueModel = new SimpleObjectProperty<Boolean>();
+        final BooleanProperty exp = BooleanProperty.booleanProperty(valueModel);
+
+        assertEquals(false, exp.get());
+        valueModel.set(true);
+        assertEquals(true, exp.get());
+        valueModel.set(false);
+        assertEquals(false, exp.get());
+        
+        exp.set(true);
+        assertEquals(true, valueModel.get());
     }
     
     private class BooleanPropertyStub extends BooleanProperty {
