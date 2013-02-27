@@ -19,8 +19,6 @@
  *  - test-stub-toolkit
  *  - README, README.md, license file, etc.
  *  - How to handle dt *.properties?
- *  - cagsrc double vs cagsrc float. Do we need to have both? We never use cagsrc.float now, so only
- *    if we intended to use it on low end systems would we bother compiling with it, not sure we care.
  */
 
 defaultTasks = ["generate"]
