@@ -557,17 +557,6 @@ public class Text extends Shape {
         return getTextAttribute().textOriginProperty();
     }
 
-    public final void setBoundsType(TextBoundsType value) {
-        boundsTypeProperty().set(value);
-    }
-
-    public final TextBoundsType getBoundsType() {
-        if (attributes == null || attributes.boundsType == null) {
-            return DEFAULT_BOUNDS_TYPE;
-        }
-        return attributes.getBoundsType();
-    }
-
     /**
      * Determines how the bounds of the text node are calculated.
      * Logical bounds is a more appropriate default for text than
@@ -576,8 +565,41 @@ public class Text extends Shape {
      * @defaultValue TextBoundsType.LOGICAL
      * @since JavaFX 1.3
      */
+    private ObjectProperty<TextBoundsType> boundsType;
+
+    public final void setBoundsType(TextBoundsType value) {
+        boundsTypeProperty().set(value);
+    }
+
+    public final TextBoundsType getBoundsType() {
+        return boundsType == null ? 
+            DEFAULT_BOUNDS_TYPE : boundsTypeProperty().get();
+    }
+
     public final ObjectProperty<TextBoundsType> boundsTypeProperty() {
-        return getTextAttribute().boundsTypeProperty();
+        if (boundsType == null) {
+            boundsType =
+               new StyleableObjectProperty<TextBoundsType>(DEFAULT_BOUNDS_TYPE) {
+                   @Override public Object getBean() { return Text.this; }
+                   @Override public String getName() { return "boundsType"; }
+                   @Override public CssMetaData<Text,TextBoundsType> getCssMetaData() {
+                       return StyleableProperties.BOUNDS_TYPE;
+                   }
+                   @Override public void invalidated() {
+                       TextLayout layout = getTextLayout();
+                       int type = 0;
+                       if (boundsType.get() == TextBoundsType.LOGICAL_VERTICAL_CENTER) {
+                           type |= TextLayout.BOUNDS_CENTER;
+                       }
+                       if (layout.setBoundsType(type)) {
+                           needsTextLayout();
+                       } else {
+                           impl_geomChanged();
+                       }
+                   }
+            };
+        }
+        return boundsType;
     }
 
     /**
@@ -1391,6 +1413,24 @@ public class Text extends Shape {
             }
          };
 
+         private static final CssMetaData<Text, TextBoundsType>
+             BOUNDS_TYPE =
+             new CssMetaData<Text,TextBoundsType>(
+                 "-fx-bounds-type",
+                 new EnumConverter<TextBoundsType>(TextBoundsType.class),
+                 DEFAULT_BOUNDS_TYPE) {
+
+            @Override
+            public boolean isSettable(Text node) {
+                return node.boundsType == null || !node.boundsType.isBound();
+            }
+
+            @Override
+            public StyleableProperty<TextBoundsType> getStyleableProperty(Text node) {
+                return (StyleableProperty<TextBoundsType>)node.boundsTypeProperty();
+            }
+         };
+
 	 private final static List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
          static {
             final List<CssMetaData<? extends Styleable, ?>> styleables =
@@ -1402,6 +1442,7 @@ public class Text extends Shape {
             styleables.add(TEXT_ORIGIN);
             styleables.add(FONT_SMOOTHING_TYPE);
             styleables.add(LINE_SPACING);
+            styleables.add(BOUNDS_TYPE);
             STYLEABLES = Collections.unmodifiableList(styleables);
          }
     }
@@ -1537,26 +1578,6 @@ public class Text extends Shape {
                 };
             }
             return textOrigin;
-        }
-        
-        private ObjectProperty<TextBoundsType> boundsType;
-
-        public final TextBoundsType getBoundsType() {
-            return boundsType == null ? DEFAULT_BOUNDS_TYPE : boundsType.get();
-        }
-
-        public final ObjectProperty<TextBoundsType> boundsTypeProperty() {
-            if (boundsType == null) {
-                boundsType =
-                   new ObjectPropertyBase<TextBoundsType>(DEFAULT_BOUNDS_TYPE) {
-                       @Override public Object getBean() { return Text.this; }
-                       @Override public String getName() { return "boundsType"; }
-                       @Override public void invalidated() {
-                           impl_geomChanged();
-                       }
-                };
-            }
-            return boundsType;
         }
         
         private BooleanProperty underline;
