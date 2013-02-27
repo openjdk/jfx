@@ -62,9 +62,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
     // properties map with this key to specify the number of rows to measure.
     // This may one day become a property on the ComboBox itself.
     private static final String COMBO_BOX_ROWS_TO_MEASURE_WIDTH_KEY = "comboBoxRowsToMeasureWidth";
-    
-    private static final String EMPTY_TEXT_CELL = "empty-text-cell";
-    
+
     
     
     /***************************************************************************
@@ -430,19 +428,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
         if (empty) {
             if (cell == null) return true;
             cell.setGraphic(null);
-            
-            final List<T> items = comboBox.getItems();
-            final int index = cell.getIndex();
-            final boolean isEmptyTextCell = index == 0 && (items == null || items.isEmpty());
-            String s = isEmptyTextCell ? comboBox.getEmptyText() : "";
-            cell.setText(s);
-            
-            if (isEmptyTextCell) {
-                cell.getStyleClass().add(EMPTY_TEXT_CELL);
-            } else {
-                cell.getStyleClass().remove(EMPTY_TEXT_CELL);
-            }
-            
+            cell.setText(null);
             return true;
         } else if (item instanceof Node) {
             Node currentNode = cell.getGraphic();
@@ -522,6 +508,10 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
             @Override protected double computePrefWidth(double height) {
                 doCSSCheck();
                 
+                // need to check the ListView pref height in the case that the
+                // placeholder node is showing
+                final double sw = super.computePrefWidth(height);
+                
                 double pw;
                 if (getSkin() instanceof ListViewSkin) {
                     ListViewSkin<?> skin = (ListViewSkin<?>)getSkin();
@@ -540,7 +530,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
                     pw = Math.max(100, comboBox.getWidth());
                 }
                 
-                return Math.max(50, pw);
+                return Math.max(50, Math.max(sw, pw));
             }
 
             @Override protected double computePrefHeight(double width) {
@@ -562,6 +552,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
         };
 
         _listView.setId("list-view");
+        _listView.placeholderProperty().bind(comboBox.placeholderProperty());
         _listView.getSelectionModel().setSelectionMode(SelectionMode.SINGLE);
 
         _listView.getSelectionModel().selectedIndexProperty().addListener(new InvalidationListener() {

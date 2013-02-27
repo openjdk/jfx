@@ -63,6 +63,7 @@ import javafx.css.PseudoClass;
 import javafx.beans.DefaultProperty;
 import javafx.css.Styleable;
 import javafx.css.StyleableProperty;
+import javafx.scene.Node;
 
 /**
  * A ListView displays a horizontal or vertical list of items from which the
@@ -332,6 +333,28 @@ public class ListView<T> extends Control {
             };
         }
         return items;
+    }
+    
+    
+    // --- Placeholder Node
+    private ObjectProperty<Node> placeholder;
+    /**
+     * This Node is shown to the user when the listview has no content to show.
+     * This may be the case because the table model has no data in the first
+     * place or that a filter has been applied to the list model, resulting
+     * in there being nothing to show the user..
+     */
+    public final ObjectProperty<Node> placeholderProperty() {
+        if (placeholder == null) {
+            placeholder = new SimpleObjectProperty<Node>(this, "placeholder");
+        }
+        return placeholder;
+    }
+    public final void setPlaceholder(Node value) {
+        placeholderProperty().set(value);
+    }
+    public final Node getPlaceholder() {
+        return placeholder == null ? null : placeholder.get();
     }
     
     

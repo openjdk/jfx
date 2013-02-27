@@ -330,7 +330,6 @@ public abstract class TableViewSkinBase<S, C extends Control, B extends Behavior
      * Region placed over the top of the flow (and possibly the header row) if
      * there is no data and/or there are no columns specified.
      */
-    // TODO externalise the strings so they can be i18n
     // FIXME this should not be a StackPane
     private StackPane placeholderRegion;
     private Label placeholderLabel;
