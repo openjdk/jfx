@@ -144,9 +144,7 @@ task generate << {
              "${RTDir}/prism-sw/src",
              "${RTDir}/prism-util/src"
         into "${FXDir}/modules/graphics/src/main/java"
-        exclude "com/sun/scenario/effect/compiler/JSL.g",
-                "com/sun/javafx/css/parser/jfxCssLexer.g",
-                "com/sun/javafx/css/parser/jfxCssParser.g"
+        exclude "com/sun/scenario/effect/compiler/JSL.g"
         exclude excludeResources
     }
     copy {
@@ -205,12 +203,6 @@ task generate << {
              "${RTDir}/test-stub-toolkit/src"
         into "${FXDir}/modules/graphics/src/test/resourcesWithStubToolkit"
         include includeResources
-    }
-
-    copy {
-        from "${RTDir}/javafx-ui-common/src/com/sun/javafx/css/parser/jfxCssLexer.g",
-             "${RTDir}/javafx-ui-common/src/com/sun/javafx/css/parser/jfxCssParser.g"
-        into "${FXDir}/modules/graphics/src/main/antlr"
     }
 
     copy {
