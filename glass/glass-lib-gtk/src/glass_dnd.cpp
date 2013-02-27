@@ -290,10 +290,13 @@ static void wait_for_selection_data_hook(GdkEvent * event, void * data)
 
 static gboolean dnd_target_receive_data(JNIEnv *env, GdkAtom target, selection_data_ctx *selection_ctx)
 {
-    GevlHookRegistration hookReg;   
+    GevlHookRegistration hookReg;
+    
+    memset(selection_ctx, 0, sizeof(selection_data_ctx));
+
     gdk_selection_convert(GLASS_GDK_DRAG_CONTEXT_GET_DEST_WINDOW(enter_ctx.ctx), gdk_drag_get_selection(enter_ctx.ctx), target,
                           GDK_CURRENT_TIME);
-    
+
     hookReg = 
             glass_evloop_hook_add(
                     (GevlHookFunction) wait_for_selection_data_hook, 
@@ -302,12 +305,12 @@ static gboolean dnd_target_receive_data(JNIEnv *env, GdkAtom target, selection_d
                                "Failed to allocate event hook")) {
         return TRUE;
     }
-    
+
     do {
         gtk_main_iteration();
     } while (!(selection_ctx->received));
-    
-    
+
+
     glass_evloop_hook_remove(hookReg);
     return selection_ctx->data != NULL;
 }
@@ -316,7 +319,6 @@ static jobject dnd_target_get_string(JNIEnv *env)
 {
     jobject result = NULL;
     selection_data_ctx ctx;
-    memset(&ctx, 0, sizeof(selection_data_ctx));
     
     if (dnd_target_receive_data(env, TARGET_UTF8_STRING_ATOM, &ctx)) {
         result = env->NewStringUTF((char *)ctx.data);
@@ -324,9 +326,9 @@ static jobject dnd_target_get_string(JNIEnv *env)
     if (!result && dnd_target_receive_data(env, TARGET_MIME_TEXT_PLAIN_ATOM, &ctx)) {
         result = env->NewStringUTF((char *)ctx.data);
     }
-    if (!result && dnd_target_receive_data(env, TARGET_COMPOUND_TEXT_ATOM, &ctx)) {
-        //TODO find out how to convert from compound text
-    }
+    // TODO find out how to convert from compound text
+    // if (!result && dnd_target_receive_data(env, TARGET_COMPOUND_TEXT_ATOM, &ctx)) {
+    // }
     if (!result && dnd_target_receive_data(env, TARGET_STRING_ATOM, &ctx)) {
         gchar *str;
         str = g_convert( (gchar *)ctx.data, -1, "UTF-8", "ISO-8859-1", NULL, NULL, NULL);
@@ -346,7 +348,6 @@ static jobject dnd_target_get_list(JNIEnv *env)
     jobjectArray result = NULL;
     jstring str;
     selection_data_ctx ctx;
-    memset(&ctx, 0, sizeof(selection_data_ctx));
 
     if (dnd_target_receive_data(env, TARGET_MIME_URI_LIST_ATOM, &ctx)) {
         strv = g_uri_list_extract_uris((gchar *)ctx.data);
@@ -380,8 +381,7 @@ static jobject dnd_target_get_image(JNIEnv *env)
         0};
     GdkAtom *cur_target = targets;
     selection_data_ctx ctx;
-    memset(&ctx, 0, sizeof(selection_data_ctx));
-    
+
     while(*cur_target != 0 && result == NULL) {
         if (dnd_target_receive_data(env, *cur_target, &ctx)) {
             stream = g_memory_input_stream_new_from_data(ctx.data, ctx.length * (ctx.format / 8),
@@ -405,7 +405,7 @@ static jobject dnd_target_get_image(JNIEnv *env)
                 h = gdk_pixbuf_get_height(buf);
                 stride = gdk_pixbuf_get_rowstride(buf);
                 data = gdk_pixbuf_get_pixels(buf);
-                
+
                 //Actually, we are converting RGBA to BGRA, but that's the same operation
                 data = (guchar*) convert_BGRA_to_RGBA((int*) data, stride, h);
                 data_array = env->NewByteArray(stride * h);
@@ -427,7 +427,6 @@ static jobject dnd_target_get_image(JNIEnv *env)
 static jobject dnd_target_get_raw(JNIEnv *env, GdkAtom target, gboolean string_data)
 {
     selection_data_ctx ctx;
-    memset(&ctx, 0, sizeof(selection_data_ctx));
     jobject result = NULL;
     if (dnd_target_receive_data(env, target, &ctx)) {
         if (string_data) {
@@ -452,7 +451,7 @@ jobject dnd_target_get_data(JNIEnv *env, jstring mime)
     jobject ret = NULL;
     
     init_target_atoms();
-    
+
     if (g_strcmp0(cmime, "text/plain") == 0) {
         ret = dnd_target_get_string(env);
     } else if (g_str_has_prefix(cmime, "text/")) {
@@ -464,9 +463,9 @@ jobject dnd_target_get_data(JNIEnv *env, jstring mime)
     } else {
         ret = dnd_target_get_raw(env, gdk_atom_intern(cmime, FALSE), FALSE);
     }
-    
+
     env->ReleaseStringUTFChars(mime, cmime);
-    
+
     return ret;
 }
 
@@ -519,14 +518,16 @@ static GdkDragContext *get_drag_context() {
 }
 
 static gboolean dnd_finish_callback() {
-    dnd_set_performed_action(
-            translate_gdk_action_to_glass(
-                GLASS_GDK_DRAG_CONTEXT_GET_SELECTED_ACTION(
-                    get_drag_context())));
+    if (dnd_window) {
+        dnd_set_performed_action(
+                translate_gdk_action_to_glass(
+                    GLASS_GDK_DRAG_CONTEXT_GET_SELECTED_ACTION(
+                        get_drag_context())));
 
-    gdk_window_destroy(dnd_window);
-    dnd_window = NULL;
-
+        gdk_window_destroy(dnd_window);
+        dnd_window = NULL;
+    }
+    
     return FALSE;
 }
 
@@ -574,9 +575,13 @@ static jobject dnd_source_get_data(const char *key)
     
 }
 
-static void dnd_source_set_utf8_string(GdkWindow *requestor, GdkAtom property)
+static gboolean dnd_source_set_utf8_string(GdkWindow *requestor, GdkAtom property)
 {
     jstring string = (jstring)dnd_source_get_data("text/plain");
+    if (!string) {
+        return FALSE;
+    }
+
     const char *cstring = mainEnv->GetStringUTFChars(string, NULL);
     gint size = strlen(cstring);
     
@@ -584,25 +589,38 @@ static void dnd_source_set_utf8_string(GdkWindow *requestor, GdkAtom property)
             8, GDK_PROP_MODE_REPLACE, (guchar *)cstring, size);
     
     mainEnv->ReleaseStringUTFChars(string, cstring);
+    return TRUE;
 }
 
-static void dnd_source_set_string(GdkWindow *requestor, GdkAtom property)
+static gboolean dnd_source_set_string(GdkWindow *requestor, GdkAtom property)
 {
     jstring string = (jstring)dnd_source_get_data("text/plain");
+    if (!string) {
+        return FALSE;
+    }
+    
+    gboolean is_data_set = FALSE;
     const char *cstring = mainEnv->GetStringUTFChars(string, NULL);
     gchar *res_str = g_convert((gchar *)cstring, -1, "ISO-8859-1", "UTF-8", NULL, NULL, NULL);
     
     if (res_str) {
         gdk_property_change(requestor, property, GDK_SELECTION_TYPE_STRING,
                 8, GDK_PROP_MODE_REPLACE, (guchar *)res_str, strlen(res_str));
+        g_free(res_str);
+        is_data_set = TRUE;
     }
     
     mainEnv->ReleaseStringUTFChars(string, cstring);
+    return is_data_set;
 }
 
-static void dnd_source_set_image(GdkWindow *requestor, GdkAtom property, GdkAtom target)
+static gboolean dnd_source_set_image(GdkWindow *requestor, GdkAtom property, GdkAtom target)
 {
     jobject pixels = dnd_source_get_data("application/x-java-rawimage");
+    if (!pixels) {
+        return FALSE;
+    }
+    
     gchar *buffer;
     gsize size;
     const char * type;
@@ -617,15 +635,18 @@ static void dnd_source_set_image(GdkWindow *requestor, GdkAtom property, GdkAtom
     } else if (target == TARGET_MIME_BMP_ATOM) {
         type = "bmp";
     } else {
-        return;
+        return FALSE;
     }
-    
+
     mainEnv->CallVoidMethod(pixels, jPixelsAttachData, PTR_TO_JLONG(&pixbuf));
     
     if (gdk_pixbuf_save_to_buffer(pixbuf, &buffer, &size, type, NULL, NULL)) {
         gdk_property_change(requestor, property, target,
                 8, GDK_PROP_MODE_REPLACE, (guchar *)buffer, size);
+    } else {
+        return FALSE;
     }
+    return TRUE;
 }
 
 #define FILE_PREFIX "file://"
@@ -666,26 +687,30 @@ static void dnd_source_set_uri_file_list(GdkWindow *requestor, GdkAtom property,
     
 }
 
-static void dnd_source_set_uri_list(GdkWindow *requestor, GdkAtom property)
+static gboolean dnd_source_set_uri_list(GdkWindow *requestor, GdkAtom property)
 {
     jobject data;
-
+    gboolean is_data_set = FALSE;
     if (data = dnd_source_get_data("text/uri-list")) {
         const char *cstring = mainEnv->GetStringUTFChars((jstring)data, NULL);
         gdk_property_change(requestor, property, GDK_SELECTION_TYPE_STRING,
                 8, GDK_PROP_MODE_REPLACE, (guchar *) cstring, strlen(cstring));
         
         mainEnv->ReleaseStringUTFChars((jstring)data, cstring);
+        is_data_set = TRUE;
     } else if (data = dnd_source_get_data("application/x-java-file-list")) {
         dnd_source_set_uri_file_list(requestor, property, (jobjectArray)data);
+        is_data_set = TRUE;
     }
+
+    return is_data_set;
 }
 
-static void dnd_source_set_raw(GdkWindow *requestor, GdkAtom property, GdkAtom target)
+static gboolean dnd_source_set_raw(GdkWindow *requestor, GdkAtom property, GdkAtom target)
 {
     gchar *target_name = gdk_atom_name(target);
     jobject data = dnd_source_get_data(target_name);
-    
+    gboolean is_data_set = FALSE;
     if (data) {
         if (mainEnv->IsInstanceOf(data, jStringCls)) {
             const char *cstring = mainEnv->GetStringUTFChars((jstring)data, NULL);
@@ -694,6 +719,7 @@ static void dnd_source_set_raw(GdkWindow *requestor, GdkAtom property, GdkAtom t
                     8, GDK_PROP_MODE_REPLACE, (guchar *) cstring, strlen(cstring));
         
             mainEnv->ReleaseStringUTFChars((jstring)data, cstring);
+            is_data_set = TRUE;
         } else if (mainEnv->IsInstanceOf(data, jByteBufferCls)) {
             jbyteArray byteArray = (jbyteArray)mainEnv->CallObjectMethod(data, jByteBufferArray);
             jbyte* raw = mainEnv->GetByteArrayElements(byteArray, NULL);
@@ -703,34 +729,35 @@ static void dnd_source_set_raw(GdkWindow *requestor, GdkAtom property, GdkAtom t
                     8, GDK_PROP_MODE_REPLACE, (guchar *) raw, nraw);
             
             mainEnv->ReleaseByteArrayElements(byteArray, raw, JNI_ABORT);
+            is_data_set = TRUE;
         }
     }
     
     g_free(target_name);
+    return is_data_set;
 }
 
 static void process_dnd_source_selection_req(GdkWindow *window, GdkEventSelection* event)
 { 
     GdkWindow *requestor = GLASS_GDK_SELECTION_EVENT_GET_REQUESTOR(event);
-    gchar *target = gdk_atom_name(event->target);
-    
-    if (event->target == TARGET_UTF8_STRING_ATOM || event->target == TARGET_MIME_TEXT_PLAIN_ATOM) {
-        dnd_source_set_utf8_string(requestor, event->property);
+
+    gboolean is_data_set = FALSE;
+    if (event->target == TARGET_UTF8_STRING_ATOM
+            || event->target == TARGET_MIME_TEXT_PLAIN_ATOM) {
+        is_data_set = dnd_source_set_utf8_string(requestor, event->property);
     } else if (event->target == TARGET_STRING_ATOM) {
-        dnd_source_set_string(requestor, event->property);
-    } else if (event->target == TARGET_COMPOUND_TEXT_ATOM) {
-        //XXX compound text
+        is_data_set = dnd_source_set_string(requestor, event->property);
+//    } else if (event->target == TARGET_COMPOUND_TEXT_ATOM) { // XXX compound text
     } else if (target_is_image(event->target)) {
-        dnd_source_set_image(requestor, event->property, event->target);
+        is_data_set = dnd_source_set_image(requestor, event->property, event->target);
     } else if (event->target == TARGET_MIME_URI_LIST_ATOM) {
-        dnd_source_set_uri_list(requestor, event->property);
+        is_data_set = dnd_source_set_uri_list(requestor, event->property);
     } else {
-        dnd_source_set_raw(requestor, event->property, event->target);
+        is_data_set = dnd_source_set_raw(requestor, event->property, event->target);
     }
-    
-    gdk_selection_send_notify(event->requestor, event->selection, event->target, event->property, event->time);
-    
-    g_free(target);
+
+    gdk_selection_send_notify(event->requestor, event->selection, event->target, 
+                               (is_data_set) ? event->property : GDK_NONE, event->time);
 }
 
 static void process_dnd_source_mouse_release(GdkWindow *window, GdkEventButton *event) {
