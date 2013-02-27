@@ -35,15 +35,15 @@ import javafx.scene.Node;
  * {@link ListView}, {@link TableView}, {@link TreeView} and {@link TreeTableView}.
  */
 public class ScrollToEvent<T> extends Event {
-    /**
-     * This event occurs if the user requests scrolling a node into view.
-     */
-    @SuppressWarnings("unchecked")
-    public static EventType<ScrollToEvent<Node>> scrollToNode() {
-        return SCROLL_TO_NODE;
-    }
-    private static final EventType<ScrollToEvent<Node>> SCROLL_TO_NODE = 
-            new EventType<ScrollToEvent<Node>>(Event.ANY, "SCROLL_TO_NODE");
+//    /**
+//     * This event occurs if the user requests scrolling a node into view.
+//     */
+//    @SuppressWarnings("unchecked")
+//    public static EventType<ScrollToEvent<Node>> scrollToNode() {
+//        return SCROLL_TO_NODE;
+//    }
+//    private static final EventType<ScrollToEvent<Node>> SCROLL_TO_NODE = 
+//            new EventType<ScrollToEvent<Node>>(Event.ANY, "SCROLL_TO_NODE");
     
     /**
      * This event occurs if the user requests scrolling a given index into view.
