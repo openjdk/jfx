@@ -7,37 +7,60 @@
  * Items left to do:
  *  - javafx checkstyle
  *  - media
- *  - apps
+ *  - building apps
  *  - performance tests
  *  - sqe tests
  *  - unit tests
  *  - manual tests (toys)
  *  - media tests
- *  - native code compilation
- *  - aria project?
- *  - iaccessible project?
- *  - test-stub-toolkit
- *  - README, README.md, license file, etc.
+ *  - all platforms native code, + cross compilation
  *  - How to handle dt *.properties?
+ *  - ModenaTest needs to be properly integrated into the tests area
+ *  - What about maven builds? We have some .pom right now, but these will need to be redone
  */
 
 defaultTasks = ["generate"]
 RTDir = "."
 FXDir = "../javafx"
 task generate << {
-    def excludeResources = ["META-INF/**", "**/*.properties", "**/*.stg", "**/*.g", "**/*.css", "**/*.html", "**/*.png", "**/*.jpg", "nbproject", "*.iml"]
-    def includeResources = ["META-INF/**", "**/*.properties", "**/*.stg", "**/*.css", "**/*.html", "**/*.png", "**/*.jpg"]
+    def excludeResources = ["META-INF/**", "**/*.properties", "**/*.stg", "**/*.g", "**/*.css", "**/*.html", "**/*.png", "**/*.jpg", "nbproject", "*.iml", "**/*.txt", "**/*.fxml", "**/*.bak", "**/*.orig", "**/*.js"]
+    def includeResources = ["META-INF/**", "**/*.properties", "**/*.stg", "**/*.css", "**/*.html", "**/*.png", "**/*.jpg", "**/*.txt", "**/*.fxml", "**/*.js"]
 
-    // Copy over the new gradle build files
+    // Copy over the new gradle build files, LICENSE, and README
     copy {
         from RTDir
         into FXDir
-        include "build.gradle", "settings.gradle"
+        include "build.gradle", "settings.gradle", "LICENSE", "README"
     }
 
+    // Copy over the apps
+    ["ConferenceScheduleApp", "Modena"].each { app ->
+        copy {
+            from "$RTDir/apps/experiments/$app/src"
+            into "$FXDir/apps/experiments/$app/src/main/java"
+            exclude excludeResources
+            exclude "build.xml"
+        }
+        copy {
+            from "$RTDir/apps/experiments/$app/src"
+            into "$FXDir/apps/experiments/$app/src/main/resources"
+            include includeResources
+        }
+    }
+
+    // Copy over Ensemble8. Some special care taken for the generated stuff.
     copy {
-        from "$RTDir/buildSrc"
-        into "$FXDir/buildSrc"
+        from "$RTDir/apps/samples/Ensemble8/src"
+        into "$FXDir/apps/samples/Ensemble8/src/main/java"
+        exclude excludeResources
+        exclude "build.xml"
+        exclude "generated/ensemble/search/index/"
+    }
+    copy {
+        from "$RTDir/apps/samples/Ensemble8/src"
+        into "$FXDir/apps/samples/Ensemble8/src/main/resources"
+        include includeResources
+        include "generated/ensemble/search/index/"
     }
 
     // Create the build-tools project
@@ -176,7 +199,8 @@ task generate << {
         from "${RTDir}/javafx-concurrent/test",
              "${RTDir}/javafx-geom/test",
              "${RTDir}/javafx-sg-common/test",
-             "${RTDir}/javafx-sg-prism/test"
+             "${RTDir}/javafx-sg-prism/test",
+             "${RTDir}/javafx-ui-quantum/test",
         into "${FXDir}/modules/graphics/src/test/java"
         exclude excludeResources
     }
@@ -184,7 +208,8 @@ task generate << {
         from "${RTDir}/javafx-concurrent/test",
              "${RTDir}/javafx-geom/test",
              "${RTDir}/javafx-sg-common/test",
-             "${RTDir}/javafx-sg-prism/test"
+             "${RTDir}/javafx-sg-prism/test",
+             "${RTDir}/javafx-ui-quantum/test",
         into "${FXDir}/modules/graphics/src/test/resources"
         include includeResources
     }
@@ -230,11 +255,11 @@ task generate << {
         copy {
             from "${RTDir}/glass/${dir}"
             into "${FXDir}/modules/graphics/native/src/main/${dir}"
-            exclude "build", "dist", "*.iml"
+            exclude "build", "dist", "*.iml", "build.xml"
         }
     }
 
-    ["decora-d3d-native", "decora-sse-native", "prism-common-native", "prism-sw-native"].each { dir ->
+    ["decora-sse-native", "prism-common-native", "prism-sw-native"].each { dir ->
         copy {
             from "${RTDir}/${dir}"
             into "${FXDir}/modules/graphics/native/src/main/${dir}"
@@ -306,14 +331,61 @@ task generate << {
     }
 
     // Create the fxml module
-//    copy {
-//        from "${RTDir}/javafx-fxml/src"
-//        into "${FXDir}/modules/fxml/src/main/java"
-//        exclude excludeResources
-//    }
-//    copy {
-//        from "${RTDir}/javafx-fxml/src"
-//        into "${FXDir}/modules/fxml/src/main/resources"
-//        include includeResources
-//    }
+    copy {
+        from "${RTDir}/javafx-fxml/src"
+        into "${FXDir}/modules/fxml/src/main/java"
+        exclude excludeResources
+    }
+    copy {
+        from "${RTDir}/javafx-fxml/src"
+        into "${FXDir}/modules/fxml/src/main/resources"
+        include includeResources
+    }
+
+    copy {
+        from "${RTDir}/javafx-fxml/test"
+        into "${FXDir}/modules/fxml/test/main/java"
+        exclude excludeResources
+    }
+    copy {
+        from "${RTDir}/javafx-fxml/test"
+        into "${FXDir}/modules/fxml/test/main/resources"
+        include includeResources
+    }
+
+    // Create the deployment code
+    copy {
+        from "$RTDir/deploy/javafx-deploy/src/js"
+        into "$FXDir/deploy/deploymentToolkit/src/main/js"
+    }
+
+    copy {
+        from "$RTDir/deploy/javafx-launcher/src"
+        into "$FXDir/deploy/launcher/src/main/java"
+    }
+
+    copy {
+        from "$RTDir/deploy/packager/src"
+        into "$FXDir/deploy/packager/src/main/java"
+        exclude excludeResources
+    }
+
+    copy {
+        from "$RTDir/deploy/packager/src", "$RTDir/deploy/packager/scripts"
+        into "$FXDir/deploy/packager/src/main/resources"
+        include includeResources
+        include "**/*antlib.xml"
+    }
+
+    ["linux", "macosx", "windows"].each { dir ->
+        copy {
+            from "$RTDir/deploy/packager/native/$dir"
+            into "$FXDir/deploy/packager/native/src/main/$dir"
+        }
+    }
+
+    copy {
+        from "$RTDir/deploy/packager/test"
+        into "$FXDir/deploy/packager/test/main/java"
+    }
 }

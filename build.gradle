@@ -239,13 +239,13 @@ project(":swt") {
 //                project(":controls"), /*project(":media"),*/ project(":swt"), project(":swing")
 //    }
 //}
-//
-//project(":fxml") {
-//    dependencies {
-//        compile project(":build-tools"), project(":base"), project(":graphics"),
-//                project(":controls"), /*project(":media"),*/ project(":web"), project(":swt"), project(":swing")
-//    }
-//}
+
+project(":fxml") {
+    dependencies {
+        compile project(":build-tools"), project(":base"), project(":graphics"),
+                project(":controls"), /*project(":media"), project(":web"),*/ project(":swt"), project(":swing")
+    }
+}
 
 project(":designTime") {
     dependencies {
