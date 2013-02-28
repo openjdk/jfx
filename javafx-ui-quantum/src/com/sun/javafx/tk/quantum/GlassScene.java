@@ -369,7 +369,10 @@ abstract class GlassScene implements TKScene, SceneChangeListener {
 
     @Override public void sceneChanged() {
         if (glassStage instanceof PopupStage) {
-            ((PopupStage)glassStage).getOwnerScene().sceneChanged();
+            GlassScene popupScene = ((PopupStage)glassStage).getOwnerScene(); 
+            if (popupScene != null) { 
+                popupScene.sceneChanged(); 
+            }
         }
         if (glassStage != null) {
             // don't mark this scene dirty and add it to the dirty scene list if
