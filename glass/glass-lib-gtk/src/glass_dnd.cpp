@@ -129,6 +129,8 @@ static struct {
     gint dx, dy;
 } enter_ctx = {NULL, FALSE, NULL, 0, 0};
 
+gboolean is_dnd_owner = FALSE;
+
 static void reset_enter_ctx() {
     if (enter_ctx.mimes != NULL) {
         mainEnv->DeleteGlobalRef(enter_ctx.mimes);
@@ -143,6 +145,7 @@ static void process_dnd_target_drag_enter(WindowContext *ctx, GdkEventDND *event
     enter_ctx.ctx = event->context;
     enter_ctx.just_entered = TRUE;
     gdk_window_get_origin(ctx->get_gdk_window(), &enter_ctx.dx, &enter_ctx.dy);
+    is_dnd_owner = is_in_drag();
 }
 
 static void process_dnd_target_drag_motion(WindowContext *ctx, GdkEventDND *event)
@@ -970,6 +973,7 @@ static void dnd_source_push_data(JNIEnv *env, jobject data, jint supported)
     
     dnd_pointer_grab(NULL);
 
+    is_dnd_owner = TRUE;
 }
 
 jint execute_dnd(JNIEnv *env, jobject data, jint supported) {
