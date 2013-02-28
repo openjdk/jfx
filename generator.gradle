@@ -200,7 +200,7 @@ task generate << {
              "${RTDir}/javafx-geom/test",
              "${RTDir}/javafx-sg-common/test",
              "${RTDir}/javafx-sg-prism/test",
-             "${RTDir}/javafx-ui-quantum/test",
+             "${RTDir}/javafx-ui-quantum/test"
         into "${FXDir}/modules/graphics/src/test/java"
         exclude excludeResources
     }
@@ -209,7 +209,7 @@ task generate << {
              "${RTDir}/javafx-geom/test",
              "${RTDir}/javafx-sg-common/test",
              "${RTDir}/javafx-sg-prism/test",
-             "${RTDir}/javafx-ui-quantum/test",
+             "${RTDir}/javafx-ui-quantum/test"
         into "${FXDir}/modules/graphics/src/test/resources"
         include includeResources
     }
