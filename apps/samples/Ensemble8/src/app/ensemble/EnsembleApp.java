@@ -31,6 +31,7 @@
  */
 package ensemble;
 
+
 import ensemble.control.Popover;
 import ensemble.control.SearchBox;
 import ensemble.control.TitledToolBar;
@@ -56,8 +57,9 @@ import javafx.scene.transform.Scale;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
 
+
 /**
- * Ensmeble Application
+ * Ensemble Application
  */
 public class EnsembleApp extends Application {
     private static final String os = System.getProperty("os.name");
