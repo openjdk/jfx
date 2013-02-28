@@ -42,122 +42,12 @@ final class LensTouchInputSupport {
     private final static TouchInputSupport touches =
         new TouchInputSupport(gestures.createTouchCountListener(), false);
 
-    private static class LensTouchPoint {
-        LensView view;
-        int state;
-        long id;
-        int x;
-        int y;
-        int absX;
-        int absY;
-
-        LensTouchPoint(LensView view, int state, long id,
-                       int x, int y, int absX, int absY) {
-            this.view = view;
-            this.state = state;
-            this.id = id;
-            this.x = x;
-            this.y = y;
-            this.absX = absX;
-            this.absY = absY;
-        }
-
-        @Override
-        public String toString() {
-            return "LensTouchPoint[view=" + view + ", state=" + state +  ", id=" + id + ", x=" +
-                   x + ", y=" + y + ", absX= " + absX + ", absY=" + absY + "]";
-        }
-    }
-
-    private static LinkedList<LensTouchPoint> touchPointsBuffer = new LinkedList<LensTouchPoint>();
-
-    private static Hashtable<Long, LensTouchPoint> touchPointsById = new Hashtable<Long, LensTouchPoint>();
-    private static final int TP_MIN_XY_CHANGE = 10;
-
-    private static boolean shouldFilterTouchPoint(LensTouchPoint tp) {
-        synchronized (touchPointsById) {
-
-            LensTouchPoint storedTP = touchPointsById.get(tp.id);
-            if (storedTP == null) {
-                touchPointsById.put(tp.id, tp);
-                return false;
-            }
-            
-            //Filter move events with small change in coordinates
-            if (tp.state == TouchEvent.TOUCH_MOVED) {
-                int distanceX =  Math.abs(tp.absX - storedTP.absX);
-                int distanceY =  Math.abs(tp.absY - storedTP.absY);
-                if (distanceX < TP_MIN_XY_CHANGE && distanceY < TP_MIN_XY_CHANGE) {
-                    return true;
-                }
-            }
-
-            if (tp.state != TouchEvent.TOUCH_RELEASED) {
-                touchPointsById.put(tp.id, tp);
-            } else {
-                touchPointsById.remove(tp.id);
-            }
-        }
-
-        return false;
-    }
-
-
-
-    static private void notifyMouseEvent(LensTouchPoint tp) {
-
-        LensApplication lensApplication = (LensApplication)Application.GetApplication();
-
-        int type = 0;
-        int modifier = KeyEvent.MODIFIER_NONE;
-        int button = MouseEvent.BUTTON_NONE;
-        switch (tp.state) {
-            case TouchEvent.TOUCH_PRESSED :
-                type = MouseEvent.DOWN;
-                modifier = KeyEvent.MODIFIER_BUTTON_PRIMARY;
-                button = MouseEvent.BUTTON_LEFT;
-                break;
-            case TouchEvent.TOUCH_RELEASED :
-                type = MouseEvent.UP;
-                button = MouseEvent.BUTTON_LEFT;
-                break;
-            case TouchEvent.TOUCH_MOVED :
-                type = MouseEvent.MOVE;
-                modifier = KeyEvent.MODIFIER_BUTTON_PRIMARY;
-                break;
-        }
-
-        lensApplication.notifyMouseEvent(tp.view, type, tp.x, tp.y,
-                                         tp.absX, tp.absY, button, modifier, false, false);
-    }
-
     static void postTouchEvent(LensView view, int state, long id,
-                                            int x, int y, int absX, int absY) {
-        synchronized (touchPointsBuffer) {
-            touchPointsBuffer.add(new LensTouchPoint(view, state, id, x, y, absX, absY));
-        }
-    }
+                               int x, int y, int absX, int absY) {
+        touches.notifyBeginTouchEvent(view, 0, true, 1);
+        touches.notifyNextTouchEvent(view, state, id, x, y, absX, absY);
+        touches.notifyEndTouchEvent(view);
 
-    static void processTouchEvents() {
-        LensTouchPoint tp = null;
-
-        synchronized (touchPointsBuffer) {
-            if (touchPointsBuffer.size() > 0) {
-                tp = touchPointsBuffer.pollFirst();
-            }
-        }
-
-        if (tp != null) {
-            if (!shouldFilterTouchPoint(tp)) {
-                touches.notifyBeginTouchEvent(tp.view, 0, true, 1);
-                touches.notifyNextTouchEvent(tp.view, tp.state, tp.id, tp.x, tp.y,
-                                             tp.absX, tp.absY);
-                touches.notifyEndTouchEvent(tp.view);
-
-                // Create similar mouse event for applications that use mouse events.
-                notifyMouseEvent(tp);
-            }
-        }
     }
 }
 
