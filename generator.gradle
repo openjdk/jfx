@@ -23,8 +23,8 @@ defaultTasks = ["generate"]
 RTDir = "."
 FXDir = "../javafx"
 task generate << {
-    def excludeResources = ["META-INF/**", "**/*.properties", "**/*.stg", "**/*.g", "**/*.css", "**/*.html", "**/*.png", "**/*.jpg", "nbproject", "*.iml", "**/*.txt", "**/*.fxml", "**/*.bak", "**/*.orig", "**/*.js"]
-    def includeResources = ["META-INF/**", "**/*.properties", "**/*.stg", "**/*.css", "**/*.html", "**/*.png", "**/*.jpg", "**/*.txt", "**/*.fxml", "**/*.js"]
+    def excludeResources = ["META-INF/**", "**/*.properties", "**/*.stg", "**/*.g", "**/*.css", "**/*.png", "**/*.jpg", "nbproject", "*.iml", "**/*.txt", "**/*.fxml", "**/*.bak", "**/*.orig", "**/*.js", "**/doc-files/**.*"]
+    def includeResources = ["META-INF/**", "**/*.properties", "**/*.stg", "**/*.css", "**/*.png", "**/*.jpg", "**/*.txt", "**/*.fxml", "**/*.js"]
 
     // Copy over the new gradle build files, LICENSE, and README
     copy {
@@ -45,6 +45,7 @@ task generate << {
             from "$RTDir/apps/experiments/$app/src"
             into "$FXDir/apps/experiments/$app/src/main/resources"
             include includeResources
+            exclude "**/doc-files/**.*"
         }
     }
 
@@ -61,6 +62,7 @@ task generate << {
         into "$FXDir/apps/samples/Ensemble8/src/main/resources"
         include includeResources
         include "generated/ensemble/search/index/"
+        exclude "**/doc-files/**.*"
     }
 
     // Create the build-tools project
@@ -81,6 +83,7 @@ task generate << {
              "${RTDir}/decora-compiler/src"
         into "${FXDir}/build-tools/src/main/resources"
         include includeResources
+        exclude "**/doc-files/**.*"
     }
     copy {
         from "${RTDir}/decora-compiler/src/com/sun/scenario/effect/compiler/JSL.g"
@@ -95,6 +98,7 @@ task generate << {
         from "${RTDir}/decora-compiler/test"
         into "${FXDir}/build-tools/src/test/resources"
         include includeResources
+        exclude "**/doc-files/**.*"
     }
 
     // Create the base module
@@ -110,6 +114,11 @@ task generate << {
         exclude excludeResources
     }
     copy {
+        from "${RTDir}/javafx-anim/src"
+        into "${FXDir}/modules/base/src/main/java"
+        include "**/doc-files/**.*"
+    }
+    copy {
         from "${RTDir}/javafx-beans/src",
              "${RTDir}/javafx-util-converter/src",
              "${RTDir}/javafx-anim/src",
@@ -117,6 +126,7 @@ task generate << {
              "${RTDir}/javafx-logging/src"
         into "${FXDir}/modules/base/src/main/resources"
         include includeResources
+        exclude "**/doc-files/**.*"
     }
     copy {
         from "${RTDir}/javafx-common/build-tools"
@@ -137,6 +147,7 @@ task generate << {
              "${RTDir}/javafx-common/test/unit"
         into "${FXDir}/modules/base/src/test/resources"
         include includeResources
+        exclude "**/doc-files/**.*"
     }
 
     // Create the graphics module
@@ -169,6 +180,11 @@ task generate << {
         exclude excludeResources
     }
     copy {
+        from "${RTDir}/javafx-ui-common/src"
+        into "${FXDir}/modules/graphics/src/main/java"
+        include "**/doc-files/**.*"
+    }
+    copy {
         from "${RTDir}/decora-d3d/src",
              "${RTDir}/decora-es2/src",
              "${RTDir}/decora-jsw/src",
@@ -194,6 +210,7 @@ task generate << {
              "${RTDir}/prism-util/src"
         into "${FXDir}/modules/graphics/src/main/resources"
         include includeResources
+        exclude "**/doc-files/**.*"
     }
     copy {
         from "${RTDir}/javafx-concurrent/test",
@@ -212,6 +229,7 @@ task generate << {
              "${RTDir}/javafx-ui-quantum/test"
         into "${FXDir}/modules/graphics/src/test/resources"
         include includeResources
+        exclude "**/doc-files/**.*"
     }
     // Because we have tests that need to be run with StubToolkit vs. Quantum,
     // and others that need Quantum, we have to split them apart
@@ -226,6 +244,7 @@ task generate << {
              "${RTDir}/test-stub-toolkit/src"
         into "${FXDir}/modules/graphics/src/test/resourcesWithStubToolkit"
         include includeResources
+        exclude "**/doc-files/**.*"
     }
 
     copy {
@@ -249,6 +268,7 @@ task generate << {
         from "${RTDir}/prism-ps/shadergen"
         into "${FXDir}/modules/graphics/prism-jsl/src/main/resources"
         include "*.stg"
+        exclude "**/doc-files/**.*"
     }
 
     ["glass-lib-gtk", "glass-lib-ios", "glass-lib-lens", "glass-lib-macosx", "glass-lib-windows"].each { dir ->
@@ -285,6 +305,7 @@ task generate << {
              "${RTDir}/javafx-ui-controls/src"
         into "${FXDir}/modules/controls/src/main/resources"
         include includeResources
+        exclude "**/doc-files/**.*"
     }
     copy {
         from "${RTDir}/javafx-designtime/src"
@@ -302,6 +323,7 @@ task generate << {
              "${RTDir}/javafx-ui-controls/test"
         into "${FXDir}/modules/controls/src/test/java"
         include includeResources
+        exclude "**/doc-files/**.*"
     }
 
     // Create the web module
@@ -316,6 +338,7 @@ task generate << {
         from "${RTDir}/javafx-embed-swing/src"
         into "${FXDir}/modules/swing/src/main/java"
         include includeResources
+        exclude "**/doc-files/**.*"
     }
 
     // Create the swt module
@@ -328,6 +351,7 @@ task generate << {
         from "${RTDir}/javafx-embed-swt/src"
         into "${FXDir}/modules/swt/src/main/java"
         include includeResources
+        exclude "**/doc-files/**.*"
     }
 
     // Create the fxml module
@@ -338,8 +362,14 @@ task generate << {
     }
     copy {
         from "${RTDir}/javafx-fxml/src"
+        into "${FXDir}/modules/fxml/src/main/java"
+        include "**/doc-files/**.*"
+    }
+    copy {
+        from "${RTDir}/javafx-fxml/src"
         into "${FXDir}/modules/fxml/src/main/resources"
         include includeResources
+        exclude "**/doc-files/**.*"
     }
 
     copy {
@@ -351,6 +381,7 @@ task generate << {
         from "${RTDir}/javafx-fxml/test"
         into "${FXDir}/modules/fxml/test/main/resources"
         include includeResources
+        exclude "**/doc-files/**.*"
     }
 
     // Create the deployment code
@@ -375,6 +406,7 @@ task generate << {
         into "$FXDir/deploy/packager/src/main/resources"
         include includeResources
         include "**/*antlib.xml"
+        exclude "**/doc-files/**.*"
     }
 
     ["linux", "macosx", "windows"].each { dir ->
