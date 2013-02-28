@@ -658,7 +658,7 @@ class GlassViewEventHandler extends View.EventHandler {
                     } finally {
                         AbstractPainter.renderLock.unlock();
                     }
-                    if (PlatformUtil.isMac() && w != null && w.isVisible()) {
+                    if (QuantumToolkit.liveResize && PlatformUtil.isMac() && w != null && w.isVisible()) {
                         WindowStage stage = scene.getWindowStage();
                         if (stage != null && !stage.isApplet()) {
                             collector.liveRepaintRenderJob(scene);

@@ -232,6 +232,13 @@ public final class QuantumToolkit extends DesktopToolkit implements ToolkitInter
                     return Integer.getInteger("javafx.animation.pulse");
                 }
             });
+    
+    static final boolean liveResize =
+            AccessController.doPrivileged(new PrivilegedAction<Boolean>() {
+                @Override public Boolean run() {
+                    return "true".equals(System.getProperty("javafx.live.resize", "true"));
+                }
+            });
 
     private AtomicBoolean           toolkitRunning = new AtomicBoolean(false);
     private AtomicBoolean           animationRunning = new AtomicBoolean(false);
