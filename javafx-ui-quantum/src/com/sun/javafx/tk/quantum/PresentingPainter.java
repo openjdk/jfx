@@ -39,7 +39,6 @@ class PresentingPainter extends ViewPainter implements Runnable {
     }
 
     @Override public void run() {
-        assert !renderLock.isHeldByCurrentThread();
         renderLock.lock();
 
         boolean locked = false;

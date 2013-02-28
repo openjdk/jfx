@@ -503,8 +503,12 @@ public final class QuantumToolkit extends DesktopToolkit implements ToolkitInter
             System.err.println("QT.endPulse: " + System.nanoTime());
         }
     }
+
+    protected void pulse() {
+        pulse(true);
+    }
     
-    void pulse() {
+    void pulse(boolean collect) {
         try {
             long start = PULSE_LOGGING_ENABLED ? System.currentTimeMillis() : 0;
             if (PULSE_LOGGING_ENABLED) {
@@ -523,7 +527,7 @@ public final class QuantumToolkit extends DesktopToolkit implements ToolkitInter
                     animationRunning.set(false);
                 }
                 firePulse();
-                collector.renderAll();
+                if (collect) collector.renderAll();
                 endPulseRunning();
             } catch (Throwable th) {
                 th.printStackTrace(System.err);
