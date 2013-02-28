@@ -168,18 +168,15 @@ final public class StyleManager {
 
     /*
      */
-    private final Map<StyleCache.Key, StyleCache> styleCache =
-            new HashMap<StyleCache.Key, StyleCache>();
+    private final Map<StyleCache.Key,StyleCache> styleCache =
+            new HashMap<StyleCache.Key,StyleCache>();
     
-    /** StyleHelper uses this cache. */
-    StyleCache getStyleCache(StyleCache.Key key) { 
-
-        StyleCache cache = styleCache.get(key);
-        if (cache == null) {
-            cache = new StyleCache();
-            styleCache.put(new StyleCache.Key(key), cache);
-        }
-        return cache;
+    /** 
+     * StyleHelper uses this cache but it lives here so it can be cleared
+     * when style-sheets change.
+     */
+    public Map<StyleCache.Key,StyleCache> getStyleCache() {         
+        return styleCache;
     }
     
    /**
@@ -955,11 +952,12 @@ final public class StyleManager {
     private void clearCache() {
         
         masterCacheMap.clear();
+        
         styleCache.clear();
         
         styleMapList.clear();
         baseStyleMapId = styleMapId;
-        // totally arbitrary
+        // 7/8ths is totally arbitrary
         if (baseStyleMapId > Integer.MAX_VALUE*7/8) {
             baseStyleMapId = styleMapId = 0;
         }

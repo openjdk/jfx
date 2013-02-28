@@ -24,7 +24,6 @@
  */
 package com.sun.javafx.css;
 
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -80,19 +79,19 @@ import java.util.Map;
 public final class StyleCache {
  
     public StyleCache() {
-        this.entries = new HashMap<StyleCacheEntry.Key, StyleCacheEntry>();
+        this.entries = new HashMap<StyleCacheEntry.Key,StyleCacheEntry>();
     }
     
     public void clear() {
         entries.clear();
     }
-    
-    public StyleCacheEntry getStyleCacheEntry(StyleCacheEntry.Key key) {
-        return entries.get(key);
+        
+    public void putStyleCacheEntry(StyleCacheEntry.Key entryKey, StyleCacheEntry entry) {
+        entries.put(entryKey, entry);
     }
-
-    public void putStyleCacheEntry(StyleCacheEntry.Key key, StyleCacheEntry entry) {
-        entries.put(key, entry);
+    
+    public StyleCacheEntry getStyleCacheEntry(StyleCacheEntry.Key entryKey) {
+        return entries.get(entryKey);
     }
     
     public static final class Key {
@@ -112,7 +111,7 @@ public final class StyleCache {
             if (styleMapIds != null) {
                 for (int i=0; i<styleMapIds.length; i++) {
                     final int id = styleMapIds[i];
-                    hash = 17 * hash + id;
+                    hash = 17 * (hash + id);
                 }
             }
             return hash;
@@ -120,36 +119,37 @@ public final class StyleCache {
 
         @Override
         public boolean equals(Object obj) {
-            if (obj == null) {
-                return false;
-            }
-            if (getClass() != obj.getClass()) {
-                return false;
-            }
-            final Key other = (Key) obj;
             
-            // if one is null, so too must the other
-            if ((this.styleMapIds == null) ^ (other.styleMapIds == null)) {
-                return false;
-            }
+            if (obj instanceof Key) {
+
+                final Key other = (Key) obj;
             
-            // if one is null, so is the other
-            if (this.styleMapIds == null) {
+                // if one is null, so too must the other
+                if ((this.styleMapIds == null) ^ (other.styleMapIds == null)) {
+                    return false;
+                }
+
+                // if one is null, so is the other
+                if (this.styleMapIds == null) {
+                    return true;
+                }
+
+                for (int i=0; i<styleMapIds.length; i++) {
+                    if (styleMapIds[i] != other.styleMapIds[i]) {
+                        return false;
+                    }
+                }
+                
                 return true;
             }
             
-            for (int i=0; i<styleMapIds.length; i++) {
-                if (styleMapIds[i] != other.styleMapIds[i]) {
-                    return false;
-                }
-            }
+            return false;
             
-            return true;
         }
         
         final int[] styleMapIds;
     }
     
-    private final Map<StyleCacheEntry.Key, StyleCacheEntry> entries;
+    private final Map<StyleCacheEntry.Key,StyleCacheEntry> entries;
     
 }

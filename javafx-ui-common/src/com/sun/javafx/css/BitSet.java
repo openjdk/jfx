@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2012, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -411,23 +411,20 @@ abstract class BitSet<T>  implements Set<T> {
     @Override
     public int hashCode() {
         int hash = 7;
-        hash = 71 * hash + Arrays.hashCode(this.bits);
+        hash = 71 * (hash + Arrays.hashCode(this.bits));
         return hash;
     }
 
     @Override
     public boolean equals(Object obj) {
-        if (obj == null) {
-            return false;
+        if (obj instanceof BitSet) {
+            final BitSet other = (BitSet) obj;
+            if (!Arrays.equals(this.bits, other.bits)) {
+                return false;
+            }
+            return true;
         }
-        if (getClass() != obj.getClass()) {
-            return false;
-        }
-        final BitSet other = (BitSet) obj;
-        if (!Arrays.equals(this.bits, other.bits)) {
-            return false;
-        }
-        return true;
+        return false;
     }
 
     abstract protected T getT(int index);

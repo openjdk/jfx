@@ -24,7 +24,8 @@
  */
 package com.sun.javafx.css;
 
-import java.util.Arrays;
+import java.lang.ref.Reference;
+import java.lang.ref.WeakReference;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -36,18 +37,14 @@ import javafx.css.StyleOrigin;
  */
 public final class StyleCacheEntry {
     
-    
-    public StyleCacheEntry(StyleCache.Key sharedCacheKey, StyleCacheEntry.Key sharedEntryKey) {
-        this.sharedCacheKey = new StyleCache.Key(sharedCacheKey);
-        this.sharedEntryKey = new StyleCacheEntry.Key(sharedEntryKey);
-        this.values = new HashMap<String,CalculatedValue>();
+    public StyleCacheEntry() {
+        this(null);
     }
     
-    private StyleCacheEntry() {
-        this.sharedCacheKey = null;
-        this.sharedEntryKey = null;
-        this.values = new HashMap<String,CalculatedValue>();
-    }
+    public StyleCacheEntry(StyleCacheEntry sharedCacheEntry) {
+        this.sharedCacheRef = sharedCacheEntry != null ? new WeakReference(sharedCacheEntry) : null;
+        this.values = new HashMap<String, CalculatedValue>();
+    }   
     
     public CalculatedValue getFont() {
         return font;
@@ -63,9 +60,10 @@ public final class StyleCacheEntry {
         if (values.isEmpty() == false) {
             cv = values.get(property);
         }
-        if (cv == null) {
-            final Map<String,CalculatedValue> sharedValues = getSharedValues();
-            if (sharedValues != null) cv = sharedValues.get(property);
+        if (cv == null && sharedCacheRef != null) {
+            final StyleCacheEntry ce = sharedCacheRef.get();
+            if (ce != null) cv = ce.values.get(property);
+            // if referent is null, we should skip the value.
             else cv = CalculatedValue.SKIP;
         }
         return cv;
@@ -83,39 +81,19 @@ public final class StyleCacheEntry {
             || (cv.isRelative() &&
                 (font.getOrigin() == StyleOrigin.INLINE || 
                  font.getOrigin() == StyleOrigin.USER));
-                
 
         if (isLocal) {
             values.put(property, cv);
         } else {
-            final Map<String,CalculatedValue> sharedValues = getSharedValues();
-            if (sharedValues != null && sharedValues.containsKey(property) == false) {
+            // if isLocal is false, then sharedCacheRef cannot be null.
+            final StyleCacheEntry ce = sharedCacheRef.get();
+            if (ce != null && ce.values.containsKey(property) == false) {
                 // don't override value already in shared cache.
-                sharedValues.put(property, cv);
+                ce.values.put(property, cv);
             }
         }
-    }
+  }
 
-    private Map<String,CalculatedValue> getSharedValues() {
-        
-        StyleCacheEntry entry = null;
-        
-        StyleCache styleCache = StyleManager.getInstance().getStyleCache(sharedCacheKey);
-        
-        if (styleCache != null) {
-            
-            entry = styleCache.getStyleCacheEntry(sharedEntryKey);
-            
-            if (entry == null) {
-                entry = new StyleCacheEntry();
-                Key key = new Key(sharedEntryKey);
-                styleCache.putStyleCacheEntry(key, entry);
-            }
-        }        
-        
-        return entry.values;
-    }
-    
     public final static class Key {
 
         private final Set<PseudoClass>[] pseudoClassStates;
@@ -143,7 +121,7 @@ public final class StyleCacheEntry {
                 
                 final Set<PseudoClass> states = pseudoClassStates[i];
                 if (states != null) {                
-                    hash = 67 * hash + states.hashCode();
+                    hash = 67 * (hash + states.hashCode());
                 }
             }
             return hash;
@@ -151,46 +129,45 @@ public final class StyleCacheEntry {
 
         @Override
         public boolean equals(Object obj) {
-            if (obj == null) {
-                return false;
-            }
-            if (getClass() != obj.getClass()) {
-                return false;
-            }
-            final Key other = (Key) obj;
             
-            // either both must be null or both must be not-null
-            if ((pseudoClassStates == null) ^ (other.pseudoClassStates == null)) {
-                return false;
-            }
-            
-            // if one is null, the other is too. 
-            if (pseudoClassStates == null) {
+            if (obj instanceof Key) {
+                
+                final Key other = (Key) obj;
+
+                // either both must be null or both must be not-null
+                if ((pseudoClassStates == null) ^ (other.pseudoClassStates == null)) {
+                    return false;
+                }
+
+                // if one is null, the other is too. 
+                if (pseudoClassStates == null) {
+                    return true;
+                }
+
+                if (pseudoClassStates.length != other.pseudoClassStates.length) {
+                    return false;
+                }
+
+                for (int i=0; i<pseudoClassStates.length; i++) {
+
+                    final Set<PseudoClass> this_pcs = pseudoClassStates[i];
+                    final Set<PseudoClass> other_pcs = other.pseudoClassStates[i];
+
+                    // if one is null, the other must be too
+                    if (this_pcs == null ? other_pcs != null : !this_pcs.equals(other_pcs)) {
+                        return false;
+                    }
+                }
+
                 return true;
             }
             
-            if (pseudoClassStates.length != other.pseudoClassStates.length) {
-                return false;
-            }
-            
-            for (int i=0; i<pseudoClassStates.length; i++) {
-                
-                final Set<PseudoClass> this_pcs = pseudoClassStates[i];
-                final Set<PseudoClass> other_pcs = other.pseudoClassStates[i];
-                
-                // if one is null, the other must be too
-                if (this_pcs == null ? other_pcs != null : !this_pcs.equals(other_pcs)) {
-                    return false;
-                }
-            }
-            
-            return true;
+            return false;
         }
 
     }
         
-    private final StyleCache.Key sharedCacheKey;
-    private final StyleCacheEntry.Key sharedEntryKey;
+    private final Reference<StyleCacheEntry> sharedCacheRef;
     private final Map<String,CalculatedValue> values;
     private CalculatedValue  font; // for use in converting font relative sizes
 }
