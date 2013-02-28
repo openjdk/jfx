@@ -24,21 +24,20 @@
  */
 package com.sun.javafx.scene.control.test;
 
-import com.sun.javafx.scene.control.skin.TableViewSkin;
+import com.sun.javafx.scene.control.skin.LabeledText;
 import com.sun.javafx.scene.control.skin.VirtualFlow;
 import com.sun.javafx.tk.Toolkit;
+import java.util.List;
 import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.Control;
 import javafx.scene.control.IndexedCell;
-import javafx.scene.control.TableRow;
-import javafx.scene.control.TableView;
+import javafx.scene.control.TreeItem;
 import javafx.scene.layout.Region;
 import javafx.stage.Stage;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
+import javafx.util.Callback;
+import static org.junit.Assert.*;
 
 public class ControlAsserts {
     
@@ -60,6 +59,62 @@ public class ControlAsserts {
     }
     
     private static void assertRows(final Control control, final int startRow, final int endRow, final boolean expectEmpty) {
+        Callback<IndexedCell<?>, Void> callback = new Callback<IndexedCell<?>, Void>() {
+            @Override public Void call(IndexedCell<?> indexedCell) {
+                boolean hasChildrenCell = false;
+                for (Node n : indexedCell.getChildrenUnmodifiable()) {
+                    if (! (n instanceof IndexedCell)) {
+                        break;
+                    }
+                    hasChildrenCell = true;
+                    IndexedCell<?> childCell = (IndexedCell<?>)n;
+
+                    if (expectEmpty) {
+                        assertCellEmpty(childCell);
+                    } else {
+                        assertCellNotEmpty(childCell);
+                    }
+                }
+
+                if (! hasChildrenCell) {
+                    if (expectEmpty) {
+                        assertCellEmpty(indexedCell);
+                    } else {
+                        assertCellNotEmpty(indexedCell);
+                    }
+                }
+                return null;
+            }
+        };
+        
+        assertCallback(control, startRow, endRow, callback);
+    }
+    
+    // used by TreeView / TreeTableView to ensure the correct indentation
+    // (although note that it has only been developed so far for TreeView)
+    public static void assertLayoutX(final Control control, final int startRow, final int endRow, final double expectedLayoutX) {
+        Callback<IndexedCell<?>, Void> callback = new Callback<IndexedCell<?>, Void>() {
+            @Override public Void call(IndexedCell<?> indexedCell) {
+                List<Node> childrenOfCell = indexedCell.getChildrenUnmodifiable();
+                LabeledText labeledText = null;
+                for (int j = 0; j < childrenOfCell.size(); j++) {
+                    Node child = childrenOfCell.get(j);
+                    if (child instanceof LabeledText) {
+                        labeledText = (LabeledText) child;
+                    }
+                }
+
+                String error = "Element in row " + indexedCell.getIndex() + " has incorrect indentation. "
+                        + "Expected " + expectedLayoutX + ", but found " + labeledText.getLayoutX();
+                assertEquals(error, expectedLayoutX, labeledText.getLayoutX(), 0.0);
+                return null;
+            }
+        };
+        
+        assertCallback(control, startRow, endRow, callback);
+    }
+    
+    public static void assertCallback(final Control control, final int startRow, final int endRow, final Callback<IndexedCell<?>, Void> callback) {
         Group group = new Group();
         Scene scene = new Scene(group);
         
@@ -79,34 +134,7 @@ public class ControlAsserts {
         final int sheetSize = sheet.getChildren().size();
         final int end = endRow == -1 ? sheetSize : Math.min(endRow, sheetSize);
         for (int row = startRow; row < end; row++) {
-            // all TableCell in this tableRow should have no text or graphic
-            IndexedCell<?> indexedCell = (IndexedCell<?>)sheet.getChildren().get(row);
-//            System.out.print(tableRow.getIndex() + ": ");
-            
-            boolean hasChildrenCell = false;
-            for (Node n : indexedCell.getChildrenUnmodifiable()) {
-                if (! (n instanceof IndexedCell)) {
-                    break;
-                }
-                hasChildrenCell = true;
-                IndexedCell<?> childCell = (IndexedCell<?>)n;
-
-//                System.out.print(tableCell.getText() + ", ");
-                if (expectEmpty) {
-                    assertCellEmpty(childCell);
-                } else {
-                    assertCellNotEmpty(childCell);
-                }
-            }
-            
-            if (! hasChildrenCell) {
-                if (expectEmpty) {
-                    assertCellEmpty(indexedCell);
-                } else {
-                    assertCellNotEmpty(indexedCell);
-                }
-            }
-//            System.out.println("");
+            callback.call((IndexedCell<?>)sheet.getChildren().get(row));
         }
     }
 }
