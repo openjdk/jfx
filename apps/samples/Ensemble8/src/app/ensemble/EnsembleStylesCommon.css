@@ -329,6 +329,9 @@
     -fx-font-weight: bold;
     -fx-text-fill: #363636;
 }
+#PopoverBackground {
+    -fx-background-color: grey;
+}
 .search-result-cell {
     -fx-background-color: white;
     -fx-padding: 4 30 4 45;
