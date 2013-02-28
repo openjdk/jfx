@@ -308,7 +308,7 @@ public class EnsembleApp extends Application {
             stage.setWidth(primaryScreenBounds.getWidth());
             stage.setHeight(primaryScreenBounds.getHeight());
         }
-        stage.setTitle("Ensemble3");
+        stage.setTitle("Ensemble");
         stage.show();
     }
 
