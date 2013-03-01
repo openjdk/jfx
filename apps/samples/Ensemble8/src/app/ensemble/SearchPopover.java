@@ -31,12 +31,13 @@
  */
 package ensemble;
 
+
 import ensemble.control.Popover;
 import ensemble.control.SearchBox;
 import ensemble.search.DocumentType;
 import ensemble.search.IndexSearcher;
 import ensemble.search.SearchResult;
-import java.util.HashMap;
+import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
 import javafx.animation.KeyFrame;
@@ -51,6 +52,7 @@ import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.util.Duration;
 import org.apache.lucene.queryParser.ParseException;
+
 
 /**
  * Implementation of popover to show search results
@@ -78,28 +80,14 @@ public class SearchPopover extends Popover {
         
         searchBox.addEventFilter(KeyEvent.ANY, new EventHandler<KeyEvent>() {
             @Override public void handle(KeyEvent t) {
-                if (t.getCode() == KeyCode.DOWN) {
+                if (t.getCode() == KeyCode.DOWN 
+                        || t.getCode() == KeyCode.UP
+                        || t.getCode() == KeyCode.PAGE_DOWN
+                        || (t.getCode() == KeyCode.HOME && (t.isControlDown() || t.isMetaDown()))
+                        || (t.getCode() == KeyCode.END && (t.isControlDown() || t.isMetaDown()))
+                        || t.getCode() == KeyCode.PAGE_UP) {
+                    searchResultPopoverList.fireEvent(t);
                     t.consume();
-                    if (t.getEventType() == KeyEvent.KEY_PRESSED) {
-                        if (searchResultPopoverList.getSelectionModel().isEmpty()) {
-                            searchResultPopoverList.getSelectionModel().selectFirst();
-                        } else {
-                            searchResultPopoverList.getSelectionModel().select(
-                                    searchResultPopoverList.getSelectionModel().getSelectedIndex() + 1);
-                        }
-                        searchResultPopoverList.scrollTo(searchResultPopoverList.getSelectionModel().getSelectedIndex());
-                    }
-                } else if (t.getCode() == KeyCode.UP) {
-                    t.consume();
-                    if (t.getEventType() == KeyEvent.KEY_PRESSED) {
-                        if (searchResultPopoverList.getSelectionModel().isEmpty()) {
-                            searchResultPopoverList.getSelectionModel().selectLast();
-                        } else {
-                            searchResultPopoverList.getSelectionModel().select(
-                                    searchResultPopoverList.getSelectionModel().getSelectedIndex() - 1);
-                        }
-                        searchResultPopoverList.scrollTo(searchResultPopoverList.getSelectionModel().getSelectedIndex());
-                    }
                 } else if (t.getCode() == KeyCode.ENTER) {
                     t.consume();
                     if (t.getEventType() == KeyEvent.KEY_PRESSED) {
@@ -123,7 +111,7 @@ public class SearchPopover extends Popover {
     
     private void updateResults() {
         if (searchBox.getText() == null || searchBox.getText().isEmpty()) {
-            populateMenu(new HashMap<DocumentType, List<SearchResult>>());
+            populateMenu(new EnumMap<DocumentType, List<SearchResult>>(DocumentType.class));
             return;
         }
         boolean haveResults = false;
@@ -168,6 +156,8 @@ public class SearchPopover extends Popover {
             searchErrorTooltipHidder.getKeyFrames().add( 
                 new KeyFrame(Duration.seconds(3), 
                     new EventHandler<ActionEvent>() {
+                        
+                        @Override
                         public void handle(ActionEvent t) {
                             searchErrorTooltip.hide();
                             searchErrorTooltip.setText(null);

@@ -30,6 +30,7 @@ import javafx.beans.value.ObservableNumberValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import com.sun.javafx.collections.annotations.ReturnsUnmodifiableCollection;
+import javafx.beans.value.ObservableValue;
 
 /**
  * A {@code DoubleExpression} is a
@@ -110,6 +111,63 @@ public abstract class DoubleExpression extends NumberExpressionBase implements
                         return FXCollections.singletonObservableList(value);
                     }
                 };
+    }
+    
+    /**
+     * Returns a {@code DoubleExpression} that wraps an
+     * {@link javafx.beans.value.ObservableValue}. If the
+     * {@code ObservableValue} is already a {@code DoubleExpression}, it
+     * will be returned. Otherwise a new
+     * {@link javafx.beans.binding.DoubleBinding} is created that is bound to
+     * the {@code ObservableValue}.
+     * 
+     * <p>
+     * Note: this method can be used to convert an {@link ObjectExpression} or
+     * {@link javafx.beans.property.ObjectProperty} of specific number type to DoubleExpression, which
+     * is essentially an {@code ObservableValue<Number>}. See sample below.
+     * 
+     * <blockquote><pre>
+     *   DoubleProperty doubleProperty = new SimpleDoubleProperty(1.0);
+     *   ObjectProperty&lt;Double&gt; objectProperty = new SimpleObjectProperty&lt;&gt;(2.0);
+     *   BooleanBinding binding = doubleProperty.greaterThan(DoubleExpression.doubleExpression(objectProperty));
+     * </pre></blockquote>
+     * 
+     * Note: null values will be interpreted as 0.0
+     * 
+     * @param value
+     *            The source {@code ObservableValue}
+     * @return A {@code DoubleExpression} that wraps the
+     *         {@code ObservableValue} if necessary
+     * @throws NullPointerException
+     *             if {@code value} is {@code null}
+     */
+    public static <T extends Number> DoubleExpression doubleExpression(final ObservableValue<T> value) {
+        if (value == null) {
+            throw new NullPointerException("Value must be specified.");
+        }
+        return (value instanceof DoubleExpression) ? (DoubleExpression) value
+                : new DoubleBinding() {
+            {
+                super.bind(value);
+            }
+
+            @Override
+            public void dispose() {
+                super.unbind(value);
+            }
+
+            @Override
+            protected double computeValue() {
+                final T val = value.getValue();
+                return val == null ? 0.0 : val.doubleValue();
+            }
+
+            @Override
+            @ReturnsUnmodifiableCollection
+            public ObservableList<ObservableValue<T>> getDependencies() {
+                return FXCollections.singletonObservableList(value);
+            }
+        };
     }
 
     @Override
@@ -215,5 +273,31 @@ public abstract class DoubleExpression extends NumberExpressionBase implements
     @Override
     public DoubleBinding divide(final int other) {
         return (DoubleBinding) Bindings.divide(this, other);
+    }
+    
+    /**
+     * Creates an {@link javafx.beans.binding.ObjectExpression} that holds the value
+     * of this {@code DoubleExpression}. If the
+     * value of this {@code DoubleExpression} changes, the value of the
+     * {@code ObjectExpression} will be updated automatically.
+     * 
+     * @return the new {@code ObjectExpression}
+     */
+    public ObjectExpression<Double> asObject() {
+        return new ObjectBinding<Double>() {
+            {
+                bind(DoubleExpression.this);
+            }
+
+            @Override
+            public void dispose() {
+                unbind(DoubleExpression.this);
+            }
+            
+            @Override
+            protected Double computeValue() {
+                return DoubleExpression.this.getValue();
+            }
+        };
     }
 }

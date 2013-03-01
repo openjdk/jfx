@@ -29,6 +29,7 @@ import javafx.beans.value.ObservableFloatValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import com.sun.javafx.collections.annotations.ReturnsUnmodifiableCollection;
+import javafx.beans.value.ObservableValue;
 
 /**
  * A {@code FloatExpression} is a
@@ -110,6 +111,64 @@ public abstract class FloatExpression extends NumberExpressionBase implements
                     }
                 };
     }
+    
+    /**
+     * Returns a {@code FloatExpression} that wraps an
+     * {@link javafx.beans.value.ObservableValue}. If the
+     * {@code ObservableValue} is already a {@code FloatExpression}, it
+     * will be returned. Otherwise a new
+     * {@link javafx.beans.binding.FloatBinding} is created that is bound to
+     * the {@code ObservableValue}.
+     * 
+     * <p>
+     * Note: this method can be used to convert an {@link ObjectExpression} or
+     * {@link javafx.beans.property.ObjectProperty} of specific number type to FloatExpression, which
+     * is essentially an {@code ObservableValue<Number>}. See sample below.
+     * 
+     * <blockquote><pre>
+     *   FloatProperty floatProperty = new SimpleFloatProperty(1.0f);
+     *   ObjectProperty&lt;Float&gt; objectProperty = new SimpleObjectProperty&lt;&gt;(2.0f);
+     *   BooleanBinding binding = floatProperty.greaterThan(FloatExpression.floatExpression(objectProperty));
+     * </pre></blockquote>
+     * 
+     *  Note: null values will be interpreted as 0f
+     * 
+     * @param value
+     *            The source {@code ObservableValue}
+     * @return A {@code FloatExpression} that wraps the
+     *         {@code ObservableValue} if necessary
+     * @throws NullPointerException
+     *             if {@code value} is {@code null}
+     */
+    public static <T extends Number> FloatExpression floatExpression(final ObservableValue<T> value) {
+        if (value == null) {
+            throw new NullPointerException("Value must be specified.");
+        }
+        return (value instanceof FloatExpression) ? (FloatExpression) value
+                : new FloatBinding() {
+            {
+                super.bind(value);
+            }
+
+            @Override
+            public void dispose() {
+                super.unbind(value);
+            }
+
+            @Override
+            protected float computeValue() {
+                final T val = value.getValue();
+                return val == null ? 0f :  val.floatValue();
+            }
+
+            @Override
+            @ReturnsUnmodifiableCollection
+            public ObservableList<ObservableValue<T>> getDependencies() {
+                return FXCollections.singletonObservableList(value);
+            }
+        };
+    }
+
 
     @Override
     public FloatBinding negate() {
@@ -194,5 +253,31 @@ public abstract class FloatExpression extends NumberExpressionBase implements
     @Override
     public FloatBinding divide(final int other) {
         return (FloatBinding) Bindings.divide(this, other);
+    }
+    
+    /**
+     * Creates an {@link javafx.beans.binding.ObjectExpression} that holds the value
+     * of this {@code FloatExpression}. If the
+     * value of this {@code FloatExpression} changes, the value of the
+     * {@code ObjectExpression} will be updated automatically.
+     * 
+     * @return the new {@code ObjectExpression}
+     */
+    public ObjectExpression<Float> asObject() {
+        return new ObjectBinding<Float>() {
+            {
+                bind(FloatExpression.this);
+            }
+
+            @Override
+            public void dispose() {
+                unbind(FloatExpression.this);
+            }
+            
+            @Override
+            protected Float computeValue() {
+                return FloatExpression.this.getValue();
+            }
+        };
     }
 }

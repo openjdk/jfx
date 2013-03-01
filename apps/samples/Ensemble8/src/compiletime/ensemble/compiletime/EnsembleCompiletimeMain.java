@@ -62,10 +62,23 @@ public class EnsembleCompiletimeMain {
         System.out.println("generatedSrcDir = " + generatedSrcDir.getAbsolutePath());
         File samplesDir = new File(ensembleDir,"src/samples");
         System.out.println("samplesDir = " + samplesDir.getAbsolutePath());
-        List<Sample> allSamples = BuildSamplesList.build(samplesDir, new File(generatedSrcDir,"Samples.java"));
+        // process args
+        boolean buildSearchIndex = false, buildSampleClass = false;
+        for (int a=0; a< args.length; a++) {
+            if (args[a].equalsIgnoreCase("index")) buildSearchIndex = true;
+            if (args[a].equalsIgnoreCase("samples")) buildSampleClass = true;
+        }
+        System.out.println("buildSearchIndex = " + buildSearchIndex);
+        System.out.println("buildSampleClass = " + buildSampleClass);
+        // build samples list
+        List<Sample> allSamples = BuildSamplesList.build(samplesDir, buildSampleClass ? new File(generatedSrcDir,"Samples.java") : null);
         System.out.println("TOTAL SAMPLES = " + allSamples.size());
+        if (buildSampleClass) {
+            System.out.println("==================================================================");
+            System.out.println("                 Written Samples.java class file");
+            System.out.println("==================================================================");
+        }
         
-        boolean buildSearchIndex = args.length > 0 && args[0].equalsIgnoreCase("true");
         System.out.println("buildSearchIndex = " + buildSearchIndex);
         if(buildSearchIndex) {
             System.out.println("==================================================================");
@@ -78,10 +91,6 @@ public class EnsembleCompiletimeMain {
                 "http://getjfx.us.oracle.com/hudson/view/8.0/job/8.0-graphics-scrum/label=windows-i586-30/lastSuccessfulBuild/artifact/artifacts/sdk/docs/api/",
                 "http://docs.oracle.com/javafx/index.html",
                 indexDir);
-        } else {
-            System.out.println("==================================================================");
-            System.out.println("                 NOT! Building Search Index");
-            System.out.println("==================================================================");
         }
     }
 }

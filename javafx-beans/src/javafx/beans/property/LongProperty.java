@@ -25,6 +25,7 @@
 
 package javafx.beans.property;
 
+import com.sun.javafx.binding.BidirectionalBinding;
 import javafx.beans.binding.Bindings;
 import javafx.beans.value.ObservableValue;
 import javafx.beans.value.WritableLongValue;
@@ -99,5 +100,118 @@ public abstract class LongProperty extends ReadOnlyLongProperty implements
         }
         result.append("value: ").append(get()).append("]");
         return result.toString();
+    }
+    
+    /**
+     * Returns a {@code LongProperty} that wraps a
+     * {@link javafx.beans.property.Property} and is 
+     * bidirectionally bound to it.
+     * Changing this property will result in a change of the original property.
+     * 
+     * <p>
+     * This is very useful when bidirectionally binding an ObjectProperty<Long> and
+     * a LongProperty.
+     * 
+     * <blockquote><pre>
+     *   LongProperty longProperty = new SimpleLongProperty(1L);
+     *   ObjectProperty&lt;Long&gt; objectProperty = new SimpleObjectProperty&lt;&gt;(2L);
+     * 
+     *   // Need to keep the reference as bidirectional binding uses weak references
+     *   LongProperty objectAsLong = LongProperty.longProperty(objectProperty);
+     *   
+     *   longProperty.bindBidirectional(objectAsLong);
+     * 
+     * </pre></blockquote>
+     * 
+     * Another approach is to convert the LongProperty to ObjectProperty using
+     * {@link #asObject()} method.
+     * 
+     * <p>
+     * Note: null values in the source property will be interpreted as 0L
+     * 
+     * @param property
+     *            The source {@code Property}
+     * @return A {@code LongProperty} that wraps the
+     *         {@code Property}
+     * @throws NullPointerException
+     *             if {@code value} is {@code null}
+     * @see #asObject() 
+     */
+     public static LongProperty longProperty(final Property<Long> property) {
+        if (property == null) {
+            throw new NullPointerException("Property cannot be null");
+        }
+        return new LongPropertyBase() {
+            {
+                BidirectionalBinding.bindNumber(property, this);
+            }
+
+            @Override
+            public Object getBean() {
+                return null; // Virtual property, no bean
+            }
+
+            @Override
+            public String getName() {
+                return property.getName();
+            }
+            
+            @Override
+            protected void finalize() throws Throwable {
+                try {
+                    BidirectionalBinding.unbindNumber(property, this);
+                } finally {
+                    super.finalize();
+                }
+            }
+        };
+    }
+
+     /**
+     * Creates an {@link javafx.beans.property.ObjectProperty} 
+     * that bidirectionally bound to this {@code LongProperty}. If the
+     * value of this {@code LongProperty} changes, the value of the
+     * {@code ObjectProperty} will be updated automatically and vice-versa.
+     * 
+     * <p>
+     * Can be used for binding an ObjectProperty to LongProperty.
+     * 
+     * <blockquote><pre>
+     *   LongProperty longProperty = new SimpleLongProperty(1L);
+     *   ObjectProperty&lt;Long&gt; objectProperty = new SimpleObjectProperty&lt;&gt;(2L);
+     *   
+     *   objectProperty.bind(longProperty.asObject());
+     * </pre></blockquote>
+     * 
+     * @return the new {@code ObjectProperty}
+     */
+    @Override
+    public ObjectProperty<Long> asObject() {
+        return new ObjectPropertyBase<Long> () {
+            
+            {
+                BidirectionalBinding.bindNumber(this, LongProperty.this);
+            }
+
+            @Override
+            public Object getBean() {
+                return null; // Virtual property, does not exist on a bean
+            }
+
+            @Override
+            public String getName() {
+                return LongProperty.this.getName();
+            }
+
+            @Override
+            protected void finalize() throws Throwable {
+                try {
+                    BidirectionalBinding.unbindNumber(this, LongProperty.this);
+                } finally {
+                    super.finalize();
+                }
+            }
+
+        };
     }
 }

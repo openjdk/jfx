@@ -24,10 +24,12 @@
  */
 package com.sun.glass.ui.mac;
 
+import com.sun.glass.ui.Application;
 import com.sun.glass.ui.Clipboard;
 import com.sun.glass.ui.SystemClipboard;
 import com.sun.glass.ui.Pixels;
 
+import java.nio.IntBuffer;
 import java.util.HashMap;
 import java.net.URL;
 import java.net.MalformedURLException;
@@ -134,11 +136,34 @@ class MacSystemClipboard extends SystemClipboard {
                     }
                 } else if ((mime.equals(RAW_IMAGE_TYPE) == true) ||
                                 (mime.equals(DRAG_IMAGE) == true)) {
-                    Pixels pixels = (Pixels)object;
-                    if (itemFirst == null) {
-                        itemFirst = new HashMap();
+                    Pixels pixels = null;
+                    if (object instanceof Pixels) {
+                        pixels = (Pixels) object;
+                    } else if (object instanceof ByteBuffer) {
+                        try {
+                            ByteBuffer bb = (ByteBuffer) object;
+                            bb.rewind();
+                            pixels = Application.GetApplication().createPixels(bb.getInt(), bb.getInt(), bb.slice());
+                        } catch (Exception ex) {
+                            //Ignore all ill-sized arrays. Not a client problem.
+                        }
+                    } else if (object instanceof IntBuffer) {
+                        try {
+                            IntBuffer ib = (IntBuffer) object;
+                            ib.rewind();
+                            pixels = Application.GetApplication().createPixels(ib.get(), ib.get(), ib.slice());
+                        } catch (Exception ex) {
+                            //Ignore all ill-sized arrays. Not a client problem.
+                        }
+                    } else {
+                        throw new RuntimeException(object.getClass().getName() + " cannot be converted to Pixels");
                     }
-                    itemFirst.put(FormatEncoder.mimeToUtf(mime), pixels);
+                    if (pixels != null) {
+                        if (itemFirst == null) {
+                            itemFirst = new HashMap();
+                        }
+                        itemFirst.put(FormatEncoder.mimeToUtf(mime), pixels);
+                    }
                 } else if ((mime.equals(TEXT_TYPE) == true) ||
                                 (mime.equals(HTML_TYPE) == true) ||
                                     (mime.equals(RTF_TYPE) == true)) {

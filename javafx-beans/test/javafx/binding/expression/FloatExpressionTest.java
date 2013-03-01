@@ -30,9 +30,12 @@ import static org.junit.Assert.assertTrue;
 import javafx.beans.binding.DoubleBinding;
 import javafx.beans.binding.FloatBinding;
 import javafx.beans.binding.FloatExpression;
+import javafx.beans.binding.ObjectExpression;
 import javafx.beans.property.FloatProperty;
 import javafx.beans.property.SimpleFloatProperty;
 import javafx.beans.value.ObservableFloatValueStub;
+import javafx.beans.value.ObservableValue;
+import javafx.beans.value.ObservableValueStub;
 import javafx.collections.FXCollections;
 
 import org.junit.Before;
@@ -177,6 +180,37 @@ public class FloatExpressionTest {
 
         // make sure we do not create unnecessary bindings
         assertEquals(op1, FloatExpression.floatExpression(op1));
+    }
+    
+    @Test
+    public void testAsObject() { 
+        final ObservableFloatValueStub valueModel = new ObservableFloatValueStub();
+        final ObjectExpression<Float> exp = FloatExpression.floatExpression(valueModel).asObject();
+        
+        assertEquals(0.0f, exp.getValue(), EPSILON);
+        valueModel.set(data);
+        assertEquals(data, exp.getValue(), EPSILON);
+        valueModel.set(float1);
+        assertEquals(float1, exp.getValue(), EPSILON);
+
+    }
+    
+    @Test
+    public void testObjectToFloat() {
+        final ObservableValueStub<Float> valueModel = new ObservableValueStub<Float>();
+        final FloatExpression exp = FloatExpression.floatExpression(valueModel);
+
+        assertTrue(exp instanceof FloatBinding);
+        assertEquals(FXCollections.singletonObservableList(valueModel), ((FloatBinding)exp).getDependencies());
+
+        assertEquals(0.0f, exp.floatValue(), EPSILON);
+        valueModel.set(data);
+        assertEquals(data, exp.floatValue(), EPSILON);
+        valueModel.set(float1);
+        assertEquals(float1, exp.floatValue(), EPSILON);
+
+        // make sure we do not create unnecessary bindings
+        assertEquals(op1, FloatExpression.floatExpression((ObservableValue)op1));
     }
 
     @Test(expected=NullPointerException.class)

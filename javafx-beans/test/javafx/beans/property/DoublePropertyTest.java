@@ -130,6 +130,37 @@ public class DoublePropertyTest {
         v5.set(VALUE_1);
         assertEquals("DoubleProperty [name: My name, value: " + VALUE_1 + "]", v5.toString());
     }
+    
+    @Test
+    public void testAsObject() {
+        final DoubleProperty valueModel = new SimpleDoubleProperty();
+        final ObjectProperty<Double> exp = valueModel.asObject();
+
+        assertEquals(0.0, exp.getValue(), EPSILON);
+        valueModel.set(-4354.3);
+        assertEquals(-4354.3, exp.getValue(), EPSILON);
+        valueModel.set(5e11);
+        assertEquals(5e11, exp.getValue(), EPSILON);
+        
+        exp.set(1234.0);
+        assertEquals(1234.0, valueModel.doubleValue(), EPSILON);
+        
+    }
+    
+    @Test
+    public void testObjectToDouble() {
+        final ObjectProperty<Double> valueModel = new SimpleObjectProperty<Double>();
+        final DoubleProperty exp = DoubleProperty.doubleProperty(valueModel);
+
+        assertEquals(0.0, exp.doubleValue(), EPSILON);
+        valueModel.set(-4354.3);
+        assertEquals(-4354.3, exp.doubleValue(), EPSILON);
+        valueModel.set(5e11);
+        assertEquals(5e11, exp.doubleValue(), EPSILON);
+        
+        exp.set(1234.0);
+        assertEquals(1234.0, valueModel.getValue(), EPSILON);
+    }
 
     private class DoublePropertyStub extends DoubleProperty {
 

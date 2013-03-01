@@ -32,18 +32,18 @@ import org.apache.tools.ant.types.DataType;
  *
  * Examples:
  * <pre>
- *    &lt;fx:preferences id="p1" shortcut="true">
+ *    &lt;fx:preferences id="p1" shortcut="true"&gt;
  * </pre>
  * Request to create desktop shortcut.
  *
  * <pre>
- *    &lt;fx:preferences shortcut="false" install="true" menu="true">
+ *    &lt;fx:preferences shortcut="false" install="true" menu="true"&gt;
  * </pre>
  * Request to add reference to the start menu and mark application as installed
  * (in particular, it will be added to Add/Remove programs).
  *
  * <pre>
- *    &lt;fx:resource refid="p1"/>
+ *    &lt;fx:resource refid="p1"/&gt;
  * </pre>
  * Same as first example - request to create shortcut.
  *

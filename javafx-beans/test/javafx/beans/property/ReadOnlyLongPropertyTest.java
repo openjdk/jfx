@@ -29,6 +29,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import javafx.beans.InvalidationListener;
+import javafx.beans.binding.ObjectExpression;
 import javafx.beans.value.ChangeListener;
 
 import org.junit.Before;
@@ -151,6 +152,30 @@ public class ReadOnlyLongPropertyTest {
         final ReadOnlyLongProperty v6 = new ReadOnlyLongPropertyStub(null, name);
         assertEquals("ReadOnlyLongProperty [name: My name, value: " + DEFAULT + "]", v6.toString());
         
+    }
+    
+    @Test
+    public void testAsObject() {
+        final ReadOnlyLongWrapper valueModel = new ReadOnlyLongWrapper();
+        final ReadOnlyObjectProperty<Long> exp = valueModel.getReadOnlyProperty().asObject();
+
+        assertEquals(Long.valueOf(0L), exp.getValue());
+        valueModel.set(-4354L);
+        assertEquals(Long.valueOf(-4354L), exp.getValue());
+        valueModel.set(5L);
+        assertEquals(Long.valueOf(5L), exp.getValue());
+    }
+    
+    @Test
+    public void testObjectToLong() {
+        final ReadOnlyObjectWrapper<Long> valueModel = new ReadOnlyObjectWrapper<Long>();
+        final ReadOnlyLongProperty exp = ReadOnlyLongProperty.readOnlyLongProperty(valueModel.getReadOnlyProperty());
+        
+        assertEquals(0L, exp.longValue());
+        valueModel.set(-4354L);
+        assertEquals(-4354L, exp.longValue());
+        valueModel.set(5L);
+        assertEquals(5L, exp.longValue());
     }
     
     private static class ReadOnlyLongPropertyStub extends ReadOnlyLongProperty {

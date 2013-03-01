@@ -466,14 +466,41 @@ final class LensApplication extends Application {
 
     private static class LensTouchEvent extends Event {
 
+        private LensView view;
+        private int state;
+        private long id;
+        private int x;
+        private int y;
+        private int absX;
+        private int absY;
+
+        LensTouchEvent(LensView view, int state, long id,
+                       int x, int y, int absX, int absY) {
+            this.view = view;
+            this.state = state;
+            this.id = id;
+            this.x = x;
+            this.y = y;
+            this.absX = absX;
+            this.absY = absY;
+        }
+
         @Override
         void dispatch() {
-            LensTouchInputSupport.processTouchEvents();
+            LensTouchInputSupport.postTouchEvent(view, state, id, x, y, absX, absY);
+
         }
 
         @Override
         public String toString() {
-            return "LensTouchEvent[]";
+            return "LensTouchEvent[view=" + view
+                   + ",state=" + state
+                   + ",id=" + id
+                   + ",x=" + x
+                   + ",y=" + y
+                   + ",absX=" + absX
+                   + ",absY=" + absY
+                   + "]";
         }
     }
 
@@ -565,14 +592,14 @@ final class LensApplication extends Application {
         int yAbs;
         boolean isKeyboardTrigger;
 
-        LensMenuEvent (LensView view, int x, int y, int xAbs,
-                       int yAbs, boolean isKeyboardTrigger) {
+        LensMenuEvent(LensView view, int x, int y, int xAbs,
+                      int yAbs, boolean isKeyboardTrigger) {
             this.view = view;
             this.x = x;
             this.y = y;
             this.xAbs = xAbs;
             this.yAbs = yAbs;
-            this.isKeyboardTrigger = isKeyboardTrigger; 
+            this.isKeyboardTrigger = isKeyboardTrigger;
         }
 
         @Override
@@ -582,12 +609,12 @@ final class LensApplication extends Application {
 
         @Override
         public String toString() {
-            return "LensMenuEvent[view=" + view 
+            return "LensMenuEvent[view=" + view
                    + ", x=" + x
                    + ", y=" + y
                    + ", absx=" + xAbs
                    + ", absy=" + yAbs
-                   + ", isKeyboardTrigger="+isKeyboardTrigger+"]";
+                   + ", isKeyboardTrigger=" + isKeyboardTrigger + "]";
         }
     }
 
@@ -1278,10 +1305,8 @@ final class LensApplication extends Application {
                                             + " on " + view);
             }
 
-            // Post the touch point to the touch handler
-            LensTouchInputSupport.postTouchEvent(view, state, id, x, y, absX, absY);
-            // Schedule touch point handling
-            postEvent(new LensTouchEvent());
+            postEvent(new LensTouchEvent(view, state, id,
+                                         x, y, absX, absY));
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -1312,13 +1337,13 @@ final class LensApplication extends Application {
     }
 
     private void notifyMenuEvent(LensView view, int x, int y, int xAbs,
-                                 int yAbs, boolean isKeyboardTrigger ) {
+                                 int yAbs, boolean isKeyboardTrigger) {
         if (LensLogger.isLogging(PlatformLogger.FINER)) {
             LensLogger.getLogger().finer(
-                                        "Notify menu event "+
-                                        "x="+x+", y="+y+", xAbs="+xAbs+", yAbs="+yAbs+
-                                        ", isKeyboardTrigger "+ isKeyboardTrigger +
-                                        ", on " + view);
+                "Notify menu event " +
+                "x=" + x + ", y=" + y + ", xAbs=" + xAbs + ", yAbs=" + yAbs +
+                ", isKeyboardTrigger " + isKeyboardTrigger +
+                ", on " + view);
         }
         if (view != null) {
             postEvent(new LensMenuEvent(view, x, y, xAbs, yAbs, isKeyboardTrigger));

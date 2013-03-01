@@ -286,7 +286,7 @@ class PlaygroundTabs extends TabPane {
 
                 @Override
                 public String toString(Number number) {
-                    return DecimalFormat.getInstance().format((double) number);
+                    return DecimalFormat.getInstance().format((Double) number);
                 }
 
                 @Override
@@ -320,7 +320,7 @@ class PlaygroundTabs extends TabPane {
 
                 @Override
                 public String toString(Number number) {
-                    return DecimalFormat.getInstance().format((int) number);
+                    return DecimalFormat.getInstance().format((Integer) number);
                 }
 
                 @Override

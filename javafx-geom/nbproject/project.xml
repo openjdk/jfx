@@ -16,16 +16,6 @@
                     <type>java</type>
                     <location>${src.dir}</location>
                 </source-folder>
-                <source-folder>
-                    <label>CAG Sources (Double)</label>
-                    <type>java</type>
-                    <location>cagsrc.double</location>
-                </source-folder>
-                <source-folder>
-                    <label>Test Packages</label>
-                    <type>java</type>
-                    <location>${test.dir}</location>
-                </source-folder>
             </folders>
             <ide-actions>
                 <action name="build">
@@ -88,10 +78,6 @@
                         <location>${src.dir}</location>
                     </source-folder>
                     <source-folder style="packages">
-                        <label>CAG Sources (Double)</label>
-                        <location>cagsrc.double</location>
-                    </source-folder>
-                    <source-folder style="packages">
                         <label>Test Packages</label>
                         <location>${test.dir}</location>
                     </source-folder>
@@ -112,12 +98,6 @@
             <compilation-unit>
                 <package-root>${src.dir}</package-root>
                 <classpath mode="compile">${javac.classpath}</classpath>
-                <built-to>dist/javafx-geom.jar</built-to>
-                <source-level>1.5</source-level>
-            </compilation-unit>
-            <compilation-unit>
-                <package-root>cagsrc.double</package-root>
-                <classpath mode="compile">${javac.classpath}:${build.classes.dir}</classpath>
                 <built-to>dist/javafx-geom.jar</built-to>
                 <source-level>1.5</source-level>
             </compilation-unit>

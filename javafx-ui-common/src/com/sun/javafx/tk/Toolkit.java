@@ -331,36 +331,30 @@ public abstract class Toolkit {
     // The set of shutdown hooks is strongly held to avoid premature GC.
     private final Set<Runnable> shutdownHooks = new HashSet<Runnable>();
     
-    private final ArrayList<TKPulseListener> stagePulseList = new ArrayList<TKPulseListener>();
-    private final ArrayList<TKPulseListener> scenePulseList = new ArrayList<TKPulseListener>();
-    private final ArrayList<TKPulseListener> postScenePulseList = new ArrayList<TKPulseListener>();
 
     public void firePulse() {
         // Stages need to be notified of pulses before scenes so the Stage can resized 
         // and those changes propogated to scene before it gets its pulse to update
         
-        try { 
-            synchronized (this) {
-                stagePulseList.addAll(stagePulseListeners.keySet());
-                scenePulseList.addAll(scenePulseListeners.keySet());
-                postScenePulseList.addAll(postScenePulseListeners.keySet());
-            }
-            for (TKPulseListener listener: stagePulseList) {
-                listener.pulse();
-            }
-            for (TKPulseListener listener: scenePulseList) {
-                listener.pulse();
-            }
-            for (TKPulseListener listener: postScenePulseList) {
-                listener.pulse();
-            }
-            if (lastTkPulseListener != null) {
-                lastTkPulseListener.pulse();
-            }
-        } finally {
-            stagePulseList.clear();
-            scenePulseList.clear();
-            postScenePulseList.clear();
+        ArrayList<TKPulseListener> stagePulseList = new ArrayList<TKPulseListener>();
+        ArrayList<TKPulseListener> scenePulseList = new ArrayList<TKPulseListener>();
+        ArrayList<TKPulseListener> postScenePulseList = new ArrayList<TKPulseListener>();
+        synchronized (this) {
+            stagePulseList.addAll(stagePulseListeners.keySet());
+            scenePulseList.addAll(scenePulseListeners.keySet());
+            postScenePulseList.addAll(postScenePulseListeners.keySet());
+        }
+        for (TKPulseListener listener: stagePulseList) {
+            listener.pulse();
+        }
+        for (TKPulseListener listener: scenePulseList) {
+            listener.pulse();
+        }
+        for (TKPulseListener listener: postScenePulseList) {
+            listener.pulse();
+        }
+        if (lastTkPulseListener != null) {
+            lastTkPulseListener.pulse();
         }
     }
     public void addStageTkPulseListener(TKPulseListener listener) {

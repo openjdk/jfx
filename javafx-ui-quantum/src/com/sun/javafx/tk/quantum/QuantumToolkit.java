@@ -232,6 +232,13 @@ public final class QuantumToolkit extends DesktopToolkit implements ToolkitInter
                     return Integer.getInteger("javafx.animation.pulse");
                 }
             });
+    
+    static final boolean liveResize =
+            AccessController.doPrivileged(new PrivilegedAction<Boolean>() {
+                @Override public Boolean run() {
+                    return "true".equals(System.getProperty("javafx.live.resize", "true"));
+                }
+            });
 
     private AtomicBoolean           toolkitRunning = new AtomicBoolean(false);
     private AtomicBoolean           animationRunning = new AtomicBoolean(false);
@@ -503,8 +510,12 @@ public final class QuantumToolkit extends DesktopToolkit implements ToolkitInter
             System.err.println("QT.endPulse: " + System.nanoTime());
         }
     }
+
+    protected void pulse() {
+        pulse(true);
+    }
     
-    void pulse() {
+    void pulse(boolean collect) {
         try {
             long start = PULSE_LOGGING_ENABLED ? System.currentTimeMillis() : 0;
             if (PULSE_LOGGING_ENABLED) {
@@ -523,7 +534,7 @@ public final class QuantumToolkit extends DesktopToolkit implements ToolkitInter
                     animationRunning.set(false);
                 }
                 firePulse();
-                collector.renderAll();
+                if (collect) collector.renderAll();
                 endPulseRunning();
             } catch (Throwable th) {
                 th.printStackTrace(System.err);

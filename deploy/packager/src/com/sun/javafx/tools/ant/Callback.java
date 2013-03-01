@@ -32,16 +32,16 @@ import org.apache.tools.ant.types.DataType;
  *
  * Example:
  * <pre>
- *        &lt;callback name="onGetSplash">customGetSplash&lt;/callback>
+ *        &lt;callback name="onGetSplash"&gt;customGetSplash&lt;/callback&gt;
  * </pre>
  * This defines callback for event 'onGetSplash'. When event is triggered
  * javascript function customGetSplash will be executed.
  * <p>
  * Note that callback could be defined with javascript code in place (and not just function name):
  * <pre>
- *    &lt;callback name="onLoadHandler">
+ *    &lt;callback name="onLoadHandler"&gt;
  *       function () {perfLog(0, "onLoad called");}
- *    &lt;/callback>
+ *    &lt;/callback&gt;
  * </pre>
  *
  * @ant.type name="callback" category="javafx"

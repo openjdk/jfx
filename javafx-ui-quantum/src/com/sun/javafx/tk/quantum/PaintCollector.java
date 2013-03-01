@@ -325,27 +325,35 @@ final class PaintCollector implements CompletionListener {
     }
 
     /**
-     * This is a essentially a pulse without the animation run 
-     * and the sceneListeners pulse. It only repaints the 
-     * scene at new dimensions.
+     * Run a full pulse and repaint before returning.
      */
     final void liveRepaintRenderJob(final ViewScene scene) {
-        final ViewPainter viewPainter = scene.getPen().getPainter();
-        if (!viewPainter.liveRepaint.getAndSet(true)) {
-            renderer.submit(new RenderJob((Runnable)viewPainter, new CompletionListener() {
-                @Override public void done(final RenderJob rj) {
-                    viewPainter.liveRepaint.set(false);
-
-                    if (QuantumToolkit.verbose) {
-                        System.err.println("LR.start: " + System.nanoTime() + scene);
-                    }
-                }
-            }));
-            if (QuantumToolkit.verbose) {
-                System.err.println("LR.start: " + System.nanoTime() + scene);
-            }
-        }
-    }
+        ViewPainter viewPainter = scene.getPen().getPainter();
+        ((QuantumToolkit)QuantumToolkit.getToolkit()).pulse(false);
+        scene.setDirty(true);
+//        ((Runnable)viewPainter).run();
+         final CountDownLatch latch = new CountDownLatch(1);
+         boolean locked =  AbstractPainter.renderLock.isHeldByCurrentThread();
+         if (locked) {
+             AbstractPainter.renderLock.unlock();
+         }
+         try {
+             renderer.submit(new RenderJob((Runnable)viewPainter, new CompletionListener() {
+                 @Override public void done(final RenderJob rj) {
+                     latch.countDown();
+                 }
+             }));
+             try {
+                 latch.await();
+             } catch (InterruptedException e) {
+                 //Fail silently.  If interrupted, then proceed with the UI ...
+             }
+         } finally {
+             if (locked) {
+                 AbstractPainter.renderLock.lock();
+             }
+         }
+     }
 
     /**
      * Called by QuantumToolkit during a pulse to render whatever dirty scenes
