@@ -25,8 +25,6 @@
 
 package com.sun.javafx.property.adapter;
 
-import javafx.beans.property.adapter.JavaBeanProperty;
-
 import java.lang.reflect.Method;
 
 import sun.reflect.misc.ReflectUtil;
