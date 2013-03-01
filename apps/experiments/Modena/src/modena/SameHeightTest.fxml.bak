@@ -368,7 +368,7 @@
         <Region fx:id="arrowButtonLeftLine" layoutX="284.0" layoutY="0.0" maxHeight="-1.0" maxWidth="1.0" opacity="0.4" prefHeight="300.0" prefWidth="1.0" style="-fx-border-color: transparent transparent transparent red;&#10;-fx-border-style: dashed; " visible="true" />
         <Region id="arrowButtonLeftLine" fx:id="arrowButtonRightLine" layoutX="303.0" layoutY="0.0" maxHeight="-1.0" maxWidth="1.0" opacity="0.4" prefHeight="300.0" prefWidth="1.0" style="-fx-border-color: transparent transparent transparent red;&#10;-fx-border-style: dashed; " visible="true" />
         <Region id="arrowButtonLeftLine" fx:id="arrowLeftLine" layoutX="294.0" layoutY="0.0" maxHeight="-1.0" maxWidth="1.0" minWidth="1.0" opacity="0.4" prefHeight="300.0" prefWidth="1.0" style="-fx-border-color: transparent transparent transparent rgba(0,0,255,0.5);&#10;-fx-border-style: dashed; " visible="true" />
-        <Region id="arrowButtonLeftLine" fx:id="arrowRightLine" layoutX="299.0" layoutY="0.0" maxHeight="-1.0" maxWidth="1.0" minWidth="1.0" opacity="0.4" prefHeight="300.0" prefWidth="1.0" style="-fx-border-color: transparent transparent transparent rgba(0,0,255,0.5);&#10;-fx-border-style: dashed; " visible="true" />
+        <Region id="arrowButtonLeftLine" layoutX="299.0" layoutY="0.0" maxHeight="-1.0" maxWidth="1.0" minWidth="1.0" opacity="0.4" prefHeight="300.0" prefWidth="1.0" style="-fx-border-color: transparent transparent transparent rgba(0,0,255,0.5);&#10;-fx-border-style: dashed; " visible="true" />
       </children>
     </AnchorPane>
   </children>

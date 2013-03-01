@@ -33,9 +33,7 @@ package modena;
 
 import java.util.HashMap;
 import java.util.Map;
-import javafx.application.Platform;
 import javafx.collections.ObservableList;
-import javafx.css.PseudoClass;
 import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
