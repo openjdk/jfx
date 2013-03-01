@@ -43,10 +43,10 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 
 import com.sun.javafx.collections.annotations.ReturnsUnmodifiableCollection;
+import com.sun.javafx.property.JavaBeanAccessHelper;
 import sun.util.logging.PlatformLogger;
 import com.sun.javafx.property.PropertyReference;
 import java.util.Arrays;
-import javafx.beans.property.adapter.JavaBeanObjectPropertyBuilder;
 import javafx.beans.property.adapter.ReadOnlyJavaBeanObjectPropertyBuilder;
 
 /**
@@ -421,7 +421,7 @@ public class SelectBinding {
         private final WeakInvalidationListener observer;
 
         private ObservableList<ObservableValue<?>> dependencies;
-
+       
         private SelectBindingHelper(Binding<?> binding, ObservableValue<?> firstProperty, String... steps) {
             if (firstProperty == null) {
                 throw new NullPointerException("Must specify the root");
@@ -453,7 +453,7 @@ public class SelectBinding {
                 throw new NullPointerException("Must specify the root and the first property");
             }
             try {
-                return ReadOnlyJavaBeanObjectPropertyBuilder.create().bean(root).name(steps[0]).build();
+                return JavaBeanAccessHelper.createReadOnlyJavaBeanProperty(root, steps[0]);
             } catch (NoSuchMethodException ex) {
                 throw new IllegalArgumentException("The first property '" + steps[0] + "' doesn't exist");
             }
@@ -484,27 +484,23 @@ public class SelectBinding {
                     if (propRefs[i].hasProperty()) {
                         properties[i + 1] = propRefs[i].getProperty(obj);
                     } else {
-                        properties[i + 1] = ReadOnlyJavaBeanObjectPropertyBuilder.create().bean(obj).name(propRefs[i].getName()).build();
+                        properties[i + 1] = JavaBeanAccessHelper.createReadOnlyJavaBeanProperty(obj, propRefs[i].getName());
                     }
-                } catch (IllegalStateException ex) {
-                    Logging.getLogger().warning("Exception while evaluating select-binding", ex);
-                    // return default
-                    updateDependencies();
-                    return null;
                 } catch (NoSuchMethodException ex) {
-                    Logging.getLogger().warning("Exception while evaluating select-binding", ex);
+                    Logging.getLogger().warning("Exception while evaluating select-binding " + stepsToString(), ex);
                     // return default
                     updateDependencies();
                     return null;
                 } catch (RuntimeException ex) {
                     final PlatformLogger logger = Logging.getLogger();
                     if (logger.isLoggable(PlatformLogger.WARNING)) {
+                        Logging.getLogger().warning("Exception while evaluating select-binding " + stepsToString());
                         if (ex instanceof  IllegalStateException) {
                             logger.warning("Property '" + propertyNames[i] + "' does not exist in " + obj.getClass(), ex);
                         } else if (ex instanceof NullPointerException) {
                             logger.warning("Property '" + propertyNames[i] + "' in " + properties[i] + " is null", ex);
                         } else {
-                            Logging.getLogger().warning("Exception while evaluating select-binding", ex);
+                            Logging.getLogger().warning("", ex);
                         }
                     }
                     // return default
@@ -520,6 +516,10 @@ public class SelectBinding {
             }
             return result;
         }
+        
+        private String stepsToString() {
+            return Arrays.toString(propertyNames);
+        } 
 
         private void unregisterListener() {
             final int n = properties.length;
