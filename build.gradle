@@ -1,3 +1,5 @@
+import sun.net.www.protocol.file.FileURLConnection
+
 import java.util.concurrent.Executors
 import java.util.concurrent.ForkJoinPool
 import java.util.concurrent.TimeUnit
@@ -42,7 +44,7 @@ def JDK_HOME = System.getenv().containsKey("JDK.HOME") ?
     JAVA_HOME.endsWith("/jre") ? JAVA_HOME.substring(0, JAVA_HOME.length() - 4) : JAVA_HOME;
 def JFXRT = System.getenv().containsKey("JFXRT") ?
     System.getenv("JFXRT") :
-    JDK_HOME + "/jre/lib/jfxrt.jar"; // Note that b75+ of Java 8 puts this in a different location!
+    JDK_HOME + "/jre/lib/ext/jfxrt.jar"; // Note that b75+ of Java 8 puts this in a different location!
 
 def RAW_VERSION = "8.0.0"
 
@@ -132,21 +134,13 @@ task assemble {
     dependsOn jfxrt
 }
 
-subprojects {
+allprojects {
+    // We want to configure all projects as java projects and use the same compile settings
+    // etc, except for the root project which we just want to ignore
+    if (project == rootProject) return
     // All of our projects are java projects
     apply plugin: "java"
     sourceCompatibility = 1.8
-    // At the moment the ASM library shipped with Gradle that is used to
-    // discover the different test classes fails on Java 8, so in order
-    // to have sourceCompatibility set to 1.8 I have to also turn scanForClasses off
-    // and manually specify the includes / excludes
-    test {
-        enableAssertions = true
-        testLogging.exceptionFormat = "full"
-        scanForTestClasses = false
-        include '**/*Test.*'
-        exclude '**/*Abstract*.*'
-    }
     // The following block is a workaround for the fact that presently Gradle
     // can't set the -XDignore.symbol.file flag, because it appears that the
     // Javac API is lacking support for it. So what we'll do is find any Compile
@@ -158,12 +152,15 @@ subprojects {
     // add JFXRT to its list of dependencies.
     mkdir "build/builder-src"
     tasks.withType(Compile) { compile ->
-        compile.options.bootClasspath = JDK_HOME + "/jre/lib/rt.jar"
-        compile.options.compilerArgs = ["-XDignore.symbol.file","-s", "build/builder-src"]
+        compile.options.compilerArgs = ["-Xbootclasspath:$JDK_HOME/jre/lib/rt.jar", "-XDignore.symbol.file","-s", "build/builder-src"]
         compile.options.debug = true
         compile.options.fork = true
         compile.options.forkOptions.executable = System.env["JAVA_HOME"] ? System.env["JAVA_HOME"] + "/bin/javac" : "javac"
         compile.options.warnings = false
+        // TODO This line is to make sure JFXRT jar is last on the classpath. But I don't know if
+        // I can refer to sourceSets.main.compileClasspath like this if a project has more than
+        // one source set! I believe right now we only have one source set per project.
+        classpath = sourceSets.main.compileClasspath + rootProject.files(JFXRT)
     }
     // Setup the repositories that we'll download libraries from. Maven Central is
     // just easy for most things. The custom "ivy" repo is for downloading SWT
@@ -178,6 +175,35 @@ subprojects {
     }
 
     project.rootProject.jfxrt.dependsOn assemble
+
+//    def testDir = file("test/main/java");
+//    if (testDir.exists()) {
+//        // Replace the built-in test task with one that will delegate to jtreg
+//        def jtrefFiles = files("/Users/rbair/Downloads/jtreg/lib/testng.jar",
+//                  "/Users/rbair/Downloads/jtreg/lib/jtreg.jar",
+//                  "/Users/rbair/Downloads/jtreg/lib/javatest.jar")
+//        dependencies {
+//    //        testCompile ":jtreg-4.1-bin-b05_29_nov_2012.zip"
+//    //        files("/Users/rbair/Downloads/jtreg/lib/testng.jar",
+//    //              "/Users/rbair/Downloads/jtreg/lib/jtreg.jar",
+//    //              "/Users/rbair/Downloads/jtreg/lib/javatest.jar")
+//        }
+//        tasks.replace("test");
+//        test {
+//            // Invoke jtreg
+//            task jtreg (type: Exec) {
+//
+//    //            inputs.dir "src/main/prism-common-native"
+//    //            outputs.dir "build/main/prism-common-native"
+//    //            outputs.dir "build/libs"
+//                workingDir "."
+//                commandLine "java", "-jar", "/Users/rbair/Downloads/jtreg/lib/jtreg.jar", "-v", "-c", "-dir:test/main/java", "-r:build/reports/test", "-w:build/test/whatever", "-avm"
+//            }
+//            dependsOn jtreg, testClasses
+//        }
+//    } else {
+        tasks.replace("test");
+//    }
 }
 
 // The build-tools project contains the annotation processor that is used to generate the
@@ -213,7 +239,7 @@ project(":build-tools") {
 
     compileJava {
         dependsOn generateGrammarSource
-        source "build/generated-src/antlr/com/sun/scenario/effect/compiler"
+        source "build/generated-src"
     }
 }
 
@@ -263,12 +289,8 @@ project(":graphics") {
     dependencies {
         compile project(":base"), project(":build-tools")
         compile ":$swtFileName:"
-        compile files(rootDir.toString() + "/../crap/plugin_exports.jar", JFXRT)
+        compile files(rootDir.toString() + "/../crap/plugin_exports.jar")
         testCompile "junit:junit:4.8.2"
-    }
-
-    test {
-        forkEvery = 1
     }
 }
 
@@ -549,4 +571,3 @@ project(":graphics:prism-jsl") {
     }
     classes.dependsOn copyPrismShaders
 }
-
