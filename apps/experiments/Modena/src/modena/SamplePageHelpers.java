@@ -272,7 +272,9 @@ public class SamplePageHelpers {
         Platform.runLater(new Runnable() {
             @Override public void run() {
                 // get second menu and force into hover state
-                new ArrayList<Node>(mb.lookupAll(".menu")).get(1).pseudoClassStateChanged(PseudoClass.getPseudoClass("hover"), true);
+                try {
+                    new ArrayList<Node>(mb.lookupAll(".menu")).get(1).pseudoClassStateChanged(PseudoClass.getPseudoClass("hover"), true);
+                } catch (Exception e) { e.printStackTrace(); }
             }
         });
         return  mb;
