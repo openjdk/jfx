@@ -380,6 +380,15 @@ is being used to size a border should also be in pixels.
  *                                                                             *
  ******************************************************************************/
 
+/* ====   TEXT NODES IN CONTROLS   ========================================== */
+
+.text {
+    /* This adjusts text alignment within the bounds of text nodes so that
+       the text is always vertically centered within the bounds. Based on
+       the cap height of the text. */
+    -fx-bounds-type: logical_vertical_center;
+}
+
 /* ====   BUTTON LIKE THINGS   ============================================== */
 
 .button,
@@ -1177,8 +1186,7 @@ is being used to size a border should also be in pixels.
     -fx-background-insets: 0, 1;
     -fx-background-radius: 3, 2;
     -fx-cursor: text;
-    /*-fx-padding: 0.333333em 0.583em 0.333333em 0.583em; *//* 5 7 4 7 */
-    -fx-padding: 0.385em 0.583em 0.385em 0.583em; /* 5 7 4 7 */
+    -fx-padding: 0.333333em 0.583em 0.333333em 0.583em; /* 4 7 4 7 */
 }
 .text-input:focused {
     -fx-highlight-fill: -fx-accent;
@@ -1218,9 +1226,10 @@ is being used to size a border should also be in pixels.
     -fx-background-radius: 0 0 2 0;
 }
 .text-area .content {
-    -fx-padding: 0.333em 0.583em 0.333em 0.583em; /* 4 7 4 7 */
+    /*the is 1px less top and bottom than TextInput because of scrollpane border */
+    -fx-padding: 0.25em 0.583em 0.25em 0.583em; /* 3 7 3 7 */
     -fx-cursor: text;
-    -fx-background-color: 
+    -fx-background-color:
         linear-gradient(from 0px 0px to 0px 4px, derive(-fx-control-inner-background, -8%), -fx-control-inner-background);
     -fx-background-radius: 2;
 }
@@ -1733,7 +1742,7 @@ is being used to size a border should also be in pixels.
     -fx-background-color: -fx-box-border, -fx-inner-border, -fx-body-color;
     -fx-background-insets: 0, 1, 2;
     -fx-background-radius: 3 3 0 0, 2 2 0 0, 1 1 0 0;
-    -fx-padding: 0.417em 0.75em 0.417em 0.75em; /* 5 9 5 9 */
+    -fx-padding: 0.3333em 0.75em 0.3333em 0.75em; /* 4 9 4 9 */
 }
 /* alternative focus using the ring around the entire title area */
 /*.titled-pane:focused > .title {

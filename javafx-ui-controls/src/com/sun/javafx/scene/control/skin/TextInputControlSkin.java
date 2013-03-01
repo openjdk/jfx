@@ -433,10 +433,6 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
      */
     public Rectangle2D getCharacterBounds(int index) { return null; }
 
-    public double getLineHeight() {
-        return fontMetrics.get().getLineHeight();
-    }
-
     /**
      * Ensures that the character at a given index is visible.
      *
