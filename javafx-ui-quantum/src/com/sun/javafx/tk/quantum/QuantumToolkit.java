@@ -263,6 +263,14 @@ public final class QuantumToolkit extends DesktopToolkit implements ToolkitInter
 
     @Override public boolean init() {
         /*
+         * The below no longer applies with for jfx 8.0 on jdk 8.0. But leaving
+         * the check and comments to avoid breaking jfx running with older
+         * versions of jdk.
+         *
+         * AWT headful trips up glass, and is used in various places throughout
+         * prism, such as J2DFontFactory and BufferedImageTools, but only
+         * required AWT in a headless capacity.
+         *
          * AWT headful interferes with glass and is used in various places throughout
          * prism, such as J2DFontFactory and BufferedImageTools, but the only
          * required AWT is in a headless capacity.
@@ -294,13 +302,20 @@ public final class QuantumToolkit extends DesktopToolkit implements ToolkitInter
             if (version.startsWith("10.4") || version.startsWith("10.5")) {
                 throw new RuntimeException("JavaFX requires Mac OSX 10.6 or higher to run");
             }
-
-            AccessController.doPrivileged(new PrivilegedAction<Void>() {
-                @Override public Void run() {
-                    System.setProperty("java.awt.headless", "true");
-                    return null;
+            String javaVersion = AccessController.doPrivileged(new PrivilegedAction<String>() {
+                @Override public String run() {
+                    return System.getProperty("java.version");
                 }
             });
+            // We only support 1.6 and higher no need to check older versions
+            if (javaVersion.startsWith("1.6") || javaVersion.startsWith("1.7")) {
+                AccessController.doPrivileged(new PrivilegedAction<Void>() {
+                    @Override public Void run() {
+                        System.setProperty("java.awt.headless", "true");
+                        return null;
+                    }
+                });
+            }
         }
         /* 
          * Glass Mac, X11 need Application.setDeviceDetails to happen prior to Glass Application.Run
