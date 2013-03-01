@@ -44,6 +44,8 @@ import com.sun.javafx.css.StyleMap;
 import com.sun.javafx.css.Stylesheet;
 import com.sun.javafx.css.converters.FontConverter;
 import com.sun.javafx.css.parser.CSSParser;
+import java.lang.ref.Reference;
+import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -199,10 +201,21 @@ final class CssStyleHelper {
                 
             }
 
-            this.styleCacheKey = new StyleCache.Key(smapIds, ctr);
-
             this.localStyleCache = new StyleCache();
-                        
+            
+            final Map<StyleCache.Key,StyleCache> styleCache = 
+                    StyleManager.getInstance().getStyleCache();
+            
+            final StyleCache.Key styleCacheKey = new StyleCache.Key(smapIds, ctr);
+            StyleCache sharedCache = styleCache.get(styleCacheKey);
+            
+            if (sharedCache == null) {
+                sharedCache = new StyleCache();
+                styleCache.put(styleCacheKey, sharedCache);
+            }
+
+            this.sharedCacheRef = new WeakReference<StyleCache>(sharedCache);
+            
             CssMetaData<Styleable,Font> styleableFontProperty = null;
             
             final List<CssMetaData<? extends Styleable, ?>> props = node.getCssMetaData();
@@ -220,19 +233,18 @@ final class CssStyleHelper {
             this.fontProp = styleableFontProperty;
         
         }
-                
+
         private final CssMetaData<Styleable,Font> fontProp;
         private final int smapId;
-        private final StyleCache.Key styleCacheKey;
         private final StyleCache localStyleCache;
-        
+        private final Reference<StyleCache> sharedCacheRef;
     }
     
     //
     // Find the entry in local cache and in the shared cache that matches the
     // states. Whether or not this is a newly created StyleCacheEntry is returned
     // in isNewEntry[0].
-    private StyleCacheEntry getStyleCacheEntry(Node node, boolean[] isNewEntry) {
+    private StyleCacheEntry getStyleCacheEntry(Node node, Set<PseudoClass>[] transitionStates) {
 
         if (cacheMetaData == null) return null;
         
@@ -247,9 +259,6 @@ final class CssStyleHelper {
         // .foo:hover { -fx-fill: red; } then only the hover state matters
         // but the transtion state could be [hover, focused]
         //
-        
-        Set<PseudoClass>[] transitionStates = getTransitionStates(node);
-        
         final Set<PseudoClass>[] pclassMask = new PseudoClassState[transitionStates.length];
         
         int count = 0;
@@ -269,34 +278,23 @@ final class CssStyleHelper {
 
         StyleCacheEntry.Key key = new StyleCacheEntry.Key(pclassMask, count);
                 
-        // find the entry in the list with the same pclassMask
         StyleCacheEntry localCacheEntry = cacheMetaData.localStyleCache.getStyleCacheEntry(key);
-
         if (localCacheEntry == null) {
             
-            if (isNewEntry != null && isNewEntry.length > 0) {
-                isNewEntry[0] = true;
+            StyleCache sharedCache = cacheMetaData.sharedCacheRef.get();
+            if (sharedCache != null) {
+                
+                StyleCacheEntry sharedCacheEntry = sharedCache.getStyleCacheEntry(key);
+                if (sharedCacheEntry == null) {
+                    sharedCacheEntry = new StyleCacheEntry();
+                    sharedCache.putStyleCacheEntry(key, sharedCacheEntry);
+                }
+                
+                localCacheEntry = new StyleCacheEntry(sharedCacheEntry);
+                cacheMetaData.localStyleCache.putStyleCacheEntry(key, localCacheEntry);
             }
-            
-            Map<String,CascadingStyle> inlineStyles = getInlineStyleMap(node);
-            
-            localCacheEntry = new StyleCacheEntry(cacheMetaData.styleCacheKey, key);
-            
-            final CalculatedValue relativeFont = 
-                getFontForUseInConvertingRelativeSize(
-                    node, 
-                    localCacheEntry, 
-                    transitionStates[0], 
-                    inlineStyles
-                );            
-            
-            assert(relativeFont != null);
-            localCacheEntry.setFont(relativeFont);
-            
-            cacheMetaData.localStyleCache.putStyleCacheEntry(key, localCacheEntry);
-            
         }
-        
+
         return localCacheEntry;
         
     }
@@ -560,13 +558,19 @@ final class CssStyleHelper {
             return;
         }
         
+        
+        Set<PseudoClass>[] transitionStates = getTransitionStates(node);
+                
         //
         // Styles that need lookup can be cached provided none of the styles
         // are from Node.style.
         //                
-        boolean[] isNewLocalCache = new boolean[] { false };
-        StyleCacheEntry cacheEntry = getStyleCacheEntry(node, isNewLocalCache);
-        
+        StyleCacheEntry cacheEntry = getStyleCacheEntry(node, transitionStates);
+        if (cacheEntry == null) {
+            cacheMetaData.localStyleCache.clear();
+            cacheMetaData = null;
+            node.impl_reapplyCSS();
+        }
         //
         // inlineStyles is this node's Node.style. This is passed along and is
         // used in getStyle. Importance being the same, an author style will
@@ -575,17 +579,30 @@ final class CssStyleHelper {
         final Map<String,CascadingStyle> inlineStyles = 
                 CssStyleHelper.getInlineStyleMap(node);
         
+        boolean fastpath = cacheEntry.getFont() != null;
+        if (fastpath == false) {
+                        
+            final CalculatedValue relativeFont = 
+                getFontForUseInConvertingRelativeSize(
+                    node, 
+                    cacheEntry, 
+                    transitionStates[0], 
+                    inlineStyles
+                );            
+            
+            assert(relativeFont != null);
+            cacheEntry.setFont(relativeFont);
+
+        }
         
-        final StyleOrigin relativeFontOrigin = 
+        // origin of the font used for converting font-relative sizes
+        final StyleOrigin fontOrigin = 
                 cacheEntry.getFont() != null 
                 ? cacheEntry.getFont().getOrigin() 
                 : null;
-        //
-        //
-        boolean fastpath = 
-                // If the cacheEntry is new, 
-                //   then calculate styles for this set of states
-                isNewLocalCache[0] == false &&
+            
+        fastpath = 
+                fastpath &&
                 // If someone is watching the styles, 
                 //   then we have to take the slow path.
                 observableStyleMap == null &&
@@ -594,11 +611,10 @@ final class CssStyleHelper {
                 inlineStyles == null &&
                 // If the relative font came from a user-set value, 
                 //   then we might not be able to use the value in shared cache.
-                relativeFontOrigin != StyleOrigin.USER && 
+                fontOrigin != StyleOrigin.USER && 
                 // If the relative font came from an inline-style, 
                 //   then we might not be able to use the value in shared cache.
-                relativeFontOrigin != StyleOrigin.INLINE;
-        
+                fontOrigin != StyleOrigin.INLINE;                        
         
         final List<CssMetaData<? extends Styleable, ?>> styleables = node.getCssMetaData();
         
@@ -1430,7 +1446,8 @@ final class CssStyleHelper {
             if (parent != null) {
                 parentHelper = parent.styleHelper;
                 if (parentHelper != null) {
-                    parentCacheEntry = parentHelper.getStyleCacheEntry(parent, null);
+                    Set<PseudoClass>[] transitionStates = getTransitionStates(parent);                    
+                    parentCacheEntry = parentHelper.getStyleCacheEntry(parent, transitionStates);
                 }
             }
         } while (parent != null && parentCacheEntry == null);

@@ -25,10 +25,14 @@
 
 package javafx.scene.control;
 
+import com.sun.javafx.runtime.VersionInfo;
 import com.sun.javafx.scene.control.test.ControlAsserts;
+import com.sun.javafx.scene.control.test.Employee;
 import com.sun.javafx.scene.control.test.Person;
 import com.sun.javafx.tk.Toolkit;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
@@ -39,9 +43,12 @@ import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
+import javafx.collections.FXCollections;
 import javafx.scene.Group;
 import javafx.scene.Scene;
 import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.scene.layout.VBox;
+import javafx.scene.paint.Color;
 import javafx.stage.Stage;
 import javafx.util.Callback;
 
@@ -668,5 +675,52 @@ public class TreeViewTest {
         
         ControlAsserts.assertRowsNotEmpty(tree, 0, 3); // rows 0 - 3 should be filled
         ControlAsserts.assertRowsEmpty(tree, 3, -1); // rows 3+ should be empty
+    }
+    
+    @Test public void test_rt28556() {
+        List<Employee> employees = Arrays.<Employee>asList(
+            new Employee("Ethan Williams", "Sales Department"),
+            new Employee("Emma Jones", "Sales Department"),
+            new Employee("Michael Brown", "Sales Department"),
+            new Employee("Anna Black", "Sales Department"),
+            new Employee("Rodger York", "Sales Department"),
+            new Employee("Susan Collins", "Sales Department"),
+            new Employee("Mike Graham", "IT Support"),
+            new Employee("Judy Mayer", "IT Support"),
+            new Employee("Gregory Smith", "IT Support"),
+            new Employee("Jacob Smith", "Accounts Department"),
+            new Employee("Isabella Johnson", "Accounts Department"));
+    
+        TreeItem<String> rootNode = new TreeItem<String>("MyCompany Human Resources");
+        rootNode.setExpanded(true);
+        
+        List<TreeItem<String>> nodeList = FXCollections.observableArrayList();
+        for (Employee employee : employees) {
+            nodeList.add(new TreeItem<String>(employee.getName()));
+        }
+        rootNode.getChildren().setAll(nodeList);
+
+        TreeView<String> treeView = new TreeView<String>(rootNode);
+        
+        // ensure all children of the root node have the correct indentation 
+        // before the sort occurs
+        ControlAsserts.assertLayoutX(treeView, 1, 11, 31.0);
+        for (TreeItem<String> children : rootNode.getChildren()) {
+            assertEquals(rootNode, children.getParent());
+        }
+        
+        // run sort
+        Collections.sort(rootNode.getChildren(), new Comparator<TreeItem<String>>() {
+            @Override public int compare(TreeItem<String> o1, TreeItem<String> o2) {
+                return o1.getValue().compareTo(o2.getValue());
+            }
+        });
+        
+        // ensure the same indentation exists after the sort (which is where the
+        // bug is - it drops down to 21.0px indentation when it shouldn't).
+        ControlAsserts.assertLayoutX(treeView, 1, 11, 31.0);
+        for (TreeItem<String> children : rootNode.getChildren()) {
+            assertEquals(rootNode, children.getParent());
+        }
     }
 }

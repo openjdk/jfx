@@ -75,6 +75,11 @@ public class StubTextLayout implements TextLayout {
     }
 
     @Override
+    public boolean setBoundsType(int type) {
+        return true;
+    }
+
+    @Override
     public BaseBounds getBounds() {
         return getBounds(null, new RectBounds());
     }

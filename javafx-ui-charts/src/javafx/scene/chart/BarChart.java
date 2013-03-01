@@ -77,6 +77,7 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
     private Data<X,Y> dataItemBeingRemoved = null;
     private Series<X,Y> seriesOfDataRemoved = null;
     private double bottomPos  = 0;
+    private static String NEGATIVE_STYLE = "negative";
     // -------------- PUBLIC PROPERTIES ----------------------------------------
 
     /** The gap to leave between bars in the same category */
@@ -195,14 +196,17 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
         } else {
             category = (String)item.getYValue();
         }
-        // Don't plot if category does not already exist ?
-//        if (!categoryAxis.getCategories().contains(category)) return;
-
-        Map<String, Data<X,Y>> categoryMap = seriesCategoryMap.get(series);
+         Map<String, Data<X,Y>> categoryMap = seriesCategoryMap.get(series);
 
         if (categoryMap == null) {
             categoryMap = new HashMap<String, Data<X,Y>>();
             seriesCategoryMap.put(series, categoryMap);
+        }
+        // check if category is already present
+        if (!categoryAxis.getCategories().contains(category)) {
+            categoryAxis.getCategories().add(itemIndex, category);
+        } else if (categoryMap.containsKey(category)){
+            categoryMap.remove(category);
         }
         categoryMap.put(category, item);
         Node bar = createBar(series, getData().indexOf(series), item, itemIndex);
@@ -255,12 +259,12 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
         }
          if (currentVal > 0 && barVal < 0) { // going from positive to negative
              // add style class negative
-             item.getNode().getStyleClass().add("negative");
+             item.getNode().getStyleClass().add(NEGATIVE_STYLE);
          } else if (currentVal < 0 && barVal > 0) { // going from negative to positive
              // remove style class negative
-             // RT-21164 upside down bars: was adding "negative" styleclass
+             // RT-21164 upside down bars: was adding NEGATIVE_STYLE styleclass
              // instead of removing it; when going from negative to positive
-             item.getNode().getStyleClass().remove("negative");
+             item.getNode().getStyleClass().remove(NEGATIVE_STYLE);
          }
     }
     
@@ -269,7 +273,7 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
         if (orientation == Orientation.VERTICAL) {
             barVal = ((Number)item.getYValue()).doubleValue();
             if (barVal < 0) {
-                bar.getStyleClass().add("negative");
+                bar.getStyleClass().add(NEGATIVE_STYLE);
             }
 //            item.setYValue(getYAxis().toRealValue(getYAxis().getZeroPosition()));
 //            item.setCurrentY(getYAxis().toRealValue(getYAxis().getZeroPosition()));
@@ -286,7 +290,7 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
         } else {
             barVal = ((Number)item.getXValue()).doubleValue();
             if (barVal < 0) {
-                bar.getStyleClass().add("negative");
+                bar.getStyleClass().add(NEGATIVE_STYLE);
             }
             item.setXValue(getXAxis().toRealValue(getXAxis().getZeroPosition()));
             item.setCurrentX(getXAxis().toRealValue(getXAxis().getZeroPosition()));
@@ -318,11 +322,11 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
             if (shouldAnimate()) {
                 animateDataAdd(item, bar);
             } else {
-                // RT-21164 check if bar value is negative to add "negative" style class 
+                // RT-21164 check if bar value is negative to add NEGATIVE_STYLE style class 
                 double barVal = (orientation == Orientation.VERTICAL) ? ((Number)item.getYValue()).doubleValue() :
                         ((Number)item.getXValue()).doubleValue();
                 if (barVal < 0) {
-                    bar.getStyleClass().add("negative");
+                    bar.getStyleClass().add(NEGATIVE_STYLE);
                 }
                 getPlotChildren().add(bar);
             }
@@ -421,10 +425,11 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
         final double avilableBarSpace = catSpace - (getCategoryGap() + getBarGap());
         final double barWidth = (avilableBarSpace / getSeriesSize()) - getBarGap();
         final double barOffset = -((catSpace - getCategoryGap()) / 2);
-        final double zeroPos = valueAxis.getDisplayPosition(valueAxis.getLowerBound());
+        final double zeroPos = (valueAxis.getLowerBound() > 0) ? 
+                valueAxis.getDisplayPosition(valueAxis.getLowerBound()) : valueAxis.getZeroPosition();
         // update bar positions and sizes
         int catIndex = 0;
-            for (String category : categoryAxis.getCategories()) {
+        for (String category : categoryAxis.getCategories()) {
             int index = 0;
             for (Series<X,Y> series = begin; series != null; series = series.next) {
                 final Data<X,Y> item = getDataItem(series, index, catIndex, category);

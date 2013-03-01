@@ -540,6 +540,10 @@ public class PlatformImpl {
                     new PrivilegedAction() {
                         @Override public Object run() {
                             StyleManager.getInstance().setDefaultUserAgentStylesheet("com/sun/javafx/scene/control/skin/modena/modena.css");
+                            if (isSupported(ConditionalFeature.INPUT_TOUCH)) {
+                                StyleManager.getInstance().addUserAgentStylesheet(
+                                        "com/sun/javafx/scene/control/skin/modena/touch.css");
+                            }
                             return null;
                         }
                     });

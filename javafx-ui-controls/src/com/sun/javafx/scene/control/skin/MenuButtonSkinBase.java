@@ -95,7 +95,6 @@ public abstract class MenuButtonSkinBase<C extends MenuButton, B extends MenuBut
         label = new MenuLabeledImpl(getSkinnable());
         label.setMnemonicParsing(control.isMnemonicParsing());
         label.setLabelFor(control);
-        label.setFocusTraversable(true);
 
         arrow = new StackPane();
         arrow.getStyleClass().setAll("arrow");

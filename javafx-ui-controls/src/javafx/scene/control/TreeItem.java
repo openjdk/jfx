@@ -390,6 +390,10 @@ public class TreeItem<T> implements EventTarget { //, Comparable<TreeItem<T>> {
     Comparator<TreeItem<T>> lastComparator = null;
     TreeSortMode lastSortMode = null;
     
+    // Refer to the TreeItem.updateChildrenParent method below for more context
+    // and a description of this field
+    private int parentLinkCount = 0;
+    
     
 
     /***************************************************************************
@@ -893,14 +897,39 @@ public class TreeItem<T> implements EventTarget { //, Comparable<TreeItem<T>> {
 
     // Convenience method to set the parent of all children in the given list to 
     // the given parent TreeItem
-    private static <T> void updateChildrenParent(List<? extends TreeItem<T>> treeItems, final TreeItem<T> parent) {
+    private static <T> void updateChildrenParent(List<? extends TreeItem<T>> treeItems, final TreeItem<T> newParent) {
         if (treeItems == null) return;
         for (final TreeItem<T> treeItem : treeItems) {
             if (treeItem == null) continue;
-            treeItem.setParent(parent);
+            
+            TreeItem<T> currentParent = treeItem.getParent();
+            
+            // We only replace the parent if the parentLinkCount of the given
+            // TreeItem is zero (which indicates that this TreeItem has not been
+            // 'linked' to its parent multiple times). This can happen in 
+            // situations such as what is shown in RT-28668 (and tested for in
+            // TreeViewTest.test_rt28556()). Specifically, when a sort is applied
+            // to the children of a TreeItem, it is possible for them to be 
+            // sorted in such a way that the element is considered to be 
+            // added in multiple places in the child list and then removed from
+            // one of those places subsequently. In doing this final removal,
+            // the parent of that TreeItem is set to null when it should in fact
+            // remain with the parent that it belongs to. 
+            if (treeItem.parentLinkCount == 0) {
+                treeItem.setParent(newParent);
+            }
+            
+            boolean parentMatch = currentParent != null && currentParent.equals(newParent);
+            if (parentMatch) {
+                if (newParent == null) {
+                    treeItem.parentLinkCount--;
+                } else {
+                    treeItem.parentLinkCount++;
+                }
+            }
          }
     }
-
+    
     /**
      * An {@link Event} that contains relevant information for all forms of
      * TreeItem modifications.

@@ -51,6 +51,10 @@ public enum TextBoundsType {
     /**
      * Use logical bounds as the basis for calculating the bounds.
      * <p>
+     * The logical bounds are based on font metrics information. The width is
+     * based on the glyph advances and the height on the ascent, descent, and 
+     * line gap. Except for the last line which does not include the line gap.
+     * <p>
      * Note: This is usually the fastest option.
      */    
     LOGICAL,
@@ -60,6 +64,14 @@ public enum TextBoundsType {
      * <p>
      * Note: This is likely to be slower than using logical bounds.
      */    
-    VISUAL
+    VISUAL,
+
+    /**
+     * Use logical vertical centered bounds as the basis for calculating the bounds.
+     * <p>
+     * This bounds type is typically used to center {@code Text} nodes vertically
+     * within the bounds of its parent.
+     */
+    LOGICAL_VERTICAL_CENTER
 
 }

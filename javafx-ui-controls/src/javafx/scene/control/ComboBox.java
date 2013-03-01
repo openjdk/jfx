@@ -372,18 +372,27 @@ public class ComboBox<T> extends ComboBoxBase<T> {
     }
 
     
-    // --- empty text
+    // --- Placeholder Node
+    private ObjectProperty<Node> placeholder;
     /**
-     * The {@code ComboBox} empty text to display, or <tt>null</tt> if no 
-     * empty text is displayed. Empty text is shown in the ComboBox popup area
+     * This Node is shown to the user when the ComboBox has no content to show.
+     * The placeholder node is shown in the ComboBox popup area
      * when the items list is null or empty. This is different than the 
      * {@link #emptyTextProperty() emptyText} property, which is shown in the
      * ComboBox Button / TextField area when there is no user-input value.
      */
-    private StringProperty emptyText = new SimpleStringProperty(this, "emptyText", "");
-    public final StringProperty emptyTextProperty() { return emptyText; }
-    public final String getEmptyText() { return emptyText.get(); }
-    public final void setEmptyText(String value) { emptyText.set(value); }
+    public final ObjectProperty<Node> placeholderProperty() {
+        if (placeholder == null) {
+            placeholder = new SimpleObjectProperty<Node>(this, "placeholder");
+        }
+        return placeholder;
+    }
+    public final void setPlaceholder(Node value) {
+        placeholderProperty().set(value);
+    }
+    public final Node getPlaceholder() {
+        return placeholder == null ? null : placeholder.get();
+    }
     
     
     
