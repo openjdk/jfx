@@ -508,10 +508,6 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
             @Override protected double computePrefWidth(double height) {
                 doCSSCheck();
                 
-                // need to check the ListView pref height in the case that the
-                // placeholder node is showing
-                final double sw = super.computePrefWidth(height);
-                
                 double pw;
                 if (getSkin() instanceof ListViewSkin) {
                     ListViewSkin<?> skin = (ListViewSkin<?>)getSkin();
@@ -529,8 +525,14 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
                 } else {
                     pw = Math.max(100, comboBox.getWidth());
                 }
-                
-                return Math.max(50, Math.max(sw, pw));
+
+                // need to check the ListView pref height in the case that the
+                // placeholder node is showing
+                if (getItems().isEmpty() && getPlaceholder() != null) {
+                    pw = Math.max(super.computePrefWidth(height), pw);
+                }
+
+                return Math.max(50, pw);
             }
 
             @Override protected double computePrefHeight(double width) {
