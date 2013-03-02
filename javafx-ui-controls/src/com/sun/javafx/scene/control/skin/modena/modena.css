@@ -51,7 +51,7 @@ The default is 12px and can change to 15px or 18px depending on user
 preference or screen DPI. On Mac the default is 13px and embedded will depend 
 on hardware. To make UI controls scale and be the right proportions for each of 
 these font sizes we base the padding (which controls size of control) on the 
-font size. This is done using the CSS measument unit of a "em" where 
+font size. This is done using the CSS measurement unit of a "em" where
 (1em = font size). The default sizes are based on Windows default of 12px, as
 a quick reference here are common px sizes in em units on windows.
 
@@ -126,29 +126,15 @@ is being used to size a border should also be in pixels.
 
     /* A bright blue for highlighting/accenting objects.  For example: selected
      * text; selected items in menus, lists, trees, and tables; progress bars */
-    /*-fx-accent: #0096C9;*/
-    /*-fx-accent: #3D8AD6;*/
-    /*-fx-accent: #0083C9;*/
-    /*-fx-accent: #E8490F;*/
-    /*-fx-accent: #f25f29;*/
-    /*-fx-accent: #057DBC;*/
     -fx-accent: #0096C9;
 
     /* Default buttons color, this is similar to accent but more subtle */
-    /*-fx-default-button: #4fb6d6;*/
-    /*-fx-default-button: #8ed2e5;*/
-    /*-fx-default-button: -fx-accent;*/
     -fx-default-button: #ABD8ED;
-    /*-fx-default-button: #5daaf5;*/
-    /*-fx-default-button: -fx-accent;*/
 
     /* A bright blue for the focus indicator of objects. Typically used as the
      * first color in -fx-background-color for the "focused" pseudo-class. Also
      * typically used with insets of -1.4 to provide a glowing effect.
      */
-    /*-fx-focus-color: #f25f29;*/
-    /*-fx-faint-focus-color: #f25f2933;*/
-    /*-fx-focus-color: #00AEFB;*/
     -fx-focus-color: #039ED3;
     -fx-faint-focus-color: #039ED322;
 
@@ -159,10 +145,6 @@ is being used to size a border should also be in pixels.
      * set -fx-color to -fx-pressed-base.
      */
     -fx-color: -fx-base;
-
-    /* The opacity level to use for the "disabled" pseudoclass.
-     */
-    -fx-disabled-opacity: 0.4;
 
     /* Chart Color Palette */
     CHART_COLOR_1: #f3622d;
@@ -259,6 +241,7 @@ is being used to size a border should also be in pixels.
                     derive(-fx-color,20%) 40%,
                     derive(-fx-color,25%) 60%,
                     derive(-fx-color,55%) 80%,
+                    derive(-fx-color,55%) 90%,
                     derive(-fx-color,75%) 100%
                 ),
                 ladder(
@@ -274,11 +257,8 @@ is being used to size a border should also be in pixels.
 
     /* A gradient that goes from a little lighter than -fx-color at the top to
      * a little darker than -fx-color at the bottom and is used to fill the
-     * body of many controls such as buttons.  Typically is the fourth color
-     * in the -fx-background-color list and represents main body of the control.
-     * Insets are typically 2.
+     * body of many controls such as buttons.
      */
-    /*-fx-body-color: linear-gradient(to bottom, derive(-fx-color,10%) ,derive(-fx-color,-6%));*/
     -fx-body-color: linear-gradient(to bottom,
             ladder(
                 -fx-color,
@@ -467,6 +447,7 @@ is being used to size a border should also be in pixels.
 .menu-button:disabled,
 .split-menu-button:disabled,
 .slider:disabled,
+.scroll-bar:disabled,
 .scroll-pane:disabled,
 .progress-bar:disabled,
 .progress-indicator:disabled,
@@ -480,8 +461,13 @@ is being used to size a border should also be in pixels.
 .tab-pane:disabled,
 .titled-pane:disabled > .title,
 .accordion:disabled > .titled-pane > .title,
-.tab-pane > .tab-header-area > .headers-region > .tab:disabled {
-    -fx-opacity: -fx-disabled-opacity;
+.tab-pane > .tab-header-area > .headers-region > .tab:disabled,
+.menu:disabled,
+.menu-item:disabled > .label,
+.menu-item:disabled,
+.list-cell:filled:selected:focused:disabled,
+.list-cell:filled:selected:disabled {
+    -fx-opacity: 0.4;
 }
 
 /* ====   MNEMONIC THINGS   ================================================= */
@@ -933,9 +919,6 @@ is being used to size a border should also be in pixels.
         -fx-faint-focus-color,
         linear-gradient(to right, derive(-fx-base,-3%), derive(-fx-base,5%) 50%, derive(-fx-base,-3%));
 }
-.scroll-bar:disabled {
-    -fx-opacity: -fx-disabled-opacity;
-}
 .scroll-bar > .thumb {
     -fx-background-color: -fx-outer-border, -fx-inner-border, -fx-body-color; 
     /*-fx-background-insets: 1, 2, 3;*/
@@ -1089,7 +1072,6 @@ is being used to size a border should also be in pixels.
             derive(-fx-control-inner-background, -9%)
           );
     -fx-background-insets: 0, 0 0 1 0, 1 1 2 1;
-    /*-fx-background-radius: 0.833em, 0.750em, 0.667em; *//* 10, 9, 8 */
     -fx-background-radius: 4, 3, 2; /* 10, 9, 8 */
 }
 
@@ -1361,9 +1343,6 @@ is being used to size a border should also be in pixels.
     -fx-background-color: transparent;
     -fx-padding: 0.333333em 0.666667em 0.333333em 0.666667em; /* 4 8 4 8 */
 }
-.menu:disabled {
-    -fx-opacity: -fx-disabled-opacity;
-}
 .menu:show-mnemonics > .mnemonic-underline {
     -fx-stroke: -fx-text-fill;
 }
@@ -1464,9 +1443,6 @@ is being used to size a border should also be in pixels.
     -fx-padding: 0em 0.5em 0em 0em;
     -fx-text-fill: -fx-text-base-color;
 }
-.menu-item:disabled > .label {
-    -fx-opacity: -fx-disabled-opacity;
-}
 .menu-item:focused {
      -fx-background: -fx-accent;
      -fx-background-color: -fx-selection-bar;
@@ -1505,9 +1481,6 @@ is being used to size a border should also be in pixels.
 }
 .menu:selected > .right-container > .arrow {
     -fx-background-color: white;
-}
-.menu-item:disabled {
-    -fx-opacity: -fx-disabled-opacity;
 }
 
 /*******************************************************************************
@@ -1575,7 +1548,6 @@ is being used to size a border should also be in pixels.
 }
 .tab-pane > .tab-header-area > .headers-region > .tab:disabled:hover {
     -fx-color: -fx-base;
-    -fx-opacity: -fx-disabled-opacity;
 }
 .tab-pane > .tab-header-area > .tab-header-background {
     /* TODO should not be using text-box-border I think? */
@@ -2221,10 +2193,6 @@ is being used to size a border should also be in pixels.
 .list-view:horizontal > .virtual-flow > .clipped-container > .sheet > .list-cell:filled:selected {
     -fx-background-color: lightgray;
     -fx-text-fill: -fx-selection-bar-text;
-}
-.list-cell:filled:selected:focused:disabled, 
-.list-cell:filled:selected:disabled {
-    -fx-opacity: -fx-disabled-opacity;
 }
 /*.list-cell:filled:hover {
     -fx-background-color: -fx-cell-hover-color;
