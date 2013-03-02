@@ -236,8 +236,18 @@ public final class QuantumToolkit extends DesktopToolkit implements ToolkitInter
     static final boolean liveResize =
             AccessController.doPrivileged(new PrivilegedAction<Boolean>() {
                 @Override public Boolean run() {
-                    return "true".equals(System.getProperty("javafx.live.resize", "true"));
+                    boolean isSWT = "swt".equals(System.getProperty("glass.platform"));
+                    String result = PlatformUtil.isMac() && !isSWT ? "true" : "false";
+                    return result.equals(System.getProperty("javafx.live.resize", "true"));
                 }
+            });
+    
+    static final boolean drawInPaint =
+            AccessController.doPrivileged(new PrivilegedAction<Boolean>() {
+                @Override public Boolean run() {
+                    boolean isSWT = "swt".equals(System.getProperty("glass.platform"));
+                    String result = PlatformUtil.isMac() && isSWT ? "true" : "false";
+                    return result.equals(System.getProperty("javafx.draw.in.paint", "true"));}
             });
 
     private AtomicBoolean           toolkitRunning = new AtomicBoolean(false);

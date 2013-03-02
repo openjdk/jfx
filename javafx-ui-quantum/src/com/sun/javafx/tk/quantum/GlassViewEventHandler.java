@@ -645,6 +645,12 @@ class GlassViewEventHandler extends View.EventHandler {
                         // RT-21057 - ignore initial minimum size setting if not visible
                         break;
                     }
+                    if (QuantumToolkit.drawInPaint && w != null && w.isVisible()) {
+                        WindowStage stage = scene.getWindowStage();
+                        if (stage != null && !stage.isApplet()) {
+                            collector.liveRepaintRenderJob(scene);
+                        }
+                    }
                     scene.entireSceneNeedsRepaint();
                     break;
                 }
@@ -658,7 +664,7 @@ class GlassViewEventHandler extends View.EventHandler {
                     } finally {
                         AbstractPainter.renderLock.unlock();
                     }
-                    if (QuantumToolkit.liveResize && PlatformUtil.isMac() && w != null && w.isVisible()) {
+                    if (QuantumToolkit.liveResize && w != null && w.isVisible()) {
                         WindowStage stage = scene.getWindowStage();
                         if (stage != null && !stage.isApplet()) {
                             collector.liveRepaintRenderJob(scene);

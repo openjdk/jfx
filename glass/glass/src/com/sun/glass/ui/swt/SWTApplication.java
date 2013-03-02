@@ -744,13 +744,13 @@ public final class SWTApplication extends Application {
     
     static void lockFocus (Control control) {
         if (SWT.getPlatform().equals("cocoa")) {
-            invokeLock(control, "lockFocus");
+            //invokeLock(control, "lockFocus");
             setView(control, new_NSOpenGLContext(context));
         }
     }
     
     static void unlockFocus (Control control) {
-        if (SWT.getPlatform().equals("cocoa")) invokeLock(control, "unlockFocus");
+        //if (SWT.getPlatform().equals("cocoa")) invokeLock(control, "unlockFocus");
     }
     
     static Object new_NSOpenGLContext (long context) {
