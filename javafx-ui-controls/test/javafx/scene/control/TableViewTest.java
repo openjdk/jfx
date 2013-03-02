@@ -27,10 +27,12 @@ package javafx.scene.control;
 
 import com.sun.javafx.scene.control.test.ControlAsserts;
 import com.sun.javafx.scene.control.test.Person;
+import java.util.ArrayList;
 import static javafx.scene.control.ControlTestUtils.assertStyleClassContains;
 import static org.junit.Assert.*;
 
 import java.util.Arrays;
+import java.util.List;
 
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
@@ -503,5 +505,68 @@ public class TableViewTest {
         
         ControlAsserts.assertRowsNotEmpty(table, 0, 2); // rows 0 - 2 should be filled
         ControlAsserts.assertRowsEmpty(table, 2, -1); // rows 2+ should be empty
+    }
+    
+    @Test public void test_rt22463() {
+        final TableView<RT_22463_Person> table = new TableView<RT_22463_Person>();
+        table.setTableMenuButtonVisible(true);
+        TableColumn c1 = new TableColumn("Id");
+        TableColumn c2 = new TableColumn("Name");
+        c1.setCellValueFactory(new PropertyValueFactory<Person, Long>("id"));
+        c2.setCellValueFactory(new PropertyValueFactory<Person, String>("name"));
+        table.getColumns().addAll(c1, c2);
+        
+        RT_22463_Person p1 = new RT_22463_Person();
+        p1.setId(1l);
+        p1.setName("name1");
+        RT_22463_Person p2 = new RT_22463_Person();
+        p2.setId(2l);
+        p2.setName("name2");
+        table.setItems(FXCollections.observableArrayList(p1, p2));
+        ControlAsserts.
+    }
+    
+    private static class RT_22463_Person {
+
+        private Long id;
+        private String name;
+
+        public Long getId() {
+            return id;
+        }
+
+        public void setId(Long id) {
+            this.id = id;
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public void setName(String name) {
+            this.name = name;
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (obj == null) {
+                return false;
+            }
+            if (getClass() != obj.getClass()) {
+                return false;
+            }
+            final RT_22463_Person other = (RT_22463_Person) obj;
+            if (this.id != other.id) {
+                return false;
+            }
+            return true;
+        }
+
+        @Override
+        public int hashCode() {
+            int hash = 7;
+            hash = 89 * hash + (int) (this.id ^ (this.id >>> 32));
+            return hash;
+        }
     }
 }

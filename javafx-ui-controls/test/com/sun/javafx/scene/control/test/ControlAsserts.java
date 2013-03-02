@@ -90,6 +90,38 @@ public class ControlAsserts {
         assertCallback(control, startRow, endRow, callback);
     }
     
+    private static void assertCellTextEquals(final Control control, final int startRow, final int endRow, final String expected) {
+        Callback<IndexedCell<?>, Void> callback = new Callback<IndexedCell<?>, Void>() {
+            @Override public Void call(IndexedCell<?> indexedCell) {
+                boolean hasChildrenCell = false;
+                for (Node n : indexedCell.getChildrenUnmodifiable()) {
+                    if (! (n instanceof IndexedCell)) {
+                        break;
+                    }
+                    hasChildrenCell = true;
+                    IndexedCell<?> childCell = (IndexedCell<?>)n;
+
+                    if (expectEmpty) {
+                        assertCellEmpty(childCell);
+                    } else {
+                        assertCellNotEmpty(childCell);
+                    }
+                }
+
+                if (! hasChildrenCell) {
+                    if (expectEmpty) {
+                        assertCellEmpty(indexedCell);
+                    } else {
+                        assertCellNotEmpty(indexedCell);
+                    }
+                }
+                return null;
+            }
+        };
+        
+        assertCallback(control, startRow, endRow, callback);
+    }
+    
     // used by TreeView / TreeTableView to ensure the correct indentation
     // (although note that it has only been developed so far for TreeView)
     public static void assertLayoutX(final Control control, final int startRow, final int endRow, final double expectedLayoutX) {
