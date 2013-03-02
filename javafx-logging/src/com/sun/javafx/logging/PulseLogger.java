@@ -70,7 +70,7 @@ public class PulseLogger {
      * the threshold, then it is logged, otherwise an abbreviated representation including
      * only the time of the pulse is logged.
      */
-    private static long THRESHOLD =
+    private static long THRESHOLD = (long)
             AccessController.doPrivileged(new PrivilegedAction<Integer>() {
                 @Override public Integer run() {
                     return Integer.getInteger("javafx.pulseLogger.threshold", 17);
