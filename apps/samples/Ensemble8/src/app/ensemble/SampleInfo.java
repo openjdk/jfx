@@ -37,6 +37,8 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.AbstractList;
 import java.util.List;
+import java.util.Map;
+import java.util.WeakHashMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javafx.beans.value.ChangeListener;
@@ -46,7 +48,6 @@ import javafx.geometry.Side;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
-import javafx.scene.control.Control;
 import javafx.scene.control.Label;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
@@ -141,7 +142,7 @@ public class SampleInfo {
             String url = getClass().getResource(previewUrl).toExternalForm();
             label.setBackground(new Background(
                 new BackgroundImage(
-                    new Image(url), 
+                    getImage(url), 
                     BackgroundRepeat.NO_REPEAT, 
                     BackgroundRepeat.NO_REPEAT, 
                     new BackgroundPosition(Side.LEFT,5,false, Side.TOP,5,false), 
@@ -149,8 +150,9 @@ public class SampleInfo {
                 )));
         }
         label.getStyleClass().add("sample-medium-preview");
-        label.setMinSize(Control.USE_PREF_SIZE, Control.USE_PREF_SIZE);
+        label.setMinSize(216, 162);
         label.setPrefSize(216, 162);
+        label.setMaxSize(216, 162);
         return label;
     }
     
@@ -208,7 +210,7 @@ public class SampleInfo {
         }
         return new Pane();
     }
-    private static final Image SAMPLE_BACKGROUND = new Image(
+    private static final Image SAMPLE_BACKGROUND = getImage(
             SampleInfo.class.getResource("images/sample-background.png").toExternalForm());
     private class LargePreviewRegion extends Region {
         private final Node sampleNode = buildSampleNode();
@@ -337,5 +339,16 @@ public class SampleInfo {
     public static interface URL {
         String getURL();
         String getName();
+    }
+    
+    private static Map<String, Image> imageCache = new WeakHashMap<>();
+    
+    private static Image getImage(String url) {
+        Image image = imageCache.get(url);
+        if (image == null) {
+            image = new Image(url);
+            imageCache.put(url, image);
+        }
+        return image;
     }
 }

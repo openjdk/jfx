@@ -33,9 +33,13 @@
 package ensemble;
 
 import ensemble.generated.Samples;
+import java.lang.ref.Reference;
+import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
+import java.util.WeakHashMap;
 import javafx.beans.property.ReadOnlyStringProperty;
 import javafx.beans.property.ReadOnlyStringWrapper;
 import javafx.beans.value.ChangeListener;
@@ -137,6 +141,8 @@ public class HomePage extends ListView<HomePage.HomePageRow> implements Callback
     private void rebuild() {
         // build new list of titles and samples
         List<HomePageRow> newItems = new ArrayList<>();
+        // add Highlights to top
+        newItems.add(HIGHLIGHTS_ROW);
         // add any samples directly in root category
         addSampleRows(newItems,Samples.ROOT.samples);
         // add samples for all sub categories
@@ -146,25 +152,8 @@ public class HomePage extends ListView<HomePage.HomePageRow> implements Callback
             // add samples
             addSampleRows(newItems,category.samplesAll);
         }
-        // debug extra data
-        /*for (int a=0;a<30;a++) {
-            newItems.add(new HomePageRow(RowType.Title,"Category "+a,null));
-            for (int b=0;b<(1+(10*Math.random()));b++) {
-                SampleInfo[] samples = new SampleInfo[numberOfColumns];
-                for(int c=0;c<numberOfColumns;c++) {
-                    samples[c] = Samples.HIGHLIGHTS[0];
-                }
-                newItems.add(new HomePageRow(RowType.Samples,null,samples));
-            }
-        }*/
-        // add Highlights to top
-        if (getItems().isEmpty()) {
-            getItems().add(HIGHLIGHTS_ROW);
-        } else {
-            getItems().retainAll(HIGHLIGHTS_ROW);
-        }
         // replace the lists items
-        getItems().addAll(newItems);
+        getItems().setAll(newItems);
     }
 
     /**
@@ -175,15 +164,25 @@ public class HomePage extends ListView<HomePage.HomePageRow> implements Callback
      */
     private void addSampleRows(List<HomePageRow> items, SampleInfo[] samples) {
         if(samples == null) return;
-        for(int row=0; row <= (samples.length/numberOfColumns); row++) {
+        for(int row = 0; row < Math.ceil((double) samples.length / numberOfColumns); row++) {
             int sampleIndex = row*numberOfColumns;
             SampleInfo[] sampleInfos = Arrays.copyOfRange(samples,sampleIndex, Math.min(sampleIndex+numberOfColumns,samples.length));
             items.add(new HomePageRow(RowType.Samples, null, sampleInfos));
         }
     }
 
+    private Reference<Pagination> paginationCache;
+    private ImageView highlightRibbon;
+    private Map<String, SectionRibbon> ribbonsCache = new WeakHashMap<>();
+    private Map<SampleInfo, Button> buttonCache = new WeakHashMap<>();
+
     private static int cellCount = 0;
+    
     private class HomeListCell extends ListCell<HomePageRow> implements Callback<Integer,Node>,  Skin<HomeListCell> {
+        private static final double HIGHLIGHTS_HEIGHT = 430;
+        private static final double RIBBON_HEIGHT = 58;
+        private static final double DEFAULT_HEIGHT = 208;
+        private double height = DEFAULT_HEIGHT;
         int cellIndex;
         private RowType oldRowType = null;
         private HBox box = new HBox(ITEM_GAP);
@@ -191,70 +190,94 @@ public class HomePage extends ListView<HomePage.HomePageRow> implements Callback
             super();
             getStyleClass().clear();
             cellIndex = cellCount++;
-//            System.out.println("CREATED CELL " + (cellIndex));
             box.getStyleClass().add("home-page-cell");
             // we don't need any of the labeled functionality of the default cell skin, so we replace skin with our own
             // in this case using this same class as it saves memory. This skin is very simple its just a HBox container
             setSkin(this);
         }
 
+        @Override
+        protected double computeMaxHeight(double d) {
+            return height;
+        }
+
+        @Override
+        protected double computePrefHeight(double d) {
+            return height;
+        }
+
+        @Override
+        protected double computeMinHeight(double d) {
+            return height;
+        }
+        
         // CELL METHODS
         @Override protected void updateItem(HomePageRow item, boolean empty) {
-            super.updateItem(item,empty);
-//            System.out.println("updating cell ["+cellIndex+"] to type "+(item==null?"null":item.rowType)+"  from "+oldRowType);
+            super.updateItem(item, empty);
             if (item == null) {
                 oldRowType = null;
                 box.getChildren().clear();
+                height = DEFAULT_HEIGHT;
             } else {
-                switch(item.rowType) {
+                switch (item.rowType) {
                     case Highlights:
-                        Pagination pagination = new Pagination(Samples.HIGHLIGHTS.length);
-                        pagination.getStyleClass().add(Pagination.STYLE_CLASS_BULLET);
-                        pagination.setMaxWidth(USE_PREF_SIZE);
-                        pagination.setPageFactory(this);
-//                        setGraphic(pagination);
-                        box.setAlignment(Pos.CENTER);
-                        ImageView highlightRibbon = new ImageView(new Image(getClass().getResource("images/highlights-ribbon.png").toExternalForm()));
-                        highlightRibbon.setManaged(false);
-                        highlightRibbon.layoutXProperty().bind(pagination.layoutXProperty().subtract(4));
-                        highlightRibbon.layoutYProperty().bind(pagination.layoutYProperty().subtract(4));
-                        box.getChildren().setAll(pagination, highlightRibbon);
-                        
-//                        box.getChildren().setAll(Samples.HIGHLIGHTS[0].getLargePreview());
+                        if (oldRowType != RowType.Highlights) {
+                            height = HIGHLIGHTS_HEIGHT;
+                            Pagination pagination = paginationCache == null ? null 
+                                    : paginationCache.get();
+                            if (pagination == null) {
+                                pagination = new Pagination(Samples.HIGHLIGHTS.length);
+                                pagination.getStyleClass().add(Pagination.STYLE_CLASS_BULLET);
+                                pagination.setMaxWidth(USE_PREF_SIZE);
+                                pagination.setPageFactory(this);
+                                paginationCache = new WeakReference<>(pagination);
+                            }
+                            if (highlightRibbon == null) {
+                                highlightRibbon = new ImageView(new Image(getClass().getResource("images/highlights-ribbon.png").toExternalForm()));
+                                highlightRibbon.setManaged(false);
+                                highlightRibbon.layoutXProperty().bind(pagination.layoutXProperty().subtract(4));
+                                highlightRibbon.layoutYProperty().bind(pagination.layoutYProperty().subtract(4));
+                            }
+                            box.setAlignment(Pos.CENTER);
+                            box.getChildren().setAll(pagination, highlightRibbon);
+                        }
                         break;
                     case Title:
-                        if (oldRowType == RowType.Title) { // reuse if we can
-                            ((SectionRibbon)box.getChildren().get(0)).setText(item.title);
-                        } else {
-                            box.getChildren().setAll(new SectionRibbon(item.title));
-                            box.setAlignment(Pos.CENTER_LEFT);
+                        height = RIBBON_HEIGHT;
+                        SectionRibbon ribbon = ribbonsCache.get(item.title);
+                        if (ribbon == null) {
+                            ribbon = new SectionRibbon(item.title);
+                            ribbonsCache.put(item.title, ribbon);
                         }
+                        box.getChildren().setAll(ribbon);
+                        box.setAlignment(Pos.CENTER_LEFT);
                         break;
                     case Samples:
-                        if (oldRowType != RowType.Samples) {
-                            box.setAlignment(Pos.CENTER);
-                            box.getChildren().clear();
-                        }
+                        height = DEFAULT_HEIGHT;
+                        box.setAlignment(Pos.CENTER);
+                        box.getChildren().clear();
                         for (int i = 0; i < item.samples.length; i++) {
                             final SampleInfo sample = item.samples[i];
-                            Button sampleButton;
-                            if (i < box.getChildren().size()) { // reusing existing buttons
-                                sampleButton = (Button) box.getChildren().get(i);
-                            } else {
+                            Button sampleButton = buttonCache.get(sample);
+                            if (sampleButton == null) {
                                 sampleButton = new Button();
                                 sampleButton.setCache(true);
                                 sampleButton.getStyleClass().setAll("sample-button");
                                 sampleButton.setContentDisplay(ContentDisplay.TOP);
-                                box.getChildren().add(sampleButton);
+                                sampleButton.setText(sample.name);
+                                sampleButton.setGraphic(sample.getMediumPreview());
+                                sampleButton.setOnAction(new EventHandler<ActionEvent>() {
+                                    
+                                    @Override public void handle(ActionEvent actionEvent) {
+                                        pageBrowser.goToSample(sample);
+                                    }
+                                });
+                                buttonCache.put(sample, sampleButton);
                             }
-                            sampleButton.setText(sample.name);
-                            sampleButton.setGraphic(sample.getMediumPreview());
-                            sampleButton.setOnAction(new EventHandler<ActionEvent>() {
-                                
-                                @Override public void handle(ActionEvent actionEvent) {
-                                    pageBrowser.goToSample(sample);
-                                }
-                            });
+                            if (sampleButton.getParent() != null) {
+                                ((HBox) sampleButton.getParent()).getChildren().remove(sampleButton);
+                            }
+                            box.getChildren().add(sampleButton);
                         }
                         break;
                 }
@@ -348,6 +371,11 @@ public class HomePage extends ListView<HomePage.HomePageRow> implements Callback
             this.rowType = rowType;
             this.title = title;
             this.samples = samples;
+        }
+
+        @Override
+        public String toString() {
+            return "HomePageRow{" + "rowType=" + rowType + ", title=" + title + ", samples=" + samples + '}';
         }
     }
 
