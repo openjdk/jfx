@@ -23,35 +23,6 @@ import java.util.concurrent.TimeUnit
  *  - partial builds for compileXXX shaders isn't working (they also get compiled)
  *  - ServiceWithSecurityManagerTest fails to complete when run from gradle.
  *  - Integrate Parfait reports for C code
- */
-defaultTasks = ["assemble"]
-
-/******************************************************************************
- *        Utility methods, variables                                          *
- *****************************************************************************/
-def OS_NAME = System.properties["os.name"].toLowerCase();
-def isMac = OS_NAME.contains("mac") || OS_NAME.contains("darwin")
-def isWindows = OS_NAME.contains("windows")
-def isLinux = OS_NAME.contains("linux")
-def isiOS = false;
-def isLinuxARM = false;
-def isSWT = true;
-def DLL_EXT = isWindows ? "dll" : isMac ? "dylib" : "so"
-
-def JAVA_HOME = System.getProperty("java.home")
-def JDK_HOME = System.getenv().containsKey("JDK.HOME") ?
-    System.getenv("JDK.HOME") :
-    JAVA_HOME.endsWith("/jre") ? JAVA_HOME.substring(0, JAVA_HOME.length() - 4) : JAVA_HOME;
-def JFXRT = System.getenv().containsKey("JFXRT") ?
-    System.getenv("JFXRT") :
-    JDK_HOME + "/jre/lib/ext/jfxrt.jar"; // Note that b75+ of Java 8 puts this in a different location!
-
-def RAW_VERSION = "8.0.0"
-
-// TODO log the JAVA_HOME, JDK_HOME, and JFXRT, as well as the platform (isMac, isWindows, isLinux, OS_NAME, etc)
-
-// TODO Verify the /include and if on mac /include/darwin directories exist as expected under JDK.HOME
-
 // ENV has:
 //   JAVA_ARCH
 // Can also get JAVA_HOME, JDK_HOME, etc IFF the environment variables are set
@@ -66,6 +37,65 @@ def RAW_VERSION = "8.0.0"
 //   path.separator
 //
 //println System.getProperties()
+
+ */
+defaultTasks = ["assemble"]
+
+/******************************************************************************
+ *        Utility methods, variables                                          *
+ *****************************************************************************/
+String readSetting(String settingName, String defaultValue) {
+    boolean hasProperty = System.getProperties().containsKey(settingName);
+    if (hasProperty) return System.getProperty(settingName);
+
+    boolean hasLowerProperty = System.getProperties().containsKey(settingName.toLowerCase());
+    if (hasLowerProperty) return System.getProperty(settingName.toLowerCase());
+
+    boolean hasEnv = System.getenv().containsKey(settingName);
+    if (hasEnv) return System.getenv(settingName);
+
+    return defaultValue;
+}
+
+def OS_NAME = System.properties["os.name"].toLowerCase();
+def isMac = OS_NAME.contains("mac") || OS_NAME.contains("darwin")
+def isWindows = OS_NAME.contains("windows")
+def isLinux = OS_NAME.contains("linux")
+def isiOS = false;
+def isLinuxARM = false;
+def isSWT = true;
+def DLL_EXT = isWindows ? "dll" : isMac ? "dylib" : "so"
+
+def JAVA_HOME = System.getProperty("java.home")
+def JDK_HOME = readSetting("JDK.HOME", JAVA_HOME.endsWith("/jre") ? JAVA_HOME.substring(0, JAVA_HOME.length() - 4) : JAVA_HOME)
+def JFXRT = readSetting("JFXRT", JDK_HOME + "/jre/lib/ext/jfxrt.jar")
+
+def CONF = readSetting("CONF", "Debug");
+def LINT = readSetting("LINT", "none");
+boolean isDebug = CONF == "Debug"
+boolean isLint = LINT != "none"
+
+def HUDSON_JOB_NAME       = readSetting("HUDSON.JOB.NAME", "not_hudson")
+def HUDSON_BUILD_NUMBER   = readSetting("HUDSON.BUILD.NUMBER", "0000")
+def PROMOTED_BUILD_NUMBER = readSetting("PROMOTED.BUILD.NUMBER", "00")
+def PRODUCT_NAME          = readSetting("PRODUCT.NAME", "OpenJFX")
+def RAW_VERSION           = readSetting("RAW.VERSION", "8.0.0")
+def RELEASE_NAME          = readSetting("RELEASE.NAME", "8.0")
+def RELEASE_MILESTONE     = readSetting("RELEASE.MILESTONE", "ea")
+
+logger.info("OS_NAME: $OS_NAME")
+logger.info("JAVA.HOME: $JAVA_HOME")
+logger.info("JDK.HOME: $JDK_HOME")
+logger.info("JFXRT: $JFXRT")
+logger.info("HUDSON.JOB.NAME: $HUDSON_JOB_NAME")
+logger.info("HUDSON.BUILD.NUMBER: $HUDSON_BUILD_NUMBER")
+logger.info("PROMOTED.BUILD.NUMBER: $PROMOTED_BUILD_NUMBER")
+logger.info("PRODUCT.NAME: $PRODUCT_NAME")
+logger.info("RAW.VERSION: $RAW_VERSION")
+logger.info("RELEASE.NAME: $RELEASE_NAME")
+logger.info("RELEASE.MILESTONE: $RELEASE_MILESTONE")
+logger.info("sun.boot.class.path: ${System.getProperty('sun.boot.class.path')}")
+logger.info(System.getProperties().toString())
 
 def swtFileName = { ->
     String fileName = "";
@@ -117,7 +147,7 @@ task jfxrt(type: Jar) {
     if (!isSWT) exclude "com/sun/glass/ui/swt"
 }
 
-task assemble {
+task sdk {
     doLast {
         // Copy all of the .dll / .so / .dylib native libraries into build/sdk/rt/lib/
         copy {
@@ -140,7 +170,7 @@ allprojects {
     if (project == rootProject) return
     // All of our projects are java projects
     apply plugin: "java"
-    sourceCompatibility = 1.8
+    sourceCompatibility = 1.7
     // The following block is a workaround for the fact that presently Gradle
     // can't set the -XDignore.symbol.file flag, because it appears that the
     // Javac API is lacking support for it. So what we'll do is find any Compile
@@ -152,15 +182,18 @@ allprojects {
     // add JFXRT to its list of dependencies.
     mkdir "build/builder-src"
     tasks.withType(Compile) { compile ->
-        compile.options.compilerArgs = ["-Xbootclasspath:$JDK_HOME/jre/lib/rt.jar", "-XDignore.symbol.file","-s", "build/builder-src"]
-        compile.options.debug = true
+        compile.options.debug = isDebug
         compile.options.fork = true
-        compile.options.forkOptions.executable = System.env["JAVA_HOME"] ? System.env["JAVA_HOME"] + "/bin/javac" : "javac"
-        compile.options.warnings = false
-        // TODO This line is to make sure JFXRT jar is last on the classpath. But I don't know if
-        // I can refer to sourceSets.main.compileClasspath like this if a project has more than
-        // one source set! I believe right now we only have one source set per project.
-        classpath = sourceSets.main.compileClasspath + rootProject.files(JFXRT)
+        compile.options.forkOptions.executable = "$JDK_HOME/bin/javac"
+        compile.options.warnings = isLint
+        // Somewhat dangerous in case there is a source set other than "test" or "main"!
+        if (name == "compileTestJava") {
+            compile.options.compilerArgs = ["-Djava.ext.dirs=", "-XDignore.symbol.file"]
+            classpath = sourceSets.test.compileClasspath + rootProject.files(JFXRT)
+        } else {
+            compile.options.compilerArgs = ["-Djava.ext.dirs=", "-XDignore.symbol.file", "-s", "build/builder-src"]
+            classpath = sourceSets.main.compileClasspath + rootProject.files(JFXRT)
+        }
     }
     // Setup the repositories that we'll download libraries from. Maven Central is
     // just easy for most things. The custom "ivy" repo is for downloading SWT
@@ -192,17 +225,21 @@ allprojects {
 //        test {
 //            // Invoke jtreg
 //            task jtreg (type: Exec) {
+//                dependsOn testClasses
+//                group = "Verification"
 //
 //    //            inputs.dir "src/main/prism-common-native"
 //    //            outputs.dir "build/main/prism-common-native"
 //    //            outputs.dir "build/libs"
 //                workingDir "."
 //                commandLine "java", "-jar", "/Users/rbair/Downloads/jtreg/lib/jtreg.jar", "-v", "-c", "-dir:test/main/java", "-r:build/reports/test", "-w:build/test/whatever", "-avm"
+//                commandLine "ls"
 //            }
-//            dependsOn jtreg, testClasses
+//            dependsOn jtreg
+//            group = "Verification"
 //        }
 //    } else {
-        tasks.replace("test");
+//        tasks.replace("test");
 //    }
 }
 
@@ -255,19 +292,19 @@ project(":base") {
     // properties within it
     mkdir "build/generated-src/version-info" // TODO Ought to be done during processing not dep analysis phase
     def replacements = ["BUILD_TIMESTAMP": new java.util.Date(),
-        "HUDSON_JOB_NAME": "not_hudson",
-        "HUDSON_BUILD_NUMBER": "0000",
-        "PROMOTED_BUILD_NUMBER": "00",
-        "PRODUCT_NAME": "javafx", // OpenJFX
+        "HUDSON_JOB_NAME": HUDSON_JOB_NAME,
+        "HUDSON_BUILD_NUMBER": HUDSON_BUILD_NUMBER,
+        "PROMOTED_BUILD_NUMBER": PROMOTED_BUILD_NUMBER,
+        "PRODUCT_NAME": PRODUCT_NAME,
         "RAW_VERSION": RAW_VERSION,
-        "RELEASE_NAME": "8.0",
-        "RELEASE_MILESTONE": "ea"];
+        "RELEASE_NAME": RELEASE_NAME,
+        "RELEASE_MILESTONE": RELEASE_MILESTONE];
     task processVersion(type: Copy, description: "Replace params in VersionInfo and copy file to destination") {
         from "src/main/version-info"
         into "build/generated-src/version-info/com/sun/javafx/runtime"
         filter {line->
             replacements.each() {k, v ->
-                line = line.replace("@${k}@", v.toString());
+                line = line.replace("@$k@", v.toString());
             }
             line
         }
@@ -285,6 +322,7 @@ project(":base") {
 // that all need to be compiled.
 project(":graphics") {
     sourceSets.main.java.srcDirs = ["src/main/java", "src/main/dt", "src/main/jsl-generator"]
+    sourceSets.test.java.srcDirs = ["src/test/java", "src/test/testsWithStubToolkit"]
 
     dependencies {
         compile project(":base"), project(":build-tools")
@@ -297,12 +335,14 @@ project(":graphics") {
 project(":controls") {
     dependencies {
         compile project(":build-tools"), project(":base"), project(":graphics")
+        testCompile "junit:junit:4.8.2", project(":graphics").sourceSets.test.output
     }
 }
 
 project(":swing") {
     dependencies {
         compile project(":build-tools"), project(":base"), project(":graphics")
+        testCompile "junit:junit:4.8.2"
     }
 }
 
@@ -310,6 +350,7 @@ project(":swt") {
     dependencies {
         compile project(":build-tools"), project(":base"), project(":graphics")
         compile ":$swtFileName:"
+        testCompile "junit:junit:4.8.2"
     }
 }
 
@@ -324,18 +365,21 @@ project(":fxml") {
     dependencies {
         compile project(":build-tools"), project(":base"), project(":graphics"),
                 project(":controls"), /*project(":media"), project(":web"),*/ project(":swt"), project(":swing")
+        testCompile "junit:junit:4.8.2"
     }
 }
 
 project(":designTime") {
     dependencies {
         compile project(":graphics"), project(":controls")
+        testCompile "junit:junit:4.8.2"
     }
 }
 
 project(":graphics:native") {
     dependencies {
         compile project(":graphics")
+        testCompile "junit:junit:4.8.2"
     }
 
 //    task compileGlassLibGTK(type:Exec, dependsOn:configurations.compile) {
@@ -458,6 +502,7 @@ project(":graphics:native") {
 project(":graphics:effects-jsl") {
     dependencies {
         compile project(":graphics")
+        testCompile "junit:junit:4.8.2"
     }
 
     task compileJSL(description: "Compile Java Shader Language (JSL) files") { }
@@ -479,14 +524,14 @@ project(":graphics:effects-jsl") {
             mkdir "modules/graphics/effects-jsl/build/generated-src/jsl"
             def destinationDir = "build/generated-src/jsl"
             def sourceDir = "src/main/java"
-            inputs.file file("${sourceDir}/${settings.fileName}.jsl")
+            inputs.file file("$sourceDir/${settings.fileName}.jsl")
             outputs.file files(
-                    "${destinationDir}/decora-d3d/build/gensrc/com/sun/scenario/effect/impl/hw/d3d/hlsl/${settings.fileName}.hlsl",
-                    "${destinationDir}/decora-es2/build/gensrc/com/sun/scenario/effect/impl/es2/glsl/${settings.fileName}.frag",
-                    "${destinationDir}/decora-jsw/build/gensrc/com/sun/scenario/effect/impl/sw/java/JSW${settings.fileName}.java",
-                    "${destinationDir}/decora-prism-ps/build/gensrc/com/sun/scenario/effect/impl/prism/ps/PPS${settings.fileName}.java",
-                    "${destinationDir}/decora-sse/build/gensrc/com/sun/scenario/effect/impl/sw/sse/SSE${settings.fileName}.java",
-                    "${destinationDir}/decora-sse-native/build/gensrc/SSE${settings.fileName}.cc")
+                    "$destinationDir/decora-d3d/build/gensrc/com/sun/scenario/effect/impl/hw/d3d/hlsl/${settings.fileName}.hlsl",
+                    "$destinationDir/decora-es2/build/gensrc/com/sun/scenario/effect/impl/es2/glsl/${settings.fileName}.frag",
+                    "$destinationDir/decora-jsw/build/gensrc/com/sun/scenario/effect/impl/sw/java/JSW${settings.fileName}.java",
+                    "$destinationDir/decora-prism-ps/build/gensrc/com/sun/scenario/effect/impl/prism/ps/PPS${settings.fileName}.java",
+                    "$destinationDir/decora-sse/build/gensrc/com/sun/scenario/effect/impl/sw/sse/SSE${settings.fileName}.java",
+                    "$destinationDir/decora-sse-native/build/gensrc/SSE${settings.fileName}.cc")
             main = settings.generator
             classpath = configurations.compile
             classpath += files("modules/graphics/effects-jsl/build/classes/main")
@@ -521,6 +566,7 @@ project(":graphics:effects-jsl") {
 project(":graphics:prism-jsl") {
     dependencies {
         compile project(":graphics")
+        testCompile "junit:junit:4.8.2"
     }
 
     task compileJSL(description: "Compile Java Shader Language (JSL) files") {}
@@ -539,9 +585,9 @@ project(":graphics:prism-jsl") {
             mkdir "modules/graphics/prism-jsl/build/generated-src/jsl"
             inputs.file file
             outputs.dir files(
-                    "${destDir}/prism-d3d/build/gensrc/com/sun/prism/d3d/hlsl/",
-                    "${destDir}/prism-es2/build/gensrc/com/sun/prism/es2/glsl/",
-                    "${destDir}/prism-ps/build/gensrc/com/sun/prism/shader/")
+                    "$destDir/prism-d3d/build/gensrc/com/sun/prism/d3d/hlsl/",
+                    "$destDir/prism-es2/build/gensrc/com/sun/prism/es2/glsl/",
+                    "$destDir/prism-ps/build/gensrc/com/sun/prism/shader/")
             main = "CompileJSL"
             classpath = configurations.compile
             classpath += files("modules/graphics/prism-jsl/build/classes/main", "modules/graphics/prism-jsl/build/resources/main")
