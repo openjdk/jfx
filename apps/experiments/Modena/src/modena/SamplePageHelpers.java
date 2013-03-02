@@ -143,7 +143,7 @@ public class SamplePageHelpers {
             ).build();
     }
     
-    static Node createTabPane(int numOfTabs, int prefWidth, String firstTabText, boolean floating, boolean disableFirst, Side side) {
+    static Node createTabPane(int numOfTabs, int prefWidth, int prefHeight, String firstTabText, boolean floating, boolean disableFirst, Side side) {
         TabPane tabPane = new TabPane();
         tabPane.setSide(side);
         if (floating) tabPane.getStyleClass().add("floating");
@@ -158,7 +158,7 @@ public class SamplePageHelpers {
         }
         if (disableFirst) tabPane.getSelectionModel().select(1);
         tabPane.setPrefWidth(prefWidth);
-        tabPane.setPrefHeight(100);
+        tabPane.setPrefHeight(prefHeight);
         return tabPane;
     }
     

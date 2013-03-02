@@ -500,51 +500,51 @@ public class SamplePage extends GridPane {
                 );
         newSection(      
                 "Tabs\n(Top):", 
-                wrapBdr(createTabPane(4, 250,null,false, false, Side.TOP)),
-                wrapBdr(withState(createTabPane(5, 200,"Tab Disabled &\nMany Tabs", false, true, Side.TOP), null, ".tab", "disabled")),
-                wrapBdr(withState(createTabPane(5, 200,"Disabled", false, false, Side.TOP), "disabled"))
+                wrapBdr(createTabPane(4, 250, 100,null,false, false, Side.TOP)),
+                wrapBdr(withState(createTabPane(5, 200, 100,"Tab Disabled &\nMany Tabs", false, true, Side.TOP), null, ".tab", "disabled")),
+                wrapBdr(withState(createTabPane(5, 200, 100,"Disabled", false, false, Side.TOP), "disabled"))
                 );
         newSection(      
                 "Tabs Floating\n(Top):", 
-                createTabPane(4, 250,null,true, false, Side.TOP),
-                withState(createTabPane(5, 200,"Tab Disabled &\nMany Tabs", true, true, Side.TOP), null, ".tab", "disabled"),
-                withState(createTabPane(5, 200,"Disabled", true, false, Side.TOP), "disabled")
+                createTabPane(4, 250, 100,null,true, false, Side.TOP),
+                withState(createTabPane(5, 200, 100,"Tab Disabled &\nMany Tabs", true, true, Side.TOP), null, ".tab", "disabled"),
+                withState(createTabPane(5, 200, 100,"Disabled", true, false, Side.TOP), "disabled")
                 );
         newSection(      
                 "Tabs\n(Bottom):", 
-                wrapBdr(createTabPane(4, 250,null,false, false, Side.BOTTOM)),
-                wrapBdr(withState(createTabPane(5, 200,"Tab Disabled &\nMany Tabs", false, true, Side.BOTTOM), null, ".tab", "disabled")),
-                wrapBdr(withState(createTabPane(5, 200,"Disabled", false, false, Side.BOTTOM), "disabled"))
+                wrapBdr(createTabPane(4, 250, 100,null,false, false, Side.BOTTOM)),
+                wrapBdr(withState(createTabPane(5, 200, 100,"Tab Disabled &\nMany Tabs", false, true, Side.BOTTOM), null, ".tab", "disabled")),
+                wrapBdr(withState(createTabPane(5, 200, 100,"Disabled", false, false, Side.BOTTOM), "disabled"))
                 );
         newSection(      
                 "Tabs Floating\n(Bottom):", 
-                createTabPane(4, 250,null,true, false, Side.BOTTOM),
-                withState(createTabPane(5, 200,"Tab Disabled &\nMany Tabs", true, true, Side.BOTTOM), null, ".tab", "disabled"),
-                withState(createTabPane(5, 200,"Disabled", true, false, Side.BOTTOM), "disabled")
+                createTabPane(4, 250, 100,null,true, false, Side.BOTTOM),
+                withState(createTabPane(5, 200, 100,"Tab Disabled &\nMany Tabs", true, true, Side.BOTTOM), null, ".tab", "disabled"),
+                withState(createTabPane(5, 200, 100,"Disabled", true, false, Side.BOTTOM), "disabled")
                 );
         newSection(      
                 "Tabs\n(Left):", 
-                wrapBdr(createTabPane(4, 250,null,false, false, Side.LEFT)),
-                wrapBdr(withState(createTabPane(5, 200,"Tab Disabled &\nMany Tabs", false, true, Side.LEFT), null, ".tab", "disabled")),
-                wrapBdr(withState(createTabPane(5, 200,"Disabled", false, false, Side.LEFT), "disabled"))
+                wrapBdr(createTabPane(4, 250, 250,null,false, false, Side.LEFT)),
+                wrapBdr(withState(createTabPane(5, 200, 250,"Tab Disabled &\nMany Tabs", false, true, Side.LEFT), null, ".tab", "disabled")),
+                wrapBdr(withState(createTabPane(5, 200, 250,"Disabled", false, false, Side.LEFT), "disabled"))
                 );
         newSection(      
                 "Tabs Floating\n(Left):", 
-                createTabPane(4, 250,null,true, false, Side.LEFT),
-                withState(createTabPane(5, 200,"Tab Disabled &\nMany Tabs", true, true, Side.LEFT), null, ".tab", "disabled"),
-                withState(createTabPane(5, 200,"Disabled", true, false, Side.LEFT), "disabled")
+                createTabPane(4, 250, 250,null,true, false, Side.LEFT),
+                withState(createTabPane(5, 200, 250,"Tab Disabled &\nMany Tabs", true, true, Side.LEFT), null, ".tab", "disabled"),
+                withState(createTabPane(5, 200, 250,"Disabled", true, false, Side.LEFT), "disabled")
                 );
         newSection(      
                 "Tabs\n(Right):", 
-                wrapBdr(createTabPane(4, 250,null,false, false, Side.RIGHT)),
-                wrapBdr(withState(createTabPane(5, 200,"Tab Disabled &\nMany Tabs", false, true, Side.RIGHT), null, ".tab", "disabled")),
-                wrapBdr(withState(createTabPane(5, 200,"Disabled", false, false, Side.RIGHT), "disabled"))
+                wrapBdr(createTabPane(4, 250, 250,null,false, false, Side.RIGHT)),
+                wrapBdr(withState(createTabPane(5, 200, 250,"Tab Disabled &\nMany Tabs", false, true, Side.RIGHT), null, ".tab", "disabled")),
+                wrapBdr(withState(createTabPane(5, 200, 250,"Disabled", false, false, Side.RIGHT), "disabled"))
                 );
         newSection(      
                 "Tabs Floating\n(Right):", 
-                createTabPane(4, 250,null,true, false, Side.RIGHT),
-                withState(createTabPane(5, 200,"Tab Disabled &\nMany Tabs", true, true, Side.RIGHT), null, ".tab", "disabled"),
-                withState(createTabPane(5, 200,"Disabled", true, false, Side.RIGHT), "disabled")
+                createTabPane(4, 250, 250,null,true, false, Side.RIGHT),
+                withState(createTabPane(5, 200, 250,"Tab Disabled &\nMany Tabs", true, true, Side.RIGHT), null, ".tab", "disabled"),
+                withState(createTabPane(5, 200, 250,"Disabled", true, false, Side.RIGHT), "disabled")
                 );
         newDetailedSection(
                 new String[] {"TitledPane:", "normal", "not collapsible", "hover", "focused", "disabled"}, 
