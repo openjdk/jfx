@@ -24,7 +24,7 @@
       </ant>
     </target>
 
-    <target name="build-linux-gtk" unless="isCrossPlatform">
+    <target name="build-linux-gtk" unless="cross.glass.dontBuildGlassGTK">
       <ant antfile="glass-lib-gtk/build.xml" target="default"
            inheritAll="true" useNativeBasedir="true">
         <propertyset id="jfx.build.ant.properties"/>

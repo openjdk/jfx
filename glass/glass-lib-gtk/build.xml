@@ -9,9 +9,14 @@
 
     <import file="../../../build-defs.xml"/>
 
-    <property name="glass-lib.build.dir" value="./build"/>
+    <property name="glass.dist.cross.dir" value="${glass.dist.dir}${cross.name.suffix}"/>
+    <property name="glass.dist.cross.bin.dir" value="${glass.dist.cross.dir}/bin"/>
+
+    <property name="jheaders.dir" value="${glass-lib.build.dir}/include"/>
+
+    <property name="glass-lib.build.dir" value="./build${cross.name.suffix}"/>
+    <property name="glass-lib.dist.dir" value="./dist${cross.name.suffix}"/>
     <property name="glass-lib.jheaders.dir" value="${glass-lib.build.dir}/include"/>
-    <property name="glass-lib.dist.dir" value="./dist"/>
 
     <property name="glass.class.dir" value="../glass/build/classes"/>
     
@@ -52,7 +57,7 @@
         </javah>
     </target>
 
-    <target name="compile-native">
+    <target name="compile-native-host" unless="cross.platform">
       <exec executable="make" failonerror="true">
         <arg value="JDK_HOME=${platform.home}"/>
         <arg value="DIST_DIR=${glass-lib.dist.dir}"/>
@@ -61,7 +66,24 @@
         <arg value="EXTRA_LDFLAGS=${extra_ldflags}"/>
         <arg value="all"/>
       </exec>
-      <copy todir="${glass.dist.bin.dir}">
+    </target>
+
+    <target name="compile-native-cross" if="cross.platform">
+      <exec executable="make" failonerror="true">
+        <arg value="JDK_HOME=${platform.home}"/>
+        <arg value="DIST_DIR=${glass-lib.dist.dir}"/>
+        <arg value="BUILD_DIR=${glass-lib.build.dir}"/>
+        <arg value="EXTRA_CFLAGS=${cross.glass.gtk.cflags}"/>
+        <arg value="EXTRA_LDFLAGS=${cross.glass.gtk.ldflags}"/>
+        <arg value="CC=${crosstools.gcc}"/>
+        <arg value="CXX=${crosstools.gpp}"/>
+        <arg value="LINK=${crosstools.gcc}"/>
+        <arg value="all"/>
+      </exec>
+    </target>
+
+    <target name="compile-native" depends="compile-native-host,compile-native-cross">
+      <copy todir="${glass.dist.cross.bin.dir}">
         <fileset dir="${glass-lib.dist.dir}"/>
       </copy>
     </target>
@@ -69,8 +91,12 @@
     <target name="clean">
 	<exec executable="make" failonerror="true">
 	  <arg value="clean"/>
+          <arg value="DIST_DIR=${glass-lib.dist.dir}"/>
+          <arg value="BUILD_DIR=${glass-lib.build.dir}"/>
 	</exec>
-        <delete dir="build"/>
-        <delete dir="dist"/>
+        <delete dir="${jheaders.dir}"/>
+        <delete dir="${glass-lib.dist.dir}"/>
+        <delete dir="${glass-lib.build.dir}"/>
+        <delete dir="${glass.dist.cross.dir}"/>
     </target>
 </project>
