@@ -41,6 +41,7 @@ import javafx.scene.control.SelectionModel;
 import javafx.scene.input.MouseEvent;
 
 import com.sun.javafx.scene.control.skin.Utils;
+import javafx.scene.input.MouseButton;
 
 /**
  * ChoiceBoxBehavior - default implementation
@@ -133,7 +134,7 @@ public class ChoiceBoxBehavior<T> extends BehaviorBase<ChoiceBox<T>> {
         if (choiceButton.isShowing() || !choiceButton.contains(e.getX(), e.getY())) {
             choiceButton.hide(); // hide if already showing 
         }
-        else {
+        else if (e.getButton() == MouseButton.PRIMARY) {
             choiceButton.show();
         }
     }

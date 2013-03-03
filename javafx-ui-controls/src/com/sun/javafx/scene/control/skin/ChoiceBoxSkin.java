@@ -197,7 +197,6 @@ import javafx.geometry.Insets;
             if (getSkinnable().getSelectionModel() != null) {
                 int index = getSkinnable().getSelectionModel().getSelectedIndex();
                 if (index != -1) {
-                    System.out.println(" selected index = "+index);
                     MenuItem item = popup.getItems().get(index);
                     if (item instanceof RadioMenuItem) ((RadioMenuItem)item).setSelected(true);
                 }
