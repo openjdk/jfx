@@ -235,6 +235,7 @@ public class SliderSkin extends BehaviorSkinBase<Slider, SliderBehavior> {
      */
     void positionThumb(final boolean animate) {
         Slider s = getSkinnable();
+        if (s.getValue() > s.getMax()) return;// this can happen if we are bound to something 
         boolean horizontal = s.getOrientation() == Orientation.HORIZONTAL;
         final double endX = (horizontal) ? trackStart + (((trackLength * ((s.getValue() - s.getMin()) /
                 (s.getMax() - s.getMin()))) - thumbWidth/2)) : thumbLeft;

@@ -197,6 +197,7 @@ import javafx.geometry.Insets;
             if (getSkinnable().getSelectionModel() != null) {
                 int index = getSkinnable().getSelectionModel().getSelectedIndex();
                 if (index != -1) {
+                    System.out.println(" selected index = "+index);
                     MenuItem item = popup.getItems().get(index);
                     if (item instanceof RadioMenuItem) ((RadioMenuItem)item).setSelected(true);
                 }
@@ -249,7 +250,7 @@ import javafx.geometry.Insets;
         }
     }
 
-    private void addPopupItem(T o, int i) {
+    private void addPopupItem(final T o, int i) {
         MenuItem popupItem = null;
         if (o instanceof Separator) {
             // We translate the Separator into a SeparatorMenuItem...
@@ -262,10 +263,10 @@ import javafx.geometry.Insets;
             final RadioMenuItem item = new RadioMenuItem(displayString);
             item.setId("choice-box-menu-item");
             item.setToggleGroup(toggleGroup);
-            final int index = i;
             item.setOnAction(new EventHandler<ActionEvent>() {
                 @Override public void handle(ActionEvent e) {
                     if (selectionModel == null) return;
+                    int index = getSkinnable().getItems().indexOf(o);
                     selectionModel.select(index);
                     item.setSelected(true);
                 }

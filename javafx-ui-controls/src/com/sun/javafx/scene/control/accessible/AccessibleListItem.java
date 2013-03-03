@@ -108,13 +108,8 @@ public class AccessibleListItem extends AccessibleControl implements
 
     @Override
     public AccessibleProvider getSelectionContainer() {
-        //return listView.impl_getAccessible();
-        try {
-            java.lang.reflect.Method method = listView.getClass().getMethod("impl_getAccessible");
-            AccessibleProvider provider = (AccessibleProvider)method.invoke(listView);
-            return provider ;
-            } catch (Exception ex) {}
-        return null;
+        // not implemented for now
+        throw new UnsupportedOperationException();
     }
 
     @Override
@@ -140,13 +135,8 @@ public class AccessibleListItem extends AccessibleControl implements
 
     @Override
     public AccessibleProvider getContainingGrid() {
-//        return listView.impl_getAccessible();
-        try {
-            java.lang.reflect.Method method = listView.getClass().getMethod("impl_getAccessible");
-            AccessibleProvider provider = (AccessibleProvider)method.invoke(listView);
-            return provider ;
-        } catch (Exception ex) {}
-        return null;
+        // not implemented for now
+        throw new UnsupportedOperationException();
     }
     
 }
