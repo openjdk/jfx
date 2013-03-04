@@ -506,13 +506,13 @@ public class FXMLLoader {
                 for (Attribute attribute : eventHandlerAttributes) {
                     EventHandler<? extends Event> eventHandler = null;
 
-                    String value = attribute.value;
+                    String attrValue = attribute.value;
 
-                    if (value.startsWith(CONTROLLER_METHOD_PREFIX)) {
-                        value = value.substring(CONTROLLER_METHOD_PREFIX.length());
+                    if (attrValue.startsWith(CONTROLLER_METHOD_PREFIX)) {
+                        attrValue = attrValue.substring(CONTROLLER_METHOD_PREFIX.length());
 
-                        if (!value.startsWith(CONTROLLER_METHOD_PREFIX)) {
-                            if (value.length() == 0) {
+                        if (!attrValue.startsWith(CONTROLLER_METHOD_PREFIX)) {
+                            if (attrValue.length() == 0) {
                                 throw new LoadException("Missing controller method.");
                             }
 
@@ -520,23 +520,23 @@ public class FXMLLoader {
                                 throw new LoadException("No controller specified.");
                             }
 
-                            Method method = getControllerMethods().get(value);
+                            Method method = getControllerMethods().get(attrValue);
 
                             if (method == null) {
-                                throw new LoadException("Controller method \"" + value + "\" not found.");
+                                throw new LoadException("Controller method \"" + attrValue + "\" not found.");
                             }
 
                             eventHandler = new ControllerMethodEventHandler(controller, method);
                         }
 
-                    } else if (value.startsWith(EXPRESSION_PREFIX)) {
-                        value = value.substring(EXPRESSION_PREFIX.length());
+                    } else if (attrValue.startsWith(EXPRESSION_PREFIX)) {
+                        attrValue = attrValue.substring(EXPRESSION_PREFIX.length());
 
-                        if (value.length() == 0) {
+                        if (attrValue.length() == 0) {
                             throw new LoadException("Missing expression reference.");
                         }
 
-                        Object expression = Expression.get(namespace, KeyPath.parse(value));
+                        Object expression = Expression.get(namespace, KeyPath.parse(attrValue));
                         if (expression instanceof EventHandler) {
                             eventHandler = (EventHandler<? extends Event>) expression;
                         }
@@ -544,15 +544,12 @@ public class FXMLLoader {
                     }
 
                     if (eventHandler == null) {
-                        if (value.length() == 0) {
-                            throw new LoadException("Event Handler not found in Namespace or missing handler script.");
+                        if (attrValue.length() == 0 || scriptEngine == null) {
+                            throw new LoadException("Error resolving "  + attribute.name + "='" + attribute.value
+                                + "', either the event handler is not in the Namespace or there is an error in the script.");
                         }
 
-                        if (scriptEngine == null) {
-                            throw new LoadException("Page language not specified.");
-                        }
-
-                        eventHandler = new ScriptEventHandler(value, scriptEngine);
+                        eventHandler = new ScriptEventHandler(attrValue, scriptEngine);
                     }
 
                     // Add the handler

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -33,13 +33,14 @@ import java.io.IOException;
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
-public class RT_25559 {
+public class RT_25559Test {
 
     @Test
     public void testControllerFactory() throws IOException {
         FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("rt_25559.fxml"));
-        final boolean[] ref = new boolean[] {false};
+        final boolean[] ref = new boolean[] { false };
         fxmlLoader.getNamespace().put("manualAction", new EventHandler<PropertyChangeEvent<String>>() {
             @Override
             public void handle(PropertyChangeEvent<String> stringPropertyChangeEvent) {
@@ -55,7 +56,18 @@ public class RT_25559 {
     }
 
     public static void main(String[] args) throws IOException {
-        new RT_25559().testControllerFactory();
+        new RT_25559Test().testControllerFactory();
+    }
+
+    @Test
+    public void testNoValues() throws IOException {
+        FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("rt_25559_err1.fxml"));
+        try {
+            fxmlLoader.load();
+            fail("Exception should have been thrown.");
+        } catch (LoadException loadException) {
+            assertTrue(loadException.getMessage().contains("onNameChange='$doesNotExist'"));
+        }
     }
 
 }
