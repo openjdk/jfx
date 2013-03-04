@@ -2774,7 +2774,7 @@ is being used to size a border should also be in pixels.
 .chart-legend {
    -fx-background-color: -fx-shadow-highlight-color,
         linear-gradient(to bottom, derive(-fx-background, -10%), derive(-fx-background, -5%)),
-        linear-gradient(from 0px 0px to 0px 5px, derive(-fx-background, -5%), derive(-fx-background, 20%));
+        linear-gradient(from 0px 0px to 0px 4px, derive(-fx-background, -4%), derive(-fx-background, 10%));
    -fx-background-insets: 0 0 -1 0, 0,1;
    -fx-background-radius: 4,4,3;
    -fx-padding: 6px;
