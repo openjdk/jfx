@@ -62,6 +62,7 @@ public class Utils {
      * @return file contents as a string
      */
     public static String loadFile(URL url) {
+        if (url == null) return "File is not available";
         StringBuilder sb = new StringBuilder();
         try {
             BufferedReader reader = new BufferedReader(new InputStreamReader(url.openStream()));
