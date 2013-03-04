@@ -47,6 +47,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javafx.application.ConditionalFeature;
+import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.collections.ObservableMap;
@@ -54,7 +56,6 @@ import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.image.Image;
 import javafx.scene.text.Font;
-import javafx.scene.web.WebView;
 import javafx.util.Builder;
 import javafx.util.BuilderFactory;
 import sun.reflect.misc.ConstructorUtil;
@@ -70,6 +71,8 @@ public final class JavaFXBuilderFactory implements BuilderFactory {
 
     private final ClassLoader classLoader;
     private final boolean alwaysUseBuilders;
+    
+    private final boolean webSupported;
 
     /**
      * Default constructor.
@@ -112,6 +115,7 @@ public final class JavaFXBuilderFactory implements BuilderFactory {
 
         this.classLoader = classLoader;
         this.alwaysUseBuilders = alwaysUseBuilders;
+        this.webSupported = Platform.isSupported(ConditionalFeature.WEB);
     }
 
     @Override
@@ -156,7 +160,7 @@ public final class JavaFXBuilderFactory implements BuilderFactory {
 
                     // Force the loader to use a builder for WebView even though
                     // it defines a default constructor
-                    if (!hasDefaultConstructor || type == WebView.class) {
+                    if (!hasDefaultConstructor || (webSupported && type.getName().equals("javafx.scene.web.WebView"))) {
                         try {
                             typeBuilder = createTypeBuilder(type);
                         } catch (ClassNotFoundException ex) {
@@ -166,6 +170,7 @@ public final class JavaFXBuilderFactory implements BuilderFactory {
                     }
 
                     builders.put(type, typeBuilder == null ? NO_BUILDER : typeBuilder);
+                    
                 }
                 if (typeBuilder != null) {
                     objectBuilder = typeBuilder.createBuilder();

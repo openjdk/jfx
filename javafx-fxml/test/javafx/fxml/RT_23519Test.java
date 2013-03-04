@@ -25,26 +25,21 @@
 
 package javafx.fxml;
 
-import javafx.application.Application;
-import javafx.scene.Scene;
-import javafx.scene.layout.AnchorPane;
-import javafx.scene.web.WebView;
-import javafx.stage.Stage;
+import java.io.IOException;
+import javafx.scene.control.Button;
+import org.junit.Test;
 
-public class RT_23519 extends Application {
-   @Override
-   public void start(Stage primaryStage) throws Exception {
-       FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("rt_23519.fxml"));
-       AnchorPane root = (AnchorPane)fxmlLoader.load();
+import static org.junit.Assert.*;
 
-       WebView webView = (WebView)fxmlLoader.getNamespace().get("wv");
-       System.out.println(webView.getId());
+public class RT_23519Test {
+    
+    @Test
+    public void testId() throws IOException {
+        FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("rt_23519.fxml"));
+        fxmlLoader.load();
 
-       primaryStage.setScene(new Scene(root));
-       primaryStage.show();
-   }
-
-   public static void main(String[] args) {
-       launch(args);
-   }
+        Button btn = (Button) fxmlLoader.getNamespace().get("fxid");
+        assertEquals(btn.getId(), "ButtonID");
+    }
+    
 }
