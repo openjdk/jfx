@@ -598,6 +598,7 @@ is being used to size a border should also be in pixels.
 .toggle-button.left-pill {
     -fx-background-radius: 3 0 0 3, 3 0 0 3, 2 0 0 2, 1 0 0 1;
     -fx-background-insets: 0 0 -1 0, 0, 1, 2;
+    -fx-padding: 0.333333em 0.666667em 0.333333em 0.75em; /* 4 8 4 9 */
 }
 .button.center-pill,
 .toggle-button.center-pill {
@@ -1094,7 +1095,8 @@ is being used to size a border should also be in pixels.
 }
 .progress-indicator > .determinate-indicator > .progress {
     -fx-background-color: -fx-accent;
-    -fx-background-insets: 2;
+    /*-fx-background-insets: 2;*/
+    -fx-background-insets: 1;
     -fx-padding: 1em; /* 9 */
 }
 /* TODO: scaling the shape seems to make it disappear */
@@ -1311,11 +1313,14 @@ is being used to size a border should also be in pixels.
 
 .context-menu {
     -fx-background-color:
-        -fx-box-border,
+        linear-gradient(to bottom,
+            derive(-fx-color,-17%),
+            derive(-fx-color,-30%)
+        ),
         -fx-control-inner-background;
     -fx-background-insets: 0, 1;
     -fx-padding: 0.333333em 0.083333em 0.333333em 0.083333em; /* 4 1 8 1 */
-    -fx-effect: dropshadow( three-pass-box , rgba(0,0,0,0.5) , 8, 0.0 , 0 , 8 );
+    -fx-effect: dropshadow( gaussian , rgba(0,0,0,0.2) , 12, 0.0 , 0 , 8 );
 }
 .context-menu > .separator {
     -fx-padding: 0.0em 0.333333em 0.0em 0.333333em; /* 0 4 0 4 */
@@ -1678,9 +1683,14 @@ is being used to size a border should also be in pixels.
 /* -------------- STYLES FOR THE DEFAULT LISTVIEW-BASED COMBOBOX ------------- */
 
 .combo-box-popup > .list-view {
-    -fx-background-color: -fx-box-border, -fx-control-inner-background;
+    -fx-background-color:
+        linear-gradient(to bottom,
+            derive(-fx-color,-17%),
+            derive(-fx-color,-30%)
+        ),
+        -fx-control-inner-background;
     -fx-background-insets: 0, 1;
-    -fx-effect: dropshadow( three-pass-box , rgba(0,0,0,0.6) , 8, 0.0 , 0 , 0 );
+    -fx-effect: dropshadow( gaussian , rgba(0,0,0,0.2) , 12, 0.0 , 0 , 8 );
 }
 .combo-box-popup > .list-view > .virtual-flow > .clipped-container > .sheet > .list-cell {
     -fx-padding: 4 0 4 5;
@@ -1711,7 +1721,12 @@ is being used to size a border should also be in pixels.
     -fx-text-fill: -fx-text-base-color;
 }
 .titled-pane > .title {
-    -fx-background-color: -fx-box-border, -fx-inner-border, -fx-body-color;
+    -fx-background-color:
+        linear-gradient(to bottom,
+            derive(-fx-color,-15%) 95%,
+            derive(-fx-color,-25%) 100%
+        ),
+        -fx-inner-border, -fx-body-color;
     -fx-background-insets: 0, 1, 2;
     -fx-background-radius: 3 3 0 0, 2 2 0 0, 1 1 0 0;
     -fx-padding: 0.3333em 0.75em 0.3333em 0.75em; /* 4 9 4 9 */
@@ -1723,8 +1738,9 @@ is being used to size a border should also be in pixels.
 }*/
 /* focus purely on the arrow */
 .titled-pane:focused > .title > .arrow-button > .arrow {
-    -fx-background-color: -fx-faint-focus-color, -fx-focus-color, -fx-mark-color;
-    -fx-background-insets: -2 -4 -4 -4, -0.3 -1 -1 -1, 1;
+    -fx-background-color: -fx-focus-color, -fx-mark-color;
+    -fx-background-insets: -1, 0;
+    -fx-effect: dropshadow(two-pass-box , -fx-focus-color, 5, 0.2 , 0, 0);
 }
 .titled-pane > .title > .arrow-button {
     -fx-background-color: null;
@@ -1758,7 +1774,10 @@ is being used to size a border should also be in pixels.
 
 .accordion > .titled-pane > .title {
     -fx-background-color:
-        -fx-box-border,
+        linear-gradient(to bottom,
+        derive(-fx-color,-15%) 95%,
+        derive(-fx-color,-25%) 100%
+        ),
         -fx-inner-border,
         -fx-body-color;
     -fx-background-insets: -1 0 0 0, 0 1 1 1, 1 2 2 2;
@@ -1824,7 +1843,10 @@ is being used to size a border should also be in pixels.
 .color-palette {
     -fx-spacing: 0.833333em; /* 10px */
     -fx-background-color:
-        derive(-fx-background,-40%),
+        linear-gradient(to bottom,
+            derive(-fx-color,-17%),
+            derive(-fx-color,-30%)
+        ),
         linear-gradient(to bottom, 
             derive(-fx-background,10%) 0%, 
             derive(-fx-background,-5%) 12%, 
@@ -1833,7 +1855,7 @@ is being used to size a border should also be in pixels.
     -fx-background-insets: 0, 1;
     -fx-background-radius: 6, 5;
     -fx-padding: 1em; /* 12 */
-    -fx-effect: dropshadow( three-pass-box , rgba(0,0,0,0.6) , 8, 0.0 , 0 , 0 );
+    -fx-effect: dropshadow( gaussian , rgba(0,0,0,0.2) , 12, 0.0 , 0 , 8 );
 }
 /*.color-palette > .color-picker-grid > .color-square > .color-rect {
     -fx-stroke: black;
@@ -2730,7 +2752,7 @@ is being used to size a border should also be in pixels.
     -fx-background-radius: 6px;
     -fx-background-insets: 0;
     -fx-padding: 0.667em 0.75em 0.667em 0.75em; /* 10px */
-    -fx-effect: dropshadow( three-pass-box , rgba(0,0,0,0.5) , 10, 0.0 , 0 , 0 );
+    -fx-effect: dropshadow( three-pass-box , rgba(0,0,0,0.5) , 10, 0.0 , 0 , 3 );
     -fx-font-size: 0.85em;
 }
 
@@ -2888,7 +2910,6 @@ is being used to size a border should also be in pixels.
 .chart-series-line {
     -fx-stroke: #f9d900;
     -fx-stroke-width: 3px;
-    /*-fx-effect: dropshadow( two-pass-box , rgba(0,0,0,0.3) , 8, 0.0 , 0 , 3 );*/
 }
 .default-color0.chart-line-symbol { -fx-background-color: CHART_COLOR_1, white; }
 .default-color1.chart-line-symbol { -fx-background-color: CHART_COLOR_2, white; }
@@ -3003,10 +3024,11 @@ is being used to size a border should also be in pixels.
 .chart-bar {
     -fx-bar-fill: #22bad9;
     -fx-background-color:   linear-gradient(to right, 
-                                derive(-fx-bar-fill, -6%),
+                                derive(-fx-bar-fill, -4%),
+                                derive(-fx-bar-fill, -1%),
                                 derive(-fx-bar-fill, 0%),
-                                derive(-fx-bar-fill, -3%),
-                                derive(-fx-bar-fill, -8%)
+                                derive(-fx-bar-fill, -1%),
+                                derive(-fx-bar-fill, -6%)
                               );
     -fx-background-insets: 0;
 }
@@ -3019,10 +3041,11 @@ is being used to size a border should also be in pixels.
 .bar-chart:horizontal .chart-bar, 
 .stacked-bar-chart:horizontal .chart-bar {
     -fx-background-color:   linear-gradient(to bottom, 
-                                derive(-fx-bar-fill, -6%),
+                                derive(-fx-bar-fill, -4%),
+                                derive(-fx-bar-fill, -1%),
                                 derive(-fx-bar-fill, 0%),
-                                derive(-fx-bar-fill, -3%),
-                                derive(-fx-bar-fill, -8%)
+                                derive(-fx-bar-fill, -1%),
+                                derive(-fx-bar-fill, -6%)
                               );
 }
 .default-color0.chart-bar { -fx-bar-fill: CHART_COLOR_1; }
