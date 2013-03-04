@@ -215,6 +215,13 @@ public class SamplePage extends GridPane {
         newSection("Pill Toggle\nButtons\nFocused:", 
                 HBoxBuilder.create()
                     .children(
+                        ToggleButtonBuilder.create().text("#").styleClass("left-pill").toggleGroup(tg5).build(),
+                        ToggleButtonBuilder.create().text("#").styleClass("center-pill").toggleGroup(tg5).build(),
+                        ToggleButtonBuilder.create().text("#").styleClass("right-pill").toggleGroup(tg5).build()
+                    )
+                    .build(),
+                HBoxBuilder.create()
+                    .children(
                         withState(ToggleButtonBuilder.create().text("L").styleClass("left-pill").toggleGroup(tg5).build(),"focused"),
                         ToggleButtonBuilder.create().text("C").styleClass("center-pill").toggleGroup(tg5).build(),
                         ToggleButtonBuilder.create().text("R").styleClass("right-pill").toggleGroup(tg5).build()
