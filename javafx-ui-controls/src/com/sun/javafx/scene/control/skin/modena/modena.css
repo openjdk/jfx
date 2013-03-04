@@ -2829,6 +2829,7 @@ is being used to size a border should also be in pixels.
 }
 .chart-horizontal-grid-lines {
     -fx-stroke: derive(-fx-background,-10%);
+    -fx-stroke-dash-array: 0.25em, 0.25em;
 }
 .chart-alternative-column-fill {
     -fx-fill: null;
