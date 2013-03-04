@@ -27,10 +27,17 @@ package com.sun.javafx.application;
 
 import com.sun.javafx.jmx.MXExtension;
 import com.sun.javafx.runtime.SystemProperties;
+import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.net.URLClassLoader;
+import java.util.ArrayList;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.jar.Attributes;
@@ -43,6 +50,7 @@ import javafx.application.Preloader.ErrorNotification;
 import javafx.application.Preloader.PreloaderNotification;
 import javafx.application.Preloader.StateChangeNotification;
 import javafx.stage.Stage;
+import sun.misc.BASE64Decoder;
 
 
 public class LauncherImpl {
@@ -61,9 +69,17 @@ public class LauncherImpl {
     // set to true to debug launch issues from Java launcher
     private static final boolean trace = false;
 
+    // set system property javafx.verbose to true to make the launcher noisy
+    private static boolean verbose = false;
+    
     private static final String MF_MAIN_CLASS = "Main-Class";
     private static final String MF_JAVAFX_MAIN = "JavaFX-Application-Class";
     private static final String MF_JAVAFX_PRELOADER = "JavaFX-Preloader-Class";
+    private static final String MF_JAVAFX_CLASS_PATH = "JavaFX-Class-Path";
+    private static final String MF_JAVAFX_FEATURE_PROXY = "JavaFX-Feature-Proxy";
+    private static final String MF_JAVAFX_ARGUMENT_PREFIX = "JavaFX-Argument-";
+    private static final String MF_JAVAFX_PARAMETER_NAME_PREFIX = "JavaFX-Parameter-Name-";
+    private static final String MF_JAVAFX_PARAMETER_VALUE_PREFIX = "JavaFX-Parameter-Value-";
 
     // Set to true to simulate a slow download progress
     private static final boolean simulateSlowProgress = false;
@@ -182,13 +198,51 @@ public class LauncherImpl {
          */
         String mainClassName = null;
         String preloaderClassName = null;
-
+        String[] appArgs = args;
+        ClassLoader appLoader = null;
+        
+        verbose = Boolean.getBoolean("javafx.verbose");
+        
         if (launchMode.equals(LAUNCH_MODE_JAR)) {
             Attributes jarAttrs = getJarAttributes(launchName);
             if (jarAttrs == null) {
                 abort(null, "Can't get manifest attributes from jar");
             }
 
+            // If we ever need to check JavaFX-Version, do that here...
+            
+            // Support JavaFX-Class-Path, but warn that it's deprecated if used
+            String fxClassPath = jarAttrs.getValue(MF_JAVAFX_CLASS_PATH);
+            if (fxClassPath != null) {
+                if (fxClassPath.trim().length() == 0) {
+                    fxClassPath = null;
+                } else {
+                    if (verbose) {
+                        System.err.println("WARNING: Application jar uses deprecated JavaFX-Class-Path attribute."
+                               +" Please use Class-Path instead.");
+                    }
+                    
+                    /*
+                     * create a new ClassLoader to pull in the requested jar files
+                     * OK if it returns null, that just means we didn't need to load
+                     * anything
+                     */
+                    appLoader = setupJavaFXClassLoader(new File(launchName), fxClassPath);
+                }
+            }
+            
+            // Support JavaFX-Feature-Proxy (only supported setting is 'auto', anything else is ignored)
+            String proxySetting = jarAttrs.getValue(MF_JAVAFX_FEATURE_PROXY);
+            if (proxySetting != null && "auto".equals(proxySetting.toLowerCase())) {
+                trySetAutoProxy();
+            }
+            
+            // process arguments and parameters if no args have been passed by the launcher
+            if (args.length == 0) {
+                appArgs = getAppArguments(jarAttrs);
+            }
+            
+            // grab JavaFX-Application-Class
             mainClassName = jarAttrs.getValue(MF_JAVAFX_MAIN);
             if (mainClassName == null) {
                 // fall back on Main-Class if no JAC
@@ -200,6 +254,7 @@ public class LauncherImpl {
             }
             mainClassName = mainClassName.trim();
 
+            // grab JavaFX-Preloader-Class
             preloaderClassName = jarAttrs.getValue(MF_JAVAFX_PRELOADER);
             if (preloaderClassName != null) {
                 preloaderClassName = preloaderClassName.trim();
@@ -215,22 +270,41 @@ public class LauncherImpl {
             abort(null, "No main JavaFX class to launch");
         }
 
-        // FIXME: need to create a new classloader to support JavaFX-Class-Path
-        ClassLoader loader = ClassLoader.getSystemClassLoader();
-        if (loader == null) {
-            abort(null, "Unable to load JavaFX application class");
+        // check if we have to load through a custom classloader
+        if (appLoader != null) {
+            try {
+                // reload this class through the app classloader
+                Class<?> launcherClass = appLoader.loadClass(LauncherImpl.class.getName());
+                
+                // then invoke the second part of this launcher using reflection
+                Method lawa = launcherClass.getMethod("launchApplicationWithArgs",
+                        new Class[] { String.class, String.class, (new String[0]).getClass()});
+                
+                // set the thread context class loader before we continue, or it won't load properly
+                Thread.currentThread().setContextClassLoader(appLoader);
+                lawa.invoke(null, new Object[] {mainClassName, preloaderClassName, appArgs});
+            } catch (Exception e) {
+                abort(e, "Exception while launching application");
+            }
+        } else {
+            launchApplicationWithArgs(mainClassName, preloaderClassName, appArgs);
         }
-
-        Class<? extends Application> appClass = null;
+    }
+    
+    // Must be public since we could be called from a different class loader
+    public static void launchApplicationWithArgs(String mainClassName,
+            String preloaderClassName, String[] args) {
+        Class<? extends Application> appClass;
         Class<? extends Preloader> preClass = null;
         Class<?> tempClass = null;
 
+        final ClassLoader loader = Thread.currentThread().getContextClassLoader();
         try {
             tempClass = loader.loadClass(mainClassName);
         } catch (ClassNotFoundException cnfe) {
             abort(cnfe, "Missing JavaFX application class %1$s", mainClassName);
         }
-
+        
         // Verify appClass extends Application
         if (!Application.class.isAssignableFrom(tempClass)) {
             // See if it has a main(String[]) method
@@ -263,18 +337,225 @@ public class LauncherImpl {
             preClass = tempClass.asSubclass(Preloader.class);
         }
 
-        /*
-         * FIXME: Missing support for the following Manifest attributes:
-         * JavaFX-Class-Path
-         * JavaFX-Feature-Proxy
-         * JavaFX-Version
-         * JavaFX-Fallback-Class
-         * JavaFX-Argument-XXX
-         * JavaFX-Parameter-Name-XXX, JavaFX-Parameter-Value-XXX
-         */
-
         // For now just hand off to the other launchApplication method
         launchApplication(appClass, preClass, args);
+    }
+
+    private static URL fileToURL(File file) throws IOException {
+        return file.getCanonicalFile().toURI().toURL();
+    }
+
+    private static ClassLoader setupJavaFXClassLoader(File appJar, String fxClassPath) {
+        try {
+            File baseDir = appJar.getParentFile();
+            ArrayList jcpList = new ArrayList();
+
+            // Add in the jars from the JavaFX-Class-Path entry
+            // TODO: should check current classpath for duplicate entries and ignore them
+            String cp = fxClassPath;
+            if (cp != null) {
+                // these paths are relative to baseDir, which should be the
+                // directory containing the app jar file
+                while (cp.length() > 0) {
+                    int pathSepIdx = cp.indexOf(" ");
+                    if (pathSepIdx < 0) {
+                        String pathElem = cp;
+                        File f = (baseDir == null) ?
+                                new File(pathElem) : new File(baseDir, pathElem);
+                        if (f.exists()) {
+                            jcpList.add(fileToURL(f));
+                        } else if (verbose) {
+                            System.err.println("Class Path entry \""+pathElem
+                                    +"\" does not exist, ignoring");
+                        }
+                        break;
+                    } else if (pathSepIdx > 0) {
+                        String pathElem = cp.substring(0, pathSepIdx);
+                        File f = (baseDir == null) ?
+                                new File(pathElem) : new File(baseDir, pathElem);
+                        if (f.exists()) {
+                            jcpList.add(fileToURL(f));
+                        } else if (verbose) {
+                            System.err.println("Class Path entry \""+pathElem
+                                    +"\" does not exist, ignoring");
+                        }
+                    }
+                    cp = cp.substring(pathSepIdx + 1);
+                }
+            }
+
+            // don't bother if there's nothing to add
+            if (!jcpList.isEmpty()) {
+                ArrayList<URL> urlList = new ArrayList<URL>();
+                
+                // prepend the existing classpath
+                // this will already have the app jar, so no need to worry about it
+                cp = System.getProperty("java.class.path");
+                if (cp != null) {
+                    while (cp.length() > 0) {
+                        int pathSepIdx = cp.indexOf(File.pathSeparatorChar);
+                        if (pathSepIdx < 0) {
+                            String pathElem = cp;
+                            urlList.add(fileToURL(new File(pathElem)));
+                            break;
+                        } else if (pathSepIdx > 0) {
+                            String pathElem = cp.substring(0, pathSepIdx);
+                            urlList.add(fileToURL(new File(pathElem)));
+                        }
+                        cp = cp.substring(pathSepIdx + 1);
+                    }
+                }
+
+                // we have to add jfxrt.jar to the new class loader, or the app won't load
+                URL jfxRtURL = LauncherImpl.class.getProtectionDomain().getCodeSource().getLocation();
+                urlList.add(jfxRtURL);
+                
+                // and finally append the JavaFX-Class-Path entries
+                urlList.addAll(jcpList);
+                
+                URL[] urls = (URL[])urlList.toArray(new URL[0]);
+                if (verbose) {
+                    System.err.println("===== URL list");
+                    for (int i = 0; i < urls.length; i++) {
+                        System.err.println("" + urls[i]);
+                    }
+                    System.err.println("=====");
+                }
+                return new URLClassLoader(urls, null);
+            }
+        } catch (Exception ex) {
+            if (trace) {
+                System.err.println("Exception creating JavaFX class loader: "+ex);
+                ex.printStackTrace();
+            }
+        }
+        return null;
+    }
+    
+    private static void trySetAutoProxy() {
+        // if explicit proxy settings are proxided we will skip autoproxy
+        // Note: we only check few most popular settings.
+        if (System.getProperty("http.proxyHost") != null
+             || System.getProperty("https.proxyHost") != null
+             || System.getProperty("ftp.proxyHost") != null
+             || System.getProperty("socksProxyHost") != null) {
+           if (verbose) {
+               System.out.println("Explicit proxy settings detected. Skip autoconfig.");
+               System.out.println("  http.proxyHost=" + System.getProperty("http.proxyHost"));
+               System.out.println("  https.proxyHost=" + System.getProperty("https.proxyHost"));
+               System.out.println("  ftp.proxyHost=" + System.getProperty("ftp.proxyHost"));
+               System.out.println("  socksProxyHost=" + System.getProperty("socksProxyHost"));
+           }
+           return;
+        }
+        if (System.getProperty("javafx.autoproxy.disable") != null) {
+            if (verbose) {
+                System.out.println("Disable autoproxy on request.");
+            }
+            return;
+        }
+        
+        // grab deploy.jar
+        // Note that we don't need to keep deploy.jar in the JavaFX classloader
+        // it is only needed long enough to configure the proxy
+        String javaHome = System.getProperty("java.home");
+        File jreLibDir = new File(javaHome, "lib");
+        File deployJar = new File(jreLibDir, "deploy.jar");
+        
+        URL[] deployURLs;
+        try {
+            deployURLs = new URL[] {
+                deployJar.toURI().toURL()
+            };
+        } catch (MalformedURLException ex) {
+            if (trace) {
+                System.err.println("Unable to build URL to deploy.jar: "+ex);
+                ex.printStackTrace();
+            }
+            return; // give up setting proxy, usually silently
+        }
+        
+        try {
+            URLClassLoader dcl = new URLClassLoader(deployURLs);
+            Class sm = Class.forName("com.sun.deploy.services.ServiceManager",
+                    true,
+                    dcl);
+            Class params[] = {Integer.TYPE};
+            Method setservice = sm.getDeclaredMethod("setService", params);
+            String osname = System.getProperty("os.name");
+
+            String servicename;
+            if (osname.startsWith("Win")) {
+                servicename = "STANDALONE_TIGER_WIN32";
+            } else if (osname.contains("Mac")) {
+                servicename = "STANDALONE_TIGER_MACOSX";
+            } else {
+                servicename = "STANDALONE_TIGER_UNIX";
+            }
+            Object values[] = new Object[1];
+            Class pt = Class.forName("com.sun.deploy.services.PlatformType",
+                    true,
+                    dcl);
+            values[0] = pt.getField(servicename).get(null);
+            setservice.invoke(null, values);
+
+            Class dps = Class.forName(
+                    "com.sun.deploy.net.proxy.DeployProxySelector",
+                    true,
+                    dcl);
+            Method m = dps.getDeclaredMethod("reset", new Class[0]);
+            m.invoke(null, new Object[0]);
+            
+            if (verbose) {
+                System.out.println("Autoconfig of proxy is completed.");
+            }
+        } catch (Exception e) {
+            if (verbose) {
+                System.err.println("Failed to autoconfig proxy due to "+e);
+            }
+            if (trace) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    private static String decodeBase64(String inp) throws IOException {
+        BASE64Decoder decoder = new BASE64Decoder();
+        byte[] decodedBytes = decoder.decodeBuffer(inp);
+        return new String(decodedBytes);
+    }
+
+    private static String[] getAppArguments(Attributes attrs) {
+        List args = new LinkedList();
+
+        try {
+            int idx = 1;
+            String argNamePrefix = MF_JAVAFX_ARGUMENT_PREFIX;
+            while (attrs.getValue(argNamePrefix + idx) != null) {
+                args.add(decodeBase64(attrs.getValue(argNamePrefix + idx)));
+                idx++;
+            }
+
+            String paramNamePrefix = MF_JAVAFX_PARAMETER_NAME_PREFIX;
+            String paramValuePrefix = MF_JAVAFX_PARAMETER_VALUE_PREFIX;
+            idx = 1;
+            while (attrs.getValue(paramNamePrefix + idx) != null) {
+                String k = decodeBase64(attrs.getValue(paramNamePrefix + idx));
+                String v = null;
+                if (attrs.getValue(paramValuePrefix + idx) != null) {
+                    v = decodeBase64(attrs.getValue(paramValuePrefix + idx));
+                }
+                args.add("--" + k + "=" + (v != null ? v : ""));
+                idx++;
+            }
+        } catch (IOException ioe) {
+            if (verbose) {
+                System.err.println("Failed to extract application parameters");
+            }
+            ioe.printStackTrace();
+        }
+
+        return (String[]) args.toArray(new String[0]);
     }
 
     // FIXME: needs localization, since these are presented to the user

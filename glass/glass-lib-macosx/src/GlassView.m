@@ -615,7 +615,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacView__1begin
     GLASS_POOL_PUSH; // it will be popped by "_end"
     {
         [view retain];
-        [view lockFocus];
+//        [view lockFocus];
         [view begin];
     }
 }
@@ -634,7 +634,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacView__1end
     NSView<GlassView> *view = getGlassView(env, jPtr);
     {
         [view end];
-        [view unlockFocus];
+//        [view unlockFocus];
         [view release];
     }
     GLASS_POOL_POP; // it was pushed by "_begin"

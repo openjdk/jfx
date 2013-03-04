@@ -78,7 +78,6 @@ abstract class AbstractPainter {
     protected Presentable       presentable;
     protected RenderingContext  context = null;
     protected ResourceFactory   factory;
-    protected AtomicBoolean     liveRepaint = new AtomicBoolean(false);
 
     protected int               width;
     protected int               height;

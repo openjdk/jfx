@@ -48,11 +48,11 @@ import javafx.event.EventHandler;
 import javafx.geometry.Insets;
 import javafx.geometry.Point2D;
 import javafx.geometry.VPos;
-import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.input.MouseEvent;
+import javafx.scene.layout.Pane;
 import javafx.scene.layout.Region;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
@@ -84,9 +84,9 @@ public class Popover extends Region implements EventHandler<Event>{
     private final Button rightButton = new Button("Right");
     private final LinkedList<Page> pages = new LinkedList<Page>();
     private final Region backgroundRectangle = new Region();
-    private final Group pagesGroup = new Group();
+    private final Pane pagesPane = new Pane();
     private final Rectangle pagesClipRect = new Rectangle();
-    private final Group titlesGroup = new Group();
+    private final Pane titlesPane = new Pane();
     private Text title; // the current title
     private final Rectangle titlesClipRect = new Rectangle();
 //    private final EventHandler<ScrollEvent> popoverScrollHandler;
@@ -101,7 +101,7 @@ public class Popover extends Region implements EventHandler<Event>{
     };
 
     public Popover() {
-        // TODO Could pagesGroup be a region instead? I need to draw some opaque background. Right now when
+        // TODO Could pagesPane be a region instead? I need to draw some opaque background. Right now when
         // TODO animating from one page to another you can see the background "shine through" because the
         // TODO group background is transparent. That can't be good for performance either.
         getStyleClass().setAll("popover");
@@ -114,11 +114,10 @@ public class Popover extends Region implements EventHandler<Event>{
         rightButton.setOnMouseClicked(this);
         rightButton.getStyleClass().add("popover-right-button");
         pagesClipRect.setSmooth(false);
-        pagesGroup.setAutoSizeChildren(false);
-        pagesGroup.setClip(pagesClipRect);
+        pagesPane.setClip(pagesClipRect);
         titlesClipRect.setSmooth(false);
-        titlesGroup.setClip(titlesClipRect);
-        getChildren().addAll(backgroundRectangle, pagesGroup, frameBorder, titlesGroup, leftButton, rightButton);
+        titlesPane.setClip(titlesClipRect);
+        getChildren().addAll(backgroundRectangle, pagesPane, frameBorder, titlesPane, leftButton, rightButton);
         // always hide to start with
         setVisible(false);
         setOpacity(0);
@@ -238,16 +237,16 @@ public class Popover extends Region implements EventHandler<Event>{
 
         int pageWidth = width - left - right;
         int pageHeight = height - top - bottom;
-
+        
         backgroundRectangle.resizeRelocate(left, top, pageWidth, pageHeight);
         frameBorder.resize(width, height);
 
-        pagesGroup.resizeRelocate(left, top, pageWidth, pageHeight);
+        pagesPane.resizeRelocate(left, top, pageWidth, pageHeight);
         pagesClipRect.setWidth(pageWidth);
         pagesClipRect.setHeight(pageHeight);
 
         int pageX = 0;
-        for (Node page : pagesGroup.getChildren()) {
+        for (Node page : pagesPane.getChildren()) {
             page.resizeRelocate(pageX, 0, pageWidth, pageHeight);
             pageX += pageWidth + PAGE_GAP;
         }
@@ -275,14 +274,14 @@ public class Popover extends Region implements EventHandler<Event>{
         while (!pages.isEmpty()) {
             pages.pop().handleHidden();
         }
-        pagesGroup.getChildren().clear();
-        titlesGroup.getChildren().clear();
+        pagesPane.getChildren().clear();
+        titlesPane.getChildren().clear();
         pagesClipRect.setX(0);
         pagesClipRect.setWidth(400);
         pagesClipRect.setHeight(400);
         popoverHeight.set(400);
-        pagesGroup.setTranslateX(0);
-        titlesGroup.setTranslateX(0);
+        pagesPane.setTranslateX(0);
+        titlesPane.setTranslateX(0);
         titlesClipRect.setTranslateX(0);
     }
     
@@ -306,14 +305,14 @@ public class Popover extends Region implements EventHandler<Event>{
                     new KeyFrame(Duration.millis(350),
                         new EventHandler<ActionEvent>() {
                             @Override public void handle(ActionEvent t) {
-                                pagesGroup.setCache(false);
-                                pagesGroup.getChildren().remove(pagesGroup.getChildren().size()-1);
-                                titlesGroup.getChildren().remove(titlesGroup.getChildren().size()-1);
+                                pagesPane.setCache(false);
+                                pagesPane.getChildren().remove(pagesPane.getChildren().size()-1);
+                                titlesPane.getChildren().remove(titlesPane.getChildren().size()-1);
                                 resizePopoverToNewPage(pages.getFirst().getPageNode());
                             }
                         },
-                        new KeyValue(pagesGroup.translateXProperty(), -newPageX, Interpolator.EASE_BOTH),
-                        new KeyValue(titlesGroup.translateXProperty(), -newPageX, Interpolator.EASE_BOTH),
+                        new KeyValue(pagesPane.translateXProperty(), -newPageX, Interpolator.EASE_BOTH),
+                        new KeyValue(titlesPane.translateXProperty(), -newPageX, Interpolator.EASE_BOTH),
                         new KeyValue(pagesClipRect.xProperty(), newPageX, Interpolator.EASE_BOTH),
                         new KeyValue(titlesClipRect.translateXProperty(), newPageX, Interpolator.EASE_BOTH)
                     )
@@ -325,7 +324,8 @@ public class Popover extends Region implements EventHandler<Event>{
     
     public final void pushPage(final Page page) {
         final Node pageNode = page.getPageNode();
-        pagesGroup.getChildren().add(pageNode);
+        pageNode.setManaged(false);
+        pagesPane.getChildren().add(pageNode);
         final Insets insets = getInsets();
         final int pageWidth = (int)(prefWidth(-1) - insets.getLeft() - insets.getRight());
         final int newPageX = (pageWidth + PAGE_GAP) * pages.size();
@@ -339,19 +339,19 @@ public class Popover extends Region implements EventHandler<Event>{
         title.setFill(Color.WHITE);
         title.setTextOrigin(VPos.CENTER);
         title.setTranslateX(newPageX + (int) ((pageWidth - title.getLayoutBounds().getWidth()) / 2d));
-        titlesGroup.getChildren().add(title);
+        titlesPane.getChildren().add(title);
         
         if (!pages.isEmpty() && isVisible()) {
             final Timeline timeline = new Timeline(
                     new KeyFrame(Duration.millis(350),
                         new EventHandler<ActionEvent>() {
                             @Override public void handle(ActionEvent t) {
-                                pagesGroup.setCache(false);
+                                pagesPane.setCache(false);
                                 resizePopoverToNewPage(pageNode);
                             }
                         },
-                        new KeyValue(pagesGroup.translateXProperty(), -newPageX, Interpolator.EASE_BOTH),
-                        new KeyValue(titlesGroup.translateXProperty(), -newPageX, Interpolator.EASE_BOTH),
+                        new KeyValue(pagesPane.translateXProperty(), -newPageX, Interpolator.EASE_BOTH),
+                        new KeyValue(titlesPane.translateXProperty(), -newPageX, Interpolator.EASE_BOTH),
                         new KeyValue(pagesClipRect.xProperty(), newPageX, Interpolator.EASE_BOTH),
                         new KeyValue(titlesClipRect.translateXProperty(), newPageX, Interpolator.EASE_BOTH)
                     )

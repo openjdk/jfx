@@ -745,9 +745,14 @@ void lens_wm_notifyButtonEvent(JNIEnv *env,
                                int xabs, int yabs) {
 
     int relX, relY;
-    NativeWindow window = glass_window_findWindowAtLocation(xabs, yabs,
-                          &relX, &relY);
+    NativeWindow window;
 
+    //cache new coordinates
+    _mousePosX = xabs;
+    _mousePosY = yabs;
+
+    window = glass_window_findWindowAtLocation(xabs, yabs,
+                          &relX, &relY);
 
     _mousePressed = pressed;
 
@@ -801,7 +806,13 @@ void lens_wm_notifyTouchEvent(JNIEnv *env,
                               int xabs, int yabs) {
 
     int relX, relY;
-    NativeWindow window = glass_window_findWindowAtLocation(xabs, yabs,
+    NativeWindow window;
+
+    //cache new coordinates
+    _mousePosX = xabs;
+    _mousePosY = yabs;
+
+    window = glass_window_findWindowAtLocation(xabs, yabs,
                           &relX, &relY);
 
     lens_wm_setMouseWindow(window);
@@ -949,13 +960,14 @@ void lens_wm_notifyMotionEvent(JNIEnv *env, int mousePosX, int mousePosY, int is
                                                _dragGrabbingWindow,
                                                com_sun_glass_events_TouchEvent_TOUCH_MOVED,
                                                touchId , relX, relY, _mousePosX, _mousePosY);
-        } else {
-            glass_application_notifyMouseEvent(env,
-                                               _dragGrabbingWindow,
-                                               com_sun_glass_events_MouseEvent_MOVE,
-                                               relX, relY, _mousePosX, _mousePosY,
-                                               com_sun_glass_events_MouseEvent_BUTTON_NONE);
         }
+
+        glass_application_notifyMouseEvent(env,
+                                           _dragGrabbingWindow,
+                                           com_sun_glass_events_MouseEvent_MOVE,
+                                           relX, relY, _mousePosX, _mousePosY,
+                                           com_sun_glass_events_MouseEvent_BUTTON_NONE);
+
 
     } else if (!_onDraggingAction && window != NULL) {
 
@@ -964,13 +976,14 @@ void lens_wm_notifyMotionEvent(JNIEnv *env, int mousePosX, int mousePosY, int is
                                                window,
                                                com_sun_glass_events_TouchEvent_TOUCH_MOVED,
                                                touchId , relX, relY, _mousePosX, _mousePosY);
-        } else {
-            glass_application_notifyMouseEvent(env,
-                                               window,
-                                               com_sun_glass_events_MouseEvent_MOVE,
-                                               relX, relY, _mousePosX, _mousePosY,
-                                               com_sun_glass_events_MouseEvent_BUTTON_NONE);
         }
+
+        glass_application_notifyMouseEvent(env,
+                                           window,
+                                           com_sun_glass_events_MouseEvent_MOVE,
+                                           relX, relY, _mousePosX, _mousePosY,
+                                           com_sun_glass_events_MouseEvent_BUTTON_NONE);
+
     }
 
 }

@@ -804,16 +804,20 @@ public class NGRegion extends NGGroup implements PGRegion {
                 for (int i = 0, max = images.size(); i < max; i++) {
                     final BackgroundImage image = images.get(i);
                     Image img = (Image) image.getImage().impl_getPlatformImage();
+                    final int imgUnscaledWidth = (int)image.getImage().getWidth();
+                    final int imgUnscaledHeight = (int)image.getImage().getHeight();
+                    final int imgWidth = img.getWidth();
+                    final int imgHeight = img.getHeight();
                     // TODO need to write tests which demonstrate this works when the image hasn't loaded yet. (RT-26978)
                     // TODO need to write tests where we use a writable image and draw to it a lot. (RT-26978)
-                    if (img != null && img.getWidth() != 0 && img.getHeight() != 0) {
+                    if (img != null && imgWidth != 0 && imgHeight != 0) {
                         final BackgroundSize size = image.getSize();
                         if (size.isCover()) {
                             // When "cover" is true, we can ignore most properties on the BackgroundSize and
                             // BackgroundRepeat and BackgroundPosition. Because the image will be stretched to
                             // fill the entire space, there is no need to know the repeat or position or
                             // size width / height.
-                            final float scale = Math.max(width / img.getWidth(),height / img.getHeight());
+                            final float scale = Math.max(width / imgWidth,height / imgHeight);
                             final Texture texture =
                                 g.getResourceFactory().getCachedTexture(img, Texture.WrapMode.CLAMP_TO_EDGE);
                             g.drawTexture(texture,
@@ -837,11 +841,11 @@ public class NGRegion extends NGGroup implements PGRegion {
                                 // In the case of "contain", we compute the destination size based on the largest
                                 // possible scale such that the aspect ratio is maintained, yet one side of the
                                 // region is completely filled.
-                                final float scaleX = width / img.getWidth();
-                                final float scaleY = height / img.getHeight();
+                                final float scaleX = width / imgUnscaledWidth;
+                                final float scaleY = height / imgUnscaledHeight;
                                 final float scale = Math.min(scaleX, scaleY);
-                                tileWidth = Math.ceil(scale * img.getWidth());
-                                tileHeight = Math.ceil(scale * img.getHeight());
+                                tileWidth = Math.ceil(scale * imgUnscaledWidth);
+                                tileHeight = Math.ceil(scale * imgUnscaledHeight);
                             } else if (size.getWidth() >= 0 && size.getHeight() >= 0) {
                                 // The width and height have been expressly defined. Note that AUTO is -1,
                                 // and all other negative values are disallowed, so by checking >= 0, we
@@ -851,17 +855,17 @@ public class NGRegion extends NGGroup implements PGRegion {
                             } else if (w >= 0) {
                                 // In this case, the width is specified, but the height is AUTO
                                 tileWidth = w;
-                                final double scale = tileWidth / img.getWidth();
-                                tileHeight = img.getHeight() * scale;
+                                final double scale = tileWidth / imgUnscaledWidth;
+                                tileHeight = imgUnscaledHeight * scale;
                             } else if (h >= 0) {
                                 // Here the height is specified and the width is AUTO
                                 tileHeight = h;
-                                final double scale = tileHeight / img.getHeight();
-                                tileWidth = img.getWidth() * scale;
+                                final double scale = tileHeight / imgUnscaledHeight;
+                                tileWidth = imgUnscaledWidth * scale;
                             } else {
                                 // Both are auto.
-                                tileWidth = img.getWidth();
-                                tileHeight = img.getHeight();
+                                tileWidth = imgUnscaledWidth;
+                                tileHeight = imgUnscaledHeight;
                             }
 
                             // Now figure out where we are going to place the images within the region.
@@ -908,7 +912,7 @@ public class NGRegion extends NGGroup implements PGRegion {
                             paintTiles(g, img, image.getRepeatX(), image.getRepeatY(),
                                        pos.getHorizontalSide(), pos.getVerticalSide(),
                                        0, 0, width, height, // the region area to fill with the image
-                                       0, 0, img.getWidth(), img.getHeight(), // The entire image is used
+                                       0, 0, imgWidth, imgHeight, // The entire image is used
                                        (float) tileX, (float) tileY, (float) tileWidth, (float) tileHeight);
                         }
                     }
@@ -1015,7 +1019,7 @@ public class NGRegion extends NGGroup implements PGRegion {
                         // TRANSPARENT and a style that is effectively NONE, but we are not checking for those
                         // cases and will in those cases be doing more work than necessary.
                         // TODO make sure CSS uses TRANSPARENT and NONE when possible (RT-26943)
-                        if (topStroke != Color.TRANSPARENT && topStyle != BorderStrokeStyle.NONE) {
+                        if (!(topStroke instanceof Color && ((Color)topStroke).getOpacity() == 0f) && topStyle != BorderStrokeStyle.NONE) {
                             g.setPaint(getPlatformPaint(topStroke));
                             if (BorderStrokeStyle.SOLID == topStyle) {
                                 g.fillRect(leftInset, topInset, width - leftInset - rightInset, topWidth);
@@ -1025,7 +1029,7 @@ public class NGRegion extends NGGroup implements PGRegion {
                             }
                         }
 
-                        if (rightStroke != Color.TRANSPARENT && rightStyle != BorderStrokeStyle.NONE) {
+                        if (!(rightStroke instanceof Color && ((Color)rightStroke).getOpacity() == 0f) && rightStyle != BorderStrokeStyle.NONE) {
                             g.setPaint(getPlatformPaint(rightStroke));
                             if (BorderStrokeStyle.SOLID == rightStyle) {
                                 g.fillRect(width - rightInset - rightWidth, topInset,
@@ -1036,7 +1040,7 @@ public class NGRegion extends NGGroup implements PGRegion {
                             }
                         }
 
-                        if (bottomStroke != Color.TRANSPARENT && bottomStyle != BorderStrokeStyle.NONE) {
+                        if (!(bottomStroke instanceof Color && ((Color)bottomStroke).getOpacity() == 0f) && bottomStyle != BorderStrokeStyle.NONE) {
                             g.setPaint(getPlatformPaint(bottomStroke));
                             if (BorderStrokeStyle.SOLID == bottomStyle) {
                                 g.fillRect(leftInset, height - bottomInset - bottomWidth,
@@ -1047,7 +1051,7 @@ public class NGRegion extends NGGroup implements PGRegion {
                             }
                         }
 
-                        if (leftStroke != Color.TRANSPARENT && leftStyle != BorderStrokeStyle.NONE) {
+                        if (!(leftStroke instanceof Color && ((Color)leftStroke).getOpacity() == 0f) && leftStyle != BorderStrokeStyle.NONE) {
                             g.setPaint(getPlatformPaint(leftStroke));
                             if (BorderStrokeStyle.SOLID == leftStyle) {
                                 g.fillRect(leftInset, topInset, leftWidth, height - topInset - bottomInset);
@@ -1108,6 +1112,8 @@ public class NGRegion extends NGGroup implements PGRegion {
                 for (int i = 0, max = images.size(); i < max; i++) {
                     final BorderImage ib = images.get(i);
                     final Image img = (Image) ib.getImage().impl_getPlatformImage();
+                    final int imgWidth = img.getWidth();
+                    final int imgHeight = img.getHeight();
                     if (img != null) {
                         final BorderWidths widths = ib.getWidths();
                         final Insets insets = ib.getInsets();
@@ -1128,14 +1134,14 @@ public class NGRegion extends NGGroup implements PGRegion {
                         final int leftWidth = (int) Math.round(
                                 widths.isLeftAsPercentage() ? width * widths.getLeft() : widths.getLeft());
 
-                        final int topSlice = (int) Math.round(
-                                slices.isTopAsPercentage() ? height * slices.getTop() : slices.getTop());
-                        final int rightSlice = (int) Math.round(
-                                slices.isRightAsPercentage() ? width * slices.getRight() : slices.getRight());
-                        final int bottomSlice = (int) Math.round(
-                                slices.isBottomAsPercentage() ? height * slices.getBottom() : slices.getBottom());
-                        final int leftSlice = (int) Math.round(
-                                slices.isLeftAsPercentage() ? width * slices.getLeft() : slices.getLeft());
+                        final int topSlice = (int) Math.round((
+                                slices.isTopAsPercentage() ? height * slices.getTop() : slices.getTop()) * img.getPixelScale());
+                        final int rightSlice = (int) Math.round((
+                                slices.isRightAsPercentage() ? width * slices.getRight() : slices.getRight()) * img.getPixelScale());
+                        final int bottomSlice = (int) Math.round((
+                                slices.isBottomAsPercentage() ? height * slices.getBottom() : slices.getBottom()) * img.getPixelScale());
+                        final int leftSlice = (int) Math.round((
+                                slices.isLeftAsPercentage() ? width * slices.getLeft() : slices.getLeft()) * img.getPixelScale());
 
                         // handle case where region is too small to fit in borders
                         if ((leftInset + leftWidth + rightInset + rightWidth) > width
@@ -1150,8 +1156,8 @@ public class NGRegion extends NGGroup implements PGRegion {
                         final int centerH = Math.round(height) - bottomInset - bottomWidth - centerMinY;
                         final int centerMaxX = centerW + centerMinX;
                         final int centerMaxY = centerH + centerMinY;
-                        final int centerSliceWidth = img.getWidth() - leftSlice - rightSlice;
-                        final int centerSliceHeight = img.getHeight() - topSlice - bottomSlice;
+                        final int centerSliceWidth = imgWidth - leftSlice - rightSlice;
+                        final int centerSliceHeight = imgHeight - topSlice - bottomSlice;
                         // paint top left corner
                         paintTiles(g, img, BorderRepeat.STRETCH, BorderRepeat.STRETCH, Side.LEFT, Side.TOP,
                                    leftInset, topInset, leftWidth, topWidth, // target bounds
@@ -1169,7 +1175,7 @@ public class NGRegion extends NGGroup implements PGRegion {
                         // paint top right corner
                         paintTiles(g, img, BorderRepeat.STRETCH, BorderRepeat.STRETCH, Side.LEFT, Side.TOP,
                                    centerMaxX, topInset, rightWidth, topWidth,
-                                   (img.getWidth() - rightSlice), 0, rightSlice, topSlice,
+                                   (imgWidth - rightSlice), 0, rightSlice, topSlice,
                                    0, 0, rightWidth, topWidth);
                         // paint left slice
                         tileWidth = leftWidth;
@@ -1185,12 +1191,12 @@ public class NGRegion extends NGGroup implements PGRegion {
                                 centerH : (rightSlice > 0 ? (rightWidth * centerSliceHeight) / rightSlice : 0);
                         paintTiles(g, img, BorderRepeat.STRETCH, ib.getRepeatY(), Side.LEFT, Side.TOP,
                                    centerMaxX, centerMinY, rightWidth, centerH,
-                                   img.getWidth() - rightSlice, topSlice, rightSlice, centerSliceHeight,
+                                   imgWidth - rightSlice, topSlice, rightSlice, centerSliceHeight,
                                    0, (centerH - tileHeight) / 2, tileWidth, tileHeight);
                         // paint bottom left corner
                         paintTiles(g, img, BorderRepeat.STRETCH, BorderRepeat.STRETCH, Side.LEFT, Side.TOP,
                                    leftInset, centerMaxY, leftWidth, bottomWidth,
-                                   0, img.getHeight() - bottomSlice, leftSlice, bottomSlice,
+                                   0, imgHeight - bottomSlice, leftSlice, bottomSlice,
                                    0, 0, leftWidth, bottomWidth);
                         // paint bottom slice
                         tileWidth = (ib.getRepeatX() == BorderRepeat.STRETCH) ?
@@ -1198,12 +1204,12 @@ public class NGRegion extends NGGroup implements PGRegion {
                         tileHeight = bottomWidth;
                         paintTiles(g, img, ib.getRepeatX(), BorderRepeat.STRETCH, Side.LEFT, Side.TOP,
                                    centerMinX, centerMaxY, centerW, bottomWidth,
-                                   leftSlice, img.getHeight() - bottomSlice, centerSliceWidth, bottomSlice,
+                                   leftSlice, imgHeight - bottomSlice, centerSliceWidth, bottomSlice,
                                    (centerW - tileWidth) / 2, 0, tileWidth, tileHeight);
                         // paint bottom right corner
                         paintTiles(g, img, BorderRepeat.STRETCH, BorderRepeat.STRETCH, Side.LEFT, Side.TOP,
                                    centerMaxX, centerMaxY, rightWidth, bottomWidth,
-                                   img.getWidth() - rightSlice, img.getHeight() - bottomSlice, rightSlice, bottomSlice,
+                                   imgWidth - rightSlice, imgHeight - bottomSlice, rightSlice, bottomSlice,
                                    0, 0, rightWidth, bottomWidth);
                         // paint the center slice
                         if (ib.isFilled()) {

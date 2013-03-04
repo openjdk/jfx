@@ -25,10 +25,10 @@
 
 package com.sun.javafx.tools.ant;
 
-import com.sun.javafx.tools.resource.PackagerResource;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
+import com.sun.javafx.tools.resource.PackagerResource;
 import org.apache.tools.ant.types.DataType;
 import org.apache.tools.ant.types.resources.FileResource;
 
@@ -39,11 +39,11 @@ import org.apache.tools.ant.types.resources.FileResource;
  * In the example below both rx:resource elements define collection consisting
  * of s.jar in the dist directory:
  * <pre>
- *    &lt;fx:resource id="aaa">
- *       &lt;fx:fileset dir="dist" includes="s.jar"/>
- *    &lt;/fx:resource>
+ *    &lt;fx:resource id="aaa"&gt;
+ *       &lt;fx:fileset dir="dist" includes="s.jar"/&gt;
+ *    &lt;/fx:resource&gt;
  *
- *    &lt;fx:resource refid="aaa"/>
+ *    &lt;fx:resource refid="aaa"/&gt;
  * </pre>
  *
  * @ant.type name="resources" category="javafx"

@@ -25,9 +25,6 @@
 
 package com.sun.javafx.css.converters;
 
-import com.sun.javafx.css.Size;
-import com.sun.javafx.css.SizeUnits;
-import com.sun.javafx.css.StyleConverterImpl;
 import javafx.css.ParsedValue;
 import javafx.css.StyleConverter;
 import javafx.scene.image.Image;
@@ -38,11 +35,14 @@ import javafx.scene.paint.Paint;
 import javafx.scene.paint.RadialGradient;
 import javafx.scene.paint.Stop;
 import javafx.scene.text.Font;
+import com.sun.javafx.css.Size;
+import com.sun.javafx.css.SizeUnits;
+import com.sun.javafx.css.StyleConverterImpl;
 
 
 public final class PaintConverter extends StyleConverterImpl<ParsedValue<?, Paint>, Paint> {
 
-    // lazy, thread-safe instatiation
+    // lazy, thread-safe instantiation
     private static class Holder {
         static PaintConverter INSTANCE = new PaintConverter();
         static SequenceConverter SEQUENCE_INSTANCE = new SequenceConverter();
@@ -62,7 +62,7 @@ public final class PaintConverter extends StyleConverterImpl<ParsedValue<?, Pain
 
     @Override
     public Paint convert(ParsedValue<ParsedValue<?, Paint>, Paint> value, Font font) {
-        Object obj = (Object) value.getValue();
+        Object obj = value.getValue();
         if (obj instanceof Paint) {
             return (Paint) obj;
         }

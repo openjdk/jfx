@@ -25,6 +25,9 @@
 
 package com.sun.javafx.tools.ant;
 
+import java.io.File;
+import java.util.LinkedList;
+import java.util.List;
 import com.sun.javafx.tools.ant.Platform.Jvmarg;
 import com.sun.javafx.tools.ant.Platform.Property;
 import com.sun.javafx.tools.packager.DeployParams;
@@ -32,9 +35,6 @@ import com.sun.javafx.tools.packager.Log;
 import com.sun.javafx.tools.packager.PackagerException;
 import com.sun.javafx.tools.packager.PackagerLib;
 import com.sun.javafx.tools.packager.bundlers.Bundler;
-import java.io.File;
-import java.util.LinkedList;
-import java.util.List;
 import org.apache.tools.ant.BuildException;
 import org.apache.tools.ant.Task;
 import org.apache.tools.ant.types.DataType;
@@ -46,11 +46,11 @@ import org.apache.tools.ant.types.DataType;
  * Minimal example:
  * <pre>
  *   &lt;fx:deploy width="600" height="400"
- *                 outdir="web-dist" outfile="Fish">
- *       &lt;info title="Sample application"/>
- *       &lt;fx:application refid="myapp"/>
- *       &lt;fx:resources refid="myresources"/>
- *   &lt;/fx:deploy>
+ *                 outdir="web-dist" outfile="Fish"&gt;
+ *       &lt;info title="Sample application"/&gt;
+ *       &lt;fx:application refid="myapp"/&gt;
+ *       &lt;fx:resources refid="myresources"/&gt;
+ *   &lt;/fx:deploy&gt;
  * </pre>
  * Above example will generate HTML/JNLP files into the web-dist directory
  * and use "Fish" as prefix for generated files. Details about application and
@@ -59,20 +59,20 @@ import org.apache.tools.ant.types.DataType;
  * Minimal complete example:
  * <pre>
  *   &lt;fx:deploy width="600" height="400"
- *                 outdir="web-dist" outfile="Fish">
- *       &lt;info title="Sample application"/>
+ *                 outdir="web-dist" outfile="Fish"&gt;
+ *       &lt;info title="Sample application"/&gt;
  *       &lt;fx:application name="SampleApp"
  *              mainClass="testapp.MainApp"
- *              preloaderClass="testpreloader.Preloader"/>
- *       &lt;fx:resources>
- *              &lt;fx:fileset requiredFor="preloader" dir="dist">
- *                &lt;include name="preloader.jar"/>
- *             &lt;/fx:fileset>
- *              &lt;fx:fileset dir="dist">
- *                &lt;include name="helloworld.jar"/>
- *             &lt;/fx:fileset>
- *       &lt;/fx:resources>
- *   &lt;/fx:deploy>
+ *              preloaderClass="testpreloader.Preloader"/&gt;
+ *       &lt;fx:resources&gt;
+ *              &lt;fx:fileset requiredFor="preloader" dir="dist"&gt;
+ *                &lt;include name="preloader.jar"/&gt;
+ *             &lt;/fx:fileset&gt;
+ *              &lt;fx:fileset dir="dist"&gt;
+ *                &lt;include name="helloworld.jar"/&gt;
+ *             &lt;/fx:fileset&gt;
+ *       &lt;/fx:resources&gt;
+ *   &lt;/fx:deploy&gt;
  * </pre>
  * Same as above but here application and resource details are defined in place.
  * Note that using references helps with reducing code duplication as fx:jar need
@@ -540,7 +540,7 @@ public class DeployFXTask extends Task {
      * <p>
      * Example:
      * <pre>
-     *     &lt;template file="App_template.html" tofile="App.html"/>
+     *     &lt;template file="App_template.html" tofile="App.html"/&gt;
      * </pre>
      *
      * @ant.type name="Template" category="javafx"

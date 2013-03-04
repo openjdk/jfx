@@ -3,9 +3,6 @@
 
   <target name="jar" depends="init">
     <build-project>
-      <addedsrcdirs>
-        <pathelement location="cagsrc.double"/>
-      </addedsrcdirs>
     </build-project>
   </target>
 

@@ -478,6 +478,10 @@ class WindowStage extends GlassStage {
     void exitFullScreen() {
         setFullScreen(false);
     }
+    
+    boolean isApplet() {
+        return isPrimaryStage && null != appletWindow;
+    }
 
     private boolean hasPermission(Permission perm) {
         try {

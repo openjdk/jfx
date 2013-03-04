@@ -44,9 +44,9 @@ import org.apache.tools.ant.types.FileSet;
  * Usage examples:
  * <pre>
  *   &lt;signjar keyStore="${basedir}/sample.jks" destdir="c:/tmp"
- *               alias="javafx" storePass="****" keyPass="****">
- *      &lt;fileset dir='${build.dir}/dist/** /*.jar'/>
- *   &lt;/signjar>
+ *               alias="javafx" storePass="****" keyPass="****"&gt;
+ *      &lt;fileset dir='${build.dir}/dist/** /*.jar'/&gt;
+ *   &lt;/signjar&gt;
  * </pre>
  *
  * @ant.task name="signjar" category="javafx"

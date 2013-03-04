@@ -26,6 +26,7 @@
 #include "glass_general.h"
 #include "glass_dnd.h"
 
+extern gboolean is_dnd_owner;
 extern "C" {
 
 /*
@@ -36,7 +37,7 @@ extern "C" {
 JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_gtk_GtkDnDClipboard_isOwner
   (JNIEnv *env , jobject obj)
 {
-    return JNI_FALSE;
+    return (is_dnd_owner) ? JNI_TRUE : JNI_FALSE;
 }
 
 /*

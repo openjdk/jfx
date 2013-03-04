@@ -25,12 +25,12 @@
 
 package com.sun.javafx.tools.ant;
 
-import com.sun.javafx.tools.packager.HtmlParam;
-import com.sun.javafx.tools.packager.Param;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import com.sun.javafx.tools.packager.HtmlParam;
+import com.sun.javafx.tools.packager.Param;
 import org.apache.tools.ant.BuildException;
 import org.apache.tools.ant.types.DataType;
 import org.apache.tools.ant.types.Reference;
@@ -43,7 +43,7 @@ import org.apache.tools.ant.types.Reference;
  *
  * Examples:
  * <pre>
- *    &lt;info vendor="Uncle Joe" description="Test program"/>
+ *    &lt;info vendor="Uncle Joe" description="Test program"/&gt;
  * </pre>
  *
  * @ant.type name="application" category="javafx"

@@ -34,9 +34,9 @@ import org.apache.tools.ant.types.DataType;
  *
  * Example:
  * <pre>
- *    &lt;callbacks>
- *        &lt;callback name="onGetSplash">customGetSplash</callback>
- *    &lt;/callbacks>
+ *    &lt;callbacks&gt;
+ *        &lt;callback name="onGetSplash"&gt;customGetSplash&lt;/callback&gt;
+ *    &lt;/callbacks&gt;
  * </pre>
  * For embedded application customGetSplash function will be used to create
  * HTML splash for the application.
