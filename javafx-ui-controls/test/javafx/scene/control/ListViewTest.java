@@ -47,6 +47,7 @@ import javafx.scene.layout.Region;
 import javafx.stage.Stage;
 
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 public class ListViewTest {
@@ -484,5 +485,23 @@ public class ListViewTest {
         list.setItems(FXCollections.observableArrayList(new_p1, new_p2));
         ControlAsserts.assertCellTextEquals(list, 0, "updated name1");
         ControlAsserts.assertCellTextEquals(list, 1, "updated name2");
+    }
+    
+    @Ignore
+    @Test public void test_rt28637() {
+        ObservableList<String> items = FXCollections.observableArrayList("String1", "String2", "String3", "String4");
+        
+        final ListView<String> listView = new ListView<String>();
+        listView.setItems(items);
+        
+        listView.getSelectionModel().select(0);
+        assertEquals("String1", listView.getSelectionModel().getSelectedItem());
+        assertEquals("String1", listView.getSelectionModel().getSelectedItems().get(0));
+        assertEquals(0, listView.getSelectionModel().getSelectedIndex());
+        
+        items.remove(listView.getSelectionModel().getSelectedItem());
+        assertEquals("String2", listView.getSelectionModel().getSelectedItem());
+        assertEquals("String2", listView.getSelectionModel().getSelectedItems().get(0));
+        assertEquals(0, listView.getSelectionModel().getSelectedIndex());
     }
 }

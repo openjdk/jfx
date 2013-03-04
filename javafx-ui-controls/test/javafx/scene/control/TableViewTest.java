@@ -541,4 +541,22 @@ public class TableViewTest {
         ControlAsserts.assertCellTextEquals(table, 0, "1", "updated name1");
         ControlAsserts.assertCellTextEquals(table, 1, "2", "updated name2");
     }
+    
+    @Ignore
+    @Test public void test_rt28637() {
+        ObservableList<String> items = FXCollections.observableArrayList("String1", "String2", "String3", "String4");
+        
+        final TableView<String> tableView = new TableView<String>();
+        tableView.setItems(items);
+        
+        tableView.getSelectionModel().select(0);
+        assertEquals("String1", tableView.getSelectionModel().getSelectedItem());
+        assertEquals("String1", tableView.getSelectionModel().getSelectedItems().get(0));
+        assertEquals(0, tableView.getSelectionModel().getSelectedIndex());
+        
+        items.remove(tableView.getSelectionModel().getSelectedItem());
+        assertEquals("String2", tableView.getSelectionModel().getSelectedItem());
+        assertEquals("String2", tableView.getSelectionModel().getSelectedItems().get(0));
+        assertEquals(0, tableView.getSelectionModel().getSelectedIndex());
+    }
 }

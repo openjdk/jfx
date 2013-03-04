@@ -45,6 +45,7 @@ import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 import javafx.scene.Group;
 import javafx.scene.Scene;
 import javafx.scene.control.cell.PropertyValueFactory;
@@ -761,5 +762,32 @@ public class TreeViewTest {
                 new TreeItem<RT_22463_Person>(new_p2));
         ControlAsserts.assertCellTextEquals(tree, 1, "updated name1");
         ControlAsserts.assertCellTextEquals(tree, 2, "updated name2");
+    }
+    
+    @Ignore
+    @Test public void test_rt28637() {
+        TreeItem<String> s1, s2, s3, s4;
+        ObservableList<TreeItem<String>> items = FXCollections.observableArrayList(
+                s1 = new TreeItem<String>("String1"), 
+                s2 = new TreeItem<String>("String2"), 
+                s3 = new TreeItem<String>("String3"), 
+                s4 = new TreeItem<String>("String4"));
+        
+        final TreeView<String> treeView = new TreeView<String>();
+        
+        TreeItem<String> root = new TreeItem<String>("Root");
+        root.setExpanded(true);
+        treeView.setRoot(root);
+        root.getChildren().addAll(items);
+        
+        treeView.getSelectionModel().select(0);
+        assertEquals(root, treeView.getSelectionModel().getSelectedItem());
+        assertEquals(root, treeView.getSelectionModel().getSelectedItems().get(0));
+        assertEquals(0, treeView.getSelectionModel().getSelectedIndex());
+        
+        items.remove(treeView.getSelectionModel().getSelectedItem());
+        assertEquals(s1, treeView.getSelectionModel().getSelectedItem());
+        assertEquals(s1, treeView.getSelectionModel().getSelectedItems().get(0));
+        assertEquals(0, treeView.getSelectionModel().getSelectedIndex());
     }
 }

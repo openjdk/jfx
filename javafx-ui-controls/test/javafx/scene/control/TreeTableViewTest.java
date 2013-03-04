@@ -991,4 +991,31 @@ public class TreeTableViewTest {
         ControlAsserts.assertCellTextEquals(table, 1, "1", "updated name1");
         ControlAsserts.assertCellTextEquals(table, 2, "2", "updated name2");
     }
+    
+    @Ignore
+    @Test public void test_rt28637() {
+        TreeItem<String> s1, s2, s3, s4;
+        ObservableList<TreeItem<String>> items = FXCollections.observableArrayList(
+                s1 = new TreeItem<String>("String1"), 
+                s2 = new TreeItem<String>("String2"), 
+                s3 = new TreeItem<String>("String3"), 
+                s4 = new TreeItem<String>("String4"));
+        
+        final TreeTableView<String> treeTableView = new TreeTableView<String>();
+        
+        TreeItem<String> root = new TreeItem<String>("Root");
+        root.setExpanded(true);
+        treeTableView.setRoot(root);
+        root.getChildren().addAll(items);
+        
+        treeTableView.getSelectionModel().select(0);
+        assertEquals(root, treeTableView.getSelectionModel().getSelectedItem());
+        assertEquals(root, treeTableView.getSelectionModel().getSelectedItems().get(0));
+        assertEquals(0, treeTableView.getSelectionModel().getSelectedIndex());
+        
+        items.remove(treeTableView.getSelectionModel().getSelectedItem());
+        assertEquals(s1, treeTableView.getSelectionModel().getSelectedItem());
+        assertEquals(s1, treeTableView.getSelectionModel().getSelectedItems().get(0));
+        assertEquals(0, treeTableView.getSelectionModel().getSelectedIndex());
+    }
 }
