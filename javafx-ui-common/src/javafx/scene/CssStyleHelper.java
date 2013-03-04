@@ -1438,20 +1438,41 @@ final class CssStyleHelper {
         if (child == null) return null;
         
         StyleCacheEntry parentCacheEntry = null;
-        Node parent = child;
         CssStyleHelper parentHelper = null;
+        Node parent = child.getParent();
         
-        do {
-            parent = parent.getParent();
-            if (parent != null) {
-                parentHelper = parent.styleHelper;
-                if (parentHelper != null) {
-                    Set<PseudoClass>[] transitionStates = getTransitionStates(parent);                    
-                    parentCacheEntry = parentHelper.getStyleCacheEntry(parent, transitionStates);
+        while(parent != null) {
+            
+            parentHelper = parent.styleHelper;
+            if (parentHelper != null) {
+                
+                Set<PseudoClass>[] transitionStates = getTransitionStates(parent);                    
+                parentCacheEntry = parentHelper.getStyleCacheEntry(parent, transitionStates);
+                
+                if (parentCacheEntry != null) {
+                    
+                    if (parentCacheEntry.getFont() == null) {
+
+                        final CalculatedValue relativeFont = 
+                            parentHelper.getFontForUseInConvertingRelativeSize(
+                                parent, 
+                                parentCacheEntry, 
+                                transitionStates[0], 
+                                getInlineStyleMap(parent)
+                            );            
+
+                        assert(relativeFont != null);
+                        parentCacheEntry.setFont(relativeFont);
+
+                    }
+                    
+                    break;
                 }
             }
-        } while (parent != null && parentCacheEntry == null);
-
+            
+            parent = parent.getParent();
+        }
+        
         return parentCacheEntry;
     }
    
