@@ -27,6 +27,7 @@ package javafx.scene.control;
 
 import com.sun.javafx.scene.control.test.ControlAsserts;
 import com.sun.javafx.scene.control.test.Person;
+import com.sun.javafx.scene.control.test.RT_22463_Person;
 import java.util.ArrayList;
 import static javafx.scene.control.ControlTestUtils.assertStyleClassContains;
 import static org.junit.Assert.*;
@@ -516,6 +517,7 @@ public class TableViewTest {
         c2.setCellValueFactory(new PropertyValueFactory<Person, String>("name"));
         table.getColumns().addAll(c1, c2);
         
+        // before the change things display fine
         RT_22463_Person p1 = new RT_22463_Person();
         p1.setId(1l);
         p1.setName("name1");
@@ -523,50 +525,20 @@ public class TableViewTest {
         p2.setId(2l);
         p2.setName("name2");
         table.setItems(FXCollections.observableArrayList(p1, p2));
-        ControlAsserts.
-    }
-    
-    private static class RT_22463_Person {
-
-        private Long id;
-        private String name;
-
-        public Long getId() {
-            return id;
-        }
-
-        public void setId(Long id) {
-            this.id = id;
-        }
-
-        public String getName() {
-            return name;
-        }
-
-        public void setName(String name) {
-            this.name = name;
-        }
-
-        @Override
-        public boolean equals(Object obj) {
-            if (obj == null) {
-                return false;
-            }
-            if (getClass() != obj.getClass()) {
-                return false;
-            }
-            final RT_22463_Person other = (RT_22463_Person) obj;
-            if (this.id != other.id) {
-                return false;
-            }
-            return true;
-        }
-
-        @Override
-        public int hashCode() {
-            int hash = 7;
-            hash = 89 * hash + (int) (this.id ^ (this.id >>> 32));
-            return hash;
-        }
+        ControlAsserts.assertCellTextEquals(table, 0, "1", "name1");
+        ControlAsserts.assertCellTextEquals(table, 1, "2", "name2");
+        
+        // now we change the persons but they are still equal as the ID's don't
+        // change - but the items list is cleared so the cells should update
+        RT_22463_Person new_p1 = new RT_22463_Person();
+        new_p1.setId(1l);
+        new_p1.setName("updated name1");
+        RT_22463_Person new_p2 = new RT_22463_Person();
+        new_p2.setId(2l);
+        new_p2.setName("updated name2");
+        table.getItems().clear();
+        table.setItems(FXCollections.observableArrayList(new_p1, new_p2));
+        ControlAsserts.assertCellTextEquals(table, 0, "1", "updated name1");
+        ControlAsserts.assertCellTextEquals(table, 1, "2", "updated name2");
     }
 }

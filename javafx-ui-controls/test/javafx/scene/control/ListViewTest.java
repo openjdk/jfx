@@ -29,6 +29,7 @@ import com.sun.javafx.scene.control.skin.ListViewSkin;
 import com.sun.javafx.scene.control.skin.VirtualFlow;
 import com.sun.javafx.scene.control.test.ControlAsserts;
 import com.sun.javafx.scene.control.test.Person;
+import com.sun.javafx.scene.control.test.RT_22463_Person;
 import com.sun.javafx.tk.Toolkit;
 import static javafx.scene.control.ControlTestUtils.assertStyleClassContains;
 import static org.junit.Assert.*;
@@ -455,5 +456,33 @@ public class ListViewTest {
         
         ControlAsserts.assertRowsNotEmpty(list, 0, 2); // rows 0 - 2 should be filled
         ControlAsserts.assertRowsEmpty(list, 2, -1); // rows 2+ should be empty
+    }
+    
+    @Test public void test_rt22463() {
+        final ListView<RT_22463_Person> list = new ListView<RT_22463_Person>();
+        
+        // before the change things display fine
+        RT_22463_Person p1 = new RT_22463_Person();
+        p1.setId(1l);
+        p1.setName("name1");
+        RT_22463_Person p2 = new RT_22463_Person();
+        p2.setId(2l);
+        p2.setName("name2");
+        list.setItems(FXCollections.observableArrayList(p1, p2));
+        ControlAsserts.assertCellTextEquals(list, 0, "name1");
+        ControlAsserts.assertCellTextEquals(list, 1, "name2");
+        
+        // now we change the persons but they are still equal as the ID's don't
+        // change - but the items list is cleared so the cells should update
+        RT_22463_Person new_p1 = new RT_22463_Person();
+        new_p1.setId(1l);
+        new_p1.setName("updated name1");
+        RT_22463_Person new_p2 = new RT_22463_Person();
+        new_p2.setId(2l);
+        new_p2.setName("updated name2");
+        list.getItems().clear();
+        list.setItems(FXCollections.observableArrayList(new_p1, new_p2));
+        ControlAsserts.assertCellTextEquals(list, 0, "updated name1");
+        ControlAsserts.assertCellTextEquals(list, 1, "updated name2");
     }
 }

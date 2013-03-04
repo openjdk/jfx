@@ -29,6 +29,7 @@ import com.sun.javafx.runtime.VersionInfo;
 import com.sun.javafx.scene.control.test.ControlAsserts;
 import com.sun.javafx.scene.control.test.Employee;
 import com.sun.javafx.scene.control.test.Person;
+import com.sun.javafx.scene.control.test.RT_22463_Person;
 import com.sun.javafx.tk.Toolkit;
 import java.util.Arrays;
 import java.util.Collections;
@@ -722,5 +723,43 @@ public class TreeViewTest {
         for (TreeItem<String> children : rootNode.getChildren()) {
             assertEquals(rootNode, children.getParent());
         }
+    }
+    
+    @Test public void test_rt22463() {
+        RT_22463_Person rootPerson = new RT_22463_Person();
+        rootPerson.setName("Root");
+        TreeItem<RT_22463_Person> root = new TreeItem<RT_22463_Person>(rootPerson);
+        root.setExpanded(true);
+        
+        final TreeView<RT_22463_Person> tree = new TreeView<RT_22463_Person>();
+        tree.setRoot(root);
+        
+        // before the change things display fine
+        RT_22463_Person p1 = new RT_22463_Person();
+        p1.setId(1l);
+        p1.setName("name1");
+        RT_22463_Person p2 = new RT_22463_Person();
+        p2.setId(2l);
+        p2.setName("name2");
+        root.getChildren().addAll(
+                new TreeItem<RT_22463_Person>(p1), 
+                new TreeItem<RT_22463_Person>(p2));
+        ControlAsserts.assertCellTextEquals(tree, 1, "name1");
+        ControlAsserts.assertCellTextEquals(tree, 2, "name2");
+        
+        // now we change the persons but they are still equal as the ID's don't
+        // change - but the items list is cleared so the cells should update
+        RT_22463_Person new_p1 = new RT_22463_Person();
+        new_p1.setId(1l);
+        new_p1.setName("updated name1");
+        RT_22463_Person new_p2 = new RT_22463_Person();
+        new_p2.setId(2l);
+        new_p2.setName("updated name2");
+        root.getChildren().clear();
+        root.getChildren().setAll(
+                new TreeItem<RT_22463_Person>(new_p1), 
+                new TreeItem<RT_22463_Person>(new_p2));
+        ControlAsserts.assertCellTextEquals(tree, 1, "updated name1");
+        ControlAsserts.assertCellTextEquals(tree, 2, "updated name2");
     }
 }
