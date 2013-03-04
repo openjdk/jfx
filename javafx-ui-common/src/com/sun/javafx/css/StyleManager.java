@@ -752,6 +752,7 @@ final public class StyleManager {
         
         for(int n=0,nMax = userAgentStylesheets.size(); n<nMax; n++) {
             StylesheetContainer sc = userAgentStylesheets.get(n);
+            if (sc == null) continue;
             String scFname = sc.fname;
             if (scFname == null ? fname == null : scFname.equals(fname)) {
                 return n;
