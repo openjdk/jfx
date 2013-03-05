@@ -167,9 +167,12 @@ public class SamplePageHelpers {
                 .style("-fx-border-color: black; -fx-border-width: 3;").build();
     }
     
-    static ToolBar createToolBar(boolean vertical, boolean overFlow, boolean disabled) {
+    static ToolBar createToolBar(Side side, boolean overFlow, boolean disabled) {
+        final boolean vertical = side == Side.LEFT || side == Side.RIGHT;
         ToolBar toolBar = new ToolBar();
         if (vertical) toolBar.setOrientation(Orientation.VERTICAL);
+        if (side == Side.BOTTOM) toolBar.getStyleClass().add("bottom");
+        if (side == Side.RIGHT) toolBar.getStyleClass().add("right");
         if (disabled) toolBar.setDisable(true);
         toolBar.getItems().addAll(
                 new Button("A"),

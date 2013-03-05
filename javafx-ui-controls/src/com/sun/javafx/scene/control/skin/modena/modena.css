@@ -798,15 +798,16 @@ is being used to size a border should also be in pixels.
  *                                                                             *
  ******************************************************************************/
 
-.tool-bar:vertical {
+.tool-bar:vertical { /* left */
     -fx-background-color:
+        -fx-outer-border,
         linear-gradient(to right, derive(-fx-base,0%) 0%, derive(-fx-base,10%) 50%, derive(-fx-base,0%) 100%);
-    -fx-background-insets: 0;
+    -fx-background-insets: 0, 0 0 0 1;
     -fx-padding: 0.5em 0.416667em 0.5em 0.416667em; /* 6 5 6 5 */
     -fx-spacing: 0.333em; /* 4 */
     -fx-alignment: TOP_LEFT;
 }
-.tool-bar {
+.tool-bar { /* top */
     -fx-background-color:
         linear-gradient(to bottom, derive(-fx-base,75%) 0%, -fx-outer-border 90%),
         linear-gradient(to bottom, derive(-fx-base,46.9%) 2%, derive(-fx-base,-2.1%) 95%);
@@ -814,6 +815,16 @@ is being used to size a border should also be in pixels.
     -fx-padding: 0.416667em 0.5em 0.416667em 0.5em; /* 5 6  5 6 */
     -fx-spacing: 0.333em; /* 4 */
     -fx-alignment: CENTER_LEFT;
+}
+.tool-bar:vertical.right {
+    -fx-background-insets: 0, 0 1 0 0;
+}
+.tool-bar.bottom {
+    -fx-background-color:
+        -fx-outer-border,
+        derive(-fx-base,75%),
+        linear-gradient(to bottom, derive(-fx-base,46.9%) 2%, derive(-fx-base,-2.1%) 95%);
+    -fx-background-insets: 0, 1 0 0 0, 2 0 0 0;
 }
 .tool-bar > .container > .separator {
     -fx-orientation: vertical;
@@ -823,6 +834,9 @@ is being used to size a border should also be in pixels.
 }
 .tool-bar-overflow-button {
     -fx-padding: 0 0.75em 0 0 ;
+}
+.tool-bar:vertical > .tool-bar-overflow-button {
+    -fx-padding: 0 0 0.75em 0 ;
 }
 .tool-bar-overflow-button > .arrow {
     -fx-background-color: -fx-mark-highlight-color, -fx-mark-color;

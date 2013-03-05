@@ -494,18 +494,30 @@ public class SamplePage extends GridPane {
                 withState(HTMLEditorBuilder.create().htmlText("<i>Focused</i>").prefWidth(650).prefHeight(120).build(), "focused")
                 );
         newDetailedSection(
-                new String[] {"ToolBar (H):", "normal", "overflow", "disabled"}, 
-                createToolBar(false,false,false),
-                createToolBar(false,true,false),
-                createToolBar(false,false,true)
+                new String[] {"ToolBar (H|TOP):", "normal", "overflow", "disabled"},
+                createToolBar(Side.TOP,false,false),
+                createToolBar(Side.TOP,true,false),
+                createToolBar(Side.TOP,false,true)
                 );
         newDetailedSection(
-                new String[] {"ToolBar (V):", "normal", "overflow", "disabled"}, 
-                createToolBar(true,false,false),
-                createToolBar(true,true,false),
-                createToolBar(true,false,true)
+                new String[] {"ToolBar (H|BOTTOM):", "normal", "overflow", "disabled"},
+                createToolBar(Side.BOTTOM,false,false),
+                createToolBar(Side.BOTTOM,true,false),
+                createToolBar(Side.BOTTOM,false,true)
                 );
-        newSection(      
+        newDetailedSection(
+                new String[] {"ToolBar (V|LEFT):", "normal", "overflow", "disabled"},
+                createToolBar(Side.LEFT,false,false),
+                createToolBar(Side.LEFT,true,false),
+                createToolBar(Side.LEFT,false,true)
+                );
+        newDetailedSection(
+                new String[] {"ToolBar (V|RIGHT):", "normal", "overflow", "disabled"},
+                createToolBar(Side.RIGHT,false,false),
+                createToolBar(Side.RIGHT,true,false),
+                createToolBar(Side.RIGHT,false,true)
+                );
+        newSection(
                 "Tabs\n(Top):", 
                 wrapBdr(createTabPane(4, 250, 100,null,false, false, Side.TOP)),
                 wrapBdr(withState(createTabPane(5, 200, 100,"Tab Disabled &\nMany Tabs", false, true, Side.TOP), null, ".tab", "disabled")),
