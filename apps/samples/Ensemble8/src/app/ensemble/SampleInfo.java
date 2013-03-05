@@ -341,9 +341,12 @@ public class SampleInfo {
         String getName();
     }
     
-    private static Map<String, Image> imageCache = new WeakHashMap<>();
+    private static Map<String, Image> imageCache;
     
     private static Image getImage(String url) {
+        if (imageCache == null) {
+            imageCache = new WeakHashMap<>();
+        }
         Image image = imageCache.get(url);
         if (image == null) {
             image = new Image(url);
