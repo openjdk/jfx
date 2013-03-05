@@ -683,23 +683,6 @@ public abstract class TableRowSkinBase<T,
     @Override protected double computePrefWidth(double height) {
         double prefWidth = 0.0F;
 
-        boolean isIndentationRequired = isIndentationRequired();
-        if (isIndentationRequired) {
-            // Do calculations for disclosure node and indentation.
-            // Firstly, indentation
-            int indentationLevel = getIndentationLevel(getSkinnable());
-            if (! isShowRoot()) indentationLevel--;
-            final double indentationPerLevel = getIndentationPerLevel();
-            prefWidth += indentationLevel * indentationPerLevel;
-
-            // Secondl, the disclosure node width
-            Control c = getVirtualFlowOwner();
-            final double defaultDisclosureWidth = 
-                maxDisclosureWidthMap.containsKey(c) ? maxDisclosureWidthMap.get(c) : 0;
-            Node disclosureNode = getDisclosureNode();
-            prefWidth += Math.max(defaultDisclosureWidth, disclosureNode == null ? 0 : disclosureNode.prefWidth(-1));
-        }
-
         List<? extends TableColumnBase/*<T,?>*/> visibleLeafColumns = getVisibleLeafColumns();
         for (int i = 0, max = visibleLeafColumns.size(); i < max; i++) {
             TableColumnBase<T,?> tableColumn = visibleLeafColumns.get(i);
