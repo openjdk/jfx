@@ -55,6 +55,7 @@ import java.util.Map.Entry;
 import java.util.Set;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
+import javafx.collections.FXCollections;
 import javafx.collections.ObservableMap;
 import javafx.css.CssMetaData;
 import javafx.css.FontCssMetaData;
@@ -532,7 +533,9 @@ final class CssStyleHelper {
       * RT-17293
       */
      ObservableMap<StyleableProperty<?>, List<Style>> getObservableStyleMap() {
-         return observableStyleMap;
+         return (observableStyleMap != null) 
+             ? observableStyleMap 
+             : FXCollections.<StyleableProperty<?>, List<Style>>emptyObservableMap();
      }
 
      /**
@@ -570,6 +573,7 @@ final class CssStyleHelper {
             cacheMetaData.localStyleCache.clear();
             cacheMetaData = null;
             node.impl_reapplyCSS();
+            return;
         }
         //
         // inlineStyles is this node's Node.style. This is passed along and is
