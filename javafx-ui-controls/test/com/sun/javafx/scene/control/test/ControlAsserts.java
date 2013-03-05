@@ -27,6 +27,7 @@ package com.sun.javafx.scene.control.test;
 import com.sun.javafx.scene.control.skin.LabeledText;
 import com.sun.javafx.scene.control.skin.VirtualFlow;
 import com.sun.javafx.tk.Toolkit;
+import java.util.Arrays;
 import java.util.List;
 import javafx.scene.Group;
 import javafx.scene.Node;
@@ -90,6 +91,50 @@ public class ControlAsserts {
         assertCallback(control, startRow, endRow, callback);
     }
     
+    public static void assertCellTextEquals(final Control control, final int index, final String... expected) {
+        if (expected == null || expected.length == 0) return;
+        
+        Callback<IndexedCell<?>, Void> callback = new Callback<IndexedCell<?>, Void>() {
+            @Override public Void call(IndexedCell<?> indexedCell) {
+                if (indexedCell.getIndex() != index) return null;
+        
+                if (expected.length == 1) {
+                    assertEquals(expected[0], indexedCell.getText());
+                } else {
+                    int jump = 0;
+                    for (int i = 0; i < expected.length; i++) {
+                        Node childNode = indexedCell.getChildrenUnmodifiable().get(i + jump);
+                        String text = null;
+                        if (! (childNode instanceof IndexedCell)) {
+                            jump++;
+                            continue;
+                        }
+                        
+                        text = ((IndexedCell) childNode).getText();
+                        assertEquals(expected[i], text);
+                    }
+                }
+                return null;
+            }
+        };
+        
+        assertCallback(control, index, index + 1, callback);
+    }
+    
+    public static void assertTableCellTextEquals(final Control control, final int row, final int column, final String expected) {
+        Callback<IndexedCell<?>, Void> callback = new Callback<IndexedCell<?>, Void>() {
+            @Override public Void call(IndexedCell<?> indexedCell) {
+                if (indexedCell.getIndex() != row) return null;
+                
+                IndexedCell cell = (IndexedCell) indexedCell.getChildrenUnmodifiable().get(column);
+                assertEquals(expected, cell.getText());
+                return null;
+            }
+        };
+        
+        assertCallback(control, row, row + 1, callback);
+    }
+    
     // used by TreeView / TreeTableView to ensure the correct indentation
     // (although note that it has only been developed so far for TreeView)
     public static void assertLayoutX(final Control control, final int startRow, final int endRow, final double expectedLayoutX) {
@@ -134,7 +179,11 @@ public class ControlAsserts {
         final int sheetSize = sheet.getChildren().size();
         final int end = endRow == -1 ? sheetSize : Math.min(endRow, sheetSize);
         for (int row = startRow; row < end; row++) {
-            callback.call((IndexedCell<?>)sheet.getChildren().get(row));
+            // old approach:
+            // callback.call((IndexedCell<?>)sheet.getChildren().get(row));
+            
+            // new approach:
+            callback.call(flow.getCell(row));
         }
     }
 }

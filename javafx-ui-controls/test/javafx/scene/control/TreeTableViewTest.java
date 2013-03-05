@@ -27,6 +27,7 @@ package javafx.scene.control;
 
 import com.sun.javafx.scene.control.test.ControlAsserts;
 import com.sun.javafx.scene.control.test.Person;
+import com.sun.javafx.scene.control.test.RT_22463_Person;
 import java.util.Arrays;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
@@ -944,5 +945,77 @@ public class TreeTableViewTest {
         
         ControlAsserts.assertRowsNotEmpty(table, 0, 3); // rows 0 - 3 should be filled
         ControlAsserts.assertRowsEmpty(table, 3, -1); // rows 3+ should be empty
+    }
+    
+    @Test public void test_rt22463() {
+        final TreeTableView<RT_22463_Person> table = new TreeTableView<RT_22463_Person>();
+        table.setTableMenuButtonVisible(true);
+        TreeTableColumn c1 = new TreeTableColumn("Id");
+        TreeTableColumn c2 = new TreeTableColumn("Name");
+        c1.setCellValueFactory(new TreeItemPropertyValueFactory<Person, Long>("id"));
+        c2.setCellValueFactory(new TreeItemPropertyValueFactory<Person, String>("name"));
+        table.getColumns().addAll(c1, c2);
+        
+        RT_22463_Person rootPerson = new RT_22463_Person();
+        rootPerson.setName("Root");
+        TreeItem<RT_22463_Person> root = new TreeItem<RT_22463_Person>(rootPerson);
+        root.setExpanded(true);
+        
+        table.setRoot(root);
+        
+        // before the change things display fine
+        RT_22463_Person p1 = new RT_22463_Person();
+        p1.setId(1l);
+        p1.setName("name1");
+        RT_22463_Person p2 = new RT_22463_Person();
+        p2.setId(2l);
+        p2.setName("name2");
+        root.getChildren().addAll(
+                new TreeItem<RT_22463_Person>(p1), 
+                new TreeItem<RT_22463_Person>(p2));
+        ControlAsserts.assertCellTextEquals(table, 1, "1", "name1");
+        ControlAsserts.assertCellTextEquals(table, 2, "2", "name2");
+        
+        // now we change the persons but they are still equal as the ID's don't
+        // change - but the items list is cleared so the cells should update
+        RT_22463_Person new_p1 = new RT_22463_Person();
+        new_p1.setId(1l);
+        new_p1.setName("updated name1");
+        RT_22463_Person new_p2 = new RT_22463_Person();
+        new_p2.setId(2l);
+        new_p2.setName("updated name2");
+        root.getChildren().clear();
+        root.getChildren().setAll(
+                new TreeItem<RT_22463_Person>(new_p1), 
+                new TreeItem<RT_22463_Person>(new_p2));
+        ControlAsserts.assertCellTextEquals(table, 1, "1", "updated name1");
+        ControlAsserts.assertCellTextEquals(table, 2, "2", "updated name2");
+    }
+    
+    @Ignore
+    @Test public void test_rt28637() {
+        TreeItem<String> s1, s2, s3, s4;
+        ObservableList<TreeItem<String>> items = FXCollections.observableArrayList(
+                s1 = new TreeItem<String>("String1"), 
+                s2 = new TreeItem<String>("String2"), 
+                s3 = new TreeItem<String>("String3"), 
+                s4 = new TreeItem<String>("String4"));
+        
+        final TreeTableView<String> treeTableView = new TreeTableView<String>();
+        
+        TreeItem<String> root = new TreeItem<String>("Root");
+        root.setExpanded(true);
+        treeTableView.setRoot(root);
+        root.getChildren().addAll(items);
+        
+        treeTableView.getSelectionModel().select(0);
+        assertEquals(root, treeTableView.getSelectionModel().getSelectedItem());
+        assertEquals(root, treeTableView.getSelectionModel().getSelectedItems().get(0));
+        assertEquals(0, treeTableView.getSelectionModel().getSelectedIndex());
+        
+        items.remove(treeTableView.getSelectionModel().getSelectedItem());
+        assertEquals(s1, treeTableView.getSelectionModel().getSelectedItem());
+        assertEquals(s1, treeTableView.getSelectionModel().getSelectedItems().get(0));
+        assertEquals(0, treeTableView.getSelectionModel().getSelectedIndex());
     }
 }

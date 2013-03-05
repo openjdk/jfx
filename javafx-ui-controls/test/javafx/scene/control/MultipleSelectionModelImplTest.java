@@ -30,6 +30,7 @@ import java.util.Collection;
 import java.util.Iterator;
 
 import javafx.collections.FXCollections;
+import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.scene.control.ListView.ListViewFocusModel;
 import javafx.scene.control.TableView.TableViewFocusModel;
@@ -733,5 +734,47 @@ public class MultipleSelectionModelImplTest {
         data.add(0, "Inserted String");
         assertFalse(model.isSelected(3));
         assertTrue(model.isSelected(4));
+    }
+    
+    private int rt_28615_row_1_hit_count = 0;
+    private int rt_28615_row_2_hit_count = 0;
+    @Ignore @Test public void test_rt_28615() {
+        msModel().setSelectionMode(SelectionMode.MULTIPLE);
+
+        msModel().getSelectedItems().addListener(new ListChangeListener<Object>() {
+            @Override
+            public void onChanged(ListChangeListener.Change<? extends Object> change) {
+                while (change.next()) {
+                    if (change.wasAdded()) {
+                        for (Object item : change.getAddedSubList()) {
+                            if (isTree()) {
+                                if (root.equals(item)) {
+                                    rt_28615_row_1_hit_count++;
+                                } else if (ROW_2_TREE_VALUE.equals(item)) {
+                                    rt_28615_row_2_hit_count++;
+                                }
+                            } else {
+                                if (ROW_1_VALUE.equals(item)) {
+                                    rt_28615_row_1_hit_count++;
+                                } else if (ROW_2_VALUE.equals(item)) {
+                                    rt_28615_row_2_hit_count++;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        assertEquals(0, rt_28615_row_1_hit_count);
+        assertEquals(0, rt_28615_row_2_hit_count);
+        
+        msModel().select(0);
+        assertEquals(1, rt_28615_row_1_hit_count);
+        assertEquals(0, rt_28615_row_2_hit_count);
+        
+        msModel().select(1);
+        assertEquals(1, rt_28615_row_1_hit_count);
+        assertEquals(1, rt_28615_row_2_hit_count);
     }
 }
