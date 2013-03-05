@@ -349,10 +349,7 @@ project(":graphics") {
         scanForTestClasses = false
         include '**/*Test.*'
         exclude '**/*Abstract*.*'
-        exclude { fileTreeElement ->
-            if (fileTreeElement.getPath().contains("/build/classes/test")) return null;
-            return fileTreeElement;
-        }
+        exclude { fileTreeElement -> fileTreeElement.toString().contains("build/classes/test") }
         jvmArgs "-Djavafx.toolkit=com.sun.javafx.pgstub.StubToolkit"
         testResultsDir = file("build/stub-test-results")
         testReportDir = file("build/reports/stubTests")
