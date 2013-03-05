@@ -100,7 +100,7 @@ import com.sun.javafx.scene.layout.region.RepeatStruct;
 import com.sun.javafx.scene.layout.region.RepeatStructConverter;
 import com.sun.javafx.scene.layout.region.SliceSequenceConverter;
 import com.sun.javafx.scene.layout.region.StrokeBorderPaintConverter;
-import javafx.geometry.NodeOrientation;
+import java.net.MalformedURLException;
 
 final public class CSSParser {
     static boolean EXIT_ON_ERROR = false;
@@ -3752,7 +3752,9 @@ final public class CSSParser {
                 // ignore all but "src"
                 if ("src".equalsIgnoreCase(key)) {
                     while(true) {
-                        if((currentToken != null) && (currentToken.getType() != CSSLexer.SEMI) &&
+                        if((currentToken != null) && 
+                                (currentToken.getType() != CSSLexer.SEMI) &&
+                                (currentToken.getType() != CSSLexer.RBRACE) &&
                                 (currentToken.getType() != Token.EOF)) {
 
                             if (currentToken.getType() == CSSLexer.IDENT) {
@@ -3775,29 +3777,56 @@ final public class CSSParser {
                                     }
                                     int start = 0, end = urlSb.length();
                                     if (urlSb.charAt(start) == '\'' || urlSb.charAt(start) == '\"') start ++;
+                                    if (urlSb.charAt(start) == '/' || urlSb.charAt(start) == '\\') start ++;
                                     if (urlSb.charAt(end-1) == '\'' || urlSb.charAt(end-1) == '\"') end --;
-                                    final String url = urlSb.substring(start,end);
-
-                                    // consume the format() function token
-                                    currentToken = nextToken(lexer);
-                                    final StringBuilder formatSb = new StringBuilder();
-                                    currentToken = nextToken(lexer);
-                                    while(true) {
-                                        if((currentToken != null) && (currentToken.getType() != CSSLexer.RPAREN) &&
-                                                (currentToken.getType() != Token.EOF)) {
-                                            formatSb.append(currentToken.getText());
-                                        } else {
-                                            break;
+                                    final String urlStr = urlSb.substring(start,end);
+                                    
+                                    URL url = null;
+                                    try {
+                                        url = new URL(sourceOfStylesheet, urlStr);
+                                    } catch (MalformedURLException malf) {
+                                        
+                                        final int line = currentToken.getLine();
+                                        final int pos = currentToken.getOffset();
+                                        final String msg = MessageFormat.format("Could not resolve @font-face url [{2}] at [{0,number,#},{1,number,#}]",line,pos,urlStr);
+                                        CssError error = createError(msg);
+                                        if (LOGGER.isLoggable(PlatformLogger.WARNING)) {
+                                            LOGGER.warning(error.toString());
                                         }
-                                        currentToken = nextToken(lexer);
+                                        reportError(error);
+                                        
+                                        // skip the rest.
+                                        while(currentToken != null) {
+                                            int ttype = currentToken.getType();
+                                            if (ttype == CSSLexer.RPAREN ||
+                                                ttype == Token.EOF) {
+                                                return null;
+                                            }
+                                            currentToken = nextToken(lexer);
+                                        }
                                     }
-                                    start = 0; end = formatSb.length();
-                                    if (formatSb.charAt(start) == '\'' || formatSb.charAt(start) == '\"') start ++;
-                                    if (formatSb.charAt(end-1) == '\'' || formatSb.charAt(end-1) == '\"') end --;
-                                    final String format = formatSb.substring(start,end);
+                                    String format = null;
+                                    while(true) {
+                                        currentToken = nextToken(lexer);
+                                        final int ttype = (currentToken != null) ? currentToken.getType() : Token.EOF;
+                                        if (ttype == CSSLexer.FUNCTION) {
+                                            if ("format(".equalsIgnoreCase(currentToken.getText())) {
+                                                continue;
+                                            } else {
+                                                break;
+                                            }
+                                        } else if (ttype == CSSLexer.IDENT ||
+                                                ttype == CSSLexer.STRING) {
+                                            
+                                            format = Utils.stripQuotes(currentToken.getText());
+                                        } else if (ttype == CSSLexer.RPAREN) {
+                                            continue;
+                                        } else {
+                                            break;                                               
+                                        }
+                                    }
 
-                                    sources.add(new FontFace.FontFaceSrc(FontFace.FontFaceSrcType.URL,url, format));
-
+                                    sources.add(new FontFace.FontFaceSrc(FontFace.FontFaceSrcType.URL,url.toExternalForm(), format));
                                 } else if ("local(".equalsIgnoreCase(currentToken.getText())) {
                                     // consume the function token
                                     currentToken = nextToken(lexer);
@@ -3860,18 +3889,15 @@ final public class CSSParser {
                     }
                     descriptors.put(key,descriptorVal.toString());
                 }
-                continue;
+//                continue;
             }
 
-            if ((currentToken != null) &&
-                    (currentToken.getType() != CSSLexer.RBRACE) &&
-                    (currentToken.getType() != Token.EOF)) {
-                continue;
+            if ((currentToken == null) ||
+                (currentToken.getType() == CSSLexer.RBRACE) ||
+                (currentToken.getType() == Token.EOF)) {
+                break;
             }
 
-            // currentToken was either null or not a comma
-            // so we are done with selectors.
-            break;
         }
         return new FontFace(descriptors, sources);
     }
