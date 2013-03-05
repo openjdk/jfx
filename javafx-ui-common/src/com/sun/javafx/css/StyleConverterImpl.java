@@ -37,6 +37,9 @@ import javafx.css.StyleConverter;
 import javafx.css.Styleable;
 import javafx.scene.Node;
 
+import com.sun.javafx.Logging;
+import sun.util.logging.PlatformLogger;
+
 /**
  * Converter converts ParsedValueImpl&lt;F,T&gt; from type F to type T.
  * F is the type of the parsed value, T is the converted type of
@@ -78,25 +81,20 @@ public class StyleConverterImpl<F, T> extends StyleConverter<F, T> {
         int index = is.readShort();
         String cname = strings[index];
 
+        if (cname == null || cname.isEmpty()) return null;
+        
+        if (cname.startsWith("com.sun.javafx.css.converters.EnumConverter")) {
+            return (StyleConverter)com.sun.javafx.css.converters.EnumConverter.readBinary(is, strings);
+        } 
+
         // Make a new entry in tmap, if necessary
         if (tmap == null || !tmap.containsKey(cname)) {
-            StyleConverter<?,?> converter = null;
-            try {
-                Class<?> cl = Class.forName(cname);
-                // is cl assignable from EnumType.class?
-                if (EnumConverter.class.isAssignableFrom(cl)) {
-                    // rawtype!
-                    converter = new EnumConverter(is, strings);
-                } else {
-                    Method getInstanceMethod = cl.getMethod("getInstance");
-                    converter = (StyleConverter) getInstanceMethod.invoke(null);
+            StyleConverter<?,?> converter = getInstance(cname);
+            if (converter == null) {
+                final PlatformLogger logger = Logging.getCSSLogger();
+                if (logger.isLoggable(PlatformLogger.SEVERE)) {
+                    logger.severe("could not deserialize " + cname);
                 }
-            } catch (ClassNotFoundException cnfe) {
-                // Class.forName failed
-                System.err.println(cnfe.toString());
-            } catch (Exception nsme) {
-                // Class.forName failed
-                System.err.println(nsme.toString());
             }
             if (converter == null) {
                 System.err.println("could not deserialize " + cname);
@@ -106,5 +104,157 @@ public class StyleConverterImpl<F, T> extends StyleConverter<F, T> {
             return converter;
         }
         return tmap.get(cname);
+    }
+
+    // package for unit test purposes
+    static StyleConverter<?,?> getInstance(final String converterClass) {
+
+        StyleConverter<?,?> styleConverter = null;
+
+        switch(converterClass) { 
+        case "com.sun.javafx.css.converters.BooleanConverter" :
+            styleConverter = com.sun.javafx.css.converters.BooleanConverter.getInstance();
+            break;
+        case "com.sun.javafx.css.converters.ColorConverter" :
+            styleConverter = com.sun.javafx.css.converters.ColorConverter.getInstance();
+            break;
+        case "com.sun.javafx.css.converters.CursorConverter" :
+            styleConverter = com.sun.javafx.css.converters.CursorConverter.getInstance();
+            break;
+        case "com.sun.javafx.css.converters.EffectConverter" :
+            styleConverter = com.sun.javafx.css.converters.EffectConverter.getInstance();
+            break;
+        case "com.sun.javafx.css.converters.EffectConverter$DropShadowConverter" :
+            styleConverter = com.sun.javafx.css.converters.EffectConverter.DropShadowConverter.getInstance();
+            break;
+        case "com.sun.javafx.css.converters.EffectConverter$InnerShadowConverter" :
+            styleConverter = com.sun.javafx.css.converters.EffectConverter.InnerShadowConverter.getInstance();
+            break;
+        case "com.sun.javafx.css.converters.FontConverter" :
+            styleConverter = com.sun.javafx.css.converters.FontConverter.getInstance();
+            break;
+        case "com.sun.javafx.css.converters.FontConverter$FontStyleConverter" :
+            styleConverter = com.sun.javafx.css.converters.FontConverter.FontStyleConverter.getInstance();
+            break;
+        case "com.sun.javafx.css.converters.FontConverter$FontWeightConverter" :
+            styleConverter = com.sun.javafx.css.converters.FontConverter.FontWeightConverter.getInstance();
+            break;
+        case "com.sun.javafx.css.converters.FontConverter$FontSizeConverter" :
+            styleConverter = com.sun.javafx.css.converters.FontConverter.FontSizeConverter.getInstance();
+            break;
+
+        case "com.sun.javafx.css.converters.InsetsConverter" :
+            styleConverter = com.sun.javafx.css.converters.InsetsConverter.getInstance();
+            break;
+        case "com.sun.javafx.css.converters.InsetsConverter$SequenceConverter" :
+            styleConverter = com.sun.javafx.css.converters.InsetsConverter.SequenceConverter.getInstance();
+            break;
+ 
+        case "com.sun.javafx.css.converters.PaintConverter" :
+            styleConverter = com.sun.javafx.css.converters.PaintConverter.getInstance();
+            break;
+        case "com.sun.javafx.css.converters.PaintConverter$SequenceConverter" :
+            styleConverter = com.sun.javafx.css.converters.PaintConverter.SequenceConverter.getInstance();
+            break;
+        case "com.sun.javafx.css.converters.PaintConverter$LinearGradientConverter" :
+            styleConverter = com.sun.javafx.css.converters.PaintConverter.LinearGradientConverter.getInstance();
+            break;
+        case "com.sun.javafx.css.converters.PaintConverter$RadialGradientConverter" :
+            styleConverter = com.sun.javafx.css.converters.PaintConverter.RadialGradientConverter.getInstance();
+            break;
+ 
+        case "com.sun.javafx.css.converters.SizeConverter" :
+            styleConverter = com.sun.javafx.css.converters.SizeConverter.getInstance();
+            break;
+        case "com.sun.javafx.css.converters.SizeConverter$SequenceConverter" :
+            styleConverter = com.sun.javafx.css.converters.SizeConverter.SequenceConverter.getInstance();
+            break;
+ 
+        case "com.sun.javafx.css.converters.StringConverter" :
+            styleConverter = com.sun.javafx.css.converters.StringConverter.getInstance();
+            break;
+        case "com.sun.javafx.css.converters.StringConverter$SequenceConverter" :
+            styleConverter = com.sun.javafx.css.converters.StringConverter.SequenceConverter.getInstance();
+            break;
+        case "com.sun.javafx.css.converters.URLConverter" :
+            styleConverter = com.sun.javafx.css.converters.URLConverter.getInstance();
+            break;
+        case "com.sun.javafx.css.converters.URLConverter$SequenceConverter" :
+            styleConverter = com.sun.javafx.css.converters.URLConverter.SequenceConverter.getInstance();
+            break;
+ 
+        // Region stuff
+        case "com.sun.javafx.scene.layout.region.BackgroundPositionConverter" :
+            styleConverter = com.sun.javafx.scene.layout.region.BackgroundPositionConverter.getInstance();
+            break;
+        case "com.sun.javafx.scene.layout.region.BackgroundSizeConverter" :
+            styleConverter = com.sun.javafx.scene.layout.region.BackgroundSizeConverter.getInstance();
+            break;
+        case "com.sun.javafx.scene.layout.region.BorderImageSliceConverter" :
+            styleConverter = com.sun.javafx.scene.layout.region.BorderImageSliceConverter.getInstance();
+            break;
+        case "com.sun.javafx.scene.layout.region.BorderImageWidthConverter" :
+            styleConverter = com.sun.javafx.scene.layout.region.BorderImageWidthConverter.getInstance();
+            break;
+        case "com.sun.javafx.scene.layout.region.BorderImageWidthsSequenceConverter" :
+            styleConverter = com.sun.javafx.scene.layout.region.BorderImageWidthsSequenceConverter.getInstance();
+            break;
+        case "com.sun.javafx.scene.layout.region.BorderStrokeStyleSequenceConverter" :
+            styleConverter = com.sun.javafx.scene.layout.region.BorderStrokeStyleSequenceConverter.getInstance();
+            break;
+        case "com.sun.javafx.scene.layout.region.BorderStyleConverter" :
+            styleConverter = com.sun.javafx.scene.layout.region.BorderStyleConverter.getInstance();
+            break;
+        case "com.sun.javafx.scene.layout.region.LayeredBackgroundPositionConverter" :
+            styleConverter = com.sun.javafx.scene.layout.region.LayeredBackgroundPositionConverter.getInstance();
+            break;
+        case "com.sun.javafx.scene.layout.region.LayeredBackgroundSizeConverter" :
+            styleConverter = com.sun.javafx.scene.layout.region.LayeredBackgroundSizeConverter.getInstance();
+            break;
+        case "com.sun.javafx.scene.layout.region.LayeredBorderPaintConverter" :
+            styleConverter = com.sun.javafx.scene.layout.region.LayeredBorderPaintConverter.getInstance();
+            break;
+        case "com.sun.javafx.scene.layout.region.LayeredBorderStyleConverter" :
+            styleConverter = com.sun.javafx.scene.layout.region.LayeredBorderStyleConverter.getInstance();
+            break;
+        case "com.sun.javafx.scene.layout.region.RepeatStructConverter" :
+            styleConverter = com.sun.javafx.scene.layout.region.RepeatStructConverter.getInstance();
+            break;
+        case "com.sun.javafx.scene.layout.region.SliceSequenceConverter" :
+            styleConverter = com.sun.javafx.scene.layout.region.SliceSequenceConverter.getInstance();
+            break;
+        case "com.sun.javafx.scene.layout.region.StrokeBorderPaintConverter" :
+            styleConverter = com.sun.javafx.scene.layout.region.StrokeBorderPaintConverter.getInstance();
+            break;
+        case "com.sun.javafx.scene.layout.region.Margins$Converter" :
+            styleConverter = com.sun.javafx.scene.layout.region.Margins.Converter.getInstance();
+            break;
+        case "com.sun.javafx.scene.layout.region.Margins$SequenceConverter" :
+            styleConverter = com.sun.javafx.scene.layout.region.Margins.SequenceConverter.getInstance();
+            break;
+ 
+        // parser stuff
+        case "com.sun.javafx.css.parser.DeriveColorConverter" :
+            styleConverter = com.sun.javafx.css.parser.DeriveColorConverter.getInstance();
+            break;
+        case "com.sun.javafx.css.parser.DeriveSizeConverter" :
+            styleConverter = com.sun.javafx.css.parser.DeriveSizeConverter.getInstance();
+            break;
+        case "com.sun.javafx.css.parser.LadderConverter" :
+            styleConverter = com.sun.javafx.css.parser.LadderConverter.getInstance();
+            break;
+        case "com.sun.javafx.css.parser.StopConverter" :
+            styleConverter = com.sun.javafx.css.parser.StopConverter.getInstance();
+            break;
+
+        default :
+            final PlatformLogger logger = Logging.getCSSLogger();
+            if (logger.isLoggable(PlatformLogger.SEVERE)) {
+                logger.severe("StyleConverterImpl : converter Class is null for : "+converterClass);
+            }
+            break;
+        }
+
+        return styleConverter;
     }
 }
