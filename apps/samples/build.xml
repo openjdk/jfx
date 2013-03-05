@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="JavaFX apps - samples" default="default" basedir=".">
+
+    <import file="../build-defs.xml"/>
+
+    <target name="init">
+        <echo message="Building samples"/>
+    </target>
+
+    <target name="jar-apps" depends="init">
+        <!-- Build applications -->
+        <ant dir="Ensemble8" target="jar" inheritAll="false"/>
+    </target>
+
+    <target name="dist-apps" depends="init,jar-apps">
+        <mkdir dir="${jfx.apps.ga-samples.dir}"/>
+        <mkdir dir="${jfx.apps.ga-samples.dist}"/>
+
+        <!-- Build these apps into artifacts/apps/ga-samples -->
+        <!-- Copy Ensemble8 jar -->
+        <copy todir="${jfx.apps.ga-samples.dir}">
+            <fileset dir="${basedir}/Ensemble8/dist">
+                <include name="*.jar"/> <!-- should be good to copy -->
+            </fileset>
+        </copy>
+       <!-- Copy src files -->
+        <mkdir dir="${jfx.apps.ga-samples.dir}"/>
+        <mkdir dir="${jfx.apps.ga-samples.dist}"/>
+       <!-- Ensemble8 -->
+        <mkdir dir="${jfx.apps.ga-samples.dist}/Ensemble8"/>
+        <copy todir="${jfx.apps.ga-samples.dist}/Ensemble8">
+            <fileset dir="${basedir}/Ensemble8">
+                <exclude name="**/build/**"/>
+                <exclude name="**/dist/**"/>
+                <exclude name="**/nbproject/private/**"/>
+                <exclude name="**/*.iml"/>
+            </fileset>
+        </copy>
+    </target>
+
+    <target name="default" depends="dist-apps"/>
+
+    <target name="clean" depends="init">
+        <!-- Clean applications -->
+        <ant dir="Ensemble8" target="clean" inheritAll="false"/>
+    </target>
+
+</project>
