@@ -2592,7 +2592,7 @@ public class FXMLLoader {
         return classLoader.loadClass(packageName + "." + className.replace('.', '$'));
     }
 
-    protected HashMap<String, Field> getControllerFields() throws LoadException {
+    private HashMap<String, Field> getControllerFields() throws LoadException {
         if (controllerFields == null) {
             controllerFields = new HashMap<String, Field>();
 
@@ -2630,7 +2630,7 @@ public class FXMLLoader {
         return controllerFields;
     }
 
-    protected HashMap<String, Method> getControllerMethods() throws LoadException {
+    private HashMap<String, Method> getControllerMethods() throws LoadException {
         if (controllerMethods == null) {
             controllerMethods = new HashMap<String, Method>();
 
