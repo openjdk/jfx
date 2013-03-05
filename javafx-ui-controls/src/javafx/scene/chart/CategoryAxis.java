@@ -213,10 +213,12 @@ public final class CategoryAxis extends Axis<String> {
     }
 
     private String getDuplicate() {
-        for (int i = 0; i < getCategories().size(); i++) {
-            for (int j = 0; j < getCategories().size(); j++) {
-                if (getCategories().get(i).equals(getCategories().get(j)) && i != j) {
-                    return getCategories().get(i);
+        if (getCategories() != null) { 
+            for (int i = 0; i < getCategories().size(); i++) {
+                for (int j = 0; j < getCategories().size(); j++) {
+                    if (getCategories().get(i).equals(getCategories().get(j)) && i != j) {
+                        return getCategories().get(i);
+                    }
                 }
             }
         }
@@ -250,7 +252,6 @@ public final class CategoryAxis extends Axis<String> {
         changeIsLocal = true;
         setCategories(FXCollections.<String>observableArrayList());
         changeIsLocal = false;
-        allDataCategories.addAll(getCategories());
     }
 
     /**
@@ -261,7 +262,6 @@ public final class CategoryAxis extends Axis<String> {
     public CategoryAxis(ObservableList<String> categories) {
         setAnimated(false);
         setCategories(categories);
-        allDataCategories.addAll(categories);
     }
 
     // -------------- PRIVATE METHODS ----------------------------------------------------------------------------------
