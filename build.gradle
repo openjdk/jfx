@@ -190,6 +190,9 @@ allprojects {
         if (name == "compileTestJava") {
             compile.options.compilerArgs = ["-Djava.ext.dirs=", "-XDignore.symbol.file"]
             classpath = sourceSets.test.compileClasspath + rootProject.files(JFXRT)
+        } else if (name == "compileStubJava") {
+            compile.options.compilerArgs = ["-Djava.ext.dirs=", "-XDignore.symbol.file"]
+            classpath = sourceSets.stub.compileClasspath + rootProject.files(JFXRT)
         } else {
             compile.options.compilerArgs = ["-Djava.ext.dirs=", "-XDignore.symbol.file", "-s", "build/builder-src"]
             classpath = sourceSets.main.compileClasspath + rootProject.files(JFXRT)
@@ -209,38 +212,24 @@ allprojects {
 
     project.rootProject.jfxrt.dependsOn assemble
 
-//    def testDir = file("test/main/java");
-//    if (testDir.exists()) {
-//        // Replace the built-in test task with one that will delegate to jtreg
-//        def jtrefFiles = files("/Users/rbair/Downloads/jtreg/lib/testng.jar",
-//                  "/Users/rbair/Downloads/jtreg/lib/jtreg.jar",
-//                  "/Users/rbair/Downloads/jtreg/lib/javatest.jar")
-//        dependencies {
-//    //        testCompile ":jtreg-4.1-bin-b05_29_nov_2012.zip"
-//    //        files("/Users/rbair/Downloads/jtreg/lib/testng.jar",
-//    //              "/Users/rbair/Downloads/jtreg/lib/jtreg.jar",
-//    //              "/Users/rbair/Downloads/jtreg/lib/javatest.jar")
-//        }
-//        tasks.replace("test");
-//        test {
-//            // Invoke jtreg
-//            task jtreg (type: Exec) {
-//                dependsOn testClasses
-//                group = "Verification"
-//
-//    //            inputs.dir "src/main/prism-common-native"
-//    //            outputs.dir "build/main/prism-common-native"
-//    //            outputs.dir "build/libs"
-//                workingDir "."
-//                commandLine "java", "-jar", "/Users/rbair/Downloads/jtreg/lib/jtreg.jar", "-v", "-c", "-dir:test/main/java", "-r:build/reports/test", "-w:build/test/whatever", "-avm"
-//                commandLine "ls"
-//            }
-//            dependsOn jtreg
-//            group = "Verification"
-//        }
-//    } else {
-//        tasks.replace("test");
-//    }
+    dependencies {
+        testCompile "junit:junit:4.8.2"
+    }
+
+    // At the moment the ASM library shipped with Gradle that is used to
+    // discover the different test classes fails on Java 8, so in order
+    // to have sourceCompatibility set to 1.8 I have to also turn scanForClasses off
+    // and manually specify the includes / excludes
+    test {
+        jvmArgs '-Djava.ext.dirs='
+        classpath = classpath + rootProject.files(JFXRT)
+        enableAssertions = true
+        testLogging.exceptionFormat = "full"
+        scanForTestClasses = false
+        include '**/*Test.*'
+        exclude '**/*Abstract*.*'
+    }
+
 }
 
 // The build-tools project contains the annotation processor that is used to generate the
@@ -258,7 +247,6 @@ project(":build-tools") {
         antlr3 "org.antlr:antlr-runtime:3.4"
         antlr3 "org.antlr:stringtemplate:4.0.2@jar"
         antlr3 "org.antlr:antlr:3.4@jar"
-        testCompile "junit:junit:4.8.2"
     }
 
     task generateGrammarSource(type: JavaExec) {
@@ -285,7 +273,6 @@ project(":build-tools") {
 project(":base") {
     dependencies {
         compile project(":build-tools")
-        testCompile "junit:junit:4.8.2"
     }
 
     // We need to take the VersionInfo.java file and replace the various
@@ -321,28 +308,76 @@ project(":base") {
 // This is a fairly complicated module. There are many different types of native components
 // that all need to be compiled.
 project(":graphics") {
-    sourceSets.main.java.srcDirs = ["src/main/java", "src/main/dt", "src/main/jsl-generator"]
-    sourceSets.test.java.srcDirs = ["src/test/java", "src/test/testsWithStubToolkit"]
+    sourceSets {
+        main {
+            java.srcDirs = ["src/main/java", "src/main/dt", "src/main/jsl-generator"]
+            resources.srcDirs = ["src/main/resources"]
+        }
+        test {
+            java.srcDirs = ["src/test/java"]
+            resources.srcDirs = ["src/test/resources"]
+        }
+        stub {
+            java.srcDirs = ["src/test/testsWithStubToolkit"]
+            resources.srcDirs = ["src/test/resourcesWithStubToolkit"]
+        }
+    }
 
     dependencies {
         compile project(":base"), project(":build-tools")
         compile ":$swtFileName:"
         compile files(rootDir.toString() + "/../crap/plugin_exports.jar")
-        testCompile "junit:junit:4.8.2"
+        stubCompile "junit:junit:4.8.2"
     }
+
+    tasks.replace("test")
+    task testWithoutStub(type: Test) {
+        jvmArgs '-Djava.ext.dirs='
+        classpath = sourceSets.test.runtimeClasspath + rootProject.files(JFXRT)
+        enableAssertions = true
+        testLogging.exceptionFormat = "full"
+        scanForTestClasses = false
+        include '**/*Test.*'
+        exclude '**/*Abstract*.*'
+        forkEvery = 1
+    }
+    task testWithStub(type: Test) {
+        jvmArgs '-Djava.ext.dirs='
+        classpath = sourceSets.stub.runtimeClasspath + sourceSets.test.runtimeClasspath + rootProject.files(JFXRT)
+        enableAssertions = true
+        testLogging.exceptionFormat = "full"
+        scanForTestClasses = false
+        include '**/*Test.*'
+        exclude '**/*Abstract*.*'
+        exclude { fileTreeElement ->
+            if (fileTreeElement.getPath().contains("/build/classes/test")) return null;
+            return fileTreeElement;
+        }
+        jvmArgs "-Djavafx.toolkit=com.sun.javafx.pgstub.StubToolkit"
+        testResultsDir = file("build/stub-test-results")
+        testReportDir = file("build/reports/stubTests")
+        forkEvery = 1
+    }
+    test.dependsOn testWithoutStub, testWithStub
 }
 
 project(":controls") {
     dependencies {
         compile project(":build-tools"), project(":base"), project(":graphics")
-        testCompile "junit:junit:4.8.2", project(":graphics").sourceSets.test.output
+        testCompile project(":graphics").sourceSets.stub.output
+    }
+
+    test {
+        jvmArgs "-Djavafx.toolkit=com.sun.javafx.pgstub.StubToolkit"
+        // This is highly unfortunate, test execution time goes from 7 sec to 2 min 8 sec
+        // however there are 8 failing tests when we don't fork. Need to fix those tests.
+        forkEvery = 1
     }
 }
 
 project(":swing") {
     dependencies {
         compile project(":build-tools"), project(":base"), project(":graphics")
-        testCompile "junit:junit:4.8.2"
     }
 }
 
@@ -350,7 +385,6 @@ project(":swt") {
     dependencies {
         compile project(":build-tools"), project(":base"), project(":graphics")
         compile ":$swtFileName:"
-        testCompile "junit:junit:4.8.2"
     }
 }
 
@@ -365,21 +399,18 @@ project(":fxml") {
     dependencies {
         compile project(":build-tools"), project(":base"), project(":graphics"),
                 project(":controls"), /*project(":media"), project(":web"),*/ project(":swt"), project(":swing")
-        testCompile "junit:junit:4.8.2"
     }
 }
 
 project(":designTime") {
     dependencies {
         compile project(":graphics"), project(":controls")
-        testCompile "junit:junit:4.8.2"
     }
 }
 
 project(":graphics:native") {
     dependencies {
         compile project(":graphics")
-        testCompile "junit:junit:4.8.2"
     }
 
 //    task compileGlassLibGTK(type:Exec, dependsOn:configurations.compile) {
@@ -502,7 +533,6 @@ project(":graphics:native") {
 project(":graphics:effects-jsl") {
     dependencies {
         compile project(":graphics")
-        testCompile "junit:junit:4.8.2"
     }
 
     task compileJSL(description: "Compile Java Shader Language (JSL) files") { }
@@ -566,7 +596,6 @@ project(":graphics:effects-jsl") {
 project(":graphics:prism-jsl") {
     dependencies {
         compile project(":graphics")
-        testCompile "junit:junit:4.8.2"
     }
 
     task compileJSL(description: "Compile Java Shader Language (JSL) files") {}

@@ -321,7 +321,7 @@ task generate << {
     copy {
         from "${RTDir}/javafx-ui-charts/test",
              "${RTDir}/javafx-ui-controls/test"
-        into "${FXDir}/modules/controls/src/test/java"
+        into "${FXDir}/modules/controls/src/test/resources"
         include includeResources
         exclude "**/doc-files/**.*"
     }
