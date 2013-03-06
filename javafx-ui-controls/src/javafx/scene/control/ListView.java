@@ -1021,9 +1021,9 @@ public class ListView<T> extends Control {
                             }
                         }
                     }
-
-                    updateSelection(c);
                 }
+                
+                updateSelection(c);
             }
         };
         
