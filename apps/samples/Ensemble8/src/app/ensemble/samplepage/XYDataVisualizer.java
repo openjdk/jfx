@@ -38,11 +38,17 @@ import javafx.scene.chart.XYChart;
 import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeTableView;
 import ensemble.samplepage.XYDataVisualizer.XYChartItem;
+import java.lang.ref.WeakReference;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import javafx.beans.WeakListener;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
+import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
@@ -445,10 +451,16 @@ public class XYDataVisualizer<X, Y> extends TreeTableView<XYChartItem<X, Y>> {
                 public void changed(ObservableValue<? extends Boolean> ov, Boolean t, Boolean expanded) {
                     if (expanded) {
                         ObservableList children = getValue().getChildren();
-                        if (children != null && getChildren().isEmpty()) {
-                            boolean expand = children.size() == 1;
-                            for (Object child : children) {
-                                getChildren().add(new MyTreeItem(new XYChartItem(child), expand));
+                        if (children != null) {
+                            ListContentBinding.bind(getChildren(), children, new Callback<Object, TreeItem<XYChartItem<X, Y>>>() {
+
+                                @Override
+                                public TreeItem call(Object p) {
+                                    return new MyTreeItem(new XYDataVisualizer.XYChartItem(p), false);
+                                }
+                            });
+                            if (getChildren().size() == 1) {
+                                getChildren().get(0).setExpanded(true);
                             }
                         } 
                     }
@@ -536,4 +548,90 @@ public class XYDataVisualizer<X, Y> extends TreeTableView<XYChartItem<X, Y>> {
             return value;
         }
     }
+    
+    private static class ListContentBinding<EF, ET> implements ListChangeListener<EF>, WeakListener {
+        
+        public static <EF, ET> Object bind(List<ET> list1, ObservableList<? extends EF> list2, Callback<EF, ET> converter) {
+//            checkParameters(list1, list2);
+            final ListContentBinding<EF, ET> contentBinding = new ListContentBinding<>(list1, converter);
+            if (list1 instanceof ObservableList) {
+                ((ObservableList) list1).setAll(contentBinding.convert(list2));
+            } else {
+                list1.clear();
+                list1.addAll(contentBinding.convert(list2));
+            }
+            list2.addListener(contentBinding);
+            return contentBinding;
+        }
+
+        private final WeakReference<List<ET>> listRef;
+        private final Callback<EF, ET> converter;
+
+        public ListContentBinding(List<ET> list, Callback<EF, ET> converter) {
+            this.listRef = new WeakReference<>(list);
+            this.converter = converter;
+        }
+
+        @Override
+        public void onChanged(ListChangeListener.Change<? extends EF> change) {
+            final List<ET> list = listRef.get();
+            if (list == null) {
+                change.getList().removeListener(this);
+            } else {
+                while (change.next()) {
+                    if (change.wasPermutated()) {
+                        list.subList(change.getFrom(), change.getTo()).clear();
+                        list.addAll(change.getFrom(), convert(change.getList().subList(change.getFrom(), change.getTo())));
+                    } else {
+                        if (change.wasRemoved()) {
+                            list.subList(change.getFrom(), change.getFrom() + change.getRemovedSize()).clear();
+                        }
+                        if (change.wasAdded()) {
+                            list.addAll(change.getFrom(), convert(change.getAddedSubList()));
+                        }
+                    }
+                }
+            }
+        }
+
+        @Override
+        public boolean wasGarbageCollected() {
+            return listRef.get() == null;
+        }
+
+        @Override
+        public int hashCode() {
+            final List<ET> list = listRef.get();
+            return (list == null)? 0 : list.hashCode();
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (this == obj) {
+                return true;
+            }
+
+            final List<ET> list1 = listRef.get();
+            if (list1 == null) {
+                return false;
+            }
+
+            if (obj instanceof ListContentBinding) {
+                final ListContentBinding<?, ?> other = (ListContentBinding<?, ?>) obj;
+                final List<?> list2 = other.listRef.get();
+                return list1 == list2;
+            }
+            return false;
+        }
+
+        private Collection<? extends ET> convert(List<? extends EF> addedSubList) {
+            List<ET> res = new ArrayList<>(addedSubList.size());
+            
+            for (EF elem : addedSubList) {
+                res.add(converter.call(elem));
+            }
+            
+            return res;
+        }
+    }    
 }
