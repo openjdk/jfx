@@ -251,9 +251,9 @@ public class ListChangeBuilderTest {
 
         assertEquals(list, Arrays.asList("aa", "a", "b", "ccc"));
 
-        observer.checkUpdate(0, observableList, 2, 3);
-        observer.checkAddRemove(1, observableList, Collections.EMPTY_LIST, 0, 1);
-        observer.checkAddRemove(2, observableList, Arrays.asList("c", "d"), 3, 4);
+        observer.checkAddRemove(0, observableList, Collections.EMPTY_LIST, 0, 1);
+        observer.checkAddRemove(1, observableList, Arrays.asList("c", "d"), 3, 4);
+        observer.checkUpdate(2, observableList, 2, 3);
     }
 
     @Test
@@ -268,9 +268,9 @@ public class ListChangeBuilderTest {
 
         assertEquals(list, Arrays.asList("a", "aa", "aaa", "b", "c", "d"));
 
-        observer.checkUpdate(0, observableList, 0, 1);
-        observer.checkUpdate(1, observableList, 3, 4);
-        observer.checkAddRemove(2, observableList, Collections.EMPTY_LIST, 1, 3);
+        observer.checkAddRemove(0, observableList, Collections.EMPTY_LIST, 1, 3);
+        observer.checkUpdate(1, observableList, 0, 1);
+        observer.checkUpdate(2, observableList, 3, 4);
     }
 
     @Test
@@ -286,8 +286,8 @@ public class ListChangeBuilderTest {
 
         assertEquals(list, Arrays.asList("aa", "b", "c", "d"));
 
-        observer.checkUpdate(0, observableList, 2, 4);
-        observer.checkAddRemove(1, observableList, Arrays.asList("a"), 0, 1);
+        observer.checkAddRemove(0, observableList, Arrays.asList("a"), 0, 1);
+        observer.checkUpdate(1, observableList, 2, 4);
     }
 
     @Test
