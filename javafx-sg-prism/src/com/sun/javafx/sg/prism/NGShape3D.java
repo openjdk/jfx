@@ -107,18 +107,26 @@ public abstract class NGShape3D extends NGNode implements PGShape3D {
         }
 
         Toolkit tk = Toolkit.getToolkit();
-        for(int i=0; i < tk.getLightsInScene().size(); i++) {
-            // Need to make changes to support AmbientLight too.
-            // Will do this once we get the first rendering up.
-            NGPointLight light = (NGPointLight)tk.getLightsInScene().get(i);
-            Affine3D lightWT = light.getWorldTransform();
-            nativeObject.setLight(i,
-                    (float)lightWT.getMxt(),
-                    (float)lightWT.getMyt(),
-                    (float)lightWT.getMzt(),
-                    light.getColor().getRed(),
-                    light.getColor().getGreen(),
-                    light.getColor().getBlue(), 1.0f);
+        for (int i = 0; i < tk.getLightsInScene().size(); i++) {
+            NGLightBase lightBase = (NGLightBase) tk.getLightsInScene().get(i);
+            if (lightBase instanceof NGPointLight) {
+                NGPointLight light = (NGPointLight) lightBase;
+                Affine3D lightWT = light.getWorldTransform();
+                nativeObject.setLight(i,
+                        (float) lightWT.getMxt(),
+                        (float) lightWT.getMyt(),
+                        (float) lightWT.getMzt(),
+                        light.getColor().getRed(),
+                        light.getColor().getGreen(),
+                        light.getColor().getBlue(), 1.0f);
+            } else if (lightBase instanceof NGAmbientLight) {
+                NGAmbientLight light = (NGAmbientLight) lightBase;
+                nativeObject.setAmbient(light.getColor().getRed(),
+                        light.getColor().getGreen(),
+                        light.getColor().getBlue());
+            } else {
+                // Unknown light type
+            }
         }
 
         return nativeObject;
