@@ -512,7 +512,7 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
             String ellipsisString = labeled.getEllipsisString();
 
             if (labeled.isWrapText()) {
-                result = Utils.computeClippedWrappedText(font, s, w, h, truncationStyle, ellipsisString);
+                result = Utils.computeClippedWrappedText(font, s, w, h, truncationStyle, ellipsisString, text.getBoundsType());
             } else if (multiline) {
                 StringBuilder sb = new StringBuilder();
 
@@ -723,7 +723,7 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
         // TODO figure out how to cache this effectively.
         // Base minimum height on one line (ignoring wrapping here).
         double s = labeled.getLineSpacing();
-        final double textHeight = Utils.computeTextHeight(font, str, 0, s);
+        final double textHeight = Utils.computeTextHeight(font, str, 0, s, text.getBoundsType());
 
         double h = textHeight;
 
@@ -790,7 +790,7 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
         // TODO figure out how to cache this effectively.
         final double textHeight = Utils.computeTextHeight(font, str,
                                                           labeled.isWrapText() ? width : 0,
-                                                          labeled.getLineSpacing());
+                                                          labeled.getLineSpacing(), text.getBoundsType());
 
         // Now we want to add on the graphic if necessary!
         double h = textHeight;
@@ -815,18 +815,16 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
     }
 
     @Override public double getBaselineOffset() {
-        Font font = text.getFont();
-        FontMetrics fontMetrics = Toolkit.getToolkit().getFontLoader().getFontMetrics(font);
-        float ascent = fontMetrics.getAscent();
-        double h = ascent;
+        double textBaselineOffset = text.getBaselineOffset();
+        double h = textBaselineOffset;
         final Labeled labeled = getSkinnable();
         final Node g = labeled.getGraphic();
         if (!isIgnoreGraphic()) {
             if (labeled.getContentDisplay() == ContentDisplay.TOP
                 || labeled.getContentDisplay() == ContentDisplay.BOTTOM) {
-                h = g.prefHeight(-1) + labeled.getGraphicTextGap() + ascent;
+                h = g.prefHeight(-1) + labeled.getGraphicTextGap() + textBaselineOffset;
             } else {
-                h = Math.max(ascent, g.prefHeight(-1));
+                h = Math.max(textBaselineOffset, g.prefHeight(-1));
             }
         }
                 
@@ -999,7 +997,7 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
             String preSt = bindings.getText();
             preMnemonicWidth = Utils.computeTextWidth(font, preSt.substring(0,bindings.getMnemonicIndex()) , 0);
             mnemonicWidth = Utils.computeTextWidth(font, preSt.substring(bindings.getMnemonicIndex(),bindings.getMnemonicIndex()+1) , 0);
-            mnemonicHeight = Utils.computeTextHeight(font, "_", 0);
+            mnemonicHeight = Utils.computeTextHeight(font, "_", 0, text.getBoundsType());
         }
 
 

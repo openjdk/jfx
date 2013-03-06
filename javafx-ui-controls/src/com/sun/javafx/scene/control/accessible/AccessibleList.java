@@ -101,22 +101,7 @@ public class AccessibleList extends AccessibleControl implements SelectionProvid
 
     @Override
     public Object[] getSelection() {
-        // Fix this later to allocate and fill the correctly sized array.
-        //      For now it will work for single selection lists.
-        Object[] selection = new Object[1];  // it'll be a Glass AccessibleBaseProvider
-      //  selection[1] = null;  // Is this needed?  Probably already null.
-        Object selected = listView.getSelectionModel().getSelectedItem();
-        try {
-            java.lang.reflect.Method method = selected.getClass().getMethod("impl_getAccessible");
-            AccessibleProvider provider = (AccessibleProvider)method.invoke(selected);
-        // if (selected instanceof Accessible) {
-           // AccessibleProvider provider = ((Accessible)selected).impl_getAccessible();
-            if (provider instanceof AccessibleNode) {
-                selection[1] = ((AccessibleNode)provider).getAccessibleElement();
-            }
-        } catch (Exception ex) {
-        }
-        return selection;
+        throw new UnsupportedOperationException();
     }
 
     @Override
@@ -138,19 +123,7 @@ public class AccessibleList extends AccessibleControl implements SelectionProvid
     @Override
     public AccessibleProvider getItem(int row, int col) {
         // get the cell and then its associated provider
-        // TODO fix this to return the appropriate item
-        listView.getItems().get(row);
-        for (Node cell : listView.lookupAll(".cell")) {
-            if (cell instanceof Cell) {
-            try {
-                java.lang.reflect.Method method = cell.getClass().getMethod("impl_getAccessible");
-                AccessibleProvider provider = (AccessibleProvider)method.invoke(cell);
-                return provider ;
-             //   return ((Cell)cell).impl_getAccessible();
-            } catch (Exception ex) {}
-            }
-        }
-        return null;
+        throw new UnsupportedOperationException();
     }
 
     

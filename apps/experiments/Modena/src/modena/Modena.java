@@ -63,7 +63,8 @@ import javafx.scene.control.ChoiceBox;
 import javafx.scene.control.ColorPicker;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
-import javafx.scene.control.MenuButton;
+import javafx.scene.control.Menu;
+import javafx.scene.control.MenuBar;
 import javafx.scene.control.RadioMenuItem;
 import javafx.scene.control.RadioMenuItemBuilder;
 import javafx.scene.control.ScrollPaneBuilder;
@@ -100,11 +101,17 @@ public class Modena extends Application {
         try {
             // these are not supported ways to find the platform themes and may 
             // change release to release. Just used here for testing.
-            final File caspianCssFile = new File("../../../javafx-ui-controls/src/com/sun/javafx/scene/control/skin/caspian/caspian.css");
+            File caspianCssFile = new File("../../../javafx-ui-controls/src/com/sun/javafx/scene/control/skin/caspian/caspian.css");
+            if (!caspianCssFile.exists()) {
+                caspianCssFile = new File("rt/javafx-ui-controls/src/com/sun/javafx/scene/control/skin/caspian/caspian.css");
+            }
             CASPIAN_STYLESHEET_URL = caspianCssFile.exists() ? 
                     caspianCssFile.toURI().toURL().toExternalForm() :
                     com.sun.javafx.scene.control.skin.ButtonSkin.class.getResource("caspian/caspian.css").toExternalForm();
-            final File modenaCssFile = new File("../../../javafx-ui-controls/src/com/sun/javafx/scene/control/skin/modena/modena.css");
+            File modenaCssFile = new File("../../../javafx-ui-controls/src/com/sun/javafx/scene/control/skin/modena/modena.css");
+            if (!modenaCssFile.exists()) {
+                modenaCssFile = new File("rt/javafx-ui-controls/src/com/sun/javafx/scene/control/skin/modena/modena.css");
+            }
             MODENA_STYLESHEET_URL = modenaCssFile.exists() ? 
                     modenaCssFile.toURI().toURL().toExternalForm() : 
                     com.sun.javafx.scene.control.skin.ButtonSkin.class.getResource("modena/modena.css").toExternalForm();
@@ -115,6 +122,7 @@ public class Modena extends Application {
         }
     }
     
+    private final BorderPane outerRoot = new BorderPane();
     private BorderPane root;
     private SamplePage samplePage;
     private Node mosaic;
@@ -186,16 +194,38 @@ public class Modena extends Application {
         mainStage = stage;
         // set user agent stylesheet
         updateUserAgentStyleSheet(true);
+        // build Menu Bar
+        outerRoot.setTop(buildMenuBar());
+        outerRoot.setCenter(root);
         // build UI
         rebuildUI(true,false,0);
         // show UI
-        Scene scene = new Scene(root, 1024, 768);
+        Scene scene = new Scene(outerRoot, 1024, 768);
         scene.getStylesheets().add(testAppCssUrl);
         stage.setScene(scene);
         stage.setTitle("Modena");
 //        stage.setIconified(test); // TODO: Blocked by http://javafx-jira.kenai.com/browse/JMY-203
         stage.show(); // see SamplePage.java:110 comment on how test fails without having stage shown
         instance = this;
+    }
+    
+    private MenuBar buildMenuBar() {
+        MenuBar menuBar = new MenuBar();
+        menuBar.setUseSystemMenuBar(true);
+        Menu fontSizeMenu = new Menu("Font");
+        ToggleGroup tg = new ToggleGroup();
+        fontSizeMenu.getItems().addAll(
+            buildFontRadioMenuItem("System Default", null, 0, tg),
+            buildFontRadioMenuItem("Mac (13px)", "Lucida Grande", 13, tg),
+            buildFontRadioMenuItem("Windows 100% (12px)", "Segoe UI", 12, tg),
+            buildFontRadioMenuItem("Windows 125% (15px)", "Segoe UI", 15, tg),
+            buildFontRadioMenuItem("Windows 150% (18px)", "Segoe UI", 18, tg),
+            buildFontRadioMenuItem("Linux (13px)", "Lucida Sans", 13, tg),
+            buildFontRadioMenuItem("Embedded Touch (22px)", "Arial", 22, tg),
+            buildFontRadioMenuItem("Embedded Small (9px)", "Arial", 9, tg)
+        );
+        menuBar.getMenus().add(fontSizeMenu);
+        return menuBar;
     }
     
     private void updateUserAgentStyleSheet() {
@@ -262,6 +292,7 @@ public class Modena extends Application {
         try {
             if (root == null) {
                 root = new BorderPane();
+                outerRoot.setCenter(root);
             } else {
                 // clear out old UI
                 root.setTop(null);
@@ -361,7 +392,6 @@ public class Modena extends Application {
                     .build(),
                 new Separator(),
                 retinaButton,
-                createFontMenu(),
                 new Label("Base:"),
                 createBaseColorPicker(),
                 new Label("Background:"),
@@ -371,9 +401,7 @@ public class Modena extends Application {
                 new Separator(),
                 ButtonBuilder.create().text("Save...").onAction(saveBtnHandler).build(),
                 ButtonBuilder.create().text("Restart").onAction(new EventHandler<ActionEvent>() {
-
-                    @Override
-                    public void handle(ActionEvent event) {
+                    @Override public void handle(ActionEvent event) {
                         restart();
                     }
                 }).build()
@@ -411,40 +439,19 @@ public class Modena extends Application {
             Logger.getLogger(Modena.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
-    
-    private MenuButton createFontMenu() {
-        MenuButton mb = new MenuButton("Font Sizes");
-        ToggleGroup tg = new ToggleGroup();
-        mb.getItems().addAll(
-            RadioMenuItemBuilder.create().text("System Default").onAction(new EventHandler<ActionEvent>(){
-                @Override public void handle(ActionEvent event) {
-                    // TODO: This one doesn't work
-//                    fontName = null;
-//                    fontSize = 13;
-//                    updateUserAgentStyleSheet();
-                }
-            }).style("-fx-font: 13px System;").toggleGroup(tg).selected(true).build(),
-            buildFontRadioMenuItem("Mac (13px)", "Lucida Grande", 13, tg),
-            buildFontRadioMenuItem("Windows 100% (12px)", "Segoe UI", 12, tg),
-            buildFontRadioMenuItem("Windows 125% (15px)", "Segoe UI", 15, tg),
-            buildFontRadioMenuItem("Windows 150% (18px)", "Segoe UI", 18, tg),
-            buildFontRadioMenuItem("Linux (13px)", "Lucida Sans", 13, tg),
-            buildFontRadioMenuItem("Embedded Touch (22px)", "Arial", 22, tg),
-            buildFontRadioMenuItem("Embedded Small (9px)", "Arial", 9, tg)
-        );
-        return mb;
-    }
 
     public RadioMenuItem buildFontRadioMenuItem(String name, final String in_fontName, final int in_fontSize, ToggleGroup tg) {
         return RadioMenuItemBuilder.create().text(name).onAction(new EventHandler<ActionEvent>(){
                    @Override public void handle(ActionEvent event) {
                        setFont(in_fontName, in_fontSize);
                    }
-
                }).style("-fx-font: " + in_fontSize + "px \"" + in_fontName + "\";").toggleGroup(tg).build();
     }
     
     public void setFont(String in_fontName, int in_fontSize) {
+        System.out.println("===================================================================");
+        System.out.println("==   SETTING FONT TO "+in_fontName+" "+in_fontSize+"px");
+        System.out.println("===================================================================");
         fontName = in_fontName;
         fontSize = in_fontSize;
         updateUserAgentStyleSheet();

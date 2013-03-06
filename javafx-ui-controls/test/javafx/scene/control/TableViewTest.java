@@ -27,10 +27,13 @@ package javafx.scene.control;
 
 import com.sun.javafx.scene.control.test.ControlAsserts;
 import com.sun.javafx.scene.control.test.Person;
+import com.sun.javafx.scene.control.test.RT_22463_Person;
+import java.util.ArrayList;
 import static javafx.scene.control.ControlTestUtils.assertStyleClassContains;
 import static org.junit.Assert.*;
 
 import java.util.Arrays;
+import java.util.List;
 
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
@@ -503,5 +506,57 @@ public class TableViewTest {
         
         ControlAsserts.assertRowsNotEmpty(table, 0, 2); // rows 0 - 2 should be filled
         ControlAsserts.assertRowsEmpty(table, 2, -1); // rows 2+ should be empty
+    }
+    
+    @Test public void test_rt22463() {
+        final TableView<RT_22463_Person> table = new TableView<RT_22463_Person>();
+        table.setTableMenuButtonVisible(true);
+        TableColumn c1 = new TableColumn("Id");
+        TableColumn c2 = new TableColumn("Name");
+        c1.setCellValueFactory(new PropertyValueFactory<Person, Long>("id"));
+        c2.setCellValueFactory(new PropertyValueFactory<Person, String>("name"));
+        table.getColumns().addAll(c1, c2);
+        
+        // before the change things display fine
+        RT_22463_Person p1 = new RT_22463_Person();
+        p1.setId(1l);
+        p1.setName("name1");
+        RT_22463_Person p2 = new RT_22463_Person();
+        p2.setId(2l);
+        p2.setName("name2");
+        table.setItems(FXCollections.observableArrayList(p1, p2));
+        ControlAsserts.assertCellTextEquals(table, 0, "1", "name1");
+        ControlAsserts.assertCellTextEquals(table, 1, "2", "name2");
+        
+        // now we change the persons but they are still equal as the ID's don't
+        // change - but the items list is cleared so the cells should update
+        RT_22463_Person new_p1 = new RT_22463_Person();
+        new_p1.setId(1l);
+        new_p1.setName("updated name1");
+        RT_22463_Person new_p2 = new RT_22463_Person();
+        new_p2.setId(2l);
+        new_p2.setName("updated name2");
+        table.getItems().clear();
+        table.setItems(FXCollections.observableArrayList(new_p1, new_p2));
+        ControlAsserts.assertCellTextEquals(table, 0, "1", "updated name1");
+        ControlAsserts.assertCellTextEquals(table, 1, "2", "updated name2");
+    }
+    
+    @Ignore
+    @Test public void test_rt28637() {
+        ObservableList<String> items = FXCollections.observableArrayList("String1", "String2", "String3", "String4");
+        
+        final TableView<String> tableView = new TableView<String>();
+        tableView.setItems(items);
+        
+        tableView.getSelectionModel().select(0);
+        assertEquals("String1", tableView.getSelectionModel().getSelectedItem());
+        assertEquals("String1", tableView.getSelectionModel().getSelectedItems().get(0));
+        assertEquals(0, tableView.getSelectionModel().getSelectedIndex());
+        
+        items.remove(tableView.getSelectionModel().getSelectedItem());
+        assertEquals("String2", tableView.getSelectionModel().getSelectedItem());
+        assertEquals("String2", tableView.getSelectionModel().getSelectedItems().get(0));
+        assertEquals(0, tableView.getSelectionModel().getSelectedIndex());
     }
 }

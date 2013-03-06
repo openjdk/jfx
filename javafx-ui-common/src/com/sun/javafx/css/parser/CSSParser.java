@@ -100,7 +100,7 @@ import com.sun.javafx.scene.layout.region.RepeatStruct;
 import com.sun.javafx.scene.layout.region.RepeatStructConverter;
 import com.sun.javafx.scene.layout.region.SliceSequenceConverter;
 import com.sun.javafx.scene.layout.region.StrokeBorderPaintConverter;
-import javafx.geometry.NodeOrientation;
+import java.net.MalformedURLException;
 
 final public class CSSParser {
     static boolean EXIT_ON_ERROR = false;
@@ -1392,7 +1392,7 @@ final public class CSSParser {
         return null;
     }
 
-    private ParsedValueImpl<BlurType,BlurType> blurType(final Term root) throws ParseException {
+    private ParsedValueImpl<String,BlurType> blurType(final Term root) throws ParseException {
 
         if (root == null) return null;
         if (root.token == null ||
@@ -1416,7 +1416,7 @@ final public class CSSParser {
             final String msg = "Expected \'gaussian\', \'one-pass-box\', \'two-pass-box\', or \'three-pass-box\'";
             error(root, msg);
         }
-        return new ParsedValueImpl<BlurType,BlurType>(blurType, null);
+        return new ParsedValueImpl<String,BlurType>(blurType.name(), new EnumConverter<BlurType>(BlurType.class));
     }
 
     // innershadow <blur-type> <color> <radius> <choke> <offset-x> <offset-y>
@@ -1432,7 +1432,7 @@ final public class CSSParser {
         Term arg;
 
         if ((arg = root.firstArg) == null) error(root, "Expected \'<blur-type>\'");
-        ParsedValueImpl<BlurType,BlurType> blurVal = blurType(arg);
+        ParsedValueImpl<String,BlurType> blurVal = blurType(arg);
 
         Term prev = arg;
         if ((arg = arg.nextArg) == null) error(prev, "Expected \'<color>\'");
@@ -1483,7 +1483,7 @@ final public class CSSParser {
         Term arg;
 
         if ((arg = root.firstArg) == null) error(root, "Expected \'<blur-type>\'");
-        ParsedValueImpl<BlurType,BlurType> blurVal = blurType(arg);
+        ParsedValueImpl<String,BlurType> blurVal = blurType(arg);
 
         Term prev = arg;
         if ((arg = arg.nextArg) == null) error(prev, "Expected \'<color>\'");
@@ -1522,7 +1522,7 @@ final public class CSSParser {
     }
 
     // returns null if the Term is null or is not a cycle method.
-    private ParsedValueImpl<CycleMethod, CycleMethod> cycleMethod(final Term root) {
+    private ParsedValueImpl<String, CycleMethod> cycleMethod(final Term root) {
         CycleMethod cycleMethod = null;
         if (root != null && root.token.getType() == CSSLexer.IDENT) {
 
@@ -1536,7 +1536,7 @@ final public class CSSParser {
             }
         }
         if (cycleMethod != null)
-            return new ParsedValueImpl<CycleMethod,CycleMethod>(cycleMethod, null);
+            return new ParsedValueImpl<String,CycleMethod>(cycleMethod.name(), new EnumConverter<CycleMethod>(CycleMethod.class));
         else
             return null;
     }
@@ -1598,11 +1598,11 @@ final public class CSSParser {
                 (term.token.getType() == CSSLexer.LPAREN));
 
         // term is either null or is a cycle method, or the start of another Paint.
-        ParsedValueImpl<CycleMethod,CycleMethod> cycleMethod = cycleMethod(term);
+        ParsedValueImpl<String,CycleMethod> cycleMethod = cycleMethod(term);
 
         if (cycleMethod == null) {
 
-            cycleMethod = new ParsedValueImpl<CycleMethod,CycleMethod>(CycleMethod.NO_CYCLE, null);
+            cycleMethod = new ParsedValueImpl<String,CycleMethod>(CycleMethod.NO_CYCLE.name(), new EnumConverter<CycleMethod>(CycleMethod.class));
 
             // if term is not null and the last term was not a cycle method,
             // then term starts a new series or layer of Paint
@@ -1859,7 +1859,7 @@ final public class CSSParser {
         values[index++] = (startPt != null) ? startPt[1] : null;
         values[index++] = (endPt != null) ? endPt[0] : null;
         values[index++] = (endPt != null) ? endPt[1] : null;
-        values[index++] = new ParsedValueImpl<CycleMethod,CycleMethod>(cycleMethod, null);
+        values[index++] = new ParsedValueImpl<String,CycleMethod>(cycleMethod.name(), new EnumConverter<CycleMethod>(CycleMethod.class));
         for (int n=0; n<stops.length; n++) values[index++] = stops[n];
         return new ParsedValueImpl<ParsedValue[], Paint>(values, PaintConverter.LinearGradientConverter.getInstance());
 
@@ -1969,11 +1969,11 @@ final public class CSSParser {
                 (term.token.getType() == CSSLexer.LPAREN));
 
         // term is either null or is a cycle method, or the start of another Paint.
-        ParsedValueImpl<CycleMethod,CycleMethod> cycleMethod = cycleMethod(term);
+        ParsedValueImpl<String,CycleMethod> cycleMethod = cycleMethod(term);
 
         if (cycleMethod == null) {
 
-            cycleMethod = new ParsedValueImpl<CycleMethod,CycleMethod>(CycleMethod.NO_CYCLE, null);
+            cycleMethod = new ParsedValueImpl<String,CycleMethod>(CycleMethod.NO_CYCLE.name(), new EnumConverter<CycleMethod>(CycleMethod.class));
 
             // if term is not null and the last term was not a cycle method,
             // then term starts a new series or layer of Paint
@@ -2160,7 +2160,7 @@ final public class CSSParser {
         values[index++] = (centerPoint != null) ? centerPoint[0] : null;
         values[index++] = (centerPoint != null) ? centerPoint[1] : null;
         values[index++] = radius;
-        values[index++] = new ParsedValueImpl<CycleMethod,CycleMethod>(cycleMethod, null);
+        values[index++] = new ParsedValueImpl<String,CycleMethod>(cycleMethod.name(), new EnumConverter<CycleMethod>(CycleMethod.class));
         for (int n=0; n<stops.length; n++) values[index++] = stops[n];
         return new ParsedValueImpl<ParsedValue[], Paint>(values, PaintConverter.RadialGradientConverter.getInstance());
         
@@ -2738,7 +2738,7 @@ final public class CSSParser {
     http://www.w3.org/TR/css3-background/#the-background-repeat
     <repeat-style> = repeat-x | repeat-y | [repeat | space | round | no-repeat]{1,2}
     */
-    private ParsedValueImpl<BackgroundRepeat, BackgroundRepeat>[] parseRepeatStyle(final Term root)
+    private ParsedValueImpl<String, BackgroundRepeat>[] parseRepeatStyle(final Term root)
             throws ParseException {
 
         BackgroundRepeat xAxis, yAxis;
@@ -2804,37 +2804,38 @@ final public class CSSParser {
         }
 
         return new ParsedValueImpl[] {
-            new ParsedValueImpl<BackgroundRepeat,BackgroundRepeat>(xAxis, null),
-            new ParsedValueImpl<BackgroundRepeat,BackgroundRepeat>(yAxis, null)
+            new ParsedValueImpl<String,BackgroundRepeat>(xAxis.name(), new EnumConverter<BackgroundRepeat>(BackgroundRepeat.class)),
+            new ParsedValueImpl<String,BackgroundRepeat>(yAxis.name(), new EnumConverter<BackgroundRepeat>(BackgroundRepeat.class))
         };
     }
 
-    private ParsedValueImpl<ParsedValue<BackgroundRepeat, BackgroundRepeat>[][],RepeatStruct[]>
+    private ParsedValueImpl<ParsedValue<String, BackgroundRepeat>[][],RepeatStruct[]>
             parseBorderImageRepeatStyleLayers(final Term root) throws ParseException {
 
         int nLayers = numberOfLayers(root);
-        ParsedValueImpl<BackgroundRepeat, BackgroundRepeat>[][] layers = new ParsedValueImpl[nLayers][];
+        ParsedValueImpl<String, BackgroundRepeat>[][] layers = new ParsedValueImpl[nLayers][];
         int layer = 0;
         Term term = root;
         while (term != null) {
             layers[layer++] = parseRepeatStyle(term);
             term = nextLayer(term);
         }
-        return new ParsedValueImpl<ParsedValue<BackgroundRepeat, BackgroundRepeat>[][],RepeatStruct[]>(layers, RepeatStructConverter.getInstance());
+        return new ParsedValueImpl<ParsedValue<String, BackgroundRepeat>[][],RepeatStruct[]>(layers, RepeatStructConverter.getInstance());
     }
 
-    private ParsedValueImpl<ParsedValue<BackgroundRepeat, BackgroundRepeat>[][], RepeatStruct[]>
+
+    private ParsedValueImpl<ParsedValue<String, BackgroundRepeat>[][], RepeatStruct[]>
             parseBackgroundRepeatStyleLayers(final Term root) throws ParseException {
 
         int nLayers = numberOfLayers(root);
-        ParsedValueImpl<BackgroundRepeat, BackgroundRepeat>[][] layers = new ParsedValueImpl[nLayers][];
+        ParsedValueImpl<String, BackgroundRepeat>[][] layers = new ParsedValueImpl[nLayers][];
         int layer = 0;
         Term term = root;
         while (term != null) {
             layers[layer++] = parseRepeatStyle(term);
             term = nextLayer(term);
         }
-        return new ParsedValueImpl<ParsedValue<BackgroundRepeat, BackgroundRepeat>[][], RepeatStruct[]>(layers, RepeatStructConverter.getInstance());
+        return new ParsedValueImpl<ParsedValue<String, BackgroundRepeat>[][], RepeatStruct[]>(layers, RepeatStructConverter.getInstance());
     }
 
     /*
@@ -3751,7 +3752,9 @@ final public class CSSParser {
                 // ignore all but "src"
                 if ("src".equalsIgnoreCase(key)) {
                     while(true) {
-                        if((currentToken != null) && (currentToken.getType() != CSSLexer.SEMI) &&
+                        if((currentToken != null) && 
+                                (currentToken.getType() != CSSLexer.SEMI) &&
+                                (currentToken.getType() != CSSLexer.RBRACE) &&
                                 (currentToken.getType() != Token.EOF)) {
 
                             if (currentToken.getType() == CSSLexer.IDENT) {
@@ -3774,29 +3777,56 @@ final public class CSSParser {
                                     }
                                     int start = 0, end = urlSb.length();
                                     if (urlSb.charAt(start) == '\'' || urlSb.charAt(start) == '\"') start ++;
+                                    if (urlSb.charAt(start) == '/' || urlSb.charAt(start) == '\\') start ++;
                                     if (urlSb.charAt(end-1) == '\'' || urlSb.charAt(end-1) == '\"') end --;
-                                    final String url = urlSb.substring(start,end);
-
-                                    // consume the format() function token
-                                    currentToken = nextToken(lexer);
-                                    final StringBuilder formatSb = new StringBuilder();
-                                    currentToken = nextToken(lexer);
-                                    while(true) {
-                                        if((currentToken != null) && (currentToken.getType() != CSSLexer.RPAREN) &&
-                                                (currentToken.getType() != Token.EOF)) {
-                                            formatSb.append(currentToken.getText());
-                                        } else {
-                                            break;
+                                    final String urlStr = urlSb.substring(start,end);
+                                    
+                                    URL url = null;
+                                    try {
+                                        url = new URL(sourceOfStylesheet, urlStr);
+                                    } catch (MalformedURLException malf) {
+                                        
+                                        final int line = currentToken.getLine();
+                                        final int pos = currentToken.getOffset();
+                                        final String msg = MessageFormat.format("Could not resolve @font-face url [{2}] at [{0,number,#},{1,number,#}]",line,pos,urlStr);
+                                        CssError error = createError(msg);
+                                        if (LOGGER.isLoggable(PlatformLogger.WARNING)) {
+                                            LOGGER.warning(error.toString());
                                         }
-                                        currentToken = nextToken(lexer);
+                                        reportError(error);
+                                        
+                                        // skip the rest.
+                                        while(currentToken != null) {
+                                            int ttype = currentToken.getType();
+                                            if (ttype == CSSLexer.RPAREN ||
+                                                ttype == Token.EOF) {
+                                                return null;
+                                            }
+                                            currentToken = nextToken(lexer);
+                                        }
                                     }
-                                    start = 0; end = formatSb.length();
-                                    if (formatSb.charAt(start) == '\'' || formatSb.charAt(start) == '\"') start ++;
-                                    if (formatSb.charAt(end-1) == '\'' || formatSb.charAt(end-1) == '\"') end --;
-                                    final String format = formatSb.substring(start,end);
+                                    String format = null;
+                                    while(true) {
+                                        currentToken = nextToken(lexer);
+                                        final int ttype = (currentToken != null) ? currentToken.getType() : Token.EOF;
+                                        if (ttype == CSSLexer.FUNCTION) {
+                                            if ("format(".equalsIgnoreCase(currentToken.getText())) {
+                                                continue;
+                                            } else {
+                                                break;
+                                            }
+                                        } else if (ttype == CSSLexer.IDENT ||
+                                                ttype == CSSLexer.STRING) {
+                                            
+                                            format = Utils.stripQuotes(currentToken.getText());
+                                        } else if (ttype == CSSLexer.RPAREN) {
+                                            continue;
+                                        } else {
+                                            break;                                               
+                                        }
+                                    }
 
-                                    sources.add(new FontFace.FontFaceSrc(FontFace.FontFaceSrcType.URL,url, format));
-
+                                    sources.add(new FontFace.FontFaceSrc(FontFace.FontFaceSrcType.URL,url.toExternalForm(), format));
                                 } else if ("local(".equalsIgnoreCase(currentToken.getText())) {
                                     // consume the function token
                                     currentToken = nextToken(lexer);
@@ -3859,18 +3889,15 @@ final public class CSSParser {
                     }
                     descriptors.put(key,descriptorVal.toString());
                 }
-                continue;
+//                continue;
             }
 
-            if ((currentToken != null) &&
-                    (currentToken.getType() != CSSLexer.RBRACE) &&
-                    (currentToken.getType() != Token.EOF)) {
-                continue;
+            if ((currentToken == null) ||
+                (currentToken.getType() == CSSLexer.RBRACE) ||
+                (currentToken.getType() == Token.EOF)) {
+                break;
             }
 
-            // currentToken was either null or not a comma
-            // so we are done with selectors.
-            break;
         }
         return new FontFace(descriptors, sources);
     }

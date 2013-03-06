@@ -1536,7 +1536,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
      * empty cell will be returned. The returned value should not be stored for
      * any reason.
      */
-    T getCell(int index) {
+    public T getCell(int index) {
         // If there are cells, then we will attempt to get an existing cell
         if (! cells.isEmpty()) {
             // First check the cells that have already been created and are

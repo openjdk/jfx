@@ -360,8 +360,9 @@ public abstract class TableRowSkinBase<T,
             updateCells = true;
             getSkinnable().requestLayout();
             
-            // Required to fix RT-24725
-            getSkinnable().layout();
+            // Required to fix RT-24725, but commented out as a performance leak
+            // when doing large-scale updating of items in a TableView
+            // getSkinnable().layout();
 //        } else if (p == "SPAN_MODEL") {
 //            // TODO update layout based on changes to span model
 //            spanModel = spanModelProperty().get();

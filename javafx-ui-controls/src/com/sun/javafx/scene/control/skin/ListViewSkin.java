@@ -40,11 +40,24 @@ import javafx.scene.control.SelectionModel;
 import javafx.scene.input.MouseEvent;
 import javafx.util.Callback;
 import com.sun.javafx.scene.control.behavior.ListViewBehavior;
+import com.sun.javafx.scene.control.skin.resources.ControlResources;
+import javafx.geometry.Insets;
+import javafx.scene.control.Label;
+import javafx.scene.layout.StackPane;
 
 /**
  *
  */
 public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListViewBehavior<T>, ListCell<T>> {
+    
+    /**
+     * Region placed over the top of the flow (and possibly the header row) if
+     * there is no data.
+     */
+    // FIXME this should not be a StackPane
+    private StackPane placeholderRegion;
+    private Label placeholderLabel;
+    private static final String EMPTY_LIST_TEXT = ControlResources.getString("ListView.noContent");
 
     private ObservableList<T> listViewItems;
 
@@ -127,6 +140,7 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListViewB
         registerChangeListener(listView.cellFactoryProperty(), "CELL_FACTORY");
         registerChangeListener(listView.parentProperty(), "PARENT");
         registerChangeListener(listView.focusTraversableProperty(), "FOCUS_TRAVERSABLE");
+        registerChangeListener(listView.placeholderProperty(), "PLACEHOLDER");
     }
 
     @Override protected void handleControlPropertyChanged(String p) {
@@ -143,15 +157,26 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListViewB
             }
         } else if ("FOCUS_TRAVERSABLE".equals(p)) {
             flow.setFocusTraversable(getSkinnable().isFocusTraversable());
+        } else if ("PLACEHOLDER".equals(p)) {
+            updatePlaceholderRegionVisibility();
         }
     }
 
     private final ListChangeListener<T> listViewItemsListener = new ListChangeListener<T>() {
         @Override public void onChanged(Change<? extends T> c) {
-            // RT-28397: Support for when an item is replaced with itself (but
-            // updated internal values that should be shown visually)
             while (c.next()) {
                 if (c.wasReplaced()) {
+                    // RT-28397: Support for when an item is replaced with itself (but
+                    // updated internal values that should be shown visually)
+                    itemCount = 0;
+                    break;
+                } else if (c.getRemovedSize() == itemCount) {
+                    // RT-22463: If the user clears out an items list then we
+                    // should reset all cells (in particular their contained
+                    // items) such that a subsequent addition to the list of
+                    // an item which equals the old item (but is rendered
+                    // differently) still displays as expected (i.e. with the
+                    // updated display, not the old display).
                     itemCount = 0;
                     break;
                 }
@@ -193,6 +218,8 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListViewB
     @Override protected void updateRowCount() {
         if (flow == null) return;
         
+        updatePlaceholderRegionVisibility();
+        
         int oldCount = itemCount;
         int newCount = listViewItems == null ? 0 : listViewItems.size();
         
@@ -204,6 +231,36 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListViewB
             needCellsRebuilt = true;
         } else {
             needCellsReconfigured = true;
+        }
+    }
+    
+    protected final void updatePlaceholderRegionVisibility() {
+        boolean visible = getItemCount() == 0;
+        
+        if (visible) {
+            if (placeholderRegion == null) {
+                placeholderRegion = new StackPane();
+                placeholderRegion.getStyleClass().setAll("placeholder");
+                getChildren().add(placeholderRegion);
+            }
+            
+            Node placeholderNode = getSkinnable().getPlaceholder();
+
+            if (placeholderNode == null) {
+                if (placeholderLabel == null) {
+                    placeholderLabel = new Label();
+                }
+                placeholderLabel.setText(EMPTY_LIST_TEXT);
+
+                placeholderRegion.getChildren().setAll(placeholderLabel);
+            } else {
+                placeholderRegion.getChildren().setAll(placeholderNode);
+            }
+        }
+
+        flow.setVisible(! visible);
+        if (placeholderRegion != null) {
+            placeholderRegion.setVisible(visible);
         }
     }
 
@@ -280,12 +337,24 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListViewB
         needCellsRebuilt = false;
         needCellsReconfigured = false;
         
-        flow.resizeRelocate(x, y, w, h);
+        if (getItemCount() == 0) {
+            // show message overlay instead of empty listview
+            placeholderRegion.resizeRelocate(x, y, w, h);
+        } else {
+            flow.resizeRelocate(x, y, w, h);
+        }
     }
     
     @Override protected double computePrefWidth(double height) {
-//        return getInsets().getLeft() + flow.computePrefWidth(height) + getInsets().getRight();
-        return computePrefHeight(-1) * 0.618033987;
+        if (getItemCount() == 0) {
+            if (placeholderRegion == null) {
+                updatePlaceholderRegionVisibility();
+            }
+            final Insets insets = getSkinnable().getInsets();
+            return placeholderRegion.prefWidth(height) + insets.getLeft() + insets.getRight();
+        } else {
+            return computePrefHeight(-1) * 0.618033987;
+        }
     }
 
     @Override protected double computePrefHeight(double width) {

@@ -98,6 +98,7 @@ public class BarChartTest extends ChartTestBase {
         startApp();
         bc.getData().clear();
         xAxis.getCategories().clear();
+        xAxis.setAutoRanging(true);
         XYChart.Series<String,Number> series = new XYChart.Series<String,Number>();
         series.getData().clear();
         series.getData().add(new XYChart.Data<String, Number>("1", 1));

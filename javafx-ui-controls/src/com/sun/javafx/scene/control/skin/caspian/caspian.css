@@ -3219,7 +3219,7 @@ Only the properties with values that are different from the TextBox are specifie
     -fx-text-fill: -fx-text-inner-color;
 }
 
-.combo-box-popup > .list-view > .virtual-flow > .clipped-container > .sheet > .empty-text-cell {
+.combo-box-popup > .list-view > .placeholder > .label {
     -fx-text-fill: derive(-fx-control-inner-background,-30%);
 }
 

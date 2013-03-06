@@ -62,6 +62,9 @@ public interface TextLayout {
                                       DIRECTION_DEFAULT_LTR | 
                                       DIRECTION_DEFAULT_RTL;
 
+    public static final int BOUNDS_CENTER       = 1 << 14;
+    public static final int BOUNDS_MASK = BOUNDS_CENTER;
+
     public static final int TYPE_TEXT           = 1 << 0;
     public static final int TYPE_UNDERLINE      = 1 << 1;
     public static final int TYPE_STRIKETHROUGH = 1 << 2;
@@ -107,10 +110,17 @@ public interface TextLayout {
 
     /**
      * Sets the direction (bidi algorithm's) for the TextLayout.
-     * 
+     *
      * @return returns true is the call modifies the layout internal state.
      */
     public boolean setDirection(int direction);
+
+    /**
+     * Sets the bounds type for the TextLayout.
+     * 
+     * @return returns true is the call modifies the layout internal state.
+     */
+    public boolean setBoundsType(int type);
 
     /** 
      * Returns the (logical) bounds of the layout

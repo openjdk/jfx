@@ -32,7 +32,7 @@ import javafx.scene.text.Font;
 
 /**
  */
-public final class RepeatStructConverter extends StyleConverterImpl<ParsedValue<BackgroundRepeat, BackgroundRepeat>[][], RepeatStruct[]> {
+public final class RepeatStructConverter extends StyleConverterImpl<ParsedValue<String, BackgroundRepeat>[][], RepeatStruct[]> {
 
     private static final RepeatStructConverter REPEAT_STRUCT_CONVERTER =
             new RepeatStructConverter();
@@ -44,13 +44,13 @@ public final class RepeatStructConverter extends StyleConverterImpl<ParsedValue<
     private RepeatStructConverter() { }
 
     @Override
-    public RepeatStruct[] convert(ParsedValue<ParsedValue<BackgroundRepeat, BackgroundRepeat>[][], RepeatStruct[]> value, Font font) {
-        final ParsedValue<BackgroundRepeat, BackgroundRepeat>[][] layers = value.getValue();
+    public RepeatStruct[] convert(ParsedValue<ParsedValue<String, BackgroundRepeat>[][], RepeatStruct[]> value, Font font) {
+        final ParsedValue<String, BackgroundRepeat>[][] layers = value.getValue();
         final RepeatStruct[] backgroundRepeat = new RepeatStruct[layers.length];
         for (int l = 0; l < layers.length; l++) {
-            final ParsedValue<BackgroundRepeat, BackgroundRepeat>[] repeats = layers[l];
-            final BackgroundRepeat horizontal = repeats[0].getValue();
-            final BackgroundRepeat vertical = repeats[1].getValue();
+            final ParsedValue<String, BackgroundRepeat>[] repeats = layers[l];
+            final BackgroundRepeat horizontal = repeats[0].convert(null);
+            final BackgroundRepeat vertical = repeats[1].convert(null);
             backgroundRepeat[l] = new RepeatStruct(horizontal, vertical);
         }
         return backgroundRepeat;

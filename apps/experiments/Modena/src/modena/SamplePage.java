@@ -33,9 +33,7 @@ package modena;
 
 import java.util.HashMap;
 import java.util.Map;
-import javafx.application.Platform;
 import javafx.collections.ObservableList;
-import javafx.css.PseudoClass;
 import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
@@ -215,6 +213,13 @@ public class SamplePage extends GridPane {
         ToggleGroup tg7 = new ToggleGroup();
         ToggleGroup tg8 = new ToggleGroup();
         newSection("Pill Toggle\nButtons\nFocused:", 
+                HBoxBuilder.create()
+                    .children(
+                        ToggleButtonBuilder.create().text("#").styleClass("left-pill").toggleGroup(tg5).build(),
+                        ToggleButtonBuilder.create().text("#").styleClass("center-pill").toggleGroup(tg5).build(),
+                        ToggleButtonBuilder.create().text("#").styleClass("right-pill").toggleGroup(tg5).build()
+                    )
+                    .build(),
                 HBoxBuilder.create()
                     .children(
                         withState(ToggleButtonBuilder.create().text("L").styleClass("left-pill").toggleGroup(tg5).build(),"focused"),
@@ -489,64 +494,76 @@ public class SamplePage extends GridPane {
                 withState(HTMLEditorBuilder.create().htmlText("<i>Focused</i>").prefWidth(650).prefHeight(120).build(), "focused")
                 );
         newDetailedSection(
-                new String[] {"ToolBar (H):", "normal", "overflow", "disabled"}, 
-                createToolBar(false,false,false),
-                createToolBar(false,true,false),
-                createToolBar(false,false,true)
+                new String[] {"ToolBar (H|TOP):", "normal", "overflow", "disabled"},
+                createToolBar(Side.TOP,false,false),
+                createToolBar(Side.TOP,true,false),
+                createToolBar(Side.TOP,false,true)
                 );
         newDetailedSection(
-                new String[] {"ToolBar (V):", "normal", "overflow", "disabled"}, 
-                createToolBar(true,false,false),
-                createToolBar(true,true,false),
-                createToolBar(true,false,true)
+                new String[] {"ToolBar (H|BOTTOM):", "normal", "overflow", "disabled"},
+                createToolBar(Side.BOTTOM,false,false),
+                createToolBar(Side.BOTTOM,true,false),
+                createToolBar(Side.BOTTOM,false,true)
                 );
-        newSection(      
+        newDetailedSection(
+                new String[] {"ToolBar (V|LEFT):", "normal", "overflow", "disabled"},
+                createToolBar(Side.LEFT,false,false),
+                createToolBar(Side.LEFT,true,false),
+                createToolBar(Side.LEFT,false,true)
+                );
+        newDetailedSection(
+                new String[] {"ToolBar (V|RIGHT):", "normal", "overflow", "disabled"},
+                createToolBar(Side.RIGHT,false,false),
+                createToolBar(Side.RIGHT,true,false),
+                createToolBar(Side.RIGHT,false,true)
+                );
+        newSection(
                 "Tabs\n(Top):", 
-                wrapBdr(createTabPane(4, 250,null,false, false, Side.TOP)),
-                wrapBdr(withState(createTabPane(5, 200,"Tab Disabled &\nMany Tabs", false, true, Side.TOP), null, ".tab", "disabled")),
-                wrapBdr(withState(createTabPane(5, 200,"Disabled", false, false, Side.TOP), "disabled"))
+                wrapBdr(createTabPane(4, 250, 100,null,false, false, Side.TOP)),
+                wrapBdr(withState(createTabPane(5, 200, 100,"Tab Disabled &\nMany Tabs", false, true, Side.TOP), null, ".tab", "disabled")),
+                wrapBdr(withState(createTabPane(5, 200, 100,"Disabled", false, false, Side.TOP), "disabled"))
                 );
         newSection(      
                 "Tabs Floating\n(Top):", 
-                createTabPane(4, 250,null,true, false, Side.TOP),
-                withState(createTabPane(5, 200,"Tab Disabled &\nMany Tabs", true, true, Side.TOP), null, ".tab", "disabled"),
-                withState(createTabPane(5, 200,"Disabled", true, false, Side.TOP), "disabled")
+                createTabPane(4, 250, 100,null,true, false, Side.TOP),
+                withState(createTabPane(5, 200, 100,"Tab Disabled &\nMany Tabs", true, true, Side.TOP), null, ".tab", "disabled"),
+                withState(createTabPane(5, 200, 100,"Disabled", true, false, Side.TOP), "disabled")
                 );
         newSection(      
                 "Tabs\n(Bottom):", 
-                wrapBdr(createTabPane(4, 250,null,false, false, Side.BOTTOM)),
-                wrapBdr(withState(createTabPane(5, 200,"Tab Disabled &\nMany Tabs", false, true, Side.BOTTOM), null, ".tab", "disabled")),
-                wrapBdr(withState(createTabPane(5, 200,"Disabled", false, false, Side.BOTTOM), "disabled"))
+                wrapBdr(createTabPane(4, 250, 100,null,false, false, Side.BOTTOM)),
+                wrapBdr(withState(createTabPane(5, 200, 100,"Tab Disabled &\nMany Tabs", false, true, Side.BOTTOM), null, ".tab", "disabled")),
+                wrapBdr(withState(createTabPane(5, 200, 100,"Disabled", false, false, Side.BOTTOM), "disabled"))
                 );
         newSection(      
                 "Tabs Floating\n(Bottom):", 
-                createTabPane(4, 250,null,true, false, Side.BOTTOM),
-                withState(createTabPane(5, 200,"Tab Disabled &\nMany Tabs", true, true, Side.BOTTOM), null, ".tab", "disabled"),
-                withState(createTabPane(5, 200,"Disabled", true, false, Side.BOTTOM), "disabled")
+                createTabPane(4, 250, 100,null,true, false, Side.BOTTOM),
+                withState(createTabPane(5, 200, 100,"Tab Disabled &\nMany Tabs", true, true, Side.BOTTOM), null, ".tab", "disabled"),
+                withState(createTabPane(5, 200, 100,"Disabled", true, false, Side.BOTTOM), "disabled")
                 );
         newSection(      
                 "Tabs\n(Left):", 
-                wrapBdr(createTabPane(4, 250,null,false, false, Side.LEFT)),
-                wrapBdr(withState(createTabPane(5, 200,"Tab Disabled &\nMany Tabs", false, true, Side.LEFT), null, ".tab", "disabled")),
-                wrapBdr(withState(createTabPane(5, 200,"Disabled", false, false, Side.LEFT), "disabled"))
+                wrapBdr(createTabPane(4, 250, 250,null,false, false, Side.LEFT)),
+                wrapBdr(withState(createTabPane(5, 200, 250,"Tab Disabled &\nMany Tabs", false, true, Side.LEFT), null, ".tab", "disabled")),
+                wrapBdr(withState(createTabPane(5, 200, 250,"Disabled", false, false, Side.LEFT), "disabled"))
                 );
         newSection(      
                 "Tabs Floating\n(Left):", 
-                createTabPane(4, 250,null,true, false, Side.LEFT),
-                withState(createTabPane(5, 200,"Tab Disabled &\nMany Tabs", true, true, Side.LEFT), null, ".tab", "disabled"),
-                withState(createTabPane(5, 200,"Disabled", true, false, Side.LEFT), "disabled")
+                createTabPane(4, 250, 250,null,true, false, Side.LEFT),
+                withState(createTabPane(5, 200, 250,"Tab Disabled &\nMany Tabs", true, true, Side.LEFT), null, ".tab", "disabled"),
+                withState(createTabPane(5, 200, 250,"Disabled", true, false, Side.LEFT), "disabled")
                 );
         newSection(      
                 "Tabs\n(Right):", 
-                wrapBdr(createTabPane(4, 250,null,false, false, Side.RIGHT)),
-                wrapBdr(withState(createTabPane(5, 200,"Tab Disabled &\nMany Tabs", false, true, Side.RIGHT), null, ".tab", "disabled")),
-                wrapBdr(withState(createTabPane(5, 200,"Disabled", false, false, Side.RIGHT), "disabled"))
+                wrapBdr(createTabPane(4, 250, 250,null,false, false, Side.RIGHT)),
+                wrapBdr(withState(createTabPane(5, 200, 250,"Tab Disabled &\nMany Tabs", false, true, Side.RIGHT), null, ".tab", "disabled")),
+                wrapBdr(withState(createTabPane(5, 200, 250,"Disabled", false, false, Side.RIGHT), "disabled"))
                 );
         newSection(      
                 "Tabs Floating\n(Right):", 
-                createTabPane(4, 250,null,true, false, Side.RIGHT),
-                withState(createTabPane(5, 200,"Tab Disabled &\nMany Tabs", true, true, Side.RIGHT), null, ".tab", "disabled"),
-                withState(createTabPane(5, 200,"Disabled", true, false, Side.RIGHT), "disabled")
+                createTabPane(4, 250, 250,null,true, false, Side.RIGHT),
+                withState(createTabPane(5, 200, 250,"Tab Disabled &\nMany Tabs", true, true, Side.RIGHT), null, ".tab", "disabled"),
+                withState(createTabPane(5, 200, 250,"Disabled", true, false, Side.RIGHT), "disabled")
                 );
         newDetailedSection(
                 new String[] {"TitledPane:", "normal", "not collapsible", "hover", "focused", "disabled"}, 

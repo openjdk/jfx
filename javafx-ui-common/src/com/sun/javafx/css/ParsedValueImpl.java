@@ -585,10 +585,8 @@ public class ParsedValueImpl<V, T> extends ParsedValue<V,T> {
         } else if (value instanceof Enum) {
             final Enum e = (Enum)value;
             final int nameIndex = stringStore.addString(e.name());
-            final int classIndex = stringStore.addString(e.getClass().getName());
             os.writeByte(ENUM);
             os.writeShort(nameIndex);
-            os.writeShort(classIndex);
 
         } else if (value instanceof Boolean) {
             final Boolean b = (Boolean)value;
@@ -686,20 +684,8 @@ public class ParsedValueImpl<V, T> extends ParsedValue<V,T> {
 
         } else if (valType == ENUM) {
             final int nameIndex = is.readShort();
-            final int classIndex = is.readShort();
             final String ename = strings[nameIndex];
-            final String cname = strings[classIndex];
-            ParsedValueImpl value = null;
-            try {
-                Class eclass = Class.forName(cname);
-                value = new ParsedValueImpl(Enum.valueOf(eclass, ename), converter, lookup);
-            } catch (ClassNotFoundException cnfe) {
-                System.err.println(cnfe.toString());
-            } catch (IllegalArgumentException iae) {
-                System.err.println(iae.toString());
-            } catch (NullPointerException npe) {
-                System.err.println(npe.toString());
-            }
+            ParsedValueImpl value = new ParsedValueImpl(ename, converter, lookup);
             return value;
 
         } else if (valType == BOOLEAN) {

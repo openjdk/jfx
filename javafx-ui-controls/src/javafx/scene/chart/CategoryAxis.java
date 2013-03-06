@@ -26,7 +26,6 @@
 package javafx.scene.chart;
 
 import java.util.ArrayList;
-import java.util.LinkedHashSet;
 import java.util.List;
 
 import javafx.animation.KeyFrame;
@@ -54,7 +53,6 @@ import com.sun.javafx.css.converters.SizeConverter;
 import java.util.Collections;
 import javafx.css.Styleable;
 import javafx.css.StyleableProperty;
-import javafx.scene.Node;
 
 /**
  * A axis implementation that will works on string categories where each 
@@ -64,13 +62,27 @@ public final class CategoryAxis extends Axis<String> {
 
     // -------------- PRIVATE FIELDS -------------------------------------------
     private List<String> allDataCategories = new ArrayList<String>();
+    private boolean changeIsLocal = false;
     /** This is the gap between one category and the next along this axis */
     private final DoubleProperty firstCategoryPos = new SimpleDoubleProperty(this, "firstCategoryPos", 0);
     private Object currentAnimationID;
     private final ChartLayoutAnimator animator = new ChartLayoutAnimator(this);
     private ListChangeListener<String> itemsListener = new ListChangeListener<String>() {
         @Override public void onChanged(Change<? extends String> c) {
-            requestAxisLayout();
+            while (c.next()) {
+                if(!c.getAddedSubList().isEmpty()) {
+                    // remove duplicates else they will get rendered on the chart.
+                    // Ideally we should be using a Set for categories.
+                    for (String addedStr : c.getAddedSubList())
+                        checkAndRemoveDuplicates(addedStr);
+                }
+                if (!isAutoRanging()) {
+                    allDataCategories.clear();
+                    allDataCategories.addAll(getCategories());
+                    rangeValid = false;
+                }
+                requestAxisLayout();
+            }
         }
     };
     
@@ -153,12 +165,17 @@ public final class CategoryAxis extends Axis<String> {
     public final BooleanProperty gapStartAndEndProperty() { return gapStartAndEnd; }
 
     /**
-     * The ordered list of categories plotted on this axis. This is set automatically based on the charts data if
-     * autoRanging is true. Duplicate categories may cause odd results.
+     * The ordered list of categories plotted on this axis. This is set automatically 
+     * based on the charts data if autoRanging is true. If the application sets the categories
+     * then auto ranging is turned off. If there is an attempt to add duplicate entry into this list, 
+     * an {@link IllegalArgumentException} is thrown.
      */
     private ObjectProperty<ObservableList<String>> categories = new ObjectPropertyBase<ObservableList<String>>() {
         ObservableList<String> old;
         @Override protected void invalidated() {
+            if (getDuplicate() != null) {
+                throw new IllegalArgumentException("Duplicate category added; "+getDuplicate()+" already present");
+            }
             final ObservableList<String> newItems = get();
             if (old != newItems) {
                 // Add and remove listeners
@@ -180,9 +197,33 @@ public final class CategoryAxis extends Axis<String> {
     };
     public final void setCategories(ObservableList<String> value) {
         categories.set(value);
+        if (!changeIsLocal) {
+            setAutoRanging(false);
+            allDataCategories.clear();
+            allDataCategories.addAll(getCategories());
+        }
         requestAxisLayout();
     }
+    
+    private void checkAndRemoveDuplicates(String category) {
+        if (getDuplicate() != null) {
+            getCategories().remove(category);
+            throw new IllegalArgumentException("Duplicate category ; "+category+" already present");
+        }
+    }
 
+    private String getDuplicate() {
+        if (getCategories() != null) { 
+            for (int i = 0; i < getCategories().size(); i++) {
+                for (int j = 0; j < getCategories().size(); j++) {
+                    if (getCategories().get(i).equals(getCategories().get(j)) && i != j) {
+                        return getCategories().get(i);
+                    }
+                }
+            }
+        }
+        return null;
+    }
     /**
      * Returns a {@link ObservableList} of categories plotted on this axis.
      *
@@ -208,7 +249,9 @@ public final class CategoryAxis extends Axis<String> {
      * Create a auto-ranging category axis with an empty list of categories.
      */
     public CategoryAxis() { 
-        this(FXCollections.<String>observableArrayList());
+        changeIsLocal = true;
+        setCategories(FXCollections.<String>observableArrayList());
+        changeIsLocal = false;
     }
 
     /**
@@ -219,7 +262,6 @@ public final class CategoryAxis extends Axis<String> {
     public CategoryAxis(ObservableList<String> categories) {
         setAnimated(false);
         setCategories(categories);
-        allDataCategories.addAll(categories);
     }
 
     // -------------- PRIVATE METHODS ----------------------------------------------------------------------------------
@@ -279,7 +321,9 @@ public final class CategoryAxis extends Axis<String> {
         double newFirstCategoryPos = (Double)rangeArray[2];
         double tickLabelRotation = (Double)rangeArray[3];
         setTickLabelRotation(tickLabelRotation);
+        changeIsLocal = true;
         setCategories(FXCollections.<String>observableArrayList(categories));
+        changeIsLocal = false;
         if (animate) {
             animator.stop(currentAnimationID);
             currentAnimationID = animator.animate(

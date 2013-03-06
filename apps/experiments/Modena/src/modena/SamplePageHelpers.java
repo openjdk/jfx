@@ -143,7 +143,7 @@ public class SamplePageHelpers {
             ).build();
     }
     
-    static Node createTabPane(int numOfTabs, int prefWidth, String firstTabText, boolean floating, boolean disableFirst, Side side) {
+    static Node createTabPane(int numOfTabs, int prefWidth, int prefHeight, String firstTabText, boolean floating, boolean disableFirst, Side side) {
         TabPane tabPane = new TabPane();
         tabPane.setSide(side);
         if (floating) tabPane.getStyleClass().add("floating");
@@ -158,7 +158,7 @@ public class SamplePageHelpers {
         }
         if (disableFirst) tabPane.getSelectionModel().select(1);
         tabPane.setPrefWidth(prefWidth);
-        tabPane.setPrefHeight(100);
+        tabPane.setPrefHeight(prefHeight);
         return tabPane;
     }
     
@@ -167,9 +167,12 @@ public class SamplePageHelpers {
                 .style("-fx-border-color: black; -fx-border-width: 3;").build();
     }
     
-    static ToolBar createToolBar(boolean vertical, boolean overFlow, boolean disabled) {
+    static ToolBar createToolBar(Side side, boolean overFlow, boolean disabled) {
+        final boolean vertical = side == Side.LEFT || side == Side.RIGHT;
         ToolBar toolBar = new ToolBar();
         if (vertical) toolBar.setOrientation(Orientation.VERTICAL);
+        if (side == Side.BOTTOM) toolBar.getStyleClass().add("bottom");
+        if (side == Side.RIGHT) toolBar.getStyleClass().add("right");
         if (disabled) toolBar.setDisable(true);
         toolBar.getItems().addAll(
                 new Button("A"),
@@ -272,7 +275,9 @@ public class SamplePageHelpers {
         Platform.runLater(new Runnable() {
             @Override public void run() {
                 // get second menu and force into hover state
-                new ArrayList<Node>(mb.lookupAll(".menu")).get(1).pseudoClassStateChanged(PseudoClass.getPseudoClass("hover"), true);
+                try {
+                    new ArrayList<Node>(mb.lookupAll(".menu")).get(1).pseudoClassStateChanged(PseudoClass.getPseudoClass("hover"), true);
+                } catch (Exception e) { e.printStackTrace(); }
             }
         });
         return  mb;

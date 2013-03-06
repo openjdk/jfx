@@ -560,14 +560,14 @@ public class LabelSkinTest {
     @Test public void whenTextIsNullAndNoGraphic_computeMinHeight_ReturnsSingleLineStringHeight() {
         label.setText(null);
         label.setPadding(new Insets(7, 7, 7, 7));
-        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0);
+        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertEquals(lineHeight + 14, label.minHeight(-1), 0);
     }
     
     @Test public void whenTextIsEmptyAndNoGraphic_computeMinHeight_ReturnsSingleLineStringHeight() {
         label.setText("");
         label.setPadding(new Insets(7, 7, 7, 7));
-        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0);
+        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertEquals(lineHeight + 14, label.minHeight(-1), 0);
     }
     
@@ -575,7 +575,7 @@ public class LabelSkinTest {
         label.setText("Howdy Pardner");
         label.setPadding(new Insets(7, 7, 7, 7));
         assertTrue(label.minHeight(-1) >= 0);
-        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0);
+        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertEquals(lineHeight + 14, label.minHeight(-1), 0);
     }
     
@@ -585,7 +585,7 @@ public class LabelSkinTest {
         Rectangle r = new Rectangle(23, 500);
         r.setManaged(false);
         label.setGraphic(r);
-        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0);
+        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertEquals(lineHeight + 14, label.minHeight(-1), 0);
     }
     
@@ -595,7 +595,7 @@ public class LabelSkinTest {
         Rectangle r = new Rectangle(23, 500);
         r.setManaged(false);
         label.setGraphic(r);
-        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0);
+        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertEquals(lineHeight + 14, label.minHeight(-1), 0);
     }
     
@@ -605,7 +605,7 @@ public class LabelSkinTest {
         Rectangle r = new Rectangle(23, 500);
         r.setManaged(false);
         label.setGraphic(r);
-        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0);
+        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertTrue(label.minHeight(-1) >= 0);
         assertEquals(lineHeight + 14, label.minHeight(-1), 0);
     }
@@ -617,7 +617,7 @@ public class LabelSkinTest {
         label.setGraphicTextGap(2);
         label.setGraphic(r);
         label.setContentDisplay(ContentDisplay.TOP);
-        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0);
+        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertEquals(23 + lineHeight + 2 + 14, label.minHeight(-1), 0);
     }
     
@@ -628,7 +628,7 @@ public class LabelSkinTest {
         label.setGraphicTextGap(2);
         label.setGraphic(r);
         label.setContentDisplay(ContentDisplay.TOP);
-        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0);
+        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertEquals(23 + lineHeight + 2 + 14, label.minHeight(-1), 0);
     }
     
@@ -639,7 +639,7 @@ public class LabelSkinTest {
         label.setGraphic(r);
         label.setGraphicTextGap(2);
         label.setContentDisplay(ContentDisplay.TOP);
-        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0);
+        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertEquals(23 + lineHeight + 2 + 14, label.minHeight(-1), 0);
     }
     
@@ -649,7 +649,7 @@ public class LabelSkinTest {
         Rectangle r = new Rectangle(23, 23);
         label.setGraphic(r);
         label.setContentDisplay(ContentDisplay.RIGHT);
-        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0);
+        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertEquals(Math.max(23, lineHeight) + 14, label.minHeight(-1), 0);
     }
     
@@ -659,7 +659,7 @@ public class LabelSkinTest {
         Rectangle r = new Rectangle(23, 23);
         label.setGraphic(r);
         label.setContentDisplay(ContentDisplay.RIGHT);
-        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0);
+        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertEquals(Math.max(23, lineHeight) + 14, label.minHeight(-1), 0);
     }
     
@@ -669,7 +669,7 @@ public class LabelSkinTest {
         Rectangle r = new Rectangle(23, 23);
         label.setGraphic(r);
         label.setContentDisplay(ContentDisplay.RIGHT);
-        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0);
+        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertEquals(Math.max(23, lineHeight) + 14, label.minHeight(-1), 0);
     }
     
@@ -680,7 +680,7 @@ public class LabelSkinTest {
         label.setGraphicTextGap(2);
         label.setGraphic(r);
         label.setContentDisplay(ContentDisplay.BOTTOM);
-        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0);
+        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertEquals(23 + lineHeight + 2 + 14, label.minHeight(-1), 0);
     }
     
@@ -691,7 +691,7 @@ public class LabelSkinTest {
         label.setGraphicTextGap(2);
         label.setGraphic(r);
         label.setContentDisplay(ContentDisplay.BOTTOM);
-        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0);
+        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertEquals(23 + lineHeight + 2 + 14, label.minHeight(-1), 0);
     }
     
@@ -702,7 +702,7 @@ public class LabelSkinTest {
         label.setGraphic(r);
         label.setGraphicTextGap(2);
         label.setContentDisplay(ContentDisplay.BOTTOM);
-        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0);
+        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertEquals(23 + lineHeight + 2 + 14, label.minHeight(-1), 0);
     }
     
@@ -712,7 +712,7 @@ public class LabelSkinTest {
         Rectangle r = new Rectangle(23, 23);
         label.setGraphic(r);
         label.setContentDisplay(ContentDisplay.LEFT);
-        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0);
+        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertEquals(Math.max(23, lineHeight) + 14, label.minHeight(-1), 0);
     }
     
@@ -722,7 +722,7 @@ public class LabelSkinTest {
         Rectangle r = new Rectangle(23, 23);
         label.setGraphic(r);
         label.setContentDisplay(ContentDisplay.LEFT);
-        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0);
+        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertEquals(Math.max(23, lineHeight) + 14, label.minHeight(-1), 0);
     }
     
@@ -732,7 +732,7 @@ public class LabelSkinTest {
         Rectangle r = new Rectangle(23, 23);
         label.setGraphic(r);
         label.setContentDisplay(ContentDisplay.LEFT);
-        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0);
+        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertEquals(Math.max(23, lineHeight) + 14, label.minHeight(-1), 0);
     }
     
@@ -742,7 +742,7 @@ public class LabelSkinTest {
         Rectangle r = new Rectangle(23, 23);
         label.setGraphic(r);
         label.setContentDisplay(ContentDisplay.CENTER);
-        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0);
+        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertEquals(Math.max(23, lineHeight) + 14, label.minHeight(-1), 0);
     }
     
@@ -752,7 +752,7 @@ public class LabelSkinTest {
         Rectangle r = new Rectangle(23, 23);
         label.setGraphic(r);
         label.setContentDisplay(ContentDisplay.CENTER);
-        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0);
+        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertEquals(Math.max(23, lineHeight) + 14, label.minHeight(-1), 0);
     }
     
@@ -762,7 +762,7 @@ public class LabelSkinTest {
         Rectangle r = new Rectangle(23, 23);
         label.setGraphic(r);
         label.setContentDisplay(ContentDisplay.CENTER);
-        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0);
+        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertEquals(Math.max(23, lineHeight) + 14, label.minHeight(-1), 0);
     }
     
@@ -799,7 +799,7 @@ public class LabelSkinTest {
         Rectangle r = new Rectangle(23, 23);
         label.setGraphic(r);
         label.setContentDisplay(ContentDisplay.TEXT_ONLY);
-        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0);
+        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertEquals(lineHeight + 14, label.minHeight(-1), 0);
     }
     
@@ -809,7 +809,7 @@ public class LabelSkinTest {
         Rectangle r = new Rectangle(23, 23);
         label.setGraphic(r);
         label.setContentDisplay(ContentDisplay.TEXT_ONLY);
-        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0);
+        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertEquals(lineHeight + 14, label.minHeight(-1), 0);
     }
     
@@ -819,7 +819,7 @@ public class LabelSkinTest {
         Rectangle r = new Rectangle(23, 23);
         label.setGraphic(r);
         label.setContentDisplay(ContentDisplay.TEXT_ONLY);
-        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0);
+        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertEquals(lineHeight + 14, label.minHeight(-1), 0);
     }
     
@@ -1118,7 +1118,7 @@ public class LabelSkinTest {
     @Test public void whenTextHasNewlines_computePrefHeight_IncludesTheMultipleLinesInThePrefHeight() {
         label.setText("This\nis a test\nof the emergency\nbroadcast system.\nThis is only a test");
         label.setPadding(new Insets(0, 0, 0, 0));
-        final double singleLineHeight = Utils.computeTextHeight(label.getFont(), " ", 0);
+        final double singleLineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         final double height = label.prefHeight(-1);
         assertTrue(height >= singleLineHeight * 5);
     }
@@ -1134,14 +1134,14 @@ public class LabelSkinTest {
     @Test public void whenTextIsNullAndNoGraphic_computePrefHeight_ReturnsSingleLineStringHeightPlusPadding() {
         label.setText(null);
         label.setPadding(new Insets(7, 7, 7, 7));
-        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0);
+        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertEquals(14 + lineHeight, label.prefHeight(-1), 0);
     }
     
     @Test public void whenTextIsEmptyAndNoGraphic_computePrefHeight_ReturnsSingleLineStringHeightPlusPadding() {
         label.setText("");
         label.setPadding(new Insets(7, 7, 7, 7));
-        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0);
+        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertEquals(14 + lineHeight, label.prefHeight(-1), 0);
     }
     
@@ -1149,7 +1149,7 @@ public class LabelSkinTest {
         label.setText("Howdy Pardner");
         label.setPadding(new Insets(7, 7, 7, 7));
         assertTrue(label.prefHeight(-1) >= 0);
-        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0);
+        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertEquals(14 + lineHeight, label.prefHeight(-1), 0);
     }
     
@@ -1159,7 +1159,7 @@ public class LabelSkinTest {
         Rectangle r = new Rectangle(23, 500);
         r.setManaged(false);
         label.setGraphic(r);
-        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0);
+        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertEquals(14 + lineHeight, label.prefHeight(-1), 0);
     }
     
@@ -1169,7 +1169,7 @@ public class LabelSkinTest {
         Rectangle r = new Rectangle(23, 500);
         r.setManaged(false);
         label.setGraphic(r);
-        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0);
+        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertEquals(14 + lineHeight, label.prefHeight(-1), 0);
     }
     
@@ -1179,7 +1179,7 @@ public class LabelSkinTest {
         Rectangle r = new Rectangle(23, 500);
         r.setManaged(false);
         label.setGraphic(r);
-        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0);
+        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertTrue(label.prefHeight(-1) >= 0);
         assertEquals(14 + lineHeight, label.prefHeight(-1), 0);
     }
@@ -1191,7 +1191,7 @@ public class LabelSkinTest {
         label.setGraphicTextGap(2);
         label.setGraphic(r);
         label.setContentDisplay(ContentDisplay.TOP);
-        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0);
+        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertEquals(14 + 23 + lineHeight + 2, label.prefHeight(-1), 0);
     }
     
@@ -1202,7 +1202,7 @@ public class LabelSkinTest {
         label.setGraphicTextGap(2);
         label.setGraphic(r);
         label.setContentDisplay(ContentDisplay.TOP);
-        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0);
+        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertEquals(14 + 23 + lineHeight + 2, label.prefHeight(-1), 0);
     }
     
@@ -1213,7 +1213,7 @@ public class LabelSkinTest {
         label.setGraphic(r);
         label.setGraphicTextGap(2);
         label.setContentDisplay(ContentDisplay.TOP);
-        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0);
+        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertEquals(14 + 23 + lineHeight + 2, label.prefHeight(-1), 0);
     }
     
@@ -1223,7 +1223,7 @@ public class LabelSkinTest {
         Rectangle r = new Rectangle(23, 23);
         label.setGraphic(r);
         label.setContentDisplay(ContentDisplay.RIGHT);
-        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0);
+        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertEquals(14 + Math.max(23, lineHeight), label.prefHeight(-1), 0);
     }
     
@@ -1233,7 +1233,7 @@ public class LabelSkinTest {
         Rectangle r = new Rectangle(23, 23);
         label.setGraphic(r);
         label.setContentDisplay(ContentDisplay.RIGHT);
-        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0);
+        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertEquals(14 + Math.max(23, lineHeight), label.prefHeight(-1), 0);
     }
     
@@ -1243,7 +1243,7 @@ public class LabelSkinTest {
         Rectangle r = new Rectangle(23, 23);
         label.setGraphic(r);
         label.setContentDisplay(ContentDisplay.RIGHT);
-        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0);
+        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertEquals(14 + Math.max(23, lineHeight), label.prefHeight(-1), 0);
     }
     
@@ -1254,7 +1254,7 @@ public class LabelSkinTest {
         label.setGraphicTextGap(2);
         label.setGraphic(r);
         label.setContentDisplay(ContentDisplay.BOTTOM);
-        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0);
+        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertEquals(14 + 23 + lineHeight + 2, label.prefHeight(-1), 0);
     }
     
@@ -1265,7 +1265,7 @@ public class LabelSkinTest {
         label.setGraphicTextGap(2);
         label.setGraphic(r);
         label.setContentDisplay(ContentDisplay.BOTTOM);
-        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0);
+        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertEquals(14 + 23 + lineHeight + 2, label.prefHeight(-1), 0);
     }
     
@@ -1276,7 +1276,7 @@ public class LabelSkinTest {
         label.setGraphic(r);
         label.setGraphicTextGap(2);
         label.setContentDisplay(ContentDisplay.BOTTOM);
-        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0);
+        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertEquals(14 + 23 + lineHeight + 2, label.prefHeight(-1), 0);
     }
     
@@ -1286,7 +1286,7 @@ public class LabelSkinTest {
         Rectangle r = new Rectangle(23, 23);
         label.setGraphic(r);
         label.setContentDisplay(ContentDisplay.LEFT);
-        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0);
+        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertEquals(14 + Math.max(23, lineHeight), label.prefHeight(-1), 0);
     }
     
@@ -1296,7 +1296,7 @@ public class LabelSkinTest {
         Rectangle r = new Rectangle(23, 23);
         label.setGraphic(r);
         label.setContentDisplay(ContentDisplay.LEFT);
-        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0);
+        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertEquals(14 + Math.max(23, lineHeight), label.prefHeight(-1), 0);
     }
     
@@ -1306,7 +1306,7 @@ public class LabelSkinTest {
         Rectangle r = new Rectangle(23, 23);
         label.setGraphic(r);
         label.setContentDisplay(ContentDisplay.LEFT);
-        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0);
+        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertEquals(14 + Math.max(23, lineHeight), label.prefHeight(-1), 0);
     }
     
@@ -1316,7 +1316,7 @@ public class LabelSkinTest {
         Rectangle r = new Rectangle(23, 23);
         label.setGraphic(r);
         label.setContentDisplay(ContentDisplay.CENTER);
-        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0);
+        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertEquals(14 + Math.max(23, lineHeight), label.prefHeight(-1), 0);
     }
     
@@ -1326,7 +1326,7 @@ public class LabelSkinTest {
         Rectangle r = new Rectangle(23, 23);
         label.setGraphic(r);
         label.setContentDisplay(ContentDisplay.CENTER);
-        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0);
+        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertEquals(14 + Math.max(23, lineHeight), label.prefHeight(-1), 0);
     }
     
@@ -1336,7 +1336,7 @@ public class LabelSkinTest {
         Rectangle r = new Rectangle(23, 23);
         label.setGraphic(r);
         label.setContentDisplay(ContentDisplay.CENTER);
-        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0);
+        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertEquals(14 + Math.max(23, lineHeight), label.prefHeight(-1), 0);
     }
     
@@ -1373,7 +1373,7 @@ public class LabelSkinTest {
         Rectangle r = new Rectangle(23, 23);
         label.setGraphic(r);
         label.setContentDisplay(ContentDisplay.TEXT_ONLY);
-        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0);
+        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertEquals(14 + lineHeight, label.prefHeight(-1), 0);
     }
     
@@ -1383,7 +1383,7 @@ public class LabelSkinTest {
         Rectangle r = new Rectangle(23, 23);
         label.setGraphic(r);
         label.setContentDisplay(ContentDisplay.TEXT_ONLY);
-        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0);
+        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertEquals(14 + lineHeight, label.prefHeight(-1), 0);
     }
     
@@ -1393,7 +1393,7 @@ public class LabelSkinTest {
         Rectangle r = new Rectangle(23, 23);
         label.setGraphic(r);
         label.setContentDisplay(ContentDisplay.TEXT_ONLY);
-        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0);
+        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertEquals(14 + lineHeight, label.prefHeight(-1), 0);
     }
         
@@ -1692,14 +1692,14 @@ public class LabelSkinTest {
     @Test public void whenTextIsNullAndNoGraphic_computeMaxHeight_ReturnsSingleLineStringHeightPlusPadding() {
         label.setText(null);
         label.setPadding(new Insets(7, 7, 7, 7));
-        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0);
+        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertEquals(14 + lineHeight, label.maxHeight(-1), 0);
     }
     
     @Test public void whenTextIsEmptyAndNoGraphic_computeMaxHeight_ReturnsSingleLineStringHeightPlusPadding() {
         label.setText("");
         label.setPadding(new Insets(7, 7, 7, 7));
-        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0);
+        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertEquals(14 + lineHeight, label.maxHeight(-1), 0);
     }
     
@@ -1707,7 +1707,7 @@ public class LabelSkinTest {
         label.setText("Howdy Pardner");
         label.setPadding(new Insets(7, 7, 7, 7));
         assertTrue(label.maxHeight(-1) >= 0);
-        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0);
+        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertEquals(14 + lineHeight, label.maxHeight(-1), 0);
     }
     
@@ -1717,7 +1717,7 @@ public class LabelSkinTest {
         Rectangle r = new Rectangle(23, 500);
         r.setManaged(false);
         label.setGraphic(r);
-        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0);
+        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertEquals(14 + lineHeight, label.maxHeight(-1), 0);
     }
     
@@ -1727,7 +1727,7 @@ public class LabelSkinTest {
         Rectangle r = new Rectangle(23, 500);
         r.setManaged(false);
         label.setGraphic(r);
-        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0);
+        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertEquals(14 + lineHeight, label.maxHeight(-1), 0);
     }
     
@@ -1737,7 +1737,7 @@ public class LabelSkinTest {
         Rectangle r = new Rectangle(23, 500);
         r.setManaged(false);
         label.setGraphic(r);
-        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0);
+        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertTrue(label.maxHeight(-1) >= 0);
         assertEquals(14 + lineHeight, label.maxHeight(-1), 0);
     }
@@ -1749,7 +1749,7 @@ public class LabelSkinTest {
         label.setGraphicTextGap(2);
         label.setGraphic(r);
         label.setContentDisplay(ContentDisplay.TOP);
-        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0);
+        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertEquals(14 + 23 + lineHeight + 2, label.maxHeight(-1), 0);
     }
     
@@ -1760,7 +1760,7 @@ public class LabelSkinTest {
         label.setGraphicTextGap(2);
         label.setGraphic(r);
         label.setContentDisplay(ContentDisplay.TOP);
-        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0);
+        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertEquals(14 + 23 + lineHeight + 2, label.maxHeight(-1), 0);
     }
     
@@ -1771,7 +1771,7 @@ public class LabelSkinTest {
         label.setGraphic(r);
         label.setGraphicTextGap(2);
         label.setContentDisplay(ContentDisplay.TOP);
-        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0);
+        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertEquals(14 + 23 + lineHeight + 2, label.maxHeight(-1), 0);
     }
     
@@ -1781,7 +1781,7 @@ public class LabelSkinTest {
         Rectangle r = new Rectangle(23, 23);
         label.setGraphic(r);
         label.setContentDisplay(ContentDisplay.RIGHT);
-        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0);
+        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertEquals(14 + Math.max(23, lineHeight), label.maxHeight(-1), 0);
     }
     
@@ -1791,7 +1791,7 @@ public class LabelSkinTest {
         Rectangle r = new Rectangle(23, 23);
         label.setGraphic(r);
         label.setContentDisplay(ContentDisplay.RIGHT);
-        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0);
+        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertEquals(14 + Math.max(23, lineHeight), label.maxHeight(-1), 0);
     }
     
@@ -1801,7 +1801,7 @@ public class LabelSkinTest {
         Rectangle r = new Rectangle(23, 23);
         label.setGraphic(r);
         label.setContentDisplay(ContentDisplay.RIGHT);
-        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0);
+        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertEquals(14 + Math.max(23, lineHeight), label.maxHeight(-1), 0);
     }
     
@@ -1812,7 +1812,7 @@ public class LabelSkinTest {
         label.setGraphicTextGap(2);
         label.setGraphic(r);
         label.setContentDisplay(ContentDisplay.BOTTOM);
-        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0);
+        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertEquals(14 + 23 + lineHeight + 2, label.maxHeight(-1), 0);
     }
     
@@ -1823,7 +1823,7 @@ public class LabelSkinTest {
         label.setGraphicTextGap(2);
         label.setGraphic(r);
         label.setContentDisplay(ContentDisplay.BOTTOM);
-        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0);
+        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertEquals(14 + 23 + lineHeight + 2, label.maxHeight(-1), 0);
     }
     
@@ -1834,7 +1834,7 @@ public class LabelSkinTest {
         label.setGraphic(r);
         label.setGraphicTextGap(2);
         label.setContentDisplay(ContentDisplay.BOTTOM);
-        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0);
+        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertEquals(14 + 23 + lineHeight + 2, label.maxHeight(-1), 0);
     }
     
@@ -1844,7 +1844,7 @@ public class LabelSkinTest {
         Rectangle r = new Rectangle(23, 23);
         label.setGraphic(r);
         label.setContentDisplay(ContentDisplay.LEFT);
-        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0);
+        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertEquals(14 + Math.max(23, lineHeight), label.maxHeight(-1), 0);
     }
     
@@ -1854,7 +1854,7 @@ public class LabelSkinTest {
         Rectangle r = new Rectangle(23, 23);
         label.setGraphic(r);
         label.setContentDisplay(ContentDisplay.LEFT);
-        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0);
+        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertEquals(14 + Math.max(23, lineHeight), label.maxHeight(-1), 0);
     }
     
@@ -1864,7 +1864,7 @@ public class LabelSkinTest {
         Rectangle r = new Rectangle(23, 23);
         label.setGraphic(r);
         label.setContentDisplay(ContentDisplay.LEFT);
-        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0);
+        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertEquals(14 + Math.max(23, lineHeight), label.maxHeight(-1), 0);
     }
     
@@ -1874,7 +1874,7 @@ public class LabelSkinTest {
         Rectangle r = new Rectangle(23, 23);
         label.setGraphic(r);
         label.setContentDisplay(ContentDisplay.CENTER);
-        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0);
+        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertEquals(14 + Math.max(23, lineHeight), label.maxHeight(-1), 0);
     }
     
@@ -1884,7 +1884,7 @@ public class LabelSkinTest {
         Rectangle r = new Rectangle(23, 23);
         label.setGraphic(r);
         label.setContentDisplay(ContentDisplay.CENTER);
-        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0);
+        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertEquals(14 + Math.max(23, lineHeight), label.maxHeight(-1), 0);
     }
     
@@ -1894,7 +1894,7 @@ public class LabelSkinTest {
         Rectangle r = new Rectangle(23, 23);
         label.setGraphic(r);
         label.setContentDisplay(ContentDisplay.CENTER);
-        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0);
+        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertEquals(14 + Math.max(23, lineHeight), label.maxHeight(-1), 0);
     }
     
@@ -1931,7 +1931,7 @@ public class LabelSkinTest {
         Rectangle r = new Rectangle(23, 23);
         label.setGraphic(r);
         label.setContentDisplay(ContentDisplay.TEXT_ONLY);
-        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0);
+        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertEquals(14 + lineHeight, label.maxHeight(-1), 0);
     }
     
@@ -1941,7 +1941,7 @@ public class LabelSkinTest {
         Rectangle r = new Rectangle(23, 23);
         label.setGraphic(r);
         label.setContentDisplay(ContentDisplay.TEXT_ONLY);
-        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0);
+        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertEquals(14 + lineHeight, label.maxHeight(-1), 0);
     }
     
@@ -1951,7 +1951,7 @@ public class LabelSkinTest {
         Rectangle r = new Rectangle(23, 23);
         label.setGraphic(r);
         label.setContentDisplay(ContentDisplay.TEXT_ONLY);
-        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0);
+        final double lineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         assertEquals(14 + lineHeight, label.maxHeight(-1), 0);
     }
 

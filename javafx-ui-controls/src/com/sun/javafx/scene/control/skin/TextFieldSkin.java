@@ -59,7 +59,6 @@ import javafx.scene.text.Text;
 import com.sun.javafx.PlatformUtil;
 import com.sun.javafx.scene.control.behavior.TextFieldBehavior;
 import com.sun.javafx.scene.text.HitInfo;
-import com.sun.javafx.tk.FontMetrics;
 
 /**
  * Text field skin.
@@ -465,27 +464,36 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
         double characterWidth = fontMetrics.get().computeStringWidth("W");
 
         int columnCount = textField.getPrefColumnCount();
-        Insets padding = textField.getInsets();
 
-        return columnCount * characterWidth + (padding.getLeft() + padding.getRight());
+        return columnCount * characterWidth + (leftPadding() + rightPadding());
     }
 
-    @Override
-    protected double computePrefHeight(double width) {
-        double lineHeight = fontMetrics.get().getLineHeight();
-        Insets padding = getSkinnable().getInsets();
-
-        return lineHeight + (padding.getTop() + padding.getBottom());
+    @Override protected double computePrefHeight(double width) {
+        return topPadding() + textNode.getLayoutBounds().getHeight() + bottomPadding();
     }
 
     @Override protected double computeMaxHeight(double width) {
         return getSkinnable().prefHeight(width);
     }
 
-    @Override
-    public double getBaselineOffset() {
-        FontMetrics fontMetrics = super.fontMetrics.get();
-        return getSkinnable().getInsets().getTop() + fontMetrics.getAscent();
+    private final double topPadding() {
+        return snapSize(getSkinnable().getInsets().getTop());
+    }
+
+    private final double bottomPadding() {
+        return snapSize(getSkinnable().getInsets().getBottom());
+    }
+
+    private final double leftPadding() {
+        return snapSize(getSkinnable().getInsets().getLeft());
+    }
+
+    private final double rightPadding() {
+        return snapSize(getSkinnable().getInsets().getRight());
+    }
+
+    @Override public double getBaselineOffset() {
+        return topPadding() + textNode.getBaselineOffset();
     }
 
     private void updateTextPos() {
@@ -733,26 +741,25 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
     @Override protected void layoutChildren(final double x, final double y,
                                             final double w, final double h) {
         super.layoutChildren(x, y, w, h);
-        
-        final TextField textField = getSkinnable();
-        final Insets padding = textField.getInsets();
 
         if (textNode != null) {
             double textY;
-            FontMetrics fm = fontMetrics.get();
+            final Bounds textNodeBounds = textNode.getLayoutBounds();
+            final double ascent = textNode.getBaselineOffset();
+            final double descent = textNodeBounds.getHeight() - ascent;
+
             switch (getSkinnable().getAlignment().getVpos()) {
-              case TOP:
-                textY = fm.getMaxAscent();
+                case TOP:
+                textY = ascent;
                 break;
 
               case CENTER:
-                textY = (fm.getMaxAscent() +
-                         textGroup.getHeight() - fm.getMaxDescent()) / 2;
+                textY = (ascent + textGroup.getHeight() - descent) / 2;
                 break;
 
               case BOTTOM:
               default:
-                textY = textGroup.getHeight() - fm.getMaxDescent();
+                textY = textGroup.getHeight() - descent;
             }
             textNode.setY(textY);
             if (promptNode != null) {
@@ -766,8 +773,8 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
         }
 
         if (PlatformUtil.isEmbedded()) {
-            handleGroup.setLayoutX(padding.getLeft());
-            handleGroup.setLayoutY(padding.getTop());
+            handleGroup.setLayoutX(leftPadding());
+            handleGroup.setLayoutY(topPadding());
 
             // Resize handles for caret and anchor.
 //            IndexRange selection = textField.getSelection();
@@ -794,9 +801,8 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
     @Override public Point2D getMenuPosition() {
         Point2D p = super.getMenuPosition();
         if (p != null) {
-            Insets padding = getSkinnable().getInsets();
-            p = new Point2D(Math.max(0, p.getX() - textNode.getLayoutX() - padding.getLeft() + textTranslateX.get()),
-                            Math.max(0, p.getY() - textNode.getLayoutY() - padding.getTop()));
+            p = new Point2D(Math.max(0, p.getX() - textNode.getLayoutX() - leftPadding() + textTranslateX.get()),
+                            Math.max(0, p.getY() - textNode.getLayoutY() - topPadding()));
         }
         return p;
     }

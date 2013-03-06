@@ -85,7 +85,7 @@ public abstract class Axis<T> extends Region {
     private final Path tickMarkPath = new Path();
     private double oldLength = 0;
     /** True when the current range invalid and all dependent calculations need to be updated */
-    private boolean rangeValid = false;
+    boolean rangeValid = false;
     /** True when labelFormatter changes programmatically - only tick marks text needs to updated */
     boolean formatterValid = false;
     

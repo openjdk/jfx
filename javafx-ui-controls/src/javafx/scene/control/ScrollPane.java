@@ -735,49 +735,6 @@ public class ScrollPane extends Control {
     }
     
     /**
-     * Scroll the given node into view
-     * @param node the node to scroll into view
-     */
-    public void scrollTo(Node node) {
-        Event.fireEvent(this, new ScrollToEvent<Node>(this, this, ScrollToEvent.scrollToNode(), node));        
-    }
-    
-    /**
-     * Called when there's a request to scroll a node into view using {@link #scrollTo(Node)}
-     */
-    private ObjectProperty<EventHandler<ScrollToEvent<Node>>> onScrollTo;
-    
-    public void setOnScrollTo(EventHandler<ScrollToEvent<Node>> value) {
-        onScrollToProperty().set(value);
-    }
-    
-    public EventHandler<ScrollToEvent<Node>> getOnScrollTo() {
-        if( onScrollTo != null ) {
-            return onScrollTo.get();
-        }
-        return null;
-    }
-    
-    public ObjectProperty<EventHandler<ScrollToEvent<Node>>> onScrollToProperty() {
-        if( onScrollTo == null ) {
-            onScrollTo = new ObjectPropertyBase<EventHandler<ScrollToEvent<Node>>>() {
-                @Override protected void invalidated() {
-                    setEventHandler(ScrollToEvent.scrollToNode(), get());
-                }
-                
-                @Override public Object getBean() {
-                    return ScrollPane.this;
-                }
-
-                @Override public String getName() {
-                    return "onScrollTo";
-                }
-            };
-        }
-        return onScrollTo;
-    }
-    
-    /**
      * An enumeration denoting the policy to be used by a scrollable
      * Control in deciding whether to show a scroll bar.
      */

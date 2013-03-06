@@ -339,7 +339,7 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, P
             ** if the % text can't fit anywhere in the bounds then don't display it
             */
             double textWidth = com.sun.javafx.scene.control.skin.Utils.computeTextWidth(text.getFont(), text.getText(), 0.0);
-            double textHeight = com.sun.javafx.scene.control.skin.Utils.computeTextHeight(text.getFont(), text.getText(), 0.0);
+            double textHeight = com.sun.javafx.scene.control.skin.Utils.computeTextHeight(text.getFont(), text.getText(), 0.0, text.getBoundsType());
             if (control.getWidth() >= textWidth && control.getHeight() >= textHeight) {
                 if (!text.isVisible()) {
                     text.setVisible(true);

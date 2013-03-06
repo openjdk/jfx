@@ -168,18 +168,15 @@ final public class StyleManager {
 
     /*
      */
-    private final Map<StyleCache.Key, StyleCache> styleCache =
-            new HashMap<StyleCache.Key, StyleCache>();
+    private final Map<StyleCache.Key,StyleCache> styleCache =
+            new HashMap<StyleCache.Key,StyleCache>();
     
-    /** StyleHelper uses this cache. */
-    StyleCache getStyleCache(StyleCache.Key key) { 
-
-        StyleCache cache = styleCache.get(key);
-        if (cache == null) {
-            cache = new StyleCache();
-            styleCache.put(new StyleCache.Key(key), cache);
-        }
-        return cache;
+    /** 
+     * StyleHelper uses this cache but it lives here so it can be cleared
+     * when style-sheets change.
+     */
+    public Map<StyleCache.Key,StyleCache> getStyleCache() {         
+        return styleCache;
     }
     
    /**
@@ -710,7 +707,11 @@ final public class StyleManager {
                     for(FontFace.FontFaceSrc src: fontFace.getSources()) {
                         if (src.getType() == FontFace.FontFaceSrcType.URL) {
                             Font loadedFont = Font.loadFont(src.getSrc(),10);
-                            getLogger().info("Loaded @font-face font [" + (loadedFont == null ? "null" : loadedFont.getName()) + "]");
+                            if (loadedFont != null) {
+                                getLogger().info("Loaded @font-face font [" + loadedFont.getName() + "]");
+                            } else {
+                                getLogger().info("Could not load @font-face font [" + src.getSrc() + "]");
+                            }
                             continue faceLoop;
                         }
                     }
@@ -755,6 +756,7 @@ final public class StyleManager {
         
         for(int n=0,nMax = userAgentStylesheets.size(); n<nMax; n++) {
             StylesheetContainer sc = userAgentStylesheets.get(n);
+            if (sc == null) continue;
             String scFname = sc.fname;
             if (scFname == null ? fname == null : scFname.equals(fname)) {
                 return n;
@@ -955,11 +957,12 @@ final public class StyleManager {
     private void clearCache() {
         
         masterCacheMap.clear();
+        
         styleCache.clear();
         
         styleMapList.clear();
         baseStyleMapId = styleMapId;
-        // totally arbitrary
+        // 7/8ths is totally arbitrary
         if (baseStyleMapId > Integer.MAX_VALUE*7/8) {
             baseStyleMapId = styleMapId = 0;
         }

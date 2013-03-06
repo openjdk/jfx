@@ -3,54 +3,72 @@
 <!-- some examples of how to customize the build. -->
 <!-- (If you delete it and reopen the project it will be recreated.) -->
 <!-- By default, only the Clean and Build commands use this build script. -->
-<project name="Modena" default="default" basedir="." xmlns:fx="javafx:com.sun.javafx.tools.ant">
+<!-- Commands such as Run, Debug, and Test only use this build script if -->
+<!-- the Compile on Save feature is turned off for the project. -->
+<!-- You can turn off the Compile on Save (or Deploy on Save) setting -->
+<!-- in the project's Project Properties dialog box.-->
+<project name="Modena" default="default" basedir=".">
     <description>Builds, tests, and runs the project Modena.</description>
     <import file="nbproject/build-impl.xml"/>
     <!--
 
     There exist several targets which are by default empty and which can be 
     used for execution of your tasks. These targets are usually executed 
-    before and after some main targets. Those of them relevant for JavaFX project are: 
+    before and after some main targets. They are: 
 
       -pre-init:                 called before initialization of project properties
       -post-init:                called after initialization of project properties
       -pre-compile:              called before javac compilation
       -post-compile:             called after javac compilation
+      -pre-compile-single:       called before javac compilation of single file
+      -post-compile-single:      called after javac compilation of single file
       -pre-compile-test:         called before javac compilation of JUnit tests
       -post-compile-test:        called after javac compilation of JUnit tests
-      -pre-jfx-jar:              called before FX SDK specific <fx:jar> task
-      -post-jfx-jar:             called after FX SDK specific <fx:jar> task
-      -pre-jfx-deploy:           called before FX SDK specific <fx:deploy> task
-      -post-jfx-deploy:          called after FX SDK specific <fx:deploy> task
+      -pre-compile-test-single:  called before javac compilation of single JUnit test
+      -post-compile-test-single: called after javac compilation of single JUunit test
+      -pre-jar:                  called before JAR building
+      -post-jar:                 called after JAR building
       -post-clean:               called after cleaning build products
 
     (Targets beginning with '-' are not intended to be called on their own.)
 
-    Example of inserting a HTML postprocessor after javaFX SDK deployment:
+    Example of inserting an obfuscator after compilation could look like this:
 
-        <target name="-post-jfx-deploy">
-            <basename property="jfx.deployment.base" file="${jfx.deployment.jar}" suffix=".jar"/>
-            <property name="jfx.deployment.html" location="${jfx.deployment.dir}${file.separator}${jfx.deployment.base}.html"/>
-            <custompostprocess>
-                <fileset dir="${jfx.deployment.html}"/>
-            </custompostprocess>
+        <target name="-post-compile">
+            <obfuscate>
+                <fileset dir="${build.classes.dir}"/>
+            </obfuscate>
         </target>
 
-    Example of calling an Ant task from JavaFX SDK. Note that access to JavaFX SDK Ant tasks must be
-    initialized; to ensure this is done add the dependence on -check-jfx-sdk-version target:
+    For list of available properties check the imported 
+    nbproject/build-impl.xml file. 
 
-        <target name="-post-jfx-jar" depends="-check-jfx-sdk-version">
-            <echo message="Calling jar task from JavaFX SDK"/>
-            <fx:jar ...>
-                ...
-            </fx:jar>
+
+    Another way to customize the build is by overriding existing main targets.
+    The targets of interest are: 
+
+      -init-macrodef-javac:     defines macro for javac compilation
+      -init-macrodef-junit:     defines macro for junit execution
+      -init-macrodef-debug:     defines macro for class debugging
+      -init-macrodef-java:      defines macro for class execution
+      -do-jar-with-manifest:    JAR building (if you are using a manifest)
+      -do-jar-without-manifest: JAR building (if you are not using a manifest)
+      run:                      execution of project 
+      -javadoc-build:           Javadoc generation
+      test-report:              JUnit report generation
+
+    An example of overriding the target for project execution could look like this:
+
+        <target name="run" depends="Modena-impl.jar">
+            <exec dir="bin" executable="launcher.exe">
+                <arg file="${dist.jar}"/>
+            </exec>
         </target>
 
-    For more details about JavaFX SDK Ant tasks go to
-    http://docs.oracle.com/javafx/2/deployment/jfxpub-deployment.htm
-
-    For list of available properties check the files
-    nbproject/build-impl.xml and nbproject/jfx-impl.xml.
+    Notice that the overridden target depends on the jar target and not only on 
+    the compile target as the regular run target does. Again, for a list of available 
+    properties which you can use, check the target you are overriding in the
+    nbproject/build-impl.xml file. 
 
     -->
 </project>

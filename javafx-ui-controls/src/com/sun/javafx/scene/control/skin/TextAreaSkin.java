@@ -60,6 +60,7 @@ import javafx.scene.shape.MoveTo;
 import javafx.scene.shape.Path;
 import javafx.scene.shape.PathElement;
 import javafx.scene.text.Text;
+import javafx.scene.text.TextBoundsType;
 import javafx.util.Duration;
 import com.sun.javafx.PlatformUtil;
 import com.sun.javafx.scene.control.behavior.TextAreaBehavior;
@@ -129,8 +130,6 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
         protected double computePrefWidth(double height) {
           if (computedPrefWidth < 0) {
 
-            Insets padding = getInsets();
-
             double prefWidth = 0;
 
             for (Node node : paragraphNodes.getChildren()) {
@@ -140,7 +139,7 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
                                                             paragraphNode.getText(), 0));
             }
 
-            prefWidth += padding.getLeft() + padding.getRight();
+            prefWidth += leftPadding() + rightPadding();
 
             Bounds viewPortBounds = scrollPane.getViewportBounds();
             computedPrefWidth = Math.max(prefWidth, (viewPortBounds != null) ? viewPortBounds.getWidth() : 0);
@@ -157,13 +156,12 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
 
           if (computedPrefHeight < 0) {
 
-            Insets padding = getInsets();
 
             double wrappingWidth;
             if (width == -1) {
                 wrappingWidth = 0;
             } else {
-                wrappingWidth = Math.max(width - (padding.getLeft() + padding.getRight()), 0);
+                wrappingWidth = Math.max(width - (leftPadding() + rightPadding()), 0);
             }
 
             double prefHeight = 0;
@@ -172,10 +170,10 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
                 Text paragraphNode = (Text)node;
                 prefHeight += Utils.computeTextHeight(paragraphNode.getFont(),
                                                       paragraphNode.getText(),
-                                                      wrappingWidth);
+                                                      wrappingWidth, paragraphNode.getBoundsType());
             }
 
-            prefHeight += padding.getTop() + padding.getBottom();
+            prefHeight += topPadding() + bottomPadding();
 
             Bounds viewPortBounds = scrollPane.getViewportBounds();
             computedPrefHeight = Math.max(prefHeight, (viewPortBounds != null) ? viewPortBounds.getHeight() : 0);
@@ -185,7 +183,7 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
 
         @Override protected double computeMinWidth(double height) {
             if (computedMinWidth < 0) {
-                double hInsets = getInsets().getLeft() + getInsets().getRight();
+                double hInsets = leftPadding() + rightPadding();
                 computedMinWidth = Math.min(characterWidth + hInsets, computePrefWidth(height));
             }
             return computedMinWidth;
@@ -193,10 +191,26 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
 
         @Override protected double computeMinHeight(double width) {
             if (computedMinHeight < 0) {
-                double vInsets = getInsets().getTop() + getInsets().getBottom();
+                double vInsets = topPadding() + bottomPadding();
                 computedMinHeight = Math.min(lineHeight + vInsets, computePrefHeight(width));
             }
             return computedMinHeight;
+        }
+
+        private final double topPadding() {
+            return snapSize(getInsets().getTop());
+        }
+
+        private final double bottomPadding() {
+            return snapSize(getInsets().getBottom());
+        }
+
+        private final double leftPadding() {
+            return snapSize(getInsets().getLeft());
+        }
+
+        private final double rightPadding() {
+            return snapSize(getInsets().getRight());
         }
 
         @Override
@@ -205,26 +219,27 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
             double width = getWidth();
 
             // Lay out paragraphs
-            Insets padding = getInsets();
+            final double topPadding = topPadding();
+            final double leftPadding = leftPadding();
 
-            double wrappingWidth = Math.max(width - (padding.getLeft() + padding.getRight()), 0);
+            double wrappingWidth = Math.max(width - (leftPadding + rightPadding()), 0);
 
-            double y = padding.getTop();
+            double y = topPadding;
 
             for (Node node : paragraphNodes.getChildren()) {
                 Text paragraphNode = (Text)node;
                 paragraphNode.setWrappingWidth(wrappingWidth);
 
                 Bounds bounds = paragraphNode.getBoundsInLocal();
-                paragraphNode.setLayoutX(padding.getLeft());
+                paragraphNode.setLayoutX(leftPadding);
                 paragraphNode.setLayoutY(y);
 
                 y += bounds.getHeight();
             }
 
             if (promptNode != null) {
-                promptNode.setLayoutX(padding.getLeft());
-                promptNode.setLayoutY(padding.getTop() + fontMetrics.get().getAscent());
+                promptNode.setLayoutX(leftPadding);
+                promptNode.setLayoutY(topPadding + promptNode.getBaselineOffset());
                 promptNode.setWrappingWidth(wrappingWidth);
             }
 
@@ -766,6 +781,12 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
         paragraphNode.setTextOrigin(VPos.TOP);
         paragraphNode.setManaged(false);
         paragraphNode.getStyleClass().add("text");
+        paragraphNode.boundsTypeProperty().addListener(new ChangeListener<TextBoundsType>() {
+            @Override public void changed(ObservableValue<? extends TextBoundsType> observable, TextBoundsType oldValue, TextBoundsType newValue) {
+                invalidateMetrics();
+                updateFontMetrics();
+            }
+        });
         paragraphNodes.getChildren().add(i, paragraphNode);
 
         paragraphNode.fontProperty().bind(textArea.fontProperty());
@@ -796,7 +817,9 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
 
     @Override
     public double getBaselineOffset() {
-        return fontMetrics.get().getAscent() + textArea.getInsets().getTop();
+        Text firstParagraph = (Text) paragraphNodes.getChildren().get(0);
+        return Utils.getAscent(getSkinnable().getFont(),firstParagraph.getBoundsType())
+                + contentView.getInsets().getTop() + textArea.getInsets().getTop();
     }
 
     @Override
@@ -1056,7 +1079,8 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
     }
 
     private void updateFontMetrics() {
-        lineHeight = fontMetrics.get().getLineHeight();
+        Text firstParagraph = (Text)paragraphNodes.getChildren().get(0);
+        lineHeight = Utils.getLineHeight(getSkinnable().getFont(),firstParagraph.getBoundsType());
         characterWidth = fontMetrics.get().computeStringWidth("W");
     }
 

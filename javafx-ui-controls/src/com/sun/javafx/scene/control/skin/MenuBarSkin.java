@@ -173,6 +173,7 @@ public class MenuBarSkin extends BehaviorSkinBase<MenuBar, BehaviorBase<MenuBar>
     private WeakEventHandler<MouseEvent> weakSceneMouseEventHandler;
     private EventHandler<KeyEvent> keyEventHandler;
     private EventHandler<MouseEvent> mouseEventHandler;
+    private ChangeListener<Boolean> menuBarFocusedPropertyListener;
     
     /***************************************************************************
      *                                                                         *
@@ -216,7 +217,7 @@ public class MenuBarSkin extends BehaviorSkinBase<MenuBar, BehaviorBase<MenuBar>
                             break;
                         }
                         case RIGHT:
-                        case TAB: {
+                        {
                             boolean isRTL = control.getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT;
                             if (control.getScene().getWindow().isFocused()) {
                                 if (openMenu == null) return;
@@ -264,6 +265,21 @@ public class MenuBarSkin extends BehaviorSkinBase<MenuBar, BehaviorBase<MenuBar>
                 }
             }
         };
+        menuBarFocusedPropertyListener = new ChangeListener<Boolean>() {
+            @Override public void changed(ObservableValue<? extends Boolean> ov, Boolean t, Boolean t1) {
+                if (t1) {
+                    // RT-23147 when MenuBar's focusTraversable is true the first 
+                    // menu will visually indicate focus  
+                    unSelectMenus();
+                    focusedMenuIndex = 0;
+                    openMenuButton = ((MenuBarButton)container.getChildren().get(0));
+                    openMenu = getSkinnable().getMenus().get(0);
+                    openMenuButton.setHover();
+                } else {
+                    unSelectMenus();
+                 }
+             }
+         };
         weakSceneKeyEventHandler = new WeakEventHandler<KeyEvent>(keyEventHandler);
         control.getScene().addEventFilter(KeyEvent.KEY_PRESSED, weakSceneKeyEventHandler);
         
@@ -460,6 +476,7 @@ public class MenuBarSkin extends BehaviorSkinBase<MenuBar, BehaviorBase<MenuBar>
     }
     
     private void rebuildUI() {
+        getSkinnable().focusedProperty().removeListener(menuBarFocusedPropertyListener);
         for (Menu m : getSkinnable().getMenus()) {
             // remove action listeners 
             updateActionListeners(m, false);
@@ -530,7 +547,7 @@ public class MenuBarSkin extends BehaviorSkinBase<MenuBar, BehaviorBase<MenuBar>
             }
         }
 
-
+        getSkinnable().focusedProperty().addListener(menuBarFocusedPropertyListener);
         for (final Menu menu : getSkinnable().getMenus()) {
             if (!menu.isVisible()) continue;
             final MenuBarButton menuButton = new MenuBarButton(menu.getText(), menu.getGraphic());

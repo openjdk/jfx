@@ -41,8 +41,8 @@ public class BackgroundRepeatConverterTest {
         -fx-background-repeat:
      */
     @Test public void scenario1() {
-        ParsedValueImpl<ParsedValue<BackgroundRepeat,BackgroundRepeat>[][], RepeatStruct[]> value =
-                new ParsedValueImpl<ParsedValue<BackgroundRepeat,BackgroundRepeat>[][], RepeatStruct[]>(
+        ParsedValueImpl<ParsedValue<String,BackgroundRepeat>[][], RepeatStruct[]> value =
+                new ParsedValueImpl<ParsedValue<String,BackgroundRepeat>[][], RepeatStruct[]>(
                         new ParsedValueImpl[0][0], null
                 );
         RepeatStruct[] results = RepeatStructConverter.getInstance().convert(value, null);
@@ -54,12 +54,12 @@ public class BackgroundRepeatConverterTest {
      */
     @Ignore ("this doesn't work, but I'm not sure what would happen with a null background-repeat in reality")
     @Test public void scenario2() {
-        ParsedValue<BackgroundRepeat,BackgroundRepeat>[][] values = new ParsedValueImpl[][] {
+        ParsedValue<String,BackgroundRepeat>[][] values = new ParsedValueImpl[][] {
                 {null}
         };
 
-        ParsedValueImpl<ParsedValue<BackgroundRepeat,BackgroundRepeat>[][], RepeatStruct[]> value =
-                new ParsedValueImpl<ParsedValue<BackgroundRepeat,BackgroundRepeat>[][], RepeatStruct[]>(
+        ParsedValueImpl<ParsedValue<String,BackgroundRepeat>[][], RepeatStruct[]> value =
+                new ParsedValueImpl<ParsedValue<String,BackgroundRepeat>[][], RepeatStruct[]>(
                         values, null
                 );
         RepeatStruct[] results = RepeatStructConverter.getInstance().convert(value, null);
@@ -70,12 +70,12 @@ public class BackgroundRepeatConverterTest {
         -fx-background-repeat: repeat round
      */
     @Test public void scenario3() {
-        ParsedValue<BackgroundRepeat,BackgroundRepeat>[][] values = new ParsedValueImpl[][] {
+        ParsedValue<String,BackgroundRepeat>[][] values = new ParsedValueImpl[][] {
                 { new ParsedValueImpl(BackgroundRepeat.REPEAT, null), new ParsedValueImpl(BackgroundRepeat.ROUND, null) }
         };
 
-        ParsedValue<ParsedValue<BackgroundRepeat,BackgroundRepeat>[][], RepeatStruct[]> value =
-                new ParsedValueImpl<ParsedValue<BackgroundRepeat,BackgroundRepeat>[][], RepeatStruct[]>(
+        ParsedValue<ParsedValue<String,BackgroundRepeat>[][], RepeatStruct[]> value =
+                new ParsedValueImpl<ParsedValue<String,BackgroundRepeat>[][], RepeatStruct[]>(
                         values, null
                 );
         RepeatStruct[] results = RepeatStructConverter.getInstance().convert(value, null);
@@ -88,12 +88,12 @@ public class BackgroundRepeatConverterTest {
         -fx-background-repeat: space no-repeat
      */
     @Test public void scenario4() {
-        ParsedValue<BackgroundRepeat,BackgroundRepeat>[][] values = new ParsedValueImpl[][] {
+        ParsedValue<String,BackgroundRepeat>[][] values = new ParsedValueImpl[][] {
                 { new ParsedValueImpl(BackgroundRepeat.SPACE, null), new ParsedValueImpl(BackgroundRepeat.NO_REPEAT, null) }
         };
 
-        ParsedValue<ParsedValue<BackgroundRepeat,BackgroundRepeat>[][], RepeatStruct[]> value =
-                new ParsedValueImpl<ParsedValue<BackgroundRepeat,BackgroundRepeat>[][], RepeatStruct[]>(
+        ParsedValue<ParsedValue<String,BackgroundRepeat>[][], RepeatStruct[]> value =
+                new ParsedValueImpl<ParsedValue<String,BackgroundRepeat>[][], RepeatStruct[]>(
                         values, null
                 );
         RepeatStruct[] results = RepeatStructConverter.getInstance().convert(value, null);
@@ -106,13 +106,13 @@ public class BackgroundRepeatConverterTest {
         -fx-background-repeat: no-repeat repeat, space round
      */
     @Test public void scenario5() {
-        ParsedValue<BackgroundRepeat,BackgroundRepeat>[][] values = new ParsedValueImpl[][] {
+        ParsedValue<String,BackgroundRepeat>[][] values = new ParsedValueImpl[][] {
                 { new ParsedValueImpl(BackgroundRepeat.NO_REPEAT, null), new ParsedValueImpl(BackgroundRepeat.REPEAT, null) },
                 { new ParsedValueImpl(BackgroundRepeat.SPACE, null), new ParsedValueImpl(BackgroundRepeat.ROUND, null) }
         };
 
-        ParsedValue<ParsedValue<BackgroundRepeat,BackgroundRepeat>[][], RepeatStruct[]> value =
-                new ParsedValueImpl<ParsedValue<BackgroundRepeat,BackgroundRepeat>[][], RepeatStruct[]>(
+        ParsedValue<ParsedValue<String,BackgroundRepeat>[][], RepeatStruct[]> value =
+                new ParsedValueImpl<ParsedValue<String,BackgroundRepeat>[][], RepeatStruct[]>(
                         values, null
                 );
         RepeatStruct[] results = RepeatStructConverter.getInstance().convert(value, null);

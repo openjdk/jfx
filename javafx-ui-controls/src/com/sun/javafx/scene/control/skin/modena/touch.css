@@ -1,0 +1,347 @@
+/*
+ * Copyright (c) 2012, Oracle and/or its affiliates. All rights reserved. 
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER. 
+ *  
+ * This code is free software; you can redistribute it and/or modify it 
+ * under the terms of the GNU General Public License version 2 only, as 
+ * published by the Free Software Foundation.  Oracle designates this 
+ * particular file as subject to the "Classpath" exception as provided 
+ * by Oracle in the LICENSE file that accompanied this code. 
+ *  
+ * This code is distributed in the hope that it will be useful, but WITHOUT 
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or 
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License 
+ * version 2 for more details (a copy is included in the LICENSE file that 
+ * accompanied this code). 
+ *  
+ * You should have received a copy of the GNU General Public License version 
+ * 2 along with this work; if not, write to the Free Software Foundation, 
+ * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA. 
+ *  
+ * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA 
+ * or visit www.oracle.com if you need additional information or have any 
+ * questions.
+ *                                                                              
+ */
+
+/*******************************************************************************
+ *                                                                             *
+ * CSS Styles for embedded devices. These styles either override or            *
+ * supplement those in caspian.css                                             *
+ *                                                                             *
+ ******************************************************************************/
+
+/*******************************************************************************
+ *                                                                             *
+ * PopupMenu                                                                   *
+ *                                                                             *
+ ******************************************************************************/
+
+.context-menu .text-input-context-menu {
+    -fx-background-color: transparent;
+    -fx-background-radius: 0;
+    -fx-padding: 0;
+}
+
+.context-menu .text-input-context-menu .button {
+    -fx-background-radius: 0;   
+    -fx-background-color: derive(-fx-color,-40%);
+    -fx-text-fill: white;
+}
+
+.context-menu .text-input-context-menu .pointer {    
+    -fx-background-color: derive(-fx-color,-40%);    
+    -fx-padding: 6px;
+    -fx-shape: "M 6 0 L 12 12 L 0 12 z";
+    -fx-scale-shape: true;
+}
+
+/*******************************************************************************
+ *                                                                             *
+ * ScrollBar                                                                   *
+ *                                                                             *
+ ******************************************************************************/
+
+.scroll-bar {
+    -fx-opacity: 100%;
+}
+.scroll-bar:horizontal,
+.scroll-bar:horizontal:focused {
+    -fx-background-insets: 1 0 -1 0, 0, 1;
+    -fx-background-color: transparent;
+}
+
+.scroll-bar:vertical,
+.scroll-bar:vertical:focused {
+    -fx-background-insets: 0 -1 0 1, 0, 1;
+    -fx-background-color: transparent;
+}
+
+.scroll-bar:horizontal > .track-background {
+    -fx-background-radius: 1.0em;
+    -fx-opacity: 10%;
+    -fx-background-color: #000000;
+}
+.scroll-bar:vertical > .track-background {
+    -fx-background-radius: 1.0em;
+    -fx-opacity: 10%;
+    -fx-background-color: #000000;
+}
+.scroll-bar:horizontal .thumb {
+    -fx-opacity: 75%;
+    -fx-background-color: #a0a0a0;
+}
+.scroll-bar:vertical .thumb {
+    -fx-opacity: 75%;
+    -fx-background-color: #a0a0a0;
+}
+.scroll-bar .track {
+    -fx-background-color: transparent;
+}
+.scroll-bar .track-background {
+    -fx-background-color: transparent;
+}
+
+.scroll-bar:horizontal > .track {
+    -xfx-background-color: transparent;
+    -fx-opacity: 10%;
+    -fx-background-color: #000000;
+}
+.scroll-bar:vertical > .track {
+    -fx-opacity: 10%;
+    -fx-background-color: #000000;
+}
+.scroll-bar:horizontal > .track-background {
+    -fx-opacity: 10%;
+    -fx-background-color: #000000;
+}
+
+
+
+/*******************************************************************************
+ *                                                                             *
+ * ScrollPane                                                                   *
+ *                                                                             *
+ ******************************************************************************/
+
+.scroll-pane .corner {
+    -fx-background-color: transparent;
+}
+
+.scroll-pane > .scroll-bar {
+    -fx-opacity: 100%;
+}
+.scroll-pane > .scroll-bar:horizontal {
+    -fx-background-insets: 1 0 -1 0, 0, 1;
+    -fx-background-color: transparent;
+}
+.scroll-pane > .scroll-bar:vertical {
+    -fx-background-insets: 0 -1 0 1, 0, 1;
+    -fx-background-color: transparent;
+}
+
+.scroll-pane > .scroll-bar:horizontal > .track-background {
+    -fx-background-radius: 1.0em;
+    -fx-opacity: 10%;
+    -fx-background-color: #000000;
+}
+.scroll-pane > .scroll-bar:vertical > .track-background {
+    -fx-background-radius: 1.0em;
+    -fx-opacity: 10%;
+    -fx-background-color: #000000;
+}
+
+.scroll-pane > .scroll-bar:horizontal .thumb {
+    -fx-opacity: 75%;
+    -fx-background-color: #a0a0a0;
+}
+
+.scroll-pane > .scroll-bar:vertical .thumb {
+    -fx-opacity: 75%;
+    -fx-background-color: #a0a0a0;
+}
+.scroll-pane > .scroll-bar .track {
+    -fx-background-color: transparent;
+}
+.scroll-pane > .scroll-bar .track-background {
+    -fx-background-color: transparent;
+}
+
+.scroll-pane > .scroll-bar:horizontal > .track {
+    -xfx-background-color: transparent;
+    -fx-opacity: 10%;
+    -fx-background-color: #000000;
+}
+.scroll-pane > .scroll-bar:vertical > .track {
+    -fx-opacity: 10%;
+    -fx-background-color: #000000;
+}
+
+
+
+/*******************************************************************************
+ *                                                                             *
+ * TextField, PasswordField, TextArea                                                                   *
+ *                                                                             *
+ ******************************************************************************/
+
+.text-field {
+    -fx-padding: 6 5 6 5; /* Adding 3px to top and bottom for handles */
+}
+
+.text-area .content {
+    -fx-padding: 9 5 9 5; /* Adding 6px to top and bottom for handles */
+}
+
+
+.caret-handle {
+    -fx-background-color: transparent,
+                          black /*#ACACAC*/,
+                          linear-gradient(to bottom, #AFAFAF 0%, #DFDFDF 100%);
+    -fx-background-insets: -4 -18 -8 -18, 0, 1;
+    -fx-shape: "M11.974,2.579L20,12.358V20H4V12.356L11.974,2.579z";
+/*
+    -fx-shape: "M11.972,1L3,12v17h18V12L11.972,1L11.972,1z";
+    -fx-padding: 0.375em 0.291em 0.375em 0.291em;
+*/
+    -fx-padding: 0.32em 0.3em 0.32em 0.3em;
+    -fx-cursor: hand;
+}
+
+
+
+.selection-handle {
+    -fx-background-color: transparent,
+                          #0071bc /*-fx-accent*/,
+                          linear-gradient(to bottom, #0063AA 0%, #008AED 100%);
+    -fx-background-insets: -4 -18 -8 -18, 0, 1;
+    -fx-shape: "M10.974,2.579L19,12.358V20H3V12.356L10.974,2.579z";
+/*
+    -fx-shape: "M10.972,1L2,12v17h18V12L10.972,1L10.972,1z";
+    -fx-padding: 0.375em 0.291em 0.375em 0.291em;
+*/
+    -fx-padding: 0.32em 0.3em 0.32em 0.3em;
+    -fx-cursor: hand;
+}
+
+
+/*******************************************************************************
+ *
+ * 2-level focus setting.
+ * The visuals aren't ready yet, so currently these are just placeholders.
+ *
+ ******************************************************************************/
+
+.choice-box:focused:external-focus {
+    -fx-background-color: -fx-focus-color, -fx-outer-border, -fx-inner-border, -fx-body-color;
+}
+.choice-box:focused:showing {
+    -fx-background-color: -fx-shadow-highlight-color, -fx-outer-border, -fx-inner-border, -fx-body-color;
+}
+.choice-box:focused:internal-focus {
+    -fx-background-color: -fx-shadow-highlight-color, -fx-outer-border, -fx-inner-border, -fx-body-color;
+}
+
+
+.slider {
+    -fx-background-color: -fx-shadow-highlight-color, -fx-text-box-border, -fx-control-inner-background;
+    -fx-background-color: transparent;
+    -fx-background-insets: 0, 1, 2;
+    -fx-background-radius: 3, 2, 2;
+    -fx-padding: 3 5 5 5;
+}
+.slider:focused:external-focus {
+    -fx-background-color: -fx-focus-color, -fx-text-box-border, -fx-control-inner-background;
+    -fx-background-insets: -0.4, 1, 2;
+    -fx-background-radius: 3.4, 2, 2;
+    -fx-prompt-text-fill: transparent;
+
+}
+.slider:focused:internal-focus {
+    -fx-background-color: transparent;
+}
+.slider:focused:external-focus > .thumb {
+    -fx-focus-color: transparent;
+}
+
+
+.text-field:focused:external-focus {
+    -fx-background-color: -fx-focus-color, -fx-text-box-border, -fx-control-inner-background;
+    -fx-prompt-text-fill: derive(-fx-control-inner-background,-30%);
+}
+.text-field:focused:external-focus .caret-handle {
+    -fx-background-color: transparent;
+}
+.text-field:focused:external-focus .selection-handle {
+    -fx-background-color: transparent;
+}
+.text-field:focused:internal-focus {
+    -fx-background-color: -fx-shadow-highlight-color, -fx-text-box-border, -fx-control-inner-background;
+    -fx-prompt-text-fill: transparent;
+}
+
+
+
+.password-field:focused:external-focus {
+    -fx-background-color: -fx-focus-color, -fx-text-box-border, -fx-control-inner-background;
+    -fx-prompt-text-fill: derive(-fx-control-inner-background,-30%);
+}
+.password-field:focused:external-focus .caret-handle {
+    -fx-background-color: transparent;
+}
+.password-field:focused:external-focus .selection-handle {
+    -fx-background-color: transparent;
+}
+.password-field:focused:internal-focus {
+    -fx-background-color: -fx-shadow-highlight-color, -fx-text-box-border, -fx-control-inner-background;
+}
+
+
+.text-area:focused:external-focus {
+    -fx-background-color: -fx-focus-color, -fx-text-box-border, -fx-control-inner-background;
+    -fx-prompt-text-fill: derive(-fx-control-inner-background,-30%);
+}
+.text-area:focused:external-focus .caret-handle {
+    -fx-background-color: transparent;
+}
+.text-area:focused:external-focus .selection-handle {
+    -fx-background-color: transparent;
+}
+.text-area:focused:internal-focus {
+    -fx-background-color: -fx-shadow-highlight-color, -fx-text-box-border, -fx-control-inner-background;
+    -fx-prompt-text-fill: transparent;
+}
+
+
+.list-view:focused:external-focus {
+    -fx-background-color: -fx-focus-color, -fx-text-box-border, -fx-control-inner-background;
+}
+.list-view:focused:external-focus > .virtual-flow > .clipped-container > .sheet > .list-cell:filled:selected {
+    -fx-background-color: gray;
+}
+.list-view:focused:internal-focus {
+    -fx-background-color: -fx-shadow-highlight-color, -fx-text-box-border, -fx-control-inner-background;
+}
+
+
+.table-view:focused:external-focus {
+    -fx-background-color: -fx-focus-color, -fx-text-box-border, -fx-control-inner-background;
+}
+.table-view:focused:external-focus > .virtual-flow > .clipped-container > .sheet > .table-row-cell:filled:selected {
+    -fx-background-color: gray;
+}
+.table-view:focused:internal-focus {
+    -fx-background-color: -fx-shadow-highlight-color, -fx-text-box-border, -fx-control-inner-background;
+}
+
+
+.combo-box:focused:external-focus {
+    -fx-background-color: -fx-focus-color, -fx-outer-border, -fx-inner-border, -fx-body-color;
+}
+.combo-box:focused:showing {
+    -fx-background-color: -fx-shadow-highlight-color, -fx-outer-border, -fx-inner-border, -fx-body-color;
+}
+.combo-box:focused:internal-focus {
+    -fx-background-color: -fx-shadow-highlight-color, -fx-outer-border, -fx-inner-border, -fx-body-color;
+}
+

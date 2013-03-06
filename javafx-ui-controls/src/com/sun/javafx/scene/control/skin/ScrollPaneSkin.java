@@ -48,7 +48,6 @@ import javafx.scene.Node;
 import javafx.scene.control.ScrollBar;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.ScrollPane.ScrollBarPolicy;
-import javafx.scene.control.ScrollToEvent;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.input.ScrollEvent;
 import javafx.scene.input.TouchEvent;
@@ -138,14 +137,6 @@ public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehav
         registerChangeListener(scrollpane.vvalueProperty(), "VVALUE");
         registerChangeListener(scrollpane.prefViewportWidthProperty(), "PREF_VIEWPORT_WIDTH");
         registerChangeListener(scrollpane.prefViewportHeightProperty(), "PREF_VIEWPORT_HEIGHT");
-        
-        scrollpane.addEventHandler(ScrollToEvent.scrollToNode(), new EventHandler<ScrollToEvent<Node>>() {
-            @Override public void handle(ScrollToEvent<Node> event) {
-                Node n = event.getScrollTarget();
-                Bounds b = scrollpane.sceneToLocal(n.localToScene(n.getLayoutBounds()));
-                scrollBoundsIntoView(b);
-            }
-        });
     }
 
     private final InvalidationListener nodeListener = new InvalidationListener() {

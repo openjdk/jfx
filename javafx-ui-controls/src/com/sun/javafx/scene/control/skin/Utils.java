@@ -51,12 +51,29 @@ import javafx.scene.input.KeyCombination;
 import javafx.scene.input.Mnemonic;
 import javafx.scene.text.Font;
 import javafx.scene.text.Text;
+import javafx.scene.text.TextBoundsType;
 
 import com.sun.javafx.scene.control.behavior.TextBinding;
 
 public class Utils {
 
     static Text helper = new Text();
+
+    static double getAscent(Font font, TextBoundsType boundsType) {
+        helper.setFont(font);
+        helper.setBoundsType(boundsType);
+        final double ascent = helper.getBaselineOffset();
+        helper.setBoundsType(TextBoundsType.LOGICAL); // restore
+        return ascent;
+    }
+
+    static double getLineHeight(Font font, TextBoundsType boundsType) {
+        helper.setFont(font);
+        helper.setBoundsType(boundsType);
+        final double lineHeight = helper.getLayoutBounds().getHeight();
+        helper.setBoundsType(TextBoundsType.LOGICAL); // restore
+        return lineHeight;
+    }
 
     static double computeTextWidth(Font font, String text, double wrappingWidth) {
         helper.setText(text);
@@ -70,16 +87,19 @@ public class Utils {
         return Math.ceil(helper.getLayoutBounds().getWidth());
     }
 
-    static double computeTextHeight(Font font, String text, double wrappingWidth) {
-        return computeTextHeight(font, text, wrappingWidth, 0);
+    static double computeTextHeight(Font font, String text, double wrappingWidth, TextBoundsType boundsType) {
+        return computeTextHeight(font, text, wrappingWidth, 0, boundsType);
     }
 
-    static double computeTextHeight(Font font, String text, double wrappingWidth, double lineSpacing) {
+    static double computeTextHeight(Font font, String text, double wrappingWidth, double lineSpacing, TextBoundsType boundsType) {
         helper.setText(text);
         helper.setFont(font);
         helper.setWrappingWidth((int)wrappingWidth);
         helper.setLineSpacing((int)lineSpacing);
-        return helper.getLayoutBounds().getHeight();
+        helper.setBoundsType(boundsType);
+        final double height = helper.getLayoutBounds().getHeight();
+        helper.setBoundsType(TextBoundsType.LOGICAL); // restore
+        return height;
     }
 
     static int computeTruncationIndex(Font font, String text, double width) {
@@ -298,7 +318,7 @@ public class Utils {
 
     static String computeClippedWrappedText(Font font, String text, double width,
                                             double height, OverrunStyle truncationStyle,
-                                            String ellipsisString) {
+                                            String ellipsisString, TextBoundsType boundsType) {
         if (font == null) {
             throw new IllegalArgumentException("Must specify a font");
         }
@@ -307,7 +327,7 @@ public class Utils {
         int eLen = ellipsis.length();
         // Do this before using helper, as it's not reentrant.
         double eWidth = computeTextWidth(font, ellipsis, 0);
-        double eHeight = computeTextHeight(font, ellipsis, 0);
+        double eHeight = computeTextHeight(font, ellipsis, 0, boundsType);
 
         if (width < eWidth || height < eHeight) {
             // The ellipsis doesn't fit.
@@ -317,6 +337,7 @@ public class Utils {
         helper.setText(text);
         helper.setFont(font);
         helper.setWrappingWidth((int)Math.ceil(width));
+        helper.setBoundsType(boundsType);
         helper.setLineSpacing(0);
 
         boolean leading =  (truncationStyle == LEADING_ELLIPSIS ||
@@ -344,6 +365,7 @@ public class Utils {
 
         int hit = helper.impl_hitTestChar(endPoint).getCharIndex();
         if (hit >= len) {
+            helper.setBoundsType(TextBoundsType.LOGICAL); // restore
             return text;
         }
         if (center) {
@@ -451,6 +473,7 @@ public class Utils {
                 }
             }
         }
+        helper.setBoundsType(TextBoundsType.LOGICAL); // restore
         return result;
     }
 

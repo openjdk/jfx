@@ -25,10 +25,15 @@
 
 package javafx.scene.control;
 
+import com.sun.javafx.runtime.VersionInfo;
 import com.sun.javafx.scene.control.test.ControlAsserts;
+import com.sun.javafx.scene.control.test.Employee;
 import com.sun.javafx.scene.control.test.Person;
+import com.sun.javafx.scene.control.test.RT_22463_Person;
 import com.sun.javafx.tk.Toolkit;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
@@ -39,9 +44,13 @@ import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 import javafx.scene.Group;
 import javafx.scene.Scene;
 import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.scene.layout.VBox;
+import javafx.scene.paint.Color;
 import javafx.stage.Stage;
 import javafx.util.Callback;
 
@@ -668,5 +677,117 @@ public class TreeViewTest {
         
         ControlAsserts.assertRowsNotEmpty(tree, 0, 3); // rows 0 - 3 should be filled
         ControlAsserts.assertRowsEmpty(tree, 3, -1); // rows 3+ should be empty
+    }
+    
+    @Test public void test_rt28556() {
+        List<Employee> employees = Arrays.<Employee>asList(
+            new Employee("Ethan Williams", "Sales Department"),
+            new Employee("Emma Jones", "Sales Department"),
+            new Employee("Michael Brown", "Sales Department"),
+            new Employee("Anna Black", "Sales Department"),
+            new Employee("Rodger York", "Sales Department"),
+            new Employee("Susan Collins", "Sales Department"),
+            new Employee("Mike Graham", "IT Support"),
+            new Employee("Judy Mayer", "IT Support"),
+            new Employee("Gregory Smith", "IT Support"),
+            new Employee("Jacob Smith", "Accounts Department"),
+            new Employee("Isabella Johnson", "Accounts Department"));
+    
+        TreeItem<String> rootNode = new TreeItem<String>("MyCompany Human Resources");
+        rootNode.setExpanded(true);
+        
+        List<TreeItem<String>> nodeList = FXCollections.observableArrayList();
+        for (Employee employee : employees) {
+            nodeList.add(new TreeItem<String>(employee.getName()));
+        }
+        rootNode.getChildren().setAll(nodeList);
+
+        TreeView<String> treeView = new TreeView<String>(rootNode);
+        
+        // ensure all children of the root node have the correct indentation 
+        // before the sort occurs
+        ControlAsserts.assertLayoutX(treeView, 1, 11, 31.0);
+        for (TreeItem<String> children : rootNode.getChildren()) {
+            assertEquals(rootNode, children.getParent());
+        }
+        
+        // run sort
+        Collections.sort(rootNode.getChildren(), new Comparator<TreeItem<String>>() {
+            @Override public int compare(TreeItem<String> o1, TreeItem<String> o2) {
+                return o1.getValue().compareTo(o2.getValue());
+            }
+        });
+        
+        // ensure the same indentation exists after the sort (which is where the
+        // bug is - it drops down to 21.0px indentation when it shouldn't).
+        ControlAsserts.assertLayoutX(treeView, 1, 11, 31.0);
+        for (TreeItem<String> children : rootNode.getChildren()) {
+            assertEquals(rootNode, children.getParent());
+        }
+    }
+    
+    @Test public void test_rt22463() {
+        RT_22463_Person rootPerson = new RT_22463_Person();
+        rootPerson.setName("Root");
+        TreeItem<RT_22463_Person> root = new TreeItem<RT_22463_Person>(rootPerson);
+        root.setExpanded(true);
+        
+        final TreeView<RT_22463_Person> tree = new TreeView<RT_22463_Person>();
+        tree.setRoot(root);
+        
+        // before the change things display fine
+        RT_22463_Person p1 = new RT_22463_Person();
+        p1.setId(1l);
+        p1.setName("name1");
+        RT_22463_Person p2 = new RT_22463_Person();
+        p2.setId(2l);
+        p2.setName("name2");
+        root.getChildren().addAll(
+                new TreeItem<RT_22463_Person>(p1), 
+                new TreeItem<RT_22463_Person>(p2));
+        ControlAsserts.assertCellTextEquals(tree, 1, "name1");
+        ControlAsserts.assertCellTextEquals(tree, 2, "name2");
+        
+        // now we change the persons but they are still equal as the ID's don't
+        // change - but the items list is cleared so the cells should update
+        RT_22463_Person new_p1 = new RT_22463_Person();
+        new_p1.setId(1l);
+        new_p1.setName("updated name1");
+        RT_22463_Person new_p2 = new RT_22463_Person();
+        new_p2.setId(2l);
+        new_p2.setName("updated name2");
+        root.getChildren().clear();
+        root.getChildren().setAll(
+                new TreeItem<RT_22463_Person>(new_p1), 
+                new TreeItem<RT_22463_Person>(new_p2));
+        ControlAsserts.assertCellTextEquals(tree, 1, "updated name1");
+        ControlAsserts.assertCellTextEquals(tree, 2, "updated name2");
+    }
+    
+    @Ignore
+    @Test public void test_rt28637() {
+        TreeItem<String> s1, s2, s3, s4;
+        ObservableList<TreeItem<String>> items = FXCollections.observableArrayList(
+                s1 = new TreeItem<String>("String1"), 
+                s2 = new TreeItem<String>("String2"), 
+                s3 = new TreeItem<String>("String3"), 
+                s4 = new TreeItem<String>("String4"));
+        
+        final TreeView<String> treeView = new TreeView<String>();
+        
+        TreeItem<String> root = new TreeItem<String>("Root");
+        root.setExpanded(true);
+        treeView.setRoot(root);
+        root.getChildren().addAll(items);
+        
+        treeView.getSelectionModel().select(0);
+        assertEquals(root, treeView.getSelectionModel().getSelectedItem());
+        assertEquals(root, treeView.getSelectionModel().getSelectedItems().get(0));
+        assertEquals(0, treeView.getSelectionModel().getSelectedIndex());
+        
+        items.remove(treeView.getSelectionModel().getSelectedItem());
+        assertEquals(s1, treeView.getSelectionModel().getSelectedItem());
+        assertEquals(s1, treeView.getSelectionModel().getSelectedItems().get(0));
+        assertEquals(0, treeView.getSelectionModel().getSelectedIndex());
     }
 }

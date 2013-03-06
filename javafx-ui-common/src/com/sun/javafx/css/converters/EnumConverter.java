@@ -31,11 +31,19 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import javafx.css.ParsedValue;
+import javafx.css.StyleConverter;
 import javafx.scene.text.Font;
+
+import java.util.HashMap;
+import java.util.Map;
+
+import com.sun.javafx.Logging;
+import sun.util.logging.PlatformLogger;
 
 public final class EnumConverter<E extends Enum<E>> extends StyleConverterImpl<String, E> {
 
-    private final Class<E> enumClass;
+    // package for unit testing
+    final Class<E> enumClass;
 
     public EnumConverter(Class<E> enumClass) {
         this.enumClass = enumClass;
@@ -61,27 +69,127 @@ public final class EnumConverter<E extends Enum<E>> extends StyleConverterImpl<S
     }
 
     @Override
-    public void writeBinary(DataOutputStream os, StringStore ss) throws IOException {
-        super.writeBinary(os,ss);
-        int index = ss.addString(enumClass.getName());
+    public void writeBinary(DataOutputStream os, StringStore sstore) throws IOException {
+        super.writeBinary(os,sstore);
+        String ename = enumClass.getName();
+        int index = sstore.addString(ename);
         os.writeShort(index);
     }
 
-    @SuppressWarnings("unchecked") // Pending RT-27146
-    public EnumConverter(DataInputStream is, String[] strings) {
-        Class<E> eclass = null;
-        try {
-            int index = is.readShort();
-            String cname = strings[index];
-            // Unchecked!
-            eclass = (Class<E>)Class.forName(cname);
-        } catch (IOException ioe) {
-            System.err.println("EnumConveter caught: " + ioe);
-        } catch (ClassNotFoundException cnfe) {
-            System.err.println("EnumConveter caught: " + cnfe.toString());
+    
+    public static StyleConverter<?,?> readBinary(DataInputStream is, String[] strings)
+            throws IOException {
+    
+        short index = is.readShort();
+        String ename = 0 <= index && index <= strings.length ? strings[index] : null;
+        
+        if (ename == null || ename.isEmpty()) return null;
+            
+        if (converters == null || converters.containsKey(ename) == false) {
+            StyleConverter<?,?> converter = getInstance(ename);
+
+            if (converter == null) {
+                final PlatformLogger logger = Logging.getCSSLogger();
+                if (logger.isLoggable(PlatformLogger.SEVERE)) {
+                    logger.severe("could not deserialize EnumConverter for " + ename);
+                }
+            }
+
+            if (converters == null) converters = new HashMap<String,StyleConverter<?,?>>();
+            converters.put(ename, converter);
+            return converter;
         }
-        enumClass = eclass;
+        return converters.get(ename);
     }
+
+    private static Map<String,StyleConverter<?,?>> converters;
+
+    // package for unit testing
+    static public StyleConverter<?,?> getInstance(final String ename) {
+
+        StyleConverter<?,?> converter = null;
+
+        switch (ename) {
+        case "com.sun.javafx.cursor.CursorType" :
+            converter = new EnumConverter<com.sun.javafx.cursor.CursorType>(com.sun.javafx.cursor.CursorType.class);
+            break;
+        case "javafx.scene.layout.BackgroundRepeat" :
+            converter = new EnumConverter<javafx.scene.layout.BackgroundRepeat>(javafx.scene.layout.BackgroundRepeat.class);
+            break;
+        case "javafx.geometry.HPos" :
+            converter = new EnumConverter<javafx.geometry.HPos>(javafx.geometry.HPos.class);
+            break;
+        case "javafx.geometry.Orientation" :
+            converter = new EnumConverter<javafx.geometry.Orientation>(javafx.geometry.Orientation.class);
+            break;
+        case "javafx.geometry.Pos" :
+            converter = new EnumConverter<javafx.geometry.Pos>(javafx.geometry.Pos.class);
+            break;
+        case "javafx.geometry.Side" :
+            converter = new EnumConverter<javafx.geometry.Side>(javafx.geometry.Side.class);
+            break;
+        case "javafx.geometry.VPos" :
+            converter = new EnumConverter<javafx.geometry.VPos>(javafx.geometry.VPos.class);
+            break;
+        case "javafx.scene.effect.BlendMode" :
+            converter = new EnumConverter<javafx.scene.effect.BlendMode>(javafx.scene.effect.BlendMode.class);
+            break;
+        case "javafx.scene.effect.BlurType" :
+            converter = new EnumConverter<javafx.scene.effect.BlurType>(javafx.scene.effect.BlurType.class);
+            break;
+        case "javafx.scene.paint.CycleMethod" :
+            converter = new EnumConverter<javafx.scene.paint.CycleMethod>(javafx.scene.paint.CycleMethod.class);
+            break;
+        case "javafx.scene.shape.ArcType" :
+            converter = new EnumConverter<javafx.scene.shape.ArcType>(javafx.scene.shape.ArcType.class);
+            break;
+        case "javafx.scene.shape.StrokeLineCap" :
+            converter = new EnumConverter<javafx.scene.shape.StrokeLineCap>(javafx.scene.shape.StrokeLineCap.class);
+            break;
+        case "javafx.scene.shape.StrokeLineJoin" :
+            converter = new EnumConverter<javafx.scene.shape.StrokeLineJoin>(javafx.scene.shape.StrokeLineJoin.class);
+            break;
+        case "javafx.scene.shape.StrokeType" :
+            converter = new EnumConverter<javafx.scene.shape.StrokeType>(javafx.scene.shape.StrokeType.class);
+            break;
+        case "javafx.scene.text.FontPosture" :
+            converter = new EnumConverter<javafx.scene.text.FontPosture>(javafx.scene.text.FontPosture.class);
+            break;
+        case "javafx.scene.text.FontSmoothingType" :
+            converter = new EnumConverter<javafx.scene.text.FontSmoothingType>(javafx.scene.text.FontSmoothingType.class);
+            break;
+        case "javafx.scene.text.FontWeight" :
+            converter = new EnumConverter<javafx.scene.text.FontWeight>(javafx.scene.text.FontWeight.class);
+            break;
+        case "javafx.scene.text.TextAlignment" :
+            converter = new EnumConverter<javafx.scene.text.TextAlignment>(javafx.scene.text.TextAlignment.class);      
+            break;
+        
+        default :
+            //
+            // Enum types that are not in the javafx-ui-common source tree.
+            //
+            // Because the parser doesn't explicitly know about these enums
+            // outside of the javafx-ui-common package, I don't expect these
+            // EnumConverters to have been persisted. For example, the
+            // -fx-text-overrun and -fx-content-display properties, will yield
+            // a ParsedValue<String,String> with a null converter. 
+            //
+            // If assertions are disabled, then null is returned. The StyleHelper
+            // code will use the StyleableProperty's converter in this case.
+            //
+            assert false : "EnumConverter<"+ ename + "> not expected";
+
+            final PlatformLogger logger = Logging.getCSSLogger();
+            if (logger.isLoggable(PlatformLogger.SEVERE)) {
+                logger.severe("EnumConverter : converter Class is null for : "+ename);
+            }
+            break;
+        }
+
+        return converter;
+    }
+            
 
     @Override
     public boolean equals(Object other) {

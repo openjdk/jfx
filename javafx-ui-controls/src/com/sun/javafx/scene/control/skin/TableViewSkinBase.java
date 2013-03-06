@@ -237,10 +237,19 @@ public abstract class TableViewSkinBase<S, C extends Control, B extends Behavior
     
     private ListChangeListener rowCountListener = new ListChangeListener() {
         @Override public void onChanged(Change c) {
-            // RT-28397: Support for when an item is replaced with itself (but
-            // updated internal values that should be shown visually)
             while (c.next()) {
                 if (c.wasReplaced()) {
+                    // RT-28397: Support for when an item is replaced with itself (but
+                    // updated internal values that should be shown visually)
+                    itemCount = 0;
+                    break;
+                } else if (c.getRemovedSize() == itemCount) {
+                    // RT-22463: If the user clears out an items list then we
+                    // should reset all cells (in particular their contained
+                    // items) such that a subsequent addition to the list of
+                    // an item which equals the old item (but is rendered
+                    // differently) still displays as expected (i.e. with the
+                    // updated display, not the old display).
                     itemCount = 0;
                     break;
                 }
@@ -330,7 +339,6 @@ public abstract class TableViewSkinBase<S, C extends Control, B extends Behavior
      * Region placed over the top of the flow (and possibly the header row) if
      * there is no data and/or there are no columns specified.
      */
-    // TODO externalise the strings so they can be i18n
     // FIXME this should not be a StackPane
     private StackPane placeholderRegion;
     private Label placeholderLabel;
