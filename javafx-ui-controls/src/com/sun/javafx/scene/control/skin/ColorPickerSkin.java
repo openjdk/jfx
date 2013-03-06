@@ -465,6 +465,7 @@ public class ColorPickerSkin extends ComboBoxPopupControl<Color> {
                 if (!popupContent.isCustomColorDialogShowing()) hide();
             }
         } else if ("VALUE".equals(p)) {
+            updateColor();
            // Change the current selected color in the grid if ColorPicker value changes
             if (popupContent != null) {
 //                popupContent.updateSelection(getSkinnable().getValue());
