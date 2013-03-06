@@ -1331,7 +1331,9 @@ public final class QuantumToolkit extends DesktopToolkit implements ToolkitInter
 
     @Override
     public PGAmbientLight createPGAmbientLight() {
-        return new NGAmbientLight();
+        NGAmbientLight light = new NGAmbientLight();
+        lightsInScene.add(light);
+        return light;
     }
 
     @Override
