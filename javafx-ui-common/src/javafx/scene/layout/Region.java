@@ -58,6 +58,7 @@ import com.sun.javafx.binding.ExpressionHelper;
 import com.sun.javafx.css.converters.BooleanConverter;
 import com.sun.javafx.css.converters.InsetsConverter;
 import com.sun.javafx.css.converters.ShapeConverter;
+import com.sun.javafx.css.converters.SizeConverter;
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.PickRay;
 import com.sun.javafx.geom.transform.BaseTransform;
@@ -66,7 +67,10 @@ import com.sun.javafx.scene.input.PickResultChooser;
 import com.sun.javafx.sg.PGNode;
 import com.sun.javafx.sg.PGRegion;
 import com.sun.javafx.tk.Toolkit;
+import javafx.beans.value.ObservableValue;
+import javafx.css.StyleOrigin;
 import javafx.css.Styleable;
+import javafx.css.StyleableDoubleProperty;
 import sun.util.logging.PlatformLogger;
 
 /**
@@ -708,17 +712,24 @@ public class Region extends Parent {
      * This class is reused for the min, pref, and max properties since
      * they all performed the same function (to call requestParentLayout).
      */
-    private final class MinPrefMaxProperty extends DoublePropertyBase {
-        private String name;
-
-        MinPrefMaxProperty(String name, double initialValue) {
+    private final class MinPrefMaxProperty extends StyleableDoubleProperty {
+        private final String name;
+        private final CssMetaData<? extends Styleable, Number> cssMetaData;
+        
+        MinPrefMaxProperty(String name, double initialValue, CssMetaData<? extends Styleable, Number> cssMetaData) {
             super(initialValue);
             this.name = name;
+            this.cssMetaData = cssMetaData;
         }
 
         @Override public void invalidated() { requestParentLayout(); }
         @Override public Object getBean() { return Region.this; }
         @Override public String getName() { return name; }
+
+        @Override
+        public CssMetaData<? extends Styleable, Number> getCssMetaData() {
+            return cssMetaData;
+        }
     }
 
     /**
@@ -746,7 +757,7 @@ public class Region extends Parent {
     }
     public final double getMinWidth() { return minWidth == null ? _minWidth : minWidth.get(); }
     public final DoubleProperty minWidthProperty() {
-        if (minWidth == null) minWidth = new MinPrefMaxProperty("minWidth", _minWidth);
+        if (minWidth == null) minWidth = new MinPrefMaxProperty("minWidth", _minWidth, StyleableProperties.MIN_WIDTH);
         return minWidth;
     }
 
@@ -776,7 +787,7 @@ public class Region extends Parent {
     }
     public final double getMinHeight() { return minHeight == null ? _minHeight : minHeight.get(); }
     public final DoubleProperty minHeightProperty() {
-        if (minHeight == null) minHeight = new MinPrefMaxProperty("minHeight", _minHeight);
+        if (minHeight == null) minHeight = new MinPrefMaxProperty("minHeight", _minHeight, StyleableProperties.MIN_HEIGHT);
         return minHeight;
     }
 
@@ -816,7 +827,7 @@ public class Region extends Parent {
     }
     public final double getPrefWidth() { return prefWidth == null ? _prefWidth : prefWidth.get(); }
     public final DoubleProperty prefWidthProperty() {
-        if (prefWidth == null) prefWidth = new MinPrefMaxProperty("prefWidth", _prefWidth);
+        if (prefWidth == null) prefWidth = new MinPrefMaxProperty("prefWidth", _prefWidth, StyleableProperties.PREF_WIDTH);
         return prefWidth;
     }
 
@@ -841,7 +852,7 @@ public class Region extends Parent {
     }
     public final double getPrefHeight() { return prefHeight == null ? _prefHeight : prefHeight.get(); }
     public final DoubleProperty prefHeightProperty() {
-        if (prefHeight == null) prefHeight = new MinPrefMaxProperty("prefHeight", _prefHeight);
+        if (prefHeight == null) prefHeight = new MinPrefMaxProperty("prefHeight", _prefHeight, StyleableProperties.PREF_HEIGHT);
         return prefHeight;
     }
 
@@ -885,7 +896,7 @@ public class Region extends Parent {
     }
     public final double getMaxWidth() { return maxWidth == null ? _maxWidth : maxWidth.get(); }
     public final DoubleProperty maxWidthProperty() {
-        if (maxWidth == null) maxWidth = new MinPrefMaxProperty("maxWidth", _maxWidth);
+        if (maxWidth == null) maxWidth = new MinPrefMaxProperty("maxWidth", _maxWidth, StyleableProperties.MAX_WIDTH);
         return maxWidth;
     }
 
@@ -914,7 +925,7 @@ public class Region extends Parent {
     }
     public final double getMaxHeight() { return maxHeight == null ? _maxHeight : maxHeight.get(); }
     public final DoubleProperty maxHeightProperty() {
-        if (maxHeight == null) maxHeight = new MinPrefMaxProperty("maxHeight", _maxHeight);
+        if (maxHeight == null) maxHeight = new MinPrefMaxProperty("maxHeight", _maxHeight, StyleableProperties.MAX_HEIGHT);
         return maxHeight;
     }
 
@@ -2413,6 +2424,90 @@ public class Region extends Parent {
             }
         };
 
+         private static final CssMetaData<Region, Number> MIN_HEIGHT =
+             new CssMetaData<Region,Number>("-fx-min-height",
+                 SizeConverter.getInstance(), USE_COMPUTED_SIZE){
+
+            @Override public boolean isSettable(Region node) {
+                return node.minHeight == null ||
+                        !node.minHeight.isBound();
+            }
+
+            @Override public StyleableProperty<Number> getStyleableProperty(Region node) {
+                return (StyleableProperty<Number>)node.minHeightProperty();
+            }
+        };
+
+         private static final CssMetaData<Region, Number> PREF_HEIGHT =
+             new CssMetaData<Region,Number>("-fx-pref-height",
+                 SizeConverter.getInstance(), USE_COMPUTED_SIZE){
+
+            @Override public boolean isSettable(Region node) {
+                return node.prefHeight == null ||
+                        !node.prefHeight.isBound();
+            }
+
+            @Override public StyleableProperty<Number> getStyleableProperty(Region node) {
+                return (StyleableProperty<Number>)node.prefHeightProperty();
+            }
+        };
+         
+         private static final CssMetaData<Region, Number> MAX_HEIGHT =
+             new CssMetaData<Region,Number>("-fx-max-height",
+                 SizeConverter.getInstance(), USE_COMPUTED_SIZE){
+
+            @Override public boolean isSettable(Region node) {
+                return node.maxHeight == null ||
+                        !node.maxHeight.isBound();
+            }
+
+            @Override public StyleableProperty<Number> getStyleableProperty(Region node) {
+                return (StyleableProperty<Number>)node.maxHeightProperty();
+            }
+        };
+         
+         private static final CssMetaData<Region, Number> MIN_WIDTH =
+             new CssMetaData<Region,Number>("-fx-min-width",
+                 SizeConverter.getInstance(), USE_COMPUTED_SIZE){
+
+            @Override public boolean isSettable(Region node) {
+                return node.minWidth == null ||
+                        !node.minWidth.isBound();
+            }
+
+            @Override public StyleableProperty<Number> getStyleableProperty(Region node) {
+                return (StyleableProperty<Number>)node.minWidthProperty();
+            }
+        };
+
+         private static final CssMetaData<Region, Number> PREF_WIDTH =
+             new CssMetaData<Region,Number>("-fx-pref-width",
+                 SizeConverter.getInstance(), USE_COMPUTED_SIZE){
+
+            @Override public boolean isSettable(Region node) {
+                return node.prefWidth == null ||
+                        !node.prefWidth.isBound();
+            }
+
+            @Override public StyleableProperty<Number> getStyleableProperty(Region node) {
+                return (StyleableProperty<Number>)node.prefWidthProperty();
+            }
+        };
+         
+         private static final CssMetaData<Region, Number> MAX_WIDTH =
+             new CssMetaData<Region,Number>("-fx-max-width",
+                 SizeConverter.getInstance(), USE_COMPUTED_SIZE){
+
+            @Override public boolean isSettable(Region node) {
+                return node.maxWidth == null ||
+                        !node.maxWidth.isBound();
+            }
+
+            @Override public StyleableProperty<Number> getStyleableProperty(Region node) {
+                return (StyleableProperty<Number>)node.maxWidthProperty();
+            }
+        };
+
          private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
          static {
 
@@ -2426,6 +2521,12 @@ public class Region extends Parent {
             styleables.add(SCALE_SHAPE);
             styleables.add(POSITION_SHAPE);
             styleables.add(SNAP_TO_PIXEL);
+            styleables.add(MIN_WIDTH);
+            styleables.add(PREF_WIDTH);
+            styleables.add(MAX_WIDTH);
+            styleables.add(MIN_HEIGHT);
+            styleables.add(PREF_HEIGHT);
+            styleables.add(MAX_HEIGHT);
             STYLEABLES = Collections.unmodifiableList(styleables);
          }
     }
