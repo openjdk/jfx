@@ -498,4 +498,34 @@ public class ListViewTest {
         assertEquals("String2", listView.getSelectionModel().getSelectedItems().get(0));
         assertEquals(0, listView.getSelectionModel().getSelectedIndex());
     }
+    
+    @Test public void test_rt28819_1() {
+        ObservableList<String> emptyModel = FXCollections.observableArrayList();
+        
+        final ListView<String> listView = new ListView<String>();
+        listView.setItems(emptyModel);
+        ControlAsserts.assertRowsEmpty(listView, 0, 5);
+        
+        ObservableList<String> mod = FXCollections.observableArrayList();
+        String value = System.currentTimeMillis()+"";
+        mod.add(value);
+        listView.setItems(mod);
+        ControlAsserts.assertCellCount(listView, 1);
+        ControlAsserts.assertCellTextEquals(listView, 0, value);
+    }
+    
+    @Test public void test_rt28819_2() {
+        ObservableList<String> emptyModel = FXCollections.observableArrayList();
+        
+        final ListView<String> listView = new ListView<String>();
+        listView.setItems(emptyModel);
+        ControlAsserts.assertRowsEmpty(listView, 0, 5);
+        
+        ObservableList<String> mod1 = FXCollections.observableArrayList();
+        String value1 = System.currentTimeMillis()+"";
+        mod1.add(value1);
+        listView.getItems().setAll(mod1);
+        ControlAsserts.assertCellCount(listView, 1);
+        ControlAsserts.assertCellTextEquals(listView, 0, value1);
+    }
 }
