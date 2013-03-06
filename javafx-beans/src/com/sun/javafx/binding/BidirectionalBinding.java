@@ -235,11 +235,19 @@ public abstract class BidirectionalBinding<T> implements ChangeListener<T>, Weak
                 } else {
                     try {
                         updating = true;
-                        if (property1.equals(sourceProperty)) {
+                        if (property1 == sourceProperty) {
                             property2.set(newValue);
                         } else {
                             property1.set(newValue);
                         }
+                    } catch (RuntimeException e) {
+                        if (property1 == sourceProperty) {
+                            property1.set(oldValue);
+                        } else {
+                            property2.set(oldValue);
+                        }
+                        throw new RuntimeException(
+                                "Bidirectional binding failed, setting to the previous value", e);
                     } finally {
                         updating = false;
                     }
@@ -284,11 +292,19 @@ public abstract class BidirectionalBinding<T> implements ChangeListener<T>, Weak
                 } else {
                     try {
                         updating = true;
-                        if (property1.equals(sourceProperty)) {
+                        if (property1 == sourceProperty) {
                             property2.set(newValue.doubleValue());
                         } else {
                             property1.set(newValue.doubleValue());
                         }
+                    } catch (RuntimeException e) {
+                        if (property1 == sourceProperty) {
+                            property1.set(oldValue.doubleValue());
+                        } else {
+                            property2.set(oldValue.doubleValue());
+                        }
+                        throw new RuntimeException(
+                                        "Bidirectional binding failed, setting to the previous value", e);
                     } finally {
                         updating = false;
                     }
@@ -333,11 +349,19 @@ public abstract class BidirectionalBinding<T> implements ChangeListener<T>, Weak
                 } else {
                     try {
                         updating = true;
-                        if (property1.equals(sourceProperty)) {
+                        if (property1 == sourceProperty) {
                             property2.set(newValue.floatValue());
                         } else {
                             property1.set(newValue.floatValue());
                         }
+                    } catch (RuntimeException e) {
+                        if (property1 == sourceProperty) {
+                            property1.set(oldValue.floatValue());
+                        } else {
+                            property2.set(oldValue.floatValue());
+                        }
+                        throw new RuntimeException(
+                                "Bidirectional binding failed, setting to the previous value", e);
                     } finally {
                         updating = false;
                     }
@@ -382,11 +406,19 @@ public abstract class BidirectionalBinding<T> implements ChangeListener<T>, Weak
                 } else {
                     try {
                         updating = true;
-                        if (property1.equals(sourceProperty)) {
+                        if (property1 == sourceProperty) {
                             property2.set(newValue.intValue());
                         } else {
                             property1.set(newValue.intValue());
                         }
+                    } catch (RuntimeException e) {
+                        if (property1 == sourceProperty) {
+                            property1.set(oldValue.intValue());
+                        } else {
+                            property2.set(oldValue.intValue());
+                        }
+                        throw new RuntimeException(
+                                        "Bidirectional binding failed, setting to the previous value", e);
                     } finally {
                         updating = false;
                     }
@@ -431,11 +463,19 @@ public abstract class BidirectionalBinding<T> implements ChangeListener<T>, Weak
                 } else {
                     try {
                         updating = true;
-                        if (property1.equals(sourceProperty)) {
+                        if (property1 == sourceProperty) {
                             property2.set(newValue.longValue());
                         } else {
                             property1.set(newValue.longValue());
                         }
+                    } catch (RuntimeException e) {
+                        if (property1 == sourceProperty) {
+                            property1.set(oldValue.longValue());
+                        } else {
+                            property2.set(oldValue.longValue());
+                        }
+                        throw new RuntimeException(
+                                "Bidirectional binding failed, setting to the previous value", e);
                     } finally {
                         updating = false;
                     }
@@ -480,11 +520,19 @@ public abstract class BidirectionalBinding<T> implements ChangeListener<T>, Weak
                 } else {
                     try {
                         updating = true;
-                        if (property1.equals(sourceProperty)) {
-                            property2.setValue(property1.getValue());
+                        if (property1 == sourceProperty) {
+                            property2.setValue(newValue);
                         } else {
-                            property1.setValue(property2.getValue());
+                            property1.setValue(newValue);
                         }
+                    } catch (RuntimeException e) {
+                        if (property1 == sourceProperty) {
+                            property1.setValue(oldValue);
+                        } else {
+                            property2.setValue(oldValue);
+                        }
+                        throw new RuntimeException(
+                                "Bidirectional binding failed, setting to the previous value", e);
                     } finally {
                         updating = false;
                     }
@@ -529,11 +577,19 @@ public abstract class BidirectionalBinding<T> implements ChangeListener<T>, Weak
                 } else {
                     try {
                         updating = true;
-                        if (property1.equals(sourceProperty)) {
-                            property2.setValue(property1.getValue());
+                        if (property1 == sourceProperty) {
+                            property2.setValue(newValue);
                         } else {
-                            property1.setValue((T)property2.getValue());
+                            property1.setValue((T)newValue);
                         }
+                    } catch (RuntimeException e) {
+                        if (property1 == sourceProperty) {
+                            property1.setValue((T)oldValue);
+                        } else {
+                            property2.setValue(oldValue);
+                        }
+                        throw new RuntimeException(
+                                        "Bidirectional binding failed, setting to the previous value", e);
                     } finally {
                         updating = false;
                     }
@@ -610,7 +666,7 @@ public abstract class BidirectionalBinding<T> implements ChangeListener<T>, Weak
                 } else {
                     try {
                         updating = true;
-                        if (property1.equals(observable)) {
+                        if (property1 == observable) {
                             try {
                                 property2.setValue(fromString(property1.getValue()));
                             } catch (Exception e) {
