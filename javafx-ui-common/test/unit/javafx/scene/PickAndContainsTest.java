@@ -163,6 +163,41 @@ public class PickAndContainsTest {
     }
 
     @Test
+    public void testScenePickingGroupAndClipWithPickOnBounds() {
+        Group grp;
+        Rectangle r0;
+        Rectangle r1;
+        Rectangle r2;
+        Group root = new Group();
+        root.getChildren().addAll(r0 = new Rectangle(100, 100, 40, 20),
+                                grp = new Group(r1 = new Rectangle(0,0,40,20),
+                                                r2 = new Rectangle(200,200,40,20))
+                                );
+        Scene scene = new Scene(root);
+        r1.setId("Rect 1");
+        r1.setClip(new Circle(20,10,10));
+        r2.setId("Rect 2");
+        grp.setClip(new Circle(120,120,120));
+        grp.getClip().setPickOnBounds(true);
+
+        int pickX = 38;
+        int pickY = 18;
+        assertNull(scene.test_pick(pickX, pickY));
+        assertFalse(grp.contains(pickX, pickY));
+        assertFalse(r0.contains(pickX, pickY));
+        assertFalse(r1.contains(pickX, pickY));
+        assertFalse(r2.contains(pickX, pickY));
+
+        pickX = 230;
+        pickY = 215;
+        assertSame(r2, scene.test_pick(pickX, pickY));
+
+        pickX = 120;
+        pickY = 110;
+        assertSame(r0, scene.test_pick(pickX, pickY));
+    }
+
+    @Test
     public void testSceneGroupPickOnBounds() {
         Group grp;
         Rectangle r0;
