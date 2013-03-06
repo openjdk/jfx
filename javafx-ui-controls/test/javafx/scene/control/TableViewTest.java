@@ -542,21 +542,23 @@ public class TableViewTest {
         ControlAsserts.assertCellTextEquals(table, 1, "2", "updated name2");
     }
     
-    @Ignore
     @Test public void test_rt28637() {
         ObservableList<String> items = FXCollections.observableArrayList("String1", "String2", "String3", "String4");
         
         final TableView<String> tableView = new TableView<String>();
+        final MultipleSelectionModel sm = tableView.getSelectionModel();
         tableView.setItems(items);
         
         tableView.getSelectionModel().select(0);
-        assertEquals("String1", tableView.getSelectionModel().getSelectedItem());
-        assertEquals("String1", tableView.getSelectionModel().getSelectedItems().get(0));
-        assertEquals(0, tableView.getSelectionModel().getSelectedIndex());
+        assertEquals("String1", sm.getSelectedItem());
+        assertEquals(1, sm.getSelectedItems().size());
+        assertEquals("String1", sm.getSelectedItems().get(0));
+        assertEquals(0, sm.getSelectedIndex());
         
-        items.remove(tableView.getSelectionModel().getSelectedItem());
-        assertEquals("String2", tableView.getSelectionModel().getSelectedItem());
-        assertEquals("String2", tableView.getSelectionModel().getSelectedItems().get(0));
-        assertEquals(0, tableView.getSelectionModel().getSelectedIndex());
+        items.remove(sm.getSelectedItem());
+        assertEquals("String2", sm.getSelectedItem());
+        assertEquals(1, sm.getSelectedItems().size());
+        assertEquals("String2", sm.getSelectedItems().get(0));
+        assertEquals(0, sm.getSelectedIndex());
     }
 }

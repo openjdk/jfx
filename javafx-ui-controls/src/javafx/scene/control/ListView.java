@@ -998,17 +998,32 @@ public class ListView<T> extends Control {
                 updateItemCount();
                 
                 while (c.next()) {
+                    final T selectedItem = getSelectedItem();
+                    final int selectedIndex = getSelectedIndex();
+                    
                     if (listView.getItems() == null || listView.getItems().isEmpty()) {
                         clearSelection();
-                    } else if (getSelectedIndex() == -1 && getSelectedItem() != null) {
-                        int newIndex = listView.getItems().indexOf(getSelectedItem());
+                    } else if (selectedIndex == -1 && selectedItem != null) {
+                        int newIndex = listView.getItems().indexOf(selectedItem);
                         if (newIndex != -1) {
                             setSelectedIndex(newIndex);
                         }
+                    } else if (c.wasRemoved() && 
+                            c.getRemovedSize() == 1 && 
+                            ! c.wasAdded() && 
+                            selectedItem != null && 
+                            selectedItem.equals(c.getRemoved().get(0))) {
+                        // Bug fix for RT-28637
+                        if (getSelectedIndex() < getItemCount()) {
+                            T newSelectedItem = getModelItem(selectedIndex);
+                            if (! selectedItem.equals(newSelectedItem)) {
+                                setSelectedItem(newSelectedItem);
+                            }
+                        }
                     }
-
-                    updateSelection(c);
                 }
+                
+                updateSelection(c);
             }
         };
         

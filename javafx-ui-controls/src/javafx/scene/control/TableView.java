@@ -1265,6 +1265,8 @@ public class TableView<S> extends Control {
      */
     // package for testing
     static class TableViewArrayListSelectionModel<S> extends TableViewSelectionModel<S> {
+        
+        private int itemCount = 0;
 
         /***********************************************************************
          *                                                                     *
@@ -1275,6 +1277,8 @@ public class TableView<S> extends Control {
         public TableViewArrayListSelectionModel(final TableView<S> tableView) {
             super(tableView);
             this.tableView = tableView;
+            
+            updateItemCount();
             
             cellSelectionEnabledProperty().addListener(new InvalidationListener() {
                 @Override public void invalidated(Observable o) {
@@ -1384,14 +1388,34 @@ public class TableView<S> extends Control {
 
         final ListChangeListener<S> itemsContentListener = new ListChangeListener<S>() {
             @Override public void onChanged(Change<? extends S> c) {
-                if (tableView.getItems() == null || tableView.getItems().isEmpty()) {
-                    clearSelection();
-                } else if (getSelectedIndex() == -1 && getSelectedItem() != null) {
-                    int newIndex = tableView.getItems().indexOf(getSelectedItem());
-                    if (newIndex != -1) {
-                        setSelectedIndex(newIndex);
+                updateItemCount();
+                
+                while (c.next()) {
+                    final S selectedItem = getSelectedItem();
+                    final int selectedIndex = getSelectedIndex();
+                    
+                    if (tableView.getItems() == null || tableView.getItems().isEmpty()) {
+                        clearSelection();
+                    } else if (getSelectedIndex() == -1 && getSelectedItem() != null) {
+                        int newIndex = tableView.getItems().indexOf(getSelectedItem());
+                        if (newIndex != -1) {
+                            setSelectedIndex(newIndex);
+                        }
+                    } else if (c.wasRemoved() && 
+                            c.getRemovedSize() == 1 && 
+                            ! c.wasAdded() && 
+                            selectedItem != null && 
+                            selectedItem.equals(c.getRemoved().get(0))) {
+                        // Bug fix for RT-28637
+                        if (getSelectedIndex() < getItemCount()) {
+                            S newSelectedItem = getModelItem(selectedIndex);
+                            if (! selectedItem.equals(newSelectedItem)) {
+                                setSelectedItem(newSelectedItem);
+                            }
+                        }
                     }
                 }
+                
                 updateSelection(c);
             }
         };
@@ -1408,6 +1432,8 @@ public class TableView<S> extends Control {
             if (newList != null) {
                 newList.addListener(weakItemsContentListener);
             }
+            
+            updateItemCount();
 
             // when the items list totally changes, we should clear out
             // the selection
@@ -1455,6 +1481,7 @@ public class TableView<S> extends Control {
         // changes we can update the selected indices list to refer to the 
         // new indices.
         private void updateSelection(ListChangeListener.Change<? extends S> c) {
+            c.reset();
             while (c.next()) {
                 if (c.wasReplaced()) {
                     if (c.getList().isEmpty()) {
@@ -1466,28 +1493,40 @@ public class TableView<S> extends Control {
                         if (previousModelSize == c.getRemovedSize()) {
                             // all items were removed from the model
                             clearSelection();
-                        } else if (index < getRowCount() && index >= 0) {
+                        } else if (index < getItemCount() && index >= 0) {
                             // Fix for RT-18969: the list had setAll called on it
+                            // Use of makeAtomic is a fix for RT-20945
+                            makeAtomic = true;
                             clearSelection(index);
+                            makeAtomic = false;
                             select(index);
                         } else {
                             // Fix for RT-22079
                             clearSelection();
                         }
                     }
-                    
-                    
                 } else if (c.wasAdded() || c.wasRemoved()) {
                     int position = c.getFrom();
                     int shift = c.wasAdded() ? c.getAddedSize() : -c.getRemovedSize();
                     
                     if (position < 0) return;
+                    if (shift == 0) return;
                     
                     List<TablePosition> newIndices = new ArrayList<TablePosition>(selectedCells.size());
         
                     for (int i = 0; i < selectedCells.size(); i++) {
-                        TablePosition old = selectedCells.get(i);
-                        int newRow = old.getRow() < position ? old.getRow() : old.getRow() + shift;
+                        final TablePosition old = selectedCells.get(i);
+                        final int oldRow = old.getRow();
+                        final int newRow = oldRow < position ? oldRow : oldRow + shift;
+                        
+                        // Special case for RT-28637 (See unit test in TableViewTest).
+                        // Essentially the selectedItem was correct, but selectedItems
+                        // was empty.
+                        if (oldRow == 0 && shift == -1) {
+                            newIndices.add(new TablePosition(getTableView(), 0, old.getTableColumn()));
+                            continue;
+                        }
+                        
                         if (newRow < 0) continue;
                         newIndices.add(new TablePosition(getTableView(), newRow, old.getTableColumn()));
                     }
@@ -1545,7 +1584,7 @@ public class TableView<S> extends Control {
                 }
             }
             
-            previousModelSize = getRowCount();
+            previousModelSize = getItemCount();
         }
 
         /***********************************************************************
@@ -1569,7 +1608,7 @@ public class TableView<S> extends Control {
 
         @Override
         public void select(int row, TableColumn<S,?> column) {
-            if (row < 0 || row >= getRowCount()) return;
+            if (row < 0 || row >= getItemCount()) return;
 
             // if I'm in cell selection mode but the column is null, I don't want
             // to select the whole row instead...
@@ -1598,7 +1637,7 @@ public class TableView<S> extends Control {
             // first occurrence of the given object. Once we find the first one, we
             // don't proceed to select any others.
             S rowObj = null;
-            for (int i = 0; i < getRowCount(); i++) {
+            for (int i = 0; i < getItemCount(); i++) {
                 rowObj = getModelItem(i);
                 if (rowObj == null) continue;
 
@@ -1634,7 +1673,7 @@ public class TableView<S> extends Control {
              * Performance optimisation - if multiple selection is disabled, only
              * process the end-most row index.
              */
-            int rowCount = getRowCount();
+            int rowCount = getItemCount();
 
             if (getSelectionMode() == SelectionMode.SINGLE) {
                 quietClearSelection();
@@ -1690,7 +1729,7 @@ public class TableView<S> extends Control {
                 TablePosition tp = null;
                 for (int col = 0; col < getTableView().getVisibleLeafColumns().size(); col++) {
                     column = getTableView().getVisibleLeafColumns().get(col);
-                    for (int row = 0; row < getRowCount(); row++) {
+                    for (int row = 0; row < getItemCount(); row++) {
                         tp = new TablePosition(getTableView(), row, column);
                         indices.add(tp);
                     }
@@ -1703,11 +1742,11 @@ public class TableView<S> extends Control {
                 }
             } else {
                 List<TablePosition> indices = new ArrayList<TablePosition>();
-                for (int i = 0; i < getRowCount(); i++) {
+                for (int i = 0; i < getItemCount(); i++) {
                     indices.add(new TablePosition(getTableView(), i, null));
                 }
                 selectedCells.setAll(indices);
-                select(getRowCount() - 1);
+                select(getItemCount() - 1);
                 focus(indices.get(indices.size() - 1));
             }
         }
@@ -1779,14 +1818,14 @@ public class TableView<S> extends Control {
                 if (pos.getColumn() - 1 >= 0) {
                     // go to previous row
                     select(pos.getRow(), getTableColumn(pos.getTableColumn(), -1));
-                } else if (pos.getRow() < getRowCount() - 1) {
+                } else if (pos.getRow() < getItemCount() - 1) {
                     // wrap to end of previous row
                     select(pos.getRow() - 1, getTableColumn(getTableView().getVisibleLeafColumns().size() - 1));
                 }
             } else {
                 int focusIndex = getFocusedIndex();
                 if (focusIndex == -1) {
-                    select(getRowCount() - 1);
+                    select(getItemCount() - 1);
                 } else if (focusIndex > 0) {
                     select(focusIndex - 1);
                 }
@@ -1801,7 +1840,7 @@ public class TableView<S> extends Control {
                 if (pos.getColumn() + 1 < getTableView().getVisibleLeafColumns().size()) {
                     // go to next column
                     select(pos.getRow(), getTableColumn(pos.getTableColumn(), 1));
-                } else if (pos.getRow() < getRowCount() - 1) {
+                } else if (pos.getRow() < getItemCount() - 1) {
                     // wrap to start of next row
                     select(pos.getRow() + 1, getTableColumn(0));
                 }
@@ -1809,7 +1848,7 @@ public class TableView<S> extends Control {
                 int focusIndex = getFocusedIndex();
                 if (focusIndex == -1) {
                     select(0);
-                } else if (focusIndex < getRowCount() -1) {
+                } else if (focusIndex < getItemCount() -1) {
                     select(focusIndex + 1);
                 }
             }
@@ -1818,7 +1857,7 @@ public class TableView<S> extends Control {
         @Override public void selectAboveCell() {
             TablePosition pos = getFocusedCell();
             if (pos.getRow() == -1) {
-                select(getRowCount() - 1);
+                select(getItemCount() - 1);
             } else if (pos.getRow() > 0) {
                 select(pos.getRow() - 1, pos.getTableColumn());
             }
@@ -1829,7 +1868,7 @@ public class TableView<S> extends Control {
 
             if (pos.getRow() == -1) {
                 select(0);
-            } else if (pos.getRow() < getRowCount() -1) {
+            } else if (pos.getRow() < getItemCount() -1) {
                 select(pos.getRow() + 1, pos.getTableColumn());
             }
         }
@@ -1841,7 +1880,7 @@ public class TableView<S> extends Control {
                 quietClearSelection();
             }
 
-            if (getRowCount() > 0) {
+            if (getItemCount() > 0) {
                 if (isCellSelectionEnabled()) {
                     select(0, focusedCell.getTableColumn());
                 } else {
@@ -1857,7 +1896,7 @@ public class TableView<S> extends Control {
                 quietClearSelection();
             }
 
-            int numItems = getRowCount();
+            int numItems = getItemCount();
             if (numItems > 0 && getSelectedIndex() < numItems - 1) {
                 if (isCellSelectionEnabled()) {
                     select(numItems - 1, focusedCell.getTableColumn());
@@ -1940,22 +1979,26 @@ public class TableView<S> extends Control {
             return getTableView().getFocusModel().getFocusedCell();
         }
 
-        private int getRowCount() {
-            List items = tableView.getItems();
-            return items == null ? -1 : items.size();
-        }
-        
         /** {@inheritDoc} */
         @Override protected int getItemCount() {
-            List items = tableView.getItems();
-            if (items == null) return -1;
-            return items.size();
+            return itemCount;
+//            List<S> items = tableView.getItems();
+//            return items == null ? -1 : items.size();
         }
 
         @Override protected S getModelItem(int index) {
-            if (index < 0 || index > getRowCount()) return null;
+            if (index < 0 || index > getItemCount()) return null;
             return tableView.getItems().get(index);
         }
+        
+        private void updateItemCount() {
+            if (tableView == null) {
+                itemCount = -1;
+            } else {
+                List<S> items = tableView.getItems();
+                itemCount = items == null ? -1 : items.size();
+            }
+        } 
     }
     
     
