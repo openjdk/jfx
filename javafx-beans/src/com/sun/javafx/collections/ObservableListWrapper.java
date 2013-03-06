@@ -29,7 +29,6 @@ import javafx.collections.ModifiableObservableListBase;
 import com.sun.javafx.collections.NonIterableChange.SimplePermutationChange;
 import java.util.Collection;
 import java.util.Comparator;
-import java.util.Iterator;
 import java.util.List;
 import java.util.RandomAccess;
 import javafx.beans.InvalidationListener;
@@ -41,7 +40,8 @@ import javafx.util.Callback;
  * A List wrapper class that implements observability.
  *
  */
-public class ObservableListWrapper<E> extends ModifiableObservableListBase<E> implements ObservableList<E>, SortableList<E> {
+public class ObservableListWrapper<E> extends ModifiableObservableListBase<E> implements
+        ObservableList<E>, SortableList<E>, RandomAccess {
 
     private final List<E> backingList;
 
@@ -64,19 +64,10 @@ public class ObservableListWrapper<E> extends ModifiableObservableListBase<E> im
                     public void invalidated(Observable observable) {
                         beginChange();
                         int i = 0;
-                        if (backingList instanceof RandomAccess) {
-                            final int size = size();
-                            for (; i < size; ++i) {
-                                if (get(i) == e) {
-                                    nextUpdate(i);
-                                }
-                            }
-                        } else {
-                            for (Iterator<?> it = iterator(); it.hasNext();) {
-                                if (it.next() == e) {
-                                    nextUpdate(i);
-                                }
-                                ++i;
+                        final int size = size();
+                        for (; i < size; ++i) {
+                            if (get(i) == e) {
+                                nextUpdate(i);
                             }
                         }
                         endChange();
