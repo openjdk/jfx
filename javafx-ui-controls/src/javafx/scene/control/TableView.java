@@ -1384,14 +1384,32 @@ public class TableView<S> extends Control {
 
         final ListChangeListener<S> itemsContentListener = new ListChangeListener<S>() {
             @Override public void onChanged(Change<? extends S> c) {
-                if (tableView.getItems() == null || tableView.getItems().isEmpty()) {
-                    clearSelection();
-                } else if (getSelectedIndex() == -1 && getSelectedItem() != null) {
-                    int newIndex = tableView.getItems().indexOf(getSelectedItem());
-                    if (newIndex != -1) {
-                        setSelectedIndex(newIndex);
+                while (c.next()) {
+                    final S selectedItem = getSelectedItem();
+                    final int selectedIndex = getSelectedIndex();
+                    
+                    if (tableView.getItems() == null || tableView.getItems().isEmpty()) {
+                        clearSelection();
+                    } else if (selectedIndex == -1 && selectedItem != null) {
+                        int newIndex = tableView.getItems().indexOf(selectedItem);
+                        if (newIndex != -1) {
+                            setSelectedIndex(newIndex);
+                        }
+                    } else if (c.wasRemoved() && 
+                            c.getRemovedSize() == 1 && 
+                            ! c.wasAdded() && 
+                            selectedItem != null && 
+                            selectedItem.equals(c.getRemoved().get(0))) {
+                        // Bug fix for RT-28637
+                        if (getSelectedIndex() < getItemCount()) {
+                            S newSelectedItem = getModelItem(selectedIndex);
+                            if (! selectedItem.equals(newSelectedItem)) {
+                                setSelectedItem(newSelectedItem);
+                            }
+                        }
                     }
                 }
+                
                 updateSelection(c);
             }
         };

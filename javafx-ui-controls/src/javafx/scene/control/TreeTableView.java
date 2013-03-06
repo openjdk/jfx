@@ -1888,14 +1888,30 @@ public class TreeTableView<S> extends Control {
                     // whilst we are here, we should check if the removed items
                     // are part of the selectedItems list - and remove them
                     // from selection if they are (as per RT-15446)
-                    List<Integer> indices = getSelectedIndices();
-                    for (int i = 0; i < indices.size() && ! getSelectedItems().isEmpty(); i++) {
-                        int index = indices.get(i);
-                        if (index > getSelectedItems().size()) break;
+                    final List<Integer> selectedIndices = getSelectedIndices();
+                    final int selectedIndex = getSelectedIndex();
+                    final List<TreeItem<S>> selectedItems = getSelectedItems();
+                    final TreeItem<S> selectedItem = getSelectedItem();
+                    final List<? extends TreeItem<S>> removedChildren = e.getRemovedChildren();
+                    
+                    for (int i = 0; i < selectedIndices.size() && ! selectedItems.isEmpty(); i++) {
+                        int index = selectedIndices.get(i);
+                        if (index > selectedItems.size()) break;
                         
-                        TreeItem<S> item = getSelectedItems().get(index);
-                        if (item == null || e.getRemovedChildren().contains(item)) {
+                        TreeItem<S> item = selectedItems.get(index);
+                        if (item == null || removedChildren.contains(item)) {
                             clearSelection(index);
+                        } else if (removedChildren.size() == 1 && 
+                                selectedItems.size() == 1 && 
+                                selectedItem != null && 
+                                selectedItem.equals(removedChildren.get(0))) {
+                            // Bug fix for RT-28637
+                            if (selectedIndex < getItemCount()) {
+                                TreeItem<S> newSelectedItem = getModelItem(selectedIndex);
+                                if (! selectedItem.equals(newSelectedItem)) {
+                                    setSelectedItem(newSelectedItem);
+                                }
+                            }
                         }
                     }
                 }

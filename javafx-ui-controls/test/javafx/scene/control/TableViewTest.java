@@ -542,7 +542,6 @@ public class TableViewTest {
         ControlAsserts.assertCellTextEquals(table, 1, "2", "updated name2");
     }
     
-    @Ignore
     @Test public void test_rt28637() {
         ObservableList<String> items = FXCollections.observableArrayList("String1", "String2", "String3", "String4");
         
