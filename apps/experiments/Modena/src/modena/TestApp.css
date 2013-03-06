@@ -32,6 +32,14 @@
  #TestAppToolbar > * > .label {
      -fx-font-size: 10px;
  }
+#SamplePageToolBar {
+    -fx-base: #666;
+    -fx-background: #444;
+}
+#SamplePageScrollPane {
+    -fx-background-insets: 0,0;
+    -fx-padding: 0;
+}
 .section-label {
     -fx-font-weight: normal;
     -fx-text-fill: derive(-fx-text-background-color,30%);
