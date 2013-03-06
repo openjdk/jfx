@@ -60,6 +60,7 @@ public class ObservableMapWrapper<K, V> implements ObservableMap<K, V>{
 
         public SimpleChange(K key, V old, V added, boolean wasAdded, boolean wasRemoved) {
             super(ObservableMapWrapper.this);
+            assert(wasAdded || wasRemoved);
             this.key = key;
             this.old = old;
             this.added = added;
@@ -90,6 +91,22 @@ public class ObservableMapWrapper<K, V> implements ObservableMap<K, V>{
         @Override
         public V getValueRemoved() {
             return old;
+        }
+
+        @Override
+        public String toString() {
+            StringBuilder builder = new StringBuilder();
+            if (wasAdded) {
+                if (wasRemoved) {
+                    builder.append("replaced ").append(old).append("by ").append(added);
+                } else {
+                    builder.append("added ").append(added);
+                }
+            } else {
+                builder.append("removed ").append(old);
+            }
+            builder.append(" at key ").append(key);
+            return builder.toString();
         }
 
     }

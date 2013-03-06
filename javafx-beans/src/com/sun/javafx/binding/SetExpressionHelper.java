@@ -622,6 +622,7 @@ public abstract class SetExpressionHelper<E> extends ExpressionHelperBase {
 
         private E old;
         private E added;
+        private boolean addOp;
 
         public SimpleChange(ObservableSet<E> set) {
             super(set);
@@ -631,28 +632,31 @@ public abstract class SetExpressionHelper<E> extends ExpressionHelperBase {
             super(set);
             old = source.getElementRemoved();
             added = source.getElementAdded();
+            addOp = source.wasAdded();
         }
 
         public SimpleChange<E> setRemoved(E old) {
             this.old = old;
             this.added = null;
+            addOp = false;
             return this;
         }
 
         public SimpleChange<E> setAdded(E added) {
             this.old = null;
             this.added = added;
+            addOp = true;
             return this;
         }
 
         @Override
         public boolean wasAdded() {
-            return added != null;
+            return addOp;
         }
 
         @Override
         public boolean wasRemoved() {
-            return old != null;
+            return !addOp;
         }
 
         @Override
@@ -664,5 +668,11 @@ public abstract class SetExpressionHelper<E> extends ExpressionHelperBase {
         public E getElementRemoved() {
             return old;
         }
+
+        @Override
+        public String toString() {
+            return addOp ? "added " + added : "removed " + old;
+        }
+        
     }
 }
