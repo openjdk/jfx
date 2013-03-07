@@ -45,6 +45,7 @@ import javafx.collections.ObservableList;
 import javafx.collections.SetChangeListener;
 import javafx.event.EventHandler;
 import javafx.scene.Node;
+import javafx.scene.control.Label;
 import javafx.scene.control.SelectionMode;
 import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
@@ -300,6 +301,25 @@ public class SamplePageTableHelper {
                 return new ReadOnlyObjectWrapper<String>("New Zealand");
             }
         });
+        // Test case for RT-28410 MODENA: can't make tree/table cell factories change color based
+        // on background when setGraphic(...) is used
+        countryCol.setCellFactory(new Callback<TableColumn<Person, String>, TableCell<Person, String>>() {
+            @Override public TableCell<Person, String> call(TableColumn<Person, String> param) {
+                final Label label = new Label();
+                label.setStyle(
+                        "-fx-font-family: 'Times New Roman';" +
+                        "-fx-font-size: 0.8em;" +
+                        "-fx-text-fill: ladder(-fx-background, yellow 49%, red 50%);");
+                TableCell cell = new TableCell() {
+                    @Override protected void updateItem(Object item, boolean empty) {
+                        label.setText(empty ? null : item.toString());
+                    }
+                };
+                cell.setGraphic(label);
+                return cell;
+            }
+        });
+
         invitedCol = new TableColumn<Person, Boolean>();
         invitedCol.setText("Invited");
         invitedCol.setPrefWidth(55);
