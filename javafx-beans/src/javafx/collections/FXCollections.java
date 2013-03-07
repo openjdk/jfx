@@ -53,10 +53,12 @@ import com.sun.javafx.collections.ObservableListWrapper;
 import com.sun.javafx.collections.ObservableMapWrapper;
 import com.sun.javafx.collections.ObservableSetWrapper;
 import com.sun.javafx.collections.MapAdapterChange;
+import com.sun.javafx.collections.ObservableSequentialListWrapper;
 import com.sun.javafx.collections.SetAdapterChange;
 import com.sun.javafx.collections.SortableList;
 import com.sun.javafx.collections.SourceAdapterChange;
 import com.sun.javafx.collections.annotations.ReturnsUnmodifiableCollection;
+import java.util.RandomAccess;
 import javafx.beans.Observable;
 import javafx.collections.ListChangeListener.Change;
 import javafx.util.Callback;
@@ -92,7 +94,8 @@ public class FXCollections {
         if (list == null) {
             throw new NullPointerException();
         }
-        return new ObservableListWrapper<E>(list);
+        return list instanceof RandomAccess ? new ObservableListWrapper<E>(list) :
+                new ObservableSequentialListWrapper<E>(list);
     }
     
     /**
@@ -116,7 +119,8 @@ public class FXCollections {
         if (list == null || extractor == null) {
             throw new NullPointerException();
         }
-        return new ObservableListWrapper<E>(list, extractor);
+        return list instanceof RandomAccess ? new ObservableListWrapper<E>(list, extractor) : 
+            new ObservableSequentialListWrapper<E>(list, extractor);
     }
     
     /**

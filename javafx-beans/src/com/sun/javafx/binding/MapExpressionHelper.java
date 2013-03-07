@@ -285,9 +285,9 @@ public abstract class MapExpressionHelper<K, V> extends ExpressionHelperBase {
                     for (final Map.Entry<K, V> element : oldValue.entrySet()) {
                         final K key = element.getKey();
                         final V oldEntry = element.getValue();
-                        final V newEntry = currentValue.get(key);
-                        if (newEntry != null) {
-                            if (!newEntry.equals(oldEntry)) {
+                        if (currentValue.containsKey(key)) {
+                            final V newEntry = currentValue.get(key);
+                            if (oldEntry == null ? newEntry != null : !newEntry.equals(oldEntry)) {
                                 listener.onChanged(change.setPut(key, oldEntry, newEntry));
                             }
                         } else {
@@ -600,9 +600,9 @@ public abstract class MapExpressionHelper<K, V> extends ExpressionHelperBase {
                                 for (final Map.Entry<K, V> element : oldValue.entrySet()) {
                                     final K key = element.getKey();
                                     final V oldEntry = element.getValue();
-                                    final V newEntry = currentValue.get(key);
-                                    if (newEntry != null) {
-                                        if (!newEntry.equals(oldEntry)) {
+                                    if (currentValue.containsKey(key)) {
+                                        final V newEntry = currentValue.get(key);
+                                        if (oldEntry == null ? newEntry != null : !newEntry.equals(oldEntry)) {
                                             change.setPut(key, oldEntry, newEntry);
                                             for (int i = 0; i < curListChangeSize; i++) {
                                                 curListChangeList[i].onChanged(change);
@@ -640,6 +640,8 @@ public abstract class MapExpressionHelper<K, V> extends ExpressionHelperBase {
         private K key;
         private V old;
         private V added;
+        private boolean removeOp;
+        private boolean addOp;
 
         public SimpleChange(ObservableMap<K, V> set) {
             super(set);
@@ -650,12 +652,16 @@ public abstract class MapExpressionHelper<K, V> extends ExpressionHelperBase {
             key = source.getKey();
             old = source.getValueRemoved();
             added = source.getValueAdded();
+            addOp = source.wasAdded();
+            removeOp = source.wasRemoved();
         }
 
         public SimpleChange<K, V> setRemoved(K key, V old) {
             this.key = key;
             this.old = old;
             this.added = null;
+            addOp = false;
+            removeOp = true;
             return this;
         }
 
@@ -663,6 +669,8 @@ public abstract class MapExpressionHelper<K, V> extends ExpressionHelperBase {
             this.key = key;
             this.old = null;
             this.added = added;
+            addOp = true;
+            removeOp = false;
             return this;
         }
         
@@ -670,17 +678,19 @@ public abstract class MapExpressionHelper<K, V> extends ExpressionHelperBase {
             this.key = key;
             this.old = old;
             this.added = added;
+            addOp = true;
+            removeOp = true;
             return this;
         }
 
         @Override
         public boolean wasAdded() {
-            return added != null;
+            return addOp;
         }
 
         @Override
         public boolean wasRemoved() {
-            return old != null;
+            return removeOp;
         }
 
         @Override
@@ -696,6 +706,22 @@ public abstract class MapExpressionHelper<K, V> extends ExpressionHelperBase {
         @Override
         public V getValueRemoved() {
             return old;
+        }
+
+        @Override
+        public String toString() {
+            StringBuilder builder = new StringBuilder();
+            if (addOp) {
+                if (removeOp) {
+                    builder.append("replaced ").append(old).append("by ").append(added);
+                } else {
+                    builder.append("added ").append(added);
+                }
+            } else {
+                builder.append("removed ").append(old);
+            }
+            builder.append(" at key ").append(key);
+            return builder.toString();
         }
     }
 }

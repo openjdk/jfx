@@ -25,10 +25,10 @@
 
 package com.sun.glass.ui.lens;
 
-import com.sun.glass.ui.Application;
-import com.sun.glass.ui.Robot;
+import com.sun.glass.ui.*;
 import com.sun.glass.events.KeyEvent;
 import com.sun.glass.events.MouseEvent;
+import java.nio.IntBuffer;
 
 final class LensRobot extends Robot {
 
@@ -104,9 +104,12 @@ final class LensRobot extends Robot {
     private native int getMouseLocation(int axsis);
 
     @Override native protected int _getPixelColor(int x, int y);
-    @Override native protected void _getScreenCapture(int x, int y,
-                                                      int width, int height,
-                                                      int[] data);
 
+    native private void _getScreenCapture(int x, int y, int width, int height, int[] data);
+    @Override protected Pixels _getScreenCapture(int x, int y, int width, int height, boolean isHiDPI) {
+        int data[] = new int[width * height];
+        _getScreenCapture(x, y, width, height, data);
+        return Application.GetApplication().createPixels(width, height, IntBuffer.wrap(data));
+    }
 }
 

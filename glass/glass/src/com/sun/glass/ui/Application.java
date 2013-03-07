@@ -538,7 +538,28 @@ public abstract class Application {
 
     public abstract Pixels createPixels(int width, int height, ByteBuffer data);
     public abstract Pixels createPixels(int width, int height, IntBuffer data);
+    public abstract Pixels createPixels(int width, int height, IntBuffer data, float scale);
     protected abstract int staticPixels_getNativeFormat();
+
+    /* utility method called from native code */
+    static Pixels createPixels(int width, int height, int[] data, float scale) {
+        return Application.GetApplication().createPixels(width, height, IntBuffer.wrap(data), scale);
+    }
+
+    /* utility method called from native code */
+    static float getScaleFactor(final int x, final int y, final int w, final int h) {
+        float scale = 0.0f;
+        // Find the maximum scale for screens this area overlaps
+        for (Screen s : Screen.getScreens()) {
+            final int sx = s.getX(), sy = s.getY(), sw = s.getWidth(), sh = s.getHeight();
+            if (x < (sx + sw) && (x + w) > sx && y < (sy + sh) && (y + h) > sy) {
+                if (scale < s.getScale()) {
+                    scale = s.getScale();
+                }
+            }
+        }
+        return scale == 0.0f ? 1.0f : scale;
+    }
 
 
     public abstract Robot createRobot();

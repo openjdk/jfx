@@ -32,6 +32,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 
 import static javafx.collections.MockMapObserver.Call.call;
@@ -112,6 +113,26 @@ public abstract class ObservableMapTestBase {
         observer.assertRemoved(5, tup("foo", (String)null));
 
         assertEquals(observer.getCallsNumber(), 6);
+    }
+    
+    @Test
+    public void testPutRemove_NullKey() {
+        if (map instanceof ConcurrentHashMap || map instanceof TreeMap) {
+            return; // Do not perform on ConcurrentHashMap and TreeMap, as they doesn't accept null keys
+        }
+
+        observableMap.put(null, "abc");
+
+        assertEquals(4, observableMap.size());
+        
+        observableMap.remove(null);
+
+        assertEquals(3, observableMap.size());
+
+        observer.assertAdded(0, tup((String)null, "abc"));
+        observer.assertRemoved(1, tup((String)null, "abc"));
+
+        assertEquals(observer.getCallsNumber(), 2);
     }
 
     @Test

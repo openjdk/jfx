@@ -38,6 +38,8 @@ import java.util.Arrays;
 import java.util.Collection;
 
 import static org.junit.Assert.*;
+import org.junit.Rule;
+import org.junit.rules.ExpectedException;
 
 @RunWith(Parameterized.class)
 public class BidirectionalBindingTest<T> {
@@ -55,6 +57,9 @@ public class BidirectionalBindingTest<T> {
 
     private final Functions<T> func;
     private final T[] v;
+    
+    @Rule
+    public ExpectedException thrown = ExpectedException.none();
 
     private PropertyMock<T> op1;
     private PropertyMock<T> op2;
@@ -254,7 +259,23 @@ public class BidirectionalBindingTest<T> {
 	public void testUnbind_X_Self() {
 		func.unbind(op1, op1);
 	}
-	
+        
+        @Test
+        public void testBrokenBind() {
+            func.bind(op1, op2);
+            op1.bind(op3);
+            assertEquals(op3.getValue(), op1.getValue());
+            assertEquals(op2.getValue(), op1.getValue());
+            
+            thrown.expect(RuntimeException.class);
+            try {
+                op2.setValue(v[2]);
+            } finally {
+                assertEquals(op3.getValue(), op1.getValue());
+                assertEquals(op2.getValue(), op1.getValue());
+            }
+        }
+        
     @Parameterized.Parameters
     public static Collection<Object[]> parameters() {
         final Boolean[] booleanData = new Boolean[] {true, false, true, false};

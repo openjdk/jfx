@@ -7,8 +7,9 @@
 <!-- the Compile on Save feature is turned off for the project. -->
 <!-- You can turn off the Compile on Save (or Deploy on Save) setting -->
 <!-- in the project's Project Properties dialog box.-->
-<project name="Ensemble8" default="default" basedir=".">
+<project name="Ensemble8" default="default" basedir="." xmlns:fx="javafx:com.sun.javafx.tools.ant">
     <description>Builds, tests, and runs the project Ensemble8.</description>
+    <import file="../../build-tasks.xml"/>
     <import file="nbproject/build-impl.xml"/>
     <!--
 
@@ -91,7 +92,7 @@
     </target>
     
     <!-- COPY LIBS INTO JAR FILE: so that we have a simple single jar application -->
-    <target name="-post-jar">
+    <target name="-post-jar" depends="jfx-deployment">
         <zip destfile="${dist.jar}" update="true">
             <zipfileset src="${file.reference.lucene-core-3.2.0.jar}"/>
             <zipfileset src="${file.reference.lucene-grouping-3.2.0.jar}"/>
@@ -118,4 +119,21 @@
          </classpath>
        </java>
     </target>
+    
+   <target name="jfx-deployment">
+        <!-- Delete the Ensemble8.jar build by netbeans as we will build one with JavaFX packager -->
+        <delete file="${dist.jar}"/>  
+        <fx:application id="ensemble8"
+                        name="${application.title}"
+                        mainClass="ensemble.EnsembleApp"/>
+        <fx:jar destfile="${dist.jar}">
+            <fx:application refId="ensemble8"/>
+            <fileset dir="${build.classes.dir}"/>
+            <manifest>
+                <attribute name="Implementation-Vendor" value="${application.vendor}"/>
+                <attribute name="Implementation-Title" value="${application.title}"/>
+                <attribute name="Implementation-Version" value="1.0"/>
+            </manifest>
+        </fx:jar>
+    </target>    
 </project>

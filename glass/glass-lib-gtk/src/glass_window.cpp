@@ -465,7 +465,8 @@ WindowContextBase::~WindowContextBase() {
 WindowContextTop::WindowContextTop(jobject _jwindow, WindowContext* _owner, long _screen,
         WindowFrameType _frame_type, WindowType type)
 : WindowContextBase(), screen(_screen), frame_type(_frame_type),
-        owner(_owner), geometry(), stale_config_notifications(), resizable(), xshape(), frame_extents_initialized()
+        owner(_owner), geometry(), stale_config_notifications(), resizable(),
+        xshape(), frame_extents_initialized(), map_received(false)
 {
     jwindow = mainEnv->NewGlobalRef(_jwindow);
 
@@ -814,13 +815,11 @@ void WindowContextTop::set_window_resizable(bool res, bool grip) {
 }
 
 void WindowContextTop::set_resizable(bool res) {
-    gint w, h;
-    gtk_window_get_size(GTK_WINDOW(gtk_widget), &w, &h);
-    if (w <= 1 || h <= 1) {
+    if (map_received) {
+        set_window_resizable(res, true);
+    } else {
         //Since window is not ready yet set only request for change of resizable.
         resizable.request  = res ? REQUEST_RESIZABLE : REQUEST_NOT_RESIZABLE;
-    } else {
-        set_window_resizable(res, true);
     }
 }
 
@@ -883,6 +882,10 @@ void WindowContextTop::set_bounds(int x, int y, bool xSet, bool ySet, int w, int
 
     window_configure(&windowChanges, windowChangesMask);
 
+}
+
+void WindowContextTop::process_map() {
+    map_received = true;
     if (resizable.request != REQUEST_NONE) {
         set_window_resizable(resizable.request == REQUEST_RESIZABLE, true);
         resizable.request = REQUEST_NONE;

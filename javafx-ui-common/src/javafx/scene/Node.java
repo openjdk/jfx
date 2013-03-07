@@ -4366,7 +4366,9 @@ public abstract class Node implements EventTarget, Styleable {
         double boundsDistance = impl_intersectsBounds(pickRay);
         if (!Double.isNaN(boundsDistance)) {
             if (isPickOnBounds()) {
-                pickResult.offer(this, boundsDistance, PickResultChooser.computePoint(pickRay, boundsDistance));
+                if (pickResult != null) {
+                    pickResult.offer(this, boundsDistance, PickResultChooser.computePoint(pickRay, boundsDistance));
+                }
                 return true;
             } else {
                 return impl_computeIntersects(pickRay, pickResult);

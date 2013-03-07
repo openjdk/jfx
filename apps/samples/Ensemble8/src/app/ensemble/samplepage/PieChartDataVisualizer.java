@@ -54,10 +54,6 @@ import javafx.util.Callback;
 import javafx.util.StringConverter;
 
 
-/**
- *
- * @author akouznet
- */
 public class PieChartDataVisualizer extends TableView<Data> {
     
     PieChart chart;

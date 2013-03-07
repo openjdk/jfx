@@ -30,6 +30,7 @@
 
 #import "GlassMacros.h"
 #import "GlassKey.h"
+#import "GlassHelper.h"
 
 //#define VERBOSE
 #ifndef VERBOSE
@@ -439,41 +440,75 @@ JNIEXPORT jint JNICALL Java_com_sun_glass_ui_mac_MacRobot__1getPixelColor
 /*
  * Class:     com_sun_glass_ui_mac_MacRobot
  * Method:    _getScreenCapture
- * Signature: (IIII[I;)V
+ * Signature: (IIIIZ)Lcom/sun/glass/ui/Pixels;
  */
-JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacRobot__1getScreenCapture
-(JNIEnv *env, jobject jrobot, jint x, jint y, jint width, jint height, jintArray pixelArray)
+JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_mac_MacRobot__1getScreenCapture
+(JNIEnv *env, jobject jrobot, jint x, jint y, jint width, jint height, jboolean isHiDPI)
 {
     LOG("Java_com_sun_glass_ui_mac_MacRobot__1getScreenCapture");
     
+    jobject pixels = NULL;
+
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER
     {
-        jint *javaPixels = (jint*)(*env)->GetIntArrayElements(env, pixelArray, 0);
-        if (javaPixels != NULL)
+        CGRect bounds = CGRectMake((CGFloat)x, (CGFloat)y, (CGFloat)width, (CGFloat)height);
+        CGImageRef screenImage = CGWindowListCreateImage(bounds, kCGWindowListOptionOnScreenOnly, kCGNullWindowID, kCGWindowImageDefault);
+        if (screenImage != NULL)
         {
-            CGRect bounds = CGRectMake((CGFloat)x, (CGFloat)y, (CGFloat)width, (CGFloat)height);
-            CGImageRef screenImage = CGWindowListCreateImage(bounds, kCGWindowListOptionOnScreenOnly, kCGNullWindowID, kCGWindowImageDefault);
-            if (screenImage != NULL)
-            {
-                CGDataProviderRef provider = CGImageGetDataProvider(screenImage);
-                if (provider != NULL)
-                {
-                    CFDataRef data = CGDataProviderCopyData(provider);
-                    if (data != NULL)
-                    {
-                        jint *screenPixels = (jint*)CFDataGetBytePtr(data);
-                        if (screenPixels != NULL)
-                        {
-                            memcpy(javaPixels, screenPixels, width*height);
-                        }
-                    }
-                    CFRelease(data);
-                }
-                CGImageRelease(screenImage);
+            jint pixWidth, pixHeight;
+
+            if (isHiDPI) {
+                pixWidth = (jint)CGImageGetWidth(screenImage);
+                pixHeight = (jint)CGImageGetHeight(screenImage);
+            } else {
+                pixWidth = width;
+                pixHeight = height;
             }
+
+            jintArray pixelArray = (*env)->NewIntArray(env, (jsize)pixWidth*pixHeight);
+            if (pixelArray)
+            {
+                jint *javaPixels = (jint*)(*env)->GetIntArrayElements(env, pixelArray, 0);
+                if (javaPixels != NULL)
+                {
+                    // create a graphics context around the Java int array
+                    CGColorSpaceRef picColorSpace = CGColorSpaceCreateWithName(
+                            kCGColorSpaceGenericRGB);
+                    CGContextRef jPicContextRef = CGBitmapContextCreate(
+                            javaPixels,
+                            pixWidth, pixHeight,
+                            8, pixWidth * sizeof(jint),
+                            picColorSpace,
+                            kCGBitmapByteOrder32Host |
+                            kCGImageAlphaPremultipliedFirst);
+
+                    CGColorSpaceRelease(picColorSpace);
+
+                    // flip, scale, and color correct the screen image into the Java pixels
+                    CGRect zeroBounds = { { 0, 0 }, { pixWidth, pixHeight } };
+                    CGContextDrawImage(jPicContextRef, zeroBounds, screenImage);
+                    CGContextFlush(jPicContextRef);
+
+                    // cleanup
+                    CGContextRelease(jPicContextRef);
+                    (*env)->ReleaseIntArrayElements(env, pixelArray, javaPixels, 0);
+
+                    jfloat scale = (*env)->CallStaticFloatMethod(env,
+                            [GlassHelper ClassForName:"com.sun.glass.ui.Application" withEnv:env],
+                            javaIDs.Application.getScaleFactor, x, y, width, height);
+
+                    // create Pixels
+                    pixels = (*env)->CallStaticObjectMethod(env,
+                            [GlassHelper ClassForName:"com.sun.glass.ui.Application" withEnv:env],
+                            javaIDs.Application.createPixels, pixWidth, pixHeight, pixelArray, scale);
+                }
+            }
+
+            CGImageRelease(screenImage);
         }
-        (*env)->ReleaseIntArrayElements(env, pixelArray, javaPixels, 0);
     }
     GLASS_POOL_EXIT;
+
+    return pixels;
 }

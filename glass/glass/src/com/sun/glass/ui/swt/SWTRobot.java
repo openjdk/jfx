@@ -24,7 +24,9 @@
  */
 package com.sun.glass.ui.swt;
 
-import com.sun.glass.ui.Robot;
+import com.sun.glass.ui.*;
+
+import java.nio.IntBuffer;
 
 import org.eclipse.swt.*;
 import org.eclipse.swt.graphics.*;
@@ -106,7 +108,7 @@ final class SWTRobot extends Robot {
         return imageData.getPixel(x, y);
     }
     
-    @Override protected void _getScreenCapture(int x, int y, int width, int height, int[] data) {
+    private void _getScreenCapture(int x, int y, int width, int height, int[] data) {
 //        Display display = Display.getDefault();
 //        GC gc = new GC(display);
 //        final Image image = new Image(display, display.getBounds());
@@ -114,6 +116,11 @@ final class SWTRobot extends Robot {
 //        gc.dispose();
 //        ImageData imageData = image.getImageData();
         //TODO - put bits into data
+    }
+    @Override protected Pixels _getScreenCapture(int x, int y, int width, int height, boolean isHiDPI) {
+        int data[] = new int[width * height];
+        _getScreenCapture(x, y, width, height, data);
+        return Application.GetApplication().createPixels(width, height, IntBuffer.wrap(data));
     }
 }
 

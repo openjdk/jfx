@@ -24,8 +24,7 @@
  */
 package com.sun.glass.ui.mac;
 
-import com.sun.glass.ui.Application;
-import com.sun.glass.ui.Robot;
+import com.sun.glass.ui.*;
 
 /**
  * MacOSX platform implementation class for Robot.
@@ -94,7 +93,6 @@ final class MacRobot extends Robot {
     }
 
     @Override native protected int _getPixelColor(int x, int y);
-    @Override native protected void _getScreenCapture(int x, int y, int width, int height, int[] data);
-
+    @Override native protected Pixels _getScreenCapture(int x, int y, int width, int height, boolean isHiDPI);
 }
 

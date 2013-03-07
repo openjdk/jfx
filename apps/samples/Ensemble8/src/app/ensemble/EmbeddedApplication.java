@@ -39,10 +39,6 @@ import javafx.application.Application;
 import javafx.scene.Node;
 import javafx.stage.Stage;
 
-/**
- *
- * @author Jasper Potts
- */
 public class EmbeddedApplication {
     private static Stage TEMP_STAGE = new Stage() {
         

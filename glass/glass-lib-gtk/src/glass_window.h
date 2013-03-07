@@ -137,6 +137,7 @@ public:
 
     virtual void process_property_notify(GdkEventProperty*) = 0;
     virtual void process_configure(GdkEventConfigure*) = 0;
+    virtual void process_map() = 0;
     virtual void process_focus(GdkEventFocus*) = 0;
     virtual void process_destroy() = 0;
     virtual void process_delete() = 0;
@@ -203,6 +204,7 @@ public:
     void set_level(int) {}
     void set_background(float, float, float);
 
+    void process_map() {}
     void process_focus(GdkEventFocus*);
     void process_destroy();
     void process_delete();
@@ -331,8 +333,10 @@ class WindowContextTop: public WindowContextBase {
     } xshape;
 
     bool frame_extents_initialized;
+    bool map_received;
 public:
     WindowContextTop(jobject, WindowContext*, long, WindowFrameType, WindowType);
+    void process_map();
     void process_property_notify(GdkEventProperty*);
     void process_configure(GdkEventConfigure*);
     void process_state(GdkEventWindowState*);
