@@ -595,8 +595,13 @@ public class SamplePage extends GridPane {
                 );
         newSection(
                 "TableView Simple:\n(Row Selection)",
-                createTableViewSimple(550, true),
-                withState(createTableViewSimple(150, true), "focused")
+                createTableViewSimple(550, true, false),
+                withState(createTableViewSimple(150, true, false), "focused")
+        );
+        newSection(
+                "TableView Simple:\n(Constrained Resize)",
+                createTableViewSimple(550, true, true),
+                withState(createTableViewSimple(150, true, true), "focused")
         );
         newSection(
                 "TableView:\n(Row Selection)",
@@ -614,9 +619,15 @@ public class SamplePage extends GridPane {
                 withState(createTreeView(350), "focused")
                 );
         newSection(
-                "TreeTableView:",
-                createTreeTableView(550),
-                withState(createTreeTableView(200), "focused")
+                "TreeTableView:\n" +
+                        "(Row Selection)",
+                createTreeTableView(550, false),
+                withState(createTreeTableView(200, false), "focused")
+                );
+        newSection(
+                "TreeTableView:\n(Cell Selection)",
+                createTreeTableView(550, true),
+                withState(createTreeTableView(200, true), "focused")
                 );
         newDetailedSection(
                 new String[] {"Empty:", "ListView", "TableView", "TreeView", "TreeTableView"},

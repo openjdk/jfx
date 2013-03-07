@@ -206,7 +206,7 @@ public class SamplePageTableHelper {
 
     }
 
-    static TableView createTableViewSimple(int width, boolean rowSelection) {
+    static TableView createTableViewSimple(int width, boolean rowSelection, boolean constrainedResize) {
         TableColumn<Person, String> nameCol, emailCol, countryCol;
         // Columns
         nameCol = new TableColumn<Person, String>();
@@ -231,7 +231,8 @@ public class SamplePageTableHelper {
         TableView<Person> tableView = new TableView<Person>();
         tableView.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
         tableView.getSelectionModel().setCellSelectionEnabled(!rowSelection);
-        tableView.setTableMenuButtonVisible(true);
+        tableView.setTableMenuButtonVisible(false);
+        if (constrainedResize) tableView.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
         tableView.setItems(data);
         tableView.getColumns().addAll(nameCol, emailCol, countryCol);
         tableView.setPrefSize(width, 300);
