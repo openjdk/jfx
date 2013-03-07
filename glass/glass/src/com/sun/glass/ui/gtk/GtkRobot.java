@@ -24,7 +24,8 @@
  */
 package com.sun.glass.ui.gtk;
 
-import com.sun.glass.ui.Robot;
+import com.sun.glass.ui.*;
+import java.nio.IntBuffer;
 
 final class GtkRobot extends Robot {
 
@@ -69,7 +70,10 @@ final class GtkRobot extends Robot {
         return result[0];
     }
 
-    @Override
-    protected native void _getScreenCapture(int x, int y, int width, int height, int[] data);
-    
+    native private void _getScreenCapture(int x, int y, int width, int height, int[] data);
+    @Override protected Pixels _getScreenCapture(int x, int y, int width, int height, boolean isHiDPI) {
+        int data[] = new int[width * height];
+        _getScreenCapture(x, y, width, height, data);
+        return Application.GetApplication().createPixels(width, height, IntBuffer.wrap(data));
+    }
 }

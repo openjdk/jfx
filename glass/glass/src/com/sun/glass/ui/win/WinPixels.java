@@ -50,6 +50,10 @@ final class WinPixels extends Pixels {
         super(width, height, data);
     }
 
+    protected WinPixels(int width, int height, IntBuffer data, float scale) {
+        super(width, height, data, scale);
+    }
+
     static int getNativeFormat_impl() {
         return nativeFormat;
     }

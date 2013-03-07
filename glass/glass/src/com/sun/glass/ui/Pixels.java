@@ -78,6 +78,8 @@ public abstract class Pixels {
     protected final ByteBuffer bytes;
     protected final IntBuffer ints;
 
+    private final float scale;
+
     protected Pixels(final int width, final int height, final ByteBuffer pixels) {
         //Application.checkEventThread(); // Quantum
         this.width = width;
@@ -89,6 +91,7 @@ public abstract class Pixels {
         }
         
         this.ints = null;
+        this.scale = 1.0f;
     }
     
     protected Pixels(final int width, final int height, IntBuffer pixels) {
@@ -102,6 +105,26 @@ public abstract class Pixels {
         }
         
         this.bytes = null;
+        this.scale = 1.0f;
+    }
+
+    protected Pixels(final int width, final int height, IntBuffer pixels, float scale) {
+        //Application.checkEventThread(); // Quantum
+        this.width = width;
+        this.height = height;
+        this.bytesPerComponent = 4;
+        this.ints = pixels.slice();
+        if ((this.width <= 0) || (this.height <= 0) || ((this.width * this.height) > this.ints.capacity())) {
+            throw new IllegalArgumentException("Too small int buffer size "+this.width+"x"+this.height+" ["+(this.width*this.height)+"] > "+this.ints.capacity());
+        }
+        
+        this.bytes = null;
+        this.scale = scale;
+    }
+
+    public final float getScale() {
+        Application.checkEventThread();
+        return this.scale;
     }
 
     public final int getWidth() {

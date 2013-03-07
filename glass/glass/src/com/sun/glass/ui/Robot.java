@@ -150,16 +150,34 @@ public abstract class Robot {
         return _getPixelColor(x, y);
     }
 
-    protected abstract void _getScreenCapture(int x, int y, int width, int height, int[] data);
+    protected abstract Pixels _getScreenCapture(int x, int y, int width, int height, boolean isHiDPI);
+    /**
+     * Returns a capture of the specified rectangular area of the screen.
+     *
+     * If {@code isHiDPI} argument is {@code true}, the returned Pixels object
+     * dimensions may differ from the requested {@code width} and {@code
+     * height} depending on how many physical pixels the area occupies on the
+     * screen.  E.g. in HiDPI mode on the Mac (aka Retina display) the pixels
+     * are doubled, and thus a screen capture of an area of size (10x10) pixels
+     * will result in a Pixels object with dimensions (20x20). Calling code
+     * should use the returned objects's getWidth() and getHeight() methods
+     * to determine the image size.
+     *
+     * If (@code isHiDPI) is {@code false}, the returned Pixels object is of
+     * the requested size. Note that in this case the image may be scaled in
+     * order to fit to the requested dimensions if running on a HiDPI display.
+     */
+    public Pixels getScreenCapture(int x, int y, int width, int height, boolean isHiDPI) {
+        Application.checkEventThread();
+        return _getScreenCapture(x, y, width, height, isHiDPI);
+    }
+
     /**
      * Returns a capture of the specified area of the screen.
+     * It is equivalent to calling getScreenCapture(x, y, width, height, false),
+     * i.e. this method takes a "LowDPI" screen shot.
      */
     public Pixels getScreenCapture(int x, int y, int width, int height) {
-        Application.checkEventThread();
-        int data[] = new int[width * height];
-
-        _getScreenCapture(x, y, width, height, data);
-
-        return Application.GetApplication().createPixels(width, height, IntBuffer.wrap(data));
+        return getScreenCapture(x, y, width, height, false);
     }
 }

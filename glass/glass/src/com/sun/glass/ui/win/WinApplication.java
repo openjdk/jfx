@@ -175,6 +175,11 @@ final class WinApplication extends Application implements InvokeLaterDispatcher.
         return new WinPixels(width, height, data);
     }
 
+    @Override
+    public Pixels createPixels(int width, int height, IntBuffer data, float scale) {
+        return new WinPixels(width, height, data, scale);
+    }
+
     @Override protected int staticPixels_getNativeFormat() {
         return WinPixels.getNativeFormat_impl();
     }

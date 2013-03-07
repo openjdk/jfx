@@ -42,6 +42,10 @@ final class IosPixels extends Pixels {
         super(width, height, data);
     }
     
+    protected IosPixels(int width, int height, IntBuffer data, float scale) {
+        super(width, height, data, scale);
+    }
+
     @Override
     protected void _fillDirectByteBuffer(ByteBuffer bb) { }
 

@@ -40,6 +40,10 @@ final class LensPixels extends Pixels {
         super(width, height, data);
     }
 
+    protected LensPixels(int width, int height, IntBuffer data, float scale) {
+        super(width, height, data, scale);
+    }
+
     static int getNativeFormat_impl() {
         LensLogger.getLogger().config("Querying native format");
         // All our implementations use ARGB_PRE and convert to the native pixel

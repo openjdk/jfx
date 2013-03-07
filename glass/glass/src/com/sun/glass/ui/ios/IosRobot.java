@@ -25,7 +25,8 @@
 
 package com.sun.glass.ui.ios;
 
-import com.sun.glass.ui.Robot;
+import com.sun.glass.ui.*;
+import java.nio.IntBuffer;
 
 /**
  * iOS platform implementation class of test automation Robot.
@@ -127,12 +128,14 @@ final class IosRobot extends Robot {
     }
 
     // capture bitmap image of (x, y, x + width, y + height) area
-    private native void _getScreenCapture(long ptr, int x, int y, int width, int height, int[] data);
-    @Override protected void _getScreenCapture(int x, int y, int width, int height, int[] data) {
+    native private void _getScreenCapture(long ptr, int x, int y, int width, int height, int[] data);
+    @Override protected Pixels _getScreenCapture(int x, int y, int width, int height, boolean isHiDPI) {
         if (ptr == 0) {
-            return;
+            return null;
         }
+        int data[] = new int[width * height];
         _getScreenCapture(ptr, x, y, width, height, data);
+        return Application.GetApplication().createPixels(width, height, IntBuffer.wrap(data));
     }
 }
 

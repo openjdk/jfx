@@ -147,6 +147,11 @@ public final class IosApplication extends Application {
     }
 
     @Override
+    public Pixels createPixels(int width, int height, IntBuffer data, float scale) {
+        return new IosPixels(width, height, data, scale);
+    }
+
+    @Override
     protected int staticPixels_getNativeFormat() {
         return 0;
     }

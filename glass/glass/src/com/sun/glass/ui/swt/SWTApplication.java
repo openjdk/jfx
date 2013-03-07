@@ -233,6 +233,11 @@ public final class SWTApplication extends Application {
     }
 
     @Override
+    public Pixels createPixels(int width, int height, IntBuffer data, float scale) {
+        return new SWTPixels(width, height, data, scale);
+    }
+
+    @Override
     protected int staticPixels_getNativeFormat() {
         return Pixels.Format.BYTE_BGRA_PRE;
     }

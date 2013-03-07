@@ -116,6 +116,10 @@ typedef struct _tagJavaIDs {
     struct {
         jmethodID init;
     } File;
+    struct {
+        jmethodID createPixels;
+        jmethodID getScaleFactor;
+    } Application;
 } JavaIDs;
 extern JavaIDs javaIDs;
 
