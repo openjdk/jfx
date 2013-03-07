@@ -70,10 +70,6 @@ import javafx.util.Callback;
 import javafx.util.StringConverter;
 
 
-/**
- *
- * @author akouznet
- */
 public class XYDataVisualizer<X, Y> extends TreeTableView<XYChartItem<X, Y>> {
     
     XYChart<X, Y> chart;

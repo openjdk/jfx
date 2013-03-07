@@ -42,10 +42,6 @@ import org.xml.sax.XMLReader;
 import org.xml.sax.helpers.DefaultHandler;
 import org.xml.sax.helpers.XMLReaderFactory;
 
-/**
- *
- * @author jpotts
- */
 public class DocumentationIndexer {
     static {
         System.setProperty("http.proxyHost", "www-proxy.us.oracle.com");
