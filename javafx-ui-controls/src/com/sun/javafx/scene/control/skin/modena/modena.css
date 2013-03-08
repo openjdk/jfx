@@ -2065,14 +2065,15 @@ is being used to size a border should also be in pixels.
     -fx-arrows-visible: true;
     -fx-tooltip-visible: true;
     -fx-page-information-visible: true;
-    -fx-page-information-alignment: bottom;        
+    -fx-page-information-alignment: bottom;
+    -fx-arrow-button-gap: 0;
 }
 .pagination > .page {
     -fx-background-color: transparent;
 }
 .pagination > .pagination-control {
-    -fx-background-color: transparent;    
-    -fx-padding: 0.833333em 0em 0.833333em 0em;
+    -fx-background-color: transparent;
+    -fx-font-size: 0.8em;
 }
 .pagination > .pagination-control > .control-box {
     -fx-spacing: 2;
@@ -2080,13 +2081,13 @@ is being used to size a border should also be in pixels.
 }
 .pagination > .pagination-control > .control-box > .left-arrow-button {
     -fx-background-radius: 3 0 0 3, 3 0 0 3, 2 0 0 2, 1 0 0 1;
-    -fx-background-insets: 0 -4 -1 11, 0 -4 0 11, 1 -3 1 12, 2 -2 2 13;
-    -fx-padding: 0.166667em 0em 0.25em 1.167em;
+    -fx-background-insets: 0 0 -1 5, 0 0 0 5, 1 1 1 6, 2 2 2 7;
+    -fx-padding: 0.166667em 0em 0.25em 0.9em;
 }
 .pagination > .pagination-control > .control-box > .right-arrow-button {
     -fx-background-radius: 0 3 3 0, 0 3 3 0, 0 2 2 0, 0 1 1 0;
-    -fx-background-insets: 0 11 -1 -4, 0 11 0 -4, 1 12 1 -3, 2 13 2 -2;
-    -fx-padding: 0.166667em 0em 0.25em 0.083em;
+    -fx-background-insets: 0 5 -1 0, 0 5 0 0, 1 6 1 1, 2 7 2 2;
+    -fx-padding: 0.166667em 0em 0.25em 0.4em;
 }
 .pagination > .pagination-control .left-arrow {
     -fx-background-color: -fx-mark-highlight-color, -fx-mark-color;

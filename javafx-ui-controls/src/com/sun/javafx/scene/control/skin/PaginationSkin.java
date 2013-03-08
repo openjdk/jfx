@@ -25,11 +25,14 @@
 
 package com.sun.javafx.scene.control.skin;
 
+import javafx.beans.property.DoubleProperty;
 import javafx.css.StyleableBooleanProperty;
+import javafx.css.StyleableDoubleProperty;
 import javafx.css.StyleableObjectProperty;
 import javafx.css.CssMetaData;
 import com.sun.javafx.css.converters.BooleanConverter;
 import com.sun.javafx.css.converters.EnumConverter;
+import com.sun.javafx.css.converters.SizeConverter;
 import com.sun.javafx.scene.control.behavior.PaginationBehavior;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -508,6 +511,22 @@ public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehav
         }
     };
 
+    /** The size of the gap between number buttons and arrow buttons */
+    private final DoubleProperty arrowButtonGap = new StyleableDoubleProperty(60.0) {
+        @Override public Object getBean() {
+            return PaginationSkin.this;
+        }
+        @Override public String getName() {
+            return "arrowButtonGap";
+        }
+        @Override public CssMetaData<Pagination,Number> getCssMetaData() {
+            return StyleableProperties.ARROW_BUTTON_GAP;
+        }
+    };
+    private DoubleProperty arrowButtonGapProperty() {
+        return arrowButtonGap;
+    }
+
     private BooleanProperty arrowsVisible;
     public final void setArrowsVisible(boolean value) { arrowsVisibleProperty().set(value); }
     public final boolean isArrowsVisible() { return arrowsVisible == null ? DEFAULT_ARROW_VISIBLE : arrowsVisible.get(); }
@@ -739,7 +758,7 @@ public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehav
             leftArrowButton.setMinSize(minButtonSize, minButtonSize);
             leftArrowButton.getStyleClass().add("left-arrow-button");
             leftArrowButton.setFocusTraversable(false);
-            HBox.setMargin(leftArrowButton, new Insets(0, 4, 0, 0));
+            HBox.setMargin(leftArrowButton, new Insets(0, snapSize(arrowButtonGap.get()), 0, 0));
             leftArrow = new StackPane();
             leftArrow.setMaxSize(USE_PREF_SIZE, USE_PREF_SIZE);
             leftArrowButton.setGraphic(leftArrow);
@@ -749,7 +768,7 @@ public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehav
             rightArrowButton.setMinSize(minButtonSize, minButtonSize);
             rightArrowButton.getStyleClass().add("right-arrow-button");
             rightArrowButton.setFocusTraversable(false);
-            HBox.setMargin(rightArrowButton, new Insets(0, 0, 0, 4));
+            HBox.setMargin(rightArrowButton, new Insets(0, 0, 0, snapSize(arrowButtonGap.get())));
             rightArrow = new StackPane();
             rightArrow.setMaxSize(USE_PREF_SIZE, USE_PREF_SIZE);
             rightArrowButton.setGraphic(rightArrow);
@@ -764,6 +783,20 @@ public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehav
             initializeNavigationHandlers();
             initializePageIndicators();
             updatePageIndex();
+
+            // listen to changes to arrowButtonGap and update margins
+            arrowButtonGap.addListener(new ChangeListener<Number>() {
+                @Override public void changed(ObservableValue<? extends Number> observable, Number oldValue, Number newValue) {
+                    if (newValue.doubleValue() == 0) {
+                        HBox.setMargin(leftArrowButton, null);
+                        HBox.setMargin(rightArrowButton, null);
+
+                    } else {
+                        HBox.setMargin(leftArrowButton, new Insets(0, snapSize(newValue.doubleValue()), 0, 0));
+                        HBox.setMargin(rightArrowButton, new Insets(0, 0, 0, snapSize(newValue.doubleValue())));
+                    }
+                }
+            });
         }
 
         private void initializeNavigationHandlers() {
@@ -877,7 +910,7 @@ public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehav
                 }
 
                 x += (iw + controlBox.getSpacing());
-                if (x >= w) {
+                if (x > w) {
                     break;
                 }
                 indicatorCount++;
@@ -1294,6 +1327,18 @@ public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehav
                 return (StyleableProperty<Boolean>)skin.tooltipVisibleProperty();
             }
         };
+        private static final CssMetaData<Pagination,Number> ARROW_BUTTON_GAP =
+            new CssMetaData<Pagination,Number>("-fx-arrow-button-gap", SizeConverter.getInstance(), 4) {
+                @Override public boolean isSettable(Pagination n) {
+                    final PaginationSkin skin = (PaginationSkin) n.getSkin();
+                    return skin.arrowButtonGap == null ||
+                            !skin.arrowButtonGap.isBound();
+                }
+                @Override public StyleableProperty<Number> getStyleableProperty(Pagination n) {
+                    final PaginationSkin skin = (PaginationSkin) n.getSkin();
+                    return (StyleableProperty<Number>)skin.arrowButtonGapProperty();
+                }
+            };
 
         private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
         static {
@@ -1303,6 +1348,7 @@ public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehav
             styleables.add(PAGE_INFORMATION_VISIBLE);
             styleables.add(PAGE_INFORMATION_ALIGNMENT);
             styleables.add(TOOLTIP_VISIBLE);
+            styleables.add(ARROW_BUTTON_GAP);
             STYLEABLES = Collections.unmodifiableList(styleables);
         }
     }
