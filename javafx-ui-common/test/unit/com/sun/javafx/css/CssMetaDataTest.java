@@ -27,6 +27,7 @@ package com.sun.javafx.css;
 
 import javafx.css.Styleable;
 import java.io.File;
+import java.lang.System;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
@@ -67,7 +68,7 @@ public class CssMetaDataTest {
 
     public CssMetaDataTest() {
     }
-    
+
     private static CssMetaData get(List<CssMetaData<? extends Styleable, ?>> list, String prop) {
         for (CssMetaData styleable : list) {
             if (prop.equals(styleable.getProperty())) return styleable;
@@ -100,11 +101,11 @@ public class CssMetaDataTest {
 
     @Test
     public void testGetJavafxBeansProperty() {
-            TestNode testNode = new TestNode();
-            WritableValue prop = TestNodeBase.StyleableProperties.TEST.getStyleableProperty(testNode);
-            assert(prop != null);
-            CssMetaData result = ((StyleableProperty)prop).getCssMetaData();
-            assert(result == TestNodeBase.StyleableProperties.TEST);
+        TestNode testNode = new TestNode();
+        WritableValue prop = TestNodeBase.StyleableProperties.TEST.getStyleableProperty(testNode);
+        assert(prop != null);
+        CssMetaData result = ((StyleableProperty)prop).getCssMetaData();
+        assert(result == TestNodeBase.StyleableProperties.TEST);
     }
 
     /**
@@ -112,7 +113,7 @@ public class CssMetaDataTest {
      */
     @Test
     public void testGetProperty() {
-        
+
         String expResult = "-fx-test";
         String result = TestNodeBase.StyleableProperties.TEST.getProperty();
         assertEquals(expResult, result);
@@ -123,7 +124,7 @@ public class CssMetaDataTest {
      */
     @Test
     public void testGetConverter() {
-        
+
         StyleConverter expResult = BooleanConverter.getInstance();
         StyleConverter result = TestNodeBase.StyleableProperties.TEST.getConverter();
         assertEquals(expResult, result);
@@ -134,7 +135,7 @@ public class CssMetaDataTest {
      */
     @Test
     public void testGetInitialValue() {
-        
+
         TestNode testNode = new TestNode();
         Double expResult = testNode.getXyzzy();
         Double result = (Double)TestNode.StyleableProperties.XYZZY.getInitialValue(testNode);
@@ -147,21 +148,21 @@ public class CssMetaDataTest {
      */
     @Test
     public void testGetSubProperties() {
-        
-        CssMetaData<TestNode,Font> fontProp = 
+
+        CssMetaData<TestNode,Font> fontProp =
                 new FontCssMetaData<TestNode>("-fx-font", Font.getDefault()) {
 
-            @Override
-            public boolean isSettable(TestNode n) {
-                return true;
-            }
+                    @Override
+                    public boolean isSettable(TestNode n) {
+                        return true;
+                    }
 
-            @Override
-            public StyleableProperty<Font> getStyleableProperty(TestNode n) {
-                return null;
-            }
-        };
-        
+                    @Override
+                    public StyleableProperty<Font> getStyleableProperty(TestNode n) {
+                        return null;
+                    }
+                };
+
         List<CssMetaData<? extends Styleable, ?>> list = fontProp.getSubProperties();
         assertNotNull(list);
 
@@ -185,23 +186,23 @@ public class CssMetaDataTest {
     @Test
     public void testToString() {
 
-        CssMetaData<TestNode,Font> fontProp = 
+        CssMetaData<TestNode,Font> fontProp =
                 new FontCssMetaData<TestNode>("-fx-font", Font.getDefault()) {
 
-            @Override
-            public boolean isSettable(TestNode n) {
-                return true;
-            }
+                    @Override
+                    public boolean isSettable(TestNode n) {
+                        return true;
+                    }
 
-            @Override
-            public StyleableProperty<Font> getStyleableProperty(TestNode n) {
-                return null;
-            }
-        };
-        
+                    @Override
+                    public StyleableProperty<Font> getStyleableProperty(TestNode n) {
+                        return null;
+                    }
+                };
+
         String string = fontProp.toString();
         assertNotNull(string);
-        
+
     }
 
     /**
@@ -232,10 +233,10 @@ public class CssMetaDataTest {
                 throw new UnsupportedOperationException("Not supported yet.");
             }
         };
-        
+
         CssMetaData testNodeOpacity = get(TestNode.getClassCssMetaData(), "-fx-opacity");
         CssMetaData nodeOpacity = get(Node.getClassCssMetaData(), "-fx-opacity");
-        
+
         assertTrue(testNodeOpacity.equals(nodeOpacity));
     }
 
@@ -243,7 +244,7 @@ public class CssMetaDataTest {
      * Helper for testGetMatchingStyles
      */
     List<CascadingStyle> match(Node node, Stylesheet stylesheet) {
-        
+
         List<CascadingStyle> styles = new ArrayList<CascadingStyle>();
 
         int ord = 0;
@@ -254,144 +255,144 @@ public class CssMetaDataTest {
                 if (match == null) continue;
                 for (Declaration declaration : rule.getDeclarations()) {
                     styles.add(
-                        new CascadingStyle(
-                            new Style(match.selector, declaration), 
-                            match.pseudoClasses,
-                            match.specificity, 
-                            ord++
-                        )
+                            new CascadingStyle(
+                                    new Style(match.selector, declaration),
+                                    match.pseudoClasses,
+                                    match.specificity,
+                                    ord++
+                            )
                     );
                 }
             }
         }
-        
+
         return styles;
     }
-        
+
     static int ord = 0;
     static CascadingStyle createCascadingStyle(Selector selector, Declaration declaration) {
-        
+
         Set<PseudoClass> pseudoClasses = null;
         if (selector instanceof SimpleSelector) {
-            
+
             pseudoClasses = ((SimpleSelector)selector).getPseudoClassStates();
         } else {
-            
+
             pseudoClasses = new PseudoClassState();
             for (SimpleSelector sel : ((CompoundSelector)selector).getSelectors()) {
-                
-                 Set<PseudoClass> selectorPseudoClasses = sel.getPseudoClassStates();
-                 pseudoClasses.addAll(selectorPseudoClasses);
+
+                Set<PseudoClass> selectorPseudoClasses = sel.getPseudoClassStates();
+                pseudoClasses.addAll(selectorPseudoClasses);
             }
         }
-        
+
         return new CascadingStyle(
-            new Style(selector, declaration),
-            pseudoClasses,
-            0,
-            ord++
+                new Style(selector, declaration),
+                pseudoClasses,
+                0,
+                ord++
         );
     }
-        
+
     @Test @org.junit.Ignore
     public void testGetMatchingStyles() {
 
-        
+
         final Stylesheet stylesheet = new Stylesheet();
         stylesheet.setOrigin(StyleOrigin.USER_AGENT);
         StyleManager.getInstance().getInstance().setDefaultUserAgentStylesheet(stylesheet);
-        
+
         final List<Rule> rules = stylesheet.getRules();
-        
+
         //
         // .root { -fx-base: red; -fx-color: -fx-base; }
         //
         List<String> rootStyleClass = new ArrayList<String>();
         rootStyleClass.add("root");
-        
+
         Selector root = new SimpleSelector("*", rootStyleClass, null, null);
-        
+
         ParsedValueImpl fxBaseValue = CSSParser.getInstance().parseExpr("-fx-base", "red");
         Declaration fxBase = new Declaration("-fx-base", fxBaseValue, false);
 
         ParsedValueImpl<String,String> fxColorValue = new ParsedValueImpl<String,String>(fxBase.getProperty(), null, true);
         Declaration fxColor = new Declaration("-fx-color", fxColorValue, false);
-        
+
         List<Selector> selectors = new ArrayList<Selector>();
-        Collections.addAll(selectors, root); 
-        
-        List<Declaration> declarations = new ArrayList<Declaration>(); 
+        Collections.addAll(selectors, root);
+
+        List<Declaration> declarations = new ArrayList<Declaration>();
         Collections.addAll(declarations, fxBase, fxColor);
-        
+
         Rule baseRule = new Rule(selectors, declarations);
         rules.add(baseRule);
-        
+
         //
         // .rect { -fx-fill: -fx-color; }
         //
         List<String> rectStyleClass = new ArrayList<String>();
         rectStyleClass.add("rect");
-        
+
         Selector rect = new SimpleSelector("*", rectStyleClass, null, null);
-        
+
         ParsedValueImpl fxFillValue = CSSParser.getInstance().parseExpr("-fx-fill", "-fx-color");
         Declaration fxFill = new Declaration("-fx-fill", fxFillValue, false);
-        
+
         selectors = new ArrayList<Selector>();
-        Collections.addAll(selectors, rect); 
-        
-        declarations = new ArrayList<Declaration>(); 
+        Collections.addAll(selectors, rect);
+
+        declarations = new ArrayList<Declaration>();
         Collections.addAll(declarations, fxFill);
-        
+
         Rule rectRule = new Rule(selectors, declarations);
         rules.add(rectRule);
-        
+
         // .rect:hover { -fx-fill: yellow; }
         List<String> pseudoclasses = new ArrayList<String>();
         pseudoclasses.add("hover");
-        
+
         Selector rectHover = new SimpleSelector("*", rectStyleClass, pseudoclasses, null);
-        
-        ParsedValueImpl<Color,Color> fxFillHoverValue = new ParsedValueImpl<Color,Color>(Color.YELLOW, null);        
+
+        ParsedValueImpl<Color,Color> fxFillHoverValue = new ParsedValueImpl<Color,Color>(Color.YELLOW, null);
         Declaration fxFillHover = new Declaration("-fx-fill", fxFillHoverValue, false);
-        
+
         selectors = new ArrayList<Selector>();
-        Collections.addAll(selectors, rectHover); 
-        
-        declarations = new ArrayList<Declaration>(); 
+        Collections.addAll(selectors, rectHover);
+
+        declarations = new ArrayList<Declaration>();
         Collections.addAll(declarations, fxFillHover);
-        
+
         Rule rectHoverRule = new Rule(selectors, declarations);
         rules.add(rectHoverRule);
 
         List<Style> expecteds = new ArrayList<Style>();
-        Collections.addAll(expecteds, 
-                new Style(root, fxBase), 
-                new Style(root, fxColor), 
-                new Style(rect, fxFill),
-                new Style(rectHover, fxFillHover)
+        Collections.addAll(expecteds,
+                           new Style(root, fxBase),
+                           new Style(root, fxColor),
+                           new Style(rect, fxFill),
+                           new Style(rectHover, fxFillHover)
         );
-        
+
         final Rectangle rectangle = new Rectangle();
         rectangle.getStyleClass().add("rect");
-        
+
         final Group group = new Group();
         group.getChildren().add(rectangle);
-        
+
         Scene scene = new Scene(group);
         Stage stage = new Stage();
         stage.setScene(scene);
         stage.show();
-        
+
         final CssMetaData FILL = get(rectangle.getCssMetaData(), "-fx-fill");
         final List<Style> actuals = Node.impl_getMatchingStyles(FILL, rectangle);
 
-//        System.err.println("matchingStyles: " + matchingStyles);
-//        System.err.println("expecteds: " + expecteds);
-//        System.err.println("actuals: " + actuals);
-        
+        //        System.err.println("matchingStyles: " + matchingStyles);
+        //        System.err.println("expecteds: " + expecteds);
+        //        System.err.println("actuals: " + actuals);
+
         assertEquals(expecteds.size(), actuals.size(), 0);
-        
+
         for (Style style : expecteds) {
             if (!actuals.remove(style)) fail();
         }
@@ -401,120 +402,120 @@ public class CssMetaDataTest {
     @Test @org.junit.Ignore
     public void testGetMatchingStylesWithInlineStyleOnParent() {
 
-        
+
         final Stylesheet stylesheet = new Stylesheet();
         stylesheet.setOrigin(StyleOrigin.USER_AGENT);
         StyleManager.getInstance().getInstance().setDefaultUserAgentStylesheet(stylesheet);
-        
+
         final List<Rule> rules = stylesheet.getRules();
-        
+
         //
         // .root { -fx-base: red; -fx-color: -fx-base; }
         //
         List<String> rootStyleClass = new ArrayList<String>();
         rootStyleClass.add("root");
-        
+
         Selector root = new SimpleSelector("*", rootStyleClass, null, null);
-        
+
         ParsedValueImpl fxBaseValue = CSSParser.getInstance().parseExpr("-fx-base", "red");
         Declaration fxBase = new Declaration("-fx-base", fxBaseValue, false);
 
         ParsedValueImpl<String,String> fxColorValue = new ParsedValueImpl<String,String>(fxBase.getProperty(), null, true);
         Declaration fxColor = new Declaration("-fx-color", fxColorValue, false);
-        
+
         List<Selector> selectors = new ArrayList<Selector>();
-        Collections.addAll(selectors, root); 
-        
-        List<Declaration> declarations = new ArrayList<Declaration>(); 
+        Collections.addAll(selectors, root);
+
+        List<Declaration> declarations = new ArrayList<Declaration>();
         Collections.addAll(declarations, fxBase, fxColor);
-        
+
         Rule baseRule = new Rule(selectors, declarations);
         rules.add(baseRule);
-        
+
         //
         // .rect { -fx-fill: -fx-color; }
         //
         List<String> rectStyleClass = new ArrayList<String>();
         rectStyleClass.add("rect");
-        
+
         Selector rect = new SimpleSelector("*", rectStyleClass, null, null);
-        
+
         ParsedValueImpl fxFillValue = CSSParser.getInstance().parseExpr("-fx-fill", "-fx-color");
         Declaration fxFill = new Declaration("-fx-fill", fxFillValue, false);
-        
+
         selectors = new ArrayList<Selector>();
-        Collections.addAll(selectors, rect); 
-        
-        declarations = new ArrayList<Declaration>(); 
+        Collections.addAll(selectors, rect);
+
+        declarations = new ArrayList<Declaration>();
         Collections.addAll(declarations, fxFill);
-        
+
         Rule rectRule = new Rule(selectors, declarations);
         rules.add(rectRule);
-        
+
         // .rect:hover { -fx-fill: yellow; }
         List<String> pseudoclasses = new ArrayList<String>();
         pseudoclasses.add("hover");
-        
+
         Selector rectHover = new SimpleSelector("*", rectStyleClass, pseudoclasses, null);
-        
-        ParsedValueImpl<Color,Color> fxFillHoverValue = new ParsedValueImpl<Color,Color>(Color.YELLOW, null);        
+
+        ParsedValueImpl<Color,Color> fxFillHoverValue = new ParsedValueImpl<Color,Color>(Color.YELLOW, null);
         Declaration fxFillHover = new Declaration("-fx-fill", fxFillHoverValue, false);
-        
+
         selectors = new ArrayList<Selector>();
-        Collections.addAll(selectors, rectHover); 
-        
-        declarations = new ArrayList<Declaration>(); 
+        Collections.addAll(selectors, rectHover);
+
+        declarations = new ArrayList<Declaration>();
         Collections.addAll(declarations, fxFillHover);
-        
+
         Rule rectHoverRule = new Rule(selectors, declarations);
         rules.add(rectHoverRule);
 
         // Declaration now checks origin, so we need to make this expected
         // value look like it came from an inline
         final Declaration decl = new Declaration("-fx-base", new ParsedValueImpl<Color,Color>(Color.GREEN, null), false);
-    
+
         Stylesheet ss = new Stylesheet() {
             {
                 setOrigin(StyleOrigin.INLINE);
                 getRules().add(
-                    new Rule(Arrays.asList(SimpleSelector.getUniversalSelector()), Arrays.asList(decl))
+                        new Rule(Arrays.asList(SimpleSelector.getUniversalSelector()), Arrays.asList(decl))
                 );
             }
         };
-       
+
         List<Style> expecteds = new ArrayList<Style>();
-        Collections.addAll(expecteds, 
-                new Style(SimpleSelector.getUniversalSelector(), decl),
-                new Style(root, fxBase),
-                new Style(root, fxColor), 
-                new Style(rect, fxFill),
-                new Style(rectHover, fxFillHover)
+        Collections.addAll(expecteds,
+                           new Style(SimpleSelector.getUniversalSelector(), decl),
+                           new Style(root, fxBase),
+                           new Style(root, fxColor),
+                           new Style(rect, fxFill),
+                           new Style(rectHover, fxFillHover)
         );
-                
+
         final Rectangle rectangle = new Rectangle();
         rectangle.getStyleClass().add("rect");
-        
+
         final Group group = new Group();
         group.setStyle("-fx-base: green;");
-        group.getChildren().add(rectangle);        
-        
+        group.getChildren().add(rectangle);
+
         Scene scene = new Scene(group);
         Stage stage = new Stage();
         stage.setScene(scene);
-        stage.show();        
-                
+        stage.show();
+
         final CssMetaData FILL = get(rectangle.getCssMetaData(), "-fx-fill");
         final List<Style> actuals = Node.impl_getMatchingStyles(FILL, rectangle);
 
-//        System.err.println("matchingStyles: " + matchingStyles);
-//        System.err.println("expecteds: " + expecteds);
-//        System.err.println("actuals: " + actuals);
-        
+        //        System.err.println("matchingStyles: " + matchingStyles);
+        //        System.err.println("expecteds: " + expecteds);
+        //        System.err.println("actuals: " + actuals);
+
         assertEquals(expecteds.size(), actuals.size(), 0);
 
         // inline style should be first
         assertEquals(expecteds.get(0), actuals.get(0));
-        
+
         for (Style style : expecteds) {
             if (!actuals.remove(style)) fail();
         }
@@ -524,103 +525,103 @@ public class CssMetaDataTest {
     @Test @org.junit.Ignore
     public void testGetMatchingStylesWithInlineStyleOnLeaf() {
 
-        
+
         final Stylesheet stylesheet = new Stylesheet();
         stylesheet.setOrigin(StyleOrigin.USER_AGENT);
         StyleManager.getInstance().getInstance().setDefaultUserAgentStylesheet(stylesheet);
-        
+
         final List<Rule> rules = stylesheet.getRules();
-        
+
         //
         // .root { -fx-base: red; -fx-color: -fx-base; }
         //
         List<String> rootStyleClass = new ArrayList<String>();
         rootStyleClass.add("root");
-        
+
         Selector root = new SimpleSelector("*", rootStyleClass, null, null);
-        
+
         ParsedValueImpl fxBaseValue = CSSParser.getInstance().parseExpr("-fx-base", "red");
         Declaration fxBase = new Declaration("-fx-base", fxBaseValue, false);
 
         ParsedValueImpl<String,String> fxColorValue = new ParsedValueImpl<String,String>(fxBase.getProperty(), null, true);
         Declaration fxColor = new Declaration("-fx-color", fxColorValue, false);
-        
+
         List<Selector> selectors = new ArrayList<Selector>();
-        Collections.addAll(selectors, root); 
-        
-        List<Declaration> declarations = new ArrayList<Declaration>(); 
+        Collections.addAll(selectors, root);
+
+        List<Declaration> declarations = new ArrayList<Declaration>();
         Collections.addAll(declarations, fxBase, fxColor);
-        
+
         Rule baseRule = new Rule(selectors, declarations);
         rules.add(baseRule);
-        
+
         //
         // .rect { -fx-fill: -fx-color; }
         //
         List<String> rectStyleClass = new ArrayList<String>();
         rectStyleClass.add("rect");
-        
+
         Selector rect = new SimpleSelector("*", rectStyleClass, null, null);
-        
+
         ParsedValueImpl fxFillValue = CSSParser.getInstance().parseExpr("-fx-fill", "-fx-color");
         Declaration fxFill = new Declaration("-fx-fill", fxFillValue, false);
-        
+
         selectors = new ArrayList<Selector>();
-        Collections.addAll(selectors, rect); 
-        
-        declarations = new ArrayList<Declaration>(); 
+        Collections.addAll(selectors, rect);
+
+        declarations = new ArrayList<Declaration>();
         Collections.addAll(declarations, fxFill);
-        
+
         Rule rectRule = new Rule(selectors, declarations);
         rules.add(rectRule);
-        
+
         // .rect:hover { -fx-fill: yellow; }
         List<String> pseudoclasses = new ArrayList<String>();
         pseudoclasses.add("hover");
-        
+
         Selector rectHover = new SimpleSelector("*", rectStyleClass, pseudoclasses, null);
-        
-        ParsedValueImpl<Color,Color> fxFillHoverValue = new ParsedValueImpl<Color,Color>(Color.YELLOW, null);        
+
+        ParsedValueImpl<Color,Color> fxFillHoverValue = new ParsedValueImpl<Color,Color>(Color.YELLOW, null);
         Declaration fxFillHover = new Declaration("-fx-fill", fxFillHoverValue, false);
-        
+
         selectors = new ArrayList<Selector>();
-        Collections.addAll(selectors, rectHover); 
-        
-        declarations = new ArrayList<Declaration>(); 
+        Collections.addAll(selectors, rectHover);
+
+        declarations = new ArrayList<Declaration>();
         Collections.addAll(declarations, fxFillHover);
-        
+
         Rule rectHoverRule = new Rule(selectors, declarations);
         rules.add(rectHoverRule);
-                
+
         // Declaration now checks origin, so we need to make this expected
         // value look like it came from an inline
         final Declaration decl = new Declaration("-fx-base", new ParsedValueImpl<Color,Color>(Color.GREEN, null), false);
-    
+
         Stylesheet ss = new Stylesheet() {
             {
                 setOrigin(StyleOrigin.INLINE);
                 getRules().add(
-                    new Rule(Arrays.asList(SimpleSelector.getUniversalSelector()), Arrays.asList(decl))
+                        new Rule(Arrays.asList(SimpleSelector.getUniversalSelector()), Arrays.asList(decl))
                 );
             }
         };
-       
+
         List<Style> expecteds = new ArrayList<Style>();
-        Collections.addAll(expecteds, 
-                new Style(SimpleSelector.getUniversalSelector(), decl),
-                new Style(root, fxBase),
-                new Style(root, fxColor), 
-                new Style(rect, fxFill),
-                new Style(rectHover, fxFillHover)
+        Collections.addAll(expecteds,
+                           new Style(SimpleSelector.getUniversalSelector(), decl),
+                           new Style(root, fxBase),
+                           new Style(root, fxColor),
+                           new Style(rect, fxFill),
+                           new Style(rectHover, fxFillHover)
         );
-        
+
         final Rectangle rectangle = new Rectangle();
         rectangle.getStyleClass().add("rect");
         rectangle.setStyle("-fx-base: green;");
-        
-        final Group group = new Group();        
-        group.getChildren().add(rectangle);        
-        
+
+        final Group group = new Group();
+        group.getChildren().add(rectangle);
+
         Scene scene = new Scene(group);
         Stage stage = new Stage();
         stage.setScene(scene);
@@ -628,22 +629,22 @@ public class CssMetaDataTest {
 
         final CssMetaData FILL = get(rectangle.getCssMetaData(), "-fx-fill");
         final List<Style> actuals = Node.impl_getMatchingStyles(FILL, rectangle);
-                
-//        System.err.println("matchingStyles: " + matchingStyles);
-//        System.err.println("expecteds: " + expecteds);
-//        System.err.println("actuals: " + actuals);
+
+        //        System.err.println("matchingStyles: " + matchingStyles);
+        //        System.err.println("expecteds: " + expecteds);
+        //        System.err.println("actuals: " + actuals);
 
         assertEquals(expecteds.size(), actuals.size(), 0);
-        
+
         // inline style should be first
         assertEquals(expecteds.get(0), actuals.get(0));
-        
+
         for (Style style : expecteds) {
             if (!actuals.remove(style)) fail();
         }
         assertTrue(actuals.isEmpty());
-    }   
-    
+    }
+
     @Test @org.junit.Ignore
     public void testGetMatchingStylesWithInlineStyleOnRootAndLeaf() {
 
@@ -651,67 +652,67 @@ public class CssMetaDataTest {
         final Stylesheet stylesheet = new Stylesheet();
         stylesheet.setOrigin(StyleOrigin.USER_AGENT);
         StyleManager.getInstance().getInstance().setDefaultUserAgentStylesheet(stylesheet);
-        
+
         final List<Rule> rules = stylesheet.getRules();
-        
+
         //
         // .root { -fx-base: red; -fx-color: -fx-base; }
         //
         List<String> rootStyleClass = new ArrayList<String>();
         rootStyleClass.add("root");
-        
+
         Selector root = new SimpleSelector("*", rootStyleClass, null, null);
-        
+
         ParsedValueImpl fxBaseValue = CSSParser.getInstance().parseExpr("-fx-base", "red");
         Declaration fxBase = new Declaration("-fx-base", fxBaseValue, false);
 
         ParsedValueImpl<String,String> fxColorValue = new ParsedValueImpl<String,String>(fxBase.getProperty(), null, true);
         Declaration fxColor = new Declaration("-fx-color", fxColorValue, false);
-        
+
         List<Selector> selectors = new ArrayList<Selector>();
-        Collections.addAll(selectors, root); 
-        
-        List<Declaration> declarations = new ArrayList<Declaration>(); 
+        Collections.addAll(selectors, root);
+
+        List<Declaration> declarations = new ArrayList<Declaration>();
         Collections.addAll(declarations, fxBase, fxColor);
-        
+
         Rule baseRule = new Rule(selectors, declarations);
         rules.add(baseRule);
-        
+
         //
         // .rect { -fx-fill: -fx-color; }
         //
         List<String> rectStyleClass = new ArrayList<String>();
         rectStyleClass.add("rect");
-        
+
         Selector rect = new SimpleSelector("*", rectStyleClass, null, null);
-        
+
         ParsedValueImpl fxFillValue = CSSParser.getInstance().parseExpr("-fx-fill", "-fx-color");
         Declaration fxFill = new Declaration("-fx-fill", fxFillValue, false);
-        
+
         selectors = new ArrayList<Selector>();
-        Collections.addAll(selectors, rect); 
-        
-        declarations = new ArrayList<Declaration>(); 
+        Collections.addAll(selectors, rect);
+
+        declarations = new ArrayList<Declaration>();
         Collections.addAll(declarations, fxFill);
-        
+
         Rule rectRule = new Rule(selectors, declarations);
         rules.add(rectRule);
-        
+
         // .rect:hover { -fx-fill: yellow; }
         List<String> pseudoclasses = new ArrayList<String>();
         pseudoclasses.add("hover");
-        
+
         Selector rectHover = new SimpleSelector("*", rectStyleClass, pseudoclasses, null);
-        
-        ParsedValueImpl<Color,Color> fxFillHoverValue = new ParsedValueImpl<Color,Color>(Color.YELLOW, null);        
+
+        ParsedValueImpl<Color,Color> fxFillHoverValue = new ParsedValueImpl<Color,Color>(Color.YELLOW, null);
         Declaration fxFillHover = new Declaration("-fx-fill", fxFillHoverValue, false);
-        
+
         selectors = new ArrayList<Selector>();
-        Collections.addAll(selectors, rectHover); 
-        
-        declarations = new ArrayList<Declaration>(); 
+        Collections.addAll(selectors, rectHover);
+
+        declarations = new ArrayList<Declaration>();
         Collections.addAll(declarations, fxFillHover);
-        
+
         Rule rectHoverRule = new Rule(selectors, declarations);
         rules.add(rectHoverRule);
 
@@ -719,272 +720,272 @@ public class CssMetaDataTest {
         // value look like it came from an inline
         final Declaration gdecl = new Declaration("-fx-base", new ParsedValueImpl<Color,Color>(Color.GREEN, null), false);
         final Declaration ydecl = new Declaration("-fx-color", new ParsedValueImpl<Color,Color>(Color.YELLOW, null), false);
-    
+
         Stylesheet ss = new Stylesheet() {
             {
                 setOrigin(StyleOrigin.INLINE);
                 Collections.addAll(getRules(),
-                    new Rule(Arrays.asList(SimpleSelector.getUniversalSelector()), Arrays.asList(gdecl)),
-                    new Rule(Arrays.asList(SimpleSelector.getUniversalSelector()), Arrays.asList(ydecl))
+                                   new Rule(Arrays.asList(SimpleSelector.getUniversalSelector()), Arrays.asList(gdecl)),
+                                   new Rule(Arrays.asList(SimpleSelector.getUniversalSelector()), Arrays.asList(ydecl))
                 );
             }
         };
-       
+
         List<Style> expecteds = new ArrayList<Style>();
-        Collections.addAll(expecteds, 
-                new Style(SimpleSelector.getUniversalSelector(), ydecl),
-                new Style(SimpleSelector.getUniversalSelector(), gdecl),
-                new Style(root, fxBase),
-                new Style(root, fxColor), 
-                new Style(rect, fxFill),
-                new Style(rectHover, fxFillHover)
+        Collections.addAll(expecteds,
+                           new Style(SimpleSelector.getUniversalSelector(), ydecl),
+                           new Style(SimpleSelector.getUniversalSelector(), gdecl),
+                           new Style(root, fxBase),
+                           new Style(root, fxColor),
+                           new Style(rect, fxFill),
+                           new Style(rectHover, fxFillHover)
         );
-        
+
         final Rectangle rectangle = new Rectangle();
         rectangle.getStyleClass().add("rect");
         rectangle.setStyle("-fx-base: green;");
-                
+
         final Group group = new Group();
         group.setStyle("-fx-color: yellow;");
-        group.getChildren().add(rectangle);        
+        group.getChildren().add(rectangle);
 
         Scene scene = new Scene(group);
         Stage stage = new Stage();
         stage.setScene(scene);
         stage.show();
-        
+
         final CssMetaData FILL = get(rectangle.getCssMetaData(), "-fx-fill");
         final List<Style> actuals = Node.impl_getMatchingStyles(FILL, rectangle);
 
-//        System.err.println("matchingStyles: " + matchingStyles);
-//        System.err.println("expecteds: " + expecteds);
-//        System.err.println("actuals: " + actuals);
+        //        System.err.println("matchingStyles: " + matchingStyles);
+        //        System.err.println("expecteds: " + expecteds);
+        //        System.err.println("actuals: " + actuals);
 
         assertEquals(expecteds.size(), actuals.size(), 0);
-        
+
         // inline style should be first
         assertEquals(expecteds.get(0), actuals.get(0));
-        
+
         for (Style style : expecteds) {
             if (!actuals.remove(style)) fail(style.toString());
         }
         assertTrue(actuals.isEmpty());
-    } 
+    }
 
     @Test @org.junit.Ignore
     public void testGetMatchingStylesShouldNotReturnAncestorPropertyIfNotInherited() {
 
-        
+
         final Stylesheet stylesheet = new Stylesheet();
         stylesheet.setOrigin(StyleOrigin.USER_AGENT);
         StyleManager.getInstance().getInstance().setDefaultUserAgentStylesheet(stylesheet);
-        
+
         final List<Rule> rules = stylesheet.getRules();
-        
+
         //
         // .root { -fx-base: red; -fx-color: -fx-base; }
         //
         List<String> rootStyleClass = new ArrayList<String>();
         rootStyleClass.add("root");
-        
+
         Selector root = new SimpleSelector("*", rootStyleClass, null, null);
-        
+
         ParsedValueImpl fxBaseValue = CSSParser.getInstance().parseExpr("-fx-base", "red");
         Declaration fxBase = new Declaration("-fx-base", fxBaseValue, false);
 
         ParsedValueImpl<String,String> fxColorValue = new ParsedValueImpl<String,String>(fxBase.getProperty(), null, true);
         Declaration fxColor = new Declaration("-fx-color", fxColorValue, false);
 
-        ParsedValueImpl<Color,Color> fxFillShouldNotMatchValue = new ParsedValueImpl<Color,Color>(Color.RED, null);        
+        ParsedValueImpl<Color,Color> fxFillShouldNotMatchValue = new ParsedValueImpl<Color,Color>(Color.RED, null);
         Declaration fxFillShouldNotMatch = new Declaration("-fx-fill", fxFillShouldNotMatchValue, false);
-        
+
         List<Selector> selectors = new ArrayList<Selector>();
-        Collections.addAll(selectors, root); 
-        
-        List<Declaration> declarations = new ArrayList<Declaration>(); 
+        Collections.addAll(selectors, root);
+
+        List<Declaration> declarations = new ArrayList<Declaration>();
         Collections.addAll(declarations, fxBase, fxColor, fxFillShouldNotMatch);
-        
+
         Rule baseRule = new Rule(selectors, declarations);
         rules.add(baseRule);
-        
+
         //
         // .rect { -fx-fill: -fx-color; }
         //
         List<String> rectStyleClass = new ArrayList<String>();
         rectStyleClass.add("rect");
-        
+
         Selector rect = new SimpleSelector("*", rectStyleClass, null, null);
-        
+
         ParsedValueImpl fxFillValue = CSSParser.getInstance().parseExpr("-fx-fill", "-fx-color");
         Declaration fxFill = new Declaration("-fx-fill", fxFillValue, false);
-        
+
         selectors = new ArrayList<Selector>();
-        Collections.addAll(selectors, rect); 
-        
-        declarations = new ArrayList<Declaration>(); 
+        Collections.addAll(selectors, rect);
+
+        declarations = new ArrayList<Declaration>();
         Collections.addAll(declarations, fxFill);
-        
+
         Rule rectRule = new Rule(selectors, declarations);
         rules.add(rectRule);
-        
+
         // .rect:hover { -fx-fill: yellow; }
         List<String> pseudoclasses = new ArrayList<String>();
         pseudoclasses.add("hover");
-        
+
         Selector rectHover = new SimpleSelector("*", rectStyleClass, pseudoclasses, null);
-        
-        ParsedValueImpl<Color,Color> fxFillHoverValue = new ParsedValueImpl<Color,Color>(Color.YELLOW, null);        
+
+        ParsedValueImpl<Color,Color> fxFillHoverValue = new ParsedValueImpl<Color,Color>(Color.YELLOW, null);
         Declaration fxFillHover = new Declaration("-fx-fill", fxFillHoverValue, false);
-        
+
         selectors = new ArrayList<Selector>();
-        Collections.addAll(selectors, rectHover); 
-        
-        declarations = new ArrayList<Declaration>(); 
+        Collections.addAll(selectors, rectHover);
+
+        declarations = new ArrayList<Declaration>();
         Collections.addAll(declarations, fxFillHover);
-        
+
         Rule rectHoverRule = new Rule(selectors, declarations);
         rules.add(rectHoverRule);
-                
+
         List<Style> expecteds = new ArrayList<Style>();
-        Collections.addAll(expecteds, 
-                new Style(root, fxBase),
-                new Style(root, fxColor), 
-                new Style(rect, fxFill),
-                new Style(rectHover, fxFillHover)
+        Collections.addAll(expecteds,
+                           new Style(root, fxBase),
+                           new Style(root, fxColor),
+                           new Style(rect, fxFill),
+                           new Style(rectHover, fxFillHover)
         );
-        
+
         final Rectangle rectangle = new Rectangle();
         rectangle.getStyleClass().add("rect");
-        
+
         final Group group = new Group();
-        group.getChildren().add(rectangle);        
+        group.getChildren().add(rectangle);
 
         Scene scene = new Scene(group);
         Stage stage = new Stage();
         stage.setScene(scene);
         stage.show();
-                
+
         final CssMetaData FILL = get(rectangle.getCssMetaData(), "-fx-fill");
         final List<Style> actuals = Node.impl_getMatchingStyles(FILL, rectangle);
 
-//        System.err.println("matchingStyles: " + matchingStyles);
-//        System.err.println("expecteds: " + expecteds);
-//        System.err.println("actuals: " + actuals);
+        //        System.err.println("matchingStyles: " + matchingStyles);
+        //        System.err.println("expecteds: " + expecteds);
+        //        System.err.println("actuals: " + actuals);
 
         assertEquals(expecteds.size(), actuals.size(), 0);
-                
+
         for (Style style : expecteds) {
             if (!actuals.remove(style)) fail();
         }
         assertTrue(actuals.isEmpty());
-    } 
+    }
 
 
     @Test @org.junit.Ignore
     public void testGetMatchingStylesShouldNotReturnInlineAncestorPropertyIfNotInherited() {
-        
+
         final Stylesheet stylesheet = new Stylesheet();
         stylesheet.setOrigin(StyleOrigin.USER_AGENT);
         StyleManager.getInstance().setDefaultUserAgentStylesheet(stylesheet);
-        
+
         final List<Rule> rules = stylesheet.getRules();
-        
+
         List<String> rootStyleClass = new ArrayList<String>();
         rootStyleClass.add("root");
-        
+
         List<String> rectStyleClass = new ArrayList<String>();
         rectStyleClass.add("rect");
-        
+
         //
         // .root { -fx-base: red; -fx-color: -fx-base; }
         //
         Selector root = new SimpleSelector("*", rootStyleClass, null, null);
-        
+
         ParsedValueImpl fxBaseValue = CSSParser.getInstance().parseExpr("-fx-base", "red");
         Declaration fxBase = new Declaration("-fx-base", fxBaseValue, false);
 
         ParsedValueImpl<String,String> fxColorValue = new ParsedValueImpl<String,String>(fxBase.getProperty(), null, true);
         Declaration fxColor = new Declaration("-fx-color", fxColorValue, false);
 
-        ParsedValueImpl<Color,Color> fxFillShouldNotMatchValue = new ParsedValueImpl<Color,Color>(Color.RED, null);        
+        ParsedValueImpl<Color,Color> fxFillShouldNotMatchValue = new ParsedValueImpl<Color,Color>(Color.RED, null);
         Declaration fxFillShouldNotMatch = new Declaration("-fx-fill", fxFillShouldNotMatchValue, false);
-        
+
         List<Selector> selectors = new ArrayList<Selector>();
-        Collections.addAll(selectors, root); 
-        
-        List<Declaration> declarations = new ArrayList<Declaration>(); 
+        Collections.addAll(selectors, root);
+
+        List<Declaration> declarations = new ArrayList<Declaration>();
         Collections.addAll(declarations, fxBase, fxColor, fxFillShouldNotMatch);
-        
+
         Rule baseRule = new Rule(selectors, declarations);
         rules.add(baseRule);
-        
+
         //
         // .rect { -fx-fill: -fx-color; }
         //
         Selector rect = new SimpleSelector("*", rectStyleClass, null, null);
-        
+
         ParsedValueImpl fxFillValue = CSSParser.getInstance().parseExpr("-fx-fill", "-fx-color");
         Declaration fxFill = new Declaration("-fx-fill", fxFillValue, false);
-        
+
         selectors = new ArrayList<Selector>();
-        Collections.addAll(selectors, rect); 
-        
-        declarations = new ArrayList<Declaration>(); 
+        Collections.addAll(selectors, rect);
+
+        declarations = new ArrayList<Declaration>();
         Collections.addAll(declarations, fxFill);
-        
+
         Rule rectRule = new Rule(selectors, declarations);
         rules.add(rectRule);
-        
+
         // .rect:hover { -fx-fill: yellow; }
         List<String> pseudoclasses = new ArrayList<String>();
         pseudoclasses.add("hover");
-        
+
         Selector rectHover = new SimpleSelector("*", rectStyleClass, pseudoclasses, null);
-        
-        ParsedValueImpl<Color,Color> fxFillHoverValue = new ParsedValueImpl<Color,Color>(Color.YELLOW, null);        
+
+        ParsedValueImpl<Color,Color> fxFillHoverValue = new ParsedValueImpl<Color,Color>(Color.YELLOW, null);
         Declaration fxFillHover = new Declaration("-fx-fill", fxFillHoverValue, false);
-        
+
         selectors = new ArrayList<Selector>();
-        Collections.addAll(selectors, rectHover); 
-        
-        declarations = new ArrayList<Declaration>(); 
+        Collections.addAll(selectors, rectHover);
+
+        declarations = new ArrayList<Declaration>();
         Collections.addAll(declarations, fxFillHover);
-        
+
         Rule rectHoverRule = new Rule(selectors, declarations);
         rules.add(rectHoverRule);
-                
+
         List<Style> expecteds = new ArrayList<Style>();
-        Collections.addAll(expecteds, 
-                new Style(root, fxBase),
-                new Style(root, fxColor), 
-                new Style(rect, fxFill),
-                new Style(rectHover, fxFillHover)
+        Collections.addAll(expecteds,
+                           new Style(root, fxBase),
+                           new Style(root, fxColor),
+                           new Style(rect, fxFill),
+                           new Style(rectHover, fxFillHover)
         );
-        
+
         final Rectangle rectangle = new Rectangle();
         rectangle.getStyleClass().add("rect");
-        
+
         final Group group = new Group();
-        group.getChildren().add(rectangle);        
-        
+        group.getChildren().add(rectangle);
+
         Scene scene = new Scene(group);
         Stage stage = new Stage();
         stage.setScene(scene);
         stage.show();
-                
+
         final CssMetaData FILL = get(rectangle.getCssMetaData(), "-fx-fill");
         final List<Style> actuals = Node.impl_getMatchingStyles(FILL, rectangle);
 
-//        System.err.println("matchingStyles: " + matchingStyles);
-//        System.err.println("expecteds: " + expecteds);
-//        System.err.println("actuals: " + actuals);
-                
+        //        System.err.println("matchingStyles: " + matchingStyles);
+        //        System.err.println("expecteds: " + expecteds);
+        //        System.err.println("actuals: " + actuals);
+
         for (Style style : expecteds) {
             actuals.remove(style);
         }
         assertTrue(actuals.toString(), actuals.isEmpty());
-    }    
-    
+    }
+
     @Test @org.junit.Ignore
     public void testGetMatchingStylesReturnsInheritedProperty() {
 
@@ -992,172 +993,177 @@ public class CssMetaDataTest {
         final Stylesheet stylesheet = new Stylesheet();
         stylesheet.setOrigin(StyleOrigin.USER_AGENT);
         StyleManager.getInstance().setDefaultUserAgentStylesheet(stylesheet);
-        
+
         final List<Rule> rules = stylesheet.getRules();
-        
+
         //
         // .root { -fx-base: red; -fx-color: -fx-base; }
         //
         List<String> rootStyleClass = new ArrayList<String>();
         rootStyleClass.add("root");
-        
+
         Selector root = new SimpleSelector("*", rootStyleClass, null, null);
-        
-        ParsedValueImpl<Color,Color> fxFontShouldInheritValue = CSSParser.getInstance().parseExpr("-fx-font", "12px system");       
+
+        ParsedValueImpl<Color,Color> fxFontShouldInheritValue = CSSParser.getInstance().parseExpr("-fx-font", "12px system");
         Declaration fxFontShouldInherit = new Declaration("-fx-font", fxFontShouldInheritValue, false);
-        
+
         List<Selector> selectors = new ArrayList<Selector>();
-        Collections.addAll(selectors, root); 
-        
-        List<Declaration> declarations = new ArrayList<Declaration>(); 
+        Collections.addAll(selectors, root);
+
+        List<Declaration> declarations = new ArrayList<Declaration>();
         Collections.addAll(declarations, fxFontShouldInherit);
-        
+
         Rule baseRule = new Rule(selectors, declarations);
         rules.add(baseRule);
-        
+
         //
         // .text { -fx-fill: -fx-color; }
         //
         List<String> textStyleClass = new ArrayList<String>();
         textStyleClass.add("text");
-        
+
         Selector textSelector = new SimpleSelector("*", textStyleClass, null, null);
-        
+
         ParsedValueImpl fxFillValue = CSSParser.getInstance().parseExpr("-fx-fill", "red");
         Declaration fxFill = new Declaration("-fx-fill", fxFillValue, false);
-        
+
         selectors = new ArrayList<Selector>();
-        Collections.addAll(selectors, textSelector); 
-        
-        declarations = new ArrayList<Declaration>(); 
+        Collections.addAll(selectors, textSelector);
+
+        declarations = new ArrayList<Declaration>();
         Collections.addAll(declarations, fxFill);
-        
+
         Rule rectRule = new Rule(selectors, declarations);
         rules.add(rectRule);
-               
+
         List<Style> expecteds = new ArrayList<Style>();
-        Collections.addAll(expecteds, 
-                new Style(root, fxFontShouldInherit)
+        Collections.addAll(expecteds,
+                           new Style(root, fxFontShouldInherit)
         );
-        
+
         final Text text = new Text("text");
         text.getStyleClass().add("text");
-        
+
         final Group group = new Group();
-        group.getChildren().add(text);        
-        
+        group.getChildren().add(text);
+
         Scene scene = new Scene(group);
         Stage stage = new Stage();
         stage.setScene(scene);
         stage.show();
-                
+
         final CssMetaData FONT = get(text.getCssMetaData(), "-fx-font");
         final List<Style> actuals = Node.impl_getMatchingStyles(FONT, text);
 
-//        System.err.println("matchingStyles: " + matchingStyles);
-//        System.err.println("expecteds: " + expecteds);
-//        System.err.println("actuals: " + actuals);
+        //        System.err.println("matchingStyles: " + matchingStyles);
+        //        System.err.println("expecteds: " + expecteds);
+        //        System.err.println("actuals: " + actuals);
 
         assertEquals(expecteds.size(), actuals.size(), 0);
-                
+
         for (Style style : expecteds) {
             if (!actuals.remove(style)) fail();
         }
         assertTrue(actuals.isEmpty());
     }
-    
+
     @Test @org.junit.Ignore
     public void testGetMatchingStylesReturnsSubProperty() {
 
         final Stylesheet stylesheet = new Stylesheet();
         stylesheet.setOrigin(StyleOrigin.USER_AGENT);
-        StyleManager.getInstance().setDefaultUserAgentStylesheet(stylesheet);        
-                
+        StyleManager.getInstance().setDefaultUserAgentStylesheet(stylesheet);
+
         final List<Rule> rules = stylesheet.getRules();
-        
+
         //
         // .root { -fx-base: red; -fx-color: -fx-base; }
         //
         List<String> rootStyleClass = new ArrayList<String>();
         rootStyleClass.add("root");
-        
+
         Selector root = new SimpleSelector("*", rootStyleClass, null, null);
-        
-        ParsedValueImpl<Color,Color> fxFontShouldInheritValue = CSSParser.getInstance().parseExpr("-fx-font", "12px system");       
+
+        ParsedValueImpl<Color,Color> fxFontShouldInheritValue = CSSParser.getInstance().parseExpr("-fx-font", "12px system");
         Declaration fxFontShouldInherit = new Declaration("-fx-font", fxFontShouldInheritValue, false);
-        
+
         List<Selector> selectors = new ArrayList<Selector>();
-        Collections.addAll(selectors, root); 
-        
-        List<Declaration> declarations = new ArrayList<Declaration>(); 
+        Collections.addAll(selectors, root);
+
+        List<Declaration> declarations = new ArrayList<Declaration>();
         Collections.addAll(declarations, fxFontShouldInherit);
-        
+
         Rule baseRule = new Rule(selectors, declarations);
         rules.add(baseRule);
-        
+
         //
         // .text { -fx-fill: -fx-color; }
         //
         List<String> rectStyleClass = new ArrayList<String>();
         rectStyleClass.add("text");
-        
+
         Selector textSelector = new SimpleSelector("*", rectStyleClass, null, null);
-        
+
         ParsedValueImpl fxFillValue = CSSParser.getInstance().parseExpr("-fx-fill", "red");
         Declaration fxFill = new Declaration("-fx-fill", fxFillValue, false);
 
         ParsedValueImpl fxFontFamilyValue = CSSParser.getInstance().parseExpr("-fx-font-family", "arial");
         Declaration fxFontFamily = new Declaration("-fx-font-family", fxFontFamilyValue, false);
-        
+
         selectors = new ArrayList<Selector>();
-        Collections.addAll(selectors, textSelector); 
-        
-        declarations = new ArrayList<Declaration>(); 
+        Collections.addAll(selectors, textSelector);
+
+        declarations = new ArrayList<Declaration>();
         Collections.addAll(declarations, fxFill, fxFontFamily);
-        
+
         Rule rectRule = new Rule(selectors, declarations);
         rules.add(rectRule);
 
         List<Style> expecteds = new ArrayList<Style>();
-        Collections.addAll(expecteds, 
-                new Style(textSelector, fxFontFamily),
-                new Style(root, fxFontShouldInherit)
+        Collections.addAll(expecteds,
+                           new Style(textSelector, fxFontFamily),
+                           new Style(root, fxFontShouldInherit)
         );
-        
+
         final Text text  = new Text();
         text.getStyleClass().add("text");
-        
+
         final Group group = new Group();
-        group.getChildren().add(text);        
+        group.getChildren().add(text);
 
         Scene scene = new Scene(group);
         Stage stage = new Stage();
         stage.setScene(scene);
         stage.show();
-                        
+
         final CssMetaData FONT = get(text.getCssMetaData(), "-fx-font");
         final List<Style> actuals = Node.impl_getMatchingStyles(FONT, text);
 
-//        System.err.println("matchingStyles: " + matchingStyles);
-//        System.err.println("expecteds: " + expecteds);
-//        System.err.println("actuals: " + actuals);
+        //        System.err.println("matchingStyles: " + matchingStyles);
+        //        System.err.println("expecteds: " + expecteds);
+        //        System.err.println("actuals: " + actuals);
 
         assertEquals(expecteds.size(), actuals.size(), 0);
-                
+
         for (Style style : expecteds) {
             if (!actuals.remove(style)) fail();
         }
         assertTrue(actuals.isEmpty());
-    }    
-    
+    }
+
     @Test
     public void testRT18097() {
         try {
-            ClassLoader cl = Thread.currentThread().getContextClassLoader();
-            URL base = cl.getResource("javafx/..");
-            File f = new File(base.toURI());
-//            System.err.println(f.getPath());
-            recursiveCheck(f, f.getPath().length());
+            File f = System.getProperties().containsKey("CSS_META_DATA_TEST_DIR") ?
+                    new File(System.getProperties().get("CSS_META_DATA_TEST_DIR").toString()) :
+                    null;
+            if (f == null) {
+                ClassLoader cl = Thread.currentThread().getContextClassLoader();
+                URL base = cl.getResource("javafx");
+                f = new File(base.toURI());
+            }
+            //System.err.println(f.getPath());
+            recursiveCheck(f, f.getPath().length() - 7);
         } catch (Exception ex) {
             ex.printStackTrace(System.err);
             fail(ex.getMessage());
@@ -1165,26 +1171,26 @@ public class CssMetaDataTest {
     }
 
     private static void checkClass(Class someClass) {
-        
+
         if (javafx.scene.Node.class.isAssignableFrom(someClass) &&
                 Modifier.isAbstract(someClass.getModifiers()) == false) {
-            
+
             String what = someClass.getName();
             try {
                 // should get NoSuchMethodException if ctor is not public
-//                Constructor ctor = someClass.getConstructor((Class[])null);
+                //                Constructor ctor = someClass.getConstructor((Class[])null);
                 Method m = someClass.getMethod("getClassCssMetaData", (Class[]) null);
-//                Node node = (Node)ctor.newInstance((Object[])null);
+                //                Node node = (Node)ctor.newInstance((Object[])null);
                 Node node = (Node)someClass.newInstance();
                 for (CssMetaData styleable : (List<CssMetaData<? extends Styleable, ?>>) m.invoke(null)) {
-                    
+
                     what = someClass.getName() + " " + styleable.getProperty();
                     WritableValue writable = styleable.getStyleableProperty(node);
                     assertNotNull(what, writable);
-                    
+
                     Object defaultValue = writable.getValue();
                     Object initialValue = styleable.getInitialValue((Node) someClass.newInstance());
-                    
+
                     if (defaultValue instanceof Number) {
                         // 5 and 5.0 are not the same according to equals,
                         // but they should be...
@@ -1192,13 +1198,13 @@ public class CssMetaDataTest {
                         double d1 = ((Number)defaultValue).doubleValue();
                         double d2 = ((Number)initialValue).doubleValue();
                         assertEquals(what, d1, d2, .001);
-                        
+
                     } else if (defaultValue != null && defaultValue.getClass().isArray()) {
                         assertTrue(what, Arrays.equals((Object[])defaultValue, (Object[])initialValue));
                     } else {
                         assertEquals(what, defaultValue, initialValue);
                     }
-                    
+
                 }
 
             } catch (NoSuchMethodException ex) {
@@ -1210,19 +1216,19 @@ public class CssMetaDataTest {
             } catch (InvocationTargetException ex) {
                 System.err.println("InvocationTargetException: " + what);
             } catch (InstantiationException ex) {
-                System.err.println("InstantiationException: " + what);                
+                System.err.println("InstantiationException: " + what);
             }
         }
     }
 
     private static void checkDirectory(File directory, final int pathLength) {
         if (directory.isDirectory()) {
-            
+
             for (File file : directory.listFiles()) {
                 if (file.isFile() && file.getName().endsWith(".class")) {
                     final int len = file.getPath().length() - ".class".length();
-                    final String clName = 
-                        file.getPath().substring(pathLength+1, len).replace(File.separatorChar,'.');
+                    final String clName =
+                            file.getPath().substring(pathLength+1, len).replace(File.separatorChar,'.');
                     try {
                         final Class cl = Class.forName(clName);
                         if (cl != null) checkClass(cl);
@@ -1236,25 +1242,25 @@ public class CssMetaDataTest {
 
     private static void recursiveCheck(File directory, int pathLength) {
         if (directory.isDirectory()) {
-//            System.err.println(directory.getPath());
+            //            System.err.println(directory.getPath());
             checkDirectory(directory, pathLength);
 
             for (File subFile : directory.listFiles()) {
                 recursiveCheck(subFile, pathLength);
             }
         }
-    }    
-    
+    }
+
     @Test
     public void testRT_21185() {
 
         Color c1 = new Color(.1,.2,.3,1.0);
         Color c2 = new Color(.1,.2,.3,1.0);
-                
+
         Rectangle rect = new Rectangle();
         rect.setFill(c1);
-        
-        
+
+
         CssMetaData fill = ((StyleableProperty)rect.fillProperty()).getCssMetaData();
         StyleOrigin origin = ((StyleableProperty)rect.fillProperty()).getStyleOrigin();
 
@@ -1267,46 +1273,46 @@ public class CssMetaDataTest {
         c2 = new Color(.3,.2,.1,1.0);
         fill.set(rect, c2, origin);
         assert(c2 == rect.getFill());
-        
+
         // set should change the value if the origin is not the same
         fill.set(rect, c2, StyleOrigin.INLINE);
         origin = ((StyleableProperty)rect.fillProperty()).getStyleOrigin();
         assert(origin == StyleOrigin.INLINE);
-        
+
         // set should change the value if one is null and the other is not.
         rect.setFill(null);
         fill.set(rect, c2, origin);
         assert(c2 == rect.getFill());
-        
+
         // set should change the value if one is null and the other is not
         fill.set(rect, null, origin);
         assertNull(rect.getFill());
-        
+
     }
-    
-    
+
+
     @Test  @org.junit.Ignore
     public void testRT_24606() {
 
         final Stylesheet stylesheet = CSSParser.getInstance().parse(
                 ".root { -fx-base: red; }" +
-                ".group { -fx-color: -fx-base; }" +
-                ".text { -fx-fill: -fx-color; }" 
+                        ".group { -fx-color: -fx-base; }" +
+                        ".text { -fx-fill: -fx-color; }"
         );
         stylesheet.setOrigin(StyleOrigin.USER_AGENT);
-        StyleManager.getInstance().setDefaultUserAgentStylesheet(stylesheet);        
-       
+        StyleManager.getInstance().setDefaultUserAgentStylesheet(stylesheet);
+
         final Text text = new Text("HelloWorld");
         text.getStyleClass().add("text");
         text.setFill(Color.BLUE);
-        
+
         final Group group = new Group();
         group.getStyleClass().add("group");
         group.getChildren().add(text);
 
         final Group root = new Group();
         root.getChildren().add(group);
-        
+
         Scene scene = new Scene(root);
         Stage stage = new Stage();
         stage.setScene(scene);
@@ -1314,9 +1320,9 @@ public class CssMetaDataTest {
 
         CssMetaData prop = ((StyleableProperty)text.fillProperty()).getCssMetaData();
         List list = Node.impl_getMatchingStyles(prop, text);
-        
+
         assertEquals(3, list.size(), 0);
-                
-    }    
-    
+
+    }
+
 }
