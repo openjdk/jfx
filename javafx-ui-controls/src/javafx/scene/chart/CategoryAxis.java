@@ -75,7 +75,7 @@ public final class CategoryAxis extends Axis<String> {
                     // Ideally we should be using a Set for categories.
                     for (String addedStr : c.getAddedSubList())
                         checkAndRemoveDuplicates(addedStr);
-                }
+                    }
                 if (!isAutoRanging()) {
                     allDataCategories.clear();
                     allDataCategories.addAll(getCategories());
@@ -260,7 +260,6 @@ public final class CategoryAxis extends Axis<String> {
      * @param categories List of the categories for this axis
      */
     public CategoryAxis(ObservableList<String> categories) {
-        setAnimated(false);
         setCategories(categories);
     }
 
