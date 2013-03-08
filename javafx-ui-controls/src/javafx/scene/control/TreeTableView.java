@@ -36,6 +36,7 @@ import com.sun.javafx.scene.control.skin.TreeTableViewSkin;
 import com.sun.javafx.scene.control.skin.VirtualContainerBase;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
 import javafx.application.Platform;
@@ -322,7 +323,7 @@ public class TreeTableView<S> extends Control {
         // the sort method.
         getSortOrder().addListener(new ListChangeListener<TreeTableColumn<S,?>>() {
             @Override public void onChanged(ListChangeListener.Change<? extends TreeTableColumn<S,?>> c) {
-                sort();
+                doSort(TableUtil.SortEventType.SORT_ORDER_CHANGE, c);
             }
         });
 
@@ -480,6 +481,42 @@ public class TreeTableView<S> extends Control {
         }
     };
     
+    /**
+     * The default {@link #sortPolicyProperty() sort policy} that this TreeTableView
+     * will use if no other policy is specified. The sort policy is a simple 
+     * {@link Callback} that accepts a TreeTableView as the sole argument and expects
+     * a Boolean response representing whether the sort succeeded or not. A Boolean
+     * response of true represents success, and a response of false (or null) will
+     * be considered to represent failure.
+     */
+    public static final Callback<TreeTableView, Boolean> DEFAULT_SORT_POLICY = new Callback<TreeTableView, Boolean>() {
+        @Override public Boolean call(TreeTableView table) {
+            try {
+                TreeItem rootItem = table.getRoot();
+                if (rootItem == null) return false;
+
+                TreeSortMode sortMode = table.getSortMode();
+                if (sortMode == null) return false;
+
+                rootItem.lastSortMode = sortMode;
+                rootItem.lastComparator = table.getComparator();
+                rootItem.sort();
+                return true;
+            } catch (UnsupportedOperationException e) {
+                // TODO might need to support other exception types including:
+                // ClassCastException - if the class of the specified element prevents it from being added to this list
+                // NullPointerException - if the specified element is null and this list does not permit null elements
+                // IllegalArgumentException - if some property of this element prevents it from being added to this list
+
+                // If we are here the list does not support sorting, so we gracefully 
+                // fail the sort request and ensure the UI is put back to its previous
+                // state. This is handled in the code that calls the sort policy.
+                
+                return false;
+            }
+        }
+    };
+    
     
     
     /***************************************************************************
@@ -581,7 +618,7 @@ public class TreeTableView<S> extends Control {
         @Override public void invalidated(Observable valueModel) {
             TreeTableColumn col = (TreeTableColumn) ((BooleanProperty)valueModel).getBean();
             if (! getSortOrder().contains(col)) return;
-            sort();
+            doSort(TableUtil.SortEventType.COLUMN_SORTABLE_CHANGE, col);
         }
     };
 
@@ -589,7 +626,7 @@ public class TreeTableView<S> extends Control {
         @Override public void invalidated(Observable valueModel) {
             TreeTableColumn col = (TreeTableColumn) ((ObjectProperty)valueModel).getBean();
             if (! getSortOrder().contains(col)) return;
-            sort();
+            doSort(TableUtil.SortEventType.COLUMN_SORT_TYPE_CHANGE, col);
         }
     };
     
@@ -1206,6 +1243,108 @@ public class TreeTableView<S> extends Control {
     }
     
     
+    // --- Comparator (built via sortOrder list, so read-only)
+    /**
+     * The comparator property is a read-only property that is representative of the
+     * current state of the {@link #getSortOrder() sort order} list. The sort
+     * order list contains the columns that have been added to it either programmatically
+     * or via a user clicking on the headers themselves.
+     */
+    private ReadOnlyObjectWrapper<Comparator<S>> comparator;
+    private void setComparator(Comparator<S> value) {
+        comparatorPropertyImpl().set(value);
+    }
+    public final Comparator<S> getComparator() {
+        return comparator == null ? null : comparator.get();
+    }
+    public final ReadOnlyObjectProperty<Comparator<S>> comparatorProperty() {
+        return comparatorPropertyImpl().getReadOnlyProperty();
+    }
+    private ReadOnlyObjectWrapper<Comparator<S>> comparatorPropertyImpl() {
+        if (comparator == null) {
+            comparator = new ReadOnlyObjectWrapper<Comparator<S>>(this, "comparator");
+        }
+        return comparator;
+    }
+    
+    
+    // --- sortPolicy
+    /**
+     * The sort policy specifies how sorting in this TreeTableView should be performed.
+     * For example, a basic sort policy may just recursively sort the children of 
+     * the root tree item, whereas a more advanced sort policy may call to a 
+     * database to perform the necessary sorting on the server-side.
+     * 
+     * <p>TreeTableView ships with a {@link TableView#DEFAULT_SORT_POLICY default
+     * sort policy} that does precisely as mentioned above: it simply attempts
+     * to sort the tree hierarchy in-place.
+     * 
+     * <p>It is recommended that rather than override the {@link TreeTableView#sort() sort}
+     * method that a different sort policy be provided instead.
+     */
+    private ObjectProperty<Callback<TreeTableView<S>, Boolean>> sortPolicy;
+    public final void setSortPolicy(Callback<TreeTableView<S>, Boolean> callback) {
+        sortPolicyProperty().set(callback);
+    }
+    @SuppressWarnings("unchecked") 
+    public final Callback<TreeTableView<S>, Boolean> getSortPolicy() {
+        return sortPolicy == null ? 
+                (Callback<TreeTableView<S>, Boolean>)(Object) DEFAULT_SORT_POLICY : 
+                sortPolicy.get();
+    }
+    @SuppressWarnings("unchecked")
+    public final ObjectProperty<Callback<TreeTableView<S>, Boolean>> sortPolicyProperty() {
+        if (sortPolicy == null) {
+            sortPolicy = new SimpleObjectProperty<Callback<TreeTableView<S>, Boolean>>(
+                    this, "sortPolicy", (Callback<TreeTableView<S>, Boolean>)(Object) DEFAULT_SORT_POLICY) {
+                @Override protected void invalidated() {
+                    sort();
+                }
+            };
+        }
+        return sortPolicy;
+    }
+    
+    
+    // onSort
+    /**
+     * Called when there's a request to sort the control.
+     */
+    private ObjectProperty<EventHandler<SortEvent<TreeTableView<S>>>> onSort;
+    
+    public void setOnSort(EventHandler<SortEvent<TreeTableView<S>>> value) {
+        onSortProperty().set(value);
+    }
+    
+    public EventHandler<SortEvent<TreeTableView<S>>> getOnSort() {
+        if( onSort != null ) {
+            return onSort.get();
+        }
+        return null;
+    }
+    
+    public ObjectProperty<EventHandler<SortEvent<TreeTableView<S>>>> onSortProperty() {
+        if( onSort == null ) {
+            onSort = new ObjectPropertyBase<EventHandler<SortEvent<TreeTableView<S>>>>() {
+                @Override protected void invalidated() {
+                    EventType<SortEvent<TreeTableView<S>>> eventType = SortEvent.sortEvent();
+                    EventHandler<SortEvent<TreeTableView<S>>> eventHandler = get();
+                    setEventHandler(eventType, eventHandler);
+                }
+                
+                @Override public Object getBean() {
+                    return TreeTableView.this;
+                }
+
+                @Override public String getName() {
+                    return "onSort";
+                }
+            };
+        }
+        return onSort;
+    }
+    
+    
     
     /***************************************************************************
      *                                                                         *
@@ -1455,6 +1594,56 @@ public class TreeTableView<S> extends Control {
         return visibleLeafColumns.get(column);
     }
 
+    /**
+     * The sort method forces the TreeTableView to re-run its sorting algorithm. More 
+     * often than not it is not necessary to call this method directly, as it is
+     * automatically called when the {@link #getSortOrder() sort order}, 
+     * {@link #sortPolicyProperty() sort policy}, or the state of the 
+     * TableColumn {@link TableColumn#sortTypeProperty() sort type} properties 
+     * change. In other words, this method should only be called directly when
+     * something external changes and a sort is required.
+     */
+    public void sort() {
+        final ObservableList<? extends TableColumnBase> sortOrder = getSortOrder();
+        
+        // update the Comparator property
+        final Comparator<S> oldComparator = getComparator();
+        if (sortOrder.isEmpty()) {
+            setComparator(null);
+        } else {
+            Comparator<S> newComparator = new TableColumnComparator(sortOrder);
+            setComparator(newComparator);
+        }
+        
+        // fire the onSort event and check if it is consumed, if
+        // so, don't run the sort
+        SortEvent<TreeTableView<S>> sortEvent = new SortEvent<TreeTableView<S>>(TreeTableView.this, TreeTableView.this);
+        fireEvent(sortEvent);
+        if (sortEvent.isConsumed()) {
+            // if the sort is consumed we could back out the last action (the code
+            // is commented out right below), but we don't as we take it as a 
+            // sign that the developer has decided to handle the event themselves.
+            
+            // sortLock = true;
+            // TableUtil.handleSortFailure(sortOrder, lastSortEventType, lastSortEventSupportInfo);
+            // sortLock = false;
+            return;
+        }
+
+        // get the sort policy and run it
+        Callback<TreeTableView<S>, Boolean> sortPolicy = getSortPolicy();
+        if (sortPolicy == null) return;
+        Boolean success = sortPolicy.call(this);
+        
+        if (success == null || ! success) {
+            // the sort was a failure. Need to backout if possible
+            sortLock = true;
+            TableUtil.handleSortFailure(sortOrder, lastSortEventType, lastSortEventSupportInfo);
+            setComparator(oldComparator);
+            sortLock = false;
+        }
+    }
+    
     
     
     /***************************************************************************
@@ -1462,6 +1651,22 @@ public class TreeTableView<S> extends Control {
      * Private Implementation                                                  *
      *                                                                         *
      **************************************************************************/
+    
+    private boolean sortLock = false;
+    private TableUtil.SortEventType lastSortEventType = null;
+    private Object[] lastSortEventSupportInfo = null;
+    
+    private void doSort(final TableUtil.SortEventType sortEventType, final Object... supportInfo) {
+        if (sortLock) {
+            return;
+        }
+        
+        this.lastSortEventType = sortEventType;
+        this.lastSortEventSupportInfo = supportInfo;
+        sort();
+        this.lastSortEventType = null;
+        this.lastSortEventSupportInfo = null;
+    }
     
     private void updateExpandedItemCount(TreeItem treeItem) {
         setExpandedItemCount(TreeUtil.updateExpandedItemCount(treeItem, expandedItemCountDirty, isShowRoot()));
@@ -1486,31 +1691,6 @@ public class TreeTableView<S> extends Control {
      */
     private void refresh() {
         getProperties().put(TableViewSkinBase.REFRESH, Boolean.TRUE);
-    }
-    
-    /**
-     * Sometimes we want to force a sort to run - this is the recommended way
-     * of doing it internally. External users of the TableView API should just
-     * stick to modifying the TableView.sortOrder ObservableList (or the contents
-     * of the TreeTableColumns within it - in particular the
-     * TreeTableColumn.sortAscending boolean).
-     */
-    private void sort() {
-        TreeItem rootItem = getRoot();
-        if (rootItem == null) return;
-        
-        TreeSortMode sortMode = getSortMode();
-        if (sortMode == null) return;
-        
-        // build up a new comparator based on the current table columms
-        TableColumnComparator comparator = new TableColumnComparator();
-        for (TreeTableColumn<S,?> tc : getSortOrder()) {
-            comparator.getColumns().add(tc);
-        }
-
-        rootItem.lastSortMode = sortMode;
-        rootItem.lastComparator = comparator;
-        rootItem.sort();
     }
     
     // --- Content width

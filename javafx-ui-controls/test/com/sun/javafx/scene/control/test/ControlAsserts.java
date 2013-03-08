@@ -42,6 +42,14 @@ import static org.junit.Assert.*;
 
 public class ControlAsserts {
     
+    public static void assertListContainsItemsInOrder(final List items, final Object... expected) {
+        assertEquals(expected.length, items.size());
+        for (int i = 0; i < expected.length; i++) {
+            Object item = items.get(i);
+            assertEquals(expected[i], item);
+        }
+    }
+    
     public static void assertRowsEmpty(final Control control, final int startRow, final int endRow) {
         assertRows(control, startRow, endRow, true);
     }

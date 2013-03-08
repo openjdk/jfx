@@ -799,6 +799,9 @@ public class TreeItem<T> implements EventTarget { //, Comparable<TreeItem<T>> {
     private void sort(final ObservableList<TreeItem<T>> children, 
                          final Comparator<TreeItem<T>> comparator, 
                          final TreeSortMode sortMode) {
+        
+        if (comparator == null) return;
+        
         runSort(children, comparator, sortMode);
         
         // if we're at the root node, we'll fire an event so that the control
@@ -839,7 +842,6 @@ public class TreeItem<T> implements EventTarget { //, Comparable<TreeItem<T>> {
 //            
         } else {
             // Unknown sort mode
-            System.out.println("Unknown sort mode in TreeItem.runSort()");
         }
     }
     
