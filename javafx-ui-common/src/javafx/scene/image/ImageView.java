@@ -34,9 +34,11 @@ import javafx.geometry.Rectangle2D;
 import javafx.scene.Node;
 
 import com.sun.javafx.beans.event.AbstractNotifyListener;
+import com.sun.javafx.css.StyleManager;
 import javafx.css.CssMetaData;
 import javafx.css.StyleableStringProperty;
 import com.sun.javafx.css.converters.StringConverter;
+import com.sun.javafx.css.converters.URLConverter;
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.jmx.MXNodeAlgorithm;
@@ -249,20 +251,9 @@ public class ImageView extends Node {
                 @Override
                 protected void invalidated() {
 
-                    String imageUrl = null;
-                    if (get() != null) {
-                        URL url = null;
-                        try {
-                            url = new URL(get());
-                        } catch (MalformedURLException malf) {
-                            // This may be a relative URL, so try resolving
-                            // it using the application classloader
-                            final ClassLoader cl = Thread.currentThread().getContextClassLoader();
-                            url = cl.getResource(get());
-                        }
-                        if (url != null) {
-                            setImage(new Image(url.toExternalForm())); 
-                        }
+                    final String imageUrl = get();
+                    if (imageUrl != null) {
+                        setImage(StyleManager.getInstance().getCachedImage(imageUrl)); 
                     } else {
                         setImage(null);
                     }                    
@@ -800,7 +791,7 @@ public class ImageView extends Node {
         // "preserve-ratio","smooth","viewport","fit-width","fit-height"
          private static final CssMetaData<ImageView, String> IMAGE = 
             new CssMetaData<ImageView,String>("-fx-image",
-                StringConverter.getInstance()) {
+                URLConverter.getInstance()) {
 
             @Override
             public boolean isSettable(ImageView n) {

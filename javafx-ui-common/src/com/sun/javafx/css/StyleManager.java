@@ -64,6 +64,8 @@ import java.util.Set;
 import javafx.css.CssMetaData;
 import javafx.css.PseudoClass;
 import javafx.css.StyleOrigin;
+import javafx.scene.image.Image;
+import javafx.util.Pair;
 import sun.util.logging.PlatformLogger;
 
 /**
@@ -224,6 +226,10 @@ final public class StyleManager {
         // This list should also be fairly small
         final RefList<Key> keys;
         
+        // RT-24516 -- cache images coming from this stylesheet.
+        // This just holds a hard reference to the image. 
+        final List<Image> imageCache;
+        
         final int hash;
 
         StylesheetContainer(String fname, Stylesheet stylesheet) {
@@ -256,6 +262,9 @@ final public class StyleManager {
             this.sceneUsers = new RefList<Scene>();
             this.parentUsers = new RefList<Parent>();
             this.keys = new RefList<Key>();
+            
+            // this just holds a hard reference to the image
+            this.imageCache = new ArrayList<Image>();
         }
 
         @Override
@@ -398,7 +407,11 @@ final public class StyleManager {
     private void clearCache(StylesheetContainer sc) {
 
         removeFromCacheMap(sc);
-            
+        
+        // clean up image cache by removing images from the cache that 
+        // might have come from this stylesheet
+        cleanUpImageCache(sc.fname);
+                           
         final List<Reference<Scene>> sceneList = sc.sceneUsers.list;
         final List<Reference<Parent>> parentList = sc.parentUsers.list;
                         
@@ -479,6 +492,73 @@ final public class StyleManager {
         }
     }
     
+    ////////////////////////////////////////////////////////////////////////////
+    //
+    // Image caching
+    //
+    ////////////////////////////////////////////////////////////////////////////
+    
+    Map<String,Image> imageCache = new HashMap<String,Image>();
+    
+    public Image getCachedImage(String url) {
+    
+        Image image = imageCache.get(url);
+        if (image == null) {
+            
+            try {
+
+                image = new Image(url);
+                imageCache.put(url, image);
+                
+            } catch (IllegalArgumentException iae) {
+                // url was empty! 
+                final PlatformLogger logger = getLogger();
+                if (logger != null && logger.isLoggable(PlatformLogger.WARNING)) {
+                        LOGGER.warning(iae.getLocalizedMessage());
+                }
+
+            } catch (NullPointerException npe) {
+                // url was null!
+                final PlatformLogger logger = getLogger();
+                if (logger != null && logger.isLoggable(PlatformLogger.WARNING)) {
+                        LOGGER.warning(npe.getLocalizedMessage());
+                }
+            }
+        } 
+        
+        return image;
+    }
+    
+    private void cleanUpImageCache(String fname) {
+
+        if (fname == null && imageCache.isEmpty()) return;
+        if (fname.trim().isEmpty()) return;
+
+        int len = fname.lastIndexOf('/');
+        final String path = (len > 0) ? fname.substring(0,len) : fname;
+        final int plen = path.length();
+        
+        final String[] entriesToRemove = new String[imageCache.size()];
+        int count = 0;
+        
+        final Set<Entry<String, Image>> entrySet = imageCache.entrySet();
+        for(Entry<String, Image> entry : entrySet) {
+            
+            final String key = entry.getKey();
+            len = key.lastIndexOf('/');
+            final String kpath = (len > 0) ? key.substring(0, len) : key;
+            final int klen = kpath.length();
+            
+            // if the longer path begins with the shorter path,
+            // then assume the image came from this path.
+            boolean match = (klen > plen) ? kpath.startsWith(path) : path.startsWith(kpath);
+            if (match) entriesToRemove[count++] = key;
+        }
+        
+        for (int n=0; n<count; n++) {
+           Image img = imageCache.remove(entriesToRemove[n]);
+       }
+    }
     
     ////////////////////////////////////////////////////////////////////////////
     //

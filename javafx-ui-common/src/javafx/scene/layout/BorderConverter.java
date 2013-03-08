@@ -26,6 +26,7 @@
 package javafx.scene.layout;
 
 import com.sun.javafx.css.StyleConverterImpl;
+import com.sun.javafx.css.StyleManager;
 import com.sun.javafx.scene.layout.region.BorderImageSlices;
 import com.sun.javafx.scene.layout.region.Margins;
 import com.sun.javafx.scene.layout.region.RepeatStruct;
@@ -163,7 +164,8 @@ class BorderConverter extends StyleConverterImpl<ParsedValue[], Border> {
                 final BorderImageSlices slice = slices.length > 0 ? slices[i <= lastSlicesIndex ? i : lastSlicesIndex] : BorderImageSlices.EMPTY;
                 final Insets inset = insets.length > 0 ? insets[i <= lastInsetsIndex ? i : lastInsetsIndex] : Insets.EMPTY;
                 final BorderWidths width = widths.length > 0 ? widths[i <= lastWidthsIndex ? i : lastWidthsIndex] : BorderWidths.DEFAULT;
-                borderImages[i] = new BorderImage(new Image(imageUrls[i]), width, inset, slice.widths, slice.filled, repeatX, repeatY);
+                final Image img = StyleManager.getInstance().getCachedImage(imageUrls[i]);
+                borderImages[i] = new BorderImage(img, width, inset, slice.widths, slice.filled, repeatX, repeatY);
             }
         }
 

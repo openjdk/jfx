@@ -26,6 +26,7 @@
 package javafx.scene.layout;
 
 import com.sun.javafx.css.StyleConverterImpl;
+import com.sun.javafx.css.StyleManager;
 import com.sun.javafx.scene.layout.region.RepeatStruct;
 import java.util.Map;
 import javafx.css.CssMetaData;
@@ -107,7 +108,7 @@ class BackgroundConverter extends StyleConverterImpl<ParsedValue[], Background> 
                 // RT-21335: skip background and border images whose image url is null
                 if (imageUrls[i] == null) continue;
 
-                final Image image = new Image(imageUrls[i]);
+                final Image image = StyleManager.getInstance().getCachedImage(imageUrls[i]);
                 final RepeatStruct repeat = (repeats.length > 0) ?
                         repeats[i <= lastRepeatIndex ? i : lastRepeatIndex] : null; // min
                 final BackgroundPosition position = (positions.length > 0) ?

@@ -28,6 +28,7 @@ package javafx.scene.control;
 
 import com.sun.javafx.css.Selector;
 import com.sun.javafx.css.SimpleSelector;
+import com.sun.javafx.css.StyleManager;
 import com.sun.javafx.css.converters.BooleanConverter;
 import com.sun.javafx.css.converters.EnumConverter;
 import com.sun.javafx.css.converters.InsetsConverter;
@@ -446,7 +447,8 @@ public abstract class Labeled extends Control {
                             url = cl.getResource(v);
                         }
                         if (url != null) {
-                            ((StyleableProperty)graphicProperty()).applyStyle(origin, new ImageView(new Image(url.toExternalForm())));
+                            final Image img = StyleManager.getInstance().getCachedImage(url.toExternalForm());
+                            ((StyleableProperty)graphicProperty()).applyStyle(origin, new ImageView(img));
                         }
                     }
                 }
