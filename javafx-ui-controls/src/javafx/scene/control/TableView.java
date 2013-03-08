@@ -29,9 +29,7 @@ import com.sun.javafx.collections.MappingChange;
 import com.sun.javafx.collections.NonIterableChange;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
-import java.util.Set;
 
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
@@ -46,8 +44,6 @@ import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.MapChangeListener;
 import javafx.collections.ObservableList;
-import com.sun.javafx.collections.transformation.SortableList;
-import com.sun.javafx.collections.transformation.TransformationList;
 
 import javafx.scene.Node;
 import javafx.scene.layout.GridPane;
@@ -57,22 +53,23 @@ import com.sun.javafx.collections.annotations.ReturnsUnmodifiableCollection;
 import javafx.css.PseudoClass;
 import com.sun.javafx.scene.control.ReadOnlyUnbackedObservableList;
 import com.sun.javafx.scene.control.TableColumnComparator;
+import com.sun.javafx.scene.control.skin.TableColumnHeader;
 import javafx.collections.WeakListChangeListener;
-import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.event.EventType;
 
 import com.sun.javafx.scene.control.skin.TableViewSkin;
 import com.sun.javafx.scene.control.skin.TableViewSkinBase;
-import com.sun.javafx.scene.control.skin.VirtualContainerBase;
 import java.lang.ref.WeakReference;
+import java.util.Comparator;
 import java.util.HashMap;
 import javafx.beans.DefaultProperty;
 import javafx.beans.WeakInvalidationListener;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.value.WeakChangeListener;
-import javafx.scene.control.cell.TreeItemPropertyValueFactory;
+import static javafx.scene.control.TableColumnBase.SortType.ASCENDING;
+import static javafx.scene.control.TableColumnBase.SortType.DESCENDING;
 
 /**
  * The TableView control is designed to visualize an unlimited number of rows
@@ -319,6 +316,34 @@ public class TableView<S> extends Control {
         }
     };
     
+    /**
+     * The default {@link #sortPolicyProperty() sort policy} that this TableView
+     * will use if no other policy is specified. The sort policy is a simple 
+     * {@link Callback} that accepts a TableView as the sole argument and expects
+     * a Boolean response representing whether the sort succeeded or not. A Boolean
+     * response of true represents success, and a response of false (or null) will
+     * be considered to represent failure.
+     */
+    public static final Callback<TableView, Boolean> DEFAULT_SORT_POLICY = new Callback<TableView, Boolean>() {
+        @Override public Boolean call(TableView table) {
+            try {
+                FXCollections.sort(table.getItems(), table.getComparator());
+                return true;
+            } catch (UnsupportedOperationException e) {
+                // TODO might need to support other exception types including:
+                // ClassCastException - if the class of the specified element prevents it from being added to this list
+                // NullPointerException - if the specified element is null and this list does not permit null elements
+                // IllegalArgumentException - if some property of this element prevents it from being added to this list
+
+                // If we are here the list does not support sorting, so we gracefully 
+                // fail the sort request and ensure the UI is put back to its previous
+                // state. This is handled in the code that calls the sort policy.
+                
+                return false;
+            }
+        }
+    };
+    
     
     
     /***************************************************************************
@@ -395,7 +420,7 @@ public class TableView<S> extends Control {
         // the sort method.
         getSortOrder().addListener(new ListChangeListener<TableColumn<S,?>>() {
             @Override public void onChanged(Change<? extends TableColumn<S,?>> c) {
-                sort();
+                doSort(TableUtil.SortEventType.SORT_ORDER_CHANGE, c);
             }
         });
 
@@ -490,7 +515,7 @@ public class TableView<S> extends Control {
         @Override public void invalidated(Observable valueModel) {
             TableColumn col = (TableColumn) ((BooleanProperty)valueModel).getBean();
             if (! getSortOrder().contains(col)) return;
-            sort();
+            doSort(TableUtil.SortEventType.COLUMN_SORTABLE_CHANGE, col);
         }
     };
 
@@ -498,7 +523,7 @@ public class TableView<S> extends Control {
         @Override public void invalidated(Observable valueModel) {
             TableColumn col = (TableColumn) ((ObjectProperty)valueModel).getBean();
             if (! getSortOrder().contains(col)) return;
-            sort();
+            doSort(TableUtil.SortEventType.COLUMN_SORT_TYPE_CHANGE, col);
         }
     };
     
@@ -817,6 +842,108 @@ public class TableView<S> extends Control {
         return editingCell;
     }
 
+    
+    // --- Comparator (built via sortOrder list, so read-only)
+    /**
+     * The comparator property is a read-only property that is representative of the
+     * current state of the {@link #getSortOrder() sort order} list. The sort
+     * order list contains the columns that have been added to it either programmatically
+     * or via a user clicking on the headers themselves.
+     */
+    private ReadOnlyObjectWrapper<Comparator<S>> comparator;
+    private void setComparator(Comparator<S> value) {
+        comparatorPropertyImpl().set(value);
+    }
+    public final Comparator<S> getComparator() {
+        return comparator == null ? null : comparator.get();
+    }
+    public final ReadOnlyObjectProperty<Comparator<S>> comparatorProperty() {
+        return comparatorPropertyImpl().getReadOnlyProperty();
+    }
+    private ReadOnlyObjectWrapper<Comparator<S>> comparatorPropertyImpl() {
+        if (comparator == null) {
+            comparator = new ReadOnlyObjectWrapper<Comparator<S>>(this, "comparator");
+        }
+        return comparator;
+    }
+    
+    
+    // --- sortPolicy
+    /**
+     * The sort policy specifies how sorting in this TableView should be performed.
+     * For example, a basic sort policy may just call 
+     * {@code FXCollections.sort(tableView.getItems())}, whereas a more advanced
+     * sort policy may call to a database to perform the necessary sorting on the
+     * server-side.
+     * 
+     * <p>TableView ships with a {@link TableView#DEFAULT_SORT_POLICY default
+     * sort policy} that does precisely as mentioned above: it simply attempts
+     * to sort the items list in-place.
+     * 
+     * <p>It is recommended that rather than override the {@link TableView#sort() sort}
+     * method that a different sort policy be provided instead.
+     */
+    private ObjectProperty<Callback<TableView<S>, Boolean>> sortPolicy;
+    public final void setSortPolicy(Callback<TableView<S>, Boolean> callback) {
+        sortPolicyProperty().set(callback);
+    }
+    @SuppressWarnings("unchecked") 
+    public final Callback<TableView<S>, Boolean> getSortPolicy() {
+        return sortPolicy == null ? 
+                (Callback<TableView<S>, Boolean>)(Object) DEFAULT_SORT_POLICY : 
+                sortPolicy.get();
+    }
+    @SuppressWarnings("unchecked")
+    public final ObjectProperty<Callback<TableView<S>, Boolean>> sortPolicyProperty() {
+        if (sortPolicy == null) {
+            sortPolicy = new SimpleObjectProperty<Callback<TableView<S>, Boolean>>(
+                    this, "sortPolicy", (Callback<TableView<S>, Boolean>)(Object) DEFAULT_SORT_POLICY) {
+                @Override protected void invalidated() {
+                    sort();
+                }
+            };
+        }
+        return sortPolicy;
+    }
+    
+    
+    // onSort
+    /**
+     * Called when there's a request to sort the control.
+     */
+    private ObjectProperty<EventHandler<SortEvent<TableView<S>>>> onSort;
+    
+    public void setOnSort(EventHandler<SortEvent<TableView<S>>> value) {
+        onSortProperty().set(value);
+    }
+    
+    public EventHandler<SortEvent<TableView<S>>> getOnSort() {
+        if( onSort != null ) {
+            return onSort.get();
+        }
+        return null;
+    }
+    
+    public ObjectProperty<EventHandler<SortEvent<TableView<S>>>> onSortProperty() {
+        if( onSort == null ) {
+            onSort = new ObjectPropertyBase<EventHandler<SortEvent<TableView<S>>>>() {
+                @Override protected void invalidated() {
+                    EventType<SortEvent<TableView<S>>> eventType = SortEvent.sortEvent();
+                    EventHandler<SortEvent<TableView<S>>> eventHandler = get();
+                    setEventHandler(eventType, eventHandler);
+                }
+                
+                @Override public Object getBean() {
+                    return TableView.this;
+                }
+
+                @Override public String getName() {
+                    return "onSort";
+                }
+            };
+        }
+        return onSort;
+    }
 
     
     /***************************************************************************
@@ -1030,12 +1157,80 @@ public class TableView<S> extends Control {
     @Override protected Skin<?> createDefaultSkin() {
         return new TableViewSkin(this);
     }
+    
+    /**
+     * The sort method forces the TableView to re-run its sorting algorithm. More 
+     * often than not it is not necessary to call this method directly, as it is
+     * automatically called when the {@link #getSortOrder() sort order}, 
+     * {@link #sortPolicyProperty() sort policy}, or the state of the 
+     * TableColumn {@link TableColumn#sortTypeProperty() sort type} properties 
+     * change. In other words, this method should only be called directly when
+     * something external changes and a sort is required.
+     */
+    public void sort() {
+        final ObservableList<? extends TableColumnBase> sortOrder = getSortOrder();
+        
+        // update the Comparator property
+        final Comparator<S> oldComparator = getComparator();
+        if (sortOrder.isEmpty()) {
+            setComparator(null);
+        } else {
+            Comparator<S> newComparator = new TableColumnComparator(sortOrder);
+            setComparator(newComparator);
+        }
+        
+        // fire the onSort event and check if it is consumed, if
+        // so, don't run the sort
+        SortEvent<TableView<S>> sortEvent = new SortEvent<TableView<S>>(TableView.this, TableView.this);
+        fireEvent(sortEvent);
+        if (sortEvent.isConsumed()) {
+            // if the sort is consumed we could back out the last action (the code
+            // is commented out right below), but we don't as we take it as a 
+            // sign that the developer has decided to handle the event themselves.
+            
+            // sortLock = true;
+            // TableUtil.handleSortFailure(sortOrder, lastSortEventType, lastSortEventSupportInfo);
+            // sortLock = false;
+            return;
+        }
+
+        // get the sort policy and run it
+        Callback<TableView<S>, Boolean> sortPolicy = getSortPolicy();
+        if (sortPolicy == null) return;
+        Boolean success = sortPolicy.call(this);
+        
+        if (success == null || ! success) {
+            // the sort was a failure. Need to backout if possible
+            sortLock = true;
+            TableUtil.handleSortFailure(sortOrder, lastSortEventType, lastSortEventSupportInfo);
+            setComparator(oldComparator);
+            sortLock = false;
+        }
+    }
+    
+    
 
     /***************************************************************************
      *                                                                         *
      * Private Implementation                                                  *
      *                                                                         *
      **************************************************************************/
+    
+    private boolean sortLock = false;
+    private TableUtil.SortEventType lastSortEventType = null;
+    private Object[] lastSortEventSupportInfo = null;
+    
+    private void doSort(final TableUtil.SortEventType sortEventType, final Object... supportInfo) {
+        if (sortLock) {
+            return;
+        }
+        
+        this.lastSortEventType = sortEventType;
+        this.lastSortEventSupportInfo = supportInfo;
+        sort();
+        this.lastSortEventType = null;
+        this.lastSortEventSupportInfo = null;
+    }
 
     /**
      * Call this function to force the TableView to re-evaluate itself. This is
@@ -1047,56 +1242,6 @@ public class TableView<S> extends Control {
      */
     private void refresh() {
         getProperties().put(TableViewSkinBase.REFRESH, Boolean.TRUE);
-    }
-
-    /**
-     * Sometimes we want to force a sort to run - this is the recommended way
-     * of doing it internally. External users of the TableView API should just
-     * stick to modifying the TableView.sortOrder ObservableList (or the contents
-     * of the TableColumns within it - in particular the
-     * TableColumn.sortAscending boolean).
-     */
-    private void sort() {
-        // build up a new comparator based on the current table columms
-        TableColumnComparator comparator = new TableColumnComparator();
-        for (TableColumn<S,?> tc : getSortOrder()) {
-            comparator.getColumns().add(tc);
-        }
-
-        // If the items are a TransformationList, but not a SortableList, then we need
-        // to get the source of the TransformationList and check it.
-        if (getItems() instanceof TransformationList) {
-            // FIXME this is temporary code whilst I await for similar functionality
-            // within FXCollections.sort, such that it does the unwrapping that is
-            // shown below
-            List list = getItems();
-            while (list != null) {
-                if (list instanceof SortableList) {
-                    break;
-                } else if (list instanceof TransformationList) {
-                    list = ((TransformationList)list).getDirectSource();
-                } else {
-                    break;
-                }
-            }
-
-            if (list instanceof SortableList) {
-                SortableList sortableList = (SortableList) list;
-                // TODO review - note that we're changing the comparator based on
-                // what columns the user has set.
-                sortableList.setComparator(comparator);
-                
-                if (sortableList.getMode() == SortableList.SortMode.BATCH) {
-                    sortableList.sort();
-                }
-                
-                return;
-            }
-        }
-
-        // If we are here, we will use the default sort functionality available
-        // in FXCollections
-        FXCollections.sort(getItems(), comparator);
     }
 
 
