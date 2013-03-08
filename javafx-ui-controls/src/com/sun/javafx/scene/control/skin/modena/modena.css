@@ -1107,21 +1107,18 @@ is being used to size a border should also be in pixels.
         radial-gradient(center 50% 50%, radius 50%, -fx-control-inner-background 70%, derive(-fx-control-inner-background, -9%) 100%), 
         -fx-control-inner-background;
     -fx-background-insets: 0, 1, 5 2 1 2;
-    -fx-padding: 1;
+    -fx-padding: 0.166667em; /* 2px */
 }
 .progress-indicator > .determinate-indicator > .progress {
     -fx-background-color: -fx-accent;
-    /*-fx-background-insets: 2;*/
-    -fx-background-insets: 1;
-    -fx-padding: 1em; /* 9 */
+    -fx-padding: 0.083333em; /* 1px */
 }
 /* TODO: scaling the shape seems to make it disappear */
 .progress-indicator > .determinate-indicator > .tick {
     -fx-background-color: white;
     -fx-background-insets: 0;
-    -fx-padding: 0.416667em; /* 5 */
+    -fx-padding: 0.666667em; /* 8 */
     -fx-shape: "M-0.25,6.083c0.843-0.758,4.583,4.833,5.75,4.833S14.5-1.5,15.917-0.917c1.292,0.532-8.75,17.083-10.5,17.083C3,16.167-1.083,6.833-0.25,6.083z";
-    -fx-scale-shape: false;
 }
 .progress-indicator:indeterminate > .spinner {
     -fx-padding: 0.833333em; /* 10 */

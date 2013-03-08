@@ -2007,7 +2007,7 @@
         -fx-inner-border,
         -fx-body-color;
     -fx-background-insets: 1 0 -1 0, 0, 1, 2;
-    -fx-padding: 0.083333em; /* 1 */
+    -fx-padding: 1px;
 }
 
 .progress-indicator > .determinate-indicator > .progress {
@@ -2015,7 +2015,7 @@
         linear-gradient(to bottom, derive(-fx-accent,38%), derive(-fx-accent,-60%)),
         linear-gradient(to bottom, derive(-fx-accent,20%), -fx-accent);
     -fx-background-insets: 0, 1;
-    -fx-padding: 0.75em; /* 9 */
+    -fx-padding: 0.25em; /* 3px */
 }
 
 /* TODO: scaling the shape seems to make it disappear */
