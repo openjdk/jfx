@@ -20,6 +20,11 @@
  */
 
 defaultTasks = ["generate"]
+
+task createWrapper(type: Wrapper) {
+    gradleVersion = '1.4'
+}
+
 RTDir = "."
 FXDir = "../javafx"
 task generate << {

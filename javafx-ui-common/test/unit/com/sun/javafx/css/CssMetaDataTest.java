@@ -25,9 +25,7 @@
 
 package com.sun.javafx.css;
 
-import javafx.css.Styleable;
 import java.io.File;
-import java.lang.System;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
@@ -36,17 +34,23 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 import javafx.beans.value.WritableValue;
 import javafx.css.CssMetaData;
 import javafx.css.FontCssMetaData;
-import javafx.css.StyleOrigin;
-import javafx.css.StyleableProperty;
+import javafx.css.PseudoClass;
 import javafx.css.StyleConverter;
+import javafx.css.StyleOrigin;
+import javafx.css.Styleable;
+import javafx.css.StyleableProperty;
 import javafx.scene.Group;
 import javafx.scene.Node;
+import javafx.scene.Scene;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Font;
+import javafx.scene.text.Text;
+import javafx.stage.Stage;
 import com.sun.javafx.css.converters.BooleanConverter;
 import com.sun.javafx.css.parser.CSSParser;
 import com.sun.javafx.geom.BaseBounds;
@@ -54,11 +58,6 @@ import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.jmx.MXNodeAlgorithm;
 import com.sun.javafx.jmx.MXNodeAlgorithmContext;
 import com.sun.javafx.sg.PGNode;
-import java.util.Set;
-import javafx.css.PseudoClass;
-import javafx.scene.Scene;
-import javafx.scene.text.Text;
-import javafx.stage.Stage;
 import org.junit.Test;
 
 import static org.junit.Assert.*;
@@ -1159,7 +1158,7 @@ public class CssMetaDataTest {
                     null;
             if (f == null) {
                 ClassLoader cl = Thread.currentThread().getContextClassLoader();
-                URL base = cl.getResource("javafx");
+                URL base = cl.getResource("javafx/../javafx");
                 f = new File(base.toURI());
             }
             //System.err.println(f.getPath());
