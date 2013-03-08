@@ -534,7 +534,6 @@ final class CssStyleHelper {
             return;
         }
         
-        
         Set<PseudoClass>[] transitionStates = getTransitionStates(node);
                 
         //
@@ -630,14 +629,31 @@ final class CssStyleHelper {
                     : null;
 
             CalculatedValue calculatedValue = null;
+            boolean isUserSet = false;
+            
             if (fastpath) {
 
                 calculatedValue = cacheEntry.get(property);
-                if (calculatedValue == null) continue;
+                if (calculatedValue == null || calculatedValue == SKIP) continue;
+                
+                // This block of code is repeated in the slowpath, but we 
+                // want to avoid calling getStyleableProperty if possible.
+                // See the use of 'if (isUserSet)' below.
+                final StyleableProperty styleableProperty = cssMetaData.getStyleableProperty(node);
+                if (styleableProperty == null) continue;
+                
+                final StyleOrigin origin = styleableProperty.getStyleOrigin();
+                
+                isUserSet = origin == StyleOrigin.USER;
                 
             } else {
 
-                boolean isUserSet = isUserSetProperty(node, cssMetaData);            
+                final StyleableProperty styleableProperty = cssMetaData.getStyleableProperty(node);
+                if (styleableProperty == null) continue;
+                
+                final StyleOrigin origin = styleableProperty.getStyleOrigin();
+                
+                isUserSet = origin == StyleOrigin.USER;
 
                 calculatedValue = lookup(node, cssMetaData, isUserSet, node.pseudoClassStates, 
                         inlineStyles, node, cacheEntry, styleList);
@@ -645,25 +661,22 @@ final class CssStyleHelper {
                 // lookup is not supposed to return null.
                 assert(calculatedValue != null);
                 
-                // RT-28635
-                // If the previous state had a value for this property
-                // and this state does not, then reset this property to 
-                // its initial value. 
+                // RT-19089
+                // If the current value of the property was set by CSS 
+                // and there is no style for the property, then reset this
+                // property to its initial value. 
                 //
                 if (calculatedValue == SKIP || calculatedValue == null) {
                     
-                    final CalculatedValue previousValue = 
-                        (cacheMetaData.previousCacheEntry != null)
-                            ? cacheMetaData.previousCacheEntry.get(property)
-                            : SKIP;
-
-                    if (previousValue != SKIP) {
+                    // Was value set by CSS?
+                    if (origin != StyleOrigin.USER && origin != null) {
 
                         Object initial = cssMetaData.getInitialValue(node);
                         
                         calculatedValue = new CalculatedValue(initial, null, false);
                         
-                    } else {                        
+                    } else {   
+                        // was set by user or was never set
                         continue;
                     }
                     
@@ -672,6 +685,10 @@ final class CssStyleHelper {
                 cacheEntry.put(property, calculatedValue);
 
             }
+            
+            assert (calculatedValue != SKIP);
+            if (calculatedValue == SKIP) continue;
+            
                         
             // RT-10522:
             // If the user set the property and there is a style and
@@ -686,41 +703,23 @@ final class CssStyleHelper {
             // the check needs to be done on any calculated value, not just
             // calculatedValues from cache
             //
-            assert (calculatedValue != SKIP);
-                
-            final StyleOrigin origin = calculatedValue.getOrigin();
-
-            //
-            // If calculated value is null, then the property was not in
-            // cache (fastpath was true). It has to be so or the value would
-            // have been SKIP since lookup never returns null. The 
-            // calculatedValue may not be in cache because there was no 
-            // style in the previous state, or the user set the property. 
-            // So if calculated value is null, we need to check if the
-            // user set the property and, if not, reset the property to
-            // its initial value.
-            //
-            // If the calculated value is not null, then check to see
-            // if the property was set by the user - but only if the
-            // origin was null (TBD - how can this be?) or USER_AGENT.
-            //
-            boolean isUserSet = 
-                (origin == StyleOrigin.USER_AGENT || origin == null) 
-                    ? isUserSetProperty(node, cssMetaData)
-                    : false;
-
-            if (isUserSet) continue;
-                       
+            final StyleOrigin cvOrigin = calculatedValue.getOrigin();
+            if (isUserSet) {
+                if (cvOrigin == StyleOrigin.USER_AGENT || cvOrigin == null) { 
+                    continue;
+                }                
+            }
             
                 try {
                     
                     final Object value = calculatedValue.getValue();
                     if (LOGGER.isLoggable(PlatformLogger.FINER)) {
-                        LOGGER.finer("call " + node + ".impl_cssSet(" +
-                                        property + ", " + value + ")");
+                        LOGGER.finer(property + ", call cssMetaData.set(" + 
+                                node + ", " + String.valueOf(value) + ", " +
+                                cvOrigin + ")");
                     }
 
-                    cssMetaData.set(node, value, calculatedValue.getOrigin());
+                    cssMetaData.set(node, value, cvOrigin);
                     
                     if (observableStyleMap != null) {
                         StyleableProperty<?> styleableProperty = cssMetaData.getStyleableProperty(node);                            
@@ -1390,15 +1389,7 @@ final class CssStyleHelper {
         return new CalculatedValue(null, style.getOrigin(), false);
            
     }
-    
-    /** return true if the origin of the property is USER */
-    private boolean isUserSetProperty(Node node, CssMetaData styleable) {
-        StyleableProperty styleableProperty = node != null ? styleable.getStyleableProperty(node) : null;
-        // writable could be null if this is a sub-property
-        StyleOrigin origin = styleableProperty != null ? styleableProperty.getStyleOrigin() : null;
-        return (origin == StyleOrigin.USER);    
-    }    
-            
+                
     private static final CssMetaData dummyFontProperty =
             new FontCssMetaData<Node>("-fx-font", Font.getDefault()) {
 
