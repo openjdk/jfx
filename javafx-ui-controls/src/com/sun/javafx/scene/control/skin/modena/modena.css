@@ -1113,15 +1113,11 @@ is being used to size a border should also be in pixels.
     -fx-background-color: -fx-accent;
     -fx-padding: 0.083333em; /* 1px */
 }
-/* TODO: scaling the shape seems to make it disappear */
 .progress-indicator > .determinate-indicator > .tick {
     -fx-background-color: white;
     -fx-background-insets: 0;
     -fx-padding: 0.666667em; /* 8 */
     -fx-shape: "M-0.25,6.083c0.843-0.758,4.583,4.833,5.75,4.833S14.5-1.5,15.917-0.917c1.292,0.532-8.75,17.083-10.5,17.083C3,16.167-1.083,6.833-0.25,6.083z";
-}
-.progress-indicator:indeterminate > .spinner {
-    -fx-padding: 0.833333em; /* 10 */
 }
 .progress-indicator > .percentage {
     -fx-font-size: 0.916667em; /* 11pt - 1 less than the default font */
@@ -1131,40 +1127,40 @@ is being used to size a border should also be in pixels.
     -fx-background-color: -fx-accent;
 }
 .progress-indicator:indeterminate .segment0 {
-    -fx-shape:"M344.0 200.0 a28.0,28.0 0 1,1 0,1 Z";
-}
+     -fx-shape:"M45.0 26.0 a3.5,3.5 0 1,1 0,1 Z";
+ }
 .progress-indicator:indeterminate .segment1 {
-    -fx-shape:"M320.95 286.0 a28.0,28.0 0 1,1 0,1 Z";
+    -fx-shape:"M41.98 37.25 a3.5,3.5 0 1,1 0,1 Z";
 }
 .progress-indicator:indeterminate .segment2 {
-    -fx-shape:"M258.0 348.95 a28.0,28.0 0 1,1 0,1 Z";
+    -fx-shape:"M33.75 45.48 a3.5,3.5 0 1,1 0,1 Z";
 }
 .progress-indicator:indeterminate .segment3 {
-    -fx-shape:"M172.0 372.0 a28.0,28.0 0 1,1 0,1 Z";
+    -fx-shape:"M22.5 48.5 a3.5,3.5 0 1,1 0,1 Z";
 }
 .progress-indicator:indeterminate .segment4 {
-    -fx-shape:"M86.0 348.95 a28.0,28.0 0 1,1 0,1 Z";
+    -fx-shape:"M11.25 45.48 a3.5,3.5 0 1,1 0,1 Z";
 }
 .progress-indicator:indeterminate .segment5 {
-    -fx-shape:"M23.04 286.0 a28.0,28.0 0 1,1 0,1 Z";
+    -fx-shape:"M3.01 37.25 a3.5,3.5 0 1,1 0,1 Z";
 }
 .progress-indicator:indeterminate .segment6 {
-    -fx-shape:"M0.0 200.0 a28.0,28.0 0 1,1 0,1 Z";
+    -fx-shape:"M0.0 26.0 a3.5,3.5 0 1,1 0,1 Z";
 }
 .progress-indicator:indeterminate .segment7 {
-    -fx-shape:"M23.04 113.99 a28.0,28.0 0 1,1 0,1 Z";
+    -fx-shape:"M3.01 14.74 a3.5,3.5 0 1,1 0,1 Z";
 }
 .progress-indicator:indeterminate .segment8 {
-    -fx-shape:"M85.99 51.04 a28.0,28.0 0 1,1 0,1 Z";
+    -fx-shape:"M11.24 6.51 a3.5,3.5 0 1,1 0,1 Z";
 }
 .progress-indicator:indeterminate .segment9 {
-    -fx-shape:"M171.99 28.0 a28.0,28.0 0 1,1 0,1 Z";
+    -fx-shape:"M22.49 3.5 a3.5,3.5 0 1,1 0,1 Z";
 }
 .progress-indicator:indeterminate .segment10 {
-    -fx-shape:"M258.0 51.04 a28.0,28.0 0 1,1 0,1 Z";
+    -fx-shape:"M33.75 6.51 a3.5,3.5 0 1,1 0,1 Z";
 }
 .progress-indicator:indeterminate .segment11 {
-    -fx-shape:"M320.95 113.99 a28.0,28.0 0 1,1 0,1 Z";
+    -fx-shape:"M41.98 14.74 a3.5,3.5 0 1,1 0,1 Z";
 }
 
 /*******************************************************************************
