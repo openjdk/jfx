@@ -236,13 +236,13 @@ task generate << {
     copy {
         from "${RTDir}/javafx-ui-common/test/unit",
              "${RTDir}/test-stub-toolkit/src"
-        into "${FXDir}/modules/graphics/src/test/testsWithStubToolkit"
+        into "${FXDir}/modules/graphics/src/stub/java"
         exclude excludeResources
     }
     copy {
         from "${RTDir}/javafx-ui-common/test/unit",
              "${RTDir}/test-stub-toolkit/src"
-        into "${FXDir}/modules/graphics/src/test/resourcesWithStubToolkit"
+        into "${FXDir}/modules/graphics/src/stub/resources"
         include includeResources
         exclude "**/doc-files/**.*"
     }
@@ -374,12 +374,12 @@ task generate << {
 
     copy {
         from "${RTDir}/javafx-fxml/test"
-        into "${FXDir}/modules/fxml/test/main/java"
+        into "${FXDir}/modules/fxml/src/test/java"
         exclude excludeResources
     }
     copy {
         from "${RTDir}/javafx-fxml/test"
-        into "${FXDir}/modules/fxml/test/main/resources"
+        into "${FXDir}/modules/fxml/src/test/resources"
         include includeResources
         exclude "**/doc-files/**.*"
     }

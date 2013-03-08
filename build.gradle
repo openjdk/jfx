@@ -8,15 +8,19 @@
  *  - checkstyle
  *  - findbugs
  *  - re needs?
- *  - testing
+ *  - sqe testing
  *  - build check -- making sure the final artifact has the right bits
  *  - API change check
  *  - JavaDoc
+ *      - There is a built in task, but I need to exclude any API that doesn't start with javafx as the package name.
+ *        Also I need to link in to the Java 8 javadocs. Also need to link to public FX docs in the binary stub sdk
  *  - Pushing results to a repo?
  *  - VersionInfo needs to be parameterized so hudson can produce valid values
  *  - partial builds for compileXXX shaders isn't working (they also get compiled)
  *  - ServiceWithSecurityManagerTest fails to complete when run from gradle.
  *  - Integrate Parfait reports for C code
+ *  - Need to compile hlsl files
+ *  - FXML Project tests are not running
 // ENV has:
 //   JAVA_ARCH
 // Can also get JAVA_HOME, JDK_HOME, etc IFF the environment variables are set
@@ -256,7 +260,7 @@ allprojects {
     // to have sourceCompatibility set to 1.8 I have to also turn scanForClasses off
     // and manually specify the includes / excludes
     test {
-        jvmArgs '-Djava.ext.dirs='
+        jvmArgs "-Djava.ext.dirs="
         classpath = classpath + rootProject.files(JFXRT)
         enableAssertions = true
         testLogging.exceptionFormat = "full"
@@ -344,17 +348,11 @@ project(":base") {
 // that all need to be compiled.
 project(":graphics") {
     sourceSets {
-        main {
-            java.srcDirs = ["src/main/java", "src/main/dt", "src/main/jsl-generator"]
-            resources.srcDirs = ["src/main/resources"]
-        }
-        test {
-            java.srcDirs = ["src/test/java"]
-            resources.srcDirs = ["src/test/resources"]
-        }
+        main.java.srcDirs = ["src/main/java", "src/main/dt", "src/main/jsl-generator"]
+        test
         stub {
-            java.srcDirs = ["src/test/testsWithStubToolkit"]
-            resources.srcDirs = ["src/test/resourcesWithStubToolkit"]
+            // The src/main/java is needed for some CSS related tests
+            resources.srcDirs = ["src/stub/resources", "src/main/java"]
         }
     }
 
@@ -366,28 +364,27 @@ project(":graphics") {
     }
 
     tasks.replace("test")
-    task testWithoutStub(type: Test) {
-        jvmArgs '-Djava.ext.dirs='
+    task testWithoutStub(type: Test, dependsOn: ":graphics:compileJava") {
+        jvmArgs "-Djava.ext.dirs="
         classpath = sourceSets.test.runtimeClasspath + rootProject.files(JFXRT)
         enableAssertions = true
         testLogging.exceptionFormat = "full"
         scanForTestClasses = false
-        include '**/*Test.*'
-        exclude '**/*Abstract*.*'
+        include "**/*Test.*"
+        exclude "**/*Abstract*.*"
         forkEvery = 1
     }
-    task testWithStub(type: Test) {
-        jvmArgs '-Djava.ext.dirs='
-        classpath = sourceSets.stub.runtimeClasspath + sourceSets.test.runtimeClasspath + rootProject.files(JFXRT)
+    task testWithStub(type: Test, dependsOn: [":graphics:compileJava"]) {
+        jvmArgs "-Djava.ext.dirs=", "-Djavafx.toolkit=com.sun.javafx.pgstub.StubToolkit", "-DCSS_META_DATA_TEST_DIR=${file('build/classes/main/javafx')}"
+        classpath = sourceSets.stub.runtimeClasspath + sourceSets.main.runtimeClasspath + rootProject.files(JFXRT)
+        testClassesDir = file("build/classes/stub")
+        testResultsDir = file("build/stub-results")
+        testReportDir = file("build/reports/stub")
         enableAssertions = true
         testLogging.exceptionFormat = "full"
         scanForTestClasses = false
-        include '**/*Test.*'
-        exclude '**/*Abstract*.*'
-        exclude { fileTreeElement -> fileTreeElement.toString().contains("build/classes/test") }
-        jvmArgs "-Djavafx.toolkit=com.sun.javafx.pgstub.StubToolkit"
-        testResultsDir = file("build/stub-test-results")
-        testReportDir = file("build/reports/stubTests")
+        include "**/*Test.*"
+        exclude "**/*Abstract*.*"
         forkEvery = 1
     }
     test.dependsOn testWithoutStub, testWithStub
