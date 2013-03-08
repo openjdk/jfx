@@ -187,9 +187,10 @@ public abstract class TextInputControl extends Control {
                     // RT-20727 - if font is changed by calling setFont, then
                     // css might need to be reapplied since font size affects
                     // calculated values for styles with relative values
-                    StyleOrigin origin = ((StyleableProperty)font).getStyleOrigin();
-                    if (origin == null || origin == StyleOrigin.USER) {
+                    if(fontSetByCss == false) {
                         TextInputControl.this.impl_reapplyCSS();
+                    } else {
+                        fontSetByCss = false;
                     }
                 }
 
@@ -212,6 +213,7 @@ public abstract class TextInputControl extends Control {
         return font;
     }
 
+    private boolean fontSetByCss = false;
     private ObjectProperty<Font> font;
     public final void setFont(Font value) { fontProperty().setValue(value); }
     public final Font getFont() { return font == null ? Font.getDefault() : font.getValue(); }
@@ -1115,6 +1117,15 @@ public abstract class TextInputControl extends Control {
     private static class StyleableProperties {
         private static final FontCssMetaData<TextInputControl> FONT =
             new FontCssMetaData<TextInputControl>("-fx-font", Font.getDefault()) {
+
+            @Override
+            public void set(TextInputControl styleable, Font value, StyleOrigin origin) {
+                // RT-20727 - if font is changed by calling setFont, then
+                // css might need to be reapplied since font size affects
+                // calculated values for styles with relative values
+                styleable.fontSetByCss = origin != StyleOrigin.USER;
+                super.set(styleable, value, origin);                
+            }
 
             @Override
             public boolean isSettable(TextInputControl n) {

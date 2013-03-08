@@ -30,7 +30,6 @@ import com.sun.javafx.scene.control.skin.VirtualFlow;
 import com.sun.javafx.scene.control.test.ControlAsserts;
 import com.sun.javafx.scene.control.test.Person;
 import com.sun.javafx.scene.control.test.RT_22463_Person;
-import com.sun.javafx.tk.Toolkit;
 import static javafx.scene.control.ControlTestUtils.assertStyleClassContains;
 import static org.junit.Assert.*;
 import java.util.Arrays;
@@ -41,10 +40,6 @@ import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
-import javafx.scene.Group;
-import javafx.scene.Scene;
-import javafx.scene.layout.Region;
-import javafx.stage.Stage;
 
 import org.junit.Before;
 import org.junit.Ignore;
@@ -364,16 +359,16 @@ public class ListViewTest {
         assertEquals(2, sm.getSelectedIndices().size());
     }
     
-    private int hitCount = 0;
+    private int rt_18969_hitCount = 0;
     @Test public void test_rt18969() {
-        hitCount = 0;
+        rt_18969_hitCount = 0;
         ObservableList<String> emptyModel = FXCollections.observableArrayList();
         listView.setItems(emptyModel);
         assertTrue(listView.getItems().isEmpty());
         
         sm.selectedItemProperty().addListener(new ChangeListener<String>() {
             @Override public void changed(ObservableValue<? extends String> observable, String oldValue, final String newValue) {
-                hitCount++;
+                rt_18969_hitCount++;
             }
         });
         
@@ -383,7 +378,7 @@ public class ListViewTest {
         
         sm.select(0);
         assertTrue(sm.isSelected(0));
-        assertEquals(1, hitCount);
+        assertEquals(1, rt_18969_hitCount);
         
         // sleep for 100ms so that the currentTimeMillis is guaranteed to be
         // a different value than the first one
@@ -401,7 +396,7 @@ public class ListViewTest {
         
         // it should be two, as there is no null event in between (although there
         // used to be, so the test used to be for three hits)
-        assertEquals(2, hitCount);
+        assertEquals(2, rt_18969_hitCount);
     }
     
     @Test public void test_rt21586() {
@@ -487,7 +482,6 @@ public class ListViewTest {
         ControlAsserts.assertCellTextEquals(list, 1, "updated name2");
     }
     
-    @Ignore
     @Test public void test_rt28637() {
         ObservableList<String> items = FXCollections.observableArrayList("String1", "String2", "String3", "String4");
         
@@ -503,5 +497,35 @@ public class ListViewTest {
         assertEquals("String2", listView.getSelectionModel().getSelectedItem());
         assertEquals("String2", listView.getSelectionModel().getSelectedItems().get(0));
         assertEquals(0, listView.getSelectionModel().getSelectedIndex());
+    }
+    
+    @Test public void test_rt28819_1() {
+        ObservableList<String> emptyModel = FXCollections.observableArrayList();
+        
+        final ListView<String> listView = new ListView<String>();
+        listView.setItems(emptyModel);
+        ControlAsserts.assertRowsEmpty(listView, 0, 5);
+        
+        ObservableList<String> mod = FXCollections.observableArrayList();
+        String value = System.currentTimeMillis()+"";
+        mod.add(value);
+        listView.setItems(mod);
+        ControlAsserts.assertCellCount(listView, 1);
+        ControlAsserts.assertCellTextEquals(listView, 0, value);
+    }
+    
+    @Test public void test_rt28819_2() {
+        ObservableList<String> emptyModel = FXCollections.observableArrayList();
+        
+        final ListView<String> listView = new ListView<String>();
+        listView.setItems(emptyModel);
+        ControlAsserts.assertRowsEmpty(listView, 0, 5);
+        
+        ObservableList<String> mod1 = FXCollections.observableArrayList();
+        String value1 = System.currentTimeMillis()+"";
+        mod1.add(value1);
+        listView.getItems().setAll(mod1);
+        ControlAsserts.assertCellCount(listView, 1);
+        ControlAsserts.assertCellTextEquals(listView, 0, value1);
     }
 }

@@ -25,6 +25,7 @@
 
 package javafx.scene.control;
 
+import com.sun.javafx.scene.control.TableColumnComparator;
 import com.sun.javafx.scene.control.test.ControlAsserts;
 import com.sun.javafx.scene.control.test.Person;
 import com.sun.javafx.scene.control.test.RT_22463_Person;
@@ -33,17 +34,25 @@ import static javafx.scene.control.ControlTestUtils.assertStyleClassContains;
 import static org.junit.Assert.*;
 
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.List;
 
 import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.property.SimpleObjectProperty;
+import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.event.EventHandler;
 import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.util.Callback;
 
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
+
+import static javafx.scene.control.TableColumnBase.SortType.ASCENDING;
+import static javafx.scene.control.TableColumnBase.SortType.DESCENDING;
 
 public class TableViewTest {
     private TableView<String> table;
@@ -69,6 +78,18 @@ public class TableViewTest {
 
     @Test public void noArgConstructorSetsNonNullItems() {
         assertNotNull(table.getItems());
+    }
+    
+    @Test public void noArgConstructorSetsNonNullSortPolicy() {
+        assertNotNull(table.getSortPolicy());
+    }
+    
+    @Test public void noArgConstructorSetsNullComparator() {
+        assertNull(table.getComparator());
+    }
+    
+    @Test public void noArgConstructorSetsNullOnSort() {
+        assertNull(table.getOnSort());
     }
 
     @Test public void noArgConstructor_selectedItemIsNull() {
@@ -285,8 +306,374 @@ public class TableViewTest {
         table.getColumns().addAll(first, second);
         table.getSortOrder().setAll(first, second);
         table.getColumns().remove(first);
-        assertEquals(false, table.getSortOrder().contains(first));
+        assertFalse(table.getSortOrder().contains(first));
     } 
+    
+    
+    /*********************************************************************
+     * Tests for new sorting API in JavaFX 8.0                           *
+     ********************************************************************/
+    
+    // TODO test for sort policies returning null
+    // TODO test for changing column sortType out of order
+    // TODO test comparator returns to original when sort fails / is consumed
+    
+    private static final Callback<TableView<String>, Boolean> NO_SORT_FAILED_SORT_POLICY = 
+            new Callback<TableView<String>, Boolean>() {
+        @Override public Boolean call(TableView<String> tableView) {
+            return false;
+        }
+    };
+    
+    private static final Callback<TableView<String>, Boolean> SORT_SUCCESS_ASCENDING_SORT_POLICY = 
+            new Callback<TableView<String>, Boolean>() {
+        @Override public Boolean call(TableView<String> tableView) {
+            if (tableView.getSortOrder().isEmpty()) return true;
+            FXCollections.sort(tableView.getItems(), new Comparator<String>() {
+                @Override public int compare(String o1, String o2) {
+                    return o1.compareTo(o2);
+                }
+            });
+            return true;
+        }
+    };
+    
+    private TableColumn<String, String> initSortTestStructure() {
+        TableColumn<String, String> col = new TableColumn<String, String>("column");
+        col.setSortType(ASCENDING);
+        col.setCellValueFactory(new Callback<TableColumn.CellDataFeatures<String, String>, ObservableValue<String>>() {
+            @Override public ObservableValue<String> call(TableColumn.CellDataFeatures<String, String> param) {
+                return new ReadOnlyObjectWrapper<String>(param.getValue());
+            }
+        });
+        table.getColumns().add(col);
+        table.getItems().addAll("Apple", "Orange", "Banana");
+        return col;
+    }
+    
+    @Ignore("This test is only valid if sort event consumption should revert changes")
+    @Test public void testSortEventCanBeConsumedToStopSortOccurring_changeSortOrderList() {
+        TableColumn<String, String> col = initSortTestStructure();
+        table.setOnSort(new EventHandler<SortEvent<TableView<String>>>() {
+            @Override public void handle(SortEvent<TableView<String>> event) {
+                event.consume();
+            }
+        });
+        
+        ControlAsserts.assertListContainsItemsInOrder(table.getItems(), "Apple", "Orange", "Banana");
+        table.getSortOrder().add(col);
+        ControlAsserts.assertListContainsItemsInOrder(table.getItems(), "Apple", "Orange", "Banana");
+        
+        // the sort order list should be returned back to its original state
+        assertTrue(table.getSortOrder().isEmpty());
+    }
+    
+    @Test public void testSortEventCanBeNotConsumedToAllowSortToOccur_changeSortOrderList() {
+        TableColumn<String, String> col = initSortTestStructure();
+        table.setOnSort(new EventHandler<SortEvent<TableView<String>>>() {
+            @Override public void handle(SortEvent<TableView<String>> event) {
+                // do not consume here - this allows the sort to happen
+            }
+        });
+        
+        ControlAsserts.assertListContainsItemsInOrder(table.getItems(), "Apple", "Orange", "Banana");
+        table.getSortOrder().add(col);
+        ControlAsserts.assertListContainsItemsInOrder(table.getItems(), "Apple", "Banana", "Orange");
+        
+        ControlAsserts.assertListContainsItemsInOrder(table.getSortOrder(), col);
+    }
+    
+    @Ignore("This test is only valid if sort event consumption should revert changes")
+    @Test public void testSortEventCanBeConsumedToStopSortOccurring_changeColumnSortType_AscendingToDescending() {
+        TableColumn<String, String> col = initSortTestStructure();
+        assertEquals(ASCENDING, col.getSortType());
+        table.getSortOrder().add(col);
+        table.setOnSort(new EventHandler<SortEvent<TableView<String>>>() {
+            @Override public void handle(SortEvent<TableView<String>> event) {
+                event.consume();
+            }
+        });
+        
+        ControlAsserts.assertListContainsItemsInOrder(table.getItems(), "Apple", "Banana", "Orange");
+        
+        // when we change from ASCENDING to DESCENDING we don't expect the sort
+        // to actually change (and in fact we expect the sort type to resort
+        // back to being ASCENDING)
+        col.setSortType(DESCENDING);
+        ControlAsserts.assertListContainsItemsInOrder(table.getItems(), "Apple", "Banana", "Orange");
+        assertEquals(ASCENDING, col.getSortType());
+        
+        ControlAsserts.assertListContainsItemsInOrder(table.getSortOrder(), col);
+    }
+    
+    @Test public void testSortEventCanBeNotConsumedToAllowSortToOccur_changeColumnSortType_AscendingToDescending() {
+        TableColumn<String, String> col = initSortTestStructure();
+        assertEquals(ASCENDING, col.getSortType());
+        table.getSortOrder().add(col);
+        table.setOnSort(new EventHandler<SortEvent<TableView<String>>>() {
+            @Override public void handle(SortEvent<TableView<String>> event) {
+                // do not consume here - this allows the sort to happen
+            }
+        });
+        
+        ControlAsserts.assertListContainsItemsInOrder(table.getItems(), "Apple", "Banana", "Orange");
+        
+        col.setSortType(DESCENDING);
+        ControlAsserts.assertListContainsItemsInOrder(table.getItems(), "Orange", "Banana", "Apple");
+        assertEquals(DESCENDING, col.getSortType());
+        
+        ControlAsserts.assertListContainsItemsInOrder(table.getSortOrder(), col);
+    }
+    
+    @Ignore("This test is only valid if sort event consumption should revert changes")
+    @Test public void testSortEventCanBeConsumedToStopSortOccurring_changeColumnSortType_DescendingToNull() {
+        TableColumn<String, String> col = initSortTestStructure();
+        col.setSortType(DESCENDING);
+        assertEquals(DESCENDING, col.getSortType());
+        table.getSortOrder().add(col);
+        table.setOnSort(new EventHandler<SortEvent<TableView<String>>>() {
+            @Override public void handle(SortEvent<TableView<String>> event) {
+                event.consume();
+            }
+        });
+        
+        ControlAsserts.assertListContainsItemsInOrder(table.getItems(), "Orange", "Banana", "Apple");
+        
+        col.setSortType(null);
+        ControlAsserts.assertListContainsItemsInOrder(table.getItems(), "Orange", "Banana", "Apple");
+        assertEquals(DESCENDING, col.getSortType());
+        
+        ControlAsserts.assertListContainsItemsInOrder(table.getSortOrder(), col);
+    }
+    
+    @Test public void testSortEventCanBeNotConsumedToAllowSortToOccur_changeColumnSortType_DescendingToNull() {
+        TableColumn<String, String> col = initSortTestStructure();
+        col.setSortType(DESCENDING);
+        assertEquals(DESCENDING, col.getSortType());
+        table.getSortOrder().add(col);
+        table.setOnSort(new EventHandler<SortEvent<TableView<String>>>() {
+            @Override public void handle(SortEvent<TableView<String>> event) {
+                // do not consume here - this allows the sort to happen
+            }
+        });
+        
+        ControlAsserts.assertListContainsItemsInOrder(table.getItems(), "Orange", "Banana", "Apple");
+        
+        col.setSortType(null);
+        ControlAsserts.assertListContainsItemsInOrder(table.getItems(), "Orange", "Banana", "Apple");
+        assertNull(col.getSortType());
+        
+        ControlAsserts.assertListContainsItemsInOrder(table.getSortOrder(), col);
+    }
+    
+    @Ignore("This test is only valid if sort event consumption should revert changes")
+    @Test public void testSortEventCanBeConsumedToStopSortOccurring_changeColumnSortType_NullToAscending() {
+        TableColumn<String, String> col = initSortTestStructure();
+        col.setSortType(null);
+        assertNull(col.getSortType());
+        table.getSortOrder().add(col);
+        table.setOnSort(new EventHandler<SortEvent<TableView<String>>>() {
+            @Override public void handle(SortEvent<TableView<String>> event) {
+                event.consume();
+            }
+        });
+        
+        ControlAsserts.assertListContainsItemsInOrder(table.getItems(), "Apple", "Orange", "Banana");
+        
+        col.setSortType(ASCENDING);
+        ControlAsserts.assertListContainsItemsInOrder(table.getItems(), "Apple", "Orange", "Banana");
+        assertNull(col.getSortType());
+        
+        ControlAsserts.assertListContainsItemsInOrder(table.getSortOrder(), col);
+    }
+    
+    @Test public void testSortEventCanBeNotConsumedToAllowSortToOccur_changeColumnSortType_NullToAscending() {
+        TableColumn<String, String> col = initSortTestStructure();
+        col.setSortType(null);
+        assertNull(col.getSortType());
+        table.getSortOrder().add(col);
+        table.setOnSort(new EventHandler<SortEvent<TableView<String>>>() {
+            @Override public void handle(SortEvent<TableView<String>> event) {
+                // do not consume here - this allows the sort to happen
+            }
+        });
+        
+        ControlAsserts.assertListContainsItemsInOrder(table.getItems(), "Apple", "Orange", "Banana");
+        
+        col.setSortType(ASCENDING);
+        ControlAsserts.assertListContainsItemsInOrder(table.getItems(), "Apple", "Banana", "Orange");
+        assertEquals(ASCENDING, col.getSortType());
+        
+        ControlAsserts.assertListContainsItemsInOrder(table.getSortOrder(), col);
+    }
+
+    @Test public void testSortMethodWithNullSortPolicy() {
+        TableColumn<String, String> col = initSortTestStructure();
+        table.setSortPolicy(null);
+        assertNull(table.getSortPolicy());
+        table.sort();
+    }
+    
+    @Test public void testChangingSortPolicyUpdatesItemsList() {
+        TableColumn<String, String> col = initSortTestStructure();
+        col.setSortType(DESCENDING);
+        ControlAsserts.assertListContainsItemsInOrder(table.getItems(), "Apple", "Orange", "Banana");
+        table.getSortOrder().add(col);
+        ControlAsserts.assertListContainsItemsInOrder(table.getItems(), "Orange", "Banana", "Apple");
+        table.setSortPolicy(SORT_SUCCESS_ASCENDING_SORT_POLICY);
+        ControlAsserts.assertListContainsItemsInOrder(table.getItems(), "Apple", "Banana", "Orange");
+    }
+    
+    @Test public void testChangingSortPolicyDoesNotUpdateItemsListWhenTheSortOrderListIsEmpty() {
+        TableColumn<String, String> col = initSortTestStructure();
+        col.setSortType(DESCENDING);
+        ControlAsserts.assertListContainsItemsInOrder(table.getItems(), "Apple", "Orange", "Banana");
+        
+        table.setSortPolicy(SORT_SUCCESS_ASCENDING_SORT_POLICY);
+        ControlAsserts.assertListContainsItemsInOrder(table.getItems(), "Apple", "Orange", "Banana");
+    }
+    
+    @Test public void testFailedSortPolicyBacksOutLastChange_sortOrderAddition() {
+        TableColumn<String, String> col = initSortTestStructure();
+        col.setSortType(DESCENDING);
+        ControlAsserts.assertListContainsItemsInOrder(table.getItems(), "Apple", "Orange", "Banana");
+        table.setSortPolicy(NO_SORT_FAILED_SORT_POLICY);
+        
+        table.getSortOrder().add(col);
+        
+        // no sort should be run (as we have a custom sort policy), and the 
+        // sortOrder list should be empty as the sortPolicy failed
+        ControlAsserts.assertListContainsItemsInOrder(table.getItems(), "Apple", "Orange", "Banana");
+        assertTrue(table.getSortOrder().isEmpty());
+    }
+    
+    @Test public void testFailedSortPolicyBacksOutLastChange_sortOrderRemoval() {
+        TableColumn<String, String> col = initSortTestStructure();
+        col.setSortType(DESCENDING);
+        table.getSortOrder().add(col);
+        ControlAsserts.assertListContainsItemsInOrder(table.getItems(), "Orange", "Banana", "Apple");
+        
+        table.setSortPolicy(NO_SORT_FAILED_SORT_POLICY);
+
+        // even though we remove the column from the sort order here, because the
+        // sort policy fails the items list should remain unchanged and the sort
+        // order list should continue to have the column in it.
+        table.getSortOrder().remove(col);
+        ControlAsserts.assertListContainsItemsInOrder(table.getItems(), "Orange", "Banana", "Apple");
+        ControlAsserts.assertListContainsItemsInOrder(table.getSortOrder(), col);
+    }
+    
+    @Test public void testFailedSortPolicyBacksOutLastChange_sortTypeChange_ascendingToDescending() {
+        TableColumn<String, String> col = initSortTestStructure();
+        col.setSortType(ASCENDING);
+        table.getSortOrder().add(col);
+        ControlAsserts.assertListContainsItemsInOrder(table.getItems(), "Apple", "Banana", "Orange");
+        
+        table.setSortPolicy(NO_SORT_FAILED_SORT_POLICY);
+
+        col.setSortType(DESCENDING);
+        ControlAsserts.assertListContainsItemsInOrder(table.getItems(), "Apple", "Banana", "Orange");
+        assertEquals(ASCENDING, col.getSortType());
+    }
+    
+    @Test public void testFailedSortPolicyBacksOutLastChange_sortTypeChange_descendingToNull() {
+        TableColumn<String, String> col = initSortTestStructure();
+        col.setSortType(DESCENDING);
+        table.getSortOrder().add(col);
+        ControlAsserts.assertListContainsItemsInOrder(table.getItems(), "Orange", "Banana", "Apple");
+        
+        table.setSortPolicy(NO_SORT_FAILED_SORT_POLICY);
+
+        col.setSortType(null);
+        ControlAsserts.assertListContainsItemsInOrder(table.getItems(), "Orange", "Banana", "Apple");
+        assertEquals(DESCENDING, col.getSortType());
+    }
+    
+    @Test public void testFailedSortPolicyBacksOutLastChange_sortTypeChange_nullToAscending() {
+        TableColumn<String, String> col = initSortTestStructure();
+        col.setSortType(null);
+        table.getSortOrder().add(col);
+        ControlAsserts.assertListContainsItemsInOrder(table.getItems(), "Apple", "Orange", "Banana");
+        
+        table.setSortPolicy(NO_SORT_FAILED_SORT_POLICY);
+
+        col.setSortType(ASCENDING);
+        ControlAsserts.assertListContainsItemsInOrder(table.getItems(), "Apple", "Orange", "Banana");
+        assertNull(col.getSortType());
+    }
+    
+    @Test public void testComparatorChangesInSyncWithSortOrder_1() {
+        TableColumn<String, String> col = initSortTestStructure();
+        assertNull(table.getComparator());
+        assertTrue(table.getSortOrder().isEmpty());
+        
+        table.getSortOrder().add(col);
+        TableColumnComparator c = (TableColumnComparator)table.getComparator();
+        assertNotNull(c);
+        ControlAsserts.assertListContainsItemsInOrder(c.getColumns(), col);
+    }
+    
+    @Test public void testComparatorChangesInSyncWithSortOrder_2() {
+        // same as test above
+        TableColumn<String, String> col = initSortTestStructure();
+        assertNull(table.getComparator());
+        assertTrue(table.getSortOrder().isEmpty());
+        
+        table.getSortOrder().add(col);
+        TableColumnComparator c = (TableColumnComparator)table.getComparator();
+        assertNotNull(c);
+        ControlAsserts.assertListContainsItemsInOrder(c.getColumns(), col);
+        
+        // now remove column from sort order, and the comparator should go to
+        // being null
+        table.getSortOrder().remove(col);
+        assertNull(table.getComparator());
+    }
+    
+    @Test public void testFailedSortPolicyBacksOutComparatorChange_sortOrderAddition() {
+        TableColumn<String, String> col = initSortTestStructure();
+        final TableColumnComparator oldComparator = (TableColumnComparator)table.getComparator();
+        
+        col.setSortType(DESCENDING);
+        ControlAsserts.assertListContainsItemsInOrder(table.getItems(), "Apple", "Orange", "Banana");
+        table.setSortPolicy(NO_SORT_FAILED_SORT_POLICY);
+        
+        table.getSortOrder().add(col);
+        
+        assertEquals(oldComparator, table.getComparator());
+    }
+    
+    @Test public void testFailedSortPolicyBacksOutComparatorChange_sortOrderRemoval() {
+        TableColumn<String, String> col = initSortTestStructure();
+        TableColumnComparator oldComparator = (TableColumnComparator)table.getComparator();
+        assertNull(oldComparator);
+
+        col.setSortType(DESCENDING);
+        table.getSortOrder().add(col);
+        ControlAsserts.assertListContainsItemsInOrder(table.getItems(), "Orange", "Banana", "Apple");
+        oldComparator = (TableColumnComparator)table.getComparator();
+        ControlAsserts.assertListContainsItemsInOrder(oldComparator.getColumns(), col);
+        
+        table.setSortPolicy(NO_SORT_FAILED_SORT_POLICY);
+        table.getSortOrder().remove(col);
+        
+        assertTrue(table.getSortOrder().contains(col));
+        ControlAsserts.assertListContainsItemsInOrder(oldComparator.getColumns(), col);
+    }
+    
+    @Test public void testFailedSortPolicyBacksOutComparatorChange_sortTypeChange() {
+        TableColumn<String, String> col = initSortTestStructure();
+        final TableColumnComparator oldComparator = (TableColumnComparator)table.getComparator();
+        assertNull(oldComparator);
+        
+        table.setSortPolicy(NO_SORT_FAILED_SORT_POLICY);
+        table.getSortOrder().add(col);
+        col.setSortType(ASCENDING);
+        
+        assertTrue(table.getSortOrder().isEmpty());
+        assertNull(oldComparator);
+    }
+    
     
     
     /*********************************************************************
@@ -542,21 +929,23 @@ public class TableViewTest {
         ControlAsserts.assertCellTextEquals(table, 1, "2", "updated name2");
     }
     
-    @Ignore
     @Test public void test_rt28637() {
         ObservableList<String> items = FXCollections.observableArrayList("String1", "String2", "String3", "String4");
         
         final TableView<String> tableView = new TableView<String>();
+        final MultipleSelectionModel sm = tableView.getSelectionModel();
         tableView.setItems(items);
         
         tableView.getSelectionModel().select(0);
-        assertEquals("String1", tableView.getSelectionModel().getSelectedItem());
-        assertEquals("String1", tableView.getSelectionModel().getSelectedItems().get(0));
-        assertEquals(0, tableView.getSelectionModel().getSelectedIndex());
+        assertEquals("String1", sm.getSelectedItem());
+        assertEquals(1, sm.getSelectedItems().size());
+        assertEquals("String1", sm.getSelectedItems().get(0));
+        assertEquals(0, sm.getSelectedIndex());
         
-        items.remove(tableView.getSelectionModel().getSelectedItem());
-        assertEquals("String2", tableView.getSelectionModel().getSelectedItem());
-        assertEquals("String2", tableView.getSelectionModel().getSelectedItems().get(0));
-        assertEquals(0, tableView.getSelectionModel().getSelectedIndex());
+        items.remove(sm.getSelectedItem());
+        assertEquals("String2", sm.getSelectedItem());
+        assertEquals(1, sm.getSelectedItems().size());
+        assertEquals("String2", sm.getSelectedItems().get(0));
+        assertEquals(0, sm.getSelectedIndex());
     }
 }

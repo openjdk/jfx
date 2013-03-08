@@ -23,37 +23,41 @@
  * questions.
  */
 
-/*
- * To change this template, choose Tools | Templates
- * and open the template in the editor.
- */
-
 package com.sun.javafx.scene.control;
 
+import com.sun.javafx.collections.annotations.ReturnsUnmodifiableCollection;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.Comparator;
-
-import javafx.collections.FXCollections;
-import javafx.collections.ObservableList;
+import java.util.List;
 import javafx.scene.control.TableColumnBase;
 
-public class TableColumnComparator implements Comparator<Object> {
+public class TableColumnComparator<S,T> implements Comparator<S> {
 
-    private final ObservableList<TableColumnBase<?,?>> columns;
+    private final List<TableColumnBase<S,T>> columns;
 
-    public TableColumnComparator() {
-        this.columns = FXCollections.observableArrayList();
+    public TableColumnComparator(TableColumnBase<S,T>... columns) {
+        this(Arrays.asList(columns));
+    }
+    
+    public TableColumnComparator(List<TableColumnBase<S,T>> columns) {
+        this.columns = new ArrayList<TableColumnBase<S, T>>(columns);
     }
 
-    public ObservableList<TableColumnBase<?,?>> getColumns() {
-        return columns;
+    @ReturnsUnmodifiableCollection
+    public List<TableColumnBase<S,T>> getColumns() {
+        return Collections.unmodifiableList(columns);
     }
 
-    @Override public int compare(Object o1, Object o2) {
-        for (TableColumnBase tc : columns) {
-            Comparator c = tc.getComparator();
+    @Override public int compare(S o1, S o2) {
+        for (TableColumnBase<S,T> tc : columns) {
+            if (tc.getSortType() == null) continue;
+            
+            Comparator<T> c = tc.getComparator();
 
-            Object value1 = tc.getCellData(o1);
-            Object value2 = tc.getCellData(o2);
+            T value1 = tc.getCellData(o1);
+            T value2 = tc.getCellData(o2);
             
             int result = 0;
             switch (tc.getSortType()) {
@@ -86,5 +90,9 @@ public class TableColumnComparator implements Comparator<Object> {
             return false;
         }
         return true;
+    }
+
+    @Override public String toString() {
+        return "TableColumnComparator [ columns: " + getColumns() + "] ";
     }
 }

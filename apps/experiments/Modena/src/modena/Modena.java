@@ -124,6 +124,7 @@ public class Modena extends Application {
     
     private final BorderPane outerRoot = new BorderPane();
     private BorderPane root;
+    private SamplePageNavigation samplePageNavigation;
     private SamplePage samplePage;
     private Node mosaic;
     private Node heightTest;
@@ -147,7 +148,8 @@ public class Modena extends Application {
                 @Override public void run() {
                     updateUserAgentStyleSheet();
                     rebuildUI(modenaButton.isSelected(), retinaButton.isSelected(), 
-                            contentTabs.getSelectionModel().getSelectedIndex());
+                            contentTabs.getSelectionModel().getSelectedIndex(),
+                            samplePageNavigation.getCurrentSection());
                 }
             });
         }
@@ -198,7 +200,7 @@ public class Modena extends Application {
         outerRoot.setTop(buildMenuBar());
         outerRoot.setCenter(root);
         // build UI
-        rebuildUI(true,false,0);
+        rebuildUI(true,false,0, null);
         // show UI
         Scene scene = new Scene(outerRoot, 1024, 768);
         scene.getStylesheets().add(testAppCssUrl);
@@ -233,6 +235,7 @@ public class Modena extends Application {
     }
     
     private void updateUserAgentStyleSheet(boolean modena) {
+        final SamplePage.Section scrolledSection = samplePageNavigation==null? null : samplePageNavigation.getCurrentSection();
         if (!modena &&
             (baseColor == null || baseColor == Color.TRANSPARENT) &&
             (backgroundColor == null || backgroundColor == Color.TRANSPARENT) &&
@@ -286,9 +289,16 @@ public class Modena extends Application {
         setUserAgentStylesheet("internal:stylesheet"+Math.random()+".css");
         
         if (root != null) root.requestLayout();
+
+        // restore scrolled section
+        Platform.runLater(new Runnable() {
+            @Override public void run() {
+                samplePageNavigation.setCurrentSection(scrolledSection);
+            }
+        });
     }
     
-    private void rebuildUI(boolean modena, boolean retina, int selectedTab) {
+    private void rebuildUI(boolean modena, boolean retina, int selectedTab, final SamplePage.Section scrolledSection) {
         try {
             if (root == null) {
                 root = new BorderPane();
@@ -298,14 +308,13 @@ public class Modena extends Application {
                 root.setTop(null);
                 root.setCenter(null);
             }
+            // Create sample page and nav
+            samplePageNavigation = new SamplePageNavigation();
+            samplePage = samplePageNavigation.getSamplePage();
             // Create Content Area
             contentTabs = new TabPane();
             contentTabs.getTabs().addAll(
-                TabBuilder.create().text("All Controls").content(
-                    ScrollPaneBuilder.create().content(
-                        samplePage = new SamplePage()
-                    ).build()
-                ).build(),
+                TabBuilder.create().text("All Controls").content( samplePageNavigation ).build(),
                 TabBuilder.create().text("UI Mosaic").content(
                     ScrollPaneBuilder.create().content(
                         mosaic = (Node)FXMLLoader.load(Modena.class.getResource("ui-mosaic.fxml"))
@@ -418,12 +427,6 @@ public class Modena extends Application {
             // populate root
             root.setTop(toolBar);
             root.setCenter(contentGroup);
-            // move foucus out of the way
-            Platform.runLater(new Runnable() {
-                @Override public void run() {
-                    modenaButton.requestFocus();
-                }
-            });
             
             samplePage.getStyleClass().add("needs-background");
             mosaic.getStyleClass().add("needs-background");
@@ -435,6 +438,14 @@ public class Modena extends Application {
             if (retina) {
                 contentTabs.getTransforms().setAll(new Scale(2,2));
             }
+            // update state
+            Platform.runLater(new Runnable() {
+                @Override public void run() {
+                    // move focus out of the way
+                    modenaButton.requestFocus();
+                    samplePageNavigation.setCurrentSection(scrolledSection);
+                }
+            });
         } catch (IOException ex) {
             Logger.getLogger(Modena.class.getName()).log(Level.SEVERE, null, ex);
         }

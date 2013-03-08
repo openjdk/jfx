@@ -29,9 +29,7 @@ import com.sun.javafx.collections.MappingChange;
 import com.sun.javafx.collections.NonIterableChange;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
-import java.util.Set;
 
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
@@ -46,8 +44,6 @@ import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.MapChangeListener;
 import javafx.collections.ObservableList;
-import com.sun.javafx.collections.transformation.SortableList;
-import com.sun.javafx.collections.transformation.TransformationList;
 
 import javafx.scene.Node;
 import javafx.scene.layout.GridPane;
@@ -57,22 +53,23 @@ import com.sun.javafx.collections.annotations.ReturnsUnmodifiableCollection;
 import javafx.css.PseudoClass;
 import com.sun.javafx.scene.control.ReadOnlyUnbackedObservableList;
 import com.sun.javafx.scene.control.TableColumnComparator;
+import com.sun.javafx.scene.control.skin.TableColumnHeader;
 import javafx.collections.WeakListChangeListener;
-import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.event.EventType;
 
 import com.sun.javafx.scene.control.skin.TableViewSkin;
 import com.sun.javafx.scene.control.skin.TableViewSkinBase;
-import com.sun.javafx.scene.control.skin.VirtualContainerBase;
 import java.lang.ref.WeakReference;
+import java.util.Comparator;
 import java.util.HashMap;
 import javafx.beans.DefaultProperty;
 import javafx.beans.WeakInvalidationListener;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.value.WeakChangeListener;
-import javafx.scene.control.cell.TreeItemPropertyValueFactory;
+import static javafx.scene.control.TableColumnBase.SortType.ASCENDING;
+import static javafx.scene.control.TableColumnBase.SortType.DESCENDING;
 
 /**
  * The TableView control is designed to visualize an unlimited number of rows
@@ -319,6 +316,34 @@ public class TableView<S> extends Control {
         }
     };
     
+    /**
+     * The default {@link #sortPolicyProperty() sort policy} that this TableView
+     * will use if no other policy is specified. The sort policy is a simple 
+     * {@link Callback} that accepts a TableView as the sole argument and expects
+     * a Boolean response representing whether the sort succeeded or not. A Boolean
+     * response of true represents success, and a response of false (or null) will
+     * be considered to represent failure.
+     */
+    public static final Callback<TableView, Boolean> DEFAULT_SORT_POLICY = new Callback<TableView, Boolean>() {
+        @Override public Boolean call(TableView table) {
+            try {
+                FXCollections.sort(table.getItems(), table.getComparator());
+                return true;
+            } catch (UnsupportedOperationException e) {
+                // TODO might need to support other exception types including:
+                // ClassCastException - if the class of the specified element prevents it from being added to this list
+                // NullPointerException - if the specified element is null and this list does not permit null elements
+                // IllegalArgumentException - if some property of this element prevents it from being added to this list
+
+                // If we are here the list does not support sorting, so we gracefully 
+                // fail the sort request and ensure the UI is put back to its previous
+                // state. This is handled in the code that calls the sort policy.
+                
+                return false;
+            }
+        }
+    };
+    
     
     
     /***************************************************************************
@@ -395,7 +420,7 @@ public class TableView<S> extends Control {
         // the sort method.
         getSortOrder().addListener(new ListChangeListener<TableColumn<S,?>>() {
             @Override public void onChanged(Change<? extends TableColumn<S,?>> c) {
-                sort();
+                doSort(TableUtil.SortEventType.SORT_ORDER_CHANGE, c);
             }
         });
 
@@ -490,7 +515,7 @@ public class TableView<S> extends Control {
         @Override public void invalidated(Observable valueModel) {
             TableColumn col = (TableColumn) ((BooleanProperty)valueModel).getBean();
             if (! getSortOrder().contains(col)) return;
-            sort();
+            doSort(TableUtil.SortEventType.COLUMN_SORTABLE_CHANGE, col);
         }
     };
 
@@ -498,7 +523,7 @@ public class TableView<S> extends Control {
         @Override public void invalidated(Observable valueModel) {
             TableColumn col = (TableColumn) ((ObjectProperty)valueModel).getBean();
             if (! getSortOrder().contains(col)) return;
-            sort();
+            doSort(TableUtil.SortEventType.COLUMN_SORT_TYPE_CHANGE, col);
         }
     };
     
@@ -817,6 +842,108 @@ public class TableView<S> extends Control {
         return editingCell;
     }
 
+    
+    // --- Comparator (built via sortOrder list, so read-only)
+    /**
+     * The comparator property is a read-only property that is representative of the
+     * current state of the {@link #getSortOrder() sort order} list. The sort
+     * order list contains the columns that have been added to it either programmatically
+     * or via a user clicking on the headers themselves.
+     */
+    private ReadOnlyObjectWrapper<Comparator<S>> comparator;
+    private void setComparator(Comparator<S> value) {
+        comparatorPropertyImpl().set(value);
+    }
+    public final Comparator<S> getComparator() {
+        return comparator == null ? null : comparator.get();
+    }
+    public final ReadOnlyObjectProperty<Comparator<S>> comparatorProperty() {
+        return comparatorPropertyImpl().getReadOnlyProperty();
+    }
+    private ReadOnlyObjectWrapper<Comparator<S>> comparatorPropertyImpl() {
+        if (comparator == null) {
+            comparator = new ReadOnlyObjectWrapper<Comparator<S>>(this, "comparator");
+        }
+        return comparator;
+    }
+    
+    
+    // --- sortPolicy
+    /**
+     * The sort policy specifies how sorting in this TableView should be performed.
+     * For example, a basic sort policy may just call 
+     * {@code FXCollections.sort(tableView.getItems())}, whereas a more advanced
+     * sort policy may call to a database to perform the necessary sorting on the
+     * server-side.
+     * 
+     * <p>TableView ships with a {@link TableView#DEFAULT_SORT_POLICY default
+     * sort policy} that does precisely as mentioned above: it simply attempts
+     * to sort the items list in-place.
+     * 
+     * <p>It is recommended that rather than override the {@link TableView#sort() sort}
+     * method that a different sort policy be provided instead.
+     */
+    private ObjectProperty<Callback<TableView<S>, Boolean>> sortPolicy;
+    public final void setSortPolicy(Callback<TableView<S>, Boolean> callback) {
+        sortPolicyProperty().set(callback);
+    }
+    @SuppressWarnings("unchecked") 
+    public final Callback<TableView<S>, Boolean> getSortPolicy() {
+        return sortPolicy == null ? 
+                (Callback<TableView<S>, Boolean>)(Object) DEFAULT_SORT_POLICY : 
+                sortPolicy.get();
+    }
+    @SuppressWarnings("unchecked")
+    public final ObjectProperty<Callback<TableView<S>, Boolean>> sortPolicyProperty() {
+        if (sortPolicy == null) {
+            sortPolicy = new SimpleObjectProperty<Callback<TableView<S>, Boolean>>(
+                    this, "sortPolicy", (Callback<TableView<S>, Boolean>)(Object) DEFAULT_SORT_POLICY) {
+                @Override protected void invalidated() {
+                    sort();
+                }
+            };
+        }
+        return sortPolicy;
+    }
+    
+    
+    // onSort
+    /**
+     * Called when there's a request to sort the control.
+     */
+    private ObjectProperty<EventHandler<SortEvent<TableView<S>>>> onSort;
+    
+    public void setOnSort(EventHandler<SortEvent<TableView<S>>> value) {
+        onSortProperty().set(value);
+    }
+    
+    public EventHandler<SortEvent<TableView<S>>> getOnSort() {
+        if( onSort != null ) {
+            return onSort.get();
+        }
+        return null;
+    }
+    
+    public ObjectProperty<EventHandler<SortEvent<TableView<S>>>> onSortProperty() {
+        if( onSort == null ) {
+            onSort = new ObjectPropertyBase<EventHandler<SortEvent<TableView<S>>>>() {
+                @Override protected void invalidated() {
+                    EventType<SortEvent<TableView<S>>> eventType = SortEvent.sortEvent();
+                    EventHandler<SortEvent<TableView<S>>> eventHandler = get();
+                    setEventHandler(eventType, eventHandler);
+                }
+                
+                @Override public Object getBean() {
+                    return TableView.this;
+                }
+
+                @Override public String getName() {
+                    return "onSort";
+                }
+            };
+        }
+        return onSort;
+    }
 
     
     /***************************************************************************
@@ -1030,12 +1157,80 @@ public class TableView<S> extends Control {
     @Override protected Skin<?> createDefaultSkin() {
         return new TableViewSkin(this);
     }
+    
+    /**
+     * The sort method forces the TableView to re-run its sorting algorithm. More 
+     * often than not it is not necessary to call this method directly, as it is
+     * automatically called when the {@link #getSortOrder() sort order}, 
+     * {@link #sortPolicyProperty() sort policy}, or the state of the 
+     * TableColumn {@link TableColumn#sortTypeProperty() sort type} properties 
+     * change. In other words, this method should only be called directly when
+     * something external changes and a sort is required.
+     */
+    public void sort() {
+        final ObservableList<? extends TableColumnBase> sortOrder = getSortOrder();
+        
+        // update the Comparator property
+        final Comparator<S> oldComparator = getComparator();
+        if (sortOrder.isEmpty()) {
+            setComparator(null);
+        } else {
+            Comparator<S> newComparator = new TableColumnComparator(sortOrder);
+            setComparator(newComparator);
+        }
+        
+        // fire the onSort event and check if it is consumed, if
+        // so, don't run the sort
+        SortEvent<TableView<S>> sortEvent = new SortEvent<TableView<S>>(TableView.this, TableView.this);
+        fireEvent(sortEvent);
+        if (sortEvent.isConsumed()) {
+            // if the sort is consumed we could back out the last action (the code
+            // is commented out right below), but we don't as we take it as a 
+            // sign that the developer has decided to handle the event themselves.
+            
+            // sortLock = true;
+            // TableUtil.handleSortFailure(sortOrder, lastSortEventType, lastSortEventSupportInfo);
+            // sortLock = false;
+            return;
+        }
+
+        // get the sort policy and run it
+        Callback<TableView<S>, Boolean> sortPolicy = getSortPolicy();
+        if (sortPolicy == null) return;
+        Boolean success = sortPolicy.call(this);
+        
+        if (success == null || ! success) {
+            // the sort was a failure. Need to backout if possible
+            sortLock = true;
+            TableUtil.handleSortFailure(sortOrder, lastSortEventType, lastSortEventSupportInfo);
+            setComparator(oldComparator);
+            sortLock = false;
+        }
+    }
+    
+    
 
     /***************************************************************************
      *                                                                         *
      * Private Implementation                                                  *
      *                                                                         *
      **************************************************************************/
+    
+    private boolean sortLock = false;
+    private TableUtil.SortEventType lastSortEventType = null;
+    private Object[] lastSortEventSupportInfo = null;
+    
+    private void doSort(final TableUtil.SortEventType sortEventType, final Object... supportInfo) {
+        if (sortLock) {
+            return;
+        }
+        
+        this.lastSortEventType = sortEventType;
+        this.lastSortEventSupportInfo = supportInfo;
+        sort();
+        this.lastSortEventType = null;
+        this.lastSortEventSupportInfo = null;
+    }
 
     /**
      * Call this function to force the TableView to re-evaluate itself. This is
@@ -1047,56 +1242,6 @@ public class TableView<S> extends Control {
      */
     private void refresh() {
         getProperties().put(TableViewSkinBase.REFRESH, Boolean.TRUE);
-    }
-
-    /**
-     * Sometimes we want to force a sort to run - this is the recommended way
-     * of doing it internally. External users of the TableView API should just
-     * stick to modifying the TableView.sortOrder ObservableList (or the contents
-     * of the TableColumns within it - in particular the
-     * TableColumn.sortAscending boolean).
-     */
-    private void sort() {
-        // build up a new comparator based on the current table columms
-        TableColumnComparator comparator = new TableColumnComparator();
-        for (TableColumn<S,?> tc : getSortOrder()) {
-            comparator.getColumns().add(tc);
-        }
-
-        // If the items are a TransformationList, but not a SortableList, then we need
-        // to get the source of the TransformationList and check it.
-        if (getItems() instanceof TransformationList) {
-            // FIXME this is temporary code whilst I await for similar functionality
-            // within FXCollections.sort, such that it does the unwrapping that is
-            // shown below
-            List list = getItems();
-            while (list != null) {
-                if (list instanceof SortableList) {
-                    break;
-                } else if (list instanceof TransformationList) {
-                    list = ((TransformationList)list).getDirectSource();
-                } else {
-                    break;
-                }
-            }
-
-            if (list instanceof SortableList) {
-                SortableList sortableList = (SortableList) list;
-                // TODO review - note that we're changing the comparator based on
-                // what columns the user has set.
-                sortableList.setComparator(comparator);
-                
-                if (sortableList.getMode() == SortableList.SortMode.BATCH) {
-                    sortableList.sort();
-                }
-                
-                return;
-            }
-        }
-
-        // If we are here, we will use the default sort functionality available
-        // in FXCollections
-        FXCollections.sort(getItems(), comparator);
     }
 
 
@@ -1265,6 +1410,8 @@ public class TableView<S> extends Control {
      */
     // package for testing
     static class TableViewArrayListSelectionModel<S> extends TableViewSelectionModel<S> {
+        
+        private int itemCount = 0;
 
         /***********************************************************************
          *                                                                     *
@@ -1275,6 +1422,8 @@ public class TableView<S> extends Control {
         public TableViewArrayListSelectionModel(final TableView<S> tableView) {
             super(tableView);
             this.tableView = tableView;
+            
+            updateItemCount();
             
             cellSelectionEnabledProperty().addListener(new InvalidationListener() {
                 @Override public void invalidated(Observable o) {
@@ -1384,14 +1533,34 @@ public class TableView<S> extends Control {
 
         final ListChangeListener<S> itemsContentListener = new ListChangeListener<S>() {
             @Override public void onChanged(Change<? extends S> c) {
-                if (tableView.getItems() == null || tableView.getItems().isEmpty()) {
-                    clearSelection();
-                } else if (getSelectedIndex() == -1 && getSelectedItem() != null) {
-                    int newIndex = tableView.getItems().indexOf(getSelectedItem());
-                    if (newIndex != -1) {
-                        setSelectedIndex(newIndex);
+                updateItemCount();
+                
+                while (c.next()) {
+                    final S selectedItem = getSelectedItem();
+                    final int selectedIndex = getSelectedIndex();
+                    
+                    if (tableView.getItems() == null || tableView.getItems().isEmpty()) {
+                        clearSelection();
+                    } else if (getSelectedIndex() == -1 && getSelectedItem() != null) {
+                        int newIndex = tableView.getItems().indexOf(getSelectedItem());
+                        if (newIndex != -1) {
+                            setSelectedIndex(newIndex);
+                        }
+                    } else if (c.wasRemoved() && 
+                            c.getRemovedSize() == 1 && 
+                            ! c.wasAdded() && 
+                            selectedItem != null && 
+                            selectedItem.equals(c.getRemoved().get(0))) {
+                        // Bug fix for RT-28637
+                        if (getSelectedIndex() < getItemCount()) {
+                            S newSelectedItem = getModelItem(selectedIndex);
+                            if (! selectedItem.equals(newSelectedItem)) {
+                                setSelectedItem(newSelectedItem);
+                            }
+                        }
                     }
                 }
+                
                 updateSelection(c);
             }
         };
@@ -1408,6 +1577,8 @@ public class TableView<S> extends Control {
             if (newList != null) {
                 newList.addListener(weakItemsContentListener);
             }
+            
+            updateItemCount();
 
             // when the items list totally changes, we should clear out
             // the selection
@@ -1455,6 +1626,7 @@ public class TableView<S> extends Control {
         // changes we can update the selected indices list to refer to the 
         // new indices.
         private void updateSelection(ListChangeListener.Change<? extends S> c) {
+            c.reset();
             while (c.next()) {
                 if (c.wasReplaced()) {
                     if (c.getList().isEmpty()) {
@@ -1466,28 +1638,40 @@ public class TableView<S> extends Control {
                         if (previousModelSize == c.getRemovedSize()) {
                             // all items were removed from the model
                             clearSelection();
-                        } else if (index < getRowCount() && index >= 0) {
+                        } else if (index < getItemCount() && index >= 0) {
                             // Fix for RT-18969: the list had setAll called on it
+                            // Use of makeAtomic is a fix for RT-20945
+                            makeAtomic = true;
                             clearSelection(index);
+                            makeAtomic = false;
                             select(index);
                         } else {
                             // Fix for RT-22079
                             clearSelection();
                         }
                     }
-                    
-                    
                 } else if (c.wasAdded() || c.wasRemoved()) {
                     int position = c.getFrom();
                     int shift = c.wasAdded() ? c.getAddedSize() : -c.getRemovedSize();
                     
                     if (position < 0) return;
+                    if (shift == 0) return;
                     
                     List<TablePosition> newIndices = new ArrayList<TablePosition>(selectedCells.size());
         
                     for (int i = 0; i < selectedCells.size(); i++) {
-                        TablePosition old = selectedCells.get(i);
-                        int newRow = old.getRow() < position ? old.getRow() : old.getRow() + shift;
+                        final TablePosition old = selectedCells.get(i);
+                        final int oldRow = old.getRow();
+                        final int newRow = oldRow < position ? oldRow : oldRow + shift;
+                        
+                        // Special case for RT-28637 (See unit test in TableViewTest).
+                        // Essentially the selectedItem was correct, but selectedItems
+                        // was empty.
+                        if (oldRow == 0 && shift == -1) {
+                            newIndices.add(new TablePosition(getTableView(), 0, old.getTableColumn()));
+                            continue;
+                        }
+                        
                         if (newRow < 0) continue;
                         newIndices.add(new TablePosition(getTableView(), newRow, old.getTableColumn()));
                     }
@@ -1545,7 +1729,7 @@ public class TableView<S> extends Control {
                 }
             }
             
-            previousModelSize = getRowCount();
+            previousModelSize = getItemCount();
         }
 
         /***********************************************************************
@@ -1569,7 +1753,7 @@ public class TableView<S> extends Control {
 
         @Override
         public void select(int row, TableColumn<S,?> column) {
-            if (row < 0 || row >= getRowCount()) return;
+            if (row < 0 || row >= getItemCount()) return;
 
             // if I'm in cell selection mode but the column is null, I don't want
             // to select the whole row instead...
@@ -1598,7 +1782,7 @@ public class TableView<S> extends Control {
             // first occurrence of the given object. Once we find the first one, we
             // don't proceed to select any others.
             S rowObj = null;
-            for (int i = 0; i < getRowCount(); i++) {
+            for (int i = 0; i < getItemCount(); i++) {
                 rowObj = getModelItem(i);
                 if (rowObj == null) continue;
 
@@ -1634,7 +1818,7 @@ public class TableView<S> extends Control {
              * Performance optimisation - if multiple selection is disabled, only
              * process the end-most row index.
              */
-            int rowCount = getRowCount();
+            int rowCount = getItemCount();
 
             if (getSelectionMode() == SelectionMode.SINGLE) {
                 quietClearSelection();
@@ -1690,7 +1874,7 @@ public class TableView<S> extends Control {
                 TablePosition tp = null;
                 for (int col = 0; col < getTableView().getVisibleLeafColumns().size(); col++) {
                     column = getTableView().getVisibleLeafColumns().get(col);
-                    for (int row = 0; row < getRowCount(); row++) {
+                    for (int row = 0; row < getItemCount(); row++) {
                         tp = new TablePosition(getTableView(), row, column);
                         indices.add(tp);
                     }
@@ -1703,11 +1887,11 @@ public class TableView<S> extends Control {
                 }
             } else {
                 List<TablePosition> indices = new ArrayList<TablePosition>();
-                for (int i = 0; i < getRowCount(); i++) {
+                for (int i = 0; i < getItemCount(); i++) {
                     indices.add(new TablePosition(getTableView(), i, null));
                 }
                 selectedCells.setAll(indices);
-                select(getRowCount() - 1);
+                select(getItemCount() - 1);
                 focus(indices.get(indices.size() - 1));
             }
         }
@@ -1779,14 +1963,14 @@ public class TableView<S> extends Control {
                 if (pos.getColumn() - 1 >= 0) {
                     // go to previous row
                     select(pos.getRow(), getTableColumn(pos.getTableColumn(), -1));
-                } else if (pos.getRow() < getRowCount() - 1) {
+                } else if (pos.getRow() < getItemCount() - 1) {
                     // wrap to end of previous row
                     select(pos.getRow() - 1, getTableColumn(getTableView().getVisibleLeafColumns().size() - 1));
                 }
             } else {
                 int focusIndex = getFocusedIndex();
                 if (focusIndex == -1) {
-                    select(getRowCount() - 1);
+                    select(getItemCount() - 1);
                 } else if (focusIndex > 0) {
                     select(focusIndex - 1);
                 }
@@ -1801,7 +1985,7 @@ public class TableView<S> extends Control {
                 if (pos.getColumn() + 1 < getTableView().getVisibleLeafColumns().size()) {
                     // go to next column
                     select(pos.getRow(), getTableColumn(pos.getTableColumn(), 1));
-                } else if (pos.getRow() < getRowCount() - 1) {
+                } else if (pos.getRow() < getItemCount() - 1) {
                     // wrap to start of next row
                     select(pos.getRow() + 1, getTableColumn(0));
                 }
@@ -1809,7 +1993,7 @@ public class TableView<S> extends Control {
                 int focusIndex = getFocusedIndex();
                 if (focusIndex == -1) {
                     select(0);
-                } else if (focusIndex < getRowCount() -1) {
+                } else if (focusIndex < getItemCount() -1) {
                     select(focusIndex + 1);
                 }
             }
@@ -1818,7 +2002,7 @@ public class TableView<S> extends Control {
         @Override public void selectAboveCell() {
             TablePosition pos = getFocusedCell();
             if (pos.getRow() == -1) {
-                select(getRowCount() - 1);
+                select(getItemCount() - 1);
             } else if (pos.getRow() > 0) {
                 select(pos.getRow() - 1, pos.getTableColumn());
             }
@@ -1829,7 +2013,7 @@ public class TableView<S> extends Control {
 
             if (pos.getRow() == -1) {
                 select(0);
-            } else if (pos.getRow() < getRowCount() -1) {
+            } else if (pos.getRow() < getItemCount() -1) {
                 select(pos.getRow() + 1, pos.getTableColumn());
             }
         }
@@ -1841,7 +2025,7 @@ public class TableView<S> extends Control {
                 quietClearSelection();
             }
 
-            if (getRowCount() > 0) {
+            if (getItemCount() > 0) {
                 if (isCellSelectionEnabled()) {
                     select(0, focusedCell.getTableColumn());
                 } else {
@@ -1857,7 +2041,7 @@ public class TableView<S> extends Control {
                 quietClearSelection();
             }
 
-            int numItems = getRowCount();
+            int numItems = getItemCount();
             if (numItems > 0 && getSelectedIndex() < numItems - 1) {
                 if (isCellSelectionEnabled()) {
                     select(numItems - 1, focusedCell.getTableColumn());
@@ -1940,22 +2124,26 @@ public class TableView<S> extends Control {
             return getTableView().getFocusModel().getFocusedCell();
         }
 
-        private int getRowCount() {
-            List items = tableView.getItems();
-            return items == null ? -1 : items.size();
-        }
-        
         /** {@inheritDoc} */
         @Override protected int getItemCount() {
-            List items = tableView.getItems();
-            if (items == null) return -1;
-            return items.size();
+            return itemCount;
+//            List<S> items = tableView.getItems();
+//            return items == null ? -1 : items.size();
         }
 
         @Override protected S getModelItem(int index) {
-            if (index < 0 || index > getRowCount()) return null;
+            if (index < 0 || index > getItemCount()) return null;
             return tableView.getItems().get(index);
         }
+        
+        private void updateItemCount() {
+            if (tableView == null) {
+                itemCount = -1;
+            } else {
+                List<S> items = tableView.getItems();
+                itemCount = items == null ? -1 : items.size();
+            }
+        } 
     }
     
     
