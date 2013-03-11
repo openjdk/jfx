@@ -755,7 +755,7 @@ blitPTSrc8888(Renderer *rdr, jint height) {
         am = a + w;
         while (a < am) {
             assert(aidx >= 0);
-            assert(aidx < rdr->_paint_length / 4);
+            assert(aidx < rdr->_paint_length);
 
             cval = paint[aidx];
             palpha = (cval >> 24) & 0xff;
@@ -811,7 +811,7 @@ blitPTSrc8888_pre(Renderer *rdr, jint height) {
         am = a + w;
         while (a < am) {
             assert(aidx >= 0);
-            assert(aidx < rdr->_paint_length / 4);
+            assert(aidx < rdr->_paint_length);
 
             cval = paint[aidx];
             palpha = (cval >> 24) & 0xff;
@@ -917,7 +917,7 @@ blitImageSrc8888_pre(Renderer *rdr, jint height) {
         am = aidx + w;
         while (aidx < am) {
             assert(aidx >= 0);
-            assert(aidx < rdr->_paint_length / 4);
+            assert(aidx < rdr->_paint_length);
 
             cval = paint[aidx];
             acoverage = aval = (cval >> 24) & 0xff;
@@ -1190,7 +1190,7 @@ blitPTSrcOver8888(Renderer *rdr, jint height) {
         am = a + w;
         while (a < am) {
             assert(aidx >= 0);
-            assert(aidx < rdr->_paint_length / 4);
+            assert(aidx < rdr->_paint_length);
 
             cval = paint[aidx];
             palpha = (cval >> 24) & 0xff;
@@ -1246,7 +1246,7 @@ blitImageSrcOver8888(Renderer *rdr, jint height) {
         am = aidx + w;
         while (aidx < am) {
             assert(aidx >= 0);
-            assert(aidx < rdr->_paint_length / 4);
+            assert(aidx < rdr->_paint_length);
 
             cval = paint[aidx];
             aval = (cval >> 24) & 0xff;
@@ -1302,7 +1302,7 @@ blitImageSrcOver8888_pre(Renderer *rdr, jint height) {
         am = aidx + w;
         while (aidx < am) {
             assert(aidx >= 0);
-            assert(aidx < rdr->_paint_length / 4);
+            assert(aidx < rdr->_paint_length);
 
             cval = paint[aidx];
             avalOrig = aval = (cval >> 24) & 0xff;
@@ -1363,7 +1363,7 @@ blitPTSrcOver8888_pre(Renderer *rdr, jint height) {
         am = a + w;
         while (a < am) {
             assert(aidx >= 0);
-            assert(aidx < rdr->_paint_length / 4);
+            assert(aidx < rdr->_paint_length);
 
             cval = paint[aidx];
             palpha = (cval >> 24) & 0xff;

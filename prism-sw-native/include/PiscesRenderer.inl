@@ -631,6 +631,7 @@ updateMaskDependedRoutines(Renderer* rdr) {
             break;
     }
     updateCompositeDependedRoutines(rdr);
+    rdr->_rendererState &= ~INVALID_MASK_DEPENDED_ROUTINES;
 }
 
 static void
