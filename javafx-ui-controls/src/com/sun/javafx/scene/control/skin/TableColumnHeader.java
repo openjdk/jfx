@@ -110,6 +110,7 @@ public class TableColumnHeader extends Region {
             changeListenerHandler.registerChangeListener(column.widthProperty(), "TABLE_COLUMN_WIDTH");
             changeListenerHandler.registerChangeListener(column.visibleProperty(), "TABLE_COLUMN_VISIBLE");
             changeListenerHandler.registerChangeListener(column.sortNodeProperty(), "TABLE_COLUMN_SORT_NODE");
+            changeListenerHandler.registerChangeListener(column.sortableProperty(), "TABLE_COLUMN_SORTABLE");
         }
     }
     
@@ -149,6 +150,8 @@ public class TableColumnHeader extends Region {
             }
         } else if ("TABLE_COLUMN_SORT_NODE".equals(p)) {
             updateSortGrid();
+        } else if ("TABLE_COLUMN_SORTABLE".equals(p)) {
+            setSortPos(! column.isSortable() ? -1 : skin.getSortOrder().indexOf(column));
         }
     }
     
