@@ -744,7 +744,7 @@ final class SWGraphics implements ReadbackGraphics {
 
     private float drawStringInternal(GlyphList gl, FontStrike strike, float x, float y, int strFrom, int strTo) {
         float advanceX = 0;
-        if (tx.isTranslateOrIdentity() && strike.supportsGlyphImages()) {
+        if (tx.isTranslateOrIdentity() && strike.supportsGlyphImages() && (!strike.drawAsShapes())) {
             final boolean doLCDText = (strike.getAAMode() == FontResource.AA_LCD) &&
                     getRenderTarget().isOpaque() &&
                     (paint.getType() == Paint.Type.COLOR) &&
