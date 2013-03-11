@@ -353,13 +353,13 @@ public class PhongMaterial extends Material {
     }
 
     @Override public String toString() {
-        return "PGPhongMaterial{" + "diffuseColor=" + diffuseColor +
-                ", specularColor=" + specularColor +
-                ", specularPower=" + specularPower +
-                ", diffuseMap=" + diffuseMap +
-                ", specularMap=" + specularMap +
-                ", bumpMap=" + bumpMap +
-                ", selfIlluminationMap=" + selfIlluminationMap + '}';
+        return "PGPhongMaterial[" + "diffuseColor=" + getDiffuseColor() +
+                ", specularColor=" + getSpecularColor() +
+                ", specularPower=" + getSpecularPower() +
+                ", diffuseMap=" + getDiffuseMap() +
+                ", specularMap=" + getSpecularMap() +
+                ", bumpMap=" + getBumpMap() +
+                ", selfIlluminationMap=" + getSelfIlluminationMap() + "]";
     }
 
 }       
