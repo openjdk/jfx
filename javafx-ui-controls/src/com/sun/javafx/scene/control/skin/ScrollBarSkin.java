@@ -210,6 +210,10 @@ public class ScrollBarSkin extends BehaviorSkinBase<ScrollBar, ScrollBarBehavior
                     */
                     if (trackLength > thumbLength) {
                         Point2D cur = thumb.localToParent(me.getX(), me.getY());
+                        if (dragStart == null) {
+                            // we're getting dragged without getting a mouse press
+                            dragStart = thumb.localToParent(me.getX(), me.getY());
+                        }
                         double dragPos = getSkinnable().getOrientation() == Orientation.VERTICAL ? cur.getY() - dragStart.getY(): cur.getX() - dragStart.getX();
                         getBehavior().thumbDragged(me, preDragThumbPos + dragPos / (trackLength - thumbLength));
                     }
@@ -247,6 +251,10 @@ public class ScrollBarSkin extends BehaviorSkinBase<ScrollBar, ScrollBarBehavior
                         */
                         if (trackLength > thumbLength) {
                             Point2D cur = thumb.localToParent(event.getX(), event.getY());
+                            if (dragStart == null) {
+                                // we're getting dragged without getting a mouse press
+                                dragStart = thumb.localToParent(event.getX(), event.getY());
+                            }
                             double dragPos = getSkinnable().getOrientation() == Orientation.VERTICAL ? cur.getY() - dragStart.getY(): cur.getX() - dragStart.getX();
                             getBehavior().thumbDragged(null/*todo*/, preDragThumbPos + dragPos / (trackLength - thumbLength));
                         }

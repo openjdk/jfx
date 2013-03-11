@@ -218,8 +218,6 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListViewB
     @Override protected void updateRowCount() {
         if (flow == null) return;
         
-        updatePlaceholderRegionVisibility();
-        
         int oldCount = itemCount;
         int newCount = listViewItems == null ? 0 : listViewItems.size();
         
@@ -227,6 +225,7 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListViewB
         
         flow.setCellCount(newCount);
         
+        updatePlaceholderRegionVisibility();
         if (newCount != oldCount) {
             needCellsRebuilt = true;
         } else {

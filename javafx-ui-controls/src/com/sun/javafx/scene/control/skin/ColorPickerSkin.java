@@ -25,6 +25,7 @@
 
 package com.sun.javafx.scene.control.skin;
 
+import com.sun.javafx.css.StyleManager;
 import javafx.beans.property.StringProperty;
 import javafx.css.StyleOrigin;
 import javafx.css.StyleableBooleanProperty;
@@ -96,9 +97,9 @@ public class ColorPickerSkin extends ComboBoxPopupControl<Color> {
             } else {
                 if (pickerColorBox.getChildren().size() == 2) {
                     ImageView imageView = (ImageView)pickerColorBox.getChildren().get(1);
-                    imageView.setImage(new Image(v));
+                    imageView.setImage(StyleManager.getInstance().getCachedImage(v));
                 } else {
-                    pickerColorBox.getChildren().add(new ImageView(new Image(v)));
+                    pickerColorBox.getChildren().add(new ImageView(StyleManager.getInstance().getCachedImage(v)));
                 }
             }
         }

@@ -27,7 +27,6 @@ package javafx.scene.control;
 
 import com.sun.javafx.Utils;
 import com.sun.javafx.scene.control.behavior.ListViewAnchorRetriever;
-import com.sun.javafx.tk.Toolkit;
 import static org.junit.Assert.*;
 
 import java.util.List;
@@ -42,7 +41,7 @@ import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
 
-@Ignore("Disabling tests as they fail with OOM in continuous builds")
+//@Ignore("Disabling tests as they fail with OOM in continuous builds")
 public class ListViewKeyInputTest {
     private ListView<String> listView;
     private MultipleSelectionModel<String> sm;

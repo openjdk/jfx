@@ -26,6 +26,7 @@
 package javafx.scene.control;
 
 
+import com.sun.javafx.css.StyleManager;
 import javafx.css.StyleableBooleanProperty;
 import javafx.css.StyleableDoubleProperty;
 import javafx.css.StyleableObjectProperty;
@@ -596,7 +597,8 @@ public class Tooltip extends PopupControl {
                                 url = cl.getResource(get());
                             }
                             if (url != null) {
-                                setGraphic(new ImageView(new Image(url.toExternalForm())));                            
+                                final Image img = StyleManager.getInstance().getCachedImage(url.toExternalForm());
+                                setGraphic(new ImageView(img));                            
                             }
                         } else {
                             setGraphic(null);

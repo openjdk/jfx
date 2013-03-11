@@ -207,7 +207,12 @@ public class TableColumnHeader extends Region {
             if (header.getTableHeaderRow().isReordering() && header.isColumnReorderingEnabled()) {
                 header.columnReorderingComplete(me);
             } else {
-                header.sortColumn(tableColumn, me.isShiftDown());
+                TableColumnHeader.sortColumn(
+                        header.getTableViewSkin().getSortOrder(), 
+                        tableColumn, 
+                        header.isSortingEnabled(),
+                        header.isSortColumn,
+                        me.isShiftDown());
             }
             me.consume();
         }
@@ -551,8 +556,12 @@ public class TableColumnHeader extends Region {
         pseudoClassStateChanged(PSEUDO_CLASS_LAST_VISIBLE, isLastVisibleColumn);
     }
 
-    private void sortColumn(TableColumnBase column, boolean addColumn) {
-        if (! isSortingEnabled()) return;
+    public static void sortColumn(final ObservableList<TableColumnBase<?,?>> sortOrder, 
+            final TableColumnBase column, 
+            final boolean isSortingEnabled, 
+            final boolean isSortColumn, 
+            final boolean addColumn) {
+        if (! isSortingEnabled) return;
         
         // we only allow sorting on the leaf columns and columns
         // that actually have comparators defined, and are sortable
@@ -564,19 +573,19 @@ public class TableColumnHeader extends Region {
         if (addColumn) {
             if (!isSortColumn) {
                 column.setSortType(ASCENDING);
-                getTableViewSkin().getSortOrder().add(column);
+                sortOrder.add(column);
             } else if (column.getSortType() == ASCENDING) {
                 column.setSortType(DESCENDING);
             } else {
-                int i = getTableViewSkin().getSortOrder().indexOf(column);
+                int i = sortOrder.indexOf(column);
                 if (i != -1) {
-                    getTableViewSkin().getSortOrder().remove(i);
+                    sortOrder.remove(i);
                 }
             }
         } else {
             // the user has clicked on a column header - we should add this to
             // the TableView sortOrder list if it isn't already there.
-            if (isSortColumn && getTableViewSkin().getSortOrder().size() == 1) {
+            if (isSortColumn && sortOrder.size() == 1) {
                 // the column is already being sorted, and it's the only column.
                 // We therefore move through the 2nd or 3rd states:
                 //   1st click: sort ascending
@@ -586,7 +595,7 @@ public class TableColumnHeader extends Region {
                     column.setSortType(DESCENDING);
                 } else {
                     // remove from sort
-                    getTableViewSkin().getSortOrder().remove(column);
+                    sortOrder.remove(column);
                 }
             } else if (isSortColumn) {
                 // the column is already being used to sort, so we toggle its
@@ -600,17 +609,18 @@ public class TableColumnHeader extends Region {
                 // to prevent multiple sorts, we make a copy of the sort order
                 // list, moving the column value from the current position to 
                 // its new position at the front of the list
-                List<TableColumnBase> sortOrder = new ArrayList<TableColumnBase>(getTableViewSkin().getSortOrder());
-                sortOrder.remove(column);
-                sortOrder.add(0, column);
-                getTableViewSkin().getSortOrder().setAll(column);
+                List<TableColumnBase<?,?>> sortOrderCopy = new ArrayList<TableColumnBase<?,?>>(sortOrder);
+                sortOrderCopy.remove(column);
+                sortOrderCopy.add(0, column);
+                sortOrder.setAll(column);
             } else {
                 // add to the sort order, in ascending form
                 column.setSortType(ASCENDING);
-                getTableViewSkin().getSortOrder().setAll(column);
+                sortOrder.setAll(column);
             }
         }
     }
+    
     
     
     
