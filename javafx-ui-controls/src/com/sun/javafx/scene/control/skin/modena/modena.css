@@ -2069,9 +2069,10 @@ is being used to size a border should also be in pixels.
 }
 .pagination > .pagination-control {
     -fx-background-color: transparent;
-    -fx-font-size: 0.8em;
+    -fx-font-size: 0.82em;
 }
 .pagination > .pagination-control > .control-box {
+    -fx-padding: 5px 0 0 0;
     -fx-spacing: 2;
     -fx-alignment: center;
 }
