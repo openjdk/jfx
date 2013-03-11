@@ -755,18 +755,27 @@ public class StubToolkit extends Toolkit {
                                           .contains((int) x, (int) y);
     }
 
+    public void setCurrentTime(long millis) {
+        masterTimer.setCurrentTime(millis);
+    }
+
+    public void handleAnimation() {
+        if (animationRunnable != null) {
+            try {
+                animationRunnable.run();
+            } catch (Throwable t) {
+                t.printStackTrace();
+            }
+        }
+    }
+
     public StubImageLoaderFactory getImageLoaderFactory() {
         return imageLoaderFactory;
     }
 
-    public void resetAnimationEngine() {
-        animationRunnable = null;
-        masterTimer = new StubMasterTimer();
-    }
-
     public void setAnimationTime(final long millis) {
-        masterTimer.setCurrentTime(millis);
-        if (animationRunnable != null) animationRunnable.run();
+        setCurrentTime(millis);
+        handleAnimation();
         fireTestPulse();
     }
 
