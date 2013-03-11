@@ -1172,12 +1172,14 @@ public class TableView<S> extends Control {
         
         // update the Comparator property
         final Comparator<S> oldComparator = getComparator();
-        if (sortOrder.isEmpty()) {
-            setComparator(null);
-        } else {
-            Comparator<S> newComparator = new TableColumnComparator(sortOrder);
-            setComparator(newComparator);
-        }
+        Comparator<S> newComparator = new TableColumnComparator(sortOrder);
+        setComparator(newComparator);
+        
+//        if (sortOrder.isEmpty()) {
+//            // TODO this should eventually handle returning a SortedList back
+//            // to its unsorted state
+//            setComparator(null);
+//        }
         
         // fire the onSort event and check if it is consumed, if
         // so, don't run the sort
