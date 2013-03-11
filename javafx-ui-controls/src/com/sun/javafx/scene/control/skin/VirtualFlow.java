@@ -145,7 +145,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
                     viewportBreadth = viewportLength = lastPosition = 0;
                     hbar.setValue(0);
                     vbar.setValue(0);
-                    adjustPosition(0.0f);
+                    setPosition(0.0f);
                     setNeedsLayout(true);
                     requestLayout();
                 }
@@ -238,11 +238,10 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         return position;
     }
 
-    public void setPosition(double position) {
-        boolean needsUpdate = this.position != position;
-        this.position = position;
+    public void setPosition(double newPosition) {
+        boolean needsUpdate = this.position != newPosition;
+        this.position = com.sun.javafx.Utils.clamp(0, newPosition, 1);;
         if (needsUpdate) {
-            adjustPosition(position);
             requestLayout();
         }
     }
@@ -1016,7 +1015,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
                 // Update the item count
 //                setItemCount(cellCount);
             } else if (currentIndex >= cellCount) {
-                adjustPosition(1.0f);
+                setPosition(1.0f);
 //                setItemCount(cellCount);
             } else if (firstCell != null) {
                 double firstCellOffset = getCellPosition(firstCell);
@@ -1118,7 +1117,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         int firstIndex = cell.getIndex();
         double firstCellPos = getCellPosition(cell);
         if (firstIndex == 0 && firstCellPos > 0) {
-            adjustPosition(0.0f);
+            setPosition(0.0f);
             offset = 0;
             for (int i = 0; i < cells.size(); i++) {
                 cell = cells.get(i);
@@ -1214,9 +1213,9 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
             // to be at 0 instead of 1.
             start = getCellPosition(firstCell);
             if (firstCell.getIndex() == 0 && start == 0) {
-                adjustPosition(0);
+                setPosition(0);
             } else if (getPosition() != 1) {
-                adjustPosition(1);
+                setPosition(1);
             }
         }
 
@@ -2019,7 +2018,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
                         T cell = cells.get(i);
                         positionCell(cell, getCellPosition(cell) + emptySize);
                     }
-                    adjustPosition(1.0f);
+                    setPosition(1.0f);
                 }
             }
 
@@ -2128,20 +2127,12 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         return pixelOffset - viewportOffset;
     }
 
-    /**
-     * Simply adjusts the position to the given value, clamped between 0 and 1
-     * inclusive.
-     */
-    private void adjustPosition(double pos) {
-        setPosition(com.sun.javafx.Utils.clamp(0, pos, 1));
-    }
-
     private void adjustPositionToIndex(int index) {
         int cellCount = getCellCount();
         if (cellCount <= 0) {
             setPosition(0.0f);
         } else {            
-            adjustPosition(((double)index) / cellCount);
+            setPosition(((double)index) / cellCount);
         }
     }
 
@@ -2240,14 +2231,14 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         return -(viewportLength * p);
     }
     
-    /**
-     * Adjust the position based on a chunk of pixels. The position is based
-     * on the start of the scrollbar position.
-     */
-    private void adjustByPixelChunk(double numPixels) {
-        setPosition(0);
-        adjustByPixelAmount(numPixels);
-    }
+//    /**
+//     * Adjust the position based on a chunk of pixels. The position is based
+//     * on the start of the scrollbar position.
+//     */
+//    private void adjustByPixelChunk(double numPixels) {
+//        setPosition(0);
+//        adjustByPixelAmount(numPixels);
+//    }
     // end of old PositionMapper code
     
     
