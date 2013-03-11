@@ -386,12 +386,8 @@ public abstract class PopupWindow extends Window {
 
         final Scene sceneValue = getScene();
         if (sceneValue != null) {
-            SceneHelper.parentEffectiveOrientationInvalidated(sceneValue);            
+            SceneHelper.parentEffectiveOrientationInvalidated(sceneValue);
         }
-        
-        // RT-28447
-        final Scene ownerScene = getRootWindow(owner).getScene();
-        sceneValue.getStylesheets().setAll(ownerScene.getStylesheets());
         
         // It is required that the root window exist and be visible to show the popup.
         if (getRootWindow(owner).isShowing()) {
