@@ -2340,8 +2340,9 @@ is being used to size a border should also be in pixels.
     -fx-background-color: -fx-box-border, -fx-inner-border, -fx-body-color;
     -fx-background-insets: 0, 0 1 1 0, 1 2 2 1;
     -fx-font-weight: bold;
-    -fx-size: 25;
+    -fx-size: 2em;
     -fx-text-fill: -fx-selection-bar-text;
+    -fx-padding: 0.166667em;
 }
 .table-view .filler,
 .tree-table-view .filler,
@@ -2364,7 +2365,8 @@ is being used to size a border should also be in pixels.
 .table-view .column-header .sort-order-dot,
 .tree-table-view .column-header .sort-order-dot {
     -fx-background-color: -fx-mark-color;
-    -fx-padding: 0.0625em 0.104em 0.0625em 0.104em;
+    -fx-padding: 0.115em;
+    -fx-background-radius: 0.115em;
 }
 /* Plus Symbol */
 .table-view .show-hide-column-image,
