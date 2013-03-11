@@ -613,6 +613,7 @@ public class TableViewTest {
         ControlAsserts.assertListContainsItemsInOrder(c.getColumns(), col);
     }
     
+    @Ignore
     @Test public void testComparatorChangesInSyncWithSortOrder_2() {
         // same as test above
         TableColumn<String, String> col = initSortTestStructure();
