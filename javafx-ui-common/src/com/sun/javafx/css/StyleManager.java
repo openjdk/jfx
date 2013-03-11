@@ -65,6 +65,7 @@ import javafx.css.CssMetaData;
 import javafx.css.PseudoClass;
 import javafx.css.StyleOrigin;
 import javafx.scene.image.Image;
+import javafx.stage.PopupWindow;
 import javafx.util.Pair;
 import sun.util.logging.PlatformLogger;
 
@@ -337,9 +338,89 @@ final public class StyleManager {
      */
     public void stylesheetsChanged(Scene scene, Change<String> c) {
 
-        // annihilate the cache
-        clearCache();
-        processChange(c);
+        // annihilate the cache?
+        boolean annihilate = false; 
+        final boolean isPopup = scene.getWindow() instanceof PopupWindow;
+        
+        c.reset();
+        while (c.next()) {
+            
+            //
+            // don't care about adds from popups since popup scene gets its 
+            // stylesheets from the scene of its root window.
+            //
+            if (isPopup == false && c.wasAdded()) {
+                //
+                // if a stylesheet is added, then the cache should be cleared
+                // only if that stylesheet isn't already in the 
+                // stylesheetContainerMap. Just because one scene adds the
+                // same stylesheet as another doesn't mean that the other
+                // scene's CSS is invalid. 
+                //
+                final List<String> addedSubList = c.getAddedSubList();
+
+                for (int n=0, nMax=addedSubList.size(); n<nMax; n++) {
+                    final String akey = addedSubList.get(n);
+                    // if this stylesheet isn't in the map, then clear the cache
+                    if (stylesheetContainerMap.containsKey(akey) == false) {
+                        annihilate = true;
+                        // we only need to process one add.
+                        break;
+                    }
+                    
+                }
+                
+            } else if (c.wasRemoved()) {
+                
+                if (isPopup == false) {
+                    //
+                    // If a stylesheet was removed from the scene, then the styles
+                    // will need to be remapped. 
+                    //
+                    annihilate = true;
+                    break;
+                    
+                } else /* isPopup == true */ {
+                    //
+                    // If the scene is from a popup, then styles don't need to
+                    // be remapped but the popup scene needs to be removed from
+                    // the containers.
+                    // 
+                    final List<String> removedList = c.getRemoved();
+                    for (int n=0, nMax=removedList.size(); n<nMax; n++) {
+                        
+                        final String rkey = removedList.get(n);
+                        final StylesheetContainer sc = stylesheetContainerMap.get(rkey); 
+                        
+                        if (sc != null) {
+                            
+                            final List<Reference<Scene>> refList = sc.sceneUsers.list;                            
+                            for(int r=refList.size()-1; 0 <= r; --r) {
+                                
+                                final Reference<Scene> ref = refList.get(r);
+                                final Scene s = (ref != null) ? ref.get() : null;
+                                
+                                if (s == scene) {
+                                    refList.remove(r);
+                                    break;
+                                }
+                                
+                            }
+                            
+                            if (refList.isEmpty()) {
+                                stylesheetContainerMap.remove(rkey);
+                            }
+                            
+                        }
+                    }
+                } 
+            }
+        }
+        
+        if (isPopup == false) {
+            if (annihilate) clearCache();
+            processChange(c);
+        }
         
     }
         
@@ -448,7 +529,7 @@ final public class StyleManager {
     // RT-22565: Called from clearParentCache to clear the cache entries.
     private void removeFromCacheMap(StylesheetContainer sc) {
 
-        if (masterCacheMap.isEmpty()) {
+        if (masterCacheMap.isEmpty() || sc == null) {
             return;
         }
 
