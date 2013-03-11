@@ -41,7 +41,6 @@ import org.junit.Before;
 /**
  * Test :dir functional pseudo-class 
  */
-@org.junit.Ignore
 public class Node_effectiveOrientation_Css_Test {
     
     private Group root;
@@ -79,7 +78,7 @@ public class Node_effectiveOrientation_Css_Test {
         root.getChildren().add(rect);
 
         // CSS is applied on next pulse after child is added
-        Toolkit.getToolkit().firePulse();
+        root.impl_processCSS(true);
         
         assertEquals(scene.getEffectiveNodeOrientation(), LEFT_TO_RIGHT);
         assertEquals(Color.web("#00ff00"), rect.getFill());
@@ -100,7 +99,7 @@ public class Node_effectiveOrientation_Css_Test {
 
         scene.setNodeOrientation(RIGHT_TO_LEFT);
         // CSS is applied on next pulse after child is added
-        Toolkit.getToolkit().firePulse();
+        root.impl_processCSS(true);
         
         assertEquals(scene.getEffectiveNodeOrientation(), RIGHT_TO_LEFT);
         assertEquals(Color.web("#ff0000"), rect.getFill());
@@ -120,7 +119,7 @@ public class Node_effectiveOrientation_Css_Test {
         root.getChildren().add(rect);
 
         // CSS is applied on next pulse after child is added
-        Toolkit.getToolkit().firePulse();
+        root.impl_processCSS(true);
         
         assertEquals(scene.getEffectiveNodeOrientation(), LEFT_TO_RIGHT);
         assertEquals(Color.web("#00ff00"), rect.getFill());
@@ -141,7 +140,7 @@ public class Node_effectiveOrientation_Css_Test {
 
         scene.setNodeOrientation(RIGHT_TO_LEFT);
         // CSS is applied on next pulse after child is added
-        Toolkit.getToolkit().firePulse();
+        root.impl_processCSS(true);
         
         assertEquals(scene.getEffectiveNodeOrientation(), RIGHT_TO_LEFT);
         assertEquals(Color.web("#ff0000"), rect.getFill());
@@ -161,7 +160,7 @@ public class Node_effectiveOrientation_Css_Test {
         root.getChildren().add(rect);
 
         // CSS is applied on next pulse after child is added
-        Toolkit.getToolkit().firePulse();
+        root.impl_processCSS(true);
         
         assertEquals(scene.getEffectiveNodeOrientation(), LEFT_TO_RIGHT);
         assertEquals(Color.web("#00ff00"), rect.getFill());
@@ -182,7 +181,7 @@ public class Node_effectiveOrientation_Css_Test {
 
         scene.setNodeOrientation(RIGHT_TO_LEFT);
         // CSS is applied on next pulse after child is added
-        Toolkit.getToolkit().firePulse();
+        root.impl_processCSS(true);
         
         assertEquals(scene.getEffectiveNodeOrientation(), RIGHT_TO_LEFT);
         assertEquals(Color.web("#ff0000"), rect.getFill());
@@ -204,7 +203,7 @@ public class Node_effectiveOrientation_Css_Test {
         rect.setNodeOrientation(RIGHT_TO_LEFT);
 
         // CSS is applied on next pulse after child is added
-        Toolkit.getToolkit().firePulse();
+        root.impl_processCSS(true);
         
         assertEquals(scene.getEffectiveNodeOrientation(), LEFT_TO_RIGHT);
         assertEquals(rect.getEffectiveNodeOrientation(), RIGHT_TO_LEFT);
@@ -214,7 +213,7 @@ public class Node_effectiveOrientation_Css_Test {
         scene.setNodeOrientation(RIGHT_TO_LEFT);
         rect.setNodeOrientation(LEFT_TO_RIGHT);
         
-        Toolkit.getToolkit().firePulse();
+        root.impl_processCSS(true);
         
         assertEquals(scene.getEffectiveNodeOrientation(), RIGHT_TO_LEFT);
         assertEquals(rect.getEffectiveNodeOrientation(), LEFT_TO_RIGHT);
