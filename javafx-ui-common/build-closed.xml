@@ -21,10 +21,6 @@
         ${jfx.checkstyle.jar}" />
     <property name="javac.classpath" refid="javac.closed.classpath.path"/>
 
-    <path id="javac.closed.test.classpath.path" path="
-        ${rt.dist.root.dir}/javafx-anim/build/test/classes/" />
-    <property name="javac.test.additional.classpath" refid="javac.closed.test.classpath.path" />
-    
     <import file="../build-defs.xml"/>
     <import file="build-common.xml"/>
 
