@@ -69,7 +69,7 @@ public interface AnimationPulseMBean {
 
     public long getPaintingDurationAv();
 
-    public long getPaitningDurationAvIn100Millis();
+    public long getPaintingDurationAvIn100Millis();
 
     public long getScenePaintingDurationMaxIn1Sec();
 

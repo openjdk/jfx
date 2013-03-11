@@ -79,9 +79,9 @@ class GeneralClipInterpolator extends ClipInterpolator {
     @Override
     void validate(boolean forceSync) {
         if (invalid) {
-            final Map<WritableValue<?>, KeyValue> lastKeyValues = new HashMap<WritableValue<?>, KeyValue>();
+            final Map<WritableValue<?>, KeyValue> lastKeyValues = new HashMap<>();
             final int n = keyFrames.length;
-            int index = 0;
+            int index;
             for (index = 0; index < n; index++) {
                 final KeyFrame keyFrame = keyFrames[index];
                 if (keyFrameTicks[index] == 0) {
@@ -93,8 +93,8 @@ class GeneralClipInterpolator extends ClipInterpolator {
                 }
             }
 
-            final Map<WritableValue<?>, List<InterpolationInterval>> map = new HashMap<WritableValue<?>, List<InterpolationInterval>>();
-            final Set<WritableValue<?>> undefinedValues = new HashSet<WritableValue<?>>();
+            final Map<WritableValue<?>, List<InterpolationInterval>> map = new HashMap<>();
+            final Set<WritableValue<?>> undefinedValues = new HashSet<>();
             // iterate through all keyFrames
             for (; index < n; index++) {
                 final KeyFrame keyFrame = keyFrames[index];
@@ -107,7 +107,7 @@ class GeneralClipInterpolator extends ClipInterpolator {
                     if (list == null) {
                         // first encounter of a particular target, generate a
                         // new interval list
-                        list = new ArrayList<InterpolationInterval>();
+                        list = new ArrayList<>();
                         map.put(target, list);
                         if (leftKeyValue == null) {
                             list.add(InterpolationInterval.create(

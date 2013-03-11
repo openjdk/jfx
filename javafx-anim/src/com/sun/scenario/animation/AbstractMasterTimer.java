@@ -25,15 +25,13 @@
 
 package com.sun.scenario.animation;
 
-import com.sun.javafx.animation.TickCalculation;
+import java.util.Arrays;
 import javafx.animation.AnimationTimer;
-
+import javafx.util.Callback;
+import com.sun.javafx.animation.TickCalculation;
 import com.sun.scenario.DelayedRunnable;
 import com.sun.scenario.Settings;
-import com.sun.scenario.animation.shared.CurrentTime;
 import com.sun.scenario.animation.shared.PulseReceiver;
-import java.util.Arrays;
-import javafx.util.Callback;
 
 public abstract class AbstractMasterTimer {
 
@@ -41,13 +39,17 @@ public abstract class AbstractMasterTimer {
     // to the nogap and fullspeed properties.
     private static Callback<String, Void> pcl = new Callback<String, Void>() {
         public Void call(String key) {
-            if (key.equals(FULLSPEED_PROP)) {
-                fullspeed = Settings.getBoolean(FULLSPEED_PROP);
-            } else if (key.equals(ADAPTIVE_PULSE_PROP)) {
-                useAdaptivePulse = Settings.getBoolean(ADAPTIVE_PULSE_PROP);
-            } else if (key.equals(ANIMATION_MBEAN_ENABLED)) {
-                AnimationPulse.getDefaultBean()
-                  .setEnabled(Settings.getBoolean(ANIMATION_MBEAN_ENABLED));
+            switch (key) {
+                case FULLSPEED_PROP:
+                    fullspeed = Settings.getBoolean(FULLSPEED_PROP);
+                    break;
+                case ADAPTIVE_PULSE_PROP:
+                    useAdaptivePulse = Settings.getBoolean(ADAPTIVE_PULSE_PROP);
+                    break;
+                case ANIMATION_MBEAN_ENABLED:
+                    AnimationPulse.getDefaultBean()
+                                  .setEnabled(Settings.getBoolean(ANIMATION_MBEAN_ENABLED));
+                    break;
             }
             return null;
         }
@@ -69,20 +71,24 @@ public abstract class AbstractMasterTimer {
     // pulses per second)
     protected final static String PULSE_PROP = "javafx.animation.pulse";
     protected final static String FRAMERATE_PROP = "javafx.animation.framerate";
-    protected final static String FIXED_PULSE_LENGHT_PROP = "com.sun.scenario.animation.fixed.pulse.length";
+    protected final static String FIXED_PULSE_LENGTH_PROP = "com.sun.scenario.animation.fixed.pulse.length";
 
     // property to enable AnimationPulse data gathering
     // note: it can be enabled via the MBean itself too
     protected final static String ANIMATION_MBEAN_ENABLED = "com.sun.scenario.animation.AnimationMBean.enabled";
     protected final static boolean enableAnimationMBean = false;
 
-    protected final int PULSE_DURATION = getPulseDuration(1000);
-    protected final int PULSE_DURATION_NS = getPulseDuration(1000000000);
-    protected final int PULSE_DURATION_TICKS = getPulseDuration((int)TickCalculation.fromMillis(1000));
+    private final int PULSE_DURATION_NS = getPulseDuration(1000000000);
+    private final int PULSE_DURATION_TICKS = getPulseDuration((int)TickCalculation.fromMillis(1000));
 
     private boolean paused = false;
     private long totalPausedTime;
     private long startPauseTime;
+
+    // These methods only exist for the sake of testing.
+    boolean isPaused() { return paused; }
+    long getTotalPausedTime() { return totalPausedTime; }
+    long getStartPauseTime() { return startPauseTime; }
 
     private PulseReceiver receivers[] = new PulseReceiver[2];
     private int receiversLength;
@@ -93,16 +99,14 @@ public abstract class AbstractMasterTimer {
                                                                      // snapshot
     private int animationTimersLength;
     private boolean animationTimersLocked;
+    private final boolean shouldUseNanoTime;
 
-    private Runnable activeAnimationHandler;
-    
-    // There is a memory leak possibility by having this be non-static, as
-    // Clip has a ref to this and this (may) have a ref to the enclosing class.
-    // But having it static has initialization issues (need to call
-    // shouldUseNanoTime() in the subclass during static init of the
-    // superclass).
-    // Moving to a true singleton model might help...
-    private final/* static */CurrentTime currentTime = createCurrentTime();
+    // These two variables are ONLY USED if FIXED_PULSE_LENGTH_PROP is true. In this
+    // case, instead of advancing time based on the system time (nanos etc) we instead
+    // increment each animation by a fixed length of time for each pulse. This is
+    // handy while debugging.
+    private final long fixedPulseLength = Boolean.getBoolean(FIXED_PULSE_LENGTH_PROP) ? PULSE_DURATION_NS : 0;
+    private long debugNanos = 0;
 
     private final MainLoop theMaster = new MainLoop();
 
@@ -120,14 +124,6 @@ public abstract class AbstractMasterTimer {
         return PULSE_DURATION_TICKS;
     }
     
-    protected CurrentTime createCurrentTime() {
-        if (Boolean.getBoolean(FIXED_PULSE_LENGHT_PROP)) { // Fixed time pulse is for debugging purposes only
-            FixedPulseTime time = new FixedPulseTime(PULSE_DURATION_NS);
-            return time;
-        }
-        return shouldUseNanoTime()? new NanoCurrentTime() : new MilliCurrentTime();
-    }
-    
     public void pause() {
         if (!paused) {
             startPauseTime = nanos();
@@ -143,44 +139,25 @@ public abstract class AbstractMasterTimer {
     }
     
     public long nanos() {
-        return paused? startPauseTime : currentTime.nanos() - totalPausedTime;
+        if (fixedPulseLength > 0) {
+            return debugNanos;
+        }
+
+        return paused ? startPauseTime :
+                (shouldUseNanoTime ?
+                        System.nanoTime() :
+                        System.currentTimeMillis() * 1000000) - totalPausedTime;
     }
 
     public boolean isFullspeed() {
         return fullspeed;
     }
 
-    protected abstract boolean shouldUseNanoTime();
-    
-    /** Prevent external instantiation of MasterTimer */
-    protected AbstractMasterTimer() {
-        if (Boolean.getBoolean(FIXED_PULSE_LENGHT_PROP)) { // Fixed time pulse is for debugging purposes only
-            addPulseReceiver((FixedPulseTime)currentTime);
-        }
+    /** Prevent external instantiation of MasterTimer. */
+    protected AbstractMasterTimer(boolean shouldUseNanoTime) {
+        this.shouldUseNanoTime = shouldUseNanoTime;
     }
     
-    // new methods to interact with Toolkit, will replace current interaction later
-    // for now they call the respecive methods of the old implementation
-    
-    // triggers an animation cycle, called by the platform
-    public void animationTrigger() {
-        theMaster.run();
-    }
-    
-    // return the delay to when the next pulse should be triggered
-    public long getNextPulseTime() {
-        return (theMaster.getDelay());
-    }
-    
-    public boolean isActive() {
-        return !theMaster.inactive;
-    }
-    
-    public void setActiveAnimationHandler(Runnable activeAnimationHandler) {
-        this.activeAnimationHandler = activeAnimationHandler;
-        
-    }
-
     /**
      * Adds a PulseReceiver to the list of targets being tracked against the
      * global schedule. The target should already have an absolute start time
@@ -258,11 +235,6 @@ public abstract class AbstractMasterTimer {
         if (animationTimersLength == 0) {
             theMaster.updateAnimationRunnable();
         }
-    }
-
-    @Deprecated
-    public void notifyJobsReady() {
-        postUpdateAnimationRunnable(theMaster);
     }
 
     /*
@@ -353,9 +325,6 @@ public abstract class AbstractMasterTimer {
             if (inactive != newInactive) {
                 inactive = newInactive;
                 final DelayedRunnable animationRunnable = inactive? null : this;
-                if (activeAnimationHandler != null) {
-                    activeAnimationHandler.run();
-                }
                 postUpdateAnimationRunnable(animationRunnable);
             }
         }
@@ -367,6 +336,10 @@ public abstract class AbstractMasterTimer {
     protected abstract int getPulseDuration(int precision);
 
     protected void timePulseImpl(long now) {
+        if (fixedPulseLength > 0) {
+            debugNanos += fixedPulseLength;
+            now = debugNanos;
+        }
         final PulseReceiver receiversSnapshot[] = receivers;
         final int rLength = receiversLength;
         try {

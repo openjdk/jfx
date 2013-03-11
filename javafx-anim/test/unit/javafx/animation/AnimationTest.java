@@ -25,26 +25,21 @@
 
 package javafx.animation;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.io.PrintStream;
 import javafx.animation.Animation.Status;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.util.Duration;
-
+import com.sun.scenario.ToolkitAccessor;
+import com.sun.scenario.animation.AbstractMasterTimerMock;
+import com.sun.scenario.animation.shared.ClipEnvelopeMock;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import com.sun.scenario.ToolkitAccessor;
-import com.sun.scenario.animation.AbstractMasterTimerMock;
-import com.sun.scenario.animation.shared.AnimationPulseReceiver;
-import com.sun.scenario.animation.shared.ClipEnvelopeMock;
-
-import java.io.IOException;
-import java.io.OutputStream;
-import java.io.PrintStream;
+import static org.junit.Assert.*;
 
 public class AnimationTest {
 	
@@ -57,31 +52,29 @@ public class AnimationTest {
     private static final int DEFAULT_REPEAT_COUNT = 1;
     private static final boolean DEFAULT_AUTO_REVERSE = false;
     
-	private static final double EPSILON = 1e-12;
-	
-	private AbstractMasterTimerMock timer;
-	private Animation animation;
-	private AnimationPulseReceiver pulseReceiver;
-	private ClipEnvelopeMock clipEnvelope;
+    private static final double EPSILON = 1e-12;
 
-	@Before
-	public void setUp() {
-	    timer = new AbstractMasterTimerMock();
-		pulseReceiver = new AnimationPulseReceiver(null, timer);
-		clipEnvelope = new ClipEnvelopeMock();
-		animation = new AnimationImpl(pulseReceiver, clipEnvelope, 1);
-		animation.setCycleDuration(ONE_SEC);
-		clipEnvelope.setAnimation(animation);
-	}
+    private AbstractMasterTimerMock timer;
+    private Animation animation;
+    private ClipEnvelopeMock clipEnvelope;
+
+    @Before
+    public void setUp() {
+        timer = new AbstractMasterTimerMock();
+        clipEnvelope = new ClipEnvelopeMock();
+        animation = new AnimationImpl(timer, clipEnvelope, 1);
+        animation.setCycleDuration(ONE_SEC);
+        clipEnvelope.setAnimation(animation);
+    }
 
     @After
     public void tearDown() {
         animation.stop();
     }
-	
-	@Test
-	public void testConstructors() {
-    	final Animation animation0 = new AnimationImpl();
+
+    @Test
+    public void testConstructors() {
+        final Animation animation0 = new AnimationImpl();
         assertEquals(DEFAULT_RATE, animation0.getRate(), EPSILON);
         assertEquals(0.0, animation0.getCurrentRate(), EPSILON);
         assertEquals(Duration.ZERO, animation0.getCycleDuration());
@@ -94,12 +87,12 @@ public class AnimationTest {
         assertEquals(null, animation0.getOnFinished());
         assertEquals(0, animation0.getCuePoints().size());
 
-        final Animation animation1 = new AnimationImpl(pulseReceiver, clipEnvelope, 600);
+        final Animation animation1 = new AnimationImpl(timer, clipEnvelope, 600);
         assertEquals(10.0, animation1.getTargetFramerate(), EPSILON);
-	}
-	
-	@Test
-	public void testReadOnlyProperties() {
+    }
+
+    @Test
+    public void testReadOnlyProperties() {
         // currentRate
         assertEquals("currentRate", animation.currentRateProperty().getName());
         assertEquals(animation, animation.currentRateProperty().getBean());
@@ -120,10 +113,10 @@ public class AnimationTest {
         assertEquals("status", animation.statusProperty().getName());
         assertEquals(animation, animation.statusProperty().getBean());
         
-	}
-	
-	@Test
-	public void testCalculationOfTotalDuration() {
+    }
+
+    @Test
+    public void testCalculationOfTotalDuration() {
         // 1000ms
         assertEquals(ONE_SEC, animation.getTotalDuration());
         animation.setCycleCount(0);
@@ -155,7 +148,7 @@ public class AnimationTest {
         animation.setCycleCount(Animation.INDEFINITE);
         assertEquals(Duration.INDEFINITE, animation.getTotalDuration());
         animation.setCycleCount(1);
-	}
+    }
 
     @Test
     public void testDecreaseTotalDuration() {
@@ -166,8 +159,8 @@ public class AnimationTest {
         assertEquals(Duration.ZERO, animation.getCurrentTime());
     }
 
-	@Test
-	public void testJumpTo() {
+    @Test
+    public void testJumpTo() {
         animation.setCycleDuration(TWO_SECS);
 
         // cycleCount = 1
@@ -210,29 +203,29 @@ public class AnimationTest {
         animation.jumpTo(Duration.ONE.negate());
         assertEquals(Duration.ZERO, animation.getCurrentTime());
         assertEquals(0, clipEnvelope.getLastJumpTo());
-	}
+    }
 
-	@Test
-	public void testJumpTo_ZeroLengthAnimation() {
-		animation.setCycleDuration(Duration.ZERO);
+    @Test
+    public void testJumpTo_ZeroLengthAnimation() {
+        animation.setCycleDuration(Duration.ZERO);
 
         // cycleCount = 1
-		animation.jumpTo(Duration.ZERO);
-		assertEquals(Duration.ZERO, animation.getCurrentTime());
+        animation.jumpTo(Duration.ZERO);
+        assertEquals(Duration.ZERO, animation.getCurrentTime());
         assertEquals(0, clipEnvelope.getLastJumpTo());
-		animation.jumpTo(ONE_SEC);
-		assertEquals(Duration.ZERO, animation.getCurrentTime());
+        animation.jumpTo(ONE_SEC);
+        assertEquals(Duration.ZERO, animation.getCurrentTime());
         assertEquals(0, clipEnvelope.getLastJumpTo());
 
         // cycleCount = 2
         animation.setCycleCount(2);
-		animation.jumpTo(Duration.ZERO);
-		assertEquals(Duration.ZERO, animation.getCurrentTime());
+        animation.jumpTo(Duration.ZERO);
+        assertEquals(Duration.ZERO, animation.getCurrentTime());
         assertEquals(0, clipEnvelope.getLastJumpTo());
-		animation.jumpTo(ONE_SEC);
-		assertEquals(Duration.ZERO, animation.getCurrentTime());
+        animation.jumpTo(ONE_SEC);
+        assertEquals(Duration.ZERO, animation.getCurrentTime());
         assertEquals(0, clipEnvelope.getLastJumpTo());
-	}
+    }
 
     @Test
     public void testDurationRoundingError() {
@@ -248,75 +241,75 @@ public class AnimationTest {
         assertEquals(Duration.ZERO, animation.getCurrentTime());
         assertEquals(0, clipEnvelope.getLastJumpTo());
     }
-	
-	@Test(expected=NullPointerException.class)
-	public void testJumpTo_Null() {
-		animation.jumpTo((Duration)null);
-	}
 
-	@Test(expected=IllegalArgumentException.class)
-	public void testJumpTo_UNKNOWN() {
-		animation.jumpTo(Duration.UNKNOWN);
-	}
-	
-	@Test
-	public void testJumpToCuePoint_Default() {
-		animation.getCuePoints().put("ONE_SEC", ONE_SEC);
-		animation.getCuePoints().put("THREE_SECS", THREE_SECS);
-		animation.setCycleDuration(TWO_SECS);
-		
-		// normal jumps
-		animation.jumpTo("end");
-		assertEquals(TWO_SECS, animation.getCurrentTime());
-		animation.jumpTo("start");
-		assertEquals(Duration.ZERO, animation.getCurrentTime());
-		animation.jumpTo("ONE_SEC");
-		assertEquals(ONE_SEC, animation.getCurrentTime());
-		
-		// jump to non-existing cue-point
-		animation.jumpTo("undefined");
-		assertEquals(ONE_SEC, animation.getCurrentTime());
-		
-		// jump to cue-point behind end of animation
-		animation.jumpTo("THREE_SECS");
-		assertEquals(TWO_SECS, animation.getCurrentTime());
-	}
-	
-	@Test
-	public void testJumpToCuePoint_ZeroLengthAnimation() {
-		animation.getCuePoints().put("ONE_SEC", ONE_SEC);
-		animation.setCycleDuration(Duration.ZERO);
-		
-		animation.jumpTo("start");
-		assertEquals(Duration.ZERO, animation.getCurrentTime());
-		animation.jumpTo("end");
-		assertEquals(Duration.ZERO, animation.getCurrentTime());
-		animation.jumpTo("ONE_SEC");
-		assertEquals(Duration.ZERO, animation.getCurrentTime());
-	}
-	
-	@Test(expected=NullPointerException.class)
-	public void testJumpToCuePoint_Null() {
-		animation.jumpTo((String)null);
-	}
-	
-	@Test
-	public void testPlay() {
+    @Test(expected=NullPointerException.class)
+    public void testJumpTo_Null() {
+        animation.jumpTo((Duration)null);
+    }
+
+    @Test(expected=IllegalArgumentException.class)
+    public void testJumpTo_UNKNOWN() {
+        animation.jumpTo(Duration.UNKNOWN);
+    }
+
+    @Test
+    public void testJumpToCuePoint_Default() {
+        animation.getCuePoints().put("ONE_SEC", ONE_SEC);
+        animation.getCuePoints().put("THREE_SECS", THREE_SECS);
+        animation.setCycleDuration(TWO_SECS);
+
+        // normal jumps
+        animation.jumpTo("end");
+        assertEquals(TWO_SECS, animation.getCurrentTime());
+        animation.jumpTo("start");
+        assertEquals(Duration.ZERO, animation.getCurrentTime());
+        animation.jumpTo("ONE_SEC");
+        assertEquals(ONE_SEC, animation.getCurrentTime());
+
+        // jump to non-existing cue-point
+        animation.jumpTo("undefined");
+        assertEquals(ONE_SEC, animation.getCurrentTime());
+
+        // jump to cue-point behind end of animation
+        animation.jumpTo("THREE_SECS");
+        assertEquals(TWO_SECS, animation.getCurrentTime());
+    }
+
+    @Test
+    public void testJumpToCuePoint_ZeroLengthAnimation() {
+        animation.getCuePoints().put("ONE_SEC", ONE_SEC);
+        animation.setCycleDuration(Duration.ZERO);
+
+        animation.jumpTo("start");
+        assertEquals(Duration.ZERO, animation.getCurrentTime());
+        animation.jumpTo("end");
+        assertEquals(Duration.ZERO, animation.getCurrentTime());
+        animation.jumpTo("ONE_SEC");
+        assertEquals(Duration.ZERO, animation.getCurrentTime());
+    }
+
+    @Test(expected=NullPointerException.class)
+    public void testJumpToCuePoint_Null() {
+        animation.jumpTo((String)null);
+    }
+
+    @Test
+    public void testPlay() {
         final OnFinishedListener listener = new OnFinishedListener();
         animation.setOnFinished(listener);
 
-		// stopped timeline
+        // stopped timeline
         listener.wasCalled = false;
         animation.play();
         assertEquals(Status.RUNNING, animation.getStatus());
         assertFalse(listener.wasCalled);
-        assertTrue(timer.containsPulseReceiver(pulseReceiver));
+        assertTrue(timer.containsPulseReceiver(animation.pulseReceiver));
 
         // calling play on playing timeline
         animation.play();
         assertEquals(Status.RUNNING, animation.getStatus());
         assertFalse(listener.wasCalled);
-        assertTrue(timer.containsPulseReceiver(pulseReceiver));
+        assertTrue(timer.containsPulseReceiver(animation.pulseReceiver));
         animation.stop();
 
         // stopped timeline, rate = 0
@@ -325,7 +318,7 @@ public class AnimationTest {
         animation.play();
         assertEquals(Status.RUNNING, animation.getStatus());
         assertFalse(listener.wasCalled);
-        assertFalse(timer.containsPulseReceiver(pulseReceiver));
+        assertFalse(timer.containsPulseReceiver(animation.pulseReceiver));
         animation.stop();
         animation.setRate(1.0);
 
@@ -335,7 +328,7 @@ public class AnimationTest {
         animation.play();
         assertEquals(Status.STOPPED, animation.getStatus());
         assertTrue(listener.wasCalled);
-        assertFalse(timer.containsPulseReceiver(pulseReceiver));
+        assertFalse(timer.containsPulseReceiver(animation.pulseReceiver));
         animation.stop();
         animation.setCycleDuration(ONE_SEC);
 
@@ -344,7 +337,7 @@ public class AnimationTest {
         animation.pause();
         animation.play();
         assertEquals(Status.RUNNING, animation.getStatus());
-        assertTrue(timer.containsPulseReceiver(pulseReceiver));
+        assertTrue(timer.containsPulseReceiver(animation.pulseReceiver));
         animation.stop();
 
         // paused timeline, rate = 0
@@ -353,18 +346,18 @@ public class AnimationTest {
         animation.setRate(0.0);
         animation.play();
         assertEquals(Status.RUNNING, animation.getStatus());
-        assertFalse(timer.containsPulseReceiver(pulseReceiver));
-	}
-	
-	@Test
-	public void testStop() {
+        assertFalse(timer.containsPulseReceiver(animation.pulseReceiver));
+    }
+
+    @Test
+    public void testStop() {
         // stopped timeline
         animation.jumpTo(ONE_SEC);
         animation.stop();
         assertEquals(Status.STOPPED, animation.getStatus());
         assertEquals(0.0, animation.getCurrentRate(), EPSILON);
         assertEquals(ONE_SEC, animation.getCurrentTime());
-        assertFalse(timer.containsPulseReceiver(pulseReceiver));
+        assertFalse(timer.containsPulseReceiver(animation.pulseReceiver));
 
         // playing timeline
         animation.jumpTo(ONE_SEC);
@@ -373,7 +366,7 @@ public class AnimationTest {
         assertEquals(Status.STOPPED, animation.getStatus());
         assertEquals(0.0, animation.getCurrentRate(), EPSILON);
         assertEquals(Duration.ZERO, animation.getCurrentTime());
-        assertFalse(timer.containsPulseReceiver(pulseReceiver));
+        assertFalse(timer.containsPulseReceiver(animation.pulseReceiver));
 
         // paused timeline
         animation.jumpTo(ONE_SEC);
@@ -383,17 +376,17 @@ public class AnimationTest {
         assertEquals(Status.STOPPED, animation.getStatus());
         assertEquals(0.0, animation.getCurrentRate(), EPSILON);
         assertEquals(Duration.ZERO, animation.getCurrentTime());
-        assertFalse(timer.containsPulseReceiver(pulseReceiver));
-	}
-	
-	@Test
-	public void testPause() {
+        assertFalse(timer.containsPulseReceiver(animation.pulseReceiver));
+    }
+
+    @Test
+    public void testPause() {
         // stopped timeline
         animation.jumpTo(ONE_SEC);
         animation.pause();
         assertEquals(Status.STOPPED, animation.getStatus());
         assertEquals(0.0, animation.getCurrentRate(), EPSILON);
-        assertFalse(timer.containsPulseReceiver(pulseReceiver));
+        assertFalse(timer.containsPulseReceiver(animation.pulseReceiver));
 
         // playing timeline
         animation.jumpTo(ONE_SEC);
@@ -401,7 +394,7 @@ public class AnimationTest {
         animation.pause();
         assertEquals(Status.PAUSED, animation.getStatus());
         assertEquals(0.0, animation.getCurrentRate(), EPSILON);
-        assertFalse(timer.containsPulseReceiver(pulseReceiver));
+        assertFalse(timer.containsPulseReceiver(animation.pulseReceiver));
 
         // paused timeline
         animation.jumpTo(ONE_SEC);
@@ -410,13 +403,13 @@ public class AnimationTest {
         animation.pause();
         assertEquals(Status.PAUSED, animation.getStatus());
         assertEquals(0.0, animation.getCurrentRate(), EPSILON);
-        assertFalse(timer.containsPulseReceiver(pulseReceiver));
-	}
-	
-	@Test
-	public void testStart() {
+        assertFalse(timer.containsPulseReceiver(animation.pulseReceiver));
+    }
+
+    @Test
+    public void testStart() {
         // cycleDuration = 1000ms
-		assertTrue(animation.impl_startable(true));
+        assertTrue(animation.impl_startable(true));
         animation.impl_start(true);
         assertEquals(Status.RUNNING, animation.getStatus());
         assertEquals(1.0, animation.getCurrentRate(), EPSILON);
@@ -431,7 +424,7 @@ public class AnimationTest {
         animation.setRate(-2.0);
         animation.setAutoReverse(true);
         animation.setCycleCount(Animation.INDEFINITE);
-		assertTrue(animation.impl_startable(true));
+        assertTrue(animation.impl_startable(true));
         animation.impl_start(true);
         assertEquals(Status.RUNNING, animation.getStatus());
         assertEquals(-2.0, animation.getCurrentRate(), EPSILON);
@@ -443,8 +436,8 @@ public class AnimationTest {
 
         // cycleDuration = 0
         animation.setCycleDuration(Duration.ZERO);
-		assertFalse(animation.impl_startable(true));
-	}
+        assertFalse(animation.impl_startable(true));
+    }
 
     @Test
     public void testFinished() {
@@ -539,7 +532,7 @@ public class AnimationTest {
     @Test
     public void testFullSpeedResolution() {
         final int resolution = ToolkitAccessor.getMasterTimer().getDefaultResolution();
-        
+
         // send pulse
         animation.impl_timePulse(4 * resolution);
         assertEquals(4 * resolution, clipEnvelope.getLastTimePulse());
@@ -561,8 +554,8 @@ public class AnimationTest {
     @Test
     public void testCustomResolution() {
         final int resolution = 100;
-        animation = new AnimationImpl(pulseReceiver, clipEnvelope, resolution);
-        
+        animation = new AnimationImpl(timer, clipEnvelope, resolution);
+
         // send pulse
         animation.impl_timePulse(4 * resolution);
         assertEquals(4 * resolution, clipEnvelope.getLastTimePulse());

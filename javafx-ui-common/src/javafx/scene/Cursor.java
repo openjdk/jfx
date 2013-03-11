@@ -25,12 +25,12 @@
 
 package javafx.scene;
 
-import com.sun.javafx.cursor.CursorFrame;
-import com.sun.javafx.cursor.CursorType;
-import com.sun.javafx.cursor.StandardCursorFrame;
 import java.net.MalformedURLException;
 import java.net.URL;
 import javafx.scene.image.Image;
+import com.sun.javafx.cursor.CursorFrame;
+import com.sun.javafx.cursor.CursorType;
+import com.sun.javafx.cursor.StandardCursorFrame;
 
 /**
  * A class to encapsulate the bitmap representation of the mouse cursor.
@@ -182,7 +182,7 @@ public abstract class Cursor {
 
     /**
      * Deactivates the cursor. Cursor should be deactivated, when no longer in
-     * use to make it collectable by GC.
+     * use to make it collectible by GC.
      */
     void deactivate() {
     }

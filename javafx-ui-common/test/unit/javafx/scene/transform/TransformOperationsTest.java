@@ -25,23 +25,24 @@
 
 package javafx.scene.transform;
 
-import com.sun.javafx.scene.transform.TransformUtils;
+import java.util.Arrays;
+import java.util.Collection;
 import javafx.beans.InvalidationListener;
-import javafx.beans.value.ChangeListener;
 import javafx.beans.Observable;
+import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.event.EventHandler;
-import java.util.Collection;
-import org.junit.runners.Parameterized.Parameters;
-import org.junit.runners.Parameterized;
-import java.util.Arrays;
-import javafx.geometry.Point3D;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import com.sun.javafx.test.TransformHelper;
 import javafx.geometry.BoundingBox;
 import javafx.geometry.Bounds;
 import javafx.geometry.Point2D;
+import javafx.geometry.Point3D;
+import com.sun.javafx.scene.transform.TransformUtils;
+import com.sun.javafx.test.TransformHelper;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+import org.junit.runners.Parameterized.Parameters;
+
 import static org.junit.Assert.*;
 
 @RunWith(Parameterized.class)
@@ -2460,7 +2461,7 @@ public class TransformOperationsTest {
     }
 
     @Test
-    public void testSetOnTtransformChanged() {
+    public void testSetOnTransformChanged() {
         Transform clone = t.clone();
 
         EventHandler<TransformChangedEvent> ontc =

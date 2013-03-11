@@ -25,7 +25,6 @@
 
 package com.sun.scenario.animation.shared;
 
-import com.sun.javafx.animation.TickCalculation;
 import javafx.animation.Interpolator;
 import javafx.animation.KeyValue;
 import javafx.beans.value.WritableBooleanValue;
@@ -59,25 +58,25 @@ public abstract class InterpolationInterval {
                 return new BooleanInterpolationInterval(rightKeyValue, ticks,
                         leftKeyValue.getEndValue());
             case DOUBLE:
-                return (((Interpolator) leftKeyValue.getInterpolator() instanceof NumberTangentInterpolator) || ((Interpolator) rightKeyValue
+                return ((leftKeyValue.getInterpolator() instanceof NumberTangentInterpolator) || (rightKeyValue
                         .getInterpolator() instanceof NumberTangentInterpolator)) ? new TangentDoubleInterpolationInterval(
                         rightKeyValue, ticks, leftKeyValue, duration)
                         : new DoubleInterpolationInterval(rightKeyValue,
                                 ticks, leftKeyValue.getEndValue());
             case FLOAT:
-                return (((Interpolator) leftKeyValue.getInterpolator() instanceof NumberTangentInterpolator) || ((Interpolator) rightKeyValue
+                return ((leftKeyValue.getInterpolator() instanceof NumberTangentInterpolator) || (rightKeyValue
                         .getInterpolator() instanceof NumberTangentInterpolator)) ? new TangentFloatInterpolationInterval(
                         rightKeyValue, ticks, leftKeyValue, duration)
                         : new FloatInterpolationInterval(rightKeyValue, ticks,
                                 leftKeyValue.getEndValue());
             case INTEGER:
-                return (((Interpolator) leftKeyValue.getInterpolator() instanceof NumberTangentInterpolator) || ((Interpolator) rightKeyValue
+                return ((leftKeyValue.getInterpolator() instanceof NumberTangentInterpolator) || (rightKeyValue
                         .getInterpolator() instanceof NumberTangentInterpolator)) ? new TangentIntegerInterpolationInterval(
                         rightKeyValue, ticks, leftKeyValue, duration)
                         : new IntegerInterpolationInterval(rightKeyValue,
                                 ticks, leftKeyValue.getEndValue());
             case LONG:
-                return (((Interpolator) leftKeyValue.getInterpolator() instanceof NumberTangentInterpolator) || ((Interpolator) rightKeyValue
+                return ((leftKeyValue.getInterpolator() instanceof NumberTangentInterpolator) || (rightKeyValue
                         .getInterpolator() instanceof NumberTangentInterpolator)) ? new TangentLongInterpolationInterval(
                         rightKeyValue, ticks, leftKeyValue, duration)
                         : new LongInterpolationInterval(rightKeyValue, ticks,
@@ -95,20 +94,20 @@ public abstract class InterpolationInterval {
             case BOOLEAN:
                 return new BooleanInterpolationInterval(rightKeyValue, ticks);
             case DOUBLE:
-                return ((Interpolator) rightKeyValue.getInterpolator() instanceof NumberTangentInterpolator) ? new TangentDoubleInterpolationInterval(
+                return (rightKeyValue.getInterpolator() instanceof NumberTangentInterpolator) ? new TangentDoubleInterpolationInterval(
                         rightKeyValue, ticks)
                         : new DoubleInterpolationInterval(rightKeyValue, ticks);
             case FLOAT:
-                return ((Interpolator) rightKeyValue.getInterpolator() instanceof NumberTangentInterpolator) ? new TangentFloatInterpolationInterval(
+                return (rightKeyValue.getInterpolator() instanceof NumberTangentInterpolator) ? new TangentFloatInterpolationInterval(
                         rightKeyValue, ticks)
                         : new FloatInterpolationInterval(rightKeyValue, ticks);
             case INTEGER:
-                return ((Interpolator) rightKeyValue.getInterpolator() instanceof NumberTangentInterpolator) ? new TangentIntegerInterpolationInterval(
+                return (rightKeyValue.getInterpolator() instanceof NumberTangentInterpolator) ? new TangentIntegerInterpolationInterval(
                         rightKeyValue, ticks)
                         : new IntegerInterpolationInterval(rightKeyValue,
                                 ticks);
             case LONG:
-                return ((Interpolator) rightKeyValue.getInterpolator() instanceof NumberTangentInterpolator) ? new TangentLongInterpolationInterval(
+                return (rightKeyValue.getInterpolator() instanceof NumberTangentInterpolator) ? new TangentLongInterpolationInterval(
                         rightKeyValue, ticks) : new LongInterpolationInterval(
                         rightKeyValue, ticks);
             case OBJECT:
@@ -179,7 +178,7 @@ public abstract class InterpolationInterval {
 
             return oneMinusTSquared * oneMinusT * p0 + 3 * oneMinusTSquared * t
                     * p1 + 3 * oneMinusT * tSquared * p2 + tSquared * t * p3;
-        };
+        }
 
         protected final void recalculateStartValue(double leftValue) {
             p0 = leftValue;
@@ -222,7 +221,7 @@ public abstract class InterpolationInterval {
             final boolean value = rightInterpolator.interpolate(leftValue,
                     rightValue, frac);
             target.set(value);
-        };
+        }
 
         @Override
         public void recalculateStartValue() {
@@ -262,7 +261,7 @@ public abstract class InterpolationInterval {
             final double value = rightInterpolator.interpolate(leftValue,
                     rightValue, frac);
             target.set(value);
-        };
+        }
 
         @Override
         public void recalculateStartValue() {
@@ -293,7 +292,7 @@ public abstract class InterpolationInterval {
         @Override
         public void interpolate(double frac) {
             target.set(calculate(frac));
-        };
+        }
 
         @Override
         public void recalculateStartValue() {
@@ -333,7 +332,7 @@ public abstract class InterpolationInterval {
             final float value = (float) rightInterpolator.interpolate(
                     leftValue, rightValue, frac);
             target.set(value);
-        };
+        }
 
         @Override
         public void recalculateStartValue() {
@@ -364,7 +363,7 @@ public abstract class InterpolationInterval {
         @Override
         public void interpolate(double frac) {
             target.set((float) calculate(frac));
-        };
+        }
 
         @Override
         public void recalculateStartValue() {
@@ -404,7 +403,7 @@ public abstract class InterpolationInterval {
             final int value = rightInterpolator.interpolate(leftValue,
                     rightValue, frac);
             target.set(value);
-        };
+        }
 
         @Override
         public void recalculateStartValue() {
@@ -435,7 +434,7 @@ public abstract class InterpolationInterval {
         @Override
         public void interpolate(double frac) {
             target.set((int) Math.round(calculate(frac)));
-        };
+        }
 
         @Override
         public void recalculateStartValue() {
@@ -475,7 +474,7 @@ public abstract class InterpolationInterval {
             final long value = rightInterpolator.interpolate(leftValue,
                     rightValue, frac);
             target.set(value);
-        };
+        }
 
         @Override
         public void recalculateStartValue() {
@@ -506,7 +505,7 @@ public abstract class InterpolationInterval {
         @Override
         public void interpolate(double frac) {
             target.set(Math.round(calculate(frac)));
-        };
+        }
 
         @Override
         public void recalculateStartValue() {
@@ -543,7 +542,7 @@ public abstract class InterpolationInterval {
             final Object value = rightInterpolator.interpolate(leftValue,
                     rightValue, frac);
             target.setValue(value);
-        };
+        }
 
         @Override
         public void recalculateStartValue() {

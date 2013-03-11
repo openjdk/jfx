@@ -44,8 +44,8 @@ import javafx.util.Callback;
  */
 public class Settings {
 
-    private final Map<String, String> settings = new HashMap<String, String>(5);
-    private final CopyOnWriteArrayList<Callback<String, Void>> listeners = new CopyOnWriteArrayList<Callback<String, Void>>();
+    private final Map<String, String> settings = new HashMap<>(5);
+    private final CopyOnWriteArrayList<Callback<String, Void>> listeners = new CopyOnWriteArrayList<>();
     private static final Object SETTINGS_KEY;
     static {
         SETTINGS_KEY = new StringBuilder("SettingsKey");

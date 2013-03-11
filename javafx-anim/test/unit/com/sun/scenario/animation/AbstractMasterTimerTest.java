@@ -25,17 +25,13 @@
 
 package com.sun.scenario.animation;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
 import javafx.animation.AnimationTimer;
-
+import com.sun.scenario.DelayedRunnable;
+import com.sun.scenario.animation.shared.PulseReceiver;
 import org.junit.Before;
 import org.junit.Test;
 
-import com.sun.scenario.DelayedRunnable;
-import com.sun.scenario.animation.shared.CurrentTime;
-import com.sun.scenario.animation.shared.PulseReceiver;
+import static org.junit.Assert.*;
 
 public class AbstractMasterTimerTest {
     
@@ -162,6 +158,10 @@ public class AbstractMasterTimerTest {
         private long nanos;
         private DelayedRunnable animationRunnable;
         
+        protected AbstractMasterTimerStub() {
+            super(true);
+        }
+
         public void setNanos(long nanos) {
             this.nanos = nanos;
         }
@@ -172,19 +172,8 @@ public class AbstractMasterTimerTest {
             }
         }
 
-        @Override
-        protected CurrentTime createCurrentTime() {
-            return new CurrentTime() {
-
-                @Override
-                public long nanos() {
-                    return nanos;
-                }};
-        }
-        
-        @Override
-        protected boolean shouldUseNanoTime() {
-            return true;
+        @Override public long nanos() {
+            return isPaused() ? getStartPauseTime() : nanos - getTotalPausedTime();
         }
 
         @Override

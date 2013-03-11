@@ -59,7 +59,7 @@ public class FiniteClipEnvelope extends ClipEnvelope {
     @Override
     public ClipEnvelope setCycleDuration(Duration cycleDuration) {
         if (cycleDuration.isIndefinite()) {
-            return ClipEnvelopeFactory.create(animation);
+            return create(animation);
         }
         updateCycleTicks(cycleDuration);
         updateTotalTicks();
@@ -69,7 +69,7 @@ public class FiniteClipEnvelope extends ClipEnvelope {
     @Override
     public ClipEnvelope setCycleCount(int cycleCount) {
         if ((cycleCount == 1) || (cycleCount == Animation.INDEFINITE)) {
-            return ClipEnvelopeFactory.create(animation);
+            return create(animation);
         }
         this.cycleCount = cycleCount;
         updateTotalTicks();

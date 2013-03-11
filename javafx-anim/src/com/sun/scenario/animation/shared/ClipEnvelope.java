@@ -25,9 +25,9 @@
 
 package com.sun.scenario.animation.shared;
 
-import com.sun.javafx.animation.TickCalculation;
 import javafx.animation.Animation;
 import javafx.util.Duration;
+import com.sun.javafx.animation.TickCalculation;
 
 /**
  * An instance of ClipEnvelope handles the loop-part of a clip.
@@ -39,7 +39,7 @@ import javafx.util.Duration;
  * values, triggering the action-functions, ...)
  * 
  * Both classes have an abstract public definition and can only be created using
- * the factory method create(). The intend is to provide a general
+ * the factory method create(). The intent is to provide a general
  * implementation plus eventually some fast-track implementations for common use
  * cases.
  */
@@ -66,6 +66,16 @@ public abstract class ClipEnvelope {
             final Duration cycleDuration = animation.getCycleDuration();
             cycleTicks = TickCalculation.fromDuration(cycleDuration);
             rate = animation.getRate();
+        }
+    }
+
+    public static ClipEnvelope create(Animation animation) {
+        if ((animation.getCycleCount() == 1) || (animation.getCycleDuration().isIndefinite())) {
+            return new SingleLoopClipEnvelope(animation);
+        } else if (animation.getCycleCount() == Animation.INDEFINITE) {
+            return new InfiniteClipEnvelope(animation);
+        } else {
+            return new FiniteClipEnvelope(animation);
         }
     }
 

@@ -25,10 +25,9 @@
 
 package com.sun.scenario.animation;
 
-import com.sun.javafx.animation.TickCalculation;
 import java.util.HashSet;
 import java.util.Set;
-
+import com.sun.javafx.animation.TickCalculation;
 import com.sun.scenario.DelayedRunnable;
 import com.sun.scenario.animation.shared.PulseReceiver;
 
@@ -38,6 +37,10 @@ public class AbstractMasterTimerMock extends AbstractMasterTimer {
     
     private long nanos;
     
+    public AbstractMasterTimerMock() {
+        super(true);
+    }
+
     public void setNanos(long nanos) {
         this.nanos = nanos;
     }
@@ -45,11 +48,6 @@ public class AbstractMasterTimerMock extends AbstractMasterTimer {
     @Override
     public long nanos() {
         return nanos;
-    }
-
-    @Override
-    protected boolean shouldUseNanoTime() {
-        return true;
     }
 
     @Override

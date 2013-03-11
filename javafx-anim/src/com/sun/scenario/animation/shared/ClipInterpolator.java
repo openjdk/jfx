@@ -38,10 +38,11 @@ public abstract class ClipInterpolator {
     }
 
     /**
-     * Returns keyFrames.length
+     * Figures out the number of "real" key frames. The user may not have specified the "zero" key
+     * frame, in which case we end up inferring an additional zero key frame on the array.
      * 
-     * @param keyFrames
-     * @return
+     * @param keyFrames The key frames. Must not be null.
+     * @return The "real" number of key frames
      */
     static int getRealKeyFrameCount(KeyFrame[] keyFrames) {
         final int length = keyFrames.length;

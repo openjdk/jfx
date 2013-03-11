@@ -27,6 +27,7 @@ package com.sun.scenario;
 
 public interface DelayedRunnable extends Runnable {
     /**
+     * Gets the delay <strong>in milliseconds</strong>.
      * @return delay in millis
      */
     public long getDelay();

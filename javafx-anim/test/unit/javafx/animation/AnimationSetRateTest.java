@@ -26,354 +26,350 @@
 package javafx.animation;
 
 
-import static org.junit.Assert.assertEquals;
 import javafx.animation.Animation.Status;
 import javafx.util.Duration;
-
+import com.sun.scenario.animation.AbstractMasterTimerMock;
+import com.sun.scenario.animation.shared.ClipEnvelopeMock;
 import org.junit.Before;
 import org.junit.Test;
 
-import com.sun.scenario.animation.AbstractMasterTimerMock;
-import com.sun.scenario.animation.shared.AnimationPulseReceiver;
-import com.sun.scenario.animation.shared.ClipEnvelopeMock;
+import static org.junit.Assert.*;
 
 public class AnimationSetRateTest {
 
-	private static final double EPSILON = 1e-12;
-	
-	private AbstractMasterTimerMock timer;
-	private Animation animation;
-	private AnimationPulseReceiver pulseReceiver;
-	private ClipEnvelopeMock clipEnvelope;
+    private static final double EPSILON = 1e-12;
 
-	@Before
-	public void setUp() throws Exception {
-	    timer = new AbstractMasterTimerMock();
-		pulseReceiver = new AnimationPulseReceiver(null, timer);
-		clipEnvelope = new ClipEnvelopeMock();
-		animation = new AnimationImpl(pulseReceiver, clipEnvelope, 1);
-		animation.setCycleDuration(Duration.millis(1000));
-		clipEnvelope.setAnimation(animation);
-	}
-	
-	private void assertAnimation(double rate, double currentRate, Status status, boolean addedToMasterTimer) {
-		assertEquals(rate, animation.getRate(), EPSILON);
-		assertEquals(currentRate, animation.getCurrentRate(), EPSILON);
-		assertEquals(status, animation.getStatus());
-		assertEquals(addedToMasterTimer, timer.containsPulseReceiver(pulseReceiver));
-	}
+    private AbstractMasterTimerMock timer;
+    private Animation animation;
+    private ClipEnvelopeMock clipEnvelope;
 
-	@Test
-	public void testSetRate() {
-		// changing the rate of a playing animation
-		animation.play();
-		animation.setRate(3.0);
-		assertAnimation(3.0, 3.0, Status.RUNNING, true);
-		
-		// toggling a playing animation
-		animation.setRate(-2.0);
-		assertAnimation(-2.0, -2.0, Status.RUNNING, true);
+    @Before
+    public void setUp() throws Exception {
+        timer = new AbstractMasterTimerMock();
+        clipEnvelope = new ClipEnvelopeMock();
+        animation = new AnimationImpl(timer, clipEnvelope, 1);
+        animation.setCycleDuration(Duration.millis(1000));
+        clipEnvelope.setAnimation(animation);
+    }
+
+    private void assertAnimation(double rate, double currentRate, Status status, boolean addedToMasterTimer) {
+        assertEquals(rate, animation.getRate(), EPSILON);
+        assertEquals(currentRate, animation.getCurrentRate(), EPSILON);
+        assertEquals(status, animation.getStatus());
+        assertEquals(addedToMasterTimer, timer.containsPulseReceiver(animation.pulseReceiver));
+    }
+
+    @Test
+    public void testSetRate() {
+        // changing the rate of a playing animation
+        animation.play();
+        animation.setRate(3.0);
+        assertAnimation(3.0, 3.0, Status.RUNNING, true);
+
+        // toggling a playing animation
+        animation.setRate(-2.0);
+        assertAnimation(-2.0, -2.0, Status.RUNNING, true);
 
         // changing the rate
         animation.setRate(-2.5);
-		assertAnimation(-2.5, -2.5, Status.RUNNING, true);
+        assertAnimation(-2.5, -2.5, Status.RUNNING, true);
 
         // toggling back
         animation.setRate(1.5);
-		assertAnimation(1.5, 1.5, Status.RUNNING, true);
+        assertAnimation(1.5, 1.5, Status.RUNNING, true);
 
-		// changing the rate of a animation playing in reverse
-		animation.impl_setCurrentRate(-1.5);
-		animation.setRate(2.2);
-		assertAnimation(2.2, -2.2, Status.RUNNING, true);
-		
-		// toggling a animation playing in reverse
-		animation.setRate(-1.8);
-		assertAnimation(-1.8, 1.8, Status.RUNNING, true);
+        // changing the rate of a animation playing in reverse
+        animation.impl_setCurrentRate(-1.5);
+        animation.setRate(2.2);
+        assertAnimation(2.2, -2.2, Status.RUNNING, true);
+
+        // toggling a animation playing in reverse
+        animation.setRate(-1.8);
+        assertAnimation(-1.8, 1.8, Status.RUNNING, true);
 
         // changing the rate
         animation.setRate(-1.3);
-		assertAnimation(-1.3, 1.3, Status.RUNNING, true);
+        assertAnimation(-1.3, 1.3, Status.RUNNING, true);
 
         // toggling back
         animation.setRate(0.5);
-		assertAnimation(0.5, -0.5, Status.RUNNING, true);
-	}
-	
-	@Test
-	public void testSetRateOfStoppedAnimation() {
-		// changing the rate
-		animation.setRate(2.0);
-		assertAnimation(2.0, 0.0, Status.STOPPED, false);
-		animation.play();
-		assertAnimation(2.0, 2.0, Status.RUNNING, true);
+        assertAnimation(0.5, -0.5, Status.RUNNING, true);
+    }
 
-		// toggling the rate of a stopped animation
-		animation.stop();
-		animation.setRate(-1.0);
-		assertAnimation(-1.0, 0.0, Status.STOPPED, false);
-		animation.play();
-		assertAnimation(-1.0, -1.0, Status.RUNNING, true);
+    @Test
+    public void testSetRateOfStoppedAnimation() {
+        // changing the rate
+        animation.setRate(2.0);
+        assertAnimation(2.0, 0.0, Status.STOPPED, false);
+        animation.play();
+        assertAnimation(2.0, 2.0, Status.RUNNING, true);
+
+        // toggling the rate of a stopped animation
+        animation.stop();
+        animation.setRate(-1.0);
+        assertAnimation(-1.0, 0.0, Status.STOPPED, false);
+        animation.play();
+        assertAnimation(-1.0, -1.0, Status.RUNNING, true);
 
         // toggling back
-		animation.stop();
+        animation.stop();
         animation.setRate(3.0);
-		assertAnimation(3.0, 0.0, Status.STOPPED, false);
-		animation.play();
-		assertAnimation(3.0, 3.0, Status.RUNNING, true);
+        assertAnimation(3.0, 0.0, Status.STOPPED, false);
+        animation.play();
+        assertAnimation(3.0, 3.0, Status.RUNNING, true);
 
-		// setting rate of stopped animation to zero
-		animation.stop();
-		animation.setRate(0);
-		assertAnimation(0.0, 0.0, Status.STOPPED, false);
-		animation.play();
-		assertAnimation(0.0, 0.0, Status.RUNNING, false);
+        // setting rate of stopped animation to zero
+        animation.stop();
+        animation.setRate(0);
+        assertAnimation(0.0, 0.0, Status.STOPPED, false);
+        animation.play();
+        assertAnimation(0.0, 0.0, Status.RUNNING, false);
 
-		// setting rate of stopped animation to non-zero
-		animation.stop();
-		animation.setRate(1.5);
-		assertAnimation(1.5, 0.0, Status.STOPPED, false);
-		animation.play();
-		assertAnimation(1.5, 1.5, Status.RUNNING, true);
+        // setting rate of stopped animation to non-zero
+        animation.stop();
+        animation.setRate(1.5);
+        assertAnimation(1.5, 0.0, Status.STOPPED, false);
+        animation.play();
+        assertAnimation(1.5, 1.5, Status.RUNNING, true);
 
-		// setting rate of stopped animation to zero
-		animation.stop();
-		animation.setRate(0);
-		assertAnimation(0.0, 0.0, Status.STOPPED, false);
-		animation.play();
-		assertAnimation(0.0, 0.0, Status.RUNNING, false);
+        // setting rate of stopped animation to zero
+        animation.stop();
+        animation.setRate(0);
+        assertAnimation(0.0, 0.0, Status.STOPPED, false);
+        animation.play();
+        assertAnimation(0.0, 0.0, Status.RUNNING, false);
 
-		// toggling rate of stopped animation to non-zero
-		animation.stop();
-		animation.setRate(-0.5);
-		assertAnimation(-0.5, 0.0, Status.STOPPED, false);
-		animation.play();
-		assertAnimation(-0.5, -0.5, Status.RUNNING, true);
+        // toggling rate of stopped animation to non-zero
+        animation.stop();
+        animation.setRate(-0.5);
+        assertAnimation(-0.5, 0.0, Status.STOPPED, false);
+        animation.play();
+        assertAnimation(-0.5, -0.5, Status.RUNNING, true);
 
-		// setting rate of stopped animation to zero
-		animation.stop();
-		animation.setRate(0);
-		assertAnimation(0.0, 0.0, Status.STOPPED, false);
-		animation.play();
-		assertAnimation(0.0, 0.0, Status.RUNNING, false);
+        // setting rate of stopped animation to zero
+        animation.stop();
+        animation.setRate(0);
+        assertAnimation(0.0, 0.0, Status.STOPPED, false);
+        animation.play();
+        assertAnimation(0.0, 0.0, Status.RUNNING, false);
 
-		// setting rate of stopped animation to non-zero
-		animation.stop();
-		animation.setRate(-2.3);
-		assertAnimation(-2.3, 0.0, Status.STOPPED, false);
-		animation.play();
-		assertAnimation(-2.3, -2.3, Status.RUNNING, true);
+        // setting rate of stopped animation to non-zero
+        animation.stop();
+        animation.setRate(-2.3);
+        assertAnimation(-2.3, 0.0, Status.STOPPED, false);
+        animation.play();
+        assertAnimation(-2.3, -2.3, Status.RUNNING, true);
 
-		// setting rate of stopped animation to zero
-		animation.stop();
-		animation.setRate(0);
-		assertAnimation(0.0, 0.0, Status.STOPPED, false);
-		animation.play();
-		assertAnimation(0.0, 0.0, Status.RUNNING, false);
+        // setting rate of stopped animation to zero
+        animation.stop();
+        animation.setRate(0);
+        assertAnimation(0.0, 0.0, Status.STOPPED, false);
+        animation.play();
+        assertAnimation(0.0, 0.0, Status.RUNNING, false);
 
-		// toggling rate of stopped animation to non-zero
-		animation.stop();
-		animation.setRate(1.7);
-		assertAnimation(1.7, 0.0, Status.STOPPED, false);
-		animation.play();
-		assertAnimation(1.7, 1.7, Status.RUNNING, true);
+        // toggling rate of stopped animation to non-zero
+        animation.stop();
+        animation.setRate(1.7);
+        assertAnimation(1.7, 0.0, Status.STOPPED, false);
+        animation.play();
+        assertAnimation(1.7, 1.7, Status.RUNNING, true);
     }
 
     @Test
     public void testSetRateToZeroForRunningAnimation() {
-		// changing the rate of a playing animation
-		animation.play();
+        // changing the rate of a playing animation
+        animation.play();
         animation.setRate(0.0);
-		assertAnimation(0.0, 0.0, Status.RUNNING, false);
-		animation.setRate(3.0);
-		assertAnimation(3.0, 3.0, Status.RUNNING, true);
+        assertAnimation(0.0, 0.0, Status.RUNNING, false);
+        animation.setRate(3.0);
+        assertAnimation(3.0, 3.0, Status.RUNNING, true);
 
-		// toggling a playing animation
+        // toggling a playing animation
         animation.setRate(0.0);
-		assertAnimation(0.0, 0.0, Status.RUNNING, false);
-		animation.setRate(-2.0);
-		assertAnimation(-2.0, -2.0, Status.RUNNING, true);
+        assertAnimation(0.0, 0.0, Status.RUNNING, false);
+        animation.setRate(-2.0);
+        assertAnimation(-2.0, -2.0, Status.RUNNING, true);
 
         // changing the rate
         animation.setRate(0.0);
-		assertAnimation(0.0, 0.0, Status.RUNNING, false);
+        assertAnimation(0.0, 0.0, Status.RUNNING, false);
         animation.setRate(-2.5);
-		assertAnimation(-2.5, -2.5, Status.RUNNING, true);
+        assertAnimation(-2.5, -2.5, Status.RUNNING, true);
 
         // toggling back
         animation.setRate(0.0);
-		assertAnimation(0.0, 0.0, Status.RUNNING, false);
+        assertAnimation(0.0, 0.0, Status.RUNNING, false);
         animation.setRate(1.5);
-		assertAnimation(1.5, 1.5, Status.RUNNING, true);
+        assertAnimation(1.5, 1.5, Status.RUNNING, true);
 
-		// changing the rate of a animation playing in reverse
-		animation.impl_setCurrentRate(-1.5);
+        // changing the rate of a animation playing in reverse
+        animation.impl_setCurrentRate(-1.5);
         animation.setRate(0.0);
-		assertAnimation(0.0, 0.0, Status.RUNNING, false);
-		animation.setRate(2.2);
-		assertAnimation(2.2, -2.2, Status.RUNNING, true);
+        assertAnimation(0.0, 0.0, Status.RUNNING, false);
+        animation.setRate(2.2);
+        assertAnimation(2.2, -2.2, Status.RUNNING, true);
 
-		// toggling a animation playing in reverse
+        // toggling a animation playing in reverse
         animation.setRate(0.0);
-		assertAnimation(0.0, 0.0, Status.RUNNING, false);
-		animation.setRate(-1.8);
-		assertAnimation(-1.8, 1.8, Status.RUNNING, true);
+        assertAnimation(0.0, 0.0, Status.RUNNING, false);
+        animation.setRate(-1.8);
+        assertAnimation(-1.8, 1.8, Status.RUNNING, true);
 
         // changing the rate
         animation.setRate(0.0);
-		assertAnimation(0.0, 0.0, Status.RUNNING, false);
+        assertAnimation(0.0, 0.0, Status.RUNNING, false);
         animation.setRate(-1.3);
-		assertAnimation(-1.3, 1.3, Status.RUNNING, true);
+        assertAnimation(-1.3, 1.3, Status.RUNNING, true);
 
         // toggling back
         animation.setRate(0.0);
-		assertAnimation(0.0, 0.0, Status.RUNNING, false);
+        assertAnimation(0.0, 0.0, Status.RUNNING, false);
         animation.setRate(0.5);
-		assertAnimation(0.5, -0.5, Status.RUNNING, true);
-	}
-	
-	@Test
-	public void testSetRateOfPausedAnimation() {
-		// changing the rate of a paused animation
-		animation.play();
-		animation.pause();
-		animation.setRate(3.0);
-		assertAnimation(3.0, 0.0, Status.PAUSED, false);
-		animation.play();
-		assertAnimation(3.0, 3.0, Status.RUNNING, true);
-		
-		// toggling a pausing animation
-		animation.pause();
-		animation.setRate(-2.0);
-		assertAnimation(-2.0, 0.0, Status.PAUSED, false);
-		animation.play();
-		assertAnimation(-2.0, -2.0, Status.RUNNING, true);
+        assertAnimation(0.5, -0.5, Status.RUNNING, true);
+    }
+
+    @Test
+    public void testSetRateOfPausedAnimation() {
+        // changing the rate of a paused animation
+        animation.play();
+        animation.pause();
+        animation.setRate(3.0);
+        assertAnimation(3.0, 0.0, Status.PAUSED, false);
+        animation.play();
+        assertAnimation(3.0, 3.0, Status.RUNNING, true);
+
+        // toggling a pausing animation
+        animation.pause();
+        animation.setRate(-2.0);
+        assertAnimation(-2.0, 0.0, Status.PAUSED, false);
+        animation.play();
+        assertAnimation(-2.0, -2.0, Status.RUNNING, true);
 
         // changing the rate
-		animation.pause();
+        animation.pause();
         animation.setRate(-2.5);
-		assertAnimation(-2.5, 0.0, Status.PAUSED, false);
-		animation.play();
-		assertAnimation(-2.5, -2.5, Status.RUNNING, true);
+        assertAnimation(-2.5, 0.0, Status.PAUSED, false);
+        animation.play();
+        assertAnimation(-2.5, -2.5, Status.RUNNING, true);
 
         // toggling back
-		animation.pause();
+        animation.pause();
         animation.setRate(1.5);
-		assertAnimation(1.5, 0.0, Status.PAUSED, false);
-		animation.play();
-		assertAnimation(1.5, 1.5, Status.RUNNING, true);
+        assertAnimation(1.5, 0.0, Status.PAUSED, false);
+        animation.play();
+        assertAnimation(1.5, 1.5, Status.RUNNING, true);
 
-		// changing the rate of a paused animation pointing in reverse
-		animation.impl_setCurrentRate(-1.5);
-		animation.pause();
-		animation.setRate(2.2);
-		assertAnimation(2.2, 0.0, Status.PAUSED, false);
-		animation.play();
-		assertAnimation(2.2, -2.2, Status.RUNNING, true);
-		
-		// toggling a paused playing pointing in reverse
-		animation.pause();
-		animation.setRate(-1.8);
-		assertAnimation(-1.8, 0.0, Status.PAUSED, false);
-		animation.play();
-		assertAnimation(-1.8, 1.8, Status.RUNNING, true);
+        // changing the rate of a paused animation pointing in reverse
+        animation.impl_setCurrentRate(-1.5);
+        animation.pause();
+        animation.setRate(2.2);
+        assertAnimation(2.2, 0.0, Status.PAUSED, false);
+        animation.play();
+        assertAnimation(2.2, -2.2, Status.RUNNING, true);
+
+        // toggling a paused playing pointing in reverse
+        animation.pause();
+        animation.setRate(-1.8);
+        assertAnimation(-1.8, 0.0, Status.PAUSED, false);
+        animation.play();
+        assertAnimation(-1.8, 1.8, Status.RUNNING, true);
 
         // changing the rate
-		animation.pause();
+        animation.pause();
         animation.setRate(-1.3);
-		assertAnimation(-1.3, 0.0, Status.PAUSED, false);
-		animation.play();
-		assertAnimation(-1.3, 1.3, Status.RUNNING, true);
+        assertAnimation(-1.3, 0.0, Status.PAUSED, false);
+        animation.play();
+        assertAnimation(-1.3, 1.3, Status.RUNNING, true);
 
         // toggling back
-		animation.pause();
+        animation.pause();
         animation.setRate(0.5);
-		assertAnimation(0.5, 0.0, Status.PAUSED, false);
-		animation.play();
-		assertAnimation(0.5, -0.5, Status.RUNNING, true);
-	}
+        assertAnimation(0.5, 0.0, Status.PAUSED, false);
+        animation.play();
+        assertAnimation(0.5, -0.5, Status.RUNNING, true);
+    }
 
     @Test
     public void testSetRateToZeroForPausedAnimation() {
-    	// starting a paused animation with rate 0
-		animation.play();
-		animation.pause();
+        // starting a paused animation with rate 0
+        animation.play();
+        animation.pause();
         animation.setRate(0.0);
-		assertAnimation(0.0, 0.0, Status.PAUSED, false);
-		animation.play();
-		assertAnimation(0.0, 0.0, Status.RUNNING, false);
-		
-		// changing the rate of a paused animation
-		animation.pause();
-        animation.setRate(0.0);
-		assertAnimation(0.0, 0.0, Status.PAUSED, false);
-		animation.setRate(3.0);
-		assertAnimation(3.0, 0.0, Status.PAUSED, false);
-		animation.play();
-		assertAnimation(3.0, 3.0, Status.RUNNING, true);
+        assertAnimation(0.0, 0.0, Status.PAUSED, false);
+        animation.play();
+        assertAnimation(0.0, 0.0, Status.RUNNING, false);
 
-		// toggling a paused animation
-		animation.pause();
+        // changing the rate of a paused animation
+        animation.pause();
         animation.setRate(0.0);
-		assertAnimation(0.0, 0.0, Status.PAUSED, false);
-		animation.setRate(-2.0);
-		assertAnimation(-2.0, 0.0, Status.PAUSED, false);
-		animation.play();
-		assertAnimation(-2.0, -2.0, Status.RUNNING, true);
+        assertAnimation(0.0, 0.0, Status.PAUSED, false);
+        animation.setRate(3.0);
+        assertAnimation(3.0, 0.0, Status.PAUSED, false);
+        animation.play();
+        assertAnimation(3.0, 3.0, Status.RUNNING, true);
+
+        // toggling a paused animation
+        animation.pause();
+        animation.setRate(0.0);
+        assertAnimation(0.0, 0.0, Status.PAUSED, false);
+        animation.setRate(-2.0);
+        assertAnimation(-2.0, 0.0, Status.PAUSED, false);
+        animation.play();
+        assertAnimation(-2.0, -2.0, Status.RUNNING, true);
 
         // changing the rate
-		animation.pause();
+        animation.pause();
         animation.setRate(0.0);
-		assertAnimation(0.0, 0.0, Status.PAUSED, false);
+        assertAnimation(0.0, 0.0, Status.PAUSED, false);
         animation.setRate(-2.5);
-		assertAnimation(-2.5, 0.0, Status.PAUSED, false);
-		animation.play();
-		assertAnimation(-2.5, -2.5, Status.RUNNING, true);
+        assertAnimation(-2.5, 0.0, Status.PAUSED, false);
+        animation.play();
+        assertAnimation(-2.5, -2.5, Status.RUNNING, true);
 
         // toggling back
-		animation.pause();
+        animation.pause();
         animation.setRate(0.0);
-		assertAnimation(0.0, 0.0, Status.PAUSED, false);
+        assertAnimation(0.0, 0.0, Status.PAUSED, false);
         animation.setRate(1.5);
-		assertAnimation(1.5, 0.0, Status.PAUSED, false);
-		animation.play();
-		assertAnimation(1.5, 1.5, Status.RUNNING, true);
+        assertAnimation(1.5, 0.0, Status.PAUSED, false);
+        animation.play();
+        assertAnimation(1.5, 1.5, Status.RUNNING, true);
 
-		// changing the rate of a paused animation pointing in reverse
-		animation.impl_setCurrentRate(-1.5);
-		animation.pause();
+        // changing the rate of a paused animation pointing in reverse
+        animation.impl_setCurrentRate(-1.5);
+        animation.pause();
         animation.setRate(0.0);
-		assertAnimation(0.0, 0.0, Status.PAUSED, false);
-		animation.setRate(2.2);
-		assertAnimation(2.2, 0.0, Status.PAUSED, false);
-		animation.play();
-		assertAnimation(2.2, -2.2, Status.RUNNING, true);
+        assertAnimation(0.0, 0.0, Status.PAUSED, false);
+        animation.setRate(2.2);
+        assertAnimation(2.2, 0.0, Status.PAUSED, false);
+        animation.play();
+        assertAnimation(2.2, -2.2, Status.RUNNING, true);
 
-		// toggling a paused animation pointing in reverse
-		animation.pause();
+        // toggling a paused animation pointing in reverse
+        animation.pause();
         animation.setRate(0.0);
-		assertAnimation(0.0, 0.0, Status.PAUSED, false);
-		animation.setRate(-1.8);
-		assertAnimation(-1.8, 0.0, Status.PAUSED, false);
-		animation.play();
-		assertAnimation(-1.8, 1.8, Status.RUNNING, true);
+        assertAnimation(0.0, 0.0, Status.PAUSED, false);
+        animation.setRate(-1.8);
+        assertAnimation(-1.8, 0.0, Status.PAUSED, false);
+        animation.play();
+        assertAnimation(-1.8, 1.8, Status.RUNNING, true);
 
         // changing the rate
-		animation.pause();
+        animation.pause();
         animation.setRate(0.0);
-		assertAnimation(0.0, 0.0, Status.PAUSED, false);
+        assertAnimation(0.0, 0.0, Status.PAUSED, false);
         animation.setRate(-1.3);
-		assertAnimation(-1.3, 0.0, Status.PAUSED, false);
-		animation.play();
-		assertAnimation(-1.3, 1.3, Status.RUNNING, true);
+        assertAnimation(-1.3, 0.0, Status.PAUSED, false);
+        animation.play();
+        assertAnimation(-1.3, 1.3, Status.RUNNING, true);
 
         // toggling back
-		animation.pause();
+        animation.pause();
         animation.setRate(0.0);
-		assertAnimation(0.0, 0.0, Status.PAUSED, false);
+        assertAnimation(0.0, 0.0, Status.PAUSED, false);
         animation.setRate(0.5);
-		assertAnimation(0.5, 0.0, Status.PAUSED, false);
-		animation.play();
-		assertAnimation(0.5, -0.5, Status.RUNNING, true);
+        assertAnimation(0.5, 0.0, Status.PAUSED, false);
+        animation.play();
+        assertAnimation(0.5, -0.5, Status.RUNNING, true);
     }
 }

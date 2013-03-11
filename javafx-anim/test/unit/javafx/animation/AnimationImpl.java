@@ -25,18 +25,18 @@
 
 package javafx.animation;
 
-import com.sun.scenario.animation.shared.AnimationPulseReceiver;
+import com.sun.scenario.animation.AbstractMasterTimer;
 import com.sun.scenario.animation.shared.ClipEnvelope;
 
 public class AnimationImpl extends Animation {
-	
-	public AnimationImpl(AnimationPulseReceiver pulseReceiver, ClipEnvelope clipEnvelope, int resolution) {
-		super(pulseReceiver, clipEnvelope, resolution);
-	}
-	
-	public AnimationImpl() {
-		super();
-	}
+
+    public AnimationImpl(AbstractMasterTimer timer, ClipEnvelope clipEnvelope, int resolution) {
+        super(timer, clipEnvelope, resolution);
+    }
+
+    public AnimationImpl() {
+        super();
+    }
     
 
     @Override
