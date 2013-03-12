@@ -119,18 +119,20 @@ CVReturn CVOutputCallback(CVDisplayLinkRef displayLink,
     {
         GlassTimer *timer = (GlassTimer*)displayLinkContext;
         
-        if (timer->_env == NULL) 
+        jint error = (*MAIN_JVM)->AttachCurrentThreadAsDaemon(MAIN_JVM, (void **)&timer->_env, NULL);
+        if (error == 0)
         {
-            jint error = (*MAIN_JVM)->AttachCurrentThreadAsDaemon(MAIN_JVM, (void **)&timer->_env, NULL);
-            if (error != 0)
+            if (timer->_runnable != NULL)
             {
-                NSLog(@"ERROR: Glass could not attach CVDisplayLink _thread to VM, result:%d\n", (int)error);
+                (*timer->_env)->CallVoidMethod(timer->_env, timer->_runnable, jRunnableRun);
             }
-        }
-        
-        if (timer->_runnable != NULL)
-        {
-            (*timer->_env)->CallVoidMethod(timer->_env, timer->_runnable, jRunnableRun);
+
+            error = (*MAIN_JVM)->DetachCurrentThread(MAIN_JVM);
+            if (error != JNI_OK) {
+                NSLog(@"ERROR: Glass could not detach CVDisplayLink _thread to VM, result:%d\n", (int)error);
+            }
+        } else {
+            NSLog(@"ERROR: Glass could not attach CVDisplayLink _thread to VM, result:%d\n", (int)error);
         }
     }
     
