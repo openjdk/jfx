@@ -52,7 +52,7 @@ public class TableColumnComparator<S,T> implements Comparator<S> {
 
     @Override public int compare(S o1, S o2) {
         for (TableColumnBase<S,T> tc : columns) {
-            if (tc.getSortType() == null) continue;
+            if (tc.getSortType() == null || ! tc.isSortable()) continue;
             
             Comparator<T> c = tc.getComparator();
 
