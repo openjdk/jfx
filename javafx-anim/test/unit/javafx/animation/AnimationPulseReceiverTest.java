@@ -23,7 +23,7 @@
  * questions.
  */
 
-package com.sun.scenario.animation.shared;
+package javafx.animation;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -45,18 +45,16 @@ public class AnimationPulseReceiverTest {
     private static final double TICKS_2_NANOS = 1.0 / 6e-6;
     private AbstractMasterTimerMock timer;
     private AnimationMock animation;
-    private AnimationPulseReceiver defaultPR;
 
     @Before
     public void setUp() {
         timer = new AbstractMasterTimerMock();
-        animation = new AnimationMock(Duration.INDEFINITE, 1.0, 1, false);
-        defaultPR = new AnimationPulseReceiver(animation, timer);
+        animation = new AnimationMock(timer, Duration.INDEFINITE, 1.0, 1, false);
     }
 
     @After
     public void tearDown() {
-        defaultPR.stop();
+        animation.impl_stop();
         ToolkitAccessor.setInstance(null);
     }
 
@@ -64,32 +62,32 @@ public class AnimationPulseReceiverTest {
     public void testPlay_DefaultResolution() {
         // start animatiom
         timer.setNanos(Math.round(3 * DEFAULT_RESOLUTION * TICKS_2_NANOS));
-        defaultPR.start(0);
-        assertTrue(timer.containsPulseReceiver(defaultPR));
+        animation.startReceiver(0);
+        assertTrue(timer.containsPulseReceiver(animation.pulseReceiver));
 
         // send pulse
-        defaultPR.timePulse(7 * DEFAULT_RESOLUTION);
+        animation.pulseReceiver.timePulse(7 * DEFAULT_RESOLUTION);
         assertEquals(4 * DEFAULT_RESOLUTION, animation.getLastTimePulse());
 
         // another pulse
-        defaultPR.timePulse(16 * DEFAULT_RESOLUTION);
+        animation.pulseReceiver.timePulse(16 * DEFAULT_RESOLUTION);
         assertEquals(13 * DEFAULT_RESOLUTION, animation.getLastTimePulse());
 
         // stop animation
-        defaultPR.stop();
-        assertFalse(timer.containsPulseReceiver(defaultPR));
+        animation.impl_stop();
+        assertFalse(timer.containsPulseReceiver(animation.pulseReceiver));
 
         // stop again
-        defaultPR.stop();
-        assertFalse(timer.containsPulseReceiver(defaultPR));
+        animation.impl_stop();
+        assertFalse(timer.containsPulseReceiver(animation.pulseReceiver));
 
         // start again
         timer.setNanos(Math.round(30 * DEFAULT_RESOLUTION * TICKS_2_NANOS));
-        defaultPR.start(0);
-        assertTrue(timer.containsPulseReceiver(defaultPR));
+        animation.startReceiver(0);
+        assertTrue(timer.containsPulseReceiver(animation.pulseReceiver));
 
         // send pulse
-        defaultPR.timePulse(43 * DEFAULT_RESOLUTION);
+        animation.pulseReceiver.timePulse(43 * DEFAULT_RESOLUTION);
         assertEquals(13 * DEFAULT_RESOLUTION, animation.getLastTimePulse());
     }
 
@@ -97,31 +95,31 @@ public class AnimationPulseReceiverTest {
     public void testPause_DefaultResolution() {
         // start animation
         timer.setNanos(Math.round(3 * DEFAULT_RESOLUTION * TICKS_2_NANOS));
-        defaultPR.start(0);
-        assertTrue(timer.containsPulseReceiver(defaultPR));
+        animation.startReceiver(0);
+        assertTrue(timer.containsPulseReceiver(animation.pulseReceiver));
 
         // pause animation
         timer.setNanos(Math.round(18 * DEFAULT_RESOLUTION * TICKS_2_NANOS));
-        defaultPR.pause();
-        assertFalse(timer.containsPulseReceiver(defaultPR));
+        animation.pauseReceiver();
+        assertFalse(timer.containsPulseReceiver(animation.pulseReceiver));
 
         // pause again
         timer.setNanos(Math.round(27 * DEFAULT_RESOLUTION * TICKS_2_NANOS));
-        defaultPR.pause();
-        assertFalse(timer.containsPulseReceiver(defaultPR));
+        animation.pauseReceiver();
+        assertFalse(timer.containsPulseReceiver(animation.pulseReceiver));
 
         // resume
         timer.setNanos(Math.round(36 * DEFAULT_RESOLUTION * TICKS_2_NANOS));
-        defaultPR.resume();
-        assertTrue(timer.containsPulseReceiver(defaultPR));
+        animation.resumeReceiver();
+        assertTrue(timer.containsPulseReceiver(animation.pulseReceiver));
 
         // resume again
         timer.setNanos(Math.round(42 * DEFAULT_RESOLUTION * TICKS_2_NANOS));
-        defaultPR.resume();
-        assertTrue(timer.containsPulseReceiver(defaultPR));
+        animation.resumeReceiver();
+        assertTrue(timer.containsPulseReceiver(animation.pulseReceiver));
 
         // send pulse
-        defaultPR.timePulse(51 * DEFAULT_RESOLUTION);
+        animation.pulseReceiver.timePulse(51 * DEFAULT_RESOLUTION);
         assertEquals(30 * DEFAULT_RESOLUTION, animation.getLastTimePulse());
     }
 
@@ -129,25 +127,25 @@ public class AnimationPulseReceiverTest {
     public void testDelay() {
         // start animatiom
         timer.setNanos(Math.round(3 * DEFAULT_RESOLUTION * TICKS_2_NANOS));
-        defaultPR.start(17 * DEFAULT_RESOLUTION);
-        assertTrue(timer.containsPulseReceiver(defaultPR));
+        animation.startReceiver(17 * DEFAULT_RESOLUTION);
+        assertTrue(timer.containsPulseReceiver(animation.pulseReceiver));
 
         // send pulse during delay
-        defaultPR.timePulse(5 * DEFAULT_RESOLUTION);
+        animation.pulseReceiver.timePulse(5 * DEFAULT_RESOLUTION);
         assertEquals(0, animation.getLastTimePulse());
 
         // pause & resume
         timer.setNanos(Math.round(10 * DEFAULT_RESOLUTION * TICKS_2_NANOS));
-        defaultPR.pause();
+        animation.pauseReceiver();
         timer.setNanos(Math.round(37 * DEFAULT_RESOLUTION * TICKS_2_NANOS));
-        defaultPR.resume();
+        animation.resumeReceiver();
 
         // send pulse during delay
-        defaultPR.timePulse(41 * DEFAULT_RESOLUTION);
+        animation.pulseReceiver.timePulse(41 * DEFAULT_RESOLUTION);
         assertEquals(0, animation.getLastTimePulse());
 
         // send pulse after delay
-        defaultPR.timePulse(48 * DEFAULT_RESOLUTION);
+        animation.pulseReceiver.timePulse(48 * DEFAULT_RESOLUTION);
         assertEquals(1 * DEFAULT_RESOLUTION, animation.getLastTimePulse());
     }
 }

@@ -391,19 +391,19 @@ final class ListChangeBuilder<E> {
                 if (permutationChange != null) {
                     array[ptr++] = permutationChange;
                 }
-                if (updateNotEmpty) {
-                    int sz = updateChanges.size();
+                if (addRemoveNotEmpty) {
+                    int sz = addRemoveChanges.size();
                     for (int i = 0; i < sz; ++i) {
-                        final SubChange<E> change = updateChanges.get(i);
+                        final SubChange<E> change = addRemoveChanges.get(i);
                         if (change != null) {
                             array[ptr++] = change;
                         }
                     }
                 }
-                if (addRemoveNotEmpty) {
-                    int sz = addRemoveChanges.size();
+                if (updateNotEmpty) {
+                    int sz = updateChanges.size();
                     for (int i = 0; i < sz; ++i) {
-                        final SubChange<E> change = addRemoveChanges.get(i);
+                        final SubChange<E> change = updateChanges.get(i);
                         if (change != null) {
                             array[ptr++] = change;
                         }

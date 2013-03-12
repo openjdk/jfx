@@ -30,8 +30,9 @@ import java.util.Map;
 import com.sun.scenario.animation.AbstractMasterTimer;
 
 /**
- * A simple java accessor to the current Toolkit
- * 
+ * A simple java accessor to the current Toolkit.
+ * This class is ONLY NECESSARY because javafx-anim is separate from javafx-ui-common.
+ * When they are combined, we can remove this class.
  */
 public abstract class ToolkitAccessor {
     private static ToolkitAccessor instance;

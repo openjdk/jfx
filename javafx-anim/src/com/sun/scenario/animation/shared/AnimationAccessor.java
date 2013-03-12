@@ -26,7 +26,6 @@
 package com.sun.scenario.animation.shared;
 
 import javafx.animation.Animation;
-import javafx.animation.Timeline;
 
 public abstract class AnimationAccessor {
  public static AnimationAccessor DEFAULT;
@@ -36,7 +35,7 @@ public abstract class AnimationAccessor {
             return DEFAULT;
         }
 
-        // invokes static initializer of Item.class
+        // invokes static initializer of Animation.class
         // that will assign value to the DEFAULT field above
         Class c = Animation.class;
         try {
@@ -47,8 +46,6 @@ public abstract class AnimationAccessor {
         assert DEFAULT != null : "The DEFAULT field must be initialized";
         return DEFAULT;
     }
-
-    public abstract void timePulse(Animation animation, long elapsedTime);
 
     public abstract void setCurrentRate(Animation animation, double currentRate);
 

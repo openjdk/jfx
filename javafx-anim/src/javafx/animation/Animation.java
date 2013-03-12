@@ -25,15 +25,14 @@
 
 package javafx.animation;
 
-import com.sun.javafx.animation.TickCalculation;
 import java.util.HashMap;
-
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.DoublePropertyBase;
 import javafx.beans.property.IntegerProperty;
 import javafx.beans.property.IntegerPropertyBase;
 import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.ObjectPropertyBase;
 import javafx.beans.property.ReadOnlyDoubleProperty;
 import javafx.beans.property.ReadOnlyDoublePropertyBase;
 import javafx.beans.property.ReadOnlyObjectProperty;
@@ -45,15 +44,13 @@ import javafx.collections.ObservableMap;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.util.Duration;
-
+import com.sun.javafx.animation.TickCalculation;
 import com.sun.scenario.ToolkitAccessor;
-import com.sun.scenario.animation.shared.AnimationPulseReceiver;
-import com.sun.scenario.animation.shared.ClipEnvelope;
-import com.sun.scenario.animation.shared.ClipEnvelopeFactory;
-
-import static com.sun.javafx.animation.TickCalculation.fromDuration;
 import com.sun.scenario.animation.AbstractMasterTimer;
-import javafx.beans.property.ObjectPropertyBase;
+import com.sun.scenario.animation.shared.ClipEnvelope;
+import com.sun.scenario.animation.shared.PulseReceiver;
+
+import static com.sun.javafx.animation.TickCalculation.*;
 
 /**
  * The class {@code Animation} provides the core functionality of all animations
@@ -118,7 +115,57 @@ public abstract class Animation {
     }
 
     private static final double EPSILON = 1e-12;
-    
+
+    /*
+        These four fields and associated methods were moved here from AnimationPulseReceiver
+        when that class was removed. They could probably be integrated much cleaner into Animation,
+        but to make sure the change was made without introducing regressions, this code was
+        moved pretty much verbatim.
+     */
+    private long startTime;
+    private long pauseTime;
+    private boolean paused = false;
+    private final AbstractMasterTimer timer;
+
+    private long now() {
+        return TickCalculation.fromNano(timer.nanos());
+    }
+
+    void startReceiver(long delay) {
+        paused = false;
+        startTime = now() + delay;
+        timer.addPulseReceiver(pulseReceiver);
+    }
+
+    void pauseReceiver() {
+        if (!paused) {
+            pauseTime = now();
+            paused = true;
+            timer.removePulseReceiver(pulseReceiver);
+        }
+    }
+
+    void resumeReceiver() {
+        if (paused) {
+            final long deltaTime = now() - pauseTime;
+            startTime += deltaTime;
+            paused = false;
+            timer.addPulseReceiver(pulseReceiver);
+        }
+    }
+
+    // package private only for the sake of testing
+    final PulseReceiver pulseReceiver = new PulseReceiver() {
+        @Override public void timePulse(long now) {
+            final long elapsedTime = now - startTime;
+            if (elapsedTime < 0) {
+                return;
+            }
+
+            impl_timePulse(elapsedTime);
+        }
+    };
+
     private class CurrentRateProperty extends ReadOnlyDoublePropertyBase {
         private double value;
         
@@ -173,9 +220,6 @@ public abstract class Animation {
             fireValueChangedEvent();
         }
     }
-    
-
-    private final AnimationPulseReceiver pulseReceiver;
     
     /**
      * The parent of this {@code Animation}. If this animation has not been
@@ -245,13 +289,13 @@ public abstract class Animation {
                                         - oldRate) < EPSILON);
                             }
                             setCurrentRate(0.0);
-                            pulseReceiver.pause();
+                            pauseReceiver();
                         } else {
                             if (getStatus() == Status.RUNNING) {
                                 final double currentRate = getCurrentRate();
                                 if (Math.abs(currentRate) < EPSILON) {
                                     setCurrentRate(lastPlayedForward ? newRate : -newRate);
-                                    pulseReceiver.resume();
+                                    resumeReceiver();
                                 } else {
                                     final boolean playingForward = Math.abs(currentRate - oldRate) < EPSILON;
                                     setCurrentRate(playingForward ? newRate : -newRate);
@@ -845,9 +889,9 @@ public abstract class Animation {
                     }
                     lastPlayedFinished = false;
                     impl_start(forceSync);
-                    pulseReceiver.start(TickCalculation.fromDuration(getDelay()));
+                    startReceiver(TickCalculation.fromDuration(getDelay()));
                     if (Math.abs(rate) < EPSILON) {
-                        pulseReceiver.pause();
+                        pauseReceiver();
                     } else {
                         
                     }
@@ -861,7 +905,7 @@ public abstract class Animation {
             case PAUSED:
                 impl_resume();
                 if (Math.abs(getRate()) >= EPSILON) {
-                    pulseReceiver.resume();
+                    resumeReceiver();
                 }
                 break;
         }
@@ -935,7 +979,7 @@ public abstract class Animation {
         }
         if (getStatus() == Status.RUNNING) {
             clipEnvelope.abortCurrentPulse();
-            pulseReceiver.pause();
+            pauseReceiver();
             impl_pause();
         }
     }
@@ -952,9 +996,8 @@ public abstract class Animation {
     protected Animation(double targetFramerate) {
         this.targetFramerate = targetFramerate;
         this.resolution = (int) Math.max(1, Math.round(TickCalculation.TICKS_PER_SECOND / targetFramerate));
-        this.pulseReceiver = new AnimationPulseReceiver(this, ToolkitAccessor
-                .getMasterTimer());
-        this.clipEnvelope = ClipEnvelopeFactory.create(this);
+        this.clipEnvelope = ClipEnvelope.create(this);
+        this.timer = ToolkitAccessor.getMasterTimer();
     }
 
     /**
@@ -963,25 +1006,24 @@ public abstract class Animation {
     protected Animation() {
         this.resolution = 1;
         this.targetFramerate = TickCalculation.TICKS_PER_SECOND / ToolkitAccessor.getMasterTimer().getDefaultResolution();
-        this.pulseReceiver = new AnimationPulseReceiver(this, ToolkitAccessor
-                .getMasterTimer());
-        this.clipEnvelope = ClipEnvelopeFactory.create(this);
+        this.clipEnvelope = ClipEnvelope.create(this);
+        this.timer = ToolkitAccessor.getMasterTimer();
     }
 
     // These constructors are only for testing purposes
     Animation(AbstractMasterTimer timer) {
         this.resolution = 1;
         this.targetFramerate = TickCalculation.TICKS_PER_SECOND / timer.getDefaultResolution();
-        this.pulseReceiver = new AnimationPulseReceiver(this, timer);
-        this.clipEnvelope = ClipEnvelopeFactory.create(this);
+        this.clipEnvelope = ClipEnvelope.create(this);
+        this.timer = timer;
     }
 
     // These constructors are only for testing purposes
-    Animation(AnimationPulseReceiver pulseReceiver, ClipEnvelope clipEnvelope, int resolution) {
+    Animation(AbstractMasterTimer timer, ClipEnvelope clipEnvelope, int resolution) {
         this.resolution = resolution;
         this.targetFramerate = TickCalculation.TICKS_PER_SECOND / resolution;
-        this.pulseReceiver = pulseReceiver;
         this.clipEnvelope = clipEnvelope;
+        this.timer = timer;
     }
 
     boolean impl_startable(boolean forceSync) {
@@ -1027,7 +1069,9 @@ public abstract class Animation {
     }
 
     void impl_stop() {
-        pulseReceiver.stop();
+        if (!paused) {
+            timer.removePulseReceiver(pulseReceiver);
+        }
         setStatus(Status.STOPPED);
         setCurrentRate(0.0);
     }

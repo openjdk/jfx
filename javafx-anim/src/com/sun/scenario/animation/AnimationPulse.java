@@ -73,37 +73,15 @@ public class AnimationPulse implements AnimationPulseMBean {
               : 0;
         }
         
-        void recordPaintingStart() {
-            paintingStartNanos = ToolkitAccessor.getMasterTimer().nanos();
-        }
-        
-        void recordPaintingEnd() {
-            paintingEndNanos = ToolkitAccessor.getMasterTimer().nanos();
-        }
-        
         long getPaintingDuration(TimeUnit unit) {
             return (paintingEndNanos > Long.MIN_VALUE && paintingStartNanos > Long.MIN_VALUE) 
               ? unit.convert(paintingEndNanos - paintingStartNanos, TimeUnit.NANOSECONDS)
               : 0;
         }
         
-        void recordScenePaintingStart() {
-            scenePaintingStartNanos = ToolkitAccessor.getMasterTimer().nanos();
-        }
-        
-        void recordScenePaintingEnd() {
-            scenePaintingEndNanos = ToolkitAccessor.getMasterTimer().nanos();
-        }
-        
         long getScenePaintingDuration(TimeUnit unit) {
             return (scenePaintingEndNanos > Long.MIN_VALUE && scenePaintingStartNanos > Long.MIN_VALUE) 
               ? unit.convert(scenePaintingEndNanos - scenePaintingStartNanos, TimeUnit.NANOSECONDS)
-              : 0;
-        }
-        
-        long getPaintingPreparationDuration(TimeUnit unit) {
-            return (paintingStartNanos > Long.MIN_VALUE && scenePaintingStartNanos > Long.MIN_VALUE) 
-              ? unit.convert(scenePaintingStartNanos - paintingStartNanos, TimeUnit.NANOSECONDS)
               : 0;
         }
         
@@ -210,7 +188,7 @@ public class AnimationPulse implements AnimationPulseMBean {
 //        }
     }
     
-    private final Queue<PulseData> pulseDataQueue = new ConcurrentLinkedQueue<PulseData>();
+    private final Queue<PulseData> pulseDataQueue = new ConcurrentLinkedQueue<>();
     
     //to be accessed from the EDT
     private PulseData pulseData = null;
@@ -439,18 +417,6 @@ public class AnimationPulse implements AnimationPulseMBean {
         return getAv(PulseData.AnimationDurationAccessor, 100, TimeUnit.MILLISECONDS);
     }
     
-    public void recordPaintingStart() {
-        if (getEnabled() && pulseData != null) {
-            pulseData.recordPaintingStart();
-        }
-    }
-    
-    public void recordPaintingEnd() {
-        if (getEnabled() && pulseData != null) {
-            pulseData.recordPaintingEnd();
-        }
-    }
-    
     @Override
     public long getPaintingDurationMax() {
         return paintingDurationMax.get();
@@ -467,20 +433,8 @@ public class AnimationPulse implements AnimationPulseMBean {
     }
     
     @Override
-    public long getPaitningDurationAvIn100Millis() {
+    public long getPaintingDurationAvIn100Millis() {
         return getAv(PulseData.PaintingDurationAccessor, 100, TimeUnit.MILLISECONDS);
-    }
-    
-    public void recordScenePaintingStart() {
-        if (getEnabled() && pulseData != null) {
-            pulseData.recordScenePaintingStart();
-        }
-    }
-    
-    public void recordScenePaintingEnd() {
-        if (getEnabled() && pulseData != null) {
-            pulseData.recordScenePaintingEnd();
-        }
     }
     
     @Override

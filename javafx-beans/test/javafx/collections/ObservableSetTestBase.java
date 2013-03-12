@@ -29,6 +29,7 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
+import java.util.TreeSet;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -138,6 +139,21 @@ public abstract class ObservableSetTestBase {
 
         assertTrue(observableSet.contains("foo"));
         assertFalse(observableSet.contains("bar"));
+    }
+    
+    @Test
+    public void testNull() {
+        if (set instanceof TreeSet) {
+            return; // TreeSet doesn't accept nulls
+        }
+        observableSet.add(null);
+        assertEquals(4, observableSet.size());
+        
+        observer.assertAdded(tup((String)null));
+        
+        observableSet.remove(null);
+        assertEquals(3, observableSet.size());
+        observer.assertRemoved(tup((String)null));
     }
 
 }

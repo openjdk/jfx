@@ -609,6 +609,13 @@ public class TriangleMesh extends Mesh {
             throw new IllegalArgumentException("faceSmoothingGroups.length has to be equal to (faces.length / NUM_COMPONENTS_PER_FACE).");
         }
 
+        // NOTE: The face smoothing group value is currently restricted from 0 to 31.
+        for (int i = 0; i < faceSmoothingGroups.length; i++) {
+            if (faceSmoothingGroups[i] < 0 || faceSmoothingGroups[i] > 31) {
+                throw new IllegalArgumentException("The face smoothing group value should be from 0 to 31 inclusive.");
+            }
+        }
+        
         if ((this.faceSmoothingGroups == null) || 
                 (this.faceSmoothingGroups.length < faceSmoothingGroups.length)) {
             this.faceSmoothingGroups = new int[faceSmoothingGroups.length];
@@ -647,8 +654,16 @@ public class TriangleMesh extends Mesh {
                 ((index + length) > fsgCount)) {
             throw new IllegalArgumentException("index or (index + length) is out of range for this triangle mesh's faceSmoothingGroups");
         }
-        System.arraycopy(faceSmoothingGroups, start, this.faceSmoothingGroups, index, length);
 
+        // NOTE: The face smoothing group value is currently restricted from 0 to 31.
+        for (int i = start; i < length; i++) {
+            if (faceSmoothingGroups[i] < 0 || faceSmoothingGroups[i] > 31) {
+                throw new IllegalArgumentException("The face smoothing group value should be from 0 to 31 inclusive.");
+            }
+        }
+
+        System.arraycopy(faceSmoothingGroups, start, this.faceSmoothingGroups, index, length);
+      
         fsgDirty = fsgUpdateRange = true;
         if (fsgRangeInfos == null) {
             fsgRangeInfos = new int[MAX_RANGE_SIZE];
@@ -810,7 +825,7 @@ public class TriangleMesh extends Mesh {
         // sync faceSmoothingGroups
         if (fsgDirty) {
             if (fsgUpdateRange) {
-                pgTriMesh.setFaces(fsgRangeInfos[RANGE_INDEX],
+                pgTriMesh.setFaceSmoothingGroups(fsgRangeInfos[RANGE_INDEX],
                         faceSmoothingGroups, fsgRangeInfos[RANGE_START],
                         fsgRangeInfos[RANGE_LENGTH]);
             } else {

@@ -30,7 +30,7 @@ import javafx.animation.Interpolator;
 /**
  * An implementation of a spline interpolator for temporal interpolation that
  * tries to follow the specification referenced by:
- * http://www.w3.org/TR/SMIL/animation.html#animationNS-OverviewSpline
+ * http://www.w3.org/TR/SMIL/animation.html#animationNS-OverviewSpline .
  * <p>
  * Basically, a cubic Bezier curve is created with start point (0,0) and
  * endpoint (1,1). The other two control points (px1, py1) and (px2, py2) are
@@ -50,37 +50,37 @@ public class SplineInterpolator extends Interpolator {
     /**
      * The coordinates of the 2 2D control points for a cubic Bezier curve, with
      * implicit start point (0,0) and end point (1,1) -- each individual
-     * coordinate value must be in range [0,1]
+     * coordinate value must be in range [0,1].
      */
     private final double x1, y1, x2, y2;
 
     /**
      * Do the input control points form a line with (0,0) and (1,1), i.e., x1 ==
-     * y1 and x2 == y2 -- if so, then all x(t) == y(t) for the curve
+     * y1 and x2 == y2 -- if so, then all x(t) == y(t) for the curve.
      */
     private final boolean isCurveLinear;
 
     /**
-     * Power of 2 sample size for lookup table of x values
+     * Power of 2 sample size for lookup table of x values.
      */
     private static final int SAMPLE_SIZE = 16;
 
     /**
      * Difference in t used to calculate each of the xSamples values -- power of
      * 2 sample size should provide exact representation of this value and its
-     * integer multiples (integer in range of [0..SAMPLE_SIZE]
+     * integer multiples (integer in range of [0..SAMPLE_SIZE].
      */
     private static final double SAMPLE_INCREMENT = 1.0 / SAMPLE_SIZE;
 
     /**
      * X values for the bezier curve, sampled at increments of 1/SAMPLE_SIZE --
-     * this is used to find the good initial guess for parameter t, given an x
+     * this is used to find the good initial guess for parameter t, given an x.
      */
     private final double[] xSamples = new double[SAMPLE_SIZE + 1];
 
     /**
      * Creates a new instance with control points (0,0) (px1,py1) (px2,py2)
-     * (1,1) -- px1, py1, px2, py2 all in range [0,1]
+     * (1,1) -- px1, py1, px2, py2 all in range [0,1].
      * 
      * @param px1
      *            X coordinate of first control point, in range [0,1]

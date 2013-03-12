@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,24 +23,18 @@
  * questions.
  */
 
-package com.sun.scenario.animation.shared;
+package javafx.scene.paint;
 
-import javafx.animation.Animation;
+import static org.junit.Assert.assertNotNull;
 
-public class ClipEnvelopeFactory {
+import org.junit.Test;
 
-    private ClipEnvelopeFactory() {}
+public class PhongMaterialTest {
 
-    public static ClipEnvelope create(Animation animation) {
-        if ((animation.getCycleCount() == 1) || (animation.getCycleDuration().isIndefinite())) {
-            return new SingleLoopClipEnvelope(animation);
-        } else if (animation.getCycleCount() == Animation.INDEFINITE) {
-            return new InfiniteClipEnvelope(animation);
-        } else {
-            return new FiniteClipEnvelope(animation);
-        }
+    @Test
+    public void testDefaultToString() {
+        String mat = new PhongMaterial().toString();
+        assertNotNull(mat);
     }
-
-    
 
 }

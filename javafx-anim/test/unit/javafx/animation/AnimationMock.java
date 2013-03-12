@@ -25,10 +25,12 @@
 
 package javafx.animation;
 
-import static org.junit.Assert.assertEquals;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.util.Duration;
+import com.sun.scenario.animation.AbstractMasterTimer;
+
+import static org.junit.Assert.*;
 
 public class AnimationMock extends Animation {
     
@@ -53,7 +55,8 @@ public class AnimationMock extends Animation {
         this.setCycleDuration(duration);
     }
     
-    public AnimationMock(Duration cycleDuration, double rate, int cycleCount, boolean autoReverse) {
+    public AnimationMock(AbstractMasterTimer timer, Duration cycleDuration, double rate, int cycleCount, boolean autoReverse) {
+        super(timer);
         setCycleDuration(cycleDuration);
         setRate(rate);
         setCycleCount(cycleCount);

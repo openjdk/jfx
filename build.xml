@@ -137,25 +137,16 @@
         <!--<ant antfile="${rt.root.dir}/javafx-designtime/build.xml" target="test" inheritAll="false"/>-->
         <ant antfile="${rt.root.dir}/javafx-ui-controls/build.xml" target="test" inheritAll="false"/>
         <ant antfile="${rt.root.dir}/javafx-ui-charts/build.xml" target="test" inheritAll="false"/>
-        <ant antfile="${rt.root.dir}/javafx-logging/build.xml" target="test" inheritAll="false"/>
         <ant antfile="${rt.root.dir}/javafx-anim/build.xml" target="test" inheritAll="false"/>
         <ant antfile="${rt.root.dir}/javafx-beans/build.xml" target="test" inheritAll="false"/>
         <ant antfile="${rt.root.dir}/javafx-common/build.xml" target="test" inheritAll="false"/>
-        <ant antfile="${rt.root.dir}/javafx-annotation-processor/build.xml" target="test" inheritAll="false"/>
         <ant antfile="${rt.root.dir}/javafx-sg-common/build.xml" target="test" inheritAll="false"/>
         <ant antfile="${rt.root.dir}/javafx-geom/build.xml" target="test" inheritAll="false"/>
         <ant antfile="${rt.root.dir}/javafx-sg-prism/build.xml" target="test" inheritAll="false"/>
         <ant antfile="${rt.root.dir}/javafx-ui-common/build.xml" target="test" inheritAll="false"/>
-        <ant antfile="${rt.root.dir}/javafx-prism-common/build.xml" target="test" inheritAll="false"/>
-        <ant antfile="${rt.root.dir}/pisces/build.xml" target="test" inheritAll="false"/>
+        <ant antfile="${rt.root.dir}/prism-common/build.xml" target="test" inheritAll="false"/>
         <ant antfile="${rt.root.dir}/javafx-util-converter/build.xml" target="test" inheritAll="false"/>
         <ant antfile="${rt.root.dir}/javafx-fxml/build.xml" target="test" inheritAll="false"/>
-        <ant antfile="${rt.root.dir}/javafx-embed-swing/build.xml" target="test" inheritAll="false"/>
-        <antcall target="test-javafx-embed-swt"/>
-    </target>
-
-    <target name="test-javafx-embed-swt" if="swt.available">
-        <ant antfile="${rt.root.dir}/javafx-embed-swt/build.xml" target="test" inheritAll="false"/>
     </target>
 
     <!--

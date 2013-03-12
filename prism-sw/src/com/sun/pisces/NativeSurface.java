@@ -28,6 +28,7 @@ package com.sun.pisces;
 public final class NativeSurface extends AbstractSurface {
 
     public NativeSurface(int dataType, int width, int height) {
+        super(width, height);
         switch (dataType) {
             case RendererBase.TYPE_INT_ARGB:
                 break;
@@ -37,9 +38,6 @@ public final class NativeSurface extends AbstractSurface {
         }
         
         initialize(dataType, width, height);
-        
-        this.width = width;
-        this.height = height;
     }
 
     private native void initialize(int dataType, int width, int height);

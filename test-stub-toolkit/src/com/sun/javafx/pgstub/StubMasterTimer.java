@@ -36,16 +36,16 @@ import com.sun.scenario.animation.AbstractMasterTimer;
 public class StubMasterTimer extends AbstractMasterTimer {
     private long currentTimeMillis;
 
+    protected StubMasterTimer() {
+        super(false);
+    }
+
     protected int getPulseDuration(int precision) {
         return precision / 60;
     }
 
     protected void postUpdateAnimationRunnable(DelayedRunnable animationRunnable) {
         Toolkit.getToolkit().setAnimationRunnable(animationRunnable);
-    }
-
-    protected boolean shouldUseNanoTime() {
-        return false;
     }
 
     public void setCurrentTime(long millis) {

@@ -26,6 +26,7 @@
 package javafx.scene.image;
 
 import java.io.InputStream;
+import java.lang.ref.WeakReference;
 import java.util.LinkedList;
 import java.util.Queue;
 
@@ -33,7 +34,6 @@ import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.beans.property.ReadOnlyDoublePropertyBase;
 import javafx.beans.property.ReadOnlyObjectPropertyBase;
-import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.util.Duration;
@@ -710,8 +710,8 @@ public class Image {
      */
     void dispose() {
         cancel();
-        if (timeline != null) {
-            timeline.stop();
+        if (animation != null) {
+            animation.stop();
         }
     }
 
@@ -745,7 +745,7 @@ public class Image {
     private void finishImage(ImageLoader loader) {
         if ((loader != null) && !loader.getError()) {
             if (loader.getFrameCount() > 1) {
-                makeAnimationTimeline(loader);
+                initializeAnimatedImage(loader);
             } else {
                 PlatformImage pi = loader.getFrame(0);
                 double w = loader.getWidth() / pi.getPixelScale();
@@ -761,47 +761,82 @@ public class Image {
     }
 
     // Support for animated images.
-    private Timeline timeline;
+    private Animation animation;
+    // We keep the animation frames associated with the Image rather than with
+    // the animation, so most of the data can be garbage collected while
+    // the animation is still running.
+    private PlatformImage[] animFrames;
 
     // Generates the animation Timeline for multiframe images.
-    private void makeAnimationTimeline(ImageLoader loader) {
-        // create and start the animation thread.
+    private void initializeAnimatedImage(ImageLoader loader) {
         final int frameCount = loader.getFrameCount();
+        animFrames = new PlatformImage[frameCount];
 
-        timeline = new Timeline();
-        timeline.setCycleCount(Timeline.INDEFINITE);
-
-        final ObservableList<KeyFrame> keyFrames = timeline.getKeyFrames();
-
-        int duration = 0;
         for (int i = 0; i < frameCount; ++i) {
-            keyFrames.add(createPlatformImageSetKeyFrame(duration, loader.getFrame(i)));
-            duration = duration + loader.getFrameDelay(i);
+            animFrames[i] = loader.getFrame(i);
         }
         
         PlatformImage zeroFrame = loader.getFrame(0);
 
-        // Note: we need one extra frame in the timeline to define how long
-        // the last frame is shown, the wrap around is "instantaneous"
-        keyFrames.add(createPlatformImageSetKeyFrame(duration, zeroFrame));
-
         double w = loader.getWidth() / zeroFrame.getPixelScale();
         double h = loader.getHeight() / zeroFrame.getPixelScale();
         setPlatformImageWH(zeroFrame, w, h);
-        timeline.play();
+
+        animation = new Animation(this, loader);
+        animation.start();
     }
 
-    private KeyFrame createPlatformImageSetKeyFrame(
-            final long duration,
-            final PlatformImage platformImage) {
-        return new KeyFrame(Duration.millis(duration),
-                            new EventHandler<ActionEvent>() {
-                                    @Override
-                                    public void handle(ActionEvent event) {
-                                        platformImagePropertyImpl().set(
-                                                platformImage);
-                                    }
-                            });
+    private static final class Animation {
+        final WeakReference<Image> imageRef;
+        final Timeline timeline;
+
+        public Animation(final Image image, final ImageLoader loader) {
+            imageRef = new WeakReference<Image>(image);
+            timeline = new Timeline();
+            timeline.setCycleCount(Timeline.INDEFINITE);
+
+            final int frameCount = loader.getFrameCount();
+            int duration = 0;
+
+            for (int i = 0; i < frameCount; ++i) {
+                addKeyFrame(i, duration);
+                duration = duration + loader.getFrameDelay(i);
+            }
+
+            // Note: we need one extra frame in the timeline to define how long
+            // the last frame is shown, the wrap around is "instantaneous"
+            addKeyFrame(0, duration);
+        }
+
+        public void start() {
+            timeline.play();
+        }
+
+        public void stop() {
+            timeline.stop();
+        }
+
+        private void updateImage(final int frameIndex) {
+            final Image image = imageRef.get();
+            if (image != null) {
+                image.platformImagePropertyImpl().set(
+                        image.animFrames[frameIndex]);
+            } else {
+                timeline.stop();
+            }
+        }
+
+        private void addKeyFrame(final int index, final double duration) {
+            timeline.getKeyFrames().add(
+                    new KeyFrame(Duration.millis(duration),
+                                 new EventHandler<ActionEvent>() {
+                                         @Override
+                                         public void handle(
+                                                 final ActionEvent event) {
+                                             updateImage(index);
+                                         }
+                                     }));
+        }
     }
 
     private void cycleTasks() {
@@ -1037,7 +1072,7 @@ public class Image {
      * Indicates whether image is animated.
      */
     boolean isAnimation() {
-        return timeline != null;
+        return animation != null;
     }
 
     boolean pixelsReadable() {

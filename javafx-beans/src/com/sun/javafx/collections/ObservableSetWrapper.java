@@ -52,25 +52,23 @@ public class ObservableSetWrapper<E> implements ObservableSet<E> {
         this.backingSet = set;
     }
 
-    private class SimpleChange extends SetChangeListener.Change<E> {
+    private class SimpleAddChange extends SetChangeListener.Change<E> {
 
-        private E old;
-        private E added;
+        private final E added;
 
-        public SimpleChange(E old, E added) {
+        public SimpleAddChange(E added) {
             super(ObservableSetWrapper.this);
-            this.old = old;
             this.added = added;
         }
 
         @Override
         public boolean wasAdded() {
-            return added != null;
+            return true;
         }
 
         @Override
         public boolean wasRemoved() {
-            return old != null;
+            return false;
         }
 
         @Override
@@ -80,8 +78,50 @@ public class ObservableSetWrapper<E> implements ObservableSet<E> {
 
         @Override
         public E getElementRemoved() {
-            return old;
+            return null;
         }
+
+        @Override
+        public String toString() {
+            return "added " + added;
+        }
+        
+    }
+    
+    private class SimpleRemoveChange extends SetChangeListener.Change<E> {
+
+        private final E removed;
+
+        public SimpleRemoveChange(E removed) {
+            super(ObservableSetWrapper.this);
+            this.removed = removed;
+        }
+
+        @Override
+        public boolean wasAdded() {
+            return false;
+        }
+
+        @Override
+        public boolean wasRemoved() {
+            return true;
+        }
+
+        @Override
+        public E getElementAdded() {
+            return null;
+        }
+
+        @Override
+        public E getElementRemoved() {
+            return removed;
+        }
+
+        @Override
+        public String toString() {
+            return "removed " + removed;
+        }
+        
     }
 
     private void callObservers(SetChangeListener.Change<E> change) {
@@ -183,7 +223,7 @@ public class ObservableSetWrapper<E> implements ObservableSet<E> {
             @Override
             public void remove() {
                 backingIt.remove();
-                callObservers(new SimpleChange(lastElement, null));
+                callObservers(new SimpleRemoveChange(lastElement));
             }
         };
     }
@@ -226,7 +266,7 @@ public class ObservableSetWrapper<E> implements ObservableSet<E> {
     public boolean add(E o) {
         boolean ret = backingSet.add(o);
         if (ret) {
-            callObservers(new SimpleChange(null, o));
+            callObservers(new SimpleAddChange(o));
         }
         return ret;
     }
@@ -244,7 +284,7 @@ public class ObservableSetWrapper<E> implements ObservableSet<E> {
     public boolean remove(Object o) {
         boolean ret = backingSet.remove(o);
         if (ret) {
-            callObservers(new SimpleChange((E)o, null));
+            callObservers(new SimpleRemoveChange((E)o));
         }
         return ret;
     }
@@ -314,7 +354,7 @@ public class ObservableSetWrapper<E> implements ObservableSet<E> {
             if (remove == c.contains(element)) {
                 removed = true;
                 i.remove();
-                callObservers(new SimpleChange(element, null));
+                callObservers(new SimpleRemoveChange(element));
             }
         }
         return removed;
@@ -330,7 +370,7 @@ public class ObservableSetWrapper<E> implements ObservableSet<E> {
         for (Iterator<E> i = backingSet.iterator(); i.hasNext(); ) {
             E element = i.next();
             i.remove();
-            callObservers(new SimpleChange(element, null));
+            callObservers(new SimpleRemoveChange(element));
         }
     }
 

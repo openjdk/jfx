@@ -71,7 +71,7 @@ public class SingleLoopClipEnvelope extends ClipEnvelope {
     @Override
     public ClipEnvelope setCycleDuration(Duration cycleDuration) {
         if ((cycleCount != 1) && !cycleDuration.isIndefinite()) {
-            return ClipEnvelopeFactory.create(animation);
+            return create(animation);
         }
         updateCycleTicks(cycleDuration);
         return this;
@@ -80,7 +80,7 @@ public class SingleLoopClipEnvelope extends ClipEnvelope {
     @Override
     public ClipEnvelope setCycleCount(int cycleCount) {
         if ((cycleCount != 1) && (cycleTicks != ClipEnvelope.INDEFINITE)) {
-            return ClipEnvelopeFactory.create(animation);
+            return create(animation);
         }
         this.cycleCount = cycleCount;
         return this;

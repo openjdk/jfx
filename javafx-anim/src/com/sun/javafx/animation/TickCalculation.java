@@ -90,10 +90,6 @@ public class TickCalculation {
         return Duration.millis(toMillis(ticks));
     }
 
-    public static Duration toDuration(long ticks, double rate) {
-        return Duration.millis(ticks * Math.abs(rate) / TICKS_PER_MILI);
-    }
-    
     public static double toMillis(long ticks) {
         return ticks / TICKS_PER_MILI;
     }

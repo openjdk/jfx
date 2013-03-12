@@ -57,6 +57,10 @@ final class MacPixels extends Pixels {
         super(width, height, data);
     }
     
+    protected MacPixels(int width, int height, IntBuffer data, float scale) {
+        super(width, height, data, scale);
+    }
+
     @Override
     protected void _fillDirectByteBuffer(ByteBuffer bb) {
         if (this.bytes != null) {

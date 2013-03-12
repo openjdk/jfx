@@ -25,7 +25,6 @@
 
 package com.sun.scenario.animation.shared;
 
-import com.sun.javafx.animation.TickCalculation;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Comparator;
@@ -35,6 +34,7 @@ import javafx.animation.Timeline;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.util.Duration;
+import com.sun.javafx.animation.TickCalculation;
 
 /**
  * An instance of ClipCore handles the core part of a clip.
@@ -98,9 +98,8 @@ public class TimelineClipCore {
             keyFrameTicks[i] = TickCalculation.fromDuration(this.keyFrames[i].getTime());
         }
         clipInterpolator = clipInterpolator.setKeyFrames(sortedKeyFrames, keyFrameTicks);
-        final Duration duration = (n == 0) ? Duration.ZERO
+        return (n == 0) ? Duration.ZERO
                 : sortedKeyFrames[n-1].getTime();
-        return duration;
     }
 
     public void notifyCurrentRateChanged() {
@@ -152,16 +151,7 @@ public class TimelineClipCore {
     }
 
     /**
-     * Called to visit all keyframes within a specified time-interval
-     * 
-     * @param toTime
-     *            the stopping time of the interval (inclusive)
-     * @param catchingUp
-     *            true, if we are running behind and want to skip keyframe
-     *            visits (keyframe.canSkip is true)
-     * @param visitLast
-     *            true, if we want to enforce visiting the last keyframe within
-     *            toTime
+     * Called to visit all keyframes within a specified time-interval.
      */
     public void playTo(long ticks) {
         aborted = false;
@@ -218,7 +208,7 @@ public class TimelineClipCore {
     }
 
     /**
-     * Visit a single keyframe
+     * Visit a single keyframe.
      * 
      * @param kfIndex
      *            the index of the keyframe in the keyframe-array

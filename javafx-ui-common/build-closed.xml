@@ -20,7 +20,7 @@
         ${runtime.dist.root.dir}/javafx-accessible/dist/javafx-accessible.jar:
         ${jfx.checkstyle.jar}" />
     <property name="javac.classpath" refid="javac.closed.classpath.path"/>
-    
+
     <import file="../build-defs.xml"/>
     <import file="build-common.xml"/>
 

@@ -431,15 +431,6 @@ public abstract class Toolkit {
         }
     }
 
-    /**
-     * Call this to make sure there is a pulse scheduled soon, this is needed by thing that reily on pulse events like
-     * layout and stage sizing and need pulse events even when there is no running annimation
-     */
-    @Deprecated
-    public void triggerNextPulse() {
-        getMasterTimer().notifyJobsReady();
-    }
-
     // notify the pulse timer code that we need the next pulse to happen
     // this flag is cleared each cycle so subsequent pulses must be requested
     public abstract void requestNextPulse();

@@ -1433,6 +1433,11 @@ final class LensApplication extends Application {
     }
 
     @Override
+    public Pixels createPixels(int width, int height, IntBuffer data, float scale) {
+        return new LensPixels(width, height, data, scale);
+    }
+
+    @Override
     protected int staticPixels_getNativeFormat() {
         return LensPixels.getNativeFormat_impl();
     }

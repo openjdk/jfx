@@ -30,11 +30,6 @@ import com.sun.scenario.animation.shared.AnimationAccessor;
 final class AnimationAccessorImpl extends AnimationAccessor{
 
     @Override
-    public void timePulse(Animation animation, long elapsedTime) {
-        animation.impl_timePulse(elapsedTime);
-    }
-
-    @Override
     public void setCurrentRate(Animation animation, double currentRate) {
         animation.impl_setCurrentRate(currentRate);
     }

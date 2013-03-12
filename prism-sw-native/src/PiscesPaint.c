@@ -468,16 +468,16 @@ genTexturePaint(Renderer *rdr, jint height) {
                                 cval = p00;
                             }
                             assert(pidx >= 0);
-                            assert(pidx < rdr->_paint_length / 4);
+                            assert(pidx < rdr->_paint_length);
                             paint[pidx] = cval;
                         } else {
                             assert(pidx >= 0);
-                            assert(pidx < rdr->_paint_length / 4);
+                            assert(pidx < rdr->_paint_length);
                             paint[pidx] = p00;
                         }
                     } else {
                         assert(pidx >= 0);
-                        assert(pidx < rdr->_paint_length / 4);
+                        assert(pidx < rdr->_paint_length);
                         paint[pidx] = 0x00000000;
                     }
                     ++a;
@@ -526,16 +526,16 @@ genTexturePaint(Renderer *rdr, jint height) {
                                 cval = p00;
                             }
                             assert(pidx >= 0);
-                            assert(pidx < rdr->_paint_length / 4);
+                            assert(pidx < rdr->_paint_length);
                             paint[pidx] = cval;
                         } else {
                             assert(pidx >= 0);
-                            assert(pidx < rdr->_paint_length / 4);
+                            assert(pidx < rdr->_paint_length);
                             paint[pidx] = p00;
                         }
                     } else {
                         assert(pidx >= 0);
-                        assert(pidx < rdr->_paint_length / 4);
+                        assert(pidx < rdr->_paint_length);
                         paint[pidx] = 0x00000000;
                     }
                     ++a;
@@ -599,18 +599,18 @@ genTexturePaint(Renderer *rdr, jint height) {
                             }
 
                             assert(pidx >= 0);
-                            assert(pidx < rdr->_paint_length / 4);
+                            assert(pidx < rdr->_paint_length);
 
                             paint[pidx] = cval;
                         } else {
                             assert(pidx >= 0);
-                            assert(pidx < rdr->_paint_length / 4);
+                            assert(pidx < rdr->_paint_length);
 
                             paint[pidx] = p00;
                         }
                     } else {
                         assert(pidx >= 0);
-                        assert(pidx < rdr->_paint_length / 4);
+                        assert(pidx < rdr->_paint_length);
 
                         paint[pidx] = 0x00000000;
                     }
@@ -664,18 +664,18 @@ genTexturePaint(Renderer *rdr, jint height) {
                             }
 
                             assert(pidx >= 0);
-                            assert(pidx < rdr->_paint_length / 4);
+                            assert(pidx < rdr->_paint_length);
 
                             paint[pidx] = cval;
                         } else {
                             assert(pidx >= 0);
-                            assert(pidx < rdr->_paint_length / 4);
+                            assert(pidx < rdr->_paint_length);
 
                             paint[pidx] = p00;
                         }
                     } else {
                         assert(pidx >= 0);
-                        assert(pidx < rdr->_paint_length / 4);
+                        assert(pidx < rdr->_paint_length);
 
                         paint[pidx] = 0x00000000;
                     }

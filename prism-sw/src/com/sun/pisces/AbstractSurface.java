@@ -27,11 +27,24 @@ package com.sun.pisces;
 
 public abstract class AbstractSurface implements Surface {
     
-    long nativePtr = 0L;
-    int width;
-    int height;
+    private long nativePtr = 0L;
+    private int width;
+    private int height;
 
-    protected AbstractSurface() { }
+    AbstractSurface(int width, int height) {
+        if (width < 0) {
+            throw new IllegalArgumentException("WIDTH must be positive");
+        }
+        if (height < 0) {
+            throw new IllegalArgumentException("HEIGHT must be positive");
+        }
+        final int nbits = 32-Integer.numberOfLeadingZeros(width) + 32-Integer.numberOfLeadingZeros(height);
+        if (nbits > 31) {
+            throw new IllegalArgumentException("WIDTH * HEIGHT is too large");
+        }
+        this.width = width;
+        this.height = height;
+    }
         
     public native void getRGB(int[] argb, int offset, int scanLength,
             int x, int y, int width, int height);
@@ -51,5 +64,5 @@ public abstract class AbstractSurface implements Surface {
         return height;
     }
 
-    public native void nativeFinalize();
+    private native void nativeFinalize();
 }

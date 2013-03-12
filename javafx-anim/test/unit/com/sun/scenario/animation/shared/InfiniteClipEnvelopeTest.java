@@ -26,17 +26,16 @@
 package com.sun.scenario.animation.shared;
 
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotSame;
-import static org.junit.Assert.assertTrue;
 import javafx.animation.Animation;
 import javafx.animation.Animation.Status;
 import javafx.animation.AnimationMock;
 import javafx.animation.AnimationMock.Command;
 import javafx.util.Duration;
-
+import com.sun.scenario.ToolkitAccessor;
 import org.junit.Before;
 import org.junit.Test;
+
+import static org.junit.Assert.*;
 
 public class InfiniteClipEnvelopeTest {
 
@@ -47,7 +46,7 @@ public class InfiniteClipEnvelopeTest {
     
     @Before
     public void setUp() {
-        animation = new AnimationMock(AnimationMock.DEFAULT_DURATION, AnimationMock.DEFAULT_RATE, Animation.INDEFINITE, AnimationMock.DEFAULT_AUTOREVERSE);
+        animation = new AnimationMock(ToolkitAccessor.getMasterTimer(), AnimationMock.DEFAULT_DURATION, AnimationMock.DEFAULT_RATE, Animation.INDEFINITE, AnimationMock.DEFAULT_AUTOREVERSE);
         clip = new InfiniteClipEnvelope(animation);
     }
     

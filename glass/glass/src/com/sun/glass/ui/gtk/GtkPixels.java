@@ -39,6 +39,10 @@ final class GtkPixels extends Pixels {
         super(width, height, data);
     }
 
+    public GtkPixels(int width, int height, IntBuffer data, float scale) {
+        super(width, height, data, scale);
+    }
+
     @Override
     protected void _fillDirectByteBuffer(ByteBuffer bb) {
         // Taken from MacPixels
