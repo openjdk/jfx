@@ -1080,7 +1080,6 @@ public abstract class Parent extends Node {
                     if (c.wasRemoved() == false) {
                         continue;
                     }
-                    impl_cssResetInitialValues();
                     break; // no point in resetting more than once...
                 }
                 
@@ -1167,21 +1166,6 @@ public abstract class Parent extends Node {
         }
     }
     
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    @Override public void impl_cssResetInitialValues() {
-        // RT-9784
-        super.impl_cssResetInitialValues();
-
-        for (int i=0, max=children.size(); i<max; i++) {
-            children.get(i).impl_cssResetInitialValues();
-        }
-    }
-    
-
     /***********************************************************************
      *                               Misc                                  *
      *                                                                     *

@@ -8183,38 +8183,6 @@ public abstract class Node implements EventTarget, Styleable {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-    public void impl_cssResetInitialValues() {
-        
-        //
-        // RT-9784: reset all properties that have been set by CSS back
-        // to their default value. Called when a stylesheet is removed from
-        // a parent or from the scene. This has to be done before calling 
-        // impl_reapplyCSS.
-        //
-        final List<CssMetaData<? extends Styleable, ?>> metaDataList = getCssMetaData();
-        final int nStyleables = metaDataList != null ? metaDataList.size() : 0;
-        for (int n=0; n<nStyleables; n++) {
-            final CssMetaData metaData = metaDataList.get(n);
-            if (metaData.isSettable(this) == false) continue;
-            final StyleableProperty<?> styleableProperty = metaData.getStyleableProperty(this);
-            if (styleableProperty != null) {
-                final StyleOrigin origin = styleableProperty.getStyleOrigin();
-                if (origin != null && origin != StyleOrigin.USER) {
-                    // If a property is never set by the user or by CSS, then 
-                    // the StyleOrigin of the property is null. So, passing null 
-                    // here makes the property look (to CSS) like it was
-                    // initialized but never used.
-                    metaData.set(this, metaData.getInitialValue(this), null);
-                }
-            }
-        }        
-    }
-    
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
     public final void impl_reapplyCSS() {
         // If there is no scene, then we cannot make it dirty, so we'll leave
         // the flag alone
@@ -8327,9 +8295,11 @@ public abstract class Node implements EventTarget, Styleable {
 
         if (cssFlag == CssFlags.REAPPLY) {
             
+            final boolean hadStyles = styleHelper != null;
+            
             // Match new styles if my own indicates I need to reapply
             styleHelper = CssStyleHelper.createStyleHelper(this);
-
+            
         } else if (cssFlag == CssFlags.RECALCULATE) {
             
             // Recalculate means that the in-line style has changed.

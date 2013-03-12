@@ -1394,7 +1394,6 @@ public class Scene implements EventTarget {
                 if (c.wasRemoved() == false) {
                     continue;
                 }
-                getRoot().impl_cssResetInitialValues();
                 break; // no point in resetting more than once...
             }
             getRoot().impl_reapplyCSS();

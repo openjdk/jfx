@@ -133,6 +133,16 @@ final class CssStyleHelper {
                 }
                 
                 if (mightInherit == false) {
+                    
+                    // If this node had a style helper but no longer has
+                    // a StyleHelper, then reset properties to thier initial
+                    // value. If this node were to have a StyleHelper after
+                    // exiting this method, then transitionToState would take
+                    // care of resetting properties if needed. 
+                    if (node.styleHelper != null) {
+                        node.styleHelper.resetToInitialValues(node);
+                    }
+                    
                     return null;
                 }
             }
@@ -309,7 +319,6 @@ final class CssStyleHelper {
         // new styles, reset the properties to initial values.
         if (cacheMetaData != null) {
             
-            node.impl_cssResetInitialValues();
             cacheMetaData.localStyleCache.clear();
             
             // do we have any styles at all now?
@@ -322,6 +331,7 @@ final class CssStyleHelper {
                     // initial state so that calls to transitionToState 
                     // become a no-op.
                     cacheMetaData = null;
+                    resetToInitialValues(node);
                 }
                 
                 // If smap isn't empty, then there are styles that
@@ -357,6 +367,28 @@ final class CssStyleHelper {
         }
         
     }
+    
+    private void resetToInitialValues(Styleable styleable) {
+        
+        final List<CssMetaData<? extends Styleable, ?>> metaDataList = styleable.getCssMetaData();
+        final int nStyleables = metaDataList != null ? metaDataList.size() : 0;
+        for (int n=0; n<nStyleables; n++) {
+            final CssMetaData metaData = metaDataList.get(n);
+            if (metaData.isSettable(styleable) == false) continue;
+            final StyleableProperty<?> styleableProperty = metaData.getStyleableProperty(styleable);
+            if (styleableProperty != null) {
+                final StyleOrigin origin = styleableProperty.getStyleOrigin();
+                if (origin != null && origin != StyleOrigin.USER) {
+                    // If a property is never set by the user or by CSS, then 
+                    // the StyleOrigin of the property is null. So, passing null 
+                    // here makes the property look (to CSS) like it was
+                    // initialized but never used.
+                    metaData.set(styleable, metaData.getInitialValue(styleable), null);
+                }
+            }
+        }        
+    }
+    
         
     private Map<String, List<CascadingStyle>> getStyleMap() {
         if (cacheMetaData == null) return null;
