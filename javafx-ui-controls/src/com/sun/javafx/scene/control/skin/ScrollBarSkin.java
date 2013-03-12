@@ -586,17 +586,14 @@ public class ScrollBarSkin extends BehaviorSkinBase<ScrollBar, ScrollBarBehavior
 
         @Override protected void layoutChildren() {
             final Insets insets = getInsets();
-            final double top = insets.getTop();
-            final double left = insets.getLeft();
-            final double bottom = insets.getBottom();
-            final double right = insets.getRight();
-            
-            double aw = arrow.prefWidth(-1);
-            double ah = arrow.prefHeight(-1);
-            
-            double yPos = (getHeight() - (top + bottom + ah)) / 2.0;
-            double xPos = (getWidth() - (left + right + aw)) / 2.0;
-
+            final double top = snapSize(insets.getTop());
+            final double left = snapSize(insets.getLeft());
+            final double bottom = snapSize(insets.getBottom());
+            final double right = snapSize(insets.getRight());
+            final double aw = snapSize(arrow.prefWidth(-1));
+            final double ah = snapSize(arrow.prefHeight(-1));
+            final double yPos = snapPosition((getHeight() - (top + bottom + ah)) / 2.0);
+            final double xPos = snapPosition((getWidth() - (left + right + aw)) / 2.0);
             arrow.resizeRelocate(xPos + left, yPos + top, aw, ah);
         }
 
@@ -609,11 +606,19 @@ public class ScrollBarSkin extends BehaviorSkinBase<ScrollBar, ScrollBarBehavior
         }
 
         @Override protected double computePrefWidth(double height) {
-            return arrow.prefWidth(height) + getInsets().getLeft() + getInsets().getRight();
+            final Insets insets = getInsets();
+            final double left = snapSize(insets.getLeft());
+            final double right = snapSize(insets.getRight());
+            final double aw = snapSize(arrow.prefWidth(-1));
+            return left + aw + right;
         }
         
         @Override protected double computePrefHeight(double width) {
-            return arrow.prefHeight(width) + getInsets().getTop() + getInsets().getBottom();
+            final Insets insets = getInsets();
+            final double top = snapSize(insets.getTop());
+            final double bottom = snapSize(insets.getBottom());
+            final double ah = snapSize(arrow.prefHeight(-1));
+            return top + ah + bottom;
         }
     }
 }
