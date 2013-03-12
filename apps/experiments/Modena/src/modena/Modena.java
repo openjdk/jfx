@@ -31,6 +31,9 @@
  */
 package modena;
 
+import java.awt.Graphics;
+import java.awt.Graphics2D;
+import java.awt.image.BufferedImage;
 import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.File;
@@ -55,6 +58,7 @@ import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.fxml.FXMLLoader;
 import javafx.geometry.NodeOrientation;
+import javafx.geometry.Rectangle2D;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.SnapshotParameters;
@@ -582,8 +586,20 @@ public class Modena extends Application {
             if (file != null) {
                 try {
                     samplePage.getStyleClass().add("root");
-                    WritableImage img = samplePage.snapshot(new SnapshotParameters(), null);
-                    ImageIO.write(SwingFXUtils.fromFXImage(img, null), "PNG", file);
+                    int width = (int)(samplePage.getLayoutBounds().getWidth()+0.5d);
+                    int height = (int)(samplePage.getLayoutBounds().getHeight()+0.5d);
+                    BufferedImage imgBuffer = new BufferedImage(width,height,BufferedImage.TYPE_INT_ARGB);
+                    Graphics2D g2 = imgBuffer.createGraphics();
+                    for (int y=0; y<height; y+=2048) {
+                        SnapshotParameters snapshotParameters = new SnapshotParameters();
+                        int remainingHeight = Math.min(2048, height - y);
+                        snapshotParameters.setViewport(new Rectangle2D(0,y,width,remainingHeight));
+                        WritableImage img = samplePage.snapshot(snapshotParameters, null);
+                        g2.drawImage(SwingFXUtils.fromFXImage(img,null),0,y,null);
+                    }
+                    g2.dispose();
+                    ImageIO.write(imgBuffer, "PNG", file);
+                    System.out.println("Written image: "+file.getAbsolutePath());
                 } catch (IOException ex) {
                     Logger.getLogger(Modena.class.getName()).log(Level.SEVERE, null, ex);
                 }
