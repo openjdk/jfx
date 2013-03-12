@@ -25,10 +25,14 @@
 
 package com.sun.javafx.scene.control.behavior;
 
+import java.util.Iterator;
+import java.util.List;
+
 import javafx.scene.Node;
 import javafx.scene.control.MultipleSelectionModel;
 import javafx.scene.control.TableSelectionModel;
 import javafx.scene.control.TreeItem;
+import javafx.scene.control.TreeTableColumn;
 import javafx.scene.control.TreeTableRow;
 import javafx.scene.control.TreeTableView;
 import javafx.scene.input.MouseButton;
@@ -67,13 +71,28 @@ public class TreeTableRowBehavior<T> extends CellBehaviorBase<TreeTableRow<T>> {
         final TableSelectionModel sm = table.getSelectionModel();
         if (sm == null || sm.isCellSelectionEnabled()) return;
         
-        // handle editing, which only occurs with the primary mouse button
+        final int index = getControl().getIndex();
+        final boolean isAlreadySelected = sm.isSelected(index);
         int clickCount = e.getClickCount();
         if (clickCount == 1) {
+            // get width of all visible columns (we only care about clicks to the
+            // right of the right-most column)
+            List<TreeTableColumn<T, ?>> columns = getControl().getTreeTableView().getVisibleLeafColumns();
+            double width = 0.0;
+            for (int i = 0; i < columns.size(); i++) {
+                width += columns.get(i).getWidth();
+            }
+            
+            if (e.getX() < width) return;
+            
             // In the case of clicking to the right of the rightmost
             // TreeTableCell, we should still support selection, so that
             // is what we are doing here.
-            sm.select(treeItem);
+            if (isAlreadySelected) {
+                sm.clearSelection(index);
+            } else {
+                sm.select(treeItem);
+            }
         }
     }
 }

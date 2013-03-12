@@ -123,7 +123,12 @@ public class TreeTableCellBehavior extends TableCellBehaviorBase<TreeTableCell> 
         
         boolean isAlreadySelected = sm.isSelected(index, column);
 
-        sm.clearAndSelect(index, column);
+        if (isAlreadySelected && (e.isControlDown() || e.isMetaDown())) {
+            sm.clearSelection(index, column);
+            isAlreadySelected = false;
+        } else {
+            sm.clearAndSelect(index, column);
+        }
 
         // handle editing, which only occurs with the primary mouse button
         if (e.getButton() == MouseButton.PRIMARY) {
