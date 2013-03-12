@@ -36,7 +36,6 @@ import org.junit.Test;
 /**
  * This fails with IllegalStateException because of the toolkit's check for the FX application thread
  */
-@Ignore
 public class ChoiceBoxSkinTest {
     private ChoiceBox choicebox;
     private ChoiceBoxSkinMock skin;

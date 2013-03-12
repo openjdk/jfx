@@ -38,7 +38,6 @@ import org.junit.Test;
 /**
  * This fails with IllegalStateException because of the toolkit's check for the FX application thread
  */
-@Ignore
 public class ToolBarSkinTest {
     private ToolBar toolbar;
     private ToolBarSkinMock skin;

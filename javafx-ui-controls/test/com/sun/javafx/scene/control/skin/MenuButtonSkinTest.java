@@ -37,7 +37,6 @@ import org.junit.Test;
 /**
  * This fails with IllegalStateException because of the toolkit's check for the FX application thread
  */
-@Ignore
 public class MenuButtonSkinTest {
     private MenuButton menubutton;
     private MenuButtonSkinMock skin;
