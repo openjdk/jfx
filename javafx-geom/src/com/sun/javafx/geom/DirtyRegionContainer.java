@@ -36,7 +36,7 @@ import java.util.Arrays;
 public final class DirtyRegionContainer {
 
     public static final int DTR_OK = 1;
-    public static final int DTR_INVALID = 0;
+    public static final int DTR_CONTAINS_CLIP = 0;
 
     private RectBounds[] dirtyRegions;
     private int emptyIndex;
@@ -142,7 +142,10 @@ public final class DirtyRegionContainer {
      * Adds new dirty region to the array.
      * @param region the dirty region. 
      */
-    public RectBounds addDirtyRegion(final RectBounds region) {
+    public void addDirtyRegion(final RectBounds region) {
+            if (region.isEmpty())
+                return;
+
             RectBounds dr, tmp;
             int tempIndex = 0;
             int regionCount = emptyIndex;
@@ -164,14 +167,14 @@ public final class DirtyRegionContainer {
                 dr = dirtyRegions[emptyIndex];
                 dr.deriveWithNewBounds(region);
                 emptyIndex++;
-                return dr;
+                return;
             }
             //match region into existing dirty regions
             if (dirtyRegions.length == 1)
-                return (RectBounds) dirtyRegions[0].deriveWithUnion(region);
+                dirtyRegions[0].deriveWithUnion(region);
             else
-                return compress(region);
-    }    
+                compress(region);
+    }
 
     public void merge(DirtyRegionContainer other) {
         int otherSize = other.size();

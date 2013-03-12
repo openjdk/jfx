@@ -322,9 +322,9 @@ public class DirtyRegionTestBase {
                 new RectBounds(), pool,
                 drc,
                 BaseTransform.IDENTITY_TRANSFORM, new GeneralTransform3D());
-        
+
         RectBounds dirtyRegion = drc.getDirtyRegion(0) ;
-        
+
         // The accumulation of dirty regions ends up with a slightly
         // padded dirty region, just to make up for any error when
         // transforming. Its quick and dirty but does the job.
@@ -337,9 +337,34 @@ public class DirtyRegionTestBase {
                 Math.max(expected.getMinX() - 1, dirtyRegion.getMinX()),
                 Math.max(expected.getMinY() - 1, dirtyRegion.getMinY()),
                 Math.min(expected.getMaxX() + 1, dirtyRegion.getMaxX()),
-                Math.min(expected.getMaxY() + 1, dirtyRegion.getMaxY()));
+                Math.min(expected.getMaxY() + 1, dirtyRegion.getMaxY()));        
         // Now make the check, and print useful error information in case it fails.
         assertEquals("creator=" + creator + ", polluter=" + polluter, expected, dirtyRegion);
+    }
+
+    /**
+     * Helper method for asserting that the dirty region of the node indicated
+     * (start) contains the windowClip and matches the dirty region which is
+     * expected. This method will invoke the accumulateDirtyRegions method
+     * on the start node. Accumulating  dirty regions requires a clip to be sent
+     * along as well. The windowClip is specified on DirtyRegionTestBase
+     * (by default it is ridiculously large) but sub classes can change the clip
+     * at any time.
+     */
+    protected void assertContainsClip(NGNode start, RectBounds expectedDirtyRegion, int expectedStatus) {
+		DirtyRegionPool pool = new DirtyRegionPool(1);
+		DirtyRegionContainer drc = pool.checkOut();
+        int status = start.accumulateDirtyRegions(
+                windowClip,
+                new RectBounds(), pool,
+                drc,
+                BaseTransform.IDENTITY_TRANSFORM, new GeneralTransform3D());
+
+        assertEquals(expectedStatus, status);
+
+        if (status == DirtyRegionContainer.DTR_OK) {
+            assertDirtyRegionEquals(start, expectedDirtyRegion);
+        }
     }
 
     /**

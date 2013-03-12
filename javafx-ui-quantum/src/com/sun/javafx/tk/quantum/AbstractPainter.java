@@ -168,7 +168,7 @@ abstract class AbstractPainter {
     }
 
     public void paintImpl(Graphics g) {
-        int status = DirtyRegionContainer.DTR_INVALID;
+        int status = DirtyRegionContainer.DTR_CONTAINS_CLIP;
         if (PrismSettings.dirtyOptsEnabled) {
             long start = PULSE_LOGGING_ENABLED ? System.currentTimeMillis() : 0;
             if (!viewState.getScene().isEntireSceneDirty() && !renderOverlay) {

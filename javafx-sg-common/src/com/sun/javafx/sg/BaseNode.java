@@ -943,21 +943,20 @@ public abstract class BaseNode<G> implements PGNode {
             return DirtyRegionContainer.DTR_OK;
         }
 
-        //returns null if there was compress in regions.
-        RectBounds changedDirtyRegion = dirtyRegionContainer.addDirtyRegion(dirtyRegionTemp);
-        assert changedDirtyRegion != null;
-        //check last added region if it contains clip
-        if (changedDirtyRegion.getMinX() <= clip.getMinX() &&
-            changedDirtyRegion.getMinY() <= clip.getMinY() &&
-            changedDirtyRegion.getMaxX() >= clip.getMaxX() &&
-            changedDirtyRegion.getMaxY() >= clip.getMaxY()) {
-            return DirtyRegionContainer.DTR_INVALID;
+        if (dirtyRegionTemp.getMinX() <= clip.getMinX() &&
+            dirtyRegionTemp.getMinY() <= clip.getMinY() &&
+            dirtyRegionTemp.getMaxX() >= clip.getMaxX() &&
+            dirtyRegionTemp.getMaxY() >= clip.getMaxY()) {
+            return DirtyRegionContainer.DTR_CONTAINS_CLIP;
         }
+
+        dirtyRegionTemp.setMinX(Math.max(dirtyRegionTemp.getMinX(), clip.getMinX()));
+        dirtyRegionTemp.setMinY(Math.max(dirtyRegionTemp.getMinY(), clip.getMinY()));
+        dirtyRegionTemp.setMaxX(Math.min(dirtyRegionTemp.getMaxX(), clip.getMaxX()));
+        dirtyRegionTemp.setMaxY(Math.min(dirtyRegionTemp.getMaxY(), clip.getMaxY()));
+
+        dirtyRegionContainer.addDirtyRegion(dirtyRegionTemp);
         
-        changedDirtyRegion.setMinX(Math.max(changedDirtyRegion.getMinX(), clip.getMinX()));
-        changedDirtyRegion.setMinY(Math.max(changedDirtyRegion.getMinY(), clip.getMinY()));
-        changedDirtyRegion.setMaxX(Math.min(changedDirtyRegion.getMaxX(), clip.getMaxX()));
-        changedDirtyRegion.setMaxY(Math.min(changedDirtyRegion.getMaxY(), clip.getMaxY()));
         return DirtyRegionContainer.DTR_OK;
     }
     
@@ -1066,7 +1065,7 @@ public abstract class BaseNode<G> implements PGNode {
                 removedChild.dirty = DirtyFlag.DIRTY;
                     status = removedChild.accumulateDirtyRegions(myClip,
                             dirtyRegionTemp,regionPool, dirtyRegionContainer, renderTx, pvTx);
-                    if (status == DirtyRegionContainer.DTR_INVALID) {
+                    if (status == DirtyRegionContainer.DTR_CONTAINS_CLIP) {
                         break;
                     }
             }
@@ -1082,7 +1081,7 @@ public abstract class BaseNode<G> implements PGNode {
             // anyway, and doing the check in one place is less error prone.            
                 status = child.accumulateDirtyRegions(myClip, dirtyRegionTemp, regionPool,
                                                       dirtyRegionContainer, renderTx, pvTx);
-                if (status == DirtyRegionContainer.DTR_INVALID) {
+                if (status == DirtyRegionContainer.DTR_CONTAINS_CLIP) {
                 break;
             }
         }
@@ -1118,7 +1117,7 @@ public abstract class BaseNode<G> implements PGNode {
         // the bounds of the dirty region, then we end up returning null in the
         // end. But the implementation of accumulateNodeDirtyRegion handles this.
         if (clipNode != null && effectFilter == null) {
-            if (status == DirtyRegionContainer.DTR_INVALID) {
+            if (status == DirtyRegionContainer.DTR_CONTAINS_CLIP) {
                 status = accumulateNodeDirtyRegion(clip, dirtyRegionTemp, originalDirtyRegion, tx, pvTx);
             } else {
                 originalDirtyRegion.merge(dirtyRegionContainer);
