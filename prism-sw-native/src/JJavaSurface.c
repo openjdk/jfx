@@ -32,9 +32,7 @@
 
 #define SURFACE_NATIVE_PTR 0
 #define SURFACE_DATA_INT 1
-#define SURFACE_DATA_SHORT 2
-#define SURFACE_DATA_BYTE 3 
-#define SURFACE_LAST SURFACE_DATA_BYTE
+#define SURFACE_LAST SURFACE_DATA_INT
 
 static jfieldID fieldIds[SURFACE_LAST + 1];
 static jboolean fieldIdsInitialized = JNI_FALSE;
@@ -48,7 +46,6 @@ static void surface_cleanup(AbstractSurface* surface);
 typedef struct _JavaSurface {
     AbstractSurface super;
     jfieldID javaArrayFieldID;
-    jint javaArrayFieldSize;
     jobject dataHandle;
 } JavaSurface;
 
@@ -83,7 +80,6 @@ Java_com_sun_pisces_JavaSurface_initialize
                 case TYPE_INT_ARGB:
                 case TYPE_INT_ARGB_PRE:
                     jSurface->javaArrayFieldID = fieldIds[SURFACE_DATA_INT];
-                    jSurface->javaArrayFieldSize = sizeof(jint);            
                     break;
                 default: //errorneous - should never happen
                     jSurface->javaArrayFieldID = NULL;

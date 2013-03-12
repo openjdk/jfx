@@ -52,21 +52,19 @@ Java_com_sun_pisces_NativeSurface_initialize(JNIEnv* env, jobject objectHandle,
             && initializeSurfaceFieldIds(env, objectHandle)) {
         surface = my_malloc(AbstractSurface, 1);
         if (surface != NULL) {
-            jint size;
+            size_t size;
             void* data;
             switch (dataType) {
             case TYPE_INT_ARGB:
             case TYPE_INT_ARGB_PRE:
-                size = width * height * sizeof(jint);
+                size = width * height;
                 break;
             default: //errorneous - should never happen
                 size = 0;
                 break;
             }
-            data = PISCESmalloc(size);
+            data = my_malloc(jint, size);
             if (data != NULL) {
-                memset(data, 0, size);
-
                 surface->super.width = width;
                 surface->super.height = height;
                 surface->super.offset = 0;

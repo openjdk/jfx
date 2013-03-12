@@ -34,10 +34,8 @@ public final class JavaSurface extends AbstractSurface {
     private int[] dataInt;
 
     public JavaSurface(int[] dataInt, int dataType, int width, int height) {
+        super(width, height);
         this.dataInt = dataInt;
-        this.width = width;
-        this.height = height;
-
         this.dataBuffer = IntBuffer.wrap(this.dataInt);
 
         initialize(dataType, width, height);
