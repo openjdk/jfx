@@ -1606,9 +1606,11 @@ is being used to size a border should also be in pixels.
 .tab-pane > .tab-header-area > .control-buttons-tab > .container > .tab-down-button {
     -fx-background-color: -fx-outer-border, -fx-inner-border, -fx-body-color;
     -fx-background-insets: -1 0 5 0, 0 1 6 1, 1 2 7 2;
-    -fx-padding: 4 4 9 4; /* TODO convert to ems */
-    /*-fx-padding: 0.416667em 0.416667em 0.833333em 0.416667em;*/ 
+    -fx-padding: 4 4 9 4;
     -fx-background-radius: 10;
+}
+.tab-pane:bottom > .tab-header-area > .control-buttons-tab > .container > .tab-down-button {
+    -fx-padding: -5 4 4 4; /* TODO convert to ems */
 }
 /* FLOATING TABS CUSTOMISATION */
 .tab-pane.floating > .tab-header-area > .tab-header-background {
