@@ -1000,13 +1000,13 @@ is being used to size a border should also be in pixels.
     -fx-background-insets: 0 1 1 1, 1;
     -fx-padding: 0 1 0 1;
 }
-.scroll-pane > .scroll-bar:horizontal > .increment-button, 
+.scroll-pane > .scroll-bar:horizontal > .increment-button,
 .scroll-pane > .scroll-bar:horizontal > .decrement-button {
-    -fx-padding: 0.25em 0.25em 0.166667em 0.25em; /* 3 3 2 3 */
+    -fx-padding: 0.166667em 0.25em 0.25em  0.25em; /* 2 3 3 3 */
 }
-.scroll-pane > .scroll-bar:vertical > .increment-button, 
+.scroll-pane > .scroll-bar:vertical > .increment-button,
 .scroll-pane > .scroll-bar:vertical > .decrement-button {
-    -fx-padding: 0.25em 0.166667em 0.25em 0.25em; /* 3 2 3 3 */
+    -fx-padding: 0.25em 0.25em 0.25em 0.166667em; /* 3 3 3 2 */
 }
 .scroll-pane > .scroll-bar:vertical {
     -fx-background-insets: 1 1 1 0, 1;
