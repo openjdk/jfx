@@ -955,39 +955,39 @@ is being used to size a border should also be in pixels.
 }
 .scroll-bar > .increment-button > .increment-arrow,
 .scroll-bar > .decrement-button > .decrement-arrow {
-    -fx-background-color: -fx-mark-highlight-color,derive(-fx-base,-35%);
+    -fx-background-color: -fx-mark-highlight-color,derive(-fx-base,-45%);
 }
 .scroll-bar > .increment-button:hover > .increment-arrow,
 .scroll-bar > .decrement-button:hover > .decrement-arrow {
-    -fx-background-color: -fx-mark-highlight-color,derive(-fx-base,-40%);
+    -fx-background-color: -fx-mark-highlight-color,derive(-fx-base,-50%);
 }
 .scroll-bar > .increment-button:pressed > .increment-arrow,
 .scroll-bar > .decrement-button:pressed > .decrement-arrow {
-    -fx-background-color: -fx-mark-highlight-color,derive(-fx-base,-45%);
-}
-.scroll-bar:horizontal > .increment-button > .increment-arrow {
-    /*-fx-padding: 0.583333em 0.416667em 0 0; *//* 7 5 0 0 */
-    -fx-padding: 0.75em 0.416667em 0 0; /* 9 5 0 0 */
-    -fx-shape: "M0.315,1.457l1.414-1.414L5.686,4L1.729,7.957L0.315,6.543L2.857,4L0.315,1.457z";
-    -fx-background-insets: 2 0 -2 0, 0;
-}
-.scroll-bar:vertical > .increment-button > .increment-arrow {
-    /*-fx-padding: 0.416667em 0.583333em 0 0 ; *//* 5 7 0 0 */
-    -fx-padding: 0.416667em 0.75em 0 0 ; /* 5 9 0 0 */
-    -fx-shape: "M6.543,0.315l1.414,1.414L4,5.686L0.043,1.729l1.414-1.414L4,2.858L6.543,0.315z";
-    -fx-background-insets: 2 0 -2 0, 0;
+    -fx-background-color: -fx-mark-highlight-color,derive(-fx-base,-55%);
 }
 .scroll-bar:horizontal > .decrement-button > .decrement-arrow {
-    /*-fx-padding: 0.583333em 0.416667em 0 0; *//* 7 5 0 0 */
-    -fx-padding: 0.75em 0.416667em 0 0; /* 9 5 0 0 */
-    -fx-shape: "M5.686,6.543L4.271,7.957L0.314,4l3.957-3.957l1.414,1.414L3.143,4L5.686,6.543z";
-    -fx-background-insets: 2 0 -2 0, 0;
+    -fx-padding: 0.333em 0.167em 0.333em 0.167em; /* 4 2 4 2 */
+    -fx-shape: "M5.997,5.072L5.995,6.501l-2.998-4l2.998-4l0.002,1.43l-1.976,2.57L5.997,5.072z";
+    -fx-effect: dropshadow(two-pass-box , -fx-shadow-highlight-color, 1, 0.0 , 0, 1.4);
+    /*-fx-background-insets: 2 0 -2 0, 0;*/
+}
+.scroll-bar:horizontal > .increment-button > .increment-arrow {
+    -fx-padding: 0.333em 0.167em 0.333em 0.167em; /* 4 2 4 2 */
+    -fx-shape: "M2.998-0.07L3-1.499l2.998,4L3,6.501l-0.002-1.43l1.976-2.57L2.998-0.07z";
+    -fx-effect: dropshadow(two-pass-box , -fx-shadow-highlight-color, 1, 0.0 , 0, 1.4);
+    /*-fx-background-insets: 2 0 -2 0, 0;*/
 }
 .scroll-bar:vertical > .decrement-button > .decrement-arrow {
-    /*-fx-padding: 0.416667em 0.583333em 0 0; *//* 5 7 0 0 */
-    -fx-padding: 0.416667em 0.75em 0 0; /* 5 9 0 0 */
-    -fx-shape: "M1.457,5.563L0.042,4.149L4,0.193l3.957,3.957L6.543,5.563L4,3.021L1.457,5.563z";
-    -fx-background-insets: 2 0 -2 0, 0;
+    -fx-padding: 0.167em 0.333em 0.167em 0.333em; /* 2 4 2 4 */
+    -fx-shape: "M1.929,4L0.5,3.998L4.5,1l4,2.998L7.07,4L4.5,2.024L1.929,4z";
+    -fx-effect: dropshadow(two-pass-box , -fx-shadow-highlight-color, 1, 0.0 , 0, 1.4);
+    /*-fx-background-insets: 2 0 -2 0, 0;*/
+}
+.scroll-bar:vertical > .increment-button > .increment-arrow {
+    -fx-padding: 0.167em 0.333em 0.167em 0.333em; /* 2 4 2 4 */
+    -fx-shape: "M7.071,1L8.5,1.002L4.5,4l-4-2.998L1.93,1L4.5,2.976L7.071,1z";
+    -fx-effect: dropshadow(two-pass-box , -fx-shadow-highlight-color, 1, 0.0 , 0, 1.4);
+    /*-fx-background-insets: 2 0 -2 0, 0;*/
 }
 
 /*******************************************************************************
