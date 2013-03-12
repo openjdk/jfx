@@ -25,11 +25,14 @@
 
 package com.sun.javafx.css;
 
+import com.sun.javafx.css.converters.URLConverter;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.net.URL;
 import javafx.css.StyleOrigin;
 import javafx.css.ParsedValue;
+import javafx.css.StyleConverter;
 
 final public class Declaration {
     final String property;
@@ -130,6 +133,41 @@ final public class Declaration {
         sbuf.append(parsedValue);
         if (important) sbuf.append(" !important");
         return sbuf.toString();
+    }
+    
+    //
+    // RT-21964
+    //
+    // We know when the .css file is parsed what the stylesheet URL is,
+    // but that might not be the URL of the deployed file. So for URL
+    // types, the parser inserts a null placeholder for the URL and we
+    // fix it up here. This method is called from Rule#setStylesheet
+    // and from Rule#declarations onChanged method.
+    // 
+    void fixUrl(URL stylesheetUrl) {
+        
+        if (stylesheetUrl == null) return;
+        
+        final StyleConverter converter = parsedValue.getConverter();        
+        
+        // code is tightly coupled to the way URLConverter works
+        if (converter == URLConverter.getInstance()) {
+            
+            final ParsedValue[] values = (ParsedValue[])parsedValue.getValue();
+            values[1] = new ParsedValueImpl<URL,URL>(stylesheetUrl, null);
+            
+        } else if (converter == URLConverter.SequenceConverter.getInstance()) {
+
+            final ParsedValue<ParsedValue[], String>[] layers = 
+                (ParsedValue<ParsedValue[], String>[])parsedValue.getValue();
+            
+            for (int layer = 0; layer < layers.length; layer++) {
+                final ParsedValue[] values = (ParsedValue[])layers[layer].getValue();
+                values[1] = new ParsedValueImpl<URL,URL>(stylesheetUrl, null);
+            }
+            
+        }
+                
     }
 
     void writeBinary(final DataOutputStream os, final StringStore stringStore)

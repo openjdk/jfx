@@ -63,7 +63,7 @@ public final class URLConverter extends StyleConverterImpl<ParsedValue[], String
             } else {
                 uriStr = com.sun.javafx.Utils.stripQuotes(uriStr);
             }
-            URL stylesheetURL = (URL) values[1].getValue();
+            URL stylesheetURL = values[1] != null ? (URL)values[1].getValue() : null;
             URL resolvedURL = null;
             if (stylesheetURL == null) {
                 try {

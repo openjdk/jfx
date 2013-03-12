@@ -29,6 +29,7 @@ import com.sun.javafx.collections.TrackableObservableList;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -61,6 +62,14 @@ final public class Rule {
                     for(int i = 0, max = added.size(); i < max; i++) {
                         Declaration decl = added.get(i);
                         decl.rule = Rule.this;
+                        
+                        if (stylesheet != null && stylesheet.getUrl() != null) {
+
+                            final URL stylesheetUrl = stylesheet.getUrl();
+                            decl.fixUrl(stylesheetUrl);
+
+                        }
+                        
                     }
                 }
                 
@@ -87,6 +96,15 @@ final public class Rule {
     /* package */
     void setStylesheet(Stylesheet stylesheet) {
         this.stylesheet = stylesheet;
+        
+        if (stylesheet != null && stylesheet.getUrl() != null) {
+            
+            final URL stylesheetUrl = stylesheet.getUrl();
+            for (int d=0, dMax=declarations.size(); d<dMax; d++) {
+                declarations.get(d).fixUrl(stylesheetUrl);
+            }
+            
+        }
     }
 
     public StyleOrigin getOrigin() {

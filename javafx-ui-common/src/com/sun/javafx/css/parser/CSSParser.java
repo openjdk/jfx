@@ -2191,7 +2191,7 @@ final public class CSSParser {
         final String uri = arg.token.getText();
         ParsedValueImpl[] uriValues = new ParsedValueImpl[] {
             new ParsedValueImpl<String,String>(uri, StringConverter.getInstance()),
-            new ParsedValueImpl<URL,URL>(sourceOfStylesheet, null)
+            null // placeholder for Stylesheet URL
         };
         ParsedValueImpl parsedURI = new ParsedValueImpl<ParsedValue[],String>(uriValues, URLConverter.getInstance());
 
@@ -2266,7 +2266,7 @@ final public class CSSParser {
         final String uri = arg.token.getText();
         ParsedValueImpl[] uriValues = new ParsedValueImpl[] {
             new ParsedValueImpl<String,String>(uri, StringConverter.getInstance()),
-            new ParsedValueImpl<URL,URL>(sourceOfStylesheet, null)
+            null // placeholder for Stylesheet URL
         };
         ParsedValueImpl parsedURI = new ParsedValueImpl<ParsedValue[],String>(uriValues, URLConverter.getInstance());
         ParsedValueImpl[] values = new ParsedValueImpl[1];
@@ -3408,7 +3408,7 @@ final public class CSSParser {
         final String uri = arg.token.getText();
         ParsedValueImpl[] uriValues = new ParsedValueImpl[] {
             new ParsedValueImpl<String,String>(uri, StringConverter.getInstance()),
-            new ParsedValueImpl<URL,URL>(sourceOfStylesheet, null)
+            null // placeholder for Stylesheet URL
         };
         return new ParsedValueImpl<ParsedValue[],String>(uriValues, URLConverter.getInstance());
     }
