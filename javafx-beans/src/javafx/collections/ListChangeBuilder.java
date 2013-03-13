@@ -28,7 +28,10 @@ package javafx.collections;
 import com.sun.javafx.collections.ChangeHelper;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.TreeSet;
 import javafx.collections.ListChangeListener.Change;
@@ -270,31 +273,100 @@ final class ListChangeBuilder<E> {
         
     }
 
+    private static int[] inverse(int[] perm) {
+        int[] inverse = new int[perm.length];
+        for (int i = 0; i < perm.length; ++i) {
+            inverse[perm[i]] = i;
+        }
+        return inverse;
+    }
+
     public void nextPermutation(int from, int to, int[] perm) {
         checkState();
+
+        int prePermFrom = from;
+        int prePermTo = to;
+        int[] prePerm = perm;
+
         if ((addRemoveChanges != null && !addRemoveChanges.isEmpty())) {
-            throw new IllegalStateException("Cannot add permutation changes after add/remove changes were added");
+            //Because there were already some changes to the list, we need
+            // to "reconstruct" the original list and create a permutation
+            // as-if there were no changes to the list. We can then
+            // merge this with the permutation we already did
+
+            // This maps elements from current list to the original list.
+            // -1 means the map was not in the original list.
+            // Note that for performance reasons, the map is permutated when created
+            // by the permutation. So it basically contains the order in which the original
+            // items were permutated by our new permutation.
+            int[] mapToOriginal = new int[list.size()];
+            // Marks the original-list indexes that were removed
+            Set<Integer> removed = new TreeSet<Integer>();
+            int last = 0;
+            int offset = 0;
+            for (int i = 0, sz = addRemoveChanges.size(); i < sz; ++i) {
+                SubChange<E> change = addRemoveChanges.get(i);
+                for (int j = last; j < change.from; ++j) {
+                    mapToOriginal[j < from || j >= to ? j : perm[j - from]] = j + offset;
+                }
+                for (int j = change.from; j < change.to; ++j) {
+                    mapToOriginal[j < from || j >= to ? j : perm[j - from]] = -1;
+                }
+                last = change.to;
+                int removedSize = (change.removed != null ? change.removed.size() : 0);
+                for (int j = change.from + offset, upTo = change.from + offset + removedSize;
+                        j < upTo; ++j) {
+                    removed.add(j);
+                }
+                offset += removedSize - (change.to - change.from);
+
+            }
+            // from the last add/remove change to the end of the list
+            for (int i = last; i < mapToOriginal.length; ++i) {
+                mapToOriginal[i < from || i >= to ? i : perm[i - from]] = i + offset;
+            }
+
+            int[] newPerm = new int[list.size() + offset];
+            int mapPtr = 0;
+            for (int i = 0; i < newPerm.length; ++i) {
+                if (removed.contains(i)) {
+                    newPerm[i] = i;
+                } else {
+                    while(mapToOriginal[mapPtr] == -1) {
+                        mapPtr++;
+                    }
+                    newPerm[mapToOriginal[mapPtr++]] = i;
+                }
+            }
+
+            // We could theoretically find the first and last items such that
+            // newPerm[i] != i and trim the permutation, but it is not necessary
+            prePermFrom = 0;
+            prePermTo = newPerm.length;
+            prePerm = newPerm;
         }
-        
+
+
+
         if (permutationChange != null) {
-            if (from == permutationChange.from && to == permutationChange.to) {
-                for (int i = 0; i < perm.length; ++i) {
-                    permutationChange.perm[i] = perm[permutationChange.perm[i] - from];
+            if (prePermFrom == permutationChange.from && prePermTo == permutationChange.to) {
+                for (int i = 0; i < prePerm.length; ++i) {
+                    permutationChange.perm[i] = prePerm[permutationChange.perm[i] - prePermFrom];
                 }
             } else {
-                final int newTo = Math.max(permutationChange.to, to);
-                final int newFrom = Math.min(permutationChange.from, from);
+                final int newTo = Math.max(permutationChange.to, prePermTo);
+                final int newFrom = Math.min(permutationChange.from, prePermFrom);
                 int[] newPerm = new int[newTo - newFrom];
 
                 for (int i = newFrom; i < newTo; ++i) {
                     if (i < permutationChange.from || i >= permutationChange.to) {
-                        newPerm[i - newFrom] = perm[i - from];
+                        newPerm[i - newFrom] = prePerm[i - prePermFrom];
                     } else {
                         int p = permutationChange.perm[i - permutationChange.from];
-                        if (p < from || p >= to) {
+                        if (p < prePermFrom || p >= prePermTo) {
                             newPerm[i - newFrom] = p;
                         } else {
-                            newPerm[i - newFrom] = perm[p - from];
+                            newPerm[i - newFrom] = prePerm[p - prePermFrom];
                         }
                     }
                 }
@@ -304,9 +376,56 @@ final class ListChangeBuilder<E> {
                 permutationChange.perm = newPerm;
             }
         } else {
-            permutationChange = new SubChange<E>(from, to, null, perm, false);
+            permutationChange = new SubChange<E>(prePermFrom, prePermTo, null, prePerm, false);
         }
-        
+
+        if ((addRemoveChanges != null && !addRemoveChanges.isEmpty())) {
+            Set<Integer> newAdded = new TreeSet<Integer>();
+            Map<Integer, List<E>> newRemoved = new HashMap<Integer, List<E>>();
+            for (int i = 0, sz = addRemoveChanges.size(); i < sz; ++i) {
+                SubChange<E> change = addRemoveChanges.get(i);
+                for (int cIndex = change.from; cIndex < change.to; ++cIndex) {
+                    if (cIndex < from || cIndex >= to) {
+                        newAdded.add(cIndex);
+                    } else {
+                        newAdded.add(perm[cIndex - from]);
+                    }
+                }
+                if (change.removed != null) {
+                    if (change.from < from || change.from >= to) {
+                        newRemoved.put(change.from, change.removed);
+                    } else {
+                        newRemoved.put(perm[change.from - from], change.removed);
+                    }
+                }
+            }
+            addRemoveChanges.clear();
+            SubChange<E> lastChange = null;
+            for (Integer i : newAdded) {
+                if (lastChange == null || lastChange.to != i) {
+                    lastChange = new SubChange<E>(i, i + 1, null, EMPTY_PERM, false);
+                    addRemoveChanges.add(lastChange);
+                } else {
+                    lastChange.to = i + 1;
+                }
+                List<E> removed = newRemoved.remove(i);
+                if (removed != null) {
+                    if (lastChange.removed != null) {
+                        lastChange.removed.addAll(removed);
+                    } else {
+                        lastChange.removed = removed;
+                    }
+                }
+            }
+
+            for(Entry<Integer, List<E>> e : newRemoved.entrySet()) {
+                final Integer at = e.getKey();
+                int idx = findSubChange(at, addRemoveChanges);
+                assert(idx < 0);
+                addRemoveChanges.add(~idx, new SubChange<E>(at, at, e.getValue(), new int[0], false));
+            }
+        }
+
         if (updateChanges != null && !updateChanges.isEmpty()) {
             Set<Integer> newUpdated = new TreeSet<Integer>();
             for (int i = 0, sz = updateChanges.size(); i < sz; ++i) {
@@ -331,6 +450,7 @@ final class ListChangeBuilder<E> {
             }
         }
     }
+
 
     public void nextReplace(int from, int to, List<? extends E> removed) {
         nextRemove(from, removed);

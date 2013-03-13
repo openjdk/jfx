@@ -29,6 +29,7 @@ import com.sun.javafx.collections.ObservableListWrapper;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
 import org.junit.Before;
 import org.junit.Test;
 import static org.junit.Assert.*;
@@ -314,6 +315,99 @@ public class ListChangeBuilderTest {
 
         observer.checkPermutation(0, observableList, 0, 4, new int[] {1, 3, 2, 0});
         observer.checkUpdate(1, observableList, 1, 3);
+    }
+
+    @Test
+    public void testAddAndPermutation() {
+        builder.beginChange();
+
+        builder.nextAdd(1, 2); // as-if "b" was added
+        builder.nextPermutation(0, 3, new int[] { 2, 0, 1}); // new order is "b", "c", "a", "d"
+
+        builder.endChange();
+         // "c", "a", "d" before "b" was added
+        observer.checkPermutation(0, observableList, 0, 3, new int[] {1, 0, 2});
+
+        observer.checkAddRemove(1, observableList, Collections.EMPTY_LIST, 0, 1);
+    }
+
+    @Test
+    public void testRemoveAndPermutation() {
+        builder.beginChange();
+
+        List<String> removed = Arrays.asList("bb", "bbb");
+
+        builder.nextRemove(2, removed);
+        builder.nextPermutation(0, 3, new int[] {2, 0, 1});
+
+        builder.endChange();
+
+        observer.checkPermutation(0, observableList, 0, 6, new int[] {4, 0, 2, 3, 1, 5});
+        observer.checkAddRemove(1, observableList, removed, 1, 1);
+
+    }
+
+    @Test
+    public void testAddRemoveAndPermutation() {
+        builder.beginChange();
+
+        // Expect list to be "b", "c1", "c2", "d"
+        List<String> removed = Arrays.asList("c1", "c2");
+        // After add: "a", "b", "c1", "c2", "d"
+        builder.nextAdd(0, 1);
+        // After replace "a", "b", "c", "d"
+        builder.nextReplace(2, 3, removed);
+        builder.nextPermutation(1, 4, new int[] {3, 1, 2});
+
+        builder.endChange();
+
+        observer.checkPermutation(0, observableList, 0, 4, new int[] {3, 1, 2, 0});
+        observer.checkAddRemove(1, observableList, removed, 0, 2);
+    }
+
+    @Test
+    public void testPermutationAndAddRemove() {
+        builder.beginChange();
+
+        // Expect list to be "b", "c1", "c2", "d"
+        // After perm "b", "c2", "d", "c1"
+        builder.nextPermutation(1, 4, new int[] {3, 1, 2});
+        // After add: "a", "b", "c2", "d", "c1"
+        builder.nextAdd(0, 1);
+        builder.nextReplace(2, 3, Arrays.asList("c2"));
+        builder.nextRemove(4, Arrays.asList("c1"));
+
+        builder.endChange();
+
+        observer.checkPermutation(0, observableList, 1, 4, new int[] {3, 1, 2});
+        observer.checkAddRemove(1, observableList, Collections.EMPTY_LIST, 0, 1);
+        observer.checkAddRemove(2, observableList, Arrays.asList("c2"), 2, 3);
+        observer.checkAddRemove(3, observableList, Arrays.asList("c1"), 4, 4);
+    }
+
+    @Test
+    public void testPermutationAddRemoveAndPermutation() {
+
+        builder.beginChange();
+        // Expect list to be "b", "c1", "d"
+        List<String> removed = Arrays.asList("c1");
+        // After perm: "c1", "b", "d"
+        builder.nextPermutation(0, 2, new int[] { 1, 0 });
+        // After add: "a", "c1", "b", "d"
+        builder.nextAdd(0, 1);
+        // After remove/add "a", "b", "c", "d"
+        builder.nextRemove(1, removed);
+        builder.nextAdd(2, 3);
+        // After permutation "a", "c", "d", "b"
+        builder.nextPermutation(1, 4, new int[] {3, 1, 2});
+
+        builder.endChange();
+
+        // When combined, it's from the expected list:
+        // permutation to "c1", "d", "b"
+        observer.checkPermutation(0, observableList, 0, 3, new int[] {2, 0, 1});
+        // add remove to "a", "c", "d", "b"
+        observer.checkAddRemove(1, observableList, removed, 0, 2);
     }
 
     @Test(expected=IllegalStateException.class)
