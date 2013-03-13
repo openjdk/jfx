@@ -99,11 +99,11 @@ public class MockListObserver<E> implements ListChangeListener<E> {
         }
         assertFalse(tooManyCalls);
         Call<E> call = calls.get(idx);
-        assertEquals(list, call.list);
-        assertEquals(removed, call.removed);
-        assertEquals(from, call.from);
-        assertEquals(to, call.to);
-        assertEquals(0, call.permutation.length);
+        assertEquals(call.list, list);
+        assertEquals(call.removed, removed);
+        assertEquals(call.from, from);
+        assertEquals(call.to, to);
+        assertEquals(call.permutation.length, 0);
     }
 
     public void check1Permutation(ObservableList<E> list, int[] perm) {

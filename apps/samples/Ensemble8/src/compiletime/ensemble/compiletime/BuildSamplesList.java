@@ -44,6 +44,7 @@ import java.util.regex.Pattern;
 import static ensemble.compiletime.CodeGenerationUtils.*;
 import ensemble.compiletime.Sample.URL;
 import java.util.HashMap;
+import javafx.application.ConditionalFeature;
 
 /**
  * Scan all samples, finding all information needed and write a Samples.java file to generated sources.
@@ -76,6 +77,7 @@ public class BuildSamplesList {
             fout.println("package ensemble.generated;");
             fout.println("import ensemble.*;");
             fout.println("import ensemble.playground.PlaygroundProperty;");
+            fout.println("import javafx.application.ConditionalFeature;");
             fout.println("import java.util.HashMap;");
             fout.println("public class Samples{");
             // write samples
@@ -211,6 +213,16 @@ public class BuildSamplesList {
                     }
                     sample.playgroundProperties.add(
                             new Sample.PlaygroundProperty(fieldName, propertyName, properties));
+                } else if (trimedLine.startsWith("@conditionalFeatures")) {
+                    String[] features = trimedLine.substring(20).trim().split(",");
+                    for (String feature : features) {
+                        try {
+                            ConditionalFeature cf = ConditionalFeature.valueOf(feature.trim());
+                            sample.conditionalFeatures.add(cf);
+                        } catch (IllegalArgumentException ex) {
+                            System.err.println("@conditionalFeatures entry is not a feature: " + feature); 
+                        }
+                    }
                 } else {
                     descBuilder.append(trimedLine);
                     descBuilder.append(' ');

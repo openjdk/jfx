@@ -54,6 +54,7 @@ import javafx.stage.Stage;
  * @preview preview.png
  * @see javafx.scene.web.WebView
  * @see javafx.scene.web.WebEngine
+ * @conditionalFeatures WEB
  */
 public class WebViewApp extends Application {
 
