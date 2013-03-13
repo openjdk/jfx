@@ -25,7 +25,18 @@
 
 package javafx.scene.control;
 
+import static javafx.scene.control.ControlTestUtils.assertPseudoClassDoesNotExist;
+import static javafx.scene.control.ControlTestUtils.assertPseudoClassExists;
+import static javafx.scene.control.ControlTestUtils.assertStyleClassContains;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
 import java.util.List;
+
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.event.ActionEvent;
@@ -42,14 +53,15 @@ import javafx.scene.paint.Stop;
 import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
 import javafx.stage.WindowEvent;
-import com.sun.javafx.pgstub.StubToolkit;
-import com.sun.javafx.tk.Toolkit;
+
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
 
-import static javafx.scene.control.ControlTestUtils.*;
-import static org.junit.Assert.*;
+import com.sun.javafx.pgstub.StubToolkit;
+import com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
+import com.sun.javafx.test.MouseEventGenerator;
+import com.sun.javafx.tk.Toolkit;
 
 /**
  * action (which can be bound, and can be null),

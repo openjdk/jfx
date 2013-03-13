@@ -38,6 +38,7 @@ import javafx.scene.control.TreeItem;
 import javafx.css.StyleableDoubleProperty;
 import javafx.css.CssMetaData;
 import com.sun.javafx.css.converters.SizeConverter;
+import com.sun.javafx.scene.control.MultiplePropertyChangeListenerHandler;
 import com.sun.javafx.scene.control.behavior.TreeTableRowBehavior;
 import javafx.animation.RotateTransition;
 import javafx.beans.property.ObjectProperty;
@@ -52,6 +53,7 @@ import javafx.scene.control.TableColumnBase;
 import javafx.scene.control.TableRow;
 import javafx.scene.control.TreeTableCell;
 import javafx.scene.control.TreeTableColumn;
+import javafx.util.Callback;
 import javafx.util.Duration;
 
 /**
@@ -65,11 +67,16 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
     private TreeItem<?> treeItem;
     private boolean disclosureNodeDirty = true;
     
-    private final ChangeListener<Boolean> treeItemExpandedListener = new ChangeListener<Boolean>() {
-        @Override public void changed(ObservableValue<? extends Boolean> ov, Boolean t, Boolean isExpanded) {
-            updateDisclosureNodeRotation(true);
+    private MultiplePropertyChangeListenerHandler treeItemListener = new MultiplePropertyChangeListenerHandler(new Callback<String, Void>() {
+        @Override public Void call(String p) {
+            if ("EXPANDED".equals(p)) {
+                updateDisclosureNodeRotation(true);
+            } else if ("GRAPHIC".equals(p)) {
+                getSkinnable().requestLayout();
+            }
+            return null;
         }
-    };
+    });
     
     public TreeTableRowSkin(TreeTableRow<T> control) {
         super(control, new TreeTableRowBehavior<T>(control));
@@ -156,11 +163,13 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
     
     private void updateTreeItem() {
         if (treeItem != null) {
-            treeItem.expandedProperty().removeListener(treeItemExpandedListener);
+            treeItemListener.unregisterChangeListener(treeItem.expandedProperty(), "EXPANDED");
+            treeItemListener.unregisterChangeListener(treeItem.graphicProperty(), "GRAPHIC");
         }
         treeItem = getSkinnable().getTreeItem();
         if (treeItem != null) {
-            treeItem.expandedProperty().addListener(treeItemExpandedListener);
+            treeItemListener.registerChangeListener(treeItem.expandedProperty(), "EXPANDED");
+            treeItemListener.registerChangeListener(treeItem.graphicProperty(), "GRAPHIC");
         }
         
         updateDisclosureNodeRotation(false);
@@ -307,12 +316,12 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
         return cell.getTableColumn();
     }
 
-    @Override protected Node getGraphic() {
+    @Override protected ObjectProperty<Node> graphicProperty() {
         TreeTableRow<T> treeTableRow = getSkinnable();
         if (treeTableRow == null) return null;
         if (treeItem == null) return null;
         
-        return treeItem.getGraphic();
+        return treeItem.graphicProperty();
     }
     
     @Override protected Control getVirtualFlowOwner() {
