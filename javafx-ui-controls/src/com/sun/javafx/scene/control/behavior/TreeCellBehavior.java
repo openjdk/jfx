@@ -253,7 +253,12 @@ public class TreeCellBehavior extends CellBehaviorBase<TreeCell<?>> {
         MultipleSelectionModel sm = tv.getSelectionModel();
         boolean isAlreadySelected = sm.isSelected(index);
 
-        tv.getSelectionModel().clearAndSelect(index);
+        if (isAlreadySelected && (e.isControlDown() || e.isMetaDown())) {
+            sm.clearSelection(index);
+            isAlreadySelected = false;
+        } else {
+            sm.clearAndSelect(index);
+        }
 
         // handle editing, which only occurs with the primary mouse button
         if (e.getButton() == MouseButton.PRIMARY) {

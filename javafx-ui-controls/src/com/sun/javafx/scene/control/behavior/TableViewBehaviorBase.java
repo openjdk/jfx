@@ -57,6 +57,7 @@ import com.sun.javafx.PlatformUtil;
 import javafx.collections.ListChangeListener;
 import javafx.collections.WeakListChangeListener;
 import javafx.scene.control.Control;
+import javafx.scene.control.MultipleSelectionModel;
 import javafx.scene.control.TableColumnBase;
 import javafx.scene.control.TableFocusModel;
 import javafx.scene.control.TablePositionBase;
@@ -235,14 +236,14 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
                 TablePositionBase anchor = getAnchor();
                 boolean cellSelectionEnabled = sm.isCellSelectionEnabled();
                 
+                // there are no selected items, so lets clear out the anchor
                 if (! selectionChanging) {
-                    // there are no selected items, so lets clear out the anchor
-                    if (c.getList().isEmpty()) {
+                    if (sm.isEmpty()) {
                         setAnchor(null);
-                    } else if (! c.getList().contains(getAnchor())) {
+                    } else if (! sm.isSelected(anchor.getRow(), anchor.getTableColumn())) {
                         setAnchor(null);
                     }
-                } 
+                }
                 
                 int addedSize = c.getAddedSize();
                 List<TablePositionBase> addedSubList = (List<TablePositionBase>) c.getAddedSubList();
