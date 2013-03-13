@@ -1,7 +1,98 @@
 /**
  * The main build script for JavaFX.
  *
+ * Gradle tasks are grouped into 5 main groups or categories. Within these
+ * five groups are several sub-groups:
+ *     - Build Tasks
+ *         - assemble
+ *         - build
+ *         - buildDependents
+ *         - buildNeeded
+ *         - classes
+ *             - compileJava
+ *             - compileNative
+ *             - processResources
+ *         - clean
+ *         - jar
+ *         - jfxrt
+ *         - sdk
+ *         - testClasses
+ *             - compileTestJava
+ *             - processTestResources
+ *     - Documentation Tasks
+ *         - javadoc
+ *     - Verification Tasks
+ *         - check
+ *             - checkstyle
+ *             - findbugs
+ *             - parfait
+ *             - apiCheck
+ *         - fullTest
+ *         - functionalTest
+ *         - manualTest
+ *         - precommitTest
+ *         - test
+ *     - Publishing Tasks
+ *         - publish
+ *         - precommit
+ *         - commit
+ *     - Help Tasks
+ *         - dependencies
+ *         - dependencyInsight
+ *         - help
+ *         - projects
+ *         - properties
+ *         - tasks
+ *
+ * By default, when executing the simple command 'gradle', the build task known as
+ * 'jfxrt' is executed. The 'jfxrt' task will compile all of the sources
+ * (Java and native), jar them, compile all of the tests sources, and create the
+ * final sdk directory containing the native libraries and jfxrt.jar and associated
+ * project files. It does not however run the documentation tasks. The purpose of this
+ * task is to build a testable SDK as quickly as possible and is meant to be used by
+ * developers in their day-to-day activities.
+ *
+ * The 'sdk' task performs these same operations but also includes the generation of
+ * javadoc and all other tasks that will produce a platform specific SDK bundle equivalent
+ * to what is produced and posted for the weekly builds. When produced based on openjfx
+ * the resulting bundle will be identified with the name "openjfx" which will also show
+ * up in the VersionInfo class. When produced on Oracle Release Engineering servers, it
+ * will instead be labeled as "JavaFX", consistent with the way bundles are produced now.
+ *
+ * The other tasks ('assemble', 'classes', 'build', 'jar', 'testClasses', etc) each perform
+ * some specific step towards the 'jfxrt' or 'sdk' tasks. For example, the 'testClasses'
+ * task is responsible for compiling the classes associated with each project's unit tests,
+ * and copying any resources for those tests over into the build area for each project.
+ * The 'classes' task does the same but for the normal sources (native and Java). The 'assemble'
+ * task performs the 'build', 'classes', 'jar', etc all together.
+ *
+ * There are several verification tasks which are used to verify that a particular build is
+ * "good". For example the checkstyle task will run checkstyle across the projects to ensure
+ * that the sources are following accepted standards. Findbugs and parfait can be used to
+ * look for bugs in Java and native code. The 'apiCheck' task will make sure that no public
+ * API was unintentially changed.
+ *
+ * In addition to these, the actual running of all of the tests occurs during the verification
+ * step. The 'fullTest' task will run a complete set of tests including manual tests. The
+ * 'functionalTest' task will run the full set of functional tests. 'manualTest' will
+ * run all the manual tests. 'precommitTest' will execute the subset of tests which must
+ * all pass prior to a commit. Finally, the 'test' task will execute all of the unit tests
+ * associated with each project.
  * Tasks to complete:
+ *
+ * The publishing tasks are used to publish either an artifact into a binary repository
+ * (such as is used to publish weekly builds), or is used to publish code changes into
+ * the source repository. The 'precommit' task will perform all operations necessary
+ * prior to a commit. These include cleaning the entire project, building the full sdk
+ * (including JavaDoc generation), and running the precommit tests. The 'commit' task
+ * will push any changes to the continuous integration server which will then perform
+ * the exact same 'precommit' task but do so on each and every platform. If the precommit
+ * task succeeds on all platforms, then the changeset is pushed into the master repository.
+ *
+ * The help tasks are the standard tasks provided by Gradle for determining which properties
+ * can be set to alter the build behavior as well as which tasks are available to run or
+ * determining the dependency hierarchy between projects or tasks.
+ *
  *  - special tasks for common needs, such as:
  *      - updating copyright headers
  *      - stripping trailing whitespace (?)
@@ -190,6 +281,8 @@ task sdk {
                  "modules/graphics/native/build/libs/libprism-sw.$DLL_EXT"
             if (isMac) from "modules/graphics/native/build/libs/glass-lib-macosx/libglass.$DLL_EXT"
             if (isWindows) from "modules/graphics/native/build/libs/glass-lib-windows/libglass.$DLL_EXT"
+            // TODO This is wrong, should be in libs/glass-lib-gtk!
+            if (isLinux) from "modules/graphics/native/build/libs/libglass.$DLL_EXT"
             into "build/sdk/rt/lib"
         }
         // Create the javafx.properties file
@@ -388,6 +481,49 @@ project(":graphics") {
         forkEvery = 1
     }
     test.dependsOn testWithoutStub, testWithStub
+
+    // A hack. Ultimately we should generate all the headers here, but the
+    // GTK build expects the headers for GTK in a specific place, so here we go.
+    task glassHeaders(dependsOn:":graphics:compileJava") {
+        inputs.dir "build/classes/main"
+        outputs.dir "native/build/main/glass-lib-gtk/include"
+        doLast {
+            ["com.sun.glass.events.DndEvent",
+             "com.sun.glass.events.KeyEvent",
+             "com.sun.glass.events.MouseEvent",
+             "com.sun.glass.events.ViewEvent",
+             "com.sun.glass.events.WindowEvent",
+             "com.sun.glass.ui.Application",
+             "com.sun.glass.ui.Cursor",
+             "com.sun.glass.ui.Menu",
+             "com.sun.glass.ui.MenuBar",
+             "com.sun.glass.ui.MenuItem",
+             "com.sun.glass.ui.Pixels",
+             "com.sun.glass.ui.Screen",
+             "com.sun.glass.ui.Size",
+             "com.sun.glass.ui.Timer",
+             "com.sun.glass.ui.View",
+             "com.sun.glass.ui.View\$Capability",
+             "com.sun.glass.ui.Window",
+             "com.sun.glass.ui.Window\$Level",
+             "com.sun.glass.ui.gtk.GtkApplication",
+             "com.sun.glass.ui.gtk.GtkTimer",
+             "com.sun.glass.ui.gtk.GtkWindow",
+             "com.sun.glass.ui.gtk.GtkView",
+             "com.sun.glass.ui.gtk.GtkPixels",
+             "com.sun.glass.ui.gtk.GtkCursor",
+             "com.sun.glass.ui.gtk.GtkRobot",
+             "com.sun.glass.ui.gtk.GtkSystemClipboard",
+             "com.sun.glass.ui.gtk.GtkCommonDialogs",
+             "com.sun.glass.ui.gtk.GtkDnDClipboard",
+             "com.sun.glass.events.WindowEvent"].each { file ->
+                exec {
+                    commandLine "javah", "-d", "modules/graphics/native/build/main/glass-lib-gtk/include", "-classpath", files("build/classes/main").asPath, file
+                }
+            }
+        }
+    }
+
 }
 
 project(":controls") {
@@ -442,18 +578,20 @@ project(":graphics:native") {
         compile project(":graphics")
     }
 
-//    task compileGlassLibGTK(type:Exec, dependsOn:configurations.compile) {
-//        inputs.dir "src/main/glass-lib-gtk"
-//        outputs.dir "build/main/glass-lib-gtk"
-//        outputs.dir "build/libs"
-//        workingDir "src/main/glass-lib-gtk"
-//        environment([
-//                "BUILD_DIR"            : "../../../build/main/glass-lib-gtk",
-//                "DIST_DIR"             : "../../../build/libs"
-////                "DECORA_SSE_CLASS_DIR" : "../../../../build/classes/main",
-//        ])
-//        commandLine "make"
-//    }
+    task compileGlassLibGTK(type:Exec, dependsOn:[configurations.compile, ":graphics:glassHeaders"]) {
+        enabled = isLinux
+        inputs.dir "src/main/glass-lib-gtk"
+        outputs.dir "build/main/glass-lib-gtk"
+        outputs.dir "build/libs/glass-lib-gtk"
+        workingDir "src/main/glass-lib-gtk"
+        environment([
+                "JDK_HOME"             : JDK_HOME,
+                "BUILD_DIR"            : "../../../build/main/glass-lib-gtk",
+                "DIST_DIR"             : "../../../build/libs",
+                "GLASS_SRC"            : "src"
+        ])
+        commandLine "make", "all"
+    }
 
 //    task compileGlassLibiOS(type:Exec, dependsOn:configurations.compile) {
 //        inputs.dir "src/main/glass-lib-ios"
@@ -465,20 +603,20 @@ project(":graphics:native") {
 //                "DIST_DIR"             : "../../../build/libs"
 ////                "DECORA_SSE_CLASS_DIR" : "../../../../build/classes/main",
 //        ])
-//        commandLine "make"
+//        commandLine "make", "all"
 //    }
-//
+
 //    task compileGlassLibLens(type:Exec, dependsOn:configurations.compile) {
 //        inputs.dir "src/main/glass-lib-lens"
 //        outputs.dir "build/main/glass-lib-lens"
-//        outputs.dir "build/libs"
+//        outputs.dir "build/libs/glass-lib-lens"
 //        workingDir "src/main/glass-lib-lens"
 //        environment([
 //                "BUILD_DIR"            : "../../../build/main/glass-lib-lens",
 //                "DIST_DIR"             : "../../../build/libs"
 ////                "DECORA_SSE_CLASS_DIR" : "../../../../build/classes/main",
 //        ])
-//        commandLine "make"
+//       commandLine "make", "all"
 //    }
 
     task compileGlassLibMacOS(type:Exec, dependsOn:configurations.compile) {
@@ -532,6 +670,7 @@ project(":graphics:native") {
     }
 
     task compileDecoraSSENative(type:Exec, dependsOn:configurations.compile) {
+        enabled = isWindows || isMac
         inputs.dir "src/main/decora-sse-native"
         outputs.dir "build/main/decora-sse-native"
         outputs.dir "build/libs"
@@ -615,7 +754,7 @@ project(":graphics:native") {
         commandLine "make", "all"
     }
     classes.dependsOn compileDecoraSSENative, compilePrismCommon, compilePrismSW,
-            compileGlassLibMacOS, compileGlassLibWindows
+            compileGlassLibMacOS, compileGlassLibWindows, compileGlassLibGTK
 }
 
 project(":graphics:effects-jsl") {
