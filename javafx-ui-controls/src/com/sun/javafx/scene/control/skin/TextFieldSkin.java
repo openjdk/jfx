@@ -26,6 +26,7 @@
 package com.sun.javafx.scene.control.skin;
 
 import java.util.List;
+import javafx.application.ConditionalFeature;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.binding.BooleanBinding;
@@ -57,6 +58,7 @@ import javafx.scene.shape.PathElement;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Text;
 import com.sun.javafx.PlatformUtil;
+import com.sun.javafx.application.PlatformImpl;
 import com.sun.javafx.scene.control.behavior.TextFieldBehavior;
 import com.sun.javafx.scene.text.HitInfo;
 
@@ -175,7 +177,7 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
         // larger than necessary.
         textGroup.getChildren().addAll(selectionHighlightPath, textNode, new Group(caretPath));
         getChildren().add(textGroup);
-        if (PlatformUtil.isEmbedded()) {
+        if (PlatformImpl.isSupported(ConditionalFeature.INPUT_TOUCH)) {
             handleGroup = new Group();
             handleGroup.getChildren().addAll(caretHandle, selectionHandle1, selectionHandle2);
             getChildren().add(handleGroup);
@@ -304,7 +306,7 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
             }
         });
 
-        if (PlatformUtil.isEmbedded()) {
+        if (PlatformImpl.isSupported(ConditionalFeature.INPUT_TOUCH)) {
             selectionHandle1.setRotate(180);
 
             EventHandler<MouseEvent> handlePressHandler = new EventHandler<MouseEvent>() {
@@ -420,7 +422,7 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
             selectionHighlightPath.getElements().setAll(elements);
         }
 
-        if (PlatformUtil.isEmbedded() && newValue != null && newValue.getLength() > 0) {
+        if (PlatformImpl.isSupported(ConditionalFeature.INPUT_TOUCH) && newValue != null && newValue.getLength() > 0) {
             int caretPos = textField.getCaretPosition();
             int anchorPos = textField.getAnchor();
 
@@ -561,7 +563,7 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
             textTranslateX.set(Math.min(textTranslateX.get() - delta,
                                         caretWidth / 2));
         }
-        if (PlatformUtil.isEmbedded()) {
+        if (PlatformImpl.isSupported(ConditionalFeature.INPUT_TOUCH)) {
             caretHandle.setLayoutX(caretX - caretHandle.getWidth() / 2 + 1);
         }
     }
@@ -772,7 +774,7 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
             }
         }
 
-        if (PlatformUtil.isEmbedded()) {
+        if (PlatformImpl.isSupported(ConditionalFeature.INPUT_TOUCH)) {
             handleGroup.setLayoutX(leftPadding());
             handleGroup.setLayoutY(topPadding());
 

@@ -28,7 +28,9 @@ package com.sun.javafx.scene.control.behavior;
 import java.util.ArrayList;
 import java.util.List;
 
+import javafx.application.ConditionalFeature;
 import com.sun.javafx.PlatformUtil;
+import com.sun.javafx.application.PlatformImpl;
 
 import static javafx.scene.input.KeyCode.*;
 import static javafx.scene.input.KeyEvent.*;
@@ -157,7 +159,7 @@ public class TextInputControlBindings {
         BINDINGS.add(new KeyBinding(F10, "ToParent"));
         // TODO XXX DEBUGGING ONLY
 //        BINDINGS.add(new KeyBinding(F4, "TraverseDebug").alt().ctrl().shift());
-        /*DEBUG*/if (PlatformUtil.isEmbedded()) {
+        /*DEBUG*/if (PlatformImpl.isSupported(ConditionalFeature.VIRTUAL_KEYBOARD) {
             BINDINGS.add(new KeyBinding(DIGIT9, "UseVK").ctrl().shift());
         }
     }

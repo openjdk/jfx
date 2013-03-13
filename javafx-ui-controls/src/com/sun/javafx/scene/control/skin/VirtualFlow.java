@@ -28,6 +28,7 @@ package com.sun.javafx.scene.control.skin;
 import java.util.ArrayList;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
+import javafx.application.ConditionalFeature;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.property.BooleanProperty;
@@ -57,6 +58,7 @@ import javafx.util.Callback;
 import javafx.util.Duration;
 
 import com.sun.javafx.PlatformUtil;
+import com.sun.javafx.application.PlatformImpl;
 
 /**
  * Implementation of a virtualized container using a cell based mechanism.
@@ -515,7 +517,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         */
         setOnScroll(new EventHandler<javafx.scene.input.ScrollEvent>() {
             @Override public void handle(ScrollEvent event) {
-                if (PlatformUtil.isEmbedded()) {
+                if (PlatformImpl.isSupported(ConditionalFeature.INPUT_TOUCH)) {
                     if (touchDetected == false &&  mouseDown == false ) {
                         startSBReleasedAnimation();
                     }
@@ -594,7 +596,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
             @Override
             public void handle(MouseEvent e) {
                 mouseDown = true;
-                if (PlatformUtil.isEmbedded()) {
+                if (PlatformImpl.isSupported(ConditionalFeature.INPUT_TOUCH)) {
                     scrollBarOn();
                 }
                 if (isFocusTraversable()) {
@@ -617,7 +619,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
             @Override
             public void handle(MouseEvent e) {
                 mouseDown = false;
-                if (PlatformUtil.isEmbedded()) {
+                if (PlatformImpl.isSupported(ConditionalFeature.INPUT_TOUCH)) {
                     startSBReleasedAnimation();
                 }
             }
@@ -625,7 +627,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         addEventFilter(MouseEvent.MOUSE_DRAGGED, new EventHandler<MouseEvent>() {
             @Override
             public void handle(MouseEvent e) {
-                if (PlatformUtil.isEmbedded()) {
+                if (PlatformImpl.isSupported(ConditionalFeature.INPUT_TOUCH)) {
                     scrollBarOn();
                 }
                 if (! isPanning || ! isPannable()) return;
@@ -876,7 +878,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         Cell cell;
         boolean cellNeedsLayout = false;
 
-        if (PlatformUtil.isEmbedded()) {
+        if (PlatformImpl.isSupported(ConditionalFeature.INPUT_TOUCH)) {
             if ((tempVisibility == true && (hbar.isVisible() == false || vbar.isVisible() == false)) ||
                 (tempVisibility == false && (hbar.isVisible() == true || vbar.isVisible() == true))) {
                 cellNeedsLayout = true;
@@ -1269,7 +1271,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         // accordingly. If during layout we find that one or the other of the
         // bars actually is needed, then we will perform a cleanup pass
 
-        if (!PlatformUtil.isEmbedded()) {
+        if (!PlatformImpl.isSupported(ConditionalFeature.INPUT_TOUCH)) {
             if (needBreadthBar) viewportLength -= breadthBarLength;
             if (needLengthBar) viewportBreadth -= lengthBarBreadth;
 
@@ -1316,7 +1318,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
                 // If cellCount is > than cells.size(), then we know we need the
                 // length bar.
                 if (cellCount > cellsSize) {
-                    if (!PlatformUtil.isEmbedded()) {
+                    if (!PlatformImpl.isSupported(ConditionalFeature.INPUT_TOUCH)) {
                         lengthBar.setVisible(true);
                     }
                     else {
@@ -1328,7 +1330,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
                     // we need to check the last cell's layout position + length
                     // to determine if we need the length bar
                     T lastCell = cells.getLast();
-                    if (!PlatformUtil.isEmbedded()) {
+                    if (!PlatformImpl.isSupported(ConditionalFeature.INPUT_TOUCH)) {
                         lengthBar.setVisible((getCellPosition(lastCell) + getCellLength(lastCell)) > viewportLength);
                     }
                     else {
@@ -1337,14 +1339,14 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
                 }
                 
                 // If the bar is needed, adjust the viewportBreadth
-                if (lengthBar.isVisible() && !PlatformUtil.isEmbedded()) {
+                if (lengthBar.isVisible() && !PlatformImpl.isSupported(ConditionalFeature.INPUT_TOUCH)) {
                     viewportBreadth -= lengthBarBreadth;
                 }
             }
             
             if (! breadthBar.isVisible()) {
                 final boolean visible = maxPrefBreadth > viewportBreadth;
-                if (!PlatformUtil.isEmbedded()) {
+                if (!PlatformImpl.isSupported(ConditionalFeature.INPUT_TOUCH)) {
                     breadthBar.setVisible(visible);
                     if (visible) {
                         viewportLength -= breadthBarLength;
@@ -1382,7 +1384,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
             /*
             ** Positioning the ScrollBar
             */
-            if (!PlatformUtil.isEmbedded()) {
+            if (!PlatformImpl.isSupported(ConditionalFeature.INPUT_TOUCH)) {
                 if (isVertical) {
                     hbar.resizeRelocate(0, viewportLength,
                         viewportBreadth, hbar.prefHeight(viewportBreadth));
@@ -1445,7 +1447,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
             /*
             ** Positioning the ScrollBar
             */
-            if (!PlatformUtil.isEmbedded()) {
+            if (!PlatformImpl.isSupported(ConditionalFeature.INPUT_TOUCH)) {
                 if (isVertical) {
                     vbar.resizeRelocate(viewportBreadth, 0, vbar.prefWidth(viewportLength), viewportLength);
                 } else {
@@ -1462,7 +1464,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         }
 
         if (corner.isVisible()) {
-            if (!PlatformUtil.isEmbedded()) {
+            if (!PlatformImpl.isSupported(ConditionalFeature.INPUT_TOUCH)) {
                 corner.resize(vbar.getWidth(), hbar.getHeight());
                 corner.relocate(hbar.getLayoutX() + hbar.getWidth(), vbar.getLayoutY() + vbar.getHeight());
             }
