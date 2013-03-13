@@ -23,7 +23,7 @@
  * questions.
  */
 
-package javafx.scene.control;
+package com.sun.javafx.scene.control.infrastructure;
 
 import java.util.Arrays;
 import java.util.List;

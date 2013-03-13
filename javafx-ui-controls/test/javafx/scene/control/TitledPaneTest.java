@@ -25,31 +25,37 @@
 
 package javafx.scene.control;
 
-import javafx.css.CssMetaData;
-import static javafx.scene.control.ControlTestUtils.*;
-import com.sun.javafx.pgstub.StubToolkit;
-import com.sun.javafx.scene.control.skin.TitledPaneSkin;
-import com.sun.javafx.tk.Toolkit;
+import static javafx.scene.control.ControlTestUtils.assertPseudoClassDoesNotExist;
+import static javafx.scene.control.ControlTestUtils.assertPseudoClassExists;
+import static javafx.scene.control.ControlTestUtils.assertStyleClassContains;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertTrue;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleObjectProperty;
+import javafx.css.CssMetaData;
 import javafx.css.StyleableProperty;
-import javafx.event.EventType;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.input.KeyCode;
-import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.StackPane;
 import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
-import static org.junit.Assert.*;
-
 
 import org.junit.Before;
 import org.junit.Test;
+
+import com.sun.javafx.pgstub.StubToolkit;
+import com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
+import com.sun.javafx.scene.control.skin.TitledPaneSkin;
+import com.sun.javafx.test.MouseEventGenerator;
+import com.sun.javafx.tk.Toolkit;
 
 /**
  *

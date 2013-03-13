@@ -23,7 +23,7 @@
  * questions.
  */
 
-package javafx.scene.control;
+package com.sun.javafx.scene.control.infrastructure;
 
 import com.sun.javafx.Utils;
 import com.sun.javafx.pgstub.StubToolkit;

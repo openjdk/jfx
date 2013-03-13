@@ -25,27 +25,30 @@
 
 package javafx.scene.control;
 
-import com.sun.javafx.pgstub.StubToolkit;
-import com.sun.javafx.scene.control.skin.ContextMenuContent;
-import com.sun.javafx.scene.control.skin.MenuBarMenuButtonRetriever;
-import com.sun.javafx.scene.control.skin.MenuBarSkin;
-import com.sun.javafx.tk.Toolkit;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 import javafx.event.Event;
 import javafx.event.EventHandler;
+import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
+import javafx.scene.input.KeyCode;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.AnchorPane;
-import javafx.stage.Stage;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertFalse;
-import javafx.scene.Node;
-import javafx.scene.input.KeyCode;
 import javafx.scene.layout.VBox;
+import javafx.stage.Stage;
 
 import org.junit.Before;
 import org.junit.Test;
+
+import com.sun.javafx.pgstub.StubToolkit;
+import com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
+import com.sun.javafx.scene.control.skin.ContextMenuContent;
+import com.sun.javafx.scene.control.skin.MenuBarMenuButtonRetriever;
+import com.sun.javafx.scene.control.skin.MenuBarSkin;
+import com.sun.javafx.test.MouseEventGenerator;
+import com.sun.javafx.tk.Toolkit;
 
 
 /**
@@ -300,7 +303,6 @@ public class MenuBarTest {
     }
     
     @Test public void testKeyNavigationWithDisabledMenuItem() {
-        final MouseEventGenerator generator = new MouseEventGenerator();
         VBox root = new VBox();
         Menu menu1 = new Menu("Menu1");
         Menu menu2 = new Menu("Menu2");
@@ -330,9 +332,9 @@ public class MenuBarTest {
         MenuButton mb = MenuBarMenuButtonRetriever.getNodeForMenu(skin, 0);
         mb.getScene().getWindow().requestFocus();
         scene.impl_processMouseEvent(
-            generator.generateMouseEvent(MouseEvent.MOUSE_PRESSED, xval+20, yval+20));
+            MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_PRESSED, xval+20, yval+20));
         scene.impl_processMouseEvent(
-            generator.generateMouseEvent(MouseEvent.MOUSE_RELEASED, xval+20, yval+20));
+            MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_RELEASED, xval+20, yval+20));
         assertTrue(menu1.isShowing());
         
         KeyEventFirer keyboard = new KeyEventFirer(mb.getScene());
@@ -343,7 +345,6 @@ public class MenuBarTest {
     
     
      @Test public void testMenuOnShowingEventFiringWithMenuHideOperation() {
-        final MouseEventGenerator generator = new MouseEventGenerator();
         VBox root = new VBox();
         Menu menu = new Menu("Menu");
 
@@ -379,34 +380,18 @@ public class MenuBarTest {
         assertTrue(mb.isFocused());
         // click on menu to show 
         scene.impl_processMouseEvent(
-            generator.generateMouseEvent(MouseEvent.MOUSE_PRESSED, xval+20, yval+20));
+            MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_PRESSED, xval+20, yval+20));
         scene.impl_processMouseEvent(
-            generator.generateMouseEvent(MouseEvent.MOUSE_RELEASED, xval+20, yval+20));
+            MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_RELEASED, xval+20, yval+20));
         tk.firePulse(); 
         assertEquals(menu.showingProperty().get(), true);
         click = false;
         // click on menu to hide
         scene.impl_processMouseEvent(
-            generator.generateMouseEvent(MouseEvent.MOUSE_PRESSED, xval+20, yval+20));
+            MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_PRESSED, xval+20, yval+20));
         scene.impl_processMouseEvent(
-            generator.generateMouseEvent(MouseEvent.MOUSE_RELEASED, xval+20, yval+20));
+            MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_RELEASED, xval+20, yval+20));
         tk.firePulse(); 
         assertEquals(menu.showingProperty().get(), false);
     }
-    
-//    static final class MouseEventTracker {
-//        private Node node;
-//        
-//        public MouseEventTracker(final Node node) {
-//            this.node = node;
-//            
-//            node.setOnMouseClicked(new EventHandler<MouseEvent>() {
-//                @Override
-//                public void handle(MouseEvent t) {
-//                    // println here to check if node received mouse event
-//                }
-//            });
-//        }
-//    }
-
 }

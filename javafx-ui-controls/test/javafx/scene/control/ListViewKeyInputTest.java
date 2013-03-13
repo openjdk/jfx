@@ -27,6 +27,9 @@ package javafx.scene.control;
 
 import com.sun.javafx.Utils;
 import com.sun.javafx.scene.control.behavior.ListViewAnchorRetriever;
+import com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
+import com.sun.javafx.scene.control.infrastructure.KeyModifier;
+
 import static org.junit.Assert.*;
 
 import java.util.List;
