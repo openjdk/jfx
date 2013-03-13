@@ -453,7 +453,7 @@ project(":graphics") {
         compile project(":base"), project(":build-tools")
         compile ":$swtFileName:"
         compile files(rootDir.toString() + "/../crap/plugin_exports.jar")
-        stubCompile "junit:junit:4.8.2"
+        stubCompile "junit:junit:4.8.2", project(":base").sourceSets.test.output
     }
 
     tasks.replace("test")
@@ -465,7 +465,6 @@ project(":graphics") {
         scanForTestClasses = false
         include "**/*Test.*"
         exclude "**/*Abstract*.*"
-        forkEvery = 1
     }
     task testWithStub(type: Test, dependsOn: [":graphics:compileJava"]) {
         jvmArgs "-Djava.ext.dirs=", "-Djavafx.toolkit=com.sun.javafx.pgstub.StubToolkit", "-DCSS_META_DATA_TEST_DIR=${file('build/classes/main/javafx')}"
@@ -478,7 +477,6 @@ project(":graphics") {
         scanForTestClasses = false
         include "**/*Test.*"
         exclude "**/*Abstract*.*"
-        forkEvery = 1
     }
     test.dependsOn testWithoutStub, testWithStub
 
