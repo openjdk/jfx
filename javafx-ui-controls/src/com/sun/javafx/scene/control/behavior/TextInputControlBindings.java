@@ -159,7 +159,7 @@ public class TextInputControlBindings {
         BINDINGS.add(new KeyBinding(F10, "ToParent"));
         // TODO XXX DEBUGGING ONLY
 //        BINDINGS.add(new KeyBinding(F4, "TraverseDebug").alt().ctrl().shift());
-        /*DEBUG*/if (PlatformImpl.isSupported(ConditionalFeature.VIRTUAL_KEYBOARD) {
+        /*DEBUG*/if (PlatformImpl.isSupported(ConditionalFeature.VIRTUAL_KEYBOARD)) {
             BINDINGS.add(new KeyBinding(DIGIT9, "UseVK").ctrl().shift());
         }
     }
