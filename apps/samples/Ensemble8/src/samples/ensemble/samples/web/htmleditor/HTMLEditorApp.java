@@ -53,6 +53,7 @@ import javafx.stage.Stage;
  * @preview preview.png
  * @see javafx.scene.web.HTMLEditor
  * @related controls/text/SimpleLabel
+ * @conditionalFeatures WEB
  */
 public class HTMLEditorApp extends Application {
 

@@ -34,6 +34,7 @@ package ensemble.compiletime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import javafx.application.ConditionalFeature;
 
 /**
  * Descriptor for a ensemble sample. Everything the ui needs is determined at 
@@ -64,8 +65,10 @@ public class Sample {
     /** ClassPath Url for preview image of size 206x152 */
     public String previewUrl;
     /** List of properties in the sample that can be played with */
-    public final List<PlaygroundProperty> playgroundProperties = new ArrayList<>();
-    
+    public final List<PlaygroundProperty> playgroundProperties = new ArrayList<>();   
+    /** List of conditional features the platform must support to run certain samples */
+    public final List<ConditionalFeature> conditionalFeatures = new ArrayList<>();
+      
     // =============== RELATED =================================================
     
     /** Array of classpaths to related api docs. */
@@ -88,7 +91,9 @@ public class Sample {
                 ",\n         apiClasspaths       =" + apiClasspaths + 
                 ",\n         docsUrls            =" + docsUrls + 
                 ",\n         relatesSamplePaths  =" + relatesSamplePaths + 
-                ",\n         playgroundProperties  =" + playgroundProperties + '}';
+                ",\n         playgroundProperties  =" + playgroundProperties + 
+                ",\n         conditionalFeatures  =" + conditionalFeatures +
+                '}';
     }
     
     public static class URL {

@@ -33,6 +33,7 @@ package ensemble.compiletime;
 
 import ensemble.compiletime.Sample.URL;
 import java.util.*;
+import javafx.application.ConditionalFeature;
 
 /**
  * A utils class containing static methods that are useful when generating Java code.
@@ -88,8 +89,9 @@ public class CodeGenerationUtils {
         sb.append(urlArrayToCode(sample.docsUrls)); sb.append(',');
         sb.append(stringArrayToCode(sample.relatesSamplePaths)); sb.append(',');
         sb.append(stringToCode(sample.mainFileUrl)); sb.append(',');
-        sb.append(playgroundPropertyArrayToCode(sample.playgroundProperties));
-        sb.append(")");
+        sb.append(playgroundPropertyArrayToCode(sample.playgroundProperties)); sb.append(',');
+        sb.append(conditionalFeatureArrayToCode(sample.conditionalFeatures));
+        sb.append(")");      
         return sb.toString();
     }
 
@@ -108,6 +110,18 @@ public class CodeGenerationUtils {
                 sb.append(stringToCode(entry.getValue()));
             }
             sb.append("),");
+        }
+        sb.append("}");
+        return sb.toString();
+    }
+ 
+    public static String conditionalFeatureArrayToCode(List<ConditionalFeature> array) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("new ConditionalFeature[]{");
+        for (ConditionalFeature feature : array) {
+            sb.append("ConditionalFeature.");
+            sb.append(feature.name());
+            sb.append(',');
         }
         sb.append("}");
         return sb.toString();

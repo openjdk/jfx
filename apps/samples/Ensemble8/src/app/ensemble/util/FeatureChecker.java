@@ -29,50 +29,37 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+package ensemble.util;
 
-package ensemble;
+import ensemble.SampleInfo;
+import java.util.ArrayList;
+import java.util.List;
+import javafx.application.ConditionalFeature;
+import javafx.application.Platform;
 
-import ensemble.generated.Samples;
-import ensemble.util.FeatureChecker;
+public class FeatureChecker {
 
-/**
- * Descriptor for a category containing samples and sub categories.
- */
-public class SampleCategory {
-    public final String name;
-    /* samples contained in this category directly */
-    public final SampleInfo[] samples;
-    /* samples contained in this category directly and all sub categories recursively */
-    public final SampleInfo[] samplesAll;
-    public final SampleCategory[] subCategories;
-
-    public SampleCategory(String name, SampleInfo[] samples, SampleInfo[] samplesAll, SampleCategory[] subCategories) {
-        this.name = name;
-        this.samples = FeatureChecker.filterSamples(samples);
-        this.samplesAll = FeatureChecker.filterSamples(samplesAll);
-        this.subCategories = subCategories;
+    public static boolean isSampleSupported(SampleInfo sample) {
+        ConditionalFeature[] cf = sample.conditionalFeatures;
+        for (ConditionalFeature oneCF : cf) {
+            if (!Platform.isSupported(oneCF)) {
+                return false;
+            }
+        }
+        return true;
     }
-    
-    public SampleInfo sampleForPath(String path) {
-        if (path.charAt(0) == '/') { // absolute path
-            return Samples.ROOT.sampleForPath(path.split("/"),1);
+
+    public static SampleInfo[] filterSamples(SampleInfo[] samples) {
+        if (samples != null) {
+            List filteredSampleInfos = new ArrayList<>();
+            for (SampleInfo oneSampleInfo : samples) {
+                if (isSampleSupported(oneSampleInfo)) {
+                    filteredSampleInfos.add(oneSampleInfo);
+                }
+            }
+            return (SampleInfo[]) filteredSampleInfos.toArray(new SampleInfo[0]);
         } else {
-            return sampleForPath(path.split("/"),0);
+            return null;
         }
-    }
-    
-    private SampleInfo sampleForPath(String[] pathParts, int index) {
-        String part = pathParts[index];
-        if (samples!=null) for (SampleInfo sample: samples) {
-            if (sample.name.equals(part)) return sample;
-        }
-        if (subCategories!=null) for (SampleCategory category: subCategories) {
-            if (category.name.equals(part)) return category.sampleForPath(pathParts, index + 1);
-        }
-        return null;
-    }
-    
-    @Override public String toString() {
-        return name;
     }
 }

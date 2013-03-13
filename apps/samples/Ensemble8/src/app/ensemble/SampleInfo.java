@@ -41,6 +41,7 @@ import java.util.Map;
 import java.util.WeakHashMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javafx.application.ConditionalFeature;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.geometry.Pos;
@@ -86,6 +87,8 @@ public class SampleInfo {
     public final String previewUrl;
     /** List of properties in the sample that can be played with */
     public final PlaygroundProperty[] playgroundProperties;
+    /** List of features that require specific platform support */
+    public final ConditionalFeature[] conditionalFeatures;
 
     // =============== RELATED =================================================
 
@@ -99,7 +102,7 @@ public class SampleInfo {
     public SampleInfo(String name, String description, String ensemblePath, String baseUri, String appClass,
                   String previewUrl, String[] resourceUrls, String[] apiClasspaths,
                   String[] docsUrls, String[] relatesSamplePaths, String mainFileUrl,
-                  PlaygroundProperty[] playgroundProperties) {
+                  PlaygroundProperty[] playgroundProperties, ConditionalFeature[] conditionalFeatures) {
         this.name = name;
         this.description = description;
         this.ensemblePath = ensemblePath;
@@ -112,6 +115,7 @@ public class SampleInfo {
         this.docsUrls = docsUrls;
         this.relatesSamplePaths = relatesSamplePaths;
         this.playgroundProperties = playgroundProperties;
+        this.conditionalFeatures = conditionalFeatures;
     }
     
     @Override public String toString() {
