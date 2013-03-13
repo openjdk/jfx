@@ -273,14 +273,6 @@ final class ListChangeBuilder<E> {
         
     }
 
-    private static int[] inverse(int[] perm) {
-        int[] inverse = new int[perm.length];
-        for (int i = 0; i < perm.length; ++i) {
-            inverse[perm[i]] = i;
-        }
-        return inverse;
-    }
-
     public void nextPermutation(int from, int to, int[] perm) {
         checkState();
 
