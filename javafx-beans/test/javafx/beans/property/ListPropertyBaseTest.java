@@ -33,6 +33,7 @@ import javafx.collections.FXCollections;
 import javafx.collections.MockListObserver;
 import javafx.collections.ObservableList;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.util.Collections;
@@ -143,6 +144,7 @@ public class ListPropertyBaseTest {
         changeListener.check(null, UNDEFINED, UNDEFINED, 0);
     }
 
+    @Ignore ("RT-28969")
     @Test
     public void testListChangeListener() {
         attachListChangeListener();
@@ -373,6 +375,7 @@ public class ListPropertyBaseTest {
         changeListener.check(property, VALUE_1a, VALUE_1b, 2);
     }
 
+    @Ignore ("RT-28969")
     @Test
     public void testSet_ListChange() {
         attachListChangeListener();
@@ -447,6 +450,7 @@ public class ListPropertyBaseTest {
         changeListener.check(property, VALUE_1a, VALUE_1b, 2);
     }
 
+    @Ignore ("RT-28969")
     @Test
     public void testSetValue_ListChange() {
         attachListChangeListener();
@@ -544,6 +548,7 @@ public class ListPropertyBaseTest {
         changeListener.check(property, VALUE_1b, VALUE_1a, 1);
     }
 
+    @Ignore ("RT-28969")
     @Test
     public void testBind_ListChange() {
         attachListChangeListener();
