@@ -748,7 +748,7 @@ final class SWGraphics implements ReadbackGraphics {
                                      Paint p, float bx, float by, float bw, float bh)
     {
         float advanceX = 0;
-        if (tx.isTranslateOrIdentity() && strike.supportsGlyphImages() && (!strike.drawAsShapes())) {
+        if (tx.isTranslateOrIdentity() && (!strike.drawAsShapes())) {
             final boolean doLCDText = (strike.getAAMode() == FontResource.AA_LCD) &&
                     getRenderTarget().isOpaque() &&
                     (p.getType() == Paint.Type.COLOR) &&

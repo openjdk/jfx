@@ -36,7 +36,6 @@ import com.sun.t2k.CharToGlyphMapper;
 import com.sun.prism.impl.packrect.RectanglePacker;
 import com.sun.prism.Texture;
 import com.sun.prism.impl.shape.MaskData;
-import com.sun.prism.impl.shape.ShapeUtil;
 import com.sun.prism.paint.Color;
 import java.nio.ByteBuffer;
 import java.util.HashMap;
@@ -75,9 +74,6 @@ public class GlyphCache {
 
     private boolean isLCDCache;
 
-    /* The number of allocated glyphs. Not actually used so far. */
-    private int numAllocatedGlyphs = 0;
-
     /* Share a RectanglePacker and its associated texture cache
      * for all uses on a particular screen.
      */
@@ -107,10 +103,6 @@ public class GlyphCache {
             packer = new RectanglePacker(tex, WIDTH, HEIGHT);
             packerMap.put(context, packer);
         }
-    }
-
-    public boolean isLCDCache() {
-        return isLCDCache;
     }
 
     public void render(BaseContext ctx, GlyphList gl, float x, float y,
@@ -242,11 +234,6 @@ public class GlyphCache {
 
     public void clear() {
         glyphDataMap.clear();
-        numAllocatedGlyphs = 0;
-    }
-
-    public int getNumAllocatedGlyphs() {
-        return numAllocatedGlyphs;
     }
 
     private void clearAll() {
@@ -255,14 +242,6 @@ public class GlyphCache {
         context.flushVertexBuffer();
         context.clearGlyphCaches();
         packer.clear();
-    }
-
-    private boolean isEmptyGlyph(FontStrike.Glyph glyph) {
-        if (!strike.supportsGlyphImages()) {
-            return glyph.getBBox().isEmpty();
-        } else {
-            return glyph.getWidth() == 0 || glyph.getHeight() == 0;
-        }
     }
 
     private GlyphData getCachedGlyph(int glyphCode) {
@@ -282,7 +261,7 @@ public class GlyphCache {
         GlyphData data = null;
         FontStrike.Glyph glyph = strike.getGlyph(glyphCode);
         if (glyph != null) {
-            if (isEmptyGlyph(glyph)) {
+            if (glyph.getWidth() == 0 || glyph.getHeight() == 0) {
                 data = new GlyphData(0, 0, 0,
                                      glyph.getPixelXAdvance(),
                                      glyph.getPixelYAdvance(),
@@ -293,16 +272,11 @@ public class GlyphCache {
                 // NOTE : if the MaskData can be stored back directly
                 // in the glyph, even as an opaque type, it should save
                 // repeated work next time the glyph is used.
-                MaskData maskData;
-                if (strike.supportsGlyphImages()) {
-                    maskData = MaskData.create(glyph.getPixelData(),
-                                               glyph.getOriginX(),
-                                               glyph.getOriginY(),
-                                               glyph.getWidth(),
-                                               glyph.getHeight());
-                } else {
-                    maskData = ShapeUtil.rasterizeGlyphOutline(glyph.getShape());
-                }
+                MaskData maskData = MaskData.create(glyph.getPixelData(),
+                                                    glyph.getOriginX(),
+                                                    glyph.getOriginY(),
+                                                    glyph.getWidth(),
+                                                    glyph.getHeight());
 
                 // Make room for the rectangle on the backing store
                 int border = 1;
@@ -360,7 +334,6 @@ public class GlyphCache {
 
             }
             segment[subIndex] = data;
-            numAllocatedGlyphs++;
         }
 
         return data;
