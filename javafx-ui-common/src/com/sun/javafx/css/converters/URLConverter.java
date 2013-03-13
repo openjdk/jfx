@@ -63,7 +63,7 @@ public final class URLConverter extends StyleConverterImpl<ParsedValue[], String
             } else {
                 uriStr = com.sun.javafx.Utils.stripQuotes(uriStr);
             }
-            URL stylesheetURL = (URL) values[1].getValue();
+            URL stylesheetURL = values[1] != null ? (URL)values[1].getValue() : null;
             URL resolvedURL = null;
             if (stylesheetURL == null) {
                 try {
@@ -71,10 +71,12 @@ public final class URLConverter extends StyleConverterImpl<ParsedValue[], String
                 } catch (MalformedURLException malf) {
                     // This may be a relative URL, so try resolving
                     // it using the application classloader
+                    if (uriStr.startsWith("/")) uriStr = uriStr.substring(1);                    
                     final ClassLoader cl = Thread.currentThread().getContextClassLoader();
                     resolvedURL = cl.getResource(uriStr);
                 }
             } else {
+                if (uriStr.startsWith("/")) uriStr = uriStr.substring(1);
                 // resolve doesn't work with opaque URI's, but this does.
                 resolvedURL = new URL(stylesheetURL, uriStr);
             }

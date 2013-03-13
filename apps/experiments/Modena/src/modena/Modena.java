@@ -31,6 +31,9 @@
  */
 package modena;
 
+import java.awt.Graphics;
+import java.awt.Graphics2D;
+import java.awt.image.BufferedImage;
 import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.File;
@@ -55,6 +58,7 @@ import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.fxml.FXMLLoader;
 import javafx.geometry.NodeOrientation;
+import javafx.geometry.Rectangle2D;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.SnapshotParameters;
@@ -124,6 +128,7 @@ public class Modena extends Application {
     
     private final BorderPane outerRoot = new BorderPane();
     private BorderPane root;
+    private SamplePageNavigation samplePageNavigation;
     private SamplePage samplePage;
     private Node mosaic;
     private Node heightTest;
@@ -147,7 +152,8 @@ public class Modena extends Application {
                 @Override public void run() {
                     updateUserAgentStyleSheet();
                     rebuildUI(modenaButton.isSelected(), retinaButton.isSelected(), 
-                            contentTabs.getSelectionModel().getSelectedIndex());
+                            contentTabs.getSelectionModel().getSelectedIndex(),
+                            samplePageNavigation.getCurrentSection());
                 }
             });
         }
@@ -198,7 +204,7 @@ public class Modena extends Application {
         outerRoot.setTop(buildMenuBar());
         outerRoot.setCenter(root);
         // build UI
-        rebuildUI(true,false,0);
+        rebuildUI(true,false,0, null);
         // show UI
         Scene scene = new Scene(outerRoot, 1024, 768);
         scene.getStylesheets().add(testAppCssUrl);
@@ -233,6 +239,7 @@ public class Modena extends Application {
     }
     
     private void updateUserAgentStyleSheet(boolean modena) {
+        final SamplePage.Section scrolledSection = samplePageNavigation==null? null : samplePageNavigation.getCurrentSection();
         if (!modena &&
             (baseColor == null || baseColor == Color.TRANSPARENT) &&
             (backgroundColor == null || backgroundColor == Color.TRANSPARENT) &&
@@ -286,9 +293,16 @@ public class Modena extends Application {
         setUserAgentStylesheet("internal:stylesheet"+Math.random()+".css");
         
         if (root != null) root.requestLayout();
+
+        // restore scrolled section
+        Platform.runLater(new Runnable() {
+            @Override public void run() {
+                samplePageNavigation.setCurrentSection(scrolledSection);
+            }
+        });
     }
     
-    private void rebuildUI(boolean modena, boolean retina, int selectedTab) {
+    private void rebuildUI(boolean modena, boolean retina, int selectedTab, final SamplePage.Section scrolledSection) {
         try {
             if (root == null) {
                 root = new BorderPane();
@@ -298,14 +312,13 @@ public class Modena extends Application {
                 root.setTop(null);
                 root.setCenter(null);
             }
+            // Create sample page and nav
+            samplePageNavigation = new SamplePageNavigation();
+            samplePage = samplePageNavigation.getSamplePage();
             // Create Content Area
             contentTabs = new TabPane();
             contentTabs.getTabs().addAll(
-                TabBuilder.create().text("All Controls").content(
-                    ScrollPaneBuilder.create().content(
-                        samplePage = new SamplePage()
-                    ).build()
-                ).build(),
+                TabBuilder.create().text("All Controls").content( samplePageNavigation ).build(),
                 TabBuilder.create().text("UI Mosaic").content(
                     ScrollPaneBuilder.create().content(
                         mosaic = (Node)FXMLLoader.load(Modena.class.getResource("ui-mosaic.fxml"))
@@ -418,12 +431,6 @@ public class Modena extends Application {
             // populate root
             root.setTop(toolBar);
             root.setCenter(contentGroup);
-            // move foucus out of the way
-            Platform.runLater(new Runnable() {
-                @Override public void run() {
-                    modenaButton.requestFocus();
-                }
-            });
             
             samplePage.getStyleClass().add("needs-background");
             mosaic.getStyleClass().add("needs-background");
@@ -435,6 +442,14 @@ public class Modena extends Application {
             if (retina) {
                 contentTabs.getTransforms().setAll(new Scale(2,2));
             }
+            // update state
+            Platform.runLater(new Runnable() {
+                @Override public void run() {
+                    // move focus out of the way
+                    modenaButton.requestFocus();
+                    samplePageNavigation.setCurrentSection(scrolledSection);
+                }
+            });
         } catch (IOException ex) {
             Logger.getLogger(Modena.class.getName()).log(Level.SEVERE, null, ex);
         }
@@ -571,8 +586,20 @@ public class Modena extends Application {
             if (file != null) {
                 try {
                     samplePage.getStyleClass().add("root");
-                    WritableImage img = samplePage.snapshot(new SnapshotParameters(), null);
-                    ImageIO.write(SwingFXUtils.fromFXImage(img, null), "PNG", file);
+                    int width = (int)(samplePage.getLayoutBounds().getWidth()+0.5d);
+                    int height = (int)(samplePage.getLayoutBounds().getHeight()+0.5d);
+                    BufferedImage imgBuffer = new BufferedImage(width,height,BufferedImage.TYPE_INT_ARGB);
+                    Graphics2D g2 = imgBuffer.createGraphics();
+                    for (int y=0; y<height; y+=2048) {
+                        SnapshotParameters snapshotParameters = new SnapshotParameters();
+                        int remainingHeight = Math.min(2048, height - y);
+                        snapshotParameters.setViewport(new Rectangle2D(0,y,width,remainingHeight));
+                        WritableImage img = samplePage.snapshot(snapshotParameters, null);
+                        g2.drawImage(SwingFXUtils.fromFXImage(img,null),0,y,null);
+                    }
+                    g2.dispose();
+                    ImageIO.write(imgBuffer, "PNG", file);
+                    System.out.println("Written image: "+file.getAbsolutePath());
                 } catch (IOException ex) {
                     Logger.getLogger(Modena.class.getName()).log(Level.SEVERE, null, ex);
                 }

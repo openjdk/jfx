@@ -38,6 +38,7 @@ import javafx.scene.text.Font;
 import com.sun.javafx.css.Size;
 import com.sun.javafx.css.SizeUnits;
 import com.sun.javafx.css.StyleConverterImpl;
+import com.sun.javafx.css.StyleManager;
 
 
 public final class PaintConverter extends StyleConverterImpl<ParsedValue<?, Paint>, Paint> {
@@ -152,7 +153,7 @@ public final class PaintConverter extends StyleConverterImpl<ParsedValue<?, Pain
             ParsedValue<?,?> urlParsedValue = values[0];
             String url = (String) urlParsedValue.convert(font);
             if (values.length == 1) {
-                return new ImagePattern(new Image(url));
+                return new ImagePattern(StyleManager.getInstance().getCachedImage(url));
             }
 
             Size x = (Size) values[1].convert(font);

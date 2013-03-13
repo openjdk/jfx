@@ -121,7 +121,7 @@ is being used to size a border should also be in pixels.
      * -fx-selection-bar-text for text on top of -fx-selection-bar
      */
     -fx-dark-text-color: black;
-    -fx-mid-text-color: #292929;
+    -fx-mid-text-color: #333;
     -fx-light-text-color: white;
 
     /* A bright blue for highlighting/accenting objects.  For example: selected
@@ -301,8 +301,7 @@ is being used to size a border should also be in pixels.
     );
 
     /* The small thin light "shadow" for mark-like objects. Typically used in
-     * conjunction with -fx-mark-color with an insets of 1 0 -1 0.
-     */
+     * conjunction with -fx-mark-color with an insets of 1 0 -1 0. */
     -fx-mark-highlight-color: ladder(
         -fx-color,
         derive(-fx-color,80%) 60%,
@@ -310,24 +309,19 @@ is being used to size a border should also be in pixels.
     );
 
     /* Background for items in list like things such as menus, lists, trees,
-     * and tables.
-     *
-     * TODO: it seems like this should be based upon -fx-accent and we should
-     * remove the setting -fx-background in all the sections that use
-     * -fx-selection-bar.
-     */
+     * and tables. */
     -fx-selection-bar: -fx-accent;
+
+    /* Background color to use for selection of list cells etc. This is when
+     * the control doesn't have focus or the row of a previously selected item. */
+    -fx-selection-bar-non-focused: lightgrey;
 
     /* The color to use as -fx-text-fill when painting text on top of
      * backgrounds filled with -fx-selection-bar.
      *
-     * TODO: it seems like this should be derived from -fx-selection-bar.
+     * TODO: this can be removed
      */
-    -fx-selection-bar-text: ladder(
-        -fx-background,
-        -fx-light-text-color 50%,
-        -fx-mid-text-color   51%
-    );
+    -fx-selection-bar-text: -fx-text-background-color;
 
     /* These are needed for Popup */
     -fx-background-radius: inherit;
@@ -337,7 +331,8 @@ is being used to size a border should also be in pixels.
     /* The color to use in ListView/TreeView/TableView to indicate hover. */
     -fx-cell-hover-color: #cce3f4;
 
-    -fx-cell-focus-inner-border: #85b9de;
+    /** Focus line for keyboard focus traversal on cell based controls */
+    -fx-cell-focus-inner-border: derive(-fx-selection-bar,30%);
 
     /* The colors to use in Pagination */
     -fx-page-bullet-border: #acacac;
@@ -466,7 +461,15 @@ is being used to size a border should also be in pixels.
 .menu-item:disabled > .label,
 .menu-item:disabled,
 .list-cell:filled:selected:focused:disabled,
-.list-cell:filled:selected:disabled {
+.list-cell:filled:selected:disabled,
+.tree-cell:filled:selected:focused:disabled,
+.tree-cell:filled:selected:disabled,
+.tree-cell > .tree-disclosure-node:disabled,
+.tree-table-row-cell > .tree-disclosure-node:disabled,
+.table-row-cell:selected:disabled,
+.tree-table-row-cell:selected:disabled,
+.table-cell:selected:disabled,
+.tree-table-cell:selected:disabled {
     -fx-opacity: 0.4;
 }
 
@@ -547,6 +550,7 @@ is being used to size a border should also be in pixels.
 .split-pane:focused,
 .list-view:focused,
 .tree-view:focused,
+.table-view:focused,
 .tree-table-view:focused,
 .html-editor:focused {
     -fx-background-color: -fx-faint-focus-color, -fx-focus-color, -fx-control-inner-background; 
@@ -699,17 +703,10 @@ is being used to size a border should also be in pixels.
 }
 .check-box > .box {
     -fx-background-radius: 3, 2, 1;
-    -fx-padding: 0.666667em; /* 16x16 = 8+8 */
-}
-.check-box:selected > .box {
-    /* Carefully picked numbers to remain square as scaling */
-    /*-fx-padding: -0.208333em 0 0.208333em 0.23em;  -2.5 0 2.5 2.76 */
-    /*-fx-padding: -0.208333em 0.083333em 0.208333em 0.23em;  -1.5 0 2.5 2.76 */
     -fx-padding: 0.166667em 0.166667em 0.25em 0.25em; /* 2 2 3 3 */
 }
-.check-box:selected > .box > .mark {
-    -fx-background-color: transparent;
-    /*-fx-padding: 0.666667em 0.583333em 0.666667em 0.5em;  7 7 6 5 */
+.check-box > .box > .mark {
+    -fx-background-color: null;
     -fx-padding: 0.416667em 0.416667em 0.5em 0.5em; /* 5 5 6 6 */
     -fx-shape: "M-0.25,6.083c0.843-0.758,4.583,4.833,5.75,4.833S14.5-1.5,15.917-0.917c1.292,0.532-8.75,17.083-10.5,17.083C3,16.167-1.083,6.833-0.25,6.083z";
 }
@@ -808,9 +805,14 @@ is being used to size a border should also be in pixels.
     -fx-alignment: TOP_LEFT;
 }
 .tool-bar { /* top */
+    TOP-COLOR: ladder(
+        -fx-base,
+        derive(-fx-base,0%) 0%,
+        derive(-fx-base,46%) 100%
+    );
     -fx-background-color:
-        linear-gradient(to bottom, derive(-fx-base,75%) 0%, -fx-outer-border 90%),
-        linear-gradient(to bottom, derive(-fx-base,46.9%) 2%, derive(-fx-base,-2.1%) 95%);
+        linear-gradient(to bottom, derive(TOP-COLOR,25%) 0%, -fx-outer-border 90%),
+        linear-gradient(to bottom, TOP-COLOR 2%, derive(-fx-base,-2.1%) 95%);
     -fx-background-insets: 0 0 0 0, 1 0 1 0;
     -fx-padding: 0.416667em 0.5em 0.416667em 0.5em; /* 5 6  5 6 */
     -fx-spacing: 0.333em; /* 4 */
@@ -822,8 +824,8 @@ is being used to size a border should also be in pixels.
 .tool-bar.bottom {
     -fx-background-color:
         -fx-outer-border,
-        derive(-fx-base,75%),
-        linear-gradient(to bottom, derive(-fx-base,46.9%) 2%, derive(-fx-base,-2.1%) 95%);
+        derive(TOP-COLOR,25%),
+        linear-gradient(to bottom, TOP-COLOR 2%, derive(-fx-base,-2.1%) 95%);
     -fx-background-insets: 0, 1 0 0 0, 2 0 0 0;
 }
 .tool-bar > .container > .separator {
@@ -953,39 +955,39 @@ is being used to size a border should also be in pixels.
 }
 .scroll-bar > .increment-button > .increment-arrow,
 .scroll-bar > .decrement-button > .decrement-arrow {
-    -fx-background-color: -fx-mark-highlight-color,derive(-fx-base,-35%);
+    -fx-background-color: -fx-mark-highlight-color,derive(-fx-base,-45%);
 }
 .scroll-bar > .increment-button:hover > .increment-arrow,
 .scroll-bar > .decrement-button:hover > .decrement-arrow {
-    -fx-background-color: -fx-mark-highlight-color,derive(-fx-base,-40%);
+    -fx-background-color: -fx-mark-highlight-color,derive(-fx-base,-50%);
 }
 .scroll-bar > .increment-button:pressed > .increment-arrow,
 .scroll-bar > .decrement-button:pressed > .decrement-arrow {
-    -fx-background-color: -fx-mark-highlight-color,derive(-fx-base,-45%);
-}
-.scroll-bar:horizontal > .increment-button > .increment-arrow {
-    /*-fx-padding: 0.583333em 0.416667em 0 0; *//* 7 5 0 0 */
-    -fx-padding: 0.75em 0.416667em 0 0; /* 9 5 0 0 */
-    -fx-shape: "M0.315,1.457l1.414-1.414L5.686,4L1.729,7.957L0.315,6.543L2.857,4L0.315,1.457z";
-    -fx-background-insets: 2 0 -2 0, 0;
-}
-.scroll-bar:vertical > .increment-button > .increment-arrow {
-    /*-fx-padding: 0.416667em 0.583333em 0 0 ; *//* 5 7 0 0 */
-    -fx-padding: 0.416667em 0.75em 0 0 ; /* 5 9 0 0 */
-    -fx-shape: "M6.543,0.315l1.414,1.414L4,5.686L0.043,1.729l1.414-1.414L4,2.858L6.543,0.315z";
-    -fx-background-insets: 2 0 -2 0, 0;
+    -fx-background-color: -fx-mark-highlight-color,derive(-fx-base,-55%);
 }
 .scroll-bar:horizontal > .decrement-button > .decrement-arrow {
-    /*-fx-padding: 0.583333em 0.416667em 0 0; *//* 7 5 0 0 */
-    -fx-padding: 0.75em 0.416667em 0 0; /* 9 5 0 0 */
-    -fx-shape: "M5.686,6.543L4.271,7.957L0.314,4l3.957-3.957l1.414,1.414L3.143,4L5.686,6.543z";
-    -fx-background-insets: 2 0 -2 0, 0;
+    -fx-padding: 0.333em 0.167em 0.333em 0.167em; /* 4 2 4 2 */
+    -fx-shape: "M5.997,5.072L5.995,6.501l-2.998-4l2.998-4l0.002,1.43l-1.976,2.57L5.997,5.072z";
+    -fx-effect: dropshadow(two-pass-box , -fx-shadow-highlight-color, 1, 0.0 , 0, 1.4);
+    /*-fx-background-insets: 2 0 -2 0, 0;*/
+}
+.scroll-bar:horizontal > .increment-button > .increment-arrow {
+    -fx-padding: 0.333em 0.167em 0.333em 0.167em; /* 4 2 4 2 */
+    -fx-shape: "M2.998-0.07L3-1.499l2.998,4L3,6.501l-0.002-1.43l1.976-2.57L2.998-0.07z";
+    -fx-effect: dropshadow(two-pass-box , -fx-shadow-highlight-color, 1, 0.0 , 0, 1.4);
+    /*-fx-background-insets: 2 0 -2 0, 0;*/
 }
 .scroll-bar:vertical > .decrement-button > .decrement-arrow {
-    /*-fx-padding: 0.416667em 0.583333em 0 0; *//* 5 7 0 0 */
-    -fx-padding: 0.416667em 0.75em 0 0; /* 5 9 0 0 */
-    -fx-shape: "M1.457,5.563L0.042,4.149L4,0.193l3.957,3.957L6.543,5.563L4,3.021L1.457,5.563z";
-    -fx-background-insets: 2 0 -2 0, 0;
+    -fx-padding: 0.167em 0.333em 0.167em 0.333em; /* 2 4 2 4 */
+    -fx-shape: "M1.929,4L0.5,3.998L4.5,1l4,2.998L7.07,4L4.5,2.024L1.929,4z";
+    -fx-effect: dropshadow(two-pass-box , -fx-shadow-highlight-color, 1, 0.0 , 0, 1.4);
+    /*-fx-background-insets: 2 0 -2 0, 0;*/
+}
+.scroll-bar:vertical > .increment-button > .increment-arrow {
+    -fx-padding: 0.167em 0.333em 0.167em 0.333em; /* 2 4 2 4 */
+    -fx-shape: "M7.071,1L8.5,1.002L4.5,4l-4-2.998L1.93,1L4.5,2.976L7.071,1z";
+    -fx-effect: dropshadow(two-pass-box , -fx-shadow-highlight-color, 1, 0.0 , 0, 1.4);
+    /*-fx-background-insets: 2 0 -2 0, 0;*/
 }
 
 /*******************************************************************************
@@ -998,13 +1000,13 @@ is being used to size a border should also be in pixels.
     -fx-background-insets: 0 1 1 1, 1;
     -fx-padding: 0 1 0 1;
 }
-.scroll-pane > .scroll-bar:horizontal > .increment-button, 
+.scroll-pane > .scroll-bar:horizontal > .increment-button,
 .scroll-pane > .scroll-bar:horizontal > .decrement-button {
-    -fx-padding: 0.25em 0.25em 0.166667em 0.25em; /* 3 3 2 3 */
+    -fx-padding: 0.166667em 0.25em 0.25em  0.25em; /* 2 3 3 3 */
 }
-.scroll-pane > .scroll-bar:vertical > .increment-button, 
+.scroll-pane > .scroll-bar:vertical > .increment-button,
 .scroll-pane > .scroll-bar:vertical > .decrement-button {
-    -fx-padding: 0.25em 0.166667em 0.25em 0.25em; /* 3 2 3 3 */
+    -fx-padding: 0.25em 0.25em 0.25em 0.166667em; /* 3 3 3 2 */
 }
 .scroll-pane > .scroll-bar:vertical {
     -fx-background-insets: 1 1 1 0, 1;
@@ -1105,24 +1107,17 @@ is being used to size a border should also be in pixels.
         radial-gradient(center 50% 50%, radius 50%, -fx-control-inner-background 70%, derive(-fx-control-inner-background, -9%) 100%), 
         -fx-control-inner-background;
     -fx-background-insets: 0, 1, 5 2 1 2;
-    -fx-padding: 1;
+    -fx-padding: 0.166667em; /* 2px */
 }
 .progress-indicator > .determinate-indicator > .progress {
     -fx-background-color: -fx-accent;
-    /*-fx-background-insets: 2;*/
-    -fx-background-insets: 1;
-    -fx-padding: 1em; /* 9 */
+    -fx-padding: 0.083333em; /* 1px */
 }
-/* TODO: scaling the shape seems to make it disappear */
 .progress-indicator > .determinate-indicator > .tick {
     -fx-background-color: white;
     -fx-background-insets: 0;
-    -fx-padding: 0.416667em; /* 5 */
+    -fx-padding: 0.666667em; /* 8 */
     -fx-shape: "M-0.25,6.083c0.843-0.758,4.583,4.833,5.75,4.833S14.5-1.5,15.917-0.917c1.292,0.532-8.75,17.083-10.5,17.083C3,16.167-1.083,6.833-0.25,6.083z";
-    -fx-scale-shape: false;
-}
-.progress-indicator:indeterminate > .spinner {
-    -fx-padding: 0.833333em; /* 10 */
 }
 .progress-indicator > .percentage {
     -fx-font-size: 0.916667em; /* 11pt - 1 less than the default font */
@@ -1132,40 +1127,40 @@ is being used to size a border should also be in pixels.
     -fx-background-color: -fx-accent;
 }
 .progress-indicator:indeterminate .segment0 {
-    -fx-shape:"M10,0C9.998,0,9.995,0,9.992,0C9.991,0,9.991,0,9.99,0C9.988,0,9.986,0,9.985,0S9.982,0,9.981,0S9.979,0,9.978,0S9.975,0,9.974,0S9.972,0,9.971,0C9.969,0,9.968,0,9.966,0H9.965c-0.007,0-0.014,0-0.02,0C9.944,0,9.944,0,9.944,0C9.941,0,9.939,0,9.937,0c-0.77,0.007-1.389,0.634-1.384,1.404C8.557,2.176,9.185,2.8,9.956,2.8c0.001,0,0.003,0,0.004,0H10c0.773-0.002,1.4-0.63,1.4-1.404c0-0.77-0.622-1.393-1.392-1.396C10.006,0,10.003,0,10,0L10,0z";
-}
+     -fx-shape:"M45.0 26.0 a3.5,3.5 0 1,1 0,1 Z";
+ }
 .progress-indicator:indeterminate .segment1 {
-    -fx-shape:"M5.688,1.156c-0.236,0-0.476,0.06-0.696,0.187C4.98,1.349,4.969,1.356,4.958,1.363c0,0-0.001,0-0.001,0C4.955,1.364,4.954,1.365,4.952,1.366c-0.001,0-0.002,0.001-0.004,0.002c0,0,0,0-0.001,0C4.944,1.371,4.94,1.373,4.936,1.375c0,0,0,0-0.001,0C4.933,1.377,4.931,1.378,4.929,1.38C4.267,1.772,4.046,2.624,4.438,3.288c0.261,0.444,0.73,0.692,1.212,0.692c0.24,0,0.484-0.062,0.706-0.192l0.034-0.02C7.058,3.378,7.283,2.52,6.896,1.851C6.636,1.405,6.168,1.156,5.688,1.156L5.688,1.156z";
+    -fx-shape:"M41.98 37.25 a3.5,3.5 0 1,1 0,1 Z";
 }
 .progress-indicator:indeterminate .segment2 {
-    -fx-shape:"M2.534,4.326c-0.482,0-0.951,0.25-1.209,0.697C1.323,5.027,1.321,5.029,1.32,5.031l0,0C1.319,5.033,1.318,5.034,1.317,5.036S1.315,5.039,1.314,5.04c0,0.001,0,0.002-0.001,0.002C1.312,5.044,1.311,5.046,1.31,5.048c0,0,0,0,0,0.001C1.309,5.051,1.308,5.053,1.307,5.055C1.302,5.063,1.297,5.071,1.292,5.079l0,0C1.291,5.082,1.29,5.084,1.288,5.087c-0.376,0.67-0.141,1.519,0.529,1.898c0.218,0.123,0.456,0.182,0.69,0.182c0.488,0,0.963-0.255,1.222-0.708l0.02-0.035c0.383-0.671,0.149-1.527-0.521-1.912C3.008,4.386,2.769,4.326,2.534,4.326L2.534,4.326z";
+    -fx-shape:"M33.75 45.48 a3.5,3.5 0 1,1 0,1 Z";
 }
 .progress-indicator:indeterminate .segment3 {
-    -fx-shape:"M1.396,8.648c-0.002,0-0.005,0-0.008,0C0.619,8.652-0.001,9.278,0,10.047c0,0.002,0,0.006,0,0.008l0,0c0,0.019,0,0.037,0,0.056c0,0.001,0,0.002,0,0.003s0,0.003,0,0.004c0.01,0.765,0.632,1.378,1.396,1.378c0.005,0,0.01,0,0.015,0c0.773-0.009,1.395-0.642,1.389-1.415v-0.04C2.794,9.27,2.166,8.648,1.396,8.648L1.396,8.648z";
+    -fx-shape:"M22.5 48.5 a3.5,3.5 0 1,1 0,1 Z";
 }
 .progress-indicator:indeterminate .segment4 {
-    -fx-shape:"M2.579,12.955c-0.242,0-0.487,0.062-0.71,0.194c-0.664,0.391-0.885,1.242-0.499,1.906c0.013,0.021,0.025,0.043,0.038,0.063c0.262,0.436,0.724,0.678,1.197,0.678c0.243,0,0.49-0.063,0.714-0.197c0.665-0.396,0.883-1.257,0.489-1.922l-0.02-0.034C3.526,13.201,3.059,12.955,2.579,12.955L2.579,12.955z";
+    -fx-shape:"M11.25 45.48 a3.5,3.5 0 1,1 0,1 Z";
 }
 .progress-indicator:indeterminate .segment5 {
-    -fx-shape:"M5.772,16.09c-0.489,0-0.965,0.257-1.223,0.712c-0.38,0.671-0.146,1.52,0.523,1.901c0.002,0.001,0.004,0.002,0.007,0.004h0c0.004,0.002,0.008,0.004,0.012,0.007c0,0,0,0,0.001,0c0.001,0.001,0.002,0.002,0.004,0.002c0.001,0.001,0.003,0.002,0.004,0.003c0,0,0.001,0,0.001,0.001c0.012,0.006,0.023,0.013,0.035,0.019c0.214,0.119,0.446,0.176,0.675,0.176c0.489,0,0.963-0.258,1.22-0.716c0.377-0.675,0.137-1.529-0.537-1.908l-0.035-0.02C6.242,16.149,6.006,16.09,5.772,16.09L5.772,16.09z";
+    -fx-shape:"M3.01 37.25 a3.5,3.5 0 1,1 0,1 Z";
 }
 .progress-indicator:indeterminate .segment6 {
-    -fx-shape:"M10.14,17.198c-0.006,0-0.013,0-0.02,0h-0.039c-0.773,0.011-1.394,0.646-1.385,1.419c0.008,0.767,0.631,1.382,1.396,1.382c0.003,0,0.006,0,0.009-0.001c0.024,0,0.051,0,0.075-0.001c0.769-0.016,1.38-0.648,1.367-1.418C11.53,17.813,10.904,17.198,10.14,17.198L10.14,17.198z";
+    -fx-shape:"M0.0 26.0 a3.5,3.5 0 1,1 0,1 Z";
 }
 .progress-indicator:indeterminate .segment7 {
-    -fx-shape:"M14.433,15.97c-0.245,0-0.494,0.064-0.72,0.2l-0.034,0.021c-0.663,0.397-0.88,1.258-0.483,1.922c0.261,0.439,0.725,0.683,1.2,0.683c0.24,0,0.484-0.062,0.707-0.194c0.022-0.013,0.044-0.025,0.065-0.039c0.656-0.399,0.866-1.254,0.469-1.913C15.373,16.212,14.909,15.97,14.433,15.97L14.433,15.97z";
+    -fx-shape:"M3.01 14.74 a3.5,3.5 0 1,1 0,1 Z";
 }
 .progress-indicator:indeterminate .segment8 {
-    -fx-shape:"M17.539,12.748c-0.493,0-0.973,0.261-1.229,0.723l-0.02,0.034c-0.376,0.676-0.133,1.53,0.542,1.907c0.216,0.121,0.45,0.178,0.681,0.178c0.487,0,0.96-0.256,1.217-0.71c0.003-0.006,0.007-0.012,0.01-0.019c0.007-0.013,0.015-0.025,0.021-0.038l0,0c0.002-0.003,0.003-0.005,0.004-0.008c0.369-0.675,0.124-1.521-0.55-1.893C18.001,12.805,17.769,12.748,17.539,12.748L17.539,12.748z";
+    -fx-shape:"M11.24 6.51 a3.5,3.5 0 1,1 0,1 Z";
 }
 .progress-indicator:indeterminate .segment9 {
-    -fx-shape:"M18.603,8.408c-0.011,0-0.021,0-0.031,0c-0.773,0.018-1.388,0.657-1.373,1.431l0.001,0.04c0.015,0.765,0.641,1.377,1.403,1.377c0.008,0,0.016,0,0.023,0c0.77-0.013,1.383-0.646,1.373-1.414c0-0.003,0-0.006,0-0.009l0,0c-0.001-0.019-0.001-0.037-0.001-0.055c0-0.001,0-0.001-0.001-0.002c0-0.002,0-0.004,0-0.006C19.979,9.012,19.358,8.408,18.603,8.408L18.603,8.408z";
+    -fx-shape:"M22.49 3.5 a3.5,3.5 0 1,1 0,1 Z";
 }
 .progress-indicator:indeterminate .segment10 {
-    -fx-shape:"M17.345,4.121c-0.248,0-0.5,0.066-0.728,0.205c-0.659,0.403-0.869,1.266-0.468,1.927l0.021,0.034c0.265,0.435,0.728,0.675,1.202,0.675c0.247,0,0.497-0.065,0.724-0.202c0.659-0.397,0.871-1.252,0.477-1.912c-0.007-0.011-0.013-0.021-0.02-0.032c-0.001-0.002-0.002-0.003-0.002-0.004c-0.001,0-0.001-0.001-0.001-0.002c-0.004-0.005-0.008-0.011-0.011-0.017c0-0.001,0-0.001-0.001-0.001c-0.001-0.002-0.002-0.004-0.004-0.007C18.271,4.358,17.813,4.121,17.345,4.121L17.345,4.121z";
+    -fx-shape:"M33.75 6.51 a3.5,3.5 0 1,1 0,1 Z";
 }
 .progress-indicator:indeterminate .segment11 {
-    -fx-shape:"M14.104,1.039c-0.494,0-0.974,0.264-1.227,0.729c-0.37,0.679-0.12,1.531,0.559,1.903l0.034,0.019c0.214,0.117,0.445,0.173,0.673,0.173c0.495,0,0.976-0.262,1.231-0.726c0.371-0.674,0.129-1.519-0.542-1.894c-0.012-0.006-0.024-0.013-0.036-0.02c-0.007-0.004-0.014-0.008-0.021-0.012c-0.003-0.001-0.006-0.003-0.009-0.005C14.556,1.094,14.329,1.039,14.104,1.039L14.104,1.039z";
+    -fx-shape:"M41.98 14.74 a3.5,3.5 0 1,1 0,1 Z";
 }
 
 /*******************************************************************************
@@ -1344,9 +1339,9 @@ is being used to size a border should also be in pixels.
     -fx-background-color: transparent;
 }
 .context-menu > .scroll-arrow:hover {
-    -fx-background: -fx-accent;
-    -fx-background-color: -fx-selection-bar;
-    -fx-text-fill: -fx-selection-bar-text;
+    -fx-background: -fx-seleection-bar;
+    -fx-background-color: -fx-background;
+    -fx-text-fill: -fx-text-background-color;
 }
 .context-menu:show-mnemonics > .mnemonic-underline {
     -fx-stroke: -fx-text-fill;
@@ -1396,16 +1391,10 @@ is being used to size a border should also be in pixels.
 .menu-bar {
     -fx-padding: 0.0em 0.666667em 0.0em 0.666667em; /* 0 8 0 8 */
     -fx-spacing: 0.166667em; /* 2 */
-    /*-fx-base: derive(#d0d0d0,-70%);*/
-    /*-fx-background-color: linear-gradient(to bottom, derive(-fx-color,50%), derive(-fx-color,-30%)), -fx-body-color;*/
-    /*-fx-background-insets: 0, 1 0 1 0;*/
     -fx-background-color:
         linear-gradient(to bottom, derive(-fx-base,75%) 0%, -fx-outer-border 90%),
         linear-gradient(to bottom, derive(-fx-base,46.9%) 2%, derive(-fx-base,-2.1%) 95%);
     -fx-background-insets: 0 0 0 0, 1 0 1 0;
-    /*-fx-background-color:*/
-        /*linear-gradient(to bottom, derive(-fx-base,46.9%) 2%, derive(-fx-base,5%) 95%);*/
-    /*-fx-background-insets: 0;*/
     -fx-background-radius: 0, 0 ;
 }
 /* Show nothing for background of normal menu button in a menu bar */
@@ -1431,12 +1420,12 @@ is being used to size a border should also be in pixels.
 .menu-bar > .container > .menu-button:focused,
 .menu-bar > .container > .menu-button:showing {
     -fx-background: -fx-selection-bar;
-    -fx-background-color: -fx-selection-bar;
+    -fx-background-color: -fx-background;
 }
 .menu-bar > .container > .menu-button:hover > .label,
 .menu-bar > .container > .menu-button:focused > .label,
 .menu-bar > .container > .menu-button:showing  > .label {
-    -fx-text-fill: -fx-selection-bar-text !important;
+    -fx-text-fill: -fx-text-background-color !important;
 }
 .menu-bar:show-mnemonics > .mnemonic-underline {
     -fx-stroke: -fx-text-fill;
@@ -1463,9 +1452,9 @@ is being used to size a border should also be in pixels.
     -fx-text-fill: -fx-text-base-color;
 }
 .menu-item:focused {
-     -fx-background: -fx-accent;
-     -fx-background-color: -fx-selection-bar;
-     -fx-text-fill: -fx-selection-bar-text;
+     -fx-background: -fx-selection-bar;
+     -fx-background-color: -fx-background;
+     -fx-text-fill:  -fx-text-background-color;
 }
 .menu-item:focused > .label {
     -fx-text-fill: white;
@@ -1617,9 +1606,11 @@ is being used to size a border should also be in pixels.
 .tab-pane > .tab-header-area > .control-buttons-tab > .container > .tab-down-button {
     -fx-background-color: -fx-outer-border, -fx-inner-border, -fx-body-color;
     -fx-background-insets: -1 0 5 0, 0 1 6 1, 1 2 7 2;
-    -fx-padding: 4 4 9 4; /* TODO convert to ems */
-    /*-fx-padding: 0.416667em 0.416667em 0.833333em 0.416667em;*/ 
+    -fx-padding: 4 4 9 4;
     -fx-background-radius: 10;
+}
+.tab-pane:bottom > .tab-header-area > .control-buttons-tab > .container > .tab-down-button {
+    -fx-padding: -5 4 4 4; /* TODO convert to ems */
 }
 /* FLOATING TABS CUSTOMISATION */
 .tab-pane.floating > .tab-header-area > .tab-header-background {
@@ -1709,17 +1700,16 @@ is being used to size a border should also be in pixels.
 .combo-box-popup > .list-view > .virtual-flow > .clipped-container > .sheet > .list-cell {
     -fx-padding: 4 0 4 5;
     /* No alternate highlighting */
-    -fx-background-color: -fx-control-inner-background;
+    -fx-background: -fx-control-inner-background;
 }
-.combo-box-popup > .list-view > .virtual-flow > .clipped-container > .sheet > .list-cell:filled:selected, 
+.combo-box-popup > .list-view > .virtual-flow > .clipped-container > .sheet > .list-cell:filled:selected {
+    -fx-background:  -fx-selection-bar-non-focused;
+    -fx-background-color:  -fx-background !important;
+}
+.combo-box-popup  > .list-view > .virtual-flow > .clipped-container > .sheet > .list-cell:filled:hover,
 .combo-box-popup  > .list-view > .virtual-flow > .clipped-container > .sheet > .list-cell:filled:selected:hover {
     -fx-background: -fx-accent;
-    -fx-background-color: -fx-selection-bar;
-    -fx-text-fill: -fx-selection-bar-text;
-}
-.combo-box-popup  > .list-view > .virtual-flow > .clipped-container > .sheet > .list-cell:filled:hover {
-    -fx-background-color: -fx-cell-hover-color;
-    -fx-text-fill: -fx-text-inner-color;
+    -fx-background-color: -fx-selection-bar !important;
 }
 .combo-box-popup > .list-view > .placeholder > .label {
     -fx-text-fill: derive(-fx-control-inner-background,-30%);
@@ -2073,28 +2063,30 @@ is being used to size a border should also be in pixels.
     -fx-arrows-visible: true;
     -fx-tooltip-visible: true;
     -fx-page-information-visible: true;
-    -fx-page-information-alignment: bottom;        
+    -fx-page-information-alignment: bottom;
+    -fx-arrow-button-gap: 0;
 }
 .pagination > .page {
     -fx-background-color: transparent;
 }
 .pagination > .pagination-control {
-    -fx-background-color: transparent;    
-    -fx-padding: 0.833333em 0em 0.833333em 0em;
+    -fx-background-color: transparent;
+    -fx-font-size: 0.82em;
 }
 .pagination > .pagination-control > .control-box {
+    -fx-padding: 5px 0 0 0;
     -fx-spacing: 2;
     -fx-alignment: center;
 }
 .pagination > .pagination-control > .control-box > .left-arrow-button {
     -fx-background-radius: 3 0 0 3, 3 0 0 3, 2 0 0 2, 1 0 0 1;
-    -fx-background-insets: 0 -4 -1 11, 0 -4 0 11, 1 -3 1 12, 2 -2 2 13;
-    -fx-padding: 0.166667em 0em 0.25em 1.167em;
+    -fx-background-insets: 0 0 -1 5, 0 0 0 5, 1 1 1 6, 2 2 2 7;
+    -fx-padding: 0.166667em 0em 0.25em 0.9em;
 }
 .pagination > .pagination-control > .control-box > .right-arrow-button {
     -fx-background-radius: 0 3 3 0, 0 3 3 0, 0 2 2 0, 0 1 1 0;
-    -fx-background-insets: 0 11 -1 -4, 0 11 0 -4, 1 12 1 -3, 2 13 2 -2;
-    -fx-padding: 0.166667em 0em 0.25em 0.083em;
+    -fx-background-insets: 0 5 -1 0, 0 5 0 0, 1 6 1 1, 2 7 2 2;
+    -fx-padding: 0.166667em 0em 0.25em 0.4em;
 }
 .pagination > .pagination-control .left-arrow {
     -fx-background-color: -fx-mark-highlight-color, -fx-mark-color;
@@ -2171,77 +2163,80 @@ is being used to size a border should also be in pixels.
 
 /*******************************************************************************
  *                                                                             *
+ * List, Tree, Table COMMON                                                    *
+ *                                                                             *
+ ******************************************************************************/
+
+/* remove double borders from scrollbars */
+.list-view > .virtual-flow > .scroll-bar:vertical,
+.tree-view > .virtual-flow > .scroll-bar:vertical,
+.table-view > .virtual-flow > .scroll-bar:vertical,
+.tree-table-view > .virtual-flow > .scroll-bar:vertical {
+    -fx-background-insets: 0, 0 0 0 1;
+    -fx-padding: -1 -1 -1 0;
+}
+.list-view > .virtual-flow > .scroll-bar:horizontal,
+.tree-view > .virtual-flow > .scroll-bar:horizontal,
+.table-view > .virtual-flow > .scroll-bar:horizontal,
+.tree-table-view > .virtual-flow > .scroll-bar:horizontal {
+    -fx-background-insets: 0, 1 0 0 0;
+    -fx-padding: 0 -1 -1 -1;
+}
+.list-view > .virtual-flow > .corner,
+.tree-view > .virtual-flow > .corner,
+.table-view > .virtual-flow > .corner,
+.tree-table-view > .virtual-flow > .corner {
+    -fx-background-color: derive(-fx-base,-1%);
+}
+/* standard cell */
+.list-cell,
+.tree-cell {
+    -fx-background: -fx-control-inner-background;
+    -fx-background-color: -fx-background;
+    -fx-text-fill: -fx-text-background-color;
+}
+/* Selected rows */
+.list-view:focused > .virtual-flow > .clipped-container > .sheet > .list-cell:filled:selected,
+.tree-view:focused > .virtual-flow > .clipped-container > .sheet > .tree-cell:filled:selected,
+.table-view:focused > .virtual-flow > .clipped-container > .sheet > .table-row-cell:filled:selected,
+.tree-table-view:focused > .virtual-flow > .clipped-container > .sheet > .tree-table-row-cell:filled:selected,
+.table-view:focused > .virtual-flow > .clipped-container > .sheet > .table-row-cell .table-cell:selected,
+.tree-table-view:focused > .virtual-flow > .clipped-container > .sheet > .tree-table-row-cell .tree-table-cell:selected {
+    -fx-background: -fx-selection-bar;
+    -fx-table-cell-border-color: derive(-fx-selection-bar, 20%);
+}
+/* Selected when control is not focused */
+.list-cell:filled:selected,
+.tree-cell:filled:selected,
+.table-row-cell:filled:selected,
+.tree-table-row-cell:filled:selected,
+.table-row-cell:filled > .table-cell:selected,
+.tree-table-row-cell:filled > .tree-table-cell:selected {
+    -fx-background: -fx-selection-bar-non-focused;
+    -fx-table-cell-border-color: derive(-fx-selection-bar-non-focused, 20%);
+}
+/* focused cell (keyboard navigation) */
+.list-view:focused > .virtual-flow > .clipped-container > .sheet > .list-cell:focused,
+.tree-view:focused > .virtual-flow > .clipped-container > .sheet > .tree-cell:focused,
+.table-view:focused > .virtual-flow > .clipped-container > .sheet > .table-row-cell:focused,
+.tree-table-view:focused > .virtual-flow > .clipped-container > .sheet > .tree-table-row-cell:focused,
+.table-view:focused > .virtual-flow > .clipped-container > .sheet > .table-row-cell > .table-cell:focused,
+.tree-table-view:focused > .virtual-flow > .clipped-container > .sheet > .tree-table-row-cell > .tree-table-cell:focused {
+    -fx-background-color: -fx-background, -fx-cell-focus-inner-border, -fx-background !important;
+    -fx-background-insets: 0, 1, 2 !important;
+}
+
+/*******************************************************************************
+ *                                                                             *
  * ListView and ListCell                                                       *
  *                                                                             *
  ******************************************************************************/
 
-.list-view > .virtual-flow > .scroll-bar:vertical{
-    -fx-background-insets: 0, 0 0 0 1;
-    -fx-padding: -1 -1 -1 0;
-}
-.list-view > .virtual-flow > .scroll-bar:horizontal{
-    -fx-background-insets: 0, 1 0 0 0;
-    -fx-padding: 0 -1 -1 -1;
-}
-.list-view > .virtual-flow > .corner {
-    -fx-background-color: -fx-box-border, -fx-base;
-    -fx-background-insets: 0, 1 0 0 1;
-}
 .list-cell {
-    -fx-background-color: -fx-control-inner-background;
     -fx-padding: 0.25em 0.583em 0.25em 0.583em; /* 3 7 3 7 */
-    -fx-text-fill: -fx-text-inner-color;
-    -fx-opacity: 1;
 }
 .list-cell:odd {
-    -fx-background-color: -fx-control-inner-background-alt;
-}
-.list-view:focused > .virtual-flow > .clipped-container > .sheet > .list-cell:focused {
-    -fx-background-color: -fx-focus-color, -fx-cell-focus-inner-border, -fx-control-inner-background;
-    -fx-background-insets: 0, 1, 2;
-}
-.list-view:focused > .virtual-flow > .clipped-container > .sheet > .list-cell:focused:odd {
-    -fx-background-color: -fx-focus-color, -fx-cell-focus-inner-border, -fx-control-inner-background-alt;
-    -fx-background-insets: 0, 1, 2;
-}
-/* When the list-cell is selected and focused */
-.list-view:focused > .virtual-flow > .clipped-container > .sheet > .list-cell:filled:focused:selected {
-    -fx-background-color: -fx-focus-color, -fx-cell-focus-inner-border, -fx-selection-bar;
-    -fx-background-insets: 0, 1, 2;
-    -fx-background: -fx-accent;
-    -fx-text-fill: -fx-selection-bar-text;
-}
-.list-view:focused > .virtual-flow > .clipped-container > .sheet > .list-cell:filled:selected, 
-.list-view:focused > .virtual-flow > .clipped-container > .sheet > .list-cell:filled:selected:hover {
-    -fx-background: -fx-accent;
-    -fx-background-color: -fx-selection-bar;
-    -fx-text-fill: -fx-selection-bar-text;
-}
-.list-view:focused > .virtual-flow > .clipped-container > .sheet > .list-cell:filled:focused:selected:hover {
-    -fx-background: -fx-accent;
-    -fx-background-color: -fx-focus-color, -fx-cell-focus-inner-border, -fx-selection-bar;
-    -fx-background-insets: 0, 1, 2;
-    -fx-text-fill: -fx-selection-bar-text;
-}
-/* When the ListView is _not_ focused, we show alternate selection colors */
-.list-cell:filled:selected:focused,
-.list-cell:filled:selected,
-.list-view:horizontal > .virtual-flow > .clipped-container > .sheet > .list-cell:filled:selected {
-    -fx-background-color: lightgray;
-    -fx-text-fill: -fx-selection-bar-text;
-}
-/*.list-cell:filled:hover {
-    -fx-background-color: -fx-cell-hover-color;
-    -fx-text-fill: -fx-text-inner-color;
-}
-.list-view:focused > .virtual-flow > .clipped-container > .sheet > .list-cell:filled:focused:hover {
-    -fx-background-color: -fx-focus-color, -fx-cell-focus-inner-border, -fx-cell-hover-color;
-    -fx-background-insets: 0, 1, 2;
-    -fx-text-fill: -fx-text-inner-color;
-}*/
-.list-view:horizontal > .virtual-flow > .clipped-container > .sheet > .list-cell:filled:selected,
-.list-view:horizontal > .virtual-flow > .clipped-container > .sheet > .list-cell:filled:selected:hover {
-    -fx-background-color: -fx-selection-bar;
+    -fx-background: -fx-control-inner-background-alt;
 }
 
 /*******************************************************************************
@@ -2250,98 +2245,27 @@ is being used to size a border should also be in pixels.
  *                                                                             *
  ******************************************************************************/
 
-.tree-view > .virtual-flow > .scroll-bar:vertical{
-    -fx-background-insets: 0, 0 0 0 1;
-    -fx-padding: -1 -1 -1 0;
-}
-.tree-view > .virtual-flow > .scroll-bar:horizontal{
-    -fx-background-insets: 0, 1 0 0 0;
-    -fx-padding: 0 -1 -1 -1;
-}
-.tree-view > .virtual-flow > .corner {
-    -fx-background-color: -fx-box-border, -fx-base;
-    -fx-background-insets: 0, 1 0 0 1;
-}
 .tree-cell {
-    -fx-background-color: -fx-control-inner-background;
     -fx-padding: 0.25em; /* 3 */
-    -fx-text-fill: -fx-text-inner-color;
     -fx-indent: 1em;
 }
 .tree-cell .label {
     -fx-padding: 0.0em 0.0em 0.0em 0.25em; /* 0 0 0 3 */
-}
-.tree-view:focused > .virtual-flow > .clipped-container > .sheet > .tree-cell:focused {
-    -fx-background-color: -fx-focus-color, -fx-cell-focus-inner-border, -fx-control-inner-background;
-    -fx-background-insets: 0, 1, 2;
-}
-.tree-view:focused > .virtual-flow > .clipped-container > .sheet > .tree-cell:filled:focused:selected {
-    -fx-background-color: -fx-focus-color, -fx-cell-focus-inner-border, -fx-selection-bar;
-    -fx-background-insets: 0, 1, 2;
-    -fx-background: -fx-accent;
-    -fx-text-fill: -fx-selection-bar-text;
-}
-.tree-view:focused > .virtual-flow > .clipped-container > .sheet > .tree-cell:filled:selected, 
-.tree-view:focused > .virtual-flow > .clipped-container > .sheet > .tree-cell:filled:selected:hover {
-    -fx-background-color: -fx-selection-bar;
-    -fx-text-fill: -fx-selection-bar-text;
-}
-.tree-view:focused > .virtual-flow > .clipped-container > .sheet > .tree-cell:filled:focused:selected:hover {
-    -fx-background-color: -fx-focus-color, -fx-cell-focus-inner-border, -fx-selection-bar;
-    -fx-background-insets: 0, 1, 2;
-    -fx-text-fill: -fx-selection-bar-text;
-}
-/* When the TreeView is _not_ focused, we show alternate selection colors */
-.tree-cell:filled:selected:focused, 
-.tree-cell:filled:selected {
-    -fx-background-color: lightgray;
-    -fx-text-fill: -fx-selection-bar-text;
-}
-.tree-cell:filled:selected:focused:disabled, 
-.tree-cell:filled:selected:disabled {
-    -fx-opacity: -fx-disabled-opacity;
 }
 .tree-cell > .tree-disclosure-node,
 .tree-table-row-cell > .tree-disclosure-node {
     -fx-padding: 4 2 4 8;
     -fx-background-color: transparent;
 }
-.tree-cell > .tree-disclosure-node:disabled,
-.tree-table-row-cell > .tree-disclosure-node:disabled {
-    -fx-opacity: -fx-disabled-opacity;
-}
 .tree-cell > .tree-disclosure-node > .arrow,
 .tree-table-row-cell > .tree-disclosure-node > .arrow {
-    -fx-background-color: -fx-mark-color;
+    -fx-background-color: -fx-text-background-color;
     -fx-padding: 0.333333em; /* 4 */
     -fx-shape: "M 0 -4 L 8 0 L 0 4 z";
 }
 .tree-cell:expanded > .tree-disclosure-node > .arrow,
 .tree-table-row-cell:expanded > .tree-disclosure-node > .arrow {
     -fx-rotate: 90;
-}
-.tree-cell:filled:selected > .tree-disclosure-node > .arrow,
-.tree-table-row-cell:filled:selected > .tree-disclosure-node > .arrow {
-    -fx-background-color: -fx-selection-bar-text;
-}
-.tree-cell:filled:hover,
-.tree-table-row-cell:filled:hover {
-    -fx-background-color: -fx-cell-hover-color;
-    -fx-text-fill: -fx-text-inner-color;
-}
-.tree-cell:filled:hover > .tree-disclosure-node > .arrow,
-.tree-table-row-cell:filled:hover > .tree-disclosure-node > .arrow {
-    -fx-background-color: -fx-mark-color;
-}
-.tree-view:focused > .virtual-flow > .clipped-container > .sheet > .tree-cell:filled:focused:hover,
-.tree-table-view:focused > .virtual-flow > .clipped-container > .sheet > .tree-table-row-cell:filled:focused:hover {
-    -fx-background-color: -fx-focus-color, -fx-cell-focus-inner-border, -fx-cell-hover-color;
-    -fx-background-insets: 0, 1, 2;
-    -fx-text-fill: -fx-text-inner-color;
-}
-.tree-cell:filled:selected:hover > .tree-disclosure-node > .arrow,
-.tree-table-row-cell:filled:selected:hover > .tree-disclosure-node > .arrow {
-    -fx-background-color: -fx-selection-bar-text;
 }
 
 /*******************************************************************************
@@ -2354,112 +2278,33 @@ is being used to size a border should also be in pixels.
 .tree-table-view {
     /* Constants used throughout the tableview. */
     -fx-table-header-border-color: -fx-box-border;
-    -fx-table-cell-border-color: -fx-box-border;
+    -fx-table-cell-border-color: derive(-fx-color,5%);
 }
-/** Draws focus border around tableview */
-.table-view:focused,
-.tree-table-view:focused {
-    -fx-background-color: -fx-faint-focus-color, -fx-focus-color,-fx-control-inner-background;
-    -fx-background-insets: -2, -0.3, 1;
-    -fx-background-radius: 2, 0, 0;
-}
-.table-view > .virtual-flow > .scroll-bar:vertical,
-.tree-table-view > .virtual-flow > .scroll-bar:vertical {
-    -fx-background-insets: 0, 0 0 0 1;
-    -fx-padding: -1 -1 -1 0;
-}
-.table-view > .virtual-flow > .scroll-bar:horizontal,
-.tree-table-view > .virtual-flow > .scroll-bar:horizontal {
-    -fx-background-insets: 0, 1 0 0 0;
-    -fx-padding: 0 -1 -1 -1;
-}
-.table-view > .virtual-flow > .corner,
-.tree-table-view > .virtual-flow > .corner {
-    -fx-background-color: -fx-box-border, -fx-base;
-    -fx-background-insets: 0, 1 0 0 1;
-}
+/***** ROW CELLS **************************************************************/
 /* Each row in the table is a table-row-cell. Inside a table-row-cell is any
    number of table-cell. */
 .table-row-cell {
-    -fx-background-color: -fx-table-cell-border-color, -fx-control-inner-background;
+    -fx-background: -fx-control-inner-background;
+    -fx-background-color: -fx-table-cell-border-color, -fx-background;
     -fx-background-insets: 0, 0 0 1 0;
-    -fx-padding: 0.0em; /* 0 */
-    -fx-text-fill: -fx-text-inner-color;
+    -fx-padding: 0;
+    -fx-text-fill: -fx-text-background-color;
 }
 .table-row-cell:odd {
-    -fx-background-color: -fx-table-cell-border-color, -fx-control-inner-background-alt;
-    -fx-background-insets: 0, 0 0 1 0;
+    -fx-background: -fx-control-inner-background-alt;
 }
-.table-row-cell:focused,
-.tree-table-row-cell:focused {
-    -fx-background-color: -fx-focus-color, -fx-cell-focus-inner-border, -fx-control-inner-background;
-    -fx-background-insets: 0, 1, 2;
-}
-.table-row-cell:focused:odd {
-    -fx-background-color: -fx-focus-color, -fx-cell-focus-inner-border, -fx-control-inner-background-alt;
-    -fx-background-insets: 0, 1, 2;
-}
-/* When the table-row-cell is selected and focused */
-.table-view:focused > .virtual-flow > .clipped-container > .sheet > .table-row-cell:filled:focused:selected,
-.tree-table-view:focused > .virtual-flow > .clipped-container > .sheet > .tree-table-row-cell:filled:focused:selected {
-    -fx-background-color: -fx-focus-color, -fx-cell-focus-inner-border, -fx-selection-bar;
-    -fx-background-insets: 0, 1, 2;
-    -fx-background: -fx-accent;
-    -fx-text-fill: -fx-selection-bar-text;
-}
-.table-view:focused > .virtual-flow > .clipped-container > .sheet > .table-row-cell:filled:selected > .table-cell,
-.tree-table-view:focused > .virtual-flow > .clipped-container > .sheet > .tree-table-row-cell:filled:selected > .tree-table-cell {
-    -fx-text-fill: -fx-selection-bar-text;
-}
-.table-view:focused > .virtual-flow > .clipped-container > .sheet > .table-row-cell:filled:selected, 
-.tree-table-view:focused > .virtual-flow > .clipped-container > .sheet > .tree-table-row-cell:filled:selected {
-    -fx-background: -fx-accent;
-    -fx-background-color: -fx-selection-bar;
-    -fx-text-fill: -fx-selection-bar-text;
-}
-.table-view:row-selection:focused > .virtual-flow > .clipped-container > .sheet > .table-row-cell:filled:focused:selected:hover,
-.tree-table-view:row-selection:focused > .virtual-flow > .clipped-container > .sheet > .tree-table-row-cell:filled:focused:selected:hover{
-    -fx-background: -fx-accent;
-    -fx-background-color: -fx-focus-color, -fx-cell-focus-inner-border, -fx-selection-bar;
-    -fx-background-insets: 0, 1, 2;
-    -fx-text-fill: -fx-selection-bar-text;
-}
-/* When the TableView is _not_ focused, we show alternate selection colors */
-.table-row-cell:filled:selected:focused, 
-.table-row-cell:filled:selected,
-.tree-table-row-cell:filled:selected:focused, 
-.tree-table-row-cell:filled:selected {
-    -fx-background-color: lightgray;
-    -fx-text-fill: -fx-selection-bar-text;
-}
-.table-row-cell:selected:disabled,
-.tree-table-row-cell:selected:disabled {
-    -fx-opacity: -fx-disabled-opacity;
-}
-.table-view:row-selection > .virtual-flow > .clipped-container > .sheet > .table-row-cell:filled:hover { 
-    -fx-background-color: -fx-table-cell-border-color, -fx-cell-hover-color;
-    -fx-background-insets: 0, 0 0 1 0;
-    -fx-text-fill: -fx-text-inner-color;
-}
-.tree-table-view:row-selection > .virtual-flow > .clipped-container > .sheet > .tree-table-row-cell:filled:hover {
-    /* No 1-pixel bottom border for the TreeTableView (unlike the TableView above) */
-    -fx-background-color: -fx-cell-hover-color;
-    -fx-background-insets: 0;
-    -fx-text-fill: -fx-text-inner-color;
-}
-.table-view:row-selection > .virtual-flow > .clipped-container > .sheet > .table-row-cell:filled:focused:hover,
-.tree-table-view:row-selection > .virtual-flow > .clipped-container > .sheet > .tree-table-row-cell:filled:focused:hover { 
-    -fx-background-color: -fx-table-cell-border-color, -fx-focus-color, -fx-cell-focus-inner-border, -fx-cell-hover-color;
-    -fx-background-insets: 0, 0 0 1 0, 1 1 2 1, 2 2 3 2, 3 3 4 3;
-    -fx-text-fill: -fx-text-inner-color;
-}
+/***** INDIVIDUAL CELLS ********************************************************/
 .table-cell {
     -fx-padding: 0.166667em; /* 2px, plus border adds 1px */
-    -fx-background-color: transparent;
+    -fx-background-color: null;
     -fx-border-color: transparent -fx-table-cell-border-color transparent transparent;
-    -fx-border-width: 0.083333em; /* 1 */
     -fx-cell-size: 2.0em; /* 24 */
-    -fx-text-fill: -fx-text-inner-color;
+    -fx-text-fill: -fx-text-background-color;
+}
+.table-view > .virtual-flow > .clipped-container > .sheet > .table-row-cell .table-cell:selected,
+.tree-table-view > .virtual-flow > .clipped-container > .sheet > .tree-table-row-cell .tree-table-cell:selected {
+    -fx-background-color: -fx-table-cell-border-color, -fx-background;
+    -fx-background-insets: 0, 0 0 1 0;
 }
 /* When in constrained resize mode, the right-most visible cell should not have
    a right-border, as it is not possible to get this cleanly out of view without
@@ -2468,162 +2313,70 @@ is being used to size a border should also be in pixels.
 .tree-table-view:constrained-resize > .virtual-flow > .clipped-container > .sheet > .tree-table-row-cell > .tree-table-cell:last-visible {
     -fx-border-color: transparent;
 }
-.table-view:constrained-resize > .column-header:last-visible,
-.tree-table-view:constrained-resize > .column-header:last-visible {
-    -fx-border-width: 0.083333em 0.0em 0.083333em 0.083333em, 0.083333em 0.0em 0.083333em 0.083333em;
-}
-.table-view:constrained-resize .filler,
-.tree-table-view:constrained-resize .filler {
-    -fx-border-color: 
-        derive(-fx-base, 80%) 
-        linear-gradient(to bottom, derive(-fx-base,80%) 20%, derive(-fx-base,-10%) 90%)
-        derive(-fx-base, 10%) 
-        linear-gradient(to bottom, derive(-fx-base,80%) 20%, derive(-fx-base,-10%) 90%),
-        /* Outer border: */
-        transparent -fx-table-header-border-color -fx-table-header-border-color -fx-table-header-border-color;
-    -fx-border-insets: 0 1 1 1, 0 0 0 0;
-}
-.table-view:focused > .virtual-flow > .clipped-container > .sheet > .table-row-cell > .table-cell:focused,
-.tree-table-view:focused > .virtual-flow > .clipped-container > .sheet > .tree-table-row-cell > .tree-table-cell:focused {
-    -fx-background-color: -fx-focus-color, -fx-cell-focus-inner-border, -fx-control-inner-background;
-    -fx-background-insets: 0 1 0 0, 1 2 1 1, 2 3 2 2;
-}
-.table-view:focused > .virtual-flow > .clipped-container > .sheet > .table-row-cell:filled .table-cell:focused:selected,
-.tree-table-view:focused > .virtual-flow > .clipped-container > .sheet > .tree-table-row-cell:filled .tree-table-cell:focused:selected {
-    -fx-background-color: -fx-focus-color, -fx-cell-focus-inner-border, -fx-selection-bar;
-    -fx-background-insets: 0 1 0 0, 1 2 1 1, 2 3 2 2;
-    -fx-background: -fx-accent;
-    -fx-text-fill: -fx-selection-bar-text;
-}
-.table-view:focused > .virtual-flow > .clipped-container > .sheet > .table-row-cell:filled > .table-cell:selected, 
-.table-view:cell-selection > .virtual-flow > .clipped-container > .sheet > .table-row-cell:filled > .table-cell:hover:selected,
-.tree-table-view:focused > .virtual-flow > .clipped-container > .sheet > .tree-table-row-cell:filled > .tree-table-cell:selected, 
-.tree-table-view:cell-selection > .virtual-flow > .clipped-container > .sheet > .tree-table-row-cell:filled > .tree-table-cell:hover:selected {
-    -fx-background: -fx-accent;
-    -fx-background-color: -fx-selection-bar;
-    -fx-text-fill: -fx-selection-bar-text;
-    -fx-background-insets: 0 0 1 0;
-}
-.table-view:focused > .virtual-flow > .clipped-container > .sheet > .table-row-cell:filled > .table-cell:focused:selected:hover,
-.tree-table-view:focused > .virtual-flow > .clipped-container > .sheet > .tree-table-row-cell:filled > .tree-table-cell:focused:selected:hover{
-    -fx-background: -fx-accent;
-    -fx-background-color: -fx-focus-color, -fx-cell-focus-inner-border, -fx-selection-bar;
-    -fx-background-insets: 0 1 0 0, 1 2 1 1, 2 3 2 2;
-    -fx-text-fill: -fx-selection-bar-text;
-}
-/* When the TableView is _not_ focused, we show alternate selection colors */
-.table-row-cell:filled > .table-cell:selected:focused, 
-.table-row-cell:filled > .table-cell:selected,
-.tree-table-row-cell:filled > .tree-table-cell:selected:focused, 
-.tree-table-row-cell:filled > .tree-table-cell:selected {
-    -fx-background-color: lightgray;
-    -fx-text-fill: -fx-selection-bar-text;
-}
-.table-cell:selected:disabled,
-.tree-table-cell:selected:disabled {
-    -fx-opacity: -fx-disabled-opacity;
-}
-.table-view:cell-selection > .virtual-flow > .clipped-container > .sheet > .table-row-cell:filled > .table-cell:hover,
-.tree-table-view:cell-selection > .virtual-flow > .clipped-container > .sheet > .tree-table-row-cell:filled > .tree-table-cell:hover {
-    -fx-background-color: -fx-cell-hover-color;
-    -fx-text-fill: -fx-text-inner-color;
-    -fx-background-insets: 0 0 1 0;
-}
-.table-view:cell-selection > .virtual-flow > .clipped-container > .sheet > .table-row-cell:filled > .table-cell:focused:hover,
-.tree-table-view:cell-selection > .virtual-flow > .clipped-container > .sheet > .tree-table-row-cell:filled > .tree-table-cell:focused:hover {
-    -fx-background-color: -fx-focus-color, -fx-cell-focus-inner-border, -fx-cell-hover-color;
-    -fx-background-insets: 0 1 0 0, 1 2 1 1, 2 3 2 2;
-    -fx-text-fill: -fx-text-inner-color;
-}
+/***** HEADER **********************************************************************/
 /* The column-resize-line is shown when the user is attempting to resize a column. */
 .table-view .column-resize-line,
 .tree-table-view .column-resize-line {
     -fx-background: -fx-accent;
-    -fx-background-color: -fx-selection-bar;
+    -fx-background-color: -fx-background;
     -fx-padding: 0.0em 0.0416667em 0.0em 0.0416667em; /* 0 0.571429 0 0.571429 */
 }
 /* This is the area behind the column headers. An ideal place to specify background
    and border colors for the whole area (not individual column-header's). */
 .table-view .column-header-background,
 .tree-table-view > .column-header-background {
-    -fx-background-color: -fx-body-color;
-    -fx-padding: 0;
+    -fx-background-color: -fx-inner-border, -fx-body-color;
+    -fx-background-insets: 0, 1;
 }
-/*.tree-table-view > .column-header-background {
-    -fx-background-color: -fx-body-color;
-    -fx-padding: 0;
-}*/
 /* The column header row is made up of a number of column-header, one for each
    TableColumn, and a 'filler' area that extends from the right-most column
    to the edge of the tableview, or up to the 'column control' button. */
 .table-view .column-header,
-.tree-table-view .column-header {
+.tree-table-view .column-header,
+.table-view .filler,
+.tree-table-view .filler,
+.table-view > .column-header-background > .show-hide-columns-button,
+.tree-table-view > .column-header-background > .show-hide-columns-button,
+.table-view:constrained-resize .filler,
+.tree-table-view:constrained-resize .filler {
+    -fx-background-color: -fx-box-border, -fx-inner-border, -fx-body-color;
+    -fx-background-insets: 0, 0 1 1 0, 1 2 2 1;
+    -fx-font-weight: bold;
+    -fx-size: 2em;
     -fx-text-fill: -fx-selection-bar-text;
-    /* TODO: for some reason, this doesn't scale. */
-    -fx-font-size: 1.083333em; /* 13pt - 1 more than the default font */
-    -fx-size: 25;
-    -fx-border-style: solid;
-    -fx-border-color: 
-        /* 
-          Inner border: we have different colours along the top, right, bottom and left.
-          Refer to RT-12298 for the spec.
-        */
-        derive(-fx-base, 80%) 
-        linear-gradient(to bottom, derive(-fx-base,80%) 20%, derive(-fx-base,-10%) 90%)
-        derive(-fx-base, 10%) 
-        linear-gradient(to bottom, derive(-fx-base,80%) 20%, derive(-fx-base,-10%) 90%),
-        /* Outer border: */
-        transparent -fx-table-header-border-color -fx-table-header-border-color transparent;
-    -fx-border-insets: 0 1 1 0, 0 0 0 0;
-    -fx-border-width: 0.083333em, 0.083333em;
+    -fx-padding: 0.166667em;
 }
 .table-view .filler,
-.tree-table-view .filler {
-    -fx-size: 25;
-    -fx-border-style: solid;
-    -fx-border-color: 
-        /* 
-          Inner border: we have different colours along the top, right, bottom and left.
-          Refer to RT-12298 for the spec.
-        */
-        derive(-fx-base, 80%) 
-        linear-gradient(to bottom, derive(-fx-base,80%) 20%, derive(-fx-base,-10%) 90%)
-        derive(-fx-base, 10%) 
-        linear-gradient(to bottom, derive(-fx-base,80%) 20%, derive(-fx-base,-10%) 90%),
-        /* Outer border: */
-        transparent transparent -fx-table-header-border-color transparent;
-    -fx-border-insets: 0 0 1 0, 0 0 0 0;
-    -fx-border-width: 0.083333em, 0.083333em 0 0.083333em 0.083333em;
+.tree-table-view .filler,
+.table-view:constrained-resize .filler,
+.tree-table-view:constrained-resize .filler {
+    -fx-background-insets: 0, 0 0 1 0, 1 1 2 1;
+}
+.table-view > .column-header-background > .show-hide-columns-button,
+.tree-table-view > .column-header-background > .show-hide-columns-button {
+    -fx-background-insets: 0, 0 0 1 1, 1 1 2 2;
+}
+.table-view .column-header .sort-order-dots-container,
+.tree-table-view .column-header .sort-order-dots-container{
+    -fx-padding: 2 0 2 0;
 }
 .table-view .column-header .sort-order,
 .tree-table-view .column-header .sort-order{
     -fx-font-size: 0.916667em; /* 11pt - 1 less than the default font */
 }
-.table-view > .column-header-background > .show-hide-columns-button,
-.tree-table-view > .column-header-background > .show-hide-columns-button{
-    -fx-background-color: -fx-body-color;
-
-    -fx-border-color:
-        /* inner border: A copy of the inner border used above in the general column header area. */
-        derive(-fx-base, 80%) 
-        linear-gradient(to bottom, derive(-fx-base,80%) 20%, derive(-fx-base,-10%) 90%),
-        derive(-fx-base, 10%) 
-        linear-gradient(to bottom, derive(-fx-base,80%) 20%, derive(-fx-base,-10%) 90%),
-        /* outer border: Slightly different to the above*/
-        transparent transparent -fx-table-header-border-color -fx-table-header-border-color;
-    -fx-border-insets: 0 0 0 1, 0 0 0 0;
+.table-view .column-header .sort-order-dot,
+.tree-table-view .column-header .sort-order-dot {
+    -fx-background-color: -fx-mark-color;
+    -fx-padding: 0.115em;
+    -fx-background-radius: 0.115em;
 }
+/* Plus Symbol */
 .table-view .show-hide-column-image,
 .tree-table-view .show-hide-column-image {
-    -fx-background-color: -fx-mark-highlight-color, -fx-mark-color;
-    -fx-background-insets: 1 0 -1 0, 0;
-
+    -fx-background-color: -fx-mark-color;
     -fx-padding: 0.25em; /* 3px */
     -fx-shape: "M398.902,298.045c0.667,0,1.333,0,2,0c0,0.667,0,1.333,0,2c0.667,0,1.333,0,2,0c0,0.667,0,1.333,0,2c-0.667,0-1.333,0-2,0c0,0.666,0,1.332,0,1.999c-0.667,0-1.333,0-2,0c0-0.667,0-1.333,0-1.999c-0.666,0-1.333,0-1.999,0c0-0.667,0-1.334,0-2c0.666,0,1.333,0,1.999,0C398.902,299.378,398.902,298.711,398.902,298.045z"; 
 }
-/*.nested-column-header .column-header {
-    -fx-background-color: transparent;
-}*/
 /* When a column is being 'dragged' to be placed in a different position, there
    is a region that follows along the column header area to indicate where the
    column will be dropped. This region can be styled using the .column-drag-header
@@ -2641,10 +2394,10 @@ is being used to size a border should also be in pixels.
     -fx-background-color: darkgray;
     -fx-opacity: 0.3;
 }
+/* Header Sort Arrows */
 .table-view /*> column-header-background > nested-column-header >*/ .arrow,
 .tree-table-view /*> column-header-background > nested-column-header >*/ .arrow {
-    -fx-background-color: -fx-mark-highlight-color, -fx-mark-color;
-    -fx-background-insets: 1 0 -1 0, 0;
+    -fx-background-color: -fx-mark-color;
     -fx-padding: 0.25em 0.3125em 0.25em 0.3125em; /* 3 3.75 3 3.75 */
     -fx-shape: "M 0 0 h 7 l -3.5 4 z";
 }
@@ -2660,22 +2413,29 @@ is being used to size a border should also be in pixels.
  * Table Cells                                                                 *
  *                                                                             *
  ******************************************************************************/
+
 .check-box-table-cell {
     -fx-alignment: center;
+    -fx-padding: 0;
 }
 .check-box-table-cell > .check-box {
+    -fx-font-size: 0.8em;
     -fx-opacity: 1;
-}   
+    -fx-padding: 0 0 1 0;
+}
 .check-box-table-cell > .check-box > .box {
-    -fx-background-color: null;
+    -fx-background-color: -fx-outer-border, -fx-background;
+    -fx-background-insets: 0,1;
+}
+.check-box-table-cell > .check-box:selected > .box > .mark {
+    -fx-background-color: -fx-text-background-color !important;
     -fx-background-insets: 0;
-    -fx-border-color: -fx-outer-border;
-    -fx-border-radius: 3;
 }
 .table-view:focused > .virtual-flow > .clipped-container > .sheet > .table-row-cell:filled:selected > .check-box-table-cell > .check-box > .box,
 .tree-table-view:focused > .virtual-flow > .clipped-container > .sheet > .tree-table-row-cell:filled:selected > .check-box-table-cell > .check-box > .box {
-    -fx-border-color: derive(-fx-accent,20%);
+    -fx-background-color: derive(-fx-accent,40%), -fx-background;
 }
+
 /*******************************************************************************
  *                                                                             *
  * TreeTableView                                                               *
@@ -2686,18 +2446,18 @@ is being used to size a border should also be in pixels.
  ******************************************************************************/
 
 .tree-table-row-cell {
-    -fx-background-color: -fx-control-inner-background;
-    -fx-padding: 0.0em; /* 0 */
-    -fx-text-fill: -fx-text-inner-color;
+    -fx-background: -fx-control-inner-background;
+    -fx-background-color: -fx-background;
+    -fx-padding: 0;
+    -fx-text-fill: -fx-text-background-color;
     -fx-indent: 1em;
 }
 .tree-table-cell {
     -fx-padding: 0.166667em; /* 2px, plus border adds 1px */
-    -fx-background-color: transparent;
+    -fx-background-color: null;
     -fx-border-color: transparent -fx-table-cell-border-color transparent transparent;
-    -fx-border-width: 0.083333em; /* 1 */
     -fx-cell-size: 2.0em; /* 24 */
-    -fx-text-fill: -fx-text-inner-color;
+    -fx-text-fill: -fx-text-background-color;
 }
 
 /*******************************************************************************
@@ -2728,30 +2488,6 @@ is being used to size a border should also be in pixels.
     -fx-background: -fx-accent;
     -fx-text-fill: -fx-selection-bar-text;
 }
-/** Hover styles */
-/** --- Row selection mode hover */
-.cell-span-tree-table-view:row-selection > .virtual-flow > .clipped-container > .sheet > .tree-table-row-cell:filled:hover > .tree-table-cell { 
-    -fx-background-color: -fx-table-cell-border-color, -fx-cell-hover-color;
-    -fx-background-insets: 0, 0 0 1 0;
-    -fx-text-fill: -fx-text-inner-color;
-}
-.cell-span-tree-table-view:row-selection > .virtual-flow > .clipped-container > .sheet > .tree-table-row-cell:filled:focused:hover > .tree-table-cell { 
-    -fx-background-color: -fx-table-cell-border-color, -fx-focus-color, -fx-cell-focus-inner-border, -fx-cell-hover-color;
-    -fx-background-insets: 0, 0 0 1 0, 1 1 2 1, 2 2 3 2, 3 3 4 3;
-    -fx-text-fill: -fx-text-inner-color;
-}
-/** --- Cell selection mode hover */
-.cell-span-tree-table-view:cell-selection > .virtual-flow > .clipped-container > .sheet > .tree-table-row-cell:filled > .tree-table-cell:hover{
-    -fx-background-color: -fx-table-cell-border-color, -fx-cell-hover-color;
-    -fx-text-fill: -fx-text-inner-color;
-    -fx-background-insets: 0, 0 0 1 0;
-}
-.cell-span-tree-table-view:cell-selection > .virtual-flow > .clipped-container > .sheet > .tree-table-row-cell:filled > .tree-table-cell:focused:hover{
-    -fx-background-color: -fx-focus-color, -fx-cell-focus-inner-border, -fx-cell-hover-color;
-    -fx-background-insets: 0 1 0 0, 1 2 1 1, 2 3 2 2;
-    -fx-text-fill: -fx-text-inner-color;
-}
-/** End of hover styles */
 
 /*******************************************************************************
  *                                                                             *

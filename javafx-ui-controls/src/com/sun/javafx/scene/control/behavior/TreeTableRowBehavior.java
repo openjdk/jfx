@@ -74,9 +74,6 @@ public class TreeTableRowBehavior<T> extends CellBehaviorBase<TreeTableRow<T>> {
             // TreeTableCell, we should still support selection, so that
             // is what we are doing here.
             sm.select(treeItem);
-        } else if (clickCount % 2 == 0) {
-            // try to expand/collapse branch tree item
-            treeItem.setExpanded(! treeItem.isExpanded());
         }
     }
 }

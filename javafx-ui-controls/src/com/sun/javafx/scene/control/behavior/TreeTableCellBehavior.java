@@ -121,8 +121,6 @@ public class TreeTableCellBehavior extends TableCellBehaviorBase<TreeTableCell> 
         TreeTableColumn column = getTableColumn();
         TableSelectionModel sm = tv.getSelectionModel();
         
-        if (! sm.isCellSelectionEnabled()) return;
-        
         boolean isAlreadySelected = sm.isSelected(index, column);
 
         sm.clearAndSelect(index, column);
@@ -139,7 +137,6 @@ public class TreeTableCellBehavior extends TableCellBehaviorBase<TreeTableCell> 
                 tv.edit(index, column);
             } else if (e.getClickCount() % 2 == 0) {
                 // try to expand/collapse branch tree item
-                System.out.println("is expanded: " + treeItem.isExpanded() + " -> " + ! treeItem.isExpanded());
                 treeItem.setExpanded(! treeItem.isExpanded());
             }
         }

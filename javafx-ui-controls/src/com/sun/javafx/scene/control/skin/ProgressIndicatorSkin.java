@@ -113,7 +113,7 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, P
                     spinner = new IndeterminateSpinner(getSkinnable(), ProgressIndicatorSkin.this, spinEnabled.get(), progressColor.get());
                     getChildren().add(spinner);
                 }
-                
+
                 if (spinner != null) {
                     if (getSkinnable().impl_isTreeVisible() && getSkinnable().getScene() != null) {
                         spinner.indeterminateTimeline.play();
@@ -184,7 +184,7 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, P
             getChildren().add(determinateIndicator);
         }
     }
-    
+
     @Override public void dispose() {
         super.dispose();
         if (spinner != null) {
@@ -194,11 +194,11 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, P
     }
 
     @Override protected void layoutChildren(final double x, final double y,
-            final double w, final double h) {
-        if (spinner != null && getSkinnable().isIndeterminate()) { 
+                                            final double w, final double h) {
+        if (spinner != null && getSkinnable().isIndeterminate()) {
             spinner.layoutChildren();
             spinner.resizeRelocate(0, 0, w, h);
-        } else if (determinateIndicator != null) { 
+        } else if (determinateIndicator != null) {
             determinateIndicator.layoutChildren();
             determinateIndicator.resizeRelocate(0, 0, w, h);
         }
@@ -224,10 +224,11 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, P
         private StackPane progress;
         private StackPane tick;
         private Arc arcShape;
+        private Circle indicatorCircle;
 
         public DeterminateIndicator(ProgressIndicator control, ProgressIndicatorSkin s, Paint fillOverride) {
             this.control = control;
-            
+
             getStyleClass().add("determinate-indicator");
 
             intProgress = (int) Math.round(control.getProgress() * 100.0) ;
@@ -248,7 +249,11 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, P
 
             // The circular background for the progress pie piece
             indicator = new StackPane();
+            indicator.setScaleShape(false);
+            indicator.setCenterShape(false);
             indicator.getStyleClass().setAll("indicator");
+            indicatorCircle = new Circle();
+            indicator.setShape(indicatorCircle);
 
             // The shape for our progress pie piece
             arcShape = new Arc();
@@ -301,76 +306,116 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, P
             // Position and size the circular background
             double doneTextHeight = doneText.getLayoutBounds().getHeight();
             final Insets controlInsets = control.getInsets();
-            
+            final double left = snapSize(controlInsets.getLeft());
+            final double right = snapSize(controlInsets.getRight());
+            final double top = snapSize(controlInsets.getTop());
+            final double bottom = snapSize(controlInsets.getBottom());
+
             /*
             ** use the min of width, or height, keep it a circle
             */
-            double areaW = (control.getWidth() - (controlInsets.getLeft() + controlInsets.getRight()));
-            double areaH = (control.getHeight() - (controlInsets.getTop() + controlInsets.getBottom()));
+            final double areaW = control.getWidth() - left - right;
+            final double areaH = control.getHeight() - top - bottom - textGap - doneTextHeight;
+            final double radiusW = areaW / 2;
+            final double radiusH = areaH / 2;
+            final double radius = Math.floor(Math.min(radiusW, radiusH));
+            final double centerX = snapPosition(left + radiusW);
+            final double centerY = snapPosition(top + radius);
 
-            double radiusW = areaW / 2;
-            double radiusH = (areaH-(textGap+doneTextHeight)) / 2;
-            double radius = Math.min(radiusW, radiusH);
+            // find radius that fits inside radius - insetsPadding
+            final Insets indicatorInsets = indicator.getInsets();
+            final double iLeft = snapSize(indicatorInsets.getLeft());
+            final double iRight = snapSize(indicatorInsets.getRight());
+            final double iTop = snapSize(indicatorInsets.getTop());
+            final double iBottom = snapSize(indicatorInsets.getBottom());
+            final double progressRadius = snapSize(Math.min(
+                    Math.min(radius - iLeft, radius - iRight),
+                    Math.min(radius - iTop, radius - iBottom)));
 
-            indicator.setShape(new Circle(radius));
-            indicator.resize(2 * radius, 2 * radius);
+            indicatorCircle.setRadius(radius);
+            indicator.setLayoutX(centerX);
+            indicator.setLayoutY(centerY);
 
-            /*
-            ** we need to work out the available space between the padding,
-            ** and centre the indicator inside it
-            */
-            indicator.setLayoutX(controlInsets.getLeft()+(radiusW - radius));
-            indicator.setLayoutY(controlInsets.getTop()+(radiusH - radius));
+            arcShape.setRadiusX(progressRadius);
+            arcShape.setRadiusY(progressRadius);
+            progress.setLayoutX(centerX);
+            progress.setLayoutY(centerY);
 
+            // find radius that fits inside progressRadius - progressInsets
+            final Insets progressInsets = progress.getInsets();
+            final double pLeft = snapSize(progressInsets.getLeft());
+            final double pRight = snapSize(progressInsets.getRight());
+            final double pTop = snapSize(progressInsets.getTop());
+            final double pBottom = snapSize(progressInsets.getBottom());
+            final double indicatorRadius = snapSize(Math.min(
+                    Math.min(progressRadius - pLeft, progressRadius - pRight),
+                    Math.min(progressRadius - pTop, progressRadius - pBottom)));
 
-            arcShape.setRadiusX(((indicator.getWidth() - indicator.getInsets().getLeft() - indicator.getInsets().getRight()) / 2));
-            arcShape.setRadiusY(arcShape.getRadiusX());
+            // find size of spare box that fits inside indicator radius
+            double squareBoxHalfWidth = Math.ceil(Math.sqrt((indicatorRadius * indicatorRadius) / 2));
+            double squareBoxHalfWidth2 = indicatorRadius * (Math.sqrt(2)/2);
 
-
-            progress.setLayoutX(indicator.getLayoutX() + radius);
-            progress.setLayoutY(indicator.getLayoutY() + radius);
-            progress.resize(2 * arcShape.getRadiusX(), 2 * arcShape.getRadiusY());
-
-            tick.setLayoutX(indicator.getLayoutX() + (indicator.getWidth() / 2) - (tick.getWidth() / 2));
-            tick.setLayoutY(indicator.getLayoutY() + (indicator.getHeight() / 2) - (tick.getHeight() / 2));
+            tick.setLayoutX(centerX - squareBoxHalfWidth);
+            tick.setLayoutY(centerY - squareBoxHalfWidth);
+            tick.resize(squareBoxHalfWidth + squareBoxHalfWidth, squareBoxHalfWidth + squareBoxHalfWidth);
             tick.setVisible(control.getProgress() >= 1);
 
-            /*
-            ** if the % text can't fit anywhere in the bounds then don't display it
-            */
-            double textWidth = com.sun.javafx.scene.control.skin.Utils.computeTextWidth(text.getFont(), text.getText(), 0.0);
-            double textHeight = com.sun.javafx.scene.control.skin.Utils.computeTextHeight(text.getFont(), text.getText(), 0.0, text.getBoundsType());
+            // if the % text can't fit anywhere in the bounds then don't display it
+            double textWidth = text.getLayoutBounds().getWidth();
+            double textHeight = text.getLayoutBounds().getHeight();
             if (control.getWidth() >= textWidth && control.getHeight() >= textHeight) {
-                if (!text.isVisible()) {
-                    text.setVisible(true);
-                }
-                text.setLayoutY(indicator.getLayoutY()+indicator.getHeight() + textGap);
-                /*
-                ** try to centre the text at the indicators radius.
-                ** but if it can't then use the padding
-                */
-                if (textWidth > (radiusW*2)) {
-                    text.setLayoutX(controlInsets.getLeft()+(radiusW - radius));
-                }
-                else {
-                    text.setLayoutX(controlInsets.getLeft()+((radiusW*2 - textWidth)/2));
-                }
-            }
-            else {
-                if (text.isVisible()) {
-                    text.setVisible(false);
-                }
+                if (!text.isVisible()) text.setVisible(true);
+                text.setLayoutY(snapPosition(centerY + radius + textGap));
+                text.setLayoutX(snapPosition(centerX - (textWidth/2)));
+            } else {
+                if (text.isVisible()) text.setVisible(false);
             }
         }
 
         @Override protected double computePrefWidth(double height) {
-            final double indW = indicator.getInsets().getLeft() + indicator.getInsets().getRight() + progress.getInsets().getLeft() + progress.getInsets().getRight();
-            return getInsets().getLeft() + Math.max(indW, doneText.getLayoutBounds().getWidth()) + getInsets().getRight();
+            final Insets controlInsets = control.getInsets();
+            final double left = snapSize(controlInsets.getLeft());
+            final double right = snapSize(controlInsets.getRight());
+            final Insets indicatorInsets = indicator.getInsets();
+            final double iLeft = snapSize(indicatorInsets.getLeft());
+            final double iRight = snapSize(indicatorInsets.getRight());
+            final double iTop = snapSize(indicatorInsets.getTop());
+            final double iBottom = snapSize(indicatorInsets.getBottom());
+            final double indicatorMax = snapSize(Math.max(Math.max(iLeft, iRight), Math.max(iTop, iBottom)));
+            final Insets progressInsets = progress.getInsets();
+            final double pLeft = snapSize(progressInsets.getLeft());
+            final double pRight = snapSize(progressInsets.getRight());
+            final double pTop = snapSize(progressInsets.getTop());
+            final double pBottom = snapSize(progressInsets.getBottom());
+            final double progressMax = snapSize(Math.max(Math.max(pLeft, pRight), Math.max(pTop, pBottom)));
+            final Insets tickInsets = tick.getInsets();
+            final double tLeft = snapSize(tickInsets.getLeft());
+            final double tRight = snapSize(tickInsets.getRight());
+            final double indicatorWidth = indicatorMax + progressMax + tLeft + tRight + progressMax + indicatorMax;
+            return left + Math.max(indicatorWidth, doneText.getLayoutBounds().getWidth()) + right;
         }
 
         @Override protected double computePrefHeight(double width) {
-            double indH = indicator.getInsets().getTop() + indicator.getInsets().getBottom() + progress.getInsets().getTop() + progress.getInsets().getBottom();
-            return getInsets().getTop() + indH + textGap + doneText.getLayoutBounds().getHeight() + getInsets().getBottom();
+            final Insets controlInsets = control.getInsets();
+            final double top = snapSize(controlInsets.getTop());
+            final double bottom = snapSize(controlInsets.getBottom());
+            final Insets indicatorInsets = indicator.getInsets();
+            final double iLeft = snapSize(indicatorInsets.getLeft());
+            final double iRight = snapSize(indicatorInsets.getRight());
+            final double iTop = snapSize(indicatorInsets.getTop());
+            final double iBottom = snapSize(indicatorInsets.getBottom());
+            final double indicatorMax = snapSize(Math.max(Math.max(iLeft, iRight), Math.max(iTop, iBottom)));
+            final Insets progressInsets = progress.getInsets();
+            final double pLeft = snapSize(progressInsets.getLeft());
+            final double pRight = snapSize(progressInsets.getRight());
+            final double pTop = snapSize(progressInsets.getTop());
+            final double pBottom = snapSize(progressInsets.getBottom());
+            final double progressMax = snapSize(Math.max(Math.max(pLeft, pRight), Math.max(pTop, pBottom)));
+            final Insets tickInsets = tick.getInsets();
+            final double tTop = snapSize(tickInsets.getTop());
+            final double tBottom = snapSize(tickInsets.getBottom());
+            final double indicatorHeight = indicatorMax + progressMax + tTop + tBottom + progressMax + indicatorMax;
+            return top + indicatorHeight + textGap + doneText.getLayoutBounds().getHeight() + bottom;
         }
 
         @Override protected double computeMaxWidth(double height) {
@@ -461,15 +506,15 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, P
                 super();
                 piSkin = pi;
                 InvalidationListener treeVisibilityListener = new InvalidationListener() {
-                        @Override public void invalidated(Observable valueModel) {
-                            if (piSkin.skin.getSkinnable().impl_isTreeVisible()) {
-                                piSkin.pauseIndicator(false);
-                            }
-                            else {
-                                piSkin.pauseIndicator(true);
-                            }
+                    @Override public void invalidated(Observable valueModel) {
+                        if (piSkin.skin.getSkinnable().impl_isTreeVisible()) {
+                            piSkin.pauseIndicator(false);
                         }
-                    };
+                        else {
+                            piSkin.pauseIndicator(true);
+                        }
+                    }
+                };
                 impl_treeVisibleProperty().addListener(treeVisibilityListener);
             }
 
@@ -511,8 +556,8 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, P
                         Region region = (Region)child;
                         if (region.getShape() != null) {
                             region.resize(
-                                region.getShape().getLayoutBounds().getMaxX(),
-                                region.getShape().getLayoutBounds().getMaxY()
+                                    region.getShape().getLayoutBounds().getMaxX(),
+                                    region.getShape().getLayoutBounds().getMaxY()
                             );
                             region.getTransforms().setAll(new Scale(scale,scale,0,0));
                         } else {
@@ -658,60 +703,60 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, P
      */
     private static class StyleableProperties {
         private static final CssMetaData<ProgressIndicator,Paint> PROGRESS_COLOR =
-            new CssMetaData<ProgressIndicator,Paint>("-fx-progress-color",
-                PaintConverter.getInstance(), null) {
+                new CssMetaData<ProgressIndicator,Paint>("-fx-progress-color",
+                                                         PaintConverter.getInstance(), null) {
 
-            @Override
-            public boolean isSettable(ProgressIndicator n) {
-                final ProgressIndicatorSkin skin = (ProgressIndicatorSkin) n.getSkin();
-                return skin.progressColor == null ||
-                        !skin.progressColor.isBound();
-            }
+                    @Override
+                    public boolean isSettable(ProgressIndicator n) {
+                        final ProgressIndicatorSkin skin = (ProgressIndicatorSkin) n.getSkin();
+                        return skin.progressColor == null ||
+                                !skin.progressColor.isBound();
+                    }
 
-            @Override
-            public StyleableProperty<Paint> getStyleableProperty(ProgressIndicator n) {
-                final ProgressIndicatorSkin skin = (ProgressIndicatorSkin) n.getSkin();
-                return (StyleableProperty<Paint>)skin.progressColor;
-            }
-        };
+                    @Override
+                    public StyleableProperty<Paint> getStyleableProperty(ProgressIndicator n) {
+                        final ProgressIndicatorSkin skin = (ProgressIndicatorSkin) n.getSkin();
+                        return (StyleableProperty<Paint>)skin.progressColor;
+                    }
+                };
         private static final CssMetaData<ProgressIndicator,Number> INDETERMINATE_SEGMENT_COUNT =
-            new CssMetaData<ProgressIndicator,Number>("-fx-indeterminate-segment-count",
-                                                     SizeConverter.getInstance(), 8) {
+                new CssMetaData<ProgressIndicator,Number>("-fx-indeterminate-segment-count",
+                                                          SizeConverter.getInstance(), 8) {
 
-            @Override public void set(ProgressIndicator node, Number value, StyleOrigin origin) {
-                super.set(node, value.intValue(), origin);
-            }
+                    @Override public void set(ProgressIndicator node, Number value, StyleOrigin origin) {
+                        super.set(node, value.intValue(), origin);
+                    }
 
-            @Override public boolean isSettable(ProgressIndicator n) {
-                final ProgressIndicatorSkin skin = (ProgressIndicatorSkin) n.getSkin();
-                return skin.indeterminateSegmentCount == null ||
-                        !skin.indeterminateSegmentCount.isBound();
-            }
+                    @Override public boolean isSettable(ProgressIndicator n) {
+                        final ProgressIndicatorSkin skin = (ProgressIndicatorSkin) n.getSkin();
+                        return skin.indeterminateSegmentCount == null ||
+                                !skin.indeterminateSegmentCount.isBound();
+                    }
 
-            @Override public StyleableProperty<Number> getStyleableProperty(ProgressIndicator n) {
-                final ProgressIndicatorSkin skin = (ProgressIndicatorSkin) n.getSkin();
-                return (StyleableProperty<Number>)skin.indeterminateSegmentCount;
-            }
-        };
+                    @Override public StyleableProperty<Number> getStyleableProperty(ProgressIndicator n) {
+                        final ProgressIndicatorSkin skin = (ProgressIndicatorSkin) n.getSkin();
+                        return (StyleableProperty<Number>)skin.indeterminateSegmentCount;
+                    }
+                };
         private static final CssMetaData<ProgressIndicator,Boolean> SPIN_ENABLED =
-            new CssMetaData<ProgressIndicator,Boolean>("-fx-spin-enabled",
-                                           BooleanConverter.getInstance(), Boolean.FALSE) {
+                new CssMetaData<ProgressIndicator,Boolean>("-fx-spin-enabled",
+                                                           BooleanConverter.getInstance(), Boolean.FALSE) {
 
-                @Override public boolean isSettable(ProgressIndicator node) {
-                    final ProgressIndicatorSkin skin = (ProgressIndicatorSkin) node.getSkin();
-                    return skin.spinEnabled == null || !skin.spinEnabled.isBound();
-                }
+                    @Override public boolean isSettable(ProgressIndicator node) {
+                        final ProgressIndicatorSkin skin = (ProgressIndicatorSkin) node.getSkin();
+                        return skin.spinEnabled == null || !skin.spinEnabled.isBound();
+                    }
 
-                @Override public StyleableProperty<Boolean> getStyleableProperty(ProgressIndicator node) {
-                    final ProgressIndicatorSkin skin = (ProgressIndicatorSkin) node.getSkin();
-                    return (StyleableProperty<Boolean>)skin.spinEnabled;
-                }
-            };
+                    @Override public StyleableProperty<Boolean> getStyleableProperty(ProgressIndicator node) {
+                        final ProgressIndicatorSkin skin = (ProgressIndicatorSkin) node.getSkin();
+                        return (StyleableProperty<Boolean>)skin.spinEnabled;
+                    }
+                };
 
         public static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
         static {
-            final List<CssMetaData<? extends Styleable, ?>> styleables = 
-                new ArrayList<CssMetaData<? extends Styleable, ?>>(SkinBase.getClassCssMetaData());
+            final List<CssMetaData<? extends Styleable, ?>> styleables =
+                    new ArrayList<CssMetaData<? extends Styleable, ?>>(SkinBase.getClassCssMetaData());
             styleables.add(PROGRESS_COLOR);
             styleables.add(INDETERMINATE_SEGMENT_COUNT);
             styleables.add(SPIN_ENABLED);

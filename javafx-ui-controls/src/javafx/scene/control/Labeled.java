@@ -28,6 +28,7 @@ package javafx.scene.control;
 
 import com.sun.javafx.css.Selector;
 import com.sun.javafx.css.SimpleSelector;
+import com.sun.javafx.css.StyleManager;
 import com.sun.javafx.css.converters.BooleanConverter;
 import com.sun.javafx.css.converters.EnumConverter;
 import com.sun.javafx.css.converters.InsetsConverter;
@@ -326,7 +327,7 @@ public abstract class Labeled extends Control {
     public final ObjectProperty<Font> fontProperty() {
         if (font == null) {
             font = new StyleableObjectProperty<Font>(Font.getDefault()) {
-                
+                                
                 @Override
                 public void set(Font value) {
                     final Font oldValue = get();
@@ -341,9 +342,10 @@ public abstract class Labeled extends Control {
                     // RT-20727 - if font is changed by calling setFont, then
                     // css might need to be reapplied since font size affects
                     // calculated values for styles with relative values
-                    StyleOrigin origin = ((StyleableProperty)font).getStyleOrigin();
-                    if (origin == null || origin == StyleOrigin.USER) {
+                    if(fontSetByCss == false) {
                         Labeled.this.impl_reapplyCSS();
+                    } else {
+                        fontSetByCss = false;
                     }
                 }
                 
@@ -365,7 +367,7 @@ public abstract class Labeled extends Control {
         }
         return font;
     }
-
+    private boolean fontSetByCss = false;
     private ObjectProperty<Font> font;
     public final void setFont(Font value) { fontProperty().setValue(value); }
     public final Font getFont() { return font == null ? Font.getDefault() : font.getValue(); }
@@ -445,7 +447,8 @@ public abstract class Labeled extends Control {
                             url = cl.getResource(v);
                         }
                         if (url != null) {
-                            ((StyleableProperty)graphicProperty()).applyStyle(origin, new ImageView(new Image(url.toExternalForm())));
+                            final Image img = StyleManager.getInstance().getCachedImage(url.toExternalForm());
+                            ((StyleableProperty)graphicProperty()).applyStyle(origin, new ImageView(img));
                         }
                     }
                 }
@@ -732,6 +735,15 @@ public abstract class Labeled extends Control {
     private static class StyleableProperties {
         private static final FontCssMetaData<Labeled> FONT = 
             new FontCssMetaData<Labeled>("-fx-font", Font.getDefault()) {
+
+            @Override
+            public void set(Labeled styleable, Font value, StyleOrigin origin) {
+                // RT-20727 - if font is changed by calling setFont, then
+                // css might need to be reapplied since font size affects
+                // calculated values for styles with relative values
+                styleable.fontSetByCss = origin != StyleOrigin.USER;
+                super.set(styleable, value, origin);                
+            }
 
             @Override
             public boolean isSettable(Labeled n) {

@@ -41,7 +41,7 @@ import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
 
-@Ignore("Disabling tests as they fail with OOM in continuous builds")
+//@Ignore("Disabling tests as they fail with OOM in continuous builds")
 public class TreeViewKeyInputTest {
     private TreeView<String> treeView;
     private MultipleSelectionModel<TreeItem<String>> sm;

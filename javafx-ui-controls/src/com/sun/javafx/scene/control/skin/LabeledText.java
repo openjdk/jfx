@@ -164,14 +164,14 @@ public class LabeledText extends Text {
                 StyleOrigin propOrigin = prop.getStyleOrigin();
 
                 //
-                // if propOrigin is null, then the property is in init state
-                // if origin is null, then some code is initializing this prop
                 // if propOrigin is greater than origin, then the style should
                 //    not override
+                // if propOrigin is null, then the property is in init state
+                // if origin is null, then some code is initializing this prop
                 //
-                if (propOrigin == null ||
-                    origin == null ||
-                    propOrigin.compareTo(origin) <= 0) {
+                if ((propOrigin != null && origin != null &&  
+                     propOrigin.compareTo(origin) <= 0) ||
+                    (propOrigin == null && origin == null)) {
                     super.set(node, value, origin);
                 }
             }

@@ -30,6 +30,9 @@ import java.util.Collections;
 import java.util.List;
 import javafx.beans.InvalidationListener;
 import javafx.collections.ListChangeListener;
+import javafx.collections.ObservableList;
+import static javafx.scene.control.TableColumnBase.SortType.ASCENDING;
+import static javafx.scene.control.TableColumnBase.SortType.DESCENDING;
 
 /**
  * A package protected util class used by TableView and TreeTableView to reduce
@@ -91,9 +94,49 @@ class TableUtil {
         }
     }
     
+    static void handleSortFailure(ObservableList<? extends TableColumnBase> sortOrder, 
+            SortEventType sortEventType, final Object... supportInfo) {
+        // if the sort event is consumed we need to back out the previous
+        // action so that the UI is not in an incorrect state
+        if (sortEventType == SortEventType.COLUMN_SORT_TYPE_CHANGE) {
+            // go back to the previous sort type
+            final TableColumnBase changedColumn = (TableColumnBase) supportInfo[0];
+            final TableColumnBase.SortType sortType = changedColumn.getSortType();
+            if (sortType == ASCENDING) {
+                changedColumn.setSortType(null);
+            } else if (sortType == DESCENDING) {
+                changedColumn.setSortType(ASCENDING);
+            } else if (sortType == null) {
+                changedColumn.setSortType(DESCENDING);
+            }
+        } else if (sortEventType == SortEventType.SORT_ORDER_CHANGE) {
+            // Revert the sortOrder list to what it was previously
+            ListChangeListener.Change change = (ListChangeListener.Change) supportInfo[0];
+            
+            final List toRemove = new ArrayList();
+            final List toAdd = new ArrayList();
+            while (change.next()) {
+                if (change.wasAdded()) {
+                    toRemove.addAll(change.getAddedSubList());
+                }
+
+                if (change.wasRemoved()) {
+                    toAdd.addAll(change.getRemoved());
+                }
+            }
+            
+            sortOrder.removeAll(toRemove);
+            sortOrder.addAll(toAdd);
+        } else if (sortEventType == SortEventType.COLUMN_SORTABLE_CHANGE) {
+            // no-op - it is ok for the sortable type to remain as-is
+        }
+    }
     
-    
-    
+    static enum SortEventType {
+         SORT_ORDER_CHANGE,
+         COLUMN_SORT_TYPE_CHANGE,
+         COLUMN_SORTABLE_CHANGE
+     }
     
     
     

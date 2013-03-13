@@ -289,26 +289,24 @@ public class StackedBarChart<X, Y> extends XYChart<X, Y> {
         if (orientation == Orientation.VERTICAL) {
             item.setYValue(getYAxis().toRealValue(getYAxis().getZeroPosition()));
             t.getKeyFrames().addAll(
-                    new KeyFrame(Duration.ZERO, new KeyValue(currentDisplayedYValueProperty(item), getCurrentDisplayedYValue(item))),
+                    new KeyFrame(Duration.ZERO, new KeyValue(currentDisplayedYValueProperty(item), 
+                    getCurrentDisplayedYValue(item))),
                     new KeyFrame(Duration.millis(700), new EventHandler<ActionEvent>() {
-
-                @Override
-                public void handle(ActionEvent actionEvent) {
-                    getPlotChildren().remove(bar);
-                }
-            },
+                        @Override public void handle(ActionEvent actionEvent) {
+                            getPlotChildren().remove(bar);
+                        }
+                    },
                     new KeyValue(currentDisplayedYValueProperty(item), item.getYValue(), Interpolator.EASE_BOTH)));
         } else {
             item.setXValue(getXAxis().toRealValue(getXAxis().getZeroPosition()));
             t.getKeyFrames().addAll(
-                    new KeyFrame(Duration.ZERO, new KeyValue(currentDisplayedXValueProperty(item), getCurrentDisplayedXValue(item))),
+                    new KeyFrame(Duration.ZERO, new KeyValue(currentDisplayedXValueProperty(item), 
+                    getCurrentDisplayedXValue(item))),
                     new KeyFrame(Duration.millis(700), new EventHandler<ActionEvent>() {
-
-                @Override
-                public void handle(ActionEvent actionEvent) {
-                    getPlotChildren().remove(bar);
-                }
-            },
+                        @Override public void handle(ActionEvent actionEvent) {
+                            getPlotChildren().remove(bar);
+                        }
+                    },
                     new KeyValue(currentDisplayedXValueProperty(item), item.getXValue(), Interpolator.EASE_BOTH)));
         }
         return t;
@@ -322,6 +320,7 @@ public class StackedBarChart<X, Y> extends XYChart<X, Y> {
 
                 public void handle(ActionEvent event) {
                     removeSeriesFromDisplay(series);
+                    requestChartLayout();
                 }
             });
             for (Data<X, Y> d : series.getData()) {
@@ -355,6 +354,7 @@ public class StackedBarChart<X, Y> extends XYChart<X, Y> {
                 getPlotChildren().remove(bar);
             }
             removeSeriesFromDisplay(series);
+            requestChartLayout();
         }
     }
 

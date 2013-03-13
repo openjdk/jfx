@@ -32,6 +32,7 @@
 package modena;
 
 import javafx.beans.binding.ObjectBinding;
+import javafx.beans.binding.StringBinding;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.property.SimpleBooleanProperty;
@@ -44,6 +45,7 @@ import javafx.collections.ObservableList;
 import javafx.collections.SetChangeListener;
 import javafx.event.EventHandler;
 import javafx.scene.Node;
+import javafx.scene.control.Label;
 import javafx.scene.control.SelectionMode;
 import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
@@ -68,6 +70,7 @@ public class SamplePageTableHelper {
         private BooleanProperty invited;
         private StringProperty firstName;
         private StringProperty lastName;
+        private StringProperty name;
         private StringProperty email;
         
         private final String country = "New Zealand";
@@ -85,7 +88,13 @@ public class SamplePageTableHelper {
             this.lastName = new SimpleStringProperty(lName);
             this.email = new SimpleStringProperty(email);
             this.invited = new SimpleBooleanProperty(invited);
-            
+            this.name = new SimpleStringProperty();
+            this.name.bind(new StringBinding() {
+                { bind(firstName,lastName); }
+                @Override protected String computeValue() {
+                    return firstName.get() + " " + lastName.get();
+                }
+            });
             this.invited.addListener(new ChangeListener<Boolean>() {
                 public void changed(ObservableValue<? extends Boolean> ov, Boolean t, Boolean t1) {
                     System.out.println(getFirstName() + " invited: " + t1);
@@ -95,6 +104,14 @@ public class SamplePageTableHelper {
         
         public Boolean isInvited() { return invited.get(); }
         public BooleanProperty invitedProperty() { return invited; }
+
+        public String getName() {
+            return name.get();
+        }
+
+        public StringProperty nameProperty() {
+            return name;
+        }
 
         public String getFirstName() {
             return firstName.get();
@@ -189,8 +206,50 @@ public class SamplePageTableHelper {
         );
 
     }
-    
-    static TableView createTableView(int width) {
+
+    static TableView createTableViewSimple(int width, boolean rowSelection, boolean constrainedResize) {
+        TableColumn<Person, String> nameCol, emailCol, countryCol;
+        // Columns
+        nameCol = new TableColumn<Person, String>();
+        nameCol.setText("Name");
+        nameCol.setCellValueFactory(new PropertyValueFactory<Person,String>("name"));
+        emailCol = new TableColumn<Person, String>();
+        emailCol.setText("Email");
+        emailCol.setMinWidth(200);
+        emailCol.setCellValueFactory(new Callback<TableColumn.CellDataFeatures<Person, String>, ObservableValue<String>>() {
+            public ObservableValue<String> call(TableColumn.CellDataFeatures<Person, String> p) {
+                return p.getValue().emailProperty();
+            }
+        });
+        countryCol = new TableColumn<Person, String>();
+        countryCol.setText("Country");
+        countryCol.setCellValueFactory(new Callback<TableColumn.CellDataFeatures<Person, String>, ObservableValue<String>>() {
+            public ObservableValue<String> call(TableColumn.CellDataFeatures<Person, String> p) {
+                return new ReadOnlyObjectWrapper<String>("New Zealand");
+            }
+        });
+        // Create TableView
+        TableView<Person> tableView = new TableView<Person>();
+        tableView.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
+        tableView.getSelectionModel().setCellSelectionEnabled(!rowSelection);
+        tableView.setTableMenuButtonVisible(false);
+        if (constrainedResize) tableView.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+        tableView.setItems(data);
+        tableView.getColumns().addAll(nameCol, emailCol, countryCol);
+        tableView.setPrefSize(width, 300);
+        if (rowSelection) {
+            tableView.getSelectionModel().selectRange(2, 5);
+        } else {
+            tableView.getSelectionModel().select(2,emailCol);
+            tableView.getSelectionModel().select(3,nameCol);
+            tableView.getSelectionModel().select(3,countryCol);
+            tableView.getSelectionModel().select(5,nameCol);
+        }
+        tableView.getSortOrder().addAll(nameCol,emailCol,countryCol);
+        return tableView;
+    }
+
+    static TableView createTableView(int width, boolean rowSelection) {
         TableColumn<Person, String> firstNameCol, lastNameCol, nameCol, emailCol, countryCol;
         TableColumn<Person, Boolean> invitedCol;
         // Columns
@@ -242,6 +301,25 @@ public class SamplePageTableHelper {
                 return new ReadOnlyObjectWrapper<String>("New Zealand");
             }
         });
+        // Test case for RT-28410 MODENA: can't make tree/table cell factories change color based
+        // on background when setGraphic(...) is used
+        countryCol.setCellFactory(new Callback<TableColumn<Person, String>, TableCell<Person, String>>() {
+            @Override public TableCell<Person, String> call(TableColumn<Person, String> param) {
+                final Label label = new Label();
+                label.setStyle(
+                        "-fx-font-family: 'Times New Roman';" +
+                        "-fx-font-size: 0.8em;" +
+                        "-fx-text-fill: ladder(-fx-background, yellow 49%, red 50%);");
+                TableCell cell = new TableCell() {
+                    @Override protected void updateItem(Object item, boolean empty) {
+                        label.setText(empty ? null : item.toString());
+                    }
+                };
+                cell.setGraphic(label);
+                return cell;
+            }
+        });
+
         invitedCol = new TableColumn<Person, Boolean>();
         invitedCol.setText("Invited");
         invitedCol.setPrefWidth(55);
@@ -256,12 +334,19 @@ public class SamplePageTableHelper {
         
         TableView<Person> tableView = new TableView<Person>();
         tableView.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
-        tableView.getSelectionModel().setCellSelectionEnabled(false);
+        tableView.getSelectionModel().setCellSelectionEnabled(!rowSelection);
         tableView.setTableMenuButtonVisible(true);
         tableView.setItems(data);
         tableView.getColumns().addAll(invitedCol, nameCol, emailCol, countryCol);
         tableView.setPrefSize(width, 300);
-        tableView.getSelectionModel().selectRange(2, 5);
+        if (rowSelection) {
+            tableView.getSelectionModel().selectRange(2, 5);
+        } else {
+            tableView.getSelectionModel().select(2,emailCol);
+            tableView.getSelectionModel().select(3,firstNameCol);
+            tableView.getSelectionModel().select(3,countryCol);
+            tableView.getSelectionModel().select(4,lastNameCol);
+        }
         tableView.getSortOrder().addAll(firstNameCol,lastNameCol,emailCol,countryCol);
         return tableView;
     }

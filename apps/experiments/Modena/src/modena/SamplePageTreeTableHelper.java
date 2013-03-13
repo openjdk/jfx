@@ -112,12 +112,20 @@ public class SamplePageTreeTableHelper {
         return sp;
     }
     
-    static TreeTableView createTreeTableView(int width) {
+    static TreeTableView createTreeTableView(int width, boolean cellSelection) {
         TreeTableView treeTableView = buildFileBrowserTreeTableView();
         treeTableView.setSortMode(TreeSortMode.ONLY_FIRST_LEVEL);
         treeTableView.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
+        treeTableView.getSelectionModel().setCellSelectionEnabled(cellSelection);
         treeTableView.setPrefSize(width, 300);
-        treeTableView.getSelectionModel().selectRange(5, 8);
+        if (cellSelection) {
+            treeTableView.getSelectionModel().select(2,(TreeTableColumn)treeTableView.getColumns().get(0));
+            treeTableView.getSelectionModel().select(3,(TreeTableColumn)treeTableView.getColumns().get(1));
+            treeTableView.getSelectionModel().select(3,(TreeTableColumn)treeTableView.getColumns().get(2));
+            treeTableView.getSelectionModel().select(5,(TreeTableColumn)treeTableView.getColumns().get(1));
+        } else {
+            treeTableView.getSelectionModel().selectRange(5, 8);
+        }
         return treeTableView;
     } 
     

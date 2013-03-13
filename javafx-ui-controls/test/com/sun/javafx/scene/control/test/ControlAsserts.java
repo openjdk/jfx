@@ -42,6 +42,14 @@ import static org.junit.Assert.*;
 
 public class ControlAsserts {
     
+    public static void assertListContainsItemsInOrder(final List items, final Object... expected) {
+        assertEquals(expected.length, items.size());
+        for (int i = 0; i < expected.length; i++) {
+            Object item = items.get(i);
+            assertEquals(expected[i], item);
+        }
+    }
+    
     public static void assertRowsEmpty(final Control control, final int startRow, final int endRow) {
         assertRows(control, startRow, endRow, true);
     }
@@ -51,12 +59,15 @@ public class ControlAsserts {
     }
     
     public static void assertCellEmpty(IndexedCell cell) {
-        assertNull("Expected null, found '" + cell.getText() + "'", cell.getText());
+        final String text = cell.getText();
+//        System.out.println("assertCellEmpty: " + cell.getIndex() + " : " + text);
+        assertTrue("Expected null, found '" + text + "'", text == null || text.isEmpty());
     }
     
     public static void assertCellNotEmpty(IndexedCell cell) {
-        assertNotNull("Expected a non-null, found '" + cell.getText() + "'", cell.getText());
-        assertFalse(cell.getText().isEmpty());
+        final String text = cell.getText();
+//        System.out.println("assertCellNotEmpty: " + cell.getIndex() + " : " + text);
+        assertTrue("Expected a non-null, found '" + text + "'", text != null && ! text.isEmpty());
     }
     
     private static void assertRows(final Control control, final int startRow, final int endRow, final boolean expectEmpty) {
@@ -76,7 +87,7 @@ public class ControlAsserts {
                         assertCellNotEmpty(childCell);
                     }
                 }
-
+                
                 if (! hasChildrenCell) {
                     if (expectEmpty) {
                         assertCellEmpty(indexedCell);
@@ -160,30 +171,42 @@ public class ControlAsserts {
     }
     
     public static void assertCallback(final Control control, final int startRow, final int endRow, final Callback<IndexedCell<?>, Void> callback) {
-        Group group = new Group();
-        Scene scene = new Scene(group);
+        VirtualFlow<?> flow = getVirtualFlow(control);
         
-        Stage stage = new Stage();
-        stage.setScene(scene);
+//        Region clippedContainer = (Region) flow.getChildrenUnmodifiable().get(0);
+//        Group sheet = (Group) clippedContainer.getChildrenUnmodifiable().get(0);
         
-        group.getChildren().setAll(control);
-        stage.show();
-        
-        Toolkit.getToolkit().firePulse();
-        
-        VirtualFlow<?> flow = (VirtualFlow<?>)control.lookup("#virtual-flow");
-        
-        Region clippedContainer = (Region) flow.getChildrenUnmodifiable().get(0);
-        Group sheet = (Group) clippedContainer.getChildrenUnmodifiable().get(0);
-        
-        final int sheetSize = sheet.getChildren().size();
+//        final int sheetSize = sheet.getChildren().size();
+        final int sheetSize = flow.getCellCount();
         final int end = endRow == -1 ? sheetSize : Math.min(endRow, sheetSize);
         for (int row = startRow; row < end; row++) {
             // old approach:
             // callback.call((IndexedCell<?>)sheet.getChildren().get(row));
             
             // new approach:
-            callback.call(flow.getCell(row));
+            IndexedCell cell = flow.getCell(row);
+//            System.out.println("cell index: " + cell.getIndex());
+            callback.call(cell);
         }
+    }
+    
+    public static void assertCellCount(final Control control, final int expected) {
+        assertEquals(getVirtualFlow(control).getCellCount(), expected);
+    }
+    
+    private static VirtualFlow<?> getVirtualFlow(final Control control) {
+        Group group = new Group();
+        Scene scene = new Scene(group);
+
+        Stage stage = new Stage();
+        stage.setScene(scene);
+
+        group.getChildren().setAll(control);
+        stage.show();
+
+        Toolkit.getToolkit().firePulse();
+
+        VirtualFlow<?> flow = (VirtualFlow<?>)control.lookup("#virtual-flow");
+        return flow;
     }
 }
