@@ -282,12 +282,6 @@ public interface ListChangeListener<E> {
             if (!wasPermutated()) {
                 throw new IllegalStateException("Not a permutation change");
             }
-            if (i < 0 || i >= getList().size()) {
-                throw new IndexOutOfBoundsException("Invalid index");
-            }
-            if (i < getFrom() || i >= getTo()) {
-                return i;
-            }
             return getPermutation()[i - getFrom()];
         }
 

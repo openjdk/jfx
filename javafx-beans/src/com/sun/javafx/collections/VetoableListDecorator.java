@@ -41,6 +41,7 @@ public abstract class VetoableListDecorator<E> implements ObservableList<E> {
 
     private final ObservableList<E> list;
     private int modCount;
+    private ListListenerHelper<E> helper;
 
     private static interface ModCountAccessor {
         public int get();
@@ -70,16 +71,33 @@ public abstract class VetoableListDecorator<E> implements ObservableList<E> {
 
     public VetoableListDecorator(ObservableList<E> decorated) {
         this.list = decorated;
+        this.list.addListener(new ListChangeListener<E>() {
+            @Override
+            public void onChanged(ListChangeListener.Change<? extends E> c) {
+                ListListenerHelper.fireValueChangedEvent(helper, 
+                        new SourceAdapterChange<E>(VetoableListDecorator.this, c));
+            }
+        });
     }
 
     @Override
     public void addListener(ListChangeListener<? super E> listener) {
-        list.addListener(listener);
+        helper = ListListenerHelper.addListener(helper, listener);
     }
 
     @Override
     public void removeListener(ListChangeListener<? super E> listener) {
-        list.removeListener(listener);
+        helper = ListListenerHelper.removeListener(helper, listener);
+    }
+    
+    @Override
+    public void addListener(InvalidationListener listener) {
+        helper = ListListenerHelper.addListener(helper, listener);
+    }
+
+    @Override
+    public void removeListener(InvalidationListener listener) {
+        helper = ListListenerHelper.removeListener(helper, listener);
     }
 
     @Override
@@ -291,16 +309,6 @@ public abstract class VetoableListDecorator<E> implements ObservableList<E> {
     @Override
     public List<E> subList(int fromIndex, int toIndex) {
         return new VetoableSubListDecorator(new ModCountAccessorImpl(), list.subList(fromIndex, toIndex), fromIndex);
-    }
-
-    @Override
-    public void addListener(InvalidationListener listener) {
-        list.addListener(listener);
-    }
-
-    @Override
-    public void removeListener(InvalidationListener listener) {
-        list.removeListener(listener);
     }
 
     @Override
