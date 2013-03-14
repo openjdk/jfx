@@ -605,6 +605,16 @@ public class InnerShadow extends Effect {
         return offsetY;
     }
 
+    private Color getColorInternal() {
+        Color c = getColor();
+        return c == null ? Color.BLACK : c;
+    }
+
+    private BlurType getBlurTypeInternal() {
+        BlurType bt = getBlurType();
+        return bt == null ? BlurType.THREE_PASS_BOX : bt;
+    }
+
     @Override
     void impl_update() {
         Effect localInput = getInput();
@@ -618,8 +628,8 @@ public class InnerShadow extends Effect {
         peer.setContentInput(localInput == null ? null : localInput.impl_getImpl());
         peer.setGaussianWidth((float)Utils.clamp(0, getWidth(), 255));
         peer.setGaussianHeight((float)Utils.clamp(0, getHeight(), 255));
-        peer.setShadowMode(Toolkit.getToolkit().toShadowMode(getBlurType()));
-        peer.setColor(Toolkit.getToolkit().toColor4f(getColor()));
+        peer.setShadowMode(Toolkit.getToolkit().toShadowMode(getBlurTypeInternal()));
+        peer.setColor(Toolkit.getToolkit().toColor4f(getColorInternal()));
         peer.setChoke((float)Utils.clamp(0, getChoke(), 1));
         peer.setOffsetX((int) getOffsetX());
         peer.setOffsetY((int) getOffsetY());

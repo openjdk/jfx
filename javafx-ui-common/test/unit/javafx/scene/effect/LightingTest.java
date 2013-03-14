@@ -26,6 +26,7 @@
 package javafx.scene.effect;
 
 import static com.sun.javafx.test.TestHelper.box;
+import com.sun.scenario.effect.Color4f;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
@@ -33,6 +34,7 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
+import javafx.scene.paint.Color;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -258,6 +260,54 @@ public class LightingTest extends EffectsTestBase {
         assertEquals(l, effect.lightProperty().get());
         pulse();
         assertEquals(l.impl_getImpl(), ((com.sun.scenario.effect.PhongLighting) effect.impl_getImpl()).getLight());
+    }
+
+    @Test
+    public void testNullLight() {
+        // nullvalue should default to Distant light
+        effect.setLight(null);
+        Light l = effect.getLight();
+        assertNull(l);
+        assertNull(effect.lightProperty().get());
+        pulse();
+        assertNotNull(((com.sun.scenario.effect.PhongLighting) effect.impl_getImpl()).getLight());
+    }
+
+    @Test
+    public void testDefaultLightNotChangedByOtherLightingEffect() {
+        // default value should be distant light
+        Light l = effect.getLight();
+        assertNotNull(l);
+        assertTrue(l instanceof Light.Distant);
+        assertEquals(l, effect.lightProperty().get());
+
+        Lighting lighting = new Lighting();
+        Light l2 = lighting.getLight();
+        assertNotNull(l2);
+        assertTrue(l2 instanceof Light.Distant);
+        assertEquals(l2, lighting.lightProperty().get());
+
+        l.setColor(Color.AQUA);
+
+        assertEquals(Color.AQUA, l.getColor());
+        assertEquals(Color.WHITE, l2.getColor());
+    }
+
+    @Test
+    public void testDefaultLightNotChangedByThisLightingEffect() {
+        // default value should be distant light
+        Light l = effect.getLight();
+        l.setColor(Color.BEIGE);
+
+        effect.setLight(null);
+        // null light should default to Distant Light with WHITE color
+        assertNull(effect.getLight());
+        pulse();
+        Color4f c = ((com.sun.scenario.effect.PhongLighting) effect.impl_getImpl()).getLight().getColor();
+        assertEquals(1f, c.getRed(), 1e-5);
+        assertEquals(1f, c.getGreen(), 1e-5);
+        assertEquals(1f, c.getBlue(), 1e-5);
+        assertEquals(1f, c.getAlpha(), 1e-5);
     }
 
     @Test

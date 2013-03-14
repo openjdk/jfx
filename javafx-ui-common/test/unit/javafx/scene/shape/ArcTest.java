@@ -108,4 +108,12 @@ public class ArcTest {
         assertNotNull(s);
         assertFalse(s.isEmpty());
     }
+
+    @Test public void testNullType() {
+        // null type should not throw NPE
+        Arc arc = new Arc(10.0, 10.0, 100.0, 100.0, 0.0, 0.0);
+        arc.setType(null);
+        assertNull(arc.getType());
+        assertNull(arc.typeProperty().get());
+    }
 }
