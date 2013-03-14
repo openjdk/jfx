@@ -43,6 +43,7 @@ import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.scene.Scene;
 import javafx.scene.input.KeyCode;
+import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.BackgroundFill;
 import javafx.scene.layout.HBox;
@@ -59,8 +60,10 @@ import org.junit.Ignore;
 import org.junit.Test;
 
 import com.sun.javafx.pgstub.StubToolkit;
+import com.sun.javafx.scene.control.infrastructure.ContextMenuEventFirer;
 import com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
-import com.sun.javafx.test.MouseEventGenerator;
+import com.sun.javafx.scene.control.infrastructure.MouseEventFirer;
+//import com.sun.javafx.test.MouseEventGenerator;
 import com.sun.javafx.tk.Toolkit;
 
 /**
@@ -336,8 +339,6 @@ public class ButtonTest {
 
 
     @Test public void conextMenuShouldntShowOnAction() {
-        final MouseEventGenerator generator = new MouseEventGenerator();
-
         ContextMenu popupMenu = new ContextMenu();
         MenuItem item1 = new MenuItem("_About");
         popupMenu.getItems().add(item1);
@@ -353,10 +354,6 @@ public class ButtonTest {
         root.getChildren().add(btn);
         show();
 
-        double xval = (btn.localToScene(btn.getLayoutBounds())).getMinX();
-        double yval = (btn.localToScene(btn.getLayoutBounds())).getMinY();
-
-
         /*
         ** none of these should cause the context menu to appear,
         ** so fire them all, and see if anything happens.
@@ -366,14 +363,51 @@ public class ButtonTest {
 
         btn.fireEvent(new ActionEvent());
         btn.fire();
-        scene.impl_processMouseEvent(
-            generator.generateMouseEvent(MouseEvent.MOUSE_PRESSED, xval+10, yval+10));
-        scene.impl_processMouseEvent(
-            generator.generateMouseEvent(MouseEvent.MOUSE_RELEASED, xval+10, yval+10));
-        scene.impl_processMouseEvent(
-            generator.generateMouseEvent(MouseEvent.MOUSE_CLICKED, xval+10, yval+10));
-       
-        tk.firePulse();                      
+        
+        MouseEventFirer.fireMousePressed(btn);
+        MouseEventFirer.fireMouseReleased(btn);
+        MouseEventFirer.fireMouseClicked(btn);
+    }
+    
+    private int count = 0;
+    @Test public void conextMenuShouldShowOnInSomeCircumstances() {
+        ContextMenu popupMenu = new ContextMenu();
+        MenuItem item1 = new MenuItem("_About");
+        popupMenu.getItems().add(item1);
+        popupMenu.setOnShown(new EventHandler<WindowEvent>() {
+            @Override public void handle(WindowEvent w) {
+                System.out.println("popup shown");
+                count++;
+            }
+        });
+
+        btn.setContextMenu(popupMenu);
+        btn.setDefaultButton(true);
+
+        root.getChildren().add(btn);
+        show();
+        
+        btn.setOnAction(new EventHandler<ActionEvent>() {
+            @Override public void handle(ActionEvent event) {
+                fail();
+            }
+        });
+
+        assertEquals(0, count);
+        
+        /* Note that right-mouse press events don't force the popup open */
+        MouseEventFirer.fireMousePressed(btn, MouseButton.SECONDARY);
+        assertEquals(0, count);
+        
+        MouseEventFirer.fireMouseClicked(btn, MouseButton.SECONDARY);
+        assertEquals(0, count);
+        
+        MouseEventFirer.fireMouseReleased(btn, MouseButton.SECONDARY);
+        assertEquals(0, count);
+        
+        /* Only context menu events force it to appear */
+        ContextMenuEventFirer.fireContextMenuEvent(btn);
+        assertEquals(1, count);
     }
 
     static class MyButton extends Button {
@@ -439,10 +473,7 @@ public class ButtonTest {
 
         List<Stop> redStops3 = getStops(red);
         List<Stop> greenStops3 = getStops(green);
-System.err.println("0 = " + redStops0.toString());        
-System.err.println("1 = " + redStops1.toString());        
-System.err.println("2 = " + redStops2.toString());        
-System.err.println("3 = " + redStops3.toString());        
+
         // did red change color after red hover=true?
         assertFalse(redStops0.equals(redStops1));
         // did red change back to original color after green hover=true?

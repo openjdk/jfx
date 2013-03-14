@@ -33,8 +33,15 @@ import javafx.event.EventType;
 import javafx.geometry.Bounds;
 import javafx.scene.Node;
 import javafx.scene.Scene;
+import javafx.scene.canvas.Canvas;
+import javafx.scene.canvas.GraphicsContext;
+import javafx.scene.image.WritableImage;
+import javafx.scene.input.ContextMenuEvent;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
+import javafx.scene.layout.Pane;
+import javafx.scene.paint.Color;
+import javafx.stage.Stage;
 
 
 public final class MouseEventFirer {
@@ -43,9 +50,45 @@ public final class MouseEventFirer {
         // no-op
     }
     
-    public static void mouseClickAndRelease(Node target, KeyModifier... modifiers) {
+    public static void fireMouseClickAndRelease(Node target, KeyModifier... modifiers) {
         fireMouseEvent(target, MouseEvent.MOUSE_PRESSED, modifiers);
         fireMouseEvent(target, MouseEvent.MOUSE_RELEASED, modifiers);
+    }
+    
+    public static void fireMouseClicked(Node target) {
+        fireMouseEvent(target, MouseEvent.MOUSE_CLICKED);
+    }
+    
+    public static void fireMouseClicked(Node target, MouseButton button) {
+        fireMouseEvent(target, MouseEvent.MOUSE_CLICKED, button, 0, 0);
+    }
+    
+    public static void fireMouseClicked(Node target, double deltaX, double deltaY) {
+        fireMouseEvent(target, MouseEvent.MOUSE_CLICKED, deltaX, deltaY);
+    }
+    
+    public static void fireMousePressed(Node target) {
+        fireMouseEvent(target, MouseEvent.MOUSE_PRESSED);
+    }
+    
+    public static void fireMousePressed(Node target, MouseButton button) {
+        fireMouseEvent(target, MouseEvent.MOUSE_PRESSED, button, 0, 0);
+    }
+    
+    public static void fireMousePressed(Node target, double deltaX, double deltaY) {
+        fireMouseEvent(target, MouseEvent.MOUSE_PRESSED, deltaX, deltaY);
+    }
+    
+    public static void fireMouseReleased(Node target) {
+        fireMouseEvent(target, MouseEvent.MOUSE_RELEASED);
+    }
+    
+    public static void fireMouseReleased(Node target, MouseButton button) {
+        fireMouseEvent(target, MouseEvent.MOUSE_RELEASED, button, 0, 0);
+    }
+    
+    public static void fireMouseReleased(Node target, double deltaX, double deltaY) {
+        fireMouseEvent(target, MouseEvent.MOUSE_RELEASED, deltaX, deltaY);
     }
     
     public static void fireMouseEvent(Node target, EventType<MouseEvent> evtType, KeyModifier... modifiers) {
@@ -57,7 +100,7 @@ public final class MouseEventFirer {
     }
     
     public static void fireMouseEvent(Node target, EventType<MouseEvent> evtType, MouseButton button, double deltaX, double deltaY, KeyModifier... modifiers) {
-        fireMouseEvent(target, evtType, MouseButton.PRIMARY, 1, deltaX, deltaY, modifiers);
+        fireMouseEvent(target, evtType, button, 1, deltaX, deltaY, modifiers);
     }
     
     public static void fireMouseEvent(Node target, EventType<MouseEvent> evtType, MouseButton button, int clickCount, double deltaX, double deltaY, KeyModifier... modifiers) {
@@ -83,39 +126,56 @@ public final class MouseEventFirer {
                 button == MouseButton.MIDDLE,      // middle button
                 button == MouseButton.SECONDARY,   // secondary button
                 true,                              // synthesized 
-                false,                             // is popup trigger
-                false,                             // still since pick
+                button == MouseButton.SECONDARY,   // is popup trigger
+                true,                              // still since pick
                 null);                             // pick result
+        
+//        // lets see the click position.
+//        // Unfortunately this doesn't work at present because StubToolkit 
+//        // cannot generate snapshots
+//        WritableImage image = target.snapshot(null, null);
+//        Canvas canvas = new Canvas(image.getWidth(), image.getHeight());
+//        GraphicsContext g = canvas.getGraphicsContext2D();
+//        g.drawImage(image, 0, 0);
+//        
+//        g.setFill(Color.RED);
+//        g.setStroke(Color.WHITE);
+//        g.fillOval(deltaX - 2, deltaY - 2, 4, 4);
+//        g.strokeOval(deltaX - 2, deltaY - 2, 4, 4);
+//        
+//        Stage stage = new Stage();
+//        stage.setScene(new Scene(new Pane(canvas), image.getWidth(), image.getHeight()));
+//        stage.show();
         
         Event.fireEvent(target, evt);
     }
     
-    public static void fireMouseEvent(Scene target, EventType<MouseEvent> evtType, MouseButton button, int clickCount, double deltaX, double deltaY, KeyModifier... modifiers) {
-        List<KeyModifier> ml = Arrays.asList(modifiers);
-        
-        double screenX = target.getWindow().getX() + target.getX() + deltaX;
-        double screenY = target.getWindow().getY() + target.getY() + deltaY;
-        
-        MouseEvent evt = new MouseEvent(
-                target, 
-                target, 
-                evtType, 
-                deltaX, deltaY, 
-                screenX, screenY, 
-                button, 
-                clickCount,
-                ml.contains(KeyModifier.SHIFT),    // shiftDown
-                ml.contains(KeyModifier.CTRL),     // ctrlDown
-                ml.contains(KeyModifier.ALT),      // altDown
-                ml.contains(KeyModifier.META),     // metaData
-                button == MouseButton.PRIMARY,     // primary button
-                button == MouseButton.MIDDLE,      // middle button
-                button == MouseButton.SECONDARY,   // secondary button
-                true,                              // synthesized 
-                false,                             // is popup trigger
-                false,                             // still since pick
-                null);                             // pick result
-        
-        Event.fireEvent(target, evt);
-  }
+//    public static void fireMouseEvent(Scene target, EventType<MouseEvent> evtType, MouseButton button, int clickCount, double deltaX, double deltaY, KeyModifier... modifiers) {
+//        List<KeyModifier> ml = Arrays.asList(modifiers);
+//        
+//        double screenX = target.getWindow().getX() + target.getX() + deltaX;
+//        double screenY = target.getWindow().getY() + target.getY() + deltaY;
+//        
+//        MouseEvent evt = new MouseEvent(
+//                target, 
+//                target, 
+//                evtType, 
+//                deltaX, deltaY, 
+//                screenX, screenY, 
+//                button, 
+//                clickCount,
+//                ml.contains(KeyModifier.SHIFT),    // shiftDown
+//                ml.contains(KeyModifier.CTRL),     // ctrlDown
+//                ml.contains(KeyModifier.ALT),      // altDown
+//                ml.contains(KeyModifier.META),     // metaData
+//                button == MouseButton.PRIMARY,     // primary button
+//                button == MouseButton.MIDDLE,      // middle button
+//                button == MouseButton.SECONDARY,   // secondary button
+//                true,                              // synthesized 
+//                button == MouseButton.SECONDARY,   // is popup trigger
+//                false,                             // still since pick
+//                null);                             // pick result
+//        
+//        Event.fireEvent(target, evt);
+//    }
 }
