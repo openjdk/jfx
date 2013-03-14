@@ -66,9 +66,8 @@ final class GtkCommonDialogs {
             owner.setEnabled(false);
         }
         try {
-            return new File(_showFolderChooser(
-                       (owner != null) ? owner.getNativeHandle() : 0,
-                       folder, title));
+            String filename = _showFolderChooser((owner != null) ? owner.getNativeHandle() : 0, folder, title);
+            return filename != null ? new File(filename) : null;
                                                    
         } finally {
             if (owner != null) {

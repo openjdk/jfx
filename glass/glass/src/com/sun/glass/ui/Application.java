@@ -622,4 +622,13 @@ public abstract class Application {
         checkEventThread();
         return _supportsUnifiedWindows();
     }
+
+    protected boolean _supportsSystemMenu() {
+        //Only Mac supports system menu
+        return false;
+    }
+    public boolean supportsSystemMenu() {
+        checkEventThread();
+        return _supportsSystemMenu();
+    }
 }

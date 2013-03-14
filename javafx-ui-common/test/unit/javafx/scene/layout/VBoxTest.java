@@ -50,6 +50,17 @@ public class VBoxTest {
         assertEquals(Pos.TOP_LEFT, vbox.getAlignment());
     }
 
+    @Test public void testVBoxNulls() {
+        vbox.setAlignment(null);
+
+        // this musn't throw NPE
+        vbox.autosize();
+        vbox.layout();
+
+        assertNull(null, vbox.getAlignment());
+        assertNull(null, vbox.alignmentProperty().get());
+    }
+
     @Test public void testSimpleVBox() {
         MockResizable child1 = new MockResizable(100,200, 300,400, 500,600);
         Rectangle child2 = new Rectangle(100, 100);

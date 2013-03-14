@@ -56,6 +56,26 @@ public class FlowPaneTest {
         assertEquals(400, flowpane.getPrefWrapLength(), 1e-100);
     }
 
+    @Test public void testFlowPaneNulls() {
+        flowpane.setAlignment(null);
+        flowpane.setColumnHalignment(null);
+        flowpane.setRowValignment(null);
+        flowpane.setOrientation(null);
+
+        // this musn't throw NPE
+        flowpane.autosize();
+        flowpane.layout();
+
+        assertNull(flowpane.getOrientation());
+        assertNull(flowpane.getAlignment());
+        assertNull(flowpane.getRowValignment());
+        assertNull(flowpane.getColumnHalignment());
+        assertNull(flowpane.orientationProperty().get());
+        assertNull(flowpane.alignmentProperty().get());
+        assertNull(flowpane.rowValignmentProperty().get());
+        assertNull(flowpane.columnHalignmentProperty().get());
+    }
+
     @Test public void testSimpleFlowPane() {
         for(int i = 0; i < 3; i++) { // 6 children
             MockResizable child1 = new MockResizable(100,200);

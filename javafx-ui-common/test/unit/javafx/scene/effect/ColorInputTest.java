@@ -26,6 +26,7 @@
 package javafx.scene.effect;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 import javafx.scene.paint.Color;
 
 import org.junit.Before;
@@ -129,6 +130,16 @@ public class ColorInputTest extends EffectsTestBase {
         // default value should be RED
         assertEquals(Color.RED, effect.getPaint());
         assertEquals(Color.RED, effect.paintProperty().get());
+        pulse();
+        assertEquals(Toolkit.getPaintAccessor().getPlatformPaint(Color.RED), ((com.sun.scenario.effect.Flood) effect.impl_getImpl()).getPaint());
+    }
+
+    @Test
+    public void testNullPaint() {
+        effect.setPaint(null);
+        // null value should default to RED in render tree
+        assertNull(effect.getPaint());
+        assertNull(effect.paintProperty().get());
         pulse();
         assertEquals(Toolkit.getPaintAccessor().getPlatformPaint(Color.RED), ((com.sun.scenario.effect.Flood) effect.impl_getImpl()).getPaint());
     }

@@ -105,15 +105,19 @@ public class DistantLightTest extends LightTestBase {
         assertEquals(1f, c.getBlue(), 1e-5);
         assertEquals(1f, c.getAlpha(), 1e-5);      
     }
-    
+
     @Test
     public void testNullColor() {
-        // try setting null value
+        // null value should default to WHITE in render tree
         effect.setColor(null);
         assertNull(effect.getColor());
+        assertNull(effect.colorProperty().get());
         pulse();
-        // null should not be propagated
-        assertNotNull(((com.sun.scenario.effect.light.DistantLight) effect.impl_getImpl()).getColor());
+        Color4f c = ((com.sun.scenario.effect.light.DistantLight) effect.impl_getImpl()).getColor();
+        assertEquals(1f, c.getRed(), 1e-5);
+        assertEquals(1f, c.getGreen(), 1e-5);
+        assertEquals(1f, c.getBlue(), 1e-5);
+        assertEquals(1f, c.getAlpha(), 1e-5);
     }
 
     @Test

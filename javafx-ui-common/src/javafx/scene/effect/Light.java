@@ -107,11 +107,15 @@ public abstract class Light {
         }
     }
 
-    void impl_update() {
-        if (getColor() != null) {
-            impl_getImpl().setColor(Toolkit.getToolkit().toColor4f(getColor()));
-        }
+   private Color getColorInternal() {
+        Color c = getColor();
+        return c == null ? Color.WHITE : c;
     }
+
+    void impl_update() {
+        impl_getImpl().setColor(Toolkit.getToolkit().toColor4f(getColorInternal()));
+    }
+
     private BooleanProperty effectDirty;
 
     private void setEffectDirty(boolean value) {

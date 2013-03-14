@@ -29,6 +29,7 @@ import static com.sun.javafx.test.TestHelper.box;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import org.junit.Before;
@@ -184,6 +185,25 @@ public class DisplacementMapTest extends EffectsTestBase {
         assertEquals(1, mapImpl.getHeight());
 
         assertEquals(map, effect.mapDataProperty().get());
+    }
+
+    @Test
+    public void testDefaultMapNotChangedByThisEffect() {
+        // Default is empty map
+        FloatMap map = effect.getMapData();
+        map.setHeight(100);
+        map.setWidth(200);
+
+        effect.setMapData(null);
+
+        // null map data should default to empty map
+        assertNull(effect.getMapData());
+        pulse();
+        com.sun.scenario.effect.FloatMap mapImpl =
+                ((com.sun.scenario.effect.DisplacementMap) effect.impl_getImpl()).getMapData();
+        assertNotNull(mapImpl);
+        assertEquals(1, mapImpl.getWidth());
+        assertEquals(1, mapImpl.getHeight());
     }
 
     @Test
