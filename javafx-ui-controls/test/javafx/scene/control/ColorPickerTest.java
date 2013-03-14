@@ -50,10 +50,10 @@ import org.junit.Test;
 
 import com.sun.javafx.pgstub.StubToolkit;
 import com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
+import com.sun.javafx.scene.control.infrastructure.MouseEventGenerator;
 import com.sun.javafx.scene.control.skin.ColorPalette;
 import com.sun.javafx.scene.control.skin.ColorPickerPaletteRetriever;
 import com.sun.javafx.scene.control.skin.ColorPickerSkin;
-import com.sun.javafx.test.MouseEventGenerator;
 import com.sun.javafx.tk.Toolkit;
 
 public class ColorPickerTest {

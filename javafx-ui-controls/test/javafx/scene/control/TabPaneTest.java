@@ -63,9 +63,9 @@ import org.junit.Test;
 
 import com.sun.javafx.pgstub.StubToolkit;
 import com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
+import com.sun.javafx.scene.control.infrastructure.MouseEventGenerator;
 import com.sun.javafx.scene.control.skin.TabPaneSkin;
 import com.sun.javafx.scene.input.KeyCodeMap;
-import com.sun.javafx.test.MouseEventGenerator;
 import com.sun.javafx.tk.Toolkit;
 
 /**
