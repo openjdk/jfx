@@ -1113,7 +1113,9 @@ public class ContextMenuContent extends Region {
         public void dispose() {
             listeners.clear();
             
-            ((Label)label).textProperty().unbind();
+            if (label != null) {
+                ((Label)label).textProperty().unbind();
+            }
             
             left = null;
             graphic = null;
