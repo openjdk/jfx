@@ -77,6 +77,7 @@ import javafx.geometry.NodeOrientation;
 import javafx.stage.Window;
 
 import com.sun.javafx.scene.control.behavior.TwoLevelFocusPopupBehavior;
+import javafx.beans.WeakInvalidationListener;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.css.Styleable;
 
@@ -112,7 +113,14 @@ public class ContextMenuContent extends Region {
     private int currentFocusedIndex = -1;
     
     private boolean itemsDirty = true;
-    
+    private InvalidationListener popupShowingListener = new InvalidationListener() {
+        @Override public void invalidated(Observable arg0) {
+            updateItems();
+        }
+    };
+    private WeakInvalidationListener weakPopupShowingListener = 
+            new WeakInvalidationListener(popupShowingListener);
+
     /***************************************************************************
      * Constructors
      **************************************************************************/
@@ -138,11 +146,7 @@ public class ContextMenuContent extends Region {
         initialize();
         setUpBinds();
         // RT-20197 add menuitems only on first show.
-        popupMenu.showingProperty().addListener(new InvalidationListener() {
-            @Override public void invalidated(Observable arg0) {
-                updateItems();
-            }
-        });
+        popupMenu.showingProperty().addListener(weakPopupShowingListener);
 
         /*
         ** only add this if we're on an embedded
@@ -1056,7 +1060,7 @@ public class ContextMenuContent extends Region {
         private Node graphic;
         private Node label;
         private Node right;
-        
+
         private final List<WeakInvalidationListener> listeners = 
                 new ArrayList<WeakInvalidationListener>();
 
@@ -1206,6 +1210,11 @@ public class ContextMenuContent extends Region {
                             selectedBackground = MenuItemContainer.this;
                             menu.show();
                             requestFocus();  // request Focus on hover
+                        }
+                    });
+                    setOnMouseReleased(new EventHandler<MouseEvent>() {
+                        @Override public void handle(MouseEvent event) {
+                            item.fire();
                         }
                     });
                 } else { // normal MenuItem
