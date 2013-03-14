@@ -28,7 +28,7 @@ package com.sun.glass.ui.lens;
 import com.sun.glass.ui.Timer;
 
 /**
- * Lensware implementation class for Timer.
+ * Lens implementation class for Timer.
  */
 final class LensTimer extends Timer {
     static java.util.Timer timer;
@@ -36,12 +36,6 @@ final class LensTimer extends Timer {
 
     protected LensTimer(final Runnable runnable) {
         super(runnable);
-        task = new java.util.TimerTask() {
-            @Override
-            public void run() {
-                runnable.run();
-            }
-        };
     }
 
     static int getMinPeriod_impl() {
@@ -57,6 +51,14 @@ final class LensTimer extends Timer {
             timer = new java.util.Timer(true);
         }
 
+        task = new java.util.TimerTask() {
+
+            @Override
+            public void run() {
+                runnable.run();
+            }
+        };
+
         timer.schedule(task, 0, (long)period);
         return 1; // need something non-zero to denote success.
     }
@@ -66,7 +68,10 @@ final class LensTimer extends Timer {
     }
 
     @Override protected void _stop(long timer) {
-        task.cancel();
+        if (task != null) {
+            task.cancel();
+            task = null;
+        }
     }
 }
 
