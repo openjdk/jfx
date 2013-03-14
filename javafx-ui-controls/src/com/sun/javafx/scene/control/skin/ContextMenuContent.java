@@ -235,19 +235,20 @@ public class ContextMenuContent extends Region {
     
     private void updateVisualItems() {
         // clean up itemsContainer
-        for (int i = 0; i < itemsContainer.getChildren().size(); i++) {
-            MenuItemContainer container = (MenuItemContainer) itemsContainer.getChildren().get(0);
+        ObservableList<Node> itemsContainerChilder = itemsContainer.getChildren();
+        for (int i = 0, max = itemsContainerChilder.size(); i < max; i++) {
+            MenuItemContainer container = (MenuItemContainer) itemsContainerChilder.get(i);
             container.visibleProperty().unbind();
             container.dispose();
         }
-        itemsContainer.getChildren().clear();
+        itemsContainerChilder.clear();
         
         for (int row = 0; row < getItems().size(); row++) {
             final MenuItem item = getItems().get(row);
             if (item instanceof CustomMenuItem && ((CustomMenuItem) item).getContent() == null) continue;
             MenuItemContainer menuItemContainer = new MenuItemContainer(item);
             menuItemContainer.visibleProperty().bind(item.visibleProperty());
-            itemsContainer.getChildren().add(menuItemContainer);
+            itemsContainerChilder.add(menuItemContainer);
             if (item instanceof SeparatorMenuItem) {
                 // TODO
                 // we don't want the hover highlight for separators, so for
@@ -255,8 +256,8 @@ public class ContextMenuContent extends Region {
                 // background entirely. This may cause issues if people
                 // intend to style the background differently.
                  Node node = ((CustomMenuItem) item).getContent();
-                 itemsContainer.getChildren().remove(menuItemContainer);
-                 itemsContainer.getChildren().add(node);
+                 itemsContainerChilder.remove(menuItemContainer);
+                 itemsContainerChilder.add(node);
                  // Add the (separator) menu item to properties map of this node.
                 // Special casing this for separator :
                 // This allows associating this container with SeparatorMenuItem.
