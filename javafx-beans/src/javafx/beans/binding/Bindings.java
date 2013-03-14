@@ -4476,27 +4476,60 @@ public final class Bindings {
     // boolean
     // =================================================================================================================
 
+     private static class BooleanAndBinding extends BooleanBinding {
+
+        private final ObservableBooleanValue op1;
+        private final ObservableBooleanValue op2;
+        private final InvalidationListener observer;
+
+        public BooleanAndBinding(ObservableBooleanValue op1, ObservableBooleanValue op2) {
+            this.op1 = op1;
+            this.op2 = op2;
+            
+            observer = new ShortCircuitAndInvalidator(this);
+            
+            op1.addListener(observer);
+            op2.addListener(observer);
+        }
+        
+
+        @Override
+        public void dispose() {
+            op1.removeListener(observer);
+            op2.removeListener(observer);
+        }
+
+        @Override
+        protected boolean computeValue() {
+            return op1.get() && op2.get();
+        }
+
+        @Override
+        @ReturnsUnmodifiableCollection
+        public ObservableList<?> getDependencies() {
+            return new ImmutableObservableList<>(op1, op2);
+        }
+    }
+    
     private static class ShortCircuitAndInvalidator implements InvalidationListener {
 
-        private final WeakReference<Binding<?>> ref;
-        private final ObservableBooleanValue op1;
+        private final WeakReference<BooleanAndBinding> ref;
 
-        private ShortCircuitAndInvalidator(ObservableBooleanValue op1, Binding<?> binding) {
+        private ShortCircuitAndInvalidator(BooleanAndBinding binding) {
             assert binding != null;
-            this.op1 = op1;
-            ref = new WeakReference<Binding<?>>(binding);
+            ref = new WeakReference<>(binding);
         }
 
         @Override
         public void invalidated(Observable observable) {
-            final Binding<?> binding = ref.get();
+            final BooleanAndBinding binding = ref.get();
             if (binding == null) {
                 observable.removeListener(this);
             } else {
                 // short-circuit invalidation. This BooleanBinding becomes
                 // only invalid if the first operator changes or the
                 // first parameter is true.
-                if ((op1.equals(observable) || (binding.isValid() && op1.get()))) {
+                if ((binding.op1.equals(observable) || (binding.isValid() && binding.op1.get()))) {
                     binding.invalidate();
                 }
             }
@@ -4522,53 +4555,62 @@ public final class Bindings {
             throw new NullPointerException("Operands cannot be null.");
         }
 
-        return new BooleanBinding() {
-            final InvalidationListener observer = new ShortCircuitAndInvalidator(op1, this);
-            {
-                op1.addListener(observer);
-                op2.addListener(observer);
-            }
+        return new BooleanAndBinding(op1, op2);
+    }
+    
+    private static class BooleanOrBinding extends BooleanBinding {
 
-            @Override
-            public void dispose() {
-                op1.removeListener(observer);
-                op2.removeListener(observer);
-            }
+        private final ObservableBooleanValue op1;
+        private final ObservableBooleanValue op2;
+        private final InvalidationListener observer;
 
-            @Override
-            protected boolean computeValue() {
-                return op1.get() && op2.get();
-            }
+        public BooleanOrBinding(ObservableBooleanValue op1, ObservableBooleanValue op2) {
+            this.op1 = op1;
+            this.op2 = op2;
+            observer = new ShortCircuitOrInvalidator(this);
+            op1.addListener(observer);
+            op2.addListener(observer);
+        }
+        
 
-            @Override
-            @ReturnsUnmodifiableCollection
-            public ObservableList<?> getDependencies() {
-                return new ImmutableObservableList<ObservableBooleanValue>(op1, op2);
-            }
-        };
+        @Override
+        public void dispose() {
+            op1.removeListener(observer);
+            op2.removeListener(observer);
+        }
+
+        @Override
+        protected boolean computeValue() {
+            return op1.get() || op2.get();
+        }
+
+        @Override
+        @ReturnsUnmodifiableCollection
+        public ObservableList<?> getDependencies() {
+            return new ImmutableObservableList<>(op1, op2);
+        }
     }
 
+    
     private static class ShortCircuitOrInvalidator implements InvalidationListener {
 
-        private final WeakReference<Binding<?>> ref;
-        private final ObservableBooleanValue op1;
+        private final WeakReference<BooleanOrBinding> ref;
 
-        private ShortCircuitOrInvalidator(ObservableBooleanValue op1, Binding<?> binding) {
+        private ShortCircuitOrInvalidator(BooleanOrBinding binding) {
             assert binding != null;
-            this.op1 = op1;
-            ref = new WeakReference<Binding<?>>(binding);
+            ref = new WeakReference<>(binding);
         }
 
         @Override
         public void invalidated(Observable observable) {
-            final Binding<?> binding = ref.get();
+            final BooleanOrBinding binding = ref.get();
             if (binding == null) {
                 observable.removeListener(this);
             } else {
                 // short circuit invalidation. This BooleanBinding becomes
                 // only invalid if the first operator changes or the
                 // first parameter is false.
-                if ((op1.equals(observable) || (binding.isValid() && !op1.get()))) {
+                if ((binding.op1.equals(observable) || (binding.isValid() && !binding.op1.get()))) {
                     binding.invalidate();
                 }
             }
@@ -4594,30 +4636,7 @@ public final class Bindings {
             throw new NullPointerException("Operands cannot be null.");
         }
 
-        return new BooleanBinding() {
-            final InvalidationListener observer = new ShortCircuitOrInvalidator(op1, this);
-            {
-                op1.addListener(observer);
-                op2.addListener(observer);
-            }
-
-            @Override
-            public void dispose() {
-                op1.removeListener(observer);
-                op2.removeListener(observer);
-            }
-
-            @Override
-            protected boolean computeValue() {
-                return op1.get() || op2.get();
-            }
-
-            @Override
-            @ReturnsUnmodifiableCollection
-            public ObservableList<?> getDependencies() {
-                return new ImmutableObservableList<ObservableBooleanValue>(op1, op2);
-            }
-        };
+        return new BooleanOrBinding(op1, op2);
     }
 
     /**
