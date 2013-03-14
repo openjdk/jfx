@@ -904,3 +904,16 @@ JNIEXPORT jstring JNICALL Java_com_sun_glass_ui_mac_MacApplication__1getRemoteLa
 
     return name;
 }
+
+/*
+ * Class:     com_sun_glass_ui_mac_MacApplication
+ * Method:    _supportsSystemMenu
+ * Signature: ()Z;
+ */
+JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacApplication__1supportsSystemMenu
+(JNIEnv *env, jobject japplication)
+{
+    return !isEmbedded;
+}
+
+

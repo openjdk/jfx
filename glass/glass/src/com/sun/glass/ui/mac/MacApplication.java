@@ -274,6 +274,8 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
         return true;
     }
 
+    @Override native protected boolean _supportsSystemMenu();
+
     native protected String _getRemoteLayerServerName();
     public String getRemoteLayerServerName() {
         return _getRemoteLayerServerName();
