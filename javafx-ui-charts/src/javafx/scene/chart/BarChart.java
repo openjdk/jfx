@@ -206,6 +206,11 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
         if (!categoryAxis.getCategories().contains(category)) {
             categoryAxis.getCategories().add(itemIndex, category);
         } else if (categoryMap.containsKey(category)){
+            // RT-21162 : replacing the previous data, first remove the node from scenegraph.
+            Data data = categoryMap.get(category);
+            getPlotChildren().remove(data.getNode());
+            removeDataItemFromDisplay(series, data);
+            requestChartLayout();
             categoryMap.remove(category);
         }
         categoryMap.put(category, item);
