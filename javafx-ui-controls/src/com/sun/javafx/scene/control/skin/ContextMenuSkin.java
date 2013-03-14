@@ -56,6 +56,7 @@ public class ContextMenuSkin implements Skin<ContextMenu> {
     /***/
     public ContextMenuSkin(final ContextMenu popupMenu) {
         this.popupMenu = popupMenu;
+        
         // When a contextMenu is shown, requestFocus on its content to enable
         // keyboard navigation.
         popupMenu.addEventHandler(Menu.ON_SHOWN, new EventHandler<Event>() {
@@ -85,33 +86,6 @@ public class ContextMenuSkin implements Skin<ContextMenu> {
         }
     }
 
-//            /*
-//             * We see if any of the items in this menu currently own the focus.
-//             * If not, we simply determine if this PopupMenu is a 'root menu'
-//             * (i.e. does not have a parent menu) or a submenu.
-//             * A root menu does not show a selected item, whereas submenus
-//             * will always have the first item selected.
-//             */
-//            PopupMenuContent popupMenuContent = (PopupMenuContent) popupContent;
-//            if (popupMenuContent.getFocusedItem() != null) {
-//                popupMenuContent.getFocusedItem().requestFocus();
-//            }
-//            else {
-//                Node anchor = popupMenu.getAnchor();
-//                if (anchor instanceof Menu && ((Menu) anchor).getParentMenu() == null) {
-//                    popupMenuContent.requestFocus();
-//                } else {
-//                    MenuBehavior.getFirstValidMenuItem(popupMenu.getItems()).requestFocus();
-//                }
-//
-//            }
-
-//    private boolean focused = false;
-//    private void setFocused(boolean value) {
-//        focused = value;
-//        ((ContextMenuContent)popupContent).requestFocus();
-//    }
-
     @Override public ContextMenu getSkinnable() {
         return popupMenu;
     }
@@ -121,7 +95,7 @@ public class ContextMenuSkin implements Skin<ContextMenu> {
     }
 
     @Override public void dispose() {
+        root.idProperty().unbind();
+        root.styleProperty().unbind();
     }
-
-
 }

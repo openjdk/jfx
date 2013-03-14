@@ -39,6 +39,7 @@ import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
+import javafx.beans.WeakInvalidationListener;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableBooleanValue;
 import javafx.beans.value.ObservableValue;
@@ -233,7 +234,14 @@ public class ContextMenuContent extends Region {
     }
     
     private void updateVisualItems() {
+        // clean up itemsContainer
+        for (int i = 0; i < itemsContainer.getChildren().size(); i++) {
+            MenuItemContainer container = (MenuItemContainer) itemsContainer.getChildren().get(0);
+            container.visibleProperty().unbind();
+            container.dispose();
+        }
         itemsContainer.getChildren().clear();
+        
         for (int row = 0; row < getItems().size(); row++) {
             final MenuItem item = getItems().get(row);
             if (item instanceof CustomMenuItem && ((CustomMenuItem) item).getContent() == null) continue;
@@ -1047,6 +1055,9 @@ public class ContextMenuContent extends Region {
         private Node graphic;
         private Node label;
         private Node right;
+        
+        private final List<WeakInvalidationListener> listeners = 
+                new ArrayList<WeakInvalidationListener>();
 
         protected Label getLabel(){
             return (Label) label;
@@ -1088,12 +1099,26 @@ public class ContextMenuContent extends Region {
             // This allows associating this container with corresponding MenuItem.
             getProperties().put(MenuItem.class, item);
             
-            item.graphicProperty().addListener(new InvalidationListener() {
-                @Override public void invalidated(Observable o) {
+            InvalidationListener listener = new InvalidationListener() {
+                @Override public void invalidated(Observable observable) {
                     createChildren();
                     computeVisualMetrics();
                 }
-            });
+            };
+            WeakInvalidationListener weakListener = new WeakInvalidationListener(listener);
+            listeners.add(weakListener);
+            item.graphicProperty().addListener(weakListener);
+        }
+        
+        public void dispose() {
+            listeners.clear();
+            
+            ((Label)label).textProperty().unbind();
+            
+            left = null;
+            graphic = null;
+            label = null;
+            right = null;
         }
         
         private void createChildren() {
@@ -1195,12 +1220,14 @@ public class ContextMenuContent extends Region {
                     
                     // accelerator support
                     updateAccelerator();
-                    item.acceleratorProperty().addListener(new InvalidationListener() {
-                        @Override
-                        public void invalidated(Observable observable) {
+                    InvalidationListener listener = new InvalidationListener() {
+                        @Override public void invalidated(Observable observable) {
                             updateAccelerator();
                         }
-                    });
+                    };
+                    WeakInvalidationListener weakListener = new WeakInvalidationListener(listener);
+                    listeners.add(weakListener);
+                    item.acceleratorProperty().addListener(weakListener);
                     
                     setOnMouseEntered(new EventHandler<MouseEvent>() {
                         @Override public void handle(MouseEvent event) {
@@ -1351,12 +1378,16 @@ public class ContextMenuContent extends Region {
         }
 
         private void listen(ObservableBooleanValue property, final PseudoClass pseudoClass) {
-            property.addListener(new InvalidationListener() {
+            InvalidationListener listener = new InvalidationListener() {
                 @Override public void invalidated(Observable valueModel) {
                     boolean active = ((ObservableBooleanValue)valueModel).get();
                     pseudoClassStateChanged(pseudoClass, active);
                 }
-            });
+            };
+            WeakInvalidationListener weakListener = new WeakInvalidationListener(listener);
+            
+            listeners.add(weakListener);
+            property.addListener(weakListener);
         }
 
         // Responsible for returning a graphic (if necessary) to position in the
