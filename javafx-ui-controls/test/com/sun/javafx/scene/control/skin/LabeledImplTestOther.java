@@ -63,22 +63,23 @@ import static org.junit.Assert.*;
 public class LabeledImplTestOther {
     
     
-    @Test 
-    public void test_RT_21357() {
+    @Test public void test_RT_21357() {
         
         final Labeled labeled = new Label("label");
         final LabeledImpl labeledImpl = new LabeledImpl(labeled);
         
-        URL url = SkinBase.class.getResource("caspian/center-btn.png");
+        URL url = LabeledSkinBase.class.getResource("caspian/center-btn.png");
         Image img = new Image(url.toExternalForm());
+        assertNotNull(img);
+        
         ImageView iView = new ImageView(img);
         labeled.setGraphic(iView);  
         
         assertEquals(labeled.getGraphic(), labeledImpl.getGraphic());
+        assertNotNull(labeled.getGraphic());
     }
 
-    @Test 
-    public void test_RT_21617() {
+    @Test public void test_RT_21617() {
         
         MenuButton mb = new MenuButton();
         mb.setText("SomeText"); 
