@@ -41,6 +41,7 @@ import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
+import javafx.scene.control.ScrollPane.ScrollBarPolicy;
 import javafx.scene.layout.VBox;
 import javafx.scene.web.HTMLEditor;
 import javafx.stage.Stage;
@@ -65,15 +66,21 @@ public class HTMLEditorApp extends Application {
     public Parent createContent() {
 
         VBox vRoot = new VBox();
-
-        vRoot.setPadding(new Insets(8, 8, 8, 8));
+        vRoot.setPrefWidth(300);
         vRoot.setSpacing(5);
 
         htmlEditor = new HTMLEditor();
-        htmlEditor.setPrefSize(245, 135);
+        htmlEditor.setPrefHeight(245);
         htmlEditor.setHtmlText(INITIAL_TEXT);
-        vRoot.getChildren().add(htmlEditor);
 
+        ScrollPane htmlSP = new ScrollPane();
+        htmlSP.setFitToWidth(true);
+        htmlSP.setPrefHeight(245);
+        htmlSP.setVbarPolicy(ScrollBarPolicy.NEVER);
+        htmlSP.setContent(htmlEditor);
+                      
+        vRoot.getChildren().add(htmlSP);        
+        
         final Label htmlLabel = new Label();
         htmlLabel.setWrapText(true);
 
