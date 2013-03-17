@@ -31,6 +31,7 @@ import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.event.Event;
+import javafx.event.EventHandler;
 import javafx.event.EventType;
 import javafx.scene.Node;
 
@@ -87,7 +88,17 @@ public class CheckBoxTreeItem<T> extends TreeItem<T> {
     
     /**
      * An EventType used when the CheckBoxTreeItem selection / indeterminate
-     * state changes.
+     * state changes. To use this, it is recommended that you use code along the
+     * lines of the following:
+     *
+     *<pre>
+     * {@code
+     * child1.addEventHandler(CheckBoxTreeItem.<String>checkBoxSelectionChangedEvent(), new EventHandler<TreeModificationEvent<String>>() {
+     *     public void handle(TreeModificationEvent<String> event) {
+     *          ...     
+     *     }
+     * });}
+     * </pre>
      * 
      * @param <T> The type of the value contained within the TreeItem.
      */
@@ -199,7 +210,7 @@ public class CheckBoxTreeItem<T> extends TreeItem<T> {
     /** Sets the selected state of this CheckBoxTreeItem. */
     public final void setSelected(boolean value) { selectedProperty().setValue(value); }
     /** Returns the selected state of this CheckBoxTreeItem. */
-    public final boolean isSelected() { return selected == null ? false : selected.getValue(); }
+    public final boolean isSelected() { return selected.getValue(); }
     /** A {@link BooleanProperty} used to represent the selected state of this CheckBoxTreeItem. */
     public final BooleanProperty selectedProperty() { return selected; }
     
@@ -214,7 +225,7 @@ public class CheckBoxTreeItem<T> extends TreeItem<T> {
     /** Sets the indeterminate state of this CheckBoxTreeItem. */
     public final void setIndeterminate(boolean value) { indeterminateProperty().setValue(value); }
     /** Returns the indeterminate state of this CheckBoxTreeItem. */
-    public final boolean isIndeterminate() { return indeterminate == null ? false : indeterminate.getValue(); }
+    public final boolean isIndeterminate() { return indeterminate.getValue(); }
     /** A {@link BooleanProperty} used to represent the indeterminate state of this CheckBoxTreeItem. */
     public final BooleanProperty indeterminateProperty() { return indeterminate; }
     
@@ -234,7 +245,7 @@ public class CheckBoxTreeItem<T> extends TreeItem<T> {
     public final BooleanProperty independentProperty() { return independent; }
     private final BooleanProperty independent = new SimpleBooleanProperty(this, "independent", false);
     public final void setIndependent(boolean value) { independentProperty().setValue(value); }
-    public final boolean isIndependent() { return independent == null ? false : independent.getValue(); }
+    public final boolean isIndependent() { return independent.getValue(); }
     
     
     
