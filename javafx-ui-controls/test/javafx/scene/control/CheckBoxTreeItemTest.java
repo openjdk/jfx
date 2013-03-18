@@ -52,14 +52,14 @@ public class CheckBoxTreeItemTest {
         private CheckBoxTreeItem<String> child3;
     
     @Before public void setup() {
-        treeItem = new CheckBoxTreeItem<>();
+        treeItem = new CheckBoxTreeItem();
         
-        root = new CheckBoxTreeItem<>("root");
-            child1 = new CheckBoxTreeItem<>("child1");
-            child2 = new CheckBoxTreeItem<>("child2");
-                subchild1 = new CheckBoxTreeItem<>("subchild1");
-                subchild2 = new CheckBoxTreeItem<>("subchild2");
-            child3 = new CheckBoxTreeItem<>("child3");
+        root = new CheckBoxTreeItem("root");
+            child1 = new CheckBoxTreeItem("child1");
+            child2 = new CheckBoxTreeItem("child2");
+                subchild1 = new CheckBoxTreeItem("subchild1");
+                subchild2 = new CheckBoxTreeItem("subchild2");
+            child3 = new CheckBoxTreeItem("child3");
             
         child2.getChildren().addAll(subchild1, subchild2);
         root.getChildren().addAll(child1, child2, child3);
@@ -166,31 +166,31 @@ public class CheckBoxTreeItemTest {
     }
     
     @Test public void testValueConstructor_hasNonNullValue() {
-        CheckBoxTreeItem<String> cbti = new CheckBoxTreeItem<>("TEST");
+        CheckBoxTreeItem<String> cbti = new CheckBoxTreeItem("TEST");
         assertEquals("TEST", cbti.getValue());
     }
     
     @Test public void testValueGraphicConstructor_hasNonNullValue() {
         Rectangle graphic = new Rectangle(10, 10, Color.RED);
-        CheckBoxTreeItem<String> cbti = new CheckBoxTreeItem<>("TEST", graphic);
+        CheckBoxTreeItem<String> cbti = new CheckBoxTreeItem("TEST", graphic);
         assertEquals("TEST", cbti.getValue());
     }
     
     @Test public void testValueGraphicConstructor_hasNonNullGraphic() {
         Rectangle graphic = new Rectangle(10, 10, Color.RED);
-        CheckBoxTreeItem<String> cbti = new CheckBoxTreeItem<>("TEST", graphic);
+        CheckBoxTreeItem<String> cbti = new CheckBoxTreeItem("TEST", graphic);
         assertEquals(graphic, cbti.getGraphic());
     }
     
     @Test public void testValueGraphicSelectedConstructor_isSelected() {
         Rectangle graphic = new Rectangle(10, 10, Color.RED);
-        CheckBoxTreeItem<String> cbti = new CheckBoxTreeItem<>("TEST", graphic, true);
+        CheckBoxTreeItem<String> cbti = new CheckBoxTreeItem("TEST", graphic, true);
         assertTrue(cbti.isSelected());
     }
     
     @Test public void testValueGraphicSelectedIndependentConstructor_isIndependent() {
         Rectangle graphic = new Rectangle(10, 10, Color.RED);
-        CheckBoxTreeItem<String> cbti = new CheckBoxTreeItem<>("TEST", graphic, true, true);
+        CheckBoxTreeItem<String> cbti = new CheckBoxTreeItem("TEST", graphic, true, true);
         assertTrue(cbti.isIndependent());
     }
     

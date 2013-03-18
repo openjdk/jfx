@@ -79,7 +79,7 @@ public class CheckBoxTableCellTest {
         assertFalse(roBooleanProperty.get());
         Callback<TableColumn<Object, Object>, TableCell<Object, Object>> cellFactory = CheckBoxTableCell.forTableColumn(callback);
         
-        TableColumn tableColumn = new TableColumn<>();
+        TableColumn tableColumn = new TableColumn();
         CheckBoxTableCell<Object, Object> cell = (CheckBoxTableCell<Object, Object>)cellFactory.call(tableColumn);
         assertNotNull(cell);
     }
@@ -88,7 +88,7 @@ public class CheckBoxTableCellTest {
         assertFalse(roBooleanProperty.get());
         Callback<TableColumn<Object, Object>, TableCell<Object, Object>> cellFactory = CheckBoxTableCell.forTableColumn(callback);
         
-        TableColumn tableColumn = new TableColumn<>();
+        TableColumn tableColumn = new TableColumn();
         CheckBoxTableCell<Object, Object> cell = (CheckBoxTableCell<Object, Object>)cellFactory.call(tableColumn);
         assertNotNull(cell.getSelectedStateCallback());
     }
@@ -97,7 +97,7 @@ public class CheckBoxTableCellTest {
         assertFalse(roBooleanProperty.get());
         Callback<TableColumn<Object, Object>, TableCell<Object, Object>> cellFactory = CheckBoxTableCell.forTableColumn(callback);
         
-        TableColumn tableColumn = new TableColumn<>();
+        TableColumn tableColumn = new TableColumn();
         CheckBoxTableCell<Object, Object> cell = (CheckBoxTableCell<Object, Object>)cellFactory.call(tableColumn);
         assertNull(cell.getConverter());
     }
@@ -123,7 +123,7 @@ public class CheckBoxTableCellTest {
         assertFalse(roBooleanProperty.get());
         Callback<TableColumn<Object, Object>, TableCell<Object, Object>> cellFactory = CheckBoxTableCell.forTableColumn(callback, converter);
         
-        TableColumn tableColumn = new TableColumn<>();
+        TableColumn tableColumn = new TableColumn();
         CheckBoxTableCell<Object, Object> cell = (CheckBoxTableCell<Object, Object>)cellFactory.call(tableColumn);
         assertNotNull(cell);
     }
@@ -132,7 +132,7 @@ public class CheckBoxTableCellTest {
         assertFalse(roBooleanProperty.get());
         Callback<TableColumn<Object, Object>, TableCell<Object, Object>> cellFactory = CheckBoxTableCell.forTableColumn(callback, converter);
         
-        TableColumn tableColumn = new TableColumn<>();
+        TableColumn tableColumn = new TableColumn();
         CheckBoxTableCell<Object, Object> cell = (CheckBoxTableCell<Object, Object>)cellFactory.call(tableColumn);
         assertNotNull(cell.getSelectedStateCallback());
     }
@@ -141,7 +141,7 @@ public class CheckBoxTableCellTest {
         assertFalse(roBooleanProperty.get());
         Callback<TableColumn<Object, Object>, TableCell<Object, Object>> cellFactory = CheckBoxTableCell.forTableColumn(callback, converter);
         
-        TableColumn tableColumn = new TableColumn<>();
+        TableColumn tableColumn = new TableColumn();
         CheckBoxTableCell<Object, Object> cell = (CheckBoxTableCell<Object, Object>)cellFactory.call(tableColumn);
         assertNotNull(cell.getConverter());
         assertEquals(converter, cell.getConverter());
@@ -157,22 +157,22 @@ public class CheckBoxTableCellTest {
 
     
     @Test public void testConstructor_noArgs_defaultCallbackIsNull() {
-        CheckBoxTableCell<Object, Object> cell = new CheckBoxTableCell<>();
+        CheckBoxTableCell<Object, Object> cell = new CheckBoxTableCell();
         assertNull(cell.getSelectedStateCallback());
     }
     
     @Test public void testConstructor_noArgs_defaultStringConverterIsNull() {
-        CheckBoxTableCell<Object, Object> cell = new CheckBoxTableCell<>();
+        CheckBoxTableCell<Object, Object> cell = new CheckBoxTableCell();
         assertNull(cell.getConverter());
     }
     
     @Test public void testConstructor_noArgs_defaultStyleClass() {
-        CheckBoxTableCell<Object, Object> cell = new CheckBoxTableCell<>();
+        CheckBoxTableCell<Object, Object> cell = new CheckBoxTableCell();
         assertTrue(cell.getStyleClass().contains("check-box-table-cell"));
     }
     
     @Test public void testConstructor_noArgs_defaultGraphicIsACheckBox() {
-        CheckBoxTableCell<Object, Object> cell = new CheckBoxTableCell<>();
+        CheckBoxTableCell<Object, Object> cell = new CheckBoxTableCell();
         assertTrue(cell.getGraphic() instanceof CheckBox);
     }
     
@@ -184,22 +184,22 @@ public class CheckBoxTableCellTest {
      **************************************************************************/
     
     @Test public void testConstructor_getSelectedProperty_selectedPropertyIsNotNull() {
-        CheckBoxTableCell<Object, Object> cell = new CheckBoxTableCell<>(callback);
+        CheckBoxTableCell<Object, Object> cell = new CheckBoxTableCell(callback);
         assertEquals(callback, cell.getSelectedStateCallback());
     }
     
     @Test public void testConstructor_getSelectedProperty_defaultStringConverterIsNull() {
-        CheckBoxTableCell<Object, Object> cell = new CheckBoxTableCell<>(callback);
+        CheckBoxTableCell<Object, Object> cell = new CheckBoxTableCell(callback);
         assertNull(cell.getConverter());
     }
     
     @Test public void testConstructor_getSelectedProperty_defaultStyleClass() {
-        CheckBoxTableCell<Object, Object> cell = new CheckBoxTableCell<>(callback);
+        CheckBoxTableCell<Object, Object> cell = new CheckBoxTableCell(callback);
         assertTrue(cell.getStyleClass().contains("check-box-table-cell"));
     }
     
     @Test public void testConstructor_getSelectedProperty_defaultGraphicIsACheckBox() {
-        CheckBoxTableCell<Object, Object> cell = new CheckBoxTableCell<>(callback);
+        CheckBoxTableCell<Object, Object> cell = new CheckBoxTableCell(callback);
         assertTrue(cell.getGraphic() instanceof CheckBox);
     }
     
@@ -211,23 +211,23 @@ public class CheckBoxTableCellTest {
      **************************************************************************/
     
     @Test public void testConstructor_getSelectedProperty_converter_selectedPropertyIsNotNull() {
-        CheckBoxTableCell<Object, Object> cell = new CheckBoxTableCell<>(callback, converter);
+        CheckBoxTableCell<Object, Object> cell = new CheckBoxTableCell(callback, converter);
         assertEquals(callback, cell.getSelectedStateCallback());
     }
     
     @Test public void testConstructor_getSelectedProperty_converter_defaultStringConverterIsNotNull() {
-        CheckBoxTableCell<Object, Object> cell = new CheckBoxTableCell<>(callback, converter);
+        CheckBoxTableCell<Object, Object> cell = new CheckBoxTableCell(callback, converter);
         assertNotNull(cell.getConverter());
         assertEquals(converter, cell.getConverter());
     }
     
     @Test public void testConstructor_getSelectedProperty_converter_defaultStyleClass() {
-        CheckBoxTableCell<Object, Object> cell = new CheckBoxTableCell<>(callback, converter);
+        CheckBoxTableCell<Object, Object> cell = new CheckBoxTableCell(callback, converter);
         assertTrue(cell.getStyleClass().contains("check-box-table-cell"));
     }
     
     @Test public void testConstructor_getSelectedProperty_converter_defaultGraphicIsACheckBox() {
-        CheckBoxTableCell<Object, Object> cell = new CheckBoxTableCell<>(callback, converter);
+        CheckBoxTableCell<Object, Object> cell = new CheckBoxTableCell(callback, converter);
         assertTrue(cell.getGraphic() instanceof CheckBox);
     }
 }

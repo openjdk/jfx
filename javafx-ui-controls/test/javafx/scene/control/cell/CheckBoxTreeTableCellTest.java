@@ -79,7 +79,7 @@ public class CheckBoxTreeTableCellTest {
         assertFalse(roBooleanProperty.get());
         Callback<TreeTableColumn<Object, Object>, TreeTableCell<Object, Object>> cellFactory = CheckBoxTreeTableCell.forTreeTableColumn(callback);
         
-        TreeTableColumn tableColumn = new TreeTableColumn<>();
+        TreeTableColumn tableColumn = new TreeTableColumn();
         CheckBoxTreeTableCell<Object, Object> cell = (CheckBoxTreeTableCell<Object, Object>)cellFactory.call(tableColumn);
         assertNotNull(cell);
     }
@@ -88,7 +88,7 @@ public class CheckBoxTreeTableCellTest {
         assertFalse(roBooleanProperty.get());
         Callback<TreeTableColumn<Object, Object>, TreeTableCell<Object, Object>> cellFactory = CheckBoxTreeTableCell.forTreeTableColumn(callback);
         
-        TreeTableColumn tableColumn = new TreeTableColumn<>();
+        TreeTableColumn tableColumn = new TreeTableColumn();
         CheckBoxTreeTableCell<Object, Object> cell = (CheckBoxTreeTableCell<Object, Object>)cellFactory.call(tableColumn);
         assertNotNull(cell.getSelectedStateCallback());
     }
@@ -97,7 +97,7 @@ public class CheckBoxTreeTableCellTest {
         assertFalse(roBooleanProperty.get());
         Callback<TreeTableColumn<Object, Object>, TreeTableCell<Object, Object>> cellFactory = CheckBoxTreeTableCell.forTreeTableColumn(callback);
         
-        TreeTableColumn tableColumn = new TreeTableColumn<>();
+        TreeTableColumn tableColumn = new TreeTableColumn();
         CheckBoxTreeTableCell<Object, Object> cell = (CheckBoxTreeTableCell<Object, Object>)cellFactory.call(tableColumn);
         assertNull(cell.getConverter());
     }
