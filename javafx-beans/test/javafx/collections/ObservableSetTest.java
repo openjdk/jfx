@@ -26,38 +26,63 @@
 package javafx.collections;
 
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
-import java.util.TreeSet;
 import org.junit.Before;
 import org.junit.Test;
 
 import static javafx.collections.MockSetObserver.Call.*;
 import static javafx.collections.MockSetObserver.Tuple.*;
 import static org.junit.Assert.*;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
-public abstract class ObservableSetTestBase {
+@RunWith(Parameterized.class)
+public class ObservableSetTest {
 
-    private final Set<String> set;
+    final Callable<ObservableSet<String>> setFactory;
     private ObservableSet<String> observableSet;
     private MockSetObserver<String> observer;
 
+    public ObservableSetTest(final Callable<ObservableSet<String>> setFactory) {
+        this.setFactory = setFactory;
+    }
 
-    public ObservableSetTestBase(final Set<String> set) {
-        this.set = set;
+    @Parameterized.Parameters
+    public static Collection createParameters() {
+        Object[][] data = new Object[][] {
+            { TestedObservableSets.HASH_SET },
+            { TestedObservableSets.TREE_SET },
+            { TestedObservableSets.LINKED_HASH_SET },
+            { TestedObservableSets.CHECKED_OBSERVABLE_HASH_SET },
+            { TestedObservableSets.SYNCHRONIZED_OBSERVABLE_HASH_SET }
+         };
+        return Arrays.asList(data);
     }
 
     @Before
-    public void setUp() {
-        observableSet = FXCollections.observableSet(set);
+    public void setUp() throws Exception {
+        observableSet = setFactory.call();
         observer = new MockSetObserver<String>();
         observableSet.addListener(observer);
-        set.add("one");
-        set.add("two");
-        set.add("foo");
+        
+        useSetData("one", "two", "foo");
     }
 
+    /**
+     * Modifies the set in the fixture to use the strings passed in instead of
+     * the default strings, and re-creates the observable set and the observer.
+     * If no strings are passed in, the result is an empty set.
+     *
+     * @param strings the strings to use for the list in the fixture
+     */
+    void useSetData(String... strings) {
+        observableSet.clear();
+        observableSet.addAll(Arrays.asList(strings));
+        observer.clear();
+    }
 
     @Test
     public void testAddRemove() {
@@ -143,7 +168,7 @@ public abstract class ObservableSetTestBase {
     
     @Test
     public void testNull() {
-        if (set instanceof TreeSet) {
+        if (setFactory instanceof TestedObservableSets.CallableTreeSetImpl) {
             return; // TreeSet doesn't accept nulls
         }
         observableSet.add(null);

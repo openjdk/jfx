@@ -25,16 +25,21 @@
 
 package javafx.collections;
 
+import java.util.Arrays;
+import java.util.Collection;
 import org.junit.Before;
 import org.junit.Test;
 
 import java.util.Collections;
 import java.util.List;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 /**
  * Tests for initially empty ObservableList.
  */
-public abstract class ObservableListTestBase_Empty {
+@RunWith(Parameterized.class)
+public class ObservableListEmptyTest {
 
     static final List<String> EMPTY = Collections.emptyList();
     final Callable<ObservableList<String>> listFactory;
@@ -42,8 +47,20 @@ public abstract class ObservableListTestBase_Empty {
     MockListObserver<String> mlo;
 
 
-    public ObservableListTestBase_Empty(final Callable<ObservableList<String>> listFactory) {
+    public ObservableListEmptyTest(final Callable<ObservableList<String>> listFactory) {
         this.listFactory = listFactory;
+    }
+
+    @Parameterized.Parameters
+    public static Collection createParameters() {
+        Object[][] data = new Object[][] {
+            { TestedObservableLists.ARRAY_LIST },
+            { TestedObservableLists.LINKED_LIST },
+            { TestedObservableLists.VETOABLE_LIST },
+            { TestedObservableLists.CHECKED_OBSERVABLE_ARRAY_LIST },
+            { TestedObservableLists.SYNCHRONIZED_OBSERVABLE_ARRAY_LIST }
+         };
+        return Arrays.asList(data);
     }
 
     @Before

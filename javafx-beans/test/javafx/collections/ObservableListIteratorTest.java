@@ -31,21 +31,36 @@ import org.junit.Test;
 import java.util.*;
 
 import static org.junit.Assert.*;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 
 /**
  * Tests for iterators of ObservableList.
  * 
  */
-public abstract class ObservableListIteratorTestBase {
+@RunWith(Parameterized.class)
+public class ObservableListIteratorTest {
 
     // ========== Test Fixture ==========
     final Callable<? extends List<String>> listFactory;
     List<String> list;
     ListIterator<String> iter;
 
-    public ObservableListIteratorTestBase(final Callable<? extends List<String>> listFactory) {
+    public ObservableListIteratorTest(final Callable<? extends List<String>> listFactory) {
         this.listFactory = listFactory;
+    }
+
+    @Parameterized.Parameters
+    public static Collection createParameters() {
+        Object[][] data = new Object[][] {
+            { TestedObservableLists.ARRAY_LIST },
+            { TestedObservableLists.LINKED_LIST },
+            { TestedObservableLists.VETOABLE_LIST },
+            { TestedObservableLists.CHECKED_OBSERVABLE_ARRAY_LIST },
+            { TestedObservableLists.SYNCHRONIZED_OBSERVABLE_ARRAY_LIST }
+         };
+        return Arrays.asList(data);
     }
 
     @Before
@@ -148,7 +163,7 @@ public abstract class ObservableListIteratorTestBase {
         for (String s : list) {
             output.add(s);
         }
-        assertEquals(list, output);
+        assertEquals(list.toString(), output.toString());
     }
 
     // ========== Add Tests ==========
