@@ -88,7 +88,7 @@ public class CheckBoxListCell<T> extends ListCell<T> {
      */
     public static <T> Callback<ListView<T>, ListCell<T>> forListView(
             final Callback<T, ObservableValue<Boolean>> getSelectedProperty) {
-        return forListView(getSelectedProperty, null);
+        return forListView(getSelectedProperty, CellUtils.<T>defaultStringConverter());
     }
     
     /**
@@ -169,7 +169,7 @@ public class CheckBoxListCell<T> extends ListCell<T> {
     public CheckBoxListCell(
             final Callback<T, ObservableValue<Boolean>> getSelectedProperty, 
             final StringConverter<T> converter) {
-        this.getStyleClass().add("choice-box-list-cell");
+        this.getStyleClass().add("check-box-list-cell");
         setSelectedStateCallback(getSelectedProperty);
         setConverter(converter);
         
