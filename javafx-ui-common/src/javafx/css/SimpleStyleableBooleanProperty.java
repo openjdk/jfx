@@ -26,13 +26,10 @@
 package javafx.css;
 
 import javafx.beans.property.SimpleBooleanProperty;
-import javafx.beans.value.ObservableValue;
-import javafx.scene.Node;
 
 /**
  * This class extends {@code SimpleBooleanProperty} and provides a full
- * implementation of a {@code StyleableProperty}. The method 
- * {@link StyleableProperty#getCssMetaData()} is not implemented. 
+ * implementation of a {@code StyleableProperty}.
  * 
  * This class is used to make a {@link javafx.beans.property.BooleanProperty}, 
  * that would otherwise be implemented as a {@link SimpleBooleanProperty}, 
@@ -41,10 +38,17 @@ import javafx.scene.Node;
  * @see javafx.beans.property.SimpleBooleanProperty
  * @see CssMetaData
  * @see StyleableProperty
+ * @see StyleableBooleanProperty
  */
 @com.sun.javafx.beans.annotations.NoBuilder
-public abstract class SimpleStyleableBooleanProperty
-    extends SimpleBooleanProperty implements StyleableProperty<Boolean> {
+public class SimpleStyleableBooleanProperty extends StyleableBooleanProperty {
+
+    private static final Object DEFAULT_BEAN = null;
+    private static final String DEFAULT_NAME = "";
+
+    private final Object bean;
+    private final String name;
+    private final CssMetaData<? extends Styleable, Boolean> cssMetaData;
 
     /**
      * The constructor of the {@code SimpleStyleableBooleanProperty}.
@@ -52,8 +56,7 @@ public abstract class SimpleStyleableBooleanProperty
      *            the CssMetaData associated with this {@code StyleableProperty}
      */
     public SimpleStyleableBooleanProperty(CssMetaData<? extends Styleable, Boolean> cssMetaData) {
-        super();
-        this.cssMetaData = cssMetaData;
+        this(cssMetaData, DEFAULT_BEAN, DEFAULT_NAME);
     }
 
     /**
@@ -65,8 +68,7 @@ public abstract class SimpleStyleableBooleanProperty
      *            the initial value of the wrapped {@code Object}
      */
     public SimpleStyleableBooleanProperty(CssMetaData<? extends Styleable, Boolean> cssMetaData, boolean initialValue) {
-        super(initialValue);
-        this.cssMetaData = cssMetaData;
+        this(cssMetaData, DEFAULT_BEAN, DEFAULT_NAME, initialValue);
     }
 
     /**
@@ -80,7 +82,8 @@ public abstract class SimpleStyleableBooleanProperty
      *            the name of this {@code BooleanProperty}
      */
     public SimpleStyleableBooleanProperty(CssMetaData<? extends Styleable, Boolean> cssMetaData, Object bean, String name) {
-        super(bean, name);
+        this.bean = bean;
+        this.name = (name == null) ? DEFAULT_NAME : name;
         this.cssMetaData = cssMetaData;
     }
 
@@ -97,43 +100,32 @@ public abstract class SimpleStyleableBooleanProperty
      *            the initial value of the wrapped {@code Object}
      */
     public SimpleStyleableBooleanProperty(CssMetaData<? extends Styleable, Boolean> cssMetaData, Object bean, String name, boolean initialValue) {
-        super(bean, name, initialValue);
+        super(initialValue);
+        this.bean = bean;
+        this.name = (name == null) ? DEFAULT_NAME : name;
         this.cssMetaData = cssMetaData;
     }
 
-    /** {@inheritDoc} */
+    /**
+     * {@inheritDoc}
+     */
     @Override
-    public void applyStyle(StyleOrigin origin, Boolean v) {
-        // call set here in case it has been overridden in the javafx.beans.property
-        set(v.booleanValue());
-        this.origin = origin;
+    public Object getBean() {
+        return bean;
     }
 
-    /** {@inheritDoc} */
+    /**
+     * {@inheritDoc}
+     */
     @Override
-    public void bind(ObservableValue<? extends Boolean> observable) {
-        super.bind(observable);
-        origin = StyleOrigin.USER;
+    public String getName() {
+        return name;
     }
-
-    /** {@inheritDoc} */
-    @Override
-    public void set(boolean v) {
-        super.set(v);
-        origin = StyleOrigin.USER;
-    }
-
-    /** {@inheritDoc} */
-    @Override
-    public final StyleOrigin getStyleOrigin() { return origin; }
 
     /** {@inheritDoc} */
     @Override
     public final CssMetaData<? extends Styleable, Boolean> getCssMetaData() {
         return cssMetaData;
     }
-
-    private StyleOrigin origin = null;
-    private final CssMetaData<? extends Styleable, Boolean> cssMetaData;
 
 }

@@ -26,25 +26,29 @@
 package javafx.css;
 
 import javafx.beans.property.SimpleStringProperty;
-import javafx.beans.value.ObservableValue;
-import javafx.scene.Node;
 
 /**
  * This class extends {@code SimpleStringProperty} and provides a full
- * implementation of a {@code StyleableProperty}. The method 
- * {@link StyleableProperty#getCssMetaData()} is not implemented. 
- * 
- * This class is used to make a {@link javafx.beans.property.StringProperty}, 
- * that would otherwise be implemented as a {@link SimpleStringProperty}, 
+ * implementation of a {@code StyleableProperty}.  
+ *
+ * This class is used to make a {@link javafx.beans.property.StringProperty},
+ * that would otherwise be implemented as a {@link SimpleStringProperty},
  * style&#8209;able by CSS.
- * 
+ *
  * @see javafx.beans.property.SimpleStringProperty
  * @see CssMetaData
  * @see StyleableProperty
+ * @see StyleableStringProperty
  */
 @com.sun.javafx.beans.annotations.NoBuilder
-public abstract class SimpleStyleableStringProperty
-    extends SimpleStringProperty implements StyleableProperty<String> {
+public class SimpleStyleableStringProperty extends StyleableStringProperty {
+
+    private static final Object DEFAULT_BEAN = null;
+    private static final String DEFAULT_NAME = "";
+
+    private final Object bean;
+    private final String name;
+    private final CssMetaData<? extends Styleable, String> cssMetaData;
 
     /**
      * The constructor of the {@code SimpleStyleableStringProperty}.
@@ -52,8 +56,7 @@ public abstract class SimpleStyleableStringProperty
      *            the CssMetaData associated with this {@code StyleableProperty}
      */
     public SimpleStyleableStringProperty(CssMetaData<? extends Styleable, String> cssMetaData) {
-        super();
-        this.cssMetaData = cssMetaData;
+        this(cssMetaData, DEFAULT_BEAN, DEFAULT_NAME);
     }
 
     /**
@@ -65,8 +68,7 @@ public abstract class SimpleStyleableStringProperty
      *            the initial value of the wrapped {@code Object}
      */
     public SimpleStyleableStringProperty(CssMetaData<? extends Styleable, String> cssMetaData, String initialValue) {
-        super(initialValue);
-        this.cssMetaData = cssMetaData;
+        this(cssMetaData, DEFAULT_BEAN, DEFAULT_NAME, initialValue);
     }
 
     /**
@@ -80,43 +82,50 @@ public abstract class SimpleStyleableStringProperty
      *            the name of this {@code StringProperty}
      */
     public SimpleStyleableStringProperty(CssMetaData<? extends Styleable, String> cssMetaData, Object bean, String name) {
-        super(bean, name);
+        this.bean = bean;
+        this.name = (name == null) ? DEFAULT_NAME : name;
         this.cssMetaData = cssMetaData;
     }
 
-    /** {@inheritDoc} */
-    @Override
-    public void applyStyle(StyleOrigin origin, String v) {
-        // call set here in case the set method is overriden
-        set(v);
-        this.origin = origin;
+    /**
+     * The constructor of the {@code SimpleStyleableStringProperty}.
+     *
+     * @param cssMetaData
+     *            the CssMetaData associated with this {@code StyleableProperty}
+     * @param bean
+     *            the bean of this {@code StringProperty}
+     * @param name
+     *            the name of this {@code StringProperty}
+     * @param initialValue
+     *            the initial value of the wrapped {@code Object}
+     */
+    public SimpleStyleableStringProperty(CssMetaData<? extends Styleable, String> cssMetaData, Object bean, String name, String initialValue) {
+        super(initialValue);
+        this.bean = bean;
+        this.name = (name == null) ? DEFAULT_NAME : name;
+        this.cssMetaData = cssMetaData;
     }
 
-    /** {@inheritDoc} */
+    /**
+     * {@inheritDoc}
+     */
     @Override
-    public void bind(ObservableValue<? extends String> observable) {
-        super.bind(observable);
-        origin = StyleOrigin.USER;
+    public Object getBean() {
+        return bean;
     }
 
-    /** {@inheritDoc} */
+    /**
+     * {@inheritDoc}
+     */
     @Override
-    public void set(String v) {
-        super.set(v);
-        origin = StyleOrigin.USER;
+    public String getName() {
+        return name;
     }
-
-    /** {@inheritDoc} */
-    @Override
-    public final StyleOrigin getStyleOrigin() { return origin; }
 
     /** {@inheritDoc} */
     @Override
     public final CssMetaData<? extends Styleable, String> getCssMetaData() {
         return cssMetaData;
     }
-
-    private StyleOrigin origin = null;
-    private final CssMetaData<? extends Styleable, String> cssMetaData;
 
 }
