@@ -1,98 +1,11 @@
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executors
+import java.util.concurrent.Future
+
 /**
  * The main build script for JavaFX.
  *
- * Gradle tasks are grouped into 5 main groups or categories. Within these
- * five groups are several sub-groups:
- *     - Build Tasks
- *         - assemble
- *         - build
- *         - buildDependents
- *         - buildNeeded
- *         - classes
- *             - compileJava
- *             - compileNative
- *             - processResources
- *         - clean
- *         - jar
- *         - jfxrt
- *         - sdk
- *         - testClasses
- *             - compileTestJava
- *             - processTestResources
- *     - Documentation Tasks
- *         - javadoc
- *     - Verification Tasks
- *         - check
- *             - checkstyle
- *             - findbugs
- *             - parfait
- *             - apiCheck
- *         - fullTest
- *         - functionalTest
- *         - manualTest
- *         - precommitTest
- *         - test
- *     - Publishing Tasks
- *         - publish
- *         - precommit
- *         - commit
- *     - Help Tasks
- *         - dependencies
- *         - dependencyInsight
- *         - help
- *         - projects
- *         - properties
- *         - tasks
- *
- * By default, when executing the simple command 'gradle', the build task known as
- * 'jfxrt' is executed. The 'jfxrt' task will compile all of the sources
- * (Java and native), jar them, compile all of the tests sources, and create the
- * final sdk directory containing the native libraries and jfxrt.jar and associated
- * project files. It does not however run the documentation tasks. The purpose of this
- * task is to build a testable SDK as quickly as possible and is meant to be used by
- * developers in their day-to-day activities.
- *
- * The 'sdk' task performs these same operations but also includes the generation of
- * javadoc and all other tasks that will produce a platform specific SDK bundle equivalent
- * to what is produced and posted for the weekly builds. When produced based on openjfx
- * the resulting bundle will be identified with the name "openjfx" which will also show
- * up in the VersionInfo class. When produced on Oracle Release Engineering servers, it
- * will instead be labeled as "JavaFX", consistent with the way bundles are produced now.
- *
- * The other tasks ('assemble', 'classes', 'build', 'jar', 'testClasses', etc) each perform
- * some specific step towards the 'jfxrt' or 'sdk' tasks. For example, the 'testClasses'
- * task is responsible for compiling the classes associated with each project's unit tests,
- * and copying any resources for those tests over into the build area for each project.
- * The 'classes' task does the same but for the normal sources (native and Java). The 'assemble'
- * task performs the 'build', 'classes', 'jar', etc all together.
- *
- * There are several verification tasks which are used to verify that a particular build is
- * "good". For example the checkstyle task will run checkstyle across the projects to ensure
- * that the sources are following accepted standards. Findbugs and parfait can be used to
- * look for bugs in Java and native code. The 'apiCheck' task will make sure that no public
- * API was unintentially changed.
- *
- * In addition to these, the actual running of all of the tests occurs during the verification
- * step. The 'fullTest' task will run a complete set of tests including manual tests. The
- * 'functionalTest' task will run the full set of functional tests. 'manualTest' will
- * run all the manual tests. 'precommitTest' will execute the subset of tests which must
- * all pass prior to a commit. Finally, the 'test' task will execute all of the unit tests
- * associated with each project.
  * Tasks to complete:
- *
- * The publishing tasks are used to publish either an artifact into a binary repository
- * (such as is used to publish weekly builds), or is used to publish code changes into
- * the source repository. The 'precommit' task will perform all operations necessary
- * prior to a commit. These include cleaning the entire project, building the full sdk
- * (including JavaDoc generation), and running the precommit tests. The 'commit' task
- * will push any changes to the continuous integration server which will then perform
- * the exact same 'precommit' task but do so on each and every platform. If the precommit
- * task succeeds on all platforms, then the changeset is pushed into the master repository.
- *
- * The help tasks are the standard tasks provided by Gradle for determining which properties
- * can be set to alter the build behavior as well as which tasks are available to run or
- * determining the dependency hierarchy between projects or tasks.
- *
  *  - special tasks for common needs, such as:
  *      - updating copyright headers
  *      - stripping trailing whitespace (?)
@@ -146,47 +59,37 @@ String readSetting(String settingName, String defaultValue) {
     return defaultValue;
 }
 
-String shortCygwinPath(String path, boolean isCygwin) {
-    if (isCygwin) {
-        def os = new ByteArrayOutputStream();
-        def result = project.exec {
-            commandLine = ["cygpath", "-m", "-a", "-s", path]
-            standardOutput = os
-        }
-        if (result.exitValue == 0) {
-            path = os.toString().trim();
-        }
-    }
-    return path;
+def is64Arch() {
+    return System.properties['os.arch'].toLowerCase().contains('64')
 }
 
-def OS_NAME = System.properties["os.name"].toLowerCase();
-def isMac = OS_NAME.contains("mac") || OS_NAME.contains("darwin")
-def isWindows = OS_NAME.contains("windows")
-def isLinux = OS_NAME.contains("linux")
-def isiOS = false;
-def isLinuxARM = false;
-def isSWT = true;
-def isCygwin = isWindows; // At this time, we assume on Windows you must have CYGWIN installed
-def DLL_EXT = isWindows ? "dll" : isMac ? "dylib" : "so"
+ext.osName = System.properties["os.name"].toLowerCase();
+ext.isMac = osName.contains("mac") || osName.contains("darwin")
+ext.isWindows = osName.contains("windows")
+ext.isLinux = osName.contains("linux")
+ext.isiOS = false;
+ext.isLinuxARM = false;
+ext.isSWT = true;
+ext.isCygwin = isWindows; // At this time, we assume on Windows you must have CYGWIN installed
+ext.objExt = isWindows ? "dll" : isMac ? "dylib" : "so"
 
-def JAVA_HOME = System.getProperty("java.home")
-def JDK_HOME = readSetting("JDK.HOME", JAVA_HOME.endsWith("jre") ? JAVA_HOME.substring(0, JAVA_HOME.length() - 4) : JAVA_HOME)
-def JFXRT = readSetting("JFXRT", JDK_HOME + "/jre/lib/ext/jfxrt.jar")
-def JAVAC = "$JDK_HOME/bin/javac"
+ext.javaHome = System.getProperty("java.home")
+ext.jdkHome = readSetting("JDK.HOME", javaHome.endsWith("jre") ? javaHome.substring(0, javaHome.length() - 4) : javaHome)
+ext.binaryStub = file(readSetting("JFXRT", jdkHome + "/jre/lib/ext/jfxrt.jar"))
+ext.javac = "$jdkHome/bin/javac"
 
 // Set when needed in loadVisualStudioProperties
-def WINDOWS_VS_VSINSTALLDIR = "C:/Program Files (x86)/Microsoft Visual Studio 10.0"
-def WINDOWS_SDK_DIR = "C:/Program Files (x86)/Microsoft SDKs/Windows/v7.0A"
-def WINDOWS_VS_VCINSTALLDIR = "$WINDOWS_VS_VSINSTALLDIR/VC"
-def WINDOWS_VS_DEVENVDIR = "$WINDOWS_VS_VSINSTALLDIR/Common7/IDE"
-//def WINDOWS_VS_DEVENVCMD = "$WINDOWS_VS_DEVENVDIR/VCExpress.exe" // NOT PRESENTLY USED
-def WINDOWS_VS_MSVCDIR = WINDOWS_VS_VCINSTALLDIR
-def WINDOWS_DXSDK_DIR = System.getenv().get("DXSDK_DIR")
-def WINDOWS_VS_INCLUDE = "$WINDOWS_VS_VCINSTALLDIR/INCLUDE;" + "$WINDOWS_SDK_DIR/include;"
-def WINDOWS_VS_LIB = "$WINDOWS_VS_VCINSTALLDIR/LIB;" + "$WINDOWS_SDK_DIR/lib;"
-def WINDOWS_VS_LIBPATH = "$WINDOWS_VS_VCINSTALLDIR/LIB;"
-def WINDOWS_VS_PATH = "$WINDOWS_VS_DEVENVDIR;" +
+ext.WINDOWS_VS_VSINSTALLDIR = readSetting("VSINSTALLDIR", "C:/Program Files (x86)/Microsoft Visual Studio 10.0")
+ext.WINDOWS_SDK_DIR = readSetting("WINDOWS_SDK_DIR", "C:/Program Files (x86)/Microsoft SDKs/Windows/v7.0A")
+ext.WINDOWS_VS_VCINSTALLDIR = "$WINDOWS_VS_VSINSTALLDIR/VC"
+ext.WINDOWS_VS_DEVENVDIR = "$WINDOWS_VS_VSINSTALLDIR/Common7/IDE"
+//ext.WINDOWS_VS_DEVENVCMD = "$WINDOWS_VS_DEVENVDIR/VCExpress.exe" // NOT PRESENTLY USED
+ext.WINDOWS_VS_MSVCDIR = WINDOWS_VS_VCINSTALLDIR
+ext.WINDOWS_DXSDK_DIR = System.getenv().get("DXSDK_DIR")
+ext.WINDOWS_VS_INCLUDE = "$WINDOWS_VS_VCINSTALLDIR/INCLUDE;" + "$WINDOWS_SDK_DIR/include;"
+ext.WINDOWS_VS_LIB = "$WINDOWS_VS_VCINSTALLDIR/LIB;" + "$WINDOWS_SDK_DIR/lib;"
+ext.WINDOWS_VS_LIBPATH = "$WINDOWS_VS_VCINSTALLDIR/LIB;"
+ext.WINDOWS_VS_PATH = "$WINDOWS_VS_DEVENVDIR;" +
         "$WINDOWS_VS_VSINSTALLDIR/VC/BIN;" +
         "$WINDOWS_VS_VSINSTALLDIR/Common7/Tools;" +
         "$WINDOWS_VS_VCINSTALLDIR/VCPackages;" +
@@ -194,30 +97,40 @@ def WINDOWS_VS_PATH = "$WINDOWS_VS_DEVENVDIR;" +
         "$WINDOWS_SDK_DIR/bin;" +
         System.getenv().get("PATH")
 
-def CONF = readSetting("CONF", "Debug");
-def LINT = readSetting("LINT", "none");
-boolean isDebug = CONF == "Debug"
-boolean isLint = LINT != "none"
+ext.MACOSX_SDK_PATH = readSetting("MACOSX_SDK_PATH", "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.7.sdk")
+ext.MACOSX_JDK_FRAMEWORK = readSetting("MACOSX_JDK_FRAMEWORK", "/System/Library/Frameworks/JavaVM.framework")
 
-def HUDSON_JOB_NAME       = readSetting("HUDSON.JOB.NAME", "not_hudson")
-def HUDSON_BUILD_NUMBER   = readSetting("HUDSON.BUILD.NUMBER", "0000")
-def PROMOTED_BUILD_NUMBER = readSetting("PROMOTED.BUILD.NUMBER", "00")
-def PRODUCT_NAME          = readSetting("PRODUCT.NAME", "OpenJFX")
-def RAW_VERSION           = readSetting("RAW.VERSION", "8.0.0")
-def RELEASE_NAME          = readSetting("RELEASE.NAME", "8.0")
-def RELEASE_MILESTONE     = readSetting("RELEASE.MILESTONE", "ea")
+ext.CONF = readSetting("CONF", "Release");
+ext.LINT = readSetting("LINT", "none");
+ext.isDebug = CONF == "Debug"
+ext.isLint = LINT != "none"
+ext.numCompileThreads = Runtime.runtime.availableProcessors()
 
-logger.info("OS_NAME: $OS_NAME")
-logger.info("JAVA.HOME: $JAVA_HOME")
-logger.info("JDK.HOME: $JDK_HOME")
-logger.info("JFXRT: $JFXRT")
-logger.info("HUDSON.JOB.NAME: $HUDSON_JOB_NAME")
-logger.info("HUDSON.BUILD.NUMBER: $HUDSON_BUILD_NUMBER")
-logger.info("PROMOTED.BUILD.NUMBER: $PROMOTED_BUILD_NUMBER")
-logger.info("PRODUCT.NAME: $PRODUCT_NAME")
-logger.info("RAW.VERSION: $RAW_VERSION")
-logger.info("RELEASE.NAME: $RELEASE_NAME")
-logger.info("RELEASE.MILESTONE: $RELEASE_MILESTONE")
+// SMALL, FAST, REAL_FAST flag needed
+
+ext.hudsonJobName       = readSetting("HUDSON.JOB.NAME", "not_hudson")
+ext.hudsonBuildNumber   = readSetting("HUDSON.BUILD.NUMBER", "0000")
+ext.promotedBuildNumber = readSetting("PROMOTED.BUILD.NUMBER", "00")
+ext.productName          = readSetting("PRODUCT.NAME", "OpenJFX")
+ext.rawVersion           = readSetting("RAW.VERSION", "8.0.0")
+ext.releaseName          = readSetting("RELEASE.NAME", "8.0")
+ext.releaseMilestone     = readSetting("RELEASE.MILESTONE", "ea")
+
+ext.CC = readSetting("CC", isWindows ? "$WINDOWS_VS_VSINSTALLDIR/VC/BIN/cl.exe" : isLinux ? "g++" : "gcc");
+ext.LINK = readSetting("LINK", isWindows ? "$WINDOWS_VS_VSINSTALLDIR/VC/BIN/link.exe" : "g++");
+ext.RC = readSetting("RC", isWindows ? "$WINDOWS_SDK_DIR/Bin/RC.Exe" : ""); // only used on Windows
+
+logger.info("OS_NAME: $osName")
+logger.info("JAVA.HOME: $javaHome")
+logger.info("JDK.HOME: $jdkHome")
+logger.info("JFXRT: $binaryStub")
+logger.info("HUDSON.JOB.NAME: $hudsonJobName")
+logger.info("HUDSON.BUILD.NUMBER: $hudsonBuildNumber")
+logger.info("PROMOTED.BUILD.NUMBER: $promotedBuildNumber")
+logger.info("PRODUCT.NAME: $productName")
+logger.info("RAW.VERSION: $rawVersion")
+logger.info("RELEASE.NAME: $releaseName")
+logger.info("RELEASE.MILESTONE: $releaseMilestone")
 logger.info("sun.boot.class.path: ${System.getProperty('sun.boot.class.path')}")
 logger.info(System.getProperties().toString())
 logger.info(System.getenv().toString())
@@ -234,6 +147,206 @@ def swtFileName = { ->
 //                fileName = "org.eclipse.swt.gtk.linux.x86_64_3.7.2.v3740f.jar"
     }
     return fileName;
+}
+
+class JavaHeaderTask extends DefaultTask {
+    @OutputDirectory File output;
+    @InputDirectory File source;
+    FileCollection classpath;
+    private final PatternFilterable patternSet = new PatternSet();
+
+    public JavaHeaderTask include(Iterable includes) {
+        patternSet.include(includes);
+        return this;
+    }
+
+    public JavaHeaderTask include(String... includes) {
+        patternSet.include(includes);
+        return this;
+    }
+
+    public JavaHeaderTask exclude(Iterable excludes) {
+        patternSet.exclude(excludes);
+        return this;
+    }
+
+    @TaskAction void runJavaH() {
+        // TODO!!! Make sure the stupid jfxrt.jar is out of lib.ext when running javah!!
+        // For each .java file we need to figure out what class
+        // the .java file belongs in and convert to a class name.
+        def classNames = [];
+        def files = project.files(source).getAsFileTree().matching(patternSet);
+        files.visit { fileTreeElement ->
+            if (!fileTreeElement.isDirectory() && fileTreeElement.name.endsWith(".java")) {
+                def path = fileTreeElement.path;
+                def className = path.substring(0, path.length() - 5).replace("/", ".");
+                classNames.add(className)
+            }
+        }
+        // Execute JavaH
+        project.exec {
+            commandLine "$project.jdkHome/bin/javah", "-d", "$output", "-classpath", "${classpath.asPath}"
+            args classNames
+        }
+    }
+}
+
+class CCTask extends SourceTask {
+    @Optional String compiler;
+    List<String> ccParams;
+    List sourceRoots = new ArrayList();
+    @InputDirectory File headers;
+    @OutputDirectory File output;
+
+    @InputFiles @Override public void setSource(Object source) {
+        super.setSource(source);
+        sourceRoots.clear();
+        sourceRoots.add(source);
+    }
+
+    @Override public SourceTask source(Object... sources) {
+        for (Object source : sources) {
+            sourceRoots.add(source);
+        }
+        return super.source(sources);
+    }
+
+    @TaskAction void compile() {
+        // Compile
+        project.mkdir output
+        def files = source.filter{it.name.matches(".*c|.*cpp|.*m|.*cc")}.files; // OOPS! Matched .rc and shouldn't have
+        def executor = Executors.newFixedThreadPool(Integer.parseInt(project.numCompileThreads.toString()));
+        def latch = new CountDownLatch(files.size());
+        final def p = project;
+        final def me = this;
+        def futures = new ArrayList<Future>();
+        files.each { sourceFile ->
+            def outFileName = sourceFile.getName()
+            outFileName = outFileName.substring(0, outFileName.lastIndexOf(".")) + ".obj"
+            futures.add(executor.submit(new Runnable() {
+                @Override public void run() {
+                    try {
+                        p.exec {
+                            commandLine "${me.compiler == null ? p.CC : me.compiler}"
+
+                            args "-I$me.headers"
+
+                            // Add the source roots in as include directories
+                            me.sourceRoots.each { root ->
+                                def file = root instanceof File ? (File) root :
+                                    p.file(root)
+                                args "-I$file"
+                            }
+
+                            // Add in any additional compilation params
+                            if (me.ccParams != null) args me.ccParams
+
+                            // Add the name of the source file to compile
+                            if (p.isWindows) {
+                                args "/Fo$me.output/$outFileName", "$sourceFile"
+                            } else {
+                                args "-o", "$me.output/$outFileName", "$sourceFile"
+                            }
+
+                            if (p.isWindows){
+                                environment([
+                                        "VCINSTALLDIR"         : p.WINDOWS_VS_VCINSTALLDIR,
+                                        "VSINSTALLDIR"         : p.WINDOWS_VS_VSINSTALLDIR,
+                                        "DEVENVDIR"            : p.WINDOWS_VS_DEVENVDIR,
+                                        "MSVCDIR"              : p.WINDOWS_VS_MSVCDIR,
+                                        "PATH"                 : p.WINDOWS_VS_PATH,
+                                        "INCLUDE"              : p.WINDOWS_VS_INCLUDE,
+                                        "LIB"                  : p.WINDOWS_VS_LIB,
+                                        "LIBPATH"              : p.WINDOWS_VS_LIBPATH,
+                                        "DXSDK_DIR"            : p.WINDOWS_DXSDK_DIR
+                                ])
+                            }
+                        }
+                    } finally {
+                        latch.countDown()
+                    }
+                }
+            }));
+        }
+        latch.await()
+        // will throw an exception if something goes wrong
+        futures.each {it.get()}
+
+        if (project.isWindows) {
+            def resources = source.filter{it.name.matches(".*rc|.*cur")}.files;
+            resources.each { res ->
+                def outFileName = res.getName()
+                outFileName = outFileName.substring(0, outFileName.lastIndexOf(".")) + ".res"
+                p.exec {
+                    commandLine "$project.RC", "/nologo", "/fo$me.output/$outFileName", "$res"
+                    if (p.isWindows){
+                        environment([
+                                "VCINSTALLDIR"         : p.WINDOWS_VS_VCINSTALLDIR,
+                                "VSINSTALLDIR"         : p.WINDOWS_VS_VSINSTALLDIR,
+                                "DEVENVDIR"            : p.WINDOWS_VS_DEVENVDIR,
+                                "MSVCDIR"              : p.WINDOWS_VS_MSVCDIR,
+                                "PATH"                 : p.WINDOWS_VS_PATH,
+                                "INCLUDE"              : p.WINDOWS_VS_INCLUDE,
+                                "LIB"                  : p.WINDOWS_VS_LIB,
+                                "LIBPATH"              : p.WINDOWS_VS_LIBPATH,
+                                "DXSDK_DIR"            : p.WINDOWS_DXSDK_DIR
+                        ])
+                    }
+                }
+            }
+        }
+    }
+}
+
+class LinkTask extends DefaultTask {
+    List<String> linkParams;
+    @InputDirectory File objectDir;
+    @OutputFile File lib;
+    @TaskAction void compile() {
+        // Link & generate the library (.dll, .so, .dylib)
+        lib.getParentFile().mkdirs();
+        project.exec {
+            commandLine "$project.LINK"
+            args objectDir.listFiles()
+            if (project.isWindows) {
+                args "/out:$lib"
+            } else {
+                args "-o", "$lib"
+            }
+            if (project.isDebug && !project.isWindows) args "-g"
+            if (linkParams != null) args linkParams
+            if (project.isWindows){
+                environment([
+                        "VCINSTALLDIR"         : project.WINDOWS_VS_VCINSTALLDIR,
+                        "VSINSTALLDIR"         : project.WINDOWS_VS_VSINSTALLDIR,
+                        "DEVENVDIR"            : project.WINDOWS_VS_DEVENVDIR,
+                        "MSVCDIR"              : project.WINDOWS_VS_MSVCDIR,
+                        "PATH"                 : project.WINDOWS_VS_PATH,
+                        "INCLUDE"              : project.WINDOWS_VS_INCLUDE,
+                        "LIB"                  : project.WINDOWS_VS_LIB,
+                        "LIBPATH"              : project.WINDOWS_VS_LIBPATH,
+                        "DXSDK_DIR"            : project.WINDOWS_DXSDK_DIR
+                ])
+            }
+        }
+    }
+}
+
+def addNative = { project, String name ->
+    def javahTask = project.task("javah$name", type: JavaHeaderTask, dependsOn: project.classes, group: "Build") {
+        source = project.sourceSets.main.java.srcDirs.iterator().next()
+        classpath = project.files(project.sourceSets.main.output.classesDir, project.binaryStub)
+        output = project.file("$project.buildDir/headers/$name")
+    }
+    def ccTask = project.task("cc$name", type: CCTask, dependsOn: javahTask, group: "Build") {
+        headers = project.file("$project.buildDir/headers/$name")
+        output(file("$project.buildDir/native/$name"))
+    }
+    def linkTask = project.task("link$name", type: LinkTask, dependsOn: ccTask, group: "Build") {
+        objectDir = file("$project.buildDir/native/$name")
+    }
+    project.task("native$name", dependsOn: linkTask, group: "Build");
+    project.assemble.dependsOn("native$name")
 }
 
 /******************************************************************************
@@ -276,18 +389,25 @@ task sdk {
     doLast {
         // Copy all of the .dll / .so / .dylib native libraries into build/sdk/rt/lib/
         copy {
-            from "modules/graphics/native/build/libs/libdecora-sse.$DLL_EXT",
-                 "modules/graphics/native/build/libs/libprism-common.$DLL_EXT",
-                 "modules/graphics/native/build/libs/libprism-sw.$DLL_EXT"
-            if (isMac) from "modules/graphics/native/build/libs/glass-lib-macosx/libglass.$DLL_EXT"
-            if (isWindows) from "modules/graphics/native/build/libs/glass-lib-windows/libglass.$DLL_EXT"
-            // TODO This is wrong, should be in libs/glass-lib-gtk!
-            if (isLinux) from "modules/graphics/native/build/libs/libglass.$DLL_EXT"
-            into "build/sdk/rt/lib"
+            from "modules/graphics/build/libs/libdecora-sse.$objExt",
+                 "modules/graphics/build/libs/libprism-common.$objExt",
+                 "modules/graphics/build/libs/libprism-sw.$objExt"
+            if (isMac) from "modules/graphics/build/libs/glass-lib-macosx/libglass.$objExt"
+            if (isWindows) from "modules/graphics/build/libs/glass-lib-windows/libglass.$objExt"
+            if (isLinux) from "modules/graphics/build/libs/glass-lib-gtk/libglass.$objExt"
+            if (isWindows) {
+                rename "lib(.*).dll", "\$1.dll"
+            }
+            if (isMac) {
+                into "build/sdk/rt/lib"
+            } else if (isWindows) {
+                into "build/sdk/rt/bin"
+            }
+            else into "build/sdk/rt/lib/i386"
         }
         // Create the javafx.properties file
         def javafxProperties = file("build/sdk/rt/lib/javafx.properties")
-        javafxProperties << "javafx.runtime.version=$RAW_VERSION"
+        javafxProperties << "javafx.runtime.version=$rawVersion"
     }
     dependsOn jfxrt
 }
@@ -307,8 +427,8 @@ allprojects {
     //
     // Also, we need to remove jfxrt.jar from the boot classpath (if it is there)
     // and instead each module that depends on closed bits is going to need to
-    // add JFXRT to its list of dependencies.
-    mkdir "build/builder-src"
+    // add binaryStub to its list of dependencies.
+    mkdir "$buildDir/builder-src"
     tasks.withType(Compile) { compile ->
         // It looks like we have to use ant to compile instead of the built-in gradle
         // compiler stuff because otherwise it won't compile on CYGWIN
@@ -316,18 +436,18 @@ allprojects {
         compile.options.useAnt = true
         compile.options.debug = isDebug
         compile.options.fork = true
-        compile.options.forkOptions.executable = JAVAC
+        compile.options.forkOptions.executable = javac
         compile.options.warnings = isLint
         // Somewhat dangerous in case there is a source set other than "test" or "main"!
         if (name == "compileTestJava") {
             compile.options.compilerArgs = ["-Djava.ext.dirs=", "-XDignore.symbol.file"]
-            classpath = sourceSets.test.compileClasspath + rootProject.files(JFXRT)
+            classpath = sourceSets.test.compileClasspath + rootProject.files(binaryStub)
         } else if (name == "compileStubJava") {
             compile.options.compilerArgs = ["-Djava.ext.dirs=", "-XDignore.symbol.file"]
-            classpath = sourceSets.stub.compileClasspath + rootProject.files(JFXRT)
+            classpath = sourceSets.stub.compileClasspath + rootProject.files(binaryStub)
         } else {
-            compile.options.compilerArgs = ["-Djava.ext.dirs=", "-XDignore.symbol.file", "-s", "build/builder-src"]
-            classpath = sourceSets.main.compileClasspath + rootProject.files(JFXRT)
+            compile.options.compilerArgs = ["-Djava.ext.dirs=", "-XDignore.symbol.file", "-s", "$buildDir/builder-src"]
+            classpath = sourceSets.main.compileClasspath + rootProject.files(binaryStub)
         }
     }
     // Setup the repositories that we'll download libraries from. Maven Central is
@@ -354,7 +474,7 @@ allprojects {
     // and manually specify the includes / excludes
     test {
         jvmArgs "-Djava.ext.dirs="
-        classpath = classpath + rootProject.files(JFXRT)
+        classpath = classpath + rootProject.files(binaryStub)
         enableAssertions = true
         testLogging.exceptionFormat = "full"
         scanForTestClasses = false
@@ -384,7 +504,7 @@ project(":build-tools") {
     task generateGrammarSource(type: JavaExec) {
         // TODO need to fix bootclasspath
         description = "Generate JSL parser from Antlr3 grammars"
-        def dest = "build/generated-src/antlr/com/sun/scenario/effect/compiler"
+        def dest = "$buildDir/generated-src/antlr/com/sun/scenario/effect/compiler"
         def src = "src/main/antlr"
         inputs.dir file(src)
         outputs.dir file(dest)
@@ -396,7 +516,7 @@ project(":build-tools") {
 
     compileJava {
         dependsOn generateGrammarSource
-        source "build/generated-src"
+        source "$buildDir/generated-src"
     }
 }
 
@@ -409,18 +529,18 @@ project(":base") {
 
     // We need to take the VersionInfo.java file and replace the various
     // properties within it
-    mkdir "build/generated-src/version-info" // TODO Ought to be done during processing not dep analysis phase
+    mkdir "$buildDir/generated-src/version-info" // TODO Ought to be done during processing not dep analysis phase
     def replacements = ["BUILD_TIMESTAMP": new java.util.Date(),
-        "HUDSON_JOB_NAME": HUDSON_JOB_NAME,
-        "HUDSON_BUILD_NUMBER": HUDSON_BUILD_NUMBER,
-        "PROMOTED_BUILD_NUMBER": PROMOTED_BUILD_NUMBER,
-        "PRODUCT_NAME": PRODUCT_NAME,
-        "RAW_VERSION": RAW_VERSION,
-        "RELEASE_NAME": RELEASE_NAME,
-        "RELEASE_MILESTONE": RELEASE_MILESTONE];
+        "HUDSON_JOB_NAME": hudsonJobName,
+        "HUDSON_BUILD_NUMBER": hudsonBuildNumber,
+        "PROMOTED_BUILD_NUMBER": promotedBuildNumber,
+        "PRODUCT_NAME": productName,
+        "RAW_VERSION": rawVersion,
+        "RELEASE_NAME": releaseName,
+        "RELEASE_MILESTONE": releaseMilestone];
     task processVersion(type: Copy, description: "Replace params in VersionInfo and copy file to destination") {
         from "src/main/version-info"
-        into "build/generated-src/version-info/com/sun/javafx/runtime"
+        into "$buildDir/generated-src/version-info/com/sun/javafx/runtime"
         filter {line->
             replacements.each() {k, v ->
                 line = line.replace("@$k@", v.toString());
@@ -429,9 +549,9 @@ project(":base") {
         }
     }
 
-    // Make sure to include build/generated-src/version-info that we previously created.
+    // Make sure to include $buildDir/generated-src/version-info that we previously created.
     // We DO NOT want to include src/main/version-info
-    sourceSets.main.java.srcDirs = ["src/main/java", "build/generated-src/version-info"]
+    sourceSets.main.java.srcDirs = ["src/main/java", "$buildDir/generated-src/version-info"]
     compileJava.dependsOn processVersion
 }
 
@@ -459,7 +579,7 @@ project(":graphics") {
     tasks.replace("test")
     task testWithoutStub(type: Test, dependsOn: ":graphics:compileJava") {
         jvmArgs "-Djava.ext.dirs="
-        classpath = sourceSets.test.runtimeClasspath + rootProject.files(JFXRT)
+        classpath = sourceSets.test.runtimeClasspath + rootProject.files(binaryStub)
         enableAssertions = true
         testLogging.exceptionFormat = "full"
         scanForTestClasses = false
@@ -467,11 +587,11 @@ project(":graphics") {
         exclude "**/*Abstract*.*"
     }
     task testWithStub(type: Test, dependsOn: [":graphics:compileJava"]) {
-        jvmArgs "-Djava.ext.dirs=", "-Djavafx.toolkit=com.sun.javafx.pgstub.StubToolkit", "-DCSS_META_DATA_TEST_DIR=${file('build/classes/main/javafx')}"
-        classpath = sourceSets.stub.runtimeClasspath + sourceSets.main.runtimeClasspath + rootProject.files(JFXRT)
-        testClassesDir = file("build/classes/stub")
-        testResultsDir = file("build/stub-results")
-        testReportDir = file("build/reports/stub")
+        jvmArgs "-Djava.ext.dirs=", "-Djavafx.toolkit=com.sun.javafx.pgstub.StubToolkit", "-DCSS_META_DATA_TEST_DIR=${file('$buildDir/classes/main/javafx')}"
+        classpath = sourceSets.stub.runtimeClasspath + sourceSets.main.runtimeClasspath + rootProject.files(binaryStub)
+        testClassesDir = file("$buildDir/classes/stub")
+        testResultsDir = file("$buildDir/stub-results")
+        testReportDir = file("$buildDir/reports/stub")
         enableAssertions = true
         testLogging.exceptionFormat = "full"
         scanForTestClasses = false
@@ -480,48 +600,192 @@ project(":graphics") {
     }
     test.dependsOn testWithoutStub, testWithStub
 
-    // A hack. Ultimately we should generate all the headers here, but the
-    // GTK build expects the headers for GTK in a specific place, so here we go.
-    task glassHeaders(dependsOn:":graphics:compileJava") {
-        inputs.dir "build/classes/main"
-        outputs.dir "native/build/main/glass-lib-gtk/include"
-        doLast {
-            ["com.sun.glass.events.DndEvent",
-             "com.sun.glass.events.KeyEvent",
-             "com.sun.glass.events.MouseEvent",
-             "com.sun.glass.events.ViewEvent",
-             "com.sun.glass.events.WindowEvent",
-             "com.sun.glass.ui.Application",
-             "com.sun.glass.ui.Cursor",
-             "com.sun.glass.ui.Menu",
-             "com.sun.glass.ui.MenuBar",
-             "com.sun.glass.ui.MenuItem",
-             "com.sun.glass.ui.Pixels",
-             "com.sun.glass.ui.Screen",
-             "com.sun.glass.ui.Size",
-             "com.sun.glass.ui.Timer",
-             "com.sun.glass.ui.View",
-             "com.sun.glass.ui.View\$Capability",
-             "com.sun.glass.ui.Window",
-             "com.sun.glass.ui.Window\$Level",
-             "com.sun.glass.ui.gtk.GtkApplication",
-             "com.sun.glass.ui.gtk.GtkTimer",
-             "com.sun.glass.ui.gtk.GtkWindow",
-             "com.sun.glass.ui.gtk.GtkView",
-             "com.sun.glass.ui.gtk.GtkPixels",
-             "com.sun.glass.ui.gtk.GtkCursor",
-             "com.sun.glass.ui.gtk.GtkRobot",
-             "com.sun.glass.ui.gtk.GtkSystemClipboard",
-             "com.sun.glass.ui.gtk.GtkCommonDialogs",
-             "com.sun.glass.ui.gtk.GtkDnDClipboard",
-             "com.sun.glass.events.WindowEvent"].each { file ->
-                exec {
-                    commandLine "javah", "-d", "modules/graphics/native/build/main/glass-lib-gtk/include", "-classpath", files("build/classes/main").asPath, file
-                }
-            }
+    addNative(project, "Glass")
+    addNative(project, "Decora")
+    addNative(project, "Prism")
+    addNative(project, "PrismSW")
+
+    def _linkParams = [];
+    def _ccParams = [];
+    def nativeGlassProject = "";
+    def _includes = [];
+    def _excludes = [];
+    def nativeObjDir = file("$project.buildDir/native")
+
+    if (isMac) {
+        _includes = ["com/sun/glass/events/**",
+                "com/sun/glass/ui/*",
+                "com/sun/glass/ui/mac/*",
+                "com/sun/glass/ui/accessible/mac/*"]
+        _excludes = [""]
+
+        def commonParams = ["-mmacosx-version-min=10.7", "-isysroot", "$MACOSX_SDK_PATH", "-arch", "x86_64", "-F$MACOSX_JDK_FRAMEWORK/Frameworks"]
+        _linkParams = ["-framework", "AppKit",
+                "-framework", "ApplicationServices",
+                "-framework", "JavaVM",
+                "-framework", "JavaRuntimeSupport",
+                "-framework", "OpenGL",
+                "-framework", "QuartzCore",
+                "-dynamiclib", "-lobjc"];
+        _linkParams.addAll(commonParams);
+        _ccParams = ["-std=c99", "-Fd$nativeObjDir", "-c", "-I$jdkHome/include", "-I$jdkHome/include/darwin"]
+        _ccParams.addAll(commonParams);
+        if (isDebug) {
+            _ccParams.add("-DDEBUG")
+        } else {
+            _ccParams.addAll(["-O3", "-ffast-math", "-DNDEBUG"])
+        }
+        nativeGlassProject = "glass-lib-macosx";
+    } else if (isWindows) {
+        _includes = ["com/sun/glass/events/**",
+                "com/sun/glass/ui/*",
+                "com/sun/glass/ui/win/*"]
+        _excludes = [""]
+
+        def commonParams = ["/nologo"]
+        _ccParams.addAll(commonParams);
+        _ccParams.addAll(["/W3", "/EHsc", "/Fd$nativeObjDir", "/c"]) // "/WX" can't be used because of PrismSW which has some warnings
+        _ccParams.addAll(["/D_STATIC_CPP_LIB", "/D_DISABLE_DEPRECATE_STATIC_CPPLIB", "/DINLINE=__inline", "/DUNICODE", "/D_UNICODE", "/DWIN32", "/DIAL", "/D_LITTLE_ENDIAN", "/DWIN32_LEAN_AND_MEAN"])
+        _ccParams.addAll(["/I$jdkHome/include", "/I$jdkHome/include/win32"])
+        _ccParams.addAll(["/arch:SSE", "/fp:fast"])
+        if (isDebug) {
+            //"/DLOGGING",
+            _ccParams.addAll(["/MDd", "/Od", "/Zi", "/DDEBUG"])
+        } else {
+            _ccParams.addAll(["/O2", "/MD"])
+        }
+
+        _linkParams.addAll(commonParams)
+        _linkParams.addAll(["/dll", "/manifest", "/opt:REF", "/incremental:no"])
+        if (isDebug) _linkParams.add("/debug")
+        nativeGlassProject = "glass-lib-windows";
+    } else {
+        // Linux, Solaris, LinuxARM, others..?
+        _includes = ["com/sun/glass/events/**",
+                "com/sun/glass/ui/*",
+                "com/sun/glass/ui/gtk/*"]
+        _excludes = [""]
+
+        def commonParams = ["-fno-strict-aliasing", "-fPIC", "-W", "-Wall", "-Wno-unused", "-Wno-parentheses", "-fno-omit-frame-pointer", "-Werror=implicit-function-declaration"]
+        _ccParams.addAll(commonParams)
+        // I think the -Fd flag is wrong, because the obj are actually in a subdirectory!
+        _ccParams.addAll(["-Fd$nativeObjDir", "-I$jdkHome/include", "-I$jdkHome/include/linux", "-c"])
+        //_ccParams.add("-g"); // extra_cflags
+        def results = new ByteArrayOutputStream();
+        exec {
+            commandLine "pkg-config", "--cflags", "gtk+-2.0", "gthread-2.0", "xtst"
+            standardOutput = results
+        }
+        _ccParams.addAll(Arrays.asList(results.toString().trim().split(" ")))
+        if (isDebug) {
+            _ccParams.addAll(["-ggdb", "-DVERBOSE"])
+        } else {
+            _ccParams.addAll(["-O2", "-ffast-math"])
+        }
+        //_ccParams.addAll(["-Wnon-virtual-dtor", "-Woverloaded-virtual", "-std=c++0x"])
+        _ccParams.add("-DINLINE=inline")
+
+        _linkParams.add("-shared")
+        _linkParams.addAll(commonParams)
+        results = new ByteArrayOutputStream();
+        exec {
+            commandLine "pkg-config", "--libs", "gtk+-2.0", "gthread-2.0", "xtst"
+            standardOutput = results
+        }
+        _linkParams.addAll(Arrays.asList(results.toString().trim().split(" ")))
+
+        nativeGlassProject = "glass-lib-gtk";
+    }
+
+    javahGlass {
+        include _includes
+    }
+
+    ccGlass {
+        ccParams = _ccParams
+        source file("src/main/native/$nativeGlassProject")
+    }
+
+    linkGlass {
+        lib = file("$project.buildDir/libs/$nativeGlassProject/libglass.$objExt")
+        if (isWindows) {
+            def p = ["/pdb:$project.buildDir/libs/$nativeGlassProject/libglass.pdb",
+                    "/map:$project.buildDir/libs/$nativeGlassProject/libglass.map"]
+            p.addAll(_linkParams)
+            p.addAll(["delayimp.lib", "gdi32.lib", "urlmon.lib", "Comdlg32.lib", "winmm.lib", "imm32.lib", "shell32.lib", "Uiautomationcore.lib", "dwmapi.lib", "/DELAYLOAD:user32.dll", "/DELAYLOAD:urlmon.dll", "/DELAYLOAD:winmm.dll", "/DELAYLOAD:shell32.dll", "/DELAYLOAD:Uiautomationcore.dll", "/DELAYLOAD:dwmapi.dll"])
+            linkParams = p
+        } else {
+            linkParams = _linkParams
         }
     }
 
+    javahDecora {
+        include "com/sun/scenario/effect/**/*"
+    }
+
+    ccDecora {
+        ccParams = _ccParams
+        source file("src/main/native/decora-sse-native")
+    }
+
+    linkDecora {
+        lib = file("$project.buildDir/libs/libdecora-sse.$objExt")
+        if (isWindows) {
+            def p = ["/pdb:$project.buildDir/libs/libdecora.pdb",
+                    "/map:$project.buildDir/libs/libdecora.map"]
+            p.addAll(_linkParams)
+            linkParams = p
+        } else {
+            linkParams = _linkParams
+        }
+    }
+
+    javahPrism {
+        include "com/sun/prism/impl/**/*",
+            "com/sun/prism/PresentableState*"
+    }
+
+    ccPrism {
+        if (isLinux) compiler = "cc"
+        ccParams = _ccParams
+        source file("src/main/native/prism-common-native")
+    }
+
+    linkPrism {
+        lib = file("$project.buildDir/libs/libprism-common.$objExt")
+        if (isWindows) {
+            def p = ["/pdb:$project.buildDir/libs/libprism-common.pdb",
+                    "/map:$project.buildDir/libs/libprism-common.map"]
+            p.addAll(_linkParams)
+            linkParams = p
+        } else {
+            linkParams = _linkParams
+        }
+    }
+
+    javahPrismSW {
+        include "com/sun/pisces/**/*"
+    }
+
+    ccPrismSW {
+        if (isLinux) compiler = "cc"
+        ccParams = _ccParams
+        source file("src/main/native/prism-sw-native")
+    }
+
+    linkPrismSW {
+        lib = file("$project.buildDir/libs/libprism-sw.$objExt")
+        if (isWindows) {
+            def p = ["/pdb:$project.buildDir/libs/libprism-sw.pdb",
+                    "/map:$project.buildDir/libs/libprism-sw.map"]
+            p.addAll(_linkParams)
+            linkParams = p
+        } else {
+            linkParams = _linkParams
+        }
+    }
+
+    task("native", dependsOn: [nativeGlass, nativePrism, nativePrismSW, nativeDecora])
 }
 
 project(":controls") {
@@ -571,189 +835,165 @@ project(":designTime") {
     }
 }
 
-project(":graphics:native") {
-    dependencies {
-        compile project(":graphics")
-    }
-
-    task compileGlassLibGTK(type:Exec, dependsOn:[configurations.compile, ":graphics:glassHeaders"]) {
-        enabled = isLinux
-        inputs.dir "src/main/glass-lib-gtk"
-        outputs.dir "build/main/glass-lib-gtk"
-        outputs.dir "build/libs/glass-lib-gtk"
-        workingDir "src/main/glass-lib-gtk"
-        environment([
-                "JDK_HOME"             : JDK_HOME,
-                "BUILD_DIR"            : "../../../build/main/glass-lib-gtk",
-                "DIST_DIR"             : "../../../build/libs",
-                "GLASS_SRC"            : "src"
-        ])
-        commandLine "make", "all"
-    }
-
-//    task compileGlassLibiOS(type:Exec, dependsOn:configurations.compile) {
-//        inputs.dir "src/main/glass-lib-ios"
-//        outputs.dir "build/main/glass-lib-ios"
-//        outputs.dir "build/libs"
-//        workingDir "src/main/glass-lib-ios"
+//project(":graphics:native") {
+//    dependencies {
+//        compile project(":graphics")
+//    }
+//
+////    task compileGlassLibGTK(type:Exec, dependsOn:configurations.compile) {
+////        inputs.dir "src/main/glass-lib-gtk"
+////        outputs.dir "$buildDir/main/glass-lib-gtk"
+////        outputs.dir "$buildDir/libs"
+////        workingDir "src/main/glass-lib-gtk"
+////        environment([
+////                "BUILD_DIR"            : "../../../$buildDir/main/glass-lib-gtk",
+////                "DIST_DIR"             : "../../../$buildDir/libs"
+//////                "DECORA_SSE_CLASS_DIR" : "../../../../$buildDir/classes/main",
+////        ])
+////        commandLine "make"
+////    }
+//
+////    task compileGlassLibiOS(type:Exec, dependsOn:configurations.compile) {
+////        inputs.dir "src/main/glass-lib-ios"
+////        outputs.dir "$buildDir/main/glass-lib-ios"
+////        outputs.dir "$buildDir/libs"
+////        workingDir "src/main/glass-lib-ios"
+////        environment([
+////                "BUILD_DIR"            : "../../../$buildDir/main/glass-lib-ios",
+////                "DIST_DIR"             : "../../../$buildDir/libs"
+//////                "DECORA_SSE_CLASS_DIR" : "../../../../$buildDir/classes/main",
+////        ])
+////        commandLine "make"
+////    }
+////
+////    task compileGlassLibLens(type:Exec, dependsOn:configurations.compile) {
+////        inputs.dir "src/main/glass-lib-lens"
+////        outputs.dir "$buildDir/main/glass-lib-lens"
+////        outputs.dir "$buildDir/libs"
+////        workingDir "src/main/glass-lib-lens"
+////        environment([
+////                "BUILD_DIR"            : "../../../$buildDir/main/glass-lib-lens",
+////                "DIST_DIR"             : "../../../$buildDir/libs"
+//////                "DECORA_SSE_CLASS_DIR" : "../../../../$buildDir/classes/main",
+////        ])
+////        commandLine "make"
+////    }
+//
+//    task compileGlassLibWindows(type:Exec, dependsOn:configurations.compile) {
+//        enabled = isWindows
+//        inputs.dir "src/main/glass-lib-windows"
+//        outputs.dir "$buildDir/main/glass-lib-windows"
+//        outputs.dir "$buildDir/libs/glass-lib-windows"
+//        workingDir "src/main/glass-lib-windows"
 //        environment([
-//                "BUILD_DIR"            : "../../../build/main/glass-lib-ios",
-//                "DIST_DIR"             : "../../../build/libs"
-////                "DECORA_SSE_CLASS_DIR" : "../../../../build/classes/main",
+//                "JDK_HOME"             : shortCygwinPath(jdkHome, isCygwin),
+//                "VCINSTALLDIR"         : WINDOWS_VS_VCINSTALLDIR,
+//                "VSINSTALLDIR"         : WINDOWS_VS_VSINSTALLDIR,
+//                "DEVENVDIR"            : WINDOWS_VS_DEVENVDIR,
+//                "MSVCDIR"              : WINDOWS_VS_MSVCDIR,
+//                "PATH"                 : WINDOWS_VS_PATH,
+//                "INCLUDE"              : WINDOWS_VS_INCLUDE,
+//                "LIB"                  : WINDOWS_VS_LIB,
+//                "LIBPATH"              : WINDOWS_VS_LIBPATH,
+//                "DXSDK_DIR"            : WINDOWS_DXSDK_DIR,
+//                "CONF"                 : CONF,
+//                "BUILD_DIR"            : "../../../$buildDir/main/glass-lib-windows",
+//                "DIST_DIR"             : "../../../$buildDir/libs",
+//                "CLASS_DIR"            : "../../../../$buildDir/classes/main",
+//                "SRC_DIR"              : "src",
+//                "OUT_LIB"              : "../../../$buildDir/libs/glass-lib-windows/libglass.dll",
+//                "OUT_MAP"              : "../../../$buildDir/libs/glass-lib-windows/libglass.map",
+//                "OUT_PDB"              : "../../../$buildDir/libs/glass-lib-windows/libglass.pdb"
 //        ])
 //        commandLine "make", "all"
 //    }
-
-//    task compileGlassLibLens(type:Exec, dependsOn:configurations.compile) {
-//        inputs.dir "src/main/glass-lib-lens"
-//        outputs.dir "build/main/glass-lib-lens"
-//        outputs.dir "build/libs/glass-lib-lens"
-//        workingDir "src/main/glass-lib-lens"
+//
+//    task compileDecoraSSENative(type:Exec, dependsOn:configurations.compile) {
+//        inputs.dir "src/main/decora-sse-native"
+//        outputs.dir "$buildDir/main/decora-sse-native"
+//        outputs.dir "$buildDir/libs"
+//        workingDir "src/main/decora-sse-native"
 //        environment([
-//                "BUILD_DIR"            : "../../../build/main/glass-lib-lens",
-//                "DIST_DIR"             : "../../../build/libs"
-////                "DECORA_SSE_CLASS_DIR" : "../../../../build/classes/main",
+//                "JDK_HOME"             : shortCygwinPath(jdkHome, isCygwin),
+//                "BUILD_DIR"            : "../../../$buildDir/main/decora-sse-native",
+//                "DIST_DIR"             : "../../../$buildDir/libs",
+//                "DECORA_SSE_CLASS_DIR" : "../../../../$buildDir/classes/main",
+//                "DECORA_DEP_CP"        : "../../../../$buildDir/classes/main",
+//                "DECORA_GEN_CPP"       : "$buildDir/generated-src"
 //        ])
-//       commandLine "make", "all"
+//        if (isWindows) {
+//            environment([
+//                    "VCINSTALLDIR"         : WINDOWS_VS_VCINSTALLDIR,
+//                    "VSINSTALLDIR"         : WINDOWS_VS_VSINSTALLDIR,
+//                    "DEVENVDIR"            : WINDOWS_VS_DEVENVDIR,
+//                    "MSVCDIR"              : WINDOWS_VS_MSVCDIR,
+//                    "PATH"                 : WINDOWS_VS_PATH,
+//                    "INCLUDE"              : WINDOWS_VS_INCLUDE,
+//                    "LIB"                  : WINDOWS_VS_LIB,
+//                    "LIBPATH"              : WINDOWS_VS_LIBPATH,
+//                    "DXSDK_DIR"            : WINDOWS_DXSDK_DIR,
+//            ])
+//        }
+//        commandLine "make", "all"
 //    }
-
-    task compileGlassLibMacOS(type:Exec, dependsOn:configurations.compile) {
-        enabled = isMac
-        inputs.dir "src/main/glass-lib-macosx"
-        inputs.dir "src/main/glass-lib-macosx/src"
-        outputs.dir "build/main/glass-lib-macosx"
-        outputs.dir "build/libs/glass-lib-macosx"
-        workingDir "src/main/glass-lib-macosx"
-        mkdir "build/libs/glass-lib-macosx"
-        environment([
-                "MACOSX_SDK_PATH"      : "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.7.sdk",
-                "JDK_HOME"             : JDK_HOME,
-                "CONF"                 : CONF,
-                "BUILD_DIR"            : "../../../build/main/glass-lib-macosx",
-                "DIST_DIR"             : "../../../build/libs",
-                "CLASS_DIR"            : "../../../../build/classes/main",
-                "SRC_DIR"              : "src",
-                "OUT_LIB"              : "../../../build/libs/glass-lib-macosx/libglass.dylib"
-        ])
-        commandLine "make", "all"
-    }
-
-    task compileGlassLibWindows(type:Exec, dependsOn:configurations.compile) {
-        enabled = isWindows
-        inputs.dir "src/main/glass-lib-windows"
-        outputs.dir "build/main/glass-lib-windows"
-        outputs.dir "build/libs/glass-lib-windows"
-        workingDir "src/main/glass-lib-windows"
-        environment([
-                "JDK_HOME"             : shortCygwinPath(JDK_HOME, isCygwin),
-                "VCINSTALLDIR"         : WINDOWS_VS_VCINSTALLDIR,
-                "VSINSTALLDIR"         : WINDOWS_VS_VSINSTALLDIR,
-                "DEVENVDIR"            : WINDOWS_VS_DEVENVDIR,
-                "MSVCDIR"              : WINDOWS_VS_MSVCDIR,
-                "PATH"                 : WINDOWS_VS_PATH,
-                "INCLUDE"              : WINDOWS_VS_INCLUDE,
-                "LIB"                  : WINDOWS_VS_LIB,
-                "LIBPATH"              : WINDOWS_VS_LIBPATH,
-                "DXSDK_DIR"            : WINDOWS_DXSDK_DIR,
-                "CONF"                 : CONF,
-                "BUILD_DIR"            : "../../../build/main/glass-lib-windows",
-                "DIST_DIR"             : "../../../build/libs",
-                "CLASS_DIR"            : "../../../../build/classes/main",
-                "SRC_DIR"              : "src",
-                "OUT_LIB"              : "../../../build/libs/glass-lib-windows/libglass.dll",
-                "OUT_MAP"              : "../../../build/libs/glass-lib-windows/libglass.map",
-                "OUT_PDB"              : "../../../build/libs/glass-lib-windows/libglass.pdb"
-        ])
-        commandLine "make", "all"
-    }
-
-    task compileDecoraSSENative(type:Exec, dependsOn:configurations.compile) {
-        enabled = isWindows || isMac
-        inputs.dir "src/main/decora-sse-native"
-        outputs.dir "build/main/decora-sse-native"
-        outputs.dir "build/libs"
-        workingDir "src/main/decora-sse-native"
-        environment([
-                "JDK_HOME"             : shortCygwinPath(JDK_HOME, isCygwin),
-                "BUILD_DIR"            : "../../../build/main/decora-sse-native",
-                "DIST_DIR"             : "../../../build/libs",
-                "DECORA_SSE_CLASS_DIR" : "../../../../build/classes/main",
-                "DECORA_DEP_CP"        : "../../../../build/classes/main",
-                "DECORA_GEN_CPP"       : "build/generated-src"
-        ])
-        if (isWindows) {
-            environment([
-                    "VCINSTALLDIR"         : WINDOWS_VS_VCINSTALLDIR,
-                    "VSINSTALLDIR"         : WINDOWS_VS_VSINSTALLDIR,
-                    "DEVENVDIR"            : WINDOWS_VS_DEVENVDIR,
-                    "MSVCDIR"              : WINDOWS_VS_MSVCDIR,
-                    "PATH"                 : WINDOWS_VS_PATH,
-                    "INCLUDE"              : WINDOWS_VS_INCLUDE,
-                    "LIB"                  : WINDOWS_VS_LIB,
-                    "LIBPATH"              : WINDOWS_VS_LIBPATH,
-                    "DXSDK_DIR"            : WINDOWS_DXSDK_DIR,
-            ])
-        }
-        commandLine "make", "all"
-    }
-
-    task compilePrismCommon(type:Exec, dependsOn:configurations.compile) {
-        inputs.dir "src/main/prism-common-native"
-        outputs.dir "build/main/prism-common-native"
-        outputs.dir "build/libs"
-        workingDir "src/main/prism-common-native"
-        environment([
-                "JDK_HOME"             : shortCygwinPath(JDK_HOME, isCygwin),
-                "BUILD_DIR"      : "../../../build/main/prism-common-native",
-                "DIST_DIR"       : "../../../build/libs",
-                "PRISM_COM_CP"   : "../../../../build/classes/main",
-                "JAVAFX_GEOM_CP" : "../../../../build/classes/main",
-        ])
-        if (isWindows) {
-            environment([
-                    "VCINSTALLDIR"         : WINDOWS_VS_VCINSTALLDIR,
-                    "VSINSTALLDIR"         : WINDOWS_VS_VSINSTALLDIR,
-                    "DEVENVDIR"            : WINDOWS_VS_DEVENVDIR,
-                    "MSVCDIR"              : WINDOWS_VS_MSVCDIR,
-                    "PATH"                 : WINDOWS_VS_PATH,
-                    "INCLUDE"              : WINDOWS_VS_INCLUDE,
-                    "LIB"                  : WINDOWS_VS_LIB,
-                    "LIBPATH"              : WINDOWS_VS_LIBPATH,
-                    "DXSDK_DIR"            : WINDOWS_DXSDK_DIR,
-            ])
-        }
-        commandLine "make", "all"
-    }
-
-    task compilePrismSW(type:Exec, dependsOn:configurations.compile) {
-        inputs.dir "src/main/prism-sw-native"
-        outputs.dir "build/main/prism-sw-native"
-        outputs.dir "build/libs"
-        workingDir "src/main/prism-sw-native"
-        environment([
-                "JDK_HOME"             : shortCygwinPath(JDK_HOME, isCygwin),
-                "BUILD_DIR"            : "../../../build/main/prism-sw-native",
-                "DIST_DIR"             : "../../../build/libs",
-                "PRISM-SW_CP"          : "../../../../build/classes/main",
-        ])
-        if (isWindows) {
-            environment([
-                    "VCINSTALLDIR"         : WINDOWS_VS_VCINSTALLDIR,
-                    "VSINSTALLDIR"         : WINDOWS_VS_VSINSTALLDIR,
-                    "DEVENVDIR"            : WINDOWS_VS_DEVENVDIR,
-                    "MSVCDIR"              : WINDOWS_VS_MSVCDIR,
-                    "PATH"                 : WINDOWS_VS_PATH,
-                    "INCLUDE"              : WINDOWS_VS_INCLUDE,
-                    "LIB"                  : WINDOWS_VS_LIB,
-                    "LIBPATH"              : WINDOWS_VS_LIBPATH,
-                    "DXSDK_DIR"            : WINDOWS_DXSDK_DIR,
-            ])
-        }
-        commandLine "make", "all"
-    }
-    classes.dependsOn compileDecoraSSENative, compilePrismCommon, compilePrismSW,
-            compileGlassLibMacOS, compileGlassLibWindows, compileGlassLibGTK
-}
+//
+//    task compilePrismCommon(type:Exec, dependsOn:configurations.compile) {
+//        inputs.dir "src/main/prism-common-native"
+//        outputs.dir "$buildDir/main/prism-common-native"
+//        outputs.dir "$buildDir/libs"
+//        workingDir "src/main/prism-common-native"
+//        environment([
+//                "JDK_HOME"             : shortCygwinPath(jdkHome, isCygwin),
+//                "BUILD_DIR"      : "../../../$buildDir/main/prism-common-native",
+//                "DIST_DIR"       : "../../../$buildDir/libs",
+//                "PRISM_COM_CP"   : "../../../../$buildDir/classes/main",
+//                "JAVAFX_GEOM_CP" : "../../../../$buildDir/classes/main",
+//        ])
+//        if (isWindows) {
+//            environment([
+//                    "VCINSTALLDIR"         : WINDOWS_VS_VCINSTALLDIR,
+//                    "VSINSTALLDIR"         : WINDOWS_VS_VSINSTALLDIR,
+//                    "DEVENVDIR"            : WINDOWS_VS_DEVENVDIR,
+//                    "MSVCDIR"              : WINDOWS_VS_MSVCDIR,
+//                    "PATH"                 : WINDOWS_VS_PATH,
+//                    "INCLUDE"              : WINDOWS_VS_INCLUDE,
+//                    "LIB"                  : WINDOWS_VS_LIB,
+//                    "LIBPATH"              : WINDOWS_VS_LIBPATH,
+//                    "DXSDK_DIR"            : WINDOWS_DXSDK_DIR,
+//            ])
+//        }
+//        commandLine "make", "all"
+//    }
+//
+//    task compilePrismSW(type:Exec, dependsOn:configurations.compile) {
+//        inputs.dir "src/main/prism-sw-native"
+//        outputs.dir "$buildDir/main/prism-sw-native"
+//        outputs.dir "$buildDir/libs"
+//        workingDir "src/main/prism-sw-native"
+//        environment([
+//                "JDK_HOME"             : shortCygwinPath(jdkHome, isCygwin),
+//                "BUILD_DIR"            : "../../../$buildDir/main/prism-sw-native",
+//                "DIST_DIR"             : "../../../$buildDir/libs",
+//                "PRISM-SW_CP"          : "../../../../$buildDir/classes/main",
+//        ])
+//        if (isWindows) {
+//            environment([
+//                    "VCINSTALLDIR"         : WINDOWS_VS_VCINSTALLDIR,
+//                    "VSINSTALLDIR"         : WINDOWS_VS_VSINSTALLDIR,
+//                    "DEVENVDIR"            : WINDOWS_VS_DEVENVDIR,
+//                    "MSVCDIR"              : WINDOWS_VS_MSVCDIR,
+//                    "PATH"                 : WINDOWS_VS_PATH,
+//                    "INCLUDE"              : WINDOWS_VS_INCLUDE,
+//                    "LIB"                  : WINDOWS_VS_LIB,
+//                    "LIBPATH"              : WINDOWS_VS_LIBPATH,
+//                    "DXSDK_DIR"            : WINDOWS_DXSDK_DIR,
+//            ])
+//        }
+//        commandLine "make", "all"
+//    }
+//    classes.dependsOn compileDecoraSSENative, compilePrismCommon, compilePrismSW,
+//            compileGlassLibMacOS, compileGlassLibWindows
+//}
 
 project(":graphics:effects-jsl") {
     dependencies {
@@ -777,7 +1017,7 @@ project(":graphics:effects-jsl") {
             // TODO need to fix bootclasspath
             description = "Generate $settings.fileName shader from JSL"
             mkdir "modules/graphics/effects-jsl/build/generated-src/jsl"
-            def destinationDir = "build/generated-src/jsl"
+            def destinationDir = "$buildDir/generated-src/jsl"
             def sourceDir = "src/main/java"
             inputs.file file("$sourceDir/${settings.fileName}.jsl")
             outputs.file files(
@@ -798,21 +1038,21 @@ project(":graphics:effects-jsl") {
     task compileDecoraJava(dependsOn: compileJSL, type: JavaCompile) {
         description = "Compile Java-based Decora-JSL files"
         classpath = configurations.compile
-        source = ["build/generated-src/jsl/decora-jsw/build/gensrc",
-                "build/generated-src/jsl/decora-prism-ps/build/gensrc",
-                "build/generated-src/jsl/decora-sse/build/gensrc"]
-        destinationDir = file("build/classes/main")
+        source = ["$buildDir/generated-src/jsl/decora-jsw/build/gensrc",
+                "$buildDir/generated-src/jsl/decora-prism-ps/build/gensrc",
+                "$buildDir/generated-src/jsl/decora-sse/build/gensrc"]
+        destinationDir = file("$buildDir/classes/main")
     }
     classes.dependsOn compileDecoraJava
 
-    task copyShaders(dependsOn: compileJSL, type: Copy, description: "Copy hlsl / frag shaders to build/resources/main") {
-        from("build/generated-src/jsl/decora-d3d/build/gensrc") {
+    task copyShaders(dependsOn: compileJSL, type: Copy, description: "Copy hlsl / frag shaders to $buildDir/resources/main") {
+        from("$buildDir/generated-src/jsl/decora-d3d/build/gensrc") {
             include "**/*.hlsl"
         }
-        from("build/generated-src/jsl/decora-es2/build/gensrc") {
+        from("$buildDir/generated-src/jsl/decora-es2/build/gensrc") {
             include("**/*.frag")
         }
-        into "build/resources/main"
+        into "$buildDir/resources/main"
     }
     processResources.dependsOn copyShaders
 }
@@ -825,7 +1065,7 @@ project(":graphics:prism-jsl") {
     task compileJSL(description: "Compile Java Shader Language (JSL) files") {}
     classes.dependsOn compileJSL
 
-    def destDir = "build/generated-src/jsl"
+    def destDir = "$buildDir/generated-src/jsl"
     def sourceDir = "src/main/java"
     def inputFiles = fileTree(dir: sourceDir)
     inputFiles.include "**/*.jsl"
@@ -854,20 +1094,20 @@ project(":graphics:prism-jsl") {
     task compilePrismJSLJava(dependsOn: compileJSL, type: JavaCompile) {
         description = "Compile Java-based Prism-JSL files"
         classpath = configurations.compile
-        source = "build/generated-src/jsl/prism-ps/build/gensrc"
-        destinationDir = file("build/classes/main")
+        source = "$buildDir/generated-src/jsl/prism-ps/build/gensrc"
+        destinationDir = file("$buildDir/classes/main")
     }
     classes.dependsOn compilePrismJSLJava
 
-    task copyPrismShaders(dependsOn: compileJSL, type: Copy, description: "Copy hlsl / frag shaders to build/resources/main") {
-        from("build/generated-src/jsl/prism-d3d/build/gensrc") {
+    task copyPrismShaders(dependsOn: compileJSL, type: Copy, description: "Copy hlsl / frag shaders to $buildDir/resources/main") {
+        from("$buildDir/generated-src/jsl/prism-d3d/build/gensrc") {
             include "**/*.hlsl"
         }
-        from("build/generated-src/jsl/prism-es2/build/gensrc") {
+        from("$buildDir/generated-src/jsl/prism-es2/build/gensrc") {
             include("**/*.frag")
         }
 
-        into "build/resources/main"
+        into "$buildDir/resources/main"
     }
     classes.dependsOn copyPrismShaders
 }
