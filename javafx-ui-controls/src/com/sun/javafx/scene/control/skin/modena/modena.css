@@ -2256,14 +2256,14 @@ is being used to size a border should also be in pixels.
 }
 .tree-cell > .tree-disclosure-node,
 .tree-table-row-cell > .tree-disclosure-node {
-    -fx-padding: 4 2 4 8;
+    -fx-padding: 4 6 4 8;
     -fx-background-color: transparent;
 }
 .tree-cell > .tree-disclosure-node > .arrow,
 .tree-table-row-cell > .tree-disclosure-node > .arrow {
     -fx-background-color: -fx-text-background-color;
-    -fx-padding: 0.333333em; /* 4 */
-    -fx-shape: "M 0 -4 L 8 0 L 0 4 z";
+    -fx-padding: 0.333333em 0.229em 0.333333em 0.229em; /* 4 */
+    -fx-shape: "M 0 -3.5 L 4 0 L 0 3.5 z";
 }
 .tree-cell:expanded > .tree-disclosure-node > .arrow,
 .tree-table-row-cell:expanded > .tree-disclosure-node > .arrow {
