@@ -29,6 +29,7 @@ import javafx.animation.Animation.Status;
 import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
 import javafx.animation.Timeline;
+import javafx.application.ConditionalFeature;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.property.DoubleProperty;
@@ -56,6 +57,7 @@ import javafx.scene.shape.Rectangle;
 import javafx.util.Duration;
 import com.sun.javafx.PlatformUtil;
 import com.sun.javafx.Utils;
+import com.sun.javafx.application.PlatformImpl;
 import com.sun.javafx.scene.control.behavior.ScrollPaneBehavior;
 import com.sun.javafx.scene.traversal.TraversalEngine;
 import com.sun.javafx.scene.traversal.TraverseListener;
@@ -285,7 +287,7 @@ public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehav
         */
         InvalidationListener vsbListener = new InvalidationListener() {
             @Override public void invalidated(Observable valueModel) {
-                if (!PlatformUtil.isEmbedded()) {
+                if (!PlatformImpl.isSupported(ConditionalFeature.INPUT_TOUCH)) {
                     posY = Utils.clamp(getSkinnable().getVmin(), vsb.getValue(), getSkinnable().getVmax());
                 }
                 else {
@@ -298,7 +300,7 @@ public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehav
 
         InvalidationListener hsbListener = new InvalidationListener() {
             @Override public void invalidated(Observable valueModel) {
-                if (!PlatformUtil.isEmbedded()) {
+                if (!PlatformImpl.isSupported(ConditionalFeature.INPUT_TOUCH)) {
                     posX = Utils.clamp(getSkinnable().getHmin(), hsb.getValue(), getSkinnable().getHmax());
                 }
                 else {
@@ -311,7 +313,7 @@ public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehav
 
         viewRect.setOnMousePressed(new EventHandler<javafx.scene.input.MouseEvent>() {
            @Override public void handle(javafx.scene.input.MouseEvent e) {
-               if (PlatformUtil.isEmbedded()) {
+               if (PlatformImpl.isSupported(ConditionalFeature.INPUT_TOUCH)) {
                    startSBReleasedAnimation();
                }
                mouseDown = true;
@@ -325,7 +327,7 @@ public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehav
 
         viewRect.setOnDragDetected(new EventHandler<javafx.scene.input.MouseEvent>() {
            @Override public void handle(javafx.scene.input.MouseEvent e) {
-                if (PlatformUtil.isEmbedded()) {
+                if (PlatformImpl.isSupported(ConditionalFeature.INPUT_TOUCH)) {
                     startSBReleasedAnimation();
                 }
                if (getSkinnable().isPannable()) {
@@ -344,7 +346,7 @@ public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehav
 
         viewRect.addEventFilter(MouseEvent.MOUSE_RELEASED, new EventHandler<MouseEvent>() {
             @Override public void handle(MouseEvent e) {
-                  if (PlatformUtil.isEmbedded()) {
+                  if (PlatformImpl.isSupported(ConditionalFeature.INPUT_TOUCH)) {
                     startSBReleasedAnimation();
                  }
                  mouseDown = false;
@@ -370,13 +372,13 @@ public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehav
         });
         viewRect.setOnMouseDragged(new EventHandler<javafx.scene.input.MouseEvent>() {
            @Override public void handle(javafx.scene.input.MouseEvent e) {
-                if (PlatformUtil.isEmbedded()) {
+                if (PlatformImpl.isSupported(ConditionalFeature.INPUT_TOUCH)) {
                     startSBReleasedAnimation();
                 }
                /*
                ** for mobile-touch we allow drag, even if not pannagle
                */
-               if (getSkinnable().isPannable() || PlatformUtil.isEmbedded()) {
+               if (getSkinnable().isPannable() || PlatformImpl.isSupported(ConditionalFeature.INPUT_TOUCH)) {
                    double deltaX = pressX - e.getX();
                    double deltaY = pressY - e.getY();
                    /*
@@ -388,7 +390,7 @@ public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehav
                                deltaX = -deltaX;
                            }
                            double newHVal = (ohvalue + deltaX / (nodeWidth - viewRect.getWidth()) * (hsb.getMax() - hsb.getMin()));
-                           if (!PlatformUtil.isEmbedded()) {
+                           if (!PlatformImpl.isSupported(ConditionalFeature.INPUT_TOUCH)) {
                                if (newHVal > hsb.getMax()) {
                                    newHVal = hsb.getMax();
                                }
@@ -408,7 +410,7 @@ public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehav
                    if (vsb.getVisibleAmount() > 0.0 && vsb.getVisibleAmount() < vsb.getMax()) {
                        if (Math.abs(deltaY) > PAN_THRESHOLD) {
                            double newVVal = (ovvalue + deltaY / (nodeHeight - viewRect.getHeight()) * (vsb.getMax() - vsb.getMin()));
-                           if (!PlatformUtil.isEmbedded()) {
+                           if (!PlatformImpl.isSupported(ConditionalFeature.INPUT_TOUCH)) {
                                if (newVVal > vsb.getMax()) {
                                    newVVal = vsb.getMax();
                                }
@@ -477,7 +479,7 @@ public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehav
         */
         getSkinnable().setOnScroll(new EventHandler<javafx.scene.input.ScrollEvent>() {
             @Override public void handle(ScrollEvent event) {
-                if (PlatformUtil.isEmbedded()) {
+                if (PlatformImpl.isSupported(ConditionalFeature.INPUT_TOUCH)) {
                     startSBReleasedAnimation();
                 }
                 /*
@@ -494,7 +496,7 @@ public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehav
                         vPixelValue = 0.0;
                     }
                     double newValue = vsb.getValue()+(-event.getDeltaY())*vPixelValue;
-                    if (!PlatformUtil.isEmbedded()) {
+                    if (!PlatformImpl.isSupported(ConditionalFeature.INPUT_TOUCH)) {
                         if ((event.getDeltaY() > 0.0 && vsb.getValue() > vsb.getMin()) ||
                             (event.getDeltaY() < 0.0 && vsb.getValue() < vsb.getMax())) {
                             vsb.setValue(newValue);
@@ -527,7 +529,7 @@ public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehav
                     }
 
                     double newValue = hsb.getValue()+(-event.getDeltaX())*hPixelValue;
-                    if (!PlatformUtil.isEmbedded()) {
+                    if (!PlatformImpl.isSupported(ConditionalFeature.INPUT_TOUCH)) {
                         if ((event.getDeltaX() > 0.0 && hsb.getValue() > hsb.getMin()) ||
                             (event.getDeltaX() < 0.0 && hsb.getValue() < hsb.getMax())) {
                             hsb.setValue(newValue);
@@ -775,13 +777,13 @@ public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehav
 
         if (vsbvis) {
             hsbWidth -= vsbWidth;
-            if (!PlatformUtil.isEmbedded()) {
+            if (!PlatformImpl.isSupported(ConditionalFeature.INPUT_TOUCH)) {
                 contentWidth -= vsbWidth;
             }
         }
         if (hsbvis) {
             vsbHeight -= hsbHeight;
-            if (!PlatformUtil.isEmbedded()) {
+            if (!PlatformImpl.isSupported(ConditionalFeature.INPUT_TOUCH)) {
                 contentHeight -= hsbHeight;
             }
         }
@@ -926,7 +928,7 @@ public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehav
         final ScrollPane sp = getSkinnable();
         final Insets insets = sp.getInsets();
         final double contentw = sp.getWidth() - insets.getLeft() - insets.getRight();
-        if (PlatformUtil.isEmbedded()) {
+        if (PlatformImpl.isSupported(ConditionalFeature.INPUT_TOUCH)) {
             return (tempVisibility && (nodeWidth > contentw));
         }
         else {
@@ -941,7 +943,7 @@ public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehav
         final ScrollPane sp = getSkinnable();
         final Insets insets = sp.getInsets();
         final double contenth = sp.getHeight() - insets.getTop() - insets.getBottom();
-        if (PlatformUtil.isEmbedded()) {
+        if (PlatformImpl.isSupported(ConditionalFeature.INPUT_TOUCH)) {
             return (tempVisibility && (nodeHeight > contenth));
         }
         else {
@@ -956,7 +958,7 @@ public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehav
         vsbWidth = snapSize(vsb.prefWidth(-1));
         if (vsbWidth == 0) {
             //            println("*** WARNING ScrollPaneSkin: can't get scroll bar width, using {DEFAULT_SB_BREADTH}");
-            if (PlatformUtil.isEmbedded()) {
+            if (PlatformImpl.isSupported(ConditionalFeature.INPUT_TOUCH)) {
                 vsbWidth = DEFAULT_EMBEDDED_SB_BREADTH;
             }
             else {
@@ -966,7 +968,7 @@ public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehav
         hsbHeight = snapSize(hsb.prefHeight(-1));
         if (hsbHeight == 0) {
             //            println("*** WARNING ScrollPaneSkin: can't get scroll bar height, using {DEFAULT_SB_BREADTH}");
-            if (PlatformUtil.isEmbedded()) {
+            if (PlatformImpl.isSupported(ConditionalFeature.INPUT_TOUCH)) {
                 hsbHeight = DEFAULT_EMBEDDED_SB_BREADTH;
             }
             else {
@@ -1105,7 +1107,7 @@ public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehav
             newPosX = getSkinnable().getHmin();
         }
 
-        if (!PlatformUtil.isEmbedded()) {
+        if (!PlatformImpl.isSupported(ConditionalFeature.INPUT_TOUCH)) {
             startSBReleasedAnimation();
         }
 

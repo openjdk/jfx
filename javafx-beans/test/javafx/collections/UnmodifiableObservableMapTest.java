@@ -29,37 +29,67 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 
 import static javafx.collections.MockMapObserver.Tuple.tup;
 import static org.junit.Assert.*;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
-public abstract class UnmodifiableObservableMapTestBase {
+@RunWith(Parameterized.class)
+public class UnmodifiableObservableMapTest {
 
-    private final Map<String, String> baseMap;
+    final Callable<ObservableMap<String, String>> mapFactory;
     private ObservableMap<String, String> observableMap;
     private ObservableMap<String, String> unmodifiableMap;
     private MockMapObserver<String, String> observer;
 
 
-    public UnmodifiableObservableMapTestBase(final Map<String, String> map) {
-        baseMap = map;
+    public UnmodifiableObservableMapTest(final Callable<ObservableMap<String, String>> mapFactory) {
+        this.mapFactory = mapFactory;
+    }
+
+    @Parameterized.Parameters
+    public static Collection createParameters() {
+        Object[][] data = new Object[][] {
+            { TestedObservableMaps.HASH_MAP },
+            { TestedObservableMaps.TREE_MAP },
+            { TestedObservableMaps.LINKED_HASH_MAP },
+            { TestedObservableMaps.CONCURRENT_HASH_MAP },
+            { TestedObservableMaps.CHECKED_OBSERVABLE_HASH_MAP },
+            { TestedObservableMaps.SYNCHRONIZED_OBSERVABLE_HASH_MAP }
+         };
+        return Arrays.asList(data);
     }
 
     @Before
     @SuppressWarnings("unchecked")
-    public void setUp() {
-        observableMap = FXCollections.observableMap(baseMap);
+    public void setUp() throws Exception {
+        observableMap = mapFactory.call();
         unmodifiableMap = FXCollections.unmodifiableObservableMap(observableMap);
         observer = new MockMapObserver<String, String>();
         unmodifiableMap.addListener(observer);
-        baseMap.put("one", "1");
-        baseMap.put("two", "2");
-        baseMap.put("foo", "bar");
+
+        useMapData();
     }
 
+    /**
+     * Modifies the map in the fixture to use the strings passed in instead of
+     * the default strings, and re-creates the observable map and the observer.
+     * If no strings are passed in, the result is an empty map.
+     *
+     * @param strings the strings to use for the list in the fixture
+     */
+    void useMapData(String... strings) {
+        observableMap.clear();
+        observableMap.put("one", "1");
+        observableMap.put("two", "2");
+        observableMap.put("foo", "bar");
+        observer.clear();
+    }
 
     @Test
     public void testObservability() {
@@ -195,21 +225,6 @@ public abstract class UnmodifiableObservableMapTestBase {
         assertTrue("Test error, underlying Map should not be empty!", iterator.hasNext());
         try {
             iterator.remove();
-            fail("Expected UnsupportedOperationException");
-        } catch(UnsupportedOperationException e) {}
-    }
-
-    @Test
-    public void testEntrySet_Entry() {
-        Map.Entry<String, String> unmodifiable = unmodifiableMap.entrySet().iterator().next();
-        Map.Entry<String, String> regular = baseMap.entrySet().iterator().next();
-
-        // Entries should NOT be the same as in the underlying Map object!
-        assertNotSame(unmodifiable, regular);
-        assertNotSame(regular, unmodifiable);
-        assertNotSame(unmodifiable.hashCode(), regular.hashCode());
-        try {
-            unmodifiable.setValue("newval");
             fail("Expected UnsupportedOperationException");
         } catch(UnsupportedOperationException e) {}
     }

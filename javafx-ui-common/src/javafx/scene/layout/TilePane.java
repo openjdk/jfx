@@ -678,6 +678,10 @@ public class TilePane extends Pane {
     private ObjectProperty<Pos> alignment;
     public final void setAlignment(Pos value) { alignmentProperty().set(value); }
     public final Pos getAlignment() { return alignment == null ? Pos.TOP_LEFT : alignment.get(); }
+    private Pos getAlignmentInternal() {
+        Pos localPos = getAlignment();
+        return localPos == null ? Pos.TOP_LEFT : localPos;
+    }
 
     /**
      * The default alignment of each child within its tile.
@@ -714,7 +718,10 @@ public class TilePane extends Pane {
     private ObjectProperty<Pos> tileAlignment;
     public final void setTileAlignment(Pos value) { tileAlignmentProperty().set(value); }
     public final Pos getTileAlignment() { return tileAlignment == null ? Pos.CENTER : tileAlignment.get(); }
-
+    private Pos getTileAlignmentInternal() {
+        Pos localPos = getTileAlignment();
+        return localPos == null ? Pos.CENTER : localPos;
+    }
 
     @Override public Orientation getContentBias() {
         return getOrientation();
@@ -802,9 +809,9 @@ public class TilePane extends Pane {
                 }
                 if (vertBias) {
                     // widest may depend on height of tile
-                    h = computeMaxPrefAreaHeight(managed, margins, -1, getTileAlignment().getVpos());
+                    h = computeMaxPrefAreaHeight(managed, margins, -1, getTileAlignmentInternal().getVpos());
                 }
-                computedTileWidth = computeMaxPrefAreaWidth(managed, margins, h, getTileAlignment().getHpos());
+                computedTileWidth = computeMaxPrefAreaWidth(managed, margins, h, getTileAlignmentInternal().getHpos());
             }
             return snapSize(computedTileWidth);
         }
@@ -827,9 +834,9 @@ public class TilePane extends Pane {
                 }
                 if (horizBias) {
                     // tallest may depend on width of tile
-                    w = computeMaxPrefAreaWidth(managed, margins, -1, getTileAlignment().getHpos());
+                    w = computeMaxPrefAreaWidth(managed, margins, -1, getTileAlignmentInternal().getHpos());
                 }
-                computedTileHeight = computeMaxPrefAreaHeight(managed, getMargins(managed), w, getTileAlignment().getVpos());
+                computedTileHeight = computeMaxPrefAreaHeight(managed, getMargins(managed), w, getTileAlignmentInternal().getVpos());
             }
             return snapSize(computedTileHeight);
         }
@@ -859,6 +866,8 @@ public class TilePane extends Pane {
 
     @Override protected void layoutChildren() {
         List<Node> managed = getManagedChildren();
+        HPos hpos = getAlignmentInternal().getHpos();
+        VPos vpos = getAlignmentInternal().getVpos();
         double width = getWidth();
         double height = getHeight();
         double top = snapSpace(getInsets().getTop());
@@ -879,33 +888,33 @@ public class TilePane extends Pane {
             actualColumns = computeColumns(insideWidth, getTileWidth());
             actualRows = computeOther(managed.size(), actualColumns);
             // remainder will be 0 if last row is filled
-            lastRowRemainder = getAlignment().getHpos() != HPos.LEFT?
+            lastRowRemainder = hpos != HPos.LEFT?
                  actualColumns - (actualColumns*actualRows - managed.size()) : 0;
         } else {
             // vertical
             actualRows = computeRows(insideHeight, getTileHeight());
             actualColumns = computeOther(managed.size(), actualRows);
             // remainder will be 0 if last column is filled
-            lastColumnRemainder = getAlignment().getVpos() != VPos.TOP?
+            lastColumnRemainder = vpos != VPos.TOP?
                 actualRows - (actualColumns*actualRows - managed.size()) : 0;
         }
         double rowX = left + computeXOffset(insideWidth,
                                             computeContentWidth(actualColumns, getTileWidth()),
-                                            getAlignment().getHpos());
+                                            hpos);
         double columnY = top + computeYOffset(insideHeight,
                                             computeContentHeight(actualRows, getTileHeight()),
-                                            getAlignment().getVpos());
+                                            vpos);
 
         double lastRowX = lastRowRemainder > 0?
                           left + computeXOffset(insideWidth,
                                             computeContentWidth(lastRowRemainder, getTileWidth()),
-                                            getAlignment().getHpos()) :  rowX;
+                                            hpos) :  rowX;
         double lastColumnY = lastColumnRemainder > 0?
                           top + computeYOffset(insideHeight,
                                             computeContentHeight(lastColumnRemainder, getTileHeight()),
-                                            getAlignment().getVpos()) : columnY;
+                                            vpos) : columnY;
 
-        double baselineOffset = getTileAlignment().getVpos() == VPos.BASELINE? getMaxBaselineOffset(managed)
+        double baselineOffset = vpos == VPos.BASELINE? getMaxBaselineOffset(managed)
                        // baseline isn't useful if nodeVpos isn't BASELINE
                        : getTileHeight()/2;
         
@@ -923,8 +932,8 @@ public class TilePane extends Pane {
             
             layoutInArea(child, tileX, tileY, getTileWidth(), getTileHeight(), baselineOffset,
                     getMargin(child),
-                    childAlignment != null? childAlignment.getHpos() : getTileAlignment().getHpos(),
-                    childAlignment != null? childAlignment.getVpos() : getTileAlignment().getVpos());
+                    childAlignment != null? childAlignment.getHpos() : getTileAlignmentInternal().getHpos(),
+                    childAlignment != null? childAlignment.getVpos() : getTileAlignmentInternal().getVpos());
 
             if (getOrientation() == HORIZONTAL) {
                 if (++c == actualColumns) {

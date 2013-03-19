@@ -67,8 +67,8 @@ final class WinCommonDialogs {
             ((WinWindow)owner).setDeferredClosing(true);
         }
         try {
-            return new File(_showFolderChooser(owner != null ? owner.getNativeWindow() : 0L,
-                    folder, title));
+            String filename = _showFolderChooser(owner != null ? owner.getNativeWindow() : 0L, folder, title);
+            return filename != null ? new File(filename) : null;
         } finally {
             if (owner != null) {
                 ((WinWindow)owner).setDeferredClosing(false);

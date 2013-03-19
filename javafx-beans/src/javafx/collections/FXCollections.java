@@ -1077,6 +1077,27 @@ public class FXCollections {
             }
         }
 
+        @Override
+        public String toString() {
+            synchronized(mutex) {
+                return backingList.toString();
+            }
+        }
+
+        @Override
+        public int hashCode() {
+            synchronized(mutex) {
+                return backingList.hashCode();
+            }
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            synchronized(mutex) {
+                return backingList.equals(o);
+            }
+        }
+
     }
 
     private static class SynchronizedObservableList<T> extends SynchronizedList<T> implements ObservableList<T> {
@@ -1191,7 +1212,7 @@ public class FXCollections {
         }
 
         void typeCheck(Object o) {
-            if (!type.isInstance(o)) {
+            if (o != null && !type.isInstance(o)) {
                 throw new ClassCastException("Attempt to insert "
                         + o.getClass() + " element into collection with element type "
                         + type);
@@ -1770,21 +1791,21 @@ public class FXCollections {
 
         @Override
         public void addListener(InvalidationListener listener) {
-            SetListenerHelper.addListener(listenerHelper, listener);
+            listenerHelper = SetListenerHelper.addListener(listenerHelper, listener);
         }
 
         @Override
         public void removeListener(InvalidationListener listener) {
-            SetListenerHelper.removeListener(listenerHelper, listener);
+            listenerHelper = SetListenerHelper.removeListener(listenerHelper, listener);
         }
         @Override
         public void addListener(SetChangeListener<? super E> listener) {
-            SetListenerHelper.addListener(listenerHelper, listener);
+            listenerHelper = SetListenerHelper.addListener(listenerHelper, listener);
         }
 
         @Override
         public void removeListener(SetChangeListener<? super E> listener) {
-            SetListenerHelper.removeListener(listenerHelper, listener);
+            listenerHelper = SetListenerHelper.removeListener(listenerHelper, listener);
         }
     }
 
@@ -1815,7 +1836,7 @@ public class FXCollections {
         }
 
         void typeCheck(Object o) {
-            if (!type.isInstance(o)) {
+            if (o != null && !type.isInstance(o)) {
                 throw new ClassCastException("Attempt to insert "
                         + o.getClass() + " element into collection with element type "
                         + type);
@@ -2648,22 +2669,23 @@ public class FXCollections {
 
         @Override
         public void addListener(InvalidationListener listener) {
-            MapListenerHelper.addListener(listenerHelper, listener);
+            listenerHelper = MapListenerHelper.addListener(listenerHelper, listener);
+
         }
 
         @Override
         public void removeListener(InvalidationListener listener) {
-            MapListenerHelper.removeListener(listenerHelper, listener);
+            listenerHelper = MapListenerHelper.removeListener(listenerHelper, listener);
         }
 
         @Override
         public void addListener(MapChangeListener<? super K, ? super V> listener) {
-            MapListenerHelper.addListener(listenerHelper, listener);
+            listenerHelper = MapListenerHelper.addListener(listenerHelper, listener);
         }
 
         @Override
         public void removeListener(MapChangeListener<? super K, ? super V> listener) {
-            MapListenerHelper.removeListener(listenerHelper, listener);
+            listenerHelper = MapListenerHelper.removeListener(listenerHelper, listener);
         }
 
     }

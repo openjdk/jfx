@@ -26,10 +26,12 @@
 package com.sun.javafx.scene.control.skin;
 
 import com.sun.javafx.PlatformUtil;
+import javafx.application.ConditionalFeature;
 import javafx.css.CssMetaData;
 import javafx.css.PseudoClass;
 import javafx.css.StyleableProperty;
 import javafx.css.StyleableObjectProperty;
+import com.sun.javafx.application.PlatformImpl;
 import com.sun.javafx.css.converters.EnumConverter;
 
 import javafx.animation.Interpolator;
@@ -383,7 +385,7 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
     }
 
     private void initializeSwipeHandlers() {
-        if (PlatformUtil.isEmbedded()) {
+        if (PlatformImpl.isSupported(ConditionalFeature.INPUT_TOUCH)) {
             getSkinnable().setOnSwipeLeft(new EventHandler<SwipeEvent>() {
                 @Override public void handle(SwipeEvent t) {
                     getBehavior().selectNextTab();

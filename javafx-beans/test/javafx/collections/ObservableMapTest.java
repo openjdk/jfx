@@ -29,37 +29,65 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
-import java.util.TreeMap;
-import java.util.concurrent.ConcurrentHashMap;
 
 import static javafx.collections.MockMapObserver.Call.call;
 import static javafx.collections.MockMapObserver.Tuple.tup;
 import static org.junit.Assert.*;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
-public abstract class ObservableMapTestBase {
+@RunWith(Parameterized.class)
+public class ObservableMapTest {
 
-    private final Map<String, String > map;
+    final Callable<ObservableMap<String, String>> mapFactory;
     private ObservableMap<String, String> observableMap;
     private MockMapObserver<String, String> observer;
 
 
-    public ObservableMapTestBase(final Map<String, String> map) {
-        this.map = map;
+    public ObservableMapTest(final Callable<ObservableMap<String, String>> mapFactory) {
+        this.mapFactory = mapFactory;
+    }
+
+    @Parameterized.Parameters
+    public static Collection createParameters() {
+        Object[][] data = new Object[][] {
+            { TestedObservableMaps.HASH_MAP },
+            { TestedObservableMaps.TREE_MAP },
+            { TestedObservableMaps.LINKED_HASH_MAP },
+            { TestedObservableMaps.CONCURRENT_HASH_MAP },
+            { TestedObservableMaps.CHECKED_OBSERVABLE_HASH_MAP },
+            { TestedObservableMaps.SYNCHRONIZED_OBSERVABLE_HASH_MAP }
+         };
+        return Arrays.asList(data);
     }
 
     @Before
-    public void setUp() {
-        observableMap = FXCollections.observableMap(map);
+    public void setUp() throws Exception {
+        observableMap = mapFactory.call();
         observer = new MockMapObserver<String, String>();
         observableMap.addListener(observer);
-        map.put("one", "1");
-        map.put("two", "2");
-        map.put("foo", "bar");
+
+        useMapData();
     }
 
+    /**
+     * Modifies the map in the fixture to use the strings passed in instead of
+     * the default strings, and re-creates the observable map and the observer.
+     * If no strings are passed in, the result is an empty map.
+     *
+     * @param strings the strings to use for the list in the fixture
+     */
+    void useMapData(String... strings) {
+        observableMap.clear();
+        observableMap.put("one", "1");
+        observableMap.put("two", "2");
+        observableMap.put("foo", "bar");
+        observer.clear();
+    }
 
     @Test
     public void testPutRemove() {
@@ -85,7 +113,7 @@ public abstract class ObservableMapTestBase {
 
     @Test
     public void testPutRemove_Null() {
-        if (map instanceof ConcurrentHashMap) {
+        if (mapFactory instanceof TestedObservableMaps.CallableConcurrentHashMapImpl) {
             return; // Do not perform on ConcurrentHashMap, as it doesn't accept nulls
         }
         observableMap.clear();
@@ -117,7 +145,8 @@ public abstract class ObservableMapTestBase {
     
     @Test
     public void testPutRemove_NullKey() {
-        if (map instanceof ConcurrentHashMap || map instanceof TreeMap) {
+        if (mapFactory instanceof TestedObservableMaps.CallableConcurrentHashMapImpl ||
+                mapFactory instanceof TestedObservableMaps.CallableTreeMapImpl) {
             return; // Do not perform on ConcurrentHashMap and TreeMap, as they doesn't accept null keys
         }
 
@@ -346,24 +375,6 @@ public abstract class ObservableMapTestBase {
 
         assertTrue(observableMap.size() == 2);
         observer.assertRemoved(tup(toBeRemovedKey, toBeRemovedVal));
-    }
-
-    @Test
-    public void testEntrySet_Entry() {
-        Map.Entry<String, String> observable = observableMap.entrySet().iterator().next();
-        Map.Entry<String, String> regular = map.entrySet().iterator().next();
-
-        assertEquals(observable, regular);
-        assertEquals(regular, observable);
-        assertEquals(observable.hashCode(), regular.hashCode());
-
-        String key = observable.getKey();
-        String value = observable.getValue();
-
-        observable.setValue("newval");
-
-        observer.assertAdded(tup(key, "newval"));
-        observer.assertRemoved(tup(key, value));
     }
 
     @Test

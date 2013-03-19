@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2012 Oracle and/or its affiliates.
+ * Copyright (c) 2008, 2013 Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -29,55 +29,37 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
- #TestAppToolbar > * > .label {
-     -fx-font-size: 10px;
- }
-#SamplePageToolBar {
-    -fx-base: #666;
-    -fx-background: #444;
-}
-#SamplePageScrollPane {
-    -fx-background-insets: 0,0;
-    -fx-padding: 0;
-}
-.section-label {
-    -fx-font-weight: normal;
-    -fx-text-fill: derive(-fx-text-background-color,30%);
-}
-.section-border {
-    -fx-border-color: ladder(
-        -fx-background,
-        derive(-fx-background,10%) 20%,
-        derive(-fx-background,-10%)  21%
-     );
-    -fx-padding: 20;
-}
-.macWindow {
-    -fx-border-image-source: url("mac-window-frame.png"); 
-    -fx-border-image-slice: 49 49 71 49;
-    -fx-border-image-width: 49 49 71 49;
-    -fx-border-image-repeat: stretch;
-    -fx-font: 13px "Lucida Grande";
-}
-.windows7Window {
-    -fx-border-image-source: url("windows7-window-frame.png"); 
-    -fx-border-image-slice: 49 49 71 49;
-    -fx-border-image-width: 49 49 71 49;
-    -fx-border-image-repeat: stretch;
-    -fx-font: 12px "Segoe UI";
-}
-.windows8Window {
-    -fx-border-image-source: url("windows8-window-frame.png"); 
-    -fx-border-image-slice: 49 49 71 49;
-    -fx-border-image-width: 49 49 71 49;
-    -fx-border-image-repeat: stretch;
-    -fx-font: 12px "Segoe UI";
-}
-.ubuntuWindow {
-    -fx-border-image-source: url("ubuntu-window-frame.png"); 
-    -fx-border-image-slice: 49 49 71 49;
-    -fx-border-image-width: 49 49 71 49;
-    -fx-border-image-repeat: stretch;
-    /*-fx-font: 15px "Ubuntu";*/
-    -fx-font: 13px "Lucida Sans";
+package ensemble.util;
+
+import ensemble.SampleInfo;
+import java.util.ArrayList;
+import java.util.List;
+import javafx.application.ConditionalFeature;
+import javafx.application.Platform;
+
+public class FeatureChecker {
+
+    public static boolean isSampleSupported(SampleInfo sample) {
+        ConditionalFeature[] cf = sample.conditionalFeatures;
+        for (ConditionalFeature oneCF : cf) {
+            if (!Platform.isSupported(oneCF)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    public static SampleInfo[] filterSamples(SampleInfo[] samples) {
+        if (samples != null) {
+            List filteredSampleInfos = new ArrayList<>();
+            for (SampleInfo oneSampleInfo : samples) {
+                if (isSampleSupported(oneSampleInfo)) {
+                    filteredSampleInfos.add(oneSampleInfo);
+                }
+            }
+            return (SampleInfo[]) filteredSampleInfos.toArray(new SampleInfo[0]);
+        } else {
+            return null;
+        }
+    }
 }

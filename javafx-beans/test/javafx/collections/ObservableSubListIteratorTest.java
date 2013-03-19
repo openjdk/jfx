@@ -29,9 +29,12 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 
 import static org.junit.Assert.assertEquals;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 
 /**
@@ -43,14 +46,27 @@ import static org.junit.Assert.assertEquals;
  * after mutating the sublist via the iterator.
  * 
  */
-public abstract class ObservableSubListIteratorTestBase extends ObservableListIteratorTestBase {
+@RunWith(Parameterized.class)
+public class ObservableSubListIteratorTest extends ObservableListIteratorTest {
 
     // ========== Test Fixture ==========
 
     List<String> fullList;
 
-    public ObservableSubListIteratorTestBase(final Callable<? extends List<String>> listFactory) {
+    public ObservableSubListIteratorTest(final Callable<? extends List<String>> listFactory) {
         super(listFactory);
+    }
+
+    @Parameterized.Parameters
+    public static Collection createParameters() {
+        Object[][] data = new Object[][] {
+            { TestedObservableLists.ARRAY_LIST },
+            { TestedObservableLists.LINKED_LIST },
+            { TestedObservableLists.VETOABLE_LIST },
+            { TestedObservableLists.CHECKED_OBSERVABLE_ARRAY_LIST },
+            { TestedObservableLists.SYNCHRONIZED_OBSERVABLE_ARRAY_LIST }
+         };
+        return Arrays.asList(data);
     }
 
     @Before @Override

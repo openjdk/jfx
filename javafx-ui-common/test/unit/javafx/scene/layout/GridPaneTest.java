@@ -57,6 +57,17 @@ public class GridPaneTest {
         assertEquals(0, gridpane.getRowConstraints().size());
     }
 
+    @Test public void testGridPaneNulls() {
+        gridpane.setAlignment(null);
+
+        // this musn't throw NPE
+        gridpane.autosize();
+        gridpane.layout();
+
+        assertNull(null, gridpane.getAlignment());
+        assertNull(null, gridpane.alignmentProperty().get());
+    }
+
     @Test public void testSimpleGridPane() {
         // populate 2x2 grid
         MockResizable child0_0 = new MockResizable(100,10, 300,100, 500,600);

@@ -25,6 +25,7 @@
 
 package com.sun.javafx.scene.control.skin;
 
+import javafx.application.ConditionalFeature;
 import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.scene.Node;
@@ -34,6 +35,7 @@ import javafx.scene.control.Skin;
 
 import com.sun.javafx.PlatformUtil;
 import javafx.scene.layout.Region;
+import com.sun.javafx.application.PlatformImpl;
 import com.sun.javafx.scene.control.behavior.TwoLevelFocusPopupBehavior;
 
 /**
@@ -65,7 +67,7 @@ public class ContextMenuSkin implements Skin<ContextMenu> {
             }
         });
 
-        if (PlatformUtil.isEmbedded() &&
+        if (PlatformImpl.isSupported(ConditionalFeature.INPUT_TOUCH) &&
             popupMenu.getStyleClass().contains("text-input-context-menu")) {
 
             root = new EmbeddedTextContextMenuContent(popupMenu);

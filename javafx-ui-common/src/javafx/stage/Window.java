@@ -979,16 +979,22 @@ public class Window implements EventTarget {
 
     // PENDING_DOC_REVIEW
     /**
-     * Construct an event dispatch chain for this stage.
+     * Construct an event dispatch chain for this window.
      *
      * @param tail the initial chain to build from
-     * @return the resulting event dispatch chain for this stage
+     * @return the resulting event dispatch chain for this window
      */
     @Override
     public EventDispatchChain buildEventDispatchChain(
             EventDispatchChain tail) {
-        return (eventDispatcher != null) ? tail.prepend(eventDispatcher.get())
-                                         : tail;
+        if (eventDispatcher != null) {
+            final EventDispatcher eventDispatcherValue = eventDispatcher.get();
+            if (eventDispatcherValue != null) {
+                tail = tail.prepend(eventDispatcherValue);
+            }
+        }
+
+        return tail;
     }
 
     private int focusGrabCounter;

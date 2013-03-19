@@ -60,7 +60,7 @@ public final class GradientColorMap {
     int[] rgba = null;
     int[] colors = null;
 
-    public GradientColorMap(int[] fractions, int[] rgba, int cycleMethod) {
+    GradientColorMap(int[] fractions, int[] rgba, int cycleMethod) {
         this.cycleMethod = cycleMethod;
     
         int numStops = fractions.length;

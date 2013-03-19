@@ -118,6 +118,18 @@ public final class ImageViewTest {
         assertEquals(url, newImageView.getImage().impl_getUrl());
     }
 
+    @Test
+    public void testNullImage() {
+        imageView.setImage(null);
+        assertNull(imageView.getImage());
+    }
+
+    @Test
+    public void testNullViewport() {
+        imageView.setViewport(null);
+        assertNull(imageView.getViewport());
+    }
+
     /*
     @Test
     public void testPlatformImageChangeForAsyncLoadedImage() {

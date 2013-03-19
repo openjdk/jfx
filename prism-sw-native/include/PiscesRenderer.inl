@@ -101,7 +101,6 @@ static INLINE void renderer_dispose(Renderer* rdr);
 
 static INLINE void renderer_setClip(Renderer* rdr, jint minX, jint minY,
                                     jint width, jint height);
-static INLINE void renderer_resetClip(Renderer* rdr);
 
 static INLINE void renderer_setCompositeRule(Renderer *rdr, jint compositeRule);
 static INLINE void renderer_setColor(Renderer* rdr, jint red, jint green,
@@ -158,7 +157,6 @@ renderer_dispose(Renderer* rdr) {
  * @param minY clip-rects upper-left corner y-coordinate
  * @param width clip-rects width
  * @param height clip-rects height
- * @see renderer_resetClip(Renderer *)
  */   
 static INLINE void
 renderer_setClip(Renderer* rdr, jint minX, jint minY, jint width, jint height) {
@@ -166,20 +164,6 @@ renderer_setClip(Renderer* rdr, jint minX, jint minY, jint width, jint height) {
     rdr->_clip_bbMinY = minY;
     rdr->_clip_bbMaxX = minX + width - 1;
     rdr->_clip_bbMaxY = minY + height- 1;
-}
-
-/**
- * This function resets clip-rect to world. This means, that clip-rect becomes
- * as large as possible. Nothing you draw to your surface is cliped.
- * @param rdr pointer to renderer structure
- * @see renderer_setClip(Renderer *, jint, jint, jint, jint) 
- */
-static INLINE void
-renderer_resetClip(Renderer* rdr) {
-    rdr->_clip_bbMinX = INTEGER_MIN_VALUE;
-    rdr->_clip_bbMinY = INTEGER_MIN_VALUE;
-    rdr->_clip_bbMaxX = INTEGER_MAX_VALUE;
-    rdr->_clip_bbMaxY = INTEGER_MAX_VALUE;
 }
 
 static INLINE void
@@ -470,10 +454,10 @@ createCommon(Surface* surface) {
     rdr->_surface = surface;
 
     // initialize the clip region
-    rdr->_clip_bbMinX = INTEGER_MIN_VALUE;
-    rdr->_clip_bbMinY = INTEGER_MIN_VALUE;
-    rdr->_clip_bbMaxX = INTEGER_MAX_VALUE;
-    rdr->_clip_bbMaxY = INTEGER_MAX_VALUE;
+    rdr->_clip_bbMinX = 0;
+    rdr->_clip_bbMinY = 0;
+    rdr->_clip_bbMaxX = surface->width - 1;
+    rdr->_clip_bbMaxY = surface->height - 1;
 
     // initialize renderer state
     rdr->_rendererState = INVALID_ALL;

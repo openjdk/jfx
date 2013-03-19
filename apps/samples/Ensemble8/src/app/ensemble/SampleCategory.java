@@ -33,6 +33,7 @@
 package ensemble;
 
 import ensemble.generated.Samples;
+import ensemble.util.FeatureChecker;
 
 /**
  * Descriptor for a category containing samples and sub categories.
@@ -47,8 +48,8 @@ public class SampleCategory {
 
     public SampleCategory(String name, SampleInfo[] samples, SampleInfo[] samplesAll, SampleCategory[] subCategories) {
         this.name = name;
-        this.samples = samples;
-        this.samplesAll = samplesAll;
+        this.samples = FeatureChecker.filterSamples(samples);
+        this.samplesAll = FeatureChecker.filterSamples(samplesAll);
         this.subCategories = subCategories;
     }
     

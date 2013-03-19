@@ -57,4 +57,19 @@ public interface TestedObservableLists {
             };
         }
     };
+
+    Callable<ObservableList<String>> CHECKED_OBSERVABLE_ARRAY_LIST = new Callable<ObservableList<String>>() {
+        @Override
+        public ObservableList<String> call() throws Exception {
+            return FXCollections.checkedObservableList(FXCollections.observableList(new ArrayList()), String.class);
+        }
+    };
+
+    Callable<ObservableList<String>> SYNCHRONIZED_OBSERVABLE_ARRAY_LIST = new Callable<ObservableList<String>>() {
+        @Override
+        public ObservableList<String> call() throws Exception {
+            return FXCollections.synchronizedObservableList(FXCollections.observableList(new ArrayList<String>()));
+        }
+    };
+    
 }

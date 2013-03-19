@@ -26,33 +26,61 @@
 package javafx.collections;
 
 import org.junit.Before;
-import org.junit.Rule;
 import org.junit.Test;
 
 import java.util.*;
 
 import static org.junit.Assert.*;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 /**
  * Tests for sublists of ObservableList.
  * 
  */
-public abstract class ObservableSubListTestBase {
+@RunWith(Parameterized.class)
+public class ObservableSubListTest {
+    final Callable<ObservableList<String>> listFactory;
     ObservableList<String> list;
     List<String> sublist;
     private MockListObserver<String> mlo;
 
-    public ObservableSubListTestBase(final ObservableList<String> c) {
-        list = c;
+    public ObservableSubListTest(final Callable<ObservableList<String>> listFactory) {
+        this.listFactory = listFactory;
     }
-    
+
+    @Parameterized.Parameters
+    public static Collection createParameters() {
+        Object[][] data = new Object[][] {
+            { TestedObservableLists.ARRAY_LIST },
+            { TestedObservableLists.LINKED_LIST },
+            { TestedObservableLists.VETOABLE_LIST },
+            { TestedObservableLists.CHECKED_OBSERVABLE_ARRAY_LIST },
+            { TestedObservableLists.SYNCHRONIZED_OBSERVABLE_ARRAY_LIST }
+        };
+        return Arrays.asList(data);
+    }
+
     @Before
-    public void setup() {
-        list.clear();
-        list.addAll(Arrays.asList("a", "b", "c", "d", "e", "f"));
-        sublist = list.subList(1, 5);
+    public void setup() throws Exception {
+        list = listFactory.call();
         mlo = new MockListObserver<String>();
         list.addListener(mlo);
+        useListData("a", "b", "c", "d", "e", "f");
+        sublist = list.subList(1, 5);
+    }
+
+    /**
+     * Modifies the list in the fixture to use the strings passed in instead of
+     * the default strings, and re-creates the observable list and the observer.
+     * If no strings are passed in, the result is an empty list.
+     *
+     * @param strings the strings to use for the list in the fixture
+     */
+    void useListData(String... strings) {
+        list.clear();
+        list.addAll(Arrays.asList(strings));
+        mlo.clear();
     }
 
     @Test(expected = IllegalArgumentException.class)

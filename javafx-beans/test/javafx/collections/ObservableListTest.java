@@ -29,17 +29,21 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
 import static org.junit.Assert.*;
 import org.junit.Ignore;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 /**
  * Tests for ObservableList.
  * 
  */
-public abstract class ObservableListTestBase  {
+@RunWith(Parameterized.class)
+public class ObservableListTest  {
 
     static final List<String> EMPTY = Collections.emptyList();
     final Callable<ObservableList<String>> listFactory;
@@ -47,8 +51,20 @@ public abstract class ObservableListTestBase  {
     MockListObserver<String> mlo;
 
 
-    public ObservableListTestBase(final Callable<ObservableList<String>> listFactory) {
+    public ObservableListTest(final Callable<ObservableList<String>> listFactory) {
         this.listFactory = listFactory;
+    }
+
+    @Parameterized.Parameters
+    public static Collection createParameters() {
+        Object[][] data = new Object[][] {
+            { TestedObservableLists.ARRAY_LIST },
+            { TestedObservableLists.LINKED_LIST },
+            { TestedObservableLists.VETOABLE_LIST },
+            { TestedObservableLists.CHECKED_OBSERVABLE_ARRAY_LIST },
+            { TestedObservableLists.SYNCHRONIZED_OBSERVABLE_ARRAY_LIST }
+         };
+        return Arrays.asList(data);
     }
 
     @Before

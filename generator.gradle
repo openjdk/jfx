@@ -278,18 +278,26 @@ task generate << {
 
     ["glass-lib-gtk", "glass-lib-ios", "glass-lib-lens", "glass-lib-macosx", "glass-lib-windows"].each { dir ->
         copy {
-            from "${RTDir}/glass/${dir}"
-            into "${FXDir}/modules/graphics/native/src/main/${dir}"
-            exclude "build", "dist", "*.iml", "build.xml"
+            from "${RTDir}/glass/${dir}/src"
+            into "${FXDir}/modules/graphics/src/main/native/${dir}"
         }
     }
 
-    ["decora-sse-native", "prism-common-native", "prism-sw-native"].each { dir ->
-        copy {
-            from "${RTDir}/${dir}"
-            into "${FXDir}/modules/graphics/native/src/main/${dir}"
-            exclude "build", "dist", "*.iml"
-        }
+    copy {
+        from "${RTDir}/prism-common-native/src"
+        into "${FXDir}/modules/graphics/src/main/native/prism-common-native"
+    }
+
+    copy {
+        from "${RTDir}/prism-sw-native/include"
+        from "${RTDir}/prism-sw-native/src"
+        into "${FXDir}/modules/graphics/src/main/native/prism-sw-native"
+    }
+
+    copy {
+        from "${RTDir}/decora-sse-native"
+        into "${FXDir}/modules/graphics/src/main/native/decora-sse-native"
+        include "*.cc", "*.h"
     }
 
     copy {

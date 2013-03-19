@@ -34,8 +34,10 @@ package ensemble.samplepage;
 
 import ensemble.SampleInfo;
 import ensemble.SampleInfo.URL;
+import ensemble.generated.Samples;
 import static ensemble.samplepage.FrontPage.*;
 import static ensemble.samplepage.SamplePage.*;
+import ensemble.util.FeatureChecker;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.scene.control.Hyperlink;
@@ -106,15 +108,17 @@ public class Description extends VBox {
                 .build();
         
         for (final SampleInfo.URL sampleURL : sampleInfo.getRelatedSampleURLs()) {
-            Hyperlink sampleLink = new Hyperlink(sampleURL.getName());
-            sampleLink.setOnAction(new EventHandler<ActionEvent>() {
-                @Override
-                public void handle(ActionEvent t) {
-                    samplePage.pageBrowser.goToPage("sample://" + sampleURL.getURL());
-                }
-            });
-            sampleLink.setPrefWidth(1000);
-            relatedSamples.getChildren().add(sampleLink);
+            if (Samples.ROOT.sampleForPath(sampleURL.getURL()) != null) { //Check if sample exists
+                Hyperlink sampleLink = new Hyperlink(sampleURL.getName());
+                sampleLink.setOnAction(new EventHandler<ActionEvent>() {
+                    @Override
+                    public void handle(ActionEvent t) {
+                        samplePage.pageBrowser.goToPage("sample://" + sampleURL.getURL());
+                    }
+                });
+                sampleLink.setPrefWidth(1000);
+                relatedSamples.getChildren().add(sampleLink);
+            }
         }
         GridPane gridPane = GridPaneBuilder.create()
                 .columnConstraints(

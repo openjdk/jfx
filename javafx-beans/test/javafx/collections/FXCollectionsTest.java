@@ -473,6 +473,182 @@ public class FXCollectionsTest {
         }
     }
 
+    @Test
+    public void emptyObservableMapTest() {
+        ObservableMap map = FXCollections.emptyObservableMap();
+        assertEquals(0, map.size());
+        assertTrue(map.isEmpty());
+        assertFalse(map.containsKey("fooKey"));
+        assertFalse(map.containsValue("fooValue"));
+        assertEquals(null, map.get("fooKey"));
+        assertEquals(FXCollections.emptyObservableSet(), map.values());
+        assertEquals(FXCollections.emptyObservableSet(), map.keySet());
+        assertEquals(FXCollections.emptyObservableSet(), map.entrySet());
+    }
+
+    @Test
+    public void checkedObservableListTest() {
+        ObservableList list = FXCollections.checkedObservableList(FXCollections.observableArrayList("foo", "foo2"), String.class);
+
+        try {
+            list.add(Boolean.TRUE);
+            fail("Expected ClassCastException");
+        } catch (ClassCastException ex) {
+        }
+        try {
+            list.add(Integer.valueOf(10));
+            fail("Expected ClassCastException");
+        } catch (ClassCastException ex) {
+        }
+        list.add("foo3");
+        assertArrayEquals(new String[] {"foo", "foo2", "foo3"}, list.toArray(new String[0]));
+
+        try {
+            list.add(0, Boolean.TRUE);
+            fail("Expected ClassCastException");
+        } catch (ClassCastException ex) {
+        }
+        list.add(0, "foo0");
+        assertArrayEquals(new String[] {"foo0", "foo", "foo2", "foo3"}, list.toArray(new String[0]));
+
+        try {
+            list.addAll(Boolean.TRUE, Integer.valueOf(15));
+            fail("Expected ClassCastException");
+        } catch (ClassCastException ex) {
+        }
+        list.addAll("foo4", "foo5");
+        assertArrayEquals(new String[] {"foo0", "foo", "foo2", "foo3", "foo4", "foo5"},
+                list.toArray(new String[0]));
+
+        try {
+            list.addAll(Arrays.asList(Boolean.TRUE, Boolean.FALSE));
+            fail("Expected ClassCastException");
+        } catch (ClassCastException ex) {
+        }
+        list.addAll(Arrays.asList("foo6", "foo7"));
+        assertArrayEquals(new String[] {"foo0", "foo", "foo2", "foo3", "foo4", "foo5", "foo6", "foo7"},
+                list.toArray(new String[0]));
+
+        try {
+            list.addAll(3, Arrays.asList(Boolean.TRUE, Boolean.FALSE));
+            fail("Expected ClassCastException");
+        } catch (ClassCastException ex) {
+        }
+        list.addAll(3, Arrays.asList("foo2_1", "foo2_2"));
+        assertArrayEquals(new String[] {"foo0", "foo", "foo2", "foo2_1", "foo2_2", "foo3", "foo4", "foo5", "foo6", "foo7"},
+                list.toArray(new String[0]));
+
+        try {
+            list.set(2, Boolean.TRUE);
+            fail("Expected ClassCastException");
+        } catch (ClassCastException ex) {
+        }
+        list.set(2, "fooNew2");
+        assertArrayEquals(new String[] {"foo0", "foo", "fooNew2", "foo2_1", "foo2_2", "foo3", "foo4", "foo5", "foo6", "foo7"},
+                list.toArray(new String[0]));
+
+        try {
+            list.setAll(Boolean.TRUE, Boolean.FALSE);
+            fail("Expected ClassCastException");
+        } catch (ClassCastException ex) {
+        }
+        list.setAll("a", "b", "c");
+        assertArrayEquals(new String[] {"a", "b", "c"}, list.toArray(new String[0]));
+
+        try {
+            list.setAll(Arrays.asList(Boolean.TRUE, Boolean.FALSE));
+            fail("Expected ClassCastException");
+        } catch (ClassCastException ex) {
+        }
+        list.setAll(Arrays.asList("1", "2", "3"));
+        assertArrayEquals(new String[] {"1", "2", "3"}, list.toArray(new String[0]));
+    }
+
+    @Test
+    public void checkedObservableMapTest() {
+        final ObservableMap map = FXCollections.observableMap(new HashMap());
+        ObservableMap om = FXCollections.checkedObservableMap(map, String.class, Boolean.class);
+
+        try {
+            om.put(Integer.valueOf(1), Integer.valueOf(10));
+            fail("Expected ClassCastException");
+        } catch (Exception ex) {
+        }
+        try {
+            om.put("1", Integer.valueOf(10));
+            fail("Expected ClassCastException");
+        } catch (Exception ex) {
+        }
+        try {
+            om.put(Integer.valueOf(1), Boolean.TRUE);
+            fail("Expected ClassCastException");
+        } catch (Exception ex) {
+        }
+        om.put("1", Boolean.TRUE);
+        assertEquals(Boolean.TRUE, om.get("1"));
+        assertEquals(1, map.size());
+
+        Map putMap = new HashMap();
+        putMap.put(Integer.valueOf(1), "10");
+        putMap.put(Integer.valueOf(2), "20");
+        try {
+            om.putAll(putMap);
+            fail("Expected ClassCastException");
+        } catch (Exception ex) {
+        }
+        putMap.clear();
+        putMap.put("1", "10");
+        putMap.put("2", "20");
+        try {
+            om.putAll(putMap);
+            fail("Expected ClassCastException");
+        } catch (Exception ex) {
+        }
+        putMap.clear();
+        putMap.put(Integer.valueOf(1), Boolean.TRUE);
+        putMap.put(Integer.valueOf(2), Boolean.FALSE);
+        try {
+            om.putAll(putMap);
+            fail("Expected ClassCastException");
+        } catch (Exception ex) {
+        }
+        putMap.clear();
+        putMap.put("1", Boolean.TRUE);
+        putMap.put("2", Boolean.FALSE);
+        om.putAll(putMap);
+        assertEquals(Boolean.TRUE, om.get("1"));
+        assertEquals(Boolean.FALSE, om.get("2"));
+        assertEquals(2, om.size());
+    }
+
+    @Test
+    public void checkedObservableSetTest() {
+        ObservableSet set = FXCollections.checkedObservableSet(FXCollections.observableSet("foo", "foo2"), String.class);
+
+        try {
+            set.add(Boolean.TRUE);
+            fail("Expected ClassCastException");
+        } catch (ClassCastException ex) {
+        }
+        try {
+            set.add(Integer.valueOf(10));
+            fail("Expected ClassCastException");
+        } catch (ClassCastException ex) {
+        }
+        set.add("foo3");
+        assertTrue(set.containsAll(Arrays.asList("foo", "foo2", "foo3")));
+        assertEquals(3, set.size());
+
+        try {
+            set.addAll(Arrays.asList(Boolean.TRUE, Boolean.FALSE));
+            fail("Expected ClassCastException");
+        } catch (ClassCastException ex) {
+        }
+        set.addAll(Arrays.asList("foo6", "foo7"));
+        assertTrue(set.containsAll(Arrays.asList("foo", "foo2", "foo3", "foo6", "foo7")));
+        assertEquals(5, set.size());
+    }
+
     private static class NonSortableObservableList extends AbstractList<String> implements ObservableList<String> {
 
         private List<String> backingList = new ArrayList<String>();

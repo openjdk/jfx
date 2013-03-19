@@ -778,7 +778,7 @@ final class SWGraphics implements ReadbackGraphics {
             glyphTx.deriveWithTranslation(x, y);
             for (int i = strFrom; i < strTo; i++) {
                 final FontStrike.Glyph g = strike.getGlyph(gl.getGlyphCode(i));
-                this.paintShape(g.getShape(), this.stroke, glyphTx);
+                this.paintShape(g.getShape(), null, glyphTx);
                 advanceX += g.getAdvance();
                 glyphTx.deriveWithTranslation(g.getAdvance(), 0);
             }

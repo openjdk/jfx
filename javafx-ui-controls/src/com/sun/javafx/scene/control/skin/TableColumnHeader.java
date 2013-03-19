@@ -30,6 +30,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import javafx.application.ConditionalFeature;
 import javafx.beans.property.DoubleProperty;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
@@ -55,6 +56,7 @@ import javafx.css.StyleableDoubleProperty;
 import javafx.css.CssMetaData;
 import javafx.css.PseudoClass;
 import javafx.css.StyleableProperty;
+import com.sun.javafx.application.PlatformImpl;
 import com.sun.javafx.css.converters.SizeConverter;
 import com.sun.javafx.scene.control.MultiplePropertyChangeListenerHandler;
 import javafx.collections.WeakListChangeListener;
@@ -370,7 +372,7 @@ public class TableColumnHeader extends Region {
     
     private boolean isColumnReorderingEnabled() {
         // we only allow for column reordering if there are more than one column,
-        return ! PlatformUtil.isEmbedded() && getTableViewSkin().getVisibleLeafColumns().size() > 1;
+        return !PlatformImpl.isSupported(ConditionalFeature.INPUT_TOUCH) && getTableViewSkin().getVisibleLeafColumns().size() > 1;
     }
     
     private void initUI() {

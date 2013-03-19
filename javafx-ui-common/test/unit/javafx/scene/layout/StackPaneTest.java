@@ -47,6 +47,17 @@ public class StackPaneTest {
         assertEquals(Pos.CENTER, stack.getAlignment());
     }
 
+    @Test public void testStackPaneNulls() {
+        stack.setAlignment(null);
+
+        // this musn't throw NPE
+        stack.autosize();
+        stack.layout();
+
+        assertNull(null, stack.getAlignment());
+        assertNull(null, stack.alignmentProperty().get());
+    }
+
     @Test public void testSimpleStackPane() {
         MockResizable child1 = new MockResizable(100,200, 300,400, 500,600);
         Rectangle child2 = new Rectangle(100, 100);

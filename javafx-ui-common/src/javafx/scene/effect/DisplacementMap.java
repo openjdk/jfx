@@ -112,10 +112,7 @@ public class DisplacementMap extends Effect {
      * Creates a new instance of DisplacementMap with default parameters.
      */
     public DisplacementMap() {
-        FloatMap fm = new FloatMap();
-        fm.setWidth(1);
-        fm.setHeight(1);
-        setMapData(fm);
+        setMapData(new FloatMap(1, 1));
     }
 
     /**
@@ -183,6 +180,8 @@ public class DisplacementMap extends Effect {
             return true;
         return localInput.impl_checkChainContains(e);
     }
+
+    private final FloatMap defaultMap = new FloatMap(1, 1);
 
     /**
      * The map data for this {@code Effect}.
@@ -483,7 +482,8 @@ public class DisplacementMap extends Effect {
             localMapData.impl_sync();
             peer.setMapData(localMapData.getImpl());
         } else {
-            peer.setMapData(null);
+            defaultMap.impl_sync();
+            peer.setMapData(defaultMap.getImpl());
         }
         peer.setScaleX((float)getScaleX());
         peer.setScaleY((float)getScaleY());

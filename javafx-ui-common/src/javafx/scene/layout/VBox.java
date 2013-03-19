@@ -302,7 +302,11 @@ public class VBox extends Pane {
     private ObjectProperty<Pos> alignment;
     public final void setAlignment(Pos value) { alignmentProperty().set(value); }
     public final Pos getAlignment() { return alignment == null ? Pos.TOP_LEFT : alignment.get(); }
-   
+    private Pos getAlignmentInternal() {
+        Pos localPos = getAlignment();
+        return localPos == null ? Pos.TOP_LEFT : localPos;
+    }
+
     /**
      * Whether or not resizable children will be resized to fill the full width of the vbox
      * or be kept to their preferred width and aligned according to the <code>alignment</code>
@@ -361,9 +365,9 @@ public class VBox extends Pane {
         if (getContentBias() == Orientation.VERTICAL) {
             double minHeights[] = getAreaHeights(managed, -1, true);
             adjustAreaHeights(managed, minHeights, height, -1);
-            contentWidth = computeMaxMinAreaWidth(managed, getMargins(managed), minHeights, getAlignment().getHpos());
+            contentWidth = computeMaxMinAreaWidth(managed, getMargins(managed), minHeights, getAlignmentInternal().getHpos());
         } else {
-            contentWidth = computeMaxMinAreaWidth(managed, getMargins(managed), getAlignment().getHpos());            
+            contentWidth = computeMaxMinAreaWidth(managed, getMargins(managed), getAlignmentInternal().getHpos());
         }
         return snapSpace(insets.getLeft()) + contentWidth + snapSpace(insets.getRight());
     }
@@ -382,9 +386,9 @@ public class VBox extends Pane {
         if (getContentBias() == Orientation.VERTICAL) {
             double prefHeights[] = getAreaHeights(managed, -1, false);
             adjustAreaHeights(managed, prefHeights, height, -1);
-            contentWidth = computeMaxPrefAreaWidth(managed, getMargins(managed), prefHeights, getAlignment().getHpos());
+            contentWidth = computeMaxPrefAreaWidth(managed, getMargins(managed), prefHeights, getAlignmentInternal().getHpos());
         } else {
-            contentWidth = computeMaxPrefAreaWidth(managed, getMargins(managed), getAlignment().getHpos());
+            contentWidth = computeMaxPrefAreaWidth(managed, getMargins(managed), getAlignmentInternal().getHpos());
         }
         return snapSpace(insets.getLeft()) + contentWidth + snapSpace(insets.getRight());
     }
@@ -507,8 +511,8 @@ public class VBox extends Pane {
         double bottom = snapSpace(insets.getBottom());
         double right = snapSpace(insets.getRight());
         double space = snapSpace(getSpacing());
-        HPos hpos = getAlignment().getHpos();
-        VPos vpos = getAlignment().getVpos();
+        HPos hpos = getAlignmentInternal().getHpos();
+        VPos vpos = getAlignmentInternal().getVpos();
 
         actualAreaHeights = getAreaHeights(managed, width, false);
         double contentWidth = width - left - right;

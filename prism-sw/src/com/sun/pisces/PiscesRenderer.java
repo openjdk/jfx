@@ -121,60 +121,10 @@ public final class PiscesRenderer {
      */
     public native void setCompositeRule(int compositeRule);
 
-    GradientColorMap gradientColorMap = null;
-    
-    private boolean arraysDiffer(int[] a, int[] b) {
-        if (a == null) {
-            return true;
-        }
-        int len = b.length;
-        if (a.length != len) {
-            return true;
-        }
-        for (int i = 0; i < len; i++) {
-            if (a[i] != b[i]) {
-                return true;
-            }
-        }
-        
-        return false;
-    }
-    
-    private void setGradientColorMap(int[] fractions, int[] rgba,
-                                     int cycleMethod) {
-        if (fractions.length != rgba.length) {
-            throw new IllegalArgumentException("fractions.length != rgba.length!");
-        }
-        
-        if (gradientColorMap == null ||
-            gradientColorMap.cycleMethod != cycleMethod ||
-            arraysDiffer(gradientColorMap.fractions, fractions) ||
-            arraysDiffer(gradientColorMap.rgba, rgba)) {
-            this.gradientColorMap =
-                new GradientColorMap(fractions, rgba, cycleMethod);
-        }
-    }
-    
     private native void setLinearGradientImpl(int x0, int y0, int x1, int y1,
                                               int[] colors,
                                               int cycleMethod,
                                               Transform6 gradientTransform);
-
-    /**
-     * This method calculates a GradientColorMap, which can be used in calls to @see setLinearGradient and @see setRadialGradient.
-     * Imagine, we want to draw simple gradient from blue to red color. Each pixel on line perpendicular to line L = [[x0,y0], [x1, y1]] will have same constant color.
-     * Pixels on perpendicular-line which passes [x0, y0] will be blue. Those on line passing [x1, y1] will be red. Colors on lines in between will be interpolated by <code>fractions</code>.
-     * @param fractions this array defines normalized distances in which color (rgba[i]) starts to fade into next color (rgba[i+1]). This distance from the point [x0,y0] is given as fraction[i]*l, where l is length of line [[x0,y0], [x1,y1]]. fraction[i+1] says, in what distance fraction[i+1]*l from [x0,y0] should color already have firm value of rgba[i+1]. Values passed in fractions should be from interval <0.0, 1.0>, in 15.16 format.
-     * @param rgba colors which the linear gradient passes through. Generally should be fulfilled this formula <code>rgba.length == fractions.length</code>
-     * @param cycleMethod some value from <code>GradientColorMap.CYCLE_*</code>. @see GradienColorMap
-     * @return The calculated GradientColorMap.
-     * @see GradienColorMap
-     */
-    public GradientColorMap calculateGradientColorMap(int[] fractions,
-                                                      int[] rgba,
-                                                      int cycleMethod) {
-        return new GradientColorMap(fractions, rgba, cycleMethod);
-    }
 
     /**
      * This method sets linear color-gradient data to be used as paint data in following rendering operation.
@@ -193,8 +143,9 @@ public final class PiscesRenderer {
     public void setLinearGradient(int x0, int y0, int x1, int y1,
                                   int[] fractions, int[] rgba,
                                   int cycleMethod,
-                                  Transform6 gradientTransform) {
-        setGradientColorMap(fractions, rgba, cycleMethod);
+                                  Transform6 gradientTransform)
+    {
+        final GradientColorMap gradientColorMap = new GradientColorMap(fractions, rgba, cycleMethod);
         setLinearGradientImpl(x0, y0, x1, y1,
                               gradientColorMap.colors, cycleMethod,
                               gradientTransform == null ? new Transform6(1 << 16, 0, 0, 1 << 16, 0, 0) : gradientTransform);
@@ -214,8 +165,8 @@ public final class PiscesRenderer {
      */
     public void setLinearGradient(int x0, int y0, int x1, int y1,
                                   GradientColorMap gradientColorMap,
-                                  Transform6 gradientTransform) {
-        this.gradientColorMap = gradientColorMap;
+                                  Transform6 gradientTransform)
+    {
         setLinearGradientImpl(x0, y0, x1, y1,
                               gradientColorMap.colors,
                               gradientColorMap.cycleMethod,
@@ -273,8 +224,9 @@ public final class PiscesRenderer {
                                   int radius,
                                   int[] fractions, int[] rgba,
                                   int cycleMethod,
-                                  Transform6 gradientTransform) {
-        setGradientColorMap(fractions, rgba, cycleMethod);
+                                  Transform6 gradientTransform)
+    {
+        final GradientColorMap gradientColorMap = new GradientColorMap(fractions, rgba, cycleMethod);
         setRadialGradientImpl(cx, cy, fx, fy, radius,
                               gradientColorMap.colors, cycleMethod,
                               gradientTransform == null ? new Transform6(1 << 16, 0, 0, 1 << 16, 0, 0) : gradientTransform);
@@ -298,14 +250,32 @@ public final class PiscesRenderer {
                                   int radius,
                                   GradientColorMap gradientColorMap,
                                   Transform6 gradientTransform) {
-        this.gradientColorMap = gradientColorMap;
         setRadialGradientImpl(cx, cy, fx, fy, radius,
                               gradientColorMap.colors,
                               gradientColorMap.cycleMethod,
                               gradientTransform == null ? new Transform6(1 << 16, 0, 0, 1 << 16, 0, 0) : gradientTransform);
     }
 
-    public native void setTexture(int imageType, int data[], int width, int height,
+    public void setTexture(int imageType, int data[], int width, int height,
+        Transform6 textureTransform, boolean repeat, boolean hasAlpha)
+    {
+        if (width < 0) {
+            throw new IllegalArgumentException("WIDTH must be positive");
+        }
+        if (height < 0) {
+            throw new IllegalArgumentException("HEIGHT must be positive");
+        }
+        final int nbits = 32-Integer.numberOfLeadingZeros(width) + 32-Integer.numberOfLeadingZeros(height);
+        if (nbits > 31) {
+            throw new IllegalArgumentException("WIDTH * HEIGHT is too large");
+        }
+        if ((width * height) > data.length) {
+            throw new IllegalArgumentException("WIDTH * HEIGHT exceeds length of data");
+        }
+        this.setTextureImpl(imageType, data, width, height, textureTransform, repeat, hasAlpha);
+    }
+
+    private native void setTextureImpl(int imageType, int data[], int width, int height,
         Transform6 textureTransform, boolean repeat, boolean hasAlpha);
 
     /**
@@ -313,13 +283,23 @@ public final class PiscesRenderer {
      * clipped to the intersection of this rectangle and the destination
      * image bounds.
      */
-    public native void setClip(int minX, int minY, int width, int height);
+    public void setClip(int minX, int minY, int width, int height) {
+        final int x1 = Math.max(minX, 0);
+        final int y1 = Math.max(minY, 0);
+        final int x2 = Math.min(minX + width, surface.getWidth());
+        final int y2 = Math.min(minY + height, surface.getHeight());
+        this.setClipImpl(x1, y1, x2 - x1, y2 - y1);
+    }
+
+    private native void setClipImpl(int minX, int minY, int width, int height);
 
     /**
      * Resets the clip rectangle.  Each primitive will be clipped only
      * to the destination image bounds.
      */
-    public native void resetClip();
+    public void resetClip() {
+        this.setClipImpl(0, 0, surface.getWidth(), surface.getHeight());
+    }
 
     /**
      * Clears rectangle (x, y, x + w, y + h). Clear sets all pixels to transparent black (0x00000000 ARGB).
@@ -328,20 +308,75 @@ public final class PiscesRenderer {
 
     public native void fillRect(int x, int y, int w, int h);
 
-    public native void emitAndClearAlphaRow(byte[] alphaMap, int[] alphaDeltas, int pix_y, int pix_x_from, int pix_x_to,
+    public void emitAndClearAlphaRow(byte[] alphaMap, int[] alphaDeltas, int pix_y, int pix_x_from, int pix_x_to,
+        int rowNum)
+    {
+        if ((pix_x_to - pix_x_from) > alphaDeltas.length) {
+            throw new IllegalArgumentException("rendering range exceeds length of data");
+        }
+        this.emitAndClearAlphaRowImpl(alphaMap, alphaDeltas, pix_y, pix_x_from, pix_x_to, rowNum);
+    }
+
+    private native void emitAndClearAlphaRowImpl(byte[] alphaMap, int[] alphaDeltas, int pix_y, int pix_x_from, int pix_x_to,
         int rowNum);
 
-    public native void fillAlphaMask(byte[] mask, int x, int y, int width, int height, int offset, int stride);
+    public void fillAlphaMask(byte[] mask, int x, int y, int width, int height, int offset, int stride) {
+        this.inputImageCheck(width, height, offset, stride, mask.length);
+        this.fillAlphaMaskImpl(mask, x, y, width, height, offset, stride);
+    }
 
-    public native void fillLCDAlphaMask(byte[] mask, int x, int y, int width, int height, int offset, int stride);
+    private native void fillAlphaMaskImpl(byte[] mask, int x, int y, int width, int height, int offset, int stride);
 
-    public native void drawImage(int imageType, int data[],  int width, int height, int offset, int stride,
+    public void fillLCDAlphaMask(byte[] mask, int x, int y, int width, int height, int offset, int stride) {
+        this.inputImageCheck(width, height, offset, stride, mask.length);
+        this.fillLCDAlphaMaskImpl(mask, x, y, width, height, offset, stride);
+    }
+
+    private native void fillLCDAlphaMaskImpl(byte[] mask, int x, int y, int width, int height, int offset, int stride);
+
+    public void drawImage(int imageType, int data[],  int width, int height, int offset, int stride,
+        Transform6 textureTransform, boolean repeat,
+        int bboxX, int bboxY, int bboxW, int bboxH,
+        int interpolateMinX, int interpolateMinY, int interpolateMaxX, int interpolateMaxY,
+        int topOpacity, int bottomOpacity,
+        boolean hasAlpha)
+    {
+        this.inputImageCheck(width, height, offset, stride, data.length);
+        this.drawImageImpl(imageType, data, width, height, offset, stride,
+            textureTransform, repeat,
+            bboxX, bboxY, bboxW, bboxH,
+            interpolateMinX, interpolateMinY, interpolateMaxX, interpolateMaxY,
+            topOpacity, bottomOpacity, hasAlpha);
+    }
+
+    private native void drawImageImpl(int imageType, int data[], int width, int height, int offset, int stride,
         Transform6 textureTransform, boolean repeat,
         int bboxX, int bboxY, int bboxW, int bboxH,
         int interpolateMinX, int interpolateMinY, int interpolateMaxX, int interpolateMaxY,
         int topOpacity, int bottomOpacity,
         boolean hasAlpha);
 
+    private void inputImageCheck(int width, int height, int offset, int stride, int data_length) {
+        if (width < 0) {
+            throw new IllegalArgumentException("WIDTH must be positive");
+        }
+        if (height < 0) {
+            throw new IllegalArgumentException("HEIGHT must be positive");
+        }
+        if (stride < 0) {
+            throw new IllegalArgumentException("STRIDE must be positive");
+        }
+        if (stride < width) {
+            throw new IllegalArgumentException("STRIDE must be >= WIDTH");
+        }
+        final int nbits = 32-Integer.numberOfLeadingZeros(stride) + 32-Integer.numberOfLeadingZeros(height);
+        if (nbits > 31) {
+            throw new IllegalArgumentException("STRIDE * HEIGHT is too large");
+        }
+        if ((offset + stride*(height-1) + width) > data_length) {
+            throw new IllegalArgumentException("STRIDE * HEIGHT exceeds length of data");
+        }
+    }
 
     protected void finalize() {
         this.nativeFinalize();
@@ -350,5 +385,5 @@ public final class PiscesRenderer {
     /**
      * Native finalizer. Releases native memory used by PiscesRenderer at lifetime.
      */
-    public native void nativeFinalize();
+    private native void nativeFinalize();
 }
