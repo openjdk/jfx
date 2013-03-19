@@ -1325,7 +1325,11 @@ final public class StyleManager {
         key.className = cname;
         key.id = id;
         for(int n=0, nMax=styleClasses.size(); n<nMax; n++) {
-            key.styleClasses.add(StyleClassSet.getStyleClass(styleClasses.get(n)));
+
+            final String styleClass = styleClasses.get(n);
+            if (styleClass == null || styleClass.isEmpty()) continue;
+
+            key.styleClasses.add(StyleClassSet.getStyleClass(styleClass));
         }
 
         Cache cache = cacheMap.get(key);
