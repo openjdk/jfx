@@ -27,6 +27,9 @@ package javafx.scene.control;
 
 import com.sun.javafx.Utils;
 import com.sun.javafx.scene.control.behavior.TreeViewAnchorRetriever;
+import com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
+import com.sun.javafx.scene.control.infrastructure.KeyModifier;
+
 import static org.junit.Assert.*;
 
 import java.util.List;
@@ -1225,7 +1228,6 @@ public class TreeViewKeyInputTest {
         assertTrue(isSelected(0,1,2,3,4,5));
     }
     
-    @Ignore("Bug not yet fixed")
     @Test public void test_rt28065() {
         sm.setSelectionMode(SelectionMode.MULTIPLE);
         

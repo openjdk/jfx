@@ -110,7 +110,7 @@ public class TableRowSkin<T> extends TableRowSkinBase<T, TableRow<T>, CellBehavi
         return cell.getTableColumn();
     }
 
-    @Override protected Node getGraphic() {
+    @Override protected ObjectProperty<Node> graphicProperty() {
         return null;
     }
 

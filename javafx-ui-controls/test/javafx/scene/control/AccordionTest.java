@@ -26,6 +26,7 @@
 package javafx.scene.control;
 
 import com.sun.javafx.pgstub.StubToolkit;
+import com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
 import com.sun.javafx.tk.Toolkit;
 import javafx.scene.Scene;
 import javafx.scene.layout.StackPane;

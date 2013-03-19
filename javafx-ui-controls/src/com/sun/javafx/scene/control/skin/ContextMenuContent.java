@@ -39,6 +39,7 @@ import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
+import javafx.beans.WeakInvalidationListener;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableBooleanValue;
 import javafx.beans.value.ObservableValue;
@@ -76,6 +77,7 @@ import javafx.geometry.NodeOrientation;
 import javafx.stage.Window;
 
 import com.sun.javafx.scene.control.behavior.TwoLevelFocusPopupBehavior;
+import javafx.beans.WeakInvalidationListener;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.css.Styleable;
 
@@ -111,7 +113,14 @@ public class ContextMenuContent extends Region {
     private int currentFocusedIndex = -1;
     
     private boolean itemsDirty = true;
-    
+    private InvalidationListener popupShowingListener = new InvalidationListener() {
+        @Override public void invalidated(Observable arg0) {
+            updateItems();
+        }
+    };
+    private WeakInvalidationListener weakPopupShowingListener = 
+            new WeakInvalidationListener(popupShowingListener);
+
     /***************************************************************************
      * Constructors
      **************************************************************************/
@@ -137,11 +146,7 @@ public class ContextMenuContent extends Region {
         initialize();
         setUpBinds();
         // RT-20197 add menuitems only on first show.
-        popupMenu.showingProperty().addListener(new InvalidationListener() {
-            @Override public void invalidated(Observable arg0) {
-                updateItems();
-            }
-        });
+        popupMenu.showingProperty().addListener(weakPopupShowingListener);
 
         /*
         ** only add this if we're on an embedded
@@ -233,13 +238,21 @@ public class ContextMenuContent extends Region {
     }
     
     private void updateVisualItems() {
-        itemsContainer.getChildren().clear();
+        // clean up itemsContainer
+        ObservableList<Node> itemsContainerChilder = itemsContainer.getChildren();
+        for (int i = 0, max = itemsContainerChilder.size(); i < max; i++) {
+            MenuItemContainer container = (MenuItemContainer) itemsContainerChilder.get(i);
+            container.visibleProperty().unbind();
+            container.dispose();
+        }
+        itemsContainerChilder.clear();
+        
         for (int row = 0; row < getItems().size(); row++) {
             final MenuItem item = getItems().get(row);
             if (item instanceof CustomMenuItem && ((CustomMenuItem) item).getContent() == null) continue;
             MenuItemContainer menuItemContainer = new MenuItemContainer(item);
             menuItemContainer.visibleProperty().bind(item.visibleProperty());
-            itemsContainer.getChildren().add(menuItemContainer);
+            itemsContainerChilder.add(menuItemContainer);
             if (item instanceof SeparatorMenuItem) {
                 // TODO
                 // we don't want the hover highlight for separators, so for
@@ -247,8 +260,8 @@ public class ContextMenuContent extends Region {
                 // background entirely. This may cause issues if people
                 // intend to style the background differently.
                  Node node = ((CustomMenuItem) item).getContent();
-                 itemsContainer.getChildren().remove(menuItemContainer);
-                 itemsContainer.getChildren().add(node);
+                 itemsContainerChilder.remove(menuItemContainer);
+                 itemsContainerChilder.add(node);
                  // Add the (separator) menu item to properties map of this node.
                 // Special casing this for separator :
                 // This allows associating this container with SeparatorMenuItem.
@@ -1048,6 +1061,9 @@ public class ContextMenuContent extends Region {
         private Node label;
         private Node right;
 
+        private final List<WeakInvalidationListener> listeners = 
+                new ArrayList<WeakInvalidationListener>();
+
         protected Label getLabel(){
             return (Label) label;
         }
@@ -1088,12 +1104,28 @@ public class ContextMenuContent extends Region {
             // This allows associating this container with corresponding MenuItem.
             getProperties().put(MenuItem.class, item);
             
-            item.graphicProperty().addListener(new InvalidationListener() {
-                @Override public void invalidated(Observable o) {
+            InvalidationListener listener = new InvalidationListener() {
+                @Override public void invalidated(Observable observable) {
                     createChildren();
                     computeVisualMetrics();
                 }
-            });
+            };
+            WeakInvalidationListener weakListener = new WeakInvalidationListener(listener);
+            listeners.add(weakListener);
+            item.graphicProperty().addListener(weakListener);
+        }
+        
+        public void dispose() {
+            listeners.clear();
+            
+            if (label != null) {
+                ((Label)label).textProperty().unbind();
+            }
+            
+            left = null;
+            graphic = null;
+            label = null;
+            right = null;
         }
         
         private void createChildren() {
@@ -1180,6 +1212,11 @@ public class ContextMenuContent extends Region {
                             requestFocus();  // request Focus on hover
                         }
                     });
+                    setOnMouseReleased(new EventHandler<MouseEvent>() {
+                        @Override public void handle(MouseEvent event) {
+                            item.fire();
+                        }
+                    });
                 } else { // normal MenuItem
                     // accelerator text
 //                    Label rightNode = new Label("Ctrl+x");
@@ -1195,12 +1232,14 @@ public class ContextMenuContent extends Region {
                     
                     // accelerator support
                     updateAccelerator();
-                    item.acceleratorProperty().addListener(new InvalidationListener() {
-                        @Override
-                        public void invalidated(Observable observable) {
+                    InvalidationListener listener = new InvalidationListener() {
+                        @Override public void invalidated(Observable observable) {
                             updateAccelerator();
                         }
-                    });
+                    };
+                    WeakInvalidationListener weakListener = new WeakInvalidationListener(listener);
+                    listeners.add(weakListener);
+                    item.acceleratorProperty().addListener(weakListener);
                     
                     setOnMouseEntered(new EventHandler<MouseEvent>() {
                         @Override public void handle(MouseEvent event) {
@@ -1244,9 +1283,17 @@ public class ContextMenuContent extends Region {
         }
 
         void doSelect() {
+            doSelect(null);
+        }
+        
+        void doSelect(MouseEvent event) {
             // don't do anything on disabled menu items
             if (item == null || item.isDisable()) return;
-            
+            if (event != null && !(getLayoutBounds()).contains(event.getX(), event.getY())) {
+                // RT-23457 Mouse release happened outside the menu item - hide and return
+                hideAllMenus(item);
+                return;
+            }
             // toggle state of check or radio items
             if (item instanceof CheckMenuItem) {
                 CheckMenuItem checkItem = (CheckMenuItem)item;
@@ -1351,12 +1398,16 @@ public class ContextMenuContent extends Region {
         }
 
         private void listen(ObservableBooleanValue property, final PseudoClass pseudoClass) {
-            property.addListener(new InvalidationListener() {
+            InvalidationListener listener = new InvalidationListener() {
                 @Override public void invalidated(Observable valueModel) {
                     boolean active = ((ObservableBooleanValue)valueModel).get();
                     pseudoClassStateChanged(pseudoClass, active);
                 }
-            });
+            };
+            WeakInvalidationListener weakListener = new WeakInvalidationListener(listener);
+            
+            listeners.add(weakListener);
+            property.addListener(weakListener);
         }
 
         // Responsible for returning a graphic (if necessary) to position in the

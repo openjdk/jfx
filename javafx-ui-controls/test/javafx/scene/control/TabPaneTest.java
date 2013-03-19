@@ -25,12 +25,15 @@
 
 package javafx.scene.control;
 
-import javafx.css.CssMetaData;
-import static javafx.scene.control.ControlTestUtils.*;
-import com.sun.javafx.pgstub.StubToolkit;
-import com.sun.javafx.scene.control.skin.TabPaneSkin;
-import com.sun.javafx.scene.input.KeyCodeMap;
-import com.sun.javafx.tk.Toolkit;
+import static javafx.scene.control.ControlTestUtils.assertPseudoClassDoesNotExist;
+import static javafx.scene.control.ControlTestUtils.assertPseudoClassExists;
+import static javafx.scene.control.ControlTestUtils.assertStyleClassContains;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertTrue;
 import javafx.application.Platform;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
@@ -40,6 +43,7 @@ import javafx.beans.property.SimpleDoubleProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
+import javafx.css.CssMetaData;
 import javafx.css.StyleableProperty;
 import javafx.event.Event;
 import javafx.event.EventHandler;
@@ -52,12 +56,17 @@ import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
-import static org.junit.Assert.*;
-
 
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
+
+import com.sun.javafx.pgstub.StubToolkit;
+import com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
+import com.sun.javafx.scene.control.infrastructure.MouseEventGenerator;
+import com.sun.javafx.scene.control.skin.TabPaneSkin;
+import com.sun.javafx.scene.input.KeyCodeMap;
+import com.sun.javafx.tk.Toolkit;
 
 /**
  *

@@ -26,25 +26,29 @@
 package javafx.css;
 
 import javafx.beans.property.SimpleIntegerProperty;
-import javafx.beans.value.ObservableValue;
-import javafx.scene.Node;
 
 /**
  * This class extends {@code SimpleIntegerProperty} and provides a full
- * implementation of a {@code StyleableProperty}. The method 
- * {@link StyleableProperty#getCssMetaData()} is not implemented. 
- * 
- * This class is used to make a {@link javafx.beans.property.IntegerProperty}, 
- * that would otherwise be implemented as a {@link SimpleIntegerProperty}, 
+ * implementation of a {@code StyleableProperty}.  
+ *
+ * This class is used to make a {@link javafx.beans.property.IntegerProperty},
+ * that would otherwise be implemented as a {@link SimpleIntegerProperty},
  * style&#8209;able by CSS.
- * 
+ *
  * @see javafx.beans.property.SimpleIntegerProperty
  * @see CssMetaData
  * @see StyleableProperty
+ * @see StyleableIntegerProperty
  */
 @com.sun.javafx.beans.annotations.NoBuilder
-public abstract class SimpleStyleableIntegerProperty
-    extends SimpleIntegerProperty implements StyleableProperty<Number> {
+public class SimpleStyleableIntegerProperty extends StyleableIntegerProperty {
+
+    private static final Object DEFAULT_BEAN = null;
+    private static final String DEFAULT_NAME = "";
+
+    private final Object bean;
+    private final String name;
+    private final CssMetaData<? extends Styleable, Number> cssMetaData;
 
     /**
      * The constructor of the {@code SimpleStyleableIntegerProperty}.
@@ -52,8 +56,7 @@ public abstract class SimpleStyleableIntegerProperty
      *            the CssMetaData associated with this {@code StyleableProperty}
      */
     public SimpleStyleableIntegerProperty(CssMetaData<? extends Styleable, Number> cssMetaData) {
-        super();
-        this.cssMetaData = cssMetaData;
+        this(cssMetaData, DEFAULT_BEAN, DEFAULT_NAME);
     }
 
     /**
@@ -64,9 +67,8 @@ public abstract class SimpleStyleableIntegerProperty
      * @param initialValue
      *            the initial value of the wrapped {@code Object}
      */
-    public SimpleStyleableIntegerProperty(CssMetaData<? extends Styleable, Number> cssMetaData, int initialValue) {
-        super(initialValue);
-        this.cssMetaData = cssMetaData;
+    public SimpleStyleableIntegerProperty(CssMetaData<? extends Styleable, Number> cssMetaData, Integer initialValue) {
+        this(cssMetaData, DEFAULT_BEAN, DEFAULT_NAME, initialValue);
     }
 
     /**
@@ -80,7 +82,8 @@ public abstract class SimpleStyleableIntegerProperty
      *            the name of this {@code IntegerProperty}
      */
     public SimpleStyleableIntegerProperty(CssMetaData<? extends Styleable, Number> cssMetaData, Object bean, String name) {
-        super(bean, name);
+        this.bean = bean;
+        this.name = (name == null) ? DEFAULT_NAME : name;
         this.cssMetaData = cssMetaData;
     }
 
@@ -96,43 +99,33 @@ public abstract class SimpleStyleableIntegerProperty
      * @param initialValue
      *            the initial value of the wrapped {@code Object}
      */
-    public SimpleStyleableIntegerProperty(CssMetaData<? extends Styleable, Number> cssMetaData, Object bean, String name, int initialValue) {
-        super(bean, name, initialValue);
+    public SimpleStyleableIntegerProperty(CssMetaData<? extends Styleable, Number> cssMetaData, Object bean, String name, Integer initialValue) {
+        super(initialValue);
+        this.bean = bean;
+        this.name = (name == null) ? DEFAULT_NAME : name;
         this.cssMetaData = cssMetaData;
     }
 
-    /** {@inheritDoc} */
+    /**
+     * {@inheritDoc}
+     */
     @Override
-    public void applyStyle(StyleOrigin origin, Number v) {
-        setValue(v);
-        this.origin = origin;
+    public Object getBean() {
+        return bean;
     }
 
-    /** {@inheritDoc} */
+    /**
+     * {@inheritDoc}
+     */
     @Override
-    public void bind(ObservableValue<? extends Number> observable) {
-        super.bind(observable);
-        origin = StyleOrigin.USER;
+    public String getName() {
+        return name;
     }
-
-    /** {@inheritDoc} */
-    @Override
-    public void set(int v) {
-        super.set(v);
-        origin = StyleOrigin.USER;
-    }
-
-    /** {@inheritDoc} */
-    @Override
-    public final StyleOrigin getStyleOrigin() { return origin; }
 
     /** {@inheritDoc} */
     @Override
     public final CssMetaData<? extends Styleable, Number> getCssMetaData() {
         return cssMetaData;
     }
-
-    private StyleOrigin origin = null;
-    private final CssMetaData<? extends Styleable, Number> cssMetaData;
 
 }

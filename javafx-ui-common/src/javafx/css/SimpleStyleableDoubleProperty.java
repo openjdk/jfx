@@ -26,25 +26,29 @@
 package javafx.css;
 
 import javafx.beans.property.SimpleDoubleProperty;
-import javafx.beans.value.ObservableValue;
-import javafx.scene.Node;
 
 /**
  * This class extends {@code SimpleDoubleProperty} and provides a full
- * implementation of a {@code StyleableProperty}. The method 
- * {@link StyleableProperty#getCssMetaData()} is not implemented. 
- * 
- * This class is used to make a {@link javafx.beans.property.DoubleProperty}, 
- * that would otherwise be implemented as a {@link SimpleDoubleProperty}, 
+ * implementation of a {@code StyleableProperty}.  
+ *
+ * This class is used to make a {@link javafx.beans.property.DoubleProperty},
+ * that would otherwise be implemented as a {@link SimpleDoubleProperty},
  * style&#8209;able by CSS.
- * 
+ *
  * @see javafx.beans.property.SimpleDoubleProperty
  * @see CssMetaData
  * @see StyleableProperty
+ * @see StyleableDoubleProperty
  */
 @com.sun.javafx.beans.annotations.NoBuilder
-public abstract class SimpleStyleableDoubleProperty
-    extends SimpleDoubleProperty implements StyleableProperty<Number> {
+public class SimpleStyleableDoubleProperty extends StyleableDoubleProperty {
+
+    private static final Object DEFAULT_BEAN = null;
+    private static final String DEFAULT_NAME = "";
+
+    private final Object bean;
+    private final String name;
+    private final CssMetaData<? extends Styleable, Number> cssMetaData;
 
     /**
      * The constructor of the {@code SimpleStyleableDoubleProperty}.
@@ -52,8 +56,7 @@ public abstract class SimpleStyleableDoubleProperty
      *            the CssMetaData associated with this {@code StyleableProperty}
      */
     public SimpleStyleableDoubleProperty(CssMetaData<? extends Styleable, Number> cssMetaData) {
-        super();
-        this.cssMetaData = cssMetaData;
+        this(cssMetaData, DEFAULT_BEAN, DEFAULT_NAME);
     }
 
     /**
@@ -64,9 +67,8 @@ public abstract class SimpleStyleableDoubleProperty
      * @param initialValue
      *            the initial value of the wrapped {@code Object}
      */
-    public SimpleStyleableDoubleProperty(CssMetaData<? extends Styleable, Number> cssMetaData, double initialValue) {
-        super(initialValue);
-        this.cssMetaData = cssMetaData;
+    public SimpleStyleableDoubleProperty(CssMetaData<? extends Styleable, Number> cssMetaData, Double initialValue) {
+        this(cssMetaData, DEFAULT_BEAN, DEFAULT_NAME, initialValue);
     }
 
     /**
@@ -80,7 +82,8 @@ public abstract class SimpleStyleableDoubleProperty
      *            the name of this {@code DoubleProperty}
      */
     public SimpleStyleableDoubleProperty(CssMetaData<? extends Styleable, Number> cssMetaData, Object bean, String name) {
-        super(bean, name);
+        this.bean = bean;
+        this.name = (name == null) ? DEFAULT_NAME : name;
         this.cssMetaData = cssMetaData;
     }
 
@@ -96,36 +99,28 @@ public abstract class SimpleStyleableDoubleProperty
      * @param initialValue
      *            the initial value of the wrapped {@code Object}
      */
-    public SimpleStyleableDoubleProperty(CssMetaData<? extends Styleable, Number> cssMetaData, Object bean, String name, double initialValue) {
-        super(bean, name, initialValue);
+    public SimpleStyleableDoubleProperty(CssMetaData<? extends Styleable, Number> cssMetaData, Object bean, String name, Double initialValue) {
+        super(initialValue);
+        this.bean = bean;
+        this.name = (name == null) ? DEFAULT_NAME : name;
         this.cssMetaData = cssMetaData;
     }
 
-    /** {@inheritDoc} */
+    /**
+     * {@inheritDoc}
+     */
     @Override
-    public void applyStyle(StyleOrigin origin, Number v) {
-        setValue(v);
-        this.origin = origin;
+    public Object getBean() {
+        return bean;
     }
 
-    /** {@inheritDoc} */
+    /**
+     * {@inheritDoc}
+     */
     @Override
-    public void bind(ObservableValue<? extends Number> observable) {
-        super.bind(observable);
-        origin = StyleOrigin.USER;
+    public String getName() {
+        return name;
     }
-
-    /** {@inheritDoc} */
-    @Override
-    public void set(double v) {
-        super.set(v);
-        origin = StyleOrigin.USER;
-    }
-
-
-    /** {@inheritDoc} */
-    @Override
-    public final StyleOrigin getStyleOrigin() { return origin; }
 
     /** {@inheritDoc} */
     @Override
@@ -133,6 +128,4 @@ public abstract class SimpleStyleableDoubleProperty
         return cssMetaData;
     }
 
-    private StyleOrigin origin = null;
-    private final CssMetaData<? extends Styleable, Number> cssMetaData;
 }

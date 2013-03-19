@@ -47,7 +47,10 @@ public final class StyleClassSet  extends BitSet<StyleClass> implements Set<Styl
 
         int nMax = styleClassNames != null ? styleClassNames.size() : 0;
         for(int n=0; n<nMax; n++) {
-            final StyleClass sc = getStyleClass(styleClassNames.get(n));
+            final String styleClass = styleClassNames.get(n);
+            if (styleClass == null || styleClass.isEmpty()) continue;
+
+            final StyleClass sc = getStyleClass(styleClass);
             add(sc);
         }
 

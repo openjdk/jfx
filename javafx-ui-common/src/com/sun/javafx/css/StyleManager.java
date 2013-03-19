@@ -535,6 +535,9 @@ final public class StyleManager {
 
         final Set<Entry<List<String>, Map<Key, Cache>>> entries = 
                 masterCacheMap.entrySet();
+        if (entries == null || entries.isEmpty()) {
+            return;
+        }
 
         // If this StylesheetContainer is used by other entries, then those
         // caches need to be invalidated, too. But we need to go through all
@@ -548,8 +551,12 @@ final public class StyleManager {
         while (iter.hasNext()) {
             
             Entry<List<String>, Map<Key, Cache>> entry = iter.next();
-            List<String> containerList = entry.getKey();
-            if (containerList == null) continue;
+
+            List<String> containerList = entry != null ? entry.getKey() : null;
+            if (containerList == null) {
+                iter.remove();
+                continue;
+            }
             
             if (containerList.contains(sc.fname)) {
                 containerList.remove(sc.fname);
@@ -1325,7 +1332,11 @@ final public class StyleManager {
         key.className = cname;
         key.id = id;
         for(int n=0, nMax=styleClasses.size(); n<nMax; n++) {
-            key.styleClasses.add(StyleClassSet.getStyleClass(styleClasses.get(n)));
+
+            final String styleClass = styleClasses.get(n);
+            if (styleClass == null || styleClass.isEmpty()) continue;
+
+            key.styleClasses.add(StyleClassSet.getStyleClass(styleClass));
         }
 
         Cache cache = cacheMap.get(key);

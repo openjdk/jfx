@@ -277,7 +277,12 @@ public abstract class TableCellBehaviorBase<T extends IndexedCell> extends CellB
         TableColumnBase column = getTableColumn();
         boolean isAlreadySelected = sm.isSelected(row, column);
 
-        sm.clearAndSelect(row, column);
+        if (isAlreadySelected && (e.isControlDown() || e.isMetaDown())) {
+            sm.clearSelection(row, column);
+            isAlreadySelected = false;
+        } else {
+            sm.clearAndSelect(row, column);
+        }
 
         // handle editing, which only occurs with the primary mouse button
         if (e.getButton() == MouseButton.PRIMARY) {

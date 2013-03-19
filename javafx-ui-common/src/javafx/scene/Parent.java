@@ -1160,8 +1160,11 @@ public abstract class Parent extends Node {
             final Node child = children.get(i);
             
             // If the parent styles are being updated, recalculated or 
-            // reapplied, then make sure the children get the same treatment. 
-            child.cssFlag = flag;
+            // reapplied, then make sure the children get the same treatment.
+            // Unless the child is already more dirty than this parent (RT-29074).
+            if(flag.compareTo(child.cssFlag) > 0) {
+                child.cssFlag = flag;
+            }
             child.impl_processCSS();
         }
     }

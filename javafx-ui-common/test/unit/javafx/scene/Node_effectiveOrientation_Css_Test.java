@@ -34,6 +34,7 @@ import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
 import org.junit.After;
+import org.junit.Ignore;
 import org.junit.Test;
 import static org.junit.Assert.*;
 import org.junit.Before;
@@ -41,6 +42,7 @@ import org.junit.Before;
 /**
  * Test :dir functional pseudo-class 
  */
+@Ignore
 public class Node_effectiveOrientation_Css_Test {
     
     private Group root;

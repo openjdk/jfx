@@ -34,6 +34,7 @@ import javafx.scene.control.CheckBox;
 import javafx.scene.control.ContentDisplay;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
+import javafx.scene.control.TreeItem;
 import javafx.util.Callback;
 import javafx.util.StringConverter;
 
@@ -88,7 +89,7 @@ public class CheckBoxListCell<T> extends ListCell<T> {
      */
     public static <T> Callback<ListView<T>, ListCell<T>> forListView(
             final Callback<T, ObservableValue<Boolean>> getSelectedProperty) {
-        return forListView(getSelectedProperty, null);
+        return forListView(getSelectedProperty, CellUtils.<T>defaultStringConverter());
     }
     
     /**
@@ -169,7 +170,7 @@ public class CheckBoxListCell<T> extends ListCell<T> {
     public CheckBoxListCell(
             final Callback<T, ObservableValue<Boolean>> getSelectedProperty, 
             final StringConverter<T> converter) {
-        this.getStyleClass().add("choice-box-list-cell");
+        this.getStyleClass().add("check-box-list-cell");
         setSelectedStateCallback(getSelectedProperty);
         setConverter(converter);
         
@@ -256,6 +257,10 @@ public class CheckBoxListCell<T> extends ListCell<T> {
         if (! empty) {
             StringConverter c = getConverter();
             Callback<T, ObservableValue<Boolean>> callback = getSelectedStateCallback();
+            if (callback == null) {
+                throw new NullPointerException(
+                        "The CheckBoxListCell selectedStateCallbackProperty can not be null");
+            }
             
             setGraphic(checkBox);
             setText(c != null ? c.toString(item) : (item == null ? "" : item.toString()));

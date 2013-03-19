@@ -62,7 +62,7 @@ public class MenuItemTest {
     private MenuItem menuItem;
 
     @BeforeClass public static void classSetup() {
-        eventType = new EventType<Event>(Event.ANY, "ON_EVENT");
+        eventType = new EventType<Event>(Event.ANY, "TEST_EVENT");
     }
 
     @Before public void setup() {

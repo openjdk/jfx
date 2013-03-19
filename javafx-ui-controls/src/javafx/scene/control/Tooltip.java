@@ -51,6 +51,7 @@ import javafx.css.Styleable;
 import javafx.css.StyleableProperty;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
+import javafx.geometry.NodeOrientation;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
@@ -764,7 +765,21 @@ public class Tooltip extends PopupControl {
                     // ACTIVATED_TIMER expire, and wait until the next mouse
                     // the movement to start it again.
                     if (owner != null && owner.isShowing() && treeVisible) {
-                        activatedTooltip.show(owner, lastMouseX, lastMouseY);
+                        double x = lastMouseX;
+                        double y = lastMouseY;
+
+                        // The tooltip always inherits the nodeOrientation of
+                        // the Node that it is attached to (see RT-26147). It
+                        // is possible to override this for the Tooltip content
+                        // (but not the popup placement) by setting the
+                        // nodeOrientation on tooltip.getScene().getRoot().
+                        NodeOrientation nodeOrientation = hoveredNode.getEffectiveNodeOrientation();
+                        activatedTooltip.getScene().setNodeOrientation(nodeOrientation);
+                        if (nodeOrientation == NodeOrientation.RIGHT_TO_LEFT) {
+                            x -= activatedTooltip.getWidth();
+                        }
+
+                        activatedTooltip.show(owner, x, y);
                         visibleTooltip = activatedTooltip;
                         hoveredNode = null;
                         hideTimer.playFromStart();

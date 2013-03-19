@@ -27,6 +27,7 @@ package com.sun.javafx.scene.control.skin;
 
 import com.sun.javafx.tk.Toolkit;
 import com.sun.javafx.tk.FontMetrics;
+import javafx.application.Platform;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.geometry.HPos;
@@ -446,8 +447,13 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
                 }
                 if (mnemonic_underscore != null) {
                     if (getChildren().contains(mnemonic_underscore)) {
-                        getChildren().remove(mnemonic_underscore);
-                        mnemonic_underscore = null;
+                        Platform.runLater(new Runnable() {
+                           @Override
+                               public void run() {
+                                 getChildren().remove(mnemonic_underscore);
+                                 mnemonic_underscore = null;
+                           }
+                        });
                     }
                 }
             }

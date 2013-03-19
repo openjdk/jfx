@@ -206,6 +206,11 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
         if (!categoryAxis.getCategories().contains(category)) {
             categoryAxis.getCategories().add(itemIndex, category);
         } else if (categoryMap.containsKey(category)){
+            // RT-21162 : replacing the previous data, first remove the node from scenegraph.
+            Data data = categoryMap.get(category);
+            getPlotChildren().remove(data.getNode());
+            removeDataItemFromDisplay(series, data);
+            requestChartLayout();
             categoryMap.remove(category);
         }
         categoryMap.put(category, item);
@@ -275,10 +280,7 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
             if (barVal < 0) {
                 bar.getStyleClass().add(NEGATIVE_STYLE);
             }
-//            item.setYValue(getYAxis().toRealValue(getYAxis().getZeroPosition()));
-//            item.setCurrentY(getYAxis().toRealValue(getYAxis().getZeroPosition()));
-            item.setYValue(getYAxis().toRealValue(bottomPos));
-            item.setCurrentY(getYAxis().toRealValue(bottomPos));
+            item.setCurrentY(getYAxis().toRealValue((barVal < 0) ? -bottomPos : bottomPos));
             getPlotChildren().add(bar);
             item.setYValue(getYAxis().toRealValue(barVal));
             animate(
@@ -292,8 +294,7 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
             if (barVal < 0) {
                 bar.getStyleClass().add(NEGATIVE_STYLE);
             }
-            item.setXValue(getXAxis().toRealValue(getXAxis().getZeroPosition()));
-            item.setCurrentX(getXAxis().toRealValue(getXAxis().getZeroPosition()));
+            item.setCurrentX(getXAxis().toRealValue((barVal < 0) ? -bottomPos : bottomPos));
             getPlotChildren().add(bar);
             item.setXValue(getXAxis().toRealValue(barVal));
             animate(

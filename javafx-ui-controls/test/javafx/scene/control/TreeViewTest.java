@@ -47,10 +47,12 @@ import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.scene.Group;
+import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
+import javafx.scene.shape.Circle;
 import javafx.stage.Stage;
 import javafx.util.Callback;
 
@@ -789,5 +791,35 @@ public class TreeViewTest {
         assertEquals((Object)s2, treeView.getSelectionModel().getSelectedItem());
         assertEquals((Object)s2, treeView.getSelectionModel().getSelectedItems().get(0));
         assertEquals(0, treeView.getSelectionModel().getSelectedIndex());
+    }
+    
+    @Ignore("Test passes from within IDE but not when run from command line. Needs more investigation.")
+    @Test public void test_rt28678() {
+        TreeItem<String> s1, s2, s3, s4;
+        ObservableList<TreeItem<String>> items = FXCollections.observableArrayList(
+                s1 = new TreeItem<String>("String1"), 
+                s2 = new TreeItem<String>("String2"), 
+                s3 = new TreeItem<String>("String3"), 
+                s4 = new TreeItem<String>("String4"));
+        
+        final TreeView<String> treeView = new TreeView<String>();
+        
+        TreeItem<String> root = new TreeItem<String>("Root");
+        root.setExpanded(true);
+        treeView.setRoot(root);
+        treeView.setShowRoot(false);
+        root.getChildren().addAll(items);
+        
+        Node graphic = new Circle(6, Color.RED);
+        
+        assertNull(s2.getGraphic());
+        TreeCell s2Cell = (TreeCell) ControlAsserts.getCell(treeView, 1);
+        assertNull(s2Cell.getGraphic());
+        
+        s2.setGraphic(graphic);
+        Toolkit.getToolkit().firePulse();
+                
+        assertEquals(graphic, s2.getGraphic());
+        assertEquals(graphic, s2Cell.getGraphic());
     }
 }

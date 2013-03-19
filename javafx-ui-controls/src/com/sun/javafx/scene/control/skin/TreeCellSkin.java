@@ -43,6 +43,7 @@ import javafx.css.StyleableDoubleProperty;
 import javafx.css.StyleableProperty;
 import javafx.css.CssMetaData;
 import com.sun.javafx.css.converters.SizeConverter;
+import com.sun.javafx.scene.control.MultiplePropertyChangeListenerHandler;
 import com.sun.javafx.scene.control.behavior.TreeCellBehavior;
 import javafx.animation.RotateTransition;
 import javafx.beans.value.ChangeListener;
@@ -50,6 +51,7 @@ import javafx.beans.value.ObservableValue;
 import javafx.beans.value.WeakChangeListener;
 import javafx.css.Styleable;
 import javafx.geometry.Insets;
+import javafx.util.Callback;
 import javafx.util.Duration;
 
 public class TreeCellSkin extends CellSkinBase<TreeCell<?>, TreeCellBehavior> {
@@ -100,14 +102,17 @@ public class TreeCellSkin extends CellSkinBase<TreeCell<?>, TreeCellBehavior> {
     private boolean disclosureNodeDirty = true;
     private TreeItem<?> treeItem;
     
-    private final ChangeListener<Boolean> treeItemExpandedListener = new ChangeListener<Boolean>() {
-        @Override public void changed(ObservableValue<? extends Boolean> ov, Boolean t, Boolean isExpanded) {
-            updateDisclosureNodeRotation(true);
+    private MultiplePropertyChangeListenerHandler treeItemListener = new MultiplePropertyChangeListenerHandler(new Callback<String, Void>() {
+        @Override public Void call(String p) {
+            if ("EXPANDED".equals(p)) {
+                updateDisclosureNodeRotation(true);
+            } else if ("GRAPHIC".equals(p)) {
+                getSkinnable().requestLayout();
+            }
+            return null;
         }
-    };
-    private final WeakChangeListener<Boolean> weakTreeItemExpandedListener = 
-            new WeakChangeListener(treeItemExpandedListener);
-
+    });
+    
     public TreeCellSkin(TreeCell<?> control) {
         super(control, new TreeCellBehavior(control));
         
@@ -153,11 +158,13 @@ public class TreeCellSkin extends CellSkinBase<TreeCell<?>, TreeCellBehavior> {
     
     private void updateTreeItem() {
         if (treeItem != null) {
-            treeItem.expandedProperty().removeListener(weakTreeItemExpandedListener);
+            treeItemListener.unregisterChangeListener(treeItem.expandedProperty(), "EXPANDED");
+            treeItemListener.unregisterChangeListener(treeItem.graphicProperty(), "GRAPHIC");
         }
         treeItem = getSkinnable().getTreeItem();
         if (treeItem != null) {
-            treeItem.expandedProperty().addListener(weakTreeItemExpandedListener);
+            treeItemListener.registerChangeListener(treeItem.expandedProperty(), "EXPANDED");
+            treeItemListener.registerChangeListener(treeItem.graphicProperty(), "GRAPHIC");
         }
         
         updateDisclosureNodeRotation(false);

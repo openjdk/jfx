@@ -116,7 +116,8 @@ public abstract class TableRowSkinBase<T,
      * graphic associated with a TreeItem (i.e. treeItem.getGraphic()), rather
      * than a graphic associated with a cell.
      */
-    protected abstract Node getGraphic(); 
+//    protected abstract Node getGraphic(); 
+    protected abstract ObjectProperty<Node> graphicProperty();
     
     protected abstract Control getVirtualFlowOwner(); // return TableView / TreeTableView
     
@@ -506,7 +507,8 @@ public abstract class TableRowSkinBase<T,
                         
                         // determine starting point of the graphic or cell node, and the
                         // remaining width available to them
-                        Node graphic = getGraphic();
+                        ObjectProperty<Node> graphicProperty = graphicProperty();
+                        Node graphic = graphicProperty == null ? null : graphicProperty.get();
                         
                         if (graphic != null) {
                             graphicWidth = graphic.prefWidth(-1) + 3;

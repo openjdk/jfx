@@ -259,25 +259,13 @@ public class Modena extends Application {
         System.out.println("accentColor = " + accentColor);
         System.out.println("backgroundColor = " + backgroundColor);
         if (baseColor != null && baseColor != Color.TRANSPARENT) {
-            final String color = String.format((Locale) null, "#%02x%02x%02x", 
-                    Math.round(baseColor.getRed() * 255), 
-                    Math.round(baseColor.getGreen() * 255), 
-                    Math.round(baseColor.getBlue() * 255));
-            styleSheetContent += "    -fx-base:"+color+";\n";
+            styleSheetContent += "    -fx-base:" + colorToRGBA(baseColor) + ";\n";
         }
         if (backgroundColor != null && backgroundColor != Color.TRANSPARENT) {
-            final String color = String.format((Locale) null, "#%02x%02x%02x", 
-                    Math.round(backgroundColor.getRed() * 255), 
-                    Math.round(backgroundColor.getGreen() * 255), 
-                    Math.round(backgroundColor.getBlue() * 255));
-            styleSheetContent += "    -fx-background:"+color+";\n";
+            styleSheetContent += "    -fx-background:" + colorToRGBA(backgroundColor) + ";\n";
         }
         if (accentColor != null && accentColor != Color.TRANSPARENT) {
-            final String color = String.format((Locale) null, "#%02x%02x%02x", 
-                    Math.round(accentColor.getRed() * 255), 
-                    Math.round(accentColor.getGreen() * 255), 
-                    Math.round(accentColor.getBlue() * 255));
-            styleSheetContent += "    -fx-accent:"+color+";\n";
+            styleSheetContent += "    -fx-accent:" + colorToRGBA(accentColor) + ";\n";
         }
         if (fontName != null) {
             styleSheetContent += "    -fx-font:"+fontSize+"px \""+fontName+"\";\n";
@@ -631,6 +619,19 @@ public class Modena extends Application {
     // URL Handler to create magic "internal:stylesheet.css" url for our css string buffer
     {
         URL.setURLStreamHandlerFactory(new StringURLStreamHandlerFactory());
+    }
+
+    private String colorToRGBA(Color color) {
+        // Older version didn't care about opacity
+//        return String.format((Locale) null, "#%02x%02x%02x", 
+//                Math.round(color.getRed() * 255), 
+//                Math.round(color.getGreen() * 255), 
+//                Math.round(color.getBlue() * 255));
+        return String.format((Locale) null, "rgba(%d, %d, %d, %f)", 
+            (int) Math.round(color.getRed() * 255), 
+            (int) Math.round(color.getGreen() * 255), 
+            (int) Math.round(color.getBlue() * 255),
+            color.getOpacity());
     }
 
     /**

@@ -640,8 +640,10 @@ final class CssStyleHelper {
             final CssMetaData<Styleable,Object> cssMetaData = 
                     (CssMetaData<Styleable,Object>)styleables.get(n);
             
+            final StyleableProperty styleableProperty = cssMetaData.getStyleableProperty(node);
+            if (styleableProperty == null) continue;
+
             if (observableStyleMap != null) {
-                StyleableProperty<?> styleableProperty = cssMetaData.getStyleableProperty(node);
                 if (styleableProperty != null && observableStyleMap.containsKey(styleableProperty)) {
                     observableStyleMap.remove(styleableProperty);
                 }
@@ -652,6 +654,11 @@ final class CssStyleHelper {
             // to be set (usually due to a "bind").
             if (!cssMetaData.isSettable(node)) continue;
 
+            // need to know who set the current value - CSS, the user, or init
+            final StyleOrigin originOfCurrentValue = styleableProperty.getStyleOrigin();
+
+            final boolean isUserSet = originOfCurrentValue == StyleOrigin.USER;
+            
             final String property = cssMetaData.getProperty();
             
             // Create a List to hold the Styles if the node has 
@@ -661,31 +668,16 @@ final class CssStyleHelper {
                     : null;
 
             CalculatedValue calculatedValue = null;
-            boolean isUserSet = false;
-            
+
             if (fastpath) {
 
                 calculatedValue = cacheEntry.get(property);
-                if (calculatedValue == null || calculatedValue == SKIP) continue;
                 
-                // This block of code is repeated in the slowpath, but we 
-                // want to avoid calling getStyleableProperty if possible.
-                // See the use of 'if (isUserSet)' below.
-                final StyleableProperty styleableProperty = cssMetaData.getStyleableProperty(node);
-                if (styleableProperty == null) continue;
-                
-                final StyleOrigin origin = styleableProperty.getStyleOrigin();
-                
-                isUserSet = origin == StyleOrigin.USER;
+                // caclculatedValue may be null,
+                // but we should never put SKIP in cache.
+                assert(calculatedValue != SKIP);
                 
             } else {
-
-                final StyleableProperty styleableProperty = cssMetaData.getStyleableProperty(node);
-                if (styleableProperty == null) continue;
-                
-                final StyleOrigin origin = styleableProperty.getStyleOrigin();
-                
-                isUserSet = origin == StyleOrigin.USER;
 
                 calculatedValue = lookup(node, cssMetaData, isUserSet, node.pseudoClassStates, 
                         inlineStyles, node, cacheEntry, styleList);
@@ -693,92 +685,93 @@ final class CssStyleHelper {
                 // lookup is not supposed to return null.
                 assert(calculatedValue != null);
                 
+            }
+            
+            // cssMetaData#set might throw an exception and it is called
+            // from two places in this try block.
+            try {                    
+            
+                //
                 // RT-19089
                 // If the current value of the property was set by CSS 
                 // and there is no style for the property, then reset this
-                // property to its initial value. 
-                //
-                if (calculatedValue == SKIP || calculatedValue == null) {
-                    
-                    // Was value set by CSS?
-                    if (origin != StyleOrigin.USER && origin != null) {
+                // property to its initial value. If it was not set by CSS
+                // then leave the property alone.
+                // 
+                if (calculatedValue == null || calculatedValue == SKIP) {
+
+                    // if the current value was set by CSS and there 
+                    // is no calculated value for the property, then 
+                    // there was no style for the property in the current
+                    // state, so reset the property to its initial value.
+                    if (originOfCurrentValue != StyleOrigin.USER && originOfCurrentValue != null) {
 
                         Object initial = cssMetaData.getInitialValue(node);
-                        
-                        calculatedValue = new CalculatedValue(initial, null, false);
-                        
-                    } else {   
-                        // was set by user or was never set
-                        continue;
-                    }
+
+                        cssMetaData.set(node, initial, null);                        
+
+                    } 
                     
+                    continue;
+
+                } 
+                
+                if (fastpath == false) {
+                    
+                    // If we're not on the fastpath, then add the calculated
+                    // value to cache.
+                    cacheEntry.put(property, calculatedValue);
                 }
                 
-                cacheEntry.put(property, calculatedValue);
 
-            }
+                // RT-10522:
+                // If the user set the property and there is a style and
+                // the style came from the user agent stylesheet, then
+                // skip the value. A style from a user agent stylesheet should
+                // not override the user set style.
+                //
+                final StyleOrigin originOfCalculatedValue = calculatedValue.getOrigin();
+                assert originOfCalculatedValue != null : styleableProperty.toString();
+                if (isUserSet) {
+                    if (originOfCalculatedValue == StyleOrigin.USER_AGENT || originOfCalculatedValue == null) { 
+                        continue;
+                    }                
+                }
             
-            assert (calculatedValue != SKIP);
-            if (calculatedValue == SKIP) continue;
-            
-                        
-            // RT-10522:
-            // If the user set the property and there is a style and
-            // the style came from the user agent stylesheet, then
-            // skip the value. A style from a user agent stylesheet should
-            // not override the user set style.
-            //
-            // RT-21894: the origin might be null if the calculatedValue 
-            // comes from reverting back to the initial value. In this case,
-            // make sure the initial value doesn't overwrite the user set value.
-            // Also moved this condition from the fastpath block to here since
-            // the check needs to be done on any calculated value, not just
-            // calculatedValues from cache
-            //
-            final StyleOrigin cvOrigin = calculatedValue.getOrigin();
-            if (isUserSet) {
-                if (cvOrigin == StyleOrigin.USER_AGENT || cvOrigin == null) { 
-                    continue;
-                }                
-            }
-            
-                try {
-                    
-                    final Object value = calculatedValue.getValue();
-                    if (LOGGER.isLoggable(PlatformLogger.FINER)) {
-                        LOGGER.finer(property + ", call cssMetaData.set(" + 
-                                node + ", " + String.valueOf(value) + ", " +
-                                cvOrigin + ")");
-                    }
-
-                    cssMetaData.set(node, value, cvOrigin);
-                    
-                    if (observableStyleMap != null) {
-                        StyleableProperty<?> styleableProperty = cssMetaData.getStyleableProperty(node);                            
-                        observableStyleMap.put(styleableProperty, styleList);
-                    }
-                    
-                } catch (Exception e) {
-
-                    // RT-27155: if setting value raises exception, reset value 
-                    // the value to initial and thereafter skip setting the property
-                    cssMetaData.set(node, cssMetaData.getInitialValue(node), null);
-                    cacheEntry.put(property, SKIP);
-                    
-                    List<CssError> errors = null;
-                    if ((errors = StyleManager.getErrors()) != null) {
-                        final String msg = String.format("Failed to set css [%s] due to %s\n", cssMetaData, e.getMessage());
-                        final CssError error = new CssError.PropertySetError(cssMetaData, node, msg);
-                        errors.add(error);
-                    }
-                    // TODO: use logger here
-                    PlatformLogger logger = Logging.getCSSLogger();
-                    if (logger.isLoggable(PlatformLogger.WARNING)) {
-                        logger.warning(String.format("Failed to set css [%s]\n", cssMetaData), e);
-                    }
+                final Object value = calculatedValue.getValue();
+                if (LOGGER.isLoggable(PlatformLogger.FINER)) {
+                    LOGGER.finer(property + ", call cssMetaData.set(" + 
+                            node + ", " + String.valueOf(value) + ", " +
+                            originOfCalculatedValue + ")");
                 }
 
+                cssMetaData.set(node, value, originOfCalculatedValue);
+
+                if (observableStyleMap != null) {
+                    observableStyleMap.put(styleableProperty, styleList);
+                }
+
+            } catch (Exception e) {
+
+                // RT-27155: if setting value raises exception, reset value 
+                // the value to initial and thereafter skip setting the property
+                cssMetaData.set(node, cssMetaData.getInitialValue(node), null);
+                cacheEntry.put(property, SKIP);
+
+                List<CssError> errors = null;
+                if ((errors = StyleManager.getErrors()) != null) {
+                    final String msg = String.format("Failed to set css [%s] due to %s\n", cssMetaData, e.getMessage());
+                    final CssError error = new CssError.PropertySetError(cssMetaData, node, msg);
+                    errors.add(error);
+                }
+                // TODO: use logger here
+                PlatformLogger logger = Logging.getCSSLogger();
+                if (logger.isLoggable(PlatformLogger.WARNING)) {
+                    logger.warning(String.format("Failed to set css [%s]\n", cssMetaData), e);
+                }
             }
+
+        }
         
         cacheMetaData.previousCacheEntry = cacheEntry;
         
@@ -2055,7 +2048,7 @@ final class CssStyleHelper {
             while (parent != null) {
                 
                 CssStyleHelper parentHelper = (parent instanceof Node) ?
-                        ((Parent)parent).styleHelper
+                        ((Node)parent).styleHelper
                         : null;
                 
                 if (parentHelper != null) {

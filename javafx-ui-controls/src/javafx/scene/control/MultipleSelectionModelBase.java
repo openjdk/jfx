@@ -302,8 +302,8 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
         setSelectedIndex(row);
         focus(row);
         
-        // TODO this isn't correct
-        selectedIndicesSeq.callObservers(new NonIterableChange.SimpleAddChange<Integer>(0, 1, selectedIndicesSeq));
+        int changeIndex = selectedIndicesSeq.indexOf(row);
+        selectedIndicesSeq.callObservers(new NonIterableChange.SimpleAddChange<Integer>(changeIndex, changeIndex+1, selectedIndicesSeq));
         
         if (fireUpdatedItemEvent) {
             setSelectedItem(newItem);
@@ -417,9 +417,14 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
         selectedIndices.set(0, (int) rowCount, true);
         selectedIndicesSeq.callObservers(new NonIterableChange.SimpleAddChange<Integer>(0, (int) rowCount, selectedIndicesSeq));
 
-        setSelectedIndex(rowCount - 1);
-
-        focus(getSelectedIndex());
+        int focusedIndex = getFocusedIndex();
+        if (focusedIndex == -1) {
+            setSelectedIndex(rowCount - 1);
+            focus(rowCount - 1);
+        } else {
+            setSelectedIndex(focusedIndex);
+            focus(focusedIndex);
+        }
     }
     
     @Override public void selectFirst() {
@@ -455,10 +460,8 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
             clearSelection();
         }
 
-//            updateLeadSelection();
-//            support.fireChangedEvent(SELECTED_INDICES);
         selectedIndicesSeq.callObservers(
-                new NonIterableChange.GenericAddRemoveChange<Integer>(0, 0, 
+                new NonIterableChange.GenericAddRemoveChange<Integer>(index, index+1, 
                 Collections.singletonList(index), selectedIndicesSeq));
     }
 
