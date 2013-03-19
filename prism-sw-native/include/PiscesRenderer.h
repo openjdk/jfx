@@ -291,8 +291,6 @@ typedef struct _Renderer {
     void (*_emitLine)(struct _Renderer *rdr, jint height, jint frac);
     void (*_genPaint)(struct _Renderer *rdr, jint height);
 
-    jint _rowAA_length;
-    jint _rowAAOffset;
     jint _rowNum;
     jint _alphaWidth;
     jint _alphaOffset;

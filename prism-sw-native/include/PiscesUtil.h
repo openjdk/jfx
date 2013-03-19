@@ -82,7 +82,7 @@
  */
 #define ALLOC(array, type, thresh, len) do { \
   if (array == NULL || array##_length < (thresh)) { \
-    jint nlen = MAX(thresh, len); \
+    size_t nlen = MAX(thresh, len); \
     PISCESfree(array); \
     array = my_malloc(type, nlen); \
     array##_length = nlen; \
@@ -103,7 +103,7 @@
  */
 #define REALLOC(array, type, thresh, len) do { \
   if (array == NULL || array##_length < (thresh)) { \
-    jint nlen; \
+    size_t nlen; \
     nlen = MAX(thresh, len); \
     array = (type *)PISCESrealloc((array), nlen*sizeof(type)); \
     array##_length = nlen; \
