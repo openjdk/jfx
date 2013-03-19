@@ -34,6 +34,7 @@ import javafx.scene.control.CheckBox;
 import javafx.scene.control.ContentDisplay;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
+import javafx.scene.control.TreeItem;
 import javafx.util.Callback;
 import javafx.util.StringConverter;
 
@@ -256,6 +257,10 @@ public class CheckBoxListCell<T> extends ListCell<T> {
         if (! empty) {
             StringConverter c = getConverter();
             Callback<T, ObservableValue<Boolean>> callback = getSelectedStateCallback();
+            if (callback == null) {
+                throw new NullPointerException(
+                        "The CheckBoxListCell selectedStateCallbackProperty can not be null");
+            }
             
             setGraphic(checkBox);
             setText(c != null ? c.toString(item) : (item == null ? "" : item.toString()));

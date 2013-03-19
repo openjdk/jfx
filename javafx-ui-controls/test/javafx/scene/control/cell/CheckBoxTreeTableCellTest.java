@@ -31,34 +31,53 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import javafx.beans.property.ReadOnlyObjectWrapper;
+import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.value.ObservableValue;
 import javafx.scene.control.CheckBox;
+import javafx.scene.control.TableCell;
+import javafx.scene.control.TableView;
 import javafx.scene.control.TreeTableCell;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TreeTableColumn;
+import javafx.scene.control.TreeTableView;
 import javafx.util.Callback;
 import javafx.util.StringConverter;
 
+import org.junit.Before;
 import org.junit.Test;
 
 public class CheckBoxTreeTableCellTest {
     
-    private ReadOnlyObjectWrapper<Boolean> roBooleanProperty = new ReadOnlyObjectWrapper<Boolean>(false);
-    private Callback<Integer, ObservableValue<Boolean>> callback = new Callback<Integer, ObservableValue<Boolean>>() {
-        public ObservableValue<Boolean> call(Integer param) {
-            return roBooleanProperty;
-        }
-    };
+    private SimpleBooleanProperty booleanProperty;
+    private Callback<Integer, ObservableValue<Boolean>> callback;
+    private StringConverter<Object> converter;
+    private TreeTableView<Object> tableView;
+    private TreeTableColumn<Object, Object> tableColumn;
     
-    private StringConverter<Object> converter = new StringConverter<Object>() {
-        @Override public String toString(Object object) {
-            return null;
-        }
-        
-        @Override public Object fromString(String string) {
-            return null;
-        }
-    };
+    @Before public void setup() {
+        tableView = new TreeTableView<>();
+        tableColumn = new TreeTableColumn<>();
+        booleanProperty = new SimpleBooleanProperty(false);
+        callback = new Callback<Integer, ObservableValue<Boolean>>() {
+            public ObservableValue<Boolean> call(Integer param) {
+                return booleanProperty;
+            }
+        };
+        converter = new StringConverter<Object>() {
+            @Override public String toString(Object object) {
+                return null;
+            }
+            
+            @Override public Object fromString(String string) {
+                return null;
+            }
+        };
+    }
+    
+    private void setTableViewAndTableColumn(TreeTableCell cell) {
+        cell.updateTreeTableView(tableView);
+        cell.updateTreeTableColumn(tableColumn);
+    }
     
     
     /**************************************************************************
@@ -70,13 +89,13 @@ public class CheckBoxTreeTableCellTest {
 
     
     @Test public void testStatic_forTreeTableColumn_callback_ensureCellFactoryIsNotNull() {
-        assertFalse(roBooleanProperty.get());
+        assertFalse(booleanProperty.get());
         Callback<TreeTableColumn<Object, Object>, TreeTableCell<Object, Object>> cellFactory = CheckBoxTreeTableCell.forTreeTableColumn(callback);
         assertNotNull(cellFactory);
     }
     
     @Test public void testStatic_forTreeTableColumn_callback_ensureCellFactoryCreatesCells() {
-        assertFalse(roBooleanProperty.get());
+        assertFalse(booleanProperty.get());
         Callback<TreeTableColumn<Object, Object>, TreeTableCell<Object, Object>> cellFactory = CheckBoxTreeTableCell.forTreeTableColumn(callback);
         
         TreeTableColumn tableColumn = new TreeTableColumn<>();
@@ -85,7 +104,7 @@ public class CheckBoxTreeTableCellTest {
     }
     
     @Test public void testStatic_forTreeTableColumn_callback_ensureCellHasNonNullSelectedStateCallback() {
-        assertFalse(roBooleanProperty.get());
+        assertFalse(booleanProperty.get());
         Callback<TreeTableColumn<Object, Object>, TreeTableCell<Object, Object>> cellFactory = CheckBoxTreeTableCell.forTreeTableColumn(callback);
         
         TreeTableColumn tableColumn = new TreeTableColumn<>();
@@ -94,7 +113,7 @@ public class CheckBoxTreeTableCellTest {
     }
     
     @Test public void testStatic_forTreeTableColumn_callback_ensureCellHasNullStringConverter() {
-        assertFalse(roBooleanProperty.get());
+        assertFalse(booleanProperty.get());
         Callback<TreeTableColumn<Object, Object>, TreeTableCell<Object, Object>> cellFactory = CheckBoxTreeTableCell.forTreeTableColumn(callback);
         
         TreeTableColumn tableColumn = new TreeTableColumn<>();
@@ -114,13 +133,13 @@ public class CheckBoxTreeTableCellTest {
 
     
     @Test public void testStatic_forTreeTableColumn_callback_2_ensureCellFactoryIsNotNull() {
-        assertFalse(roBooleanProperty.get());
+        assertFalse(booleanProperty.get());
         Callback<TreeTableColumn<Object, Object>, TreeTableCell<Object, Object>> cellFactory = CheckBoxTreeTableCell.forTreeTableColumn(callback, converter);
         assertNotNull(cellFactory);
     }
     
     @Test public void testStatic_forTreeTableColumn_callback_2_ensureCellFactoryCreatesCells() {
-        assertFalse(roBooleanProperty.get());
+        assertFalse(booleanProperty.get());
         Callback<TreeTableColumn<Object, Object>, TreeTableCell<Object, Object>> cellFactory = CheckBoxTreeTableCell.forTreeTableColumn(callback, converter);
         
         TreeTableColumn tableColumn = new TreeTableColumn<>();
@@ -129,7 +148,7 @@ public class CheckBoxTreeTableCellTest {
     }
     
     @Test public void testStatic_forTreeTableColumn_callback_2_ensureCellHasNonNullSelectedStateCallback() {
-        assertFalse(roBooleanProperty.get());
+        assertFalse(booleanProperty.get());
         Callback<TreeTableColumn<Object, Object>, TreeTableCell<Object, Object>> cellFactory = CheckBoxTreeTableCell.forTreeTableColumn(callback, converter);
         
         TreeTableColumn tableColumn = new TreeTableColumn<>();
@@ -138,7 +157,7 @@ public class CheckBoxTreeTableCellTest {
     }
     
     @Test public void testStatic_forTreeTableColumn_callback_2_ensureCellHasSetStringConverter() {
-        assertFalse(roBooleanProperty.get());
+        assertFalse(booleanProperty.get());
         Callback<TreeTableColumn<Object, Object>, TreeTableCell<Object, Object>> cellFactory = CheckBoxTreeTableCell.forTreeTableColumn(callback, converter);
         
         TreeTableColumn tableColumn = new TreeTableColumn<>();
@@ -229,5 +248,104 @@ public class CheckBoxTreeTableCellTest {
     @Test public void testConstructor_getSelectedProperty_converter_defaultGraphicIsACheckBox() {
         CheckBoxTreeTableCell<Object, Object> cell = new CheckBoxTreeTableCell<>(callback, converter);
         assertTrue(cell.getGraphic() instanceof CheckBox);
+    }
+    
+    
+    /**************************************************************************
+     * 
+     * updateItem tests
+     * 
+     **************************************************************************/
+
+    @Test(expected=NullPointerException.class)
+    public void test_getSelectedPropertyIsNull() {
+        CheckBoxTreeTableCell<Object, Object> cell = new CheckBoxTreeTableCell<>();
+        cell.updateItem("TEST", false);
+    }
+    
+    @Test public void test_updateItem_isEmpty_graphicIsNull() {
+        CheckBoxTreeTableCell<Object, Object> cell = new CheckBoxTreeTableCell<>();
+        cell.updateItem("TEST", true);
+        assertNull(cell.getGraphic());
+    }
+    
+    @Test public void test_updateItem_isEmpty_textIsNull() {
+        CheckBoxTreeTableCell<Object, Object> cell = new CheckBoxTreeTableCell<>();
+        cell.updateItem("TEST", true);
+        assertNull(cell.getText());
+    }
+    
+    @Test public void test_updateItem_isNotEmpty_graphicIsNotNull() {
+        CheckBoxTreeTableCell<Object, Object> cell = new CheckBoxTreeTableCell<>(callback);
+        setTableViewAndTableColumn(cell);
+        cell.updateItem("TEST", false);
+        assertNotNull(cell.getGraphic());
+        assertTrue(cell.getGraphic() instanceof CheckBox);
+    }
+    
+    @Test public void test_updateItem_isNotEmpty_textIsNullBecauseOfNullConverter_1() {
+        CheckBoxTreeTableCell<Object, Object> cell = new CheckBoxTreeTableCell<>(callback);
+        setTableViewAndTableColumn(cell);
+        cell.updateItem("TEST", false);
+        assertNull(cell.getText());
+    }
+    
+    @Test public void test_updateItem_isNotEmpty_textIsNullBecauseOfNullConverter_2() {
+        CheckBoxTreeTableCell<Object, Object> cell = new CheckBoxTreeTableCell<>(callback);
+        setTableViewAndTableColumn(cell);
+        cell.setConverter(null);
+        cell.updateItem("TEST", false);
+        assertNull(cell.getText());
+    }
+    
+    @Test public void test_updateItem_isNotEmpty_textIsNotNull_nonNullConverter() {
+        CheckBoxTreeTableCell<Object, Object> cell = new CheckBoxTreeTableCell<>(callback);
+        setTableViewAndTableColumn(cell);
+        cell.setConverter(new StringConverter<Object>() {
+            @Override public Object fromString(String string) {
+                return "ERROR";
+            }
+            
+            @Override public String toString(Object object) {
+                return "CONVERTED";
+            }
+        });
+        cell.updateItem("TEST", false);
+        assertEquals("CONVERTED", cell.getText());
+    }
+    
+    
+    /**************************************************************************
+     * 
+     * test checkbox selection state is bound
+     * 
+     **************************************************************************/
+    
+    @Test public void test_booleanPropertyChangeUpdatesCheckBoxSelection() {
+        CheckBoxTreeTableCell<Object, Object> cell = new CheckBoxTreeTableCell<>(callback);
+        setTableViewAndTableColumn(cell);
+        cell.updateItem("TEST", false);
+        CheckBox cb = (CheckBox)cell.getGraphic();
+        
+        assertFalse(cb.isSelected());
+        booleanProperty.set(true);
+        assertTrue(cb.isScaleShape());
+
+        booleanProperty.set(false);
+        assertFalse(cb.isSelected());
+    }
+    
+    @Test public void test_checkBoxSelectionUpdatesBooleanProperty() {
+        CheckBoxTreeTableCell<Object, Object> cell = new CheckBoxTreeTableCell<>(callback);
+        setTableViewAndTableColumn(cell);
+        cell.updateItem("TEST", false);
+        CheckBox cb = (CheckBox)cell.getGraphic();
+        
+        assertFalse(booleanProperty.get());
+        cb.setSelected(true);
+        assertTrue(booleanProperty.get());
+
+        cb.setSelected(false);
+        assertFalse(booleanProperty.get());
     }
 }

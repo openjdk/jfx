@@ -26,7 +26,9 @@
 package javafx.scene.control.cell;
 
 import static org.junit.Assert.*;
+import javafx.beans.property.ReadOnlyBooleanWrapper;
 import javafx.beans.property.ReadOnlyObjectWrapper;
+import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.value.ObservableValue;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.ListCell;
@@ -39,23 +41,27 @@ import org.junit.Test;
 
 public class CheckBoxListCellTest {
     
-    private ReadOnlyObjectWrapper<Boolean> roBooleanProperty = new ReadOnlyObjectWrapper<Boolean>(false);
-    private Callback<Object, ObservableValue<Boolean>> callback = new Callback<Object, ObservableValue<Boolean>>() {
-        public ObservableValue<Boolean> call(Object param) {
-            return roBooleanProperty;
-        }
-    };
+    private SimpleBooleanProperty booleanProperty;
+    private Callback<Object, ObservableValue<Boolean>> callback;
+    private StringConverter<Object> converter;
     
-    private StringConverter<Object> converter = new StringConverter<Object>() {
-        @Override public String toString(Object object) {
-            return null;
-        }
-        
-        @Override public Object fromString(String string) {
-            return null;
-        }
-    };
-    
+    @Before public void setup() {
+        booleanProperty = new SimpleBooleanProperty(false);
+        callback = new Callback<Object, ObservableValue<Boolean>>() {
+            public ObservableValue<Boolean> call(Object param) {
+                return booleanProperty;
+            }
+        };
+        converter = new StringConverter<Object>() {
+            @Override public String toString(Object object) {
+                return null;
+            }
+            
+            @Override public Object fromString(String string) {
+                return null;
+            }
+        };
+    }
     
     /**************************************************************************
      * 
@@ -66,13 +72,13 @@ public class CheckBoxListCellTest {
 
     
     @Test public void testStatic_forListView_callback_ensureCellFactoryIsNotNull() {
-        assertFalse(roBooleanProperty.get());
+        assertFalse(booleanProperty.get());
         Callback<ListView<Object>, ListCell<Object>> cellFactory = CheckBoxListCell.forListView(callback);
         assertNotNull(cellFactory);
     }
     
     @Test public void testStatic_forListView_callback_ensureCellFactoryCreatesCells() {
-        assertFalse(roBooleanProperty.get());
+        assertFalse(booleanProperty.get());
         Callback<ListView<Object>, ListCell<Object>> cellFactory = CheckBoxListCell.forListView(callback);
         
         ListView<Object> listView = new ListView<>();
@@ -81,7 +87,7 @@ public class CheckBoxListCellTest {
     }
     
     @Test public void testStatic_forListView_callback_ensureCellHasNonNullSelectedStateCallback() {
-        assertFalse(roBooleanProperty.get());
+        assertFalse(booleanProperty.get());
         Callback<ListView<Object>, ListCell<Object>> cellFactory = CheckBoxListCell.forListView(callback);
         
         ListView<Object> listView = new ListView<>();
@@ -90,7 +96,7 @@ public class CheckBoxListCellTest {
     }
     
     @Test public void testStatic_forListView_callback_ensureCellHasNonNullStringConverter() {
-        assertFalse(roBooleanProperty.get());
+        assertFalse(booleanProperty.get());
         Callback<ListView<Object>, ListCell<Object>> cellFactory = CheckBoxListCell.forListView(callback);
         
         ListView<Object> listView = new ListView<>();
@@ -110,13 +116,13 @@ public class CheckBoxListCellTest {
 
     
     @Test public void testStatic_forListView_callback_2_ensureCellFactoryIsNotNull() {
-        assertFalse(roBooleanProperty.get());
+        assertFalse(booleanProperty.get());
         Callback<ListView<Object>, ListCell<Object>> cellFactory = CheckBoxListCell.forListView(callback, converter);
         assertNotNull(cellFactory);
     }
     
     @Test public void testStatic_forListView_callback_2_ensureCellFactoryCreatesCells() {
-        assertFalse(roBooleanProperty.get());
+        assertFalse(booleanProperty.get());
         Callback<ListView<Object>, ListCell<Object>> cellFactory = CheckBoxListCell.forListView(callback, converter);
         
         ListView<Object> listView = new ListView<>();
@@ -125,7 +131,7 @@ public class CheckBoxListCellTest {
     }
     
     @Test public void testStatic_forListView_callback_2_ensureCellHasNonNullSelectedStateCallback() {
-        assertFalse(roBooleanProperty.get());
+        assertFalse(booleanProperty.get());
         Callback<ListView<Object>, ListCell<Object>> cellFactory = CheckBoxListCell.forListView(callback, converter);
         
         ListView<Object> listView = new ListView<>();
@@ -134,7 +140,7 @@ public class CheckBoxListCellTest {
     }
     
     @Test public void testStatic_forListView_callback_2_ensureCellHasSetStringConverter() {
-        assertFalse(roBooleanProperty.get());
+        assertFalse(booleanProperty.get());
         Callback<ListView<Object>, ListCell<Object>> cellFactory = CheckBoxListCell.forListView(callback, converter);
         
         ListView<Object> listView = new ListView<>();
@@ -225,5 +231,101 @@ public class CheckBoxListCellTest {
     @Test public void testConstructor_getSelectedProperty_converter_defaultGraphicIsACheckBox() {
         CheckBoxListCell<Object> cell = new CheckBoxListCell<>(callback, converter);
         assertTrue(cell.getGraphic() instanceof CheckBox);
+    }
+    
+    
+    /**************************************************************************
+     * 
+     * updateItem tests
+     * 
+     **************************************************************************/
+
+    @Test(expected=NullPointerException.class)
+    public void test_getSelectedPropertyIsNull() {
+        CheckBoxListCell<Object> cell = new CheckBoxListCell<>();
+        cell.updateItem("TEST", false);
+    }
+    
+    @Test public void test_updateItem_isEmpty_graphicIsNull() {
+        CheckBoxListCell<Object> cell = new CheckBoxListCell<>();
+        cell.updateItem("TEST", true);
+        assertNull(cell.getGraphic());
+    }
+    
+    @Test public void test_updateItem_isEmpty_textIsNull() {
+        CheckBoxListCell<Object> cell = new CheckBoxListCell<>();
+        cell.updateItem("TEST", true);
+        assertNull(cell.getText());
+    }
+    
+    @Test public void test_updateItem_isNotEmpty_graphicIsNotNull() {
+        CheckBoxListCell<Object> cell = new CheckBoxListCell<>(callback);
+        cell.updateItem("TEST", false);
+        assertNotNull(cell.getGraphic());
+        assertTrue(cell.getGraphic() instanceof CheckBox);
+    }
+    
+    @Test public void test_updateItem_isNotEmpty_textIsNotNull() {
+        CheckBoxListCell<Object> cell = new CheckBoxListCell<>(callback);
+        cell.updateItem("TEST", false);
+        assertNotNull(cell.getText());
+        assertEquals("TEST", cell.getText());
+    }
+    
+    @Test public void test_updateItem_isNotEmpty_textIsNotNull_nullConverter() {
+        CheckBoxListCell<Object> cell = new CheckBoxListCell<>(callback);
+        cell.setConverter(null);
+        cell.updateItem("TEST", false);
+        assertNotNull(cell.getText());
+        assertEquals("TEST", cell.getText());
+    }
+    
+    @Test public void test_updateItem_isNotEmpty_textIsNotNull_nonNullConverter() {
+        CheckBoxListCell<Object> cell = new CheckBoxListCell<>(callback);
+        cell.setConverter(new StringConverter<Object>() {
+            @Override public Object fromString(String string) {
+                return null;
+            }
+            
+            @Override public String toString(Object object) {
+                return "CONVERTED";
+            }
+        });
+        cell.updateItem("TEST", false);
+        assertNotNull(cell.getText());
+        assertEquals("CONVERTED", cell.getText());
+    }
+    
+    
+    /**************************************************************************
+     * 
+     * test checkbox selection state is bound
+     * 
+     **************************************************************************/
+    
+    @Test public void test_booleanPropertyChangeUpdatesCheckBoxSelection() {
+        CheckBoxListCell<Object> cell = new CheckBoxListCell<>(callback);
+        cell.updateItem("TEST", false);
+        CheckBox cb = (CheckBox)cell.getGraphic();
+        
+        assertFalse(cb.isSelected());
+        booleanProperty.set(true);
+        assertTrue(cb.isScaleShape());
+
+        booleanProperty.set(false);
+        assertFalse(cb.isSelected());
+    }
+    
+    @Test public void test_checkBoxSelectionUpdatesBooleanProperty() {
+        CheckBoxListCell<Object> cell = new CheckBoxListCell<>(callback);
+        cell.updateItem("TEST", false);
+        CheckBox cb = (CheckBox)cell.getGraphic();
+        
+        assertFalse(booleanProperty.get());
+        cb.setSelected(true);
+        assertTrue(booleanProperty.get());
+
+        cb.setSelected(false);
+        assertFalse(booleanProperty.get());
     }
 }

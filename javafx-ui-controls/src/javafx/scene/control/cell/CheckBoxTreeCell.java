@@ -408,9 +408,6 @@ public class CheckBoxTreeCell<T> extends TreeCell<T> {
             final Callback<TreeItem<T>, ObservableValue<Boolean>> getSelectedProperty, 
             final StringConverter<TreeItem<T>> converter, 
             final Callback<TreeItem<T>, ObservableValue<Boolean>> getIndeterminateProperty) {
-        if (getSelectedProperty == null) {
-            throw new NullPointerException("getSelectedProperty can not be null");
-        }
         this.getStyleClass().add("check-box-tree-cell");
         setSelectedStateCallback(getSelectedProperty);
         setConverter(converter);
@@ -500,12 +497,11 @@ public class CheckBoxTreeCell<T> extends TreeCell<T> {
             setGraphic(null);
         } else {
             StringConverter c = getConverter();
-            Callback<TreeItem<T>, ObservableValue<Boolean>> callback = getSelectedStateCallback();
             
             TreeItem<T> treeItem = getTreeItem();
             
             // update the node content
-            setText(c.toString(treeItem));
+            setText(c != null ? c.toString(treeItem) : (treeItem == null ? "" : treeItem.toString()));
             checkBox.setGraphic(treeItem == null ? null : treeItem.getGraphic());
             setGraphic(checkBox);
             
@@ -527,6 +523,12 @@ public class CheckBoxTreeCell<T> extends TreeCell<T> {
                 indeterminateProperty = cbti.indeterminateProperty();
                 checkBox.indeterminateProperty().bindBidirectional(indeterminateProperty);
             } else {
+                Callback<TreeItem<T>, ObservableValue<Boolean>> callback = getSelectedStateCallback();
+                if (callback == null) {
+                    throw new NullPointerException(
+                            "The CheckBoxTreeCell selectedStateCallbackProperty can not be null");
+                }
+                
                 booleanProperty = callback.call(treeItem);
                 if (booleanProperty != null) {
                     checkBox.selectedProperty().bindBidirectional((BooleanProperty)booleanProperty);

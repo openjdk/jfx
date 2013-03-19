@@ -197,7 +197,7 @@ public class CheckBoxTreeTableCell<S,T> extends TreeTableCell<S,T> {
      **************************************************************************/
     private final CheckBox checkBox;
     
-    private final boolean showLabel;
+    private boolean showLabel;
     
     private ObservableValue<Boolean> booleanProperty;
     
@@ -242,12 +242,12 @@ public class CheckBoxTreeTableCell<S,T> extends TreeTableCell<S,T> {
         // we let getSelectedProperty be null here, as we can always defer to the
         // TreeTableColumn
         this.getStyleClass().add("check-box-tree-table-cell");
-        setSelectedStateCallback(getSelectedProperty);
-        setConverter(converter);
-        this.showLabel = converter != null;
         
         this.checkBox = new CheckBox();
         setGraphic(checkBox);
+        
+        setSelectedStateCallback(getSelectedProperty);
+        setConverter(converter);
         
 //        // alignment is styleable through css. Calling setAlignment
 //        // makes it look to css like the user set the value and css will not 
@@ -255,10 +255,6 @@ public class CheckBoxTreeTableCell<S,T> extends TreeTableCell<S,T> {
 //        // CssMetaData ensures that css will be able to override the value.
 //        final CssMetaData prop = CssMetaData.getCssMetaData(alignmentProperty());
 //        prop.set(this, Pos.CENTER);
-        
-        if (showLabel) {
-            this.checkBox.setAlignment(Pos.CENTER_LEFT);
-        }
     }
     
     
@@ -270,7 +266,11 @@ public class CheckBoxTreeTableCell<S,T> extends TreeTableCell<S,T> {
     
     // --- converter
     private ObjectProperty<StringConverter<T>> converter = 
-            new SimpleObjectProperty<StringConverter<T>>(this, "converter");
+            new SimpleObjectProperty<StringConverter<T>>(this, "converter") {
+        protected void invalidated() {
+            updateShowLabel();
+        }
+    };
 
     /**
      * The {@link StringConverter} property.
@@ -370,6 +370,11 @@ public class CheckBoxTreeTableCell<S,T> extends TreeTableCell<S,T> {
      * Private implementation                                                  *
      *                                                                         *
      **************************************************************************/
+    
+    private void updateShowLabel() {
+        this.showLabel = converter != null;
+        this.checkBox.setAlignment(showLabel ? Pos.CENTER_LEFT : Pos.CENTER);
+    }
     
     private ObservableValue getSelectedProperty() {
         return getSelectedStateCallback() != null ?
