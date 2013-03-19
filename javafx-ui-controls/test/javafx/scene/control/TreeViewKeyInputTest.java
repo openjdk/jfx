@@ -1228,7 +1228,6 @@ public class TreeViewKeyInputTest {
         assertTrue(isSelected(0,1,2,3,4,5));
     }
     
-    @Ignore("Bug not yet fixed")
     @Test public void test_rt28065() {
         sm.setSelectionMode(SelectionMode.MULTIPLE);
         

@@ -147,11 +147,6 @@ public class SliderBehavior extends BehaviorBase<Slider> {
         }
     }
 
-    /**
-     */
-    public void trackRelease(MouseEvent e, double position) {
-    }
-
      /**
      * @param position The mouse position on track with 0.0 being beginning of
       *       track and 1.0 being the end

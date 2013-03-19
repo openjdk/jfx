@@ -1893,8 +1893,8 @@ public class TableView<S> extends Control {
                     indices.add(new TablePosition(getTableView(), i, null));
                 }
                 selectedCells.setAll(indices);
-                select(getItemCount() - 1);
-                focus(indices.get(indices.size() - 1));
+                select(getFocusedIndex());
+                focus(getFocusedIndex());
             }
         }
 

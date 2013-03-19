@@ -141,14 +141,14 @@
                 <package-root>${src.dir}</package-root>
                 <classpath mode="compile">${javac.classpath}</classpath>
                 <built-to>dist/javafx-ui-controls.jar</built-to>
-                <source-level>1.6</source-level>
+                <source-level>1.7</source-level>
             </compilation-unit>
             <compilation-unit>
                 <package-root>${test.dir}</package-root>
                 <unit-tests/>
                 <classpath mode="compile">${javac.test.classpath}</classpath>
                 <built-to>${build.test.classes.dir}</built-to>
-                <source-level>1.6</source-level>
+                <source-level>1.7</source-level>
             </compilation-unit>
         </java-data>
         <spellchecker-wordlist xmlns="http://www.netbeans.org/ns/spellchecker-wordlist/1">
