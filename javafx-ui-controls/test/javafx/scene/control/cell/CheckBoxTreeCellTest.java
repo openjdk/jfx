@@ -78,7 +78,7 @@ public class CheckBoxTreeCellTest {
         assertFalse(roBooleanProperty.get());
         Callback<TreeView<Object>, TreeCell<Object>> cellFactory = CheckBoxTreeCell.forTreeView();
         
-        TreeView<Object> treeView = new TreeView();
+        TreeView<Object> treeView = new TreeView<>();
         CheckBoxTreeCell<Object> cell = (CheckBoxTreeCell<Object>)cellFactory.call(treeView);
         assertNotNull(cell);
     }
@@ -87,7 +87,7 @@ public class CheckBoxTreeCellTest {
         assertFalse(roBooleanProperty.get());
         Callback<TreeView<Object>, TreeCell<Object>> cellFactory = CheckBoxTreeCell.forTreeView();
         
-        TreeView<Object> treeView = new TreeView();
+        TreeView<Object> treeView = new TreeView<>();
         CheckBoxTreeCell<Object> cell = (CheckBoxTreeCell<Object>)cellFactory.call(treeView);
         assertNotNull(cell.getSelectedStateCallback());
     }
@@ -96,7 +96,7 @@ public class CheckBoxTreeCellTest {
         assertFalse(roBooleanProperty.get());
         Callback<TreeView<Object>, TreeCell<Object>> cellFactory = CheckBoxTreeCell.forTreeView();
         
-        TreeView<Object> treeView = new TreeView();
+        TreeView<Object> treeView = new TreeView<>();
         CheckBoxTreeCell<Object> cell = (CheckBoxTreeCell<Object>)cellFactory.call(treeView);
         assertNotNull(cell.getConverter());
     }
@@ -120,7 +120,7 @@ public class CheckBoxTreeCellTest {
         assertFalse(roBooleanProperty.get());
         Callback<TreeView<Object>, TreeCell<Object>> cellFactory = CheckBoxTreeCell.forTreeView(callback);
         
-        TreeView<Object> treeView = new TreeView();
+        TreeView<Object> treeView = new TreeView<>();
         CheckBoxTreeCell<Object> cell = (CheckBoxTreeCell<Object>)cellFactory.call(treeView);
         assertNotNull(cell);
     }
@@ -129,7 +129,7 @@ public class CheckBoxTreeCellTest {
         assertFalse(roBooleanProperty.get());
         Callback<TreeView<Object>, TreeCell<Object>> cellFactory = CheckBoxTreeCell.forTreeView(callback);
         
-        TreeView<Object> treeView = new TreeView();
+        TreeView<Object> treeView = new TreeView<>();
         CheckBoxTreeCell<Object> cell = (CheckBoxTreeCell<Object>)cellFactory.call(treeView);
         assertNotNull(cell.getSelectedStateCallback());
     }
@@ -138,7 +138,7 @@ public class CheckBoxTreeCellTest {
         assertFalse(roBooleanProperty.get());
         Callback<TreeView<Object>, TreeCell<Object>> cellFactory = CheckBoxTreeCell.forTreeView(callback);
         
-        TreeView<Object> treeView = new TreeView();
+        TreeView<Object> treeView = new TreeView<>();
         CheckBoxTreeCell<Object> cell = (CheckBoxTreeCell<Object>)cellFactory.call(treeView);
         assertNotNull(cell.getConverter());
     }
@@ -164,7 +164,7 @@ public class CheckBoxTreeCellTest {
         assertFalse(roBooleanProperty.get());
         Callback<TreeView<Object>, TreeCell<Object>> cellFactory = CheckBoxTreeCell.forTreeView(callback, converter);
         
-        TreeView<Object> treeView = new TreeView();
+        TreeView<Object> treeView = new TreeView<>();
         CheckBoxTreeCell<Object> cell = (CheckBoxTreeCell<Object>)cellFactory.call(treeView);
         assertNotNull(cell);
     }
@@ -173,7 +173,7 @@ public class CheckBoxTreeCellTest {
         assertFalse(roBooleanProperty.get());
         Callback<TreeView<Object>, TreeCell<Object>> cellFactory = CheckBoxTreeCell.forTreeView(callback, converter);
         
-        TreeView<Object> treeView = new TreeView();
+        TreeView<Object> treeView = new TreeView<>();
         CheckBoxTreeCell<Object> cell = (CheckBoxTreeCell<Object>)cellFactory.call(treeView);
         assertNotNull(cell.getSelectedStateCallback());
     }
@@ -182,7 +182,7 @@ public class CheckBoxTreeCellTest {
         assertFalse(roBooleanProperty.get());
         Callback<TreeView<Object>, TreeCell<Object>> cellFactory = CheckBoxTreeCell.forTreeView(callback, converter);
         
-        TreeView<Object> treeView = new TreeView();
+        TreeView<Object> treeView = new TreeView<>();
         CheckBoxTreeCell<Object> cell = (CheckBoxTreeCell<Object>)cellFactory.call(treeView);
         assertNotNull(cell.getConverter());
         assertEquals(converter, cell.getConverter());
@@ -198,22 +198,22 @@ public class CheckBoxTreeCellTest {
 
     
     @Test public void testConstructor_noArgs_defaultCallbackIsNull() {
-        CheckBoxTreeCell<Object> cell = new CheckBoxTreeCell();
+        CheckBoxTreeCell<Object> cell = new CheckBoxTreeCell<>();
         assertNotNull(cell.getSelectedStateCallback());
     }
     
     @Test public void testConstructor_noArgs_defaultStringConverterIsNotNull() {
-        CheckBoxTreeCell<Object> cell = new CheckBoxTreeCell();
+        CheckBoxTreeCell<Object> cell = new CheckBoxTreeCell<>();
         assertNotNull(cell.getConverter());
     }
     
     @Test public void testConstructor_noArgs_defaultStyleClass() {
-        CheckBoxTreeCell<Object> cell = new CheckBoxTreeCell();
+        CheckBoxTreeCell<Object> cell = new CheckBoxTreeCell<>();
         assertTrue(cell.getStyleClass().contains("check-box-tree-cell"));
     }
     
     @Test public void testConstructor_noArgs_defaultGraphicIsACheckBox() {
-        CheckBoxTreeCell<Object> cell = new CheckBoxTreeCell();
+        CheckBoxTreeCell<Object> cell = new CheckBoxTreeCell<>();
         assertTrue(cell.getGraphic() instanceof CheckBox);
     }
     
@@ -225,28 +225,28 @@ public class CheckBoxTreeCellTest {
      **************************************************************************/
     
     @Test public void testConstructor_getSelectedProperty_selectedPropertyIsNotNull() {
-        CheckBoxTreeCell<Object> cell = new CheckBoxTreeCell(callback);
+        CheckBoxTreeCell<Object> cell = new CheckBoxTreeCell<>(callback);
         assertEquals(callback, cell.getSelectedStateCallback());
     }
     
     @Test public void testConstructor_getSelectedProperty_defaultStringConverterIsNotNull() {
-        CheckBoxTreeCell<Object> cell = new CheckBoxTreeCell(callback);
+        CheckBoxTreeCell<Object> cell = new CheckBoxTreeCell<>(callback);
         assertNotNull(cell.getConverter());
     }
     
     @Test public void testConstructor_getSelectedProperty_defaultStyleClass() {
-        CheckBoxTreeCell<Object> cell = new CheckBoxTreeCell(callback);
+        CheckBoxTreeCell<Object> cell = new CheckBoxTreeCell<>(callback);
         assertTrue(cell.getStyleClass().contains("check-box-tree-cell"));
     }
     
     @Test public void testConstructor_getSelectedProperty_defaultGraphicIsACheckBox() {
-        CheckBoxTreeCell<Object> cell = new CheckBoxTreeCell(callback);
+        CheckBoxTreeCell<Object> cell = new CheckBoxTreeCell<>(callback);
         assertTrue(cell.getGraphic() instanceof CheckBox);
     }
     
     @Test(expected=NullPointerException.class)
     public void testConstructor_getSelectedProperty_passInNullCallback() {
-        new CheckBoxTreeCell(null);
+        new CheckBoxTreeCell<>(null);
     }
     
     
@@ -257,28 +257,28 @@ public class CheckBoxTreeCellTest {
      **************************************************************************/
     
     @Test public void testConstructor_getSelectedProperty_converter_selectedPropertyIsNotNull() {
-        CheckBoxTreeCell<Object> cell = new CheckBoxTreeCell(callback, converter);
+        CheckBoxTreeCell<Object> cell = new CheckBoxTreeCell<>(callback, converter);
         assertEquals(callback, cell.getSelectedStateCallback());
     }
     
     @Test public void testConstructor_getSelectedProperty_converter_defaultStringConverterIsNotNull() {
-        CheckBoxTreeCell<Object> cell = new CheckBoxTreeCell(callback, converter);
+        CheckBoxTreeCell<Object> cell = new CheckBoxTreeCell<>(callback, converter);
         assertNotNull(cell.getConverter());
         assertEquals(converter, cell.getConverter());
     }
     
     @Test public void testConstructor_getSelectedProperty_converter_defaultStyleClass() {
-        CheckBoxTreeCell<Object> cell = new CheckBoxTreeCell(callback, converter);
+        CheckBoxTreeCell<Object> cell = new CheckBoxTreeCell<>(callback, converter);
         assertTrue(cell.getStyleClass().contains("check-box-tree-cell"));
     }
     
     @Test public void testConstructor_getSelectedProperty_converter_defaultGraphicIsACheckBox() {
-        CheckBoxTreeCell<Object> cell = new CheckBoxTreeCell(callback, converter);
+        CheckBoxTreeCell<Object> cell = new CheckBoxTreeCell<>(callback, converter);
         assertTrue(cell.getGraphic() instanceof CheckBox);
     }
     
     @Test(expected=NullPointerException.class)
     public void testConstructor_getSelectedProperty_converter_passInNullCallback() {
-        new CheckBoxTreeCell(null, converter);
+        new CheckBoxTreeCell<>(null, converter);
     }
 }

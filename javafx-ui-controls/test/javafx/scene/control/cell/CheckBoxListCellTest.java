@@ -75,7 +75,7 @@ public class CheckBoxListCellTest {
         assertFalse(roBooleanProperty.get());
         Callback<ListView<Object>, ListCell<Object>> cellFactory = CheckBoxListCell.forListView(callback);
         
-        ListView<Object> listView = new ListView();
+        ListView<Object> listView = new ListView<>();
         CheckBoxListCell<Object> cell = (CheckBoxListCell<Object>)cellFactory.call(listView);
         assertNotNull(cell);
     }
@@ -84,7 +84,7 @@ public class CheckBoxListCellTest {
         assertFalse(roBooleanProperty.get());
         Callback<ListView<Object>, ListCell<Object>> cellFactory = CheckBoxListCell.forListView(callback);
         
-        ListView<Object> listView = new ListView();
+        ListView<Object> listView = new ListView<>();
         CheckBoxListCell<Object> cell = (CheckBoxListCell<Object>)cellFactory.call(listView);
         assertNotNull(cell.getSelectedStateCallback());
     }
@@ -93,7 +93,7 @@ public class CheckBoxListCellTest {
         assertFalse(roBooleanProperty.get());
         Callback<ListView<Object>, ListCell<Object>> cellFactory = CheckBoxListCell.forListView(callback);
         
-        ListView<Object> listView = new ListView();
+        ListView<Object> listView = new ListView<>();
         CheckBoxListCell<Object> cell = (CheckBoxListCell<Object>)cellFactory.call(listView);
         assertNotNull(cell.getConverter());
     }
@@ -119,7 +119,7 @@ public class CheckBoxListCellTest {
         assertFalse(roBooleanProperty.get());
         Callback<ListView<Object>, ListCell<Object>> cellFactory = CheckBoxListCell.forListView(callback, converter);
         
-        ListView<Object> listView = new ListView();
+        ListView<Object> listView = new ListView<>();
         CheckBoxListCell<Object> cell = (CheckBoxListCell<Object>)cellFactory.call(listView);
         assertNotNull(cell);
     }
@@ -128,7 +128,7 @@ public class CheckBoxListCellTest {
         assertFalse(roBooleanProperty.get());
         Callback<ListView<Object>, ListCell<Object>> cellFactory = CheckBoxListCell.forListView(callback, converter);
         
-        ListView<Object> listView = new ListView();
+        ListView<Object> listView = new ListView<>();
         CheckBoxListCell<Object> cell = (CheckBoxListCell<Object>)cellFactory.call(listView);
         assertNotNull(cell.getSelectedStateCallback());
     }
@@ -137,7 +137,7 @@ public class CheckBoxListCellTest {
         assertFalse(roBooleanProperty.get());
         Callback<ListView<Object>, ListCell<Object>> cellFactory = CheckBoxListCell.forListView(callback, converter);
         
-        ListView<Object> listView = new ListView();
+        ListView<Object> listView = new ListView<>();
         CheckBoxListCell<Object> cell = (CheckBoxListCell<Object>)cellFactory.call(listView);
         assertNotNull(cell.getConverter());
         assertEquals(converter, cell.getConverter());
@@ -153,22 +153,22 @@ public class CheckBoxListCellTest {
 
     
     @Test public void testConstructor_noArgs_defaultCallbackIsNull() {
-        CheckBoxListCell<Object> cell = new CheckBoxListCell();
+        CheckBoxListCell<Object> cell = new CheckBoxListCell<>();
         assertNull(cell.getSelectedStateCallback());
     }
     
     @Test public void testConstructor_noArgs_defaultStringConverterIsNotNull() {
-        CheckBoxListCell<Object> cell = new CheckBoxListCell();
+        CheckBoxListCell<Object> cell = new CheckBoxListCell<>();
         assertNotNull(cell.getConverter());
     }
     
     @Test public void testConstructor_noArgs_defaultStyleClass() {
-        CheckBoxListCell<Object> cell = new CheckBoxListCell();
+        CheckBoxListCell<Object> cell = new CheckBoxListCell<>();
         assertTrue(cell.getStyleClass().contains("check-box-list-cell"));
     }
     
     @Test public void testConstructor_noArgs_defaultGraphicIsACheckBox() {
-        CheckBoxListCell<Object> cell = new CheckBoxListCell();
+        CheckBoxListCell<Object> cell = new CheckBoxListCell<>();
         assertTrue(cell.getGraphic() instanceof CheckBox);
     }
     
@@ -180,22 +180,22 @@ public class CheckBoxListCellTest {
      **************************************************************************/
     
     @Test public void testConstructor_getSelectedProperty_selectedPropertyIsNotNull() {
-        CheckBoxListCell<Object> cell = new CheckBoxListCell(callback);
+        CheckBoxListCell<Object> cell = new CheckBoxListCell<>(callback);
         assertEquals(callback, cell.getSelectedStateCallback());
     }
     
     @Test public void testConstructor_getSelectedProperty_defaultStringConverterIsNotNull() {
-        CheckBoxListCell<Object> cell = new CheckBoxListCell(callback);
+        CheckBoxListCell<Object> cell = new CheckBoxListCell<>(callback);
         assertNotNull(cell.getConverter());
     }
     
     @Test public void testConstructor_getSelectedProperty_defaultStyleClass() {
-        CheckBoxListCell<Object> cell = new CheckBoxListCell(callback);
+        CheckBoxListCell<Object> cell = new CheckBoxListCell<>(callback);
         assertTrue(cell.getStyleClass().contains("check-box-list-cell"));
     }
     
     @Test public void testConstructor_getSelectedProperty_defaultGraphicIsACheckBox() {
-        CheckBoxListCell<Object> cell = new CheckBoxListCell(callback);
+        CheckBoxListCell<Object> cell = new CheckBoxListCell<>(callback);
         assertTrue(cell.getGraphic() instanceof CheckBox);
     }
     
@@ -207,23 +207,23 @@ public class CheckBoxListCellTest {
      **************************************************************************/
     
     @Test public void testConstructor_getSelectedProperty_converter_selectedPropertyIsNotNull() {
-        CheckBoxListCell<Object> cell = new CheckBoxListCell(callback, converter);
+        CheckBoxListCell<Object> cell = new CheckBoxListCell<>(callback, converter);
         assertEquals(callback, cell.getSelectedStateCallback());
     }
     
     @Test public void testConstructor_getSelectedProperty_converter_defaultStringConverterIsNotNull() {
-        CheckBoxListCell<Object> cell = new CheckBoxListCell(callback, converter);
+        CheckBoxListCell<Object> cell = new CheckBoxListCell<>(callback, converter);
         assertNotNull(cell.getConverter());
         assertEquals(converter, cell.getConverter());
     }
     
     @Test public void testConstructor_getSelectedProperty_converter_defaultStyleClass() {
-        CheckBoxListCell<Object> cell = new CheckBoxListCell(callback, converter);
+        CheckBoxListCell<Object> cell = new CheckBoxListCell<>(callback, converter);
         assertTrue(cell.getStyleClass().contains("check-box-list-cell"));
     }
     
     @Test public void testConstructor_getSelectedProperty_converter_defaultGraphicIsACheckBox() {
-        CheckBoxListCell<Object> cell = new CheckBoxListCell(callback, converter);
+        CheckBoxListCell<Object> cell = new CheckBoxListCell<>(callback, converter);
         assertTrue(cell.getGraphic() instanceof CheckBox);
     }
 }
