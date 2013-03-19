@@ -102,25 +102,25 @@ public class ColorPalette extends VBox {
             @Override public void handle(ActionEvent t) {
                 if (customColorDialog == null) {
                     customColorDialog = new CustomColorDialog(owner);
-                    customColorDialog.customColorProperty().addListener(new ChangeListener<Color>() {
+                    customColorDialog.customColorProperty.addListener(new ChangeListener<Color>() {
                         @Override public void changed(ObservableValue<? extends Color> ov, 
                                                                 Color t, Color t1) {
-                            Color customColor = customColorDialog.customColorProperty().get();
-                            if (customColorDialog.isSaveCustomColor()) {
+                            Color customColor = customColorDialog.customColorProperty.get();
+                            if (customColorDialog.saveCustomColor) {
                                 ColorSquare cs = new ColorSquare(customColor, true);
                                 customSquares.add(cs);
                                 buildCustomColors();
                                 colorPicker.getCustomColors().add(customColor);
                                 updateSelection(customColor);
                             }
-                            if (customColorDialog.isSaveCustomColor() || customColorDialog.isUseCustomColor()) {
+                            if (customColorDialog.saveCustomColor || customColorDialog.useCustomColor) {
                                 Event.fireEvent(colorPicker, new ActionEvent());
                             }             
                             colorPicker.setValue(customColor);
                         }
                     });
-                    customColorDialog.getSaveButton().addEventHandler(ActionEvent.ACTION, actionListener);
-                    customColorDialog.getUseButton().addEventHandler(ActionEvent.ACTION, actionListener);
+                    customColorDialog.saveButton.addEventHandler(ActionEvent.ACTION, actionListener);
+                    customColorDialog.useButton.addEventHandler(ActionEvent.ACTION, actionListener);
                 }
                 customColorDialog.setCurrentColor(colorPicker.valueProperty().get());
                 if (popupControl != null) popupControl.setAutoHide(false);
