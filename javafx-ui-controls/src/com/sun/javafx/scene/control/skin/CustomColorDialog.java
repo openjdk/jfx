@@ -83,7 +83,7 @@ public class CustomColorDialog extends StackPane {
     public CustomColorDialog(Window owner) {
         getStyleClass().add("custom-color-dialog");
         if (owner != null) dialog.initOwner(owner);
-        dialog.setTitle("Custom Colors");
+        dialog.setTitle("Custom Colors..");
         dialog.initModality(Modality.APPLICATION_MODAL);
         dialog.initStyle(StageStyle.UTILITY);
         colorRectPane = new ColorRectPane();
