@@ -2304,8 +2304,8 @@ public class TreeTableView<S> extends Control {
                     indices.add(new TreeTablePosition(getTreeTableView(), i, null));
                 }
                 selectedCells.setAll(indices);
-                select(getRowCount() - 1);
-                focus(indices.get(indices.size() - 1));
+                select(getFocusedIndex());
+                focus(getFocusedIndex());
             }
         }
 

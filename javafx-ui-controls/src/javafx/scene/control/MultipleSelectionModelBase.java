@@ -417,8 +417,7 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
         selectedIndices.set(0, (int) rowCount, true);
         selectedIndicesSeq.callObservers(new NonIterableChange.SimpleAddChange<Integer>(0, (int) rowCount, selectedIndicesSeq));
 
-        setSelectedIndex(rowCount - 1);
-
+        setSelectedIndex(getFocusedIndex());
         focus(getSelectedIndex());
     }
     
