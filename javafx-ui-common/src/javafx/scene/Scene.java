@@ -3931,7 +3931,10 @@ public class Scene implements EventTarget {
     public EventDispatchChain buildEventDispatchChain(
             EventDispatchChain tail) {
         if (eventDispatcher != null) {
-            tail = tail.prepend(eventDispatcher.get());
+            final EventDispatcher eventDispatcherValue = eventDispatcher.get();
+            if (eventDispatcherValue != null) {
+                tail = tail.prepend(eventDispatcherValue);
+            }
         }
 
         if (getWindow() != null) {
