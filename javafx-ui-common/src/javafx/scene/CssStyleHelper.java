@@ -2048,7 +2048,7 @@ final class CssStyleHelper {
             while (parent != null) {
                 
                 CssStyleHelper parentHelper = (parent instanceof Node) ?
-                        ((Parent)parent).styleHelper
+                        ((Node)parent).styleHelper
                         : null;
                 
                 if (parentHelper != null) {
