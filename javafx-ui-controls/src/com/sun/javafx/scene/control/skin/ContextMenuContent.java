@@ -1283,9 +1283,17 @@ public class ContextMenuContent extends Region {
         }
 
         void doSelect() {
+            doSelect(null);
+        }
+        
+        void doSelect(MouseEvent event) {
             // don't do anything on disabled menu items
             if (item == null || item.isDisable()) return;
-            
+            if (event != null && !(getLayoutBounds()).contains(event.getX(), event.getY())) {
+                // RT-23457 Mouse release happened outside the menu item - hide and return
+                hideAllMenus(item);
+                return;
+            }
             // toggle state of check or radio items
             if (item instanceof CheckMenuItem) {
                 CheckMenuItem checkItem = (CheckMenuItem)item;
