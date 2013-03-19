@@ -2457,7 +2457,7 @@ is being used to size a border should also be in pixels.
 .tree-table-cell {
     /* tree-table-cell needs slightly different padding to make the text sit at
     the right height for the arrow */
-    -fx-padding: 0.25em 0.166667em 0.083emem 0.166667em; /* 3 2 1 2 , plus border adds 1px */
+    -fx-padding: 0.25em 0.166667em 0.083em 0.166667em; /* 3 2 1 2 , plus border adds 1px */
     -fx-background-color: null;
     -fx-border-color: transparent -fx-table-cell-border-color transparent transparent;
     -fx-cell-size: 2.0em; /* 24 */
