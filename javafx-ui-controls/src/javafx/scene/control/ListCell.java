@@ -412,9 +412,12 @@ public class ListCell<T> extends IndexedCell<T> {
 
         // Cause the cell to update itself
         if (valid) {
-            T newItem = items.get(index);
-            if (newItem == null || ! newItem.equals(getItem())) {
-                updateItem(newItem, false);
+            T oldValue = getItem();
+            T newValue = items.get(index);
+            
+            if ((newValue != null && ! newValue.equals(oldValue)) || 
+                    oldValue != null && ! oldValue.equals(newValue)) {
+                updateItem(newValue, false);
             }
         } else {
             updateItem(null, true);
