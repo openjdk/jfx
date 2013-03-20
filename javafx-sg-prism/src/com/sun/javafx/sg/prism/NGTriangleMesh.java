@@ -109,7 +109,7 @@ public class NGTriangleMesh implements PGTriangleMesh {
         System.arraycopy(points, 0, this.points, 0, this.points.length);      
     }
 
-    public void setPoints(int index, float[] points, int start, int length) {
+    public void setPoints(float[] points, int index, int length) {
         meshDirty = true;
         if (points == null) {
             this.points = null;
@@ -117,10 +117,9 @@ public class NGTriangleMesh implements PGTriangleMesh {
         }
 
         // Range check were done in the FX layer.
-        int startOffset = start * TriangleMesh.NUM_COMPONENTS_PER_POINT;
         int indexOffset = index * TriangleMesh.NUM_COMPONENTS_PER_POINT;
         int lengthInFloatUnit = length * TriangleMesh.NUM_COMPONENTS_PER_POINT;
-        System.arraycopy(points, startOffset, this.points, indexOffset, lengthInFloatUnit);
+        System.arraycopy(points, indexOffset, this.points, indexOffset, lengthInFloatUnit);
     }
 
     public void setTexCoords(float[] texCoords) {
@@ -135,7 +134,7 @@ public class NGTriangleMesh implements PGTriangleMesh {
         System.arraycopy(texCoords, 0, this.texCoords, 0, this.texCoords.length);
     }
 
-    public void setTexCoords(int index, float[] texCoords, int start, int length) {
+    public void setTexCoords(float[] texCoords, int index, int length) {
         meshDirty = true;
         if (texCoords == null) {
             this.texCoords = null;
@@ -143,10 +142,9 @@ public class NGTriangleMesh implements PGTriangleMesh {
         }
 
         // Range check were done in the FX layer.
-        int startOffset = start * TriangleMesh.NUM_COMPONENTS_PER_TEXCOORD;
         int indexOffset = index * TriangleMesh.NUM_COMPONENTS_PER_TEXCOORD;
         int lengthInFloatUnit = length * TriangleMesh.NUM_COMPONENTS_PER_TEXCOORD;
-        System.arraycopy(texCoords, startOffset, this.texCoords, indexOffset, lengthInFloatUnit);
+        System.arraycopy(texCoords, indexOffset, this.texCoords, indexOffset, lengthInFloatUnit);
     }
 
     public void setFaces(int[] faces) {
@@ -161,7 +159,7 @@ public class NGTriangleMesh implements PGTriangleMesh {
         System.arraycopy(faces, 0, this.faces, 0, this.faces.length);
     }
 
-    public void setFaces(int index, int[] faces, int start, int length) {
+    public void setFaces(int[] faces, int index, int length) {
         meshDirty = true;
         if (faces == null) {
             this.faces = null;
@@ -169,10 +167,9 @@ public class NGTriangleMesh implements PGTriangleMesh {
         }
 
         // Range check were done in the FX layer.
-        int startOffset = start * TriangleMesh.NUM_COMPONENTS_PER_FACE;
-        int lengthInIntUnit = length * TriangleMesh.NUM_COMPONENTS_PER_FACE;
         int indexOffset = index * TriangleMesh.NUM_COMPONENTS_PER_FACE;
-        System.arraycopy(faces, startOffset, this.faces, indexOffset, lengthInIntUnit);
+        int lengthInIntUnit = length * TriangleMesh.NUM_COMPONENTS_PER_FACE;
+        System.arraycopy(faces, indexOffset, this.faces, indexOffset, lengthInIntUnit);
     }
 
     public void setFaceSmoothingGroups(int[] faceSmoothingGroups) {
@@ -191,7 +188,7 @@ public class NGTriangleMesh implements PGTriangleMesh {
         }
     }
 
-    public void setFaceSmoothingGroups(int index, int[] faceSmoothingGroups, int start, int length) {
+    public void setFaceSmoothingGroups(int[] faceSmoothingGroups, int index, int length) {
         meshDirty = true;
         if (faceSmoothingGroups == null) {
             this.faceSmoothingGroups = null;
@@ -199,8 +196,9 @@ public class NGTriangleMesh implements PGTriangleMesh {
         }
 
         // Range check were done in the FX layer.
-        for (int i = start; i < length; i++, index++) {
-            this.faceSmoothingGroups[index] = 1 << faceSmoothingGroups[i];
+        int toIndex = index + length;
+        for (int i = index; i < toIndex; i++) {
+            this.faceSmoothingGroups[i] = 1 << faceSmoothingGroups[i];
         }
     }
 

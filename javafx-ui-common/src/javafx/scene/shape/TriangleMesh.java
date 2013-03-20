@@ -96,9 +96,8 @@ public class TriangleMesh extends Mesh {
 
     // Partial Update constants and variables
     private static final int RANGE_INDEX = 0;
-    private static final int RANGE_START = 1;
-    private static final int RANGE_LENGTH = 2;
-    private static final int MAX_RANGE_SIZE = 3;
+    private static final int RANGE_LENGTH = 1;
+    private static final int MAX_RANGE_SIZE = 2;
     private int refCount = 1;
     private boolean pointUpdateRange = false;   
     private int[] pointRangeInfos;
@@ -302,13 +301,22 @@ public class TriangleMesh extends Mesh {
         }
         System.arraycopy(points, startOffset, this.points, indexOffset, lengthInFloatUnit);
 
-        pointsDirty = pointUpdateRange = true;
         if (pointRangeInfos == null) {
             pointRangeInfos = new int[MAX_RANGE_SIZE];
         }
-        pointRangeInfos[RANGE_INDEX] = index;
-        pointRangeInfos[RANGE_START] = start;
-        pointRangeInfos[RANGE_LENGTH] = length;
+
+        if (!pointUpdateRange) {
+            pointsDirty = pointUpdateRange = true;
+            pointRangeInfos[RANGE_INDEX] = index;
+            pointRangeInfos[RANGE_LENGTH] = length;
+        } else {
+            pointsDirty = true;
+            int fromIndex = Math.min(pointRangeInfos[RANGE_INDEX], index);
+            int toIndex = Math.max(pointRangeInfos[RANGE_INDEX] + pointRangeInfos[RANGE_LENGTH], index + length);
+            pointRangeInfos[RANGE_INDEX] = fromIndex;
+            pointRangeInfos[RANGE_LENGTH] = toIndex - fromIndex;
+        }
+        
         setDirty(true);
     }
     
@@ -415,13 +423,20 @@ public class TriangleMesh extends Mesh {
         }
         System.arraycopy(texCoords, startOffset, this.texCoords, indexOffset, lengthInFloatUnit);
       
-        texCoordsDirty = texCoordUpdateRange = true;
         if (texCoordRangeInfos == null) {
             texCoordRangeInfos = new int[MAX_RANGE_SIZE];
         }
-        texCoordRangeInfos[RANGE_INDEX] = index;
-        texCoordRangeInfos[RANGE_START] = start;
-        texCoordRangeInfos[RANGE_LENGTH] = length;
+        if (!texCoordUpdateRange) {
+            texCoordsDirty = texCoordUpdateRange = true;
+            texCoordRangeInfos[RANGE_INDEX] = index;
+            texCoordRangeInfos[RANGE_LENGTH] = length;
+        } else {
+            texCoordsDirty = true;
+            int fromIndex = Math.min(texCoordRangeInfos[RANGE_INDEX], index);
+            int toIndex = Math.max(texCoordRangeInfos[RANGE_INDEX] + texCoordRangeInfos[RANGE_LENGTH], index + length);
+            texCoordRangeInfos[RANGE_INDEX] = fromIndex;
+            texCoordRangeInfos[RANGE_LENGTH] = toIndex - fromIndex;            
+        }
         setDirty(true);
     }
 
@@ -531,13 +546,20 @@ public class TriangleMesh extends Mesh {
         }
         System.arraycopy(faces, startOffset, this.faces, indexOffset, lengthInIntUnit);
 
-        facesDirty = faceUpdateRange = true;
         if (faceRangeInfos == null) {
             faceRangeInfos = new int[MAX_RANGE_SIZE];
         }
-        faceRangeInfos[RANGE_INDEX] = index;
-        faceRangeInfos[RANGE_START] = start;
-        faceRangeInfos[RANGE_LENGTH] = length;
+        if (!faceUpdateRange) {
+            facesDirty = faceUpdateRange = true;
+            faceRangeInfos[RANGE_INDEX] = index;
+            faceRangeInfos[RANGE_LENGTH] = length;
+        } else {
+            facesDirty = true;
+            int fromIndex = Math.min(faceRangeInfos[RANGE_INDEX], index);
+            int toIndex = Math.max(faceRangeInfos[RANGE_INDEX] + faceRangeInfos[RANGE_LENGTH], index + length);
+            faceRangeInfos[RANGE_INDEX] = fromIndex;
+            faceRangeInfos[RANGE_LENGTH] = toIndex - fromIndex;
+        }
         setDirty(true);
     }
 
@@ -663,14 +685,21 @@ public class TriangleMesh extends Mesh {
         }
 
         System.arraycopy(faceSmoothingGroups, start, this.faceSmoothingGroups, index, length);
-      
-        fsgDirty = fsgUpdateRange = true;
+              
         if (fsgRangeInfos == null) {
             fsgRangeInfos = new int[MAX_RANGE_SIZE];
         }
-        fsgRangeInfos[RANGE_INDEX] = index;
-        fsgRangeInfos[RANGE_START] = start;
-        fsgRangeInfos[RANGE_LENGTH] = length;
+         if (!fsgUpdateRange) {
+            fsgDirty = fsgUpdateRange = true;
+            fsgRangeInfos[RANGE_INDEX] = index;
+            fsgRangeInfos[RANGE_LENGTH] = length;
+        } else {
+            fsgDirty = true;
+            int fromIndex = Math.min(fsgRangeInfos[RANGE_INDEX], index);
+            int toIndex = Math.max(fsgRangeInfos[RANGE_INDEX] + fsgRangeInfos[RANGE_LENGTH], index + length);
+            fsgRangeInfos[RANGE_INDEX] = fromIndex;
+            fsgRangeInfos[RANGE_LENGTH] = toIndex - fromIndex;
+        }
         setDirty(true);
     }
 
@@ -795,8 +824,7 @@ public class TriangleMesh extends Mesh {
         // sync points 
         if (pointsDirty) {
             if (pointUpdateRange) {
-                pgTriMesh.setPoints(pointRangeInfos[RANGE_INDEX],
-                        points, pointRangeInfos[RANGE_START],
+                pgTriMesh.setPoints(points, pointRangeInfos[RANGE_INDEX],
                         pointRangeInfos[RANGE_LENGTH]);
             } else {
                 pgTriMesh.setPoints(points);
@@ -805,9 +833,8 @@ public class TriangleMesh extends Mesh {
         // sync texCoords
         if (texCoordsDirty) {
             if (texCoordUpdateRange) {
-                pgTriMesh.setTexCoords(texCoordRangeInfos[RANGE_INDEX],
-                        texCoords, texCoordRangeInfos[RANGE_START],
-                        texCoordRangeInfos[RANGE_LENGTH]);
+                pgTriMesh.setTexCoords(texCoords, texCoordRangeInfos[RANGE_INDEX],
+                                       texCoordRangeInfos[RANGE_LENGTH]);
             } else {
                 pgTriMesh.setTexCoords(texCoords);
             }
@@ -815,9 +842,8 @@ public class TriangleMesh extends Mesh {
         // sync faces
         if (facesDirty) {
             if (faceUpdateRange) {
-                pgTriMesh.setFaces(faceRangeInfos[RANGE_INDEX],
-                        faces, faceRangeInfos[RANGE_START],
-                        faceRangeInfos[RANGE_LENGTH]);
+                pgTriMesh.setFaces(faces, faceRangeInfos[RANGE_INDEX],
+                                   faceRangeInfos[RANGE_LENGTH]);
             } else {
                 pgTriMesh.setFaces(faces);
             }
@@ -825,9 +851,8 @@ public class TriangleMesh extends Mesh {
         // sync faceSmoothingGroups
         if (fsgDirty) {
             if (fsgUpdateRange) {
-                pgTriMesh.setFaceSmoothingGroups(fsgRangeInfos[RANGE_INDEX],
-                        faceSmoothingGroups, fsgRangeInfos[RANGE_START],
-                        fsgRangeInfos[RANGE_LENGTH]);
+                pgTriMesh.setFaceSmoothingGroups(faceSmoothingGroups, fsgRangeInfos[RANGE_INDEX],
+                                                 fsgRangeInfos[RANGE_LENGTH]);
             } else {
                 pgTriMesh.setFaceSmoothingGroups(faceSmoothingGroups);
             }
