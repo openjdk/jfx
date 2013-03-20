@@ -160,6 +160,7 @@ defineProperty("JDK_HOME", JAVA_HOME.endsWith("jre") ? JAVA_HOME.substring(0, JA
 defineProperty("BINARY_STUB", "../artifacts/sdk/rt/lib/ext/jfxrt.jar");
 defineProperty("JAVAC", "$JDK_HOME/bin/javac");
 defineProperty("JAVAH", "$JDK_HOME/bin/javah");
+defineProperty("JDK_DOCS", "http://download.oracle.com/javase/7/docs/api");
 
 // Define the SWT.jar that we are going to have to download during the build process based
 // on what platform we are compiling from (not based on our target). SWT in particular is
@@ -168,15 +169,17 @@ ext.SWT_FILE_NAME = IS_MAC ? "org.eclipse.swt.cocoa.macosx.x86_64_3.7.2.v3740f.j
     IS_WINDOWS && IS_64 ? "org.eclipse.swt.win32.win32.x86_64_3.7.2.v3740f.jar" :
     IS_WINDOWS && !IS_64 ? "org.eclipse.swt.win32.win32.x86_3.7.2.v3740f.jar" :
     IS_LINUX && IS_64 ? "org.eclipse.swt.gtk.linux.x86_64_3.7.2.v3740f.jar" :
-    IS_LINUX && !IS_64 ? "org.eclipse.swt.gtk.linux.x86_3.7.2.v3740f.jar" : ""
+    IS_LINUX && !IS_64 ? "org.eclipse.swt.gtk.linux.x86_3.7.2.v3740f.jar" : "";
 
 // Specify the build configuration (Release or Debug) and whether we're checking warnings during compilation (LINT)
-defineProperty("CONF", "Release")
-defineProperty("LINT", "none")
-ext.IS_DEBUG = CONF == "Debug"
-ext.IS_LINT = LINT != "none"
+defineProperty("CONF", "Release");
+defineProperty("LINT", "none");
+defineProperty("DOC_LINT", "none");
+ext.IS_DEBUG = CONF == "Debug";
+ext.IS_LINT = LINT != "none";
+ext.IS_DOC_LINT = DOC_LINT != "none";
 // Define the number of threads to use when compiling (specifically for native compilation)
-defineProperty("NUM_COMPILE_THREADS", "${Runtime.runtime.availableProcessors()}")
+defineProperty("NUM_COMPILE_THREADS", "${Runtime.runtime.availableProcessors()}");
 
 // Define settings for Mac compilation. This is much easier than Windows because we know what version we're
 // compiling against and Mac always puts it in the same place. In extreme cases you can provide your own
@@ -552,90 +555,6 @@ def addNative = { project, String name ->
 *        Project definitions (dependencies, etc)                             *
 *****************************************************************************/
 
-task clean() {
-    getSubprojects().each { subProject ->
-        dependsOn(subProject.getTasksByName("clean", true));
-    }
-    doLast {
-        delete(buildDir);
-    }
-}
-
-// The jfxrt task is responsible for creating the jfxrt.jar. A developer may
-// have multiple SDK's on their system at any one time, depending on which
-// cross compiles they have done. For example, I might have:
-//      build/mac-sdk/rt/lib/ext/jfxrt.jar
-//      build/ios-sdk/rt/lib/ext/jfxrt.jar
-//      build/win-sdk/rt/lib/ext/jfxrt.jar
-//      build/armhf-sdk/rt/lib/ext/jfxrt.jar
-//
-// and so forth. This arrangement allows for multiple independent SDKs to
-// exist on a developer's system.
-task jfxrt(type: Jar) {
-    archiveName = "build/${COMPILE_TARGET.name}-sdk/rt/lib/ext/jfxrt.jar";
-    from("modules/base/build/classes/main",
-         "modules/base/build/resources/main",
-         "modules/graphics/build/classes/main",
-         "modules/graphics/build/resources/main",
-         "modules/controls/build/classes/main",
-         "modules/controls/build/resources/main",
-         "modules/fxml/build/classes/main",
-         "modules/fxml/build/resources/main",
-         "modules/graphics/effects-jsl/build/classes/main",
-         "modules/graphics/effects-jsl/build/resources/main",
-         "modules/graphics/prism-jsl/build/classes/main",
-         "modules/graphics/prism-jsl/build/resources/main");
-    exclude("Compile*", // the Decora compiler classes must be excluded
-            "PrismLoaderBackend*", // More decora stuff
-            "**/*.stg",    // any glue files for decora must be excluded
-            "**/*.java");  // Builder java files are in build/classes and should be excluded
-
-    // We only need to include Swing & SWT when we're building for one of the desktop
-    // compile targets (mac, win, linux, swt), not when we're building for iOS etc.
-    if (COMPILE_TARGET.isDesktop) {
-        from("modules/swing/build/classes/main",
-             "modules/swing/build/resources/main",
-             "modules/swt/build/classes/main",
-             "modules/swt/build/resources/main");
-    }
-
-    // Filter out platform specific Java sources (glass) when compiling for other targets
-    if (COMPILE_TARGET != CompileTarget.WIN) exclude("**/*.hlsl", "com/sun/glass/ui/win");
-    if (COMPILE_TARGET != CompileTarget.IOS) exclude("com/sun/glass/ui/ios");
-    if (COMPILE_TARGET != CompileTarget.MAC) exclude("com/sun/glass/events/mac", "com/sun/glass/ui/mac");
-    if (COMPILE_TARGET != CompileTarget.LINUX) exclude("com/sun/glass/ui/gtk");
-    if (COMPILE_TARGET != CompileTarget.ARM_HF && COMPILE_TARGET != CompileTarget.ARM_VFP) exclude("com/sun/glass/ui/lens");
-    if (COMPILE_TARGET != CompileTarget.SWT) exclude("com/sun/glass/ui/swt");
-}
-
-// The 'sdk' task will build the rest of the SDK, and depends on the 'jfxrt' task. After
-// executing this task the sdk bundle for the current COMPILE_TARGET will be fully created.
-task sdk {
-    doLast {
-        // Copy all of the .dll / .so / .dylib native libraries into build/sdk/rt/lib/
-        copy {
-            from("modules/graphics/build/libs/libdecora-sse.$LIBRARY_EXT",
-                 "modules/graphics/build/libs/libprism-common.$LIBRARY_EXT",
-                 "modules/graphics/build/libs/libprism-sw.$LIBRARY_EXT",
-                 "modules/graphics/build/libs/${COMPILE_TARGET.name}/libglass.$LIBRARY_EXT");
-            if (IS_WINDOWS) {
-                rename("lib(.*).dll", "\$1.dll");
-            }
-            if (COMPILE_TARGET == CompileTarget.MAC || COMPILE_TARGET == CompileTarget.IOS) {
-                into("build/${COMPILE_TARGET.name}-sdk/rt/lib");
-            } else if (COMPILE_TARGET == CompileTarget.WIN) {
-                into("build/${COMPILE_TARGET.name}-sdk/rt/bin");
-            } else {
-                into("build/${COMPILE_TARGET.name}-sdk/rt/lib/i386");
-            }
-        }
-        // Create the javafx.properties file
-        final File javafxProperties = file("build/${COMPILE_TARGET.name}-sdk/rt/lib/javafx.properties");
-        javafxProperties << "javafx.runtime.version=$RAW_VERSION";
-    }
-    dependsOn(jfxrt);
-}
-
 allprojects {
     // We want to configure all projects as java projects and use the same compile settings
     // etc, except for the root project which we just want to ignore
@@ -678,6 +597,27 @@ allprojects {
             compile.options.compilerArgs = ["-Djava.ext.dirs=", "-XDignore.symbol.file", "-s", "$buildDir/builder-src"]
             classpath = sourceSets.main.compileClasspath + rootProject.files(BINARY_STUB)
         }
+        doLast {
+            // Workaround: there are a number of packages which are now getting builders
+            // generated even though they they didn't before since we combined sources
+            // into fewer projects. So I have to strip out the .class files after compilation!
+            // Alternatively we can go through and add @NoBuilder to all these classes
+            // (or stop using automatic builder generation, but that's another story).
+            delete(files("$buildDir/builder-src/javafx/beans",
+                         "$buildDir/builder-src/javafx/concurrent",
+                         "$buildDir/builder-src/javafx/event",
+                         "$buildDir/builder-src/javafx/fxml",
+                         "$buildDir/builder-src/javafx/collections",
+                         "$buildDir/builder-src/javafx/util"));
+            delete(files("$buildDir/classes/main/javafx/beans",
+                         "$buildDir/classes/main/javafx/concurrent",
+                         "$buildDir/classes/main/javafx/event",
+                         "$buildDir/classes/main/javafx/fxml",
+                         "$buildDir/classes/main/javafx/collections",
+                         "$buildDir/classes/main/javafx/util").getAsFileTree().filter( { file ->
+                file.getName().endsWith("Builder.class")
+            } ));
+        }
     }
     // Setup the repositories that we'll download libraries from. Maven Central is
     // just easy for most things. The custom "ivy" repo is for downloading SWT. The way it
@@ -693,9 +633,6 @@ allprojects {
             }
         }
     }
-
-    // This was unexpected! TODO why is this here instead of in the jfxrt task??
-    project.rootProject.jfxrt.dependsOn(assemble)
 
     // By default all of our projects require junit for testing so we can just
     // setup this dependency here.
@@ -719,6 +656,14 @@ allprojects {
         exclude('**/*Abstract*.*');
     }
 
+    // Exclude any non-public-API classes from having javadoc generated
+    javadoc {
+        exclude("com/**/*", "javafx/scene/ParentDesignInfo*", "Compile*", "javafx/builder/**/*");
+        options.windowTitle("JavaFX Project ${project.name} ${RELEASE_NAME}")
+        options.links(JDK_DOCS);
+        options.addBooleanOption("XDignore.symbol.file").setValue(true);
+        options.addBooleanOption("Xdoclint:none").setValue(!IS_DOC_LINT);
+    }
 }
 
 // The build-tools project contains the annotation processor that is used to generate the
@@ -1081,4 +1026,108 @@ project(":graphics:prism-jsl") {
         into "$buildDir/resources/main"
     }
     classes.dependsOn copyPrismShaders
+}
+
+task clean() {
+    getSubprojects().each { subProject ->
+        dependsOn(subProject.getTasksByName("clean", true));
+    }
+    doLast {
+        delete(buildDir);
+    }
+}
+
+// The jfxrt task is responsible for creating the jfxrt.jar. A developer may
+// have multiple SDK's on their system at any one time, depending on which
+// cross compiles they have done. For example, I might have:
+//      build/mac-sdk/rt/lib/ext/jfxrt.jar
+//      build/ios-sdk/rt/lib/ext/jfxrt.jar
+//      build/win-sdk/rt/lib/ext/jfxrt.jar
+//      build/armhf-sdk/rt/lib/ext/jfxrt.jar
+//
+// and so forth. This arrangement allows for multiple independent SDKs to
+// exist on a developer's system.
+task jfxrt(type: Jar) {
+    archiveName = "build/${COMPILE_TARGET.name}-sdk/rt/lib/ext/jfxrt.jar";
+    from("modules/base/build/classes/main",
+         "modules/base/build/resources/main",
+         "modules/graphics/build/classes/main",
+         "modules/graphics/build/resources/main",
+         "modules/controls/build/classes/main",
+         "modules/controls/build/resources/main",
+         "modules/fxml/build/classes/main",
+         "modules/fxml/build/resources/main",
+         "modules/graphics/effects-jsl/build/classes/main",
+         "modules/graphics/effects-jsl/build/resources/main",
+         "modules/graphics/prism-jsl/build/classes/main",
+         "modules/graphics/prism-jsl/build/resources/main");
+    exclude("Compile*", // the Decora compiler classes must be excluded
+            "PrismLoaderBackend*", // More decora stuff
+            "**/*.stg",    // any glue files for decora must be excluded
+            "**/*.java");  // Builder java files are in build/classes and should be excluded
+
+    // We only need to include Swing & SWT when we're building for one of the desktop
+    // compile targets (mac, win, linux, swt), not when we're building for iOS etc.
+    if (COMPILE_TARGET.isDesktop) {
+        from("modules/swing/build/classes/main",
+             "modules/swing/build/resources/main",
+             "modules/swt/build/classes/main",
+             "modules/swt/build/resources/main");
+    }
+
+    // Filter out platform specific Java sources (glass) when compiling for other targets
+    if (COMPILE_TARGET != CompileTarget.WIN) exclude("**/*.hlsl", "com/sun/glass/ui/win");
+    if (COMPILE_TARGET != CompileTarget.IOS) exclude("com/sun/glass/ui/ios");
+    if (COMPILE_TARGET != CompileTarget.MAC) exclude("com/sun/glass/events/mac", "com/sun/glass/ui/mac");
+    if (COMPILE_TARGET != CompileTarget.LINUX) exclude("com/sun/glass/ui/gtk");
+    if (COMPILE_TARGET != CompileTarget.ARM_HF && COMPILE_TARGET != CompileTarget.ARM_VFP) exclude("com/sun/glass/ui/lens");
+    if (COMPILE_TARGET != CompileTarget.SWT) exclude("com/sun/glass/ui/swt");
+
+    dependsOn(subprojects.collect { project -> project.getTasksByName("assemble", true)});
+}
+
+// The 'sdk' task will build the rest of the SDK, and depends on the 'jfxrt' task. After
+// executing this task the sdk bundle for the current COMPILE_TARGET will be fully created.
+task sdk {
+    doLast {
+        // Copy all of the .dll / .so / .dylib native libraries into build/sdk/rt/lib/
+        copy {
+            from("modules/graphics/build/libs/libdecora-sse.$LIBRARY_EXT",
+                 "modules/graphics/build/libs/libprism-common.$LIBRARY_EXT",
+                 "modules/graphics/build/libs/libprism-sw.$LIBRARY_EXT",
+                 "modules/graphics/build/libs/${COMPILE_TARGET.name}/libglass.$LIBRARY_EXT");
+            if (IS_WINDOWS) {
+                rename("lib(.*).dll", "\$1.dll");
+            }
+            if (COMPILE_TARGET == CompileTarget.MAC || COMPILE_TARGET == CompileTarget.IOS) {
+                into("build/${COMPILE_TARGET.name}-sdk/rt/lib");
+            } else if (COMPILE_TARGET == CompileTarget.WIN) {
+                into("build/${COMPILE_TARGET.name}-sdk/rt/bin");
+            } else {
+                into("build/${COMPILE_TARGET.name}-sdk/rt/lib/i386");
+            }
+        }
+        // Create the javafx.properties file
+        final File javafxProperties = file("build/${COMPILE_TARGET.name}-sdk/rt/lib/javafx.properties");
+        javafxProperties << "javafx.runtime.version=$RAW_VERSION";
+    }
+    dependsOn(jfxrt);
+}
+
+task javadoc(type: Javadoc) {
+    source(subprojects.findAll({ it != project(":designTime") }).collect({
+        [it.sourceSets.main.java, "$it.buildDir/builder-src"]
+    }));
+    setDestinationDir(new File(buildDir, 'javadoc'));
+    // Might need a classpath
+    classpath = files(subprojects.collect { project ->
+        project.sourceSets.main.compileClasspath
+    });
+    exclude("com/**/*", "javafx/scene/ParentDesignInfo*", "Compile*", "javafx/builder/**/*");
+    options.windowTitle("JavaFX ${RELEASE_NAME}")
+    options.links(JDK_DOCS);
+    options.addBooleanOption("XDignore.symbol.file").setValue(true);
+    options.addBooleanOption("Xdoclint:none").setValue(!IS_DOC_LINT);
+
+    dependsOn(subprojects.collect { project -> project.getTasksByName("classes", true)});
 }
