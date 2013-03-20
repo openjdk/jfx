@@ -31,6 +31,7 @@ import com.sun.javafx.geom.Rectangle;
 import com.sun.javafx.geom.transform.Affine3D;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.geom.transform.GeneralTransform3D;
+import com.sun.javafx.geom.transform.NoninvertibleTransformException;
 import com.sun.javafx.jmx.MXNodeAlgorithm;
 import com.sun.javafx.jmx.MXNodeAlgorithmContext;
 import com.sun.javafx.scene.DirtyBits;
@@ -39,6 +40,8 @@ import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.SimpleDoubleProperty;
+import javafx.scene.transform.Transform;
+import sun.util.logging.PlatformLogger;
 
 
 /**
@@ -54,9 +57,63 @@ public abstract class Camera extends Node {
         this.localToSceneTransformProperty().addListener(new InvalidationListener() {
             @Override
             public void invalidated(Observable observable) {
+                isL2STxChanged = true;
                 impl_markDirty(DirtyBits.NODE_CAMERA_TRANSFORM);
             }
         });
+    }
+
+    private boolean isL2STxChanged = true;
+    private boolean isClipPlaneChanged = true;
+
+    // NOTE: farClipInScene and nearClipInScene are valid only if there is no rotation
+    private double farClipInScene;
+    private double nearClipInScene;
+
+    double getFarClipInScene() {
+        updateMiscProperties();
+        return farClipInScene;
+    }
+
+    double getNearClipInScene() {
+        updateMiscProperties();
+        return nearClipInScene;
+    }
+
+    /**
+     * An affine transform that holds the computed scene-to-local transform.
+     * It is used to convert node to camera coordinate when rotation is involved.
+     */
+    private Affine3D sceneToLocalTx = new Affine3D();
+
+    Affine3D getSceneToLocalTransform() {
+        updateMiscProperties();
+        return sceneToLocalTx;
+    }
+
+    private void updateMiscProperties() {
+        if (isL2STxChanged) {
+            Transform localToSceneTransform = getLocalToSceneTransform();
+            nearClipInScene = localToSceneTransform.transform(0, 0, getNearClip()).getZ();
+            farClipInScene = localToSceneTransform.transform(0, 0, getFarClip()).getZ();
+            
+            sceneToLocalTx.setToIdentity();
+            localToSceneTransform.impl_apply(sceneToLocalTx);
+            try {
+                sceneToLocalTx.invert();
+            } catch (NoninvertibleTransformException ex) {
+                String logname = Camera.class.getName();
+                PlatformLogger.getLogger(logname).severe("updateMiscProperties", ex);
+            }
+            
+            isL2STxChanged = isClipPlaneChanged = false;
+        } else if (isClipPlaneChanged) {
+            Transform localToSceneTransform = getLocalToSceneTransform();
+            nearClipInScene = localToSceneTransform.transform(0, 0, getNearClip()).getZ();
+            farClipInScene = localToSceneTransform.transform(0, 0, getFarClip()).getZ();
+            
+            isClipPlaneChanged = false;
+        }
     }
 
     /**
@@ -81,6 +138,7 @@ public abstract class Camera extends Node {
             nearClip = new SimpleDoubleProperty(Camera.this, "nearClip", 0.1) {
                 @Override
                 protected void invalidated() {
+                    isClipPlaneChanged = true;
                     impl_markDirty(DirtyBits.NODE_CAMERA);
                 }
             };
@@ -111,6 +169,7 @@ public abstract class Camera extends Node {
             farClip = new SimpleDoubleProperty(Camera.this, "farClip", 100.0) {
                 @Override
                 protected void invalidated() {
+                    isClipPlaneChanged = true;
                     impl_markDirty(DirtyBits.NODE_CAMERA);
                 }
             };

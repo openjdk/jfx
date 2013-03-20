@@ -2783,12 +2783,6 @@ public abstract class Node implements EventTarget, Styleable {
         return getLayoutBounds().getHeight();
     }
 
-    /* *************************************************************************
-     *                                                                         *
-     * LOD Helper related APIs 
-     * TODO: (RT-26535) Implement LOD helper
-     *                                                                         *
-     **************************************************************************/
     /**
      * Returns the area of this {@code Node} projected onto the 
      * physical screen in pixel units.
@@ -2800,50 +2794,123 @@ public abstract class Node implements EventTarget, Styleable {
     /*
      * Help application or utility to implement LOD support by returning the
      * projected area of a Node in pixel unit. The projected area is not clipped.
+     *
+     * For perspective camera, this method first exams node's bounds against
+     * camera's clipping plane to cut off those out of viewing frustrum. After
+     * computing areaInScreen, it applys a tight viewing frustrum check using
+     * canonical view volume. 
+     *
+     * The result of areaInScreen comes from the product of
+     * (projViewTx x localToSceneTransform x localBounds).
+     *
+     * Returns 0 for those fall outside viewing frustrum.
      */
     private double impl_computeAreaInScreen() {
-        Scene scene = getScene();
-        if (scene != null) {
+        Scene tmpScene = getScene();
+        if (tmpScene != null) {
             Bounds bounds = getBoundsInLocal();
-            Camera camera = scene.getCamera();
+            Camera camera = tmpScene.getCamera();
             boolean isPerspective = camera instanceof PerspectiveCamera ? true : false;
-
-            // NOTE: Viewing frustrum check is now only for perspective camera
-            // TODO: Need to hook up parallel camera's nearClip and farClip.
-            if (isPerspective && (bounds.getMinZ() > camera.getFarClip()
-                || bounds.getMaxZ() < camera.getNearClip())) {
-                return 0;
-            }
-
-            GeneralTransform3D projViewTx = TempState.getInstance().projViewTx;          
-            projViewTx = scene.getProjViewTx(projViewTx);
-            Rectangle viewport = TempState.getInstance().viewport;
-            viewport = scene.getViewport(viewport);
-
-            Transform localToSceneTx = getLocalToSceneTransform();
-
-            // We need to set tempTx to identity since it is a recycled transform.
-            // This is because impl_apply is a matrix concatenation operation. 
-            Affine3D localToSceneTransform = TempState.getInstance().tempTx;
-            localToSceneTransform.setToIdentity();
-            localToSceneTx.impl_apply(localToSceneTransform);
-            
+            Transform localToSceneTx = getLocalToSceneTransform();            
+            Affine3D tempTx = TempState.getInstance().tempTx;
             BaseBounds localBounds = new BoxBounds((float) bounds.getMinX(),
                                                    (float) bounds.getMinY(),
                                                    (float) bounds.getMinZ(),
                                                    (float) bounds.getMaxX(),
                                                    (float) bounds.getMaxY(),
                                                    (float) bounds.getMaxZ());
+
+            // NOTE: Viewing frustrum check on camera's clipping plane is now only
+            // for perspective camera.
+            // TODO: Need to hook up parallel camera's nearClip and farClip.
+            if (isPerspective) {
+                Transform cameraL2STx = camera.getLocalToSceneTransform();
+
+                // If camera transform only contains translate, compare in scene 
+                // coordinate. Otherwise, compare in camera coordinate.
+                if (cameraL2STx.getMxx() == 1.0
+                        && cameraL2STx.getMxy() == 0.0
+                        && cameraL2STx.getMxz() == 0.0
+                        && cameraL2STx.getMyx() == 0.0
+                        && cameraL2STx.getMyy() == 1.0
+                        && cameraL2STx.getMyz() == 0.0
+                        && cameraL2STx.getMzx() == 0.0
+                        && cameraL2STx.getMzy() == 0.0
+                        && cameraL2STx.getMzz() == 1.0) {
+
+                    double minZ, maxZ;
+                    
+                    // If node transform only contains translate, only convert 
+                    // minZ and maxZ to scene coordinate. Otherwise, convert 
+                    // node bounds to scene coordinate.
+                    if (localToSceneTx.getMxx() == 1.0
+                            && localToSceneTx.getMxy() == 0.0
+                            && localToSceneTx.getMxz() == 0.0
+                            && localToSceneTx.getMyx() == 0.0
+                            && localToSceneTx.getMyy() == 1.0
+                            && localToSceneTx.getMyz() == 0.0
+                            && localToSceneTx.getMzx() == 0.0
+                            && localToSceneTx.getMzy() == 0.0
+                            && localToSceneTx.getMzz() == 1.0) {
+
+                        Vec3d tempV3D = TempState.getInstance().vec3d;
+                        tempV3D.set(0, 0, bounds.getMinZ());
+                        localToScene(tempV3D);
+                        minZ = tempV3D.z;
+
+                        tempV3D.set(0, 0, bounds.getMaxZ());
+                        localToScene(tempV3D);
+                        maxZ = tempV3D.z;
+                    } else {
+                        Bounds nodeInSceneBounds = localToScene(bounds);
+                        minZ = nodeInSceneBounds.getMinZ();
+                        maxZ = nodeInSceneBounds.getMaxZ();
+                    }
+
+                    if (minZ > camera.getFarClipInScene()
+                            || maxZ < camera.getNearClipInScene()) {
+                        return 0;
+                    }
+
+                } else {
+                    BaseBounds nodeInCameraBounds = new BoxBounds();
+
+                    // We need to set tempTx to identity since it is a recycled transform.
+                    // This is because impl_apply is a matrix concatenation operation.
+                    tempTx.setToIdentity();
+                    localToSceneTx.impl_apply(tempTx);
+                    
+                    // Convert node from local coordinate to camera coordinate
+                    tempTx.preConcatenate(camera.getSceneToLocalTransform());
+                    tempTx.transform(localBounds, nodeInCameraBounds);
+            
+                    // Compare in camera coornidate
+                    if (nodeInCameraBounds.getMinZ() > camera.getFarClip()
+                            || nodeInCameraBounds.getMaxZ() < camera.getNearClip()) {
+                        return 0;
+                    }
+                }
+            }
+
+            GeneralTransform3D projViewTx = TempState.getInstance().projViewTx;          
+            projViewTx = tmpScene.getProjViewTx(projViewTx);
+            Rectangle viewport = TempState.getInstance().viewport;
+            viewport = tmpScene.getViewport(viewport);
+
+            // We need to set tempTx to identity since it is a recycled transform.
+            // This is because impl_apply is a matrix concatenation operation.
+            tempTx.setToIdentity();
+            localToSceneTx.impl_apply(tempTx);
             
             // The product of projViewTx * localToSceneTransform
-            GeneralTransform3D tx = projViewTx.mul(localToSceneTransform);
-
+            GeneralTransform3D tx = projViewTx.mul(tempTx);
+            
             // Transform localBounds to projected bounds
             localBounds = tx.transform(localBounds, localBounds);
             double area = localBounds.getWidth() * localBounds.getHeight();
 
-            // Use viewing frustum culling against canonical view volume
-            // to check whether object is outside the viewing frustrum
+            // Use canonical view volume to check whether object is outside the
+            // viewing frustrum
             if (isPerspective) {
                 localBounds.intersectWith(-1, -1, 0, 1, 1, 1);   
                 area = (localBounds.getWidth() < 0 || localBounds.getHeight() < 0) ? 0 : area;
