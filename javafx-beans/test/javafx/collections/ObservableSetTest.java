@@ -29,6 +29,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Set;
 import org.junit.Before;
 import org.junit.Test;
@@ -57,7 +58,8 @@ public class ObservableSetTest {
             { TestedObservableSets.TREE_SET },
             { TestedObservableSets.LINKED_HASH_SET },
             { TestedObservableSets.CHECKED_OBSERVABLE_HASH_SET },
-            { TestedObservableSets.SYNCHRONIZED_OBSERVABLE_HASH_SET }
+            { TestedObservableSets.SYNCHRONIZED_OBSERVABLE_HASH_SET },
+            { TestedObservableSets.OBSERVABLE_SET_PROPERTY }
          };
         return Arrays.asList(data);
     }
@@ -179,6 +181,13 @@ public class ObservableSetTest {
         observableSet.remove(null);
         assertEquals(3, observableSet.size());
         observer.assertRemoved(tup((String)null));
+    }
+    
+    @Test
+    public void testEqualsAndHashCode() {
+        final Set<String> other = new HashSet<>(Arrays.asList("one", "two", "foo"));
+        assertTrue(observableSet.equals(other));
+        assertEquals(observableSet.hashCode(), other.hashCode());
     }
 
 }
