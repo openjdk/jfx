@@ -1,3 +1,4 @@
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
@@ -380,44 +381,101 @@ class CCTask extends SourceTask {
     }
 
     @TaskAction void compile() {
-        // Compile
+        // Get the existing native-dependencies file from build/dependency-cache and load its contents into
+        // memory. If the file doesn't exist, then we will just have an empty dependency map.
+        final Map<String, Map> dependencies = new ConcurrentHashMap<>();
+        final File nativeDependenciesFile = project.file("$project.buildDir/dependency-cache/native-dependencies");
+        if (nativeDependenciesFile.exists()) {
+            nativeDependenciesFile.splitEachLine("\t", { strings ->
+                dependencies.put(strings[0], ["DATE":Long.parseLong(strings[1]), "SIZE":Long.parseLong(strings[2])]);
+            });
+        }
+
         project.mkdir(output);
-        final Set files = source.filter{it.name.matches(".*\\.c|.*\\.cpp|.*\\.m|.*\\.cc")}.files;
+        final Set<File> files = source.filter{it.name.matches(".*\\.c|.*\\.cpp|.*\\.m|.*\\.cc|.*\\.rc|.*\\.cur")}.files;
+        final Set<File> otherFiles = source.filter{!it.name.matches(".*\\.c|.*\\.cpp|.*\\.m|.*\\.cc|.*\\.rc|.*\\.cur")}.files;
+        boolean shouldCompileAnyway = false;
+        otherFiles.each { f->
+            if (f.isFile()) {
+                final Map otherFileData = dependencies.get(f.toString());
+                if (otherFileData == null ||
+                        !otherFileData["DATE"].equals(f.lastModified()) ||
+                        !otherFileData["SIZE"].equals(f.length()))
+                {
+                    shouldCompileAnyway = true;
+                    dependencies.put(f.toString(), ["DATE":f.lastModified(), "SIZE":f.length()]);
+                }
+            }
+        }
+        final boolean forceCompile = shouldCompileAnyway;
         final ExecutorService executor = Executors.newFixedThreadPool(Integer.parseInt(project.NUM_COMPILE_THREADS.toString()));
         final CountDownLatch latch = new CountDownLatch(files.size());
         final Project p = project;
         final CCTask me = this;
         List futures = new ArrayList<Future>();
-        files.each { sourceFile ->
-            final String outFileName = sourceFile.getName();
-            final String objFileName = outFileName.substring(0, outFileName.lastIndexOf(".")) + ".obj";
-            final String pdbFileName = outFileName.substring(0, outFileName.lastIndexOf(".")) + ".pdb";
+        files.each { File sourceFile ->
+            final String outFileName = sourceFile.getName().substring(0, sourceFile.getName().lastIndexOf("."));
             futures.add(executor.submit(new Runnable() {
                 @Override public void run() {
                     try {
-                        p.exec({
-                            commandLine("${me.compiler == null ? p.CC : me.compiler}", "-I$me.headers");
-
-                            // Add the source roots in as include directories
-                            me.sourceRoots.each { root ->
-                                final File file = root instanceof File ? (File) root : p.file(root)
-                                args("-I$file");
+                        // "compile" native resources using RC
+                        if (p.IS_WINDOWS && (sourceFile.getName().endsWith(".rc") || sourceFile.getName().endsWith(".cur"))) {
+                            final File resFile = new File("$me.output/${outFileName}.res");
+                            // If the source file is not listed in dependencies, then we must compile it.
+                            // If the target file(s) (.rc or .cur in the case of resources, .pdb or .obj for sources)
+                            //    do not exist, then compile.
+                            // If the source file date or size differs from dependencies, then compile it.
+                            final Map sourceFileData = dependencies.get(sourceFile.toString());
+                            if (forceCompile || sourceFileData == null || !resFile.exists() ||
+                                    !sourceFileData["DATE"].equals(sourceFile.lastModified()) ||
+                                    !sourceFileData["SIZE"].equals(sourceFile.length()))
+                            {
+                                p.exec({
+                                    commandLine("$p.RC", "/nologo", "/fo$resFile", "$sourceFile");
+                                    environment(p.WINDOWS_NATIVE_COMPILE_ENVIRONMENT);
+                                });
                             }
+                        } else {
+                            // or compile sources using CC
+                            final File pdbFile = new File("$me.output/${outFileName}.pdb");
+                            final File objFile = new File("$me.output/${outFileName}.obj");
+                            // If the source file is not listed in dependencies, then we must compile it.
+                            // If the target file(s) (.rc or .cur in the case of resources, .pdb or .obj for sources)
+                            //    do not exist, then compile.
+                            // If the source file date or size differs from dependencies, then compile it.
+                            final Map sourceFileData = dependencies.get(sourceFile.toString());
+                            // TODO the PDB file is never being built -- maybe because it is only built during
+                            // debug builds, otherwise that flag is ignored "/Fd" or "-Fd"
+                            if (forceCompile || sourceFileData == null || /*!pdbFile.exists() ||*/ !objFile.exists() ||
+                                    !sourceFileData["DATE"].equals(sourceFile.lastModified()) ||
+                                    !sourceFileData["SIZE"].equals(sourceFile.length()))
+                            {
+                                p.exec({
+                                    commandLine("${me.compiler == null ? p.CC : me.compiler}", "-I$me.headers");
 
-                            // Add in any additional compilation params
-                            if (me.ccParams != null) args(me.ccParams);
+                                    // Add the source roots in as include directories
+                                    me.sourceRoots.each { root ->
+                                        final File file = root instanceof File ? (File) root : p.file(root)
+                                        args("-I$file");
+                                    }
 
-                            // Add the name of the source file to compile
-                            if (p.IS_WINDOWS) {
-                                args("/Fd$me.output/$pdbFileName", "/Fo$me.output/$objFileName", "$sourceFile");
-                            } else {
-                                args("-Fd$me.output/$pdbFileName", "-o", "$me.output/$objFileName", "$sourceFile");
+                                    // Add in any additional compilation params
+                                    if (me.ccParams != null) args(me.ccParams);
+
+                                    // Add the name of the source file to compile
+                                    if (p.IS_WINDOWS) {
+                                        args("/Fd$pdbFile", "/Fo$objFile", "$sourceFile");
+                                    } else {
+                                        args("-Fd$pdbFile", "-o", "$objFile", "$sourceFile");
+                                    }
+
+                                    if (p.IS_WINDOWS){
+                                        environment(p.WINDOWS_NATIVE_COMPILE_ENVIRONMENT);
+                                    }
+                                });
                             }
-
-                            if (p.IS_WINDOWS){
-                                environment(p.WINDOWS_NATIVE_COMPILE_ENVIRONMENT);
-                            }
-                        });
+                        }
+                        dependencies.put(sourceFile.toString(), ["DATE":sourceFile.lastModified(), "SIZE":sourceFile.length()]);
                     } finally {
                         latch.countDown();
                     }
@@ -430,19 +488,12 @@ class CCTask extends SourceTask {
         // on the background thread.
         futures.each {it.get();}
 
-        // TODO could process these resources in parallel as well but it probably isn't worth the effort
-        if (project.IS_WINDOWS) {
-            final Set resources = source.filter{it.name.matches(".*\\.rc|.*\\.cur")}.files;
-            resources.each { res ->
-                String outFileName = res.getName()
-                outFileName = outFileName.substring(0, outFileName.lastIndexOf(".")) + ".res"
-                p.exec({
-                    commandLine("$project.RC", "/nologo", "/fo$me.output/$outFileName", "$res");
-                    if (p.IS_WINDOWS){
-                        environment(p.WINDOWS_NATIVE_COMPILE_ENVIRONMENT);
-                    }
-                });
-            }
+        // Update the native-dependencies file
+        if (nativeDependenciesFile.exists()) nativeDependenciesFile.delete();
+        nativeDependenciesFile.getParentFile().mkdirs();
+        nativeDependenciesFile.createNewFile();
+        dependencies.each { key, value ->
+            nativeDependenciesFile << key << "\t" << value["DATE"] << "\t" << value["SIZE"] << "\n";
         }
     }
 }
