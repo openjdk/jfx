@@ -1,0 +1,28 @@
+def commonParams = [
+        "-fno-strict-aliasing", "-fPIC", "-fno-omit-frame-pointer",
+        "-W", "-Wall", "-Wno-unused", "-Wno-parentheses", "-Werror=implicit-function-declaration"]
+
+ext.CC_PARAMS = [commonParams, "-I$JDK_HOME/include", "-I$JDK_HOME/include/linux", "-c"].flatten()
+
+// TODO could move two calls to pkg-config to a genVSproperties like workflow...
+def results = new ByteArrayOutputStream();
+project.exec({ execSpec ->
+    execSpec.commandLine("pkg-config", "--cflags", "gtk+-2.0", "gthread-2.0", "xtst");
+    execSpec.setStandardOutput(results);
+});
+CC_PARAMS.addAll(Arrays.asList(results.toString().trim().split(" ")))
+if (IS_DEBUG) {
+    CC_PARAMS.addAll(["-ggdb", "-DVERBOSE"])
+} else {
+    CC_PARAMS.addAll(["-O2", "-ffast-math"])
+}
+//CC_PARAMS.addAll(["-Wnon-virtual-dtor", "-Woverloaded-virtual", "-std=c++0x"])
+CC_PARAMS.add("-DINLINE=inline")
+
+ext.LINK_PARAMS = ["-shared", commonParams].flatten()
+results = new ByteArrayOutputStream();
+exec {
+    commandLine "pkg-config", "--libs", "gtk+-2.0", "gthread-2.0", "xtst"
+    standardOutput = results
+}
+LINK_PARAMS.addAll(Arrays.asList(results.toString().trim().split(" ")))

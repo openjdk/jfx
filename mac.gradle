@@ -1,0 +1,20 @@
+def commonParams = [
+        "-mmacosx-version-min=$MACOSX_MIN_VERSION",
+        "-isysroot", "$MACOSX_SDK_PATH",
+        "-arch", "x86_64",
+        "-F$MACOSX_JDK_FRAMEWORK/Frameworks"]
+ext.LINK_PARAMS = [
+        "-framework", "AppKit",
+        "-framework", "ApplicationServices",
+        "-framework", "JavaVM",
+        "-framework", "JavaRuntimeSupport",
+        "-framework", "OpenGL",
+        "-framework", "QuartzCore",
+        "-dynamiclib", "-lobjc", commonParams].flatten();
+ext.CC_PARAMS = [
+        "-std=c99",
+        "-c",
+        "-I$JDK_HOME/include",
+        "-I$JDK_HOME/include/darwin",
+        commonParams,
+        IS_DEBUG ? "-DDEBUG" : ["-O3", "-ffast-math", "-DNDEBUG"]].flatten()
