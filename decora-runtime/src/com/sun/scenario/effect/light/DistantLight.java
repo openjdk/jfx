@@ -81,9 +81,7 @@ public class DistantLight extends Light {
      * @param azimuth the azimuth of the light, in degrees
      */
     public void setAzimuth(float azimuth) {
-        float old = this.azimuth;
         this.azimuth = azimuth;
-        firePropertyChange("azimuth", old, azimuth);
     }
 
     /**
@@ -109,9 +107,7 @@ public class DistantLight extends Light {
      * @param elevation the elevation of the light, in degrees
      */
     public void setElevation(float elevation) {
-        float old = this.elevation;
         this.elevation = elevation;
-        firePropertyChange("elevation", old, elevation);
     }
 
     @Override
