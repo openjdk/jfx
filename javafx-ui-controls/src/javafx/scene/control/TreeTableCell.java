@@ -484,10 +484,15 @@ public class TreeTableCell<S,T> extends IndexedCell<T> {
             return;
         } else {
             currentObservableValue = tableColumn.getCellObservableValue(index);
-            T value = currentObservableValue == null ? null : currentObservableValue.getValue();
+            
+            T oldValue = getItem();
+            T newValue = currentObservableValue == null ? null : currentObservableValue.getValue();
             
             // update the 'item' property of this cell.
-            updateItem(value, false);
+            if ((newValue != null && ! newValue.equals(oldValue)) || 
+                    oldValue != null && ! oldValue.equals(newValue)) {
+                updateItem(newValue, false);
+            }
         }
         
         if (currentObservableValue == null) {
