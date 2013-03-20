@@ -72,6 +72,7 @@ final class SWGraphics implements ReadbackGraphics {
     private static final int TO_PISCES = 65536;
 
     private final PiscesRenderer pr;
+    private final SWContext context;
     private final SWRTTexture target;
 
     private final BaseTransform tx = new Affine2D();
@@ -108,9 +109,9 @@ final class SWGraphics implements ReadbackGraphics {
         return renderRoot;
     }
 
-
-    public SWGraphics(SWRTTexture target, PiscesRenderer pr) {
+    public SWGraphics(SWRTTexture target, SWContext context, PiscesRenderer pr) {
         this.target = target;
+        this.context = context;
         this.pr = pr;
 
         this.setClipRect(null);
@@ -975,14 +976,16 @@ final class SWGraphics implements ReadbackGraphics {
     }
 
     public RTTexture readBack(Rectangle view) {
+        context.validateRBBuffer(Math.max(0, view.width), Math.max(0, view.height));
+        RTTexture rbb = context.getReadBackBuffer();
+
         if (view.width <= 0 || view.height <= 0) {
-            return new SWRTTexture(getResourceFactory(), 0, 0);
+            return rbb;
         }
 
-        RTTexture rtt = getResourceFactory().createRTTexture(view.width, view.height, Texture.WrapMode.CLAMP_NOT_NEEDED);
-        int pixels[] = rtt.getPixels();
-        this.target.getSurface().getRGB(pixels, 0, rtt.getPhysicalWidth(), view.x, view.y, view.width, view.height);
-        return rtt;
+        int pixels[] = rbb.getPixels();
+        this.target.getSurface().getRGB(pixels, 0, rbb.getPhysicalWidth(), view.x, view.y, view.width, view.height);
+        return rbb;
     }
 
     public void releaseReadBackBuffer(RTTexture view) { }

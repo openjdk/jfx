@@ -107,7 +107,7 @@ class SWRTTexture extends SWTexture implements RTTexture {
         if (pr == null) {
             pr = new PiscesRenderer(this.surface);
         }
-        return new SWGraphics(this, pr);
+        return new SWGraphics(this, getResourceFactory().getContext(), pr);
     }
 
     public boolean isOpaque() {
