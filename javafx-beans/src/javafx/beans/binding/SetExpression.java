@@ -281,7 +281,7 @@ public abstract class SetExpression<E> implements ObservableSetValue<E> {
     @Override
     public boolean containsAll(Collection<?> objects) {
         final ObservableSet<E> set = get();
-        return (set == null)? EMPTY_SET.contains(objects) : set.contains(objects);
+        return (set == null)? EMPTY_SET.contains(objects) : set.containsAll(objects);
     }
 
     @Override

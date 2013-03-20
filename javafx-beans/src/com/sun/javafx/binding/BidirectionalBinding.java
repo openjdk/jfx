@@ -42,7 +42,7 @@ public abstract class BidirectionalBinding<T> implements ChangeListener<T>, Weak
         if ((property1 == null) || (property2 == null)) {
             throw new NullPointerException("Both properties must be specified.");
         }
-        if (property1.equals(property2)) {
+        if (property1 == property2) {
             throw new IllegalArgumentException("Cannot bind property to itself");
         }
     }
@@ -187,12 +187,10 @@ public abstract class BidirectionalBinding<T> implements ChangeListener<T>, Weak
                 return false;
             }
 
-            if ((propertyA1.equals(propertyB1) && (propertyA2
-                    .equals(propertyB2)))) {
+            if (propertyA1 == propertyB1 && propertyA2 == propertyB2) {
                 return true;
             }
-            if ((propertyA1.equals(propertyB2) && (propertyA2
-                    .equals(propertyB1)))) {
+            if (propertyA1 == propertyB2 && propertyA2 == propertyB1) {
                 return true;
             }
         }

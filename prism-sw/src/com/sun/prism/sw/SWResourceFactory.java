@@ -52,16 +52,23 @@ final class SWResourceFactory
     private static final ShapeRep rectRep = new BasicRoundRectRep();
 
     private Screen screen;
+    private final SWContext context;
 
     public SWResourceFactory(Screen screen) {
         this.screen = screen;
+        this.context = new SWContext(this);
     }
     
     public Screen getScreen() {
         return screen;
     }
+
+    SWContext getContext() {
+        return context;
+    }
     
     @Override public void dispose() {
+        context.dispose();
     }
 
     @Override public RenderingContext createRenderingContext(PresentableState pstate) {

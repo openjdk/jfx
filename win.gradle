@@ -1,0 +1,8 @@
+ext.CC_PARAMS = ["/nologo", "/W3", "/EHsc", "/c",
+        "/D_STATIC_CPP_LIB", "/D_DISABLE_DEPRECATE_STATIC_CPPLIB", "/DINLINE=__inline",
+        "/DUNICODE", "/D_UNICODE", "/DWIN32", "/DIAL", "/D_LITTLE_ENDIAN", "/DWIN32_LEAN_AND_MEAN",
+        "/I$JDK_HOME/include", "/I$JDK_HOME/include/win32", "/arch:SSE", "/fp:fast",
+        IS_DEBUG ? ["/MDd", "/Od", "/Zi", "/DDEBUG"] : ["/O2", "/MD"]].flatten();
+
+ext.LINK_PARAMS = ["/nologo", "/dll", "/manifest", "/opt:REF", "/incremental:no"];
+if (IS_DEBUG) LINK_PARAMS.add("/debug");

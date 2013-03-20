@@ -25,6 +25,9 @@
 
 package javafx.beans.property;
 
+import java.util.Collection;
+import java.util.Iterator;
+import java.util.Set;
 import javafx.beans.binding.Bindings;
 import javafx.beans.binding.SetExpression;
 import javafx.collections.ObservableList;
@@ -105,21 +108,21 @@ public abstract class ReadOnlySetProperty<E> extends SetExpression<E> implements
 
     @Override
     public boolean equals(Object obj) {
-        if (this == obj) {
+        if (obj == this)
             return true;
-        }
-        final Object bean1 = getBean();
-        final String name1 = getName();
-        if ((bean1 == null) || (name1 == null) || name1.equals("")) {
+
+        if (!(obj instanceof Set))
+            return false;
+        Set c = (Set) obj;
+        if (c.size() != size())
+            return false;
+        try {
+            return containsAll(c);
+        } catch (ClassCastException unused)   {
+            return false;
+        } catch (NullPointerException unused) {
             return false;
         }
-        if (obj instanceof ReadOnlySetProperty) {
-            final ReadOnlySetProperty other = (ReadOnlySetProperty) obj;
-            final Object bean2 = other.getBean();
-            final String name2 = other.getName();
-            return (bean1 == bean2) && name1.equals(name2);
-        }
-        return false;
     }
 
     /**
@@ -128,16 +131,12 @@ public abstract class ReadOnlySetProperty<E> extends SetExpression<E> implements
      */
     @Override
     public int hashCode() {
-        final Object bean = getBean();
-        final String name = getName();
-        if ((bean == null) && ((name == null) || name.equals(""))) {
-            return super.hashCode();
-        } else {
-            int result = 17;
-            result = 31 * result + ((bean == null)? 0 : bean.hashCode());
-            result = 31 * result + ((name == null)? 0 : name.hashCode());
-            return result;
+        int h = 0;
+        for (E e : get()) {
+            if (e != null)
+                h += e.hashCode();
         }
+        return h;
     }
 
     /**

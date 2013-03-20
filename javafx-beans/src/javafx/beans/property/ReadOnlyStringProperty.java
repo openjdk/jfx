@@ -44,43 +44,6 @@ public abstract class ReadOnlyStringProperty extends StringExpression implements
     public ReadOnlyStringProperty() {
     }
 
-    @Override
-    public boolean equals(Object obj) {
-        if (this == obj) {
-            return true;
-        }
-        final Object bean1 = getBean();
-        final String name1 = getName();
-        if ((bean1 == null) || (name1 == null) || name1.equals("")) {
-            return false;
-        }
-        if (obj instanceof ReadOnlyStringProperty) {
-            final ReadOnlyStringProperty other = (ReadOnlyStringProperty) obj;
-            final Object bean2 = other.getBean();
-            final String name2 = other.getName();
-            return (bean1 == bean2) && name1.equals(name2);
-        }
-        return false;
-    }
-
-    /**
-     * Returns a hash code for this {@code ReadOnlyStringProperty} object.
-     * @return a hash code for this {@code ReadOnlyStringProperty} object.
-     */ 
-    @Override
-    public int hashCode() {
-        final Object bean = getBean();
-        final String name = getName();
-        if ((bean == null) && ((name == null) || name.equals(""))) {
-            return super.hashCode();
-        } else {
-            int result = 17;
-            result = 31 * result + ((bean == null)? 0 : bean.hashCode());
-            result = 31 * result + ((name == null)? 0 : name.hashCode());
-            return result;
-        }
-    }
-
     /**
      * Returns a string representation of this {@code ReadOnlyStringProperty} object.
      * @return a string representation of this {@code ReadOnlyStringProperty} object.

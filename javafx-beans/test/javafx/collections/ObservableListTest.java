@@ -62,7 +62,8 @@ public class ObservableListTest  {
             { TestedObservableLists.LINKED_LIST },
             { TestedObservableLists.VETOABLE_LIST },
             { TestedObservableLists.CHECKED_OBSERVABLE_ARRAY_LIST },
-            { TestedObservableLists.SYNCHRONIZED_OBSERVABLE_ARRAY_LIST }
+            { TestedObservableLists.SYNCHRONIZED_OBSERVABLE_ARRAY_LIST },
+            { TestedObservableLists.OBSERVABLE_LIST_PROPERTY }
          };
         return Arrays.asList(data);
     }
@@ -275,6 +276,13 @@ public class ObservableListTest  {
         assertEquals(listener.counter, 1);
         list.add("zz");
         assertEquals(listener.counter, 1);
+    }
+    
+    @Test
+    public void testEqualsAndHashCode() {
+        final List<String> other = Arrays.asList("one", "two", "three");
+        assertTrue(list.equals(other));
+        assertEquals(list.hashCode(), other.hashCode());
     }
 
 

@@ -28,6 +28,7 @@ package javafx.collections;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.TreeSet;
+import javafx.beans.property.SimpleSetProperty;
 
 public interface TestedObservableSets {
 
@@ -58,6 +59,13 @@ public interface TestedObservableSets {
         @Override
         public ObservableSet<String> call() throws Exception {
             return FXCollections.synchronizedObservableSet(FXCollections.observableSet(new HashSet<String>()));
+        }
+    };
+    
+    Callable<ObservableSet<String>> OBSERVABLE_SET_PROPERTY = new Callable<ObservableSet<String>>() {
+        @Override
+        public ObservableSet<String> call() throws Exception {
+            return new SimpleSetProperty<>(FXCollections.observableSet(new HashSet<String>()));
         }
     };
 

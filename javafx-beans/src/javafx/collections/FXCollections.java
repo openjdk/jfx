@@ -1765,6 +1765,23 @@ public class FXCollections {
                 backingSet.clear();
             }
         }
+        
+        @Override
+        public boolean equals(Object o) {
+            if (o == this) {
+                return true;
+            }
+            synchronized(mutex) {
+                return backingSet.equals(o);
+            }
+        }
+
+        @Override
+        public int hashCode() {
+            synchronized (mutex) {
+                return backingSet.hashCode();
+            }
+        }
     }
 
     private static class SynchronizedObservableSet<E> extends SynchronizedSet<E> implements ObservableSet<E> {
@@ -2536,6 +2553,23 @@ public class FXCollections {
                 if (entrySet==null)
                     entrySet = new SynchronizedSet<Map.Entry<K,V>>(backingMap.entrySet(), mutex);
                 return entrySet;
+            }
+        }
+        
+        @Override
+        public boolean equals(Object o) {
+            if (o == this) {
+                return true;
+            }
+            synchronized(mutex) {
+                return backingMap.equals(o);
+            }
+        }
+
+        @Override
+        public int hashCode() {
+            synchronized(mutex) {
+                return backingMap.hashCode();
             }
         }
 
