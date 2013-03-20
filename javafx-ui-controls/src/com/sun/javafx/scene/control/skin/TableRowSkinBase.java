@@ -360,10 +360,6 @@ public abstract class TableRowSkinBase<T,
         if ("ITEM".equals(p)) {
             updateCells = true;
             getSkinnable().requestLayout();
-            
-            // Required to fix RT-24725, but commented out as a performance leak
-            // when doing large-scale updating of items in a TableView
-            // getSkinnable().layout();
 //        } else if (p == "SPAN_MODEL") {
 //            // TODO update layout based on changes to span model
 //            spanModel = spanModelProperty().get();
@@ -374,16 +370,8 @@ public abstract class TableRowSkinBase<T,
     @Override protected void layoutChildren(double x, final double y,
             final double w, final double h) {
         
-        if (isDirty) {
-            recreateCells();
-            updateCells(true);
-            isDirty = false;
-        } else if (updateCells) {
-            updateCells(true);
-            updateCells = false;
-        }
+        checkState();
         if (cellsMap.isEmpty()) return;
-        
         
         ObservableList<? extends TableColumnBase> visibleLeafColumns = getVisibleLeafColumns();
         if (! visibleLeafColumns.isEmpty()) {
@@ -699,6 +687,9 @@ public abstract class TableRowSkinBase<T,
             return fixedCellLength;
         }
         
+        // fix for RT-29080
+        checkState();
+        
         // Support for RT-18467: making it easier to specify a height for
         // cells via CSS, where the desired height is less than the height
         // of the TableCells. Essentially, -fx-cell-size is given higher
@@ -716,7 +707,19 @@ public abstract class TableRowSkinBase<T,
             prefHeight = Math.max(prefHeight, tableCell.prefHeight(-1));
         }
         double ph = Math.max(prefHeight, Math.max(getCellSize(), getSkinnable().minHeight(-1)));
+        
         return ph;
+    }
+    
+    private void checkState() {
+        if (isDirty) {
+            recreateCells();
+            updateCells(true);
+            isDirty = false;
+        } else if (updateCells) {
+            updateCells(true);
+            updateCells = false;
+        }
     }
     
     private static final Duration FADE_DURATION = Duration.millis(200);

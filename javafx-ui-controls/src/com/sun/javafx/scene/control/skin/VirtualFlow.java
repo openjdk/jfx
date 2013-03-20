@@ -1561,7 +1561,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
             // TODO I would not have thought so, there should be an assert added to addToPile to
             // TODO make sure we never add null to the pile (since it doesn't make sense to do so)
             // TODO and then we can get rid of the cell != null check on line 1422 above.
-            return pile.get(0);
+            accumCell = pile.get(0);
         }
 
         // We need to use the accumCell and return that
