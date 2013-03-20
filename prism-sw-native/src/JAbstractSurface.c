@@ -58,7 +58,7 @@ Java_com_sun_pisces_AbstractSurface_nativeFinalize(JNIEnv* env,
 }
 
 JNIEXPORT void JNICALL
-Java_com_sun_pisces_AbstractSurface_getRGB(JNIEnv* env, jobject objectHandle,
+Java_com_sun_pisces_AbstractSurface_getRGBImpl(JNIEnv* env, jobject objectHandle,
         jintArray arrayHandle, jint offset, jint scanLength,
         jint x, jint y, jint width, jint height) {
     jint dstX = 0;
@@ -109,7 +109,7 @@ Java_com_sun_pisces_AbstractSurface_getRGB(JNIEnv* env, jobject objectHandle,
 }
 
 JNIEXPORT void JNICALL
-Java_com_sun_pisces_AbstractSurface_setRGB(JNIEnv* env, jobject objectHandle,
+Java_com_sun_pisces_AbstractSurface_setRGBImpl(JNIEnv* env, jobject objectHandle,
         jintArray arrayHandle, jint offset, jint scanLength,
         jint x, jint y, jint width, jint height) {
     jint srcX = 0;
