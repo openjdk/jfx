@@ -25,8 +25,6 @@
 
 package com.sun.scenario.effect.light;
 
-import java.beans.PropertyChangeListener;
-import java.beans.PropertyChangeSupport;
 import com.sun.scenario.effect.Color4f;
 
 /**
@@ -46,7 +44,6 @@ public abstract class Light {
         SPOT
     }
 
-    private final PropertyChangeSupport pcs = new PropertyChangeSupport(this);
     private final Type type;
     private Color4f color;
 
@@ -110,9 +107,7 @@ public abstract class Light {
         if (color == null) {
             throw new IllegalArgumentException("Color must be non-null");
         }
-        Color4f old = this.color;
         this.color = color;
-        firePropertyChange("color", old, color);
     }
 
     /**
@@ -122,37 +117,4 @@ public abstract class Light {
      * @return the normalized position of this light source
      */
     public abstract float[] getNormalizedLightPosition();
-
-    /**
-     * Adds the given {@code PropertyChangeListener} to the list
-     * of listeners.
-     *
-     * @param listener the {@code PropertyChangeListener} to be added
-     */
-    public void addPropertyChangeListener(PropertyChangeListener listener) {
-        pcs.addPropertyChangeListener(listener);
-    }
-
-    /**
-     * Removes the given {@code PropertyChangeListener} to the list
-     * of listeners.
-     *
-     * @param listener the {@code PropertyChangeListener} to be removed
-     */
-    public void removePropertyChangeListener(PropertyChangeListener listener) {
-        pcs.removePropertyChangeListener(listener);
-    }
-
-    /**
-     * Reports a bound property update to any registered listeners.
-     * No event is fired if {@code oldValue} and {@code newValue}
-     * are equal and non-null.
-     *
-     * @param prop the programmatic name of the property that was changed
-     * @param oldValue the old value of the property
-     * @param newValue the new value of the property
-     */
-    void firePropertyChange(String prop, Object oldValue, Object newValue) {
-        pcs.firePropertyChange(prop, oldValue, newValue);
-    }
 }
