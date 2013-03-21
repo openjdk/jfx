@@ -87,7 +87,6 @@
             <class name="com.sun.glass.ui.lens.LensApplication"/>
             <class name="com.sun.glass.ui.lens.LensCursor"/>
             <class name="com.sun.glass.ui.lens.LensPixels"/>
-            <class name="com.sun.glass.ui.lens.LensScreen"/>
             <class name="com.sun.glass.ui.lens.LensView"/>
             <class name="com.sun.glass.ui.lens.LensWindow"/>
             <class name="com.sun.glass.ui.lens.LensRobot"/>

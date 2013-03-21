@@ -165,34 +165,10 @@ public final class IosApplication extends Application {
     }
 
     @Override 
-    protected Screen staticScreen_getDeepestScreen() {
-        return IosScreen.getDeepestScreen_impl();
-    }
+    protected native double staticScreen_getVideoRefreshPeriod();
 
-    @Override 
-    protected Screen staticScreen_getMainScreen() {
-        return IosScreen.getMainScreen_impl();
-    }
-    
-    @Override 
-    protected Screen staticScreen_getScreenForLocation(int x, int y) {
-        return IosScreen.getScreenForLocation_impl(x, y);
-    }
-
-    @Override 
-    protected Screen staticScreen_getScreenForPtr(long screenPtr) {
-        return IosScreen.getScreenForPtr_impl(screenPtr);
-    }
-
-    @Override 
-    protected List<Screen> staticScreen_getScreens() {
-        return IosScreen.getScreens_impl();
-    }
-
-    @Override 
-    protected double staticScreen_getVideoRefreshPeriod() {
-        return IosScreen.getVideoRefreshPeriod_impl();
-    }
+    @Override
+    protected native Screen[] staticScreen_getScreens();
     
     /**
      * @inheritDoc

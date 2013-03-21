@@ -29,18 +29,13 @@
 #include "GlassApplication.h"
 
 #include "com_sun_glass_ui_Screen.h"
-#include "com_sun_glass_ui_win_WinScreen.h"
 
-
-static jmethodID midNotifySettingsChanged = NULL;
+static jclass screenCls = NULL;
 
 static int g_nMonitorCounter = 0;
 static int g_nMonitorLimit = 0;
-static int g_nDeepestColorDepth = 0;
 
 static HMONITOR* g_hmpMonitors = NULL;
-static HMONITOR g_hDeepestMonitor;
-static HMONITOR g_hPrimaryMonitor;
 
 extern BOOL CALLBACK CountMonitorsCallback(HMONITOR hMon, HDC hDC, LPRECT rRect, LPARAM lP);
 extern BOOL CALLBACK CollectMonitorsCallback(HMONITOR hMonitor, HDC hDC, LPRECT rRect, LPARAM lP);
@@ -71,14 +66,6 @@ int CollectMonitors(int limit)
     return g_nMonitorCounter;
 }
 
-int FindDeepestMonitor(int limit)
-{
-    g_nMonitorCounter = 0;
-    g_nMonitorLimit = limit;
-    g_nDeepestColorDepth = 0;
-    ::EnumDisplayMonitors(NULL, NULL, FindDeepestMonitorCallback, 0L);
-    return g_nMonitorCounter;
-}
 
 void GetMonitorSettings(HMONITOR hMonitor, MonitorInfoStruct *mis)
 {
@@ -104,37 +91,95 @@ void GetMonitorSettings(HMONITOR hMonitor, MonitorInfoStruct *mis)
     ::DeleteDC(hDC);
 }
 
-void CopyMonitorSettingsToJava(JNIEnv *env, jobject jScreen, MonitorInfoStruct *mis)
+jobject CreateJavaMonitorWithSettings(JNIEnv *env, MonitorInfoStruct *mis)
 {
-    jclass cls = GlassApplication::ClassForName(env, "com.sun.glass.ui.Screen");
-    ASSERT(cls);
+    if (screenCls == NULL) {
+        screenCls = GlassApplication::ClassForName(env, "com.sun.glass.ui.Screen");
+        ASSERT(screenCls);
+    }
 
-    env->SetLongField(jScreen, env->GetFieldID(cls, "ptr", "J"), mis->ptr);
+    if (javaIDs.Screen.init == NULL) {
+        javaIDs.Screen.init = env->GetMethodID(screenCls, "<init>", "(JIIIIIIIIIIIF)V");
+        ASSERT(javaIDs.Screen.init);
+    }
+    
+    if (CheckAndClearException(env)) return NULL;
+    
+    return env->NewObject(screenCls, javaIDs.Screen.init,
+                          mis->ptr,
 
-    env->SetIntField(jScreen, env->GetFieldID(cls, "x", "I"), mis->rcMonitor.left);
-    env->SetIntField(jScreen, env->GetFieldID(cls, "y", "I"), mis->rcMonitor.top);
-    env->SetIntField(jScreen, env->GetFieldID(cls, "width", "I"), mis->rcMonitor.right - mis->rcMonitor.left);
-    env->SetIntField(jScreen, env->GetFieldID(cls, "height", "I"), mis->rcMonitor.bottom - mis->rcMonitor.top);
-
-    env->SetIntField(jScreen, env->GetFieldID(cls, "visibleX", "I"), mis->rcWork.left);
-    env->SetIntField(jScreen, env->GetFieldID(cls, "visibleY", "I"), mis->rcWork.top);
-    env->SetIntField(jScreen, env->GetFieldID(cls, "visibleWidth", "I"), mis->rcWork.right - mis->rcWork.left);
-    env->SetIntField(jScreen, env->GetFieldID(cls, "visibleHeight", "I"), mis->rcWork.bottom - mis->rcWork.top);
-
-    env->SetIntField(jScreen, env->GetFieldID(cls, "depth", "I"), mis->colorDepth);
-    env->SetIntField(jScreen, env->GetFieldID(cls, "resolutionX", "I"), mis->dpiX);
-    env->SetIntField(jScreen, env->GetFieldID(cls, "resolutionY", "I"), mis->dpiY);
-    env->SetFloatField(jScreen, env->GetFieldID(cls, "scale", "F"), mis->scale);
+                          mis->colorDepth,
+                          mis->rcMonitor.left,
+                          mis->rcMonitor.top,
+                          mis->rcMonitor.right - mis->rcMonitor.left,
+                          mis->rcMonitor.bottom - mis->rcMonitor.top,
+                          
+                          mis->rcWork.left,
+                          mis->rcWork.top,
+                          mis->rcWork.right - mis->rcWork.left,
+                          mis->rcWork.bottom - mis->rcWork.top,
+                              
+                          mis->dpiX,
+                          mis->dpiY,
+                          
+                          mis->scale);
 }
 
 void GlassScreen::HandleDisplayChange()
 {
     JNIEnv *env = GetEnv();
 
-    jclass cls = GlassApplication::ClassForName(env, "com.sun.glass.ui.Screen");
-    ASSERT(cls);
-    env->CallStaticVoidMethod(cls, midNotifySettingsChanged);
+    if (screenCls == NULL) {
+        screenCls = GlassApplication::ClassForName(env, "com.sun.glass.ui.Screen");
+        ASSERT(screenCls);
+    }
+    if (javaIDs.Screen.notifySettingsChanged == NULL) {
+        javaIDs.Screen.notifySettingsChanged
+             = env->GetStaticMethodID(screenCls, "notifySettingsChanged", "()V");
+        ASSERT(javaIDs.Screen.notifySettingsChanged);
+    }
+
+    env->CallStaticVoidMethod(screenCls, javaIDs.Screen.notifySettingsChanged);
     CheckAndClearException(env);
+}
+
+jobjectArray GlassScreen::CreateJavaScreens(JNIEnv *env)
+{
+    int numMonitors = CountMonitors();
+    g_hmpMonitors = (HMONITOR *)malloc(numMonitors * sizeof(HMONITOR));
+    numMonitors = CollectMonitors(numMonitors);
+
+    if (screenCls == NULL) {
+        screenCls = GlassApplication::ClassForName(env, "com.sun.glass.ui.Screen");
+        ASSERT(screenCls);
+    }
+
+    jobjectArray jScreens = env->NewObjectArray(numMonitors, screenCls, NULL);
+
+    int arrayIndex = 1;
+    for (int i = 0; i < numMonitors; i++) {
+        if (g_hmpMonitors[i] != NULL) {
+            MonitorInfoStruct mis;
+            memset(&mis, 0, sizeof(MonitorInfoStruct));
+            GetMonitorSettings(g_hmpMonitors[i], &mis);
+
+            jobject jScreen = CreateJavaMonitorWithSettings(env, &mis);
+            const POINT ptZero = { 0, 0 };
+
+            //The primary monitor should be set to the 0 index
+            if (g_hmpMonitors[i] == ::MonitorFromPoint(ptZero, MONITOR_DEFAULTTOPRIMARY)) {
+                env->SetObjectArrayElement(jScreens, 0, jScreen);
+            } else {
+                env->SetObjectArrayElement(jScreens, arrayIndex, jScreen);
+                arrayIndex++;
+            }
+            CheckAndClearException(env);
+            env->DeleteLocalRef(jScreen);
+        }
+    }
+
+    free(g_hmpMonitors);
+    return jScreens;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////
@@ -154,150 +199,4 @@ BOOL CALLBACK CollectMonitorsCallback(HMONITOR hMonitor, HDC hDC, LPRECT rRect, 
         g_nMonitorCounter++;
     }
     return TRUE;
-}
-
-BOOL CALLBACK FindDeepestMonitorCallback(HMONITOR hMonitor, HDC hDC, LPRECT rRect, LPARAM lP)
-{
-    if (g_nMonitorCounter < g_nMonitorLimit) {
-        MonitorInfoStruct mis;
-        memset(&mis, 0, sizeof(MonitorInfoStruct));
-        GetMonitorSettings(hMonitor, &mis);
-        if (mis.colorDepth > g_nDeepestColorDepth) {
-            g_nDeepestColorDepth = mis.colorDepth;
-            g_hDeepestMonitor = hMonitor;
-        }
-        g_nMonitorCounter++;
-    }
-    return TRUE;
-}
-
-/*
- * Class:     com_sun_glass_ui_win_WinScreen
- * Method:    _initIDs
- * Signature: ()V
- */
-JNIEXPORT void JNICALL Java_com_sun_glass_ui_win_WinScreen__1initIDs
-  (JNIEnv *env, jclass jScreenClass)
-{
-    jclass cls = env->FindClass("com/sun/glass/ui/Screen");
-    ASSERT(cls);
-
-    midNotifySettingsChanged = env->GetStaticMethodID(cls, "notifySettingsChanged", "()V");
-    ASSERT(midNotifySettingsChanged);
-
-
-    cls = env->FindClass("java/util/List");
-    ASSERT(cls);
-    javaIDs.List.add = env->GetMethodID(cls, "add", "(Ljava/lang/Object;)Z");
-    ASSERT(javaIDs.List.add);
-}
-
-/*
- * Class:     com_sun_glass_ui_win_WinScreen
- * Method:    _getDeepestScreen
- * Signature: (Lcom/sun/glass/ui/Screen;)Lcom/sun/glass/ui/Screen;
- */
-JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_win_WinScreen__1getDeepestScreen
-  (JNIEnv *env, jclass jScreenClass, jobject jScreen)
-{
-    int numMonitors = CountMonitors();
-    FindDeepestMonitor(numMonitors);
-
-    MonitorInfoStruct mis;
-    memset(&mis, 0, sizeof(MonitorInfoStruct));
-    GetMonitorSettings(g_hDeepestMonitor, &mis);
-    CopyMonitorSettingsToJava(env, jScreen, &mis);
-
-    return jScreen;
-}
-
-/*
- * Class:     com_sun_glass_ui_win_WinScreen
- * Method:    _getMainScreen
- * Signature: (Lcom/sun/glass/ui/Screen;)Lcom/sun/glass/ui/Screen;
- */
-JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_win_WinScreen__1getMainScreen
-  (JNIEnv *env, jclass jScreenClass, jobject jScreen)
-{
-    const POINT ptZero = { 0, 0 }; // primary monitor has its upper left corner at (0, 0)
-    HMONITOR hMonitor = ::MonitorFromPoint(ptZero, MONITOR_DEFAULTTOPRIMARY);
-
-    MonitorInfoStruct mis;
-    memset(&mis, 0, sizeof(MonitorInfoStruct));
-    GetMonitorSettings(hMonitor, &mis);
-    CopyMonitorSettingsToJava(env, jScreen, &mis);
-
-    return jScreen;
-}
-
-/*
- * Class:     com_sun_glass_ui_win_WinScreen
- * Method:    _getScreenForLocation
- * Signature: (Lcom/sun/glass/ui/Screen;II)Lcom/sun/glass/ui/Screen;
- */
-JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_win_WinScreen__1getScreenForLocation
-  (JNIEnv *env, jclass jScreenClass, jobject jScreen, jint x, jint y)
-{
-    POINT p = {x, y};
-    HMONITOR hMonitor = ::MonitorFromPoint(p, MONITOR_DEFAULTTOPRIMARY);
-
-    MonitorInfoStruct mis;
-    memset(&mis, 0, sizeof(MonitorInfoStruct));
-    GetMonitorSettings(hMonitor, &mis);
-    CopyMonitorSettingsToJava(env, jScreen, &mis);
-
-    return jScreen;
-}
-
-/*
- * Class:     com_sun_glass_ui_win_WinScreen
- * Method:    _getScreenForPtr
- * Signature: (Lcom/sun/glass/ui/Screen;J)Lcom/sun/glass/ui/Screen;
- */
-JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_win_WinScreen__1getScreenForPtr
-  (JNIEnv *env, jclass jScreenClass, jobject jScreen, jlong screenPtr)
-{
-    HMONITOR hMonitor = (HMONITOR)jlong_to_ptr(screenPtr);
-
-    MonitorInfoStruct mis;
-    memset(&mis, 0, sizeof(MonitorInfoStruct));
-    GetMonitorSettings(hMonitor, &mis);
-    CopyMonitorSettingsToJava(env, jScreen, &mis);
-
-    return jScreen;
-}
-
-/*
- * Class:     com_sun_glass_ui_win_WinScreen
- * Method:    _getScreens
- * Signature: (Ljava/util/List;)Ljava/util/List;
- */
-JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_win_WinScreen__1getScreens
-  (JNIEnv *env, jclass jScreenClass, jobject jScreens)
-{
-    int numMonitors = CountMonitors();
-    g_hmpMonitors = (HMONITOR *)malloc(numMonitors * sizeof(HMONITOR));
-    numMonitors = CollectMonitors(numMonitors);
-
-    jclass cls = GlassApplication::ClassForName(env, "com.sun.glass.ui.Screen");
-    ASSERT(cls);
-
-    for (int i = 0; i < numMonitors; i++) {
-        if (g_hmpMonitors[i] != NULL) {
-            jobject jScreen = env->NewObject(cls, env->GetMethodID(cls, "<init>", "()V"));
-            if (!CheckAndClearException(env)) {
-                MonitorInfoStruct mis;
-                memset(&mis, 0, sizeof(MonitorInfoStruct));
-                GetMonitorSettings(g_hmpMonitors[i], &mis);
-                CopyMonitorSettingsToJava(env, jScreen, &mis);
-
-                env->CallBooleanMethod(jScreens, javaIDs.List.add, jScreen);
-                CheckAndClearException(env);
-                env->DeleteLocalRef(jScreen);
-            }
-        }
-    }
-
-    free(g_hmpMonitors);
-    return jScreens;
 }

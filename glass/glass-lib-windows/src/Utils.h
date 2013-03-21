@@ -489,6 +489,10 @@ typedef struct _tagJavaIDs {
         jmethodID notifyNextTouchEventMID;
         jmethodID notifyEndTouchEventMID;
     } Gestures;
+    struct {
+        jmethodID init;
+        jmethodID notifySettingsChanged;
+    } Screen;
 } JavaIDs;
 
 extern JavaIDs javaIDs;

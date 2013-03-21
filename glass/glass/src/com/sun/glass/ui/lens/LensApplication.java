@@ -1447,34 +1447,11 @@ final class LensApplication extends Application {
         return new LensRobot();
     }
 
-    @Override
-    protected Screen staticScreen_getDeepestScreen() {
-        return LensScreen.getDeepestScreen_impl();
-    }
-
-    @Override
-    protected Screen staticScreen_getMainScreen() {
-        return LensScreen.getMainScreen_impl();
-    }
-
-    @Override
-    protected Screen staticScreen_getScreenForLocation(int x, int y) {
-        return LensScreen.getScreenForLocation_impl(x, y);
-    }
-
-    @Override
-    protected Screen staticScreen_getScreenForPtr(long screenPtr) {
-        return LensScreen.getScreenForPtr_impl(screenPtr);
-    }
-
-    @Override
-    protected List<Screen> staticScreen_getScreens() {
-        return LensScreen.getScreens_impl();
-    }
-
     @Override protected double staticScreen_getVideoRefreshPeriod() {
         return 0.0;     // indicate millisecond resolution
     }
+
+    @Override native protected Screen[] staticScreen_getScreens();
 
     @Override
     public Timer createTimer(Runnable runnable) {

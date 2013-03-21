@@ -333,3 +333,43 @@ JNIEXPORT jint JNICALL Java_com_sun_glass_ui_mac_MacTimer__1getMaxPeriod
     
     return period;
 }
+
+/*
+ * Class:     com_sun_glass_ui_mac_MacTimer
+ * Method:    _initIDs
+ * Signature: ()V
+ */
+JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacTimer__1initIDs
+(JNIEnv *env, jclass jClass)
+{
+
+    initJavaIDsList(env);
+
+    if (GlassDisplayLink == NULL)
+    {
+        CVReturn err = CVDisplayLinkCreateWithActiveCGDisplays(&GlassDisplayLink);
+        if (err != kCVReturnSuccess)
+        {
+            NSLog(@"CVDisplayLinkCreateWithActiveCGDisplays error: %d", err);
+        }
+        err = CVDisplayLinkSetCurrentCGDisplay(GlassDisplayLink, kCGDirectMainDisplay);
+        if (err != kCVReturnSuccess)
+        {
+            NSLog(@"CVDisplayLinkSetCurrentCGDisplay error: %d", err);
+        }
+        /*
+         * set a null callback and start the link to prep for GlassTimer initialization
+         */
+        err = CVDisplayLinkSetOutputCallback(GlassDisplayLink, &CVOutputCallback, NULL);
+        if (err != kCVReturnSuccess)
+        {
+            NSLog(@"CVDisplayLinkSetOutputCallback error: %d", err);
+        }
+        err = CVDisplayLinkStart(GlassDisplayLink);
+        if (err != kCVReturnSuccess)
+        {
+            NSLog(@"CVDisplayLinkStart error: %d", err);
+        }
+    }
+}
+

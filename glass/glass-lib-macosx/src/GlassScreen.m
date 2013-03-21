@@ -25,7 +25,6 @@
 
 #import "common.h"
 #import "com_sun_glass_ui_Screen.h"
-#import "com_sun_glass_ui_mac_MacScreen.h"
 
 #import "GlassMacros.h"
 #import "GlassScreen.h"
@@ -49,33 +48,66 @@ CGFloat GetScreenScaleFactor(NSScreen *screen)
     }
 }
 
-void SetJavaScreen(NSScreen *screen, JNIEnv *env, jobject jscreen)
+static inline jobject createJavaScreen(JNIEnv *env, NSScreen* screen)
 {
+    jobject jscreen = NULL;
+
     if (screen != nil)
     {
-        (*env)->SetLongField(env, jscreen, (*env)->GetFieldID(env, jScreenClass, "ptr", "J"), ptr_to_jlong([screen retain]));
-        
-        (*env)->SetIntField(env, jscreen, (*env)->GetFieldID(env, jScreenClass, "depth", "I"), (jint)NSBitsPerPixelFromDepth([screen depth]));
-        
-        (*env)->SetIntField(env, jscreen, (*env)->GetFieldID(env, jScreenClass, "x", "I"), (jint)[screen frame].origin.x);
-        (*env)->SetIntField(env, jscreen, (*env)->GetFieldID(env, jScreenClass, "y", "I"), (jint)[screen frame].origin.y);
-        (*env)->SetIntField(env, jscreen, (*env)->GetFieldID(env, jScreenClass, "width", "I"), (jint)[screen frame].size.width);
-        (*env)->SetIntField(env, jscreen, (*env)->GetFieldID(env, jScreenClass, "height", "I"), (jint)[screen frame].size.height);
-        
-        (*env)->SetIntField(env, jscreen, (*env)->GetFieldID(env, jScreenClass, "visibleX", "I"), (jint)[screen visibleFrame].origin.x);
-        (*env)->SetIntField(env, jscreen, (*env)->GetFieldID(env, jScreenClass, "visibleY", "I"),
-                (jint)([screen frame].size.height - [screen visibleFrame].size.height - [screen visibleFrame].origin.y));
-        (*env)->SetIntField(env, jscreen, (*env)->GetFieldID(env, jScreenClass, "visibleWidth", "I"), (jint)[screen visibleFrame].size.width);
-        (*env)->SetIntField(env, jscreen, (*env)->GetFieldID(env, jScreenClass, "visibleHeight", "I"), (jint)[screen visibleFrame].size.height);
-        
-        CGFloat scale = GetScreenScaleFactor(screen);
-        (*env)->SetFloatField(env, jscreen, (*env)->GetFieldID(env, jScreenClass, "scale", "F"), (jfloat)scale);
-        
+        jmethodID screenInit = (*env)->GetMethodID(env, jScreenClass,
+                                                   "<init>",
+                                                   "(JIIIIIIIIIIIF)V");
+        GLASS_CHECK_EXCEPTION(env);
+
         NSValue *resolutionValue = [[screen deviceDescription] valueForKey:NSDeviceResolution];
         NSSize resolution = [resolutionValue sizeValue];
-        (*env)->SetIntField(env, jscreen, (*env)->GetFieldID(env, jScreenClass, "resolutionX", "I"), (jint)resolution.width);
-        (*env)->SetIntField(env, jscreen, (*env)->GetFieldID(env, jScreenClass, "resolutionY", "I"), (jint)resolution.height);
+
+        jscreen = (jobject)(*env)->NewObject(env, jScreenClass, screenInit,
+                                             ptr_to_jlong(screen),
+
+                                             (jint)NSBitsPerPixelFromDepth([screen depth]),
+
+                                             (jint)[screen frame].origin.x,
+                                             (jint)[screen frame].origin.y,
+                                             (jint)[screen frame].size.width,
+                                             (jint)[screen frame].size.height,
+
+                                             (jint)[screen visibleFrame].origin.x,
+                                             (jint)([screen frame].size.height - [screen visibleFrame].size.height - [screen visibleFrame].origin.y),
+                                             (jint)[screen visibleFrame].size.width,
+                                             (jint)[screen visibleFrame].size.height,
+
+
+                                             (jint)resolution.width,
+                                             (jint)resolution.height,
+                                             (jfloat)GetScreenScaleFactor(screen));
+        
+        GLASS_CHECK_EXCEPTION(env);
     }
+    
+    return jscreen;
+}
+
+jobjectArray createJavaScreens(JNIEnv* env) {
+    //Update the Java notion of screens[]
+    NSArray* screens = [NSScreen screens];
+
+    if (jScreenClass == NULL)
+    {
+        jScreenClass = (*env)->NewGlobalRef(env, (*env)->FindClass(env, "com/sun/glass/ui/Screen"));
+    }
+
+    jobjectArray screenArray = (*env)->NewObjectArray(env,
+                                                      [screens count],
+                                                      jScreenClass,
+                                                      NULL);
+
+    for (NSUInteger index = 0; index < [screens count]; index++) {
+        jobject javaScreen = createJavaScreen(env, [screens objectAtIndex:index]);
+        (*env)->SetObjectArrayElement(env, screenArray, index, javaScreen);
+    }
+
+    return screenArray;
 }
 
 void GlassScreenDidChangeScreenParameters(JNIEnv *env)
@@ -84,19 +116,8 @@ void GlassScreenDidChangeScreenParameters(JNIEnv *env)
     {
         jScreenNotifySettingsChanged = (*env)->GetStaticMethodID(env, jScreenClass, "notifySettingsChanged", "()V");
     }
+    
     (*env)->CallStaticVoidMethod(env, jScreenClass, jScreenNotifySettingsChanged);
-}
-
-static inline jobject createJavaScreen(JNIEnv *env)
-{
-    jobject jscreen = NULL;
-    
-    jscreen = (*env)->NewObject(env, jScreenClass, (*env)->GetMethodID(env, jScreenClass, "<init>", "()V"));
-    {
-        SetJavaScreen([NSScreen deepestScreen], env, jscreen);
-    }
-    
-    return jscreen;
 }
 
 @implementation NSScreen (FullscreenAdditions)
@@ -168,182 +189,4 @@ static inline jobject createJavaScreen(JNIEnv *env)
 }
 
 @end
-
-/*
- * Class:     com_sun_glass_ui_Screen
- * Method:    _initIDs
- * Signature: ()V
- */
-JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacScreen__1initIDs
-(JNIEnv *env, jclass jClass)
-{
-    LOG("Java_com_sun_glass_ui_mac_MacScreen__1initIDs");
-    
-    if (jScreenClass == NULL)
-    {
-        jScreenClass = (*env)->NewGlobalRef(env, (*env)->FindClass(env, "com/sun/glass/ui/Screen"));
-    }
-    
-    initJavaIDsList(env);
-    
-    // TODO: move from Java_com_sun_glass_ui_mac_MacScreen__1initIDs to Java_com_sun_glass_ui_mac_MacTimer__1initIDs
-    if (GlassDisplayLink == NULL)
-    {
-        CVReturn err = CVDisplayLinkCreateWithActiveCGDisplays(&GlassDisplayLink);
-        if (err != kCVReturnSuccess)
-        {
-            NSLog(@"CVDisplayLinkCreateWithActiveCGDisplays error: %d", err);
-        }
-        err = CVDisplayLinkSetCurrentCGDisplay(GlassDisplayLink, kCGDirectMainDisplay);
-        if (err != kCVReturnSuccess)
-        {
-            NSLog(@"CVDisplayLinkSetCurrentCGDisplay error: %d", err);
-        }
-        /*
-         * set a null callback and start the link to prep for GlassTimer initialization
-         */
-        err = CVDisplayLinkSetOutputCallback(GlassDisplayLink, &CVOutputCallback, NULL);
-        if (err != kCVReturnSuccess)
-        {
-            NSLog(@"CVDisplayLinkSetOutputCallback error: %d", err);
-        }
-        err = CVDisplayLinkStart(GlassDisplayLink);
-        if (err != kCVReturnSuccess)
-        {
-            NSLog(@"CVDisplayLinkStart error: %d", err);
-        }
-    }
-}
-
-/*
- * Class:     com_sun_glass_ui_Screen
- * Method:    _getDeepestScreen
- * Signature: (Lcom/sun/glass/ui/Screen;)Lcom/sun/glass/ui/Screen;
- */
-JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_mac_MacScreen__1getDeepestScreen
-(JNIEnv *env, jclass jscreenClass, jobject jscreen)
-{
-    LOG("Java_com_sun_glass_ui_mac_MacScreen__1getDeepestScreen");
-    
-    GLASS_ASSERT_MAIN_JAVA_THREAD(env);
-    GLASS_POOL_ENTER;
-    {
-        SetJavaScreen([NSScreen deepestScreen], env, jscreen);
-    }
-    GLASS_POOL_EXIT;
-    GLASS_CHECK_EXCEPTION(env);
-    
-    return jscreen;
-}
-
-/*
- * Class:     com_sun_glass_ui_Screen
- * Method:    _getMainScreen
- * Signature: (Lcom/sun/glass/ui/Screen;)Lcom/sun/glass/ui/Screen;
- */
-JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_mac_MacScreen__1getMainScreen
-(JNIEnv *env, jclass jscreenClass, jobject jscreen)
-{
-    LOG("Java_com_sun_glass_ui_mac_MacScreen__1getMainScreen");
-    
-    GLASS_ASSERT_MAIN_JAVA_THREAD(env);
-    GLASS_POOL_ENTER;
-    {
-        NSScreen * screen = [[NSScreen screens] objectAtIndex: 0];
-        SetJavaScreen(screen, env, jscreen);
-    }
-    GLASS_POOL_EXIT;
-    GLASS_CHECK_EXCEPTION(env);
-    
-    return jscreen;
-}
-
-/*
- * Class:     com_sun_glass_ui_Screen
- * Method:    _getScreenForLocation
- * Signature: (Lcom/sun/glass/ui/Screen;II)Lcom/sun/glass/ui/Screen;
- */
-JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_mac_MacScreen__1getScreenForLocation
-(JNIEnv *env, jclass jscreenClass, jobject jscreen, jint x, jint y)
-{
-    LOG("Java_com_sun_glass_ui_mac_MacScreen__1getScreenForLocation");
-    
-    // how do we do this?
-    
-    return jscreen;
-}
-
-/*
- * Class:     com_sun_glass_ui_Screen
- * Method:    _getScreenForPtr
- * Signature: (Lcom/sun/glass/ui/Screen;J)Lcom/sun/glass/ui/Screen;
- */
-JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_mac_MacScreen__1getScreenForPtr
-(JNIEnv *env, jclass jscreenClass, jobject jscreen, jlong screenPtr)
-{
-    LOG("Java_com_sun_glass_ui_mac_MacScreen__1getScreenForPtr");
-    
-    GLASS_ASSERT_MAIN_JAVA_THREAD(env);
-    GLASS_POOL_ENTER;
-    {
-        SetJavaScreen((NSScreen *)jlong_to_ptr(screenPtr), env, jscreen);
-    }
-    GLASS_POOL_EXIT;
-    GLASS_CHECK_EXCEPTION(env);
-    
-    return jscreen;
-}
-
-/*
- * Class:     com_sun_glass_ui_Screen
- * Method:    _getScreens
- * Signature: (Ljava/util/ArrayList;)Ljava/util/List;
- */
-JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_mac_MacScreen__1getScreens
-(JNIEnv *env, jclass jscreenClass, jobject jscreens)
-{
-    LOG("Java_com_sun_glass_ui_mac_MacScreen__1getScreens");
-    
-    GLASS_ASSERT_MAIN_JAVA_THREAD(env);
-    GLASS_POOL_ENTER;
-    {
-        NSArray *screens = [NSScreen screens];
-        for (NSUInteger i=0; i<[screens count]; i++)
-        {
-            jobject jscreen = createJavaScreen(env);
-            {
-                SetJavaScreen([screens objectAtIndex:i], env, jscreen);
-                
-                (*env)->CallBooleanMethod(env, jscreens, javaIDs.List.add, jscreen);
-            }
-            (*env)->DeleteLocalRef(env, jscreen);
-        }
-    }
-    GLASS_POOL_EXIT;
-    GLASS_CHECK_EXCEPTION(env);
-    
-    return jscreens;
-}
-
-/*
- * Class:     com_sun_glass_ui_mac_MacScreen
- * Method:    _getVideoRefreshPeriod
- * Signature: ()D
- */
-JNIEXPORT jdouble JNICALL 
-Java_com_sun_glass_ui_mac_MacScreen__1getVideoRefreshPeriod(JNIEnv *env, jclass screenClass) 
-{
-    LOG("Java_com_sun_glass_ui_mac_MacScreen__1getVideoRefreshPeriod");
-    
-    if (GlassDisplayLink != NULL)
-    {
-        double outRefresh = CVDisplayLinkGetActualOutputVideoRefreshPeriod(GlassDisplayLink);
-        LOG("CVDisplayLinkGetActualOutputVideoRefreshPeriod: %f", outRefresh);
-        return (outRefresh * 1000.0); // to millis
-    } 
-    else
-    {
-        return 0.0;
-    }
-}
 

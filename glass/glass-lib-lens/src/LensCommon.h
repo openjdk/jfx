@@ -268,6 +268,11 @@ jboolean glass_screen_capture(jint x,
                               jint *pixels);
 
 
+/**
+ * Get an array of available screens
+ */
+ jobjectArray createJavaScreens(JNIEnv *env);
+
 /////////////Aplication
 
 /**

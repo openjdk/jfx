@@ -23,13 +23,7 @@
  * questions.
  */
 
-#ifndef _GLASS_SCREEN_
-#define _GLASS_SCREEN_
+#import <jni.h>
 
-class GlassScreen {
-public:
-    static void HandleDisplayChange();
-    static jobjectArray CreateJavaScreens(JNIEnv* env);
-};
-
-#endif
+void GlassScreenDidChangeScreenParameters(JNIEnv *env);
+jobjectArray createJavaScreens(JNIEnv* env);
