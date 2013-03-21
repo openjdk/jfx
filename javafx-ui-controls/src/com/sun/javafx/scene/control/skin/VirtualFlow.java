@@ -2387,8 +2387,10 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         }
 
         public T get(int index) {
-            if (index > lastIndex - firstIndex || index < 0) {
-                throw new java.lang.ArrayIndexOutOfBoundsException();
+            if (index > (lastIndex - firstIndex) || index < 0) {
+                // Commented out exception due to RT-29111
+                // throw new java.lang.ArrayIndexOutOfBoundsException();
+                return null;
             }
 
             return array.get(firstIndex + index);
