@@ -24,6 +24,7 @@
  */
 package com.sun.glass.ui;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.ArrayList;
 import java.io.File;
@@ -220,7 +221,11 @@ public class CommonDialogs {
     private static String convertFolder(File folder) {
         if (folder != null) {
             if (folder.isDirectory()) {
-                return folder.getAbsolutePath();
+                try {
+                    return folder.getCanonicalPath();
+                } catch (IOException e) {
+                    throw new IllegalArgumentException("Unable to get a canonical path for folder", e);
+                }
             } else {
                 throw new IllegalArgumentException("Folder parameter must be a valid folder");
             }
