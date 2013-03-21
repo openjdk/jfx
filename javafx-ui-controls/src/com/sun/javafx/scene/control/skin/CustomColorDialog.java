@@ -518,41 +518,6 @@ public class CustomColorDialog extends StackPane {
             rgbButton.setId("toggle-button-center");
             webButton = new ToggleButton("Web");
             webButton.setId("toggle-button-right");
-            ToggleGroup group = new ToggleGroup();
-            hsbButton.setToggleGroup(group);
-            rgbButton.setToggleGroup(group);
-            webButton.setToggleGroup(group);
-            group.selectToggle(hsbButton);
-            
-            showHSBSettings(); // Color settings Grid Pane
-            
-            hsbButton.setOnAction(new EventHandler<ActionEvent>() {
-                @Override public void handle(ActionEvent t) {
-                    if (colorSettingsMode != ColorSettingsMode.HSB) {
-                        colorSettingsMode = ColorSettingsMode.HSB;
-                        showHSBSettings();
-                        requestLayout();
-                    }
-                }
-            });
-            rgbButton.setOnAction(new EventHandler<ActionEvent>() {
-                @Override public void handle(ActionEvent t) {
-                    if (colorSettingsMode != ColorSettingsMode.RGB) {
-                        colorSettingsMode = ColorSettingsMode.RGB;
-                        showRGBSettings();
-                        requestLayout();
-                    }
-                }
-            });
-            webButton.setOnAction(new EventHandler<ActionEvent>() {
-                @Override public void handle(ActionEvent t) {
-                    if (colorSettingsMode != ColorSettingsMode.WEB) {
-                        colorSettingsMode = ColorSettingsMode.WEB;
-                        showWebSettings();
-                        requestLayout();
-                    }
-                }
-            });
             
             hBox = new HBox();
             hBox.getChildren().addAll(hsbButton, rgbButton, webButton);
@@ -601,6 +566,29 @@ public class CustomColorDialog extends StackPane {
             
             Rectangle spacer5 = new Rectangle(0, 15);
             alphaSettings.add(spacer5, 0, 2, 3, 1);
+            
+            final ToggleGroup group = new ToggleGroup();
+            hsbButton.setToggleGroup(group);
+            rgbButton.setToggleGroup(group);
+            webButton.setToggleGroup(group);
+            group.selectedToggleProperty().addListener(new ChangeListener<Toggle>() {
+
+                @Override
+                public void changed(ObservableValue<? extends Toggle> observable, Toggle oldValue, Toggle newValue) {
+                    if (newValue == null) {
+                        group.selectToggle(oldValue);
+                    } else {
+                        if (newValue == hsbButton) {
+                            showHSBSettings();
+                        } else if (newValue == rgbButton) {
+                            showRGBSettings();
+                        } else {
+                            showWebSettings();
+                        }
+                    }
+                }
+            });
+            group.selectToggle(hsbButton);            
             
             buttonBox = new HBox(4);
             
@@ -657,6 +645,7 @@ public class CustomColorDialog extends StackPane {
         }
         
         private void showHSBSettings() {
+            colorSettingsMode = ColorSettingsMode.HSB;
             if (hsbSettings == null) {
                 hsbSettings = new GridPane();
                 hsbSettings.setHgap(5);
@@ -730,6 +719,7 @@ public class CustomColorDialog extends StackPane {
         
         
         private void showRGBSettings() {
+            colorSettingsMode = ColorSettingsMode.RGB;
             if (rgbSettings == null) {
                 rgbSettings = new GridPane();
                 rgbSettings.setHgap(5);
@@ -803,6 +793,7 @@ public class CustomColorDialog extends StackPane {
         }
         
         private void showWebSettings() {
+            colorSettingsMode = ColorSettingsMode.WEB;
             if (webSettings == null) {
                 webSettings = new GridPane();
                 webSettings.setHgap(5);
