@@ -85,6 +85,26 @@ public class PickResultChooser {
     }
 
     /**
+     * This method is introduced as a workaround for SubScene, in order to
+     * force a pick result without regard to distance. And is needed since
+     * nodes in a SubScene usually exist in a different coordinates system from
+     * nodes in a Scene, as they have different transform, camera...
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an internal API that is not intended for use and
+     * will be removed in the next version
+     */
+    @Deprecated
+    public void impl_setPickResult(PickResultChooser result) {
+        this.distance = result.getIntersectedDistance();
+        this.face = result.getIntersectedFace();
+        this.node = result.getIntersectedNode();
+        this.empty = node == null ? true : false;
+        point = result.getIntersectedPoint();
+        texCoord = result.getIntersectedTexCoord();
+        this.closed = result.isClosed();
+    }
+
+    /**
      * Returns true if the given distance is smaller than the distance stored
      * in this instance.
      * @param distance The distance to compare

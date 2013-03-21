@@ -83,6 +83,7 @@ import com.sun.javafx.sg.PGShape.StrokeLineCap;
 import com.sun.javafx.sg.PGShape.StrokeLineJoin;
 import com.sun.javafx.sg.PGShape.StrokeType;
 import com.sun.javafx.sg.PGSphere;
+import com.sun.javafx.sg.PGSubScene;
 import com.sun.javafx.sg.PGText;
 import com.sun.javafx.sg.PGTriangleMesh;
 import com.sun.scenario.DelayedRunnable;
@@ -548,6 +549,11 @@ final public class DummyToolkit extends Toolkit {
 
     @Override
     public void setLightsDirty(boolean lightsDirty) {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public PGSubScene createPGSubScene() {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 }

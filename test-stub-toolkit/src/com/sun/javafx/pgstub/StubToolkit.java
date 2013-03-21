@@ -97,6 +97,7 @@ import com.sun.javafx.sg.PGPolyline;
 import com.sun.javafx.sg.PGQuadCurve;
 import com.sun.javafx.sg.PGRectangle;
 import com.sun.javafx.sg.PGRegion;
+import com.sun.javafx.sg.PGSubScene;
 import com.sun.javafx.sg.PGSVGPath;
 import com.sun.javafx.sg.PGShape.StrokeLineCap;
 import com.sun.javafx.sg.PGShape.StrokeLineJoin;
@@ -923,6 +924,11 @@ public class StubToolkit extends Toolkit {
 
     @Override
     public void setLightsDirty(boolean lightsDirty) {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public PGSubScene createPGSubScene() {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 

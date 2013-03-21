@@ -26,8 +26,6 @@
 package javafx.scene;
 
 
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -57,7 +55,6 @@ import javafx.beans.property.StringPropertyBase;
 import javafx.beans.value.ChangeListener;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener.Change;
-import javafx.collections.MapChangeListener;
 import javafx.collections.ObservableList;
 import javafx.collections.ObservableMap;
 import javafx.event.Event;
@@ -401,8 +398,12 @@ public abstract class Node implements EventTarget, Styleable {
 
     private void addToSceneDirtyList() {
         Scene s = getScene();
-        if (s != null)
+        if (s != null) {
             s.addToDirtyList(this);
+            if (getSubScene() != null) {
+                getSubScene().setDirty(this);
+            }
+        }
     }
 
     /**
@@ -724,53 +725,17 @@ public abstract class Node implements EventTarget, Styleable {
         }
     };
 
+    private SubScene subScene = null;
+
     /**
      * The {@link Scene} that this {@code Node} is part of. If the Node is not
      * part of a scene, then this variable will be null.
      *
      * @defaultValue null
      */
-    private ReadOnlyObjectWrapper<Scene> scene = new ReadOnlyObjectWrapper<Scene>() {
+    private ReadOnlyObjectWrapperManualFire<Scene> scene = new ReadOnlyObjectWrapperManualFire<Scene>();
 
-        private Scene oldScene;
-
-        @Override
-        protected void invalidated() {
-            Scene _scene = get();
-            if (getClip() != null) {
-                getClip().setScene(_scene);
-            }
-            updateCanReceiveFocus();
-            if (isFocusTraversable()) {
-                if (oldScene != null) {
-                    oldScene.unregisterTraversable(Node.this);
-                }
-                if (_scene != null) {
-                    _scene.registerTraversable(Node.this);
-                }
-            }
-            focusSetDirty(oldScene);
-            focusSetDirty(_scene);
-            sceneChanged(oldScene);
-            if (oldScene != _scene) {
-                //Note: no need to remove from scene's dirty list
-                //Scene's is checking if the node's scene is correct
-                impl_reapplyCSS();
-                if (_scene != null && !impl_isDirtyEmpty()) {
-                    _scene.addToDirtyList(Node.this);
-                }
-                if (_scene == null && peer != null) {
-                    peer.release();
-                }
-            }
-            if (getParent() == null) {
-                // if we are the root we need to handle scene change
-                parentResolvedOrientationInvalidated();
-            }
-
-            oldScene = _scene;
-        }
-
+    private class ReadOnlyObjectWrapperManualFire<T> extends ReadOnlyObjectWrapper<T> {
         @Override
         public Object getBean() {
             return Node.this;
@@ -780,24 +745,107 @@ public abstract class Node implements EventTarget, Styleable {
         public String getName() {
             return "scene";
         }
-    };
 
-    final void setScene(Scene value) {
-        scene.set(value);
+        @Override
+        protected void fireValueChangedEvent() {
+            /*
+             * Note: This method has been intentionally made into a no-op. In
+             * order to override the default set behavior. By default calling
+             * set(...) on a different scene will trigger:
+             * - invalidated();
+             * - fireValueChangedEvent();
+             * Both of the above are no-ops, but are handled manually via
+             * - Node.this.setScenes(...)
+             * - Node.this.invalidatedScenes(...)
+             * - forceValueChangedEvent()
+             */
+        }
+
+        public void fireSuperValueChangedEvent() {
+            super.fireValueChangedEvent();
+        }
+    }
+
+    private void invalidatedScenes(Scene oldScene, SubScene oldSubScene) {
+        Scene newScene = sceneProperty().get();
+        boolean sceneChanged = oldScene != newScene;
+        SubScene newSubScene = subScene;
+
+        if (getClip() != null) {
+            getClip().setScenes(newScene, newSubScene);
+        }
+        if (sceneChanged) {
+            updateCanReceiveFocus();
+            if (isFocusTraversable()) {
+                if (oldScene != null) {
+                    oldScene.unregisterTraversable(Node.this);
+                }
+                if (newScene != null) {
+                    newScene.registerTraversable(Node.this);
+                }
+            }
+            focusSetDirty(oldScene);
+            focusSetDirty(newScene);
+        }
+        scenesChanged(newScene, newSubScene, oldScene, oldSubScene);
+        impl_reapplyCSS();
+
+        if (sceneChanged && !impl_isDirtyEmpty()) {
+            //Note: no need to remove from scene's dirty list
+            //Scene's is checking if the node's scene is correct
+            /* TODO: looks like an existing bug when a node is moved from one
+             * location to another, setScenes will be called twice by
+             * Parent.VetoableListDecorator onProposedChange and onChanged
+             * respectively. Removing the node and setting setScense(null,null)
+             * then adding it back to potentially the same scene. Causing the
+             * same node to being added twice to the same scene.
+             */
+            addToSceneDirtyList();
+        }
+
+        if (newScene == null && peer != null) {
+            peer.release();
+        }
+        if (getParent() == null) {
+            // if we are the root we need to handle scene change
+            parentResolvedOrientationInvalidated();
+        }
+
+        if (sceneChanged) { scene.fireSuperValueChangedEvent(); }
+    }
+
+    final void setScenes(Scene newScene, SubScene newSubScene) {
+        Scene oldScene = sceneProperty().get();
+        if (newScene != oldScene || newSubScene != subScene) {
+            scene.set(newScene);
+            SubScene oldSubScene = subScene;
+            subScene = newSubScene;
+            invalidatedScenes(oldScene, oldSubScene);
+            if (this instanceof SubScene) { // TODO: find better solution
+                SubScene thisSubScene = (SubScene)this;
+                thisSubScene.getRoot().setScenes(newScene, thisSubScene);
+            }
+        }
+    }
+
+    final SubScene getSubScene() {
+        return subScene;
     }
 
     public final Scene getScene() {
         return scene.get();
     }
 
-    /**
-     * Exists for Parent
-     */
-    void sceneChanged(Scene old) { }
-
     public final ReadOnlyObjectProperty<Scene> sceneProperty() {
         return scene.getReadOnlyProperty();
     }
+
+    /**
+     * Exists for Parent
+     */
+    void scenesChanged(final Scene newScene, final SubScene newSubScene,
+                       final Scene oldScene, final SubScene oldSubScene) { }
+
 
     /**
      * The id of this {@code Node}. This simple string identifier is useful for
@@ -1551,7 +1599,15 @@ public abstract class Node implements EventTarget, Styleable {
     }
 
     private void updateDisabled() {
-        setDisabled(isDisable() || (getParent() != null && getParent().isDisabled()));
+        boolean isDisabled = isDisable();
+        if (!isDisabled) {
+            isDisabled = getParent() != null ? getParent().isDisabled() :
+                    getSubScene() != null && getSubScene().isDisabled();
+        }
+        setDisabled(isDisabled);
+        if (this instanceof SubScene) {
+            ((SubScene)this).getRoot().setDisabled(isDisabled);
+        }
     }
 
     /**
@@ -2146,11 +2202,13 @@ public abstract class Node implements EventTarget, Styleable {
         while (n != child) {
             if (n.getParent() != null) {
                 n = n.getParent();
+            } else if (n.getSubScene() != null) {
+                n = n.getSubScene();
             } else if (n.clipParent != null) {
                 n = n.clipParent;
             } else {
                 return false;
-    }
+            }
         }
         return true;
     }
@@ -6018,12 +6076,12 @@ public abstract class Node implements EventTarget, Styleable {
                         } else {
                             if (oldClip != null) {
                                 oldClip.clipParent = null;
-                                oldClip.setScene(null);
+                                oldClip.setScenes(null, null);
                             }
 
                             if (newClip != null) {
                                 newClip.clipParent = Node.this;
-                                newClip.setScene(getScene());
+                                newClip.setScenes(getScene(), getSubScene());
                             }
 
                             impl_markDirty(DirtyBits.NODE_CLIP);
@@ -7364,13 +7422,19 @@ public abstract class Node implements EventTarget, Styleable {
     }
 
     private void updateTreeVisible() {
-        setTreeVisible(isVisible() && ((getParent() == null) || getParent().impl_isTreeVisible()));
+        boolean isTreeVisible = isVisible();
+        if (isTreeVisible) {
+            isTreeVisible = (getParent() == null) ?
+                    (getSubScene() == null || getSubScene().impl_isTreeVisible()) :
+                    getParent().impl_isTreeVisible();
+        }
+        setTreeVisible(isTreeVisible);
     }
 
     private boolean treeVisible;
     private TreeVisiblePropertyReadOnly treeVisibleRO;
 
-    private void setTreeVisible(boolean value) {
+    final void setTreeVisible(boolean value) {
         if (treeVisible != value) {
             treeVisible = value;
             updateCanReceiveFocus();
@@ -7381,6 +7445,14 @@ public abstract class Node implements EventTarget, Styleable {
                 addToSceneDirtyList();
             }
             ((TreeVisiblePropertyReadOnly)impl_treeVisibleProperty()).invalidate();
+            if (Node.this instanceof SubScene) {
+                Node subSceneRoot = ((SubScene)Node.this).getRoot();
+                if (subSceneRoot != null) {
+                    // SubScene.getRoot() is only null if it's constructor
+                    // has not finished.
+                    subSceneRoot.setTreeVisible(value && subSceneRoot.isVisible());
+                }
+            }
         }
     }
 
@@ -8100,7 +8172,7 @@ public abstract class Node implements EventTarget, Styleable {
      * @return The CssMetaData associated with this node, which may include the
      * CssMetaData of its super classes.
      */
-    
+
     @Override
     public List<CssMetaData<? extends Styleable, ?>> getCssMetaData() {
         return getClassCssMetaData();
@@ -8233,12 +8305,24 @@ public abstract class Node implements EventTarget, Styleable {
     // Walks up the tree telling each parent that the pseudo class state of
     // this node has changed.
     /** @treatAsPrivate */
-    private void notifyParentsOfInvalidatedCSS() {
-        if (!getScene().getRoot().impl_isDirty(DirtyBits.NODE_CSS)) {
+    final void notifyParentsOfInvalidatedCSS() {
+        SubScene subScene = getSubScene();
+        Parent root = (subScene != null) ?
+                subScene.getRoot() : getScene().getRoot();
+
+        if (!root.impl_isDirty(DirtyBits.NODE_CSS)) {
             // Ensure that Scene.root is marked as dirty. If the scene isn't
             // dirty, nothing will get repainted. This bit is cleared from
             // Scene in doCSSPass().
-            getScene().getRoot().impl_markDirty(DirtyBits.NODE_CSS);
+            root.impl_markDirty(DirtyBits.NODE_CSS);
+            if (subScene != null) {
+                // If the node is part of a subscene, then we must ensure that
+                // the we not only mark subScene.root dirty, but continue and
+                // call subScene.notifyParentsOfInvalidatedCSS() until
+                // Scene.root gets marked dirty, via the recurisve call:
+                subScene.cssFlag = CssFlags.UPDATE;
+                subScene.notifyParentsOfInvalidatedCSS();
+            }
         }
         Parent _parent = getParent();
         while (_parent != null) {
@@ -8283,7 +8367,7 @@ public abstract class Node implements EventTarget, Styleable {
         switch (cssFlag) {
             case CLEAN:
                 break;
-            case DIRTY_BRANCH:     
+            case DIRTY_BRANCH:
                 Parent me = (Parent)this;
                 // clear the flag first in case the flag is set to something
                 // other than clean by downstream processing.
@@ -8334,7 +8418,7 @@ public abstract class Node implements EventTarget, Styleable {
                 topMost = _parent;
             } 
             _parent = _parent.getParent();
-        } 
+        }
         
         _parent = this;
         while (_parent != topMost) {
@@ -8345,7 +8429,7 @@ public abstract class Node implements EventTarget, Styleable {
         }
         topMost.processCSS();
     }
-    
+
     /**
      * If invoked, will update / reapply styles from here on down. If reapply
      * is false, then we will only update from here on down, otherwise we will

@@ -27,6 +27,7 @@ package javafx.scene;
 
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.BoxBounds;
+import com.sun.javafx.geom.PickRay;
 import com.sun.javafx.geom.Rectangle;
 import com.sun.javafx.geom.transform.Affine3D;
 import com.sun.javafx.geom.transform.BaseTransform;
@@ -206,6 +207,16 @@ public abstract class Camera extends Node {
             pgCamera.setWorldTransform(localToSceneTx);
         }
     }
+
+    /*
+     * Introduced to support SubScene picking, in order to getting around
+     * limitations of one camera for every Scene. GlassScene has camera
+     * properties. This might change after camera work has been moved to FX
+     * thread, when RT-28290 is fixed.
+     */
+    abstract PickRay computePickRay(double localX, double localY,
+                                    double viewWidth, double viewHeight,
+                                    PickRay pickRay);
 
     /**
      * @treatAsPrivate implementation detail

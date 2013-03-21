@@ -1048,7 +1048,7 @@ public class Scene implements EventTarget {
                     }
 
                     if (oldRoot != null) {
-                        oldRoot.setScene(null);
+                        oldRoot.setScenes(null, null);
                         oldRoot.setImpl_traversalEngine(null);
                     }
                     oldRoot = _value;
@@ -1056,7 +1056,7 @@ public class Scene implements EventTarget {
                         _value.setImpl_traversalEngine(new TraversalEngine(_value, true));
                     }
                     _value.getStyleClass().add(0, "root");
-                    _value.setScene(Scene.this);
+                    _value.setScenes(Scene.this, null);
                     markDirty(DirtyBits.ROOT_DIRTY);
                     _value.resize(getWidth(), getHeight()); // maybe no-op if root is not resizable
                     _value.requestLayout();
@@ -2170,6 +2170,9 @@ public class Scene implements EventTarget {
                         size += syncAll(n);
                     }
                 }
+            } else if (node instanceof SubScene) {
+                SubScene subScene = (SubScene)node;
+                size += syncAll(subScene.getRoot());
             }
             if (node.getClip() != null) {
                 size += syncAll(node.getClip());

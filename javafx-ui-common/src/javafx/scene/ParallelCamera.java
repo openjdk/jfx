@@ -25,6 +25,8 @@
 
 package javafx.scene;
 
+import com.sun.javafx.geom.PickRay;
+import com.sun.javafx.geom.Vec3d;
 import com.sun.javafx.sg.PGNode;
 import com.sun.javafx.sg.PGParallelCamera;
 import com.sun.javafx.tk.Toolkit;
@@ -66,4 +68,27 @@ public class ParallelCamera extends Camera {
         return pgCamera;
     }
 
+    /*
+     * Introduced as a workaround for SubScene, until we can fix camera
+     * implementation, such that projection transform and view transform are
+     * determined on FX thread, when RT-28290 is fixed.
+     */
+    @Override
+    final PickRay computePickRay(double localX, double localY,
+                           double viewWidth, double viewHeight,
+                           PickRay pickRay) {
+        if (pickRay == null) {
+            pickRay = new PickRay();
+        }
+        pickRay.setOrigin(new Vec3d(localX, localY, -1.0));
+        pickRay.setDirection(new Vec3d(0.0, 0.0, 1.0));
+        /*
+         * TODO: Fix for RT-28446 Introduced a parallel property on PickRay. If
+         * the parallel property is set correctly on PickRay, it breaks subscene
+         * picking. Once RT-29106 is fixed remove above two lines and replace
+         * with the line below:
+         */
+//        pickRay.set(localY, localY);
+        return pickRay;
+    }
 }
