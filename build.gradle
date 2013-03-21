@@ -1,3 +1,28 @@
+/*
+ * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.  Oracle designates this
+ * particular file as subject to the "Classpath" exception as provided
+ * by Oracle in the LICENSE file that accompanied this code.
+ *
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
+ *
+ * You should have received a copy of the GNU General Public License version
+ * 2 along with this work; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+ * or visit www.oracle.com if you need additional information or have any
+ * questions.
+ */
+
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.ExecutorService
@@ -7,7 +32,12 @@ import java.util.concurrent.Future
 /**
  * The main build script for JavaFX.
  *
- * Tasks to complete:
+ * MUST FIX tasks to complete:
+ *  - build check -- making sure the final artifact has the right bits
+ *  - JavaDoc needs to use the FX doclet (which needs to be open sourced before I can use it!)
+ *  - Need to compile hlsl files
+ *
+ * Additional projects to work on as we go:
  *  - special tasks for common needs, such as:
  *      - updating copyright headers
  *      - stripping trailing whitespace (?)
@@ -15,33 +45,13 @@ import java.util.concurrent.Future
  *  - findbugs
  *  - re needs?
  *  - sqe testing
- *  - build check -- making sure the final artifact has the right bits
  *  - API change check
- *  - JavaDoc
- *      - There is a built in task, but I need to exclude any API that doesn't start with javafx as the package name.
- *        Also I need to link in to the Java 8 javadocs. Also need to link to public FX docs in the binary stub sdk
  *  - Pushing results to a repo?
- *  - partial builds for compileXXX shaders isn't working (they also get compiled)
+ *  - partial builds for compileXXX shaders isn't working until after 2 compiles
  *  - ServiceWithSecurityManagerTest fails to complete when run from gradle.
  *  - Integrate Parfait reports for C code
  *  - jar everything with includeEmptyDirs set to false
- *  - Need to compile hlsl files
  *  - FXML Project tests are not running
-// ENV has:
-//   JAVA_ARCH
-// Can also get JAVA_HOME, JDK_HOME, etc IFF the environment variables are set
-//println System.getenv();
-// Properties has:
-//   os.arch
-//   java.specification.version
-//   java.vm.specification.version
-//   java.runtime.version
-//   file.separator
-//   os.name
-//   path.separator
-//
-//println System.getProperties()
-
  */
 defaultTasks = ["assemble"]
 
@@ -556,6 +566,7 @@ def addNative = { project, String name ->
 *****************************************************************************/
 
 allprojects {
+    apply plugin: 'idea'
     // We want to configure all projects as java projects and use the same compile settings
     // etc, except for the root project which we just want to ignore
     if (project == rootProject) return
@@ -664,12 +675,57 @@ allprojects {
         options.addBooleanOption("XDignore.symbol.file").setValue(true);
         options.addBooleanOption("Xdoclint:none").setValue(!IS_DOC_LINT);
     }
+
+    // Configure all projects to include $buildDir/builder-src in the generated IDEA project files.
+    // Also need to un-exclude the build-dir since we put stuff in it, and then re-exclude other stuff
+    configurations {
+      binaryStub
+      binaryStub.extendsFrom(compile)
+    }
+
+    dependencies {
+      binaryStub rootProject.files(BINARY_STUB)
+    }
+
+    idea {
+        module {
+            inheritOutputDirs = true;
+            sourceDirs += new File(buildDir, "builder-src");
+            excludeDirs -= buildDir;
+            excludeDirs += [
+                    new File(buildDir, "classes"),
+                    new File(buildDir, "dependency-cache"),
+                    new File(buildDir, "libs"),
+                    new File(buildDir, "resources"),
+                    new File(buildDir, "tmp")];
+            scopes.COMPILE.plus += configurations.binaryStub
+
+            // Some hackery. I have to make sure the binary stub is the VERY LAST entry
+            // in the class path or things will be somewhat unpredictable
+            iml {
+                withXml { xmlProvider ->
+                    def root = xmlProvider.asNode();
+                    // Find the <root url=".../jfxrt.jar!/" />. Walk up 3 steps to <orderEntry>
+                    def orderEntry = root.depthFirst().find { it.name() == "root" }.parent().parent().parent(); // && it.@url.contains(BINARY_STUB)
+                    if (orderEntry.name() != "orderEntry") throw new Exception("Couldn't find the order entry");
+                    // Move that <orderEntry> to be the last child of its parent.
+                    def parent = orderEntry.parent();
+                    parent.remove(orderEntry);
+                    parent.append(orderEntry);
+                }
+            }
+        }
+    }
 }
 
 // The build-tools project contains the annotation processor that is used to generate the
 // builders, the decora compiler used for effects, and various annotations we use for FXML
 // etc. Nothing in build-tools should *ever* be shipped with the runtime.
 project(":build-tools") {
+    sourceSets {
+        main.java.srcDirs = ["src/main/java", "$buildDir/generated-src/antlr"]
+    }
+
     // Workaround for lack of Antlr 3 support in Gradle. By defining a configuration,
     // we can then give it a class path and use that classpath to execute a java command
     getConfigurations().add("antlr3");
@@ -699,7 +755,13 @@ project(":build-tools") {
     // for compilation.
     compileJava {
         dependsOn(generateGrammarSource);
-        source("$buildDir/generated-src");
+    }
+
+    // Add antlr to the sources for IDEA
+    idea {
+        module {
+            sourceDirs += file("$buildDir/generated-src/antlr")
+        }
     }
 }
 
@@ -736,6 +798,13 @@ project(":base") {
     // We DO NOT want to include src/main/version-info
     sourceSets.main.java.srcDirs = ["src/main/java", "$buildDir/generated-src/version-info"]
     compileJava.dependsOn processVersion
+
+    // Add in the version-info generated sources for IDEA projects
+    idea {
+        module {
+            sourceDirs += file("$buildDir/generated-src/version-info")
+        }
+    }
 }
 
 // The graphics module is needed for any graphical JavaFX application. It requires
@@ -858,6 +927,14 @@ project(":graphics") {
     }
 
     task("native", dependsOn: [nativeGlass, nativePrism, nativePrismSW, nativeDecora])
+
+    idea {
+        module {
+            sourceDirs += new File(buildDir, "headers");
+            excludeDirs += new File(buildDir, "native");
+            testSourceDirs += [file("src/stub/java"), file("src/stub/resources")];
+        }
+    }
 }
 
 project(":controls") {
@@ -1130,4 +1207,135 @@ task javadoc(type: Javadoc) {
     options.addBooleanOption("Xdoclint:none").setValue(!IS_DOC_LINT);
 
     dependsOn(subprojects.collect { project -> project.getTasksByName("classes", true)});
+}
+
+/**
+ * I want to keep all the project files and out directory and such all hidden from the filesystem
+ * for the most part, so we don't have a lot of .iml files strewn about. So what we will do is
+ * to redirect all of the .iml files into a .idea directory on the root project level, and stash the
+ * out/ for all the projects there as well as the project module definition files.
+ */
+idea {
+    project {
+        jdkName = "JavaFX 1.7"
+        languageLevel = "1.7"
+        wildcards += ["?*.css", "?*.bss", "?*.glsl", "?*.frag", "?*.ttf", "?*.txt", "?*.fxml"]
+        ipr {
+
+            withXml { xmlProvider ->
+                def root = xmlProvider.asNode();
+                def doc = root.depthFirst();
+
+                // Set the copyright. Look for this:
+                //   <component name="CopyrightManager" default="">
+                //     <module2copyright/>
+                //   </component>
+                def copyrightManager = doc.find { it.name() == "component" && it.@name == "CopyrightManager" };
+                copyrightManager.@default="OpenJFX";
+                def module2copyright = copyrightManager.get("module2copyright");
+                module2copyright.replaceNode {
+                    copyright {
+                        option(name: "notice", value:
+"""Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+
+This code is free software; you can redistribute it and/or modify it
+under the terms of the GNU General Public License version 2 only, as
+published by the Free Software Foundation.  Oracle designates this
+particular file as subject to the "Classpath" exception as provided
+by Oracle in the LICENSE file that accompanied this code.
+
+This code is distributed in the hope that it will be useful, but WITHOUT
+ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+version 2 for more details (a copy is included in the LICENSE file that
+accompanied this code).
+
+You should have received a copy of the GNU General Public License version
+2 along with this work; if not, write to the Free Software Foundation,
+Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+
+Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+or visit www.oracle.com if you need additional information or have any
+questions.""");
+                        option(name: "keyword", value: "Copyright");
+                        option(name: "allowReplaceKeyword", value: "");
+                        option(name: "myName", value: "OpenJFX");
+                        option(name: "myLocal", value: "true");
+                    }
+                }
+
+                // Remove some setting and change the project output directory
+                def projectRootManager = doc.find { it.name() == "component" && it.@name == "ProjectRootManager" };
+                projectRootManager.attributes.remove("assert-jdk-15");
+                projectRootManager.children()[0].@url = "file://\$PROJECT_DIR\$/.idea-out";
+
+                // Add in some custom dictionary stuff so that people get fewer green-squigglies
+                // in their code. Nothing like a green squiggly to ruin my day.
+                copyrightManager.plus {
+                    component(name: "ProjectDictionaryState") {
+                        dictionary(name: "javafx") {
+                            words {
+                                w (text: "backoff")
+                                w (text: "blhr")
+                                w (text: "blvr")
+                                w (text: "brhr")
+                                w (text: "brvr")
+                                w (text: "gradle")
+                                w (text: "gzip")
+                                w (text: "halignment")
+                                w (text: "interpolator")
+                                w (text: "jfxrt")
+                                w (text: "multithreaded")
+                                w (text: "redoable")
+                                w (text: "resized")
+                                w (text: "squigglies")
+                                w (text: "subclassing")
+                                w (text: "timeline")
+                                w (text: "timeline's")
+                                w (text: "tlhr")
+                                w (text: "tlvr")
+                                w (text: "trhr")
+                                w (text: "trvr")
+                                w (text: "unmanaged")
+                                w (text: "unselect")
+                                w (text: "urlencoded")
+                                w (text: "valignment")
+                            }
+                        }
+                    }
+                }
+
+                // Setup some common project settings like tabs vs. spaces
+                copyrightManager.plus {
+                    component(name: "CodeStyleSettingsManager") {
+                        option(name: "PER_PROJECT_SETTINGS") {
+                            value {
+                                ADDITIONAL_INDENT_OPTIONS(fileType: "java") {
+                                    option (name: "IDENT_SIZE", value: "4")
+                                    option (name: "CONTINUATION_INDENT_SIZE", value: "8")
+                                    option (name: "TAB_SIZE", value: "4")
+                                    option (name: "USE_TAB_CHARACTER", value: "false")
+                                    option (name: "SMART_TABS", value: "false")
+                                    option (name: "LABEL_INDENT_SIZE", value: "0")
+                                    option (name: "LABEL_INDENT_ABSOLUTE", value: "false")
+                                    option (name: "USE_RELATIVE_INDENTS", value: "false")
+                                }
+                                ADDITIONAL_INDENT_OPTIONS(fileType: "xml") {
+                                    option (name: "IDENT_SIZE", value: "4")
+                                    option (name: "CONTINUATION_INDENT_SIZE", value: "8")
+                                    option (name: "TAB_SIZE", value: "4")
+                                    option (name: "USE_TAB_CHARACTER", value: "false")
+                                    option (name: "SMART_TABS", value: "false")
+                                    option (name: "LABEL_INDENT_SIZE", value: "0")
+                                    option (name: "LABEL_INDENT_ABSOLUTE", value: "false")
+                                    option (name: "USE_RELATIVE_INDENTS", value: "false")
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
