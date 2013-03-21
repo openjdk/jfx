@@ -72,10 +72,9 @@ public class CustomColorDialog extends StackPane {
 
     private Color currentColor = Color.WHITE;
     private ObjectProperty<Color> customColorProperty = new SimpleObjectProperty<Color>(Color.TRANSPARENT);
-    private boolean saveCustomColor = false;
-    private boolean useCustomColor = false;
-    private Button saveButton;
-    private Button useButton;
+    private Runnable onSave;
+    private Runnable onUse;
+    private Runnable onCancel;
     
     private WebColorField webField = null;
     private Scene customScene;
@@ -117,20 +116,28 @@ public class CustomColorDialog extends StackPane {
         return customColorProperty;
     }
 
-    boolean isSaveCustomColor() {
-        return saveCustomColor;
+    public Runnable getOnSave() {
+        return onSave;
     }
 
-    boolean isUseCustomColor() {
-        return useCustomColor;
+    public void setOnSave(Runnable onSave) {
+        this.onSave = onSave;
     }
 
-    Button getSaveButton() {
-        return saveButton;
+    public Runnable getOnUse() {
+        return onUse;
     }
 
-    Button getUseButton() {
-        return useButton;
+    public void setOnUse(Runnable onUse) {
+        this.onUse = onUse;
+    }
+
+    public Runnable getOnCancel() {
+        return onCancel;
+    }
+
+    public void setOnCancel(Runnable onCancel) {
+        this.onCancel = onCancel;
     }
 
     Stage getDialog() {
@@ -597,10 +604,9 @@ public class CustomColorDialog extends StackPane {
             
             buttonBox = new HBox(4);
             
-            saveButton = new Button("Save");
+            Button saveButton = new Button("Save");
             saveButton.setOnAction(new EventHandler<ActionEvent>() {
                 @Override public void handle(ActionEvent t) {
-                    saveCustomColor = true;
                     if (colorSettingsMode == ColorSettingsMode.WEB) {
                         customColorProperty.set(webField.valueProperty().get());
                     } else {
@@ -608,20 +614,23 @@ public class CustomColorDialog extends StackPane {
                             colorRectPane.green.get(), colorRectPane.blue.get(), 
                             clamp(colorRectPane.alpha.get() / 100)));
                     }
+                    if (onSave != null) {
+                        onSave.run();
+                    }
                     dialog.hide();
-                    saveCustomColor = false;
                 }
             });
             
-            useButton = new Button("Use");
+            Button useButton = new Button("Use");
             useButton.setOnAction(new EventHandler<ActionEvent>() {
                 @Override public void handle(ActionEvent t) {
-                    useCustomColor = true;
                     customColorProperty.set(Color.rgb(colorRectPane.red.get(), 
                             colorRectPane.green.get(), colorRectPane.blue.get(), 
                             clamp(colorRectPane.alpha.get() / 100)));
+                    if (onUse != null) {
+                        onUse.run();
+                    }
                     dialog.hide();
-                    useCustomColor = false;
                 }
             });
             
@@ -629,6 +638,9 @@ public class CustomColorDialog extends StackPane {
             cancelButton.setOnAction(new EventHandler<ActionEvent>() {
                 @Override public void handle(ActionEvent e) {
                     customColorProperty.set(currentColor);
+                    if (onCancel != null) {
+                        onCancel.run();
+                    }
                     dialog.hide();
                 }
             });
