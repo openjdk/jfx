@@ -906,7 +906,6 @@ public class CustomColorDialog extends StackPane {
     }
     
     private static int doubleToInt(double value) {
-        // RT-27731 regression : reverting back to this - even though findbugs may complain.
-        return new Double(value*255).intValue();
+        return (int) (value * 255 + 0.5); // Adding 0.5 for rounding only
     }
 }
