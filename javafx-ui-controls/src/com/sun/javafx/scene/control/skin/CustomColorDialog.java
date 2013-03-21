@@ -902,7 +902,7 @@ public class CustomColorDialog extends StackPane {
             int h = (int)((y / 255.0) * 360);
             stops[y] = new Stop(offset, Color.hsb(h, 1.0, 1.0));
         }
-        return new LinearGradient(0f, 1f, 1f, 0f, true, CycleMethod.NO_CYCLE, stops);
+        return new LinearGradient(0f, 1f, 0f, 0f, true, CycleMethod.NO_CYCLE, stops);
     }
     
     private static int doubleToInt(double value) {
