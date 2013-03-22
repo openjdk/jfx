@@ -32,6 +32,7 @@ import com.sun.javafx.jmx.MXNodeAlgorithm;
 import com.sun.javafx.jmx.MXNodeAlgorithmContext;
 import com.sun.javafx.scene.CssFlags;
 import com.sun.javafx.scene.DirtyBits;
+import com.sun.javafx.scene.SubSceneAccess;
 import com.sun.javafx.scene.input.PickResultChooser;
 import com.sun.javafx.scene.traversal.TraversalEngine;
 import com.sun.javafx.sg.PGNode;
@@ -43,6 +44,7 @@ import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ObjectPropertyBase;
 import javafx.geometry.NodeOrientation;
 import javafx.geometry.Point3D;
+import javafx.scene.input.PickResult;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
 
@@ -581,30 +583,19 @@ public class SubScene extends Node {
      * Generates a pick ray based on local coordinates and camera. Then finds a
      * top-most child node that intersects the pick ray.
      */
-    private void pickRootSG(double localX, double localY, PickResultChooser result) {
+    private PickResult pickRootSG(double localX, double localY) {
         double viewWidth = getWidth();
         double viewHeight = getHeight();
         if (localX < 0 || localY < 0 || localX > viewWidth || localY > viewHeight) {
-            return;
+            return null;
         }
-        PickResultChooser subSceneChooser = new PickResultChooser();
         Camera camera = getCamera() == null ? getDefaultCamera() : getCamera();
+        final PickResultChooser result = new PickResultChooser();
         PickRay pickRay = camera.computePickRay(localX, localY,
                                                 viewWidth, viewHeight,
                                                 new PickRay());
-        getRoot().impl_pickNode(pickRay, subSceneChooser);
-        if (!subSceneChooser.isEmpty()) {
-            /*
-             * The trouble with PickResultChooser it does not allow to
-             * change result of picking, once it has found a result.
-             * SubScene is special it should picked SubScene nodes over
-             * itself.
-             * Since we need to determine where and if subScene is picked,
-             * and if so then check if subScene nodes are picked.
-             */
-            // TODO: PickResultChooser.impl_setPickResult method was added to get around above
-            result.impl_setPickResult(subSceneChooser);
-        }
+        getRoot().impl_pickNode(pickRay, result);
+        return result.toPickResult(!pickRay.isParallel());
     }
 
     /**
@@ -616,9 +607,17 @@ public class SubScene extends Node {
      */
     @Deprecated @Override
     protected void impl_pickNodeLocal(PickRay localPickRay, PickResultChooser result) {
-        if (impl_intersects(localPickRay, result)) {
-            Point3D intersectPt = result.getIntersectedPoint();
-            pickRootSG(intersectPt.getX(), intersectPt.getY(), result);
+        double boundsDistance = impl_intersectsBounds(localPickRay);
+        if (!Double.isNaN(boundsDistance) && result.isCloser(boundsDistance)) {
+            Point3D intersectPt = PickResultChooser.computePoint(localPickRay, boundsDistance);
+            PickResult subSceneResult =
+                    pickRootSG(intersectPt.getX(), intersectPt.getY());
+            if (result != null) {
+                result.offerSubScenePickResult(this, subSceneResult, boundsDistance);
+            } else if (isPickOnBounds() ||
+                    subSceneComputeContains(intersectPt.getX(), intersectPt.getY())) {
+                result.offer(this, boundsDistance, intersectPt);
+            }
         }
     }
 
@@ -631,4 +630,20 @@ public class SubScene extends Node {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
+    /**
+     * This class is used by classes in different packages to get access to
+     * private and package private methods.
+     */
+    private static class SubSceneAccessImpl extends SubSceneAccess {
+
+        @Override
+        public boolean isDepthBuffer(SubScene subScene) {
+            return subScene.depthBuffer;
+        };
+
+    }
+
+    static {
+        SubSceneAccess.setSubSceneAccess(new SubSceneAccessImpl());
+    }
 }

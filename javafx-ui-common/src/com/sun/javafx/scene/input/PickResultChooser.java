@@ -28,9 +28,11 @@ package com.sun.javafx.scene.input;
 import com.sun.javafx.geom.PickRay;
 import com.sun.javafx.geom.Vec3d;
 import com.sun.javafx.scene.NodeAccess;
+import com.sun.javafx.scene.SubSceneAccess;
 import javafx.geometry.Point2D;
 import javafx.geometry.Point3D;
 import javafx.scene.Node;
+import javafx.scene.SubScene;
 import javafx.scene.input.PickResult;
 
 /**
@@ -85,26 +87,6 @@ public class PickResultChooser {
     }
 
     /**
-     * This method is introduced as a workaround for SubScene, in order to
-     * force a pick result without regard to distance. And is needed since
-     * nodes in a SubScene usually exist in a different coordinates system from
-     * nodes in a Scene, as they have different transform, camera...
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and
-     * will be removed in the next version
-     */
-    @Deprecated
-    public void impl_setPickResult(PickResultChooser result) {
-        this.distance = result.getIntersectedDistance();
-        this.face = result.getIntersectedFace();
-        this.node = result.getIntersectedNode();
-        this.empty = node == null ? true : false;
-        point = result.getIntersectedPoint();
-        texCoord = result.getIntersectedTexCoord();
-        this.closed = result.isClosed();
-    }
-
-    /**
      * Returns true if the given distance is smaller than the distance stored
      * in this instance.
      * @param distance The distance to compare
@@ -145,7 +127,7 @@ public class PickResultChooser {
      * @return true if the offered intersection has been used
      */
     public boolean offer(Node node, double distance, int face, Point3D point, Point2D texCoord) {
-        return processOffer(node, distance, point, face, texCoord);
+        return processOffer(node, node, distance, point, face, texCoord);
     }
 
     /**
@@ -162,7 +144,24 @@ public class PickResultChooser {
      * @return true if the offered intersection has been used
      */
     public boolean offer(Node node, double distance, Point3D point) {
-        return processOffer(node, distance, point, PickResult.FACE_UNDEFINED, null);
+        return processOffer(node, node, distance, point, PickResult.FACE_UNDEFINED, null);
+    }
+
+    /**
+     * Offers an intersection found inside a SubScene.
+     * @param subScene SubScene where the result was picked
+     * @param pickResult Picking result from the subScene
+     * @param distance distance from the camera to the intersection point
+     *                 with the subScene plane
+     * @return true if the offered intersection has been used
+     */
+    public boolean offerSubScenePickResult(SubScene subScene, PickResult pickResult, double distance) {
+        if (pickResult == null) {
+            return false;
+        }
+        return processOffer(pickResult.getIntersectedNode(), subScene, distance,
+                pickResult.getIntersectedPoint(), pickResult.getIntersectedFace(),
+                pickResult.getIntersectedTexCoord());
     }
 
     /**
@@ -170,16 +169,26 @@ public class PickResultChooser {
      * @see PickResultChooser#offer(javafx.scene.Node, double, int, javafx.geometry.Point3D, javafx.geometry.Point2D)
      * @see PickResultChooser#offer(javafx.scene.Node, double, javafx.geometry.Point3D)
      * @param node The intersected node
+     * @param depthTestNode The node whose depthTest is considered. When
+     *        processing subScene pick result we need to consider the inner
+     *        picked node but subScene's depth test
      * @param distance The intersected distance measured in pickRay direction magnitudes
      * @param point The intersection point
      * @param face The intersected face
      * @param texCoord The intersected texture coordinates
      * @return true if the offered intersection has been used
      */
-    private boolean processOffer(Node node, double distance, Point3D point, int face, Point2D texCoord) {
+    private boolean processOffer(Node node, Node depthTestNode, double distance,
+            Point3D point, int face, Point2D texCoord) {
 
-        final boolean hasDepthTest = node.getScene().isDepthBuffer()
-                && NodeAccess.getNodeAccess().isDerivedDepthTest(node);
+        final NodeAccess na = NodeAccess.getNodeAccess();
+        final SubSceneAccess sa = SubSceneAccess.getSubSceneAccess();
+        final SubScene subScene = na.getSubScene(depthTestNode);
+        final boolean hasDepthBuffer = subScene != null
+                ? sa.isDepthBuffer(subScene)
+                : depthTestNode.getScene().isDepthBuffer();
+        final boolean hasDepthTest = 
+                hasDepthBuffer && na.isDerivedDepthTest(depthTestNode);
 
         boolean accepted = false;
         if ((empty || (hasDepthTest && distance < this.distance)) && !closed) {

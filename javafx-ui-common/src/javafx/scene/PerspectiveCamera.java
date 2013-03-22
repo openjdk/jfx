@@ -163,12 +163,7 @@ public  class PerspectiveCamera extends Camera {
         eye.set(halfViewWidth, halfViewHeight, -distanceZ);
         // set eye at center of viewport and move back so that projection plane
         // is at Z = 0
-        /*
-         * TODO: Fix for RT-28446 Introduced a parallel property on PickRay. If
-         * the parallel property is set correctly on PickRay, it breaks subscene
-         * picking. Once RT-29106 is fixed uncomment the below line.
-         */
-//        if (pickRay.isParallel()) { pickRay.set(eye, direction); }
+        if (pickRay.isParallel()) { pickRay.set(eye, direction); }
         final BaseTransform cameraTX = impl_getLeafTransform();
         pickRay.transform(cameraTX);
 

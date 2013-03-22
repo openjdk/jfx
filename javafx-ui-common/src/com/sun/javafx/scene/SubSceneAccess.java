@@ -25,14 +25,12 @@
 
 package com.sun.javafx.scene;
 
-import javafx.scene.Node;
 import javafx.scene.SubScene;
 
-public abstract class NodeAccess {
+public abstract class SubSceneAccess {
+    private static SubSceneAccess access;
 
-    private static NodeAccess access;
-
-    public static synchronized void setNodeAccess(NodeAccess acc) {
+    public static synchronized void setSubSceneAccess(SubSceneAccess acc) {
         if (access == null) {
             access = acc;
         }
@@ -41,11 +39,9 @@ public abstract class NodeAccess {
     /**
      * Return the accessor created by the Node class when its loaded.
      */
-    public static synchronized NodeAccess getNodeAccess() {
+    public static synchronized SubSceneAccess getSubSceneAccess() {
         return access;
     }
 
-    public abstract void layoutNodeForPrinting(Node node);
-    public abstract boolean isDerivedDepthTest(Node node);
-    public abstract SubScene getSubScene(Node node);
+    public abstract boolean isDepthBuffer(SubScene subScene);
 }

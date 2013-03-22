@@ -8642,6 +8642,11 @@ public abstract class Node implements EventTarget, Styleable {
         public boolean isDerivedDepthTest(Node node) {
             return node.isDerivedDepthTest();
         }
+
+        @Override
+        public SubScene getSubScene(Node node) {
+            return node.getSubScene();
+        }    
     }
 
     static {

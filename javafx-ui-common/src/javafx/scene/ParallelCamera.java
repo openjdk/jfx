@@ -80,15 +80,7 @@ public class ParallelCamera extends Camera {
         if (pickRay == null) {
             pickRay = new PickRay();
         }
-        pickRay.setOrigin(new Vec3d(localX, localY, -1.0));
-        pickRay.setDirection(new Vec3d(0.0, 0.0, 1.0));
-        /*
-         * TODO: Fix for RT-28446 Introduced a parallel property on PickRay. If
-         * the parallel property is set correctly on PickRay, it breaks subscene
-         * picking. Once RT-29106 is fixed remove above two lines and replace
-         * with the line below:
-         */
-//        pickRay.set(localY, localY);
+        pickRay.set(localY, localY);
         return pickRay;
     }
 }
