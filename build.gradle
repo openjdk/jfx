@@ -608,8 +608,7 @@ allprojects {
         options.links(JDK_DOCS);
         options.addBooleanOption("XDignore.symbol.file").setValue(true);
         options.addBooleanOption("Xdoclint:none").setValue(!IS_DOC_LINT);
-        // TODO Re-enable when this option is fixed in the JDK
-//        options.addBooleanOption("javafx").setValue(true);
+        options.addBooleanOption("javafx").setValue(true);
     }
 
     // Configure all projects to include $buildDir/builder-src in the generated IDEA project files.
@@ -1174,8 +1173,7 @@ task javadoc(type: Javadoc) {
     options.links(JDK_DOCS);
     options.addBooleanOption("XDignore.symbol.file").setValue(true);
     options.addBooleanOption("Xdoclint:none").setValue(!IS_DOC_LINT);
-    // TODO Re-enable when this option is fixed in the JDK
-//    options.addBooleanOption("javafx").setValue(true);
+    options.addBooleanOption("javafx").setValue(true);
 
     dependsOn(subprojects.collect { project -> project.getTasksByName("classes", true)});
 }

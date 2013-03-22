@@ -96,7 +96,7 @@ task generate << {
              "${RTDir}/decora-compiler/src"
         into "${FXDir}/build-tools/src/main/resources"
         include includeResources
-        exclude "**/doc-files/**.*", "**/META-INF"
+        exclude "**/doc-files/**.*", "**/META-INF/**/*"
     }
     copy {
         from "${RTDir}/decora-compiler/src/com/sun/scenario/effect/compiler/JSL.g"
