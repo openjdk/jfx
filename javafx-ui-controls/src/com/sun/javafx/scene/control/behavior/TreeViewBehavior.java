@@ -253,6 +253,10 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
         }
     }
     
+    public void dispose() {
+        TreeCellBehavior.removeAnchor(getControl());
+    }
+    
     private void setAnchor(int anchor) {
         TreeCellBehavior.setAnchor(getControl(), anchor);
     }

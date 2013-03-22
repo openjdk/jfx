@@ -310,7 +310,7 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
      * Returns true if there is an anchor set, and false if not anchor is set.
      */
     protected abstract boolean hasAnchor();
-
+    
     /**
      * Returns the number of items in the underlying data model.
      */
@@ -447,6 +447,16 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
         }
     }
     
+    public void dispose() {
+        removeAnchor();
+    }
+
+    /** 
+     * Removes the anchor for this control.
+     */
+    public void removeAnchor() {
+        TableCellBehaviorBase.removeAnchor(getControl());
+    }
     
     
     /**************************************************************************

@@ -79,6 +79,7 @@ public class ListViewKeyInputTest {
     }
     
     @After public void tearDown() {
+        listView.getSkin().dispose();
         stage.hide();
     }
     

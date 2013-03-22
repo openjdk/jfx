@@ -29,6 +29,7 @@ import com.sun.javafx.Utils;
 import com.sun.javafx.scene.control.behavior.TreeTableViewAnchorRetriever;
 import com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
 import com.sun.javafx.scene.control.infrastructure.KeyModifier;
+import com.sun.javafx.scene.control.skin.TreeTableViewSkin;
 
 import static org.junit.Assert.*;
 
@@ -129,6 +130,7 @@ public class TreeTableViewKeyInputTest {
     }
     
     @After public void tearDown() {
+        tableView.getSkin().dispose();
         stage.hide();
     }
     

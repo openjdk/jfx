@@ -89,6 +89,7 @@ public class TableViewKeyInputTest {
     }
     
     @After public void tearDown() {
+        tableView.getSkin().dispose();
         stage.hide();
     }
     

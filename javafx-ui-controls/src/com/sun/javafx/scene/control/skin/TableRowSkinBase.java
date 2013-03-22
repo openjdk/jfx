@@ -28,17 +28,15 @@ package com.sun.javafx.scene.control.skin;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.WeakHashMap;
 
-import javafx.collections.ListChangeListener;
-
-import com.sun.javafx.scene.control.behavior.CellBehaviorBase;
-import java.util.Map;
 import javafx.animation.FadeTransition;
 import javafx.beans.property.ObjectProperty;
-import javafx.collections.WeakListChangeListener;
+import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.collections.ObservableMap;
+import javafx.collections.WeakListChangeListener;
 import javafx.geometry.HPos;
 import javafx.geometry.Insets;
 import javafx.geometry.VPos;
@@ -47,6 +45,10 @@ import javafx.scene.control.Control;
 import javafx.scene.control.IndexedCell;
 import javafx.scene.control.TableColumnBase;
 import javafx.util.Duration;
+
+import com.sun.javafx.pgstub.StubToolkit;
+import com.sun.javafx.scene.control.behavior.CellBehaviorBase;
+import com.sun.javafx.tk.Toolkit;
 
 /**
  */
@@ -724,16 +726,34 @@ public abstract class TableRowSkinBase<T,
     
     private static final Duration FADE_DURATION = Duration.millis(200);
     
+    // There appears to be a memory leak when using the stub toolkit. Therefore,
+    // to prevent tests from failing we disable the animations below when the
+    // stub toolkit is being used.
+    // Filed as RT-29163.
+    private static boolean IS_STUB_TOOLKIT = Toolkit.getToolkit() instanceof StubToolkit;
+    
     private void fadeOut(final Node node) {
         if (node.getOpacity() < 1.0) return;
-        FadeTransition fader = new FadeTransition(FADE_DURATION, node);
+        
+        if (IS_STUB_TOOLKIT) {
+            node.setOpacity(0);
+            return;
+        }
+        
+        final FadeTransition fader = new FadeTransition(FADE_DURATION, node);
         fader.setToValue(0.0);
         fader.play();
     }
     
     private void fadeIn(final Node node) {
         if (node.getOpacity() > 0.0) return;
-        FadeTransition fader = new FadeTransition(FADE_DURATION, node);
+        
+        if (IS_STUB_TOOLKIT) {
+            node.setOpacity(1);
+            return;
+        }
+        
+        final FadeTransition fader = new FadeTransition(FADE_DURATION, node);
         fader.setToValue(1.0);
         fader.play();
     }
