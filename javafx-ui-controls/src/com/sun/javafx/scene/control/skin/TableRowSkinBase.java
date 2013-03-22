@@ -46,7 +46,6 @@ import javafx.scene.control.IndexedCell;
 import javafx.scene.control.TableColumnBase;
 import javafx.util.Duration;
 
-import com.sun.javafx.pgstub.StubToolkit;
 import com.sun.javafx.scene.control.behavior.CellBehaviorBase;
 import com.sun.javafx.tk.Toolkit;
 
@@ -730,7 +729,7 @@ public abstract class TableRowSkinBase<T,
     // to prevent tests from failing we disable the animations below when the
     // stub toolkit is being used.
     // Filed as RT-29163.
-    private static boolean IS_STUB_TOOLKIT = Toolkit.getToolkit() instanceof StubToolkit;
+    private static boolean IS_STUB_TOOLKIT = Toolkit.getToolkit().toString().contains("StubToolkit");
     
     private void fadeOut(final Node node) {
         if (node.getOpacity() < 1.0) return;
