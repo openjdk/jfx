@@ -655,60 +655,10 @@ public class CustomColorDialog extends StackPane {
                 Region spacer2 = new Region();
                 spacer2.setPrefHeight(3);
                 hsbSettings.add(spacer2, 0, 0, 3, 1);
-
-                // Hue
-                Label hueLabel = new Label("Hue:");
-                hueLabel.setMinWidth(68);
-                hsbSettings.add(hueLabel, 0, 1);
-
-                Slider hueSlider = new Slider(0, 360, 100);
-                hueSlider.setPrefWidth(100);
-                hsbSettings.add(hueSlider, 1, 1);
-
-                IntegerField hueField = new IntegerField(360);
-                hueField.setSkin(new IntegerFieldSkin(hueField));
-                hueField.setPrefColumnCount(3);
-                hueField.setMaxWidth(38);
-                hsbSettings.add(hueField, 2, 1);
-                hueField.valueProperty().bindBidirectional(colorRectPane.hue);
-                hueSlider.valueProperty().bindBidirectional(colorRectPane.hue);
                 
-                // Saturation
-                Label saturationLabel = new Label("Saturation:");
-                saturationLabel.setMinWidth(68);
-                hsbSettings.add(saturationLabel, 0, 2);
-
-                Slider saturationSlider = new Slider(0, 100, 50);
-                saturationSlider.setPrefWidth(100);
-                hsbSettings.add(saturationSlider, 1, 2);
-                
-                IntegerField saturationField = new IntegerField(100);
-                saturationField.setSkin(new IntegerFieldSkin(saturationField));
-                saturationField.setPrefColumnCount(3);
-                saturationField.setMaxWidth(38);
-                hsbSettings.add(saturationField, 2, 2);
-                saturationField.valueProperty().bindBidirectional(colorRectPane.sat);
-                saturationSlider.valueProperty().bindBidirectional(colorRectPane.sat);
-                
-                // Brightness
-                Label brightnessLabel = new Label("Brightness:");
-                brightnessLabel.setMinWidth(68);
-                hsbSettings.add(brightnessLabel, 0, 3);
-
-                Slider brightnessSlider = new Slider(0, 100, 50);
-                brightnessSlider.setPrefWidth(100);
-                hsbSettings.add(brightnessSlider, 1, 3);
-
-                IntegerField brightnessField = new IntegerField(100);
-                brightnessField.setSkin(new IntegerFieldSkin(brightnessField));
-                brightnessField.setPrefColumnCount(3);
-                brightnessField.setMaxWidth(38);
-                hsbSettings.add(brightnessField, 2, 3);
-//                colorRectPane.bright.bindBidirectional(brightnessSlider.valueProperty());
-//                colorRectPane.bright.bindBidirectional(brightnessField.valueProperty());
-                
-                brightnessField.valueProperty().bindBidirectional(colorRectPane.bright);
-                brightnessSlider.valueProperty().bindBidirectional(colorRectPane.bright);
+                addRow(1, "Hue:", 360, colorRectPane.hue, hsbSettings);
+                addRow(2, "Saturation:", 100, colorRectPane.sat, hsbSettings);
+                addRow(3, "Brightness:", 100, colorRectPane.bright, hsbSettings);
                 
                 Region spacer3 = new Region();
                 spacer3.setPrefHeight(4);
@@ -730,66 +680,16 @@ public class CustomColorDialog extends StackPane {
                 spacer2.setPrefHeight(3);
                 rgbSettings.add(spacer2, 0, 0, 3, 1);
 
-                Label redLabel = new Label("Red:");
-                redLabel.setMinWidth(68);
-                rgbSettings.add(redLabel, 0, 1);
-
-                // Red ----------------------------------------
-                Slider redSlider = new Slider(0, 255, 100);
-                redSlider.setPrefWidth(100);
-                rgbSettings.add(redSlider, 1, 1);
-
-                IntegerField redField = new IntegerField(255);
-                redField.setSkin(new IntegerFieldSkin(redField));
-//                redField.setPrefColumnCount(3);
-                redField.setMaxWidth(38);
-                rgbSettings.add(redField, 2, 1);
+                addRow(1, "Red:", 255, colorRectPane.red, rgbSettings);
+                addRow(2, "Green:", 255, colorRectPane.green, rgbSettings);
+                addRow(3, "Blue:", 255, colorRectPane.blue, rgbSettings);
                 
-                redField.valueProperty().bindBidirectional(colorRectPane.red);
-                redSlider.valueProperty().bindBidirectional(colorRectPane.red);
-                
-                // Green ----------------------------------------
-                Label greenLabel = new Label("Green:     ");
-                greenLabel.setMinWidth(68);
-                rgbSettings.add(greenLabel, 0, 2);
-
-                Slider greenSlider = new Slider(0, 255, 100);
-                greenSlider.setPrefWidth(100);
-                rgbSettings.add(greenSlider, 1, 2);
-
-                IntegerField greenField = new IntegerField(255);
-                greenField.setSkin(new IntegerFieldSkin(greenField));
-//                greenField.setPrefColumnCount(3);
-                greenField.setMaxWidth(38);
-                rgbSettings.add(greenField, 2, 2);
-                
-                greenField.valueProperty().bindBidirectional(colorRectPane.green);
-                greenSlider.valueProperty().bindBidirectional(colorRectPane.green);
-
-                // Blue ----------------------------------------
-                Label blueLabel = new Label("Blue:      ");
-//                blueLabel.setMinWidth(Control.USE_PREF_SIZE);
-                blueLabel.setMinWidth(68);
-                rgbSettings.add(blueLabel, 0, 3);
-
-                Slider blueSlider = new Slider(0, 255, 100);
-                blueSlider.setPrefWidth(100);
-                rgbSettings.add(blueSlider, 1, 3);
-
-                IntegerField blueField = new IntegerField(255);
-                blueField.setSkin(new IntegerFieldSkin(blueField));
-//                blueField.setPrefColumnCount(3);
-                blueField.setMaxWidth(38);
-                rgbSettings.add(blueField, 2, 3);
-
                 Region spacer3 = new Region();
                 spacer3.setPrefHeight(4);
                 rgbSettings.add(spacer3, 0, 4, 3, 1);
-                
-                blueField.valueProperty().bindBidirectional(colorRectPane.blue);
-                blueSlider.valueProperty().bindBidirectional(colorRectPane.blue);
             }
             settingsPane.getChildren().setAll(rgbSettings);
+            settingsPane.requestLayout();
         }
         
         private void showWebSettings() {
@@ -878,6 +778,24 @@ public class CustomColorDialog extends StackPane {
         
         @Override public double computePrefWidth(double height) {
             return getInsets().getLeft() + CONTROLS_WIDTH + getInsets().getRight();
+        }
+
+        private void addRow(int row, String caption, int maxValue, Property<Number> prop, GridPane gridPane) {
+            Label label = new Label(caption);
+            label.setMinWidth(68);
+            gridPane.add(label, 0, row);
+
+            Slider slider = new Slider(0, maxValue, 100);
+            slider.setPrefWidth(100);
+            gridPane.add(slider, 1, row);
+
+            IntegerField field = new IntegerField(maxValue);
+            field.setSkin(new IntegerFieldSkin(field));
+            field.setPrefColumnCount(3);
+            field.setMaxWidth(38);
+            gridPane.add(field, 2, row);
+            field.valueProperty().bindBidirectional(prop);
+            slider.valueProperty().bindBidirectional(prop);
         }
     }
     
