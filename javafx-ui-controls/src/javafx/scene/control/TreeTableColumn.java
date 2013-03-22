@@ -46,6 +46,7 @@ import javafx.event.EventHandler;
 import javafx.event.EventTarget;
 import javafx.event.EventType;
 import javafx.scene.Node;
+import javafx.scene.control.TableColumn.SortType;
 import javafx.util.Callback;
 import javafx.css.Styleable;
 import com.sun.javafx.scene.control.skin.TableViewSkinBase;
@@ -438,6 +439,30 @@ public class TreeTableColumn<S,T> extends TableColumnBase<TreeItem<S>,T> impleme
     }
     
     
+    // --- Sort Type
+    /**
+     * Used to state whether this column, if it is part of a sort order (see
+     * {@link TreeTableView#getSortOrder()} for more details), should be sorted 
+     * in ascending or descending order. 
+     * Simply toggling this property will result in the sort order changing in 
+     * the TreeTableView, assuming of course that this column is in the 
+     * sortOrder ObservableList to begin with.
+     */
+    private ObjectProperty<SortType> sortType;
+    public final ObjectProperty<SortType> sortTypeProperty() {
+        if (sortType == null) {
+            sortType = new SimpleObjectProperty<SortType>(this, "sortType", SortType.ASCENDING);
+        }
+        return sortType;
+    }
+    public final void setSortType(SortType value) {
+        sortTypeProperty().set(value);
+    }
+    public final SortType getSortType() {
+        return sortType == null ? SortType.ASCENDING : sortType.get();
+    }
+    
+    
     // --- On Edit Start
     /**
      * This event handler will be fired when the user successfully initiates
@@ -798,5 +823,23 @@ public class TreeTableColumn<S,T> extends TableColumnBase<TreeItem<S>,T> impleme
 
             return treeTable.getTreeItem(row);
         }
+    }
+    
+    /**
+     * Enumeration that specifies the type of sorting being applied to a specific
+     * column.
+     */
+    public static enum SortType {
+        /**
+         * Column will be sorted in an ascending order.
+         */
+        ASCENDING,
+        
+        /**
+         * Column will be sorted in a descending order.
+         */
+        DESCENDING;
+        
+        // UNSORTED
     }
 }

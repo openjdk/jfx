@@ -25,7 +25,7 @@
 
 package javafx.scene.control;
 
-import com.sun.javafx.scene.control.TableColumnComparator;
+import static com.sun.javafx.scene.control.TableColumnComparatorBase.TreeTableColumnComparator;
 import com.sun.javafx.scene.control.test.ControlAsserts;
 import com.sun.javafx.scene.control.test.Person;
 import com.sun.javafx.scene.control.test.RT_22463_Person;
@@ -45,8 +45,8 @@ import javafx.collections.ObservableList;
 import javafx.event.EventHandler;
 import javafx.scene.Group;
 import javafx.scene.Scene;
-import static javafx.scene.control.TableColumnBase.SortType.ASCENDING;
-import static javafx.scene.control.TableColumnBase.SortType.DESCENDING;
+import static javafx.scene.control.TreeTableColumn.SortType.ASCENDING;
+import static javafx.scene.control.TreeTableColumn.SortType.DESCENDING;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.control.cell.TreeItemPropertyValueFactory;
 import javafx.stage.Stage;
@@ -559,7 +559,7 @@ public class TreeTableViewTest {
         assertTrue(treeTableView.getSortOrder().isEmpty());
         
         treeTableView.getSortOrder().add(col);
-        TableColumnComparator c = (TableColumnComparator)treeTableView.getComparator();
+        TreeTableColumnComparator c = (TreeTableColumnComparator)treeTableView.getComparator();
         assertNotNull(c);
         ControlAsserts.assertListContainsItemsInOrder(c.getColumns(), col);
     }
@@ -571,7 +571,7 @@ public class TreeTableViewTest {
         assertTrue(treeTableView.getSortOrder().isEmpty());
         
         treeTableView.getSortOrder().add(col);
-        TableColumnComparator c = (TableColumnComparator)treeTableView.getComparator();
+        TreeTableColumnComparator c = (TreeTableColumnComparator)treeTableView.getComparator();
         assertNotNull(c);
         ControlAsserts.assertListContainsItemsInOrder(c.getColumns(), col);
         
@@ -583,7 +583,7 @@ public class TreeTableViewTest {
     
     @Test public void testFailedSortPolicyBacksOutComparatorChange_sortOrderAddition() {
         TreeTableColumn<String, String> col = initSortTestStructure();
-        final TableColumnComparator oldComparator = (TableColumnComparator)treeTableView.getComparator();
+        final TreeTableColumnComparator oldComparator = (TreeTableColumnComparator)treeTableView.getComparator();
         
         col.setSortType(DESCENDING);
         ControlAsserts.assertListContainsItemsInOrder(treeTableView.getRoot().getChildren(), apple, orange, banana);
@@ -596,13 +596,13 @@ public class TreeTableViewTest {
     
     @Test public void testFailedSortPolicyBacksOutComparatorChange_sortOrderRemoval() {
         TreeTableColumn<String, String> col = initSortTestStructure();
-        TableColumnComparator oldComparator = (TableColumnComparator)treeTableView.getComparator();
+        TreeTableColumnComparator oldComparator = (TreeTableColumnComparator)treeTableView.getComparator();
         assertNull(oldComparator);
 
         col.setSortType(DESCENDING);
         treeTableView.getSortOrder().add(col);
         ControlAsserts.assertListContainsItemsInOrder(treeTableView.getRoot().getChildren(), orange, banana, apple);
-        oldComparator = (TableColumnComparator)treeTableView.getComparator();
+        oldComparator = (TreeTableColumnComparator)treeTableView.getComparator();
         ControlAsserts.assertListContainsItemsInOrder(oldComparator.getColumns(), col);
         
         treeTableView.setSortPolicy(NO_SORT_FAILED_SORT_POLICY);
@@ -614,7 +614,7 @@ public class TreeTableViewTest {
     
     @Test public void testFailedSortPolicyBacksOutComparatorChange_sortTypeChange() {
         TreeTableColumn<String, String> col = initSortTestStructure();
-        final TableColumnComparator oldComparator = (TableColumnComparator)treeTableView.getComparator();
+        final TreeTableColumnComparator oldComparator = (TreeTableColumnComparator)treeTableView.getComparator();
         assertNull(oldComparator);
         
         treeTableView.setSortPolicy(NO_SORT_FAILED_SORT_POLICY);

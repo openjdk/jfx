@@ -29,7 +29,7 @@ import com.sun.javafx.collections.MappingChange;
 import com.sun.javafx.collections.annotations.ReturnsUnmodifiableCollection;
 import javafx.css.PseudoClass;
 import com.sun.javafx.scene.control.ReadOnlyUnbackedObservableList;
-import com.sun.javafx.scene.control.TableColumnComparator;
+import com.sun.javafx.scene.control.TableColumnComparatorBase;
 import com.sun.javafx.scene.control.skin.TableViewSkinBase;
 import javafx.event.WeakEventHandler;
 import com.sun.javafx.scene.control.skin.TreeTableViewSkin;
@@ -1604,14 +1604,14 @@ public class TreeTableView<S> extends Control {
      * something external changes and a sort is required.
      */
     public void sort() {
-        final ObservableList<? extends TableColumnBase> sortOrder = getSortOrder();
+        final ObservableList<TreeTableColumn<S,?>> sortOrder = getSortOrder();
         
         // update the Comparator property
         final Comparator<S> oldComparator = getComparator();
         if (sortOrder.isEmpty()) {
             setComparator(null);
         } else {
-            Comparator<S> newComparator = new TableColumnComparator(sortOrder);
+            Comparator<S> newComparator = new TableColumnComparatorBase.TreeTableColumnComparator(sortOrder);
             setComparator(newComparator);
         }
         
