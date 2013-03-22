@@ -561,6 +561,14 @@ public class SubScene extends Node {
         }
     }
 
+    /**
+     * Determines whether subScene contains the given point.
+     * It does not consider the contained nodes, only subScene's
+     * size and fills.
+     * @param localX horizontal coordinate in the local space of the subScene node
+     * @param localY vertical coordinate in the local space of the subScene node
+     * @return true if the point is inside subScene's area covered by its fill
+     */
     private boolean subSceneComputeContains(double localX, double localY) {
         if (localX < 0 || localY < 0 || localX > getWidth() || localY > getHeight()) {
             return false;
