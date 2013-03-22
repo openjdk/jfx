@@ -1308,3 +1308,10 @@ questions.""");
         }
     }
 }
+
+// This next section should remain at the end of the build script. It allows for a "supplemental"
+// gradle file to be used to extend the normal build structure. For example, this is used for
+// passing a supplemental gradle file for producing official JavaFX builds.
+if (hasProperty("SUPPLEMENTAL_BUILD_FILE")) {
+    apply from: SUPPLEMENTAL_BUILD_FILE
+}
