@@ -25,24 +25,27 @@
 
 package javafx.scene.control;
 
-import com.sun.javafx.Utils;
-import com.sun.javafx.scene.control.behavior.TreeViewAnchorRetriever;
-import com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
-import com.sun.javafx.scene.control.infrastructure.KeyModifier;
-
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 import java.util.List;
+
 import javafx.scene.Group;
 import javafx.scene.Scene;
-
 import javafx.scene.input.KeyCode;
 import javafx.stage.Stage;
-import org.junit.After;
 
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
+
+import com.sun.javafx.scene.control.behavior.TreeViewAnchorRetriever;
+import com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
+import com.sun.javafx.scene.control.infrastructure.KeyModifier;
+import com.sun.javafx.scene.control.skin.TreeViewSkin;
 
 //@Ignore("Disabling tests as they fail with OOM in continuous builds")
 public class TreeViewKeyInputTest {
@@ -119,6 +122,7 @@ public class TreeViewKeyInputTest {
     }
     
     @After public void tearDown() {
+        treeView.getSkin().dispose();
         stage.hide();
     }
     

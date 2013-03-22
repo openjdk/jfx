@@ -71,6 +71,10 @@ public abstract class TableCellBehaviorBase<T extends IndexedCell> extends CellB
         return map.containsKey(table) && map.get(table) != null;
     }
     
+    static void removeAnchor(Control table) {
+        map.remove(table);
+    }
+    
     
     
     /***************************************************************************

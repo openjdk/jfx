@@ -122,6 +122,11 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeViewB
         updateRowCount();
     }
     
+    @Override public void dispose() {
+        getBehavior().dispose();
+        super.dispose();
+    }
+    
     @Override protected void handleControlPropertyChanged(String p) {
         super.handleControlPropertyChanged(p);
         

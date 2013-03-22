@@ -365,6 +365,10 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
             tlFocus = new TwoLevelFocusListBehavior(control); // needs to be last.
         }
     }
+    
+    public void dispose() {
+        ListCellBehavior.removeAnchor(getControl());
+    }
 
     private void setAnchor(int anchor) {
         ListCellBehavior.setAnchor(getControl(), anchor);

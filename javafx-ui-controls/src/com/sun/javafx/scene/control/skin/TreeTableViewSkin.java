@@ -137,6 +137,13 @@ public class TreeTableViewSkin<S> extends TableViewSkinBase<S, TreeTableView<S>,
         registerChangeListener(treeTableView.rowFactoryProperty(), "ROW_FACTORY");
         registerChangeListener(treeTableView.expandedItemCountProperty(), "TREE_ITEM_COUNT");
     }
+    
+    @Override public void dispose() {
+        getBehavior().dispose();
+        treeItemToListMap.remove(getSkinnable());
+        
+        super.dispose();
+    }
 
     @Override protected void handleControlPropertyChanged(String p) {
         super.handleControlPropertyChanged(p);
@@ -173,9 +180,9 @@ public class TreeTableViewSkin<S> extends TableViewSkinBase<S, TreeTableView<S>,
      *                                                                         *
      **************************************************************************/
 
-    private final TreeTableViewBackingList<S> tableBackingList;
-    private final ObjectProperty/*<TreeTableViewBackingList<S>>*/ tableBackingListProperty;
-    private final TreeTableView<S> treeTableView;
+    private TreeTableViewBackingList<S> tableBackingList;
+    private ObjectProperty/*<TreeTableViewBackingList<S>>*/ tableBackingListProperty;
+    private TreeTableView<S> treeTableView;
     private WeakReference<TreeItem> weakRootRef;
     
     private EventHandler<TreeItem.TreeModificationEvent> rootListener = new EventHandler<TreeItem.TreeModificationEvent>() {

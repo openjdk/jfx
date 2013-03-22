@@ -75,6 +75,10 @@ public class TreeCellBehavior extends CellBehaviorBase<TreeCell<?>> {
         return map.containsKey(tree) && map.get(tree) != -1;
     }
     
+    static void removeAnchor(TreeView tree) {
+        map.remove(tree);
+    }
+    
     
     
     /***************************************************************************

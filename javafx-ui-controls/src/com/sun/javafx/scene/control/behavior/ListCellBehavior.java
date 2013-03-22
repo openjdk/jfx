@@ -66,6 +66,10 @@ public class ListCellBehavior extends CellBehaviorBase<ListCell> {
         return map.containsKey(list) && map.get(list) != -1;
     }
     
+    static void removeAnchor(ListView list) {
+        map.remove(list);
+    }
+    
     // For RT-17456: have selection occur as fast as possible with mouse input.
     // The idea is (consistently with some native applications we've tested) to 
     // do the action as soon as you can. It takes a bit more coding but provides
