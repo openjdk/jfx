@@ -560,6 +560,9 @@ public class SubScene extends Node {
     }
 
     private boolean subSceneComputeContains(double localX, double localY) {
+        if (localX < 0 || localY < 0 || localX > getWidth() || localY > getHeight()) {
+            return false;
+        }
         Paint paint = getFill();
         if (paint == null) { return false; }
         // Check if the background fill paint is opaque, then there is no point in looking further
