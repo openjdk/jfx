@@ -584,16 +584,16 @@ public class SubScene extends Node {
      * top-most child node that intersects the pick ray.
      */
     private PickResult pickRootSG(double localX, double localY) {
-        double viewWidth = getWidth();
-        double viewHeight = getHeight();
+        final double viewWidth = getWidth();
+        final double viewHeight = getHeight();
         if (localX < 0 || localY < 0 || localX > viewWidth || localY > viewHeight) {
             return null;
         }
-        Camera camera = getCamera() == null ? getDefaultCamera() : getCamera();
+        final Camera camera = getCamera() == null ? getDefaultCamera() : getCamera();
         final PickResultChooser result = new PickResultChooser();
-        PickRay pickRay = camera.computePickRay(localX, localY,
-                                                viewWidth, viewHeight,
-                                                new PickRay());
+        final PickRay pickRay = camera.computePickRay(localX, localY,
+                                                      viewWidth, viewHeight,
+                                                      new PickRay());
         getRoot().impl_pickNode(pickRay, result);
         return result.toPickResult(!pickRay.isParallel());
     }
@@ -607,10 +607,11 @@ public class SubScene extends Node {
      */
     @Deprecated @Override
     protected void impl_pickNodeLocal(PickRay localPickRay, PickResultChooser result) {
-        double boundsDistance = impl_intersectsBounds(localPickRay);
+        final double boundsDistance = impl_intersectsBounds(localPickRay);
         if (!Double.isNaN(boundsDistance) && result.isCloser(boundsDistance)) {
-            Point3D intersectPt = PickResultChooser.computePoint(localPickRay, boundsDistance);
-            PickResult subSceneResult =
+            final Point3D intersectPt = PickResultChooser.computePoint(
+                    localPickRay, boundsDistance);
+            final PickResult subSceneResult =
                     pickRootSG(intersectPt.getX(), intersectPt.getY());
             if (result != null) {
                 result.offerSubScenePickResult(this, subSceneResult, boundsDistance);
