@@ -1,8 +1,21 @@
+// Define settings for Mac compilation. This is much easier than Windows because we know what version we're
+// compiling against and Mac always puts it in the same place. In extreme cases you can provide your own
+// properties in your home dir to override these settings or pass them on the command line via -P
+defineProperty("MACOSX_MIN_VERSION", "10.7");
+defineProperty("MACOSX_SDK_PATH", "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX${MACOSX_MIN_VERSION}.sdk");
+defineProperty("MACOSX_JDK_FRAMEWORK", "/System/Library/Frameworks/JavaVM.framework");
+// Redefine the CC property to be gcc instead of the default g++ as defined in the main build file
+defineProperty("CC", "gcc");
+
+// Sanity check
+if (!IS_64) throw new Exception("Cannot compile on 32-bit Mac, only on 64-bit Mac");
+
 def commonParams = [
         "-mmacosx-version-min=$MACOSX_MIN_VERSION",
         "-isysroot", "$MACOSX_SDK_PATH",
         "-arch", "x86_64",
         "-F$MACOSX_JDK_FRAMEWORK/Frameworks"]
+
 ext.LINK_PARAMS = [
         "-framework", "AppKit",
         "-framework", "ApplicationServices",
@@ -11,6 +24,7 @@ ext.LINK_PARAMS = [
         "-framework", "OpenGL",
         "-framework", "QuartzCore",
         "-dynamiclib", "-lobjc", commonParams].flatten();
+
 ext.CC_PARAMS = [
         "-std=c99",
         "-c",

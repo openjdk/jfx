@@ -34,7 +34,7 @@ import java.util.concurrent.Future
  *
  * MUST FIX tasks to complete:
  *  - build check -- making sure the final artifact has the right bits
- *  - JavaDoc needs to use the FX doclet (which needs to be open sourced before I can use it!)
+ *  - JavaDoc needs to use the -javafx flag (waiting for fix in JDK 8 to be able to use this)
  *  - Need to compile hlsl files
  *
  * Additional projects to work on as we go:
@@ -59,8 +59,15 @@ defaultTasks = ["assemble"]
  *                              Utility methods                               *
  *****************************************************************************/
 
-// Any properties defined by this method can be substituted on the command line
-// by using -P, or by specifying a gradle.properties file in the user home dir
+/**
+ * If the given named property is not defined, then this method will define
+ * it with the given defaultValue. Any properties defined by this method can
+ * be substituted on the command line by using -P, or by specifying a
+ * gradle.properties file in the user home dir
+ *
+ * @param name The name of the property to define
+ * @param defaultValue The default value to assign the property
+ */
 void defineProperty(String name, String defaultValue) {
     if (!project.hasProperty(name)) {
         project.ext.set(name, defaultValue);
@@ -98,7 +105,7 @@ void defineProperty(String name, Properties props, String defaultValue) {
  *****************************************************************************/
 
 // These variables indicate what the platform is that is doing the build. Is
-// this build running on a Mac, Windows, or Linux machine?
+// this build running on a Mac, Windows, or Linux machine? 32 or 64 bit?
 ext.OS_NAME = System.getProperty("os.name").toLowerCase();
 ext.IS_64 = System.getProperty("os.arch").toLowerCase().contains("64");
 ext.IS_MAC = OS_NAME.contains("mac") || OS_NAME.contains("darwin");
@@ -135,6 +142,9 @@ enum CompileTarget {
     }
 }
 
+// Check whether the COMPILE_TARGET property has been specified (if so, it was done by
+// the user and not by this script). If it has been defined, then convert it from a
+// String to a CompileTarget, and do some sanity checking.
 if (hasProperty("COMPILE_TARGET")) {
     // Convert from whatever String was assigned to COMPILE_TARGET to an object
     for (CompileTarget target : CompileTarget.values()) {
@@ -168,6 +178,7 @@ ext.GLASS_PLATFORM = COMPILE_TARGET.glassName;
 ext.JAVA_HOME = System.getProperty("java.home");
 defineProperty("JDK_HOME", JAVA_HOME.endsWith("jre") ? JAVA_HOME.substring(0, JAVA_HOME.length() - 4) : JAVA_HOME);
 defineProperty("BINARY_STUB", "../artifacts/sdk/rt/lib/ext/jfxrt.jar");
+defineProperty("JAVA", "$JDK_HOME/bin/java");
 defineProperty("JAVAC", "$JDK_HOME/bin/javac");
 defineProperty("JAVAH", "$JDK_HOME/bin/javah");
 defineProperty("JDK_DOCS", "http://download.oracle.com/javase/7/docs/api");
@@ -191,91 +202,6 @@ ext.IS_DOC_LINT = DOC_LINT != "none";
 // Define the number of threads to use when compiling (specifically for native compilation)
 defineProperty("NUM_COMPILE_THREADS", "${Runtime.runtime.availableProcessors()}");
 
-// Define settings for Mac compilation. This is much easier than Windows because we know what version we're
-// compiling against and Mac always puts it in the same place. In extreme cases you can provide your own
-// properties in your home dir to override these settings or pass them on the command line via -P
-defineProperty("MACOSX_MIN_VERSION", "10.7");
-defineProperty("MACOSX_SDK_PATH", "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX${MACOSX_MIN_VERSION}.sdk");
-defineProperty("MACOSX_JDK_FRAMEWORK", "/System/Library/Frameworks/JavaVM.framework");
-
-// Check to see whether $buildDir/windows_tools.properties file exists. If not, then generate it.
-// Once generated, we need to read the properties file to help us define the defaults for this
-// block of properties
-if (IS_WINDOWS) {
-    File windows_tools = file("$buildDir/windows_tools.properties");
-    //outputs.file = windows_tools;
-    if (!windows_tools.exists()) {
-        // Create the properties file
-        windows_tools.getParentFile().mkdirs();
-        windows_tools.createNewFile();
-        ByteArrayOutputStream results = new ByteArrayOutputStream();
-        exec({
-            environment([
-                    "WINSDKPATH" : "",
-                    "CONF"       : CONF, // TODO does this mean the generated properties must be reset when in a different configuration?
-                    "VCARCH"     : IS_64 ? "amd64" : "x86",
-                    "SDKARCH"    : IS_64 ? "/x64" : "/x86",
-            ]);
-            commandLine("cmd", "/q", "/c", "genVSproperties.bat");
-            setStandardOutput(results);
-        });
-        BufferedReader reader = new BufferedReader(new StringReader(results.toString().trim()));
-        reader.readLine();
-        reader.readLine();
-        String line;
-        while ((line = reader.readLine()) != null && !line.startsWith("######")) {
-            line = line.replace("\\", "/").replace("/@@ENDOFLINE@@", "").replace("@@ENDOFLINE@@", "").replace("//", "/")
-            windows_tools << line;
-        }
-    }
-    // Try reading the properties in order to define the properties. If the property file cannot
-    // be located, then we will end up using some hard-coded defaults (which are probably wrong 80%
-    // of the time, but what the heck).
-    InputStream windows_tools_stream = null;
-    try {
-        Properties windows_tools_properties = new Properties();
-        windows_tools_stream = new FileInputStream(windows_tools);
-        windows_tools_properties.load(windows_tools_stream);
-        defineProperty("WINDOWS_VS_VSINSTALLDIR", windows_tools_properties, "C:/Program Files (x86)/Microsoft Visual Studio 10.0");
-        defineProperty("WINDOWS_SDK_DIR", windows_tools_properties, "C:/Program Files (x86)/Microsoft SDKs/Windows/v7.0A")
-        defineProperty("WINDOWS_VS_VCINSTALLDIR", windows_tools_properties, "$WINDOWS_VS_VSINSTALLDIR/VC")
-        defineProperty("WINDOWS_VS_DEVENVDIR", windows_tools_properties, "$WINDOWS_VS_VSINSTALLDIR/Common7/IDE")
-        defineProperty("WINDOWS_VS_DEVENVCMD", windows_tools_properties, "$WINDOWS_VS_DEVENVDIR/VCExpress.exe")
-        defineProperty("WINDOWS_VS_MSVCDIR", windows_tools_properties, WINDOWS_VS_VCINSTALLDIR)
-        defineProperty("WINDOWS_DXSDK_DIR", windows_tools_properties, System.getenv().get("DXSDK_DIR"))
-        defineProperty("WINDOWS_VS_INCLUDE", windows_tools_properties, "$WINDOWS_VS_VCINSTALLDIR/INCLUDE;" + "$WINDOWS_SDK_DIR/include;")
-        defineProperty("WINDOWS_VS_LIB", windows_tools_properties, "$WINDOWS_VS_VCINSTALLDIR/LIB;" + "$WINDOWS_SDK_DIR/lib;")
-        defineProperty("WINDOWS_VS_LIBPATH", windows_tools_properties, "$WINDOWS_VS_VCINSTALLDIR/LIB;")
-        defineProperty("WINDOWS_VS_PATH", windows_tools_properties, "$WINDOWS_VS_DEVENVDIR;" +
-                "$WINDOWS_VS_VSINSTALLDIR/VC/BIN;" +
-                "$WINDOWS_VS_VSINSTALLDIR/Common7/Tools;" +
-                "$WINDOWS_VS_VCINSTALLDIR/VCPackages;" +
-                "$WINDOWS_SDK_DIR/bin/NETFX 4.0 Tools;" +
-                "$WINDOWS_SDK_DIR/bin;" +
-                System.getenv().get("PATH"))
-    } finally {
-        try { windows_tools_stream.close() } catch (Exception e) { }
-    }
-
-    ext.WINDOWS_NATIVE_COMPILE_ENVIRONMENT = [
-            "VCINSTALLDIR"         : WINDOWS_VS_VCINSTALLDIR,
-            "VSINSTALLDIR"         : WINDOWS_VS_VSINSTALLDIR,
-            "DEVENVDIR"            : WINDOWS_VS_DEVENVDIR,
-            "MSVCDIR"              : WINDOWS_VS_MSVCDIR,
-            "PATH"                 : WINDOWS_VS_PATH,
-            "INCLUDE"              : WINDOWS_VS_INCLUDE,
-            "LIB"                  : WINDOWS_VS_LIB,
-            "LIBPATH"              : WINDOWS_VS_LIBPATH,
-            "DXSDK_DIR"            : WINDOWS_DXSDK_DIR
-    ];
-}
-
-// Define the programs to use for compiling and linking native code.
-// TODO do we want to hard-code some default tools for doing cross compiling? What about iOS?
-defineProperty("CC", IS_WINDOWS ? "$WINDOWS_VS_VSINSTALLDIR/VC/BIN/cl.exe" : IS_LINUX ? "g++" : "gcc");
-defineProperty("LINK", IS_WINDOWS ? "$WINDOWS_VS_VSINSTALLDIR/VC/BIN/link.exe" : "g++");
-defineProperty("RC", IS_WINDOWS ? "$WINDOWS_SDK_DIR/Bin/RC.Exe" : ""); // only used on Windows
-
 // Now we need to define the native compilation tasks. The set of parameters to
 // CC / LINK depends on the target platform (and also to some extent what platform
 // you are compiling on). These settings are contained in various gradle files
@@ -284,6 +210,10 @@ defineProperty("RC", IS_WINDOWS ? "$WINDOWS_SDK_DIR/Bin/RC.Exe" : ""); // only u
 // that will contain the appropriate flags.
 defineProperty("COMPILE_FLAGS_FILE", "${COMPILE_TARGET.name}.gradle");
 apply from: COMPILE_FLAGS_FILE;
+
+// Define the programs to use for compiling and linking native code.
+defineProperty("CC", "g++");
+defineProperty("LINK", "g++");
 
 // Define settings used when creating the VersionInfo. These settings are generally left alone
 // by developers and set only from Hudson. We have to manually rev this version number from
@@ -298,17 +228,16 @@ defineProperty("RELEASE_MILESTONE", "ea");
 
 // Log some of the settings we've determined. We could log more here, it doesn't really hurt.
 logger.info("OS_NAME: $OS_NAME");
-logger.info("JAVA.HOME: $JAVA_HOME");
-logger.info("JDK.HOME: $JDK_HOME");
+logger.info("JAVA_HOME: $JAVA_HOME");
+logger.info("JDK_HOME: $JDK_HOME");
 logger.info("BINARY_STUB: $BINARY_STUB");
-logger.info("HUDSON.JOB.NAME: $HUDSON_JOB_NAME");
-logger.info("HUDSON.BUILD.NUMBER: $HUDSON_BUILD_NUMBER");
-logger.info("PROMOTED.BUILD.NUMBER: $PROMOTED_BUILD_NUMBER");
-logger.info("PRODUCT.NAME: $PRODUCT_NAME");
-logger.info("RAW.VERSION: $RAW_VERSION");
-logger.info("RELEASE.NAME: $RELEASE_NAME");
-logger.info("RELEASE.MILESTONE: $RELEASE_MILESTONE");
-logger.info("sun.boot.class.path: ${System.getProperty('sun.boot.class.path')}");
+logger.info("HUDSON_JOB_NAME: $HUDSON_JOB_NAME");
+logger.info("HUDSON_BUILD_NUMBER: $HUDSON_BUILD_NUMBER");
+logger.info("PROMOTED_BUILD_NUMBER: $PROMOTED_BUILD_NUMBER");
+logger.info("PRODUCT_NAME: $PRODUCT_NAME");
+logger.info("RAW_VERSION: $RAW_VERSION");
+logger.info("RELEASE_NAME: $RELEASE_NAME");
+logger.info("RELEASE_MILESTONE: $RELEASE_MILESTONE");
 
 /******************************************************************************
  *                                                                            *
@@ -330,8 +259,6 @@ logger.info("sun.boot.class.path: ${System.getProperty('sun.boot.class.path')}")
  *                                                                            *
  *****************************************************************************/
 
-// TODO need to define the inputs / outputs more fine-grained, such that when a
-// single input has changed we only compile that one input file
 class JavaHeaderTask extends DefaultTask {
     @OutputDirectory File output;
     @InputDirectory File source;
@@ -606,6 +533,10 @@ allprojects {
             classpath = sourceSets.stub.compileClasspath + rootProject.files(BINARY_STUB)
         } else {
             compile.options.compilerArgs = ["-Djava.ext.dirs=", "-XDignore.symbol.file", "-s", "$buildDir/builder-src"]
+            // Both controls & graphics need to use the annotation processor, but not the other guys.
+            if (["graphics", "controls", "swing", "swt", "base", "fxml"].contains(project.name)){
+                compile.options.compilerArgs += ["-processor", "javafx.builder.processor.BuilderProcessor"]
+            }
             classpath = sourceSets.main.compileClasspath + rootProject.files(BINARY_STUB)
         }
         doLast {
@@ -660,20 +591,25 @@ allprojects {
     test {
         jvmArgs("-Djava.ext.dirs=");
         classpath = classpath + rootProject.files(BINARY_STUB);
+        executable = JAVA;
         enableAssertions = true;
         testLogging.exceptionFormat = "full";
         scanForTestClasses = false;
-        include('**/*Test.*');
-        exclude('**/*Abstract*.*');
+        include("**/*Test.*");
+        exclude("**/DepthTest.*")
+        exclude("**/*Abstract*.*");
     }
 
     // Exclude any non-public-API classes from having javadoc generated
     javadoc {
         exclude("com/**/*", "javafx/scene/ParentDesignInfo*", "Compile*", "javafx/builder/**/*");
+        executable = JAVA;
         options.windowTitle("JavaFX Project ${project.name} ${RELEASE_NAME}")
         options.links(JDK_DOCS);
         options.addBooleanOption("XDignore.symbol.file").setValue(true);
         options.addBooleanOption("Xdoclint:none").setValue(!IS_DOC_LINT);
+        // TODO Re-enable when this option is fixed in the JDK
+//        options.addBooleanOption("javafx").setValue(true);
     }
 
     // Configure all projects to include $buildDir/builder-src in the generated IDEA project files.
@@ -930,7 +866,15 @@ project(":graphics") {
 
     idea {
         module {
-            sourceDirs += new File(buildDir, "headers");
+            sourceDirs += [new File(buildDir, "headers"),
+                    file("src/main/native-decora"),
+                    file("src/main/native-glass/gtk"),
+                    file("src/main/native-glass/ios"),
+                    file("src/main/native-glass/lens"),
+                    file("src/main/native-glass/mac"),
+                    file("src/main/native-glass/win"),
+                    file("src/main/native-prism"),
+                    file("src/main/native-prism-sw")]
             excludeDirs += new File(buildDir, "native");
             testSourceDirs += [file("src/stub/java"), file("src/stub/resources")];
         }
@@ -939,7 +883,7 @@ project(":graphics") {
 
 project(":controls") {
     dependencies {
-        compile project(":build-tools"), project(":base"), project(":graphics")
+        compile project(":build-tools"), project(":base"), project(":graphics"), project(":designTime")
         testCompile project(":graphics").sourceSets.stub.output
     }
 
@@ -948,6 +892,12 @@ project(":controls") {
         // This is highly unfortunate, test execution time goes from 7 sec to 2 min 8 sec
         // however there are 8 failing tests when we don't fork. Need to fix those tests.
         forkEvery = 1
+    }
+
+    idea {
+        module {
+            sourceDirs += file("src/main/dt");
+        }
     }
 }
 
@@ -979,12 +929,19 @@ project(":fxml") {
     dependencies {
         compile project(":build-tools"), project(":base"), project(":graphics"),
                 project(":controls"), /*project(":media"), project(":web"),*/ project(":swt"), project(":swing")
+        testCompile project(":graphics").sourceSets.stub.output
+    }
+    test {
+        // StubToolkit is not *really* needed here, but because some code inadvertently invokes performance
+        // tracker and this attemps to fire up the toolkit and this looks for native libraries and fails,
+        // we have to use the stub toolkit for now.
+        jvmArgs "-Djavafx.toolkit=com.sun.javafx.pgstub.StubToolkit"
     }
 }
 
 project(":designTime") {
     dependencies {
-        compile project(":graphics"), project(":controls")
+        compile project(":graphics")
     }
 }
 
@@ -1048,6 +1005,12 @@ project(":graphics:effects-jsl") {
         into "$buildDir/resources/main"
     }
     processResources.dependsOn copyShaders
+
+    idea {
+        module {
+            sourceDirs += file("$buildDir/generated-src/jsl")
+        }
+    }
 }
 
 project(":graphics:prism-jsl") {
@@ -1103,6 +1066,12 @@ project(":graphics:prism-jsl") {
         into "$buildDir/resources/main"
     }
     classes.dependsOn copyPrismShaders
+
+    idea {
+        module {
+            sourceDirs += file("$buildDir/generated-src/jsl")
+        }
+    }
 }
 
 task clean() {
@@ -1205,6 +1174,8 @@ task javadoc(type: Javadoc) {
     options.links(JDK_DOCS);
     options.addBooleanOption("XDignore.symbol.file").setValue(true);
     options.addBooleanOption("Xdoclint:none").setValue(!IS_DOC_LINT);
+    // TODO Re-enable when this option is fixed in the JDK
+//    options.addBooleanOption("javafx").setValue(true);
 
     dependsOn(subprojects.collect { project -> project.getTasksByName("classes", true)});
 }
