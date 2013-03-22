@@ -56,7 +56,7 @@ public class ColorPickerPaletteRetriever {
     }
     
     public static Stage getCustomColorDialog(ColorPalette cp) {
-        if (cp.customColorDialog != null) return cp.customColorDialog.dialog;
+        if (cp.customColorDialog != null) return cp.customColorDialog.getDialog();
         return null;
     }
 }

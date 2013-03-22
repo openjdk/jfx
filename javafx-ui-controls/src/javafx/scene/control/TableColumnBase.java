@@ -446,29 +446,6 @@ public abstract class TableColumnBase<S,T> implements EventTarget, Styleable {
     }
 
     
-    // --- Sort Type
-    /**
-     * Used to state whether this column, if it is part of a sort order (see
-     * {@link TableView#getSortOrder()} and {@link TreeTableView#getSortOrder()}
-     * for more details), should be sorted in ascending or descending order. 
-     * Simply toggling this property will result in the sort order changing in 
-     * the underlying UI control, assuming of course that this column is in the 
-     * sortOrder ObservableList to begin with.
-     */
-    private ObjectProperty<SortType> sortType;
-    public final ObjectProperty<SortType> sortTypeProperty() {
-        if (sortType == null) {
-            sortType = new SimpleObjectProperty<SortType>(this, "sortType", SortType.ASCENDING);
-        }
-        return sortType;
-    }
-    public final void setSortType(SortType value) {
-        sortTypeProperty().set(value);
-    }
-    public final SortType getSortType() {
-        return sortType == null ? SortType.ASCENDING : sortType.get();
-    }
-    
     
     // --- Sortable
     /**
@@ -774,21 +751,4 @@ public abstract class TableColumnBase<S,T> implements EventTarget, Styleable {
      *                                                                         *
      **************************************************************************/
 
-    /**
-     * Enumeration that specifies the type of sorting being applied to a specific
-     * column.
-     */
-    public static enum SortType {
-        /**
-         * Column will be sorted in an ascending order.
-         */
-        ASCENDING,
-        
-        /**
-         * Column will be sorted in a descending order.
-         */
-        DESCENDING;
-        
-        // UNSORTED
-    }
 }

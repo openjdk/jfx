@@ -92,35 +92,38 @@ public class ColorPalette extends VBox {
         customColorLink.setAlignment(Pos.CENTER);
         customColorLink.setFocusTraversable(true);
         customColorLink.setVisited(true); // so that it always appears blue 
-        // ColorPalette should hide when save or use button is pressed in CustomColorDialog.
-        final EventHandler<ActionEvent> actionListener = new EventHandler<ActionEvent>() {
-            @Override public void handle(ActionEvent t) {
-                colorPicker.hide();
-            }
-        };
         customColorLink.setOnAction(new EventHandler<ActionEvent>() {
             @Override public void handle(ActionEvent t) {
                 if (customColorDialog == null) {
                     customColorDialog = new CustomColorDialog(owner);
-                    customColorDialog.customColorProperty.addListener(new ChangeListener<Color>() {
+                    customColorDialog.customColorProperty().addListener(new ChangeListener<Color>() {
                         @Override public void changed(ObservableValue<? extends Color> ov, 
                                                                 Color t, Color t1) {
-                            Color customColor = customColorDialog.customColorProperty.get();
-                            if (customColorDialog.saveCustomColor) {
-                                ColorSquare cs = new ColorSquare(customColor, true);
-                                customSquares.add(cs);
-                                buildCustomColors();
-                                colorPicker.getCustomColors().add(customColor);
-                                updateSelection(customColor);
-                            }
-                            if (customColorDialog.saveCustomColor || customColorDialog.useCustomColor) {
-                                Event.fireEvent(colorPicker, new ActionEvent());
-                            }             
-                            colorPicker.setValue(customColor);
+                            colorPicker.setValue(customColorDialog.customColorProperty().get());
                         }
                     });
-                    customColorDialog.saveButton.addEventHandler(ActionEvent.ACTION, actionListener);
-                    customColorDialog.useButton.addEventHandler(ActionEvent.ACTION, actionListener);
+                    customColorDialog.setOnSave(new Runnable() {
+
+                        @Override
+                        public void run() {
+                            Color customColor = customColorDialog.customColorProperty().get();
+                            ColorSquare cs = new ColorSquare(customColor, true);
+                            customSquares.add(cs);
+                            buildCustomColors();
+                            colorPicker.getCustomColors().add(customColor);
+                            updateSelection(customColor);
+                            Event.fireEvent(colorPicker, new ActionEvent());
+                            colorPicker.hide();
+                        }
+                    });
+                    customColorDialog.setOnUse(new Runnable() {
+
+                        @Override
+                        public void run() {
+                            Event.fireEvent(colorPicker, new ActionEvent());
+                            colorPicker.hide();
+                        }
+                    });
                 }
                 customColorDialog.setCurrentColor(colorPicker.valueProperty().get());
                 if (popupControl != null) popupControl.setAutoHide(false);

@@ -1563,7 +1563,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
             // TODO I would not have thought so, there should be an assert added to addToPile to
             // TODO make sure we never add null to the pile (since it doesn't make sense to do so)
             // TODO and then we can get rid of the cell != null check on line 1422 above.
-            return pile.get(0);
+            accumCell = pile.get(0);
         }
 
         // We need to use the accumCell and return that
@@ -2387,8 +2387,10 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         }
 
         public T get(int index) {
-            if (index > lastIndex - firstIndex || index < 0) {
-                throw new java.lang.ArrayIndexOutOfBoundsException();
+            if (index > (lastIndex - firstIndex) || index < 0) {
+                // Commented out exception due to RT-29111
+                // throw new java.lang.ArrayIndexOutOfBoundsException();
+                return null;
             }
 
             return array.get(firstIndex + index);

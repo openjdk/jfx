@@ -63,6 +63,7 @@ import javafx.scene.control.ProgressIndicatorBuilder;
 import javafx.scene.control.RadioButton;
 import javafx.scene.control.ScrollBar;
 import javafx.scene.control.ScrollBarBuilder;
+import javafx.scene.control.ScrollPane;
 import javafx.scene.control.ScrollPaneBuilder;
 import javafx.scene.control.SeparatorBuilder;
 import javafx.scene.control.Slider;
@@ -407,6 +408,11 @@ public class SamplePage extends GridPane {
                 ScrollPaneBuilder.create().build()
                 );
         newDetailedSection(
+                new String[] {"ScrollPane H/V: ", "H Bar", "V bar"},
+                ScrollPaneBuilder.create().content(scrollPaneContent()).vbarPolicy(ScrollPane.ScrollBarPolicy.NEVER).build(),
+                ScrollPaneBuilder.create().content(scrollPaneContent()).hbarPolicy(ScrollPane.ScrollBarPolicy.NEVER).build()
+                );
+        newDetailedSection(
                 new String[] {"Separator: ", "horizontal", "vertical"},
                 SeparatorBuilder.create().prefWidth(100).build(),
                 SeparatorBuilder.create().orientation(Orientation.VERTICAL).prefHeight(50).build()
@@ -448,8 +454,8 @@ public class SamplePage extends GridPane {
         newSection(
                 "TextArea:",
                 TextAreaBuilder.create().text("TextArea").prefColumnCount(10).prefRowCount(2).build(),
-                TextAreaBuilder.create().text("Many Lines of\nText.\n#3\n#4\n#5\n#6\n#7\n#8\n#9\n#10").prefColumnCount(10).prefRowCount(3).build(),
-                TextAreaBuilder.create().text("Many Lines of\nText.\n#3\n#4\n#5\n#6\n#7\n#8\n#9\n#10").prefColumnCount(6).prefRowCount(3).build(),
+                TextAreaBuilder.create().text("Many Lines of\nText.\n#3\n#4\n#5\n#6\n#7\n#8\n#9\n#10").prefColumnCount(10).prefRowCount(5).build(),
+                TextAreaBuilder.create().text("Many Lines of\nText.\n#3\n#4\n#5\n#6\n#7\n#8\n#9\n#10").prefColumnCount(6).prefRowCount(5).build(),
                 TextAreaBuilder.create().promptText("Prompt Text").prefColumnCount(10).prefRowCount(2).build(),
                 withState(TextAreaBuilder.create().text("Focused").prefColumnCount(7).prefRowCount(2).build(), "focused"),
                 withState(TextAreaBuilder.create().text("Disabled").prefColumnCount(8).prefRowCount(2).build(), "disabled")
