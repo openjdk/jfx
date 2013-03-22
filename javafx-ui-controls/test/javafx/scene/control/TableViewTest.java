@@ -25,7 +25,7 @@
 
 package javafx.scene.control;
 
-import com.sun.javafx.scene.control.TableColumnComparator;
+import com.sun.javafx.scene.control.TableColumnComparatorBase.TableColumnComparator;
 import com.sun.javafx.scene.control.test.ControlAsserts;
 import com.sun.javafx.scene.control.test.Person;
 import com.sun.javafx.scene.control.test.RT_22463_Person;
@@ -51,8 +51,8 @@ import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
 
-import static javafx.scene.control.TableColumnBase.SortType.ASCENDING;
-import static javafx.scene.control.TableColumnBase.SortType.DESCENDING;
+import static javafx.scene.control.TableColumn.SortType.ASCENDING;
+import static javafx.scene.control.TableColumn.SortType.DESCENDING;
 
 public class TableViewTest {
     private TableView<String> table;

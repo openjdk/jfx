@@ -31,8 +31,6 @@ import java.util.List;
 import javafx.beans.InvalidationListener;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
-import static javafx.scene.control.TableColumnBase.SortType.ASCENDING;
-import static javafx.scene.control.TableColumnBase.SortType.DESCENDING;
 
 /**
  * A package protected util class used by TableView and TreeTableView to reduce
@@ -49,7 +47,13 @@ class TableUtil {
         for (TableColumnBase col : list) {
             col.visibleProperty().removeListener(columnVisibleObserver);
             col.sortableProperty().removeListener(columnSortableObserver);
-            col.sortTypeProperty().removeListener(columnSortTypeObserver);
+            
+//            col.sortTypeProperty().removeListener(columnSortTypeObserver);
+            if (col instanceof TableColumn) {
+                ((TableColumn)col).sortTypeProperty().removeListener(columnSortTypeObserver);
+            } else if (col instanceof TreeTableColumn) {
+                ((TreeTableColumn)col).sortTypeProperty().removeListener(columnSortTypeObserver);
+            }
 
             removeTableColumnListener(col.getColumns(),
                                       columnVisibleObserver,
@@ -67,7 +71,13 @@ class TableUtil {
         for (TableColumnBase col : list) {
             col.visibleProperty().addListener(columnVisibleObserver);
             col.sortableProperty().addListener(columnSortableObserver);
-            col.sortTypeProperty().addListener(columnSortTypeObserver);
+            
+//            col.sortTypeProperty().addListener(columnSortTypeObserver);
+            if (col instanceof TableColumn) {
+                ((TableColumn)col).sortTypeProperty().addListener(columnSortTypeObserver);
+            } else if (col instanceof TreeTableColumn) {
+                ((TreeTableColumn)col).sortTypeProperty().addListener(columnSortTypeObserver);
+            }
             
             addTableColumnListener(col.getColumns(),
                                    columnVisibleObserver,
@@ -101,14 +111,7 @@ class TableUtil {
         if (sortEventType == SortEventType.COLUMN_SORT_TYPE_CHANGE) {
             // go back to the previous sort type
             final TableColumnBase changedColumn = (TableColumnBase) supportInfo[0];
-            final TableColumnBase.SortType sortType = changedColumn.getSortType();
-            if (sortType == ASCENDING) {
-                changedColumn.setSortType(null);
-            } else if (sortType == DESCENDING) {
-                changedColumn.setSortType(ASCENDING);
-            } else if (sortType == null) {
-                changedColumn.setSortType(DESCENDING);
-            }
+            revertSortType(changedColumn);
         } else if (sortEventType == SortEventType.SORT_ORDER_CHANGE) {
             // Revert the sortOrder list to what it was previously
             ListChangeListener.Change change = (ListChangeListener.Change) supportInfo[0];
@@ -129,6 +132,30 @@ class TableUtil {
             sortOrder.addAll(toAdd);
         } else if (sortEventType == SortEventType.COLUMN_SORTABLE_CHANGE) {
             // no-op - it is ok for the sortable type to remain as-is
+        }
+    }
+    
+    private static void revertSortType(TableColumnBase changedColumn) {
+        if (changedColumn instanceof TableColumn) {
+            TableColumn tableColumn = (TableColumn)changedColumn;
+            final TableColumn.SortType sortType = tableColumn.getSortType();
+            if (sortType == TableColumn.SortType.ASCENDING) {
+                tableColumn.setSortType(null);
+            } else if (sortType == TableColumn.SortType.DESCENDING) {
+                tableColumn.setSortType(TableColumn.SortType.ASCENDING);
+            } else if (sortType == null) {
+                tableColumn.setSortType(TableColumn.SortType.DESCENDING);
+            }
+        } else if (changedColumn instanceof TreeTableColumn) {
+            TreeTableColumn tableColumn = (TreeTableColumn)changedColumn;
+            final TreeTableColumn.SortType sortType = tableColumn.getSortType();
+            if (sortType == TreeTableColumn.SortType.ASCENDING) {
+                tableColumn.setSortType(null);
+            } else if (sortType == TreeTableColumn.SortType.DESCENDING) {
+                tableColumn.setSortType(TreeTableColumn.SortType.ASCENDING);
+            } else if (sortType == null) {
+                tableColumn.setSortType(TreeTableColumn.SortType.DESCENDING);
+            }
         }
     }
     
