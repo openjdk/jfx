@@ -760,7 +760,7 @@ project(":graphics") {
         compile project(":base"), project(":build-tools")
         compile ":$SWT_FILE_NAME:"
         compile files(rootDir.toString() + "/../crap/plugin_exports.jar")
-        stubCompile "junit:junit:4.8.2", project(":base").sourceSets.test.output
+        stubCompile "junit:junit:4.8.2", project(":base").sourceSets.test.output, sourceSets.main.output
     }
 
     // The graphics project needs to completely replace the "test" task because the
