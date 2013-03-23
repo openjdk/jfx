@@ -35,9 +35,11 @@ import java.util.concurrent.Future
  * MUST FIX tasks to complete:
  *  - build check -- making sure the final artifact has the right bits
  *  - JavaDoc needs to use the -javafx flag (waiting for fix in JDK 8 to be able to use this)
+ *      - I've seen 'gradle javadoc' fail, whereas 'gradle :javadoc' succeeds. Need to investigate.
  *  - Need to compile hlsl files
  *
  * Additional projects to work on as we go:
+ *  - The genVSproperties.bat doesn't find the directory where RC.exe lives. So it is hard coded. Might be a problem.
  *  - special tasks for common needs, such as:
  *      - updating copyright headers
  *      - stripping trailing whitespace (?)
@@ -493,7 +495,6 @@ def addNative = { project, String name ->
 *****************************************************************************/
 
 allprojects {
-    apply plugin: 'idea'
     // We want to configure all projects as java projects and use the same compile settings
     // etc, except for the root project which we just want to ignore
     if (project == rootProject) return
@@ -621,36 +622,6 @@ allprojects {
     dependencies {
       binaryStub rootProject.files(BINARY_STUB)
     }
-
-    idea {
-        module {
-            inheritOutputDirs = true;
-            sourceDirs += new File(buildDir, "builder-src");
-            excludeDirs -= buildDir;
-            excludeDirs += [
-                    new File(buildDir, "classes"),
-                    new File(buildDir, "dependency-cache"),
-                    new File(buildDir, "libs"),
-                    new File(buildDir, "resources"),
-                    new File(buildDir, "tmp")];
-            scopes.COMPILE.plus += configurations.binaryStub
-
-            // Some hackery. I have to make sure the binary stub is the VERY LAST entry
-            // in the class path or things will be somewhat unpredictable
-            iml {
-                withXml { xmlProvider ->
-                    def root = xmlProvider.asNode();
-                    // Find the <root url=".../jfxrt.jar!/" />. Walk up 3 steps to <orderEntry>
-                    def orderEntry = root.depthFirst().find { it.name() == "root" }.parent().parent().parent(); // && it.@url.contains(BINARY_STUB)
-                    if (orderEntry.name() != "orderEntry") throw new Exception("Couldn't find the order entry");
-                    // Move that <orderEntry> to be the last child of its parent.
-                    def parent = orderEntry.parent();
-                    parent.remove(orderEntry);
-                    parent.append(orderEntry);
-                }
-            }
-        }
-    }
 }
 
 // The build-tools project contains the annotation processor that is used to generate the
@@ -691,13 +662,6 @@ project(":build-tools") {
     compileJava {
         dependsOn(generateGrammarSource);
     }
-
-    // Add antlr to the sources for IDEA
-    idea {
-        module {
-            sourceDirs += file("$buildDir/generated-src/antlr")
-        }
-    }
 }
 
 // The "base" project is our first module and the most basic one required for
@@ -733,13 +697,6 @@ project(":base") {
     // We DO NOT want to include src/main/version-info
     sourceSets.main.java.srcDirs = ["src/main/java", "$buildDir/generated-src/version-info"]
     compileJava.dependsOn processVersion
-
-    // Add in the version-info generated sources for IDEA projects
-    idea {
-        module {
-            sourceDirs += file("$buildDir/generated-src/version-info")
-        }
-    }
 }
 
 // The graphics module is needed for any graphical JavaFX application. It requires
@@ -862,22 +819,6 @@ project(":graphics") {
     }
 
     task("native", dependsOn: [nativeGlass, nativePrism, nativePrismSW, nativeDecora])
-
-    idea {
-        module {
-            sourceDirs += [new File(buildDir, "headers"),
-                    file("src/main/native-decora"),
-                    file("src/main/native-glass/gtk"),
-                    file("src/main/native-glass/ios"),
-                    file("src/main/native-glass/lens"),
-                    file("src/main/native-glass/mac"),
-                    file("src/main/native-glass/win"),
-                    file("src/main/native-prism"),
-                    file("src/main/native-prism-sw")]
-            excludeDirs += new File(buildDir, "native");
-            testSourceDirs += [file("src/stub/java"), file("src/stub/resources")];
-        }
-    }
 }
 
 project(":controls") {
@@ -891,12 +832,6 @@ project(":controls") {
         // This is highly unfortunate, test execution time goes from 7 sec to 2 min 8 sec
         // however there are 8 failing tests when we don't fork. Need to fix those tests.
         forkEvery = 1
-    }
-
-    idea {
-        module {
-            sourceDirs += file("src/main/dt");
-        }
     }
 }
 
@@ -1004,12 +939,6 @@ project(":graphics:effects-jsl") {
         into "$buildDir/resources/main"
     }
     processResources.dependsOn copyShaders
-
-    idea {
-        module {
-            sourceDirs += file("$buildDir/generated-src/jsl")
-        }
-    }
 }
 
 project(":graphics:prism-jsl") {
@@ -1065,12 +994,6 @@ project(":graphics:prism-jsl") {
         into "$buildDir/resources/main"
     }
     classes.dependsOn copyPrismShaders
-
-    idea {
-        module {
-            sourceDirs += file("$buildDir/generated-src/jsl")
-        }
-    }
 }
 
 task clean() {
@@ -1178,6 +1101,53 @@ task javadoc(type: Javadoc) {
     dependsOn(subprojects.collect { project -> project.getTasksByName("classes", true)});
 }
 
+/******************************************************************************
+ *                                                                            *
+ *                   Generation of IDEA Project Files                         *
+ *                                                                            *
+ *  This next section is responsible for setting up the work for generation   *
+ *  of IntelliJ IDEA project files. The developer needs to invoke             *
+ *                                                                            *
+ *      gradle idea                                                           *
+ *                                                                            *
+ *  and all necessary project files will be generated.                        *
+ *                                                                            *
+ *****************************************************************************/
+
+allprojects {
+    apply plugin: 'idea'
+    if (project == rootProject) return
+    idea {
+        module {
+            inheritOutputDirs = true;
+            sourceDirs += new File(buildDir, "builder-src");
+            excludeDirs -= buildDir;
+            excludeDirs += [
+                    new File(buildDir, "classes"),
+                    new File(buildDir, "dependency-cache"),
+                    new File(buildDir, "libs"),
+                    new File(buildDir, "resources"),
+                    new File(buildDir, "tmp")];
+            scopes.COMPILE.plus += configurations.binaryStub
+
+            // Some hackery. I have to make sure the binary stub is the VERY LAST entry
+            // in the class path or things will be somewhat unpredictable
+            iml {
+                withXml { xmlProvider ->
+                    def root = xmlProvider.asNode();
+                    // Find the <root url=".../jfxrt.jar!/" />. Walk up 3 steps to <orderEntry>
+                    def orderEntry = root.depthFirst().find { it.name() == "root" }.parent().parent().parent(); // && it.@url.contains(BINARY_STUB)
+                    if (orderEntry.name() != "orderEntry") throw new Exception("Couldn't find the order entry");
+                    // Move that <orderEntry> to be the last child of its parent.
+                    def parent = orderEntry.parent();
+                    parent.remove(orderEntry);
+                    parent.append(orderEntry);
+                }
+            }
+        }
+    }
+}
+
 /**
  * I want to keep all the project files and out directory and such all hidden from the filesystem
  * for the most part, so we don't have a lot of .iml files strewn about. So what we will do is
@@ -1195,10 +1165,7 @@ idea {
                 def root = xmlProvider.asNode();
                 def doc = root.depthFirst();
 
-                // Set the copyright. Look for this:
-                //   <component name="CopyrightManager" default="">
-                //     <module2copyright/>
-                //   </component>
+                // Set the copyright
                 def copyrightManager = doc.find { it.name() == "component" && it.@name == "CopyrightManager" };
                 copyrightManager.@default="OpenJFX";
                 def module2copyright = copyrightManager.get("module2copyright");
@@ -1309,9 +1276,77 @@ questions.""");
     }
 }
 
-// This next section should remain at the end of the build script. It allows for a "supplemental"
-// gradle file to be used to extend the normal build structure. For example, this is used for
-// passing a supplemental gradle file for producing official JavaFX builds.
+project(":build-tools") {
+    // Add antlr to the sources for IDEA
+    idea {
+        module {
+            sourceDirs += file("$buildDir/generated-src/antlr")
+        }
+    }
+}
+
+project(":base") {
+    // Add in the version-info generated sources for IDEA projects
+    idea {
+        module {
+            sourceDirs += file("$buildDir/generated-src/version-info")
+        }
+    }
+}
+
+project(":graphics") {
+    idea {
+        module {
+            sourceDirs += [new File(buildDir, "headers"),
+                    file("src/main/native-decora"),
+                    file("src/main/native-glass/gtk"),
+                    file("src/main/native-glass/ios"),
+                    file("src/main/native-glass/lens"),
+                    file("src/main/native-glass/mac"),
+                    file("src/main/native-glass/win"),
+                    file("src/main/native-prism"),
+                    file("src/main/native-prism-sw")]
+            excludeDirs += new File(buildDir, "native");
+            testSourceDirs += [file("src/stub/java"), file("src/stub/resources")];
+        }
+    }
+}
+
+project(":controls") {
+    idea {
+        module {
+            sourceDirs += file("src/main/dt");
+        }
+    }
+}
+
+project(":graphics:effects-jsl") {
+    idea {
+        module {
+            sourceDirs += file("$buildDir/generated-src/jsl")
+        }
+    }
+}
+
+project(":graphics:prism-jsl") {
+    idea {
+        module {
+            sourceDirs += file("$buildDir/generated-src/jsl")
+        }
+    }
+}
+
+/******************************************************************************
+ *                                                                            *
+ *                         SUPPLEMENTAL_BUILD_FILE                            *
+ *                                                                            *
+ * This next section should remain at the end of the build script. It allows  *
+ * for a "supplemental" gradle file to be used to extend the normal build     *
+ * structure. For example, this is used for passing a supplemental gradle     *
+ * file for producing official JavaFX builds.                                 *
+ *                                                                            *
+ *****************************************************************************/
+
 if (hasProperty("SUPPLEMENTAL_BUILD_FILE")) {
     apply from: SUPPLEMENTAL_BUILD_FILE
 }
