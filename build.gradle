@@ -475,18 +475,23 @@ class LinkTask extends DefaultTask {
 */
 def addNative = { project, String name ->
     def javahTask = project.task("javah$name", type: JavaHeaderTask, dependsOn: project.classes, group: "Build") {
+        description = "Generates JNI Headers for $name"
         source = project.sourceSets.main.java.srcDirs.iterator().next()
         classpath = project.files(project.sourceSets.main.output.classesDir, project.rootProject.file(project.BINARY_STUB))
         output = project.file("$project.buildDir/headers/$name")
     }
     def ccTask = project.task("cc$name", type: CCTask, dependsOn: javahTask, group: "Build") {
+        description = "Compiles native sources for $name"
         headers = project.file("$project.buildDir/headers/$name")
         output(file("$project.buildDir/native/$name"))
     }
     def linkTask = project.task("link$name", type: LinkTask, dependsOn: ccTask, group: "Build") {
+        description = "Creates native dynamic library for $name"
         objectDir = file("$project.buildDir/native/$name")
     }
-    project.task("native$name", dependsOn: linkTask, group: "Build");
+    project.task("native$name", dependsOn: linkTask, group: "Build") {
+        description = "Generates JNI headers, compiles, and builds native dynamic library for $name"
+    }
     project.assemble.dependsOn("native$name")
 }
 
@@ -724,6 +729,10 @@ project(":graphics") {
     // tests have been split among the normal tests and the stub tests. I want to make sure
     // that invoking "graphics:test" runs both of these tasks, rather than only one of them.
     tasks.replace("test")
+    test {
+        group = "Verification"
+        description = "Runs all the unit tests for Graphics"
+    }
     task testWithoutStub(type: Test, dependsOn: ":graphics:compileJava") {
         jvmArgs "-Djava.ext.dirs="
         classpath = sourceSets.test.runtimeClasspath + rootProject.files(BINARY_STUB)
@@ -818,7 +827,10 @@ project(":graphics") {
         linkParams.addAll(LINK_PARAMS);
     }
 
-    task("native", dependsOn: [nativeGlass, nativePrism, nativePrismSW, nativeDecora])
+    task("native", dependsOn: [nativeGlass, nativePrism, nativePrismSW, nativeDecora]) {
+        group = "Build"
+        description = "Compiles and Builds all native libraries for Graphics"
+    }
 }
 
 project(":controls") {
@@ -996,7 +1008,19 @@ project(":graphics:prism-jsl") {
     classes.dependsOn copyPrismShaders
 }
 
+/******************************************************************************
+ *                                                                            *
+ *                             Top Level Tasks                                *
+ *                                                                            *
+ *  These are the tasks which are defined only for the top level project and  *
+ *  not for any sub projects. These are generally the entry point that is     *
+ *  used by Hudson and by the continuous build system.                        *
+ *                                                                            *
+ *****************************************************************************/
+
 task clean() {
+    group = "Basic"
+    description = "Deletes the build directory and the build directory of all sub projects"
     getSubprojects().each { subProject ->
         dependsOn(subProject.getTasksByName("clean", true));
     }
@@ -1016,6 +1040,8 @@ task clean() {
 // and so forth. This arrangement allows for multiple independent SDKs to
 // exist on a developer's system.
 task jfxrt(type: Jar) {
+    group = "Basic"
+    description = "Creates the jfxrt.jar"
     archiveName = "build/${COMPILE_TARGET.name}-sdk/rt/lib/ext/jfxrt.jar";
     from("modules/base/build/classes/main",
          "modules/base/build/resources/main",
@@ -1057,6 +1083,8 @@ task jfxrt(type: Jar) {
 // The 'sdk' task will build the rest of the SDK, and depends on the 'jfxrt' task. After
 // executing this task the sdk bundle for the current COMPILE_TARGET will be fully created.
 task sdk {
+    group = "Basic"
+    description = "Creates an SDK"
     doLast {
         // Copy all of the .dll / .so / .dylib native libraries into build/sdk/rt/lib/
         copy {
@@ -1083,6 +1111,8 @@ task sdk {
 }
 
 task javadoc(type: Javadoc) {
+    group = "Basic"
+    description = "Generates the JavaDoc for all the public API"
     source(subprojects.findAll({ it != project(":designTime") }).collect({
         [it.sourceSets.main.java, "$it.buildDir/builder-src"]
     }));
@@ -1099,6 +1129,57 @@ task javadoc(type: Javadoc) {
     options.addBooleanOption("javafx").setValue(true);
 
     dependsOn(subprojects.collect { project -> project.getTasksByName("classes", true)});
+}
+
+/******************************************************************************
+ *                                                                            *
+ *                 Generation of NetBeans Project Files                       *
+ *                                                                            *
+ *  This next section is responsible for setting up the work for generation   *
+ *  of NetBeans project files. The developer needs to invoke                  *
+ *                                                                            *
+ *      gradle netbeans                                                       *
+ *                                                                            *
+ *  and all necessary project files will be generated. Note that unlike       *
+ *  Eclipse and IDEA, NetBeans natively understands Gradle build files so     *
+ *  the project files generated for NetBeans is limited to just shared        *
+ *  configuration files. Make sure you have the latest stable release of      *
+ *                                                                            *
+ *  http://plugins.netbeans.org/plugin/44510/gradle-support                   *
+ *                                                                            *
+ *  for your version of the IDE.                                              *
+ *                                                                            *
+ *****************************************************************************/
+
+task netBeans() {
+    description = "Creates the NetBeans project files for JavaFX"
+    group = "IDE"
+    File nbGradleProperties = file(".nb-gradle-properties")
+    if (nbGradleProperties.exists()) {
+        nbGradleProperties.delete()
+    }
+    nbGradleProperties.createNewFile()
+    nbGradleProperties <<
+"""<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<gradle-project-properties>
+  <!--DO NOT EDIT THIS FILE! - Used by the Gradle plugin of NetBeans.-->
+  <source-encoding>UTF-8</source-encoding>
+  <target-platform-name>j2se</target-platform-name>
+  <target-platform>1.7</target-platform>
+  <source-level>1.7</source-level>
+  <script-platform>
+    <spec-name>j2se</spec-name>
+    <spec-version>1.8</spec-version>
+  </script-platform>
+  <gradle-home>?VER=1.4</gradle-home>
+</gradle-project-properties>"""
+
+}
+
+task cleanNetBeans() {
+    description = "Deletes generated NetBeans files"
+    group = "IDE"
+    file(".nb-gradle-properties").delete()
 }
 
 /******************************************************************************
@@ -1160,7 +1241,6 @@ idea {
         languageLevel = "1.7"
         wildcards += ["?*.css", "?*.bss", "?*.glsl", "?*.frag", "?*.ttf", "?*.txt", "?*.fxml"]
         ipr {
-
             withXml { xmlProvider ->
                 def root = xmlProvider.asNode();
                 def doc = root.depthFirst();
@@ -1335,6 +1415,9 @@ project(":graphics:prism-jsl") {
         }
     }
 }
+
+cleanIdeaWorkspace.group = "IDE"
+cleanIdeaWorkspace.description = "Deletes the javafx.ipw file"
 
 /******************************************************************************
  *                                                                            *
