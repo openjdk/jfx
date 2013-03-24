@@ -102,7 +102,7 @@ void defineProperty(String name, Properties props, String defaultValue) {
  *                                                                            *
  *  All properties defined using the "defineProperty" method can be replaced  *
  *  on the command line by using the -P flag. For example, to override the    *
- *  location of the binary stub, you would specify -PBINARY_STUB=some/where   *
+ *  location of the binary plug, you would specify -PBINARY_PLUG=some/where   *
  *                                                                            *
  *****************************************************************************/
 
@@ -176,14 +176,28 @@ ext.GLASS_PLATFORM = COMPILE_TARGET.glassName;
 
 // Get the JDK_HOME automatically based on the version of Java used to execute gradle. Or, if specified,
 // use a user supplied JDK_HOME, BINARY_STUB, JAVAC, and/or JAVAH, all of which may be specified
-// independently (or we'll try to get the right one based on other supplied info).
+// independently (or we'll try to get the right one based on other supplied info). There is a really
+// odd situation on windows where you can have two JRE's on the same system(!!!):
+//    c:\Program Files (x86)\Java\jdk1.8.0\jre
+//    c:\Program Files (x86)\Java\jre8\
+// Because of this, you may sometimes get the jdk's JRE (in which case the logic we used to have here
+// was correct and consistent with all other platforms), or it might be the standalone JRE (for the love!).
+// So what we have to do is add some special windows-only logic here to figure out the JDK based on the
+// wrong JRE, if we happen to have gotten the wrong JRE.
 ext.JAVA_HOME = System.getProperty("java.home");
-defineProperty("JDK_HOME", JAVA_HOME.endsWith("jre") ? JAVA_HOME.substring(0, JAVA_HOME.length() - 4) : JAVA_HOME);
-defineProperty("BINARY_STUB", "file://$JDK_HOME/jre/lib/ext/jfxrt.jar");
+def javaHomeFile = file(JAVA_HOME);
+defineProperty("JDK_HOME",
+        javaHomeFile.name == "jre" ?
+        javaHomeFile.getParent().toString() :
+        javaHomeFile.name.startsWith("jre") ?
+        new File(javaHomeFile.getParent(), "jdk1.${javaHomeFile.name.substring(3)}.0").toString() :
+        JAVA_HOME); // we have to bail and set it to something and this is as good as any!
 defineProperty("JAVA", "$JDK_HOME/bin/java");
 defineProperty("JAVAC", "$JDK_HOME/bin/javac");
 defineProperty("JAVAH", "$JDK_HOME/bin/javah");
 defineProperty("JDK_DOCS", "http://download.oracle.com/javase/7/docs/api");
+defineProperty("BINARY_STUB", "file://$JDK_HOME/jre/lib/ext/jfxrt.jar");
+BINARY_STUB = files(BINARY_STUB); // convert from String to FileCollection
 
 // Define the SWT.jar that we are going to have to download during the build process based
 // on what platform we are compiling from (not based on our target). SWT in particular is
@@ -232,7 +246,7 @@ defineProperty("RELEASE_MILESTONE", "ea");
 logger.info("OS_NAME: $OS_NAME");
 logger.info("JAVA_HOME: $JAVA_HOME");
 logger.info("JDK_HOME: $JDK_HOME");
-logger.info("BINARY_STUB: $BINARY_STUB");
+logger.info("BINARY_STUB: $BINARY_STUB.asPath");
 logger.info("HUDSON_JOB_NAME: $HUDSON_JOB_NAME");
 logger.info("HUDSON_BUILD_NUMBER: $HUDSON_BUILD_NUMBER");
 logger.info("PROMOTED_BUILD_NUMBER: $PROMOTED_BUILD_NUMBER");
@@ -477,7 +491,7 @@ def addNative = { project, String name ->
     def javahTask = project.task("javah$name", type: JavaHeaderTask, dependsOn: project.classes, group: "Build") {
         description = "Generates JNI Headers for $name"
         source = project.sourceSets.main.java.srcDirs.iterator().next()
-        classpath = project.files(project.sourceSets.main.output.classesDir, project.rootProject.file(project.BINARY_STUB))
+        classpath = project.files(project.sourceSets.main.output.classesDir, project.BINARY_STUB)
         output = project.file("$project.buildDir/headers/$name")
     }
     def ccTask = project.task("cc$name", type: CCTask, dependsOn: javahTask, group: "Build") {
@@ -533,17 +547,17 @@ allprojects {
         // defined. So the "test" source set automatically creates a "compileTestJava" task (among others).
         if (name == "compileTestJava") {
             compile.options.compilerArgs = ["-Djava.ext.dirs=", "-XDignore.symbol.file"]
-            classpath = sourceSets.test.compileClasspath + rootProject.files(BINARY_STUB)
+            classpath = sourceSets.test.compileClasspath + BINARY_STUB
         } else if (name == "compileStubJava") {
             compile.options.compilerArgs = ["-Djava.ext.dirs=", "-XDignore.symbol.file"]
-            classpath = sourceSets.stub.compileClasspath + rootProject.files(BINARY_STUB)
+            classpath = sourceSets.stub.compileClasspath + BINARY_STUB
         } else {
             compile.options.compilerArgs = ["-Djava.ext.dirs=", "-XDignore.symbol.file", "-s", "$buildDir/builder-src"]
             // Both controls & graphics need to use the annotation processor, but not the other guys.
             if (["graphics", "controls", "swing", "swt", "base", "fxml"].contains(project.name)){
                 compile.options.compilerArgs += ["-processor", "javafx.builder.processor.BuilderProcessor"]
             }
-            classpath = sourceSets.main.compileClasspath + rootProject.files(BINARY_STUB)
+            classpath = sourceSets.main.compileClasspath + BINARY_STUB
         }
         doLast {
             // Workaround: there are a number of packages which are now getting builders
@@ -596,7 +610,7 @@ allprojects {
     // we start building with Java 9.
     test {
         jvmArgs("-Djava.ext.dirs=");
-        classpath = classpath + rootProject.files(BINARY_STUB);
+        classpath = classpath + BINARY_STUB;
         executable = JAVA;
         enableAssertions = true;
         testLogging.exceptionFormat = "full";
@@ -625,7 +639,7 @@ allprojects {
     }
 
     dependencies {
-      binaryStub rootProject.files(BINARY_STUB)
+      binaryStub BINARY_STUB
     }
 }
 
@@ -735,11 +749,11 @@ project(":graphics") {
     }
     task testWithoutStub(type: Test, dependsOn: ":graphics:compileJava") {
         jvmArgs "-Djava.ext.dirs="
-        classpath = sourceSets.test.runtimeClasspath + rootProject.files(BINARY_STUB)
+        classpath = sourceSets.test.runtimeClasspath + BINARY_STUB
     }
     task testWithStub(type: Test, dependsOn: [":graphics:compileJava"]) {
         jvmArgs "-Djava.ext.dirs=", "-Djavafx.toolkit=com.sun.javafx.pgstub.StubToolkit", "-DCSS_META_DATA_TEST_DIR=${file('$buildDir/classes/main/javafx')}"
-        classpath = sourceSets.stub.runtimeClasspath + sourceSets.main.runtimeClasspath + rootProject.files(BINARY_STUB)
+        classpath = sourceSets.stub.runtimeClasspath + sourceSets.main.runtimeClasspath + BINARY_STUB
         testClassesDir = file("$buildDir/classes/stub")
         testResultsDir = file("$buildDir/stub-results")
         testReportDir = file("$buildDir/reports/stub")
