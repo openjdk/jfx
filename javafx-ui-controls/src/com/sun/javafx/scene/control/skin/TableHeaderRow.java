@@ -70,6 +70,9 @@ public class TableHeaderRow extends StackPane {
 //    private final TableView<?> table;
     
     private final TableViewSkinBase tableSkin;
+    protected TableViewSkinBase getTableSkin() {
+        return this.tableSkin;
+    } 
 
     private Insets tablePadding;
     public void setTablePadding(Insets tablePadding) {
