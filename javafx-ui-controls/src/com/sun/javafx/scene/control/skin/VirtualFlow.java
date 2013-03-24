@@ -278,7 +278,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
      */
     private Callback<VirtualFlow, T> createCell;
     public Callback<VirtualFlow, T> getCreateCell() { return createCell; }
-    protected void setCreateCell(Callback<VirtualFlow, T> cc) {
+    public void setCreateCell(Callback<VirtualFlow, T> cc) {
         this.createCell = cc;
 
         if (createCell != null) {
