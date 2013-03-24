@@ -1908,7 +1908,7 @@ public class TreeTableView<S> extends Control {
          * in this TableView. Rather than directly modify this list, please
          * use the other methods provided in the TableViewSelectionModel.
          */
-        public abstract ObservableList<TreeTablePosition> getSelectedCells();
+        public abstract ObservableList<TreeTablePosition<S,?>> getSelectedCells();
 
         /**
          * Returns the TableView instance that this selection model is installed in.
@@ -1940,35 +1940,35 @@ public class TreeTableView<S> extends Control {
             this.treeTableView.rootProperty().addListener(weakRootPropertyListener);
             updateTreeEventListener(null, treeTableView.getRoot());
             
-            final MappingChange.Map<TreeTablePosition,TreeItem<S>> cellToItemsMap = new MappingChange.Map<TreeTablePosition, TreeItem<S>>() {
-                @Override public TreeItem<S> map(TreeTablePosition f) {
+            final MappingChange.Map<TreeTablePosition<S,?>,TreeItem<S>> cellToItemsMap = new MappingChange.Map<TreeTablePosition<S,?>, TreeItem<S>>() {
+                @Override public TreeItem<S> map(TreeTablePosition<S,?> f) {
                     return getModelItem(f.getRow());
                 }
             };
             
-            final MappingChange.Map<TreeTablePosition,Integer> cellToIndicesMap = new MappingChange.Map<TreeTablePosition, Integer>() {
-                @Override public Integer map(TreeTablePosition f) {
+            final MappingChange.Map<TreeTablePosition<S,?>,Integer> cellToIndicesMap = new MappingChange.Map<TreeTablePosition<S,?>, Integer>() {
+                @Override public Integer map(TreeTablePosition<S,?> f) {
                     return f.getRow();
                 }
             };
             
-            selectedCells = FXCollections.<TreeTablePosition>observableArrayList();
-            selectedCells.addListener(new ListChangeListener<TreeTablePosition>() {
+            selectedCells = FXCollections.<TreeTablePosition<S,?>>observableArrayList();
+            selectedCells.addListener(new ListChangeListener<TreeTablePosition<S,?>>() {
                 @Override
-                public void onChanged(final ListChangeListener.Change<? extends TreeTablePosition> c) {
+                public void onChanged(final ListChangeListener.Change<? extends TreeTablePosition<S,?>> c) {
                     // when the selectedCells observableArrayList changes, we manually call
                     // the observers of the selectedItems, selectedIndices and
                     // selectedCells lists.
                     
                     // create an on-demand list of the removed objects contained in the
                     // given rows
-                    selectedItems.callObservers(new MappingChange<TreeTablePosition, TreeItem<S>>(c, cellToItemsMap, selectedItems));
+                    selectedItems.callObservers(new MappingChange<TreeTablePosition<S,?>, TreeItem<S>>(c, cellToItemsMap, selectedItems));
                     c.reset();
 
-                    selectedIndices.callObservers(new MappingChange<TreeTablePosition, Integer>(c, cellToIndicesMap, selectedIndices));
+                    selectedIndices.callObservers(new MappingChange<TreeTablePosition<S,?>, Integer>(c, cellToIndicesMap, selectedIndices));
                     c.reset();
 
-                    selectedCellsSeq.callObservers(new MappingChange<TreeTablePosition, TreeTablePosition>(c, MappingChange.NOOP_MAP, selectedCellsSeq));
+                    selectedCellsSeq.callObservers(new MappingChange<TreeTablePosition<S,?>, TreeTablePosition<S,?>>(c, MappingChange.NOOP_MAP, selectedCellsSeq));
                     c.reset();
                 }
             });
@@ -1993,8 +1993,8 @@ public class TreeTableView<S> extends Control {
                 }
             };
             
-            selectedCellsSeq = new ReadOnlyUnbackedObservableList<TreeTablePosition>() {
-                @Override public TreeTablePosition get(int i) {
+            selectedCellsSeq = new ReadOnlyUnbackedObservableList<TreeTablePosition<S,?>>() {
+                @Override public TreeTablePosition<S,?> get(int i) {
                     return selectedCells.get(i);
                 }
 
@@ -2116,7 +2116,7 @@ public class TreeTableView<S> extends Control {
         
         // the only 'proper' internal observableArrayList, selectedItems and selectedIndices
         // are both 'read-only and unbacked'.
-        private final ObservableList<TreeTablePosition> selectedCells;
+        private final ObservableList<TreeTablePosition<S,?>> selectedCells;
 
         // NOTE: represents selected ROWS only - use selectedCells for more data
         private final ReadOnlyUnbackedObservableList<Integer> selectedIndices;
@@ -2130,8 +2130,8 @@ public class TreeTableView<S> extends Control {
             return selectedItems;
         }
 
-        private final ReadOnlyUnbackedObservableList<TreeTablePosition> selectedCellsSeq;
-        @Override public ObservableList<TreeTablePosition> getSelectedCells() {
+        private final ReadOnlyUnbackedObservableList<TreeTablePosition<S,?>> selectedCellsSeq;
+        @Override public ObservableList<TreeTablePosition<S,?>> getSelectedCells() {
             return selectedCellsSeq;
         }
 
@@ -2250,7 +2250,7 @@ public class TreeTableView<S> extends Control {
                 }
             } else {
                 int lastIndex = -1;
-                List<TreeTablePosition> positions = new ArrayList<TreeTablePosition>();
+                List<TreeTablePosition<S,?>> positions = new ArrayList<TreeTablePosition<S,?>>();
 
                 if (row >= 0 && row < rowCount) {
                     positions.add(new TreeTablePosition(getTreeTableView(), row, null));
@@ -2282,7 +2282,7 @@ public class TreeTableView<S> extends Control {
 //            if (getTableModel() == null) return;
 
             if (isCellSelectionEnabled()) {
-                List<TreeTablePosition> indices = new ArrayList<TreeTablePosition>();
+                List<TreeTablePosition<S,?>> indices = new ArrayList<TreeTablePosition<S,?>>();
                 TreeTableColumn column;
                 TreeTablePosition tp = null;
                 for (int col = 0; col < getTreeTableView().getVisibleLeafColumns().size(); col++) {
@@ -2299,7 +2299,7 @@ public class TreeTableView<S> extends Control {
                     focus(tp.getRow(), tp.getTableColumn());
                 }
             } else {
-                List<TreeTablePosition> indices = new ArrayList<TreeTablePosition>();
+                List<TreeTablePosition<S,?>> indices = new ArrayList<TreeTablePosition<S,?>>();
                 for (int i = 0; i < getRowCount(); i++) {
                     indices.add(new TreeTablePosition(getTreeTableView(), i, null));
                 }

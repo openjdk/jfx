@@ -138,7 +138,7 @@ public class TableViewBehavior<T> extends TableViewBehaviorBase<TableView<T>, T,
     }
 
     /** {@inheritDoc}  */
-    @Override protected ObservableList<TablePosition> getSelectedCells() {
+    @Override protected ObservableList<TablePosition<T,?>> getSelectedCells() {
         return getControl().getSelectionModel().getSelectedCells();
     }
 
