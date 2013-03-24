@@ -102,7 +102,7 @@ void defineProperty(String name, Properties props, String defaultValue) {
  *                                                                            *
  *  All properties defined using the "defineProperty" method can be replaced  *
  *  on the command line by using the -P flag. For example, to override the    *
- *  location of the binary plug, you would specify -PBINARY_PLUG=some/where   *
+ *  location of the binary stub, you would specify -PBINARY_STUB=some/where   *
  *                                                                            *
  *****************************************************************************/
 
@@ -179,7 +179,7 @@ ext.GLASS_PLATFORM = COMPILE_TARGET.glassName;
 // independently (or we'll try to get the right one based on other supplied info).
 ext.JAVA_HOME = System.getProperty("java.home");
 defineProperty("JDK_HOME", JAVA_HOME.endsWith("jre") ? JAVA_HOME.substring(0, JAVA_HOME.length() - 4) : JAVA_HOME);
-defineProperty("BINARY_STUB", "../artifacts/sdk/rt/lib/ext/jfxrt.jar");
+defineProperty("BINARY_STUB", "file://$JDK_HOME/jre/lib/ext/jfxrt.jar");
 defineProperty("JAVA", "$JDK_HOME/bin/java");
 defineProperty("JAVAC", "$JDK_HOME/bin/javac");
 defineProperty("JAVAH", "$JDK_HOME/bin/javah");
