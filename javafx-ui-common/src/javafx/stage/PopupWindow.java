@@ -102,7 +102,7 @@ public abstract class PopupWindow extends Window {
             new InvalidationListener() {
                 @Override
                 public void invalidated(final Observable observable) {
-                    updateDimensions();
+                    syncWithRootBounds();
                 }
             };
 
@@ -145,11 +145,11 @@ public abstract class PopupWindow extends Window {
                             }
 
                             oldRoot = newRoot;
-                            updateDimensions();
+                            syncWithRootBounds();
                         }
                     }
                 });
-        updateDimensions();
+        syncWithRootBounds();
     }
 
     /**
@@ -400,14 +400,6 @@ public abstract class PopupWindow extends Window {
             // popup calculated below uses the right width and height values for
             // its calculation. (fix for part of RT-10675).
             show();
-            if (!isAutoFix()) {
-                final Parent rootNode = getScene().getRoot();
-                if (rootNode != null) {
-                    final Bounds _bounds = rootNode.getLayoutBounds();
-                    setX(this.getX() + _bounds.getMinX());
-                    setY(this.getY() + _bounds.getMinY());
-                }
-            }
         }
     }
 
@@ -484,7 +476,7 @@ public abstract class PopupWindow extends Window {
         PerformanceTracker.logEvent("PopupWindow.storeVisible for [PopupWindow] finished");
     }
 
-    private void updateDimensions() {
+    private void syncWithRootBounds() {
         final Parent rootNode = getScene().getRoot();
         final Bounds layoutBounds = rootNode.getLayoutBounds();
 
@@ -494,6 +486,39 @@ public abstract class PopupWindow extends Window {
         // update transform
         rootNode.setTranslateX(-layoutBounds.getMinX());
         rootNode.setTranslateY(-layoutBounds.getMinY());
+
+        if (alignWithContentOrigin) {
+            // update window position
+            setWindowTranslate(layoutBounds.getMinX(), layoutBounds.getMinY());
+            if (autofixActive) {
+                autofixHandler.adjustPosition();
+            }
+        }
+    }
+
+    private boolean alignWithContentOrigin = true;
+
+    /**
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     */
+    @Deprecated
+    protected void impl_setAlignWithContentOrigin(final boolean value) {
+        if (alignWithContentOrigin != value) {
+            alignWithContentOrigin = value;
+            if (alignWithContentOrigin) {
+                final Bounds layoutBounds =
+                        getScene().getRoot().getLayoutBounds();
+                setWindowTranslate(layoutBounds.getMinX(),
+                                   layoutBounds.getMinY());
+            } else {
+                setWindowTranslate(0, 0);
+            }
+
+            if (autofixActive) {
+                autofixHandler.adjustPosition();
+            }
+        }
     }
 
     /**
@@ -643,12 +668,22 @@ public abstract class PopupWindow extends Window {
                     Utils.hasFullScreenStage(currentScreen)
                             ? currentScreen.getBounds()
                             : currentScreen.getVisualBounds();
-            double _x = Math.min(getX(), screenBounds.getMaxX() - getWidth());
-            double _y = Math.min(getY(), screenBounds.getMaxY() - getHeight());
+            double wtX = getWindowTranslateX();
+            double wtY = getWindowTranslateY();
+            double oldWindowX = getX() + wtX;
+            double oldWindowY = getY() + wtY;
+            double _x = Math.min(oldWindowX,
+                                 screenBounds.getMaxX() - getWidth());
+            double _y = Math.min(oldWindowY,
+                                 screenBounds.getMaxY() - getHeight());
             _x = Math.max(_x, screenBounds.getMinX());
             _y = Math.max(_y, screenBounds.getMinY());
-            setX(_x);
-            setY(_y);
+            if (_x != oldWindowX) {
+                setX(_x - wtX);
+            }
+            if (_y != oldWindowY) {
+                setY(_y - wtY);
+            }
         }
     }
 

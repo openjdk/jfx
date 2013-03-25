@@ -101,7 +101,7 @@ public class PopupTest {
         p1.setAutoFix(false);
         p1.show(stage);
         assertTrue(p1.isShowing());
-    }    
+    }
             
     @Test
     public void testShowLocation() {
@@ -115,7 +115,29 @@ public class PopupTest {
         assertEquals(10, peer.x, 1e-100);
         assertEquals(20, peer.y, 1e-100);
     }
-            
+
+    @Test
+    public void testContentAdjustment() {
+        final Popup popup = new Popup();
+        final Rectangle contentRect = new Rectangle(10, 20, 100, 100);
+
+        popup.impl_setAlignWithContentOrigin(true);
+        popup.getContent().add(contentRect);
+        popup.show(stage, 50, 50);
+        pulse();
+        final StubPopupStage peer = (StubPopupStage) popup.impl_getPeer();
+
+        assertEquals(60.0, peer.x, 1e-100);
+        assertEquals(70.0, peer.y, 1e-100);
+
+        contentRect.setX(-20);
+        contentRect.setY(-10);
+        pulse();
+
+        assertEquals(30.0, peer.x, 1e-100);
+        assertEquals(40.0, peer.y, 1e-100);
+    }
+
     @Test
     public void testHide() {
         Popup p1 = new Popup();
