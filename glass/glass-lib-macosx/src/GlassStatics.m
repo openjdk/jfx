@@ -37,7 +37,6 @@ JNIEnv *jEnv = NULL;
 
 jclass jWindowClass = NULL;
 jclass jViewClass = NULL;
-jclass jGestureSupportClass = NULL;
 
 jclass jScreenClass = NULL;
 jclass jMenuBarDelegateClass = NULL;
@@ -76,15 +75,6 @@ jmethodID jViewNotifyDragDrop = NULL;
 jmethodID jViewNotifyDragEnd = NULL;
 
 jmethodID jScreenNotifySettingsChanged = NULL;
-
-jmethodID jGestureSupportRotateGesturePerformed = NULL;
-jmethodID jGestureSupportScrollGesturePerformed = NULL;
-jmethodID jGestureSupportSwipeGesturePerformed = NULL;
-jmethodID jGestureSupportMagnifyGesturePerformed = NULL;
-jmethodID jGestureSupportGestureFinished = NULL;
-jmethodID jGestureSupportNotifyBeginTouchEvent = NULL;
-jmethodID jGestureSupportNotifyNextTouchEvent = NULL;
-jmethodID jGestureSupportNotifyEndTouchEvent = NULL;
 
 jmethodID jMapGetMethod = NULL;
 jmethodID jBooleanValueMethod = NULL;
