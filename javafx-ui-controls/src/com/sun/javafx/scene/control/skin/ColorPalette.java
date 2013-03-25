@@ -66,7 +66,6 @@ public class ColorPalette extends VBox {
     GridPane customColorGrid = new GridPane();
     Hyperlink customColorLink = new Hyperlink("Custom Color..");
     Separator separator = new Separator();
-    Window owner;
     Label customColorLabel = new Label("Custom Colors");
     CustomColorDialog customColorDialog = null;
     private final List<ColorSquare> customSquares = FXCollections.observableArrayList();
@@ -83,7 +82,6 @@ public class ColorPalette extends VBox {
     public ColorPalette(Color initPaint, final ColorPicker colorPicker) {
         getStyleClass().add("color-palette");
         this.colorPicker = colorPicker;
-        owner = colorPicker.getScene().getWindow();
         colorPickerGrid = new ColorPickerGrid(initPaint);
         colorPickerGrid.requestFocus();
         colorPickerGrid.setFocusTraversable(true);
@@ -95,7 +93,7 @@ public class ColorPalette extends VBox {
         customColorLink.setOnAction(new EventHandler<ActionEvent>() {
             @Override public void handle(ActionEvent t) {
                 if (customColorDialog == null) {
-                    customColorDialog = new CustomColorDialog(owner);
+                    customColorDialog = new CustomColorDialog(popupControl);
                     customColorDialog.customColorProperty().addListener(new ChangeListener<Color>() {
                         @Override public void changed(ObservableValue<? extends Color> ov, 
                                                                 Color t, Color t1) {
