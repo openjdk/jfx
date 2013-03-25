@@ -71,7 +71,7 @@ public class CustomColorDialog extends StackPane {
     private Rectangle colorBarIndicator;
 
     private Color currentColor = Color.WHITE;
-    private ObjectProperty<Color> customColorProperty = new SimpleObjectProperty<Color>(Color.TRANSPARENT);
+    private ObjectProperty<Color> customColorProperty = new SimpleObjectProperty<>(Color.TRANSPARENT);
     private Runnable onSave;
     private Runnable onUse;
     private Runnable onCancel;
@@ -114,6 +114,14 @@ public class CustomColorDialog extends StackPane {
 
     ObjectProperty<Color> customColorProperty() {
         return customColorProperty;
+    }
+
+    void setCustomColor(Color color) {
+        customColorProperty.set(color);
+    }
+
+    Color getCustomColor() {
+        return customColorProperty.get();
     }
 
     public Runnable getOnSave() {
@@ -227,11 +235,6 @@ public class CustomColorDialog extends StackPane {
                 }
             }
         };
-        private ObjectProperty<Color> color = new SimpleObjectProperty<Color>(); 
-        private ObjectProperty<Color> colorProperty() { return color; }
-        public Color getColor() { return color.get(); }
-        public void setColor(Color newColor) { color.set(newColor); }
-
         private IntegerProperty red = new SimpleIntegerProperty(-1) {
             @Override protected void invalidated() {
                 if (!changeIsLocal) {
@@ -266,16 +269,11 @@ public class CustomColorDialog extends StackPane {
             @Override protected void invalidated() {
                 if (!changeIsLocal) {
                     changeIsLocal = true;
-                    switch (controlsPane.colorSettingsMode) {
-                        case HSB:
-                            updateHSBColor();
-                            break;
-                        case RGB:
-                            updateRGBColor();
-                            break;
-                        case WEB:
-                            break;
-                    }
+                    setCustomColor(new Color(
+                            getCustomColor().getRed(), 
+                            getCustomColor().getGreen(), 
+                            getCustomColor().getBlue(), 
+                            clamp(alpha.get() / 100)));
                     changeIsLocal = false;
                 }
             }
@@ -286,7 +284,7 @@ public class CustomColorDialog extends StackPane {
             hue.set(newColor.getHue());
             sat.set(newColor.getSaturation() * 100);
             bright.set(newColor.getBrightness() * 100);
-            setColor(newColor);
+            setCustomColor(newColor);
         }
         
         private void updateHSBColor() {
@@ -295,18 +293,18 @@ public class CustomColorDialog extends StackPane {
             red.set(doubleToInt(newColor.getRed()));
             green.set(doubleToInt(newColor.getGreen()));
             blue.set(doubleToInt(newColor.getBlue()));
-            setColor(newColor);
+            setCustomColor(newColor);
         }
        
         private void colorChanged() {
             if (!changeIsLocal) {
                 changeIsLocal = true;
-                hue.set(getColor().getHue());
-                sat.set(getColor().getSaturation() * 100);
-                bright.set(getColor().getBrightness() * 100);
-                red.set(doubleToInt(getColor().getRed()));
-                green.set(doubleToInt(getColor().getGreen()));
-                blue.set(doubleToInt(getColor().getBlue()));
+                hue.set(getCustomColor().getHue());
+                sat.set(getCustomColor().getSaturation() * 100);
+                bright.set(getCustomColor().getBrightness() * 100);
+                red.set(doubleToInt(getCustomColor().getRed()));
+                green.set(doubleToInt(getCustomColor().getGreen()));
+                blue.set(doubleToInt(getCustomColor().getBlue()));
                 changeIsLocal = false;
             }
         }
@@ -315,7 +313,7 @@ public class CustomColorDialog extends StackPane {
             
             getStyleClass().add("color-rect-pane");
             
-            color.addListener(new ChangeListener<Color>() {
+            customColorProperty().addListener(new ChangeListener<Color>() {
 
                 @Override
                 public void changed(ObservableValue<? extends Color> ov, Color t, Color t1) {
@@ -328,7 +326,7 @@ public class CustomColorDialog extends StackPane {
             colorRectIndicator.setEffect(new DropShadow(2, 0, 1, Color.BLACK));
         
             colorRect = new Rectangle(RECT_SIZE, RECT_SIZE);
-            colorProperty().addListener(new ChangeListener<Color>() {
+            customColorProperty().addListener(new ChangeListener<Color>() {
                 @Override
                 public void changed(ObservableValue<? extends Color> ov, Color t, Color t1) {
                     colorRect.setFill(Color.hsb(hue.getValue(), 1.0, 1.0, clamp(alpha.get()/100)));
@@ -413,11 +411,11 @@ public class CustomColorDialog extends StackPane {
             hue.set(currentColor.getHue());
             sat.set(currentColor.getSaturation()*100);
             bright.set(currentColor.getBrightness()*100);
-            setColor(Color.hsb(hue.get(), clamp(sat.get() / 100), clamp(bright.get() / 100), 
+            setCustomColor(Color.hsb(hue.get(), clamp(sat.get() / 100), clamp(bright.get() / 100), 
                     clamp(alpha.get()/100)));
-            red.set(doubleToInt(getColor().getRed()));
-            green.set(doubleToInt(getColor().getGreen()));
-            blue.set(doubleToInt(getColor().getBlue()));
+            red.set(doubleToInt(getCustomColor().getRed()));
+            green.set(doubleToInt(getCustomColor().getGreen()));
+            blue.set(doubleToInt(getCustomColor().getBlue()));
             changeIsLocal = false;
         }
         
@@ -492,18 +490,7 @@ public class CustomColorDialog extends StackPane {
             currentColorRect.setFill(currentColor);
 
             newColorRect = new Rectangle(CONTROLS_WIDTH/2, 18);
-            
-            updateNewColorFill();
-            colorRectPane.color.addListener(new ChangeListener<Color>() {
-                @Override
-                public void changed(ObservableValue<? extends Color> ov, Color t, Color t1) {
-                    updateNewColorFill();
-                    customColorProperty.set(Color.hsb(colorRectPane.hue.getValue(), 
-                        clamp(colorRectPane.sat.getValue()/100), 
-                        clamp(colorRectPane.bright.getValue()/100),
-                        clamp(colorRectPane.alpha.getValue()/100)));
-                }
-            });
+            newColorRect.fillProperty().bind(customColorProperty());
 
             currentColorLabel = new Label("Current Color");
             newColorLabel = new Label("New Color");
@@ -638,12 +625,6 @@ public class CustomColorDialog extends StackPane {
                                             hBox, settingsPane, alphaSettings, buttonBox);
         }
         
-        private void updateNewColorFill() {
-            newColorRect.setFill(Color.hsb(colorRectPane.hue.getValue(), 
-                clamp(colorRectPane.sat.getValue()/100), clamp(colorRectPane.bright.getValue()/100),
-                clamp(colorRectPane.alpha.getValue()/100)));
-        }
-        
         private void showHSBSettings() {
             colorSettingsMode = ColorSettingsMode.HSB;
             if (hsbSettings == null) {
@@ -710,7 +691,7 @@ public class CustomColorDialog extends StackPane {
 
                 webField = new WebColorField();
                 webField.setSkin(new WebColorFieldSkin(webField));
-                webField.valueProperty().bindBidirectional(colorRectPane.colorProperty());
+                webField.valueProperty().bindBidirectional(customColorProperty());
                 webField.setPrefColumnCount(6);
                 webSettings.add(webField, 1, 1);
                 
