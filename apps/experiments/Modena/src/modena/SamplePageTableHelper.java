@@ -277,7 +277,7 @@ public class SamplePageTableHelper {
         lastNameCol = new TableColumn<Person, String>();
         lastNameCol.setGraphic(graphic1);
         lastNameCol.setText("Last");
-        lastNameCol.setSortType(TableColumnBase.SortType.DESCENDING);
+        lastNameCol.setSortType(TableColumn.SortType.DESCENDING);
         lastNameCol.setCellValueFactory(new Callback<TableColumn.CellDataFeatures<Person, String>, ObservableValue<String>>() {
             public ObservableValue<String> call(TableColumn.CellDataFeatures<Person, String> p) {
                 return p.getValue().lastNameProperty();
