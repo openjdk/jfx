@@ -455,7 +455,10 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
         if (c == null) return;
         
         T oldValue = comboBox.getValue();
-        T value = c.fromString(textField.getText());
+        String text = textField.getText();
+        
+        // conditional check here added due to RT-28245
+        T value = oldValue == null && (text == null || text.isEmpty()) ? null : c.fromString(textField.getText());
         
         if ((value == null && oldValue == null) || (value != null && value.equals(oldValue))) {
             // no point updating values needlessly (as they are the same)
