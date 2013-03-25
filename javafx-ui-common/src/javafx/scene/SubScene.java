@@ -346,10 +346,9 @@ public class SubScene extends Node {
     /**
      * Defines the background fill of this {@code SubScene}. Both a {@code null}
      * value meaning paint no background and a {@link javafx.scene.paint.Paint}
-     * with transparency are supported, but what is painted behind it will
-     * depend on the platform.  The default value is COLOR.TRANSPARENT.
+     * with transparency are supported. The default value is null.
      *
-     * @defaultValue WHITE
+     * @defaultValue null
      */
     private ObjectProperty<Paint> fill;
 
@@ -358,12 +357,12 @@ public class SubScene extends Node {
     }
 
     public final Paint getFill() {
-        return fill == null ? Color.TRANSPARENT : fill.get();
+        return fill == null ? null : fill.get();
     }
 
     public final ObjectProperty<Paint> fillProperty() {
         if (fill == null) {
-            fill = new ObjectPropertyBase<Paint>(Color.TRANSPARENT) {
+            fill = new ObjectPropertyBase<Paint>(null) {
 
                 @Override
                 protected void invalidated() {
@@ -573,18 +572,7 @@ public class SubScene extends Node {
         if (localX < 0 || localY < 0 || localX > getWidth() || localY > getHeight()) {
             return false;
         }
-        Paint paint = getFill();
-        if (paint == null) { return false; }
-        // Check if the background fill paint is opaque, then there is no point in looking further
-        if (paint.isOpaque()) { return true; }
-        if (paint instanceof Color && (((Color)paint).getOpacity() > 0.0)) {
-            return true;
-        }
-        // Remind: If above returns false, we should also check if the alpha
-        // value of complex fill paint and return false iff alpha == 0.0
-        // then we will need localX and localY.  But paint does not have API to
-        // get alpha value at given a location.
-        return false;
+        return getFill() != null;
     }
 
     /*
