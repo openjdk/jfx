@@ -152,7 +152,7 @@ public class TreeTableViewBehavior<T> extends TableViewBehaviorBase<TreeTableVie
     }
 
     /** {@inheritDoc}  */
-    @Override protected ObservableList<TreeTablePosition> getSelectedCells() {
+    @Override protected ObservableList<TreeTablePosition<T,?>> getSelectedCells() {
         return getControl().getSelectionModel().getSelectedCells();
     }
 

@@ -141,8 +141,8 @@ public class TreeTableViewKeyInputTest {
     private String debug() {
         StringBuilder sb = new StringBuilder("Selected Cells: [");
         
-        List<TreeTablePosition> cells = sm.getSelectedCells();
-        for (TreeTablePosition tp : cells) {
+        List<TreeTablePosition<String,?>> cells = sm.getSelectedCells();
+        for (TreeTablePosition<String,?> tp : cells) {
             sb.append("(");
             sb.append(tp.getRow());
             sb.append(",");

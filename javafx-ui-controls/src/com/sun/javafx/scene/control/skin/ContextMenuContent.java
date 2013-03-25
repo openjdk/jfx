@@ -241,9 +241,13 @@ public class ContextMenuContent extends Region {
         // clean up itemsContainer
         ObservableList<Node> itemsContainerChilder = itemsContainer.getChildren();
         for (int i = 0, max = itemsContainerChilder.size(); i < max; i++) {
-            MenuItemContainer container = (MenuItemContainer) itemsContainerChilder.get(i);
-            container.visibleProperty().unbind();
-            container.dispose();
+            Node n = itemsContainerChilder.get(i);
+            
+            if (n instanceof MenuItemContainer) {
+                MenuItemContainer container = (MenuItemContainer) n;
+                container.visibleProperty().unbind();
+                container.dispose();
+            }
         }
         itemsContainerChilder.clear();
         
