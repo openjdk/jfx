@@ -942,9 +942,8 @@ public class TilePaneTest {
         
         ParsedValue pv = CSSParser.getInstance().parseExpr("-fx-perf-tile-width","67.0");
         Object val = pv.convert(null);        
-        CssMetaData prop = ((StyleableProperty)tilepane.prefTileWidthProperty()).getCssMetaData();
         try {
-            prop.set(tilepane, val, null);
+            ((StyleableProperty)tilepane.prefTileWidthProperty()).applyStyle(null, val);
             assertEquals(67.0, tilepane.getPrefTileWidth(), 0.00001);
         } catch (Exception e) {
             Assert.fail(e.toString());
@@ -959,9 +958,8 @@ public class TilePaneTest {
         
         ParsedValue pv = CSSParser.getInstance().parseExpr("-fx-perf-rows","2");
         Object val = pv.convert(null);        
-        CssMetaData prop = ((StyleableProperty)tilepane.prefRowsProperty()).getCssMetaData();
         try {
-            prop.set(tilepane, val, null);
+            ((StyleableProperty)tilepane.prefRowsProperty()).applyStyle(null, val);
             assertEquals(2, tilepane.getPrefRows(), 0.00001);
         } catch (Exception e) {
             Assert.fail(e.toString());
@@ -979,7 +977,7 @@ public class TilePaneTest {
         Object val = pv.convert(null);        
         CssMetaData prop = ((StyleableProperty)tilepane.prefColumnsProperty()).getCssMetaData();
         try {
-            prop.set(tilepane, val, null);
+            ((StyleableProperty)tilepane.prefColumnsProperty()).applyStyle(null,val);
             assertEquals(2, tilepane.getPrefColumns(), 0.00001);
         } catch (Exception e) {
             Assert.fail(e.toString());

@@ -723,10 +723,6 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, P
                 new CssMetaData<ProgressIndicator,Number>("-fx-indeterminate-segment-count",
                                                           SizeConverter.getInstance(), 8) {
 
-                    @Override public void set(ProgressIndicator node, Number value, StyleOrigin origin) {
-                        super.set(node, value.intValue(), origin);
-                    }
-
                     @Override public boolean isSettable(ProgressIndicator n) {
                         final ProgressIndicatorSkin skin = (ProgressIndicatorSkin) n.getSkin();
                         return skin.indeterminateSegmentCount == null ||

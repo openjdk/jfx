@@ -326,11 +326,6 @@ public class Pagination extends Control {
                 SizeConverter.getInstance(), DEFAULT_MAX_PAGE_INDICATOR_COUNT) {
 
             @Override
-            public void set(Pagination node, Number value, StyleOrigin origin) {
-                super.set(node, value.intValue(), origin);
-            }
-
-            @Override
             public boolean isSettable(Pagination n) {
                 return n.maxPageIndicatorCount == null || !n.maxPageIndicatorCount.isBound();
             }

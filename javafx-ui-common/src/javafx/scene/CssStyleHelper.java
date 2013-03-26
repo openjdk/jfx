@@ -84,7 +84,14 @@ final class CssStyleHelper {
      * Creates a new StyleHelper.
      */
     static CssStyleHelper createStyleHelper(Node node) {
-        
+
+        // If this node had a style helper, then reset properties to their initial value
+        // since the node might not have a style helper after this call
+        if (node.styleHelper != null && node.styleHelper.cacheMetaData != null) {
+            node.styleHelper.resetToInitialValues(node);
+            node.styleHelper.cacheMetaData.cssSetProperties.clear();
+        }
+
         // need to know how far we are to root in order to init arrays.
         // TODO: should we hang onto depth to avoid this nonsense later?
         // TODO: is there some other way of knowing how far from the root a node is?
@@ -133,16 +140,6 @@ final class CssStyleHelper {
                 }
                 
                 if (mightInherit == false) {
-                    
-                    // If this node had a style helper but no longer has
-                    // a StyleHelper, then reset properties to thier initial
-                    // value. If this node were to have a StyleHelper after
-                    // exiting this method, then transitionToState would take
-                    // care of resetting properties if needed. 
-                    if (node.styleHelper != null) {
-                        node.styleHelper.resetToInitialValues(node);
-                    }
-                    
                     return null;
                 }
             }
@@ -242,6 +239,8 @@ final class CssStyleHelper {
             }
 
             this.fontProp = styleableFontProperty;
+
+            this.cssSetProperties = new HashMap<String,StyleableProperty>();
         
         }
 
@@ -249,7 +248,7 @@ final class CssStyleHelper {
         private final int smapId;
         private final StyleCache localStyleCache;
         private final Reference<StyleCache> sharedCacheRef;
-        private StyleCacheEntry previousCacheEntry;
+        private Map<String, StyleableProperty> cssSetProperties;
     }
     
     //
@@ -375,7 +374,7 @@ final class CssStyleHelper {
         for (int n=0; n<nStyleables; n++) {
             final CssMetaData metaData = metaDataList.get(n);
             if (metaData.isSettable(styleable) == false) continue;
-            final StyleableProperty<?> styleableProperty = metaData.getStyleableProperty(styleable);
+            final StyleableProperty styleableProperty = metaData.getStyleableProperty(styleable);
             if (styleableProperty != null) {
                 final StyleOrigin origin = styleableProperty.getStyleOrigin();
                 if (origin != null && origin != StyleOrigin.USER) {
@@ -383,7 +382,8 @@ final class CssStyleHelper {
                     // the StyleOrigin of the property is null. So, passing null 
                     // here makes the property look (to CSS) like it was
                     // initialized but never used.
-                    metaData.set(styleable, metaData.getInitialValue(styleable), null);
+                    Object value = metaData.getInitialValue(styleable);
+                    styleableProperty.applyStyle(null, value);
                 }
             }
         }        
@@ -640,10 +640,8 @@ final class CssStyleHelper {
             final CssMetaData<Styleable,Object> cssMetaData = 
                     (CssMetaData<Styleable,Object>)styleables.get(n);
             
-            final StyleableProperty styleableProperty = cssMetaData.getStyleableProperty(node);
-            if (styleableProperty == null) continue;
-
             if (observableStyleMap != null) {
+                final StyleableProperty styleableProperty = cssMetaData.getStyleableProperty(node);
                 if (styleableProperty != null && observableStyleMap.containsKey(styleableProperty)) {
                     observableStyleMap.remove(styleableProperty);
                 }
@@ -654,11 +652,6 @@ final class CssStyleHelper {
             // to be set (usually due to a "bind").
             if (!cssMetaData.isSettable(node)) continue;
 
-            // need to know who set the current value - CSS, the user, or init
-            final StyleOrigin originOfCurrentValue = styleableProperty.getStyleOrigin();
-
-            final boolean isUserSet = originOfCurrentValue == StyleOrigin.USER;
-            
             final String property = cssMetaData.getProperty();
             
             // Create a List to hold the Styles if the node has 
@@ -679,7 +672,7 @@ final class CssStyleHelper {
                 
             } else {
 
-                calculatedValue = lookup(node, cssMetaData, isUserSet, node.pseudoClassStates, 
+                calculatedValue = lookup(node, cssMetaData, node.pseudoClassStates,
                         inlineStyles, node, cacheEntry, styleList);
 
                 // lookup is not supposed to return null.
@@ -689,8 +682,16 @@ final class CssStyleHelper {
             
             // cssMetaData#set might throw an exception and it is called
             // from two places in this try block.
-            try {                    
-            
+            try {
+
+                // cssSetProperties keeps track of the StyleableProperty's that were set by CSS in the previous state.
+                // If this property is not in cssSetProperties map, then the property was not set in the previous state.
+                // This accomplishes two things. First, it lets us know if the property was set in the previous state
+                // so it can be reset in this state if there is no value for it. Second, it calling
+                // CssMetaData#getStyleableProperty which is rather expensive as it may cause expansion of lazy
+                // properties.
+                StyleableProperty styleableProperty = cacheMetaData.cssSetProperties.remove(property);
+
                 //
                 // RT-19089
                 // If the current value of the property was set by CSS 
@@ -704,11 +705,12 @@ final class CssStyleHelper {
                     // is no calculated value for the property, then 
                     // there was no style for the property in the current
                     // state, so reset the property to its initial value.
-                    if (originOfCurrentValue != StyleOrigin.USER && originOfCurrentValue != null) {
+                    if (styleableProperty != null) {
 
                         Object initial = cssMetaData.getInitialValue(node);
+                        styleableProperty.applyStyle(null, initial);
 
-                        cssMetaData.set(node, initial, null);                        
+//                        cssMetaData.set(node, initial, null);
 
                     } 
                     
@@ -722,7 +724,12 @@ final class CssStyleHelper {
                     // value to cache.
                     cacheEntry.put(property, calculatedValue);
                 }
-                
+
+                if (styleableProperty == null) styleableProperty = cssMetaData.getStyleableProperty(node);
+
+                // need to know who set the current value - CSS, the user, or init
+                final StyleOrigin originOfCurrentValue = styleableProperty.getStyleOrigin();
+
 
                 // RT-10522:
                 // If the user set the property and there is a style and
@@ -732,20 +739,32 @@ final class CssStyleHelper {
                 //
                 final StyleOrigin originOfCalculatedValue = calculatedValue.getOrigin();
                 assert originOfCalculatedValue != null : styleableProperty.toString();
-                if (isUserSet) {
+
+                if (originOfCurrentValue == StyleOrigin.USER) {
                     if (originOfCalculatedValue == StyleOrigin.USER_AGENT || originOfCalculatedValue == null) { 
                         continue;
                     }                
                 }
             
                 final Object value = calculatedValue.getValue();
-                if (LOGGER.isLoggable(PlatformLogger.FINER)) {
-                    LOGGER.finer(property + ", call cssMetaData.set(" + 
-                            node + ", " + String.valueOf(value) + ", " +
-                            originOfCalculatedValue + ")");
-                }
+                final Object currentValue = styleableProperty.getValue();
 
-                cssMetaData.set(node, value, originOfCalculatedValue);
+                // RT-21185: Only apply the style if something has changed.
+                if ((originOfCurrentValue != originOfCalculatedValue)
+                        || (currentValue != null
+                        ? currentValue.equals(value) == false
+                        : value != null)) {
+
+                    if (LOGGER.isLoggable(PlatformLogger.FINER)) {
+                        LOGGER.finer(property + ", call applyStyle: " + styleableProperty + ", value =" +
+                                String.valueOf(value) + ", originOfCalculatedValue=" + originOfCalculatedValue);
+                    }
+
+
+                    styleableProperty.applyStyle(originOfCalculatedValue, value);
+                    cacheMetaData.cssSetProperties.put(property, styleableProperty);
+
+                }
 
                 if (observableStyleMap != null) {
                     observableStyleMap.put(styleableProperty, styleList);
@@ -755,7 +774,9 @@ final class CssStyleHelper {
 
                 // RT-27155: if setting value raises exception, reset value 
                 // the value to initial and thereafter skip setting the property
-                cssMetaData.set(node, cssMetaData.getInitialValue(node), null);
+                StyleableProperty styleableProperty = cssMetaData.getStyleableProperty(node);
+                Object value = cssMetaData.getInitialValue(node);
+                styleableProperty.applyStyle(null, value);
                 cacheEntry.put(property, SKIP);
 
                 List<CssError> errors = null;
@@ -772,9 +793,7 @@ final class CssStyleHelper {
             }
 
         }
-        
-        cacheMetaData.previousCacheEntry = cacheEntry;
-        
+
         // RT-20643
         CssError.setCurrentScene(null);
 
@@ -840,20 +859,20 @@ final class CssStyleHelper {
      * style tree looking for the style information for the Node, the
      * property associated with the given styleable, in these states for this font.
      *
+     *
      * @param node
      * @param styleable
      * @param states
-     * @param font
      * @return
      */
-    private CalculatedValue lookup(Node node, CssMetaData styleable, 
-            boolean isUserSet, Set<PseudoClass> states,
-            Map<String,CascadingStyle> userStyles, Node originatingNode, 
-            StyleCacheEntry cacheEntry, List<Style> styleList) {
+    private CalculatedValue lookup(Node node, CssMetaData styleable,
+                                   Set<PseudoClass> states,
+                                   Map<String, CascadingStyle> userStyles, Node originatingNode,
+                                   StyleCacheEntry cacheEntry, List<Style> styleList) {
 
         if (styleable.getConverter() == FontConverter.getInstance()) {
         
-            return lookupFont(node, styleable, isUserSet, 
+            return lookupFont(node, styleable,
                     originatingNode, cacheEntry, styleList);
         }
         
@@ -872,7 +891,7 @@ final class CssStyleHelper {
             
             if (numSubProperties == 0) {
                 
-                return handleNoStyleFound(node, styleable, isUserSet, userStyles, 
+                return handleNoStyleFound(node, styleable, userStyles,
                         originatingNode, cacheEntry, styleList);
                 
             } else {
@@ -895,7 +914,7 @@ final class CssStyleHelper {
                 for (int i=0; i<numSubProperties; i++) {
                     CssMetaData subkey = subProperties.get(i);
                     CalculatedValue constituent = 
-                        lookup(node, subkey, isUserSet, states, userStyles, 
+                        lookup(node, subkey, states, userStyles,
                             originatingNode, cacheEntry, styleList);
                     if (constituent != SKIP) {
                         if (subs == null) {
@@ -919,7 +938,7 @@ final class CssStyleHelper {
 
                 // If there are no subkeys which apply...
                 if (subs == null || subs.isEmpty()) {
-                    return handleNoStyleFound(node, styleable, isUserSet, userStyles, 
+                    return handleNoStyleFound(node, styleable, userStyles,
                             originatingNode, cacheEntry, styleList);
                 }
 
@@ -955,8 +974,13 @@ final class CssStyleHelper {
             // the style came from the user agent stylesheet, then
             // skip the value. A style from a user agent stylesheet should
             // not override the user set style.
-            if (isUserSet && style.getOrigin() == StyleOrigin.USER_AGENT) {
-                return SKIP;
+            if (style.getOrigin() == StyleOrigin.USER_AGENT) {
+
+                StyleableProperty styleableProperty = styleable.getStyleableProperty(node);
+                // if styleableProperty is null, then we're dealing with a sub-property.
+                if (styleableProperty != null && styleableProperty.getStyleOrigin() == StyleOrigin.USER) {
+                    return SKIP;
+                }
             }
 
             // If there was a style found, then we want to check whether the
@@ -985,15 +1009,18 @@ final class CssStyleHelper {
      * Called when there is no style found.
      */
     private CalculatedValue handleNoStyleFound(Node node, CssMetaData styleable,
-            boolean isUserSet, Map<String,CascadingStyle> userStyles, 
-            Node originatingNode, StyleCacheEntry cacheEntry, List<Style> styleList) {
+                                               Map<String, CascadingStyle> userStyles,
+                                               Node originatingNode, StyleCacheEntry cacheEntry, List<Style> styleList) {
 
         if (styleable.isInherits()) {
 
 
+            StyleableProperty styleableProperty = styleable.getStyleableProperty(node);
+            StyleOrigin origin = styleableProperty != null ? styleableProperty.getStyleOrigin() : null;
+
             // RT-16308: if there is no matching style and the user set 
             // the property, do not look for inherited styles.
-            if (isUserSet) {
+            if (origin == StyleOrigin.USER) {
 
                     return SKIP;
                     
@@ -1032,7 +1059,7 @@ final class CssStyleHelper {
         if (parent == null) {
             return SKIP;
         }
-        return parentStyleHelper.lookup(parent, styleable, false,
+        return parentStyleHelper.lookup(parent, styleable,
                 parent.pseudoClassStates,
                 getInlineStyleMap(parent), originatingNode, cacheEntry, styleList);
     }
@@ -1735,19 +1762,17 @@ final class CssStyleHelper {
      * group.setStyle("-fx-font: 12px Arial;");
      * group.getChildren().add(text);
      * </pre>
+     *
      * @param node
      * @param styleable
-     * @param isUserSet
-     * @param states
-     * @param userStyles
      * @param originatingNode
      * @param cacheEntry
      * @param styleList
-     * @return 
+     * @return
      */
-    private CalculatedValue lookupFont(Node node, CssMetaData styleable, 
-            boolean isUserSet, Node originatingNode, 
-            StyleCacheEntry cacheEntry, List<Style> styleList) {
+    private CalculatedValue lookupFont(Node node, CssMetaData styleable,
+                                       Node originatingNode,
+                                       StyleCacheEntry cacheEntry, List<Style> styleList) {
 
         // To make the code easier to read, define CONSIDER_INLINE_STYLES as true. 
         // Passed to lookupFontSubProperty to tell it whether or not 
@@ -1767,6 +1792,11 @@ final class CssStyleHelper {
         CssStyleHelper helper = this;
         String property = styleable == null ? null : styleable.getProperty();
         CascadingStyle csShorthand = null;
+
+        StyleableProperty styleableProperty = styleable.getStyleableProperty(node);
+        boolean isUserSet = styleableProperty.getStyleOrigin() == StyleOrigin.USER;
+
+
         while (parent != null) {
             
             final Set<PseudoClass> states = parent.pseudoClassStates;
@@ -1774,14 +1804,15 @@ final class CssStyleHelper {
             
             final CascadingStyle cascadingStyle =
                 helper.getStyle(parent, property, states, inlineStyles);
-            
+
             if (isUserSet) {
+
                 //
-                // If isUserSet, then we don't look beyond the current node. 
+                // If current StyleOrigin is USER, then we don't look beyond the current node.
                 // Only if the user did not set the font will we inherit.
                 //
                 if (cascadingStyle != null) {
-                
+
                     origin = cascadingStyle.getOrigin();
 
                     // if the user set font and the origin of the font shorthand
@@ -1789,19 +1820,20 @@ final class CssStyleHelper {
                     // since ua styles shouldn't override setFont
                     if (origin != StyleOrigin.USER_AGENT) {
                         csShorthand = cascadingStyle;
-                    }                    
-                }    
-                
+                    }
+
+                }
+
                 break;
-                
+
             } else if (cascadingStyle != null) {
                 //
-                // If isUserSet is false, then take the style if we found one.
+                // If current StyleOrigin is not USER, then take the style if we found one.
                 // If csShorthand is not null, then were looking for an inline
                 // style. In this case, if the origin is INLINE, we'll take it.
                 // If it isn't INLINE we'll keep looking for an INLINE style.
                 //
-                final boolean isInline = cascadingStyle.getOrigin() == StyleOrigin.INLINE;
+                final boolean isInline = origin == StyleOrigin.INLINE;
                 if (csShorthand == null || isInline) {
                     origin = cascadingStyle.getOrigin();
                     csShorthand = cascadingStyle;
@@ -1975,9 +2007,6 @@ final class CssStyleHelper {
         
         // Now we have all the pieces from the stylesheet
         // still be some missing. We'll grab those from the node. 
-        StyleableProperty styleableProperty = styleable != null 
-                ? styleable.getStyleableProperty(node) 
-                : null;
         Font f = null;
         if (styleableProperty != null) {
             f = (Font)styleableProperty.getValue();

@@ -334,13 +334,11 @@ public class TabPaneTest {
 
     @Test public void whenTabMinWidthIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
         CssMetaData styleable = ((StyleableProperty)tabPane.tabMinWidthProperty()).getCssMetaData();
-        styleable.set(tabPane, 43.0, null);
         assertTrue(styleable.isSettable(tabPane));
     }
 
     @Test public void canSpecifyTabMinWidthViaCSS() {
-        CssMetaData styleable = ((StyleableProperty)tabPane.tabMinWidthProperty()).getCssMetaData();
-        styleable.set(tabPane, 34.0, null);
+        ((StyleableProperty)tabPane.tabMinWidthProperty()).applyStyle(null, 34.0);
         assertEquals(34.0, tabPane.getTabMinWidth(), 0.0);
     }
 
@@ -354,13 +352,11 @@ public class TabPaneTest {
 
     @Test public void whenTabMaxWidthIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
         CssMetaData styleable = ((StyleableProperty)tabPane.tabMaxWidthProperty()).getCssMetaData();
-        styleable.set(tabPane, 43.0, null);
         assertTrue(styleable.isSettable(tabPane));
     }
 
     @Test public void canSpecifyTabMaxWidthViaCSS() {
-        CssMetaData styleable = ((StyleableProperty)tabPane.tabMaxWidthProperty()).getCssMetaData();
-        styleable.set(tabPane, 34.0, null);
+        ((StyleableProperty)tabPane.tabMaxWidthProperty()).applyStyle(null, 34.0);
         assertEquals(34.0, tabPane.getTabMaxWidth(), 0.0);
     }
 
@@ -374,13 +370,11 @@ public class TabPaneTest {
 
     @Test public void whenTabMinHeightIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
         CssMetaData styleable = ((StyleableProperty)tabPane.tabMinHeightProperty()).getCssMetaData();
-        styleable.set(tabPane, 43.0, null);
         assertTrue(styleable.isSettable(tabPane));
     }
 
     @Test public void canSpecifyTabMinHeightViaCSS() {
-        CssMetaData styleable = ((StyleableProperty)tabPane.tabMinHeightProperty()).getCssMetaData();
-        styleable.set(tabPane, 34.0, null);
+        ((StyleableProperty)tabPane.tabMinHeightProperty()).applyStyle(null, 34.0);
         assertEquals(34.0, tabPane.getTabMinHeight(), 0.0);
     }
 
@@ -394,13 +388,11 @@ public class TabPaneTest {
 
     @Test public void whenTabMaxHeightIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
         CssMetaData styleable = ((StyleableProperty)tabPane.tabMaxHeightProperty()).getCssMetaData();
-        styleable.set(tabPane, 43.0, null);
         assertTrue(styleable.isSettable(tabPane));
     }
 
     @Test public void canSpecifyTabMaxHeightViaCSS() {
-        CssMetaData styleable = ((StyleableProperty)tabPane.tabMaxHeightProperty()).getCssMetaData();
-        styleable.set(tabPane, 34.0, null);
+        ((StyleableProperty)tabPane.tabMaxHeightProperty()).applyStyle(null, 34.0);
         assertEquals(34.0, tabPane.getTabMaxHeight(), 0.0);
     }
 

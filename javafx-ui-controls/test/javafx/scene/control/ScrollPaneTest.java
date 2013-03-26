@@ -410,14 +410,12 @@ public class ScrollPaneTest {
 
     @Test public void whenHbarPolicyIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
         CssMetaData styleable = ((StyleableProperty)scrollPane.hbarPolicyProperty()).getCssMetaData();
-        styleable.set(scrollPane, ScrollPane.ScrollBarPolicy.ALWAYS, null);
         assertTrue(styleable.isSettable(scrollPane));
     }
 
     @Test public void canSpecifyHbarPolicyViaCSS() {
-        CssMetaData styleable = ((StyleableProperty)scrollPane.hbarPolicyProperty()).getCssMetaData();
-        styleable.set(scrollPane, ScrollPane.ScrollBarPolicy.NEVER, null);
-        assertTrue(styleable.isSettable(scrollPane));
+        ((StyleableProperty)scrollPane.hbarPolicyProperty()).applyStyle(null, ScrollPane.ScrollBarPolicy.NEVER);
+        assertSame(ScrollPane.ScrollBarPolicy.NEVER, scrollPane.hbarPolicyProperty().get());
     }
 
     @Test public void whenVbarPolicyIsBound_impl_cssSettable_ReturnsFalse() {
@@ -430,13 +428,11 @@ public class ScrollPaneTest {
 
     @Test public void whenVbarPolicyIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
         CssMetaData styleable = ((StyleableProperty)scrollPane.vbarPolicyProperty()).getCssMetaData();
-        styleable.set(scrollPane, ScrollPane.ScrollBarPolicy.ALWAYS, null);
         assertTrue(styleable.isSettable(scrollPane));
     }
 
     @Test public void canSpecifyVbarPolicyViaCSS() {
-        CssMetaData styleable = ((StyleableProperty)scrollPane.vbarPolicyProperty()).getCssMetaData();
-        styleable.set(scrollPane, ScrollPane.ScrollBarPolicy.NEVER, null);
+        ((StyleableProperty)scrollPane.vbarPolicyProperty()).applyStyle(null, ScrollPane.ScrollBarPolicy.NEVER);
         assertSame(ScrollPane.ScrollBarPolicy.NEVER, scrollPane.getVbarPolicy());
     }
 
@@ -450,13 +446,11 @@ public class ScrollPaneTest {
 
     @Test public void whenFitToWidthIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
         CssMetaData styleable = ((StyleableProperty)scrollPane.fitToWidthProperty()).getCssMetaData();
-        styleable.set(scrollPane, false, null);
         assertTrue(styleable.isSettable(scrollPane));
     }
 
     @Test public void canSpecifyFitToWidthViaCSS() {
-        CssMetaData styleable = ((StyleableProperty)scrollPane.fitToWidthProperty()).getCssMetaData();
-        styleable.set(scrollPane, true, null);
+        ((StyleableProperty)scrollPane.fitToWidthProperty()).applyStyle(null, Boolean.TRUE);
         assertSame(true, scrollPane.isFitToWidth());
     }
 
@@ -470,13 +464,11 @@ public class ScrollPaneTest {
 
     @Test public void whenFitToHeightIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
         CssMetaData styleable = ((StyleableProperty)scrollPane.fitToHeightProperty()).getCssMetaData();
-        styleable.set(scrollPane, false, null);
         assertTrue(styleable.isSettable(scrollPane));
     }
 
     @Test public void canSpecifyFitToHeightViaCSS() {
-        CssMetaData styleable = ((StyleableProperty)scrollPane.fitToHeightProperty()).getCssMetaData();
-        styleable.set(scrollPane, true, null);
+        ((StyleableProperty)scrollPane.fitToHeightProperty()).applyStyle(null, Boolean.TRUE);
         assertSame(true, scrollPane.isFitToHeight());
     }
 
@@ -490,13 +482,11 @@ public class ScrollPaneTest {
 
     @Test public void whenPannableIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
         CssMetaData styleable = ((StyleableProperty)scrollPane.pannableProperty()).getCssMetaData();
-        styleable.set(scrollPane, false, null);
         assertTrue(styleable.isSettable(scrollPane));
     }
 
     @Test public void canSpecifyPannableViaCSS() {
-        CssMetaData styleable = ((StyleableProperty)scrollPane.pannableProperty()).getCssMetaData();
-        styleable.set(scrollPane, true, null);
+        ((StyleableProperty)scrollPane.pannableProperty()).applyStyle(null, Boolean.TRUE);
         assertSame(true, scrollPane.isPannable());
     }
 

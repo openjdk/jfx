@@ -167,13 +167,11 @@ public class CategoryAxisTest {
 
     @Test public void whenStartMarginIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
         CssMetaData styleable = ((StyleableProperty)axis.startMarginProperty()).getCssMetaData();
-        styleable.set(axis,10.9, null);
         assertTrue(styleable.isSettable(axis));
     }
 
     @Test public void canSpecifyStartMarginViaCSS() {
-        CssMetaData styleable = ((StyleableProperty)axis.startMarginProperty()).getCssMetaData();
-        styleable.set(axis,10.34, null);
+        ((StyleableProperty)axis.startMarginProperty()).applyStyle(null, 10.34);
         assertEquals(10.34, axis.getStartMargin(), 0.0);
     }
 
@@ -187,13 +185,11 @@ public class CategoryAxisTest {
 
     @Test public void whenEndMarginIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
         CssMetaData styleable = ((StyleableProperty)axis.endMarginProperty()).getCssMetaData();
-        styleable.set(axis,10.9, null);
         assertTrue(styleable.isSettable(axis));
     }
 
     @Test public void canSpecifyEndMarginViaCSS() {
-        CssMetaData styleable = ((StyleableProperty)axis.endMarginProperty()).getCssMetaData();
-        styleable.set(axis,10.34, null);
+        ((StyleableProperty)axis.endMarginProperty()).applyStyle(null, 10.34);
         assertEquals(10.34, axis.getEndMargin(), 0.0);
     }
 
@@ -208,13 +204,11 @@ public class CategoryAxisTest {
 
     @Test public void whenGapStartAndEndIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
         CssMetaData styleable = ((StyleableProperty)axis.gapStartAndEndProperty()).getCssMetaData();
-        styleable.set(axis,false, null);
         assertTrue(styleable.isSettable(axis));
     }
 
     @Test public void canGapStartAndEndViaCSS() {
-        CssMetaData styleable = ((StyleableProperty)axis.gapStartAndEndProperty()).getCssMetaData();
-        styleable.set(axis,true, null);
+        ((StyleableProperty)axis.gapStartAndEndProperty()).applyStyle(null, Boolean.TRUE);
         assertSame(true, axis.isGapStartAndEnd());
     }
 

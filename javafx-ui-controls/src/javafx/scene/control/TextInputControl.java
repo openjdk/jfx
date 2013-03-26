@@ -173,6 +173,28 @@ public abstract class TextInputControl extends Control {
         if (font == null) {
             font = new StyleableObjectProperty<Font>(Font.getDefault()) {
 
+
+                private boolean fontSetByCss = false;
+
+                @Override
+                public void applyStyle(StyleOrigin newOrigin, Font value) {
+
+                    //
+                    // RT-20727 -
+                    //
+                    // if oldOrigin is null, then the property is in init state.
+                    // if newOrigin is null, then either some code is initializing this property or css is resetting it.
+                    //
+                    final StyleOrigin oldOrigin = getStyleOrigin();
+                    fontSetByCss =
+                            newOrigin != StyleOrigin.USER &&
+                                    ((oldOrigin == null && newOrigin != null) ||
+                                            (oldOrigin != null && newOrigin == null));
+
+                    super.applyStyle(newOrigin, value);
+                }
+
+
                 @Override
                 public void set(Font value) {
                     final Font oldValue = get();
@@ -213,7 +235,6 @@ public abstract class TextInputControl extends Control {
         return font;
     }
 
-    private boolean fontSetByCss = false;
     private ObjectProperty<Font> font;
     public final void setFont(Font value) { fontProperty().setValue(value); }
     public final Font getFont() { return font == null ? Font.getDefault() : font.getValue(); }
@@ -1117,15 +1138,6 @@ public abstract class TextInputControl extends Control {
     private static class StyleableProperties {
         private static final FontCssMetaData<TextInputControl> FONT =
             new FontCssMetaData<TextInputControl>("-fx-font", Font.getDefault()) {
-
-            @Override
-            public void set(TextInputControl styleable, Font value, StyleOrigin origin) {
-                // RT-20727 - if font is changed by calling setFont, then
-                // css might need to be reapplied since font size affects
-                // calculated values for styles with relative values
-                styleable.fontSetByCss = origin != StyleOrigin.USER;
-                super.set(styleable, value, origin);                
-            }
 
             @Override
             public boolean isSettable(TextInputControl n) {

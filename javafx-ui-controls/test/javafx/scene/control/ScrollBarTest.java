@@ -271,14 +271,12 @@ public class ScrollBarTest {
 
     @Test public void whenOrientationIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
         CssMetaData styleable = ((StyleableProperty)scrollBar.orientationProperty()).getCssMetaData();
-        styleable.set(scrollBar, Orientation.VERTICAL, null);
         assertTrue(styleable.isSettable(scrollBar));
     }
 
     @Test public void canSpecifyOrientationViaCSS() {
-        CssMetaData styleable = ((StyleableProperty)scrollBar.orientationProperty()).getCssMetaData();
-        styleable.set(scrollBar, Orientation.VERTICAL, null);
-        assertTrue(styleable.isSettable(scrollBar));
+        ((StyleableProperty)scrollBar.orientationProperty()).applyStyle(null, Orientation.VERTICAL);
+        assertSame(Orientation.VERTICAL, scrollBar.getOrientation());
     }
 
     @Test public void whenUnitIncIsBound_impl_cssSettable_ReturnsFalse() {
@@ -291,13 +289,11 @@ public class ScrollBarTest {
 
     @Test public void whenUnitIncIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
         CssMetaData styleable = ((StyleableProperty)scrollBar.unitIncrementProperty()).getCssMetaData();
-        styleable.set(scrollBar, 5.0, null);
         assertTrue(styleable.isSettable(scrollBar));
     }
 
     @Test public void canSpecifyUnitIncViaCSS() {
-        CssMetaData styleable = ((StyleableProperty)scrollBar.unitIncrementProperty()).getCssMetaData();
-        styleable.set(scrollBar, 6.0, null);
+        ((StyleableProperty)scrollBar.unitIncrementProperty()).applyStyle(null, 6.0);
         assertEquals(6.0, scrollBar.getUnitIncrement(), 0.0);
     }
 
@@ -311,13 +307,11 @@ public class ScrollBarTest {
 
     @Test public void whenBlockIncIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
         CssMetaData styleable = ((StyleableProperty)scrollBar.blockIncrementProperty()).getCssMetaData();
-        styleable.set(scrollBar, 5.0, null);
         assertTrue(styleable.isSettable(scrollBar));
     }
 
     @Test public void canSpecifyBlockIncViaCSS() {
-        CssMetaData styleable = ((StyleableProperty)scrollBar.blockIncrementProperty()).getCssMetaData();
-        styleable.set(scrollBar, 6.0, null);
+        ((StyleableProperty)scrollBar.blockIncrementProperty()).applyStyle(null, 6.0);
         assertEquals(6.0, scrollBar.getBlockIncrement(), 0.0);
     }
 

@@ -247,13 +247,11 @@ public class ValueAxisTest {
 
     @Test public void whenMinorTickVisibleIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
         CssMetaData styleable = ((StyleableProperty)axis.minorTickVisibleProperty()).getCssMetaData();
-        styleable.set(axis,false, null);
         assertTrue(styleable.isSettable(axis));
     }
 
     @Test public void canSpecifyMinorTickVisibleViaCSS() {
-        CssMetaData styleable = ((StyleableProperty)axis.minorTickVisibleProperty()).getCssMetaData();
-        styleable.set(axis,true, null);
+        ((StyleableProperty)axis.minorTickVisibleProperty()).applyStyle(null, Boolean.TRUE);
         assertSame(true, axis.isMinorTickVisible());
     }
 
@@ -267,13 +265,11 @@ public class ValueAxisTest {
 
     @Test public void whenMinorTickLengthIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
         CssMetaData styleable = ((StyleableProperty)axis.minorTickLengthProperty()).getCssMetaData();
-        styleable.set(axis,10.9, null);
         assertTrue(styleable.isSettable(axis));
     }
 
     @Test public void canSpecifyMinorTickLengthViaCSS() {
-        CssMetaData styleable = ((StyleableProperty)axis.minorTickLengthProperty()).getCssMetaData();
-        styleable.set(axis,10.34, null);
+        ((StyleableProperty)axis.minorTickLengthProperty()).applyStyle(null, 10.34);
         assertEquals(10.34, axis.getMinorTickLength(), 0.0);
     }
 
@@ -287,14 +283,12 @@ public class ValueAxisTest {
 
     @Test public void whenMinorTickCountIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
         CssMetaData styleable = ((StyleableProperty)axis.minorTickCountProperty()).getCssMetaData();
-        styleable.set(axis,10, null);
         assertTrue(styleable.isSettable(axis));
     }
 
     @Test public void canSpecifyMinorTickCountViaCSS() {
-        CssMetaData styleable = ((StyleableProperty)axis.minorTickCountProperty()).getCssMetaData();
-        styleable.set(axis,10, null);
-        assertTrue(styleable.isSettable(axis));
+        ((StyleableProperty)axis.minorTickCountProperty()).applyStyle(null, 10);
+        assertEquals(10, axis.getMinorTickCount(), 0.000001);
     }
 
     /*********************************************************************

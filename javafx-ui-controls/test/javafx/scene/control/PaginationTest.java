@@ -148,13 +148,11 @@ public class PaginationTest {
 
     @Test public void whenMaxPageIndicatorCountIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
         CssMetaData styleable = ((StyleableProperty)pagination.maxPageIndicatorCountProperty()).getCssMetaData();
-        styleable.set(pagination, 100, null);
         assertTrue(styleable.isSettable(pagination));
     }
 
     @Test public void canSpecifyMaxPageIndicatorCountViaCSS() {
-        CssMetaData styleable = ((StyleableProperty)pagination.maxPageIndicatorCountProperty()).getCssMetaData();
-        styleable.set(pagination, 100, null);
+        ((StyleableProperty)pagination.maxPageIndicatorCountProperty()).applyStyle(null, 100);
         assertSame(100, pagination.getMaxPageIndicatorCount());
     }
 

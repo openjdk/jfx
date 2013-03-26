@@ -33,11 +33,9 @@ import com.sun.javafx.css.converters.SizeConverter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import javafx.css.CssMetaData;
-import javafx.css.FontCssMetaData;
-import javafx.css.StyleOrigin;
-import javafx.css.Styleable;
-import javafx.css.StyleableProperty;
+
+import javafx.beans.property.ObjectProperty;
+import javafx.css.*;
 import javafx.scene.control.Labeled;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
@@ -92,7 +90,7 @@ public class LabeledText extends Text {
      * CssMetaData of its super classes.
      */
     public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
-        return StyleableProperties.STYLEABLES;
+        return STYLEABLES;
     }
 
     /**
@@ -108,113 +106,64 @@ public class LabeledText extends Text {
    // with instances of CssMetaData that redirect to Labeled. Thus, when
    // the Labeled is styled,
    //
-   private static class StyleableProperties {
 
-       private static final CssMetaData<LabeledText,Font> FONT =
-           new FontCssMetaData<LabeledText>("-fx-font", Font.getDefault()) {
+    private StyleableProperty<Font> fontMirror = null;
+    private StyleableProperty<Font> fontMirror() {
+        if (fontMirror == null) {
+            fontMirror = new StyleablePropertyMirror<Font>(FONT, "fontMirror", Font.getDefault(), (StyleableProperty)labeled.fontProperty());
+        }
+        return fontMirror;
+    }
 
-            @Override
-            public void set(LabeledText node, Font value, StyleOrigin origin) {
-                //
-                // In the case where the Labeled's textFill was set by an
-                // inline style, this inline style should override values
-                // from lesser origins.
-                //
-                StyleableProperty<Font> prop = (StyleableProperty<Font>)node.labeled.fontProperty();
-                StyleOrigin propOrigin = prop.getStyleOrigin();
+    private static final CssMetaData<LabeledText,Font> FONT =
+        new FontCssMetaData<LabeledText>("-fx-font", Font.getDefault()) {
 
-                //
-                // if propOrigin is null, then the property is in init state
-                // if origin is null, then some code is initializing this prop
-                // if propOrigin is greater than origin, then the style should
-                //    not override
-                //
-                if (propOrigin == null ||
-                    origin == null ||
-                    propOrigin.compareTo(origin) <= 0) {
-                    super.set(node, value, origin);
-                }
-            }
+        @Override
+        public boolean isSettable(LabeledText node) {
+            return node.labeled != null ? node.labeled.fontProperty().isBound() == false : true;
+        }
 
-           @Override
-           public boolean isSettable(LabeledText node) {
-               return node.labeled != null ? node.labeled.fontProperty().isBound() == false : true;
-           }
+        @Override
+        public StyleableProperty<Font> getStyleableProperty(LabeledText node) {
+            return node.fontMirror();
+        }
+    };
 
-           @Override
-           public StyleableProperty<Font> getStyleableProperty(LabeledText node) {
-               return node.labeled != null ? (StyleableProperty<Font>)node.labeled.fontProperty() : null;
-           }
-       };
+    private StyleableProperty<Paint> fillMirror;
+    private StyleableProperty<Paint> fillMirror() {
+        if (fillMirror == null) {
+            fillMirror = new StyleablePropertyMirror<Paint>(FILL, "fillMirror", Color.BLACK, (StyleableProperty)labeled.textFillProperty());
+        }
+        return fillMirror;        
+    }
 
-
-       private static final CssMetaData<LabeledText,Paint> FILL =
-           new CssMetaData<LabeledText,Paint>("-fx-fill",
-               PaintConverter.getInstance(), Color.BLACK) {
+    private static final CssMetaData<LabeledText,Paint> FILL =
+        new CssMetaData<LabeledText,Paint>("-fx-fill",
+            PaintConverter.getInstance(), Color.BLACK) {
 
             @Override
-            public void set(LabeledText node, Paint value, StyleOrigin origin) {
-                //
-                // In the case where the Labeled's textFill was set by an
-                // inline style, this inline style should override values
-                // from lesser origins.
-                //
-                StyleableProperty<Paint> prop = 
-                        (StyleableProperty<Paint>)node.labeled.textFillProperty();
-                StyleOrigin propOrigin = prop.getStyleOrigin();
-
-                //
-                // if propOrigin is greater than origin, then the style should
-                //    not override
-                // if propOrigin is null, then the property is in init state
-                // if origin is null, then some code is initializing this prop
-                //
-                if ((propOrigin != null && origin != null &&  
-                     propOrigin.compareTo(origin) <= 0) ||
-                    (propOrigin == null && origin == null)) {
-                    super.set(node, value, origin);
-                }
+            public boolean isSettable(LabeledText node) {
+                return node.labeled.textFillProperty().isBound() == false;
             }
-
-           @Override
-           public boolean isSettable(LabeledText node) {
-               return node.labeled.textFillProperty().isBound() == false;
-           }
-
-           @Override
-           public StyleableProperty<Paint> getStyleableProperty(LabeledText node) {
-               return (StyleableProperty<Paint>)node.labeled.textFillProperty();
-           }
-       };
-
-        private static final CssMetaData<LabeledText,TextAlignment> TEXT_ALIGNMENT =
-                new CssMetaData<LabeledText,TextAlignment>("-fx-text-alignment",
-                new EnumConverter<TextAlignment>(TextAlignment.class),
-                TextAlignment.LEFT) {
 
             @Override
-            public void set(LabeledText node, TextAlignment value, StyleOrigin origin) {
-                //
-                // In the case where the Labeled's textFill was set by an
-                // inline style, this inline style should override values
-                // from lesser origins.
-                //
-                StyleableProperty<TextAlignment> prop = 
-                        (StyleableProperty<TextAlignment>)node.labeled.textAlignmentProperty();
-                StyleOrigin propOrigin = prop.getStyleOrigin();
-
-                //
-                // if propOrigin is null, then the property is in init state
-                // if origin is null, then some code is initializing this prop
-                // if propOrigin is greater than origin, then the style should
-                //    not override
-                //
-                if (propOrigin == null ||
-                    origin == null ||
-                    propOrigin.compareTo(origin) <= 0) {
-                    super.set(node, value, origin);
-                }
+            public StyleableProperty<Paint> getStyleableProperty(LabeledText node) {
+                return node.fillMirror();
             }
+        };
+
+    private StyleableProperty<TextAlignment> textAlignmentMirror;
+    private StyleableProperty<TextAlignment> textAlignmentMirror() {
+        if (textAlignmentMirror == null) {
+            textAlignmentMirror = new StyleablePropertyMirror<TextAlignment>(TEXT_ALIGNMENT, "textAlignmentMirror", TextAlignment.LEFT, (StyleableProperty)labeled.textAlignmentProperty());
+        }
+        return textAlignmentMirror;        
+    }
+    
+    private static final CssMetaData<LabeledText,TextAlignment> TEXT_ALIGNMENT =
+        new CssMetaData<LabeledText,TextAlignment>("-fx-text-alignment",
+        new EnumConverter<TextAlignment>(TextAlignment.class),
+        TextAlignment.LEFT) {
 
             @Override
             public boolean isSettable(LabeledText node) {
@@ -223,39 +172,23 @@ public class LabeledText extends Text {
 
             @Override
             public StyleableProperty<TextAlignment> getStyleableProperty(LabeledText node) {
-                return (StyleableProperty<TextAlignment>)node.labeled.textAlignmentProperty();
+                return node.textAlignmentMirror();
             }
         };
 
-        private static final CssMetaData<LabeledText,Boolean> UNDERLINE =
-                new CssMetaData<LabeledText,Boolean>("-fx-underline",
-                BooleanConverter.getInstance(),
-                Boolean.FALSE) {
-
-            @Override
-            public void set(LabeledText node, Boolean value, StyleOrigin origin) {
-                //
-                // In the case where the Labeled's textFill was set by an
-                // inline style, this inline style should override values
-                // from lesser origins.
-                //
-                StyleableProperty<Boolean> prop = 
-                        (StyleableProperty<Boolean>)node.labeled.underlineProperty();
-                StyleOrigin propOrigin = prop.getStyleOrigin();
-
-                //
-                // if propOrigin is null, then the property is in init state
-                // if origin is null, then some code is initializing this prop
-                // if propOrigin is greater than origin, then the style should
-                //    not override
-                //
-                if (propOrigin == null ||
-                    origin == null ||
-                    propOrigin.compareTo(origin) <= 0) {
-                    super.set(node, value, origin);
-                }
-            }
-
+    private StyleableProperty<Boolean> underlineMirror;
+    private StyleableProperty<Boolean> underlineMirror() {
+        if (underlineMirror == null) {
+            underlineMirror = new StyleablePropertyMirror<Boolean>(UNDERLINE, "underLineMirror", Boolean.FALSE, (StyleableProperty)labeled.underlineProperty());
+        }
+        return underlineMirror;        
+    }
+    
+    private static final CssMetaData<LabeledText,Boolean> UNDERLINE =
+            new CssMetaData<LabeledText,Boolean>("-fx-underline",
+            BooleanConverter.getInstance(),
+            Boolean.FALSE) {
+ 
             @Override
             public boolean isSettable(LabeledText node) {
                 return node.labeled.underlineProperty().isBound() == false;
@@ -263,38 +196,22 @@ public class LabeledText extends Text {
 
             @Override
             public StyleableProperty<Boolean> getStyleableProperty(LabeledText node) {
-                return (StyleableProperty<Boolean>)node.labeled.underlineProperty();
+                return node.underlineMirror();
             }
         };
 
-        private static final CssMetaData<LabeledText,Number> LINE_SPACING =
-	    new CssMetaData<LabeledText,Number>("-fx-line-spacing",
-                SizeConverter.getInstance(),
+    private StyleableProperty<Number> lineSpacingMirror;
+    private StyleableProperty<Number> lineSpacingMirror() {
+        if (lineSpacingMirror == null) {
+            lineSpacingMirror = new StyleablePropertyMirror<Number>(LINE_SPACING, "lineSpacingMirror", 0d, (StyleableProperty)labeled.lineSpacingProperty());
+        }
+        return lineSpacingMirror;        
+    }
+    
+    private static final CssMetaData<LabeledText,Number> LINE_SPACING =
+        new CssMetaData<LabeledText,Number>("-fx-line-spacing",
+            SizeConverter.getInstance(),
                 0) {
-
-            @Override
-            public void set(LabeledText node, Number value, StyleOrigin origin) {
-                //
-                // In the case where the Labeled's textFill was set by an
-                // inline style, this inline style should override values
-                // from lesser origins.
-                //
-                StyleableProperty<Number> prop = 
-                        (StyleableProperty<Number>)node.labeled.lineSpacingProperty();
-                StyleOrigin propOrigin = prop.getStyleOrigin();
-
-                //
-                // if propOrigin is null, then the property is in init state
-                // if origin is null, then some code is initializing this prop
-                // if propOrigin is greater than origin, then the style should
-                //    not override
-                //
-                if (propOrigin == null ||
-                    origin == null ||
-                    propOrigin.compareTo(origin) <= 0) {
-                    super.set(node, value, origin);
-                }
-            }
 
             @Override
             public boolean isSettable(LabeledText node) {
@@ -303,33 +220,70 @@ public class LabeledText extends Text {
 
             @Override
             public StyleableProperty<Number> getStyleableProperty(LabeledText node) {
-                return (StyleableProperty<Number>)node.labeled.lineSpacingProperty();
+                return node.lineSpacingMirror();
             }
         };
 
-       private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
-       static {
+    private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
+    static {
 
-           final List<CssMetaData<? extends Styleable, ?>> styleables =
-               new ArrayList<CssMetaData<? extends Styleable, ?>>(Text.getClassCssMetaData());
+       final List<CssMetaData<? extends Styleable, ?>> styleables =
+           new ArrayList<CssMetaData<? extends Styleable, ?>>(Text.getClassCssMetaData());
 
-           for (int n=0,nMax=styleables.size(); n<nMax; n++) {
-               final String prop = styleables.get(n).getProperty();
+       for (int n=0,nMax=styleables.size(); n<nMax; n++) {
+           final String prop = styleables.get(n).getProperty();
 
-               if ("-fx-fill".equals(prop)) {
-                   styleables.set(n, FILL);
-               } else if ("-fx-font".equals(prop)) {
-                   styleables.set(n, FONT);
-               } else if ("-fx-text-alignment".equals(prop)) {
-                   styleables.set(n, TEXT_ALIGNMENT);
-               } else if ("-fx-underline".equals(prop)) {
-                   styleables.set(n, UNDERLINE);
-               } else if ("-fx-line-spacing".equals(prop)) {
-                   styleables.set(n, LINE_SPACING);
-               }
+           if ("-fx-fill".equals(prop)) {
+               styleables.set(n, FILL);
+           } else if ("-fx-font".equals(prop)) {
+               styleables.set(n, FONT);
+           } else if ("-fx-text-alignment".equals(prop)) {
+               styleables.set(n, TEXT_ALIGNMENT);
+           } else if ("-fx-underline".equals(prop)) {
+               styleables.set(n, UNDERLINE);
+           } else if ("-fx-line-spacing".equals(prop)) {
+               styleables.set(n, LINE_SPACING);
            }
-
-           STYLEABLES = Collections.unmodifiableList(styleables);
        }
-   }
+
+       STYLEABLES = Collections.unmodifiableList(styleables);
+    }       
+    
+    private class StyleablePropertyMirror<T> extends SimpleStyleableObjectProperty<T> {
+        
+        private StyleablePropertyMirror(CssMetaData<LabeledText, T> cssMetaData, String name, T initialValue, StyleableProperty property) {
+            super(cssMetaData, LabeledText.this, name, initialValue);
+            this.property = property;
+        }
+        
+        @Override
+        public void applyStyle(StyleOrigin newOrigin, T value) {
+
+            //
+            // In the case where the Labeled's property was set by an
+            // inline style, this inline style should override values
+            // from lesser origins.
+            //
+            StyleOrigin propOrigin = property.getStyleOrigin();
+
+            //
+            // if propOrigin is null, then the property is in init state
+            // if origin is null, then some code is initializing this prop
+            // if propOrigin is greater than origin, then the style should
+            //    not override
+            //
+            if (propOrigin == null ||
+                    newOrigin == null ||
+                    propOrigin.compareTo(newOrigin) <= 0) {
+                super.applyStyle(newOrigin, value);
+            }
+        }
+        
+        @Override protected void invalidated() {
+            property.applyStyle(this.getStyleOrigin(), this.get());
+        }
+        
+        private final StyleableProperty property;
+    } 
+       
 }

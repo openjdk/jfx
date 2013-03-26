@@ -115,8 +115,7 @@ public class ControlSkinTest {
     
     
     @Test public void shouldBeAbleToSpecifyTheSkinViaCSS() {
-        CssMetaData styleable = ((StyleableProperty)c.skinClassNameProperty()).getCssMetaData();
-        styleable.set(c, "javafx.scene.control.ControlSkinTest$MySkinStub", null);
+        ((StyleableProperty)c.skinClassNameProperty()).applyStyle(null, "javafx.scene.control.ControlSkinTest$MySkinStub");
         assertTrue(c.getSkin() instanceof MySkinStub);
     }
     
@@ -130,18 +129,16 @@ public class ControlSkinTest {
                 calledOnce = true;
             }
         });
-        CssMetaData styleable = ((StyleableProperty)skinClassName).getCssMetaData();
-        styleable.set(c, "javafx.scene.control.ControlSkinTest$MySkinStub", null);
+        ((StyleableProperty)skinClassName).applyStyle(null, "javafx.scene.control.ControlSkinTest$MySkinStub");
         Skin<?> s = c.getSkin();
-        styleable.set(c, "javafx.scene.control.ControlSkinTest$MySkinStub", null);
+        ((StyleableProperty)skinClassName).applyStyle(null, "javafx.scene.control.ControlSkinTest$MySkinStub");
         assertSame(s, c.getSkin());
     }
 
     @Test public void shouldNotSeeErrorMessageWhenSettingTheSkinToNullViaCSS() {
-        CssMetaData styleable = ((StyleableProperty)c.skinClassNameProperty()).getCssMetaData();
-        styleable.set(c, "javafx.scene.control.ControlSkinTest$MySkinStub", null);
+        ((StyleableProperty)c.skinClassNameProperty()).applyStyle(null, "javafx.scene.control.ControlSkinTest$MySkinStub");
         assertTrue(c.getSkin() instanceof MySkinStub);
-        styleable.set(c, null, null);
+        ((StyleableProperty)c.skinClassNameProperty()).applyStyle(null, null);
         assertTrue(c.getSkin() instanceof MySkinStub);        
     }
             
@@ -149,32 +146,28 @@ public class ControlSkinTest {
     @Ignore ("This spits out annoying debug statements, re-enable when we can disable all logging")
     @Test public void loadSkinClassShouldIgnoreNullNames() {
         c.setSkin(s);
-        CssMetaData styleable = ((StyleableProperty)c.skinClassNameProperty()).getCssMetaData();
-        styleable.set(c, null, null); // indirectly calls loadSkinClass
+        ((StyleableProperty)c.skinClassNameProperty()).applyStyle(null, null);
         assertSame(s, c.getSkin()); // shouldn't have changed
     }
     
     @Ignore ("This spits out annoying debug statements, re-enable when we can disable all logging")
     @Test public void loadSkinClassShouldIgnoreEmptyStrings() {
         c.setSkin(s);
-        CssMetaData styleable = ((StyleableProperty)c.skinClassNameProperty()).getCssMetaData();
-        styleable.set(c, "", null); // indirectly calls loadSkinClass
+        ((StyleableProperty)c.skinClassNameProperty()).applyStyle(null, "");
         assertSame(s, c.getSkin()); // shouldn't have changed
     }
     
     @Ignore ("This spits out annoying debug statements, re-enable when we can disable all logging")
     @Test public void loadSkinClassShouldIgnoreSkinsWithoutAProperConstructor() {
         c.setSkin(s);
-        CssMetaData styleable = ((StyleableProperty)c.skinClassNameProperty()).getCssMetaData();
-        styleable.set(c, "javafx.scene.control.ControlSkinTest$UnloadableSkinStub", null); // indirectly calls loadSkinClass
+        ((StyleableProperty)c.skinClassNameProperty()).applyStyle(null, "javafx.scene.control.ControlSkinTest$UnloadableSkinStub");
         assertSame(s, c.getSkin()); // shouldn't have changed
     }
     
     @Ignore ("This spits out annoying debug statements, re-enable when we can disable all logging")
     @Test public void loadSkinClassShouldIgnoreBogusOrUnfindableSkins() {
         c.setSkin(s);
-        CssMetaData styleable = ((StyleableProperty)c.skinClassNameProperty()).getCssMetaData();
-        styleable.set(c, "javafx.scene.control.ControlSkinTest$FooSkinWhichDoesntExist", null); // indirectly calls loadSkinClass
+        ((StyleableProperty)c.skinClassNameProperty()).applyStyle(null, "javafx.scene.control.ControlSkinTest$FooSkinWhichDoesntExist");
         assertSame(s, c.getSkin()); // shouldn't have changed
     }
     

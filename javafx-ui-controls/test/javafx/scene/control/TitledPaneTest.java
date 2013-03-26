@@ -218,7 +218,6 @@ public class TitledPaneTest {
 
     @Test public void whenAnimatedIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
         CssMetaData styleable = ((StyleableProperty)titledPane.animatedProperty()).getCssMetaData();
-        styleable.set(titledPane, false, null);
         assertTrue(styleable.isSettable(titledPane));
     }
 
@@ -232,7 +231,7 @@ public class TitledPaneTest {
 
     @Test public void whenCollapsibleIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
         CssMetaData styleable = ((StyleableProperty)titledPane.collapsibleProperty()).getCssMetaData();
-        styleable.set(titledPane, false, null);
+        ((StyleableProperty)titledPane.collapsibleProperty()).applyStyle(null, Boolean.FALSE);
         assertTrue(styleable.isSettable(titledPane));
     }
 

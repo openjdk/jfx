@@ -69,6 +69,15 @@ public class CellSkinBase<C extends Cell, B extends CellBehaviorBase<C>> extends
     private DoubleProperty cellSizePropertyImpl() {
         if (cellSize == null) {
             cellSize = new StyleableDoubleProperty(DEFAULT_CELL_SIZE) {
+
+                @Override
+                public void applyStyle(StyleOrigin origin, Number value) {
+                    double size = value == null ? DEFAULT_CELL_SIZE : value.doubleValue();
+                    // guard against a 0 or negative size
+                    super.applyStyle(origin, size <= 0 ? DEFAULT_CELL_SIZE : size);
+                }
+
+
                 @Override public void set(double value) {
 //                    // Commented this out due to RT-19794, because otherwise
 //                    // cellSizeSet would be false when the default caspian.css
@@ -126,13 +135,6 @@ public class CellSkinBase<C extends Cell, B extends CellBehaviorBase<C>> extends
          private final static CssMetaData<Cell<?>,Number> CELL_SIZE =
                 new CssMetaData<Cell<?>,Number>("-fx-cell-size",
                  SizeConverter.getInstance(), DEFAULT_CELL_SIZE) {
-
-            @Override
-            public void set(Cell<?> node, Number value, StyleOrigin origin) {
-                double size = value == null ? DEFAULT_CELL_SIZE : value.doubleValue();
-                // guard against a 0 or negative size
-                super.set(node, size <= 0 ? DEFAULT_CELL_SIZE : size, origin);
-            }
 
             @Override
             public boolean isSettable(Cell n) {

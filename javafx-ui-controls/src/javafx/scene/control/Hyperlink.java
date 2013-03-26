@@ -87,10 +87,9 @@ public class Hyperlink extends ButtonBase {
         getStyleClass().setAll(DEFAULT_STYLE_CLASS);
         // cursor is styleable through css. Calling setCursor
         // makes it look to css like the user set the value and css will not 
-        // override. Initializing cursor by calling set on the 
-        // CssMetaData ensures that css will be able to override the value.        
-        final CssMetaData prop = ((StyleableProperty)cursorProperty()).getCssMetaData();
-        prop.set(this, Cursor.HAND, null);
+        // override. Initializing cursor by calling applyStyle with null
+        // StyleOrigin ensures that css will be able to override the value.
+        ((StyleableProperty)cursorProperty()).applyStyle(null, Cursor.HAND);
     }
     
     /***************************************************************************

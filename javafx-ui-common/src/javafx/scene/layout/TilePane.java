@@ -986,10 +986,6 @@ public class TilePane extends Pane {
              new CssMetaData<TilePane,Number>("-fx-pref-columns",
                  SizeConverter.getInstance(), 5.0) {
 
-            @Override public void set(TilePane node, Number value, StyleOrigin origin) {
-                super.set(node, value.intValue(), origin);
-            }
-            
             @Override
             public boolean isSettable(TilePane node) {
                 return node.prefColumns == null ||
@@ -1022,10 +1018,6 @@ public class TilePane extends Pane {
              new CssMetaData<TilePane,Number>("-fx-pref-rows",
                  SizeConverter.getInstance(), 5.0) {
 
-            @Override public void set(TilePane node, Number value, StyleOrigin origin) {
-                super.set(node, value.intValue(), origin);
-            }
-            
             @Override
             public boolean isSettable(TilePane node) {
                 return node.prefRows == null ||

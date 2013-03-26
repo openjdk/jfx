@@ -35,6 +35,7 @@ import javafx.collections.ListChangeListener;
 import javafx.collections.ListChangeListener.Change;
 import javafx.collections.ObservableList;
 import javafx.css.Styleable;
+import javafx.css.StyleableProperty;
 import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.NodeTest;
@@ -171,7 +172,8 @@ public class ShapeTest {
         
         for (CssMetaData styleable : styleables) {
             if ("-fx-stroke-dash-array".equals(styleable.getProperty())) {
-                styleable.set(rect, new Double[] {5d, 7d, 1d, 3d}, null);
+                StyleableProperty styleableProperty = styleable.getStyleableProperty(rect);
+                styleableProperty.applyStyle(null, new Double[] {5d, 7d, 1d, 3d});
                 actual = rect.getStrokeDashArray();
             }
         }

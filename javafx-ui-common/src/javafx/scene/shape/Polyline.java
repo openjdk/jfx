@@ -70,10 +70,8 @@ public  class Polyline extends Shape {
         // overriding default values for fill and stroke
         // Set through CSS property so that it appears to be a UA style rather
         // that a USER style so that fill and stroke can still be set from CSS.
-        final CssMetaData fillProp = ((StyleableProperty)fillProperty()).getCssMetaData();
-        fillProp.set(this, null, null);
-        final CssMetaData strokeProp = ((StyleableProperty)strokeProperty()).getCssMetaData();
-        strokeProp.set(this, Color.BLACK, null);
+        ((StyleableProperty)fillProperty()).applyStyle(null, null);
+        ((StyleableProperty)strokeProperty()).applyStyle(null, Color.BLACK);
     }
 
     /**

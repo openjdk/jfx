@@ -146,13 +146,11 @@ public class SeparatorTest {
 
     @Test public void whenOrientationIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
         CssMetaData styleable = ((StyleableProperty)separator.orientationProperty()).getCssMetaData();
-        styleable.set(separator, Orientation.VERTICAL, null);
         assertTrue(styleable.isSettable(separator));
     }
 
     @Test public void canSpecifyOrientationViaCSS() {
-        CssMetaData styleable = ((StyleableProperty)separator.orientationProperty()).getCssMetaData();
-        styleable.set(separator, Orientation.VERTICAL, null);
+        ((StyleableProperty)separator.orientationProperty()).applyStyle(null, Orientation.VERTICAL);
         assertSame(Orientation.VERTICAL, separator.getOrientation());
     }
 
@@ -225,13 +223,11 @@ public class SeparatorTest {
 
     @Test public void whenHalignmentIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
         CssMetaData styleable = ((StyleableProperty)separator.halignmentProperty()).getCssMetaData();
-        styleable.set(separator, HPos.RIGHT, null);
         assertTrue(styleable.isSettable(separator));
     }
 
     @Test public void canSpecifyHalignmentViaCSS() {
-        CssMetaData styleable = ((StyleableProperty)separator.halignmentProperty()).getCssMetaData();
-        styleable.set(separator, HPos.RIGHT, null);
+        ((StyleableProperty)separator.halignmentProperty()).applyStyle(null, HPos.RIGHT);
         assertSame(HPos.RIGHT, separator.getHalignment());
     }
 
@@ -284,13 +280,11 @@ public class SeparatorTest {
 
     @Test public void whenValignmentIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
         CssMetaData styleable = ((StyleableProperty)separator.valignmentProperty()).getCssMetaData();
-        styleable.set(separator, VPos.BASELINE, null);
         assertTrue(styleable.isSettable(separator));
     }
 
     @Test public void canSpecifyValignmentViaCSS() {
-        CssMetaData styleable = ((StyleableProperty)separator.valignmentProperty()).getCssMetaData();
-        styleable.set(separator, VPos.BASELINE, null);
+        ((StyleableProperty)separator.valignmentProperty()).applyStyle(null, VPos.BASELINE);
         assertSame(VPos.BASELINE, separator.getValignment());
     }
 }
