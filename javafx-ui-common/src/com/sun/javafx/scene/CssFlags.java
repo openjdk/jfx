@@ -38,6 +38,11 @@ public enum CssFlags {
      */
     CLEAN,
     /**
+     * DIRTY_BRANCH means that this node is CLEAN but one of its children,
+     * or grandchildren, etc is UPDATE or REAPPLY so we need to step into this branch.
+     */
+    DIRTY_BRANCH,
+    /**
      * Indicates that we must update properties for this node and all child
      * nodes. This is typically in response to a pseudoclass state change and
      * is much faster than a REAPPLY.
@@ -57,10 +62,5 @@ public enum CssFlags {
      * is the most expensive CSS operation that can occur, and usually only
      * happens when the CSS tree has changed. 
      */
-    REAPPLY,
-    /**
-     * DIRTY_BRANCH means that this node is CLEAN but one of its children,
-     * or grandchildren, etc is UPDATE or REAPPLY so we need to step into this branch.
-     */
-    DIRTY_BRANCH
+    REAPPLY
 }
