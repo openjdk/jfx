@@ -50,8 +50,6 @@ jmethodID jGtkPixelsInit;
 jclass jScreenCls;
 jmethodID jScreenInit;
 jmethodID jScreenNotifySettingsChanged;
-jmethodID jScreenGetScreenForLocation;
-jmethodID jScreenGetNativeScreen;
 
 jmethodID jViewNotifyResize;
 jmethodID jViewNotifyMouse;
@@ -138,10 +136,8 @@ JNI_OnLoad(JavaVM *jvm, void *reserved)
     jGtkPixelsInit = env->GetMethodID(jGtkPixelsCls, "<init>", "(IILjava/nio/ByteBuffer;)V");
 
     jScreenCls = (jclass) env->NewGlobalRef(env->FindClass("com/sun/glass/ui/Screen"));
-    jScreenInit = env->GetMethodID(jScreenCls, "<init>", "()V");
+    jScreenInit = env->GetMethodID(jScreenCls, "<init>", "(JIIIIIIIIIIIF)V");
     jScreenNotifySettingsChanged = env->GetStaticMethodID(jScreenCls, "notifySettingsChanged", "()V");
-    jScreenGetScreenForLocation = env->GetStaticMethodID(jScreenCls, "getScreenForLocation","(II)Lcom/sun/glass/ui/Screen;");
-    jScreenGetNativeScreen = env->GetMethodID(jScreenCls, "getNativeScreen","()J");
 
     clazz = env->FindClass("com/sun/glass/ui/View");
     jViewNotifyResize = env->GetMethodID(clazz, "notifyResize", "(II)V");

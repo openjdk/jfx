@@ -251,7 +251,7 @@ public abstract class ListExpression<E> implements ObservableListValue<E> {
     @Override
     public boolean containsAll(Collection<?> objects) {
         final ObservableList<E> list = get();
-        return (list == null)? EMPTY_LIST.contains(objects) : list.contains(objects);
+        return (list == null)? EMPTY_LIST.contains(objects) : list.containsAll(objects);
     }
 
     @Override

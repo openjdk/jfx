@@ -42,13 +42,20 @@ import com.sun.prism.impl.PrismSettings;
 import java.nio.Buffer;
 import java.nio.IntBuffer;
 
-class SWTexture implements Texture {
+abstract class SWTexture implements Texture {
 
-    private int data[];
-    private boolean allocated = false;
-    private boolean hasAlpha = true;
-    private int width, height;
-    private int stride, offset;
+    static Texture create(SWResourceFactory factory, PixelFormat formatHint, WrapMode wrapMode, int w, int h) {
+        switch (formatHint) {
+            case BYTE_ALPHA:
+                return new SWMaskTexture(factory, wrapMode, w, h);
+            default:
+                return new SWArgbPreTexture(factory, wrapMode, w, h);
+        }
+    }
+
+    boolean allocated = false;
+    int width, height;
+    int stride, offset;
     private SWResourceFactory factory;
     private int lastImageSerial;
     private final WrapMode wrapMode;
@@ -63,9 +70,7 @@ class SWTexture implements Texture {
     }
 
     SWTexture(SWTexture sharedTex, WrapMode altMode) {
-        this.data = sharedTex.data;
         this.allocated = sharedTex.allocated;
-        this.hasAlpha = sharedTex.hasAlpha;
         this.width = sharedTex.width;
         this.height = sharedTex.height;
         this.factory = sharedTex.factory;
@@ -78,14 +83,6 @@ class SWTexture implements Texture {
         return this.factory;
     }
 
-    int[] getDataNoClone() {
-        return data;
-    }
-
-    boolean hasAlpha() {
-        return hasAlpha;
-    }
-    
     int getStride() {
         return stride;
     }
@@ -96,11 +93,6 @@ class SWTexture implements Texture {
 
     @Override
     public void dispose() { }
-
-    @Override
-    public PixelFormat getPixelFormat() {
-        return PixelFormat.INT_ARGB_PRE;
-    }
 
     @Override
     public int getPhysicalWidth() {
@@ -156,75 +148,6 @@ class SWTexture implements Texture {
     }
 
     @Override
-    public void update(Image img, int dstx, int dsty, int srcw, int srch, boolean skipFlush) {
-        if (PrismSettings.debug) {
-            System.out.println("Image format: " + img.getPixelFormat());
-            System.out.println("Bytes per pixel: " + img.getBytesPerPixelUnit());
-            System.out.println("dstx:" + dstx + " dsty:" + dsty + " srcw:" + srcw + " srch:" + srch);
-        }
-        this.allocate();
-
-        final PixelGetter getter;
-        switch (img.getPixelFormat()) {
-            case BYTE_RGB:
-                getter = ByteRgb.getter;
-                this.hasAlpha = false;
-                break;
-            case INT_ARGB_PRE:
-                getter = IntArgbPre.getter;
-                this.hasAlpha = true;
-                break;
-            case BYTE_BGRA_PRE:
-                getter = ByteBgraPre.getter;
-                this.hasAlpha = true;
-                break;
-            case BYTE_GRAY:
-                getter = ByteGray.getter;
-                this.hasAlpha = false;
-                break;
-            default:
-                throw new UnsupportedOperationException("!!! UNSUPPORTED PIXEL FORMAT: " + img.getPixelFormat());
-        }
-
-        PixelConverter converter = PixelUtils.getConverter(getter, IntArgbPre.setter);
-        converter.convert(img.getPixelBuffer(), 0, srcw * img.getBytesPerPixelUnit(),
-                IntBuffer.wrap(this.data), (dsty * width) + dstx, width, srcw, srch);
-    }
-
-    @Override
-    public void update(Buffer buffer, PixelFormat format, int dstx, int dsty, int srcx, int srcy, int srcw, int srch, int srcscan, boolean skipFlush) {
-        throw new UnsupportedOperationException("update5:unimp");
-    }
-
-    @Override
-    public void update(MediaFrame frame, boolean skipFlush) {
-        if (PrismSettings.debug) {
-            System.out.println("Media Pixel format: " + frame.getPixelFormat());
-        }
-
-        frame.holdFrame();
-
-        if (frame.getPixelFormat() != PixelFormat.INT_ARGB_PRE) {
-            MediaFrame f = frame.convertToFormat(PixelFormat.INT_ARGB_PRE);
-            frame.releaseFrame();
-            frame = f;
-        }
-
-        IntBuffer ib = frame.getBuffer().asIntBuffer();
-        if (ib.hasArray()) {
-            this.allocated = false;
-            this.data = ib.array();
-        } else {
-            this.allocate();
-            ib.get(this.data);
-        }
-        this.offset = frame.offsetForPlane(0) / 4;
-        this.stride = frame.strideForPlane(0) / 4;
-
-        frame.releaseFrame();
-    }
-
-    @Override
     public WrapMode getWrapMode() {
         return wrapMode;
     }
@@ -246,7 +169,7 @@ class SWTexture implements Texture {
             default:
                 return null;
         }
-        return new SWTexture(this, altMode);
+        return this.createSharedTexture(altMode);
     }
 
     @Override
@@ -257,6 +180,15 @@ class SWTexture implements Texture {
     @Override
     public void setLinearFiltering(boolean linear) { }
 
+    void checkAllocation(int srcw, int srch) {
+        if (allocated) {
+            final int nlen = srcw * srch;
+            if (nlen > this.getBufferLength()) {
+                throw new IllegalArgumentException("SRCW * SRCH exceeds buffer length");
+            }
+        }
+    }
+
     void allocate() {
         if (allocated) {
             return;
@@ -264,20 +196,13 @@ class SWTexture implements Texture {
         if (PrismSettings.debug) {
             System.out.println("PCS Texture allocating buffer: " + this + ", " + width + "x" + height);
         }
-        this.data = new int[width * height];
+        this.allocateBuffer();
         allocated = true;
     }
 
-    void applyCompositeAlpha(float alpha) {
-        if (allocated) {
-            int finalAlpha;
-            this.hasAlpha = this.hasAlpha || (alpha < 1f);
-            for (int i = 0; i < this.data.length; i++) {
-                finalAlpha = ((int)((this.data[i] >> 24) * alpha + 0.5f)) & 0xFF;
-                this.data[i] = (finalAlpha << 24) | (this.data[i] & 0xFFFFFF);
-            }
-        } else {
-            throw new IllegalStateException("Cannot apply composite alpha to texture with non-allocated data");
-        }
-    }
+    abstract int getBufferLength();
+
+    abstract void allocateBuffer();
+
+    abstract Texture createSharedTexture(WrapMode altMode);
 }

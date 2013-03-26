@@ -191,6 +191,8 @@ public class Scene implements EventTarget {
 
     private final AccessControlContext acc = AccessController.getContext();
 
+    private Camera defaultCamera;
+
     //Neither width nor height are initialized and will be calculated according to content when this Scene
     //is shown for the first time.
 //    public Scene() {
@@ -720,8 +722,9 @@ public class Scene implements EventTarget {
         PerformanceTracker.logEvent("Scene.initPeer TKScene set");
         impl_peer.setRoot(getRoot().impl_getPGNode());
         impl_peer.setFillPaint(getFill() == null ? null : tk.getPaint(getFill()));
-        impl_peer.setCamera(getCamera() == null ? null : getCamera().getPlatformCamera());
-        pickingCamera = getCamera();
+        impl_peer.setCamera(getCamera() == null 
+                ? getDefaultCamera().getPlatformCamera()
+                : getCamera().getPlatformCamera());
 
         impl_setAllowPGAccess(false);
 
@@ -894,14 +897,6 @@ public class Scene implements EventTarget {
         return height;
     }
 
-    /*
-     * 3D pickRays are computed on the toolkit layer. The camera settings are
-     * pushed to the toolkit layer on pulse. So we need to keep track of the
-     * camera currently used by toolkit not to ask it to compute 3D pick ray
-     * when it thinks we are using 2D camera.
-     */
-    private Camera pickingCamera;
-
     // Reusable target wrapper (to avoid creating new one for each picking)
     private TargetWrapper tmpTargetWrapper = new TargetWrapper();
 
@@ -947,6 +942,13 @@ public class Scene implements EventTarget {
             };
         }
         return camera;
+    }
+
+    private Camera getDefaultCamera() {
+        if (defaultCamera == null) {
+             defaultCamera = new ParallelCamera();
+        }
+        return defaultCamera;
     }
 
     /**
@@ -1048,7 +1050,7 @@ public class Scene implements EventTarget {
                     }
 
                     if (oldRoot != null) {
-                        oldRoot.setScene(null);
+                        oldRoot.setScenes(null, null);
                         oldRoot.setImpl_traversalEngine(null);
                     }
                     oldRoot = _value;
@@ -1056,7 +1058,7 @@ public class Scene implements EventTarget {
                         _value.setImpl_traversalEngine(new TraversalEngine(_value, true));
                     }
                     _value.getStyleClass().add(0, "root");
-                    _value.setScene(Scene.this);
+                    _value.setScenes(Scene.this, null);
                     markDirty(DirtyBits.ROOT_DIRTY);
                     _value.resize(getWidth(), getHeight()); // maybe no-op if root is not resizable
                     _value.requestLayout();
@@ -1176,9 +1178,10 @@ public class Scene implements EventTarget {
         double h = getHeight();
         BaseTransform transform = BaseTransform.IDENTITY_TRANSFORM;
 
+        Camera cam = getCamera();
         return doSnapshot(this, 0, 0, w, h,
                 getRoot(), transform, isDepthBuffer(),
-                getFill(), getCamera(), img);
+                getFill(), cam == null ? getDefaultCamera() : cam, img);
     }
 
     // Pulse listener used to run all deferred (async) snapshot requests
@@ -1740,8 +1743,13 @@ public class Scene implements EventTarget {
     }
 
     private void pick(TargetWrapper target, final double x, final double y) {
-        final PickRay pickRay = Scene.this.impl_peer.computePickRay(
-                (float)x, (float)y, null);
+        Camera cam = getCamera();
+        if (cam == null) {
+            cam = getDefaultCamera();
+        }
+        final PickRay pickRay = cam.computePickRay(
+                x, y, getWidth(), getHeight(), null);
+
         final double mag = pickRay.getDirectionNoClone().length();
         pickRay.getDirectionNoClone().normalize();
         final PickResult res = mouseHandler.pickNode(pickRay);
@@ -2073,7 +2081,6 @@ public class Scene implements EventTarget {
         public final int getMask() { return mask; }
     }
 
-    private Camera defaultCamera = new ParallelCamera();
     // TODO: RT-28290 - Camera's parameters need to be computed on the FX layer
     // Should remove once we move the camera's projViewTx computation to the FX side
     private Rectangle viewport = new Rectangle();
@@ -2082,7 +2089,7 @@ public class Scene implements EventTarget {
     private void snapshotCameraParameters() {
         Camera cam = getCamera();
         if (cam == null) {
-            cam = defaultCamera;
+            cam = getDefaultCamera();
         }
         
         projViewTx = cam.computeProjViewTx(projViewTx, getWidth(), getHeight());
@@ -2170,6 +2177,9 @@ public class Scene implements EventTarget {
                         size += syncAll(n);
                     }
                 }
+            } else if (node instanceof SubScene) {
+                SubScene subScene = (SubScene)node;
+                size += syncAll(subScene.getRoot());
             }
             if (node.getClip() != null) {
                 size += syncAll(node.getClip());
@@ -2192,12 +2202,11 @@ public class Scene implements EventTarget {
             // new camera was set on the scene
             if (isDirty(DirtyBits.CAMERA_DIRTY)) {
                 Camera camera = getCamera();
-                pickingCamera = camera;
                 if (camera != null) {
                     camera.impl_updatePG();
                     impl_peer.setCamera(camera.getPlatformCamera());
                  } else {
-                     impl_peer.setCamera(null);
+                     impl_peer.setCamera(getDefaultCamera().getPlatformCamera());
                  }
             }
 

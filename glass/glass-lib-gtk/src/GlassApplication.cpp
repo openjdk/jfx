@@ -51,8 +51,6 @@ JNIEnv* mainEnv; // Use only with main loop thread!!!
 
 extern gboolean disableGrab;
 
-static jobject jscreens; //java.util.List<com.sun.glass.ui.Screen>
-
 static gboolean call_runnable (gpointer data)
 {
     RunnableContext* context = reinterpret_cast<RunnableContext*>(data);
@@ -65,7 +63,7 @@ static gboolean call_runnable (gpointer data)
     return FALSE;
 }
 
-static jobject toScreen
+static jobject createJavaScreen
   (JNIEnv* env, GdkScreen* screen, GdkRectangle workArea, gint monitor_idx)
 {
     GdkRectangle monitor_geometry;
@@ -77,28 +75,25 @@ static jobject toScreen
     GdkRectangle working_monitor_geometry;
     gdk_rectangle_intersect(&workArea, &monitor_geometry, &working_monitor_geometry);
 
-    jobject jScreen = env->NewObject(jScreenCls, jScreenInit);
+    jobject jScreen = env->NewObject(jScreenCls, jScreenInit,
+                                    (jlong)monitor_idx,
+
+                                    gdk_screen_get_number(screen),
+
+                                    monitor_geometry.x,
+                                    monitor_geometry.y,
+                                    monitor_geometry.width,
+                                    monitor_geometry.height,
+
+                                    working_monitor_geometry.x,
+                                    working_monitor_geometry.y,
+                                    working_monitor_geometry.width,
+                                    working_monitor_geometry.height,
+
+                                    (jint)gdk_screen_get_resolution(screen),
+                                    (jint)gdk_screen_get_resolution(screen),
+                                    1.0f);
     JNI_EXCEPTION_TO_CPP(env);
-
-    // Use monitor_idx as a virtual id for screen (don't have pointer to monitor)
-    env->SetLongField(jScreen, env->GetFieldID(jScreenCls, "ptr", "J"), (jlong)monitor_idx);
-
-    env->SetIntField(jScreen, env->GetFieldID(jScreenCls, "x", "I"), monitor_geometry.x);
-    env->SetIntField(jScreen, env->GetFieldID(jScreenCls, "y", "I"), monitor_geometry.y);
-    env->SetIntField(jScreen, env->GetFieldID(jScreenCls, "width", "I"), monitor_geometry.width);
-    env->SetIntField(jScreen, env->GetFieldID(jScreenCls, "height", "I"), monitor_geometry.height);
-
-    env->SetIntField(jScreen, env->GetFieldID(jScreenCls, "visibleX", "I"), working_monitor_geometry.x);
-    env->SetIntField(jScreen, env->GetFieldID(jScreenCls, "visibleY", "I"), working_monitor_geometry.y);
-    env->SetIntField(jScreen, env->GetFieldID(jScreenCls, "visibleWidth", "I"), working_monitor_geometry.width);
-    env->SetIntField(jScreen, env->GetFieldID(jScreenCls, "visibleHeight", "I"), working_monitor_geometry.height);
-
-    env->SetIntField(jScreen, env->GetFieldID(jScreenCls, "depth", "I"), gdk_screen_get_number(screen));
-    env->SetIntField(jScreen, env->GetFieldID(jScreenCls, "resolutionX", "I"), (jint)gdk_screen_get_resolution(screen));
-    env->SetIntField(jScreen, env->GetFieldID(jScreenCls, "resolutionY", "I"), (jint)gdk_screen_get_resolution(screen));
-    env->SetFloatField(jScreen, env->GetFieldID(jScreenCls, "scale", "F"), 1.0f);
-
-    JNI_EXCEPTION_TO_CPP(env)
     return jScreen;
 }
 
@@ -171,15 +166,11 @@ static GdkRectangle get_screen_workarea(GdkScreen *screen) {
 
 }
 
-static void rebuild_screens(JNIEnv* env) {
+static jobjectArray rebuild_screens(JNIEnv* env) {
     GdkScreen *default_gdk_screen = gdk_screen_get_default();
     gint n_monitors = gdk_screen_get_n_monitors(default_gdk_screen);
 
-
-    if (jscreens != NULL) {
-        env->DeleteGlobalRef(jscreens);
-    }
-    jscreens = env->NewGlobalRef(env->NewObject(jArrayListCls, jArrayListInit, NULL));
+    jobjectArray jscreens = env->NewObjectArray(n_monitors, jScreenCls, NULL);
     JNI_EXCEPTION_TO_CPP(env)
     LOG1("Available monitors: %d\n", n_monitors)
     int i;
@@ -187,13 +178,14 @@ static void rebuild_screens(JNIEnv* env) {
     LOG4("Work Area: x:%d, y:%d, w:%d, h:%d\n", workArea.x, workArea.y, workArea.width, workArea.height);
 
     for (i=0; i < n_monitors; i++) {
-        env->CallBooleanMethod(jscreens, jArrayListAdd, toScreen(env, default_gdk_screen, workArea, i));
+        env->SetObjectArrayElement(jscreens, i, createJavaScreen(env, default_gdk_screen, workArea, i));
         JNI_EXCEPTION_TO_CPP(env)
     }
+
+    return jscreens;
 }
 
 static void screen_settings_changed(GdkScreen* screen, gpointer user_data) {
-    rebuild_screens(mainEnv);
     mainEnv->CallStaticVoidMethod(jScreenCls, jScreenNotifySettingsChanged);
     LOG_EXCEPTION(mainEnv);
     mainEnv->ExceptionClear(); //This is callback, so clear
@@ -322,19 +314,16 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkApplication_leaveNestedEvent
 /*
  * Class:     com_sun_glass_ui_gtk_GtkApplication
  * Method:    staticScreen_getScreens
- * Signature: ()Ljava/util/List;
+ * Signature: ()[Lcom/sun/glass/ui/Screen;
  */
-JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_gtk_GtkApplication_staticScreen_1getScreens
+JNIEXPORT jobjectArray JNICALL Java_com_sun_glass_ui_gtk_GtkApplication_staticScreen_1getScreens
   (JNIEnv * env, jobject obj)
 {
-    if (jscreens == NULL) {
-        try {
-            rebuild_screens(env);
-        } catch (jni_exception&) {
-            return NULL;
-        }
+    try {
+        return rebuild_screens(env);
+    } catch (jni_exception&) {
+        return NULL;
     }
-    return jscreens;
 }
 
 /*

@@ -47,16 +47,15 @@ public class StubTriangleMesh implements PGTriangleMesh {
     }
 
     @Override
-    public void setPoints(int index, float[] points, int start, int length) {
+    public void setPoints(float[] points, int index, int length) {
         if (points == null) {
             this.points = null;
             return;
         }
 
-        int startOffset = start * TriangleMesh.NUM_COMPONENTS_PER_POINT;
         int indexOffset = index * TriangleMesh.NUM_COMPONENTS_PER_POINT;
         int lengthInFloatUnit = length * TriangleMesh.NUM_COMPONENTS_PER_POINT;
-        System.arraycopy(points, startOffset, this.points, indexOffset, lengthInFloatUnit);
+        System.arraycopy(points, indexOffset, this.points, indexOffset, lengthInFloatUnit);
     }
 
     @Override
@@ -70,15 +69,14 @@ public class StubTriangleMesh implements PGTriangleMesh {
     }
 
     @Override
-    public void setTexCoords(int index, float[] texCoords, int start, int length) {
+    public void setTexCoords(float[] texCoords, int index, int length) {
         if (texCoords == null) {
             this.texCoords = null;
             return;
         }
-        int startOffset = start * TriangleMesh.NUM_COMPONENTS_PER_TEXCOORD;
         int indexOffset = index * TriangleMesh.NUM_COMPONENTS_PER_TEXCOORD;
         int lengthInFloatUnit = length * TriangleMesh.NUM_COMPONENTS_PER_TEXCOORD;
-        System.arraycopy(texCoords, startOffset, this.texCoords, indexOffset, lengthInFloatUnit);
+        System.arraycopy(texCoords, indexOffset, this.texCoords, indexOffset, lengthInFloatUnit);
     }
 
     @Override
@@ -92,15 +90,14 @@ public class StubTriangleMesh implements PGTriangleMesh {
     }
 
     @Override
-    public void setFaces(int index, int[] faces, int start, int length) {
+    public void setFaces(int[] faces, int index, int length) {
         if (faces == null) {
             this.faces = null;
             return;
         }
-        int startOffset = start * TriangleMesh.NUM_COMPONENTS_PER_FACE;
-        int lengthInIntUnit = length * TriangleMesh.NUM_COMPONENTS_PER_FACE;
         int indexOffset = index * TriangleMesh.NUM_COMPONENTS_PER_FACE;
-        System.arraycopy(faces, startOffset, this.faces, indexOffset, lengthInIntUnit);
+        int lengthInIntUnit = length * TriangleMesh.NUM_COMPONENTS_PER_FACE;
+        System.arraycopy(faces, indexOffset, this.faces, indexOffset, lengthInIntUnit);
     }
 
     @Override
@@ -115,12 +112,12 @@ public class StubTriangleMesh implements PGTriangleMesh {
     }
 
     @Override
-    public void setFaceSmoothingGroups(int index, int[] faceSmoothingGroups, int start, int length) {
+    public void setFaceSmoothingGroups(int[] faceSmoothingGroups, int index, int length) {
         if (faceSmoothingGroups == null) {
             this.smoothingGroups = null;
             return;
         }
 
-        System.arraycopy(faceSmoothingGroups, start, this.smoothingGroups, index, length);
+        System.arraycopy(faceSmoothingGroups, index, this.smoothingGroups, index, length);
     }
 }

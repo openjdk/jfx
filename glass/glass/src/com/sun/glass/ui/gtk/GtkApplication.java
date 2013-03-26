@@ -265,55 +265,6 @@ final class GtkApplication extends Application implements InvokeLaterDispatcher.
     }
 
     @Override
-    protected Screen staticScreen_getDeepestScreen() {
-        List<Screen> screens = staticScreen_getScreens();
-        Screen deepest = screens.get(0);
-        int nScreens = screens.size();
-        for (int i = 1; i<nScreens; i++) {            
-            if (deepest.getDepth() < screens.get(i).getDepth()) {
-                deepest = screens.get(i);
-            }
-        }
-        return deepest;
-    }
-
-    @Override
-    protected Screen staticScreen_getMainScreen() {
-        /*
-         * can't use gdk_screen_get_primary_monitor is since ver. 2.20
-         * primary monitor gtk places at index 0.
-         */
-        List<Screen> screens = staticScreen_getScreens();
-        return screens.get(0);
-    }
-
-    @Override
-    protected Screen staticScreen_getScreenForLocation(int x, int y) {
-        List<Screen> screens = staticScreen_getScreens();
-        for (Screen screen : screens) {
-            if (x >= screen.getX() &&
-                x <= screen.getWidth() + screen.getX() &&
-                y >= screen.getY() &&
-                y <= screen.getHeight() + screen.getY() ) {
-                return screen;
-            }                    
-        }
-        return null;
-    }
-
-    @Override
-    protected Screen staticScreen_getScreenForPtr(long screenPtr) {
-        List<Screen> screens = staticScreen_getScreens();
-        for (Screen screen : screens) {
-            if (screen.getNativeScreen() == screenPtr) return screen;
-        }
-        return null;
-    }
-
-    @Override
-    protected native List<Screen> staticScreen_getScreens();
-
-    @Override
     public Timer createTimer(Runnable runnable) {
         return new GtkTimer(runnable);
     }
@@ -323,10 +274,12 @@ final class GtkApplication extends Application implements InvokeLaterDispatcher.
 
     @Override
     protected native int staticTimer_getMaxPeriod();
-    
+
     @Override protected double staticScreen_getVideoRefreshPeriod() {
         return 0.0;     // indicate millisecond resolution
     }
+
+    @Override native protected Screen[] staticScreen_getScreens();
 
     @Override
     protected FileChooserResult staticCommonDialogs_showFileChooser(Window owner, String folder, String filename, String title, int type, boolean multipleMode, ExtensionFilter[] extensionFilters) {

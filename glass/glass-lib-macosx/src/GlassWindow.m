@@ -127,8 +127,18 @@ static inline NSString* getNSString(JNIEnv* env, jstring jstring)
                                                                                         \
 - (void)close                                                                           \
 {                                                                                       \
+    self->gWindow->isClosed = YES;                                                      \
     [self->gWindow close];                                                              \
     [super close];                                                                      \
+}                                                                                       \
+/* super calls NSWindow on the next run-loop pass when NSWindow could be released */    \
+- (BOOL)performKeyEquivalent:(NSEvent *)theEvent                                        \
+{                                                                                       \
+    [self retain];                                                                      \
+    BOOL result = [super performKeyEquivalent:theEvent];                                \
+    result = result || self->gWindow->isClosed;                                         \
+    [self release];                                                                     \
+    return result;                                                                      \
 }                                                                                       \
 - (BOOL)canBecomeMainWindow                                                             \
 {                                                                                       \

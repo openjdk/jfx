@@ -29,7 +29,6 @@ FILES_export = \
 			com/sun/glass/ui/win/WinMenuBarDelegate.java \
 			com/sun/glass/ui/win/WinMenuDelegate.java \
 			com/sun/glass/ui/win/WinMenuImpl.java \
-			com/sun/glass/ui/win/WinScreen.java \
 			com/sun/glass/ui/win/WinCursor.java \
 			com/sun/glass/ui/win/WinWindow.java \
 			com/sun/glass/ui/win/WinView.java \

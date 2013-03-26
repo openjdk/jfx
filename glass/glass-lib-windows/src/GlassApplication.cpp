@@ -349,7 +349,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_win_WinApplication__1init
     if (hWnd == NULL) {
         delete pApp;
     }
-
+    
     return (jlong)hWnd;
 }
 
@@ -472,6 +472,17 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_win_WinApplication__1supportsUn
     (JNIEnv * env, jobject japplication)
 {
     return (IS_WINVISTA);
+}
+
+/*
+ * Class:     com_sun_glass_ui_Application
+ * Method:    staticScreen_getScreens
+ * Signature: ()[Lcom/sun/glass/ui/Screen;
+ */
+JNIEXPORT jobjectArray JNICALL Java_com_sun_glass_ui_win_WinApplication_staticScreen_1getScreens
+    (JNIEnv * env, jobject japplication)
+{
+    return GlassScreen::CreateJavaScreens(env);
 }
 
 } // extern "C"

@@ -47,14 +47,14 @@ public class NGTriangleMeshTest {
      * Test of setFaceSmoothingGroups method, of class NGTriangleMesh.
      */
     @Test
-    public void testSetFaceSmoothingGroups_4args() {
+    public void testSetFaceSmoothingGroups_3args() {
         int[] faceSmoothingGroups = new int[]{0, 1, 2, 3, 4, 5};
         NGTriangleMesh instance = new NGTriangleMesh();
         instance.setFaceSmoothingGroups(faceSmoothingGroups);
         Arrays.fill(faceSmoothingGroups, 1);
-        instance.setFaceSmoothingGroups(0, faceSmoothingGroups, 0, faceSmoothingGroups.length);
+        instance.setFaceSmoothingGroups(faceSmoothingGroups, 1, 4);
         int[] actuals = instance.test_getShiftedFaceSmoothingGroups();
-        int[] expecteds = new int[]{2, 2, 2, 2, 2, 2};
+        int[] expecteds = new int[]{1, 2, 2, 2, 2, 32};
         assertArrayEquals(expecteds, actuals);
     }
 }

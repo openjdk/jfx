@@ -52,16 +52,23 @@ final class SWResourceFactory
     private static final ShapeRep rectRep = new BasicRoundRectRep();
 
     private Screen screen;
+    private final SWContext context;
 
     public SWResourceFactory(Screen screen) {
         this.screen = screen;
+        this.context = new SWContext(this);
     }
     
     public Screen getScreen() {
         return screen;
     }
+
+    SWContext getContext() {
+        return context;
+    }
     
     @Override public void dispose() {
+        context.dispose();
     }
 
     @Override public RenderingContext createRenderingContext(PresentableState pstate) {
@@ -122,14 +129,14 @@ final class SWResourceFactory
     }
 
     @Override public Texture createTexture(MediaFrame vdb) {
-        return new SWTexture(this, WrapMode.CLAMP_TO_EDGE,
-                             vdb.getWidth(), vdb.getHeight());
+        return new SWArgbPreTexture(this, WrapMode.CLAMP_TO_EDGE, vdb.getWidth(), vdb.getHeight());
     }
             
     @Override public Texture createTexture(PixelFormat formatHint,
                                            Usage usageHint,
                                            WrapMode wrapMode,
-                                           int w, int h) {
-        return new SWTexture(this, wrapMode, w, h);
+                                           int w, int h)
+    {
+        return SWTexture.create(this, formatHint, wrapMode, w, h);
     }
 }

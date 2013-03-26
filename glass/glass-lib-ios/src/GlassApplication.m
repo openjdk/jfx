@@ -31,6 +31,7 @@
 #import "GlassStatics.h"
 #import "GlassTimer.h"
 #import "GlassWindow.h"
+#import "GlassScreen.h"
 
 pthread_key_t GlassThreadDataKey = 0;
 
@@ -104,13 +105,6 @@ jclass mat_jCursorClass = NULL;
 // a unix pipe which we will use as a runnable queue for posted events.
 static int postEventPipe[2];
 static int haveIDs = 0;
-
-
-void GlassScreenDidChangeScreenParameters(JNIEnv *env)
-{
-    jmethodID midNotifySettingsChanged = (*env)->GetStaticMethodID(env, mat_jScreenClass, "notifySettingsChanged", "()V");
-    (*env)->CallStaticVoidMethod(env, mat_jScreenClass, midNotifySettingsChanged);
-}
 
 
 /*
@@ -434,7 +428,7 @@ jclass classForName(JNIEnv *env, char *className)
             }
             
             if ((runnableClass != 0) && (runMethod != 0))
-            {
+            {        
                 (*jEnv)->CallVoidMethod(jEnv, self.jLaunchable, runMethod);
                 if ((*jEnv)->ExceptionCheck(jEnv) == JNI_TRUE)
                 {
@@ -850,3 +844,33 @@ JNIEXPORT jint JNICALL Java_com_sun_glass_ui_ios_IosApplication__1getStatusBarOr
 (JNIEnv *env, jclass clazz) {
     return [UIApplication sharedApplication].statusBarOrientation;
 }
+
+/*
+ * Class:     com_sun_glass_ui_ios_IosApplication
+ * Method:    staticScreen_getVideoRefreshPeriod
+ * Signature: ()D
+ */
+JNIEXPORT jdouble JNICALL
+Java_com_sun_glass_ui_ios_IosApplication_staticScreen_1getVideoRefreshPeriod
+(JNIEnv *env, jobject jApplication)
+{
+    GLASS_LOG("Java_com_sun_glass_ui_ios_IosApplication_staticScreen_1getVideoRefreshPeriod");
+
+    double outRefresh = 1.0 / 30.0;     // ability to set frame divider
+    return (outRefresh * 1000.0);       // to millis
+}
+
+/*
+ * Class:     com_sun_glass_ui_ios_IosApplication
+ * Method:    staticScreen_getScreens
+ * Signature: ([Lcom/sun/glass/ui/Screen;)D
+ */
+JNIEXPORT jobjectArray JNICALL
+Java_com_sun_glass_ui_ios_IosApplication_staticScreen_1getScreens
+(JNIEnv *env, jobject jApplication)
+{
+    GLASS_LOG("Java_com_sun_glass_ui_ios_IosApplication_staticScreen_1getScreens");
+
+    return createJavaScreens(env);
+}
+

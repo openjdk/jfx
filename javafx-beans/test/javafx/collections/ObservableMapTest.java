@@ -60,7 +60,8 @@ public class ObservableMapTest {
             { TestedObservableMaps.LINKED_HASH_MAP },
             { TestedObservableMaps.CONCURRENT_HASH_MAP },
             { TestedObservableMaps.CHECKED_OBSERVABLE_HASH_MAP },
-            { TestedObservableMaps.SYNCHRONIZED_OBSERVABLE_HASH_MAP }
+            { TestedObservableMaps.SYNCHRONIZED_OBSERVABLE_HASH_MAP },
+            { TestedObservableMaps.OBSERVABLE_MAP_PROPERTY }
          };
         return Arrays.asList(data);
     }
@@ -389,6 +390,13 @@ public class ObservableMapTest {
 
         assertTrue(observableMap.entrySet().toArray(new Map.Entry[0]).length == 3);
         assertTrue(observableMap.entrySet().toArray().length == 3);
+    }
+    
+    @Test
+    public void testEqualsAndHashCode() {
+        final Map<String, String> other = new HashMap<>(observableMap);
+        assertTrue(observableMap.equals(other));
+        assertEquals(observableMap.hashCode(), other.hashCode());
     }
 
     private<K, V> Map.Entry<K, V> entry(final K key, final V value) {

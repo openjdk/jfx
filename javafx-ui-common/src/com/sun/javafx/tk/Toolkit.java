@@ -83,6 +83,7 @@ import com.sun.javafx.sg.PGCubicCurve;
 import com.sun.javafx.sg.PGEllipse;
 import com.sun.javafx.sg.PGGroup;
 import com.sun.javafx.sg.PGImageView;
+import com.sun.javafx.sg.PGSubScene;
 import com.sun.javafx.sg.PGLine;
 import com.sun.javafx.sg.PGNode;
 import com.sun.javafx.sg.PGPath;
@@ -620,6 +621,7 @@ public abstract class Toolkit {
     public abstract PGRegion createPGRegion();
     public abstract PGCanvas createPGCanvas();
     public abstract PGText createPGText();
+    public abstract PGSubScene createPGSubScene();
 
     public abstract Object createSVGPathObject(SVGPath svgpath);
     public abstract Path2D createSVGPath2D(SVGPath svgpath);

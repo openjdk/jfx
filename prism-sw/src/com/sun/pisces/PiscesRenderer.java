@@ -363,6 +363,9 @@ public final class PiscesRenderer {
         if (height < 0) {
             throw new IllegalArgumentException("HEIGHT must be positive");
         }
+        if (offset < 0) {
+            throw new IllegalArgumentException("OFFSET must be positive");
+        }
         if (stride < 0) {
             throw new IllegalArgumentException("STRIDE must be positive");
         }

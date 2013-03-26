@@ -187,6 +187,17 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_lens_LensApplication__1initiali
     return lens_wm_initialize(env);
 }
 
+/*
+ * Class:     com_sun_glass_ui_lens_LensApplication
+ * Method:    staticScreen_getScreens
+ * Signature: ()[Lcom/sun/glass/ui/Screen;
+ */
+JNIEXPORT jobjectArray JNICALL Java_com_sun_glass_ui_lens_LensApplication_staticScreen_1getScreens
+(JNIEnv *env, jobject jApplication) {
+
+    return createJavaScreens(env);
+}
+
 JNIEXPORT void JNICALL Java_com_sun_glass_ui_lens_LensApplication_registerApplication
 (JNIEnv *env , jobject this) {
     GLASS_LOG_FINE("Rgistering LenApplication object");
