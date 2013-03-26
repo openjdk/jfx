@@ -3317,6 +3317,8 @@ Only the properties with values that are different from the TextBox are specifie
     -fx-border-color: null;
 }
 
+
+/* ------- CUSTOM COLOR DIALOG ------- */
 .custom-color-dialog > .color-rect-pane {
     -fx-padding: 15 8 15 15;
 /*    -fx-background-color: -fx-background;*/
@@ -3356,23 +3358,23 @@ Only the properties with values that are different from the TextBox are specifie
     /* TODO: -fx-text-fill should be derived */
     -fx-text-fill: -fx-light-text-color;
 }
-.custom-color-dialog .controls-pane #toggle-button-left {
+.custom-color-dialog .controls-pane .left-pill {
     -fx-background-radius: 3 0 0 3;
     -fx-background-insets: 0 0 -1 0, 0, 1 0 1 1, 2 0 2 2;
     -fx-border-color: transparent -fx-outer-border transparent transparent;
     -fx-border-insets: 4 0 4 0;
     -fx-padding: -2 8 -2 8;
 }
-.custom-color-dialog .controls-pane #toggle-button-left:focused {
+.custom-color-dialog .controls-pane .left-pill:focused {
 	-fx-background-radius: 3 0 0 3;
 	-fx-background-insets: -1.4 0 -1.4 -1.4, 0 0 0 0, 1, 2;
 	-fx-border-color: transparent;
 }
-.custom-color-dialog .controls-pane #toggle-button-left:selected, .controls-pane #toggle-button-left:selected:focused {
+.custom-color-dialog .controls-pane .left-pill:selected, .controls-pane .left-pill:selected:focused {
         -fx-background-insets: 0 0 -1 0, 0, 1 0 1 1, 1 0 1 1;
 	-fx-border-color: transparent;
 }
-.custom-color-dialog .controls-pane #toggle-button-center {
+.custom-color-dialog .controls-pane .center-pill {
 	-fx-background-radius: 0;
         -fx-background-insets: 0;
 	-fx-background-insets: 0 0 -1 0, 0, 1 0 1 0, 2 0 2 0;
@@ -3380,26 +3382,26 @@ Only the properties with values that are different from the TextBox are specifie
         -fx-border-insets: 4 0 4 0;
 	-fx-padding: -2 8 -2 8;
 }
-.custom-color-dialog .controls-pane #toggle-button-center:focused {
+.custom-color-dialog .controls-pane .center-pill:focused {
 	-fx-background-radius: 0;
 	-fx-background-insets: -1.4 0 -1.4 -1, 0 0 0 -1, 1 1 1 0, 2 2 2 1;
 	-fx-border-color: transparent;
 }
-.custom-color-dialog .controls-pane #toggle-button-center:selected, .controls-pane #toggle-button-center:selected:focused {
+.custom-color-dialog .controls-pane .center-pill:selected, .controls-pane .center-pill:selected:focused {
 	-fx-background-insets: -1.4 0 -1.4 -1, 0 0 0 -1, 1 1 1 0, 1 1 1 0;
 	-fx-border-color: transparent;
 }
 
-.custom-color-dialog .controls-pane #toggle-button-right {
+.custom-color-dialog .controls-pane .right-pill {
 	-fx-background-radius: 0 3 3 0;
     -fx-background-insets: 0 0 -1 0, 0, 1 1 1 0, 2 2 2 0;
 	-fx-padding: 3 8 3 8;
 }
-.custom-color-dialog .controls-pane #toggle-button-right:focused {
+.custom-color-dialog .controls-pane .right-pill:focused {
 	-fx-background-radius: 0 3 3 0;
 	-fx-background-insets: -1.4 -1.4 -1.4 -1, 0 0 0 -1, 1 1 1 0, 2 2 2 1;
 }
-.custom-color-dialog .controls-pane #toggle-button-right:selected, .controls-pane #toggle-button-right:selected:focused {
+.custom-color-dialog .controls-pane .right-pill:selected, .controls-pane .right-pill:selected:focused {
 	-fx-background-insets: -1.4 -1.4 -1.4 -1, 0 0 0 -1, 1 1 1 0, 1 1 1 0;
 }
 
@@ -3417,96 +3419,8 @@ Only the properties with values that are different from the TextBox are specifie
     -fx-padding: 3 5 3 5;
 }
 
-.custom-color-dialog .controls-pane .alpha-settings .text-field {
-/*    -fx-background-color: -fx-shadow-highlight-color, -fx-text-box-border, -fx-control-inner-background;*/
-    -fx-background-color: -fx-text-box-border, -fx-control-inner-background;
-    -fx-background-insets: 0, 1;
-    -fx-background-radius: 3, 2;
-    -fx-padding: 3 5 3 5;
-    -fx-text-fill: -fx-text-inner-color;
-    -fx-prompt-text-fill: derive(-fx-control-inner-background,-30%);
-    -fx-cursor: text;
-}
-
 .custom-color-dialog .controls-pane .current-new-color-grid .label {
     -fx-padding: 0 0 0 5;
-}
-
-.custom-color-dialog .input-field {
-    -fx-background-color: -fx-shadow-highlight-color, -fx-text-box-border, -fx-control-inner-background;
-    -fx-background-insets: 0, 1, 2;
-    -fx-background-radius: 3, 2, 2;
-    -fx-padding: 3 5 3 5;
-    -fx-prompt-text-fill: derive(-fx-control-inner-background,-30%);
-    -fx-cursor: text;
-}
-
-.custom-color-dialog .input-field:focused {
-    -fx-background-color: -fx-focus-color, -fx-text-box-border, -fx-control-inner-background;
-    -fx-background-insets: -0.4, 1, 2;
-    -fx-background-radius: 3.4, 2, 2;
-}
-
-.custom-color-dialog .input-field:disabled {
-    -fx-opacity: -fx-disabled-opacity;
-}
-
-.custom-color-dialog .integer-field {
-    -fx-background-color: -fx-shadow-highlight-color, -fx-text-box-border, -fx-control-inner-background;
-    -fx-background-insets: 0, 1, 2;
-    -fx-background-radius: 3, 2, 2;
-    -fx-padding: 3 5 3 5;
-    -fx-prompt-text-fill: derive(-fx-control-inner-background,-30%);
-    -fx-cursor: text;
-}
-
-.custom-color-dialog .integer-field:focused {
-    -fx-background-color: -fx-focus-color, -fx-text-box-border, -fx-control-inner-background;
-    -fx-background-insets: -0.4, 1, 2;
-    -fx-background-radius: 3.4, 2, 2;
-}
-
-/*.integer-field:disabled {
-    -fx-opacity: -fx-disabled-opacity;
-}*/
-
-.custom-color-dialog .double-field {
-    -fx-background-color: -fx-shadow-highlight-color, -fx-text-box-border, -fx-control-inner-background;
-    -fx-background-insets: 0, 1, 2;
-    -fx-background-radius: 3, 2, 2;
-    -fx-padding: 3 5 3 5;
-    -fx-prompt-text-fill: derive(-fx-control-inner-background,-30%);
-    -fx-cursor: text;
-}
-
-.custom-color-dialog .double-field:focused {
-    -fx-background-color: -fx-focus-color, -fx-text-box-border, -fx-control-inner-background;
-    -fx-background-insets: -0.4, 1, 2;
-    -fx-background-radius: 3.4, 2, 2;
-}
-
-.custom-color-dialog .double-field:disabled {
-    -fx-opacity: -fx-disabled-opacity;
-}
-
-
-.custom-color-dialog .webcolor-field {
-    -fx-background-color: -fx-shadow-highlight-color, -fx-text-box-border, -fx-control-inner-background;
-    -fx-background-insets: 0, 1, 2;
-    -fx-background-radius: 3, 2, 2;
-    -fx-padding: 3 5 3 5;
-    -fx-prompt-text-fill: derive(-fx-control-inner-background,-30%);
-    -fx-cursor: text;
-}
-
-.custom-color-dialog .webcolor-field:focused {
-    -fx-background-color: -fx-focus-color, -fx-text-box-border, -fx-control-inner-background;
-    -fx-background-insets: -0.4, 1, 2;
-    -fx-background-radius: 3.4, 2, 2;
-}
-
-.custom-color-dialog .webcolor-field:disabled {
-    -fx-opacity: -fx-disabled-opacity;
 }
 
 

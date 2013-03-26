@@ -500,11 +500,11 @@ public class CustomColorDialog extends StackPane {
             whiteBox.getStyleClass().add("customcolor-controls-background");
             
             hsbButton = new ToggleButton("HSB");
-            hsbButton.setId("toggle-button-left");
+            hsbButton.getStyleClass().add("left-pill");
             rgbButton = new ToggleButton("RGB");
-            rgbButton.setId("toggle-button-center");
+            rgbButton.getStyleClass().add("center-pill");
             webButton = new ToggleButton("Web");
-            webButton.setId("toggle-button-right");
+            webButton.getStyleClass().add("right-pill");
             
             hBox = new HBox();
             hBox.getChildren().addAll(hsbButton, rgbButton, webButton);
@@ -690,6 +690,7 @@ public class CustomColorDialog extends StackPane {
                 webSettings.add(webLabel, 0, 1);
 
                 webField = new WebColorField();
+                webField.getStyleClass().add("text-field");
                 webField.setSkin(new WebColorFieldSkin(webField));
                 webField.valueProperty().bindBidirectional(customColorProperty());
                 webField.setPrefColumnCount(6);
@@ -771,6 +772,7 @@ public class CustomColorDialog extends StackPane {
             gridPane.add(slider, 1, row);
 
             IntegerField field = new IntegerField(maxValue);
+            field.getStyleClass().addAll("color-input-field", "text-field");
             field.setSkin(new IntegerFieldSkin(field));
             field.setPrefColumnCount(3);
             field.setMaxWidth(38);
