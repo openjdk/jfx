@@ -51,10 +51,10 @@ public class Main {
             + " " + PackagerLib.JAVAFX_VERSION + "\n";
     private static final String help = bundle.getString("MSG_Help_1")
                                         + bundle.getString("MSG_Help_2")
-                                        + bundle.getString("MSG_Help_3")            
-                                        + bundle.getString("MSG_Help_4")            
-                                        + bundle.getString("MSG_Help_5")            
-                                        + bundle.getString("MSG_Help_6")            
+                                        + bundle.getString("MSG_Help_3")
+                                        + bundle.getString("MSG_Help_4")
+                                        + bundle.getString("MSG_Help_5")
+                                        + bundle.getString("MSG_Help_6")
                                         + bundle.getString("MSG_Help_7");
 
     private static String nextArg(String args[], int i) {
