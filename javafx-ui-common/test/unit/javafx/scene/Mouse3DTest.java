@@ -1745,6 +1745,91 @@ public class Mouse3DTest {
     }
 
 
+    /***************** moving camera ********************/
+
+    @Test
+    public void takesPerspectiveCameraMovesIntoAccount() {
+        MouseEventGenerator g = new MouseEventGenerator();
+        Box b = box().handleMove(me);
+        Camera cam = perspective();
+        Group camGroup = group(cam);
+        cam.setTranslateX(-43);
+        camGroup.setTranslateX(23);
+        cam.impl_updatePG();
+
+        Scene s = scene(group(b), cam, true);
+        s.getRoot().getChildren().add(camGroup);
+        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 30, 40));
+
+        MouseEvent e = me.event;
+        assertNotNull(e);
+        assertCoordinates(e, 30, 40, 10, 40, -200);
+        assertPickResult(e.getPickResult(),
+                b, point(10, 40, -200), 800, NOFACE, point(0.4, 0.3));
+    }
+
+    @Test
+    public void ignoresPerspectiveCameraMovesIfCameraNotInScene() {
+        MouseEventGenerator g = new MouseEventGenerator();
+        Box b = box().handleMove(me);
+        Camera cam = perspective();
+        Group camGroup = group(cam);
+        cam.setTranslateX(-43);
+        camGroup.setTranslateX(23);
+        cam.impl_updatePG();
+
+        Scene s = scene(group(b), cam, true);
+        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 30, 40));
+
+        MouseEvent e = me.event;
+        assertNotNull(e);
+        assertCoordinates(e, 30, 40, 30, 40, -200);
+        assertPickResult(e.getPickResult(),
+                b, point(30, 40, -200), 800, NOFACE, point(0.2, 0.3));
+    }
+
+    @Test
+    public void takesParallelCameraMovesIntoAccount() {
+        MouseEventGenerator g = new MouseEventGenerator();
+        Box b = box().handleMove(me);
+        Camera cam = parallel();
+        Group camGroup = group(cam);
+        cam.setTranslateX(-43);
+        camGroup.setTranslateX(23);
+        cam.impl_updatePG();
+
+        Scene s = scene(group(b), cam, true);
+        s.getRoot().getChildren().add(camGroup);
+        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 30, 40));
+
+        MouseEvent e = me.event;
+        assertNotNull(e);
+        assertCoordinates(e, 30, 40, 10, 40, -200);
+        assertPickResult(e.getPickResult(),
+                b, point(10, 40, -200), Double.POSITIVE_INFINITY, NOFACE, point(0.4, 0.3));
+    }
+
+    @Test
+    public void ignoresParallelCameraMovesIfCameraNotInScene() {
+        MouseEventGenerator g = new MouseEventGenerator();
+        Box b = box().handleMove(me);
+        Camera cam = parallel();
+        Group camGroup = group(cam);
+        cam.setTranslateX(-43);
+        camGroup.setTranslateX(23);
+        cam.impl_updatePG();
+
+        Scene s = scene(group(b), cam, true);
+        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 30, 40));
+
+        MouseEvent e = me.event;
+        assertNotNull(e);
+        assertCoordinates(e, 30, 40, 30, 40, -200);
+        assertPickResult(e.getPickResult(),
+                b, point(30, 40, -200), Double.POSITIVE_INFINITY, NOFACE, point(0.2, 0.3));
+    }
+
+
     /***************** helper stuff ********************/
 
 
@@ -1757,6 +1842,10 @@ public class Mouse3DTest {
                     pickRay = new PickRay();
                 }
                 pickRay.set(new Vec3d(localX, localY, -1000), new Vec3d(0, 0, 1000));
+
+                if (getScene() != null) {
+                    pickRay.transform(getCameraTransform());
+                }
                 return pickRay;
             }
         };
