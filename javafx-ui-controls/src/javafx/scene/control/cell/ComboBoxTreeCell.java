@@ -34,6 +34,7 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.scene.Node;
 import javafx.scene.control.*;
+import javafx.scene.layout.HBox;
 import javafx.util.Callback;
 import javafx.util.StringConverter;
 
@@ -165,6 +166,7 @@ public class ComboBoxTreeCell<T> extends TreeCell<T> {
     private final ObservableList<T> items;
 
     private ComboBox<T> comboBox;
+    private HBox hbox;
     
 
     
@@ -322,12 +324,22 @@ public class ComboBoxTreeCell<T> extends TreeCell<T> {
             comboBox = createComboBox(this, items, getConverter());
             comboBox.editableProperty().bind(comboBoxEditableProperty());
         }
+        if (hbox == null) {
+            hbox = new HBox(CellUtils.TREE_VIEW_HBOX_GRAPHIC_PADDING);
+        }
         
         comboBox.getSelectionModel().select(getTreeItem().getValue());
         
         super.startEdit();
         setText(null);
-        setGraphic(comboBox);
+        
+        Node graphic = CellUtils.getGraphic(getTreeItem());
+        if (graphic != null) {
+            hbox.getChildren().setAll(graphic, comboBox);
+            setGraphic(hbox);
+        } else {
+            setGraphic(comboBox);
+        }
     }
 
     /** {@inheritDoc} */
@@ -342,8 +354,7 @@ public class ComboBoxTreeCell<T> extends TreeCell<T> {
     @Override public void updateItem(T item, boolean empty) {
         super.updateItem(item, empty);
         
-        TreeItem<T> treeItem = getTreeItem();
-        Node graphic = treeItem == null ? null : treeItem.getGraphic();
-        CellUtils.updateItem(this, comboBox, getConverter(), graphic);
+        Node graphic = CellUtils.getGraphic(getTreeItem());
+        CellUtils.updateItem(this, getConverter(), hbox, graphic, comboBox);
     };
 }

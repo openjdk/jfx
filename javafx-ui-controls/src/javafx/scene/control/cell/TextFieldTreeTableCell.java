@@ -193,18 +193,18 @@ public class TextFieldTreeTableCell<S,T> extends TreeTableCell<S,T> {
             textField = CellUtils.createTextField(this, getConverter());
         }
         
-        CellUtils.startEdit(this, textField, getConverter());
+        CellUtils.startEdit(this, getConverter(), null, null, textField);
     }
 
     /** {@inheritDoc} */
     @Override public void cancelEdit() {
         super.cancelEdit();
-        CellUtils.cancelEdit(this, getConverter());
+        CellUtils.cancelEdit(this, getConverter(), null);
     }
     
     /** {@inheritDoc} */
     @Override public void updateItem(T item, boolean empty) {
         super.updateItem(item, empty);
-        CellUtils.updateItem(this, textField, getConverter());
+        CellUtils.updateItem(this, getConverter(), null, null, textField);
     }
 }

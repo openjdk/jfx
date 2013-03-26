@@ -338,6 +338,6 @@ public class ComboBoxListCell<T> extends ListCell<T> {
     /** {@inheritDoc} */
     @Override public void updateItem(T item, boolean empty) {
         super.updateItem(item, empty);
-        CellUtils.updateItem(this, comboBox, getConverter());
+        CellUtils.updateItem(this, getConverter(), null, null, comboBox);
     }
 }

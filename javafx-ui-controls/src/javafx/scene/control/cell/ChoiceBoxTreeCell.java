@@ -32,6 +32,7 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.scene.Node;
 import javafx.scene.control.*;
+import javafx.scene.layout.HBox;
 import javafx.util.Callback;
 import javafx.util.StringConverter;
 
@@ -166,6 +167,8 @@ public class ChoiceBoxTreeCell<T> extends TreeCell<T> {
 
     private ChoiceBox<T> choiceBox;
     
+    private HBox hbox;
+    
 
     
     /***************************************************************************
@@ -293,12 +296,22 @@ public class ChoiceBoxTreeCell<T> extends TreeCell<T> {
         if (choiceBox == null) {
             choiceBox = createChoiceBox(this, items);
         }
+        if (hbox == null) {
+            hbox = new HBox(CellUtils.TREE_VIEW_HBOX_GRAPHIC_PADDING);
+        }
         
         choiceBox.getSelectionModel().select(getTreeItem().getValue());
         
         super.startEdit();
         setText(null);
-        setGraphic(choiceBox);
+        
+        Node graphic = getTreeItemGraphic();
+        if (graphic != null) {
+            hbox.getChildren().setAll(graphic, choiceBox);
+            setGraphic(hbox);
+        } else {
+            setGraphic(choiceBox);
+        }
     }
 
     /** {@inheritDoc} */
@@ -313,8 +326,19 @@ public class ChoiceBoxTreeCell<T> extends TreeCell<T> {
     @Override public void updateItem(T item, boolean empty) {
         super.updateItem(item, empty);
         
-        TreeItem<T> treeItem = getTreeItem();
-        Node graphic = treeItem == null ? null : treeItem.getGraphic();
-        CellUtils.updateItem(this, choiceBox, getConverter(), graphic);
+        CellUtils.updateItem(this, getConverter(), hbox, getTreeItemGraphic(), choiceBox);
     };
+    
+    
+    
+    /***************************************************************************
+     *                                                                         *
+     * Private Implementation                                                  *
+     *                                                                         *
+     **************************************************************************/  
+    
+    private Node getTreeItemGraphic() {
+        TreeItem<T> treeItem = getTreeItem();
+        return treeItem == null ? null : treeItem.getGraphic();
+    }
 }
