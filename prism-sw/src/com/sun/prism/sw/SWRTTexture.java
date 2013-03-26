@@ -37,7 +37,7 @@ import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 
-class SWRTTexture extends SWTexture implements RTTexture {
+class SWRTTexture extends SWArgbPreTexture implements RTTexture {
 
     private PiscesRenderer pr;
     private JavaSurface surface;
