@@ -36,7 +36,9 @@ import java.util.concurrent.Future
  *  - build check -- making sure the final artifact has the right bits
  *  - JavaDoc needs to use the -javafx flag (waiting for fix in JDK 8 to be able to use this)
  *      - I've seen 'gradle javadoc' fail, whereas 'gradle :javadoc' succeeds. Need to investigate.
- *  - Need to compile hlsl files
+ *  - Perform sanity checking to make sure a JDK exists with javac, javah, etc
+ *  - Support building with no known JDK location, as long as javac, javah, etc are on the path
+ *  - Check all of the native flags. We're adding weight to some libs that don't need it, and so forth.
  *
  * Additional projects to work on as we go:
  *  - The genVSproperties.bat doesn't find the directory where RC.exe lives. So it is hard coded. Might be a problem.
@@ -302,9 +304,9 @@ class JavaHeaderTask extends DefaultTask {
         List classNames = [];
         FileTree files = project.files(source).getAsFileTree().matching(patternSet);
         files.visit({ fileTreeElement ->
-            if (!fileTreeElement.isDirectory() && fileTreeElement.getName().endsWith(".java")) {
+            if (!fileTreeElement.isDirectory() && fileTreeElement.getName().endsWith(".class")) {
                 String path = fileTreeElement.getPath();
-                String className = path.substring(0, path.length() - 5).replace("/", ".");
+                String className = path.substring(0, path.length() - 6).replace("/", ".");
                 classNames.add(className)
             }
         })
@@ -316,24 +318,33 @@ class JavaHeaderTask extends DefaultTask {
     }
 }
 
-class CCTask extends SourceTask {
-    @Optional String compiler;
-    List<String> ccParams = new ArrayList<String>();
+class NativeCompileTask extends DefaultTask {
+    @Optional String matches; // regex for matching input files
+    List<String> params = new ArrayList<String>();
     List sourceRoots = new ArrayList();
-    @InputDirectory File headers;
     @OutputDirectory File output;
+    private final PatternFilterable patternSet = new PatternSet();
 
-    @InputFiles @Override public void setSource(Object source) {
-        super.setSource(source);
+    @InputFiles public void setSource(Object source) {
         sourceRoots.clear();
         sourceRoots.add(source);
     }
 
-    @Override public SourceTask source(Object... sources) {
+    public NativeCompileTask source(Object... sources) {
         for (Object source : sources) {
             sourceRoots.add(source);
         }
-        return super.source(sources);
+        return this;
+    }
+
+    public NativeCompileTask include(String... includes) {
+        patternSet.include(includes);
+        return this;
+    }
+
+    public NativeCompileTask include(Iterable<String> includes) {
+        patternSet.include(includes);
+        return this;
     }
 
     @TaskAction void compile() {
@@ -348,88 +359,34 @@ class CCTask extends SourceTask {
         }
 
         project.mkdir(output);
-        final Set<File> files = source.filter{it.name.matches(".*\\.c|.*\\.cpp|.*\\.m|.*\\.cc|.*\\.rc|.*\\.cur")}.files;
-        final Set<File> otherFiles = source.filter{!it.name.matches(".*\\.c|.*\\.cpp|.*\\.m|.*\\.cc|.*\\.rc|.*\\.cur")}.files;
-        boolean shouldCompileAnyway = false;
-        otherFiles.each { f->
-            if (f.isFile()) {
-                final Map otherFileData = dependencies.get(f.toString());
-                if (otherFileData == null ||
-                        !otherFileData["DATE"].equals(f.lastModified()) ||
-                        !otherFileData["SIZE"].equals(f.length()))
-                {
-                    shouldCompileAnyway = true;
-                    dependencies.put(f.toString(), ["DATE":f.lastModified(), "SIZE":f.length()]);
-                }
-            }
+        // Combine the different source roots into a single FileCollection based on all files in each source root
+        def allFiles = [];
+        sourceRoots.each {
+            println project.file(it).toString()
+            allFiles += project.file(it).listFiles()
         }
+        def source = project.files(allFiles);
+        final Set<File> files = matches == null ? new HashSet<File>(source.files) : source.filter{it.name.matches(matches)}.files;
+        boolean shouldCompileAnyway = false;
         final boolean forceCompile = shouldCompileAnyway;
         final ExecutorService executor = Executors.newFixedThreadPool(Integer.parseInt(project.NUM_COMPILE_THREADS.toString()));
         final CountDownLatch latch = new CountDownLatch(files.size());
-        final Project p = project;
-        final CCTask me = this;
         List futures = new ArrayList<Future>();
         files.each { File sourceFile ->
-            final String outFileName = sourceFile.getName().substring(0, sourceFile.getName().lastIndexOf("."));
             futures.add(executor.submit(new Runnable() {
                 @Override public void run() {
                     try {
-                        // "compile" native resources using RC
-                        if (p.IS_WINDOWS && (sourceFile.getName().endsWith(".rc") || sourceFile.getName().endsWith(".cur"))) {
-                            final File resFile = new File("$me.output/${outFileName}.res");
-                            // If the source file is not listed in dependencies, then we must compile it.
-                            // If the target file(s) (.rc or .cur in the case of resources, .pdb or .obj for sources)
-                            //    do not exist, then compile.
-                            // If the source file date or size differs from dependencies, then compile it.
-                            final Map sourceFileData = dependencies.get(sourceFile.toString());
-                            if (forceCompile || sourceFileData == null || !resFile.exists() ||
-                                    !sourceFileData["DATE"].equals(sourceFile.lastModified()) ||
-                                    !sourceFileData["SIZE"].equals(sourceFile.length()))
-                            {
-                                p.exec({
-                                    commandLine("$p.RC", "/nologo", "/fo$resFile", "$sourceFile");
-                                    environment(p.WINDOWS_NATIVE_COMPILE_ENVIRONMENT);
-                                });
-                            }
-                        } else {
-                            // or compile sources using CC
-                            final File pdbFile = new File("$me.output/${outFileName}.pdb");
-                            final File objFile = new File("$me.output/${outFileName}.obj");
-                            // If the source file is not listed in dependencies, then we must compile it.
-                            // If the target file(s) (.rc or .cur in the case of resources, .pdb or .obj for sources)
-                            //    do not exist, then compile.
-                            // If the source file date or size differs from dependencies, then compile it.
-                            final Map sourceFileData = dependencies.get(sourceFile.toString());
-                            // TODO the PDB file is never being built -- maybe because it is only built during
-                            // debug builds, otherwise that flag is ignored "/Fd" or "-Fd"
-                            if (forceCompile || sourceFileData == null || /*!pdbFile.exists() ||*/ !objFile.exists() ||
-                                    !sourceFileData["DATE"].equals(sourceFile.lastModified()) ||
-                                    !sourceFileData["SIZE"].equals(sourceFile.length()))
-                            {
-                                p.exec({
-                                    commandLine("${me.compiler == null ? p.CC : me.compiler}", "-I$me.headers");
-
-                                    // Add the source roots in as include directories
-                                    me.sourceRoots.each { root ->
-                                        final File file = root instanceof File ? (File) root : p.file(root)
-                                        args("-I$file");
-                                    }
-
-                                    // Add in any additional compilation params
-                                    if (me.ccParams != null) args(me.ccParams);
-
-                                    // Add the name of the source file to compile
-                                    if (p.IS_WINDOWS) {
-                                        args("/Fd$pdbFile", "/Fo$objFile", "$sourceFile");
-                                    } else {
-                                        args("-Fd$pdbFile", "-o", "$objFile", "$sourceFile");
-                                    }
-
-                                    if (p.IS_WINDOWS){
-                                        environment(p.WINDOWS_NATIVE_COMPILE_ENVIRONMENT);
-                                    }
-                                });
-                            }
+                        final File outputFile = outputFile(sourceFile);
+                        // If the source file is not listed in dependencies, then we must compile it.
+                        // If the target file(s) (.rc or .cur in the case of resources, .pdb or .obj for sources)
+                        //    do not exist, then compile.
+                        // If the source file date or size differs from dependencies, then compile it.
+                        final Map sourceFileData = dependencies.get(sourceFile.toString());
+                        if (forceCompile || sourceFileData == null || !outputFile.exists() ||
+                                !sourceFileData["DATE"].equals(sourceFile.lastModified()) ||
+                                !sourceFileData["SIZE"].equals(sourceFile.length()))
+                        {
+                            doCompile(sourceFile, outputFile)
                         }
                         dependencies.put(sourceFile.toString(), ["DATE":sourceFile.lastModified(), "SIZE":sourceFile.length()]);
                     } finally {
@@ -451,6 +408,87 @@ class CCTask extends SourceTask {
         dependencies.each { key, value ->
             nativeDependenciesFile << key << "\t" << value["DATE"] << "\t" << value["SIZE"] << "\n";
         }
+    }
+
+    protected void doCompile(File sourceFile, File outputFile){ }
+    protected File outputFile(File sourceFile) { return null; }
+}
+
+class CompileResourceTask extends NativeCompileTask {
+
+    protected File outputFile(File sourceFile) {
+        final String outFileName = sourceFile.getName().substring(0, sourceFile.getName().lastIndexOf("."));
+        new File("$output/${outFileName}.res");
+    }
+
+    protected void doCompile(File sourceFile, File outputFile){
+        project.exec({
+            commandLine("$project.RC", "/nologo", "/fo$outputFile", "$sourceFile");
+            environment(project.WINDOWS_NATIVE_COMPILE_ENVIRONMENT);
+        });
+    }
+}
+
+class CompileHLSLTask extends NativeCompileTask {
+    protected File outputFile(File sourceFile) {
+        new File("$output/${sourceFile.name.replace('.hlsl', '.obj')}");
+    }
+
+    protected void doCompile(File sourceFile, File outputFile){
+        project.exec({
+            commandLine = ["$project.FXC", "/nologo", "/T", "ps_3_0", "/Fo", "$outputFile", "$sourceFile"]
+            environment(project.WINDOWS_NATIVE_COMPILE_ENVIRONMENT);
+        });
+    }
+}
+
+class CCTask extends NativeCompileTask {
+    @Optional String compiler;
+    @InputDirectory File headers;
+
+    protected File outputFile(File sourceFile) {
+        final String outFileName = sourceFile.getName().substring(0, sourceFile.getName().lastIndexOf("."));
+        new File("$output/${outFileName}.obj");
+    }
+
+    protected void doCompile(File sourceFile, File outputFile) {
+        // or compile sources using CC
+        final File pdbFile = new File("$output/${outputFile.name.replace('.obj', '.pdb')}");
+
+        // TODO the PDB file is never being built -- maybe because it is only built during
+        // debug builds, otherwise that flag is ignored "/Fd" or "-Fd"
+        project.exec({
+            commandLine("${compiler == null ? project.CC : compiler}", "-I$headers");
+
+            // Add the source roots in as include directories
+            sourceRoots.each { root ->
+                final File file = root instanceof File ? (File) root : project.file(root)
+                args("-I$file");
+            }
+
+            // Add in any additional compilation params
+            if (params != null) {
+                // A little hack. Only use the -std=c99 flag if compiling .c or .m
+                if (sourceFile.name.endsWith(".cpp") || sourceFile.name.endsWith(".cc")) {
+                    def stripped = params;
+                    stripped.remove("-std=c99");
+                    args(stripped)
+                } else {
+                    args(params)
+                }
+            };
+
+            // Add the name of the source file to compile
+            if (project.IS_WINDOWS) {
+                args("/Fd$pdbFile", "/Fo$outputFile", "$sourceFile");
+            } else {
+                args("-Fd$pdbFile", "-o", "$outputFile", "$sourceFile");
+            }
+
+            if (project.IS_WINDOWS){
+                environment(project.WINDOWS_NATIVE_COMPILE_ENVIRONMENT);
+            }
+        });
     }
 }
 
@@ -487,15 +525,16 @@ class LinkTask extends DefaultTask {
 * tasks are parameterized by name, so that we can produce, for example, javahGlass, ccGlass, etc
 * named tasks.
 */
-def addNative = { project, String name ->
+void addNative(Project project, String name) {
     def javahTask = project.task("javah$name", type: JavaHeaderTask, dependsOn: project.classes, group: "Build") {
         description = "Generates JNI Headers for $name"
-        source = project.sourceSets.main.java.srcDirs.iterator().next()
+        source = project.sourceSets.main.output.classesDir
         classpath = project.files(project.sourceSets.main.output.classesDir, project.BINARY_STUB)
         output = project.file("$project.buildDir/headers/$name")
     }
     def ccTask = project.task("cc$name", type: CCTask, dependsOn: javahTask, group: "Build") {
         description = "Compiles native sources for $name"
+        matches = ".*\\.c|.*\\.cpp|.*\\.m|.*\\.cc"
         headers = project.file("$project.buildDir/headers/$name")
         output(file("$project.buildDir/native/$name"))
     }
@@ -503,10 +542,23 @@ def addNative = { project, String name ->
         description = "Creates native dynamic library for $name"
         objectDir = file("$project.buildDir/native/$name")
     }
+    if (IS_WINDOWS) {
+        def rcTask = project.task("rc$name", type: CompileResourceTask, dependsOn: javahTask, group: "Build") {
+            description = "Compiles native sources for $name"
+            matches = ".*\\.rc|.*\\.cur"
+            output(file("$project.buildDir/native/$name"))
+        }
+        linkTask.dependsOn rcTask;
+    }
     project.task("native$name", dependsOn: linkTask, group: "Build") {
         description = "Generates JNI headers, compiles, and builds native dynamic library for $name"
     }
     project.assemble.dependsOn("native$name")
+    project.task("cleanNative$name", group: "Build") {
+        project.delete("$project.buildDir/headers")
+        project.delete("$project.buildDir/native")
+        //project.delete("$project.buildDir/libs/${COMPILE_TARGET.name}")
+    }
 }
 
 /******************************************************************************
@@ -768,7 +820,6 @@ project(":graphics") {
     test.dependsOn testWithoutStub, testWithStub
 
     addNative(project, "Glass")
-
     javahGlass {
         include("com/sun/glass/events/**",
                 "com/sun/glass/ui/*",
@@ -777,8 +828,8 @@ project(":graphics") {
     }
 
     ccGlass {
-        ccParams.addAll(CC_PARAMS)
-        if (IS_WINDOWS) ccParams.add("/WX");
+        params.addAll(CC_PARAMS)
+        if (IS_WINDOWS) params.add("/WX");
         source(file("src/main/native-glass/$GLASS_PLATFORM"));
     }
 
@@ -800,7 +851,7 @@ project(":graphics") {
     }
 
     ccDecora {
-        ccParams.addAll(CC_PARAMS);
+        params.addAll(CC_PARAMS);
         source file("src/main/native-decora")
     }
 
@@ -816,7 +867,7 @@ project(":graphics") {
 
     ccPrism {
         if (IS_LINUX) compiler = "cc"
-        ccParams.addAll(CC_PARAMS);
+        params.addAll(CC_PARAMS);
         source file("src/main/native-prism")
     }
 
@@ -832,7 +883,7 @@ project(":graphics") {
 
     ccPrismSW {
         if (IS_LINUX) compiler = "cc"
-        ccParams.addAll(CC_PARAMS);
+        params.addAll(CC_PARAMS);
         source file("src/main/native-prism-sw")
     }
 
@@ -955,6 +1006,16 @@ project(":graphics:effects-jsl") {
     }
     classes.dependsOn compileDecoraJava
 
+    if (IS_WINDOWS){
+        task compileDecoraHLSL(dependsOn: compileJSL, type: CompileHLSLTask) {
+            description = "Compile Decora HLSL files into .obj files"
+            matches = ".*\\.hlsl"
+            source "$buildDir/generated-src/jsl/decora-d3d/build/gensrc/com/sun/scenario/effect/impl/hw/d3d/hlsl/"
+            output file("$buildDir/hlsl")
+        }
+        classes.dependsOn compileDecoraHLSL
+    }
+
     task copyShaders(dependsOn: compileJSL, type: Copy, description: "Copy hlsl / frag shaders to $buildDir/resources/main") {
         from("$buildDir/generated-src/jsl/decora-d3d/build/gensrc") {
             include "**/*.hlsl"
@@ -1008,6 +1069,16 @@ project(":graphics:prism-jsl") {
         destinationDir = file("$buildDir/classes/main")
     }
     classes.dependsOn compilePrismJSLJava
+
+    if (IS_WINDOWS){
+        task compilePrismHLSL(dependsOn: compileJSL, type: CompileHLSLTask) {
+            description = "Compile Prism HLSL files into .obj files"
+            matches = ".*\\.hlsl"
+            source "$buildDir/generated-src/jsl/prism-d3d/build/gensrc/com/sun/prism/d3d/hlsl/"
+            output file("$buildDir/hlsl")
+        }
+        classes.dependsOn compilePrismHLSL
+    }
 
     task copyPrismShaders(dependsOn: compileJSL, type: Copy, description: "Copy hlsl / frag shaders to $buildDir/resources/main") {
         from("$buildDir/generated-src/jsl/prism-d3d/build/gensrc") {
