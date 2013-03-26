@@ -133,14 +133,12 @@ public  class PerspectiveCamera extends Camera {
         return fixedEyePosition;
     }
 
-    /*
-     * Introduced to support SubScene picking, in order to getting around
-     * limitations of one camera for every Scene. GlassScene has camera
-     * properties. This might change after camera work has been moved to FX
-     * thread, when RT-28290 is fixed.
-     */
+    // In case of publishing this should be final. Right now it is not
+    // because of tests. It would be very hard to write complex 3D picking
+    // tests with the real pick ray, so we override this method in tests
+    // and return an orthogonal pick ray which makes it easy to verify the pick.
     @Override
-    final PickRay computePickRay(double localX, double localY,
+    PickRay computePickRay(double localX, double localY,
                            double viewWidth, double viewHeight,
                            PickRay pickRay) {
         if (pickRay == null) {
@@ -164,8 +162,10 @@ public  class PerspectiveCamera extends Camera {
         // set eye at center of viewport and move back so that projection plane
         // is at Z = 0
         if (pickRay.isParallel()) { pickRay.set(eye, direction); }
-        final BaseTransform cameraTX = impl_getLeafTransform();
-        pickRay.transform(cameraTX);
+
+        if (getScene() != null) {
+            pickRay.transform(getCameraTransform());
+        }
 
         return pickRay;
     }

@@ -208,11 +208,26 @@ public abstract class Camera extends Node {
         }
     }
 
-    /*
-     * Introduced to support SubScene picking, in order to getting around
-     * limitations of one camera for every Scene. GlassScene has camera
-     * properties. This might change after camera work has been moved to FX
-     * thread, when RT-28290 is fixed.
+    /**
+     * Returns the local-to-scene transform of this camera.
+     * Package private, for use in our internal subclasses.
+     */
+    Affine3D getCameraTransform() {
+        return localToSceneTx;
+    }
+
+    /**
+     * Computes pick ray for the content rendered by this camera.
+     * @param localX horizontal coordinate of the pick ray in the projected
+     *               view, usually mouse cursor position
+     * @param localY vertical coordinate of the pick ray in the projected
+     *               view, usually mouse cursor position
+     * @param viewWidth width of the projected view
+     * @param viewHeight height of the projected view
+     * @param pickRay pick ray to be reused. New instance is created in case
+     *                of null.
+     * @return The PickRay instance computed based on this camera and the given
+     *         arguments.
      */
     abstract PickRay computePickRay(double localX, double localY,
                                     double viewWidth, double viewHeight,

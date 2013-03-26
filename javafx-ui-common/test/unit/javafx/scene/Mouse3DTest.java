@@ -25,6 +25,8 @@
 
 package javafx.scene;
 
+import com.sun.javafx.geom.PickRay;
+import com.sun.javafx.geom.Vec3d;
 import com.sun.javafx.test.MouseEventGenerator;
 import javafx.event.Event;
 import javafx.event.EventHandler;
@@ -1747,7 +1749,17 @@ public class Mouse3DTest {
 
 
     private Camera perspective() {
-        return new PerspectiveCamera();
+        return new PerspectiveCamera() {
+            @Override PickRay computePickRay(double localX, double localY,
+                                    double viewWidth, double viewHeight,
+                                    PickRay pickRay) {
+                if (pickRay == null) {
+                    pickRay = new PickRay();
+                }
+                pickRay.set(new Vec3d(localX, localY, -1000), new Vec3d(0, 0, 1000));
+                return pickRay;
+            }
+        };
     }
 
     private Camera parallel() {

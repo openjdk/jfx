@@ -80,15 +80,7 @@ public class StubScene implements TKScene {
     }
 
     public PickRay computePickRay(float x, float y, PickRay pickRay) {
-        if (pickRay == null) {
-            pickRay = new PickRay();
-        }
-        if (camera instanceof PGPerspectiveCamera) {
-            pickRay.set(new Vec3d(x, y, -1000), new Vec3d(0, 0, 1000));
-        } else {
-            pickRay.set(x, y);
-        }
-        return pickRay;
+        return null;
     }
 
     public void setFillPaint(Object fillPaint) {

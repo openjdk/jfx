@@ -27,6 +27,7 @@ package javafx.scene;
 
 import com.sun.javafx.geom.PickRay;
 import com.sun.javafx.geom.Vec3d;
+import com.sun.javafx.geom.transform.Affine3D;
 import com.sun.javafx.sg.PGNode;
 import com.sun.javafx.sg.PGParallelCamera;
 import com.sun.javafx.tk.Toolkit;
@@ -68,11 +69,6 @@ public class ParallelCamera extends Camera {
         return pgCamera;
     }
 
-    /*
-     * Introduced as a workaround for SubScene, until we can fix camera
-     * implementation, such that projection transform and view transform are
-     * determined on FX thread, when RT-28290 is fixed.
-     */
     @Override
     final PickRay computePickRay(double localX, double localY,
                            double viewWidth, double viewHeight,
@@ -80,7 +76,11 @@ public class ParallelCamera extends Camera {
         if (pickRay == null) {
             pickRay = new PickRay();
         }
-        pickRay.set(localY, localY);
+        pickRay.set(localX, localY);
+
+        if (getScene() != null) {
+            pickRay.transform(getCameraTransform());
+        }
         return pickRay;
     }
 }
