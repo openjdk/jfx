@@ -547,6 +547,7 @@ public class CustomColorDialog extends StackPane {
             alphaSettings.add(alphaSlider, 1, 1);
             
             IntegerField alphaField = new IntegerField(100);
+            alphaField.getStyleClass().addAll("color-input-field", "text-field");
             alphaField.setSkin(new IntegerFieldSkin(alphaField));
             alphaField.setPrefColumnCount(3);
             alphaField.setMaxWidth(38);
