@@ -25,17 +25,19 @@
 
 package javafx.scene.control;
 
-import com.sun.javafx.scene.control.TableColumnComparatorBase.TableColumnComparator;
-import com.sun.javafx.scene.control.test.ControlAsserts;
-import com.sun.javafx.scene.control.test.Person;
-import com.sun.javafx.scene.control.test.RT_22463_Person;
-import java.util.ArrayList;
 import static javafx.scene.control.ControlTestUtils.assertStyleClassContains;
-import static org.junit.Assert.*;
+import static javafx.scene.control.TableColumn.SortType.ASCENDING;
+import static javafx.scene.control.TableColumn.SortType.DESCENDING;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertTrue;
 
 import java.util.Arrays;
 import java.util.Comparator;
-import java.util.List;
+import java.util.Random;
 
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
@@ -51,8 +53,10 @@ import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
 
-import static javafx.scene.control.TableColumn.SortType.ASCENDING;
-import static javafx.scene.control.TableColumn.SortType.DESCENDING;
+import com.sun.javafx.scene.control.TableColumnComparatorBase.TableColumnComparator;
+import com.sun.javafx.scene.control.test.ControlAsserts;
+import com.sun.javafx.scene.control.test.Person;
+import com.sun.javafx.scene.control.test.RT_22463_Person;
 
 public class TableViewTest {
     private TableView<String> table;
@@ -948,5 +952,53 @@ public class TableViewTest {
         assertEquals(1, sm.getSelectedItems().size());
         assertEquals("String2", sm.getSelectedItems().get(0));
         assertEquals(0, sm.getSelectedIndex());
+    }
+    
+    @Test public void test_rt24844() {
+        // p1 == lowest first name
+        Person p0, p1, p2, p3, p4;
+        
+        TableView<Person> table = new TableView<Person>();
+        table.setItems(FXCollections.observableArrayList(
+            p3 = new Person("Jacob", "Smith", "jacob.smith@example.com"),
+            p2 = new Person("Isabella", "Johnson", "isabella.johnson@example.com"),
+            p1 = new Person("Ethan", "Williams", "ethan.williams@example.com"),
+            p0 = new Person("Emma", "Jones", "emma.jones@example.com"),
+            p4 = new Person("Michael", "Brown", "michael.brown@example.com")));
+        
+        TableColumn firstNameCol = new TableColumn("First Name");
+        firstNameCol.setCellValueFactory(new PropertyValueFactory<Person, String>("firstName"));
+        
+        // set dummy comparator to lock items in place until new comparator is set
+        firstNameCol.setComparator(new Comparator() {
+            @Override public int compare(Object t, Object t1) {
+                return 0;
+            }
+        });
+
+        table.getColumns().addAll(firstNameCol);
+        table.getSortOrder().add(firstNameCol);
+        
+        // ensure the existing order is as expected
+        assertEquals(p3, table.getItems().get(0));
+        assertEquals(p2, table.getItems().get(1));
+        assertEquals(p1, table.getItems().get(2));
+        assertEquals(p0, table.getItems().get(3));
+        assertEquals(p4, table.getItems().get(4));
+        
+        // set a new comparator
+        firstNameCol.setComparator(new Comparator() {
+            Random r =  new Random();
+            @Override public int compare(Object t, Object t1) {
+                return t.toString().compareTo(t1.toString());
+            }
+        });
+        
+        // ensure the new order is as expected
+        assertEquals(p0, table.getItems().get(0));
+        assertEquals(p1, table.getItems().get(1));
+        assertEquals(p2, table.getItems().get(2));
+        assertEquals(p3, table.getItems().get(3));
+        assertEquals(p4, table.getItems().get(4));
     }
 }

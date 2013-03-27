@@ -25,16 +25,21 @@
 
 package javafx.scene.control;
 
-import static com.sun.javafx.scene.control.TableColumnComparatorBase.TreeTableColumnComparator;
-import com.sun.javafx.scene.control.test.ControlAsserts;
-import com.sun.javafx.scene.control.test.Person;
-import com.sun.javafx.scene.control.test.RT_22463_Person;
-import java.util.Arrays;
+import static javafx.scene.control.ControlTestUtils.assertStyleClassContains;
+import static javafx.scene.control.TreeTableColumn.SortType.ASCENDING;
+import static javafx.scene.control.TreeTableColumn.SortType.DESCENDING;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertTrue;
+
 import java.util.Comparator;
+import java.util.Random;
+
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
-import static javafx.scene.control.ControlTestUtils.assertStyleClassContains;
-import static org.junit.Assert.*;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.property.SimpleObjectProperty;
@@ -45,8 +50,6 @@ import javafx.collections.ObservableList;
 import javafx.event.EventHandler;
 import javafx.scene.Group;
 import javafx.scene.Scene;
-import static javafx.scene.control.TreeTableColumn.SortType.ASCENDING;
-import static javafx.scene.control.TreeTableColumn.SortType.DESCENDING;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.control.cell.TreeItemPropertyValueFactory;
 import javafx.stage.Stage;
@@ -55,6 +58,11 @@ import javafx.util.Callback;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
+
+import com.sun.javafx.scene.control.TableColumnComparatorBase.TreeTableColumnComparator;
+import com.sun.javafx.scene.control.test.ControlAsserts;
+import com.sun.javafx.scene.control.test.Person;
+import com.sun.javafx.scene.control.test.RT_22463_Person;
 
 public class TreeTableViewTest {
     private TreeTableView<String> treeTableView;
@@ -1410,5 +1418,60 @@ public class TreeTableViewTest {
         assertEquals((Object)s2, treeTableView.getSelectionModel().getSelectedItem());
         assertEquals((Object)s2, treeTableView.getSelectionModel().getSelectedItems().get(0));
         assertEquals(0, treeTableView.getSelectionModel().getSelectedIndex());
+    }
+    
+    @Test public void test_rt24844() {
+        // p1 == lowest first name
+        TreeItem<Person> p0, p1, p2, p3, p4;
+        
+        ObservableList<TreeItem<Person>> persons = FXCollections.observableArrayList(
+            p3 = new TreeItem<Person>(new Person("Jacob", "Smith", "jacob.smith@example.com")),
+            p2 = new TreeItem<Person>(new Person("Isabella", "Johnson", "isabella.johnson@example.com")),
+            p1 = new TreeItem<Person>(new Person("Ethan", "Williams", "ethan.williams@example.com")),
+            p0 = new TreeItem<Person>(new Person("Emma", "Jones", "emma.jones@example.com")),
+            p4 = new TreeItem<Person>(new Person("Michael", "Brown", "michael.brown@example.com")));
+            
+        TreeTableView<Person> table = new TreeTableView<>();
+        
+        TreeItem<Person> root = new TreeItem<Person>(new Person("Root", null, null));
+        root.setExpanded(true);
+        table.setRoot(root);
+        table.setShowRoot(false);
+        root.getChildren().setAll(persons);
+        
+        TreeTableColumn firstNameCol = new TreeTableColumn("First Name");
+        firstNameCol.setCellValueFactory(new TreeItemPropertyValueFactory<Person, String>("firstName"));
+        
+        // set dummy comparator to lock items in place until new comparator is set
+        firstNameCol.setComparator(new Comparator() {
+            @Override public int compare(Object t, Object t1) {
+                return 0;
+            }
+        });
+
+        table.getColumns().addAll(firstNameCol);
+        table.getSortOrder().add(firstNameCol);
+        
+        // ensure the existing order is as expected
+        assertEquals(p3, root.getChildren().get(0));
+        assertEquals(p2, root.getChildren().get(1));
+        assertEquals(p1, root.getChildren().get(2));
+        assertEquals(p0, root.getChildren().get(3));
+        assertEquals(p4, root.getChildren().get(4));
+        
+        // set a new comparator
+        firstNameCol.setComparator(new Comparator() {
+            Random r =  new Random();
+            @Override public int compare(Object t, Object t1) {
+                return t.toString().compareTo(t1.toString());
+            }
+        });
+        
+        // ensure the new order is as expected
+        assertEquals(p0, root.getChildren().get(0));
+        assertEquals(p1, root.getChildren().get(1));
+        assertEquals(p2, root.getChildren().get(2));
+        assertEquals(p3, root.getChildren().get(3));
+        assertEquals(p4, root.getChildren().get(4));
     }
 }

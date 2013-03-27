@@ -306,11 +306,13 @@ public class TreeTableView<S> extends Control {
                     TableUtil.removeTableColumnListener(c.getRemoved(),
                             weakColumnVisibleObserver,
                             weakColumnSortableObserver,
-                            weakColumnSortTypeObserver);
+                            weakColumnSortTypeObserver,
+                            weakColumnComparatorObserver);
                     TableUtil.addTableColumnListener(c.getAddedSubList(),
                             weakColumnVisibleObserver,
                             weakColumnSortableObserver,
-                            weakColumnSortTypeObserver);
+                            weakColumnSortTypeObserver,
+                            weakColumnComparatorObserver);
                 }
                     
                 // We don't maintain a bind for leafColumns, we simply call this update
@@ -630,6 +632,14 @@ public class TreeTableView<S> extends Control {
         }
     };
     
+    private final InvalidationListener columnComparatorObserver = new InvalidationListener() {
+        @Override public void invalidated(Observable valueModel) {
+            TreeTableColumn col = (TreeTableColumn) ((SimpleObjectProperty)valueModel).getBean();
+            if (! getSortOrder().contains(col)) return;
+            doSort(TableUtil.SortEventType.COLUMN_COMPARATOR_CHANGE, col);
+        }
+    };
+    
     /* proxy pseudo-class state change from selectionModel's cellSelectionEnabledProperty */
     private final InvalidationListener cellSelectionModelInvalidationListener = new InvalidationListener() {
         @Override public void invalidated(Observable o) {
@@ -649,6 +659,9 @@ public class TreeTableView<S> extends Control {
     
     private final WeakInvalidationListener weakColumnSortTypeObserver = 
             new WeakInvalidationListener(columnSortTypeObserver);
+    
+    private final WeakInvalidationListener weakColumnComparatorObserver = 
+            new WeakInvalidationListener(columnComparatorObserver);
     
     private final WeakListChangeListener weakColumnsObserver = 
             new WeakListChangeListener(columnsObserver);

@@ -41,12 +41,14 @@ class TableUtil {
     static void removeTableColumnListener(List<? extends TableColumnBase> list,
                         final InvalidationListener columnVisibleObserver,
                         final InvalidationListener columnSortableObserver,
-                        final InvalidationListener columnSortTypeObserver) {
+                        final InvalidationListener columnSortTypeObserver,
+                        final InvalidationListener columnComparatorObserver) {
     
         if (list == null) return;
         for (TableColumnBase col : list) {
             col.visibleProperty().removeListener(columnVisibleObserver);
             col.sortableProperty().removeListener(columnSortableObserver);
+            col.comparatorProperty().removeListener(columnComparatorObserver);
             
 //            col.sortTypeProperty().removeListener(columnSortTypeObserver);
             if (col instanceof TableColumn) {
@@ -58,19 +60,22 @@ class TableUtil {
             removeTableColumnListener(col.getColumns(),
                                       columnVisibleObserver,
                                       columnSortableObserver,
-                                      columnSortTypeObserver);
+                                      columnSortTypeObserver,
+                                      columnComparatorObserver);
         }
     }
 
     static void addTableColumnListener(List<? extends TableColumnBase> list,
                         final InvalidationListener columnVisibleObserver,
                         final InvalidationListener columnSortableObserver,
-                        final InvalidationListener columnSortTypeObserver) {
+                        final InvalidationListener columnSortTypeObserver,
+                        final InvalidationListener columnComparatorObserver) {
         
         if (list == null) return;
         for (TableColumnBase col : list) {
             col.visibleProperty().addListener(columnVisibleObserver);
             col.sortableProperty().addListener(columnSortableObserver);
+            col.comparatorProperty().addListener(columnComparatorObserver);
             
 //            col.sortTypeProperty().addListener(columnSortTypeObserver);
             if (col instanceof TableColumn) {
@@ -82,7 +87,8 @@ class TableUtil {
             addTableColumnListener(col.getColumns(),
                                    columnVisibleObserver,
                                    columnSortableObserver,
-                                   columnSortTypeObserver);
+                                   columnSortTypeObserver,
+                                   columnComparatorObserver);
         }
     }
 
@@ -132,6 +138,8 @@ class TableUtil {
             sortOrder.addAll(toAdd);
         } else if (sortEventType == SortEventType.COLUMN_SORTABLE_CHANGE) {
             // no-op - it is ok for the sortable type to remain as-is
+        } else if (sortEventType == SortEventType.COLUMN_COMPARATOR_CHANGE) {
+            // no-op - it is ok for the comparator to remain as-is
         }
     }
     
@@ -162,7 +170,8 @@ class TableUtil {
     static enum SortEventType {
          SORT_ORDER_CHANGE,
          COLUMN_SORT_TYPE_CHANGE,
-         COLUMN_SORTABLE_CHANGE
+         COLUMN_SORTABLE_CHANGE,
+         COLUMN_COMPARATOR_CHANGE
      }
     
     
