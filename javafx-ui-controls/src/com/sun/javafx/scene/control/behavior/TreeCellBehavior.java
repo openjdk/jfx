@@ -43,7 +43,7 @@ import sun.util.logging.PlatformLogger;
 
 /**
  */
-public class TreeCellBehavior extends CellBehaviorBase<TreeCell<?>> {
+public class TreeCellBehavior<T> extends CellBehaviorBase<TreeCell<T>> {
     
     /***************************************************************************
      *                                                                         *
@@ -54,16 +54,16 @@ public class TreeCellBehavior extends CellBehaviorBase<TreeCell<?>> {
     // global map used to store the focus index for a tree view when it is first
     // shift-clicked. This allows for proper keyboard interactions, in particular
     // resolving RT-11446
-    private static final WeakHashMap<TreeView, Integer> map = new WeakHashMap<TreeView, Integer>();
+    private static final WeakHashMap<TreeView<?>, Integer> map = new WeakHashMap<TreeView<?>, Integer>();
     
-    static int getAnchor(TreeView tree) {
-        FocusModel fm = tree.getFocusModel();
+    static int getAnchor(TreeView<?> tree) {
+        FocusModel<?> fm = tree.getFocusModel();
         if (fm == null) return -1;
         
         return hasAnchor(tree) ? map.get(tree) : fm.getFocusedIndex();
     }
     
-    static void setAnchor(TreeView tree, int anchor) {
+    static void setAnchor(TreeView<?> tree, int anchor) {
         if (tree != null && anchor < 0) {
             map.remove(tree);
         } else {
@@ -71,11 +71,11 @@ public class TreeCellBehavior extends CellBehaviorBase<TreeCell<?>> {
         }
     }
     
-    static boolean hasAnchor(TreeView tree) {
+    static boolean hasAnchor(TreeView<?> tree) {
         return map.containsKey(tree) && map.get(tree) != -1;
     }
     
-    static void removeAnchor(TreeView tree) {
+    static void removeAnchor(TreeView<?> tree) {
         map.remove(tree);
     }
     
@@ -109,7 +109,7 @@ public class TreeCellBehavior extends CellBehaviorBase<TreeCell<?>> {
      *                                                                         *
      **************************************************************************/
     
-    public TreeCellBehavior(final TreeCell control) {
+    public TreeCellBehavior(final TreeCell<T> control) {
         super(control);
     }
     
@@ -148,7 +148,7 @@ public class TreeCellBehavior extends CellBehaviorBase<TreeCell<?>> {
     @Override public void mouseDragged(MouseEvent event) {
         latePress = false;
         
-        TreeView treeView = getControl().getTreeView();
+        TreeView<T> treeView = getControl().getTreeView();
         if (treeView == null || treeView.getSelectionModel() == null) return;
         
         // the mouse has now been dragged on a touch device, we should
@@ -169,8 +169,8 @@ public class TreeCellBehavior extends CellBehaviorBase<TreeCell<?>> {
     
     private void doSelect(MouseEvent event) {
         // we update the cell to point to the new tree node
-        TreeCell<?> treeCell = getControl();
-        TreeView treeView = treeCell.getTreeView();
+        TreeCell<T> treeCell = getControl();
+        TreeView<T> treeView = treeCell.getTreeView();
         if (treeView == null) return;
 
         // If the mouse event is not contained within this TreeCell, then
@@ -187,10 +187,10 @@ public class TreeCellBehavior extends CellBehaviorBase<TreeCell<?>> {
 
         int index = treeCell.getIndex();
         boolean selected = treeCell.isSelected();
-        MultipleSelectionModel sm = treeView.getSelectionModel();
+        MultipleSelectionModel<TreeItem<T>> sm = treeView.getSelectionModel();
         if (sm == null) return;
         
-        FocusModel fm = treeView.getFocusModel();
+        FocusModel<TreeItem<T>> fm = treeView.getFocusModel();
         if (fm == null) return;
         
         // if the user has clicked on the disclosure node, we do nothing other
@@ -253,10 +253,10 @@ public class TreeCellBehavior extends CellBehaviorBase<TreeCell<?>> {
     }
 
     private void simpleSelect(MouseEvent e) {
-        TreeView tv = getControl().getTreeView();
-        TreeItem treeItem = getControl().getTreeItem();
+        TreeView<T> tv = getControl().getTreeView();
+        TreeItem<T> treeItem = getControl().getTreeItem();
         int index = getControl().getIndex();
-        MultipleSelectionModel sm = tv.getSelectionModel();
+        MultipleSelectionModel<TreeItem<T>> sm = tv.getSelectionModel();
         boolean isAlreadySelected = sm.isSelected(index);
 
         if (isAlreadySelected && (e.isControlDown() || e.isMetaDown())) {
