@@ -34,8 +34,12 @@ import java.util.concurrent.Future
  *
  * MUST FIX tasks to complete:
  *  - build check -- making sure the final artifact has the right bits
- *  - JavaDoc needs to use the -javafx flag (waiting for fix in JDK 8 to be able to use this)
- *      - I've seen 'gradle javadoc' fail, whereas 'gradle :javadoc' succeeds. Need to investigate.
+ *      - some things worth automatically sanity checking:
+ *          - are there images in the javadocs?
+ *          - are all of the expected dylibs etc there?
+ *          - is jfxrt.jar there?
+ *          - does jfxrt.jar contain stuff it shouldn't (doc-files, iml, etc)
+ *          - does jfxrt.jar contain stuff it should (bss files, etc)
  *  - Perform sanity checking to make sure a JDK exists with javac, javah, etc
  *  - Support building with no known JDK location, as long as javac, javah, etc are on the path
  *  - Check all of the native flags. We're adding weight to some libs that don't need it, and so forth.
@@ -54,7 +58,6 @@ import java.util.concurrent.Future
  *  - partial builds for compileXXX shaders isn't working until after 2 compiles
  *  - ServiceWithSecurityManagerTest fails to complete when run from gradle.
  *  - Integrate Parfait reports for C code
- *  - jar everything with includeEmptyDirs set to false
  *  - FXML Project tests are not running
  */
 defaultTasks = ["assemble"]
@@ -197,9 +200,9 @@ defineProperty("JDK_HOME",
 defineProperty("JAVA", "$JDK_HOME/bin/java");
 defineProperty("JAVAC", "$JDK_HOME/bin/javac");
 defineProperty("JAVAH", "$JDK_HOME/bin/javah");
+defineProperty("JAVADOC", "$JDK_HOME/bin/javadoc");
 defineProperty("JDK_DOCS", "http://download.oracle.com/javase/7/docs/api");
 defineProperty("BINARY_STUB", "file://$JDK_HOME/jre/lib/ext/jfxrt.jar");
-BINARY_STUB = files(BINARY_STUB); // convert from String to FileCollection
 
 // Define the SWT.jar that we are going to have to download during the build process based
 // on what platform we are compiling from (not based on our target). SWT in particular is
@@ -248,7 +251,7 @@ defineProperty("RELEASE_MILESTONE", "ea");
 logger.info("OS_NAME: $OS_NAME");
 logger.info("JAVA_HOME: $JAVA_HOME");
 logger.info("JDK_HOME: $JDK_HOME");
-logger.info("BINARY_STUB: $BINARY_STUB.asPath");
+logger.info("BINARY_STUB: ${file(BINARY_STUB)}");
 logger.info("HUDSON_JOB_NAME: $HUDSON_JOB_NAME");
 logger.info("HUDSON_BUILD_NUMBER: $HUDSON_BUILD_NUMBER");
 logger.info("PROMOTED_BUILD_NUMBER: $PROMOTED_BUILD_NUMBER");
@@ -307,7 +310,13 @@ class JavaHeaderTask extends DefaultTask {
             if (!fileTreeElement.isDirectory() && fileTreeElement.getName().endsWith(".class")) {
                 String path = fileTreeElement.getPath();
                 String className = path.substring(0, path.length() - 6).replace("/", ".");
-                classNames.add(className)
+                boolean skip = false;
+                int dollar = className.lastIndexOf('$');
+                if (dollar > 0) {
+                    String lastPart = className.substring(dollar + 1);
+                    skip = lastPart.matches("[0123456789]*");
+                }
+                if (!skip) classNames.add(className)
             }
         })
         // Execute javah
@@ -529,7 +538,7 @@ void addNative(Project project, String name) {
     def javahTask = project.task("javah$name", type: JavaHeaderTask, dependsOn: project.classes, group: "Build") {
         description = "Generates JNI Headers for $name"
         source = project.sourceSets.main.output.classesDir
-        classpath = project.files(project.sourceSets.main.output.classesDir, project.BINARY_STUB)
+        classpath = project.files(project.sourceSets.main.output.classesDir, project.files(project.BINARY_STUB))
         output = project.file("$project.buildDir/headers/$name")
     }
     def ccTask = project.task("cc$name", type: CCTask, dependsOn: javahTask, group: "Build") {
@@ -599,17 +608,17 @@ allprojects {
         // defined. So the "test" source set automatically creates a "compileTestJava" task (among others).
         if (name == "compileTestJava") {
             compile.options.compilerArgs = ["-Djava.ext.dirs=", "-XDignore.symbol.file"]
-            classpath = sourceSets.test.compileClasspath + BINARY_STUB
+            classpath = sourceSets.test.compileClasspath + rootProject.files(rootProject.BINARY_STUB)
         } else if (name == "compileStubJava") {
             compile.options.compilerArgs = ["-Djava.ext.dirs=", "-XDignore.symbol.file"]
-            classpath = sourceSets.stub.compileClasspath + BINARY_STUB
+            classpath = sourceSets.stub.compileClasspath + rootProject.files(rootProject.BINARY_STUB)
         } else {
             compile.options.compilerArgs = ["-Djava.ext.dirs=", "-XDignore.symbol.file", "-s", "$buildDir/builder-src"]
             // Both controls & graphics need to use the annotation processor, but not the other guys.
             if (["graphics", "controls", "swing", "swt", "base", "fxml"].contains(project.name)){
                 compile.options.compilerArgs += ["-processor", "javafx.builder.processor.BuilderProcessor"]
             }
-            classpath = sourceSets.main.compileClasspath + BINARY_STUB
+            classpath = sourceSets.main.compileClasspath + rootProject.files(rootProject.BINARY_STUB)
         }
         doLast {
             // Workaround: there are a number of packages which are now getting builders
@@ -629,7 +638,7 @@ allprojects {
                          "$buildDir/classes/main/javafx/fxml",
                          "$buildDir/classes/main/javafx/collections",
                          "$buildDir/classes/main/javafx/util").getAsFileTree().filter( { file ->
-                file.getName().endsWith("Builder.class")
+                !file.getName().equals("Builder.class") && file.getName().endsWith("Builder.class")
             } ));
         }
     }
@@ -662,7 +671,7 @@ allprojects {
     // we start building with Java 9.
     test {
         jvmArgs("-Djava.ext.dirs=");
-        classpath = classpath + BINARY_STUB;
+        classpath = classpath + rootProject.files(rootProject.BINARY_STUB);
         executable = JAVA;
         enableAssertions = true;
         testLogging.exceptionFormat = "full";
@@ -675,12 +684,18 @@ allprojects {
     // Exclude any non-public-API classes from having javadoc generated
     javadoc {
         exclude("com/**/*", "javafx/scene/ParentDesignInfo*", "Compile*", "javafx/builder/**/*");
-        executable = JAVA;
+        executable = JAVADOC;
         options.windowTitle("JavaFX Project ${project.name} ${RELEASE_NAME}")
         options.links(JDK_DOCS);
         options.addBooleanOption("XDignore.symbol.file").setValue(true);
         options.addBooleanOption("Xdoclint:none").setValue(!IS_DOC_LINT);
         options.addBooleanOption("javafx").setValue(true);
+        doLast {
+            copy {
+                from "src/main/docs"
+                into "$buildDir/docs/javadoc"
+            }
+        }
     }
 
     // Configure all projects to include $buildDir/builder-src in the generated IDEA project files.
@@ -691,7 +706,7 @@ allprojects {
     }
 
     dependencies {
-      binaryStub BINARY_STUB
+      binaryStub rootProject.files(rootProject.BINARY_STUB)
     }
 }
 
@@ -801,11 +816,11 @@ project(":graphics") {
     }
     task testWithoutStub(type: Test, dependsOn: ":graphics:compileJava") {
         jvmArgs "-Djava.ext.dirs="
-        classpath = sourceSets.test.runtimeClasspath + BINARY_STUB
+        classpath = sourceSets.test.runtimeClasspath + rootProject.files(rootProject.BINARY_STUB)
     }
     task testWithStub(type: Test, dependsOn: [":graphics:compileJava"]) {
         jvmArgs "-Djava.ext.dirs=", "-Djavafx.toolkit=com.sun.javafx.pgstub.StubToolkit", "-DCSS_META_DATA_TEST_DIR=${file('$buildDir/classes/main/javafx')}"
-        classpath = sourceSets.stub.runtimeClasspath + sourceSets.main.runtimeClasspath + BINARY_STUB
+        classpath = sourceSets.stub.runtimeClasspath + sourceSets.main.runtimeClasspath + rootProject.files(rootProject.BINARY_STUB)
         testClassesDir = file("$buildDir/classes/stub")
         testResultsDir = file("$buildDir/stub-results")
         testReportDir = file("$buildDir/reports/stub")
@@ -909,6 +924,23 @@ project(":controls") {
         // This is highly unfortunate, test execution time goes from 7 sec to 2 min 8 sec
         // however there are 8 failing tests when we don't fork. Need to fix those tests.
         forkEvery = 1
+    }
+
+    // TODO Css2Bin really should be moved out and put into build-tools if it can be
+    processResources << {
+        ["$buildDir/resources/main/com/sun/javafx/scene/control/skin/caspian/caspian.css",
+        "$buildDir/resources/main/com/sun/javafx/scene/control/skin/caspian/embedded-qvga.css",
+        "$buildDir/resources/main/com/sun/javafx/scene/control/skin/caspian/embedded.css",
+        "$buildDir/resources/main/com/sun/javafx/scene/control/skin/caspian/fxvk.css",
+        "$buildDir/resources/main/com/sun/javafx/scene/control/skin/caspian/highcontrast.css",
+        "$buildDir/resources/main/com/sun/javafx/scene/control/skin/modena/modena.css",
+        "$buildDir/resources/main/com/sun/javafx/scene/control/skin/modena/touch.css"].each { css ->
+            javaexec {
+                classpath "$buildDir/classes/main"
+                main = "com.sun.javafx.css.parser.Css2Bin"
+                args css
+            }
+        }
     }
 }
 
@@ -1155,7 +1187,11 @@ task jfxrt(type: Jar) {
     }
 
     // Filter out platform specific Java sources (glass) when compiling for other targets
-    if (COMPILE_TARGET != CompileTarget.WIN) exclude("**/*.hlsl", "com/sun/glass/ui/win");
+    if (COMPILE_TARGET != CompileTarget.WIN) exclude("**/*.hlsl", "com/sun/glass/ui/win",
+            "com/sun/glass/ui/accessible/win", "com/sun/prism/d3d",
+            "com/sun/prism/es2/gl/eglfb", "com/sun/prism/es2/gl/eglx11",
+            "com/sun/prism/es2/gl/win", "com/sun/prism/es2/gl/x11",
+            "com/sun/prism/null3d", "com/sun/scenario/effect/impl/hw/d3d");
     if (COMPILE_TARGET != CompileTarget.IOS) exclude("com/sun/glass/ui/ios");
     if (COMPILE_TARGET != CompileTarget.MAC) exclude("com/sun/glass/events/mac", "com/sun/glass/ui/mac");
     if (COMPILE_TARGET != CompileTarget.LINUX) exclude("com/sun/glass/ui/gtk");
@@ -1163,6 +1199,36 @@ task jfxrt(type: Jar) {
     if (COMPILE_TARGET != CompileTarget.SWT) exclude("com/sun/glass/ui/swt");
 
     dependsOn(subprojects.collect { project -> project.getTasksByName("assemble", true)});
+}
+
+task javadoc(type: Javadoc) {
+    group = "Basic"
+    description = "Generates the JavaDoc for all the public API"
+    def projectsToDocument = subprojects.findAll({ it != project(":designTime") })
+    source(projectsToDocument.collect({
+        [it.sourceSets.main.java, "$it.buildDir/builder-src"]
+    }));
+    setDestinationDir(new File(buildDir, 'javadoc'));
+    // Might need a classpath
+    classpath = files(subprojects.collect { project ->
+        project.sourceSets.main.compileClasspath
+    });
+    exclude("com/**/*", "javafx/scene/ParentDesignInfo*", "Compile*", "javafx/builder/**/*");
+    options.windowTitle("JavaFX ${RELEASE_NAME}")
+    options.links(JDK_DOCS);
+    options.addBooleanOption("XDignore.symbol.file").setValue(true);
+    options.addBooleanOption("Xdoclint:none").setValue(!IS_DOC_LINT);
+    options.addBooleanOption("javafx").setValue(true);
+    doLast {
+        projectsToDocument.each { p ->
+            copy {
+                from "$p.projectDir/src/main/docs"
+                into "$buildDir/javadoc"
+            }
+        }
+    }
+
+    dependsOn(subprojects.collect { project -> project.getTasksByName("classes", true)});
 }
 
 // The 'sdk' task will build the rest of the SDK, and depends on the 'jfxrt' task. After
@@ -1191,29 +1257,14 @@ task sdk {
         // Create the javafx.properties file
         final File javafxProperties = file("build/${COMPILE_TARGET.name}-sdk/rt/lib/javafx.properties");
         javafxProperties << "javafx.runtime.version=$RAW_VERSION";
+        // Copy over the javadocs that were generated
+        copy {
+            from("build/javadoc");
+            into("build/${COMPILE_TARGET.name}-sdk/doc/api");
+        }
     }
     dependsOn(jfxrt);
-}
-
-task javadoc(type: Javadoc) {
-    group = "Basic"
-    description = "Generates the JavaDoc for all the public API"
-    source(subprojects.findAll({ it != project(":designTime") }).collect({
-        [it.sourceSets.main.java, "$it.buildDir/builder-src"]
-    }));
-    setDestinationDir(new File(buildDir, 'javadoc'));
-    // Might need a classpath
-    classpath = files(subprojects.collect { project ->
-        project.sourceSets.main.compileClasspath
-    });
-    exclude("com/**/*", "javafx/scene/ParentDesignInfo*", "Compile*", "javafx/builder/**/*");
-    options.windowTitle("JavaFX ${RELEASE_NAME}")
-    options.links(JDK_DOCS);
-    options.addBooleanOption("XDignore.symbol.file").setValue(true);
-    options.addBooleanOption("Xdoclint:none").setValue(!IS_DOC_LINT);
-    options.addBooleanOption("javafx").setValue(true);
-
-    dependsOn(subprojects.collect { project -> project.getTasksByName("classes", true)});
+    dependsOn(javadoc);
 }
 
 /******************************************************************************
@@ -1302,7 +1353,7 @@ allprojects {
                 withXml { xmlProvider ->
                     def root = xmlProvider.asNode();
                     // Find the <root url=".../jfxrt.jar!/" />. Walk up 3 steps to <orderEntry>
-                    def orderEntry = root.depthFirst().find { it.name() == "root" }.parent().parent().parent(); // && it.@url.contains(BINARY_STUB)
+                    def orderEntry = root.depthFirst().find { it.name() == "root" }.parent().parent().parent(); // && it.@url.contains(rootProject.files(rootProject.BINARY_STUB))
                     if (orderEntry.name() != "orderEntry") throw new Exception("Couldn't find the order entry");
                     // Move that <orderEntry> to be the last child of its parent.
                     def parent = orderEntry.parent();

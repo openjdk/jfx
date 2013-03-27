@@ -95,7 +95,7 @@ public class DeployParams extends CommonParams {
     // didn't have a setter...
     boolean offlineAllowed = true;
 
-    List<Callback> callbacks;
+    List<JSCallback> callbacks;
 
     //list of HTML templates to process
     List<Template> templates = new LinkedList<Template>();
@@ -280,8 +280,16 @@ public class DeployParams extends CommonParams {
         includeDT = doEmbed;
     }
 
-    public void setCallbacks(List<Callback> list) {
+    public void setJSCallbacks(List<JSCallback> list) {
         callbacks = list;
+    }
+    
+    public void setCallbacks(List<Callback> list) {
+        List<JSCallback> jslist = new ArrayList<JSCallback>(list.size());
+        for (Callback cb: list) {
+            jslist.add(new JSCallback(cb.getName(), cb.getCmd()));
+        }
+        callbacks = jslist;
     }
 
     static class Template {
