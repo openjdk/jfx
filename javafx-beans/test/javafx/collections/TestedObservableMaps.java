@@ -29,6 +29,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
+import javafx.beans.property.SimpleMapProperty;
 
 public interface TestedObservableMaps {
 
@@ -61,6 +62,13 @@ public interface TestedObservableMaps {
         @Override
         public ObservableMap<String, String> call() throws Exception {
             return FXCollections.synchronizedObservableMap(FXCollections.observableMap(new HashMap<String, String>()));
+        }
+    };
+    
+    Callable<ObservableMap<String, String>> OBSERVABLE_MAP_PROPERTY = new Callable<ObservableMap<String, String>>() {
+        @Override
+        public ObservableMap<String, String> call() throws Exception {
+            return new SimpleMapProperty<>(FXCollections.observableMap(new HashMap<String, String>()));
         }
     };
 

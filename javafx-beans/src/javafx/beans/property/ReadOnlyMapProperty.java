@@ -25,9 +25,11 @@
 
 package javafx.beans.property;
 
+import java.util.Iterator;
+import java.util.Map;
+import java.util.Map.Entry;
 import javafx.beans.binding.Bindings;
 import javafx.beans.binding.MapExpression;
-import javafx.collections.ObservableList;
 import javafx.collections.ObservableMap;
 
 /**
@@ -106,21 +108,34 @@ public abstract class ReadOnlyMapProperty<K, V> extends MapExpression<K, V> impl
 
     @Override
     public boolean equals(Object obj) {
-        if (this == obj) {
+        if (obj == this)
             return true;
-        }
-        final Object bean1 = getBean();
-        final String name1 = getName();
-        if ((bean1 == null) || (name1 == null) || name1.equals("")) {
+
+        if (!(obj instanceof Map))
+            return false;
+        Map<K,V> m = (Map<K,V>) obj;
+        if (m.size() != size())
+            return false;
+
+        try {
+            for (Entry<K,V> e : entrySet()) {
+                K key = e.getKey();
+                V value = e.getValue();
+                if (value == null) {
+                    if (!(m.get(key)==null && m.containsKey(key)))
+                        return false;
+                } else {
+                    if (!value.equals(m.get(key)))
+                        return false;
+                }
+            }
+        } catch (ClassCastException unused) {
+            return false;
+        } catch (NullPointerException unused) {
             return false;
         }
-        if (obj instanceof ReadOnlyMapProperty) {
-            final ReadOnlyMapProperty other = (ReadOnlyMapProperty) obj;
-            final Object bean2 = other.getBean();
-            final String name2 = other.getName();
-            return (bean1 == bean2) && name1.equals(name2);
-        }
-        return false;
+
+        return true;
     }
 
     /**
@@ -129,16 +144,11 @@ public abstract class ReadOnlyMapProperty<K, V> extends MapExpression<K, V> impl
      */
     @Override
     public int hashCode() {
-        final Object bean = getBean();
-        final String name = getName();
-        if ((bean == null) && ((name == null) || name.equals(""))) {
-            return super.hashCode();
-        } else {
-            int result = 17;
-            result = 31 * result + ((bean == null)? 0 : bean.hashCode());
-            result = 31 * result + ((name == null)? 0 : name.hashCode());
-            return result;
+        int h = 0;
+        for (Entry<K,V> e : entrySet()) {
+            h += e.hashCode();
         }
+        return h;
     }
 
     /**

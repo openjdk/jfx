@@ -782,9 +782,9 @@ public abstract class BaseNode<G> implements PGNode {
      * Gets whether this SGNode is clean. This will return true only if
      * this node and any / all child nodes are clean.
      */
-//    public final boolean isClean() {
-//        return !dirty && !childDirty;
-//    }
+    public final boolean isClean() {
+        return dirty == DirtyFlag.CLEAN && !childDirty;
+    }
 
     /**
      * Gets whether this node itself is dirty.

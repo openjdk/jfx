@@ -76,7 +76,6 @@ import com.sun.glass.ui.EventLoop;
 import com.sun.glass.ui.Screen;
 import com.sun.glass.ui.Timer;
 import com.sun.glass.ui.View;
-import com.sun.glass.ui.Window;
 import com.sun.javafx.PlatformUtil;
 import com.sun.javafx.embed.HostInterface;
 import com.sun.javafx.geom.Path2D;
@@ -151,8 +150,6 @@ import com.sun.prism.ResourceFactory;
 import com.sun.prism.ResourceFactoryListener;
 import com.sun.prism.Texture.WrapMode;
 import com.sun.prism.camera.PrismCameraImpl;
-import com.sun.prism.camera.PrismParallelCameraImpl;
-import com.sun.prism.camera.PrismPerspectiveCameraImpl;
 import com.sun.prism.impl.Disposer;
 import com.sun.prism.impl.PrismSettings;
 import com.sun.prism.render.CompletionListener;
@@ -176,6 +173,7 @@ import com.sun.javafx.sg.PGPerspectiveCamera;
 import com.sun.javafx.sg.PGPhongMaterial;
 import com.sun.javafx.sg.PGPointLight;
 import com.sun.javafx.sg.PGSphere;
+import com.sun.javafx.sg.PGSubScene;
 import com.sun.javafx.sg.PGTriangleMesh;
 import com.sun.javafx.sg.prism.NGAmbientLight;
 import com.sun.javafx.sg.prism.NGBox;
@@ -186,6 +184,7 @@ import com.sun.javafx.sg.prism.NGPerspectiveCamera;
 import com.sun.javafx.sg.prism.NGPhongMaterial;
 import com.sun.javafx.sg.prism.NGPointLight;
 import com.sun.javafx.sg.prism.NGSphere;
+import com.sun.javafx.sg.prism.NGSubScene;
 import com.sun.javafx.sg.prism.NGTriangleMesh;
 
 public final class QuantumToolkit extends DesktopToolkit implements ToolkitInterface {
@@ -1092,6 +1091,10 @@ public final class QuantumToolkit extends DesktopToolkit implements ToolkitInter
 
     @Override public PGSVGPath createPGSVGPath() {
         return new NGSVGPath();
+    }
+
+    @Override public PGSubScene createPGSubScene() {
+        return new NGSubScene();
     }
 
     @Override public PGPolygon createPGPolygon() {

@@ -37,6 +37,7 @@ final class MacTimer extends Timer {
     static {
         minPeriod = _getMinPeriod();
         maxPeriod = _getMaxPeriod();
+        _initIDs();
     }
 
     private static final int minPeriod, maxPeriod;
@@ -59,5 +60,6 @@ final class MacTimer extends Timer {
     @Override native protected long _start(Runnable runnable);
     @Override native protected long _start(Runnable runnable, int period);
     @Override native protected void _stop(long timer);
+    native private static void _initIDs();
 }
 

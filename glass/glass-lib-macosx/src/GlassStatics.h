@@ -36,7 +36,6 @@ extern JNIEnv *jEnv;
 
 extern jclass jWindowClass;
 extern jclass jViewClass;
-extern jclass jGestureSupportClass;
 
 extern jclass jScreenClass;
 extern jclass jMenuBarDelegateClass;
@@ -76,15 +75,6 @@ extern jmethodID jViewNotifyDragEnd;
 
 extern jmethodID jScreenNotifySettingsChanged;
 
-extern jmethodID jGestureSupportRotateGesturePerformed;
-extern jmethodID jGestureSupportScrollGesturePerformed;
-extern jmethodID jGestureSupportSwipeGesturePerformed;
-extern jmethodID jGestureSupportMagnifyGesturePerformed;
-extern jmethodID jGestureSupportGestureFinished;
-extern jmethodID jGestureSupportNotifyBeginTouchEvent;
-extern jmethodID jGestureSupportNotifyNextTouchEvent;
-extern jmethodID jGestureSupportNotifyEndTouchEvent;
-
 extern jmethodID jMapGetMethod;
 extern jmethodID jBooleanValueMethod;
 extern jmethodID jIntegerInitMethod;
@@ -120,6 +110,16 @@ typedef struct _tagJavaIDs {
         jmethodID createPixels;
         jmethodID getScaleFactor;
     } Application;
+    struct {
+        jmethodID rotateGesturePerformed;
+        jmethodID scrollGesturePerformed;
+        jmethodID swipeGesturePerformed;
+        jmethodID magnifyGesturePerformed;
+        jmethodID gestureFinished;
+        jmethodID notifyBeginTouchEvent;
+        jmethodID notifyNextTouchEvent;
+        jmethodID notifyEndTouchEvent;
+    } GestureSupport;
 } JavaIDs;
 extern JavaIDs javaIDs;
 

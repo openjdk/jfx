@@ -132,6 +132,8 @@ static NSWindow *s_grabWindow = nil;
     self->suppressWindowMoveEvent = NO;
     self->suppressWindowResizeEvent = NO;
 
+    self->isClosed = NO;
+
     // This is surely can't be a real location, which indicates
     // we've never sent a MOVE event to Java yet.
     self->lastReportedLocation.x = self->lastReportedLocation.y = FLT_MAX;

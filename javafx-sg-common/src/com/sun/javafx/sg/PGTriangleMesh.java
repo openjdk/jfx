@@ -30,11 +30,11 @@ package com.sun.javafx.sg;
  */
 public interface PGTriangleMesh {
     public void setPoints(float[] points);
-    public void setPoints(int index, float[] points, int start, int length);
+    public void setPoints(float[] points, int index, int length);
     public void setTexCoords(float[] texCoords);
-    public void setTexCoords(int index, float[] texCoords, int start, int length);
+    public void setTexCoords(float[] texCoords, int index, int length);
     public void setFaces(int[] faces);
-    public void setFaces(int index, int[] faces, int start, int length);
+    public void setFaces(int[] faces, int index, int length);
     public void setFaceSmoothingGroups(int[] faceSmoothingGroups);
-    public void setFaceSmoothingGroups(int index, int[] faceSmoothingGroups, int start, int length);    
+    public void setFaceSmoothingGroups(int[] faceSmoothingGroups, int index, int length);
 }

@@ -25,6 +25,9 @@
 
 package javafx.scene;
 
+import com.sun.javafx.geom.PickRay;
+import com.sun.javafx.geom.Vec3d;
+import com.sun.javafx.geom.transform.Affine3D;
 import com.sun.javafx.sg.PGNode;
 import com.sun.javafx.sg.PGParallelCamera;
 import com.sun.javafx.tk.Toolkit;
@@ -66,4 +69,18 @@ public class ParallelCamera extends Camera {
         return pgCamera;
     }
 
+    @Override
+    final PickRay computePickRay(double localX, double localY,
+                           double viewWidth, double viewHeight,
+                           PickRay pickRay) {
+        if (pickRay == null) {
+            pickRay = new PickRay();
+        }
+        pickRay.set(localX, localY);
+
+        if (getScene() != null) {
+            pickRay.transform(getCameraTransform());
+        }
+        return pickRay;
+    }
 }

@@ -72,6 +72,7 @@
     jint                        _setMinimumSizeW, _setMinimumSizeH;
         
     CGFloat                        _setMaximumSizeW, _setMaximumSizeH;
+    BOOL                 isClosed;   
 }
 
 - (void)setFullscreenWindow:(NSWindow *)fsWindow;

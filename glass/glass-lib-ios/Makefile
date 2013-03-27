@@ -83,7 +83,6 @@ FILES_export = \
 	com/sun/glass/ui/ios/IosPixels.java \
 	com/sun/glass/ui/ios/IosPlatformFactory.java \
 	com/sun/glass/ui/ios/IosRobot.java \
-	com/sun/glass/ui/ios/IosScreen.java \
 	com/sun/glass/ui/ios/IosTimer.java \
 	com/sun/glass/ui/ios/IosView.java \
 	com/sun/glass/ui/ios/IosWindow.java

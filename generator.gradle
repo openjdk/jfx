@@ -25,8 +25,8 @@ task createWrapper(type: Wrapper) {
     gradleVersion = '1.4'
 }
 
-RTDir = "."
-FXDir = "../javafx"
+ext.RTDir = "."
+ext.FXDir = "../javafx"
 task generate << {
     def excludeResources = ["META-INF/**", "**/*.properties", "**/*.stg", "**/*.g", "**/*.css", "**/*.png", "**/*.jpg", "nbproject", "*.iml", "**/*.txt", "**/*.fxml", "**/*.bak", "**/*.orig", "**/*.js", "**/doc-files/**.*"]
     def includeResources = ["META-INF/**", "**/*.properties", "**/*.stg", "**/*.css", "**/*.png", "**/*.jpg", "**/*.txt", "**/*.fxml", "**/*.js"]
@@ -35,7 +35,15 @@ task generate << {
     copy {
         from RTDir
         into FXDir
-        include "build.gradle", "settings.gradle", "LICENSE", "README"
+        include "*.gradle", "LICENSE", "README"
+        exclude "generator.gradle"
+    }
+
+    // Copy over the genVSproperties.bat, used to generate properties required
+    // for compilation on Windows.
+    copy {
+        from "$RTDir/../build-src/genVSproperties.bat"
+        into FXDir
     }
 
     // Copy over the apps
@@ -88,7 +96,7 @@ task generate << {
              "${RTDir}/decora-compiler/src"
         into "${FXDir}/build-tools/src/main/resources"
         include includeResources
-        exclude "**/doc-files/**.*"
+        exclude "**/doc-files/**.*", "**/META-INF/**/*"
     }
     copy {
         from "${RTDir}/decora-compiler/src/com/sun/scenario/effect/compiler/JSL.g"
@@ -277,26 +285,29 @@ task generate << {
     }
 
     ["glass-lib-gtk", "glass-lib-ios", "glass-lib-lens", "glass-lib-macosx", "glass-lib-windows"].each { dir ->
+        def name = dir.substring(dir.lastIndexOf("-") + 1);
+        if (name == "windows") name = "win"
+        if (name == "macosx") name = "mac"
         copy {
             from "${RTDir}/glass/${dir}/src"
-            into "${FXDir}/modules/graphics/src/main/native/${dir}"
+            into "${FXDir}/modules/graphics/src/main/native-glass/${name}"
         }
     }
 
     copy {
         from "${RTDir}/prism-common-native/src"
-        into "${FXDir}/modules/graphics/src/main/native/prism-common-native"
+        into "${FXDir}/modules/graphics/src/main/native-prism"
     }
 
     copy {
         from "${RTDir}/prism-sw-native/include"
         from "${RTDir}/prism-sw-native/src"
-        into "${FXDir}/modules/graphics/src/main/native/prism-sw-native"
+        into "${FXDir}/modules/graphics/src/main/native-prism-sw"
     }
 
     copy {
         from "${RTDir}/decora-sse-native"
-        into "${FXDir}/modules/graphics/src/main/native/decora-sse-native"
+        into "${FXDir}/modules/graphics/src/main/native-decora"
         include "*.cc", "*.h"
     }
 

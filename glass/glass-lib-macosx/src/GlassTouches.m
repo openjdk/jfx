@@ -29,6 +29,8 @@
 #import "GlassMacros.h"
 #import "GlassTouches.h"
 #import "GlassKey.h"
+#import "GlassHelper.h"
+#import "GlassStatics.h"
 
 
 //#define VERBOSE
@@ -316,11 +318,15 @@ static CGEventRef listenTouchEvents(CGEventTapProxy proxy, CGEventType type,
     }
 
     GET_MAIN_JENV;
-
-    (*env)->CallStaticVoidMethod(env, jGestureSupportClass, 
-                                jGestureSupportNotifyBeginTouchEvent,
-                                [self->curConsumer jView], modifiers, 
-                                touchPointCount);
+    const jclass jGestureSupportClass = [GlassHelper ClassForName:"com.sun.glass.ui.mac.MacGestureSupport"
+                                                          withEnv:env];
+    if (jGestureSupportClass)
+    {
+        (*env)->CallStaticVoidMethod(env, jGestureSupportClass,
+                                     javaIDs.GestureSupport.notifyBeginTouchEvent,
+                                     [self->curConsumer jView], modifiers,
+                                     touchPointCount);
+    }
     GLASS_CHECK_EXCEPTION(env);
 
     if (self->touches == nil && touchPointCount) 
@@ -348,9 +354,12 @@ static CGEventRef listenTouchEvents(CGEventTapProxy proxy, CGEventType type,
                         pos:&pos];
     }
 
-    (*env)->CallStaticVoidMethod(env, jGestureSupportClass, 
-                                jGestureSupportNotifyEndTouchEvent, 
-                                [self->curConsumer jView]);
+    if (jGestureSupportClass)
+    {
+        (*env)->CallStaticVoidMethod(env, jGestureSupportClass,
+                                     javaIDs.GestureSupport.notifyEndTouchEvent,
+                                     [self->curConsumer jView]);
+    }
     GLASS_CHECK_EXCEPTION(env);
 
     if ([self->touches count] == 0)
@@ -408,11 +417,16 @@ static CGEventRef listenTouchEvents(CGEventTapProxy proxy, CGEventType type,
         [self->touches setObject:ctnr forKey:identity];
     }
 
-    (*env)->CallStaticVoidMethod(env, jGestureSupportClass, 
-                                    jGestureSupportNotifyNextTouchEvent, 
-                                    [self->curConsumer jView],
-                                    getTouchStateFromPhase(phase),
-                                    tp.touchId, tp.x, tp.y);
+    const jclass jGestureSupportClass = [GlassHelper ClassForName:"com.sun.glass.ui.mac.MacGestureSupport"
+                                                          withEnv:env];
+    if (jGestureSupportClass)
+    {
+        (*env)->CallStaticVoidMethod(env, jGestureSupportClass,
+                                     javaIDs.GestureSupport.notifyNextTouchEvent,
+                                     [self->curConsumer jView],
+                                     getTouchStateFromPhase(phase),
+                                     tp.touchId, tp.x, tp.y);
+    }
     GLASS_CHECK_EXCEPTION(env);
 }
 

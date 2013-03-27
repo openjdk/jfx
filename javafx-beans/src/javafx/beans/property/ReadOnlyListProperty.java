@@ -25,6 +25,8 @@
 
 package javafx.beans.property;
 
+import java.util.List;
+import java.util.ListIterator;
 import javafx.beans.binding.Bindings;
 import javafx.beans.binding.ListExpression;
 import javafx.collections.ObservableList;
@@ -108,36 +110,32 @@ public abstract class ReadOnlyListProperty<E> extends ListExpression<E>
         if (this == obj) {
             return true;
         }
-        final Object bean1 = getBean();
-        final String name1 = getName();
-        if ((bean1 == null) || (name1 == null) || name1.equals("")) {
+        if (!(obj instanceof List)) {
             return false;
         }
-        if (obj instanceof ReadOnlyListProperty) {
-            final ReadOnlyListProperty other = (ReadOnlyListProperty) obj;
-            final Object bean2 = other.getBean();
-            final String name2 = other.getName();
-            return (bean1 == bean2) && name1.equals(name2);
+        final List list = (List)obj;
+        
+        if (size() != list.size()) {
+            return false;
         }
-        return false;
-    }
 
-    /**
-     * Returns a hash code for this {@code ReadOnlyListProperty} object.
-     * @return a hash code for this {@code ReadOnlyListProperty} object.
-     */
+        ListIterator<E> e1 = listIterator();
+        ListIterator e2 = list.listIterator();
+        while (e1.hasNext() && e2.hasNext()) {
+            E o1 = e1.next();
+            Object o2 = e2.next();
+            if (!(o1==null ? o2==null : o1.equals(o2)))
+                return false;
+        }
+        return true;
+    }
+    
     @Override
     public int hashCode() {
-        final Object bean = getBean();
-        final String name = getName();
-        if ((bean == null) && ((name == null) || name.equals(""))) {
-            return super.hashCode();
-        } else {
-            int result = 17;
-            result = 31 * result + ((bean == null)? 0 : bean.hashCode());
-            result = 31 * result + ((name == null)? 0 : name.hashCode());
-            return result;
-        }
+        int hashCode = 1;
+        for (E e : this)
+            hashCode = 31*hashCode + (e==null ? 0 : e.hashCode());
+        return hashCode;
     }
 
     /**
