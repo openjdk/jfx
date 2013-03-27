@@ -1257,6 +1257,11 @@ task sdk {
         // Create the javafx.properties file
         final File javafxProperties = file("build/${COMPILE_TARGET.name}-sdk/rt/lib/javafx.properties");
         javafxProperties << "javafx.runtime.version=$RAW_VERSION";
+        // Copy over the javadocs that were generated
+        copy {
+            from("build/javadoc");
+            into("build/${COMPILE_TARGET.name}-sdk/doc/api");
+        }
     }
     dependsOn(jfxrt);
     dependsOn(javadoc);
