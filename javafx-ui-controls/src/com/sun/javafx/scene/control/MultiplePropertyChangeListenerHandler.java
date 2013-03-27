@@ -74,7 +74,7 @@ public final class MultiplePropertyChangeListenerHandler {
         }
     }
     
-    public final void unregisterChangeListener(ObservableValue property, String reference) {
+    public final void unregisterChangeListener(ObservableValue property) {
         if (propertyReferenceMap.containsKey(property)) {
             propertyReferenceMap.remove(property);
             property.removeListener(weakPropertyChangedListener);

@@ -29,6 +29,8 @@ package com.sun.javafx.scene.control.skin;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
 import java.util.WeakHashMap;
 
 import javafx.animation.FadeTransition;
@@ -616,6 +618,13 @@ public abstract class TableRowSkinBase<T,
 //        TableView<T> table = getSkinnable().getTableView();
 //        if (table == null) {
         if (cellsMap != null) {
+            
+//            Set<Entry<TableColumnBase, R>> cells = cellsMap.entrySet();
+//            for (Entry<TableColumnBase, R> entry : cells) {
+//                R cell = entry.getValue();
+//                cell.dispose();
+//            }
+            
             cellsMap.clear();
         }
 //        return;

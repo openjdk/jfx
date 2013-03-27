@@ -163,8 +163,8 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
     
     private void updateTreeItem() {
         if (treeItem != null) {
-            treeItemListener.unregisterChangeListener(treeItem.expandedProperty(), "EXPANDED");
-            treeItemListener.unregisterChangeListener(treeItem.graphicProperty(), "GRAPHIC");
+            treeItemListener.unregisterChangeListener(treeItem.expandedProperty());
+            treeItemListener.unregisterChangeListener(treeItem.graphicProperty());
         }
         treeItem = getSkinnable().getTreeItem();
         if (treeItem != null) {
