@@ -265,24 +265,29 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeViewB
                 }
             };
             
+            private InvalidationListener treeItemListener = new InvalidationListener() {
+                @Override public void invalidated(Observable observable) {
+                    TreeItem<T> oldTreeItem = treeItemRef == null ? null : treeItemRef.get();
+                    if (oldTreeItem != null) {
+                        oldTreeItem.graphicProperty().removeListener(weakTreeItemGraphicListener);
+                    }
+                    
+                    TreeItem<T> newTreeItem = getTreeItem();
+                    if (newTreeItem != null) {
+                        newTreeItem.graphicProperty().addListener(weakTreeItemGraphicListener);
+                        treeItemRef = new WeakReference<TreeItem<T>>(newTreeItem);
+                    }
+                }
+            };
+            
             private WeakInvalidationListener weakTreeItemGraphicListener =
                     new WeakInvalidationListener(treeItemGraphicListener);
             
+            private WeakInvalidationListener weakTreeItemListener =
+                    new WeakInvalidationListener(treeItemListener);
+            
             {
-                treeItemProperty().addListener(new InvalidationListener() {
-                    @Override public void invalidated(Observable observable) {
-                        TreeItem<T> oldTreeItem = treeItemRef == null ? null : treeItemRef.get();
-                        if (oldTreeItem != null) {
-                            oldTreeItem.graphicProperty().removeListener(weakTreeItemGraphicListener);
-                        }
-                        
-                        TreeItem<T> newTreeItem = getTreeItem();
-                        if (newTreeItem != null) {
-                            newTreeItem.graphicProperty().addListener(weakTreeItemGraphicListener);
-                            treeItemRef = new WeakReference<TreeItem<T>>(newTreeItem);
-                        }
-                    }
-                });
+                treeItemProperty().addListener(weakTreeItemListener);
                 
                 if (getTreeItem() != null) {
                     getTreeItem().graphicProperty().addListener(weakTreeItemGraphicListener);
