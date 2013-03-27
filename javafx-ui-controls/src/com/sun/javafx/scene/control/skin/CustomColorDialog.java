@@ -45,6 +45,7 @@ import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 import javafx.stage.Window;
 import com.sun.javafx.Utils;
+import javafx.beans.binding.ObjectBinding;
 import javafx.geometry.Insets;
 import javafx.scene.input.KeyEvent;
 /**
@@ -326,10 +327,14 @@ public class CustomColorDialog extends StackPane {
             colorRectIndicator.setEffect(new DropShadow(2, 0, 1, Color.BLACK));
         
             colorRect = new Rectangle(RECT_SIZE, RECT_SIZE);
-            customColorProperty().addListener(new ChangeListener<Color>() {
+            colorRect.fillProperty().bind(new ObjectBinding<Color>() {
+                {
+                    bind(hue, alpha);
+                }
+
                 @Override
-                public void changed(ObservableValue<? extends Color> ov, Color t, Color t1) {
-                    colorRect.setFill(Color.hsb(hue.getValue(), 1.0, 1.0, clamp(alpha.get()/100)));
+                protected Color computeValue() {
+                    return Color.hsb(hue.getValue(), 1.0, 1.0, clamp(alpha.get()/100));
                 }
             });
             
