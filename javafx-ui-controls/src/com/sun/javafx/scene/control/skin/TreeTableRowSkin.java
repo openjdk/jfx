@@ -72,6 +72,7 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
             if ("EXPANDED".equals(p)) {
                 updateDisclosureNodeRotation(true);
             } else if ("GRAPHIC".equals(p)) {
+                disclosureNodeDirty = true;
                 getSkinnable().requestLayout();
             }
             return null;
@@ -175,28 +176,36 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
         updateDisclosureNodeRotation(false);
     }
     
-    private void updateDisclosureNode() {
+    private void updateDisclosureNodeAndGraphic() {
         if (getSkinnable().isEmpty()) return;
-
-        Node disclosureNode = getSkinnable().getDisclosureNode();
-        if (disclosureNode == null) return;
         
-        boolean disclosureVisible = treeItem != null && ! treeItem.isLeaf();
-        disclosureNode.setVisible(disclosureVisible);
-            
-        if (! disclosureVisible) {
-            getChildren().remove(disclosureNode);
-        } else if (disclosureNode.getParent() == null) {
-            getChildren().add(disclosureNode);
-            disclosureNode.toFront();
-        } else {
-            disclosureNode.toBack();
+        // check for graphic missing
+        ObjectProperty<Node> graphicProperty = graphicProperty();
+        Node graphic = graphicProperty == null ? null : graphicProperty.get();
+        if (graphic != null && ! getChildren().contains(graphic)) {
+            getChildren().add(graphic);
         }
         
-        // RT-26625: [TreeView, TreeTableView] can lose arrows while scrolling
-        // RT-28668: Ensemble tree arrow disappears
-        if (disclosureNode.getScene() != null) {
-            disclosureNode.impl_processCSS(true);
+        // check disclosure node
+        Node disclosureNode = getSkinnable().getDisclosureNode();
+        if (disclosureNode != null) {
+            boolean disclosureVisible = treeItem != null && ! treeItem.isLeaf();
+            disclosureNode.setVisible(disclosureVisible);
+                
+            if (! disclosureVisible) {
+                getChildren().remove(disclosureNode);
+            } else if (disclosureNode.getParent() == null) {
+                getChildren().add(disclosureNode);
+                disclosureNode.toFront();
+            } else {
+                disclosureNode.toBack();
+            }
+            
+            // RT-26625: [TreeView, TreeTableView] can lose arrows while scrolling
+            // RT-28668: Ensemble tree arrow disappears
+            if (disclosureNode.getScene() != null) {
+                disclosureNode.impl_processCSS(true);
+            }
         }
     }
 
@@ -204,7 +213,7 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
     @Override protected void updateChildren() {
         super.updateChildren();
         
-        updateDisclosureNode();
+        updateDisclosureNodeAndGraphic();
         
         if (childrenDirty) {
             childrenDirty = false;
@@ -221,13 +230,13 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
 
     @Override protected void layoutChildren(double x, double y, double w, double h) {
         if (disclosureNodeDirty) {
-            updateDisclosureNode();
+            updateDisclosureNodeAndGraphic();
             disclosureNodeDirty = false;
         }
         
         Node disclosureNode = getDisclosureNode();
         if (disclosureNode != null && disclosureNode.getScene() == null) {
-            updateDisclosureNode();
+            updateDisclosureNodeAndGraphic();
         }
         
         super.layoutChildren(x, y, w, h);

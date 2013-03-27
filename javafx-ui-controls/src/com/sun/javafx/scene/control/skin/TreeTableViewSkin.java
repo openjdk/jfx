@@ -379,13 +379,13 @@ public class TreeTableViewSkin<S> extends TableViewSkinBase<S, TreeTableView<S>,
     }
     
     /** {@inheritDoc} */
-    @Override public TreeTableRow createCell() {
-        TreeTableRow cell;
+    @Override public TreeTableRow<S> createCell() {
+        TreeTableRow<S> cell;
 
         if (treeTableView.getRowFactory() != null) {
             cell = treeTableView.getRowFactory().call(treeTableView);
         } else {
-            cell = createDefaultCellImpl();
+            cell = new TreeTableRow<S>();
         }
 
         // If there is no disclosure node, then add one of my own
@@ -404,51 +404,6 @@ public class TreeTableViewSkin<S> extends TableViewSkinBase<S, TreeTableView<S>,
         return cell;
     }
     
-    private TreeTableRow<S> createDefaultCellImpl() {
-        return new TreeTableRow() {
-            private HBox hbox;
-            
-            @Override public void updateItem(Object item, boolean empty) {
-                super.updateItem(item, empty);
-
-                if (item == null || empty) {
-                    hbox = null;
-                    setText(null);
-                    setGraphic(null);
-                } else {
-                    // update the graphic if one is set in the TreeItem
-                    TreeItem<?> treeItem = (TreeItem<?>)getTreeItem();
-                    if (treeItem != null && treeItem.getGraphic() != null) {
-                        if (item instanceof Node) {
-                            setText(null);
-                            
-                            // the item is a Node, and the graphic exists, so 
-                            // we must insert both into an HBox and present that
-                            // to the user (see RT-15910)
-                            if (hbox == null) {
-                                hbox = new HBox(3);
-                            }
-                            hbox.getChildren().setAll(treeItem.getGraphic(), (Node)item);
-                            setGraphic(hbox);
-                        } else {
-                            hbox = null;
-                            setText(item.toString());
-                            setGraphic(treeItem.getGraphic());
-                        }
-                    } else {
-                        hbox = null;
-                        if (item instanceof Node) {
-                            setText(null);
-                            setGraphic((Node)item);
-                        } else {
-                            setText(item.toString());
-                            setGraphic(null);
-                        }
-                    }
-                }
-            }
-        };
-    }
 
     
     
