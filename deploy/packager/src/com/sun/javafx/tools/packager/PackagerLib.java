@@ -25,7 +25,6 @@
 
 package com.sun.javafx.tools.packager;
 
-import com.sun.javafx.tools.ant.Callback;
 import com.sun.javafx.tools.ant.Utils;
 import com.sun.javafx.tools.packager.DeployParams.Icon;
 import com.sun.javafx.tools.packager.JarSignature.InputStreamSource;
@@ -1188,7 +1187,7 @@ public class PackagerLib {
         }
 
         if ((deployParams.callbacks != null) && !deployParams.callbacks.isEmpty()) {
-            for (Callback cb: deployParams.callbacks) {
+            for (JSCallback cb: deployParams.callbacks) {
                 addToList(w_callback, cb.getName(), cb.getCmd(), false);
             }
         }
@@ -1249,7 +1248,7 @@ public class PackagerLib {
         }
 
         if ((deployParams.callbacks != null) && !deployParams.callbacks.isEmpty()) {
-            for (Callback cb: deployParams.callbacks) {
+            for (JSCallback cb: deployParams.callbacks) {
                 addToList(p_callback, cb.getName(), cb.getCmd(), false);
             }
         }
@@ -1264,7 +1263,7 @@ public class PackagerLib {
             // we will reset splash function to be "none"
             boolean needOnGetSplashImpl = true;
             if (deployParams.callbacks != null) {
-                for (Callback c: deployParams.callbacks) {
+                for (JSCallback c: deployParams.callbacks) {
                     if ("onGetSplash".equals(c.getName())) {
                         needOnGetSplashImpl = false;
                     }

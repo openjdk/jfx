@@ -25,9 +25,6 @@
 
 package com.sun.javafx.tools.packager;
 
-import com.sun.javafx.tools.ant.Info;
-import com.sun.javafx.tools.ant.Application;
-import com.sun.javafx.tools.ant.Callback;
 import com.sun.javafx.tools.packager.bundlers.Bundler;
 import java.io.File;
 import java.io.FileInputStream;
@@ -154,14 +151,14 @@ public class Main {
         return parameters;
     }
 
-    private static List<Callback> parseCallbacks(String param) {
+    private static List<JSCallback> parseCallbacks(String param) {
         String[] callbacks = param.split(",");
-        List<Callback> list = new ArrayList<Callback>(callbacks.length);
+        List<JSCallback> list = new ArrayList<JSCallback>(callbacks.length);
 
         for (String cb: callbacks) {
             String[] nameCmd = cb.split(":");
             if (nameCmd.length == 2) {
-                list.add(new Callback(nameCmd[0], nameCmd[1]));
+                list.add(new JSCallback(nameCmd[0], nameCmd[1]));
             }
         }
         return list;
@@ -289,7 +286,7 @@ public class Main {
                         } else if (arg.equalsIgnoreCase("-isExtension")) {
                             deployParams.setExtension(true);
                         } else if (arg.equalsIgnoreCase("-callbacks")) {
-                            deployParams.setCallbacks(parseCallbacks(nextArg(args, i++)));
+                            deployParams.setJSCallbacks(parseCallbacks(nextArg(args, i++)));
                         } else if (arg.equalsIgnoreCase("-templateInFilename")) {
                             templateInFile = new File(nextArg(args, i++));
                         } else if (arg.equalsIgnoreCase("-templateOutFilename")) {
