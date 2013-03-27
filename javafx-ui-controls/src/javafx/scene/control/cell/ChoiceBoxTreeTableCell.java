@@ -320,6 +320,6 @@ public class ChoiceBoxTreeTableCell<S,T> extends TreeTableCell<S,T> {
     /** {@inheritDoc} */
     @Override public void updateItem(T item, boolean empty) {
         super.updateItem(item, empty);
-        CellUtils.updateItem(this, choiceBox, getConverter());
+        CellUtils.updateItem(this, getConverter(), null, null, choiceBox);
     }
 }

@@ -25,24 +25,26 @@
 
 package javafx.scene.control;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+
+import java.util.List;
+
+import javafx.scene.Group;
+import javafx.scene.Scene;
+import javafx.scene.input.KeyCode;
+import javafx.stage.Stage;
+
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
+
 import com.sun.javafx.Utils;
 import com.sun.javafx.scene.control.behavior.ListViewAnchorRetriever;
 import com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
 import com.sun.javafx.scene.control.infrastructure.KeyModifier;
-
-import static org.junit.Assert.*;
-
-import java.util.List;
-import javafx.scene.Group;
-import javafx.scene.Scene;
-
-import javafx.scene.input.KeyCode;
-import javafx.stage.Stage;
-import org.junit.After;
-
-import org.junit.Before;
-import org.junit.Ignore;
-import org.junit.Test;
+import com.sun.javafx.scene.control.infrastructure.StageLoader;
 
 //@Ignore("Disabling tests as they fail with OOM in continuous builds")
 public class ListViewKeyInputTest {
@@ -52,9 +54,7 @@ public class ListViewKeyInputTest {
     
     private KeyEventFirer keyboard;
     
-    private Stage stage;
-    private Scene scene;
-    private Group group;
+    private StageLoader stageLoader;
     
     @Before public void setup() {
         listView = new ListView<String>();
@@ -65,14 +65,8 @@ public class ListViewKeyInputTest {
         
         keyboard = new KeyEventFirer(listView);
         
-        group = new Group();
-        scene = new Scene(group);
-        
-        stage = new Stage();
-        stage.setScene(scene);
-        
-        group.getChildren().setAll(listView);
-        stage.show();
+        stageLoader = new StageLoader(listView);
+        stageLoader.getStage().show();
 
         listView.getItems().setAll("1", "2", "3", "4", "5", "6", "7", "8", "9", "10");
         sm.clearAndSelect(0);
@@ -80,7 +74,7 @@ public class ListViewKeyInputTest {
     
     @After public void tearDown() {
         listView.getSkin().dispose();
-        stage.hide();
+        stageLoader.dispose();
     }
     
     

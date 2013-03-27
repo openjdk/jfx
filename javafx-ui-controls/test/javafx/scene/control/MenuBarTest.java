@@ -40,6 +40,7 @@ import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import com.sun.javafx.pgstub.StubToolkit;
@@ -55,6 +56,7 @@ import com.sun.javafx.tk.Toolkit;
  *
  * @author lubermud
  */
+@Ignore
 public class MenuBarTest {
     private MenuBar menuBar;
     private Toolkit tk;
