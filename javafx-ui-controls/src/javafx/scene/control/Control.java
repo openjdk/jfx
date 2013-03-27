@@ -792,12 +792,39 @@ public abstract class Control extends Region implements Skinnable {
     @Override
     public final List<CssMetaData<? extends Styleable, ?>> getCssMetaData() {
         if (styleableProperties == null) {
-            styleableProperties = new ArrayList<CssMetaData<? extends Styleable, ?>>();
-            styleableProperties.addAll(getControlCssMetaData());
             
-            if (skinBase != null) {
-                styleableProperties.addAll(skinBase.getCssMetaData());
+            // RT-29162: make sure properties only show up once in the list
+            java.util.Map<String, CssMetaData<? extends Styleable, ?>> map = 
+                new java.util.HashMap<String, CssMetaData<? extends Styleable, ?>>();
+            
+            List<CssMetaData<? extends Styleable, ?>> list =  getControlCssMetaData();
+            
+            for (int n=0, nMax = list != null ? list.size() : 0; n<nMax; n++) {
+                
+                CssMetaData<? extends Styleable, ?> metaData = list.get(n);
+                if (metaData == null) continue;
+                
+                map.put(metaData.getProperty(), metaData);
             }
+
+            //
+            // if both control and skin base have the same property, use the
+            // one from skin base since it may be a specialization of the 
+            // property in the control. For instance, Label has -fx-font and  
+            // so does LabeledText which is Label's skin.
+            //
+            list =  skinBase != null ? skinBase.getCssMetaData() : null;
+            
+            for (int n=0, nMax = list != null ? list.size() : 0; n<nMax; n++) {
+                
+                CssMetaData<? extends Styleable, ?> metaData = list.get(n);
+                if (metaData == null) continue;
+                
+                map.put(metaData.getProperty(), metaData);
+            }
+
+            styleableProperties = new ArrayList<CssMetaData<? extends Styleable, ?>>();
+            styleableProperties.addAll(map.values());
         }
         return styleableProperties;
     }
