@@ -194,7 +194,9 @@ public class NestedTableColumnHeader extends TableColumnHeader {
     @Override void dispose() {
         super.dispose();
         
-        if (label != null) label.dispose();
+        if (label != null) {
+            label.dispose();
+        }
         
         if (getColumns() != null) {
             getColumns().removeListener(weakColumnsListener);
@@ -211,6 +213,8 @@ public class NestedTableColumnHeader extends TableColumnHeader {
         }
         dragRects.clear();
         getChildren().clear();
+        
+        changeListenerHandler.dispose();
     }
 
     private TableColumnHeader label;

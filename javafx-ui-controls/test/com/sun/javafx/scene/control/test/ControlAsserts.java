@@ -76,7 +76,7 @@ public class ControlAsserts {
                 boolean hasChildrenCell = false;
                 for (Node n : indexedCell.getChildrenUnmodifiable()) {
                     if (! (n instanceof IndexedCell)) {
-                        break;
+                        continue;
                     }
                     hasChildrenCell = true;
                     IndexedCell<?> childCell = (IndexedCell<?>)n;

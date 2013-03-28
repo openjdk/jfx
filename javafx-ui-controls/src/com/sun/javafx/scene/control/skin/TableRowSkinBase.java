@@ -29,6 +29,8 @@ package com.sun.javafx.scene.control.skin;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
 import java.util.WeakHashMap;
 
 import javafx.animation.FadeTransition;
@@ -443,7 +445,7 @@ public abstract class TableRowSkinBase<T,
             
             for (int column = 0, max = cells.size(); column < max; column++) {
                 R tableCell = cells.get(column);
-                TableColumnBase tableColumn = getTableColumnBase(tableCell);
+                TableColumnBase<T, ?> tableColumn = getTableColumnBase(tableCell);
                 
                 show(tableCell);
                 
@@ -570,16 +572,10 @@ public abstract class TableRowSkinBase<T,
 //                    ///////////////////////////////////////////
                     
                     tableCell.resize(width, height);
-
-                    if (indentationRequired && column == indentationColumnIndex) {
-                        tableCell.relocate(x, insets.getTop());
-                    } else {
-                        // if j is a negative number (because the width is smaller
-                        // that the left margin and disclosure node), we relocate
-                        // the cell to the left (and subtract 1 to take into 
-                        // account the minimum 1px width we resize cells to above).
-                        tableCell.relocate(x, insets.getTop());
-                    }
+                    tableCell.relocate(x, insets.getTop());
+                    
+                    // Request layout is here as (partial) fix for RT-28684
+                    tableCell.requestLayout();
                 } else {
                     if (fixedCellLengthEnabled) {
                         // we only add/remove to the scenegraph if the fixed cell
@@ -616,6 +612,13 @@ public abstract class TableRowSkinBase<T,
 //        TableView<T> table = getSkinnable().getTableView();
 //        if (table == null) {
         if (cellsMap != null) {
+            
+//            Set<Entry<TableColumnBase, R>> cells = cellsMap.entrySet();
+//            for (Entry<TableColumnBase, R> entry : cells) {
+//                R cell = entry.getValue();
+//                cell.dispose();
+//            }
+            
             cellsMap.clear();
         }
 //        return;
