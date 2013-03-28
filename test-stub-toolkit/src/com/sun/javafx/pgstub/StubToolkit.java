@@ -851,7 +851,7 @@ public class StubToolkit extends Toolkit {
 
     @Override
     public PGPhongMaterial createPGPhongMaterial() {
-        throw new UnsupportedOperationException("Not supported yet.");
+        return new StubPhongMaterial();
     }
 
     @Override
