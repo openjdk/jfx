@@ -25,7 +25,8 @@
 
 package javafx.scene.paint;
 
-import static org.junit.Assert.assertNotNull;
+import javafx.scene.image.Image;
+import static org.junit.Assert.*;
 
 import org.junit.Test;
 
@@ -37,4 +38,11 @@ public class PhongMaterialTest {
         assertNotNull(mat);
     }
 
+    @Test
+    public void testSetSpecularMap() {
+        PhongMaterial mat = new PhongMaterial();
+        Image img = new Image("file:javafx.png");
+        mat.setSpecularMap(img);
+        assertEquals(img, mat.getSpecularMap());
+    }
 }
