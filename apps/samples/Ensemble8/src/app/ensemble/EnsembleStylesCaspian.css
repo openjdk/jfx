@@ -51,7 +51,6 @@
     -fx-font-weight: bold;
     -fx-font-size: 20;
     -fx-text-fill: white;
-    -fx-effect: dropshadow( three-pass-box , #3d4346 , 0 , 0 , 0 , -1 );
 }
 .ensmeble-tool-bar #back{
     -fx-background-radius: 5 0 0 5, 5 0 0 5, 4 0 0 4, 3 0 0 3;
@@ -81,7 +80,6 @@
 .ensmeble-tool-bar .button Region, .ensmeble-tool-bar .toggle-button Region {
     -fx-background-color: white;
     -fx-scale-shape: false;
-    -fx-effect: dropshadow( three-pass-box , rgba(0,0,0,0.8) , 0 , 0 , 0 , -1 );
 }
 .ensmeble-tool-bar #back Region{
     -fx-shape: "M0,7L11,0L11,14Z";
@@ -102,12 +100,6 @@
     -fx-shape: "M13.814,13.386l-3.396-3.398c0.953-1.059,1.533-2.462,1.533-4c0-3.305-2.678-5.982-5.981-5.982c-3.304,0-5.982,2.678-5.982,5.982S2.666,11.97,5.97,11.97c1.052,0,2.042-0.271,2.899-0.748l3.555,3.555L13.814,13.386zM1.975,5.988c0-2.207,1.789-3.995,3.995-3.995c2.206,0,3.995,1.788,3.995,3.995c0,2.205-1.789,3.996-3.995,3.996C3.764,9.984,1.975,8.193,1.975,5.988z";
 }
 /* style Sample Buttons on the home page */
-.sample-button:hover {
-    -fx-effect: dropshadow( three-pass-box , rgba(255,255,255,0.8) , 10, 0.5 , 0 , 0);
-}
-.sample-button:focused {
-    -fx-effect: dropshadow( three-pass-box , -fx-focus-color , 3, 0.5 , 0 , 0);
-}
 .search-box {
     -fx-background-color: rgba(255,255,255,0.3) , #41494e;
     -fx-background-insets: 1 0 -1 0,0;
@@ -129,7 +121,6 @@
     -fx-background-color: white;
     -fx-background-insets: 1;
     -fx-background-radius: 17;
-    -fx-effect: innershadow( three-pass-box , rgba(0,0,0,0.7) , 7, 0 , 0 , 1 );
 }
 
 /* *****************************************************************************

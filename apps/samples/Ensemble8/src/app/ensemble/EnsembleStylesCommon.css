@@ -52,7 +52,6 @@
 }
 .popover .scroll-bar > .track {
     -fx-background-color: #eee;
-    -fx-effect: innershadow( three-pass-box , rgba(0,0,0,0.2) , 8, 0.5 , 0 , 0 );
 }
 .popover .scroll-bar:horizontal > .increment-button, 
 .popover .scroll-bar:horizontal > .decrement-button {
@@ -74,12 +73,10 @@
 #HomePage .scroll-bar:horizontal {
     -fx-background-color: null;
     -fx-padding: 6px 2px 6px 2px;
-    -fx-effect: dropshadow( three-pass-box , rgba(255,255,255,0.15) , 0, 0.5 , 0 , 1 );
 }
 #HomePage .scroll-bar:vertical {
     -fx-background-color: null;
     -fx-padding: 2px 6px 2px 6px;
-    -fx-effect: dropshadow( three-pass-box , rgba(255,255,255,0.15) , 0, 0.5 , 1 , 0 );
 }
 #HomePage .scroll-bar > .thumb {
     -fx-background-color: #333, #f9f9f9;
@@ -91,7 +88,6 @@
 }
 #HomePage .scroll-bar > .track {
     -fx-background-color: #38434b;
-    -fx-effect: innershadow( three-pass-box , rgba(0,0,0,0.5) , 8, 0.5 , 0 , 0 );
 }
 #HomePage .scroll-bar:horizontal > .increment-button, 
 #HomePage .scroll-bar:horizontal > .decrement-button {
@@ -128,7 +124,6 @@
 }
 .sample-back-page .scroll-bar > .track {
     -fx-background-color: #eee;
-    -fx-effect: innershadow( three-pass-box , rgba(0,0,0,0.2) , 8, 0.5 , 0 , 0 );
 }
 .sample-back-page .scroll-bar:horizontal > .increment-button, 
 .sample-back-page .scroll-bar:horizontal > .decrement-button {
@@ -187,9 +182,6 @@
     -fx-text-fill: white;
     -fx-graphic-text-gap: 8px;
 }
-.sample-button > .text{
-    -fx-effect: dropshadow( three-pass-box , rgba(0,0,0,0.8) , 3, 0.5 , 0 , 1 );
-}
 .sample-large-preview {
     -fx-border-image-source: url("images/tile-border.png");
     -fx-border-image-slice: 7 9 10 7;
@@ -202,7 +194,6 @@
     -fx-font-weight: bold;
     -fx-font-size: 17;
     -fx-text-fill: #555;
-    -fx-effect: dropshadow( one-pass-box , white , 0, 0 , 0 , 1 );
 }
 .sample-medium-preview {
     -fx-border-image-source: url("images/tile-border.png");
@@ -231,7 +222,6 @@
     -fx-font-weight: bold;
     -fx-font-size: 17;
     -fx-text-fill: white;
-    -fx-effect: dropshadow( three-pass-box , rgba(0,0,0,0.8) , 3, 0.5 , 0 , 1 );
 }
 
 /* *****************************************************************************
