@@ -31,6 +31,7 @@ import java.awt.event.MouseEvent;
 import java.awt.event.MouseWheelEvent;
 
 import com.sun.javafx.embed.AbstractEvents;
+import javafx.event.EventType;
 
 /**
  * An utility class to translate cursor types between embedded
@@ -92,7 +93,7 @@ class SwingEvents {
         }
         return 0;
     }
-    
+
     static int keyIDToEmbedKeyType(int id) {
         switch (id) {
             case KeyEvent.KEY_PRESSED:
@@ -121,4 +122,105 @@ class SwingEvents {
         }
         return embedModifiers;
     }
+
+    // FX -> Swing conversion methods
+
+    static int fxMouseEventTypeToMouseID(javafx.scene.input.MouseEvent event) {
+        EventType<?> type = event.getEventType();
+        if (type == javafx.scene.input.MouseEvent.MOUSE_MOVED) {
+            return MouseEvent.MOUSE_MOVED;
+        }
+        if (type == javafx.scene.input.MouseEvent.MOUSE_PRESSED) {
+            return MouseEvent.MOUSE_PRESSED;
+        }
+        if (type == javafx.scene.input.MouseEvent.MOUSE_RELEASED) {
+            return MouseEvent.MOUSE_RELEASED;
+        }
+        if (type == javafx.scene.input.MouseEvent.MOUSE_CLICKED) {
+            return MouseEvent.MOUSE_CLICKED;
+        }
+        if (type == javafx.scene.input.MouseEvent.MOUSE_ENTERED) {
+            return MouseEvent.MOUSE_ENTERED;
+        }
+        if (type == javafx.scene.input.MouseEvent.MOUSE_EXITED) {
+            return MouseEvent.MOUSE_EXITED;
+        }
+        if (type == javafx.scene.input.MouseEvent.MOUSE_DRAGGED) {
+            return MouseEvent.MOUSE_DRAGGED;
+        }
+        if (type == javafx.scene.input.MouseEvent.DRAG_DETECTED) {
+            return -1;
+        }
+        throw new RuntimeException("Unknown MouseEvent type: " + type);
+    }
+
+    static int fxMouseModsToMouseMods(javafx.scene.input.MouseEvent event) {
+        int mods = 0;
+        if (event.isAltDown()) {
+            mods |= InputEvent.ALT_DOWN_MASK;
+        }
+        if (event.isControlDown()) {
+            mods |= InputEvent.CTRL_DOWN_MASK;
+        }
+        if (event.isMetaDown()) {
+            mods |= InputEvent.META_DOWN_MASK;
+        }
+        if (event.isShiftDown()) {
+            mods |= InputEvent.SHIFT_DOWN_MASK;
+        }
+        if (event.isPrimaryButtonDown()) {
+            mods |= MouseEvent.BUTTON1_DOWN_MASK;
+        }
+        if (event.isSecondaryButtonDown()) {
+            mods |= MouseEvent.BUTTON2_DOWN_MASK;
+        }
+        if (event.isMiddleButtonDown()) {
+            mods |= MouseEvent.BUTTON3_DOWN_MASK;
+        }
+        return mods;
+    }
+
+    static int fxMouseButtonToMouseButton(javafx.scene.input.MouseEvent event) {
+        switch (event.getButton()) {
+            case PRIMARY:
+                return MouseEvent.BUTTON1;
+            case SECONDARY:
+                return MouseEvent.BUTTON2;
+            case MIDDLE:
+                return MouseEvent.BUTTON3;
+        }
+        return 0;
+    }
+
+    static int fxKeyEventTypeToKeyID(javafx.scene.input.KeyEvent event) {
+        EventType<?> eventType = event.getEventType();
+        if (eventType == javafx.scene.input.KeyEvent.KEY_PRESSED) {
+            return KeyEvent.KEY_PRESSED;
+        }
+        if (eventType == javafx.scene.input.KeyEvent.KEY_RELEASED) {
+            return KeyEvent.KEY_RELEASED;
+        }
+        if (eventType == javafx.scene.input.KeyEvent.KEY_TYPED) {
+            return KeyEvent.KEY_TYPED;
+        }
+        throw new RuntimeException("Unknown KeyEvent type: " + eventType);
+    }
+
+    static int fxKeyModsToKeyMods(javafx.scene.input.KeyEvent event) {
+        int mods = 0;
+        if (event.isAltDown()) {
+            mods |= InputEvent.ALT_DOWN_MASK;
+        }
+        if (event.isControlDown()) {
+            mods |= InputEvent.CTRL_DOWN_MASK;
+        }
+        if (event.isMetaDown()) {
+            mods |= InputEvent.META_DOWN_MASK;
+        }
+        if (event.isShiftDown()) {
+            mods |= InputEvent.SHIFT_DOWN_MASK;
+        }
+        return mods;
+    }
+
 }

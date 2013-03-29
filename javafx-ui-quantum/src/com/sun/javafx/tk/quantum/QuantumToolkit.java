@@ -92,6 +92,7 @@ import com.sun.javafx.sg.PGCanvas;
 import com.sun.javafx.sg.PGCircle;
 import com.sun.javafx.sg.PGCubicCurve;
 import com.sun.javafx.sg.PGEllipse;
+import com.sun.javafx.sg.PGExternalNode;
 import com.sun.javafx.sg.PGGroup;
 import com.sun.javafx.sg.PGImageView;
 import com.sun.javafx.sg.PGLine;
@@ -186,6 +187,7 @@ import com.sun.javafx.sg.prism.NGPointLight;
 import com.sun.javafx.sg.prism.NGSphere;
 import com.sun.javafx.sg.prism.NGSubScene;
 import com.sun.javafx.sg.prism.NGTriangleMesh;
+import com.sun.javafx.sg.prism.NGExternalNode;
 
 public final class QuantumToolkit extends DesktopToolkit implements ToolkitInterface {
 
@@ -231,7 +233,7 @@ public final class QuantumToolkit extends DesktopToolkit implements ToolkitInter
                     return Integer.getInteger("javafx.animation.pulse");
                 }
             });
-    
+
     static final boolean liveResize =
             AccessController.doPrivileged(new PrivilegedAction<Boolean>() {
                 @Override public Boolean run() {
@@ -240,7 +242,7 @@ public final class QuantumToolkit extends DesktopToolkit implements ToolkitInter
                     return result.equals(System.getProperty("javafx.live.resize", "true"));
                 }
             });
-    
+
     static final boolean drawInPaint =
             AccessController.doPrivileged(new PrivilegedAction<Boolean>() {
                 @Override public Boolean run() {
@@ -254,7 +256,7 @@ public final class QuantumToolkit extends DesktopToolkit implements ToolkitInter
     private AtomicBoolean           nextPulseRequested = new AtomicBoolean(false);
     private AtomicBoolean           pulseRunning = new AtomicBoolean(false);
     private CountDownLatch          launchLatch = new CountDownLatch(1);
-    
+
     final int                       PULSE_INTERVAL = (int)(TimeUnit.SECONDS.toMillis(1L) / getRefreshRate());
     final int                       FULLSPEED_INTERVAL = 1;     // ms
     boolean                         nativeSystemVsync = false;
@@ -326,7 +328,7 @@ public final class QuantumToolkit extends DesktopToolkit implements ToolkitInter
                 });
             }
         }
-        /* 
+        /*
          * Glass Mac, X11 need Application.setDeviceDetails to happen prior to Glass Application.Run
          */
         renderer = QuantumRenderer.getInstance();
@@ -366,7 +368,7 @@ public final class QuantumToolkit extends DesktopToolkit implements ToolkitInter
 
             Application.run(new Runnable () {
                 public void run () {
-                    // Ensure that the toolkit can only be started here 
+                    // Ensure that the toolkit can only be started here
                     runToolkit();
                 }
             });
@@ -419,12 +421,12 @@ public final class QuantumToolkit extends DesktopToolkit implements ToolkitInter
              */
             renderer.createResourceFactory();
 
-            pulseRunnable = new Runnable() { 
+            pulseRunnable = new Runnable() {
                 @Override public void run() {
                     QuantumToolkit.this.pulse();
                 }
             };
-            timerRunnable = new Runnable() { 
+            timerRunnable = new Runnable() {
                 @Override public void run() {
                     try {
                         QuantumToolkit.this.postPulse();
@@ -446,9 +448,9 @@ public final class QuantumToolkit extends DesktopToolkit implements ToolkitInter
         launchLatch.countDown();
         try {
             Application.invokeAndWait(this.userRunnable);
-            
+
             if (getMasterTimer().isFullspeed()) {
-                /* 
+                /*
                  * FULLSPEED_INTVERVAL workaround
                  *
                  * Application.invokeLater(pulseRunnable);
@@ -461,7 +463,7 @@ public final class QuantumToolkit extends DesktopToolkit implements ToolkitInter
                     pulseTimer.start();
                 } else {
                     // rely on millisecond resolution timer to provide
-                    // nominal pulse sync and use pulse hinting on 
+                    // nominal pulse sync and use pulse hinting on
                     // synchronous pipelines to fine tune the interval
                     pulseTimer.start(PULSE_INTERVAL);
                 }
@@ -476,7 +478,7 @@ public final class QuantumToolkit extends DesktopToolkit implements ToolkitInter
             PerformanceTracker.logEvent("Toolkit.startup - finished");
         }
     }
-    
+
     boolean hasNativeSystemVsync() {
         return nativeSystemVsync;
     }
@@ -485,7 +487,7 @@ public final class QuantumToolkit extends DesktopToolkit implements ToolkitInter
         return (PrismSettings.isVsyncEnabled &&
                 pipeline.isVsyncSupported());
     }
-    
+
     @Override public void checkFxUserThread() {
         super.checkFxUserThread();
         renderer.checkRendererIdle();
@@ -494,20 +496,20 @@ public final class QuantumToolkit extends DesktopToolkit implements ToolkitInter
     protected static Thread getFxUserThread() {
         return Toolkit.getFxUserThread();
     }
-    
+
     /* com.sun.javafx.tk.ToolkitInterface */
 
     @Override public Future addRenderJob(RenderJob r) {
         return (renderer.submitRenderJob(r));
     }
-   
+
     void postPulse() {
         if (toolkitRunning.get() &&
             (animationRunning.get() || nextPulseRequested.get() || collector.hasDirty()) &&
             !setPulseRunning()) {
-            
+
             Application.invokeLater(pulseRunnable);
-            
+
             if (debug) {
                 System.err.println("QT.postPulse@(" + System.nanoTime() + "): " + pulseString());
             }
@@ -515,19 +517,19 @@ public final class QuantumToolkit extends DesktopToolkit implements ToolkitInter
             System.err.println("QT.postPulse#(" + System.nanoTime() + ") DROP: " + pulseString());
         }
     }
-    
+
     private String pulseString() {
         return ((toolkitRunning.get() ? "T" : "t") +
                 (animationRunning.get() ? "A" : "a") +
-                (pulseRunning.get() ? "P" : "p") + 
+                (pulseRunning.get() ? "P" : "p") +
                 (nextPulseRequested.get() ? "N" : "n") +
                 (collector.hasDirty() ? "D" : "d"));
     }
-    
+
     private boolean setPulseRunning() {
         return (pulseRunning.getAndSet(true));
     }
-    
+
     private void endPulseRunning() {
         pulseRunning.set(false);
         if (debug) {
@@ -538,14 +540,14 @@ public final class QuantumToolkit extends DesktopToolkit implements ToolkitInter
     protected void pulse() {
         pulse(true);
     }
-    
+
     void pulse(boolean collect) {
         try {
             long start = PULSE_LOGGING_ENABLED ? System.currentTimeMillis() : 0;
             if (PULSE_LOGGING_ENABLED) {
                 PULSE_LOGGER.pulseStart();
             }
-            
+
             if (toolkitRunning.get() == false) {
                 return;
             }
@@ -578,14 +580,14 @@ public final class QuantumToolkit extends DesktopToolkit implements ToolkitInter
             postPulse();
         }
     }
-    
+
     @Override  public AppletWindow createAppletWindow(long parent, String serverName) {
         GlassAppletWindow parentWindow = new GlassAppletWindow(parent, serverName);
         // Make this the parent window for all future Stages
         WindowStage.setAppletWindow(parentWindow);
         return parentWindow;
     }
-    
+
     @Override public void closeAppletWindow() {
         GlassAppletWindow gaw = WindowStage.getAppletWindow();
         if (null != gaw) {
@@ -594,13 +596,13 @@ public final class QuantumToolkit extends DesktopToolkit implements ToolkitInter
             // any further strong refs will be in the applet itself
         }
     }
-    
+
     @Override public TKStage createTKStage(StageStyle stageStyle) {
         assertToolkitRunning();
         return new WindowStage(verbose, stageStyle).init(systemMenu);
     }
 
-    @Override public TKStage createTKStage(StageStyle stageStyle, 
+    @Override public TKStage createTKStage(StageStyle stageStyle,
             boolean primary, Modality modality, TKStage owner, boolean rtl) {
         assertToolkitRunning();
         WindowStage stage = new WindowStage(verbose, stageStyle, primary, modality, owner);
@@ -684,7 +686,7 @@ public final class QuantumToolkit extends DesktopToolkit implements ToolkitInter
             }
         };
 
-    @Override public ScreenConfigurationAccessor 
+    @Override public ScreenConfigurationAccessor
                     setScreenConfigurationListener(final TKScreenConfigurationListener listener) {
         Screen.setEventHandler(new Screen.EventHandler() {
             @Override public void handleSettingsChanged() {
@@ -806,7 +808,7 @@ public final class QuantumToolkit extends DesktopToolkit implements ToolkitInter
     @Override public void requestNextPulse() {
         nextPulseRequested.set(true);
     }
-    
+
     @Override public void waitFor(Task t) {
         if (t.isFinished()) {
             return;
@@ -1133,6 +1135,10 @@ public final class QuantumToolkit extends DesktopToolkit implements ToolkitInter
         return new NGText();
     }
 
+    @Override public PGExternalNode createPGExternalNode() {
+        return new NGExternalNode();
+    }
+
     @Override public Object createSVGPathObject(SVGPath svgpath) {
         int windingRule = svgpath.getFillRule() == FillRule.NON_ZERO ? PathIterator.WIND_NON_ZERO : PathIterator.WIND_EVEN_ODD;
         Path2D path = new Path2D(windingRule);
@@ -1301,7 +1307,7 @@ public final class QuantumToolkit extends DesktopToolkit implements ToolkitInter
         view.setInputMethodRequests(requests);
     }
 
-    // 3D API support for FX 8 
+    // 3D API support for FX 8
     @Override
     public PGBox createPGBox() {
         return new NGBox();
@@ -1367,22 +1373,22 @@ public final class QuantumToolkit extends DesktopToolkit implements ToolkitInter
     public PGPerspectiveCamera createPGPerspectiveCamera(boolean fixedEyePosition) {
         return new NGPerspectiveCamera(fixedEyePosition);
     }
-    
+
     static class QuantumImage implements com.sun.javafx.tk.ImageLoader, ResourceFactoryListener {
 
         // cache rt here
         private com.sun.prism.RTTexture rt;
         private com.sun.prism.Image image;
         private ResourceFactory rf;
-        
-        QuantumImage(com.sun.prism.Image image) { 
+
+        QuantumImage(com.sun.prism.Image image) {
             this.image = image;
         }
-        
+
         RTTexture getRT(int w, int h, ResourceFactory rfNew) {
-            boolean rttOk = rt != null && rf == rfNew && 
+            boolean rttOk = rt != null && rf == rfNew &&
                     rt.getContentWidth() == w && rt.getContentHeight() == h;
-            
+
             if (!rttOk) {
                 if (rt != null) {
                     rt.dispose();
@@ -1397,21 +1403,21 @@ public final class QuantumToolkit extends DesktopToolkit implements ToolkitInter
                     rf.addFactoryListener(this);
                 }
             }
-            
+
             return rt;
         }
-        
+
         void dispose() {
             if (rt != null) {
                 rt.dispose();
                 rt = null;
             }
         }
-        
+
         void setImage(com.sun.prism.Image img) {
             image = img;
         }
-        
+
         @Override
         public boolean getError() { return image == null; }
         @Override
@@ -1424,9 +1430,9 @@ public final class QuantumToolkit extends DesktopToolkit implements ToolkitInter
         public int getWidth() { return image.getWidth(); }
         @Override
         public int getHeight() { return image.getHeight(); }
-        @Override 
+        @Override
         public void factoryReset() { dispose(); }
-        @Override 
+        @Override
         public void factoryReleased() { dispose(); }
     }
 
@@ -1434,11 +1440,11 @@ public final class QuantumToolkit extends DesktopToolkit implements ToolkitInter
         if (platformImage instanceof QuantumImage) {
             return (QuantumImage)platformImage;
         }
-        
+
         if (platformImage instanceof com.sun.prism.Image) {
             return new QuantumImage((com.sun.prism.Image) platformImage);
-        }     
-        
+        }
+
         throw new UnsupportedOperationException("unsupported class for loadPlatformImage");
     }
 
@@ -1452,9 +1458,9 @@ public final class QuantumToolkit extends DesktopToolkit implements ToolkitInter
     public Object renderToImage(ImageRenderingContext p) {
         Object saveImage = p.platformImage;
         final ImageRenderingContext params = p;
-        final com.sun.prism.paint.Paint currentPaint = p.platformPaint instanceof com.sun.prism.paint.Paint ? 
+        final com.sun.prism.paint.Paint currentPaint = p.platformPaint instanceof com.sun.prism.paint.Paint ?
                 (com.sun.prism.paint.Paint)p.platformPaint : null;
-        
+
         RenderJob re = new RenderJob(new Runnable() {
 
             private com.sun.prism.paint.Color getClearColor() {
@@ -1473,7 +1479,7 @@ public final class QuantumToolkit extends DesktopToolkit implements ToolkitInter
                 g.setDepthBuffer(params.depthBuffer);
 
                 g.clear(getClearColor());
-                if (currentPaint != null && 
+                if (currentPaint != null &&
                         currentPaint.getType() != com.sun.prism.paint.Paint.Type.COLOR) {
                     g.getRenderTarget().setOpaque(currentPaint.isOpaque());
                     g.setPaint(currentPaint);
@@ -1492,13 +1498,13 @@ public final class QuantumToolkit extends DesktopToolkit implements ToolkitInter
                     if (params.camera instanceof PrismCameraImpl) {
                         g.setCamera((PrismCameraImpl)params.camera);
                     }
-                    
+
                     NGNode ngNode = (NGNode)params.root;
                     ngNode.render(g);
                 }
 
             }
-            
+
             @Override
             public void run() {
 
@@ -1519,24 +1525,24 @@ public final class QuantumToolkit extends DesktopToolkit implements ToolkitInter
 
                 RenderingContext context = rf.createRenderingContext(null);
                 try {
-                    
+
                     context.begin();
 
                     QuantumImage pImage = (params.platformImage instanceof QuantumImage) ?
                             (QuantumImage)params.platformImage : new QuantumImage(null);
-                    
+
                     com.sun.prism.RTTexture rt = pImage.getRT(w, h, rf);
-                    
+
                     if (rt == null) {
                         return;
                     }
-                    
+
                     Graphics g = rt.createGraphics();
 
                     draw(g, x, y, w, h);
 
                     int[] pixels = pImage.rt.getPixels();
-                    
+
                     if (pixels != null) {
                         pImage.setImage(com.sun.prism.Image.fromIntArgbPreData(pixels, w, h));
                     } else {
@@ -1584,7 +1590,7 @@ public final class QuantumToolkit extends DesktopToolkit implements ToolkitInter
 
         return image;
     }
-    
+
     @Override
     public List<File> showFileChooser(final TKStage ownerWindow,
                                       final String title,
@@ -1599,7 +1605,7 @@ public final class QuantumToolkit extends DesktopToolkit implements ToolkitInter
             //       The native system blocks the nearest owner itself.
             //       Otherwise sheets on Mac are unusable.
             blockedStage = blockOwnerStage(ownerWindow);
-            
+
             FileChooserResult result = CommonDialogs.showFileChooser(
                     (ownerWindow instanceof WindowStage)
                             ? ((WindowStage) ownerWindow).getPlatformWindow()
@@ -1616,7 +1622,7 @@ public final class QuantumToolkit extends DesktopToolkit implements ToolkitInter
             String extension = result.getExtensionFilter() == null ?
                 null : result.getExtensionFilter().getExtensions().get(0);
 
-            if (fileChooserType == FileChooserType.OPEN || extension == null || extension.endsWith("*")) { 
+            if (fileChooserType == FileChooserType.OPEN || extension == null || extension.endsWith("*")) {
                 return result.getFiles();
             } else {
                 final List<File> list = new ArrayList<File>(result.getFiles().size());
@@ -1704,7 +1710,7 @@ public final class QuantumToolkit extends DesktopToolkit implements ToolkitInter
     @Override
     public int getMultiClickMaxX() {
         return View.getMultiClickMaxX();
-    }   
+    }
 
     @Override
     public int getMultiClickMaxY() {

@@ -81,6 +81,7 @@ import com.sun.javafx.sg.PGCanvas;
 import com.sun.javafx.sg.PGCircle;
 import com.sun.javafx.sg.PGCubicCurve;
 import com.sun.javafx.sg.PGEllipse;
+import com.sun.javafx.sg.PGExternalNode;
 import com.sun.javafx.sg.PGGroup;
 import com.sun.javafx.sg.PGImageView;
 import com.sun.javafx.sg.PGSubScene;
@@ -122,7 +123,7 @@ public abstract class Toolkit {
 
     private static final String QUANTUM_TOOLKIT     = "com.sun.javafx.tk.quantum.QuantumToolkit";
     private static final String DEFAULT_TOOLKIT     = QUANTUM_TOOLKIT;
-    
+
     private static final Map gradientMap = new WeakHashMap();
 
     private static String lookupToolkitClass(String name) {
@@ -331,12 +332,12 @@ public abstract class Toolkit {
 
     // The set of shutdown hooks is strongly held to avoid premature GC.
     private final Set<Runnable> shutdownHooks = new HashSet<Runnable>();
-    
+
 
     public void firePulse() {
-        // Stages need to be notified of pulses before scenes so the Stage can resized 
+        // Stages need to be notified of pulses before scenes so the Stage can resized
         // and those changes propogated to scene before it gets its pulse to update
-        
+
         ArrayList<TKPulseListener> stagePulseList = new ArrayList<TKPulseListener>();
         ArrayList<TKPulseListener> scenePulseList = new ArrayList<TKPulseListener>();
         ArrayList<TKPulseListener> postScenePulseList = new ArrayList<TKPulseListener>();
@@ -460,16 +461,16 @@ public abstract class Toolkit {
                                           int width, int height,
                                           boolean preserveRatio,
                                           boolean smooth);
-    
+
     /*
      * The loadPlatformImage method supports the following image types:
      *   - an object returned by the renderToImage method
      *   - an instance of com.sun.prism.Image (in case of prism)
-     *   - an instance of an external image object, which can be a BufferedImage 
-     * If JavaFX Image had one more constructor Image(ImageLoader), 
+     *   - an instance of an external image object, which can be a BufferedImage
+     * If JavaFX Image had one more constructor Image(ImageLoader),
      * we could introduce a different method for external image loading support.
      */
-    
+
     public abstract ImageLoader loadPlatformImage(Object platformImage);
 
     public abstract PlatformImage createPlatformImage(int w, int h);
@@ -534,7 +535,7 @@ public abstract class Toolkit {
             return createColorPaint((Color) paint);
         }
 
-        if (paint instanceof LinearGradient) {          
+        if (paint instanceof LinearGradient) {
             return getPaint((LinearGradient) paint);
         }
 
@@ -636,19 +637,21 @@ public abstract class Toolkit {
 
     // Material
     public abstract PGPhongMaterial createPGPhongMaterial();
-    
+
     // Lights
     public abstract PGAmbientLight createPGAmbientLight();
-    public abstract PGPointLight createPGPointLight();   
-    
+    public abstract PGPointLight createPGPointLight();
+
     // Cameras
-    public abstract PGParallelCamera createPGParallelCamera();   
+    public abstract PGParallelCamera createPGParallelCamera();
     public abstract PGPerspectiveCamera createPGPerspectiveCamera(boolean fixedEyePosition);
-    
+
     // TODO: Need to evaluate the lighting logic
     public abstract List<PGLightBase> getLightsInScene();
     public abstract boolean isLightsDirty();
     public abstract void setLightsDirty(boolean lightsDirty);
+
+    public abstract PGExternalNode createPGExternalNode();
 
     /**
      * Tests whether the pixel on the given coordinates in the given image
@@ -658,9 +661,9 @@ public abstract class Toolkit {
     public abstract boolean imageContains(Object image, float x, float y);
 
     public abstract TKClipboard getSystemClipboard();
-    
+
     public abstract TKSystemMenu getSystemMenu();
-    
+
     public abstract TKClipboard getNamedClipboard(String name);
 
     public boolean isSupported(ConditionalFeature feature) { return false; }
@@ -714,7 +717,7 @@ public abstract class Toolkit {
     }
 
     public abstract void installInputMethodRequests(TKScene scene, InputMethodRequests requests);
-    
+
     /*
      * ImageRenderingContext holds the many parameters passed to
      * the renderToImage method.
@@ -778,7 +781,7 @@ public abstract class Toolkit {
      */
 
     public abstract Object renderToImage(ImageRenderingContext context);
-    
+
     /**
      * Returns the key code for the key which is commonly used on the
      * corresponding platform as a modifier key in shortcuts. For example
@@ -788,7 +791,7 @@ public abstract class Toolkit {
      * @return the key code for shortcut modifier key
      */
     public abstract KeyCode getPlatformShortcutKey();
-    
+
     public abstract List<File> showFileChooser(
             TKStage ownerWindow,
             String title,
@@ -866,9 +869,9 @@ public abstract class Toolkit {
     private Set<HighlightRegion> highlightRegions;
 
     /**
-     * Getter for the set of regions to be highlighted using the JMX tooling 
+     * Getter for the set of regions to be highlighted using the JMX tooling
      * interface.
-     * 
+     *
      * @return the set of regions to be highlighted.
      */
     public Set<HighlightRegion> getHighlightedRegions() {
@@ -892,7 +895,7 @@ public abstract class Toolkit {
     public static WritableImageAccessor getWritableImageAccessor() {
         return writableImageAccessor;
     }
-    
+
     public interface PaintAccessor {
         public boolean isMutable(Paint paint);
         public Object getPlatformPaint(Paint paint);
@@ -909,12 +912,12 @@ public abstract class Toolkit {
     public static PaintAccessor getPaintAccessor() {
         return paintAccessor;
     }
-    
+
     public interface ImageAccessor {
         public boolean isAnimation(Image image);
         public ReadOnlyObjectProperty<PlatformImage>getImageProperty(Image image);
     }
-    
+
     private static ImageAccessor imageAccessor = null;
 
     public static void setImageAccessor(ImageAccessor accessor) {
