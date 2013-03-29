@@ -43,8 +43,10 @@ import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
+import javafx.scene.control.ScrollPane;
 import javafx.scene.effect.BlendMode;
 import javafx.scene.effect.BoxBlur;
+import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.CycleMethod;
 import javafx.scene.paint.LinearGradient;
@@ -70,11 +72,11 @@ import javafx.util.Duration;
  */
 public class ColorfulCirclesApp extends Application {
 
-    private static final double WIDTH = 450, HEIGHT = 480;
+    private static final double WIDTH = 500, HEIGHT = 480;
     private Timeline animation;
 
     public Parent createContent() {
-        Group layer1 = new Group();
+        Pane layer1 = new Pane();
         for (int i = 0; i < 15; i++) {
             Circle circle = new Circle(200, Color.web("white", 0.05f));
             circle.setStrokeType(StrokeType.OUTSIDE);
@@ -83,7 +85,7 @@ public class ColorfulCirclesApp extends Application {
             layer1.getChildren().add(circle);
         }
         // create second list of circles
-        Group layer2 = new Group();
+        Pane layer2 = new Pane();
         for (int i = 0; i < 20; i++) {
             Circle circle = new Circle(70, Color.web("white", 0.05f));
             circle.setStrokeType(StrokeType.OUTSIDE);
@@ -92,7 +94,7 @@ public class ColorfulCirclesApp extends Application {
             layer2.getChildren().add(circle);
         }
         // create third list of circles
-        Group layer3 = new Group();
+        Pane layer3 = new Pane();
         for (int i = 0; i < 10; i++) {
             Circle circle = new Circle(150, Color.web("white", 0.05f));
             circle.setStrokeType(StrokeType.OUTSIDE);
@@ -116,17 +118,23 @@ public class ColorfulCirclesApp extends Application {
                 new Stop(1, Color.web("#f2660f"))));
         colors.setBlendMode(BlendMode.OVERLAY);
         // create main content
-        Group group = new Group(
-                new Rectangle(WIDTH, HEIGHT, Color.BLACK),
+        ScrollPane sp = new ScrollPane();
+        sp.setFitToWidth(true);
+        sp.setFitToHeight(true);
+        sp.setPrefSize(WIDTH, HEIGHT);
+
+        Pane pane = new Pane();
+        sp.setContent(pane);
+        pane.getChildren().addAll( new Rectangle(WIDTH, HEIGHT, Color.BLACK),
                 layer1,
                 layer2,
                 layer3,
                 colors);
         Rectangle clip = new Rectangle(WIDTH, HEIGHT);
         clip.setSmooth(false);
-        group.setClip(clip);
+        pane.setClip(clip);
         // create list of all circles
-        List<Node> allCircles = new ArrayList<Node>();
+        List<Node> allCircles = new ArrayList<>();
         allCircles.addAll(layer1.getChildren());
         allCircles.addAll(layer2.getChildren());
         allCircles.addAll(layer3.getChildren());
@@ -143,7 +151,7 @@ public class ColorfulCirclesApp extends Application {
         }
         animation.setAutoReverse(true);
         animation.setCycleCount(Animation.INDEFINITE);
-        return group;
+        return sp;
     }
 
     public void play() {
