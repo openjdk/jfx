@@ -25,9 +25,9 @@
 
 package javafx.stage;
 
+import java.security.AllPermission;
 import java.security.AccessControlContext;
 import java.security.AccessController;
-import java.security.PrivilegedAction;
 import java.util.Iterator;
 
 import javafx.beans.property.DoubleProperty;
@@ -108,14 +108,12 @@ public class Window implements EventTarget {
     @Deprecated
     @NoInit
     public static Iterator<Window> impl_getWindows() {
-        final Iterator iterator = AccessController.doPrivileged(
-            new PrivilegedAction<Iterator>() {
-                @Override public Iterator run() {
-                    return windowQueue.iterator();
-                }
-            }
-        );
-        return iterator;
+        final SecurityManager securityManager = System.getSecurityManager();
+        if (securityManager != null) {
+            securityManager.checkPermission(new AllPermission());
+        }
+
+        return (Iterator<Window>) windowQueue.iterator();
     }
 
     private final AccessControlContext acc = AccessController.getContext();
