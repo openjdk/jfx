@@ -136,6 +136,16 @@ final public class DummyToolkit extends Toolkit {
     }
 
     @Override
+    public AppletWindow createAppletWindow(long parent, String serverName) {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public void closeAppletWindow() {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
     public TKSystemMenu getSystemMenu() {
         throw new UnsupportedOperationException("Not supported yet.");
     }

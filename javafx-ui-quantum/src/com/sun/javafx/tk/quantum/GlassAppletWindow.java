@@ -28,10 +28,13 @@ package com.sun.javafx.tk.quantum;
 import com.sun.glass.ui.Application;
 import com.sun.glass.ui.Window;
 import com.sun.glass.ui.View;
+
+import com.sun.javafx.tk.AppletWindow;
 import com.sun.javafx.tk.TKStage;
-import com.sun.javafx.tk.desktop.AppletWindow;
+
 import java.lang.ref.WeakReference;
 import java.util.Map;
+
 import javafx.stage.Stage;
 
 /**

@@ -106,6 +106,7 @@ import com.sun.javafx.sg.PGShape.StrokeType;
 import com.sun.javafx.sg.PGSphere;
 import com.sun.javafx.sg.PGText;
 import com.sun.javafx.sg.PGTriangleMesh;
+import com.sun.javafx.tk.AppletWindow;
 import com.sun.javafx.tk.FileChooserType;
 import com.sun.javafx.tk.FontLoader;
 import com.sun.javafx.tk.ImageLoader;
@@ -196,6 +197,17 @@ public class StubToolkit extends Toolkit {
     @Override
     public TKStage createTKEmbeddedStage(HostInterface host) {
         return new StubStage();
+    }
+
+    @Override
+    public AppletWindow createAppletWindow(long parent, String serverName) {
+        // unsupported
+        return null;
+    }
+
+    @Override
+    public void closeAppletWindow() {
+        // unsupported
     }
 
     @Override

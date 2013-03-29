@@ -124,6 +124,7 @@ import com.sun.javafx.sg.prism.NGRectangle;
 import com.sun.javafx.sg.prism.NGRegion;
 import com.sun.javafx.sg.prism.NGSVGPath;
 import com.sun.javafx.sg.prism.NGText;
+import com.sun.javafx.tk.AppletWindow;
 import com.sun.javafx.tk.FileChooserType;
 import com.sun.javafx.tk.FontLoader;
 import com.sun.javafx.tk.ImageLoader;
@@ -138,9 +139,6 @@ import com.sun.javafx.tk.TKScreenConfigurationListener;
 import com.sun.javafx.tk.TKStage;
 import com.sun.javafx.tk.TKSystemMenu;
 import com.sun.javafx.tk.Toolkit;
-import com.sun.javafx.tk.desktop.AppletWindow;
-import com.sun.javafx.tk.desktop.DesktopToolkit;
-import com.sun.javafx.tk.desktop.MasterTimer;
 import com.sun.prism.BasicStroke;
 import com.sun.prism.Graphics;
 import com.sun.prism.GraphicsPipeline;
@@ -189,7 +187,7 @@ import com.sun.javafx.sg.prism.NGSubScene;
 import com.sun.javafx.sg.prism.NGTriangleMesh;
 import com.sun.javafx.sg.prism.NGExternalNode;
 
-public final class QuantumToolkit extends DesktopToolkit implements ToolkitInterface {
+public final class QuantumToolkit extends Toolkit implements ToolkitInterface {
 
     public static final boolean verbose =
             AccessController.doPrivileged(new PrivilegedAction<Boolean>() {
@@ -271,6 +269,8 @@ public final class QuantumToolkit extends DesktopToolkit implements ToolkitInter
     private ClassLoader             ccl;
 
     private HashMap<Object,EventLoop> eventLoopMap = null;
+
+    private final PerformanceTracker perfTracker = new PerformanceTrackerImpl();
 
     @Override public boolean init() {
         /*
@@ -706,6 +706,16 @@ public final class QuantumToolkit extends DesktopToolkit implements ToolkitInter
 
     @Override public List<?> getScreens() {
         return Screen.getScreens();
+    }
+
+    @Override
+    public PerformanceTracker getPerformanceTracker() {
+        return perfTracker;
+    }
+
+    @Override
+    public PerformanceTracker createPerformanceTracker() {
+        return new PerformanceTrackerImpl();
     }
 
     public float getMaxPixelScale() {
@@ -1291,11 +1301,6 @@ public final class QuantumToolkit extends DesktopToolkit implements ToolkitInter
 
         GlassScene view = (GlassScene)s;
         view.setTKDragGestureListener(l);
-    }
-
-    /* com.sun.javafx.tk.desktop.DesktopToolkit */
-    @Override public boolean isAppletDragSupported() {
-        return false;
     }
 
     @Override

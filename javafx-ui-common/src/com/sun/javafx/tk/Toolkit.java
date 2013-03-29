@@ -321,6 +321,24 @@ public abstract class Toolkit {
     public abstract TKStage createTKPopupStage(StageStyle stageStyle, Object owner);
     public abstract TKStage createTKEmbeddedStage(HostInterface host);
 
+    /**
+     * Creates an AppletWindow using the provided window pointer as the parent
+     * window.
+     *
+     * @param parent the native parent which will contain the primary stage
+     * window(s). Used on Windows/Linux platforms.
+     *
+     * @param serverName the name of CARemoteLayerServer which
+     * will be used to register native layer. Used on Mac platform.
+     */
+    public abstract AppletWindow createAppletWindow(long parent, String serverName);
+
+    /**
+     * Perform cleanup in preparation for applet termination, including closing
+     * the applet window.
+     */
+    public abstract void closeAppletWindow();
+
     private final Map<TKPulseListener,Object> stagePulseListeners =
             new WeakHashMap<TKPulseListener,Object>();
     private final Map<TKPulseListener,Object> scenePulseListeners =
@@ -790,7 +808,9 @@ public abstract class Toolkit {
      *
      * @return the key code for shortcut modifier key
      */
-    public abstract KeyCode getPlatformShortcutKey();
+    public KeyCode getPlatformShortcutKey() {
+        return PlatformUtil.isMac() ? KeyCode.META : KeyCode.CONTROL;
+    }
 
     public abstract List<File> showFileChooser(
             TKStage ownerWindow,
