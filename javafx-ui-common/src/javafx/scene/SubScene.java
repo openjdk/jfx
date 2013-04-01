@@ -204,6 +204,8 @@ public class SubScene extends Node {
     /**
      * Specifies the type of camera use for rendering this {@code SubScene}.
      * If {@code camera} is null, a parallel camera is used for rendering.
+     * It is illegal to set a camera that belongs to other {@code Scene}
+     * or {@code SubScene}.
      * <p>
      * Note: this is a conditional feature. See
      * {@link javafx.application.ConditionalFeature#SCENE3D ConditionalFeature.SCENE3D}
@@ -214,6 +216,13 @@ public class SubScene extends Node {
     private ObjectProperty<Camera> camera;
 
     public final void setCamera(Camera value) {
+        // Illegal value if it belongs to any scene or other subscene
+        if (value != null
+                && (value.getScene() != null || value.getSubScene() != null)
+                && (value.getScene() != getScene() || value.getSubScene() != this)) {
+            throw new IllegalArgumentException(value
+                    + "is already set as camera in other scene/subscene");
+        }
         cameraProperty().set(value);
     }
 

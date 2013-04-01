@@ -903,10 +903,12 @@ public class Scene implements EventTarget {
     /**
      * Specifies the type of camera use for rendering this {@code Scene}.
      * If {@code camera} is null, a parallel camera is used for rendering.
+     * It is illegal to set a camera that belongs to other {@code Scene}
+     * or {@code SubScene}.
      * <p>
      * Note: this is a conditional feature. See
      * {@link javafx.application.ConditionalFeature#SCENE3D ConditionalFeature.SCENE3D}
-     * for more information.
+     * for more information. 
      *
      * @defaultValue null
      * @since JavaFX 1.3
@@ -914,6 +916,13 @@ public class Scene implements EventTarget {
     private ObjectProperty<Camera> camera;
 
     public final void setCamera(Camera value) {
+        // Illegal value if it belongs to other scene or any subscene
+        if (value != null
+                && ((value.getScene() != null && value.getScene() != this)
+                || value.getSubScene() != null)) {
+            throw new IllegalArgumentException(value
+                    + "is already set as camera in other scene");
+        }
         cameraProperty().set(value);
     }
 
