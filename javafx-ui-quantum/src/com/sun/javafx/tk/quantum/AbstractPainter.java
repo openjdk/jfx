@@ -28,7 +28,6 @@ package com.sun.javafx.tk.quantum;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReentrantLock;
 
 import com.sun.javafx.geom.DirtyRegionContainer;
@@ -56,7 +55,7 @@ import static com.sun.javafx.logging.PulseLogger.PULSE_LOGGING_ENABLED;
 import static com.sun.javafx.logging.PulseLogger.PULSE_LOGGER;
 import com.sun.prism.camera.PrismCameraImpl;
 
-abstract class AbstractPainter {
+abstract class AbstractPainter implements Runnable {
     
     private static final NodePath<NGNode> NODE_PATH = new NodePath<NGNode>();
 
@@ -74,6 +73,8 @@ abstract class AbstractPainter {
     protected static final ReentrantLock renderLock = new ReentrantLock();
 
     protected static final PaintCollector collector = PaintCollector.getInstance();
+
+    protected GlassScene scene;
 
     protected Presentable       presentable;
     protected RenderingContext  context = null;
@@ -94,9 +95,9 @@ abstract class AbstractPainter {
     GeneralTransform3D          viewProjTx;
     GeneralTransform3D          projTx;
     NGNode                      root, overlayRoot;
-    SceneState                   viewState;
 
     protected AbstractPainter(GlassScene gs) {
+        this.scene = gs;
         if (PrismSettings.dirtyOptsEnabled) {
             tx = new Affine3D();
             viewProjTx = new GeneralTransform3D();
@@ -108,9 +109,8 @@ abstract class AbstractPainter {
             dirtyRegionPool = new DirtyRegionPool(PrismSettings.dirtyRegionCount);
             dirtyRegionContainer = dirtyRegionPool.checkOut();
         }
-        viewState = gs.getViewState();
     }
-    
+
     protected void setPaintBounds(int w, int h) {
         width  = w;
         height = h;
@@ -138,8 +138,6 @@ abstract class AbstractPainter {
     
     protected abstract void doPaint(Graphics g, NodePath<NGNode> renderRoot);
     
-    protected abstract PrismCameraImpl getCamera();
-
     private void adjustPerspective(PrismCameraImpl camera) {
         if (camera instanceof PrismPerspectiveCameraImpl) {
             PrismPerspectiveCameraImpl perspCamera = (PrismPerspectiveCameraImpl) camera;
@@ -158,7 +156,7 @@ abstract class AbstractPainter {
         dirtyRegionContainer.reset();
         tx.setToIdentity();
         projTx.setIdentity();
-        adjustPerspective(getCamera());
+        adjustPerspective(scene.getCamera());
         int status = root.accumulateDirtyRegions(clip, dirtyRegionTemp,
                                                  dirtyRegionPool, dirtyRegionContainer, 
                                                  tx, projTx);
@@ -171,7 +169,7 @@ abstract class AbstractPainter {
         int status = DirtyRegionContainer.DTR_CONTAINS_CLIP;
         if (PrismSettings.dirtyOptsEnabled) {
             long start = PULSE_LOGGING_ENABLED ? System.currentTimeMillis() : 0;
-            if (!viewState.getScene().isEntireSceneDirty() && !renderOverlay) {
+            if (!scene.isEntireSceneDirty() && !renderOverlay) {
                 status = setDirtyRect(g);
                 if (status == DirtyRegionContainer.DTR_OK) {
                     root.doPreCulling(dirtyRegionContainer,
@@ -248,7 +246,7 @@ abstract class AbstractPainter {
                                             BasicStroke.JOIN_BEVEL,
                                             10f));
                 for (HighlightRegion region: highlightRegions) {
-                    if (viewState.getScene().equals(region.getTKScene())) {
+                    if (scene.equals(region.getTKScene())) {
                         g.setPaint(new Color(1, 1, 1, 1));
                         g.drawRect((float) region.getMinX(),
                                    (float) region.getMinY(),
@@ -276,6 +274,6 @@ abstract class AbstractPainter {
     }
     
     protected boolean validateStageGraphics() {
-        return viewState != null;
+        return scene.getViewState() != null;
     }
 }

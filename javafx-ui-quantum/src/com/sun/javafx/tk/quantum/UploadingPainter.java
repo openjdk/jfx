@@ -41,7 +41,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * UploadingPainter is used when we need to render into an offscreen buffer.
  * The PresentingPainter is used when we are rendering to the main screen.
  */
-class UploadingPainter extends ViewPainter implements Runnable {
+final class UploadingPainter extends ViewPainter implements Runnable {
 
     private Application app = Application.GetApplication();
     private Pixels      pix;
@@ -50,8 +50,8 @@ class UploadingPainter extends ViewPainter implements Runnable {
     private final AtomicInteger uploadCount = new AtomicInteger(0);
     private RTTexture   rttexture;
 
-    protected UploadingPainter(ViewScene view, PrismPen pen) {
-        super(view, pen);
+    UploadingPainter(ViewScene view) {
+        super(view);
     }
 
     void disposeRTTexture() {
@@ -65,7 +65,8 @@ class UploadingPainter extends ViewPainter implements Runnable {
         renderLock.lock();
 
         boolean locked = false;
-        
+
+        SceneState viewState = scene.getViewState();
         try {
             valid = validateStageGraphics();
 
@@ -75,7 +76,7 @@ class UploadingPainter extends ViewPainter implements Runnable {
                 }
                 return;
             }
-            
+
             if (viewState != null) {
                 /*
                  * As Glass is responsible for creating the rendering contexts,
@@ -147,7 +148,7 @@ class UploadingPainter extends ViewPainter implements Runnable {
                 uploadCount.incrementAndGet();
                 Application.invokeLater(new Runnable() {
                     @Override public void run() {
-                        if (viewRefCopy.isClosed() == false) {
+                        if (!viewRefCopy.isClosed()) {
                             viewRefCopy.uploadPixels(pixRefCopy);
                         }
                         uploadCount.decrementAndGet();
@@ -166,7 +167,8 @@ class UploadingPainter extends ViewPainter implements Runnable {
                  viewState.unlock();
             }
 
-            pen.getPainting().set(false);
+            ViewScene viewScene = (ViewScene)viewState.getScene();
+            viewScene.setPainting(false);
             renderLock.unlock();
         }
     }
