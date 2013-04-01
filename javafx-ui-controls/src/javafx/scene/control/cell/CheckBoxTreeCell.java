@@ -134,18 +134,8 @@ public class CheckBoxTreeCell<T> extends TreeCell<T> {
                 return null;
             }
         };
-        Callback<TreeItem<T>, ObservableValue<Boolean>> getIndeterminateProperty = 
-                new Callback<TreeItem<T>, ObservableValue<Boolean>>() {
-            @Override public ObservableValue<Boolean> call(TreeItem<T> item) {
-                if (item instanceof CheckBoxTreeItem<?>) {
-                    return ((CheckBoxTreeItem<?>)item).indeterminateProperty();
-                }
-                return null;
-            }
-        };
         return forTreeView(getSelectedProperty, 
-                           CellUtils.<T>defaultTreeItemStringConverter(), 
-                           getIndeterminateProperty);
+                           CellUtils.<T>defaultTreeItemStringConverter());
     }
     
     /**
@@ -222,79 +212,13 @@ public class CheckBoxTreeCell<T> extends TreeCell<T> {
     public static <T> Callback<TreeView<T>, TreeCell<T>> forTreeView(
             final Callback<TreeItem<T>, ObservableValue<Boolean>> getSelectedProperty, 
             final StringConverter<TreeItem<T>> converter) {
-        return forTreeView(getSelectedProperty, converter, null);
-    }
-    
-    /**
-     * Creates a cell factory for use in a TreeView control. Unlike 
-     * {@link #forTreeView()}, this method does not assume that all TreeItem 
-     * instances in the TreeView are {@link CheckBoxTreeItem}.
-     * 
-     * <p>To call this method, it is necessary to provide three 
-     * {@link Callback Callbacks}:
-     * 
-     * <ol>
-     *   <li><b>getSelectedProperty</b>: A Callback that, given an object of type 
-     *      TreeItem<T>, will return an {@code ObservableValue<Boolean>} that 
-     *      represents whether the given item is selected or not. This 
-     *      {@code ObservableValue<Boolean>} will be bound bidirectionally 
-     *      (meaning that the CheckBox in the cell will set/unset this property 
-     *      based on user interactions, and the CheckBox will reflect the state of 
-     *      the {@code ObservableValue<Boolean>}, if it changes externally).</li>
-     *   <li><b>converter</b>: A StringConverter that, give an object of type TreeItem<T>, 
-     *      will return a String that can be used to represent the object
-     *      visually. The default implementation in {@link #forTreeView(Callback)} 
-     *      is to simply call .toString() on all non-null items (and to just 
-     *      return an empty string in cases where the given item is null).</li>
-     *   <li><b>getIndeterminateProperty</b>: A Callback that, given an object 
-     *      of type TreeItem<T>, will return an {@code ObservableValue<Boolean>} 
-     *      that represents whether the given item is in an indeterminate state 
-     *      or not (refer to the {@link CheckBox#indeterminateProperty()} for
-     *      more information on what an indeterminate state is. This 
-     *      {@code ObservableValue<Boolean>} will be bound bidirectionally 
-     *      (meaning that the CheckBox in the cell will set/unset this property 
-     *      based on user interactions, and the CheckBox will reflect the state of 
-     *      the {@code ObservableValue<Boolean>}, if it changes externally).</li>
-     * </ol>
-     * 
-     * <p>When used in a TreeView, the CheckBoxCell is rendered with a CheckBox 
-     * to the right of the 'disclosure node' (i.e. the arrow). The item stored 
-     * in {@link TreeItem#getValue()} will then have the toString Callback 
-     * called on it, and this text will take all remaining horizontal space.
-     * 
-     * <p>Unlike {@link #forTreeView()}, this cell factory does not handle 
-     * updating the state of parent or children TreeItems - it simply toggles 
-     * the BooleanProperties that are provided via the 
-     * <code>getSelectedProperty</code> and <code>getIndeterminateProperty</code>
-     * callbacks, and no more. Of course, this functionality can then be 
-     * implemented externally by adding observers to the BooleanProperties, and 
-     * toggling the state of other properties as necessary.
-     * 
-     * @param <T> The type of the elements contained within the {@link TreeItem} 
-     *      instances.
-     * @param getSelectedProperty A {@link Callback} that will return an 
-     *      {@code ObservableValue<Boolean>} that represents whether the given 
-     *      item is selected or not.
-     * @param converter A StringConverter that, give an object of type TreeItem<T>, will 
-     *      return a String that can be used to represent the object visually.
-     * @param getIndeterminateProperty A {@link Callback} that will return an 
-     *      {@code ObservableValue<Boolean>} that represents whether the given 
-     *      item is indeterminate or not.
-     * @return A {@link Callback} that will return a TreeCell that is able to 
-     *      work on the type of element contained within the TreeView root, and 
-     *      all of its children (recursively).
-     */
-    // TODO this is not currently public API, as we don't even use the indeterminate property!
-    private static <T> Callback<TreeView<T>, TreeCell<T>> forTreeView(
-            final Callback<TreeItem<T>, ObservableValue<Boolean>> getSelectedProperty, 
-            final StringConverter<TreeItem<T>> converter, 
-            final Callback<TreeItem<T>, ObservableValue<Boolean>> getIndeterminateProperty) {
         return new Callback<TreeView<T>, TreeCell<T>>() {
-            @Override public TreeCell<T> call(TreeView<T> list) {
-                return new CheckBoxTreeCell<T>(getSelectedProperty, converter/*, getIndeterminateProperty*/);
+            @Override public TreeCell<T> call(TreeView<T> tree) {
+                return new CheckBoxTreeCell<T>(getSelectedProperty, converter);
             }
         };
     }
+    
     
     
     
