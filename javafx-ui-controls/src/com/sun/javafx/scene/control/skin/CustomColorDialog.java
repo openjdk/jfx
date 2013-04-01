@@ -42,6 +42,7 @@ import javafx.stage.Window;
 import javafx.beans.binding.Bindings;
 import javafx.beans.binding.ObjectBinding;
 import javafx.geometry.Insets;
+import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
 import javafx.scene.input.KeyEvent;
 /**
@@ -71,6 +72,7 @@ public class CustomColorDialog extends HBox {
         dialog.initStyle(StageStyle.UTILITY);
         colorRectPane = new ColorRectPane();
         controlsPane = new ControlsPane();
+        setHgrow(controlsPane, Priority.ALWAYS);
         
         customScene = new Scene(this);
         getChildren().addAll(colorRectPane, controlsPane);
@@ -285,7 +287,22 @@ public class CustomColorDialog extends HBox {
             colorRectIndicator.setManaged(false);
             colorRectIndicator.setCache(true);
         
-            colorRect = new StackPane();
+            colorRect = new StackPane() {
+                // This is an implementation of square control that chooses its
+                // size to fill the available height
+                @Override
+                public Orientation getContentBias() {
+                    return Orientation.VERTICAL;
+                }
+                @Override
+                protected double computePrefWidth(double height) {
+                    return height;
+                }
+                @Override
+                protected double computeMaxWidth(double height) {
+                    return height;
+                }
+            };
             colorRect.getStyleClass().addAll("color-rect", "color-rect-border");
             colorRect.backgroundProperty().bind(new ObjectBinding<Background>() {
                 {
@@ -350,6 +367,7 @@ public class CustomColorDialog extends HBox {
         
             colorBar.getChildren().setAll(colorBarIndicator);
             colorRect.getChildren().setAll(colorRectOverlayOne, colorRectOverlayTwo, colorRectIndicator);
+            HBox.setHgrow(colorRect, Priority.SOMETIMES);
             getChildren().addAll(colorRect, colorBar);
         }
         
@@ -372,6 +390,10 @@ public class CustomColorDialog extends HBox {
             
             // to maintain default size
             colorRectIndicator.autosize();
+            // to maintain square size
+            double size = Math.min(colorRect.getWidth(), colorRect.getHeight());
+            colorRect.resize(size, size);
+            colorBar.resize(colorBar.getWidth(), size);
         }
     }
     
@@ -472,6 +494,10 @@ public class CustomColorDialog extends HBox {
             currentAndNewColor.getColumnConstraints().addAll(new ColumnConstraints(), new ColumnConstraints());
             currentAndNewColor.getColumnConstraints().get(0).setHgrow(Priority.ALWAYS);
             currentAndNewColor.getColumnConstraints().get(1).setHgrow(Priority.ALWAYS);
+            currentAndNewColor.getRowConstraints().addAll(new RowConstraints(), new RowConstraints(), new RowConstraints());
+            currentAndNewColor.getRowConstraints().get(2).setVgrow(Priority.ALWAYS);
+            VBox.setVgrow(currentAndNewColor, Priority.ALWAYS);
+            
             currentAndNewColor.getStyleClass().add("current-new-color-grid");
             currentAndNewColor.add(currentColorLabel, 0, 0);
             currentAndNewColor.add(newColorLabel, 1, 0);

@@ -3322,15 +3322,13 @@ Only the properties with values that are different from the TextBox are specifie
 .custom-color-dialog > .color-rect-pane {
     -fx-spacing: 0.75em;
     -fx-pref-height: 16.666667em;
+    -fx-alignment: top-left;
+    -fx-fill-height: true;
 }
 
 .custom-color-dialog .color-rect-pane .color-rect {
     -fx-min-width: 16.666667em;
     -fx-min-height: 16.666667em;
-    -fx-max-width: 16.666667em;
-    -fx-max-height: 16.666667em;
-    -fx-max-width: 16.666667em;
-    -fx-pref-height: 16.666667em;
 }
 
 .custom-color-dialog .color-rect-pane .color-rect-border {
@@ -3351,10 +3349,7 @@ Only the properties with values that are different from the TextBox are specifie
 .custom-color-dialog > .color-rect-pane > .color-bar {
     -fx-min-width: 1.666667em;
     -fx-min-height: 16.666667em;
-    -fx-pref-width: 1.666667em;
-    -fx-pref-height: 16.666667em;
     -fx-max-width: 1.666667em;
-    -fx-max-height: 16.666667em;
     -fx-border-color: derive(-fx-base, -20%);
 }
 
