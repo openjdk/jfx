@@ -86,6 +86,7 @@ public abstract class Axis<T> extends Region {
     private double oldLength = 0;
     /** True when the current range invalid and all dependent calculations need to be updated */
     boolean rangeValid = false;
+    private boolean tickPropertyChanged = false;
     /** True when labelFormatter changes programmatically - only tick marks text needs to updated */
     boolean formatterValid = false;
     
@@ -295,6 +296,7 @@ public abstract class Axis<T> extends Region {
     /** The fill for all tick labels */
     private ObjectProperty<Paint> tickLabelFill = new StyleableObjectProperty<Paint>(Color.BLACK) {
         @Override protected void invalidated() {
+            tickPropertyChanged = true;
             requestAxisLayout();
         }
 
@@ -622,7 +624,7 @@ public abstract class Axis<T> extends Region {
         final double length = (Side.TOP.equals(side) || Side.BOTTOM.equals(side)) ? width : height;
         int numLabelsToSkip = 1;
         int tickIndex = 0;
-        if (oldLength != length || !isRangeValid() || formatterValid) {
+        if (oldLength != length || !isRangeValid() || tickPropertyChanged || formatterValid) {
             // get range
             Object range;
             if(isAutoRanging()) {
@@ -708,6 +710,12 @@ public abstract class Axis<T> extends Region {
                     ft.setFromValue(0);
                     ft.setToValue(1);
                     ft.play();
+                }
+            }
+            if (tickPropertyChanged) {
+                tickPropertyChanged = false;
+                for (TickMark<T> tick : tickMarks) {
+                    tick.textNode.setFill(getTickLabelFill());
                 }
             }
             if (formatterValid) {
