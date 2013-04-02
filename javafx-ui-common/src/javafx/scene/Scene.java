@@ -3279,7 +3279,7 @@ public class Scene implements EventTarget {
 
                 if (clickedTarget != null) {
                     MouseEvent click = new MouseEvent(null, clickedTarget,
-                            MouseEvent.MOUSE_CLICKED, e.getX(), e.getY(),
+                            MouseEvent.MOUSE_CLICKED, e.getSceneX(), e.getSceneY(),
                             e.getScreenX(), e.getScreenY(), e.getButton(),
                             cc.get(),
                             e.isShiftDown(), e.isControlDown(), e.isAltDown(), e.isMetaDown(),
