@@ -133,12 +133,8 @@ public  class PerspectiveCamera extends Camera {
         return fixedEyePosition;
     }
 
-    // In case of publishing this should be final. Right now it is not
-    // because of tests. It would be very hard to write complex 3D picking
-    // tests with the real pick ray, so we override this method in tests
-    // and return an orthogonal pick ray which makes it easy to verify the pick.
     @Override
-    PickRay computePickRay(double localX, double localY,
+    final PickRay computePickRay(double localX, double localY,
                            double viewWidth, double viewHeight,
                            PickRay pickRay) {
         if (pickRay == null) {
