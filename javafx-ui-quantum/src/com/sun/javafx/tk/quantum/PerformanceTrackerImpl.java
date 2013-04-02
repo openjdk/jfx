@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,26 +23,31 @@
  * questions.
  */
 
-package javafx.scene.paint;
+package com.sun.javafx.tk.quantum;
 
-import javafx.scene.image.Image;
-import static org.junit.Assert.*;
+import com.sun.javafx.perf.PerformanceTracker;
 
-import org.junit.Test;
+/**
+ * Class containing implementation for logging, and performance tracking.
+ */
+final class PerformanceTrackerImpl extends PerformanceTracker {
 
-public class PhongMaterialTest {
+    final PerformanceTrackerHelper helper =
+            PerformanceTrackerHelper.getInstance();
 
-    @Test
-    public void testDefaultToString() {
-        String mat = new PhongMaterial().toString();
-        assertNotNull(mat);
+    public PerformanceTrackerImpl() {
+       setPerfLoggingEnabled(helper.isPerfLoggingEnabled());
     }
 
-    @Test
-    public void testSetSpecularMap() {
-        PhongMaterial mat = new PhongMaterial();
-        Image img = new Image("file:javafx.png");
-        mat.setSpecularMap(img);
-        assertEquals(img, mat.getSpecularMap());
+    @Override public void doLogEvent(String s) {
+        helper.logEvent(s);
+    }
+
+    @Override public void doOutputLog() {
+        helper.outputLog();
+    }
+
+    @Override public long nanoTime() {
+        return helper.nanoTime();
     }
 }

@@ -37,9 +37,7 @@ import com.sun.prism.paint.Paint;
 import static com.sun.javafx.logging.PulseLogger.PULSE_LOGGING_ENABLED;
 import static com.sun.javafx.logging.PulseLogger.PULSE_LOGGER;
 
-class ViewPainter extends AbstractPainter {
-
-    protected PrismPen          pen;
+abstract class ViewPainter extends AbstractPainter {
 
     // Pen dimensions. Pen width and height are checked on every repaint
     // to match its scene width/height. If any difference is found, the
@@ -51,10 +49,8 @@ class ViewPainter extends AbstractPainter {
     
     protected boolean           valid;
 
-    protected ViewPainter(GlassScene gs, PrismPen pp) {
+    protected ViewPainter(GlassScene gs) {
         super(gs);
-        
-        pen = pp;
     }
         
     @Override protected boolean validateStageGraphics() {
@@ -63,7 +59,8 @@ class ViewPainter extends AbstractPainter {
         if (!valid) {
             return false;
         }
-        
+
+        SceneState viewState = scene.getViewState();
         if (!viewState.isValid()) {
             // indicates something happened between the scheduling of the 
             // job and the running of this job. 
@@ -100,13 +97,13 @@ class ViewPainter extends AbstractPainter {
         }
         long start = PULSE_LOGGING_ENABLED ? System.currentTimeMillis() : 0;
         try {
-            viewState.getScene().clearEntireSceneDirty();
-            g.setDepthBuffer(pen.getDepthBuffer());
-            Color clearColor = pen.getClearColor();
+            scene.clearEntireSceneDirty();
+            g.setDepthBuffer(scene.getDepthBuffer());
+            Color clearColor = scene.getClearColor();
             if (clearColor != null) {
                 g.clear(clearColor);
             }
-            Paint curPaint = pen.getCurrentPaint();
+            Paint curPaint = scene.getCurrentPaint();
             if (curPaint != null) {
                 if (curPaint.getType() != com.sun.prism.paint.Paint.Type.COLOR) {
                     g.getRenderTarget().setOpaque(curPaint.isOpaque());
@@ -114,7 +111,7 @@ class ViewPainter extends AbstractPainter {
                 g.setPaint(curPaint);
                 g.fillQuad(0, 0, width, height);
             }
-            g.setCamera((PrismCameraImpl) pen.getCamera());        
+            g.setCamera(scene.getCamera());
             g.setRenderRoot(renderRootPath);
             root.render(g);
         } finally {
@@ -124,11 +121,4 @@ class ViewPainter extends AbstractPainter {
         }
     }
     
-    @Override protected PrismCameraImpl getCamera() {
-        if (pen != null) {
-            return pen.getCamera();
-        }
-        return null;
-    }
-
 }

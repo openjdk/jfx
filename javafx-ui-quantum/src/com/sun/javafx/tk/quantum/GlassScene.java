@@ -25,6 +25,7 @@
 
 package com.sun.javafx.tk.quantum;
 
+import com.sun.prism.paint.*;
 import javafx.application.Platform;
 import javafx.scene.input.InputMethodRequests;
 import com.sun.glass.ui.Clipboard;
@@ -52,7 +53,7 @@ import com.sun.prism.camera.PrismCameraImpl;
 import com.sun.prism.camera.PrismParallelCameraImpl;
 import com.sun.prism.camera.PrismPerspectiveCameraImpl;
 import com.sun.prism.impl.PrismSettings;
-import com.sun.prism.paint.Paint;
+import javafx.stage.*;
 import sun.util.logging.PlatformLogger;
 
 import java.security.AccessControlContext;
@@ -74,9 +75,9 @@ abstract class GlassScene implements TKScene, SceneChangeListener {
 
     private TKClipboard dragSourceClipboard;
 
-    protected NGNode root;
-    protected PrismCameraImpl camera;
-    protected Paint fillPaint;
+    private NGNode root;
+    private PrismCameraImpl camera;
+    private Paint fillPaint;
 
     private boolean entireSceneDirty = true;
     private boolean dirty = true;
@@ -84,7 +85,7 @@ abstract class GlassScene implements TKScene, SceneChangeListener {
 
     private boolean depthBuffer = false;
     
-    private SceneState viewState;
+    private final SceneState viewState;
 
     private AccessControlContext accessCtrlCtx = null;
 
@@ -129,10 +130,10 @@ abstract class GlassScene implements TKScene, SceneChangeListener {
         AbstractPainter.renderLock.unlock();
     }
 
-    boolean hasDepthBuffer() {
+    boolean getDepthBuffer() {
         return depthBuffer;
     }
-    
+
     protected abstract boolean isSynchronous();
 
     @Override public void setScene(Object scene) {
@@ -169,8 +170,12 @@ abstract class GlassScene implements TKScene, SceneChangeListener {
         entireSceneNeedsRepaint();
     }
     
-    protected PGNode getRoot() {
+    protected NGNode getRoot() {
         return root;
+    }
+
+    PrismCameraImpl getCamera() {
+        return camera;
     }
 
     @Override
@@ -181,6 +186,10 @@ abstract class GlassScene implements TKScene, SceneChangeListener {
             this.camera = PrismParallelCameraImpl.getInstance();
         }
         entireSceneNeedsRepaint();
+    }
+
+    Paint getFillPaint() {
+        return fillPaint;
     }
 
     @Override
@@ -262,6 +271,7 @@ abstract class GlassScene implements TKScene, SceneChangeListener {
             PaintCollector.getInstance().removeDirtyScene(this);
         }
     }
+
     protected SceneState getViewState() {
         return viewState;
     }
@@ -402,6 +412,41 @@ abstract class GlassScene implements TKScene, SceneChangeListener {
 
     public final synchronized boolean getDoPresent() {
         return doPresent;
+    }
+
+    protected final Color getClearColor() {
+        WindowStage windowStage = glassStage instanceof WindowStage ? (WindowStage)glassStage : null;
+        if (windowStage != null && windowStage.getPlatformWindow().isTransparentWindow()) {
+            return (Color.TRANSPARENT);
+        } else {
+            if (fillPaint == null) {
+                return Color.WHITE;
+            } else if (fillPaint.isOpaque() ||
+                    (windowStage != null && windowStage.getPlatformWindow().isUnifiedWindow())) {
+                //For bare windows the transparent fill is allowed
+                if (fillPaint.getType() == Paint.Type.COLOR) {
+                    return (Color)fillPaint;
+                } else if (depthBuffer) {
+                    // Must set clearColor in order for the depthBuffer to be cleared
+                    return Color.TRANSPARENT;
+                } else {
+                    return null;
+                }
+            } else {
+                return Color.WHITE;
+            }
+        }
+    }
+
+    protected Paint getCurrentPaint() {
+        WindowStage windowStage = glassStage instanceof WindowStage ? (WindowStage)glassStage : null;
+        if ((windowStage != null) && windowStage.getStyle() == StageStyle.TRANSPARENT) {
+            return Color.TRANSPARENT.equals(fillPaint) ? null : fillPaint;
+        }
+        if ((fillPaint != null) && fillPaint.isOpaque() && (fillPaint.getType() == Paint.Type.COLOR)) {
+            return null;
+        }
+        return fillPaint;
     }
 
     @Override public String toString() {

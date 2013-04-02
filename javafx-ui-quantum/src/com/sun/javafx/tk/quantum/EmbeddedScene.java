@@ -34,11 +34,8 @@ import java.util.concurrent.locks.ReentrantLock;
 import com.sun.javafx.tk.TKClipboard;
 import javafx.application.Platform;
 import javafx.event.EventType;
-import javafx.scene.input.InputEvent;
-import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.input.ScrollEvent;
-import javafx.scene.input.Dragboard;
 
 import com.sun.javafx.cursor.CursorFrame;
 import com.sun.javafx.embed.*;
@@ -49,18 +46,20 @@ import com.sun.javafx.tk.Toolkit;
 import com.sun.prism.impl.PrismSettings;
 import com.sun.prism.render.ToolkitInterface;
 
-class EmbeddedScene extends GlassScene implements EmbeddedSceneInterface {
+final class EmbeddedScene extends GlassScene implements EmbeddedSceneInterface {
 
-    private AbstractPainter         painter;
+    // TODO: synchronize access to embedder from ET and RT
+    HostInterface host;
+
+    private EmbeddedPainter         painter;
     private PaintRenderJob          paintRenderJob;
 
-    protected Lock          sizeLock = new ReentrantLock();
-    protected IntBuffer     textureBits;
-    // TODO: synchronize access to embedder from ET and RT
-    protected HostInterface host;
-    protected boolean       needsReset = true;
-    protected int           width;
-    protected int           height;
+    IntBuffer textureBits;
+    boolean needsReset = true;
+
+    Lock sizeLock = new ReentrantLock();
+    int width;
+    int height;
 
     private final EmbeddedSceneDnD dndDelegate;
 
@@ -77,7 +76,7 @@ class EmbeddedScene extends GlassScene implements EmbeddedSceneInterface {
 
         PaintCollector collector = PaintCollector.getInstance();
         painter = new EmbeddedPainter(this);
-        paintRenderJob = new PaintRenderJob(this, collector.getRendered(), (Runnable)painter);
+        paintRenderJob = new PaintRenderJob(this, collector.getRendered(), painter);
     }
 
     @Override protected boolean isSynchronous() {

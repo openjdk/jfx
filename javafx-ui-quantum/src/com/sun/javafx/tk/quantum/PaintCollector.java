@@ -328,7 +328,7 @@ final class PaintCollector implements CompletionListener {
      * Run a full pulse and repaint before returning.
      */
     final void liveRepaintRenderJob(final ViewScene scene) {
-        ViewPainter viewPainter = scene.getPen().getPainter();
+        ViewPainter viewPainter = scene.getPainter();
         ((QuantumToolkit)QuantumToolkit.getToolkit()).pulse(false);
         scene.setDirty(true);
 //        ((Runnable)viewPainter).run();

@@ -220,9 +220,7 @@ class WindowStage extends GlassStage {
             }
         }
         if (oldScene != null) {
-            PrismPen  pen       = ((ViewScene)oldScene).getPen();
-            ViewPainter painter = pen.getPainter();
-            
+            ViewPainter painter = ((ViewScene)oldScene).getPainter();
             renderer.disposePresentable(painter.presentable);   // latched on RT
         }
     }

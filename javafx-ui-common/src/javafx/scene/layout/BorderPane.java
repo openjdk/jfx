@@ -28,6 +28,7 @@ package javafx.scene.layout;
 import java.util.List;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ObjectPropertyBase;
+import javafx.collections.ListChangeListener;
 import javafx.geometry.HPos;
 import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
@@ -38,15 +39,15 @@ import javafx.scene.Node;
 
 /**
  * BorderPane lays out children in top, left, right, bottom, and center positions.
- * 
+ *
  * <p> <img src="doc-files/borderpane.png"/> </p>
- * 
+ *
  * The top and bottom children will be resized to their preferred heights and
  * extend the width of the border pane.  The left and right children will be resized
  * to their preferred widths and extend the length between the top and bottom nodes.
  * And the center node will be resized to fill the available space in the middle.
  * Any of the positions may be null.
- *  
+ *
  * Example:
  * <pre><code>     <b>BorderPane borderPane = new BorderPane();</b>
  *     ToolBar toolbar = new ToolBar();
@@ -69,7 +70,7 @@ import javafx.scene.Node;
  * <li>top: Pos.TOP_LEFT</li>
  * <li>bottom: Pos.BOTTOM_LEFT</li>
  * <li>left: Pos.TOP_LEFT</li>
- * <li>top: Pos.TOP_RIGHT</li>
+ * <li>right: Pos.TOP_RIGHT</li>
  * <li>center: Pos.CENTER</li>
  * </ul>
  * See "Optional Layout Constraints" on how to customize these alignments.
@@ -93,8 +94,8 @@ import javafx.scene.Node;
  * <td>left/right insets plus width required to display right/left children at their pref widths and top/bottom/center with at least their min widths</td>
  * <td>top/bottom insets plus height required to display top/bottom children at their pref heights and left/right/center with at least their min heights</td></tr>
  * <tr><th>preferred</th>
- * <td>left/right insets plus width required to display display top/right/bottom/left/center children with at least their pref widths</td>
- * <td>top/bottom insets plus height required to display display top/right/bottom/left/center children with at least their pref heights</td></tr>
+ * <td>left/right insets plus width required to display top/right/bottom/left/center children with at least their pref widths</td>
+ * <td>top/bottom insets plus height required to display top/right/bottom/left/center children with at least their pref heights</td></tr>
  * <tr><th>maximum</th>
  * <td>Double.MAX_VALUE</td><td>Double.MAX_VALUE</td></tr>
  * </table>
@@ -599,7 +600,7 @@ public class BorderPane extends Pane {
                     alignment != null? alignment.getHpos() : HPos.LEFT,
                     alignment != null? alignment.getVpos() : VPos.BOTTOM);
         }
-        
+
         if (l != null && l.isManaged()) {
             Pos alignment = getAlignment(l);
             leftWidth = Math.min(leftWidth, insideWidth);
@@ -622,7 +623,7 @@ public class BorderPane extends Pane {
 
         if (c != null && c.isManaged()) {
             Pos alignment = getAlignment(c);
-            
+
             layoutInArea(c, insideX + leftWidth, insideY + topHeight,
                     insideWidth - leftWidth - rightWidth,
                     insideHeight - topHeight - bottomHeight, 0/*ignore baseline*/,
@@ -832,25 +833,51 @@ public class BorderPane extends Pane {
 
     private final class BorderPositionProperty extends ObjectPropertyBase<Node> {
         private Node oldValue = null;
-        private String propertyName;
+        private final String propertyName;
+        private boolean isBeingInvalidated;
 
         BorderPositionProperty(String propertyName) {
             this.propertyName = propertyName;
+            getChildren().addListener(new ListChangeListener<Node>() {
+
+                @Override
+                public void onChanged(ListChangeListener.Change<? extends Node> c) {
+                    if (oldValue == null || isBeingInvalidated) {
+                        return;
+                    }
+                    while (c.next()) {
+                        if (c.wasRemoved()) {
+                            List<? extends Node> removed = c.getRemoved();
+                            for (int i = 0, sz = removed.size(); i < sz; ++i) {
+                                if (removed.get(i) == oldValue) {
+                                    oldValue = null; // Do not remove again in invalidated
+                                    set(null);
+                                }
+                            }
+                        }
+                    }
+                }
+            });
         }
 
         @Override
         protected void invalidated() {
             final List<Node> children = getChildren();
 
-            if (oldValue != null) {
-                children.remove(oldValue);
-            }
+            isBeingInvalidated = true;
+            try {
+                if (oldValue != null) {
+                    children.remove(oldValue);
+                }
 
-            final Node _value = get();
-            this.oldValue = _value;
+                final Node _value = get();
+                this.oldValue = _value;
 
-            if (_value != null) {
-                children.add(_value);
+                if (_value != null) {
+                    children.add(_value);
+                }
+            } finally {
+                isBeingInvalidated = false;
             }
         }
 

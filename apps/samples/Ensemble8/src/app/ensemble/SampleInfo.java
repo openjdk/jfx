@@ -116,6 +116,10 @@ public class SampleInfo {
         this.relatesSamplePaths = relatesSamplePaths;
         this.playgroundProperties = playgroundProperties;
         this.conditionalFeatures = conditionalFeatures;
+        
+        if (EnsembleApp.PRELOAD_PREVIEW_IMAGES) {
+            getImage(getClass().getResource(previewUrl).toExternalForm());
+        }
     }
     
     @Override public String toString() {

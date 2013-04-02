@@ -48,7 +48,6 @@
     -fx-font-size: 20;
     -fx-text-fill: white;
     -fx-padding: 3 0 0 0;
-    -fx-effect: dropshadow( three-pass-box , rgba(0,0,0,0.8) , 0 , 0 , 0 , -1 );
 }
 .ensmeble-tool-bar .button, .ensmeble-tool-bar .toggle-button {
     -fx-background-size: cover;
@@ -127,12 +126,6 @@
 .popover-left-button {
     -fx-border-image-source: url("images-ios/popover-blue-btn.png");
 }
-.popover-left-button .text {
-    -fx-effect: dropshadow( three-pass-box , rgba(0,0,0,0.9) , 0, 0.0 , 0 , -1 );
-}
 .popover-right-button {
     -fx-border-image-source: url("images-ios/popover-light-blue-btn.png");
-}
-.popover-right-button .text {
-    -fx-effect: dropshadow( three-pass-box , rgba(0,0,0,0.9) , 0, 0.0 , 0 , -1 );
 }

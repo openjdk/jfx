@@ -903,17 +903,19 @@ public class Scene implements EventTarget {
     /**
      * Specifies the type of camera use for rendering this {@code Scene}.
      * If {@code camera} is null, a parallel camera is used for rendering.
+     * It is illegal to set a camera that belongs to other {@code Scene}
+     * or {@code SubScene}.
      * <p>
      * Note: this is a conditional feature. See
      * {@link javafx.application.ConditionalFeature#SCENE3D ConditionalFeature.SCENE3D}
-     * for more information.
+     * for more information. 
      *
      * @defaultValue null
      * @since JavaFX 1.3
      */
     private ObjectProperty<Camera> camera;
 
-    public final void setCamera(Camera value) {
+    public final void setCamera(Camera value) {        
         cameraProperty().set(value);
     }
 
@@ -927,6 +929,14 @@ public class Scene implements EventTarget {
 
                 @Override
                 protected void invalidated() {
+                    Camera _value = get();                    
+                    // Illegal value if it belongs to other scene or any subscene
+                    if (_value != null
+                            && ((_value.getScene() != null && _value.getScene() != Scene.this)
+                            || _value.getSubScene() != null)) {
+                        throw new IllegalArgumentException(_value
+                                + "is already set as camera in other scene");
+                    }
                     markDirty(DirtyBits.CAMERA_DIRTY);
                 }
 
@@ -3269,7 +3279,7 @@ public class Scene implements EventTarget {
 
                 if (clickedTarget != null) {
                     MouseEvent click = new MouseEvent(null, clickedTarget,
-                            MouseEvent.MOUSE_CLICKED, e.getX(), e.getY(),
+                            MouseEvent.MOUSE_CLICKED, e.getSceneX(), e.getSceneY(),
                             e.getScreenX(), e.getScreenY(), e.getButton(),
                             cc.get(),
                             e.isShiftDown(), e.isControlDown(), e.isAltDown(), e.isMetaDown(),

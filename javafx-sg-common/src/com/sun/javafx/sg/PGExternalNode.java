@@ -23,26 +23,17 @@
  * questions.
  */
 
-package javafx.scene.paint;
+package com.sun.javafx.sg;
 
-import javafx.scene.image.Image;
-import static org.junit.Assert.*;
+import java.nio.Buffer;
+import java.util.concurrent.locks.ReentrantLock;
 
-import org.junit.Test;
+public interface PGExternalNode extends PGNode {
+    public void setLock(ReentrantLock lock);
 
-public class PhongMaterialTest {
+    public void setImageBuffer(Buffer buffer, int x, int y, int width, int height, int linestride);
 
-    @Test
-    public void testDefaultToString() {
-        String mat = new PhongMaterial().toString();
-        assertNotNull(mat);
-    }
+    public void setImageBounds(int x, int y, int width, int height);
 
-    @Test
-    public void testSetSpecularMap() {
-        PhongMaterial mat = new PhongMaterial();
-        Image img = new Image("file:javafx.png");
-        mat.setSpecularMap(img);
-        assertEquals(img, mat.getSpecularMap());
-    }
+    public void repaintDirtyRegion(int dirtyX, int dirtyY, int dirtyWidth, int dirtyHeight);
 }

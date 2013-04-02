@@ -57,6 +57,7 @@ import javafx.scene.layout.Region;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Text;
 import javafx.util.Callback;
+import static ensemble.EnsembleApp.*;
 
 /**
  * The home page for ensemble.
@@ -142,7 +143,9 @@ public class HomePage extends ListView<HomePage.HomePageRow> implements Callback
         // build new list of titles and samples
         List<HomePageRow> newItems = new ArrayList<>();
         // add Highlights to top
-        newItems.add(HIGHLIGHTS_ROW);
+        if (SHOW_HIGHLIGHTS) {
+            newItems.add(HIGHLIGHTS_ROW);
+        }
         // add any samples directly in root category
         addSampleRows(newItems,Samples.ROOT.samples);
         // add samples for all sub categories
@@ -261,7 +264,6 @@ public class HomePage extends ListView<HomePage.HomePageRow> implements Callback
                             Button sampleButton = buttonCache.get(sample);
                             if (sampleButton == null) {
                                 sampleButton = new Button();
-                                sampleButton.setCache(true);
                                 sampleButton.getStyleClass().setAll("sample-button");
                                 sampleButton.setContentDisplay(ContentDisplay.TOP);
                                 sampleButton.setText(sample.name);
@@ -292,7 +294,6 @@ public class HomePage extends ListView<HomePage.HomePageRow> implements Callback
         // CALLBACK METHODS
         @Override public Node call(final Integer highlightIndex) {
             Button sampleButton = new Button();
-            sampleButton.setCache(true);
             sampleButton.getStyleClass().setAll("sample-button");
             sampleButton.setGraphic(Samples.HIGHLIGHTS[highlightIndex].getLargePreview());
             sampleButton.setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
@@ -389,7 +390,6 @@ public class HomePage extends ListView<HomePage.HomePageRow> implements Callback
             setPrefHeight(38);
             setMaxWidth(USE_PREF_SIZE);
             textNode.setEffect(RIBBON_EFFECT);
-            setCache(true);
             getChildren().add(textNode);
         }
 

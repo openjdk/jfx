@@ -26,6 +26,7 @@
 package com.sun.javafx.tk.quantum;
 
 import java.nio.ByteOrder;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.sun.glass.ui.Application;
 import com.sun.glass.ui.Cursor;
@@ -33,64 +34,62 @@ import com.sun.glass.ui.Pixels;
 import com.sun.glass.ui.View;
 import com.sun.glass.ui.Window;
 import com.sun.javafx.cursor.CursorFrame;
-import com.sun.javafx.sg.PGCamera;
 import com.sun.javafx.sg.PGNode;
-import com.sun.javafx.sg.prism.NGCamera;
 import com.sun.javafx.sg.prism.NGNode;
+import com.sun.javafx.tk.Toolkit;
+import com.sun.prism.render.ToolkitInterface;
 
 class ViewScene extends GlassScene {
 
     private static final String UNSUPPORTED_FORMAT = 
         "Transparent windows only supported for BYTE_BGRA_PRE format on LITTLE_ENDIAN machines";
-    
 
-    private View        platformView;
-    private final PrismPen pen;
+    private View platformView;
+    private ViewPainter painter;
+
+    private AtomicBoolean painting = new AtomicBoolean(false);
+    private PaintRenderJob paintRenderJob;
 
     public ViewScene(boolean verbose, boolean depthBuffer) {
         super(verbose, depthBuffer);
 
-        this.pen = new PrismPen(this, depthBuffer);
         this.platformView = Application.GetApplication().createView();
         this.platformView.setEventHandler(new GlassViewEventHandler(this));
     }
 
     @Override protected boolean isSynchronous() {
-        ViewPainter vp = pen.getPainter();
-        if (vp != null && vp instanceof PresentingPainter) {
-            return true;
-        }
-        return false;
+        return painter != null && painter instanceof PresentingPainter;
     }
 
     protected View getPlatformView() {
         return this.platformView;
     }
     
-    protected PrismPen getPen() {
-        return pen;
+    ViewPainter getPainter() {
+        return painter;
+    }
+
+    boolean setPainting(boolean value) {
+        return painting.getAndSet(value);
     }
 
     @Override
     public void setGlassStage(GlassStage stage) {
         super.setGlassStage(stage);
-        
-
         if (stage != null) {
-            WindowStage     wstage  = (WindowStage)stage;
-            ViewPainter     painter = null;
-
+            WindowStage wstage  = (WindowStage)stage;
             if (wstage.needsUpdateWindow()) {
                 if (Pixels.getNativeFormat() != Pixels.Format.BYTE_BGRA_PRE ||
                     ByteOrder.nativeOrder() != ByteOrder.LITTLE_ENDIAN) {
                     throw new UnsupportedOperationException(UNSUPPORTED_FORMAT);
                 }
-                painter = new UploadingPainter(this, pen);
+                painter = new UploadingPainter(this);
             } else {
-                painter = new PresentingPainter(this, pen);
+                painter = new PresentingPainter(this);
             }
-            pen.setPainter(painter);
+//            pen.setPainter(painter);
             painter.setRoot((NGNode)getRoot());
+            paintRenderJob = new PaintRenderJob(this, PaintCollector.getInstance().getRendered(), painter);
         }
     }
 
@@ -118,21 +117,9 @@ class ViewScene extends GlassScene {
     
     @Override public void setRoot(PGNode root) {
         super.setRoot(root);
-        ViewPainter vp = pen.getPainter();
-        if (vp != null) {
-            vp.setRoot((NGNode)root);
+        if (painter != null) {
+            painter.setRoot((NGNode)root);
         }
-    }
-
-    @Override
-    public void setCamera(PGCamera camera) {
-        super.setCamera(camera);
-        this.pen.setCamera(camera == null ? null : ((NGCamera) camera).getCameraImpl());
-    }
-
-    @Override
-    public void setFillPaint(Object fillPaint) {
-        super.setFillPaint(fillPaint);
     }
 
     @Override
@@ -156,7 +143,15 @@ class ViewScene extends GlassScene {
     }
 
     @Override void repaint() {
-        pen.repaint();
+        if (platformView == null) {
+            return;
+        }
+
+        if (!painting.getAndSet(true)) {
+            Toolkit tk = Toolkit.getToolkit();
+            ToolkitInterface toolkit = (ToolkitInterface)tk;
+            toolkit.addRenderJob(paintRenderJob);
+        }
     }
     
     @Override

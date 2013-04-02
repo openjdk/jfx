@@ -74,7 +74,7 @@ public class OverlayWarning {
         view = vs;
         
         sceneRoot = createOverlayGroup();
-        painter = view.getPen().getPainter();                            
+        painter = view.getPainter();
 
         // TODO - needs to be thread-safe - see RT-13813
         Scene.impl_setAllowPGAccess(true);
@@ -110,7 +110,7 @@ public class OverlayWarning {
         }
 
         view = vs;
-        painter = vs.getPen().getPainter();
+        painter = vs.getPainter();
 
         // TODO - needs to be thread-safe - see RT-13813
         Scene.impl_setAllowPGAccess(true);

@@ -23,26 +23,23 @@
  * questions.
  */
 
-package javafx.scene.paint;
+package com.sun.javafx.pgstub;
 
-import javafx.scene.image.Image;
-import static org.junit.Assert.*;
+import com.sun.javafx.sg.PGExternalNode;
 
-import org.junit.Test;
+import java.nio.Buffer;
+import java.util.concurrent.locks.ReentrantLock;
 
-public class PhongMaterialTest {
+public class StubExternalNode extends StubNode implements PGExternalNode {
+    @Override
+    public void setLock(ReentrantLock lock) {}
 
-    @Test
-    public void testDefaultToString() {
-        String mat = new PhongMaterial().toString();
-        assertNotNull(mat);
-    }
+    @Override
+    public void setImageBuffer(Buffer buffer, int x, int y, int width, int height, int linestride) {}
 
-    @Test
-    public void testSetSpecularMap() {
-        PhongMaterial mat = new PhongMaterial();
-        Image img = new Image("file:javafx.png");
-        mat.setSpecularMap(img);
-        assertEquals(img, mat.getSpecularMap());
-    }
+    @Override
+    public void setImageBounds(int x, int y, int width, int height) {}
+
+    @Override
+    public void repaintDirtyRegion(int x, int y, int width, int height) {}
 }

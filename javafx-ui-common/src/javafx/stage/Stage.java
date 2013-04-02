@@ -783,6 +783,9 @@ public class Stage extends Window {
      * {@code RuntimeException} on an attempt to do so. This is because
      * the setting of resizable is asynchronous on some systems or generally
      * might be set by the system / window manager.
+     * <br>
+     * Bidirectional binds are still allowed, as they don't block setting of the
+     * property by the system.
      * 
      * @defaultValue true
      */
@@ -835,10 +838,6 @@ public class Stage extends Window {
             throw new RuntimeException("Resizable property cannot be bound");
         }
 
-        @Override
-        public void bindBidirectional(Property<Boolean> other) {
-            throw new RuntimeException("Resizable property cannot be bound");
-        }
     }
 
     /**

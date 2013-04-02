@@ -63,6 +63,7 @@ import com.sun.javafx.sg.PGCircle;
 import com.sun.javafx.sg.PGCubicCurve;
 import com.sun.javafx.sg.PGCylinder;
 import com.sun.javafx.sg.PGEllipse;
+import com.sun.javafx.sg.PGExternalNode;
 import com.sun.javafx.sg.PGGroup;
 import com.sun.javafx.sg.PGImageView;
 import com.sun.javafx.sg.PGLightBase;
@@ -131,6 +132,16 @@ final public class DummyToolkit extends Toolkit {
 
     @Override
     public TKStage createTKEmbeddedStage(HostInterface host) {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public AppletWindow createAppletWindow(long parent, String serverName) {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public void closeAppletWindow() {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
@@ -380,6 +391,11 @@ final public class DummyToolkit extends Toolkit {
     }
 
     @Override
+    public PGExternalNode createPGExternalNode() {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
     public Object createSVGPathObject(SVGPath svgpath) {
         throw new UnsupportedOperationException("Not supported yet.");
     }
@@ -448,7 +464,7 @@ final public class DummyToolkit extends Toolkit {
     public KeyCode getPlatformShortcutKey() {
         throw new UnsupportedOperationException("Not supported yet.");
     }
-    
+
     @Override
     public List<File> showFileChooser(TKStage ownerWindow,
                                       String title,
@@ -475,7 +491,7 @@ final public class DummyToolkit extends Toolkit {
     @Override
     public int getMultiClickMaxX() {
 	return 0;
-    }   
+    }
 
     @Override
     public int getMultiClickMaxY() {
