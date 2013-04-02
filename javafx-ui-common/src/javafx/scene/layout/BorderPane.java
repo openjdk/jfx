@@ -69,7 +69,7 @@ import javafx.scene.Node;
  * <li>top: Pos.TOP_LEFT</li>
  * <li>bottom: Pos.BOTTOM_LEFT</li>
  * <li>left: Pos.TOP_LEFT</li>
- * <li>top: Pos.TOP_RIGHT</li>
+ * <li>right: Pos.TOP_RIGHT</li>
  * <li>center: Pos.CENTER</li>
  * </ul>
  * See "Optional Layout Constraints" on how to customize these alignments.
@@ -93,8 +93,8 @@ import javafx.scene.Node;
  * <td>left/right insets plus width required to display right/left children at their pref widths and top/bottom/center with at least their min widths</td>
  * <td>top/bottom insets plus height required to display top/bottom children at their pref heights and left/right/center with at least their min heights</td></tr>
  * <tr><th>preferred</th>
- * <td>left/right insets plus width required to display display top/right/bottom/left/center children with at least their pref widths</td>
- * <td>top/bottom insets plus height required to display display top/right/bottom/left/center children with at least their pref heights</td></tr>
+ * <td>left/right insets plus width required to display top/right/bottom/left/center children with at least their pref widths</td>
+ * <td>top/bottom insets plus height required to display top/right/bottom/left/center children with at least their pref heights</td></tr>
  * <tr><th>maximum</th>
  * <td>Double.MAX_VALUE</td><td>Double.MAX_VALUE</td></tr>
  * </table>
