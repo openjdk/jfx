@@ -216,13 +216,7 @@ public class SubScene extends Node {
     private ObjectProperty<Camera> camera;
 
     public final void setCamera(Camera value) {
-        // Illegal value if it belongs to any scene or other subscene
-        if (value != null
-                && (value.getScene() != null || value.getSubScene() != null)
-                && (value.getScene() != getScene() || value.getSubScene() != this)) {
-            throw new IllegalArgumentException(value
-                    + "is already set as camera in other scene/subscene");
-        }
+        
         cameraProperty().set(value);
     }
 
@@ -236,6 +230,14 @@ public class SubScene extends Node {
 
                 @Override
                 protected void invalidated() {
+                    Camera _value = get();                    
+                    // Illegal value if it belongs to any scene or other subscene
+                    if (_value != null
+                            && (_value.getScene() != null || _value.getSubScene() != null)
+                            && (_value.getScene() != getScene() || _value.getSubScene() != SubScene.this)) {
+                        throw new IllegalArgumentException(_value
+                                + "is already set as camera in other scene/subscene");
+                    }
                     markDirty(SubScene.SubSceneDirtyBits.CAMERA_DIRTY);
                 }
 
