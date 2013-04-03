@@ -600,6 +600,7 @@ public class CustomColorDialog extends HBox {
             buttonBox.setId("buttons-hbox");
             
             Button saveButton = new Button("Save");
+            saveButton.setDefaultButton(true);
             saveButton.setOnAction(new EventHandler<ActionEvent>() {
                 @Override public void handle(ActionEvent t) {
                     if (colorSettingsMode == ColorSettingsMode.WEB) {
@@ -630,6 +631,7 @@ public class CustomColorDialog extends HBox {
             });
             
             Button cancelButton = new Button("Cancel");
+            cancelButton.setCancelButton(true);
             cancelButton.setOnAction(new EventHandler<ActionEvent>() {
                 @Override public void handle(ActionEvent e) {
                     customColorProperty.set(getCurrentColor());
