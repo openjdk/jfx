@@ -3454,7 +3454,7 @@ Only the properties with values that are different from the TextBox are specifie
     -fx-pref-height: 1.75em;
 }
 
-.custom-color-dialog .controls-pane .current-new-color-grid .transparent-pattern {
+.custom-color-dialog .transparent-pattern {
     -fx-background-image: url("pattern-transparent.png"); 
     -fx-background-repeat: repeat;
     -fx-background-size: auto;

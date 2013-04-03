@@ -287,6 +287,8 @@ public class CustomColorDialog extends HBox {
             colorRectIndicator.setManaged(false);
             colorRectIndicator.setCache(true);
         
+            final Pane colorRectOpacityContainer = new StackPane();
+            
             colorRect = new StackPane() {
                 // This is an implementation of square control that chooses its
                 // size to fill the available height
@@ -303,15 +305,18 @@ public class CustomColorDialog extends HBox {
                     return height;
                 }
             };
-            colorRect.getStyleClass().addAll("color-rect", "color-rect-border");
-            colorRect.backgroundProperty().bind(new ObjectBinding<Background>() {
+            colorRect.getStyleClass().addAll("color-rect", "transparent-pattern");
+            
+            Pane colorRectHue = new Pane();
+            colorRectHue.backgroundProperty().bind(new ObjectBinding<Background>() {
+                
                 {
-                    bind(hue, alpha);
+                    bind(hue);
                 }
 
                 @Override protected Background computeValue() {
                     return new Background(new BackgroundFill(
-                            Color.hsb(hue.getValue(), 1.0, 1.0, clamp(alpha.get()/100)), 
+                            Color.hsb(hue.getValue(), 1.0, 1.0), 
                             CornerRadii.EMPTY, Insets.EMPTY));
                 }
             });            
@@ -334,13 +339,17 @@ public class CustomColorDialog extends HBox {
             };
         
             colorRectOverlayTwo = new Pane();
-            colorRectOverlayTwo.getStyleClass().addAll("color-rect", "color-rect-border");
+            colorRectOverlayTwo.getStyleClass().addAll("color-rect");
             colorRectOverlayTwo.setBackground(new Background(new BackgroundFill(
                     new LinearGradient(0, 0, 0, 1, true, CycleMethod.NO_CYCLE, 
                     new Stop(0, Color.rgb(0, 0, 0, 0)), new Stop(1, Color.rgb(0, 0, 0, 1))), 
                     CornerRadii.EMPTY, Insets.EMPTY)));
             colorRectOverlayTwo.setOnMouseDragged(rectMouseHandler);
             colorRectOverlayTwo.setOnMouseClicked(rectMouseHandler);
+            
+            Pane colorRectBlackBorder = new Pane();
+            colorRectBlackBorder.setMouseTransparent(true);
+            colorRectBlackBorder.getStyleClass().addAll("color-rect", "color-rect-border");
             
             colorBar = new Pane();
             colorBar.getStyleClass().add("color-bar");
@@ -354,6 +363,7 @@ public class CustomColorDialog extends HBox {
             colorRectIndicator.layoutXProperty().bind(sat.divide(100).multiply(colorRect.widthProperty()));
             colorRectIndicator.layoutYProperty().bind(Bindings.subtract(1, bright.divide(100)).multiply(colorRect.heightProperty()));
             colorBarIndicator.layoutYProperty().bind(hue.divide(360).multiply(colorBar.heightProperty()));
+            colorRectOpacityContainer.opacityProperty().bind(alpha.divide(100));
                     
             EventHandler<MouseEvent> barMouseHandler = new EventHandler<MouseEvent>() {
                 @Override public void handle(MouseEvent event) {
@@ -366,7 +376,8 @@ public class CustomColorDialog extends HBox {
             colorBar.setOnMouseClicked(barMouseHandler);
         
             colorBar.getChildren().setAll(colorBarIndicator);
-            colorRect.getChildren().setAll(colorRectOverlayOne, colorRectOverlayTwo, colorRectIndicator);
+            colorRectOpacityContainer.getChildren().setAll(colorRectHue, colorRectOverlayOne, colorRectOverlayTwo);
+            colorRect.getChildren().setAll(colorRectOpacityContainer, colorRectBlackBorder, colorRectIndicator);
             HBox.setHgrow(colorRect, Priority.SOMETIMES);
             getChildren().addAll(colorRect, colorBar);
         }
