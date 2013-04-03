@@ -114,6 +114,8 @@ public class TableColumnHeader extends Region {
             changeListenerHandler.registerChangeListener(column.visibleProperty(), "TABLE_COLUMN_VISIBLE");
             changeListenerHandler.registerChangeListener(column.sortNodeProperty(), "TABLE_COLUMN_SORT_NODE");
             changeListenerHandler.registerChangeListener(column.sortableProperty(), "TABLE_COLUMN_SORTABLE");
+            changeListenerHandler.registerChangeListener(column.textProperty(), "TABLE_COLUMN_TEXT");
+            changeListenerHandler.registerChangeListener(column.graphicProperty(), "TABLE_COLUMN_GRAPHIC");
         }
     }
     
@@ -155,6 +157,10 @@ public class TableColumnHeader extends Region {
             updateSortGrid();
         } else if ("TABLE_COLUMN_SORTABLE".equals(p)) {
             setSortPos(! column.isSortable() ? -1 : skin.getSortOrder().indexOf(column));
+        } else if ("TABLE_COLUMN_TEXT".equals(p)) {
+            label.setText(column.getText());
+        } else if ("TABLE_COLUMN_GRAPHIC".equals(p)) {
+            label.setGraphic(column.getGraphic());
         }
     }
     
@@ -357,9 +363,6 @@ public class TableColumnHeader extends Region {
 
         changeListenerHandler.dispose();
         
-        label.textProperty().unbind();
-        label.graphicProperty().unbind();
-        
         idProperty().unbind();
         styleProperty().unbind();
     }
@@ -389,8 +392,8 @@ public class TableColumnHeader extends Region {
         // --- label
         label = new Label();
         label.setAlignment(Pos.CENTER);
-        label.textProperty().bind(column.textProperty());
-        label.graphicProperty().bind(column.graphicProperty());
+        label.setText(column.getText());
+        label.setGraphic(column.getGraphic());
 
         // ---- container for the sort arrow (which is not supported on embedded
         // platforms)

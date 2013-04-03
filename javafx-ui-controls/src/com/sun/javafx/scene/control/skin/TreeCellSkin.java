@@ -54,7 +54,7 @@ import javafx.geometry.Insets;
 import javafx.util.Callback;
 import javafx.util.Duration;
 
-public class TreeCellSkin extends CellSkinBase<TreeCell<?>, TreeCellBehavior> {
+public class TreeCellSkin<T> extends CellSkinBase<TreeCell<T>, TreeCellBehavior<T>> {
 
     /*
      * This is rather hacky - but it is a quick workaround to resolve the
@@ -71,7 +71,7 @@ public class TreeCellSkin extends CellSkinBase<TreeCell<?>, TreeCellBehavior> {
      * which has a disclosureNode. Once we scroll and encounter one, indentation
      * happens in a displeasing way.
      */
-    private static final Map<TreeView, Double> maxDisclosureWidthMap = new WeakHashMap<TreeView, Double>();
+    private static final Map<TreeView<?>, Double> maxDisclosureWidthMap = new WeakHashMap<TreeView<?>, Double>();
 
     /**
      * The amount of space to multiply by the treeItem.level to get the left
@@ -106,22 +106,19 @@ public class TreeCellSkin extends CellSkinBase<TreeCell<?>, TreeCellBehavior> {
         @Override public Void call(String p) {
             if ("EXPANDED".equals(p)) {
                 updateDisclosureNodeRotation(true);
-            } else if ("GRAPHIC".equals(p)) {
-                getSkinnable().requestLayout();
             }
             return null;
         }
     });
     
-    public TreeCellSkin(TreeCell<?> control) {
-        super(control, new TreeCellBehavior(control));
+    public TreeCellSkin(TreeCell<T> control) {
+        super(control, new TreeCellBehavior<T>(control));
         
         updateTreeItem();
         updateDisclosureNodeRotation(false);
         
         registerChangeListener(control.treeItemProperty(), "TREE_ITEM");
         registerChangeListener(control.textProperty(), "TEXT");
-        registerChangeListener(control.graphicProperty(), "GRAPHIC");
     }
     
     @Override protected void handleControlPropertyChanged(String p) {
@@ -130,7 +127,7 @@ public class TreeCellSkin extends CellSkinBase<TreeCell<?>, TreeCellBehavior> {
             updateTreeItem();
             disclosureNodeDirty = true;
             getSkinnable().requestLayout();
-        } else if ("TEXT".equals(p) || "GRAPHIC".equals(p)) {
+        } else if ("TEXT".equals(p)) {
             getSkinnable().requestLayout();
         }
     }
@@ -158,13 +155,11 @@ public class TreeCellSkin extends CellSkinBase<TreeCell<?>, TreeCellBehavior> {
     
     private void updateTreeItem() {
         if (treeItem != null) {
-            treeItemListener.unregisterChangeListener(treeItem.expandedProperty(), "EXPANDED");
-            treeItemListener.unregisterChangeListener(treeItem.graphicProperty(), "GRAPHIC");
+            treeItemListener.unregisterChangeListener(treeItem.expandedProperty());
         }
         treeItem = getSkinnable().getTreeItem();
         if (treeItem != null) {
             treeItemListener.registerChangeListener(treeItem.expandedProperty(), "EXPANDED");
-            treeItemListener.registerChangeListener(treeItem.graphicProperty(), "GRAPHIC");
         }
         
         updateDisclosureNodeRotation(false);

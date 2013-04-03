@@ -420,6 +420,16 @@ public abstract class Control extends Region implements Skinnable {
      *                                                                         *
      **************************************************************************/
     
+    // Proposed dispose() API. 
+    // Note that there is impl code for a dispose method in TableRowSkinBase
+    // and TableCell (just search for dispose())
+//    public void dispose() {
+//        Skin skin = getSkin();
+//        if (skin != null) {
+//            skin.dispose();
+//        }
+//    }
+    
     /**
      * Returns <code>true</code> since all Controls are resizable.
      * @return whether this node can be resized by its parent during layout

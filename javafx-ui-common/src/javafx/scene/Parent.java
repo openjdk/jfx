@@ -1162,7 +1162,13 @@ public abstract class Parent extends Node {
 
         // Nothing to do...
         if (cssFlag == CssFlags.CLEAN) return;
-        
+
+        // RT-29254 - If DIRTY_BRANCH, pass control to Node#processCSS. This avoids calling impl_processCSS on
+        // this node and all of its children when css doesn't need updated, recalculated, or reapplied.
+        if (cssFlag == CssFlags.DIRTY_BRANCH) {
+            super.processCSS();
+            return;
+        }
         // remember the flag we started with since super.impl_processCSS
         // resets it to CLEAN and we need it for setting children.
         CssFlags flag = cssFlag;

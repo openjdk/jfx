@@ -263,11 +263,11 @@ public final class KeyboardShortcutsHandler extends BasicEventDispatcher {
                     if (mnemonicsList.get(i) instanceof Mnemonic) {
                         Node currentNode = (Node)mnemonicsList.get(i).getNode();
 
-                        if (firstMnemonics == null && currentNode.impl_isTreeVisible()) {
+                        if (firstMnemonics == null && (currentNode.impl_isTreeVisible() && !currentNode.isDisabled())) {
                             firstMnemonics = mnemonicsList.get(i);
                         }
 
-                        if (currentNode.impl_isTreeVisible() && currentNode.isFocusTraversable()) {
+                        if (currentNode.impl_isTreeVisible() && (currentNode.isFocusTraversable() && !currentNode.isDisabled())) {
                             if (firstNode == null) {
                                 firstNode = currentNode;
                             }

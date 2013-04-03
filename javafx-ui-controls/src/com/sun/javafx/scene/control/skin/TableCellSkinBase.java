@@ -77,8 +77,7 @@ public abstract class TableCellSkinBase<C extends IndexedCell, B extends CellBeh
         
         ReadOnlyDoubleProperty columnWidthProperty = columnWidthProperty();
         if (columnWidthProperty != null) {
-            columnWidthProperty.addListener(
-                new WeakInvalidationListener(weakColumnWidthListener));
+            columnWidthProperty.addListener(weakColumnWidthListener);
         }
 
         registerChangeListener(control.visibleProperty(), "VISIBLE");
@@ -93,6 +92,15 @@ public abstract class TableCellSkinBase<C extends IndexedCell, B extends CellBeh
         if ("VISIBLE".equals(p)) {
             getSkinnable().setVisible(columnVisibleProperty().get());
         }
+    }
+    
+    @Override public void dispose() {
+        ReadOnlyDoubleProperty columnWidthProperty = columnWidthProperty();
+        if (columnWidthProperty != null) {
+            columnWidthProperty.removeListener(weakColumnWidthListener);
+        }
+        
+        super.dispose();
     }
     
     @Override protected void layoutChildren(final double x, final double y,
