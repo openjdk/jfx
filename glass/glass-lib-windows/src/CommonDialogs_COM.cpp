@@ -110,6 +110,7 @@ void SetFilters(IFileDialogPtr pDialog, jobjectArray jFilters)
     }
 
     OLE_TRY
+    OLE_HRT( pDialog->SetDefaultExtension(L"") );
     OLE_HRT( pDialog->SetFileTypes(size, filterSpec) );
     OLE_CATCH
 
