@@ -226,7 +226,7 @@
     </macrodef>
 
     <!-- depend on "init" to ensure project properties are loaded -->
-    <target name="launcher-win" if="isWindows" depends="init">
+    <target name="launcher-win-via-vs" if="isWindows" depends="init">
         <do-vs-build-custom
             proj-dir="native/windows"
             build-type="Release"
@@ -243,7 +243,142 @@
               todir="${build.classes.dir}/com/sun/javafx/tools/resource/windows"/>
     </target>
 
-    <target name="launcher-mac" if="isMacOSX" depends="init">
+    <!--Only builds release version right now, will have to add debug version-->
+    <target name="launcher-win" if="isWindows" depends="init">
+        <property name="cl-options"
+                  value="/c /Zi /nologo /I${platform.home}/include
+/I${platform.home}/include/win32 /W3 /WX- /O2 /Oi /Oy- /GL /D WIN32 /D NDEBUG
+/D _WINDOWS /D _UNICODE /D UNICODE /Gm- /EHsc /MT /GS /Gy /fp:precise /Zc:wchar_t
+/Zc:forScope /Fo&quot;Release\\&quot; /Gd /TP /analyze-"/>
+        <mkdir dir="native\windows\Release"/>
+        <!--This mimics how Visual Studio creates the exes, cl, link, mt-->
+        <do-cl
+            dir="native\windows"
+            options="${cl-options} WinLauncher.cpp"
+         />
+        <do-link
+            dir="native\windows"
+            output-dir="Release"
+            main-file="WinLauncher"
+            additional-options="/SUBSYSTEM:WINDOWS"
+        />
+        <do-manifest
+            dir="native\windows"
+            output-dir="Release"
+            main-file="WinLauncher"
+         />
+        <echo message="Copy WinLauncher.exe to ${build.classes.dir}/com/sun/javafx/tools/resource/windows"/>
+        <copy file="native/windows/Release/WinLauncher.exe"
+              todir="${build.classes.dir}/com/sun/javafx/tools/resource/windows"/>
+        <do-cl
+            dir="native\windows"
+            options="${cl-options} IconSwap.cpp"
+         />
+        <do-link
+            dir="native\windows"
+            output-dir="Release"
+            main-file="IconSwap"
+            additional-options="/SUBSYSTEM:CONSOLE"
+        />
+        <do-manifest
+            dir="native\windows"
+            output-dir="Release"
+            main-file="IconSwap"
+         />
+        <echo message="Copy IconSwap.exe to ${build.classes.dir}/com/sun/javafx/tools/resource/windows"/>
+        <copy file="native/windows/Release/IconSwap.exe"
+              todir="${build.classes.dir}/com/sun/javafx/tools/resource/windows"/>
+    </target>
+
+   <property name="cmd.utility" location="${systemroot.path}/System32/cmd.exe"/>
+
+   <macrodef name="do-link">
+        <!-- Does a Visual Studio link -->
+        <attribute name="dir"/>
+        <attribute name="output-dir"/>
+        <attribute name="main-file" />
+        <attribute name="additional-options"/>
+           <sequential>
+              <local name="link-options"/>
+              <!--This mimics the options that Visual Studio linker creates-->
+              <property name="link-options"
+                        value="/OUT:&quot;@{output-dir}\@{main-file}.exe&quot;
+/MANIFEST /ManifestFile:&quot;@{output-dir}\@{main-file}.exe.intermediate.manifest&quot;
+/MANIFESTUAC:&quot;level='asInvoker' uiAccess='false'&quot;
+/PDB:&quot;@{output-dir}\@{main-file}.pdb&quot;
+/IMPLIB:&quot;@{output-dir}\@{main-file}.lib&quot;
+kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib
+shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib
+/INCREMENTAL:NO /NOLOGO /DEBUG /OPT:REF /OPT:ICF /LTCG
+/TLBID:1 /DYNAMICBASE /NXCOMPAT /MACHINE:X86"
+                />
+
+        <property file="${vs.properties}"/>
+            <property name="link.utility" value="&quot;${windows.vs.MSVCDIR}/bin/link.exe&quot;"/>
+            <echo message="STARTING: cd @{dir} ; ${link.utility} ${link-options} @{additional-options} @{output-dir}\@{main-file}"/>
+
+            <exec dir="@{dir}"
+                  executable="${link.utility}"
+                  failonerror="true">
+                <env key="VCINSTALLDIR"  value="${windows.vs.VCINSTALLDIR}"/>
+                <env key="VSINSTALLDIR"  value="${windows.vs.VSINSTALLDIR}"/>
+                <env key="DEVENVDIR"     value="${windows.vs.DEVENVDIR}"/>
+                <env key="MSVCDIR"       value="${windows.vs.MSVCDIR}"/>
+                <env key="INCLUDE"       value="${windows.vs.INCLUDE}"/>
+                <env key="LIB"           value="${windows.vs.LIB}"/>
+                <env key="LIBPATH"       value="${windows.vs.LIBPATH}"/>
+                <env key="PATH"          value="${platform.home}/bin;${windows.vs.PATH}"/>
+                <env key="CONF"          value="${build.conf}"/>
+                <env key="JAVA_HOME"     value="${platform.home}"/>
+                <env key="JDK_HOME"      value="${platform.home}"/>
+                <env key="DXSDK_DIR"     value="${dxsdk.path}"/>
+                <arg line="${link-options}"/>
+                <arg line="@{additional-options}"/>
+                <arg value="@{output-dir}\@{main-file}"/>
+            </exec>
+            <echo message="FINISHED: cd @{dir} ; ${link.utility} ${link-options}
+@{additional-options} @{output-dir}\@{main-file}"/>
+        </sequential>
+    </macrodef>
+
+   <macrodef name="do-manifest">
+        <!-- Does a Visual Studio link -->
+        <attribute name="dir"/>
+        <attribute name="output-dir"/>
+        <attribute name="main-file" />
+        <sequential>
+            <local name="mt-options"/>
+            <property name="mt-options"
+                      value="/outputresource:@{output-dir}\@{main-file}.exe;#1
+/manifest @{output-dir}\@{main-file}.exe.intermediate.manifest" />
+
+            <property file="${vs.properties}"/>
+            <property name="mt.utility" value="mt.exe"/>
+            <echo message="STARTING: cd @{dir} ;  ${mt.utility} ${mt-options}"/>
+
+            <exec dir="@{dir}"
+                  executable="${cmd.utility}"
+                  failonerror="true">
+                <env key="VCINSTALLDIR"  value="${windows.vs.VCINSTALLDIR}"/>
+                <env key="VSINSTALLDIR"  value="${windows.vs.VSINSTALLDIR}"/>
+                <env key="DEVENVDIR"     value="${windows.vs.DEVENVDIR}"/>
+                <env key="MSVCDIR"       value="${windows.vs.MSVCDIR}"/>
+                <env key="INCLUDE"       value="${windows.vs.INCLUDE}"/>
+                <env key="LIB"           value="${windows.vs.LIB}"/>
+                <env key="LIBPATH"       value="${windows.vs.LIBPATH}"/>
+                <env key="PATH"          value="${platform.home}/bin;${windows.vs.PATH}"/>
+                <env key="CONF"          value="${build.conf}"/>
+
+                <arg value="/A"/>
+                <arg value="/C"/>
+                <arg value="${mt.utility}"/>
+                <arg line="${mt-options}"/>
+            </exec>
+            <echo message="FINISHED: cd @{dir} ; ${mt.utility} ${mt-options}"/>
+        </sequential>
+    </macrodef>
+
+   <target name="launcher-mac" if="isMacOSX" depends="init">
         <!-- add launcher binary to classes tree
              jar will pick it from there -->
         <property name="macLauncherDir"
