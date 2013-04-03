@@ -488,7 +488,9 @@ final public class StyleManager {
     private void clearCache(StylesheetContainer sc) {
 
         removeFromCacheMap(sc);
-        
+
+        if (sc == null) return;
+
         // clean up image cache by removing images from the cache that 
         // might have come from this stylesheet
         cleanUpImageCache(sc.fname);
