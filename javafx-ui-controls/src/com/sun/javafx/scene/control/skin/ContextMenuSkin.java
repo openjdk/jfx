@@ -32,9 +32,10 @@ import javafx.scene.Node;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Menu;
 import javafx.scene.control.Skin;
-
-import com.sun.javafx.PlatformUtil;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.Region;
+
 import com.sun.javafx.application.PlatformImpl;
 import com.sun.javafx.scene.control.behavior.TwoLevelFocusPopupBehavior;
 
@@ -54,6 +55,23 @@ public class ContextMenuSkin implements Skin<ContextMenu> {
     private ContextMenu popupMenu;
     
     private final Region root;
+    
+    // Fix for RT-18247
+    private final EventHandler<KeyEvent> keyListener = new EventHandler<KeyEvent>() {
+        @Override public void handle(KeyEvent event) {
+            if (event.getEventType() != KeyEvent.KEY_PRESSED) return;
+            
+            // We only care if the root container still has focus
+            if (! root.isFocused()) return;
+            
+            final KeyCode code = event.getCode();
+            switch (code) {
+                case ENTER: 
+                case SPACE: popupMenu.hide(); return;
+                default:    return;
+            }
+        }
+    };
 
     /***/
     public ContextMenuSkin(final ContextMenu popupMenu) {
@@ -65,12 +83,21 @@ public class ContextMenuSkin implements Skin<ContextMenu> {
             @Override public void handle(Event event) {
                 Node cmContent = popupMenu.getSkin().getNode();
                 if (cmContent != null) cmContent.requestFocus();
+                
+                root.addEventHandler(KeyEvent.KEY_PRESSED, keyListener);
+            }
+        });
+        popupMenu.addEventHandler(Menu.ON_HIDDEN, new EventHandler<Event>() {
+            @Override public void handle(Event event) {
+                Node cmContent = popupMenu.getSkin().getNode();
+                if (cmContent != null) cmContent.requestFocus();
+                
+                root.removeEventHandler(KeyEvent.KEY_PRESSED, keyListener);
             }
         });
 
         if (PlatformImpl.isSupported(ConditionalFeature.INPUT_TOUCH) &&
             popupMenu.getStyleClass().contains("text-input-context-menu")) {
-
             root = new EmbeddedTextContextMenuContent(popupMenu);
         } else {
             root = new ContextMenuContent(popupMenu);
