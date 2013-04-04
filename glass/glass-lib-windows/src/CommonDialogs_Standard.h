@@ -27,7 +27,7 @@
 #define _COMMONDIALOGS_STANDARD_INCLUDED_
 
 jobject StandardFileChooser_Show(HWND owner, LPCTSTR folder, LPCTSTR filename, LPCTSTR title, jint type,
-                                      jboolean multipleMode, jobjectArray jFilters);
+                                      jboolean multipleMode, jobjectArray jFilters, jint defaultFilterIndex);
 
 jstring StandardFolderChooser_Show(HWND owner, LPCTSTR folder, LPCTSTR title);
 

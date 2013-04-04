@@ -1622,7 +1622,8 @@ public final class QuantumToolkit extends Toolkit implements ToolkitInterface {
                             ? CommonDialogs.Type.SAVE
                             : CommonDialogs.Type.OPEN,
                     (fileChooserType == FileChooserType.OPEN_MULTIPLE),
-                    convertExtensionFilters(extensionFilters));
+                    convertExtensionFilters(extensionFilters),
+                    0);
 
             return result.getFiles();
         } finally {

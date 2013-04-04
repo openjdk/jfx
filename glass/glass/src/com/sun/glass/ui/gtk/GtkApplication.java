@@ -42,7 +42,6 @@ import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
-import java.util.List;
 import java.util.Map;
 
 final class GtkApplication extends Application implements InvokeLaterDispatcher.InvokeLaterSubmitter {
@@ -282,8 +281,12 @@ final class GtkApplication extends Application implements InvokeLaterDispatcher.
     @Override native protected Screen[] staticScreen_getScreens();
 
     @Override
-    protected FileChooserResult staticCommonDialogs_showFileChooser(Window owner, String folder, String filename, String title, int type, boolean multipleMode, ExtensionFilter[] extensionFilters) {
-        return GtkCommonDialogs.showFileChooser(owner, folder, filename, title, type, multipleMode, extensionFilters);
+    protected FileChooserResult staticCommonDialogs_showFileChooser(
+            Window owner, String folder, String filename, String title,
+            int type, boolean multipleMode, ExtensionFilter[] extensionFilters, int defaultFilterIndex) {
+
+        return GtkCommonDialogs.showFileChooser(owner, folder, filename, title,
+                type, multipleMode, extensionFilters, defaultFilterIndex);
     }
 
     @Override

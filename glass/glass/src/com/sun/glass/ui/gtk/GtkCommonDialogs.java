@@ -29,7 +29,6 @@ import com.sun.glass.ui.CommonDialogs.FileChooserResult;
 import com.sun.glass.ui.Window;
 
 import java.io.File;
-import java.util.List;
 
 final class GtkCommonDialogs {
  
@@ -40,7 +39,8 @@ final class GtkCommonDialogs {
                                             String title,
                                             int type,
                                             boolean multipleMode,
-                                            ExtensionFilter[] extensionFilters);
+                                            ExtensionFilter[] extensionFilters,
+                                            int defaultFilterIndex);
 
     private static native String _showFolderChooser(long parent,
                                                     String folder,
@@ -52,11 +52,11 @@ final class GtkCommonDialogs {
                                     String title,
                                     int type,
                                     boolean multipleMode,
-                                    ExtensionFilter[] extensionFilters) {
+                                    ExtensionFilter[] extensionFilters, int defaultFilterIndex) {
 
         if (owner != null) owner.setEnabled(false);
         FileChooserResult result = _showFileChooser(owner == null? 0L : owner.getNativeHandle(),
-                folder, filename, title, type, multipleMode, extensionFilters);
+                folder, filename, title, type, multipleMode, extensionFilters, defaultFilterIndex);
         if (owner != null) owner.setEnabled(true);
         return result;
     }

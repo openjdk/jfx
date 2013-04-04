@@ -43,18 +43,18 @@ final class WinCommonDialogs {
     }
 
     private static native FileChooserResult _showFileChooser(long owner, String folder, String filename, String title, int type,
-                                                    boolean multipleMode, ExtensionFilter[] extensionFilters);
+                                                    boolean multipleMode, ExtensionFilter[] extensionFilters, int defaultFilterIndex);
 
     private static native String _showFolderChooser(long owner, String folder, String title);
 
     static FileChooserResult showFileChooser_impl(Window owner, String folder, String filename, String title, int type,
-                                         boolean multipleMode, ExtensionFilter[] extensionFilters) {
+                                         boolean multipleMode, ExtensionFilter[] extensionFilters, int defaultFilterIndex) {
         if (owner != null) {
             ((WinWindow)owner).setDeferredClosing(true);
         }
         try {
             return _showFileChooser(owner != null ? owner.getNativeWindow() : 0L,
-                    folder, filename, title, type, multipleMode, extensionFilters);
+                    folder, filename, title, type, multipleMode, extensionFilters, defaultFilterIndex);
         } finally {
             if (owner != null) {
                 ((WinWindow)owner).setDeferredClosing(false);
