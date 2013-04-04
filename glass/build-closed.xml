@@ -61,6 +61,14 @@
       <antcall target="copy-sdk-binaries-linux-lens"/>
     </target>
 
+    <target name="copy-sdk-binaries-android" if="isAndroid">
+      <copy todir="${jfx.sdk.desktop.dir}" flatten="true">
+        <fileset dir="${basedir}">
+          <include name="glass-lib-lens/libs/${cross.platform.arch}/*.so"/>
+        </fileset>
+      </copy>
+    </target>
+
     <target name="copy-sdk-binaries" depends="glass-dist">
       <copy todir="${jfx.sdk.desktop.dir}" flatten="true">
         <fileset refid="glass.libraries.to.be.copied"/>
@@ -68,6 +76,7 @@
       <antcall target="copy-sdk-binaries-linux"/>
       <antcall target="copy-sdk-binaries-macosx"/>
       <antcall target="copy-sdk-binaries-ios"/>
+      <antcall target="copy-sdk-binaries-android"/>
       <antcall target="copy-sdk-binaries-windows"/>
     </target>
 

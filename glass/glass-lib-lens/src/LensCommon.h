@@ -26,6 +26,9 @@
 #ifndef LENS_COMMON_H
 #define LENS_COMMON_H
 
+#ifdef ANDROID_NDK
+#include <stdio.h>
+#endif
 #include "stdlib.h"
 #include "string.h"
 #include <unistd.h>
@@ -1469,10 +1472,6 @@ extern jint glass_log_level;
  * @param level the logging level (e.g. LOG_WARNING)
  * @param ... a format string and parameters in printf format
  */
-#define GLASS_LOG(level,...) \
-    GLASS_IF_LOG(level) \
-    glass_logf(level, __func__, __FILE__, __LINE__, __VA_ARGS__)
-
 /** Logging levels, with same meanings as in java.util.logging.Level */
 #define GLASS_LOG_LEVEL_SEVERE  1000
 #define GLASS_LOG_LEVEL_WARNING 900
@@ -1482,6 +1481,20 @@ extern jint glass_log_level;
 #define GLASS_LOG_LEVEL_FINER   400
 #define GLASS_LOG_LEVEL_FINEST  300
 
+#ifdef ANDROID_NDK
+// Can't use java logger in jvm8 on Android. Remove when this issue is fixed.
+#include <android/log.h>
+#define TAG "GLASS"
+#define LOGI(...) ((void)__android_log_print(ANDROID_LOG_INFO, __VA_ARGS__))
+#define LOGE(...) ((void)__android_log_print(ANDROID_LOG_ERROR, __VA_ARGS__))
+#define LOGV(...) ((void)__android_log_print(ANDROID_LOG_VERBOSE, __VA_ARGS__))
+#define GLASS_LOG(level,...) \
+        LOGI(TAG, __VA_ARGS__)
+#else
+#define GLASS_LOG(level,...) \
+    GLASS_IF_LOG(level) \
+    glass_logf(level, __func__, __FILE__, __LINE__, __VA_ARGS__)
+
 #define GLASS_IF_LOG_SEVERE  GLASS_IF_LOG(GLASS_LOG_LEVEL_SEVERE)
 #define GLASS_IF_LOG_WARNING GLASS_IF_LOG(GLASS_LOG_LEVEL_WARNING)
 #define GLASS_IF_LOG_INFO    GLASS_IF_LOG(GLASS_LOG_LEVEL_INFO)
@@ -1489,6 +1502,7 @@ extern jint glass_log_level;
 #define GLASS_IF_LOG_FINE    GLASS_IF_LOG(GLASS_LOG_LEVEL_FINE)
 #define GLASS_IF_LOG_FINER   GLASS_IF_LOG(GLASS_LOG_LEVEL_FINER)
 #define GLASS_IF_LOG_FINEST  GLASS_IF_LOG(GLASS_LOG_LEVEL_FINEST)
+#endif
 
 #ifdef NO_LOGGING
 #define GLASS_LOG_SEVERE(...)  (void)0, ##__VA_ARGS__
