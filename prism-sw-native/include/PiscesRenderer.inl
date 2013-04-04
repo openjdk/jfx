@@ -381,6 +381,13 @@ renderer_setTexture(Renderer* rdr, jint paintType, jint* data, jint width, jint 
 }
 
 static INLINE void
+renderer_setGamma(Renderer* rdr, jfloat gamma, jfloat invgamma)
+{
+    rdr->_gamma = gamma;
+    rdr->_invgamma = invgamma;
+}
+
+static INLINE void
 renderer_setMask(Renderer* rdr, jint maskType, jbyte* data, jint width, jint height, jboolean freeData)
 {
     if (rdr->_mask_free == JNI_TRUE) {
