@@ -40,6 +40,7 @@ import java.util.List;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.collections.FXCollections;
+import javafx.collections.ListChangeListener.Change;
 
 import javafx.scene.control.TreeTableColumn.CellEditEvent;
 
@@ -125,6 +126,20 @@ public class TreeTableCell<S,T> extends IndexedCell<T> {
         }
     };
     
+    private ListChangeListener<String> columnStyleClassListener = new ListChangeListener<String>() {
+        @Override public void onChanged(Change<? extends String> c) {
+            while (c.next()) {
+                if (c.wasRemoved()) {
+                    getStyleClass().removeAll(c.getRemoved());
+                }
+                
+                if (c.wasAdded()) {
+                    getStyleClass().addAll(c.getAddedSubList());
+                }
+            }
+        }
+    };
+    
     private final WeakListChangeListener<TreeTablePosition<S,T>> weakSelectedListener = 
             new WeakListChangeListener<TreeTablePosition<S,T>>(selectedListener);
     private final WeakInvalidationListener weakFocusedListener = 
@@ -135,6 +150,8 @@ public class TreeTableCell<S,T> extends IndexedCell<T> {
             new WeakInvalidationListener(editingListener);
     private final WeakListChangeListener<TreeTableColumn<S,?>> weakVisibleLeafColumnsListener =
             new WeakListChangeListener<TreeTableColumn<S,?>>(visibleLeafColumnsListener);
+    private final WeakListChangeListener<String> weakColumnStyleClassListener =
+            new WeakListChangeListener<String>(columnStyleClassListener);
 
     
     /***************************************************************************
@@ -551,7 +568,19 @@ public class TreeTableCell<S,T> extends IndexedCell<T> {
      *         for developers or designers to access this function directly.
      */
     public final void updateTreeTableColumn(TreeTableColumn col) {
+        // remove style class of existing tree table column, if it is non-null
+        TreeTableColumn<S,T> oldCol = getTableColumn();
+        if (oldCol != null) {
+            oldCol.getStyleClass().removeListener(weakColumnStyleClassListener);
+            getStyleClass().removeAll(oldCol.getStyleClass());
+        }
+        
         setTableColumn(col);
+        
+        if (col != null) {
+            getStyleClass().addAll(col.getStyleClass());
+            col.getStyleClass().addListener(weakColumnStyleClassListener);
+        }
     }
 
 
