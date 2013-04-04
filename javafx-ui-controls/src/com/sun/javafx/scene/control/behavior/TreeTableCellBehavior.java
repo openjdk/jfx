@@ -25,7 +25,6 @@
 
 package com.sun.javafx.scene.control.behavior;
 
-import javafx.scene.control.MultipleSelectionModel;
 import javafx.scene.control.TableColumnBase;
 import javafx.scene.control.TablePositionBase;
 import javafx.scene.control.TableSelectionModel;
@@ -33,13 +32,12 @@ import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeTableCell;
 import javafx.scene.control.TreeTableColumn;
 import javafx.scene.control.TreeTableView;
-import javafx.scene.control.TreeView;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 
 /**
  */
-public class TreeTableCellBehavior extends TableCellBehaviorBase<TreeTableCell> {
+public class TreeTableCellBehavior<S,T> extends TableCellBehaviorBase<S, TreeTableCell<S,T>> {
     
     /***************************************************************************
      *                                                                         *
@@ -47,7 +45,7 @@ public class TreeTableCellBehavior extends TableCellBehaviorBase<TreeTableCell> 
      *                                                                         *
      **************************************************************************/    
 
-    public TreeTableCellBehavior(TreeTableCell control) {
+    public TreeTableCellBehavior(TreeTableCell<S,T> control) {
         super(control);
     }
     
@@ -60,7 +58,7 @@ public class TreeTableCellBehavior extends TableCellBehaviorBase<TreeTableCell> 
      **************************************************************************/          
 
     /** @{@inheritDoc} */
-    @Override TreeTableView getTableControl() {
+    @Override TreeTableView<S> getTableControl() {
         return getControl().getTreeTableView();
     }
 
@@ -75,12 +73,12 @@ public class TreeTableCellBehavior extends TableCellBehaviorBase<TreeTableCell> 
     }
 
     /** @{@inheritDoc} */
-    @Override TreeTableView.TreeTableViewSelectionModel getSelectionModel() {
+    @Override TreeTableView.TreeTableViewSelectionModel<S> getSelectionModel() {
         return getTableControl().getSelectionModel();
     }
 
     /** @{@inheritDoc} */
-    @Override TreeTableView.TreeTableViewFocusModel getFocusModel() {
+    @Override TreeTableView.TreeTableViewFocusModel<S> getFocusModel() {
         return getTableControl().getFocusModel();
     }
 
@@ -115,10 +113,10 @@ public class TreeTableCellBehavior extends TableCellBehaviorBase<TreeTableCell> 
     }
     
     @Override protected void simpleSelect(MouseEvent e) {
-        TreeTableView tv = getControl().getTreeTableView();
+        TreeTableView<S> tv = getControl().getTreeTableView();
         TreeItem treeItem = getControl().getTreeTableRow().getTreeItem();
         int index = getControl().getIndex();
-        TreeTableColumn column = getTableColumn();
+        TreeTableColumn<S,T> column = getTableColumn();
         TableSelectionModel sm = tv.getSelectionModel();
         
         boolean isAlreadySelected = sm.isSelected(index, column);

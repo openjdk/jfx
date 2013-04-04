@@ -25,7 +25,6 @@
 
 package com.sun.javafx.scene.control.behavior;
 
-import com.sun.javafx.PlatformUtil;
 import com.sun.javafx.application.PlatformImpl;
 import java.util.WeakHashMap;
 import javafx.application.ConditionalFeature;
@@ -41,7 +40,7 @@ import javafx.scene.input.MouseEvent;
 
 /**
  */
-public abstract class TableCellBehaviorBase<T extends IndexedCell> extends CellBehaviorBase<T> {
+public abstract class TableCellBehaviorBase<S, T extends IndexedCell> extends CellBehaviorBase<T> {
     
     /***************************************************************************
      *                                                                         *
@@ -117,7 +116,7 @@ public abstract class TableCellBehaviorBase<T extends IndexedCell> extends CellB
      *************************************************************************/  
     
     abstract Control getTableControl(); // tableCell.getTreeTableView()
-    abstract TableColumnBase getTableColumn(); // getControl().getTableColumn()
+    abstract TableColumnBase<S, T> getTableColumn(); // getControl().getTableColumn()
     abstract int getItemCount();        // tableView.impl_getTreeItemCount()
     abstract TableSelectionModel getSelectionModel();
     abstract TableFocusModel getFocusModel();
