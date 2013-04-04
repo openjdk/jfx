@@ -1475,4 +1475,35 @@ public class TreeTableViewTest {
         assertEquals(p3, root.getChildren().get(3));
         assertEquals(p4, root.getChildren().get(4));
     }
+    
+    @Test public void test_rt29331() {
+        TreeTableView<Person> table = new TreeTableView<Person>();
+        
+        // p1 == lowest first name
+        TreeItem<Person> p0, p1, p2, p3, p4;
+        
+        TreeTableColumn firstNameCol = new TreeTableColumn("First Name");
+        firstNameCol.setCellValueFactory(new PropertyValueFactory<Person, String>("firstName"));
+
+        TreeTableColumn lastNameCol = new TreeTableColumn("Last Name");
+        lastNameCol.setCellValueFactory(new PropertyValueFactory<Person, String>("lastName"));
+
+        TreeTableColumn emailCol = new TreeTableColumn("Email");
+        emailCol.setCellValueFactory(new PropertyValueFactory<Person, String>("email"));
+        
+        TreeTableColumn parentColumn = new TreeTableColumn<>("Parent");
+        parentColumn.getColumns().addAll(firstNameCol, lastNameCol, emailCol);
+        
+        table.getColumns().addAll(parentColumn);
+        
+        // table is setup, now hide the 'last name' column
+        emailCol.setVisible(false);
+        assertFalse(emailCol.isVisible());
+        
+        // reorder columns inside the parent column
+        parentColumn.getColumns().setAll(emailCol, firstNameCol, lastNameCol);
+        
+        // the email column should not become visible after this, but it does
+        assertFalse(emailCol.isVisible());
+    }
 }

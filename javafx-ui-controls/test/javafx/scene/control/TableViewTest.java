@@ -1001,4 +1001,32 @@ public class TableViewTest {
         assertEquals(p3, table.getItems().get(3));
         assertEquals(p4, table.getItems().get(4));
     }
+    
+    @Test public void test_rt29331() {
+        TableView<Person> table = new TableView<Person>();
+        
+        TableColumn firstNameCol = new TableColumn("First Name");
+        firstNameCol.setCellValueFactory(new PropertyValueFactory<Person, String>("firstName"));
+
+        TableColumn lastNameCol = new TableColumn("Last Name");
+        lastNameCol.setCellValueFactory(new PropertyValueFactory<Person, String>("lastName"));
+
+        TableColumn emailCol = new TableColumn("Email");
+        emailCol.setCellValueFactory(new PropertyValueFactory<Person, String>("email"));
+        
+        TableColumn parentColumn = new TableColumn<>("Parent");
+        parentColumn.getColumns().addAll(firstNameCol, lastNameCol, emailCol);
+        
+        table.getColumns().addAll(parentColumn);
+        
+        // table is setup, now hide the 'last name' column
+        emailCol.setVisible(false);
+        assertFalse(emailCol.isVisible());
+        
+        // reorder columns inside the parent column
+        parentColumn.getColumns().setAll(emailCol, firstNameCol, lastNameCol);
+        
+        // the email column should not become visible after this, but it does
+        assertFalse(emailCol.isVisible());
+    }
 }

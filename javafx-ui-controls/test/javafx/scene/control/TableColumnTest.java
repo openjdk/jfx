@@ -298,12 +298,13 @@ public class TableColumnTest {
         assertTrue(child.visibleProperty().get());
     }
 
-    @Test public void visibleIsFalseWhenAddedToParentColumnWithVisibleFalse() {
+    @Test public void visibleIsNotChangedWhenAddedToParentColumnWithVisibleFalse() {
         TableColumn child = new TableColumn();
+        child.setVisible(true);
         column.setVisible(false);
         column.getColumns().add(child);
-        assertFalse(child.isVisible());
-        assertFalse(child.visibleProperty().get());
+        assertTrue(child.isVisible());
+        assertFalse(column.isVisible());
     }
 
     @Test public void visibleIsNotChangedWhenRemovedFromParentColumn() {
