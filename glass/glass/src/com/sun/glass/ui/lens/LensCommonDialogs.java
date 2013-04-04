@@ -39,7 +39,8 @@ import java.security.PrivilegedAction;
 final class LensCommonDialogs {
 
     static List<File> showFileChooser_impl(String folder, String title, int type,
-                                         boolean multipleMode, ExtensionFilter[] extensionFilters) {
+                                         boolean multipleMode, ExtensionFilter[] extensionFilters,
+                                         int defaultFilterIndex) {
 
         LensLogger.getLogger().severe("Not implemented");
         throw new UnsupportedOperationException("not implmented");

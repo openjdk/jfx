@@ -189,7 +189,7 @@ public final class IosApplication extends Application {
     }
 
     @Override
-    protected FileChooserResult staticCommonDialogs_showFileChooser(Window owner, String folder, String filename, String title, int type, boolean multipleMode, ExtensionFilter[] extensionFilters) {
+    protected FileChooserResult staticCommonDialogs_showFileChooser(Window owner, String folder, String filename, String title, int type, boolean multipleMode, ExtensionFilter[] extensionFilters, int defaultFilterIndex) {
         return new FileChooserResult();
     }
 

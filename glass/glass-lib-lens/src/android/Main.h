@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,12 +23,41 @@
  * questions.
  */
 
-#ifndef _COMMONDIALOGS_STANDARD_INCLUDED_
-#define _COMMONDIALOGS_STANDARD_INCLUDED_
+#ifndef MAIN_H_
+#define MAIN_H_
 
-jobject StandardFileChooser_Show(HWND owner, LPCTSTR folder, LPCTSTR filename, LPCTSTR title, jint type,
-                                      jboolean multipleMode, jobjectArray jFilters, jint defaultFilterIndex);
+#include <android_native_app_glue.h>
 
-jstring StandardFolderChooser_Show(HWND owner, LPCTSTR folder, LPCTSTR title);
+#define TRUE  1
+#define FALSE 0;
 
-#endif // _COMMONDIALOGS_STANDARD_INCLUDED_
+#define CHECK_JNI_EXCEPTION(env) \
+        if ((*env)->ExceptionCheck(env)) {\
+            return;\
+        }
+
+#define CHECK_JNI_EXCEPTION_RET(env, ret) \
+        if ((*env)->ExceptionCheck(env)) {\
+                return ret;\
+        }
+
+typedef uint8_t boolean;
+
+struct _DvkContext {
+   struct android_app *app;
+};
+
+typedef struct _DvkContext *DvkContext;
+
+ANativeWindow *getAndroidNativeWindow();
+
+DvkContext getDvkContext();
+
+const char *getExternalDataPath();
+
+void dvkEventLoop(DvkContext context);
+
+//jni references
+extern jmethodID jRunnableRun;
+
+#endif /* MAIN_H_ */

@@ -78,13 +78,14 @@ public class PlatformUtil {
             doEGLCompositing = false;
     }
 
+    private static final boolean ANDROID = "android".equals(System.getProperty("javafx.platform"));
     private static final boolean WINDOWS = os.startsWith("Windows");
     private static final boolean WINDOWS_VISTA_OR_LATER = WINDOWS && versionNumberGreaterThanOrEqualTo(6.0f);
     private static final boolean WINDOWS_7_OR_LATER = WINDOWS && versionNumberGreaterThanOrEqualTo(6.1f);
     private static final boolean MAC = os.startsWith("Mac");
-    private static final boolean LINUX = os.startsWith("Linux");
+    private static final boolean LINUX = os.startsWith("Linux") && !ANDROID;
     private static final boolean SOLARIS = os.startsWith("SunOS");
-    private static final boolean IOS = os.startsWith("iOS");
+    private static final boolean IOS = os.startsWith("iOS");    
 
     /**
      * Utility method used to determine whether the version number as
@@ -256,6 +257,7 @@ public class PlatformUtil {
     private static void loadProperties() {
         final String vmname = System.getProperty("java.vm.name");
         final String arch = System.getProperty("os.arch");
+
         if (! (javafxPlatform != null ||
                 (arch != null && arch.equals("arm")) ||
                 (vmname != null && vmname.indexOf("Embedded") > 0))) {
@@ -270,17 +272,30 @@ public class PlatformUtil {
                 // Then in the installation directory of the JRE
                 if (rtProperties.exists()) {
                     loadPropertiesFromFile(rtProperties);
-                } else {
-                    String javaHome = System.getProperty("java.home");
-                    File javaHomeProperties = new File(javaHome,
-                                                       "lib" + File.separator
-                                                       + propertyFilename);
-                    if (javaHomeProperties.exists()) {
-                        loadPropertiesFromFile(javaHomeProperties);
-                    } 
+                    return null;
+                } 
+                String javaHome = System.getProperty("java.home");
+                File javaHomeProperties = new File(javaHome,
+                                                   "lib" + File.separator
+                                                   + propertyFilename);
+                if (javaHomeProperties.exists()) {
+                    loadPropertiesFromFile(javaHomeProperties);
+                    return null;
+                } 
+                
+                String javafxRuntimePath = System.getProperty("javafx.runtime.path");
+                File javafxRuntimePathProperties = new File(javafxRuntimePath,
+                                                         File.separator + propertyFilename);
+                if (javafxRuntimePathProperties.exists()) {
+                   loadPropertiesFromFile(javafxRuntimePathProperties);
+                   return null;
                 }
                 return null;
             }
         });
+    }
+    
+    public static boolean isAndroid() {
+       return ANDROID;
     }
 }

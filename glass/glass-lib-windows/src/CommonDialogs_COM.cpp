@@ -95,7 +95,7 @@ wchar_t *GetExtensions(JNIEnv *env, jobject jFilter)
     return ext;
 }
 
-void SetFilters(IFileDialogPtr pDialog, jobjectArray jFilters)
+void SetFilters(IFileDialogPtr pDialog, jobjectArray jFilters, jint defaultFilterIndex)
 {
     JNIEnv *env = GetEnv();
 
@@ -110,7 +110,11 @@ void SetFilters(IFileDialogPtr pDialog, jobjectArray jFilters)
     }
 
     OLE_TRY
+    OLE_HRT( pDialog->SetDefaultExtension(L"") );
     OLE_HRT( pDialog->SetFileTypes(size, filterSpec) );
+    if (size > 0) {
+        OLE_HRT( pDialog->SetFileTypeIndex(defaultFilterIndex + 1) ); // 1-based index required
+    }
     OLE_CATCH
 
     for (int i = 0; i < size; i++) {
@@ -175,7 +179,7 @@ jobjectArray GetFiles(IFileDialogPtr pDialog, BOOL isCancelled, jint type)
 }
 
 jobject COMFileChooser_Show(HWND owner, LPCTSTR folder, LPCTSTR filename, LPCTSTR title, jint type,
-                                 jboolean multipleMode, jobjectArray jFilters)
+                                 jboolean multipleMode, jobjectArray jFilters, jint defaultFilterIndex)
 {
     OLEHolder _ole_;
     IFileDialogPtr pDialog;
@@ -219,7 +223,7 @@ jobject COMFileChooser_Show(HWND owner, LPCTSTR folder, LPCTSTR filename, LPCTST
     }
 
     if (jFilters != NULL) {
-        SetFilters(pDialog, jFilters);
+        SetFilters(pDialog, jFilters, defaultFilterIndex);
     }
 
     OLE_HR = pDialog->Show(owner);

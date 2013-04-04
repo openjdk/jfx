@@ -1622,30 +1622,10 @@ public final class QuantumToolkit extends Toolkit implements ToolkitInterface {
                             ? CommonDialogs.Type.SAVE
                             : CommonDialogs.Type.OPEN,
                     (fileChooserType == FileChooserType.OPEN_MULTIPLE),
-                    convertExtensionFilters(extensionFilters));
+                    convertExtensionFilters(extensionFilters),
+                    0);
 
-            String extension = result.getExtensionFilter() == null ?
-                null : result.getExtensionFilter().getExtensions().get(0);
-
-            if (fileChooserType == FileChooserType.OPEN || extension == null || extension.endsWith("*")) {
-                return result.getFiles();
-            } else {
-                final List<File> list = new ArrayList<File>(result.getFiles().size());
-                if (extension.startsWith("*")) {
-                    extension = extension.substring(1, extension.length());
-                }
-
-                for (File f : result.getFiles()) {
-                    String filename = f.getAbsolutePath();
-
-                    if (filename.endsWith(extension)) {
-                        list.add(f);
-                    } else {
-                        list.add(new File(filename + extension));
-                    }
-                }
-                return list;
-            }
+            return result.getFiles();
         } finally {
             if (blockedStage != null) {
                 blockedStage.setEnabled(true);

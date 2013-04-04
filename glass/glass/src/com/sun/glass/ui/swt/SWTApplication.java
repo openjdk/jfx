@@ -306,7 +306,9 @@ public final class SWTApplication extends Application {
     }
 
     @Override
-    protected FileChooserResult staticCommonDialogs_showFileChooser(Window owner, String folder, String filename, String title, int type, boolean multipleMode, ExtensionFilter[] extensionFilters) {
+    protected FileChooserResult staticCommonDialogs_showFileChooser(Window owner, String folder,
+                                    String filename, String title, int type, boolean multipleMode,
+                                    ExtensionFilter[] extensionFilters, int defaultFilterIndex) {
         int bits = SWT.APPLICATION_MODAL;
         if (multipleMode) bits |= SWT.MULTI;
         switch (type) {
@@ -326,6 +328,7 @@ public final class SWTApplication extends Application {
         dialog.setFilterNames(filters);
         dialog.setFilterExtensions(extensions);
         dialog.setFilterPath(folder);
+        dialog.setFilterIndex(defaultFilterIndex);
         dialog.setFileName(filename);
         if (dialog.open() == null) return new FileChooserResult();
         String path = dialog.getFilterPath();

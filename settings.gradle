@@ -1,14 +1,14 @@
-include 'build-tools', 'base', 'graphics', 'controls', 'swing', 'swt', /*'web',*/ 'fxml' /*, 'media'*/, 'designTime',
-        /*'graphics:native',*/ 'graphics:effects-jsl', 'graphics:prism-jsl'
-project(':base').projectDir = file('modules/base')
-project(':graphics').projectDir = file('modules/graphics')
-//project(':graphics:native').projectDir = file('modules/graphics/native')
-project(':graphics:effects-jsl').projectDir = file('modules/graphics/effects-jsl')
-project(':graphics:prism-jsl').projectDir = file('modules/graphics/prism-jsl')
-project(':controls').projectDir = file('modules/controls')
-project(':swing').projectDir = file('modules/swing')
-project(':swt').projectDir = file('modules/swt')
-/*project(':media').projectDir = file('modules/media')*/
-//project(':web').projectDir = file('modules/web')
-project(':fxml').projectDir = file('modules/fxml')
-project(':designTime').projectDir = file('modules/designTime')
+include "build-tools", "base", "graphics", "controls", "swing", "swt", "fxml", "designTime",
+        "graphics:effects-jsl", "graphics:prism-jsl",
+        "fxpackager"
+
+project(":base").projectDir = file("modules/base")
+project(":graphics").projectDir = file("modules/graphics")
+project(":graphics:effects-jsl").projectDir = file("modules/graphics/effects-jsl")
+project(":graphics:prism-jsl").projectDir = file("modules/graphics/prism-jsl")
+project(":controls").projectDir = file("modules/controls")
+project(":swing").projectDir = file("modules/swing")
+project(":swt").projectDir = file("modules/swt")
+project(":fxml").projectDir = file("modules/fxml")
+project(":designTime").projectDir = file("modules/designTime")
+project(":fxpackager").projectDir = file("modules/fxpackager")
