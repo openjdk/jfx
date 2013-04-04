@@ -23,11 +23,7 @@
  * questions.
  */
 
-import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.CountDownLatch
-import java.util.concurrent.ExecutorService
-import java.util.concurrent.Executors
-import java.util.concurrent.Future
+import java.util.concurrent.*
 
 /**
  * The main build script for JavaFX.
@@ -621,7 +617,8 @@ allprojects {
         // compiler stuff because otherwise it won't compile on CYGWIN
         // TODO need to file issue with Gradle
         compile.options.useAnt = true
-        compile.options.debug = IS_DEBUG
+        compile.options.debug = true // we always generate debugging info in the class files
+        compile.options.debugOptions.debugLevel = IS_DEBUG ? "source,lines,vars" : "source,lines"
         compile.options.fork = true
         compile.options.forkOptions.executable = JAVAC
         compile.options.warnings = IS_LINT
@@ -1331,6 +1328,7 @@ task jfxrt(type: Jar) {
     group = "Basic"
     description = "Creates the jfxrt.jar"
     archiveName = "build/${COMPILE_TARGET.name}-sdk/rt/lib/ext/jfxrt.jar";
+    includeEmptyDirs = false
     from("modules/base/build/classes/main",
          "modules/base/build/resources/main",
          "modules/graphics/build/classes/main",
@@ -1441,8 +1439,7 @@ task sdk {
 // JavaFX runtime get all permissions by default
 grant codeBase "file:\${javafx.runtime.home}/lib/ext/jfxrt.jar" {
     permission java.security.AllPermission;
-};
-"""
+};"""
 
         // Copy over the javadocs that were generated. This is done rather than just generating
         // the docs into the "right place" because for a cross-compile you only need one set of
