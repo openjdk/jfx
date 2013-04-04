@@ -230,7 +230,11 @@ void glass_inputEvents_updateKeyModifiers(int key, int eventType) {
                 shiftDown++;
                 GLASS_LOG_FINER("SHIFT was pressed shiftDown = %d", shiftDown);
             } else {
-                shiftDown --;
+       #ifdef ANDROID_NDK  
+                shiftDown = 0;
+       #else
+                shiftDown--;
+       #endif
                 GLASS_LOG_FINER("SHIFT was released shiftDown = %d", shiftDown);
             }
             //update mask
@@ -249,7 +253,11 @@ void glass_inputEvents_updateKeyModifiers(int key, int eventType) {
                 ctrlDown++;
                 GLASS_LOG_FINER("CTRL was pressed");
             } else {
+       #ifdef ANDROID_NDK
+                ctrlDown = 0;
+       #else
                 ctrlDown--;
+       #endif
                 GLASS_LOG_FINER("CTRL was released");
             }
             //update mask
@@ -267,8 +275,12 @@ void glass_inputEvents_updateKeyModifiers(int key, int eventType) {
             if (isPressed) {
                 altDown++;
                 GLASS_LOG_FINER("ALT was pressed");
-            } else {
-                altDown --;
+            } else {                
+       #ifdef ANDROID_NDK
+                altDown = 0;
+       #else
+                altDown--;
+       #endif
                 GLASS_LOG_FINER("ALT was released");
             }
             //update mask
@@ -287,7 +299,11 @@ void glass_inputEvents_updateKeyModifiers(int key, int eventType) {
                 metaDown++;
                 GLASS_LOG_FINER("META was pressed");
             } else {
-                metaDown --;
+       #ifdef ANDROID_NDK
+                metaDown = 0;
+       #else
+                metaDown--;
+       #endif
                 GLASS_LOG_FINER("META was released");
             }
             //update mask
