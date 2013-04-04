@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="prism-common" default="all" basedir=".">
+
+  <import file="../build-defs.xml"/>
+   
+  <target name="jheaders">
+        <echo>Generate jheaders for prism-common</echo>
+        <mkdir dir="${native.build.dir}"/>
+       <javah 
+          destdir="${native.build.dir}" 
+          classpath="${prismcom.classes.dir}:${javac.classpath}" >
+         <class name="com.sun.prism.BasicStroke"/>
+         <class name="com.sun.prism.MeshView"/>
+         <class name="com.sun.prism.PhongMaterial"/>
+         <class name="com.sun.prism.PixelFormat"/>
+         <class name="com.sun.prism.image.CachingCompoundImage"/>
+         <class name="com.sun.prism.image.CompoundImage"/>
+         <class name="com.sun.prism.image.CompoundTexture"/>
+         <class name="com.sun.prism.impl.BufferUtil"/>
+         <class name="com.sun.prism.impl.Disposer"/>
+         <class name="com.sun.prism.impl.FactoryResetException"/>
+         <class name="com.sun.prism.impl.GlyphCache"/>
+         <class name="com.sun.prism.impl.VertexBuffer"/>
+         <class name="com.sun.prism.impl.packrect.RectanglePacker"/>
+         <class name="com.sun.prism.impl.paint.LinearGradientContext"/>
+         <class name="com.sun.prism.impl.paint.MultipleGradientContext"/>
+         <class name="com.sun.prism.impl.paint.RadialGradientContext"/>
+         <class name="com.sun.prism.impl.shape.NativePiscesRasterizer"/>
+         <class name="com.sun.prism.paint.Gradient"/>
+         <class name="com.sun.prism.paint.LinearGradient"/>
+         <class name="com.sun.prism.paint.RadialGradient"/>
+      </javah>
+  </target>            
+
+  <target name="compile-native" depends="jheaders">
+   <exec executable="${ndk.build.cmd}" dir="${cpp.dir}" failonerror="true">
+     <arg line="APP_BUILD_SCRIPT=Android.mk NDK_PROJECT_PATH=. TARGET_PLATFORM=${android.ndk.target}"/>
+   </exec> 
+   <copy todir="${native.dist.dir}" flatten="true">
+       <fileset dir="${cpp.dir}/libs" includes="armeabi/libprism-common.so"/>
+   </copy>
+  </target>
+
+  <target name="clean-native">       
+    <delete dir="${cpp.dir}/libs"/>
+      <delete dir="${cpp.dir}/obj"/>
+      <delete dir="${native.dist.dir}"/>
+      <delete dir="${native.build.dir}"/>
+  </target>
+
+</project>
