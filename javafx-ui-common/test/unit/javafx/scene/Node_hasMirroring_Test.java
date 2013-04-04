@@ -49,6 +49,16 @@ public final class Node_hasMirroring_Test extends NodeOrientationTestBase {
                                    inhAutGroup())))));
     }
 
+    private static Scene lriiliWithSubSceneScene() {
+        return ltrScene(
+                   rtlAutGroup(
+                       inhSubScene(
+                           inhAutGroup(
+                               ltrAutGroup(
+                                   inhAutGroup())))));
+    }
+
+
     private static Scene lrIiliScene() {
         return ltrScene(
                    rtlAutGroup(
@@ -88,6 +98,11 @@ public final class Node_hasMirroring_Test extends NodeOrientationTestBase {
                         { lriiliScene(), "...L..", ".M.M.." }, // LRRLLL
                         { lriiliScene(), "....I.", ".M...." }, // LRRRRR
                         { lriiliScene(), "RIIIII", ".M...." }, // RRRRRR
+
+                        {
+                            lriiliWithSubSceneScene(),
+                            "......", ".M..M."
+                        },
 
                         /* effective: LRRRLL, automatic: LRLLLL */
                         { lrIiliScene(), "......", ".MM..." },
