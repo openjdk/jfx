@@ -128,15 +128,15 @@ public class JFXPanel extends JComponent {
 
     private volatile EmbeddedWindow stage;
     private volatile Scene scene;
-    
+
     private final SwingDnD dnd;
 
     private EmbeddedStageInterface stagePeer;
     private EmbeddedSceneInterface scenePeer;
 
     // Dimensions of back buffer used to draw FX content
-    private int pWidth = -1;
-    private int pHeight = -1;
+    private int pWidth;
+    private int pHeight;
 
     // Preferred size set from FX
     private volatile int pPreferredWidth = -1;
@@ -147,6 +147,7 @@ public class JFXPanel extends JComponent {
     private volatile int screenX = 0;
     private volatile int screenY = 0;
 
+    // accessed on EDT only
     private BufferedImage pixelsIm;
 
     private volatile float opacity = 1.0f;
@@ -450,12 +451,7 @@ public class JFXPanel extends JComponent {
     protected void processComponentEvent(ComponentEvent e) {
         switch (e.getID()) {
             case ComponentEvent.COMPONENT_RESIZED: {
-                // It's quite possible to get negative values here, this is not
-                // what JavaFX embedded scenes/stages are ready to
-                pWidth = Math.max(0, getWidth());
-                pHeight = Math.max(0, getHeight());
-                resizePixels();
-                sendResizeEventToFX();
+                updateComponentSize();
                 break;
             }
             case ComponentEvent.COMPONENT_MOVED: {
@@ -469,6 +465,20 @@ public class JFXPanel extends JComponent {
             }
         }
         super.processComponentEvent(e);
+    }
+
+    // called on EDT only
+    private void updateComponentSize() {
+        int oldWidth = pWidth;
+        int oldHeight = pHeight;
+        // It's quite possible to get negative values here, this is not
+        // what JavaFX embedded scenes/stages are ready to
+        pWidth = Math.max(0, getWidth());
+        pHeight = Math.max(0, getHeight());
+        if (oldWidth != pWidth || oldHeight != pHeight) {
+            resizePixels();
+            sendResizeEventToFX();
+        }
     }
 
     // This methods should only be called on EDT
@@ -529,7 +539,7 @@ public class JFXPanel extends JComponent {
         boolean focused = (e.getID() == FocusEvent.FOCUS_GAINED);
         int focusCause = (focused ? AbstractEvents.FOCUSEVENT_ACTIVATED :
                                       AbstractEvents.FOCUSEVENT_DEACTIVATED);
-        
+
         if (focused && (e instanceof CausedFocusEvent)) {
             CausedFocusEvent ce = (CausedFocusEvent)e;
             if (ce.getCause() == CausedFocusEvent.Cause.TRAVERSAL_FORWARD) {
@@ -555,6 +565,7 @@ public class JFXPanel extends JComponent {
         super.processFocusEvent(e);
     }
 
+    // called on EDT only
     private void resizePixels() {
         if ((pWidth <= 0) || (pHeight <= 0)) {
             pixelsIm = null;
@@ -680,10 +691,11 @@ public class JFXPanel extends JComponent {
             }
         });
 
+        updateComponentSize(); // see RT-23603
+
         Platform.runLater(new Runnable() {
             @Override
             public void run() {
-                resizePixels();
                 if ((stage != null) && !stage.isShowing()) {
                     stage.show();
                     firstPanelShown = true;
@@ -705,9 +717,12 @@ public class JFXPanel extends JComponent {
                 if ((stage != null) && stage.isShowing()) {
                     stage.hide();
                 }
-                pixelsIm = null;
             }
         });
+
+        pixelsIm = null;
+        pWidth = 0;
+        pHeight = 0;
 
         super.removeNotify();
 
@@ -756,7 +771,9 @@ public class JFXPanel extends JComponent {
 
                 @Override
                 public void run() {
-                    scenePeer.setDragStartListener(dnd.getDragStartListener());
+                    if (scenePeer != null) {
+                        scenePeer.setDragStartListener(dnd.getDragStartListener());
+                    }
                 }
             });
         }
