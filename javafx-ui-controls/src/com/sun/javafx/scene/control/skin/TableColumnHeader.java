@@ -25,7 +25,12 @@
 
 package com.sun.javafx.scene.control.skin;
 
-import com.sun.javafx.PlatformUtil;
+import static com.sun.javafx.scene.control.TableColumnSortTypeWrapper.getSortTypeName;
+import static com.sun.javafx.scene.control.TableColumnSortTypeWrapper.getSortTypeProperty;
+import static com.sun.javafx.scene.control.TableColumnSortTypeWrapper.isAscending;
+import static com.sun.javafx.scene.control.TableColumnSortTypeWrapper.isDescending;
+import static com.sun.javafx.scene.control.TableColumnSortTypeWrapper.setSortType;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -34,6 +39,12 @@ import javafx.application.ConditionalFeature;
 import javafx.beans.property.DoubleProperty;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
+import javafx.collections.WeakListChangeListener;
+import javafx.css.CssMetaData;
+import javafx.css.PseudoClass;
+import javafx.css.Styleable;
+import javafx.css.StyleableDoubleProperty;
+import javafx.css.StyleableProperty;
 import javafx.event.EventHandler;
 import javafx.geometry.HPos;
 import javafx.geometry.Insets;
@@ -43,6 +54,7 @@ import javafx.scene.Node;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Label;
 import javafx.scene.control.TableColumn;
+import javafx.scene.control.TableColumnBase;
 import javafx.scene.input.ContextMenuEvent;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.GridPane;
@@ -51,18 +63,9 @@ import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.util.Callback;
 
-import javafx.css.StyleableDoubleProperty;
-import javafx.css.CssMetaData;
-import javafx.css.PseudoClass;
-import javafx.css.StyleableProperty;
 import com.sun.javafx.application.PlatformImpl;
 import com.sun.javafx.css.converters.SizeConverter;
 import com.sun.javafx.scene.control.MultiplePropertyChangeListenerHandler;
-import javafx.collections.WeakListChangeListener;
-import javafx.css.Styleable;
-import javafx.scene.control.TableColumnBase;
-
-import static com.sun.javafx.scene.control.TableColumnSortTypeWrapper.*;
 
 
 /**
@@ -85,8 +88,6 @@ public class TableColumnHeader extends Region {
         this.skin = skin;
         this.column = tc;
         
-        getStyleClass().setAll("column-header");
-
         setFocusTraversable(false);
 
         updateColumnIndex();
@@ -116,6 +117,9 @@ public class TableColumnHeader extends Region {
             changeListenerHandler.registerChangeListener(column.sortableProperty(), "TABLE_COLUMN_SORTABLE");
             changeListenerHandler.registerChangeListener(column.textProperty(), "TABLE_COLUMN_TEXT");
             changeListenerHandler.registerChangeListener(column.graphicProperty(), "TABLE_COLUMN_GRAPHIC");
+
+            column.getStyleClass().addListener(weakStyleClassListener);
+            updateStyleClass();
         }
     }
     
@@ -176,10 +180,18 @@ public class TableColumnHeader extends Region {
         }
     };
     
+    private ListChangeListener<String> styleClassListener = new ListChangeListener<String>() {
+        @Override public void onChanged(Change<? extends String> c) {
+            updateStyleClass();
+        }
+    };
+    
     private WeakListChangeListener<TableColumnBase<?,?>> weakSortOrderListener =
             new WeakListChangeListener<TableColumnBase<?,?>>(sortOrderListener);
-    private final WeakListChangeListener weakVisibleLeafColumnsListener =
-            new WeakListChangeListener(visibleLeafColumnsListener);
+    private final WeakListChangeListener<TableColumnBase<?,?>> weakVisibleLeafColumnsListener =
+            new WeakListChangeListener<TableColumnBase<?,?>>(visibleLeafColumnsListener);
+    private final WeakListChangeListener<String> weakStyleClassListener =
+            new WeakListChangeListener<String>(styleClassListener);
     
     private static final EventHandler<MouseEvent> mousePressedHandler = new EventHandler<MouseEvent>() {
         @Override public void handle(MouseEvent me) {
@@ -293,7 +305,7 @@ public class TableColumnHeader extends Region {
     NestedTableColumnHeader getNestedColumnHeader() { return nestedColumnHeader; }
     void setNestedColumnHeader(NestedTableColumnHeader nch) { nestedColumnHeader = nch; }
 
-    private final TableColumnBase column;
+    private final TableColumnBase<?,?> column;
     public TableColumnBase getTableColumn() { return column; }
 
     private TableHeaderRow tableHeaderRow;
@@ -337,6 +349,13 @@ public class TableColumnHeader extends Region {
      *                                                                         *
      **************************************************************************/   
     
+    private void updateStyleClass() {
+        // For now we leave the 'column-header' style class intact so that the
+        // appropriate border styles are shown, etc.
+        getStyleClass().setAll("column-header");
+        getStyleClass().addAll(column.getStyleClass());
+    }
+    
     private void updateScene() {
         // RT-17684: If the TableColumn widths are all currently the default,
         // we attempt to 'auto-size' based on the preferred width of the first
@@ -362,9 +381,6 @@ public class TableColumnHeader extends Region {
         }
 
         changeListenerHandler.dispose();
-        
-        idProperty().unbind();
-        styleProperty().unbind();
     }
     
     private boolean isSortingEnabled() {
