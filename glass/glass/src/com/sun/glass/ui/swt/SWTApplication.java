@@ -25,7 +25,9 @@
 package com.sun.glass.ui.swt;
 
 import java.io.File;
+import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
@@ -42,6 +44,7 @@ import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.graphics.ImageData;
 import org.eclipse.swt.graphics.PaletteData;
 import org.eclipse.swt.graphics.Point;
+import org.eclipse.swt.graphics.Rectangle;
 import org.eclipse.swt.internal.Callback;
 import org.eclipse.swt.widgets.*;
 import org.eclipse.swt.opengl.*;
@@ -247,32 +250,44 @@ public final class SWTApplication extends Application {
         return new SWTRobot();
     }
 
-    @Override protected Screen staticScreen_getDeepestScreen() {
-        //TODO - screen not implemented
-        return SWTScreen.getScreen();
-    }
-
-    @Override protected Screen staticScreen_getMainScreen() {
-        return SWTScreen.getScreen();
-    }
-    @Override protected Screen staticScreen_getScreenForLocation(int x, int y) {
-        //TODO - screen not implemented
-        return SWTScreen.getScreen();
-    }
-
-    @Override protected Screen staticScreen_getScreenForPtr(long screenPtr) {
-        //TODO - screen not implemented
-        return SWTScreen.getScreen();
-    }
-
-    @Override protected List<Screen> staticScreen_getScreens() {
-        //TODO - screen not implemented
-        return Arrays.asList(SWTScreen.getScreen());
-    }
-
     @Override protected double staticScreen_getVideoRefreshPeriod() {
         //TODO - vsync not implemented
         return 0;
+    }
+
+    //TODO - get rid of reflection
+    //TODO - implement multiple screens
+    //TODO - implement resolution changed
+    @Override protected Screen[] staticScreen_getScreens() {
+        Display display = Display.getDefault();
+        final Screen[] screens = new Screen[1];
+        try {
+            Constructor<Screen> screenConstructor = Screen.class.getDeclaredConstructor(
+                    long.class, int.class, int.class, int.class,
+                    int.class, int.class, int.class, int.class,
+                    int.class, int.class, int.class, int.class,
+                    float.class);
+            screenConstructor.setAccessible(true);
+
+            Monitor monitor = display.getPrimaryMonitor();
+            Rectangle bounds = monitor.getBounds();
+            Rectangle client = monitor.getClientArea();
+            int depth = display.getDepth();
+            Point dpi = display.getDPI();
+            screens[0] = screenConstructor.newInstance(
+                    1L,
+                    depth,
+                    bounds.x, bounds.y,
+                    bounds.width, bounds.height,
+                    client.x, client.y,
+                    client.width, client.height,
+                    dpi.x, dpi.y,
+                    1.0f);
+
+            return screens;
+        } catch (NoSuchMethodException | InvocationTargetException | InstantiationException | IllegalAccessException e) {
+            throw new RuntimeException("Unable to construct a Screen", e);
+        }
     }
 
     @Override

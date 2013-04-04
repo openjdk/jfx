@@ -77,7 +77,8 @@ public class LabeledImpl extends Label {
                 ((Observable)fromVal).addListener(shuttler);
                 // set this LabeledImpl's property to the same value as the Labeled. 
                 final StyleOrigin origin = fromVal.getStyleOrigin();
-                styleable.set(labeledImpl, fromVal.getValue(), origin);
+                final StyleableProperty styleableProperty = styleable.getStyleableProperty(labeledImpl);
+                styleableProperty.applyStyle(origin, fromVal.getValue());
             }
         }
     }
@@ -113,7 +114,8 @@ public class LabeledImpl extends Label {
                 CssMetaData<Styleable,Object> cssMetaData = (CssMetaData<Styleable,Object>)styleableProperty.getCssMetaData();
                 if (cssMetaData != null) {
                     StyleOrigin origin = styleableProperty.getStyleOrigin();
-                    cssMetaData.set(labeledImpl, styleableProperty.getValue(), origin);
+                    StyleableProperty targetProperty = cssMetaData.getStyleableProperty(labeledImpl);
+                    targetProperty.applyStyle(origin, styleableProperty.getValue());
                 }
             }
         }

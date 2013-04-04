@@ -27,34 +27,33 @@ package javafx.scene.image;
 
 import java.io.InputStream;
 import java.lang.ref.WeakReference;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.nio.Buffer;
+import java.nio.ByteBuffer;
+import java.nio.IntBuffer;
 import java.util.LinkedList;
 import java.util.Queue;
-
+import java.util.regex.Pattern;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
+import javafx.beans.property.ReadOnlyBooleanProperty;
+import javafx.beans.property.ReadOnlyBooleanWrapper;
+import javafx.beans.property.ReadOnlyDoubleProperty;
 import javafx.beans.property.ReadOnlyDoublePropertyBase;
+import javafx.beans.property.ReadOnlyDoubleWrapper;
+import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectPropertyBase;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
+import javafx.scene.paint.Color;
 import javafx.util.Duration;
-
 import com.sun.javafx.beans.annotations.Default;
 import com.sun.javafx.runtime.async.AsyncOperation;
 import com.sun.javafx.runtime.async.AsyncOperationListener;
 import com.sun.javafx.tk.ImageLoader;
 import com.sun.javafx.tk.PlatformImage;
 import com.sun.javafx.tk.Toolkit;
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.nio.Buffer;
-import java.nio.ByteBuffer;
-import java.nio.IntBuffer;
-import javafx.beans.property.ReadOnlyBooleanProperty;
-import javafx.beans.property.ReadOnlyBooleanWrapper;
-import javafx.beans.property.ReadOnlyDoubleProperty;
-import javafx.beans.property.ReadOnlyDoubleWrapper;
-import javafx.beans.property.ReadOnlyObjectProperty;
-import javafx.scene.paint.Color;
 
 /**
  * The {@code Image} class represents graphical images and is used for loading
@@ -124,7 +123,7 @@ public class Image {
     }
 
     // Matches strings that start with a valid URI scheme
-    private static final String URL_QUICKMATCH = "^\\p{Alpha}[\\p{Alnum}+.-]*:.*$";
+    private static final Pattern URL_QUICKMATCH = Pattern.compile("^\\p{Alpha}[\\p{Alnum}+.-]*:.*$");
     /**
      * The string representing the URL to use in fetching the pixel data.
      *
@@ -1020,7 +1019,7 @@ public class Image {
         }
 
         try {
-            if (!url.matches(URL_QUICKMATCH)) {
+            if (!URL_QUICKMATCH.matcher(url).matches()) {
                 final ClassLoader contextClassLoader = Thread.currentThread().getContextClassLoader();
                 URL resource;
                 if (url.charAt(0) == '/') {

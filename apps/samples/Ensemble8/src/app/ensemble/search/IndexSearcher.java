@@ -31,6 +31,7 @@
  */
 package ensemble.search;
 
+import ensemble.generated.Samples;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -81,7 +82,7 @@ public class IndexSearcher {
         try {
             Query query = parser.parse(searchString);
             final SecondPassGroupingCollector collector = new SecondPassGroupingCollector("documentType", searchGroups,
-                    Sort.RELEVANCE, null, 5, true, false, true);
+                    Sort.RELEVANCE, null, 10, true, false, true); 
             searcher.search(query, collector);
             final TopGroups groups = collector.getTopGroups(0);
             for (GroupDocs groupDocs : groups.groups) {
@@ -100,7 +101,33 @@ public class IndexSearcher {
                                     doc.get("bookTitle") == null ? doc.get("chapter") : doc.get("bookTitle")
                                     : doc.get("shortDescription").trim()
                     );
-                    results.add(result);
+                    /* If the result is a sample, then filter out the samples that 
+                     * the runtime platform does not support. We really want to show
+                     * just 5 results, but we search for 10 and filter out unsupported
+                     * samples and show just 5.
+                     */
+                    // If result is a sample, check if supported sample exists before adding so it's
+                    // either not sample or it is a supported sample
+                    if (!result.getDocumentType().name().equals(DocumentType.SAMPLE.name())
+                            || Samples.ROOT.sampleForPath(result.getEnsemblePath().substring(9).trim()) != null) {
+                        results.add(result);
+                        if (results.size() == 5) {
+                            // 5 samples is enough
+                            break;
+                        }
+                    }
+
+                    /*                   if (results.size() < 5) {
+                     //If result is a sample check if supported sample exists before adding
+                     if (result.getDocumentType().name().equals(DocumentType.SAMPLE.name())) {
+                     if (Samples.ROOT.sampleForPath(result.getEnsemblePath().substring(9).trim()) != null) {
+                     results.add(result);
+                     }
+                     } else {
+                     results.add(result);
+                     }
+                     }
+                     */
                 }
                 resultMap.put(docType, results);
             }

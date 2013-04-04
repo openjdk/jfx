@@ -793,8 +793,7 @@ public class ControlTest {
     @Test public void canSpecifySkinViaCSS() {
         disableLogging();
         try {
-            CssMetaData styleable = ((StyleableProperty)c.skinClassNameProperty()).getCssMetaData();
-            styleable.set(c, "javafx.scene.control.SkinStub", null);
+            ((StyleableProperty)c.skinClassNameProperty()).applyStyle(null, "javafx.scene.control.SkinStub");
             assertNotNull(c.getSkin());
             assertTrue(c.getSkin() instanceof SkinStub);
             assertSame(c, c.getSkin().getSkinnable());
@@ -808,11 +807,10 @@ public class ControlTest {
         try {
             SkinChangeListener listener = new SkinChangeListener();
             c.skinProperty().addListener(listener);
-            CssMetaData styleable = ((StyleableProperty)c.skinClassNameProperty()).getCssMetaData();
-            styleable.set(c, "javafx.scene.control.SkinStub", null);
+            ((StyleableProperty)c.skinClassNameProperty()).applyStyle(null, "javafx.scene.control.SkinStub");
             assertTrue(listener.changed);
             listener.changed = false;
-            styleable.set(c, "javafx.scene.control.SkinStub", null);
+            ((StyleableProperty)c.skinClassNameProperty()).applyStyle(null, "javafx.scene.control.SkinStub");
             assertFalse(listener.changed);
         } finally {
             enableLogging();
@@ -824,8 +822,7 @@ public class ControlTest {
         try {
             SkinChangeListener listener = new SkinChangeListener();
             c.skinProperty().addListener(listener);
-            CssMetaData styleable = ((StyleableProperty)c.skinClassNameProperty()).getCssMetaData();
-            styleable.set(c, null, null);
+            ((StyleableProperty)c.skinClassNameProperty()).applyStyle(null, null);
             assertFalse(listener.changed);
             assertNull(c.getSkin());
         } finally {
@@ -838,8 +835,7 @@ public class ControlTest {
         try {
             SkinChangeListener listener = new SkinChangeListener();
             c.skinProperty().addListener(listener);
-            CssMetaData styleable = ((StyleableProperty)c.skinClassNameProperty()).getCssMetaData();
-            styleable.set(c, "", null);            
+            ((StyleableProperty)c.skinClassNameProperty()).applyStyle(null, "");
             assertFalse(listener.changed);
             assertNull(c.getSkin());
         } finally {
@@ -852,8 +848,7 @@ public class ControlTest {
         try {
             SkinChangeListener listener = new SkinChangeListener();
             c.skinProperty().addListener(listener);
-            CssMetaData styleable = ((StyleableProperty)c.skinClassNameProperty()).getCssMetaData();
-            styleable.set(c, "javafx.scene.control.ControlTest$BadSkin", null);
+            ((StyleableProperty)c.skinClassNameProperty()).applyStyle(null, "javafx.scene.control.ControlTest$BadSkin");
             assertFalse(listener.changed);
             assertNull(c.getSkin());
         } finally {
@@ -866,8 +861,7 @@ public class ControlTest {
         try {
             SkinChangeListener listener = new SkinChangeListener();
             c.skinProperty().addListener(listener);
-            CssMetaData styleable = ((StyleableProperty)c.skinClassNameProperty()).getCssMetaData();
-            styleable.set(c, "javafx.scene.control.ControlTest$ExceptionalSkin", null);
+            ((StyleableProperty)c.skinClassNameProperty()).applyStyle(null, "javafx.scene.control.ControlTest$ExceptionalSkin");
             assertFalse(listener.changed);
             assertNull(c.getSkin());
         } finally {

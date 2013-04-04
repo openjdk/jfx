@@ -86,7 +86,7 @@ class GlassSystemMenu implements TKSystemMenu {
     }
     
     @Override public boolean isSupported() {
-        return (PlatformUtil.isMac());
+        return Application.GetApplication().supportsSystemMenu();
     }
 
     @Override public void setMenus(List<MenuBase> menus) {

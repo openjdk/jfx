@@ -26,14 +26,25 @@
 package javafx.scene;
 
 import com.sun.javafx.geom.BaseBounds;
+import com.sun.javafx.geom.PickRay;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.jmx.MXNodeAlgorithm;
 import com.sun.javafx.jmx.MXNodeAlgorithmContext;
+import com.sun.javafx.scene.CssFlags;
+import com.sun.javafx.scene.DirtyBits;
+import com.sun.javafx.scene.SubSceneAccess;
+import com.sun.javafx.scene.input.PickResultChooser;
+import com.sun.javafx.scene.traversal.TraversalEngine;
 import com.sun.javafx.sg.PGNode;
+import com.sun.javafx.sg.PGSubScene;
+import com.sun.javafx.tk.Toolkit;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.DoublePropertyBase;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ObjectPropertyBase;
+import javafx.geometry.NodeOrientation;
+import javafx.geometry.Point3D;
+import javafx.scene.input.PickResult;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
 
@@ -56,7 +67,9 @@ public class SubScene extends Node {
      * @throws NullPointerException if root is null
      */
     public SubScene(Parent root, double width, double height) {
-        throw new UnsupportedOperationException("*** 3D Work is still in progress ... ***");
+        setRoot(root);
+        setWidth(width);
+        setHeight(height);
     }
 
     /**
@@ -83,7 +96,10 @@ public class SubScene extends Node {
      */
     public SubScene(Parent root, double width, double height,
             boolean depthBuffer, boolean antiAliasing) {
-        throw new UnsupportedOperationException("*** 3D Work is still in progress ... ***");
+        this(root, width, height);
+        this.depthBuffer = depthBuffer;
+        //TODO verify that depthBuffer is working correctly
+        //TODO complete antiAliasing
     }
 
     /**
@@ -92,6 +108,8 @@ public class SubScene extends Node {
     public boolean isAntiAliasing() {
         throw new UnsupportedOperationException("Unsupported --- *** isAntiAliasing method ***");        
     }
+
+    private boolean depthBuffer = false;
 
     /**
      * Defines the root {@code Node} of the SubScene scene graph.
@@ -114,9 +132,59 @@ public class SubScene extends Node {
     public final ObjectProperty<Parent> rootProperty() {
         if (root == null) {
             root = new ObjectPropertyBase<Parent>() {
+                private Parent oldRoot;
+
+                private void forceUnbind() {
+                    System.err.println("Unbinding illegal root.");
+                    unbind();
+                }
 
                 @Override
                 protected void invalidated() {
+                    Parent _value = get();
+
+                    if (_value == null) {
+                        if (isBound()) { forceUnbind(); }
+                        throw new NullPointerException("Scene's root cannot be null");
+                    }
+                    if (_value.getParent() != null) {
+                        if (isBound()) { forceUnbind(); }
+                        throw new IllegalArgumentException(_value +
+                                "is already inside a scene-graph and cannot be set as root");
+                    }
+                    if (_value.getClipParent() != null) {
+                        if (isBound()) forceUnbind();
+                        throw new IllegalArgumentException(_value +
+                                "is set as a clip on another node, so cannot be set as root");
+                    }
+                    if ((_value.getScene() != null &&
+                            _value.getScene().getRoot() == _value) ||
+                            (_value.getSubScene() != null &&
+                            _value.getSubScene().getRoot() == _value &&
+                            _value.getSubScene() != SubScene.this))
+                    {
+                        if (isBound()) { forceUnbind(); }
+                        throw new IllegalArgumentException(_value +
+                                "is already set as root of another scene or subScene");
+                    }
+
+                    // disabled and isTreeVisible properties are inherrited
+                    _value.setTreeVisible(impl_isTreeVisible());
+                    _value.setDisabled(isDisabled());
+
+                    if (oldRoot != null) {
+                        oldRoot.setScenes(null, null);
+                        oldRoot.setImpl_traversalEngine(null);
+                    }
+                    oldRoot = _value;
+                    if (_value.getImpl_traversalEngine() == null) {
+                        _value.setImpl_traversalEngine(new TraversalEngine(_value, true));
+                    }
+                    _value.getStyleClass().add(0, "root");
+                    _value.setScenes(getScene(), SubScene.this);
+                    markDirty(SubScene.SubSceneDirtyBits.ROOT_SG_DIRTY);
+                    _value.resize(getWidth(), getHeight()); // maybe no-op if root is not resizable
+                    _value.requestLayout();
                 }
 
                 @Override
@@ -136,6 +204,8 @@ public class SubScene extends Node {
     /**
      * Specifies the type of camera use for rendering this {@code SubScene}.
      * If {@code camera} is null, a parallel camera is used for rendering.
+     * It is illegal to set a camera that belongs to other {@code Scene}
+     * or {@code SubScene}.
      * <p>
      * Note: this is a conditional feature. See
      * {@link javafx.application.ConditionalFeature#SCENE3D ConditionalFeature.SCENE3D}
@@ -146,6 +216,7 @@ public class SubScene extends Node {
     private ObjectProperty<Camera> camera;
 
     public final void setCamera(Camera value) {
+        
         cameraProperty().set(value);
     }
 
@@ -159,6 +230,15 @@ public class SubScene extends Node {
 
                 @Override
                 protected void invalidated() {
+                    Camera _value = get();                    
+                    // Illegal value if it belongs to any scene or other subscene
+                    if (_value != null
+                            && (_value.getScene() != null || _value.getSubScene() != null)
+                            && (_value.getScene() != getScene() || _value.getSubScene() != SubScene.this)) {
+                        throw new IllegalArgumentException(_value
+                                + "is already set as camera in other scene/subscene");
+                    }
+                    markDirty(SubScene.SubSceneDirtyBits.CAMERA_DIRTY);
                 }
 
                 @Override
@@ -173,6 +253,15 @@ public class SubScene extends Node {
             };
         }
         return camera;
+    }
+
+    private Camera defaultCamera;
+
+    private Camera getDefaultCamera() {
+        if (defaultCamera == null) {
+            defaultCamera = new ParallelCamera();
+        }
+        return defaultCamera;
     }
 
     /**
@@ -196,6 +285,16 @@ public class SubScene extends Node {
 
                 @Override
                 public void invalidated() {
+                    final Parent _root = getRoot();
+                    //TODO - use a better method to update mirroring
+                    if (_root.getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT) {
+                        _root.impl_transformsChanged();
+                    }
+                    if (_root.isResizable()) {
+                        _root.resize(get() - _root.getLayoutX() - _root.getTranslateX(), _root.getLayoutBounds().getHeight());
+                    }
+                    markDirty(SubScene.SubSceneDirtyBits.CAMERA_DIRTY);
+                    SubScene.this.impl_geomChanged();
                 }
 
                 @Override
@@ -210,8 +309,8 @@ public class SubScene extends Node {
             };
         }
         return width;
-    }   
-    
+    }
+
     /**
      * Defines the height of this {@code SubScene}
      *
@@ -233,6 +332,12 @@ public class SubScene extends Node {
 
                 @Override
                 public void invalidated() {
+                    final Parent _root = getRoot();
+                    if (_root.isResizable()) {
+                        _root.resize(_root.getLayoutBounds().getWidth(), get() - _root.getLayoutY() - _root.getTranslateY());
+                    }
+                    markDirty(SubScene.SubSceneDirtyBits.CAMERA_DIRTY);
+                    SubScene.this.impl_geomChanged();
                 }
 
                 @Override
@@ -252,10 +357,9 @@ public class SubScene extends Node {
     /**
      * Defines the background fill of this {@code SubScene}. Both a {@code null}
      * value meaning paint no background and a {@link javafx.scene.paint.Paint}
-     * with transparency are supported, but what is painted behind it will
-     * depend on the platform.  The default value is COLOR.TRANSPARENT.
+     * with transparency are supported. The default value is null.
      *
-     * @defaultValue WHITE
+     * @defaultValue null
      */
     private ObjectProperty<Paint> fill;
 
@@ -264,15 +368,16 @@ public class SubScene extends Node {
     }
 
     public final Paint getFill() {
-        return fill == null ? Color.TRANSPARENT : fill.get();
+        return fill == null ? null : fill.get();
     }
 
     public final ObjectProperty<Paint> fillProperty() {
         if (fill == null) {
-            fill = new ObjectPropertyBase<Paint>(Color.TRANSPARENT) {
+            fill = new ObjectPropertyBase<Paint>(null) {
 
                 @Override
                 protected void invalidated() {
+                    markDirty(SubScene.SubSceneDirtyBits.FILL_DIRTY);
                 }
 
                 @Override
@@ -293,9 +398,86 @@ public class SubScene extends Node {
      * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
+    @Deprecated @Override
+    public void impl_updatePG() {
+        super.impl_updatePG();
+        Camera camera = getCamera();
+        if (camera != null) {
+            camera.impl_syncPGNode();
+        } else {
+            getDefaultCamera().impl_syncPGNode();
+        }
+
+        // TODO deal with clip node
+
+        dirtyNodes = dirtyLayout = false;
+        if (isDirty()) {
+            PGSubScene peer = (PGSubScene) impl_getPGNode();
+            if (isDirty(SubSceneDirtyBits.ROOT_SG_DIRTY)) {
+                // TODO: Will call peer.setRoot either if root has changed or
+                // if root is dirty. This is a workaround for dirty region support.
+                peer.setRoot(getRoot().impl_getPGNode());
+            }
+            if (isDirty(SubSceneDirtyBits.FILL_DIRTY)) {
+                Object platformPaint = getFill() == null ? null :
+                        Toolkit.getPaintAccessor().getPlatformPaint(getFill());
+                peer.setFillPaint(platformPaint);
+            }
+            peer.setDepthBuffer(depthBuffer);
+            if (isDirty(SubSceneDirtyBits.CAMERA_DIRTY)) {
+                peer.setWidth((float)getWidth());
+                peer.setHeight((float)getHeight());
+                if (camera != null) {
+                    peer.setCamera(camera.getPlatformCamera());
+                 } else {
+                    peer.setCamera(getDefaultCamera().getPlatformCamera());
+                 }
+            }
+            clearDirtyBits();
+        }
+    }
+
+    /***********************************************************************
+     *                         CSS                                         *
+     **********************************************************************/
+    /**
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     */
+    @Deprecated @Override
+    protected void impl_processCSS() {
+        // Nothing to do...
+        if (cssFlag == CssFlags.CLEAN) { return; }
+
+        if (getRoot().cssFlag == CssFlags.CLEAN) {
+            getRoot().cssFlag = cssFlag;
+        }
+        super.impl_processCSS();
+        getRoot().processCSS();
+    }
+
+    @Override
+    void processCSS() {
+        Parent root = getRoot();
+        if (root.impl_isDirty(DirtyBits.NODE_CSS)) {
+            root.impl_clearDirty(DirtyBits.NODE_CSS);
+            if (cssFlag == CssFlags.CLEAN) { cssFlag = CssFlags.UPDATE; }
+        }
+        super.processCSS();
+    }
+
+    @Override void updateBounds() {
+        super.updateBounds();
+        getRoot().updateBounds();
+    }
+
+    /**
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     */
     @Deprecated    @Override
     protected PGNode impl_createPGNode() {
-        throw new UnsupportedOperationException("Not supported yet.");
+        return Toolkit.getToolkit().createPGSubScene();
     }
 
     /**
@@ -304,8 +486,77 @@ public class SubScene extends Node {
      */
     @Deprecated    @Override
     public BaseBounds impl_computeGeomBounds(BaseBounds bounds, BaseTransform tx) {
-        throw new UnsupportedOperationException("Not supported yet.");
+        int w = (int)Math.ceil(width.get());
+        int h = (int)Math.ceil(height.get());
+        bounds = bounds.deriveWithNewBounds(0.0f, 0.0f, 0.0f,
+                                            w, h, 0.0f);
+        bounds = tx.transform(bounds, bounds);
+        return bounds;
     }
+
+    /***********************************************************************
+     *                         Dirty Bits                                  *
+     **********************************************************************/
+    boolean dirtyLayout = false;
+    void setDirtyLayout(Parent p) {
+        if (!dirtyLayout && p != null && p.getSubScene() == this &&
+                this.getScene() != null) {
+            dirtyLayout = true;
+            markDirty(SubSceneDirtyBits.ROOT_SG_DIRTY);
+        }
+    }
+
+    private boolean dirtyNodes = false;
+    void setDirty(Node n) {
+        if (!dirtyNodes && n != null && n.getSubScene() == this &&
+                this.getScene() != null) {
+            dirtyNodes = true;
+            markDirty(SubSceneDirtyBits.ROOT_SG_DIRTY);
+        }
+    }
+
+    private enum SubSceneDirtyBits {
+        FILL_DIRTY,
+        /* ROOT_SG_DIRTY is set either when the root has changed or hint that
+         * root scene graph needs to be rerendered. For example when layout
+         * occures, or node has been added or removed.
+         */
+        ROOT_SG_DIRTY,
+        CAMERA_DIRTY; // get set if the camera, width or height change
+
+        private int mask;
+
+        private SubSceneDirtyBits() { mask = 1 << ordinal(); }
+
+        public final int getMask() { return mask; }
+    }
+
+    private int dirtyBits;
+
+    private void clearDirtyBits() { dirtyBits = 0; }
+
+    private boolean isDirty() { return dirtyBits != 0; }
+
+    // Should not be called directly, instead use markDirty
+    private void setDirty(SubSceneDirtyBits dirtyBit) {
+        this.dirtyBits |= dirtyBit.getMask();
+    }
+
+    private boolean isDirty(SubSceneDirtyBits dirtyBit) {
+        return ((this.dirtyBits & dirtyBit.getMask()) != 0);
+    }
+
+    private void markDirty(SubSceneDirtyBits dirtyBit) {
+        if (!isDirty()) {
+            // Force SubScene to redraw
+            impl_markDirty(DirtyBits.NODE_CONTENTS);
+        }
+        setDirty(dirtyBit);
+    }
+
+    /***********************************************************************
+     *                           Picking                                   *
+     **********************************************************************/
 
     /**
      * @treatAsPrivate implementation detail
@@ -313,7 +564,69 @@ public class SubScene extends Node {
      */
     @Deprecated    @Override
     protected boolean impl_computeContains(double localX, double localY) {
-        throw new UnsupportedOperationException("Not supported yet.");
+        if (subSceneComputeContains(localX, localY)) {
+            return true;
+        } else {
+            return getRoot().impl_computeContains(localX, localY);
+        }
+    }
+
+    /**
+     * Determines whether subScene contains the given point.
+     * It does not consider the contained nodes, only subScene's
+     * size and fills.
+     * @param localX horizontal coordinate in the local space of the subScene node
+     * @param localY vertical coordinate in the local space of the subScene node
+     * @return true if the point is inside subScene's area covered by its fill
+     */
+    private boolean subSceneComputeContains(double localX, double localY) {
+        if (localX < 0 || localY < 0 || localX > getWidth() || localY > getHeight()) {
+            return false;
+        }
+        return getFill() != null;
+    }
+
+    /*
+     * Generates a pick ray based on local coordinates and camera. Then finds a
+     * top-most child node that intersects the pick ray.
+     */
+    private PickResult pickRootSG(double localX, double localY) {
+        final double viewWidth = getWidth();
+        final double viewHeight = getHeight();
+        if (localX < 0 || localY < 0 || localX > viewWidth || localY > viewHeight) {
+            return null;
+        }
+        final Camera camera = getCamera() == null ? getDefaultCamera() : getCamera();
+        final PickResultChooser result = new PickResultChooser();
+        final PickRay pickRay = camera.computePickRay(localX, localY,
+                                                      viewWidth, viewHeight,
+                                                      new PickRay());
+        getRoot().impl_pickNode(pickRay, result);
+        return result.toPickResult(!pickRay.isParallel());
+    }
+
+    /**
+     * Finds a top-most child node that contains the given local coordinates.
+     *
+     * Returns the picked node, null if no such node was found.
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     */
+    @Deprecated @Override
+    protected void impl_pickNodeLocal(PickRay localPickRay, PickResultChooser result) {
+        final double boundsDistance = impl_intersectsBounds(localPickRay);
+        if (!Double.isNaN(boundsDistance) && result.isCloser(boundsDistance)) {
+            final Point3D intersectPt = PickResultChooser.computePoint(
+                    localPickRay, boundsDistance);
+            final PickResult subSceneResult =
+                    pickRootSG(intersectPt.getX(), intersectPt.getY());
+            if (result != null) {
+                result.offerSubScenePickResult(this, subSceneResult, boundsDistance);
+            } else if (isPickOnBounds() ||
+                    subSceneComputeContains(intersectPt.getX(), intersectPt.getY())) {
+                result.offer(this, boundsDistance, intersectPt);
+            }
+        }
     }
 
     /**
@@ -324,5 +637,21 @@ public class SubScene extends Node {
     public Object impl_processMXNode(MXNodeAlgorithm alg, MXNodeAlgorithmContext ctx) {
         throw new UnsupportedOperationException("Not supported yet.");
     }
-    
+
+    /**
+     * This class is used by classes in different packages to get access to
+     * private and package private methods.
+     */
+    private static class SubSceneAccessImpl extends SubSceneAccess {
+
+        @Override
+        public boolean isDepthBuffer(SubScene subScene) {
+            return subScene.depthBuffer;
+        };
+
+    }
+
+    static {
+        SubSceneAccess.setSubSceneAccess(new SubSceneAccessImpl());
+    }
 }

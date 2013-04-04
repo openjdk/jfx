@@ -27,6 +27,7 @@
 #import "com_sun_glass_ui_mac_MacGestureSupport.h"
 
 #import "GlassMacros.h"
+#import "GlassStatics.h"
 
 //#define VERBOSE
 #ifndef VERBOSE
@@ -47,78 +48,73 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacGestureSupport__1initIDs
 {
     LOG("Java_com_sun_glass_ui_mac_MacGestureSupport__1initIDs");
 
-    if (jGestureSupportClass == NULL)
+    if (javaIDs.GestureSupport.rotateGesturePerformed == NULL)
     {
-        jGestureSupportClass = (*env)->NewGlobalRef(env, jClass);
-    }
-
-    if (jGestureSupportRotateGesturePerformed == NULL)
-    {
-        jGestureSupportRotateGesturePerformed = 
-                    (*env)->GetStaticMethodID(env, jGestureSupportClass, 
+        javaIDs.GestureSupport.rotateGesturePerformed = 
+                    (*env)->GetStaticMethodID(env, jClass,
                                 "rotateGesturePerformed",
                                 "(Lcom/sun/glass/ui/View;IIIIIF)V");
         GLASS_CHECK_EXCEPTION(env);
     }
 
-    if (jGestureSupportScrollGesturePerformed == NULL)
+    if (javaIDs.GestureSupport.scrollGesturePerformed == NULL)
     {
-        jGestureSupportScrollGesturePerformed = 
-                    (*env)->GetStaticMethodID(env, jGestureSupportClass, 
+        javaIDs.GestureSupport.scrollGesturePerformed = 
+                    (*env)->GetStaticMethodID(env, jClass,
                                 "scrollGesturePerformed",
                                 "(Lcom/sun/glass/ui/View;IIIIIIFF)V");
         GLASS_CHECK_EXCEPTION(env);
     }
 
-    if (jGestureSupportSwipeGesturePerformed == NULL)
+    if (javaIDs.GestureSupport.swipeGesturePerformed == NULL)
     {
-        jGestureSupportSwipeGesturePerformed = 
-                    (*env)->GetStaticMethodID(env, jGestureSupportClass, 
+        javaIDs.GestureSupport.swipeGesturePerformed = 
+                    (*env)->GetStaticMethodID(env, jClass,
                                 "swipeGesturePerformed",
                                 "(Lcom/sun/glass/ui/View;IIIIII)V");
         GLASS_CHECK_EXCEPTION(env);
     }
 
-    if (jGestureSupportMagnifyGesturePerformed == NULL)
+    if (javaIDs.GestureSupport.magnifyGesturePerformed == NULL)
     {
-        jGestureSupportMagnifyGesturePerformed = 
-                    (*env)->GetStaticMethodID(env, jGestureSupportClass, 
+        javaIDs.GestureSupport.magnifyGesturePerformed = 
+                    (*env)->GetStaticMethodID(env, jClass,
                                 "magnifyGesturePerformed",
                                 "(Lcom/sun/glass/ui/View;IIIIIF)V");
         GLASS_CHECK_EXCEPTION(env);
     }
 
-    if (jGestureSupportGestureFinished == NULL)
+    if (javaIDs.GestureSupport.gestureFinished == NULL)
     {
-        jGestureSupportGestureFinished = 
-                    (*env)->GetStaticMethodID(env, jGestureSupportClass, 
+        javaIDs.GestureSupport.gestureFinished = 
+                    (*env)->GetStaticMethodID(env, jClass,
                                 "gestureFinished",
                                 "(Lcom/sun/glass/ui/View;IIIII)V");
         GLASS_CHECK_EXCEPTION(env);
     }
 
-    if (jGestureSupportNotifyBeginTouchEvent == NULL)
+    if (javaIDs.GestureSupport.notifyBeginTouchEvent == NULL)
     {
-        jGestureSupportNotifyBeginTouchEvent = 
-                    (*env)->GetStaticMethodID(env, jGestureSupportClass, 
+        javaIDs.GestureSupport.notifyBeginTouchEvent = 
+                    (*env)->GetStaticMethodID(env, jClass,
                                 "notifyBeginTouchEvent",
                                 "(Lcom/sun/glass/ui/View;II)V");
         GLASS_CHECK_EXCEPTION(env);
     }
 
-    if (jGestureSupportNotifyNextTouchEvent == NULL)
+    if (javaIDs.GestureSupport.notifyNextTouchEvent == NULL)
     {
-        jGestureSupportNotifyNextTouchEvent = 
-                    (*env)->GetStaticMethodID(env, jGestureSupportClass, 
+        javaIDs.GestureSupport.notifyNextTouchEvent = 
+                    (*env)->GetStaticMethodID(env, jClass,
                                 "notifyNextTouchEvent",
                                 "(Lcom/sun/glass/ui/View;IJFF)V");
         GLASS_CHECK_EXCEPTION(env);
     }
 
-    if (jGestureSupportNotifyEndTouchEvent == NULL)
+    if (javaIDs.GestureSupport.notifyEndTouchEvent == NULL)
     {
-        jGestureSupportNotifyEndTouchEvent = 
-                    (*env)->GetStaticMethodID(env, jGestureSupportClass, 
+        javaIDs.GestureSupport.notifyEndTouchEvent = 
+                    (*env)->GetStaticMethodID(env, jClass,
                                 "notifyEndTouchEvent",
                                 "(Lcom/sun/glass/ui/View;)V");
         GLASS_CHECK_EXCEPTION(env);

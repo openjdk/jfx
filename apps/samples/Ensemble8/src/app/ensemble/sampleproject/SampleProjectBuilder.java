@@ -102,7 +102,7 @@ public class SampleProjectBuilder {
             zipinputstream.close();
             //Put resources like images under src/
             File srcDestDir = new File(projectDir.getPath() + "/src/");
-            loadSampleResourceUrls(srcDestDir, sampleInfo.baseUri, sampleInfo.resourceUrls);
+            loadSampleResourceUrls(srcDestDir, sampleInfo.resourceUrls);
             // open project in netbeans
             //TODO:      loadProject(projectDir, mainSrcFile);
         } catch (Exception e) {
@@ -110,44 +110,18 @@ public class SampleProjectBuilder {
         }
     }
 
-    /* TODO: private static void loadProject(File projectDir, File mainSrcFile) {
-     ///System.out.println("Trying to load project in Netbeans...");
-     NBInstallation[] installations = UserDirScanner.suitableNBInstallations(new File(System.getProperty("user.home")),"6.9.0",
-     NBInstallation.LAST_USED_COMPARATOR);
-     if (installations.length > 0) {
-     NBInstallation installation = installations[0];
-     String launcher = NBInstallation.getPlatformLauncher();
-     ///System.out.println("launcher = " + launcher);
-     String cmdArray[] = new String[]{
-     installation.getExecDir().getAbsolutePath() + File.separator + launcher,
-     "--open",
-     projectDir.getAbsolutePath(),
-     mainSrcFile.getAbsolutePath()
-     };
-     ///System.out.println("Command line: " + Arrays.asList(cmdArray));
-     try {
-     Process proc = Runtime.getRuntime().exec(cmdArray, null, installation.getExecDir());
-     } catch (IOException e) {
-     e.printStackTrace();
-     }
-     } else {
-     ///System.out.println("Could not find netbeans installed.");
-     }
-     }
-     */
-    private static void loadSampleResourceUrls(File destDir, String baseUri, String[] resourceUrlArray) {
+    private static void loadSampleResourceUrls(File destDir, String[] resourceUrlArray) {
         List<String> resourceUrlList = Arrays.asList(resourceUrlArray);
         //create resource files for each of the resources we use
         if (!resourceUrlList.isEmpty()) {
-            File dirs = new File(destDir.getPath() + baseUri);
-            boolean outflag = dirs.mkdirs();
             for (String oneResourceUrl : resourceUrlList) {
-                String sampleResourceName = oneResourceUrl.substring(
-                        oneResourceUrl.lastIndexOf('/') + 1,
-                        oneResourceUrl.length());
+                String resourceSubdir = oneResourceUrl.substring(0, oneResourceUrl.lastIndexOf('/'));
                 try {
+                    File parentDir = new File(destDir.getPath() + resourceSubdir);
+                    parentDir.mkdirs();
                     Utils.copyFile(new URL(SampleProjectBuilder.class.getResource(oneResourceUrl).toExternalForm()),
-                                   dirs.getPath() + "/" + sampleResourceName);
+                            destDir.getPath() + oneResourceUrl);
+
                 } catch (MalformedURLException e) {
                     e.printStackTrace();
                 }

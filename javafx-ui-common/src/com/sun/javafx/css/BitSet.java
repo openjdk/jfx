@@ -320,8 +320,8 @@ abstract class BitSet<T>  implements Set<T> {
             BitSet other = (BitSet)c;
             
             if (other.isEmpty()) {
-                // this not modified!
-                return false;
+                // if other is empty, then discard all!
+                this.bits = EMPTY_SET;
             }
 
             final long[] maskOne = this.bits;

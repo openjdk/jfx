@@ -119,6 +119,10 @@ CVReturn CVOutputCallback(CVDisplayLinkRef displayLink,
     {
         GlassTimer *timer = (GlassTimer*)displayLinkContext;
         
+        // Attach the thread every time.  Cocoa changes the thread when a new
+        // display resolution is selected so we need to make sure that we are
+        // able to call into Java.  Attaching the same thread multiple times
+        // does nothing.
         jint error = (*MAIN_JVM)->AttachCurrentThreadAsDaemon(MAIN_JVM, (void **)&timer->_env, NULL);
         if (error == 0)
         {
@@ -127,10 +131,13 @@ CVReturn CVOutputCallback(CVDisplayLinkRef displayLink,
                 (*timer->_env)->CallVoidMethod(timer->_env, timer->_runnable, jRunnableRun);
             }
 
-            error = (*MAIN_JVM)->DetachCurrentThread(MAIN_JVM);
-            if (error != JNI_OK) {
-                NSLog(@"ERROR: Glass could not detach CVDisplayLink _thread to VM, result:%d\n", (int)error);
-            }
+              // Do not detach the thread - continuously attaching and detaching a thread
+              // kills some debuggers making it impossible to step through Prism.  Since
+              // the thread is attached as a daemon, it will not stop Java from exiting.
+//            error = (*MAIN_JVM)->DetachCurrentThread(MAIN_JVM);
+//            if (error != JNI_OK) {
+//                NSLog(@"ERROR: Glass could not detach CVDisplayLink _thread to VM, result:%d\n", (int)error);
+//            }
         } else {
             NSLog(@"ERROR: Glass could not attach CVDisplayLink _thread to VM, result:%d\n", (int)error);
         }
@@ -326,3 +333,43 @@ JNIEXPORT jint JNICALL Java_com_sun_glass_ui_mac_MacTimer__1getMaxPeriod
     
     return period;
 }
+
+/*
+ * Class:     com_sun_glass_ui_mac_MacTimer
+ * Method:    _initIDs
+ * Signature: ()V
+ */
+JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacTimer__1initIDs
+(JNIEnv *env, jclass jClass)
+{
+
+    initJavaIDsList(env);
+
+    if (GlassDisplayLink == NULL)
+    {
+        CVReturn err = CVDisplayLinkCreateWithActiveCGDisplays(&GlassDisplayLink);
+        if (err != kCVReturnSuccess)
+        {
+            NSLog(@"CVDisplayLinkCreateWithActiveCGDisplays error: %d", err);
+        }
+        err = CVDisplayLinkSetCurrentCGDisplay(GlassDisplayLink, kCGDirectMainDisplay);
+        if (err != kCVReturnSuccess)
+        {
+            NSLog(@"CVDisplayLinkSetCurrentCGDisplay error: %d", err);
+        }
+        /*
+         * set a null callback and start the link to prep for GlassTimer initialization
+         */
+        err = CVDisplayLinkSetOutputCallback(GlassDisplayLink, &CVOutputCallback, NULL);
+        if (err != kCVReturnSuccess)
+        {
+            NSLog(@"CVDisplayLinkSetOutputCallback error: %d", err);
+        }
+        err = CVDisplayLinkStart(GlassDisplayLink);
+        if (err != kCVReturnSuccess)
+        {
+            NSLog(@"CVDisplayLinkStart error: %d", err);
+        }
+    }
+}
+

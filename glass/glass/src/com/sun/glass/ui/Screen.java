@@ -24,157 +24,212 @@
  */
 package com.sun.glass.ui;
 
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 public final class Screen {
-    
+
+    // the list of attached screens provided by native.
+    // screens[0] is the default/main Screen
+    private static volatile List<Screen> screens = null ;
+
     public static class EventHandler {
         public void handleSettingsChanged() {
         }
     }
-    
+
     public static double getVideoRefreshPeriod() {
         Application.checkEventThread();
         return Application.GetApplication().staticScreen_getVideoRefreshPeriod();
     }
 
-    public static Screen getDeepestScreen() {
-        Application.checkEventThread();
-        return Application.GetApplication().staticScreen_getDeepestScreen();
-    }
-
-    public static Screen getMainScreen() {
-        //Application.checkEventThread(); // Quantum
-        return Application.GetApplication().staticScreen_getMainScreen();
-    }
-
-    public static Screen getScreenForLocation(int x, int y) {
-        Application.checkEventThread();
-        return Application.GetApplication().staticScreen_getScreenForLocation(x, y);
-    }
-
-    // used by Window.notifyMoveToAnotherScreen
+    // Used by Window.notifyMoveToAnotherScreen
     static Screen getScreenForPtr(long screenPtr) {
         Application.checkEventThread();
-        return Application.GetApplication().staticScreen_getScreenForPtr(screenPtr);
+        for (Screen s : getScreens()) {
+            if (s != null && s.ptr == screenPtr) {
+                return s;
+            }
+        }
+
+        return null;
     }
 
+
+    /**
+     * Could be called from any thread
+     * @return the main screen
+     */
+    public static Screen getMainScreen() {
+        return getScreens().get(0);
+    }
+
+    /**
+     * Could be called from any thread
+     * @return list of all available screens
+     */
     public static List<Screen> getScreens() {
-        //Application.checkEventThread(); // Quantum
-        return Application.GetApplication().staticScreen_getScreens();
+        if (screens == null) {
+            throw new RuntimeException("Internal graphics not initialized yet");
+        }
+
+        return screens;
     }
 
     private static EventHandler eventHandler;
     
-    private long ptr;
+    private volatile long ptr;
 
-    private int depth;
+    private final int depth;
 
-    private int x;
-    private int y;
-    private int width;
-    private int height;
+    private final int x;
+    private final int y;
+    private final int width;
+    private final int height;
 
-    private int visibleX;
-    private int visibleY;
-    private int visibleWidth;
-    private int visibleHeight;
+    private final int visibleX;
+    private final int visibleY;
+    private final int visibleWidth;
+    private final int visibleHeight;
 
-    private int resolutionX;
-    private int resolutionY;
+    private final int resolutionX;
+    private final int resolutionY;
 
-    private float scale;
+    private final float scale;
 
-    public Screen() {
-        //Application.checkEventThread(); // Quantum
-        this.ptr = 0L;
+    protected Screen(
+            long nativePtr,
 
-        this.depth = 0;
+            int depth,
+            int x,
+            int y,
+            int width,
+            int height,
 
-        this.x = 0;
-        this.y = 0;
-        this.width = 0;
-        this.height = 0;
+            int visibleX,
+            int visibleY,
+            int visibleWidth,
+            int visibleHeight,
 
-        this.visibleX = 0;
-        this.visibleY = 0;
-        this.visibleWidth = 0;
-        this.visibleHeight = 0;
+            int resolutionX,
+            int resolutionY,
 
-        this.resolutionX = 0;
-        this.resolutionY = 0;
+            float scale
+            ) {
+        this.ptr = nativePtr;
 
-        this.scale = 0.0f;
+        this.depth = depth;
+
+        this.x = x;
+        this.y = y;
+        this.width = width;
+        this.height = height;
+
+        this.visibleX = visibleX;
+        this.visibleY = visibleY;
+        this.visibleWidth = visibleWidth;
+        this.visibleHeight = visibleHeight;
+
+        this.resolutionX = resolutionX;
+        this.resolutionY = resolutionY;
+
+        this.scale = scale;
     }
 
+    /**
+     * Could be called from any thread
+     */
     public int getDepth() {
-        Application.checkEventThread();
         return this.depth;
     }
 
+    /**
+     * Could be called from any thread
+     */
     public int getX() {
-        Application.checkEventThread();
         return this.x;
     }
 
+    /**
+     * Could be called from any thread
+     */
     public int getY() {
-        Application.checkEventThread();
         return this.y;
     }
 
+    /**
+     * Could be called from any thread
+     */
     public int getWidth() {
-        Application.checkEventThread();
         return this.width;
     }
 
+    /**
+     * Could be called from any thread
+     */
     public int getHeight() {
-        Application.checkEventThread();
         return this.height;
     }
 
+    /**
+     * Could be called from any thread
+     */
     public int getVisibleX() {
-        Application.checkEventThread();
         return this.visibleX;
     }
 
+    /**
+     * Could be called from any thread
+     */
     public int getVisibleY() {
-        Application.checkEventThread();
         return this.visibleY;
     }
 
+    /**
+     * Could be called from any thread
+     */
     public int getVisibleWidth() {
-        Application.checkEventThread();
         return this.visibleWidth;
     }
 
+    /**
+     * Could be called from any thread
+     */
     public int getVisibleHeight() {
-        Application.checkEventThread();
         return this.visibleHeight;
     }
 
+    /**
+     * Could be called from any thread
+     */
     public int getResolutionX() {
-        Application.checkEventThread();
         return this.resolutionX;
     }
 
+    /**
+     * Could be called from any thread
+     */
     public int getResolutionY() {
-        Application.checkEventThread();
         return this.resolutionY;
     }
 
+    /**
+     * Could be called from any thread
+     */
     public float getScale() {
-        Application.checkEventThread();
         return this.scale;
     }
 
+    /**
+     * Could be called from any thread
+     */
     public long getNativeScreen() {
-        //Application.checkEventThread(); // Quantum
         return this.ptr;
     }
 
-    public static EventHandler getEventHandler() {
-        Application.checkEventThread();
-        return eventHandler;
+    private void dispose() {
+        this.ptr = 0L;
     }
     
     public static void setEventHandler(EventHandler eh) {
@@ -182,12 +237,32 @@ public final class Screen {
         eventHandler = eh;
     }
     
+    /**
+     * Called from native when the Screen definitions change.
+     */
     private static void notifySettingsChanged() {
+        if (screens != null) {
+            for (Screen screen : screens) {
+                screen.dispose();
+            }
+        }
+
+        initScreens();
+
         if (eventHandler != null) {
             eventHandler.handleSettingsChanged();
         }
     }
-    
+
+    static void initScreens() {
+        Application.checkEventThread();
+        Screen[] newScreens = Application.GetApplication().staticScreen_getScreens();
+        if (newScreens == null) {
+            throw new RuntimeException("Internal graphics failed to initialize");
+        }
+        screens = Collections.unmodifiableList(Arrays.asList(newScreens));
+    }
+
     @Override public String toString() {
         return  "Screen:"+"\n"+
                 "    ptr:"+getNativeScreen()+"\n"+

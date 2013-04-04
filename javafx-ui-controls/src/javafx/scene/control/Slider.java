@@ -726,10 +726,6 @@ public class Slider extends Control {
             new CssMetaData<Slider,Number>("-fx-minor-tick-count",
                 SizeConverter.getInstance(), 3.0) {
 
-            @Override public void set(Slider node, Number value, StyleOrigin origin) {
-                super.set(node, value.intValue(), origin);
-            } 
-            
             @Override
             public boolean isSettable(Slider n) {
                 return n.minorTickCount == null || !n.minorTickCount.isBound();

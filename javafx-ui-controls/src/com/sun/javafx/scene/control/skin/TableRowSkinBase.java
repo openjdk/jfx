@@ -28,17 +28,17 @@ package com.sun.javafx.scene.control.skin;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
 import java.util.WeakHashMap;
 
-import javafx.collections.ListChangeListener;
-
-import com.sun.javafx.scene.control.behavior.CellBehaviorBase;
-import java.util.Map;
 import javafx.animation.FadeTransition;
 import javafx.beans.property.ObjectProperty;
-import javafx.collections.WeakListChangeListener;
+import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.collections.ObservableMap;
+import javafx.collections.WeakListChangeListener;
 import javafx.geometry.HPos;
 import javafx.geometry.Insets;
 import javafx.geometry.VPos;
@@ -47,6 +47,9 @@ import javafx.scene.control.Control;
 import javafx.scene.control.IndexedCell;
 import javafx.scene.control.TableColumnBase;
 import javafx.util.Duration;
+
+import com.sun.javafx.scene.control.behavior.CellBehaviorBase;
+import com.sun.javafx.tk.Toolkit;
 
 /**
  */
@@ -116,7 +119,8 @@ public abstract class TableRowSkinBase<T,
      * graphic associated with a TreeItem (i.e. treeItem.getGraphic()), rather
      * than a graphic associated with a cell.
      */
-    protected abstract Node getGraphic(); 
+//    protected abstract Node getGraphic(); 
+    protected abstract ObjectProperty<Node> graphicProperty();
     
     protected abstract Control getVirtualFlowOwner(); // return TableView / TreeTableView
     
@@ -359,10 +363,6 @@ public abstract class TableRowSkinBase<T,
         if ("ITEM".equals(p)) {
             updateCells = true;
             getSkinnable().requestLayout();
-            
-            // Required to fix RT-24725, but commented out as a performance leak
-            // when doing large-scale updating of items in a TableView
-            // getSkinnable().layout();
 //        } else if (p == "SPAN_MODEL") {
 //            // TODO update layout based on changes to span model
 //            spanModel = spanModelProperty().get();
@@ -373,16 +373,8 @@ public abstract class TableRowSkinBase<T,
     @Override protected void layoutChildren(double x, final double y,
             final double w, final double h) {
         
-        if (isDirty) {
-            recreateCells();
-            updateCells(true);
-            isDirty = false;
-        } else if (updateCells) {
-            updateCells(true);
-            updateCells = false;
-        }
+        checkState();
         if (cellsMap.isEmpty()) return;
-        
         
         ObservableList<? extends TableColumnBase> visibleLeafColumns = getVisibleLeafColumns();
         if (! visibleLeafColumns.isEmpty()) {
@@ -453,7 +445,7 @@ public abstract class TableRowSkinBase<T,
             
             for (int column = 0, max = cells.size(); column < max; column++) {
                 R tableCell = cells.get(column);
-                TableColumnBase tableColumn = getTableColumnBase(tableCell);
+                TableColumnBase<T, ?> tableColumn = getTableColumnBase(tableCell);
                 
                 show(tableCell);
                 
@@ -506,7 +498,8 @@ public abstract class TableRowSkinBase<T,
                         
                         // determine starting point of the graphic or cell node, and the
                         // remaining width available to them
-                        Node graphic = getGraphic();
+                        ObjectProperty<Node> graphicProperty = graphicProperty();
+                        Node graphic = graphicProperty == null ? null : graphicProperty.get();
                         
                         if (graphic != null) {
                             graphicWidth = graphic.prefWidth(-1) + 3;
@@ -579,16 +572,10 @@ public abstract class TableRowSkinBase<T,
 //                    ///////////////////////////////////////////
                     
                     tableCell.resize(width, height);
-
-                    if (indentationRequired && column == indentationColumnIndex) {
-                        tableCell.relocate(x, insets.getTop());
-                    } else {
-                        // if j is a negative number (because the width is smaller
-                        // that the left margin and disclosure node), we relocate
-                        // the cell to the left (and subtract 1 to take into 
-                        // account the minimum 1px width we resize cells to above).
-                        tableCell.relocate(x, insets.getTop());
-                    }
+                    tableCell.relocate(x, insets.getTop());
+                    
+                    // Request layout is here as (partial) fix for RT-28684
+                    tableCell.requestLayout();
                 } else {
                     if (fixedCellLengthEnabled) {
                         // we only add/remove to the scenegraph if the fixed cell
@@ -625,6 +612,13 @@ public abstract class TableRowSkinBase<T,
 //        TableView<T> table = getSkinnable().getTableView();
 //        if (table == null) {
         if (cellsMap != null) {
+            
+//            Set<Entry<TableColumnBase, R>> cells = cellsMap.entrySet();
+//            for (Entry<TableColumnBase, R> entry : cells) {
+//                R cell = entry.getValue();
+//                cell.dispose();
+//            }
+            
             cellsMap.clear();
         }
 //        return;
@@ -697,6 +691,9 @@ public abstract class TableRowSkinBase<T,
             return fixedCellLength;
         }
         
+        // fix for RT-29080
+        checkState();
+        
         // Support for RT-18467: making it easier to specify a height for
         // cells via CSS, where the desired height is less than the height
         // of the TableCells. Essentially, -fx-cell-size is given higher
@@ -714,21 +711,51 @@ public abstract class TableRowSkinBase<T,
             prefHeight = Math.max(prefHeight, tableCell.prefHeight(-1));
         }
         double ph = Math.max(prefHeight, Math.max(getCellSize(), getSkinnable().minHeight(-1)));
+        
         return ph;
+    }
+    
+    private void checkState() {
+        if (isDirty) {
+            recreateCells();
+            updateCells(true);
+            isDirty = false;
+        } else if (updateCells) {
+            updateCells(true);
+            updateCells = false;
+        }
     }
     
     private static final Duration FADE_DURATION = Duration.millis(200);
     
+    // There appears to be a memory leak when using the stub toolkit. Therefore,
+    // to prevent tests from failing we disable the animations below when the
+    // stub toolkit is being used.
+    // Filed as RT-29163.
+    private static boolean IS_STUB_TOOLKIT = Toolkit.getToolkit().toString().contains("StubToolkit");
+    
     private void fadeOut(final Node node) {
         if (node.getOpacity() < 1.0) return;
-        FadeTransition fader = new FadeTransition(FADE_DURATION, node);
+        
+        if (IS_STUB_TOOLKIT) {
+            node.setOpacity(0);
+            return;
+        }
+        
+        final FadeTransition fader = new FadeTransition(FADE_DURATION, node);
         fader.setToValue(0.0);
         fader.play();
     }
     
     private void fadeIn(final Node node) {
         if (node.getOpacity() > 0.0) return;
-        FadeTransition fader = new FadeTransition(FADE_DURATION, node);
+        
+        if (IS_STUB_TOOLKIT) {
+            node.setOpacity(1);
+            return;
+        }
+        
+        final FadeTransition fader = new FadeTransition(FADE_DURATION, node);
         fader.setToValue(1.0);
         fader.play();
     }

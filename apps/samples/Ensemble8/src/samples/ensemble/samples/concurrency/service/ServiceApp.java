@@ -75,21 +75,25 @@ public class ServiceApp extends Application {
                 service.restart();
             }
         });
+        vbox.setPrefHeight(160);
         vbox.getChildren().addAll(tableView, button);
 
         Region veil = new Region();
         veil.setStyle("-fx-background-color: rgba(0, 0, 0, 0.4)");
+        veil.setPrefSize(240, 160);
         ProgressIndicator p = new ProgressIndicator();
-        p.setMaxSize(150, 150);
+        p.setMaxSize(140, 140);
 
         //Define table columns
         TableColumn idCol = new TableColumn();
         idCol.setText("ID");
         idCol.setCellValueFactory(new PropertyValueFactory("dailySalesId"));
+        idCol.setPrefWidth(32);
         tableView.getColumns().add(idCol);
         TableColumn qtyCol = new TableColumn();
         qtyCol.setText("Qty");
         qtyCol.setCellValueFactory(new PropertyValueFactory("quantity"));
+        qtyCol.setPrefWidth(60);
         tableView.getColumns().add(qtyCol);
         TableColumn dateCol = new TableColumn();
         dateCol.setText("Date");
@@ -97,12 +101,11 @@ public class ServiceApp extends Application {
         dateCol.setMinWidth(240);
         tableView.getColumns().add(dateCol);
 
-
         p.progressProperty().bind(service.progressProperty());
         veil.visibleProperty().bind(service.runningProperty());
         p.visibleProperty().bind(service.runningProperty());
         tableView.itemsProperty().bind(service.valueProperty());
-
+        tableView.setMinSize(240, 140);
         StackPane stack = new StackPane();
         stack.getChildren().addAll(vbox, veil, p);
 

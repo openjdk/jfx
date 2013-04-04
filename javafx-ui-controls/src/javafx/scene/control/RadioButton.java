@@ -90,8 +90,7 @@ import javafx.css.StyleableProperty;
         // makes it look to css like the user set the value and css will not 
         // override. Initializing alignment by calling set on the 
         // CssMetaData ensures that css will be able to override the value.
-        final CssMetaData prop = ((StyleableProperty)alignmentProperty()).getCssMetaData();
-        prop.set(this, Pos.CENTER_LEFT, null);
+        ((StyleableProperty)alignmentProperty()).applyStyle(null, Pos.CENTER_LEFT);
     }
 
     /***************************************************************************

@@ -142,6 +142,11 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListViewB
         registerChangeListener(listView.focusTraversableProperty(), "FOCUS_TRAVERSABLE");
         registerChangeListener(listView.placeholderProperty(), "PLACEHOLDER");
     }
+    
+    @Override public void dispose() {
+        getBehavior().dispose();
+        super.dispose();
+    }
 
     @Override protected void handleControlPropertyChanged(String p) {
         super.handleControlPropertyChanged(p);

@@ -38,6 +38,7 @@ import javafx.scene.control.TreeItem;
 import javafx.css.StyleableDoubleProperty;
 import javafx.css.CssMetaData;
 import com.sun.javafx.css.converters.SizeConverter;
+import com.sun.javafx.scene.control.MultiplePropertyChangeListenerHandler;
 import com.sun.javafx.scene.control.behavior.TreeTableRowBehavior;
 import javafx.animation.RotateTransition;
 import javafx.beans.property.ObjectProperty;
@@ -52,6 +53,7 @@ import javafx.scene.control.TableColumnBase;
 import javafx.scene.control.TableRow;
 import javafx.scene.control.TreeTableCell;
 import javafx.scene.control.TreeTableColumn;
+import javafx.util.Callback;
 import javafx.util.Duration;
 
 /**
@@ -65,11 +67,17 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
     private TreeItem<?> treeItem;
     private boolean disclosureNodeDirty = true;
     
-    private final ChangeListener<Boolean> treeItemExpandedListener = new ChangeListener<Boolean>() {
-        @Override public void changed(ObservableValue<? extends Boolean> ov, Boolean t, Boolean isExpanded) {
-            updateDisclosureNodeRotation(true);
+    private MultiplePropertyChangeListenerHandler treeItemListener = new MultiplePropertyChangeListenerHandler(new Callback<String, Void>() {
+        @Override public Void call(String p) {
+            if ("EXPANDED".equals(p)) {
+                updateDisclosureNodeRotation(true);
+            } else if ("GRAPHIC".equals(p)) {
+                disclosureNodeDirty = true;
+                getSkinnable().requestLayout();
+            }
+            return null;
         }
-    };
+    });
     
     public TreeTableRowSkin(TreeTableRow<T> control) {
         super(control, new TreeTableRowBehavior<T>(control));
@@ -156,38 +164,48 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
     
     private void updateTreeItem() {
         if (treeItem != null) {
-            treeItem.expandedProperty().removeListener(treeItemExpandedListener);
+            treeItemListener.unregisterChangeListener(treeItem.expandedProperty());
+            treeItemListener.unregisterChangeListener(treeItem.graphicProperty());
         }
         treeItem = getSkinnable().getTreeItem();
         if (treeItem != null) {
-            treeItem.expandedProperty().addListener(treeItemExpandedListener);
+            treeItemListener.registerChangeListener(treeItem.expandedProperty(), "EXPANDED");
+            treeItemListener.registerChangeListener(treeItem.graphicProperty(), "GRAPHIC");
         }
         
         updateDisclosureNodeRotation(false);
     }
     
-    private void updateDisclosureNode() {
+    private void updateDisclosureNodeAndGraphic() {
         if (getSkinnable().isEmpty()) return;
-
-        Node disclosureNode = getSkinnable().getDisclosureNode();
-        if (disclosureNode == null) return;
         
-        boolean disclosureVisible = treeItem != null && ! treeItem.isLeaf();
-        disclosureNode.setVisible(disclosureVisible);
-            
-        if (! disclosureVisible) {
-            getChildren().remove(disclosureNode);
-        } else if (disclosureNode.getParent() == null) {
-            getChildren().add(disclosureNode);
-            disclosureNode.toFront();
-        } else {
-            disclosureNode.toBack();
+        // check for graphic missing
+        ObjectProperty<Node> graphicProperty = graphicProperty();
+        Node graphic = graphicProperty == null ? null : graphicProperty.get();
+        if (graphic != null && ! getChildren().contains(graphic)) {
+            getChildren().add(graphic);
         }
         
-        // RT-26625: [TreeView, TreeTableView] can lose arrows while scrolling
-        // RT-28668: Ensemble tree arrow disappears
-        if (disclosureNode.getScene() != null) {
-            disclosureNode.impl_processCSS(true);
+        // check disclosure node
+        Node disclosureNode = getSkinnable().getDisclosureNode();
+        if (disclosureNode != null) {
+            boolean disclosureVisible = treeItem != null && ! treeItem.isLeaf();
+            disclosureNode.setVisible(disclosureVisible);
+                
+            if (! disclosureVisible) {
+                getChildren().remove(disclosureNode);
+            } else if (disclosureNode.getParent() == null) {
+                getChildren().add(disclosureNode);
+                disclosureNode.toFront();
+            } else {
+                disclosureNode.toBack();
+            }
+            
+            // RT-26625: [TreeView, TreeTableView] can lose arrows while scrolling
+            // RT-28668: Ensemble tree arrow disappears
+            if (disclosureNode.getScene() != null) {
+                disclosureNode.impl_processCSS(true);
+            }
         }
     }
 
@@ -195,7 +213,7 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
     @Override protected void updateChildren() {
         super.updateChildren();
         
-        updateDisclosureNode();
+        updateDisclosureNodeAndGraphic();
         
         if (childrenDirty) {
             childrenDirty = false;
@@ -212,13 +230,13 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
 
     @Override protected void layoutChildren(double x, double y, double w, double h) {
         if (disclosureNodeDirty) {
-            updateDisclosureNode();
+            updateDisclosureNodeAndGraphic();
             disclosureNodeDirty = false;
         }
         
         Node disclosureNode = getDisclosureNode();
         if (disclosureNode != null && disclosureNode.getScene() == null) {
-            updateDisclosureNode();
+            updateDisclosureNodeAndGraphic();
         }
         
         super.layoutChildren(x, y, w, h);
@@ -307,12 +325,12 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
         return cell.getTableColumn();
     }
 
-    @Override protected Node getGraphic() {
+    @Override protected ObjectProperty<Node> graphicProperty() {
         TreeTableRow<T> treeTableRow = getSkinnable();
         if (treeTableRow == null) return null;
         if (treeItem == null) return null;
         
-        return treeItem.getGraphic();
+        return treeItem.graphicProperty();
     }
     
     @Override protected Control getVirtualFlowOwner() {

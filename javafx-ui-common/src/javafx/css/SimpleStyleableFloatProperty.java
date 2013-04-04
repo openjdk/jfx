@@ -26,25 +26,29 @@
 package javafx.css;
 
 import javafx.beans.property.SimpleFloatProperty;
-import javafx.beans.value.ObservableValue;
-import javafx.scene.Node;
 
 /**
  * This class extends {@code SimpleFloatProperty} and provides a full
- * implementation of a {@code StyleableProperty}. The method 
- * {@link StyleableProperty#getCssMetaData()} is not implemented. 
- * 
- * This class is used to make a {@link javafx.beans.property.FloatProperty}, 
- * that would otherwise be implemented as a {@link SimpleFloatProperty}, 
+ * implementation of a {@code StyleableProperty}.  
+ *
+ * This class is used to make a {@link javafx.beans.property.FloatProperty},
+ * that would otherwise be implemented as a {@link SimpleFloatProperty},
  * style&#8209;able by CSS.
- * 
+ *
  * @see javafx.beans.property.SimpleFloatProperty
  * @see CssMetaData
  * @see StyleableProperty
+ * @see StyleableFloatProperty
  */
 @com.sun.javafx.beans.annotations.NoBuilder
-public abstract class SimpleStyleableFloatProperty
-    extends SimpleFloatProperty implements StyleableProperty<Number> {
+public class SimpleStyleableFloatProperty extends StyleableFloatProperty {
+
+    private static final Object DEFAULT_BEAN = null;
+    private static final String DEFAULT_NAME = "";
+
+    private final Object bean;
+    private final String name;
+    private final CssMetaData<? extends Styleable, Number> cssMetaData;
 
     /**
      * The constructor of the {@code SimpleStyleableFloatProperty}.
@@ -52,8 +56,7 @@ public abstract class SimpleStyleableFloatProperty
      *            the CssMetaData associated with this {@code StyleableProperty}
      */
     public SimpleStyleableFloatProperty(CssMetaData<? extends Styleable, Number> cssMetaData) {
-        super();
-        this.cssMetaData = cssMetaData;
+        this(cssMetaData, DEFAULT_BEAN, DEFAULT_NAME);
     }
 
     /**
@@ -64,9 +67,8 @@ public abstract class SimpleStyleableFloatProperty
      * @param initialValue
      *            the initial value of the wrapped {@code Object}
      */
-    public SimpleStyleableFloatProperty(CssMetaData<? extends Styleable, Number> cssMetaData, float initialValue) {
-        super(initialValue);
-        this.cssMetaData = cssMetaData;
+    public SimpleStyleableFloatProperty(CssMetaData<? extends Styleable, Number> cssMetaData, Float initialValue) {
+        this(cssMetaData, DEFAULT_BEAN, DEFAULT_NAME, initialValue);
     }
 
     /**
@@ -80,7 +82,8 @@ public abstract class SimpleStyleableFloatProperty
      *            the name of this {@code FloatProperty}
      */
     public SimpleStyleableFloatProperty(CssMetaData<? extends Styleable, Number> cssMetaData, Object bean, String name) {
-        super(bean, name);
+        this.bean = bean;
+        this.name = (name == null) ? DEFAULT_NAME : name;
         this.cssMetaData = cssMetaData;
     }
 
@@ -96,43 +99,33 @@ public abstract class SimpleStyleableFloatProperty
      * @param initialValue
      *            the initial value of the wrapped {@code Object}
      */
-    public SimpleStyleableFloatProperty(CssMetaData<? extends Styleable, Number> cssMetaData, Object bean, String name, float initialValue) {
-        super(bean, name, initialValue);
+    public SimpleStyleableFloatProperty(CssMetaData<? extends Styleable, Number> cssMetaData, Object bean, String name, Float initialValue) {
+        super(initialValue);
+        this.bean = bean;
+        this.name = (name == null) ? DEFAULT_NAME : name;
         this.cssMetaData = cssMetaData;
     }
 
-    /** {@inheritDoc} */
+    /**
+     * {@inheritDoc}
+     */
     @Override
-    public void applyStyle(StyleOrigin origin, Number v) {
-        setValue(v);
-        this.origin = origin;
+    public Object getBean() {
+        return bean;
     }
 
-    /** {@inheritDoc} */
+    /**
+     * {@inheritDoc}
+     */
     @Override
-    public void bind(ObservableValue<? extends Number> observable) {
-        super.bind(observable);
-        origin = StyleOrigin.USER;
+    public String getName() {
+        return name;
     }
-
-    /** {@inheritDoc} */
-    @Override
-    public void set(float v) {
-        super.set(v);
-        origin = StyleOrigin.USER;
-    }
-
-    /** {@inheritDoc} */
-    @Override
-    public final StyleOrigin getStyleOrigin() { return origin; }
 
     /** {@inheritDoc} */
     @Override
     public final CssMetaData<? extends Styleable, Number> getCssMetaData() {
         return cssMetaData;
     }
-
-    private StyleOrigin origin = null;
-    private final CssMetaData<? extends Styleable, Number> cssMetaData;
 
 }

@@ -198,7 +198,7 @@ public class PhongMaterial extends Material {
     private ObjectProperty<Image> specularMap;
 
     public final void setSpecularMap(Image value) {
-        diffuseMapProperty().set(value);
+        specularMapProperty().set(value);
     }
 
     public final Image getSpecularMap() {

@@ -428,6 +428,7 @@ public class TreeCell<T> extends IndexedCell<T> {
     private int index = -1;
 
     @Override void indexChanged() {
+        int oldIndex = index;
         index = getIndex();
         
         // when the cell index changes, this may result in the cell
@@ -446,17 +447,28 @@ public class TreeCell<T> extends IndexedCell<T> {
 
         // Cause the cell to update itself
         if (valid) {
+            TreeItem<T> oldTreeItem = getTreeItem();
+            T oldValue = getItem();
+            
             // update the TreeCell state.
             // get the new treeItem that is about to go in to the TreeCell
-            TreeItem<T> treeItem = tv.getTreeItem(index);
+            TreeItem<T> newTreeItem = tv.getTreeItem(index);
+            T newValue = newTreeItem == null ? null : newTreeItem.getValue();
         
             // For the sake of RT-14279, it is important that the order of these
             // method calls is as shown below. If the order is switched, it is
             // likely that events will be fired where the item is null, even
             // though calling cell.getTreeItem().getValue() returns the value
             // as expected
-            updateTreeItem(treeItem);
-            updateItem(treeItem == null ? null : treeItem.getValue(), false);
+            if ((newTreeItem != null && ! newTreeItem.equals(oldTreeItem)) || 
+                    oldTreeItem != null && ! oldTreeItem.equals(newTreeItem)) {
+                updateTreeItem(newTreeItem);
+            }
+            
+            if ((newValue != null && ! newValue.equals(oldValue)) || 
+                    oldValue != null && ! oldValue.equals(newValue)) {
+                updateItem(newValue, false);
+            }
         } else {
             updateTreeItem(null);
             updateItem(null, true);

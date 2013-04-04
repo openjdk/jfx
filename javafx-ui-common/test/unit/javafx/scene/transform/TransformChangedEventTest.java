@@ -25,10 +25,12 @@
 
 package javafx.scene.transform;
 
+import javafx.event.ActionEvent;
 import javafx.event.Event;
 import javafx.event.EventDispatchChain;
 import javafx.event.EventTarget;
 import org.junit.Test;
+
 import static org.junit.Assert.*;
 
 public class TransformChangedEventTest {
@@ -61,5 +63,12 @@ public class TransformChangedEventTest {
         assertSame(TransformChangedEvent.TRANSFORM_CHANGED, e.getEventType());
         assertSame(src, e.getSource());
         assertSame(trg, e.getTarget());
+    }
+
+    // RT-28932
+    @Test
+    public void canCreateActionEventToo() {
+        TransformChangedEvent event = new TransformChangedEvent(null, null);
+        ActionEvent actionEvent = new ActionEvent(null, null);
     }
 }

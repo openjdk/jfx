@@ -25,21 +25,28 @@
 
 package javafx.scene.control;
 
-import com.sun.javafx.Utils;
-import com.sun.javafx.scene.control.behavior.TreeViewAnchorRetriever;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 import java.util.List;
+
 import javafx.scene.Group;
 import javafx.scene.Scene;
-
 import javafx.scene.input.KeyCode;
 import javafx.stage.Stage;
-import org.junit.After;
 
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
+
+import com.sun.javafx.scene.control.behavior.TreeViewAnchorRetriever;
+import com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
+import com.sun.javafx.scene.control.infrastructure.KeyModifier;
+import com.sun.javafx.scene.control.infrastructure.StageLoader;
+import com.sun.javafx.scene.control.skin.TreeViewSkin;
 
 //@Ignore("Disabling tests as they fail with OOM in continuous builds")
 public class TreeViewKeyInputTest {
@@ -48,10 +55,7 @@ public class TreeViewKeyInputTest {
     private FocusModel<TreeItem<String>> fm;
     
     private KeyEventFirer keyboard;
-    
-    private Stage stage;
-    private Scene scene;
-    private Group group;
+    private StageLoader stageLoader;
     
     private final TreeItem<String> root = new TreeItem<String>("Root");                     // 0
         private final TreeItem<String> child1 = new TreeItem<String>("Child 1");            // 1
@@ -107,16 +111,13 @@ public class TreeViewKeyInputTest {
         keyboard = new KeyEventFirer(treeView);
         
         // create a simple UI that will be shown (to send the keyboard events to)
-        group = new Group();
-        group.getChildren().setAll(treeView);
-        scene = new Scene(group);
-        stage = new Stage();
-        stage.setScene(scene);
-        stage.show();
+        stageLoader = new StageLoader(treeView);
+        stageLoader.getStage().show();
     }
     
     @After public void tearDown() {
-        stage.hide();
+        treeView.getSkin().dispose();
+        stageLoader.dispose();
     }
     
     
@@ -1225,7 +1226,6 @@ public class TreeViewKeyInputTest {
         assertTrue(isSelected(0,1,2,3,4,5));
     }
     
-    @Ignore("Bug not yet fixed")
     @Test public void test_rt28065() {
         sm.setSelectionMode(SelectionMode.MULTIPLE);
         

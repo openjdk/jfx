@@ -58,6 +58,7 @@ import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.jmx.MXNodeAlgorithm;
 import com.sun.javafx.jmx.MXNodeAlgorithmContext;
 import com.sun.javafx.sg.PGNode;
+import javafx.scene.paint.Paint;
 import org.junit.Test;
 
 import static org.junit.Assert.*;
@@ -1181,7 +1182,10 @@ public class CssMetaDataTest {
                 Method m = someClass.getMethod("getClassCssMetaData", (Class[]) null);
                 //                Node node = (Node)ctor.newInstance((Object[])null);
                 Node node = (Node)someClass.newInstance();
-                for (CssMetaData styleable : (List<CssMetaData<? extends Styleable, ?>>) m.invoke(null)) {
+                List<CssMetaData<? extends Styleable, ?>> list = (List<CssMetaData<? extends Styleable, ?>>)m.invoke(null);
+                if(list == null || list.isEmpty()) return;
+
+                for (CssMetaData styleable : list) {
 
                     what = someClass.getName() + " " + styleable.getProperty();
                     WritableValue writable = styleable.getStyleableProperty(node);
@@ -1250,7 +1254,7 @@ public class CssMetaDataTest {
         }
     }
 
-    @Test
+    @Test @org.junit.Ignore("tested CssMetaData#set method, which is deprecated")
     public void testRT_21185() {
 
         Color c1 = new Color(.1,.2,.3,1.0);
@@ -1259,32 +1263,32 @@ public class CssMetaDataTest {
         Rectangle rect = new Rectangle();
         rect.setFill(c1);
 
-
-        CssMetaData fill = ((StyleableProperty)rect.fillProperty()).getCssMetaData();
+        StyleableProperty fill = (StyleableProperty)rect.fillProperty();
         StyleOrigin origin = ((StyleableProperty)rect.fillProperty()).getStyleOrigin();
 
         // set should not change the value if the values are equal and origin is same
-        assertEquals(c1, c2);
-        fill.set(rect, c2, origin);
-        assert(c1 == rect.getFill()); // instance should not change.
+        assertEquals(c1, c2);        
+        fill.applyStyle(origin, c2);
+
+        assertSame(c1,rect.getFill()); // instance should not change.
 
         // set should change the value if the values are not equal.
         c2 = new Color(.3,.2,.1,1.0);
-        fill.set(rect, c2, origin);
-        assert(c2 == rect.getFill());
+        fill.applyStyle(origin, c2);
+        assertSame(c2,rect.getFill());
 
         // set should change the value if the origin is not the same
-        fill.set(rect, c2, StyleOrigin.INLINE);
+        fill.applyStyle(StyleOrigin.INLINE, c2);
         origin = ((StyleableProperty)rect.fillProperty()).getStyleOrigin();
-        assert(origin == StyleOrigin.INLINE);
+        assertSame(StyleOrigin.INLINE, origin);
 
         // set should change the value if one is null and the other is not.
         rect.setFill(null);
-        fill.set(rect, c2, origin);
-        assert(c2 == rect.getFill());
+        fill.applyStyle(origin, c2);
+        assertSame(c2, rect.getFill());
 
         // set should change the value if one is null and the other is not
-        fill.set(rect, null, origin);
+        fill.applyStyle(origin, null);
         assertNull(rect.getFill());
 
     }

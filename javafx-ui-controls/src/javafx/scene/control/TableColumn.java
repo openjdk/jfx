@@ -451,6 +451,31 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
 
     
     
+    // --- Sort Type
+    /**
+     * Used to state whether this column, if it is part of a sort order (see
+     * {@link TableView#getSortOrder()} for more details), should be sorted in 
+     * ascending or descending order. 
+     * Simply toggling this property will result in the sort order changing in 
+     * the TableView, assuming of course that this column is in the 
+     * sortOrder ObservableList to begin with.
+     */
+    private ObjectProperty<SortType> sortType;
+    public final ObjectProperty<SortType> sortTypeProperty() {
+        if (sortType == null) {
+            sortType = new SimpleObjectProperty<SortType>(this, "sortType", SortType.ASCENDING);
+        }
+        return sortType;
+    }
+    public final void setSortType(SortType value) {
+        sortTypeProperty().set(value);
+    }
+    public final SortType getSortType() {
+        return sortType == null ? SortType.ASCENDING : sortType.get();
+    }
+    
+    
+    
     // --- On Edit Start
     private ObjectProperty<EventHandler<CellEditEvent<S,T>>> onEditStart;
     public final void setOnEditStart(EventHandler<CellEditEvent<S,T>> value) {
@@ -808,5 +833,23 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
 
             return items.get(row);
         }
+    }
+    
+    /**
+     * Enumeration that specifies the type of sorting being applied to a specific
+     * column.
+     */
+    public static enum SortType {
+        /**
+         * Column will be sorted in an ascending order.
+         */
+        ASCENDING,
+        
+        /**
+         * Column will be sorted in a descending order.
+         */
+        DESCENDING;
+        
+        // UNSORTED
     }
 }

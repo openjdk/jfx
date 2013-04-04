@@ -30,9 +30,8 @@ import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 
 public final class MouseEventGenerator {
-    private boolean primaryButtonDown = false;
 
-    public MouseEvent generateMouseEvent(EventType<MouseEvent> type,
+    public static MouseEvent generateMouseEvent(EventType<MouseEvent> type,
             double x, double y) {
 
         MouseButton button = MouseButton.NONE;
@@ -41,6 +40,8 @@ public final class MouseEventGenerator {
                 type == MouseEvent.MOUSE_DRAGGED) {
             button = MouseButton.PRIMARY;
         }
+        
+        boolean primaryButtonDown = false;
 
         if (type == MouseEvent.MOUSE_PRESSED ||
                 type == MouseEvent.MOUSE_DRAGGED) {

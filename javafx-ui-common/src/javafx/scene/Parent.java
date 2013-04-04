@@ -52,7 +52,6 @@ import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.geom.transform.NoninvertibleTransformException;
 import com.sun.javafx.jmx.MXNodeAlgorithm;
 import com.sun.javafx.jmx.MXNodeAlgorithmContext;
-import javafx.geometry.Point3D;
 import sun.util.logging.PlatformLogger;
 import com.sun.javafx.scene.CssFlags;
 import com.sun.javafx.scene.DirtyBits;
@@ -96,7 +95,7 @@ public abstract class Parent extends Node {
      * but mark whole parent dirty.
      */
     private boolean removedChildrenExceedsThreshold = false;
-
+    
     /**
      * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
@@ -275,7 +274,7 @@ public abstract class Parent extends Node {
                             relayout = true;
                         }
                         node.setParent(Parent.this);
-                        node.setScene(getScene());
+                        node.setScenes(getScene(), getSubScene());
                         // assert !node.boundsChanged;
                         if (node.isVisible()) {
                             geomChanged = true;
@@ -477,7 +476,7 @@ public abstract class Parent extends Node {
                     }
                     if (old.getParent() == Parent.this) {
                         old.setParent(null);
-                        old.setScene(null);
+                        old.setScenes(null, null);
                     }
                     if (!removedChildrenExceedsThreshold) {
                         removed.add(old);
@@ -627,28 +626,37 @@ public abstract class Parent extends Node {
         }
     }
 
-    @Override void sceneChanged(final Scene old) {
-        // Give all of the children the new scene
-        final Scene scene = getScene();
+    @Override
+    void scenesChanged(final Scene newScene, final SubScene newSubScene,
+                       final Scene oldScene, final SubScene oldSubScene) {
         for (int i=0, max=children.size(); i<max; i++) {
-            children.get(i).setScene(scene);
+            children.get(i).setScenes(newScene, newSubScene);
         }
 
         // If this node was in the old scene's dirty layout
         // list, then remove it from that list so that it is
         // not processed on the next pulse
         final boolean awaitingLayout = isNeedsLayout();
-        if (awaitingLayout && old != null) {
-            old.removeFromDirtyLayoutList(this);
-        }
 
-        sceneRoot = scene != null && scene.getRoot() == this;
+        sceneRoot = (newSubScene != null && newSubScene.getRoot() == this) ||
+                    (newScene != null && newScene.getRoot() == this);
         layoutRoot = !isManaged() || sceneRoot;
 
-        // If this node is dirty and the new scene is not null
-        // then add this node to the new scene's dirty list
-        if (scene != null && awaitingLayout && layoutRoot) {
-            scene.addToDirtyLayoutList(this);
+        if (awaitingLayout) {
+            boolean sceneChanged = oldScene != newScene;
+            if (oldScene != null && sceneChanged) {
+                oldScene.removeFromDirtyLayoutList(this);
+            }
+            // If this node is dirty and the new scene or subScene is not null
+            // then add this node to the new scene's dirty list
+            if (newScene != null && layoutRoot) {
+                if (newSubScene != null) {
+                    newSubScene.setDirtyLayout(this);
+                }
+                if (sceneChanged) {
+                    newScene.addToDirtyLayoutList(this);
+                }
+            }
         }
     }
 
@@ -812,6 +820,13 @@ public abstract class Parent extends Node {
             setNeedsLayout(true);
             if (layoutRoot) {
                 final Scene scene = getScene();
+                final SubScene subScene = getSubScene();
+                if (subScene != null) {
+                    if (logger.isLoggable(PlatformLogger.FINER)) {
+                        logger.finer(this.toString()+" layoutRoot added to SubScene dirty layout list");
+                    }
+                    subScene.setDirtyLayout(this);
+                }
                 if (scene != null) {
                     if (logger.isLoggable(PlatformLogger.FINER)) {
                         logger.finer(this.toString()+" layoutRoot added to scene dirty layout list");
@@ -1147,7 +1162,13 @@ public abstract class Parent extends Node {
 
         // Nothing to do...
         if (cssFlag == CssFlags.CLEAN) return;
-        
+
+        // RT-29254 - If DIRTY_BRANCH, pass control to Node#processCSS. This avoids calling impl_processCSS on
+        // this node and all of its children when css doesn't need updated, recalculated, or reapplied.
+        if (cssFlag == CssFlags.DIRTY_BRANCH) {
+            super.processCSS();
+            return;
+        }
         // remember the flag we started with since super.impl_processCSS
         // resets it to CLEAN and we need it for setting children.
         CssFlags flag = cssFlag;
@@ -1160,12 +1181,15 @@ public abstract class Parent extends Node {
             final Node child = children.get(i);
             
             // If the parent styles are being updated, recalculated or 
-            // reapplied, then make sure the children get the same treatment. 
-            child.cssFlag = flag;
+            // reapplied, then make sure the children get the same treatment.
+            // Unless the child is already more dirty than this parent (RT-29074).
+            if(flag.compareTo(child.cssFlag) > 0) {
+                child.cssFlag = flag;
+            }
             child.impl_processCSS();
         }
     }
-    
+
     /***********************************************************************
      *                               Misc                                  *
      *                                                                     *

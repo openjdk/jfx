@@ -326,7 +326,7 @@
         <sequential>
             <mkdir dir="${coverage.classes.dir}"/>
             <cobertura-instrument todir="${coverage.classes.dir}" datafile="${coverage.datafile}">
-                <fileset dir="${build.classes.dir}" includes="**/*.class"/>
+                <fileset dir="${build.classes.dir}" includes="**/*.class" excludes="**/*Builder.class"/>
                 <classpath refid="cobertura.class.path"/>
             </cobertura-instrument>
         </sequential>
@@ -343,14 +343,14 @@
             <mkdir dir="${coverage.dist.dir}"/>
             <cobertura-report destdir="${coverage.dist.dir}" datafile="${coverage.datafile}">
                 <fileset dir="${src.dir}"/>
-                <fileset dir="${build.dir}/builders"/>
+                <!--<fileset dir="${build.dir}/builders"/>-->
                 <classpath>
                     <path location="${build.classes.dir}"/>
                 </classpath>
             </cobertura-report>
             <cobertura-report format="xml" destdir="${coverage.dist.dir}" datafile="${coverage.datafile}">
                 <fileset dir="${src.dir}"/>
-                <fileset dir="${build.dir}/builders"/>
+                <!--<fileset dir="${build.dir}/builders"/>-->
             </cobertura-report>
         </sequential>
     </macrodef>

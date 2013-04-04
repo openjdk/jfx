@@ -80,6 +80,7 @@ import javafx.scene.shape.VLineTo;
 import javafx.stage.Window;
 import javafx.util.Duration;
 import com.sun.javafx.PlatformUtil;
+import com.sun.javafx.application.PlatformImpl;
 import com.sun.javafx.css.converters.BooleanConverter;
 import com.sun.javafx.css.converters.PaintConverter;
 import com.sun.javafx.scene.control.behavior.TextInputControlBehavior;
@@ -230,7 +231,7 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
     protected StackPane selectionHandle2 = null;
 
     public Point2D getMenuPosition() {
-        if (isEmbedded()) {
+        if (PlatformImpl.isSupported(ConditionalFeature.INPUT_TOUCH)) {
             if (caretHandle.isVisible()) {
                 return new Point2D(caretHandle.getLayoutX() + caretHandle.getWidth() / 2,
                                    caretHandle.getLayoutY());
@@ -296,7 +297,7 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
             }
         };
 
-        if (isEmbedded()) {
+        if (PlatformImpl.isSupported(ConditionalFeature.INPUT_TOUCH)) {
             caretHandle      = new StackPane();
             selectionHandle1 = new StackPane();
             selectionHandle2 = new StackPane();
@@ -656,7 +657,7 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
         boolean maskText = (maskText("A") != "A");
         ObservableList<MenuItem> items = contextMenu.getItems();
 
-        if (isEmbedded()) {
+        if (PlatformImpl.isSupported(ConditionalFeature.INPUT_TOUCH)) {
             items.clear();
             if (!maskText && hasSelection) {
                 if (editable) {

@@ -54,6 +54,7 @@ import javafx.stage.Stage;
  * @see javafx.scene.media.AudioClip
  * @related /Graphics3d/Xylophone
  * @highlight
+ * @conditionalFeatures WEB
  */
 public class AudioClipApp extends Application {
     public Parent createContent() {

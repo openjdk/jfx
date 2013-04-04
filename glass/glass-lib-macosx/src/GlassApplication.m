@@ -904,3 +904,62 @@ JNIEXPORT jstring JNICALL Java_com_sun_glass_ui_mac_MacApplication__1getRemoteLa
 
     return name;
 }
+
+/*
+ * Class:     com_sun_glass_ui_mac_MacApplication
+ * Method:    staticScreen_getVideoRefreshPeriod
+ * Signature: ()D
+ */
+JNIEXPORT jdouble JNICALL
+Java_com_sun_glass_ui_mac_MacApplication_staticScreen_1getVideoRefreshPeriod
+(JNIEnv *env, jobject jApplication)
+{
+    LOG("Java_com_sun_glass_ui_mac_MacApplication__1getVideoRefreshPeriod");
+
+    if (GlassDisplayLink != NULL)
+    {
+        double outRefresh = CVDisplayLinkGetActualOutputVideoRefreshPeriod(GlassDisplayLink);
+        LOG("CVDisplayLinkGetActualOutputVideoRefreshPeriod: %f", outRefresh);
+        return (outRefresh * 1000.0); // to millis
+    }
+    else
+    {
+        return 0.0;
+    }
+}
+
+/*
+ * Class:     com_sun_glass_ui_mac_MacApplication
+ * Method:    staticScreen_getScreens
+ * Signature: ()[Lcom/sun/glass/ui/Screen;
+ */
+JNIEXPORT jobjectArray JNICALL Java_com_sun_glass_ui_mac_MacApplication_staticScreen_1getScreens
+(JNIEnv *env, jobject jApplication)
+{
+    LOG("Java_com_sun_glass_ui_mac_MacApplication__1getScreens");
+
+    jobjectArray screenArray = nil;
+
+    GLASS_POOL_ENTER;
+    {
+        screenArray = createJavaScreens(env);
+    }
+    GLASS_POOL_EXIT;
+    GLASS_CHECK_EXCEPTION(env);
+    
+    return screenArray;
+}
+
+
+/*
+ * Class:     com_sun_glass_ui_mac_MacApplication
+ * Method:    _supportsSystemMenu
+ * Signature: ()Z;
+ */
+JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacApplication__1supportsSystemMenu
+(JNIEnv *env, jobject japplication)
+{
+    return !isEmbedded;
+}
+
+

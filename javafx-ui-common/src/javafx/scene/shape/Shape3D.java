@@ -39,6 +39,7 @@ import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.scene.Node;
 import javafx.scene.paint.Material;
+import javafx.scene.paint.PhongMaterial;
 
 
 /**
@@ -60,6 +61,8 @@ public abstract class Shape3D extends Node {
     
     // TODO: 3D - May provide user convenient utility to compose images in a single image for shapes such as Box or Cylinder
 
+    private static final PhongMaterial DEFAULT_MATERIAL = new PhongMaterial();
+    
     protected Shape3D() {
     }
 
@@ -68,7 +71,8 @@ public abstract class Shape3D extends Node {
 
     /**
      * Defines the material this {@code Shape3D}.
-     * The default material is null. XXX Info about null Material XXX
+     * The default material is null. If {@code Material} is null, a PhongMaterial
+     * with a diffuse color of Color.LIGHTGRAY is used for rendering.
      *
      * @defaultValue null
      */
@@ -214,7 +218,8 @@ public abstract class Shape3D extends Node {
                 material.impl_updatePG(); // new material should be updated
                 pgShape3D.setMaterial((PGPhongMaterial) material.impl_getPGMaterial());
             } else {
-                pgShape3D.setMaterial(null);
+                DEFAULT_MATERIAL.impl_updatePG();
+                pgShape3D.setMaterial(DEFAULT_MATERIAL.impl_getPGMaterial());
             }
         }
         if (impl_isDirty(DirtyBits.NODE_DRAWMODE)) {

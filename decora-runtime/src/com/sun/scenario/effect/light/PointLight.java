@@ -95,9 +95,7 @@ public class PointLight extends Light {
      * @param x the x coordinate of the light position
      */
     public void setX(float x) {
-        float old = this.x;
         this.x = x;
-        firePropertyChange("x", old, x);
     }
 
     /**
@@ -121,9 +119,7 @@ public class PointLight extends Light {
      * @param y the y coordinate of the light position
      */
     public void setY(float y) {
-        float old = this.y;
         this.y = y;
-        firePropertyChange("y", old, y);
     }
 
     /**
@@ -147,9 +143,7 @@ public class PointLight extends Light {
      * @param z the z coordinate of the light position
      */
     public void setZ(float z) {
-        float old = this.z;
         this.z = z;
-        firePropertyChange("z", old, z);
     }
 
     @Override

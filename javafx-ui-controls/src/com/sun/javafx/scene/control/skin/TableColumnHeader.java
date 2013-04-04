@@ -30,6 +30,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import javafx.application.ConditionalFeature;
 import javafx.beans.property.DoubleProperty;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
@@ -41,8 +42,7 @@ import javafx.geometry.VPos;
 import javafx.scene.Node;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Label;
-import static javafx.scene.control.TableColumnBase.SortType.ASCENDING;
-import static javafx.scene.control.TableColumnBase.SortType.DESCENDING;
+import javafx.scene.control.TableColumn;
 import javafx.scene.input.ContextMenuEvent;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.GridPane;
@@ -55,11 +55,14 @@ import javafx.css.StyleableDoubleProperty;
 import javafx.css.CssMetaData;
 import javafx.css.PseudoClass;
 import javafx.css.StyleableProperty;
+import com.sun.javafx.application.PlatformImpl;
 import com.sun.javafx.css.converters.SizeConverter;
 import com.sun.javafx.scene.control.MultiplePropertyChangeListenerHandler;
 import javafx.collections.WeakListChangeListener;
 import javafx.css.Styleable;
 import javafx.scene.control.TableColumnBase;
+
+import static com.sun.javafx.scene.control.TableColumnSortTypeWrapper.*;
 
 
 /**
@@ -111,6 +114,8 @@ public class TableColumnHeader extends Region {
             changeListenerHandler.registerChangeListener(column.visibleProperty(), "TABLE_COLUMN_VISIBLE");
             changeListenerHandler.registerChangeListener(column.sortNodeProperty(), "TABLE_COLUMN_SORT_NODE");
             changeListenerHandler.registerChangeListener(column.sortableProperty(), "TABLE_COLUMN_SORTABLE");
+            changeListenerHandler.registerChangeListener(column.textProperty(), "TABLE_COLUMN_TEXT");
+            changeListenerHandler.registerChangeListener(column.graphicProperty(), "TABLE_COLUMN_GRAPHIC");
         }
     }
     
@@ -146,12 +151,16 @@ public class TableColumnHeader extends Region {
         } else if ("TABLE_COLUMN_SORT_TYPE".equals(p)) {
             updateSortGrid();
             if (arrow != null) {
-                arrow.setRotate(column.getSortType() == ASCENDING ? 180 : 0.0);
+                arrow.setRotate(isAscending(column) ? 180 : 0.0);
             }
         } else if ("TABLE_COLUMN_SORT_NODE".equals(p)) {
             updateSortGrid();
         } else if ("TABLE_COLUMN_SORTABLE".equals(p)) {
             setSortPos(! column.isSortable() ? -1 : skin.getSortOrder().indexOf(column));
+        } else if ("TABLE_COLUMN_TEXT".equals(p)) {
+            label.setText(column.getText());
+        } else if ("TABLE_COLUMN_GRAPHIC".equals(p)) {
+            label.setGraphic(column.getGraphic());
         }
     }
     
@@ -354,9 +363,6 @@ public class TableColumnHeader extends Region {
 
         changeListenerHandler.dispose();
         
-        label.textProperty().unbind();
-        label.graphicProperty().unbind();
-        
         idProperty().unbind();
         styleProperty().unbind();
     }
@@ -370,7 +376,7 @@ public class TableColumnHeader extends Region {
     
     private boolean isColumnReorderingEnabled() {
         // we only allow for column reordering if there are more than one column,
-        return ! PlatformUtil.isEmbedded() && getTableViewSkin().getVisibleLeafColumns().size() > 1;
+        return !PlatformImpl.isSupported(ConditionalFeature.INPUT_TOUCH) && getTableViewSkin().getVisibleLeafColumns().size() > 1;
     }
     
     private void initUI() {
@@ -386,8 +392,8 @@ public class TableColumnHeader extends Region {
         // --- label
         label = new Label();
         label.setAlignment(Pos.CENTER);
-        label.textProperty().bind(column.textProperty());
-        label.graphicProperty().bind(column.graphicProperty());
+        label.setText(column.getText());
+        label.setGraphic(column.getGraphic());
 
         // ---- container for the sort arrow (which is not supported on embedded
         // platforms)
@@ -442,8 +448,8 @@ public class TableColumnHeader extends Region {
                 arrow = new Region();
                 arrow.getStyleClass().setAll("arrow");
                 arrow.setVisible(true);
-                arrow.setRotate(column.getSortType() == ASCENDING ? 180.0F : 0.0F);
-                changeListenerHandler.registerChangeListener(column.sortTypeProperty(), "TABLE_COLUMN_SORT_TYPE");
+                arrow.setRotate(isAscending(column) ? 180.0F : 0.0F);
+                changeListenerHandler.registerChangeListener(getSortTypeProperty(column), "TABLE_COLUMN_SORT_TYPE");
             }
             
             arrow.setVisible(isSortColumn);
@@ -472,8 +478,9 @@ public class TableColumnHeader extends Region {
                 }
 
                 // show the sort order dots
-                int arrowRow = column.getSortType() == ASCENDING ? 1 : 2;
-                int dotsRow = column.getSortType() == ASCENDING ? 2 : 1;
+                boolean isAscending = isAscending(column);
+                int arrowRow = isAscending ? 1 : 2;
+                int dotsRow = isAscending ? 2 : 1;
 
                 sortArrowGrid.add(arrow, 1, arrowRow);
                 GridPane.setHalignment(arrow, HPos.CENTER);
@@ -512,9 +519,9 @@ public class TableColumnHeader extends Region {
             Region r = new Region();
             r.getStyleClass().add("sort-order-dot");
             
-            TableColumnBase.SortType sortType = getTableColumn().getSortType();
-            if (sortType != null) {
-                r.getStyleClass().add(sortType.name().toLowerCase());
+            String sortTypeName = getSortTypeName(column);
+            if (sortTypeName != null && ! sortTypeName.isEmpty()) {
+                r.getStyleClass().add(sortTypeName.toLowerCase());
             }
             
             sortOrderDots.getChildren().add(r);
@@ -575,10 +582,10 @@ public class TableColumnHeader extends Region {
         // addColumn is true e.g. when the user is holding down Shift
         if (addColumn) {
             if (!isSortColumn) {
-                column.setSortType(ASCENDING);
+                setSortType(column, TableColumn.SortType.ASCENDING);
                 sortOrder.add(column);
-            } else if (column.getSortType() == ASCENDING) {
-                column.setSortType(DESCENDING);
+            } else if (isAscending(column)) {
+                setSortType(column, TableColumn.SortType.DESCENDING);
             } else {
                 int i = sortOrder.indexOf(column);
                 if (i != -1) {
@@ -594,8 +601,8 @@ public class TableColumnHeader extends Region {
                 //   1st click: sort ascending
                 //   2nd click: sort descending
                 //   3rd click: natural sorting (sorting is switched off) 
-                if (column.getSortType() == ASCENDING) {
-                    column.setSortType(DESCENDING);
+                if (isAscending(column)) {
+                    setSortType(column, TableColumn.SortType.DESCENDING);
                 } else {
                     // remove from sort
                     sortOrder.remove(column);
@@ -604,9 +611,10 @@ public class TableColumnHeader extends Region {
                 // the column is already being used to sort, so we toggle its
                 // sortAscending property, and also make the column become the
                 // primary sort column
-                switch (column.getSortType()) {
-                    case ASCENDING: column.setSortType(DESCENDING); break;
-                    case DESCENDING: column.setSortType(ASCENDING); break;
+                if (isAscending(column)) {
+                    setSortType(column, TableColumn.SortType.DESCENDING);
+                } else if (isDescending(column)) {
+                    setSortType(column, TableColumn.SortType.ASCENDING);
                 }
                 
                 // to prevent multiple sorts, we make a copy of the sort order
@@ -618,7 +626,7 @@ public class TableColumnHeader extends Region {
                 sortOrder.setAll(column);
             } else {
                 // add to the sort order, in ascending form
-                column.setSortType(ASCENDING);
+                setSortType(column, TableColumn.SortType.ASCENDING);
                 sortOrder.setAll(column);
             }
         }

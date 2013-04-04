@@ -24,67 +24,65 @@
  */
  
 #include "LensCommon.h"
-#include "com_sun_glass_ui_lens_LensScreen.h"
 
-/*
- * Class:     com_sun_glass_ui_lens_LensScreen
- * Method:    _getMainScreen
- * Signature: (Lcom/sun/glass/ui/Screen;)Lcom/sun/glass/ui/Screen;
- */
-JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_lens_LensScreen__1getMainScreen
-(JNIEnv *env, jclass clazz, jobject jscreen) {
-    NativeScreen screen;
-    jclass jScreenClass = (*env)->FindClass(env, "com/sun/glass/ui/Screen");
+static jobject createJavaScreen(JNIEnv *env, NativeScreen screen) {
+    // already allocated globally, leaving here only for reference
+    //jclass jScreenClass = (*env)->FindClass(env, "com/sun/glass/ui/Screen");
 
-    screen = glass_screen_getMainScreen();
-    GLASS_LOG_FINE("screen=%p", screen);
+    jmethodID screenInit = (*env)->GetMethodID(env, jScreenClass, 
+        "<init>", 
+        "(JIIIIIIIIIIIF)V");
+    GLASS_CHECK_EXCEPTION(env);
 
-    if (jscreen != NULL) {
-        (*env)->SetLongField(env, jscreen,
-                             (*env)->GetFieldID(env, jScreenClass, "ptr", "J"),
-                             ptr_to_jlong(screen));
-        (*env)->SetIntField(env, jscreen,
-                            (*env)->GetFieldID(env, jScreenClass, "depth", "I"),
-                            screen->depth);
-        (*env)->SetIntField(env, jscreen,
-                            (*env)->GetFieldID(env, jScreenClass, "x", "I"),
-                            screen->x);
-        (*env)->SetIntField(env, jscreen,
-                            (*env)->GetFieldID(env, jScreenClass, "y", "I"),
-                            screen->y);
-        (*env)->SetIntField(env, jscreen,
-                            (*env)->GetFieldID(env, jScreenClass, "width", "I"),
-                            screen->width);
-        (*env)->SetIntField(env, jscreen,
-                            (*env)->GetFieldID(env, jScreenClass, "height", "I"),
-                            screen->height);
-
-        (*env)->SetIntField(env, jscreen,
-                            (*env)->GetFieldID(env, jScreenClass, "visibleX", "I"),
-                            screen->visibleX);
-        (*env)->SetIntField(env, jscreen,
-                            (*env)->GetFieldID(env, jScreenClass, "visibleY", "I"),
-                            screen->visibleY);
-        (*env)->SetIntField(env, jscreen,
-                            (*env)->GetFieldID(env, jScreenClass, "visibleWidth", "I"),
-                            screen->visibleWidth);
-        (*env)->SetIntField(env, jscreen,
-                            (*env)->GetFieldID(env, jScreenClass, "visibleHeight", "I"),
-                            screen->visibleHeight);
-
-        (*env)->SetFloatField(env, jscreen,
-                              (*env)->GetFieldID(env, jScreenClass, "scale", "F"), 1.0);
-        (*env)->SetIntField(env, jscreen,
-                            (*env)->GetFieldID(env, jScreenClass, "resolutionX", "I"),
-                            screen->resolutionX);
-        (*env)->SetIntField(env, jscreen,
-                            (*env)->GetFieldID(env, jScreenClass, "resolutionY", "I"),
-                            screen->resolutionY);
-        GLASS_CHECK_EXCEPTION(env);
-    } else {
-        GLASS_LOG_SEVERE("Failed to allocate screen");
+    if (!screenInit) {
+        glass_throw_exception_by_name(env, glass_RuntimeException,"missing Screen()");
+        return NULL ;
     }
 
-    return jscreen;
+    jobject newScreen = (jobject)(*env)->NewObject(env, jScreenClass, screenInit,
+        ptr_to_jlong(screen),
+
+        screen->depth,
+
+        screen->x,
+        screen->y,
+        screen->width,
+        screen->height,
+
+        screen->visibleX,
+        screen->visibleY,
+        screen->visibleWidth,
+        screen->visibleHeight,
+
+        screen->resolutionX,
+        screen->resolutionY,
+
+        1.0f);
+    GLASS_CHECK_EXCEPTION(env);
+
+    return newScreen;
+}
+
+jobjectArray createJavaScreens(JNIEnv *env) {
+    // Update the Java notion of our Screens[]
+
+
+    // create our one Screen object
+    jobject defScreen = createJavaScreen(env, glass_screen_getMainScreen());
+    if (defScreen == NULL) {
+        glass_throw_exception_by_name(env, glass_RuntimeException,"failed to create default Screen");
+        return NULL;
+    }
+
+    // create our Screen[]
+    // with only one element because we know that is all we currently support
+    int screenCount = 1;
+    jobjectArray screenArray = (*env)->NewObjectArray(env, 
+            screenCount, 
+            jScreenClass, 
+            NULL);
+    (*env)->SetObjectArrayElement(env, screenArray, 0, defScreen);
+
+    return screenArray;
 }
 

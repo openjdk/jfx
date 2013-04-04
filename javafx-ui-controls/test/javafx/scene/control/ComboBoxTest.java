@@ -26,6 +26,9 @@
 package javafx.scene.control;
 
 import javafx.css.PseudoClass;
+
+import com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
+import com.sun.javafx.scene.control.infrastructure.StageLoader;
 import com.sun.javafx.scene.control.skin.ComboBoxListViewSkin;
 import com.sun.javafx.scene.control.skin.ListViewSkin;
 import com.sun.javafx.scene.control.skin.VirtualFlow;
@@ -46,8 +49,10 @@ import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.event.Event;
 import javafx.event.EventHandler;
+import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.Scene;
+import javafx.scene.input.KeyCode;
 import javafx.stage.Stage;
 import javafx.util.Callback;
 import javafx.util.StringConverter;
@@ -989,5 +994,32 @@ public class ComboBoxTest {
         assertEquals("2", comboBox.getValue());
         assertEquals("2", buttonCell.getText());
         assertEquals(2, sm.getSelectedIndex());
+    }
+    
+    @Test public void test_rt28245() {
+        final ObservableList<String> strings = FXCollections.observableArrayList(
+            "Option 1", "Option 2", "Option 3"
+        );
+        
+        ComboBox<String> comboBox = new ComboBox<String>();
+        comboBox.setItems(strings);
+        comboBox.setEditable(true);
+        comboBox.valueProperty().addListener(new ChangeListener<String>() {
+            @Override public void changed(ObservableValue ov, String t, String t1) {
+                if (t == null && t1.isEmpty()) {
+                    fail("Old value is '" + t + "' and new value is '" + t1 + "'.");
+                }
+            }
+        });
+        
+        StageLoader stageLoader = new StageLoader(comboBox);
+        stageLoader.getStage().show();
+        
+        assertNull(comboBox.getValue());
+        assertTrue(comboBox.getEditor().getText().isEmpty());
+        
+        comboBox.requestFocus();
+        
+        new KeyEventFirer(comboBox).doKeyPress(KeyCode.ENTER);
     }
 }

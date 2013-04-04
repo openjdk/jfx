@@ -51,6 +51,17 @@ public class HBoxTest {
         assertEquals(Pos.TOP_LEFT, hbox.getAlignment());
     }
 
+    @Test public void testHBoxNulls() {
+        hbox.setAlignment(null);
+
+        // this musn't throw NPE
+        hbox.autosize();
+        hbox.layout();
+
+        assertNull(null, hbox.getAlignment());
+        assertNull(null, hbox.alignmentProperty().get());
+    }
+
     @Test public void testSimpleHBox() {
         MockResizable child1 = new MockResizable(100,200, 300,400, 500,600);
         Rectangle child2 = new Rectangle(100, 100);

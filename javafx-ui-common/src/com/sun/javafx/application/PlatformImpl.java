@@ -524,7 +524,7 @@ public class PlatformImpl {
                         @Override public Object run() {
                             StyleManager.getInstance().setDefaultUserAgentStylesheet("com/sun/javafx/scene/control/skin/caspian/caspian.css");
 
-                            if (com.sun.javafx.PlatformUtil.isEmbedded()) {
+                            if (isSupported(ConditionalFeature.INPUT_TOUCH)) {
                                 StyleManager.getInstance().addUserAgentStylesheet("com/sun/javafx/scene/control/skin/caspian/embedded.css");
 
                                 if (com.sun.javafx.Utils.isQVGAScreen()) {

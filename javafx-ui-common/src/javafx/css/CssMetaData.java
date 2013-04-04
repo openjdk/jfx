@@ -102,7 +102,7 @@ import javafx.scene.Node;
  *     return getClassCssMetaData();
  * }
  * </pre><code>
- * @param <N> The type of Node
+ * @param <S> The type of Styleable
  * @param <V> The type into which the parsed value is converted. 
  */
 @com.sun.javafx.beans.annotations.NoBuilder
@@ -112,7 +112,10 @@ public abstract class CssMetaData<S extends Styleable, V> {
      * Set the value of the corresponding property on the given Node.
      * @param styleable The Styleable on which the property value is being set
      * @param value The value to which the property is set
+     * @deprecated This method is no longer called from CSS code. 
+     * Use {@link StyleableProperty#applyStyle(javafx.css.StyleOrigin, java.lang.Object)}
      */
+    @Deprecated
     public void set(S styleable, V value, StyleOrigin origin) {
         
         final StyleableProperty<V> styleableProperty = getStyleableProperty(styleable);

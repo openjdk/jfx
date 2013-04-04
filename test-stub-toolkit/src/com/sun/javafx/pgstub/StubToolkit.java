@@ -81,6 +81,7 @@ import com.sun.javafx.sg.PGCircle;
 import com.sun.javafx.sg.PGCubicCurve;
 import com.sun.javafx.sg.PGCylinder;
 import com.sun.javafx.sg.PGEllipse;
+import com.sun.javafx.sg.PGExternalNode;
 import com.sun.javafx.sg.PGGroup;
 import com.sun.javafx.sg.PGImageView;
 import com.sun.javafx.sg.PGLightBase;
@@ -97,6 +98,7 @@ import com.sun.javafx.sg.PGPolyline;
 import com.sun.javafx.sg.PGQuadCurve;
 import com.sun.javafx.sg.PGRectangle;
 import com.sun.javafx.sg.PGRegion;
+import com.sun.javafx.sg.PGSubScene;
 import com.sun.javafx.sg.PGSVGPath;
 import com.sun.javafx.sg.PGShape.StrokeLineCap;
 import com.sun.javafx.sg.PGShape.StrokeLineJoin;
@@ -104,6 +106,7 @@ import com.sun.javafx.sg.PGShape.StrokeType;
 import com.sun.javafx.sg.PGSphere;
 import com.sun.javafx.sg.PGText;
 import com.sun.javafx.sg.PGTriangleMesh;
+import com.sun.javafx.tk.AppletWindow;
 import com.sun.javafx.tk.FileChooserType;
 import com.sun.javafx.tk.FontLoader;
 import com.sun.javafx.tk.ImageLoader;
@@ -147,11 +150,11 @@ public class StubToolkit extends Toolkit {
     private int maximumCursorColors = 2;
 
     private TKScreenConfigurationListener screenConfigurationListener;
-    
+
     private static final ScreenConfiguration[] DEFAULT_SCREEN_CONFIG = {
                 new ScreenConfiguration(0, 0, 1920, 1200, 0, 0, 1920, 1172, 96)
             };
-            
+
     private ScreenConfiguration[] screenConfigurations = DEFAULT_SCREEN_CONFIG;
 
     static {
@@ -194,6 +197,17 @@ public class StubToolkit extends Toolkit {
     @Override
     public TKStage createTKEmbeddedStage(HostInterface host) {
         return new StubStage();
+    }
+
+    @Override
+    public AppletWindow createAppletWindow(long parent, String serverName) {
+        // unsupported
+        return null;
+    }
+
+    @Override
+    public void closeAppletWindow() {
+        // unsupported
     }
 
     @Override
@@ -437,6 +451,10 @@ public class StubToolkit extends Toolkit {
         return new StubText();
     }
 
+    @Override public PGExternalNode createPGExternalNode() {
+        return new StubExternalNode();
+    }
+
     /*
      * additional testing functions
      */
@@ -496,7 +514,7 @@ public class StubToolkit extends Toolkit {
             modes.add(TransferMode.COPY);
             return modes;
         }
-    
+
         @Override
         public void setDragView(Image image) {
             this.image = image;
@@ -850,7 +868,7 @@ public class StubToolkit extends Toolkit {
 
     @Override
     public PGPhongMaterial createPGPhongMaterial() {
-        throw new UnsupportedOperationException("Not supported yet.");
+        return new StubPhongMaterial();
     }
 
     @Override
@@ -923,6 +941,11 @@ public class StubToolkit extends Toolkit {
 
     @Override
     public void setLightsDirty(boolean lightsDirty) {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public PGSubScene createPGSubScene() {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
@@ -1065,7 +1088,7 @@ public class StubToolkit extends Toolkit {
             return dpi;
         }
     }
-    
+
     public static class StubSystemMenu implements TKSystemMenu {
 
         @Override

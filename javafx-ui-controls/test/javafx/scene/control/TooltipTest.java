@@ -280,13 +280,12 @@ public class TooltipTest {
 
     @Test public void whenTextAlignmentIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
         CssMetaData styleable = ((StyleableProperty)toolTip.textAlignmentProperty()).getCssMetaData();
-        styleable.set(toolTip.bridge, TextAlignment.RIGHT, null);
+        ((StyleableProperty)toolTip.textAlignmentProperty()).applyStyle(null, TextAlignment.RIGHT);
         assertTrue(styleable.isSettable(toolTip.bridge));
     }
 
     @Test public void canSpecifyTextAlignmentViaCSS() {
-        CssMetaData styleable = ((StyleableProperty)toolTip.textAlignmentProperty()).getCssMetaData();
-        styleable.set(toolTip.bridge, TextAlignment.CENTER, null);
+        ((StyleableProperty)toolTip.textAlignmentProperty()).applyStyle(null, TextAlignment.CENTER);
         assertSame(TextAlignment.CENTER, toolTip.getTextAlignment());
     }
   
@@ -300,13 +299,12 @@ public class TooltipTest {
     
     @Test public void whenTextOverrunIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
         CssMetaData styleable = ((StyleableProperty)toolTip.textOverrunProperty()).getCssMetaData();
-        styleable.set(toolTip.bridge, OverrunStyle.CENTER_ELLIPSIS, null);
+        ((StyleableProperty)toolTip.textOverrunProperty()).applyStyle(null, OverrunStyle.CENTER_ELLIPSIS);
         assertTrue(styleable.isSettable(toolTip.bridge));
     }
     
     @Test public void canSpecifyTextOverrunViaCSS() {
-        CssMetaData styleable = ((StyleableProperty)toolTip.textOverrunProperty()).getCssMetaData();
-        styleable.set(toolTip.bridge, OverrunStyle.CLIP, null);
+        ((StyleableProperty)toolTip.textOverrunProperty()).applyStyle(null, OverrunStyle.CLIP);
         assertSame(OverrunStyle.CLIP, toolTip.getTextOverrun());
     }
    
@@ -320,13 +318,11 @@ public class TooltipTest {
     
     @Test public void whenWrapTextIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
         CssMetaData styleable = ((StyleableProperty)toolTip.wrapTextProperty()).getCssMetaData();
-          styleable.set(toolTip.bridge, false, null);
           assertTrue(styleable.isSettable(toolTip.bridge));
     }
     
     @Test public void canSpecifyWrapTextViaCSS() {
-        CssMetaData styleable = ((StyleableProperty)toolTip.wrapTextProperty()).getCssMetaData();
-          styleable.set(toolTip.bridge, true, null);
+        ((StyleableProperty)toolTip.wrapTextProperty()).applyStyle(null, Boolean.TRUE);
         assertSame(true, toolTip.isWrapText());
     }
     
@@ -340,13 +336,11 @@ public class TooltipTest {
     
     @Test public void whenFontIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
         CssMetaData styleable = ((StyleableProperty)toolTip.fontProperty()).getCssMetaData();
-          styleable.set(toolTip.bridge, Font.getDefault(), null);
           assertTrue(styleable.isSettable(toolTip.bridge));
     }
     
     @Test public void canSpecifyFontViaCSS() {
-        CssMetaData styleable = ((StyleableProperty)toolTip.fontProperty()).getCssMetaData();
-          styleable.set(toolTip.bridge, Font.getDefault(), null);
+        ((StyleableProperty)toolTip.fontProperty()).applyStyle(null, Font.getDefault());
         assertSame(Font.getDefault(), toolTip.getFont());
     }
     
@@ -362,14 +356,13 @@ public class TooltipTest {
     @Ignore("getCssMetaData returns null for graphicProperty")
     @Test public void whenGraphicIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
         CssMetaData styleable = ((StyleableProperty)toolTip.graphicProperty()).getCssMetaData();
-          styleable.set(toolTip.bridge, "../../../../build/classes/com/sun/javafx/scene/control/skin/caspian/menu-shadow.png", null);
           assertTrue(styleable.isSettable(toolTip.bridge));
     }
     
     @Ignore("getCssMetaData returns null for graphicProperty")
     @Test public void canSpecifyGraphicViaCSS() {
-        CssMetaData styleable = ((StyleableProperty)toolTip.graphicProperty()).getCssMetaData();
-          styleable.set(toolTip.bridge, "../../../../build/classes/com/sun/javafx/scene/control/skin/caspian/menu-shadow.png", null);
+        ((StyleableProperty)toolTip.graphicProperty())
+                .applyStyle(null , "../../../../build/classes/com/sun/javafx/scene/control/skin/caspian/menu-shadow.png");
         assertNotNull(toolTip.getGraphic());
     }
     
@@ -383,13 +376,11 @@ public class TooltipTest {
     
     @Test public void whenContentDisplayIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
         CssMetaData styleable = ((StyleableProperty)toolTip.contentDisplayProperty()).getCssMetaData();
-          styleable.set(toolTip.bridge, ContentDisplay.TEXT_ONLY, null);
           assertTrue(styleable.isSettable(toolTip.bridge));
     }
     
     @Test public void canSpecifyContentDisplayViaCSS() {
-        CssMetaData styleable = ((StyleableProperty)toolTip.contentDisplayProperty()).getCssMetaData();
-          styleable.set(toolTip.bridge, ContentDisplay.BOTTOM, null);
+        ((StyleableProperty)toolTip.contentDisplayProperty()).applyStyle(null, ContentDisplay.BOTTOM);
         assertSame(toolTip.getContentDisplay(), ContentDisplay.BOTTOM);
     }
     
@@ -403,13 +394,11 @@ public class TooltipTest {
 
     @Test public void whenGraphicTextGapIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
         CssMetaData styleable = ((StyleableProperty)toolTip.graphicTextGapProperty()).getCssMetaData();
-          styleable.set(toolTip.bridge, 6.0, null);
           assertTrue(styleable.isSettable(toolTip.bridge));
     }
 
     @Test public void canSpecifyGraphicTextGapViaCSS() {
-        CssMetaData styleable = ((StyleableProperty)toolTip.graphicTextGapProperty()).getCssMetaData();
-          styleable.set(toolTip.bridge, 56.0, null);
+        ((StyleableProperty)toolTip.graphicTextGapProperty()).applyStyle(null, 56.0);
         assertEquals(56.0, toolTip.getGraphicTextGap(),0.0);
     }
 

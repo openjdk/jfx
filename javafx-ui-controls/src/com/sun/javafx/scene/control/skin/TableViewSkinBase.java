@@ -204,7 +204,7 @@ public abstract class TableViewSkinBase<S, C extends Control, B extends Behavior
         registerChangeListener(control.focusTraversableProperty(), "FOCUS_TRAVERSABLE");
         registerChangeListener(control.widthProperty(), "WIDTH");
     }
-
+    
     @Override protected void handleControlPropertyChanged(String p) {
         super.handleControlPropertyChanged(p);
 

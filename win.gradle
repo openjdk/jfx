@@ -1,0 +1,109 @@
+/*
+ * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.  Oracle designates this
+ * particular file as subject to the "Classpath" exception as provided
+ * by Oracle in the LICENSE file that accompanied this code.
+ *
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
+ *
+ * You should have received a copy of the GNU General Public License version
+ * 2 along with this work; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+ * or visit www.oracle.com if you need additional information or have any
+ * questions.
+ */
+
+ext.CC_PARAMS = ["/nologo", "/W3", "/EHsc", "/c",
+        "/D_STATIC_CPP_LIB", "/D_DISABLE_DEPRECATE_STATIC_CPPLIB", "/DINLINE=__inline",
+        "/DUNICODE", "/D_UNICODE", "/DWIN32", "/DIAL", "/D_LITTLE_ENDIAN", "/DWIN32_LEAN_AND_MEAN",
+        "/I$JDK_HOME/include", "/I$JDK_HOME/include/win32", "/arch:SSE", "/fp:fast",
+        IS_DEBUG ? ["/MDd", "/Od", "/Zi", "/DDEBUG"] : ["/O2", "/MD"]].flatten();
+
+ext.LINK_PARAMS = ["/nologo", "/dll", "/manifest", "/opt:REF", "/incremental:no"];
+if (IS_DEBUG) LINK_PARAMS.add("/debug");
+
+// Check to see whether $buildDir/windows_tools.properties file exists. If not, then generate it.
+// Once generated, we need to read the properties file to help us define the defaults for this
+// block of properties
+File windows_tools = file("$buildDir/windows_tools.properties");
+//outputs.file = windows_tools;
+if (!windows_tools.exists()) {
+    // Create the properties file
+    windows_tools.getParentFile().mkdirs();
+    windows_tools.createNewFile();
+    ByteArrayOutputStream results = new ByteArrayOutputStream();
+    exec({
+        environment([
+                "WINSDKPATH" : "",
+                "CONF"       : CONF, // TODO does this mean the generated properties must be reset when in a different configuration?
+                "VCARCH"     : IS_64 ? "amd64" : "x86",
+                "SDKARCH"    : IS_64 ? "/x64" : "/x86",
+        ]);
+        commandLine("cmd", "/q", "/c", "genVSproperties.bat");
+        setStandardOutput(results);
+    });
+    BufferedReader reader = new BufferedReader(new StringReader(results.toString().trim()));
+    reader.readLine();
+    reader.readLine();
+    String line;
+    while ((line = reader.readLine()) != null && !line.startsWith("######")) {
+        println line
+        line = line.replace("\\", "/").replace("/@@ENDOFLINE@@", "").replace("@@ENDOFLINE@@", "").replace("//", "/").replace("windows.vs.", "WINDOWS_VS_");
+        windows_tools << line << "\r\n";
+    }
+}
+// Try reading the properties in order to define the properties. If the property file cannot
+// be located, then we will end up using some hard-coded defaults (which are probably wrong 80%
+// of the time, but what the heck).
+InputStream windows_tools_stream = null;
+try {
+    Properties windows_tools_properties = new Properties();
+    windows_tools_stream = new FileInputStream(windows_tools);
+    windows_tools_properties.load(windows_tools_stream);
+    defineProperty("WINDOWS_VS_VSINSTALLDIR", windows_tools_properties, "absolute garbage");
+    defineProperty("WINDOWS_SDK_DIR", windows_tools_properties, "C:/Program Files (x86)/Microsoft SDKs/Windows/v7.0A")
+    defineProperty("WINDOWS_VS_VCINSTALLDIR", windows_tools_properties, "$WINDOWS_VS_VSINSTALLDIR/VC")
+    defineProperty("WINDOWS_VS_DEVENVDIR", windows_tools_properties, "$WINDOWS_VS_VSINSTALLDIR/Common7/IDE")
+    defineProperty("WINDOWS_VS_DEVENVCMD", windows_tools_properties, "$WINDOWS_VS_DEVENVDIR/VCExpress.exe")
+    defineProperty("WINDOWS_VS_MSVCDIR", windows_tools_properties, WINDOWS_VS_VCINSTALLDIR)
+    defineProperty("WINDOWS_DXSDK_DIR", windows_tools_properties, System.getenv().get("DXSDK_DIR"))
+    defineProperty("WINDOWS_VS_INCLUDE", windows_tools_properties, "$WINDOWS_VS_VCINSTALLDIR/INCLUDE;" + "$WINDOWS_SDK_DIR/include;")
+    defineProperty("WINDOWS_VS_LIB", windows_tools_properties, "$WINDOWS_VS_VCINSTALLDIR/LIB;" + "$WINDOWS_SDK_DIR/lib;")
+    defineProperty("WINDOWS_VS_LIBPATH", windows_tools_properties, "$WINDOWS_VS_VCINSTALLDIR/LIB;")
+    defineProperty("WINDOWS_VS_PATH", windows_tools_properties, "$WINDOWS_VS_DEVENVDIR;" +
+            "$WINDOWS_VS_VSINSTALLDIR/VC/BIN;" +
+            "$WINDOWS_VS_VSINSTALLDIR/Common7/Tools;" +
+            "$WINDOWS_VS_VCINSTALLDIR/VCPackages;" +
+            "$WINDOWS_SDK_DIR/bin/NETFX 4.0 Tools;" +
+            "$WINDOWS_SDK_DIR/bin;" +
+            System.getenv().get("PATH"))
+} finally {
+    try { windows_tools_stream.close() } catch (Exception e) { }
+}
+
+ext.WINDOWS_NATIVE_COMPILE_ENVIRONMENT = [
+        "VCINSTALLDIR"         : WINDOWS_VS_VCINSTALLDIR,
+        "VSINSTALLDIR"         : WINDOWS_VS_VSINSTALLDIR,
+        "DEVENVDIR"            : WINDOWS_VS_DEVENVDIR,
+        "MSVCDIR"              : WINDOWS_VS_MSVCDIR,
+        "PATH"                 : WINDOWS_VS_PATH,
+        "INCLUDE"              : WINDOWS_VS_INCLUDE,
+        "LIB"                  : WINDOWS_VS_LIB,
+        "LIBPATH"              : WINDOWS_VS_LIBPATH,
+        "DXSDK_DIR"            : WINDOWS_DXSDK_DIR
+];
+
+defineProperty("CC", "$WINDOWS_VS_VSINSTALLDIR/VC/BIN/cl.exe");
+defineProperty("LINK", "$WINDOWS_VS_VSINSTALLDIR/VC/BIN/link.exe");
+defineProperty("RC", "$WINDOWS_SDK_DIR/Bin/RC.Exe");
+defineProperty("FXC", "$WINDOWS_DXSDK_DIR/utilities/bin/x86/fxc");

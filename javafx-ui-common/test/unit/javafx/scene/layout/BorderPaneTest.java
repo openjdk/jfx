@@ -25,9 +25,7 @@
 
 package javafx.scene.layout;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 import javafx.geometry.Orientation;
 import org.junit.Before;
 import org.junit.Ignore;
@@ -49,6 +47,96 @@ public class BorderPaneTest {
         assertNull(borderpane.getBottom());
         assertNull(borderpane.getLeft());
         assertNull(borderpane.getRight());
+    }
+
+    @Test public void testChildrenRemovedDirectly() {
+        MockResizable node = new MockResizable(10,20, 100,200, 700,800);
+
+        borderpane.setCenter(node);
+        assertSame(node, borderpane.getCenter());
+        assertNull(borderpane.getLeft());
+        assertNull(borderpane.getRight());
+        assertNull(borderpane.getBottom());
+        assertNull(borderpane.getTop());
+
+        borderpane.autosize();
+        borderpane.layout();
+        assertEquals(0, node.getLayoutX(), 1e-100);
+        assertEquals(0, node.getLayoutY(), 1e-100);
+        assertEquals(100, node.getWidth(), 1e-100);
+        assertEquals(200, node.getHeight(), 1e-100);
+
+        borderpane.getChildren().remove(node);
+        assertNull(borderpane.getCenter());
+
+        borderpane.setLeft(node);
+        assertNull(borderpane.getCenter());
+        assertSame(node, borderpane.getLeft());
+        assertNull(borderpane.getRight());
+        assertNull(borderpane.getBottom());
+        assertNull(borderpane.getTop());
+
+        borderpane.autosize();
+        borderpane.layout();
+        assertEquals(0, node.getLayoutX(), 1e-100);
+        assertEquals(0, node.getLayoutY(), 1e-100);
+        assertEquals(100, node.getWidth(), 1e-100);
+        assertEquals(200, node.getHeight(), 1e-100);
+
+        borderpane.getChildren().remove(node);
+        assertNull(borderpane.getLeft());
+
+        borderpane.setRight(node);
+        assertNull(borderpane.getCenter());
+        assertNull(borderpane.getLeft());
+        assertSame(node, borderpane.getRight());
+        assertNull(borderpane.getBottom());
+        assertNull(borderpane.getTop());
+
+        borderpane.autosize();
+        borderpane.layout();
+        assertEquals(0, node.getLayoutX(), 1e-100);
+        assertEquals(0, node.getLayoutY(), 1e-100);
+        assertEquals(100, node.getWidth(), 1e-100);
+        assertEquals(200, node.getHeight(), 1e-100);
+
+        borderpane.getChildren().remove(node);
+        assertNull(borderpane.getRight());
+
+        borderpane.setBottom(node);
+        assertNull(borderpane.getCenter());
+        assertNull(borderpane.getLeft());
+        assertNull(borderpane.getRight());
+        assertSame(node, borderpane.getBottom());
+        assertNull(borderpane.getTop());
+
+        borderpane.autosize();
+        borderpane.layout();
+        assertEquals(0, node.getLayoutX(), 1e-100);
+        assertEquals(0, node.getLayoutY(), 1e-100);
+        assertEquals(100, node.getWidth(), 1e-100);
+        assertEquals(200, node.getHeight(), 1e-100);
+
+        borderpane.getChildren().remove(node);
+        assertNull(borderpane.getBottom());
+
+        borderpane.setTop(node);
+        assertNull(borderpane.getCenter());
+        assertNull(borderpane.getLeft());
+        assertNull(borderpane.getRight());
+        assertNull(borderpane.getBottom());
+        assertSame(node, borderpane.getTop());
+
+        borderpane.autosize();
+        borderpane.layout();
+        assertEquals(0, node.getLayoutX(), 1e-100);
+        assertEquals(0, node.getLayoutY(), 1e-100);
+        assertEquals(100, node.getWidth(), 1e-100);
+        assertEquals(200, node.getHeight(), 1e-100);
+
+        borderpane.getChildren().remove(node);
+        assertNull(borderpane.getTop());
+
     }
 
     @Test public void testCenterChildOnly() {
@@ -224,7 +312,7 @@ public class BorderPaneTest {
         assertEquals(22, bottom.getHeight(), 1e-100);
 
     }
-    
+
     @Test public void testWithBiasedChildren() {
         MockBiased top = new MockBiased(Orientation.HORIZONTAL, 100, 20); // 280 x 7.1428
         borderpane.setTop(top);
@@ -243,7 +331,7 @@ public class BorderPaneTest {
 
         assertEquals(280, borderpane.prefWidth(-1), 1e-100);
         assertEquals(240, borderpane.prefHeight(-1), 1e-10);
-        
+
         borderpane.resize(280, 240);
         borderpane.layout();
 
@@ -276,7 +364,7 @@ public class BorderPaneTest {
     @Test public void testWithHorizontalBiasedChildrenAtPrefSize() {
         MockResizable top = new MockResizable(400, 100);
         borderpane.setTop(top);
-        
+
         MockResizable left = new MockResizable(100, 100);
         borderpane.setLeft(left);
 
@@ -295,7 +383,7 @@ public class BorderPaneTest {
 
         borderpane.autosize();
         borderpane.layout();
-        
+
         assertEquals(0, top.getLayoutX(), 1e-200);
         assertEquals(0, top.getLayoutY(), 1e-200);
         assertEquals(400, top.getLayoutBounds().getWidth(), 1e-200);
@@ -479,7 +567,7 @@ public class BorderPaneTest {
 
         MockResizable bottom = new MockResizable(400, 100);
         borderpane.setBottom(bottom);
-       
+
         assertEquals(400, borderpane.prefWidth(500), 1e-200);
         borderpane.resize(400, 500);
         borderpane.layout();
@@ -526,7 +614,7 @@ public class BorderPaneTest {
 
         MockResizable bottom = new MockResizable(400, 100);
         borderpane.setBottom(bottom);
-        
+
         assertEquals(1000, borderpane.prefWidth(250), 1e-200);
         borderpane.resize(1000, 250);
         borderpane.layout();

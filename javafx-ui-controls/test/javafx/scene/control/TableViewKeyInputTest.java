@@ -28,6 +28,10 @@ package javafx.scene.control;
 import com.sun.javafx.Utils;
 import com.sun.javafx.scene.control.behavior.ListViewAnchorRetriever;
 import com.sun.javafx.scene.control.behavior.TableViewAnchorRetriever;
+import com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
+import com.sun.javafx.scene.control.infrastructure.KeyModifier;
+import com.sun.javafx.scene.control.infrastructure.StageLoader;
+
 import static org.junit.Assert.*;
 
 import java.util.List;
@@ -50,9 +54,7 @@ public class TableViewKeyInputTest {
     
     private KeyEventFirer keyboard;
     
-    private Stage stage;
-    private Scene scene;
-    private Group group;
+    private StageLoader stageLoader;
     
     private final TableColumn<String, String> col0 = new TableColumn<String, String>("col0");
     private final TableColumn<String, String> col1 = new TableColumn<String, String>("col1");
@@ -75,18 +77,13 @@ public class TableViewKeyInputTest {
         
         keyboard = new KeyEventFirer(tableView);
         
-        group = new Group();
-        scene = new Scene(group);
-        
-        stage = new Stage();
-        stage.setScene(scene);
-        
-        group.getChildren().setAll(tableView);
-        stage.show();
+        stageLoader = new StageLoader(tableView);
+        stageLoader.getStage().show();
     }
     
     @After public void tearDown() {
-        stage.hide();
+        tableView.getSkin().dispose();
+        stageLoader.dispose();
     }
     
     /***************************************************************************
@@ -96,8 +93,8 @@ public class TableViewKeyInputTest {
     private String debug() {
         StringBuilder sb = new StringBuilder("Selected Cells: [");
         
-        List<TablePosition> cells = sm.getSelectedCells();
-        for (TablePosition tp : cells) {
+        List<TablePosition<String,?>> cells = sm.getSelectedCells();
+        for (TablePosition<String,?> tp : cells) {
             sb.append("(");
             sb.append(tp.getRow());
             sb.append(",");
@@ -1670,7 +1667,6 @@ public class TableViewKeyInputTest {
         assertTrue(isSelected(0,1,2,3,4,5));
     }
     
-    @Ignore("Bug not yet fixed")
     @Test public void test_rt28065() {
         sm.setSelectionMode(SelectionMode.MULTIPLE);
         tableView.getItems().setAll("Apple", "Orange", "Banana");

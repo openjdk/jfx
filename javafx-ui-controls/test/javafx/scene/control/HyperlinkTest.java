@@ -188,15 +188,13 @@ public class HyperlinkTest {
     @Test public void whenVisitedIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsFalse() {
         // will return null!
         CssMetaData styleable = ((StyleableProperty)link.visitedProperty()).getCssMetaData();
-        styleable.set(link,true, null);
         assertFalse(styleable.isSettable(link));
     }
     
     @Ignore ("replaced by visitedPropertyIsNotStyleable")
     @Test public void cannotSpecifyVisitedViaCSS() {
         // will return null!
-        CssMetaData styleable = ((StyleableProperty)link.visitedProperty()).getCssMetaData();
-        styleable.set(link,true, null);
+        ((StyleableProperty)link.visitedProperty()).applyStyle(null, Boolean.TRUE);
         assertFalse(link.isVisited());
     }
     

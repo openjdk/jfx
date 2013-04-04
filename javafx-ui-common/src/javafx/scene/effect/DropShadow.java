@@ -649,6 +649,16 @@ public class DropShadow extends Effect {
         return (float) Utils.clamp(0, getSpread(), 1);
     }
 
+    private Color getColorInternal() {
+        Color c = getColor();
+        return c == null ? Color.BLACK : c;
+    }
+
+    private BlurType getBlurTypeInternal() {
+        BlurType bt = getBlurType();
+        return bt == null ? BlurType.THREE_PASS_BOX : bt;
+    }
+
     @Override
     void impl_update() {
         Effect localInput = getInput();
@@ -663,8 +673,8 @@ public class DropShadow extends Effect {
         peer.setGaussianWidth(getClampedWidth());
         peer.setGaussianHeight(getClampedHeight());
         peer.setSpread(getClampedSpread());
-        peer.setShadowMode(Toolkit.getToolkit().toShadowMode(getBlurType()));
-        peer.setColor(Toolkit.getToolkit().toColor4f(getColor()));
+        peer.setShadowMode(Toolkit.getToolkit().toShadowMode(getBlurTypeInternal()));
+        peer.setColor(Toolkit.getToolkit().toColor4f(getColorInternal()));
         peer.setOffsetX((int) getOffsetX());
         peer.setOffsetY((int) getOffsetY());
     }
@@ -697,7 +707,7 @@ public class DropShadow extends Effect {
         shadowBounds = EffectUtils.getShadowBounds(shadowBounds, tx,
                                                    getClampedWidth(),
                                                    getClampedHeight(),
-                                                   getBlurType());
+                                                   getBlurTypeInternal());
         BaseBounds contentBounds = EffectUtils.transformBounds(tx, bounds);
         BaseBounds ret = contentBounds.deriveWithUnion(shadowBounds);
 

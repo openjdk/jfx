@@ -25,6 +25,7 @@
 
 package com.sun.javafx.scene.control.behavior;
 
+import javafx.application.ConditionalFeature;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.geometry.NodeOrientation;
@@ -36,6 +37,7 @@ import java.text.Bidi;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.sun.javafx.application.PlatformImpl;
 import com.sun.javafx.scene.control.skin.TextInputControlSkin;
 
 import static javafx.scene.input.KeyEvent.KEY_PRESSED;
@@ -179,7 +181,7 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
             else if ("SelectHomeExtend".equals(name)) selectHomeExtend();
             else if ("SelectEndExtend".equals(name)) selectEndExtend();
             else if ("ToParent".equals(name)) forwardToParent(lastEvent);
-            /*DEBUG*/else if ("UseVK".equals(name) && isEmbedded()) {
+            /*DEBUG*/else if ("UseVK".equals(name) && PlatformImpl.isSupported(ConditionalFeature.VIRTUAL_KEYBOARD)) {
                 ((TextInputControlSkin<?,?>)textInputControl.getSkin()).toggleUseVK();
             } else {
                 done = false;

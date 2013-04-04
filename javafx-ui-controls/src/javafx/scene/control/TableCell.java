@@ -191,21 +191,7 @@ public class TableCell<S,T> extends IndexedCell<T> {
                     TableViewFocusModel fm;
                     
                     if (weakTableViewRef != null) {
-                        TableView<S> oldTableView = weakTableViewRef.get();
-                        if (oldTableView != null) {
-                            sm = oldTableView.getSelectionModel();
-                            if (sm != null) {
-                                sm.getSelectedCells().removeListener(weakSelectedListener);
-                            }
-
-                            fm = oldTableView.getFocusModel();
-                            if (fm != null) {
-                                fm.focusedCellProperty().removeListener(weakFocusedListener);
-                            }
-
-                            oldTableView.editingCellProperty().removeListener(weakEditingListener);
-                            oldTableView.getVisibleLeafColumns().removeListener(weakVisibleLeafColumnsListener);
-                        }
+                        cleanUpTableViewListeners(weakTableViewRef.get());
                     }
                     
                     if (get() != null) {
@@ -228,21 +214,20 @@ public class TableCell<S,T> extends IndexedCell<T> {
                     updateColumnIndex();
                 }
 
-                @Override
-                public Object getBean() {
+                @Override public Object getBean() {
                     return TableCell.this;
                 }
 
-                @Override
-                public String getName() {
+                @Override public String getName() {
                     return "tableView";
                 }
             };
         }
         return tableView;
     }
-    
-    
+
+
+
     // --- TableRow
     /**
      * The TableRow that this TableCell currently finds itself placed within.
@@ -372,12 +357,39 @@ public class TableCell<S,T> extends IndexedCell<T> {
     @Override protected Skin<?> createDefaultSkin() {
         return new TableCellSkin(this);
     }
+    
+//    @Override public void dispose() {
+//        cleanUpTableViewListeners(getTableView());
+//        
+//        if (currentObservableValue != null) {
+//            currentObservableValue.removeListener(weaktableRowUpdateObserver);
+//        }
+//        
+//        super.dispose();
+//    }
 
     /* *************************************************************************
     *                                                                         *
     * Private Implementation                                                  *
     *                                                                         *
     **************************************************************************/
+    
+    private void cleanUpTableViewListeners(TableView<S> tableView) {
+        if (tableView != null) {
+            TableView.TableViewSelectionModel sm = tableView.getSelectionModel();
+            if (sm != null) {
+                sm.getSelectedCells().removeListener(weakSelectedListener);
+            }
+
+            TableViewFocusModel fm = tableView.getFocusModel();
+            if (fm != null) {
+                fm.focusedCellProperty().removeListener(weakFocusedListener);
+            }
+
+            tableView.editingCellProperty().removeListener(weakEditingListener);
+            tableView.getVisibleLeafColumns().removeListener(weakVisibleLeafColumnsListener);
+        }        
+    }
     
     @Override void indexChanged() {
         super.indexChanged();
@@ -492,7 +504,7 @@ public class TableCell<S,T> extends IndexedCell<T> {
         
         // get the total number of items in the data model
         final TableView tableView = getTableView();
-        final List<T> items = tableView == null ? FXCollections.emptyObservableList() : tableView.getItems();
+        final List<T> items = tableView == null ? FXCollections.<T>emptyObservableList() : tableView.getItems();
         final TableColumn tableColumn = getTableColumn();
         final int itemCount = items.size();
         final int index = getIndex();
@@ -508,10 +520,14 @@ public class TableCell<S,T> extends IndexedCell<T> {
             return;
         } else {
             currentObservableValue = tableColumn.getCellObservableValue(index);
-            T value = currentObservableValue == null ? null : currentObservableValue.getValue();
+            T oldValue = getItem();
+            T newValue = currentObservableValue == null ? null : currentObservableValue.getValue();
             
             // update the 'item' property of this cell.
-            updateItem(value, false);
+            if ((newValue != null && ! newValue.equals(oldValue)) || 
+                    oldValue != null && ! oldValue.equals(newValue)) {
+                updateItem(newValue, false);
+            }
         }
         
         if (currentObservableValue == null) {

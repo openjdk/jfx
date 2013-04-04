@@ -205,6 +205,42 @@ public final class Scenegraph_eventHandlers_Test {
     }
 
     @Test
+    public void shouldNotCallHandlersWithoutDispatcher() {
+        final EventCountingHandler sceneHandler = new EventCountingHandler();
+        final EventCountingHandler rootHandler = new EventCountingHandler();
+        final EventCountingHandler leafHandler = new EventCountingHandler();
+
+        final Node testLeafNode = new Rectangle();
+        final Group testRootNode = new Group(testLeafNode);
+        final Scene testScene = new Scene(testRootNode);
+
+        setEventHandler(testScene, sceneOnHandlerPropRef, sceneHandler);
+        setEventHandler(testRootNode, nodeOnHandlerPropRef, rootHandler);
+        testLeafNode.addEventHandler(eventType, leafHandler);
+
+        testRootNode.setEventDispatcher(null);
+
+        Event.fireEvent(testLeafNode, triggeringEvent);
+        assertEquals(1, sceneHandler.getCounter());
+        assertEquals(0, rootHandler.getCounter());
+        assertEquals(1, leafHandler.getCounter());
+
+        testLeafNode.setEventDispatcher(null);
+
+        Event.fireEvent(testLeafNode, triggeringEvent);
+        assertEquals(2, sceneHandler.getCounter());
+        assertEquals(0, rootHandler.getCounter());
+        assertEquals(1, leafHandler.getCounter());
+
+        testScene.setEventDispatcher(null);
+
+        Event.fireEvent(testLeafNode, triggeringEvent);
+        assertEquals(2, sceneHandler.getCounter());
+        assertEquals(0, rootHandler.getCounter());
+        assertEquals(1, leafHandler.getCounter());
+    }
+
+    @Test
     public void shouldNotPropagateConsumedCapturingEvents() {
         final EventCountingHandler sceneHandler = new EventCountingHandler();
         final EventCountingHandler rlNodeHandler = new EventCountingHandler();

@@ -315,6 +315,10 @@ public class HBox extends Pane {
     private ObjectProperty<Pos> alignment;
     public final void setAlignment(Pos value) { alignmentProperty().set(value); }
     public final Pos getAlignment() { return alignment == null ? Pos.TOP_LEFT : alignment.get(); }
+    private Pos getAlignmentInternal() {
+        Pos localPos = getAlignment();
+        return localPos == null ? Pos.TOP_LEFT : localPos;
+    }
 
     /**
      * Whether or not resizable children will be resized to fill the full height of the hbox
@@ -354,7 +358,7 @@ public class HBox extends Pane {
     public final boolean isFillHeight() { return fillHeight == null ? true : fillHeight.get(); }
 
     private boolean shouldFillHeight() {
-        return isFillHeight() && getAlignment().getVpos() != VPos.BASELINE;
+        return isFillHeight() && getAlignmentInternal().getVpos() != VPos.BASELINE;
     }
 
     /**
@@ -388,9 +392,9 @@ public class HBox extends Pane {
             // altering the height of any child with a horizontal contentBias.
             double minWidths[] = getAreaWidths(managed, -1, true);
             adjustAreaWidths(managed, minWidths, width, -1);
-            contentHeight = computeMaxMinAreaHeight(managed, getMargins(managed), minWidths, getAlignment().getVpos());
+            contentHeight = computeMaxMinAreaHeight(managed, getMargins(managed), minWidths, getAlignmentInternal().getVpos());
         } else {
-            contentHeight = computeMaxMinAreaHeight(managed, getMargins(managed), getAlignment().getVpos());
+            contentHeight = computeMaxMinAreaHeight(managed, getMargins(managed), getAlignmentInternal().getVpos());
         }
         return snapSpace(insets.getTop()) +
                contentHeight +
@@ -413,9 +417,9 @@ public class HBox extends Pane {
             // altering the height of any child with a horizontal contentBias.
             double prefWidths[] = getAreaWidths(managed, -1, false);
             adjustAreaWidths(managed, prefWidths, width, -1);
-            contentHeight = computeMaxPrefAreaHeight(managed, getMargins(managed), prefWidths, getAlignment().getVpos());
+            contentHeight = computeMaxPrefAreaHeight(managed, getMargins(managed), prefWidths, getAlignmentInternal().getVpos());
         } else {
-            contentHeight = computeMaxPrefAreaHeight(managed, getMargins(managed), getAlignment().getVpos());
+            contentHeight = computeMaxPrefAreaHeight(managed, getMargins(managed), getAlignmentInternal().getVpos());
         }
         return snapSpace(insets.getTop()) +
                contentHeight +
@@ -529,6 +533,7 @@ public class HBox extends Pane {
     @Override protected void layoutChildren() {
         List<Node> managed = getManagedChildren();
         Insets insets = getInsets();
+        Pos align = getAlignmentInternal();
         double width = getWidth();
         double height = getHeight();
         double top = snapSpace(insets.getTop());
@@ -541,9 +546,9 @@ public class HBox extends Pane {
         double contentWidth = adjustAreaWidths(managed, actualAreaWidths, width, height);
         double contentHeight = height - top - bottom;
 
-        double x = snapSpace(insets.getLeft()) + computeXOffset(width - left - right, contentWidth, getAlignment().getHpos());
+        double x = snapSpace(insets.getLeft()) + computeXOffset(width - left - right, contentWidth, align.getHpos());
         double y = snapSpace(insets.getTop());
-        double baselineOffset = getAlignment().getVpos() == VPos.BASELINE ? getMaxBaselineOffset(managed)
+        double baselineOffset = align.getVpos() == VPos.BASELINE ? getMaxBaselineOffset(managed)
                                     : height/2;
 
         for (int i = 0, size = managed.size(); i < size; i++) {
@@ -551,7 +556,7 @@ public class HBox extends Pane {
             Insets margin = getMargin(child);
             layoutInArea(child, x, y, actualAreaWidths[i], contentHeight,
                     baselineOffset, margin, true, shouldFillHeight(),
-                    getAlignment().getHpos(), getAlignment().getVpos());
+                    align.getHpos(), align.getVpos());
             x += actualAreaWidths[i] + space;
         }
     }

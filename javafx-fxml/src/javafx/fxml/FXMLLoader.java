@@ -25,6 +25,7 @@
 
 package javafx.fxml;
 
+import com.sun.javafx.Logging;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -88,7 +89,10 @@ import com.sun.javafx.fxml.expression.Expression;
 import com.sun.javafx.fxml.expression.ExpressionValue;
 import com.sun.javafx.fxml.expression.KeyPath;
 import java.net.MalformedURLException;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
 import java.util.Locale;
+import java.util.StringTokenizer;
 import sun.reflect.misc.ConstructorUtil;
 import sun.reflect.misc.FieldUtil;
 import sun.reflect.misc.MethodUtil;
@@ -678,6 +682,26 @@ public class FXMLLoader {
             // If this is the root element, update the value
             if (parent == null) {
                 root = value;
+
+                // checking version of fx namespace - throw exception if not supported
+                String fxNSURI = xmlStreamReader.getNamespaceContext().getNamespaceURI("fx");
+                if (fxNSURI != null) {
+                    String fxVersion = fxNSURI.substring(fxNSURI.lastIndexOf("/") + 1);
+                    if (compareJFXVersions(FX_NAMESPACE_VERSION, fxVersion) < 0) {
+                        throw new LoadException("Loading FXML document of version " +
+                                fxVersion + " by JavaFX runtime supporting version " + FX_NAMESPACE_VERSION);
+                    }
+                }
+
+                // checking the version JavaFX API - print warning if not supported
+                String defaultNSURI = xmlStreamReader.getNamespaceContext().getNamespaceURI("");
+                if (defaultNSURI != null) {
+                    String nsVersion = defaultNSURI.substring(defaultNSURI.lastIndexOf("/") + 1);
+                    if (compareJFXVersions(JAVAFX_VERSION, nsVersion) < 0) {
+                        Logging.getJavaFXLogger().warning("Loading FXML document with JavaFX API of version " +
+                                nsVersion + " by JavaFX runtime of version " + JAVAFX_VERSION);
+                    }
+                }
             }
 
             // Add the value to the namespace
@@ -1705,12 +1729,23 @@ public class FXMLLoader {
 
     public static final String INITIALIZE_METHOD_NAME = "initialize";
 
+    public static final String JAVAFX_VERSION;
+
+    public static final String FX_NAMESPACE_VERSION = "1";
+
     static {
         defaultClassLoader = Thread.currentThread().getContextClassLoader();
 
         if (defaultClassLoader == null) {
             throw new NullPointerException();
         }
+
+        JAVAFX_VERSION = AccessController.doPrivileged(new PrivilegedAction<String>() {
+            @Override
+            public String run() {
+                return System.getProperty("javafx.version");
+            }
+        });
     }
 
     /**
@@ -2808,4 +2843,83 @@ public class FXMLLoader {
 
         return (T)fxmlLoader.load();
     }
+
+    /**
+     * Utility method for comparing two JavaFX version strings (such as 2.2.5, 8.0.0-ea)
+     * @param rtVer String representation of JavaFX runtime version, including - or _ appendix
+     * @param nsVer String representation of JavaFX version to compare against runtime version
+     * @return number &lt; 0 if runtime version is lower, 0 when both versions are the same,
+     *          number &gt; 0 if runtime is higher version
+     */
+    static int compareJFXVersions(String rtVer, String nsVer) {
+
+        int retVal = 0;
+
+        if (rtVer == null || "".equals(rtVer) ||
+            nsVer == null || "".equals(nsVer)) {
+            return retVal;
+        }
+
+        if (rtVer.equals(nsVer)) {
+            return retVal;
+        }
+
+        // version string can contain '-'
+        int dashIndex = rtVer.indexOf("-");
+        if (dashIndex > 0) {
+            rtVer = rtVer.substring(0, dashIndex);
+        }
+
+        // or "_"
+        int underIndex = rtVer.indexOf("_");
+        if (underIndex > 0) {
+            rtVer = rtVer.substring(0, underIndex);
+        }
+
+        // do not try to compare if the string is not valid version format
+        if (!Pattern.matches("^(\\d+)(\\.\\d+)*$", rtVer) ||
+            !Pattern.matches("^(\\d+)(\\.\\d+)*$", nsVer)) {
+            return retVal;
+        }
+
+        StringTokenizer nsVerTokenizer = new StringTokenizer(nsVer, ".");
+        StringTokenizer rtVerTokenizer = new StringTokenizer(rtVer, ".");
+        int nsDigit = 0, rtDigit = 0;
+        boolean rtVerEnd = false;
+
+        while (nsVerTokenizer.hasMoreTokens() && retVal == 0) {
+            nsDigit = Integer.parseInt(nsVerTokenizer.nextToken());
+            if (rtVerTokenizer.hasMoreTokens()) {
+                rtDigit = Integer.parseInt(rtVerTokenizer.nextToken());
+                retVal = rtDigit - nsDigit;
+            } else {
+                rtVerEnd = true;
+                break;
+            }
+        }
+
+        if (rtVerTokenizer.hasMoreTokens() && retVal == 0) {
+            rtDigit = Integer.parseInt(rtVerTokenizer.nextToken());
+            if (rtDigit > 0) {
+                retVal = 1;
+            }
+        }
+
+        if (rtVerEnd) {
+            if (nsDigit > 0) {
+                retVal = -1;
+            } else {
+                while (nsVerTokenizer.hasMoreTokens()) {
+                    nsDigit = Integer.parseInt(nsVerTokenizer.nextToken());
+                    if (nsDigit > 0) {
+                        retVal = -1;
+                        break;
+                    }
+                }
+            }
+        }
+
+        return retVal;
+    }
+
 }

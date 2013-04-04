@@ -52,7 +52,7 @@ import javafx.util.Callback;
 import com.sun.javafx.collections.annotations.ReturnsUnmodifiableCollection;
 import javafx.css.PseudoClass;
 import com.sun.javafx.scene.control.ReadOnlyUnbackedObservableList;
-import com.sun.javafx.scene.control.TableColumnComparator;
+import com.sun.javafx.scene.control.TableColumnComparatorBase.TableColumnComparator;
 import com.sun.javafx.scene.control.skin.TableColumnHeader;
 import javafx.collections.WeakListChangeListener;
 import javafx.event.EventHandler;
@@ -68,8 +68,8 @@ import javafx.beans.WeakInvalidationListener;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.value.WeakChangeListener;
-import static javafx.scene.control.TableColumnBase.SortType.ASCENDING;
-import static javafx.scene.control.TableColumnBase.SortType.DESCENDING;
+import static javafx.scene.control.TableColumn.SortType.ASCENDING;
+import static javafx.scene.control.TableColumn.SortType.DESCENDING;
 
 /**
  * The TableView control is designed to visualize an unlimited number of rows
@@ -403,11 +403,13 @@ public class TableView<S> extends Control {
                     TableUtil.removeTableColumnListener(c.getRemoved(),
                             weakColumnVisibleObserver,
                             weakColumnSortableObserver,
-                            weakColumnSortTypeObserver);
+                            weakColumnSortTypeObserver,
+                            weakColumnComparatorObserver);
                     TableUtil.addTableColumnListener(c.getAddedSubList(),
                             weakColumnVisibleObserver,
                             weakColumnSortableObserver,
-                            weakColumnSortTypeObserver);
+                            weakColumnSortTypeObserver,
+                            weakColumnComparatorObserver);
                 }
                     
                 // We don't maintain a bind for leafColumns, we simply call this update
@@ -527,6 +529,14 @@ public class TableView<S> extends Control {
         }
     };
     
+    private final InvalidationListener columnComparatorObserver = new InvalidationListener() {
+        @Override public void invalidated(Observable valueModel) {
+            TableColumn col = (TableColumn) ((SimpleObjectProperty)valueModel).getBean();
+            if (! getSortOrder().contains(col)) return;
+            doSort(TableUtil.SortEventType.COLUMN_COMPARATOR_CHANGE, col);
+        }
+    };
+    
     /* proxy pseudo-class state change from selectionModel's cellSelectionEnabledProperty */
     private final InvalidationListener cellSelectionModelInvalidationListener = new InvalidationListener() {
         @Override public void invalidated(Observable o) {
@@ -545,6 +555,9 @@ public class TableView<S> extends Control {
     
     private final WeakInvalidationListener weakColumnSortTypeObserver = 
             new WeakInvalidationListener(columnSortTypeObserver);
+    
+    private final WeakInvalidationListener weakColumnComparatorObserver = 
+            new WeakInvalidationListener(columnComparatorObserver);
     
     private final WeakListChangeListener weakColumnsObserver = 
             new WeakListChangeListener(columnsObserver);
@@ -1394,7 +1407,7 @@ public class TableView<S> extends Control {
          * in this TableView. Rather than directly modify this list, please
          * use the other methods provided in the TableViewSelectionModel.
          */
-        public abstract ObservableList<TablePosition> getSelectedCells();
+        public abstract ObservableList<TablePosition<S,?>> getSelectedCells();
 
         /**
          * Returns the TableView instance that this selection model is installed in.
@@ -1434,39 +1447,35 @@ public class TableView<S> extends Control {
                 }
             });
             
-            final MappingChange.Map<TablePosition,S> cellToItemsMap = new MappingChange.Map<TablePosition, S>() {
-
-                @Override
-                public S map(TablePosition f) {
+            final MappingChange.Map<TablePosition<S,?>,S> cellToItemsMap = new MappingChange.Map<TablePosition<S,?>, S>() {
+                @Override public S map(TablePosition<S,?> f) {
                     return getModelItem(f.getRow());
                 }
             };
             
-            final MappingChange.Map<TablePosition,Integer> cellToIndicesMap = new MappingChange.Map<TablePosition, Integer>() {
-
-                @Override
-                public Integer map(TablePosition f) {
+            final MappingChange.Map<TablePosition<S,?>,Integer> cellToIndicesMap = new MappingChange.Map<TablePosition<S,?>, Integer>() {
+                @Override public Integer map(TablePosition f) {
                     return f.getRow();
                 }
             };
             
-            selectedCells = FXCollections.<TablePosition>observableArrayList();
-            selectedCells.addListener(new ListChangeListener<TablePosition>() {
+            selectedCells = FXCollections.<TablePosition<S,?>>observableArrayList();
+            selectedCells.addListener(new ListChangeListener<TablePosition<S,?>>() {
                 @Override
-                public void onChanged(final Change<? extends TablePosition> c) {
+                public void onChanged(final Change<? extends TablePosition<S,?>> c) {
                     // when the selectedCells observableArrayList changes, we manually call
                     // the observers of the selectedItems, selectedIndices and
                     // selectedCells lists.
                     
                     // create an on-demand list of the removed objects contained in the
                     // given rows
-                    selectedItems.callObservers(new MappingChange<TablePosition, S>(c, cellToItemsMap, selectedItems));
+                    selectedItems.callObservers(new MappingChange<TablePosition<S,?>, S>(c, cellToItemsMap, selectedItems));
                     c.reset();
 
-                    selectedIndices.callObservers(new MappingChange<TablePosition, Integer>(c, cellToIndicesMap, selectedIndices));
+                    selectedIndices.callObservers(new MappingChange<TablePosition<S,?>, Integer>(c, cellToIndicesMap, selectedIndices));
                     c.reset();
 
-                    selectedCellsSeq.callObservers(new MappingChange<TablePosition, TablePosition>(c, MappingChange.NOOP_MAP, selectedCellsSeq));
+                    selectedCellsSeq.callObservers(new MappingChange<TablePosition<S,?>, TablePosition<S,?>>(c, MappingChange.NOOP_MAP, selectedCellsSeq));
                     c.reset();
                 }
             });
@@ -1491,8 +1500,8 @@ public class TableView<S> extends Control {
                 }
             };
             
-            selectedCellsSeq = new ReadOnlyUnbackedObservableList<TablePosition>() {
-                @Override public TablePosition get(int i) {
+            selectedCellsSeq = new ReadOnlyUnbackedObservableList<TablePosition<S,?>>() {
+                @Override public TablePosition<S,?> get(int i) {
                     return selectedCells.get(i);
                 }
 
@@ -1596,7 +1605,7 @@ public class TableView<S> extends Control {
         
         // the only 'proper' internal observableArrayList, selectedItems and selectedIndices
         // are both 'read-only and unbacked'.
-        private final ObservableList<TablePosition> selectedCells;
+        private final ObservableList<TablePosition<S,?>> selectedCells;
 
         // NOTE: represents selected ROWS only - use selectedCells for more data
         private final ReadOnlyUnbackedObservableList<Integer> selectedIndices;
@@ -1610,8 +1619,8 @@ public class TableView<S> extends Control {
             return selectedItems;
         }
 
-        private final ReadOnlyUnbackedObservableList<TablePosition> selectedCellsSeq;
-        @Override public ObservableList<TablePosition> getSelectedCells() {
+        private final ReadOnlyUnbackedObservableList<TablePosition<S,?>> selectedCellsSeq;
+        @Override public ObservableList<TablePosition<S,?>> getSelectedCells() {
             return selectedCellsSeq;
         }
 
@@ -1659,10 +1668,10 @@ public class TableView<S> extends Control {
                     if (position < 0) return;
                     if (shift == 0) return;
                     
-                    List<TablePosition> newIndices = new ArrayList<TablePosition>(selectedCells.size());
+                    List<TablePosition<S,?>> newIndices = new ArrayList<TablePosition<S,?>>(selectedCells.size());
         
                     for (int i = 0; i < selectedCells.size(); i++) {
-                        final TablePosition old = selectedCells.get(i);
+                        final TablePosition<S,?> old = selectedCells.get(i);
                         final int oldRow = old.getRow();
                         final int newRow = oldRow < position ? oldRow : oldRow + shift;
                         
@@ -1682,7 +1691,7 @@ public class TableView<S> extends Control {
                     
                     // Fix for RT-22079
                     for (int i = 0; i < newIndices.size(); i++) {
-                        TablePosition tp = newIndices.get(i);
+                        TablePosition<S,?> tp = newIndices.get(i);
                         select(tp.getRow(), tp.getTableColumn());
                     }
                 } else if (c.wasPermutated()) {
@@ -1705,18 +1714,18 @@ public class TableView<S> extends Control {
                     }
 
                     // (2)
-                    List<TablePosition> selectedIndices = new ArrayList<TablePosition>(getSelectedCells());
+                    List<TablePosition<S,?>> selectedIndices = new ArrayList<TablePosition<S,?>>(getSelectedCells());
 
 
                     // (3)
                     clearSelection();
 
                     // (4)
-                    List<TablePosition> newIndices = new ArrayList<TablePosition>(getSelectedIndices().size());
+                    List<TablePosition<S,?>> newIndices = new ArrayList<TablePosition<S,?>>(getSelectedIndices().size());
 
                     // (5)
                     for (int i = 0; i < selectedIndices.size(); i++) {
-                        TablePosition oldIndex = selectedIndices.get(i);
+                        TablePosition<S,?> oldIndex = selectedIndices.get(i);
 
                         if (pMap.containsKey(oldIndex.getRow())) {
                             Integer newIndex = pMap.get(oldIndex.getRow());
@@ -1727,7 +1736,7 @@ public class TableView<S> extends Control {
                     // (6)
                     quietClearSelection();
                     selectedCells.setAll(newIndices);
-                    selectedCellsSeq.callObservers(new NonIterableChange.SimpleAddChange<TablePosition>(0, newIndices.size(), selectedCellsSeq));
+                    selectedCellsSeq.callObservers(new NonIterableChange.SimpleAddChange<TablePosition<S,?>>(0, newIndices.size(), selectedCellsSeq));
                 }
             }
             
@@ -1840,7 +1849,7 @@ public class TableView<S> extends Control {
                 }
             } else {
                 int lastIndex = -1;
-                List<TablePosition> positions = new ArrayList<TablePosition>();
+                List<TablePosition<S,?>> positions = new ArrayList<TablePosition<S,?>>();
 
                 if (row >= 0 && row < rowCount) {
                     positions.add(new TablePosition(getTableView(), row, null));
@@ -1871,9 +1880,9 @@ public class TableView<S> extends Control {
             quietClearSelection();
 
             if (isCellSelectionEnabled()) {
-                List<TablePosition> indices = new ArrayList<TablePosition>();
+                List<TablePosition<S,?>> indices = new ArrayList<TablePosition<S,?>>();
                 TableColumn column;
-                TablePosition tp = null;
+                TablePosition<S,?> tp = null;
                 for (int col = 0; col < getTableView().getVisibleLeafColumns().size(); col++) {
                     column = getTableView().getVisibleLeafColumns().get(col);
                     for (int row = 0; row < getItemCount(); row++) {
@@ -1888,13 +1897,20 @@ public class TableView<S> extends Control {
                     focus(tp.getRow(), tp.getTableColumn());
                 }
             } else {
-                List<TablePosition> indices = new ArrayList<TablePosition>();
+                List<TablePosition<S,?>> indices = new ArrayList<TablePosition<S,?>>();
                 for (int i = 0; i < getItemCount(); i++) {
                     indices.add(new TablePosition(getTableView(), i, null));
                 }
                 selectedCells.setAll(indices);
-                select(getItemCount() - 1);
-                focus(indices.get(indices.size() - 1));
+                
+                int focusedIndex = getFocusedIndex();
+                if (focusedIndex == -1) {
+                    select(getItemCount() - 1);
+                    focus(indices.get(indices.size() - 1));
+                } else {
+                    select(focusedIndex);
+                    focus(focusedIndex);
+                }
             }
         }
 

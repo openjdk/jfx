@@ -43,6 +43,7 @@ import javafx.css.StyleableDoubleProperty;
 import javafx.css.StyleableProperty;
 import javafx.css.CssMetaData;
 import com.sun.javafx.css.converters.SizeConverter;
+import com.sun.javafx.scene.control.MultiplePropertyChangeListenerHandler;
 import com.sun.javafx.scene.control.behavior.TreeCellBehavior;
 import javafx.animation.RotateTransition;
 import javafx.beans.value.ChangeListener;
@@ -50,9 +51,10 @@ import javafx.beans.value.ObservableValue;
 import javafx.beans.value.WeakChangeListener;
 import javafx.css.Styleable;
 import javafx.geometry.Insets;
+import javafx.util.Callback;
 import javafx.util.Duration;
 
-public class TreeCellSkin extends CellSkinBase<TreeCell<?>, TreeCellBehavior> {
+public class TreeCellSkin<T> extends CellSkinBase<TreeCell<T>, TreeCellBehavior<T>> {
 
     /*
      * This is rather hacky - but it is a quick workaround to resolve the
@@ -69,7 +71,7 @@ public class TreeCellSkin extends CellSkinBase<TreeCell<?>, TreeCellBehavior> {
      * which has a disclosureNode. Once we scroll and encounter one, indentation
      * happens in a displeasing way.
      */
-    private static final Map<TreeView, Double> maxDisclosureWidthMap = new WeakHashMap<TreeView, Double>();
+    private static final Map<TreeView<?>, Double> maxDisclosureWidthMap = new WeakHashMap<TreeView<?>, Double>();
 
     /**
      * The amount of space to multiply by the treeItem.level to get the left
@@ -100,23 +102,23 @@ public class TreeCellSkin extends CellSkinBase<TreeCell<?>, TreeCellBehavior> {
     private boolean disclosureNodeDirty = true;
     private TreeItem<?> treeItem;
     
-    private final ChangeListener<Boolean> treeItemExpandedListener = new ChangeListener<Boolean>() {
-        @Override public void changed(ObservableValue<? extends Boolean> ov, Boolean t, Boolean isExpanded) {
-            updateDisclosureNodeRotation(true);
+    private MultiplePropertyChangeListenerHandler treeItemListener = new MultiplePropertyChangeListenerHandler(new Callback<String, Void>() {
+        @Override public Void call(String p) {
+            if ("EXPANDED".equals(p)) {
+                updateDisclosureNodeRotation(true);
+            }
+            return null;
         }
-    };
-    private final WeakChangeListener<Boolean> weakTreeItemExpandedListener = 
-            new WeakChangeListener(treeItemExpandedListener);
-
-    public TreeCellSkin(TreeCell<?> control) {
-        super(control, new TreeCellBehavior(control));
+    });
+    
+    public TreeCellSkin(TreeCell<T> control) {
+        super(control, new TreeCellBehavior<T>(control));
         
         updateTreeItem();
         updateDisclosureNodeRotation(false);
         
         registerChangeListener(control.treeItemProperty(), "TREE_ITEM");
         registerChangeListener(control.textProperty(), "TEXT");
-        registerChangeListener(control.graphicProperty(), "GRAPHIC");
     }
     
     @Override protected void handleControlPropertyChanged(String p) {
@@ -125,7 +127,7 @@ public class TreeCellSkin extends CellSkinBase<TreeCell<?>, TreeCellBehavior> {
             updateTreeItem();
             disclosureNodeDirty = true;
             getSkinnable().requestLayout();
-        } else if ("TEXT".equals(p) || "GRAPHIC".equals(p)) {
+        } else if ("TEXT".equals(p)) {
             getSkinnable().requestLayout();
         }
     }
@@ -153,11 +155,11 @@ public class TreeCellSkin extends CellSkinBase<TreeCell<?>, TreeCellBehavior> {
     
     private void updateTreeItem() {
         if (treeItem != null) {
-            treeItem.expandedProperty().removeListener(weakTreeItemExpandedListener);
+            treeItemListener.unregisterChangeListener(treeItem.expandedProperty());
         }
         treeItem = getSkinnable().getTreeItem();
         if (treeItem != null) {
-            treeItem.expandedProperty().addListener(weakTreeItemExpandedListener);
+            treeItemListener.registerChangeListener(treeItem.expandedProperty(), "EXPANDED");
         }
         
         updateDisclosureNodeRotation(false);

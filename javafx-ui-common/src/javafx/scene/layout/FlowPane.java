@@ -459,6 +459,10 @@ public class FlowPane extends Pane {
     private ObjectProperty<Pos> alignment;
     public final void setAlignment(Pos value) { alignmentProperty().set(value); }
     public final Pos getAlignment() { return alignment == null ? Pos.TOP_LEFT : alignment.get(); }
+    private Pos getAlignmentInternal() {
+        Pos localPos = getAlignment();
+        return localPos == null ? Pos.TOP_LEFT : localPos;
+    }
 
     /**
      * The horizontal alignment of nodes within each column of a vertical flowpane.
@@ -495,6 +499,10 @@ public class FlowPane extends Pane {
     private ObjectProperty<HPos> columnHalignment;
     public final void setColumnHalignment(HPos value) { columnHalignmentProperty().set(value); }
     public final HPos getColumnHalignment() { return columnHalignment == null ? HPos.LEFT : columnHalignment.get(); }
+    private HPos getColumnHalignmentInternal() {
+        HPos localPos = getColumnHalignment();
+        return localPos == null ? HPos.LEFT : localPos;
+    }
 
     /**
      * The vertical alignment of nodes within each row of a horizontal flowpane.
@@ -533,6 +541,10 @@ public class FlowPane extends Pane {
     private ObjectProperty<VPos> rowValignment;
     public final void setRowValignment(VPos value) { rowValignmentProperty().set(value); }
     public final VPos getRowValignment() { return rowValignment == null ? VPos.CENTER : rowValignment.get(); }
+    private VPos getRowValignmentInternal() {
+        VPos localPos =  getRowValignment();
+        return localPos == null ? VPos.CENTER : localPos;
+    }
 
     @Override public Orientation getContentBias() {
         return getOrientation();
@@ -752,10 +764,10 @@ public class FlowPane extends Pane {
             final Run run = runs.get(i);
             final double xoffset = left + computeXOffset(insideWidth,
                                      getOrientation() == HORIZONTAL ? run.width : computeContentWidth(runs),
-                                     getAlignment().getHpos());
+                                     getAlignmentInternal().getHpos());
             final double yoffset = top + computeYOffset(insideHeight,
                                     getOrientation() == VERTICAL ? run.height : computeContentHeight(runs),
-                                    getAlignment().getVpos());
+                                    getAlignmentInternal().getVpos());
             for (int j = 0; j < run.rects.size(); j++) {
                 final LayoutRect lrect = run.rects.get(j);
 //              System.out.println("flowpane.layout: run="+i+" "+run.width+"x"+run.height+" xoffset="+xoffset+" yoffset="+yoffset+" lrect="+lrect);
@@ -767,7 +779,7 @@ public class FlowPane extends Pane {
                            run.baselineOffset, getMargin(lrect.node),
                            // only fill height if we don't have baseline alignment
                            true, getOrientation() == VERTICAL || getRowValignment() != VPos.BASELINE,
-                           getColumnHalignment(), getRowValignment());
+                           getColumnHalignmentInternal(), getRowValignmentInternal());
             }
         }
     }

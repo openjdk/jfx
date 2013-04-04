@@ -49,6 +49,7 @@ import javafx.stage.Stage;
  * @related /Media/Advanced Media
  * @related /Media/Alpha Media Player
  * @related /Media/Overlay Media Player
+ * @conditionalFeatures WEB
  */
 public class StreamingMediaPlayerApp extends Application {
 

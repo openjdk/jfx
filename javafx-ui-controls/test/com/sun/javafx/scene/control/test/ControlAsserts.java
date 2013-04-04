@@ -76,7 +76,7 @@ public class ControlAsserts {
                 boolean hasChildrenCell = false;
                 for (Node n : indexedCell.getChildrenUnmodifiable()) {
                     if (! (n instanceof IndexedCell)) {
-                        break;
+                        continue;
                     }
                     hasChildrenCell = true;
                     IndexedCell<?> childCell = (IndexedCell<?>)n;
@@ -168,6 +168,10 @@ public class ControlAsserts {
         };
         
         assertCallback(control, startRow, endRow, callback);
+    }
+    
+    public static IndexedCell getCell(final Control control, final int index) {
+        return getVirtualFlow(control).getCell(index);
     }
     
     public static void assertCallback(final Control control, final int startRow, final int endRow, final Callback<IndexedCell<?>, Void> callback) {

@@ -25,7 +25,6 @@
 
 package com.sun.javafx.scene.control.skin;
 
-import javafx.collections.WeakListChangeListener;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -33,9 +32,12 @@ import java.util.Map;
 
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
-import javafx.beans.binding.StringBinding;
+import javafx.beans.WeakInvalidationListener;
 import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.BooleanPropertyBase;
+import javafx.beans.property.StringProperty;
 import javafx.collections.ListChangeListener;
+import javafx.collections.WeakListChangeListener;
 import javafx.event.EventHandler;
 import javafx.geometry.HPos;
 import javafx.geometry.Insets;
@@ -45,7 +47,7 @@ import javafx.scene.control.CheckMenuItem;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Label;
 import javafx.scene.control.TableColumn;
-import javafx.scene.control.TableView;
+import javafx.scene.control.TableColumnBase;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.Region;
@@ -53,9 +55,6 @@ import javafx.scene.layout.StackPane;
 import javafx.scene.shape.Rectangle;
 
 import com.sun.javafx.scene.control.skin.resources.ControlResources;
-import javafx.beans.WeakInvalidationListener;
-import javafx.beans.property.BooleanPropertyBase;
-import javafx.scene.control.TableColumnBase;
 
 /**
  * Region responsible for painting the entire row of column headers.
@@ -70,6 +69,9 @@ public class TableHeaderRow extends StackPane {
 //    private final TableView<?> table;
     
     private final TableViewSkinBase tableSkin;
+    protected TableViewSkinBase getTableSkin() {
+        return this.tableSkin;
+    } 
 
     private Insets tablePadding;
     public void setTablePadding(Insets tablePadding) {
@@ -306,6 +308,16 @@ public class TableHeaderRow extends StackPane {
         }
     };
     
+    private final InvalidationListener columnTextListener = new InvalidationListener() {
+        @Override public void invalidated(Observable observable) {
+            TableColumn<?,?> column = (TableColumn<?,?>) ((StringProperty)observable).getBean();
+            CheckMenuItem menuItem = columnMenuItems.get(column);
+            if (menuItem != null) {
+                menuItem.setText(getText(column.getText(), column));
+            }
+        }
+    };
+    
     private final WeakInvalidationListener weakTableWidthListener = 
             new WeakInvalidationListener(tableWidthListener);
     
@@ -314,6 +326,9 @@ public class TableHeaderRow extends StackPane {
     
     private final WeakListChangeListener weakTableColumnsListener =
             new WeakListChangeListener(tableColumnsListener);
+    
+    private final WeakInvalidationListener weakColumnTextListener = 
+            new WeakInvalidationListener(columnTextListener);
     
 
     private Map<TableColumnBase, CheckMenuItem> columnMenuItems = new HashMap<TableColumnBase, CheckMenuItem>();
@@ -332,15 +347,15 @@ public class TableHeaderRow extends StackPane {
     private void remove(TableColumnBase<?,?> col) {
         if (col == null) return;
         
-        if (col.getColumns().isEmpty()) {
-            CheckMenuItem item = columnMenuItems.remove(col);
-            if (item == null) return;
-            
-            item.textProperty().unbind();
+        CheckMenuItem item = columnMenuItems.remove(col);
+        if (item != null) { 
+            col.textProperty().removeListener(weakColumnTextListener);
             item.selectedProperty().unbindBidirectional(col.visibleProperty());
-
+    
             columnPopupMenu.getItems().remove(item);
-        } else {
+        }
+        
+        if (! col.getColumns().isEmpty()) {
             for (TableColumnBase tc : col.getColumns()) {
                 remove(tc);
             }
@@ -358,13 +373,8 @@ public class TableHeaderRow extends StackPane {
             }
             
             // bind column text and isVisible so that the menu item is always correct
-            item.textProperty().bind(new StringBinding() {
-                { super.bind(col.textProperty()); }
-                
-                @Override protected String computeValue() {
-                    return getText(col.getText(), col);
-                }
-            });
+            item.setText(getText(col.getText(), col));
+            col.textProperty().addListener(weakColumnTextListener);
             item.selectedProperty().bindBidirectional(col.visibleProperty());
             
             columnPopupMenu.getItems().add(item);
@@ -374,7 +384,7 @@ public class TableHeaderRow extends StackPane {
             }
         }
     }
-
+    
     void updateScrollX() {
         scrollX = flow.getHbar().isVisible() ? -flow.getHbar().getValue() : 0.0F;
         requestLayout();

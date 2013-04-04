@@ -362,6 +362,8 @@ is being used to size a border should also be in pixels.
        the text is always vertically centered within the bounds. Based on
        the cap height of the text. */
     -fx-bounds-type: logical_vertical_center;
+    /* Enable LCD text rendering */
+    -fx-font-smoothing-type: lcd;
 }
 
 /* ====   BUTTON LIKE THINGS   ============================================== */
@@ -948,10 +950,17 @@ is being used to size a border should also be in pixels.
 }
 .scroll-bar > .increment-button, 
 .scroll-bar > .decrement-button {
-    -fx-background-color: -fx-outer-border, -fx-inner-border, -fx-body-color; 
-    -fx-background-insets: 0, 1, 2;
+    -fx-background-color: -fx-outer-border, -fx-inner-border, -fx-body-color;     
     -fx-color: transparent;
     -fx-padding: 0.25em; /* 3px */
+}
+.scroll-bar:horizontal > .increment-button,
+.scroll-bar:horizontal > .decrement-button {
+    -fx-background-insets: 2 1 2 1, 3 2 3 2, 4 3 4 3;
+}
+.scroll-bar:vertical > .increment-button,
+.scroll-bar:vertical > .decrement-button {
+    -fx-background-insets: 1 2 1 2, 2 3 2 3, 3 4 3 4;
 }
 .scroll-bar > .increment-button > .increment-arrow,
 .scroll-bar > .decrement-button > .decrement-arrow {
@@ -2254,14 +2263,14 @@ is being used to size a border should also be in pixels.
 }
 .tree-cell > .tree-disclosure-node,
 .tree-table-row-cell > .tree-disclosure-node {
-    -fx-padding: 4 2 4 8;
+    -fx-padding: 4 6 4 8;
     -fx-background-color: transparent;
 }
 .tree-cell > .tree-disclosure-node > .arrow,
 .tree-table-row-cell > .tree-disclosure-node > .arrow {
     -fx-background-color: -fx-text-background-color;
-    -fx-padding: 0.333333em; /* 4 */
-    -fx-shape: "M 0 -4 L 8 0 L 0 4 z";
+    -fx-padding: 0.333333em 0.229em 0.333333em 0.229em; /* 4 */
+    -fx-shape: "M 0 -3.5 L 4 0 L 0 3.5 z";
 }
 .tree-cell:expanded > .tree-disclosure-node > .arrow,
 .tree-table-row-cell:expanded > .tree-disclosure-node > .arrow {
@@ -2431,6 +2440,8 @@ is being used to size a border should also be in pixels.
     -fx-background-color: -fx-text-background-color !important;
     -fx-background-insets: 0;
 }
+.table-view:focused > .virtual-flow > .clipped-container > .sheet > .table-row-cell:filled > .check-box-table-cell:selected > .check-box > .box,
+.tree-table-view:focused > .virtual-flow > .clipped-container > .sheet > .tree-table-row-cell:filled > .check-box-table-cell:selected > .check-box > .box,
 .table-view:focused > .virtual-flow > .clipped-container > .sheet > .table-row-cell:filled:selected > .check-box-table-cell > .check-box > .box,
 .tree-table-view:focused > .virtual-flow > .clipped-container > .sheet > .tree-table-row-cell:filled:selected > .check-box-table-cell > .check-box > .box {
     -fx-background-color: derive(-fx-accent,40%), -fx-background;
@@ -2453,7 +2464,9 @@ is being used to size a border should also be in pixels.
     -fx-indent: 1em;
 }
 .tree-table-cell {
-    -fx-padding: 0.166667em; /* 2px, plus border adds 1px */
+    /* tree-table-cell needs slightly different padding to make the text sit at
+    the right height for the arrow */
+    -fx-padding: 0.25em 0.166667em 0.083em 0.166667em; /* 3 2 1 2 , plus border adds 1px */
     -fx-background-color: null;
     -fx-border-color: transparent -fx-table-cell-border-color transparent transparent;
     -fx-cell-size: 2.0em; /* 24 */

@@ -25,6 +25,7 @@
 
 package javafx.scene;
 
+import com.sun.javafx.geom.PickRay;
 import com.sun.javafx.test.MouseEventGenerator;
 import javafx.event.Event;
 import javafx.event.EventHandler;
@@ -49,124 +50,232 @@ import org.junit.Test;
 public class Mouse3DTest {
 
     private static final int NOFACE = PickResult.FACE_UNDEFINED;
+    private static final double PERSPECTIVE_CAMERA_X = 500;
+    private static final double PERSPECTIVE_CAMERA_Y = 400;
+    private static final double PERSPECTIVE_CAMERA_Z = -1492.820323027551;
 
     private EventHolder<MouseEvent> me = new EventHolder<MouseEvent>();
     private EventHolder<MouseEvent> pme = new EventHolder<MouseEvent>();
     private EventHolder<MouseEvent> sme = new EventHolder<MouseEvent>();
 
+    /***************** pick ray ********************/
+    // We use moving camera for the picking tests, so test pick ray sanity first
+
+    @Test
+    public void shouldComputeCorrectPerspectivePickRay() {
+        Camera cam = new PerspectiveCamera();
+        scene(group(), cam, true);
+        cam.impl_updatePG();
+        PickRay pickRay = cam.computePickRay(10, 20, 1000, 800, null);
+        assertEquals(PERSPECTIVE_CAMERA_X, pickRay.getOriginNoClone().x, 0.00001);
+        assertEquals(PERSPECTIVE_CAMERA_Y, pickRay.getOriginNoClone().y, 0.00001);
+        assertEquals(PERSPECTIVE_CAMERA_Z, pickRay.getOriginNoClone().z, 0.00001);
+        assertEquals(10 - PERSPECTIVE_CAMERA_X, pickRay.getDirectionNoClone().x, 0.00001);
+        assertEquals(20 - PERSPECTIVE_CAMERA_Y, pickRay.getDirectionNoClone().y, 0.00001);
+        assertEquals(-PERSPECTIVE_CAMERA_Z, pickRay.getDirectionNoClone().z, 0.00001);
+    }
+
+    @Test
+    public void shouldComputeCorrectMovedPerspectivePickRay() {
+        Camera cam = new PerspectiveCamera();
+        scene(group(cam), cam, true);
+        cam.setTranslateX(50);
+        cam.getParent().setTranslateY(30);
+        cam.impl_updatePG();
+        PickRay pickRay = cam.computePickRay(10, 20, 1000, 800, null);
+        assertEquals(50 + PERSPECTIVE_CAMERA_X, pickRay.getOriginNoClone().x, 0.00001);
+        assertEquals(30 + PERSPECTIVE_CAMERA_Y, pickRay.getOriginNoClone().y, 0.00001);
+        assertEquals(PERSPECTIVE_CAMERA_Z, pickRay.getOriginNoClone().z, 0.00001);
+        assertEquals(10 - PERSPECTIVE_CAMERA_X, pickRay.getDirectionNoClone().x, 0.00001);
+        assertEquals(20 - PERSPECTIVE_CAMERA_Y, pickRay.getDirectionNoClone().y, 0.00001);
+        assertEquals(-PERSPECTIVE_CAMERA_Z, pickRay.getDirectionNoClone().z, 0.00001);
+    }
+
+    @Test
+    public void shouldIgnoreCameraMovesOfPerspectivePickRayIfNotInScene() {
+        Camera cam = new PerspectiveCamera();
+        scene(group(), cam, true);
+        group(cam);
+        cam.setTranslateX(50);
+        cam.getParent().setTranslateY(30);
+        cam.impl_updatePG();
+        PickRay pickRay = cam.computePickRay(10, 20, 1000, 800, null);
+        assertEquals(PERSPECTIVE_CAMERA_X, pickRay.getOriginNoClone().x, 0.00001);
+        assertEquals(PERSPECTIVE_CAMERA_Y, pickRay.getOriginNoClone().y, 0.00001);
+        assertEquals(PERSPECTIVE_CAMERA_Z, pickRay.getOriginNoClone().z, 0.00001);
+        assertEquals(10 - PERSPECTIVE_CAMERA_X, pickRay.getDirectionNoClone().x, 0.00001);
+        assertEquals(20 - PERSPECTIVE_CAMERA_Y, pickRay.getDirectionNoClone().y, 0.00001);
+        assertEquals(-PERSPECTIVE_CAMERA_Z, pickRay.getDirectionNoClone().z, 0.00001);
+    }
+
+    @Test
+    public void shouldComputeCorrectParallelPickRay() {
+        Camera cam = new ParallelCamera();
+        scene(group(), cam, true);
+        PickRay pickRay = cam.computePickRay(10, 20, 1000, 800, null);
+        assertEquals(10.0, pickRay.getOriginNoClone().x, 0.00001);
+        assertEquals(20.0, pickRay.getOriginNoClone().y, 0.00001);
+        assertEquals(-1, pickRay.getOriginNoClone().z, 0.1);
+        assertEquals(0.0, pickRay.getDirectionNoClone().x, 0.00001);
+        assertEquals(0.0, pickRay.getDirectionNoClone().y, 0.00001);
+        assertEquals(1.0, pickRay.getDirectionNoClone().z, 0.1);
+    }
+
+    @Test
+    public void shouldComputeCorrectMovedParallelPickRay() {
+        Camera cam = new ParallelCamera();
+        scene(group(cam), cam, true);
+        cam.setTranslateX(50);
+        cam.getParent().setTranslateY(30);
+        cam.impl_updatePG();
+        PickRay pickRay = cam.computePickRay(10, 20, 1000, 800, null);
+        assertEquals(60.0, pickRay.getOriginNoClone().x, 0.00001);
+        assertEquals(50.0, pickRay.getOriginNoClone().y, 0.00001);
+        assertEquals(-1, pickRay.getOriginNoClone().z, 0.1);
+        assertEquals(0.0, pickRay.getDirectionNoClone().x, 0.00001);
+        assertEquals(0.0, pickRay.getDirectionNoClone().y, 0.00001);
+        assertEquals(1.0, pickRay.getDirectionNoClone().z, 0.1);
+    }
+
+    @Test
+    public void shouldIgnoreCameraMovesOfParallelPickRayIfNotInScene() {
+        Camera cam = new ParallelCamera();
+        scene(group(), cam, true);
+        group(cam);
+        cam.setTranslateX(50);
+        cam.getParent().setTranslateY(30);
+        cam.impl_updatePG();
+        PickRay pickRay = cam.computePickRay(10, 20, 1000, 800, null);
+        assertEquals(10.0, pickRay.getOriginNoClone().x, 0.00001);
+        assertEquals(20.0, pickRay.getOriginNoClone().y, 0.00001);
+        assertEquals(-1, pickRay.getOriginNoClone().z, 0.1);
+        assertEquals(0.0, pickRay.getDirectionNoClone().x, 0.00001);
+        assertEquals(0.0, pickRay.getDirectionNoClone().y, 0.00001);
+        assertEquals(1.0, pickRay.getDirectionNoClone().z, 0.1);
+    }
+
+
     /*****************  BOX picking ********************/
 
     @Test
     public void shouldPickBoxFromFront() {
-        MouseEventGenerator g = new MouseEventGenerator();
         Box b = box().handleMove(me);
         b.setCullFace(CullFace.BACK);
         Scene s = scene(group(b), perspective(), true);
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 10, 40));
+
+        makeParallel(s, 10, 40);
+        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNotNull(e);
-        assertCoordinates(e, 10, 40, 10, 40, -200);
+        assertCoordinates(e, 10, 40, -200);
         assertPickResult(e.getPickResult(),
                 b, point(10, 40, -200), 800, NOFACE, point(0.4, 0.3));
     }
 
     @Test
     public void shouldPickBoxInteriorFromFront() {
-        MouseEventGenerator g = new MouseEventGenerator();
         Box b = box().handleMove(me);
         b.setCullFace(CullFace.FRONT);
         Scene s = scene(group(b), perspective(), true);
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 10, 40));
+
+        makeParallel(s, 10, 40);
+        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNotNull(e);
-        assertCoordinates(e, 10, 40, 10, 40, 200);
+        assertCoordinates(e, 10, 40, 200);
         assertPickResult(e.getPickResult(),
                 b, point(10, 40, 200), 1200, NOFACE, point(0.3, 0.4));
     }
 
     @Test
     public void shouldPickNotCulledBoxFromFront() {
-        MouseEventGenerator g = new MouseEventGenerator();
         Box b = box().handleMove(me);
         b.setCullFace(CullFace.NONE);
         Scene s = scene(group(b), perspective(), true);
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 10, 40));
+
+        makeParallel(s, 10, 40);
+        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNotNull(e);
-        assertCoordinates(e, 10, 40, 10, 40, -200);
+        assertCoordinates(e, 10, 40, -200);
         assertPickResult(e.getPickResult(),
                 b, point(10, 40, -200), 800, NOFACE, point(0.4, 0.3));
     }
 
     @Test
     public void shouldPickBoxFromTop() {
-        MouseEventGenerator g = new MouseEventGenerator();
         Node b = box().rotate('x', 90).handleMove(me);
         Scene s = scene(group(b), perspective(), true);
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 10, 20));
+
+        makeParallel(s, 10, 20);
+        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNotNull(e);
-        assertCoordinates(e, 10, 20, 10, -100, -20);
+        assertCoordinates(e, 10, -100, -20);
         assertPickResult(e.getPickResult(),
                 b, point(10, -100, -20), 900, NOFACE, point(0.4, 0.55));
     }
 
     @Test
     public void shouldPickBoxFromBack() {
-        MouseEventGenerator g = new MouseEventGenerator();
         Node b = box().rotate('x', 180).handleMove(me);
         Scene s = scene(group(b), perspective(), true);
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 10, 40));
+
+        makeParallel(s, 10, 40);
+        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNotNull(e);
-        assertCoordinates(e, 10, 40, 10, -40, 200);
+        assertCoordinates(e, 10, -40, 200);
         assertPickResult(e.getPickResult(),
                 b, point(10, -40, 200), 800, NOFACE, point(0.7, 0.4));
     }
 
     @Test
     public void shouldPickBoxFromBottom() {
-        MouseEventGenerator g = new MouseEventGenerator();
         Node b = box().rotate('x', -90).handleMove(me);
         Scene s = scene(group(b), perspective(), true);
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 10, 20));
+
+        makeParallel(s, 10, 20);
+        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNotNull(e);
-        assertCoordinates(e, 10, 20, 10, 100, 20);
+        assertCoordinates(e, 10, 100, 20);
         assertPickResult(e.getPickResult(),
                 b, point(10, 100, 20), 900, NOFACE, point(0.4, 0.45));
     }
 
     @Test
     public void shouldPickBoxFromLeft() {
-        MouseEventGenerator g = new MouseEventGenerator();
         Node b = box().rotate('y', -90).handleMove(me);
         Scene s = scene(group(b), perspective(), true);
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 10, 20));
+
+        makeParallel(s, 10, 20);
+        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNotNull(e);
-        assertCoordinates(e, 10, 20, -50, 20, -10);
+        assertCoordinates(e, -50, 20, -10);
         assertPickResult(e.getPickResult(),
                 b, point(-50, 20, -10), 950, NOFACE, point(0.4, 0.525));
     }
 
     @Test
     public void shouldPickBoxFromRight() {
-        MouseEventGenerator g = new MouseEventGenerator();
         Node b = box().rotate('y', 90).handleMove(me);
         Scene s = scene(group(b), perspective(), true);
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 10, 20));
+
+        makeParallel(s, 10, 20);
+        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNotNull(e);
-        assertCoordinates(e, 10, 20, 50, 20, 10);
+        assertCoordinates(e, 50, 20, 10);
         assertPickResult(e.getPickResult(),
                 b, point(50, 20, 10), 950, NOFACE, point(0.4, 0.475));
     }
@@ -217,28 +326,32 @@ public class Mouse3DTest {
 
     @Test
     public void shouldPickBoxFromAngle() {
-        MouseEventGenerator g = new MouseEventGenerator();
         Node b = box().rotate('y', 90).handleMove(me);
-        Scene s = scene(group(b).rotate('x', 40), perspective(), true);
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 0, 0));
+        Scene s = scene(group(group(b).rotate('x', 40)), perspective(), true);
+
+        makeParallel(s, 0, 0);
+        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNotNull(e);
-        assertCoordinates(e, 0, 0, 50, -41.95498, 0);
+        assertCoordinates(e, 50, -41.95498, 0);
         assertPickResult(e.getPickResult(),
                 b, point(50, -41.95498, 0), 934.729635, NOFACE, point(0.709774, 0.5));
     }
 
     @Test
     public void shouldNotPickBoxOutside() {
-        MouseEventGenerator g = new MouseEventGenerator();
         Node b = box().handleMove(me);
         b.setTranslateX(300);
         Scene s = scene(group(b), perspective(), true);
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 10, 20));
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 1000, 20));
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 10, -500));
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 10, 500));
+        makeParallel(s, 10, 20);
+        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
+        makeParallel(s, 1000, 20);
+        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
+        makeParallel(s, 10, -500);
+        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
+        makeParallel(s, 10, 500);
+        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNull(e);
@@ -246,14 +359,17 @@ public class Mouse3DTest {
 
     @Test
     public void shouldNotPickRotatedBoxOutside() {
-        MouseEventGenerator g = new MouseEventGenerator();
         Node b = box().rotate('y', 30).handleMove(me);
         b.setTranslateX(300);
         Scene s = scene(group(b), perspective(), true);
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 10, 20));
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 1000, 20));
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 300, -500));
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 300, 500));
+        makeParallel(s, 10, 20);
+        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
+        makeParallel(s, 1000, 20);
+        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
+        makeParallel(s, 300, -500);
+        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
+        makeParallel(s, 300, 500);
+        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNull(e);
@@ -261,27 +377,28 @@ public class Mouse3DTest {
 
     @Test
     public void shouldPickBoxOnBounds() {
-        MouseEventGenerator g = new MouseEventGenerator();
         Box b = box().handleMove(me);
         b.setPickOnBounds(true);
         Scene s = scene(group(b), perspective(), true);
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 10, 40));
+
+        makeParallel(s, 10, 40);
+        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNotNull(e);
-        assertCoordinates(e, 10, 40, 10, 40, -200);
+        assertCoordinates(e, 10, 40, -200);
         assertPickResult(e.getPickResult(),
                 b, point(10, 40, -200), 800, NOFACE, null);
     }
 
     @Test
     public void shouldNotPickBoxFromInsideIfCulled() {
-        MouseEventGenerator g = new MouseEventGenerator();
         Box b = box().handleMove(me);
         b.setCullFace(CullFace.BACK);
         Scene s = scene(group(b), perspective(), true);
         b.setTranslateZ(-1000);
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 10, 40));
+        makeParallel(s, 10, 40);
+        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNull(e);
@@ -289,16 +406,16 @@ public class Mouse3DTest {
 
     @Test
     public void shouldPickBoxInteriorByPerspectiveCameraFromInside() {
-        MouseEventGenerator g = new MouseEventGenerator();
         Box b = box().handleMove(me);
         b.setCullFace(CullFace.NONE);
         b.setTranslateZ(-1000);
         Scene s = scene(group(b), perspective(), true);
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 10, 40));
+        makeParallel(s, 10, 40);
+        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNotNull(e);
-        assertCoordinates(e, 10, 40, 10, 40, 200);
+        assertCoordinates(e, 10, 40, 200);
         assertPickResult(e.getPickResult(),
                 b, point(10, 40, 200), 200, NOFACE, point(0.3, 0.4));
     }
@@ -321,12 +438,12 @@ public class Mouse3DTest {
 
     @Test
     public void shouldNotPickBoxByPerspectiveCameraFromBehind() {
-        MouseEventGenerator g = new MouseEventGenerator();
         Box b = box().handleMove(me);
         b.setCullFace(CullFace.NONE);
         b.setTranslateZ(-3000);
         Scene s = scene(group(b), perspective(), true);
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 10, 40));
+        makeParallel(s, 10, 40);
+        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNull(e);
@@ -353,72 +470,72 @@ public class Mouse3DTest {
 
     @Test
     public void shouldPickSphereFromFront() {
-        MouseEventGenerator g = new MouseEventGenerator();
         Sphere sph = sphere().handleMove(me);
         sph.setCullFace(CullFace.BACK);
         Scene s = scene(group(sph), perspective(), true);
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 10, 20));
+        makeParallel(s, 10, 20);
+        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNotNull(e);
-        assertCoordinates(e, 10, 20, 10, 20, -97.46794);
+        assertCoordinates(e, 10, 20, -97.46794);
         assertPickResult(e.getPickResult(),
                 sph, point(10, 20, -97.46794), 902.53205, NOFACE, point(0.483727, 0.6));
     }
 
     @Test
     public void shouldPickSphereInteriorFromFront() {
-        MouseEventGenerator g = new MouseEventGenerator();
         Sphere sph = sphere().handleMove(me);
         sph.setCullFace(CullFace.FRONT);
         Scene s = scene(group(sph), perspective(), true);
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 10, 20));
+        makeParallel(s, 10, 20);
+        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNotNull(e);
-        assertCoordinates(e, 10, 20, 10, 20, 97.46794);
+        assertCoordinates(e, 10, 20, 97.46794);
         assertPickResult(e.getPickResult(),
                 sph, point(10, 20, 97.46794), 1097.46794, NOFACE, point(0.01627, 0.6));
     }
 
     @Test
     public void shouldPickNotCulledSphereFromFront() {
-        MouseEventGenerator g = new MouseEventGenerator();
         Sphere sph = sphere().handleMove(me);
         sph.setCullFace(CullFace.NONE);
         Scene s = scene(group(sph), perspective(), true);
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 10, 20));
+        makeParallel(s, 10, 20);
+        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNotNull(e);
-        assertCoordinates(e, 10, 20, 10, 20, -97.46794);
+        assertCoordinates(e, 10, 20, -97.46794);
         assertPickResult(e.getPickResult(),
                 sph, point(10, 20, -97.46794), 902.53205, NOFACE, point(0.483727, 0.6));
     }
 
     @Test
     public void shouldPickSphereFromBack() {
-        MouseEventGenerator g = new MouseEventGenerator();
         Sphere sph = sphere().rotate('y', 180).handleMove(me);
         sph.setCullFace(CullFace.BACK);
         Scene s = scene(group(sph), perspective(), true);
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 10, 20));
+        makeParallel(s, 10, 20);
+        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNotNull(e);
-        assertCoordinates(e, 10, 20, -10, 20, 97.46794);
+        assertCoordinates(e, -10, 20, 97.46794);
         assertPickResult(e.getPickResult(),
                 sph, point(-10, 20, 97.46794), 902.53205, NOFACE, point(0.98372, 0.6));
     }
 
     @Test
     public void shouldNotPickSphereOutside() {
-        MouseEventGenerator g = new MouseEventGenerator();
         Node sph = sphere().handleMove(me);
         sph.setTranslateX(100);
         sph.setTranslateY(110);
         Scene s = scene(group(sph), perspective(), true);
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 10, 20));
+        makeParallel(s, 10, 20);
+        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNull(e);
@@ -426,26 +543,26 @@ public class Mouse3DTest {
 
     @Test
     public void shouldPickRoughSphere() {
-        MouseEventGenerator g = new MouseEventGenerator();
         Sphere sph = sphereWith4Divs().handleMove(me);
         Scene s = scene(group(sph), perspective(), true);
         sph.impl_updatePG();
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 50, 25));
+        makeParallel(s, 50, 25);
+        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNotNull(e);
-        assertCoordinates(e, 50, 25, 50, 25, -25);
+        assertCoordinates(e, 50, 25, -25);
         assertPickResult(e.getPickResult(),
                 sph, point(50, 25, -25), 975, NOFACE, point(0.34374, 0.62402));
     }
 
     @Test
     public void shouldNotPickRoughSphereOutsideOfItsTriangles() {
-        MouseEventGenerator g = new MouseEventGenerator();
         Sphere sph = sphereWith4Divs().handleMove(me);
         Scene s = scene(group(sph), perspective(), true);
         sph.impl_updatePG();
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 50, 60));
+        makeParallel(s, 50, 60);
+        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNull(e);
@@ -453,30 +570,30 @@ public class Mouse3DTest {
 
     @Test
     public void shouldPickRoughSphereFrontFaceInsideOfShape() {
-        MouseEventGenerator g = new MouseEventGenerator();
         Sphere sph = sphereWith4Divs().handleMove(me);
         sph.setTranslateZ(-974);
         sph.setCullFace(CullFace.BACK);
         Scene s = scene(group(sph), perspective(), true);
         sph.impl_updatePG();
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 50, 25));
+        makeParallel(s, 50, 25);
+        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNotNull(e);
-        assertCoordinates(e, 50, 25, 50, 25, -25);
+        assertCoordinates(e, 50, 25, -25);
         assertPickResult(e.getPickResult(),
                 sph, point(50, 25, -25), 1, NOFACE, point(0.34374, 0.62402));
     }
 
     @Test
     public void shouldNotPickSphereFromInsideIfCulled() {
-        MouseEventGenerator g = new MouseEventGenerator();
         Sphere sph = sphere().handleMove(me);
         sph.setTranslateZ(-980);
         sph.setCullFace(CullFace.BACK);
         Scene s = scene(group(sph), perspective(), true);
         sph.impl_updatePG();
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 50, 25));
+        makeParallel(s, 50, 25);
+        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNull(e);
@@ -484,64 +601,64 @@ public class Mouse3DTest {
 
     @Test
     public void shouldPickSphereOnBounds() {
-        MouseEventGenerator g = new MouseEventGenerator();
         Sphere sph = sphere().handleMove(me);
         sph.setPickOnBounds(true);
         Scene s = scene(group(sph), perspective(), true);
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 10, 20));
+        makeParallel(s, 10, 20);
+        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNotNull(e);
-        assertCoordinates(e, 10, 20, 10, 20, -100);
+        assertCoordinates(e, 10, 20, -100);
         assertPickResult(e.getPickResult(),
                 sph, point(10, 20, -100), 900, NOFACE, null);
     }
 
     @Test
     public void shouldPickRoughSphereOnBounds() {
-        MouseEventGenerator g = new MouseEventGenerator();
         Sphere sph = sphereWith4Divs().handleMove(me);
         sph.setPickOnBounds(true);
         Scene s = scene(group(sph), perspective(), true);
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 10, 20));
+        makeParallel(s, 10, 20);
+        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNotNull(e);
-        assertCoordinates(e, 10, 20, 10, 20, -100);
+        assertCoordinates(e, 10, 20, -100);
         assertPickResult(e.getPickResult(),
                 sph, point(10, 20, -100), 900, NOFACE, null);
     }
 
     @Test
     public void shouldPickSphereOnBoundsOutsideOfShape() {
-        MouseEventGenerator g = new MouseEventGenerator();
         Sphere sph = sphere().handleMove(me);
         Scene s = scene(group(sph), perspective(), true);
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 99, 1));
+        makeParallel(s, 99, 1);
+        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
         MouseEvent e = me.event;
         assertNotNull(e);
 
         sph.setPickOnBounds(true);
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 99, 1));
+        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
         e = me.event;
         assertNotNull(e);
-        assertCoordinates(e, 99, 1, 99, 1, -100);
+        assertCoordinates(e, 99, 1, -100);
         assertPickResult(e.getPickResult(),
                 sph, point(99, 1, -100), 900, NOFACE, null);
     }
 
     @Test
     public void shouldPickSphereInteriorByPerspectiveCameraFromInside() {
-        MouseEventGenerator g = new MouseEventGenerator();
         Sphere sph = sphere().handleMove(me);
         sph.setTranslateZ(-1000);
         sph.setCullFace(CullFace.NONE);
         Scene s = scene(group(sph), perspective(), true);
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 10, 20));
+        makeParallel(s, 10, 20);
+        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNotNull(e);
-        assertCoordinates(e, 10, 20, 10, 20, 97.46794);
+        assertCoordinates(e, 10, 20, 97.46794);
         assertPickResult(e.getPickResult(),
                 sph, point(10, 20, 97.46794), 97.46794, NOFACE, point(0.01627, 0.6));
     }
@@ -564,12 +681,12 @@ public class Mouse3DTest {
 
     @Test
     public void shouldNotPickSphereByPerspectiveCameraFromBehind() {
-        MouseEventGenerator g = new MouseEventGenerator();
         Sphere sph = sphere().handleMove(me);
         sph.setTranslateZ(-1098);
         sph.setCullFace(CullFace.NONE);
         Scene s = scene(group(sph), perspective(), true);
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 10, 20));
+        makeParallel(s, 10, 20);
+        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNull(e);
@@ -597,130 +714,131 @@ public class Mouse3DTest {
 
     @Test
     public void shouldPickCylinderFromFront() {
-        MouseEventGenerator g = new MouseEventGenerator();
         Cylinder c = cylinder().handleMove(me);
         c.setCullFace(CullFace.BACK);
         Scene s = scene(group(c), perspective(), true);
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 10, 20));
+        makeParallel(s, 10, 20);
+        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNotNull(e);
-        assertCoordinates(e, 10, 20, 10, 20, -48.98979);
+        assertCoordinates(e, 10, 20, -48.98979);
         assertPickResult(e.getPickResult(),
                 c, point(10, 20, -48.98979), 951.01020, NOFACE, point(0.467952, 0.4));
     }
 
     @Test
     public void shouldPickCylinderInteriorFromFront() {
-        MouseEventGenerator g = new MouseEventGenerator();
         Cylinder c = cylinder().handleMove(me);
         c.setCullFace(CullFace.FRONT);
         Scene s = scene(group(c), perspective(), true);
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 10, 20));
+        makeParallel(s, 10, 20);
+        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNotNull(e);
-        assertCoordinates(e, 10, 20, 10, 20, 48.98979);
+        assertCoordinates(e, 10, 20, 48.98979);
         assertPickResult(e.getPickResult(),
                 c, point(10, 20, 48.98979), 1048.98979, NOFACE, point(0.03204, 0.4));
     }
 
     @Test
     public void shouldPickCylinderFromBack() {
-        MouseEventGenerator g = new MouseEventGenerator();
         Cylinder c = cylinder().rotate('y', 180).handleMove(me);
         c.setCullFace(CullFace.BACK);
         Scene s = scene(group(c), perspective(), true);
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 10, 20));
+        makeParallel(s, 10, 20);
+        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNotNull(e);
-        assertCoordinates(e, 10, 20, -10, 20, 48.98979);
+        assertCoordinates(e, -10, 20, 48.98979);
         assertPickResult(e.getPickResult(),
                 c, point(-10, 20, 48.98979), 951.01020, NOFACE, point(0.967952, 0.4));
     }
 
     @Test
     public void shouldPickNotCulledCylinderFromFront() {
-        MouseEventGenerator g = new MouseEventGenerator();
         Cylinder c = cylinder().handleMove(me);
         c.setCullFace(CullFace.NONE);
         Scene s = scene(group(c), perspective(), true);
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 10, 20));
+        makeParallel(s, 10, 20);
+        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNotNull(e);
-        assertCoordinates(e, 10, 20, 10, 20, -48.98979);
+        assertCoordinates(e, 10, 20, -48.98979);
         assertPickResult(e.getPickResult(),
                 c, point(10, 20, -48.98979), 951.01020, NOFACE, point(0.467952, 0.4));
     }
 
     @Test
     public void shouldPickCylinderFromTop() {
-        MouseEventGenerator g = new MouseEventGenerator();
         Node c = cylinder().rotate('x', 90).handleMove(me);
         Scene s = scene(group(c), perspective(), true);
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 10, 20));
+        makeParallel(s, 10, 20);
+        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNotNull(e);
-        assertCoordinates(e, 10, 20, 10, -100, -20);
+        assertCoordinates(e, 10, -100, -20);
         assertPickResult(e.getPickResult(),
                 c, point(10, -100, -20), 900, NOFACE, point(0.6, 0.3));
     }
 
     @Test
     public void shouldPickCylinderInteriorFromTop() {
-        MouseEventGenerator g = new MouseEventGenerator();
         Cylinder c = cylinder().rotate('x', 90).handleMove(me);
         c.setCullFace(CullFace.FRONT);
         Scene s = scene(group(c), perspective(), true);
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 10, 20));
+        makeParallel(s, 10, 20);
+        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNotNull(e);
-        assertCoordinates(e, 10, 20, 10, 100, -20);
+        assertCoordinates(e, 10, 100, -20);
         assertPickResult(e.getPickResult(),
                 c, point(10, 100, -20), 1100, NOFACE, point(0.6, 0.3));
     }
 
     @Test
     public void shouldPickNotCulledCylinderFromTop() {
-        MouseEventGenerator g = new MouseEventGenerator();
         Cylinder c = cylinder().rotate('x', 90).handleMove(me);
         c.setCullFace(CullFace.NONE);
         Scene s = scene(group(c), perspective(), true);
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 10, 20));
+        makeParallel(s, 10, 20);
+        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNotNull(e);
-        assertCoordinates(e, 10, 20, 10, -100, -20);
+        assertCoordinates(e, 10, -100, -20);
         assertPickResult(e.getPickResult(),
                 c, point(10, -100, -20), 900, NOFACE, point(0.6, 0.3));
     }
 
     @Test
     public void shouldPickCylinderFromBottom() {
-        MouseEventGenerator g = new MouseEventGenerator();
         Node c = cylinder().rotate('x', -90).handleMove(me);
         Scene s = scene(group(c), perspective(), true);
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 10, 20));
+        makeParallel(s, 10, 20);
+        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNotNull(e);
-        assertCoordinates(e, 10, 20, 10, 100, 20);
+        assertCoordinates(e, 10, 100, 20);
         assertPickResult(e.getPickResult(),
                 c, point(10, 100, 20), 900, NOFACE, point(0.6, 0.7));
     }
 
     @Test
     public void shouldNotPickCylinderAboveIt() {
-        MouseEventGenerator g = new MouseEventGenerator();
         Node c = cylinder().handleMove(me);
         c.setTranslateY(130);
         Scene s = scene(group(c), perspective(), true);
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 10, 20));
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 10, 520));
+        makeParallel(s, 10, 20);
+        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
+        makeParallel(s, 10, 520);
+        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNull(e);
@@ -728,11 +846,11 @@ public class Mouse3DTest {
 
     @Test
     public void shouldNotPickCylinderNextToIt() {
-        MouseEventGenerator g = new MouseEventGenerator();
         Node c = cylinder().rotate('y', 45).handleMove(me);
         c.setTranslateX(-48);
         Scene s = scene(group(c), perspective(), true);
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 10, 20));
+        makeParallel(s, 10, 20);
+        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNull(e);
@@ -740,17 +858,24 @@ public class Mouse3DTest {
 
     @Test
     public void shouldNotPickCylinderParallelToIt() {
-        MouseEventGenerator g = new MouseEventGenerator();
         Node c = cylinder().rotate('x', 90).handleMove(me);
         Scene s = scene(group(c), perspective(), true);
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 48, 48));
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, -48, 48));
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 48, -48));
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, -48, -48));
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 148, 148));
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, -148, 148));
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 148, -148));
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, -148, -148));
+        makeParallel(s, 48, 48);
+        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
+        makeParallel(s, -48, 48);
+        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
+        makeParallel(s, 48, -48);
+        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
+        makeParallel(s, -48, -48);
+        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
+        makeParallel(s, 148, 148);
+        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
+        makeParallel(s, -148, 148);
+        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
+        makeParallel(s, 148, -148);
+        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
+        makeParallel(s, -148, -148);
+        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNull(e);
@@ -758,26 +883,26 @@ public class Mouse3DTest {
 
     @Test
     public void shouldPickRoughCylinder() {
-        MouseEventGenerator g = new MouseEventGenerator();
         Cylinder c = cylinderWith4Divs().handleMove(me);
         Scene s = scene(group(c), perspective(), true);
         c.impl_updatePG();
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 10, 20));
+        makeParallel(s, 10, 20);
+        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNotNull(e);
-        assertCoordinates(e, 10, 20, 10, 20, -40);
+        assertCoordinates(e, 10, 20, -40);
         assertPickResult(e.getPickResult(),
                 c, point(10, 20, -40), 960, NOFACE, point(0.45, 0.40078));
     }
 
     @Test
     public void shouldNotPickRoughCylinderOutsideOfItsTriangles() {
-        MouseEventGenerator g = new MouseEventGenerator();
         Cylinder c = cylinderWith4Divs().rotate('y', 45).handleMove(me);
         Scene s = scene(group(c), perspective(), true);
         c.impl_updatePG();
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 48, 20));
+        makeParallel(s, 48, 20);
+        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNull(e);
@@ -785,30 +910,30 @@ public class Mouse3DTest {
 
     @Test
     public void shouldPickRoughCylinderFrontFaceInsideOfShape() {
-        MouseEventGenerator g = new MouseEventGenerator();
         Cylinder c = cylinderWith4Divs().handleMove(me);
         c.setTranslateZ(-959);
         c.setCullFace(CullFace.BACK);
         Scene s = scene(group(c), perspective(), true);
         c.impl_updatePG();
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 10, 20));
+        makeParallel(s, 10, 20);
+        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNotNull(e);
-        assertCoordinates(e, 10, 20, 10, 20, -40);
+        assertCoordinates(e, 10, 20, -40);
         assertPickResult(e.getPickResult(),
                 c, point(10, 20, -40), 1, NOFACE, point(0.45, 0.40078));
     }
 
     @Test
     public void shouldNotPickCylinderFromInsideIfCulled() {
-        MouseEventGenerator g = new MouseEventGenerator();
         Cylinder c = cylinder().handleMove(me);
         c.setTranslateZ(-959);
         c.setCullFace(CullFace.BACK);
         Scene s = scene(group(c), perspective(), true);
         c.impl_updatePG();
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 10, 20));
+        makeParallel(s, 10, 20);
+        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNull(e);
@@ -816,64 +941,64 @@ public class Mouse3DTest {
 
     @Test
     public void shouldPickCylinderOnBounds() {
-        MouseEventGenerator g = new MouseEventGenerator();
         Cylinder c = cylinder().handleMove(me);
         c.setPickOnBounds(true);
         Scene s = scene(group(c), perspective(), true);
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 10, 20));
+        makeParallel(s, 10, 20);
+        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNotNull(e);
-        assertCoordinates(e, 10, 20, 10, 20, -50);
+        assertCoordinates(e, 10, 20, -50);
         assertPickResult(e.getPickResult(),
                 c, point(10, 20, -50), 950, NOFACE, null);
     }
 
     @Test
     public void shouldPickRoughCylinderOnBounds() {
-        MouseEventGenerator g = new MouseEventGenerator();
         Cylinder c = cylinderWith4Divs().handleMove(me);
         c.setPickOnBounds(true);
         Scene s = scene(group(c), perspective(), true);
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 10, 20));
+        makeParallel(s, 10, 20);
+        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNotNull(e);
-        assertCoordinates(e, 10, 20, 10, 20, -50);
+        assertCoordinates(e, 10, 20, -50);
         assertPickResult(e.getPickResult(),
                 c, point(10, 20, -50), 950, NOFACE, null);
     }
 
     @Test
     public void shouldPickCylinderOnBoundsOutsideOfShape() {
-        MouseEventGenerator g = new MouseEventGenerator();
         Node c = cylinder().rotate('x', 90).handleMove(me);
         Scene s = scene(group(c), perspective(), true);
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 49, 48));
+        makeParallel(s, 49, 48);
+        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
         MouseEvent e = me.event;
         assertNull(e);
 
         c.setPickOnBounds(true);
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 49, 48));
+        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
         e = me.event;
         assertNotNull(e);
-        assertCoordinates(e, 49, 48, 49, -100, -48);
+        assertCoordinates(e, 49, -100, -48);
         assertPickResult(e.getPickResult(),
                 c, point(49, -100, -48), 900, NOFACE, null);
     }
 
     @Test
     public void shouldPickCylinderInteriorByPerspectiveCameraFromInside() {
-        MouseEventGenerator g = new MouseEventGenerator();
         Cylinder c = cylinder().handleMove(me);
         c.setTranslateZ(-1000);
         c.setCullFace(CullFace.NONE);
         Scene s = scene(group(c), perspective(), true);
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 10, 20));
+        makeParallel(s, 10, 20);
+        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNotNull(e);
-        assertCoordinates(e, 10, 20, 10, 20, 48.98979);
+        assertCoordinates(e, 10, 20, 48.98979);
         assertPickResult(e.getPickResult(),
                 c, point(10, 20, 48.98979), 48.98979, NOFACE, point(0.03204, 0.4));
     }
@@ -896,12 +1021,12 @@ public class Mouse3DTest {
 
     @Test
     public void shouldNotPickCylinderByPerspectiveCameraFromBehind() {
-        MouseEventGenerator g = new MouseEventGenerator();
         Cylinder c = cylinder().handleMove(me);
         c.setTranslateZ(-1049);
         c.setCullFace(CullFace.NONE);
         Scene s = scene(group(c), perspective(), true);
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 10, 20));
+        makeParallel(s, 10, 20);
+        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNull(e);
@@ -929,24 +1054,24 @@ public class Mouse3DTest {
 
     @Test
     public void shouldPickMeshXY() {
-        MouseEventGenerator g = new MouseEventGenerator();
         Node m = meshXY().handleMove(me);
         Scene s = scene(group(m), perspective(), true);
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 60, 20));
+        makeParallel(s, 60, 20);
+        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNotNull(e);
-        assertCoordinates(e, 60, 20, 60, 20, 0);
+        assertCoordinates(e, 60, 20, 0);
         assertPickResult(e.getPickResult(),
                 m, point(60, 20, 0), 1000, 0, point(0.6, 0.2));
     }
 
     @Test
     public void shouldNotPickMeshXYOutsideOfIt() {
-        MouseEventGenerator g = new MouseEventGenerator();
         Node m = meshXY().handleMove(me);
         Scene s = scene(group(m), perspective(), true);
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 60, 70));
+        makeParallel(s, 60, 70);
+        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNull(e);
@@ -954,11 +1079,11 @@ public class Mouse3DTest {
 
     @Test
     public void shouldNotPickCulledMeshXY() {
-        MouseEventGenerator g = new MouseEventGenerator();
         MeshView m = meshXY().handleMove(me);
         m.setCullFace(CullFace.FRONT);
         Scene s = scene(group(m), perspective(), true);
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 60, 20));
+        makeParallel(s, 60, 20);
+        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNull(e);
@@ -966,54 +1091,54 @@ public class Mouse3DTest {
 
     @Test
     public void shouldPickNotCulledMeshXY() {
-        MouseEventGenerator g = new MouseEventGenerator();
         MeshView m = meshXY().handleMove(me);
         m.setCullFace(CullFace.NONE);
         Scene s = scene(group(m), perspective(), true);
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 60, 20));
+        makeParallel(s, 60, 20);
+        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNotNull(e);
-        assertCoordinates(e, 60, 20, 60, 20, 0);
+        assertCoordinates(e, 60, 20, 0);
         assertPickResult(e.getPickResult(),
                 m, point(60, 20, 0), 1000, 0, point(0.6, 0.2));
     }
 
     @Test
     public void shouldPickMeshXYParallel() {
-        MouseEventGenerator g = new MouseEventGenerator();
         MeshView m = meshXYParallel().handleMove(me);
         m.setCullFace(CullFace.BACK);
         Scene s = scene(group(m), perspective(), true);
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 60, 20));
+        makeParallel(s, 60, 20);
+        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNotNull(e);
-        assertCoordinates(e, 60, 20, 60, 20, 7);
+        assertCoordinates(e, 60, 20, 7);
         assertPickResult(e.getPickResult(),
                 m, point(60, 20, 7), 1007, 0, point(0.6, 0.2));
     }
 
     @Test
     public void shouldPickMeshXYFlippedTexture() {
-        MouseEventGenerator g = new MouseEventGenerator();
         Node m = meshXYFlippedTexture().handleMove(me);
         Scene s = scene(group(m), perspective(), true);
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 60, 20));
+        makeParallel(s, 60, 20);
+        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNotNull(e);
-        assertCoordinates(e, 60, 20, 60, 20, 7);
+        assertCoordinates(e, 60, 20, 7);
         assertPickResult(e.getPickResult(),
                 m, point(60, 20, 7), 1007, 0, point(0.4, 0.6));
     }
 
     @Test
     public void shouldNotPickMeshXYBack() {
-        MouseEventGenerator g = new MouseEventGenerator();
         Node m = meshXYBack().handleMove(me);
         Scene s = scene(group(m), perspective(), true);
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 60, 20));
+        makeParallel(s, 60, 20);
+        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNull(e);
@@ -1021,94 +1146,94 @@ public class Mouse3DTest {
 
     @Test
     public void shouldPickMeshYZ() {
-        MouseEventGenerator g = new MouseEventGenerator();
         Node m = meshYZ().rotate('y', 90).handleMove(me);
         Scene s = scene(group(m), perspective(), true);
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 10, 20));
+        makeParallel(s, 10, 20);
+        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNotNull(e);
-        assertCoordinates(e, 10, 20, 7, 20, 53);
+        assertCoordinates(e, 7, 20, 53);
         assertPickResult(e.getPickResult(),
                 m, point(7, 20, 53), 1050, 0, point(0.2, 0.53));
     }
 
     @Test
     public void shouldPickMeshGeneral() {
-        MouseEventGenerator g = new MouseEventGenerator();
         Node m = meshGeneral().handleMove(me);
         Scene s = scene(group(m), perspective(), true);
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 10, 20));
+        makeParallel(s, 10, 20);
+        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNotNull(e);
-        assertCoordinates(e, 10, 20, 10, 20, 10);
+        assertCoordinates(e, 10, 20, 10);
         assertPickResult(e.getPickResult(),
                 m, point(10, 20, 10), 1010, 0, point(0.1, 0.2));
     }
 
     @Test
     public void shouldPickMeshGeneralStretchedTexture() {
-        MouseEventGenerator g = new MouseEventGenerator();
         Node m = meshGeneralStretchedTexture().handleMove(me);
         Scene s = scene(group(m), perspective(), true);
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 10, 20));
+        makeParallel(s, 10, 20);
+        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNotNull(e);
-        assertCoordinates(e, 10, 20, 10, 20, 10);
+        assertCoordinates(e, 10, 20, 10);
         assertPickResult(e.getPickResult(),
                 m, point(10, 20, 10), 1010, 0, point(0.025, 0.1));
     }
 
     @Test
     public void shouldPickMeshOnBounds() {
-        MouseEventGenerator g = new MouseEventGenerator();
         Node m = meshGeneral().handleMove(me);
         m.setPickOnBounds(true);
         Scene s = scene(group(m), perspective(), true);
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 10, 20));
+        makeParallel(s, 10, 20);
+        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNotNull(e);
-        assertCoordinates(e, 10, 20, 10, 20, 0);
+        assertCoordinates(e, 10, 20, 0);
         assertPickResult(e.getPickResult(),
                 m, point(10, 20, 0), 1000, NOFACE, null);
     }
 
     @Test
     public void shouldPickMeshOnBoundsOutsideOfTriangles() {
-        MouseEventGenerator g = new MouseEventGenerator();
         Node m = meshGeneral().handleMove(me);
         Scene s = scene(group(m), perspective(), true);
 
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 90, 90));
+        makeParallel(s, 90, 90);
+        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
         MouseEvent e = me.event;
         assertNull(e);
 
         m.setPickOnBounds(true);
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 90, 90));
+        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
         e = me.event;
         assertNotNull(e);
-        assertCoordinates(e, 90, 90, 90, 90, 0);
+        assertCoordinates(e, 90, 90, 0);
         assertPickResult(e.getPickResult(),
                 m, point(90, 90, 0), 1000, NOFACE, null);
     }
 
     @Test
     public void shouldNotPickMeshXYByPerspectiveCameraFromBehind() {
-        MouseEventGenerator g = new MouseEventGenerator();
         Node m = meshXY().handleMove(me);
         m.setTranslateZ(-3000);
         Scene s = scene(group(m), perspective(), true);
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 60, 20));
+        makeParallel(s, 60, 20);
+        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNull(e);
     }
 
     @Test
-    public void shouldPickMeshXYByParallelCamerFromBehind() {
+    public void shouldPickMeshXYByParallelCameraFromBehind() {
         MouseEventGenerator g = new MouseEventGenerator();
         Node m = meshXY().handleMove(me);
         m.setTranslateZ(-3000);
@@ -1124,11 +1249,11 @@ public class Mouse3DTest {
 
     @Test
     public void shouldNotPickMeshGeneralByPerspectiveCameraFromBehind() {
-        MouseEventGenerator g = new MouseEventGenerator();
         Node m = meshGeneral().handleMove(me);
         m.setTranslateZ(-1011);
         Scene s = scene(group(m), perspective(), true);
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 10, 20));
+        makeParallel(s, 10, 20);
+        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNull(e);
@@ -1155,95 +1280,94 @@ public class Mouse3DTest {
 
     @Test
     public void shouldPickNearestFace() {
-        MouseEventGenerator g = new MouseEventGenerator();
         Node m = meshesXY().handleMove(me);
         Scene s = scene(group(m), perspective(), true);
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 60, 20));
+        makeParallel(s, 60, 20);
+        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNotNull(e);
-        assertCoordinates(e, 60, 20, 60, 20, -7);
+        assertCoordinates(e, 60, 20, -7);
         assertPickResult(e.getPickResult(),
                 m, point(60, 20, -7), 993, 1, point(0.6, 0.2));
     }
 
     @Test
     public void shouldPickNearestFace2() {
-        MouseEventGenerator g = new MouseEventGenerator();
         Node m = meshesXY2().handleMove(me);
         Scene s = scene(group(m), perspective(), true);
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 60, 20));
+        makeParallel(s, 60, 20);
+        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNotNull(e);
-        assertCoordinates(e, 60, 20, 60, 20, -7);
+        assertCoordinates(e, 60, 20, -7);
         assertPickResult(e.getPickResult(),
                 m, point(60, 20, -7), 993, 0, point(0.6, 0.2));
     }
 
     @Test
     public void shouldPickNearestThroughBackFace() {
-        MouseEventGenerator g = new MouseEventGenerator();
         Node m = meshesXYFacingEachOther().handleMove(me);
         Scene s = scene(group(m), perspective(), true);
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 60, 20));
+        makeParallel(s, 60, 20);
+        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNotNull(e);
-        assertCoordinates(e, 60, 20, 60, 20, 0);
+        assertCoordinates(e, 60, 20, 0);
         assertPickResult(e.getPickResult(),
                 m, point(60, 20, 0), 1000, 0, point(0.6, 0.2));
     }
 
     @Test
     public void shouldPickNearestBackIfNotCulled() {
-        MouseEventGenerator g = new MouseEventGenerator();
         MeshView m = meshesXYFacingEachOther().handleMove(me);
         m.setCullFace(CullFace.NONE);
         Scene s = scene(group(m), perspective(), true);
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 60, 20));
+        makeParallel(s, 60, 20);
+        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNotNull(e);
-        assertCoordinates(e, 60, 20, 60, 20, -7);
+        assertCoordinates(e, 60, 20, -7);
         assertPickResult(e.getPickResult(),
                 m, point(60, 20, -7), 993, 1, point(0.6, 0.2));
     }
 
     @Test
     public void shouldNotPickShapesIfNearerPickExists() {
-        MouseEventGenerator g = new MouseEventGenerator();
         MeshView m = meshXY().handleMove(me);
         m.setTranslateZ(-500);
         Scene s = scene(group(meshXY(), cylinder(), sphere(), box(), m), perspective(), true);
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 40, 10));
+        makeParallel(s, 40, 10);
+        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNotNull(e);
-        assertCoordinates(e, 40, 10, 40, 10, 0);
+        assertCoordinates(e, 40, 10, 0);
         assertPickResult(e.getPickResult(),
                 m, point(40, 10, 0), 500, 0, point(0.4, 0.1));
     }
 
     @Test
     public void shouldPickNearestShapeOfMany() {
-        MouseEventGenerator g = new MouseEventGenerator();
         MeshView m = meshXY().handleMove(me);
         m.setTranslateZ(-500);
         m.setTranslateX(-30);
         Scene s = scene(group(m, box(), sphere(), cylinder(), meshXY()), perspective(), true);
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 30, 20));
+        makeParallel(s, 30, 20);
+        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNotNull(e);
-        assertCoordinates(e, 30, 20, 60, 20, 0);
+        assertCoordinates(e, 60, 20, 0);
         assertPickResult(e.getPickResult(),
                 m, point(60, 20, 0), 500, 0, point(0.6, 0.2));
     }
 
     @Test
     public void shouldPickNodeWithDepthTestDisabledCoveredBySibling() {
-        MouseEventGenerator g = new MouseEventGenerator();
         MeshView m = meshXY();
         m.setTranslateZ(-500);
         m.setTranslateX(-30);
@@ -1252,18 +1376,18 @@ public class Mouse3DTest {
         b.setDepthTest(DepthTest.DISABLE);
 
         Scene s = scene(group(m, b), perspective(), true);
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 30, 20));
+        makeParallel(s, 30, 20);
+        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNotNull(e);
-        assertCoordinates(e, 30, 20, 30, 20, -200);
+        assertCoordinates(e, 30, 20, -200);
         assertPickResult(e.getPickResult(),
                 b, point(30, 20, -200), 800, NOFACE, point(0.2, 0.4));
     }
 
     @Test
     public void shouldPickNodeCoveringCloserSiblingWithDepthTestDisabled() {
-        MouseEventGenerator g = new MouseEventGenerator();
         MeshView m = meshXY();
         m.setTranslateZ(-500);
         m.setTranslateX(-30);
@@ -1273,18 +1397,18 @@ public class Mouse3DTest {
         b.setDepthTest(DepthTest.ENABLE);
 
         Scene s = scene(group(m, b), perspective(), true);
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 30, 20));
+        makeParallel(s, 30, 20);
+        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNotNull(e);
-        assertCoordinates(e, 30, 20, 30, 20, -200);
+        assertCoordinates(e, 30, 20, -200);
         assertPickResult(e.getPickResult(),
                 b, point(30, 20, -200), 800, NOFACE, point(0.2, 0.4));
     }
 
     @Test
     public void shouldPickNodeWithDisabledDepthtestCoveredByOtherNode() {
-        MouseEventGenerator g = new MouseEventGenerator();
 
         Box closer = box();
         closer.setTranslateZ(-10);
@@ -1293,18 +1417,18 @@ public class Mouse3DTest {
         b.setDepthTest(DepthTest.DISABLE);
 
         Scene s = scene(group(group(closer), group(b)), perspective(), true);
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 30, 20));
+        makeParallel(s, 30, 20);
+        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNotNull(e);
-        assertCoordinates(e, 30, 20, 30, 20, -200);
+        assertCoordinates(e, 30, 20, -200);
         assertPickResult(e.getPickResult(),
                 b, point(30, 20, -200), 800, NOFACE, point(0.2, 0.4));
     }
 
     @Test
     public void shouldPickNodeCoveringNodeWithDisabledDepthtest() {
-        MouseEventGenerator g = new MouseEventGenerator();
 
         Box b1 = box();
 
@@ -1315,18 +1439,18 @@ public class Mouse3DTest {
         b2.setTranslateZ(-10);
 
         Scene s = scene(group(group(b1), group(b), group(b2)), perspective(), true);
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 30, 20));
+        makeParallel(s, 30, 20);
+        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNotNull(e);
-        assertCoordinates(e, 30, 20, 30, 20, -200);
+        assertCoordinates(e, 30, 20, -200);
         assertPickResult(e.getPickResult(),
                 b2, point(30, 20, -200), 790, NOFACE, point(0.2, 0.4));
     }
 
     @Test
     public void shouldPickByOrderIfParentsDepthTestDisabled() {
-        MouseEventGenerator g = new MouseEventGenerator();
         MeshView m = meshXY();
         m.setTranslateZ(-500);
         m.setTranslateX(-30);
@@ -1335,20 +1459,20 @@ public class Mouse3DTest {
 
         Group parent = group(m, b);
         parent.setDepthTest(DepthTest.DISABLE);
-        
+
         Scene s = scene(parent, perspective(), true);
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 30, 20));
+        makeParallel(s, 30, 20);
+        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNotNull(e);
-        assertCoordinates(e, 30, 20, 30, 20, -200);
+        assertCoordinates(e, 30, 20, -200);
         assertPickResult(e.getPickResult(),
                 b, point(30, 20, -200), 800, NOFACE, point(0.2, 0.4));
     }
 
     @Test
     public void depthTestShouldHaveNoEffectWithoutDepthBuffer() {
-        MouseEventGenerator g = new MouseEventGenerator();
         MeshView m = meshXY();
         m.setTranslateZ(-500);
         m.setTranslateX(-30);
@@ -1358,18 +1482,18 @@ public class Mouse3DTest {
         b.setDepthTest(DepthTest.ENABLE);
 
         Scene s = scene(group(m, b), perspective(), false);
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 30, 20));
+        makeParallel(s, 30, 20);
+        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNotNull(e);
-        assertCoordinates(e, 30, 20, 30, 20, -200);
+        assertCoordinates(e, 30, 20, -200);
         assertPickResult(e.getPickResult(),
                 b, point(30, 20, -200), 800, NOFACE, point(0.2, 0.4));
     }
 
     @Test
     public void disabledDepthTestShouldNotInfluencePickingIfNotPicked() {
-        MouseEventGenerator g = new MouseEventGenerator();
 
         Box b1 = box().handleMove(me);
         b1.setDepthTest(DepthTest.ENABLE);
@@ -1379,18 +1503,18 @@ public class Mouse3DTest {
         b2.setDepthTest(DepthTest.DISABLE);
 
         Scene s = scene(group(b1, b2), perspective(), false);
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 30, 20));
+        makeParallel(s, 30, 20);
+        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNotNull(e);
-        assertCoordinates(e, 30, 20, 30, 20, -200);
+        assertCoordinates(e, 30, 20, -200);
         assertPickResult(e.getPickResult(),
                 b1, point(30, 20, -200), 800, NOFACE, point(0.2, 0.4));
     }
 
     @Test
     public void disabledDepthTestShouldNotInfluencePickingIfNotPickedByNonEmptyResult() {
-        MouseEventGenerator g = new MouseEventGenerator();
 
         Box odd = box();
         odd.setTranslateZ(10);
@@ -1403,11 +1527,12 @@ public class Mouse3DTest {
         b2.setDepthTest(DepthTest.DISABLE);
 
         Scene s = scene(group(b1, b2, odd), perspective(), true);
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 30, 20));
+        makeParallel(s, 30, 20);
+        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNotNull(e);
-        assertCoordinates(e, 30, 20, 30, 20, -200);
+        assertCoordinates(e, 30, 20, -200);
         assertPickResult(e.getPickResult(),
                 b1, point(30, 20, -200), 800, NOFACE, point(0.2, 0.4));
     }
@@ -1420,20 +1545,20 @@ public class Mouse3DTest {
 
     @Test
     public void shouldPickScene() {
-        MouseEventGenerator g = new MouseEventGenerator();
         Rectangle r = rect().handleMove(me);
 
         Group parent = group(r).handleMove(pme);
 
         Scene s = scene(parent, perspective(), true).handleMove(sme);
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 150, 160));
+        makeParallel(s, 150, 160);
+        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         assertNull(me.event);
         assertNull(pme.event);
 
         MouseEvent e = sme.event;
         assertNotNull(e);
-        assertCoordinates(e, 150, 160, 150, 160, 0);
+        assertCoordinates(e, 150, 160, 0);
         assertPickResult(e.getPickResult(), null, point(150, 160, 0), 1000,
                 NOFACE, null);
     }
@@ -1444,11 +1569,11 @@ public class Mouse3DTest {
 
     @Test
     public void shouldPickFirstShapeWithoutDepthBuffer() {
-        MouseEventGenerator g = new MouseEventGenerator();
         Node trg;
         Group root = group(sphere(), trg = cylinder());
         Scene s = scene(root, perspective(), false).handleMove(me);
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 0, 0));
+        makeParallel(s, 0, 0);
+        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNotNull(e);
@@ -1457,11 +1582,11 @@ public class Mouse3DTest {
 
     @Test
     public void shouldPickNearestShapeWithDepthBuffer() {
-        MouseEventGenerator g = new MouseEventGenerator();
         Node trg;
         Group root = group(trg = sphere(), cylinder());
         Scene s = scene(root, perspective(), true).handleMove(me);
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 0, 0));
+        makeParallel(s, 0, 0);
+        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNotNull(e);
@@ -1474,22 +1599,21 @@ public class Mouse3DTest {
 
     @Test
     public void shouldPickRectWithPickRay() {
-        MouseEventGenerator g = new MouseEventGenerator();
         Rectangle r = rect().handleMove(me);
 
         Scene s = scene(group(r), perspective(), true);
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 50, 60));
+        makeParallel(s, 50, 60);
+        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNotNull(e);
-        assertCoordinates(e, 50, 60, 50, 60, 0);
+        assertCoordinates(e, 50, 60, 0);
         assertPickResult(e.getPickResult(),
                 r, point(50, 60, 0), 1000, NOFACE, null);
     }
 
     @Test
     public void localCoordinatesShouldBeCorrectDuringBubbling() {
-        MouseEventGenerator g = new MouseEventGenerator();
         Rectangle r = rect().handleMove(me);
         r.setTranslateX(100);
         r.setTranslateZ(50);
@@ -1498,51 +1622,53 @@ public class Mouse3DTest {
         parent.setTranslateZ(-20);
 
         Scene s = scene(parent, perspective(), true).handleMove(sme);
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 150, 60));
+        makeParallel(s, 150, 60);
+        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNotNull(e);
-        assertCoordinates(e, 150, 60, 50, 60, 0);
+        assertCoordinates(e, 50, 60, 0);
 
         e = pme.event;
         assertNotNull(e);
-        assertCoordinates(e, 150, 60, 150, 60, 50);
+        assertCoordinates(e, 150, 60, 50);
 
         e = sme.event;
         assertNotNull(e);
-        assertCoordinates(e, 150, 60, 150, 60, 30);
+        assertCoordinates(e, 150, 60, 30);
     }
 
 
     @Test
     public void shouldPickRectRotatedIn3D() {
-        MouseEventGenerator g = new MouseEventGenerator();
         Rectangle r = rect().rotate('y', 45).handleMove(me);
 
         Scene s = scene(group(r), perspective(), true).handleMove(sme);
 
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 10, 50));
+        makeParallel(s, 10, 50);
+        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
 
         MouseEvent e = me.event;
         assertNull(e);
 
         e = sme.event;
         assertNotNull(e);
-        assertCoordinates(e, 10, 50, 10, 50, 0);
+        assertCoordinates(e, 10, 50, 0);
         assertPickResult(e.getPickResult(), null, point(10, 50, 0), 1000,
                 NOFACE, null);
         sme.clear();
 
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 30, 50));
+        makeParallel(s, 30, 50);
+        s.impl_processMouseEvent(generateMouseEvent(MouseEvent.MOUSE_MOVED));
         e = me.event;
         assertNotNull(e);
-        assertCoordinates(e, 30, 50, 21.71572, 50, 0);
+        assertCoordinates(e, 21.71572, 50, 0);
         assertPickResult(e.getPickResult(), r, point(21.71572, 50, 0), 1020,
                 NOFACE, null);
 
         e = sme.event;
         assertNotNull(e);
-        assertCoordinates(e, 30, 50, 30, 50, 20);
+        assertCoordinates(e, 30, 50, 20);
         assertPickResult(e.getPickResult(), r, point(21.71572, 50, 0), 1020,
                 NOFACE, null);
     }
@@ -1585,7 +1711,7 @@ public class Mouse3DTest {
         e = sme.event;
         assertNotNull(e);
         assertCoordinates(e, 10, 50, 10, 50, 0);
-        assertPickResult(e.getPickResult(), null, point(10, 50, 0), 
+        assertPickResult(e.getPickResult(), null, point(10, 50, 0),
                 Double.POSITIVE_INFINITY, NOFACE, null);
         sme.clear();
 
@@ -1593,7 +1719,7 @@ public class Mouse3DTest {
         e = me.event;
         assertNotNull(e);
         assertCoordinates(e, 30, 50, 21.71572, 50, 0);
-        assertPickResult(e.getPickResult(), r, point(21.71572, 50, 0), 
+        assertPickResult(e.getPickResult(), r, point(21.71572, 50, 0),
                 Double.POSITIVE_INFINITY, NOFACE, null);
 
         e = sme.event;
@@ -1613,12 +1739,15 @@ public class Mouse3DTest {
 
         Scene s = scene(group(b), perspective(), true);
 
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_PRESSED, 10, 50));
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_RELEASED, 20, 50));
+        makeParallel(s, 20, 50);
+        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_PRESSED,
+                PERSPECTIVE_CAMERA_X - 10, PERSPECTIVE_CAMERA_Y));
+        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_RELEASED,
+                PERSPECTIVE_CAMERA_X, PERSPECTIVE_CAMERA_Y));
 
         MouseEvent e = me.event;
         assertNotNull(e);
-        assertCoordinates(e, 20, 50, 20, 50, -200);
+        assertCoordinates(e, 20, 50, -200);
         assertPickResult(e.getPickResult(), b, point(20, 50, -200), 800,
                 NOFACE, point(0.3, 0.25));
     }
@@ -1634,18 +1763,21 @@ public class Mouse3DTest {
 
         Scene s = scene(group(b1, b2), perspective(), true);
 
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 10, 50));
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 70, 50));
+        makeParallel(s, 70, 50);
+        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_PRESSED,
+                PERSPECTIVE_CAMERA_X - 60, PERSPECTIVE_CAMERA_Y));
+        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_RELEASED,
+                PERSPECTIVE_CAMERA_X, PERSPECTIVE_CAMERA_Y));
 
         MouseEvent e = me.event;
         assertNotNull(e);
-        assertCoordinates(e, 70, 50, 15, 50, -201);
+        assertCoordinates(e, 15, 50, -201);
         assertPickResult(e.getPickResult(), b2, point(-30, 50, -200), 799,
                 NOFACE, point(0.8, 0.25));
 
         e = pme.event;
         assertNotNull(e);
-        assertCoordinates(e, 70, 50, -30, 50, -200);
+        assertCoordinates(e, -30, 50, -200);
         assertPickResult(e.getPickResult(), b2, point(-30, 50, -200), 799,
                 NOFACE, point(0.8, 0.25));
     }
@@ -1657,13 +1789,17 @@ public class Mouse3DTest {
 
         Scene s = scene(group(b), perspective(), true);
 
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_PRESSED, 10, 50));
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_DRAGGED, 20, 50));
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_RELEASED, 20, 50));
+        makeParallel(s, 20, 50);
+        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_PRESSED,
+                PERSPECTIVE_CAMERA_X - 10, PERSPECTIVE_CAMERA_Y));
+        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_DRAGGED,
+                PERSPECTIVE_CAMERA_X, PERSPECTIVE_CAMERA_Y));
+        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_RELEASED,
+                PERSPECTIVE_CAMERA_X, PERSPECTIVE_CAMERA_Y));
 
         MouseEvent e = me.event;
         assertNotNull(e);
-        assertCoordinates(e, 20, 50, 20, 50, -200);
+        assertCoordinates(e, 20, 50, -200);
         assertPickResult(e.getPickResult(), b, point(20, 50, -200), 800,
                 NOFACE, point(0.3, 0.25));
     }
@@ -1684,17 +1820,21 @@ public class Mouse3DTest {
 
         Scene s = scene(group(b1, b2), perspective(), true);
 
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_PRESSED, 10, 50));
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_DRAGGED, 70, 50));
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_RELEASED, 70, 50));
+        makeParallel(s, 70, 50);
+        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_PRESSED,
+                PERSPECTIVE_CAMERA_X - 60, PERSPECTIVE_CAMERA_Y));
+        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_DRAGGED,
+                PERSPECTIVE_CAMERA_X, PERSPECTIVE_CAMERA_Y));
+        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_RELEASED,
+                PERSPECTIVE_CAMERA_X, PERSPECTIVE_CAMERA_Y));
 
         MouseEvent e = me.event;
         assertNotNull(e);
-        assertCoordinates(e, 70, 50, 15, 50, -201);
+        assertCoordinates(e, 15, 50, -201);
         assertPickResult(e.getPickResult(), b2, point(-30, 50, -200), 799,
                 NOFACE, point(0.8, 0.25));
     }
-    
+
     @Test
     public void shouldReportCorrectPickResultForFullPDR() {
         EventHolder<MouseDragEvent> smde = new EventHolder<MouseDragEvent>();
@@ -1717,37 +1857,161 @@ public class Mouse3DTest {
 
         Scene s = scene(group(b1, b2), perspective(), true);
 
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_PRESSED, 10, 50));
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_DRAGGED, 10, 60));
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_DRAGGED, 11, 60));
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_DRAGGED, 70, 50));
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_RELEASED, 70, 50));
+        makeParallel(s, 70, 50);
+        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_PRESSED,
+                PERSPECTIVE_CAMERA_X - 60, PERSPECTIVE_CAMERA_Y));
+        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_DRAGGED,
+                PERSPECTIVE_CAMERA_X - 60, PERSPECTIVE_CAMERA_Y + 10));
+        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_DRAGGED,
+                PERSPECTIVE_CAMERA_X - 59, PERSPECTIVE_CAMERA_Y + 10));
+        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_DRAGGED,
+                PERSPECTIVE_CAMERA_X, PERSPECTIVE_CAMERA_Y));
+        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_RELEASED,
+                PERSPECTIVE_CAMERA_X, PERSPECTIVE_CAMERA_Y));
 
         MouseEvent e = smde.event;
         assertNotNull(e);
-        assertCoordinates(e, 70, 50, 15, 50, -201);
+        assertCoordinates(e, 15, 50, -201);
         assertPickResult(e.getPickResult(), b2, point(-30, 50, -200), 799,
                 NOFACE, point(0.8, 0.25));
 
         e = tmde.event;
         assertNotNull(e);
-        assertCoordinates(e, 70, 50, -30, 50, -200);
+        assertCoordinates(e, -30, 50, -200);
         assertPickResult(e.getPickResult(), b2, point(-30, 50, -200), 799,
                 NOFACE, point(0.8, 0.25));
 
         e = tmde.event;
         assertNotNull(e);
-        assertCoordinates(e, 70, 50, -30, 50, -200);
+        assertCoordinates(e, -30, 50, -200);
         assertPickResult(e.getPickResult(), b2, point(-30, 50, -200), 799,
                 NOFACE, point(0.8, 0.25));
     }
 
 
+    /***************** moving camera ********************/
+
+    @Test
+    public void takesPerspectiveCameraMovesIntoAccount() {
+        MouseEventGenerator g = new MouseEventGenerator();
+        Box b = box().handleMove(me);
+        Camera cam = perspective();
+        Group camGroup = group(cam);
+        cam.setTranslateX(-143);
+        camGroup.setTranslateX(123);
+        cam.impl_updatePG();
+        cam.setTranslateX(-43);
+        camGroup.setTranslateX(23);
+        cam.impl_updatePG();
+
+        Scene s = scene(group(b), cam, true);
+        s.getRoot().getChildren().add(camGroup);
+        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 30, 40));
+
+        MouseEvent e = me.event;
+        assertNotNull(e);
+        assertCoordinates(e, 30, 40, 50, 70.638298, -85.106383);
+        assertPickResult(e.getPickResult(),
+                b, point(50, 70.638298, -85.106383), 1063.207158, NOFACE, point(0.146808, 0.712767));
+    }
+
+    @Test
+    public void ignoresPerspectiveCameraMovesIfCameraNotInScene() {
+        MouseEventGenerator g = new MouseEventGenerator();
+        Box b = box().handleMove(me);
+        Camera cam = perspective();
+        Group camGroup = group(cam);
+        cam.setTranslateX(-143);
+        camGroup.setTranslateX(123);
+        cam.impl_updatePG();
+        cam.setTranslateX(-43);
+        camGroup.setTranslateX(23);
+        cam.impl_updatePG();
+
+        Scene s = scene(group(b), cam, true);
+        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 30, 40));
+
+        MouseEvent e = me.event;
+        assertNotNull(e);
+        assertCoordinates(e, 30, 40, 50, 55.31915, -42.553191);
+        assertPickResult(e.getPickResult(),
+                b, point(50, 55.31915, -42.553191), 1112.658654, NOFACE, point(0.223404, 0.606383));
+    }
+
+    @Test
+    public void takesParallelCameraMovesIntoAccount() {
+        MouseEventGenerator g = new MouseEventGenerator();
+        Box b = box().handleMove(me);
+        Camera cam = parallel();
+        Group camGroup = group(cam);
+        cam.setTranslateX(-143);
+        camGroup.setTranslateX(123);
+        cam.impl_updatePG();
+        cam.setTranslateX(-43);
+        camGroup.setTranslateX(23);
+        cam.impl_updatePG();
+
+        Scene s = scene(group(b), cam, true);
+        s.getRoot().getChildren().add(camGroup);
+        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 30, 40));
+
+        MouseEvent e = me.event;
+        assertNotNull(e);
+        assertCoordinates(e, 30, 40, 10, 40, -200);
+        assertPickResult(e.getPickResult(),
+                b, point(10, 40, -200), Double.POSITIVE_INFINITY, NOFACE, point(0.4, 0.3));
+    }
+
+    @Test
+    public void ignoresParallelCameraMovesIfCameraNotInScene() {
+        MouseEventGenerator g = new MouseEventGenerator();
+        Box b = box().handleMove(me);
+        Camera cam = parallel();
+        Group camGroup = group(cam);
+        cam.setTranslateX(-43);
+        camGroup.setTranslateX(23);
+        cam.impl_updatePG();
+        cam.setTranslateX(-143);
+        camGroup.setTranslateX(123);
+        cam.impl_updatePG();
+
+        Scene s = scene(group(b), cam, true);
+        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 30, 40));
+
+        MouseEvent e = me.event;
+        assertNotNull(e);
+        assertCoordinates(e, 30, 40, 30, 40, -200);
+        assertPickResult(e.getPickResult(),
+                b, point(30, 40, -200), Double.POSITIVE_INFINITY, NOFACE, point(0.2, 0.3));
+    }
+
+
     /***************** helper stuff ********************/
 
+    private MouseEvent generateMouseEvent(EventType<MouseEvent> type) {
+        MouseEventGenerator g = new MouseEventGenerator();
+        return g.generateMouseEvent(type, PERSPECTIVE_CAMERA_X, PERSPECTIVE_CAMERA_Y);
+    }
+
+    /**
+     * Moves the camera so that picking on point
+     * [PERSPECTIVE_CAMERA_X, PERSPECTIVE_CAMERA_Y] results in pick ray
+     * with origin [x, y, -1000] and direction [0, 0, 1000].
+     */
+    private void makeParallel(Scene s, double x, double y) {
+        if (!s.getRoot().getChildren().contains(s.getCamera())) {
+            s.getRoot().getChildren().add(s.getCamera());
+        }
+        s.getCamera().setTranslateX(x - PERSPECTIVE_CAMERA_X);
+        s.getCamera().setTranslateY(y - PERSPECTIVE_CAMERA_Y);
+        s.getCamera().impl_updatePG();
+    }
 
     private Camera perspective() {
-        return new PerspectiveCamera();
+        PerspectiveCamera cam = new PerspectiveCamera();
+        // this field of view makes camera Z position to be -1000
+        cam.setFieldOfView(43.60281897);
+        return cam;
     }
 
     private Camera parallel() {
@@ -1893,7 +2157,7 @@ public class Mouse3DTest {
     private static class TestScene extends Scene {
 
         public TestScene(Parent root, Camera camera, boolean depthBuffer) {
-            super(root, 1000, 1000, depthBuffer);
+            super(root, 1000, 800, depthBuffer);
             setCamera(camera);
             Stage stage = new Stage();
             stage.setScene(this);
@@ -2059,6 +2323,15 @@ public class Mouse3DTest {
             double x, double y, double z) {
         assertEquals(sceneX, e.getSceneX(), 0.00001);
         assertEquals(sceneY, e.getSceneY(), 0.00001);
+        assertEquals(x, e.getX(), 0.00001);
+        assertEquals(y, e.getY(), 0.00001);
+        assertEquals(z, e.getZ(), 0.00001);
+    }
+
+    private void assertCoordinates(MouseEvent e,
+            double x, double y, double z) {
+        assertEquals(PERSPECTIVE_CAMERA_X, e.getSceneX(), 0.00001);
+        assertEquals(PERSPECTIVE_CAMERA_Y, e.getSceneY(), 0.00001);
         assertEquals(x, e.getX(), 0.00001);
         assertEquals(y, e.getY(), 0.00001);
         assertEquals(z, e.getZ(), 0.00001);

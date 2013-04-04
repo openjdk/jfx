@@ -26,6 +26,7 @@
 package com.sun.javafx.scene;
 
 import javafx.scene.Node;
+import javafx.scene.SubScene;
 
 public abstract class NodeAccess {
 
@@ -46,4 +47,5 @@ public abstract class NodeAccess {
 
     public abstract void layoutNodeForPrinting(Node node);
     public abstract boolean isDerivedDepthTest(Node node);
+    public abstract SubScene getSubScene(Node node);
 }

@@ -51,7 +51,6 @@ FILES_export = \
 	com/sun/glass/ui/mac/MacPixels.java \
 	com/sun/glass/ui/mac/MacPlatformFactory.java \
 	com/sun/glass/ui/mac/MacRobot.java \
-	com/sun/glass/ui/mac/MacScreen.java \
 	com/sun/glass/ui/mac/MacSystemClipboard.java \
 	com/sun/glass/ui/mac/MacTimer.java \
 	com/sun/glass/ui/mac/MacView.java \

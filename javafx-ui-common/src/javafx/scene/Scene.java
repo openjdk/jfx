@@ -191,6 +191,8 @@ public class Scene implements EventTarget {
 
     private final AccessControlContext acc = AccessController.getContext();
 
+    private Camera defaultCamera;
+
     //Neither width nor height are initialized and will be calculated according to content when this Scene
     //is shown for the first time.
 //    public Scene() {
@@ -720,8 +722,9 @@ public class Scene implements EventTarget {
         PerformanceTracker.logEvent("Scene.initPeer TKScene set");
         impl_peer.setRoot(getRoot().impl_getPGNode());
         impl_peer.setFillPaint(getFill() == null ? null : tk.getPaint(getFill()));
-        impl_peer.setCamera(getCamera() == null ? null : getCamera().getPlatformCamera());
-        pickingCamera = getCamera();
+        impl_peer.setCamera(getCamera() == null 
+                ? getDefaultCamera().getPlatformCamera()
+                : getCamera().getPlatformCamera());
 
         impl_setAllowPGAccess(false);
 
@@ -894,31 +897,25 @@ public class Scene implements EventTarget {
         return height;
     }
 
-    /*
-     * 3D pickRays are computed on the toolkit layer. The camera settings are
-     * pushed to the toolkit layer on pulse. So we need to keep track of the
-     * camera currently used by toolkit not to ask it to compute 3D pick ray
-     * when it thinks we are using 2D camera.
-     */
-    private Camera pickingCamera;
-
     // Reusable target wrapper (to avoid creating new one for each picking)
     private TargetWrapper tmpTargetWrapper = new TargetWrapper();
 
     /**
      * Specifies the type of camera use for rendering this {@code Scene}.
      * If {@code camera} is null, a parallel camera is used for rendering.
+     * It is illegal to set a camera that belongs to other {@code Scene}
+     * or {@code SubScene}.
      * <p>
      * Note: this is a conditional feature. See
      * {@link javafx.application.ConditionalFeature#SCENE3D ConditionalFeature.SCENE3D}
-     * for more information.
+     * for more information. 
      *
      * @defaultValue null
      * @since JavaFX 1.3
      */
     private ObjectProperty<Camera> camera;
 
-    public final void setCamera(Camera value) {
+    public final void setCamera(Camera value) {        
         cameraProperty().set(value);
     }
 
@@ -932,6 +929,14 @@ public class Scene implements EventTarget {
 
                 @Override
                 protected void invalidated() {
+                    Camera _value = get();                    
+                    // Illegal value if it belongs to other scene or any subscene
+                    if (_value != null
+                            && ((_value.getScene() != null && _value.getScene() != Scene.this)
+                            || _value.getSubScene() != null)) {
+                        throw new IllegalArgumentException(_value
+                                + "is already set as camera in other scene");
+                    }
                     markDirty(DirtyBits.CAMERA_DIRTY);
                 }
 
@@ -947,6 +952,13 @@ public class Scene implements EventTarget {
             };
         }
         return camera;
+    }
+
+    private Camera getDefaultCamera() {
+        if (defaultCamera == null) {
+             defaultCamera = new ParallelCamera();
+        }
+        return defaultCamera;
     }
 
     /**
@@ -1048,7 +1060,7 @@ public class Scene implements EventTarget {
                     }
 
                     if (oldRoot != null) {
-                        oldRoot.setScene(null);
+                        oldRoot.setScenes(null, null);
                         oldRoot.setImpl_traversalEngine(null);
                     }
                     oldRoot = _value;
@@ -1056,7 +1068,7 @@ public class Scene implements EventTarget {
                         _value.setImpl_traversalEngine(new TraversalEngine(_value, true));
                     }
                     _value.getStyleClass().add(0, "root");
-                    _value.setScene(Scene.this);
+                    _value.setScenes(Scene.this, null);
                     markDirty(DirtyBits.ROOT_DIRTY);
                     _value.resize(getWidth(), getHeight()); // maybe no-op if root is not resizable
                     _value.requestLayout();
@@ -1176,9 +1188,10 @@ public class Scene implements EventTarget {
         double h = getHeight();
         BaseTransform transform = BaseTransform.IDENTITY_TRANSFORM;
 
+        Camera cam = getCamera();
         return doSnapshot(this, 0, 0, w, h,
                 getRoot(), transform, isDepthBuffer(),
-                getFill(), getCamera(), img);
+                getFill(), cam == null ? getDefaultCamera() : cam, img);
     }
 
     // Pulse listener used to run all deferred (async) snapshot requests
@@ -1740,8 +1753,13 @@ public class Scene implements EventTarget {
     }
 
     private void pick(TargetWrapper target, final double x, final double y) {
-        final PickRay pickRay = Scene.this.impl_peer.computePickRay(
-                (float)x, (float)y, null);
+        Camera cam = getCamera();
+        if (cam == null) {
+            cam = getDefaultCamera();
+        }
+        final PickRay pickRay = cam.computePickRay(
+                x, y, getWidth(), getHeight(), null);
+
         final double mag = pickRay.getDirectionNoClone().length();
         pickRay.getDirectionNoClone().normalize();
         final PickResult res = mouseHandler.pickNode(pickRay);
@@ -2073,7 +2091,6 @@ public class Scene implements EventTarget {
         public final int getMask() { return mask; }
     }
 
-    private Camera defaultCamera = new ParallelCamera();
     // TODO: RT-28290 - Camera's parameters need to be computed on the FX layer
     // Should remove once we move the camera's projViewTx computation to the FX side
     private Rectangle viewport = new Rectangle();
@@ -2082,7 +2099,7 @@ public class Scene implements EventTarget {
     private void snapshotCameraParameters() {
         Camera cam = getCamera();
         if (cam == null) {
-            cam = defaultCamera;
+            cam = getDefaultCamera();
         }
         
         projViewTx = cam.computeProjViewTx(projViewTx, getWidth(), getHeight());
@@ -2170,6 +2187,9 @@ public class Scene implements EventTarget {
                         size += syncAll(n);
                     }
                 }
+            } else if (node instanceof SubScene) {
+                SubScene subScene = (SubScene)node;
+                size += syncAll(subScene.getRoot());
             }
             if (node.getClip() != null) {
                 size += syncAll(node.getClip());
@@ -2192,12 +2212,11 @@ public class Scene implements EventTarget {
             // new camera was set on the scene
             if (isDirty(DirtyBits.CAMERA_DIRTY)) {
                 Camera camera = getCamera();
-                pickingCamera = camera;
                 if (camera != null) {
                     camera.impl_updatePG();
                     impl_peer.setCamera(camera.getPlatformCamera());
                  } else {
-                     impl_peer.setCamera(null);
+                     impl_peer.setCamera(getDefaultCamera().getPlatformCamera());
                  }
             }
 
@@ -3260,7 +3279,7 @@ public class Scene implements EventTarget {
 
                 if (clickedTarget != null) {
                     MouseEvent click = new MouseEvent(null, clickedTarget,
-                            MouseEvent.MOUSE_CLICKED, e.getX(), e.getY(),
+                            MouseEvent.MOUSE_CLICKED, e.getSceneX(), e.getSceneY(),
                             e.getScreenX(), e.getScreenY(), e.getButton(),
                             cc.get(),
                             e.isShiftDown(), e.isControlDown(), e.isAltDown(), e.isMetaDown(),
@@ -3931,7 +3950,10 @@ public class Scene implements EventTarget {
     public EventDispatchChain buildEventDispatchChain(
             EventDispatchChain tail) {
         if (eventDispatcher != null) {
-            tail = tail.prepend(eventDispatcher.get());
+            final EventDispatcher eventDispatcherValue = eventDispatcher.get();
+            if (eventDispatcherValue != null) {
+                tail = tail.prepend(eventDispatcherValue);
+            }
         }
 
         if (getWindow() != null) {

@@ -194,29 +194,8 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
         return new MacRobot();
     }
 
-    @Override protected double staticScreen_getVideoRefreshPeriod() {
-        return MacScreen.getVideoRefreshPeriod_impl();
-    }
-    
-    @Override protected Screen staticScreen_getDeepestScreen() {
-        return MacScreen.getDeepestScreen_impl();
-    }
-    
-    @Override protected Screen staticScreen_getMainScreen() {
-        return MacScreen.getMainScreen_impl();
-    }
-
-    @Override protected Screen staticScreen_getScreenForLocation(int x, int y) {
-        return MacScreen.getScreenForLocation_impl(x, y);
-    }
-
-    @Override protected Screen staticScreen_getScreenForPtr(long screenPtr) {
-        return MacScreen.getScreenForPtr_impl(screenPtr);
-    }
-
-    @Override protected List<Screen> staticScreen_getScreens() {
-        return MacScreen.getScreens_impl();
-    }
+    @Override native protected double staticScreen_getVideoRefreshPeriod();
+    @Override native protected Screen[] staticScreen_getScreens();
 
     @Override public Timer createTimer(Runnable runnable) {
         return new MacTimer(runnable);
@@ -273,6 +252,8 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
     @Override protected boolean _supportsUnifiedWindows() {
         return true;
     }
+
+    @Override native protected boolean _supportsSystemMenu();
 
     native protected String _getRemoteLayerServerName();
     public String getRemoteLayerServerName() {

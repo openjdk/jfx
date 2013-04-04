@@ -39,6 +39,10 @@ import javafx.scene.layout.StackPane;
 import javafx.event.WeakEventHandler;
 import com.sun.javafx.scene.control.behavior.TreeViewBehavior;
 import java.lang.ref.WeakReference;
+
+import javafx.beans.InvalidationListener;
+import javafx.beans.Observable;
+import javafx.beans.WeakInvalidationListener;
 import javafx.collections.ObservableMap;
 import javafx.event.EventType;
 import javafx.scene.control.*;
@@ -120,6 +124,11 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeViewB
         registerChangeListener(treeView.focusTraversableProperty(), "FOCUS_TRAVERSABLE");
         
         updateRowCount();
+    }
+    
+    @Override public void dispose() {
+        getBehavior().dispose();
+        super.dispose();
     }
     
     @Override protected void handleControlPropertyChanged(String p) {
@@ -245,19 +254,54 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeViewB
     }
 
     private TreeCell<T> createDefaultCellImpl() {
-        return new TreeCell() {
+        return new TreeCell<T>() {
             private HBox hbox;
             
-            @Override public void updateItem(Object item, boolean empty) {
-                super.updateItem(item, empty);
+            private WeakReference<TreeItem<T>> treeItemRef;
+            
+            private InvalidationListener treeItemGraphicListener = new InvalidationListener() {
+                @Override public void invalidated(Observable observable) {
+                    updateDisplay(getItem(), isEmpty());
+                }
+            };
+            
+            private InvalidationListener treeItemListener = new InvalidationListener() {
+                @Override public void invalidated(Observable observable) {
+                    TreeItem<T> oldTreeItem = treeItemRef == null ? null : treeItemRef.get();
+                    if (oldTreeItem != null) {
+                        oldTreeItem.graphicProperty().removeListener(weakTreeItemGraphicListener);
+                    }
+                    
+                    TreeItem<T> newTreeItem = getTreeItem();
+                    if (newTreeItem != null) {
+                        newTreeItem.graphicProperty().addListener(weakTreeItemGraphicListener);
+                        treeItemRef = new WeakReference<TreeItem<T>>(newTreeItem);
+                    }
+                }
+            };
+            
+            private WeakInvalidationListener weakTreeItemGraphicListener =
+                    new WeakInvalidationListener(treeItemGraphicListener);
+            
+            private WeakInvalidationListener weakTreeItemListener =
+                    new WeakInvalidationListener(treeItemListener);
+            
+            {
+                treeItemProperty().addListener(weakTreeItemListener);
                 
+                if (getTreeItem() != null) {
+                    getTreeItem().graphicProperty().addListener(weakTreeItemGraphicListener);
+                }
+            }
+            
+            private void updateDisplay(T item, boolean empty) {
                 if (item == null || empty) {
                     hbox = null;
                     setText(null);
                     setGraphic(null);
                 } else {
                     // update the graphic if one is set in the TreeItem
-                    TreeItem<?> treeItem = (TreeItem<?>)getTreeItem();
+                    TreeItem<T> treeItem = getTreeItem();
                     if (treeItem != null && treeItem.getGraphic() != null) {
                         if (item instanceof Node) {
                             setText(null);
@@ -285,7 +329,12 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeViewB
                             setGraphic(null);
                         }
                     }
-                }
+                }                
+            }
+            
+            @Override public void updateItem(T item, boolean empty) {
+                super.updateItem(item, empty);
+                updateDisplay(item, empty);
             }
         };
     }

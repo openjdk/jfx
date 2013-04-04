@@ -25,6 +25,9 @@
 
 package javafx.scene;
 
+import com.sun.javafx.geom.PickRay;
+import com.sun.javafx.geom.Vec3d;
+import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.scene.DirtyBits;
 import com.sun.javafx.sg.PGNode;
 import com.sun.javafx.sg.PGPerspectiveCamera;
@@ -42,7 +45,7 @@ import javafx.beans.property.SimpleDoubleProperty;
  * <p> This camera defines a viewing volume for a perspective projection;
  * a truncated right pyramid.
  * The {@code fieldOfView} value can be used to change viewing volume.
- * This camera is always located at center of the window and looks along the
+ * This camera is always located at center of the scene and looks along the
  * positive z-axis. The coordinate system defined by this camera has its
  * origin in the upper left corner of the panel with the Y-axis pointing
  * down and the Z axis pointing away from the viewer (into the screen). The
@@ -128,6 +131,39 @@ public  class PerspectiveCamera extends Camera {
 
     public final boolean isFixedEyePosition() {
         return fixedEyePosition;
+    }
+
+    @Override
+    final PickRay computePickRay(double localX, double localY,
+                           double viewWidth, double viewHeight,
+                           PickRay pickRay) {
+        if (pickRay == null) {
+            pickRay = new PickRay();
+        }
+
+        Vec3d direction = pickRay.getDirectionNoClone();
+        double halfViewWidth = viewWidth / 2.0;
+        double halfViewHeight = viewHeight / 2.0;
+        double halfViewDim = isVerticalFieldOfView() ? halfViewHeight: halfViewWidth;
+        // Distance to projection plane from eye
+        double distanceZ = halfViewDim / Math.tan(Math.toRadians(getFieldOfView()/2.0));
+
+        direction.x = localX - halfViewWidth;
+        direction.y = localY - halfViewHeight;
+        direction.z = distanceZ;
+
+        Vec3d eye = pickRay.getOriginNoClone();
+        // Projection plane is at Z = 0, implies that eye must be located at:
+        eye.set(halfViewWidth, halfViewHeight, -distanceZ);
+        // set eye at center of viewport and move back so that projection plane
+        // is at Z = 0
+        if (pickRay.isParallel()) { pickRay.set(eye, direction); }
+
+        if (getScene() != null) {
+            pickRay.transform(getCameraTransform());
+        }
+
+        return pickRay;
     }
 
     @Override Camera copy() {

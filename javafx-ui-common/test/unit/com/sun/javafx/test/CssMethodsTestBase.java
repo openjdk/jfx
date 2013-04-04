@@ -244,7 +244,8 @@ public abstract class CssMethodsTestBase {
 
         public void cssSetTest() {
             nodePropertyReference.setValue(node, initialValue);
-            cssPropertyKey.set(node, cssPropertyValue, null);
+            StyleableProperty styleableProperty = cssPropertyKey.getStyleableProperty(node);
+            styleableProperty.applyStyle(null, cssPropertyValue);
 
             final Object nodePropertyValue = 
                     nodePropertyReference.getValue(node);

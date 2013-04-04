@@ -49,7 +49,7 @@
         -fx-background,
         derive(-fx-background,10%) 20%,
         derive(-fx-background,-10%)  21%
-     );;
+     );
     -fx-padding: 20;
 }
 .macWindow {

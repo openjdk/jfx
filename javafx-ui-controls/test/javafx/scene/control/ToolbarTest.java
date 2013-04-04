@@ -120,13 +120,11 @@ public class ToolbarTest {
 
     @Test public void whenOrientationIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
         CssMetaData styleable = ((StyleableProperty)toolBar.orientationProperty()).getCssMetaData();
-        styleable.set(toolBar, Orientation.VERTICAL, null);
         assertTrue(styleable.isSettable(toolBar));
     }
 
     @Test public void canSpecifyOrientationViaCSS() {
-        CssMetaData styleable = ((StyleableProperty)toolBar.orientationProperty()).getCssMetaData();
-        styleable.set(toolBar, Orientation.VERTICAL, null);
+        ((StyleableProperty)toolBar.orientationProperty()).applyStyle(null, Orientation.VERTICAL);
         assertSame(Orientation.VERTICAL, toolBar.getOrientation());
     }
 

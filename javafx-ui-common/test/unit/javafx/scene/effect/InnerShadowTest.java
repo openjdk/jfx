@@ -27,6 +27,7 @@ package javafx.scene.effect;
 
 import static com.sun.javafx.test.TestHelper.box;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.scene.paint.Color;
@@ -92,6 +93,16 @@ public class InnerShadowTest extends EffectsTestBase {
     }
 
     @Test
+    public void testNullBlurType() {
+        // null should default to BlurType.THREE_PASS_BOX in render tree
+        effect.setBlurType(null);
+        assertNull(effect.getBlurType());
+        assertNull(effect.blurTypeProperty().get());
+        pulse();
+        assertEquals(ShadowMode.THREE_PASS_BOX, ((com.sun.scenario.effect.InnerShadow) effect.impl_getImpl()).getShadowMode());
+    }
+
+    @Test
     public void testSetColor() {
         // try setting correct value
         effect.setColor(Color.RED);
@@ -107,6 +118,20 @@ public class InnerShadowTest extends EffectsTestBase {
         assertEquals(Color.BLACK, effect.getColor());
         assertEquals(Color.BLACK, effect.colorProperty().get());
         pulse();
+        Color4f actual = ((com.sun.scenario.effect.InnerShadow) effect.impl_getImpl()).getColor();
+        assertColor4fEquals(black, actual);
+    }
+
+    @Test
+    public void testNullColor() {
+        // null color should default to Color.BLACK in render tree
+        effect.setColor(null);
+        assertNull(effect.getColor());
+        assertNull(effect.colorProperty().get());
+        pulse();
+        Color color = Color.BLACK;
+        Color4f black = new Color4f((float) color.getRed(), (float) color.getGreen(),
+                (float) color.getBlue(), (float) color.getOpacity());
         Color4f actual = ((com.sun.scenario.effect.InnerShadow) effect.impl_getImpl()).getColor();
         assertColor4fEquals(black, actual);
     }

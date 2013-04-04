@@ -738,7 +738,7 @@ public class MultipleSelectionModelImplTest {
     
     private int rt_28615_row_1_hit_count = 0;
     private int rt_28615_row_2_hit_count = 0;
-    @Ignore @Test public void test_rt_28615() {
+    @Test public void test_rt_28615() {
         msModel().setSelectionMode(SelectionMode.MULTIPLE);
 
         msModel().getSelectedItems().addListener(new ListChangeListener<Object>() {

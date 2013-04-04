@@ -41,7 +41,6 @@ import com.sun.javafx.geom.transform.Affine2D;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.geom.transform.GeneralTransform3D;
 import com.sun.javafx.geom.transform.NoninvertibleTransformException;
-import com.sun.openpisces.Renderer;
 import com.sun.pisces.GradientColorMap;
 import com.sun.pisces.PiscesRenderer;
 import com.sun.pisces.RendererBase;
@@ -50,13 +49,13 @@ import com.sun.prism.BasicStroke;
 import com.sun.prism.CompositeMode;
 import com.sun.prism.Image;
 import com.sun.prism.MeshView;
+import com.sun.prism.PixelFormat;
 import com.sun.prism.ReadbackGraphics;
 import com.sun.prism.RenderTarget;
 import com.sun.prism.RTTexture;
 import com.sun.prism.Texture;
 import com.sun.prism.camera.PrismCameraImpl;
 import com.sun.prism.impl.PrismSettings;
-import com.sun.prism.impl.shape.OpenPiscesPrismUtils;
 import com.sun.prism.paint.Color;
 import com.sun.prism.paint.Gradient;
 import com.sun.prism.paint.ImagePattern;
@@ -67,11 +66,10 @@ import com.sun.prism.paint.Stop;
 
 final class SWGraphics implements ReadbackGraphics {
 
-    private static final DirectRTPiscesAlphaConsumer consumer = new DirectRTPiscesAlphaConsumer();
-
     private static final int TO_PISCES = 65536;
 
     private final PiscesRenderer pr;
+    private final SWContext context;
     private final SWRTTexture target;
 
     private final BaseTransform tx = new Affine2D();
@@ -108,9 +106,9 @@ final class SWGraphics implements ReadbackGraphics {
         return renderRoot;
     }
 
-
-    public SWGraphics(SWRTTexture target, PiscesRenderer pr) {
+    public SWGraphics(SWRTTexture target, SWContext context, PiscesRenderer pr) {
         this.target = target;
+        this.context = context;
         this.pr = pr;
 
         this.setClipRect(null);
@@ -373,15 +371,19 @@ final class SWGraphics implements ReadbackGraphics {
                             x + ip.getX(), y + ip.getY());
                 }
                 convertToPiscesTransform(paintTx, piscesTx);
-                SWTexture tex = (SWTexture)
-                    getResourceFactory().createTexture(ip.getImage(),
-                                                       Texture.Usage.DEFAULT,
-                                                       Texture.WrapMode.REPEAT);
-                if (this.compositeAlpha < 1.0f) {
-                    tex.applyCompositeAlpha(this.compositeAlpha);
+                if (ip.getImage().getPixelFormat() == PixelFormat.BYTE_ALPHA) {
+                    throw new UnsupportedOperationException("Alpha image is not supported as an image pattern.");
+                } else {
+                    SWArgbPreTexture tex = (SWArgbPreTexture)getResourceFactory().createTexture(ip.getImage(),
+                                                Texture.Usage.DEFAULT,
+                                                Texture.WrapMode.REPEAT);
+                    if (this.compositeAlpha < 1.0f) {
+                        tex.applyCompositeAlpha(this.compositeAlpha);
+                    }
+                    this.pr.setTexture(RendererBase.TYPE_INT_ARGB_PRE, tex.getDataNoClone(),
+                            tex.getPhysicalWidth(), tex.getPhysicalHeight(),
+                            piscesTx, true, tex.hasAlpha());
                 }
-                this.pr.setTexture(RendererBase.TYPE_INT_ARGB_PRE, tex.getDataNoClone(), tex.getPhysicalWidth(), tex.getPhysicalHeight(),
-                        piscesTx, true, tex.hasAlpha());
                 break;
             default:
                 throw new IllegalArgumentException("Unknown paint type: " + paint.getType());
@@ -590,9 +592,7 @@ final class SWGraphics implements ReadbackGraphics {
             System.out.println("Clip: " + finalClip);
             System.out.println("Composite rule: " + compositeMode);
         }
-        Renderer r = OpenPiscesPrismUtils.setupRenderer(shape, st, tr, this.finalClip);
-        consumer.initConsumer(r, pr);
-        r.produceAlphas(consumer);
+        context.renderShape(this.pr, shape, st, tr, this.finalClip);
     }
 
     private void setPaintFromShape(Shape shape, BaseTransform tr, float localX, float localY, float localWidth, float localHeight) {
@@ -778,7 +778,7 @@ final class SWGraphics implements ReadbackGraphics {
             glyphTx.deriveWithTranslation(x, y);
             for (int i = strFrom; i < strTo; i++) {
                 final FontStrike.Glyph g = strike.getGlyph(gl.getGlyphCode(i));
-                this.paintShape(g.getShape(), this.stroke, glyphTx);
+                this.paintShape(g.getShape(), null, glyphTx);
                 advanceX += g.getAdvance();
                 glyphTx.deriveWithTranslation(g.getAdvance(), 0);
             }
@@ -842,7 +842,7 @@ final class SWGraphics implements ReadbackGraphics {
             System.out.println("Composite rule: " + compositeMode);
         }
         
-        final SWTexture swTex = (SWTexture) tex;
+        final SWArgbPreTexture swTex = (SWArgbPreTexture) tex;
         int data[] = swTex.getDataNoClone();
 
         final int ix1 = SWUtils.fastFloor(dx1);
@@ -975,14 +975,16 @@ final class SWGraphics implements ReadbackGraphics {
     }
 
     public RTTexture readBack(Rectangle view) {
+        context.validateRBBuffer(Math.max(0, view.width), Math.max(0, view.height));
+        RTTexture rbb = context.getReadBackBuffer();
+
         if (view.width <= 0 || view.height <= 0) {
-            return new SWRTTexture(getResourceFactory(), 0, 0);
+            return rbb;
         }
 
-        RTTexture rtt = getResourceFactory().createRTTexture(view.width, view.height, Texture.WrapMode.CLAMP_NOT_NEEDED);
-        int pixels[] = rtt.getPixels();
-        this.target.getSurface().getRGB(pixels, 0, rtt.getPhysicalWidth(), view.x, view.y, view.width, view.height);
-        return rtt;
+        int pixels[] = rbb.getPixels();
+        this.target.getSurface().getRGB(pixels, 0, rbb.getPhysicalWidth(), view.x, view.y, view.width, view.height);
+        return rbb;
     }
 
     public void releaseReadBackBuffer(RTTexture view) { }

@@ -145,7 +145,12 @@ public abstract class Application {
         // on Linux - TODO
         application.name = "java"; // default
         try {
-            application.runLoop(launchable);
+            application.runLoop(new Runnable() {
+                @Override public void run() {
+                    Screen.initScreens();
+                    launchable.run();
+                }
+            });
         } catch (Throwable t) {
             t.printStackTrace();
         }
@@ -565,11 +570,7 @@ public abstract class Application {
     public abstract Robot createRobot();
 
     protected abstract double staticScreen_getVideoRefreshPeriod();
-    protected abstract Screen staticScreen_getDeepestScreen();
-    protected abstract Screen staticScreen_getMainScreen();
-    protected abstract Screen staticScreen_getScreenForLocation(int x, int y);
-    protected abstract Screen staticScreen_getScreenForPtr(long screenPtr);
-    protected abstract List<Screen> staticScreen_getScreens();
+    protected abstract Screen[] staticScreen_getScreens();
 
     public abstract Timer createTimer(Runnable runnable);
     protected abstract int staticTimer_getMinPeriod();
@@ -621,5 +622,14 @@ public abstract class Application {
     public boolean supportsUnifiedWindows() {
         checkEventThread();
         return _supportsUnifiedWindows();
+    }
+
+    protected boolean _supportsSystemMenu() {
+        //Only Mac supports system menu
+        return false;
+    }
+    public boolean supportsSystemMenu() {
+        checkEventThread();
+        return _supportsSystemMenu();
     }
 }

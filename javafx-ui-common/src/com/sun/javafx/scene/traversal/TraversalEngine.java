@@ -29,6 +29,7 @@ import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
+import javafx.application.ConditionalFeature;
 import javafx.geometry.BoundingBox;
 import javafx.geometry.Bounds;
 import javafx.geometry.Point2D;
@@ -37,6 +38,7 @@ import javafx.scene.Parent;
 import javafx.scene.Scene;
 
 import com.sun.javafx.Logging;
+import com.sun.javafx.application.PlatformImpl;
 import sun.util.logging.PlatformLogger;
 import com.sun.javafx.PlatformUtil;
 
@@ -74,7 +76,7 @@ public class TraversalEngine {
          * for 2D arrow behaviour with a target biasm and a stack use :
          *    algorithm = new Biased2DWithStack();
          */
-        if (PlatformUtil.isEmbedded()) {
+        if (PlatformImpl.isSupported(ConditionalFeature.TWO_LEVEL_FOCUS)) {
             algorithm = new Hueristic2D();
         }
         else {

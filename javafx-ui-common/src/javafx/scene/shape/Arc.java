@@ -399,7 +399,7 @@ public class Arc extends Shape {
     @Deprecated
     @Override public Arc2D impl_configShape() {
         short tmpType;
-        switch (getType()) {
+        switch (getTypeInternal()) {
         case OPEN:
             tmpType = 0;
             break;
@@ -423,6 +423,11 @@ public class Arc extends Shape {
         return shape;
     }
 
+    public final ArcType getTypeInternal() {
+        ArcType t = getType();
+        return t == null ? ArcType.OPEN : t;
+    }
+
     /**
      * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
@@ -439,7 +444,7 @@ public class Arc extends Shape {
                 (float)getRadiusY(),
                 (float)getStartAngle(),
                 (float)getLength(),
-                toPGArcType(getType()));
+                toPGArcType(getTypeInternal()));
         }
     }
 

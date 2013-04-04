@@ -26,8 +26,6 @@
 package javafx.scene;
 
 
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -57,7 +55,6 @@ import javafx.beans.property.StringPropertyBase;
 import javafx.beans.value.ChangeListener;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener.Change;
-import javafx.collections.MapChangeListener;
 import javafx.collections.ObservableList;
 import javafx.collections.ObservableMap;
 import javafx.event.Event;
@@ -401,8 +398,12 @@ public abstract class Node implements EventTarget, Styleable {
 
     private void addToSceneDirtyList() {
         Scene s = getScene();
-        if (s != null)
+        if (s != null) {
             s.addToDirtyList(this);
+            if (getSubScene() != null) {
+                getSubScene().setDirty(this);
+            }
+        }
     }
 
     /**
@@ -724,53 +725,17 @@ public abstract class Node implements EventTarget, Styleable {
         }
     };
 
+    private SubScene subScene = null;
+
     /**
      * The {@link Scene} that this {@code Node} is part of. If the Node is not
      * part of a scene, then this variable will be null.
      *
      * @defaultValue null
      */
-    private ReadOnlyObjectWrapper<Scene> scene = new ReadOnlyObjectWrapper<Scene>() {
+    private ReadOnlyObjectWrapperManualFire<Scene> scene = new ReadOnlyObjectWrapperManualFire<Scene>();
 
-        private Scene oldScene;
-
-        @Override
-        protected void invalidated() {
-            Scene _scene = get();
-            if (getClip() != null) {
-                getClip().setScene(_scene);
-            }
-            updateCanReceiveFocus();
-            if (isFocusTraversable()) {
-                if (oldScene != null) {
-                    oldScene.unregisterTraversable(Node.this);
-                }
-                if (_scene != null) {
-                    _scene.registerTraversable(Node.this);
-                }
-            }
-            focusSetDirty(oldScene);
-            focusSetDirty(_scene);
-            sceneChanged(oldScene);
-            if (oldScene != _scene) {
-                //Note: no need to remove from scene's dirty list
-                //Scene's is checking if the node's scene is correct
-                impl_reapplyCSS();
-                if (_scene != null && !impl_isDirtyEmpty()) {
-                    _scene.addToDirtyList(Node.this);
-                }
-                if (_scene == null && peer != null) {
-                    peer.release();
-                }
-            }
-            if (getParent() == null) {
-                // if we are the root we need to handle scene change
-                parentResolvedOrientationInvalidated();
-            }
-
-            oldScene = _scene;
-        }
-
+    private class ReadOnlyObjectWrapperManualFire<T> extends ReadOnlyObjectWrapper<T> {
         @Override
         public Object getBean() {
             return Node.this;
@@ -780,24 +745,107 @@ public abstract class Node implements EventTarget, Styleable {
         public String getName() {
             return "scene";
         }
-    };
 
-    final void setScene(Scene value) {
-        scene.set(value);
+        @Override
+        protected void fireValueChangedEvent() {
+            /*
+             * Note: This method has been intentionally made into a no-op. In
+             * order to override the default set behavior. By default calling
+             * set(...) on a different scene will trigger:
+             * - invalidated();
+             * - fireValueChangedEvent();
+             * Both of the above are no-ops, but are handled manually via
+             * - Node.this.setScenes(...)
+             * - Node.this.invalidatedScenes(...)
+             * - forceValueChangedEvent()
+             */
+        }
+
+        public void fireSuperValueChangedEvent() {
+            super.fireValueChangedEvent();
+        }
+    }
+
+    private void invalidatedScenes(Scene oldScene, SubScene oldSubScene) {
+        Scene newScene = sceneProperty().get();
+        boolean sceneChanged = oldScene != newScene;
+        SubScene newSubScene = subScene;
+
+        if (getClip() != null) {
+            getClip().setScenes(newScene, newSubScene);
+        }
+        if (sceneChanged) {
+            updateCanReceiveFocus();
+            if (isFocusTraversable()) {
+                if (oldScene != null) {
+                    oldScene.unregisterTraversable(Node.this);
+                }
+                if (newScene != null) {
+                    newScene.registerTraversable(Node.this);
+                }
+            }
+            focusSetDirty(oldScene);
+            focusSetDirty(newScene);
+        }
+        scenesChanged(newScene, newSubScene, oldScene, oldSubScene);
+        impl_reapplyCSS();
+
+        if (sceneChanged && !impl_isDirtyEmpty()) {
+            //Note: no need to remove from scene's dirty list
+            //Scene's is checking if the node's scene is correct
+            /* TODO: looks like an existing bug when a node is moved from one
+             * location to another, setScenes will be called twice by
+             * Parent.VetoableListDecorator onProposedChange and onChanged
+             * respectively. Removing the node and setting setScense(null,null)
+             * then adding it back to potentially the same scene. Causing the
+             * same node to being added twice to the same scene.
+             */
+            addToSceneDirtyList();
+        }
+
+        if (newScene == null && peer != null) {
+            peer.release();
+        }
+        if (getParent() == null) {
+            // if we are the root we need to handle scene change
+            parentResolvedOrientationInvalidated();
+        }
+
+        if (sceneChanged) { scene.fireSuperValueChangedEvent(); }
+    }
+
+    final void setScenes(Scene newScene, SubScene newSubScene) {
+        Scene oldScene = sceneProperty().get();
+        if (newScene != oldScene || newSubScene != subScene) {
+            scene.set(newScene);
+            SubScene oldSubScene = subScene;
+            subScene = newSubScene;
+            invalidatedScenes(oldScene, oldSubScene);
+            if (this instanceof SubScene) { // TODO: find better solution
+                SubScene thisSubScene = (SubScene)this;
+                thisSubScene.getRoot().setScenes(newScene, thisSubScene);
+            }
+        }
+    }
+
+    final SubScene getSubScene() {
+        return subScene;
     }
 
     public final Scene getScene() {
         return scene.get();
     }
 
-    /**
-     * Exists for Parent
-     */
-    void sceneChanged(Scene old) { }
-
     public final ReadOnlyObjectProperty<Scene> sceneProperty() {
         return scene.getReadOnlyProperty();
     }
+
+    /**
+     * Exists for Parent
+     */
+    void scenesChanged(final Scene newScene, final SubScene newSubScene,
+                       final Scene oldScene, final SubScene oldSubScene) { }
+
 
     /**
      * The id of this {@code Node}. This simple string identifier is useful for
@@ -1551,7 +1599,15 @@ public abstract class Node implements EventTarget, Styleable {
     }
 
     private void updateDisabled() {
-        setDisabled(isDisable() || (getParent() != null && getParent().isDisabled()));
+        boolean isDisabled = isDisable();
+        if (!isDisabled) {
+            isDisabled = getParent() != null ? getParent().isDisabled() :
+                    getSubScene() != null && getSubScene().isDisabled();
+        }
+        setDisabled(isDisabled);
+        if (this instanceof SubScene) {
+            ((SubScene)this).getRoot().setDisabled(isDisabled);
+        }
     }
 
     /**
@@ -2146,11 +2202,13 @@ public abstract class Node implements EventTarget, Styleable {
         while (n != child) {
             if (n.getParent() != null) {
                 n = n.getParent();
+            } else if (n.getSubScene() != null) {
+                n = n.getSubScene();
             } else if (n.clipParent != null) {
                 n = n.clipParent;
             } else {
                 return false;
-    }
+            }
         }
         return true;
     }
@@ -2783,12 +2841,6 @@ public abstract class Node implements EventTarget, Styleable {
         return getLayoutBounds().getHeight();
     }
 
-    /* *************************************************************************
-     *                                                                         *
-     * LOD Helper related APIs 
-     * TODO: (RT-26535) Implement LOD helper
-     *                                                                         *
-     **************************************************************************/
     /**
      * Returns the area of this {@code Node} projected onto the 
      * physical screen in pixel units.
@@ -2800,50 +2852,123 @@ public abstract class Node implements EventTarget, Styleable {
     /*
      * Help application or utility to implement LOD support by returning the
      * projected area of a Node in pixel unit. The projected area is not clipped.
+     *
+     * For perspective camera, this method first exams node's bounds against
+     * camera's clipping plane to cut off those out of viewing frustrum. After
+     * computing areaInScreen, it applys a tight viewing frustrum check using
+     * canonical view volume. 
+     *
+     * The result of areaInScreen comes from the product of
+     * (projViewTx x localToSceneTransform x localBounds).
+     *
+     * Returns 0 for those fall outside viewing frustrum.
      */
     private double impl_computeAreaInScreen() {
-        Scene scene = getScene();
-        if (scene != null) {
+        Scene tmpScene = getScene();
+        if (tmpScene != null) {
             Bounds bounds = getBoundsInLocal();
-            Camera camera = scene.getCamera();
+            Camera camera = tmpScene.getCamera();
             boolean isPerspective = camera instanceof PerspectiveCamera ? true : false;
-
-            // NOTE: Viewing frustrum check is now only for perspective camera
-            // TODO: Need to hook up parallel camera's nearClip and farClip.
-            if (isPerspective && (bounds.getMinZ() > camera.getFarClip()
-                || bounds.getMaxZ() < camera.getNearClip())) {
-                return 0;
-            }
-
-            GeneralTransform3D projViewTx = TempState.getInstance().projViewTx;          
-            projViewTx = scene.getProjViewTx(projViewTx);
-            Rectangle viewport = TempState.getInstance().viewport;
-            viewport = scene.getViewport(viewport);
-
-            Transform localToSceneTx = getLocalToSceneTransform();
-
-            // We need to set tempTx to identity since it is a recycled transform.
-            // This is because impl_apply is a matrix concatenation operation. 
-            Affine3D localToSceneTransform = TempState.getInstance().tempTx;
-            localToSceneTransform.setToIdentity();
-            localToSceneTx.impl_apply(localToSceneTransform);
-            
+            Transform localToSceneTx = getLocalToSceneTransform();            
+            Affine3D tempTx = TempState.getInstance().tempTx;
             BaseBounds localBounds = new BoxBounds((float) bounds.getMinX(),
                                                    (float) bounds.getMinY(),
                                                    (float) bounds.getMinZ(),
                                                    (float) bounds.getMaxX(),
                                                    (float) bounds.getMaxY(),
                                                    (float) bounds.getMaxZ());
+
+            // NOTE: Viewing frustrum check on camera's clipping plane is now only
+            // for perspective camera.
+            // TODO: Need to hook up parallel camera's nearClip and farClip.
+            if (isPerspective) {
+                Transform cameraL2STx = camera.getLocalToSceneTransform();
+
+                // If camera transform only contains translate, compare in scene 
+                // coordinate. Otherwise, compare in camera coordinate.
+                if (cameraL2STx.getMxx() == 1.0
+                        && cameraL2STx.getMxy() == 0.0
+                        && cameraL2STx.getMxz() == 0.0
+                        && cameraL2STx.getMyx() == 0.0
+                        && cameraL2STx.getMyy() == 1.0
+                        && cameraL2STx.getMyz() == 0.0
+                        && cameraL2STx.getMzx() == 0.0
+                        && cameraL2STx.getMzy() == 0.0
+                        && cameraL2STx.getMzz() == 1.0) {
+
+                    double minZ, maxZ;
+                    
+                    // If node transform only contains translate, only convert 
+                    // minZ and maxZ to scene coordinate. Otherwise, convert 
+                    // node bounds to scene coordinate.
+                    if (localToSceneTx.getMxx() == 1.0
+                            && localToSceneTx.getMxy() == 0.0
+                            && localToSceneTx.getMxz() == 0.0
+                            && localToSceneTx.getMyx() == 0.0
+                            && localToSceneTx.getMyy() == 1.0
+                            && localToSceneTx.getMyz() == 0.0
+                            && localToSceneTx.getMzx() == 0.0
+                            && localToSceneTx.getMzy() == 0.0
+                            && localToSceneTx.getMzz() == 1.0) {
+
+                        Vec3d tempV3D = TempState.getInstance().vec3d;
+                        tempV3D.set(0, 0, bounds.getMinZ());
+                        localToScene(tempV3D);
+                        minZ = tempV3D.z;
+
+                        tempV3D.set(0, 0, bounds.getMaxZ());
+                        localToScene(tempV3D);
+                        maxZ = tempV3D.z;
+                    } else {
+                        Bounds nodeInSceneBounds = localToScene(bounds);
+                        minZ = nodeInSceneBounds.getMinZ();
+                        maxZ = nodeInSceneBounds.getMaxZ();
+                    }
+
+                    if (minZ > camera.getFarClipInScene()
+                            || maxZ < camera.getNearClipInScene()) {
+                        return 0;
+                    }
+
+                } else {
+                    BaseBounds nodeInCameraBounds = new BoxBounds();
+
+                    // We need to set tempTx to identity since it is a recycled transform.
+                    // This is because impl_apply is a matrix concatenation operation.
+                    tempTx.setToIdentity();
+                    localToSceneTx.impl_apply(tempTx);
+                    
+                    // Convert node from local coordinate to camera coordinate
+                    tempTx.preConcatenate(camera.getSceneToLocalTransform());
+                    tempTx.transform(localBounds, nodeInCameraBounds);
+            
+                    // Compare in camera coornidate
+                    if (nodeInCameraBounds.getMinZ() > camera.getFarClip()
+                            || nodeInCameraBounds.getMaxZ() < camera.getNearClip()) {
+                        return 0;
+                    }
+                }
+            }
+
+            GeneralTransform3D projViewTx = TempState.getInstance().projViewTx;          
+            projViewTx = tmpScene.getProjViewTx(projViewTx);
+            Rectangle viewport = TempState.getInstance().viewport;
+            viewport = tmpScene.getViewport(viewport);
+
+            // We need to set tempTx to identity since it is a recycled transform.
+            // This is because impl_apply is a matrix concatenation operation.
+            tempTx.setToIdentity();
+            localToSceneTx.impl_apply(tempTx);
             
             // The product of projViewTx * localToSceneTransform
-            GeneralTransform3D tx = projViewTx.mul(localToSceneTransform);
-
+            GeneralTransform3D tx = projViewTx.mul(tempTx);
+            
             // Transform localBounds to projected bounds
             localBounds = tx.transform(localBounds, localBounds);
             double area = localBounds.getWidth() * localBounds.getHeight();
 
-            // Use viewing frustum culling against canonical view volume
-            // to check whether object is outside the viewing frustrum
+            // Use canonical view volume to check whether object is outside the
+            // viewing frustrum
             if (isPerspective) {
                 localBounds.intersectWith(-1, -1, 0, 1, 1, 1);   
                 area = (localBounds.getWidth() < 0 || localBounds.getHeight() < 0) ? 0 : area;
@@ -5951,12 +6076,12 @@ public abstract class Node implements EventTarget, Styleable {
                         } else {
                             if (oldClip != null) {
                                 oldClip.clipParent = null;
-                                oldClip.setScene(null);
+                                oldClip.setScenes(null, null);
                             }
 
                             if (newClip != null) {
                                 newClip.clipParent = Node.this;
-                                newClip.setScene(getScene());
+                                newClip.setScenes(getScene(), getSubScene());
                             }
 
                             impl_markDirty(DirtyBits.NODE_CLIP);
@@ -7297,13 +7422,19 @@ public abstract class Node implements EventTarget, Styleable {
     }
 
     private void updateTreeVisible() {
-        setTreeVisible(isVisible() && ((getParent() == null) || getParent().impl_isTreeVisible()));
+        boolean isTreeVisible = isVisible();
+        if (isTreeVisible) {
+            isTreeVisible = (getParent() == null) ?
+                    (getSubScene() == null || getSubScene().impl_isTreeVisible()) :
+                    getParent().impl_isTreeVisible();
+        }
+        setTreeVisible(isTreeVisible);
     }
 
     private boolean treeVisible;
     private TreeVisiblePropertyReadOnly treeVisibleRO;
 
-    private void setTreeVisible(boolean value) {
+    final void setTreeVisible(boolean value) {
         if (treeVisible != value) {
             treeVisible = value;
             updateCanReceiveFocus();
@@ -7314,6 +7445,14 @@ public abstract class Node implements EventTarget, Styleable {
                 addToSceneDirtyList();
             }
             ((TreeVisiblePropertyReadOnly)impl_treeVisibleProperty()).invalidate();
+            if (Node.this instanceof SubScene) {
+                Node subSceneRoot = ((SubScene)Node.this).getRoot();
+                if (subSceneRoot != null) {
+                    // SubScene.getRoot() is only null if it's constructor
+                    // has not finished.
+                    subSceneRoot.setTreeVisible(value && subSceneRoot.isVisible());
+                }
+            }
         }
     }
 
@@ -7647,7 +7786,11 @@ public abstract class Node implements EventTarget, Styleable {
         Node curNode = this;
         do {
             if (curNode.eventDispatcher != null) {
-                tail = tail.prepend(curNode.eventDispatcher.get());
+                final EventDispatcher eventDispatcherValue =
+                        curNode.eventDispatcher.get();
+                if (eventDispatcherValue != null) {
+                    tail = tail.prepend(eventDispatcherValue);
+                }
             }
             curNode = curNode.getParent();
         } while (curNode != null);
@@ -8029,7 +8172,7 @@ public abstract class Node implements EventTarget, Styleable {
      * @return The CssMetaData associated with this node, which may include the
      * CssMetaData of its super classes.
      */
-    
+
     @Override
     public List<CssMetaData<? extends Styleable, ?>> getCssMetaData() {
         return getClassCssMetaData();
@@ -8162,12 +8305,24 @@ public abstract class Node implements EventTarget, Styleable {
     // Walks up the tree telling each parent that the pseudo class state of
     // this node has changed.
     /** @treatAsPrivate */
-    private void notifyParentsOfInvalidatedCSS() {
-        if (!getScene().getRoot().impl_isDirty(DirtyBits.NODE_CSS)) {
+    final void notifyParentsOfInvalidatedCSS() {
+        SubScene subScene = getSubScene();
+        Parent root = (subScene != null) ?
+                subScene.getRoot() : getScene().getRoot();
+
+        if (!root.impl_isDirty(DirtyBits.NODE_CSS)) {
             // Ensure that Scene.root is marked as dirty. If the scene isn't
             // dirty, nothing will get repainted. This bit is cleared from
             // Scene in doCSSPass().
-            getScene().getRoot().impl_markDirty(DirtyBits.NODE_CSS);
+            root.impl_markDirty(DirtyBits.NODE_CSS);
+            if (subScene != null) {
+                // If the node is part of a subscene, then we must ensure that
+                // the we not only mark subScene.root dirty, but continue and
+                // call subScene.notifyParentsOfInvalidatedCSS() until
+                // Scene.root gets marked dirty, via the recurisve call:
+                subScene.cssFlag = CssFlags.UPDATE;
+                subScene.notifyParentsOfInvalidatedCSS();
+            }
         }
         Parent _parent = getParent();
         while (_parent != null) {
@@ -8212,7 +8367,7 @@ public abstract class Node implements EventTarget, Styleable {
         switch (cssFlag) {
             case CLEAN:
                 break;
-            case DIRTY_BRANCH:     
+            case DIRTY_BRANCH:
                 Parent me = (Parent)this;
                 // clear the flag first in case the flag is set to something
                 // other than clean by downstream processing.
@@ -8263,7 +8418,7 @@ public abstract class Node implements EventTarget, Styleable {
                 topMost = _parent;
             } 
             _parent = _parent.getParent();
-        } 
+        }
         
         _parent = this;
         while (_parent != topMost) {
@@ -8274,7 +8429,7 @@ public abstract class Node implements EventTarget, Styleable {
         }
         topMost.processCSS();
     }
-    
+
     /**
      * If invoked, will update / reapply styles from here on down. If reapply
      * is false, then we will only update from here on down, otherwise we will
@@ -8487,6 +8642,11 @@ public abstract class Node implements EventTarget, Styleable {
         public boolean isDerivedDepthTest(Node node) {
             return node.isDerivedDepthTest();
         }
+
+        @Override
+        public SubScene getSubScene(Node node) {
+            return node.getSubScene();
+        }    
     }
 
     static {

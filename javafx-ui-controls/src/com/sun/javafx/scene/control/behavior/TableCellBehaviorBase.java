@@ -26,7 +26,9 @@
 package com.sun.javafx.scene.control.behavior;
 
 import com.sun.javafx.PlatformUtil;
+import com.sun.javafx.application.PlatformImpl;
 import java.util.WeakHashMap;
+import javafx.application.ConditionalFeature;
 import javafx.scene.control.Control;
 import javafx.scene.control.IndexedCell;
 import javafx.scene.control.SelectionMode;
@@ -69,6 +71,10 @@ public abstract class TableCellBehaviorBase<T extends IndexedCell> extends CellB
         return map.containsKey(table) && map.get(table) != null;
     }
     
+    static void removeAnchor(Control table) {
+        map.remove(table);
+    }
+    
     
     
     /***************************************************************************
@@ -87,7 +93,7 @@ public abstract class TableCellBehaviorBase<T extends IndexedCell> extends CellB
     // that selection only happens on mouse release, if only minimal dragging
     // has occurred.
     private boolean latePress = false;
-    private final boolean isEmbedded = PlatformUtil.isEmbedded();
+    private final boolean isTouch = PlatformImpl.isSupported(ConditionalFeature.INPUT_TOUCH);
     private boolean wasSelected = false;
     
     
@@ -146,7 +152,7 @@ public abstract class TableCellBehaviorBase<T extends IndexedCell> extends CellB
 
         doSelect(event);
         
-        if (isEmbedded && selectedBefore) {
+        if (isTouch && selectedBefore) {
             wasSelected = getControl().isSelected();
         }
     }
@@ -166,7 +172,7 @@ public abstract class TableCellBehaviorBase<T extends IndexedCell> extends CellB
         // the mouse has now been dragged on a touch device, we should
         // remove the selection if we just added it in the last mouse press
         // event
-        if (isEmbedded && ! wasSelected && getControl().isSelected()) {
+        if (isTouch && ! wasSelected && getControl().isSelected()) {
             getSelectionModel().clearSelection(getControl().getIndex());
         }
     }
@@ -275,7 +281,12 @@ public abstract class TableCellBehaviorBase<T extends IndexedCell> extends CellB
         TableColumnBase column = getTableColumn();
         boolean isAlreadySelected = sm.isSelected(row, column);
 
-        sm.clearAndSelect(row, column);
+        if (isAlreadySelected && (e.isControlDown() || e.isMetaDown())) {
+            sm.clearSelection(row, column);
+            isAlreadySelected = false;
+        } else {
+            sm.clearAndSelect(row, column);
+        }
 
         // handle editing, which only occurs with the primary mouse button
         if (e.getButton() == MouseButton.PRIMARY) {

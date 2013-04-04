@@ -770,6 +770,10 @@ public class GridPane extends Pane {
     public final Pos getAlignment() {
         return alignment == null ? Pos.TOP_LEFT : alignment.get();
     }
+    private Pos getAlignmentInternal() {
+        Pos localPos = getAlignment();
+        return localPos == null ? Pos.TOP_LEFT : localPos;
+    }
 
     /**
      * For debug purposes only: controls whether lines are displayed to show the gridpane's rows and columns.
@@ -1517,8 +1521,8 @@ public class GridPane extends Pane {
             columnTotal = adjustColumnWidths(columnPrefWidth, width);
         }
 
-        final double x = left + computeXOffset(contentWidth, columnTotal, getAlignment().getHpos());
-        final double y = top + computeYOffset(contentHeight, rowTotal, getAlignment().getVpos());
+        final double x = left + computeXOffset(contentWidth, columnTotal, getAlignmentInternal().getHpos());
+        final double y = top + computeYOffset(contentHeight, rowTotal, getAlignmentInternal().getVpos());
         final List<Node> children = getChildren();
         for (int i = 0, size = children.size(); i < size; i++) {
             Node child = children.get(i);

@@ -26,8 +26,6 @@
 package javafx.scene.chart;
 
 
-import com.sun.javafx.pgstub.StubToolkit;
-import com.sun.javafx.tk.Toolkit;
 import org.junit.Test;
 import javafx.collections.*;
 import javafx.scene.chart.Axis.TickMark;
@@ -35,11 +33,13 @@ import javafx.css.ParsedValue;
 import javafx.css.CssMetaData;
 import javafx.css.StyleableProperty;
 import com.sun.javafx.css.parser.CSSParser;
+import javafx.scene.Node;
+import javafx.scene.paint.Color;
 
 import javafx.scene.text.Font;
+import javafx.scene.text.Text;
 import org.junit.Assert;
 import static org.junit.Assert.assertEquals;
-import org.junit.Ignore;
 
 
 public class XYChartTest extends ChartTestBase {
@@ -95,5 +95,18 @@ public class XYChartTest extends ChartTestBase {
         final ObservableList<Axis.TickMark<Number>> yaTickMarks = yaxis.getTickMarks();
         TickMark tm = yaTickMarks.get(0);
         assertEquals(12, new Double(tm.textNode.getFont().getSize()).intValue());
+    }
+    
+    @Test public void testSetTickLabelFill() {
+        startApp();
+        pulse();
+        yaxis.setTickLabelFill(Color.web("#444444"));
+        pulse();
+        // Check if text node on axis has the right fill 
+        for (Node n : yaxis.getChildrenUnmodifiable()) {
+            if (n instanceof Text) {
+                assertEquals(((Text)n).getFill(), Color.web("#444444"));
+            }
+        }
     }
 }

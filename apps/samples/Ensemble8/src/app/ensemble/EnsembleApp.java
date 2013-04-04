@@ -36,6 +36,8 @@ import ensemble.control.Popover;
 import ensemble.control.SearchBox;
 import ensemble.control.TitledToolBar;
 import ensemble.generated.Samples;
+import java.util.ArrayList;
+import java.util.List;
 import javafx.application.Application;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
@@ -62,13 +64,17 @@ import javafx.stage.Stage;
  * Ensemble Application
  */
 public class EnsembleApp extends Application {
-    private static final String os = System.getProperty("os.name");
-    private static final String arch = System.getProperty("os.arch");
-    public static final boolean IS_BEAGLE = arch.equals("arm");
-    public static final boolean IS_DESKTOP = !IS_BEAGLE;
-    public static final boolean IS_IOS = "Darwin".equals(os);
-    public static final boolean IS_MAC = os.startsWith("Mac");
+    private static final String OS_NAME = System.getProperty("ensemble.os.name", System.getProperty("os.name"));
+    private static final String OS_ARCH = System.getProperty("ensemble.os.arch", System.getProperty("os.arch"));
+    public static final boolean IS_BEAGLE = "arm".equals(OS_ARCH);
+    public static final boolean IS_IOS = "Darwin".equals(OS_NAME);
     public static final boolean IS_IPHONE = false;
+    public static final boolean IS_DESKTOP = !IS_BEAGLE && !IS_IOS;
+    public static final boolean IS_MAC = OS_NAME.startsWith("Mac");
+    public static final boolean PRELOAD_PREVIEW_IMAGES = true;
+    public static final boolean SHOW_HIGHLIGHTS = IS_DESKTOP;
+    public static final boolean SHOW_MENU = IS_DESKTOP;
+    public static final boolean SELECT_IOS_THEME = IS_MAC || IS_IOS;
     private static final int TOOL_BAR_BUTTON_SIZE = 30;
     private Scene scene;
     private Pane root;
@@ -79,13 +85,17 @@ public class EnsembleApp extends Application {
     private ToggleButton listButton;
     private ToggleButton searchButton;
     private SearchBox searchBox = new SearchBox();
-    private Label titleLabel;
     private PageBrowser pageBrowser;
     private Popover sampleListPopover;
     private SearchPopover searchPopover;
     private MenuBar menuBar;
-  
+    
     static {
+        System.out.println("IS_IPHONE = " + IS_IPHONE);
+        System.out.println("IS_MAC = " + IS_MAC);
+        System.out.println("IS_IOS = " + IS_IOS);
+        System.out.println("IS_BEAGLE = " + IS_BEAGLE);
+        System.out.println("IS_DESKTOP = " + IS_DESKTOP);
         System.setProperty("http.proxyHost", "www-proxy.us.oracle.com");
         System.setProperty("http.proxyPort", "80");
         System.setProperty("https.proxyHost", "www-proxy.us.oracle.com");
@@ -102,9 +112,11 @@ public class EnsembleApp extends Application {
                 super.layoutChildren();
                 final double w = getWidth();
                 final double h = getHeight();
-                final double menuHeight = IS_IOS || IS_MAC ? 0 : menuBar.prefHeight(w);
+                final double menuHeight = SHOW_MENU ? menuBar.prefHeight(w) : 0;
                 final double toolBarHeight = toolBar.prefHeight(w);
-                menuBar.resize(w, menuHeight);
+                if (menuBar != null) {
+                    menuBar.resize(w, menuHeight);
+                }
                 toolBar.resizeRelocate(0, menuHeight, w, toolBarHeight);
                 pageBrowser.setLayoutY(toolBarHeight + menuHeight);
                 pageBrowser.resize(w, h-toolBarHeight);
@@ -123,21 +135,22 @@ public class EnsembleApp extends Application {
             Region statusSpacer = new Region();
             statusSpacer.setPrefHeight(20);
             root.getChildren().add(statusSpacer);
-        } else {
+        }
+        if (SHOW_MENU) {
             menuBar = new MenuBar();
             menuBar.setUseSystemMenuBar(true);
             Menu themeMenu = new Menu("Theme");
             final RadioMenuItem caspianThemeMenuItem = new RadioMenuItem("Caspian");
-            caspianThemeMenuItem.setSelected(true);
             final RadioMenuItem iOSThemeMenuItem = new RadioMenuItem("iOS");
-            ToggleGroup tg = new ToggleGroup();
+            final ToggleGroup tg = new ToggleGroup();
             caspianThemeMenuItem.setToggleGroup(tg);
             iOSThemeMenuItem.setToggleGroup(tg);
+            tg.selectToggle(SELECT_IOS_THEME ? iOSThemeMenuItem : caspianThemeMenuItem);
             tg.selectedToggleProperty().addListener(new ChangeListener<Toggle>() {
-                @Override public void changed(ObservableValue<? extends Toggle> arg0, Toggle arg1, Toggle arg2) {
-                    scene.getStylesheets().setAll(
-                            "/ensemble/EnsembleStylesCommon.css",
-                            "/ensemble/EnsembleStyles"+(caspianThemeMenuItem.isSelected()?"Caspian":"IOS")+".css");
+                @Override public void changed(ObservableValue<? extends Toggle> arg0, Toggle oldValue, Toggle newValue) {
+                    if (newValue != null) {
+                        setStylesheets(newValue == iOSThemeMenuItem);
+                    }
                 }
             });
             themeMenu.getItems().addAll(caspianThemeMenuItem,iOSThemeMenuItem);
@@ -281,20 +294,29 @@ public class EnsembleApp extends Application {
                 .build();
     }
 
+    private void setStylesheets(boolean isIOsSelected) {
+        List<String> stylesheets = new ArrayList<>(5);
+        String base = "/ensemble/EnsembleStyles" + (isIOsSelected ? "IOS" : "Caspian");
+        stylesheets.add("/ensemble/EnsembleStylesCommon.css");
+        stylesheets.add(base + ".css");
+        if (IS_DESKTOP) {
+            stylesheets.add("/ensemble/EnsembleStylesCommonDesktop.css");
+            stylesheets.add(base + "Desktop.css");
+        }
+        if (IS_MAC || IS_IOS) {
+            stylesheets.add("/ensemble/EnsembleStylesHelvetica.css");
+        }                    
+        stylesheets.add("http://fonts.googleapis.com/css?family=Bree+Serif");
+        scene.getStylesheets().setAll(stylesheets);
+    }    
+    
     @Override public void start(final Stage stage) throws Exception {
         // CREATE SCENE
-        scene = new Scene(root, 1024, 768,Color.BLACK);
-        if (IS_MAC || IS_IOS) {
-            scene.getStylesheets().addAll(
-                    "/ensemble/EnsembleStylesCommon.css",
-                    "/ensemble/EnsembleStyles"+(IS_IOS?"IOS":"Caspian")+".css",
-                    "/ensemble/EnsembleStylesHelvetica.css");
-        } else {
-            scene.getStylesheets().addAll(
-                    "/ensemble/EnsembleStylesCommon.css",
-                    "/ensemble/EnsembleStyles"+(IS_IOS?"IOS":"Caspian")+".css");
+        scene = new Scene(root, 1024, 768, Color.BLACK);
+        if (IS_BEAGLE) {
+            new ScrollEventSynthesizer(scene);
         }
-        scene.getStylesheets().add("http://fonts.googleapis.com/css?family=Bree+Serif");
+        setStylesheets(SELECT_IOS_THEME);
         stage.setScene(scene);
         // SHOW STAGE
         if (IS_IOS) {

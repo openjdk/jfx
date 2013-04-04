@@ -237,6 +237,10 @@ public class StackPane extends Pane {
     private ObjectProperty<Pos> alignment;
     public final void setAlignment(Pos value) { alignmentProperty().set(value); }
     public final Pos getAlignment() { return alignment == null ? Pos.CENTER : alignment.get(); }
+    private Pos getAlignmentInternal() {
+        Pos localPos = getAlignment();
+        return localPos == null ? Pos.CENTER : localPos;
+    }
 
     /**
      *
@@ -257,14 +261,14 @@ public class StackPane extends Pane {
     @Override protected double computeMinWidth(double height) {
         List<Node>managed = getManagedChildren();
         return getInsets().getLeft() +
-               computeMaxMinAreaWidth(managed, getMargins(managed), getAlignment().getHpos(), height) +
+               computeMaxMinAreaWidth(managed, getMargins(managed), getAlignmentInternal().getHpos(), height) +
                getInsets().getRight();
     }
 
     @Override protected double computeMinHeight(double width) {
         List<Node>managed = getManagedChildren();
         return getInsets().getTop() +
-               computeMaxMinAreaHeight(managed, getMargins(managed), getAlignment().getVpos(), width) +
+               computeMaxMinAreaHeight(managed, getMargins(managed), getAlignmentInternal().getVpos(), width) +
                getInsets().getBottom();
     }
 
@@ -287,7 +291,7 @@ public class StackPane extends Pane {
         return padding.getLeft() +
                computeMaxPrefAreaWidth(managed, margins,
                                        (height == -1) ? -1 : (height - padding.getTop() - padding.getBottom()),
-                                       getAlignment().getHpos()) +
+                                       getAlignmentInternal().getHpos()) +
                padding.getRight();
     }
 
@@ -310,7 +314,7 @@ public class StackPane extends Pane {
         return padding.getTop() +
                computeMaxPrefAreaHeight(managed, margins,
                                         (width == -1) ? -1 : (width - padding.getLeft() - padding.getRight()),
-                                        getAlignment().getVpos()) +
+                                        getAlignmentInternal().getVpos()) +
                padding.getBottom();
     }
 
@@ -324,13 +328,14 @@ public class StackPane extends Pane {
 
     @Override protected void layoutChildren() {
         List<Node> managed = getManagedChildren();
+        Pos align = getAlignmentInternal();
         double width = getWidth();
         double height = getHeight();
         double top = getInsets().getTop();
         double right = getInsets().getRight();
         double left = getInsets().getLeft();
         double bottom = getInsets().getBottom();
-        double baselineOffset = getAlignment().getVpos() == VPos.BASELINE ? getMaxBaselineOffset(managed)
+        double baselineOffset = align.getVpos() == VPos.BASELINE ? getMaxBaselineOffset(managed)
                                     : height/2;
         for (int i = 0, size = managed.size(); i < size; i++) {
             Node child = managed.get(i);
@@ -338,8 +343,8 @@ public class StackPane extends Pane {
             layoutInArea(child, left, top,
                            width - left - right, height - top - bottom,
                            baselineOffset, getMargin(child),
-                           childAlignment != null? childAlignment.getHpos() : getAlignment().getHpos(),
-                           childAlignment != null? childAlignment.getVpos() : getAlignment().getVpos());
+                           childAlignment != null? childAlignment.getHpos() : align.getHpos(),
+                           childAlignment != null? childAlignment.getVpos() : align.getVpos());
         }
     }
 

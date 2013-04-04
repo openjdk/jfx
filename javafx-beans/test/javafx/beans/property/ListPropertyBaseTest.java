@@ -147,7 +147,7 @@ public class ListPropertyBaseTest {
     public void testListChangeListener() {
         attachListChangeListener();
         property.set(VALUE_2a);
-        listChangeListener.check1AddRemove(VALUE_2a, EMPTY_LIST, 0, 2);
+        listChangeListener.check1AddRemove(property, EMPTY_LIST, 0, 2);
         property.removeListener(listChangeListener);
         listChangeListener.clear();
         property.set(VALUE_1a);
@@ -381,7 +381,7 @@ public class ListPropertyBaseTest {
         property.set(VALUE_2a);
         assertEquals(VALUE_2a, property.get());
         property.check(1);
-        listChangeListener.check1AddRemove(VALUE_2a, EMPTY_LIST, 0, 2);
+        listChangeListener.check1AddRemove(property, EMPTY_LIST, 0, 2);
 
         // set same value again
         listChangeListener.clear();
@@ -396,7 +396,7 @@ public class ListPropertyBaseTest {
         property.set(VALUE_1b);
         assertEquals(VALUE_1b, property.get());
         property.check(2);
-        listChangeListener.check1AddRemove(VALUE_1b, VALUE_1a, 0, 1);
+        listChangeListener.check1AddRemove(property, VALUE_1a, 0, 1);
     }
 
     @Test
@@ -455,7 +455,7 @@ public class ListPropertyBaseTest {
         property.setValue(VALUE_2a);
         assertEquals(VALUE_2a, property.get());
         property.check(1);
-        listChangeListener.check1AddRemove(VALUE_2a, EMPTY_LIST, 0, 2);
+        listChangeListener.check1AddRemove(property, EMPTY_LIST, 0, 2);
 
         // set same value again
         listChangeListener.clear();
@@ -470,7 +470,7 @@ public class ListPropertyBaseTest {
         property.setValue(VALUE_1b);
         assertEquals(VALUE_1b, property.get());
         property.check(2);
-        listChangeListener.check1AddRemove(VALUE_1b, VALUE_1a, 0, 1);
+        listChangeListener.check1AddRemove(property, VALUE_1a, 0, 1);
     }
 
     @Test(expected = RuntimeException.class)
@@ -553,14 +553,14 @@ public class ListPropertyBaseTest {
         assertEquals(VALUE_1a, property.get());
         assertTrue(property.isBound());
         property.check(1);
-        listChangeListener.check1AddRemove(VALUE_1a, EMPTY_LIST, 0, 0);
+        listChangeListener.check1AddRemove(property, EMPTY_LIST, 0, 0);
 
         // change binding once
         listChangeListener.clear();
         v.set(VALUE_2a);
         assertEquals(VALUE_2a, property.get());
         property.check(1);
-        listChangeListener.check1AddRemove(VALUE_2a, VALUE_1a, 0, 2);
+        listChangeListener.check1AddRemove(property, VALUE_1a, 0, 2);
 
         // change binding twice without reading
         v.set(VALUE_1a);
@@ -568,7 +568,7 @@ public class ListPropertyBaseTest {
         v.set(VALUE_1b);
         assertEquals(VALUE_1b, property.get());
         property.check(2);
-        listChangeListener.check1AddRemove(VALUE_1b, VALUE_1a, 0, 1);
+        listChangeListener.check1AddRemove(property, VALUE_1a, 0, 1);
 
         // change binding twice to same value
         v.set(VALUE_1a);

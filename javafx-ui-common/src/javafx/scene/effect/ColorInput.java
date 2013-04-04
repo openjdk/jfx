@@ -308,11 +308,16 @@ public class ColorInput extends Effect {
         return height;
     }
 
+    private Paint getPaintInternal() {
+        Paint p = getPaint();
+        return p == null ? Color.RED : p;
+    }
+
     @Override
     void impl_update() {
         com.sun.scenario.effect.Flood peer =
                 (com.sun.scenario.effect.Flood) impl_getImpl();
-        peer.setPaint(Toolkit.getPaintAccessor().getPlatformPaint(getPaint()));
+        peer.setPaint(Toolkit.getPaintAccessor().getPlatformPaint(getPaintInternal()));
         peer.setFloodBounds(new RectBounds(
                 (float)getX(), (float)getY(),
                 (float)(getX() + getWidth()),

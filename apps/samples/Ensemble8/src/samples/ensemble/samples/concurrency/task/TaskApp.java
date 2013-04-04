@@ -32,29 +32,18 @@
 package ensemble.samples.concurrency.task;
 
 import ensemble.samples.concurrency.service.*;
-import ensemble.samples.controls.accordion.*;
 import javafx.application.Application;
 import javafx.collections.ObservableList;
 import javafx.concurrent.Task;
-import javafx.event.ActionEvent;
-import javafx.event.EventHandler;
-import javafx.geometry.Insets;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
-import javafx.scene.control.Accordion;
-import javafx.scene.control.Button;
 import javafx.scene.control.ProgressIndicator;
+import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
-import javafx.scene.control.TitledPane;
 import javafx.scene.control.cell.PropertyValueFactory;
-import javafx.scene.layout.Pane;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
-import javafx.scene.layout.VBox;
-import javafx.scene.paint.Color;
-import javafx.scene.shape.Rectangle;
-import javafx.scene.text.Text;
 import javafx.stage.Stage;
 
 /**
@@ -73,7 +62,7 @@ public class TaskApp extends Application {
  final GetDailySalesService service = new GetDailySalesService();    
     
     public Parent createContent() {
-       TableView<DailySales> tableView = new TableView<DailySales>();
+       TableView<DailySales> tableView = new TableView<>();
         Region veil = new Region();
         veil.setStyle("-fx-background-color: rgba(0, 0, 0, 0.4)");
         ProgressIndicator p = new ProgressIndicator();
@@ -82,19 +71,22 @@ public class TaskApp extends Application {
         TableColumn idCol = new TableColumn();
         idCol.setText("ID");
         idCol.setCellValueFactory(new PropertyValueFactory("dailySalesId"));
+        idCol.setPrefWidth(32);
         tableView.getColumns().add(idCol);
         TableColumn qtyCol = new TableColumn();
         qtyCol.setText("Qty");
         qtyCol.setCellValueFactory(new PropertyValueFactory("quantity"));
+        qtyCol.setPrefWidth(60);
         tableView.getColumns().add(qtyCol);
         TableColumn dateCol = new TableColumn();
         dateCol.setText("Date");
         dateCol.setCellValueFactory(new PropertyValueFactory("date"));
         dateCol.setMinWidth(240);
         tableView.getColumns().add(dateCol);
+        tableView.setMinSize(240, 200);
         StackPane stack = new StackPane();
         stack.getChildren().addAll(tableView, veil, p);
-
+     
         // Use binding to be notified whenever the data source chagnes
         Task<ObservableList<DailySales>> task = new GetDailySalesTask();
         p.progressProperty().bind(task.progressProperty());

@@ -73,7 +73,7 @@ import com.sun.scenario.effect.PhongLighting;
 public class Lighting extends Effect {
     @Override
     com.sun.scenario.effect.PhongLighting impl_createImpl() {
-        return new PhongLighting(getLight().impl_getImpl());
+        return new PhongLighting(getLightInternal().impl_getImpl());
     };
 
     /**
@@ -95,6 +95,8 @@ public class Lighting extends Effect {
         setBumpInput(shadow);
         setLight(light);
     }
+
+    private final Light defaultLight = new Light.Distant();
 
     /**
      * The light source for this {@code Lighting} effect.
@@ -407,6 +409,11 @@ public class Lighting extends Effect {
         return surfaceScale;
     }
 
+    private Light getLightInternal() {
+        Light localLight = getLight();
+        return localLight == null ? defaultLight : localLight;
+    }
+
     @Override
     void impl_update() {
         Effect localBumpInput = getBumpInput();
@@ -427,12 +434,12 @@ public class Lighting extends Effect {
         peer.setSpecularConstant((float)Utils.clamp(0, getSpecularConstant(), 2));
         peer.setSpecularExponent((float)Utils.clamp(0, getSpecularExponent(), 40));
         peer.setSurfaceScale((float)Utils.clamp(0, getSurfaceScale(), 10));
-        Light localLight = getLight(); // FIXME null value
-        lightChangeListener.register(localLight);
-        if (localLight != null) {
-            localLight.impl_sync();
-            peer.setLight(localLight.impl_getImpl());
-        }
+        // we don't need to register on default light in case the light is null
+        // because default light never changes
+        lightChangeListener.register(getLight());
+
+        getLightInternal().impl_sync();
+        peer.setLight(getLightInternal().impl_getImpl());
     }
 
     /**

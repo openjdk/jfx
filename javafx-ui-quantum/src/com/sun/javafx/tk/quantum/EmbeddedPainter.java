@@ -37,15 +37,16 @@ import com.sun.prism.Texture.WrapMode;
 import com.sun.prism.camera.PrismCameraImpl;
 import com.sun.prism.impl.Disposer;
 import com.sun.prism.paint.Color;
+import com.sun.prism.paint.Paint;
 
-class EmbeddedPainter extends AbstractPainter implements Runnable {
+final class EmbeddedPainter extends AbstractPainter {
     
     private RTTexture       texture;
     private EmbeddedScene   escene;
 
     protected EmbeddedPainter(EmbeddedScene es) {
         super(es);
-        setRoot(es.root);
+        setRoot(es.getRoot());
         escene = es;
     }
     
@@ -77,8 +78,9 @@ class EmbeddedPainter extends AbstractPainter implements Runnable {
         return true;
     }
         
-    @Override public void run() {
-        if (validateStageGraphics() == false) {
+    @Override
+    public void run() {
+        if (!validateStageGraphics()) {
             return;
         }
 
@@ -121,21 +123,16 @@ class EmbeddedPainter extends AbstractPainter implements Runnable {
     
     @Override protected void doPaint(Graphics g, NodePath<NGNode> renderRoot) {
         escene.clearEntireSceneDirty();
-        g.setDepthBuffer(escene.hasDepthBuffer());
+        g.setDepthBuffer(escene.getDepthBuffer());
         g.clear(Color.TRANSPARENT);
-        if (escene.fillPaint != null) {
-            g.getRenderTarget().setOpaque(escene.fillPaint.isOpaque());
-            g.setPaint(escene.fillPaint);
+        Paint fillPaint = escene.getFillPaint();
+        if (fillPaint != null) {
+            g.getRenderTarget().setOpaque(fillPaint.isOpaque());
+            g.setPaint(fillPaint);
             g.fillQuad(0, 0, escene.width, escene.height);
         }
-        g.setCamera(escene.camera);
-        escene.root.render(g); // Ignoring occlusion culling for now
-    }
-
-    @Override protected PrismCameraImpl getCamera() {
-        if (escene != null) {
-            return escene.camera;
-        }
-        return null;
+        PrismCameraImpl camera = escene.getCamera();
+        g.setCamera(camera);
+        escene.getRoot().render(g); // Ignoring occlusion culling for now
     }
 }

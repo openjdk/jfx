@@ -25,19 +25,20 @@
 
 package com.sun.javafx.scene.control.skin;
 
+import javafx.animation.Transition;
 import javafx.event.EventHandler;
+import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
 import javafx.geometry.Point2D;
 import javafx.geometry.Side;
 import javafx.scene.chart.NumberAxis;
 import javafx.scene.control.Slider;
+import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.StackPane;
-
-import com.sun.javafx.scene.control.behavior.SliderBehavior;
-import javafx.animation.Transition;
-import javafx.geometry.Insets;
 import javafx.util.Duration;
 import javafx.util.StringConverter;
+
+import com.sun.javafx.scene.control.behavior.SliderBehavior;
 
 /**
  * Region/css based skin for Slider
@@ -91,8 +92,8 @@ public class SliderSkin extends BehaviorSkinBase<Slider, SliderBehavior> {
         getChildren().clear();
         getChildren().addAll(track, thumb);
         setShowTickMarks(getSkinnable().isShowTickMarks(), getSkinnable().isShowTickLabels());
-         track.setOnMousePressed( new EventHandler<javafx.scene.input.MouseEvent>() {
-            @Override public void handle(javafx.scene.input.MouseEvent me) {
+        track.setOnMousePressed( new EventHandler<MouseEvent>() {
+            @Override public void handle(MouseEvent me) {
                 if (!thumb.isPressed()) {
                     trackClicked = true;
                     if (getSkinnable().getOrientation() == Orientation.HORIZONTAL) {
@@ -104,17 +105,21 @@ public class SliderSkin extends BehaviorSkinBase<Slider, SliderBehavior> {
                 }
             }
         });
-
-        track.setOnMouseReleased( new EventHandler<javafx.scene.input.MouseEvent>() {
-            @Override public void handle(javafx.scene.input.MouseEvent me) {
-                 //Nothing being done with the second param in sliderBehavior
-                //So, passing a dummy value
-                getBehavior().trackRelease(me, 0.0f);
+        
+        track.setOnMouseDragged(new EventHandler<MouseEvent>() {
+            public void handle(MouseEvent me) {
+                if (!thumb.isPressed()) {
+                    if (getSkinnable().getOrientation() == Orientation.HORIZONTAL) {
+                        getBehavior().trackPress(me, (me.getX() / trackLength));
+                    } else {
+                        getBehavior().trackPress(me, (me.getY() / trackLength));
+                    }
+                }
             }
         });
 
-        thumb.setOnMousePressed(new EventHandler<javafx.scene.input.MouseEvent>() {
-            @Override public void handle(javafx.scene.input.MouseEvent me) {
+        thumb.setOnMousePressed(new EventHandler<MouseEvent>() {
+            @Override public void handle(MouseEvent me) {
                 getBehavior().thumbPressed(me, 0.0f);
                 dragStart = thumb.localToParent(me.getX(), me.getY());
                 preDragThumbPos = (getSkinnable().getValue() - getSkinnable().getMin()) /
@@ -122,14 +127,14 @@ public class SliderSkin extends BehaviorSkinBase<Slider, SliderBehavior> {
             }
         });
 
-        thumb.setOnMouseReleased(new EventHandler<javafx.scene.input.MouseEvent>() {
-            @Override public void handle(javafx.scene.input.MouseEvent me) {
+        thumb.setOnMouseReleased(new EventHandler<MouseEvent>() {
+            @Override public void handle(MouseEvent me) {
                 getBehavior().thumbReleased(me);
             }
         });
 
-          thumb.setOnMouseDragged(new EventHandler<javafx.scene.input.MouseEvent>() {
-            @Override public void handle(javafx.scene.input.MouseEvent me) {
+        thumb.setOnMouseDragged(new EventHandler<MouseEvent>() {
+            @Override public void handle(MouseEvent me) {
                 Point2D cur = thumb.localToParent(me.getX(), me.getY());
                 double dragPos = (getSkinnable().getOrientation() == Orientation.HORIZONTAL)?
                     cur.getX() - dragStart.getX() : -(cur.getY() - dragStart.getY());

@@ -37,10 +37,13 @@ import javafx.scene.control.TextField;
 import javafx.scene.control.TreeItem;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
+import javafx.scene.layout.HBox;
 import javafx.util.StringConverter;
 
 // Package protected - not intended for external use
 class CellUtils {
+    
+    static int TREE_VIEW_HBOX_GRAPHIC_PADDING = 3; 
     
     /***************************************************************************
      *                                                                         *
@@ -98,6 +101,11 @@ class CellUtils {
             converter.toString(cell.getItem());
     }
     
+    
+    static Node getGraphic(TreeItem<?> treeItem) {
+        return treeItem == null ? null : treeItem.getGraphic();
+    }
+    
 
     
     /***************************************************************************
@@ -106,16 +114,17 @@ class CellUtils {
      *                                                                         *
      **************************************************************************/   
     
-    static <T> void updateItem(
-            final Cell<T> cell, ChoiceBox<T> choiceBox, 
-            final StringConverter<T> converter) {
-        updateItem(cell, choiceBox, converter, null);
+    static <T> void updateItem(final Cell<T> cell, 
+                               final StringConverter<T> converter,
+                               final ChoiceBox<T> choiceBox) {
+        updateItem(cell, converter, null, null, choiceBox);
     }
     
-    static <T> void updateItem(
-            final Cell<T> cell, ChoiceBox<T> choiceBox, 
-            final StringConverter<T> converter,
-            final Node graphic) {
+    static <T> void updateItem(final Cell<T> cell,
+                               final StringConverter<T> converter,
+                               final HBox hbox,
+                               final Node graphic,
+                               final ChoiceBox<T> choiceBox) {
         if (cell.isEmpty()) {
             cell.setText(null);
             cell.setGraphic(null);
@@ -125,7 +134,13 @@ class CellUtils {
                     choiceBox.getSelectionModel().select(cell.getItem());
                 }
                 cell.setText(null);
-                cell.setGraphic(choiceBox);
+                
+                if (graphic != null) {
+                    hbox.getChildren().setAll(graphic, choiceBox);
+                    cell.setGraphic(hbox);
+                } else {
+                    cell.setGraphic(choiceBox);
+                }
             } else {
                 cell.setText(getItemText(cell, converter));
                 cell.setGraphic(graphic);
@@ -157,14 +172,17 @@ class CellUtils {
      *                                                                         *
      **************************************************************************/  
     
-    static <T> void updateItem(Cell<T> cell, TextField textField, StringConverter<T> converter) {
-        updateItem(cell, textField, converter, null);
+    static <T> void updateItem(final Cell<T> cell, 
+                               final StringConverter<T> converter,
+                               final TextField textField) {
+        updateItem(cell, converter, null, null, textField);
     }
     
     static <T> void updateItem(final Cell<T> cell, 
-                               final TextField textField, 
                                final StringConverter<T> converter,
-                               final Node graphic) {
+                               final HBox hbox,
+                               final Node graphic,
+                               final TextField textField) {
         if (cell.isEmpty()) {
             cell.setText(null);
             cell.setGraphic(null);
@@ -174,7 +192,13 @@ class CellUtils {
                     textField.setText(getItemText(cell, converter));
                 }
                 cell.setText(null);
-                cell.setGraphic(textField);
+                
+                if (graphic != null) {
+                    hbox.getChildren().setAll(graphic, textField);
+                    cell.setGraphic(hbox);
+                } else {
+                    cell.setGraphic(textField);
+                }
             } else {
                 cell.setText(getItemText(cell, converter));
                 cell.setGraphic(graphic);
@@ -182,21 +206,29 @@ class CellUtils {
         }
     }
     
-    static <T> void startEdit(
-            final Cell<T> cell, 
-            TextField textField, 
-            final StringConverter<T> converter) {
-        textField.setText(getItemText(cell, converter));
-        
+    static <T> void startEdit(final Cell<T> cell, 
+                              final StringConverter<T> converter,
+                              final HBox hbox,
+                              final Node graphic,
+                              final TextField textField) {
+        if (textField != null) {
+            textField.setText(getItemText(cell, converter));
+        }
         cell.setText(null);
-        cell.setGraphic(textField);
+        
+        if (graphic != null) {
+            hbox.getChildren().setAll(graphic, textField);
+            cell.setGraphic(hbox);
+        } else {
+            cell.setGraphic(textField);
+        }
         
         textField.selectAll();
     }
     
-    static <T> void cancelEdit(Cell<T> cell, final StringConverter<T> converter) {
+    static <T> void cancelEdit(Cell<T> cell, final StringConverter<T> converter, Node graphic) {
         cell.setText(getItemText(cell, converter));
-        cell.setGraphic(null);
+        cell.setGraphic(graphic);
     }
     
     static <T> TextField createTextField(final Cell<T> cell, final StringConverter<T> converter) {
@@ -227,14 +259,15 @@ class CellUtils {
      *                                                                         *
      **************************************************************************/ 
     
-    static <T> void updateItem(Cell<T> cell, ComboBox<T> comboBox, StringConverter<T> converter) {
-        updateItem(cell, comboBox, converter, null);
+    static <T> void updateItem(Cell<T> cell, StringConverter<T> converter, ComboBox<T> comboBox) {
+        updateItem(cell, converter, null, null, comboBox);
     }
     
     static <T> void updateItem(final Cell<T> cell, 
-                               final ComboBox<T> comboBox, 
                                final StringConverter<T> converter,
-                               final Node graphic) {
+                               final HBox hbox,
+                               final Node graphic,
+                               final ComboBox<T> comboBox) {
         if (cell.isEmpty()) {
             cell.setText(null);
             cell.setGraphic(null);
@@ -244,7 +277,13 @@ class CellUtils {
                     comboBox.getSelectionModel().select(cell.getItem());
                 }
                 cell.setText(null);
-                cell.setGraphic(comboBox);
+                
+                if (graphic != null) {
+                    hbox.getChildren().setAll(graphic, comboBox);
+                    cell.setGraphic(hbox);
+                } else {
+                    cell.setGraphic(comboBox);
+                }
             } else {
                 cell.setText(getItemText(cell, converter));
                 cell.setGraphic(graphic);

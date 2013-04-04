@@ -26,25 +26,29 @@
 package javafx.css;
 
 import javafx.beans.property.SimpleObjectProperty;
-import javafx.beans.value.ObservableValue;
-import javafx.scene.Node;
 
 /**
  * This class extends {@code SimpleObjectProperty} and provides a full
- * implementation of a {@code StyleableProperty}. The method 
- * {@link StyleableProperty#getCssMetaData()} is not implemented. 
- * 
- * This class is used to make a {@link javafx.beans.property.ObjectProperty}, 
- * that would otherwise be implemented as a {@link SimpleObjectProperty}, 
+ * implementation of a {@code StyleableProperty}.  
+ *
+ * This class is used to make a {@link javafx.beans.property.ObjectProperty},
+ * that would otherwise be implemented as a {@link SimpleObjectProperty},
  * style&#8209;able by CSS.
- * 
+ *
  * @see javafx.beans.property.SimpleObjectProperty
  * @see CssMetaData
  * @see StyleableProperty
+ * @see StyleableObjectProperty
  */
 @com.sun.javafx.beans.annotations.NoBuilder
-public abstract class SimpleStyleableObjectProperty<T>
-    extends SimpleObjectProperty<T> implements StyleableProperty<T> {
+public class SimpleStyleableObjectProperty<T> extends StyleableObjectProperty<T> {
+
+    private static final Object DEFAULT_BEAN = null;
+    private static final String DEFAULT_NAME = "";
+
+    private final Object bean;
+    private final String name;
+    private final CssMetaData<? extends Styleable, T> cssMetaData;
 
     /**
      * The constructor of the {@code SimpleStyleableObjectProperty}.
@@ -52,8 +56,7 @@ public abstract class SimpleStyleableObjectProperty<T>
      *            the CssMetaData associated with this {@code StyleableProperty}
      */
     public SimpleStyleableObjectProperty(CssMetaData<? extends Styleable, T> cssMetaData) {
-        super();
-        this.cssMetaData = cssMetaData;
+        this(cssMetaData, DEFAULT_BEAN, DEFAULT_NAME);
     }
 
     /**
@@ -65,8 +68,7 @@ public abstract class SimpleStyleableObjectProperty<T>
      *            the initial value of the wrapped {@code Object}
      */
     public SimpleStyleableObjectProperty(CssMetaData<? extends Styleable, T> cssMetaData, T initialValue) {
-        super(initialValue);
-        this.cssMetaData = cssMetaData;
+        this(cssMetaData, DEFAULT_BEAN, DEFAULT_NAME, initialValue);
     }
 
     /**
@@ -80,34 +82,45 @@ public abstract class SimpleStyleableObjectProperty<T>
      *            the name of this {@code ObjectProperty}
      */
     public SimpleStyleableObjectProperty(CssMetaData<? extends Styleable, T> cssMetaData, Object bean, String name) {
-        super(bean, name);
+        this.bean = bean;
+        this.name = (name == null) ? DEFAULT_NAME : name;
         this.cssMetaData = cssMetaData;
     }
 
-    /** {@inheritDoc} */
-    @Override
-    public void applyStyle(StyleOrigin origin, T v) {
-        set(v);
-        this.origin = origin;
+    /**
+     * The constructor of the {@code SimpleStyleableObjectProperty}.
+     *
+     * @param cssMetaData
+     *            the CssMetaData associated with this {@code StyleableProperty}
+     * @param bean
+     *            the bean of this {@code ObjectProperty}
+     * @param name
+     *            the name of this {@code ObjectProperty}
+     * @param initialValue
+     *            the initial value of the wrapped {@code Object}
+     */
+    public SimpleStyleableObjectProperty(CssMetaData<? extends Styleable, T> cssMetaData, Object bean, String name, T initialValue) {
+        super(initialValue);
+        this.bean = bean;
+        this.name = (name == null) ? DEFAULT_NAME : name;
+        this.cssMetaData = cssMetaData;
     }
 
-    /** {@inheritDoc} */
+    /**
+     * {@inheritDoc}
+     */
     @Override
-    public void bind(ObservableValue<? extends T> observable) {
-        super.bind(observable);
-        origin = StyleOrigin.USER;
+    public Object getBean() {
+        return bean;
     }
 
-    /** {@inheritDoc} */
+    /**
+     * {@inheritDoc}
+     */
     @Override
-    public void set(T v) {
-        super.set(v);
-        origin = StyleOrigin.USER;
+    public String getName() {
+        return name;
     }
-
-    /** {@inheritDoc} */
-    @Override
-    public final StyleOrigin getStyleOrigin() { return origin; }
 
     /** {@inheritDoc} */
     @Override
@@ -115,6 +128,4 @@ public abstract class SimpleStyleableObjectProperty<T>
         return cssMetaData;
     }
 
-    private StyleOrigin origin = null;
-    private final CssMetaData<? extends Styleable, T> cssMetaData;
 }

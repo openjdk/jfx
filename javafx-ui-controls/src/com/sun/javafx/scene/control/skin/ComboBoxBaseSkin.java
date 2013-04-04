@@ -153,7 +153,7 @@ public abstract class ComboBoxBaseSkin<T> extends BehaviorSkinBase<ComboBoxBase<
         
         arrowButton.resize(arrowButtonWidth, h);
         positionInArea(arrowButton, 
-                getSkinnable().getWidth() - padding.getRight() - arrowButtonWidth, 0, 
+                getSkinnable().getWidth() - padding.getRight() - arrowButtonWidth, padding.getTop(), 
                 arrowButtonWidth, h, 0, HPos.CENTER, VPos.CENTER);
     }
     

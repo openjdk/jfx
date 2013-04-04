@@ -53,15 +53,4 @@ public interface ReadOnlyProperty<T> extends ObservableValue<T> {
      */
     String getName();
 
-    /**
-     * Indicates whether some other object is "equal to" this one.
-     * <p>
-     * Two properties are considered equal, if they belong to the same bean and they have the same name.
-     * (Beans are compared with {@code ==}, names with {@code equal()}).
-     * Two distinct properties are not equal, if either their bean is {@code null} or their name is {@code null} or empty.
-     *
-     * @param obj the reference object with which to compare.
-     * @return {@code true} if this object is equal to the {@code obj} argument; {@code false} otherwise.
-     */
-    boolean equals(Object obj);
 }

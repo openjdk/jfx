@@ -87,9 +87,7 @@ public class SpotLight extends PointLight {
      * @param pointsAtX the x coordinate of the direction vector for this light
      */
     public void setPointsAtX(float pointsAtX) {
-        float old = this.pointsAtX;
         this.pointsAtX = pointsAtX;
-        firePropertyChange("pointsAtX", old, pointsAtX);
     }
 
     /**
@@ -115,7 +113,6 @@ public class SpotLight extends PointLight {
     public void setPointsAtY(float pointsAtY) {
         float old = this.pointsAtY;
         this.pointsAtY = pointsAtY;
-        firePropertyChange("pointsAtY", old, pointsAtY);
     }
 
     /**
@@ -139,9 +136,7 @@ public class SpotLight extends PointLight {
      * @param pointsAtZ the z coordinate of the direction vector for this light
      */
     public void setPointsAtZ(float pointsAtZ) {
-        float old = this.pointsAtZ;
         this.pointsAtZ = pointsAtZ;
-        firePropertyChange("pointsAtZ", old, pointsAtZ);
     }
 
     /**
@@ -170,9 +165,7 @@ public class SpotLight extends PointLight {
         if (specularExponent < 0f || specularExponent > 4f) {
             throw new IllegalArgumentException("Specular exponent must be in the range [0,4]");
         }
-        float old = this.specularExponent;
         this.specularExponent = specularExponent;
-        firePropertyChange("specularExponent", old, specularExponent);
     }
 
     @Override

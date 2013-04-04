@@ -94,7 +94,7 @@ Java_com_sun_pisces_PiscesRenderer_nativeFinalize(JNIEnv* env,
 }
 
 JNIEXPORT void JNICALL
-Java_com_sun_pisces_PiscesRenderer_setClip(JNIEnv* env, jobject objectHandle,
+Java_com_sun_pisces_PiscesRenderer_setClipImpl(JNIEnv* env, jobject objectHandle,
         jint minX, jint minY, jint width, jint height) {
     Renderer* rdr;
     rdr = (Renderer*)JLongToPointer(
@@ -102,22 +102,6 @@ Java_com_sun_pisces_PiscesRenderer_setClip(JNIEnv* env, jobject objectHandle,
                                    fieldIds[RENDERER_NATIVE_PTR]));
 
     renderer_setClip(rdr, minX, minY, width, height);
-
-    if (JNI_TRUE == readAndClearMemErrorFlag()) {
-        JNI_ThrowNew(env, "java/lang/OutOfMemoryError",
-                     "Allocation of internal renderer buffer failed.");
-    }
-}
-
-JNIEXPORT void JNICALL
-Java_com_sun_pisces_PiscesRenderer_resetClip(JNIEnv* env,
-        jobject objectHandle) {
-    Renderer* rdr;
-    rdr = (Renderer*)JLongToPointer(
-              (*env)->GetLongField(env, objectHandle,
-                                   fieldIds[RENDERER_NATIVE_PTR]));
-
-    renderer_resetClip(rdr);
 
     if (JNI_TRUE == readAndClearMemErrorFlag()) {
         JNI_ThrowNew(env, "java/lang/OutOfMemoryError",
@@ -256,10 +240,10 @@ JNIEXPORT void JNICALL Java_com_sun_pisces_PiscesRenderer_setRadialGradientImpl(
 
 /*
  * Class:     com_sun_pisces_PiscesRenderer
- * Method:    setTexture
+ * Method:    setTextureImpl
  * Signature: (I[IIILcom/sun/pisces/Transform6;Z)V
  */
-JNIEXPORT void JNICALL Java_com_sun_pisces_PiscesRenderer_setTexture
+JNIEXPORT void JNICALL Java_com_sun_pisces_PiscesRenderer_setTextureImpl
   (JNIEnv *env, jobject this, jint imageType, jintArray dataArray, jint width, jint height,
       jobject jTransform, jboolean repeat, jboolean hasAlpha)
 {
@@ -529,10 +513,10 @@ JNIEXPORT void JNICALL Java_com_sun_pisces_PiscesRenderer_fillRect
 
 /*
  * Class:     com_sun_pisces_PiscesRenderer
- * Method:    emitAndClearAlphaRow
+ * Method:    emitAndClearAlphaRowImpl
  * Signature: ([B[IIII)V
  */
-JNIEXPORT void JNICALL Java_com_sun_pisces_PiscesRenderer_emitAndClearAlphaRow
+JNIEXPORT void JNICALL Java_com_sun_pisces_PiscesRenderer_emitAndClearAlphaRowImpl
   (JNIEnv *env, jobject this, jbyteArray jAlphaMap, jintArray jAlphaDeltas, jint y, jint x_from, jint x_to,
    jint rowNum)
 {
@@ -554,37 +538,41 @@ JNIEXPORT void JNICALL Java_com_sun_pisces_PiscesRenderer_emitAndClearAlphaRow
         jint* alphaRow = (jint*)(*env)->GetPrimitiveArrayCritical(env, jAlphaDeltas, NULL);
         if (alphaRow != NULL)
         {
-            rdr->_minTouched = x_from;
-            rdr->_maxTouched = x_to;
-            rdr->_currX = x_from;
-            rdr->_currY = y;
-        
-            rdr->_rowAAOffset = 0;
-            rdr->_rowNum = rowNum;
-            
-            rdr->alphaMap = alphaMap;
-            rdr->_rowAAInt = alphaRow;
-            rdr->_alphaWidth = x_to - x_from + 1;
-            rdr->_alphaOffset = 0;
-            
-            rdr->_currImageOffset = y * surface->width;
-            rdr->_imageScanlineStride = surface->width;
-            rdr->_imagePixelStride = 1;
-            
-            if (rdr->_genPaint) {
-                size_t l = (x_to - x_from + 1);
-                ALLOC3(rdr->_paint, jint, l);
-                rdr->_genPaint(rdr, 1);
+            x_from = MAX(x_from, rdr->_clip_bbMinX);
+            x_to = MIN(x_to, rdr->_clip_bbMaxX);
+
+            if (x_to >= x_from &&
+                y >= rdr->_clip_bbMinY &&
+                y <= rdr->_clip_bbMaxY)
+            {
+                rdr->_minTouched = x_from;
+                rdr->_maxTouched = x_to;
+                rdr->_currX = x_from;
+                rdr->_currY = y;
+
+                rdr->_rowNum = rowNum;
+
+                rdr->alphaMap = alphaMap;
+                rdr->_rowAAInt = alphaRow;
+                rdr->_alphaWidth = x_to - x_from + 1;
+                rdr->_alphaOffset = 0;
+
+                rdr->_currImageOffset = y * surface->width;
+                rdr->_imageScanlineStride = surface->width;
+                rdr->_imagePixelStride = 1;
+
+                if (rdr->_genPaint) {
+                    size_t l = (x_to - x_from + 1);
+                    ALLOC3(rdr->_paint, jint, l);
+                    rdr->_genPaint(rdr, 1);
+                }
+                rdr->_emitRows(rdr, 1);
+                rdr->_rowAAInt = NULL;
             }
-        
-            rdr->_emitRows(rdr, 1);
-            
-            rdr->_rowAAInt = NULL;
             (*env)->ReleasePrimitiveArrayCritical(env, jAlphaDeltas, alphaRow, 0);
         } else {
             setMemErrorFlag();
         }
-        
         (*env)->ReleasePrimitiveArrayCritical(env, jAlphaMap, alphaMap, 0);
     } else {
         setMemErrorFlag();
@@ -600,10 +588,10 @@ JNIEXPORT void JNICALL Java_com_sun_pisces_PiscesRenderer_emitAndClearAlphaRow
 
 /*
  * Class:     com_sun_pisces_PiscesRenderer
- * Method:    drawImage
+ * Method:    drawImageImpl
  * Signature: (I[IIIIILcom/sun/pisces/Transform6;ZIIII)V
  */
-JNIEXPORT void JNICALL Java_com_sun_pisces_PiscesRenderer_drawImage
+JNIEXPORT void JNICALL Java_com_sun_pisces_PiscesRenderer_drawImageImpl
 (JNIEnv *env, jobject this, jint imageType, jintArray dataArray, jint width, jint height, jint offset, jint stride,
     jobject jTransform, jboolean repeat, jint bboxX, jint bboxY, jint bboxW, jint bboxH,
     jint interpolateMinX, jint interpolateMinY, jint interpolateMaxX, jint interpolateMaxY,
@@ -706,10 +694,10 @@ JNIEXPORT void JNICALL Java_com_sun_pisces_PiscesRenderer_drawImage
 
 /*
  * Class:     com_sun_pisces_PiscesRenderer
- * Method:    fillAlphaMask
+ * Method:    fillAlphaMaskImpl
  * Signature: ([BIIIIII)V
  */
-JNIEXPORT void JNICALL Java_com_sun_pisces_PiscesRenderer_fillAlphaMask
+JNIEXPORT void JNICALL Java_com_sun_pisces_PiscesRenderer_fillAlphaMaskImpl
 (JNIEnv *env, jobject this, jbyteArray jmask, jint x, jint y, jint maskWidth, jint maskHeight, jint offset, jint stride)
 {
     Renderer* rdr;
@@ -730,10 +718,10 @@ JNIEXPORT void JNICALL Java_com_sun_pisces_PiscesRenderer_fillAlphaMask
 
 /*
  * Class:     com_sun_pisces_PiscesRenderer
- * Method:    fillLCDAlphaMask
+ * Method:    fillLCDAlphaMaskImpl
  * Signature: ([BIIIIII)V
  */
-JNIEXPORT void JNICALL Java_com_sun_pisces_PiscesRenderer_fillLCDAlphaMask
+JNIEXPORT void JNICALL Java_com_sun_pisces_PiscesRenderer_fillLCDAlphaMaskImpl
 (JNIEnv *env, jobject this, jbyteArray jmask, jint x, jint y, jint maskWidth, jint maskHeight, jint offset, jint stride)
 {
     Renderer* rdr;

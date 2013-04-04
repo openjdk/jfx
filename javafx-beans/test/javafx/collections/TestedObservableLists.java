@@ -30,6 +30,7 @@ import com.sun.javafx.collections.VetoableListDecorator;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
+import javafx.beans.property.SimpleListProperty;
 
 public interface TestedObservableLists {
 
@@ -57,4 +58,26 @@ public interface TestedObservableLists {
             };
         }
     };
+
+    Callable<ObservableList<String>> CHECKED_OBSERVABLE_ARRAY_LIST = new Callable<ObservableList<String>>() {
+        @Override
+        public ObservableList<String> call() throws Exception {
+            return FXCollections.checkedObservableList(FXCollections.observableList(new ArrayList()), String.class);
+        }
+    };
+
+    Callable<ObservableList<String>> SYNCHRONIZED_OBSERVABLE_ARRAY_LIST = new Callable<ObservableList<String>>() {
+        @Override
+        public ObservableList<String> call() throws Exception {
+            return FXCollections.synchronizedObservableList(FXCollections.observableList(new ArrayList<String>()));
+        }
+    };
+    
+    Callable<ObservableList<String>> OBSERVABLE_LIST_PROPERTY = new Callable<ObservableList<String>>() {
+        @Override
+        public ObservableList<String> call() throws Exception {
+            return new SimpleListProperty<>(FXCollections.observableList(new ArrayList<String>()));
+        }
+    };
+    
 }

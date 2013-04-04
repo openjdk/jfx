@@ -158,13 +158,11 @@ public class NumberAxisTest {
 
     @Test public void whenTickUnitIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
         CssMetaData styleable = ((StyleableProperty)axis.tickUnitProperty()).getCssMetaData();
-        styleable.set(axis,10.9, null);
         assertTrue(styleable.isSettable(axis));
     }
 
     @Test public void canTickUnitViaCSS() {
-        CssMetaData styleable = ((StyleableProperty)axis.tickUnitProperty()).getCssMetaData();
-        styleable.set(axis,10.34, null);
+        ((StyleableProperty)axis.tickUnitProperty()).applyStyle(null, 10.34);
         assertEquals(10.34, axis.getTickUnit(), 0.0);
     }
 

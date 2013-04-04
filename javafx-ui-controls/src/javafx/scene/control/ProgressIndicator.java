@@ -89,10 +89,9 @@ public class ProgressIndicator extends Control {
     public ProgressIndicator(double progress) {
         // focusTraversable is styleable through css. Calling setFocusTraversable
         // makes it look to css like the user set the value and css will not 
-        // override. Initializing focusTraversable by calling set on the 
-        // CssMetaData ensures that css will be able to override the value.
-        final CssMetaData prop = ((StyleableProperty)focusTraversableProperty()).getCssMetaData();
-        prop.set(this, Boolean.FALSE, null); 
+        // override. Initializing focusTraversable by calling applyStyle with null
+        // StyleOrigin ensures that css will be able to override the value.
+        ((StyleableProperty)focusTraversableProperty()).applyStyle(null, Boolean.FALSE);
         setProgress(progress);
         getStyleClass().setAll(DEFAULT_STYLE_CLASS);
         

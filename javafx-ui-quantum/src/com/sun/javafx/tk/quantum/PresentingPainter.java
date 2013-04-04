@@ -32,10 +32,10 @@ import com.sun.prism.impl.Disposer;
  * The PresentingPainter is used when we are rendering to the main screen.
  * UploadingPainter is used when we need to render into an offscreen buffer.
  */
-class PresentingPainter extends ViewPainter implements Runnable {
+final class PresentingPainter extends ViewPainter {
     
-    protected PresentingPainter(ViewScene view, PrismPen pen) {
-        super(view, pen);
+    PresentingPainter(ViewScene view) {
+        super(view);
     }
 
     @Override public void run() {
@@ -43,6 +43,7 @@ class PresentingPainter extends ViewPainter implements Runnable {
 
         boolean locked = false;
 
+        SceneState viewState = scene.getViewState();
         try {
             valid = validateStageGraphics();
 
@@ -117,8 +118,9 @@ class PresentingPainter extends ViewPainter implements Runnable {
             if (locked) {
                 viewState.unlock();
             }
-            
-            pen.getPainting().set(false);
+
+            ViewScene viewScene = (ViewScene)viewState.getScene();
+            viewScene.setPainting(false);
             renderLock.unlock();
         }
     }
