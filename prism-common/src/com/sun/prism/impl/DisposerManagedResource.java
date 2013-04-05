@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,17 +23,16 @@
  * questions.
  */
 
-package com.sun.scenario.effect;
+package com.sun.prism.impl;
 
-public interface Filterable {
-    public Object getData();
-    public int getContentWidth();
-    public int getContentHeight();
-    public int getPhysicalWidth();
-    public int getPhysicalHeight();
-    public float getPixelScale();
-    public void flush();
-    public void lock();
-    public void unlock();
-    public boolean isLost();
+public abstract class DisposerManagedResource<T> extends ManagedResource<T> {
+    Object referent;
+
+    public DisposerManagedResource(T resource, ResourcePool pool,
+                                   Disposer.Record record)
+    {
+        super(resource, pool);
+        this.referent = new Object();
+        Disposer.addRecord(referent, record);
+    }
 }

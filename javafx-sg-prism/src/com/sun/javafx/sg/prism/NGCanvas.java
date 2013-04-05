@@ -95,9 +95,18 @@ public class NGCanvas extends NGNode implements PGCanvas {
         }
        
         public boolean validate(Graphics resg, int tw, int th) {
-            int cw = (tex == null) ? 0 : tex.getContentWidth();
-            int ch = (tex == null) ? 0 : tex.getContentHeight();
-            if (tex == null || cw < tw || ch < th) {
+            int cw, ch;
+            boolean create;
+            if (tex == null) {
+                cw = ch = 0;
+                create = true;
+            } else {
+                cw = tex.getContentWidth();
+                ch = tex.getContentHeight();
+                tex.lock();
+                create = tex.isSurfaceLost() || cw < tw || ch < th;
+            }
+            if (create) {
                 RTTexture oldtex = tex;
                 ResourceFactory factory = resg.getResourceFactory();
                 RTTexture newtex =
@@ -117,6 +126,7 @@ public class NGCanvas extends NGNode implements PGCanvas {
                         }
                         g.setCompositeMode(CompositeMode.SRC_OVER);
                     }
+                    oldtex.unlock();
                     oldtex.dispose();
                 }
                 if (init_type == InitType.FILL_WHITE) {
@@ -443,11 +453,18 @@ public class NGCanvas extends NGNode implements PGCanvas {
             cv.dispose();
             return;
         }
-        cv.validate(g, tw, th);
+        if (cv.validate(g, tw, th)) {
+            // If the texture was recreated then we add a permanent
+            // "useful" and extra "lock" status to it.
+            cv.tex.contentsUseful();
+            cv.tex.makePermanent();
+            cv.tex.lock();
+        }
     }
 
     private void initClip() {
         if (clip.validate(cv.g, tw, th)) {
+            clip.tex.contentsUseful();
             for (Path2D clippath : clipStack) {
                 renderClip(clippath);
             }
@@ -460,6 +477,7 @@ public class NGCanvas extends NGNode implements PGCanvas {
         temp.g.setTransform(BaseTransform.IDENTITY_TRANSFORM);
         temp.g.fill(clippath);
         blendAthruBintoC(temp, Mode.SRC_IN, clip, null, CompositeMode.SRC, clip);
+        temp.tex.unlock();
     }
 
     private Rectangle applyEffectOnAintoC(Effect definput,
@@ -617,6 +635,8 @@ public class NGCanvas extends NGNode implements PGCanvas {
                     gr.drawTexture(tex,
                                    dx1, dy1, dx1 + highestPixelScale, dy1 + highestPixelScale,
                                    0, 0, 1, 1);
+                    tex.contentsNotUseful();
+                    tex.unlock();
                     break;
                 }
                 case PUT_ARGBPRE_BUF:
@@ -642,6 +662,8 @@ public class NGCanvas extends NGNode implements PGCanvas {
                     gr.drawTexture(tex,
                                    dx1, dy1, dx2, dy2,
                                    0, 0, w, h);
+                    tex.contentsNotUseful();
+                    tex.unlock();
                     gr.setCompositeMode(CompositeMode.SRC_OVER);
                     break;
                 }
@@ -747,11 +769,15 @@ public class NGCanvas extends NGNode implements PGCanvas {
                 case STROKE_TEXT:
                 {
                     RenderBuf dest;
-                    if (clipStack.isEmpty() && blendmode == Blend.Mode.SRC_OVER) {
-                        dest = cv;
-                    } else {
+                    if (!clipStack.isEmpty()) {
+                        initClip();
                         temp.validate(cv.g, tw, th);
                         dest = temp;
+                    } else if (blendmode != Blend.Mode.SRC_OVER) {
+                        temp.validate(cv.g, tw, th);
+                        dest = temp;
+                    } else {
+                        dest = cv;
                     }
                     if (effect != null) {
                         buf.save();
@@ -798,12 +824,15 @@ public class NGCanvas extends NGNode implements PGCanvas {
                             // back into the temp buffer.  We must use SRC
                             // mode here so that the erased (or reduced) pixels
                             // actually get reduced to their new alpha.
-                            dest = temp;
+                            // assert: dest == temp;
                             compmode = CompositeMode.SRC;
                         }
-                        initClip();
                         blendAthruBintoC(temp, Mode.SRC_IN, clip,
                                          TEMP_RECTBOUNDS, compmode, dest);
+                        clip.tex.unlock();
+                        if (dest != temp) {
+                            temp.tex.unlock();
+                        }
                     }
                     if (blendmode != Blend.Mode.SRC_OVER) {
                         // We always use SRC mode here because the results of
@@ -1010,6 +1039,7 @@ public class NGCanvas extends NGNode implements PGCanvas {
                     gr.drawTexture(tex,
                                    dx, dy, dx+dw, dy+dh,
                                    sx, sy, sx+sw, sy+sh);
+                    tex.unlock();
                 }
                 break;
             }

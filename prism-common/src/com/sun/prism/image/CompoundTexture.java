@@ -40,6 +40,12 @@ public class CompoundTexture extends CompoundImage implements GraphicsResource {
     public Texture getTile(int x, int y, ResourceFactory factory) {
         int idx = x + y*uSections;
         Texture tex = texTiles[idx];
+        if (tex != null) {
+            tex.lock();
+            if (tex.isSurfaceLost()) {
+                texTiles[idx] = tex = null;
+            }
+        }
         if (tex == null) {
             tex = factory.createTexture(tiles[idx],
                                         Texture.Usage.STATIC,

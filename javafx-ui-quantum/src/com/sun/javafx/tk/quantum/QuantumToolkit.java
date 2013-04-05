@@ -1393,6 +1393,12 @@ public final class QuantumToolkit extends Toolkit implements ToolkitInterface {
         RTTexture getRT(int w, int h, ResourceFactory rfNew) {
             boolean rttOk = rt != null && rf == rfNew &&
                     rt.getContentWidth() == w && rt.getContentHeight() == h;
+            if (rttOk) {
+                rt.lock();
+                if (rt.isSurfaceLost()) {
+                    rttOk = false;
+                }
+            }
 
             if (!rttOk) {
                 if (rt != null) {
@@ -1561,6 +1567,8 @@ public final class QuantumToolkit extends Toolkit implements ToolkitInterface {
                             pImage = null;
                         }
                     }
+
+                    rt.unlock();
 
                     params.platformImage = pImage;
 

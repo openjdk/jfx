@@ -101,6 +101,8 @@ public class GlyphCache {
             ResourceFactory factory = context.getResourceFactory();
             Texture tex = factory.createMaskTexture(WIDTH, HEIGHT,
                                                     WrapMode.CLAMP_NOT_NEEDED);
+            tex.contentsUseful();
+            tex.makePermanent();
             tex.setLinearFiltering(false);
             packer = new RectanglePacker(tex, WIDTH, HEIGHT);
             packerMap.put(context, packer);

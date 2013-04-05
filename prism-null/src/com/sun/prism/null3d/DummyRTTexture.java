@@ -64,10 +64,6 @@ class DummyRTTexture extends DummyTexture implements RTTexture {
         return getContext().getAssociatedScreen();
     }
 
-    @Override public boolean isSurfaceLost() {
-        return false;
-    }
-
     @Override
     public void update(Image img) {
     }

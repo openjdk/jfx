@@ -32,13 +32,4 @@ public interface RTTexture extends Texture, RenderTarget {
     public boolean readPixels(Buffer pixels);
     public boolean readPixels(Buffer pixels, int x, int y, int width, int height);
     public boolean isVolatile();
-
-    /**
-     * Called by code wanting to know if the RTTexture's surface is lost. This happens
-     * in some cases (mostly on Windows) when, for example, the user presses Ctrl+Alt+Delete,
-     * or the system goes to sleep.
-     * @return True if the backing surface of this RTTexture is gone and the image is therefore
-     *         no longer usable. False if it is still OK.
-     */
-    public boolean isSurfaceLost();
 }

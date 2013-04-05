@@ -67,6 +67,7 @@ abstract class SWTexture implements Texture {
         height = h;
         stride = w;
         offset = 0;
+        lock();
     }
 
     SWTexture(SWTexture sharedTex, WrapMode altMode) {
@@ -77,6 +78,9 @@ abstract class SWTexture implements Texture {
         // REMIND: Use indirection to share the serial number?
         this.lastImageSerial = sharedTex.lastImageSerial;
         this.wrapMode = altMode;
+        // The lock is transferred to this texture...
+        sharedTex.unlock();
+        lock();
     }
 
     SWResourceFactory getResourceFactory() {
@@ -89,6 +93,52 @@ abstract class SWTexture implements Texture {
     
     int getOffset() {
         return offset;
+    }
+
+    private int lockcount;
+    public void lock() {
+        lockcount++;
+    }
+
+    public void unlock() {
+        assertLocked();
+        lockcount--;
+    }
+
+    public boolean isLocked() {
+        return (lockcount > 0);
+    }
+
+    public int getLockCount() {
+        return lockcount;
+    }
+
+    public void assertLocked() {
+        if (lockcount <= 0) {
+            throw new IllegalStateException("texture not locked");
+        }
+    }
+
+    boolean permanent;
+    public void makePermanent() {
+        permanent = true;
+    }
+
+    int employcount;
+    public void contentsUseful() {
+        assertLocked();
+        employcount++;
+    }
+
+    public void contentsNotUseful() {
+        if (employcount <= 0) {
+            throw new IllegalStateException("Resource obsoleted too many times");
+        }
+        employcount--;
+    }
+
+    public boolean isSurfaceLost() {
+        return false;
     }
 
     @Override

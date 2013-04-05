@@ -30,7 +30,9 @@ import com.sun.prism.PixelFormat;
 import com.sun.prism.Texture;
 import java.nio.Buffer;
 
-public abstract class BaseTexture extends BaseGraphicsResource implements Texture {
+public abstract class BaseTexture<T extends ManagedResource> implements Texture {
+
+    protected final T resource;
 
     private final PixelFormat format;
     private final int physicalWidth;
@@ -45,8 +47,8 @@ public abstract class BaseTexture extends BaseGraphicsResource implements Textur
     private boolean linearFiltering = true;
     private int lastImageSerial;
 
-    protected BaseTexture(BaseTexture sharedTex, WrapMode newMode) {
-        super(sharedTex);
+    protected BaseTexture(BaseTexture<T> sharedTex, WrapMode newMode) {
+        this.resource = sharedTex.resource;
         this.format = sharedTex.format;
         this.wrapMode = newMode;
         this.physicalWidth = sharedTex.physicalWidth;
@@ -57,31 +59,20 @@ public abstract class BaseTexture extends BaseGraphicsResource implements Textur
         this.contentHeight = sharedTex.contentHeight;
     }
 
-    protected BaseTexture(PixelFormat format, WrapMode wrapMode,
-                          int physicalWidth, int physicalHeight,
-                          int contentX, int contentY,
-                          int contentWidth, int contentHeight,
-                          Disposer.Record disposerRecord)
+    protected BaseTexture(T resource,
+                          PixelFormat format, WrapMode wrapMode,
+                          int width, int height)
     {
-        super(disposerRecord);
-        this.format = format;
-        this.wrapMode = wrapMode;
-        this.physicalWidth = physicalWidth;
-        this.physicalHeight = physicalHeight;
-        this.contentX = contentX;
-        this.contentY = contentY;
-        this.contentWidth = contentWidth;
-        this.contentHeight = contentHeight;
+        this(resource, format, wrapMode, width, height, 0, 0, width, height);
     }
 
-    protected BaseTexture(PixelFormat format, WrapMode wrapMode,
+    protected BaseTexture(T resource,
+                          PixelFormat format, WrapMode wrapMode,
                           int physicalWidth, int physicalHeight,
                           int contentX, int contentY,
-                          int contentWidth, int contentHeight,
-                          float u0, float v0, float u1, float v1,
-                          Disposer.Record disposerRecord)
+                          int contentWidth, int contentHeight)
     {
-        super(disposerRecord);
+        this.resource = resource;
         this.format = format;
         this.wrapMode = wrapMode;
         this.physicalWidth = physicalWidth;
@@ -173,6 +164,56 @@ public abstract class BaseTexture extends BaseGraphicsResource implements Textur
     @Override
     public final void setLastImageSerial(int serial) {
         lastImageSerial = serial;
+    }
+
+    @Override
+    public final void lock() {
+        resource.lock();
+    }
+
+    @Override
+    public final boolean isLocked() {
+        return resource.isLocked();
+    }
+
+    @Override
+    public final int getLockCount() {
+        return resource.getLockCount();
+    }
+
+    @Override
+    public final void assertLocked() {
+        resource.assertLocked();
+    }
+
+    @Override
+    public final void unlock() {
+        resource.unlock();
+    }
+
+    @Override
+    public final void makePermanent() {
+        resource.makePermanent();
+    }
+
+    @Override
+    public final void contentsUseful() {
+        resource.contentsUseful();
+    }
+
+    @Override
+    public final void contentsNotUseful() {
+        resource.contentsNotUseful();
+    }
+
+    @Override
+    public final boolean isSurfaceLost() {
+        return !resource.isValid();
+    }
+
+    @Override
+    public final void dispose() {
+        resource.dispose();
     }
 
     @Override
