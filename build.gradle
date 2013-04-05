@@ -1431,16 +1431,6 @@ task sdk {
         final File javafxProperties = file("build/${COMPILE_TARGET.name}-sdk/rt/lib/javafx.properties");
         javafxProperties << "javafx.runtime.version=$RAW_VERSION";
 
-        // Create the javafx.policy file
-        final File javafxPolicy = file("build/${COMPILE_TARGET.name}-sdk/rt/lib/security/javafx.policy");
-        javafxPolicy.getParentFile().mkdirs()
-        javafxPolicy <<
-"""
-// JavaFX runtime get all permissions by default
-grant codeBase "file:\${javafx.runtime.home}/lib/ext/jfxrt.jar" {
-    permission java.security.AllPermission;
-};"""
-
         // Copy over the javadocs that were generated. This is done rather than just generating
         // the docs into the "right place" because for a cross-compile you only need one set of
         // docs but need to have a copy in each created sdk
