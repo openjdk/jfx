@@ -25,6 +25,7 @@
 
 package javafx.scene.layout;
 
+import com.sun.javafx.geom.Vec2d;
 import java.util.List;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ObjectPropertyBase;
@@ -35,6 +36,7 @@ import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
 import javafx.geometry.VPos;
 import javafx.scene.Node;
+import static javafx.scene.layout.Region.positionInArea;
 
 
 /**
@@ -531,9 +533,8 @@ public class BorderPane extends Pane {
         final Node t = getTop();
 
         double topHeight = 0;
-        Insets topMargin = null;
         if (t != null && t.isManaged()) {
-            topMargin = getNodeMargin(t);
+            Insets topMargin = getNodeMargin(t);
             if (getContentBias() == Orientation.VERTICAL) {
                 topHeight = heights[0] == -1 ? t.prefHeight(-1) : heights[0];
             } else {
@@ -541,12 +542,21 @@ public class BorderPane extends Pane {
                         t.prefHeight(insideWidth - topMargin.getLeft() - topMargin.getRight()) +
                         topMargin.getBottom());
             }
+            topHeight = Math.min(topHeight, insideHeight);
+            Vec2d result = boundedNodeSizeWithBias(t, adjustWidthByMargin(insideWidth, topMargin),
+                    adjustHeightByMargin(topHeight, topMargin), true, true, TEMP_VEC2D);
+            topHeight = snapSize(result.y);
+            t.resize(snapSize(result.x), topHeight);
+            Pos alignment = getAlignment(t);
+            positionInArea(t, insideX, insideY, insideWidth, topHeight, 0/*ignore baseline*/,
+                    topMargin,
+                    alignment != null? alignment.getHpos() : HPos.LEFT,
+                    alignment != null? alignment.getVpos() : VPos.TOP, isSnapToPixel());
         }
 
         double bottomHeight = 0;
-        Insets bottomMargin = null;
         if (b != null && b.isManaged()) {
-            bottomMargin = getNodeMargin(b);
+            Insets bottomMargin = getNodeMargin(b);
             if (getContentBias() == Orientation.VERTICAL) {
                 bottomHeight = heights[4] == -1 ? b.prefHeight(-1) : heights[4];
             } else {
@@ -554,12 +564,22 @@ public class BorderPane extends Pane {
                         b.prefHeight(insideWidth - bottomMargin.getLeft() - bottomMargin.getRight()) +
                         bottomMargin.getBottom());
             }
+            bottomHeight = Math.min(bottomHeight, insideHeight - topHeight);
+            Vec2d result = boundedNodeSizeWithBias(b, adjustWidthByMargin(insideWidth, bottomMargin),
+                    adjustHeightByMargin(bottomHeight, bottomMargin), true, true, TEMP_VEC2D);
+            bottomHeight = snapSize(result.y);
+            b.resize(snapSize(result.x), bottomHeight);
+            Pos alignment = getAlignment(b);
+            positionInArea(b, insideX, insideY + insideHeight - bottomHeight,
+                    insideWidth, bottomHeight, 0/*ignore baseline*/,
+                    bottomMargin,
+                    alignment != null? alignment.getHpos() : HPos.LEFT,
+                    alignment != null? alignment.getVpos() : VPos.BOTTOM, isSnapToPixel());
         }
 
         double leftWidth = 0;
-        Insets leftMargin = null;
         if (l != null && l.isManaged()) {
-            leftMargin = getNodeMargin(l);
+            Insets leftMargin = getNodeMargin(l);
             if (getContentBias() == Orientation.HORIZONTAL) {
                 leftWidth =  widths[0] == -1 ? l.prefWidth(-1) : widths[0];
             } else {
@@ -567,12 +587,22 @@ public class BorderPane extends Pane {
                     l.prefWidth(insideHeight - topHeight - bottomHeight - leftMargin.getTop() - leftMargin.getBottom()) +
                     leftMargin.getRight());
             }
+            leftWidth = Math.min(leftWidth, insideWidth);
+            Vec2d result = boundedNodeSizeWithBias(l, adjustWidthByMargin(leftWidth, leftMargin),
+                    adjustHeightByMargin(insideHeight - topHeight - bottomHeight, leftMargin), true, true, TEMP_VEC2D);
+            leftWidth = snapSize(result.x);
+            l.resize(leftWidth, snapSize(result.y));
+            Pos alignment = getAlignment(l);
+            positionInArea(l, insideX, insideY + topHeight,
+                    leftWidth, insideHeight - topHeight - bottomHeight, 0/*ignore baseline*/,
+                    leftMargin,
+                    alignment != null? alignment.getHpos() : HPos.LEFT,
+                    alignment != null? alignment.getVpos() : VPos.TOP, isSnapToPixel());
         }
 
         double rightWidth = 0;
-        Insets rightMargin = null;
         if (r != null && r.isManaged()) {
-            rightMargin = getNodeMargin(r);
+            Insets rightMargin = getNodeMargin(r);
             if (getContentBias() == Orientation.HORIZONTAL) {
                 rightWidth = widths[2] == -1 ? r.prefWidth(-1) : widths[2];
             } else {
@@ -580,45 +610,17 @@ public class BorderPane extends Pane {
                         r.prefWidth(insideHeight - topHeight - bottomHeight - rightMargin.getTop() - rightMargin.getBottom()) +
                         rightMargin.getRight());
             }
-        }
-
-        if (t != null && t.isManaged()) {
-            Pos alignment = getAlignment(t);
-            topHeight = Math.min(topHeight, insideHeight);
-            layoutInArea(t, insideX, insideY, insideWidth, topHeight, 0/*ignore baseline*/,
-                    topMargin,
-                    alignment != null? alignment.getHpos() : HPos.LEFT,
-                    alignment != null? alignment.getVpos() : VPos.TOP);
-        }
-
-        if (b != null && b.isManaged() ) {
-            Pos alignment = getAlignment(b);
-            bottomHeight = Math.min(bottomHeight, insideHeight - topHeight);
-            layoutInArea(b, insideX, insideY + insideHeight - bottomHeight,
-                    insideWidth, bottomHeight, 0/*ignore baseline*/,
-                    bottomMargin,
-                    alignment != null? alignment.getHpos() : HPos.LEFT,
-                    alignment != null? alignment.getVpos() : VPos.BOTTOM);
-        }
-
-        if (l != null && l.isManaged()) {
-            Pos alignment = getAlignment(l);
-            leftWidth = Math.min(leftWidth, insideWidth);
-            layoutInArea(l, insideX, insideY + topHeight,
-                    leftWidth, insideHeight - topHeight - bottomHeight, 0/*ignore baseline*/,
-                    leftMargin,
-                    alignment != null? alignment.getHpos() : HPos.LEFT,
-                    alignment != null? alignment.getVpos() : VPos.TOP);
-        }
-
-        if (r != null && r.isManaged()) {
-            Pos alignment = getAlignment(r);
             rightWidth = Math.min(rightWidth, insideWidth - leftWidth);
-            layoutInArea(r, insideX + insideWidth - rightWidth, insideY + topHeight,
+            Vec2d result = boundedNodeSizeWithBias(r, rightWidth,
+                    insideHeight - topHeight - bottomHeight - rightMargin.getTop() - rightMargin.getBottom(), true, true, TEMP_VEC2D);
+            rightWidth = snapSize(result.x);
+            r.resize(rightWidth, snapSize(result.y));
+            Pos alignment = getAlignment(r);
+            positionInArea(r, insideX + insideWidth - rightWidth, insideY + topHeight,
                     rightWidth, insideHeight - topHeight - bottomHeight, 0/*ignore baseline*/,
                     rightMargin,
                     alignment != null? alignment.getHpos() : HPos.RIGHT,
-                    alignment != null? alignment.getVpos() : VPos.TOP);
+                    alignment != null? alignment.getVpos() : VPos.TOP, isSnapToPixel());
         }
 
         if (c != null && c.isManaged()) {

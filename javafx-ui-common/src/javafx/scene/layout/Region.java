@@ -61,6 +61,7 @@ import com.sun.javafx.css.converters.ShapeConverter;
 import com.sun.javafx.css.converters.SizeConverter;
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.PickRay;
+import com.sun.javafx.geom.Vec2d;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.scene.DirtyBits;
 import com.sun.javafx.scene.input.PickResultChooser;
@@ -77,7 +78,7 @@ import sun.util.logging.PlatformLogger;
  * Region is the base class for all JavaFX Node-based UI Controls, and all layout containers.
  * It is a resizable Parent node which can be styled from CSS. It can have multiple backgrounds
  * and borders. It is designed to support as much of the CSS3 specification for backgrounds
- * and borders as is relevant to JavaFX. 
+ * and borders as is relevant to JavaFX.
  * The full specification is available at <a href="http://www.w3.org/TR/2012/CR-css3-background-20120724/">the W3C</a>.
  * <p/>
  * Every Region has its layout bounds, which are specified to be (0, 0, width, height). A Region might draw outside
@@ -159,6 +160,8 @@ public class Region extends Parent {
      */
     public static final double USE_COMPUTED_SIZE = -1;
 
+    static Vec2d TEMP_VEC2D = new Vec2d();
+
     /***************************************************************************
      *                                                                         *
      * Static convenience methods for layout                                   *
@@ -190,6 +193,22 @@ public class Region extends Parent {
         double a = pref >= min ? pref : min;
         double b = min >= max ? min : max;
         return a <= b ? a : b;
+    }
+
+    double adjustWidthByMargin(double width, Insets margin) {
+        if (margin == null || margin == Insets.EMPTY) {
+            return width;
+        }
+        boolean isSnapToPixel = isSnapToPixel();
+        return width - snapSpace(margin.getLeft(), isSnapToPixel) - snapSpace(margin.getRight(), isSnapToPixel);
+    }
+
+    double adjustHeightByMargin(double height, Insets margin) {
+        if (margin == null || margin == Insets.EMPTY) {
+            return height;
+        }
+        boolean isSnapToPixel = isSnapToPixel();
+        return height - snapSpace(margin.getTop(), isSnapToPixel) - snapSpace(margin.getBottom(), isSnapToPixel);
     }
 
     /**
@@ -294,7 +313,7 @@ public class Region extends Parent {
      * Constructors                                                            *
      *                                                                         *
      **************************************************************************/
-    
+
     /**
      * Creates a new Region with an empty Background and and empty Border. The
      * Region defaults to having pickOnBounds set to true, meaning that any pick
@@ -715,7 +734,7 @@ public class Region extends Parent {
     private final class MinPrefMaxProperty extends StyleableDoubleProperty {
         private final String name;
         private final CssMetaData<? extends Styleable, Number> cssMetaData;
-        
+
         MinPrefMaxProperty(String name, double initialValue, CssMetaData<? extends Styleable, Number> cssMetaData) {
             super(initialValue);
             this.name = name;
@@ -1382,7 +1401,7 @@ public class Region extends Parent {
             alt = snapSize(boundedSize(
                     child.minHeight(-1), height != -1? height - top - bottom :
                            child.prefHeight(-1), child.maxHeight(-1)));
-        }        
+        }
         return left + snapSize(boundedSize(child.minWidth(alt), child.prefWidth(alt), child.maxWidth(alt))) + right;
     }
 
@@ -1401,7 +1420,7 @@ public class Region extends Parent {
             alt = snapSize(boundedSize(
                     child.minWidth(-1), width != -1? width - left - right :
                            child.prefWidth(-1), child.maxWidth(-1)));
-        }        
+        }
         return top + snapSize(boundedSize(child.minHeight(alt), child.prefHeight(alt), child.maxHeight(alt))) + bottom;
     }
 
@@ -1423,7 +1442,7 @@ public class Region extends Parent {
         return left + snapSize(boundedSize(child.minWidth(alt), max, child.maxWidth(alt))) + right;
     }
 
-    double computeChildMaxAreaHeight(Node child, Insets margin, double width) {
+     double computeChildMaxAreaHeight(Node child, Insets margin, double width) {
         double max = child.maxHeight(-1);
         if (max == Double.MAX_VALUE) {
             return max;
@@ -1472,7 +1491,7 @@ public class Region extends Parent {
 
     /* Max of children's pref area widths */
 
-    double computeMaxPrefAreaWidth(List<Node>children, Insets margins[], HPos halignment /* ignored for now */) {        
+    double computeMaxPrefAreaWidth(List<Node>children, Insets margins[], HPos halignment /* ignored for now */) {
         return getMaxAreaWidth(children, margins, new double[] { -1 }, false);
     }
 
@@ -1496,6 +1515,64 @@ public class Region extends Parent {
 
     double computeMaxPrefAreaHeight(List<Node>children, Insets childMargins[], double childWidths[], VPos valignment) {
         return getMaxAreaHeight(children, childMargins, childWidths, valignment, false);
+    }
+
+    /**
+     * Returns the size of a Node that should be placed in an area of the specified size,
+     * bounded in it's min/max size, respecting bias.
+     *
+     * @param node the node
+     * @param areaWidth the width of the bounding area where the node is going to be placed
+     * @param areaHeight the height of the bounding area where the node is going to be placed
+     * @param fillWidth if Node should try to fill the area width
+     * @param fillHeight if Node should try to fill the area height
+     * @param result Vec2d object for the result or null if new one should be created
+     * @return Vec2d object with width(x parameter) and height (y parameter)
+     */
+    static Vec2d boundedNodeSizeWithBias(Node node, double areaWidth, double areaHeight,
+            boolean fillWidth, boolean fillHeight, Vec2d result) {
+        if (result == null) {
+            result = new Vec2d();
+        }
+
+        Orientation bias = node.getContentBias();
+
+        double childWidth = 0;
+        double childHeight = 0;
+
+        if (bias == null) {
+            childWidth = boundedSize(
+                    node.minWidth(-1), fillWidth ? areaWidth
+                    : Math.min(areaWidth, node.prefWidth(-1)),
+                    node.maxWidth(-1));
+            childHeight = boundedSize(
+                    node.minHeight(-1), fillHeight ? areaHeight
+                    : Math.min(areaHeight, node.prefHeight(-1)),
+                    node.maxHeight(-1));
+
+        } else if (bias == Orientation.HORIZONTAL) {
+            childWidth = boundedSize(
+                    node.minWidth(-1), fillWidth ? areaWidth
+                    : Math.min(areaWidth, node.prefWidth(-1)),
+                    node.maxWidth(-1));
+            childHeight = boundedSize(
+                    node.minHeight(childWidth), fillHeight ? areaHeight
+                    : Math.min(areaHeight, node.prefHeight(childWidth)),
+                    node.maxHeight(childWidth));
+
+        } else { // bias == VERTICAL
+            childHeight = boundedSize(
+                    node.minHeight(-1), fillHeight ? areaHeight
+                    : Math.min(areaHeight, node.prefHeight(-1)),
+                    node.maxHeight(-1));
+            childWidth = boundedSize(
+                    node.minWidth(childHeight), fillWidth ? areaWidth
+                    : Math.min(areaWidth, node.prefWidth(childHeight)),
+                    node.maxWidth(childHeight));
+        }
+
+        result.set(childWidth, childHeight);
+        return result;
     }
 
     /* utility method for computing the max of children's min or pref heights, taking into account baseline alignment */
@@ -1608,9 +1685,9 @@ public class Region extends Parent {
         Insets childMargin = margin != null? margin : Insets.EMPTY;
 
         position(child, areaX, areaY, areaWidth, areaHeight, areaBaselineOffset,
-                snapSpace(childMargin.getTop(), isSnapToPixel), 
+                snapSpace(childMargin.getTop(), isSnapToPixel),
                 snapSpace(childMargin.getRight(), isSnapToPixel),
-                snapSpace(childMargin.getBottom(), isSnapToPixel), 
+                snapSpace(childMargin.getBottom(), isSnapToPixel),
                 snapSpace(childMargin.getLeft(), isSnapToPixel),
                 halignment, valignment, isSnapToPixel);
     }
@@ -1780,58 +1857,23 @@ public class Region extends Parent {
                                HPos halignment, VPos valignment) {
         layoutInArea(child, areaX, areaY, areaWidth, areaHeight, areaBaselineOffset, margin, fillWidth, fillHeight, halignment, valignment, isSnapToPixel());
     }
-    
+
     public static void layoutInArea(Node child, double areaX, double areaY,
                                double areaWidth, double areaHeight,
                                double areaBaselineOffset,
                                Insets margin, boolean fillWidth, boolean fillHeight,
                                HPos halignment, VPos valignment, boolean isSnapToPixel) {
-        
-        Insets childMargin = margin != null? margin : Insets.EMPTY;
+
+        Insets childMargin = margin != null ? margin : Insets.EMPTY;
         double top = snapSpace(childMargin.getTop(), isSnapToPixel);
         double bottom = snapSpace(childMargin.getBottom(), isSnapToPixel);
         double left = snapSpace(childMargin.getLeft(), isSnapToPixel);
         double right = snapSpace(childMargin.getRight(), isSnapToPixel);
+
         if (child.isResizable()) {
-            Orientation bias = child.getContentBias();
-
-            double innerAreaWidth = areaWidth - left - right;
-            double innerAreaHeight = areaHeight - top - bottom;
-
-            double childWidth = 0;
-            double childHeight = 0;
-
-            if (bias == null) {
-                childWidth = boundedSize(
-                        child.minWidth(-1), fillWidth? innerAreaWidth :
-                                         Math.min(innerAreaWidth,child.prefWidth(-1)),
-                        child.maxWidth(-1));
-                childHeight = boundedSize(
-                        child.minHeight(-1), fillHeight? innerAreaHeight :
-                                         Math.min(innerAreaHeight,child.prefHeight(-1)),
-                        child.maxHeight(-1));
-
-            } else if (bias == Orientation.HORIZONTAL) {
-                childWidth = boundedSize(
-                        child.minWidth(-1), fillWidth? innerAreaWidth :
-                                         Math.min(innerAreaWidth,child.prefWidth(-1)),
-                        child.maxWidth(-1));
-                childHeight = boundedSize(
-                        child.minHeight(childWidth), fillHeight? innerAreaHeight :
-                                         Math.min(innerAreaHeight,child.prefHeight(childWidth)),
-                        child.maxHeight(childWidth));
-
-            } else { // bias == VERTICAL
-                childHeight = boundedSize(
-                        child.minHeight(-1), fillHeight? innerAreaHeight :
-                                         Math.min(innerAreaHeight,child.prefHeight(-1)),
-                        child.maxHeight(-1));
-                childWidth = boundedSize(
-                        child.minWidth(childHeight), fillWidth? innerAreaWidth :
-                                         Math.min(innerAreaWidth,child.prefWidth(childHeight)),
-                        child.maxWidth(childHeight));
-            }
-            child.resize(snapSize(childWidth, isSnapToPixel),snapSize(childHeight, isSnapToPixel));
+            Vec2d size = boundedNodeSizeWithBias(child, areaWidth - left - right, areaHeight - top - bottom,
+                    fillWidth, fillHeight, TEMP_VEC2D);
+            child.resize(snapSize(size.x, isSnapToPixel),snapSize(size.y, isSnapToPixel));
         }
         position(child, areaX, areaY, areaWidth, areaHeight, areaBaselineOffset,
                 top, right, bottom, left, halignment, valignment, isSnapToPixel);
@@ -2180,7 +2222,7 @@ public class Region extends Parent {
     }
 
     private Bounds boundingBox;
-    
+
     /**
      * The layout bounds of this region: {@code 0, 0  width x height}
      *
@@ -2371,7 +2413,7 @@ public class Region extends Parent {
             }
          };
 
-         private static final CssMetaData<Region, Boolean> SCALE_SHAPE = 
+         private static final CssMetaData<Region, Boolean> SCALE_SHAPE =
              new CssMetaData<Region,Boolean>("-fx-scale-shape",
                  BooleanConverter.getInstance(), Boolean.TRUE){
 
@@ -2384,7 +2426,7 @@ public class Region extends Parent {
             }
         };
 
-         private static final CssMetaData<Region,Boolean> POSITION_SHAPE = 
+         private static final CssMetaData<Region,Boolean> POSITION_SHAPE =
              new CssMetaData<Region,Boolean>("-fx-position-shape",
                  BooleanConverter.getInstance(), Boolean.TRUE){
 
@@ -2451,7 +2493,7 @@ public class Region extends Parent {
                 return (StyleableProperty<Number>)node.prefHeightProperty();
             }
         };
-         
+
          private static final CssMetaData<Region, Number> MAX_HEIGHT =
              new CssMetaData<Region,Number>("-fx-max-height",
                  SizeConverter.getInstance(), USE_COMPUTED_SIZE){
@@ -2465,7 +2507,7 @@ public class Region extends Parent {
                 return (StyleableProperty<Number>)node.maxHeightProperty();
             }
         };
-         
+
          private static final CssMetaData<Region, Number> MIN_WIDTH =
              new CssMetaData<Region,Number>("-fx-min-width",
                  SizeConverter.getInstance(), USE_COMPUTED_SIZE){
@@ -2493,7 +2535,7 @@ public class Region extends Parent {
                 return (StyleableProperty<Number>)node.prefWidthProperty();
             }
         };
-         
+
          private static final CssMetaData<Region, Number> MAX_WIDTH =
              new CssMetaData<Region,Number>("-fx-max-width",
                  SizeConverter.getInstance(), USE_COMPUTED_SIZE){
@@ -2543,8 +2585,8 @@ public class Region extends Parent {
      * {@inheritDoc}
      *
      */
-    
-    
+
+
     @Override
     public List<CssMetaData<? extends Styleable, ?>> getCssMetaData() {
         return getClassCssMetaData();
