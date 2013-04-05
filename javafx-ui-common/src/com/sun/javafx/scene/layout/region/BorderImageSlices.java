@@ -31,7 +31,18 @@ import javafx.scene.layout.BorderWidths;
  * A helper class during the conversion process.
  */
 public class BorderImageSlices {
+
+    /**
+     * Using EMPTY results in no border-image being drawn since the slices are zero. You probably
+     * want to use {@link BorderImageSlices#DEFAULT}
+     */
     public static final BorderImageSlices EMPTY = new BorderImageSlices(BorderWidths.EMPTY, false);
+
+    /**
+     * Default border-image-slice is 100%
+     * @see <a href="http://www.w3.org/TR/css3-background/#the-border-image-slice">border-image-slice</a>
+     */
+    public static final BorderImageSlices DEFAULT = new BorderImageSlices(BorderWidths.FULL, false);
 
     public BorderWidths widths;
     public boolean filled;

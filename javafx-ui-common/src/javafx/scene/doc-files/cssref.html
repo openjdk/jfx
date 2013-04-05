@@ -2203,11 +2203,12 @@
     <p>Stroked borders are specified with the properties <span class="propertyname">-fx-border-color</span>,
       <span class="propertyname">-fx-border-style</span>, <span class="propertyname">-fx-border-width</span>,
       <span class="propertyname">-fx-border-radius</span> and <span class="propertyname">-fx-border-insets</span>.
-      Each property contains a series of items. The number of items in the-fx-
-      border-color property determines the number of borders that are painted.
+      Each property contains a series of items. The maximum number of items in the -fx-
+      border-color or -fx-border-style property determines the number of border layers that are painted..
       Each border in the series is painted using information from the
-      corresponding series item of the -fx-border-style, -fx-border-width,
-      -fx-border-radius, and -fx-border-insets properties.</p>
+      corresponding series item of the -fx-border-color, -fx-border-style, -fx-border-width,
+      -fx-border-radius, and -fx-border-insets properties. If there is no -fx-border-color, the default color is black.
+    if there is no -fx-border-style, the default style is solid. </p>
     <p>Image borders are specified with the properties <span class="propertyname">-fx-border-image-source</span>,
       <span class="propertyname">-fx-border-image-repeat</span>, <span class="propertyname">-fx-border-image-slice</span>,
       <span class="propertyname">-fx-border-image-width</span> and <span class="propertyname">-fx-border-image-insets</span>.

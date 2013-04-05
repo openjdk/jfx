@@ -25,6 +25,7 @@
 
 package javafx.scene.layout;
 
+import com.sun.javafx.scene.layout.region.BorderImageSlices;
 import javafx.geometry.Insets;
 import javafx.scene.image.Image;
 
@@ -93,8 +94,9 @@ public class BorderImage {
      * defined for repeatX, repeatY) in each dimension. By default the center is
      * omitted (ie: not drawn), although a BorderImageSlices value of {@code true}
      * for the {@code filled} property will cause the center to be drawn. A
-     * default value for this property will result in BorderImageSlices.EMPTY, which
-     * will essentially draw nothing.
+     * default value for this property will result in BorderImageSlices.DEFAULT, which
+     * is a border-image-slice of 100% 
+     * @see <a href="http://www.w3.org/TR/css3-background/#the-border-image-slice">border-image-slice</a>
      */
     final BorderWidths slices;
     public final BorderWidths getSlices() { return slices; }
@@ -131,7 +133,7 @@ public class BorderImage {
      * @param widths    The widths of the border in each dimension. A null value results in Insets.EMPTY.
      * @param insets    The insets at which to place the border relative to the region.
      *                  A null value results in Insets.EMPTY.
-     * @param slices    The slices for the image. If null, defaults to BorderImageSlices.EMPTY
+     * @param slices    The slices for the image. If null, defaults to BorderImageSlices.DEFAULT
      * @param repeatX    The repeat value for the border image in the x direction. If null, defaults to STRETCH.
      * @param repeatY    The repeat value for the border image in the y direction. If null, defaults to the same
      *                   value as repeatX.
@@ -143,7 +145,7 @@ public class BorderImage {
         this.image = image;
         this.widths = widths == null ? BorderWidths.DEFAULT : widths;
         this.insets = insets == null ? Insets.EMPTY : insets;
-        this.slices = slices == null ? BorderWidths.EMPTY : slices;
+        this.slices = slices == null ? BorderImageSlices.DEFAULT.widths : slices;
         this.filled = filled;
         this.repeatX = repeatX == null ? BorderRepeat.STRETCH : repeatX;
         this.repeatY = repeatY == null ? this.repeatX : repeatY;

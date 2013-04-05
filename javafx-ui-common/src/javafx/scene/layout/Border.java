@@ -116,7 +116,7 @@ public final class Border {
     static final CssMetaData<Node,BorderImageSlices[]> BORDER_IMAGE_SLICE =
             new SubCssMetaData<BorderImageSlices[]> ("-fx-border-image-slice",
                     SliceSequenceConverter.getInstance(),
-                    new BorderImageSlices[] { BorderImageSlices.EMPTY });
+                    new BorderImageSlices[] { BorderImageSlices.DEFAULT});
 
     static final CssMetaData<Node,BorderWidths[]> BORDER_IMAGE_WIDTH =
             new SubCssMetaData<BorderWidths[]>("-fx-border-image-width",

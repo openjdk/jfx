@@ -58,6 +58,12 @@ public final class BorderWidths {
     public static final BorderWidths EMPTY = new BorderWidths(0, 0, 0, 0, false, false, false, false);
 
     /**
+     * A set of widths representing 100% on each side.
+     */
+    public static final BorderWidths FULL = new BorderWidths(1d, 1d, 1d, 1d, true, true, true, true);
+
+
+    /**
      * A non-negative value (with the exception of {@link #AUTO}) indicating the border
      * thickness on the top of the border. This value can be a literal value, or can be
      * treated as a percentage, based on the value of the

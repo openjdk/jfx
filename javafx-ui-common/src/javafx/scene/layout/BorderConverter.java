@@ -36,6 +36,7 @@ import javafx.css.ParsedValue;
 import javafx.css.Styleable;
 import javafx.geometry.Insets;
 import javafx.scene.image.Image;
+import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
 
 /**
@@ -55,8 +56,20 @@ class BorderConverter extends StyleConverterImpl<ParsedValue[], Border> {
     @Override
     public Border convert(Map<CssMetaData<? extends Styleable, ?>, Object> convertedValues) {
         final Paint[][] strokeFills = (Paint[][])convertedValues.get(Border.BORDER_COLOR);
+        final BorderStrokeStyle[][] strokeStyles = (BorderStrokeStyle[][]) convertedValues.get(Border.BORDER_STYLE);
         final String[] imageUrls = (String[]) convertedValues.get(Border.BORDER_IMAGE_SOURCE);
-        final boolean hasStrokes = strokeFills != null && strokeFills.length > 0;
+        //
+        // In W3C CSS, border colors and border images are not layered. In javafx, they are. We've taken the position
+        // that there is one layer per -fx-border-color or -fx-border-image-source. This is consistent with
+        // background-image (see http://www.w3.org/TR/css3-background/#layering). But, in a browser, you can have a
+        // border-style with no corresponding border-color - the border-color just defaults to 'currentColor' (which
+        // we don't have so we'll call it 'black' for the time being). So the number of stroke-border layers is now
+        // determined by the max of strokeFills.length and strokeStyles.length. If there are more styles than fills,
+        // the remaining styles will use the last fill value (this is consistent with handling of the other stroke
+        // border properties). If there aren't any fills at all, then the fill is 'currentColor' (i.e., black) just
+        // as the default stroke is solid.
+        //
+        final boolean hasStrokes = (strokeFills != null && strokeFills.length > 0) || (strokeStyles != null && strokeStyles.length > 0);
         final boolean hasImages = imageUrls != null && imageUrls.length > 0;
 
         // If there are neither background fills nor images, then there is nothing for us to construct.
@@ -64,11 +77,12 @@ class BorderConverter extends StyleConverterImpl<ParsedValue[], Border> {
 
         BorderStroke[] borderStrokes = null;
         if (hasStrokes) {
-            Object tmp = convertedValues.get(Border.BORDER_STYLE);
-            final BorderStrokeStyle[][] strokeStyles = tmp == null ? new BorderStrokeStyle[0][0] : (BorderStrokeStyle[][]) tmp;
-            final int lastStrokeStyle = strokeStyles.length - 1;
 
-            tmp = convertedValues.get(Border.BORDER_WIDTH);
+            final int lastStrokeFill = strokeFills != null ? strokeFills.length - 1 : -1;
+            final int lastStrokeStyle = strokeStyles != null ? strokeStyles.length - 1 : -1;
+            final int nLayers = (lastStrokeFill >= lastStrokeStyle ? lastStrokeFill : lastStrokeStyle) + 1;
+
+            Object tmp = convertedValues.get(Border.BORDER_WIDTH);
             final Margins[] borderWidths = tmp == null ? new Margins[0] : (Margins[]) tmp;
             final int lastMarginIndex = borderWidths.length - 1;
 
@@ -80,11 +94,11 @@ class BorderConverter extends StyleConverterImpl<ParsedValue[], Border> {
             final Insets[] borderInsets = tmp == null ? new Insets[0] : (Insets[]) tmp;
             final int lastInsetsIndex = borderInsets.length - 1;
 
-            for (int i=0; i<strokeFills.length; i++) {
-                if (strokeFills[i] == null) continue;
+            for (int i=0; i<nLayers; i++) {
 
                 BorderStrokeStyle[] styles;
-                if (strokeStyles.length == 0) {
+                // if there are no strokeStyles, then lastStrokeStyle will be < 0
+                if (lastStrokeStyle < 0) {
                     styles = new BorderStrokeStyle[4];
                     styles[0] = styles[1] = styles[2] = styles[3] = BorderStrokeStyle.SOLID;
                 } else {
@@ -96,8 +110,18 @@ class BorderConverter extends StyleConverterImpl<ParsedValue[], Border> {
                         styles[2] == BorderStrokeStyle.NONE &&
                         styles[3] == BorderStrokeStyle.NONE) continue;
 
-                if (borderStrokes == null) borderStrokes = new BorderStroke[strokeFills.length];
-                final Paint[] strokes = strokeFills[i];
+                Paint[] strokes;
+                // if there are no strokeFills, then lastStrokeFill will be < 0
+                if (lastStrokeFill < 0) {
+                    strokes = new Paint[4];
+                    // TODO: should be 'currentColor'
+                    strokes[0] = strokes[1] = strokes[2] = strokes[3] = Color.BLACK;
+                }  else {
+                    strokes = strokeFills[i <= lastStrokeFill ? i : lastStrokeFill];
+                }
+
+                if (borderStrokes == null) borderStrokes = new BorderStroke[nLayers];
+
                 final Margins margins = borderWidths.length == 0 ?
                         null :
                         borderWidths[i <= lastMarginIndex ? i : lastMarginIndex];
@@ -161,7 +185,7 @@ class BorderConverter extends StyleConverterImpl<ParsedValue[], Border> {
                     }
                 }
 
-                final BorderImageSlices slice = slices.length > 0 ? slices[i <= lastSlicesIndex ? i : lastSlicesIndex] : BorderImageSlices.EMPTY;
+                final BorderImageSlices slice = slices.length > 0 ? slices[i <= lastSlicesIndex ? i : lastSlicesIndex] : BorderImageSlices.DEFAULT;
                 final Insets inset = insets.length > 0 ? insets[i <= lastInsetsIndex ? i : lastInsetsIndex] : Insets.EMPTY;
                 final BorderWidths width = widths.length > 0 ? widths[i <= lastWidthsIndex ? i : lastWidthsIndex] : BorderWidths.DEFAULT;
                 final Image img = StyleManager.getInstance().getCachedImage(imageUrls[i]);
