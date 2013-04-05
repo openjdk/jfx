@@ -812,10 +812,7 @@ project(":graphics") {
     sourceSets {
         main.java.srcDirs = ["src/main/java", "src/main/dt", "src/main/jsl-generator"]
         test
-        stub {
-            // The src/main/java is needed for some CSS related tests
-            resources.srcDirs = ["src/stub/resources", "src/main/java"]
-        }
+        stub
     }
 
     dependencies {
@@ -935,7 +932,7 @@ project(":graphics") {
 project(":controls") {
     dependencies {
         compile project(":build-tools"), project(":base"), project(":graphics"), project(":designTime")
-        testCompile files("../graphics/build/classes/stub")
+        testCompile project(":graphics").sourceSets.stub.output
     }
 
     test {
