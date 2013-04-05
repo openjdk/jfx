@@ -75,6 +75,16 @@ public class PrImage implements Filterable {
         return image.getPixelScale();
     }
 
+    public void lock() {
+    }
+
+    public void unlock() {
+    }
+
+    public boolean isLost() {
+        return false;
+    }
+
     public void flush() {
         throw new UnsupportedOperationException("Not supported yet.");
     }

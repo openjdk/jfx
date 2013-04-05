@@ -46,6 +46,10 @@ final class SWPresentable extends SWRTTexture implements Presentable {
         this.pState = pState;
     }
 
+    public boolean lockResources() {
+        return false;
+    }
+
     public boolean prepare(Rectangle dirtyregion) {
         if (!pState.isViewClosed()) {
             /*

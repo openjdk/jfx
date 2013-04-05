@@ -29,6 +29,17 @@ import com.sun.javafx.geom.Rectangle;
 
 public interface Presentable extends RenderTarget {
     /**
+     * Locks any underlying resources needed for a createGraphics/prepare/present
+     * sequence and returns a boolean indicating if the presentable needs to be
+     * recreated.
+     * The resources will be unlocked in either {@link #prepare()} or
+     * {@link #present()}.
+     * 
+     * @return true if the caller should recreate the Presentable
+     */
+    public boolean lockResources();
+
+    /**
      * display the indicated region to the user.
      * @param dirtyregion display region or null for full area
      * @return true if the provided region was successfully displayed,

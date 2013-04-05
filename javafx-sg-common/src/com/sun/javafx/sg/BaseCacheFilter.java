@@ -25,7 +25,6 @@
 
 package com.sun.javafx.sg;
 
-import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.Rectangle;
 import com.sun.scenario.effect.FilterContext;
 import com.sun.scenario.effect.ImageData;
@@ -210,8 +209,18 @@ public abstract class BaseCacheFilter {
         lastXDelta = lastXDelta * xformInfo[0];
         lastYDelta = lastYDelta * xformInfo[1];
 
+        if (cachedImageData != null) {
+            cachedImageData.getUntransformedImage().lock();
+            if (!cachedImageData.validate(fctx)) {
+                cachedImageData.getUntransformedImage().unlock();
+                invalidate();
+            }
+        }
         if (needToRenderCache(fctx, xform, xformInfo)) {
-            invalidate();
+            if (cachedImageData != null) {
+                cachedImageData.getUntransformedImage().unlock();
+                invalidate();
+            }
             // Update the cachedXform to the current xform (ignoring translate).
             cachedXform.setTransform(mxx, myx, mxy, myy, 0.0, 0.0);
             cachedScaleX = xformInfo[0];
@@ -263,6 +272,7 @@ public abstract class BaseCacheFilter {
             impl_renderNodeToScreen(implGraphics, xform);
         } else {
             impl_renderCacheToScreen(implGraphics, implImage, mxt, myt);
+            implImage.unlock();
         }
     }
 
@@ -302,10 +312,12 @@ public abstract class BaseCacheFilter {
 
     /*
      * Do we need to regenerate the cached image?
+     * Assumes that caller locked and validated the cachedImageData.untximage
+     * if not null...
      */
-    boolean needToRenderCache(FilterContext fctx, BaseTransform renderXform,
-                              double[] xformInfo) {
-        if (cachedImageData == null || !cachedImageData.validate(fctx)) {
+    private boolean needToRenderCache(FilterContext fctx, BaseTransform renderXform,
+                                      double[] xformInfo) {
+        if (cachedImageData == null) {
             return true;
         }
         
@@ -411,6 +423,10 @@ public abstract class BaseCacheFilter {
 
     protected void imageDataUnref() {
         if (cachedImageData != null) {
+            // While we hold on to this ImageData we leave the texture
+            // unlocked so it can be reclaimed, but the default unref()
+            // method assumes it was locked.
+            cachedImageData.getUntransformedImage().lock();
             cachedImageData.unref();
             cachedImageData = null;
         }

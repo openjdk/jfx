@@ -27,7 +27,6 @@ package com.sun.javafx.sg.prism;
 
 import java.nio.Buffer;
 import com.sun.glass.ui.Screen;
-import com.sun.glass.ui.View;
 import com.sun.javafx.font.FontStrike;
 import com.sun.javafx.geom.RectBounds;
 import com.sun.javafx.geom.Shape;
@@ -51,6 +50,7 @@ import com.sun.prism.Texture.WrapMode;
 import com.sun.prism.camera.PrismCameraImpl;
 import com.sun.prism.impl.BaseContext;
 import com.sun.prism.impl.BaseGraphics;
+import com.sun.prism.impl.TextureResourcePool;
 import com.sun.prism.impl.VertexBuffer;
 import com.sun.prism.paint.Color;
 import com.sun.prism.shape.ShapeRep;
@@ -151,6 +151,7 @@ public class TestGraphics extends BaseGraphics {
     private static class TestResourceFactory implements ResourceFactory {
         @Override public boolean isDeviceReady() { return true; }
 
+        @Override public TextureResourcePool getTextureResourcePool() { return null; }
         @Override public Texture createTexture(Image image, Texture.Usage usageHint, Texture.WrapMode wrapMode) { return null; }
         @Override public Texture createTexture(PixelFormat formatHint, Texture.Usage usageHint, Texture.WrapMode wrapMode, int w, int h) { return null; }
         @Override public Texture createTexture(MediaFrame frame) { return null; }
@@ -192,6 +193,14 @@ public class TestGraphics extends BaseGraphics {
                 @Override public boolean getLinearFiltering() { return false; }
                 @Override public void setLinearFiltering(boolean linear) { }
                 @Override public void dispose() { }
+                @Override public void lock() { }
+                @Override public void unlock() { }
+                @Override public boolean isLocked() { return true; }
+                @Override public int getLockCount() { return 1; }
+                @Override public void assertLocked() { }
+                @Override public void makePermanent() { }
+                @Override public void contentsUseful() { }
+                @Override public void contentsNotUseful() { }
                 @Override public void setOpaque(boolean opaque) { }
             };
         }

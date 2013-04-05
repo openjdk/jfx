@@ -27,6 +27,7 @@ package com.sun.prism.image;
 
 import com.sun.prism.Graphics;
 import com.sun.prism.ResourceFactory;
+import com.sun.prism.Texture;
 
 public class CompoundCoords {
     // position in the sub-Image matrix
@@ -89,7 +90,9 @@ public class CompoundCoords {
         int idx = 0;
         for (int y = yImg0; y <= yImg1; ++y) {
             for (int x = xImg0; x <= xImg1; ++x) {
-                tileCoords[idx++].draw(t.getTile(x, y, factory), g, xS, yS);
+                Texture tex = t.getTile(x, y, factory);
+                tileCoords[idx++].draw(tex, g, xS, yS);
+                tex.unlock();
             }
         }
     }

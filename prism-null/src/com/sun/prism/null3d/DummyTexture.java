@@ -29,10 +29,16 @@ import com.sun.prism.MediaFrame;
 import com.sun.prism.PixelFormat;
 import com.sun.prism.Texture;
 import com.sun.prism.impl.BaseTexture;
+import com.sun.prism.impl.ManagedResource;
 import com.sun.prism.impl.PrismTrace;
 import java.nio.Buffer;
 
 class DummyTexture extends BaseTexture  {
+    static class DummyManagedResource extends ManagedResource<Object> {
+        DummyManagedResource() {
+            super(new Object(), DummyTexturePool.instance);
+        }
+    };
 
     DummyContext context;
 
@@ -45,10 +51,9 @@ class DummyTexture extends BaseTexture  {
     DummyTexture(DummyContext context, PixelFormat format, WrapMode wrapMode,
                  int contentWidth, int contentHeight, boolean isRTT)
     {
-        super(format, wrapMode,
+        super(new DummyManagedResource(), format, wrapMode,
               contentWidth, contentHeight,
-              0, 0, contentWidth, contentHeight,
-              new DummyResource.DummyRecord());
+              0, 0, contentWidth, contentHeight);
 
         this.context = context;
 
@@ -62,10 +67,6 @@ class DummyTexture extends BaseTexture  {
 
     public DummyContext getContext() {
         return context;
-    }
-
-    @Override
-    public void dispose() {
     }
 
     public void update(Buffer buffer, PixelFormat format, int dstx, int dsty, int srcx, int srcy, int srcw, int srch, int srcscan, boolean skipFlush) {
