@@ -126,6 +126,20 @@ public class TableCell<S,T> extends IndexedCell<T> {
         }
     };
     
+    private ListChangeListener<String> columnStyleClassListener = new ListChangeListener<String>() {
+        @Override public void onChanged(Change<? extends String> c) {
+            while (c.next()) {
+                if (c.wasRemoved()) {
+                    getStyleClass().removeAll(c.getRemoved());
+                }
+                
+                if (c.wasAdded()) {
+                    getStyleClass().addAll(c.getAddedSubList());
+                }
+            }
+        }
+    };
+    
     private final WeakListChangeListener weakSelectedListener = 
             new WeakListChangeListener(selectedListener);
     private final WeakInvalidationListener weakFocusedListener = 
@@ -136,6 +150,8 @@ public class TableCell<S,T> extends IndexedCell<T> {
             new WeakInvalidationListener(editingListener);
     private final WeakListChangeListener weakVisibleLeafColumnsListener =
             new WeakListChangeListener(visibleLeafColumnsListener);
+    private final WeakListChangeListener<String> weakColumnStyleClassListener =
+            new WeakListChangeListener<String>(columnStyleClassListener);
 
     
     /***************************************************************************
@@ -586,7 +602,19 @@ public class TableCell<S,T> extends IndexedCell<T> {
      *         for developers or designers to access this function directly.
      */
     public final void updateTableColumn(TableColumn col) {
+        // remove style class of existing table column, if it is non-null
+        TableColumn<S,T> oldCol = getTableColumn();
+        if (oldCol != null) {
+            oldCol.getStyleClass().removeListener(weakColumnStyleClassListener);
+            getStyleClass().removeAll(oldCol.getStyleClass());
+        }
+        
         setTableColumn(col);
+        
+        if (col != null) {
+            getStyleClass().addAll(col.getStyleClass());
+            col.getStyleClass().addListener(weakColumnStyleClassListener);
+        }
     }
 
 

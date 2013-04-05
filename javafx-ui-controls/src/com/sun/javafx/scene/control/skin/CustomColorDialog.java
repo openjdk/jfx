@@ -285,6 +285,7 @@ public class CustomColorDialog extends HBox {
             colorRectIndicator = new Region();
             colorRectIndicator.setId("color-rect-indicator");
             colorRectIndicator.setManaged(false);
+            colorRectIndicator.setMouseTransparent(true);
             colorRectIndicator.setCache(true);
         
             final Pane colorRectOpacityContainer = new StackPane();
@@ -345,7 +346,7 @@ public class CustomColorDialog extends HBox {
                     new Stop(0, Color.rgb(0, 0, 0, 0)), new Stop(1, Color.rgb(0, 0, 0, 1))), 
                     CornerRadii.EMPTY, Insets.EMPTY)));
             colorRectOverlayTwo.setOnMouseDragged(rectMouseHandler);
-            colorRectOverlayTwo.setOnMouseClicked(rectMouseHandler);
+            colorRectOverlayTwo.setOnMousePressed(rectMouseHandler);
             
             Pane colorRectBlackBorder = new Pane();
             colorRectBlackBorder.setMouseTransparent(true);
@@ -358,6 +359,7 @@ public class CustomColorDialog extends HBox {
 
             colorBarIndicator = new Region();
             colorBarIndicator.setId("color-bar-indicator");
+            colorBarIndicator.setMouseTransparent(true);
             colorBarIndicator.setCache(true);
             
             colorRectIndicator.layoutXProperty().bind(sat.divide(100).multiply(colorRect.widthProperty()));
@@ -373,7 +375,7 @@ public class CustomColorDialog extends HBox {
             };
             
             colorBar.setOnMouseDragged(barMouseHandler);
-            colorBar.setOnMouseClicked(barMouseHandler);
+            colorBar.setOnMousePressed(barMouseHandler);
         
             colorBar.getChildren().setAll(colorBarIndicator);
             colorRectOpacityContainer.getChildren().setAll(colorRectHue, colorRectOverlayOne, colorRectOverlayTwo);
@@ -600,6 +602,7 @@ public class CustomColorDialog extends HBox {
             buttonBox.setId("buttons-hbox");
             
             Button saveButton = new Button("Save");
+            saveButton.setDefaultButton(true);
             saveButton.setOnAction(new EventHandler<ActionEvent>() {
                 @Override public void handle(ActionEvent t) {
                     if (colorSettingsMode == ColorSettingsMode.WEB) {
@@ -630,6 +633,7 @@ public class CustomColorDialog extends HBox {
             });
             
             Button cancelButton = new Button("Cancel");
+            cancelButton.setCancelButton(true);
             cancelButton.setOnAction(new EventHandler<ActionEvent>() {
                 @Override public void handle(ActionEvent e) {
                     customColorProperty.set(getCurrentColor());
