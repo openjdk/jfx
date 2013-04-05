@@ -385,11 +385,15 @@ public class CustomColorDialog extends HBox {
         }
         
         private void updateValues() {
+            if (getCurrentColor() == null) {
+                setCurrentColor(Color.TRANSPARENT);
+            }
             changeIsLocal = true;
             //Initialize hue, sat, bright, color, red, green and blue
             hue.set(getCurrentColor().getHue());
             sat.set(getCurrentColor().getSaturation()*100);
             bright.set(getCurrentColor().getBrightness()*100);
+            alpha.set(getCurrentColor().getOpacity()*100);
             setCustomColor(Color.hsb(hue.get(), clamp(sat.get() / 100), clamp(bright.get() / 100), 
                     clamp(alpha.get()/100)));
             red.set(doubleToInt(getCustomColor().getRed()));
