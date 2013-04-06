@@ -2991,7 +2991,7 @@ public class RegionCSSTest {
                 image.getImage(),
                 BorderWidths.DEFAULT,
                 Insets.EMPTY,
-                BorderWidths.EMPTY,
+                BorderWidths.FULL,
                 false,
                 BorderRepeat.STRETCH,
                 BorderRepeat.STRETCH
@@ -3162,7 +3162,7 @@ public class RegionCSSTest {
                 image.getImage(),
                 new BorderWidths(1, 1, 1, 1, false, false, false, false),
                 Insets.EMPTY,
-                BorderWidths.EMPTY,
+                BorderWidths.FULL,
                 false,
                 BorderRepeat.STRETCH,
                 BorderRepeat.STRETCH
@@ -3181,7 +3181,7 @@ public class RegionCSSTest {
                 image.getImage(),
                 new BorderWidths(1, 2, 1, 2, false, false, false, false),
                 Insets.EMPTY,
-                BorderWidths.EMPTY,
+                BorderWidths.FULL,
                 false,
                 BorderRepeat.STRETCH,
                 BorderRepeat.STRETCH
@@ -3200,7 +3200,7 @@ public class RegionCSSTest {
                 image.getImage(),
                 new BorderWidths(1, 2, 3, 2, false, false, false, false),
                 Insets.EMPTY,
-                BorderWidths.EMPTY,
+                BorderWidths.FULL,
                 false,
                 BorderRepeat.STRETCH,
                 BorderRepeat.STRETCH
@@ -3219,7 +3219,7 @@ public class RegionCSSTest {
                 image.getImage(),
                 new BorderWidths(1, 2, 3, 4, false, false, false, false),
                 Insets.EMPTY,
-                BorderWidths.EMPTY,
+                BorderWidths.FULL,
                 false,
                 BorderRepeat.STRETCH,
                 BorderRepeat.STRETCH
@@ -3238,7 +3238,7 @@ public class RegionCSSTest {
                 image.getImage(),
                 new BorderWidths(1, .02, 1, .02, false, true, false, true),
                 Insets.EMPTY,
-                BorderWidths.EMPTY,
+                BorderWidths.FULL,
                 false,
                 BorderRepeat.STRETCH,
                 BorderRepeat.STRETCH
@@ -3257,7 +3257,7 @@ public class RegionCSSTest {
                 image.getImage(),
                 new BorderWidths(.01, .02, .03, .04, true, true, true, true),
                 Insets.EMPTY,
-                BorderWidths.EMPTY,
+                BorderWidths.FULL,
                 false,
                 BorderRepeat.STRETCH,
                 BorderRepeat.STRETCH
@@ -3279,7 +3279,7 @@ public class RegionCSSTest {
                         BorderWidths.AUTO, BorderWidths.AUTO,
                         BorderWidths.AUTO, BorderWidths.AUTO, false, false, false, false),
                 Insets.EMPTY,
-                BorderWidths.EMPTY,
+                BorderWidths.FULL,
                 false,
                 BorderRepeat.STRETCH,
                 BorderRepeat.STRETCH
@@ -3300,7 +3300,7 @@ public class RegionCSSTest {
                 new BorderWidths(1, BorderWidths.AUTO,
                         1, BorderWidths.AUTO, false, false, false, false),
                 Insets.EMPTY,
-                BorderWidths.EMPTY,
+                BorderWidths.FULL,
                 false,
                 BorderRepeat.STRETCH,
                 BorderRepeat.STRETCH
@@ -3321,7 +3321,7 @@ public class RegionCSSTest {
                 new BorderWidths(1, .02,
                         BorderWidths.AUTO, .02, false, true, false, true),
                 Insets.EMPTY,
-                BorderWidths.EMPTY,
+                BorderWidths.FULL,
                 false,
                 BorderRepeat.STRETCH,
                 BorderRepeat.STRETCH
@@ -3340,7 +3340,7 @@ public class RegionCSSTest {
                 image.getImage(),
                 BorderWidths.DEFAULT,
                 new Insets(1),
-                BorderWidths.EMPTY,
+                BorderWidths.FULL,
                 false,
                 BorderRepeat.STRETCH,
                 BorderRepeat.STRETCH
@@ -3359,7 +3359,7 @@ public class RegionCSSTest {
                 image.getImage(),
                 BorderWidths.DEFAULT,
                 new Insets(1, 2, 1, 2),
-                BorderWidths.EMPTY,
+                BorderWidths.FULL,
                 false,
                 BorderRepeat.STRETCH,
                 BorderRepeat.STRETCH
@@ -3378,7 +3378,7 @@ public class RegionCSSTest {
                 image.getImage(),
                 BorderWidths.DEFAULT,
                 new Insets(1, 2, 3, 2),
-                BorderWidths.EMPTY,
+                BorderWidths.FULL,
                 false,
                 BorderRepeat.STRETCH,
                 BorderRepeat.STRETCH
@@ -3397,7 +3397,7 @@ public class RegionCSSTest {
                 image.getImage(),
                 BorderWidths.DEFAULT,
                 new Insets(1, 2, 3, 4),
-                BorderWidths.EMPTY,
+                BorderWidths.FULL,
                 false,
                 BorderRepeat.STRETCH,
                 BorderRepeat.STRETCH
@@ -3416,7 +3416,7 @@ public class RegionCSSTest {
                 image.getImage(),
                 BorderWidths.DEFAULT,
                 Insets.EMPTY,
-                BorderWidths.EMPTY,
+                BorderWidths.FULL,
                 false,
                 BorderRepeat.STRETCH,
                 BorderRepeat.STRETCH
@@ -3435,7 +3435,7 @@ public class RegionCSSTest {
                 image.getImage(),
                 BorderWidths.DEFAULT,
                 Insets.EMPTY,
-                BorderWidths.EMPTY,
+                BorderWidths.FULL,
                 false,
                 BorderRepeat.REPEAT,
                 BorderRepeat.REPEAT
@@ -3454,7 +3454,7 @@ public class RegionCSSTest {
                 image.getImage(),
                 BorderWidths.DEFAULT,
                 Insets.EMPTY,
-                BorderWidths.EMPTY,
+                BorderWidths.FULL,
                 false,
                 BorderRepeat.ROUND,
                 BorderRepeat.ROUND
@@ -3473,7 +3473,7 @@ public class RegionCSSTest {
                 image.getImage(),
                 BorderWidths.DEFAULT,
                 Insets.EMPTY,
-                BorderWidths.EMPTY,
+                BorderWidths.FULL,
                 false,
                 BorderRepeat.SPACE,
                 BorderRepeat.SPACE
@@ -3492,7 +3492,7 @@ public class RegionCSSTest {
                 image.getImage(),
                 BorderWidths.DEFAULT,
                 Insets.EMPTY,
-                BorderWidths.EMPTY,
+                BorderWidths.FULL,
                 false,
                 BorderRepeat.ROUND,
                 BorderRepeat.STRETCH
@@ -3511,7 +3511,7 @@ public class RegionCSSTest {
                 image.getImage(),
                 BorderWidths.DEFAULT,
                 Insets.EMPTY,
-                BorderWidths.EMPTY,
+                BorderWidths.FULL,
                 false,
                 BorderRepeat.ROUND,
                 BorderRepeat.REPEAT
