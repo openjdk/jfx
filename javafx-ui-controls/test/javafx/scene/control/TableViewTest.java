@@ -1117,4 +1117,91 @@ public class TableViewTest {
         lastNameCol.setSortType(ASCENDING);
         assertEquals(4, rt29330_count);
     }
+    
+    @Test public void test_rt29313_selectedIndices() {
+        TableView<Person> table = new TableView<Person>();
+        table.setItems(FXCollections.observableArrayList(
+              new Person("Jacob", "Smith", "jacob.smith@example.com"),
+              new Person("Isabella", "Johnson", "isabella.johnson@example.com"),
+              new Person("Ethan", "Williams", "ethan.williams@example.com"),
+              new Person("Emma", "Jones", "emma.jones@example.com"),
+              new Person("Michael", "Brown", "michael.brown@example.com")));
+        
+        TableSelectionModel sm = table.getSelectionModel();
+        
+        TableColumn firstNameCol = new TableColumn("First Name");
+        firstNameCol.setCellValueFactory(new PropertyValueFactory<Person, String>("firstName"));
+
+        TableColumn lastNameCol = new TableColumn("Last Name");
+        lastNameCol.setCellValueFactory(new PropertyValueFactory<Person, String>("lastName"));
+        
+        TableColumn emailCol = new TableColumn("Email");
+        emailCol.setCellValueFactory(new PropertyValueFactory<Person, String>("email"));
+        
+        table.getColumns().addAll(firstNameCol, lastNameCol, emailCol);
+        sm.setCellSelectionEnabled(true);
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+        
+        assertTrue(sm.getSelectedIndices().isEmpty());
+        
+        // only (0,0) should be selected, so selected indices should be [0]
+        sm.select(0, firstNameCol);
+        assertEquals(1, sm.getSelectedIndices().size());
+        
+        // now (0,0) and (1,0) should be selected, so selected indices should be [0, 1]
+        sm.select(1, firstNameCol);
+        assertEquals(2, sm.getSelectedIndices().size());
+        
+        // now (0,0), (1,0) and (1,1) should be selected, but selected indices 
+        // should remain as [0, 1], as we don't want selected indices to become
+        // [0,1,1] (which is what RT-29313 is about)
+        sm.select(1, lastNameCol);
+        assertEquals(2, sm.getSelectedIndices().size());
+        assertEquals(0, sm.getSelectedIndices().get(0));
+        assertEquals(1, sm.getSelectedIndices().get(1));
+    }
+    
+    @Test public void test_rt29313_selectedItems() {
+        Person p0, p1;
+        TableView<Person> table = new TableView<Person>();
+        table.setItems(FXCollections.observableArrayList(
+              p0 = new Person("Jacob", "Smith", "jacob.smith@example.com"),
+              p1 = new Person("Isabella", "Johnson", "isabella.johnson@example.com"),
+              new Person("Ethan", "Williams", "ethan.williams@example.com"),
+              new Person("Emma", "Jones", "emma.jones@example.com"),
+              new Person("Michael", "Brown", "michael.brown@example.com")));
+        
+        TableSelectionModel sm = table.getSelectionModel();
+        
+        TableColumn firstNameCol = new TableColumn("First Name");
+        firstNameCol.setCellValueFactory(new PropertyValueFactory<Person, String>("firstName"));
+
+        TableColumn lastNameCol = new TableColumn("Last Name");
+        lastNameCol.setCellValueFactory(new PropertyValueFactory<Person, String>("lastName"));
+        
+        TableColumn emailCol = new TableColumn("Email");
+        emailCol.setCellValueFactory(new PropertyValueFactory<Person, String>("email"));
+        
+        table.getColumns().addAll(firstNameCol, lastNameCol, emailCol);
+        sm.setCellSelectionEnabled(true);
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+        
+        assertTrue(sm.getSelectedItems().isEmpty());
+        
+        // only (0,0) should be selected, so selected items should be [p0]
+        sm.select(0, firstNameCol);
+        assertEquals(1, sm.getSelectedItems().size());
+        
+        // now (0,0) and (1,0) should be selected, so selected items should be [p0, p1]
+        sm.select(1, firstNameCol);
+        assertEquals(2, sm.getSelectedItems().size());
+        
+        // now (0,0), (1,0) and (1,1) should be selected, but selected items 
+        // should remain as [p0, p1], as we don't want selected items to become
+        // [p0,p1,p1] (which is what RT-29313 is about)
+        sm.select(1, lastNameCol);
+        assertEquals(2, sm.getSelectedItems().size());
+        assertEquals(p0, sm.getSelectedItems().get(0));
+        assertEquals(p1, sm.getSelectedItems().get(1));
+    }
 }

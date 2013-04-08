@@ -1608,4 +1608,105 @@ public class TreeTableViewTest {
         lastNameCol.setSortType(ASCENDING);
         assertEquals(4, rt29330_count);
     }
+    
+    @Test public void test_rt29313_selectedIndices() {
+        ObservableList<TreeItem<Person>> persons = FXCollections.observableArrayList(
+                new TreeItem<Person>(new Person("Jacob", "Smith", "jacob.smith@example.com")),
+                new TreeItem<Person>(new Person("Isabella", "Johnson", "isabella.johnson@example.com")),
+                new TreeItem<Person>(new Person("Ethan", "Williams", "ethan.williams@example.com")),
+                new TreeItem<Person>(new Person("Emma", "Jones", "emma.jones@example.com")),
+                new TreeItem<Person>(new Person("Michael", "Brown", "michael.brown@example.com")));
+                
+        TreeTableView<Person> table = new TreeTableView<>();
+        
+        TreeItem<Person> root = new TreeItem<Person>(new Person("Root", null, null));
+        root.setExpanded(true);
+        table.setRoot(root);
+        table.setShowRoot(false);
+        root.getChildren().setAll(persons);
+        
+        TableSelectionModel sm = table.getSelectionModel();
+        
+        TreeTableColumn firstNameCol = new TreeTableColumn("First Name");
+        firstNameCol.setCellValueFactory(new TreeItemPropertyValueFactory<Person, String>("firstName"));
+
+        TreeTableColumn lastNameCol = new TreeTableColumn("Last Name");
+        lastNameCol.setCellValueFactory(new TreeItemPropertyValueFactory<Person, String>("lastName"));
+        
+        TreeTableColumn emailCol = new TreeTableColumn("Email");
+        emailCol.setCellValueFactory(new TreeItemPropertyValueFactory<Person, String>("email"));
+        
+        table.getColumns().addAll(firstNameCol, lastNameCol, emailCol);
+        sm.setCellSelectionEnabled(true);
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+        
+        assertTrue(sm.getSelectedIndices().isEmpty());
+        
+        // only (0,0) should be selected, so selected indices should be [0]
+        sm.select(0, firstNameCol);
+        assertEquals(1, sm.getSelectedIndices().size());
+        
+        // now (0,0) and (1,0) should be selected, so selected indices should be [0, 1]
+        sm.select(1, firstNameCol);
+        assertEquals(2, sm.getSelectedIndices().size());
+        
+        // now (0,0), (1,0) and (1,1) should be selected, but selected indices 
+        // should remain as [0, 1], as we don't want selected indices to become
+        // [0,1,1] (which is what RT-29313 is about)
+        sm.select(1, lastNameCol);
+        assertEquals(2, sm.getSelectedIndices().size());
+        assertEquals(0, sm.getSelectedIndices().get(0));
+        assertEquals(1, sm.getSelectedIndices().get(1));
+    }
+    
+    @Test public void test_rt29313_selectedItems() {
+        TreeItem<Person> p0, p1;
+        ObservableList<TreeItem<Person>> persons = FXCollections.observableArrayList(
+                p0 = new TreeItem<Person>(new Person("Jacob", "Smith", "jacob.smith@example.com")),
+                p1 = new TreeItem<Person>(new Person("Isabella", "Johnson", "isabella.johnson@example.com")),
+                new TreeItem<Person>(new Person("Ethan", "Williams", "ethan.williams@example.com")),
+                new TreeItem<Person>(new Person("Emma", "Jones", "emma.jones@example.com")),
+                new TreeItem<Person>(new Person("Michael", "Brown", "michael.brown@example.com")));
+                
+        TreeTableView<Person> table = new TreeTableView<>();
+        
+        TreeItem<Person> root = new TreeItem<Person>(new Person("Root", null, null));
+        root.setExpanded(true);
+        table.setRoot(root);
+        table.setShowRoot(false);
+        root.getChildren().setAll(persons);
+        
+        TableSelectionModel sm = table.getSelectionModel();
+        
+        TreeTableColumn firstNameCol = new TreeTableColumn("First Name");
+        firstNameCol.setCellValueFactory(new TreeItemPropertyValueFactory<Person, String>("firstName"));
+
+        TreeTableColumn lastNameCol = new TreeTableColumn("Last Name");
+        lastNameCol.setCellValueFactory(new TreeItemPropertyValueFactory<Person, String>("lastName"));
+        
+        TreeTableColumn emailCol = new TreeTableColumn("Email");
+        emailCol.setCellValueFactory(new TreeItemPropertyValueFactory<Person, String>("email"));
+        
+        table.getColumns().addAll(firstNameCol, lastNameCol, emailCol);
+        sm.setCellSelectionEnabled(true);
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+        
+        assertTrue(sm.getSelectedItems().isEmpty());
+        
+        // only (0,0) should be selected, so selected items should be [p0]
+        sm.select(0, firstNameCol);
+        assertEquals(1, sm.getSelectedItems().size());
+        
+        // now (0,0) and (1,0) should be selected, so selected items should be [p0, p1]
+        sm.select(1, firstNameCol);
+        assertEquals(2, sm.getSelectedItems().size());
+        
+        // now (0,0), (1,0) and (1,1) should be selected, but selected items 
+        // should remain as [p0, p1], as we don't want selected items to become
+        // [p0,p1,p1] (which is what RT-29313 is about)
+        sm.select(1, lastNameCol);
+        assertEquals(2, sm.getSelectedItems().size());
+        assertEquals(p0, sm.getSelectedItems().get(0));
+        assertEquals(p1, sm.getSelectedItems().get(1));
+    }
 }

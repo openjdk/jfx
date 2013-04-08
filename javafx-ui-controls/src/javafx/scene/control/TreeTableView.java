@@ -36,6 +36,7 @@ import com.sun.javafx.scene.control.skin.TreeTableViewSkin;
 import com.sun.javafx.scene.control.skin.VirtualContainerBase;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
+import java.util.BitSet;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
@@ -1933,6 +1934,8 @@ public class TreeTableView<S> extends Control {
     // package for testing
     static class TreeTableViewArrayListSelectionModel<S> extends TreeTableViewSelectionModel<S> {
 
+        private BitSet selectedIndicesBitSet;
+        
         /***********************************************************************
          *                                                                     *
          * Constructors                                                        *
@@ -1942,6 +1945,7 @@ public class TreeTableView<S> extends Control {
         public TreeTableViewArrayListSelectionModel(final TreeTableView<S> treeTableView) {
             super(treeTableView);
             this.treeTableView = treeTableView;
+            this.selectedIndicesBitSet = new BitSet();
             
             this.treeTableView.rootProperty().addListener(weakRootPropertyListener);
             updateTreeEventListener(null, treeTableView.getRoot());
@@ -1962,6 +1966,49 @@ public class TreeTableView<S> extends Control {
             selectedCells.addListener(new ListChangeListener<TreeTablePosition<S,?>>() {
                 @Override
                 public void onChanged(final ListChangeListener.Change<? extends TreeTablePosition<S,?>> c) {
+                    // RT-29313: because selectedIndices and selectedItems repesent
+                    // row-based selection, we need to mark the selectedIndices
+                    // and selectedItems lists dirty when the selectedCells changes,
+                    // as they will need to have their sizes recalculated upon
+                    // their next request. This is because their size can not
+                    // simply defer to the selectedCells size as selectedCells
+                    // may contain be representing multiple cells in one row
+                    // (e.g. selectedCells of [(0,1), (1,1), (1,2), (1,3)] should
+                    // result in a selectedIndices of [0,1], not [0,1,1,1]).
+                    // An inefficient solution would rebuild the selectedIndicesBitSet
+                    // every time the change happens, but we can do better than
+                    // that.
+                    // 
+                    // Inefficient solution:
+                    //
+                    // selectedIndicesBitSet.clear();
+                    // for (int i = 0; i < selectedCells.size(); i++) {
+                    //     final TreeTablePosition<S,?> tp = selectedCells.get(i);
+                    //     final int row = tp.getRow();
+                    //     selectedIndicesBitSet.set(row);
+                    // }
+                    // 
+                    // A more efficient solution:
+                    while (c.next()) {
+                        if (c.wasRemoved()) {
+                            List<? extends TreeTablePosition<S,?>> removed = c.getRemoved();
+                            for (int i = 0; i < removed.size(); i++) {
+                                final TreeTablePosition<S,?> tp = removed.get(i);
+                                final int row = tp.getRow();
+                                selectedIndicesBitSet.clear(row);
+                            }
+                        }
+                        if (c.wasAdded()) {
+                            List<? extends TreeTablePosition<S,?>> added = c.getAddedSubList();
+                            for (int i = 0; i < added.size(); i++) {
+                                final TreeTablePosition<S,?> tp = added.get(i);
+                                final int row = tp.getRow();
+                                selectedIndicesBitSet.set(row);
+                            }
+                        }
+                    }
+                    c.reset();
+                    
                     // when the selectedCells observableArrayList changes, we manually call
                     // the observers of the selectedItems, selectedIndices and
                     // selectedCells lists.
@@ -1980,12 +2027,32 @@ public class TreeTableView<S> extends Control {
             });
 
             selectedIndices = new ReadOnlyUnbackedObservableList<Integer>() {
-                @Override public Integer get(int i) {
-                    return selectedCells.get(i).getRow();
+                @Override public Integer get(int index) {
+                    if (index < 0 || index >= getItemCount()) return -1;
+
+                    for (int pos = 0, val = selectedIndicesBitSet.nextSetBit(0);
+                        val >= 0 || pos == index;
+                        pos++, val = selectedIndicesBitSet.nextSetBit(val+1)) {
+                            if (pos == index) return val;
+                    }
+
+                    return -1;
                 }
 
                 @Override public int size() {
-                    return selectedCells.size();
+                    return selectedIndicesBitSet.cardinality();
+                }
+
+                @Override public boolean contains(Object o) {
+                    if (o instanceof Number) {
+                        Number n = (Number) o;
+                        int index = n.intValue();
+
+                        return index > 0 && index < selectedIndicesBitSet.length() &&
+                                selectedIndicesBitSet.get(index);
+                    }
+
+                    return false;
                 }
             };
 
