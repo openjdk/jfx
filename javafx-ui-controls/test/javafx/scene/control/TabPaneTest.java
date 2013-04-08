@@ -657,8 +657,8 @@ public class TabPaneTest {
 
         root.getChildren().add(tabPane);
         show();
+        tabPane.requestFocus();
 
-        tk.firePulse();
         assertTrue(tabPane.isFocused());
         
         tab2.setDisable(true);
@@ -668,13 +668,11 @@ public class TabPaneTest {
 
         KeyEventFirer keyboard = new KeyEventFirer(tabPane);
         keyboard.doRightArrowPress();
-        tk.firePulse();
 
         assertEquals(2, tabPane.getSelectionModel().getSelectedIndex());
         assertEquals(tab3, tabPane.getSelectionModel().getSelectedItem());
 
         keyboard.doLeftArrowPress();
-        tk.firePulse();
 
         assertEquals(0, tabPane.getSelectionModel().getSelectedIndex());
         assertEquals(tab1, tabPane.getSelectionModel().getSelectedItem());
