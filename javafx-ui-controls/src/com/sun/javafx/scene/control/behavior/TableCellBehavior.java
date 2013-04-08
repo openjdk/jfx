@@ -35,7 +35,7 @@ import javafx.scene.control.TableView.TableViewFocusModel;
 
 /**
  */
-public class TableCellBehavior extends TableCellBehaviorBase<TableCell> {
+public class TableCellBehavior<S,T> extends TableCellBehaviorBase<S, TableCell<S, T>> {
     
     /***************************************************************************
      *                                                                         *

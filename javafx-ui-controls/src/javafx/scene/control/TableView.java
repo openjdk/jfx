@@ -29,6 +29,7 @@ import com.sun.javafx.collections.MappingChange;
 import com.sun.javafx.collections.NonIterableChange;
 
 import java.util.ArrayList;
+import java.util.BitSet;
 import java.util.List;
 
 import javafx.beans.InvalidationListener;
@@ -387,36 +388,6 @@ public class TableView<S> extends Control {
         // we watch the columns list, such that when it changes we can update
         // the leaf columns and visible leaf columns lists (which are read-only).
         getColumns().addListener(weakColumnsObserver);
-        getColumns().addListener(new ListChangeListener<TableColumn<S,?>>() {
-            @Override
-            public void onChanged(Change<? extends TableColumn<S,?>> c) {
-                while (c.next()) {
-                    // update the TableColumn.tableView property
-                    for (TableColumn<S,?> tc : c.getRemoved()) {
-                        tc.setTableView(null);
-                    }
-                    for (TableColumn<S,?> tc : c.getAddedSubList()) {
-                        tc.setTableView(TableView.this);
-                    }
-
-                    // set up listeners
-                    TableUtil.removeTableColumnListener(c.getRemoved(),
-                            weakColumnVisibleObserver,
-                            weakColumnSortableObserver,
-                            weakColumnSortTypeObserver,
-                            weakColumnComparatorObserver);
-                    TableUtil.addTableColumnListener(c.getAddedSubList(),
-                            weakColumnVisibleObserver,
-                            weakColumnSortableObserver,
-                            weakColumnSortTypeObserver,
-                            weakColumnComparatorObserver);
-                }
-                    
-                // We don't maintain a bind for leafColumns, we simply call this update
-                // function behind the scenes in the appropriate places.
-                updateVisibleLeafColumns();
-            }
-        });
 
         // watch for changes to the sort order list - and when it changes run
         // the sort method.
@@ -485,22 +456,45 @@ public class TableView<S> extends Control {
     
     private final ListChangeListener<TableColumn<S,?>> columnsObserver = new ListChangeListener<TableColumn<S,?>>() {
         @Override public void onChanged(Change<? extends TableColumn<S,?>> c) {
+            // We don't maintain a bind for leafColumns, we simply call this update
+            // function behind the scenes in the appropriate places.
             updateVisibleLeafColumns();
             
             // Fix for RT-15194: Need to remove removed columns from the 
             // sortOrder list.
-            List<TableColumn> toRemove = new ArrayList<TableColumn>();
+            List<TableColumn<S,?>> toRemove = new ArrayList<TableColumn<S,?>>();
             while (c.next()) {
-                TableUtil.removeColumnsListener(c.getRemoved(), weakColumnsObserver);
-                TableUtil.addColumnsListener(c.getAddedSubList(), weakColumnsObserver);
+                final List<? extends TableColumn<S, ?>> removed = c.getRemoved();
+                final List<? extends TableColumn<S, ?>> added = c.getAddedSubList();
                 
                 if (c.wasRemoved()) {
-                    toRemove.addAll(c.getRemoved());
+                    toRemove.addAll(removed);
+                    for (TableColumn<S,?> tc : removed) {
+                        tc.setTableView(null);
+                    }
                 }
                 
                 if (c.wasAdded()) {
-                    toRemove.removeAll(c.getAddedSubList());
+                    toRemove.removeAll(added);
+                    for (TableColumn<S,?> tc : added) {
+                        tc.setTableView(TableView.this);
+                    }
                 }
+                
+                // set up listeners
+                TableUtil.removeColumnsListener(removed, weakColumnsObserver);
+                TableUtil.addColumnsListener(added, weakColumnsObserver);
+                
+                TableUtil.removeTableColumnListener(c.getRemoved(),
+                        weakColumnVisibleObserver,
+                        weakColumnSortableObserver,
+                        weakColumnSortTypeObserver,
+                        weakColumnComparatorObserver);
+                TableUtil.addTableColumnListener(c.getAddedSubList(),
+                        weakColumnVisibleObserver,
+                        weakColumnSortableObserver,
+                        weakColumnSortTypeObserver,
+                        weakColumnComparatorObserver);
             }
             
             sortOrder.removeAll(toRemove);
@@ -559,8 +553,8 @@ public class TableView<S> extends Control {
     private final WeakInvalidationListener weakColumnComparatorObserver = 
             new WeakInvalidationListener(columnComparatorObserver);
     
-    private final WeakListChangeListener weakColumnsObserver = 
-            new WeakListChangeListener(columnsObserver);
+    private final WeakListChangeListener<TableColumn<S,?>> weakColumnsObserver = 
+            new WeakListChangeListener<TableColumn<S,?>>(columnsObserver);
     
     private final WeakInvalidationListener weakCellSelectionModelInvalidationListener = 
             new WeakInvalidationListener(cellSelectionModelInvalidationListener);
@@ -1427,6 +1421,7 @@ public class TableView<S> extends Control {
     static class TableViewArrayListSelectionModel<S> extends TableViewSelectionModel<S> {
         
         private int itemCount = 0;
+        private BitSet selectedIndicesBitSet;
 
         /***********************************************************************
          *                                                                     *
@@ -1437,6 +1432,7 @@ public class TableView<S> extends Control {
         public TableViewArrayListSelectionModel(final TableView<S> tableView) {
             super(tableView);
             this.tableView = tableView;
+            this.selectedIndicesBitSet = new BitSet();
             
             updateItemCount();
             
@@ -1461,8 +1457,50 @@ public class TableView<S> extends Control {
             
             selectedCells = FXCollections.<TablePosition<S,?>>observableArrayList();
             selectedCells.addListener(new ListChangeListener<TablePosition<S,?>>() {
-                @Override
-                public void onChanged(final Change<? extends TablePosition<S,?>> c) {
+                @Override public void onChanged(final Change<? extends TablePosition<S,?>> c) {
+                    // RT-29313: because selectedIndices and selectedItems repesent
+                    // row-based selection, we need to mark the selectedIndices
+                    // and selectedItems lists dirty when the selectedCells changes,
+                    // as they will need to have their sizes recalculated upon
+                    // their next request. This is because their size can not
+                    // simply defer to the selectedCells size as selectedCells
+                    // may contain be representing multiple cells in one row
+                    // (e.g. selectedCells of [(0,1), (1,1), (1,2), (1,3)] should
+                    // result in a selectedIndices of [0,1], not [0,1,1,1]).
+                    // An inefficient solution would rebuild the selectedIndicesBitSet
+                    // every time the change happens, but we can do better than
+                    // that.
+                    // 
+                    // Inefficient solution:
+                    //
+                    // selectedIndicesBitSet.clear();
+                    // for (int i = 0; i < selectedCells.size(); i++) {
+                    //     final TablePosition<S,?> tp = selectedCells.get(i);
+                    //     final int row = tp.getRow();
+                    //     selectedIndicesBitSet.set(row);
+                    // }
+                    // 
+                    // A more efficient solution:
+                    while (c.next()) {
+                        if (c.wasRemoved()) {
+                            List<? extends TablePosition<S,?>> removed = c.getRemoved();
+                            for (int i = 0; i < removed.size(); i++) {
+                                final TablePosition<S,?> tp = removed.get(i);
+                                final int row = tp.getRow();
+                                selectedIndicesBitSet.clear(row);
+                            }
+                        }
+                        if (c.wasAdded()) {
+                            List<? extends TablePosition<S,?>> added = c.getAddedSubList();
+                            for (int i = 0; i < added.size(); i++) {
+                                final TablePosition<S,?> tp = added.get(i);
+                                final int row = tp.getRow();
+                                selectedIndicesBitSet.set(row);
+                            }
+                        }
+                    }
+                    c.reset();
+                    
                     // when the selectedCells observableArrayList changes, we manually call
                     // the observers of the selectedItems, selectedIndices and
                     // selectedCells lists.
@@ -1481,12 +1519,32 @@ public class TableView<S> extends Control {
             });
 
             selectedIndices = new ReadOnlyUnbackedObservableList<Integer>() {
-                @Override public Integer get(int i) {
-                    return selectedCells.get(i).getRow();
+                @Override public Integer get(int index) {
+                    if (index < 0 || index >= getItemCount()) return -1;
+
+                    for (int pos = 0, val = selectedIndicesBitSet.nextSetBit(0);
+                        val >= 0 || pos == index;
+                        pos++, val = selectedIndicesBitSet.nextSetBit(val+1)) {
+                            if (pos == index) return val;
+                    }
+
+                    return -1;
                 }
 
                 @Override public int size() {
-                    return selectedCells.size();
+                    return selectedIndicesBitSet.cardinality();
+                }
+
+                @Override public boolean contains(Object o) {
+                    if (o instanceof Number) {
+                        Number n = (Number) o;
+                        int index = n.intValue();
+
+                        return index > 0 && index < selectedIndicesBitSet.length() &&
+                                selectedIndicesBitSet.get(index);
+                    }
+
+                    return false;
                 }
             };
 

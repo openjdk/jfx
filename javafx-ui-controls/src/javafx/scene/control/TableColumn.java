@@ -317,7 +317,6 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
                 }
                 for (TableColumn<S,?> tc : c.getAddedSubList()) {
                     tc.setTableView(getTableView());
-                    tc.setVisible(isVisible()); // See visible property TODO, we probably don't want this
                 }
 
                 updateColumnWidths();

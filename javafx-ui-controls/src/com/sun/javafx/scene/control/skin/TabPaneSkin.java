@@ -1256,7 +1256,8 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
             });    
 
             // initialize pseudo-class state
-            pseudoClassStateChanged(SELECTED_PSEUDOCLASS_STATE, tab.isSelected());            
+            pseudoClassStateChanged(SELECTED_PSEUDOCLASS_STATE, tab.isSelected());
+            pseudoClassStateChanged(DISABLED_PSEUDOCLASS_STATE, tab.isDisable());
             final Side side = getSkinnable().getSide();
             pseudoClassStateChanged(TOP_PSEUDOCLASS_STATE, (side == Side.TOP));
             pseudoClassStateChanged(RIGHT_PSEUDOCLASS_STATE, (side == Side.RIGHT));

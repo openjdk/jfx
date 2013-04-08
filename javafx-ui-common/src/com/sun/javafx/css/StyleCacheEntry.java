@@ -42,8 +42,7 @@ public final class StyleCacheEntry {
     }
     
     public StyleCacheEntry(StyleCacheEntry sharedCacheEntry) {
-        this.sharedCacheRef = sharedCacheEntry != null ? new WeakReference(sharedCacheEntry) : null;
-        this.values = new HashMap<String, CalculatedValue>();
+        this.sharedCacheRef = sharedCacheEntry != null ? new WeakReference<StyleCacheEntry>(sharedCacheEntry) : null;
     }   
     
     public CalculatedValue getFont() {
@@ -55,14 +54,18 @@ public final class StyleCacheEntry {
     }
     
     public CalculatedValue get(String property) {
-
+//        if (values == null) return null;
+        
         CalculatedValue cv = null;
-        if (values.isEmpty() == false) {
+        
+        if (values != null && ! values.isEmpty()) {
             cv = values.get(property);
         }
         if (cv == null && sharedCacheRef != null) {
             final StyleCacheEntry ce = sharedCacheRef.get();
-            if (ce != null) cv = ce.values.get(property);
+            if (ce != null && ce.values != null) {
+                cv = ce.values.get(property);
+            }
             // if referent is null, we should skip the value.
             else cv = CalculatedValue.SKIP;
         }
@@ -81,18 +84,26 @@ public final class StyleCacheEntry {
             || (cv.isRelative() &&
                 (font.getOrigin() == StyleOrigin.INLINE || 
                  font.getOrigin() == StyleOrigin.USER));
-
+        
         if (isLocal) {
+            makeValuesMap();
             values.put(property, cv);
         } else {
             // if isLocal is false, then sharedCacheRef cannot be null.
             final StyleCacheEntry ce = sharedCacheRef.get();
+            ce.makeValuesMap();
             if (ce != null && ce.values.containsKey(property) == false) {
                 // don't override value already in shared cache.
                 ce.values.put(property, cv);
             }
         }
-  }
+    }
+    
+    private void makeValuesMap() {
+        if (values == null) {
+            this.values = new HashMap<String, CalculatedValue>();
+        }
+    }
 
     public final static class Key {
 
@@ -108,10 +119,6 @@ public final class StyleCacheEntry {
             }
         }
         
-        private Key(Key other) {
-            this(other.pseudoClassStates, other.pseudoClassStates != null ? other.pseudoClassStates.length : 0);
-        }
-
         @Override
         public int hashCode() {
             int hash = 7;
@@ -168,6 +175,6 @@ public final class StyleCacheEntry {
     }
         
     private final Reference<StyleCacheEntry> sharedCacheRef;
-    private final Map<String,CalculatedValue> values;
+    private Map<String,CalculatedValue> values;
     private CalculatedValue  font; // for use in converting font relative sizes
 }

@@ -79,18 +79,23 @@ import java.util.Map;
 public final class StyleCache {
  
     public StyleCache() {
-        this.entries = new HashMap<StyleCacheEntry.Key,StyleCacheEntry>();
+        // no-op
     }
     
     public void clear() {
+        if (entries == null) return;
         entries.clear();
     }
         
     public void putStyleCacheEntry(StyleCacheEntry.Key entryKey, StyleCacheEntry entry) {
+        if (entries == null) {
+            this.entries = new HashMap<StyleCacheEntry.Key,StyleCacheEntry>();
+        }
         entries.put(entryKey, entry);
     }
     
     public StyleCacheEntry getStyleCacheEntry(StyleCacheEntry.Key entryKey) {
+        if (entries == null) return null;
         return entries.get(entryKey);
     }
     
@@ -99,10 +104,6 @@ public final class StyleCache {
         public Key(int[] styleMapIds, int count) {
             this.styleMapIds = new int[count];
             System.arraycopy(styleMapIds, 0, this.styleMapIds, 0, count);
-        }
-        
-        public Key(Key other) {
-            this(other.styleMapIds, other.styleMapIds != null ? other.styleMapIds.length : 0);
         }
 
         @Override
@@ -150,6 +151,6 @@ public final class StyleCache {
         final int[] styleMapIds;
     }
     
-    private final Map<StyleCacheEntry.Key,StyleCacheEntry> entries;
+    private Map<StyleCacheEntry.Key,StyleCacheEntry> entries;
     
 }

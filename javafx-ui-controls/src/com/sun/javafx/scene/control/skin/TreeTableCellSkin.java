@@ -39,13 +39,13 @@ import javafx.scene.control.TreeTableView;
 
 /**
  */
-public class TreeTableCellSkin extends TableCellSkinBase<TreeTableCell, TreeTableCellBehavior> {
+public class TreeTableCellSkin<S,T> extends TableCellSkinBase<TreeTableCell<S,T>, TreeTableCellBehavior<S,T>> {
     
-    private final TreeTableCell treeTableCell;
-    private final TreeTableColumn tableColumn;
+    private final TreeTableCell<S,T> treeTableCell;
+    private final TreeTableColumn<S,T> tableColumn;
     
-    public TreeTableCellSkin(TreeTableCell treeTableCell) {
-        super(treeTableCell, new TreeTableCellBehavior(treeTableCell));
+    public TreeTableCellSkin(TreeTableCell<S,T> treeTableCell) {
+        super(treeTableCell, new TreeTableCellBehavior<S,T>(treeTableCell));
         
         this.treeTableCell = treeTableCell;
         this.tableColumn = treeTableCell.getTableColumn();
@@ -68,27 +68,27 @@ public class TreeTableCellSkin extends TableCellSkinBase<TreeTableCell, TreeTabl
         // indentation (which is not taken into account by the LabeledSkinBase.
         final double height = getCellSize();
 
-        TreeTableCell cell = getSkinnable();
+        TreeTableCell<S,T> cell = getSkinnable();
 
-        TreeTableColumn tableColumn = cell.getTableColumn();
+        TreeTableColumn<S,T> tableColumn = cell.getTableColumn();
         if (tableColumn == null) return leftPadding;
 
         // check if this column is the TreeTableView treeColumn (i.e. the 
         // column showing the disclosure node and graphic).
-        TreeTableView treeTable = cell.getTreeTableView();
+        TreeTableView<S> treeTable = cell.getTreeTableView();
         if (treeTable == null) return leftPadding;
 
         int columnIndex = treeTable.getVisibleLeafIndex(tableColumn);
 
-        TreeTableColumn treeColumn = treeTable.getTreeColumn();
+        TreeTableColumn<S,?> treeColumn = treeTable.getTreeColumn();
         if ((treeColumn == null && columnIndex != 0) || (treeColumn != null && ! tableColumn.equals(treeColumn))) {
             return leftPadding;
         }
 
-        TreeTableRow treeTableRow = cell.getTreeTableRow();
+        TreeTableRow<S> treeTableRow = cell.getTreeTableRow();
         if (treeTableRow == null) return leftPadding;
 
-        TreeItem treeItem = treeTableRow.getTreeItem();
+        TreeItem<S> treeItem = treeTableRow.getTreeItem();
         if (treeItem == null) return leftPadding;
         
         int nodeLevel = TreeTableView.getNodeLevel(treeItem);

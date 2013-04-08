@@ -302,12 +302,13 @@ public class TreeTableColumnTest {
         assertTrue(child.visibleProperty().get());
     }
 
-    @Test public void visibleIsFalseWhenAddedToParentColumnWithVisibleFalse() {
+    @Test public void visibleIsNotChangedWhenAddedToParentColumnWithVisibleFalse() {
         TreeTableColumn child = new TreeTableColumn();
+        child.setVisible(true);
         column.setVisible(false);
         column.getColumns().add(child);
-        assertFalse(child.isVisible());
-        assertFalse(child.visibleProperty().get());
+        assertTrue(child.isVisible());
+        assertFalse(column.isVisible());
     }
 
     @Test public void visibleIsNotChangedWhenRemovedFromParentColumn() {

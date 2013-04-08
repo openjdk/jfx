@@ -305,7 +305,6 @@ public class TreeTableColumn<S,T> extends TableColumnBase<TreeItem<S>,T> impleme
                 }
                 for (TreeTableColumn<S,?> tc : c.getAddedSubList()) {
                     tc.setTreeTableView(getTreeTableView());
-                    tc.setVisible(isVisible()); // See visible property TODO, we probably don't want this
                 }
 
                 updateColumnWidths();
