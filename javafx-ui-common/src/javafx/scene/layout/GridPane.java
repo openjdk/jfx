@@ -1190,7 +1190,7 @@ public class GridPane extends Pane {
             List<Node> baselineNodes = new ArrayList<Node>();
             for(int j = 0, k = 0, size = startNodes.size(); j < size; j++) {
                 Node n = startNodes.get(j);
-                if (getValignment(n) == VPos.BASELINE) {
+                if (rowVPos == VPos.BASELINE || getValignment(n) == VPos.BASELINE) {
                     baselineNodes.add(n);
                     margins[k++] = getMargin(n);
                 }
