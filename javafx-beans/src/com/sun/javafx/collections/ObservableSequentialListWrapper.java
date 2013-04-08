@@ -75,6 +75,26 @@ public final class ObservableSequentialListWrapper<E> extends ModifiableObservab
     }
 
     @Override
+    public boolean contains(Object o) {
+        return backingList.contains(o);
+    }
+
+    @Override
+    public boolean containsAll(Collection<?> c) {
+        return backingList.containsAll(c);
+    }
+
+    @Override
+    public int indexOf(Object o) {
+        return backingList.indexOf(o);
+    }
+
+    @Override
+    public int lastIndexOf(Object o) {
+        return backingList.lastIndexOf(o);
+    }
+
+    @Override
     public ListIterator<E> listIterator(final int index) {
         return new ListIterator<E>() {
 
