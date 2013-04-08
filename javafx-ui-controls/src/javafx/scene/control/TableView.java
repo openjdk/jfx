@@ -1458,20 +1458,20 @@ public class TableView<S> extends Control {
             selectedCells = FXCollections.<TablePosition<S,?>>observableArrayList();
             selectedCells.addListener(new ListChangeListener<TablePosition<S,?>>() {
                 @Override public void onChanged(final Change<? extends TablePosition<S,?>> c) {
-                    // RT-29313: because selectedIndices and selectedItems repesent
-                    // row-based selection, we need to mark the selectedIndices
-                    // and selectedItems lists dirty when the selectedCells changes,
-                    // as they will need to have their sizes recalculated upon
-                    // their next request. This is because their size can not
-                    // simply defer to the selectedCells size as selectedCells
-                    // may contain be representing multiple cells in one row
-                    // (e.g. selectedCells of [(0,1), (1,1), (1,2), (1,3)] should
-                    // result in a selectedIndices of [0,1], not [0,1,1,1]).
+                    // RT-29313: because selectedIndices and selectedItems represent
+                    // row-based selection, we need to update the
+                    // selectedIndicesBitSet when the selectedCells changes to 
+                    // ensure that selectedIndices and selectedItems return only
+                    // the correct values (and only once). The issue identified
+                    // by RT-29313 is that the size and contents of selectedIndices
+                    // and selectedItems can not simply defer to the
+                    // selectedCells as selectedCells may be representing 
+                    // multiple cells from one row (e.g. selectedCells of 
+                    // [(0,1), (1,1), (1,2), (1,3)] should result in 
+                    // selectedIndices of [0,1], not [0,1,1,1]).
                     // An inefficient solution would rebuild the selectedIndicesBitSet
                     // every time the change happens, but we can do better than
-                    // that.
-                    // 
-                    // Inefficient solution:
+                    // that. Inefficient solution:
                     //
                     // selectedIndicesBitSet.clear();
                     // for (int i = 0; i < selectedCells.size(); i++) {
