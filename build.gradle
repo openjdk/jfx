@@ -639,27 +639,6 @@ allprojects {
             }
             classpath = sourceSets.main.compileClasspath + rootProject.files(rootProject.BINARY_STUB)
         }
-        doLast {
-            // Workaround: there are a number of packages which are now getting builders
-            // generated even though they they didn't before since we combined sources
-            // into fewer projects. So I have to strip out the .class files after compilation!
-            // Alternatively we can go through and add @NoBuilder to all these classes
-            // (or stop using automatic builder generation, but that's another story).
-            delete(files("$buildDir/builder-src/javafx/beans",
-                         "$buildDir/builder-src/javafx/concurrent",
-                         "$buildDir/builder-src/javafx/event",
-                         "$buildDir/builder-src/javafx/fxml",
-                         "$buildDir/builder-src/javafx/collections",
-                         "$buildDir/builder-src/javafx/util"));
-            delete(files("$buildDir/classes/main/javafx/beans",
-                         "$buildDir/classes/main/javafx/concurrent",
-                         "$buildDir/classes/main/javafx/event",
-                         "$buildDir/classes/main/javafx/fxml",
-                         "$buildDir/classes/main/javafx/collections",
-                         "$buildDir/classes/main/javafx/util").getAsFileTree().filter( { file ->
-                !file.getName().equals("Builder.class") && file.getName().endsWith("Builder.class")
-            } ));
-        }
     }
     // Setup the repositories that we'll download libraries from. Maven Central is
     // just easy for most things. The custom "ivy" repo is for downloading SWT. The way it
@@ -812,10 +791,7 @@ project(":graphics") {
     sourceSets {
         main.java.srcDirs = ["src/main/java", "src/main/dt", "src/main/jsl-generator"]
         test
-        stub {
-            // The src/main/java is needed for some CSS related tests
-            resources.srcDirs = ["src/stub/resources", "src/main/java"]
-        }
+        stub
     }
 
     dependencies {
@@ -935,7 +911,7 @@ project(":graphics") {
 project(":controls") {
     dependencies {
         compile project(":build-tools"), project(":base"), project(":graphics"), project(":designTime")
-        testCompile files("../graphics/build/classes/stub")
+        testCompile project(":graphics").sourceSets.stub.output
     }
 
     test {
@@ -1430,16 +1406,6 @@ task sdk {
         // Create the javafx.properties file
         final File javafxProperties = file("build/${COMPILE_TARGET.name}-sdk/rt/lib/javafx.properties");
         javafxProperties << "javafx.runtime.version=$RAW_VERSION";
-
-        // Create the javafx.policy file
-        final File javafxPolicy = file("build/${COMPILE_TARGET.name}-sdk/rt/lib/security/javafx.policy");
-        javafxPolicy.getParentFile().mkdirs()
-        javafxPolicy <<
-"""
-// JavaFX runtime get all permissions by default
-grant codeBase "file:\${javafx.runtime.home}/lib/ext/jfxrt.jar" {
-    permission java.security.AllPermission;
-};"""
 
         // Copy over the javadocs that were generated. This is done rather than just generating
         // the docs into the "right place" because for a cross-compile you only need one set of
