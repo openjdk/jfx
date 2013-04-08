@@ -123,8 +123,13 @@ public abstract class ComboBoxBaseSkin<T> extends BehaviorSkinBase<ComboBoxBase<
     }
     
     private void updateDisplayArea() {
+        if (displayNode != null) {
+            getChildren().remove(displayNode);
+        }
         displayNode = getDisplayNode();
-        getChildren().setAll(displayNode, arrowButton);
+        if (displayNode != null) {
+            getChildren().add(displayNode);
+        }
     }
     
     private boolean isButton() {

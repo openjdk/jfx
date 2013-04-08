@@ -502,15 +502,11 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
     
     private ListView<T> createListView() {
         final ListView<T> _listView = new ListView<T>() {
-            private boolean isFirstSizeCalculation = true;
-
             @Override protected double computeMinHeight(double width) {
                 return 30;
             }
             
             @Override protected double computePrefWidth(double height) {
-                doCSSCheck();
-                
                 double pw;
                 if (getSkin() instanceof ListViewSkin) {
                     ListViewSkin<?> skin = (ListViewSkin<?>)getSkin();
@@ -539,20 +535,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
             }
 
             @Override protected double computePrefHeight(double width) {
-                doCSSCheck();
-                
                 return getListViewPrefHeight();
-            }
-            
-            private void doCSSCheck() {
-                if (listView != null && listView.getScene() != null && (isFirstSizeCalculation || getSkin() == null)) {
-                    // if the skin is null, it means that the css related to the
-                    // listview skin hasn't been loaded yet, so we force it here.
-                    // This ensures the combobox button is the correct width
-                    // when it is first displayed, before the listview is shown.
-                    listView.impl_processCSS(true);
-                    isFirstSizeCalculation = false;
-                }
             }
         };
 
