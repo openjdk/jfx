@@ -133,6 +133,11 @@ public class ObservableListWrapper<E> extends ModifiableObservableListBase<E> im
     }
 
     @Override
+    public boolean containsAll(Collection<?> c) {
+        return backingList.containsAll(c);
+    }
+
+    @Override
     public void clear() {
         if (elementObserver != null) {
             final int sz = size();
