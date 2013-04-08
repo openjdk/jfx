@@ -342,7 +342,7 @@ public class VBoxTest {
         MockResizable child = new MockResizable(100,100);
         vbox.getChildren().addAll(r, biased, child);
 
-        assertEquals(Orientation.HORIZONTAL, vbox.getContentBias());        
+        assertEquals(Orientation.HORIZONTAL, vbox.getContentBias());
     }
 
     @Test public void testVBoxWithHorizontalContentBiasAtPrefSize() {
@@ -377,7 +377,7 @@ public class VBoxTest {
         MockResizable resizable = new MockResizable(100,100);
         vbox.getChildren().addAll(rect, biased, resizable);
 
-        assertEquals(Orientation.HORIZONTAL, vbox.getContentBias());        
+        assertEquals(Orientation.HORIZONTAL, vbox.getContentBias());
         assertEquals(600, vbox.prefHeight(50), 0);
 
         vbox.resize(50, 600);
@@ -489,7 +489,7 @@ public class VBoxTest {
         vbox.getChildren().addAll(rect, biased, resizable);
 
         vbox.setVgrow(biased, Priority.ALWAYS);
-        
+
         assertEquals(Orientation.VERTICAL, vbox.getContentBias());
         assertEquals(100, vbox.prefWidth(500), 0);
 
@@ -590,12 +590,12 @@ public class VBoxTest {
 //        assertEquals(200, vbox.prefWidth(-1), 0);
 //        assertEquals(200, vbox.prefWidth(200), 0);
 //    }
-    
+
     @Test public void testVBoxSetMarginConstraint() {
         MockResizable child1 = new MockResizable(100,200, 300,400, 500,600);
 
         assertNull(VBox.getMargin(child1));
-        
+
         Insets margin = new Insets(10,20,30,40);
         VBox.setMargin(child1, margin);
         assertEquals(margin, VBox.getMargin(child1));
@@ -723,6 +723,9 @@ public class VBoxTest {
 
         assertEquals(200, vbox.prefWidth(-1), 1e-100);
         assertEquals(300, vbox.prefHeight(-1), 1e-100);
+        assertEquals(200, vbox.minWidth(-1), 1e-100); //MockBias minWidth == 10
+        assertEquals(20, vbox.minHeight(-1), 1e-100);
+        assertEquals(Math.ceil(Math.max(100 * 100 / 50.0, 200 * 200 / 150.0)), vbox.minWidth(200), 1e-100);
 
         vbox.autosize();
         vbox.layout();
