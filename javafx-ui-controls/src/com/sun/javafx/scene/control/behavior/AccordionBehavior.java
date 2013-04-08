@@ -36,6 +36,8 @@ import javafx.scene.control.Accordion;
 import javafx.scene.control.FocusModel;
 import javafx.scene.control.TitledPane;
 import javafx.scene.input.KeyCode;
+import javafx.scene.input.MouseEvent;
+
 
 public class AccordionBehavior extends BehaviorBase<Accordion> {
 
@@ -131,6 +133,25 @@ public class AccordionBehavior extends BehaviorBase<Accordion> {
             super.callAction(name);
         }
     }
+
+
+    /*
+    ** mouse press over the background of the accordian
+    ** i.e. it missed all of the titledpanes
+    ** select the last titledpane, or the accoridan if
+    ** none present
+    */
+    public void mousePressed(MouseEvent e) {
+        Accordion accordion = getControl();
+        if (accordion.getPanes().size() > 0) {
+            TitledPane lastTitledPane = accordion.getPanes().get(accordion.getPanes().size() - 1);
+            lastTitledPane.requestFocus();
+        }
+        else {
+            accordion.requestFocus();
+        }
+    }
+
 
     static class AccordionFocusModel extends FocusModel<TitledPane> {
 
