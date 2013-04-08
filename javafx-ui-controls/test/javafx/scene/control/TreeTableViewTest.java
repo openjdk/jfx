@@ -1506,4 +1506,106 @@ public class TreeTableViewTest {
         // the email column should not become visible after this, but it does
         assertFalse(emailCol.isVisible());
     }
+    
+    private int rt29330_count = 0;
+    @Test public void test_rt29330_1() {
+        ObservableList<TreeItem<Person>> persons = FXCollections.observableArrayList(
+                new TreeItem<Person>(new Person("Jacob", "Smith", "jacob.smith@example.com")),
+                new TreeItem<Person>(new Person("Isabella", "Johnson", "isabella.johnson@example.com")),
+                new TreeItem<Person>(new Person("Ethan", "Williams", "ethan.williams@example.com")),
+                new TreeItem<Person>(new Person("Emma", "Jones", "emma.jones@example.com")),
+                new TreeItem<Person>(new Person("Michael", "Brown", "michael.brown@example.com")));
+                
+        TreeTableView<Person> table = new TreeTableView<>();
+        
+        TreeItem<Person> root = new TreeItem<Person>(new Person("Root", null, null));
+        root.setExpanded(true);
+        table.setRoot(root);
+        table.setShowRoot(false);
+        root.getChildren().setAll(persons);
+        
+        TreeTableColumn parentColumn = new TreeTableColumn<>("Parent");
+        table.getColumns().addAll(parentColumn);
+        
+        TreeTableColumn firstNameCol = new TreeTableColumn("First Name");
+        firstNameCol.setCellValueFactory(new TreeItemPropertyValueFactory<Person, String>("firstName"));
+
+        TreeTableColumn lastNameCol = new TreeTableColumn("Last Name");
+        lastNameCol.setCellValueFactory(new TreeItemPropertyValueFactory<Person, String>("lastName"));
+        
+        parentColumn.getColumns().addAll(firstNameCol, lastNameCol);
+
+        table.setOnSort(new EventHandler<SortEvent<TreeTableView<Person>>>() {
+            @Override public void handle(SortEvent<TreeTableView<Person>> event) {
+                rt29330_count++;
+            }
+        });
+        
+        // test preconditions
+        assertEquals(ASCENDING, lastNameCol.getSortType());
+        assertEquals(0, rt29330_count);
+        
+        table.getSortOrder().add(lastNameCol);
+        assertEquals(1, rt29330_count);
+        
+        lastNameCol.setSortType(DESCENDING);
+        assertEquals(2, rt29330_count);
+        
+        lastNameCol.setSortType(null);
+        assertEquals(3, rt29330_count);
+        
+        lastNameCol.setSortType(ASCENDING);
+        assertEquals(4, rt29330_count);
+    }
+    
+    @Test public void test_rt29330_2() {
+        ObservableList<TreeItem<Person>> persons = FXCollections.observableArrayList(
+                new TreeItem<Person>(new Person("Jacob", "Smith", "jacob.smith@example.com")),
+                new TreeItem<Person>(new Person("Isabella", "Johnson", "isabella.johnson@example.com")),
+                new TreeItem<Person>(new Person("Ethan", "Williams", "ethan.williams@example.com")),
+                new TreeItem<Person>(new Person("Emma", "Jones", "emma.jones@example.com")),
+                new TreeItem<Person>(new Person("Michael", "Brown", "michael.brown@example.com")));
+                
+        TreeTableView<Person> table = new TreeTableView<>();
+        
+        TreeItem<Person> root = new TreeItem<Person>(new Person("Root", null, null));
+        root.setExpanded(true);
+        table.setRoot(root);
+        table.setShowRoot(false);
+        root.getChildren().setAll(persons);
+        
+        TreeTableColumn firstNameCol = new TreeTableColumn("First Name");
+        firstNameCol.setCellValueFactory(new TreeItemPropertyValueFactory<Person, String>("firstName"));
+
+        TreeTableColumn lastNameCol = new TreeTableColumn("Last Name");
+        lastNameCol.setCellValueFactory(new TreeItemPropertyValueFactory<Person, String>("lastName"));
+        
+        // this test differs from the previous one by installing the parent column
+        // into the tableview after it has the children added into it
+        TreeTableColumn parentColumn = new TreeTableColumn<>("Parent");
+        parentColumn.getColumns().addAll(firstNameCol, lastNameCol);
+        table.getColumns().addAll(parentColumn);
+
+        table.setOnSort(new EventHandler<SortEvent<TreeTableView<Person>>>() {
+            @Override public void handle(SortEvent<TreeTableView<Person>> event) {
+                rt29330_count++;
+            }
+        });
+        
+        // test preconditions
+        assertEquals(ASCENDING, lastNameCol.getSortType());
+        assertEquals(0, rt29330_count);
+        
+        table.getSortOrder().add(lastNameCol);
+        assertEquals(1, rt29330_count);
+        
+        lastNameCol.setSortType(DESCENDING);
+        assertEquals(2, rt29330_count);
+        
+        lastNameCol.setSortType(null);
+        assertEquals(3, rt29330_count);
+        
+        lastNameCol.setSortType(ASCENDING);
+        assertEquals(4, rt29330_count);
+    }
 }

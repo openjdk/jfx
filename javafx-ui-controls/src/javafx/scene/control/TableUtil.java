@@ -77,7 +77,6 @@ class TableUtil {
             col.sortableProperty().addListener(columnSortableObserver);
             col.comparatorProperty().addListener(columnComparatorObserver);
             
-//            col.sortTypeProperty().addListener(columnSortTypeObserver);
             if (col instanceof TableColumn) {
                 ((TableColumn)col).sortTypeProperty().addListener(columnSortTypeObserver);
             } else if (col instanceof TreeTableColumn) {

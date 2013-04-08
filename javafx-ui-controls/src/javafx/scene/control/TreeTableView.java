@@ -290,36 +290,6 @@ public class TreeTableView<S> extends Control {
         // we watch the columns list, such that when it changes we can update
         // the leaf columns and visible leaf columns lists (which are read-only).
         getColumns().addListener(weakColumnsObserver);
-        getColumns().addListener(new ListChangeListener<TreeTableColumn<S,?>>() {
-            @Override
-            public void onChanged(ListChangeListener.Change<? extends TreeTableColumn<S,?>> c) {
-                while (c.next()) {
-                    // update the TreeTableColumn.tableView property
-                    for (TreeTableColumn<S,?> tc : c.getRemoved()) {
-                        tc.setTreeTableView(null);
-                    }
-                    for (TreeTableColumn<S,?> tc : c.getAddedSubList()) {
-                        tc.setTreeTableView(TreeTableView.this);
-                    }
-
-                    // set up listeners
-                    TableUtil.removeTableColumnListener(c.getRemoved(),
-                            weakColumnVisibleObserver,
-                            weakColumnSortableObserver,
-                            weakColumnSortTypeObserver,
-                            weakColumnComparatorObserver);
-                    TableUtil.addTableColumnListener(c.getAddedSubList(),
-                            weakColumnVisibleObserver,
-                            weakColumnSortableObserver,
-                            weakColumnSortTypeObserver,
-                            weakColumnComparatorObserver);
-                }
-                    
-                // We don't maintain a bind for leafColumns, we simply call this update
-                // function behind the scenes in the appropriate places.
-                updateVisibleLeafColumns();
-            }
-        });
 
         // watch for changes to the sort order list - and when it changes run
         // the sort method.
@@ -588,22 +558,45 @@ public class TreeTableView<S> extends Control {
     
     private final ListChangeListener<TreeTableColumn<S,?>> columnsObserver = new ListChangeListener<TreeTableColumn<S,?>>() {
         @Override public void onChanged(ListChangeListener.Change<? extends TreeTableColumn<S,?>> c) {
+            // We don't maintain a bind for leafColumns, we simply call this update
+            // function behind the scenes in the appropriate places.
             updateVisibleLeafColumns();
             
             // Fix for RT-15194: Need to remove removed columns from the 
             // sortOrder list.
-            List<TreeTableColumn> toRemove = new ArrayList<TreeTableColumn>();
+            List<TreeTableColumn<S,?>> toRemove = new ArrayList<TreeTableColumn<S,?>>();
             while (c.next()) {
-                TableUtil.removeColumnsListener(c.getRemoved(), weakColumnsObserver);
-                TableUtil.addColumnsListener(c.getAddedSubList(), weakColumnsObserver);
+                final List<? extends TreeTableColumn<S, ?>> removed = c.getRemoved();
+                final List<? extends TreeTableColumn<S, ?>> added = c.getAddedSubList();
                 
                 if (c.wasRemoved()) {
-                    toRemove.addAll(c.getRemoved());
+                    toRemove.addAll(removed);
+                    for (TreeTableColumn<S,?> tc : removed) {
+                        tc.setTreeTableView(null);
+                    }
                 }
                 
                 if (c.wasAdded()) {
-                    toRemove.removeAll(c.getAddedSubList());
+                    toRemove.removeAll(added);
+                    for (TreeTableColumn<S,?> tc : added) {
+                        tc.setTreeTableView(TreeTableView.this);
+                    }
                 }
+                
+                // set up listeners
+                TableUtil.removeColumnsListener(removed, weakColumnsObserver);
+                TableUtil.addColumnsListener(added, weakColumnsObserver);
+                
+                TableUtil.removeTableColumnListener(c.getRemoved(),
+                        weakColumnVisibleObserver,
+                        weakColumnSortableObserver,
+                        weakColumnSortTypeObserver,
+                        weakColumnComparatorObserver);
+                TableUtil.addTableColumnListener(c.getAddedSubList(),
+                        weakColumnVisibleObserver,
+                        weakColumnSortableObserver,
+                        weakColumnSortTypeObserver,
+                        weakColumnComparatorObserver);
             }
             
             sortOrder.removeAll(toRemove);
@@ -663,8 +656,8 @@ public class TreeTableView<S> extends Control {
     private final WeakInvalidationListener weakColumnComparatorObserver = 
             new WeakInvalidationListener(columnComparatorObserver);
     
-    private final WeakListChangeListener weakColumnsObserver = 
-            new WeakListChangeListener(columnsObserver);
+    private final WeakListChangeListener<TreeTableColumn<S,?>> weakColumnsObserver = 
+            new WeakListChangeListener<TreeTableColumn<S,?>>(columnsObserver);
     
     private final WeakInvalidationListener weakCellSelectionModelInvalidationListener = 
             new WeakInvalidationListener(cellSelectionModelInvalidationListener);
