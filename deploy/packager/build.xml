@@ -252,7 +252,7 @@
 /Zc:forScope /Fo&quot;Release\\&quot; /Gd /TP /analyze-"/>
         <mkdir dir="native\windows\Release"/>
         <!--This mimics how Visual Studio creates the exes, cl, link, mt-->
-        <do-cl
+        <do-clexe
             dir="native\windows"
             options="${cl-options} WinLauncher.cpp"
          />
@@ -270,7 +270,7 @@
         <echo message="Copy WinLauncher.exe to ${build.classes.dir}/com/sun/javafx/tools/resource/windows"/>
         <copy file="native/windows/Release/WinLauncher.exe"
               todir="${build.classes.dir}/com/sun/javafx/tools/resource/windows"/>
-        <do-cl
+        <do-clexe
             dir="native\windows"
             options="${cl-options} IconSwap.cpp"
          />
@@ -292,6 +292,42 @@
 
    <property name="cmd.utility" location="${systemroot.path}/System32/cmd.exe"/>
 
+    <condition property="processor-type" value="/MACHINE:X64" else="/MACHINE:X86">
+        <equals arg1="${arch}" arg2="amd64"/>
+    </condition>
+
+    <macrodef name="do-clexe">
+        <!-- Does a Visual Studio compilation -->
+        <attribute name="dir"/>
+        <attribute name="options" default=""/>
+        <sequential>
+            <property file="${vs.properties}"/>
+            <property name="cl.utility" value="cl.exe"/>
+            <echo message="STARTING: cd @{dir} ; ${cmd.utility} /A /C ${cl.utility} @{options}"/>
+            <exec dir="@{dir}"
+                  executable="${cmd.utility}"
+                  failonerror="true">
+                <env key="VCINSTALLDIR"  value="${windows.vs.VCINSTALLDIR}"/>
+                <env key="VSINSTALLDIR"  value="${windows.vs.VSINSTALLDIR}"/>
+                <env key="DEVENVDIR"     value="${windows.vs.DEVENVDIR}"/>
+                <env key="MSVCDIR"       value="${windows.vs.MSVCDIR}"/>
+                <env key="INCLUDE"       value="${windows.vs.INCLUDE}"/>
+                <env key="LIB"           value="${windows.vs.LIB}"/>
+                <env key="LIBPATH"       value="${windows.vs.LIBPATH}"/>
+                <env key="PATH"          value="${platform.home}/bin;${windows.vs.PATH}"/>
+                <env key="CONF"          value="${build.conf}"/>
+                <env key="JAVA_HOME"     value="${platform.home}"/>
+                <env key="JDK_HOME"      value="${platform.home}"/>
+                <env key="DXSDK_DIR"     value="${dxsdk.path}"/>
+                <arg value="/A"/>
+                <arg value="/C"/>
+                <arg value="${cl.utility}"/>
+                <arg line="@{options}"/>
+            </exec>
+            <echo message="FINISHED: cd @{dir} ; ${cmd.utility} /A /C ${cl.utility} @{options}"/>
+        </sequential>
+    </macrodef>
+
    <macrodef name="do-link">
         <!-- Does a Visual Studio link -->
         <attribute name="dir"/>
@@ -307,18 +343,16 @@
 /MANIFESTUAC:&quot;level='asInvoker' uiAccess='false'&quot;
 /PDB:&quot;@{output-dir}\@{main-file}.pdb&quot;
 /IMPLIB:&quot;@{output-dir}\@{main-file}.lib&quot;
-kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib
-shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib
-/INCREMENTAL:NO /NOLOGO /DEBUG /OPT:REF /OPT:ICF /LTCG
-/TLBID:1 /DYNAMICBASE /NXCOMPAT /MACHINE:X86"
+ user32.lib advapi32.lib shell32.lib
+/INCREMENTAL:NO /NOLOGO /OPT:REF /LTCG
+/DYNAMICBASE /NXCOMPAT ${processor-type} "
                 />
-
         <property file="${vs.properties}"/>
-            <property name="link.utility" value="&quot;${windows.vs.MSVCDIR}/bin/link.exe&quot;"/>
+            <property name="link.utility" value="link.exe"/>
             <echo message="STARTING: cd @{dir} ; ${link.utility} ${link-options} @{additional-options} @{output-dir}\@{main-file}"/>
 
             <exec dir="@{dir}"
-                  executable="${link.utility}"
+                  executable="${cmd.utility}"
                   failonerror="true">
                 <env key="VCINSTALLDIR"  value="${windows.vs.VCINSTALLDIR}"/>
                 <env key="VSINSTALLDIR"  value="${windows.vs.VSINSTALLDIR}"/>
@@ -332,12 +366,16 @@ shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib
                 <env key="JAVA_HOME"     value="${platform.home}"/>
                 <env key="JDK_HOME"      value="${platform.home}"/>
                 <env key="DXSDK_DIR"     value="${dxsdk.path}"/>
+                <arg value="/A"/>
+                <arg value="/C"/>
+                <arg value="${link.utility}"/>
+
+
                 <arg line="${link-options}"/>
                 <arg line="@{additional-options}"/>
                 <arg value="@{output-dir}\@{main-file}"/>
             </exec>
-            <echo message="FINISHED: cd @{dir} ; ${link.utility} ${link-options}
-@{additional-options} @{output-dir}\@{main-file}"/>
+            <echo message="FINISHED: cd @{dir} ; ${link.utility} ${link-options} @{additional-options} @{output-dir}\@{main-file}"/>
         </sequential>
     </macrodef>
 
