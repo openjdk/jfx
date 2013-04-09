@@ -195,10 +195,10 @@ defineProperty("JDK_HOME",
         javaHomeFile.name.startsWith("jre") ?
         new File(javaHomeFile.getParent(), "jdk1.${javaHomeFile.name.substring(3)}.0").toString() :
         JAVA_HOME); // we have to bail and set it to something and this is as good as any!
-defineProperty("JAVA", "$JDK_HOME/bin/java");
-defineProperty("JAVAC", "$JDK_HOME/bin/javac");
-defineProperty("JAVAH", "$JDK_HOME/bin/javah");
-defineProperty("JAVADOC", "$JDK_HOME/bin/javadoc");
+defineProperty("JAVA", "$JDK_HOME/bin/java${IS_WINDOWS ? '.exe' : ''}");
+defineProperty("JAVAC", "$JDK_HOME/bin/javac${IS_WINDOWS ? '.exe' : ''}");
+defineProperty("JAVAH", "$JDK_HOME/bin/javah${IS_WINDOWS ? '.exe' : ''}");
+defineProperty("JAVADOC", "$JDK_HOME/bin/javadoc${IS_WINDOWS ? '.exe' : ''}");
 defineProperty("JDK_DOCS", "http://download.oracle.com/javase/7/docs/api");
 defineProperty("BINARY_STUB", "file://$JDK_HOME/jre/lib/ext/jfxrt.jar");
 
@@ -274,7 +274,7 @@ defineProperty("RELEASE_MILESTONE", "ea");
 
 // Verify that the architecture & OS are supported configurations
 if (!IS_MAC && !IS_WINDOWS && !IS_LINUX) logger.error("Unsupported build OS ${OS_NAME}")
-if ((IS_WINDOWS && OS_ARCH != "i386" && OS_ARCH != "amd64") || (IS_MAC && OS_ARCH != "x86_64")) {
+if ((IS_WINDOWS && OS_ARCH != "i386" && OS_ARCH != "amd64" && OS_ARCH != "x86") || (IS_MAC && OS_ARCH != "x86_64")) {
     // TODO what are appropriate linux arch values?
     throw new Exception("Unknown and unsupported build architecture: $OS_ARCH")
 }
