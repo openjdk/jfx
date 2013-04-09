@@ -1456,6 +1456,18 @@ public class ContextMenuContent extends Region {
 
             addEventHandler(ActionEvent.ACTION, new EventHandler<ActionEvent>() {
                 @Override public void handle(ActionEvent e) {
+                    /*
+                    ** if we get an ActionEvent for either RadioMenuItem
+                    ** or CheckMenuItem then we should toggle the selected
+                    ** state.
+                    */
+                    if (menuitem instanceof RadioMenuItem) {
+                        ((RadioMenuItem)menuitem).setSelected(!((RadioMenuItem)menuitem).isSelected());
+                    }
+                    else if (menuitem instanceof CheckMenuItem) {
+                        ((CheckMenuItem)menuitem).setSelected(!((CheckMenuItem)menuitem).isSelected());
+
+                    }
                     Event.fireEvent(menuitem, new ActionEvent());
                     e.consume();
                 }
