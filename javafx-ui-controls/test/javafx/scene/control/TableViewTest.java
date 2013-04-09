@@ -54,6 +54,7 @@ import org.junit.Ignore;
 import org.junit.Test;
 
 import com.sun.javafx.scene.control.TableColumnComparatorBase.TableColumnComparator;
+import com.sun.javafx.scene.control.skin.VirtualScrollBar;
 import com.sun.javafx.scene.control.test.ControlAsserts;
 import com.sun.javafx.scene.control.test.Person;
 import com.sun.javafx.scene.control.test.RT_22463_Person;
@@ -1253,5 +1254,46 @@ public class TableViewTest {
         ControlAsserts.assertCellTextEquals(table, 2, "Ethan", "Williams", "ethan.williams@example.com");
         ControlAsserts.assertCellTextEquals(table, 3, "Emma", "Jones", "emma.jones@example.com");
         ControlAsserts.assertCellTextEquals(table, 4, "Michael", "Brown", "michael.brown@example.com");
+    }
+    
+    @Test public void test_rt29390() {
+        final TableView<Person> tableView = new TableView<Person>();
+        tableView.setMaxHeight(50);
+        tableView.setPrefHeight(50);
+        tableView.setItems(FXCollections.observableArrayList(
+            new Person("Jacob", "Smith", "jacob.smith@example.com"),
+            new Person("Isabella", "Johnson", "isabella.johnson@example.com"),
+            new Person("Ethan", "Williams", "ethan.williams@example.com"),
+            new Person("Emma", "Jones", "emma.jones@example.com"),
+            new Person("Jacob", "Smith", "jacob.smith@example.com"),
+            new Person("Isabella", "Johnson", "isabella.johnson@example.com"),
+            new Person("Ethan", "Williams", "ethan.williams@example.com"),
+            new Person("Emma", "Jones", "emma.jones@example.com"),
+            new Person("Jacob", "Smith", "jacob.smith@example.com"),
+            new Person("Isabella", "Johnson", "isabella.johnson@example.com"),
+            new Person("Ethan", "Williams", "ethan.williams@example.com"),
+            new Person("Emma", "Jones", "emma.jones@example.com"),
+            new Person("Jacob", "Smith", "jacob.smith@example.com"),
+            new Person("Isabella", "Johnson", "isabella.johnson@example.com"),
+            new Person("Ethan", "Williams", "ethan.williams@example.com"),
+            new Person("Emma", "Jones", "emma.jones@example.com")
+        ));
+        
+        TableColumn firstNameCol = new TableColumn("First Name");
+        firstNameCol.setCellValueFactory(new PropertyValueFactory<Person, String>("firstName"));
+        
+        tableView.getColumns().add(firstNameCol);
+        
+        // we want the vertical scrollbar
+        VirtualScrollBar scrollBar = ControlAsserts.getVirtualFlowVerticalScrollbar(tableView);
+        
+        assertNotNull(scrollBar);
+        assertTrue(scrollBar.isVisible());
+        assertTrue(scrollBar.getVisibleAmount() > 0.0);
+        assertTrue(scrollBar.getVisibleAmount() < 1.0);
+        
+        // this next test is likely to be brittle, but we'll see...If it is the
+        // cause of failure then it can be commented out
+        assertEquals(0.125, scrollBar.getVisibleAmount(), 0.0);
     }
 }

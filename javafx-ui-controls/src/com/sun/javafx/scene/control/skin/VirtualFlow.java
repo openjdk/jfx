@@ -1364,7 +1364,12 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         double sumCellLength = 0;
         double flowLength = (isVertical ? getHeight() : getWidth()) -
             (breadthBar.isVisible() ? breadthBar.prefHeight(-1) : 0);
-        if (numCellsVisibleOnScreen == -1) {
+        
+        // This was changed from '== -1' to '<= 0' due to RT-29390. If this needs
+        // to change in the future there are unit tests developed against
+        // ListView, TreeView, TableView and TreeTableView, so it is hoped that
+        // RT-29390 will not be reintroduced.
+        if (numCellsVisibleOnScreen <= 0) {
             numCellsVisibleOnScreen = 0;
             for (int i = 0, max = cells.size(); i < max; i++) {
                 T cell = cells.get(i);
@@ -1430,6 +1435,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
             } else {
                 lengthBar.setVisibleAmount(numCellsVisibleOnScreen / (float) cellCount);
             }
+            
 
             // Fix for RT-11873. If this isn't here, we can have a situation where
             // the scrollbar scrolls endlessly. This is possible when the cell
