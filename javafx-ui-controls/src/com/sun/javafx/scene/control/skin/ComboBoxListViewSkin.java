@@ -116,8 +116,18 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
         this.comboBox = comboBox;
         updateComboBoxItems();
         
-        this.listView = createListView();
+        // editable input node
         this.textField = comboBox.isEditable() ? getEditableInputNode() : null;
+        
+        // Fix for RT-29565. Without this the textField does not have a correct
+        // pref width at startup, as it is not part of the scenegraph (and therefore
+        // has no pref width until after the first measurements have been taken).
+        if (this.textField != null) {
+            getChildren().add(textField);
+        }
+        
+        // listview for popup
+        this.listView = createListView();
         
         // Fix for RT-21207. Additional code related to this bug is further below.
         this.listView.setManaged(false);

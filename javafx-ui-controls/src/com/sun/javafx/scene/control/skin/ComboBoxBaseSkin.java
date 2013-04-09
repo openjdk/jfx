@@ -25,16 +25,19 @@
 
 package com.sun.javafx.scene.control.skin;
 
-import javafx.scene.control.ComboBoxBase;
-import com.sun.javafx.scene.control.behavior.ComboBoxBaseBehavior;
+import java.util.List;
+
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.geometry.HPos;
 import javafx.geometry.Insets;
 import javafx.geometry.VPos;
 import javafx.scene.Node;
+import javafx.scene.control.ComboBoxBase;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
+
+import com.sun.javafx.scene.control.behavior.ComboBoxBaseBehavior;
 
 public abstract class ComboBoxBaseSkin<T> extends BehaviorSkinBase<ComboBoxBase<T>, ComboBoxBaseBehavior<T>> {
     
@@ -123,12 +126,13 @@ public abstract class ComboBoxBaseSkin<T> extends BehaviorSkinBase<ComboBoxBase<
     }
     
     private void updateDisplayArea() {
+        List<Node> children = getChildren();
         if (displayNode != null) {
-            getChildren().remove(displayNode);
+            children.remove(displayNode);
         }
         displayNode = getDisplayNode();
-        if (displayNode != null) {
-            getChildren().add(displayNode);
+        if (displayNode != null && !children.contains(displayNode)) {
+            children.add(displayNode);
         }
     }
     
@@ -173,9 +177,9 @@ public abstract class ComboBoxBaseSkin<T> extends BehaviorSkinBase<ComboBoxBase<
                                         (snapSpace(arrowButtonPadding.getLeft()) + 
                                         arrowWidth + 
                                         snapSpace(arrowButtonPadding.getRight()));
+        final double displayNodeWidth = displayNode == null ? 0 : displayNode.prefWidth(height);
         
-        final double totalWidth = (displayNode == null) ? 0 : (displayNode.prefWidth(height) 
-                + arrowButtonWidth);
+        final double totalWidth = displayNodeWidth + arrowButtonWidth;
         final Insets padding = getSkinnable().getInsets();
         return padding.getLeft() + totalWidth + padding.getRight();
     }
