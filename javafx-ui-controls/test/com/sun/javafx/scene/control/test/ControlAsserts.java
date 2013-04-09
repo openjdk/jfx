@@ -26,9 +26,12 @@ package com.sun.javafx.scene.control.test;
 
 import com.sun.javafx.scene.control.skin.LabeledText;
 import com.sun.javafx.scene.control.skin.VirtualFlow;
+import com.sun.javafx.scene.control.skin.VirtualScrollBar;
 import com.sun.javafx.tk.Toolkit;
 import java.util.Arrays;
 import java.util.List;
+
+import javafx.geometry.Orientation;
 import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.Scene;
@@ -198,7 +201,7 @@ public class ControlAsserts {
         assertEquals(getVirtualFlow(control).getCellCount(), expected);
     }
     
-    private static VirtualFlow<?> getVirtualFlow(final Control control) {
+    public static VirtualFlow<?> getVirtualFlow(final Control control) {
         Group group = new Group();
         Scene scene = new Scene(group);
 
@@ -212,5 +215,20 @@ public class ControlAsserts {
 
         VirtualFlow<?> flow = (VirtualFlow<?>)control.lookup("#virtual-flow");
         return flow;
+    }
+    
+    public static VirtualScrollBar getVirtualFlowVerticalScrollbar(final Control control) {
+        VirtualFlow<?> flow = getVirtualFlow(control);
+        VirtualScrollBar scrollBar = null;
+        for (Node child : flow.getChildrenUnmodifiable()) {
+            if (child instanceof VirtualScrollBar) {
+                if (((VirtualScrollBar)child).getOrientation() == Orientation.VERTICAL) {
+                    scrollBar = (VirtualScrollBar) child;
+                }
+            }
+        }
+        
+//        Toolkit.getToolkit().firePulse();
+        return scrollBar;
     }
 }

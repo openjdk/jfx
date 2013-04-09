@@ -25,13 +25,15 @@
 
 package javafx.scene.control;
 
-import com.sun.javafx.scene.control.skin.ListViewSkin;
-import com.sun.javafx.scene.control.skin.VirtualFlow;
-import com.sun.javafx.scene.control.test.ControlAsserts;
-import com.sun.javafx.scene.control.test.Person;
-import com.sun.javafx.scene.control.test.RT_22463_Person;
 import static javafx.scene.control.ControlTestUtils.assertStyleClassContains;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
 import java.util.Arrays;
 
 import javafx.beans.property.ObjectProperty;
@@ -40,10 +42,20 @@ import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.geometry.Orientation;
+import javafx.scene.Node;
+import javafx.scene.layout.StackPane;
 
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
+
+import com.sun.javafx.scene.control.infrastructure.StageLoader;
+import com.sun.javafx.scene.control.skin.VirtualFlow;
+import com.sun.javafx.scene.control.skin.VirtualScrollBar;
+import com.sun.javafx.scene.control.test.ControlAsserts;
+import com.sun.javafx.scene.control.test.Person;
+import com.sun.javafx.scene.control.test.RT_22463_Person;
+import com.sun.javafx.tk.Toolkit;
 
 public class ListViewTest {
     private ListView<String> listView;
@@ -527,5 +539,30 @@ public class ListViewTest {
         listView.getItems().setAll(mod1);
         ControlAsserts.assertCellCount(listView, 1);
         ControlAsserts.assertCellTextEquals(listView, 0, value1);
+    }
+    
+    @Test public void test_rt29390() {
+        ObservableList<String> items = FXCollections.observableArrayList(
+                "String1", "String2", "String3", "String4",
+                "String1", "String2", "String3", "String4",
+                "String1", "String2", "String3", "String4",
+                "String1", "String2", "String3", "String4"
+        );
+        
+        final ListView<String> listView = new ListView<String>(items);
+        listView.setMaxHeight(50);
+        listView.setPrefHeight(50);
+        
+        // we want the vertical scrollbar
+        VirtualScrollBar scrollBar = ControlAsserts.getVirtualFlowVerticalScrollbar(listView);
+        
+        assertNotNull(scrollBar);
+        assertTrue(scrollBar.isVisible());
+        assertTrue(scrollBar.getVisibleAmount() > 0.0);
+        assertTrue(scrollBar.getVisibleAmount() < 1.0);
+        
+        // this next test is likely to be brittle, but we'll see...If it is the
+        // cause of failure then it can be commented out
+        assertEquals(0.125, scrollBar.getVisibleAmount(), 0.0);
     }
 }
