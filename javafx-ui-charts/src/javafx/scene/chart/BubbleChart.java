@@ -56,7 +56,8 @@ public class BubbleChart<X,Y> extends XYChart<X,Y> {
     // -------------- CONSTRUCTORS ----------------------------------------------
 
     /**
-     * Construct a new BubbleChart with the given axis.
+     * Construct a new BubbleChart with the given axis. BubbleChart does not use a Category Axis. 
+     * Both X and Y axes should be of type NumberAxis.
      *
      * @param xAxis The x axis to use
      * @param yAxis The y axis to use
@@ -66,7 +67,8 @@ public class BubbleChart<X,Y> extends XYChart<X,Y> {
     }
 
     /**
-     * Construct a new BubbleChart with the given axis and data.
+     * Construct a new BubbleChart with the given axis and data. BubbleChart does not 
+     * use a Category Axis. Both X and Y axes should be of type NumberAxis.
      *
      * @param xAxis The x axis to use
      * @param yAxis The y axis to use
@@ -75,6 +77,9 @@ public class BubbleChart<X,Y> extends XYChart<X,Y> {
     public BubbleChart(Axis<X> xAxis, Axis<Y> yAxis, ObservableList<Series<X,Y>> data) {
         super(xAxis, yAxis);
         setLegend(legend);
+        if (!(xAxis instanceof ValueAxis && yAxis instanceof ValueAxis)) {
+            throw new IllegalArgumentException("Axis type incorrect, X and Y should both be NumberAxis");
+        }
         setData(data);
     }
 
