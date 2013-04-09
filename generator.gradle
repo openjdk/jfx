@@ -43,8 +43,9 @@ task generate << {
     // Copy over the genVSproperties.bat, used to generate properties required
     // for compilation on Windows.
     copy {
-        from "$RTDir/../build-src/genVSproperties.bat"
+        from "$RTDir/gradle-genVSproperties.bat"
         into FXDir
+        rename ("gradle-genVSproperties.bat", "genVSproperties.bat")
     }
 
     // Copy over the apps
