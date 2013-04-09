@@ -1473,11 +1473,11 @@ final class LensApplication extends Application {
                                         String filename,
                                         String title, int type,
                                         boolean multipleMode,
-                                        ExtensionFilter[] extensionFilters) {
+                                        ExtensionFilter[] extensionFilters, int defaultFilterIndex) {
         //TODO: support FileChooserResult
         return new FileChooserResult(LensCommonDialogs.showFileChooser_impl(folder, title, type,
                                                       multipleMode,
-                                                      extensionFilters), null);
+                                                      extensionFilters, defaultFilterIndex), null);
     }
 
     @Override

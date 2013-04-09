@@ -25,6 +25,7 @@
 
 package com.sun.prism;
 
+import com.sun.prism.impl.TextureResourcePool;
 import com.sun.prism.impl.VertexBuffer;
 import com.sun.prism.shape.ShapeRep;
 
@@ -41,6 +42,8 @@ public interface ResourceFactory extends GraphicsResource {
      **/
 
     public boolean isDeviceReady();
+
+    public TextureResourcePool getTextureResourcePool();
 
     /**
      * Returns a new {@code Texture} containing the pixels from the given

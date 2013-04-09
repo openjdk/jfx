@@ -124,6 +124,7 @@ public class NGImageView extends NGNode implements PGImageView {
             } else {
                 coords.draw(texture, g, x, y);
             }
+            texture.unlock();
         } else {
             if (compoundImage == null) compoundImage = new CachingCompoundImage(image, maxSize);
             // coords is null iff there was no viewport specified, but

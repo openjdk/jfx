@@ -45,8 +45,6 @@ public abstract class PrDrawable extends PrTexture implements Filterable {
         return 1.0f;
     }
 
-    public abstract boolean isLost();
-
     public abstract Graphics createGraphics();
 
     public void clear() {

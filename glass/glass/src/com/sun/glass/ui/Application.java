@@ -581,7 +581,7 @@ public abstract class Application {
     }
 
     protected abstract FileChooserResult staticCommonDialogs_showFileChooser(Window owner, String folder, String filename, String title, int type,
-                                                     boolean multipleMode, ExtensionFilter[] extensionFilters);
+                                                     boolean multipleMode, ExtensionFilter[] extensionFilters, int defaultFilterIndex);
 
     protected abstract File staticCommonDialogs_showFolderChooser(Window owner, String folder, String title);
 

@@ -289,6 +289,12 @@ class CachingShapeRepState {
 
                 if (entryMatches(entry, shape, stroke, xform))
                 {
+                    entry.texData.maskTex.lock();
+                    if (entry.texData.maskTex.isSurfaceLost()) {
+                        // Eventually refcount will go to zero and entry will be freed
+                        entry.texData.maskTex.unlock();
+                        continue;
+                    }
                     // increment ref count for the chosen entry and
                     // link the given texData to it
                     entry.refCount++;
@@ -313,6 +319,7 @@ class CachingShapeRepState {
             texData.maskTex =
                 context.getResourceFactory().createMaskTexture(mw, mh, WrapMode.CLAMP_TO_ZERO);
             maskData.uploadToTexture(texData.maskTex, 0, 0, false);
+            texData.maskTex.contentsUseful();
 
             // add the new mask texture to the cache; note that we copy the
             // shape and transform so that dependents are not affected
@@ -432,6 +439,14 @@ class CachingShapeRepState {
             }
         }
 
+        if (texData.cacheEntry != null) {
+            texData.maskTex.lock();
+            if (texData.maskTex.isSurfaceLost()) {
+                texData.maskTex.unlock();
+                invalidateMaskTexData();
+            }
+        }
+
         RectBounds xformBounds = null;
         boolean boundsCopy = false;
 
@@ -545,6 +560,7 @@ class CachingShapeRepState {
             VertexBuffer vb = context.getVertexBuffer();
             vb.addQuad(dx1, dy1, dx2, dy2, tx1, ty1, tx2, ty2);
         }
+        maskTex.unlock();
     }
 
     void dispose() {

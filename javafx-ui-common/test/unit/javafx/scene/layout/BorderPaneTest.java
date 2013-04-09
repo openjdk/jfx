@@ -28,7 +28,6 @@ package javafx.scene.layout;
 import static org.junit.Assert.*;
 import javafx.geometry.Orientation;
 import org.junit.Before;
-import org.junit.Ignore;
 
 import org.junit.Test;
 
@@ -250,7 +249,6 @@ public class BorderPaneTest {
         assertEquals(200, left.getHeight(), 1e-100);
     }
 
-  //  @Ignore
     @Test public void testChildrenInAllPositions() {
         MockResizable center = new MockResizable(10,20, 100,200, 1000,1000);
         borderpane.setCenter(center);
@@ -281,8 +279,6 @@ public class BorderPaneTest {
         assertEquals(242, borderpane.prefHeight(-1), 1e-100);
         assertEquals(Double.MAX_VALUE, borderpane.maxWidth(-1), 1e-100);
         assertEquals(Double.MAX_VALUE, borderpane.maxHeight(-1), 1e-100);
-
-// TODO Amy: re-enable the following tests once they all pass
 
         borderpane.autosize();
         borderpane.layout();
@@ -345,10 +341,15 @@ public class BorderPaneTest {
         assertEquals(19, left.getWidth(), 1e-100);
         assertEquals(217, left.getHeight(), 1e-100);
 
-        assertEquals(40, center.getLayoutX(), 1e-100);
-        assertEquals(5, center.getLayoutY(), 1e-100);
-        assertEquals(180, center.getWidth(), 1e-100);
-        assertEquals(223, center.getHeight(), 1e-100);
+        // Center is HORIZONTALLY biased, so when width is stretched, height is lower
+        double centerWidth = 280 - 19 - 56;
+        double centerHeight = Math.ceil(200 * 200 / centerWidth);
+
+        assertEquals(19, center.getLayoutX(), 1e-100);
+        // center alignment, Math.round == snapPosition
+        assertEquals(Math.round(8 + (240 - 8 - 15 - centerHeight) / 2), center.getLayoutY(), 1e-100);
+        assertEquals(centerWidth, center.getWidth(), 1e-100);
+        assertEquals(centerHeight, center.getHeight(), 1e-100);
 
         assertEquals(224, right.getLayoutX(), 1e-100);
         assertEquals(8, right.getLayoutY(), 1e-100);

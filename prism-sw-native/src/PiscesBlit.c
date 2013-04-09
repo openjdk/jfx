@@ -44,7 +44,8 @@ static INLINE void blendSrcOver8888_pre(jint *intData, jint aval, jint sred,
                                  jint sgreen, jint sblue);
 
 static INLINE void blendLCDSrcOver8888_pre(jint *intData,
-    jint ared, jint agreen, jint ablue, jint sred, jint sgreen, jint sblue);
+    jint ared, jint agreen, jint ablue, jint sred, jint sgreen, jint sblue,
+    jfloat gamma, jfloat invgamma);
 
 static INLINE void blendSrc8888(jint *intData, jint aval, jint aaval,
                          jint sred, jint sgreen, jint sblue);
@@ -1124,6 +1125,9 @@ blitSrcOverLCDMask8888_pre(Renderer *rdr, jint height) {
     jint cgreen = rdr->_cgreen;
     jint cblue = rdr->_cblue;
 
+    jfloat gamma = rdr->_gamma;
+    jfloat invgamma = rdr->_invgamma;
+
     minX = rdr->_minTouched;
     maxX = rdr->_maxTouched;
     w = (maxX >= minX) ? (maxX - minX + 1) : 0;
@@ -1146,7 +1150,9 @@ blitSrcOverLCDMask8888_pre(Renderer *rdr, jint height) {
             if (aval_ismax == MAX_ALPHA) {
                 intData[iidx] = 0xff000000 | (cred << 16) | (cgreen << 8) | cblue;
             } else {
-                blendLCDSrcOver8888_pre(&intData[iidx], ared, agreen, ablue, cred, cgreen, cblue);
+                blendLCDSrcOver8888_pre(&intData[iidx], ared, agreen, ablue,
+                    cred, cgreen, cblue,
+                    gamma, invgamma);
             }
             iidx += imagePixelStride;
         }
@@ -1543,7 +1549,8 @@ blendSrcOver8888_pre(jint *intData,
 static void
 blendLCDSrcOver8888_pre(jint *intData,
                              jint ared, jint agreen, jint ablue,
-                             jint sred, jint sgreen, jint sblue)
+                             jint sred, jint sgreen, jint sblue,
+                             jfloat gamma, jfloat invgamma)
 {
     jint ival = *intData;
     //destination alpha
@@ -1552,11 +1559,21 @@ blendLCDSrcOver8888_pre(jint *intData,
     jint dred = (ival >> 16) & 0xff;
     jint dgreen = (ival >> 8) & 0xff;
     jint dblue = ival & 0xff;
-    
-    jint ored    = div255(ared * sred     + (255 - ared) * dred);
-    jint ogreen  = div255(agreen * sgreen + (255 - agreen) * dgreen);
-    jint oblue   = div255(ablue * sblue   + (255 - ablue) * dblue);
-    
+
+    jint ored, ogreen, oblue;
+
+    dred = (jint) (255 * (pow(dred / 255.0, invgamma)));
+    dgreen = (jint) (255 * (pow(dgreen / 255.0, invgamma)));
+    dblue = (jint) (255 * (pow(dblue / 255.0, invgamma)));
+
+    ored    = ared * sred     + (255 - ared) * dred;
+    ogreen  = agreen * sgreen + (255 - agreen) * dgreen;
+    oblue   = ablue * sblue   + (255 - ablue) * dblue;
+
+    ored = (jint) (255 * (pow(ored / 65025.0, gamma)));    // 65025 = 255*255
+    ogreen = (jint) (255 * (pow(ogreen / 65025.0, gamma)));
+    oblue = (jint) (255 * (pow(oblue / 65025.0, gamma)));
+
     *intData = 0xFF000000 | (ored << 16) | (ogreen << 8) | oblue;
 }
 

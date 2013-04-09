@@ -45,7 +45,7 @@ import javafx.application.Platform;
 public abstract class AbstractAsyncOperation<V> implements AsyncOperation,
                                                            Callable<V> {
 
-    private final FutureTask<V> future;
+    protected final FutureTask<V> future;
     protected final AsyncOperationListener listener;
 
     private int progressGranularity = 100;

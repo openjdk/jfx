@@ -170,7 +170,7 @@ UINT_PTR CALLBACK DialogHook(HWND hwnd, UINT uMsg, WPARAM wParam,
 } 
 
 jobject StandardFileChooser_Show(HWND owner, LPCTSTR folder, LPCTSTR filename, LPCTSTR title, jint type,
-                                      jboolean multipleMode, jobjectArray jFilters)
+                                      jboolean multipleMode, jobjectArray jFilters, jint defaultFilterIndex)
 {
     DNTString files(MAX_PATH);
     DNTString filters(MAX_PATH);
@@ -189,7 +189,7 @@ jobject StandardFileChooser_Show(HWND owner, LPCTSTR folder, LPCTSTR filename, L
     ofn.lStructSize       = sizeof(OPENFILENAME);
     ofn.hwndOwner         = owner;
     ofn.lpstrFilter       = filters;
-    ofn.nFilterIndex      = 1;
+    ofn.nFilterIndex      = defaultFilterIndex + 1; // nFilterIndex is 1-based
     ofn.lpstrFile         = files;
     ofn.nMaxFile          = MAX_PATH;
     ofn.lpstrInitialDir   = folder;

@@ -412,38 +412,84 @@ task generate << {
     // Create the deployment code
     copy {
         from "$RTDir/deploy/javafx-deploy/src/js"
-        into "$FXDir/deploy/deploymentToolkit/src/main/js"
+        into "$FXDir/modules/fxpackager/src/main/resources/resources/web-files"
+    }
+
+    copy {
+        from "$RTDir/deploy/lib"
+        into "$FXDir/modules/fxpackager/src/main/resources/resources/web-files"
+        exclude "java-coffee-cup-23x20.png", "splash.gif"
     }
 
     copy {
         from "$RTDir/deploy/javafx-launcher/src"
-        into "$FXDir/deploy/launcher/src/main/java"
+        into "$FXDir/modules/fxpackager/src/main/java"
     }
 
     copy {
         from "$RTDir/deploy/packager/src"
-        into "$FXDir/deploy/packager/src/main/java"
+        into "$FXDir/modules/fxpackager/src/main/java"
         exclude excludeFromSource
+        exclude "**/*antlib.xml",
+                "**/*.control", "**/*.copyright", "**/*.desktop", "**/*.postinst", "**/*.postrm", "**/*.spec",
+                "**/*.scpt", "**/*.icns", "**/*.template", "**/*.plist",
+                "**/*.bmp", "**/*.ico", "**/*.iss", "**/*.wxs"
     }
 
     copy {
         from "$RTDir/deploy/packager/src", "$RTDir/deploy/packager/scripts"
-        into "$FXDir/deploy/packager/src/main/resources"
+        into "$FXDir/modules/fxpackager/src/main/resources"
         include includeInResources
-        include "**/*antlib.xml"
+        include "**/*antlib.xml",
+                "**/*.control", "**/*.copyright", "**/*.desktop", "**/*.postinst", "**/*.postrm", "**/*.spec",
+                "**/*.scpt", "**/*.icns", "**/*.template", "**/*.plist",
+                "**/*.bmp", "**/*.ico", "**/*.iss", "**/*.wxs"
         exclude excludeFromResources
     }
 
-    ["linux", "macosx", "windows"].each { dir ->
-        copy {
-            from "$RTDir/deploy/packager/native/$dir"
-            into "$FXDir/deploy/packager/native/src/main/$dir"
-        }
+    copy {
+        from "$RTDir/deploy/packager/native/linux"
+        into "$FXDir/modules/fxpackager/src/main/native/launcher/linux"
+    }
+
+    copy {
+        from "$RTDir/deploy/packager/native/macosx"
+        into "$FXDir/modules/fxpackager/src/main/native/launcher/mac"
+    }
+
+    copy {
+        from "$RTDir/deploy/packager/native/windows"
+        into "$FXDir/modules/fxpackager/src/main/native/launcher/win"
+        rename "iconswap.cpp", "IconSwap.cpp"
+        include "WinLauncher.cpp", "iconswap.cpp"
+    }
+
+    copy {
+        from "$RTDir/deploy/packager/scripts"
+        into "$FXDir/modules/fxpackager/src/main/native/javafxpackager/shell"
+    }
+
+    copy {
+        from "$RTDir/deploy/packager/winlauncher"
+        into "$FXDir/modules/fxpackager/src/main/native/javafxpackager/win"
+        include "javafxpackager.manifest", "javafxpackager.rc", "main.cpp"
+        rename "main.cpp", "javafxpackager.cpp"
     }
 
     copy {
         from "$RTDir/deploy/packager/test"
-        into "$FXDir/deploy/packager/test/main/java"
+        into "$FXDir/modules/fxpackager/test/main/java"
+    }
+
+    copy {
+        from "$RTDir/deploy/man"
+        into "$FXDir/modules/fxpackager/src/main/man"
+        exclude "build.xml", "**/ja/**"
+    }
+
+    copy {
+        from "$RTDir/deploy/man/ja"
+        into "$FXDir/modules/fxpackager/src/main/man/ja_JP.UTF-8"
     }
 
     // Find every empty directory and nuke it

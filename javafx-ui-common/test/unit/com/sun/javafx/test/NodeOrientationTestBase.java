@@ -31,6 +31,7 @@ import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
+import javafx.scene.SubScene;
 
 public abstract class NodeOrientationTestBase {
     protected NodeOrientationTestBase() {
@@ -57,6 +58,12 @@ public abstract class NodeOrientationTestBase {
 
     protected static Group inhAutGroup(final Node... childNodes) {
         return autGroup(NodeOrientation.INHERIT, childNodes);
+    }
+
+    protected static SubScene inhSubScene(final Parent rootNode) {
+        final SubScene subScene = new SubScene(rootNode, 400, 300);
+        subScene.setNodeOrientation(NodeOrientation.INHERIT);
+        return subScene;
     }
 
     protected static Group ltrManGroup(final Node... childNodes) {
@@ -139,6 +146,10 @@ public abstract class NodeOrientationTestBase {
                 nextIndex = updateOrientation(childNode, updateString,
                                               nextIndex);
             }
+        } else if (node instanceof SubScene) {
+            final Node nextRoot = ((SubScene) node).getRoot();
+            nextIndex = updateOrientation(nextRoot, updateString,
+                                          nextIndex);
         }
 
         return nextIndex;
@@ -179,6 +190,9 @@ public abstract class NodeOrientationTestBase {
             for (final Node childNode: childNodes) {
                 collectState(dest, childNode, encoder);
             }
+        } else if (node instanceof SubScene) {
+            final Node nextRoot = ((SubScene) node).getRoot();
+            collectState(dest, nextRoot, encoder);
         }
     }
 }

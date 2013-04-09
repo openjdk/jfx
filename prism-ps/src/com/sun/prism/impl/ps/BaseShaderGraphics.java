@@ -301,6 +301,7 @@ public abstract class BaseShaderGraphics
         VertexBuffer vb = context.getVertexBuffer();
         context.validateTextureOp(this, IDENT, tex, null, tex.getPixelFormat());
         vb.addQuad(dx1, dy1, dx2, dy2, tx1, ty1, tx2, ty2);
+        tex.unlock();
     }
 
     @Override
@@ -351,6 +352,7 @@ public abstract class BaseShaderGraphics
             VertexBuffer vb = context.getVertexBuffer();
             vb.addQuad(dx1, dy1, dx2, dy2, tx1, ty1, tx2, ty2);
         }
+        maskTex.unlock();
     }
 
     private static float getStrokeExpansionFactor(BasicStroke stroke) {
@@ -1100,6 +1102,7 @@ public abstract class BaseShaderGraphics
                                   ou0, ov0, ouc, ov0, ou0, ovc, ouc, ovc,
                                   x1, y1, xc, yc, paintTx);
             }
+            rTex.unlock();
             return true;
         } else {
             System.out.println("Not a 2d transform!");
@@ -1126,6 +1129,7 @@ public abstract class BaseShaderGraphics
         vb.addQuad( x1,  y1,  xc,  yc,
                    ou0, ov0, ouc, ovc,
                    paintTx);
+        rTex.unlock();
         return true;
     }
 
@@ -1240,6 +1244,7 @@ public abstract class BaseShaderGraphics
                                    u0,  v0,  u1,  v0,  u0,  v1,  u1,  v1,
                                   0, 0);
 //                System.out.print("1"); System.out.flush();
+                rTex.unlock();
                 return true;
             }
             // long thin line (cellw is along the line, cellh is across it)
@@ -1269,6 +1274,7 @@ public abstract class BaseShaderGraphics
                                    u0,  v0,  u1,  v0,  u0,  v1,  u1,  v1,
                                   0, 0);
 //                System.out.print("2"); System.out.flush();
+                rTex.unlock();
                 return true;
             }
             // Finally, 3-slice the line (left edge, huge middle, right edge)
@@ -1300,6 +1306,7 @@ public abstract class BaseShaderGraphics
                                u1,  v0,  u0,  v0,  u1,  v1,  u0,  v1,
                               0, 0);
 //            System.out.print("3"); System.out.flush();
+            rTex.unlock();
             return true;
         }
         // we could 2 and 3 slice extremely wide short lines, but they
@@ -1335,6 +1342,7 @@ public abstract class BaseShaderGraphics
                             u0,  v0,  uc,  v0,  u0,  vc,  uc,  vc,
                             0, 0);
 //        System.out.print("4"); System.out.flush();
+        rTex.unlock();
         return true;
     }
 
@@ -1348,13 +1356,12 @@ public abstract class BaseShaderGraphics
             return;
         }
         if (PrismSettings.primTextureSize != 0) {
-            if (fillPrimRect(x, y, w, h,
-                             context.getRectTexture(),
-                             context.getWrapRectTexture(),
-                             x, y, w, h))
-            {
-                return;
-            }
+            Texture rTex = context.getRectTexture();
+            Texture wTex = context.getWrapRectTexture();
+            boolean success = fillPrimRect(x, y, w, h, rTex, wTex, x, y, w, h);
+            rTex.unlock();
+            wTex.unlock();
+            if (success) return;
         }
         renderGeneralRoundedRect(x, y, w, h, 0f, 0f,
                                  MaskType.FILL_PGRAM, null);
@@ -1647,14 +1654,14 @@ public abstract class BaseShaderGraphics
                     // Zero length line - NOP for CAP_BUTT
                     return;
                 }
-                if (fillPrimRect(bx - padx,        by - pady,
-                                 bw + padx + padx, bh + pady + pady,
-                                 context.getRectTexture(),
-                                 context.getWrapRectTexture(),
-                                 bx, by, bw, bh))
-                {
-                    return;
-                }
+                Texture rTex = context.getRectTexture();
+                Texture wTex = context.getWrapRectTexture();
+                boolean success = fillPrimRect(bx - padx,        by - pady,
+                                               bw + padx + padx, bh + pady + pady,
+                                               rTex, wTex, bx, by, bw, bh);
+                rTex.unlock();
+                wTex.unlock();
+                if (success) return;
             } else {
                 if (drawPrimDiagonal(x1, y1, x2, y2, lw, cap,
                                      bx, by, bw, bh))
@@ -2000,7 +2007,9 @@ public abstract class BaseShaderGraphics
     }
 
     public void releaseReadBackBuffer(RTTexture rtt) {
-        // NOP.
+        // This will be needed when we track LCD buffer locks and uses.
+        // (See RT-29488)
+//        context.releaseLCDBuffer();
     }
 
 }

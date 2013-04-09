@@ -33,23 +33,25 @@ import com.sun.javafx.binding.Logging;
 
 /**
  * This class defines a {@link Property} wrapping a {@code float} value.
- * 
+ * <p>
  * The value of a {@code FloatProperty} can be get and set with {@link #get()},
  * {@link #getValue()}, {@link #set(float)}, and {@link #setValue(Number)}.
- * 
+ * <p>
  * A property can be bound and unbound unidirectional with
  * {@link #bind(ObservableValue)} and {@link #unbind()}. Bidirectional bindings
  * can be created and removed with {@link #bindBidirectional(Property)} and
  * {@link #unbindBidirectional(Property)}.
- * 
+ * <p>
  * The context of a {@code FloatProperty} can be read with {@link #getBean()}
  * and {@link #getName()}.
- * 
+ * <p>
+ * Note: setting or binding this property to a null value will set the property to "0.0". See {@link #setValue(java.lang.Number) }.
+ *
  * @see javafx.beans.value.ObservableFloatValue
  * @see javafx.beans.value.WritableFloatValue
  * @see ReadOnlyFloatProperty
  * @see Property
- * 
+ *
  */
 public abstract class FloatProperty extends ReadOnlyFloatProperty implements
         Property<Number>, WritableFloatValue {
@@ -86,7 +88,7 @@ public abstract class FloatProperty extends ReadOnlyFloatProperty implements
     /**
      * Returns a string representation of this {@code FloatProperty} object.
      * @return a string representation of this {@code FloatProperty} object.
-     */ 
+     */
     @Override
     public String toString() {
         final Object bean = getBean();
@@ -102,41 +104,41 @@ public abstract class FloatProperty extends ReadOnlyFloatProperty implements
         result.append("value: ").append(get()).append("]");
         return result.toString();
     }
-    
+
     /**
      * Returns a {@code FloatProperty} that wraps a
-     * {@link javafx.beans.property.Property} and is 
+     * {@link javafx.beans.property.Property} and is
      * bidirectionally bound to it.
      * Changing this property will result in a change of the original property.
-     * 
+     *
      * <p>
      * This is very useful when bidirectionally binding an ObjectProperty<Float> and
      * a FloatProperty.
-     * 
+     *
      * <blockquote><pre>
      *   FloatProperty floatProperty = new SimpleFloatProperty(1.0f);
      *   ObjectProperty&lt;Float&gt; objectProperty = new SimpleObjectProperty&lt;&gt;(2.0f);
-     * 
+     *
      *   // Need to keep the reference as bidirectional binding uses weak references
      *   FloatProperty objectAsFloat = FloatProperty.floatProperty(objectProperty);
-     *   
+     *
      *   floatProperty.bindBidirectional(objectAsFloat);
-     * 
+     *
      * </pre></blockquote>
-     * 
+     *
      * Another approach is to convert the FloatProperty to ObjectProperty using
      * {@link #asObject()} method.
-     * 
+     *
      * <p>
      * Note: null values in the source property will be interpreted as 0f
-     * 
+     *
      * @param property
      *            The source {@code Property}
      * @return A {@code FloatProperty} that wraps the
      *         {@code Property}
      * @throws NullPointerException
      *             if {@code value} is {@code null}
-     * @see #asObject() 
+     * @see #asObject()
      */
      public static FloatProperty floatProperty(final Property<Float> property) {
         if (property == null) {
@@ -156,7 +158,7 @@ public abstract class FloatProperty extends ReadOnlyFloatProperty implements
             public String getName() {
                 return property.getName();
             }
-            
+
             @Override
             protected void finalize() throws Throwable {
                 try {
@@ -189,7 +191,7 @@ public abstract class FloatProperty extends ReadOnlyFloatProperty implements
     @Override
     public ObjectProperty<Float> asObject() {
         return new ObjectPropertyBase<Float> () {
-            
+
             {
                 BidirectionalBinding.bindNumber(this, FloatProperty.this);
             }
@@ -215,5 +217,5 @@ public abstract class FloatProperty extends ReadOnlyFloatProperty implements
 
         };
     }
-    
+
 }

@@ -27,7 +27,7 @@
 #define _COMMONDIALOGS_COM_INCLUDED_
 
 jobject COMFileChooser_Show(HWND owner, LPCTSTR folder, LPCTSTR filename, LPCTSTR title, jint type,
-                                 jboolean multipleMode, jobjectArray jFilters);
+                                 jboolean multipleMode, jobjectArray jFilters, jint defaultFilterIndex);
 
 jstring COMFolderChooser_Show(HWND owner, LPCTSTR folder, LPCTSTR title);
 

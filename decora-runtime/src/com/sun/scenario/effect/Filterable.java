@@ -33,4 +33,7 @@ public interface Filterable {
     public int getPhysicalHeight();
     public float getPixelScale();
     public void flush();
+    public void lock();
+    public void unlock();
+    public boolean isLost();
 }

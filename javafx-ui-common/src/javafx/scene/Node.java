@@ -5739,6 +5739,20 @@ public abstract class Node implements EventTarget, Styleable {
         // overriden in Parent
     }
 
+    private Node getOrientationParent() {
+        final Node parentValue = getParent();
+        if (parentValue != null) {
+            return parentValue;
+        }
+
+        final Node subSceneValue = getSubScene();
+        if (subSceneValue != null) {
+            return subSceneValue;
+        }
+
+        return null;
+    }
+
     private byte calcEffectiveNodeOrientation() {
         final NodeOrientation nodeOrientationValue = getNodeOrientation();
         if (nodeOrientationValue != NodeOrientation.INHERIT) {
@@ -5747,7 +5761,7 @@ public abstract class Node implements EventTarget, Styleable {
                        : EFFECTIVE_ORIENTATION_RTL;
         }
 
-        final Node parentValue = getParent();
+        final Node parentValue = getOrientationParent();
         if (parentValue != null) {
             return getEffectiveOrientation(parentValue.resolvedNodeOrientation);
         }
@@ -5775,7 +5789,7 @@ public abstract class Node implements EventTarget, Styleable {
                        : AUTOMATIC_ORIENTATION_RTL;
         }
 
-        final Node parentValue = getParent();
+        final Node parentValue = getOrientationParent();
         if (parentValue != null) {
             // automatic node orientation is inherited
             return getAutomaticOrientation(parentValue.resolvedNodeOrientation);
@@ -5796,7 +5810,7 @@ public abstract class Node implements EventTarget, Styleable {
     // A node has mirroring if the orientation differs from the parent
     // package private for testing
     final boolean hasMirroring() {
-        final Node parentValue = getParent();
+        final Node parentValue = getOrientationParent();
 
         final byte thisOrientation =
                 getAutomaticOrientation(resolvedNodeOrientation);

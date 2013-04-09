@@ -194,11 +194,15 @@ public abstract class J2DPresentable implements Presentable {
     IntBuffer ib;
     J2DRTTexture readbackBuffer;
 
-    protected J2DPresentable(java.awt.image.BufferedImage buffer,
-                             J2DResourceFactory factory)
+    J2DPresentable(java.awt.image.BufferedImage buffer,
+                   J2DResourceFactory factory)
     {
         this.buffer = buffer;
         this.factory = factory;
+    }
+
+    public boolean lockResources() {
+        return false;
     }
 
     public void setNeedsResize() {
