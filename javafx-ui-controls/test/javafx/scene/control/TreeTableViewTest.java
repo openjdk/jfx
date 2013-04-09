@@ -1709,4 +1709,61 @@ public class TreeTableViewTest {
         assertEquals(p0, sm.getSelectedItems().get(0));
         assertEquals(p1, sm.getSelectedItems().get(1));
     }
+    
+    @Test public void test_rt29566() {
+        ObservableList<TreeItem<Person>> persons = FXCollections.observableArrayList(
+                new TreeItem<Person>(new Person("Jacob", "Smith", "jacob.smith@example.com")),
+                new TreeItem<Person>(new Person("Isabella", "Johnson", "isabella.johnson@example.com")),
+                new TreeItem<Person>(new Person("Ethan", "Williams", "ethan.williams@example.com")),
+                new TreeItem<Person>(new Person("Emma", "Jones", "emma.jones@example.com")),
+                new TreeItem<Person>(new Person("Michael", "Brown", "michael.brown@example.com")));
+                
+        TreeTableView<Person> table = new TreeTableView<>();
+        
+        TreeItem<Person> root = new TreeItem<Person>(new Person("Root", null, null));
+        root.setExpanded(true);
+        table.setRoot(root);
+        table.setShowRoot(false);
+        root.getChildren().setAll(persons);
+        
+        TableSelectionModel sm = table.getSelectionModel();
+        
+        TreeTableColumn firstNameCol = new TreeTableColumn("First Name");
+        firstNameCol.setCellValueFactory(new TreeItemPropertyValueFactory<Person, String>("firstName"));
+
+        TreeTableColumn lastNameCol = new TreeTableColumn("Last Name");
+        lastNameCol.setCellValueFactory(new TreeItemPropertyValueFactory<Person, String>("lastName"));
+        
+        TreeTableColumn emailCol = new TreeTableColumn("Email");
+        emailCol.setCellValueFactory(new TreeItemPropertyValueFactory<Person, String>("email"));
+        
+        table.getColumns().addAll(firstNameCol, lastNameCol, emailCol);
+        
+        // test the state before we hide and re-add a column
+        ControlAsserts.assertCellTextEquals(table, 0, "Jacob", "Smith", "jacob.smith@example.com");
+        ControlAsserts.assertCellTextEquals(table, 1, "Isabella", "Johnson", "isabella.johnson@example.com");
+        ControlAsserts.assertCellTextEquals(table, 2, "Ethan", "Williams", "ethan.williams@example.com");
+        ControlAsserts.assertCellTextEquals(table, 3, "Emma", "Jones", "emma.jones@example.com");
+        ControlAsserts.assertCellTextEquals(table, 4, "Michael", "Brown", "michael.brown@example.com");
+        
+        // hide the last name column, and test cells again
+        table.getColumns().remove(lastNameCol);
+        ControlAsserts.assertCellTextEquals(table, 0, "Jacob", "jacob.smith@example.com");
+        ControlAsserts.assertCellTextEquals(table, 1, "Isabella", "isabella.johnson@example.com");
+        ControlAsserts.assertCellTextEquals(table, 2, "Ethan", "ethan.williams@example.com");
+        ControlAsserts.assertCellTextEquals(table, 3, "Emma", "emma.jones@example.com");
+        ControlAsserts.assertCellTextEquals(table, 4, "Michael", "michael.brown@example.com");
+        
+        // re-add the last name column - we should go back to the original state.
+        // However, what appears to be happening is that, for some reason, some
+        // of the cells from the removed column do not reappear - meaning in this case
+        // some of the last name values will not be where we expect them to be.
+        // This is clearly not ideal!
+        table.getColumns().add(1, lastNameCol);
+        ControlAsserts.assertCellTextEquals(table, 0, "Jacob", "Smith", "jacob.smith@example.com");
+        ControlAsserts.assertCellTextEquals(table, 1, "Isabella", "Johnson", "isabella.johnson@example.com");
+        ControlAsserts.assertCellTextEquals(table, 2, "Ethan", "Williams", "ethan.williams@example.com");
+        ControlAsserts.assertCellTextEquals(table, 3, "Emma", "Jones", "emma.jones@example.com");
+        ControlAsserts.assertCellTextEquals(table, 4, "Michael", "Brown", "michael.brown@example.com");
+    }
 }
