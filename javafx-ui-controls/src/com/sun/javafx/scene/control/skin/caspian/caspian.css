@@ -3477,8 +3477,12 @@ Only the properties with values that are different from the TextBox are specifie
     -fx-vgap: 0.3333333em;
 }
 
-.custom-color-dialog .controls-pane #settings-pane .label {
+.custom-color-dialog .controls-pane #settings-pane .settings-label {
     -fx-min-width: 5.75em;
+}
+
+.custom-color-dialog .controls-pane #settings-pane .settings-unit {
+    -fx-max-width: 1em;
 }
 
 .custom-color-dialog .controls-pane #settings-pane .slider {

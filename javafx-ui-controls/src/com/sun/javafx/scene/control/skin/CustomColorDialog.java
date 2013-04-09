@@ -433,6 +433,7 @@ public class CustomColorDialog extends HBox {
         private Label labels[] = new Label[4];
         private Slider sliders[] = new Slider[4];
         private IntegerField fields[] = new IntegerField[4];
+        private Label units[] = new Label[4];
         private HBox buttonBox;
         private Region whiteBox;
         
@@ -522,15 +523,17 @@ public class CustomColorDialog extends HBox {
             settingsPane.setId("settings-pane");
             settingsPane.getColumnConstraints().addAll(new ColumnConstraints(), 
                     new ColumnConstraints(), new ColumnConstraints(), 
-                    new ColumnConstraints(), new ColumnConstraints());
+                    new ColumnConstraints(), new ColumnConstraints(), 
+                    new ColumnConstraints());
             settingsPane.getColumnConstraints().get(0).setHgrow(Priority.NEVER);
             settingsPane.getColumnConstraints().get(2).setHgrow(Priority.ALWAYS);
             settingsPane.getColumnConstraints().get(3).setHgrow(Priority.NEVER);
             settingsPane.getColumnConstraints().get(4).setHgrow(Priority.NEVER);
-            settingsPane.add(whiteBox, 0, 0, 5, 5);
-            settingsPane.add(hBox, 0, 0, 5, 1);
+            settingsPane.getColumnConstraints().get(5).setHgrow(Priority.NEVER);
+            settingsPane.add(whiteBox, 0, 0, 6, 5);
+            settingsPane.add(hBox, 0, 0, 6, 1);
             settingsPane.add(leftSpacer, 0, 0);
-            settingsPane.add(rightSpacer, 4, 0);
+            settingsPane.add(rightSpacer, 5, 0);
             settingsPane.add(bottomSpacer, 0, 4);   
             
             webField = new WebColorField();
@@ -543,12 +546,16 @@ public class CustomColorDialog extends HBox {
             // Color settings Grid Pane
             for (int i = 0; i < 4; i++) {
                 labels[i] = new Label();
+                labels[i].getStyleClass().add("settings-label");
 
                 sliders[i] = new Slider();
 
                 fields[i] = new IntegerField();
                 fields[i].getStyleClass().addAll("color-input-field", "text-field");
                 fields[i].setSkin(new IntegerFieldSkin(fields[i]));
+                
+                units[i] = new Label(i == 0 ? "\u00B0" : "%");                
+                units[i].getStyleClass().add("settings-unit");
 
                 if (i > 0 && i < 3) {
                     // first row and opacity labels are always visible
@@ -559,6 +566,7 @@ public class CustomColorDialog extends HBox {
                     // sliders and fields shouldn't be visible in Web page
                     sliders[i].visibleProperty().bind(group.selectedToggleProperty().isNotEqualTo(webButton));
                     fields[i].visibleProperty().bind(group.selectedToggleProperty().isNotEqualTo(webButton));
+                    units[i].visibleProperty().bind(group.selectedToggleProperty().isEqualTo(hsbButton));
                 }
                 int row = 1 + i;
                 if (i == 3) {
@@ -569,6 +577,7 @@ public class CustomColorDialog extends HBox {
                 settingsPane.add(labels[i], 1, row);
                 settingsPane.add(sliders[i], 2, row);
                 settingsPane.add(fields[i], 3, row);
+                settingsPane.add(units[i], 4, row);
             }
             
             set(3, "Opacity:", 100, colorRectPane.alpha);
