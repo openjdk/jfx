@@ -71,4 +71,16 @@ public class StubFilterable implements Filterable {
     public void flush() {
     }
 
+    @Override
+    public void lock() {
+    }
+
+    @Override
+    public void unlock() {
+    }
+
+    @Override
+    public boolean isLost() {
+        return false;
+    }
 }

@@ -53,7 +53,7 @@ final class MacCommonDialogs {
     private static native File _showFolderChooser(String folder, String title);
 
     static List<File> showFileChooser_impl(Window owner, String folder, String filename, String title, int type,
-                                         boolean multipleMode, ExtensionFilter[] extensionFilters) {
+                                         boolean multipleMode, ExtensionFilter[] extensionFilters, int defaultFilterIndex) {
         List<String> list = new ArrayList<String>();
         for (ExtensionFilter extension : extensionFilters) {
             for (String suffix : extension.getExtensions()) {

@@ -31,6 +31,7 @@ import com.sun.prism.Image;
 import com.sun.prism.PixelFormat;
 import com.sun.prism.RTTexture;
 
+import java.awt.image.BufferedImage;
 import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
@@ -40,12 +41,14 @@ class J2DRTTexture extends J2DTexture implements RTTexture {
     private boolean opaque;
 
     J2DRTTexture(int w, int h, J2DResourceFactory factory) {
-        super(PixelFormat.INT_ARGB_PRE, WrapMode.CLAMP_TO_ZERO, w, h);
+        super(new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB_PRE),
+              IntArgbPreUpdater.INT_ARGB_PRE_INSTANCE, WrapMode.CLAMP_TO_ZERO);
         this.factory = factory;
         this.opaque = false;
     }
 
     public int[] getPixels() {
+        BufferedImage bimg = getBufferedImage();
         java.awt.image.DataBuffer db = bimg.getRaster().getDataBuffer();
         if (db instanceof java.awt.image.DataBufferInt) {
             return ((java.awt.image.DataBufferInt) db).getData();
@@ -91,21 +94,18 @@ class J2DRTTexture extends J2DTexture implements RTTexture {
     }
 
     public Graphics createGraphics() {
+        BufferedImage bimg = getBufferedImage();
         J2DPresentable presentable = J2DPresentable.create(bimg, factory);
         java.awt.Graphics2D g2d = bimg.createGraphics();
         return new J2DPrismGraphics(presentable, g2d);
     }
 
     java.awt.Graphics2D createAWTGraphics2D() {
-        return bimg.createGraphics();
+        return getBufferedImage().createGraphics();
     }
 
     public Screen getAssociatedScreen() {
         return factory.getScreen();
-    }
-
-    @Override public boolean isSurfaceLost() {
-        return false;
     }
 
     @Override

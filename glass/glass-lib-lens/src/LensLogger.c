@@ -26,7 +26,10 @@
 #include "LensCommon.h"
 
 #include <assert.h>
+#ifndef ANDROID_NDK
+//Backtrace is not available on Android. Need to find workaround.
 #include <execinfo.h>
+#endif
 #include <sys/types.h>
 #include <linux/unistd.h>
 #include <sys/syscall.h>
@@ -282,6 +285,11 @@ void glass_logf(
     }
 }
 
+#ifdef ANDROID_NDK
+void glass_backtrace() {
+    fprintf(stderr, "backtrace not supported on Android!");
+}
+#else
 void glass_backtrace() {
     JNIEnv *env;
     int i;
@@ -387,4 +395,4 @@ void glass_backtrace() {
     }
     fflush(stderr);
 }
-
+#endif

@@ -66,7 +66,6 @@ typedef struct {
 
 
 static DispManCursor cursor;
-static DISPMANX_RESOURCE_HANDLE_T screenResource = 0;
 
 static void *fbCursorUpdater(void *data);
 static void fbDispmanAddDispmanxElement(void);
@@ -341,10 +340,16 @@ jboolean dispman_glass_robot_screen_capture(jint x, jint y,
     VC_IMAGE_TRANSFORM_T transform = 0;
     DISPMANX_RESOURCE_HANDLE_T resource = 0;
     DISPMANX_DISPLAY_HANDLE_T display = 0;
+    DISPMANX_RESOURCE_HANDLE_T screenResource = 0;
     uint32_t imagePtr;
     int rc;
 
     GLASS_LOG_FINE("Capture %i,%i+%ix%i", x, y, width, height);
+
+    if (width < 1 || height < 1) {
+        GLASS_LOG_SEVERE("Failed. width/height values must be at least = 1");
+        return JNI_FALSE;
+    }
 
     GLASS_LOG_FINE("open(%s, O_RDONLY)", FB_DEVICE);
     fbFileHandle = open(FB_DEVICE, O_RDONLY);
@@ -352,6 +357,7 @@ jboolean dispman_glass_robot_screen_capture(jint x, jint y,
         GLASS_LOG_SEVERE("Cannot open framebuffer");
         return JNI_FALSE;
     }
+
     GLASS_LOG_FINE("ioctl(%s, FBIOGET_VSCREENINFO)", FB_DEVICE);
     if (ioctl(fbFileHandle, FBIOGET_VSCREENINFO, &screenInfo)) {
         GLASS_LOG_SEVERE("Cannot get screen info");
@@ -364,10 +370,11 @@ jboolean dispman_glass_robot_screen_capture(jint x, jint y,
                    screenInfo.xoffset, screenInfo.yoffset);
     GLASS_LOG_FINE("close(%s)", FB_DEVICE);
     close(fbFileHandle);
+
     VC_RECT_T pixelRect = { 0, 0, screenInfo.xres, screenInfo.yres };
 
-    pixelBuffer = (unsigned int *) malloc(
-                      screenInfo.xres * screenInfo.yres * 4);
+    int pixelBufferLength = screenInfo.xres * screenInfo.yres * 4;
+    pixelBuffer = (unsigned int *) malloc(pixelBufferLength);
     pixelBufferPtr = (unsigned char *) pixelBuffer;
 
     if (pixelBuffer == NULL) {
@@ -384,16 +391,16 @@ jboolean dispman_glass_robot_screen_capture(jint x, jint y,
         free(pixelBuffer);
         return JNI_FALSE;
     }
+
     // create the resource for the snapshot
+    screenResource = vc_dispmanx_resource_create(VC_IMAGE_ARGB8888, screenInfo.xres, screenInfo.yres, &imagePtr);
     if (!screenResource) {
-        screenResource = vc_dispmanx_resource_create(VC_IMAGE_ARGB8888, screenInfo.xres, screenInfo.yres, &imagePtr);
-        if (!screenResource) {
-            fprintf(stderr, "fbRobotScreenCapture: Cannot create resource\n");
-            vc_dispmanx_display_close(display);
-            free(pixelBuffer);
-            return JNI_FALSE;
-        }
+        fprintf(stderr, "fbRobotScreenCapture: Cannot create resource\n");
+        vc_dispmanx_display_close(display);
+        free(pixelBuffer);
+        return JNI_FALSE;
     }
+
     rc = vc_dispmanx_snapshot(display, screenResource, transform);
     if (rc) {
         fprintf(stderr, "fbRobotScreenCapture: snapshot failed\n");
@@ -410,11 +417,14 @@ jboolean dispman_glass_robot_screen_capture(jint x, jint y,
         return JNI_FALSE;
     }
 
-    if (width < 1 || height < 1) {
-        GLASS_LOG_SEVERE("Failed. width/height values must be at least = 1");
+    rc = vc_dispmanx_resource_delete(screenResource);
+    if (rc) {
+        fprintf(stderr, "fbRobotScreenCapture: failed to free buffer %d\n", rc);
+        vc_dispmanx_display_close(display);
         free(pixelBuffer);
         return JNI_FALSE;
     }
+    screenResource = 0;
 
     if (x < 0) {
         pixelBuffer += -x;

@@ -95,11 +95,9 @@ import com.sun.javafx.tk.Toolkit;
  * </pre></code>
  * <p>
  * In addition to the common or built in types, you may put any arbitrary data onto the
- * clipboard (assuming it is either a reference, or serializable. See more about
- * references later). The clipboard system in JavaFX utilizes the same system as Cocoa
- * for defining a hierarchical namespace for content types.
- * See http://en.wikipedia.org/wiki/Uniform_Type_Identifier.
+ * clipboard (assuming it is serializable).
  * <p>
+ * Content types are defined by the DataFormat objects.
  * The DataFormat class defines an immutable object, and there are a number of static final
  * fields for common DataFormat types. Of course application specific DataFormat types can also be
  * declared and used. The following two methods are equivalent (and the second call

@@ -38,6 +38,17 @@ import com.sun.javafx.runtime.async.AsyncOperationListener;
 import com.sun.javafx.tk.PlatformImage;
 import com.sun.prism.Image;
 import com.sun.prism.impl.PrismSettings;
+import java.lang.reflect.UndeclaredThrowableException;
+import java.security.AccessControlContext;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
+import java.security.PrivilegedActionException;
+import java.security.PrivilegedExceptionAction;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 class PrismImageLoader2 implements com.sun.javafx.tk.ImageLoader {
 
@@ -177,9 +188,14 @@ class PrismImageLoader2 implements com.sun.javafx.tk.ImageLoader {
         }
     }
 
-    static class AsyncImageLoader
+    static final class AsyncImageLoader
         extends AbstractRemoteResource<PrismImageLoader2>
     {
+        private static final ExecutorService BG_LOADING_EXECUTOR =
+                createExecutor();
+
+        private final AccessControlContext acc;
+
         int width, height;
         boolean preserveRatio;
         boolean smooth;
@@ -194,10 +210,79 @@ class PrismImageLoader2 implements com.sun.javafx.tk.ImageLoader {
             this.height = height;
             this.preserveRatio = preserveRatio;
             this.smooth = smooth;
+            this.acc = AccessController.getContext();
         }
 
+        @Override
         protected PrismImageLoader2 processStream(InputStream stream) throws IOException {
             return new PrismImageLoader2(stream, width, height, preserveRatio, smooth);
+        }
+
+        @Override
+        public PrismImageLoader2 call() throws IOException {
+            try {
+                return AccessController.doPrivileged(
+                        new PrivilegedExceptionAction<PrismImageLoader2>() {
+                            @Override
+                            public PrismImageLoader2 run() throws IOException {
+                                return AsyncImageLoader.super.call();
+                            }
+                        }, acc);
+            } catch (final PrivilegedActionException e) {
+                final Throwable cause = e.getCause();
+
+                if (cause instanceof IOException) {
+                    throw (IOException) cause;
+                }
+
+                throw new UndeclaredThrowableException(cause);
+            }
+        }
+
+        @Override
+        public void start() {
+            BG_LOADING_EXECUTOR.execute(future);
+        }
+
+        private static ExecutorService createExecutor() {
+            final ThreadGroup bgLoadingThreadGroup =
+                    AccessController.doPrivileged(
+                        new PrivilegedAction<ThreadGroup>() {
+                            @Override
+                            public ThreadGroup run() {
+                                return new ThreadGroup(
+                                    QuantumToolkit.getFxUserThread()
+                                                  .getThreadGroup(),
+                                    "Background image loading thread pool");
+                            }
+                        });
+
+            final ThreadFactory bgLoadingThreadFactory =
+                    new ThreadFactory() {
+                        @Override
+                        public Thread newThread(final Runnable runnable) {
+                            return AccessController.doPrivileged(
+                                new PrivilegedAction<Thread>() {
+                                    @Override
+                                    public Thread run() {
+                                        final Thread newThread =
+                                                new Thread(bgLoadingThreadGroup,
+                                                           runnable);
+                                        newThread.setPriority(
+                                                      Thread.MIN_PRIORITY);
+
+                                        return newThread;
+                                    }
+                                });
+                        }
+                    };
+
+            final ExecutorService bgLoadingExecutor =
+                    Executors.newCachedThreadPool(bgLoadingThreadFactory);
+            ((ThreadPoolExecutor) bgLoadingExecutor).setKeepAliveTime(
+                                                         1, TimeUnit.SECONDS);
+
+            return bgLoadingExecutor;
         }
     }
 }

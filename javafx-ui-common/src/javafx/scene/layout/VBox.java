@@ -347,7 +347,7 @@ public class VBox extends Pane {
      *
      * @return null unless one of its children has a content bias.
      */
-    @Override public Orientation getContentBias() {        
+    @Override public Orientation getContentBias() {
         final List<Node> children = getChildren();
         for (int i=0, size=children.size(); i<size; i++) {
             Node child = children.get(i);
@@ -363,9 +363,9 @@ public class VBox extends Pane {
         List<Node>managed = getManagedChildren();
         double contentWidth = 0;
         if (getContentBias() == Orientation.VERTICAL) {
-            double minHeights[] = getAreaHeights(managed, -1, true);
-            adjustAreaHeights(managed, minHeights, height, -1);
-            contentWidth = computeMaxMinAreaWidth(managed, getMargins(managed), minHeights, getAlignmentInternal().getHpos());
+            double prefHeights[] = getAreaHeights(managed, -1, false);
+            adjustAreaHeights(managed, prefHeights, height, -1);
+            contentWidth = computeMaxMinAreaWidth(managed, getMargins(managed), prefHeights, getAlignmentInternal().getHpos());
         } else {
             contentWidth = computeMaxMinAreaWidth(managed, getMargins(managed), getAlignmentInternal().getHpos());
         }
@@ -419,7 +419,7 @@ public class VBox extends Pane {
             prefAreaHeights[i] = minimum?
                                computeChildMinAreaHeight(child, margin,
                                    isFillWidth()? insideWidth : child.minWidth(-1)) :
-                                   computeChildPrefAreaHeight(child, margin, 
+                                   computeChildPrefAreaHeight(child, margin,
                                        isFillWidth()? insideWidth : child.prefWidth(-1));
         }
         return prefAreaHeights;
@@ -428,16 +428,16 @@ public class VBox extends Pane {
     private double adjustAreaHeights(List<Node>managed, double areaHeights[], double height, double width) {
         Insets insets = getInsets();
         double left = snapSpace(insets.getLeft());
-        double right = snapSpace(insets.getRight());        
+        double right = snapSpace(insets.getRight());
 
         double contentHeight = computeContentHeight(areaHeights);
         double extraHeight = (height == -1 ? prefHeight(-1) : height) -
                 snapSpace(insets.getTop()) - snapSpace(insets.getBottom()) - contentHeight;
 
         if (extraHeight != 0) {
-            double remaining = growOrShrinkAreaHeights(managed, areaHeights, 
+            double remaining = growOrShrinkAreaHeights(managed, areaHeights,
                     Priority.ALWAYS, extraHeight, isFillWidth() && width != -1? width - left - right: -1);
-            remaining = growOrShrinkAreaHeights(managed, areaHeights, 
+            remaining = growOrShrinkAreaHeights(managed, areaHeights,
                     Priority.SOMETIMES, remaining, isFillWidth() && width != -1? width - left - right: -1);
             contentHeight += (extraHeight - remaining);
         }
@@ -459,7 +459,7 @@ public class VBox extends Pane {
         }
 
         double[] areaLimitHeights = new double[adjustList.size()];
-        for (int i = 0, size = adjustList.size(); i < size; i++) {        
+        for (int i = 0, size = adjustList.size(); i < size; i++) {
             Node child = adjustList.get(i);
             Insets margin  = getMargin(child);
             areaLimitHeights[i] = shrinking?
@@ -522,7 +522,7 @@ public class VBox extends Pane {
         double y = top + computeYOffset(height - top - bottom, contentHeight, vpos);
 
         for (int i = 0, size = managed.size(); i < size; i++) {
-            Node child = managed.get(i);            
+            Node child = managed.get(i);
             layoutInArea(child, x, y, contentWidth, actualAreaHeights[i],
                        /* baseline shouldn't matter */actualAreaHeights[i],
                        getMargin(child), isFillWidth(), true,
@@ -530,7 +530,7 @@ public class VBox extends Pane {
             y += actualAreaHeights[i] + space;
         }
     }
-    
+
     /***************************************************************************
      *                                                                         *
      *                         Stylesheet Handling                             *
@@ -542,7 +542,7 @@ public class VBox extends Pane {
       * @treatAsPrivate implementation detail
       */
      private static class StyleableProperties {
-         private static final CssMetaData<VBox,Pos> ALIGNMENT = 
+         private static final CssMetaData<VBox,Pos> ALIGNMENT =
              new CssMetaData<VBox,Pos>("-fx-alignment",
                  new EnumConverter<Pos>(Pos.class), Pos.TOP_LEFT){
 
@@ -556,8 +556,8 @@ public class VBox extends Pane {
                 return (StyleableProperty<Pos>)node.alignmentProperty();
             }
         };
-         
-         private static final CssMetaData<VBox,Boolean> FILL_WIDTH = 
+
+         private static final CssMetaData<VBox,Boolean> FILL_WIDTH =
              new CssMetaData<VBox,Boolean>("-fx-fill-width",
                  BooleanConverter.getInstance(), Boolean.TRUE) {
 
@@ -571,8 +571,8 @@ public class VBox extends Pane {
                 return (StyleableProperty<Boolean>)node.fillWidthProperty();
             }
         };
-         
-         private static final CssMetaData<VBox,Number> SPACING = 
+
+         private static final CssMetaData<VBox,Number> SPACING =
              new CssMetaData<VBox,Number>("-fx-spacing",
                  SizeConverter.getInstance(), 0d) {
 
@@ -589,7 +589,7 @@ public class VBox extends Pane {
 
          private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
          static {
-            final List<CssMetaData<? extends Styleable, ?>> styleables = 
+            final List<CssMetaData<? extends Styleable, ?>> styleables =
                 new ArrayList<CssMetaData<? extends Styleable, ?>>(Region.getClassCssMetaData());
             styleables.add(ALIGNMENT);
             styleables.add(FILL_WIDTH);
@@ -610,8 +610,8 @@ public class VBox extends Pane {
      * {@inheritDoc}
      *
      */
-    
-    
+
+
     @Override
     public List<CssMetaData<? extends Styleable, ?>> getCssMetaData() {
         return getClassCssMetaData();

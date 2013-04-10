@@ -33,23 +33,24 @@ import com.sun.javafx.binding.Logging;
 
 /**
  * This class defines a {@link Property} wrapping a {@code long} value.
- * 
+ * <p>
  * The value of a {@code LongProperty} can be get and set with {@link #get()},
  * {@link #getValue()}, {@link #set(long)}, and {@link #setValue(Number)}.
- * 
+ * <p>
  * A property can be bound and unbound unidirectional with
  * {@link #bind(ObservableValue)} and {@link #unbind()}. Bidirectional bindings
  * can be created and removed with {@link #bindBidirectional(Property)} and
  * {@link #unbindBidirectional(Property)}.
- * 
+ * <p>
  * The context of a {@code LongProperty} can be read with {@link #getBean()}
  * and {@link #getName()}.
- * 
+ * <p>
+ * Note: setting or binding this property to a null value will set the property to "0.0". See {@link #setValue(java.lang.Number) }.
  * @see javafx.beans.value.ObservableLongValue
  * @see javafx.beans.value.WritableLongValue
  * @see ReadOnlyLongProperty
  * @see Property
- * 
+ *
  */
 public abstract class LongProperty extends ReadOnlyLongProperty implements
         Property<Number>, WritableLongValue {
@@ -86,7 +87,7 @@ public abstract class LongProperty extends ReadOnlyLongProperty implements
     /**
      * Returns a string representation of this {@code LongProperty} object.
      * @return a string representation of this {@code LongProperty} object.
-     */ 
+     */
     @Override
     public String toString() {
         final Object bean = getBean();
@@ -101,41 +102,41 @@ public abstract class LongProperty extends ReadOnlyLongProperty implements
         result.append("value: ").append(get()).append("]");
         return result.toString();
     }
-    
+
     /**
      * Returns a {@code LongProperty} that wraps a
-     * {@link javafx.beans.property.Property} and is 
+     * {@link javafx.beans.property.Property} and is
      * bidirectionally bound to it.
      * Changing this property will result in a change of the original property.
-     * 
+     *
      * <p>
      * This is very useful when bidirectionally binding an ObjectProperty<Long> and
      * a LongProperty.
-     * 
+     *
      * <blockquote><pre>
      *   LongProperty longProperty = new SimpleLongProperty(1L);
      *   ObjectProperty&lt;Long&gt; objectProperty = new SimpleObjectProperty&lt;&gt;(2L);
-     * 
+     *
      *   // Need to keep the reference as bidirectional binding uses weak references
      *   LongProperty objectAsLong = LongProperty.longProperty(objectProperty);
-     *   
+     *
      *   longProperty.bindBidirectional(objectAsLong);
-     * 
+     *
      * </pre></blockquote>
-     * 
+     *
      * Another approach is to convert the LongProperty to ObjectProperty using
      * {@link #asObject()} method.
-     * 
+     *
      * <p>
      * Note: null values in the source property will be interpreted as 0L
-     * 
+     *
      * @param property
      *            The source {@code Property}
      * @return A {@code LongProperty} that wraps the
      *         {@code Property}
      * @throws NullPointerException
      *             if {@code value} is {@code null}
-     * @see #asObject() 
+     * @see #asObject()
      */
      public static LongProperty longProperty(final Property<Long> property) {
         if (property == null) {
@@ -155,7 +156,7 @@ public abstract class LongProperty extends ReadOnlyLongProperty implements
             public String getName() {
                 return property.getName();
             }
-            
+
             @Override
             protected void finalize() throws Throwable {
                 try {
@@ -168,27 +169,27 @@ public abstract class LongProperty extends ReadOnlyLongProperty implements
     }
 
      /**
-     * Creates an {@link javafx.beans.property.ObjectProperty} 
+     * Creates an {@link javafx.beans.property.ObjectProperty}
      * that bidirectionally bound to this {@code LongProperty}. If the
      * value of this {@code LongProperty} changes, the value of the
      * {@code ObjectProperty} will be updated automatically and vice-versa.
-     * 
+     *
      * <p>
      * Can be used for binding an ObjectProperty to LongProperty.
-     * 
+     *
      * <blockquote><pre>
      *   LongProperty longProperty = new SimpleLongProperty(1L);
      *   ObjectProperty&lt;Long&gt; objectProperty = new SimpleObjectProperty&lt;&gt;(2L);
-     *   
+     *
      *   objectProperty.bind(longProperty.asObject());
      * </pre></blockquote>
-     * 
+     *
      * @return the new {@code ObjectProperty}
      */
     @Override
     public ObjectProperty<Long> asObject() {
         return new ObjectPropertyBase<Long> () {
-            
+
             {
                 BidirectionalBinding.bindNumber(this, LongProperty.this);
             }

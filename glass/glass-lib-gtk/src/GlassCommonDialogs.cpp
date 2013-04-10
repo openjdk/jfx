@@ -32,7 +32,7 @@
 #include <cstring>
 #include <cstdlib>
 
-static GSList* setup_GtkFileFilters(GtkFileChooser*, JNIEnv*, jobjectArray);
+static GSList* setup_GtkFileFilters(GtkFileChooser*, JNIEnv*, jobjectArray, int default_filter_index);
 
 static void free_fname(char* fname, gpointer unused) {
     g_free(fname);
@@ -79,7 +79,7 @@ extern "C" {
 
 JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_gtk_GtkCommonDialogs__1showFileChooser
   (JNIEnv *env, jclass clazz, jlong parent, jstring folder, jstring name, jstring title,
-   jint type, jboolean multiple, jobjectArray jFilters) {
+   jint type, jboolean multiple, jobjectArray jFilters, jint default_filter_index) {
 
     jobjectArray jFileNames = NULL;
     char* filename;
@@ -120,7 +120,7 @@ JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_gtk_GtkCommonDialogs__1showFileC
 
     gtk_file_chooser_set_select_multiple(GTK_FILE_CHOOSER(chooser), (JNI_TRUE == multiple));
     gtk_file_chooser_set_current_folder(GTK_FILE_CHOOSER(chooser), chooser_folder);
-    GSList* filters = setup_GtkFileFilters(GTK_FILE_CHOOSER(chooser), env, jFilters);
+    GSList* filters = setup_GtkFileFilters(GTK_FILE_CHOOSER(chooser), env, jFilters, default_filter_index);
 
     if (gtk_dialog_run(GTK_DIALOG(chooser)) == GTK_RESPONSE_ACCEPT) {
         GSList* fnames_gslist = gtk_file_chooser_get_filenames(GTK_FILE_CHOOSER(chooser));
@@ -129,8 +129,7 @@ JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_gtk_GtkCommonDialogs__1showFileC
 
         if (fnames_list_len > 0) {
             jFileNames = env->NewObjectArray((jsize)fnames_list_len, jStringCls, NULL);
-            int i;
-            for(i = 0; i < fnames_list_len; i++) {
+            for (guint i = 0; i < fnames_list_len; i++) {
                 filename = (char*)g_slist_nth(fnames_gslist, i)->data;
                 LOG1("Add [%s] into returned filenames\n", filename)
                 jfilename = env->NewStringUTF(filename);
@@ -218,7 +217,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_glass_ui_gtk_GtkCommonDialogs__1showFolde
  * @param extFilters ExtensionFilter[]
  * @return
  */
-static GSList* setup_GtkFileFilters(GtkFileChooser* chooser, JNIEnv* env, jobjectArray extFilters) {
+static GSList* setup_GtkFileFilters(GtkFileChooser* chooser, JNIEnv* env, jobjectArray extFilters, int default_filter_index) {
     int i;
     LOG0("Setup filters\n")
     //setup methodIDs
@@ -263,6 +262,10 @@ static GSList* setup_GtkFileFilters(GtkFileChooser* chooser, JNIEnv* env, jobjec
         }
         LOG0("Filter ready\n")
         gtk_file_chooser_add_filter(chooser, ffilter);
+
+        if (default_filter_index == i) {
+            gtk_file_chooser_set_filter(chooser, ffilter);
+        }
         
         filter_list = g_slist_append(filter_list, ffilter);
     }

@@ -24,6 +24,12 @@
       </ant>
     </target>
 
+    <target name="build-android" if="isAndroid">
+      <ant antfile="glass-lib-lens/build-android.xml" target="jar" inheritAll="false">
+        <propertyset id="jfx.build.ant.properties"/>
+      </ant>
+    </target>
+
     <target name="build-linux-gtk" unless="cross.glass.dontBuildGlassGTK">
       <ant antfile="glass-lib-gtk/build.xml" target="default"
            inheritAll="true" useNativeBasedir="true">
@@ -68,6 +74,7 @@
       <antcall target="build-linux"/>
       <antcall target="build-macosx"/>
       <antcall target="build-ios"/>
+      <antcall target="build-android"/>
       <antcall target="build-windows"/>
     </target>
     
@@ -115,6 +122,10 @@
         <propertyset id="jfx.build.ant.properties"/>
       </ant>
     </target>
+
+    <target name="clean-android" if="isAndroid">
+   <ant antfile="glass-lib-lens/build-android.xml" target="clean" inheritAll="false"/>
+    </target>
     
     <target name="clean">
       <delete dir="${basedir}/dist"/>
@@ -125,6 +136,7 @@
       </ant>
       <antcall target="clean-linux"/>
       <antcall target="clean-macosx"/>
+      <antcall target="clean-android"/>
       <antcall target="clean-ios"/>
       <antcall target="clean-windows"/>
     </target>

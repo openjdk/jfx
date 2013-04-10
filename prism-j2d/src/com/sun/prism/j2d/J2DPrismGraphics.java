@@ -300,6 +300,7 @@ public class J2DPrismGraphics
             Texture tex =
                 getResourceFactory().getCachedTexture(imgpat.getImage(), WrapMode.REPEAT);
             java.awt.image.BufferedImage bimg = ((J2DTexture) tex).getBufferedImage();
+            tex.unlock();
             return new java.awt.TexturePaint(bimg, tmpRect(x, y, w, h));
         }
         throw new UnsupportedOperationException("Paint "+p+" not supported yet.");
@@ -1036,7 +1037,7 @@ public class J2DPrismGraphics
     }
 
     public void releaseReadBackBuffer(RTTexture view) {
-        // NOP
+        target.getReadbackBuffer().unlock();
     }
 
     public PrismCameraImpl getCameraNoClone() {

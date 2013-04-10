@@ -129,27 +129,45 @@ public abstract class BaseResourceFactory implements ResourceFactory {
             throw new IllegalArgumentException("no caching for "+wrapMode);
         }
          Texture tex = texCache.get(image);
+         if (tex != null) {
+             tex.lock();
+             if (tex.isSurfaceLost()) {
+                 texCache.remove(image);
+                 tex = null;
+             }
+         }
          int serial = image.getSerial();
          if (tex == null) {
             // Try to share a converted texture from the other cache
-            tex = (wrapMode == WrapMode.REPEAT
+            Texture othertex = (wrapMode == WrapMode.REPEAT
                    ? clampTexCache
                    : repeatTexCache).get(image);
-            if (tex != null) {
-                // This conversion operation will fail if the texture is
-                // _SIMULATED
-                tex = tex.getSharedTexture(wrapMode);
-                if (tex != null) {
-                    texCache.put(image, tex);
+            if (othertex != null) {
+                othertex.lock();
+                if (!othertex.isSurfaceLost()) {
+                    // This conversion operation will fail if the texture is
+                    // _SIMULATED
+                    tex = othertex.getSharedTexture(wrapMode);
+                    if (tex != null) {
+                        // Technically, our shared texture will maintain that
+                        // the contents are useful, but for completeness we
+                        // will register both references as "useful"
+                        tex.contentsUseful();
+                        texCache.put(image, othertex);
+                    }
                 }
+                othertex.unlock();
             }
         }
         if (tex == null) {
-            tex = createTexture(image, Usage.DEFAULT, wrapMode);
-            if (tex == null) {
-                clearTextureCache();
-                tex = createTexture(image, Usage.DEFAULT, wrapMode);
+            int w = image.getWidth();
+            int h = image.getHeight();
+            TextureResourcePool pool = getTextureResourcePool();
+            long size = pool.estimateTextureSize(w, h, image.getPixelFormat());
+            if (!pool.prepareForAllocation(size)) {
+                return null;
             }
+            tex = createTexture(image, Usage.DEFAULT, wrapMode);
             if (tex != null) {
                 tex.setLastImageSerial(serial);
                 texCache.put(image, tex);
@@ -175,6 +193,7 @@ public abstract class BaseResourceFactory implements ResourceFactory {
         // so pass skipFlush=true here...
         if (tex != null) {
             tex.update(image, 0, 0, w, h, true);
+            tex.contentsUseful();
         }
         return tex;
     }

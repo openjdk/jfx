@@ -35,6 +35,8 @@ import com.sun.prism.RTTexture;
 import com.sun.prism.Texture.WrapMode;
 import com.sun.prism.impl.BufferUtil;
 import com.sun.prism.impl.Disposer;
+import com.sun.prism.impl.ManagedResource;
+import com.sun.prism.impl.PrismSettings;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -87,7 +89,15 @@ final class UploadingPainter extends ViewPainter implements Runnable {
             }
 
             boolean needsReset = (rttexture == null) || (viewWidth != penWidth) || (viewHeight != penHeight);
-            
+
+            if (!needsReset) {
+                rttexture.lock();
+                if (rttexture.isSurfaceLost()) {
+                    rttexture.unlock();
+                    needsReset = true;
+                }
+            }
+
             if (needsReset) {
                 context = factory.createRenderingContext(null);
             }
@@ -138,7 +148,11 @@ final class UploadingPainter extends ViewPainter implements Runnable {
                     }
                 }
             }
-            
+
+            if (rttexture != null) {
+                rttexture.unlock();
+            }
+
             if (pix != null) {
                 /* transparent pixels created and ready for upload */
                 // Copy references, which are volatile, used by upload. Thus
@@ -169,6 +183,11 @@ final class UploadingPainter extends ViewPainter implements Runnable {
 
             ViewScene viewScene = (ViewScene)viewState.getScene();
             viewScene.setPainting(false);
+            if (PrismSettings.poolStats ||
+                ManagedResource.anyLockedResources())
+            {
+                ManagedResource.printSummary();
+            }
             renderLock.unlock();
         }
     }

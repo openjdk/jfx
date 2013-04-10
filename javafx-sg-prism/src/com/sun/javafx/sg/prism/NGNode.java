@@ -780,6 +780,8 @@ public abstract class NGNode extends BaseNode<Graphics> {
             try {
                 ret = Effect.getCompatibleImage(fctx,
                                           bounds.width, bounds.height);
+                Texture cachedTex = ((PrDrawable) ret).getTextureObject();
+                cachedTex.contentsUseful();
             } catch (Throwable e) {
                 ret = null;
             }
@@ -919,6 +921,12 @@ public abstract class NGNode extends BaseNode<Graphics> {
             int h = r.height - (int) Math.abs(yDelta);
 
             final Graphics g = drawable.createGraphics();
+            if (tempTexture != null) {
+                tempTexture.lock();
+                if (tempTexture.isSurfaceLost()) {
+                    tempTexture = null;
+                }
+            }
             if (tempTexture == null) {
                 tempTexture = g.getResourceFactory().
                     createRTTexture(drawable.getPhysicalWidth(), drawable.getPhysicalHeight(),
@@ -931,6 +939,7 @@ public abstract class NGNode extends BaseNode<Graphics> {
 
             g.clear();
             g.drawTexture(tempTexture, destX, destY, destX + w, destY + h, 0, 0, w, h);
+            tempTexture.unlock();
         }
 
         /**

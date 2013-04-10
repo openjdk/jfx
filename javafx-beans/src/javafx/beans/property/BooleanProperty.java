@@ -34,23 +34,26 @@ import com.sun.javafx.binding.Logging;
 /**
  * This class provides a full implementation of a {@link Property} wrapping a
  * {@code boolean} value.
- * 
+ * <p>
  * The value of a {@code BooleanProperty} can be get and set with {@link #get()},
  * {@link #getValue()}, {@link #set(boolean)}, and {@link #setValue(Boolean)}.
- * 
+ * <p>
  * A property can be bound and unbound unidirectional with
  * {@link #bind(ObservableValue)} and {@link #unbind()}. Bidirectional bindings
  * can be created and removed with {@link #bindBidirectional(Property)} and
  * {@link #unbindBidirectional(Property)}.
- * 
+ * <p>
  * The context of a {@code BooleanProperty} can be read with {@link #getBean()}
  * and {@link #getName()}.
- * 
+ *
+ * <p>
+ * Note: setting or binding this property to a null value will set the property to "false". See {@link #setValue(java.lang.Boolean) }.
+ *
  * @see javafx.beans.value.ObservableBooleanValue
  * @see javafx.beans.value.WritableBooleanValue
  * @see ReadOnlyBooleanProperty
  * @see Property
- * 
+ *
  */
 public abstract class BooleanProperty extends ReadOnlyBooleanProperty implements
         Property<Boolean>, WritableBooleanValue {
@@ -87,7 +90,7 @@ public abstract class BooleanProperty extends ReadOnlyBooleanProperty implements
     /**
      * Returns a string representation of this {@code BooleanProperty} object.
      * @return a string representation of this {@code BooleanProperty} object.
-     */ 
+     */
     @Override
     public String toString() {
         final Object bean = getBean();
@@ -103,7 +106,7 @@ public abstract class BooleanProperty extends ReadOnlyBooleanProperty implements
         result.append("value: ").append(get()).append("]");
         return result.toString();
     }
-    
+
     /**
      * Returns a {@code BooleanProperty} that wraps a
      * {@link javafx.beans.property.Property}. If the
@@ -111,9 +114,9 @@ public abstract class BooleanProperty extends ReadOnlyBooleanProperty implements
      * will be returned. Otherwise a new
      * {@code BooleanProperty} is created that is bound to
      * the {@code Property}.
-     * 
+     *
      * Note: null values in the source property will be interpreted as "false"
-     * 
+     *
      * @param property
      *            The source {@code Property}
      * @return A {@code BooleanProperty} that wraps the
@@ -139,7 +142,7 @@ public abstract class BooleanProperty extends ReadOnlyBooleanProperty implements
             public String getName() {
                 return property.getName();
             }
-            
+
             @Override
             protected void finalize() throws Throwable {
                 try {
@@ -150,19 +153,19 @@ public abstract class BooleanProperty extends ReadOnlyBooleanProperty implements
             }
         };
     }
-    
+
     /**
      * Creates an {@link javafx.beans.property.ObjectProperty} that holds the value
      * of this {@code BooleanProperty}. If the
      * value of this {@code BooleanProperty} changes, the value of the
      * {@code ObjectProperty} will be updated automatically.
-     * 
+     *
      * @return the new {@code ObjectProperty}
      */
     @Override
     public ObjectProperty<Boolean> asObject() {
         return new ObjectPropertyBase<Boolean> () {
-            
+
             {
                 BidirectionalBinding.bind(this, BooleanProperty.this);
             }

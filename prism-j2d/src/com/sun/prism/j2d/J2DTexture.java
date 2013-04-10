@@ -26,25 +26,35 @@
 package com.sun.prism.j2d;
 
 import com.sun.prism.MediaFrame;
-import com.sun.prism.Image;
 import com.sun.prism.PixelFormat;
 import com.sun.prism.Texture;
 import com.sun.prism.Texture.WrapMode;
+import com.sun.prism.impl.BaseTexture;
+import com.sun.prism.impl.ManagedResource;
+import com.sun.prism.j2d.J2DTexture.J2DTexResource;
 import java.awt.image.BufferedImage;
 import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 
-class J2DTexture implements Texture {
-    protected BufferedImage bimg;
-    private final WrapMode wrapMode;
+class J2DTexture extends BaseTexture<J2DTexResource> {
 
-    private Updater updater;
-    private boolean linearfiltering = true;
-    private int lastImageSerial;
+    private final Updater updater;
 
-    J2DTexture(PixelFormat format, WrapMode wrapMode, int w, int h) {
+    static class J2DTexResource extends ManagedResource<BufferedImage> {
+        public J2DTexResource(BufferedImage bimg) {
+            super(bimg, J2DTexturePool.instance);
+        }
+
+        @Override
+        public void free() {
+            resource.flush();
+        }
+    }
+
+    static J2DTexture create(PixelFormat format, WrapMode wrapMode, int w, int h) {
         int type;
+        Updater updater;
         switch (format) {
             case BYTE_RGB:
                 type = BufferedImage.TYPE_3BYTE_BGR;
@@ -62,124 +72,33 @@ class J2DTexture implements Texture {
             default:
                 throw new InternalError("Unrecognized PixelFormat ("+format+")!");
         }
-        this.bimg = new BufferedImage(w, h, type);
-        this.wrapMode = wrapMode;
+        J2DTexturePool pool = J2DTexturePool.instance;
+        long size = J2DTexturePool.size(w, h, type);
+        if (!pool.prepareForAllocation(size)) {
+            return null;
+        }
+        BufferedImage bimg = new BufferedImage(w, h, type);
+        return new J2DTexture(bimg, updater, wrapMode);
+    }
+
+    J2DTexture(BufferedImage bimg, Updater updater, WrapMode wrapMode) {
+        super(new J2DTexResource(bimg), PixelFormat.BYTE_RGB, wrapMode,
+              bimg.getWidth(), bimg.getHeight());
+        this.updater = updater;
     }
 
     J2DTexture(J2DTexture sharedTex, WrapMode altMode) {
-        this.bimg = sharedTex.bimg;
-        this.wrapMode = sharedTex.wrapMode;
+        super(sharedTex, altMode);
         this.updater = sharedTex.updater;
-        this.linearfiltering = sharedTex.linearfiltering;
-        // REMIND: Use indirection to "share" the last serial?
-        this.lastImageSerial = sharedTex.lastImageSerial;
     }
 
-    public void dispose() {
-        bimg.flush();
-        bimg = null;
+    @Override
+    protected Texture createSharedTexture(WrapMode newMode) {
+        return new J2DTexture(this, newMode);
     }
 
     BufferedImage getBufferedImage() {
-        return bimg;
-    }
-
-    public PixelFormat getPixelFormat() {
-        switch (bimg.getType()) {
-            case BufferedImage.TYPE_3BYTE_BGR:
-                return PixelFormat.BYTE_RGB;
-            case BufferedImage.TYPE_BYTE_GRAY:
-                return PixelFormat.BYTE_GRAY;
-            case BufferedImage.TYPE_INT_ARGB_PRE:
-                return PixelFormat.INT_ARGB_PRE;
-            default:
-                throw new InternalError("Unrecognized BufferedImage type ("+bimg.getType()+")!");
-        }
-    }
-
-    public int getPhysicalWidth() {
-        return bimg.getWidth();
-    }
-
-    public int getPhysicalHeight() {
-        return bimg.getHeight();
-    }
-
-    public int getContentX() {
-        return 0;
-    }
-
-    public int getContentY() {
-        return 0;
-    }
-
-    public int getContentWidth() {
-        return bimg.getWidth();
-    }
-
-    public int getContentHeight() {
-        return bimg.getHeight();
-    }
-
-    public WrapMode getWrapMode() {
-        return wrapMode;
-    }
-
-    public Texture getSharedTexture(WrapMode altMode) {
-        if (wrapMode == altMode) {
-            return this;
-        }
-        switch (altMode) {
-            case REPEAT:
-                if (wrapMode != WrapMode.CLAMP_TO_EDGE) {
-                    return null;
-                }
-                break;
-            case CLAMP_TO_EDGE:
-                if (wrapMode != WrapMode.REPEAT) {
-                    return null;
-                }
-            default:
-                return null;
-        }
-        return new J2DTexture(this, altMode);
-    }
-
-    public boolean getLinearFiltering() {
-        return linearfiltering;
-    }
-
-    public void setLinearFiltering(boolean linear) {
-        this.linearfiltering = linear;
-    }
-
-    public int getLastImageSerial() {
-        return lastImageSerial;
-    }
-
-    public void setLastImageSerial(int serial) {
-        lastImageSerial = serial;
-    }
-
-    public void update(Image img) {
-        update(img, 0, 0);
-    }
-
-    public void update(Image img, int dstx, int dsty) {
-        update(img, dstx, dsty, img.getWidth(), img.getHeight());
-    }
-
-    public void update(Image img, int dstx, int dsty, int w, int h) {
-        update(img, dstx, dsty, w, h, false);
-    }
-
-    public void update(Image img, int dstx, int dsty, int srcw, int srch,
-                       boolean skipFlush)
-    {
-        update(img.getPixelBuffer(), img.getPixelFormat(),
-               dstx, dsty, img.getMinX(), img.getMinY(),
-               srcw, srch, img.getScanlineStride(),
-               skipFlush);
+        return resource.getResource();
     }
 
     public void update(Buffer buffer, PixelFormat format,
@@ -188,6 +107,7 @@ class J2DTexture implements Texture {
                        int srcscan,
                        boolean skipFlush)
     {
+        BufferedImage bimg = getBufferedImage();
         switch (format) {
             case BYTE_RGB:
                 updater.updateFromByteBuffer(bimg, (ByteBuffer) buffer,
@@ -235,6 +155,7 @@ class J2DTexture implements Texture {
 
         ByteBuffer bbuf = frame.getBuffer();
         bbuf.position(frame.offsetForPlane(0));
+        BufferedImage bimg = getBufferedImage();
         updater.updateFromIntBuffer(bimg, bbuf.asIntBuffer(),
                 0, 0, 0, 0, frame.getWidth(), frame.getHeight(),
                 frame.strideForPlane(0)/4,

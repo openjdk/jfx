@@ -243,6 +243,73 @@ public final class MultiTexture implements Texture {
     }
 
     @Override
+    public void lock() {
+        for (Texture tex : textures) {
+            tex.lock();
+        }
+    }
+
+    @Override
+    public void unlock() {
+        for (Texture tex : textures) {
+            tex.unlock();
+        }
+    }
+
+    @Override
+    public boolean isLocked() {
+        for (Texture tex : textures) {
+            if (tex.isLocked()) return true;
+        }
+        return false;
+    }
+
+    @Override
+    public int getLockCount() {
+        int count = 0;
+        for (Texture tex : textures) {
+            count = Math.max(count, tex.getLockCount());
+        }
+        return count;
+    }
+
+    @Override
+    public void assertLocked() {
+        for (Texture tex : textures) {
+            tex.assertLocked();
+        }
+    }
+
+    @Override
+    public void makePermanent() {
+        for (Texture tex : textures) {
+            tex.makePermanent();
+        }
+    }
+
+    @Override
+    public void contentsUseful() {
+        for (Texture tex : textures) {
+            tex.contentsUseful();
+        }
+    }
+
+    @Override
+    public void contentsNotUseful() {
+        for (Texture tex : textures) {
+            tex.contentsNotUseful();
+        }
+    }
+
+    @Override
+    public boolean isSurfaceLost() {
+        for (Texture tex : textures) {
+            if (tex.isSurfaceLost()) return true;
+        }
+        return false;
+    }
+
+    @Override
     public void dispose() {
         for (Texture tex : textures) {
             tex.dispose();

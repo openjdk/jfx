@@ -92,7 +92,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_win_WinCommonDialogs__1initIDs
  */
 JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_win_WinCommonDialogs__1showFileChooser
   (JNIEnv *env, jobject jThis, jlong owner, jstring jFolder, jstring jFilename, jstring jTitle, jint type,
-        jboolean multipleMode, jobjectArray jFilters)
+        jboolean multipleMode, jobjectArray jFilters, jint defaultFilterIndex)
 {
     CommonDialogOwner cdo((HWND)jlong_to_ptr(owner));
     JString folder(env, jFolder);
@@ -100,9 +100,9 @@ JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_win_WinCommonDialogs__1showFileC
     JString title(env, jTitle);
 
     if (IS_WINVISTA) {
-        return COMFileChooser_Show((HWND)jlong_to_ptr(owner), folder, filename, title, type, multipleMode, jFilters);
+        return COMFileChooser_Show((HWND)jlong_to_ptr(owner), folder, filename, title, type, multipleMode, jFilters, defaultFilterIndex);
     } else {
-        return StandardFileChooser_Show((HWND)jlong_to_ptr(owner), folder, filename, title, type, multipleMode, jFilters);
+        return StandardFileChooser_Show((HWND)jlong_to_ptr(owner), folder, filename, title, type, multipleMode, jFilters, defaultFilterIndex);
     }
 }
 

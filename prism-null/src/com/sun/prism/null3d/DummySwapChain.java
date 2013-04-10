@@ -50,6 +50,10 @@ class DummySwapChain extends DummyResource implements Presentable {
         this.h = pState.getHeight();
     }
 
+    public boolean lockResources() {
+        return false;
+    }
+
     public boolean prepare(Rectangle clip) {
         return true;
     }

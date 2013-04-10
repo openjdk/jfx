@@ -37,6 +37,7 @@ import com.sun.prism.Texture.Usage;
 import com.sun.prism.Texture.WrapMode;
 import com.sun.prism.impl.VertexBuffer;
 import com.sun.prism.impl.BaseRenderingContext;
+import com.sun.prism.impl.TextureResourcePool;
 import com.sun.prism.impl.ps.BaseShaderFactory;
 import com.sun.prism.ps.Shader;
 
@@ -55,6 +56,9 @@ class DummyResourceFactory extends BaseShaderFactory {
         return context;
     }
 
+    public TextureResourcePool getTextureResourcePool() {
+        return DummyTexturePool.instance;
+    }
 
     @Override
     public DummyTexture createTexture(PixelFormat format,

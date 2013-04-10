@@ -137,6 +137,8 @@ class EffectUtil {
                                                         Texture.WrapMode.CLAMP_TO_EDGE);
             // We use a power-of-2 size so that we can get true CLAMP_TO_EDGE on all platforms
             assert itex.getWrapMode() == Texture.WrapMode.CLAMP_TO_EDGE;
+            itex.contentsUseful();
+            itex.makePermanent();
         }
         float r = shadow.getRadius();
         int texsize = itex.getPhysicalWidth();
@@ -250,6 +252,8 @@ class EffectUtil {
                                                         Texture.WrapMode.CLAMP_TO_EDGE);
             // We use a power-of-2 size so that we can get true CLAMP_TO_EDGE on all platforms
             assert dtex.getWrapMode() == Texture.WrapMode.CLAMP_TO_EDGE;
+            dtex.contentsUseful();
+            dtex.makePermanent();
         }
         float r = shadow.getRadius();
         int texsize = dtex.getPhysicalWidth();

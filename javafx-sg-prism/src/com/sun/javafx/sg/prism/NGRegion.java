@@ -504,6 +504,12 @@ public class NGRegion extends NGGroup implements PGRegion {
                 // scaled region, or things won't look right (they'll looked scaled instead of vector-resized).
                 final boolean cache = backgroundCanBeCached && g.getTransformNoClone().isTranslateOrIdentity();
                 RTTexture cached = cache ? CACHE.getImage(g.getAssociatedScreen(), textureWidth, textureHeight, background, shape) : null;
+                if (cached != null) {
+                    cached.lock();
+                    if (cached.isSurfaceLost()) {
+                        cached = null;
+                    }
+                }
                 // If there is not a cached texture already, then we need to render everything
                 if (cached == null) {
                     // We will here check to see if we CAN cache the region background. If not, then
@@ -515,6 +521,7 @@ public class NGRegion extends NGGroup implements PGRegion {
                         old = g;
                         cached = g.getResourceFactory().createRTTexture(textureWidth, textureHeight,
                                                                         WrapMode.CLAMP_TO_ZERO);
+                        cached.contentsUseful();
                         g = cached.createGraphics();
                         // Have to move the origin such that when rendering to x=0, we actually end up rendering
                         // at x=bounds.getMinX(). Otherwise anything rendered to the left of the origin would be lost
@@ -594,6 +601,7 @@ public class NGRegion extends NGGroup implements PGRegion {
                     if (PulseLogger.PULSE_LOGGING_ENABLED) {
                         PulseLogger.PULSE_LOGGER.renderIncrementCounter("Cached Region shape image used");
                     }
+                    cached.unlock();
                 }
             }
 
@@ -648,6 +656,12 @@ public class NGRegion extends NGGroup implements PGRegion {
                         backgroundCanBeCached &&
                         g.getTransformNoClone().isTranslateOrIdentity();
                 RTTexture cached = cache ? CACHE.getImage(g.getAssociatedScreen(), textureWidth, textureHeight, background) : null;
+                if (cached != null) {
+                    cached.lock();
+                    if (cached.isSurfaceLost()) {
+                        cached = null;
+                    }
+                }
                 // If there is not a cached texture already, then we need to render everything
                 if (cached == null) {
                     // We will here check to see if we CAN cache the region background. If not, then
@@ -661,6 +675,7 @@ public class NGRegion extends NGGroup implements PGRegion {
                         width = cacheWidth;
                         cached = g.getResourceFactory().createRTTexture(textureWidth, textureHeight,
                                                                         WrapMode.CLAMP_TO_ZERO);
+                        cached.contentsUseful();
                         g = cached.createGraphics();
                         // Have to move the origin such that when rendering to x=0, we actually end up rendering
                         // at x=outsets.getLeft(). Otherwise anything rendered to the left of the origin would be lost
@@ -798,6 +813,7 @@ public class NGRegion extends NGGroup implements PGRegion {
                             PulseLogger.PULSE_LOGGER.renderIncrementCounter("Cached Region background image used");
                         }
                     }
+                    cached.unlock();
                 }
 
                 final List<BackgroundImage> images = background.getImages();
@@ -824,6 +840,7 @@ public class NGRegion extends NGGroup implements PGRegion {
                                     0, 0, width, height,
                                     0, 0, width/scale, height/scale
                             );
+                            texture.unlock();
                         } else {
                             // Other than "cover", all other modes need to pay attention to the repeat,
                             // size, and position in order to determine how to render. This next block
@@ -1761,6 +1778,7 @@ public class NGRegion extends NGGroup implements PGRegion {
                 }
                 dstY += yIncrement;
             }
+            texture.unlock();
         }
     }
 

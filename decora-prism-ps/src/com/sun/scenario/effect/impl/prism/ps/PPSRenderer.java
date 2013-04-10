@@ -271,8 +271,7 @@ public class PPSRenderer extends PrRenderer {
     public boolean isImageDataCompatible(final ImageData id) {
         if (getRendererState() == OK) {
             Filterable f = id.getUntransformedImage();
-            return (f instanceof PrDrawable &&
-                    !((PrDrawable) f).isLost());
+            return (f instanceof PrDrawable && !f.isLost());
         }
         return false;
     }
