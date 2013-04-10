@@ -218,6 +218,11 @@ public abstract class PPSTwoSamplerPeer extends PPSEffectPeer {
         }
 
         g.setExternalShader(null);
+        if (inputs.length <= 1) {
+            // We did not get src1Tex from an ImageData, we have to manage
+            // its lock state directly.
+            src1Tex.unlock();
+        }
 
         return new ImageData(getFilterContext(), dst, dstBounds);
     }

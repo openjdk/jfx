@@ -41,6 +41,7 @@ import com.sun.scenario.effect.FilterContext;
 import com.sun.scenario.effect.Filterable;
 import com.sun.scenario.effect.FloatMap;
 import com.sun.scenario.effect.ImageData;
+import com.sun.scenario.effect.LockableResource;
 
 public abstract class Renderer {
 
@@ -208,10 +209,10 @@ public abstract class Renderer {
 
     // NOTE: these two methods are only relevant to HW codepaths; should
     // find a way to push them down a level...
-    public Object createFloatTexture(int w, int h) {
+    public LockableResource createFloatTexture(int w, int h) {
         throw new InternalError();
     }
-    public void updateFloatTexture(Object texture, FloatMap map) {
+    public void updateFloatTexture(LockableResource texture, FloatMap map) {
         throw new InternalError();
     }
 
