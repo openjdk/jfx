@@ -681,7 +681,7 @@ final class CssStyleHelper {
                 
             }
             
-            // cssMetaData#set might throw an exception and it is called
+            // StyleableProperty#applyStyle might throw an exception and it is called
             // from two places in this try block.
             try {
 
@@ -691,7 +691,7 @@ final class CssStyleHelper {
                 // so it can be reset in this state if there is no value for it. Second, it calling
                 // CssMetaData#getStyleableProperty which is rather expensive as it may cause expansion of lazy
                 // properties.
-                StyleableProperty styleableProperty = cacheContainer.cssSetProperties.remove(property);
+                StyleableProperty styleableProperty = cacheContainer.cssSetProperties.get(property);
 
                 //
                 // RT-19089
@@ -726,6 +726,8 @@ final class CssStyleHelper {
 
                 if (styleableProperty == null) {
                     styleableProperty = cssMetaData.getStyleableProperty(node);
+                    // track this property
+                    cacheContainer.cssSetProperties.put(property, styleableProperty);
                 }
 
                 // need to know who set the current value - CSS, the user, or init
@@ -765,11 +767,6 @@ final class CssStyleHelper {
                     styleableProperty.applyStyle(originOfCalculatedValue, value);
                 }
 
-                // Track this property. This line of code needs to come after the
-                // call to applyStyle (in case it throws and exception) and needs to happen
-                // even if applyStyle does not (due to the conditions on the if-block).
-                cacheContainer.cssSetProperties.put(property, styleableProperty);
-
                 if (observableStyleMap != null) {
                     observableStyleMap.put(styleableProperty, styleList);
                 }
@@ -778,10 +775,14 @@ final class CssStyleHelper {
 
                 // RT-27155: if setting value raises exception, reset value 
                 // the value to initial and thereafter skip setting the property
-                StyleableProperty styleableProperty = cssMetaData.getStyleableProperty(node);
-                Object value = cssMetaData.getInitialValue(node);
-                styleableProperty.applyStyle(null, value);
-                cacheEntry.put(property, SKIP);
+                cacheEntry.put(property, null);
+
+                StyleableProperty styleableProperty = cacheContainer.cssSetProperties.remove(property);
+                assert(styleableProperty != null);
+                if (styleableProperty != null) {
+                    Object value = cssMetaData.getInitialValue(node);
+                    styleableProperty.applyStyle(null, value);
+                }
 
                 List<CssError> errors = null;
                 if ((errors = StyleManager.getErrors()) != null) {
