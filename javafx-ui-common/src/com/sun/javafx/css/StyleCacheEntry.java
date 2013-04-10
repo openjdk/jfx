@@ -67,7 +67,7 @@ public final class StyleCacheEntry {
                 cv = ce.values.get(property);
             }
             // if referent is null, we should skip the value.
-            else cv = CalculatedValue.SKIP;
+            // else cv = CalculatedValue.SKIP;
         }
         return cv;
     }

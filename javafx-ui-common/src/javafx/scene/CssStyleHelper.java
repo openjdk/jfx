@@ -669,7 +669,7 @@ final class CssStyleHelper {
                 
                 // caclculatedValue may be null,
                 // but we should never put SKIP in cache.
-                assert(calculatedValue != SKIP);
+                assert calculatedValue != SKIP : "cache returned SKIP for " + property;
                 
             } else {
 
@@ -677,7 +677,7 @@ final class CssStyleHelper {
                         inlineStyles, node, fontForRelativeSizes, styleList);
 
                 // lookup is not supposed to return null.
-                assert(calculatedValue != null);
+                assert calculatedValue != null : "lookup returned null for " + property;
                 
             }
             
