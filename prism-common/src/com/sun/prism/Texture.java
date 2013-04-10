@@ -408,4 +408,22 @@ public interface Texture extends GraphicsResource {
      * nearest neighbor filtering
      */
     public void setLinearFiltering(boolean linear);
+
+    public void lock();
+    public void unlock();
+    public boolean isLocked();
+    public int getLockCount();
+    public void assertLocked();
+    public void makePermanent();
+    public void contentsUseful();
+    public void contentsNotUseful();
+
+    /**
+     * Called by code wanting to know if the RTTexture's surface is lost. This happens
+     * in some cases (mostly on Windows) when, for example, the user presses Ctrl+Alt+Delete,
+     * or the system goes to sleep.
+     * @return True if the backing surface of this RTTexture is gone and the image is therefore
+     *         no longer usable. False if it is still OK.
+     */
+    public boolean isSurfaceLost();
 }

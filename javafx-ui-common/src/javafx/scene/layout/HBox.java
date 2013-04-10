@@ -255,8 +255,8 @@ public class HBox extends Pane {
                 public void invalidated() {
                     requestLayout();
                 }
-                
-                @Override 
+
+                @Override
                 public CssMetaData getCssMetaData () {
                     return StyleableProperties.SPACING;
                 }
@@ -274,7 +274,7 @@ public class HBox extends Pane {
         }
         return spacing;
     }
-    
+
     private DoubleProperty spacing;
     public final void setSpacing(double value) { spacingProperty().set(value); }
     public final double getSpacing() { return spacing == null ? 0 : spacing.get(); }
@@ -292,8 +292,8 @@ public class HBox extends Pane {
                 public void invalidated() {
                     requestLayout();
                 }
-                
-                @Override 
+
+                @Override
                 public CssMetaData<HBox, Pos> getCssMetaData() {
                     return StyleableProperties.ALIGNMENT;
                 }
@@ -311,7 +311,7 @@ public class HBox extends Pane {
         }
         return alignment;
     }
-    
+
     private ObjectProperty<Pos> alignment;
     public final void setAlignment(Pos value) { alignmentProperty().set(value); }
     public final Pos getAlignment() { return alignment == null ? Pos.TOP_LEFT : alignment.get(); }
@@ -333,7 +333,7 @@ public class HBox extends Pane {
                 public void invalidated() {
                     requestLayout();
                 }
-                                
+
                 @Override
                 public CssMetaData<HBox, Boolean> getCssMetaData() {
                     return StyleableProperties.FILL_HEIGHT;
@@ -352,7 +352,7 @@ public class HBox extends Pane {
         }
         return fillHeight;
     }
-    
+
     private BooleanProperty fillHeight;
     public final void setFillHeight(boolean value) { fillHeightProperty().set(value); }
     public final boolean isFillHeight() { return fillHeight == null ? true : fillHeight.get(); }
@@ -390,9 +390,9 @@ public class HBox extends Pane {
         if (getContentBias() == Orientation.HORIZONTAL) {
             // if width is different than preferred, then child widths may grow or shrink,
             // altering the height of any child with a horizontal contentBias.
-            double minWidths[] = getAreaWidths(managed, -1, true);
-            adjustAreaWidths(managed, minWidths, width, -1);
-            contentHeight = computeMaxMinAreaHeight(managed, getMargins(managed), minWidths, getAlignmentInternal().getVpos());
+            double prefWidths[] = getAreaWidths(managed, -1, false);
+            adjustAreaWidths(managed, prefWidths, width, -1);
+            contentHeight = computeMaxMinAreaHeight(managed, getMargins(managed), prefWidths, getAlignmentInternal().getVpos());
         } else {
             contentHeight = computeMaxMinAreaHeight(managed, getMargins(managed), getAlignmentInternal().getVpos());
         }
@@ -460,7 +460,7 @@ public class HBox extends Pane {
         double extraWidth = (width == -1? prefWidth(-1) : width) -
                 snapSpace(insets.getLeft()) - snapSpace(insets.getRight()) - contentWidth;
 
-        if (extraWidth != 0) {            
+        if (extraWidth != 0) {
             double remaining = growOrShrinkAreaWidths(managed, areaWidths, Priority.ALWAYS, extraWidth,
                     shouldFillHeight() && height != -1? height - top - bottom : -1);
             remaining = growOrShrinkAreaWidths(managed, areaWidths, Priority.SOMETIMES, remaining,
@@ -498,7 +498,7 @@ public class HBox extends Pane {
             for (int i = 0, size = adjusting.size(); i < size; i++) {
                 final Node child = adjusting.get(i);
                 final int childIndex = managed.indexOf(child);
-                final double limit = areaLimitWidths[adjustList.indexOf(child)] - areaWidths[childIndex]; // negative in shrinking case                
+                final double limit = areaLimitWidths[adjustList.indexOf(child)] - areaWidths[childIndex]; // negative in shrinking case
                 final double change = Math.abs(limit) <= Math.abs(portion)? limit : portion;
                 areaWidths[childIndex] += change;
                 //if (node.id.startsWith("debug.")) println("{if (shrinking) "shrink" else "grow"}: {node.id} portion({portion})=available({available})/({sizeof adjusting}) change={change}");
@@ -574,9 +574,9 @@ public class HBox extends Pane {
       */
      private static class StyleableProperties {
 
-         private static final CssMetaData<HBox,Pos> ALIGNMENT = 
+         private static final CssMetaData<HBox,Pos> ALIGNMENT =
              new CssMetaData<HBox,Pos>("-fx-alignment",
-                 new EnumConverter<Pos>(Pos.class), 
+                 new EnumConverter<Pos>(Pos.class),
                  Pos.TOP_LEFT) {
 
             @Override
@@ -588,10 +588,10 @@ public class HBox extends Pane {
             public StyleableProperty<Pos> getStyleableProperty(HBox node) {
                 return (StyleableProperty<Pos>)node.alignmentProperty();
             }
-                     
+
          };
-         
-         private static final CssMetaData<HBox,Boolean> FILL_HEIGHT = 
+
+         private static final CssMetaData<HBox,Boolean> FILL_HEIGHT =
              new CssMetaData<HBox,Boolean>("-fx-fill-height",
                  BooleanConverter.getInstance(), Boolean.TRUE) {
 
@@ -605,10 +605,10 @@ public class HBox extends Pane {
             public StyleableProperty<Boolean> getStyleableProperty(HBox node) {
                 return (StyleableProperty<Boolean>)node.fillHeightProperty();
             }
-                     
+
          };
-         
-         private static final CssMetaData<HBox,Number> SPACING = 
+
+         private static final CssMetaData<HBox,Number> SPACING =
              new CssMetaData<HBox,Number>("-fx-spacing",
                  SizeConverter.getInstance(), 0.0){
 
@@ -621,7 +621,7 @@ public class HBox extends Pane {
             public StyleableProperty<Number> getStyleableProperty(HBox node) {
                 return (StyleableProperty<Number>)node.spacingProperty();
             }
-                     
+
          };
 
          private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
@@ -647,8 +647,8 @@ public class HBox extends Pane {
      * {@inheritDoc}
      *
      */
-    
-    
+
+
     @Override
     public List<CssMetaData<? extends Styleable, ?>> getCssMetaData() {
         return getClassCssMetaData();

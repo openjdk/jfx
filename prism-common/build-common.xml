@@ -14,6 +14,9 @@
   <target name="get-libname-macosx" if="isMacOSX">
     <property name="native.lib.file" value="libprism-common${nativelib.suffix.macosx}"/>
   </target>
+  <target name="get-libname-android" if="isAndroid">
+    <property name="native.lib.file" value="libprism-common.so"/>
+  </target>
   <target name="get-libname-linux" if="isLinux">
     <property name="native.lib.file" value="libprism-common.so"/>
   </target>
@@ -23,7 +26,7 @@
   <target name="get-libname-windows" if="isWindows">
     <property name="native.lib.file" value="prism-common.dll"/>
   </target>
-  <target name="get-libname" depends="get-libname-macosx,get-libname-linux,get-libname-solaris,get-libname-windows"/>
+  <target name="get-libname" depends="get-libname-macosx,get-libname-android,get-libname-linux,get-libname-solaris,get-libname-windows"/>
 
   <target name="-local-pre-init" depends="get-libname"/>
 

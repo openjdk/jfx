@@ -56,4 +56,5 @@ ext.CC_PARAMS = [
         "-I$JDK_HOME/include",
         "-I$JDK_HOME/include/darwin",
         commonParams,
-        IS_DEBUG ? "-DDEBUG" : ["-O3", "-ffast-math", "-DNDEBUG"]].flatten()
+        IS_DEBUG ? "-DDEBUG" : ["-O3", "-DNDEBUG"]].flatten()
+        //IS_DEBUG ? "-DDEBUG" : ["-O3", "-ffast-math", "-DNDEBUG"]].flatten()

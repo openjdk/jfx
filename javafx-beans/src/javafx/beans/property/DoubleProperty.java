@@ -39,23 +39,25 @@ import javafx.beans.value.ObservableDoubleValue;
 
 /**
  * This class defines a {@link Property} wrapping a {@code double} value.
- * 
+ * <p>
  * The value of a {@code DoubleProperty} can be get and set with {@link #get()},
  * {@link #getValue()}, {@link #set(double)}, and {@link #setValue(Number)}.
- * 
+ * <p>
  * A property can be bound and unbound unidirectional with
  * {@link #bind(ObservableValue)} and {@link #unbind()}. Bidirectional bindings
  * can be created and removed with {@link #bindBidirectional(Property)} and
  * {@link #unbindBidirectional(Property)}.
- * 
+ * <p>
  * The context of a {@code DoubleProperty} can be read with {@link #getBean()}
  * and {@link #getName()}.
- * 
+ * <p>
+ * Note: setting or binding this property to a null value will set the property to "0.0". See {@link #setValue(java.lang.Number) }.
+ *
  * @see javafx.beans.value.ObservableDoubleValue
  * @see javafx.beans.value.WritableDoubleValue
  * @see ReadOnlyDoubleProperty
  * @see Property
- * 
+ *
  */
 public abstract class DoubleProperty extends ReadOnlyDoubleProperty implements
         Property<Number>, WritableDoubleValue {
@@ -92,7 +94,7 @@ public abstract class DoubleProperty extends ReadOnlyDoubleProperty implements
     /**
      * Returns a string representation of this {@code DoubleProperty} object.
      * @return a string representation of this {@code DoubleProperty} object.
-     */ 
+     */
     @Override
     public String toString() {
         final Object bean = getBean();
@@ -108,40 +110,40 @@ public abstract class DoubleProperty extends ReadOnlyDoubleProperty implements
         result.append("value: ").append(get()).append("]");
         return result.toString();
     }
-    
+
     /**
      * Returns a {@code DoubleProperty} that wraps a
-     * {@link javafx.beans.property.Property} and is 
+     * {@link javafx.beans.property.Property} and is
      * bidirectionally bound to it.
      * Changing this property will result in a change of the original property.
-     * 
+     *
      * <p>
      * This is very useful when bidirectionally binding an ObjectProperty<Double> and
      * a DoubleProperty.
-     * 
+     *
      * <blockquote><pre>
      *   DoubleProperty doubleProperty = new SimpleDoubleProperty(1.0);
      *   ObjectProperty&lt;Double&gt; objectProperty = new SimpleObjectProperty&lt;&gt;(2.0);
-     * 
+     *
      *   // Need to keep the reference as bidirectional binding uses weak references
      *   DoubleProperty objectAsDouble = DoubleProperty.doubleProperty(objectProperty);
-     *   
+     *
      *   doubleProperty.bindBidirectional(objectAsDouble);
-     * 
+     *
      * </pre></blockquote>
-     * 
+     *
      * Another approach is to convert the DoubleProperty to ObjectProperty using
      * {@link #asObject()} method.
      * <p>
      * Note: null values in the source property will be interpreted as 0.0
-     * 
+     *
      * @param property
      *            The source {@code Property}
      * @return A {@code DoubleProperty} that wraps the
      *         {@code Property}
      * @throws NullPointerException
      *             if {@code value} is {@code null}
-     * @see #asObject() 
+     * @see #asObject()
      */
     public static DoubleProperty doubleProperty(final Property<Double> property) {
         if (property == null) {
@@ -161,7 +163,7 @@ public abstract class DoubleProperty extends ReadOnlyDoubleProperty implements
             public String getName() {
                 return property.getName();
             }
-            
+
             @Override
             protected void finalize() throws Throwable {
                 try {
@@ -174,27 +176,27 @@ public abstract class DoubleProperty extends ReadOnlyDoubleProperty implements
     }
 
     /**
-     * Creates an {@link javafx.beans.property.ObjectProperty} 
+     * Creates an {@link javafx.beans.property.ObjectProperty}
      * that bidirectionally bound to this {@code DoubleProperty}. If the
      * value of this {@code DoubleProperty} changes, the value of the
      * {@code ObjectProperty} will be updated automatically and vice-versa.
-     * 
+     *
      * <p>
      * Can be used for binding an ObjectProperty to DoubleProperty.
-     * 
+     *
      * <blockquote><pre>
      *   DoubleProperty doubleProperty = new SimpleDoubleProperty(1.0);
      *   ObjectProperty&lt;Double&gt; objectProperty = new SimpleObjectProperty&lt;&gt;(2.0);
-     *   
+     *
      *   objectProperty.bind(doubleProperty.asObject());
      * </pre></blockquote>
-     * 
+     *
      * @return the new {@code ObjectProperty}
      */
     @Override
     public ObjectProperty<Double> asObject() {
         return new ObjectPropertyBase<Double> () {
-            
+
             {
                 BidirectionalBinding.bindNumber(this, DoubleProperty.this);
             }
@@ -220,6 +222,6 @@ public abstract class DoubleProperty extends ReadOnlyDoubleProperty implements
 
         };
     }
-    
-    
+
+
 }

@@ -130,8 +130,10 @@ public abstract class Parent extends Node {
                     for(int i = 0; i < removed.size(); i++) {
                         peer.addToRemoved(removed.get(i).impl_getPGNode());
                     }
-                    removed.clear();
                 }
+            }
+            if (removed != null) {
+                removed.clear();
             }
             pgChildrenSize = children.size();
             startIdx = pgChildrenSize;

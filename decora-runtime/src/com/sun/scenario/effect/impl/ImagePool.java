@@ -52,7 +52,7 @@ public class ImagePool {
             public Object run() {
                 if (System.getProperty("decora.showstats") != null) {
                     Runtime.getRuntime().addShutdownHook(new Thread() {
-                        public void run() {
+                        @Override public void run() {
                             printStats();
                         }
                     });
@@ -136,6 +136,14 @@ public class ImagePool {
             if (ew >= w && eh >= h) {
                 int diff = (ew-w) * (eh-h);
                 if (chosenEntry == null || diff < mindiff) {
+                    eimg.lock();
+                    if (eimg.isLost()) {
+                        entries.remove();
+                        continue;
+                    }
+                    if (chosenImage != null) {
+                        chosenImage.unlock();
+                    }
                     chosenEntry = entry;
                     chosenImage = eimg;
                     mindiff = diff;
@@ -193,6 +201,7 @@ public class ImagePool {
             } else if (eimg == img) {
                 chosenEntry = entry;
                 chosenImage = eimg;
+                img.unlock();
                 break;
             }
         }

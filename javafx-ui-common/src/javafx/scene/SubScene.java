@@ -437,6 +437,11 @@ public class SubScene extends Node {
         }
     }
 
+    @Override
+    void nodeResolvedOrientationChanged() {
+        getRoot().parentResolvedOrientationInvalidated();
+    }
+
     /***********************************************************************
      *                         CSS                                         *
      **********************************************************************/

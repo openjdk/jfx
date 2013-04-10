@@ -883,50 +883,12 @@ public class StubToolkit extends Toolkit {
 
     @Override
     public PGParallelCamera createPGParallelCamera() {
-        return new PGParallelCamera() {
-            @Override public GeneralTransform3D getScreenProjViewTx(GeneralTransform3D tx, double w, double h) { return null; }
-            @Override public Rectangle getViewport(Rectangle vp) { return null; }
-            @Override public void setNearClip(float f) {}
-            @Override public void setFarClip(float f) {}
-            @Override public void setWorldTransform(Affine3D ad) {}
-            @Override public void setTransformMatrix(BaseTransform bt) {}
-            @Override public void setContentBounds(BaseBounds bb) {}
-            @Override public void setTransformedBounds(BaseBounds bb, boolean bln) {}
-            @Override public void setVisible(boolean bln) {}
-            @Override public void setOpacity(float f) {}
-            @Override public void setNodeBlendMode(Mode mode) {}
-            @Override public void setDepthTest(boolean bln) {}
-            @Override public void setClipNode(PGNode pgnode) {}
-            @Override public void setCachedAsBitmap(boolean bln, CacheHint ch) {}
-            @Override public void setEffect(Object o) {}
-            @Override public void effectChanged() {}
-            @Override public void release() {}
-        };
+        return new StubParallelCamera();
     }
 
     @Override
     public PGPerspectiveCamera createPGPerspectiveCamera(boolean fixedEyePosition) {
-        return new PGPerspectiveCamera() {
-            @Override public GeneralTransform3D getScreenProjViewTx(GeneralTransform3D tx, double w, double h) { return null; }
-            @Override public Rectangle getViewport(Rectangle vp) { return null; }
-            @Override public void setFieldOfView(float f) {}
-            @Override public void setVerticalFieldOfView(boolean bln) {}
-            @Override public void setNearClip(float f) {}
-            @Override public void setFarClip(float f) {}
-            @Override public void setWorldTransform(Affine3D ad) {}
-            @Override public void setTransformMatrix(BaseTransform bt) {}
-            @Override public void setContentBounds(BaseBounds bb) {}
-            @Override public void setTransformedBounds(BaseBounds bb, boolean bln) {}
-            @Override public void setVisible(boolean bln) {}
-            @Override public void setOpacity(float f) {}
-            @Override public void setNodeBlendMode(Mode mode) {}
-            @Override public void setDepthTest(boolean bln) {}
-            @Override public void setClipNode(PGNode pgnode) {}
-            @Override public void setCachedAsBitmap(boolean bln, CacheHint ch) {}
-            @Override public void setEffect(Object o) {}
-            @Override public void effectChanged() {}
-            @Override public void release() {}
-        };
+        return new StubPerspectiveCamera();
     }
 
     @Override

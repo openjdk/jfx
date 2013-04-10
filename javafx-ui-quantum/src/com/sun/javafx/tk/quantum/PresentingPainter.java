@@ -27,6 +27,8 @@ package com.sun.javafx.tk.quantum;
 
 import com.sun.prism.Graphics;
 import com.sun.prism.impl.Disposer;
+import com.sun.prism.impl.ManagedResource;
+import com.sun.prism.impl.PrismSettings;
 
 /**
  * The PresentingPainter is used when we are rendering to the main screen.
@@ -64,6 +66,9 @@ final class PresentingPainter extends ViewPainter {
             }
 
             boolean needsReset = (presentable == null) || (penWidth != viewWidth) || (penHeight != viewHeight);
+            if (!needsReset && presentable.lockResources()) {
+                needsReset=true;
+            }
             if (needsReset) {
                 if (presentable == null || presentable.recreateOnResize()) {
                     context = factory.createRenderingContext(viewState);
@@ -121,6 +126,11 @@ final class PresentingPainter extends ViewPainter {
 
             ViewScene viewScene = (ViewScene)viewState.getScene();
             viewScene.setPainting(false);
+            if (PrismSettings.poolStats ||
+                ManagedResource.anyLockedResources())
+            {
+                ManagedResource.printSummary();
+            }
             renderLock.unlock();
         }
     }

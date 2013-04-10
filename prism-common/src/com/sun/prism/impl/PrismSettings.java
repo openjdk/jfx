@@ -77,6 +77,10 @@ public final class PrismSettings {
     public static final boolean noClampToZero;
     public static final boolean disableD3D9Ex;
     public static final boolean allowHiDPIScaling;
+    public static final long maxVram;
+    public static final long targetVram;
+    public static final boolean poolStats;
+    public static final boolean poolDebug;
 
     private PrismSettings() {
     }
@@ -194,6 +198,8 @@ public final class PrismSettings {
                 tryOrderArr = new String[] { "es2", "sw" };
             } else if (PlatformUtil.isIOS()) {
                 tryOrderArr = new String[] { "es2" };
+            } else if (PlatformUtil.isAndroid()) {
+                    tryOrderArr = new String[] { "es2" };
             } else if (PlatformUtil.isLinux()) {
                 tryOrderArr = new String[] { "es2", "sw" };
             } else {
@@ -253,6 +259,11 @@ public final class PrismSettings {
         noClampToZero = getBoolean(systemProperties, "prism.noclamptozero", false);
         
         allowHiDPIScaling = getBoolean(systemProperties, "prism.allowhidpi", true);
+
+        maxVram = getLong(systemProperties, "prism.maxvram", 256 * 1024 * 1024, null);
+        targetVram = getLong(systemProperties, "prism.targetvram", maxVram / 2, null);
+        poolStats = getBoolean(systemProperties, "prism.poolstats", false);
+        poolDebug = getBoolean(systemProperties, "prism.pooldebug", false);
 
         if (verbose) {
             System.out.print("Prism pipeline init order: ");
@@ -332,6 +343,31 @@ public final class PrismSettings {
         return dflt;
     }
 
+    private static long parseLong(String s, long dflt, String errMsg) {
+        if (s != null && s.length() > 0) {
+            long mult = 1;
+            if (s.endsWith("k") || s.endsWith("K")) {
+                mult = 1024L;
+            } else if (s.endsWith("m") || s.endsWith("M")) {
+                mult = 1024L * 1024L;
+            } else if (s.endsWith("g") || s.endsWith("G")) {
+                mult = 1024L * 1024L * 1024L;
+            }
+            if (mult > 1) {
+                s = s.substring(0, s.length() - 1);
+            }
+            try {
+                return Long.parseLong(s) * mult;
+            } catch (Exception e) {
+                if (errMsg != null) {
+                    System.err.println(errMsg);
+                }
+            }
+        }
+
+        return dflt;
+    }
+
     /* A simple version of String.split(), since that isn't available on CDC */
     private static String[] split(String str, String delim) {
         StringTokenizer st = new StringTokenizer(str, delim);
@@ -368,5 +404,15 @@ public final class PrismSettings {
         return parseInt(properties.getProperty(key),
                         dflt,
                         errMsg);
+    }
+
+    private static long getLong(Properties properties,
+                                String key,
+                                long dflt,
+                                String errMsg)
+    {
+        return parseLong(properties.getProperty(key),
+                         dflt,
+                         errMsg);
     }
 }

@@ -119,11 +119,21 @@ class PaintHelper {
                 PixelFormat.BYTE_BGRA_PRE, Usage.DEFAULT, WrapMode.CLAMP_TO_EDGE,
                 MULTI_TEXTURE_SIZE, MULTI_CACHE_SIZE);
         gradientCacheTexture.setLinearFiltering(true);
+        // gradientCacheTexture remains permanently locked, useful, and permanent
+        // an additional lock is added when a caller calls getGreientTeture for
+        // them to unlock
+        gradientCacheTexture.contentsUseful();
+        gradientCacheTexture.makePermanent();
 
         gtexCacheTexture = g.getResourceFactory().createTexture(
                 PixelFormat.BYTE_BGRA_PRE, Usage.DEFAULT, WrapMode.CLAMP_NOT_NEEDED,
                 GTEX_CLR_TABLE_MIRRORED_SIZE, MULTI_CACHE_SIZE);
         gtexCacheTexture.setLinearFiltering(true);
+        // gtexCacheTexture remains permanently locked, useful, and permanent
+        // an additional lock is added when a caller calls getWrapGreientTeture for
+        // them to unlock
+        gtexCacheTexture.contentsUseful();
+        gtexCacheTexture.makePermanent();
     }
 
     static Texture getGradientTexture(ShaderGraphics g, Gradient paint) {
@@ -131,6 +141,11 @@ class PaintHelper {
             initGradientTextures(g);
         }
 
+        // gradientCacheTexture is left permanent and locked so it never
+        // goes away or needs to be checked for isSurfaceLost(), but we
+        // add a lock here so that the caller can unlock without knowing
+        // our inner implementation details
+        gradientCacheTexture.lock();
         return gradientCacheTexture;
     }
 
@@ -139,6 +154,11 @@ class PaintHelper {
             initGradientTextures(g);
         }
 
+        // gtexCacheTexture is left permanent and locked so it never
+        // goes away or needs to be checked for isSurfaceLost(), but we
+        // add a lock here so that the caller can unlock without knowing
+        // our inner implementation details
+        gtexCacheTexture.lock();
         return gtexCacheTexture;
     }
 
@@ -242,6 +262,9 @@ class PaintHelper {
             long nextOffset = ++cacheOffset;
             paint.setGradientOffset(nextOffset);
             int cacheIdx = (int)(nextOffset % MULTI_CACHE_SIZE);
+            // both gradientCacheTexture and gtexCacheTexture should be
+            // left permanent and locked so we can always call update on
+            // either or both of them here.
             gradientCacheTexture.update(colorsImg, 0, cacheIdx);
             gtexCacheTexture.update(gtexImg, 0, cacheIdx);
             return cacheIdx;
@@ -721,6 +744,7 @@ class PaintHelper {
         float ch = paintTex.getContentHeight();
         float texw = paintTex.getPhysicalWidth();
         float texh = paintTex.getPhysicalHeight();
+        paintTex.unlock();
 
         // calculate plane equation constants
         Affine3D at = scratchXform3D;

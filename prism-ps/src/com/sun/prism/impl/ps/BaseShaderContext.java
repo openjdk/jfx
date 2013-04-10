@@ -440,6 +440,7 @@ public abstract class BaseShaderContext extends BaseContext {
             checkState(g, xform, shader, tex0, tex1);
             updatePaintShader(g, shader, maskType, paint, bx, by, bw, bh);
             updatePerVertexColor(paint, g.getExtraAlpha());
+            if (paintTex != null) paintTex.unlock();
             return shader;
         } else {
             // note that paint is assumed to be a simple Color in this case
@@ -632,6 +633,7 @@ public abstract class BaseShaderContext extends BaseContext {
     }
 
     private void setTexture(int texUnit, Texture tex) {
+        if (tex != null) tex.assertLocked();
         if (tex != state.lastTextures[texUnit]) {
             flushVertexBuffer();
             updateTexture(texUnit, tex);
@@ -642,6 +644,11 @@ public abstract class BaseShaderContext extends BaseContext {
     //Current RenderTarget is the lcdBuffer after this method.
     public void initLCDBuffer(int width, int height) {
         lcdBuffer = factory.createRTTexture(width, height, Texture.WrapMode.CLAMP_NOT_NEEDED);
+        // TODO: RT-29488 we need to track the uses of the LCD buffer,
+        // but the flow of control through the text methods is
+        // not straight-forward enough for a simple set of lock/unlock
+        // fixes at this time.
+        lcdBuffer.makePermanent();
     }
 
     public void disposeLCDBuffer() {
@@ -670,6 +677,9 @@ public abstract class BaseShaderContext extends BaseContext {
     protected void setRenderTarget(RenderTarget target, PrismCameraImpl camera,
                                    boolean depthTest)
     {
+        if (target instanceof Texture) {
+            ((Texture) target).assertLocked();
+        }
         if (state == null ||
             target != state.lastRenderTarget ||
             camera != state.lastCamera ||

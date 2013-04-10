@@ -51,6 +51,15 @@ public final class Node_effectiveOrientation_Test
                                    inhAutGroup())))));
     }
 
+    private static Scene lriiliWithSubSceneScene() {
+        return ltrScene(
+                   rtlAutGroup(
+                       inhSubScene(
+                           inhAutGroup(
+                               ltrAutGroup(
+                                   inhAutGroup())))));
+    }
+
     private static Scene liirliPrecachedScene() {
         final Scene scene =
                 ltrScene(
@@ -102,6 +111,15 @@ public final class Node_effectiveOrientation_Test
                         { lriiliScene(), "...L..", "LRRLLL" },
                         { lriiliScene(), "....I.", "LRRRRR" },
                         { lriiliScene(), "RIIIII", "RRRRRR" },
+
+                        {
+                            lriiliWithSubSceneScene(),
+                            ".......", "LRRRLL"
+                        },
+                        {
+                            lriiliWithSubSceneScene(),
+                            ".L.....", "LLLLLL"
+                        },
 
                         { liirliPrecachedScene(), "......", "LLLRLL" },
                         { liirliPrecachedScene(), "R.....", "RRRRLL" },

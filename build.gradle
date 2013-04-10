@@ -23,11 +23,7 @@
  * questions.
  */
 
-import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.CountDownLatch
-import java.util.concurrent.ExecutorService
-import java.util.concurrent.Executors
-import java.util.concurrent.Future
+import java.util.concurrent.*
 
 /**
  * The main build script for JavaFX.
@@ -114,7 +110,8 @@ void defineProperty(String name, Properties props, String defaultValue) {
 // These variables indicate what the platform is that is doing the build. Is
 // this build running on a Mac, Windows, or Linux machine? 32 or 64 bit?
 ext.OS_NAME = System.getProperty("os.name").toLowerCase();
-ext.IS_64 = System.getProperty("os.arch").toLowerCase().contains("64");
+ext.OS_ARCH = System.getProperty("os.arch");
+ext.IS_64 = OS_ARCH.toLowerCase().contains("64");
 ext.IS_MAC = OS_NAME.contains("mac") || OS_NAME.contains("darwin");
 ext.IS_WINDOWS = OS_NAME.contains("windows");
 ext.IS_LINUX = OS_NAME.contains("linux");
@@ -249,6 +246,7 @@ defineProperty("RELEASE_MILESTONE", "ea");
 
 // Log some of the settings we've determined. We could log more here, it doesn't really hurt.
 logger.info("OS_NAME: $OS_NAME");
+logger.info("OS_ARCH: $OS_ARCH");
 logger.info("JAVA_HOME: $JAVA_HOME");
 logger.info("JDK_HOME: $JDK_HOME");
 logger.info("BINARY_STUB: ${file(BINARY_STUB)}");
@@ -424,10 +422,9 @@ class NativeCompileTask extends DefaultTask {
 }
 
 class CompileResourceTask extends NativeCompileTask {
-
     protected File outputFile(File sourceFile) {
         final String outFileName = sourceFile.getName().substring(0, sourceFile.getName().lastIndexOf("."));
-        new File("$output/${outFileName}.res");
+        return new File("$output/${outFileName}.res");
     }
 
     protected void doCompile(File sourceFile, File outputFile){
@@ -453,7 +450,10 @@ class CompileHLSLTask extends NativeCompileTask {
 
 class CCTask extends NativeCompileTask {
     @Optional String compiler;
-    @InputDirectory File headers;
+    @Optional List<String> linkerOptions = new ArrayList<String>();
+    @Optional @InputDirectory File headers;
+    @Optional Closure eachOutputFile; // will be given a File and must return a File
+    @Optional boolean exe = false;
 
     protected File outputFile(File sourceFile) {
         final String outFileName = sourceFile.getName().substring(0, sourceFile.getName().lastIndexOf("."));
@@ -461,13 +461,19 @@ class CCTask extends NativeCompileTask {
     }
 
     protected void doCompile(File sourceFile, File outputFile) {
+        if (eachOutputFile != null) {
+            outputFile = eachOutputFile(outputFile);
+        }
+
         // or compile sources using CC
-        final File pdbFile = new File("$output/${outputFile.name.replace('.obj', '.pdb')}");
+        final int lastDot = outputFile.name.lastIndexOf(".");
+        final File pdbFile = new File("$output/${lastDot > 0 ? outputFile.name.substring(0, lastDot) + '.pdb' : outputFile.name + '.pdb'}");
 
         // TODO the PDB file is never being built -- maybe because it is only built during
         // debug builds, otherwise that flag is ignored "/Fd" or "-Fd"
         project.exec({
-            commandLine("${compiler == null ? project.CC : compiler}", "-I$headers");
+            commandLine("${compiler == null ? project.CC : compiler}");
+            if (headers != null) args("-I$headers");
 
             // Add the source roots in as include directories
             sourceRoots.each { root ->
@@ -489,9 +495,21 @@ class CCTask extends NativeCompileTask {
 
             // Add the name of the source file to compile
             if (project.IS_WINDOWS) {
-                args("/Fd$pdbFile", "/Fo$outputFile", "$sourceFile");
+                if (exe) {
+                    final File exeFile = new File("$output/${lastDot > 0 ? outputFile.name.substring(0, lastDot) + '.exe' : outputFile.name + '.exe'}");
+                    args(/*"/Fd$pdbFile",*/ "/Fo$outputFile", "/Fe$exeFile", "$sourceFile")
+                } else {
+                    args(/*"/Fd$pdbFile",*/ "/Fo$outputFile", "$sourceFile");
+                }
             } else {
                 args("-Fd$pdbFile", "-o", "$outputFile", "$sourceFile");
+            }
+
+            // Add any optional linker options -- used now rarely but can be
+            // used for any cc task which isn't going to be followed by a
+            // link task
+            if (linkerOptions != null && !linkerOptions.isEmpty()) {
+                args(linkerOptions);
             }
 
             if (project.IS_WINDOWS){
@@ -577,7 +595,7 @@ void addNative(Project project, String name) {
 allprojects {
     // We want to configure all projects as java projects and use the same compile settings
     // etc, except for the root project which we just want to ignore
-    if (project == rootProject) return
+    if (project == rootProject || project.name == "deployment") return
     // All of our projects are java projects
     apply plugin: "java"
     sourceCompatibility = 1.7
@@ -599,7 +617,8 @@ allprojects {
         // compiler stuff because otherwise it won't compile on CYGWIN
         // TODO need to file issue with Gradle
         compile.options.useAnt = true
-        compile.options.debug = IS_DEBUG
+        compile.options.debug = true // we always generate debugging info in the class files
+        compile.options.debugOptions.debugLevel = IS_DEBUG ? "source,lines,vars" : "source,lines"
         compile.options.fork = true
         compile.options.forkOptions.executable = JAVAC
         compile.options.warnings = IS_LINT
@@ -607,39 +626,18 @@ allprojects {
         // Note that the compileFooJava task is automatically created whenever a source set is
         // defined. So the "test" source set automatically creates a "compileTestJava" task (among others).
         if (name == "compileTestJava") {
-            compile.options.compilerArgs = ["-Djava.ext.dirs=", "-XDignore.symbol.file"]
+            compile.options.compilerArgs = ["-Djava.ext.dirs=", "-XDignore.symbol.file", "-encoding","UTF-8"]
             classpath = sourceSets.test.compileClasspath + rootProject.files(rootProject.BINARY_STUB)
         } else if (name == "compileStubJava") {
-            compile.options.compilerArgs = ["-Djava.ext.dirs=", "-XDignore.symbol.file"]
+            compile.options.compilerArgs = ["-Djava.ext.dirs=", "-XDignore.symbol.file", "-encoding","UTF-8"]
             classpath = sourceSets.stub.compileClasspath + rootProject.files(rootProject.BINARY_STUB)
         } else {
-            compile.options.compilerArgs = ["-Djava.ext.dirs=", "-XDignore.symbol.file", "-s", "$buildDir/builder-src"]
+            compile.options.compilerArgs = ["-Djava.ext.dirs=", "-XDignore.symbol.file", "-s", "$buildDir/builder-src", "-encoding","UTF-8"]
             // Both controls & graphics need to use the annotation processor, but not the other guys.
             if (["graphics", "controls", "swing", "swt", "base", "fxml"].contains(project.name)){
                 compile.options.compilerArgs += ["-processor", "javafx.builder.processor.BuilderProcessor"]
             }
             classpath = sourceSets.main.compileClasspath + rootProject.files(rootProject.BINARY_STUB)
-        }
-        doLast {
-            // Workaround: there are a number of packages which are now getting builders
-            // generated even though they they didn't before since we combined sources
-            // into fewer projects. So I have to strip out the .class files after compilation!
-            // Alternatively we can go through and add @NoBuilder to all these classes
-            // (or stop using automatic builder generation, but that's another story).
-            delete(files("$buildDir/builder-src/javafx/beans",
-                         "$buildDir/builder-src/javafx/concurrent",
-                         "$buildDir/builder-src/javafx/event",
-                         "$buildDir/builder-src/javafx/fxml",
-                         "$buildDir/builder-src/javafx/collections",
-                         "$buildDir/builder-src/javafx/util"));
-            delete(files("$buildDir/classes/main/javafx/beans",
-                         "$buildDir/classes/main/javafx/concurrent",
-                         "$buildDir/classes/main/javafx/event",
-                         "$buildDir/classes/main/javafx/fxml",
-                         "$buildDir/classes/main/javafx/collections",
-                         "$buildDir/classes/main/javafx/util").getAsFileTree().filter( { file ->
-                !file.getName().equals("Builder.class") && file.getName().endsWith("Builder.class")
-            } ));
         }
     }
     // Setup the repositories that we'll download libraries from. Maven Central is
@@ -793,10 +791,7 @@ project(":graphics") {
     sourceSets {
         main.java.srcDirs = ["src/main/java", "src/main/dt", "src/main/jsl-generator"]
         test
-        stub {
-            // The src/main/java is needed for some CSS related tests
-            resources.srcDirs = ["src/stub/resources", "src/main/java"]
-        }
+        stub
     }
 
     dependencies {
@@ -1125,6 +1120,155 @@ project(":graphics:prism-jsl") {
     classes.dependsOn copyPrismShaders
 }
 
+project(":fxpackager") {
+    // fxpackager has a dependency on ant in order to build the ant jar,
+    // and as such needs to point to the apache binary repository
+    repositories {
+        maven {
+            url "https://repository.apache.org"
+        }
+    }
+
+    dependencies {
+        compile "org.apache.ant:ant:1.8.2"
+    }
+
+    // When producing the jar, we need to relocate a few class files
+    // from their normal location to a resources/classes or resources/web-files
+    // location
+    jar {
+        includeEmptyDirs = false
+        archiveName = "ant-javafx.jar"
+        eachFile { FileCopyDetails details ->
+            if (details.path.startsWith("com/javafx/main")) {
+                details.path = "resources/classes/$details.path"
+            } else if (details.path.startsWith("web-files")) {
+                details.path = "resources/$details.path"
+            }
+        }
+    }
+
+    // The "man" task will create a $buildDir/man containing the man
+    // files for the system being built
+    task man(type: Copy) {
+        includeEmptyDirs = false
+        enabled = IS_LINUX || IS_MAC
+        from "src/main/man"
+        into "$buildDir/man"
+        exclude "**/*.html"
+        if (IS_MAC) exclude "**/ja_JP.UTF-8/**"
+    }
+    processResources.dependsOn man
+
+    // Compile the native launchers. These are included in ant-javafx.jar
+    if (IS_WINDOWS) {
+        task compileWinLauncher(type: CCTask, group: "Build") {
+            description = "Compiles native sources for the application co-bundle launcher"
+            matches = "WinLauncher\\.cpp"
+            params.addAll(["/nologo", "/W3", "/EHsc", "/D_WINDOWS",
+                    "/DUNICODE", "/D_UNICODE", "/DWIN32", "/D_LITTLE_ENDIAN", "/DWIN32_LEAN_AND_MEAN",
+                    "/I$JDK_HOME/include", "/I$JDK_HOME/include/win32", "/arch:SSE", "/fp:fast",
+                    "/O2", "/MD"])
+            output(file("$buildDir/classes/main/com/sun/javafx/tools/resource/windows"))
+            source file("src/main/native/launcher/win")
+            exe = true
+            linkerOptions.addAll(["/link", "/nologo", "/SUBSYSTEM:WINDOWS", "user32.lib", "shell32.lib", "advapi32.lib"])
+        }
+        task compileIconSwap(type: CCTask, group: "Build") {
+            description = "Compiles native sources for the application co-bundle launcher"
+            matches = "iconswap\\.cpp"
+            params.addAll(["/nologo", "/W3", "/EHsc", "/D_WINDOWS", "/DUNICODE", "/D_UNICODE",
+                    "/arch:SSE", "/fp:fast", "/O2"])
+            output(file("$buildDir/classes/main/com/sun/javafx/tools/resource/windows"))
+            source file("src/main/native/launcher/win")
+            exe = true
+            linkerOptions.addAll(["/link", "/nologo", "/SUBSYSTEM:CONSOLE"])
+        }
+        task compileLauncher(dependsOn: [compileWinLauncher, compileIconSwap])
+    } else {
+        task compileLauncher(type: CCTask, group: "Build") {
+            description = "Compiles native sources for the application co-bundle launcher"
+            if (IS_MAC) {
+                matches = ".*\\.m"
+                output(file("$buildDir/classes/main/com/sun/javafx/tools/resource/mac"))
+                params.addAll(CC_PARAMS);
+                source file("src/main/native/launcher/mac")
+                eachOutputFile = { f ->
+                    return new File(f.getParent(), "JavaAppLauncher")
+                }
+            } else {
+                matches = ".*\\.c"
+                output(file("$buildDir/classes/main/com/sun/javafx/tools/resource/linux"))
+                params.addAll(["-DJAVAARCH=\"$OS_ARCH\"", "-I$JDK_HOME/include", "-I$JDK_HOME/include/linux"])
+                linkerOptions.add("-ldl")
+                source file("src/main/native/launcher/linux")
+                eachOutputFile = { f ->
+                    return new File(f.getParent(), "JavaAppLauncher")
+                }
+            }
+        }
+    }
+    assemble.dependsOn compileLauncher;
+
+    // Builds the javafxpackager executable. For everything other than windows,
+    // this is simply moving the existing shell script and ensuring it has proper
+    // permissions. For Windows, this includes compiling the native executable
+    if (IS_WINDOWS){
+        task buildJavaFXPackager(type: CCTask, group: "Build") {
+            description = "Compiles native sources for javafxpackager.exe"
+            matches = "javafxpackager\\.cpp"
+            params.addAll(["/nologo", "/W3", "/EHsc", "/MT", "/GS",
+                    "/DWIN32", "/D_LITTLE_ENDIAN", "/DWIN32_LEAN_AND_MEAN",
+                    "/D_WIN32_WINDOWS=0X0500", "/D_WIN32_WINNT=0X0500",
+                    "/I$JDK_HOME/include", "/I$JDK_HOME/include/win32", "/arch:SSE", "/fp:fast",
+                    "/O2", "-c"])
+            output(file("$buildDir/native"))
+            source file("src/main/native/javafxpackager/win")
+            doLast {
+                mkdir "$buildDir/native"
+                exec({
+                    commandLine("$RC", "/nologo", "/l", "0x409", "/r", "/dJFX_DVERSION=8", "/dJFX_VERSION=8", "/fo$buildDir/native/javafxpackager.res", "src/main/native/javafxpackager/win/javafxpackager.rc");
+                    environment(WINDOWS_NATIVE_COMPILE_ENVIRONMENT);
+                });
+            }
+            doLast {
+                mkdir "$buildDir/javafxpackager"
+                exec({
+                    commandLine("$LINK", "/nologo", "/opt:REF", "/incremental:no", "/manifest", "kernel32.lib", "advapi32.lib",
+                            "/out:$buildDir/native/javafxpackager.exe",
+                            "$buildDir/native/javafxpackager.obj", "$buildDir/native/javafxpackager.res")
+                    environment(WINDOWS_NATIVE_COMPILE_ENVIRONMENT)
+                })
+            }
+            doLast {
+                copy {
+                    from file("src/main/native/javafxpackager/win/javafxpackager.manifest")
+                    into file("$buildDir/native")
+                }
+                // TODO, not sure MT.exe is actually being used currently, so for now skipping.
+//                exec({
+//                    commandLine("$MT -nologo -manifest $buildDir/native/javafxpackager.manifest")
+//                    environment(WINDOWS_NATIVE_COMPILE_ENVIRONMENT)
+//                })
+                copy {
+                    from file("$buildDir/native/javafxpackager.exe")
+                    into file("$buildDir/javafxpackager")
+                }
+            }
+        }
+    } else {
+        task buildJavaFXPackager(group: "Build") << {
+            copy {
+                from "src/main/native/javafxpackager/shell"
+                into "$buildDir/javafxpackager"
+                fileMode = 0755
+            }
+        }
+    }
+
+    assemble.dependsOn buildJavaFXPackager
+}
+
 /******************************************************************************
  *                                                                            *
  *                             Top Level Tasks                                *
@@ -1160,6 +1304,7 @@ task jfxrt(type: Jar) {
     group = "Basic"
     description = "Creates the jfxrt.jar"
     archiveName = "build/${COMPILE_TARGET.name}-sdk/rt/lib/ext/jfxrt.jar";
+    includeEmptyDirs = false
     from("modules/base/build/classes/main",
          "modules/base/build/resources/main",
          "modules/graphics/build/classes/main",
@@ -1204,13 +1349,16 @@ task jfxrt(type: Jar) {
 task javadoc(type: Javadoc) {
     group = "Basic"
     description = "Generates the JavaDoc for all the public API"
-    def projectsToDocument = subprojects.findAll({ it != project(":designTime") })
+    executable = JAVADOC
+    def projectsToDocument = [
+            project(":base"), project(":graphics"), project(":controls"),
+            project(":swing"), project(":swt"), project(":fxml")]
     source(projectsToDocument.collect({
         [it.sourceSets.main.java, "$it.buildDir/builder-src"]
     }));
     setDestinationDir(new File(buildDir, 'javadoc'));
     // Might need a classpath
-    classpath = files(subprojects.collect { project ->
+    classpath = files(projectsToDocument.collect { project ->
         project.sourceSets.main.compileClasspath
     });
     exclude("com/**/*", "javafx/scene/ParentDesignInfo*", "Compile*", "javafx/builder/**/*");
@@ -1228,7 +1376,7 @@ task javadoc(type: Javadoc) {
         }
     }
 
-    dependsOn(subprojects.collect { project -> project.getTasksByName("classes", true)});
+    dependsOn(projectsToDocument.collect { project -> project.getTasksByName("classes", true)});
 }
 
 // The 'sdk' task will build the rest of the SDK, and depends on the 'jfxrt' task. After
@@ -1251,16 +1399,38 @@ task sdk {
             } else if (COMPILE_TARGET == CompileTarget.WIN) {
                 into("build/${COMPILE_TARGET.name}-sdk/rt/bin");
             } else {
-                into("build/${COMPILE_TARGET.name}-sdk/rt/lib/i386");
+                into("build/${COMPILE_TARGET.name}-sdk/rt/lib/$OS_ARCH");
             }
         }
+
         // Create the javafx.properties file
         final File javafxProperties = file("build/${COMPILE_TARGET.name}-sdk/rt/lib/javafx.properties");
         javafxProperties << "javafx.runtime.version=$RAW_VERSION";
-        // Copy over the javadocs that were generated
+
+        // Copy over the javadocs that were generated. This is done rather than just generating
+        // the docs into the "right place" because for a cross-compile you only need one set of
+        // docs but need to have a copy in each created sdk
         copy {
             from("build/javadoc");
-            into("build/${COMPILE_TARGET.name}-sdk/doc/api");
+            into("build/${COMPILE_TARGET.name}-sdk/docs/api");
+        }
+
+        // Copy over the fxpackager and rename as ant-javafx.jar
+        copy {
+            from "modules/fxpackager/build/libs"
+            into "build/${COMPILE_TARGET.name}-sdk/lib"
+        }
+
+        // Copy over the FXPackager man files
+        copy {
+            from "modules/fxpackager/build/man"
+            into "build/${COMPILE_TARGET.name}-sdk/man"
+        }
+
+        // Copy over the javafxpackager executable
+        copy {
+            from "modules/fxpackager/build/javafxpackager"
+            into "build/${COMPILE_TARGET.name}-sdk/bin"
         }
     }
     dependsOn(jfxrt);
@@ -1333,7 +1503,7 @@ task cleanNetBeans() {
 
 allprojects {
     apply plugin: 'idea'
-    if (project == rootProject) return
+    if (project == rootProject || project.name == "deployment") return
     idea {
         module {
             inheritOutputDirs = true;

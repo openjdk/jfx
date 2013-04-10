@@ -40,6 +40,14 @@ public class PrTexture {
         this.bounds = new Rectangle(tex.getPhysicalWidth(), tex.getPhysicalHeight());
     }
 
+    public void lock() {
+        if (tex != null) tex.lock();
+    }
+
+    public void unlock() {
+        if (tex != null) tex.unlock();
+    }
+
     public Rectangle getNativeBounds() {
         return bounds;
     }

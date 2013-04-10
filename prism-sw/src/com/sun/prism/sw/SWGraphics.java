@@ -29,6 +29,7 @@ import com.sun.glass.ui.Screen;
 import com.sun.javafx.font.FontResource;
 import com.sun.javafx.font.FontStrike;
 import com.sun.javafx.font.Metrics;
+import com.sun.javafx.font.PrismFontUtils;
 import com.sun.javafx.scene.text.GlyphList;
 import com.sun.javafx.geom.Ellipse2D;
 import com.sun.javafx.geom.Line2D;
@@ -317,12 +318,16 @@ final class SWGraphics implements ReadbackGraphics {
     }
 
     private void setPaintBeforeDraw(float x, float y, float width, float height) {
-        switch (paint.getType()) {
+        this.setPaintBeforeDraw(this.paint, x, y, width, height);
+    }
+
+    private void setPaintBeforeDraw(Paint p, float x, float y, float width, float height) {
+        switch (p.getType()) {
             case COLOR:
-                this.setColor((Color)this.paint, this.compositeAlpha);
+                this.setColor((Color)p, this.compositeAlpha);
                 break;
             case LINEAR_GRADIENT:
-                final LinearGradient lg = (LinearGradient)this.paint;
+                final LinearGradient lg = (LinearGradient)p;
                 if (PrismSettings.debug) {
                     System.out.println("PR.setLinearGradient: " + lg.getX1() + ", " + lg.getY1() + ", " + lg.getX2() + ", " + lg.getY2());
                 }
@@ -336,7 +341,7 @@ final class SWGraphics implements ReadbackGraphics {
                     getFractions(lg), getARGB(lg, this.compositeAlpha), getPiscesGradientCycleMethod(lg.getSpreadMethod()), piscesTx);
                 break;
             case RADIAL_GRADIENT:
-                final RadialGradient rg = (RadialGradient)this.paint;
+                final RadialGradient rg = (RadialGradient)p;
                 if (PrismSettings.debug) {
                     System.out.println("PR.setRadialGradient: " + rg.getCenterX() + ", " + rg.getCenterY() + ", " + rg.getFocusAngle() + ", " + rg.getFocusDistance() + ", " + rg.getRadius());
                 }
@@ -352,7 +357,7 @@ final class SWGraphics implements ReadbackGraphics {
                         getFractions(rg), getARGB(rg, this.compositeAlpha), getPiscesGradientCycleMethod(rg.getSpreadMethod()), piscesTx);
                 break;
             case IMAGE_PATTERN:
-                final ImagePattern ip = (ImagePattern)this.paint;
+                final ImagePattern ip = (ImagePattern)p;
                 final Image image = ip.getImage();
                 if (PrismSettings.debug) {
                     System.out.println("PR.setTexturePaint: " + image);
@@ -386,7 +391,7 @@ final class SWGraphics implements ReadbackGraphics {
                 }
                 break;
             default:
-                throw new IllegalArgumentException("Unknown paint type: " + paint.getType());
+                throw new IllegalArgumentException("Unknown paint type: " + p.getType());
         }
     }
 
@@ -724,37 +729,49 @@ final class SWGraphics implements ReadbackGraphics {
 
         // check for selection that is out of range of this line (TextArea)
         if ((selectGlyphStart < 0 && selectGlyphEnd < 0)||(selectGlyphStart >= gl.getGlyphCount() && selectGlyphEnd >= gl.getGlyphCount())) {
-            this.setPaintBeforeDraw(bx, by, bw, bh);
-            this.drawStringInternal(gl, strike, x, y, 0, gl.getGlyphCount());
+            this.drawStringInternal(gl, strike, x, y, 0, gl.getGlyphCount(), this.paint, bx, by, bw, bh);
         } else {
             float advanceX = 0;
             if (selectGlyphStart > 0) {
-                this.setPaintBeforeDraw(bx, by, bw, bh);
-                advanceX = this.drawStringInternal(gl, strike, x, y, 0, selectGlyphStart);
+                advanceX = this.drawStringInternal(gl, strike, x, y, 0, selectGlyphStart, this.paint, bx, by, bw, bh);
             }
-            this.setColor(selectColor, this.compositeAlpha);
             advanceX += this.drawStringInternal(gl, strike, x+advanceX, y,
-                                                Math.max(0, selectGlyphStart), Math.min(gl.getGlyphCount(), selectGlyphEnd));
+                                                Math.max(0, selectGlyphStart), Math.min(gl.getGlyphCount(), selectGlyphEnd),
+                                                selectColor, 0, 0, 0, 0);
             if (selectGlyphEnd < gl.getGlyphCount()) {
-                this.setPaintBeforeDraw(bx, by, bw, bh);
-                this.drawStringInternal(gl, strike, x+advanceX, y, selectGlyphEnd, gl.getGlyphCount());
+                this.drawStringInternal(gl, strike, x+advanceX, y, selectGlyphEnd, gl.getGlyphCount(),
+                                        this.paint, bx, by, bw, bh);
             }
         }
     }
 
-    private float drawStringInternal(GlyphList gl, FontStrike strike, float x, float y, int strFrom, int strTo) {
+    private float drawStringInternal(GlyphList gl, FontStrike strike, float x, float y, int strFrom, int strTo,
+                                     Paint p, float bx, float by, float bw, float bh)
+    {
         float advanceX = 0;
         if (tx.isTranslateOrIdentity() && strike.supportsGlyphImages() && (!strike.drawAsShapes())) {
             final boolean doLCDText = (strike.getAAMode() == FontResource.AA_LCD) &&
                     getRenderTarget().isOpaque() &&
-                    (paint.getType() == Paint.Type.COLOR) &&
+                    (p.getType() == Paint.Type.COLOR) &&
                     tx.is2D();
 
-            if (!doLCDText) {
+            final float gamma, invgamma;
+            if (doLCDText) {
+                invgamma = PrismFontUtils.getLCDContrast();
+                gamma = 1.0f/invgamma;
+                final Color c = (Color)p;
+                final Color correctedColor = new Color((float)Math.pow(c.getRed(), invgamma),
+                                                       (float)Math.pow(c.getGreen(), invgamma),
+                                                       (float)Math.pow(c.getBlue(), invgamma),
+                                                       (float)Math.pow(c.getAlpha(), invgamma));
+                this.setColor(correctedColor, this.compositeAlpha);
+            } else {
+                gamma = invgamma = 0;
                 final FontResource fr = strike.getFontResource();
                 final float origSize = strike.getSize();
                 final BaseTransform origTx = strike.getTransform();
                 strike = fr.getStrike(origSize, origTx, FontResource.AA_GREYSCALE);
+                this.setPaintBeforeDraw(p, bx, by, bw, bh);
             }
 
             for (int i = strFrom; i < strTo; i++) {
@@ -764,7 +781,8 @@ final class SWGraphics implements ReadbackGraphics {
                             (int)(x + tx.getMxt() + g.getOriginX() + gl.getPosX(i) + 0.5f),
                             (int)(y + tx.getMyt() + g.getOriginY() + gl.getPosY(i) + 0.5f),
                             g.getWidth(), g.getHeight(),
-                            0, g.getWidth());
+                            0, g.getWidth(),
+                            gamma, invgamma);
                 } else {
                     this.pr.fillAlphaMask(g.getPixelData(),
                             (int)(x + tx.getMxt() + g.getOriginX() + gl.getPosX(i) + 0.5f),

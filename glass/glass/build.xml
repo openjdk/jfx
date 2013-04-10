@@ -16,6 +16,13 @@
     <property name="jfx.logging.dir" value="${rt.dist.root.dir}/javafx-logging"/>
     <property name="jfx.logging.jar" value="${jfx.logging.dir}/dist/javafx-logging.jar"/>
 
+    <condition property="needLens">
+      <or>
+         <isset property="isLinux"/>
+         <isset property="isAndroid"/>
+      </or>
+    </condition>
+
     <target name="init">
         <mkdir dir="${glass-java.class.dir}" />
         <mkdir dir="${glass-java.dist.dir}" />
@@ -48,7 +55,7 @@
             <exclude name="com/sun/glass/events/mac/" unless="isMacOSX" />
             <exclude name="com/sun/glass/ui/gtk/" unless="isLinux" />
             <exclude name="com/sun/glass/ui/ios/" unless="isIOS" />
-            <exclude name="com/sun/glass/ui/lens/" unless="isLinux" />
+            <exclude name="com/sun/glass/ui/lens/" unless="needLens" />
             <exclude name="com/sun/glass/ui/mac/" unless="isMacOSX" />
             <exclude name="com/sun/glass/ui/win/" unless="isWindows" />
             <exclude name="com/sun/glass/ui/x11/" unless="isLinux" />
