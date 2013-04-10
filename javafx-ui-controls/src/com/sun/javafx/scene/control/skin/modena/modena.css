@@ -374,7 +374,7 @@ is being used to size a border should also be in pixels.
 .check-box > .box,
 .menu-button,
 .choice-box,
-.ickericker.split-button > .color-picker-label,
+.color-picker.split-button > .color-picker-label,
 .combo-box-base,
 .combo-box-base:editable > .arrow-button {
     -fx-background-color: -fx-shadow-highlight-color, -fx-outer-border, -fx-inner-border, -fx-body-color;
