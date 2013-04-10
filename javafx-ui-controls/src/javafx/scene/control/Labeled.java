@@ -335,27 +335,28 @@ public abstract class Labeled extends Control {
                 public void applyStyle(StyleOrigin newOrigin, Font value) {
 
                     //
-                    // RT-20727 -
+                    // RT-20727 - if CSS is setting the font, then make sure invalidate doesn't call impl_reapplyCSS
                     //
-                    // if oldOrigin is null, then the property is in init state.
-                    // if newOrigin is null, then either some code is initializing this property or css is resetting it.
-                    //
-                    final StyleOrigin oldOrigin = getStyleOrigin();
-                    fontSetByCss =
-                            newOrigin != StyleOrigin.USER &&
-                            ((oldOrigin == null && newOrigin != null) ||
-                             (oldOrigin != null && newOrigin == null));
-
-                    super.applyStyle(newOrigin, value);
+                    try {
+                        // super.applyStyle calls set which might throw if value is bound.
+                        // Have to make sure fontSetByCss is reset.
+                        fontSetByCss = true;
+                        super.applyStyle(newOrigin, value);
+                    } catch(Exception e) {
+                        throw e;
+                    } finally {
+                        fontSetByCss = false;
+                    }
                 }
 
                 @Override
                 public void set(Font value) {
+
                     final Font oldValue = get();
-                    if (value == null ? oldValue == null : value.equals(oldValue)) {
-                        return;
+                    if (value != null ? !value.equals(oldValue) : oldValue != null) {
+                        super.set(value);
                     }
-                    super.set(value);
+
                 }
                 
                 @Override
@@ -365,8 +366,6 @@ public abstract class Labeled extends Control {
                     // calculated values for styles with relative values
                     if(fontSetByCss == false) {
                         Labeled.this.impl_reapplyCSS();
-                    } else {
-                        fontSetByCss = false;
                     }
                 }
                 

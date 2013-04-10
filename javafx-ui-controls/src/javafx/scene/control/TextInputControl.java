@@ -180,18 +180,19 @@ public abstract class TextInputControl extends Control {
                 public void applyStyle(StyleOrigin newOrigin, Font value) {
 
                     //
-                    // RT-20727 -
+                    // RT-20727 - if CSS is setting the font, then make sure invalidate doesn't call impl_reapplyCSS
                     //
-                    // if oldOrigin is null, then the property is in init state.
-                    // if newOrigin is null, then either some code is initializing this property or css is resetting it.
-                    //
-                    final StyleOrigin oldOrigin = getStyleOrigin();
-                    fontSetByCss =
-                            newOrigin != StyleOrigin.USER &&
-                                    ((oldOrigin == null && newOrigin != null) ||
-                                            (oldOrigin != null && newOrigin == null));
+                    try {
+                        // super.applyStyle calls set which might throw if value is bound.
+                        // Have to make sure fontSetByCss is reset.
+                        fontSetByCss = true;
+                        super.applyStyle(newOrigin, value);
+                    } catch(Exception e) {
+                        throw e;
+                    } finally {
+                        fontSetByCss = false;
+                    }
 
-                    super.applyStyle(newOrigin, value);
                 }
 
 
@@ -211,8 +212,6 @@ public abstract class TextInputControl extends Control {
                     // calculated values for styles with relative values
                     if(fontSetByCss == false) {
                         TextInputControl.this.impl_reapplyCSS();
-                    } else {
-                        fontSetByCss = false;
                     }
                 }
 
