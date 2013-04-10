@@ -672,7 +672,7 @@ void addNative(Project project, String name) {
 allprojects {
     // We want to configure all projects as java projects and use the same compile settings
     // etc, except for the root project which we just want to ignore
-    if (project == rootProject) return
+    if (project == rootProject || project.name == "media" || project.name == "web") return
     // All of our projects are java projects
     apply plugin: "java"
     // TODO we will want to switch this to 1.8 soooooon
@@ -1208,23 +1208,22 @@ project(":fxpackager") {
     // Compile the native launchers. These are included in ant-javafx.jar
     if (IS_WINDOWS) {
         task compileWinLauncher(type: CCTask, group: "Build") {
-            description = "Compiles native sources for the application co-bundle launcher"
-            matches = "WinLauncher\\.cpp"
-            params.addAll(LAUNCHER_CC_FLAGS)
-            output(file("$buildDir/classes/main/com/sun/javafx/tools/resource/windows"))
-            source file("src/main/native/launcher/win")
-            exe = true
-            linkerOptions.addAll(LAUNCHER_LINK_FLAGS)
+            description = "Compiles native sources for the application co-bundle launcher";
+            matches = "WinLauncher\\.cpp";
+            params.addAll(LAUNCHER_CC_FLAGS);
+            output(file("$buildDir/classes/main/com/sun/javafx/tools/resource/windows"));
+            source(file("src/main/native/launcher/win"));
+            exe = true;
+            linkerOptions.addAll(LAUNCHER_LINK_FLAGS);
         }
         task compileIconSwap(type: CCTask, group: "Build") {
             description = "Compiles native sources for the application co-bundle launcher"
             matches = "iconswap\\.cpp"
-            params.addAll(["/nologo", "/W3", "/EHsc", "/D_WINDOWS", "/DUNICODE", "/D_UNICODE",
-                    "/arch:SSE", "/fp:fast", "/O2"])
+            params.addAll(ICON_LAUNCHER_CC_FLAGS)
             output(file("$buildDir/classes/main/com/sun/javafx/tools/resource/windows"))
             source file("src/main/native/launcher/win")
             exe = true
-            linkerOptions.addAll(["/link", "/nologo", "/SUBSYSTEM:CONSOLE"])
+            linkerOptions.addAll(ICON_LAUNCHER_LINK_FLAGS)
         }
         task compileLauncher(dependsOn: [compileWinLauncher, compileIconSwap])
     } else {
@@ -1594,7 +1593,7 @@ task cleanNetBeans() {
 
 allprojects {
     apply plugin: 'idea'
-    if (project == rootProject) return
+    if (project == rootProject || project.name == "media" || project.name == "web") return
 
     // Configure all projects to include $buildDir/builder-src in the generated IDEA project files.
     // Also need to un-exclude the build-dir since we put stuff in it, and then re-exclude other stuff

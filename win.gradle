@@ -70,8 +70,8 @@ try {
     Properties windows_tools_properties = new Properties();
     windows_tools_stream = new FileInputStream(windows_tools);
     windows_tools_properties.load(windows_tools_stream);
-    defineProperty("WINDOWS_VS_VSINSTALLDIR", windows_tools_properties, "absolute garbage");
-    defineProperty("WINDOWS_SDK_DIR", windows_tools_properties, "C:/Program Files (x86)/Microsoft SDKs/Windows/v7.0A")
+    defineProperty("WINDOWS_VS_VSINSTALLDIR", windows_tools_properties, "c:/Program Files (x86)/Microsoft Visual Studio 10.0");
+    defineProperty("WINDOWS_SDK_DIR", windows_tools_properties, System.getenv().get("WindowsSdkDir"))
     defineProperty("WINDOWS_VS_VCINSTALLDIR", windows_tools_properties, "$WINDOWS_VS_VSINSTALLDIR/VC")
     defineProperty("WINDOWS_VS_DEVENVDIR", windows_tools_properties, "$WINDOWS_VS_VSINSTALLDIR/Common7/IDE")
     defineProperty("WINDOWS_VS_DEVENVCMD", windows_tools_properties, "$WINDOWS_VS_DEVENVDIR/VCExpress.exe")
@@ -111,7 +111,6 @@ defineProperty("MT", "$WINDOWS_SDK_DIR/Bin/mt.exe");
 defineProperty("PRISM_CC", CC);
 defineProperty("PRISM_SW_CC", CC);
 
-
 ext.GLASS_CC_FLAGS = [CC_FLAGS, "/WX"].flatten();
 ext.GLASS_LINK_FLAGS = [LINK_FLAGS, "delayimp.lib", "gdi32.lib", "urlmon.lib", "Comdlg32.lib",
         "winmm.lib", "imm32.lib", "shell32.lib", "Uiautomationcore.lib", "dwmapi.lib",
@@ -123,8 +122,11 @@ ext.PRISM_CC_FLAGS = new ArrayList(CC_FLAGS);
 ext.PRISM_LINK_FLAGS = new ArrayList(LINK_FLAGS);
 ext.PRISM_SW_CC_FLAGS = new ArrayList(CC_FLAGS);
 ext.PRISM_SW_LINK_FLAGS = new ArrayList(LINK_FLAGS);
-ext.LAUNCHER_CC_FLAGS = [["/nologo", "/W3", "/EHsc", "/D_WINDOWS", "/DUNICODE", "/D_UNICODE", "/DWIN32",
+ext.LAUNCHER_CC_FLAGS = ["/nologo", "/W3", "/EHsc", "/D_WINDOWS", "/DUNICODE", "/D_UNICODE", "/DWIN32",
         "/D_LITTLE_ENDIAN", "/DWIN32_LEAN_AND_MEAN", "/I$JDK_HOME/include", "/I$JDK_HOME/include/win32",
-        "/arch:SSE", "/fp:fast", "/O2", "/MD"]];
+        "/arch:SSE", "/fp:fast", "/O2", "/MD"];
 ext.LAUNCHER_LINK_FLAGS = ["/link", "/nologo", "/SUBSYSTEM:WINDOWS", "user32.lib", "shell32.lib", "advapi32.lib"]
 
+ext.ICON_LAUNCHER_CC_FLAGS = ["/nologo", "/W3", "/EHsc", "/D_WINDOWS", "/DUNICODE", "/D_UNICODE",
+        "/arch:SSE", "/fp:fast", "/O2"]
+ext.ICON_LAUNCHER_LINK_FLAGS = ["/link", "/nologo", "/SUBSYSTEM:CONSOLE"];
