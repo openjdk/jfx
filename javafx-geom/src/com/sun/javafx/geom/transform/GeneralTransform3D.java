@@ -643,6 +643,10 @@ public class GeneralTransform3D implements CanTransformVec3d{
      * @return this transform
      */
     public GeneralTransform3D mul(BaseTransform t1) {
+        if (t1.isIdentity()) {
+            return this;
+        }
+
         double tmp0, tmp1, tmp2, tmp3;
         double tmp4, tmp5, tmp6, tmp7;
         double tmp8, tmp9, tmp10, tmp11;
@@ -714,6 +718,10 @@ public class GeneralTransform3D implements CanTransformVec3d{
      * @return this transform
      */
     public GeneralTransform3D mul(GeneralTransform3D t1) {
+        if (t1.isIdentity()) {
+            return this;
+        }
+
         double tmp0, tmp1, tmp2, tmp3;
         double tmp4, tmp5, tmp6, tmp7;
         double tmp8, tmp9, tmp10, tmp11;
