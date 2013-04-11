@@ -26,8 +26,8 @@
 #include <stdlib.h>
 #include <jni.h>
 
-#define jlong_to_ptr(value) ((void*)((long)value))
-#define ptr_to_jlong(value) (long)(value)
+#define jlong_to_ptr(value) (intptr_t)value
+#define ptr_to_jlong(value) (jlong)((intptr_t)value)
 
 #ifndef USE_GLASS_CHECK
         #define GLASS_CHECK_EXCEPTION(ENV)
