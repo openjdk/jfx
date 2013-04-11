@@ -132,14 +132,14 @@
                 <package-root>${src.dir}</package-root>
                 <classpath mode="compile">../javafx-beans/dist/javafx-beans.jar:../../rt/javafx-geom/dist/javafx-geom.jar:../../rt/javafx-logging/dist/javafx-logging.jar:../../rt/javafx-anim/dist/javafx-anim.jar:../../rt/javafx-common/dist/javafx-common.jar:../../rt-closed/javafx-mx-common/dist/javafx-mx-common.jar:../../rt/javafx-sg-common/dist/javafx-sg-common.jar:../../rt-closed/decora-runtime/dist/decora-runtime.jar:../../rt-closed/build/deps/plugin_exports.jar:../../import/checkstyle-5.1/checkstyle-5.1.jar:../../rt-closed/javafx-accessible/dist/javafx-accessible.jar</classpath>
                 <built-to>dist/javafx-ui-common.jar</built-to>
-                <source-level>1.6</source-level>
+                <source-level>1.7</source-level>
             </compilation-unit>
             <compilation-unit>
                 <package-root>${test.dir}</package-root>
                 <unit-tests/>
                 <classpath mode="compile">../javafx-beans/dist/javafx-beans.jar:../../rt/javafx-geom/dist/javafx-geom.jar:../../rt/javafx-anim/dist/javafx-anim.jar:../../rt/javafx-common/dist/javafx-common.jar:../../rt-closed/javafx-mx-common/dist/javafx-mx-common.jar:../../rt/glass/dist/lib/glass.jar:../../rt-closed/build/deps/plugin_exports.jar:../test-stub-toolkit/dist/test-stub-toolkit.jar:../../rt/prism-common/dist/prism-common.jar:build/classes:${jfx.sdk.rt.jar}:../../rt-closed/build/deps/junit.jar:../../artifacts/sdk/rt/lib/ext/jfxrt.jar</classpath>
                 <built-to>${build.test.classes.dir}</built-to>
-                <source-level>1.6</source-level>
+                <source-level>1.7</source-level>
             </compilation-unit>
         </java-data>
         <spellchecker-wordlist xmlns="http://www.netbeans.org/ns/spellchecker-wordlist/1">

@@ -339,126 +339,107 @@ public class BorderPane extends Pane {
         }
 
         final Node r = getRight();
-        if (r != null && r.isManaged() && r.getContentBias() != null) {
+        if (r != null && r.isManaged() && r.getContentBias() == Orientation.VERTICAL) {
             return r.getContentBias();
         }
 
+        final Node l = getLeft();
+        if (l != null && l.isManaged() && l.getContentBias() == Orientation.VERTICAL) {
+            return l.getContentBias();
+        }
         final Node b = getBottom();
-        if (b != null && b.isManaged() && b.getContentBias() != null) {
+        if (b != null && b.isManaged() && b.getContentBias() == Orientation.HORIZONTAL) {
             return b.getContentBias();
         }
 
-        final Node l = getLeft();
-        if (l != null && l.isManaged() && l.getContentBias() != null) {
-            return l.getContentBias();
-        }
-
         final Node t = getTop();
-        if (t != null && t.isManaged() && t.getContentBias() != null) {
+        if (t != null && t.isManaged() && t.getContentBias() == Orientation.HORIZONTAL) {
             return t.getContentBias();
         }
+
 
         return null;
     }
 
     @Override protected double computeMinWidth(double height) {
-        double topMinWidth;
-        double leftMinWidth;
+        double topMinWidth = getAreaWidth(getTop(), -1, true);
+        double bottomMinWidth = getAreaWidth(getBottom(), -1, true);
+
+        double leftPrefWidth;
+        double rightPrefWidth;
         double centerMinWidth;
-        double rightMinWidth;
-        double bottomMinWidth;
 
-        final Node c = getCenter();
-        final Node r = getRight();
-        final Node b = getBottom();
-        final Node l = getLeft();
-        final Node t = getTop();
+        if (height != -1 && (childHasContentBias(getLeft(), Orientation.VERTICAL) ||
+                childHasContentBias(getRight(), Orientation.VERTICAL) ||
+            childHasContentBias(getCenter(), Orientation.VERTICAL))) {
+            double topPrefHeight = getAreaHeight(getTop(), -1, false);
+            double bottomPrefHeight = getAreaHeight(getBottom(), -1, false);
 
-        if (getContentBias() == Orientation.VERTICAL) {
-            final double h[] = adjustAreaHeight(height, -1);
-            topMinWidth = getAreaWidth(t, h[0], true);
-            leftMinWidth = getAreaWidth(l, h[1], true);
-            centerMinWidth = getAreaWidth(c, h[2], true);
-            rightMinWidth = getAreaWidth(r, h[3], true);
-            bottomMinWidth = getAreaWidth(b, h[4], true);
+            double middleAreaHeight = Math.max(0, height - topPrefHeight - bottomPrefHeight);
+
+            leftPrefWidth = getAreaWidth(getLeft(), middleAreaHeight, false);
+            rightPrefWidth = getAreaWidth(getRight(), middleAreaHeight, false);
+            centerMinWidth = getAreaWidth(getCenter(), middleAreaHeight, true);
         } else {
-            topMinWidth = t != null? computeChildMinAreaWidth(t, getMargin(t)) : 0;
-            leftMinWidth = l != null? computeChildMinAreaWidth(l, getMargin(l)) : 0;
-            centerMinWidth = c != null? computeChildMinAreaWidth(c, getMargin(c)) : 0;
-            rightMinWidth = r != null? computeChildMinAreaWidth(r, getMargin(r)) : 0;
-            bottomMinWidth = b != null? computeChildMinAreaWidth(b, getMargin(b)) : 0;
+            leftPrefWidth = getAreaWidth(getLeft(), -1, false);
+            rightPrefWidth = getAreaWidth(getRight(), -1, false);
+            centerMinWidth = getAreaWidth(getCenter(), -1, true);
         }
 
         final Insets insets = getInsets();
         return insets.getLeft() +
-                Math.max(leftMinWidth + centerMinWidth + rightMinWidth, Math.max(topMinWidth,bottomMinWidth)) +
+                Math.max(leftPrefWidth + centerMinWidth + rightPrefWidth, Math.max(topMinWidth,bottomMinWidth)) +
                 insets.getRight();
     }
 
     @Override protected double computeMinHeight(double width) {
-        double topMinHeight;
-        double bottomMinHeight;
-        double leftMinHeight;
+        final Insets insets = getInsets();
+
+        // Bottom and top are always at their pref height
+        double topPrefHeight = getAreaHeight(getTop(), width, false);
+        double bottomPrefHeight = getAreaHeight(getBottom(), width, false);
+
+        double leftMinHeight = getAreaHeight(getLeft(), -1, true);
+        double rightMinHeight = getAreaHeight(getRight(), -1, true);
+
         double centerMinHeight;
-        double rightMinHeight;
-
-        final Node c = getCenter();
-        final Node r = getRight();
-        final Node b = getBottom();
-        final Node l = getLeft();
-        final Node t = getTop();
-
-        if (getContentBias() == Orientation.HORIZONTAL) {
-            final double w[] = adjustAreaWidth(width, -1);
-            topMinHeight = getAreaHeight(t, width, true);
-            leftMinHeight = getAreaHeight(l, w[0], true);
-            centerMinHeight = getAreaHeight(c, w[1], true);
-            rightMinHeight = getAreaHeight(r, w[2], true);
-            bottomMinHeight = getAreaHeight(b, width, true);
+        if (width != -1 && childHasContentBias(getCenter(), Orientation.HORIZONTAL)) {
+            double leftPrefWidth = getAreaWidth(getLeft(), -1, false);
+            double rightPrefWidth = getAreaWidth(getRight(), -1, false);
+            centerMinHeight = getAreaHeight(getCenter(),
+                    Math.max(0, width - leftPrefWidth - rightPrefWidth) , true);
         } else {
-            topMinHeight = t != null? computeChildMinAreaHeight(t, getMargin(t)) : 0;
-            leftMinHeight = l != null? computeChildMinAreaHeight(l, getMargin(l)) : 0;
-            centerMinHeight = c != null? computeChildMinAreaHeight(c, getMargin(c)) : 0;
-            rightMinHeight = r != null? computeChildMinAreaHeight(r, getMargin(r)) : 0;
-            bottomMinHeight = b != null? computeChildMinAreaHeight(b, getMargin(b)) : 0;
+            centerMinHeight = getAreaHeight(getCenter(), -1, true);
         }
 
-        final Insets insets = getInsets();
-        return insets.getTop() + topMinHeight +
-                Math.max(centerMinHeight, Math.max(rightMinHeight,leftMinHeight)) +
-                bottomMinHeight + insets.getBottom();
+        double middleAreaMinHeigh = Math.max(centerMinHeight, Math.max(rightMinHeight, leftMinHeight));
+
+        return insets.getTop() + topPrefHeight + middleAreaMinHeigh + bottomPrefHeight + insets.getBottom();
     }
 
     @Override protected double computePrefWidth(double height) {
-        double topPrefWidth;
+        double topPrefWidth = getAreaWidth(getTop(), -1, false);
+        double bottomPrefWidth = getAreaWidth(getBottom(), -1, false);
+
         double leftPrefWidth;
-        double centerPrefWidth;
         double rightPrefWidth;
-        double bottomPrefWidth;
+        double centerPrefWidth;
 
-        final Node c = getCenter();
-        final Node r = getRight();
-        final Node b = getBottom();
-        final Node l = getLeft();
-        final Node t = getTop();
+        if ( height != -1 && (childHasContentBias(getLeft(), Orientation.VERTICAL) ||
+                childHasContentBias(getRight(), Orientation.VERTICAL) ||
+            childHasContentBias(getCenter(), Orientation.VERTICAL))) {
+            double topPrefHeight = getAreaHeight(getTop(), -1, false);
+            double bottomPrefHeight = getAreaHeight(getBottom(), -1, false);
 
-        if (getContentBias() == Orientation.VERTICAL) {
-            final double h[] = adjustAreaHeight(height, -1);
-            topPrefWidth = getAreaWidth(t, h[0], false);
-            leftPrefWidth = getAreaWidth(l, h[1], false);
-            centerPrefWidth = getAreaWidth(c, h[2], false);
-            rightPrefWidth = getAreaWidth(r, h[3], false);
-            bottomPrefWidth = getAreaWidth(b, h[4], false);
+            double middleAreaHeight = Math.max(0, height - topPrefHeight - bottomPrefHeight);
+
+            leftPrefWidth = getAreaWidth(getLeft(), middleAreaHeight, false);
+            rightPrefWidth = getAreaWidth(getRight(), middleAreaHeight, false);
+            centerPrefWidth = getAreaWidth(getCenter(), middleAreaHeight, false);
         } else {
-            double centerPrefHeight = c != null? computeChildPrefAreaHeight(c, getMargin(c)) : 0;
-            double leftPrefHeight = l != null? computeChildPrefAreaHeight(l, getMargin(l)) : 0;
-            double rightPrefHeight = r != null? computeChildPrefAreaHeight(r, getMargin(r)) : 0;
-            double maxHeight = Math.max(centerPrefHeight, Math.max(rightPrefHeight, leftPrefHeight));
-            leftPrefWidth = l != null? computeChildPrefAreaWidth(l, getMargin(l), maxHeight) : 0;
-            rightPrefWidth = r != null? computeChildPrefAreaWidth(r, getMargin(r), maxHeight) : 0;
-            centerPrefWidth = c != null? computeChildPrefAreaWidth(c, getMargin(c), maxHeight) : 0;
-            topPrefWidth = t != null? computeChildPrefAreaWidth(t, getMargin(t)) : 0;
-            bottomPrefWidth = b != null? computeChildPrefAreaWidth(b, getMargin(b)) : 0;
+            leftPrefWidth = getAreaWidth(getLeft(), -1, false);
+            rightPrefWidth = getAreaWidth(getRight(), -1, false);
+            centerPrefWidth = getAreaWidth(getCenter(), -1, false);
         }
 
         final Insets insets = getInsets();
@@ -468,52 +449,26 @@ public class BorderPane extends Pane {
     }
 
     @Override protected double computePrefHeight(double width) {
-        double topPrefHeight;
-        double bottomPrefHeight;
-        double leftPrefHeight;
-        double centerPrefHeight;
-        double rightPrefHeight;
-        double maxHeight;
-
-        final Node c = getCenter();
-        final Node r = getRight();
-        final Node b = getBottom();
-        final Node l = getLeft();
-        final Node t = getTop();
         final Insets insets = getInsets();
 
-        if (getContentBias() == Orientation.HORIZONTAL) {
-            final double w[] = adjustAreaWidth(width, -1);
-            topPrefHeight = getAreaHeight(t, width, false);
-            leftPrefHeight = getAreaHeight(l, w[0], false);
-            centerPrefHeight = getAreaHeight(c, w[1], false);
-            rightPrefHeight = getAreaHeight(r, w[2], false);
-            bottomPrefHeight = getAreaHeight(b, width, false);
-            maxHeight = Math.max(centerPrefHeight, Math.max(rightPrefHeight, leftPrefHeight));
-        } else {
-            final Insets centerMargin = c == null ? null : getMargin(c);
-            final Insets rightMargin = r == null ? null : getMargin(r);
-            final Insets bottomMargin = b == null ? null : getMargin(b);
-            final Insets leftMargin = l == null ? null : getMargin(l);
-            final Insets topMargin = t == null ? null : getMargin(t);
-            centerPrefHeight = c != null? computeChildPrefAreaHeight(c, centerMargin) : 0;
-            leftPrefHeight = l != null? computeChildPrefAreaHeight(l, leftMargin) : 0;
-            rightPrefHeight = r != null? computeChildPrefAreaHeight(r, rightMargin) : 0;
-            maxHeight = Math.max(centerPrefHeight, Math.max(rightPrefHeight, leftPrefHeight));
-            double leftPrefWidth = l != null? computeChildPrefAreaWidth(l, leftMargin, maxHeight) : 0;
-            double rightPrefWidth = r != null? computeChildPrefAreaWidth(r, rightMargin, maxHeight) : 0;
-            double centerPrefWidth = c != null? computeChildPrefAreaWidth(c, centerMargin, maxHeight) : 0;
-            double topPrefWidth = t != null? computeChildPrefAreaWidth(t, topMargin) : 0;
-            double bottomPrefWidth = b != null? computeChildPrefAreaWidth(b, bottomMargin) : 0;
-            double prefWidth = insets.getLeft() +
-                    Math.max(leftPrefWidth + centerPrefWidth + rightPrefWidth, Math.max(topPrefWidth,bottomPrefWidth)) +
-                    insets.getRight();
+        double topPrefHeight = getAreaHeight(getTop(), width, false);
+        double bottomPrefHeight = getAreaHeight(getBottom(), width, false);
+        double leftPrefHeight = getAreaHeight(getLeft(), -1, false);
+        double rightPrefHeight = getAreaHeight(getRight(), -1, false);
 
-            topPrefHeight = t != null? computeChildPrefAreaHeight(t, topMargin, prefWidth) : 0;
-            bottomPrefHeight = b != null? computeChildPrefAreaHeight(b, bottomMargin, prefWidth) : 0;
+        double centerPrefHeight;
+        if (width != -1 && childHasContentBias(getCenter(), Orientation.HORIZONTAL)) {
+            double leftPrefWidth = getAreaWidth(getLeft(), -1, false);
+            double rightPrefWidth = getAreaWidth(getRight(), -1, false);
+            centerPrefHeight = getAreaHeight(getCenter(),
+                    Math.max(0, width - leftPrefWidth - rightPrefWidth) , false);
+        } else {
+            centerPrefHeight = getAreaHeight(getCenter(), -1, false);
         }
 
-        return insets.getTop() + topPrefHeight + maxHeight + bottomPrefHeight + insets.getBottom();
+        double middleAreaPrefHeigh = Math.max(centerPrefHeight, Math.max(rightPrefHeight, leftPrefHeight));
+
+        return insets.getTop() + topPrefHeight + middleAreaPrefHeigh + bottomPrefHeight + insets.getBottom();
     }
 
     @Override protected void layoutChildren() {
@@ -524,8 +479,6 @@ public class BorderPane extends Pane {
         final double insideY = insets.getTop();
         final double insideWidth = width - insideX - insets.getRight();
         final double insideHeight = height - insideY - insets.getBottom();
-        final double widths[] = adjustAreaWidth(width, height);
-        final double heights[] = adjustAreaHeight(height, width);
         final Node c = getCenter();
         final Node r = getRight();
         final Node b = getBottom();
@@ -535,13 +488,9 @@ public class BorderPane extends Pane {
         double topHeight = 0;
         if (t != null && t.isManaged()) {
             Insets topMargin = getNodeMargin(t);
-            if (getContentBias() == Orientation.VERTICAL) {
-                topHeight = heights[0] == -1 ? t.prefHeight(-1) : heights[0];
-            } else {
-                topHeight = snapSize(topMargin.getTop() +
-                        t.prefHeight(insideWidth - topMargin.getLeft() - topMargin.getRight()) +
-                        topMargin.getBottom());
-            }
+            topHeight = snapSize(topMargin.getTop() +
+                    t.prefHeight(insideWidth - topMargin.getLeft() - topMargin.getRight()) +
+                    topMargin.getBottom());
             topHeight = Math.min(topHeight, insideHeight);
             Vec2d result = boundedNodeSizeWithBias(t, adjustWidthByMargin(insideWidth, topMargin),
                     adjustHeightByMargin(topHeight, topMargin), true, true, TEMP_VEC2D);
@@ -557,13 +506,9 @@ public class BorderPane extends Pane {
         double bottomHeight = 0;
         if (b != null && b.isManaged()) {
             Insets bottomMargin = getNodeMargin(b);
-            if (getContentBias() == Orientation.VERTICAL) {
-                bottomHeight = heights[4] == -1 ? b.prefHeight(-1) : heights[4];
-            } else {
-                bottomHeight = snapSize(bottomMargin.getTop() +
-                        b.prefHeight(insideWidth - bottomMargin.getLeft() - bottomMargin.getRight()) +
-                        bottomMargin.getBottom());
-            }
+            bottomHeight = snapSize(bottomMargin.getTop() +
+                    b.prefHeight(insideWidth - bottomMargin.getLeft() - bottomMargin.getRight()) +
+                    bottomMargin.getBottom());
             bottomHeight = Math.min(bottomHeight, insideHeight - topHeight);
             Vec2d result = boundedNodeSizeWithBias(b, adjustWidthByMargin(insideWidth, bottomMargin),
                     adjustHeightByMargin(bottomHeight, bottomMargin), true, true, TEMP_VEC2D);
@@ -580,13 +525,9 @@ public class BorderPane extends Pane {
         double leftWidth = 0;
         if (l != null && l.isManaged()) {
             Insets leftMargin = getNodeMargin(l);
-            if (getContentBias() == Orientation.HORIZONTAL) {
-                leftWidth =  widths[0] == -1 ? l.prefWidth(-1) : widths[0];
-            } else {
-                leftWidth = snapSize(leftMargin.getLeft() +
-                    l.prefWidth(insideHeight - topHeight - bottomHeight - leftMargin.getTop() - leftMargin.getBottom()) +
-                    leftMargin.getRight());
-            }
+            leftWidth = snapSize(leftMargin.getLeft() +
+                l.prefWidth(insideHeight - topHeight - bottomHeight - leftMargin.getTop() - leftMargin.getBottom()) +
+                leftMargin.getRight());
             leftWidth = Math.min(leftWidth, insideWidth);
             Vec2d result = boundedNodeSizeWithBias(l, adjustWidthByMargin(leftWidth, leftMargin),
                     adjustHeightByMargin(insideHeight - topHeight - bottomHeight, leftMargin), true, true, TEMP_VEC2D);
@@ -603,13 +544,9 @@ public class BorderPane extends Pane {
         double rightWidth = 0;
         if (r != null && r.isManaged()) {
             Insets rightMargin = getNodeMargin(r);
-            if (getContentBias() == Orientation.HORIZONTAL) {
-                rightWidth = widths[2] == -1 ? r.prefWidth(-1) : widths[2];
-            } else {
-                rightWidth = snapSize(rightMargin.getLeft() +
-                        r.prefWidth(insideHeight - topHeight - bottomHeight - rightMargin.getTop() - rightMargin.getBottom()) +
-                        rightMargin.getRight());
-            }
+            rightWidth = snapSize(rightMargin.getLeft() +
+                    r.prefWidth(insideHeight - topHeight - bottomHeight - rightMargin.getTop() - rightMargin.getBottom()) +
+                    rightMargin.getRight());
             rightWidth = Math.min(rightWidth, insideWidth - leftWidth);
             Vec2d result = boundedNodeSizeWithBias(r, rightWidth,
                     insideHeight - topHeight - bottomHeight - rightMargin.getTop() - rightMargin.getBottom(), true, true, TEMP_VEC2D);
@@ -658,173 +595,6 @@ public class BorderPane extends Pane {
             return child.getContentBias() == orientation;
         }
         return false;
-    }
-
-    private double getAreaLimitWidth(Node child, boolean shrinking, double height) {
-        if (child != null && child.isManaged()) {
-            Insets margin = getNodeMargin(child);
-            return shrinking ? computeChildMinAreaWidth(child, margin, height) :
-                computeChildMaxAreaWidth(child, margin, height);
-        }
-        return 0;
-    }
-
-    private double[] adjustAreaWidth(double width, double height) {
-        double actualWidth[] = new double[3];
-        actualWidth[0] = getAreaWidth(getLeft(), -1, false);
-        actualWidth[1] = getAreaWidth(getCenter(), -1, false);
-        actualWidth[2] = getAreaWidth(getRight(), -1, false);
-
-        double contentWidths = actualWidth[0] + actualWidth[1] + actualWidth[2];
-        double extraWidth = width - contentWidths;
-        boolean shrinking = extraWidth < 0;
-
-        boolean contentBias[] = new boolean[3];
-        contentBias[0] = childHasContentBias(getLeft(), Orientation.HORIZONTAL);
-        contentBias[1] = childHasContentBias(getCenter(), Orientation.HORIZONTAL);
-        contentBias[2] = childHasContentBias(getRight(), Orientation.HORIZONTAL);
-
-        double[] areaLimitWidth = new double[3];
-        areaLimitWidth[0] = getAreaLimitWidth(getLeft(), shrinking, height);
-        areaLimitWidth[1] = getAreaLimitWidth(getCenter(), shrinking, height);
-        areaLimitWidth[2] = getAreaLimitWidth(getRight(), shrinking, height);
-
-        double availableWidth = width;
-        double w[] = {-1, -1, -1};
-        int numBiases = w.length;
-        if (width != -1 && getContentBias() == Orientation.HORIZONTAL) {
-            for (int i = 0; i < w.length; i++) {
-                if (!contentBias[i]) {
-                    w[i] = -1;
-                    numBiases--;
-                    if (shrinking) {
-                        availableWidth -= actualWidth[i];
-                    }
-                }
-            }
-
-            extraWidth = extraWidth/numBiases;
-            for (int i = 0; i < w.length; i++) {
-                if (!shrinking) {
-                    if (contentBias[i]) {
-                        double grow = actualWidth[i] + extraWidth;
-                        if (grow < areaLimitWidth[i]) {
-                            w[i] = grow;
-                        } else {
-                            w[i] = areaLimitWidth[i];
-                        }
-                    }
-                } else {
-                    if (availableWidth > 0) {
-                        if (contentBias[i]) {
-                            if (availableWidth > areaLimitWidth[i]) {
-                                w[i] = availableWidth/numBiases;
-                            } else {
-                                w[i] = areaLimitWidth[i];
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        return w;
-    }
-
-    private double getAreaLimitHeight(Node child, boolean shrinking, double width) {
-        if (child != null && child.isManaged()) {
-            Insets margin = getNodeMargin(child);
-            return shrinking ? computeChildMinAreaHeight(child, margin, width) :
-                computeChildMaxAreaHeight(child, margin, width);
-        }
-        return 0;
-    }
-
-    private double[] adjustAreaHeight(double height, double width) {
-        final Node c = getCenter();
-        final Node r = getRight();
-        final Node b = getBottom();
-        final Node l = getLeft();
-        final Node t = getTop();
-
-        double actualHeight[] = new double[5];
-        actualHeight[0] = getAreaHeight(t, -1, false);
-        actualHeight[1] = getAreaHeight(l, -1, false);
-        actualHeight[2] = getAreaHeight(c, -1, false);
-        actualHeight[3] = getAreaHeight(r, -1, false);
-        actualHeight[4] = getAreaHeight(b, -1, false);
-
-        double contentHeight = Math.max(actualHeight[1], Math.max(actualHeight[2], actualHeight[3]));
-        contentHeight += (actualHeight[0] + actualHeight[4]);
-
-        double extraHeight = height - contentHeight;
-        boolean shrinking = extraHeight < 0;
-
-        boolean contentBias[] = new boolean[5];
-        contentBias[0] = childHasContentBias(t, Orientation.VERTICAL);
-        contentBias[1] = childHasContentBias(l, Orientation.VERTICAL);
-        contentBias[2] = childHasContentBias(c, Orientation.VERTICAL);
-        contentBias[3] = childHasContentBias(r, Orientation.VERTICAL);
-        contentBias[4] = childHasContentBias(b, Orientation.VERTICAL);
-
-        double areaLimitHeight[] = new double[5];
-        areaLimitHeight[0] = getAreaLimitHeight(t, shrinking, width);
-        areaLimitHeight[1] = getAreaLimitHeight(l, shrinking, width);
-        areaLimitHeight[2] = getAreaLimitHeight(c, shrinking, width);
-        areaLimitHeight[3] = getAreaLimitHeight(r, shrinking, width);
-        areaLimitHeight[4] = getAreaLimitHeight(b, shrinking, width);
-
-        double availableHeight = height;
-        double h[] = {-1, -1, -1, -1, -1};
-        int numBiases = h.length;
-
-        if (height != -1 && getContentBias() == Orientation.VERTICAL) {
-
-            double middleRowContentHeight = 0;
-            for (int i = 1; i < 4; i++) {
-                if (!contentBias[i]) {
-                    middleRowContentHeight = Math.max(middleRowContentHeight, actualHeight[i]);
-                }
-            }
-            for (int i = 0; i < h.length; i++) {
-                if (!contentBias[i]) {
-                    h[i] = -1;
-                    numBiases--;
-                    if (shrinking) {
-                        if (i < 1 || i > 3) {
-                            availableHeight -= actualHeight[i];
-                        } else if (i == 1) {
-                            // We only need to subtract the middle row once.
-                            availableHeight -= middleRowContentHeight;
-                        }
-                    }
-                }
-            }
-
-            extraHeight = extraHeight/numBiases;
-            for (int i = 0; i < h.length; i++) {
-                if (!shrinking) {
-                    if (contentBias[i]) {
-                        double grow = actualHeight[i] + extraHeight;
-                        if (grow < areaLimitHeight[i]) {
-                            h[i] = grow;
-                        } else {
-                            h[i] = areaLimitHeight[i];
-                        }
-                    }
-                } else {
-                    if (availableHeight > 0) {
-                        if (contentBias[i]) {
-                            if (availableHeight > areaLimitHeight[i]) {
-                                h[i] = availableHeight/numBiases;
-                            } else {
-                                h[i] = areaLimitHeight[i];
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        return h;
     }
 
     /***************************************************************************

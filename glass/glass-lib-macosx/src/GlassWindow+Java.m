@@ -54,8 +54,7 @@ static NSWindow *s_grabWindow = nil;
     // force==YES indicates that the screen's properties might have changed (e.g. scale)
     if ((self->currentScreen != newScreen || force) && (newScreen != nil))
     {
-        [self->currentScreen release];
-        self->currentScreen = [newScreen retain];
+        self->currentScreen = newScreen;
         
         GET_MAIN_JENV;
         (*env)->CallVoidMethod(env, jWindow, jWindowNotifyMoveToAnotherScreen, ptr_to_jlong(self->currentScreen), ptr_to_jlong(newScreen));

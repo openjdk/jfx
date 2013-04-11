@@ -25,7 +25,7 @@
 
 package com.sun.scenario.effect;
 
-public interface Filterable {
+public interface Filterable extends LockableResource {
     public Object getData();
     public int getContentWidth();
     public int getContentHeight();
@@ -33,7 +33,4 @@ public interface Filterable {
     public int getPhysicalHeight();
     public float getPixelScale();
     public void flush();
-    public void lock();
-    public void unlock();
-    public boolean isLost();
 }

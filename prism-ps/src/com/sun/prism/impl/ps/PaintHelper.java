@@ -845,6 +845,7 @@ class PaintHelper {
         float ch = paintTex.getContentHeight();
         float texw = paintTex.getPhysicalWidth();
         float texh = paintTex.getPhysicalHeight();
+        paintTex.unlock();
 
         // calculate plane equation constants
         AffineBase ret;

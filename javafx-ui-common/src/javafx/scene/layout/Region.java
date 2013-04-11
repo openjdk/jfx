@@ -1365,7 +1365,7 @@ public class Region extends Parent {
         double alt = -1;
         if (child.getContentBias() == Orientation.VERTICAL) { // width depends on height
             alt = snapSize(height != -1? boundedSize(child.minHeight(-1), height, child.maxHeight(-1)) :
-                                         child.minHeight(-1));
+                                         child.maxHeight(-1));
         }
         return left + snapSize(child.minWidth(alt)) + right;
     }
@@ -1381,7 +1381,7 @@ public class Region extends Parent {
         double alt = -1;
         if (child.getContentBias() == Orientation.HORIZONTAL) { // height depends on width
             alt = snapSize(width != -1? boundedSize(child.minWidth(-1), width, child.maxWidth(-1)) :
-                                        child.minWidth(-1));
+                                        child.maxWidth(-1));
         }
         return top + snapSize(child.minHeight(alt)) + bottom;
     }
@@ -1435,7 +1435,7 @@ public class Region extends Parent {
         double alt = -1;
         if (child.getContentBias() == Orientation.VERTICAL) { // width depends on height
             alt = snapSize(height != -1? boundedSize(child.minHeight(-1), height, child.maxHeight(-1)) :
-                child.maxHeight(-1));
+                child.minHeight(-1));
             max = child.maxWidth(alt);
         }
         // if min > max, min wins, so still need to call boundedSize()
@@ -1454,7 +1454,7 @@ public class Region extends Parent {
         double alt = -1;
         if (child.getContentBias() == Orientation.HORIZONTAL) { // height depends on width
             alt = snapSize(width != -1? boundedSize(child.minWidth(-1), width, child.maxWidth(-1)) :
-                child.maxWidth(-1));
+                child.minWidth(-1));
             max = child.maxHeight(alt);
         }
         // if min > max, min wins, so still need to call boundedSize()
