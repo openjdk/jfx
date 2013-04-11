@@ -337,32 +337,16 @@ public abstract class NGNode extends BaseNode<Graphics> {
      *                                                                         *
      **************************************************************************/
 
-    // TODO: 3D - Reconsider the NodeType interface.
-    // At the very least it needs to be documented.
-    enum NodeType {
-        NODE_NONE, NODE_2D, NODE_3D
+    // This node requires 2D graphics state for rendering
+    boolean isShape3D() {
+        return false;
     }
 
-    // TODO: 3D - Reconsider the NodeType interface.
-    // At the very least it needs to be documented.
-    NodeType getNodeType() {
-        return NodeType.NODE_2D;
-    }
-    
-    protected final boolean configureRenderer(Graphics g) {
-        switch (getNodeType()) {
-            case NODE_2D: return g.beginRender2D();
-            case NODE_3D: return g.beginRender3D();
-        }
-        return true;
-    }
-    
     @Override
     protected void doRender(Graphics g) {
-        // check if the renderer configured properly
-        if (!configureRenderer(g))
-            return;
-        
+
+        g.setState3D(isShape3D());
+
         boolean preCullingTurnedOff = false;
         if (PrismSettings.dirtyOptsEnabled) {
             if (g.hasPreCullingBits()) {

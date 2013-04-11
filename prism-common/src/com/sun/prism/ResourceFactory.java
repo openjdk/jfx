@@ -176,7 +176,8 @@ public interface ResourceFactory extends GraphicsResource {
     
     /*
      * 3D stuff
-     * TODO: 3D - is this how we want to expose tihs?
      */
-    public MeshFactory get3DFactory();
+    public PhongMaterial createPhongMaterial();
+    public MeshView createMeshView(Mesh mesh);
+    public Mesh createMesh();
 }

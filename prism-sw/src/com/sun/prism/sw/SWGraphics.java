@@ -49,7 +49,6 @@ import com.sun.pisces.Transform6;
 import com.sun.prism.BasicStroke;
 import com.sun.prism.CompositeMode;
 import com.sun.prism.Image;
-import com.sun.prism.MeshView;
 import com.sun.prism.PixelFormat;
 import com.sun.prism.ReadbackGraphics;
 import com.sun.prism.RenderTarget;
@@ -118,7 +117,7 @@ final class SWGraphics implements ReadbackGraphics {
     public RenderTarget getRenderTarget() {
         return target;
     }
-    
+
     public SWResourceFactory getResourceFactory() {
         return target.getResourceFactory();
     }
@@ -126,10 +125,10 @@ final class SWGraphics implements ReadbackGraphics {
     public Screen getAssociatedScreen() {
         return target.getAssociatedScreen();
     }
-    
+
     public void sync() {
     }
-    
+
     public void reset() {
         throw new UnsupportedOperationException("unimp: SWG.reset");
     }
@@ -287,7 +286,7 @@ final class SWGraphics implements ReadbackGraphics {
         }
         clipRectIndex = index;
     }
-    
+
     public float getExtraAlpha() {
         return compositeAlpha;
     }
@@ -302,7 +301,7 @@ final class SWGraphics implements ReadbackGraphics {
     public Paint getPaint() {
         return paint;
     }
-    
+
     public void setPaint(Paint paint) {
         this.paint = paint;
     }
@@ -434,7 +433,7 @@ final class SWGraphics implements ReadbackGraphics {
     public BasicStroke getStroke() {
         return stroke;
     }
-    
+
     public void setStroke(BasicStroke stroke) {
         this.stroke = stroke;
     }
@@ -482,7 +481,7 @@ final class SWGraphics implements ReadbackGraphics {
     public void clear() {
         this.clear(Color.TRANSPARENT);
     }
-    
+
     /**
      * Clears the current {@code RenderTarget} with the given {@code Color}.
      * Note that this operation is affected by the current clip rectangle,
@@ -497,7 +496,7 @@ final class SWGraphics implements ReadbackGraphics {
         pr.clearRect(0, 0, target.getPhysicalWidth(), target.getPhysicalHeight());
         getRenderTarget().setOpaque(color.isOpaque());
     }
-    
+
     /**
      * Clears the region represented by the given quad with transparent pixels.
      * Note that this operation is affected by the current clip rectangle,
@@ -528,7 +527,7 @@ final class SWGraphics implements ReadbackGraphics {
         }
         this.fillRect(Math.min(x1, x2), Math.min(y1, y2), Math.abs(x2 - x1), Math.abs(y2 - y1));
     }
-    
+
     public void fillRect(float x, float y, float width, float height) {
         if (PrismSettings.debug) {
             System.out.printf("+ SWG.fillRect, x: %f, y: %f, w: %f, h: %f\n", x, y, width, height);
@@ -554,22 +553,22 @@ final class SWGraphics implements ReadbackGraphics {
             this.fillRoundRect(x, y, width, height, 0, 0);
         }
     }
-    
-    public void fillRoundRect(float x, float y, float width, float height, 
+
+    public void fillRoundRect(float x, float y, float width, float height,
                               float arcw, float arch) {
         if (PrismSettings.debug) {
             System.out.println("+ SWG.fillRoundRect");
         }
         this.paintRoundRect(x, y, width, height, arcw, arch, null);
     }
-    
+
     public void fillEllipse(float x, float y, float width, float height) {
         if (PrismSettings.debug) {
             System.out.println("+ SWG.fillEllipse");
         }
         this.paintEllipse(x, y, width, height, null);
     }
-    
+
     public void draw(Shape shape) {
         if (PrismSettings.debug) {
             System.out.println("+ draw(Shape)");
@@ -655,22 +654,22 @@ final class SWGraphics implements ReadbackGraphics {
         }
         paintShape(this.line2d, this.stroke, this.tx);
     }
-    
+
     public void drawRect(float x, float y, float width, float height) {
         if (PrismSettings.debug) {
             System.out.println("+ SWG.drawRect");
         }
         this.drawRoundRect(x, y, width, height, 0, 0);
     }
-    
-    public void drawRoundRect(float x, float y, float width, float height, 
+
+    public void drawRoundRect(float x, float y, float width, float height,
                               float arcw, float arch) {
         if (PrismSettings.debug) {
             System.out.println("+ SWG.drawRoundRect");
         }
         this.paintRoundRect(x, y, width, height, arcw, arch, stroke);
     }
-    
+
     public void drawEllipse(float x, float y, float width, float height) {
         if (PrismSettings.debug) {
             System.out.println("+ SWG.drawEllipse");
@@ -819,7 +818,7 @@ final class SWGraphics implements ReadbackGraphics {
         }
         this.drawTextureVO(tex, 1, 1, dx1, dy1, dx2, dy2, sx1, sy1, sx2, sy2);
     }
-    
+
     private void computeScaleAndPixelCorrection(float[] target, float dv1, float dv2, float sv1, float sv2) {
         final float dv_diff = dv2 - dv1;
         float scale = dv_diff / (sv2 - sv1);
@@ -859,7 +858,7 @@ final class SWGraphics implements ReadbackGraphics {
             System.out.println("Clip: " + finalClip);
             System.out.println("Composite rule: " + compositeMode);
         }
-        
+   
         final SWArgbPreTexture swTex = (SWArgbPreTexture) tex;
         int data[] = swTex.getDataNoClone();
 
@@ -879,7 +878,7 @@ final class SWGraphics implements ReadbackGraphics {
         tx.transform(srcBBox, dstBBox);
 
         paintTx.setTransform(tx);
-        
+
         final float[] scale_correction = new float[2];
         computeScaleAndPixelCorrection(scale_correction, dx1, dx2, sx1, sx2);
         final float scaleX = scale_correction[0];
@@ -934,7 +933,7 @@ final class SWGraphics implements ReadbackGraphics {
             System.out.println("* drawTextureVO, DONE");
         }
     }
-    
+
     public void drawTextureRaw(Texture tex,
                                float dx1, float dy1, float dx2, float dy2,
                                float tx1, float ty1, float tx2, float ty2)
@@ -951,7 +950,7 @@ final class SWGraphics implements ReadbackGraphics {
         ty2 *= h;
         drawTexture(tex, dx1, dy1, dx2, dy2, tx1, ty1, tx2, ty2);
     }
-    
+
     public void drawMappedTextureRaw(Texture tex,
                                      float dx1, float dy1, float dx2, float dy2,
                                      float tx11, float ty11, float tx21, float ty21,
@@ -1005,16 +1004,27 @@ final class SWGraphics implements ReadbackGraphics {
         return rbb;
     }
 
-    public void releaseReadBackBuffer(RTTexture view) { }
+    public void releaseReadBackBuffer(RTTexture view) {
+    }
 
-    // switch to classic rendering mode (default)
-    public boolean beginRender2D() { return true; }
-    
-    // switch to retained rendering mode
-    public boolean beginRender3D() { return false; }
-    
-    // render retained object
-    public boolean draw3DObject(MeshView obj) { return false; }
+    public void setState3D(boolean flag) {
+    }
 
+    public boolean isState3D() {
+        return false;
+    }
 
+    public void setup3DRendering() {
+    }
+
+    @Override
+    public void setLights(Object[] lights) {
+        // Light are not supported by SW pipeline
+    }
+
+    @Override
+    public Object[] getLights() {
+        // Light are not supported by SW pipeline
+        return null;
+    }
 }

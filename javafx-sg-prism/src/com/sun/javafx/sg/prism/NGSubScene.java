@@ -113,6 +113,16 @@ public class NGSubScene extends NGNode implements PGSubScene {
         this.depthBuffer = depthBuffer;
     }
 
+    private Object lights[];
+
+    @Override
+    public Object[] getLights() { return lights; }
+
+    public void setLights(Object[] lights) {
+        this.lights = lights;
+        visualsChanged();
+    }
+
     @Override
     protected void visualsChanged() {
         renderSG = true;
@@ -159,7 +169,6 @@ public class NGSubScene extends NGNode implements PGSubScene {
 
     @Override
     protected void renderContent(Graphics g) {
-        
         if (!root.isClean() || renderSG) {
             if (rtt == null) {
                 ResourceFactory factory = g.getResourceFactory();
@@ -167,13 +176,13 @@ public class NGSubScene extends NGNode implements PGSubScene {
                                               Texture.WrapMode.CLAMP_NOT_NEEDED);
             }
             Graphics rttGraphics = rtt.createGraphics();
-
-            applyBackgroundFillPaint(rttGraphics);
+            rttGraphics.setLights(lights);
 
             rttGraphics.setDepthBuffer(depthBuffer);
             if (camera != null) {
                 rttGraphics.setCamera(camera);
             }
+            applyBackgroundFillPaint(rttGraphics);
             rttGraphics.setTransform(BaseTransform.IDENTITY_TRANSFORM);
 
             root.render(rttGraphics);

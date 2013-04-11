@@ -23,17 +23,17 @@
  * questions.
  */
 
-package com.sun.prism;
+package com.sun.prism.impl;
+
+import com.sun.prism.MeshView;
 
 /**
  * TODO: 3D - Need documentation
- * This is Factory for retained mode objects
  */
-public interface MeshFactory {
+public abstract class BaseMeshView extends BaseGraphicsResource implements MeshView {
 
-    Mesh createMesh();
+    protected BaseMeshView(Disposer.Record disposerRecord) {
+        super(disposerRecord);
+    }
 
-    MeshView createMeshView(Mesh mesh);
-
-    PhongMaterial createPhongMaterial();
 }

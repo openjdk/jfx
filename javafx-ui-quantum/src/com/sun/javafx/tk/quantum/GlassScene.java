@@ -84,7 +84,7 @@ abstract class GlassScene implements TKScene, SceneChangeListener {
     private boolean doPresent = true;
 
     private boolean depthBuffer = false;
-    
+
     private final SceneState viewState;
 
     private AccessControlContext accessCtrlCtx = null;
@@ -169,7 +169,7 @@ abstract class GlassScene implements TKScene, SceneChangeListener {
         this.root = (NGNode)root;
         entireSceneNeedsRepaint();
     }
-    
+
     protected NGNode getRoot() {
         return root;
     }
@@ -177,6 +177,13 @@ abstract class GlassScene implements TKScene, SceneChangeListener {
     PrismCameraImpl getCamera() {
         return camera;
     }
+
+    // List of all attached PGLights
+    private Object lights[];
+
+    public Object[] getLights() { return lights; }
+
+    public void setLights(Object[] lights) { this.lights = lights; }
 
     @Override
     public void setCamera(PGCamera camera) {
@@ -235,7 +242,7 @@ abstract class GlassScene implements TKScene, SceneChangeListener {
             glassStage.requestFocus();
         }
     }
-    
+
     @Override
     public TKClipboard createDragboard(boolean isDragSource) {
         ClipboardAssistance assistant = new ClipboardAssistance(Clipboard.DND) {
@@ -379,9 +386,9 @@ abstract class GlassScene implements TKScene, SceneChangeListener {
 
     @Override public void sceneChanged() {
         if (glassStage instanceof PopupStage) {
-            GlassScene popupScene = ((PopupStage)glassStage).getOwnerScene(); 
-            if (popupScene != null) { 
-                popupScene.sceneChanged(); 
+            GlassScene popupScene = ((PopupStage)glassStage).getOwnerScene();
+            if (popupScene != null) {
+                popupScene.sceneChanged();
             }
         }
         if (glassStage != null) {

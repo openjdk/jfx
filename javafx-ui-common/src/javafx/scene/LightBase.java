@@ -44,6 +44,7 @@ import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.ListChangeListener.Change;
 import javafx.collections.ObservableList;
 import javafx.scene.paint.Color;
+import javafx.scene.shape.Shape3D;
 
 /**
  * The {@code LightBase} class provides definitions of common properties for
@@ -56,20 +57,7 @@ import javafx.scene.paint.Color;
  * @since JavaFX 8
  */
 public abstract class LightBase extends Node {
-    /*
-     *    A Light source is a Node
-          LightBase is an abstract base class for other Light classes
-          Support AmbientLight, PointLight and DirectionalLight.
-          No plan to add SpotLight in FX8
-          No plan to include attenuation in light computation in FX8
-          Scoping
-            Spacial vs. hierarchical (or explicit) scoping
-            Spacial is hard to do it right
-            Explicit is the preferred approach
-            Add a default light when no light is specified in a 3D scene (principle of least surprise)
- 
-     */
-    
+
     private Affine3D localToSceneTx = new Affine3D();
 
     /**
@@ -81,7 +69,7 @@ public abstract class LightBase extends Node {
 
     /**
      * Creates a new instance of {@code LightBase} class using the specified color.
-     * 
+     *
      * @param color the color of the light source
      */
     protected LightBase(Color color) {
@@ -93,7 +81,7 @@ public abstract class LightBase extends Node {
             }
         });
     }
-    
+
     /**
      * Specifies the color of light source.
      *
@@ -115,7 +103,7 @@ public abstract class LightBase extends Node {
                 @Override
                 protected void invalidated() {
                     impl_markDirty(DirtyBits.NODE_LIGHT);
-                }                
+                }
             };
         }
         return color;
@@ -149,10 +137,10 @@ public abstract class LightBase extends Node {
     }
 
     private ObservableList<Node> scope;
-    
+
     /**
      * Gets the list of nodes that specifies the
-     * hierarchical scope of this Light. If the scope list is empty, 
+     * hierarchical scope of this Light. If the scope list is empty,
      * the Light node has universe scope: all nodes under it's scene
      * are affected by it. If the scope list is non-empty, only those
      * 3D Shape nodes in the scope list and under the Group nodes in the
@@ -164,21 +152,26 @@ public abstract class LightBase extends Node {
 
                 @Override
                 protected void onChanged(Change<Node> c) {
+                    impl_markDirty(DirtyBits.NODE_LIGHT);
                     while (c.next()) {
                         for (Node node : c.getRemoved()) {
-//                            node.impl_remove(Node.this);
+                            // Update the removed nodes
+                            if (node instanceof Parent || node instanceof Shape3D) {
+                                node.impl_markDirty(DirtyBits.NODE_CONTENTS);
+                            }
                         }
                         for (Node node : c.getAddedSubList()) {
-//                            node.impl_add(LightBase.this);
+                            if (node instanceof Parent || node instanceof Shape3D) {
+                                node.impl_markDirty(DirtyBits.NODE_CONTENTS);
+                            }
                         }
                     }
                 }
             };
         }
-
         return scope;
     }
-    
+
     /**
      * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
@@ -191,14 +184,33 @@ public abstract class LightBase extends Node {
         if (impl_isDirty(DirtyBits.NODE_LIGHT)) {
             pgLightBase.setColor((getColor() == null) ? null
                     : Toolkit.getPaintAccessor().getPlatformPaint(getColor()));
-            //TODO: 3D - Handle light on/off
+            pgLightBase.setLightOn(isLightOn());
+
+            if (scope != null) {
+                if (getScope().isEmpty()) {
+                    pgLightBase.setScope(null);
+                } else {
+                    Object ngList[] = new Object[getScope().size()];
+                    for (int i = 0; i < scope.size(); i++) {
+                        Node n = scope.get(i);
+                        ngList[i] = n.impl_getPGNode();
+                    }
+                    pgLightBase.setScope(ngList);
+                }
+            }
         }
+
         if (impl_isDirty(DirtyBits.NODE_LIGHT_TRANSFORM)) {
             localToSceneTx.setToIdentity();
             getLocalToSceneTransform().impl_apply(localToSceneTx);
             // TODO: 3D - For now, we are treating the scene as world. This may need to change
             // for the fixed eye position case.
             pgLightBase.setWorldTransform(localToSceneTx);
+        }
+        if (getSubScene() == null) {
+            getScene().addLight(this);
+        } else {
+            getSubScene().addLight(this);
         }
     }
 
@@ -233,5 +245,5 @@ public abstract class LightBase extends Node {
     public Object impl_processMXNode(MXNodeAlgorithm alg, MXNodeAlgorithmContext ctx) {
         throw new UnsupportedOperationException("Not supported yet.");
     }
-    
+
 }

@@ -37,11 +37,7 @@ import com.sun.prism.paint.Color;
  * TODO: 3D - Need documentation
  */
 public class NGPhongMaterial implements PGPhongMaterial {
-// Default values in 3D prototype    
-//    private Color diffuseColor = Color.RED;
-//    private Color specularColor = Color.WHITE;
-//    private float specularPower = 0.5f;
-    
+
     private Color diffuseColor;
     private Color specularColor;
     private float specularPower;
@@ -49,7 +45,7 @@ public class NGPhongMaterial implements PGPhongMaterial {
     private Image specularMap;
     private Image bumpMap;
     private Image selfIlluminationMap;
-    private PhongMaterial nativeMaterial;
+    private PhongMaterial material;
     private boolean diffuseColorDirty = true;
     private boolean specularColorDirty = true;
     private boolean specularPowerDirty = true;
@@ -58,45 +54,41 @@ public class NGPhongMaterial implements PGPhongMaterial {
     private boolean bumpMapDirty = true;
     private boolean selfIlluminationMapDirty = true;
 
-    Material getNativeMaterial(ResourceFactory f) {
-        if (nativeMaterial == null) {
-            nativeMaterial = f.get3DFactory().createPhongMaterial();
+    Material createMaterial(ResourceFactory f) {
+        if (material == null) {
+            material = f.createPhongMaterial();
         }
-        updateNativeObject(f);
-        return nativeMaterial;
+        validate(f);
+        return material;
     }
 
-    public void setNativeMaterial(PhongMaterial nativeMaterial) {
-        this.nativeMaterial = nativeMaterial;
-    }
-
-    static Texture getCachedTexture(ResourceFactory f, Image img) {
+    private static Texture getCachedTexture(ResourceFactory f, Image img) {
         return img != null ? f.getCachedTexture(img, Texture.WrapMode.CLAMP_TO_EDGE) : null;
     }
-    
-    void updateNativeObject(ResourceFactory f) {
-        
+
+    private void validate(ResourceFactory f) {
+
         if (diffuseColorDirty) {
             if (diffuseColor != null) {
-                nativeMaterial.setSolidColor(
+                material.setSolidColor(
                         diffuseColor.getRed(), diffuseColor.getGreen(),
                         diffuseColor.getBlue(), diffuseColor.getAlpha());
             } else {
-                nativeMaterial.setSolidColor(0, 0, 0, 0);
+                material.setSolidColor(0, 0, 0, 0);
             }
             diffuseColorDirty = false;
         }
 
         if (diffuseMapDirty) {
-            nativeMaterial.setMap(PhongMaterial.mapDiffuse, getCachedTexture(f, diffuseMap));
+            material.setMap(PhongMaterial.MapType.DIFFUSE, getCachedTexture(f, diffuseMap));
             diffuseMapDirty = false;
         }
         if (bumpMapDirty) {
-            nativeMaterial.setMap(PhongMaterial.mapBump, getCachedTexture(f, bumpMap));
+            material.setMap(PhongMaterial.MapType.BUMP, getCachedTexture(f, bumpMap));
             bumpMapDirty = false;
         }
         if (selfIlluminationMapDirty) {
-            nativeMaterial.setMap(PhongMaterial.mapSelfIlum, getCachedTexture(f, selfIlluminationMap));
+            material.setMap(PhongMaterial.MapType.SELF_ILLUM, getCachedTexture(f, selfIlluminationMap));
             selfIlluminationMapDirty = false;
         }
         if (specularMapDirty || specularColorDirty || specularPowerDirty) {
@@ -113,7 +105,7 @@ public class NGPhongMaterial implements PGPhongMaterial {
                             new int[]{pixel, pixel, pixel, pixel}, 2, 2);
                 }
             }
-            nativeMaterial.setMap(PhongMaterial.mapSpecular, getCachedTexture(f, specular));
+            material.setMap(PhongMaterial.MapType.SPECULAR, getCachedTexture(f, specular));
             specularColorDirty = false;
             specularPowerDirty = false;
             specularMapDirty = false;
@@ -154,5 +146,9 @@ public class NGPhongMaterial implements PGPhongMaterial {
         this.selfIlluminationMap = (Image)selfIlluminationMap;
         selfIlluminationMapDirty = true;
     }
-    
+
+    // NOTE: This method is used for unit test purpose only.
+    Color test_getDiffuseColor() {
+        return diffuseColor;
+    }
 }

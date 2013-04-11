@@ -117,6 +117,12 @@ public abstract class BaseShaderGraphics
         super.setPaint(paint);
     }
 
+    private Object lights[] = null;
+
+    public void setLights(Object lights[]) { this.lights = lights; }
+
+    public final Object[] getLights() { return this.lights; }
+
     @Override
     public void drawTexture(Texture tex,
                             float dx1, float dy1, float dx2, float dy2,
@@ -2012,4 +2018,7 @@ public abstract class BaseShaderGraphics
 //        context.releaseLCDBuffer();
     }
 
+    public void setup3DRendering() {
+        context.setRenderTarget(this);
+    }
 }

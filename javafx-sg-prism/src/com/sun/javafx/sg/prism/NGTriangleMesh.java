@@ -27,7 +27,7 @@ package com.sun.javafx.sg.prism;
 
 import com.sun.javafx.sg.PGTriangleMesh;
 import com.sun.prism.Mesh;
-import com.sun.prism.MeshFactory;
+import com.sun.prism.ResourceFactory;
 import javafx.scene.shape.TriangleMesh;
 
 /**
@@ -35,31 +35,33 @@ import javafx.scene.shape.TriangleMesh;
  */
 public class NGTriangleMesh implements PGTriangleMesh {
     private boolean meshDirty = true;
-    private Mesh nativeObject;
+    private Mesh mesh;
 
-    private float[] points;     // x,y,z interleaved
-    private float[] texCoords;  // u,v interleaved
-    private int[] faces;        // v1,v2,v3 interleaved (where v = {point, texCoord})
-    private int[] faceSmoothingGroups; // face smoothing group 
-    
-    protected Mesh getNativeObject(MeshFactory meshFactory) {
-        if (nativeObject == null) {
-            nativeObject = meshFactory.createMesh();
+    // points is an array of x,y,z interleaved
+    private float[] points;
+
+    // texCoords is an array of u,v interleaved
+    private float[] texCoords;
+
+    // faces is an array of v1,v2,v3 interleaved (where v = {point, texCoord})
+    private int[] faces;
+
+    // faceSmoothingGroups is an array of face smoothing group values
+    private int[] faceSmoothingGroups;
+
+    Mesh createMesh(ResourceFactory rf) {
+        if (mesh == null) {
+            mesh = rf.createMesh();
             meshDirty = true;
         }
-        updateNativeIfNeeded();
-        return nativeObject;        
+        validate();
+        return mesh;        
     }
 
-    public void updateNativeIfNeeded() {
+    void validate() {
         if (meshDirty) {
-            Mesh.Geometry g = new Mesh.Geometry();
-            g.pos = points;
-            g.uv = texCoords;
-            g.faces = faces;
-            g.smoothing = faceSmoothingGroups;
-            if (!nativeObject.buildGeometry(g)) {
-                throw new RuntimeException("nativeObject.buildGeometry failed");
+            if (!mesh.buildGeometry(points, texCoords, faces, faceSmoothingGroups)) {
+                throw new RuntimeException("NGTriangleMesh: buildGeometry failed");
             }
             meshDirty = false;
         }

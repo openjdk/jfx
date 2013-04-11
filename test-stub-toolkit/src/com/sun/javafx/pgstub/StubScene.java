@@ -35,8 +35,6 @@ import com.sun.javafx.tk.TKScene;
 import com.sun.javafx.tk.TKSceneListener;
 import com.sun.javafx.tk.TKScenePaintListener;
 
-import javafx.scene.input.Dragboard;
-
 import java.security.AccessControlContext;
 
 public class StubScene implements TKScene {
@@ -120,5 +118,16 @@ public class StubScene implements TKScene {
 
     public TKSceneListener getListener() {
         return listener;
+    }
+
+    @Override
+    public Object[] getLights() {
+        // ignore
+        return null;
+    }
+
+    @Override
+    public void setLights(Object[] lights) {
+        // ignore
     }
 }

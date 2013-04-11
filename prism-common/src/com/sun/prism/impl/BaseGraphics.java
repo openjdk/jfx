@@ -82,6 +82,7 @@ public abstract class BaseGraphics implements RectShadowGraphics {
 
     private final BaseContext context;
     private final RenderTarget renderTarget;
+    private boolean state3D = false;
     private GeneralTransform3D pvTx;
 
     protected BaseGraphics(BaseContext context, RenderTarget target) {
@@ -114,6 +115,16 @@ public abstract class BaseGraphics implements RectShadowGraphics {
 
     public RenderTarget getRenderTarget() {
         return renderTarget;
+    }
+
+    @Override
+    public void setState3D(boolean flag) {
+        this.state3D = flag;            
+    }
+
+    @Override
+    public boolean isState3D() {
+        return state3D;
     }
 
     public Screen getAssociatedScreen() {
@@ -538,18 +549,6 @@ public abstract class BaseGraphics implements RectShadowGraphics {
         vb.addMappedQuad(dx1, dy1, dx2, dy2,
                          tx11, ty11, tx21, ty21,
                          tx12, ty12, tx22, ty22);
-    }
-
-    @Override public boolean beginRender2D() {
-        return true;
-    }
-
-    @Override public boolean beginRender3D() {
-        return false;
-    }
-
-    @Override public boolean draw3DObject(com.sun.prism.MeshView obj) {
-        return false;
     }
 
 }

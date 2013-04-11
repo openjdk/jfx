@@ -63,6 +63,10 @@ class DummyContext extends BaseShaderContext {
     }
 
     @Override
+    protected void updateWorldTransform(BaseTransform xform) {
+    }
+
+    @Override
     protected void updateClipRect(Rectangle clipRect) {
     }
 

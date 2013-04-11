@@ -54,12 +54,17 @@ class DummyGraphics extends BaseShaderGraphics  {
 
     public void reset() {
     }
-    
-    public boolean beginRender3D() {
+
+    @Override
+    public void setState3D(boolean flag) {
+    }
+
+    @Override
+    public boolean isState3D() {
         return false;
     }
-    
-    public boolean draw3DObject(com.sun.prism.MeshView obj) {
-        return false;
+
+    @Override
+    public void setup3DRendering() {
     }
 }

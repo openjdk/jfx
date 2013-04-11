@@ -31,7 +31,6 @@ import com.sun.javafx.font.FontResource;
 import com.sun.javafx.font.FontStrike;
 import com.sun.javafx.font.Metrics;
 import com.sun.javafx.scene.text.GlyphList;
-import com.sun.t2k.CharToGlyphMapper;
 import com.sun.t2k.CompositeGlyphMapper;
 import com.sun.t2k.CompositeStrike;
 
@@ -65,12 +64,9 @@ import com.sun.prism.j2d.paint.MultipleGradientPaint.ColorSpaceType;
 import com.sun.prism.j2d.paint.RadialGradientPaint;
 import java.awt.LinearGradientPaint;
 import java.awt.font.GlyphVector;
-import java.awt.font.TextAttribute;
-import java.awt.font.TextLayout;
 import java.awt.geom.NoninvertibleTransformException;
 import java.awt.geom.Rectangle2D;
 import java.lang.ref.WeakReference;
-import java.text.AttributedString;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -909,7 +905,7 @@ public class J2DPrismGraphics
     protected void setTransformG2D(java.awt.geom.AffineTransform tx) {
         g2d.setTransform(tx);
     }
-    
+
     /**
      * Needed only by printing subclass, which over-rides it.
      */
@@ -1137,6 +1133,16 @@ public class J2DPrismGraphics
     @Override
     public Object getRenderRoot() {
         return renderRoot;
+    }
+
+    public void setState3D(boolean flag) {
+    }
+
+    public boolean isState3D() {
+        return false;
+    }
+
+    public void setup3DRendering() {
     }
 
     private static class AdaptorShape implements java.awt.Shape {
@@ -1511,13 +1517,14 @@ public class J2DPrismGraphics
         }
     }
 
-    // switch to classic rendering mode (default)
-    public boolean beginRender2D() { return true; }
-    
-    // switch to retained rendering mode
-    public boolean beginRender3D() { return false; }
-    
-    // render retained object
-    public boolean draw3DObject(com.sun.prism.MeshView obj) { return false; }
+    @Override
+    public void setLights(Object[] lights) {
+        // Light are not supported by J2d
+    }
 
+    @Override
+    public Object[] getLights() {
+        // Light are not supported by J2d
+        return null;
+    }
 }

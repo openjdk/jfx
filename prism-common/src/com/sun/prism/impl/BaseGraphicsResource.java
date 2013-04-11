@@ -42,5 +42,6 @@ public abstract class BaseGraphicsResource implements GraphicsResource {
         Disposer.addRecord(disposerReferent, disposerRecord);
     }
 
+    @Override
     public abstract void dispose();
 }

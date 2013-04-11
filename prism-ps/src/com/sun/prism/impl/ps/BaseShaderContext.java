@@ -30,6 +30,7 @@ import com.sun.javafx.geom.Rectangle;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.geom.transform.Affine3D;
 import com.sun.prism.CompositeMode;
+import com.sun.prism.Graphics;
 import com.sun.prism.PixelFormat;
 import com.sun.prism.RTTexture;
 import com.sun.prism.RenderTarget;
@@ -157,12 +158,13 @@ public abstract class BaseShaderContext extends BaseContext {
         private CompositeMode lastComp;
         private Texture[] lastTextures = new Texture[4];
         private boolean isXformValid;
-        private float lastConst1;
-        private float lastConst2;
-        private float lastConst3;
-        private float lastConst4;
-        private float lastConst5;
-        private float lastConst6;
+        private float lastConst1 = Float.NaN;
+        private float lastConst2 = Float.NaN;
+        private float lastConst3 = Float.NaN;
+        private float lastConst4 = Float.NaN;
+        private float lastConst5 = Float.NaN;
+        private float lastConst6 = Float.NaN;
+        private boolean lastState3D = false;
     }
 
     protected abstract State updateRenderTarget(RenderTarget target, PrismCameraImpl camera,
@@ -172,6 +174,8 @@ public abstract class BaseShaderContext extends BaseContext {
 
     protected abstract void updateShaderTransform(Shader shader,
                                                   BaseTransform xform);
+    
+    protected abstract void updateWorldTransform(BaseTransform xform);
 
     protected abstract void updateClipRect(Rectangle clipRect);
 
@@ -675,12 +679,13 @@ public abstract class BaseShaderContext extends BaseContext {
 
     @Override
     protected void setRenderTarget(RenderTarget target, PrismCameraImpl camera,
-                                   boolean depthTest)
-    {
+            boolean depthTest, boolean state3D)
+    {        
         if (target instanceof Texture) {
             ((Texture) target).assertLocked();
         }
         if (state == null ||
+            state3D != state.lastState3D ||
             target != state.lastRenderTarget ||
             camera != state.lastCamera ||
             depthTest != state.lastDepthTest)
@@ -690,11 +695,36 @@ public abstract class BaseShaderContext extends BaseContext {
             state.lastRenderTarget = target;
             state.lastCamera = camera;
             state.lastDepthTest = depthTest;
+
             // the projection matrix is set in updateShaderTransform()
             // because it depends on the dimensions of the destination surface,
             // so if the RenderTarget is changing we force a call to the
             // updateShaderTransform() method by setting isXformValid=false
             state.isXformValid = false;
+
+            // True if we switch between 2D and 3D primitives
+            if (state3D != state.lastState3D) {
+                state.lastState3D = state3D;
+                state.lastShader = null;
+                state.lastConst1 = Float.NaN;
+                state.lastConst2 = Float.NaN;
+                state.lastConst3 = Float.NaN;
+                state.lastConst4 = Float.NaN;
+                state.lastConst5 = Float.NaN;
+                state.lastConst6 = Float.NaN;
+                state.lastComp = null;
+                state.lastClip = null;
+                for (int i = 0; i != state.lastTextures.length; i++) {
+                    state.lastTextures[i] = null;
+                }
+                if (state3D) {
+                    // switch to 3D state
+                    setDeviceParametersFor3D();
+                } else {
+                    // switch to 2D state
+                    setDeviceParametersFor2D();
+                }
+            }
         }
     }
 
@@ -709,12 +739,4 @@ public abstract class BaseShaderContext extends BaseContext {
         }
     }
 
-    // TODO: 3D - we probablhy need a better way to reset the state
-    protected void resetStateWithoutRenderTargetChange() {
-        state.isXformValid = false;
-        state.lastShader = null;
-        for (int i = 0; i != state.lastTextures.length; i++) {
-            state.lastTextures[i] = null;
-        }
-    }
 }

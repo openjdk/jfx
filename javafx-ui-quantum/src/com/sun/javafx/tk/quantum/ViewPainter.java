@@ -98,6 +98,7 @@ abstract class ViewPainter extends AbstractPainter {
         long start = PULSE_LOGGING_ENABLED ? System.currentTimeMillis() : 0;
         try {
             scene.clearEntireSceneDirty();
+            g.setLights(scene.getLights());
             g.setDepthBuffer(scene.getDepthBuffer());
             Color clearColor = scene.getClearColor();
             if (clearColor != null) {

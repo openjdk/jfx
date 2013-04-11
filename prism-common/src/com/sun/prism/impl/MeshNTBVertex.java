@@ -23,20 +23,19 @@
  * questions.
  */
 
-package com.sun.javafx.sg.prism;
-
-import com.sun.javafx.sg.PGMeshView;
-import com.sun.javafx.sg.PGTriangleMesh;
+package com.sun.prism.impl;
 
 /**
  * TODO: 3D - Need documentation
+ * TODO: This is a direct port of the 3D Mesh prototype.
+ *       Need to rename members and methods
+ * JIRA ID: RT-29542 - FX 8 3D: Mesh computation code needs major clean up or redo
  */
-public class NGMeshView extends NGShape3D implements PGMeshView {
+class MeshNTBVertex {
 
-    @Override
-    public void setMesh(PGTriangleMesh pgtm) {
-        // NOTE: Implementation has been promopted to NGShape3D so as to
-        // share NGTriangleMesh between predefined 3D shapes
-        super.setMesh(pgtm);
+    MeshQuat tbn = new MeshQuat();
+    int pVert, tVert;
+
+    public MeshNTBVertex() {
     }
 }
