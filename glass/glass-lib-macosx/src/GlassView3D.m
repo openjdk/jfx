@@ -531,9 +531,8 @@ static inline NSString* getNSString(JNIEnv* env, jstring jstring)
 
 - (void)draggingEnded:(id <NSDraggingInfo>)sender
 {
-    //TODO: This is wrong. Glass' END is for the drag source.
     DNDLOG("draggingEnded");
-    [self->_delegate sendJavaDndEvent:sender type:com_sun_glass_events_DndEvent_END];
+    [self->_delegate draggingEnded];
 }
 
 - (void)draggingExited:(id <NSDraggingInfo>)sender

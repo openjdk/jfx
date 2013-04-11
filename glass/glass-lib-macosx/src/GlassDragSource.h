@@ -29,6 +29,7 @@
 @protocol GlassDragSourceDelegate <NSObject>
 
 - (void)startDrag:(NSDragOperation)operation;
+- (void)draggingEnded;
 
 @end
 
