@@ -193,7 +193,7 @@ public class FloatMap {
 
     private Map<FilterContext, Entry> cache;
 
-    public Object getAccelData(FilterContext fctx) {
+    public LockableResource getAccelData(FilterContext fctx) {
         if (cache == null) {
             cache = new HashMap<FilterContext, Entry>();
         } else if (!cacheValid) {
@@ -209,8 +209,16 @@ public class FloatMap {
         // HWTwoSamplerPeer.filter()...
         Renderer renderer = Renderer.getRenderer(fctx);
         Entry entry = cache.get(fctx);
+        if (entry != null) {
+            entry.texture.lock();
+            if (entry.texture.isLost()) {
+                entry.texture.unlock();
+                cache.remove(fctx);
+                entry = null;
+            }
+        }
         if (entry == null) {
-            Object texture = renderer.createFloatTexture(width, height);
+            LockableResource texture = renderer.createFloatTexture(width, height);
             entry = new Entry(texture);
             cache.put(fctx, entry);
         }
@@ -223,9 +231,9 @@ public class FloatMap {
     }
 
     private static class Entry {
-        Object texture;
+        LockableResource texture;
         boolean valid;
-        Entry(Object texture) {
+        Entry(LockableResource texture) {
             this.texture = texture;
         }
     }

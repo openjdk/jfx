@@ -2344,5 +2344,29 @@ public class GridPaneTest {
 
         assertEquals(76, cw[0], 1e-100);
         assertEquals(75, cw[1], 1e-100);
-    }    
+    }
+
+    @Test public void testBaselineRowAlignment() {
+        MockResizable child1 = new MockResizable(50,50, 200,200, 300,300); //baseline = 190
+        MockResizable child2 = new MockResizable(100,100, 300,300, 500,500); //baseline = 290
+        gridpane.add(child1, 0, 0);
+        gridpane.add(child2, 1, 0);
+
+        RowConstraints rc = new RowConstraints();
+        rc.setValignment(VPos.BASELINE);
+        gridpane.getRowConstraints().addAll(rc);
+
+        gridpane.autosize();
+        gridpane.layout();
+
+        assertEquals(0, child1.getLayoutX(), 1e-100);
+        assertEquals(100, child1.getLayoutY(), 1e-100);
+        assertEquals(200, child1.getLayoutBounds().getWidth(), 1e-100);
+        assertEquals(200, child1.getLayoutBounds().getHeight(), 1e-100);
+
+        assertEquals(200, child2.getLayoutX(), 1e-100);
+        assertEquals(0, child2.getLayoutY(), 1e-100);
+        assertEquals(300, child2.getLayoutBounds().getWidth(), 1e-100);
+        assertEquals(300, child2.getLayoutBounds().getHeight(), 1e-100);
+    }
 }

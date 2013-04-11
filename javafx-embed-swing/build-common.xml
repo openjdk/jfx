@@ -2,7 +2,7 @@
 <project name="javafx-embed-swing-common" default="jar" basedir=".">
 
     <condition property="runtime.excludes" value="javafx/embed/swing/SwingNode.java">
-        <not><contains string="${ant.java.version}" substring="1.8"/></not>
+        <not><contains string="${java.version}" substring="1.8"/></not>
     </condition>
 
 </project>

@@ -299,7 +299,7 @@
 
 - (void)draggingEnded:(id <NSDraggingInfo>)sender
 {
-    [self->delegate sendJavaDndEvent:sender type:com_sun_glass_events_DndEvent_END];
+    [self->delegate draggingEnded];
 }
 
 - (void)draggingExited:(id <NSDraggingInfo>)sender
