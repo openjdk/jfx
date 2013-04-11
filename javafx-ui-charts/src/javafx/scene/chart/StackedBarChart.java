@@ -42,6 +42,7 @@ import javafx.css.StyleableDoubleProperty;
 import javafx.css.CssMetaData;
 import javafx.css.PseudoClass;
 import com.sun.javafx.css.converters.SizeConverter;
+import javafx.collections.ListChangeListener;
 import javafx.css.Styleable;
 import javafx.css.StyleableProperty;
 
@@ -62,7 +63,28 @@ public class StackedBarChart<X, Y> extends XYChart<X, Y> {
     private ValueAxis valueAxis;
     private int seriesDefaultColorIndex = 0;
     private Map<Series<X, Y>, String> seriesDefaultColorMap = new HashMap<Series<X, Y>, String>();
-
+    // RT-23125 handling data removal when a category is removed.
+    private ListChangeListener<String> categoriesListener = new ListChangeListener<String>() {
+        @Override public void onChanged(ListChangeListener.Change<? extends String> c) {
+            while (c.next()) {
+                for(String cat : c.getRemoved()) {
+                    for (Series<X,Y> series : getData()) {
+                        for (Data<X, Y> data : series.getData()) {
+                            if ((cat).equals((orientation == orientation.VERTICAL) ? 
+                                    data.getXValue() : data.getYValue())) {
+                                boolean animatedOn = getAnimated();
+                                setAnimated(false);
+                                dataItemRemoved(data, series);
+                                setAnimated(animatedOn);
+                            }
+                        }
+                    }
+                    requestChartLayout();
+                }
+            }
+        }
+    };
+    
     // -------------- PUBLIC PROPERTIES ----------------------------------------
     /** The gap to leave between bars in separate categories */
     private DoubleProperty categoryGap = new StyleableDoubleProperty(10) {
@@ -139,6 +161,7 @@ public class StackedBarChart<X, Y> extends XYChart<X, Y> {
         pseudoClassStateChanged(HORIZONTAL_PSEUDOCLASS_STATE, orientation == Orientation.HORIZONTAL);
         pseudoClassStateChanged(VERTICAL_PSEUDOCLASS_STATE, orientation == Orientation.VERTICAL);
         setData(data);
+        categoryAxis.getCategories().addListener(categoriesListener);
     }
 
     /**
