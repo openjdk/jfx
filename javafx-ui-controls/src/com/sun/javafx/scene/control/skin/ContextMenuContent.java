@@ -68,6 +68,7 @@ import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.shape.Rectangle;
+import javafx.util.Callback;
 import javafx.util.Duration;
 
 import javafx.css.CssMetaData;
@@ -76,6 +77,7 @@ import java.util.Iterator;
 import javafx.geometry.NodeOrientation;
 import javafx.stage.Window;
 
+import com.sun.javafx.scene.control.MultiplePropertyChangeListenerHandler;
 import com.sun.javafx.scene.control.behavior.TwoLevelFocusPopupBehavior;
 import javafx.beans.WeakInvalidationListener;
 import javafx.beans.property.ReadOnlyBooleanProperty;
@@ -253,25 +255,28 @@ public class ContextMenuContent extends Region {
         
         for (int row = 0; row < getItems().size(); row++) {
             final MenuItem item = getItems().get(row);
-            if (item instanceof CustomMenuItem && ((CustomMenuItem) item).getContent() == null) continue;
-            MenuItemContainer menuItemContainer = new MenuItemContainer(item);
-            menuItemContainer.visibleProperty().bind(item.visibleProperty());
-            itemsContainerChilder.add(menuItemContainer);
+            if (item instanceof CustomMenuItem && ((CustomMenuItem) item).getContent() == null) {
+                continue;
+            }
+            
             if (item instanceof SeparatorMenuItem) {
-                // TODO
                 // we don't want the hover highlight for separators, so for
                 // now this is the simplest approach - just remove the
                 // background entirely. This may cause issues if people
                 // intend to style the background differently.
-                 Node node = ((CustomMenuItem) item).getContent();
-                 itemsContainerChilder.remove(menuItemContainer);
-                 itemsContainerChilder.add(node);
-                 // Add the (separator) menu item to properties map of this node.
+                Node node = ((CustomMenuItem) item).getContent();
+                itemsContainerChilder.add(node);
+                // Add the (separator) menu item to properties map of this node.
                 // Special casing this for separator :
                 // This allows associating this container with SeparatorMenuItem.
                 node.getProperties().put(MenuItem.class, item);
+            } else {
+                MenuItemContainer menuItemContainer = new MenuItemContainer(item);
+                menuItemContainer.visibleProperty().bind(item.visibleProperty());
+                itemsContainerChilder.add(menuItemContainer);
             }
         }
+        
         // Add the Menu to properties map of this skin. Used by QA for testing
         // This enables associating a parent menu for this skin showing menu items.
         if (getItems().size() > 0) {
@@ -1065,8 +1070,13 @@ public class ContextMenuContent extends Region {
         private Node label;
         private Node right;
 
-        private final List<WeakInvalidationListener> listeners = 
-                new ArrayList<WeakInvalidationListener>();
+        private final MultiplePropertyChangeListenerHandler listener = 
+            new MultiplePropertyChangeListenerHandler(new Callback<String, Void>() {
+                @Override public Void call(String param) {
+                    handlePropertyChanged(param);
+                    return null;
+                }
+            });
 
         protected Label getLabel(){
             return (Label) label;
@@ -1091,36 +1101,30 @@ public class ContextMenuContent extends Region {
             ReadOnlyBooleanProperty pseudoProperty;
             if (item instanceof Menu) {
                 pseudoProperty = ((Menu)item).showingProperty();
+                listener.registerChangeListener(pseudoProperty, "MENU_SHOWING");
                 pseudoClassStateChanged(SELECTED_PSEUDOCLASS_STATE, pseudoProperty.get());
-                listen(pseudoProperty, SELECTED_PSEUDOCLASS_STATE);
             } else if (item instanceof RadioMenuItem) {
                 pseudoProperty = ((RadioMenuItem)item).selectedProperty();
+                listener.registerChangeListener(pseudoProperty, "RADIO_ITEM_SELECTED");
                 pseudoClassStateChanged(CHECKED_PSEUDOCLASS_STATE, pseudoProperty.get());
-                listen(pseudoProperty, CHECKED_PSEUDOCLASS_STATE);
             } else if (item instanceof CheckMenuItem) {
                 pseudoProperty = ((CheckMenuItem)item).selectedProperty();
+                listener.registerChangeListener(pseudoProperty, "CHECK_ITEM_SELECTED");
                 pseudoClassStateChanged(CHECKED_PSEUDOCLASS_STATE, pseudoProperty.get());
-                listen(pseudoProperty, CHECKED_PSEUDOCLASS_STATE);
             }
+            
             pseudoClassStateChanged(DISABLED_PSEUDOCLASS_STATE, item.disableProperty().get());
-            listen(item.disableProperty(), DISABLED_PSEUDOCLASS_STATE);
+            listener.registerChangeListener(item.disableProperty(), "DISABLE");
+            
             // Add the menu item to properties map of this node. Used by QA for testing
             // This allows associating this container with corresponding MenuItem.
             getProperties().put(MenuItem.class, item);
             
-            InvalidationListener listener = new InvalidationListener() {
-                @Override public void invalidated(Observable observable) {
-                    createChildren();
-                    computeVisualMetrics();
-                }
-            };
-            WeakInvalidationListener weakListener = new WeakInvalidationListener(listener);
-            listeners.add(weakListener);
-            item.graphicProperty().addListener(weakListener);
+            listener.registerChangeListener(item.graphicProperty(), "GRAPHIC");
         }
         
         public void dispose() {
-            listeners.clear();
+            listener.dispose();
             
             if (label != null) {
                 ((Label)label).textProperty().unbind();
@@ -1130,6 +1134,26 @@ public class ContextMenuContent extends Region {
             graphic = null;
             label = null;
             right = null;
+        }
+        
+        private void handlePropertyChanged(String p) {
+            if ("MENU_SHOWING".equals(p)) {
+                Menu menu = (Menu) item;
+                pseudoClassStateChanged(SELECTED_PSEUDOCLASS_STATE, menu.isShowing());
+            } else if ("RADIO_ITEM_SELECTED".equals(p)) {
+                RadioMenuItem radioItem = (RadioMenuItem) item;
+                pseudoClassStateChanged(CHECKED_PSEUDOCLASS_STATE, radioItem.isSelected());
+            } else if ("CHECK_ITEM_SELECTED".equals(p)) {
+                CheckMenuItem checkItem = (CheckMenuItem) item;
+                pseudoClassStateChanged(CHECKED_PSEUDOCLASS_STATE, checkItem.isSelected());
+            } else if ("DISABLE".equals(p)) {
+                pseudoClassStateChanged(DISABLED_PSEUDOCLASS_STATE, item.isDisable());
+            } else if ("GRAPHIC".equals(p)) {
+                createChildren();
+                computeVisualMetrics();
+            } else if ("ACCELERATOR".equals(p)) {
+                updateAccelerator();
+            }
         }
         
         private void createChildren() {
@@ -1236,14 +1260,7 @@ public class ContextMenuContent extends Region {
                     
                     // accelerator support
                     updateAccelerator();
-                    InvalidationListener listener = new InvalidationListener() {
-                        @Override public void invalidated(Observable observable) {
-                            updateAccelerator();
-                        }
-                    };
-                    WeakInvalidationListener weakListener = new WeakInvalidationListener(listener);
-                    listeners.add(weakListener);
-                    item.acceleratorProperty().addListener(weakListener);
+                    listener.registerChangeListener(item.acceleratorProperty(), "ACCELERATOR");
                     
                     setOnMouseEntered(new EventHandler<MouseEvent>() {
                         @Override public void handle(MouseEvent event) {
@@ -1317,7 +1334,7 @@ public class ContextMenuContent extends Region {
         }
         
         private void createNodeMenuItemChildren(final CustomMenuItem item) {
-            Node node = ((CustomMenuItem) item).getContent();
+            Node node = item.getContent();
             getChildren().add(node);
             // handle hideOnClick
             node.setOnMouseClicked(new EventHandler<MouseEvent>() {
@@ -1399,19 +1416,6 @@ public class ContextMenuContent extends Region {
             return Math.max(nodeMenuItemWidth,
                     getInsets().getLeft() + maxLeftWidth + maxGraphicWidth +
                     maxLabelWidth + maxRightWidth + getInsets().getRight());
-        }
-
-        private void listen(ObservableBooleanValue property, final PseudoClass pseudoClass) {
-            InvalidationListener listener = new InvalidationListener() {
-                @Override public void invalidated(Observable valueModel) {
-                    boolean active = ((ObservableBooleanValue)valueModel).get();
-                    pseudoClassStateChanged(pseudoClass, active);
-                }
-            };
-            WeakInvalidationListener weakListener = new WeakInvalidationListener(listener);
-            
-            listeners.add(weakListener);
-            property.addListener(weakListener);
         }
 
         // Responsible for returning a graphic (if necessary) to position in the
