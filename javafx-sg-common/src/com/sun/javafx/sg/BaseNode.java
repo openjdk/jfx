@@ -1344,7 +1344,12 @@ public abstract class BaseNode<G> implements PGNode {
 
         @Override
         public BaseBounds getBounds(BaseTransform transform, Effect defaultInput) {
-            return bounds;
+            if (bounds.getBoundsType() == BaseBounds.BoundsType.RECTANGLE) {
+                return bounds;
+            } else {
+                //RT-29453 - CCE: in case we get 3D bounds we need to "flatten" them
+                return new RectBounds(bounds.getMinX(), bounds.getMinY(), bounds.getMaxX(), bounds.getMaxY());
+            }
         }
 
         @Override
