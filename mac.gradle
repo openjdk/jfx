@@ -31,6 +31,8 @@ defineProperty("MACOSX_SDK_PATH", "/Applications/Xcode.app/Contents/Developer/Pl
 defineProperty("MACOSX_JDK_FRAMEWORK", "/System/Library/Frameworks/JavaVM.framework");
 // Redefine the CC property to be gcc instead of the default g++ as defined in the main build file
 defineProperty("CC", "gcc");
+defineProperty("PRISM_CC", CC);
+defineProperty("PRISM_SW_CC", CC);
 
 // Sanity check
 if (!IS_64) throw new Exception("Cannot compile on 32-bit Mac, only on 64-bit Mac");
@@ -41,7 +43,7 @@ def commonParams = [
         "-arch", "x86_64",
         "-F$MACOSX_JDK_FRAMEWORK/Frameworks"]
 
-ext.LINK_PARAMS = [
+ext.LINK_FLAGS = [
         "-framework", "AppKit",
         "-framework", "ApplicationServices",
         "-framework", "JavaVM",
@@ -50,11 +52,21 @@ ext.LINK_PARAMS = [
         "-framework", "QuartzCore",
         "-dynamiclib", "-lobjc", commonParams].flatten();
 
-ext.CC_PARAMS = [
+ext.CC_FLAGS = [
         "-std=c99",
         "-c",
         "-I$JDK_HOME/include",
         "-I$JDK_HOME/include/darwin",
         commonParams,
         IS_DEBUG ? "-DDEBUG" : ["-O3", "-DNDEBUG"]].flatten()
-        //IS_DEBUG ? "-DDEBUG" : ["-O3", "-ffast-math", "-DNDEBUG"]].flatten()
+
+ext.GLASS_CC_FLAGS = new ArrayList(CC_FLAGS);
+ext.GLASS_LINK_FLAGS = new ArrayList(LINK_FLAGS);
+ext.DECORA_CC_FLAGS = [CC_FLAGS, "-ffast-math"].flatten();
+ext.DECORA_LINK_FLAGS = new ArrayList(LINK_FLAGS);
+ext.PRISM_CC_FLAGS = new ArrayList(CC_FLAGS);
+ext.PRISM_LINK_FLAGS = new ArrayList(LINK_FLAGS);
+ext.PRISM_SW_CC_FLAGS = new ArrayList(CC_FLAGS);
+ext.PRISM_SW_LINK_FLAGS = new ArrayList(LINK_FLAGS);
+ext.LAUNCHER_CC_FLAGS = new ArrayList(CC_FLAGS);
+ext.LAUNCHER_LINK_FLAGS = [];

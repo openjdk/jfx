@@ -51,6 +51,7 @@ import com.sun.scenario.effect.FilterContext;
 import com.sun.scenario.effect.Filterable;
 import com.sun.scenario.effect.FloatMap;
 import com.sun.scenario.effect.ImageData;
+import com.sun.scenario.effect.LockableResource;
 import com.sun.scenario.effect.impl.EffectPeer;
 import com.sun.scenario.effect.impl.Renderer;
 import com.sun.scenario.effect.impl.hw.ShaderSource;
@@ -164,14 +165,14 @@ public class PPSRenderer extends PrRenderer {
     }
 
     @Override
-    public Object createFloatTexture(int w, int h) {
+    public LockableResource createFloatTexture(int w, int h) {
         Texture prismTex = GraphicsPipeline.getPipeline().
             getResourceFactory(screen).createFloatTexture(w, h);
         return new PrTexture(prismTex);
     }
 
     @Override
-    public void updateFloatTexture(Object texture, FloatMap map) {
+    public void updateFloatTexture(LockableResource texture, FloatMap map) {
         FloatBuffer buf = map.getBuffer();
         int w = map.getWidth();
         int h = map.getHeight();

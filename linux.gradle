@@ -29,12 +29,14 @@ def commonParams = [
         "-W", "-Wall", "-Wno-unused", "-Wno-parentheses", "-Werror=implicit-function-declaration"] // warning params
 
 // Specify the compilation parameters and link parameters
-ext.CC_PARAMS = [
+ext.CC_FLAGS = [
         commonParams, "-I$JDK_HOME/include", "-I$JDK_HOME/include/linux", "-c",
-        IS_DEBUG ? ["-ggdb", "-DVERBOSE"] : ["-O2", "-ffast-math"], "-DINLINE=inline"].flatten()
-//CC_PARAMS.addAll(["-Wnon-virtual-dtor", "-Woverloaded-virtual", "-std=c++0x"])
-ext.LINK_PARAMS = ["-shared", commonParams].flatten()
+        IS_DEBUG ? ["-ggdb", "-DVERBOSE"] : "-O2", "-DINLINE=inline"].flatten()
+//CC_FLAGS.addAll(["-Wnon-virtual-dtor", "-Woverloaded-virtual", "-std=c++0x"])
+ext.LINK_FLAGS = ["-shared", commonParams].flatten()
 defineProperty("CC", "gcc");
+defineProperty("PRISM_CC", "cc");
+defineProperty("PRISM_SW_CC", "cc");
 
 // Check to see whether $buildDir/linux_tools.properties file exists. If not, then generate it.
 // Once generated, we need to read the properties file to help us define the defaults for this
@@ -66,8 +68,19 @@ try {
     Properties linux_tools_properties = new Properties();
     linux_tools_stream = new FileInputStream(linux_tools);
     linux_tools_properties.load(linux_tools_stream);
-    CC_PARAMS.addAll(linux_tools_properties.getProperty("cflags").split(" "))
-    LINK_PARAMS.addAll(linux_tools_properties.getProperty("libs").split(" "))
+    CC_FLAGS.addAll(linux_tools_properties.getProperty("cflags").split(" "))
+    LINK_FLAGS.addAll(linux_tools_properties.getProperty("libs").split(" "))
 } finally {
     try { linux_tools_stream.close() } catch (Exception e) { }
 }
+
+ext.GLASS_CC_FLAGS = new ArrayList(CC_FLAGS);
+ext.GLASS_LINK_FLAGS = new ArrayList(LINK_FLAGS);
+ext.DECORA_CC_FLAGS = [CC_FLAGS, "-ffast-math"].flatten();
+ext.DECORA_LINK_FLAGS = new ArrayList(LINK_FLAGS);
+ext.PRISM_CC_FLAGS = new ArrayList(CC_FLAGS);
+ext.PRISM_LINK_FLAGS = new ArrayList(LINK_FLAGS);
+ext.PRISM_SW_CC_FLAGS = new ArrayList(CC_FLAGS);
+ext.PRISM_SW_LINK_FLAGS = new ArrayList(LINK_FLAGS);
+ext.LAUNCHER_CC_FLAGS = ["-DJAVAARCH=\"$OS_ARCH\"", "-I$JDK_HOME/include", "-I$JDK_HOME/include/linux"];
+ext.LAUNCHER_LINK_FLAGS = ["-ldl"]
