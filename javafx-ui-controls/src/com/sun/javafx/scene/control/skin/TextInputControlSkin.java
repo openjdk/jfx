@@ -248,7 +248,8 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
     }
 
 
-    private static boolean useFXVK = Platform.isSupported(ConditionalFeature.VIRTUAL_KEYBOARD);
+    private final static boolean isFXVKSupported = Platform.isSupported(ConditionalFeature.VIRTUAL_KEYBOARD);
+    private static boolean useFXVK = isFXVKSupported;
 
     /* For testing only */
     static int vkType = -1;
@@ -347,7 +348,9 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
 
             selectionHandle1.setId("selection-handle-1");
             selectionHandle2.setId("selection-handle-2");
+        }
 
+        if (isFXVKSupported) {
             textInput.focusedProperty().addListener(new InvalidationListener() {
                 @Override public void invalidated(Observable observable) {
                     if (useFXVK) {
