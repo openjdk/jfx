@@ -246,8 +246,8 @@
     <!--Only builds release version right now, will have to add debug version-->
     <target name="launcher-win" if="isWindows" depends="init">
         <property name="cl-options"
-                  value="/c /Zi /nologo /I${platform.home}/include
-/I${platform.home}/include/win32 /W3 /WX- /O2 /Oi /Oy- /GL /D WIN32 /D NDEBUG
+                  value="/c /Zi /nologo /I&quot;${platform.home}/include&quot;
+/&quot;I${platform.home}/include/win32&quot; /W3 /WX- /O2 /Oi /Oy- /GL /D WIN32 /D NDEBUG
 /D _WINDOWS /D _UNICODE /D UNICODE /Gm- /EHsc /MT /GS /Gy /fp:precise /Zc:wchar_t
 /Zc:forScope /Fo&quot;Release\\&quot; /Gd /TP /analyze-"/>
         <mkdir dir="native\windows\Release"/>
