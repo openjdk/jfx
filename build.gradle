@@ -1211,19 +1211,31 @@ project(":fxpackager") {
             description = "Compiles native sources for the application co-bundle launcher";
             matches = "WinLauncher\\.cpp";
             params.addAll(LAUNCHER_CC_FLAGS);
-            output(file("$buildDir/classes/main/com/sun/javafx/tools/resource/windows"));
+            output(file("$buildDir/native/WinLauncher"));
             source(file("src/main/native/launcher/win"));
             exe = true;
             linkerOptions.addAll(LAUNCHER_LINK_FLAGS);
+            doLast {
+                copy {
+                    from "$buildDir/native/WinLauncher/WinLauncher.exe"
+                    into "$buildDir/classes/main/com/sun/javafx/tools/resource/windows"
+                }
+            }
         }
         task compileIconSwap(type: CCTask, group: "Build") {
             description = "Compiles native sources for the application co-bundle launcher"
-            matches = "iconswap\\.cpp"
+            matches = "IconSwap\\.cpp"
             params.addAll(ICON_LAUNCHER_CC_FLAGS)
-            output(file("$buildDir/classes/main/com/sun/javafx/tools/resource/windows"))
+            output(file("$buildDir/native/IconSwap"))
             source file("src/main/native/launcher/win")
             exe = true
             linkerOptions.addAll(ICON_LAUNCHER_LINK_FLAGS)
+            doLast {
+                copy {
+                    from "$buildDir/native/IconSwap/IconSwap.exe"
+                    into "$buildDir/classes/main/com/sun/javafx/tools/resource/windows"
+                }
+            }
         }
         task compileLauncher(dependsOn: [compileWinLauncher, compileIconSwap])
     } else {
@@ -1249,7 +1261,7 @@ project(":fxpackager") {
             }
         }
     }
-    assemble.dependsOn compileLauncher;
+    jar.dependsOn compileLauncher;
 
     // Builds the javafxpackager executable. For everything other than windows,
     // this is simply moving the existing shell script and ensuring it has proper
@@ -1263,12 +1275,14 @@ project(":fxpackager") {
                     "/D_WIN32_WINDOWS=0X0500", "/D_WIN32_WINNT=0X0500",
                     "/I$JDK_HOME/include", "/I$JDK_HOME/include/win32", "/arch:SSE", "/fp:fast",
                     "/O2", "-c"])
-            output(file("$buildDir/native"))
+            output(file("$buildDir/native/javafxpackager"))
             source file("src/main/native/javafxpackager/win")
             doLast {
                 mkdir "$buildDir/native"
                 exec({
-                    commandLine("$RC", "/nologo", "/l", "0x409", "/r", "/dJFX_DVERSION=8", "/dJFX_VERSION=8", "/fo$buildDir/native/javafxpackager.res", "src/main/native/javafxpackager/win/javafxpackager.rc");
+                    commandLine("$RC", "/nologo", "/l", "0x409", "/r", "/dJFX_DVERSION=8", "/dJFX_VERSION=8",
+                            "/fo$buildDir/native/javafxpackager/javafxpackager.res",
+                            "src/main/native/javafxpackager/win/javafxpackager.rc");
                     environment(WINDOWS_NATIVE_COMPILE_ENVIRONMENT);
                 });
             }
@@ -1276,23 +1290,24 @@ project(":fxpackager") {
                 mkdir "$buildDir/javafxpackager"
                 exec({
                     commandLine("$LINK", "/nologo", "/opt:REF", "/incremental:no", "/manifest", "kernel32.lib", "advapi32.lib",
-                            "/out:$buildDir/native/javafxpackager.exe",
-                            "$buildDir/native/javafxpackager.obj", "$buildDir/native/javafxpackager.res")
+                            "/out:$buildDir/native/javafxpackager/javafxpackager.exe",
+                            "$buildDir/native/javafxpackager/javafxpackager.obj",
+                            "$buildDir/native/javafxpackager/javafxpackager.res")
                     environment(WINDOWS_NATIVE_COMPILE_ENVIRONMENT)
                 })
             }
             doLast {
                 copy {
                     from file("src/main/native/javafxpackager/win/javafxpackager.manifest")
-                    into file("$buildDir/native")
+                    into file("$buildDir/native/javafxpackager")
                 }
                 // TODO, not sure MT.exe is actually being used currently, so for now skipping.
 //                exec({
-//                    commandLine("$MT -nologo -manifest $buildDir/native/javafxpackager.manifest")
+//                    commandLine("$MT -nologo -manifest $buildDir/native/javafxpackager/javafxpackager.manifest")
 //                    environment(WINDOWS_NATIVE_COMPILE_ENVIRONMENT)
 //                })
                 copy {
-                    from file("$buildDir/native/javafxpackager.exe")
+                    from file("$buildDir/native/javafxpackager/javafxpackager.exe")
                     into file("$buildDir/javafxpackager")
                 }
             }
@@ -1307,7 +1322,7 @@ project(":fxpackager") {
         }
     }
 
-    assemble.dependsOn buildJavaFXPackager
+    jar.dependsOn buildJavaFXPackager
 }
 
 /******************************************************************************
