@@ -33,6 +33,7 @@
 #import "GlassMacros.h"
 #import "GlassWindow.h"
 #import "GlassView3D.h"
+#import "GlassHelper.h"
 
 //#define VERBOSE
 #ifndef VERBOSE
@@ -68,22 +69,6 @@ static inline NSView<GlassView>* getGlassView(JNIEnv *env, jlong jPtr)
     {
         return nil;
     }
-}
-
-static inline NSString* getNSString(JNIEnv* env, jstring jstring)
-{
-    NSString *string = @"";
-    if (jstring != NULL)
-    {
-        const jchar* jstrChars = (*env)->GetStringChars(env, jstring, NULL);
-        jsize size = (*env)->GetStringLength(env, jstring);
-        if (size > 0)
-        {
-            string = [[[NSString alloc] initWithCharacters:jstrChars length:(NSUInteger)size] autorelease];
-        }
-        (*env)->ReleaseStringChars(env, jstring, jstrChars);
-    }
-    return string;
 }
 
 #pragma mark --- Dispatcher
@@ -459,7 +444,7 @@ JNIEXPORT jint JNICALL Java_com_sun_glass_ui_mac_MacView__1getNativeRemoteLayerI
     GLASS_POOL_ENTER;
     {
         NSView<GlassView> *view = getGlassView(env, jPtr);
-        layerId = (jint)[view getRemoteLayerIdForServer:getNSString(env, jServerString)];
+        layerId = (jint)[view getRemoteLayerIdForServer:[GlassHelper nsStringWithJavaString:jServerString withEnv:env]];
     }
     GLASS_POOL_EXIT;
     GLASS_CHECK_EXCEPTION(env);

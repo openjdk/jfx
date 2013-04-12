@@ -31,6 +31,7 @@
 #import "GlassMacros.h"
 #import "GlassEmbeddedWindow+Npapi.h"
 #import "GlassNSEvent.h"
+#import "GlassHelper.h"
 
 //#define VERBOSE
 #ifndef VERBOSE
@@ -51,22 +52,6 @@ inline GlassEmbeddedWindow *getGlassEmbeddedWindow(JNIEnv *env, jlong jPtr)
     {
         return nil;
     }
-}
-
-static inline NSString* getNSString(JNIEnv* env, jstring jstring)
-{
-    NSString *string = @"";
-    if (jstring != NULL)
-    {
-        const jchar* jstrChars = (*env)->GetStringChars(env, jstring, NULL);
-        jsize size = (*env)->GetStringLength(env, jstring);
-        if (size > 0)
-        {
-            string = [[[NSString alloc] initWithCharacters:jstrChars length:(NSUInteger)size] autorelease];
-        }
-        (*env)->ReleaseStringChars(env, jstring, jstrChars);
-    }
-    return string;
 }
 
 #pragma mark --- GlassEmbeddedWindow (Npapi)
@@ -247,8 +232,9 @@ JNIEXPORT void JNICALL Java_com_sun_glass_events_mac_NpapiEvent__1dispatchCocoaN
                                              timestamp:[NSDate timeIntervalSinceReferenceDate]
                                           windowNumber:[window->child windowNumber]
                                                context:nil
-                                            characters:getNSString(env, jCharacters)
-                           charactersIgnoringModifiers:getNSString(env, jCharactersIgnoringModifiers)
+                                            characters:[GlassHelper nsStringWithJavaString:jCharacters withEnv:env]
+                           charactersIgnoringModifiers:[GlassHelper nsStringWithJavaString:jCharactersIgnoringModifiers
+                                                                                   withEnv:env]
                                              isARepeat:(jIsrepeat==JNI_TRUE)
                                                keyCode:(unsigned short)jKeyCode];
             LOG("   NPAPI key event: %s", [[event description] UTF8String]);
@@ -312,7 +298,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_events_mac_NpapiEvent__1dispatchCocoaN
     GLASS_POOL_ENTER;
     {
         GlassEmbeddedWindow *window = getGlassEmbeddedWindow(env, jPtr);
-        NSString *chars = getNSString(env, jText);
+        NSString *chars = [GlassHelper nsStringWithJavaString:jText withEnv:env];
         if ((window != nil) && (window->child != nil))
         {
             unichar *unichars = malloc([chars length] * sizeof(unichar));

@@ -319,4 +319,20 @@ static volatile jobject glassClassLoader = NULL;
     }
 }
 
++ (NSString*)nsStringWithJavaString:(jstring)javaString withEnv:(JNIEnv*)env
+{
+    NSString *string = @"";
+    if (javaString != NULL)
+    {
+        const jchar* jstrChars = (*env)->GetStringChars(env, javaString, NULL);
+        jsize size = (*env)->GetStringLength(env, javaString);
+        if (size > 0)
+        {
+            string = [[[NSString alloc] initWithCharacters:jstrChars length:(NSUInteger)size] autorelease];
+        }
+        (*env)->ReleaseStringChars(env, javaString, jstrChars);
+    }
+    return string;
+}
+
 @end

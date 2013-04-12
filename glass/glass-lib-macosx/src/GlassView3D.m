@@ -80,22 +80,6 @@
 
 @implementation GlassView3D
 
-static inline NSString* getNSString(JNIEnv* env, jstring jstring)
-{
-    NSString *string = @"";
-    if (jstring != NULL)
-    {
-        const jchar* jstrChars = (*env)->GetStringChars(env, jstring, NULL);
-        jsize size = (*env)->GetStringLength(env, jstring);
-        if (size > 0)
-        {
-            string = [[[NSString alloc] initWithCharacters:jstrChars length:(NSUInteger)size] autorelease];
-        }
-        (*env)->ReleaseStringChars(env, jstring, jstrChars);
-    }
-    return string;
-}
-
 - (CGLPixelFormatObj)_createPixelFormatWithDepth:(CGLPixelFormatAttribute)depth
 {
     CGLPixelFormatObj pix = NULL;

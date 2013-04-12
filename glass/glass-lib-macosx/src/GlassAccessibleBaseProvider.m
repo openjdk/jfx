@@ -29,6 +29,7 @@
 #import <AppKit/AppKit.h>
 #import "com_sun_glass_ui_accessible_mac_MacAccessibleBaseProvider.h"
 #import "GlassWindow.h"
+#import "GlassHelper.h"
 
 // Pull in the NSAccessibility Informal Protocol.
 // It defines the NSAccessibility Category which adds the NSAccessibility methods to NSObject
@@ -62,18 +63,6 @@ NSArray* eventIds = nil;
 NSArray* roleIds = nil;
 NSMutableArray* attributes = nil;
 NSArray* settableAttribute = nil ;
-
-static inline NSString* getNSString(JNIEnv* env, jstring jstring)
-{
-    NSString *string = nil;
-    if (jstring != NULL) {
-        const jchar* jstrChars = (*env)->GetStringChars(env, jstring, NULL);
-        string = [[[NSString alloc] initWithCharacters:jstrChars
-                                    length:(*env)->GetStringLength(env, jstring)] autorelease];
-        (*env)->ReleaseStringChars(env, jstring, jstrChars);
-    }
-    return string;
-}
 
 + (void) initialize {
     if (self == [GlassAccessibleBaseProvider class]) {
@@ -628,7 +617,7 @@ static inline NSString* getNSString(JNIEnv* env, jstring jstring)
             (*env)->CallObjectMethod(env, jBaseProvider, midGetPropertyValue, attributeId);
         GLASS_CHECK_EXCEPTION(env);
         if (javaString != NULL) {
-            NSString *strTitle = getNSString(env, javaString);
+            NSString *strTitle = [GlassHelper nsStringWithJavaString:javaString withEnv:env];
             LOG("  returning: %s", [strTitle UTF8String]);
             return strTitle;
         } else {
