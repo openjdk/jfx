@@ -203,8 +203,8 @@ class WindowStage extends GlassStage {
             AbstractPainter.renderLock.lock();
             try {
                 platformWindow.setView(view);
-                if (oldScene != null) oldScene.updateViewState();
-                newScene.updateViewState();
+                if (oldScene != null) oldScene.updateSceneState();
+                newScene.updateSceneState();
             } finally {
                 AbstractPainter.renderLock.unlock();
             }
@@ -214,7 +214,7 @@ class WindowStage extends GlassStage {
             AbstractPainter.renderLock.lock();
             try {
                 platformWindow.setView(null);
-                if (oldScene != null) oldScene.updateViewState();
+                if (oldScene != null) oldScene.updateSceneState();
             } finally {
                 AbstractPainter.renderLock.unlock();
             }
@@ -594,7 +594,7 @@ class WindowStage extends GlassStage {
             try {
                 GlassScene oldScene = getViewScene();
                 platformWindow.close();
-                if (oldScene != null) oldScene.updateViewState();
+                if (oldScene != null) oldScene.updateSceneState();
             } finally {
                 AbstractPainter.renderLock.unlock();
             }

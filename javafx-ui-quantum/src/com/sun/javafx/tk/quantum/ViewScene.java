@@ -107,7 +107,7 @@ class ViewScene extends GlassScene {
                 try {
                     this.platformView.close();
                     this.platformView = null;
-                    this.updateViewState();
+                    this.updateSceneState();
                 } finally {
                     AbstractPainter.renderLock.unlock();
                 }
