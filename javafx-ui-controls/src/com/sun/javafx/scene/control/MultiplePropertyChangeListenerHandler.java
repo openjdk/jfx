@@ -32,9 +32,6 @@ import javafx.beans.value.ObservableValue;
 import javafx.beans.value.WeakChangeListener;
 import javafx.util.Callback;
 
-/**
- * 
- */
 public final class MultiplePropertyChangeListenerHandler {
     
     private final Callback<String, Void> propertyChangedHandler;
@@ -48,17 +45,19 @@ public final class MultiplePropertyChangeListenerHandler {
      * want to adjust the way listeners are added rather than continuing to use this
      * map (although it doesn't really do much harm).
      */
-    private Map<ObservableValue,String> propertyReferenceMap =
-            new HashMap<ObservableValue,String>();
+    private Map<ObservableValue<?>,String> propertyReferenceMap =
+            new HashMap<ObservableValue<?>,String>();
     
-    private final ChangeListener propertyChangedListener = new ChangeListener() {
-        @Override public void changed(ObservableValue property, Object oldValue, Object newValue) {
+    private final ChangeListener<Object> propertyChangedListener = new ChangeListener<Object>() {
+        @Override public void changed(ObservableValue<?> property, 
+                @SuppressWarnings("unused") Object oldValue, 
+                @SuppressWarnings("unused") Object newValue) {
             propertyChangedHandler.call(propertyReferenceMap.get(property));
         }
     };
     
-    private final WeakChangeListener weakPropertyChangedListener = 
-            new WeakChangeListener(propertyChangedListener);
+    private final WeakChangeListener<Object> weakPropertyChangedListener = 
+            new WeakChangeListener<Object>(propertyChangedListener);
     
     /**
      * Subclasses can invoke this method to register that we want to listen to
@@ -67,14 +66,14 @@ public final class MultiplePropertyChangeListenerHandler {
      * @param property
      * @param reference
      */
-    public final void registerChangeListener(ObservableValue property, String reference) {
+    public final void registerChangeListener(ObservableValue<?> property, String reference) {
         if (!propertyReferenceMap.containsKey(property)) {
             propertyReferenceMap.put(property, reference);
             property.addListener(weakPropertyChangedListener);
         }
     }
     
-    public final void unregisterChangeListener(ObservableValue property) {
+    public final void unregisterChangeListener(ObservableValue<?> property) {
         if (propertyReferenceMap.containsKey(property)) {
             propertyReferenceMap.remove(property);
             property.removeListener(weakPropertyChangedListener);
@@ -83,7 +82,7 @@ public final class MultiplePropertyChangeListenerHandler {
 
     public void dispose() {
         // unhook listeners
-        for (ObservableValue value : propertyReferenceMap.keySet()) {
+        for (ObservableValue<?> value : propertyReferenceMap.keySet()) {
             value.removeListener(weakPropertyChangedListener);
         }
         propertyReferenceMap.clear();
