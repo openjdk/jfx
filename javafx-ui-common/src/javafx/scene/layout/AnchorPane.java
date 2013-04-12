@@ -184,7 +184,7 @@ public class AnchorPane extends Pane {
     }
 
     /**
-     * Sets the bottom anchor for the child when contained by an anchor pane.
+     * Sets the right anchor for the child when contained by an anchor pane.
      * If set, the anchor pane will maintain the child's size and position so
      * that it's right is always offset by that amount from the anchor pane's right
      * content edge.
@@ -215,9 +215,9 @@ public class AnchorPane extends Pane {
         setBottomAnchor(child, null);
         setLeftAnchor(child, null);
     }
-    
+
     /********************************************************************
-     *  END static methods 
+     *  END static methods
      ********************************************************************/
 
     /**
@@ -271,7 +271,7 @@ public class AnchorPane extends Pane {
                 max = Math.max(max, left + (minimum? child.minWidth(height) : child.prefWidth(height)) + right);
             }
         }
-        
+
         final Insets insets = getInsets();
         return insets.getLeft() + max + insets.getRight();
     }
@@ -287,10 +287,10 @@ public class AnchorPane extends Pane {
 
                 double top = topAnchor != null? topAnchor :
                     (bottomAnchor != null? 0 : child.getLayoutBounds().getMinY() + child.getLayoutY());
-                double bottom = bottomAnchor != null? bottomAnchor : 0;                
+                double bottom = bottomAnchor != null? bottomAnchor : 0;
                 if (child.getContentBias() == Orientation.HORIZONTAL) {
                     width = (minimum? child.minWidth(-1) : child.prefWidth(-1));
-                }                  
+                }
                 max = Math.max(max, top + (minimum? child.minHeight(width) : child.prefHeight(width)) + bottom);
             }
         }
@@ -350,16 +350,16 @@ public class AnchorPane extends Pane {
 
                 if (leftAnchor != null) {
                     x = insets.getLeft() + leftAnchor;
-                } else if (rightAnchor != null) {                   
+                } else if (rightAnchor != null) {
                     x = getWidth() - insets.getRight() - rightAnchor - w;
                 }
-                
+
                 if (topAnchor != null) {
                     y = insets.getTop() + topAnchor;
                 } else if (bottomAnchor != null) {
                     y = getHeight() - insets.getBottom() - bottomAnchor - h;
                 }
-                
+
                 child.resizeRelocate(x, y, w, h);
             }
         }
