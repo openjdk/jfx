@@ -101,104 +101,83 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
     /**
      * The fill to use for the text under normal conditions
      */
-    protected final ObjectProperty<Paint> textFill = 
-        new StyleableObjectProperty<Paint>(Color.BLACK) {
-
-        @Override
-        public Object getBean() {
+    protected final ObjectProperty<Paint> textFill = new StyleableObjectProperty<Paint>(Color.BLACK) {
+        @Override public Object getBean() {
             return TextInputControlSkin.this;
         }
 
-        @Override
-        public String getName() {
+        @Override public String getName() {
             return "textFill";
         }
 
-        @Override
-        public CssMetaData<TextInputControl,Paint> getCssMetaData() {
+        @Override public CssMetaData<TextInputControl,Paint> getCssMetaData() {
             return StyleableProperties.TEXT_FILL;
         }
     };
-    protected final ObjectProperty<Paint> promptTextFill = 
-        new StyleableObjectProperty<Paint>(Color.GRAY) {
-
-        @Override
-        public Object getBean() {
+    
+    protected final ObjectProperty<Paint> promptTextFill = new StyleableObjectProperty<Paint>(Color.GRAY) {
+        @Override public Object getBean() {
             return TextInputControlSkin.this;
         }
 
-        @Override
-        public String getName() {
+        @Override public String getName() {
             return "promptTextFill";
         }
 
-        @Override
-        public CssMetaData<TextInputControl,Paint> getCssMetaData() {
+        @Override public CssMetaData<TextInputControl,Paint> getCssMetaData() {
             return StyleableProperties.PROMPT_TEXT_FILL;
         }
     };
+    
     /**
      * The fill to use for the text when highlighted.
      */
-    protected final ObjectProperty<Paint> highlightFill = 
-        new StyleableObjectProperty<Paint>(Color.DODGERBLUE) {
-
+    protected final ObjectProperty<Paint> highlightFill = new StyleableObjectProperty<Paint>(Color.DODGERBLUE) {
         @Override protected void invalidated() {
             updateHighlightFill();
         }
 
-        @Override
-        public Object getBean() {
+        @Override public Object getBean() {
             return TextInputControlSkin.this;
         }
 
-        @Override
-        public String getName() {
+        @Override public String getName() {
             return "highlightFill";
         }
 
-        @Override
-        public CssMetaData<TextInputControl,Paint> getCssMetaData() {
+        @Override public CssMetaData<TextInputControl,Paint> getCssMetaData() {
             return StyleableProperties.HIGHLIGHT_FILL;
         }
     };
-    protected final ObjectProperty<Paint> highlightTextFill = 
-        new StyleableObjectProperty<Paint>(Color.WHITE) {
-
+    
+    protected final ObjectProperty<Paint> highlightTextFill = new StyleableObjectProperty<Paint>(Color.WHITE) {
         @Override protected void invalidated() {
             updateHighlightTextFill();
         }
 
-        @Override
-        public Object getBean() {
+        @Override public Object getBean() {
             return TextInputControlSkin.this;
         }
 
-        @Override
-        public String getName() {
+        @Override public String getName() {
             return "highlightTextFill";
         }
 
-        @Override
-        public CssMetaData<TextInputControl,Paint> getCssMetaData() {
+        @Override public CssMetaData<TextInputControl,Paint> getCssMetaData() {
             return StyleableProperties.HIGHLIGHT_TEXT_FILL;
         }
     };
-    protected final BooleanProperty displayCaret = 
-        new StyleableBooleanProperty(true) {
-
-        @Override
-        public Object getBean() {
+    
+    protected final BooleanProperty displayCaret = new StyleableBooleanProperty(true) {
+        @Override public Object getBean() {
             return TextInputControlSkin.this;
         }
 
-        @Override
-        public String getName() {
+        @Override public String getName() {
             return "displayCaret";
         }
 
-        @Override
-        public CssMetaData<TextInputControl,Boolean> getCssMetaData() {
+        @Override public CssMetaData<TextInputControl,Boolean> getCssMetaData() {
             return StyleableProperties.DISPLAY_CARET;
         }
     };

@@ -119,8 +119,7 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
             });
         }
 
-        @Override
-        protected ObservableList<Node> getChildren() {
+        @Override protected ObservableList<Node> getChildren() {
             return super.getChildren();
         }
 
@@ -128,59 +127,57 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
             return Orientation.HORIZONTAL;
         }
 
-        @Override
-        protected double computePrefWidth(double height) {
-          if (computedPrefWidth < 0) {
+        @Override protected double computePrefWidth(double height) {
+            if (computedPrefWidth < 0) {
+                double prefWidth = 0;
 
-            double prefWidth = 0;
+                for (Node node : paragraphNodes.getChildren()) {
+                    Text paragraphNode = (Text)node;
+                    prefWidth = Math.max(prefWidth,
+                            Utils.computeTextWidth(paragraphNode.getFont(),
+                                    paragraphNode.getText(), 0));
+                }
 
-            for (Node node : paragraphNodes.getChildren()) {
-                Text paragraphNode = (Text)node;
-                prefWidth = Math.max(prefWidth,
-                                     Utils.computeTextWidth(paragraphNode.getFont(),
-                                                            paragraphNode.getText(), 0));
+                prefWidth += leftPadding() + rightPadding();
+
+                Bounds viewPortBounds = scrollPane.getViewportBounds();
+                computedPrefWidth = Math.max(prefWidth, (viewPortBounds != null) ? viewPortBounds.getWidth() : 0);
             }
-
-            prefWidth += leftPadding() + rightPadding();
-
-            Bounds viewPortBounds = scrollPane.getViewportBounds();
-            computedPrefWidth = Math.max(prefWidth, (viewPortBounds != null) ? viewPortBounds.getWidth() : 0);
-          }
-          return computedPrefWidth;
+            return computedPrefWidth;
         }
 
         @Override
         protected double computePrefHeight(double width) {
-          if (width != widthForComputedPrefHeight) {
-              invalidateMetrics();
-              widthForComputedPrefHeight = width;
-          }
-
-          if (computedPrefHeight < 0) {
-
-
-            double wrappingWidth;
-            if (width == -1) {
-                wrappingWidth = 0;
-            } else {
-                wrappingWidth = Math.max(width - (leftPadding() + rightPadding()), 0);
+            if (width != widthForComputedPrefHeight) {
+                invalidateMetrics();
+                widthForComputedPrefHeight = width;
             }
 
-            double prefHeight = 0;
+            if (computedPrefHeight < 0) {
+                double wrappingWidth;
+                if (width == -1) {
+                    wrappingWidth = 0;
+                } else {
+                    wrappingWidth = Math.max(width - (leftPadding() + rightPadding()), 0);
+                }
 
-            for (Node node : paragraphNodes.getChildren()) {
-                Text paragraphNode = (Text)node;
-                prefHeight += Utils.computeTextHeight(paragraphNode.getFont(),
-                                                      paragraphNode.getText(),
-                                                      wrappingWidth, paragraphNode.getBoundsType());
+                double prefHeight = 0;
+
+                for (Node node : paragraphNodes.getChildren()) {
+                    Text paragraphNode = (Text)node;
+                    prefHeight += Utils.computeTextHeight(
+                            paragraphNode.getFont(),
+                            paragraphNode.getText(),
+                            wrappingWidth, 
+                            paragraphNode.getBoundsType());
+                }
+
+                prefHeight += topPadding() + bottomPadding();
+
+                Bounds viewPortBounds = scrollPane.getViewportBounds();
+                computedPrefHeight = Math.max(prefHeight, (viewPortBounds != null) ? viewPortBounds.getHeight() : 0);
             }
-
-            prefHeight += topPadding() + bottomPadding();
-
-            Bounds viewPortBounds = scrollPane.getViewportBounds();
-            computedPrefHeight = Math.max(prefHeight, (viewPortBounds != null) ? viewPortBounds.getHeight() : 0);
-          }
-          return computedPrefHeight;
+            return computedPrefHeight;
         }
 
         @Override protected double computeMinWidth(double height) {
@@ -227,15 +224,18 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
             double wrappingWidth = Math.max(width - (leftPadding + rightPadding()), 0);
 
             double y = topPadding;
+            
+            final List<Node> paragraphNodesChildren = paragraphNodes.getChildren();
 
-            for (Node node : paragraphNodes.getChildren()) {
+            for (int i = 0; i < paragraphNodesChildren.size(); i++) {
+                Node node = paragraphNodesChildren.get(i);
                 Text paragraphNode = (Text)node;
                 paragraphNode.setWrappingWidth(wrappingWidth);
 
                 Bounds bounds = paragraphNode.getBoundsInLocal();
                 paragraphNode.setLayoutX(leftPadding);
                 paragraphNode.setLayoutY(y);
-
+                
                 y += bounds.getHeight();
             }
 
@@ -269,11 +269,11 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
                 // Position the handle for the anchor. This could be handle1 or handle2.
                 // Do this before positioning the actual caret.
                 if (selection.getLength() > 0) {
-                    int paragraphIndex = paragraphNodes.getChildren().size();
+                    int paragraphIndex = paragraphNodesChildren.size();
                     int paragraphOffset = textArea.getLength() + 1;
                     Text paragraphNode = null;
                     do {
-                        paragraphNode = (Text)paragraphNodes.getChildren().get(--paragraphIndex);
+                        paragraphNode = (Text)paragraphNodesChildren.get(--paragraphIndex);
                         paragraphOffset -= paragraphNode.getText().length() + 1;
                     } while (anchorPos < paragraphOffset);
 
@@ -296,12 +296,12 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
 
             {
                 // Position caret
-                int paragraphIndex = paragraphNodes.getChildren().size();
+                int paragraphIndex = paragraphNodesChildren.size();
                 int paragraphOffset = textArea.getLength() + 1;
 
                 Text paragraphNode = null;
                 do {
-                    paragraphNode = (Text)paragraphNodes.getChildren().get(--paragraphIndex);
+                    paragraphNode = (Text)paragraphNodesChildren.get(--paragraphIndex);
                     paragraphOffset -= paragraphNode.getText().length() + 1;
                 } while (caretPos < paragraphOffset);
 
@@ -324,7 +324,8 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
             // Update selection fg and bg
             int start = selection.getStart();
             int end = selection.getEnd();
-            for (Node paragraphNode : paragraphNodes.getChildren()) {
+            for (int i = 0, max = paragraphNodesChildren.size(); i < max; i++) {
+                Node paragraphNode = paragraphNodesChildren.get(i);
                 Text textNode = (Text)paragraphNode;
                 int paragraphLength = textNode.getText().length() + 1;
                 if (end > start && start < paragraphLength) {
@@ -599,45 +600,45 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
             }
         });
 
-      if (USE_MULTIPLE_NODES) {
-        textArea.getParagraphs().addListener(new ListChangeListener<CharSequence>() {
-            @Override
-            public void onChanged(ListChangeListener.Change<? extends CharSequence> change) {
-                while (change.next()) {
-                    int from = change.getFrom();
-                    int to = change.getTo();
-                    List<? extends CharSequence> removed = change.getRemoved();
-                    if (from < to) {
+        if (USE_MULTIPLE_NODES) {
+            textArea.getParagraphs().addListener(new ListChangeListener<CharSequence>() {
+                @Override
+                public void onChanged(ListChangeListener.Change<? extends CharSequence> change) {
+                    while (change.next()) {
+                        int from = change.getFrom();
+                        int to = change.getTo();
+                        List<? extends CharSequence> removed = change.getRemoved();
+                        if (from < to) {
 
-                        if (removed.isEmpty()) {
-                            // This is an add
-                            for (int i = from, n = to; i < n; i++) {
-                                addParagraphNode(i, change.getList().get(i).toString());
+                            if (removed.isEmpty()) {
+                                // This is an add
+                                for (int i = from, n = to; i < n; i++) {
+                                    addParagraphNode(i, change.getList().get(i).toString());
+                                }
+                            } else {
+                                // This is an update
+                                for (int i = from, n = to; i < n; i++) {
+                                    Node node = paragraphNodes.getChildren().get(i);
+                                    Text paragraphNode = (Text) node;
+                                    paragraphNode.setText(change.getList().get(i).toString());
+                                }
                             }
                         } else {
-                            // This is an update
-                            for (int i = from, n = to; i < n; i++) {
-                                Node node = paragraphNodes.getChildren().get(i);
-                                Text paragraphNode = (Text) node;
-                                paragraphNode.setText(change.getList().get(i).toString());
-                            }
+                            // This is a remove
+                            paragraphNodes.getChildren().subList(from, from + removed.size()).clear();
                         }
-                    } else {
-                        // This is a remove
-                        paragraphNodes.getChildren().subList(from, from + removed.size()).clear();
                     }
                 }
-            }
-        });
-      } else {
-        textArea.textProperty().addListener(new InvalidationListener() {
-            @Override public void invalidated(Observable observable) {
-                invalidateMetrics();
-                ((Text)paragraphNodes.getChildren().get(0)).setText(textArea.textProperty().getValueSafe());
-                contentView.requestLayout();
-            }
-        });
-      }
+            });
+        } else {
+            textArea.textProperty().addListener(new InvalidationListener() {
+                @Override public void invalidated(Observable observable) {
+                    invalidateMetrics();
+                    ((Text)paragraphNodes.getChildren().get(0)).setText(textArea.textProperty().getValueSafe());
+                    contentView.requestLayout();
+                }
+            });
+        }
 
         usePromptText = new BooleanBinding() {
             { bind(textArea.textProperty(), textArea.promptTextProperty()); }
@@ -798,6 +799,7 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
 
     @Override public void layoutChildren(final double x, final double y,
             final double w, final double h) {
+        
         scrollPane.setHbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
         scrollPane.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
 
