@@ -522,20 +522,24 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
 
         double contentWidth = w - (isHorizontal() ? 0 : headerHeight);
         double contentHeight = h - (isHorizontal() ? headerHeight: 0);
-        for (TabContentRegion tabContent : tabContentRegions) {
-            if (tabContent.getTab().equals(selectedTab)) {
-                tabContent.setAlignment(Pos.TOP_LEFT);
-                if (tabContent.getClip() != null) {
-                    ((Rectangle)tabContent.getClip()).setWidth(contentWidth);
-                    ((Rectangle)tabContent.getClip()).setHeight(contentHeight);
-                }
-                tabContent.resize(contentWidth, contentHeight);
-                tabContent.relocate(contentStartX, contentStartY);
-                Node content = tabContent.getTab().getContent();
-                if (content != null) content.setVisible(true);
-            } else {
-                Node content = tabContent.getTab().getContent();
-                if (content != null) content.setVisible(false);
+        
+        for (int i = 0, max = tabContentRegions.size(); i < max; i++) {
+            TabContentRegion tabContent = tabContentRegions.get(i);
+            
+            tabContent.setAlignment(Pos.TOP_LEFT);
+            if (tabContent.getClip() != null) {
+                ((Rectangle)tabContent.getClip()).setWidth(contentWidth);
+                ((Rectangle)tabContent.getClip()).setHeight(contentHeight);
+            }
+            
+            // we need to size all tabs, even if they aren't visible. For example,
+            // see RT-29167
+            tabContent.resize(contentWidth, contentHeight);
+            tabContent.relocate(contentStartX, contentStartY);
+            
+            Node content = tabContent.getTab().getContent();
+            if (content != null) {
+                content.setVisible(tabContent.getTab().equals(selectedTab));
             }
         }
     }
