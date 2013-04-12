@@ -169,6 +169,14 @@ public class NGSubScene extends NGNode implements PGSubScene {
 
     @Override
     protected void renderContent(Graphics g) {
+        if (rtt != null) {
+            rtt.lock();
+            if (rtt.isSurfaceLost()) {
+                renderSG = true;
+                rtt = null;
+            }
+        }
+
         if (!root.isClean() || renderSG) {
             if (rtt == null) {
                 ResourceFactory factory = g.getResourceFactory();
@@ -191,6 +199,7 @@ public class NGSubScene extends NGNode implements PGSubScene {
         }
         g.drawTexture(rtt, rtt.getContentX(), rtt.getContentY(),
                       rtt.getContentWidth(), rtt.getContentHeight());
+        rtt.unlock();
     }
 
 }
