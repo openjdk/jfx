@@ -33,6 +33,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Logs information on a per-pulse basis. When doing performance analysis, a very
@@ -80,7 +81,7 @@ public class PulseLogger {
     /**
      * We have a simple counter that keeps track of the current pulse number.
      */
-    private int pulseCount = 0;
+    private int pulseCount = 1;
 
     /**
      * When printing the truncated form of the pulse, we just print one truncated
@@ -99,22 +100,8 @@ public class PulseLogger {
 
     /**
      * References to PulseData for the FX thread (fxData) and the Render thread (renderData).
-     * We also have an "empty" pulseData which is available for use on the next
-     * pulseStart. Basically, this is a classic double-buffered technique
-     * where we are writing to two buffers simultaneously and use the "empty"
-     * to hold the finished buffer for use later.
      */
-    private volatile PulseData fxData, renderData, empty;
-
-    /**
-     * Sometimes log methods are called when there is no pulse
-     * going on. I'd like to gather that information as well
-     * (particularly for things like layout). So I have a special
-     * interPulseData which is written to in case there is no
-     * other data to write to. It is then flushed at the start
-     * of the next real pulse.
-     */
-    private volatile PulseData interPulseData = new PulseData();
+    private volatile PulseData fxData, renderData;
 
     /**
      * Keeps track of the start of the previous pulse, such that we can print out
@@ -123,11 +110,58 @@ public class PulseLogger {
     private long lastPulseStartTime;
 
     /**
+     * No logger activity is expected outside the renderStart..renderEnd interval.
+     * This flag is for notification when that assumption is broken.
+     */
+    private boolean nullRenderFlag = false;
+
+    /**
+     * The queue of all PulseData objects, both available and those in use.
+     * New PulseData objects are allocated from head if the state is AVAILABLE.
+     * They are re-linked at tail with the state INCOMPLETE. Once fully processed
+     * they will change their state back to AVAILABLE and will become ready for reuse.
+     */
+    private PulseData head;
+    private PulseData tail;
+    
+    /**
+     * A synchronization object for printing arbitrage.
+     */
+    AtomicInteger active = new AtomicInteger(0);
+    
+    /**
+     * PulseData object states
+     */
+    private static final int AVAILABLE = 0;
+    private static final int INCOMPLETE = 1;
+    private static final int COMPLETE = 2;
+    
+    /**
      * Disallow instantiation.
      */
     private PulseLogger() {
-        empty = new PulseData();
-        fxData = renderData = null;
+        head = new PulseData();
+        tail = new PulseData();
+        head.next = tail;
+    }
+
+    /**
+     * Allocate and initialize a PulseData object
+     */
+    private PulseData allocate(int n) {
+        PulseData res;
+        if (head != tail && head.state == AVAILABLE) {
+            res = head;
+            head = head.next;
+            res.next = null;
+        }
+        else {
+            res = new PulseData();
+        }
+        tail.next = res;
+        tail = res;
+        res.init(n);        
+        return res;
     }
 
     /**
@@ -136,23 +170,19 @@ public class PulseLogger {
      * calls to fxMessage will write to this buffer.
      */
     public void pulseStart() {
-        // Initialize the lastPulseTime, so that the first pulse will effectively
-        // have 0 as the delay
-        if (lastPulseStartTime == 0) lastPulseStartTime = System.currentTimeMillis();
-        // At the start of the pulse, we take the waiting
-        // PulseData and then we use it. But we have to reset it.
-        fxData = empty == null ? fxData = new PulseData() : empty;
-        empty = null;
-        fxData.reset();
-        fxData.pulseCount = pulseCount++;
-
-        // If the interPulseData has been populated, then we need
-        // to flush it to the log and reset it
-        if (!interPulseData.counters.isEmpty() || interPulseData.message.length() != 0) {
-            logPulseData(interPulseData);
-            interPulseData.reset();
-            interPulseData.pulseCount = fxData.pulseCount;
+        if (fxData != null) {
+            // Inter pulse data
+            fxData.state = COMPLETE;
+            if (active.incrementAndGet() == 1) {
+                fxData.printAndReset();
+                active.decrementAndGet();
+            }
         }
+        fxData = allocate(pulseCount++);
+        if (lastPulseStartTime > 0) {
+            fxData.interval = fxData.startTime - lastPulseStartTime;
+        }
+        lastPulseStartTime = fxData.startTime;
     }
 
     /**
@@ -165,7 +195,9 @@ public class PulseLogger {
      * logged.
      */
     public void renderStart() {
+        fxData.pushedRender = true;
         renderData = fxData;
+        active.incrementAndGet();
     }
 
     /**
@@ -176,12 +208,12 @@ public class PulseLogger {
      * as pulseEnd is called, we are ready for another call to pulseStart.
      */
     public void pulseEnd() {
-        if (renderData == null) {
-            // There is no rendering for this pulse, so we can terminate it
-            // now and not bother going any further.
-            logPulseData(fxData);
-            // The renderData is null, so the only reusable data is the fxData.
-            empty = fxData;
+        if (!fxData.pushedRender) {
+            fxData.state = COMPLETE;
+            if (active.incrementAndGet() == 1) {
+                fxData.printAndReset();
+                active.decrementAndGet();
+            }
         }
         fxData = null;
     }
@@ -192,11 +224,12 @@ public class PulseLogger {
      * data to be logged.
      */
     public void renderEnd() {
-        if (renderData != null) {
-            logPulseData(renderData);
-            empty = renderData;
-            renderData = null;
-        }
+        renderData.state = COMPLETE;
+        do {
+            renderData.printAndReset();
+            renderData = renderData.next;
+        } while (active.decrementAndGet() > 0);
+        renderData = null;
     }
 
     /**
@@ -206,8 +239,10 @@ public class PulseLogger {
      * @param message The message to log. A newline will be added automatically.
      */
     public void fxMessage(String message) {
-        StringBuffer buffer = fxData == null ? interPulseData.message : fxData.message;
-        buffer
+        if (fxData == null) {
+            fxData = allocate(-1);
+        }
+        fxData.message
             .append("T")
             .append(Thread.currentThread().getId())
             .append(" : ")
@@ -233,11 +268,13 @@ public class PulseLogger {
      * @param message The message to log. A newline will be added automatically.
      */
     public void fxMessage(long start, long end, String message) {
-        StringBuffer buffer = fxData == null ? interPulseData.message : fxData.message;
-        buffer
+        if (fxData == null) {
+            fxData = allocate(-1);
+        }
+        fxData.message
             .append("T")
             .append(Thread.currentThread().getId())
-            .append(" (").append(end - start).append("ms): ")
+            .append(" (").append(start-fxData.startTime).append(" +").append(end - start).append("ms): ")
             .append(message)
             .append("\n");
     }
@@ -248,14 +285,17 @@ public class PulseLogger {
      * @param counter The name for the counter.
      */
     public void fxIncrementCounter(String counter) {
-        Map<String,Integer> counters = fxData == null ? interPulseData.counters : fxData.counters;
+        if (fxData == null) {
+            fxData = allocate(-1);
+        }
+        Map<String,Integer> counters = fxData.counters;
         if (counters.containsKey(counter)) {
             counters.put(counter, counters.get(counter) + 1);
         } else {
             counters.put(counter, 1);
         }
     }
-
+    
     /**
      * Adds a message to the log for the pulse. This method <strong>MUST ONLY
      * BE CALLED FROM THE RENDER THREAD</strong>.
@@ -263,8 +303,11 @@ public class PulseLogger {
      * @param message The message to log. A newline will be added automatically.
      */
     public void renderMessage(String message) {
-        StringBuffer buffer = renderData == null ? interPulseData.message : renderData.message;
-        buffer
+        if (renderData == null) {
+            nullRenderFlag = true;
+            return;
+        }
+        renderData.message
             .append("T")
             .append(Thread.currentThread().getId())
             .append(" : ")
@@ -290,11 +333,14 @@ public class PulseLogger {
      * @param message The message to log. A newline will be added automatically.
      */
     public void renderMessage(long start, long end, String message) {
-        StringBuffer buffer = renderData == null ? interPulseData.message : renderData.message;
-        buffer
+        if (renderData == null) {
+            nullRenderFlag = true;
+            return;
+        }
+        renderData.message
             .append("T")
             .append(Thread.currentThread().getId())
-            .append(" (").append(end - start).append("ms): ")
+            .append(" (").append(start-renderData.startTime).append(" +").append(end - start).append("ms): ")
             .append(message)
             .append("\n");
     }
@@ -305,75 +351,89 @@ public class PulseLogger {
      * @param counter The name for the counter.
      */
     public void renderIncrementCounter(String counter) {
-        Map<String,Integer> counters = renderData == null ? interPulseData.counters : renderData.counters;
+        if (renderData == null) {
+            nullRenderFlag = true;
+            return;
+        }
+        Map<String,Integer> counters = renderData.counters;
         if (counters.containsKey(counter)) {
             counters.put(counter, counters.get(counter) + 1);
         } else {
             counters.put(counter, 1);
         }
     }
-
-    /**
-     * Logs the given pulse data.
-     * @param data
-     */
-    private void logPulseData(PulseData data) {
-        // We've finished with some pulse data completely, so
-        // we need to print it all out if the length of time the
-        // pulse took exceeded some threshold.
-        long endTime = System.currentTimeMillis();
-        long totalTime = endTime - data.startTime;
-        long interval = data.startTime - lastPulseStartTime;
-        if (totalTime > THRESHOLD) {
-            if (data == fxData) {
-                System.out.println("\n\nPULSE: " + data.pulseCount +
-                        " [" + totalTime + "ms:" + interval + "ms] Required No Rendering");
-                lastPulseStartTime = data.startTime;
-            } else if (data == interPulseData) {
-                System.out.println("\n\nINTER PULSE LOG DATA");
-            } else {
-                System.out.println("\n\nPULSE: " + data.pulseCount +
-                        " [" + totalTime + "ms:" + interval + "ms]");
-                lastPulseStartTime = data.startTime;
-            }
-            System.out.print(data.message);
-            if (!data.counters.isEmpty()) {
-                System.out.println("Counters:");
-                List<Map.Entry<String,Integer>> entries = new ArrayList<Map.Entry<String,Integer>>(data.counters.entrySet());
-                Collections.sort(entries, new Comparator<Map.Entry<String,Integer>>() {
-                    public int compare(Map.Entry<String,Integer> a, Map.Entry<String,Integer> b) {
-                        return a.getKey().compareTo(b.getKey());
-                    }
-                });
-                for (Map.Entry<String, Integer> entry : entries) {
-                    String message = entry.getKey();
-                    int count = entry.getValue();
-                    System.out.println("\t" + message + ": " + count);
-                }
-            }
-            wrapCount = 0;
-        } else {
-            System.out.print((wrapCount++ % 20 == 0 ? "\n[" : "[") + totalTime + "ms:" + interval + "ms]");
-            lastPulseStartTime = data.startTime;
-        }
-    }
-
+    
     /**
      * The data we collect per pulse. We store the pulse number
      * associated with this pulse, along with what time it
-     * started at. We also maintain the message buffer.
+     * started at and the interval since the previous pulse.
+     * We also maintain the message buffer and counters.
      */
-    private static final class PulseData {
-        long startTime = 0;
-        int pulseCount = 0;
+    private final class PulseData {
+        PulseData next;
+        volatile int state = AVAILABLE;
+        long startTime;
+        long interval;
+        int pulseCount;
+        boolean pushedRender;
         StringBuffer message = new StringBuffer();
         Map<String,Integer> counters = new ConcurrentHashMap<String, Integer>();
 
-        void reset() {
+        void init(int n) {
+            state = INCOMPLETE;
+            pulseCount = n;
             startTime = System.currentTimeMillis();
-            pulseCount = 0;
-            message = new StringBuffer();
+            interval = 0;
+            pushedRender = false;
+        }
+        
+        void printAndReset() {
+            long endTime = System.currentTimeMillis();
+            long totalTime = endTime - startTime;
+            
+            if (nullRenderFlag) {
+                System.err.println("\nWARNING: unexpected render thread activity");
+                nullRenderFlag = false;
+            }
+            if (state != COMPLETE) {
+                System.err.println("\nWARNING: logging incomplete state");
+            }
+            
+            if (totalTime <= THRESHOLD) {
+                System.err.print((wrapCount++ % 10 == 0 ? "\n[" : "[") + pulseCount+ " " + interval + "ms:" + totalTime + "ms]");
+            }
+            else {
+                if (pulseCount < 0) {
+                    System.err.println("\n\nINTER PULSE LOG DATA");                
+                }
+                else {
+                    System.err.print("\n\nPULSE: " + pulseCount +
+                            " [" + interval + "ms:" + totalTime + "ms]");
+                    if (!pushedRender) {
+                        System.err.print(" Required No Rendering");
+                    }
+                    System.err.println();
+                }
+                System.err.print(message);
+                if (!counters.isEmpty()) {
+                    System.err.println("Counters:");
+                    List<Map.Entry<String,Integer>> entries = new ArrayList<Map.Entry<String,Integer>>(counters.entrySet());
+                    Collections.sort(entries, new Comparator<Map.Entry<String,Integer>>() {
+                        public int compare(Map.Entry<String,Integer> a, Map.Entry<String,Integer> b) {
+                            return a.getKey().compareTo(b.getKey());
+                        }
+                    });
+                    for (Map.Entry<String, Integer> entry : entries) {
+                        System.err.println("\t" + entry.getKey() + ": " + entry.getValue());
+                    }
+                }
+                wrapCount = 0;
+            }
+            
+            // Reset the state
+            message.setLength(0);
             counters.clear();
+            state = AVAILABLE;
         }
     }
 }
