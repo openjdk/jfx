@@ -453,8 +453,7 @@ class MacSystemClipboard extends SystemClipboard {
     }
 
     private static class FormatEncoder {
-        private static final String UTI_PREFIX = "javafx.";
-        private static int keyNumber = 1;
+        private static final String DYNAMIC_UTI_PREFIX = "dyn.";
 
         private static final Map<String, String> utm = new HashMap<>();
         private static final Map<String, String> mtu = new HashMap<>();
@@ -482,23 +481,31 @@ class MacSystemClipboard extends SystemClipboard {
         }
 
         public static synchronized String mimeToUtf(String mime) {
-            if (! mtu.containsKey(mime)) {
-                String generatedUTI = UTI_PREFIX + keyNumber;
-                keyNumber++;
-
-                mtu.put(mime, generatedUTI);
-                utm.put(generatedUTI, mime);
+            if (mtu.containsKey(mime)) {
+                return mtu.get(mime);
             }
-            return mtu.get(mime);
+            String encodedUTI = _convertMIMEtoUTI(mime);
+            mtu.put(mime, encodedUTI);
+            utm.put(encodedUTI, mime);
+            return encodedUTI;
         }
 
         public static synchronized String utfToMime(String uti) {
             if (utm.containsKey(uti)) {
                 return utm.get(uti);
             }
+            if (uti.startsWith(DYNAMIC_UTI_PREFIX)) {
+                String decodedMIME = _convertUTItoMIME(uti);
+                mtu.put(decodedMIME, uti);
+                utm.put(uti, decodedMIME);
+                return decodedMIME;
+            }
             //Do not know who encoded it, pass-throw
             return uti;
         }
+
+        private static native String _convertMIMEtoUTI(String mime);
+        private static native String _convertUTItoMIME(String uti);
     }
     
     private URI createUri(String path, String message) {
