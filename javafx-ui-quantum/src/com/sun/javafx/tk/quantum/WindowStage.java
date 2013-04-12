@@ -406,7 +406,9 @@ class WindowStage extends GlassStage {
                 // mentioned in RT-12607
                 if (owner != null) {
                     WindowStage ownerStage = (WindowStage)owner;
-                    ownerStage.requestToFront();
+                    if (!ownerStage.getPlatformWindow().isClosed()) {
+                        ownerStage.requestToFront();
+                    }
                 }
             }
         }
