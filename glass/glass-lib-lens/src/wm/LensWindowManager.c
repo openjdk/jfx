@@ -300,13 +300,12 @@ static void lens_wm_windowMaximize(JNIEnv *env,
     }
 
     /**
-    * Window's max size can be limmited, so try to extend the 
-    * window to the buttom right corner of the scren from the 
-    * current x,y coordinates. If the window will be extended 
-    * beyond the screen boundries, push the window towards the top 
-    * left corner of the screen. 
-    * If no limits applied to the window it will capture the entire 
-    * screen. 
+    * Window's max size can be limited, so try to extend the window 
+    * to the buttom right corner of the screen from the current x,y 
+    * coordinates. If the window will be extended beyond the screen 
+    * boundaries, push the window towards the top left corner of the
+    * screen. If no limits applied to the window it will capture the 
+    * entire screen. 
     */
 
     //cache current window bounds for restoration
@@ -543,7 +542,7 @@ jboolean glass_window_setVisible(JNIEnv *env, NativeWindow window, jboolean visi
         lens_wm_unsetFocusedWidow(env, window);        
     } else {
         if (!window->owner) {
-            //window become visible, grant him the focus if not a pop-up
+            //window become visible, grant it the focus if not a pop-up
             lens_wm_setFocusedWindow(env, window);
         }
 
@@ -673,7 +672,7 @@ jboolean glass_window_grabFocus(JNIEnv *env, NativeWindow window) {
 
 /**
  * This functions will check if the given window is grabbed and
- * ungrab it if necessary note, may also be called from mouse 
+ * ungrab it if necessary. Note: may also be called from mouse 
  * handling 
  */
 void glass_window_ungrabFocus(JNIEnv *env, NativeWindow window) {
@@ -832,7 +831,7 @@ jboolean glass_view_exitFullscreen(JNIEnv *env,
                    view, window->id, window);
 
     /**
-    * animateis currently stubbed to false in WindowStage.java, 
+    * animate is currently stubbed to false in WindowStage.java, 
     * which is the only caller for this API. Ignoring it for now 
     */
 
@@ -887,7 +886,7 @@ NativeWindow glass_window_findWindowAtLocation(int absX, int absY,
 
     NativeWindow w = glass_window_list_getTail();
     while (w) {
-        GLASS_LOG_FINER("Window %d[%p] isVisible=%s, state=%s",
+        GLASS_LOG_FINEST("Window %d[%p] isVisible=%s, state=%s",
                        w->id, w,
                        w->isVisible?"true" : "false",
                        lens_window_getNativeStateName(w->state));

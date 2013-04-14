@@ -883,13 +883,13 @@ jboolean glass_window_setMaximumSize(JNIEnv *env,
  *              be changed to value within bounds
  * @param height [IN/OUT] the requested height of a window. Will
  *              be changed to value within bounds
- * @return JNI_TRUE means values are valid, JNI_FAILED means 
+ * @return JNI_TRUE means values are valid, JNI_FALSE means 
  *         values are not valid and have been updated.
  * 
  */
 jboolean glass_window_check_bounds(NativeWindow window,
-                                     int *width,
-                                     int *height);
+                                   int *width,
+                                   int *height);
 
 /**
  * Maximize / Restore window

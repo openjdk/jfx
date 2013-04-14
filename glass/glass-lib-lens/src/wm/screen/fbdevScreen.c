@@ -220,8 +220,8 @@ void lens_platform_shutdown(JNIEnv *env) {
 NativeScreen lens_screen_initialize(JNIEnv *env) {
     int fbFileHandle;
     struct fb_var_screeninfo screenInfo;
-    GLASS_LOG_FINE("open(%s, O_RDWR)", FB_DEVICE);
-    fbFileHandle = open(FB_DEVICE, O_RDWR);
+    GLASS_LOG_FINE("open(%s, O_RDONLY)", FB_DEVICE);
+    fbFileHandle = open(FB_DEVICE, O_RDONLY);
     if (fbFileHandle < 0) {
         GLASS_LOG_SEVERE("Cannot open framebuffer (%s)", strerror(errno));
         return NULL;
