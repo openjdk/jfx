@@ -1138,9 +1138,16 @@ public abstract class Window {
      *   - WindowEvent.RESTORE
      */
     protected void notifyResize(final int type, final int width, final int height) {
+
         if (type == WindowEvent.MINIMIZE) {
             this.state = State.MINIMIZED;
+            //no need to render minimized window
+            Window.remove(this);
         } else {
+            if (this.state == State.MINIMIZED && this.isVisible) {
+                //window is presentable
+                Window.add(this);
+            }
             if (type == WindowEvent.MAXIMIZE) {
                 this.state = State.MAXIMIZED;
             } else { // WindowEvent.RESIZE or WindowEvent.RESTORE
