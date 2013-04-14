@@ -44,9 +44,6 @@ static jboolean _mousePressed = JNI_FALSE;
 static jboolean _onDraggingAction = JNI_FALSE;
 static NativeWindow _dragGrabbingWindow = NULL;
 
-
-
-
 static inline void render_lock() {
     pthread_mutex_lock(&renderMutex);
 }
@@ -205,7 +202,8 @@ static void lens_wm_windowMinimize(JNIEnv *env,
     glass_application_notifyWindowEvent_resize(env,
                                                window,
                                                com_sun_glass_events_WindowEvent_MINIMIZE,
-                                               0,0 /*bounds not required*/);
+                                               window->cachedBounds.width,
+                                               window->cachedBounds.height);
 }
 
 
@@ -439,12 +437,14 @@ void glass_window_setBoundsImpl(JNIEnv *env,
     jboolean windowHasBeenUpdated = JNI_FALSE;
 
     GLASS_LOG_FINE("setBoundsImpl on window %i[%p] x=%i y=%i w=%i h=%i"
-                   " needToUpdatePostion=%s needToUpdateSize=%s isContentSize=%s",
+                   " needToUpdatePostion=%s needToUpdateSize=%s isContentSize=%s"
+                   " statet=%s",
                    window->id, window,
                    x, y, width, height,
                    (needToUpdatePostion)?"true":"false",
                    (needToUpdateSize)?"true":"false",
-                   (isContentSize)?"true":"false");
+                   (isContentSize)?"true":"false",
+                   lens_window_getNativeStateName(window->state));
 
     if (isContentSize && !needToUpdateSize) {
         GLASS_LOG_FINE("Treating content size change as window size change");
@@ -475,6 +475,7 @@ void glass_window_setBoundsImpl(JNIEnv *env,
                                                    com_sun_glass_events_WindowEvent_RESIZE,
                                                    width,
                                                    height);
+        
         windowHasBeenUpdated = JNI_TRUE;
 
     }
@@ -515,14 +516,20 @@ void glass_window_setBoundsImpl(JNIEnv *env,
                                                    window->currentBounds.width,
                                                    window->currentBounds.height);
     }
+
+    //some time the order of the window rendering concluded by the events is wrong.
+    //so force repaint.
+   lens_wm_repaint(env, window);
 }
 
 
 jboolean glass_window_setVisible(JNIEnv *env, NativeWindow window, jboolean visible) {
 
-    GLASS_LOG_FINE("Setting window %i[%p] from %s, to %s",
+    GLASS_LOG_FINE("Setting window %i[%p](owner %i[%p]) from %s, to %s",
                    window->id,
                    window,
+                   window->owner? window->owner->id : -1,
+                   window->owner,
                    (window->isVisible)?"visible":"invisible",
                    (visible)?"visible":"invisible");
 
@@ -535,8 +542,10 @@ jboolean glass_window_setVisible(JNIEnv *env, NativeWindow window, jboolean visi
         //lose focus and grab
         lens_wm_unsetFocusedWidow(env, window);        
     } else {
-        //window become visible, grant him the focus
-        lens_wm_setFocusedWindow(env, window);
+        if (!window->owner) {
+            //window become visible, grant him the focus if not a pop-up
+            lens_wm_setFocusedWindow(env, window);
+        }
 
         GLASS_LOG_FINE("notify window it has been restored");
         glass_application_notifyWindowEvent_resize(env,
@@ -648,7 +657,7 @@ jboolean glass_window_grabFocus(JNIEnv *env, NativeWindow window) {
         GLASS_LOG_FINE("RE-GRAB on %p root %p\n", window, window->root);
         return JNI_TRUE;
     }
-
+    
     if (NULL == lens_wm_getGrabbedWindow() &&
             window == glass_window_getFocusedWindow()) {
         // we allow the grab, note: focus is also checked in Java.
@@ -682,6 +691,7 @@ void glass_window_ungrabFocus(JNIEnv *env, NativeWindow window) {
     GLASS_LOG_FINE("Ungrabbing window %i[%p]",
                    window?window->id : -1,
                    window);
+
     lens_wm_setGrabbedWindow(NULL);
 
     //notify the UNGRAB
@@ -1174,6 +1184,7 @@ void lens_wm_notifyMotionEvent(JNIEnv *env, int mousePosX, int mousePosY, int is
                 GLASS_LOG_FINER("MouseEvent_ENTER on window %i[%p]",
                                (window)?window->id:-1,
                                window);
+
                 glass_application_notifyMouseEvent(env,
                                                    window,
                                                    com_sun_glass_events_MouseEvent_ENTER,
@@ -1242,15 +1253,16 @@ void lens_wm_notifyMotionEvent(JNIEnv *env, int mousePosX, int mousePosY, int is
  */
 void lens_wm_setFocusedWindow(JNIEnv *env, NativeWindow window) {
 
-    NativeWindow _focusedWindow = glass_window_getFocusedWindow();
-
-    GLASS_LOG_FINE("Window %i[%p] is focused. Window %i[%p] requesting focus",
-                   (_focusedWindow)?_focusedWindow->id:-1,
-                   _focusedWindow,
-                   (window)?window->id:-1,
-                   window);
-
+    NativeWindow _focusedWindow = glass_window_getFocusedWindow();    
+ 
     if (window != _focusedWindow) {
+
+      GLASS_LOG_FINE("Window %i[%p] is focused. Window %i[%p] requesting focus",
+             (_focusedWindow)?_focusedWindow->id:-1,
+             _focusedWindow,
+             (window)?window->id:-1,
+             window);
+
         if (_focusedWindow) {
 
             //Release the grab if window holds it
@@ -1259,6 +1271,7 @@ void lens_wm_setFocusedWindow(JNIEnv *env, NativeWindow window) {
             GLASS_LOG_FINE("Notifying window %i[%p] focus lost ",
                            _focusedWindow->id,
                            _focusedWindow);
+
             glass_application_notifyWindowEvent(env,
                                                 _focusedWindow,
                                                 com_sun_glass_events_WindowEvent_FOCUS_LOST);
@@ -1270,12 +1283,15 @@ void lens_wm_setFocusedWindow(JNIEnv *env, NativeWindow window) {
             GLASS_LOG_FINE("Notifying window %i[%p] focus gained ",
                            window->id,
                            window);
+
             glass_application_notifyWindowEvent(env,
                                                 window,
                                                 com_sun_glass_events_WindowEvent_FOCUS_GAINED);
         }
     } else {
-        GLASS_LOG_FINE("Window is alredy focused - ignore");
+        GLASS_LOG_FINE("Window %i[%p] is already focused - ignore",
+                       (window)?window->id:-1,
+                       window);
     }
 
 }
@@ -1293,14 +1309,15 @@ NativeWindow lens_wm_unsetFocusedWidow(JNIEnv *env, NativeWindow window){
 
     GLASS_LOG_FINE("unsetting focus for window %i[%p]",
                    window->id, window);
-
-    //if this window hold the grab, release it
-    GLASS_LOG_FINE("Check if this window holds the grab");
-    glass_window_ungrabFocus(env, window); /* function will print the result*/
+    
 
     NativeWindow _focusedWindow = glass_window_getFocusedWindow();
 
     if (window == _focusedWindow) {
+        //if this window hold the grab, release it
+        GLASS_LOG_FINE("Check if this window holds the grab");
+        glass_window_ungrabFocus(env, window); /* function will print the result*/
+
         GLASS_LOG_FINE("Releasing the focus");
         lens_wm_setFocusedWindow(env, NULL);
 
@@ -1314,6 +1331,7 @@ NativeWindow lens_wm_unsetFocusedWidow(JNIEnv *env, NativeWindow window){
                 if (!w->owner && w->isFocusable) {
                     GLASS_LOG_FINE("Granting window %i[%p] the focus",
                                    w->id, w);
+
                     lens_wm_setFocusedWindow(env, w);
                     _focusedWindow = w;
                     break;
@@ -1321,6 +1339,10 @@ NativeWindow lens_wm_unsetFocusedWidow(JNIEnv *env, NativeWindow window){
             }
             w = w->previousWindow;
         }
+    }else {
+        GLASS_LOG_FINE("Window %i[%p] doesn't have the focus",
+                       window?window->id : -1,
+                       window);
     }
 
     return _focusedWindow;

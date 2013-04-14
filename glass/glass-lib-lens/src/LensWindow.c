@@ -836,9 +836,16 @@ void glass_window_list_remove(NativeWindow window) {
 
 void glass_window_listPrint() {
     NativeWindow w = windowList_head;
-    GLASS_LOG_FINE("Window list head %p tail %p\n",windowList_head,windowList_tail);
+    GLASS_LOG_FINE("Window list head %i[%p] tail %i[%p]\n",
+                   windowList_head?windowList_head->id : -1,
+                   windowList_head,
+                   windowList_tail? windowList_tail->id : -1,
+                   windowList_tail);
     while (w) {
-        GLASS_LOG_FINE(" window %p p=%p n=%p\n",w,w->previousWindow, w->nextWindow);
+        GLASS_LOG_FINE(" window %i[%p] p=%i[%p] n=%i[%p]\n",
+                       w? w->id :-1, w,
+                       w->previousWindow?w->previousWindow->id :-1, w->previousWindow,
+                       w->nextWindow?w->nextWindow->id : -1, w->nextWindow);
         w = w->nextWindow;
     }
 }

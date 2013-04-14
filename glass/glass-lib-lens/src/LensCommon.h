@@ -973,6 +973,12 @@ void glass_window_list_add(NativeWindow window);
 void glass_window_list_remove(NativeWindow window);
 
 /**
+ * Print the content of the windows list to the console. Used 
+ * for debugging. 
+ */
+void glass_window_listPrint();
+
+/**
  * Get the current focused window (as was set by 
  * glass_window_setFocusedWindow()) 
  *
