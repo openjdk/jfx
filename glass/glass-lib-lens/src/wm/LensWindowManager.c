@@ -62,7 +62,7 @@ static void lens_wm_rfbNotifyWindowUpdate(NativeWindow window,
                                           int width, int height);
 static void lens_wm_windowCacheBounds(NativeWindow window);
 static void lens_wm_windowUncacheBounds(NativeWindow window);
-NativeWindow lens_wm_unsetFocusedWidow(JNIEnv *env, NativeWindow window);
+NativeWindow lens_wm_unsetFocusedWindow(JNIEnv *env, NativeWindow window);
 
 //service functions to handle window state
 static void lens_wm_windowMinimize(JNIEnv *env,
@@ -195,8 +195,11 @@ static void lens_wm_windowMinimize(JNIEnv *env,
     window->state = NWS_MINIMIZED;
 
     //if window hold the focus, release it
-    lens_wm_unsetFocusedWidow(env, window);
+    lens_wm_unsetFocusedWindow(env, window);
 
+
+    //Stop rendering this window, because its minimized
+    glass_application_RemoveWindowFromVisibleWindowList(env,window);
 
     //notify
     glass_application_notifyWindowEvent_resize(env,
@@ -218,6 +221,11 @@ static void lens_wm_windowRestore(JNIEnv *env,
 
             //notify platform
             lens_platform_windowMinimize(env, window, JNI_FALSE);
+            if (window->isVisible) {
+                //the window is restored and visible, add it to the window list
+                //to resume rendering
+                glass_application_addWindowToVisibleWindowList(env,window);
+            }
             break;
 
         case NWS_NORMAL:
@@ -539,7 +547,7 @@ jboolean glass_window_setVisible(JNIEnv *env, NativeWindow window, jboolean visi
 
     if (!visible) {
         //lose focus and grab
-        lens_wm_unsetFocusedWidow(env, window);        
+        lens_wm_unsetFocusedWindow(env, window);        
     } else {
         if (!window->owner) {
             //window become visible, grant it the focus if not a pop-up
@@ -831,8 +839,10 @@ jboolean glass_view_exitFullscreen(JNIEnv *env,
                    view, window->id, window);
 
     /**
-    * animate is currently stubbed to false in WindowStage.java, 
-    * which is the only caller for this API. Ignoring it for now 
+    * WindowStage.applyFullScreen() always sets the animate 
+    * parameter to false when calling enterFullScreen on its View, 
+    * in WindowStage.java, which is the only caller for this API. 
+    * Ignoring it for now.
     */
 
     lens_wm_windowRestore(env, window);
@@ -1304,7 +1314,7 @@ void lens_wm_setFocusedWindow(JNIEnv *env, NativeWindow window) {
  * @param window the window to unset 
  * @return the new focused window (may be NULL) 
  */
-NativeWindow lens_wm_unsetFocusedWidow(JNIEnv *env, NativeWindow window){
+NativeWindow lens_wm_unsetFocusedWindow(JNIEnv *env, NativeWindow window){
 
     GLASS_LOG_FINE("unsetting focus for window %i[%p]",
                    window->id, window);

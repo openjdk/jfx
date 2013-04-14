@@ -530,6 +530,30 @@ void glass_application_notifyDeviceEvent(JNIEnv *env,
                                          jint flags,
                                          jboolean attach);
 
+/**
+ * Call Window.java::add(Window window) private method that adds 
+ * a window to the visible window list. 
+ * Windows on that list are the actual windows rendered by 
+ * Quantum/Prism 
+ * 
+ * @param env 
+ * @param window the window to add
+ */
+void glass_application_addWindowToVisibleWindowList(JNIEnv *env,
+                                                    NativeWindow window);
+
+/**
+ * Call Window.java::remove(Window window) private method that 
+ * removes a window from the visible window list. 
+ * Windows on that list are the actual windows rendered by 
+ * Quantum/Prism 
+ * 
+ * @param env 
+ * @param window the window to remove
+ */
+void glass_application_RemoveWindowFromVisibleWindowList(JNIEnv *env,
+                                          NativeWindow window);
+
 /////////////Window
 /**
  * NWS stands for Native Window State
