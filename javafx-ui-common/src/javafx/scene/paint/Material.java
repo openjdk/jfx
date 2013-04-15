@@ -26,12 +26,19 @@
 package javafx.scene.paint;
 
 import com.sun.javafx.sg.PGPhongMaterial;
+import javafx.application.ConditionalFeature;
+import javafx.application.Platform;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
+import sun.util.logging.PlatformLogger;
 
 /**
  * Base class for representing the material of a 3D surface.
  * 
+ * Note that this is a conditional feature. See
+ * {@link javafx.application.ConditionalFeature#SCENE3D ConditionalFeature.SCENE3D}
+ * for more information.
+ *
  * @since JavaFX 8
  */
 public abstract class Material {
@@ -46,6 +53,11 @@ public abstract class Material {
      */
 
     protected Material() {
+        if (!Platform.isSupported(ConditionalFeature.SCENE3D)) {
+            String logname = Material.class.getName();
+            PlatformLogger.getLogger(logname).warning("System can't support "
+                                                      + "ConditionalFeature.SCENE3D");
+        }
     }
     
     // Material isn't a Node. It can't use the standard dirtyBits pattern that is 

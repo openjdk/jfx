@@ -34,6 +34,8 @@ import com.sun.prism.Graphics;
 import com.sun.prism.Material;
 import com.sun.prism.MeshView;
 import com.sun.prism.ResourceFactory;
+import javafx.application.ConditionalFeature;
+import javafx.application.Platform;
 import javafx.scene.shape.CullFace;
 import javafx.scene.shape.DrawMode;
 
@@ -186,7 +188,7 @@ public abstract class NGShape3D extends NGNode implements PGShape3D {
 
     protected void renderContent(Graphics g) {
 
-        if (material == null) {
+        if (!Platform.isSupported(ConditionalFeature.SCENE3D) || material == null) {
             return;
         }
 

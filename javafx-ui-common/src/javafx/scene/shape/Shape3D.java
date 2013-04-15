@@ -33,6 +33,8 @@ import com.sun.javafx.jmx.MXNodeAlgorithmContext;
 import com.sun.javafx.scene.DirtyBits;
 import com.sun.javafx.sg.PGPhongMaterial;
 import com.sun.javafx.sg.PGShape3D;
+import javafx.application.ConditionalFeature;
+import javafx.application.Platform;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ChangeListener;
@@ -40,6 +42,7 @@ import javafx.beans.value.ObservableValue;
 import javafx.scene.Node;
 import javafx.scene.paint.Material;
 import javafx.scene.paint.PhongMaterial;
+import sun.util.logging.PlatformLogger;
 
 
 /**
@@ -53,6 +56,10 @@ import javafx.scene.paint.PhongMaterial;
  * <li>The face culling properties that defines which face to cull (see {@link #setCullFace}).
  * </ul>
  *
+ * Note that this is a conditional feature. See
+ * {@link javafx.application.ConditionalFeature#SCENE3D ConditionalFeature.SCENE3D}
+ * for more information.
+ * 
  * @since JavaFX 8
  */
 public abstract class Shape3D extends Node {
@@ -64,6 +71,11 @@ public abstract class Shape3D extends Node {
     private static final PhongMaterial DEFAULT_MATERIAL = new PhongMaterial();
     
     protected Shape3D() {
+        if (!Platform.isSupported(ConditionalFeature.SCENE3D)) {
+            String logname = Shape3D.class.getName();
+            PlatformLogger.getLogger(logname).warning("System can't support "
+                                                      + "ConditionalFeature.SCENE3D");
+        }
     }
 
     PredefinedMeshManager manager = PredefinedMeshManager.getInstance();
