@@ -473,35 +473,35 @@ public class GridPaneTest {
     @Test public void testGridPaneSetColumnSpanConstraintWithHorizontalContentBias_RT_23718() {
         MockBiased child0_0 = new MockBiased(Orientation.HORIZONTAL, 300, 100);
 
-        GridPane.setColumnSpan(child0_0, 2);        
-        
+        GridPane.setColumnSpan(child0_0, 2);
+
         gridpane.getChildren().addAll(child0_0);
-        
+
         gridpane.resize(500, 500);
         gridpane.layout();
 
         assertEquals(0, child0_0.getLayoutX(), 1e-100);
         assertEquals(0, child0_0.getLayoutY(), 1e-100);
         assertEquals(300, child0_0.getLayoutBounds().getWidth(), 1e-100);
-        assertEquals(100, child0_0.getLayoutBounds().getHeight(), 1e-100);        
-    }    
+        assertEquals(100, child0_0.getLayoutBounds().getHeight(), 1e-100);
+    }
 
     @Test public void testGridPaneSetColumnSpanConstraintWithVerticalContentBias_RT_23718() {
         MockBiased child0_0 = new MockBiased(Orientation.VERTICAL, 100, 300);
 
         GridPane.setRowSpan(child0_0, 2);
-        
+
         gridpane.getChildren().addAll(child0_0);
-        
+
         gridpane.resize(500, 500);
         gridpane.layout();
-  
+
         assertEquals(0, child0_0.getLayoutX(), 1e-100);
         assertEquals(0, child0_0.getLayoutY(), 1e-100);
         assertEquals(100, child0_0.getLayoutBounds().getWidth(), 1e-100);
-        assertEquals(300, child0_0.getLayoutBounds().getHeight(), 1e-100);        
-    } 
-    
+        assertEquals(300, child0_0.getLayoutBounds().getHeight(), 1e-100);
+    }
+
     @Test public void testGridPaneSetMarginConstraint() {
         MockResizable child1 = new MockResizable(100,200, 300,400, 500,600);
 
@@ -713,7 +713,7 @@ public class GridPaneTest {
         assertEquals(child2, gridpane.getChildren().get(1));
         assertEquals(child3, gridpane.getChildren().get(2));
     }
-    
+
     @Test public void testGridPaneAddRowAppend() {
         MockResizable child1 = new MockResizable(100,100);
         MockResizable child2 = new MockResizable(100,100);
@@ -732,15 +732,15 @@ public class GridPaneTest {
         MockResizable child5 = new MockResizable(100,100);
         MockResizable child6 = new MockResizable(100,100);
         gridpane.addRow(2, child4,child5,child6);
-        
+
         assertEquals((Integer)2, GridPane.getRowIndex(child4));
         assertEquals((Integer)2, GridPane.getRowIndex(child5));
         assertEquals((Integer)2, GridPane.getRowIndex(child6));
 
         assertEquals((Integer)3, GridPane.getColumnIndex(child4));
         assertEquals((Integer)4, GridPane.getColumnIndex(child5));
-        assertEquals((Integer)5, GridPane.getColumnIndex(child6));        
-    }    
+        assertEquals((Integer)5, GridPane.getColumnIndex(child6));
+    }
 
     @Test public void testGridPaneAddColumn() {
         MockResizable child1 = new MockResizable(100,100);
@@ -761,7 +761,7 @@ public class GridPaneTest {
         assertEquals(child2, gridpane.getChildren().get(1));
         assertEquals(child3, gridpane.getChildren().get(2));
     }
-    
+
     @Test public void testGridPaneAddColumnAppend() {
         MockResizable child1 = new MockResizable(100,100);
         MockResizable child2 = new MockResizable(100,100);
@@ -780,7 +780,7 @@ public class GridPaneTest {
         assertEquals(child1, gridpane.getChildren().get(0));
         assertEquals(child2, gridpane.getChildren().get(1));
         assertEquals(child3, gridpane.getChildren().get(2));
-        
+
         MockResizable child4 = new MockResizable(100,100);
         MockResizable child5 = new MockResizable(100,100);
         MockResizable child6 = new MockResizable(100,100);
@@ -792,8 +792,8 @@ public class GridPaneTest {
 
         assertEquals((Integer)3, GridPane.getRowIndex(child4));
         assertEquals((Integer)4, GridPane.getRowIndex(child5));
-        assertEquals((Integer)5, GridPane.getRowIndex(child6));        
-    }    
+        assertEquals((Integer)5, GridPane.getRowIndex(child6));
+    }
 
     @Test public void testColumnConstraintsDefaults() {
         ColumnConstraints cc = new ColumnConstraints();
@@ -1818,7 +1818,7 @@ public class GridPaneTest {
         assertEquals(233, child0_0.getLayoutBounds().getWidth(), 1e-100);
         assertEquals(129, child0_0.getLayoutBounds().getHeight(), 1e-100);
         assertEquals(233, child1_0.getLayoutX(), 1e-100);
-        assertEquals(14.5, child1_0.getLayoutY(), 1e-100);
+        assertEquals(15, child1_0.getLayoutY(), 1e-100);
         assertEquals(100, child1_0.getLayoutBounds().getWidth(), 1e-100);
         assertEquals(100, child1_0.getLayoutBounds().getHeight(), 1e-100);
         assertEquals(366, child2_0.getLayoutX(), 1e-100);
@@ -1859,7 +1859,7 @@ public class GridPaneTest {
         gridpane.getRowConstraints().add(row);
 
         GridPane.setHgrow(child2_0, Priority.ALWAYS);
-        
+
         gridpane.getChildren().addAll(child0_0, child1_0, child2_0,
                                       child0_1, child1_1, child2_1);
 
@@ -1914,7 +1914,7 @@ public class GridPaneTest {
         row.setFillHeight(true);
         gridpane.getRowConstraints().add(row);
         GridPane.setHgrow(child2_0, Priority.ALWAYS);
-        
+
         gridpane.getChildren().addAll(child0_0, child1_0, child2_0,
                                       child0_1, child1_1, child2_1);
 
@@ -1957,7 +1957,7 @@ public class GridPaneTest {
         GridPane.setConstraints(child1_1, 1, 1);
 
         gridpane.getChildren().addAll(child0_0, child1_0, child1_1);
-        
+
         gridpane.resize(500, 600);
         gridpane.layout();
 
@@ -2043,7 +2043,7 @@ public class GridPaneTest {
         assertEquals(500, child2_1.getLayoutX(), 1e-100);
         assertEquals(100, child2_1.getLayoutY(), 1e-100);
         assertEquals(300, child2_1.getLayoutBounds().getWidth(), 1e-100);
-        assertEquals(300, child2_1.getLayoutBounds().getHeight(), 1e-100);       
+        assertEquals(300, child2_1.getLayoutBounds().getHeight(), 1e-100);
     }
 
     @Test public void testGridPaneWithVerticalContentBiasVerticalShrinking() {
@@ -2063,7 +2063,7 @@ public class GridPaneTest {
         gridpane.getChildren().addAll(child0_0, child1_0,
                                       child0_1, child1_1,
                                       child0_2, child1_2);
-        
+
         assertEquals(Orientation.VERTICAL, gridpane.getContentBias());
         assertEquals(300, gridpane.prefWidth(-1), 0);
         assertEquals(500, gridpane.prefHeight(-1), 0);
@@ -2121,7 +2121,7 @@ public class GridPaneTest {
         col.setFillWidth(false);
         gridpane.getColumnConstraints().add(col);
         GridPane.setVgrow(child0_2, Priority.ALWAYS);
-               
+
         assertEquals(Orientation.VERTICAL, gridpane.getContentBias());
         assertEquals(300, gridpane.prefWidth(600), 0);
         gridpane.resize(300, 600);
@@ -2176,7 +2176,7 @@ public class GridPaneTest {
         col.setFillWidth(true);
         gridpane.getColumnConstraints().add(col);
         GridPane.setVgrow(child0_2, Priority.ALWAYS);
-               
+
         assertEquals(Orientation.VERTICAL, gridpane.getContentBias());
         assertEquals(300, gridpane.prefWidth(600), 0);
         gridpane.resize(300, 600);
@@ -2257,89 +2257,89 @@ public class GridPaneTest {
         assertEquals(200, gridpane.prefWidth(-1), 0);
         assertEquals(200, gridpane.prefHeight(-1), 0);
     }
-    
+
     @Test public void test_RT20573_USE_PREF_SIZEisIgnored() {
         ColumnConstraints cc = new ColumnConstraints();
         cc.setMinWidth(100);
         cc.setMaxWidth(Region.USE_PREF_SIZE);
-        
+
         ColumnConstraints cc2 = new ColumnConstraints();
         cc2.setMinWidth(50);
-        cc2.setMaxWidth(Region.USE_PREF_SIZE);        
-        
+        cc2.setMaxWidth(Region.USE_PREF_SIZE);
+
         gridpane.getColumnConstraints().addAll(cc, cc2);
 
         MockResizable child1_0 = new MockResizable(50,50);
-        GridPane.setConstraints(child1_0, 1, 0);        
+        GridPane.setConstraints(child1_0, 1, 0);
         gridpane.getChildren().add(child1_0);
-        
+
         gridpane.resize(200,200);
-        gridpane.layout();        
+        gridpane.layout();
         double[] cw = gridpane.getColumnWidths();
 
         assertEquals(100, cw[0], 1e-100);
         assertEquals(50, cw[1], 1e-100);
     }
-    
+
     @Test public void test_RT20931_cellHeightTotalShouldEqualColumnHeight() {
         ColumnConstraints c1 = new ColumnConstraints();
         c1.setMinWidth(10);
         c1.setHgrow(Priority.SOMETIMES);
-        
+
         ColumnConstraints c2 = new ColumnConstraints();
         c2.setMinWidth(10);
         c2.setHgrow(Priority.SOMETIMES);
-                
+
         RowConstraints r1 = new RowConstraints();
         r1.setMinHeight(10);
         r1.setVgrow(Priority.SOMETIMES);
-        
+
         RowConstraints r2 = new RowConstraints();
         r2.setMinHeight(10);
         r2.setVgrow(Priority.SOMETIMES);
-        
+
         RowConstraints r3 = new RowConstraints();
         r3.setMinHeight(10);
-        r3.setVgrow(Priority.SOMETIMES);        
-        
+        r3.setVgrow(Priority.SOMETIMES);
+
         gridpane.getColumnConstraints().addAll(c1, c2);
         gridpane.getRowConstraints().addAll(r1, r2, r3);
-        
+
         gridpane.resize(150, 73);
-        gridpane.layout();        
+        gridpane.layout();
         double[] rh = gridpane.getRowHeights();
 
         assertEquals(25, rh[0], 1e-100);
         assertEquals(24, rh[1], 1e-100);
         assertEquals(24, rh[2], 1e-100);
     }
-    
+
     @Test public void test_RT20931_cellWidthTotalShouldEqualRowWidth() {
         ColumnConstraints c1 = new ColumnConstraints();
         c1.setMinWidth(10);
         c1.setHgrow(Priority.SOMETIMES);
-        
+
         ColumnConstraints c2 = new ColumnConstraints();
         c2.setMinWidth(10);
         c2.setHgrow(Priority.SOMETIMES);
-                
+
         RowConstraints r1 = new RowConstraints();
         r1.setMinHeight(10);
         r1.setVgrow(Priority.SOMETIMES);
-        
+
         RowConstraints r2 = new RowConstraints();
         r2.setMinHeight(10);
         r2.setVgrow(Priority.SOMETIMES);
-        
+
         RowConstraints r3 = new RowConstraints();
         r3.setMinHeight(10);
-        r3.setVgrow(Priority.SOMETIMES);        
-        
+        r3.setVgrow(Priority.SOMETIMES);
+
         gridpane.getColumnConstraints().addAll(c1, c2);
         gridpane.getRowConstraints().addAll(r1, r2, r3);
-        
+
         gridpane.resize(151, 73);
-        gridpane.layout();        
+        gridpane.layout();
         double[] cw = gridpane.getColumnWidths();
 
         assertEquals(76, cw[0], 1e-100);
