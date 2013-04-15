@@ -80,39 +80,44 @@ task generate << {
         include "generated/ensemble/search/index/"
     }
 
-    // Create the build-tools project
+    // Create the buildSrc project
+    copy {
+        from "$RTDir/gradleBuildSrc"
+        into "$FXDir/buildSrc"
+    }
+
     copy {
         from "${RTDir}/javafx-beans/src"
-        into "${FXDir}/build-tools/src/main/java"
+        into "${FXDir}/buildSrc/src/main/java"
         include "com/sun/javafx/beans/annotations/**",
                 "com/sun/javafx/collections/annotations/**"
     }
     copy {
         from "${RTDir}/javafx-annotation-processor/src",
              "${RTDir}/decora-compiler/src"
-        into "${FXDir}/build-tools/src/main/java"
+        into "${FXDir}/buildSrc/src/main/java"
         exclude excludeFromSource
     }
     copy {
         from "${RTDir}/javafx-annotation-processor/src",
              "${RTDir}/decora-compiler/src"
-        into "${FXDir}/build-tools/src/main/resources"
+        into "${FXDir}/buildSrc/src/main/resources"
         include includeInResources
         exclude excludeFromResources
         exclude "**/META-INF/**/*"
     }
     copy {
         from "${RTDir}/decora-compiler/src/com/sun/scenario/effect/compiler/JSL.g"
-        into "${FXDir}/build-tools/src/main/antlr"
+        into "${FXDir}/buildSrc/src/main/antlr"
     }
     copy {
         from "${RTDir}/decora-compiler/test"
-        into "${FXDir}/build-tools/src/test/java"
+        into "${FXDir}/buildSrc/src/test/java"
         exclude excludeFromSource
     }
     copy {
         from "${RTDir}/decora-compiler/test"
-        into "${FXDir}/build-tools/src/test/resources"
+        into "${FXDir}/buildSrc/src/test/resources"
         include includeInResources
         exclude excludeFromResources
     }

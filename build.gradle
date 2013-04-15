@@ -52,7 +52,6 @@ import java.util.concurrent.*
  *  - sqe testing
  *  - API change check
  *  - Pushing results to a repo?
- *  - partial builds for compileXXX shaders isn't working until after 2 compiles
  *  - ServiceWithSecurityManagerTest fails to complete when run from gradle.
  *  - Integrate Parfait reports for C code
  *  - FXML Project tests are not running
@@ -349,10 +348,6 @@ logger.info("RELEASE_MILESTONE: $RELEASE_MILESTONE");
  *                                                                            *
  *                Definition of Native Code Compilation Tasks                 *
  *                                                                            *
- *  Three custom tasks are defined here to aid in compiling native code. This *
- *  approach removes the need to use make files for any of the projects under *
- *  our control (webkit and gstreamer both still require 'make' to build).    *
- *                                                                            *
  *    - JavaHeaderTask is used to run javah. The JAVAH property will point at *
  *      the version of javah to be used (i.e.: a path to javah)               *
  *    - CCTask compiles native code. Specifically it will compile .m, .c,     *
@@ -365,293 +360,13 @@ logger.info("RELEASE_MILESTONE: $RELEASE_MILESTONE");
  *                                                                            *
  *****************************************************************************/
 
-class JavaHeaderTask extends DefaultTask {
-    @OutputDirectory File output;
-    List sourceRoots = new ArrayList();
-    FileCollection classpath;
-    private final PatternFilterable patternSet = new PatternSet();
-
-//    @InputFiles public void setSource(Object source) {
-//        sourceRoots.clear();
-//        sourceRoots.add(source);
-//    }
-//
-    public JavaHeaderTask source(Object... sources) {
-        for (Object source : sources) {
-            sourceRoots.add(source);
-        }
-        return this;
-    }
-
-    public JavaHeaderTask include(Iterable includes) {
-        patternSet.include(includes);
-        return this;
-    }
-
-    public JavaHeaderTask include(String... includes) {
-        patternSet.include(includes);
-        return this;
-    }
-
-    public JavaHeaderTask exclude(Iterable excludes) {
-        patternSet.exclude(excludes);
-        return this;
-    }
-
-    @TaskAction void runJavaH() {
-        // For each .java file we need to figure out what class
-        // the .java file belongs in and convert to a class name.
-        List classNames = [];
-        def ps = patternSet;
-        sourceRoots.each { root ->
-            logger.info("javah: looking for classes in source root '$root'")
-            FileTree files = project.files(root).getAsFileTree().matching(ps);
-            files.visit({ fileTreeElement ->
-                if (!fileTreeElement.isDirectory() && fileTreeElement.getName().endsWith(".class")) {
-                    logger.info("javah:\tconsidering file '$fileTreeElement.name'")
-                    String path = fileTreeElement.getPath();
-                    String className = path.substring(0, path.length() - 6).replace("/", ".");
-                    boolean skip = false;
-                    int dollar = className.lastIndexOf('$');
-                    if (dollar > 0) {
-                        String lastPart = className.substring(dollar + 1);
-                        skip = lastPart.matches("[0123456789]*");
-                    }
-                    if (!skip) classNames.add(className)
-                }
-            })
-        }
-        // Execute javah
-        project.exec({
-            commandLine("$project.JAVAH", "-J-Djava.ext.dirs=", "-d", "$output", "-classpath", "${classpath.asPath}");
-            args(classNames);
-        });
-    }
-}
-
-class NativeCompileTask extends DefaultTask {
-    @Optional String matches; // regex for matching input files
-    List<String> params = new ArrayList<String>();
-    List sourceRoots = new ArrayList();
-    @OutputDirectory File output;
-    private final PatternFilterable patternSet = new PatternSet();
-
-    @InputFiles public void setSource(Object source) {
-        sourceRoots.clear();
-        sourceRoots.add(source);
-    }
-
-    public NativeCompileTask source(Object... sources) {
-        for (Object source : sources) {
-            sourceRoots.add(source);
-        }
-        return this;
-    }
-
-    public NativeCompileTask include(String... includes) {
-        patternSet.include(includes);
-        return this;
-    }
-
-    public NativeCompileTask include(Iterable<String> includes) {
-        patternSet.include(includes);
-        return this;
-    }
-
-    @TaskAction void compile() {
-        // Get the existing native-dependencies file from build/dependency-cache and load its contents into
-        // memory. If the file doesn't exist, then we will just have an empty dependency map.
-        final Map<String, Map> dependencies = new ConcurrentHashMap<>();
-        final File nativeDependenciesFile = project.file("$project.buildDir/dependency-cache/native-dependencies");
-        if (nativeDependenciesFile.exists()) {
-            nativeDependenciesFile.splitEachLine("\t", { strings ->
-                dependencies.put(strings[0], ["DATE":Long.parseLong(strings[1]), "SIZE":Long.parseLong(strings[2])]);
-            });
-        }
-
-        project.mkdir(output);
-        // Combine the different source roots into a single FileCollection based on all files in each source root
-        def allFiles = [];
-        sourceRoots.each {
-            allFiles += project.file(it).listFiles()
-        }
-        def source = project.files(allFiles);
-        final Set<File> files = matches == null ? new HashSet<File>(source.files) : source.filter{it.name.matches(matches)}.files;
-        boolean shouldCompileAnyway = false;
-        final boolean forceCompile = shouldCompileAnyway;
-        final ExecutorService executor = Executors.newFixedThreadPool(Integer.parseInt(project.NUM_COMPILE_THREADS.toString()));
-        final CountDownLatch latch = new CountDownLatch(files.size());
-        List futures = new ArrayList<Future>();
-        files.each { File sourceFile ->
-            futures.add(executor.submit(new Runnable() {
-                @Override public void run() {
-                    try {
-                        final File outputFile = outputFile(sourceFile);
-                        // If the source file is not listed in dependencies, then we must compile it.
-                        // If the target file(s) (.rc or .cur in the case of resources, .pdb or .obj for sources)
-                        //    do not exist, then compile.
-                        // If the source file date or size differs from dependencies, then compile it.
-                        final Map sourceFileData = dependencies.get(sourceFile.toString());
-                        if (forceCompile || sourceFileData == null || !outputFile.exists() ||
-                                !sourceFileData["DATE"].equals(sourceFile.lastModified()) ||
-                                !sourceFileData["SIZE"].equals(sourceFile.length()))
-                        {
-                            doCompile(sourceFile, outputFile)
-                        }
-                        dependencies.put(sourceFile.toString(), ["DATE":sourceFile.lastModified(), "SIZE":sourceFile.length()]);
-                    } finally {
-                        latch.countDown();
-                    }
-                }
-            }));
-        }
-        latch.await();
-        // Looking for whether an exception occurred while executing any of the futures.
-        // By calling "get()" on each future an exception will be thrown if one had occurred
-        // on the background thread.
-        futures.each {it.get();}
-
-        // Update the native-dependencies file
-        if (nativeDependenciesFile.exists()) nativeDependenciesFile.delete();
-        nativeDependenciesFile.getParentFile().mkdirs();
-        nativeDependenciesFile.createNewFile();
-        dependencies.each { key, value ->
-            nativeDependenciesFile << key << "\t" << value["DATE"] << "\t" << value["SIZE"] << "\n";
-        }
-    }
-
-    protected void doCompile(File sourceFile, File outputFile){ }
-    protected File outputFile(File sourceFile) { return null; }
-}
-
-class CompileResourceTask extends NativeCompileTask {
-    protected File outputFile(File sourceFile) {
-        final String outFileName = sourceFile.getName().substring(0, sourceFile.getName().lastIndexOf("."));
-        return new File("$output/${outFileName}.res");
-    }
-
-    protected void doCompile(File sourceFile, File outputFile){
-        project.exec({
-            commandLine("$project.RC", "/nologo", "/fo$outputFile", "$sourceFile");
-            environment(project.WINDOWS_NATIVE_COMPILE_ENVIRONMENT);
-        });
-    }
-}
-
-class CompileHLSLTask extends NativeCompileTask {
-    protected File outputFile(File sourceFile) {
-        new File("$output/${sourceFile.name.replace('.hlsl', '.obj')}");
-    }
-
-    protected void doCompile(File sourceFile, File outputFile){
-        project.exec({
-            commandLine = ["$project.FXC", "/nologo", "/T", "ps_3_0", "/Fo", "$outputFile", "$sourceFile"]
-            environment(project.WINDOWS_NATIVE_COMPILE_ENVIRONMENT);
-        });
-    }
-}
-
-class CCTask extends NativeCompileTask {
-    @Optional String compiler;
-    @Optional List<String> linkerOptions = new ArrayList<String>();
-    @Optional @InputDirectory File headers;
-    @Optional Closure eachOutputFile; // will be given a File and must return a File
-    @Optional boolean exe = false;
-
-    protected File outputFile(File sourceFile) {
-        final String outFileName = sourceFile.getName().substring(0, sourceFile.getName().lastIndexOf("."));
-        new File("$output/${outFileName}.obj");
-    }
-
-    protected void doCompile(File sourceFile, File outputFile) {
-        if (eachOutputFile != null) {
-            outputFile = eachOutputFile(outputFile);
-        }
-
-        // or compile sources using CC
-        final int lastDot = outputFile.name.lastIndexOf(".");
-        final File pdbFile = new File("$output/${lastDot > 0 ? outputFile.name.substring(0, lastDot) + '.pdb' : outputFile.name + '.pdb'}");
-
-        // TODO the PDB file is never being built -- maybe because it is only built during
-        // debug builds, otherwise that flag is ignored "/Fd" or "-Fd"
-        project.exec({
-            commandLine("${compiler == null ? project.CC : compiler}");
-            if (headers != null) args("-I$headers");
-
-            // Add the source roots in as include directories
-            sourceRoots.each { root ->
-                final File file = root instanceof File ? (File) root : project.file(root)
-                args("-I$file");
-            }
-
-            // Add in any additional compilation params
-            if (params != null) {
-                // A little hack. Only use the -std=c99 flag if compiling .c or .m
-                if (sourceFile.name.endsWith(".cpp") || sourceFile.name.endsWith(".cc")) {
-                    def stripped = params;
-                    stripped.remove("-std=c99");
-                    args(stripped)
-                } else {
-                    args(params)
-                }
-            };
-
-            // Add the name of the source file to compile
-            if (project.IS_WINDOWS) {
-                if (exe) {
-                    final File exeFile = new File("$output/${lastDot > 0 ? outputFile.name.substring(0, lastDot) + '.exe' : outputFile.name + '.exe'}");
-                    args(/*"/Fd$pdbFile",*/ "/Fo$outputFile", "/Fe$exeFile", "$sourceFile")
-                } else {
-                    args(/*"/Fd$pdbFile",*/ "/Fo$outputFile", "$sourceFile");
-                }
-            } else {
-                args(/*"-Fd$pdbFile",*/ "-o", "$outputFile", "$sourceFile");
-            }
-
-            // Add any optional linker options -- used now rarely but can be
-            // used for any cc task which isn't going to be followed by a
-            // link task
-            if (linkerOptions != null && !linkerOptions.isEmpty()) {
-                args(linkerOptions);
-            }
-
-            if (project.IS_WINDOWS){
-                environment(project.WINDOWS_NATIVE_COMPILE_ENVIRONMENT);
-            }
-        });
-    }
-}
-
-class LinkTask extends DefaultTask {
-    List<String> linkParams = new ArrayList<String>();
-    @InputDirectory File objectDir;
-    @OutputFile File lib;
-    @TaskAction void compile() {
-        // Link & generate the library (.dll, .so, .dylib)
-        lib.getParentFile().mkdirs();
-        project.exec({
-            commandLine("$project.LINK");
-            args(objectDir.listFiles());
-            if (project.IS_WINDOWS) {
-                args("/out:$lib");
-            } else {
-                args("-o", "$lib");
-            }
-            if (project.IS_DEBUG && !project.IS_WINDOWS) args("-g");
-            if (linkParams != null) args(linkParams);
-            if (project.IS_WINDOWS){
-                final String libPath = lib.toString();
-                final String libPrefix = libPath.substring(0, libPath.lastIndexOf("."))
-                args("/pdb:${libPrefix}.pdb",
-                    "/map:${libPrefix}.map");
-                environment(project.WINDOWS_NATIVE_COMPILE_ENVIRONMENT);
-            }
-        });
-    }
-}
+// Save a reference to the buildSrc.jar file because we need it for actually
+// compiling things, not just for the sake of this build script
+// (such as generating the builders, JSL files, etc)
+ext.BUILD_SRC = rootProject.files("buildSrc/build/libs/buildSrc.jar");
 
 /**
-* Convenience lambda for creating javah, cc, link, and "native" tasks in the given project. These
+* Convenience method for creating javah, cc, link, and "native" tasks in the given project. These
 * tasks are parameterized by name, so that we can produce, for example, javahGlass, ccGlass, etc
 * named tasks.
 */
@@ -693,12 +408,12 @@ void addNative(Project project, String name) {
 
 void addJSL(Project project, String name, Closure compile) {
     def lowerName = name.toLowerCase()
+
     def compileCompilers = project.task("compile${name}Compilers", type: JavaCompile, dependsOn: project.compileJava) {
         description = "Compile the $name JSL Compilers"
-        classpath = project.files(
-                project.sourceSets.main.output.classesDir,
-                rootProject.project(":build-tools").sourceSets.main.output.classesDir) +
-                rootProject.project(":build-tools").configurations.antlr3
+        classpath = project.files(project.sourceSets.main.output.classesDir) +
+                rootProject.BUILD_SRC +
+                project.configurations.antlr3
         source = [project.file("src/main/jsl-$lowerName")]
         destinationDir = project.file("$project.buildDir/classes/jsl-compilers/$lowerName")
     }
@@ -716,9 +431,7 @@ void addJSL(Project project, String name, Closure compile) {
 
     project.task("compile${name}JavaShaders", type: JavaCompile, dependsOn: generateShaders) {
         description = "Compile the Java $name JSL shaders"
-        classpath = project.files(
-                project.sourceSets.main.output.classesDir,
-                rootProject.project(":build-tools").sourceSets.main.output.classesDir)
+        classpath = project.files(project.sourceSets.main.output.classesDir) + rootProject.BUILD_SRC
         source = [project.file("$project.buildDir/generated-src/jsl-$lowerName")]
         destinationDir = project.file("$project.buildDir/classes/jsl-$lowerName")
     }
@@ -815,52 +528,11 @@ allprojects {
     }
 }
 
-// The build-tools project contains the annotation processor that is used to generate the
-// builders, the decora compiler used for effects, and various annotations we use for FXML
-// etc. Nothing in build-tools should *ever* be shipped with the runtime.
-project(":build-tools") {
-    // Include the to-be-generated antlr source files int he source set. We will generate
-    // the antlr sources first before compilation.
-    sourceSets {
-        main.java.srcDirs = ["src/main/java", "$buildDir/generated-src/antlr"]
-    }
-
-    // Workaround for lack of Antlr 3 support in Gradle. By defining a configuration,
-    // we can then give it a class path and use that classpath to execute a java command
-    getConfigurations().add("antlr3");
-
-    dependencies {
-        compile("org.antlr:antlr-runtime:3.1.3");
-        antlr3("org.antlr:antlr-runtime:3.1.3",
-               "org.antlr:stringtemplate:3.2@jar",
-               "org.antlr:antlr:3.1.3@jar");
-    }
-
-    // This is the task that will call antlr to generate the sources
-    task generateGrammarSource(type: JavaExec) {
-        description = "Generate JSL parser from Antlr3 grammars"
-        String dest = "$buildDir/generated-src/antlr/com/sun/scenario/effect/compiler"
-        String src = "src/main/antlr"
-        inputs.dir file(src)
-        outputs.dir file(dest)
-        def grammars = fileTree(src).include("**/*.g")
-        main = "org.antlr.Tool"
-        classpath = configurations.antlr3
-        args = ["-o", dest, grammars.files].flatten()
-    }
-
-    // Configure the compileJava task so that it relies on the task for generating
-    // the grammar source (gotta have it prior to compilation)
-    compileJava {
-        dependsOn(generateGrammarSource);
-    }
-}
-
 // The "base" project is our first module and the most basic one required for
 // all other modules. It is useful even for non-GUI applications.
 project(":base") {
     dependencies {
-        compile project(":build-tools")
+        compile BUILD_SRC
     }
 
     // We need to take the VersionInfo.java file and replace the various
@@ -897,6 +569,10 @@ project(":base") {
 // This is a fairly complicated module. There are many different types of native components
 // that all need to be compiled.
 project(":graphics") {
+    // Workaround for lack of Antlr 3 support in Gradle. By defining a configuration,
+    // we can then give it a class path and use that classpath to execute a java command
+    getConfigurations().add("antlr3");
+
     sourceSets {
         main
         test
@@ -904,9 +580,10 @@ project(":graphics") {
     }
 
     dependencies {
-        compile project(":base"), project(":build-tools")
+        compile project(":base"), BUILD_SRC
         compile ":$SWT_FILE_NAME:"
         stubCompile "junit:junit:4.8.2", project(":base").sourceSets.test.output, sourceSets.main.output
+        antlr3("org.antlr:antlr-runtime:3.1.3");
     }
 
     // Add the tasks for native compilation of Glass
@@ -967,7 +644,7 @@ project(":graphics") {
             javaexec {
                 workingDir = "modules/graphics"
                 main = settings.generator
-                classpath = configurations.compile
+                classpath = configurations.compile + configurations.antlr3
                 classpath += files("$buildDir/classes/jsl-compilers/decora")
                 args = ["-i", sourceDir, "-o", destinationDir, "-t", "-pkg", "com/sun/scenario/effect", "$settings.outputs", "$settings.fileName"]
             }
@@ -1012,7 +689,7 @@ project(":graphics") {
             javaexec {
                 workingDir = "modules/graphics"
                 main = "CompileJSL"
-                classpath = configurations.compile
+                classpath = configurations.compile + configurations.antlr3
                 classpath += files("$buildDir/classes/jsl-compilers/prism", "modules/graphics/src/main/jsl-prism") // for the .stg
                 args = ["-i", sourceDir, "-o", destinationDir, "-t", "-pkg", "com/sun/prism", "-d3d", "-es2", "-name", "$file"]
             }
@@ -1063,7 +740,7 @@ project(":graphics") {
 
 project(":controls") {
     dependencies {
-        compile project(":build-tools"), project(":base"), project(":graphics"), project(":designTime")
+        compile BUILD_SRC, project(":base"), project(":graphics"), project(":designTime")
         testCompile project(":graphics").sourceSets.stub.output
     }
 
@@ -1075,7 +752,7 @@ project(":controls") {
         forkEvery = 1
     }
 
-    // TODO Css2Bin really should be moved out and put into build-tools if it can be
+    // TODO Css2Bin really should be moved out and put into buildSrc if it can be
     // TODO could change script to dynamically locate all .css files and create bss for them, probably better
     // TODO also not sure there is any benefit to having css files in the jfxrt.jar at all
     processResources << {
@@ -1102,7 +779,7 @@ project(":swing") {
     }
 
     dependencies {
-        compile project(":build-tools"), project(":base"), project(":graphics")
+        compile BUILD_SRC, project(":base"), project(":graphics")
     }
 }
 
@@ -1113,14 +790,14 @@ project(":swt") {
     }
 
     dependencies {
-        compile project(":build-tools"), project(":base"), project(":graphics")
+        compile BUILD_SRC, project(":base"), project(":graphics")
         compile ":$SWT_FILE_NAME:"
     }
 }
 
 project(":fxml") {
     dependencies {
-        compile project(":build-tools"), project(":base"), project(":graphics"),
+        compile BUILD_SRC, project(":base"), project(":graphics"),
                 project(":controls"), project(":swt"), project(":swing")
         testCompile project(":graphics").sourceSets.stub.output
     }
@@ -1813,14 +1490,14 @@ questions.""");
     }
 }
 
-project(":build-tools") {
-    // Add antlr to the sources for IDEA
-    idea {
-        module {
-            sourceDirs += file("$buildDir/generated-src/antlr")
-        }
-    }
-}
+//project("buildSrc") {
+//    // Add antlr to the sources for IDEA
+//    idea {
+//        module {
+//            sourceDirs += file("$buildDir/generated-src/antlr")
+//        }
+//    }
+//}
 
 project(":base") {
     // Add in the version-info generated sources for IDEA projects
