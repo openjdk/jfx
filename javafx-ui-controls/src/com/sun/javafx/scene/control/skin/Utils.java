@@ -55,15 +55,27 @@ import javafx.scene.text.TextBoundsType;
 
 import com.sun.javafx.scene.control.behavior.TextBinding;
 
+/**
+ * BE REALLY CAREFUL WITH RESTORING OR RESETTING STATE OF helper NODE AS LEFTOVER
+ * STATE CAUSES REALLY ODD NASTY BUGS!
+ *
+ * We expect all methods to set the Font property of helper but other than that
+ * any properties set should be restored to defaults.
+ */
 public class Utils {
 
-    static Text helper = new Text();
+    static final Text helper = new Text();
+    static final double DEFAULT_WRAPPING_WIDTH = helper.getWrappingWidth();
+    static final double DEFAULT_LINE_SPACING = helper.getLineSpacing();
+    static final String DEFAULT_TEXT = helper.getText();
+    static final TextBoundsType DEFAULT_BOUNDS_TYPE = helper.getBoundsType();
 
     static double getAscent(Font font, TextBoundsType boundsType) {
         helper.setFont(font);
         helper.setBoundsType(boundsType);
         final double ascent = helper.getBaselineOffset();
-        helper.setBoundsType(TextBoundsType.LOGICAL); // restore
+        // RESTORE STATE
+        helper.setBoundsType(DEFAULT_BOUNDS_TYPE);
         return ascent;
     }
 
@@ -71,7 +83,8 @@ public class Utils {
         helper.setFont(font);
         helper.setBoundsType(boundsType);
         final double lineHeight = helper.getLayoutBounds().getHeight();
-        helper.setBoundsType(TextBoundsType.LOGICAL); // restore
+        // RESTORE STATE
+        helper.setBoundsType(DEFAULT_BOUNDS_TYPE);
         return lineHeight;
     }
 
@@ -84,7 +97,12 @@ public class Utils {
         helper.setLineSpacing(0);
         double w = Math.min(helper.prefWidth(-1), wrappingWidth);
         helper.setWrappingWidth((int)Math.ceil(w));
-        return Math.ceil(helper.getLayoutBounds().getWidth());
+        w = Math.ceil(helper.getLayoutBounds().getWidth());
+        // RESTORE STATE
+        helper.setWrappingWidth(DEFAULT_WRAPPING_WIDTH);
+        helper.setLineSpacing(DEFAULT_LINE_SPACING);
+        helper.setText(DEFAULT_TEXT);
+        return w;
     }
 
     static double computeTextHeight(Font font, String text, double wrappingWidth, TextBoundsType boundsType) {
@@ -98,7 +116,11 @@ public class Utils {
         helper.setLineSpacing((int)lineSpacing);
         helper.setBoundsType(boundsType);
         final double height = helper.getLayoutBounds().getHeight();
-        helper.setBoundsType(TextBoundsType.LOGICAL); // restore
+        // RESTORE STATE
+        helper.setWrappingWidth(DEFAULT_WRAPPING_WIDTH);
+        helper.setLineSpacing(DEFAULT_LINE_SPACING);
+        helper.setText(DEFAULT_TEXT);
+        helper.setBoundsType(DEFAULT_BOUNDS_TYPE);
         return height;
     }
 
@@ -112,7 +134,12 @@ public class Utils {
         // clear what causes the small discrepancies.
         Bounds bounds = helper.getLayoutBounds();
         Point2D endPoint = new Point2D(width - 2, bounds.getMinY() + bounds.getHeight() / 2);
-        return helper.impl_hitTestChar(endPoint).getCharIndex();
+        final int index = helper.impl_hitTestChar(endPoint).getCharIndex();
+        // RESTORE STATE
+        helper.setWrappingWidth(DEFAULT_WRAPPING_WIDTH);
+        helper.setLineSpacing(DEFAULT_LINE_SPACING);
+        helper.setText(DEFAULT_TEXT);
+        return index;
     }
 
     static String computeClippedText(Font font, String text, double width,
@@ -473,7 +500,11 @@ public class Utils {
                 }
             }
         }
-        helper.setBoundsType(TextBoundsType.LOGICAL); // restore
+        // RESTORE STATE
+        helper.setWrappingWidth(DEFAULT_WRAPPING_WIDTH);
+        helper.setLineSpacing(DEFAULT_LINE_SPACING);
+        helper.setText(DEFAULT_TEXT);
+        helper.setBoundsType(DEFAULT_BOUNDS_TYPE);
         return result;
     }
 
