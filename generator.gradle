@@ -276,14 +276,8 @@ task generate << {
     copy {
         from "${RTDir}/prism-ps/jsl",
              "${RTDir}/prism-ps/shadergen"
-        into "${FXDir}/modules/graphics/prism-jsl/src/main/java"
-        exclude "nbproject", "*.iml", "*.stg"
-    }
-
-    copy {
-        from "${RTDir}/prism-ps/shadergen"
-        into "${FXDir}/modules/graphics/prism-jsl/src/main/resources"
-        include "*.stg"
+        into "${FXDir}/modules/graphics/src/main/jsl-prism"
+        exclude "nbproject", "*.iml"
     }
 
     ["glass-lib-gtk", "glass-lib-ios", "glass-lib-lens", "glass-lib-macosx", "glass-lib-windows"].each { dir ->
@@ -316,7 +310,7 @@ task generate << {
     copy {
         from "${RTDir}/decora-runtime/jsl",
              "${RTDir}/decora-runtime/generator"
-        into "${FXDir}/modules/graphics/effects-jsl/src/main/java"
+        into "${FXDir}/modules/graphics/src/main/jsl-decora"
     }
 
     // Create the controls module

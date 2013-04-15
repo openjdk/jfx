@@ -1,11 +1,7 @@
-include "build-tools", "base", "graphics", "controls", "swing", "swt", "fxml", "designTime",
-        "graphics:effects-jsl", "graphics:prism-jsl",
-        "fxpackager"
+include "build-tools", "base", "graphics", "controls", "swing", "swt", "fxml", "designTime", "fxpackager"
 
 project(":base").projectDir = file("modules/base")
 project(":graphics").projectDir = file("modules/graphics")
-project(":graphics:effects-jsl").projectDir = file("modules/graphics/effects-jsl")
-project(":graphics:prism-jsl").projectDir = file("modules/graphics/prism-jsl")
 project(":controls").projectDir = file("modules/controls")
 project(":swing").projectDir = file("modules/swing")
 project(":swt").projectDir = file("modules/swt")

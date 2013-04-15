@@ -57,7 +57,6 @@ if (!windows_tools.exists()) {
     reader.readLine();
     String line;
     while ((line = reader.readLine()) != null && !line.startsWith("######")) {
-        println line
         line = line.replace("\\", "/").replace("/@@ENDOFLINE@@", "").replace("@@ENDOFLINE@@", "").replace("//", "/").replace("windows.vs.", "WINDOWS_VS_");
         windows_tools << line << "\r\n";
     }
