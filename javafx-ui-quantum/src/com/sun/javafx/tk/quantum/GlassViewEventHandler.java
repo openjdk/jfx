@@ -660,7 +660,7 @@ class GlassViewEventHandler extends View.EventHandler {
                     scene.entireSceneNeedsRepaint();
                     AbstractPainter.renderLock.lock();
                     try {
-                        scene.updateViewState();
+                        scene.updateSceneState();
                     } finally {
                         AbstractPainter.renderLock.unlock();
                     }

@@ -183,14 +183,16 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_lens_LensWindow_attachViewToWin
     if (window == NULL) {
         glass_throw_exception_by_name(
             env, glass_NullPointerException, "Window handle is null");
+    } else {
+
+        // note view can be null
+
+        GLASS_LOG_FINE("attach view %p to window %i[%p]", view, window->id, window);
+        window->view = view;
+        result = JNI_TRUE;
     }
 
-    // note view can be null
-
-    GLASS_LOG_FINE("attach view %p to window %i[%p]", view, window->id, window);
-    window->view = view;
-
-    return JNI_TRUE;
+    return result;
 }
 
 
@@ -204,19 +206,24 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_lens_LensWindow__1close
 (JNIEnv *env, jobject jWindow, jlong nativeWindowPtr) {
 
     NativeWindow window = (NativeWindow)jlong_to_ptr(nativeWindowPtr);
+    jboolean result = JNI_FALSE;
+
     if (window == NULL) {
         glass_throw_exception_by_name(
             env, glass_NullPointerException, "Window handle is null");
-    }
-    GLASS_LOG_FINE("close window %i[%p]", window->id, window);
+    } else {
+        GLASS_LOG_FINE("close window %i[%p]", window->id, window);
 
-    int result = glass_window_NativeWindow_release(env, window);
-    if (result != LENS_OK) {
-        GLASS_LOG_SEVERE("Failed to close native window (%p)",
-                         window);
+        LensResult res = glass_window_NativeWindow_release(env, window);
+        if (res != LENS_OK) {
+            GLASS_LOG_SEVERE("Failed to close native window (%p)",
+                             window);
 
+        }
+        result =  (res ? JNI_FALSE : JNI_TRUE);
     }
-    return (result ? JNI_FALSE : JNI_TRUE);
+
+    return result;
 }
 
 /*
@@ -239,14 +246,17 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_lens_LensWindow__1minimize
 (JNIEnv *env, jobject jWindow, jlong nativeWindowPtr, jboolean minimize) {
 
     NativeWindow window = (NativeWindow)jlong_to_ptr(nativeWindowPtr);
+    jboolean result = JNI_FALSE;
     if (window == NULL) {
         glass_throw_exception_by_name(
             env, glass_NullPointerException, "Window handle is null");
+    } else {
+        GLASS_LOG_FINE("minimize window %i[%p]", window->id, window);
+        result = glass_window_minimize(env,
+                                       window,
+                                       minimize);
     }
-    GLASS_LOG_FINE("minimize window %p", window);
-    jboolean result = glass_window_minimize(env,
-                                            window,
-                                            minimize);
+
     return result;
 }
 
@@ -260,15 +270,19 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_lens_LensWindow__1maximize
  jboolean wasMaximized) {
 
     NativeWindow window = (NativeWindow)jlong_to_ptr(nativeWindowPtr);
+    jboolean result = JNI_FALSE;
     if (window == NULL) {
         glass_throw_exception_by_name(
             env, glass_NullPointerException, "Window handle is null");
+    } else {
+        GLASS_LOG_FINE("maximize window %i[%p]", window->id, window);
+        result =  glass_window_maximize(env,
+                                        window,
+                                        maximize,
+                                        wasMaximized);
     }
-    GLASS_LOG_FINE("maximize window %p", window);
-    return glass_window_maximize(env,
-                                 window,
-                                 maximize,
-                                 wasMaximized);
+
+    return result;
 }
 
 JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_lens_LensWindow__1getNativeWindowImpl
@@ -282,25 +296,23 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_lens_LensWindow_setBoundsImpl
  jint x, jint y, jint width, jint height,
  jboolean needToUpdatePostion, jboolean needToUpdateSize, jboolean isContentSize) {
 
-    DEBUG_FUNC_ENTRY();
     NativeWindow window = (NativeWindow)jlong_to_ptr(nativeWindowPtr);
+
     if (window == NULL) {
         glass_throw_exception_by_name(
             env, glass_NullPointerException, "Window handle is null");
+    } else {
+        GLASS_LOG_FINER("setBoundsImpl called with x=%d, y=%d, width=%d, height= %d"
+                        " needToUpdatePostion = %s, needToUpdateSize=%s, "
+                        "isContentSize=%s", x, y, width, height,
+                        needToUpdatePostion ? "true" : "false",
+                        needToUpdateSize ? "true" : "false",
+                        isContentSize ? "true" : "false");
+
+        glass_window_setBoundsImpl(env, window,
+                                   x, y, width, height,
+                                   needToUpdatePostion , needToUpdateSize, isContentSize);
     }
-    GLASS_LOG_FINER("setBoundsImpl called with x=%d, y=%d, width=%d, height= %d"
-                    " needToUpdatePostion = %s, needToUpdateSize=%s, "
-                    "isContentSize=%s", x, y, width, height,
-                    needToUpdatePostion ? "true" : "false",
-                    needToUpdateSize ? "true" : "false",
-                    isContentSize ? "true" : "false");
-
-    glass_window_setBoundsImpl(env, window,
-                               x, y, width, height,
-                               needToUpdatePostion , needToUpdateSize, isContentSize);
-
-    DEBUG_FUNC_EXIT();
-
 }
 
 /*
@@ -312,17 +324,20 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_lens_LensWindow__1setVisible
 (JNIEnv *env, jobject jWindow, jlong nativeWindowPtr, jboolean visible) {
 
     NativeWindow window = (NativeWindow)jlong_to_ptr(nativeWindowPtr);
+    jboolean result = JNI_FALSE;
+
     if (window == NULL) {
         glass_throw_exception_by_name(
             env, glass_NullPointerException, "Window handle is null");
+    } else {
+
+        GLASS_LOG_FINE("set window %i[%p] to %svisible",
+                       window->id, window, visible ? "" : "in");
+        //until setVisible = true, window is expected not to be shown
+        result =  glass_window_setVisible(env, window, visible);
     }
 
-    jboolean result = JNI_FALSE;
-    GLASS_LOG_FINE("set window %i[%p] to %svisible",
-                   window->id, window, visible ? "" : "in");
-    //until setVisible = true, window is expected not to be shown
-    return glass_window_setVisible(env, window, visible);
-
+    return result;
 }
 
 /*
@@ -347,13 +362,19 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_lens_LensWindow__1requestFocus
 (JNIEnv *env, jobject jWindow, jlong nativeWindowPtr, jint focusEventType) {
 
     NativeWindow window = (NativeWindow)jlong_to_ptr(nativeWindowPtr);
+
+    jboolean result = JNI_FALSE;
     if (window == NULL) {
+
         glass_throw_exception_by_name(
             env, glass_NullPointerException, "Window handle is null");
+    } else {
+
+        GLASS_LOG_FINE("request focus on window %p", window);
+        result = glass_window_requestFocus(env, window, focusEventType);
     }
 
-    GLASS_LOG_FINE("request focus on window %p", window);
-    return glass_window_requestFocus(env, window, focusEventType);
+     return result;
 }
 
 /*
@@ -365,13 +386,14 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_lens_LensWindow__1setFocusable
 (JNIEnv *env, jobject jWindow, jlong nativeWindowPtr, jboolean isFocusable) {
 
     NativeWindow window = (NativeWindow)jlong_to_ptr(nativeWindowPtr);
+
     if (window == NULL) {
         glass_throw_exception_by_name(
             env, glass_NullPointerException, "Window handle is null");
+    } else {
+        GLASS_LOG_FINE("set focusable=%i on window %p", (int) isFocusable, window),
+        (void) glass_window_setFocusable(env, window, isFocusable);
     }
-
-    GLASS_LOG_FINE("set focusable=%i on window %p", (int) isFocusable, window),
-    (void) glass_window_setFocusable(env, window, isFocusable);
 }
 
 /*
@@ -399,14 +421,15 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_lens_LensWindow__1setLevel
     if (window == NULL) {
         glass_throw_exception_by_name(
             env, glass_NullPointerException, "Window handle is null");
-    }
+    } else {
 
-    GLASS_LOG_FINE("set level=%i on window %p", level, window);
+        GLASS_LOG_FINE("set level=%i on window %p", level, window);
 
-    if (!glass_window_setLevel(window, level)) {
-        GLASS_LOG_SEVERE("Failed to setLevel for window, handle %p",
-                         jlong_to_ptr(nativeWindowPtr));
-        glass_throw_exception_by_name(env, glass_RuntimeException, "setLevel failed");
+        if (!glass_window_setLevel(window, level)) {
+            GLASS_LOG_SEVERE("Failed to setLevel for window, handle %p",
+                             jlong_to_ptr(nativeWindowPtr));
+            glass_throw_exception_by_name(env, glass_RuntimeException, "setLevel failed");
+        }
     }
 }
 
@@ -422,13 +445,14 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_lens_LensWindow__1setAlpha
     if (window == NULL) {
         glass_throw_exception_by_name(
             env, glass_NullPointerException, "Window handle is null");
-    }
+    } else {
 
-    GLASS_LOG_FINE("set alpha=%f on window %i[%p]", alpha, window->id, window);
+        GLASS_LOG_FINE("set alpha=%f on window %i[%p]", alpha, window->id, window);
 
-    if (!glass_window_setAlpha(env, window, alpha)) {
-        GLASS_LOG_WARNING("failed to set window alpha");
-        //we might want to throw an exception
+        if (!glass_window_setAlpha(env, window, alpha)) {
+            GLASS_LOG_WARNING("failed to set window alpha");
+            //we might want to throw an exception
+        }
     }
 }
 
@@ -442,15 +466,21 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_lens_LensWindow__1setBackground
  jfloat r, jfloat g, jfloat b) {
 
     NativeWindow window = (NativeWindow)jlong_to_ptr(nativeWindowPtr);
+
+
+    jboolean result = JNI_FALSE;
     if (window == NULL) {
         glass_throw_exception_by_name(
             env, glass_NullPointerException, "Window handle is null");
+    } else {
+
+        GLASS_LOG_FINE("set background=(%f,%f,%f) on window %p",
+                       r, g, b, window);
+
+        result = glass_window_setBackground(window, r, g, b);
     }
 
-    GLASS_LOG_FINE("set background=(%f,%f,%f) on window %p",
-                   r, g, b, window);
-
-    return glass_window_setBackground(window, r, g, b);
+     return result;
 }
 
 /*
@@ -465,25 +495,26 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_lens_LensWindow__1setEnabled
     if (window == NULL) {
         glass_throw_exception_by_name(
             env, glass_NullPointerException, "Window handle is null");
-    }
+    } else {
 
-    GLASS_LOG_FINE("set enabled=%s on window %d[%p]",
-                   enabled?"true":"false",
-                   window->id, window);
+        GLASS_LOG_FINE("set enabled=%s on window %d[%p]",
+                       enabled?"true":"false",
+                       window->id, window);
 
-    window->isEnabled = enabled;
+        window->isEnabled = enabled;
 
-    GLASS_LOG_FINE("glass_window_setFocusable(%s)", enabled?"true":"false");
-    glass_window_setFocusable(env, window, enabled);
+        GLASS_LOG_FINE("glass_window_setFocusable(%s)", enabled?"true":"false");
+        glass_window_setFocusable(env, window, enabled);
 
-    //syntheticlly notify view for mouse exit
-    if (!enabled && window->view) {
-        glass_application_notifyMouseEvent(env,
-                                           window,
-                                           com_sun_glass_events_MouseEvent_EXIT, 
-                                           0,0,0,0,
-                                           com_sun_glass_events_MouseEvent_BUTTON_NONE);
+        //syntheticlly notify view for mouse exit
+        if (!enabled && window->view) {
+            glass_application_notifyMouseEvent(env,
+                                               window,
+                                               com_sun_glass_events_MouseEvent_EXIT, 
+                                               0,0,0,0,
+                                               com_sun_glass_events_MouseEvent_BUTTON_NONE);
 
+        }
     }
 }
 
@@ -496,14 +527,20 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_lens_LensWindow__1setMinimumSiz
 (JNIEnv *env, jobject jWindow, jlong nativeWindowPtr, jint width, jint height) {
 
     NativeWindow window = (NativeWindow)jlong_to_ptr(nativeWindowPtr);
+
+    jboolean result = JNI_FALSE;
+
     if (window == NULL) {
         glass_throw_exception_by_name(
             env, glass_NullPointerException, "Window handle is null");
+    } else {
+
+        GLASS_LOG_FINE("set window %d[%p] minimum size to %ix%i", 
+                       window->id, window, width, height);
+        result = glass_window_setMinimumSize(env, window, width, height);
     }
 
-    GLASS_LOG_FINE("set window %p minimum size to %ix%i", 
-                   window, width, height);
-    return glass_window_setMinimumSize(env, window, width, height);
+     return result;
 }
 
 /*
@@ -515,14 +552,19 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_lens_LensWindow__1setMaximumSiz
 (JNIEnv *env, jobject jWindow, jlong nativeWindowPtr, jint width, jint height) {
 
     NativeWindow window = (NativeWindow)jlong_to_ptr(nativeWindowPtr);
+    jboolean result = JNI_FALSE;
+
     if (window == NULL) {
         glass_throw_exception_by_name(
             env, glass_NullPointerException, "Window handle is null");
+    } else {
+
+        GLASS_LOG_FINE("set window %p maximum size to %ix%i",
+                       window, width, height);
+        result = glass_window_setMaximumSize(env, window, width, height);
     }
 
-    GLASS_LOG_FINE("set window %p maximum size to %ix%i",
-                   window, width, height);
-    return glass_window_setMaximumSize(env, window, width, height);
+     return result;
 }
 
 /*
@@ -548,10 +590,11 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_lens_LensWindow__1toFront
     if (window == NULL) {
         glass_throw_exception_by_name(
             env, glass_NullPointerException, "Window handle is null");
-    }
+    } else {
 
-    GLASS_LOG_FINE("bring window %p to front", window);
-    glass_window_toFront(env, window);
+        GLASS_LOG_FINE("bring window %d[%p] to front", window->id, window);
+        glass_window_toFront(env, window);
+    }
 }
 
 /*
@@ -566,24 +609,29 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_lens_LensWindow__1toBack
     if (window == NULL) {
         glass_throw_exception_by_name(
             env, glass_NullPointerException, "Window handle is null");
+    } else {
+
+        GLASS_LOG_FINE("send window %p to back", window);
+        glass_window_toBack(env, window);
     }
-
-
-    GLASS_LOG_FINE("send window %p to back", window);
-    glass_window_toBack(env, window);
 }
 
 JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_lens_LensWindow__1grabFocus
 (JNIEnv *env, jobject _this, jlong nativeWindowPtr) {
 
     NativeWindow window = (NativeWindow)jlong_to_ptr(nativeWindowPtr);
+    jboolean result = JNI_FALSE;
+
     if (window == NULL) {
         glass_throw_exception_by_name(
             env, glass_NullPointerException, "Window handle is null");
+    } else {
+
+        GLASS_LOG_FINE("grab focus on window %p", window);
+        result = glass_window_grabFocus(env, window);
     }
 
-    GLASS_LOG_FINE("grab focus on window %p", window);
-    return glass_window_grabFocus(env, window);
+     return result;
 }
 
 JNIEXPORT void JNICALL Java_com_sun_glass_ui_lens_LensWindow__1ungrabFocus
@@ -593,26 +641,30 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_lens_LensWindow__1ungrabFocus
     if (window == NULL) {
         glass_throw_exception_by_name(
             env, glass_NullPointerException, "Window handle is null");
-    }
+    } else {
 
-    GLASS_LOG_FINE("ungrab focus on window %p", window);
-    glass_window_ungrabFocus(env, window);
+        GLASS_LOG_FINE("ungrab focus on window %p", window);
+        glass_window_ungrabFocus(env, window);
+    }
 }
 
-void glass_window_check_bounds(NativeWindow window, int *pWidth, int *pHeight) {
+jboolean glass_window_check_bounds(NativeWindow window, int *pWidth, int *pHeight) {
 
     GLASS_LOG_FINE("check bounds for window %i[%p] with new dimentions %ix%i",
                    window->id, window, *pWidth,*pHeight);
+    jboolean paramsAreValid = JNI_TRUE;
 
     //check width
     if (window->minWidth > 0 && *pWidth < window->minWidth) {
         GLASS_LOG_FINE("Width %i, is smaller then the minimum window width (%i)."
                        " Updating width to minimum", *pWidth, window->minWidth);
         *pWidth = window->minWidth;
+        paramsAreValid = JNI_FALSE;
     } else if (window->maxWidth > 0 && *pWidth > window->maxWidth) {
         GLASS_LOG_FINE("Width %i, is bigger then the window's maximum width (%i)."
                        " Updating width to maximum possible", *pWidth, window->maxWidth);
         *pWidth = window->maxWidth;
+         paramsAreValid = JNI_FALSE;
     }
 
     //check height
@@ -621,18 +673,24 @@ void glass_window_check_bounds(NativeWindow window, int *pWidth, int *pHeight) {
         GLASS_LOG_FINE("Height %i, is smaller then the minimum window's height (%i)."
                        " Updating height to minimum possible", *pHeight, window->minHeight);
         *pHeight = window->minHeight;
+        paramsAreValid = JNI_FALSE;
     } else if (window->maxHeight > 0 && *pHeight > window->maxHeight) {
         GLASS_LOG_FINE("Height %i, is bigger then the window's maximum height (%i)."
                        " Updating height to maximum possible", *pHeight, window->maxHeight);
         *pHeight = window->maxHeight;
+        paramsAreValid = JNI_FALSE;
     }
 
-    GLASS_LOG_FINE("Returning width = %i, height = %i", *pWidth, *pHeight);
+    GLASS_LOG_FINE("Params %s. Returning width = %i, height = %i",
+                   (paramsAreValid)? "are valid" : "updated (were out of bounds)",
+                   *pWidth, *pHeight);
+
+    return paramsAreValid;
 }
 
-char *glass_window_getNativeStateName(int nativeWindowState) {
+char *lens_window_getNativeStateName(NativeWindowState state) {
 
-    switch (nativeWindowState) {
+    switch (state) {
         case NWS_FULLSCREEN:
             return "FULLSCREEN";
         case NWS_MAXIMIZED:
@@ -642,7 +700,7 @@ char *glass_window_getNativeStateName(int nativeWindowState) {
         case NWS_NORMAL:
             return "NORMAL";
         default:
-            GLASS_LOG_FINE("unknown native window state (%d)", nativeWindowState);
+            GLASS_LOG_FINE("unknown native window state (%d)", state);
             return "UNKNOWN";
     }
 }
@@ -778,9 +836,16 @@ void glass_window_list_remove(NativeWindow window) {
 
 void glass_window_listPrint() {
     NativeWindow w = windowList_head;
-    GLASS_LOG_FINE("Window list head %p tail %p\n",windowList_head,windowList_tail);
+    GLASS_LOG_FINE("Window list head %i[%p] tail %i[%p]\n",
+                   windowList_head?windowList_head->id : -1,
+                   windowList_head,
+                   windowList_tail? windowList_tail->id : -1,
+                   windowList_tail);
     while (w) {
-        GLASS_LOG_FINE(" window %p p=%p n=%p\n",w,w->previousWindow, w->nextWindow);
+        GLASS_LOG_FINE(" window %i[%p] p=%i[%p] n=%i[%p]\n",
+                       w? w->id :-1, w,
+                       w->previousWindow?w->previousWindow->id :-1, w->previousWindow,
+                       w->nextWindow?w->nextWindow->id : -1, w->nextWindow);
         w = w->nextWindow;
     }
 }

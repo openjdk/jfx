@@ -91,8 +91,7 @@ LensResult glass_window_PlatformWindowRelease(JNIEnv *env, NativeWindow window) 
     return LENS_OK;
 }
 
-jboolean glass_window_setAlpha(JNIEnv *env, NativeWindow window, float alpha) {
-    window->alpha = alpha;
+jboolean glass_window_setAlpha(JNIEnv *env, NativeWindow window, float alpha) {    
     lens_wm_repaint(env, window);
     return JNI_TRUE;
 }
@@ -104,27 +103,7 @@ void glass_pixel_attachIntBuffer(JNIEnv *env,
                                  jint height, int offset) {
     FILE *fb;
     NativeScreen fbScreen = glass_screen_getMainScreen();
-    if (fbScanLine == NULL) {
-        int bytesPerPixel = 0;
-        switch (fbScreen->depth) {
-            case 16:
-                bytesPerPixel = 2;
-                break;
-            case 24:
-            case 32:
-                bytesPerPixel = 4;
-                break;
-            default:
-                GLASS_LOG_SEVERE("Cannot write to screen of depth %i", fbScreen->depth);
-                return;
-        }
-        fbScanLineSize = fbScreen->width * bytesPerPixel;
-        fbScanLine = malloc(fbScanLineSize);
-        if (fbScanLine == NULL) {
-            GLASS_LOG_SEVERE("Cannot allocate scan line of size %i", fbScanLineSize);
-            return;
-        }
-    }
+    
     GLASS_LOG_FINE("fopen(%s, \"w\") to write %ix%i pixels at depth %i",
                    FB_DEVICE, width, height, fbScreen->depth);
     fb = fopen(FB_DEVICE, "w");
@@ -200,7 +179,7 @@ void glass_screen_clear() {
     int y;
     NativeScreen fbScreen = glass_screen_getMainScreen();
 
-    GLASS_LOG_FINE("fopen(%s, \"w\") to clear to background",
+    GLASS_LOG_FINE("fopen(%s, \"w\") to clear the background",
                    FB_DEVICE);
     fb = fopen(FB_DEVICE, "w");
     if (fb == NULL) {
@@ -210,18 +189,20 @@ void glass_screen_clear() {
 
     memset(fbScanLine, 0, fbScanLineSize);
     switch (fbScreen->depth) {
-        case 32: {
+        case 32: 
             for (y = 0; y < fbScreen->height; y++) {
                 fwrite(fbScanLine, 4, fbScanLineSize >> 2, fb);
             }
-        }
-        break;
-        case 16: {
+            GLASS_LOG_FINE("Screen cleared (32bit mode)");
+        
+            break;
+        case 16: 
             for (y = 0; y < fbScreen->height; y++) {
                 fwrite(fbScanLine, 2, fbScanLineSize >> 1, fb);
             }
-        }
-        break;
+            GLASS_LOG_FINE("Screen cleared (16bit mode)");
+        
+            break;
         default:
             GLASS_LOG_SEVERE("Cannot write to screen of depth %i", fbScreen->depth);
     }
@@ -302,6 +283,29 @@ NativeScreen lens_screen_initialize(JNIEnv *env) {
 
     GLASS_LOG_CONFIG("Set resolution to %ix%i dots per inch",
                      fbScreen.resolutionX, fbScreen.resolutionY);
+
+    if (fbScanLine == NULL) {
+        int bytesPerPixel = 0;
+        switch (fbScreen.depth) {
+            case 16:
+                bytesPerPixel = 2;
+                break;
+            case 24:
+            case 32:
+                bytesPerPixel = 4;
+                break;
+            default:
+                GLASS_LOG_SEVERE("Cannot write to screen of depth %i", fbScreen.depth);
+                return NULL;
+        }
+        fbScanLineSize = fbScreen.width * bytesPerPixel;
+        fbScanLine = malloc(fbScanLineSize);
+        if (fbScanLine == NULL) {
+            GLASS_LOG_SEVERE("Cannot allocate scan line of size %i", fbScanLineSize);
+            return NULL;
+        }
+    }
+
     close(fbFileHandle);
 
     return &fbScreen;
@@ -439,4 +443,18 @@ jboolean glass_screen_capture(jint x, jint y,
         fclose(fb);
         return JNI_TRUE;
     }
+}
+
+LensResult lens_platform_windowMinimize(JNIEnv *env,
+                                        NativeWindow window,
+                                        jboolean toMinimize) {
+    //noop for fb
+    return LENS_OK;
+}
+
+LensResult lens_platform_windowSetVisible(JNIEnv *env,
+                                        NativeWindow window,
+                                        jboolean visible) {
+    //noop for fb
+    return LENS_OK;
 }

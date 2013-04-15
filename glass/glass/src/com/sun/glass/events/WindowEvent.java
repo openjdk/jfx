@@ -46,4 +46,39 @@ public class WindowEvent {
     final static public int FOCUS_UNGRAB          = 546;
     
     final static public int INIT_ACCESSIBILITY    = 551;
+
+    public static String getEventName(final int eventType) {
+        switch(eventType) {
+            case WindowEvent.RESIZE:
+                return "RESIZE";
+            case WindowEvent.MOVE:
+                return "MOVE";
+            case WindowEvent.CLOSE:
+                return "CLOSE";
+            case WindowEvent.DESTROY:
+                return "DESTROY";
+            case WindowEvent.MINIMIZE:
+                return "MINIMIZE";
+            case WindowEvent.MAXIMIZE:
+                return "MAXIMIZE";
+            case WindowEvent.RESTORE:
+                return "RESTORE";
+            case WindowEvent.FOCUS_LOST:
+                return "FOCUS_LOST";
+            case WindowEvent.FOCUS_GAINED:
+                return "FOCUS_GAINED";
+            case WindowEvent.FOCUS_GAINED_FORWARD:
+                return "FOCUS_GAINED_FORWARD";
+            case WindowEvent.FOCUS_GAINED_BACKWARD:
+                return "FOCUS_GAINED_BACKWARD";
+            case WindowEvent.FOCUS_DISABLED:
+                return "FOCUS_DISABLED";   
+            case WindowEvent.FOCUS_UNGRAB:
+                return "FOCUS_UNGRAB";   
+            case WindowEvent.INIT_ACCESSIBILITY:
+                return "INIT_ACCESSIBILITY";
+            default:
+                return "UNKNOWN";
+        }
+    }
 }

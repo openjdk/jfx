@@ -74,7 +74,7 @@ abstract class AbstractPainter implements Runnable {
 
     protected static final PaintCollector collector = PaintCollector.getInstance();
 
-    protected GlassScene scene;
+    protected SceneState sceneState;
 
     protected Presentable       presentable;
     protected RenderingContext  context = null;
@@ -97,7 +97,10 @@ abstract class AbstractPainter implements Runnable {
     NGNode                      root, overlayRoot;
 
     protected AbstractPainter(GlassScene gs) {
-        this.scene = gs;
+        sceneState = gs.getSceneState();
+        if (sceneState == null) {
+            throw new NullPointerException("Scene state is null");
+        }
         if (PrismSettings.dirtyOptsEnabled) {
             tx = new Affine3D();
             viewProjTx = new GeneralTransform3D();
@@ -156,7 +159,7 @@ abstract class AbstractPainter implements Runnable {
         dirtyRegionContainer.reset();
         tx.setToIdentity();
         projTx.setIdentity();
-        adjustPerspective(scene.getCamera());
+        adjustPerspective(sceneState.getScene().getCamera());
         int status = root.accumulateDirtyRegions(clip, dirtyRegionTemp,
                                                  dirtyRegionPool, dirtyRegionContainer, 
                                                  tx, projTx);
@@ -169,7 +172,7 @@ abstract class AbstractPainter implements Runnable {
         int status = DirtyRegionContainer.DTR_CONTAINS_CLIP;
         if (PrismSettings.dirtyOptsEnabled) {
             long start = PULSE_LOGGING_ENABLED ? System.currentTimeMillis() : 0;
-            if (!scene.isEntireSceneDirty() && !renderOverlay) {
+            if (!sceneState.getScene().isEntireSceneDirty() && !renderOverlay) {
                 status = setDirtyRect(g);
                 if (status == DirtyRegionContainer.DTR_OK) {
                     root.doPreCulling(dirtyRegionContainer,
@@ -246,7 +249,7 @@ abstract class AbstractPainter implements Runnable {
                                             BasicStroke.JOIN_BEVEL,
                                             10f));
                 for (HighlightRegion region: highlightRegions) {
-                    if (scene.equals(region.getTKScene())) {
+                    if (sceneState.getScene().equals(region.getTKScene())) {
                         g.setPaint(new Color(1, 1, 1, 1));
                         g.drawRect((float) region.getMinX(),
                                    (float) region.getMinY(),
@@ -274,6 +277,6 @@ abstract class AbstractPainter implements Runnable {
     }
     
     protected boolean validateStageGraphics() {
-        return scene.getViewState() != null;
+        return true;
     }
 }
