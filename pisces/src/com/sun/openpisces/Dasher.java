@@ -154,7 +154,7 @@ public final class Dasher implements PathConsumer2D {
             if (starting) {
                 firstSegmentsBuffer =
                     Helpers.widenArray(firstSegmentsBuffer,
-                                       firstSegidx, type - 2);
+                                       firstSegidx, type - 1);
                 firstSegmentsBuffer[firstSegidx++] = type;
                 System.arraycopy(pts, off, firstSegmentsBuffer, firstSegidx, type - 2);
                 firstSegidx += type - 2;
