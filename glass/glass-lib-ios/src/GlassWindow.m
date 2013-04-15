@@ -670,6 +670,10 @@ static inline void setWindowFrame(GlassWindow *window, CGFloat x, CGFloat y, CGF
     if ([self superview] != nil) {
         [self removeFromSuperview];
     }
+    
+    if (focusOwner == self) {
+        focusOwner = nil;
+    }
         
     (*jEnv)->DeleteGlobalRef(jEnv, self->jWindow);
     GLASS_CHECK_EXCEPTION(jEnv);
