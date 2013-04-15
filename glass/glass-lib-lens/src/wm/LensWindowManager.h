@@ -23,8 +23,8 @@
  * questions.
  */
  
-#ifndef __GLASS_WINDOW_MGR_H__
-#define __GLASS_WINDOW_MGR_H__
+#ifndef __LENS_WINDOW_MGR_H__
+#define __LENS_WINDOW_MGR_H__
 
 #include "LensCommon.h"
 
@@ -178,6 +178,34 @@ void lens_wm_repaint(JNIEnv *env, NativeWindow window);
 
 /// platform specific calls
 void lens_platform_shutdown(JNIEnv *env);
+
+/**
+ * Ask the platform window manager to minimize the window.
+ * NOTE: this may be NOOP in some configurations. 
+ * 
+ * @param env 
+ *  
+ * @param window the window to minimize 
+ * 
+ * @return LensResult LENS_OK on success
+ */
+LensResult lens_platform_windowMinimize(JNIEnv *env,
+                                        NativeWindow window,
+                                        jboolean toMinimize);
+
+/**
+ * Ask the platform window manager to set window's visibility.  
+ * NOTE: this may be NOOP in some configurations.
+ * 
+ * @param env 
+ * @param window the window to set visibility on
+ * @param visible does the window need to be visible
+ * 
+ * @return LensResult LENS_OK on success
+ */
+LensResult lens_platform_windowSetVisible(JNIEnv *env,
+                                        NativeWindow window,
+                                        jboolean visible);
 
 
 #endif

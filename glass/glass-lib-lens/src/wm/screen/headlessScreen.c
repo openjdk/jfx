@@ -260,3 +260,17 @@ jboolean glass_screen_capture(jint x,
     return JNI_TRUE;
 }
 
+
+LensResult lens_platform_windowMinimize(JNIEnv *env,
+                                        NativeWindow window,
+                                        jboolean toMinimize) {
+    //noop for headless
+    return LENS_OK;
+}
+
+LensResult lens_platform_windowSetVisible(JNIEnv *env,
+                                        NativeWindow window,
+                                        jboolean visible) {
+    //noop for headless
+    return LENS_OK;
+}

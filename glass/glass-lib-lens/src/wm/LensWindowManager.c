@@ -44,9 +44,6 @@ static jboolean _mousePressed = JNI_FALSE;
 static jboolean _onDraggingAction = JNI_FALSE;
 static NativeWindow _dragGrabbingWindow = NULL;
 
-
-
-
 static inline void render_lock() {
     pthread_mutex_lock(&renderMutex);
 }
@@ -64,6 +61,18 @@ static void lens_wm_initRFB(JNIEnv *env);
 static void lens_wm_rfbNotifyWindowUpdate(NativeWindow window,
                                           int width, int height);
 static void lens_wm_windowCacheBounds(NativeWindow window);
+static void lens_wm_windowUncacheBounds(NativeWindow window);
+NativeWindow lens_wm_unsetFocusedWindow(JNIEnv *env, NativeWindow window);
+
+//service functions to handle window state
+static void lens_wm_windowMinimize(JNIEnv *env,
+                                   NativeWindow window);
+static void lens_wm_windowRestore(JNIEnv *env,
+                                  NativeWindow window);
+static void lens_wm_windowMaximize(JNIEnv *env,
+                                   NativeWindow window);
+static void lens_wm_windowEnterFullscreen(JNIEnv *env,
+                                          NativeWindow window);
 
 jboolean lens_wm_initialize(JNIEnv *env) {
 
@@ -154,191 +163,416 @@ void lens_wm_repaint(JNIEnv *env, NativeWindow window) {
     render_unlock();
 }
 
-static void reset_bounds_and_state(JNIEnv *env, NativeWindow window,
-                                   jint newX, jint newY,
-                                   jint newWidth, jint newHeight,
-                                   NativeWindowState newState) {
+//////////////////////////// WINDOW STATE MACHINE //////////////////////
+static void lens_wm_windowMinimize(JNIEnv *env,
+                                   NativeWindow window) {
 
-    jboolean moved = JNI_FALSE;
-    if ((newX != window->currentBounds.x) ||
-            (newY != window->currentBounds.y)) {
 
-        GLASS_LOG_FINE("Move window %p to %i,%i", window, newX, newY);
-        window->currentBounds.x = newX;
-        window->currentBounds.y = newY;
-        moved = JNI_TRUE;
+    //"undo" previous state, if needed
+    switch (window->state) {
+        case NWS_MINIMIZED:
+            GLASS_LOG_FINE("Nothing to do, skipping");
+            return;
+        case NWS_NORMAL:            
+        case NWS_MAXIMIZED:
+            //NOOP
+            break;
+        case NWS_FULLSCREEN:
+            lens_wm_windowRestore(env, window);
+            break;
+        default:
+            GLASS_LOG_SEVERE("Window is in unsupported NativeWindowState (%i)",
+                              window->state);
     }
 
-    if (newState == NWS_NORMAL) {
-        glass_window_check_bounds(window, &newWidth, &newHeight);
-    }
+    //cache window bounds for restoration
+    lens_wm_windowCacheBounds(window);
 
-    jboolean sized = JNI_FALSE;
-    if ((newWidth != window->currentBounds.width) ||
-            (newHeight != window->currentBounds.height)) {
+    //if supported let platform do the minimization 
+    lens_platform_windowMinimize(env, window, JNI_TRUE);
 
-        GLASS_LOG_FINE("Resize window %p to %ix%i", window, newWidth, newHeight);
-        window->currentBounds.width = newWidth;
-        window->currentBounds.height = newHeight;
-        sized = JNI_TRUE;
-    }
+    //update state
+    window->state = NWS_MINIMIZED;
 
-    jboolean state = JNI_FALSE;
-    if (newState != window->state) {
-        state = JNI_TRUE;
-    }
-
-    jboolean do_repaint = JNI_FALSE;
-
-    //If the window is staying same size/possition and only the content have been changed,
-    //resize event should be sent, in order to repaint the scene
-
-    if (!moved && !sized && !state) {
-        sized = JNI_TRUE;
-    }
-
-    if (moved || sized || state) {
-
-        if (moved) {
+    //if window hold the focus, release it
+    lens_wm_unsetFocusedWindow(env, window);
 
 
-            glass_application_notifyWindowEvent_move(env,
-                                                     window,
-                                                     newX, newY);
+    //Stop rendering this window, because its minimized
+    glass_application_RemoveWindowFromVisibleWindowList(env,window);
 
-            do_repaint = JNI_TRUE;
-        }
-
-        if (sized) {
-
-            glass_application_notifyWindowEvent_resize(env,
-                                                       window,
-                                                       com_sun_glass_events_WindowEvent_RESIZE,
-                                                       newWidth, newHeight);
-
-            do_repaint = JNI_TRUE;
-        }
-
-        if (state) {
-            GLASS_LOG_FINE("State change window %p %i to %i", window, window->state, newState);
-
-            if (window->state == NWS_NORMAL) {
-                if (newState == NWS_FULLSCREEN) {
-                    glass_application_notifyViewEvent(env,
-                                                      window->view,
-                                                      com_sun_glass_events_ViewEvent_FULLSCREEN_ENTER,
-                                                      window->currentBounds.x, window->currentBounds.y,
-                                                      window->currentBounds.width, window->currentBounds.height);
-                } else if (newState == NWS_MAXIMIZED) {
-                    // no events generated
-                } else if (newState == NWS_MINIMIZED) {
-                    glass_application_notifyWindowEvent_resize(env,
-                                                               window,
-                                                               com_sun_glass_events_WindowEvent_MINIMIZE,
-                                                               window->currentBounds.width, window->currentBounds.height);
-                } else {
-                    GLASS_LOG_WARNING("BAD State change on window %p %i to %i", window, window->state, newState);
-                }
-            } else if (window->state == NWS_FULLSCREEN && newState == NWS_NORMAL) {
-                glass_application_notifyViewEvent(env,
-                                                  window->view,
-                                                  com_sun_glass_events_ViewEvent_FULLSCREEN_EXIT,
-                                                  window->currentBounds.x, window->currentBounds.y,
-                                                  window->currentBounds.width, window->currentBounds.height);
-            } else if (window->state == NWS_MAXIMIZED && newState == NWS_NORMAL) {
-                // no events generated
-            } else if (window->state == NWS_MINIMIZED && newState == NWS_NORMAL) {
-                glass_application_notifyWindowEvent_resize(env,
-                                                           window,
-                                                           com_sun_glass_events_WindowEvent_RESTORE,
-                                                           window->currentBounds.width, window->currentBounds.height);
-            } else {
-                GLASS_LOG_WARNING("BAD State change on window %p %i to %i", window, window->state, newState);
-            }
-            window->state = newState;
-        }
-
-        if (do_repaint) {
-            GLASS_LOG_FINE("Repaint required");
-            lens_wm_repaint(env, window);
-        }
-
-
-    }
+    //notify
+    glass_application_notifyWindowEvent_resize(env,
+                                               window,
+                                               com_sun_glass_events_WindowEvent_MINIMIZE,
+                                               window->cachedBounds.width,
+                                               window->cachedBounds.height);
 }
+
+
+static void lens_wm_windowRestore(JNIEnv *env,
+                                  NativeWindow window){
+
+        
+    //"undo" previous state, if needed
+    switch (window->state) {
+        case NWS_MINIMIZED:
+            GLASS_LOG_FINE("Window is minimized -notifying platform minimize(false)");
+
+            //notify platform
+            lens_platform_windowMinimize(env, window, JNI_FALSE);
+            if (window->isVisible) {
+                //the window is restored and visible, add it to the window list
+                //to resume rendering
+                glass_application_addWindowToVisibleWindowList(env,window);
+            }
+            break;
+
+        case NWS_NORMAL:
+            GLASS_LOG_FINE("Nothing to do, skipping");
+            return;
+        case NWS_MAXIMIZED:
+            //NOOP
+            break;
+        case NWS_FULLSCREEN:
+            GLASS_LOG_FINE("Window in full screen notify FULLSCREEN_EXIT"
+                           " (x=%i, y=%i, w=%i, h=%i)",
+                           window->cachedBounds.x,
+                           window->cachedBounds.y,
+                           window->cachedBounds.width,
+                           window->cachedBounds.height);
+
+            //notify view it has existed full screen
+            glass_application_notifyViewEvent(env,
+                                              window->view,
+                                              com_sun_glass_events_ViewEvent_FULLSCREEN_EXIT,
+                                              window->cachedBounds.x,    
+                                              window->cachedBounds.y,    
+                                              window->cachedBounds.width,
+                                              window->cachedBounds.height);
+            break;
+        default:
+            GLASS_LOG_SEVERE("Window is in unsupported NativeWindowState (%i)",
+                              window->state);
+    }    
+
+    //update state
+    window->state = NWS_NORMAL;        
+    
+
+    //resize and relocate window to previous bounds
+    glass_window_setBoundsImpl(env,
+                               window,
+                               window->cachedBounds.x,    
+                               window->cachedBounds.y,    
+                               window->cachedBounds.width,
+                               window->cachedBounds.height,
+                               JNI_TRUE,
+                               JNI_TRUE,
+                               JNI_FALSE);
+
+    //restore bounds
+    lens_wm_windowUncacheBounds(window);
+
+    GLASS_LOG_FINE("notify window it has been restored");
+    glass_application_notifyWindowEvent_resize(env,
+                                               window,
+                                               com_sun_glass_events_WindowEvent_RESTORE,
+                                               window->currentBounds.width,
+                                               window->currentBounds.height);
+
+    GLASS_LOG_FINE("make sure window has the focus");
+    lens_wm_setFocusedWindow(env, window);
+}
+
+static void lens_wm_windowMaximize(JNIEnv *env,
+                                   NativeWindow window){
+
+    //"undo" previous state, if needed
+    switch (window->state) {
+        case NWS_MINIMIZED:
+            lens_wm_windowRestore(env, window);
+            break;
+        case NWS_NORMAL:
+            //NOOP
+            break;
+        case NWS_MAXIMIZED:
+            GLASS_LOG_FINE("Nothing to do, skipping");
+            return;
+        case NWS_FULLSCREEN:
+            lens_wm_windowRestore(env, window);
+            break;
+        default:
+            GLASS_LOG_SEVERE("Window is in unsupported NativeWindowState (%i)",
+                              window->state);
+    }
+
+    /**
+    * Window's max size can be limited, so try to extend the window 
+    * to the buttom right corner of the screen from the current x,y 
+    * coordinates. If the window will be extended beyond the screen 
+    * boundaries, push the window towards the top left corner of the
+    * screen. If no limits applied to the window it will capture the 
+    * entire screen. 
+    */
+
+    //cache current window bounds for restoration
+    lens_wm_windowCacheBounds(window);
+
+    //get screen size
+    NativeScreen screen = glass_screen_getMainScreen();
+    int width = screen->width;
+    int height = screen->height;
+    int x = window->currentBounds.x;
+    int y = window->currentBounds.y;    
+
+    //check if window can occupy the entire screen
+    if (glass_window_check_bounds(window, &width, &height)) {
+        //window can be fully maximized, so we need to move it to
+        //the top left corner
+        x = 0;
+        y = 0;
+    } else {
+       //window is restricted, check if new bounds are bigger
+       //from current bounds
+       if (width > window->currentBounds.width || 
+           height > window->currentBounds.height){
+           //calculate new x,y
+           x = screen->width - width -1;
+           y = screen->height - height -1;
+
+       } 
+    }
+
+    GLASS_LOG_FINE("Maximized window bounds x=%i, y=%i, width =%i, height=%i",
+                   x, y, width, height);
+
+    //notify for bounds update
+    glass_window_setBoundsImpl(env, window,
+                               x, y,width, height,
+                               JNI_TRUE, //update location
+                               JNI_TRUE, // update size
+                               JNI_FALSE /* update content */);
+
+    //update state
+    window->state = NWS_MAXIMIZED;
+
+    //notify
+    glass_application_notifyWindowEvent_resize(env,
+                                               window,
+                                               com_sun_glass_events_WindowEvent_MAXIMIZE,
+                                               width,
+                                               height);
+    //make sure window has the focus
+    lens_wm_setFocusedWindow(env, window);
+
+}
+static void lens_wm_windowEnterFullscreen(JNIEnv *env,
+                                          NativeWindow window){
+    //"undo" previous state, if needed
+    switch (window->state) {
+        case NWS_MINIMIZED:
+            GLASS_LOG_FINE("Window is minimized - restoring");
+            lens_wm_windowRestore(env, window);
+            break;
+        case NWS_NORMAL:
+        case NWS_MAXIMIZED:
+            //NOOP
+            break;
+        case NWS_FULLSCREEN:
+            GLASS_LOG_FINE("Nothing to do, skipping");
+            return;
+        default:
+            GLASS_LOG_SEVERE("Window is in unsupported NativeWindowState (%i)",
+                              window->state);
+    }
+
+    //get screen
+    NativeScreen screen = glass_screen_getMainScreen();
+
+    //cache current window bounds for restoration
+    lens_wm_windowCacheBounds(window);
+
+
+
+
+    //set full screen dimensions 
+    glass_window_setBoundsImpl(env,window,
+                               0, 0,
+                               screen->width,
+                               screen->height,
+                               JNI_TRUE, // update position
+                               JNI_TRUE, // update size
+                               JNI_FALSE); // update content
+
+    GLASS_LOG_FINE("Notifying FULLSCREEN_ENTER on view[%p] window %i[%p]"
+                   " x=%i, y=%i, w=%i, h=%i",
+                   window->view,
+                   window->id,
+                   window,
+                   window->currentBounds.x,
+                   window->currentBounds.y,
+                   window->currentBounds.width,
+                   window->currentBounds.height);
+
+    //notify view  
+    glass_application_notifyViewEvent(env,
+                                      window->view,
+                                      com_sun_glass_events_ViewEvent_FULLSCREEN_ENTER,
+                                      window->currentBounds.x,
+                                      window->currentBounds.y,
+                                      window->currentBounds.width,
+                                      window->currentBounds.height);
+
+    //make sure window has the focus
+    lens_wm_setFocusedWindow(env, window);
+
+    window->state = NWS_FULLSCREEN;
+
+
+}
+
 
 void glass_window_setBoundsImpl(JNIEnv *env,
                                 NativeWindow window,
-                                jint newX, jint newY, jint newWidth, jint newHeight,
+                                jint x, jint y, jint width, jint height,
                                 jboolean needToUpdatePostion,
                                 jboolean needToUpdateSize,
                                 jboolean isContentSize) {
 
-    int x = window->currentBounds.x;
-    int y = window->currentBounds.y;
-    int width = window->currentBounds.width;
-    int height = window->currentBounds.height;
 
-    //handle resize
-    if (needToUpdateSize && (width != newWidth || height != newHeight)) {
-        width = newWidth;
-        height = newHeight;
+    jboolean windowHasBeenUpdated = JNI_FALSE;
+
+    GLASS_LOG_FINE("setBoundsImpl on window %i[%p] x=%i y=%i w=%i h=%i"
+                   " needToUpdatePostion=%s needToUpdateSize=%s isContentSize=%s"
+                   " statet=%s",
+                   window->id, window,
+                   x, y, width, height,
+                   (needToUpdatePostion)?"true":"false",
+                   (needToUpdateSize)?"true":"false",
+                   (isContentSize)?"true":"false",
+                   lens_window_getNativeStateName(window->state));
+
+    if (isContentSize && !needToUpdateSize) {
+        GLASS_LOG_FINE("Treating content size change as window size change");
+        needToUpdateSize = isContentSize;
     }
 
-    //handle move
-    if (needToUpdatePostion && (x != newX || y != newY)) {
-        x = newX;
-        y = newY;
+    GLASS_LOG_FINER("currentW(%i) != newW(%i) || currentH(%i)!=newH(%i)",
+                    window->currentBounds.width,
+                    width,
+                    window->currentBounds.height,
+                    height );
+    //handle resize if needed
+    if (needToUpdateSize &&
+        (window->currentBounds.width != width || window->currentBounds.height != height)) {
+
+        GLASS_LOG_FINE("Updatating window %i[%p] size from %iX%i to %iX%i",
+                       window->id,
+                       window,
+                       window->currentBounds.width,
+                       window->currentBounds.height,
+                       width,
+                       height);
+
+        window->currentBounds.width = width;
+        window->currentBounds.height = height;
+
+        glass_application_notifyWindowEvent_resize(env,window,
+                                                   com_sun_glass_events_WindowEvent_RESIZE,
+                                                   width,
+                                                   height);
+        
+        windowHasBeenUpdated = JNI_TRUE;
+
     }
 
-    reset_bounds_and_state(env, window,
-                           x, y, width, height,
-                           window->state);
+    GLASS_LOG_FINER("curentX(%i) != newX(%i) || currentY(%i)!=newY(%i)",
+                    window->currentBounds.x,
+                    x,
+                    window->currentBounds.y,
+                    y);
+    //handle move if needed
+    if (needToUpdatePostion && 
+        (window->currentBounds.x != x || window->currentBounds.y != y)) {
+        GLASS_LOG_FINE("Updatating window %i[%p] locatoin from %iX%i to %iX%i",
+                       window->id,
+                       window,
+                       window->currentBounds.x,
+                       window->currentBounds.y,
+                       x,
+                       y);
+        window->currentBounds.x = x;
+        window->currentBounds.y = y;
+
+        glass_application_notifyWindowEvent_move(env,
+                                                 window,
+                                                 x,
+                                                 y);
+
+        windowHasBeenUpdated = JNI_TRUE;
+    }
+
+    if (!windowHasBeenUpdated) {
+        //if function got the same sizes as the current ones, it means that
+        //window have been restored.
+        //happens when swapping stages with same params, for example.
+        GLASS_LOG_FINE("Notifying window restore");
+        glass_application_notifyWindowEvent_resize(env,window,
+                                                   com_sun_glass_events_WindowEvent_RESTORE,
+                                                   window->currentBounds.width,
+                                                   window->currentBounds.height);
+    }
+
+    //some time the order of the window rendering concluded by the events is wrong.
+    //so force repaint.
+   lens_wm_repaint(env, window);
 }
 
 
 jboolean glass_window_setVisible(JNIEnv *env, NativeWindow window, jboolean visible) {
 
+    GLASS_LOG_FINE("Setting window %i[%p](owner %i[%p]) from %s, to %s",
+                   window->id,
+                   window,
+                   window->owner? window->owner->id : -1,
+                   window->owner,
+                   (window->isVisible)?"visible":"invisible",
+                   (visible)?"visible":"invisible");
+
+
+    lens_platform_windowSetVisible(env, window, visible);
+
     window->isVisible = visible;
 
-    if (!visible &&
-            window == glass_window_getFocusedWindow()) {
-
-        glass_application_notifyWindowEvent(env,
-                                            window,
-                                            com_sun_glass_events_WindowEvent_FOCUS_LOST);
-
-        if (lens_wm_getGrabbedWindow()) {
-            glass_window_ungrabFocus(env, lens_wm_getGrabbedWindow());
+    if (!visible) {
+        //lose focus and grab
+        lens_wm_unsetFocusedWindow(env, window);        
+    } else {
+        if (!window->owner) {
+            //window become visible, grant it the focus if not a pop-up
+            lens_wm_setFocusedWindow(env, window);
         }
 
-        // find our first root window
-        NativeWindow w = glass_window_list_getTail();
-        while (w) {
-            if (!w->owner && w->isVisible) {
-                lens_wm_setFocusedWindow(env, w);
-                break;
-            }
-            w = w->previousWindow;
-        }
-
-
-        // need to repaint here because we have a hole on the screen
-        lens_wm_repaint(env, window);
+        GLASS_LOG_FINE("notify window it has been restored");
+        glass_application_notifyWindowEvent_resize(env,
+                                                   window,
+                                                   com_sun_glass_events_WindowEvent_RESTORE,
+                                                   window->currentBounds.width,
+                                                   window->currentBounds.height);
     }
-
 
     return JNI_TRUE;
 }
 
 jboolean glass_view_drawBegin(NativeView view) {
-    GLASS_LOG_FINE("glass_view_drawBegin");
+    GLASS_LOG_FINER("glass_view_drawBegin");
     render_lock();
     return JNI_TRUE;
 }
 
 void glass_view_drawEnd(NativeView view) {
-    GLASS_LOG_FINE("glass_view_drawEnd");
+    GLASS_LOG_FINER("glass_view_drawEnd");
     render_unlock();
 }
 
@@ -430,7 +664,7 @@ jboolean glass_window_grabFocus(JNIEnv *env, NativeWindow window) {
         GLASS_LOG_FINE("RE-GRAB on %p root %p\n", window, window->root);
         return JNI_TRUE;
     }
-
+    
     if (NULL == lens_wm_getGrabbedWindow() &&
             window == glass_window_getFocusedWindow()) {
         // we allow the grab, note: focus is also checked in Java.
@@ -444,16 +678,27 @@ jboolean glass_window_grabFocus(JNIEnv *env, NativeWindow window) {
     return JNI_FALSE;
 }
 
-// note, may also be called from mouse handling
+/**
+ * This functions will check if the given window is grabbed and
+ * ungrab it if necessary. Note: may also be called from mouse 
+ * handling 
+ */
 void glass_window_ungrabFocus(JNIEnv *env, NativeWindow window) {
 
-    if (window != lens_wm_getGrabbedWindow()) {
-        //GLASS_LOG_WARNING("Grab release on the wrong window");
-        GLASS_LOG_SEVERE("Grab release on the wrong window");
+    if (window == NULL) {
+        GLASS_LOG_FINER("window=NULL - Nothing to do");
         return;
     }
 
-    GLASS_LOG_FINE("UNGRAB on %p \n", window);
+    if (window != lens_wm_getGrabbedWindow()) {
+        GLASS_LOG_FINE("Given window is not grabbed, ignore");
+        return;
+    }
+
+    GLASS_LOG_FINE("Ungrabbing window %i[%p]",
+                   window?window->id : -1,
+                   window);
+
     lens_wm_setGrabbedWindow(NULL);
 
     //notify the UNGRAB
@@ -556,20 +801,22 @@ jboolean glass_view_enterFullscreen(JNIEnv *env,
 
     NativeWindow window = view->parent;
 
-    if (window->state == NWS_FULLSCREEN) {
+    if (window == NULL) {
+        GLASS_LOG_WARNING("Full screen request on a view(%p) with no parent window, abort",
+                          view);
         return JNI_FALSE;
     }
 
+    GLASS_LOG_FINE("Enter full screen request on view %p, window %i[%p]",
+                   view, window->id, window);
 
-    NativeScreen screen = glass_screen_getMainScreen();
-
-    //save current window bounds
-    lens_wm_windowCacheBounds(window);
-
-    reset_bounds_and_state(env, window,
-                           0, 0,
-                           screen->width, screen->height,
-                           NWS_FULLSCREEN);
+   /**
+    * animate, keepRatio ration and hideCursor are currently stubbed
+    * to false in WindowStage.java, which is the only caller for 
+    * this API. 
+    * Ignoring them for now 
+    */
+    lens_wm_windowEnterFullscreen(env, window);
 
     return JNI_TRUE;
 
@@ -581,28 +828,24 @@ jboolean glass_view_exitFullscreen(JNIEnv *env,
 
     NativeWindow window = view->parent;
 
-    if (!window) {
-        // note, this can happen to a view after disconnected from the window.
-        GLASS_LOG_FINE("NULL window passed to exitFullScreen");
-        glass_application_notifyViewEvent(env,
-                                          view,
-                                          com_sun_glass_events_ViewEvent_FULLSCREEN_EXIT,
-                                          0, 0, 0, 0);
+    if (window == NULL) {
+        GLASS_LOG_WARNING("Exit full screen request on a view(%p) with no parent"
+                          " window, abort",
+                          view);
         return JNI_FALSE;
     }
 
-    if (window->state != NWS_FULLSCREEN) {
-        return JNI_FALSE;
-    }
+    GLASS_LOG_FINE("Exit full screen request on view %p, window %i[%p]",
+                   view, window->id, window);
 
-    GLASS_LOG_FINE("EXITING FS, restoring %d,%d %dx%d",
-                   window->cachedBounds.x, window->cachedBounds.y,
-                   window->cachedBounds.width, window->cachedBounds.height);
+    /**
+    * WindowStage.applyFullScreen() always sets the animate 
+    * parameter to false when calling enterFullScreen on its View, 
+    * in WindowStage.java, which is the only caller for this API. 
+    * Ignoring it for now.
+    */
 
-    reset_bounds_and_state(env, window,
-                           window->cachedBounds.x, window->cachedBounds.y,
-                           window->cachedBounds.width, window->cachedBounds.height,
-                           NWS_NORMAL);
+    lens_wm_windowRestore(env, window);
 
     return JNI_TRUE;
 }
@@ -610,27 +853,18 @@ jboolean glass_view_exitFullscreen(JNIEnv *env,
 jboolean glass_window_minimize(JNIEnv *env,
                                NativeWindow window,
                                jboolean toMinimize) {
+    
+    GLASS_LOG_FINE("Minimize window %i[%p] toMinimize=%s",
+                   window->id,
+                   window,
+                   (toMinimize)?"true":"false");
 
-    if (toMinimize && window->state != NWS_MINIMIZED) {
-        // cache for a restore later
-        window->cachedBounds.width = window->currentBounds.width;
-        window->cachedBounds.height = window->currentBounds.height;
-
-        NativeScreen screen = glass_screen_getMainScreen();
-
-        reset_bounds_and_state(env, window,
-                               window->currentBounds.x, window->currentBounds.y,
-                               screen->width, screen->height,
-                               NWS_MINIMIZED);
-
-    } else if (!toMinimize && window->state == NWS_MINIMIZED)  {
-
-        reset_bounds_and_state(env, window,
-                               window->currentBounds.x, window->currentBounds.y,
-                               window->cachedBounds.width, window->cachedBounds.height,
-                               NWS_NORMAL);
-
+    if (toMinimize) {
+        lens_wm_windowMinimize(env, window);
+    } else {
+        lens_wm_windowRestore(env, window);
     }
+    
     return JNI_TRUE;
 
 }
@@ -639,30 +873,22 @@ jboolean glass_window_maximize(JNIEnv *env,
                                NativeWindow window,
                                jboolean toMaximize,
                                jboolean isMaximized) {
-    if (toMaximize && window->state != NWS_MAXIMIZED) {
+    GLASS_LOG_FINE("Maximize window %i[%p] toMaximize=%s isMaximized=%s",
+                   window->id,
+                   window,
+                   (toMaximize)?"true":"false",
+                   (isMaximized)?"true":"false");
+    jboolean result = JNI_TRUE;
 
-        NativeScreen screen = glass_screen_getMainScreen();
-
-        // cache for a restore later
-        window->cachedBounds.x = window->currentBounds.x;
-        window->cachedBounds.y = window->currentBounds.y;
-        window->cachedBounds.width = window->currentBounds.width;
-        window->cachedBounds.height = window->currentBounds.height;
-
-        reset_bounds_and_state(env, window,
-                               0, 0,
-                               screen->width, screen->height,
-                               NWS_MAXIMIZED);
-
-    } else if (!toMaximize && window->state == NWS_MAXIMIZED)  {
-
-        reset_bounds_and_state(env, window,
-                               window->cachedBounds.x, window->cachedBounds.y,
-                               window->cachedBounds.width, window->cachedBounds.height,
-                               NWS_NORMAL);
-
+    if (toMaximize && !isMaximized) {
+        lens_wm_windowMaximize(env, window);
+    } else if (!toMaximize && isMaximized) {
+        lens_wm_windowRestore(env, window);
+    } else {
+        GLASS_LOG_WARNING("Maximize request with bad arguments");
+        result = JNI_FALSE;
     }
-    return JNI_TRUE;
+    return result;
 }
 
 NativeWindow glass_window_findWindowAtLocation(int absX, int absY,
@@ -670,19 +896,28 @@ NativeWindow glass_window_findWindowAtLocation(int absX, int absY,
 
     NativeWindow w = glass_window_list_getTail();
     while (w) {
-        if (absX >= w->currentBounds.x &&
-                absX < w->currentBounds.x + w->currentBounds.width &&
-                absY >= w->currentBounds.y &&
-                absY < w->currentBounds.y + w->currentBounds.height &&
-                w->isEnabled) {
+        GLASS_LOG_FINEST("Window %d[%p] isVisible=%s, state=%s",
+                       w->id, w,
+                       w->isVisible?"true" : "false",
+                       lens_window_getNativeStateName(w->state));
+        if (w->isVisible && w->state != NWS_MINIMIZED) {
+            if (absX >= w->currentBounds.x &&
+                    absX < w->currentBounds.x + w->currentBounds.width &&
+                    absY >= w->currentBounds.y &&
+                    absY < w->currentBounds.y + w->currentBounds.height &&
+                    w->isEnabled) {
 
-            *pRelX = absX - w->currentBounds.x;
-            *pRelY = absY - w->currentBounds.y;
-            GLASS_LOG_FINER(
-                "Absolute coordinates %i,%i are on window %p "
-                "as relative coordinates %i,%i",
-                absX, absY, w, *pRelX, *pRelY);
-            return w;
+                *pRelX = absX - w->currentBounds.x;
+                *pRelY = absY - w->currentBounds.y;
+                GLASS_LOG_FINER(
+                    "Absolute coordinates %i,%i are on window %i[%p] "
+                    "as relative coordinates %i,%i",
+                    absX, absY, w->id, w, *pRelX, *pRelY);
+                return w;
+            }
+        } else {
+            GLASS_LOG_FINER("Skipping invisible window %i[%p]",
+                           w->id, w);
         }
         w = w->previousWindow;
     }
@@ -886,15 +1121,25 @@ void lens_wm_notifyMotionEvent(JNIEnv *env, int mousePosX, int mousePosY, int is
 
 
     if (_mousePressed && !_onDraggingAction) {
+        GLASS_LOG_FINE("Starting native mouse drag");
         _onDraggingAction = JNI_TRUE;
         _dragGrabbingWindow = lens_wm_getMouseWindow();
     }
-
+    
     NativeWindow window = glass_window_findWindowAtLocation(
                               _mousePosX, _mousePosY, &relX, &relY);
 
+    GLASS_LOG_FINER("Motion event on window %i[%p] absX=%i absY=%i, relX=%i, relY=%i",
+                    (window)?window->id:-1,
+                    window,
+                    _mousePosX, _mousePosY, relX, relY);
+
 
     NativeWindow lastMouseWindow = lens_wm_getMouseWindow();
+
+    GLASS_LOG_FINER("lastMouseWindow = %i[%p]",
+                    (lastMouseWindow)?lastMouseWindow->id:-1,
+                    lastMouseWindow);
 
     //Send EXIT/ENTER events
     if (_onDraggingAction && _dragGrabbingWindow != NULL) {
@@ -902,6 +1147,9 @@ void lens_wm_notifyMotionEvent(JNIEnv *env, int mousePosX, int mousePosY, int is
                 _dragGrabbingWindow == lastMouseWindow) {
             relX = _mousePosX - _dragGrabbingWindow->currentBounds.x;
             relY = _mousePosY - _dragGrabbingWindow->currentBounds.y;
+            GLASS_LOG_FINER("MouseEvent_EXIT on dragGrabbingWindow %i[%p]",
+                            (_dragGrabbingWindow)?_dragGrabbingWindow->id:-1,
+                            _dragGrabbingWindow);
 
             glass_application_notifyMouseEvent(env,
                                                _dragGrabbingWindow,
@@ -912,6 +1160,9 @@ void lens_wm_notifyMotionEvent(JNIEnv *env, int mousePosX, int mousePosY, int is
 
         if (window == _dragGrabbingWindow &&
                 window != lastMouseWindow) {
+            GLASS_LOG_FINER("MouseEvent_ENTER on dragGrabbingWindow %i[%p]",
+                            (_dragGrabbingWindow)?_dragGrabbingWindow->id:-1,
+                            _dragGrabbingWindow);
             glass_application_notifyMouseEvent(env,
                                                _dragGrabbingWindow,
                                                com_sun_glass_events_MouseEvent_ENTER,
@@ -927,6 +1178,10 @@ void lens_wm_notifyMotionEvent(JNIEnv *env, int mousePosX, int mousePosY, int is
                 relX = _mousePosX - lastMouseWindow->currentBounds.x;
                 relY = _mousePosY - lastMouseWindow->currentBounds.y;
 
+                GLASS_LOG_FINER("MouseEvent_EXIT on lastMouseWindow %i[%p]",
+                               (lastMouseWindow)?lastMouseWindow->id:-1,
+                               lastMouseWindow);
+
                 glass_application_notifyMouseEvent(env,
                                                    lastMouseWindow,
                                                    com_sun_glass_events_MouseEvent_EXIT,
@@ -935,6 +1190,10 @@ void lens_wm_notifyMotionEvent(JNIEnv *env, int mousePosX, int mousePosY, int is
             }
             if (window) {
                 // Enter into window
+                GLASS_LOG_FINER("MouseEvent_ENTER on window %i[%p]",
+                               (window)?window->id:-1,
+                               window);
+
                 glass_application_notifyMouseEvent(env,
                                                    window,
                                                    com_sun_glass_events_MouseEvent_ENTER,
@@ -962,6 +1221,9 @@ void lens_wm_notifyMotionEvent(JNIEnv *env, int mousePosX, int mousePosY, int is
                                                touchId , relX, relY, _mousePosX, _mousePosY);
         }
 
+        GLASS_LOG_FINEST("MouseEvent_MOVE on window %i[%p]",
+                       (_dragGrabbingWindow)?_dragGrabbingWindow->id:-1,
+                       _dragGrabbingWindow);
         glass_application_notifyMouseEvent(env,
                                            _dragGrabbingWindow,
                                            com_sun_glass_events_MouseEvent_MOVE,
@@ -978,6 +1240,9 @@ void lens_wm_notifyMotionEvent(JNIEnv *env, int mousePosX, int mousePosY, int is
                                                touchId , relX, relY, _mousePosX, _mousePosY);
         }
 
+         GLASS_LOG_FINEST("MouseEvent_MOVE on window %i[%p]",
+                       (window)?window->id:-1,
+                       window);
         glass_application_notifyMouseEvent(env,
                                            window,
                                            com_sun_glass_events_MouseEvent_MOVE,
@@ -997,24 +1262,99 @@ void lens_wm_notifyMotionEvent(JNIEnv *env, int mousePosX, int mousePosY, int is
  */
 void lens_wm_setFocusedWindow(JNIEnv *env, NativeWindow window) {
 
-    NativeWindow focusWindow = glass_window_getFocusedWindow();
+    NativeWindow _focusedWindow = glass_window_getFocusedWindow();    
+ 
+    if (window != _focusedWindow) {
 
-    if (focusWindow) {
-        GLASS_LOG_FINER("Notifying focus lost on %p", focusWindow);
-        glass_application_notifyWindowEvent(env,
-                                            focusWindow,
-                                            com_sun_glass_events_WindowEvent_FOCUS_LOST);
+      GLASS_LOG_FINE("Window %i[%p] is focused. Window %i[%p] requesting focus",
+             (_focusedWindow)?_focusedWindow->id:-1,
+             _focusedWindow,
+             (window)?window->id:-1,
+             window);
+
+        if (_focusedWindow) {
+
+            //Release the grab if window holds it
+            glass_window_ungrabFocus(env, window); /* function will print the result*/
+
+            GLASS_LOG_FINE("Notifying window %i[%p] focus lost ",
+                           _focusedWindow->id,
+                           _focusedWindow);
+
+            glass_application_notifyWindowEvent(env,
+                                                _focusedWindow,
+                                                com_sun_glass_events_WindowEvent_FOCUS_LOST);
+        }
+
+        glass_window_setFocusedWindow(window);
+
+        if (window != NULL) {
+            GLASS_LOG_FINE("Notifying window %i[%p] focus gained ",
+                           window->id,
+                           window);
+
+            glass_application_notifyWindowEvent(env,
+                                                window,
+                                                com_sun_glass_events_WindowEvent_FOCUS_GAINED);
+        }
+    } else {
+        GLASS_LOG_FINE("Window %i[%p] is already focused - ignore",
+                       (window)?window->id:-1,
+                       window);
     }
 
-    glass_window_setFocusedWindow(window);
+}
 
-    if (window != NULL) {
-        GLASS_LOG_FINER("Notifying focus gained on %p", window);
-        glass_application_notifyWindowEvent(env,
-                                            window,
-                                            com_sun_glass_events_WindowEvent_FOCUS_GAINED);
+/**
+ * Check if this window hold the focus or the grab. Loose them 
+ * if required and give focus to the next focusable and visible
+ * window 
+ * 
+ * @param env 
+ * @param window the window to unset 
+ * @return the new focused window (may be NULL) 
+ */
+NativeWindow lens_wm_unsetFocusedWindow(JNIEnv *env, NativeWindow window){
+
+    GLASS_LOG_FINE("unsetting focus for window %i[%p]",
+                   window->id, window);
+    
+
+    NativeWindow _focusedWindow = glass_window_getFocusedWindow();
+
+    if (window == _focusedWindow) {
+        //if this window hold the grab, release it
+        GLASS_LOG_FINE("Check if this window holds the grab");
+        glass_window_ungrabFocus(env, window); /* function will print the result*/
+
+        GLASS_LOG_FINE("Releasing the focus");
+        lens_wm_setFocusedWindow(env, NULL);
+
+        _focusedWindow = NULL;
+
+        //search for the next focusable window
+        NativeWindow w = glass_window_list_getTail();
+
+        while (w) {
+            if (w->isVisible && w->state != NWS_MINIMIZED) {
+                if (!w->owner && w->isFocusable) {
+                    GLASS_LOG_FINE("Granting window %i[%p] the focus",
+                                   w->id, w);
+
+                    lens_wm_setFocusedWindow(env, w);
+                    _focusedWindow = w;
+                    break;
+                }
+            }
+            w = w->previousWindow;
+        }
+    }else {
+        GLASS_LOG_FINE("Window %i[%p] doesn't have the focus",
+                       window?window->id : -1,
+                       window);
     }
 
+    return _focusedWindow;
 }
 
 /*

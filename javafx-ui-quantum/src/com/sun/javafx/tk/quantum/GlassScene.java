@@ -25,9 +25,9 @@
 
 package com.sun.javafx.tk.quantum;
 
-import com.sun.prism.paint.*;
 import javafx.application.Platform;
 import javafx.scene.input.InputMethodRequests;
+import javafx.stage.StageStyle;
 import com.sun.glass.ui.Clipboard;
 import com.sun.glass.ui.ClipboardAssistance;
 import com.sun.glass.ui.View;
@@ -53,7 +53,9 @@ import com.sun.prism.camera.PrismCameraImpl;
 import com.sun.prism.camera.PrismParallelCameraImpl;
 import com.sun.prism.camera.PrismPerspectiveCameraImpl;
 import com.sun.prism.impl.PrismSettings;
-import javafx.stage.*;
+import com.sun.prism.paint.Color;
+import com.sun.prism.paint.Paint;
+
 import sun.util.logging.PlatformLogger;
 
 import java.security.AccessControlContext;
@@ -85,7 +87,7 @@ abstract class GlassScene implements TKScene, SceneChangeListener {
 
     private boolean depthBuffer = false;
 
-    private final SceneState viewState;
+    private final SceneState sceneState;
 
     private AccessControlContext accessCtrlCtx = null;
 
@@ -96,7 +98,7 @@ abstract class GlassScene implements TKScene, SceneChangeListener {
     protected GlassScene(boolean verbose, boolean depthBuffer) {
         this.verbose = verbose;
         this.depthBuffer = depthBuffer;
-        viewState = new SceneState(this);
+        sceneState = new SceneState(this);
     }
 
     // To be used by subclasses to enforce context check
@@ -126,7 +128,7 @@ abstract class GlassScene implements TKScene, SceneChangeListener {
         // can process the new tree.  Capture the current state of
         // the view (such as the width and height) so that the view
         // state matches the state in the render tree
-        updateViewState();
+        updateSceneState();
         AbstractPainter.renderLock.unlock();
     }
 
@@ -279,13 +281,13 @@ abstract class GlassScene implements TKScene, SceneChangeListener {
         }
     }
 
-    protected SceneState getViewState() {
-        return viewState;
+    final SceneState getSceneState() {
+        return sceneState;
     }
 
-    protected void updateViewState() {
+    final void updateSceneState() {
         // should only be called on the event thread
-        viewState.update();
+        sceneState.update();
     }
 
     protected View getPlatformView() {

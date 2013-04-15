@@ -322,9 +322,9 @@ jboolean glass_window_setAlpha(JNIEnv *env, NativeWindow window, float alpha) {
         DFBBREAK(dfbWindow->SetOpacity(dfbWindow, (alpha * 255)/*convert to u8 */));
 
         //save current alpha level as the actual level set may be different
-        DFBBREAK(dfbWindow->GetOpacity(dfbWindow, &(window->opacity)));
+        DFBBREAK(dfbWindow->GetOpacity(dfbWindow, &(window->data->opacity)));
         GLASS_LOG_FINE("IDirectFBWindow->GetOpacity(window=%p) returned %i",
-                       dfbWindow, window->opacity);
+                       dfbWindow, window->data->opacity);
         result = JNI_TRUE;
     } while (0);
 
@@ -864,3 +864,41 @@ jboolean glass_screen_capture(jint x,
 
 }
 
+LensResult lens_platform_windowMinimize(JNIEnv *env,
+                                        NativeWindow window,
+                                        jboolean toMinimize) {
+    GLASS_LOG_FINE("Calling lens_platform_windowSetVisible(window %i[%p], %s)",
+                   window?window->id : -1,
+                   window,
+                   (!toMinimize)?"true" : "false");
+
+    return lens_platform_windowSetVisible(env, window, !toMinimize);
+}
+
+
+LensResult lens_platform_windowSetVisible(JNIEnv *env,
+                                        NativeWindow window,
+                                        jboolean visible) {
+
+    IDirectFBWindow *dfbWindow = window->data->dfbWindow;
+    jboolean result = JNI_FALSE;
+
+    GLASS_LOG_FINE("Setting window %i[%p] to %s",
+                   window->id, window,
+                   (visible)?"visible":"invisible");
+
+    do {        
+        if (visible == JNI_TRUE) {
+            GLASS_LOG_FINE("IDirectFBWindow->SetOpacity(window=%p, %i)",
+                           dfbWindow, window->data->opacity);
+            DFBBREAK(dfbWindow->SetOpacity(dfbWindow, window->data->opacity));
+        } else {
+            GLASS_LOG_FINE("IDirectFBWindow->SetOpacity(window=%p, 0)",
+                           dfbWindow);
+            DFBBREAK(dfbWindow->SetOpacity(dfbWindow, 0));
+        }
+        result = JNI_TRUE;
+    } while (0);
+
+    return result;
+}
