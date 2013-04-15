@@ -156,7 +156,9 @@ import javafx.geometry.NodeOrientation;
  * <p>
  * The scene's size may be initialized by the application during construction.
  * If no size is specified, the scene will automatically compute its initial
- * size based on the preferred size of its content.
+ * size based on the preferred size of its content. If only one dimension is specified,
+ * the other dimension is computed using the specified dimension, respecting content bias
+ * of a root.
  *
  * <p>
  * Scene objects must be constructed and modified on the
@@ -724,7 +726,7 @@ public class Scene implements EventTarget {
         PerformanceTracker.logEvent("Scene.initPeer TKScene set");
         impl_peer.setRoot(getRoot().impl_getPGNode());
         impl_peer.setFillPaint(getFill() == null ? null : tk.getPaint(getFill()));
-        impl_peer.setCamera(getCamera() == null 
+        impl_peer.setCamera(getCamera() == null
                 ? getDefaultCamera().getPlatformCamera()
                 : getCamera().getPlatformCamera());
 
@@ -910,14 +912,14 @@ public class Scene implements EventTarget {
      * <p>
      * Note: this is a conditional feature. See
      * {@link javafx.application.ConditionalFeature#SCENE3D ConditionalFeature.SCENE3D}
-     * for more information. 
+     * for more information.
      *
      * @defaultValue null
      * @since JavaFX 1.3
      */
     private ObjectProperty<Camera> camera;
 
-    public final void setCamera(Camera value) {        
+    public final void setCamera(Camera value) {
         cameraProperty().set(value);
     }
 
@@ -931,7 +933,7 @@ public class Scene implements EventTarget {
 
                 @Override
                 protected void invalidated() {
-                    Camera _value = get();                    
+                    Camera _value = get();
                     // Illegal value if it belongs to other scene or any subscene
                     if (_value != null
                             && ((_value.getScene() != null && _value.getScene() != Scene.this)
@@ -2109,7 +2111,7 @@ public class Scene implements EventTarget {
         viewport = cam.getViewport(viewport);
     }
 
-    // TODO: 3D - Should avoid the need to do costly linear search and update of 
+    // TODO: 3D - Should avoid the need to do costly linear search and update of
     //            lights at every light add and graph sync.
     private List<LightBase> lights = new ArrayList<LightBase>();
 
