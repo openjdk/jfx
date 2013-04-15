@@ -33,10 +33,12 @@ import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.geometry.Insets;
 import javafx.scene.Scene;
+import javafx.scene.control.CheckMenuItem;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Menu;
 import javafx.scene.control.MenuButton;
 import javafx.scene.control.MenuItem;
+import javafx.scene.control.RadioMenuItem;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
@@ -281,7 +283,16 @@ public abstract class MenuButtonSkinBase<C extends MenuButton, B extends MenuBut
                                 if(target!= null && target.getOnMenuValidation() != null) {
                                     Event.fireEvent(target, new Event(MenuItem.MENU_VALIDATION_EVENT));
                                 }
-                                if (!menuitem.isDisable()) menuitem.fire();
+                                if (!menuitem.isDisable()) {
+                                    if (menuitem instanceof RadioMenuItem) {
+                                        ((RadioMenuItem)menuitem).setSelected(!((RadioMenuItem)menuitem).isSelected());
+                                    }
+                                    else if (menuitem instanceof CheckMenuItem) {
+                                        ((CheckMenuItem)menuitem).setSelected(!((CheckMenuItem)menuitem).isSelected());
+                                    }
+
+                                    menuitem.fire();
+                                }
                             }
                         };
                         getSkinnable().getScene().getAccelerators().put(menuitem.getAccelerator(), acceleratorRunnable);
@@ -290,28 +301,7 @@ public abstract class MenuButtonSkinBase<C extends MenuButton, B extends MenuBut
             }
         }
     }
-    
-    // remove this after Mick approves.
-//    private void addAccelerators() {
-//        for (final MenuItem menuitem : popup.getItems()) {
-//
-//            /*
-//            ** check is there are any accelerators in this menu
-//            */
-//            if (menuitem.getAccelerator() != null) {
-//                if (getSkinnable().getScene().getAccelerators() != null) {
-//                    
-//                    Runnable acceleratorRunnable = new Runnable() {
-//                            public void run() {
-//                                menuitem.fire();
-//                            }
-//                        };
-//                    getSkinnable().getScene().getAccelerators().put(menuitem.getAccelerator(), acceleratorRunnable);
-//                }
-//            }
-//        }
-//    }
-
+   
 
     private class MenuLabeledImpl extends LabeledImpl {
 
