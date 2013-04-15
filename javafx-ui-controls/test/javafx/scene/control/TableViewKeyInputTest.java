@@ -1683,4 +1683,70 @@ public class TableViewKeyInputTest {
         assertEquals(0, tableView.getFocusModel().getFocusedIndex());
         assertEquals("Apple", tableView.getFocusModel().getFocusedItem());
     }
+    
+    @Test public void test_rt27583_cellSelection_1() {
+        sm.setCellSelectionEnabled(true);
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+        
+        sm.select(0, col0);
+        assertTrue(fm.isFocused(0, col0));
+        
+        // focus should not go out the top of the table
+        keyboard.doDownArrowPress(KeyModifier.SHIFT);
+        assertTrue(fm.isFocused(1, col0));
+        keyboard.doUpArrowPress(KeyModifier.SHIFT);
+        assertTrue(fm.isFocused(0, col0));
+        keyboard.doUpArrowPress(KeyModifier.SHIFT);
+        assertTrue(debug(), fm.isFocused(0, col0));
+        
+    }
+    
+    @Test public void test_rt27583_cellSelection_2() {
+        sm.setCellSelectionEnabled(true);
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+        
+        sm.select(9, col0);
+        assertTrue(fm.isFocused(9, col0));
+        
+        // focus should not go out the bottom of the table
+        keyboard.doDownArrowPress(KeyModifier.SHIFT);
+        assertTrue(fm.isFocused(10, col0));
+        keyboard.doDownArrowPress(KeyModifier.SHIFT);
+        assertTrue(fm.isFocused(11, col0));
+        keyboard.doDownArrowPress(KeyModifier.SHIFT);
+        assertTrue(debug(), fm.isFocused(11, col0));
+    }
+    
+    @Test public void test_rt27583_rowSelection_1() {
+        sm.setCellSelectionEnabled(false);
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+        
+        sm.select(0);
+        assertTrue(fm.isFocused(0));
+        
+        // focus should not go out the top of the table
+        keyboard.doDownArrowPress(KeyModifier.SHIFT);
+        assertTrue(fm.isFocused(1));
+        keyboard.doUpArrowPress(KeyModifier.SHIFT);
+        assertTrue(fm.isFocused(0));
+        keyboard.doUpArrowPress(KeyModifier.SHIFT);
+        assertTrue(debug(), fm.isFocused(0));
+        
+    }
+    
+    @Test public void test_rt27583_rowSelection_2() {
+        sm.setCellSelectionEnabled(false);
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+        
+        sm.select(9);
+        assertTrue(fm.isFocused(9));
+        
+        // focus should not go out the bottom of the table
+        keyboard.doDownArrowPress(KeyModifier.SHIFT);
+        assertTrue(fm.isFocused(10));
+        keyboard.doDownArrowPress(KeyModifier.SHIFT);
+        assertTrue(fm.isFocused(11));
+        keyboard.doDownArrowPress(KeyModifier.SHIFT);
+        assertTrue(debug(), fm.isFocused(11));
+    }
 }

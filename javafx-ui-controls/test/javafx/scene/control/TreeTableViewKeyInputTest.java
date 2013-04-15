@@ -31,12 +31,17 @@ import com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
 import com.sun.javafx.scene.control.infrastructure.KeyModifier;
 import com.sun.javafx.scene.control.infrastructure.StageLoader;
 import com.sun.javafx.scene.control.skin.TreeTableViewSkin;
+import com.sun.javafx.scene.control.test.Person;
 
 import static org.junit.Assert.*;
 
 import java.util.List;
+
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 import javafx.scene.Group;
 import javafx.scene.Scene;
+import javafx.scene.control.cell.TreeItemPropertyValueFactory;
 import javafx.scene.input.KeyCode;
 
 import javafx.stage.Stage;
@@ -2234,5 +2239,75 @@ public class TreeTableViewKeyInputTest {
         assertEquals(root, tableView.getSelectionModel().getSelectedItem());
         assertEquals(0, tableView.getFocusModel().getFocusedIndex());
         assertEquals(root, tableView.getFocusModel().getFocusedItem());
+    }
+    
+    @Test public void test_rt27583_cellSelection_1() {
+        sm.setCellSelectionEnabled(true);
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+        
+        sm.select(0, col0);
+        assertTrue(fm.isFocused(0, col0));
+        
+        // focus should not go out the top of the table
+        keyboard.doDownArrowPress(KeyModifier.SHIFT);
+        assertTrue(fm.isFocused(1, col0));
+        keyboard.doUpArrowPress(KeyModifier.SHIFT);
+        assertTrue(fm.isFocused(0, col0));
+        keyboard.doUpArrowPress(KeyModifier.SHIFT);
+        assertTrue(debug(), fm.isFocused(0, col0));
+        
+    }
+    
+    @Test public void test_rt27583_cellSelection_2() {
+        sm.setCellSelectionEnabled(true);
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+        
+        sm.select(10, col0);
+        assertTrue(fm.isFocused(10, col0));
+        
+        // focus should not go out the bottom of the table
+        keyboard.doDownArrowPress(KeyModifier.SHIFT);
+        assertTrue(fm.isFocused(11, col0));
+        keyboard.doDownArrowPress(KeyModifier.SHIFT);
+        assertTrue(fm.isFocused(12, col0));
+        keyboard.doDownArrowPress(KeyModifier.SHIFT);
+        assertTrue(fm.isFocused(13, col0));
+        keyboard.doDownArrowPress(KeyModifier.SHIFT);
+        assertTrue(debug(), fm.isFocused(13, col0));
+    }
+    
+    @Test public void test_rt27583_rowSelection_1() {
+        sm.setCellSelectionEnabled(false);
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+        
+        sm.select(0);
+        assertTrue(fm.isFocused(0));
+        
+        // focus should not go out the top of the table
+        keyboard.doDownArrowPress(KeyModifier.SHIFT);
+        assertTrue(fm.isFocused(1));
+        keyboard.doUpArrowPress(KeyModifier.SHIFT);
+        assertTrue(fm.isFocused(0));
+        keyboard.doUpArrowPress(KeyModifier.SHIFT);
+        assertTrue(debug(), fm.isFocused(0));
+        
+    }
+    
+    @Test public void test_rt27583_rowSelection_2() {
+        sm.setCellSelectionEnabled(false);
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+        
+        sm.select(10);
+        assertTrue(fm.isFocused(10));
+        
+        // focus should not go out the bottom of the table
+        keyboard.doDownArrowPress(KeyModifier.SHIFT);
+        assertTrue(fm.isFocused(11));
+        keyboard.doDownArrowPress(KeyModifier.SHIFT);
+        assertTrue(fm.isFocused(12));
+        keyboard.doDownArrowPress(KeyModifier.SHIFT);
+        assertTrue(fm.isFocused(13));
+        keyboard.doDownArrowPress(KeyModifier.SHIFT);
+        assertTrue(debug(), fm.isFocused(13));
     }
 }

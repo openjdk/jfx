@@ -720,6 +720,9 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
             fm.focus(newFocusOwner, focusedCell.getTableColumn());
         } else if (isShiftDown && getAnchor() != null && ! selectionPathDeviated) {
             int newRow = fm.getFocusedIndex() + delta;
+            
+            // we don't let the newRow go outside the bounds of the data
+            newRow = Math.max(Math.min(getItemCount() - 1, newRow), 0);
 
             int start = Math.min(getAnchor().getRow(), newRow);
             int end = Math.max(getAnchor().getRow(), newRow);
