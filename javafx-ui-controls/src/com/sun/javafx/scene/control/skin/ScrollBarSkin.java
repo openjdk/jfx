@@ -33,6 +33,7 @@ import javafx.geometry.Point2D;
 import javafx.scene.control.ScrollBar;
 import javafx.scene.layout.StackPane;
 import javafx.scene.input.ScrollEvent;
+import javafx.scene.input.MouseButton;
 
 import com.sun.javafx.Utils;
 import com.sun.javafx.application.PlatformImpl;
@@ -153,7 +154,7 @@ public class ScrollBarSkin extends BehaviorSkinBase<ScrollBar, ScrollBarBehavior
 
         track.setOnMousePressed( new EventHandler<javafx.scene.input.MouseEvent>() {
            @Override public void handle(javafx.scene.input.MouseEvent me) {
-               if (!thumb.isPressed()) {
+               if (!thumb.isPressed() && me.getButton() == MouseButton.PRIMARY) {
                    if (getSkinnable().getOrientation() == Orientation.VERTICAL) {
                        if (trackLength != 0) {
                            getBehavior().trackPress(me, me.getY() / trackLength);
