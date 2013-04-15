@@ -31,3 +31,4 @@
 #define DRAG_IMAGE_MIME @"application.x-java-drag-image"
 #define DRAG_IMAGE_OFFSET @"application.x-java-drag-image-offset"
 
+void copyToDragPasteboardIfNeeded(id<NSDraggingInfo> sender);

@@ -43,6 +43,7 @@
 #import "GlassPasteboard.h"
 #import "GlassHelper.h"
 #import "GlassStatics.h"
+#import "GlassPasteboard.h"
 
 //#define VERBOSE
 #ifndef VERBOSE
@@ -791,6 +792,7 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
     {
         case com_sun_glass_events_DndEvent_ENTER:
             DNDLOG("com_sun_glass_events_DndEvent_ENTER");
+            copyToDragPasteboardIfNeeded(info);
             mask = (*env)->CallIntMethod(env, self->jView, jViewNotifyDragEnter, x, y, xAbs, yAbs, recommendedAction);
             [GlassDragSource setMask:mask];
             break;
