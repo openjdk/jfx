@@ -1890,9 +1890,8 @@ public class Region extends Parent {
                           areaBaselineOffset - child.getBaselineOffset() :
                           computeYOffset(areaHeight - topMargin - bottomMargin,
                                          child.getLayoutBounds().getHeight(), vpos));
-        // do not snap position if child is not resizable because it can cause gaps
-        final double x = child.isResizable()? snapPosition(areaX + xoffset, isSnapToPixel) : areaX + xoffset;
-        final double y = child.isResizable()? snapPosition(areaY + yoffset, isSnapToPixel) : areaY + yoffset;
+        final double x = snapPosition(areaX + xoffset, isSnapToPixel);
+        final double y = snapPosition(areaY + yoffset, isSnapToPixel);
 
         child.relocate(x,y);
     }
