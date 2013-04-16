@@ -1906,7 +1906,7 @@ public class Region extends Parent {
     /** @treatAsPrivate */
     @Override public void impl_updatePG() {
         super.impl_updatePG();
-        if (_shape != null) _shape.impl_updatePG();
+        if (_shape != null) _shape.impl_syncPGNode();
         PGRegion pg = (PGRegion) impl_getPGNode();
 
         final boolean sizeChanged = impl_isDirty(DirtyBits.NODE_GEOMETRY);
