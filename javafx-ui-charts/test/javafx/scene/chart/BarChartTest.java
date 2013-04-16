@@ -41,7 +41,7 @@ import javafx.scene.layout.StackPane;
  *
  * @author paru
  */
-public class BarChartTest extends ChartTestBase {
+public class BarChartTest extends XYChartTestBase {
 
     static String[] years = {"2010", "2011", "2012"};
     static double[] anvilsSold = { 567, 1292, 2423 };

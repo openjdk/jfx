@@ -42,12 +42,12 @@ import javafx.scene.shape.*;
 import org.junit.Ignore;
 
 
-public class StackedAreaChartTest extends XYChartTestBase {
+public class AreaChartTest extends XYChartTestBase {
     
     private Scene scene;
     private StubToolkit toolkit;
     private Stage stage;
-    StackedAreaChart<Number,Number> ac;
+    AreaChart<Number,Number> ac;
     final XYChart.Series<Number, Number> series1 = new XYChart.Series<Number, Number>();
     boolean useCategoryAxis = false;
     final String[] countries = {"USA", "Italy", "France", "China", "India"};
@@ -66,7 +66,7 @@ public class StackedAreaChartTest extends XYChartTestBase {
         series1.getData().add(new XYChart.Data(countries[4], 10d));
         } else {
             xAxis = new NumberAxis();
-            ac = new StackedAreaChart<Number,Number>(xAxis,yAxis);
+            ac = new AreaChart<Number,Number>(xAxis,yAxis);
             // add starting data
         series1.getData().add(new XYChart.Data(10d, 10d));
         series1.getData().add(new XYChart.Data(25d, 20d));
@@ -77,7 +77,7 @@ public class StackedAreaChartTest extends XYChartTestBase {
         
         xAxis.setLabel("X Axis");
         yAxis.setLabel("Y Axis");
-        ac.setTitle("HelloStackedAreaChart");
+        ac.setTitle("HelloAreaChart");
         
         return ac;
     }
@@ -97,17 +97,6 @@ public class StackedAreaChartTest extends XYChartTestBase {
             }
         }
         return sb;
-    }
-    
-    @Test 
-    public void testSeriesAdd() {
-        startApp();
-        ac.getData().addAll(series1);
-        pulse();
-        StringBuffer sb = getSeriesLineFromPlot();
-//        assertEquals("L220.0 59.0 L264.0 175.0 L440.0 175.0 L704.0 291.0 ", sb.toString());
-        assertEquals("L219.0 58.0 L263.0 173.0 L438.0 173.0 L700.0 289.0 ", sb.toString());
-    
     }
     
     @Test
@@ -136,56 +125,16 @@ public class StackedAreaChartTest extends XYChartTestBase {
         }
     }
     
-    @Test @Ignore
-    public void testDataItemAdd() {
-        startApp();
-        ac.getData().addAll(series1);
-        pulse();
-        if (!ac.getData().isEmpty()) {
-            series1.getData().add(new XYChart.Data(40d,10d));
-            pulse();
-            StringBuffer sb = getSeriesLineFromPlot();
-            assertEquals(sb.toString(), "L206.0 57.0 L247.0 171.0 L329.0 284.0 L412.0 171.0 L658.0 284.0 ");
-        }
-    }
-    
-    @Test @Ignore
-    public void testDataItemInsert() {
-        startApp();
-        ac.getData().addAll(series1);
-        pulse();
-        if (!ac.getData().isEmpty()) {
-            series1.getData().add(2, new XYChart.Data(40d,10d));
-            pulse();
-            StringBuffer sb = getSeriesLineFromPlot();
-            assertEquals(sb.toString(), "L206.0 57.0 L247.0 171.0 L329.0 284.0 L412.0 171.0 L658.0 284.0 ");
-        }
-    }
-    
-    @Test @Ignore
-    public void testDataItemChange() {
-        startApp();
-        ac.getData().addAll(series1);
-        pulse();
-        if (!ac.getData().isEmpty()) {
-            XYChart.Data<Number,Number> d = series1.getData().get(2);
-            d.setXValue(40d);
-            d.setYValue(30d);
-            pulse();
-            StringBuffer sb = getSeriesLineFromPlot();
-            assertEquals(sb.toString(), "L206.0 197.0 L329.0 40.0 L412.0 276.0 L658.0 354.0 ");
-        }
-    }
-    
-    @Test 
-    public void testStackedAreaChartWithCategoryAxis() {
+    @Test  
+    public void testAreaChartWithCategoryAxis() {
         useCategoryAxis = true;
         startApp();
         useCategoryAxis = false;
     }
-
+    
     @Test public void testCreateSymbols() {
          startApp();
+         ac.getData().clear();
          ac.setCreateSymbols(false);
          pulse();
          ac.getData().addAll(series1);
@@ -193,10 +142,10 @@ public class StackedAreaChartTest extends XYChartTestBase {
          assertEquals(0, countSymbols(ac, "chart-area-symbol"));
          
          ac.getData().clear();
-         pulse();
          ac.setCreateSymbols(true);
          pulse();
          ac.getData().addAll(series1);
+         pulse();
          assertEquals(5, countSymbols(ac, "chart-area-symbol"));
      }
 }

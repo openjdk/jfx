@@ -45,7 +45,7 @@ import javafx.scene.shape.*;
 import org.junit.Ignore;
 
 
-public class LineChartTest extends ChartTestBase {
+public class LineChartTest extends XYChartTestBase {
 
     private Scene scene;
     private StubToolkit toolkit;
@@ -97,4 +97,20 @@ public class LineChartTest extends ChartTestBase {
             assertEquals(sb.toString(), "");
         }
     }
+        
+     @Test public void testCreateSymbols() {
+         startApp();
+         lineChart.setCreateSymbols(false);
+         pulse();
+         lineChart.getData().addAll(series1);
+         pulse();
+         assertEquals(0, countSymbols(lineChart, "chart-line-symbol"));
+         
+         lineChart.getData().clear();
+         pulse();
+         lineChart.setCreateSymbols(true);
+         pulse();
+         lineChart.getData().addAll(series1);
+         assertEquals(5, countSymbols(lineChart, "chart-line-symbol"));
+     }
 }

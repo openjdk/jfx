@@ -54,6 +54,14 @@ import javafx.util.Duration;
 
 import com.sun.javafx.charts.Legend;
 import com.sun.javafx.charts.Legend.LegendItem;
+import com.sun.javafx.css.converters.BooleanConverter;
+import java.util.Collections;
+import javafx.beans.property.BooleanProperty;
+import javafx.css.CssMetaData;
+import javafx.css.Styleable;
+import javafx.css.StyleableBooleanProperty;
+import javafx.css.StyleableProperty;
+import static javafx.scene.chart.LineChart.getClassCssMetaData;
 
 /**
  * AreaChart - Plots the area between the line that connects the data points and
@@ -67,6 +75,54 @@ public class AreaChart<X,Y> extends XYChart<X,Y> {
     private Map<Series, DoubleProperty> seriesYMultiplierMap = new HashMap<Series, DoubleProperty>();
     private Legend legend = new Legend();
 
+    // -------------- PUBLIC PROPERTIES ----------------------------------------
+
+    /** When true, CSS styleable symbols are created for any data items that don't have a symbol node specified. */
+    private BooleanProperty createSymbols = new StyleableBooleanProperty(true) {
+        @Override protected void invalidated() {
+            for (int seriesIndex=0; seriesIndex < getData().size(); seriesIndex ++) {
+                Series<X,Y> series = getData().get(seriesIndex);
+                for (int itemIndex=0; itemIndex < series.getData().size(); itemIndex ++) {
+                    Data<X,Y> item = series.getData().get(itemIndex);
+                    Node symbol = item.getNode();
+                    if(get() && symbol == null) { // create any symbols
+                        symbol = createSymbol(series, getData().indexOf(series), item, itemIndex);
+                        if (null != symbol) {
+                            getPlotChildren().add(symbol);
+                        }
+                    } else if (!get() && symbol != null) { // remove symbols
+                        getPlotChildren().remove(symbol);
+                        symbol = null;
+                        item.setNode(null);
+                    }
+                }
+            }
+            requestChartLayout();
+        }
+
+        public Object getBean() {
+            return this;
+        }
+
+        public String getName() {
+            return "createSymbols";
+        }
+
+        public CssMetaData getCssMetaData() {
+            return StyleableProperties.CREATE_SYMBOLS;
+        }
+    };
+
+    /**
+     * Indicates whether symbols for data points will be created or not.
+     *
+     * @return true if symbols for data points will be created and false otherwise.
+     */
+    public final boolean getCreateSymbols() { return createSymbols.getValue(); }
+    public final void setCreateSymbols(boolean value) { createSymbols.setValue(value); }
+    public final BooleanProperty createSymbolsProperty() { return createSymbols; }
+    
+    
     // -------------- CONSTRUCTORS ----------------------------------------------
 
     /**
@@ -157,7 +213,7 @@ public class AreaChart<X,Y> extends XYChart<X,Y> {
                 int last = series.getData().size() - 2;
                 item.setCurrentX(series.getData().get(last).getXValue());
                 item.setCurrentY(series.getData().get(last).getYValue());
-            } else {
+            } else if (symbol != null) {
                 // fade in new symbol
                 FadeTransition ft = new FadeTransition(Duration.millis(500),symbol);
                 ft.setToValue(1);
@@ -176,8 +232,9 @@ public class AreaChart<X,Y> extends XYChart<X,Y> {
                 );
             }
             
+        } else if (symbol != null) {
+            getPlotChildren().add(symbol);
         }
-        getPlotChildren().add(symbol);
     }
 
     @Override protected  void dataItemRemoved(final Data<X,Y> item, final Series<X,Y> series) {
@@ -311,12 +368,17 @@ public class AreaChart<X,Y> extends XYChart<X,Y> {
         for (int j=0; j<series.getData().size(); j++) {
             Data item = series.getData().get(j);
             final Node symbol = createSymbol(series, seriesIndex, item, j);
-            if (shouldAnimate()) symbol.setOpacity(0);
-            getPlotChildren().add(symbol);
-            if (shouldAnimate()) {
-                // fade in new symbol
-                keyFrames.add(new KeyFrame(Duration.ZERO, new KeyValue(symbol.opacityProperty(), 0)));
-                keyFrames.add(new KeyFrame(Duration.millis(200), new KeyValue(symbol.opacityProperty(), 1)));
+            if (symbol != null) {
+                if (shouldAnimate()) {
+                    symbol.setOpacity(0);
+                    getPlotChildren().add(symbol);
+                    // fade in new symbol
+                    keyFrames.add(new KeyFrame(Duration.ZERO, new KeyValue(symbol.opacityProperty(), 0)));
+                    keyFrames.add(new KeyFrame(Duration.millis(200), new KeyValue(symbol.opacityProperty(), 1)));
+                }
+                else {
+                    getPlotChildren().add(symbol);
+                }
             }
         }
         if (shouldAnimate()) animate(keyFrames.toArray(new KeyFrame[keyFrames.size()]));
@@ -341,7 +403,6 @@ public class AreaChart<X,Y> extends XYChart<X,Y> {
         }
         seriesColorMap.remove(series);
     }
-
     @Override protected  void seriesRemoved(final Series<X,Y> series) {
         updateDefaultColorIndex(series);
         // remove series Y multiplier
@@ -351,7 +412,10 @@ public class AreaChart<X,Y> extends XYChart<X,Y> {
             // create list of all nodes we need to fade out
             final List<Node> nodes = new ArrayList<Node>();
             nodes.add(series.getNode());
-            for (Data d: series.getData()) nodes.add(d.getNode());
+            if (getCreateSymbols()) { // RT-22124
+                // done need to fade the symbols if createSymbols is false
+                for (Data d: series.getData()) nodes.add(d.getNode());
+            }
             // fade out old and symbols
             KeyValue[] startValues = new KeyValue[nodes.size()];
             KeyValue[] endValues = new KeyValue[nodes.size()];
@@ -419,13 +483,13 @@ public class AreaChart<X,Y> extends XYChart<X,Y> {
     private Node createSymbol(Series series, int seriesIndex, final Data item, int itemIndex) {
         Node symbol = item.getNode();
         // check if symbol has already been created
-        if (symbol == null) {
+        if (symbol == null && getCreateSymbols()) {
             symbol = new StackPane();
             item.setNode(symbol);
         }
         // set symbol styles
         // Note: not sure if we want to add or check, ie be more careful and efficient here
-        symbol.getStyleClass().setAll("chart-area-symbol", "series" + seriesIndex, "data" + itemIndex,
+        if (symbol != null) symbol.getStyleClass().setAll("chart-area-symbol", "series" + seriesIndex, "data" + itemIndex,
                 series.defaultColorStyleClass);
         return symbol;
     }
@@ -453,5 +517,48 @@ public class AreaChart<X,Y> extends XYChart<X,Y> {
             setLegend(null);
         }
     }
+
+    // -------------- STYLESHEET HANDLING --------------------------------------
+
+    private static class StyleableProperties {
+        private static final CssMetaData<AreaChart<?,?>,Boolean> CREATE_SYMBOLS = 
+            new CssMetaData<AreaChart<?,?>,Boolean>("-fx-create-symbols",
+                BooleanConverter.getInstance(), Boolean.TRUE) {
+
+            @Override
+            public boolean isSettable(AreaChart node) {
+                return node.createSymbols == null || !node.createSymbols.isBound();
+}
+
+            @Override
+            public StyleableProperty<Boolean> getStyleableProperty(AreaChart node) {
+                return (StyleableProperty<Boolean>)node.createSymbolsProperty();
+            }
+        };
+
+        private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
+        static {
+            final List<CssMetaData<? extends Styleable, ?>> styleables =
+                new ArrayList<CssMetaData<? extends Styleable, ?>>(XYChart.getClassCssMetaData());
+            styleables.add(CREATE_SYMBOLS);
+            STYLEABLES = Collections.unmodifiableList(styleables);
+        }
+    }
+
+    /**
+     * @return The CssMetaData associated with this class, which may include the
+     * CssMetaData of its super classes.
+     */
+    public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
+        return StyleableProperties.STYLEABLES;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public List<CssMetaData<? extends Styleable, ?>> getCssMetaData() {
+        return getClassCssMetaData();
+    }    
 
 }
