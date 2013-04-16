@@ -27,37 +27,53 @@ package com.sun.javafx.scene.control;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.WeakHashMap;
+
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.beans.value.WeakChangeListener;
+import javafx.collections.ListChangeListener;
+import javafx.collections.ObservableList;
+import javafx.collections.WeakListChangeListener;
 import javafx.util.Callback;
 
 public final class MultiplePropertyChangeListenerHandler {
     
     private final Callback<String, Void> propertyChangedHandler;
     
+    private Map<Object,String> propertyReferenceMap = new WeakHashMap<Object,String>();
+    
     public MultiplePropertyChangeListenerHandler(Callback<String, Void> propertyChangedHandler) {
         this.propertyChangedHandler = propertyChangedHandler;
     }
     
-    /**
-     * This is part of the workaround introduced during delomboking. We probably will
-     * want to adjust the way listeners are added rather than continuing to use this
-     * map (although it doesn't really do much harm).
-     */
-    private Map<ObservableValue<?>,String> propertyReferenceMap =
-            new HashMap<ObservableValue<?>,String>();
-    
-    private final ChangeListener<Object> propertyChangedListener = new ChangeListener<Object>() {
-        @Override public void changed(ObservableValue<?> property, 
-                @SuppressWarnings("unused") Object oldValue, 
-                @SuppressWarnings("unused") Object newValue) {
-            propertyChangedHandler.call(propertyReferenceMap.get(property));
+    public void dispose() {
+        if (propertyReferenceMap != null) {
+            // unhook listeners
+            for (Object obj : propertyReferenceMap.keySet()) {
+                if (obj instanceof ObservableValue) {
+                    ((ObservableValue<?>)obj).removeListener(weakPropertyChangedListener);
+                } else if (obj instanceof ObservableList) {
+                    ((ObservableList<?>)obj).removeListener(weakListChangedListener);
+                }
+            }
+            propertyReferenceMap.clear();
+            propertyReferenceMap = null;
+            propertyChangedListener = null;
+            weakPropertyChangedListener = null;
         }
-    };
+    }
     
-    private final WeakChangeListener<Object> weakPropertyChangedListener = 
-            new WeakChangeListener<Object>(propertyChangedListener);
+    
+    
+    /***************************************************************************
+     * 
+     * Property listener 
+     *
+     **************************************************************************/
+    
+    private ChangeListener<Object> propertyChangedListener;
+    private WeakChangeListener<Object> weakPropertyChangedListener;
     
     /**
      * Subclasses can invoke this method to register that we want to listen to
@@ -67,6 +83,17 @@ public final class MultiplePropertyChangeListenerHandler {
      * @param reference
      */
     public final void registerChangeListener(ObservableValue<?> property, String reference) {
+        if (weakPropertyChangedListener == null) {
+            propertyChangedListener = new ChangeListener<Object>() {
+                @Override public void changed(ObservableValue<?> property, 
+                        @SuppressWarnings("unused") Object oldValue, 
+                        @SuppressWarnings("unused") Object newValue) {
+                    propertyChangedHandler.call(propertyReferenceMap.get(property));
+                }
+            };
+            weakPropertyChangedListener = new WeakChangeListener<Object>(propertyChangedListener);
+        }
+        
         if (!propertyReferenceMap.containsKey(property)) {
             propertyReferenceMap.put(property, reference);
             property.addListener(weakPropertyChangedListener);
@@ -74,17 +101,51 @@ public final class MultiplePropertyChangeListenerHandler {
     }
     
     public final void unregisterChangeListener(ObservableValue<?> property) {
+        if (propertyReferenceMap == null) {
+            return;
+        }
+        
         if (propertyReferenceMap.containsKey(property)) {
             propertyReferenceMap.remove(property);
             property.removeListener(weakPropertyChangedListener);
         }
     }
-
-    public void dispose() {
-        // unhook listeners
-        for (ObservableValue<?> value : propertyReferenceMap.keySet()) {
-            value.removeListener(weakPropertyChangedListener);
+    
+    
+    
+    /***************************************************************************
+     * 
+     * ObservableList listener 
+     *
+     **************************************************************************/
+    
+    private ListChangeListener<Object> listChangedListener;
+    private WeakListChangeListener<Object> weakListChangedListener;
+    
+    public final void registerChangeListener(ObservableList list, String reference) {
+        if (weakListChangedListener == null) {
+            listChangedListener = new ListChangeListener<Object>() {
+                @Override public void onChanged(javafx.collections.ListChangeListener.Change<? extends Object> c) {
+                    propertyChangedHandler.call(propertyReferenceMap.get(c.getList()));
+                }
+            };
+            weakListChangedListener = new WeakListChangeListener<Object>(listChangedListener);
         }
-        propertyReferenceMap.clear();
+        
+        if (!propertyReferenceMap.containsKey(list)) {
+            propertyReferenceMap.put(list, reference);
+            list.addListener(weakListChangedListener);
+        }
+    }
+    
+    public final void unregisterChangeListener(ObservableList list) {
+        if (propertyReferenceMap == null) {
+            return;
+        }
+        
+        if (propertyReferenceMap.containsKey(list)) {
+            propertyReferenceMap.remove(list);
+            list.removeListener(weakListChangedListener);
+        }
     }
 }
