@@ -25,6 +25,7 @@
 
 package javafx.scene.control;
 
+import com.sun.javafx.application.PlatformImpl;
 import com.sun.javafx.runtime.VersionInfo;
 import com.sun.javafx.scene.control.skin.VirtualScrollBar;
 import com.sun.javafx.scene.control.test.ControlAsserts;
@@ -708,9 +709,13 @@ public class TreeViewTest {
 
         TreeView<String> treeView = new TreeView<String>(rootNode);
         
+        final double indent = PlatformImpl.isCaspian() ? 31 : 
+                        PlatformImpl.isModena()  ? 35 :
+                        0;
+        
         // ensure all children of the root node have the correct indentation 
         // before the sort occurs
-        ControlAsserts.assertLayoutX(treeView, 1, 11, 31.0);
+        ControlAsserts.assertLayoutX(treeView, 1, 11, indent);
         for (TreeItem<String> children : rootNode.getChildren()) {
             assertEquals(rootNode, children.getParent());
         }
@@ -724,7 +729,7 @@ public class TreeViewTest {
         
         // ensure the same indentation exists after the sort (which is where the
         // bug is - it drops down to 21.0px indentation when it shouldn't).
-        ControlAsserts.assertLayoutX(treeView, 1, 11, 31.0);
+        ControlAsserts.assertLayoutX(treeView, 1, 11, indent);
         for (TreeItem<String> children : rootNode.getChildren()) {
             assertEquals(rootNode, children.getParent());
         }
