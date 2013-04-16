@@ -653,23 +653,23 @@ is being used to size a border should also be in pixels.
             -fx-shadow-highlight-color,
             linear-gradient(to bottom, derive(-fx-outer-border, -20%), -fx-outer-border),
             linear-gradient(to bottom, 
-                    derive(-fx-text-box-border, -10%) 0%, 
-                    derive(-fx-text-box-border, -2%) 20%,
-                    derive(-fx-text-box-border, 5%) 50%);
+                    derive(-fx-color, -22%) 0%,
+                    derive(-fx-color, -13%) 20%,
+                    derive(-fx-color, -11%) 50%);
     -fx-background-insets: 0 0 -1 0, 0, 1;
 }
 .toggle-button:selected:focused {
-    -fx-background-color: 
+    -fx-background-color:
         -fx-focus-color,
         linear-gradient(to bottom,
-            derive(-fx-text-box-border, -10%) 0%,
-            derive(-fx-text-box-border, -2%) 20%,
-            derive(-fx-text-box-border, 5%) 50%),
+            derive(-fx-color, -22%) 0%,
+            derive(-fx-color, -13%) 20%,
+            derive(-fx-color, -11%) 50%),
         -fx-faint-focus-color,
         linear-gradient(to bottom,
-            derive(-fx-text-box-border, -10%) 0%,
-            derive(-fx-text-box-border, -2%) 20%,
-            derive(-fx-text-box-border, 5%) 50%);
+            derive(-fx-color, -22%) 0%,
+            derive(-fx-color, -13%) 20%,
+            derive(-fx-color, -11%) 50%);
     -fx-background-insets: -0.2, 1, -1.4, 2.6;
     -fx-background-radius: 3, 2, 4, 0;
 }
