@@ -264,8 +264,6 @@ public class StackedAreaChart<X,Y> extends XYChart<X,Y> {
         seriesYMultiplierMap.put(series, seriesYAnimMultiplier);
         // handle any data already in series
         if (shouldAnimate()) {
-            seriesLine.setOpacity(0);
-            fillPath.setOpacity(0);
             seriesYAnimMultiplier.setValue(0d);
         } else {
             seriesYAnimMultiplier.setValue(1d);
@@ -275,13 +273,11 @@ public class StackedAreaChart<X,Y> extends XYChart<X,Y> {
         if (shouldAnimate()) {
             // animate in new series
             keyFrames.add(new KeyFrame(Duration.ZERO,
-                new KeyValue(seriesLine.opacityProperty(), 0),
-                new KeyValue(fillPath.opacityProperty(), 0),
+                new KeyValue(areaGroup.opacityProperty(), 0),
                 new KeyValue(seriesYAnimMultiplier, 0)
             ));
             keyFrames.add(new KeyFrame(Duration.millis(200),
-                new KeyValue(seriesLine.opacityProperty(), 1),
-                new KeyValue(fillPath.opacityProperty(), 1)
+                new KeyValue(areaGroup.opacityProperty(), 1)
             ));
             keyFrames.add(new KeyFrame(Duration.millis(500),
                 new KeyValue(seriesYAnimMultiplier, 1)
@@ -314,8 +310,8 @@ public class StackedAreaChart<X,Y> extends XYChart<X,Y> {
             KeyValue[] startValues = new KeyValue[nodes.size()];
             KeyValue[] endValues = new KeyValue[nodes.size()];
             for (int j=0; j < nodes.size(); j++) {
-                startValues[j]   = new KeyValue(nodes.get(j).opacityProperty(),0);
-                endValues[j]       = new KeyValue(nodes.get(j).opacityProperty(),1);
+                startValues[j]   = new KeyValue(nodes.get(j).opacityProperty(),1);
+                endValues[j]       = new KeyValue(nodes.get(j).opacityProperty(),0);
             }
             Timeline tl = new Timeline();
             tl.getKeyFrames().addAll(

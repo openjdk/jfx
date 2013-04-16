@@ -389,8 +389,8 @@ public class LineChart<X,Y> extends XYChart<X,Y> {
             KeyValue[] startValues = new KeyValue[nodes.size()];
             KeyValue[] endValues = new KeyValue[nodes.size()];
             for (int j=0; j < nodes.size(); j++) {
-                startValues[j]   = new KeyValue(nodes.get(j).opacityProperty(),0);
-                endValues[j]       = new KeyValue(nodes.get(j).opacityProperty(),1);
+                startValues[j]   = new KeyValue(nodes.get(j).opacityProperty(),1);
+                endValues[j]       = new KeyValue(nodes.get(j).opacityProperty(),0);
             }
             Timeline tl = new Timeline();
             tl.getKeyFrames().addAll(
