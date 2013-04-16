@@ -497,7 +497,7 @@ public class PlatformImpl {
      *
      * @return true if using caspian stylesheet
      */
-    public static boolean isCaspain() {
+    public static boolean isCaspian() {
         return isCaspian;
     }
 
