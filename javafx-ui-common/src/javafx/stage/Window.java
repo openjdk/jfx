@@ -425,6 +425,7 @@ public class Window implements EventTarget {
                 // will also trigger scene's peer disposal.
                 if (oldScene != null) {
                     oldScene.impl_setWindow(null);
+                    StyleManager.getInstance().forget(oldScene);
                 }
                 if (newScene != null) {
                     final Window oldWindow = newScene.getWindow();
@@ -777,6 +778,7 @@ public class Window implements EventTarget {
                     if (getScene() != null) {
                         impl_peer.setScene(null);
                         getScene().impl_disposePeer();
+                        StyleManager.getInstance().forget(getScene());
                     }
 
                     // Remove toolkit pulse listener

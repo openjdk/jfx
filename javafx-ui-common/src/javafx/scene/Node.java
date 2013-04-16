@@ -8466,8 +8466,6 @@ public abstract class Node implements EventTarget, Styleable {
 
         if (cssFlag == CssFlags.REAPPLY) {
             
-            final boolean hadStyles = styleHelper != null;
-            
             // Match new styles if my own indicates I need to reapply
             styleHelper = CssStyleHelper.createStyleHelper(this);
             
