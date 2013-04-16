@@ -69,6 +69,7 @@
 	<classpathentry kind="src" path="javafx-sg-prism/src"/>
 	<classpathentry kind="src" path="javafx-sg-prism/test"/>
 	<classpathentry kind="src" path="javafx-ui-charts/src"/>
+    <classpathentry kind="src" path="javafx-ui-charts/test"/>
 	<classpathentry kind="src" path="javafx-ui-charts/build/builders"/>
 	<classpathentry kind="src" path="javafx-ui-common/src"/>
 	<classpathentry kind="src" path="javafx-ui-common/test/unit"/>
