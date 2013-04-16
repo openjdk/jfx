@@ -46,6 +46,7 @@ import javafx.beans.property.SimpleDoubleProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
+import javafx.collections.WeakListChangeListener;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.Bounds;
@@ -74,8 +75,10 @@ import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.transform.Rotate;
+import javafx.util.Callback;
 import javafx.util.Duration;
 
+import com.sun.javafx.scene.control.MultiplePropertyChangeListenerHandler;
 import com.sun.javafx.scene.control.behavior.TabPaneBehavior;
 import com.sun.javafx.scene.traversal.Direction;
 import com.sun.javafx.scene.traversal.TraversalEngine;
@@ -1011,8 +1014,24 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
         private StackPane inner;
         private Tooltip tooltip;
         private Rectangle clip;
-        private InvalidationListener tabListener;
-        private InvalidationListener controlListener;
+        
+        private MultiplePropertyChangeListenerHandler listener = 
+                new MultiplePropertyChangeListenerHandler(new Callback<String, Void>() {
+                    @Override public Void call(String param) {
+                        handlePropertyChanged(param);
+                        return null;
+                    }
+                });
+        
+        private final ListChangeListener<String> styleClassListener = new ListChangeListener<String>() {
+            @Override
+            public void onChanged(Change<? extends String> c) {
+                getStyleClass().setAll(tab.getStyleClass());
+            }
+        };
+        
+        private final WeakListChangeListener<String> weakStyleClassListener =
+                new WeakListChangeListener<>(styleClassListener);
 
         public TabHeaderSkin(final Tab tab) {
             getStyleClass().setAll(tab.getStyleClass());
@@ -1147,87 +1166,25 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
                 Tooltip.install(this, tooltip);
             }
 
-            tabListener = new InvalidationListener() {
-                @Override public void invalidated(Observable valueModel) {
-                    if (valueModel == tab.selectedProperty()) {
-                        pseudoClassStateChanged(SELECTED_PSEUDOCLASS_STATE, tab.isSelected());
-                        // Need to request a layout pass for inner because if the width
-                        // and height didn't not change the label or close button may have
-                        // changed.
-                        inner.requestLayout();
-                        requestLayout();
-                    } else if (valueModel == tab.textProperty()) {
-                        label.setText(getTab().getText());
-                    } else if (valueModel == tab.graphicProperty()) {
-                        label.setGraphic(getTab().getGraphic());
-                    } else if (valueModel == tab.contextMenuProperty()) {
-                        // todo
-                    } else if (valueModel == tab.tooltipProperty()) {
-                        getChildren().remove(tooltip);
-                        tooltip = tab.getTooltip();
-                        if (tooltip != null) {
-//                            getChildren().addAll(tooltip);
-                        }
-                    } else if (valueModel == tab.styleProperty()) {
-                        setStyle(tab.getStyle());
-                    } else if (valueModel == tab.disableProperty()) {
-                        pseudoClassStateChanged(DISABLED_PSEUDOCLASS_STATE, tab.isDisable());
-                        inner.requestLayout();
-                        requestLayout();
-                    } else if (valueModel == tab.closableProperty()) {
-                        inner.requestLayout();
-                        requestLayout();
-                    }
-                }
-            };
+            listener.registerChangeListener(tab.closableProperty(), "CLOSABLE");
+            listener.registerChangeListener(tab.selectedProperty(), "SELECTED");
+            listener.registerChangeListener(tab.textProperty(), "TEXT");
+            listener.registerChangeListener(tab.graphicProperty(), "GRAPHIC");
+            listener.registerChangeListener(tab.contextMenuProperty(), "CONTEXT_MENU");
+            listener.registerChangeListener(tab.tooltipProperty(), "TOOLTIP");
+            listener.registerChangeListener(tab.disableProperty(), "DISABLE");
+            listener.registerChangeListener(tab.styleProperty(), "STYLE");
             
-            tab.closableProperty().addListener(tabListener);
-            tab.selectedProperty().addListener(tabListener);
-            tab.textProperty().addListener(tabListener);
-            tab.graphicProperty().addListener(tabListener);
-            tab.contextMenuProperty().addListener(tabListener);
-            tab.tooltipProperty().addListener(tabListener);
-            tab.disableProperty().addListener(tabListener);
-            tab.styleProperty().addListener(tabListener);
-            tab.getStyleClass().addListener(new ListChangeListener<String>() {
-                @Override
-                public void onChanged(Change<? extends String> c) {
-                    getStyleClass().setAll(tab.getStyleClass());
-                }
-            });
+            tab.getStyleClass().addListener(weakStyleClassListener);
 
-            controlListener = new InvalidationListener() {
-                @Override public void invalidated(Observable valueModel) {
-                    if (valueModel == getSkinnable().tabClosingPolicyProperty()) {
-                        inner.requestLayout();
-                        requestLayout();
-                    } else if (valueModel == getSkinnable().sideProperty()) {
-                        final Side side = getSkinnable().getSide();
-                        pseudoClassStateChanged(TOP_PSEUDOCLASS_STATE, (side == Side.TOP));
-                        pseudoClassStateChanged(RIGHT_PSEUDOCLASS_STATE, (side == Side.RIGHT));
-                        pseudoClassStateChanged(BOTTOM_PSEUDOCLASS_STATE, (side == Side.BOTTOM));
-                        pseudoClassStateChanged(LEFT_PSEUDOCLASS_STATE, (side == Side.LEFT));
-                        inner.setRotate(side == Side.BOTTOM ? 180.0F : 0.0F);
-                        if (getSkinnable().isRotateGraphic()) {
-                            updateGraphicRotation();
-                        }
-                    } else if (valueModel == getSkinnable().rotateGraphicProperty()) {
-                        updateGraphicRotation();
-                    } else if (valueModel == getSkinnable().tabMinWidthProperty() ||
-                            valueModel == getSkinnable().tabMaxWidthProperty() ||
-                            valueModel == getSkinnable().tabMinHeightProperty() ||
-                            valueModel == getSkinnable().tabMaxHeightProperty()) {
-                        requestLayout();
-                    }
-                }
-            };
-            getSkinnable().tabClosingPolicyProperty().addListener(controlListener);
-            getSkinnable().sideProperty().addListener(controlListener);
-            getSkinnable().rotateGraphicProperty().addListener(controlListener);
-            getSkinnable().tabMinWidthProperty().addListener(controlListener);
-            getSkinnable().tabMaxWidthProperty().addListener(controlListener);
-            getSkinnable().tabMinHeightProperty().addListener(controlListener);
-            getSkinnable().tabMaxHeightProperty().addListener(controlListener);
+            listener.registerChangeListener(getSkinnable().tabClosingPolicyProperty(), "TAB_CLOSING_POLICY");
+            listener.registerChangeListener(getSkinnable().sideProperty(), "SIDE");
+            listener.registerChangeListener(getSkinnable().rotateGraphicProperty(), "ROTATE_GRAPHIC");
+            listener.registerChangeListener(getSkinnable().tabMinWidthProperty(), "TAB_MIN_WIDTH");
+            listener.registerChangeListener(getSkinnable().tabMaxWidthProperty(), "TAB_MAX_WIDTH");
+            listener.registerChangeListener(getSkinnable().tabMinHeightProperty(), "TAB_MIN_HEIGHT");
+            listener.registerChangeListener(getSkinnable().tabMaxHeightProperty(), "TAB_MAX_HEIGHT");
+            
             getProperties().put(Tab.class, tab);
             getProperties().put(ContextMenu.class, tab.getContextMenu());
 
@@ -1267,7 +1224,65 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
             pseudoClassStateChanged(RIGHT_PSEUDOCLASS_STATE, (side == Side.RIGHT));
             pseudoClassStateChanged(BOTTOM_PSEUDOCLASS_STATE, (side == Side.BOTTOM));
             pseudoClassStateChanged(LEFT_PSEUDOCLASS_STATE, (side == Side.LEFT));
+        }
+        
+        private void handlePropertyChanged(final String p) {
+            // --- Tab properties
+            if ("CLOSABLE".equals(p)) {
+                inner.requestLayout();
+                requestLayout();
+            } else if ("SELECTED".equals(p)) {
+                pseudoClassStateChanged(SELECTED_PSEUDOCLASS_STATE, tab.isSelected());
+                // Need to request a layout pass for inner because if the width
+                // and height didn't not change the label or close button may have
+                // changed.
+                inner.requestLayout();
+                requestLayout();
+            } else if ("TEXT".equals(p)) {
+                label.setText(getTab().getText());
+            } else if ("GRAPHIC".equals(p)) {
+                label.setGraphic(getTab().getGraphic());
+            } else if ("CONTEXT_MENU".equals(p)) {
+                // todo
+            } else if ("TOOLTIP".equals(p)) {
+                getChildren().remove(tooltip);
+                tooltip = tab.getTooltip();
+                if (tooltip != null) {
+//                    getChildren().addAll(tooltip);
+                }
+            } else if ("DISABLE".equals(p)) {
+                pseudoClassStateChanged(DISABLED_PSEUDOCLASS_STATE, tab.isDisable());
+                inner.requestLayout();
+                requestLayout();
+            } else if ("STYLE".equals(p)) {
+                setStyle(tab.getStyle());
+            }
             
+            // --- Skinnable properties
+            else if ("TAB_CLOSING_POLICY".equals(p)) {
+                inner.requestLayout();
+                requestLayout(); 
+            } else if ("SIDE".equals(p)) {
+                final Side side = getSkinnable().getSide();
+                pseudoClassStateChanged(TOP_PSEUDOCLASS_STATE, (side == Side.TOP));
+                pseudoClassStateChanged(RIGHT_PSEUDOCLASS_STATE, (side == Side.RIGHT));
+                pseudoClassStateChanged(BOTTOM_PSEUDOCLASS_STATE, (side == Side.BOTTOM));
+                pseudoClassStateChanged(LEFT_PSEUDOCLASS_STATE, (side == Side.LEFT));
+                inner.setRotate(side == Side.BOTTOM ? 180.0F : 0.0F);
+                if (getSkinnable().isRotateGraphic()) {
+                    updateGraphicRotation();
+                }
+            } else if ("ROTATE_GRAPHIC".equals(p)) {
+                updateGraphicRotation();
+            } else if ("TAB_MIN_WIDTH".equals(p)) {
+                requestLayout();
+            } else if ("TAB_MAX_WIDTH".equals(p)) {
+                requestLayout();
+            } else if ("TAB_MIN_HEIGHT".equals(p)) {
+                requestLayout();
+            } else if ("TAB_MAX_HEIGHT".equals(p)) {
+                requestLayout();
+            } 
         }
 
         private void updateGraphicRotation() {
@@ -1302,23 +1317,11 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
         };
 
         private void removeListeners(Tab tab) {
-            tab.selectedProperty().removeListener(tabListener);
-            tab.textProperty().removeListener(tabListener);
-            tab.graphicProperty().removeListener(tabListener);
+            listener.dispose();
             ContextMenu menu = tab.getContextMenu();
             if (menu != null) {
                 menu.getItems().clear();
             }
-            tab.contextMenuProperty().removeListener(tabListener);
-            tab.tooltipProperty().removeListener(tabListener);
-            tab.styleProperty().removeListener(tabListener);
-            getSkinnable().tabClosingPolicyProperty().removeListener(controlListener);
-            getSkinnable().sideProperty().removeListener(controlListener);
-            getSkinnable().rotateGraphicProperty().removeListener(controlListener);
-            getSkinnable().tabMinWidthProperty().removeListener(controlListener);
-            getSkinnable().tabMaxWidthProperty().removeListener(controlListener);
-            getSkinnable().tabMinHeightProperty().removeListener(controlListener);
-            getSkinnable().tabMaxHeightProperty().removeListener(controlListener);
             inner.getChildren().clear();
             getChildren().clear();
         }
