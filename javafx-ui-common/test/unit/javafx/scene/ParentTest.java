@@ -38,6 +38,8 @@ import org.junit.Test;
 
 import com.sun.javafx.pgstub.StubToolkit;
 import com.sun.javafx.tk.Toolkit;
+import javafx.beans.InvalidationListener;
+import javafx.beans.Observable;
 
 public class ParentTest {
     private StubToolkit toolkit;
@@ -469,6 +471,24 @@ public class ParentTest {
         stage.show();
 
         // there are assertions tested down the stack (see RT-21746)
+    }
+
+    @Test
+    public void sceneListenerCanAddChild() {
+        final Group root = new Group();
+        final Scene scene = new Scene(root, 600, 450);
+
+        final Group child = new Group(new Group(), new Group(), new Group());
+
+        child.getChildren().get(1).sceneProperty().addListener(new InvalidationListener() {
+            @Override public void invalidated(Observable o) {
+                child.getChildren().add(2, new Group());
+            }
+        });
+
+        root.getChildren().add(child);
+
+        assertSame(scene, child.getChildren().get(3).getScene());
     }
 
     public static class MockParent extends Parent {
