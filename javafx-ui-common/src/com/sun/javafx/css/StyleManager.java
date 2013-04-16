@@ -61,12 +61,12 @@ import javafx.stage.Window;
 import com.sun.javafx.css.parser.CSSParser;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.WeakHashMap;
 import javafx.css.CssMetaData;
 import javafx.css.PseudoClass;
 import javafx.css.StyleOrigin;
 import javafx.scene.image.Image;
 import javafx.stage.PopupWindow;
-import javafx.util.Pair;
 import sun.util.logging.PlatformLogger;
 
 /**
@@ -160,26 +160,37 @@ final public class StyleManager {
     }
             
     /**
-     * The map of Caches, key'd by a combination of class name, style class, and
-     * id.
+     * Each Scene has its own cache. If a scene is closed,
+     * then StyleManager is told to forget the scene and it's cache is annihilated.
      */
-    private static final Map<List<String>, Map<Key, Cache>> 
-            masterCacheMap = new HashMap<List<String>, Map<Key, Cache>>();
-    
-    // for testing
-    Map<List<String>, Map<Key, Cache>> getCacheMap() { return masterCacheMap; }
+    private static final Map<Scene, CacheContainer> cacheContainerMap
+            = new WeakHashMap<Scene, CacheContainer>();
 
-    /*
-     */
-    private final Map<StyleCache.Key,StyleCache> styleCache =
-            new HashMap<StyleCache.Key,StyleCache>();
-    
     /** 
      * StyleHelper uses this cache but it lives here so it can be cleared
      * when style-sheets change.
      */
-    public Map<StyleCache.Key,StyleCache> getStyleCache() {         
-        return styleCache;
+    public Map<StyleCache.Key,StyleCache> getStyleCache(Scene scene) {   
+        
+        if (scene == null) return null;
+        
+        CacheContainer container = cacheContainerMap.get(scene);
+        if (container == null) {
+            container = new CacheContainer();
+            cacheContainerMap.put(scene, container);
+        }
+        
+        return container.getStyleCache();
+    }
+    
+    public StyleMap getStyleMap(Scene scene, int smapId) {
+        
+        if (scene == null || smapId == -1) return StyleMap.EMPTY_MAP;
+        
+        CacheContainer container = cacheContainerMap.get(scene);
+        if (container == null) return StyleMap.EMPTY_MAP;
+        
+        return container.getStyleMap(smapId);
     }
     
    /**
@@ -324,7 +335,6 @@ final public class StyleManager {
 
     }
 
-
     /**
      * A map from String => Stylesheet. If a stylesheet for the 
      * given URL has already been loaded then we'll simply reuse the stylesheet
@@ -332,6 +342,59 @@ final public class StyleManager {
      */
     private final Map<String,StylesheetContainer> stylesheetContainerMap 
         = new HashMap<String,StylesheetContainer>();
+    
+
+    /**
+     * called from Window when the scene is closed.
+     */
+    public void forget(Scene scene) {
+        
+        final CacheContainer cacheContainer = cacheContainerMap.remove(scene);
+        if (cacheContainer != null) {
+            cacheContainer.clearCache();
+        }
+
+        //
+        // remove this scene and any parents belonging to this scene from the
+        // stylesheetContainerMap
+        //
+        Set<Entry<String,StylesheetContainer>> stylesheetContainers = stylesheetContainerMap.entrySet();
+        Iterator<Entry<String,StylesheetContainer>> iter = stylesheetContainers.iterator();
+        
+        while(iter.hasNext()) {
+            
+            Entry<String,StylesheetContainer> entry = iter.next();
+            StylesheetContainer container = entry.getValue();
+            
+            Iterator<Reference<Scene>> sceneIter = container.sceneUsers.list.iterator();
+            while (sceneIter.hasNext()) {
+                
+                Reference<Scene> ref = sceneIter.next();
+                Scene _scene = ref.get();
+                
+                if (_scene == scene || _scene == null) {
+                    sceneIter.remove();
+                } 
+            }
+            
+            Iterator<Reference<Parent>> parentIter = container.parentUsers.list.iterator();
+            while (parentIter.hasNext()) {
+                
+                Reference<Parent> ref = parentIter.next();
+                Parent _parent = ref.get();
+                
+                if (_parent.getScene() == scene || _parent.getScene() == null) {
+                    parentIter.remove();
+                } 
+            }
+            
+            if (container.sceneUsers.list.isEmpty() &&
+                    container.parentUsers.list.isEmpty()) {
+                iter.remove();
+            }
+        }
+        
+    }
     
     /**
      * called from Parent's or Scene's stylesheets property's onChanged method
@@ -360,11 +423,41 @@ final public class StyleManager {
                 final List<String> addedSubList = c.getAddedSubList();
 
                 for (int n=0, nMax=addedSubList.size(); n<nMax; n++) {
+                    
                     final String akey = addedSubList.get(n);
-                    // if this stylesheet isn't in the map, then clear the cache
-                    if (stylesheetContainerMap.containsKey(akey) == false) {
-                        annihilate = true;
-                        // we only need to process one add.
+
+                    //
+                    // clear the cache if this stylesheet isn't in the map
+                    // or if it is in the map but not for this scene,
+                    //
+                    
+                    annihilate = true;
+                        
+                    StylesheetContainer container = stylesheetContainerMap.get(akey);
+                    if (container != null) {
+                        
+                        if (container.sceneUsers != null && container.sceneUsers.list != null) {
+                            
+                            Iterator<Reference<Scene>> iter = container.sceneUsers.list.iterator();
+                            while (iter.hasNext()) {
+
+                                Reference<Scene> ref = iter.next();
+                                Scene s = ref.get();
+                                if (s == scene) {
+                                    annihilate = false;
+                                    break;
+                                }
+                                if (s == null) iter.remove();
+                            }
+                        }
+                        
+                    }
+                    
+                    if (annihilate) {
+                        //
+                        // Once we know we are going to nuke the cache, 
+                        // there is no need to look at other adds.
+                        // 
                         break;
                     }
                     
@@ -418,7 +511,12 @@ final public class StyleManager {
         }
         
         if (isPopup == false) {
-            if (annihilate) clearCache();
+            
+            if (annihilate) {
+                CacheContainer container = cacheContainerMap.get(scene);
+                if (container != null) container.clearCache();
+            }
+            
             processChange(c);
         }
         
@@ -460,7 +558,7 @@ final public class StyleManager {
 
                 final List<String> list = c.getRemoved();
                 int nMax = list != null ? list.size() : 0;
-                for (int n=0; n<nMax; n++) {
+                for (int n = 0; n < nMax; n++) {
                     final String fname = list.get(n);
 
                     // remove this stylesheet from the container and clear
@@ -486,8 +584,6 @@ final public class StyleManager {
     // RT-22565: Called from parentStylesheetsChanged to clear the cache entries
     // for parents and scenes that use the same stylesheet
     private void clearCache(StylesheetContainer sc) {
-
-        removeFromCacheMap(sc);
 
         if (sc == null) return;
 
@@ -525,60 +621,6 @@ final public class StyleManager {
             // impl_reapplyCSS called on the root.
             // 
             parent.impl_reapplyCSS();
-        }
-    }
-
-    // RT-22565: Called from clearParentCache to clear the cache entries.
-    private void removeFromCacheMap(StylesheetContainer sc) {
-
-        if (masterCacheMap.isEmpty() || sc == null) {
-            return;
-        }
-
-        final Set<Entry<List<String>, Map<Key, Cache>>> entries = 
-                masterCacheMap.entrySet();
-        if (entries == null || entries.isEmpty()) {
-            return;
-        }
-
-        // If this StylesheetContainer is used by other entries, then those
-        // caches need to be invalidated, too. But we need to go through all
-        // of the entries first and gather up the ones that need invalidated
-        // to avoid concurrent modification due to this method being re-entered.         
-        final List<String> containerKeys = new ArrayList<String>();
-        
-        final Iterator<Entry<List<String>, Map<Key, Cache>>> iter =
-                entries.iterator();
-            
-        while (iter.hasNext()) {
-            
-            Entry<List<String>, Map<Key, Cache>> entry = iter.next();
-
-            List<String> containerList = entry != null ? entry.getKey() : null;
-            if (containerList == null) {
-                iter.remove();
-                continue;
-            }
-            
-            if (containerList.contains(sc.fname)) {
-                containerList.remove(sc.fname);
-                
-                if (containerList.isEmpty()) {
-                    entry.getValue().clear();
-                } else {
-                    for (String container : containerList) {
-                        if (containerKeys.contains(container) == false) {
-                            containerKeys.add(container);                            
-                        }
-                    }
-                }
-            }
-        }
-        
-        // invalidate other caches that used this Stylesheet.
-        for (String key : containerKeys) {
-            StylesheetContainer container = stylesheetContainerMap.get(key);
-            clearCache(container);
         }
     }
     
@@ -1110,7 +1152,9 @@ final public class StyleManager {
      */
     private void userAgentStylesheetsChanged() {
 
-        clearCache();
+        for (CacheContainer container : cacheContainerMap.values()) {
+            container.clearCache();            
+        }
         
         final Iterator<Window> windows = Window.impl_getWindows();
         while (windows.hasNext()) {
@@ -1123,21 +1167,6 @@ final public class StyleManager {
         }
 
     }
-    
-    private void clearCache() {
-        
-        masterCacheMap.clear();
-        
-        styleCache.clear();
-        
-        styleMapList.clear();
-        baseStyleMapId = styleMapId;
-        // 7/8ths is totally arbitrary
-        if (baseStyleMapId > Integer.MAX_VALUE*7/8) {
-            baseStyleMapId = styleMapId = 0;
-        }
-    }
-
 
     //
     // recurse so that stylesheets of Parents closest to the root are
@@ -1247,7 +1276,6 @@ final public class StyleManager {
     
     // reuse key to avoid creation of numerous small objects
     private Key key = null;
-    private List<String> masterKey = null;        
 
     /**
      * Finds matching styles for this Node.
@@ -1257,6 +1285,12 @@ final public class StyleManager {
         final Scene scene = node.getScene();
         if (scene == null) {
             return StyleMap.EMPTY_MAP;
+        }
+        
+        CacheContainer cacheContainer = cacheContainerMap.get(scene);
+        if (cacheContainer == null) {
+            cacheContainer = new CacheContainer();
+            cacheContainerMap.put(scene, cacheContainer);
         }
 
         final Parent parent = 
@@ -1284,43 +1318,6 @@ final public class StyleManager {
             return StyleMap.EMPTY_MAP;
         }
         
-        if (masterKey == null) {
-            masterKey = new ArrayList<String>();
-        }         
-
-        if (userAgentStylesheets.isEmpty() == false) {
-            for(int n=0, nMax=userAgentStylesheets.size(); n<nMax; n++) {
-                final StylesheetContainer container = userAgentStylesheets.get(n);
-                masterKey.add(container.fname);
-            }
-        }
-        
-        if (hasSceneStylesheets) {
-            for(int n=0, nMax=sceneStylesheets.size(); n<nMax; n++) {
-                final StylesheetContainer container = sceneStylesheets.get(n);
-                masterKey.add(container.fname);
-            }
-        }
-        
-        if (hasParentStylesheets) {
-            for(int n=0, nMax=parentStylesheets.size(); n<nMax; n++) {
-                final StylesheetContainer container = parentStylesheets.get(n);
-                masterKey.add(container.fname);
-            }
-        }
-
-        assert(masterKey.isEmpty() == false);
-        Map<Key, Cache> cacheMap = masterCacheMap.get(masterKey);
-        
-        if (cacheMap != null) {
-            // masterKey is reused, so clear it for next use
-            masterKey.clear();
-        } else {
-            cacheMap = new HashMap<Key, Cache>();
-            masterCacheMap.put(masterKey, cacheMap);
-            masterKey = null;
-        }
-        
         final String name = node.getClass().getName();
         final int dotPos = name.lastIndexOf('.');
         final String cname = name.substring(dotPos+1);  // want Foo, not bada.bing.Foo
@@ -1341,6 +1338,8 @@ final public class StyleManager {
             key.styleClasses.add(StyleClassSet.getStyleClass(styleClass));
         }
 
+        Map<Key, Cache> cacheMap = cacheContainer.getCacheMap();
+        
         Cache cache = cacheMap.get(key);
                 
         if (cache != null) {
@@ -1406,7 +1405,7 @@ final public class StyleManager {
         //
         // Create a style helper for this node from the styles that match. 
         //
-        StyleMap smap = cache.getStyleMap(this, node, triggerStates);
+        StyleMap smap = cache.getStyleMap(cacheContainer, node, triggerStates);
         
         return smap;        
     }
@@ -1448,35 +1447,77 @@ final public class StyleManager {
     //
     ////////////////////////////////////////////////////////////////////////////
 
-    /*
-     * A simple counter used to generate a unique id for a StyleMap. 
-     * This unique id is used by StyleHelper in figuring out which 
-     * style cache to use.
-     */
-    private int styleMapId = 0;
-    
-    private List<StyleMap> styleMapList = new ArrayList<StyleMap>();
-    private int baseStyleMapId = 0;
+    // Each Scene has its own cache
+    private static class CacheContainer {
 
-    private int nextSmapId() {
-        styleMapId = baseStyleMapId + styleMapList.size();
-        return styleMapId;
-    }
-       
-    private void addStyleMap(StyleMap smap) {
-        assert ((smap.getId() - baseStyleMapId) == styleMapList.size());
-        styleMapList.add(smap);
-    }
-    
-    public StyleMap getStyleMap(int smapId) {
-        
-        final int correctedId = smapId - baseStyleMapId;
-        
-        if (0 <= correctedId && correctedId < styleMapList.size()) {
-            return styleMapList.get(correctedId);
+        private Map<StyleCache.Key,StyleCache> getStyleCache() {
+            if (styleCache == null) styleCache = new HashMap<StyleCache.Key, StyleCache>();
+            return styleCache;
         }
         
-        return StyleMap.EMPTY_MAP;
+        private Map<Key,Cache> getCacheMap() {
+            if (cacheMap == null) cacheMap = new HashMap<Key,Cache>();
+            return cacheMap;
+        }
+        
+        private List<StyleMap> getStyleMapList() {
+            if (styleMapList == null) styleMapList = new ArrayList<StyleMap>();
+            return styleMapList;
+        }
+        
+        private int nextSmapId() {
+            styleMapId = baseStyleMapId + getStyleMapList().size();
+            return styleMapId;
+        }
+
+        private void addStyleMap(StyleMap smap) {
+            assert ((smap.getId() - baseStyleMapId) == getStyleMapList().size());
+            getStyleMapList().add(smap);
+        }
+
+        public StyleMap getStyleMap(int smapId) {
+
+            final int correctedId = smapId - baseStyleMapId;
+
+            if (0 <= correctedId && correctedId < getStyleMapList().size()) {
+                return getStyleMapList().get(correctedId);
+            }
+
+            return StyleMap.EMPTY_MAP;
+        }
+        
+        private void clearCache() {
+
+            if (cacheMap != null) cacheMap.clear();
+            if (styleCache != null) styleCache.clear();
+            if (styleMapList != null) styleMapList.clear();
+            
+            baseStyleMapId = styleMapId;
+            // 7/8ths is totally arbitrary
+            if (baseStyleMapId > Integer.MAX_VALUE*7/8) {
+                baseStyleMapId = styleMapId = 0;
+            }
+        }
+       
+        private Map<StyleCache.Key,StyleCache> styleCache;
+
+        private Map<Key,Cache> cacheMap;
+        
+        private List<StyleMap> styleMapList;
+
+        /*
+         * A simple counter used to generate a unique id for a StyleMap. 
+         * This unique id is used by StyleHelper in figuring out which 
+         * style cache to use.
+         */
+        private int styleMapId = 0;
+        
+        // When the cache is cleared, styleMapId counting begins here. 
+        // If a StyleHelper calls getStyleMap with an id less than the
+        // baseStyleMapId, then that StyleHelper is working with an old
+        // cache and is no longer valid.
+        private int baseStyleMapId = 0;
+        
     }
         
     /**
@@ -1524,7 +1565,7 @@ final public class StyleManager {
             this.cache = new HashMap<Key, Integer>();
         }
 
-        private StyleMap getStyleMap(StyleManager owner, Node node, Set<PseudoClass>[] triggerStates) {
+        private StyleMap getStyleMap(CacheContainer cacheContainer, Node node, Set<PseudoClass>[] triggerStates) {
             
             if (rules == null || rules.isEmpty()) {                
                 return StyleMap.EMPTY_MAP;
@@ -1598,7 +1639,7 @@ final public class StyleManager {
             final Key keyObj = new Key(key);
             if (cache.containsKey(keyObj)) {
                 Integer id = cache.get(keyObj);
-                final StyleMap styleMap = id != null ? owner.getStyleMap(id.intValue()) : null;
+                final StyleMap styleMap = id != null ? cacheContainer.getStyleMap(id.intValue()) : null;
                 return styleMap;
             }
 
@@ -1677,9 +1718,9 @@ final public class StyleManager {
                 list.add(style);
             }
 
-            final int id = owner.nextSmapId();
+            final int id = cacheContainer.nextSmapId();
             final StyleMap styleMap = new StyleMap(id, smap);
-            owner.addStyleMap(styleMap);
+            cacheContainer.addStyleMap(styleMap);
             cache.put(keyObj, Integer.valueOf(id));
             return styleMap;
         }

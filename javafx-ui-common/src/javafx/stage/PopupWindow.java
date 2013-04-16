@@ -411,7 +411,7 @@ public abstract class PopupWindow extends Window {
             if (c.isShowing()) {
                 c.hide();
             }
-        }
+        }        
         children.clear();
         super.hide();
         // RT-28454 when popup hides, remove listeners; these are added when the popup shows.

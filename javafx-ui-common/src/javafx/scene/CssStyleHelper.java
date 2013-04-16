@@ -47,6 +47,7 @@ import com.sun.javafx.css.parser.CSSParser;
 import java.lang.ref.Reference;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -212,7 +213,7 @@ final class CssStyleHelper {
             this.localStyleCache = new StyleCache();
             
             final Map<StyleCache.Key,StyleCache> styleCache = 
-                    StyleManager.getInstance().getStyleCache();
+                    StyleManager.getInstance().getStyleCache(node.getScene());
             
             final StyleCache.Key styleCacheKey = new StyleCache.Key(smapIds, ctr);
             StyleCache sharedCache = styleCache.get(styleCacheKey);
@@ -244,6 +245,11 @@ final class CssStyleHelper {
         
         }
 
+        private StyleMap getStyleMap(Node node) {
+            if (node == null) return StyleMap.EMPTY_MAP;
+            return StyleManager.getInstance().getStyleMap(node.getScene(), smapId);
+        }
+        
         private final CssMetaData<Styleable,Font> fontProp;
         private final int smapId;
         private final StyleCache localStyleCache;
@@ -306,7 +312,7 @@ final class CssStyleHelper {
             final String inlineStyle = node.getStyle();
             if(inlineStyle == null || inlineStyle.isEmpty()) {
 
-                final Map<String, List<CascadingStyle>> smap = getStyleMap();            
+                final Map<String, List<CascadingStyle>> smap = getStyleMap(node);            
                 if (smap == null || smap.isEmpty()) {
                     // We have no styles! Reset this StyleHelper to its
                     // initial state so that calls to transitionToState 
@@ -372,9 +378,9 @@ final class CssStyleHelper {
     }
     
         
-    private Map<String, List<CascadingStyle>> getStyleMap() {
+    private Map<String, List<CascadingStyle>> getStyleMap(Node node) {
         if (cacheContainer == null) return null;
-        StyleMap styleMap = StyleManager.getInstance().getStyleMap(cacheContainer.smapId);
+        StyleMap styleMap = cacheContainer.getStyleMap(node);                
         return (styleMap != null) ? styleMap.getMap() : null;
     }
     
@@ -823,7 +829,7 @@ final class CssStyleHelper {
         final CascadingStyle inlineStyle = (inlineStyles != null) ? inlineStyles.get(property) : null;
 
         // Get all of the Styles which may apply to this particular property
-        final Map<String, List<CascadingStyle>> smap = getStyleMap();
+        final Map<String, List<CascadingStyle>> smap = getStyleMap(node);
         if (smap == null) return inlineStyle;
 
         final List<CascadingStyle> styles = smap.get(property);
@@ -981,7 +987,7 @@ final class CssStyleHelper {
             // not override the user set style.
             if (style.getOrigin() == StyleOrigin.USER_AGENT) {
 
-                StyleableProperty styleableProperty = styleable.getStyleableProperty(node);
+                StyleableProperty styleableProperty = styleable.getStyleableProperty(originatingNode);
                 // if styleableProperty is null, then we're dealing with a sub-property.
                 if (styleableProperty != null && styleableProperty.getStyleOrigin() == StyleOrigin.USER) {
                     return SKIP;
@@ -1064,6 +1070,7 @@ final class CssStyleHelper {
         if (parent == null) {
             return SKIP;
         }
+
         return parentStyleHelper.lookup(parent, styleable,
                 parent.pseudoClassStates,
                 getInlineStyleMap(parent), originatingNode, cachedFont, styleList);
@@ -2102,7 +2109,8 @@ final class CssStyleHelper {
             }
                     
             String property = styleableProperty.getProperty();
-            final Map<String, List<CascadingStyle>> smap = getStyleMap();
+            Node _node = node instanceof Node ? (Node)node : null;
+            final Map<String, List<CascadingStyle>> smap = getStyleMap(_node);
             if (smap == null) return;
             
              List<CascadingStyle> styles = smap.get(property);            
@@ -2154,14 +2162,15 @@ final class CssStyleHelper {
                 // gather up any and all styles that contain this value as a property
                 Styleable parent = node;
                 do {
-                    final CssStyleHelper helper = parent instanceof Node 
-                            ? ((Node)parent).styleHelper
+                    final Node _parent = parent instanceof Node ? (Node)parent : null;                            
+                    final CssStyleHelper helper = _parent != null 
+                            ? _parent.styleHelper
                             : null;
                     if (helper != null) {
                                              
                         final int start = styleList.size();
                         
-                        final Map<String, List<CascadingStyle>> smap = helper.getStyleMap();
+                        final Map<String, List<CascadingStyle>> smap = helper.getStyleMap(_parent);
                         if (smap != null) {
 
                             List<CascadingStyle> styles = smap.get(property);
