@@ -535,7 +535,6 @@ public class PlatformImpl {
                         }
                     });
         } else if (Application.STYLESHEET_MODENA.equalsIgnoreCase(stylesheetUrl)) {
-            System.out.println("Using Modena Theme");
             AccessController.doPrivileged(
                     new PrivilegedAction() {
                         @Override public Object run() {
