@@ -27,7 +27,6 @@ package com.sun.javafx;
 
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.RectBounds;
-import com.sun.javafx.geom.Rectangle;
 import com.sun.javafx.geom.transform.Affine3D;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.geom.transform.GeneralTransform3D;
@@ -75,12 +74,6 @@ public final class TempState {
      * to compute area in scene.
      */
     public final GeneralTransform3D projViewTx = new GeneralTransform3D();
-
-    /**
-     * A temporary rectangle used by LOD helper method, in node, 
-     * to snapshot viewport.
-     */
-    public final Rectangle viewport = new Rectangle();
 
    /**
      * A temporary affine transform used by the LOD helper method to get an 

@@ -234,12 +234,15 @@ public class SubScene extends Node {
                 @Override
                 protected void invalidated() {
                     Camera _value = get();                    
-                    // Illegal value if it belongs to any scene or other subscene
-                    if (_value != null
-                            && (_value.getScene() != null || _value.getSubScene() != null)
-                            && (_value.getScene() != getScene() || _value.getSubScene() != SubScene.this)) {
-                        throw new IllegalArgumentException(_value
-                                + "is already set as camera in other scene/subscene");
+                    if (_value != null) {
+                        // Illegal value if it belongs to any scene or other subscene
+                        if ((_value.getScene() != null || _value.getSubScene() != null)
+                                && (_value.getScene() != getScene() || _value.getSubScene() != SubScene.this)) {
+                            throw new IllegalArgumentException(_value
+                                    + "is already set as camera in other scene/subscene");
+                        }
+                        _value.setViewWidth(getWidth());
+                        _value.setViewHeight(getHeight());
                     }
                     markDirty(SubScene.SubSceneDirtyBits.CAMERA_DIRTY);
                 }
@@ -260,11 +263,18 @@ public class SubScene extends Node {
 
     private Camera defaultCamera;
 
-    private Camera getDefaultCamera() {
-        if (defaultCamera == null) {
-            defaultCamera = new ParallelCamera();
+    Camera getEffectiveCamera() {
+        final Camera cam = getCamera();
+        if (cam == null) {
+            if (defaultCamera == null) {
+                defaultCamera = new ParallelCamera();
+                defaultCamera.setViewWidth(getWidth());
+                defaultCamera.setViewHeight(getHeight());
+            }
+            return defaultCamera;
         }
-        return defaultCamera;
+
+        return cam;
     }
 
     /**
@@ -298,6 +308,8 @@ public class SubScene extends Node {
                     }
                     markDirty(SubScene.SubSceneDirtyBits.CAMERA_DIRTY);
                     SubScene.this.impl_geomChanged();
+
+                    getEffectiveCamera().setViewWidth(get());
                 }
 
                 @Override
@@ -341,6 +353,8 @@ public class SubScene extends Node {
                     }
                     markDirty(SubScene.SubSceneDirtyBits.CAMERA_DIRTY);
                     SubScene.this.impl_geomChanged();
+
+                    getEffectiveCamera().setViewHeight(get());
                 }
 
                 @Override
@@ -404,12 +418,8 @@ public class SubScene extends Node {
     @Deprecated @Override
     public void impl_updatePG() {
         super.impl_updatePG();
-        Camera camera = getCamera();
-        if (camera != null) {
-            camera.impl_syncPGNode();
-        } else {
-            getDefaultCamera().impl_syncPGNode();
-        }
+        final Camera cam = getEffectiveCamera();
+        cam.impl_syncPGNode();
 
         // TODO deal with clip node
 
@@ -430,11 +440,7 @@ public class SubScene extends Node {
             if (isDirty(SubSceneDirtyBits.CAMERA_DIRTY)) {
                 peer.setWidth((float)getWidth());
                 peer.setHeight((float)getHeight());
-                if (camera != null) {
-                    peer.setCamera(camera.getPlatformCamera());
-                 } else {
-                    peer.setCamera(getDefaultCamera().getPlatformCamera());
-                 }
+                peer.setCamera(cam.getPlatformCamera());
             }
             syncLights();
             clearDirtyBits();
@@ -607,11 +613,8 @@ public class SubScene extends Node {
         if (localX < 0 || localY < 0 || localX > viewWidth || localY > viewHeight) {
             return null;
         }
-        final Camera camera = getCamera() == null ? getDefaultCamera() : getCamera();
         final PickResultChooser result = new PickResultChooser();
-        final PickRay pickRay = camera.computePickRay(localX, localY,
-                                                      viewWidth, viewHeight,
-                                                      new PickRay());
+        final PickRay pickRay = getEffectiveCamera().computePickRay(localX, localY, new PickRay());
         getRoot().impl_pickNode(pickRay, result);
         return result.toPickResult(!pickRay.isParallel());
     }
