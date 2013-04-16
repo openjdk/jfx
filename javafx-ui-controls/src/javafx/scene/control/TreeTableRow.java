@@ -26,6 +26,8 @@
 package javafx.scene.control;
 
 import javafx.css.PseudoClass;
+
+import com.sun.javafx.scene.control.MultiplePropertyChangeListenerHandler;
 import com.sun.javafx.scene.control.skin.TreeTableRowSkin;
 import java.lang.ref.WeakReference;
 import javafx.beans.InvalidationListener;
@@ -85,53 +87,6 @@ public class TreeTableRow<T> extends IndexedCell<T> {
      *                                                                         *
      **************************************************************************/
     
-    private final ListChangeListener<Integer> selectedListener = new ListChangeListener<Integer>() {
-        @Override public void onChanged(ListChangeListener.Change<? extends Integer> c) {
-            updateSelection();
-        }
-    };
-
-    private final InvalidationListener focusedListener = new InvalidationListener() {
-        @Override public void invalidated(Observable valueModel) {
-            updateFocus();
-        }
-    };
-
-    private final InvalidationListener editingListener = new InvalidationListener() {
-        @Override public void invalidated(Observable valueModel) {
-            updateEditing();
-        }
-    };
-    
-    private final InvalidationListener leafListener = new InvalidationListener() {
-        @Override public void invalidated(Observable valueModel) {
-            // necessary to update the disclosure node in the skin when the
-            // leaf property changes
-            TreeItem<T> treeItem = getTreeItem();
-            if (treeItem != null) {
-                requestLayout();
-            }
-        }
-    };
-    
-    private final InvalidationListener treeItemExpandedInvalidationListener = new InvalidationListener() {
-        @Override public void invalidated(Observable o) {
-            final boolean expanded = ((BooleanProperty)o).get();
-            pseudoClassStateChanged(EXPANDED_PSEUDOCLASS_STATE,   expanded);
-            pseudoClassStateChanged(COLLAPSED_PSEUDOCLASS_STATE, !expanded);
-        }
-    };
-    
-    private final WeakListChangeListener<Integer> weakSelectedListener = 
-            new WeakListChangeListener<Integer>(selectedListener);
-    private final WeakInvalidationListener weakFocusedListener = 
-            new WeakInvalidationListener(focusedListener);
-    private final WeakInvalidationListener weakEditingListener = 
-            new WeakInvalidationListener(editingListener);
-    private final WeakInvalidationListener weakLeafListener = 
-            new WeakInvalidationListener(leafListener);
-    private final WeakInvalidationListener weakTreeItemExpandedInvalidationListener = 
-            new WeakInvalidationListener(treeItemExpandedInvalidationListener);
     
     
     
@@ -144,23 +99,24 @@ public class TreeTableRow<T> extends IndexedCell<T> {
     // --- TreeItem
     private ReadOnlyObjectWrapper<TreeItem<T>> treeItem = 
         new ReadOnlyObjectWrapper<TreeItem<T>>(this, "treeItem") {
-            
             TreeItem<T> oldValue = null;
             
             @Override protected void invalidated() {
                 if (oldValue != null) {
-                    oldValue.expandedProperty().removeListener(weakTreeItemExpandedInvalidationListener);
+                    getPropertyListener().unregisterChangeListener(oldValue.expandedProperty());
                 }
                 
                 oldValue = get(); 
                 
                 if (oldValue != null) {
-                    oldValue.expandedProperty().addListener(weakTreeItemExpandedInvalidationListener);
+                    getPropertyListener().registerChangeListener(oldValue.expandedProperty(), "TREE_ITEM_EXPANDED");
+
                     // fake an invalidation to ensure updated pseudo-class state
-                    weakTreeItemExpandedInvalidationListener.invalidated(oldValue.expandedProperty());            
+                    handlePropertyChanged("TREE_ITEM_EXPANDED");
                 }
             }
     };
+    
     private void setTreeItem(TreeItem<T> value) {
         treeItem.set(value); 
     }
@@ -210,21 +166,23 @@ public class TreeTableRow<T> extends IndexedCell<T> {
             TreeTableViewSelectionModel<T> sm;
             TreeTableViewFocusModel<T> fm;
             
+            final MultiplePropertyChangeListenerHandler listener = getPropertyListener();
+            
             if (weakTreeTableViewRef != null) {
                 TreeTableView<T> oldTreeTableView = weakTreeTableViewRef.get();
                 if (oldTreeTableView != null) {
                     // remove old listeners
                     sm = oldTreeTableView.getSelectionModel();
                     if (sm != null) {
-                        sm.getSelectedIndices().removeListener(weakSelectedListener);
+                        listener.unregisterChangeListener(sm.getSelectedIndices());
                     }
 
                     fm = oldTreeTableView.getFocusModel();
                     if (fm != null) {
-                        fm.focusedIndexProperty().removeListener(weakFocusedListener);
+                        listener.unregisterChangeListener(fm.focusedIndexProperty());
                     }
 
-                    oldTreeTableView.editingItemProperty().removeListener(weakEditingListener);
+                    listener.unregisterChangeListener(oldTreeTableView.editingItemProperty());
                 }
                 
                 weakTreeTableViewRef = null;
@@ -235,16 +193,16 @@ public class TreeTableRow<T> extends IndexedCell<T> {
                 if (sm != null) {
                     // listening for changes to treeView.selectedIndex and IndexedCell.index,
                     // to determine if this cell is selected
-                    sm.getSelectedIndices().addListener(weakSelectedListener);
+                    listener.registerChangeListener(sm.getSelectedIndices(), "SELECTED_INDICES");
                 }
 
                 fm = get().getFocusModel();
                 if (fm != null) {
                     // similar to above, but this time for focus
-                    fm.focusedIndexProperty().addListener(weakFocusedListener);
+                    listener.registerChangeListener(fm.focusedIndexProperty(), "FOCUSED_INDEX");
                 }
 
-                get().editingItemProperty().addListener(weakEditingListener);
+                listener.registerChangeListener(get().editingItemProperty(), "EDITING_ITEM");
                 
                 weakTreeTableViewRef = new WeakReference<TreeTableView<T>>(get());
             }
@@ -432,6 +390,28 @@ public class TreeTableRow<T> extends IndexedCell<T> {
         }
     }
 
+    @Override void handlePropertyChanged(String p) {
+        super.handlePropertyChanged(p);
+        
+        if ("SELECTED_INDICES".equals(p)) {
+            updateSelection();
+        } else if ("TREE_ITEM_EXPANDED".equals(p)) {
+            final boolean expanded = getTreeItem().isExpanded();
+            pseudoClassStateChanged(EXPANDED_PSEUDOCLASS_STATE,   expanded);
+            pseudoClassStateChanged(COLLAPSED_PSEUDOCLASS_STATE, !expanded);   
+        } else if ("FOCUSED_INDEX".equals(p)) {
+            updateFocus();
+        } else if ("EDITING_ITEM".equals(p)) {
+            updateEditing();
+        } else if ("TREE_ITEM_LEAF".equals(p)) {
+            // necessary to update the disclosure node in the skin when the
+            // leaf property changes
+            TreeItem<T> treeItem = getTreeItem();
+            if (treeItem != null) {
+                requestLayout();
+            }
+        }
+    }
 
 
     /***************************************************************************
@@ -465,11 +445,11 @@ public class TreeTableRow<T> extends IndexedCell<T> {
     public final void updateTreeItem(TreeItem<T> treeItem) {
         TreeItem<T> _treeItem = getTreeItem();
         if (_treeItem != null) {
-            _treeItem.leafProperty().removeListener(weakLeafListener);
+            getPropertyListener().unregisterChangeListener(_treeItem.leafProperty());
         }
         setTreeItem(treeItem);
         if (treeItem != null) {
-            treeItem.leafProperty().addListener(weakLeafListener);
+            getPropertyListener().registerChangeListener(treeItem.leafProperty(), "TREE_ITEM_LEAF");
         }
     }
 

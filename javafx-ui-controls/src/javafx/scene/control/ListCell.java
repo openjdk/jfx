@@ -94,28 +94,7 @@ public class ListCell<T> extends IndexedCell<T> {
      *                                                                         *
      **************************************************************************/
 
-    /**
-     * Listens to the editing index on the ListView. It is possible for the developer
-     * to call the ListView#edit(int) method and cause a specific cell to start
-     * editing. In such a case, we need to be notified so we can call startEdit
-     * on our side.
-     */
-    private final InvalidationListener editingListener = new InvalidationListener() {
-        @Override public void invalidated(Observable value) {
-            updateEditing();
-        }
-    };
     private boolean updateEditingIndex = true;
-
-    /**
-     * Listens to the selection model on the ListView. Whenever the selection model
-     * is changed (updated), the selected property on the ListCell is updated accordingly.
-     */
-    private final ListChangeListener<Integer> selectedListener = new ListChangeListener<Integer>() {
-        @Override public void onChanged(ListChangeListener.Change<? extends Integer> c) {
-            updateSelection();
-        }
-    };
 
     /**
      * Listens to the selectionModel property on the ListView. Whenever the entire model is changed,
@@ -129,26 +108,16 @@ public class ListCell<T> extends IndexedCell<T> {
                 MultipleSelectionModel<T> newValue) {
             
             if (oldValue != null) {
-                oldValue.getSelectedIndices().removeListener(weakSelectedListener);
+                getPropertyListener().unregisterChangeListener(oldValue.getSelectedIndices());
             }
             
             if (newValue != null) {
-                newValue.getSelectedIndices().addListener(weakSelectedListener);
+                getPropertyListener().registerChangeListener(newValue.getSelectedIndices(), "SELECTED_INDICES");
             }
             
             updateSelection();
         }
         
-    };
-
-    /**
-     * Listens to the items on the ListView. Whenever the items are changed in such a way that
-     * it impacts the index of this ListCell, then we must update the item.
-     */
-    private final ListChangeListener<T> itemsListener = new ListChangeListener<T>() {
-        @Override public void onChanged(ListChangeListener.Change<? extends T> c) {
-            updateItem();
-        }
     };
 
     /**
@@ -170,16 +139,6 @@ public class ListCell<T> extends IndexedCell<T> {
     };
 
     /**
-     * Listens to the focus model on the ListView. Whenever the focus model changes,
-     * the focused property on the ListCell is updated
-     */
-    private final InvalidationListener focusedListener = new InvalidationListener() {
-        @Override public void invalidated(Observable value) {
-            updateFocus();
-        }
-    };
-
-    /**
      * Listens to the focusModel property on the ListView. Whenever the entire model is changed,
      * we have to unhook the weakFocusedListener and update the focus.
      */
@@ -188,24 +147,31 @@ public class ListCell<T> extends IndexedCell<T> {
                                       FocusModel<T> oldValue,
                                       FocusModel<T> newValue) {
             if (oldValue != null) {
-                oldValue.focusedIndexProperty().removeListener(weakFocusedListener);
+                getPropertyListener().unregisterChangeListener(oldValue.focusedIndexProperty());
             }
             if (newValue != null) {
-                newValue.focusedIndexProperty().addListener(weakFocusedListener);
+                getPropertyListener().registerChangeListener(newValue.focusedIndexProperty(), "FOCUSED_INDEX");
             }
             updateFocus();
         }
     };
+    
+    // This can not be extracted out into the property listener, as it is provided
+    // by the user, and property listener needs to iterate over all values to 
+    // determine if the list is already observed.
+    private final ListChangeListener<T> itemsListener = new ListChangeListener<T>() {
+        @Override public void onChanged(ListChangeListener.Change<? extends T> c) {
+            updateItem();
+        }
+    };
 
-
-    private final WeakInvalidationListener weakEditingListener = new WeakInvalidationListener(editingListener);
-    private final WeakListChangeListener<Integer> weakSelectedListener = new WeakListChangeListener<Integer>(selectedListener);
     private final WeakChangeListener<MultipleSelectionModel<T>> weakSelectionModelPropertyListener = new WeakChangeListener<MultipleSelectionModel<T>>(selectionModelPropertyListener);
-    private final WeakListChangeListener<T> weakItemsListener = new WeakListChangeListener<T>(itemsListener);
     private final WeakChangeListener<ObservableList<T>> weakItemsPropertyListener = new WeakChangeListener<ObservableList<T>>(itemsPropertyListener);
-    private final WeakInvalidationListener weakFocusedListener = new WeakInvalidationListener(focusedListener);
     private final WeakChangeListener<FocusModel<T>> weakFocusModelPropertyListener = new WeakChangeListener<FocusModel<T>>(focusModelPropertyListener);
-
+    private final WeakListChangeListener<T> weakItemsListener = new WeakListChangeListener<T>(itemsListener);
+    
+    
+    
     /***************************************************************************
      *                                                                         *
      * Properties                                                              *
@@ -235,13 +201,13 @@ public class ListCell<T> extends IndexedCell<T> {
                 // If the old selection model isn't null, unhook it
                 final MultipleSelectionModel<T> sm = oldListView.getSelectionModel();
                 if (sm != null) {
-                    sm.getSelectedIndices().removeListener(weakSelectedListener);
+                    getPropertyListener().unregisterChangeListener(sm.getSelectedIndices());
                 }
 
                 // If the old focus model isn't null, unhook it
                 final FocusModel<T> fm = oldListView.getFocusModel();
                 if (fm != null) {
-                    fm.focusedIndexProperty().removeListener(weakFocusedListener);
+                    getPropertyListener().unregisterChangeListener(fm.focusedIndexProperty());
                 }
 
                 // If the old items isn't null, unhook the listener
@@ -251,7 +217,7 @@ public class ListCell<T> extends IndexedCell<T> {
                 }
 
                 // Remove the listeners of the properties on ListView
-                oldListView.editingIndexProperty().removeListener(weakEditingListener);
+                getPropertyListener().unregisterChangeListener(oldListView.editingIndexProperty());
                 oldListView.itemsProperty().removeListener(weakItemsPropertyListener);
                 oldListView.focusModelProperty().removeListener(weakFocusModelPropertyListener);
                 oldListView.selectionModelProperty().removeListener(weakSelectionModelPropertyListener);
@@ -260,12 +226,12 @@ public class ListCell<T> extends IndexedCell<T> {
             if (currentListView != null) {
                 final MultipleSelectionModel<T> sm = currentListView.getSelectionModel();
                 if (sm != null) {
-                    sm.getSelectedIndices().addListener(weakSelectedListener);
+                    getPropertyListener().registerChangeListener(sm.getSelectedIndices(), "SELECTED_INDICES");
                 }
 
                 final FocusModel<T> fm = currentListView.getFocusModel();
                 if (fm != null) {
-                    fm.focusedIndexProperty().addListener(weakFocusedListener);
+                    getPropertyListener().registerChangeListener(fm.focusedIndexProperty(), "FOCUSED_INDEX");
                 }
 
                 final ObservableList<T> items = currentListView.getItems();
@@ -273,7 +239,7 @@ public class ListCell<T> extends IndexedCell<T> {
                     items.addListener(weakItemsListener);
                 }
 
-                currentListView.editingIndexProperty().addListener(weakEditingListener);
+                getPropertyListener().registerChangeListener(currentListView.editingIndexProperty(), "EDITING_INDEX");
                 currentListView.itemsProperty().addListener(weakItemsPropertyListener);
                 currentListView.focusModelProperty().addListener(weakFocusModelPropertyListener);
                 currentListView.selectionModelProperty().addListener(weakSelectionModelPropertyListener);
@@ -487,6 +453,18 @@ public class ListCell<T> extends IndexedCell<T> {
         }
     }
      
+    
+    @Override void handlePropertyChanged(final String p) {
+        super.handlePropertyChanged(p);
+        
+        if ("SELECTED_INDICES".equals(p)) {
+            updateSelection();
+        } else if ("FOCUSED_INDEX".equals(p)) {
+            updateFocus();
+        } else if ("EDITING_INDEX".equals(p)) {
+            updateEditing();
+        }
+    }
 
     
     /***************************************************************************
