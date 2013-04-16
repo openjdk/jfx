@@ -665,7 +665,7 @@ static void dnd_source_set_uri_file_list(GdkWindow *requestor, GdkAtom property,
     gint data_size = 0;
     for (i = 0; i < ndata; ++i) {
         string = (jstring)mainEnv->GetObjectArrayElement(array, i);
-        data_size += mainEnv->GetStringUTFLength(string) + FILE_PREFIX_N + 1;
+        data_size += mainEnv->GetStringUTFLength(string) + FILE_PREFIX_N + 2;
     }
     
     data_ptr = data = new gchar[data_size];
@@ -676,11 +676,13 @@ static void dnd_source_set_uri_file_list(GdkWindow *requestor, GdkAtom property,
         
         g_strlcpy(data_ptr, FILE_PREFIX, FILE_PREFIX_N + 1);
         mainEnv->GetStringUTFRegion(string, 0, string_size, data_ptr + FILE_PREFIX_N);
-        *(data_ptr += FILE_PREFIX_N + string_size) = '\n';
+        *(data_ptr += FILE_PREFIX_N + string_size) = '\r';
+        *(++data_ptr) = '\n';
         ++data_ptr;
     }
     if (ndata > 0) {
-        *(data_ptr - 1) = 0;
+        *(data_ptr - 2) = 0;
+        --data_size;
     }
     
     gdk_property_change(requestor, property, GDK_SELECTION_TYPE_STRING,
