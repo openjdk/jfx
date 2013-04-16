@@ -1371,12 +1371,13 @@ is being used to size a border should also be in pixels.
 .menu:show-mnemonics > .mnemonic-underline {
     -fx-stroke: -fx-text-fill;
 }
-.menu > .arrow {
+.menu > .right-container > .arrow {
+    -fx-padding: 0.458em 0.167em 0.458em 0.167em; /* 4.5 2 4.5 2 */
     -fx-background-color: -fx-mark-color;
     -fx-shape: "M0,-4L4,0L0,4Z";
     -fx-scale-shape: false;
 }
-.menu:focused:showing > .arrow, .menu:hover:showing > .arrow, .menu:focused > .arrow, .menu:showing > .arrow {
+.menu:focused > .right-container > .arrow {
     -fx-background-color: white;
 }
 .menu-up-arrow {
@@ -1492,16 +1493,6 @@ is being used to size a border should also be in pixels.
 .check-menu-item:focused:checked > .left-container > .check {
     -fx-background-color: white;
 }
-.menu > .right-container > .arrow {
-    -fx-padding: 0.458em 0.167em 0.458em 0.167em; /* 4.5 2 4.5 2 */
-    -fx-background-color: -fx-mark-color;
-    -fx-shape: "M0,-4L4,0L0,4Z";
-    -fx-scale-shape: false;
-}
-.menu:selected > .right-container > .arrow {
-    -fx-background-color: white;
-}
-
 /*******************************************************************************
  *                                                                             *
  * ChoiceBox                                                                   *
