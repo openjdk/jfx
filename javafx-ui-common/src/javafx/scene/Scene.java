@@ -726,9 +726,7 @@ public class Scene implements EventTarget {
         PerformanceTracker.logEvent("Scene.initPeer TKScene set");
         impl_peer.setRoot(getRoot().impl_getPGNode());
         impl_peer.setFillPaint(getFill() == null ? null : tk.getPaint(getFill()));
-        impl_peer.setCamera(getCamera() == null
-                ? getDefaultCamera().getPlatformCamera()
-                : getCamera().getPlatformCamera());
+        impl_peer.setCamera(getEffectiveCamera().getPlatformCamera());
 
         impl_setAllowPGAccess(false);
 
@@ -842,6 +840,8 @@ public class Scene implements EventTarget {
                     if (_root.isResizable()) {
                         _root.resize(get() - _root.getLayoutX() - _root.getTranslateX(), _root.getLayoutBounds().getHeight());
                     }
+
+                    getEffectiveCamera().setViewWidth(get());
                 }
 
                 @Override
@@ -885,6 +885,8 @@ public class Scene implements EventTarget {
                     if (_root.isResizable()) {
                         _root.resize(_root.getLayoutBounds().getWidth(), get() - _root.getLayoutY() - _root.getTranslateY());
                     }
+
+                    getEffectiveCamera().setViewHeight(get());
                 }
 
                 @Override
@@ -934,12 +936,15 @@ public class Scene implements EventTarget {
                 @Override
                 protected void invalidated() {
                     Camera _value = get();
-                    // Illegal value if it belongs to other scene or any subscene
-                    if (_value != null
-                            && ((_value.getScene() != null && _value.getScene() != Scene.this)
-                            || _value.getSubScene() != null)) {
-                        throw new IllegalArgumentException(_value
-                                + "is already set as camera in other scene");
+                    if (_value != null) {
+                        // Illegal value if it belongs to other scene or any subscene
+                        if ((_value.getScene() != null && _value.getScene() != Scene.this)
+                                || _value.getSubScene() != null) {
+                            throw new IllegalArgumentException(_value
+                                    + "is already set as camera in other scene");
+                        }
+                        _value.setViewWidth(getWidth());
+                        _value.setViewHeight(getHeight());
                     }
                     markDirty(DirtyBits.CAMERA_DIRTY);
                 }
@@ -958,11 +963,18 @@ public class Scene implements EventTarget {
         return camera;
     }
 
-    private Camera getDefaultCamera() {
-        if (defaultCamera == null) {
-             defaultCamera = new ParallelCamera();
+    Camera getEffectiveCamera() {
+        final Camera cam = getCamera();
+        if (cam == null) {
+            if (defaultCamera == null) {
+                defaultCamera = new ParallelCamera();
+                defaultCamera.setViewWidth(getWidth());
+                defaultCamera.setViewHeight(getHeight());
+            }
+            return defaultCamera;
         }
-        return defaultCamera;
+
+        return cam;
     }
 
     /**
@@ -1192,10 +1204,9 @@ public class Scene implements EventTarget {
         double h = getHeight();
         BaseTransform transform = BaseTransform.IDENTITY_TRANSFORM;
 
-        Camera cam = getCamera();
         return doSnapshot(this, 0, 0, w, h,
                 getRoot(), transform, isDepthBuffer(),
-                getFill(), cam == null ? getDefaultCamera() : cam, img);
+                getFill(), getEffectiveCamera(), img);
     }
 
     // Pulse listener used to run all deferred (async) snapshot requests
@@ -1757,12 +1768,8 @@ public class Scene implements EventTarget {
     }
 
     private void pick(TargetWrapper target, final double x, final double y) {
-        Camera cam = getCamera();
-        if (cam == null) {
-            cam = getDefaultCamera();
-        }
-        final PickRay pickRay = cam.computePickRay(
-                x, y, getWidth(), getHeight(), null);
+        final PickRay pickRay = getEffectiveCamera().computePickRay(
+                x, y, null);
 
         final double mag = pickRay.getDirectionNoClone().length();
         pickRay.getDirectionNoClone().normalize();
@@ -2096,21 +2103,6 @@ public class Scene implements EventTarget {
         public final int getMask() { return mask; }
     }
 
-    // TODO: RT-28290 - Camera's parameters need to be computed on the FX layer
-    // Should remove once we move the camera's projViewTx computation to the FX side
-    private Rectangle viewport = new Rectangle();
-    private GeneralTransform3D projViewTx = new GeneralTransform3D();
-
-    private void snapshotCameraParameters() {
-        Camera cam = getCamera();
-        if (cam == null) {
-            cam = getDefaultCamera();
-        }
-
-        projViewTx = cam.computeProjViewTx(projViewTx, getWidth(), getHeight());
-        viewport = cam.getViewport(viewport);
-    }
-
     // TODO: 3D - Should avoid the need to do costly linear search and update of
     //            lights at every light add and graph sync.
     private List<LightBase> lights = new ArrayList<LightBase>();
@@ -2159,22 +2151,6 @@ public class Scene implements EventTarget {
         }
     }
 
-    GeneralTransform3D getProjViewTx(GeneralTransform3D pTx) {
-        if (pTx == null) {
-            pTx = new GeneralTransform3D();
-        }
-        pTx.set(projViewTx);
-        return pTx;
-    }
-
-    Rectangle getViewport(Rectangle vp) {
-        if (vp == null) {
-            vp = new Rectangle();
-        }
-        vp.setBounds(viewport);
-        return vp;
-    }
-
     //INNER CLASSES
 
     /*******************************************************************************
@@ -2218,7 +2194,6 @@ public class Scene implements EventTarget {
                 dirtyNodesSize = 0;
             }
 
-            snapshotCameraParameters();
             syncLights();
 
             Scene.inSynchronizer = false;
@@ -2265,13 +2240,9 @@ public class Scene implements EventTarget {
 
             // new camera was set on the scene
             if (isDirty(DirtyBits.CAMERA_DIRTY)) {
-                Camera camera = getCamera();
-                if (camera != null) {
-                    camera.impl_updatePG();
-                    impl_peer.setCamera(camera.getPlatformCamera());
-                 } else {
-                     impl_peer.setCamera(getDefaultCamera().getPlatformCamera());
-                 }
+                final Camera camera = getEffectiveCamera();
+                camera.impl_updatePG();
+                impl_peer.setCamera(camera.getPlatformCamera());
             }
 
             clearDirty();

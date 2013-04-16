@@ -117,4 +117,17 @@ jboolean glass_screen_capture(jint x,
    GLASS_LOG_FINE("androidScreen: glass_screen_capture not implemented!");
 }
 
+LensResult lens_platform_windowMinimize(JNIEnv *env,
+                                        NativeWindow window,
+                                        jboolean toMinimize) {
+    //noop for fb
+    return LENS_OK;
+}
+
+LensResult lens_platform_windowSetVisible(JNIEnv *env,
+                                        NativeWindow window,
+                                        jboolean visible) {
+    return LENS_OK;
+}
+
 #endif /* ANDROID_NDK */

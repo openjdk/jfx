@@ -631,7 +631,7 @@ public abstract class Parent extends Node {
     @Override
     void scenesChanged(final Scene newScene, final SubScene newSubScene,
                        final Scene oldScene, final SubScene oldSubScene) {
-        for (int i=0, max=children.size(); i<max; i++) {
+        for (int i=0; i<children.size(); i++) {
             children.get(i).setScenes(newScene, newSubScene);
         }
 

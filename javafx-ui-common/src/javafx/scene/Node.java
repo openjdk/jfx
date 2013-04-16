@@ -122,7 +122,6 @@ import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.BoxBounds;
 import com.sun.javafx.geom.PickRay;
 import com.sun.javafx.geom.RectBounds;
-import com.sun.javafx.geom.Rectangle;
 import com.sun.javafx.geom.transform.Affine3D;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.geom.transform.NoninvertibleTransformException;
@@ -2879,7 +2878,7 @@ public abstract class Node implements EventTarget, Styleable {
         Scene tmpScene = getScene();
         if (tmpScene != null) {
             Bounds bounds = getBoundsInLocal();
-            Camera camera = tmpScene.getCamera();
+            Camera camera = tmpScene.getEffectiveCamera();
             boolean isPerspective = camera instanceof PerspectiveCamera ? true : false;
             Transform localToSceneTx = getLocalToSceneTransform();
             Affine3D tempTx = TempState.getInstance().tempTx;
@@ -2963,9 +2962,7 @@ public abstract class Node implements EventTarget, Styleable {
             }
 
             GeneralTransform3D projViewTx = TempState.getInstance().projViewTx;
-            projViewTx = tmpScene.getProjViewTx(projViewTx);
-            Rectangle viewport = TempState.getInstance().viewport;
-            viewport = tmpScene.getViewport(viewport);
+            projViewTx = camera.getProjViewTransform(projViewTx);
 
             // We need to set tempTx to identity since it is a recycled transform.
             // This is because impl_apply is a matrix concatenation operation.
@@ -2985,7 +2982,7 @@ public abstract class Node implements EventTarget, Styleable {
                 localBounds.intersectWith(-1, -1, 0, 1, 1, 1);
                 area = (localBounds.getWidth() < 0 || localBounds.getHeight() < 0) ? 0 : area;
             }
-            return area * (viewport.width / 2 * viewport.height / 2);
+            return area * (camera.getViewWidth() / 2 * camera.getViewHeight() / 2);
         }
         return 0;
     }
