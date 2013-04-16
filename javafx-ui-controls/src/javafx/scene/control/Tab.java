@@ -695,7 +695,7 @@ public class Tab implements EventTarget, Styleable {
      * @since 2.2
      */
      public boolean hasProperties() {
-        return properties != null;
+        return properties != null && !properties.isEmpty();
     }
 
      
