@@ -132,11 +132,12 @@ final public class StyleManager {
          
     /**
      * 
-     * @param node
-     * @return 
+     * @param styleable
+     * @return
+     * @deprecated Use {@link javafx.css.Styleable#getCssMetaData()}
      */
     // TODO: is this used anywhere?
-    public static List<CssMetaData<? extends Styleable, ?>> getStyleables(final Styleable styleable) {
+    @Deprecated public static List<CssMetaData<? extends Styleable, ?>> getStyleables(final Styleable styleable) {
         
         return styleable != null 
             ? styleable.getCssMetaData() 
@@ -144,12 +145,13 @@ final public class StyleManager {
     }
 
     /**
-     * 
+     *
      * @param node
-     * @return 
+     * @return
+     * @deprecated Use {@link javafx.scene.Node#getCssMetaData()}
      */
     // TODO: is this used anywhere?
-    public static List<CssMetaData<? extends Styleable, ?>> getStyleables(final Node node) {
+    @Deprecated public static List<CssMetaData<? extends Styleable, ?>> getStyleables(final Node node) {
         
         return node != null 
             ? node.getCssMetaData() 
@@ -1032,7 +1034,7 @@ final public class StyleManager {
      * Add a user agent stylesheet, possibly overriding styles in the default
      * user agent stylesheet.
      * @param scene Only used in CssError for tracking back to the scene that loaded the stylesheet
-     * @param fname  The file URL, either relative or absolute, as a String.
+     * @param ua_stylesheet  The stylesheet to add as a user-agent stylesheet
      */
     public void addUserAgentStylesheet(Scene scene, Stylesheet ua_stylesheet) {
 
@@ -1047,6 +1049,8 @@ final public class StyleManager {
         
         if (ua_stylesheet != null) {
             ua_stylesheet.setOrigin(StyleOrigin.USER_AGENT);
+            URL url = ua_stylesheet.getUrl();
+            userAgentStylesheets.add(new StylesheetContainer(url != null ? url.toExternalForm() : "", ua_stylesheet));
             userAgentStylesheetsChanged();
         }
 
@@ -1338,7 +1342,7 @@ final public class StyleManager {
             key.styleClasses.add(StyleClassSet.getStyleClass(styleClass));
         }
 
-        Map<Key, Cache> cacheMap = cacheContainer.getCacheMap();
+        Map<Key, Cache> cacheMap = cacheContainer.getCacheMap(parentStylesheets);
         
         Cache cache = cacheMap.get(key);
                 
@@ -1447,6 +1451,8 @@ final public class StyleManager {
     //
     ////////////////////////////////////////////////////////////////////////////
 
+    private static List<String> cacheMapKey;
+
     // Each Scene has its own cache
     private static class CacheContainer {
 
@@ -1455,9 +1461,46 @@ final public class StyleManager {
             return styleCache;
         }
         
-        private Map<Key,Cache> getCacheMap() {
-            if (cacheMap == null) cacheMap = new HashMap<Key,Cache>();
-            return cacheMap;
+        private Map<Key,Cache> getCacheMap(List<StylesheetContainer> parentStylesheets) {
+
+            if (cacheMap == null) {
+                cacheMap = new HashMap<List<String>,Map<Key,Cache>>();
+            }
+
+            if (parentStylesheets == null || parentStylesheets.isEmpty()) {
+
+                Map<Key,Cache> cmap = cacheMap.get(null);
+                if (cmap == null) {
+                    cmap = new HashMap<Key,Cache>();
+                    cacheMap.put(null, cmap);
+                }
+                return cmap;
+
+            } else {
+
+                final int nMax = parentStylesheets.size();
+                if (cacheMapKey == null) {
+                    cacheMapKey = new ArrayList<String>(nMax);
+                }
+                for (int n=0; n<nMax; n++) {
+                    StylesheetContainer sc = parentStylesheets.get(n);
+                    if (sc == null || sc.fname == null || sc.fname.isEmpty()) continue;
+                    cacheMapKey.add(sc.fname);
+                }
+                Map<Key,Cache> cmap = cacheMap.get(cacheMapKey);
+                if (cmap == null) {
+                    cmap = new HashMap<Key,Cache>();
+                    cacheMap.put(cacheMapKey, cmap);
+                    // create a new cacheMapKey the next time this method is called
+                    cacheMapKey = null;
+                } else {
+                    // reuse cacheMapKey, but not the data, the next time this method is called
+                    cacheMapKey.clear();
+                }
+                return cmap;
+
+            }
+
         }
         
         private List<StyleMap> getStyleMapList() {
@@ -1501,7 +1544,7 @@ final public class StyleManager {
        
         private Map<StyleCache.Key,StyleCache> styleCache;
 
-        private Map<Key,Cache> cacheMap;
+        private Map<List<String>, Map<Key,Cache>> cacheMap;
         
         private List<StyleMap> styleMapList;
 
