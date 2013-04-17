@@ -36,10 +36,7 @@ import javafx.scene.Node;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.shape.Rectangle;
-import javafx.util.Callback;
 import javafx.css.CssMetaData;
-
-import com.sun.javafx.scene.control.MultiplePropertyChangeListenerHandler;
 import com.sun.javafx.scene.control.accessible.AccessibleListItem;
 import com.sun.javafx.accessible.providers.AccessibleProvider;
 import javafx.css.PseudoClass;
@@ -296,7 +293,16 @@ public class Cell<T> extends Labeled {
          * ListView defines zero or one cell as being the "focused" cell. This cell
          * would have focused set to true.
          */
-        getPropertyListener().registerChangeListener(focusedProperty(), "FOCUSED");
+        super.focusedProperty().addListener(new InvalidationListener() {
+            @Override public void invalidated(Observable property) {
+                pseudoClassStateChanged(PSEUDO_CLASS_FOCUSED, isFocused()); // TODO is this necessary??
+
+                // The user has shifted focus, so we should cancel the editing on this cell
+                if (!isFocused() && isEditing()) {
+                    cancelEdit();
+                }
+            }
+        });
         
         // initialize default pseudo-class state
         pseudoClassStateChanged(PSEUDO_CLASS_EMPTY, true);
@@ -579,41 +585,6 @@ public class Cell<T> extends Labeled {
         if( accListItem == null)
             accListItem = new AccessibleListItem(this);
         return (AccessibleProvider)accListItem ;
-    }
-    
-    
-    
-    /***************************************************************************
-     *                                                                         *
-     * Private Implementation                                                  *
-     *                                                                         *
-     **************************************************************************/
-    
-    // usable by related classes in this package - we don't intend to share this
-    // with subclasses in general however.
-    private MultiplePropertyChangeListenerHandler propertyListener;
-        
-    MultiplePropertyChangeListenerHandler getPropertyListener() {
-        if (propertyListener == null) {
-            propertyListener = new MultiplePropertyChangeListenerHandler(new Callback<String, Void>() {
-                @Override public Void call(String param) {
-                    handlePropertyChanged(param);
-                    return null;
-                }
-            });
-        }
-        return propertyListener;
-    }
-    
-    void handlePropertyChanged(final String p) {
-        if ("FOCUSED".equals(p)) {
-            pseudoClassStateChanged(PSEUDO_CLASS_FOCUSED, isFocused()); // TODO is this necessary??
-
-            // The user has shifted focus, so we should cancel the editing on this cell
-            if (!isFocused() && isEditing()) {
-                cancelEdit();
-            }
-        }
     }
     
     

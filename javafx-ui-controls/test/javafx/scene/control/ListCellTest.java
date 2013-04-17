@@ -496,7 +496,7 @@ public class ListCellTest {
         assertFalse(other.isSelected());
     }
 
-    @Ignore @Test public void replacingTheFocusModelRemovesTheListenerFromTheOldModel() {
+    @Test public void replacingTheFocusModelRemovesTheListenerFromTheOldModel() {
         cell.updateIndex(0);
         cell.updateListView(list);
         FocusModel<String> fm = list.getFocusModel();

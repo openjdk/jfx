@@ -26,9 +26,10 @@
 package javafx.scene.control;
 
 import javafx.css.PseudoClass;
-
-import com.sun.javafx.scene.control.MultiplePropertyChangeListenerHandler;
 import com.sun.javafx.scene.control.skin.TreeTableCellSkin;
+import javafx.beans.InvalidationListener;
+import javafx.beans.Observable;
+import javafx.beans.WeakInvalidationListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.ListChangeListener;
 import javafx.event.Event;
@@ -83,6 +84,45 @@ public class TreeTableCell<S,T> extends IndexedCell<T> {
     
     private boolean itemDirty = false;
     
+    /*
+     * This is the list observer we use to keep an eye on the SelectedCells
+     * ObservableList in the tree table view. Because it is possible that the table can
+     * be mutated, we create this observer here, and add/remove it from the
+     * storeTableView method.
+     */
+    private ListChangeListener<TreeTablePosition<S,?>> selectedListener = new ListChangeListener<TreeTablePosition<S,?>>() {
+        @Override public void onChanged(Change<? extends TreeTablePosition<S,?>> c) {
+            updateSelection();
+        }
+    };
+
+    // same as above, but for focus
+    private final InvalidationListener focusedListener = new InvalidationListener() {
+        @Override public void invalidated(@SuppressWarnings("unused") Observable value) {
+            updateFocus();
+        }
+    };
+
+    // same as above, but for for changes to the properties on TableRow
+    private final InvalidationListener tableRowUpdateObserver = new InvalidationListener() {
+        @Override public void invalidated(@SuppressWarnings("unused") Observable value) {
+            itemDirty = true;
+            requestLayout();
+        }
+    };
+    
+    private final InvalidationListener editingListener = new InvalidationListener() {
+        @Override public void invalidated(@SuppressWarnings("unused") Observable value) {
+            updateEditing();
+        }
+    };
+    
+    private ListChangeListener<TreeTableColumn<S,?>> visibleLeafColumnsListener = new ListChangeListener<TreeTableColumn<S,?>>() {
+        @Override public void onChanged(Change<? extends TreeTableColumn<S,?>> c) {
+            updateColumnIndex();
+        }
+    };
+    
     private ListChangeListener<String> columnStyleClassListener = new ListChangeListener<String>() {
         @Override public void onChanged(Change<? extends String> c) {
             while (c.next()) {
@@ -97,6 +137,16 @@ public class TreeTableCell<S,T> extends IndexedCell<T> {
         }
     };
     
+    private final WeakListChangeListener<TreeTablePosition<S,?>> weakSelectedListener = 
+            new WeakListChangeListener<TreeTablePosition<S,?>>(selectedListener);
+    private final WeakInvalidationListener weakFocusedListener = 
+            new WeakInvalidationListener(focusedListener);
+    private final WeakInvalidationListener weaktableRowUpdateObserver = 
+            new WeakInvalidationListener(tableRowUpdateObserver);
+    private final WeakInvalidationListener weakEditingListener = 
+            new WeakInvalidationListener(editingListener);
+    private final WeakListChangeListener<TreeTableColumn<S,?>> weakVisibleLeafColumnsListener =
+            new WeakListChangeListener<TreeTableColumn<S,?>>(visibleLeafColumnsListener);
     private final WeakListChangeListener<String> weakColumnStyleClassListener =
             new WeakListChangeListener<String>(columnStyleClassListener);
 
@@ -145,40 +195,37 @@ public class TreeTableCell<S,T> extends IndexedCell<T> {
                     TreeTableView.TreeTableViewSelectionModel<S> sm;
                     TreeTableView.TreeTableViewFocusModel<S> fm;
                     
-                    final MultiplePropertyChangeListenerHandler listener = getPropertyListener();
-                    
                     if (weakTableViewRef != null) {
                         TreeTableView<S> oldTableView = weakTableViewRef.get();
                         if (oldTableView != null) {
                             sm = oldTableView.getSelectionModel();
                             if (sm != null) {
-                                listener.unregisterChangeListener(sm.getSelectedCells());
+                                sm.getSelectedCells().removeListener(weakSelectedListener);
                             }
 
                             fm = oldTableView.getFocusModel();
                             if (fm != null) {
-                                listener.unregisterChangeListener(fm.focusedCellProperty());
+                                fm.focusedCellProperty().removeListener(weakFocusedListener);
                             }
 
-                            listener.unregisterChangeListener(oldTableView.editingCellProperty());
-                            listener.unregisterChangeListener(oldTableView.getVisibleLeafColumns());
+                            oldTableView.editingCellProperty().removeListener(weakEditingListener);
+                            oldTableView.getVisibleLeafColumns().removeListener(weakVisibleLeafColumnsListener);
                         }
                     }
                     
-                    TreeTableView<S> ttv = get();
-                    if (ttv != null) {
-                        sm = ttv.getSelectionModel();
+                    if (get() != null) {
+                        sm = get().getSelectionModel();
                         if (sm != null) {
-                            listener.registerChangeListener(sm.getSelectedCells(), "SELECTED_CELLS");
+                            sm.getSelectedCells().addListener(weakSelectedListener);
                         }
 
-                        fm = ttv.getFocusModel();
+                        fm = get().getFocusModel();
                         if (fm != null) {
-                            listener.registerChangeListener(fm.focusedCellProperty(), "FOCUSED_CELL");
+                            fm.focusedCellProperty().addListener(weakFocusedListener);
                         }
 
-                        listener.registerChangeListener(ttv.editingCellProperty(), "EDITING_CELL");
-                        listener.registerChangeListener(ttv.getVisibleLeafColumns(), "VISIBLE_LEAF_COLUMNS");
+                        get().editingCellProperty().addListener(weakEditingListener);
+                        get().getVisibleLeafColumns().addListener(weakVisibleLeafColumnsListener);
                         
                         weakTableViewRef = new WeakReference<TreeTableView<S>>(get());
                     }
@@ -438,7 +485,7 @@ public class TreeTableCell<S,T> extends IndexedCell<T> {
      */
     private void updateItem() {
         if (currentObservableValue != null) {
-            getPropertyListener().unregisterChangeListener(currentObservableValue);
+            currentObservableValue.removeListener(weaktableRowUpdateObserver);
         }
         
         // get the total number of items in the data model
@@ -475,7 +522,7 @@ public class TreeTableCell<S,T> extends IndexedCell<T> {
         }
         
         // add property change listeners to this item
-        getPropertyListener().registerChangeListener(currentObservableValue, "TABLE_ROW_VALUE");
+        currentObservableValue.addListener(weaktableRowUpdateObserver);
     }
 
     @Override protected void layoutChildren() {
@@ -486,22 +533,6 @@ public class TreeTableCell<S,T> extends IndexedCell<T> {
         super.layoutChildren();
     }
 
-    @Override void handlePropertyChanged(final String p) {
-        super.handlePropertyChanged(p);
-        
-        if ("SELECTED_CELLS".equals(p)) {
-            updateSelection();
-        } else if ("TABLE_ROW_VALUE".equals(p)) {
-            itemDirty = true;
-            requestLayout();
-        } else if ("VISIBLE_LEAF_COLUMNS".equals(p)) {
-            updateColumnIndex();
-        } else if ("FOCUSED_CELL".equals(p)) {
-            updateFocus();
-        } else if ("EDITING_CELL".equals(p)) {
-            updateEditing();
-        }
-    }
     
 
 
