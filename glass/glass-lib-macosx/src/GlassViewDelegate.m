@@ -171,7 +171,7 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
                                                                                    NSPasteboardTypeMultipleTextSelection,
                                                                                    (NSString*)kUTTypeURL,
                                                                                    (NSString*)kUTTypeFileURL,
-                                                                                   (NSString*)@"placeholder.custom.bytes",
+                                                                                   (NSString*)@"public.mime-type",
                                                                             nil]];
     }
     return self;
