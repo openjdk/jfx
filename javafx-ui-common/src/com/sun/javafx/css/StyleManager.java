@@ -384,8 +384,8 @@ final public class StyleManager {
                 
                 Reference<Parent> ref = parentIter.next();
                 Parent _parent = ref.get();
-                
-                if (_parent.getScene() == scene || _parent.getScene() == null) {
+
+                if (_parent == null || _parent.getScene() == scene || _parent.getScene() == null) {
                     parentIter.remove();
                 } 
             }
