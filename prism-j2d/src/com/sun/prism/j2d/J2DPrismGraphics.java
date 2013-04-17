@@ -334,6 +334,10 @@ public class J2DPrismGraphics
         FontResource fr = strike.getFontResource();
         java.awt.Font j2dfont;
         Object peer = fr.getPeer();
+        if (peer == null && fr.isEmbeddedFont()) {
+            J2DFontFactory.registerFont(fr);
+            peer = fr.getPeer();
+        }
         if (peer != null && peer instanceof java.awt.Font) {
             j2dfont = (java.awt.Font)peer;
         } else {
