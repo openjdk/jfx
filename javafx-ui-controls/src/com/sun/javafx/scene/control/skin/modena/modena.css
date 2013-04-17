@@ -479,10 +479,19 @@ is being used to size a border should also be in pixels.
 
 /* ====   MNEMONIC THINGS   ================================================= */
 
-.button:show-mnemonics .mnemonic-underline,
-.toggle-button:show-mnemonics .mnemonic-underline,
-.radio-button:show-mnemonics .mnemonic-underline,
-.check-box:show-mnemonics .mnemonic-underline,
+.mnemonic-underline {
+    -fx-stroke: transparent;
+}
+
+.label:show-mnemonics > .mnemonic-underline,
+.context-menu:show-mnemonics > .mnemonic-underline,
+.menu:show-mnemonics > .mnemonic-underline,
+.menu-bar:show-mnemonics > .mnemonic-underline,
+.menu-item:show-mnemonics > .mnemonic-underline,
+.button:show-mnemonics > .mnemonic-underline,
+.toggle-button:show-mnemonics > .mnemonic-underline,
+.radio-button:show-mnemonics > .mnemonic-underline,
+.check-box:show-mnemonics > .mnemonic-underline,
 .hyperlink:show-mnemonics > .mnemonic-underline,
 .split-menu-button:show-mnemonics > .mnemonic-underline,
 .menu-button:show-mnemonics > .mnemonic-underline {
