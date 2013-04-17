@@ -64,8 +64,6 @@ import java.security.PrivilegedAction;
 
 abstract class GlassScene implements TKScene, SceneChangeListener {
 
-    protected boolean verbose;
-
     protected GlassStage glassStage;
 
     protected TKSceneListener sceneListener;
@@ -91,14 +89,14 @@ abstract class GlassScene implements TKScene, SceneChangeListener {
 
     private AccessControlContext accessCtrlCtx = null;
 
-    protected GlassScene(boolean verbose) {
-        this(verbose, false);
-    }
-
-    protected GlassScene(boolean verbose, boolean depthBuffer) {
-        this.verbose = verbose;
+    protected GlassScene(boolean depthBuffer) {
         this.depthBuffer = depthBuffer;
         sceneState = new SceneState(this);
+    }
+
+    @Override
+    public void dispose() {
+        // Overridden in subclasses
     }
 
     // To be used by subclasses to enforce context check
@@ -137,10 +135,6 @@ abstract class GlassScene implements TKScene, SceneChangeListener {
     }
 
     protected abstract boolean isSynchronous();
-
-    @Override public void setScene(Object scene) {
-        // Overridden in subclasses
-    }
 
     @Override public void setTKSceneListener(final TKSceneListener listener) {
         this.sceneListener = listener;
@@ -213,7 +207,7 @@ abstract class GlassScene implements TKScene, SceneChangeListener {
     }
 
     @Override
-    public void markDirty() {
+    public final void markDirty() {
         sceneChanged();
     }
 
@@ -387,17 +381,11 @@ abstract class GlassScene implements TKScene, SceneChangeListener {
     /* com.sun.javafx.tk.TKSceneListener */
 
     @Override public void sceneChanged() {
-        if (glassStage instanceof PopupStage) {
-            GlassScene popupScene = ((PopupStage)glassStage).getOwnerScene();
-            if (popupScene != null) {
-                popupScene.sceneChanged();
-            }
-        }
         if (glassStage != null) {
             // don't mark this scene dirty and add it to the dirty scene list if
             // it is not attached to a Stage. When it does get attached the
             // scene will be marked dirty anyway.
-            PaintCollector.getInstance().addDirtyScene(GlassScene.this);
+            PaintCollector.getInstance().addDirtyScene(this);
         }
     }
 
@@ -447,7 +435,7 @@ abstract class GlassScene implements TKScene, SceneChangeListener {
         }
     }
 
-    protected Paint getCurrentPaint() {
+    protected final Paint getCurrentPaint() {
         WindowStage windowStage = glassStage instanceof WindowStage ? (WindowStage)glassStage : null;
         if ((windowStage != null) && windowStage.getStyle() == StageStyle.TRANSPARENT) {
             return Color.TRANSPARENT.equals(fillPaint) ? null : fillPaint;

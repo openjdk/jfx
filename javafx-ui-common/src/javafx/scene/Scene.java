@@ -722,7 +722,6 @@ public class Scene implements EventTarget {
         impl_peer.setSecurityContext(acc);
         impl_peer.setTKSceneListener(new ScenePeerListener());
         impl_peer.setTKScenePaintListener(new ScenePeerPaintListener());
-        impl_peer.setScene(this);
         PerformanceTracker.logEvent("Scene.initPeer TKScene set");
         impl_peer.setRoot(getRoot().impl_getPGNode());
         impl_peer.setFillPaint(getFill() == null ? null : tk.getPaint(getFill()));
@@ -755,7 +754,7 @@ public class Scene implements EventTarget {
         }
         Toolkit tk = Toolkit.getToolkit();
         tk.removeSceneTkPulseListener(scenePulseListener);
-        impl_peer.setScene(null);
+        impl_peer.dispose();
         impl_peer = null;
     }
 

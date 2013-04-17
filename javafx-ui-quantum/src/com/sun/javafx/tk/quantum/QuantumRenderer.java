@@ -64,7 +64,7 @@ final class QuantumRenderer extends ThreadPoolExecutor  {
         
         
     private static final AtomicReference<QuantumRenderer> instanceReference =
-                                    new AtomicReference<QuantumRenderer>(null);
+                                    new AtomicReference<>(null);
 
     private Thread          _renderer;
     private Throwable       _initThrowable = null;
@@ -103,13 +103,11 @@ final class QuantumRenderer extends ThreadPoolExecutor  {
                     }
                     device.put(com.sun.glass.ui.View.Capability.kHiDPIAwareKey,
                                PrismSettings.allowHiDPIScaling);
-                    if (device != null) {
-                        Map map =  Application.getDeviceDetails();
-                        if (map != null) {
-                            device.putAll(map);
-                        }
-                        Application.setDeviceDetails(device);
+                    Map map =  Application.getDeviceDetails();
+                    if (map != null) {
+                        device.putAll(map);
                     }
+                    Application.setDeviceDetails(device);
                 }
             } catch (Throwable th) {
                 QuantumRenderer.this.setInitThrowable(th); 
@@ -194,7 +192,7 @@ final class QuantumRenderer extends ThreadPoolExecutor  {
      * render thread.  This method can be called from the FX thread 
      */
     protected void disposePresentable(final Presentable presentable) {
-        assert Thread.currentThread().equals(_renderer) == false;
+        assert !Thread.currentThread().equals(_renderer);
         
         if (presentable instanceof GraphicsResource) {
             final GraphicsResource resource = (GraphicsResource)presentable;
@@ -261,13 +259,12 @@ final class QuantumRenderer extends ThreadPoolExecutor  {
         if (PrismSettings.threadCheck) {
             PaintCollector collector = PaintCollector.getInstance();
             final boolean busy = AbstractPainter.renderLock.isLocked() &&
-                    AbstractPainter.renderLock.isHeldByCurrentThread() == false;
+                    !AbstractPainter.renderLock.isHeldByCurrentThread();
 
             if (busy) {
                 System.err.println("ERROR: PrismPen / FX threads co-running:" +
                                    " DIRTY: " + collector.hasDirty());
-                QuantumToolkit qt = (QuantumToolkit)QuantumToolkit.getToolkit();
-                for (StackTraceElement s : qt.getFxUserThread().getStackTrace()) {
+                for (StackTraceElement s : QuantumToolkit.getFxUserThread().getStackTrace()) {
                     System.err.println("FX: " + s);
                 }
                 for (StackTraceElement q : _renderer.getStackTrace()) {

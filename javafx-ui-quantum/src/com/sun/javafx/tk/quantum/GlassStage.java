@@ -54,8 +54,6 @@ abstract class GlassStage implements TKStage {
     // focused window, which we assume is very close to the last topmost one).
     private static List<GlassStage> activeWindows = new LinkedList<GlassStage>();
 
-    protected boolean verbose;
-
     protected GlassScene scene;
 
     protected TKStageListener stageListener;
@@ -66,8 +64,7 @@ abstract class GlassStage implements TKStage {
 
     private AccessControlContext accessCtrlCtx = null;
 
-    protected GlassStage(boolean verbose) {
-        this.verbose = verbose;
+    protected GlassStage() {
         windows.add(this);
     }
 

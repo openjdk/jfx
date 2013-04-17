@@ -80,10 +80,7 @@ class WindowStage extends GlassStage {
     // an input event handler.
     private boolean inEventHandler = false;
 
-    private static final QuantumRenderer renderer  = QuantumRenderer.getInstance();
-    
-    private static final AtomicReference<WindowStage> activeFSWindowReference =
-                            new AtomicReference<WindowStage>();
+    private static final AtomicReference<WindowStage> activeFSWindow = new AtomicReference<>();
 
     private static GlassAppletWindow appletWindow = null;
     static void setAppletWindow(GlassAppletWindow aw) {
@@ -93,31 +90,15 @@ class WindowStage extends GlassStage {
         return appletWindow;
     }
 
-    public WindowStage(final boolean verbose) {
-        this(verbose, StageStyle.DECORATED, false, Modality.NONE, null);
+    public WindowStage() {
+        this(StageStyle.DECORATED, false, Modality.NONE, null);
     }
 
-    public WindowStage(final boolean verbose, final StageStyle stageStyle) {
-        this(verbose, stageStyle, false, Modality.NONE, null);
+    public WindowStage(final StageStyle stageStyle) {
+        this(stageStyle, false, Modality.NONE, null);
     }
 
-    // Called by QuantumToolkit, so we can override initPlatformWindow in subclasses
-    public final WindowStage init(GlassSystemMenu sysmenu) {
-        initPlatformWindow();
-        platformWindow.setEventHandler(new GlassWindowEventHandler(this));
-        platformWindow.setMinimumSize(minWidth, minHeight);
-        platformWindow.setMaximumSize(maxWidth, maxHeight);
-        if (sysmenu.isSupported()) {
-            sysmenu.createMenuBar();
-            platformWindow.setMenuBar(sysmenu.getMenuBar());
-        }
-        return this;
-    }
-
-    public WindowStage(final boolean verbose, final StageStyle stageStyle,
-            final boolean isPrimary, Modality modality, TKStage owner) {
-        super(verbose);
-
+    public WindowStage(final StageStyle stageStyle, final boolean isPrimary, Modality modality, TKStage owner) {
         transparent = stageStyle == StageStyle.TRANSPARENT;
 
         this.style = stageStyle;
@@ -140,6 +121,19 @@ class WindowStage extends GlassStage {
         }
         this.owner = owner;
         this.modality = modality;
+    }
+
+    // Called by QuantumToolkit, so we can override initPlatformWindow in subclasses
+    public final WindowStage init(GlassSystemMenu sysmenu) {
+        initPlatformWindow();
+        platformWindow.setEventHandler(new GlassWindowEventHandler(this));
+        platformWindow.setMinimumSize(minWidth, minHeight);
+        platformWindow.setMaximumSize(maxWidth, maxHeight);
+        if (sysmenu.isSupported()) {
+            sysmenu.createMenuBar();
+            platformWindow.setMenuBar(sysmenu.getMenuBar());
+        }
+        return this;
     }
 
     protected void initPlatformWindow() {
@@ -186,7 +180,7 @@ class WindowStage extends GlassStage {
     }
 
     @Override public TKScene createTKScene(boolean depthBuffer) {
-        return new ViewScene(verbose, depthBuffer);
+        return new ViewScene(depthBuffer);
     }
     
     /**
@@ -221,7 +215,7 @@ class WindowStage extends GlassStage {
         }
         if (oldScene != null) {
             ViewPainter painter = ((ViewScene)oldScene).getPainter();
-            renderer.disposePresentable(painter.presentable);   // latched on RT
+            QuantumRenderer.getInstance().disposePresentable(painter.presentable);   // latched on RT
         }
     }
     
@@ -548,19 +542,20 @@ class WindowStage extends GlassStage {
             fullScreenFromUserEvent = true;
         }
 
-        if (fullScreen && (activeFSWindowReference.get() != null)) {
-            activeFSWindowReference.get().setFullScreen(false);
+        WindowStage fsWindow = activeFSWindow.get();
+        if (fullScreen && (fsWindow != null)) {
+            fsWindow.setFullScreen(false);
         }
         isInFullScreen = fullScreen;
         applyFullScreen();
         if (fullScreen) {
-            activeFSWindowReference.set(this);
+            activeFSWindow.set(this);
         }
     }
 
     void fullscreenChanged(final boolean fs) {
         if (!fs) {
-            activeFSWindowReference.compareAndSet(this, null);
+            activeFSWindow.compareAndSet(this, null);
         }
         AccessController.doPrivileged(new PrivilegedAction<Void>() {
             @Override

@@ -43,7 +43,6 @@ import com.sun.javafx.scene.traversal.Direction;
 import com.sun.javafx.sg.PGNode;
 import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.tk.Toolkit;
-import com.sun.prism.impl.PrismSettings;
 import com.sun.prism.render.ToolkitInterface;
 
 final class EmbeddedScene extends GlassScene implements EmbeddedSceneInterface {
@@ -68,7 +67,7 @@ final class EmbeddedScene extends GlassScene implements EmbeddedSceneInterface {
     }
 
     public EmbeddedScene(HostInterface host, boolean depthBuffer) {
-        super(PrismSettings.verbose, depthBuffer);
+        super(depthBuffer);
         this.dndDelegate = new EmbeddedSceneDnD(this);
 
         this.host = host;
@@ -89,8 +88,8 @@ final class EmbeddedScene extends GlassScene implements EmbeddedSceneInterface {
     }
 
     @Override
-    public void markDirty() {
-        super.markDirty();
+    public void sceneChanged() {
+        super.sceneChanged();
         host.repaint();
     }
     
@@ -101,7 +100,7 @@ final class EmbeddedScene extends GlassScene implements EmbeddedSceneInterface {
 
     @Override
     public void enableInputMethodEvents(boolean enable) {
-        if (verbose) {
+        if (QuantumToolkit.verbose) {
             System.err.println("EmbeddedScene.enableInputMethodEvents " + enable);
         }
     }

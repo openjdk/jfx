@@ -45,6 +45,11 @@ public class StubScene implements TKScene {
     private PGCamera camera;
 
     @Override
+    public void dispose() {
+        // ignore
+    }
+
+    @Override
     public void setSecurityContext(AccessControlContext ctx) {
         // ignore
     }
@@ -59,10 +64,6 @@ public class StubScene implements TKScene {
 
     public void setTKSceneListener(TKSceneListener listener) {
         this.listener = listener;
-    }
-
-    public void setScene(Object scene) {
-        // ignore
     }
 
     public void setRoot(PGNode root) {

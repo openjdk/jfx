@@ -47,11 +47,11 @@ class ViewScene extends GlassScene {
     private View platformView;
     private ViewPainter painter;
 
-    private AtomicBoolean painting = new AtomicBoolean(false);
+    private final AtomicBoolean painting = new AtomicBoolean(false);
     private PaintRenderJob paintRenderJob;
 
-    public ViewScene(boolean verbose, boolean depthBuffer) {
-        super(verbose, depthBuffer);
+    public ViewScene(boolean depthBuffer) {
+        super(depthBuffer);
 
         this.platformView = Application.GetApplication().createView();
         this.platformView.setEventHandler(new GlassViewEventHandler(this));
@@ -87,8 +87,7 @@ class ViewScene extends GlassScene {
             } else {
                 painter = new PresentingPainter(this);
             }
-//            pen.setPainter(painter);
-            painter.setRoot((NGNode)getRoot());
+            painter.setRoot(getRoot());
             paintRenderJob = new PaintRenderJob(this, PaintCollector.getInstance().getRendered(), painter);
         }
     }
@@ -99,20 +98,19 @@ class ViewScene extends GlassScene {
 
     /* com.sun.javafx.tk.TKScene */
 
-    @Override public void setScene(Object scene) {
-        if (scene == null) {
-            // Setting scene to null is a dispose operation
-            if (this.platformView != null) {
-                AbstractPainter.renderLock.lock();
-                try {
-                    this.platformView.close();
-                    this.platformView = null;
-                    this.updateSceneState();
-                } finally {
-                    AbstractPainter.renderLock.unlock();
-                }
+    @Override
+    public void dispose() {
+        if (platformView != null) {
+            AbstractPainter.renderLock.lock();
+            try {
+                platformView.close();
+                platformView = null;
+                updateSceneState();
+            } finally {
+                AbstractPainter.renderLock.unlock();
             }
         }
+        super.dispose();
     }
     
     @Override public void setRoot(PGNode root) {
