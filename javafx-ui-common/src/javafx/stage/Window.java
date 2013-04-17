@@ -53,8 +53,8 @@ import javafx.scene.Scene;
 import com.sun.javafx.WeakReferenceQueue;
 import com.sun.javafx.beans.annotations.NoInit;
 import com.sun.javafx.css.StyleManager;
-import com.sun.javafx.stage.WindowBoundsAccessor;
 import com.sun.javafx.stage.WindowEventDispatcher;
+import com.sun.javafx.stage.WindowHelper;
 import com.sun.javafx.stage.WindowPeerListener;
 import com.sun.javafx.tk.TKPulseListener;
 import com.sun.javafx.tk.TKScene;
@@ -77,26 +77,46 @@ public class Window implements EventTarget {
      */
     private static WeakReferenceQueue<Window>windowQueue = new WeakReferenceQueue<Window>();
 
-    /**
-     * Allows window peer listeners to directly change window location and size
-     * without changing the xExplicit, yExplicit, widthExplicit and
-     * heightExplicit values.
-     */
-    private static final WindowBoundsAccessor BOUNDS_ACCESSOR =
-            new WindowBoundsAccessor() {
-                @Override
-                public void setLocation(Window window, double x, double y) {
-                    window.x.set(x - window.winTranslateX);
-                    window.y.set(y - window.winTranslateY);
-                }
+    static {
+        WindowHelper.setWindowAccessor(
+                new WindowHelper.WindowAccessor() {
+                    @Override
+                    public void setWindowTranslate(Window window,
+                                                   double translateX,
+                                                   double translateY) {
+                        window.setWindowTranslate(translateX, translateY);
+                    }
 
-                @Override
-                public void setSize(Window window,
-                                    double width, double height) {
-                    window.width.set(width);
-                    window.height.set(height);
-                }
-            };
+                    @Override
+                    public double getScreenX(Window window) {
+                        return window.getX() + window.winTranslateX;
+                    }
+
+                    @Override
+                    public double getScreenY(Window window) {
+                        return window.getY() + window.winTranslateY;
+                    }
+
+                    /**
+                     * Allow window peer listeners to directly change window
+                     * location and size without changing the xExplicit,
+                     * yExplicit, widthExplicit and heightExplicit values.
+                     */
+                    @Override
+                    public void setLocation(Window window, double x, double y) {
+                        window.x.set(x - window.winTranslateX);
+                        window.y.set(y - window.winTranslateY);
+                    }
+
+                    @Override
+                    public void setSize(Window window,
+                                        double width,
+                                        double height) {
+                        window.width.set(width);
+                        window.height.set(height);
+                    }
+                });
+    }
 
     /**
      * Return all Windows
@@ -728,8 +748,6 @@ public class Window implements EventTarget {
                     if (peerListener == null) {
                         peerListener = new WindowPeerListener(Window.this);
                     }
-
-                    peerListener.setBoundsAccessor(BOUNDS_ACCESSOR);
 
                     // Setup listener for changes coming back from peer
                     impl_peer.setTKStageListener(peerListener);

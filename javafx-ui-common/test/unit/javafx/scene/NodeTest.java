@@ -28,6 +28,7 @@ package javafx.scene;
 import com.sun.javafx.geom.PickRay;
 import com.sun.javafx.pgstub.StubGroup;
 import com.sun.javafx.pgstub.StubCircle;
+import com.sun.javafx.stage.WindowHelper;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -1044,7 +1045,6 @@ public class NodeTest {
     @Test
     public void testLocalToScreen() {
         Rectangle rect = new Rectangle();
-        Group g = new Group(rect);
 
         rect.setTranslateX(10);
         rect.setTranslateY(20);
@@ -1062,7 +1062,6 @@ public class NodeTest {
     @Test
     public void testScreenToLocal() {
         Rectangle rect = new Rectangle();
-        Group g = new Group(rect);
 
         rect.setTranslateX(10);
         rect.setTranslateY(20);
@@ -1077,4 +1076,39 @@ public class NodeTest {
         assertEquals(new BoundingBox(1, 2, 3, 4), rect.screenToLocal(new BoundingBox(111, 222, 3, 4)));
     }
 
+    @Test
+    public void testLocalToScreenWithTranslatedWindow() {
+        Rectangle rect = new Rectangle();
+
+        rect.setTranslateX(10);
+        rect.setTranslateY(20);
+
+        TestScene scene = new TestScene(new Group(rect));
+        final TestStage testStage = new TestStage("");
+        testStage.setX(100);
+        testStage.setY(200);
+        WindowHelper.setWindowTranslate(testStage, -30, -20);
+        scene.set_window(testStage);
+
+        assertEquals(new Point2D(81, 202), rect.localToScreen(new Point2D(1, 2)));
+        assertEquals(new BoundingBox(81, 202, 3, 4), rect.localToScreen(new BoundingBox(1, 2, 3, 4)));
+    }
+
+    @Test
+    public void testScreenToLocalWithTranslatedWindow() {
+        Rectangle rect = new Rectangle();
+
+        rect.setTranslateX(10);
+        rect.setTranslateY(20);
+
+        TestScene scene = new TestScene(new Group(rect));
+        final TestStage testStage = new TestStage("");
+        testStage.setX(100);
+        testStage.setY(200);
+        WindowHelper.setWindowTranslate(testStage, -30, -20);
+        scene.set_window(testStage);
+
+        assertEquals(new Point2D(31, 22), rect.screenToLocal(new Point2D(111, 222)));
+        assertEquals(new BoundingBox(31, 22, 3, 4), rect.screenToLocal(new BoundingBox(111, 222, 3, 4)));
+    }
 }

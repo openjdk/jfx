@@ -40,24 +40,18 @@ public class WindowPeerListener implements TKStageListener {
 
     private final Window window;
 
-    private WindowBoundsAccessor boundsAccessor;
-
     public WindowPeerListener(Window window) {
         this.window = window;
     }
 
-    public void setBoundsAccessor(WindowBoundsAccessor boundsAccessor) {
-        this.boundsAccessor = boundsAccessor;
-    }
-
     @Override
     public void changedLocation(float x, float y) {
-        boundsAccessor.setLocation(window, x, y);
+        WindowHelper.setLocation(window, x, y);
     }
 
     @Override
     public void changedSize(float width, float height) {
-        boundsAccessor.setSize(window, width, height);
+        WindowHelper.setSize(window, width, height);
     }
 
     public void changedFocused(boolean focused, FocusCause cause) {
