@@ -150,7 +150,6 @@ public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehav
 
     private void initializeSwipeAndTouchHandlers() {
         final Pagination control = getSkinnable();
-        final Insets controlPadding = control.getInsets();
                     
         getSkinnable().setOnTouchPressed(new EventHandler<TouchEvent>() {
             @Override public void handle(TouchEvent e) {
@@ -185,7 +184,7 @@ public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehav
                 }
 
                 if (touchThresholdBroken) {
-                    double width = control.getWidth() - (controlPadding.getLeft() + controlPadding.getRight());
+                    double width = control.getWidth() - (snappedLeftInset() + snappedRightInset());
                     double currentPaneX;
                     double nextPaneX;
 
@@ -267,7 +266,7 @@ public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehav
                     final double velocity = quick ? (double)drag / time : touchVelocity; // pixels/ms
                     // calculate distance we would travel at this speed for 500ms of travel
                     final double distance = (velocity * 500);
-                    final double width = control.getWidth() - (controlPadding.getLeft() + controlPadding.getRight());
+                    final double width = control.getWidth() - (snappedLeftInset() + snappedRightInset());
 
                     // The swipe distance travelled.
                     final double threshold = Math.abs(distance/width);
@@ -680,49 +679,34 @@ public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehav
         getSkinnable().requestLayout();
     }
 
-    @Override protected double computeMinWidth(double height) {
-        Insets padding = getSkinnable().getInsets();
-        double left = snapSpace(padding.getLeft());
-        double right = snapSpace(padding.getRight());
+    @Override protected double computeMinWidth(double height, int topInset, int rightInset, int bottomInset, int leftInset) {
         double navigationWidth = navigation.isVisible() ? snapSize(navigation.minWidth(height)) : 0;
-        return left + Math.max(currentStackPane.minWidth(height), navigationWidth) + right;
+        return leftInset + Math.max(currentStackPane.minWidth(height), navigationWidth) + rightInset;
     }
 
-    @Override protected double computeMinHeight(double width) {
-        Insets padding = getSkinnable().getInsets();
-        double top = snapSpace(padding.getTop());
-        double bottom = snapSpace(padding.getBottom());
+    @Override protected double computeMinHeight(double width, int topInset, int rightInset, int bottomInset, int leftInset) {
         double navigationHeight = navigation.isVisible() ? snapSize(navigation.minHeight(width)) : 0;
-        return top + currentStackPane.minHeight(width) + navigationHeight + bottom;
+        return topInset + currentStackPane.minHeight(width) + navigationHeight + bottomInset;
     }
 
-    @Override protected double computePrefWidth(double height) {
-        Insets padding = getSkinnable().getInsets();
-        double left = snapSpace(padding.getLeft());
-        double right = snapSpace(padding.getRight());
+    @Override protected double computePrefWidth(double height, int topInset, int rightInset, int bottomInset, int leftInset) {
         double navigationWidth = navigation.isVisible() ? snapSize(navigation.prefWidth(height)) : 0;
-        return left + Math.max(currentStackPane.prefWidth(height), navigationWidth) + right;
+        return leftInset + Math.max(currentStackPane.prefWidth(height), navigationWidth) + rightInset;
     }
 
-    @Override protected double computePrefHeight(double width) {
-        Insets padding = getSkinnable().getInsets();
-        double top = snapSpace(padding.getTop());
-        double bottom = snapSpace(padding.getBottom());
+    @Override protected double computePrefHeight(double width, int topInset, int rightInset, int bottomInset, int leftInset) {
         double navigationHeight = navigation.isVisible() ? snapSize(navigation.prefHeight(width)) : 0;
-        return top + currentStackPane.prefHeight(width) + navigationHeight + bottom;
+        return topInset + currentStackPane.prefHeight(width) + navigationHeight + bottomInset;
     }
 
     @Override protected void layoutChildren(final double x, final double y,
             final double w, final double h) {
-        Insets padding = getSkinnable().getInsets();
-        double left = snapSpace(padding.getLeft());
-        double top = snapSpace(padding.getTop());
         double navigationHeight = navigation.isVisible() ? snapSize(navigation.prefHeight(-1)) : 0;
         double stackPaneHeight = snapSize(h - navigationHeight);
 
-        layoutInArea(currentStackPane, left, top, w, stackPaneHeight, 0, HPos.CENTER, VPos.CENTER);
-        layoutInArea(nextStackPane, left, top, w, stackPaneHeight, 0, HPos.CENTER, VPos.CENTER);
-        layoutInArea(navigation, left, stackPaneHeight, w, navigationHeight, 0, HPos.CENTER, VPos.CENTER);
+        layoutInArea(currentStackPane, x, y, w, stackPaneHeight, 0, HPos.CENTER, VPos.CENTER);
+        layoutInArea(nextStackPane, x, y, w, stackPaneHeight, 0, HPos.CENTER, VPos.CENTER);
+        layoutInArea(navigation, x, stackPaneHeight, w, navigationHeight, 0, HPos.CENTER, VPos.CENTER);
     }
 
     class NavigationControl extends StackPane {
@@ -883,14 +867,14 @@ public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehav
         // Layout the maximum number of page indicators we can fit within the width.
         // And always show the selected indicator.
         private void layoutPageIndicators() {
-            double left = snapSpace(getInsets().getLeft());
-            double right = snapSpace(getInsets().getRight());
-            double width = snapSize(getWidth()) - (left + right);
-            double controlBoxleft = snapSpace(controlBox.getInsets().getLeft());
-            double controlBoxRight = snapSpace(controlBox.getInsets().getRight());
-            double leftArrowWidth = snapSize(Utils.boundedSize(leftArrowButton.prefWidth(-1), leftArrowButton.minWidth(-1), leftArrowButton.maxWidth(-1)));
-            double rightArrowWidth = snapSize(Utils.boundedSize(rightArrowButton.prefWidth(-1), rightArrowButton.minWidth(-1), rightArrowButton.maxWidth(-1)));
-            double spacing = snapSize(controlBox.getSpacing());
+            final double left = snappedLeftInset();
+            final double right = snappedRightInset();
+            final double width = snapSize(getWidth()) - (left + right);
+            final double controlBoxleft = controlBox.snappedLeftInset();
+            final double controlBoxRight = controlBox.snappedRightInset();
+            final double leftArrowWidth = snapSize(Utils.boundedSize(leftArrowButton.prefWidth(-1), leftArrowButton.minWidth(-1), leftArrowButton.maxWidth(-1)));
+            final double rightArrowWidth = snapSize(Utils.boundedSize(rightArrowButton.prefWidth(-1), rightArrowButton.minWidth(-1), rightArrowButton.maxWidth(-1)));
+            final double spacing = snapSize(controlBox.getSpacing());
             double w = width - (controlBoxleft + leftArrowWidth + spacing + rightArrowWidth + controlBoxRight);
 
             if (isPageInformationVisible() &&
@@ -1070,8 +1054,8 @@ public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehav
         }
 
         @Override protected double computeMinWidth(double height) {
-            double left = snapSpace(getInsets().getLeft());
-            double right = snapSpace(getInsets().getRight());
+            double left = snappedLeftInset();
+            double right = snappedRightInset();
             double leftArrowWidth = snapSize(Utils.boundedSize(leftArrowButton.prefWidth(-1), leftArrowButton.minWidth(-1), leftArrowButton.maxWidth(-1)));
             double rightArrowWidth = snapSize(Utils.boundedSize(rightArrowButton.prefWidth(-1), rightArrowButton.minWidth(-1), rightArrowButton.maxWidth(-1)));
             double spacing = snapSize(controlBox.getSpacing());
@@ -1089,9 +1073,9 @@ public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehav
         }
 
         @Override protected double computePrefWidth(double height) {
-            double left = snapSpace(getInsets().getLeft());
-            double right = snapSpace(getInsets().getRight());
-            double controlBoxWidth = snapSize(controlBox.prefWidth(height));
+            final double left = snappedLeftInset();
+            final double right = snappedRightInset();
+            final double controlBoxWidth = snapSize(controlBox.prefWidth(height));
             double pageInformationWidth = 0;
             Side side = getPageInformationAlignment();
             if (Side.LEFT.equals(side) || Side.RIGHT.equals(side)) {
@@ -1102,9 +1086,9 @@ public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehav
         }
 
         @Override protected double computePrefHeight(double width) {
-            double top = snapSpace(getInsets().getTop());
-            double bottom = snapSpace(getInsets().getBottom());
-            double boxHeight = snapSize(controlBox.prefHeight(width));
+            final double top = snappedTopInset();
+            final double bottom = snappedBottomInset();
+            final double boxHeight = snapSize(controlBox.prefHeight(width));
             double pageInformationHeight = 0;
             Side side = getPageInformationAlignment();
             if (Side.TOP.equals(side) || Side.BOTTOM.equals(side)) {
@@ -1115,16 +1099,16 @@ public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehav
         }
 
         @Override protected void layoutChildren() {
-            double top = snapSpace(getInsets().getTop());
-            double bottom = snapSpace(getInsets().getBottom());
-            double left = snapSpace(getInsets().getLeft());
-            double right = snapSpace(getInsets().getRight());
-            double width = snapSize(getWidth()) - (left + right);
-            double height = snapSize(getHeight()) - (top + bottom);
-            double controlBoxWidth = snapSize(controlBox.prefWidth(-1));
-            double controlBoxHeight = snapSize(controlBox.prefHeight(-1));
-            double pageInformationWidth = snapSize(pageInformation.prefWidth(-1));
-            double pageInformationHeight = snapSize(pageInformation.prefHeight(-1));
+            final double top = snappedTopInset();
+            final double bottom = snappedBottomInset();
+            final double left = snappedLeftInset();
+            final double right = snappedRightInset();
+            final double width = snapSize(getWidth()) - (left + right);
+            final double height = snapSize(getHeight()) - (top + bottom);
+            final double controlBoxWidth = snapSize(controlBox.prefWidth(-1));
+            final double controlBoxHeight = snapSize(controlBox.prefHeight(-1));
+            final double pageInformationWidth = snapSize(pageInformation.prefWidth(-1));
+            final double pageInformationHeight = snapSize(pageInformation.prefHeight(-1));
 
             leftArrowButton.setDisable(false);
             rightArrowButton.setDisable(false);

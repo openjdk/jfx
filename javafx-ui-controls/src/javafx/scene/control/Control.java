@@ -455,7 +455,7 @@ public abstract class Control extends Region implements Skinnable {
      */
     @Override protected double computeMinWidth(final double height) {
         if (skinBase != null) {    
-            return skinBase.computeMinWidth(height);
+            return skinBase.computeMinWidth(height, snappedTopInset(), snappedRightInset(), snappedBottomInset(), snappedLeftInset());
         } else {
             final Node skinNode = getSkinNode();
             return skinNode == null ? 0 : skinNode.minWidth(height);
@@ -474,7 +474,7 @@ public abstract class Control extends Region implements Skinnable {
      */
     @Override protected double computeMinHeight(final double width) {
         if (skinBase != null) {    
-            return skinBase.computeMinHeight(width);
+            return skinBase.computeMinHeight(width, snappedTopInset(), snappedRightInset(), snappedBottomInset(), snappedLeftInset());
         } else {
             final Node skinNode = getSkinNode();
             return skinNode == null ? 0 : skinNode.minHeight(width);
@@ -493,7 +493,7 @@ public abstract class Control extends Region implements Skinnable {
      */
     @Override protected double computeMaxWidth(double height) {
         if (skinBase != null) {  
-            return skinBase.computeMaxWidth(height);
+            return skinBase.computeMaxWidth(height, snappedTopInset(), snappedRightInset(), snappedBottomInset(), snappedLeftInset());
         } else {
             final Node skinNode = getSkinNode();
             return skinNode == null ? 0 : skinNode.maxWidth(height);
@@ -512,7 +512,7 @@ public abstract class Control extends Region implements Skinnable {
      */
     @Override protected double computeMaxHeight(double width) {
         if (skinBase != null) {  
-            return skinBase.computeMaxHeight(width);
+            return skinBase.computeMaxHeight(width, snappedTopInset(), snappedRightInset(), snappedBottomInset(), snappedLeftInset());
         } else {
             final Node skinNode = getSkinNode();
             return skinNode == null ? 0 : skinNode.maxHeight(width);
@@ -522,7 +522,7 @@ public abstract class Control extends Region implements Skinnable {
     /** {@inheritDoc} */
     @Override protected double computePrefWidth(double height) {
         if (skinBase != null) {  
-            return skinBase.computePrefWidth(height);
+            return skinBase.computePrefWidth(height, snappedTopInset(), snappedRightInset(), snappedBottomInset(), snappedLeftInset());
         } else {
             final Node skinNode = getSkinNode();
             return skinNode == null ? 0 : skinNode.prefWidth(height);
@@ -531,8 +531,8 @@ public abstract class Control extends Region implements Skinnable {
 
     /** {@inheritDoc} */
     @Override protected double computePrefHeight(double width) {
-        if (skinBase != null) {  
-            return skinBase.computePrefHeight(width);
+        if (skinBase != null) {
+            return skinBase.computePrefHeight(width, snappedTopInset(), snappedRightInset(), snappedBottomInset(), snappedLeftInset());
         } else {
             final Node skinNode = getSkinNode();
             return skinNode == null ? 0 : skinNode.prefHeight(width);
@@ -542,7 +542,7 @@ public abstract class Control extends Region implements Skinnable {
     /** {@inheritDoc} */
     @Override public double getBaselineOffset() { 
         if (skinBase != null) {  
-            return skinBase.getBaselineOffset();
+            return skinBase.computeBaselineOffset(snappedTopInset(), snappedRightInset(), snappedBottomInset(), snappedLeftInset());
         } else {
             final Node skinNode = getSkinNode();
             return skinNode == null ? 0 : skinNode.getBaselineOffset();
@@ -559,11 +559,10 @@ public abstract class Control extends Region implements Skinnable {
     /** {@inheritDoc} */
     @Override protected void layoutChildren() {
         if (skinBase != null) {
-            final Insets padding = getInsets();
-            final double x = snapSize(padding.getLeft());
-            final double y = snapSize(padding.getTop());
-            final double w = snapSize(getWidth()) - snapSize(padding.getLeft()) - snapSize(padding.getRight());
-            final double h = snapSize(getHeight()) - snapSize(padding.getTop()) - snapSize(padding.getBottom());
+            final double x = snappedLeftInset();
+            final double y = snappedTopInset();
+            final double w = snapSize(getWidth()) - x - snappedRightInset();
+            final double h = snapSize(getHeight()) - y - snappedBottomInset();
             skinBase.layoutChildren(x, y, w, h);
         } else {
             Node n = getSkinNode();

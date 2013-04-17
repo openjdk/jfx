@@ -428,10 +428,8 @@ public abstract class TableRowSkinBase<T,
             double width;
             double height;
             
-            Insets insets = getSkinnable().getInsets();
-            
-            double verticalPadding = insets.getTop() + insets.getBottom();
-            double horizontalPadding = insets.getLeft() + insets.getRight();
+            double verticalPadding = snappedTopInset() + snappedBottomInset();
+            double horizontalPadding = snappedLeftInset() + snappedRightInset();
 
             /**
              * RT-26743:TreeTableView: Vertical Line looks unfinished.
@@ -572,7 +570,7 @@ public abstract class TableRowSkinBase<T,
 //                    ///////////////////////////////////////////
                     
                     tableCell.resize(width, height);
-                    tableCell.relocate(x, insets.getTop());
+                    tableCell.relocate(x, snappedTopInset());
                     
                     // Request layout is here as (partial) fix for RT-28684
                     tableCell.requestLayout();
@@ -686,7 +684,7 @@ public abstract class TableRowSkinBase<T,
         return cell;
     }
     
-    @Override protected double computePrefWidth(double height) {
+    @Override protected double computePrefWidth(double height, int topInset, int rightInset, int bottomInset, int leftInset) {
         double prefWidth = 0.0F;
 
         List<? extends TableColumnBase/*<T,?>*/> visibleLeafColumns = getVisibleLeafColumns();
@@ -698,7 +696,7 @@ public abstract class TableRowSkinBase<T,
         return prefWidth;
     }
     
-    @Override protected double computePrefHeight(double width) {
+    @Override protected double computePrefHeight(double width, int topInset, int rightInset, int bottomInset, int leftInset) {
         if (fixedCellLengthEnabled) {
             return fixedCellLength;
         }

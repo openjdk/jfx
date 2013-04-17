@@ -243,9 +243,8 @@ public class TableHeaderRow extends StackPane {
         image.getStyleClass().setAll("show-hide-column-image");
         cornerRegion = new StackPane() {
             @Override protected void layoutChildren() {
-                Insets padding = image.getInsets();
-                double imageWidth = padding.getLeft() + padding.getRight();
-                double imageHeight = padding.getTop() + padding.getBottom();
+                double imageWidth = image.snappedLeftInset() + image.snappedRightInset();
+                double imageHeight = image.snappedTopInset() + image.snappedBottomInset();
                 
                 image.resize(imageWidth, imageHeight);
                 positionInArea(image, 0, 0, getWidth(), getHeight() - 3, 
@@ -393,11 +392,11 @@ public class TableHeaderRow extends StackPane {
     @Override protected void layoutChildren() {
         double x = scrollX;
         double headerWidth = snapSize(header.prefWidth(-1));
-        double prefHeight = getHeight() - getInsets().getTop() - getInsets().getBottom();
+        double prefHeight = getHeight() - snappedTopInset() - snappedBottomInset();
         double cornerWidth = snapSize(flow.getVbar().prefWidth(-1));
 
         // position the main nested header
-        header.resizeRelocate(x, getInsets().getTop(), headerWidth, prefHeight);
+        header.resizeRelocate(x, snappedTopInset(), headerWidth, prefHeight);
         
         // position the filler region
         double border = filler.getBoundsInLocal().getWidth() - filler.getLayoutBounds().getWidth();
@@ -405,11 +404,11 @@ public class TableHeaderRow extends StackPane {
         fillerWidth -= tableSkin.tableMenuButtonVisibleProperty().get() ? cornerWidth : 0;
         filler.setVisible(fillerWidth > 0);
         if (fillerWidth > 0) {
-            filler.resizeRelocate(x + headerWidth, getInsets().getTop(), fillerWidth, prefHeight);
+            filler.resizeRelocate(x + headerWidth, snappedTopInset(), fillerWidth, prefHeight);
         }
 
         // position the top-right rectangle (which sits above the scrollbar)
-        cornerRegion.resizeRelocate(tableWidth - cornerWidth, getInsets().getTop(), cornerWidth, prefHeight);
+        cornerRegion.resizeRelocate(tableWidth - cornerWidth, snappedTopInset(), cornerWidth, prefHeight);
     }
 
     @Override protected double computePrefWidth(double height) {
@@ -421,7 +420,7 @@ public class TableHeaderRow extends StackPane {
     }
     
     @Override protected double computePrefHeight(double width) {
-        return getInsets().getTop() + header.prefHeight(width) + getInsets().getBottom();
+        return snappedTopInset() + header.prefHeight(width) + snappedBottomInset();
     }
 
     //    public function isColumnFullyVisible(col:TableColumn):Number {

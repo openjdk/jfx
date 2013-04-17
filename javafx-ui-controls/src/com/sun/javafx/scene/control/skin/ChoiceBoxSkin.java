@@ -52,7 +52,6 @@ import javafx.scene.text.Text;
 
 import com.sun.javafx.scene.control.behavior.ChoiceBoxBehavior;
 import javafx.collections.WeakListChangeListener;
-import javafx.geometry.Insets;
 
 
 /**
@@ -331,31 +330,25 @@ import javafx.geometry.Insets;
         double obw = openButton.prefWidth(-1);
 
         ChoiceBox<T> control = getSkinnable();
-        Insets insets = control.getInsets();
-        label.resizeRelocate(insets.getLeft(), insets.getTop(), w, h);
+        label.resizeRelocate(x, y, w, h);
         openButton.resize(obw, openButton.prefHeight(-1));
-        positionInArea(openButton, control.getWidth() - insets.getRight() - obw,
-                insets.getTop(), obw, h, /*baseline ignored*/0, HPos.CENTER, VPos.CENTER);
+        positionInArea(openButton, (x+w) - obw,
+                y, obw, h, /*baseline ignored*/0, HPos.CENTER, VPos.CENTER);
     }
 
-    @Override protected double computeMinWidth(double height) {
+    @Override protected double computeMinWidth(double height, int topInset, int rightInset, int bottomInset, int leftInset) {
         final double boxWidth = label.minWidth(-1) + openButton.minWidth(-1);
         final double popupWidth = popup.minWidth(-1);
-        final Insets insets = getSkinnable().getInsets();
-        return insets.getLeft() + Math.max(boxWidth, popupWidth)
-                + insets.getRight();
+        return leftInset + Math.max(boxWidth, popupWidth) + rightInset;
     }
 
-    @Override protected double computeMinHeight(double width) {
+    @Override protected double computeMinHeight(double width, int topInset, int rightInset, int bottomInset, int leftInset) {
         final double displayHeight = label.minHeight(-1);
         final double openButtonHeight = openButton.minHeight(-1);
-        final Insets insets = getSkinnable().getInsets();
-        return insets.getTop()
-                + Math.max(displayHeight, openButtonHeight)
-                + insets.getBottom();
+        return topInset + Math.max(displayHeight, openButtonHeight) + bottomInset;
     }
 
-    @Override protected double computePrefWidth(double height) {
+    @Override protected double computePrefWidth(double height, int topInset, int rightInset, int bottomInset, int leftInset) {
         final double boxWidth = label.prefWidth(-1)
                 + openButton.prefWidth(-1);
         double popupWidth = popup.prefWidth(-1);
@@ -364,25 +357,23 @@ import javafx.geometry.Insets;
                 popupWidth = (new Text(((MenuItem)popup.getItems().get(0)).getText())).prefWidth(-1);
             }
         }
-        final Insets insets = getSkinnable().getInsets();
-        return (popup.getItems().size() == 0) ? 50 : insets.getLeft() + Math.max(boxWidth, popupWidth)
-                + insets.getRight();
+        return (popup.getItems().size() == 0) ? 50 : leftInset + Math.max(boxWidth, popupWidth)
+                + rightInset;
     }
 
-    @Override protected double computePrefHeight(double width) {
+    @Override protected double computePrefHeight(double width, int topInset, int rightInset, int bottomInset, int leftInset) {
         final double displayHeight = label.prefHeight(-1);
         final double openButtonHeight = openButton.prefHeight(-1);
-        final Insets insets = getSkinnable().getInsets();
-        return insets.getTop()
+        return topInset
                 + Math.max(displayHeight, openButtonHeight)
-                + insets.getBottom();
+                + bottomInset;
     }
     
-    @Override protected double computeMaxHeight(double width) {
+    @Override protected double computeMaxHeight(double width, int topInset, int rightInset, int bottomInset, int leftInset) {
         return getSkinnable().prefHeight(width);
     }
     
-    @Override protected double computeMaxWidth(double height) {
+    @Override protected double computeMaxWidth(double height, int topInset, int rightInset, int bottomInset, int leftInset) {
         return getSkinnable().prefWidth(height);
     }
 }

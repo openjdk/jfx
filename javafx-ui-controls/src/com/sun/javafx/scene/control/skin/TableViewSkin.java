@@ -234,7 +234,7 @@ public class TableViewSkin<T> extends TableViewSkinBase<T, TableView<T>, TableVi
         Node n = cell.getSkin() == null ? null : cell.getSkin().getNode();
         if (n instanceof Region) {
             Region r = (Region) n;
-            padding = r.getInsets().getLeft() + r.getInsets().getRight();
+            padding = r.snappedLeftInset() + r.snappedRightInset();
         } 
         
         int rows = maxRows == -1 ? items.size() : Math.min(items.size(), maxRows);

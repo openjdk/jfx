@@ -197,48 +197,64 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
     /**
      * Computes the minimum allowable width of the Skin, based on the provided
      * height.
-     * 
+     *
      * @param height The height of the Skin, in case this value might dictate
      *      the minimum width.
+     * @param topInset the pixel snapped top inset
+     * @param rightInset the pixel snapped right inset
+     * @param bottomInset the pixel snapped bottom inset
+     * @param leftInset  the pixel snapped left inset
      * @return A double representing the minimum width of this Skin.
      */
-    protected double computeMinWidth(double height) {
+    protected double computeMinWidth(double height, int topInset, int rightInset, int bottomInset, int leftInset) {
         return control.prefWidth(height);
     }
 
     /**
      * Computes the minimum allowable height of the Skin, based on the provided
      * width.
-     * 
+     *
      * @param width The width of the Skin, in case this value might dictate
      *      the minimum height.
+     * @param topInset the pixel snapped top inset
+     * @param rightInset the pixel snapped right inset
+     * @param bottomInset the pixel snapped bottom inset
+     * @param leftInset  the pixel snapped left inset
      * @return A double representing the minimum height of this Skin.
      */
-    protected double computeMinHeight(double width) {
+    protected double computeMinHeight(double width, int topInset, int rightInset, int bottomInset, int leftInset) {
         return control.prefHeight(width);
     }
 
     /**
      * Computes the maximum allowable width of the Skin, based on the provided
      * height.
-     * 
+     *
      * @param height The height of the Skin, in case this value might dictate
      *      the maximum width.
+     * @param topInset the pixel snapped top inset
+     * @param rightInset the pixel snapped right inset
+     * @param bottomInset the pixel snapped bottom inset
+     * @param leftInset  the pixel snapped left inset
      * @return A double representing the maximum width of this Skin.
      */
-    protected double computeMaxWidth(double height) {
+    protected double computeMaxWidth(double height, int topInset, int rightInset, int bottomInset, int leftInset) {
         return Double.MAX_VALUE;
     }
     
     /**
      * Computes the maximum allowable height of the Skin, based on the provided
      * width.
-     * 
+     *
      * @param width The width of the Skin, in case this value might dictate
      *      the maximum height.
+     * @param topInset the pixel snapped top inset
+     * @param rightInset the pixel snapped right inset
+     * @param bottomInset the pixel snapped bottom inset
+     * @param leftInset  the pixel snapped left inset
      * @return A double representing the maximum height of this Skin.
      */
-    protected double computeMaxHeight(double width) {
+    protected double computeMaxHeight(double width, int topInset, int rightInset, int bottomInset, int leftInset) {
         return Double.MAX_VALUE;
     }
     
@@ -249,11 +265,14 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
      * by its managed children when they are positioned at their
      * current positions at their preferred widths.
      *
-     * @param height the height that should be used if preferred width depends
-     *      on it
+     * @param height the height that should be used if preferred width depends on it
+     * @param topInset the pixel snapped top inset
+     * @param rightInset the pixel snapped right inset
+     * @param bottomInset the pixel snapped bottom inset
+     * @param leftInset  the pixel snapped left inset
      * @return the calculated preferred width
      */
-    protected double computePrefWidth(double height) {
+    protected double computePrefWidth(double height, int topInset, int rightInset, int bottomInset, int leftInset) {
         double minX = 0;
         double maxX = 0;
         for (int i = 0; i < children.size(); i++) {
@@ -274,11 +293,14 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
      * by its managed children when they are positioned at their current
      * positions at their preferred heights.
      *
-     * @param width the width that should be used if preferred height depends
-     *      on it
+     * @param width the width that should be used if preferred height depends on it
+     * @param topInset the pixel snapped top inset
+     * @param rightInset the pixel snapped right inset
+     * @param bottomInset the pixel snapped bottom inset
+     * @param leftInset  the pixel snapped left inset
      * @return the calculated preferred height
      */
-    protected double computePrefHeight(double width) {
+    protected double computePrefHeight(double width, int topInset, int rightInset, int bottomInset, int leftInset) {
         double minY = 0;
         double maxY = 0;
         for (int i = 0; i < children.size(); i++) {
@@ -296,9 +318,13 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
      * Calculates the baseline offset based on the first managed child. If there
      * is no such child, returns {@link Node#getBaselineOffset()}.
      *
+     * @param topInset the pixel snapped top inset
+     * @param rightInset the pixel snapped right inset
+     * @param bottomInset the pixel snapped bottom inset
+     * @param leftInset  the pixel snapped left inset
      * @return baseline offset
      */
-    public double getBaselineOffset() {
+    protected double computeBaselineOffset(int topInset, int rightInset, int bottomInset, int leftInset) {
         int size = children.size();
         for (int i = 0; i < size; ++i) {
             Node child = children.get(i);
@@ -308,15 +334,54 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
         }
         return control.getLayoutBounds().getHeight();
     }
-    
-    
+
     
     /***************************************************************************
      *                                                                         *
      * (Mostly ugly) Skin -> Control forwarding API                            *
      *                                                                         *
-     **************************************************************************/      
-    
+     **************************************************************************/
+
+    /**
+     * Utility method to get the top inset which includes padding and border
+     * inset. Then snapped to whole pixels if getSkinnable().isSnapToPixel() is true.
+     *
+     * @return Rounded up insets top
+     */
+    protected int snappedTopInset() {
+        return control.snappedTopInset();
+    }
+
+    /**
+     * Utility method to get the bottom inset which includes padding and border
+     * inset. Then snapped to whole pixels if getSkinnable().isSnapToPixel() is true.
+     *
+     * @return Rounded up insets bottom
+     */
+    protected int snappedBottomInset() {
+        return control.snappedBottomInset();
+    }
+
+    /**
+     * Utility method to get the left inset which includes padding and border
+     * inset. Then snapped to whole pixels if getSkinnable().isSnapToPixel() is true.
+     *
+     * @return Rounded up insets left
+     */
+    protected int snappedLeftInset() {
+        return control.snappedLeftInset();
+    }
+
+    /**
+     * Utility method to get the right inset which includes padding and border
+     * inset. Then snapped to whole pixels if getSkinnable().isSnapToPixel() is true.
+     *
+     * @return Rounded up insets right
+     */
+    protected int snappedRightInset() {
+        return control.snappedRightInset();
+    }
+
     /**
      * If this region's snapToPixel property is true, returns a value rounded
      * to the nearest pixel, else returns the same value.

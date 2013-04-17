@@ -31,7 +31,6 @@ import javafx.collections.ListChangeListener;
 import javafx.event.ActionEvent;
 import javafx.event.Event;
 import javafx.event.EventHandler;
-import javafx.geometry.Insets;
 import javafx.scene.Scene;
 import javafx.scene.control.CheckMenuItem;
 import javafx.scene.control.ContextMenu;
@@ -232,26 +231,24 @@ public abstract class MenuButtonSkinBase<C extends MenuButton, B extends MenuBut
      *                                                                         *
      **************************************************************************/
 
-    @Override protected double computePrefWidth(double height) {
-        final Insets padding = getSkinnable().getInsets();
-        return padding.getLeft()
+    @Override protected double computePrefWidth(double height, int topInset, int rightInset, int bottomInset, int leftInset) {
+        return leftInset
                 + label.prefWidth(height)
                 + snapSize(arrowButton.prefWidth(height))
-                + padding.getRight();
+                + rightInset;
     }
 
-    @Override protected double computePrefHeight(double width) {
-        final Insets padding = getSkinnable().getInsets();
-        return padding.getTop()
+    @Override protected double computePrefHeight(double width, int topInset, int rightInset, int bottomInset, int leftInset) {
+        return topInset
                 + Math.max(label.prefHeight(width), snapSize(arrowButton.prefHeight(-1)))
-                + padding.getBottom();
+                + bottomInset;
     }
 
-    @Override protected double computeMaxWidth(double height) {
+    @Override protected double computeMaxWidth(double height, int topInset, int rightInset, int bottomInset, int leftInset) {
         return getSkinnable().prefWidth(height);
     }
 
-    @Override protected double computeMaxHeight(double width) {
+    @Override protected double computeMaxHeight(double width, int topInset, int rightInset, int bottomInset, int leftInset) {
         return getSkinnable().prefHeight(width);
     }
 

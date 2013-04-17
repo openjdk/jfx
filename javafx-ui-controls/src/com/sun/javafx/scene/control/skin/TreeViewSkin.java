@@ -27,7 +27,6 @@ package com.sun.javafx.scene.control.skin;
 
 import javafx.event.EventHandler;
 import javafx.scene.Node;
-import javafx.scene.control.IndexedCell;
 import javafx.scene.control.TreeCell;
 import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeItem.TreeModificationEvent;
@@ -339,11 +338,11 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeViewB
         };
     }
     
-    @Override protected double computePrefWidth(double height) {
-        return computePrefHeight(-1) * 0.618033987;
+    @Override protected double computePrefWidth(double height, int topInset, int rightInset, int bottomInset, int leftInset) {
+        return computePrefHeight(-1, topInset, rightInset, bottomInset, leftInset) * 0.618033987;
     }
 
-    @Override protected double computePrefHeight(double width) {
+    @Override protected double computePrefHeight(double width, int topInset, int rightInset, int bottomInset, int leftInset) {
         return 400;
     }
 

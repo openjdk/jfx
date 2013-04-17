@@ -75,10 +75,10 @@ public abstract class Chart extends Region {
      */
     private final Pane chartContent = new Pane() {
         @Override protected void layoutChildren() {
-            final double top = getInsets().getTop();
-            final double left = getInsets().getLeft();
-            final double bottom = getInsets().getBottom();
-            final double right = getInsets().getRight();
+            final double top = snappedTopInset();
+            final double left = snappedLeftInset();
+            final double bottom = snappedBottomInset();
+            final double right = snappedRightInset();
             final double width = getWidth();
             final double height = getHeight();
             final double contentWidth = snapSize(width - (left + right));
@@ -315,10 +315,10 @@ public abstract class Chart extends Region {
      * Invoked during the layout pass to layout this chart and all its content.
      */
     @Override protected void layoutChildren() {
-        double top = getInsets().getTop();
-        double left = getInsets().getLeft();
-        double bottom = getInsets().getBottom();
-        double right = getInsets().getRight();
+        double top = snappedTopInset();
+        double left = snappedLeftInset();
+        double bottom = snappedBottomInset();
+        double right = snappedRightInset();
         final double width = getWidth();
         final double height = getHeight();
         // layout title

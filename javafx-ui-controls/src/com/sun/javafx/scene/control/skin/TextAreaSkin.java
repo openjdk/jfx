@@ -63,7 +63,6 @@ import javafx.scene.shape.PathElement;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextBoundsType;
 import javafx.util.Duration;
-import com.sun.javafx.PlatformUtil;
 import com.sun.javafx.application.PlatformImpl;
 import com.sun.javafx.scene.control.behavior.TextAreaBehavior;
 import com.sun.javafx.scene.text.HitInfo;
@@ -138,7 +137,7 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
                                     paragraphNode.getText(), 0));
                 }
 
-                prefWidth += leftPadding() + rightPadding();
+                prefWidth += snappedLeftInset() + snappedRightInset();
 
                 Bounds viewPortBounds = scrollPane.getViewportBounds();
                 computedPrefWidth = Math.max(prefWidth, (viewPortBounds != null) ? viewPortBounds.getWidth() : 0);
@@ -158,7 +157,7 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
                 if (width == -1) {
                     wrappingWidth = 0;
                 } else {
-                    wrappingWidth = Math.max(width - (leftPadding() + rightPadding()), 0);
+                    wrappingWidth = Math.max(width - (snappedLeftInset() + snappedRightInset()), 0);
                 }
 
                 double prefHeight = 0;
@@ -172,7 +171,7 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
                             paragraphNode.getBoundsType());
                 }
 
-                prefHeight += topPadding() + bottomPadding();
+                prefHeight += snappedTopInset() + snappedBottomInset();
 
                 Bounds viewPortBounds = scrollPane.getViewportBounds();
                 computedPrefHeight = Math.max(prefHeight, (viewPortBounds != null) ? viewPortBounds.getHeight() : 0);
@@ -182,7 +181,7 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
 
         @Override protected double computeMinWidth(double height) {
             if (computedMinWidth < 0) {
-                double hInsets = leftPadding() + rightPadding();
+                double hInsets = snappedLeftInset() + snappedRightInset();
                 computedMinWidth = Math.min(characterWidth + hInsets, computePrefWidth(height));
             }
             return computedMinWidth;
@@ -190,26 +189,10 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
 
         @Override protected double computeMinHeight(double width) {
             if (computedMinHeight < 0) {
-                double vInsets = topPadding() + bottomPadding();
+                double vInsets = snappedTopInset() + snappedBottomInset();
                 computedMinHeight = Math.min(lineHeight + vInsets, computePrefHeight(width));
             }
             return computedMinHeight;
-        }
-
-        private final double topPadding() {
-            return snapSize(getInsets().getTop());
-        }
-
-        private final double bottomPadding() {
-            return snapSize(getInsets().getBottom());
-        }
-
-        private final double leftPadding() {
-            return snapSize(getInsets().getLeft());
-        }
-
-        private final double rightPadding() {
-            return snapSize(getInsets().getRight());
         }
 
         @Override
@@ -218,10 +201,10 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
             double width = getWidth();
 
             // Lay out paragraphs
-            final double topPadding = topPadding();
-            final double leftPadding = leftPadding();
+            final double topPadding = snappedTopInset();
+            final double leftPadding = snappedLeftInset();
 
-            double wrappingWidth = Math.max(width - (leftPadding + rightPadding()), 0);
+            double wrappingWidth = Math.max(width - (leftPadding + snappedRightInset()), 0);
 
             double y = topPadding;
             
@@ -820,10 +803,10 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
     }
 
     @Override
-    public double getBaselineOffset() {
+    public double computeBaselineOffset(int topInset, int rightInset, int bottomInset, int leftInset) {
         Text firstParagraph = (Text) paragraphNodes.getChildren().get(0);
         return Utils.getAscent(getSkinnable().getFont(),firstParagraph.getBoundsType())
-                + contentView.getInsets().getTop() + textArea.getInsets().getTop();
+                + contentView.snappedTopInset() + textArea.snappedTopInset();
     }
 
     @Override
@@ -858,13 +841,11 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
         int index = -1;
 
         if (n > 0) {
-            Insets padding = contentView.getInsets();
-
-            if (y < padding.getTop()) {
+            if (y < contentView.snappedTopInset()) {
                 // Select the character at x in the first row
                 Text paragraphNode = (Text)paragraphNodes.getChildren().get(0);
                 index = getNextInsertionPoint(paragraphNode, x, -1, VerticalDirection.DOWN);
-            } else if (y > padding.getTop() + contentView.getHeight()) {
+            } else if (y > contentView.snappedTopInset() + contentView.getHeight()) {
                 // Select the character at x in the last row
                 int lastParagraphIndex = n - 1;
                 Text lastParagraphView = (Text)paragraphNodes.getChildren().get(lastParagraphIndex);
@@ -1032,7 +1013,6 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
     private void scrollBoundsToVisible(Rectangle2D bounds) {
         TextArea textArea = getSkinnable();
         Bounds viewportBounds = scrollPane.getViewportBounds();
-        Insets padding = contentView.getInsets();
 
         double viewportWidth = viewportBounds.getWidth();
         double viewportHeight = viewportBounds.getHeight();
@@ -1042,13 +1022,13 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
 
         if (bounds.getMinY() < 0) {
             double y = scrollTop + bounds.getMinY();
-            if (y <= padding.getTop()) {
+            if (y <= contentView.snappedTopInset()) {
                 y = 0;
             }
             textArea.setScrollTop(y);
-        } else if (padding.getTop() + bounds.getMaxY() > viewportHeight) {
-            double y = scrollTop + padding.getTop() + bounds.getMaxY() - viewportHeight;
-            if (y >= getScrollTopMax() - padding.getBottom()) {
+        } else if (contentView.snappedTopInset() + bounds.getMaxY() > viewportHeight) {
+            double y = scrollTop + contentView.snappedTopInset() + bounds.getMaxY() - viewportHeight;
+            if (y >= getScrollTopMax() - contentView.snappedBottomInset()) {
                 y = getScrollTopMax();
             }
             textArea.setScrollTop(y);
@@ -1057,13 +1037,13 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
 
         if (bounds.getMinX() < 0) {
             double x = scrollLeft + bounds.getMinX() - slop;
-            if (x <= padding.getLeft() + slop) {
+            if (x <= contentView.snappedLeftInset() + slop) {
                 x = 0;
             }
             textArea.setScrollLeft(x);
-        } else if (padding.getLeft() + bounds.getMaxX() > viewportWidth) {
-            double x = scrollLeft + padding.getLeft() + bounds.getMaxX() - viewportWidth + slop;
-            if (x >= getScrollLeftMax() - padding.getRight() - slop) {
+        } else if (contentView.snappedLeftInset() + bounds.getMaxX() > viewportWidth) {
+            double x = scrollLeft + contentView.snappedLeftInset() + bounds.getMaxX() - viewportWidth + slop;
+            if (x >= getScrollLeftMax() - contentView.snappedRightInset() - slop) {
                 x = getScrollLeftMax();
             }
             textArea.setScrollLeft(x);
@@ -1072,14 +1052,12 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
 
     private void updatePrefViewportWidth() {
         int columnCount = getSkinnable().getPrefColumnCount();
-        Insets contentPadding = contentView.getInsets();
-        scrollPane.setPrefViewportWidth(columnCount * characterWidth + contentPadding.getLeft() + contentPadding.getRight());
+        scrollPane.setPrefViewportWidth(columnCount * characterWidth + contentView.snappedLeftInset() + contentView.snappedRightInset());
     }
 
     private void updatePrefViewportHeight() {
         int rowCount = getSkinnable().getPrefRowCount();
-        Insets contentPadding = contentView.getInsets();
-        scrollPane.setPrefViewportHeight(rowCount * lineHeight + contentPadding.getTop() + contentPadding.getBottom());
+        scrollPane.setPrefViewportHeight(rowCount * lineHeight + contentView.snappedTopInset() + contentView.snappedBottomInset());
     }
 
     private void updateFontMetrics() {
@@ -1113,11 +1091,11 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
     // Callbacks from Behavior class
 
     private double getTextTranslateX() {
-        return contentView.getInsets().getLeft();
+        return contentView.snappedLeftInset();
     }
 
     private double getTextTranslateY() {
-        return contentView.getInsets().getTop();
+        return contentView.snappedTopInset();
     }
 
     private double getTextLeft() {
@@ -1389,9 +1367,8 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
         contentView.layoutChildren();
         Point2D p = super.getMenuPosition();
         if (p != null) {
-            Insets padding = contentView.getInsets();
-            p = new Point2D(Math.max(0, p.getX() - padding.getLeft() - getSkinnable().getScrollLeft()),
-                            Math.max(0, p.getY() - padding.getTop() - getSkinnable().getScrollTop()));
+            p = new Point2D(Math.max(0, p.getX() - contentView.snappedLeftInset() - getSkinnable().getScrollLeft()),
+                            Math.max(0, p.getY() - contentView.snappedTopInset() - getSkinnable().getScrollTop()));
         }
         return p;
     }

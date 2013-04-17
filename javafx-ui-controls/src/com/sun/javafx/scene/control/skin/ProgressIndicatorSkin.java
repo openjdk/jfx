@@ -305,11 +305,10 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, P
         @Override protected void layoutChildren() {
             // Position and size the circular background
             double doneTextHeight = doneText.getLayoutBounds().getHeight();
-            final Insets controlInsets = control.getInsets();
-            final double left = snapSize(controlInsets.getLeft());
-            final double right = snapSize(controlInsets.getRight());
-            final double top = snapSize(controlInsets.getTop());
-            final double bottom = snapSize(controlInsets.getBottom());
+            final double left = control.snappedLeftInset();
+            final double right = control.snappedRightInset();
+            final double top = control.snappedTopInset();
+            final double bottom = control.snappedBottomInset();
 
             /*
             ** use the min of width, or height, keep it a circle
@@ -323,11 +322,10 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, P
             final double centerY = snapPosition(top + radius);
 
             // find radius that fits inside radius - insetsPadding
-            final Insets indicatorInsets = indicator.getInsets();
-            final double iLeft = snapSize(indicatorInsets.getLeft());
-            final double iRight = snapSize(indicatorInsets.getRight());
-            final double iTop = snapSize(indicatorInsets.getTop());
-            final double iBottom = snapSize(indicatorInsets.getBottom());
+            final double iLeft = indicator.snappedLeftInset();
+            final double iRight = indicator.snappedRightInset();
+            final double iTop = indicator.snappedTopInset();
+            final double iBottom = indicator.snappedBottomInset();
             final double progressRadius = snapSize(Math.min(
                     Math.min(radius - iLeft, radius - iRight),
                     Math.min(radius - iTop, radius - iBottom)));
@@ -342,11 +340,10 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, P
             progress.setLayoutY(centerY);
 
             // find radius that fits inside progressRadius - progressInsets
-            final Insets progressInsets = progress.getInsets();
-            final double pLeft = snapSize(progressInsets.getLeft());
-            final double pRight = snapSize(progressInsets.getRight());
-            final double pTop = snapSize(progressInsets.getTop());
-            final double pBottom = snapSize(progressInsets.getBottom());
+            final double pLeft = progress.snappedLeftInset();
+            final double pRight = progress.snappedRightInset();
+            final double pTop = progress.snappedTopInset();
+            final double pBottom = progress.snappedBottomInset();
             final double indicatorRadius = snapSize(Math.min(
                     Math.min(progressRadius - pLeft, progressRadius - pRight),
                     Math.min(progressRadius - pTop, progressRadius - pBottom)));
@@ -373,47 +370,39 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, P
         }
 
         @Override protected double computePrefWidth(double height) {
-            final Insets controlInsets = control.getInsets();
-            final double left = snapSize(controlInsets.getLeft());
-            final double right = snapSize(controlInsets.getRight());
-            final Insets indicatorInsets = indicator.getInsets();
-            final double iLeft = snapSize(indicatorInsets.getLeft());
-            final double iRight = snapSize(indicatorInsets.getRight());
-            final double iTop = snapSize(indicatorInsets.getTop());
-            final double iBottom = snapSize(indicatorInsets.getBottom());
+            final double left = control.snappedLeftInset();
+            final double right = control.snappedRightInset();
+            final double iLeft = indicator.snappedLeftInset();
+            final double iRight = indicator.snappedRightInset();
+            final double iTop = indicator.snappedTopInset();
+            final double iBottom = indicator.snappedBottomInset();
             final double indicatorMax = snapSize(Math.max(Math.max(iLeft, iRight), Math.max(iTop, iBottom)));
-            final Insets progressInsets = progress.getInsets();
-            final double pLeft = snapSize(progressInsets.getLeft());
-            final double pRight = snapSize(progressInsets.getRight());
-            final double pTop = snapSize(progressInsets.getTop());
-            final double pBottom = snapSize(progressInsets.getBottom());
+            final double pLeft = progress.snappedLeftInset();
+            final double pRight = progress.snappedRightInset();
+            final double pTop = progress.snappedTopInset();
+            final double pBottom = progress.snappedBottomInset();
             final double progressMax = snapSize(Math.max(Math.max(pLeft, pRight), Math.max(pTop, pBottom)));
-            final Insets tickInsets = tick.getInsets();
-            final double tLeft = snapSize(tickInsets.getLeft());
-            final double tRight = snapSize(tickInsets.getRight());
+            final double tLeft = tick.snappedLeftInset();
+            final double tRight = tick.snappedRightInset();
             final double indicatorWidth = indicatorMax + progressMax + tLeft + tRight + progressMax + indicatorMax;
             return left + Math.max(indicatorWidth, doneText.getLayoutBounds().getWidth()) + right;
         }
 
         @Override protected double computePrefHeight(double width) {
-            final Insets controlInsets = control.getInsets();
-            final double top = snapSize(controlInsets.getTop());
-            final double bottom = snapSize(controlInsets.getBottom());
-            final Insets indicatorInsets = indicator.getInsets();
-            final double iLeft = snapSize(indicatorInsets.getLeft());
-            final double iRight = snapSize(indicatorInsets.getRight());
-            final double iTop = snapSize(indicatorInsets.getTop());
-            final double iBottom = snapSize(indicatorInsets.getBottom());
+            final double top = control.snappedTopInset();
+            final double bottom = control.snappedBottomInset();
+            final double iLeft = indicator.snappedLeftInset();
+            final double iRight = indicator.snappedRightInset();
+            final double iTop = indicator.snappedTopInset();
+            final double iBottom = indicator.snappedBottomInset();
             final double indicatorMax = snapSize(Math.max(Math.max(iLeft, iRight), Math.max(iTop, iBottom)));
-            final Insets progressInsets = progress.getInsets();
-            final double pLeft = snapSize(progressInsets.getLeft());
-            final double pRight = snapSize(progressInsets.getRight());
-            final double pTop = snapSize(progressInsets.getTop());
-            final double pBottom = snapSize(progressInsets.getBottom());
+            final double pLeft = progress.snappedLeftInset();
+            final double pRight = progress.snappedRightInset();
+            final double pTop = progress.snappedTopInset();
+            final double pBottom = progress.snappedBottomInset();
             final double progressMax = snapSize(Math.max(Math.max(pLeft, pRight), Math.max(pTop, pBottom)));
-            final Insets tickInsets = tick.getInsets();
-            final double tTop = snapSize(tickInsets.getTop());
-            final double tBottom = snapSize(tickInsets.getBottom());
+            final double tTop = tick.snappedTopInset();
+            final double tBottom = tick.snappedBottomInset();
             final double indicatorHeight = indicatorMax + progressMax + tTop + tBottom + progressMax + indicatorMax;
             return top + indicatorHeight + textGap + doneText.getLayoutBounds().getHeight() + bottom;
         }
@@ -569,9 +558,8 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, P
         }
 
         @Override protected void layoutChildren() {
-            Insets controlInsets = control.getInsets();
-            final double w = control.getWidth() - controlInsets.getLeft() - controlInsets.getRight();
-            final double h = control.getHeight() - controlInsets.getTop() - controlInsets.getBottom();
+            final double w = control.getWidth() - control.snappedLeftInset() - control.snappedRightInset();
+            final double h = control.getHeight() - control.snappedTopInset() - control.snappedBottomInset();
             final double prefW = pathsG.prefWidth(-1);
             final double prefH = pathsG.prefHeight(-1);
             double scaleX = w / prefW;

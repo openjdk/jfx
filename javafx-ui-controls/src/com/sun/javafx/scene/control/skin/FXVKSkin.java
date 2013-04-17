@@ -28,9 +28,6 @@ package com.sun.javafx.scene.control.skin;
 import java.lang.reflect.Field;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
-import java.util.*;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 
 import javafx.animation.Interpolator;
 import javafx.animation.KeyFrame;
@@ -41,30 +38,17 @@ import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.SimpleDoubleProperty;
-import javafx.event.ActionEvent;
-import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.event.EventTarget;
 import javafx.event.EventType;
-import javafx.geometry.Bounds;
-import javafx.geometry.HPos;
-import javafx.geometry.Insets;
-import javafx.geometry.Point2D;
-import javafx.geometry.Pos;
 import javafx.geometry.Rectangle2D;
 import javafx.geometry.VPos;
-import javafx.geometry.Side;
 
-import javafx.scene.Group;
 import javafx.scene.Node;
-import javafx.scene.Parent;
 import javafx.scene.Scene;
-import javafx.scene.control.*;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
-import javafx.scene.layout.*;
-import javafx.scene.image.*;
 
 import javafx.stage.*;
 import javafx.util.Duration;
@@ -73,12 +57,7 @@ import com.sun.javafx.robot.impl.FXRobotHelper;
 import com.sun.javafx.robot.impl.FXRobotHelper.FXRobotInputAccessor;
 import com.sun.javafx.scene.control.behavior.BehaviorBase;
 
-import javafx.animation.Animation.Status;
-import static javafx.scene.input.KeyCode.*;
-import static javafx.scene.input.MouseEvent.*;
 import static javafx.scene.layout.Region.*;
-
-import static com.sun.javafx.scene.control.skin.resources.EmbeddedResources.*;
 
 import java.io.BufferedReader;
 import java.io.InputStream;
@@ -86,17 +65,8 @@ import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import javafx.event.EventHandler;
-import javafx.event.EventType;
-import javafx.geometry.Insets;
-import javafx.geometry.VPos;
-import javafx.scene.input.KeyCode;
-import javafx.scene.input.KeyEvent;
-import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.Region;
 import javafx.scene.text.Text;
-import com.sun.javafx.scene.control.behavior.BehaviorBase;
-import java.net.URL;
 
 
 public class FXVKSkin extends BehaviorSkinBase<FXVK, BehaviorBase<FXVK>> {
@@ -373,15 +343,13 @@ public class FXVKSkin extends BehaviorSkinBase<FXVK, BehaviorBase<FXVK>> {
     // This skin is designed such that it gives equal widths to all columns. So
     // the pref width is just some hard-coded value (although I could have maybe
     // done it based on the pref width of a text node with the right font).
-    @Override protected double computePrefWidth(double height) {
-        final Insets insets = getSkinnable().getInsets();
-        return insets.getLeft() + (56 * numCols) + insets.getRight();
+    @Override protected double computePrefWidth(double height, int topInset, int rightInset, int bottomInset, int leftInset) {
+        return leftInset + (56 * numCols) + rightInset;
     }
 
     // Pref height is just some value. This isn't overly important.
-    @Override protected double computePrefHeight(double width) {
-        final Insets insets = getSkinnable().getInsets();
-        return insets.getTop() + (80 * 5) + insets.getBottom();
+    @Override protected double computePrefHeight(double width, int topInset, int rightInset, int bottomInset, int leftInset) {
+        return topInset + (80 * 5) + bottomInset;
     }
 
     // Lays the buttons comprising the current keyboard out. The first row is always
@@ -445,11 +413,10 @@ public class FXVKSkin extends BehaviorSkinBase<FXVK, BehaviorBase<FXVK>> {
         public void update(boolean capsDown, boolean shiftDown) { }
 
         @Override protected void layoutChildren() {
-            final Insets insets = getSkinnable().getInsets();
-            final double left = insets.getLeft();
-            final double top = insets.getTop();
-            final double width = getWidth() - left - insets.getRight();
-            final double height = getHeight() - top - insets.getBottom();
+            final double left = snappedLeftInset();
+            final double top = snappedTopInset();
+            final double width = getWidth() - left - snappedRightInset();
+            final double height = getHeight() - top - snappedBottomInset();
 
             text.setVisible(icon.getBackground() == null);
             double contentPrefWidth = text.prefWidth(-1);

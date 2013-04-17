@@ -133,39 +133,39 @@ public class Legend extends Region {
     }
 
     @Override protected double computePrefWidth(double height) {
-        final double contentHeight = height - getInsets().getTop() - getInsets().getBottom();
+        final double contentHeight = height - snappedTopInset() - snappedBottomInset();
         Dimension2D tileSize = getTileSize();
         if(height == -1) {
-            if(columns <= 1) return tileSize.getWidth() + getInsets().getLeft() + getInsets().getRight();
+            if(columns <= 1) return tileSize.getWidth() + snappedLeftInset() + snappedRightInset();
         } else {
             rows = (int) Math.floor( contentHeight / (tileSize.getHeight() + GAP) );
             columns = (rows == 0) ? (int)Math.ceil(getItems().size()) : 
                             (int)Math.ceil(getItems().size() / (double)rows);
         }
         if(columns == 1) rows = Math.min(rows, getItems().size());
-        return (columns*(tileSize.getWidth()+GAP)) - GAP + getInsets().getLeft() + getInsets().getRight();
+        return (columns*(tileSize.getWidth()+GAP)) - GAP + snappedLeftInset() + snappedRightInset();
     }
 
     @Override protected double computePrefHeight(double width) {
-        final double contentWidth = width - getInsets().getLeft() - getInsets().getRight();
+        final double contentWidth = width - snappedLeftInset() - snappedRightInset();
         Dimension2D tileSize = getTileSize();
         if(width == -1) {
-            if(rows <= 1) return tileSize.getHeight() + getInsets().getTop() + getInsets().getBottom();
+            if(rows <= 1) return tileSize.getHeight() + snappedTopInset() + snappedBottomInset();
         } else {
             columns = (int) Math.floor( contentWidth / (tileSize.getWidth() + GAP) );
             rows = (columns == 0) ? (int)Math.ceil(getItems().size()) : 
                             (int)Math.ceil(getItems().size() / (double)columns);
         }
         if(rows == 1) columns = Math.min(columns, getItems().size());
-        return (rows*(tileSize.getHeight()+GAP)) - GAP + getInsets().getTop() + getInsets().getBottom();
+        return (rows*(tileSize.getHeight()+GAP)) - GAP + snappedTopInset() + snappedBottomInset();
     }
 
     @Override protected void layoutChildren() {
         Dimension2D tileSize = getTileSize();
         if(isVertical()) {
-            double left = getInsets().getLeft();
+            double left = snappedLeftInset();
             outer: for (int col=0; col < columns; col++) {
-                double top = getInsets().getTop();
+                double top = snappedTopInset();
                 for (int row=0; row < rows; row++) {
                     int itemIndex = (col*rows) + row;
                     if(itemIndex >= getItems().size()) break outer;
@@ -175,9 +175,9 @@ public class Legend extends Region {
                 left += tileSize.getWidth() + GAP;
             }
         } else {
-            double top = getInsets().getTop();
+            double top = snappedTopInset();
             outer: for (int row=0; row < rows; row++) {
-                double left = getInsets().getLeft();
+                double left = snappedLeftInset();
                 for (int col=0; col < columns; col++) {
                     int itemIndex = (row*columns) + col;
                     if(itemIndex >= getItems().size()) break outer;

@@ -88,8 +88,7 @@ public abstract class VirtualContainerBase<C extends Control, B extends Behavior
     protected abstract void updateRowCount();
 
     double getMaxCellWidth(int rowsToCount) {
-        final Insets padding = getSkinnable().getInsets();
-        return padding.getLeft() + flow.getMaxCellWidth(rowsToCount) + padding.getRight();
+        return snappedLeftInset() + flow.getMaxCellWidth(rowsToCount) + snappedRightInset();
     }
     
     double getVirtualFlowPreferredHeight(int rows) {
@@ -98,9 +97,8 @@ public abstract class VirtualContainerBase<C extends Control, B extends Behavior
         for (int i = 0; i < rows && i < getItemCount(); i++) {
             height += flow.getCellLength(i);
         }
-        
-        final Insets padding = getSkinnable().getInsets();
-        return height + padding.getTop() + padding.getBottom();
+
+        return height + snappedTopInset() + snappedBottomInset();
     }
 
     @Override protected void layoutChildren(double x, double y, double w, double h) {

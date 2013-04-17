@@ -25,7 +25,6 @@
 
 package com.sun.javafx.scene.control.skin;
 
-import com.sun.javafx.PlatformUtil;
 import javafx.application.ConditionalFeature;
 import javafx.event.EventHandler;
 import javafx.geometry.Orientation;
@@ -356,20 +355,18 @@ public class ScrollBarSkin extends BehaviorSkinBase<ScrollBar, ScrollBarBehavior
      * We should change this when we get width/height css properties.
      */
     double getBreadth() {
-        final Insets padding = getSkinnable().getInsets();
-        
         if (!PlatformImpl.isSupported(ConditionalFeature.INPUT_TOUCH)) {
             if (getSkinnable().getOrientation() == Orientation.VERTICAL) {
-                return Math.max(decButton.prefWidth(-1)+padding.getLeft()+padding.getRight(), incButton.prefWidth(-1)+padding.getLeft()+padding.getRight());
+                return Math.max(decButton.prefWidth(-1), incButton.prefWidth(-1)) +snappedLeftInset()+snappedRightInset();
             } else {
-                return Math.max(decButton.prefHeight(-1)+padding.getTop()+padding.getBottom(), incButton.prefHeight(-1)+padding.getTop()+padding.getBottom());
+                return Math.max(decButton.prefHeight(-1), incButton.prefHeight(-1)) +snappedTopInset()+snappedBottomInset();
             }
         }
         else {
             if (getSkinnable().getOrientation() == Orientation.VERTICAL) {
-                return Math.max(DEFAULT_EMBEDDED_SB_BREADTH+padding.getLeft()+padding.getRight(), DEFAULT_EMBEDDED_SB_BREADTH+padding.getLeft()+padding.getRight());
+                return Math.max(DEFAULT_EMBEDDED_SB_BREADTH, DEFAULT_EMBEDDED_SB_BREADTH)+snappedLeftInset()+snappedRightInset();
             } else {
-                return Math.max(DEFAULT_EMBEDDED_SB_BREADTH+padding.getTop()+padding.getBottom(), DEFAULT_EMBEDDED_SB_BREADTH+padding.getTop()+padding.getBottom());
+                return Math.max(DEFAULT_EMBEDDED_SB_BREADTH, DEFAULT_EMBEDDED_SB_BREADTH)+snappedTopInset()+snappedBottomInset();
             }
         }
     }
@@ -388,27 +385,24 @@ public class ScrollBarSkin extends BehaviorSkinBase<ScrollBar, ScrollBarBehavior
      * track. Minimum breadth is determined by the breadths of the
      * end buttons.
      */
-    @Override protected double computeMinWidth(double height) {
+    @Override protected double computeMinWidth(double height, int topInset, int rightInset, int bottomInset, int leftInset) {
         if (getSkinnable().getOrientation() == Orientation.VERTICAL) {
             return getBreadth();
         } else {
-            final Insets padding = getSkinnable().getInsets();
-            
             if (!PlatformImpl.isSupported(ConditionalFeature.INPUT_TOUCH)) {
-                return decButton.minWidth(-1) + incButton.minWidth(-1) + minTrackLength()+padding.getLeft()+padding.getRight();
+                return decButton.minWidth(-1) + incButton.minWidth(-1) + minTrackLength()+leftInset+rightInset;
             } else {
-                return minTrackLength()+padding.getLeft()+padding.getRight();
+                return minTrackLength()+leftInset+rightInset;
             }
         }
     }
 
-    @Override protected double computeMinHeight(double width) {
+    @Override protected double computeMinHeight(double width, int topInset, int rightInset, int bottomInset, int leftInset) {
         if (getSkinnable().getOrientation() == Orientation.VERTICAL) {
-            final Insets padding = getSkinnable().getInsets();
             if (!PlatformImpl.isSupported(ConditionalFeature.INPUT_TOUCH)) {
-                return decButton.minHeight(-1) + incButton.minHeight(-1) + minTrackLength()+padding.getTop()+padding.getBottom();
+                return decButton.minHeight(-1) + incButton.minHeight(-1) + minTrackLength()+topInset+bottomInset;
             } else {
-                return minTrackLength()+padding.getTop()+padding.getBottom();
+                return minTrackLength()+topInset+bottomInset;
             }
         } else {
             return getBreadth();
@@ -422,24 +416,22 @@ public class ScrollBarSkin extends BehaviorSkinBase<ScrollBar, ScrollBarBehavior
      * specific length using LayoutInfo or will stretch the length
      * of the scrollbar to fit a container.
      */
-    @Override protected double computePrefWidth(double height) {
+    @Override protected double computePrefWidth(double height, int topInset, int rightInset, int bottomInset, int leftInset) {
         final ScrollBar s = getSkinnable();
-        final Insets padding = s.getInsets();
-        return s.getOrientation() == Orientation.VERTICAL ? getBreadth() : DEFAULT_LENGTH+padding.getLeft()+padding.getRight();
+        return s.getOrientation() == Orientation.VERTICAL ? getBreadth() : DEFAULT_LENGTH+leftInset+rightInset;
     }
 
-    @Override protected double computePrefHeight(double height) {
+    @Override protected double computePrefHeight(double height, int topInset, int rightInset, int bottomInset, int leftInset) {
         final ScrollBar s = getSkinnable();
-        final Insets padding = s.getInsets();
-        return s.getOrientation() == Orientation.VERTICAL ? DEFAULT_LENGTH+padding.getTop()+padding.getBottom() : getBreadth();
+        return s.getOrientation() == Orientation.VERTICAL ? DEFAULT_LENGTH+topInset+bottomInset : getBreadth();
     }
 
-    @Override protected double computeMaxWidth(double height) {
+    @Override protected double computeMaxWidth(double height, int topInset, int rightInset, int bottomInset, int leftInset) {
         final ScrollBar s = getSkinnable();
         return s.getOrientation() == Orientation.VERTICAL ? s.prefWidth(-1) : Double.MAX_VALUE;
     }
 
-    @Override protected double computeMaxHeight(double width) {
+    @Override protected double computeMaxHeight(double width, int topInset, int rightInset, int bottomInset, int leftInset) {
         final ScrollBar s = getSkinnable();
         return s.getOrientation() == Orientation.VERTICAL ? Double.MAX_VALUE : s.prefHeight(-1);
     }
@@ -460,9 +452,8 @@ public class ScrollBarSkin extends BehaviorSkinBase<ScrollBar, ScrollBarBehavior
             }
         }
 
-        final Insets padding = s.getInsets();
-        thumb.setTranslateX( snapPosition(s.getOrientation() == Orientation.VERTICAL ? padding.getLeft() : trackPos + padding.getLeft()));
-        thumb.setTranslateY( snapPosition(s.getOrientation() == Orientation.VERTICAL ? trackPos + padding.getTop() : padding.getTop()));
+        thumb.setTranslateX( snapPosition(s.getOrientation() == Orientation.VERTICAL ? snappedLeftInset() : trackPos + snappedLeftInset()));
+        thumb.setTranslateY( snapPosition(s.getOrientation() == Orientation.VERTICAL ? trackPos + snappedTopInset() : snappedTopInset()));
     }
 
     @Override protected void layoutChildren(final double x, final double y,
@@ -539,9 +530,8 @@ public class ScrollBarSkin extends BehaviorSkinBase<ScrollBar, ScrollBarBehavior
         }
 
         // things should be invisible only when well below minimum length
-        final Insets padding = s.getInsets();
-        if (s.getOrientation() == Orientation.VERTICAL && h >= (computeMinHeight(-1) - (padding.getTop()+padding.getBottom())) ||
-            s.getOrientation() == Orientation.HORIZONTAL && w >= (computeMinWidth(-1) - (padding.getLeft()+padding.getRight()))) {
+        if (s.getOrientation() == Orientation.VERTICAL && h >= (computeMinHeight(-1, (int)y , snappedRightInset(), snappedBottomInset(), (int)x) - (y+snappedBottomInset())) ||
+            s.getOrientation() == Orientation.HORIZONTAL && w >= (computeMinWidth(-1, (int)y , snappedRightInset(), snappedBottomInset(), (int)x) - (x+snappedRightInset()))) {
             trackBackground.setVisible(true);
             track.setVisible(true);
             thumb.setVisible(true);
@@ -588,11 +578,10 @@ public class ScrollBarSkin extends BehaviorSkinBase<ScrollBar, ScrollBarBehavior
         }
 
         @Override protected void layoutChildren() {
-            final Insets insets = getInsets();
-            final double top = snapSize(insets.getTop());
-            final double left = snapSize(insets.getLeft());
-            final double bottom = snapSize(insets.getBottom());
-            final double right = snapSize(insets.getRight());
+            final double top = snappedTopInset();
+            final double left = snappedLeftInset();
+            final double bottom = snappedBottomInset();
+            final double right = snappedRightInset();
             final double aw = snapSize(arrow.prefWidth(-1));
             final double ah = snapSize(arrow.prefHeight(-1));
             final double yPos = snapPosition((getHeight() - (top + bottom + ah)) / 2.0);
@@ -609,17 +598,15 @@ public class ScrollBarSkin extends BehaviorSkinBase<ScrollBar, ScrollBarBehavior
         }
 
         @Override protected double computePrefWidth(double height) {
-            final Insets insets = getInsets();
-            final double left = snapSize(insets.getLeft());
-            final double right = snapSize(insets.getRight());
+            final double left = snappedLeftInset();
+            final double right = snappedRightInset();
             final double aw = snapSize(arrow.prefWidth(-1));
             return left + aw + right;
         }
         
         @Override protected double computePrefHeight(double width) {
-            final Insets insets = getInsets();
-            final double top = snapSize(insets.getTop());
-            final double bottom = snapSize(insets.getBottom());
+            final double top = snappedTopInset();
+            final double bottom = snappedBottomInset();
             final double ah = snapSize(arrow.prefHeight(-1));
             return top + ah + bottom;
         }

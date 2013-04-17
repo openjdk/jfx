@@ -25,7 +25,6 @@
 
 package com.sun.javafx.scene.control.skin;
 
-import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
 import javafx.scene.control.Separator;
 import javafx.scene.layout.Region;
@@ -92,7 +91,6 @@ public class SeparatorSkin extends BehaviorSkinBase<Separator, BehaviorBase<Sepa
     @Override protected void layoutChildren(final double x, final double y,
             final double w, final double h) {
         final Separator sep = getSkinnable();
-        final Insets p = sep.getInsets();
 
         if (sep.getOrientation() == Orientation.HORIZONTAL) {
             // Resize to the content width, and the pref height of the line.
@@ -103,29 +101,27 @@ public class SeparatorSkin extends BehaviorSkinBase<Separator, BehaviorBase<Sepa
         }
 
         // Now that the line has been sized, simply position it
-        positionInArea(line, p.getLeft(), p.getTop(), w, h, 0, sep.getHalignment(), sep.getValignment());
+        positionInArea(line, x, y, w, h, 0, sep.getHalignment(), sep.getValignment());
     }
 
-    @Override protected double computePrefWidth(double h) {
+    @Override protected double computePrefWidth(double h, int topInset, int rightInset, int bottomInset, int leftInset) {
         final Separator sep = getSkinnable();
         double w = sep.getOrientation() == Orientation.VERTICAL ? line.prefWidth(-1) : DEFAULT_LENGTH;
-        final Insets padding = sep.getInsets();
-        return w + padding.getLeft() + padding.getRight();
+        return w + leftInset + rightInset;
     }
 
-    @Override protected double computePrefHeight(double w) {
+    @Override protected double computePrefHeight(double w, int topInset, int rightInset, int bottomInset, int leftInset) {
         final Separator sep = getSkinnable();
-        final Insets padding = sep.getInsets();
         double h = sep.getOrientation() == Orientation.VERTICAL ? DEFAULT_LENGTH : line.prefHeight(-1);
-        return h + padding.getTop() + padding.getBottom();
+        return h + topInset + bottomInset;
     }
 
-    @Override protected double computeMaxWidth(double h) {
+    @Override protected double computeMaxWidth(double h, int topInset, int rightInset, int bottomInset, int leftInset) {
         final Separator sep = getSkinnable();
         return sep.getOrientation() == Orientation.VERTICAL ? sep.prefWidth(h) : Double.MAX_VALUE;
     }
 
-    @Override protected double computeMaxHeight(double w) {
+    @Override protected double computeMaxHeight(double w, int topInset, int rightInset, int bottomInset, int leftInset) {
         final Separator sep = getSkinnable();
         return sep.getOrientation() == Orientation.VERTICAL ? Double.MAX_VALUE : sep.prefHeight(w);
     }

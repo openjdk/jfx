@@ -26,7 +26,6 @@
 package com.sun.javafx.scene.control.skin;
 
 import com.sun.javafx.scene.control.behavior.ComboBoxListViewBehavior;
-import java.util.Collections;
 import java.util.List;
 import javafx.application.Platform;
 import javafx.beans.InvalidationListener;
@@ -284,8 +283,8 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
         return listView;
     }
     
-    @Override protected double computePrefWidth(double height) {
-        double superPrefWidth = super.computePrefWidth(height);
+    @Override protected double computePrefWidth(double height, int topInset, int rightInset, int bottomInset, int leftInset) {
+        double superPrefWidth = super.computePrefWidth(height, topInset, rightInset, bottomInset, leftInset);
         double listViewWidth = listView.prefWidth(height);
         double pw = Math.max(superPrefWidth, listViewWidth);
         
@@ -294,7 +293,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
         return pw;
     }
     
-    @Override protected double computeMinWidth(double height) {
+    @Override protected double computeMinWidth(double height, int topInset, int rightInset, int bottomInset, int leftInset) {
         return 50;
     }
     

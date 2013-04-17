@@ -287,14 +287,14 @@ public class ContextMenuContent extends Region {
 
     @Override protected void layoutChildren() {
         if (itemsContainer.getChildren().size() == 0) return;
-        final double x = snapSpace(getInsets().getLeft());
-        final double y = snapSpace(getInsets().getTop());
-        final double w = snapSize(getWidth()) - (snapSpace(getInsets().getLeft()) + snapSpace(getInsets().getRight()));
-        final double h = snapSize(getHeight()) - (snapSpace(getInsets().getTop()) + snapSpace(getInsets().getBottom()));
+        final double x = snappedLeftInset();
+        final double y = snappedTopInset();
+        final double w = getWidth() - x - snappedRightInset();
+        final double h = getHeight() - y - snappedBottomInset();
         final double contentHeight =  snapSize(getContentHeight()); // itemsContainer.prefHeight(-1);
 
         itemsContainer.resize(w,contentHeight);
-        itemsContainer.relocate(snapSpace(getInsets().getLeft()), y);
+        itemsContainer.relocate(x, y);
 
         if (isFirstShow && ty == 0) {
             upArrow.setVisible(false);
@@ -335,14 +335,14 @@ public class ContextMenuContent extends Region {
              if (! n.isVisible()) continue;
              prefWidth = Math.max(prefWidth, snapSize(n.prefWidth(-1)));
          }
-         return snapSize(getInsets().getLeft()) + snapSize(prefWidth) + snapSize(getInsets().getRight());
+         return snappedLeftInset() + snapSize(prefWidth) + snappedRightInset();
     }
 
     @Override protected double computePrefHeight(double width) {
         if (itemsContainer.getChildren().size() == 0) return 0;
         final double screenHeight = getScreenHeight();
         final double contentHeight = getContentHeight(); // itemsContainer.prefHeight(width);
-        double totalHeight = snapSpace(getInsets().getTop()) + snapSize(contentHeight) + snapSpace(getInsets().getBottom());
+        double totalHeight = snappedTopInset() + snapSize(contentHeight) + snappedBottomInset();
         // the pref height of this menu is the smaller value of the
         // actual pref height and the height of the screens _visual_ bounds.
         double prefHeight = (screenHeight <= 0) ? (totalHeight) : (Math.min(totalHeight, screenHeight));
@@ -778,7 +778,7 @@ public class ContextMenuContent extends Region {
     double getMenuYOffset(int menuIndex) {
         double offset = 0;
         if (itemsContainer.getChildren().size() > menuIndex) {
-            offset = getInsets().getTop();
+            offset = snappedTopInset();
             Node menuitem = itemsContainer.getChildren().get(menuIndex);
             offset += menuitem.getLayoutY() + menuitem.prefHeight(-1);
         }
@@ -962,7 +962,7 @@ public class ContextMenuContent extends Region {
                 if (n.isVisible()) {
                     final double prefHeight = snapSize(n.prefHeight(-1));
                     n.resize(snapSize(getWidth()), prefHeight);
-                    n.relocate(snapSpace(getInsets().getLeft()), yOffset);
+                    n.relocate(snappedLeftInset(), yOffset);
                     yOffset += prefHeight;
                 }
             }
@@ -1014,7 +1014,7 @@ public class ContextMenuContent extends Region {
         }
 
         @Override protected double computePrefHeight(double width) {
-            return snapSize(getInsets().getTop()) + upDownArrow.prefHeight(-1) + snapSize(getInsets().getBottom());
+            return snappedTopInset() + upDownArrow.prefHeight(-1) + snappedBottomInset();
         }
 
         @Override protected void layoutChildren() {
@@ -1354,27 +1354,27 @@ public class ContextMenuContent extends Region {
         
             final double prefHeight = prefHeight(-1);
             if (left != null) {
-                xOffset = getInsets().getLeft();
+                xOffset = snappedLeftInset();
                 left.resize(left.prefWidth(-1), left.prefHeight(-1));
                 positionInArea(left, xOffset, 0,
                         maxLeftWidth, prefHeight, 0, HPos.LEFT, VPos.CENTER);
             }
             if (graphic != null) {
-                xOffset = getInsets().getLeft() + maxLeftWidth;
+                xOffset = snappedLeftInset() + maxLeftWidth;
                 graphic.resize(graphic.prefWidth(-1), graphic.prefHeight(-1));
                 positionInArea(graphic, xOffset, 0,
                         maxGraphicWidth, prefHeight, 0, HPos.LEFT, VPos.CENTER);
             }
             
             if (label != null) {
-                xOffset = getInsets().getLeft() + maxLeftWidth + maxGraphicWidth;
+                xOffset = snappedLeftInset() + maxLeftWidth + maxGraphicWidth;
                 label.resize(label.prefWidth(-1), label.prefHeight(-1));
                 positionInArea(label, xOffset, 0,
                         maxLabelWidth, prefHeight, 0, HPos.LEFT, VPos.CENTER);
             }
             
             if (right != null) {
-                xOffset = getInsets().getLeft() + maxLeftWidth + maxGraphicWidth + maxLabelWidth;
+                xOffset = snappedLeftInset() + maxLeftWidth + maxGraphicWidth + maxLabelWidth;
                 right.resize(right.prefWidth(-1), right.prefHeight(-1));
                 positionInArea(right, xOffset, 0,
                     maxRightWidth, prefHeight, 0, HPos.RIGHT, VPos.CENTER);
@@ -1383,13 +1383,13 @@ public class ContextMenuContent extends Region {
             if ( item instanceof CustomMenuItem) {
                 Node n = ((CustomMenuItem) item).getContent();
                 if (item instanceof SeparatorMenuItem) {
-                    double width = prefWidth(-1) - (getInsets().getLeft() + maxGraphicWidth + getInsets().getRight());
+                    double width = prefWidth(-1) - (snappedLeftInset() + maxGraphicWidth + snappedRightInset());
                     n.resize(width, n.prefHeight(-1));
-                    positionInArea(n, getInsets().getLeft() + maxGraphicWidth, 0, prefWidth(-1), prefHeight, 0, HPos.LEFT, VPos.CENTER);
+                    positionInArea(n, snappedLeftInset() + maxGraphicWidth, 0, prefWidth(-1), prefHeight, 0, HPos.LEFT, VPos.CENTER);
                 } else {
                     n.resize(n.prefWidth(-1), n.prefHeight(-1));
                     //the node should be left aligned 
-                    positionInArea(n, getInsets().getLeft(), 0, getWidth(), prefHeight, 0, HPos.LEFT, VPos.CENTER);
+                    positionInArea(n, snappedLeftInset(), 0, getWidth(), prefHeight, 0, HPos.LEFT, VPos.CENTER);
                 }
             }
         }
@@ -1404,18 +1404,18 @@ public class ContextMenuContent extends Region {
                 prefHeight = Math.max(prefHeight, (label != null) ? label.prefHeight(-1) : 0);
                 prefHeight = Math.max(prefHeight, (right != null) ? right.prefHeight(-1) : 0);
             }
-             return getInsets().getTop() + prefHeight + getInsets().getBottom();
+             return snappedTopInset() + prefHeight + snappedBottomInset();
         }
 
         @Override protected double computePrefWidth(double height) {
             double nodeMenuItemWidth = 0;
             if (item instanceof CustomMenuItem && !(item instanceof SeparatorMenuItem)) {
-                nodeMenuItemWidth = getInsets().getLeft() + ((CustomMenuItem) item).getContent().prefWidth(-1) +
-                        getInsets().getRight();
+                nodeMenuItemWidth = snappedLeftInset() + ((CustomMenuItem) item).getContent().prefWidth(-1) +
+                        snappedRightInset();
             }
             return Math.max(nodeMenuItemWidth,
-                    getInsets().getLeft() + maxLeftWidth + maxGraphicWidth +
-                    maxLabelWidth + maxRightWidth + getInsets().getRight());
+                    snappedLeftInset() + maxLeftWidth + maxGraphicWidth +
+                    maxLabelWidth + maxRightWidth + snappedRightInset());
         }
 
         // Responsible for returning a graphic (if necessary) to position in the

@@ -41,7 +41,6 @@ import javafx.scene.input.MouseEvent;
 import javafx.util.Callback;
 import com.sun.javafx.scene.control.behavior.ListViewBehavior;
 import com.sun.javafx.scene.control.skin.resources.ControlResources;
-import javafx.geometry.Insets;
 import javafx.scene.control.Label;
 import javafx.scene.layout.StackPane;
 
@@ -349,19 +348,18 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListViewB
         }
     }
     
-    @Override protected double computePrefWidth(double height) {
+    @Override protected double computePrefWidth(double height, int topInset, int rightInset, int bottomInset, int leftInset) {
         if (getItemCount() == 0) {
             if (placeholderRegion == null) {
                 updatePlaceholderRegionVisibility();
             }
-            final Insets insets = getSkinnable().getInsets();
-            return placeholderRegion.prefWidth(height) + insets.getLeft() + insets.getRight();
+            return placeholderRegion.prefWidth(height) + leftInset + rightInset;
         } else {
-            return computePrefHeight(-1) * 0.618033987;
+            return computePrefHeight(-1, topInset, rightInset, bottomInset, leftInset) * 0.618033987;
         }
     }
 
-    @Override protected double computePrefHeight(double width) {
+    @Override protected double computePrefHeight(double width, int topInset, int rightInset, int bottomInset, int leftInset) {
 //        return getInsets().getTop() + flow.computePrefHeight(width) + getInsets().getBottom();
         return 400;
     }

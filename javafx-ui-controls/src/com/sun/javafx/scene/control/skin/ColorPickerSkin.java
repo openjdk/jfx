@@ -508,12 +508,12 @@ public class ColorPickerSkin extends ComboBoxPopupControl<Color> {
 
     private class PickerColorBox extends StackPane {
         @Override protected void layoutChildren() {
-            final double top = getInsets().getTop();
-            final double left = getInsets().getLeft();
+            final double top = snappedTopInset();
+            final double left = snappedLeftInset();
             final double width = getWidth();
             final double height = getHeight();
-            final double right = getInsets().getRight();
-            final double bottom = getInsets().getBottom();
+            final double right = snappedRightInset();
+            final double bottom = snappedBottomInset();
             colorRect.setX(snapPosition(colorRectX.get()));
             colorRect.setY(snapPosition(colorRectY.get()));
             colorRect.setWidth(snapSize(colorRectWidth.get()));

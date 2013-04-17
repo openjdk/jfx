@@ -351,15 +351,14 @@ public class SplitPaneSkin extends BehaviorSkinBase<SplitPane, BehaviorBase<Spli
 
     private double getSize() {
         final SplitPane s = getSkinnable();
-        final Insets padding = s.getInsets();
         double size = totalMinSize();
         if (horizontal) {
             if (s.getWidth() > size) {
-                size = s.getWidth() - padding.getLeft() - padding.getRight();
+                size = s.getWidth() - snappedLeftInset() - snappedRightInset();
             }
         } else {
             if (s.getHeight() > size) {
-                size = s.getHeight() - padding.getTop() - padding.getBottom();
+                size = s.getHeight() - snappedTopInset() - snappedBottomInset();
             }
         }
         return size;
@@ -503,9 +502,9 @@ public class SplitPaneSkin extends BehaviorSkinBase<SplitPane, BehaviorBase<Spli
     }
 
     private void layoutDividersAndContent(double width, double height) {
-        double paddingX = getSkinnable().getInsets().getLeft();
-        double paddingY = getSkinnable().getInsets().getTop();
-        double dividerWidth = contentDividers.isEmpty() ? 0 : contentDividers.get(0).prefWidth(-1);
+        final double paddingX = snappedLeftInset();
+        final double paddingY = snappedTopInset();
+        final double dividerWidth = contentDividers.isEmpty() ? 0 : contentDividers.get(0).prefWidth(-1);
 
         for (Content c: contentRegions) {
 //            System.out.println("LAYOUT " + c.getId() + " PANELS X " + c.getX() + " Y " + c.getY() + " W " + (horizontal ? c.getArea() : width) + " H " + (horizontal ? height : c.getArea()));
@@ -831,7 +830,7 @@ public class SplitPaneSkin extends BehaviorSkinBase<SplitPane, BehaviorBase<Spli
         resize = false;        
     }
 
-    @Override protected double computeMinWidth(double height) {
+    @Override protected double computeMinWidth(double height, int topInset, int rightInset, int bottomInset, int leftInset) {
         double minWidth = 0;
         double maxMinWidth = 0;
         for (Content c: contentRegions) {
@@ -841,15 +840,14 @@ public class SplitPaneSkin extends BehaviorSkinBase<SplitPane, BehaviorBase<Spli
         for (ContentDivider d: contentDividers) {
             minWidth += d.prefWidth(-1);
         }
-        final Insets padding = getSkinnable().getInsets();
         if (horizontal) {
-            return minWidth + padding.getLeft() + padding.getRight();
+            return minWidth + leftInset + rightInset;
         } else {
-            return maxMinWidth + padding.getLeft() + padding.getRight();
+            return maxMinWidth + leftInset + rightInset;
         }
     }
 
-    @Override protected double computeMinHeight(double width) {
+    @Override protected double computeMinHeight(double width, int topInset, int rightInset, int bottomInset, int leftInset) {
         double minHeight = 0;
         double maxMinHeight = 0;
         for (Content c: contentRegions) {
@@ -859,15 +857,14 @@ public class SplitPaneSkin extends BehaviorSkinBase<SplitPane, BehaviorBase<Spli
         for (ContentDivider d: contentDividers) {
             minHeight += d.prefWidth(-1);
         }
-        final Insets padding = getSkinnable().getInsets();
         if (horizontal) {
-            return maxMinHeight + padding.getTop() + padding.getBottom();
+            return maxMinHeight + topInset + bottomInset;
         } else {
-            return minHeight + padding.getTop() + padding.getBottom();
+            return minHeight + topInset + bottomInset;
         }
     }
 
-    @Override protected double computePrefWidth(double height) {
+    @Override protected double computePrefWidth(double height, int topInset, int rightInset, int bottomInset, int leftInset) {
         double prefWidth = 0;
         double prefMaxWidth = 0;
         for (Content c: contentRegions) {
@@ -877,15 +874,14 @@ public class SplitPaneSkin extends BehaviorSkinBase<SplitPane, BehaviorBase<Spli
         for (ContentDivider d: contentDividers) {
             prefWidth += d.prefWidth(-1);
         }
-        final Insets padding = getSkinnable().getInsets();
         if (horizontal) {
-            return prefWidth + padding.getLeft() + padding.getRight();
+            return prefWidth + leftInset + rightInset;
         } else {
-            return prefMaxWidth + padding.getLeft() + padding.getRight();
+            return prefMaxWidth + leftInset + rightInset;
         }
     }
 
-    @Override protected double computePrefHeight(double width) {
+    @Override protected double computePrefHeight(double width, int topInset, int rightInset, int bottomInset, int leftInset) {
         double prefHeight = 0;
         double maxPrefHeight = 0;
         for (Content c: contentRegions) {
@@ -895,11 +891,10 @@ public class SplitPaneSkin extends BehaviorSkinBase<SplitPane, BehaviorBase<Spli
         for (ContentDivider d: contentDividers) {
             prefHeight += d.prefWidth(-1);
         }
-        final Insets padding = getSkinnable().getInsets();
         if (horizontal) {
-            return maxPrefHeight + padding.getTop() + padding.getBottom();
+            return maxPrefHeight + topInset + bottomInset;
         } else {
-            return prefHeight + padding.getTop() + padding.getBottom();
+            return prefHeight + topInset + bottomInset;
         }
     }
     
@@ -954,11 +949,11 @@ public class SplitPaneSkin extends BehaviorSkinBase<SplitPane, BehaviorBase<Spli
                 }
 
                 @Override protected double computePrefWidth(double height) {
-                    return getInsets().getLeft() + getInsets().getRight();
+                    return snappedLeftInset() + snappedRightInset();
                 }
 
                 @Override protected double computePrefHeight(double width) {
-                    return getInsets().getTop() + getInsets().getBottom();
+                    return snappedTopInset() + snappedBottomInset();
                 }
 
                 @Override protected double computeMaxWidth(double height) {
@@ -1047,11 +1042,11 @@ public class SplitPaneSkin extends BehaviorSkinBase<SplitPane, BehaviorBase<Spli
         }
 
         @Override protected double computePrefWidth(double height) {
-            return snapSpace(getInsets().getLeft()) + snapSpace(getInsets().getRight());
+            return snappedLeftInset() + snappedRightInset();
         }
 
         @Override protected double computePrefHeight(double width) {
-            return snapSpace(getInsets().getTop()) + snapSpace(getInsets().getBottom());
+            return snappedTopInset() + snappedBottomInset();
         }
 
         @Override protected double computeMaxWidth(double height) {

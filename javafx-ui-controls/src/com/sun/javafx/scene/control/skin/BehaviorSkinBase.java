@@ -159,8 +159,6 @@ public abstract class BehaviorSkinBase<C extends Control, BB extends BehaviorBas
         super.dispose();
     }
     
-    
-    
     /***************************************************************************
      *                                                                         *
      * Public API                                                              *

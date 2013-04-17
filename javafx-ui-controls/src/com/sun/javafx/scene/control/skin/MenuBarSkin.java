@@ -922,12 +922,18 @@ public class MenuBarSkin extends BehaviorSkinBase<MenuBar, BehaviorBase<MenuBar>
 
     // Return empty insets when "container" is empty, which happens
     // when using the system menu bar.
-    private Insets getInsets() {
-        if (container.getChildren().isEmpty()) {
-            return Insets.EMPTY;
-        } else {
-            return getSkinnable().getInsets();
-        }
+
+    @Override protected int snappedTopInset() {
+        return container.getChildren().isEmpty() ? 0 : super.snappedTopInset();
+    }
+    @Override protected int snappedBottomInset() {
+        return container.getChildren().isEmpty() ? 0 : super.snappedBottomInset();
+    }
+    @Override protected int snappedLeftInset() {
+        return container.getChildren().isEmpty() ? 0 : super.snappedLeftInset();
+    }
+    @Override protected int snappedRightInset() {
+        return container.getChildren().isEmpty() ? 0 : super.snappedRightInset();
     }
 
     /**
@@ -940,28 +946,24 @@ public class MenuBarSkin extends BehaviorSkinBase<MenuBar, BehaviorBase<MenuBar>
         container.resizeRelocate(x, y, w, h);
     }
 
-    @Override protected double computeMinWidth(double height) {
-        Insets insets = getInsets();
-        return container.minWidth(height) + insets.getLeft() + insets.getRight();
+    @Override protected double computeMinWidth(double height, int topInset, int rightInset, int bottomInset, int leftInset) {
+        return container.minWidth(height) + snappedLeftInset() + snappedRightInset();
     }
 
-    @Override protected double computePrefWidth(double height) {
-        Insets insets = getInsets();
-        return container.prefWidth(height) + insets.getLeft() + insets.getRight();
+    @Override protected double computePrefWidth(double height, int topInset, int rightInset, int bottomInset, int leftInset) {
+        return container.prefWidth(height) + snappedLeftInset() + snappedRightInset();
     }
 
-    @Override protected double computeMinHeight(double width) {
-        Insets insets = getInsets();
-        return container.minHeight(width) + insets.getTop() + insets.getBottom();
+    @Override protected double computeMinHeight(double width, int topInset, int rightInset, int bottomInset, int leftInset) {
+        return container.minHeight(width) + snappedTopInset() + snappedBottomInset();
     }
 
-    @Override protected double computePrefHeight(double width) {
-        Insets insets = getInsets();
-        return container.prefHeight(width) + insets.getTop() + insets.getBottom();
+    @Override protected double computePrefHeight(double width, int topInset, int rightInset, int bottomInset, int leftInset) {
+        return container.prefHeight(width) + snappedTopInset() + snappedBottomInset();
     }
 
     // grow horizontally, but not vertically
-    @Override protected double computeMaxHeight(double width) {
+    @Override protected double computeMaxHeight(double width, int topInset, int rightInset, int bottomInset, int leftInset) {
         return getSkinnable().prefHeight(-1);
     }
 }

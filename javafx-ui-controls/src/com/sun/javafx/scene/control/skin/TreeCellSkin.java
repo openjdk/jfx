@@ -45,14 +45,9 @@ import javafx.css.CssMetaData;
 import com.sun.javafx.css.converters.SizeConverter;
 import com.sun.javafx.scene.control.MultiplePropertyChangeListenerHandler;
 import com.sun.javafx.scene.control.behavior.TreeCellBehavior;
-import javafx.animation.RotateTransition;
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
-import javafx.beans.value.WeakChangeListener;
 import javafx.css.Styleable;
 import javafx.geometry.Insets;
 import javafx.util.Callback;
-import javafx.util.Duration;
 
 public class TreeCellSkin<T> extends CellSkinBase<TreeCell<T>, TreeCellBehavior<T>> {
 
@@ -253,17 +248,16 @@ public class TreeCellSkin<T> extends CellSkinBase<TreeCell<T>, TreeCellBehavior<
         layoutLabelInArea(x, y, w, h);
     }
 
-    @Override protected double computePrefHeight(double width) {
-        double pref = super.computePrefHeight(width);
+    @Override protected double computePrefHeight(double width, int topInset, int rightInset, int bottomInset, int leftInset) {
+        double pref = super.computePrefHeight(width, topInset, rightInset, bottomInset, leftInset);
         Node d = getSkinnable().getDisclosureNode();
         return (d == null) ? pref : Math.max(d.prefHeight(-1), pref);
     }
     
-    @Override protected double computePrefWidth(double height) {
-        double labelWidth = super.computePrefWidth(height);
+    @Override protected double computePrefWidth(double height, int topInset, int rightInset, int bottomInset, int leftInset) {
+        double labelWidth = super.computePrefWidth(height, topInset, rightInset, bottomInset, leftInset);
 
-        final Insets padding = getSkinnable().getInsets();
-        double pw = padding.getLeft() + padding.getRight();
+        double pw = snappedLeftInset() + snappedRightInset();
 
         TreeView tree = getSkinnable().getTreeView();
         if (tree == null) return pw;

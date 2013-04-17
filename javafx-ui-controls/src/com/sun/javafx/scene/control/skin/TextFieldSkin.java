@@ -42,7 +42,6 @@ import javafx.beans.value.ObservableValue;
 import javafx.event.EventHandler;
 import javafx.geometry.Bounds;
 import javafx.geometry.HPos;
-import javafx.geometry.Insets;
 import javafx.geometry.Point2D;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.Group;
@@ -57,7 +56,6 @@ import javafx.scene.shape.Path;
 import javafx.scene.shape.PathElement;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Text;
-import com.sun.javafx.PlatformUtil;
 import com.sun.javafx.application.PlatformImpl;
 import com.sun.javafx.scene.control.behavior.TextFieldBehavior;
 import com.sun.javafx.scene.text.HitInfo;
@@ -460,42 +458,26 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
     }
 
     @Override
-    protected double computePrefWidth(double height) {
+    protected double computePrefWidth(double height, int topInset, int rightInset, int bottomInset, int leftInset) {
         TextField textField = getSkinnable();
 
         double characterWidth = fontMetrics.get().computeStringWidth("W");
 
         int columnCount = textField.getPrefColumnCount();
 
-        return columnCount * characterWidth + (leftPadding() + rightPadding());
+        return columnCount * characterWidth + leftInset + rightInset;
     }
 
-    @Override protected double computePrefHeight(double width) {
-        return topPadding() + textNode.getLayoutBounds().getHeight() + bottomPadding();
+    @Override protected double computePrefHeight(double width, int topInset, int rightInset, int bottomInset, int leftInset) {
+        return topInset + textNode.getLayoutBounds().getHeight() + bottomInset;
     }
 
-    @Override protected double computeMaxHeight(double width) {
+    @Override protected double computeMaxHeight(double width, int topInset, int rightInset, int bottomInset, int leftInset) {
         return getSkinnable().prefHeight(width);
     }
 
-    private final double topPadding() {
-        return snapSize(getSkinnable().getInsets().getTop());
-    }
-
-    private final double bottomPadding() {
-        return snapSize(getSkinnable().getInsets().getBottom());
-    }
-
-    private final double leftPadding() {
-        return snapSize(getSkinnable().getInsets().getLeft());
-    }
-
-    private final double rightPadding() {
-        return snapSize(getSkinnable().getInsets().getRight());
-    }
-
-    @Override public double getBaselineOffset() {
-        return topPadding() + textNode.getBaselineOffset();
+    @Override public double computeBaselineOffset(int topInset, int rightInset, int bottomInset, int leftInset) {
+        return topInset + textNode.getBaselineOffset();
     }
 
     private void updateTextPos() {
@@ -648,11 +630,10 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
     public HitInfo getIndex(MouseEvent e) {
         // adjust the event to be in the same coordinate space as the
         // text content of the textInputControl
-        Insets insets = getSkinnable().getInsets();
         Point2D p;
 
-        p = new Point2D(e.getX() - textTranslateX.get() - insets.getLeft(),
-                        e.getY() - insets.getTop());
+        p = new Point2D(e.getX() - textTranslateX.get() - snappedLeftInset(),
+                        e.getY() - snappedTopInset());
         return textNode.impl_hitTestChar(translateCaretPosition(p));
     }
 
@@ -775,8 +756,8 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
         }
 
         if (PlatformImpl.isSupported(ConditionalFeature.INPUT_TOUCH)) {
-            handleGroup.setLayoutX(leftPadding());
-            handleGroup.setLayoutY(topPadding());
+            handleGroup.setLayoutX(x);
+            handleGroup.setLayoutY(y);
 
             // Resize handles for caret and anchor.
 //            IndexRange selection = textField.getSelection();
@@ -803,8 +784,8 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
     @Override public Point2D getMenuPosition() {
         Point2D p = super.getMenuPosition();
         if (p != null) {
-            p = new Point2D(Math.max(0, p.getX() - textNode.getLayoutX() - leftPadding() + textTranslateX.get()),
-                            Math.max(0, p.getY() - textNode.getLayoutY() - topPadding()));
+            p = new Point2D(Math.max(0, p.getX() - textNode.getLayoutX() - snappedLeftInset() + textTranslateX.get()),
+                            Math.max(0, p.getY() - textNode.getLayoutY() - snappedTopInset()));
         }
         return p;
     }

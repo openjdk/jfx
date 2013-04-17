@@ -1354,6 +1354,52 @@ public class Region extends Parent {
         return snapPosition(value, isSnapToPixel());
     }
 
+
+    /**
+     * Utility method to get the top inset which includes padding and border
+     * inset. Then snapped to whole pixels if isSnapToPixel() is true.
+     *
+     * @since 8.0
+     * @return Rounded up insets top
+     */
+    public final int snappedTopInset() {
+        return (int)snapSize(getInsets().getTop());
+    }
+
+    /**
+     * Utility method to get the bottom inset which includes padding and border
+     * inset. Then snapped to whole pixels if isSnapToPixel() is true.
+     *
+     * @since 8.0
+     * @return Rounded up insets bottom
+     */
+    public final int snappedBottomInset() {
+        return (int)snapSize(getInsets().getBottom());
+    }
+
+    /**
+     * Utility method to get the left inset which includes padding and border
+     * inset. Then snapped to whole pixels if isSnapToPixel() is true.
+     *
+     * @since 8.0
+     * @return Rounded up insets left
+     */
+    public final int snappedLeftInset() {
+        return (int)snapSize(getInsets().getLeft());
+    }
+
+    /**
+     * Utility method to get the right inset which includes padding and border
+     * inset. Then snapped to whole pixels if isSnapToPixel() is true.
+     *
+     * @since 8.0
+     * @return Rounded up insets right
+     */
+    public final int snappedRightInset() {
+        return (int)snapSize(getInsets().getRight());
+    }
+
+
     double computeChildMinAreaWidth(Node child, Insets margin) {
         return computeChildMinAreaWidth(child, margin, -1);
     }

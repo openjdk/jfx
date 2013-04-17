@@ -55,7 +55,6 @@ import javafx.scene.input.TouchEvent;
 import javafx.scene.layout.StackPane;
 import javafx.scene.shape.Rectangle;
 import javafx.util.Duration;
-import com.sun.javafx.PlatformUtil;
 import com.sun.javafx.Utils;
 import com.sun.javafx.application.PlatformImpl;
 import com.sun.javafx.scene.control.behavior.ScrollPaneBehavior;
@@ -162,7 +161,6 @@ public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehav
     */ 
    private final ChangeListener<Bounds> boundsChangeListener = new ChangeListener<Bounds>() {
         @Override public void changed(ObservableValue<? extends Bounds> observable, Bounds oldBounds, Bounds newBounds) {
-            final Insets padding = getSkinnable().getInsets();
             
             /*
             ** For a height change then we want to reduce
@@ -173,8 +171,8 @@ public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehav
             double oldHeight = oldBounds.getHeight();
             double newHeight = newBounds.getHeight();
             if (oldHeight != newHeight) {
-                double oldPositionY = (snapPosition(padding.getTop() - posY / (vsb.getMax() - vsb.getMin()) * (oldHeight - contentHeight)));
-                double newPositionY = (snapPosition(padding.getTop() - posY / (vsb.getMax() - vsb.getMin()) * (newHeight - contentHeight)));
+                double oldPositionY = (snapPosition(snappedTopInset() - posY / (vsb.getMax() - vsb.getMin()) * (oldHeight - contentHeight)));
+                double newPositionY = (snapPosition(snappedTopInset() - posY / (vsb.getMax() - vsb.getMin()) * (newHeight - contentHeight)));
                 
                 double newValueY = (oldPositionY/newPositionY)*vsb.getValue();
                 if (newValueY < 0.0) {
@@ -197,8 +195,8 @@ public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehav
             double oldWidth = oldBounds.getWidth();
             double newWidth = newBounds.getWidth();
             if (oldWidth != newWidth) {
-                double oldPositionX = (snapPosition(padding.getLeft() - posX / (hsb.getMax() - hsb.getMin()) * (oldWidth - contentWidth)));
-                double newPositionX = (snapPosition(padding.getLeft() - posX / (hsb.getMax() - hsb.getMin()) * (newWidth - contentWidth)));
+                double oldPositionX = (snapPosition(snappedLeftInset() - posX / (hsb.getMax() - hsb.getMin()) * (oldWidth - contentWidth)));
+                double newPositionX = (snapPosition(snappedLeftInset() - posX / (hsb.getMax() - hsb.getMin()) * (newWidth - contentWidth)));
 
                 double newValueX = (oldPositionX/newPositionX)*hsb.getValue();
                 if (newValueX < 0.0) {
@@ -712,38 +710,36 @@ public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehav
      *                                                                         *
      **************************************************************************/
 
-    @Override protected double computePrefWidth(double height) {
+    @Override protected double computePrefWidth(double height, int topInset, int rightInset, int bottomInset, int leftInset) {
         final ScrollPane sp = getSkinnable();
         
         if (sp.getPrefViewportWidth() > 0) {
             double vsbWidth = sp.getVbarPolicy() == ScrollBarPolicy.ALWAYS? vsb.prefWidth(-1) : 0;
-            final Insets padding = sp.getInsets();
-            return (sp.getPrefViewportWidth() + vsbWidth + padding.getLeft() + padding.getRight());
+            return (sp.getPrefViewportWidth() + vsbWidth + snappedLeftInset() + snappedRightInset());
         }
         else {
             return DEFAULT_PREF_SIZE;
         }
     }
 
-    @Override protected double computePrefHeight(double width) {
+    @Override protected double computePrefHeight(double width, int topInset, int rightInset, int bottomInset, int leftInset) {
         final ScrollPane sp = getSkinnable();
         
         if (sp.getPrefViewportHeight() > 0) {
             double hsbHeight = sp.getHbarPolicy() == ScrollBarPolicy.ALWAYS? hsb.prefHeight(-1) : 0;
-            final Insets padding = sp.getInsets();
-            return (sp.getPrefViewportHeight() + hsbHeight + padding.getTop() + padding.getBottom());
+            return (sp.getPrefViewportHeight() + hsbHeight + snappedTopInset() + snappedBottomInset());
         }
         else {
             return DEFAULT_PREF_SIZE;
         }
     }
 
-    @Override protected double computeMinWidth(double height) {
+    @Override protected double computeMinWidth(double height, int topInset, int rightInset, int bottomInset, int leftInset) {
         double w = corner.minWidth(-1);
         return (w > 0) ? (3 * w) : (DEFAULT_MIN_SIZE);
     }
 
-    @Override protected double computeMinHeight(double width) {
+    @Override protected double computeMinHeight(double width, int topInset, int rightInset, int bottomInset, int leftInset) {
         double h = corner.minHeight(-1);
         return (h > 0) ? (3 * h) : (DEFAULT_MIN_SIZE);
     }
@@ -926,8 +922,7 @@ public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehav
 
     private boolean determineHorizontalSBVisible() {
         final ScrollPane sp = getSkinnable();
-        final Insets insets = sp.getInsets();
-        final double contentw = sp.getWidth() - insets.getLeft() - insets.getRight();
+        final double contentw = sp.getWidth() - snappedLeftInset() - snappedRightInset();
         if (PlatformImpl.isSupported(ConditionalFeature.INPUT_TOUCH)) {
             return (tempVisibility && (nodeWidth > contentw));
         }
@@ -941,8 +936,7 @@ public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehav
 
     private boolean determineVerticalSBVisible() {
         final ScrollPane sp = getSkinnable();
-        final Insets insets = sp.getInsets();
-        final double contenth = sp.getHeight() - insets.getTop() - insets.getBottom();
+        final double contenth = sp.getHeight() - snappedTopInset() - snappedBottomInset();
         if (PlatformImpl.isSupported(ConditionalFeature.INPUT_TOUCH)) {
             return (tempVisibility && (nodeHeight > contenth));
         }
@@ -996,7 +990,7 @@ public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehav
             if (nodeWidth > contentWidth) {
                 updatePosX();
             } else {
-                viewContent.setLayoutX(getSkinnable().getInsets().getLeft());
+                viewContent.setLayoutX(snappedLeftInset());
             }
         }
     }
@@ -1020,7 +1014,7 @@ public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehav
             if (nodeHeight > contentHeight) {
                 updatePosY();
             } else {
-                viewContent.setLayoutY(getSkinnable().getInsets().getTop());
+                viewContent.setLayoutY(snappedTopInset());
             }
         }
     }
@@ -1028,14 +1022,14 @@ public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehav
     private double updatePosX() {
         final ScrollPane sp = getSkinnable();
         double x = isReverseNodeOrientation() ? (hsb.getMax() - (posX - hsb.getMin())) : posX;
-        viewContent.setLayoutX(snapPosition(sp.getInsets().getLeft() - x / (hsb.getMax() - hsb.getMin()) * (nodeWidth - contentWidth)));
+        viewContent.setLayoutX(snapPosition(snappedLeftInset() - x / (hsb.getMax() - hsb.getMin()) * (nodeWidth - contentWidth)));
         sp.setHvalue(Utils.clamp(sp.getHmin(), posX, sp.getHmax()));
         return posX;
     }
 
     private double updatePosY() {
         final ScrollPane sp = getSkinnable();
-        viewContent.setLayoutY(snapPosition(sp.getInsets().getTop() - posY / (vsb.getMax() - vsb.getMin()) * (nodeHeight - contentHeight)));
+        viewContent.setLayoutY(snapPosition(snappedTopInset() - posY / (vsb.getMax() - vsb.getMin()) * (nodeHeight - contentHeight)));
         sp.setVvalue(Utils.clamp(sp.getVmin(), posY, sp.getVmax()));
         return posY;
     }
@@ -1043,9 +1037,7 @@ public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehav
     private void resetClip() {
         clipRect.setWidth(snapSize(contentWidth));
         clipRect.setHeight(snapSize(contentHeight));
-        final ScrollPane sp = getSkinnable();
-        Insets insets = sp.getInsets();
-        clipRect.relocate(snapPosition(insets.getLeft()), snapPosition(insets.getTop()));
+        clipRect.relocate(snappedLeftInset(), snappedTopInset());
     }
 
     Timeline sbTouchTimeline;

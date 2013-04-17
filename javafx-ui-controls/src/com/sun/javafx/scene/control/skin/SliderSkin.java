@@ -245,7 +245,7 @@ public class SliderSkin extends BehaviorSkinBase<Slider, SliderBehavior> {
         final double endX = (horizontal) ? trackStart + (((trackLength * ((s.getValue() - s.getMin()) /
                 (s.getMax() - s.getMin()))) - thumbWidth/2)) : thumbLeft;
         final double endY = (horizontal) ? thumbTop :
-            s.getInsets().getTop() + trackLength - (trackLength * ((s.getValue() - s.getMin()) /
+            snappedTopInset() + trackLength - (trackLength * ((s.getValue() - s.getMin()) /
                 (s.getMax() - s.getMin()))); //  - thumbHeight/2
         
         if (animate) {
@@ -351,27 +351,25 @@ public class SliderSkin extends BehaviorSkinBase<Slider, SliderBehavior> {
         return 2*thumb.prefWidth(-1);
     }
 
-    @Override protected double computeMinWidth(double height) {
+    @Override protected double computeMinWidth(double height, int topInset, int rightInset, int bottomInset, int leftInset) {
         final Slider s = getSkinnable();
-        final Insets padding = s.getInsets();
         if (getSkinnable().getOrientation() == Orientation.HORIZONTAL) {
-            return (padding.getLeft() + minTrackLength() + thumb.minWidth(-1) + padding.getRight());
+            return (leftInset + minTrackLength() + thumb.minWidth(-1) + rightInset);
         } else {
-            return(padding.getLeft() + thumb.prefWidth(-1) + padding.getRight());
+            return(leftInset + thumb.prefWidth(-1) + rightInset);
         }
     }
 
-    @Override protected double computeMinHeight(double width) {
+    @Override protected double computeMinHeight(double width, int topInset, int rightInset, int bottomInset, int leftInset) {
         final Slider s = getSkinnable();
-        final Insets padding = s.getInsets();
          if (getSkinnable().getOrientation() == Orientation.HORIZONTAL) {
-            return(padding.getTop() + thumb.prefHeight(-1) + padding.getBottom());
+            return(topInset + thumb.prefHeight(-1) + bottomInset);
         } else {
-            return(padding.getTop() + minTrackLength() + thumb.prefHeight(-1) + padding.getBottom());
+            return(topInset + minTrackLength() + thumb.prefHeight(-1) + bottomInset);
         }
     }
 
-    @Override protected double computePrefWidth(double height) {
+    @Override protected double computePrefWidth(double height, int topInset, int rightInset, int bottomInset, int leftInset) {
         final Slider s = getSkinnable();
         if (s.getOrientation() == Orientation.HORIZONTAL) {
             if(showTickMarks) {
@@ -380,18 +378,16 @@ public class SliderSkin extends BehaviorSkinBase<Slider, SliderBehavior> {
                 return 140;
             }
         } else {
-            final Insets padding = s.getInsets();
-            return (padding.getLeft()) + Math.max(thumb.prefWidth(-1), track.prefWidth(-1)) +
-            ((showTickMarks) ? (trackToTickGap+tickLine.prefWidth(-1)) : 0) + padding.getRight();
+            return leftInset + Math.max(thumb.prefWidth(-1), track.prefWidth(-1)) +
+            ((showTickMarks) ? (trackToTickGap+tickLine.prefWidth(-1)) : 0) + rightInset;
         }
     }
 
-    @Override protected double computePrefHeight(double width) {
+    @Override protected double computePrefHeight(double width, int topInset, int rightInset, int bottomInset, int leftInset) {
         final Slider s = getSkinnable();
         if (s.getOrientation() == Orientation.HORIZONTAL) {
-            final Insets padding = s.getInsets();
-            return padding.getTop() + Math.max(thumb.prefHeight(-1), track.prefHeight(-1)) +
-             ((showTickMarks) ? (trackToTickGap+tickLine.prefHeight(-1)) : 0)  + padding.getBottom();
+            return topInset + Math.max(thumb.prefHeight(-1), track.prefHeight(-1)) +
+             ((showTickMarks) ? (trackToTickGap+tickLine.prefHeight(-1)) : 0)  + bottomInset;
         } else {
             if(showTickMarks) {
                 return Math.max(140, tickLine.prefHeight(-1));
@@ -401,7 +397,7 @@ public class SliderSkin extends BehaviorSkinBase<Slider, SliderBehavior> {
         }
     }
 
-    @Override protected double computeMaxWidth(double height) {
+    @Override protected double computeMaxWidth(double height, int topInset, int rightInset, int bottomInset, int leftInset) {
         if (getSkinnable().getOrientation() == Orientation.HORIZONTAL) {
             return Double.MAX_VALUE;
         } else {
@@ -409,7 +405,7 @@ public class SliderSkin extends BehaviorSkinBase<Slider, SliderBehavior> {
         }
     }
 
-    @Override protected double computeMaxHeight(double width) {
+    @Override protected double computeMaxHeight(double width, int topInset, int rightInset, int bottomInset, int leftInset) {
         if (getSkinnable().getOrientation() == Orientation.HORIZONTAL) {
             return getSkinnable().prefHeight(width);
         } else {

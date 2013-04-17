@@ -417,19 +417,19 @@ public class NestedTableColumnHeader extends TableColumnHeader {
             updateColumns = false;
             getParent().requestLayout();
         }
-        double w = getWidth() - getInsets().getLeft() - getInsets().getRight();
-        double h = getHeight() - getInsets().getTop() - getInsets().getBottom();
+        double w = getWidth() - snappedLeftInset() - snappedRightInset();
+        double h = getHeight() - snappedTopInset() - snappedBottomInset();
         
         int labelHeight = (int) label.prefHeight(-1);
 
         if (label.isVisible()) {
             // label gets to span whole width and sits at top
             label.resize(w, labelHeight);
-            label.relocate(getInsets().getLeft(), getInsets().getTop());
+            label.relocate(snappedLeftInset(), snappedTopInset());
         }
 
         // children columns need to share the total available width
-        double x = getInsets().getLeft();
+        double x = snappedLeftInset();
         int i = 0;
         for (TableColumnHeader n : getColumnHeaders()) {
             if (! n.isVisible()) continue;
@@ -439,7 +439,7 @@ public class NestedTableColumnHeader extends TableColumnHeader {
 
             // position the column header in the default location...
             n.resize(prefWidth, snapSize(h - labelHeight));
-            n.relocate(x, labelHeight + getInsets().getTop());
+            n.relocate(x, labelHeight + snappedTopInset());
 
 //            // ...but, if there are no children of this column, we should ensure
 //            // that it is resized vertically such that it goes to the very
@@ -457,7 +457,7 @@ public class NestedTableColumnHeader extends TableColumnHeader {
             if (dragRects != null && i < dragRects.size()) {
                 Rectangle dragRect = dragRects.get(i++);
                 dragRect.setHeight(getHeight() - label.getHeight());
-                dragRect.relocate(x - DRAG_RECT_WIDTH / 2, getInsets().getTop() + labelHeight);
+                dragRect.relocate(x - DRAG_RECT_WIDTH / 2, snappedTopInset() + labelHeight);
             }
         }
     }
@@ -486,7 +486,7 @@ public class NestedTableColumnHeader extends TableColumnHeader {
             }
         }
 
-        return height + label.prefHeight(-1) + getInsets().getTop() + getInsets().getBottom();
+        return height + label.prefHeight(-1) + snappedTopInset() + snappedBottomInset();
     }
 
     private TableColumnHeader createColumnHeader(TableColumnBase col) {

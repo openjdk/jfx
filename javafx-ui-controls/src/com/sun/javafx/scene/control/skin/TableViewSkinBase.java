@@ -448,21 +448,20 @@ public abstract class TableViewSkinBase<S, C extends Control, B extends Behavior
     
     private static final double GOLDEN_RATIO_MULTIPLIER = 0.618033987;
 
-    @Override protected double computePrefHeight(double width) {
+    @Override protected double computePrefHeight(double width, int topInset, int rightInset, int bottomInset, int leftInset) {
         return 400;
     }
 
     /** {@inheritDoc} */
-    @Override protected double computePrefWidth(double height) {
-        double prefHeight = computePrefHeight(-1);
+    @Override protected double computePrefWidth(double height, int topInset, int rightInset, int bottomInset, int leftInset) {
+        double prefHeight = computePrefHeight(-1, topInset, rightInset, bottomInset, leftInset);
         
         List<? extends TableColumnBase> cols = getVisibleLeafColumns();
         if (cols == null || cols.isEmpty()) {
             return prefHeight * GOLDEN_RATIO_MULTIPLIER;
         } 
-        
-        final Insets padding = getSkinnable().getInsets();
-        double pw = padding.getLeft() + padding.getRight();
+
+        double pw = leftInset + rightInset;
         for (int i = 0, max = cols.size(); i < max; i++) {
             TableColumnBase tc = cols.get(i);
             pw += Math.max(tc.getPrefWidth(), tc.getMinWidth());
@@ -556,10 +555,9 @@ public abstract class TableViewSkinBase<S, C extends Control, B extends Behavior
             }
             
             // paint the reorder line as well
-            Insets rp = columnReorderLine.getInsets();
-            double cw = rp.getLeft() + rp.getRight();
+            double cw = columnReorderLine.snappedLeftInset() + columnReorderLine.snappedRightInset();
             double lineHeight = h - (flow.getHbar().isVisible() ? flow.getHbar().getHeight() - 1 : 0);
-            columnReorderLine.resizeRelocate(0, rp.getTop(), cw, lineHeight);
+            columnReorderLine.resizeRelocate(0, columnReorderLine.snappedTopInset(), cw, lineHeight);
         }
         
         columnReorderLine.setVisible(tableHeaderRow.isReordering());
@@ -667,8 +665,7 @@ public abstract class TableViewSkinBase<S, C extends Control, B extends Behavior
         if (contentWidth <= 0) {
             // Fix for RT-14855 when there is no content in the TableView.
             Control c = getSkinnable();
-            Insets padding = c.getInsets();
-            contentWidth = c.getWidth() - (padding.getLeft() + padding.getRight());
+            contentWidth = c.getWidth() - (snappedLeftInset() + snappedRightInset());
         }
 
         // FIXME this isn't perfect, but it prevents RT-14885, which results in
@@ -762,7 +759,6 @@ public abstract class TableViewSkinBase<S, C extends Control, B extends Behavior
         if (col == null || !col.isVisible()) return;
         
         final Control control = getSkinnable();
-        final Insets padding = control.getInsets();
 
         // work out where this column header is, and it's width (start -> end)
         double start = 0;//scrollX;
@@ -773,7 +769,7 @@ public abstract class TableViewSkinBase<S, C extends Control, B extends Behavior
         double end = start + col.getWidth();
 
         // determine the visible width of the table
-        double headerWidth = control.getWidth() - padding.getLeft() + padding.getRight();
+        double headerWidth = control.getWidth() - snappedLeftInset() - snappedRightInset();
 
         // determine by how much we need to translate the table to ensure that
         // the start position of this column lines up with the left edge of the

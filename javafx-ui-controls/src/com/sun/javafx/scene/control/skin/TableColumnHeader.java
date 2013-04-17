@@ -668,8 +668,8 @@ public class TableColumnHeader extends Region {
         }
         
         double sortWidth = 0;
-        double w = snapSize(getWidth()) - (snapSpace(getInsets().getLeft()) + snapSpace(getInsets().getRight()));
-        double h = getHeight() - getInsets().getTop() + getInsets().getBottom();
+        double w = snapSize(getWidth()) - (snappedLeftInset() + snappedRightInset());
+        double h = getHeight() - (snappedTopInset() + snappedBottomInset());
         double x = w;
         
         // a bit hacky, but we REALLY don't want the arrow shape to fluctuate 
@@ -682,13 +682,13 @@ public class TableColumnHeader extends Region {
             sortWidth = sortArrow.prefWidth(-1);
             x -= sortWidth;
             sortArrow.resize(sortWidth, sortArrow.prefHeight(-1));
-            positionInArea(sortArrow, x, getInsets().getTop(), 
+            positionInArea(sortArrow, x, snappedTopInset(),
                     sortWidth, h, 0, HPos.CENTER, VPos.CENTER);
         }
 
         if (label != null) {
             double labelWidth = w - sortWidth;
-            label.resizeRelocate(getInsets().getLeft(), 0, labelWidth, getHeight());
+            label.resizeRelocate(snappedLeftInset(), 0, labelWidth, getHeight());
         }
     }
 

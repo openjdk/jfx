@@ -39,7 +39,6 @@ import com.sun.javafx.scene.control.behavior.AccordionBehavior;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import javafx.geometry.Insets;
 
 public class AccordionSkin extends BehaviorSkinBase<Accordion, AccordionBehavior> {
 
@@ -95,7 +94,7 @@ public class AccordionSkin extends BehaviorSkinBase<Accordion, AccordionBehavior
         }
     }
 
-    @Override protected double computeMinHeight(double width) {
+    @Override protected double computeMinHeight(double width, int topInset, int rightInset, int bottomInset, int leftInset) {
         double h = 0;
         for (Node child: getChildren()) {
             h += snapSize(child.minHeight(width));
@@ -103,7 +102,7 @@ public class AccordionSkin extends BehaviorSkinBase<Accordion, AccordionBehavior
         return h;
     }
 
-    @Override protected double computePrefHeight(double width) {
+    @Override protected double computePrefHeight(double width, int topInset, int rightInset, int bottomInset, int leftInset) {
         double h = 0;
 
         if (expandedPane != null) {
@@ -123,9 +122,8 @@ public class AccordionSkin extends BehaviorSkinBase<Accordion, AccordionBehavior
                 h += snapSize(pane.minHeight(width));
             }
         }
-        
-        Insets insets = getSkinnable().getInsets();
-        return h + snapSpace(insets.getTop()) + snapSpace(insets.getBottom());
+
+        return h + topInset + bottomInset;
     }
 
     @Override protected void layoutChildren(final double x, double y,

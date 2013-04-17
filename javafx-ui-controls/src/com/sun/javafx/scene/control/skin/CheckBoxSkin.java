@@ -26,7 +26,6 @@
 package com.sun.javafx.scene.control.skin;
 
 import javafx.geometry.HPos;
-import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.geometry.VPos;
 import javafx.scene.control.CheckBox;
@@ -61,31 +60,28 @@ public class CheckBoxSkin extends LabeledSkinBase<CheckBox, ButtonBehavior<Check
         }
     }
 
-    @Override protected double computePrefWidth(double height) {
-        return super.computePrefWidth(height) + snapSize(box.prefWidth(-1));
+    @Override protected double computePrefWidth(double height, int topInset, int rightInset, int bottomInset, int leftInset) {
+        return super.computePrefWidth(height, topInset, rightInset, bottomInset, leftInset) + snapSize(box.prefWidth(-1));
     }
 
-    @Override protected double computePrefHeight(double width) {
-        Insets insets = getSkinnable().getInsets();
-        return Math.max(super.computePrefHeight(width - box.prefWidth(-1)),
-                        insets.getTop() + box.prefHeight(-1) + insets.getBottom());
+    @Override protected double computePrefHeight(double width, int topInset, int rightInset, int bottomInset, int leftInset) {
+        return Math.max(super.computePrefHeight(width - box.prefWidth(-1), topInset, rightInset, bottomInset, leftInset),
+                        topInset + box.prefHeight(-1) + bottomInset);
     }
-
 
     @Override protected void layoutChildren(final double x, final double y,
             final double w, final double h) {
-        Insets padding = getSkinnable().getInsets();
 
         final double boxWidth = snapSize(box.prefWidth(-1));
         final double boxHeight = snapSize(box.prefHeight(-1));
         final double labelWidth = Math.min(getSkinnable().prefWidth(-1) - boxWidth, w - snapSize(boxWidth));
         final double labelHeight = Math.min(getSkinnable().prefHeight(labelWidth), h);
         final double maxHeight = Math.max(boxHeight, labelHeight);
-        final double xOffset = Utils.computeXOffset(w, labelWidth + boxWidth, getSkinnable().getAlignment().getHpos()) + padding.getLeft();
-        final double yOffset = Utils.computeYOffset(h, maxHeight, getSkinnable().getAlignment().getVpos()) + padding.getTop();
+        final double xOffset = Utils.computeXOffset(w, labelWidth + boxWidth, getSkinnable().getAlignment().getHpos()) + x;
+        final double yOffset = Utils.computeYOffset(h, maxHeight, getSkinnable().getAlignment().getVpos()) + x;
 
         layoutLabelInArea(xOffset + boxWidth, yOffset, labelWidth, maxHeight, Pos.CENTER_LEFT);
         box.resize(boxWidth, boxHeight);
-        positionInArea(box, xOffset, yOffset, boxWidth, maxHeight, getBaselineOffset(), HPos.CENTER, VPos.CENTER);
+        positionInArea(box, xOffset, yOffset, boxWidth, maxHeight, 0, HPos.CENTER, VPos.CENTER);
     }
 }
