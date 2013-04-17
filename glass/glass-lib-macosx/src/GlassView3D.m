@@ -80,22 +80,6 @@
 
 @implementation GlassView3D
 
-static inline NSString* getNSString(JNIEnv* env, jstring jstring)
-{
-    NSString *string = @"";
-    if (jstring != NULL)
-    {
-        const jchar* jstrChars = (*env)->GetStringChars(env, jstring, NULL);
-        jsize size = (*env)->GetStringLength(env, jstring);
-        if (size > 0)
-        {
-            string = [[[NSString alloc] initWithCharacters:jstrChars length:(NSUInteger)size] autorelease];
-        }
-        (*env)->ReleaseStringChars(env, jstring, jstrChars);
-    }
-    return string;
-}
-
 - (CGLPixelFormatObj)_createPixelFormatWithDepth:(CGLPixelFormatAttribute)depth
 {
     CGLPixelFormatObj pix = NULL;
@@ -531,9 +515,8 @@ static inline NSString* getNSString(JNIEnv* env, jstring jstring)
 
 - (void)draggingEnded:(id <NSDraggingInfo>)sender
 {
-    //TODO: This is wrong. Glass' END is for the drag source.
     DNDLOG("draggingEnded");
-    [self->_delegate sendJavaDndEvent:sender type:com_sun_glass_events_DndEvent_END];
+    [self->_delegate draggingEnded];
 }
 
 - (void)draggingExited:(id <NSDraggingInfo>)sender

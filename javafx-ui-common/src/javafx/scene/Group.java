@@ -182,6 +182,16 @@ public  class Group extends Parent {
         return getLayoutBounds().getHeight();
     }
 
+    @Override
+    public double minHeight(double width) {
+        return prefHeight(width);
+    }
+
+    @Override
+    public double minWidth(double height) {
+        return prefWidth(height);
+    }
+
     /**
      * Group implements layoutChildren such that each child is resized to its preferred
      * size, if the child is resizable. Non-resizable children are simply left alone.

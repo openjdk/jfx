@@ -35,7 +35,7 @@ import javafx.scene.shape.Rectangle;
 import org.junit.Test;
 
 
-public class EffetctBoundsTest {
+public class EffectBoundsTest {
 
     // test setting an effect on a Node alters the bounds
     public @Test void testBoundsOnRectangleWithShadow() {

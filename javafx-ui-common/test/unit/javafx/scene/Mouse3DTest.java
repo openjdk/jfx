@@ -66,7 +66,7 @@ public class Mouse3DTest {
         Camera cam = new PerspectiveCamera();
         scene(group(), cam, true);
         cam.impl_updatePG();
-        PickRay pickRay = cam.computePickRay(10, 20, 1000, 800, null);
+        PickRay pickRay = cam.computePickRay(10, 20, null);
         assertEquals(PERSPECTIVE_CAMERA_X, pickRay.getOriginNoClone().x, 0.00001);
         assertEquals(PERSPECTIVE_CAMERA_Y, pickRay.getOriginNoClone().y, 0.00001);
         assertEquals(PERSPECTIVE_CAMERA_Z, pickRay.getOriginNoClone().z, 0.00001);
@@ -82,7 +82,7 @@ public class Mouse3DTest {
         cam.setTranslateX(50);
         cam.getParent().setTranslateY(30);
         cam.impl_updatePG();
-        PickRay pickRay = cam.computePickRay(10, 20, 1000, 800, null);
+        PickRay pickRay = cam.computePickRay(10, 20, null);
         assertEquals(50 + PERSPECTIVE_CAMERA_X, pickRay.getOriginNoClone().x, 0.00001);
         assertEquals(30 + PERSPECTIVE_CAMERA_Y, pickRay.getOriginNoClone().y, 0.00001);
         assertEquals(PERSPECTIVE_CAMERA_Z, pickRay.getOriginNoClone().z, 0.00001);
@@ -99,7 +99,7 @@ public class Mouse3DTest {
         cam.setTranslateX(50);
         cam.getParent().setTranslateY(30);
         cam.impl_updatePG();
-        PickRay pickRay = cam.computePickRay(10, 20, 1000, 800, null);
+        PickRay pickRay = cam.computePickRay(10, 20, null);
         assertEquals(PERSPECTIVE_CAMERA_X, pickRay.getOriginNoClone().x, 0.00001);
         assertEquals(PERSPECTIVE_CAMERA_Y, pickRay.getOriginNoClone().y, 0.00001);
         assertEquals(PERSPECTIVE_CAMERA_Z, pickRay.getOriginNoClone().z, 0.00001);
@@ -112,7 +112,7 @@ public class Mouse3DTest {
     public void shouldComputeCorrectParallelPickRay() {
         Camera cam = new ParallelCamera();
         scene(group(), cam, true);
-        PickRay pickRay = cam.computePickRay(10, 20, 1000, 800, null);
+        PickRay pickRay = cam.computePickRay(10, 20, null);
         assertEquals(10.0, pickRay.getOriginNoClone().x, 0.00001);
         assertEquals(20.0, pickRay.getOriginNoClone().y, 0.00001);
         assertEquals(-1, pickRay.getOriginNoClone().z, 0.1);
@@ -128,7 +128,7 @@ public class Mouse3DTest {
         cam.setTranslateX(50);
         cam.getParent().setTranslateY(30);
         cam.impl_updatePG();
-        PickRay pickRay = cam.computePickRay(10, 20, 1000, 800, null);
+        PickRay pickRay = cam.computePickRay(10, 20, null);
         assertEquals(60.0, pickRay.getOriginNoClone().x, 0.00001);
         assertEquals(50.0, pickRay.getOriginNoClone().y, 0.00001);
         assertEquals(-1, pickRay.getOriginNoClone().z, 0.1);
@@ -145,7 +145,7 @@ public class Mouse3DTest {
         cam.setTranslateX(50);
         cam.getParent().setTranslateY(30);
         cam.impl_updatePG();
-        PickRay pickRay = cam.computePickRay(10, 20, 1000, 800, null);
+        PickRay pickRay = cam.computePickRay(10, 20, null);
         assertEquals(10.0, pickRay.getOriginNoClone().x, 0.00001);
         assertEquals(20.0, pickRay.getOriginNoClone().y, 0.00001);
         assertEquals(-1, pickRay.getOriginNoClone().z, 0.1);

@@ -29,21 +29,10 @@ package com.sun.prism;
  * TODO: 3D - Need documentation
  * This class represents mesh geometry data object
  */
-public interface Mesh {
-
-    public int getNumGPUVertices();
-
-    static class Geometry {
-
-        // points
-        public float pos[];    // x,y,z
-        // tex points
-        public float uv[];     // u,v
-        public int faces[];  // p1, t1, p2, t2, p3, t3
-        public int smoothing[]; //  smoothing
-    }
-
+public interface Mesh extends GraphicsResource {
     // This method will fail if and only if ALL faces are wrong.
-    // Wrong face is one with zero area or with any index out of range
-    public boolean buildGeometry(Geometry geom);
+    // A wrong face is one with zero area or with any index out of range
+    public boolean buildGeometry(float pos[], float uv[], int faces[], int smoothing[]);
+
+    public int getCount();
 }

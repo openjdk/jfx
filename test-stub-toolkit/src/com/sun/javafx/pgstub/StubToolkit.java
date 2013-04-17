@@ -891,20 +891,6 @@ public class StubToolkit extends Toolkit {
         return new StubPerspectiveCamera();
     }
 
-    @Override
-    public List<PGLightBase> getLightsInScene() {
-        throw new UnsupportedOperationException("Not supported yet.");
-    }
-
-    @Override
-    public boolean isLightsDirty() {
-        throw new UnsupportedOperationException("Not supported yet.");
-    }
-
-    @Override
-    public void setLightsDirty(boolean lightsDirty) {
-        throw new UnsupportedOperationException("Not supported yet.");
-    }
 
     @Override
     public PGSubScene createPGSubScene() {

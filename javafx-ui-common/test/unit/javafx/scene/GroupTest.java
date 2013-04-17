@@ -207,7 +207,7 @@ public class GroupTest {
         node1.setX(1);
         Rectangle node2 = new Rectangle();
         node2.setX(2);
-        
+
         assertEquals(0, group.getChildren().size());
         assertNull(node1.getParent());
         assertNull(node2.getParent());
@@ -371,7 +371,7 @@ public class GroupTest {
         } catch(Throwable t) {
             assertNull("unexpected exception", t);
         }
-        
+
         assertEquals(0, group1.getChildren().size());
         assertEquals(1, group2.getChildren().size());
         assertSame(node, group2.getChildren().get(0));
@@ -423,7 +423,7 @@ public class GroupTest {
         } catch (Throwable t) {
             assertNull("unexpected exception", t);
         }
-      
+
         assertEquals(0, group1.getChildren().size());
         assertEquals(1, group2.getChildren().size());
         assertSame(node, group2.getChildren().get(0));
@@ -707,5 +707,31 @@ public class GroupTest {
 
         rect.setWidth(100);
         assertFalse(group.isNeedsLayout());
+    }
+
+    @Test
+    public void testMinMaxSizesCorrespondToPreferred() {
+        Group group = new Group();
+        Rectangle rect = new Rectangle(50,50);
+        group.getChildren().add(rect);
+
+        assertEquals(50, group.minWidth(-1), 1e-100);
+        assertEquals(50, group.minHeight(-1), 1e-100);
+        assertEquals(50, group.maxWidth(-1), 1e-100);
+        assertEquals(50, group.maxHeight(-1), 1e-100);
+
+        rect.setWidth(100);
+
+        assertEquals(100, group.minWidth(-1), 1e-100);
+        assertEquals(50, group.minHeight(-1), 1e-100);
+        assertEquals(100, group.maxWidth(-1), 1e-100);
+        assertEquals(50, group.maxHeight(-1), 1e-100);
+
+        rect.setHeight(200);
+
+        assertEquals(100, group.minWidth(-1), 1e-100);
+        assertEquals(200, group.minHeight(-1), 1e-100);
+        assertEquals(100, group.maxWidth(-1), 1e-100);
+        assertEquals(200, group.maxHeight(-1), 1e-100);
     }
 }

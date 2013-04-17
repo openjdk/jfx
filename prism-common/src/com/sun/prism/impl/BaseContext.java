@@ -73,6 +73,9 @@ public abstract class BaseContext {
         this.vertexBuffer = vb;
     }
 
+    protected void setDeviceParametersFor2D() {}
+    protected void setDeviceParametersFor3D() {}
+
     public Screen getAssociatedScreen() {
         return screen;
     }
@@ -89,14 +92,6 @@ public abstract class BaseContext {
         vertexBuffer.flush();
     }
 
-    // TODO: 3D - Rethink whether this is how we want to do this.
-    // configure the pipeline to classic 2d rendering 
-    // common VertexBuffer, VertexShader
-    // this method gets called 
-    //  - switch form retained mode rendering to classic
-    //  - in BaseGraphics constuctor to make classic mode be default
-    public void setDeviceParametersFor2D() {}
-
     /**
      *
      * This method will call releaseRenderTarget method to reset last
@@ -105,7 +100,7 @@ public abstract class BaseContext {
     public void setRenderTarget(BaseGraphics g) {
         if (g != null) {
             setRenderTarget(g.getRenderTarget(), g.getCameraNoClone(),
-                    g.isDepthTest() && g.isDepthBuffer());
+                    g.isDepthTest() && g.isDepthBuffer(), g.isState3D());
         } else {
             releaseRenderTarget();
         }
@@ -116,7 +111,7 @@ public abstract class BaseContext {
     }
 
     protected abstract void setRenderTarget(RenderTarget target, PrismCameraImpl camera,
-                                            boolean depthTest);
+                                            boolean depthTest, boolean state3D);
 
     public void validateClearOp(BaseGraphics g) {
         validatePaintOp(g, BaseTransform.IDENTITY_TRANSFORM, null, 0, 0, 0, 0);

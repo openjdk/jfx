@@ -45,7 +45,6 @@ final class PresentingPainter extends ViewPainter {
 
         boolean locked = false;
 
-        SceneState viewState = scene.getViewState();
         try {
             valid = validateStageGraphics();
 
@@ -56,14 +55,12 @@ final class PresentingPainter extends ViewPainter {
                 return;
             }
             
-            if (viewState != null) {
-                /*
-                 * As Glass is responsible for creating the rendering contexts,
-                 * locking should be done prior to the Prism calls.
-                 */
-                viewState.lock();
-                locked = true;
-            }
+            /*
+             * As Glass is responsible for creating the rendering contexts,
+             * locking should be done prior to the Prism calls.
+             */
+            sceneState.lock();
+            locked = true;
 
             boolean needsReset = (presentable == null) || (penWidth != viewWidth) || (penHeight != viewHeight);
             if (!needsReset && presentable.lockResources()) {
@@ -71,7 +68,7 @@ final class PresentingPainter extends ViewPainter {
             }
             if (needsReset) {
                 if (presentable == null || presentable.recreateOnResize()) {
-                    context = factory.createRenderingContext(viewState);
+                    context = factory.createRenderingContext(sceneState);
                 }
             }
             
@@ -80,7 +77,7 @@ final class PresentingPainter extends ViewPainter {
             if (needsReset) {
                 if (presentable == null || presentable.recreateOnResize()) {
                     disposePresentable();
-                    presentable = factory.createPresentable(viewState);
+                    presentable = factory.createPresentable(sceneState);
                     needsReset = false;
                 }
                 penWidth  = viewWidth;
@@ -90,7 +87,7 @@ final class PresentingPainter extends ViewPainter {
             if (presentable != null) {
                 Graphics g = presentable.createGraphics();
 
-                ViewScene vs = (ViewScene) viewState.getScene();
+                ViewScene vs = (ViewScene) sceneState.getScene();
                 if (g != null && vs.getDirty()) {
                     if (needsReset) {
                         g.reset();
@@ -101,7 +98,7 @@ final class PresentingPainter extends ViewPainter {
                 
                 if (!presentable.prepare(null)) {
                     disposePresentable();
-                    viewState.getScene().entireSceneNeedsRepaint();
+                    sceneState.getScene().entireSceneNeedsRepaint();
                     return;
                 }
                 
@@ -109,7 +106,7 @@ final class PresentingPainter extends ViewPainter {
                 if (vs.getDoPresent()) {
                     if (!presentable.present()) {
                         disposePresentable();
-                        viewState.getScene().entireSceneNeedsRepaint();
+                        sceneState.getScene().entireSceneNeedsRepaint();
                     }
                 }
             }
@@ -121,10 +118,10 @@ final class PresentingPainter extends ViewPainter {
                 context.end();
             }
             if (locked) {
-                viewState.unlock();
+                sceneState.unlock();
             }
 
-            ViewScene viewScene = (ViewScene)viewState.getScene();
+            ViewScene viewScene = (ViewScene)sceneState.getScene();
             viewScene.setPainting(false);
             if (PrismSettings.poolStats ||
                 ManagedResource.anyLockedResources())

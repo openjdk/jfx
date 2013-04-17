@@ -25,6 +25,9 @@
 
 package javafx.scene;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.PickRay;
 import com.sun.javafx.geom.transform.BaseTransform;
@@ -35,6 +38,7 @@ import com.sun.javafx.scene.DirtyBits;
 import com.sun.javafx.scene.SubSceneAccess;
 import com.sun.javafx.scene.input.PickResultChooser;
 import com.sun.javafx.scene.traversal.TraversalEngine;
+import com.sun.javafx.sg.PGLightBase;
 import com.sun.javafx.sg.PGNode;
 import com.sun.javafx.sg.PGSubScene;
 import com.sun.javafx.tk.Toolkit;
@@ -45,12 +49,11 @@ import javafx.beans.property.ObjectPropertyBase;
 import javafx.geometry.NodeOrientation;
 import javafx.geometry.Point3D;
 import javafx.scene.input.PickResult;
-import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
 
 /**
  * The {@code SubScene} class is the container for content in a scene graph.
- * 
+ *
  * @since JavaFX 8
  */
 public class SubScene extends Node {
@@ -74,7 +77,7 @@ public class SubScene extends Node {
 
     /**
      * Constructs a SubScene consisting of a root, with a dimension of width and
-     * height, specifies whether a depth buffer is created for this scene and 
+     * height, specifies whether a depth buffer is created for this scene and
      * specifies whether scene anti-aliasing is requested.
      *
      * @param root The root node of the scene graph
@@ -83,7 +86,7 @@ public class SubScene extends Node {
      * @param depthBuffer The depth buffer flag
      * @param antiAliasing The sub-scene anti-aliasing flag
      * <p>
-     * The depthBuffer and antiAliasing flags are conditional feature and the default 
+     * The depthBuffer and antiAliasing flags are conditional feature and the default
      * value for both are false. See
      * {@link javafx.application.ConditionalFeature#SCENE3D ConditionalFeature.SCENE3D}
      * for more information.
@@ -98,15 +101,15 @@ public class SubScene extends Node {
             boolean depthBuffer, boolean antiAliasing) {
         this(root, width, height);
         this.depthBuffer = depthBuffer;
-        //TODO verify that depthBuffer is working correctly
-        //TODO complete antiAliasing
+        //TODO: 3D - verify that depthBuffer is working correctly
+        //TODO: 3D - complete antiAliasing
     }
 
     /**
      * Return true if this {@code SubScene} is anti-aliased otherwise false.
      */
     public boolean isAntiAliasing() {
-        throw new UnsupportedOperationException("Unsupported --- *** isAntiAliasing method ***");        
+        throw new UnsupportedOperationException("Unsupported --- *** isAntiAliasing method ***");
     }
 
     private boolean depthBuffer = false;
@@ -115,9 +118,9 @@ public class SubScene extends Node {
      * Defines the root {@code Node} of the SubScene scene graph.
      * If a {@code Group} is used as the root, the
      * contents of the scene graph will be clipped by the SubScene's width and height.
-     * 
+     *
      * SubScene doesn't accept null root.
-     * 
+     *
      */
     private ObjectProperty<Parent> root;
 
@@ -231,12 +234,15 @@ public class SubScene extends Node {
                 @Override
                 protected void invalidated() {
                     Camera _value = get();                    
-                    // Illegal value if it belongs to any scene or other subscene
-                    if (_value != null
-                            && (_value.getScene() != null || _value.getSubScene() != null)
-                            && (_value.getScene() != getScene() || _value.getSubScene() != SubScene.this)) {
-                        throw new IllegalArgumentException(_value
-                                + "is already set as camera in other scene/subscene");
+                    if (_value != null) {
+                        // Illegal value if it belongs to any scene or other subscene
+                        if ((_value.getScene() != null || _value.getSubScene() != null)
+                                && (_value.getScene() != getScene() || _value.getSubScene() != SubScene.this)) {
+                            throw new IllegalArgumentException(_value
+                                    + "is already set as camera in other scene/subscene");
+                        }
+                        _value.setViewWidth(getWidth());
+                        _value.setViewHeight(getHeight());
                     }
                     markDirty(SubScene.SubSceneDirtyBits.CAMERA_DIRTY);
                 }
@@ -257,16 +263,23 @@ public class SubScene extends Node {
 
     private Camera defaultCamera;
 
-    private Camera getDefaultCamera() {
-        if (defaultCamera == null) {
-            defaultCamera = new ParallelCamera();
+    Camera getEffectiveCamera() {
+        final Camera cam = getCamera();
+        if (cam == null) {
+            if (defaultCamera == null) {
+                defaultCamera = new ParallelCamera();
+                defaultCamera.setViewWidth(getWidth());
+                defaultCamera.setViewHeight(getHeight());
+            }
+            return defaultCamera;
         }
-        return defaultCamera;
+
+        return cam;
     }
 
     /**
      * Defines the width of this {@code SubScene}
-     * 
+     *
      * @defaultvalue 0.0
      */
     private DoubleProperty width;
@@ -295,6 +308,8 @@ public class SubScene extends Node {
                     }
                     markDirty(SubScene.SubSceneDirtyBits.CAMERA_DIRTY);
                     SubScene.this.impl_geomChanged();
+
+                    getEffectiveCamera().setViewWidth(get());
                 }
 
                 @Override
@@ -338,6 +353,8 @@ public class SubScene extends Node {
                     }
                     markDirty(SubScene.SubSceneDirtyBits.CAMERA_DIRTY);
                     SubScene.this.impl_geomChanged();
+
+                    getEffectiveCamera().setViewHeight(get());
                 }
 
                 @Override
@@ -401,12 +418,8 @@ public class SubScene extends Node {
     @Deprecated @Override
     public void impl_updatePG() {
         super.impl_updatePG();
-        Camera camera = getCamera();
-        if (camera != null) {
-            camera.impl_syncPGNode();
-        } else {
-            getDefaultCamera().impl_syncPGNode();
-        }
+        final Camera cam = getEffectiveCamera();
+        cam.impl_syncPGNode();
 
         // TODO deal with clip node
 
@@ -427,14 +440,12 @@ public class SubScene extends Node {
             if (isDirty(SubSceneDirtyBits.CAMERA_DIRTY)) {
                 peer.setWidth((float)getWidth());
                 peer.setHeight((float)getHeight());
-                if (camera != null) {
-                    peer.setCamera(camera.getPlatformCamera());
-                 } else {
-                    peer.setCamera(getDefaultCamera().getPlatformCamera());
-                 }
+                peer.setCamera(cam.getPlatformCamera());
             }
+            syncLights();
             clearDirtyBits();
         }
+
     }
 
     @Override
@@ -523,11 +534,12 @@ public class SubScene extends Node {
     private enum SubSceneDirtyBits {
         FILL_DIRTY,
         /* ROOT_SG_DIRTY is set either when the root has changed or hint that
-         * root scene graph needs to be rerendered. For example when layout
-         * occures, or node has been added or removed.
+         * root scene graph needs to be re-rendered. For example when layout
+         * occurs, or node has been added or removed.
          */
         ROOT_SG_DIRTY,
-        CAMERA_DIRTY; // get set if the camera, width or height change
+        CAMERA_DIRTY, // get set if the camera, width or height change
+        LIGHTS_DIRTY;
 
         private int mask;
 
@@ -601,11 +613,8 @@ public class SubScene extends Node {
         if (localX < 0 || localY < 0 || localX > viewWidth || localY > viewHeight) {
             return null;
         }
-        final Camera camera = getCamera() == null ? getDefaultCamera() : getCamera();
         final PickResultChooser result = new PickResultChooser();
-        final PickRay pickRay = camera.computePickRay(localX, localY,
-                                                      viewWidth, viewHeight,
-                                                      new PickRay());
+        final PickRay pickRay = getEffectiveCamera().computePickRay(localX, localY, new PickRay());
         getRoot().impl_pickNode(pickRay, result);
         return result.toPickResult(!pickRay.isParallel());
     }
@@ -641,6 +650,56 @@ public class SubScene extends Node {
     @Deprecated    @Override
     public Object impl_processMXNode(MXNodeAlgorithm alg, MXNodeAlgorithmContext ctx) {
         throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+
+    // TODO: 3D - Should avoid the need to do costly linear search and update of 
+    //            lights at every light add and graph sync.
+    private List<LightBase> lights = new ArrayList<LightBase>();
+
+    final void addLight(LightBase light) {
+        // There is only an add light method and no removed method. However, if
+        // a light is no longer attached it will be removed via syncLights.
+        if (!lights.contains(light)) {
+            markDirty(SubScene.SubSceneDirtyBits.LIGHTS_DIRTY);
+            lights.add(light);
+        }
+    }
+
+    /**
+     * PG Light synchronizer. It will verify if light is attached, if not the
+     * light is removed.
+     */
+    private void syncLights() {
+        if (!isDirty(SubSceneDirtyBits.LIGHTS_DIRTY)) {
+            return;
+        }
+        PGSubScene pgSubScene = (PGSubScene) impl_getPGNode();
+        Object peerLights[] = pgSubScene.getLights();
+        if (!lights.isEmpty() || (peerLights != null)) {
+            if (lights.isEmpty()) {
+                pgSubScene.setLights(null);
+            } else {
+                if (peerLights == null || peerLights.length != lights.size()) {
+                    peerLights = new PGLightBase[lights.size()];
+                }
+                int i = 0;
+                for (; i < lights.size(); i++) {
+                    LightBase light = lights.get(i);
+                    if (light.getSubScene() == this) {
+                        peerLights[i] = (PGLightBase) light.impl_getPGNode();
+                    } else {
+                        // The light does not belong here
+                        lights.remove(i--);
+                    }
+                }
+                // Clear the rest of the list
+                while (i < peerLights.length && peerLights[i] != null) {
+                    peerLights[i++] = null;
+                }
+                pgSubScene.setLights(peerLights);
+            }
+        }
     }
 
     /**

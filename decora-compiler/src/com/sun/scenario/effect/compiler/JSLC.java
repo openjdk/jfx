@@ -25,16 +25,6 @@
 
 package com.sun.scenario.effect.compiler;
 
-import java.io.ByteArrayInputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileWriter;
-import java.io.InputStream;
-import java.io.PrintStream;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 import com.sun.scenario.effect.compiler.backend.hw.ES2Backend;
 import com.sun.scenario.effect.compiler.backend.hw.HLSLBackend;
 import com.sun.scenario.effect.compiler.backend.prism.PrismBackend;
@@ -46,6 +36,12 @@ import org.antlr.runtime.ANTLRInputStream;
 import org.antlr.runtime.CommonTokenStream;
 import org.antlr.stringtemplate.CommonGroupLoader;
 import org.antlr.stringtemplate.StringTemplateGroup;
+
+import java.io.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  */
@@ -104,8 +100,8 @@ public class JSLC {
     }
 
     /**
-     * If userRootDir is provided by the user, then we will output all files
-     * under that directory, for example if rootDir=/foo/bar:
+     * If trimToOutDir is provided by the user, then we will output all files
+     * under the out directory, for example if outDir=/foo/bar:
      *   /foo/bar/ + rootPkg + /impl/sw/java
      *   /foo/bar/ + rootPkg + /impl/sw/sse
      *   /foo/bar/ + rootPkg + /impl/sw/me
@@ -312,6 +308,7 @@ public class JSLC {
         public int outTypes;
         public boolean force;
         public String outDir;
+        public boolean trimToOutDir;
         public List<String> srcDirs = new ArrayList<String>();
         public String shaderName;
         public String peerName;
@@ -335,7 +332,7 @@ public class JSLC {
             String prefix1 = "";
             for (int i = 0; i < prefix0.length(); i++) prefix1 += " ";
             out.println(prefix0+"[-d3d | -es2 | -java | -sse | -me | -sw | -hw | -all]");
-            out.println(prefix1+"[-o <outdir>] [-i <srcdir>]");
+            out.println(prefix1+"[-o <outdir>] [-i <srcdir>] [-t]");
             out.println(prefix1+"[-name <name>] [-ifname <interface name>]");
             if (extraOpts != null) {
                 out.println(prefix1+extraOpts);
@@ -393,6 +390,8 @@ public class JSLC {
             } else if (arg.equals("-help")) {
                 usage(System.out);
                 System.exit(0);
+            } else if (arg.equals("-t")) {
+                trimToOutDir = true;
             } else {
                 try {
                     // options with 1 argument
@@ -441,21 +440,22 @@ public class JSLC {
             }
 
             error("Input file not found: "+filename);
-            // NOTREACHED
+            // NOT REACHED
             return null;
         }
 
         public File getOutputFile(String outName) {
-            String name = peerName;
-            if (name == null) name = shaderName;
-
+            if (trimToOutDir) {
+                outName = outName.substring(outName.indexOf("gensrc") + 7);
+            }
             outName = outName.replace("{pkg}", pkgName);
             outName = outName.replace("{name}", peerName == null ? shaderName : peerName);
             return outDir == null ? new File(outName) : new File(outDir, outName);
         }
 
         public File getOutputFile(int outType) {
-            return getOutputFile(outNameMap.get(outType));
+            String fileName = outNameMap.get(outType);
+            return getOutputFile(fileName);
         }
     }
 

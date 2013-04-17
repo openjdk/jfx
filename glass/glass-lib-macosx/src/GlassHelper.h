@@ -26,6 +26,7 @@
 #pragma once
 
 #import <Foundation/Foundation.h>
+#import <Cocoa/Cocoa.h>
 #import <objc/runtime.h>
 #import <jni.h>
 
@@ -50,5 +51,7 @@
 + (jmethodID)ApplicationNotifyWillQuitMethod;
 
 + (BOOL)InvokeSelectorIfAvailable:(SEL)aSelector forClass:(Class)aClass withArgument:(void *)anArgument withReturnValue:(void **)aReturnValue;
+
++ (NSString*)nsStringWithJavaString:(jstring)javaString withEnv:(JNIEnv*)env;
 
 @end

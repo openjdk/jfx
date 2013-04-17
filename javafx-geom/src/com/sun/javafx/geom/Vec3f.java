@@ -70,6 +70,12 @@ public class Vec3f {
         this.y = y;
         this.z = z;
     }
+
+    public final void mul(float s) {
+        this.x *= s;
+        this.y *= s;
+        this.z *= s;
+    }
     
     /**
      * Sets the value of this vector to the difference

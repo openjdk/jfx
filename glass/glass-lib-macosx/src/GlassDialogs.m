@@ -38,22 +38,6 @@
     #define LOG(MSG, ...) GLASS_LOG(MSG, ## __VA_ARGS__);
 #endif
 
-static inline NSString* getNSString(JNIEnv* env, jstring jstring)
-{
-    NSString *string = nil;
-    if (jstring != NULL)
-    {
-        const jchar* jstrChars = (*env)->GetStringChars(env, jstring, NULL);
-        jsize size = (*env)->GetStringLength(env, jstring);
-        if (size > 0)
-        {
-            string = [[[NSString alloc] initWithCharacters:jstrChars length:(NSUInteger)size] autorelease];
-        }
-        (*env)->ReleaseStringChars(env, jstring, jstrChars);
-    }
-    return string;
-}
-
 // NSSavePanel is the super class for NSLoadPanel
 static inline void applyExtensions(JNIEnv* env, jobjectArray jExtensions, NSSavePanel *panel)
 {
@@ -66,7 +50,7 @@ static inline void applyExtensions(JNIEnv* env, jobjectArray jExtensions, NSSave
             for (int i=0; i<itemCount; i++)
             {
                 jstring type = (*env)->GetObjectArrayElement(env, jExtensions, i);
-                NSString *string = getNSString(env, type);
+                NSString *string = [GlassHelper nsStringWithJavaString:type withEnv:env];
                 [types addObject:[string pathExtension]];
             }
             [panel setAllowedFileTypes:types];
@@ -357,11 +341,9 @@ JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_mac_MacCommonDialogs__1showFileO
     {
         NSOpenPanel *panel = [NSOpenPanel openPanel];
         [panel setAllowsMultipleSelection:(jMultipleMode==JNI_TRUE)];
-        [panel setTitle:getNSString(env, jTitle)];
-        //[panel setPrompt:getNSString(env, jTitle)];
-        //[panel setMessage:getNSString(env, jTitle)];
-        NSString *folder = getNSString(env, jFolder);
-        if (folder != nil)
+        [panel setTitle:[GlassHelper nsStringWithJavaString:jTitle withEnv:env]];
+        NSString *folder = [GlassHelper nsStringWithJavaString:jFolder withEnv:env];
+        if ([folder length] > 0)
         {
             [panel setDirectoryURL:[NSURL fileURLWithPath:folder isDirectory:YES]];
         }
@@ -415,17 +397,15 @@ JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_mac_MacCommonDialogs__1showFileS
     GLASS_POOL_ENTER;
     {
         NSSavePanel *panel = [NSSavePanel savePanel];
-        [panel setTitle:getNSString(env, jTitle)];
-        //[panel setPrompt:getNSString(env, jTitle)];
-        //[panel setMessage:getNSString(env, jTitle)];
-        NSString *folder = getNSString(env, jFolder);
-        if (folder != nil)
+        [panel setTitle:[GlassHelper nsStringWithJavaString:jTitle withEnv:env]];
+        NSString *folder = [GlassHelper nsStringWithJavaString:jFolder withEnv:env];
+        if ([folder length] > 0)
         {
             [panel setDirectoryURL:[NSURL fileURLWithPath:folder isDirectory:YES]];
         }
 
-        NSString *filename = getNSString(env, jFilename);
-        if (filename != nil) {
+        NSString *filename = [GlassHelper nsStringWithJavaString:jFilename withEnv:env];
+        if ([filename length] > 0) {
             [panel setNameFieldStringValue:filename];
         }
         
@@ -471,11 +451,9 @@ JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_mac_MacCommonDialogs__1showFolde
     GLASS_POOL_ENTER;
     {
         NSOpenPanel *panel = [NSOpenPanel openPanel];
-        [panel setTitle:getNSString(env, jTitle)];
-        //[panel setPrompt:getNSString(env, jTitle)];
-        //[panel setMessage:getNSString(env, jTitle)];
-        NSString *folder = getNSString(env, jFolder);
-        if (folder != nil)
+        [panel setTitle:[GlassHelper nsStringWithJavaString:jTitle withEnv:env]];
+        NSString *folder = [GlassHelper nsStringWithJavaString:jFolder withEnv:env];
+        if ([folder length] > 0)
         {
             [panel setDirectoryURL:[NSURL fileURLWithPath:folder isDirectory:YES]];
         }

@@ -34,4 +34,5 @@ public interface PGLightBase extends PGNode {
     public void setColor(Object value);
     public void setLightOn(boolean value);
     public void setWorldTransform(Affine3D localToSceneTx);
+    public void setScope(Object[] scopedPGNodes);
 }

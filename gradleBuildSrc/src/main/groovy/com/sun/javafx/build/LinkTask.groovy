@@ -23,17 +23,36 @@
  * questions.
  */
 
-package com.sun.prism;
+import org.gradle.api.DefaultTask
+import org.gradle.api.tasks.InputDirectory
+import org.gradle.api.tasks.OutputFile
+import org.gradle.api.tasks.TaskAction
 
-/**
- * TODO: 3D - Need documentation
- * This is Factory for retained mode objects
- */
-public interface MeshFactory {
-
-    Mesh createMesh();
-
-    MeshView createMeshView(Mesh mesh);
-
-    PhongMaterial createPhongMaterial();
+class LinkTask extends DefaultTask {
+    List<String> linkParams = new ArrayList<String>();
+    @InputDirectory File objectDir;
+    @OutputFile File lib;
+    @TaskAction void compile() {
+        // Link & generate the library (.dll, .so, .dylib)
+        lib.getParentFile().mkdirs();
+        project.exec({
+            commandLine("$project.LINK");
+            args(objectDir.listFiles());
+            if (project.IS_WINDOWS) {
+                args("/out:$lib");
+            } else {
+                args("-o", "$lib");
+            }
+            if (project.IS_DEBUG && !project.IS_WINDOWS) args("-g");
+            if (linkParams != null) args(linkParams);
+            if (project.IS_WINDOWS){
+                final String libPath = lib.toString();
+                final String libPrefix = libPath.substring(0, libPath.lastIndexOf("."))
+                args("/pdb:${libPrefix}.pdb",
+                    "/map:${libPrefix}.map");
+                environment(project.WINDOWS_NATIVE_COMPILE_ENVIRONMENT);
+            }
+        });
+    }
 }
+

@@ -27,6 +27,9 @@ package com.sun.prism.sw;
 
 import com.sun.glass.ui.Screen;
 import com.sun.prism.MediaFrame;
+import com.sun.prism.Mesh;
+import com.sun.prism.MeshView;
+import com.sun.prism.PhongMaterial;
 import com.sun.prism.PixelFormat;
 import com.sun.prism.Presentable;
 import com.sun.prism.PresentableState;
@@ -153,5 +156,17 @@ final class SWResourceFactory
             return null;
         }
         return SWTexture.create(this, formatHint, wrapMode, w, h);
+    }
+
+    public PhongMaterial createPhongMaterial() {
+        throw new UnsupportedOperationException("Not supported yet.");
+}
+
+    public MeshView createMeshView(Mesh mesh) {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    public Mesh createMesh() {
+        throw new UnsupportedOperationException("Not supported yet.");
     }
 }

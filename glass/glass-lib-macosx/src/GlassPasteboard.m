@@ -38,6 +38,27 @@
     #define LOG(MSG, ...) GLASS_LOG(MSG, ## __VA_ARGS__);
 #endif
 
+static NSInteger lastDragSesionNumber = 0;
+
+// Dock puts the data to a custom pasteboard, so dragging from it does not work.
+// Copy the contents of the sender PBoard to the DraggingPBoard
+void copyToDragPasteboardIfNeeded(id<NSDraggingInfo> sender)
+{
+    NSPasteboard* sourcePasteboard = [sender draggingPasteboard];
+    if (![[sourcePasteboard name] isEqualToString:NSDragPboard] &&
+        [sender draggingSequenceNumber] != lastDragSesionNumber)
+    {
+        lastDragSesionNumber = [sender draggingSequenceNumber];
+        
+        NSPasteboard* dragPasteboard = [NSPasteboard pasteboardWithName:NSDragPboard];
+        [dragPasteboard clearContents];
+        for (NSString* type in [sourcePasteboard types])
+        {
+            [dragPasteboard setData:[sourcePasteboard dataForType:type] forType:type];
+        }
+    }
+}
+
 static inline void DumpPasteboard(NSPasteboard *pasteboard)
 {
     NSLog(@"\n");

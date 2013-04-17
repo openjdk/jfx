@@ -47,7 +47,7 @@ public enum DirtyBits {
     NODE_DRAWMODE, // Used by Shape3D
     NODE_SMOOTH,    // Used by ImageView, MediaView, and subclasses of Shape
     NODE_VIEWPORT,  // Used by ImageView and MediaView
-    NODE_CONTENTS,  // Used by ImageView, MediaView, Text, WebView, and subclasses of Shape
+    NODE_CONTENTS,  // Used by ImageView, Light, MediaView, Text, WebView, and subclasses of Shape
 
     // Dirty bits for the Parent class
     PARENT_CHILDREN,  // children removed, added or permuted

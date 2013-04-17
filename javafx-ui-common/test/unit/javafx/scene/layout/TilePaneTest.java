@@ -45,7 +45,7 @@ import org.junit.Test;
 
 
 public class TilePaneTest {
-    
+
     TilePane tilepane;
     TilePane htilepane;
     TilePane vtilepane;
@@ -167,7 +167,7 @@ public class TilePaneTest {
     @Test public void testLayoutWithPrefSize() {
         tilepane.autosize();
         tilepane.layout();
-        
+
         // test a handful
         Node first = tilepane.getChildren().get(0);
         Node last = tilepane.getChildren().get(11);
@@ -188,7 +188,7 @@ public class TilePaneTest {
 
         Node first = tilepane.getChildren().get(0);
         Node last = tilepane.getChildren().get(11);
-        
+
         assertEquals(0, first.getLayoutX(), 1e-100);
         assertEquals(0, first.getLayoutY(), 1e-100);
         assertEquals(100, first.getLayoutBounds().getWidth(), 1e-100);
@@ -199,7 +199,7 @@ public class TilePaneTest {
         assertEquals(100, last.getLayoutBounds().getHeight(), 1e-100);
     }
 
-    @Test public void testHorizontalTilePaneAlignmentTopLeft() {        
+    @Test public void testHorizontalTilePaneAlignmentTopLeft() {
         htilepane.setAlignment(Pos.TOP_LEFT);
         htilepane.resize(700,1000);
         htilepane.layout();
@@ -711,12 +711,12 @@ public class TilePaneTest {
         assertEquals(100, last.getLayoutBounds().getWidth(), 1e-100);
         assertEquals(100, last.getLayoutBounds().getHeight(), 1e-100);
     }
-    
+
     @Test public void testSetMarginConstraint() {
         MockResizable child1 = new MockResizable(100,200, 300,400, 500,600);
 
         assertNull(TilePane.getMargin(child1));
-        
+
         Insets margin = new Insets(10,20,30,40);
         TilePane.setMargin(child1, margin);
         assertEquals(margin, TilePane.getMargin(child1));
@@ -837,7 +837,7 @@ public class TilePaneTest {
         assertEquals(150, biased.getLayoutBounds().getWidth(), 1e-100);
         assertEquals(67, biased.getLayoutBounds().getHeight(), 1e-100);
         assertEquals(150, rect.getLayoutX(), 1e-100);
-        assertEquals(8.5, rect.getLayoutY(), 1e-100);
+        assertEquals(9, rect.getLayoutY(), 1e-100);
         assertEquals(150, rect.getLayoutBounds().getWidth(), 1e-100);
         assertEquals(50, rect.getLayoutBounds().getHeight(), 1e-100);
 
@@ -860,7 +860,7 @@ public class TilePaneTest {
         assertEquals(0, biased.getLayoutY(), 1e-100);
         assertEquals(67, biased.getLayoutBounds().getWidth(), 1e-100);
         assertEquals(150, biased.getLayoutBounds().getHeight(), 1e-100);
-        assertEquals(75.5, rect.getLayoutX(), 1e-100);
+        assertEquals(76, rect.getLayoutX(), 1e-100);
         assertEquals(0, rect.getLayoutY(), 1e-100);
         assertEquals(50, rect.getLayoutBounds().getWidth(), 1e-100);
         assertEquals(150, rect.getLayoutBounds().getHeight(), 1e-100);
@@ -899,7 +899,7 @@ public class TilePaneTest {
         assertEquals(100, last.getLayoutBounds().getWidth(), 1e-100);
         assertEquals(100, last.getLayoutBounds().getHeight(), 1e-100);
     }
-    
+
     @Test public void testHorizontalTilePaneWithFixedTileHeight() {
         TilePane tilepane = new TilePane();
         tilepane.setPrefColumns(3);
@@ -934,14 +934,14 @@ public class TilePaneTest {
         assertEquals(100, last.getLayoutBounds().getHeight(), 1e-100);
     }
 
-    @Test public void testCSSsetPrefTileWidthAndHeight_RT20388() {        
+    @Test public void testCSSsetPrefTileWidthAndHeight_RT20388() {
         Scene scene = new Scene(tilepane);
         Stage stage = new Stage();
-        stage.setScene(scene);                
+        stage.setScene(scene);
         stage.show();
-        
+
         ParsedValue pv = CSSParser.getInstance().parseExpr("-fx-perf-tile-width","67.0");
-        Object val = pv.convert(null);        
+        Object val = pv.convert(null);
         try {
             ((StyleableProperty)tilepane.prefTileWidthProperty()).applyStyle(null, val);
             assertEquals(67.0, tilepane.getPrefTileWidth(), 0.00001);
@@ -949,32 +949,32 @@ public class TilePaneTest {
             Assert.fail(e.toString());
         }
     }
-      
-    @Test public void testCSSsetPrefRow_RT20437() {        
+
+    @Test public void testCSSsetPrefRow_RT20437() {
         Scene scene = new Scene(tilepane);
         Stage stage = new Stage();
-        stage.setScene(scene);                
+        stage.setScene(scene);
         stage.show();
-        
+
         ParsedValue pv = CSSParser.getInstance().parseExpr("-fx-perf-rows","2");
-        Object val = pv.convert(null);        
+        Object val = pv.convert(null);
         try {
             ((StyleableProperty)tilepane.prefRowsProperty()).applyStyle(null, val);
             assertEquals(2, tilepane.getPrefRows(), 0.00001);
         } catch (Exception e) {
             Assert.fail(e.toString());
         }
-    }    
-    
-      
-    @Test public void testCSSsetPrefColumns_RT22929() {        
+    }
+
+
+    @Test public void testCSSsetPrefColumns_RT22929() {
         Scene scene = new Scene(tilepane);
         Stage stage = new Stage();
-        stage.setScene(scene);                
+        stage.setScene(scene);
         stage.show();
-        
+
         ParsedValue pv = CSSParser.getInstance().parseExpr("-fx-pref-columns","2");
-        Object val = pv.convert(null);        
+        Object val = pv.convert(null);
         CssMetaData prop = ((StyleableProperty)tilepane.prefColumnsProperty()).getCssMetaData();
         try {
             ((StyleableProperty)tilepane.prefColumnsProperty()).applyStyle(null,val);
@@ -982,5 +982,5 @@ public class TilePaneTest {
         } catch (Exception e) {
             Assert.fail(e.toString());
         }
-    }      
+    }
 }

@@ -58,27 +58,43 @@ public abstract class Camera extends Node {
         this.localToSceneTransformProperty().addListener(new InvalidationListener() {
             @Override
             public void invalidated(Observable observable) {
-                isL2STxChanged = true;
                 impl_markDirty(DirtyBits.NODE_CAMERA_TRANSFORM);
             }
         });
     }
 
-    private boolean isL2STxChanged = true;
-    private boolean isClipPlaneChanged = true;
-
     // NOTE: farClipInScene and nearClipInScene are valid only if there is no rotation
     private double farClipInScene;
     private double nearClipInScene;
 
+    private GeneralTransform3D projViewTx = new GeneralTransform3D();
+    private GeneralTransform3D projTx = new GeneralTransform3D();
+    private Affine3D viewTx = new Affine3D();
+    private double viewWidth = 1.0;
+    private double viewHeight = 1.0;
+
+    private boolean clipInSceneValid = false;
+    private boolean projViewTxValid = false;
+    private boolean localToSceneValid = false;
+    private boolean sceneToLocalValid = false;
+
     double getFarClipInScene() {
-        updateMiscProperties();
+        updateClipPlane();
         return farClipInScene;
     }
 
     double getNearClipInScene() {
-        updateMiscProperties();
+        updateClipPlane();
         return nearClipInScene;
+    }
+
+    private void updateClipPlane() {
+        if (!clipInSceneValid) {
+            final Transform localToSceneTransform = getLocalToSceneTransform();
+            nearClipInScene = localToSceneTransform.transform(0, 0, getNearClip()).getZ();
+            farClipInScene = localToSceneTransform.transform(0, 0, getFarClip()).getZ();
+            clipInSceneValid = true;
+        }
     }
 
     /**
@@ -88,33 +104,20 @@ public abstract class Camera extends Node {
     private Affine3D sceneToLocalTx = new Affine3D();
 
     Affine3D getSceneToLocalTransform() {
-        updateMiscProperties();
-        return sceneToLocalTx;
-    }
-
-    private void updateMiscProperties() {
-        if (isL2STxChanged) {
-            Transform localToSceneTransform = getLocalToSceneTransform();
-            nearClipInScene = localToSceneTransform.transform(0, 0, getNearClip()).getZ();
-            farClipInScene = localToSceneTransform.transform(0, 0, getFarClip()).getZ();
-            
+        if (!sceneToLocalValid) {
             sceneToLocalTx.setToIdentity();
-            localToSceneTransform.impl_apply(sceneToLocalTx);
+            getLocalToSceneTransform().impl_apply(sceneToLocalTx);
             try {
                 sceneToLocalTx.invert();
             } catch (NoninvertibleTransformException ex) {
                 String logname = Camera.class.getName();
-                PlatformLogger.getLogger(logname).severe("updateMiscProperties", ex);
+                PlatformLogger.getLogger(logname).severe("getSceneToLocalTransform", ex);
+                sceneToLocalTx.setToIdentity();
             }
-            
-            isL2STxChanged = isClipPlaneChanged = false;
-        } else if (isClipPlaneChanged) {
-            Transform localToSceneTransform = getLocalToSceneTransform();
-            nearClipInScene = localToSceneTransform.transform(0, 0, getNearClip()).getZ();
-            farClipInScene = localToSceneTransform.transform(0, 0, getFarClip()).getZ();
-            
-            isClipPlaneChanged = false;
+            sceneToLocalValid = true;
         }
+
+        return sceneToLocalTx;
     }
 
     /**
@@ -139,7 +142,7 @@ public abstract class Camera extends Node {
             nearClip = new SimpleDoubleProperty(Camera.this, "nearClip", 0.1) {
                 @Override
                 protected void invalidated() {
-                    isClipPlaneChanged = true;
+                    clipInSceneValid = false;
                     impl_markDirty(DirtyBits.NODE_CAMERA);
                 }
             };
@@ -170,7 +173,7 @@ public abstract class Camera extends Node {
             farClip = new SimpleDoubleProperty(Camera.this, "farClip", 100.0) {
                 @Override
                 protected void invalidated() {
-                    isClipPlaneChanged = true;
+                    clipInSceneValid = false;
                     impl_markDirty(DirtyBits.NODE_CAMERA);
                 }
             };
@@ -200,20 +203,77 @@ public abstract class Camera extends Node {
             pgCamera.setFarClip((float) getFarClip());
         }
         if (impl_isDirty(DirtyBits.NODE_CAMERA_TRANSFORM)) {
-            localToSceneTx.setToIdentity();
-            getLocalToSceneTransform().impl_apply(localToSceneTx);
             // TODO: 3D - For now, we are treating the scene as world.
             // This may need to change for the fixed eye position case.
-            pgCamera.setWorldTransform(localToSceneTx);
+            pgCamera.setWorldTransform(getCameraTransform());
         }
     }
+
+    void setViewWidth(double width) {
+        this.viewWidth = width;
+        projViewTxValid = false;
+    }
+
+    double getViewWidth() {
+        return viewWidth;
+    }
+
+    void setViewHeight(double height) {
+        this.viewHeight = height;
+        projViewTxValid = false;
+    }
+
+    double getViewHeight() {
+        return viewHeight;
+    }
+
+    @Override
+    protected void impl_markDirty(DirtyBits dirtyBit) {
+        super.impl_markDirty(dirtyBit);
+        if (dirtyBit == DirtyBits.NODE_CAMERA_TRANSFORM) {
+            localToSceneValid = false;
+            sceneToLocalValid = false;
+            clipInSceneValid = false;
+            projViewTxValid = false;
+        } else if (dirtyBit == DirtyBits.NODE_CAMERA) {
+            projViewTxValid = false;
+        }
+    }
+
 
     /**
      * Returns the local-to-scene transform of this camera.
      * Package private, for use in our internal subclasses.
+     * Returns directly the internal instance, it must not be altered.
      */
     Affine3D getCameraTransform() {
+        if (!localToSceneValid) {
+            localToSceneTx.setToIdentity();
+            getLocalToSceneTransform().impl_apply(localToSceneTx);
+            localToSceneValid = true;
+        }
         return localToSceneTx;
+    }
+
+    abstract void computeProjectionTransform(GeneralTransform3D proj);
+    abstract void computeViewTransform(Affine3D view);
+
+    GeneralTransform3D getProjViewTransform(GeneralTransform3D tx) {
+        if (!projViewTxValid) {
+            computeProjectionTransform(projTx);
+            computeViewTransform(viewTx);
+
+            projViewTx.set(projTx);
+            projViewTx.mul(viewTx);
+            projViewTx.mul(getSceneToLocalTransform());
+
+            projViewTxValid = true;
+        }
+
+        if (tx == null) {
+            tx = new GeneralTransform3D();
+        }
+        return tx.set(projViewTx);
     }
 
     /**
@@ -222,16 +282,12 @@ public abstract class Camera extends Node {
      *               view, usually mouse cursor position
      * @param localY vertical coordinate of the pick ray in the projected
      *               view, usually mouse cursor position
-     * @param viewWidth width of the projected view
-     * @param viewHeight height of the projected view
      * @param pickRay pick ray to be reused. New instance is created in case
      *                of null.
      * @return The PickRay instance computed based on this camera and the given
      *         arguments.
      */
-    abstract PickRay computePickRay(double localX, double localY,
-                                    double viewWidth, double viewHeight,
-                                    PickRay pickRay);
+    abstract PickRay computePickRay(double localX, double localY, PickRay pickRay);
 
     /**
      * @treatAsPrivate implementation detail

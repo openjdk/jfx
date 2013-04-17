@@ -62,6 +62,9 @@ static jmethodID jLensApplication_notifyViewEvent;
 static jmethodID jLensApplication_notifyDeviceEvent;
 static jmethodID jLensApplication_notifyMenuEvent;
 
+static jclass jGlassWindowClass;
+static jmethodID jGlassWindowClass_Add;
+static jmethodID jGlassWindowClass_Remove;
 
 char *glass_RuntimeException = "java/lang/RuntimeException";
 char *glass_NullPointerException = "java/lang/NullPointerException";
@@ -159,10 +162,21 @@ static void initIDs(JNIEnv *env) {
                             "(Lcom/sun/glass/ui/lens/LensView;IIIIZ)V");
 
     CHECK_AND_RET_VOID(env);
+
+    jGlassWindowClass =
+            (*env)->NewGlobalRef(env,
+                                 (*env)->FindClass(env, "com/sun/glass/ui/Window"));
+    CHECK_AND_RET_VOID(env);
+    jGlassWindowClass_Add =  
+        (*env)->GetStaticMethodID(env, jGlassWindowClass, "add",
+                                  "(Lcom/sun/glass/ui/Window;)V");
+    CHECK_AND_RET_VOID(env);
+    jGlassWindowClass_Remove =  
+        (*env)->GetStaticMethodID(env, jGlassWindowClass, "remove",
+                                  "(Lcom/sun/glass/ui/Window;)V");
+
     GLASS_LOG_FINE("Set up JNI references");
 }
-
-
 
 /*
  * Class:     com_sun_glass_ui_lens_LensApplication
@@ -673,3 +687,18 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_lens_LensApplication_shutdown
     GLASS_LOG_FINEST("Shut down");
 }
 
+void glass_application_addWindowToVisibleWindowList (JNIEnv *env,
+                                        NativeWindow window) {
+    GLASS_LOG_FINE("Adding window %i[%p] to the visible window list", window->id, window);
+    (*env)->CallStaticVoidMethod(env, jGlassWindowClass, jGlassWindowClass_Add, window->lensWindow);
+
+    CHECK_AND_RET_VOID(env);
+}
+
+void glass_application_RemoveWindowFromVisibleWindowList (JNIEnv *env,
+                                        NativeWindow window) {
+    GLASS_LOG_FINE("Removing window %i[%p] from the visible window list", window->id, window);
+    (*env)->CallStaticVoidMethod(env, jGlassWindowClass, jGlassWindowClass_Remove, window->lensWindow);
+
+    CHECK_AND_RET_VOID(env);
+}

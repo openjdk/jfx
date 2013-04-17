@@ -28,8 +28,6 @@ package com.sun.javafx.tk;
 import com.sun.javafx.geom.PickRay;
 import com.sun.javafx.sg.PGCamera;
 import com.sun.javafx.sg.PGNode;
-import javafx.scene.input.Dragboard;
-
 import java.security.AccessControlContext;
 
 /**
@@ -69,6 +67,9 @@ public interface TKScene {
 
     public PickRay computePickRay(float x, float y, PickRay pickRay);
 
+    Object[] getLights();
+    public void setLights(Object lights[]);
+
     /**
      * Set the background fill for the scene
      *
@@ -81,8 +82,8 @@ public interface TKScene {
     public void requestFocus();
 
     public void enableInputMethodEvents(boolean enable);
-    
+
     public void entireSceneNeedsRepaint();
-    
+
     public TKClipboard createDragboard(boolean isDragSource);
 }

@@ -26,7 +26,6 @@
 package javafx.scene;
 
 import com.sun.javafx.sg.PGNode;
-import com.sun.javafx.sg.PGPointLight;
 import com.sun.javafx.tk.Toolkit;
 import javafx.scene.paint.Color;
 
@@ -47,7 +46,7 @@ public class PointLight extends LightBase {
 
     /**
      * Creates a new instance of {@code PointLight} class using the specified color.
-     * 
+     *
      * @param color the color of the light source
      */
     public PointLight(Color color) {
@@ -62,18 +61,5 @@ public class PointLight extends LightBase {
     @Override
     protected PGNode impl_createPGNode() {
         return Toolkit.getToolkit().createPGPointLight();
-    }
-
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    @Override
-    public void impl_updatePG() {
-        super.impl_updatePG();
-        PGPointLight pgPointLight = (PGPointLight) impl_getPGNode();
-        pgPointLight.setColor((getColor() == null) ? null
-                : Toolkit.getPaintAccessor().getPlatformPaint(getColor()));
     }
 }

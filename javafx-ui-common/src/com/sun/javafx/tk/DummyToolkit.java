@@ -66,7 +66,6 @@ import com.sun.javafx.sg.PGEllipse;
 import com.sun.javafx.sg.PGExternalNode;
 import com.sun.javafx.sg.PGGroup;
 import com.sun.javafx.sg.PGImageView;
-import com.sun.javafx.sg.PGLightBase;
 import com.sun.javafx.sg.PGLine;
 import com.sun.javafx.sg.PGMeshView;
 import com.sun.javafx.sg.PGParallelCamera;
@@ -550,21 +549,6 @@ final public class DummyToolkit extends Toolkit {
 
     @Override
     public PGPerspectiveCamera createPGPerspectiveCamera(boolean fixedEyePosition) {
-        throw new UnsupportedOperationException("Not supported yet.");
-    }
-
-    @Override
-    public List<PGLightBase> getLightsInScene() {
-        throw new UnsupportedOperationException("Not supported yet.");
-    }
-
-    @Override
-    public boolean isLightsDirty() {
-        throw new UnsupportedOperationException("Not supported yet.");
-    }
-
-    @Override
-    public void setLightsDirty(boolean lightsDirty) {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 

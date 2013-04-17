@@ -31,6 +31,8 @@ defineProperty("MACOSX_SDK_PATH", "/Applications/Xcode.app/Contents/Developer/Pl
 defineProperty("MACOSX_JDK_FRAMEWORK", "/System/Library/Frameworks/JavaVM.framework");
 // Redefine the CC property to be gcc instead of the default g++ as defined in the main build file
 defineProperty("CC", "gcc");
+defineProperty("PRISM_CC", CC);
+defineProperty("PRISM_SW_CC", CC);
 
 // Sanity check
 if (!IS_64) throw new Exception("Cannot compile on 32-bit Mac, only on 64-bit Mac");
@@ -41,7 +43,7 @@ def commonParams = [
         "-arch", "x86_64",
         "-F$MACOSX_JDK_FRAMEWORK/Frameworks"]
 
-ext.LINK_PARAMS = [
+def commonLinkParams = [
         "-framework", "AppKit",
         "-framework", "ApplicationServices",
         "-framework", "JavaVM",
@@ -50,11 +52,52 @@ ext.LINK_PARAMS = [
         "-framework", "QuartzCore",
         "-dynamiclib", "-lobjc", commonParams].flatten();
 
-ext.CC_PARAMS = [
+def commonCcParams = [
         "-std=c99",
         "-c",
         "-I$JDK_HOME/include",
         "-I$JDK_HOME/include/darwin",
         commonParams,
         IS_DEBUG ? "-DDEBUG" : ["-O3", "-DNDEBUG"]].flatten()
-        //IS_DEBUG ? "-DDEBUG" : ["-O3", "-ffast-math", "-DNDEBUG"]].flatten()
+
+// TODO these two variables should be removed
+ext.LINK_FLAGS = [commonLinkParams].flatten();
+ext.CC_FLAGS = [commonCcParams].flatten()
+
+// NOTE: I've attempted to use the exact same build flags here as what are used in the ant builds, so that
+// the transition can be made simpler. However, this needs to be fixed and the flags that are used consolidated.
+// There are many "accidental" differences between the different builds that have cropped up over time, and
+// there are a few intentional differences. We need to take a measured look at what flags are being used to build with.
+ext.GLASS_CC_FLAGS = [commonCcParams].flatten()
+if (!IS_DEBUG) GLASS_CC_FLAGS += "-Werror";
+ext.GLASS_LINK_FLAGS = [commonLinkParams].flatten()
+if (IS_DEBUG) GLASS_LINK_FLAGS += "-g";
+
+// TODO Should move the /include /include/darwin flags off to the common code section
+ext.DECORA_CC_FLAGS = [
+        "-O1", "-ffast-math",
+        "-I$JDK_HOME/include",
+        "-I$JDK_HOME/include/darwin",
+        "-mmacosx-version-min=$MACOSX_MIN_VERSION",
+        "-arch", "x86_64", "-c"]
+ext.DECORA_LINK_FLAGS = [
+        "-dynamiclib",
+        "-mmacosx-version-min=$MACOSX_MIN_VERSION",
+        "-arch", "x86_64"]
+
+ext.PRISM_CC_FLAGS = [
+        "-O3", "-DINLINE=inline",
+        "-I$JDK_HOME/include",
+        "-I$JDK_HOME/include/darwin",
+        "-mmacosx-version-min=$MACOSX_MIN_VERSION",
+        "-arch", "x86_64", "-c"]
+ext.PRISM_LINK_FLAGS = [
+        "-dynamiclib",
+        "-mmacosx-version-min=$MACOSX_MIN_VERSION",
+        "-arch", "x86_64"]
+
+ext.PRISM_SW_CC_FLAGS = [PRISM_CC_FLAGS].flatten()
+ext.PRISM_SW_LINK_FLAGS = [PRISM_LINK_FLAGS].flatten()
+
+ext.LAUNCHER_CC_FLAGS = [commonCcParams].flatten()
+ext.LAUNCHER_LINK_FLAGS = [];

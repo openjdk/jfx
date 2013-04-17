@@ -33,6 +33,7 @@ import com.sun.javafx.sg.PGTriangleMesh;
  */
 public class NGMeshView extends NGShape3D implements PGMeshView {
 
+    @Override
     public void setMesh(PGTriangleMesh pgtm) {
         // NOTE: Implementation has been promopted to NGShape3D so as to
         // share NGTriangleMesh between predefined 3D shapes

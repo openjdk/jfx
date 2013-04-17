@@ -25,7 +25,6 @@
 
 package com.sun.prism.impl;
 
-import com.sun.prism.MeshFactory;
 import com.sun.prism.Image;
 import com.sun.prism.PixelFormat;
 import com.sun.prism.ResourceFactory;
@@ -212,9 +211,4 @@ public abstract class BaseResourceFactory implements ResourceFactory {
                              width, height);
     }
 
-    // TODO: 3D - We may not want a default implementation here
-    @Override
-    public MeshFactory get3DFactory() { 
-        return new DummyMeshFactory();
     }
-}

@@ -29,18 +29,30 @@ import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.PickRay;
 import com.sun.javafx.scene.input.PickResultChooser;
 import com.sun.javafx.sg.PGTriangleMesh;
+import javafx.application.ConditionalFeature;
+import javafx.application.Platform;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.scene.Node;
+import sun.util.logging.PlatformLogger;
 
 /**
  * Base class for representing a 3D geometric surface.
+ *
+ * Note that this is a conditional feature. See
+ * {@link javafx.application.ConditionalFeature#SCENE3D ConditionalFeature.SCENE3D}
+ * for more information.
  * 
  * @since JavaFX 8
  */
 public abstract class Mesh {
 
     protected Mesh() {
+        if (!Platform.isSupported(ConditionalFeature.SCENE3D)) {
+            String logname = Mesh.class.getName();
+            PlatformLogger.getLogger(logname).warning("System can't support "
+                                                      + "ConditionalFeature.SCENE3D");
+        }
     }
     
     // Mesh isn't a Node. It can't use the standard dirtyBits pattern that is 

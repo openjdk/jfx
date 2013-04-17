@@ -30,16 +30,11 @@ import com.sun.javafx.geom.RectBounds;
 import com.sun.javafx.geom.Rectangle;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.geom.transform.GeneralTransform3D;
-import com.sun.javafx.sg.BaseCacheFilter;
 import com.sun.javafx.sg.BaseNode;
-import com.sun.javafx.sg.DirtyHint;
 import com.sun.javafx.sg.NodePath;
 import com.sun.javafx.sg.PGGroup;
 import com.sun.javafx.sg.PGNode;
 import com.sun.prism.Graphics;
-import com.sun.prism.impl.PrismSettings;
-import com.sun.prism.paint.Color;
-import com.sun.prism.paint.Paint;
 import com.sun.scenario.effect.Blend;
 import com.sun.scenario.effect.Blend.Mode;
 import com.sun.scenario.effect.FilterContext;
@@ -473,8 +468,4 @@ public class NGGroup extends NGNode implements PGGroup {
         }
     }
 
-    @Override
-    NodeType getNodeType() {
-        return NodeType.NODE_NONE;
-    }
 }

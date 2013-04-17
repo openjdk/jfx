@@ -30,6 +30,7 @@
 
 #import "GlassMacros.h"
 #import "GlassMenu.h"
+#import "GlassHelper.h"
 
 //#define VERBOSE
 #ifndef VERBOSE
@@ -43,22 +44,6 @@ static jmethodID jMenuOpeningMethod = 0;
 static jmethodID jMenuClosedMethod = 0;
 static jmethodID jMenuValidateMethod = 0;
 static jfieldID  jDelegateMenuField = 0;
-
-static inline NSString* getNSString(JNIEnv* env, jstring jstring)
-{
-    NSString *string = nil;
-    if (jstring != NULL)
-    {
-        const jchar* jstrChars = (*env)->GetStringChars(env, jstring, NULL);
-        string = [[[NSString alloc] initWithCharacters:jstrChars length:(NSUInteger)(*env)->GetStringLength(env, jstring)] autorelease];
-        (*env)->ReleaseStringChars(env, jstring, jstrChars);
-    }
-    else
-    {
-        string = [[[NSString alloc] init] autorelease];
-    }
-    return string;
-}
 
 @interface NSMenuItem (SPI)
 
@@ -122,7 +107,10 @@ static inline NSString* getNSString(JNIEnv* env, jstring jstring)
     {
         GET_MAIN_JENV;
         self->jDelegate = (*env)->NewGlobalRef(env, jdelegate);
-        self->item = [[NSMenuItem allocWithZone:[NSMenu menuZone]] initWithTitle:getNSString(env, jtitle) action:NULL keyEquivalent:@""];
+        NSString* title = [GlassHelper nsStringWithJavaString:jtitle withEnv:env];
+        self->item = [[NSMenuItem allocWithZone:[NSMenu menuZone]] initWithTitle:title
+                                                                          action:NULL
+                                                                   keyEquivalent:@""];
         self->_setEnabled = jenabled;
         [self _setEnabled];
         
@@ -146,7 +134,10 @@ static inline NSString* getNSString(JNIEnv* env, jstring jstring)
         }
         
         NSString *shortcut = @"";
-        self->item = [[NSMenuItem allocWithZone:[NSMenu menuZone]] initWithTitle:getNSString(env, jtitle) action:@selector(action:) keyEquivalent:shortcut];
+        NSString *title = [GlassHelper nsStringWithJavaString:jtitle withEnv:env];
+        self->item = [[NSMenuItem allocWithZone:[NSMenu menuZone]] initWithTitle:title
+                                                                          action:@selector(action:)
+                                                                   keyEquivalent:shortcut];
         if (jshortcut != '\0')
         {
             self->_setShortcutShortcut = jshortcut;
@@ -278,7 +269,7 @@ static inline NSString* getNSString(JNIEnv* env, jstring jstring)
 - (void)_setTitle
 {
     GET_MAIN_JENV;
-    [self->item setTitle:getNSString(env, self->_setTitle)];
+    [self->item setTitle:[GlassHelper nsStringWithJavaString:self->_setTitle withEnv:env]];
 }
 
 - (void)_setShortcut

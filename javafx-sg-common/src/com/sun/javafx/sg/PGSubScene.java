@@ -34,4 +34,6 @@ public interface PGSubScene extends PGNode {
     public void setCamera(PGCamera camera);
     public void setRoot(PGNode root);
     public void setDepthBuffer(boolean depthBuffer);
+    public Object[] getLights();
+    public void setLights(Object object[]);
 }

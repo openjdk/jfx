@@ -43,6 +43,7 @@
 #import "GlassPasteboard.h"
 #import "GlassHelper.h"
 #import "GlassStatics.h"
+#import "GlassPasteboard.h"
 
 //#define VERBOSE
 #ifndef VERBOSE
@@ -791,6 +792,7 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
     {
         case com_sun_glass_events_DndEvent_ENTER:
             DNDLOG("com_sun_glass_events_DndEvent_ENTER");
+            copyToDragPasteboardIfNeeded(info);
             mask = (*env)->CallIntMethod(env, self->jView, jViewNotifyDragEnter, x, y, xAbs, yAbs, recommendedAction);
             [GlassDragSource setMask:mask];
             break;
@@ -803,12 +805,6 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
             DNDLOG("com_sun_glass_events_DndEvent_PERFORM");
             mask = (*env)->CallIntMethod(env, self->jView, jViewNotifyDragDrop, x, y, xAbs, yAbs, recommendedAction);
             [GlassDragSource setMask:mask];
-            break;
-        case com_sun_glass_events_DndEvent_END:
-            //TODO: this doesn't belong here. END is for drag source.
-            DNDLOG("com_sun_glass_events_DndEvent_END");
-            (*env)->CallVoidMethod(env, self->jView, jViewNotifyDragEnd, recommendedAction);
-            [GlassDragSource setMask:com_sun_glass_ui_Clipboard_ACTION_NONE];
             break;
         case com_sun_glass_events_DndEvent_EXIT:
             DNDLOG("com_sun_glass_events_DndEvent_EXIT");
@@ -930,6 +926,13 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
         [image release];
     }
     self->dragOperation = NSDragOperationNone;
+}
+
+- (void)draggingEnded
+{
+    GET_MAIN_JENV;
+    (*env)->CallVoidMethod(env, self->jView, jViewNotifyDragEnd,  [GlassDragSource getMask]);
+    GLASS_CHECK_EXCEPTION(env);
 }
 
 - (BOOL)suppressMouseEnterExitOnMouseDown

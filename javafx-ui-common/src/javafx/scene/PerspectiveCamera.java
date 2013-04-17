@@ -27,7 +27,8 @@ package javafx.scene;
 
 import com.sun.javafx.geom.PickRay;
 import com.sun.javafx.geom.Vec3d;
-import com.sun.javafx.geom.transform.BaseTransform;
+import com.sun.javafx.geom.transform.Affine3D;
+import com.sun.javafx.geom.transform.GeneralTransform3D;
 import com.sun.javafx.scene.DirtyBits;
 import com.sun.javafx.sg.PGNode;
 import com.sun.javafx.sg.PGPerspectiveCamera;
@@ -56,6 +57,15 @@ import javafx.beans.property.SimpleDoubleProperty;
 public  class PerspectiveCamera extends Camera {   
 
     private boolean fixedEyePosition = false;
+
+    private static final Affine3D LOOK_AT_TX = new Affine3D();
+    static {
+        // Compute the lookAt matrix such that the zero point ends up at
+        // the z=-1 plane.
+        LOOK_AT_TX.setToTranslation(0, 0, -1);
+        // Y-axis pointing down
+        LOOK_AT_TX.rotate(Math.PI, 1, 0, 0);
+    }
 
     /**
      * Specifies the field of view angle of the camera's projection plane,
@@ -134,16 +144,14 @@ public  class PerspectiveCamera extends Camera {
     }
 
     @Override
-    final PickRay computePickRay(double localX, double localY,
-                           double viewWidth, double viewHeight,
-                           PickRay pickRay) {
+    final PickRay computePickRay(double localX, double localY, PickRay pickRay) {
         if (pickRay == null) {
             pickRay = new PickRay();
         }
 
         Vec3d direction = pickRay.getDirectionNoClone();
-        double halfViewWidth = viewWidth / 2.0;
-        double halfViewHeight = viewHeight / 2.0;
+        double halfViewWidth = getViewWidth() / 2.0;
+        double halfViewHeight = getViewHeight() / 2.0;
         double halfViewDim = isVerticalFieldOfView() ? halfViewHeight: halfViewWidth;
         // Distance to projection plane from eye
         double distanceZ = halfViewDim / Math.tan(Math.toRadians(getFieldOfView()/2.0));
@@ -201,6 +209,42 @@ public  class PerspectiveCamera extends Camera {
         if (impl_isDirty(DirtyBits.NODE_CAMERA)) {
             pgPerspectiveCamera.setVerticalFieldOfView(isVerticalFieldOfView());
             pgPerspectiveCamera.setFieldOfView((float) getFieldOfView());
+        }
+    }
+
+    @Override
+    void computeProjectionTransform(GeneralTransform3D proj) {
+        proj.perspective(isVerticalFieldOfView(), Math.toRadians(getFieldOfView()),
+                getViewWidth() / getViewHeight(), getNearClip(), getFarClip());
+    }
+
+    @Override
+    protected void computeViewTransform(Affine3D view) {
+
+        // In the case of fixedEyePosition the camera position is (0,0,0) in
+        // local coord. of the camera node. In non-fixed eye case, the camera
+        // position is (w/2, h/2, h/2/tan) in local coord. of the camera.
+        if (isFixedEyePosition()) {
+            view.setTransform(LOOK_AT_TX);
+        } else {
+            final double viewWidth = getViewWidth();
+            final double viewHeight = getViewHeight();
+            final boolean verticalFOV = isVerticalFieldOfView();
+
+            final double aspect = viewWidth / viewHeight;
+            final double tanOfHalfFOV = Math.tan(Math.toRadians(getFieldOfView()) / 2.0);
+
+            // Translate the zero point to the upper-left corner
+            final double xOffset = -tanOfHalfFOV * (verticalFOV ? aspect : 1.0);
+            final double yOffset = tanOfHalfFOV * (verticalFOV ? 1.0 : 1.0 / aspect);
+
+            // Compute scale factor as 2/viewport.width or height, after adjusting for fov
+            final double scale = 2.0 * tanOfHalfFOV /
+                    (verticalFOV ? viewHeight : viewWidth);
+
+            view.setToTranslation(xOffset, yOffset, 0.0);
+            view.concatenate(LOOK_AT_TX);
+            view.scale(scale, scale, scale);
         }
     }
 }

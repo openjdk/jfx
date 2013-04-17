@@ -41,6 +41,7 @@ import java.util.concurrent.*
  *  - Check all of the native flags. We're adding weight to some libs that don't need it, and so forth.
  *
  * Additional projects to work on as we go:
+ *  - Add "developer debug". This is where the natives do not have debug symbols, but the Java code does
  *  - The genVSproperties.bat doesn't find the directory where RC.exe lives. So it is hard coded. Might be a problem.
  *  - special tasks for common needs, such as:
  *      - updating copyright headers
@@ -51,7 +52,6 @@ import java.util.concurrent.*
  *  - sqe testing
  *  - API change check
  *  - Pushing results to a repo?
- *  - partial builds for compileXXX shaders isn't working until after 2 compiles
  *  - ServiceWithSecurityManagerTest fails to complete when run from gradle.
  *  - Integrate Parfait reports for C code
  *  - FXML Project tests are not running
@@ -92,6 +92,18 @@ void defineProperty(String name, Properties props, String defaultValue) {
     }
 }
 
+/**
+ * Converts the simple name of a library to the full name. For example, on mac
+ * the simple name "glass" becomes "libglass.dylib". On Linux or Solaris, it would
+ * be "libglass.so", and on Windows "glass.dll".
+ *
+ * @param name The simple name of the library
+ * @return The name of the shared library file
+ */
+String library(String name) {
+    return "${IS_WINDOWS ? '' : 'lib'}$name.${IS_WINDOWS ? 'dll' : IS_MAC ? 'dylib' : 'so'}"
+}
+
 /******************************************************************************
  *                                                                            *
  *                   Definition of project properties                         *
@@ -115,6 +127,12 @@ ext.IS_64 = OS_ARCH.toLowerCase().contains("64");
 ext.IS_MAC = OS_NAME.contains("mac") || OS_NAME.contains("darwin");
 ext.IS_WINDOWS = OS_NAME.contains("windows");
 ext.IS_LINUX = OS_NAME.contains("linux");
+
+// TODO I want to determine whether to build 64-bit or 32-bit not by the OS but by the version
+// of Java being used, and potentially also based on some user specified flag. Specifically,
+// on 64-bit windows or 64-bit linux I want to be able to compile 32-bit versions of everything.
+// This implies that my various native intermediate directories need to be more than just
+// linux- mac- or win-, but also need to include 32 or 64 bit markers.
 
 // CompileTarget defines what we are trying to compile to. By default the CompileTarget
 // will be the same as the platform running this build -- that is, Mac, Windows, or Linux.
@@ -152,40 +170,32 @@ enum CompileTarget {
 if (hasProperty("COMPILE_TARGET")) {
     // Convert from whatever String was assigned to COMPILE_TARGET to an object
     for (CompileTarget target : CompileTarget.values()) {
-        if (target.name.equals(COMPILE_TARGET)) {
+        if (target.name.equals(COMPILE_TARGET.toLowerCase())) {
             COMPILE_TARGET = target;
             break;
         }
     }
-    // Sanity checking
-    if (COMPILE_TARGET == CompileTarget.MAC && !IS_MAC) throw new Exception("Must be on MacOSX to compile for MacOSX");
-    if (COMPILE_TARGET == CompileTarget.LINUX && !IS_LINUX) throw new Exception("Must be on Linux to compile for Linux");
-    if (COMPILE_TARGET == CompileTarget.WIN && !IS_WINDOWS) throw new Exception("Must be on Windows to compile for Windows");
-    if (COMPILE_TARGET == CompileTarget.IOS && !IS_MAC) throw new Exception("Must be on MacOSX to cross compile for iOS");
-    if (COMPILE_TARGET == CompileTarget.ARM_HF && !IS_LINUX) throw new Exception("Must be on Linux x86 to cross compile for ARM Hard Float");
-    if (COMPILE_TARGET == CompileTarget.ARM_SF && !IS_LINUX) throw new Exception("Must be on Linux x86 to cross compile for ARM Soft Float");
 } else {
     // Default to the right compile target for the platform
     ext.COMPILE_TARGET = IS_MAC ? CompileTarget.MAC : IS_WINDOWS ? CompileTarget.WIN : IS_LINUX ? CompileTarget.LINUX : null;
-    // Sanity check that we're not building from a platform we didn't anticipate
-    if (COMPILE_TARGET == null) throw new Exception("Unable to determine compilation platform, or COMPILE_TARGET!");
 }
 
-// It turns out that the type of library to create is related to the platform you compile from
-// because on Mac you can only target platforms supporting .dylib and on Linux .so
-ext.LIBRARY_EXT = IS_WINDOWS ? "dll" : IS_MAC ? "dylib" : "so"
+// TODO Need to add a "PIPELINE" property so that when compiling for ARM (for example) I can choose
+// between building for the X11 and the EGLFB pipelines. Or, I need to be able to compile both and
+// then just choose which to include in the final sdk based on a flag?
+
+// The name of the glass platform to build, one of "gkt", "ios", "lens", "mac", "win", or "android"
+// TODO Might also be different based on X11 or EGLFB?
 ext.GLASS_PLATFORM = COMPILE_TARGET.glassName;
 
 // Get the JDK_HOME automatically based on the version of Java used to execute gradle. Or, if specified,
 // use a user supplied JDK_HOME, BINARY_STUB, JAVAC, and/or JAVAH, all of which may be specified
-// independently (or we'll try to get the right one based on other supplied info). There is a really
-// odd situation on windows where you can have two JRE's on the same system(!!!):
+// independently (or we'll try to get the right one based on other supplied info). Sometimes the
+// JRE might be the thing that is being used instead of the JRE embedded in the JDK, such as:
 //    c:\Program Files (x86)\Java\jdk1.8.0\jre
 //    c:\Program Files (x86)\Java\jre8\
 // Because of this, you may sometimes get the jdk's JRE (in which case the logic we used to have here
 // was correct and consistent with all other platforms), or it might be the standalone JRE (for the love!).
-// So what we have to do is add some special windows-only logic here to figure out the JDK based on the
-// wrong JRE, if we happen to have gotten the wrong JRE.
 ext.JAVA_HOME = System.getProperty("java.home");
 def javaHomeFile = file(JAVA_HOME);
 defineProperty("JDK_HOME",
@@ -194,12 +204,19 @@ defineProperty("JDK_HOME",
         javaHomeFile.name.startsWith("jre") ?
         new File(javaHomeFile.getParent(), "jdk1.${javaHomeFile.name.substring(3)}.0").toString() :
         JAVA_HOME); // we have to bail and set it to something and this is as good as any!
-defineProperty("JAVA", "$JDK_HOME/bin/java");
-defineProperty("JAVAC", "$JDK_HOME/bin/javac");
-defineProperty("JAVAH", "$JDK_HOME/bin/javah");
-defineProperty("JAVADOC", "$JDK_HOME/bin/javadoc");
+defineProperty("JAVA", "$JDK_HOME/bin/java${IS_WINDOWS ? '.exe' : ''}");
+defineProperty("JAVAC", "$JDK_HOME/bin/javac${IS_WINDOWS ? '.exe' : ''}");
+defineProperty("JAVAH", "$JDK_HOME/bin/javah${IS_WINDOWS ? '.exe' : ''}");
+defineProperty("JAVADOC", "$JDK_HOME/bin/javadoc${IS_WINDOWS ? '.exe' : ''}");
 defineProperty("JDK_DOCS", "http://download.oracle.com/javase/7/docs/api");
 defineProperty("BINARY_STUB", "file://$JDK_HOME/jre/lib/ext/jfxrt.jar");
+
+// COMPILE_WEBKIT specifies whether to build all of webkit. COMPILE_GSTREAMER
+// specifies whether to build GStreamer.
+defineProperty("COMPILE_WEBKIT", "false")
+defineProperty("COMPILE_GSTREAMER", "false")
+COMPILE_WEBKIT = Boolean.parseBoolean(COMPILE_WEBKIT)
+COMPILE_GSTREAMER = Boolean.parseBoolean(COMPILE_GSTREAMER)
 
 // Define the SWT.jar that we are going to have to download during the build process based
 // on what platform we are compiling from (not based on our target). SWT in particular is
@@ -210,13 +227,23 @@ ext.SWT_FILE_NAME = IS_MAC ? "org.eclipse.swt.cocoa.macosx.x86_64_3.7.2.v3740f.j
     IS_LINUX && IS_64 ? "org.eclipse.swt.gtk.linux.x86_64_3.7.2.v3740f.jar" :
     IS_LINUX && !IS_64 ? "org.eclipse.swt.gtk.linux.x86_3.7.2.v3740f.jar" : "";
 
-// Specify the build configuration (Release or Debug) and whether we're checking warnings during compilation (LINT)
+// Specify the build configuration (Release or Debug)
 defineProperty("CONF", "Release");
-defineProperty("LINT", "none");
-defineProperty("DOC_LINT", "none");
 ext.IS_DEBUG = CONF == "Debug";
+
+// Defines the compiler warning levels to use. If empty, then no warnings are generated. If
+// not empty, then the expected syntax is as a space or comma separated list of names, such
+// as defined in the javac documentation.
+defineProperty("LINT", "none");
 ext.IS_LINT = LINT != "none";
+
+defineProperty("DOC_LINT", "none");
 ext.IS_DOC_LINT = DOC_LINT != "none";
+
+// Specifies whether to use the "useDepend" option when compiling Java sources
+defineProperty("USE_DEPEND", "false");
+ext.USE_DEPEND = Boolean.parseBoolean(USE_DEPEND);
+
 // Define the number of threads to use when compiling (specifically for native compilation)
 defineProperty("NUM_COMPILE_THREADS", "${Runtime.runtime.availableProcessors()}");
 
@@ -244,7 +271,66 @@ defineProperty("RAW_VERSION", "8.0.0");
 defineProperty("RELEASE_NAME", "8.0");
 defineProperty("RELEASE_MILESTONE", "ea");
 
-// Log some of the settings we've determined. We could log more here, it doesn't really hurt.
+/******************************************************************************
+ *                                                                            *
+ *                          Build Setup Sanity Checks                         *
+ *                                                                            *
+ *  Here we do a variety of checks so that if the version of Java you are     *
+ *  building with is misconfigured, or you are using the wrong version of     *
+ *  gradle, etc you will get some kind of helpful error / warning message     *
+ *                                                                            *
+ *****************************************************************************/
+
+// Verify that the architecture & OS are supported configurations
+if (!IS_MAC && !IS_WINDOWS && !IS_LINUX) logger.error("Unsupported build OS ${OS_NAME}")
+if ((IS_WINDOWS && OS_ARCH != "i386" && OS_ARCH != "amd64" && OS_ARCH != "x86") || (IS_MAC && OS_ARCH != "x86_64")) {
+    // TODO what are appropriate linux arch values?
+    throw new Exception("Unknown and unsupported build architecture: $OS_ARCH")
+}
+
+// Sanity checking
+if (COMPILE_TARGET == CompileTarget.MAC && !IS_MAC) throw new Exception("Must be on MacOSX to compile for MacOSX");
+if (COMPILE_TARGET == CompileTarget.LINUX && !IS_LINUX) throw new Exception("Must be on Linux to compile for Linux");
+if (COMPILE_TARGET == CompileTarget.WIN && !IS_WINDOWS) throw new Exception("Must be on Windows to compile for Windows");
+if (COMPILE_TARGET == CompileTarget.IOS && !IS_MAC) throw new Exception("Must be on MacOSX to cross compile for iOS");
+if (COMPILE_TARGET == CompileTarget.ARM_HF && !IS_LINUX) throw new Exception("Must be on Linux x86 to cross compile for ARM Hard Float");
+if (COMPILE_TARGET == CompileTarget.ARM_VFP && !IS_LINUX) throw new Exception("Must be on Linux x86 to cross compile for ARM Soft Float");
+
+// Sanity check that we're not building from a platform we didn't anticipate
+if (COMPILE_TARGET == null) throw new Exception("Unable to determine compilation platform, or COMPILE_TARGET!");
+
+// Make sure JAVA_HOME/bin/java exists
+defineProperty("JAVA", "$JDK_HOME/bin/java");
+if (!file("$JAVA").exists()) throw new Exception("Missing or incorrect path to 'java': '$JAVA'. Perhaps bad JDK_HOME? $JDK_HOME")
+if (!file("$JAVAC").exists()) throw new Exception("Missing or incorrect path to 'javac': '$JAVAC'. Perhaps bad JDK_HOME? $JDK_HOME")
+if (!file("$JAVAH").exists()) throw new Exception("Missing or incorrect path to 'javah': '$JAVAH'. Perhaps bad JDK_HOME? $JDK_HOME")
+if (!file("$JAVADOC").exists()) throw new Exception("Missing or incorrect path to 'javadoc': '$JAVADOC'. Perhaps bad JDK_HOME? $JDK_HOME")
+if (!file("$BINARY_STUB").exists()) logger.warn("Missing or incorrect path to 'jfxrt.jar': '$BINARY_STUB'. Perhaps bad JDK_HOME? $JDK_HOME")
+
+// Verify that CONF is something useful
+if (CONF != "Release" && CONF != "Debug") logger.warn("Unknown configuration CONF='$CONF'. Treating as 'Release'");
+
+// If the number of compile threads is less than 1 then we have a problem!
+if (Integer.parseInt(NUM_COMPILE_THREADS.toString()) < 1) {
+    logger.warn("NUM_COMPILE_THREADS was specified as '$NUM_COMPILE_THREADS' which is less than the minimum value of 1. " +
+            "Building with a value of 1 instead.")
+    NUM_COMPILE_THREADS = 1;
+}
+
+// Check that Gradle 1.4 is in use. We haven't tried any other versions.
+if (gradle.gradleVersion != "1.4") {
+    logger.warn("Unsupported gradle version $gradle.gradleVersion in use. Only 1.4 is supported")
+}
+
+/******************************************************************************
+ *                                                                            *
+ *                      Logging of Properties and Settings                    *
+ *                                                                            *
+ *  Log some of the settings we've determined. We could log more here, it     *
+ *  doesn't really hurt.                                                      *
+ *                                                                            *
+ *****************************************************************************/
+
 logger.info("OS_NAME: $OS_NAME");
 logger.info("OS_ARCH: $OS_ARCH");
 logger.info("JAVA_HOME: $JAVA_HOME");
@@ -262,10 +348,6 @@ logger.info("RELEASE_MILESTONE: $RELEASE_MILESTONE");
  *                                                                            *
  *                Definition of Native Code Compilation Tasks                 *
  *                                                                            *
- *  Three custom tasks are defined here to aid in compiling native code. This *
- *  approach removes the need to use make files for any of the projects under *
- *  our control (webkit and gstreamer both still require 'make' to build).    *
- *                                                                            *
  *    - JavaHeaderTask is used to run javah. The JAVAH property will point at *
  *      the version of javah to be used (i.e.: a path to javah)               *
  *    - CCTask compiles native code. Specifically it will compile .m, .c,     *
@@ -278,291 +360,27 @@ logger.info("RELEASE_MILESTONE: $RELEASE_MILESTONE");
  *                                                                            *
  *****************************************************************************/
 
-class JavaHeaderTask extends DefaultTask {
-    @OutputDirectory File output;
-    @InputDirectory File source;
-    FileCollection classpath;
-    private final PatternFilterable patternSet = new PatternSet();
-
-    public JavaHeaderTask include(Iterable includes) {
-        patternSet.include(includes);
-        return this;
-    }
-
-    public JavaHeaderTask include(String... includes) {
-        patternSet.include(includes);
-        return this;
-    }
-
-    public JavaHeaderTask exclude(Iterable excludes) {
-        patternSet.exclude(excludes);
-        return this;
-    }
-
-    @TaskAction void runJavaH() {
-        // For each .java file we need to figure out what class
-        // the .java file belongs in and convert to a class name.
-        List classNames = [];
-        FileTree files = project.files(source).getAsFileTree().matching(patternSet);
-        files.visit({ fileTreeElement ->
-            if (!fileTreeElement.isDirectory() && fileTreeElement.getName().endsWith(".class")) {
-                String path = fileTreeElement.getPath();
-                String className = path.substring(0, path.length() - 6).replace("/", ".");
-                boolean skip = false;
-                int dollar = className.lastIndexOf('$');
-                if (dollar > 0) {
-                    String lastPart = className.substring(dollar + 1);
-                    skip = lastPart.matches("[0123456789]*");
-                }
-                if (!skip) classNames.add(className)
-            }
-        })
-        // Execute javah
-        project.exec({
-            commandLine("$project.JAVAH", "-J-Djava.ext.dirs=", "-d", "$output", "-classpath", "${classpath.asPath}");
-            args(classNames);
-        });
-    }
-}
-
-class NativeCompileTask extends DefaultTask {
-    @Optional String matches; // regex for matching input files
-    List<String> params = new ArrayList<String>();
-    List sourceRoots = new ArrayList();
-    @OutputDirectory File output;
-    private final PatternFilterable patternSet = new PatternSet();
-
-    @InputFiles public void setSource(Object source) {
-        sourceRoots.clear();
-        sourceRoots.add(source);
-    }
-
-    public NativeCompileTask source(Object... sources) {
-        for (Object source : sources) {
-            sourceRoots.add(source);
-        }
-        return this;
-    }
-
-    public NativeCompileTask include(String... includes) {
-        patternSet.include(includes);
-        return this;
-    }
-
-    public NativeCompileTask include(Iterable<String> includes) {
-        patternSet.include(includes);
-        return this;
-    }
-
-    @TaskAction void compile() {
-        // Get the existing native-dependencies file from build/dependency-cache and load its contents into
-        // memory. If the file doesn't exist, then we will just have an empty dependency map.
-        final Map<String, Map> dependencies = new ConcurrentHashMap<>();
-        final File nativeDependenciesFile = project.file("$project.buildDir/dependency-cache/native-dependencies");
-        if (nativeDependenciesFile.exists()) {
-            nativeDependenciesFile.splitEachLine("\t", { strings ->
-                dependencies.put(strings[0], ["DATE":Long.parseLong(strings[1]), "SIZE":Long.parseLong(strings[2])]);
-            });
-        }
-
-        project.mkdir(output);
-        // Combine the different source roots into a single FileCollection based on all files in each source root
-        def allFiles = [];
-        sourceRoots.each {
-            println project.file(it).toString()
-            allFiles += project.file(it).listFiles()
-        }
-        def source = project.files(allFiles);
-        final Set<File> files = matches == null ? new HashSet<File>(source.files) : source.filter{it.name.matches(matches)}.files;
-        boolean shouldCompileAnyway = false;
-        final boolean forceCompile = shouldCompileAnyway;
-        final ExecutorService executor = Executors.newFixedThreadPool(Integer.parseInt(project.NUM_COMPILE_THREADS.toString()));
-        final CountDownLatch latch = new CountDownLatch(files.size());
-        List futures = new ArrayList<Future>();
-        files.each { File sourceFile ->
-            futures.add(executor.submit(new Runnable() {
-                @Override public void run() {
-                    try {
-                        final File outputFile = outputFile(sourceFile);
-                        // If the source file is not listed in dependencies, then we must compile it.
-                        // If the target file(s) (.rc or .cur in the case of resources, .pdb or .obj for sources)
-                        //    do not exist, then compile.
-                        // If the source file date or size differs from dependencies, then compile it.
-                        final Map sourceFileData = dependencies.get(sourceFile.toString());
-                        if (forceCompile || sourceFileData == null || !outputFile.exists() ||
-                                !sourceFileData["DATE"].equals(sourceFile.lastModified()) ||
-                                !sourceFileData["SIZE"].equals(sourceFile.length()))
-                        {
-                            doCompile(sourceFile, outputFile)
-                        }
-                        dependencies.put(sourceFile.toString(), ["DATE":sourceFile.lastModified(), "SIZE":sourceFile.length()]);
-                    } finally {
-                        latch.countDown();
-                    }
-                }
-            }));
-        }
-        latch.await();
-        // Looking for whether an exception occurred while executing any of the futures.
-        // By calling "get()" on each future an exception will be thrown if one had occurred
-        // on the background thread.
-        futures.each {it.get();}
-
-        // Update the native-dependencies file
-        if (nativeDependenciesFile.exists()) nativeDependenciesFile.delete();
-        nativeDependenciesFile.getParentFile().mkdirs();
-        nativeDependenciesFile.createNewFile();
-        dependencies.each { key, value ->
-            nativeDependenciesFile << key << "\t" << value["DATE"] << "\t" << value["SIZE"] << "\n";
-        }
-    }
-
-    protected void doCompile(File sourceFile, File outputFile){ }
-    protected File outputFile(File sourceFile) { return null; }
-}
-
-class CompileResourceTask extends NativeCompileTask {
-    protected File outputFile(File sourceFile) {
-        final String outFileName = sourceFile.getName().substring(0, sourceFile.getName().lastIndexOf("."));
-        return new File("$output/${outFileName}.res");
-    }
-
-    protected void doCompile(File sourceFile, File outputFile){
-        project.exec({
-            commandLine("$project.RC", "/nologo", "/fo$outputFile", "$sourceFile");
-            environment(project.WINDOWS_NATIVE_COMPILE_ENVIRONMENT);
-        });
-    }
-}
-
-class CompileHLSLTask extends NativeCompileTask {
-    protected File outputFile(File sourceFile) {
-        new File("$output/${sourceFile.name.replace('.hlsl', '.obj')}");
-    }
-
-    protected void doCompile(File sourceFile, File outputFile){
-        project.exec({
-            commandLine = ["$project.FXC", "/nologo", "/T", "ps_3_0", "/Fo", "$outputFile", "$sourceFile"]
-            environment(project.WINDOWS_NATIVE_COMPILE_ENVIRONMENT);
-        });
-    }
-}
-
-class CCTask extends NativeCompileTask {
-    @Optional String compiler;
-    @Optional List<String> linkerOptions = new ArrayList<String>();
-    @Optional @InputDirectory File headers;
-    @Optional Closure eachOutputFile; // will be given a File and must return a File
-    @Optional boolean exe = false;
-
-    protected File outputFile(File sourceFile) {
-        final String outFileName = sourceFile.getName().substring(0, sourceFile.getName().lastIndexOf("."));
-        new File("$output/${outFileName}.obj");
-    }
-
-    protected void doCompile(File sourceFile, File outputFile) {
-        if (eachOutputFile != null) {
-            outputFile = eachOutputFile(outputFile);
-        }
-
-        // or compile sources using CC
-        final int lastDot = outputFile.name.lastIndexOf(".");
-        final File pdbFile = new File("$output/${lastDot > 0 ? outputFile.name.substring(0, lastDot) + '.pdb' : outputFile.name + '.pdb'}");
-
-        // TODO the PDB file is never being built -- maybe because it is only built during
-        // debug builds, otherwise that flag is ignored "/Fd" or "-Fd"
-        project.exec({
-            commandLine("${compiler == null ? project.CC : compiler}");
-            if (headers != null) args("-I$headers");
-
-            // Add the source roots in as include directories
-            sourceRoots.each { root ->
-                final File file = root instanceof File ? (File) root : project.file(root)
-                args("-I$file");
-            }
-
-            // Add in any additional compilation params
-            if (params != null) {
-                // A little hack. Only use the -std=c99 flag if compiling .c or .m
-                if (sourceFile.name.endsWith(".cpp") || sourceFile.name.endsWith(".cc")) {
-                    def stripped = params;
-                    stripped.remove("-std=c99");
-                    args(stripped)
-                } else {
-                    args(params)
-                }
-            };
-
-            // Add the name of the source file to compile
-            if (project.IS_WINDOWS) {
-                if (exe) {
-                    final File exeFile = new File("$output/${lastDot > 0 ? outputFile.name.substring(0, lastDot) + '.exe' : outputFile.name + '.exe'}");
-                    args(/*"/Fd$pdbFile",*/ "/Fo$outputFile", "/Fe$exeFile", "$sourceFile")
-                } else {
-                    args(/*"/Fd$pdbFile",*/ "/Fo$outputFile", "$sourceFile");
-                }
-            } else {
-                args("-Fd$pdbFile", "-o", "$outputFile", "$sourceFile");
-            }
-
-            // Add any optional linker options -- used now rarely but can be
-            // used for any cc task which isn't going to be followed by a
-            // link task
-            if (linkerOptions != null && !linkerOptions.isEmpty()) {
-                args(linkerOptions);
-            }
-
-            if (project.IS_WINDOWS){
-                environment(project.WINDOWS_NATIVE_COMPILE_ENVIRONMENT);
-            }
-        });
-    }
-}
-
-class LinkTask extends DefaultTask {
-    List<String> linkParams = new ArrayList<String>();
-    @InputDirectory File objectDir;
-    @OutputFile File lib;
-    @TaskAction void compile() {
-        // Link & generate the library (.dll, .so, .dylib)
-        lib.getParentFile().mkdirs();
-        project.exec({
-            commandLine("$project.LINK");
-            args(objectDir.listFiles());
-            if (project.IS_WINDOWS) {
-                args("/out:$lib");
-            } else {
-                args("-o", "$lib");
-            }
-            if (project.IS_DEBUG && !project.IS_WINDOWS) args("-g");
-            if (linkParams != null) args(linkParams);
-            if (project.IS_WINDOWS){
-                final String libPath = lib.toString();
-                final String libPrefix = libPath.substring(0, libPath.lastIndexOf("."))
-                args("/pdb:${libPrefix}.pdb",
-                    "/map:${libPrefix}.map");
-                environment(project.WINDOWS_NATIVE_COMPILE_ENVIRONMENT);
-            }
-        });
-    }
-}
+// Save a reference to the buildSrc.jar file because we need it for actually
+// compiling things, not just for the sake of this build script
+// (such as generating the builders, JSL files, etc)
+ext.BUILD_SRC = rootProject.files("buildSrc/build/libs/buildSrc.jar");
 
 /**
-* Convenience lambda for creating javah, cc, link, and "native" tasks in the given project. These
+* Convenience method for creating javah, cc, link, and "native" tasks in the given project. These
 * tasks are parameterized by name, so that we can produce, for example, javahGlass, ccGlass, etc
 * named tasks.
 */
 void addNative(Project project, String name) {
     def javahTask = project.task("javah$name", type: JavaHeaderTask, dependsOn: project.classes, group: "Build") {
         description = "Generates JNI Headers for $name"
-        source = project.sourceSets.main.output.classesDir
+        source project.sourceSets.main.output.classesDir
         classpath = project.files(project.sourceSets.main.output.classesDir, project.files(project.BINARY_STUB))
-        output = project.file("$project.buildDir/headers/$name")
+        output = project.file("$project.buildDir/generated-src/headers/$name")
     }
     def ccTask = project.task("cc$name", type: CCTask, dependsOn: javahTask, group: "Build") {
         description = "Compiles native sources for $name"
         matches = ".*\\.c|.*\\.cpp|.*\\.m|.*\\.cc"
-        headers = project.file("$project.buildDir/headers/$name")
+        headers = project.file("$project.buildDir/generated-src/headers/$name")
         output(file("$project.buildDir/native/$name"))
     }
     def linkTask = project.task("link$name", type: LinkTask, dependsOn: ccTask, group: "Build") {
@@ -581,65 +399,73 @@ void addNative(Project project, String name) {
         description = "Generates JNI headers, compiles, and builds native dynamic library for $name"
     }
     project.assemble.dependsOn("native$name")
-    project.task("cleanNative$name", group: "Build") {
-        project.delete("$project.buildDir/headers")
+    project.task("cleanNative$name", group: "Build") << {
+        project.delete("$project.buildDir/generated-src/headers")
         project.delete("$project.buildDir/native")
-        //project.delete("$project.buildDir/libs/${COMPILE_TARGET.name}")
+        project.delete("$project.buildDir/libs/${COMPILE_TARGET.name}")
     }
 }
 
-/******************************************************************************
+void addJSL(Project project, String name, Closure compile) {
+    def lowerName = name.toLowerCase()
+
+    def compileCompilers = project.task("compile${name}Compilers", type: JavaCompile, dependsOn: project.compileJava) {
+        description = "Compile the $name JSL Compilers"
+        classpath = project.files(project.sourceSets.main.output.classesDir) +
+                rootProject.BUILD_SRC +
+                project.configurations.antlr3
+        source = [project.file("src/main/jsl-$lowerName")]
+        destinationDir = project.file("$project.buildDir/classes/jsl-compilers/$lowerName")
+    }
+
+    def generateShaders = project.task("generate${name}Shaders", dependsOn: compileCompilers) {
+        description = "Generate $name shaders from JSL"
+        def sourceDir = project.file("src/main/jsl-$lowerName")
+        def destinationDir = project.file("$project.buildDir/generated-src/jsl-$lowerName")
+        inputs.dir sourceDir
+        outputs.dir destinationDir
+        doLast {
+            compile(sourceDir, destinationDir)
+        }
+    }
+
+    project.task("compile${name}JavaShaders", type: JavaCompile, dependsOn: generateShaders) {
+        description = "Compile the Java $name JSL shaders"
+        classpath = project.files(project.sourceSets.main.output.classesDir) + rootProject.BUILD_SRC
+        source = [project.file("$project.buildDir/generated-src/jsl-$lowerName")]
+        destinationDir = project.file("$project.buildDir/classes/jsl-$lowerName")
+    }
+
+    def compileHLSLShaders = project.task("compile${name}HLSLShaders", dependsOn: generateShaders, type: CompileHLSLTask) {
+        enabled = IS_WINDOWS
+        description = "Compile $name HLSL files into .obj files"
+        matches = ".*\\.hlsl"
+        output project.file("$project.buildDir/hlsl") // TODO!!
+    }
+
+    project.task("process${name}Shaders", dependsOn: [generateShaders, compileHLSLShaders], type: Copy, description: "Copy hlsl / frag shaders to build/resources/jsl-$lowerName") {
+        from("$project.buildDir/hlsl") { // TODO!!
+            include "**/*.obj"
+        }
+        from("$project.buildDir/generated-src/jsl-$lowerName") {
+            include("**/*.frag")
+        }
+        into "$project.buildDir/resources/jsl-$lowerName"
+    }
+}
+
+/*****************************************************************************
 *        Project definitions (dependencies, etc)                             *
 *****************************************************************************/
 
 allprojects {
     // We want to configure all projects as java projects and use the same compile settings
     // etc, except for the root project which we just want to ignore
-    if (project == rootProject || project.name == "deployment") return
+    if (project == rootProject || project.name == "media" || project.name == "web") return
     // All of our projects are java projects
     apply plugin: "java"
     sourceCompatibility = 1.7
-    // The following block is a workaround for the fact that presently Gradle
-    // can't set the -XDignore.symbol.file flag, because it appears that the
-    // javac API is lacking support for it. So what we'll do is find any Compile
-    // task and manually provide the options necessary to fire up the
-    // compiler with the right settings.
-    //
-    // Also, we need to remove jfxrt.jar from the ext classpath (if it is there)
-    // and instead each module that depends on closed bits is going to need to
-    // add BINARY_STUB to its list of dependencies.
-    tasks.withType(Compile) { compile ->
-        // Defer actually creating builder-src until compilation
-        doFirst {
-            mkdir("$buildDir/builder-src");
-        }
-        // It looks like we have to use ant to compile instead of the built-in gradle
-        // compiler stuff because otherwise it won't compile on CYGWIN
-        // TODO need to file issue with Gradle
-        compile.options.useAnt = true
-        compile.options.debug = true // we always generate debugging info in the class files
-        compile.options.debugOptions.debugLevel = IS_DEBUG ? "source,lines,vars" : "source,lines"
-        compile.options.fork = true
-        compile.options.forkOptions.executable = JAVAC
-        compile.options.warnings = IS_LINT
-        // Somewhat dangerous in case there is a java source set other than "test" or "stub" or "main"!
-        // Note that the compileFooJava task is automatically created whenever a source set is
-        // defined. So the "test" source set automatically creates a "compileTestJava" task (among others).
-        if (name == "compileTestJava") {
-            compile.options.compilerArgs = ["-Djava.ext.dirs=", "-XDignore.symbol.file", "-encoding","UTF-8"]
-            classpath = sourceSets.test.compileClasspath + rootProject.files(rootProject.BINARY_STUB)
-        } else if (name == "compileStubJava") {
-            compile.options.compilerArgs = ["-Djava.ext.dirs=", "-XDignore.symbol.file", "-encoding","UTF-8"]
-            classpath = sourceSets.stub.compileClasspath + rootProject.files(rootProject.BINARY_STUB)
-        } else {
-            compile.options.compilerArgs = ["-Djava.ext.dirs=", "-XDignore.symbol.file", "-s", "$buildDir/builder-src", "-encoding","UTF-8"]
-            // Both controls & graphics need to use the annotation processor, but not the other guys.
-            if (["graphics", "controls", "swing", "swt", "base", "fxml"].contains(project.name)){
-                compile.options.compilerArgs += ["-processor", "javafx.builder.processor.BuilderProcessor"]
-            }
-            classpath = sourceSets.main.compileClasspath + rootProject.files(rootProject.BINARY_STUB)
-        }
-    }
+
     // Setup the repositories that we'll download libraries from. Maven Central is
     // just easy for most things. The custom "ivy" repo is for downloading SWT. The way it
     // works is to setup the download URL such that it will resolve to the actual jar file
@@ -675,11 +501,13 @@ allprojects {
         testLogging.exceptionFormat = "full";
         scanForTestClasses = false;
         include("**/*Test.*");
-        exclude("**/DepthTest.*")
+        exclude("**/DepthTest.*");
         exclude("**/*Abstract*.*");
     }
 
-    // Exclude any non-public-API classes from having javadoc generated
+    // Exclude any non-public-API classes from having javadoc generated. This block is used
+    // when generating JavaDocs for a specific project. When generating the JavaDocs for the
+    // entire SDK, a different javadoc command is used (see the javadoc task on the top level)
     javadoc {
         exclude("com/**/*", "javafx/scene/ParentDesignInfo*", "Compile*", "javafx/builder/**/*");
         executable = JAVADOC;
@@ -688,6 +516,9 @@ allprojects {
         options.addBooleanOption("XDignore.symbol.file").setValue(true);
         options.addBooleanOption("Xdoclint:none").setValue(!IS_DOC_LINT);
         options.addBooleanOption("javafx").setValue(true);
+        // All doc-files are located in src/main/docs because Gradle's javadoc doesn't copy
+        // over the doc-files if they are embedded with the sources. I find this arrangement
+        // somewhat cleaner anyway (never was a fan of mixing javadoc files with the sources)
         doLast {
             copy {
                 from "src/main/docs"
@@ -695,70 +526,19 @@ allprojects {
             }
         }
     }
-
-    // Configure all projects to include $buildDir/builder-src in the generated IDEA project files.
-    // Also need to un-exclude the build-dir since we put stuff in it, and then re-exclude other stuff
-    configurations {
-      binaryStub
-      binaryStub.extendsFrom(compile)
-    }
-
-    dependencies {
-      binaryStub rootProject.files(rootProject.BINARY_STUB)
-    }
-}
-
-// The build-tools project contains the annotation processor that is used to generate the
-// builders, the decora compiler used for effects, and various annotations we use for FXML
-// etc. Nothing in build-tools should *ever* be shipped with the runtime.
-project(":build-tools") {
-    sourceSets {
-        main.java.srcDirs = ["src/main/java", "$buildDir/generated-src/antlr"]
-    }
-
-    // Workaround for lack of Antlr 3 support in Gradle. By defining a configuration,
-    // we can then give it a class path and use that classpath to execute a java command
-    getConfigurations().add("antlr3");
-
-    dependencies({
-        compile("org.antlr:antlr-runtime:3.4");
-        antlr3("org.antlr:antlr-runtime:3.4",
-               "org.antlr:stringtemplate:4.0.2@jar",
-               "org.antlr:antlr:3.4@jar");
-    });
-
-    // This is the task that will call antlr to generate the sources
-    task generateGrammarSource(type: JavaExec) {
-        description = "Generate JSL parser from Antlr3 grammars"
-        String dest = "$buildDir/generated-src/antlr/com/sun/scenario/effect/compiler"
-        String src = "src/main/antlr"
-        inputs.dir file(src)
-        outputs.dir file(dest)
-        def grammars = fileTree(src).include("**/*.g")
-        main = "org.antlr.Tool"
-        classpath = configurations.antlr3
-        args = ["-o", dest, grammars.files].flatten()
-    }
-
-    // Configure the compileJava task so that it relies on the task for generating
-    // the grammar source, and also so that it uses the generated-src as input
-    // for compilation.
-    compileJava {
-        dependsOn(generateGrammarSource);
-    }
 }
 
 // The "base" project is our first module and the most basic one required for
 // all other modules. It is useful even for non-GUI applications.
 project(":base") {
     dependencies {
-        compile project(":build-tools")
+        compile BUILD_SRC
     }
 
     // We need to take the VersionInfo.java file and replace the various
     // properties within it
-    mkdir "$buildDir/generated-src/version-info" // TODO Ought to be done during processing not dep analysis phase
-    def replacements = ["BUILD_TIMESTAMP": new java.util.Date(),
+    def replacements = [
+        "BUILD_TIMESTAMP": new java.util.Date(),
         "HUDSON_JOB_NAME": HUDSON_JOB_NAME,
         "HUDSON_BUILD_NUMBER": HUDSON_BUILD_NUMBER,
         "PROMOTED_BUILD_NUMBER": PROMOTED_BUILD_NUMBER,
@@ -766,7 +546,8 @@ project(":base") {
         "RAW_VERSION": RAW_VERSION,
         "RELEASE_NAME": RELEASE_NAME,
         "RELEASE_MILESTONE": RELEASE_MILESTONE];
-    task processVersion(type: Copy, description: "Replace params in VersionInfo and copy file to destination") {
+    task processVersionInfo(type: Copy, description: "Replace params in VersionInfo and copy file to destination") {
+        doFirst { mkdir "$buildDir/generated-src/version-info" }
         from "src/main/version-info"
         into "$buildDir/generated-src/version-info/com/sun/javafx/runtime"
         filter {line->
@@ -780,7 +561,7 @@ project(":base") {
     // Make sure to include $buildDir/generated-src/version-info that we previously created.
     // We DO NOT want to include src/main/version-info
     sourceSets.main.java.srcDirs = ["src/main/java", "$buildDir/generated-src/version-info"]
-    compileJava.dependsOn processVersion
+    compileJava.dependsOn processVersionInfo
 }
 
 // The graphics module is needed for any graphical JavaFX application. It requires
@@ -788,18 +569,144 @@ project(":base") {
 // This is a fairly complicated module. There are many different types of native components
 // that all need to be compiled.
 project(":graphics") {
+    // Workaround for lack of Antlr 3 support in Gradle. By defining a configuration,
+    // we can then give it a class path and use that classpath to execute a java command
+    getConfigurations().add("antlr3");
+
     sourceSets {
-        main.java.srcDirs = ["src/main/java", "src/main/dt", "src/main/jsl-generator"]
+        main
         test
         stub
     }
 
     dependencies {
-        compile project(":base"), project(":build-tools")
+        compile project(":base"), BUILD_SRC
         compile ":$SWT_FILE_NAME:"
-        compile files(rootDir.toString() + "/../crap/plugin_exports.jar")
         stubCompile "junit:junit:4.8.2", project(":base").sourceSets.test.output, sourceSets.main.output
+        antlr3("org.antlr:antlr-runtime:3.1.3");
     }
+
+    // Add the tasks for native compilation of Glass
+    addNative(project, "Glass");
+    javahGlass.include("com/sun/glass/events/**",
+                "com/sun/glass/ui/*",
+                "com/sun/glass/ui/$GLASS_PLATFORM/*",
+                "com/sun/glass/ui/accessible/$GLASS_PLATFORM/*");
+    ccGlass.params.addAll(GLASS_CC_FLAGS);
+    ccGlass.source(file("src/main/native-glass/$GLASS_PLATFORM"));
+    linkGlass.linkParams.addAll(GLASS_LINK_FLAGS);
+    linkGlass.lib = file("$project.buildDir/libs/${COMPILE_TARGET.name}/${library('glass')}");
+
+    // Add the tasks for native compilation of Prism
+    addNative(project, "Prism")
+    javahPrism.include("com/sun/prism/impl/**/*", "com/sun/prism/PresentableState*");
+    ccPrism.compiler = PRISM_CC;
+    ccPrism.params.addAll(CC_FLAGS);
+    ccPrism.source(file("src/main/native-prism"));
+    linkPrism.linkParams.addAll(PRISM_LINK_FLAGS);
+    linkPrism.lib = file("$project.buildDir/libs/${COMPILE_TARGET.name}/${library('prism-common')}");
+
+    // Add the tasks for native compilation of Prism Software Pipeline
+    addNative(project, "PrismSW")
+    javahPrismSW.include "com/sun/pisces/**/*"
+    ccPrismSW.compiler = PRISM_SW_CC;
+    ccPrismSW.params.addAll(PRISM_SW_CC_FLAGS);
+    ccPrismSW.source(file("src/main/native-prism-sw"));
+    linkPrismSW.linkParams.addAll(PRISM_SW_LINK_FLAGS);
+    linkPrismSW.lib = file("$project.buildDir/libs/${COMPILE_TARGET.name}/${library('prism-sw')}");
+
+    // The Decora and Prism JSL files have to be generated in a very specific set of steps.
+    //      1) Compile the *Compile.java classes. These live in src/main/jsl-* and will be
+    //         output to $buildDir/classes/jsl-compilers/* (where * == decora or prism).
+    //      2) Generate source files from the JSL files contained in src/main/jsl-*. These
+    //         will be output to $buildDir/generated-src/jsl-*
+    //      3) Compile the JSL Java sources in $buildDir/generated-src/jsl-* and put the output
+    //         into classes/jsl-*
+    //      4) Compile the native JSL sources in $buildDir/generated-src/jsl-* and put the obj
+    //         files into native/jsl-* and the resulting library into libs/jsl-*.dll|so|dylib
+    //      5) Modify the jar step to include classes/jsl-*
+    // The native library must be copied over during SDK creation time in the "sdk" task. In
+    // addition to these steps, the clean task is created. Note that I didn't bother to create
+    // a new task for each of the decora files, preferring instead just to create a rule?? Also
+    // need "clean" tasks for each compile task.
+
+    addJSL(project, "Decora") { sourceDir, destinationDir ->
+        [[fileName: "ColorAdjust", generator: "CompileJSL", outputs: "-all"],
+         [fileName: "Brightpass", generator: "CompileJSL", outputs: "-all"],
+         [fileName: "SepiaTone", generator: "CompileJSL", outputs: "-all"],
+         [fileName: "PerspectiveTransform", generator: "CompileJSL", outputs: "-all"],
+         [fileName: "DisplacementMap", generator: "CompileJSL", outputs: "-all"],
+         [fileName: "InvertMask", generator: "CompileJSL", outputs: "-all"],
+         [fileName: "Blend", generator: "CompileBlend", outputs: "-all"],
+         [fileName: "PhongLighting", generator: "CompilePhong", outputs: "-all"],
+         [fileName: "LinearConvolve", generator: "CompileLinearConvolve", outputs: "-hw"],
+         [fileName: "LinearConvolveShadow", generator: "CompileLinearConvolve", outputs: "-hw"]].each { settings ->
+            javaexec {
+                workingDir = "modules/graphics"
+                main = settings.generator
+                classpath = configurations.compile + configurations.antlr3
+                classpath += files("$buildDir/classes/jsl-compilers/decora")
+                args = ["-i", sourceDir, "-o", destinationDir, "-t", "-pkg", "com/sun/scenario/effect", "$settings.outputs", "$settings.fileName"]
+            }
+        }
+    }
+
+    task generateDecoraNativeHeaders(type: JavaHeaderTask, dependsOn: compileDecoraJavaShaders) {
+        description = "Generates JNI Headers for Decora SSE Natives"
+        source file("$buildDir/classes/jsl-decora")
+        source file("$buildDir/classes/main")
+        include("com/sun/scenario/effect/impl/sw/sse/*");
+        classpath = files("$buildDir/classes/main", "$buildDir/classes/jsl-decora")
+        output = file("$buildDir/generated-src/headers/jsl-decora")
+    }
+
+    task compileDecoraNativeShaders(type: CCTask, dependsOn: generateDecoraNativeHeaders) {
+        description = "Compiles Decora SSE natives"
+        matches = ".*\\.cc"
+        source file("$buildDir/generated-src/jsl-decora")
+        source file("src/main/native-decora")
+        headers = file("$buildDir/generated-src/headers/jsl-decora")
+        params.addAll(DECORA_CC_FLAGS);
+        output(file("$buildDir/native/jsl-decora"))
+    }
+
+    task linkDecoraNativeShaders(type: LinkTask, dependsOn: compileDecoraNativeShaders) {
+        description = "Creates native dynamic library for Decora SSE"
+        objectDir = file("$buildDir/native/jsl-decora")
+        linkParams.addAll(DECORA_LINK_FLAGS);
+        lib = file("$buildDir/libs/${COMPILE_TARGET.name}/${library('decora-sse')}");
+    }
+
+    compileDecoraHLSLShaders.source "$buildDir/generated-src/jsl-decora/com/sun/scenario/effect/impl/hw/d3d/hlsl/"
+
+    task nativeDecora(dependsOn: [linkDecoraNativeShaders, compileDecoraHLSLShaders]);
+
+    // Prism JSL
+    addJSL(project, "Prism") { sourceDir, destinationDir ->
+        def inputFiles = fileTree(dir: sourceDir)
+        inputFiles.include "**/*.jsl"
+        inputFiles.each { file ->
+            javaexec {
+                workingDir = "modules/graphics"
+                main = "CompileJSL"
+                classpath = configurations.compile + configurations.antlr3
+                classpath += files("$buildDir/classes/jsl-compilers/prism", "modules/graphics/src/main/jsl-prism") // for the .stg
+                args = ["-i", sourceDir, "-o", destinationDir, "-t", "-pkg", "com/sun/prism", "-d3d", "-es2", "-name", "$file"]
+            }
+        }
+    }
+
+    compilePrismHLSLShaders.source "$buildDir/generated-src/jsl-prism/com/sun/prism/d3d/hlsl/"
+    classes.dependsOn compilePrismJavaShaders;
+    nativePrism.dependsOn compilePrismHLSLShaders;
+
+    // Create a single "native" task which will depend on all the individual native tasks for graphics
+    task("native", dependsOn: [nativeGlass, nativePrism, nativePrismSW, nativeDecora]) {
+        group = "Build"
+        description = "Compiles and Builds all native libraries for Graphics"
+    }
+    assemble.dependsOn nativeDecora
+    processResources.dependsOn processDecoraShaders, processPrismShaders
 
     // The graphics project needs to completely replace the "test" task because the
     // tests have been split among the normal tests and the stub tests. I want to make sure
@@ -809,11 +716,11 @@ project(":graphics") {
         group = "Verification"
         description = "Runs all the unit tests for Graphics"
     }
-    task testWithoutStub(type: Test, dependsOn: ":graphics:compileJava") {
+    task testWithoutStub(type: Test, dependsOn: ":graphics:compileJava", group: "Verification") {
         jvmArgs "-Djava.ext.dirs="
         classpath = sourceSets.test.runtimeClasspath + rootProject.files(rootProject.BINARY_STUB)
     }
-    task testWithStub(type: Test, dependsOn: [":graphics:compileJava"]) {
+    task testWithStub(type: Test, dependsOn: [":graphics:compileJava"], group: "Verification") {
         jvmArgs "-Djava.ext.dirs=", "-Djavafx.toolkit=com.sun.javafx.pgstub.StubToolkit", "-DCSS_META_DATA_TEST_DIR=${file('$buildDir/classes/main/javafx')}"
         classpath = sourceSets.stub.runtimeClasspath + sourceSets.main.runtimeClasspath + rootProject.files(rootProject.BINARY_STUB)
         testClassesDir = file("$buildDir/classes/stub")
@@ -829,99 +736,25 @@ project(":graphics") {
     }
     test.dependsOn testWithoutStub, testWithStub
 
-    addNative(project, "Glass")
-    javahGlass {
-        include("com/sun/glass/events/**",
-                "com/sun/glass/ui/*",
-                "com/sun/glass/ui/$GLASS_PLATFORM/*",
-                "com/sun/glass/ui/accessible/$GLASS_PLATFORM/*")
-    }
-
-    ccGlass {
-        params.addAll(CC_PARAMS)
-        if (IS_WINDOWS) params.add("/WX");
-        source(file("src/main/native-glass/$GLASS_PLATFORM"));
-    }
-
-    linkGlass {
-        lib = file("$project.buildDir/libs/${COMPILE_TARGET.name}/libglass.$LIBRARY_EXT")
-        if (IS_WINDOWS) {
-            def p = []
-            p.addAll(LINK_PARAMS)
-            p.addAll(["delayimp.lib", "gdi32.lib", "urlmon.lib", "Comdlg32.lib", "winmm.lib", "imm32.lib", "shell32.lib", "Uiautomationcore.lib", "dwmapi.lib", "/DELAYLOAD:user32.dll", "/DELAYLOAD:urlmon.dll", "/DELAYLOAD:winmm.dll", "/DELAYLOAD:shell32.dll", "/DELAYLOAD:Uiautomationcore.dll", "/DELAYLOAD:dwmapi.dll"])
-            linkParams = p
-        } else {
-            linkParams.addAll(LINK_PARAMS);
-        }
-    }
-
-    addNative(project, "Decora")
-    javahDecora {
-        include "com/sun/scenario/effect/**/*"
-    }
-
-    ccDecora {
-        params.addAll(CC_PARAMS);
-        source file("src/main/native-decora")
-    }
-
-    linkDecora {
-        lib = file("$project.buildDir/libs/libdecora-sse.$LIBRARY_EXT")
-        linkParams.addAll(LINK_PARAMS);
-    }
-
-    addNative(project, "Prism")
-    javahPrism {
-        include "com/sun/prism/impl/**/*", "com/sun/prism/PresentableState*"
-    }
-
-    ccPrism {
-        if (IS_LINUX) compiler = "cc"
-        params.addAll(CC_PARAMS);
-        source file("src/main/native-prism")
-    }
-
-    linkPrism {
-        lib = file("$project.buildDir/libs/libprism-common.$LIBRARY_EXT")
-        linkParams.addAll(LINK_PARAMS);
-    }
-
-    addNative(project, "PrismSW")
-    javahPrismSW {
-        include "com/sun/pisces/**/*"
-    }
-
-    ccPrismSW {
-        if (IS_LINUX) compiler = "cc"
-        params.addAll(CC_PARAMS);
-        source file("src/main/native-prism-sw")
-    }
-
-    linkPrismSW {
-        lib = file("$project.buildDir/libs/libprism-sw.$LIBRARY_EXT")
-        linkParams.addAll(LINK_PARAMS);
-    }
-
-    task("native", dependsOn: [nativeGlass, nativePrism, nativePrismSW, nativeDecora]) {
-        group = "Build"
-        description = "Compiles and Builds all native libraries for Graphics"
-    }
 }
 
 project(":controls") {
     dependencies {
-        compile project(":build-tools"), project(":base"), project(":graphics"), project(":designTime")
+        compile BUILD_SRC, project(":base"), project(":graphics"), project(":designTime")
         testCompile project(":graphics").sourceSets.stub.output
     }
 
     test {
         jvmArgs "-Djavafx.toolkit=com.sun.javafx.pgstub.StubToolkit"
+        // TODO fix the Controls tests so that we can run them all in one VM
         // This is highly unfortunate, test execution time goes from 7 sec to 2 min 8 sec
         // however there are 8 failing tests when we don't fork. Need to fix those tests.
         forkEvery = 1
     }
 
-    // TODO Css2Bin really should be moved out and put into build-tools if it can be
+    // TODO Css2Bin really should be moved out and put into buildSrc if it can be
+    // TODO could change script to dynamically locate all .css files and create bss for them, probably better
+    // TODO also not sure there is any benefit to having css files in the jfxrt.jar at all
     processResources << {
         ["$buildDir/resources/main/com/sun/javafx/scene/control/skin/caspian/caspian.css",
         "$buildDir/resources/main/com/sun/javafx/scene/control/skin/caspian/embedded-qvga.css",
@@ -941,37 +774,36 @@ project(":controls") {
 
 project(":swing") {
     // Skip Swing compilation when not on a compile target for MAC, WIN, LINUX
-    //enabled = COMPILE_TARGET == CompileTarget.WIN || COMPILE_TARGET == CompileTarget.MAC || COMPILE_TARGET == CompileTarget.LINUX;
+    if(COMPILE_TARGET != CompileTarget.WIN && COMPILE_TARGET != CompileTarget.MAC && COMPILE_TARGET != CompileTarget.LINUX) {
+        tasks { enabled = false; }
+    }
+
     dependencies {
-        compile project(":build-tools"), project(":base"), project(":graphics")
+        compile BUILD_SRC, project(":base"), project(":graphics")
     }
 }
 
 project(":swt") {
     // Skip SWT compilation when not on a compile target for MAC, WIN, LINUX
-    //enabled = COMPILE_TARGET == CompileTarget.WIN || COMPILE_TARGET == CompileTarget.MAC || COMPILE_TARGET == CompileTarget.LINUX;
+    if(COMPILE_TARGET != CompileTarget.WIN && COMPILE_TARGET != CompileTarget.MAC && COMPILE_TARGET != CompileTarget.LINUX) {
+        tasks { enabled = false; }
+    }
+
     dependencies {
-        compile project(":build-tools"), project(":base"), project(":graphics")
+        compile BUILD_SRC, project(":base"), project(":graphics")
         compile ":$SWT_FILE_NAME:"
     }
 }
 
-//project(":web") {
-//    dependencies {
-//        compile project(":build-tools"), project(":base"), project(":graphics"),
-//                project(":controls"), /*project(":media"),*/ project(":swt"), project(":swing")
-//    }
-//}
-
 project(":fxml") {
     dependencies {
-        compile project(":build-tools"), project(":base"), project(":graphics"),
-                project(":controls"), /*project(":media"), project(":web"),*/ project(":swt"), project(":swing")
+        compile BUILD_SRC, project(":base"), project(":graphics"),
+                project(":controls"), project(":swt"), project(":swing")
         testCompile project(":graphics").sourceSets.stub.output
     }
     test {
         // StubToolkit is not *really* needed here, but because some code inadvertently invokes performance
-        // tracker and this attemps to fire up the toolkit and this looks for native libraries and fails,
+        // tracker and this attempts to fire up the toolkit and this looks for native libraries and fails,
         // we have to use the stub toolkit for now.
         jvmArgs "-Djavafx.toolkit=com.sun.javafx.pgstub.StubToolkit"
     }
@@ -981,143 +813,6 @@ project(":designTime") {
     dependencies {
         compile project(":graphics")
     }
-}
-
-project(":graphics:effects-jsl") {
-    dependencies {
-        compile project(":graphics")
-    }
-
-    task compileJSL(description: "Compile Java Shader Language (JSL) files") { }
-    classes.dependsOn compileJSL
-
-    [[fileName: "ColorAdjust", generator: "CompileJSL", outputs: "-all"],
-            [fileName: "Brightpass", generator: "CompileJSL", outputs: "-all"],
-            [fileName: "SepiaTone", generator: "CompileJSL", outputs: "-all"],
-            [fileName: "PerspectiveTransform", generator: "CompileJSL", outputs: "-all"],
-            [fileName: "DisplacementMap", generator: "CompileJSL", outputs: "-all"],
-            [fileName: "InvertMask", generator: "CompileJSL", outputs: "-all"],
-            [fileName: "Blend", generator: "CompileBlend", outputs: "-all"],
-            [fileName: "PhongLighting", generator: "CompilePhong", outputs: "-all"],
-            [fileName: "LinearConvolve", generator: "CompileLinearConvolve", outputs: "-hw"],
-            [fileName: "LinearConvolveShadow", generator: "CompileLinearConvolve", outputs: "-hw"]].each { settings ->
-        task "compile$settings.fileName"(dependsOn: compileJava, type: JavaExec) {
-            // TODO need to fix bootclasspath
-            description = "Generate $settings.fileName shader from JSL"
-            mkdir "modules/graphics/effects-jsl/build/generated-src/jsl"
-            def destinationDir = "$buildDir/generated-src/jsl"
-            def sourceDir = "src/main/java"
-            inputs.file file("$sourceDir/${settings.fileName}.jsl")
-            outputs.file files(
-                    "$destinationDir/decora-d3d/build/gensrc/com/sun/scenario/effect/impl/hw/d3d/hlsl/${settings.fileName}.hlsl",
-                    "$destinationDir/decora-es2/build/gensrc/com/sun/scenario/effect/impl/es2/glsl/${settings.fileName}.frag",
-                    "$destinationDir/decora-jsw/build/gensrc/com/sun/scenario/effect/impl/sw/java/JSW${settings.fileName}.java",
-                    "$destinationDir/decora-prism-ps/build/gensrc/com/sun/scenario/effect/impl/prism/ps/PPS${settings.fileName}.java",
-                    "$destinationDir/decora-sse/build/gensrc/com/sun/scenario/effect/impl/sw/sse/SSE${settings.fileName}.java",
-                    "$destinationDir/decora-sse-native/build/gensrc/SSE${settings.fileName}.cc")
-            main = settings.generator
-            classpath = configurations.compile
-            classpath += files("modules/graphics/effects-jsl/build/classes/main")
-            args = ["-i", sourceDir, "-o", destinationDir, "-pkg", "com/sun/scenario/effect", "$settings.outputs", "$settings.fileName"].flatten()
-        }
-        compileJSL.dependsOn "compile$settings.fileName"
-    }
-
-    task compileDecoraJava(dependsOn: compileJSL, type: JavaCompile) {
-        description = "Compile Java-based Decora-JSL files"
-        classpath = configurations.compile
-        source = ["$buildDir/generated-src/jsl/decora-jsw/build/gensrc",
-                "$buildDir/generated-src/jsl/decora-prism-ps/build/gensrc",
-                "$buildDir/generated-src/jsl/decora-sse/build/gensrc"]
-        destinationDir = file("$buildDir/classes/main")
-    }
-    classes.dependsOn compileDecoraJava
-
-    if (IS_WINDOWS){
-        task compileDecoraHLSL(dependsOn: compileJSL, type: CompileHLSLTask) {
-            description = "Compile Decora HLSL files into .obj files"
-            matches = ".*\\.hlsl"
-            source "$buildDir/generated-src/jsl/decora-d3d/build/gensrc/com/sun/scenario/effect/impl/hw/d3d/hlsl/"
-            output file("$buildDir/hlsl")
-        }
-        classes.dependsOn compileDecoraHLSL
-    }
-
-    task copyShaders(dependsOn: compileJSL, type: Copy, description: "Copy hlsl / frag shaders to $buildDir/resources/main") {
-        from("$buildDir/generated-src/jsl/decora-d3d/build/gensrc") {
-            include "**/*.hlsl"
-        }
-        from("$buildDir/generated-src/jsl/decora-es2/build/gensrc") {
-            include("**/*.frag")
-        }
-        into "$buildDir/resources/main"
-    }
-    processResources.dependsOn copyShaders
-}
-
-project(":graphics:prism-jsl") {
-    dependencies {
-        compile project(":graphics")
-    }
-
-    task compileJSL(description: "Compile Java Shader Language (JSL) files") {}
-    classes.dependsOn compileJSL
-
-    def destDir = "$buildDir/generated-src/jsl"
-    def sourceDir = "src/main/java"
-    def inputFiles = fileTree(dir: sourceDir)
-    inputFiles.include "**/*.jsl"
-
-    inputFiles.each { file ->
-        def taskName = file.name.substring(0, file.name.length() - 4);
-        task "compile$taskName"(type: JavaExec) {
-            // TODO need to fix bootclasspath
-            dependsOn compileJava;
-            dependsOn processResources;
-            mkdir "modules/graphics/prism-jsl/build/generated-src/jsl"
-            inputs.file file
-            outputs.dir files(
-                    "$destDir/prism-d3d/build/gensrc/com/sun/prism/d3d/hlsl/",
-                    "$destDir/prism-es2/build/gensrc/com/sun/prism/es2/glsl/",
-                    "$destDir/prism-ps/build/gensrc/com/sun/prism/shader/")
-            main = "CompileJSL"
-            classpath = configurations.compile
-            classpath += files("modules/graphics/prism-jsl/build/classes/main", "modules/graphics/prism-jsl/build/resources/main")
-            args = ["-i", sourceDir, "-o", destDir, "-pkg", "com/sun/prism", "-d3d", "-es2", "-name", "$file"].flatten()
-            maxHeapSize = "256m"
-        }
-        compileJSL.dependsOn "compile$taskName"
-    }
-
-    task compilePrismJSLJava(dependsOn: compileJSL, type: JavaCompile) {
-        description = "Compile Java-based Prism-JSL files"
-        classpath = configurations.compile
-        source = "$buildDir/generated-src/jsl/prism-ps/build/gensrc"
-        destinationDir = file("$buildDir/classes/main")
-    }
-    classes.dependsOn compilePrismJSLJava
-
-    if (IS_WINDOWS){
-        task compilePrismHLSL(dependsOn: compileJSL, type: CompileHLSLTask) {
-            description = "Compile Prism HLSL files into .obj files"
-            matches = ".*\\.hlsl"
-            source "$buildDir/generated-src/jsl/prism-d3d/build/gensrc/com/sun/prism/d3d/hlsl/"
-            output file("$buildDir/hlsl")
-        }
-        classes.dependsOn compilePrismHLSL
-    }
-
-    task copyPrismShaders(dependsOn: compileJSL, type: Copy, description: "Copy hlsl / frag shaders to $buildDir/resources/main") {
-        from("$buildDir/generated-src/jsl/prism-d3d/build/gensrc") {
-            include "**/*.hlsl"
-        }
-        from("$buildDir/generated-src/jsl/prism-es2/build/gensrc") {
-            include("**/*.frag")
-        }
-
-        into "$buildDir/resources/main"
-    }
-    classes.dependsOn copyPrismShaders
 }
 
 project(":fxpackager") {
@@ -1163,26 +858,34 @@ project(":fxpackager") {
     // Compile the native launchers. These are included in ant-javafx.jar
     if (IS_WINDOWS) {
         task compileWinLauncher(type: CCTask, group: "Build") {
-            description = "Compiles native sources for the application co-bundle launcher"
-            matches = "WinLauncher\\.cpp"
-            params.addAll(["/nologo", "/W3", "/EHsc", "/D_WINDOWS",
-                    "/DUNICODE", "/D_UNICODE", "/DWIN32", "/D_LITTLE_ENDIAN", "/DWIN32_LEAN_AND_MEAN",
-                    "/I$JDK_HOME/include", "/I$JDK_HOME/include/win32", "/arch:SSE", "/fp:fast",
-                    "/O2", "/MD"])
-            output(file("$buildDir/classes/main/com/sun/javafx/tools/resource/windows"))
-            source file("src/main/native/launcher/win")
-            exe = true
-            linkerOptions.addAll(["/link", "/nologo", "/SUBSYSTEM:WINDOWS", "user32.lib", "shell32.lib", "advapi32.lib"])
+            description = "Compiles native sources for the application co-bundle launcher";
+            matches = "WinLauncher\\.cpp";
+            params.addAll(LAUNCHER_CC_FLAGS);
+            output(file("$buildDir/native/WinLauncher"));
+            source(file("src/main/native/launcher/win"));
+            exe = true;
+            linkerOptions.addAll(LAUNCHER_LINK_FLAGS);
+            doLast {
+                copy {
+                    from "$buildDir/native/WinLauncher/WinLauncher.exe"
+                    into "$buildDir/classes/main/com/sun/javafx/tools/resource/windows"
+                }
+            }
         }
         task compileIconSwap(type: CCTask, group: "Build") {
             description = "Compiles native sources for the application co-bundle launcher"
-            matches = "iconswap\\.cpp"
-            params.addAll(["/nologo", "/W3", "/EHsc", "/D_WINDOWS", "/DUNICODE", "/D_UNICODE",
-                    "/arch:SSE", "/fp:fast", "/O2"])
-            output(file("$buildDir/classes/main/com/sun/javafx/tools/resource/windows"))
+            matches = "IconSwap\\.cpp"
+            params.addAll(ICON_LAUNCHER_CC_FLAGS)
+            output(file("$buildDir/native/IconSwap"))
             source file("src/main/native/launcher/win")
             exe = true
-            linkerOptions.addAll(["/link", "/nologo", "/SUBSYSTEM:CONSOLE"])
+            linkerOptions.addAll(ICON_LAUNCHER_LINK_FLAGS)
+            doLast {
+                copy {
+                    from "$buildDir/native/IconSwap/IconSwap.exe"
+                    into "$buildDir/classes/main/com/sun/javafx/tools/resource/windows"
+                }
+            }
         }
         task compileLauncher(dependsOn: [compileWinLauncher, compileIconSwap])
     } else {
@@ -1191,7 +894,7 @@ project(":fxpackager") {
             if (IS_MAC) {
                 matches = ".*\\.m"
                 output(file("$buildDir/classes/main/com/sun/javafx/tools/resource/mac"))
-                params.addAll(CC_PARAMS);
+                params.addAll(LAUNCHER_CC_FLAGS);
                 source file("src/main/native/launcher/mac")
                 eachOutputFile = { f ->
                     return new File(f.getParent(), "JavaAppLauncher")
@@ -1199,8 +902,8 @@ project(":fxpackager") {
             } else {
                 matches = ".*\\.c"
                 output(file("$buildDir/classes/main/com/sun/javafx/tools/resource/linux"))
-                params.addAll(["-DJAVAARCH=\"$OS_ARCH\"", "-I$JDK_HOME/include", "-I$JDK_HOME/include/linux"])
-                linkerOptions.add("-ldl")
+                params.addAll(LAUNCHER_CC_FLAGS)
+                linkerOptions.addAll(LAUNCHER_LINK_FLAGS)
                 source file("src/main/native/launcher/linux")
                 eachOutputFile = { f ->
                     return new File(f.getParent(), "JavaAppLauncher")
@@ -1208,7 +911,7 @@ project(":fxpackager") {
             }
         }
     }
-    assemble.dependsOn compileLauncher;
+    jar.dependsOn compileLauncher;
 
     // Builds the javafxpackager executable. For everything other than windows,
     // this is simply moving the existing shell script and ensuring it has proper
@@ -1222,12 +925,14 @@ project(":fxpackager") {
                     "/D_WIN32_WINDOWS=0X0500", "/D_WIN32_WINNT=0X0500",
                     "/I$JDK_HOME/include", "/I$JDK_HOME/include/win32", "/arch:SSE", "/fp:fast",
                     "/O2", "-c"])
-            output(file("$buildDir/native"))
+            output(file("$buildDir/native/javafxpackager"))
             source file("src/main/native/javafxpackager/win")
             doLast {
                 mkdir "$buildDir/native"
                 exec({
-                    commandLine("$RC", "/nologo", "/l", "0x409", "/r", "/dJFX_DVERSION=8", "/dJFX_VERSION=8", "/fo$buildDir/native/javafxpackager.res", "src/main/native/javafxpackager/win/javafxpackager.rc");
+                    commandLine("$RC", "/nologo", "/l", "0x409", "/r", "/dJFX_DVERSION=8", "/dJFX_VERSION=8",
+                            "/fo$buildDir/native/javafxpackager/javafxpackager.res",
+                            "src/main/native/javafxpackager/win/javafxpackager.rc");
                     environment(WINDOWS_NATIVE_COMPILE_ENVIRONMENT);
                 });
             }
@@ -1235,23 +940,24 @@ project(":fxpackager") {
                 mkdir "$buildDir/javafxpackager"
                 exec({
                     commandLine("$LINK", "/nologo", "/opt:REF", "/incremental:no", "/manifest", "kernel32.lib", "advapi32.lib",
-                            "/out:$buildDir/native/javafxpackager.exe",
-                            "$buildDir/native/javafxpackager.obj", "$buildDir/native/javafxpackager.res")
+                            "/out:$buildDir/native/javafxpackager/javafxpackager.exe",
+                            "$buildDir/native/javafxpackager/javafxpackager.obj",
+                            "$buildDir/native/javafxpackager/javafxpackager.res")
                     environment(WINDOWS_NATIVE_COMPILE_ENVIRONMENT)
                 })
             }
             doLast {
                 copy {
                     from file("src/main/native/javafxpackager/win/javafxpackager.manifest")
-                    into file("$buildDir/native")
+                    into file("$buildDir/native/javafxpackager")
                 }
                 // TODO, not sure MT.exe is actually being used currently, so for now skipping.
 //                exec({
-//                    commandLine("$MT -nologo -manifest $buildDir/native/javafxpackager.manifest")
+//                    commandLine("$MT -nologo -manifest $buildDir/native/javafxpackager/javafxpackager.manifest")
 //                    environment(WINDOWS_NATIVE_COMPILE_ENVIRONMENT)
 //                })
                 copy {
-                    from file("$buildDir/native/javafxpackager.exe")
+                    from file("$buildDir/native/javafxpackager/javafxpackager.exe")
                     into file("$buildDir/javafxpackager")
                 }
             }
@@ -1266,7 +972,61 @@ project(":fxpackager") {
         }
     }
 
-    assemble.dependsOn buildJavaFXPackager
+    jar.dependsOn buildJavaFXPackager
+}
+
+allprojects {
+    // The following block is a workaround for the fact that presently Gradle
+    // can't set the -XDignore.symbol.file flag, because it appears that the
+    // javac API is lacking support for it. So what we'll do is find any Compile
+    // task and manually provide the options necessary to fire up the
+    // compiler with the right settings.
+    //
+    // Also, we need to remove jfxrt.jar from the ext classpath (if it is there)
+    // and instead each module that depends on closed bits is going to need to
+    // add BINARY_STUB to its list of dependencies.
+    tasks.withType(Compile) { compile ->
+        // Defer actually creating generated-src/builders until task execution
+        doFirst {
+            mkdir("$buildDir/generated-src/builders");
+        }
+        // It looks like we have to use ant to compile instead of the built-in gradle
+        // compiler stuff because otherwise it won't compile on CYGWIN
+        // TODO need to file issue with Gradle
+        compile.options.useAnt = true
+        compile.options.debug = true // we always generate debugging info in the class files
+        compile.options.debugOptions.debugLevel = IS_DEBUG ? "source,lines,vars" : "source,lines"
+        compile.options.fork = true
+        compile.options.forkOptions.executable = JAVAC
+        compile.options.warnings = IS_LINT
+        compile.options.useDepend = USE_DEPEND
+        compile.options.compilerArgs = ["-Djava.ext.dirs=", "-XDignore.symbol.file", "-encoding", "UTF-8"]
+
+        // Add in the -Xlint options
+        if (IS_LINT) {
+            LINT.split("[, ]").each { s ->
+                compile.options.compilerArgs += "-Xlint:$s"
+            }
+        }
+
+        // Somewhat dangerous in case there is a java source set other than "test" or "stub" or "main"!
+        // Note that the compileFooJava task is automatically created whenever a source set is
+        // defined. So the "test" source set automatically creates a "compileTestJava" task (among others).
+        if (name == "compileTestJava") {
+            classpath = sourceSets.test.compileClasspath + rootProject.files(rootProject.BINARY_STUB)
+        } else if (name == "compileStubJava") {
+            classpath = sourceSets.stub.compileClasspath + rootProject.files(rootProject.BINARY_STUB)
+        } else if (name == "compileJava") {
+            compile.options.compilerArgs += ["-s", "$buildDir/generated-src/builders"]
+            // Not everything needs the builder processor
+            if (["graphics", "controls", "swing", "swt", "base", "fxml"].contains(project.name)){
+                compile.options.compilerArgs += ["-processor", "javafx.builder.processor.BuilderProcessor"]
+            }
+            classpath = sourceSets.main.compileClasspath + rootProject.files(rootProject.BINARY_STUB)
+        } else {
+            logger.info("Not using BINARY_STUB in compilation: $name")
+        }
+    }
 }
 
 /******************************************************************************
@@ -1313,11 +1073,11 @@ task jfxrt(type: Jar) {
          "modules/controls/build/resources/main",
          "modules/fxml/build/classes/main",
          "modules/fxml/build/resources/main",
-         "modules/graphics/effects-jsl/build/classes/main",
-         "modules/graphics/effects-jsl/build/resources/main",
-         "modules/graphics/prism-jsl/build/classes/main",
-         "modules/graphics/prism-jsl/build/resources/main");
-    exclude("Compile*", // the Decora compiler classes must be excluded
+         "modules/graphics/build/classes/jsl-decora",
+         "modules/graphics/build/resources/jsl-decora",
+         "modules/graphics/build/classes/jsl-prism",
+         "modules/graphics/build/resources/jsl-prism");
+    exclude("js/**/*", // er...
             "PrismLoaderBackend*", // More decora stuff
             "**/*.stg",    // any glue files for decora must be excluded
             "**/*.java");  // Builder java files are in build/classes and should be excluded
@@ -1334,13 +1094,18 @@ task jfxrt(type: Jar) {
     // Filter out platform specific Java sources (glass) when compiling for other targets
     if (COMPILE_TARGET != CompileTarget.WIN) exclude("**/*.hlsl", "com/sun/glass/ui/win",
             "com/sun/glass/ui/accessible/win", "com/sun/prism/d3d",
-            "com/sun/prism/es2/gl/eglfb", "com/sun/prism/es2/gl/eglx11",
-            "com/sun/prism/es2/gl/win", "com/sun/prism/es2/gl/x11",
-            "com/sun/prism/null3d", "com/sun/scenario/effect/impl/hw/d3d");
+            "com/sun/prism/es2/gl/win", "com/sun/prism/null3d", "com/sun/scenario/effect/impl/hw/d3d");
     if (COMPILE_TARGET != CompileTarget.IOS) exclude("com/sun/glass/ui/ios");
-    if (COMPILE_TARGET != CompileTarget.MAC) exclude("com/sun/glass/events/mac", "com/sun/glass/ui/mac");
+    if (COMPILE_TARGET != CompileTarget.MAC) exclude("com/sun/glass/events/mac",
+            "com/sun/glass/ui/mac", "com/sun/glass/ui/accessible/mac");
     if (COMPILE_TARGET != CompileTarget.LINUX) exclude("com/sun/glass/ui/gtk");
-    if (COMPILE_TARGET != CompileTarget.ARM_HF && COMPILE_TARGET != CompileTarget.ARM_VFP) exclude("com/sun/glass/ui/lens");
+    if (COMPILE_TARGET != CompileTarget.LINUX &&
+            COMPILE_TARGET != CompileTarget.ARM_HF &&
+            COMPILE_TARGET != CompileTarget.ARM_VFP) exclude("com/sun/glass/ui/lens",
+                "com/sun/prism/es2/gl/eglfb", "com/sun/prism/es2/gl/eglx11",
+                "com/sun/prism/es2/gl/x11");
+    if (COMPILE_TARGET != CompileTarget.ARM_HF && COMPILE_TARGET != CompileTarget.ARM_VFP)
+        exclude("com/sun/prism/es2/gl/eglfb", "com/sun/prism/es2/gl/eglx11");
     if (COMPILE_TARGET != CompileTarget.SWT) exclude("com/sun/glass/ui/swt");
 
     dependsOn(subprojects.collect { project -> project.getTasksByName("assemble", true)});
@@ -1354,7 +1119,7 @@ task javadoc(type: Javadoc) {
             project(":base"), project(":graphics"), project(":controls"),
             project(":swing"), project(":swt"), project(":fxml")]
     source(projectsToDocument.collect({
-        [it.sourceSets.main.java, "$it.buildDir/builder-src"]
+        [it.sourceSets.main.java, "$it.buildDir/generated-src/builders"]
     }));
     setDestinationDir(new File(buildDir, 'javadoc'));
     // Might need a classpath
@@ -1385,12 +1150,13 @@ task sdk {
     group = "Basic"
     description = "Creates an SDK"
     doLast {
+        // TODO instead of using copy everywhere, I probably want to use "sync" instead?
         // Copy all of the .dll / .so / .dylib native libraries into build/sdk/rt/lib/
         copy {
-            from("modules/graphics/build/libs/libdecora-sse.$LIBRARY_EXT",
-                 "modules/graphics/build/libs/libprism-common.$LIBRARY_EXT",
-                 "modules/graphics/build/libs/libprism-sw.$LIBRARY_EXT",
-                 "modules/graphics/build/libs/${COMPILE_TARGET.name}/libglass.$LIBRARY_EXT");
+            from("modules/graphics/build/libs/${COMPILE_TARGET.name}/${library('decora-sse')}",
+                 "modules/graphics/build/libs/${COMPILE_TARGET.name}/${library('prism-common')}",
+                 "modules/graphics/build/libs/${COMPILE_TARGET.name}/${library('prism-sw')}",
+                 "modules/graphics/build/libs/${COMPILE_TARGET.name}/${library('glass')}");
             if (IS_WINDOWS) {
                 rename("lib(.*).dll", "\$1.dll");
             }
@@ -1437,6 +1203,13 @@ task sdk {
     dependsOn(javadoc);
 }
 
+task integrationCheck {
+    group = "Basic"
+    description = "Performs all the tasks necessary to ensure that the current build is ready for integration."
+    dependsOn sdk
+    dependsOn subprojects.collect { project -> project.getTasksByName("check", true)}
+}
+
 /******************************************************************************
  *                                                                            *
  *                 Generation of NetBeans Project Files                       *
@@ -1457,15 +1230,45 @@ task sdk {
  *                                                                            *
  *****************************************************************************/
 
+/*
+  <built-in-tasks>
+    <task>
+      <display-name>build</display-name>
+      <non-blocking>yes</non-blocking>
+      <task-names>
+        <name must-exist="no">build</name>
+      </task-names>
+      <task-args>
+        <arg>-PSUPPLEMENTAL_BUILD_FILE=../rt-closed/closed-build.gradle</arg>
+      </task-args>
+      <task-jvm-args/>
+    </task>
+  </built-in-tasks>
+  <common-tasks>
+    <task>
+      <display-name>sdk</display-name>
+      <non-blocking>no</non-blocking>
+      <task-names>
+        <name must-exist="yes">tasks</name>
+      </task-names>
+      <task-args>
+        <arg>-PSUPPLEMENTAL_BUILD_FILE=../rt-closed/closed-build.gradle</arg>
+      </task-args>
+      <task-jvm-args/>
+    </task>
+  </common-tasks>
+
+ */
+
 task netBeans() {
     description = "Creates the NetBeans project files for JavaFX"
     group = "IDE"
-    File nbGradleProperties = file(".nb-gradle-properties")
-    if (nbGradleProperties.exists()) {
-        nbGradleProperties.delete()
-    }
-    nbGradleProperties.createNewFile()
-    nbGradleProperties <<
+
+    doLast {
+        File nbGradleProperties = file(".nb-gradle-properties")
+        if (nbGradleProperties.exists()) nbGradleProperties.delete()
+        nbGradleProperties.createNewFile()
+        nbGradleProperties <<
 """<?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <gradle-project-properties>
   <!--DO NOT EDIT THIS FILE! - Used by the Gradle plugin of NetBeans.-->
@@ -1475,17 +1278,30 @@ task netBeans() {
   <source-level>1.7</source-level>
   <script-platform>
     <spec-name>j2se</spec-name>
-    <spec-version>1.8</spec-version>
+    <spec-version>1.7</spec-version>
   </script-platform>
   <gradle-home>?VER=1.4</gradle-home>
+  <license-header>
+    <name>OpenJFX</name>
+    <template>.nb-openjfx-template-license</template>
+    <property name="organization">OpenJFX</property>
+  </license-header>
 </gradle-project-properties>"""
 
+        File nbGradleTemplate = file(".nb-openjfx-template-license")
+        if (nbGradleTemplate.exists()) nbGradleTemplate.delete()
+        nbGradleTemplate.createNewFile()
+        nbGradleTemplate <<
+"""My License will reign supreme!"""
+    }
 }
 
 task cleanNetBeans() {
     description = "Deletes generated NetBeans files"
     group = "IDE"
-    file(".nb-gradle-properties").delete()
+    doLast {
+        file(".nb-gradle-properties").delete()
+    }
 }
 
 /******************************************************************************
@@ -1503,11 +1319,23 @@ task cleanNetBeans() {
 
 allprojects {
     apply plugin: 'idea'
-    if (project == rootProject || project.name == "deployment") return
+    if (project == rootProject || project.name == "media" || project.name == "web") return
+
+    // Configure all projects to include $buildDir/generated-src/builders in the generated IDEA project files.
+    // Also need to un-exclude the build-dir since we put stuff in it, and then re-exclude other stuff
+    configurations {
+      binaryStub
+      binaryStub.extendsFrom(compile)
+    }
+
+    dependencies {
+      binaryStub rootProject.files(rootProject.BINARY_STUB)
+    }
+
     idea {
         module {
             inheritOutputDirs = true;
-            sourceDirs += new File(buildDir, "builder-src");
+            sourceDirs += file("$buildDir/generated-src/builders");
             excludeDirs -= buildDir;
             excludeDirs += [
                     new File(buildDir, "classes"),
@@ -1662,14 +1490,14 @@ questions.""");
     }
 }
 
-project(":build-tools") {
-    // Add antlr to the sources for IDEA
-    idea {
-        module {
-            sourceDirs += file("$buildDir/generated-src/antlr")
-        }
-    }
-}
+//project("buildSrc") {
+//    // Add antlr to the sources for IDEA
+//    idea {
+//        module {
+//            sourceDirs += file("$buildDir/generated-src/antlr")
+//        }
+//    }
+//}
 
 project(":base") {
     // Add in the version-info generated sources for IDEA projects
@@ -1683,7 +1511,7 @@ project(":base") {
 project(":graphics") {
     idea {
         module {
-            sourceDirs += [new File(buildDir, "headers"),
+            sourceDirs += [file("$buildDir/generated-src/headers"),
                     file("src/main/native-decora"),
                     file("src/main/native-glass/gtk"),
                     file("src/main/native-glass/ios"),
@@ -1692,6 +1520,9 @@ project(":graphics") {
                     file("src/main/native-glass/win"),
                     file("src/main/native-prism"),
                     file("src/main/native-prism-sw")]
+            // TODO generated JSL directories need to be added
+//            sourceDirs += file("$buildDir/generated-src/jsl")
+//            sourceDirs += file("$buildDir/generated-src/jsl")
             excludeDirs += new File(buildDir, "native");
             testSourceDirs += [file("src/stub/java"), file("src/stub/resources")];
         }
@@ -1702,22 +1533,6 @@ project(":controls") {
     idea {
         module {
             sourceDirs += file("src/main/dt");
-        }
-    }
-}
-
-project(":graphics:effects-jsl") {
-    idea {
-        module {
-            sourceDirs += file("$buildDir/generated-src/jsl")
-        }
-    }
-}
-
-project(":graphics:prism-jsl") {
-    idea {
-        module {
-            sourceDirs += file("$buildDir/generated-src/jsl")
         }
     }
 }

@@ -27,6 +27,7 @@ package javafx.scene.layout;
 
 import javafx.geometry.HPos;
 import javafx.geometry.Insets;
+import javafx.geometry.Orientation;
 import javafx.geometry.VPos;
 import javafx.scene.shape.Rectangle;
 import org.junit.Test;
@@ -235,18 +236,6 @@ public class RegionTest {
         assertEquals(10, child.getLayoutY(), 1e-100);
     }
 
-    @Test public void testPositionInAreaForNONResizableTopLeft() {
-        Pane pane = new Pane(); // Region extension which makes children sequence public
-
-        Rectangle child = new Rectangle(50.4, 50.4);
-        pane.getChildren().add(child);
-
-        pane.positionInArea(child, 10, 10, 100, 100, 0, HPos.LEFT, VPos.TOP);
-
-        assertEquals(10, child.getLayoutX(), .01);
-        assertEquals(10, child.getLayoutY(), .01);
-    }
-
     @Test public void testPositionInAreaForResizableTopCenter() {
         Pane pane = new Pane(); // Region extension which makes children sequence public
 
@@ -260,18 +249,6 @@ public class RegionTest {
         assertEquals(40, child.getHeight(), 1e-100);
         assertEquals(45, child.getLayoutX(), 1e-100);
         assertEquals(10, child.getLayoutY(), 1e-100);
-    }
-
-    @Test public void testPositionInAreaForNONResizableTopCenter() {
-        Pane pane = new Pane(); // Region extension which makes children sequence public
-
-        Rectangle child = new Rectangle(50.4, 50.4);
-        pane.getChildren().add(child);
-
-        pane.positionInArea(child, 10, 10, 100, 100, 0, HPos.CENTER, VPos.TOP);
-
-        assertEquals(34.8, child.getLayoutX(), .01);
-        assertEquals(10, child.getLayoutY(), .01);
     }
 
     @Test public void testPositionInAreaForResizableTopRight() {
@@ -289,18 +266,6 @@ public class RegionTest {
         assertEquals(10, child.getLayoutY(), 1e-100);
     }
 
-    @Test public void testPositionInAreaForNONResizableTopRight() {
-        Pane pane = new Pane(); // Region extension which makes children sequence public
-
-        Rectangle child = new Rectangle(50.4, 50.4);
-        pane.getChildren().add(child);
-
-        pane.positionInArea(child, 10, 10, 100, 100, 0, HPos.RIGHT, VPos.TOP);
-
-        assertEquals(59.6, child.getLayoutX(), .01);
-        assertEquals(10, child.getLayoutY(), .01);
-    }
-
     @Test public void testPositionInAreaForResizableCenterLeft() {
         Pane pane = new Pane(); // Region extension which makes children sequence public
 
@@ -316,17 +281,18 @@ public class RegionTest {
         assertEquals(40, child.getLayoutY(), 1e-100);
     }
 
-    @Test public void testPositionInAreaForNONResizableCenterLeft() {
-        Pane pane = new Pane(); // Region extension which makes children sequence public
-
-        Rectangle child = new Rectangle(50.4, 50.4);
-        pane.getChildren().add(child);
-
-        pane.positionInArea(child, 10, 10, 100, 100, 0, HPos.LEFT, VPos.CENTER);
-
-        assertEquals(10, child.getLayoutX(), .01);
-        assertEquals(34.8, child.getLayoutY(), .01);
-    }
+//    // See RT-19282
+//    @Test public void testPositionInAreaForNONResizableCenterLeft() {
+//        Pane pane = new Pane(); // Region extension which makes children sequence public
+//
+//        Rectangle child = new Rectangle(50.4, 50.4);
+//        pane.getChildren().add(child);
+//
+//        pane.positionInArea(child, 10, 10, 100, 100, 0, HPos.LEFT, VPos.CENTER);
+//
+//        assertEquals(10, child.getLayoutX(), .01);
+//        assertEquals(34.8, child.getLayoutY(), .01);
+//    }
 
 
     @Test public void testPositionInAreaForResizableCenter() {
@@ -344,18 +310,19 @@ public class RegionTest {
         assertEquals(40, child.getLayoutY(), 1e-100);
     }
 
-    @Test public void testPositionInAreaForNONResizableCenter() {
-        Pane pane = new Pane(); // Region extension which makes children sequence public
+//    // See RT-19282
+//    @Test public void testPositionInAreaForNONResizableCenter() {
+//        Pane pane = new Pane(); // Region extension which makes children sequence public
+//
+//        Rectangle child = new Rectangle(50.4, 50.4);
+//        pane.getChildren().add(child);
+//
+//        pane.positionInArea(child, 10, 10, 100, 100, 0, HPos.CENTER, VPos.CENTER);
+//
+//        assertEquals(34.8, child.getLayoutX(), .01);
+//        assertEquals(34.8, child.getLayoutY(), .01);
+//    }
 
-        Rectangle child = new Rectangle(50.4, 50.4);
-        pane.getChildren().add(child);
-
-        pane.positionInArea(child, 10, 10, 100, 100, 0, HPos.CENTER, VPos.CENTER);
-
-        assertEquals(34.8, child.getLayoutX(), .01);
-        assertEquals(34.8, child.getLayoutY(), .01);
-    }
-    
     @Test public void testPositionInAreaForResizableCenterRight() {
         Pane pane = new Pane(); // Region extension which makes children sequence public
 
@@ -369,18 +336,6 @@ public class RegionTest {
         assertEquals(40, child.getHeight(), 1e-100);
         assertEquals(80, child.getLayoutX(), 1e-100);
         assertEquals(40, child.getLayoutY(), 1e-100);
-    }
-
-    @Test public void testPositionInAreaForNONResizableCenterRight() {
-        Pane pane = new Pane(); // Region extension which makes children sequence public
-
-        Rectangle child = new Rectangle(50.4, 50.4);
-        pane.getChildren().add(child);
-
-        pane.positionInArea(child, 10, 10, 100, 100, 0, HPos.RIGHT, VPos.CENTER);
-
-        assertEquals(59.6, child.getLayoutX(), .01);
-        assertEquals(34.8, child.getLayoutY(), .01);
     }
 
     @Test public void testPositionInAreaForResizableBottomLeft() {
@@ -398,17 +353,18 @@ public class RegionTest {
         assertEquals(70, child.getLayoutY(), 1e-100);
     }
 
-    @Test public void testPositionInAreaForNONResizableBottomLeft() {
-        Pane pane = new Pane(); // Region extension which makes children sequence public
-
-        Rectangle child = new Rectangle(50.4, 50.4);
-        pane.getChildren().add(child);
-
-        pane.positionInArea(child, 10, 10, 100, 100, 0, HPos.LEFT, VPos.BOTTOM);
-
-        assertEquals(10, child.getLayoutX(), .01);
-        assertEquals(59.6, child.getLayoutY(), .01);
-    }
+//    // See RT-19282
+//    @Test public void testPositionInAreaForNONResizableBottomLeft() {
+//        Pane pane = new Pane(); // Region extension which makes children sequence public
+//
+//        Rectangle child = new Rectangle(50.4, 50.4);
+//        pane.getChildren().add(child);
+//
+//        pane.positionInArea(child, 10, 10, 100, 100, 0, HPos.LEFT, VPos.BOTTOM);
+//
+//        assertEquals(10, child.getLayoutX(), .01);
+//        assertEquals(59.6, child.getLayoutY(), .01);
+//    }
 
     @Test public void testPositionInAreaForResizableBottomCenter() {
         Pane pane = new Pane(); // Region extension which makes children sequence public
@@ -425,17 +381,18 @@ public class RegionTest {
         assertEquals(70, child.getLayoutY(), 1e-100);
     }
 
-    @Test public void testPositionInAreaForNONResizableBottomCenter() {
-        Pane pane = new Pane(); // Region extension which makes children sequence public
-
-        Rectangle child = new Rectangle(50.4, 50.4);
-        pane.getChildren().add(child);
-
-        pane.positionInArea(child, 10, 10, 100, 100, 0, HPos.CENTER, VPos.BOTTOM);
-
-        assertEquals(34.8, child.getLayoutX(), .01);
-        assertEquals(59.6, child.getLayoutY(), .01);
-    }
+//    // See RT-19282
+//    @Test public void testPositionInAreaForNONResizableBottomCenter() {
+//        Pane pane = new Pane(); // Region extension which makes children sequence public
+//
+//        Rectangle child = new Rectangle(50.4, 50.4);
+//        pane.getChildren().add(child);
+//
+//        pane.positionInArea(child, 10, 10, 100, 100, 0, HPos.CENTER, VPos.BOTTOM);
+//
+//        assertEquals(34.8, child.getLayoutX(), .01);
+//        assertEquals(59.6, child.getLayoutY(), .01);
+//    }
 
     @Test public void testPositionInAreaForResizableBottomRight() {
         Pane pane = new Pane(); // Region extension which makes children sequence public
@@ -452,17 +409,18 @@ public class RegionTest {
         assertEquals(70, child.getLayoutY(), 1e-100);
     }
 
-    @Test public void testPositionInAreaForNONResizableBottomRight() {
-        Pane pane = new Pane(); // Region extension which makes children sequence public
-
-        Rectangle child = new Rectangle(50.4, 50.4);
-        pane.getChildren().add(child);
-
-        pane.positionInArea(child, 10, 10, 100, 100, 0, HPos.RIGHT, VPos.BOTTOM);
-
-        assertEquals(59.6, child.getLayoutX(), .01);
-        assertEquals(59.6, child.getLayoutY(), .01);
-    }
+//    // See RT-19282
+//    @Test public void testPositionInAreaForNONResizableBottomRight() {
+//        Pane pane = new Pane(); // Region extension which makes children sequence public
+//
+//        Rectangle child = new Rectangle(50.4, 50.4);
+//        pane.getChildren().add(child);
+//
+//        pane.positionInArea(child, 10, 10, 100, 100, 0, HPos.RIGHT, VPos.BOTTOM);
+//
+//        assertEquals(59.6, child.getLayoutX(), .01);
+//        assertEquals(59.6, child.getLayoutY(), .01);
+//    }
 
     @Test public void testPositionInAreaForResizableBaselineLeft() {
         Pane pane = new Pane(); // Region extension which makes children sequence public
@@ -479,17 +437,18 @@ public class RegionTest {
         assertEquals(30, child.getLayoutY(), 1e-100);
     }
 
-    @Test public void testPositionInAreaForNONResizableBaselineLeft() {
-        Pane pane = new Pane(); // Region extension which makes children sequence public
-
-        Rectangle child = new Rectangle(50.4, 50.4);
-        pane.getChildren().add(child);
-
-        pane.positionInArea(child, 10, 10, 100, 100, 60, HPos.LEFT, VPos.BASELINE);
-
-        assertEquals(10, child.getLayoutX(), .01);
-        assertEquals(19.6, child.getLayoutY(), .01);
-    }
+//    // See RT-19282
+//    @Test public void testPositionInAreaForNONResizableBaselineLeft() {
+//        Pane pane = new Pane(); // Region extension which makes children sequence public
+//
+//        Rectangle child = new Rectangle(50.4, 50.4);
+//        pane.getChildren().add(child);
+//
+//        pane.positionInArea(child, 10, 10, 100, 100, 60, HPos.LEFT, VPos.BASELINE);
+//
+//        assertEquals(10, child.getLayoutX(), .01);
+//        assertEquals(19.6, child.getLayoutY(), .01);
+//    }
 
     @Test public void testPositionInAreaForResizableBaselineCenter() {
         Pane pane = new Pane(); // Region extension which makes children sequence public
@@ -506,17 +465,18 @@ public class RegionTest {
         assertEquals(30, child.getLayoutY(), 1e-100);
     }
 
-    @Test public void testPositionInAreaForNONResizableBaselineCenter() {
-        Pane pane = new Pane(); // Region extension which makes children sequence public
-
-        Rectangle child = new Rectangle(50.4, 50.4);
-        pane.getChildren().add(child);
-
-        pane.positionInArea(child, 10, 10, 100, 100, 60, HPos.CENTER, VPos.BASELINE);
-
-        assertEquals(34.8, child.getLayoutX(), .01);
-        assertEquals(19.6, child.getLayoutY(), .01);
-    }
+//    // See RT-19282
+//    @Test public void testPositionInAreaForNONResizableBaselineCenter() {
+//        Pane pane = new Pane(); // Region extension which makes children sequence public
+//
+//        Rectangle child = new Rectangle(50.4, 50.4);
+//        pane.getChildren().add(child);
+//
+//        pane.positionInArea(child, 10, 10, 100, 100, 60, HPos.CENTER, VPos.BASELINE);
+//
+//        assertEquals(34.8, child.getLayoutX(), .01);
+//        assertEquals(19.6, child.getLayoutY(), .01);
+//    }
 
     @Test public void testPositionInAreaForResizableBaselineRight() {
         Pane pane = new Pane(); // Region extension which makes children sequence public
@@ -533,17 +493,18 @@ public class RegionTest {
         assertEquals(30, child.getLayoutY(), 1e-100);
     }
 
-    @Test public void testPositionInAreaForNONResizableBaselineRight() {
-        Pane pane = new Pane(); // Region extension which makes children sequence public
-
-        Rectangle child = new Rectangle(50.4, 50.4);
-        pane.getChildren().add(child);
-
-        pane.positionInArea(child, 10, 10, 100, 100, 60, HPos.RIGHT, VPos.BASELINE);
-
-        assertEquals(59.6, child.getLayoutX(), .01);
-        assertEquals(19.6, child.getLayoutY(), .01);
-    }
+//    // See RT-19282
+//    @Test public void testPositionInAreaForNONResizableBaselineRight() {
+//        Pane pane = new Pane(); // Region extension which makes children sequence public
+//
+//        Rectangle child = new Rectangle(50.4, 50.4);
+//        pane.getChildren().add(child);
+//
+//        pane.positionInArea(child, 10, 10, 100, 100, 60, HPos.RIGHT, VPos.BASELINE);
+//
+//        assertEquals(59.6, child.getLayoutX(), .01);
+//        assertEquals(19.6, child.getLayoutY(), .01);
+//    }
 
     @Test public void testLayoutInAreaWithLargerMax() {
         Pane pane = new Pane(); // Region extension which makes children sequence public
@@ -557,7 +518,7 @@ public class RegionTest {
         assertEquals(100, child.getHeight(), 1e-100);
         assertEquals(10, child.getLayoutX(), 1e-100);
         assertEquals(10, child.getLayoutY(), 1e-100);
-        
+
     }
 
     @Test public void testLayoutInAreaWithSmallerMax() {
@@ -572,7 +533,7 @@ public class RegionTest {
         assertEquals(60, child.getHeight(), 1e-100);
         assertEquals(35, child.getLayoutX(), 1e-100);
         assertEquals(30, child.getLayoutY(), 1e-100);
-        
+
     }
 
     @Test public void testLayoutInAreaWithLargerMin() {
@@ -832,5 +793,71 @@ public class RegionTest {
         pane.getChildren().add(child);
 
         assertEquals(600, pane.computeChildPrefAreaHeight(child, Insets.EMPTY), 1e-100);
+    }
+
+    @Test public void testChildMinAreaWidth() {
+        Pane pane = new Pane();
+
+        Region c1 = new MockBiased(Orientation.HORIZONTAL, 100, 100);
+        Region c2 = new MockBiased(Orientation.VERTICAL, 100, 100);
+        Region c3 = new MockRegion(10, 10, 100, 100, 1000, 1000);
+
+        pane.getChildren().addAll(c1, c2, c3);
+
+        assertEquals(12, pane.computeChildMinAreaWidth(c1, new Insets(1), -1), 1e-100);
+        assertEquals(12, pane.computeChildMinAreaWidth(c1, new Insets(1), 50), 1e-100);
+        assertEquals(3, pane.computeChildMinAreaWidth(c2, new Insets(1), -1), 1e-100); /*Insets + minimal for biased is 1 */
+        assertEquals(202, pane.computeChildMinAreaWidth(c2, new Insets(1), 50), 1e-100);
+        assertEquals(12, pane.computeChildMinAreaWidth(c3, new Insets(1), -1), 1e-100);
+        assertEquals(12, pane.computeChildMinAreaWidth(c3, new Insets(1), 50), 1e-100);
+
+    }
+    @Test public void testChildMinAreaHeight() {
+        Pane pane = new Pane();
+
+        Region c1 = new MockBiased(Orientation.HORIZONTAL, 100, 100);
+        Region c2 = new MockBiased(Orientation.VERTICAL, 100, 100);
+        Region c3 = new MockRegion(10, 10, 100, 100, 1000, 1000);
+
+        pane.getChildren().addAll(c1, c2, c3);
+
+        assertEquals(3, pane.computeChildMinAreaHeight(c1, new Insets(1), -1), 1e-100); /*Insets + minimal for biased is 1 */
+        assertEquals(202, pane.computeChildMinAreaHeight(c1, new Insets(1), 50), 1e-100);
+        assertEquals(12, pane.computeChildMinAreaHeight(c2, new Insets(1), -1), 1e-100);
+        assertEquals(12, pane.computeChildMinAreaHeight(c2, new Insets(1), 50), 1e-100);
+        assertEquals(12, pane.computeChildMinAreaHeight(c3, new Insets(1), -1), 1e-100);
+        assertEquals(12, pane.computeChildMinAreaHeight(c3, new Insets(1), 50), 1e-100);
+    }
+    @Test public void testChildMaxAreaWidth() {
+        Pane pane = new Pane();
+
+        Region c1 = new MockBiased(Orientation.HORIZONTAL, 100, 100);
+        Region c2 = new MockBiased(Orientation.VERTICAL, 100, 100);
+        Region c3 = new MockRegion(10, 10, 100, 100, 1000, 1000);
+
+        pane.getChildren().addAll(c1, c2, c3);
+
+        assertEquals(10002, pane.computeChildMaxAreaWidth(c1, new Insets(1), -1), 1e-100);
+        assertEquals(10002, pane.computeChildMaxAreaWidth(c1, new Insets(1), 50), 1e-100);
+        assertEquals(1002, pane.computeChildMaxAreaWidth(c2, new Insets(1), -1), 1e-100); /* 100 * 100 / 10 + 2*/
+        assertEquals(202, pane.computeChildMaxAreaWidth(c2, new Insets(1), 50), 1e-100);
+        assertEquals(1002, pane.computeChildMaxAreaWidth(c3, new Insets(1), -1), 1e-100);
+        assertEquals(1002, pane.computeChildMaxAreaWidth(c3, new Insets(1), 50), 1e-100);
+    }
+    @Test public void testChildMaxAreaHeight() {
+        Pane pane = new Pane();
+
+        Region c1 = new MockBiased(Orientation.HORIZONTAL, 100, 100);
+        Region c2 = new MockBiased(Orientation.VERTICAL, 100, 100);
+        Region c3 = new MockRegion(10, 10, 100, 100, 1000, 1000);
+
+        pane.getChildren().addAll(c1, c2, c3);
+
+        assertEquals(1002, pane.computeChildMaxAreaHeight(c1, new Insets(1), -1), 1e-100);
+        assertEquals(202, pane.computeChildMaxAreaHeight(c1, new Insets(1), 50), 1e-100);
+        assertEquals(10002, pane.computeChildMaxAreaHeight(c2, new Insets(1), -1), 1e-100);
+        assertEquals(10002, pane.computeChildMaxAreaHeight(c2, new Insets(1), 50), 1e-100);
+        assertEquals(1002, pane.computeChildMaxAreaHeight(c3, new Insets(1), -1), 1e-100);
+        assertEquals(1002, pane.computeChildMaxAreaHeight(c3, new Insets(1), 50), 1e-100);
     }
 }

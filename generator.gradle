@@ -36,15 +36,16 @@ task generate << {
     copy {
         from RTDir
         into FXDir
-        include "*.gradle", "LICENSE", "README"
+        include "*.gradle", "LICENSE", "README", "gradle.properties"
         exclude "generator.gradle"
     }
 
     // Copy over the genVSproperties.bat, used to generate properties required
     // for compilation on Windows.
     copy {
-        from "$RTDir/../build-src/genVSproperties.bat"
+        from "$RTDir/gradle-genVSproperties.bat"
         into FXDir
+        rename ("gradle-genVSproperties.bat", "genVSproperties.bat")
     }
 
     // Copy over the apps
@@ -79,39 +80,44 @@ task generate << {
         include "generated/ensemble/search/index/"
     }
 
-    // Create the build-tools project
+    // Create the buildSrc project
+    copy {
+        from "$RTDir/gradleBuildSrc"
+        into "$FXDir/buildSrc"
+    }
+
     copy {
         from "${RTDir}/javafx-beans/src"
-        into "${FXDir}/build-tools/src/main/java"
+        into "${FXDir}/buildSrc/src/main/java"
         include "com/sun/javafx/beans/annotations/**",
                 "com/sun/javafx/collections/annotations/**"
     }
     copy {
         from "${RTDir}/javafx-annotation-processor/src",
              "${RTDir}/decora-compiler/src"
-        into "${FXDir}/build-tools/src/main/java"
+        into "${FXDir}/buildSrc/src/main/java"
         exclude excludeFromSource
     }
     copy {
         from "${RTDir}/javafx-annotation-processor/src",
              "${RTDir}/decora-compiler/src"
-        into "${FXDir}/build-tools/src/main/resources"
+        into "${FXDir}/buildSrc/src/main/resources"
         include includeInResources
         exclude excludeFromResources
         exclude "**/META-INF/**/*"
     }
     copy {
         from "${RTDir}/decora-compiler/src/com/sun/scenario/effect/compiler/JSL.g"
-        into "${FXDir}/build-tools/src/main/antlr"
+        into "${FXDir}/buildSrc/src/main/antlr"
     }
     copy {
         from "${RTDir}/decora-compiler/test"
-        into "${FXDir}/build-tools/src/test/java"
+        into "${FXDir}/buildSrc/src/test/java"
         exclude excludeFromSource
     }
     copy {
         from "${RTDir}/decora-compiler/test"
-        into "${FXDir}/build-tools/src/test/resources"
+        into "${FXDir}/buildSrc/src/test/resources"
         include includeInResources
         exclude excludeFromResources
     }
@@ -275,14 +281,8 @@ task generate << {
     copy {
         from "${RTDir}/prism-ps/jsl",
              "${RTDir}/prism-ps/shadergen"
-        into "${FXDir}/modules/graphics/prism-jsl/src/main/java"
-        exclude "nbproject", "*.iml", "*.stg"
-    }
-
-    copy {
-        from "${RTDir}/prism-ps/shadergen"
-        into "${FXDir}/modules/graphics/prism-jsl/src/main/resources"
-        include "*.stg"
+        into "${FXDir}/modules/graphics/src/main/jsl-prism"
+        exclude "nbproject", "*.iml"
     }
 
     ["glass-lib-gtk", "glass-lib-ios", "glass-lib-lens", "glass-lib-macosx", "glass-lib-windows"].each { dir ->
@@ -315,7 +315,7 @@ task generate << {
     copy {
         from "${RTDir}/decora-runtime/jsl",
              "${RTDir}/decora-runtime/generator"
-        into "${FXDir}/modules/graphics/effects-jsl/src/main/java"
+        into "${FXDir}/modules/graphics/src/main/jsl-decora"
     }
 
     // Create the controls module

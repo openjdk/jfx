@@ -25,17 +25,17 @@
 
 package com.sun.javafx.sg.prism;
 
+import com.sun.javafx.geom.Vec3d;
 import com.sun.javafx.geom.transform.Affine3D;
-import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.sg.PGPhongMaterial;
 import com.sun.javafx.sg.PGShape3D;
 import com.sun.javafx.sg.PGTriangleMesh;
-import com.sun.javafx.tk.Toolkit;
 import com.sun.prism.Graphics;
 import com.sun.prism.Material;
-import com.sun.prism.MeshFactory;
 import com.sun.prism.MeshView;
 import com.sun.prism.ResourceFactory;
+import javafx.application.ConditionalFeature;
+import javafx.application.Platform;
 import javafx.scene.shape.CullFace;
 import javafx.scene.shape.DrawMode;
 
@@ -49,8 +49,8 @@ public abstract class NGShape3D extends NGNode implements PGShape3D {
     protected boolean materialDirty = false;
     protected boolean drawModeDirty = false;
     protected boolean cullFaceDirty = false;
-    private NGTriangleMesh triangleMesh;
-    private MeshView nativeObject;
+    private NGTriangleMesh mesh;
+    private MeshView meshView;
 
     public void setMaterial(PGPhongMaterial material) {
         this.material = (NGPhongMaterial) material;
@@ -72,110 +72,133 @@ public abstract class NGShape3D extends NGNode implements PGShape3D {
     protected void invalidate() {
         setMesh(null);
     }
-    
-    protected MeshView getNativeObject(ResourceFactory rf) {
 
-        if (nativeObject == null && triangleMesh != null) {
-            MeshFactory meshFactory = rf.get3DFactory();
-            nativeObject = meshFactory.createMeshView(triangleMesh.getNativeObject(meshFactory));
+    protected void renderMeshView(Graphics g) {
+
+        //validate state
+        g.setup3DRendering();
+
+        ResourceFactory rf = g.getResourceFactory();
+
+        if (meshView == null && mesh != null) {
+            meshView = rf.createMeshView(mesh.createMesh(rf));
             setMaterial(material);
             setDrawMode(drawMode);
             setCullFace(cullFace);
         }
 
-        if (nativeObject == null) {
-            return null;
+        if (meshView == null) {
+            return;
         }
 
-        triangleMesh.updateNativeIfNeeded();
+        mesh.validate();
 
-        Material mtl =  material.getNativeMaterial(rf);
+        Material mtl =  material.createMaterial(rf);
         if (materialDirty) {
-            nativeObject.setMaterial(mtl);
+            meshView.setMaterial(mtl);
             materialDirty = false;
         }
 
         if (cullFaceDirty) {
-            nativeObject.setCullingMode(cullFace.ordinal());
+            meshView.setCullingMode(cullFace.ordinal());
             cullFaceDirty = false;
         }
 
         if (drawModeDirty) {
-            // This need to change once the wire up is working
-            nativeObject.setWireframe(drawMode == DrawMode.LINE);
+            meshView.setWireframe(drawMode == DrawMode.LINE);
             drawModeDirty = false;
         }
 
-        Toolkit tk = Toolkit.getToolkit();
-        for (int i = 0; i < tk.getLightsInScene().size(); i++) {
-            NGLightBase lightBase = (NGLightBase) tk.getLightsInScene().get(i);
-            if (lightBase instanceof NGPointLight) {
-                NGPointLight light = (NGPointLight) lightBase;
-                Affine3D lightWT = light.getWorldTransform();
-                nativeObject.setLight(i,
-                        (float) lightWT.getMxt(),
-                        (float) lightWT.getMyt(),
-                        (float) lightWT.getMzt(),
-                        light.getColor().getRed(),
-                        light.getColor().getGreen(),
-                        light.getColor().getBlue(), 1.0f);
-            } else if (lightBase instanceof NGAmbientLight) {
-                NGAmbientLight light = (NGAmbientLight) lightBase;
-                nativeObject.setAmbient(light.getColor().getRed(),
-                        light.getColor().getGreen(),
-                        light.getColor().getBlue());
-            } else {
-                // Unknown light type
+        // Setup lights
+        int pointLightIdx = 0;
+        if (g.getLights() == null || g.getLights()[0] == null) {
+            // If no lights are in scene apply default light. Default light
+            // is a single point white point light at camera eye position.
+            meshView.setAmbientLight(0.0f, 0.0f, 0.0f);
+            Vec3d cameraPos = g.getCameraNoClone().getPositionInWorld(null);
+            meshView.setPointLight(pointLightIdx++,
+                                   (float)cameraPos.x,
+                                   (float)cameraPos.y,
+                                   (float)cameraPos.z,
+                                   1.0f, 1.0f, 1.0f, 1.0f);
+        } else {
+            float ambientRed = 0.0f;
+            float ambientBlue = 0.0f;
+            float ambientGreen = 0.0f;
+
+            for (int i = 0; i < g.getLights().length; i++) {
+                NGLightBase lightBase = (NGLightBase)g.getLights()[i];
+                if (lightBase == null) {
+                    // The array of lights can have nulls
+                    break;
+                } else if (lightBase.affects(this)) {
+                    if (lightBase instanceof NGPointLight) {
+                        NGPointLight light = (NGPointLight) lightBase;
+                        float intensity = light.getColor().getAlpha();
+                        if (intensity == 0.0f) {
+                            continue;
+                        }
+                        Affine3D lightWT = light.getWorldTransform();
+                        meshView.setPointLight(pointLightIdx++,
+                                (float)lightWT.getMxt(),
+                                (float)lightWT.getMyt(),
+                                (float)lightWT.getMzt(),
+                                light.getColor().getRed(),
+                                light.getColor().getGreen(),
+                                light.getColor().getBlue(),
+                                intensity);
+                    } else if (lightBase instanceof NGAmbientLight) {
+                        // Accumulate ambient lights
+                        ambientRed   += lightBase.getColor().getRedPremult();
+                        ambientGreen += lightBase.getColor().getGreenPremult();
+                        ambientBlue  += lightBase.getColor().getBluePremult();
+                    } else {
+                        // Unknown light type
+                    }
+                }
             }
+            ambientRed = saturate(ambientRed);
+            ambientGreen = saturate(ambientGreen);
+            ambientBlue = saturate(ambientBlue);
+            meshView.setAmbientLight(ambientRed, ambientGreen, ambientBlue);
+        }
+        // TODO: 3D Required for D3D implementation of lights, which is limited to 3
+        while (pointLightIdx < 3) {
+            // Reset any previously set lights
+            meshView.setPointLight(pointLightIdx++, 0, 0, 0, 0, 0, 0, 0);
         }
 
-        return nativeObject;
+        meshView.render(g);
+    }
+
+    // Clamp between [0, 1]
+    private static float saturate(float value) {
+        return value < 1.0f ? ((value < 0.0f) ? 0.0f : value) : 1.0f;
     }
 
     protected void setMesh(PGTriangleMesh triangleMesh) {
-        this.triangleMesh = (NGTriangleMesh)triangleMesh;
-        nativeObject = null;
+        this.mesh = (NGTriangleMesh)triangleMesh;
+        meshView = null;
         visualsChanged();
     }
 
     protected NGTriangleMesh getMesh() {
-        return triangleMesh;
+        return mesh;
     }
 
-    // for renderContent temp
-    private static final float tempTx[] = new float[12];
-
-    // TODO: 3D HACK - Remove this temporary method. 
-    // DELETE THIS ONCE D3D native clean up is done.
-    // This copy with tranpose operation should be done in the native d3d pipe.    
-    private void setMatrixAs3x4TempTx(BaseTransform bTx) {
-        assert tempTx.length == 12;
-        tempTx[0] = (float)bTx.getMxx(); tempTx[3] = (float)bTx.getMxy(); tempTx[6] = (float)bTx.getMxz();
-        tempTx[1] = (float)bTx.getMyx(); tempTx[4] = (float)bTx.getMyy(); tempTx[7] = (float)bTx.getMyz();
-        tempTx[2] = (float)bTx.getMzx(); tempTx[5] = (float)bTx.getMzy(); tempTx[8] = (float)bTx.getMzz();
-        tempTx[9] = (float)bTx.getMxt(); tempTx[10] = (float)bTx.getMyt(); tempTx[11] = (float)bTx.getMzt();
-    }
-    
     protected void renderContent(Graphics g) {
 
-        if (material == null) {
+        if (!Platform.isSupported(ConditionalFeature.SCENE3D) || material == null) {
             return;
         }
 
-        MeshView mView = getNativeObject(g.getResourceFactory());
-
-        if (mView != null) {
-            // TODO: 3D - Replace mView.setPos with setWorldTransform
-            // mView.setWorldTransform(g.getTransformNoClone());
-            setMatrixAs3x4TempTx(g.getTransformNoClone());
-            mView.setPos(tempTx);
-            g.draw3DObject(mView);
-        }
+        renderMeshView(g);
     }
 
+    // This node requires 3D graphics state for rendering
     @Override
-    NodeType getNodeType() {
-        return NodeType.NODE_3D;
+    boolean isShape3D() {
+        return true;
     }
 
     @Override
@@ -186,6 +209,6 @@ public abstract class NGShape3D extends NGNode implements PGShape3D {
     @Override
     public void release() {
         // TODO: 3D - Need to release native resources
-//        System.err.println("NGShape3D: Need to release native resources");
+        // material, mesh and meshview have native backing that need clean up.
     }
 }

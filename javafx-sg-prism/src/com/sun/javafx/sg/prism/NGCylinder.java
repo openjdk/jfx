@@ -27,8 +27,7 @@ package com.sun.javafx.sg.prism;
 
 import com.sun.javafx.sg.PGCylinder;
 import com.sun.javafx.sg.PGTriangleMesh;
-import com.sun.prism.MeshView;
-import com.sun.prism.ResourceFactory;
+import com.sun.prism.Graphics;
 
 /**
  * TODO: 3D - Need documentation
@@ -37,11 +36,12 @@ public class NGCylinder extends NGShape3D implements PGCylinder {
 
     private PGTriangleMesh mesh;
 
-    protected MeshView getNativeObject(ResourceFactory rf) {
+    @Override
+    protected void renderMeshView(Graphics g) {
         if (getMesh() == null) {
             setMesh(mesh);
         }
-        return super.getNativeObject(rf);
+        super.renderMeshView(g);
     }
 
     @Override

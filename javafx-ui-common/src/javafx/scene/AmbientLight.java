@@ -25,7 +25,6 @@
 
 package javafx.scene;
 
-import com.sun.javafx.sg.PGAmbientLight;
 import com.sun.javafx.sg.PGNode;
 import com.sun.javafx.tk.Toolkit;
 import javafx.scene.paint.Color;
@@ -46,7 +45,7 @@ public class AmbientLight extends LightBase {
 
     /**
      * Creates a new instance of {@code AmbientLight} class using the specified color.
-     * 
+     *
      * @param color the color of the light source
      */
     public AmbientLight(Color color) {
@@ -61,18 +60,5 @@ public class AmbientLight extends LightBase {
     @Override
     protected PGNode impl_createPGNode() {
         return Toolkit.getToolkit().createPGAmbientLight();
-    }
-
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    @Override
-    public void impl_updatePG() {
-        super.impl_updatePG();
-        PGAmbientLight pgAmbientLight = (PGAmbientLight) impl_getPGNode();
-        pgAmbientLight.setColor((getColor() == null) ? null
-                : Toolkit.getPaintAccessor().getPlatformPaint(getColor()));
     }
 }

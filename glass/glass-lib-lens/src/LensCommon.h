@@ -146,7 +146,7 @@ void glass_throw_exception_by_name(JNIEnv *env,
 typedef enum _LensResult{
     LENS_OK         = 0, 
     LENS_FAILED     = 1
-} LensResult;
+}LensResult;
 
 /**                                                   
  * Data structure that define NativeWindow and NativeView bounds
@@ -530,13 +530,37 @@ void glass_application_notifyDeviceEvent(JNIEnv *env,
                                          jint flags,
                                          jboolean attach);
 
+/**
+ * Call Window.java::add(Window window) private method that adds 
+ * a window to the visible window list. 
+ * Windows on that list are the actual windows rendered by 
+ * Quantum/Prism 
+ * 
+ * @param env 
+ * @param window the window to add
+ */
+void glass_application_addWindowToVisibleWindowList(JNIEnv *env,
+                                                    NativeWindow window);
+
+/**
+ * Call Window.java::remove(Window window) private method that 
+ * removes a window from the visible window list. 
+ * Windows on that list are the actual windows rendered by 
+ * Quantum/Prism 
+ * 
+ * @param env 
+ * @param window the window to remove
+ */
+void glass_application_RemoveWindowFromVisibleWindowList(JNIEnv *env,
+                                          NativeWindow window);
+
 /////////////Window
 /**
  * NWS stands for Native Window State
  * the enum holds all the possible state of a window.
  * Window can have only one state at a given time
  */
-typedef enum {
+typedef enum _NativeWindowState{
     NWS_NORMAL,
     NWS_MINIMIZED,
     NWS_MAXIMIZED,
@@ -619,7 +643,7 @@ struct _NativeWindow {
  *
  * @return char* String representation of NativeWindowState
  */
-char *glass_window_getNativeStateName(int nativeWindowState);
+char *lens_window_getNativeStateName(NativeWindowState state);
 
 /**
  * Service function that release _NativeWindow resources and 
@@ -869,15 +893,13 @@ jboolean glass_window_setMaximumSize(JNIEnv *env,
 
 
 /**
- * This service functions check if window's current dimensions 
- * are within bounds and correct them if not. 
- * This is required as we don't have a window manager to force
- * this on our window.
- * the max* / min* attribute are been set by
+ * This service function checks if given width and height can be
+ * applied to the given window by comparing them to the window's 
+ * max and min attributes that were set by 
  * glass_window_setMaximumSize() and
- * glass_window_setMinimumSize(). value of 0, means no
- * restriction.
- * 
+ * glass_window_setMinimumSize().
+ * If given values are out of bounds they will be update with
+ * the closest in bounds values to match the restrictions.
  * 
  * 
  * @param window the window to check
@@ -885,10 +907,13 @@ jboolean glass_window_setMaximumSize(JNIEnv *env,
  *              be changed to value within bounds
  * @param height [IN/OUT] the requested height of a window. Will
  *              be changed to value within bounds
+ * @return JNI_TRUE means values are valid, JNI_FALSE means 
+ *         values are not valid and have been updated.
+ * 
  */
-void glass_window_check_bounds(NativeWindow window,
-                               int *width,
-                               int *height);
+jboolean glass_window_check_bounds(NativeWindow window,
+                                   int *width,
+                                   int *height);
 
 /**
  * Maximize / Restore window
@@ -970,6 +995,12 @@ void glass_window_list_add(NativeWindow window);
  * @param window window
  */
 void glass_window_list_remove(NativeWindow window);
+
+/**
+ * Print the content of the windows list to the console. Used 
+ * for debugging. 
+ */
+void glass_window_listPrint();
 
 /**
  * Get the current focused window (as was set by 

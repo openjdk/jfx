@@ -32,13 +32,10 @@ package com.sun.prism;
 
 public interface PhongMaterial extends Material {
 
-    static public final int mapDiffuse = 0;
-    static public final int mapSpecular = 1;
-    static public final int mapBump = 2;
-    static public final int mapSelfIlum = 3;
+    public enum MapType {DIFFUSE, SPECULAR, BUMP, SELF_ILLUM};
 
     public void setSolidColor(float r, float g, float b, float a);
 
-    public void setMap(int mapID, Texture hTexture);
+    public void setMap(MapType mapID, Texture map);
 
 }

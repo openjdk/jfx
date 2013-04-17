@@ -27,8 +27,9 @@ package com.sun.javafx.sg.prism;
 
 import com.sun.javafx.geom.transform.Affine3D;
 import com.sun.javafx.geom.transform.BaseTransform;
+import com.sun.javafx.sg.BaseNode;
+import com.sun.javafx.sg.PGGroup;
 import com.sun.javafx.sg.PGLightBase;
-import com.sun.javafx.tk.Toolkit;
 import com.sun.prism.Graphics;
 import com.sun.prism.paint.Color;
 
@@ -36,42 +37,39 @@ import com.sun.prism.paint.Color;
  * TODO: 3D - Need documentation
  */
 public class NGLightBase extends NGNode implements PGLightBase {
-    // TODO: 3D - Should the default be White or null?
-    private Color color = Color.WHITE;
+
+    private Color DEFAULT_COLOR = Color.WHITE;
+    private Color color = DEFAULT_COLOR;
     private boolean lightOn = true;
     private Affine3D worldTransform;
-    
-    protected NGLightBase() {     
+
+    protected NGLightBase() {
     }
 
     @Override
-    NodeType getNodeType() {
-        return NodeType.NODE_NONE;
-    }
-    
-    @Override
     public void setTransformMatrix(BaseTransform tx) {
         super.setTransformMatrix(tx);
-        Toolkit.getToolkit().setLightsDirty(true);
     }
 
     @Override
     protected void doRender(Graphics g) {}
-    
+
     @Override protected void renderContent(Graphics g) {}
 
     @Override protected boolean hasOverlappingContents() {
         return false;
     }
+
     public Color getColor() {
         return color;
     }
 
     public void setColor(Object value) {
-        this.color = (Color) value;
-        //TODO: 3D - Need to evaluate this pattern
-        Toolkit.getToolkit().setLightsDirty(true);
-        visualsChanged();
+        if (value == null) { value = DEFAULT_COLOR; }
+        if (!this.color.equals(value)) {
+            this.color = (Color)value;
+            visualsChanged();
+        }
     }
 
     public boolean isLightOn() {
@@ -79,7 +77,10 @@ public class NGLightBase extends NGNode implements PGLightBase {
     }
 
     public void setLightOn(boolean value) {
-        lightOn = value;
+        if (lightOn != value) {
+            visualsChanged();
+            lightOn = value;
+        }
     }
 
     public Affine3D getWorldTransform() {
@@ -87,12 +88,52 @@ public class NGLightBase extends NGNode implements PGLightBase {
     }
 
     public void setWorldTransform(Affine3D localToSceneTx) {
-        this.worldTransform = localToSceneTx;        
+        // TODO: 3D worldTransform is reference to the FX light transform,
+        // which is incorrect. Uncomment below to fix problem. Requires sync
+        // to be called at the correct time by FX light
+//        if (this.worldTransform == null ||
+//                !this.worldTransform.equals(localToSceneTx)) {
+//        this.worldTransform.setTransform(localToSceneTx);
+//            visualsChanged();
+//        }
+        this.worldTransform = localToSceneTx;
+    }
+
+    Object scopedNodes[] = null;
+
+    public void setScope(Object[] scopedNodes) {
+        if (this.scopedNodes != scopedNodes) {
+            this.scopedNodes = scopedNodes;
+            visualsChanged();
+        }
+    }
+
+    final boolean affects(NGShape3D n3d) {
+        if (!lightOn) {
+            return false;
+        } else if (scopedNodes == null) {
+            return true;
+        } else {
+            for (int i = 0; i < scopedNodes.length; i++) {
+                Object scopedNode = scopedNodes[i];
+                if (scopedNode instanceof PGGroup) {
+                    BaseNode parent = n3d.getParent();
+                    while (parent != null) {
+                        if (scopedNode == parent) {
+                            return true;
+                        }
+                        parent = parent.getParent();
+                    }
+                } else if (scopedNode == n3d) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     @Override
     public void release() {
         // TODO: 3D - Need to release native resources
-//        System.err.println("NGLightBase: Need to release native resources");
     }
 }

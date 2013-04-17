@@ -72,6 +72,8 @@ public interface Graphics {
     public int getClipRectIndex();
     public float getExtraAlpha();
     public void setExtraAlpha(float extraAlpha);
+    public void setLights(Object lights[]);
+    public Object[] getLights();
     public Paint getPaint();
     public void setPaint(Paint paint);
     public BasicStroke getStroke();
@@ -182,13 +184,10 @@ public interface Graphics {
     public void setRenderRoot(Object root);
     public Object getRenderRoot();
 
-    // switch to classic rendering mode (default)
-    public boolean beginRender2D();
-    
-    // switch to retained rendering mode
-    public boolean beginRender3D();
-    
-    // render retained object
-    public boolean draw3DObject(MeshView obj);
-    
+    public void setState3D(boolean flag);
+    public boolean isState3D();
+
+    // TODO: 3D Get better name, and may want to move this into node render method
+    public void setup3DRendering();
+
 }

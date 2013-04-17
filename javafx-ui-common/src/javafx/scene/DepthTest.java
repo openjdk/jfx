@@ -27,6 +27,10 @@ package javafx.scene;
 
 /**
  * This enum defines the possible states for the depthTest flag in node.
+ *
+ * Note that this is a conditional feature. See
+ * {@link javafx.application.ConditionalFeature#SCENE3D ConditionalFeature.SCENE3D}
+ * for more information.
  */
 public enum DepthTest {
     /**

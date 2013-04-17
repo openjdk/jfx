@@ -113,6 +113,16 @@ public class NGSubScene extends NGNode implements PGSubScene {
         this.depthBuffer = depthBuffer;
     }
 
+    private Object lights[];
+
+    @Override
+    public Object[] getLights() { return lights; }
+
+    public void setLights(Object[] lights) {
+        this.lights = lights;
+        visualsChanged();
+    }
+
     @Override
     protected void visualsChanged() {
         renderSG = true;
@@ -159,7 +169,14 @@ public class NGSubScene extends NGNode implements PGSubScene {
 
     @Override
     protected void renderContent(Graphics g) {
-        
+        if (rtt != null) {
+            rtt.lock();
+            if (rtt.isSurfaceLost()) {
+                renderSG = true;
+                rtt = null;
+            }
+        }
+
         if (!root.isClean() || renderSG) {
             if (rtt == null) {
                 ResourceFactory factory = g.getResourceFactory();
@@ -167,13 +184,13 @@ public class NGSubScene extends NGNode implements PGSubScene {
                                               Texture.WrapMode.CLAMP_NOT_NEEDED);
             }
             Graphics rttGraphics = rtt.createGraphics();
-
-            applyBackgroundFillPaint(rttGraphics);
+            rttGraphics.setLights(lights);
 
             rttGraphics.setDepthBuffer(depthBuffer);
             if (camera != null) {
                 rttGraphics.setCamera(camera);
             }
+            applyBackgroundFillPaint(rttGraphics);
             rttGraphics.setTransform(BaseTransform.IDENTITY_TRANSFORM);
 
             root.render(rttGraphics);
@@ -182,6 +199,7 @@ public class NGSubScene extends NGNode implements PGSubScene {
         }
         g.drawTexture(rtt, rtt.getContentX(), rtt.getContentY(),
                       rtt.getContentWidth(), rtt.getContentHeight());
+        rtt.unlock();
     }
 
 }

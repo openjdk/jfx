@@ -39,10 +39,6 @@ abstract public class NGCamera extends NGNode implements PGCamera {
 
     private PrismCameraImpl cameraImpl;
 
-    @Override NodeType getNodeType() {
-        return NodeType.NODE_NONE;
-    }
-
     @Override protected void doRender(Graphics g) {
     }
 

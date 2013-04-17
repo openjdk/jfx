@@ -25,6 +25,8 @@
 
 package com.sun.prism;
 
+import javafx.scene.shape.CullFace;
+
 /**
  * TODO: 3D - Need documentation
  * This class represents new retained mode rendering object
@@ -32,22 +34,21 @@ package com.sun.prism;
  */
 public interface MeshView {
 
-    public final int CULL_NONE = 1;
-    public final int CULL_CW = 2;
-    public final int CULL_CCW = 3;
-    public final int CULL_DEFAULT = CULL_CW;
+    public final static int CULL_NONE = CullFace.NONE.ordinal();
+    public final static int CULL_BACK = CullFace.BACK.ordinal();
+    public final static int CULL_FRONT = CullFace.FRONT.ordinal();
 
     public void setCullingMode(int mode);
 
-    public boolean setMaterial(Material material);
+    public void setMaterial(Material material);
 
-    public void setPos(float tm3x4[]); //TODO: 3D - Rename this method
+    public void setWireframe(boolean wireframe);
 
-    public void setWireframe(boolean isWired); // Redo this method to use enum.
+    public void setAmbientLight(float r, float g, float b);
 
-    public void setAmbient(float r, float g, float b); // Do we still need this method
-
-    public boolean setLight(int index,
+    public void setPointLight(int index,
             float x, float y, float z,
             float r, float g, float b, float w);
+
+    public void render(Graphics g);
 }
