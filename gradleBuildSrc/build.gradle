@@ -30,8 +30,20 @@
  * as for compiling native code. Nothing in buildSrc should *ever* be shipped with the runtime.
  */
 
+apply plugin: "java"
+
 repositories {
-    mavenCentral()
+    if ("true".equalsIgnoreCase(System.getProperty("PULL_CLOSED"))) {
+        ivy {
+            url "http://jfx.us.oracle.com/shared-webrev/rbair/"
+            layout "pattern", {
+                artifact "[artifact]-[revision].[ext]"
+                artifact "[artifact].[ext]"
+            }
+        }
+    } else {
+        mavenCentral()
+    }
 }
 
 // Include the to-be-generated antlr source files in the source set. We will generate
@@ -45,11 +57,11 @@ sourceSets {
 getConfigurations().add("antlr3");
 
 dependencies {
-    compile("org.antlr:antlr-runtime:3.1.3");
-    testCompile("junit:junit:4.8.2");
-    antlr3("org.antlr:antlr-runtime:3.1.3",
-           "org.antlr:stringtemplate:3.2@jar",
-           "org.antlr:antlr:3.1.3@jar");
+    compile     group: "org.antlr", name: "antlr",          version: "3.1.3"
+    testCompile group: "junit",     name: "junit",          version: "4.8.2"
+    antlr3      group: "org.antlr", name: "antlr-runtime",  version: "3.1.3"
+    antlr3      group: "org.antlr", name: "stringtemplate", version: "3.2"
+    antlr3      group: "org.antlr", name: "antlr",          version: "3.1.3"
 }
 
 // At the moment the ASM library shipped with Gradle that is used to
