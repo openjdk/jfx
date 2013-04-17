@@ -102,6 +102,16 @@ String library(String name) {
     return "${IS_WINDOWS ? '' : 'lib'}$name.${IS_WINDOWS ? 'dll' : IS_MAC ? 'dylib' : 'so'}"
 }
 
+String cygpath(String path) {
+    if (!IS_WINDOWS) return path;
+    ByteArrayOutputStream out = new ByteArrayOutputStream();
+    exec {
+        standardOutput = out
+        commandLine "cmd", "/c", "cygpath", "-m", path
+    }
+    return out.toString().trim();
+}
+
 /******************************************************************************
  *                                                                            *
  *                   Definition of project properties                         *
@@ -194,7 +204,7 @@ ext.GLASS_PLATFORM = COMPILE_TARGET.glassName;
 //    c:\Program Files (x86)\Java\jre8\
 // Because of this, you may sometimes get the jdk's JRE (in which case the logic we used to have here
 // was correct and consistent with all other platforms), or it might be the standalone JRE (for the love!).
-def envJavaHome = System.getenv("JAVA_HOME");
+def envJavaHome = cygpath(System.getenv("JAVA_HOME"));
 ext.JAVA_HOME = envJavaHome == null || envJavaHome.equals("") ? System.getProperty("java.home") : envJavaHome;
 def javaHomeFile = file(JAVA_HOME);
 defineProperty("JDK_HOME",
@@ -203,12 +213,12 @@ defineProperty("JDK_HOME",
         javaHomeFile.name.startsWith("jre") ?
         new File(javaHomeFile.getParent(), "jdk1.${javaHomeFile.name.substring(3)}.0").toString() :
         JAVA_HOME); // we have to bail and set it to something and this is as good as any!
-defineProperty("JAVA", "$JDK_HOME/bin/java${IS_WINDOWS ? '.exe' : ''}");
-defineProperty("JAVAC", "$JDK_HOME/bin/javac${IS_WINDOWS ? '.exe' : ''}");
-defineProperty("JAVAH", "$JDK_HOME/bin/javah${IS_WINDOWS ? '.exe' : ''}");
-defineProperty("JAVADOC", "$JDK_HOME/bin/javadoc${IS_WINDOWS ? '.exe' : ''}");
+defineProperty("JAVA", cygpath("$JDK_HOME/bin/java${IS_WINDOWS ? '.exe' : ''}"));
+defineProperty("JAVAC", cygpath("$JDK_HOME/bin/javac${IS_WINDOWS ? '.exe' : ''}"));
+defineProperty("JAVAH", cygpath("$JDK_HOME/bin/javah${IS_WINDOWS ? '.exe' : ''}"));
+defineProperty("JAVADOC", cygpath("$JDK_HOME/bin/javadoc${IS_WINDOWS ? '.exe' : ''}"));
 defineProperty("JDK_DOCS", "http://download.oracle.com/javase/7/docs/api");
-defineProperty("BINARY_STUB", "file://$JDK_HOME/jre/lib/ext/jfxrt.jar");
+defineProperty("BINARY_STUB", cygpath("$JDK_HOME/jre/lib/ext/jfxrt.jar"));
 
 // COMPILE_WEBKIT specifies whether to build all of webkit. COMPILE_GSTREAMER
 // specifies whether to build GStreamer.
@@ -299,12 +309,11 @@ if (COMPILE_TARGET == CompileTarget.ARM_VFP && !IS_LINUX) throw new Exception("M
 if (COMPILE_TARGET == null) throw new Exception("Unable to determine compilation platform, or COMPILE_TARGET!");
 
 // Make sure JAVA_HOME/bin/java exists
-defineProperty("JAVA", "$JDK_HOME/bin/java");
-if (!file("$JAVA").exists()) throw new Exception("Missing or incorrect path to 'java': '$JAVA'. Perhaps bad JDK_HOME? $JDK_HOME")
-if (!file("$JAVAC").exists()) throw new Exception("Missing or incorrect path to 'javac': '$JAVAC'. Perhaps bad JDK_HOME? $JDK_HOME")
-if (!file("$JAVAH").exists()) throw new Exception("Missing or incorrect path to 'javah': '$JAVAH'. Perhaps bad JDK_HOME? $JDK_HOME")
-if (!file("$JAVADOC").exists()) throw new Exception("Missing or incorrect path to 'javadoc': '$JAVADOC'. Perhaps bad JDK_HOME? $JDK_HOME")
-if (!file("$BINARY_STUB").exists()) logger.warn("Missing or incorrect path to 'jfxrt.jar': '$BINARY_STUB'. Perhaps bad JDK_HOME? $JDK_HOME")
+if (!file(JAVA).exists()) throw new Exception("Missing or incorrect path to 'java': '$JAVA'. Perhaps bad JDK_HOME? $JDK_HOME")
+if (!file(JAVAC).exists()) throw new Exception("Missing or incorrect path to 'javac': '$JAVAC'. Perhaps bad JDK_HOME? $JDK_HOME")
+if (!file(JAVAH).exists()) throw new Exception("Missing or incorrect path to 'javah': '$JAVAH'. Perhaps bad JDK_HOME? $JDK_HOME")
+if (!file(JAVADOC).exists()) throw new Exception("Missing or incorrect path to 'javadoc': '$JAVADOC'. Perhaps bad JDK_HOME? $JDK_HOME")
+if (!file(BINARY_STUB).exists()) logger.warn("Missing or incorrect path to 'jfxrt.jar': '$BINARY_STUB'. Perhaps bad JDK_HOME? $JDK_HOME")
 
 // Verify that CONF is something useful
 if (CONF != "Release" && CONF != "Debug") logger.warn("Unknown configuration CONF='$CONF'. Treating as 'Release'");
@@ -1019,9 +1028,9 @@ allprojects {
         } else if (name == "compileStubJava") {
             classpath = sourceSets.stub.compileClasspath + rootProject.files(rootProject.BINARY_STUB)
         } else if (name == "compileJava") {
-            compile.options.compilerArgs += ["-s", "$buildDir/generated-src/builders"]
             // Not everything needs the builder processor
             if (["graphics", "controls", "swing", "swt", "base", "fxml"].contains(project.name)){
+                compile.options.compilerArgs += ["-s", "$buildDir/generated-src/builders"]
                 compile.options.compilerArgs += ["-processor", "javafx.builder.processor.BuilderProcessor"]
             }
             classpath = sourceSets.main.compileClasspath + rootProject.files(rootProject.BINARY_STUB)
