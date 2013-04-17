@@ -9,6 +9,7 @@
 
     <import file="../../build-defs.xml"/>
 
+    <property name="glass.dist.dir" value="dist"/>
     <property name="glass.dist.cross.dir" value="${glass.dist.dir}${cross.name.suffix}"/>
     <property name="glass.dist.cross.bin.dir" value="${glass.dist.cross.dir}/bin"/>
 
