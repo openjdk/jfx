@@ -26,6 +26,7 @@
 package com.sun.prism.null3d;
 
 import com.sun.glass.ui.Screen;
+import com.sun.javafx.PlatformUtil;
 import com.sun.prism.GraphicsPipeline;
 import com.sun.prism.ResourceFactory;
 import com.sun.prism.impl.PrismSettings;
@@ -91,7 +92,8 @@ public class NULL3DPipeline extends GraphicsPipeline {
     @Override
     public boolean supportsShaderType(ShaderType type) {
         switch (type) {
-            case HLSL: return true;
+            case HLSL: return PlatformUtil.isWindows();
+	    case GLSL: return !PlatformUtil.isWindows();
             default: return false;
         }
     }
