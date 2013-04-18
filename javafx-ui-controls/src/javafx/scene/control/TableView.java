@@ -1910,7 +1910,7 @@ public class TableView<S> extends Control {
                 List<TablePosition<S,?>> positions = new ArrayList<TablePosition<S,?>>();
 
                 if (row >= 0 && row < rowCount) {
-                    positions.add(new TablePosition(getTableView(), row, null));
+                    positions.add(new TablePosition<S,Object>(getTableView(), row, null));
                     lastIndex = row;
                 }
 
@@ -1918,7 +1918,7 @@ public class TableView<S> extends Control {
                     int index = rows[i];
                     if (index < 0 || index >= rowCount) continue;
                     lastIndex = index;
-                    TablePosition pos = new TablePosition(getTableView(), index, null);
+                    TablePosition<S,Object> pos = new TablePosition<S,Object>(getTableView(), index, null);
                     if (selectedCells.contains(pos)) continue;
 
                     positions.add(pos);
