@@ -655,12 +655,14 @@ project(":graphics") {
          [fileName: "LinearConvolve", generator: "CompileLinearConvolve", outputs: "-hw"],
          [fileName: "LinearConvolveShadow", generator: "CompileLinearConvolve", outputs: "-hw"]].each { settings ->
             javaexec {
+                executable = JAVA
                 workingDir = "modules/graphics"
                 main = settings.generator
                 classpath = configurations.compile + configurations.antlr3
                 classpath += files("$buildDir/classes/main")
                 classpath += files("$buildDir/classes/jsl-compilers/decora")
                 args = ["-i", sourceDir, "-o", destinationDir, "-t", "-pkg", "com/sun/scenario/effect", "$settings.outputs", "$settings.fileName"]
+                jvmArgs "-Djava.ext.dirs="
             }
         }
     }
@@ -701,11 +703,13 @@ project(":graphics") {
         inputFiles.include "**/*.jsl"
         inputFiles.each { file ->
             javaexec {
+                executable = JAVA
                 workingDir = "modules/graphics"
                 main = "CompileJSL"
                 classpath = configurations.compile + configurations.antlr3
                 classpath += files("$buildDir/classes/jsl-compilers/prism", "modules/graphics/src/main/jsl-prism") // for the .stg
                 args = ["-i", sourceDir, "-o", destinationDir, "-t", "-pkg", "com/sun/prism", "-d3d", "-es2", "-name", "$file"]
+                jvmArgs "-Djava.ext.dirs="
             }
         }
     }
@@ -757,6 +761,7 @@ project(":graphics") {
 project(":controls") {
     dependencies {
         compile BUILD_SRC, project(":base"), project(":graphics"), project(":designTime")
+        // TODO not sure how to specify this? processResources project(":base"), project(":graphics")
         testCompile project(":graphics").sourceSets.stub.output
     }
 
@@ -780,11 +785,14 @@ project(":controls") {
         "$buildDir/resources/main/com/sun/javafx/scene/control/skin/modena/modena.css",
         "$buildDir/resources/main/com/sun/javafx/scene/control/skin/modena/touch.css"].each { css ->
             javaexec {
+                executable = JAVA
+                workingDir = "modules/controls"
                 classpath files("$buildDir/classes/main",
                         project(":graphics").sourceSets.main.output,
                         project(":base").sourceSets.main.output)
                 main = "com.sun.javafx.css.parser.Css2Bin"
                 args css
+                jvmArgs "-Djava.ext.dirs="
             }
         }
     }
