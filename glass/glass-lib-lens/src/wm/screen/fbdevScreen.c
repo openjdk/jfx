@@ -175,6 +175,10 @@ void glass_pixel_attachIntBuffer(JNIEnv *env,
 
 
 void glass_screen_clear() {
+#ifdef ISEGLFB
+    //noop for eglfb as screen is managed in prism
+    return;
+#else
     FILE *fb;
     int y;
     NativeScreen fbScreen = glass_screen_getMainScreen();
@@ -209,6 +213,7 @@ void glass_screen_clear() {
 
     GLASS_LOG_FINE("fclose(%s)", FB_DEVICE);
     fclose(fb);
+#endif
 }
 
 
