@@ -124,7 +124,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_gtk_GtkWindow__1close
   (JNIEnv * env, jobject obj, jlong ptr)
 {
     WindowContext* ctx = JLONG_TO_WINDOW_CTX(ptr);
-    delete ctx;
+    destroy_and_delete_ctx(ctx);
     return JNI_TRUE; // return value not used
 }
 /*
