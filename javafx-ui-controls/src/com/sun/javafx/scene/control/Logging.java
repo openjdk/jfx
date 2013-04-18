@@ -35,7 +35,7 @@ public class Logging {
     /**
      * A PlatformLogger to use for logging controls activities.  Created
      * lazily to delay calls to com.sun.javafx.tk.Toolkit.getToolkit() so that
-     * it will no intefere with the build.
+     * it will no intefere with the build. Note, this is no longer true.
      */
     private static PlatformLogger controlsLogger = null;
 
@@ -44,7 +44,7 @@ public class Logging {
      */
     public static final PlatformLogger getControlsLogger() {
         if (controlsLogger == null) {
-            controlsLogger = com.sun.javafx.tk.Toolkit.getToolkit().getLogger("controls");
+            controlsLogger = PlatformLogger.getLogger("controls");
         }
         return controlsLogger;
     }
