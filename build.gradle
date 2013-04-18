@@ -491,6 +491,9 @@ allprojects {
                 artifact "[artifact].[ext]"
             }
         }
+        flatDir {
+            dir "$JDK_HOME/jre/lib/"
+        }
     }
 
     // By default all of our projects require junit for testing so we can just
@@ -592,7 +595,8 @@ project(":graphics") {
     }
 
     dependencies {
-        compile project(":base"), BUILD_SRC, files("$JDK_HOME/jre/lib/plugin.jar")
+        compile project(":base"), BUILD_SRC
+        compile name: "plugin"
         compile name: SWT_FILE_NAME
         stubCompile group: "junit", name: "junit", version: "4.8.2",
             project(":base").sourceSets.test.output, sourceSets.main.output
