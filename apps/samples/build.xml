@@ -36,6 +36,11 @@
                 <exclude name="**/*.iml"/>
             </fileset>
         </copy>
+        <!-- Remove build-tasks import from netbeans projects -->
+        <replace dir="${jfx.apps.ga-samples.dist}/Ensemble8">
+            <include name="build.xml"/>
+            <replacetoken><![CDATA[<import file="../../build-tasks.xml"/>]]></replacetoken>
+        </replace>
     </target>
 
     <target name="default" depends="dist-apps"/>
