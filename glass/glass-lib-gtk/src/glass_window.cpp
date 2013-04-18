@@ -81,7 +81,25 @@ void WindowContextBase::process_focus(GdkEventFocus* event) {
     }
 }
 
+void destroy_and_delete_ctx(WindowContext* ctx) {
+    if (ctx) {
+        ctx->process_destroy();
+        delete ctx;
+    }
+}
+
 void WindowContextBase::process_destroy() {
+    if (WindowContextBase::sm_grab_window == this) {
+        ungrab_focus();
+    }
+
+    std::set<WindowContextTop*>::iterator it;
+    for (it = children.begin(); it != children.end(); ++it) {
+        (*it)->set_owner(NULL);
+        destroy_and_delete_ctx(*it);
+    }
+    children.clear();
+
     if (jwindow) {
         mainEnv->CallVoidMethod(jwindow, jWindowNotifyDestroy);
     }
@@ -430,19 +448,6 @@ void WindowContextBase::set_background(float r, float g, float b) {
 }
 
 WindowContextBase::~WindowContextBase() {
-    if (jwindow) {
-        // in case we don't get GDK_DESTROY event
-        mainEnv->CallVoidMethod(jwindow, jWindowNotifyDestroy);
-    }
-
-    if (WindowContextBase::sm_grab_window == this) {
-        ungrab_focus();
-    }
-    std::set<WindowContextTop*>::iterator it;
-    for (it = children.begin(); it != children.end(); ++it) {
-        (*it)->set_owner(NULL);
-        (*it)->process_destroy();
-    }
     if (jview) {
         mainEnv->DeleteGlobalRef(jview);
     }

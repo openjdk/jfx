@@ -190,7 +190,7 @@ public class StubToolkit extends Toolkit {
     }
 
     @Override
-    public TKStage createTKPopupStage(StageStyle stageStyle, Object owner) {
+    public TKStage createTKPopupStage(StageStyle stageStyle, TKStage owner) {
         return new StubPopupStage();
     }
 

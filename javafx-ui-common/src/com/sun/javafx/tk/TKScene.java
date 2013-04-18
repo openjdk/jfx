@@ -37,6 +37,11 @@ import java.security.AccessControlContext;
 public interface TKScene {
 
     /**
+      * This method is called from Scene, when it is being destroyed.
+      */
+    public void dispose();
+
+    /**
      * This method is used to set security context of the Scene.
      */
     public void setSecurityContext(AccessControlContext ctx);
@@ -56,8 +61,6 @@ public interface TKScene {
 
     public void setTKSceneListener(TKSceneListener listener);
     public void setTKScenePaintListener(final TKScenePaintListener listener);
-
-    public void setScene(Object scene);
 
     public void setRoot(PGNode root);
 

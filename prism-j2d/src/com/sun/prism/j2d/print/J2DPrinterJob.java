@@ -990,6 +990,7 @@ public class J2DPrinterJob implements PrinterJobImpl {
             int h = (int)pf.getImageableHeight();
             Node appNode = currPageInfo.getNode();
             g.translate(x, y);
+System.out.println("x="+x+" y="+y+" w="+w+" h="+h);
             printNode(appNode, g, w, h);
             return Printable.PAGE_EXISTS;
         }

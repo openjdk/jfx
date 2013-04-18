@@ -53,7 +53,6 @@ import javafx.event.EventDispatchChain;
 import javafx.event.EventHandler;
 import javafx.event.EventTarget;
 import javafx.event.EventType;
-import com.sun.javafx.tk.Toolkit;
 import sun.util.logging.PlatformLogger;
 
 import static javafx.concurrent.WorkerStateEvent.*;
@@ -123,7 +122,7 @@ public abstract class Service<V> implements Worker<V>, EventTarget {
     /**
      * Logger used in the case of some uncaught exceptions
      */
-    private static final PlatformLogger LOG = Toolkit.getToolkit().getLogger(Service.class.getName());
+    private static final PlatformLogger LOG = PlatformLogger.getLogger(Service.class.getName());
 
     /*
         The follow chunk of static state is for defining the default Executor used

@@ -37,18 +37,13 @@ import com.sun.javafx.tk.TKScene;
 import com.sun.javafx.tk.Toolkit;
 import com.sun.javafx.accessible.providers.AccessibleProvider;
 import com.sun.javafx.accessible.providers.AccessibleStageProvider;
-import com.sun.prism.impl.PrismSettings;
 import javafx.application.Platform;
 
-class EmbeddedStage extends GlassStage implements EmbeddedStageInterface {
+final class EmbeddedStage extends GlassStage implements EmbeddedStageInterface {
 
     private HostInterface host;
 
-    private boolean visible = false;
-    
     public EmbeddedStage(HostInterface host) {
-        super(PrismSettings.verbose);
-        
         this.host = host;
     }
 
@@ -72,7 +67,7 @@ class EmbeddedStage extends GlassStage implements EmbeddedStageInterface {
                           float w, float h, float cw, float ch,
                           float xGravity, float yGravity)
     {
-        if (verbose) {
+        if (QuantumToolkit.verbose) {
             System.err.println("EmbeddedStage.setBounds: x=" + x + " y=" + y + " xSet=" + xSet + " ySet=" + ySet +
                                " w=" + w + " h=" + " cw=" + cw + " ch=" + ch);
         }
@@ -101,21 +96,20 @@ class EmbeddedStage extends GlassStage implements EmbeddedStageInterface {
 
     @Override
     public void setIcons(List icons) {
-        if (verbose) {
+        if (QuantumToolkit.verbose) {
             System.err.println("EmbeddedStage.setIcons");
         }
     }
 
     @Override
     public void setTitle(String title) {
-        if (verbose) {
+        if (QuantumToolkit.verbose) {
             System.err.println("EmbeddedStage.setTitle " + title);
         }
     }
 
     @Override
     public void setVisible(boolean visible) {
-        this.visible = visible;
         host.setEmbeddedStage(visible ? this : null);
         super.setVisible(visible);
     }
@@ -127,28 +121,28 @@ class EmbeddedStage extends GlassStage implements EmbeddedStageInterface {
 
     @Override
     public void setIconified(boolean iconified) {
-        if (verbose) {
+        if (QuantumToolkit.verbose) {
             System.err.println("EmbeddedScene.setIconified " + iconified);
         }
     }
 
     @Override
     public void setMaximized(boolean maximized) {
-        if (verbose) {
+        if (QuantumToolkit.verbose) {
             System.err.println("EmbeddedScene.setMaximized " + maximized);
         }
     }
 
     @Override
     public void setResizable(boolean resizable) {
-        if (verbose) {
+        if (QuantumToolkit.verbose) {
             System.err.println("EmbeddedStage.setResizable " + resizable);
         }
     }
 
     @Override
     public void setFullScreen(boolean fullScreen) {
-        if (verbose) {
+        if (QuantumToolkit.verbose) {
             System.err.println("EmbeddedStage.setFullScreen " + fullScreen);
         }
     }
@@ -163,14 +157,14 @@ class EmbeddedStage extends GlassStage implements EmbeddedStageInterface {
 
     @Override
     public void toBack() {
-        if (verbose) {
+        if (QuantumToolkit.verbose) {
             System.err.println("EmbeddedStage.toBack");
         }
     }
 
     @Override
     public void toFront() {
-        if (verbose) {
+        if (QuantumToolkit.verbose) {
             System.err.println("EmbeddedStage.toFront");
         }
     }

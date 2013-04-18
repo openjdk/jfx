@@ -141,6 +141,7 @@ import com.sun.javafx.scene.input.PickResultChooser;
 import com.sun.javafx.scene.transform.TransformUtils;
 import com.sun.javafx.scene.traversal.Direction;
 import com.sun.javafx.sg.PGNode;
+import com.sun.javafx.stage.WindowHelper;
 import com.sun.javafx.tk.Toolkit;
 import javafx.css.StyleableProperty;
 import javafx.geometry.NodeOrientation;
@@ -3836,8 +3837,10 @@ public abstract class Node implements EventTarget, Styleable {
         }
         final com.sun.javafx.geom.Point2D tempPt =
                 TempState.getInstance().point;
-        tempPt.setLocation((float)(screenX - scene.getX() - window.getX()),
-                (float)(screenY - scene.getY() - window.getY()));
+        tempPt.setLocation((float)(screenX - scene.getX()
+                                       - WindowHelper.getScreenX(window)),
+                           (float)(screenY - scene.getY()
+                                       - WindowHelper.getScreenY(window)));
         try {
             sceneToLocal(tempPt);
         } catch (NoninvertibleTransformException e) {
@@ -3871,10 +3874,15 @@ public abstract class Node implements EventTarget, Styleable {
         if (scene == null || window == null) {
             return null;
         }
-        Bounds sceneBounds = new BoundingBox(screenBounds.getMinX() - scene.getX() - window.getX(),
-                screenBounds.getMinY() - scene.getY() - window.getY(),
-                screenBounds.getMinZ(),
-                screenBounds.getWidth(), screenBounds.getHeight(), screenBounds.getDepth());
+        Bounds sceneBounds =
+                new BoundingBox(screenBounds.getMinX() - scene.getX()
+                                    - WindowHelper.getScreenX(window),
+                                screenBounds.getMinY() - scene.getY()
+                                    - WindowHelper.getScreenY(window),
+                                screenBounds.getMinZ(),
+                                screenBounds.getWidth(),
+                                screenBounds.getHeight(),
+                                screenBounds.getDepth());
         return sceneToLocal(sceneBounds);
     }
 
@@ -4002,8 +4010,10 @@ public abstract class Node implements EventTarget, Styleable {
         tempPt.setLocation((float)localX, (float)localY);
         localToScene(tempPt);
 
-        return new Point2D(tempPt.x + scene.getX() + window.getX(),
-                tempPt.y + scene.getY() + window.getY());
+        return new Point2D(tempPt.x + scene.getX()
+                               + WindowHelper.getScreenX(window),
+                           tempPt.y + scene.getY()
+                               + WindowHelper.getScreenY(window));
     }
 
     /**
@@ -4030,10 +4040,14 @@ public abstract class Node implements EventTarget, Styleable {
         }
 
         Bounds sceneBounds = localToScene(localBounds);
-        return new BoundingBox(sceneBounds.getMinX() + scene.getX() + window.getX(),
-                sceneBounds.getMinY() + scene.getY() + window.getY(),
-                sceneBounds.getMinZ(),
-                sceneBounds.getWidth(), sceneBounds.getHeight(), sceneBounds.getDepth());
+        return new BoundingBox(sceneBounds.getMinX() + scene.getX()
+                                   + WindowHelper.getScreenX(window),
+                               sceneBounds.getMinY() + scene.getY()
+                                   + WindowHelper.getScreenY(window),
+                               sceneBounds.getMinZ(),
+                               sceneBounds.getWidth(),
+                               sceneBounds.getHeight(),
+                               sceneBounds.getDepth());
     }
 
     /**

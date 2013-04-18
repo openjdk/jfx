@@ -95,7 +95,7 @@ final class PaintCollector implements CompletionListener {
      * or removeDirtyScene. It is only ever accessed (both read and write!)
      * from the FX thread.
      */
-    private final List<GlassScene> dirtyScenes = new ArrayList<GlassScene>();
+    private final List<GlassScene> dirtyScenes = new ArrayList<>();
 
     /**
      * Keeps track of the number of scenes which still need to be processed.
@@ -161,7 +161,7 @@ final class PaintCollector implements CompletionListener {
      * Called by renderAll to wait for rendering to complete before
      * continuing.
      */
-    private final void waitForRenderingToComplete() {
+    private void waitForRenderingToComplete() {
         while (true) {
             try {
                 // We need to keep waiting until things are done!
@@ -281,7 +281,7 @@ final class PaintCollector implements CompletionListener {
         }
 
         final PaintRenderJob paintjob = (PaintRenderJob)job;
-        final GlassScene scene = paintjob == null ? null : paintjob.getScene();
+        final GlassScene scene = paintjob.getScene();
 
         if (scene == null) {
             throw new IllegalArgumentException("PaintCollector: null scene");
@@ -308,7 +308,7 @@ final class PaintCollector implements CompletionListener {
             View.notifyRenderingEnd();
             // In some cases we need to tell the toolkit that
             // now would be a great time to vsync! 
-            if (needsHint && toolkit.hasNativeSystemVsync() == false) {
+            if (needsHint && !toolkit.hasNativeSystemVsync()) {
                 toolkit.vsyncHint();
             }
 
@@ -331,14 +331,13 @@ final class PaintCollector implements CompletionListener {
         ViewPainter viewPainter = scene.getPainter();
         ((QuantumToolkit)QuantumToolkit.getToolkit()).pulse(false);
         scene.setDirty(true);
-//        ((Runnable)viewPainter).run();
          final CountDownLatch latch = new CountDownLatch(1);
          boolean locked =  AbstractPainter.renderLock.isHeldByCurrentThread();
          if (locked) {
              AbstractPainter.renderLock.unlock();
          }
          try {
-             renderer.submit(new RenderJob((Runnable)viewPainter, new CompletionListener() {
+             renderer.submit(new RenderJob(viewPainter, new CompletionListener() {
                  @Override public void done(final RenderJob rj) {
                      latch.countDown();
                  }

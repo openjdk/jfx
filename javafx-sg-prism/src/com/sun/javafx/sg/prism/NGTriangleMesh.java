@@ -185,9 +185,8 @@ public class NGTriangleMesh implements PGTriangleMesh {
             this.faceSmoothingGroups = new int[faceSmoothingGroups.length];
         }
 
-        for (int i = 0; i < faceSmoothingGroups.length; i++) {
-            this.faceSmoothingGroups[i] = 1 << faceSmoothingGroups[i];
-        }
+        System.arraycopy(faceSmoothingGroups, 0, this.faceSmoothingGroups, 0,
+                this.faceSmoothingGroups.length);
     }
 
     public void setFaceSmoothingGroups(int[] faceSmoothingGroups, int index, int length) {
@@ -198,14 +197,11 @@ public class NGTriangleMesh implements PGTriangleMesh {
         }
 
         // Range check were done in the FX layer.
-        int toIndex = index + length;
-        for (int i = index; i < toIndex; i++) {
-            this.faceSmoothingGroups[i] = 1 << faceSmoothingGroups[i];
-        }
+        System.arraycopy(faceSmoothingGroups, index, this.faceSmoothingGroups, index, length);
     }
 
     // NOTE: This method is used for unit test purpose only.
-    int[] test_getShiftedFaceSmoothingGroups() {
+    int[] test_getFaceSmoothingGroups() {
         return this.faceSmoothingGroups;
     }
 }

@@ -107,11 +107,7 @@
     {
         [[self->nsWindow parentWindow] removeChildWindow:self->nsWindow];
     }
-    
-    // Call the notification method
-    GET_MAIN_JENV;
-    (*env)->CallVoidMethod(env, self->jWindow, jWindowNotifyDestroy);
-    
+
     // Finally, close owned windows to mimic MS Windows behavior
     NSArray *children = [self->nsWindow childWindows];
     for (NSUInteger i=0; i<[children count]; i++)
@@ -119,6 +115,10 @@
         NSWindow *child = (NSWindow*)[children objectAtIndex:i];
         [child close];
     }
+    
+    // Call the notification method
+    GET_MAIN_JENV;
+    (*env)->CallVoidMethod(env, self->jWindow, jWindowNotifyDestroy);
 }
 
 - (void)windowWillMove:(NSNotification *)notification

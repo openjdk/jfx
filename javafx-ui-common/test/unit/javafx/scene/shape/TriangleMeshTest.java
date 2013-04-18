@@ -46,29 +46,6 @@ public class TriangleMeshTest {
     }
 
     /**
-     * Test faceSmoothingGroups with illegal value of setFaceSmoothingGroups
-     * method, of class TriangleMesh.
-     */
-    @Test (expected=IllegalArgumentException.class)
-    public void testSetFaceSmoothingGroups_intArrValueOutOfRange() {
-        int divX = 10;
-        int divY = 10;
-        TriangleMesh instance = buildTriangleMesh(divX, divY);
-
-        int[] faceSmoothingGroups = new int[divX * divY * 2];
-        Arrays.fill(faceSmoothingGroups, 1);
-        instance.setFaceSmoothingGroups(faceSmoothingGroups);
-
-        Arrays.fill(faceSmoothingGroups, -1);
-        instance.setFaceSmoothingGroups(faceSmoothingGroups); // expect IllegalArgumentException
-        
-        int[] expecteds = new int[faceSmoothingGroups.length];
-        Arrays.fill(expecteds, 1);
-        // faceSmoothingGroups should not change
-        assertArrayEquals(expecteds, instance.getFaceSmoothingGroups(null));
-    }
-
-    /**
      * Test of setFaceSmoothingGroups method, of class TriangleMesh.
      */
     @Test

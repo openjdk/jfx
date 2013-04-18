@@ -74,11 +74,6 @@ import javafx.scene.transform.Rotate;
  * @since JavaFX 8
  */
 public class TriangleMesh extends Mesh {
-    /*
-     * setSmoothingBit - 32 bit (see existing 3D concept implementation of 
-     * smoothness by grouping for details)
-        opposite faces can share the same bit
-     */
 
     public static final int NUM_COMPONENTS_PER_POINT = 3;
     public static final int NUM_COMPONENTS_PER_TEXCOORD = 2;
@@ -620,32 +615,32 @@ public class TriangleMesh extends Mesh {
     
     /**
      * Sets the face smoothing group for each face in this {@code TriangleMesh}
+     * A smoothing group value of 0 implies hard edges for its associated face, 
+     * and a null faceSmoothingGroup implies all faces in this mesh have a 
+     * smoothing group value of 1.
      * 
-     * TODO: 3D - if faceSmoothingGroups is null (default) --> smooth faces
-     * Note: faceSmoothingGroups.length must be equal to faces.length/NUM_COMPONENTS_PER_FACE.
-     * Error: Throw exception?
+     * Note: If faceSmoothingGroup is not null, faceSmoothingGroups.length must
+     * be equal to faces.length/NUM_COMPONENTS_PER_FACE.
      */
     public final void setFaceSmoothingGroups(int[] faceSmoothingGroups) {
-        // Check that faceSmoothingGroups.length is 1/NUM_COMPONENTS_PER_FACE of faces.length
-        if (faceSmoothingGroups.length != (faces.length / NUM_COMPONENTS_PER_FACE)) {
-            throw new IllegalArgumentException("faceSmoothingGroups.length has to be equal to (faces.length / NUM_COMPONENTS_PER_FACE).");
-        }
-
-        // NOTE: The face smoothing group value is currently restricted from 0 to 31.
-        for (int i = 0; i < faceSmoothingGroups.length; i++) {
-            if (faceSmoothingGroups[i] < 0 || faceSmoothingGroups[i] > 31) {
-                throw new IllegalArgumentException("The face smoothing group value should be from 0 to 31 inclusive.");
+        if (faceSmoothingGroups == null) {
+            this.faceSmoothingGroups = null;
+            setFaceSmoothingGroupCount(0);
+        } else {
+            // Check that faceSmoothingGroups.length is 1/NUM_COMPONENTS_PER_FACE of faces.length
+            if (faceSmoothingGroups.length != (faces.length / NUM_COMPONENTS_PER_FACE)) {
+                throw new IllegalArgumentException("faceSmoothingGroups.length has to be equal to (faces.length / NUM_COMPONENTS_PER_FACE).");
             }
+
+            if ((this.faceSmoothingGroups == null)
+                    || (this.faceSmoothingGroups.length < faceSmoothingGroups.length)) {
+                this.faceSmoothingGroups = new int[faceSmoothingGroups.length];
+            }
+            System.arraycopy(faceSmoothingGroups, 0, this.faceSmoothingGroups, 0, faceSmoothingGroups.length);
+            // Store the valid faceSmoothingGroup count.
+            // Note this.faceSmoothingGroups.length can be bigger than faceSmoothingGroups.length.
+            setFaceSmoothingGroupCount(faceSmoothingGroups.length);
         }
-        
-        if ((this.faceSmoothingGroups == null) || 
-                (this.faceSmoothingGroups.length < faceSmoothingGroups.length)) {
-            this.faceSmoothingGroups = new int[faceSmoothingGroups.length];
-        }
-        System.arraycopy(faceSmoothingGroups, 0, this.faceSmoothingGroups, 0, faceSmoothingGroups.length);
-        // Store the valid faceSmoothingGroup count.
-        // Note this.faceSmoothingGroups.length can be bigger than faceSmoothingGroups.length.
-        setFaceSmoothingGroupCount(faceSmoothingGroups.length);
 
         fsgDirty = true;
         setDirty(true);
@@ -655,6 +650,7 @@ public class TriangleMesh extends Mesh {
      * Sets the faceSmoothingGroups associated with this {@code TriangleMesh}
      * starting at the specified {@code index} using data in {@code faceSmoothingGroups} 
      * starting at index {@code start} for {@code length} number of faceSmoothingGroups.
+     * A smoothing group value of 0 implies hard edges for its associated face.
      * 
      * @param index the starting destination index in this TriangleMesh's faceSmoothingGroups array
      * @param points source array of floats containing the new faceSmoothingGroups
@@ -675,13 +671,6 @@ public class TriangleMesh extends Mesh {
         if ((index >= fsgCount) || 
                 ((index + length) > fsgCount)) {
             throw new IllegalArgumentException("index or (index + length) is out of range for this triangle mesh's faceSmoothingGroups");
-        }
-
-        // NOTE: The face smoothing group value is currently restricted from 0 to 31.
-        for (int i = start; i < length; i++) {
-            if (faceSmoothingGroups[i] < 0 || faceSmoothingGroups[i] > 31) {
-                throw new IllegalArgumentException("The face smoothing group value should be from 0 to 31 inclusive.");
-            }
         }
 
         System.arraycopy(faceSmoothingGroups, start, this.faceSmoothingGroups, index, length);

@@ -399,7 +399,7 @@ public final class QuantumToolkit extends Toolkit implements ToolkitInterface {
     void runToolkit() {
         Thread user = Thread.currentThread();
 
-        if (toolkitRunning.getAndSet(true) == false) {
+        if (!toolkitRunning.getAndSet(true)) {
             user.setName("JavaFX Application Thread");
 
             // Set context class loader to the same as the thread that called startup
@@ -542,12 +542,11 @@ public final class QuantumToolkit extends Toolkit implements ToolkitInterface {
 
     void pulse(boolean collect) {
         try {
-            long start = PULSE_LOGGING_ENABLED ? System.currentTimeMillis() : 0;
             if (PULSE_LOGGING_ENABLED) {
                 PULSE_LOGGER.pulseStart();
             }
 
-            if (toolkitRunning.get() == false) {
+            if (!toolkitRunning.get()) {
                 return;
             }
             try {
@@ -598,13 +597,13 @@ public final class QuantumToolkit extends Toolkit implements ToolkitInterface {
 
     @Override public TKStage createTKStage(StageStyle stageStyle) {
         assertToolkitRunning();
-        return new WindowStage(verbose, stageStyle).init(systemMenu);
+        return new WindowStage(stageStyle).init(systemMenu);
     }
 
     @Override public TKStage createTKStage(StageStyle stageStyle,
             boolean primary, Modality modality, TKStage owner, boolean rtl) {
         assertToolkitRunning();
-        WindowStage stage = new WindowStage(verbose, stageStyle, primary, modality, owner);
+        WindowStage stage = new WindowStage(stageStyle, primary, modality, owner);
         stage.setRTL(rtl);
         stage.init(systemMenu);
         return stage;
@@ -617,7 +616,7 @@ public final class QuantumToolkit extends Toolkit implements ToolkitInterface {
             throw new NullPointerException();
         }
         if (eventLoopMap == null) {
-            eventLoopMap = new HashMap<Object, EventLoop>();
+            eventLoopMap = new HashMap<>();
         }
         if (eventLoopMap.containsKey(key)) {
             throw new IllegalArgumentException(
@@ -644,9 +643,9 @@ public final class QuantumToolkit extends Toolkit implements ToolkitInterface {
         eventLoop.leave(rval);
     }
 
-    @Override public TKStage createTKPopupStage(StageStyle stageStyle, Object owner) {
+    @Override public TKStage createTKPopupStage(StageStyle stageStyle, TKStage owner) {
         assertToolkitRunning();
-        return new PopupStage(verbose, owner).init(systemMenu);
+        return new PopupStage(owner).init(systemMenu);
     }
 
     @Override public TKStage createTKEmbeddedStage(HostInterface host) {
@@ -793,7 +792,7 @@ public final class QuantumToolkit extends Toolkit implements ToolkitInterface {
                    && e.isShiftDown();
     }
 
-    private Map contextMap = Collections.synchronizedMap(new HashMap());
+    private Map<Object, Object> contextMap = Collections.synchronizedMap(new HashMap<>());
     @Override public Map<Object, Object> getContextMap() {
         return contextMap;
     }
@@ -802,7 +801,7 @@ public final class QuantumToolkit extends Toolkit implements ToolkitInterface {
         if (pulseHZ == null) {
             return 60;
         } else {
-            return pulseHZ.intValue();
+            return pulseHZ;
         }
     }
 
@@ -836,7 +835,7 @@ public final class QuantumToolkit extends Toolkit implements ToolkitInterface {
 
     private List<com.sun.prism.paint.Stop> convertStops(List<Stop> paintStops) {
         List<com.sun.prism.paint.Stop> stops =
-            new ArrayList<com.sun.prism.paint.Stop>(paintStops.size());
+            new ArrayList<>(paintStops.size());
         for (Stop s : paintStops) {
             stops.add(new com.sun.prism.paint.Stop(toPrismColor(s.getColor()),
                                                    (float) s.getOffset()));
@@ -1001,7 +1000,7 @@ public final class QuantumToolkit extends Toolkit implements ToolkitInterface {
         if (shape == null) {
             return new PathElement[0];
         }
-        List<PathElement> elements = new ArrayList();
+        List<PathElement> elements = new ArrayList<>();
         // iterate over the shape and turn it into a series of path
         // elements
         com.sun.javafx.geom.Shape geomShape = (com.sun.javafx.geom.Shape) shape;
@@ -1047,7 +1046,7 @@ public final class QuantumToolkit extends Toolkit implements ToolkitInterface {
     @Override public HitInfo convertHitInfoToFX(Object hit) {
         Integer textHitPos = (Integer) hit;
         HitInfo hitInfo = new HitInfo();
-        hitInfo.setCharIndex(textHitPos.intValue());
+        hitInfo.setCharIndex(textHitPos);
         hitInfo.setLeading(true);
         return hitInfo;
     }
@@ -1057,7 +1056,7 @@ public final class QuantumToolkit extends Toolkit implements ToolkitInterface {
     }
 
     @Override public FilterContext getFilterContext(Object config) {
-        if (config == null || ((config instanceof com.sun.glass.ui.Screen) == false)) {
+        if (config == null || (!(config instanceof com.sun.glass.ui.Screen))) {
             return PrFilterContext.getDefaultInstance();
         }
         Screen screen = (Screen)config;

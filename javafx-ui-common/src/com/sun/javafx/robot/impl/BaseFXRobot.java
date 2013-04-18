@@ -42,6 +42,7 @@ import javafx.scene.input.MouseEvent;
 
 import com.sun.javafx.robot.FXRobot;
 import com.sun.javafx.robot.FXRobotImage;
+import com.sun.javafx.stage.WindowHelper;
 import com.sun.javafx.tk.Toolkit;
 import javafx.scene.input.ScrollEvent;
 
@@ -224,8 +225,8 @@ public class BaseFXRobot extends FXRobot {
     private void doMouseEvent(double x, double y, MouseButton passedButton,
             int clickCount, EventType<MouseEvent> passedType)
     {
-        screenMouseX = target.getWindow().getX() + target.getX() + x;
-        screenMouseY = target.getWindow().getY() + target.getY() + y;
+        screenMouseX = WindowHelper.getScreenX(target.getWindow()) + target.getX() + x;
+        screenMouseY = WindowHelper.getScreenY(target.getWindow()) + target.getY() + y;
         sceneMouseX = x;
         sceneMouseY = y;
 
@@ -281,8 +282,8 @@ public class BaseFXRobot extends FXRobot {
     private void doScrollEvent(double x, double y, double rotation,
             EventType<ScrollEvent> type)
     {
-        screenMouseX = target.getWindow().getX() + target.getX() + x;
-        screenMouseY = target.getWindow().getY() + target.getY() + y;
+        screenMouseX = WindowHelper.getScreenX(target.getWindow()) + target.getX() + x;
+        screenMouseY = WindowHelper.getScreenY(target.getWindow()) + target.getY() + y;
         sceneMouseX = x;
         sceneMouseY = y;
 

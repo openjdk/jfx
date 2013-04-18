@@ -249,19 +249,6 @@ public abstract class Toolkit {
              });
     }
 
-    /**
-     * Returns a PlatformLogger of a given name.
-     *
-     * @param name the name of the PlatformLogger to get
-     */
-    public PlatformLogger getLogger(String name) {
-        /*
-         * PlatformLogger is full of statics. So, we use PlatformLogger in this
-         * manner to limit the amount of mutable static state in the public API.
-         */
-        return PlatformLogger.getLogger(name);
-    }
-
     public abstract boolean init();
 
     /**
@@ -319,7 +306,7 @@ public abstract class Toolkit {
     public abstract TKStage createTKStage(StageStyle stageStyle, boolean primary,
             Modality modality, TKStage owner, boolean rtl);
 
-    public abstract TKStage createTKPopupStage(StageStyle stageStyle, Object owner);
+    public abstract TKStage createTKPopupStage(StageStyle stageStyle, TKStage owner);
     public abstract TKStage createTKEmbeddedStage(HostInterface host);
 
     /**

@@ -30,16 +30,16 @@ import javafx.stage.StageStyle;
 import com.sun.glass.ui.Application;
 import com.sun.glass.ui.Screen;
 import com.sun.glass.ui.Window;
-import com.sun.javafx.tk.TKScene;
-import com.sun.prism.impl.PrismSettings;
 
-class PopupStage extends WindowStage  {
+import com.sun.javafx.tk.TKScene;
+import com.sun.javafx.tk.TKStage;
+
+final class PopupStage extends WindowStage  {
 
     private GlassStage ownerStage;
 
-    public PopupStage(boolean verbose, final Object owner) {
-        super(verbose, StageStyle.TRANSPARENT);
-        assert owner instanceof GlassStage;
+    public PopupStage(final TKStage owner) {
+        super(StageStyle.TRANSPARENT);
         ownerStage = (GlassStage)owner;
     }
 
@@ -60,34 +60,15 @@ class PopupStage extends WindowStage  {
 
     @Override
     public TKScene createTKScene(boolean depthBuffer) {
-        PopupScene scene = new PopupScene(verbose, depthBuffer);
-        scene.setGlassStage(this);
-
-        return scene;
+        return new PopupScene(depthBuffer);
     }
 
     public void setResizable(final boolean resizable) {
+        // no-op
     }
 
     public void setTitle(final String title) {
-    }
-
-    public void sizeToScene() {
-    }
-
-    public void centerOnScreen(){
-    }
-
-    public void close() {
-        super.close();
-    }
-
-    @Override
-    public void setBounds(float x, float y, boolean xSet, boolean ySet,
-                          float width, float height, float clientWidth, float clientHeight,
-                          float xGravity, float yGravity)
-    {
-        super.setBounds(x, y, xSet, ySet, width, height, clientWidth, clientHeight, xGravity, yGravity);
+        // no-op
     }
 
     @Override public void setVisible(boolean visible) {
