@@ -31,7 +31,7 @@ import javafx.collections.ObservableList;
 import org.junit.Before;
 import org.junit.Test;
 
-import static javafx.scene.control.ControlTestUtils.assertStyleClassContains;
+import static com.sun.javafx.scene.control.infrastructure.ControlTestUtils.assertStyleClassContains;
 import static org.junit.Assert.*;
 
 /**

@@ -25,7 +25,7 @@
 
 package javafx.scene.control;
 
-import static javafx.scene.control.ControlTestUtils.assertStyleClassContains;
+import static com.sun.javafx.scene.control.infrastructure.ControlTestUtils.assertStyleClassContains;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;

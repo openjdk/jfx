@@ -25,7 +25,8 @@
 
 package javafx.scene.control;
 
-import static javafx.scene.control.ControlTestUtils.*;
+import static com.sun.javafx.scene.control.infrastructure.ControlTestUtils.*;
+
 import com.sun.javafx.pgstub.StubToolkit;
 import com.sun.javafx.tk.Toolkit;
 import javafx.beans.property.BooleanProperty;

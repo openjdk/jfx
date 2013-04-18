@@ -25,7 +25,7 @@
 
 package javafx.scene.control;
 
-import static javafx.scene.control.ControlTestUtils.assertStyleClassContains;
+import static com.sun.javafx.scene.control.infrastructure.ControlTestUtils.assertStyleClassContains;
 import static javafx.scene.control.TreeTableColumn.SortType.ASCENDING;
 import static javafx.scene.control.TreeTableColumn.SortType.DESCENDING;
 import static org.junit.Assert.assertEquals;
@@ -61,8 +61,8 @@ import org.junit.Ignore;
 import org.junit.Test;
 
 import com.sun.javafx.scene.control.TableColumnComparatorBase.TreeTableColumnComparator;
+import com.sun.javafx.scene.control.infrastructure.VirtualFlowTestUtils;
 import com.sun.javafx.scene.control.skin.VirtualScrollBar;
-import com.sun.javafx.scene.control.test.ControlAsserts;
 import com.sun.javafx.scene.control.test.Person;
 import com.sun.javafx.scene.control.test.RT_22463_Person;
 import com.sun.javafx.tk.Toolkit;
@@ -322,9 +322,9 @@ public class TreeTableViewTest {
             }
         });
         
-        ControlAsserts.assertListContainsItemsInOrder(treeTableView.getRoot().getChildren(), apple, orange, banana);
+        VirtualFlowTestUtils.assertListContainsItemsInOrder(treeTableView.getRoot().getChildren(), apple, orange, banana);
         treeTableView.getSortOrder().add(col);
-        ControlAsserts.assertListContainsItemsInOrder(treeTableView.getRoot().getChildren(), apple, orange, banana);
+        VirtualFlowTestUtils.assertListContainsItemsInOrder(treeTableView.getRoot().getChildren(), apple, orange, banana);
         
         // the sort order list should be returned back to its original state
         assertTrue(treeTableView.getSortOrder().isEmpty());
@@ -338,11 +338,11 @@ public class TreeTableViewTest {
             }
         });
         
-        ControlAsserts.assertListContainsItemsInOrder(treeTableView.getRoot().getChildren(), apple, orange, banana);
+        VirtualFlowTestUtils.assertListContainsItemsInOrder(treeTableView.getRoot().getChildren(), apple, orange, banana);
         treeTableView.getSortOrder().add(col);
-        ControlAsserts.assertListContainsItemsInOrder(treeTableView.getRoot().getChildren(), apple, banana, orange);
+        VirtualFlowTestUtils.assertListContainsItemsInOrder(treeTableView.getRoot().getChildren(), apple, banana, orange);
         
-        ControlAsserts.assertListContainsItemsInOrder(treeTableView.getSortOrder(), col);
+        VirtualFlowTestUtils.assertListContainsItemsInOrder(treeTableView.getSortOrder(), col);
     }
     
     @Ignore("This test is only valid if sort event consumption should revert changes")
@@ -356,16 +356,16 @@ public class TreeTableViewTest {
             }
         });
         
-        ControlAsserts.assertListContainsItemsInOrder(treeTableView.getRoot().getChildren(), apple, banana, orange);
+        VirtualFlowTestUtils.assertListContainsItemsInOrder(treeTableView.getRoot().getChildren(), apple, banana, orange);
         
         // when we change from ASCENDING to DESCENDING we don't expect the sort
         // to actually change (and in fact we expect the sort type to resort
         // back to being ASCENDING)
         col.setSortType(DESCENDING);
-        ControlAsserts.assertListContainsItemsInOrder(treeTableView.getRoot().getChildren(), apple, banana, orange);
+        VirtualFlowTestUtils.assertListContainsItemsInOrder(treeTableView.getRoot().getChildren(), apple, banana, orange);
         assertEquals(ASCENDING, col.getSortType());
         
-        ControlAsserts.assertListContainsItemsInOrder(treeTableView.getSortOrder(), col);
+        VirtualFlowTestUtils.assertListContainsItemsInOrder(treeTableView.getSortOrder(), col);
     }
     
     @Test public void testSortEventCanBeNotConsumedToAllowSortToOccur_changeColumnSortType_AscendingToDescending() {
@@ -378,13 +378,13 @@ public class TreeTableViewTest {
             }
         });
         
-        ControlAsserts.assertListContainsItemsInOrder(treeTableView.getRoot().getChildren(), apple, banana, orange);
+        VirtualFlowTestUtils.assertListContainsItemsInOrder(treeTableView.getRoot().getChildren(), apple, banana, orange);
         
         col.setSortType(DESCENDING);
-        ControlAsserts.assertListContainsItemsInOrder(treeTableView.getRoot().getChildren(), orange, banana, apple);
+        VirtualFlowTestUtils.assertListContainsItemsInOrder(treeTableView.getRoot().getChildren(), orange, banana, apple);
         assertEquals(DESCENDING, col.getSortType());
         
-        ControlAsserts.assertListContainsItemsInOrder(treeTableView.getSortOrder(), col);
+        VirtualFlowTestUtils.assertListContainsItemsInOrder(treeTableView.getSortOrder(), col);
     }
     
     @Ignore("This test is only valid if sort event consumption should revert changes")
@@ -399,13 +399,13 @@ public class TreeTableViewTest {
             }
         });
         
-        ControlAsserts.assertListContainsItemsInOrder(treeTableView.getRoot().getChildren(), orange, banana, apple);
+        VirtualFlowTestUtils.assertListContainsItemsInOrder(treeTableView.getRoot().getChildren(), orange, banana, apple);
         
         col.setSortType(null);
-        ControlAsserts.assertListContainsItemsInOrder(treeTableView.getRoot().getChildren(), orange, banana, apple);
+        VirtualFlowTestUtils.assertListContainsItemsInOrder(treeTableView.getRoot().getChildren(), orange, banana, apple);
         assertEquals(DESCENDING, col.getSortType());
         
-        ControlAsserts.assertListContainsItemsInOrder(treeTableView.getSortOrder(), col);
+        VirtualFlowTestUtils.assertListContainsItemsInOrder(treeTableView.getSortOrder(), col);
     }
     
     @Test public void testSortEventCanBeNotConsumedToAllowSortToOccur_changeColumnSortType_DescendingToNull() {
@@ -419,13 +419,13 @@ public class TreeTableViewTest {
             }
         });
         
-        ControlAsserts.assertListContainsItemsInOrder(treeTableView.getRoot().getChildren(), orange, banana, apple);
+        VirtualFlowTestUtils.assertListContainsItemsInOrder(treeTableView.getRoot().getChildren(), orange, banana, apple);
         
         col.setSortType(null);
-        ControlAsserts.assertListContainsItemsInOrder(treeTableView.getRoot().getChildren(), orange, banana, apple);
+        VirtualFlowTestUtils.assertListContainsItemsInOrder(treeTableView.getRoot().getChildren(), orange, banana, apple);
         assertNull(col.getSortType());
         
-        ControlAsserts.assertListContainsItemsInOrder(treeTableView.getSortOrder(), col);
+        VirtualFlowTestUtils.assertListContainsItemsInOrder(treeTableView.getSortOrder(), col);
     }
     
     @Ignore("This test is only valid if sort event consumption should revert changes")
@@ -440,13 +440,13 @@ public class TreeTableViewTest {
             }
         });
         
-        ControlAsserts.assertListContainsItemsInOrder(treeTableView.getRoot().getChildren(), apple, orange, banana);
+        VirtualFlowTestUtils.assertListContainsItemsInOrder(treeTableView.getRoot().getChildren(), apple, orange, banana);
         
         col.setSortType(ASCENDING);
-        ControlAsserts.assertListContainsItemsInOrder(treeTableView.getRoot().getChildren(), apple, orange, banana);
+        VirtualFlowTestUtils.assertListContainsItemsInOrder(treeTableView.getRoot().getChildren(), apple, orange, banana);
         assertNull(col.getSortType());
         
-        ControlAsserts.assertListContainsItemsInOrder(treeTableView.getSortOrder(), col);
+        VirtualFlowTestUtils.assertListContainsItemsInOrder(treeTableView.getSortOrder(), col);
     }
     
     @Test public void testSortEventCanBeNotConsumedToAllowSortToOccur_changeColumnSortType_NullToAscending() {
@@ -460,13 +460,13 @@ public class TreeTableViewTest {
             }
         });
         
-        ControlAsserts.assertListContainsItemsInOrder(treeTableView.getRoot().getChildren(), apple, orange, banana);
+        VirtualFlowTestUtils.assertListContainsItemsInOrder(treeTableView.getRoot().getChildren(), apple, orange, banana);
         
         col.setSortType(ASCENDING);
-        ControlAsserts.assertListContainsItemsInOrder(treeTableView.getRoot().getChildren(), apple, banana, orange);
+        VirtualFlowTestUtils.assertListContainsItemsInOrder(treeTableView.getRoot().getChildren(), apple, banana, orange);
         assertEquals(ASCENDING, col.getSortType());
         
-        ControlAsserts.assertListContainsItemsInOrder(treeTableView.getSortOrder(), col);
+        VirtualFlowTestUtils.assertListContainsItemsInOrder(treeTableView.getSortOrder(), col);
     }
     
     @Test public void testSortMethodWithNullSortPolicy() {
@@ -479,33 +479,33 @@ public class TreeTableViewTest {
     @Test public void testChangingSortPolicyUpdatesItemsList() {
         TreeTableColumn<String, String> col = initSortTestStructure();
         col.setSortType(DESCENDING);
-        ControlAsserts.assertListContainsItemsInOrder(treeTableView.getRoot().getChildren(), apple, orange, banana);
+        VirtualFlowTestUtils.assertListContainsItemsInOrder(treeTableView.getRoot().getChildren(), apple, orange, banana);
         treeTableView.getSortOrder().add(col);
-        ControlAsserts.assertListContainsItemsInOrder(treeTableView.getRoot().getChildren(), orange, banana, apple);
+        VirtualFlowTestUtils.assertListContainsItemsInOrder(treeTableView.getRoot().getChildren(), orange, banana, apple);
         treeTableView.setSortPolicy(SORT_SUCCESS_ASCENDING_SORT_POLICY);
-        ControlAsserts.assertListContainsItemsInOrder(treeTableView.getRoot().getChildren(), apple, banana, orange);
+        VirtualFlowTestUtils.assertListContainsItemsInOrder(treeTableView.getRoot().getChildren(), apple, banana, orange);
     }
     
     @Test public void testChangingSortPolicyDoesNotUpdateItemsListWhenTheSortOrderListIsEmpty() {
         TreeTableColumn<String, String> col = initSortTestStructure();
         col.setSortType(DESCENDING);
-        ControlAsserts.assertListContainsItemsInOrder(treeTableView.getRoot().getChildren(), apple, orange, banana);
+        VirtualFlowTestUtils.assertListContainsItemsInOrder(treeTableView.getRoot().getChildren(), apple, orange, banana);
         
         treeTableView.setSortPolicy(SORT_SUCCESS_ASCENDING_SORT_POLICY);
-        ControlAsserts.assertListContainsItemsInOrder(treeTableView.getRoot().getChildren(), apple, orange, banana);
+        VirtualFlowTestUtils.assertListContainsItemsInOrder(treeTableView.getRoot().getChildren(), apple, orange, banana);
     }
     
     @Test public void testFailedSortPolicyBacksOutLastChange_sortOrderAddition() {
         TreeTableColumn<String, String> col = initSortTestStructure();
         col.setSortType(DESCENDING);
-        ControlAsserts.assertListContainsItemsInOrder(treeTableView.getRoot().getChildren(), apple, orange, banana);
+        VirtualFlowTestUtils.assertListContainsItemsInOrder(treeTableView.getRoot().getChildren(), apple, orange, banana);
         treeTableView.setSortPolicy(NO_SORT_FAILED_SORT_POLICY);
         
         treeTableView.getSortOrder().add(col);
         
         // no sort should be run (as we have a custom sort policy), and the 
         // sortOrder list should be empty as the sortPolicy failed
-        ControlAsserts.assertListContainsItemsInOrder(treeTableView.getRoot().getChildren(), apple, orange, banana);
+        VirtualFlowTestUtils.assertListContainsItemsInOrder(treeTableView.getRoot().getChildren(), apple, orange, banana);
         assertTrue(treeTableView.getSortOrder().isEmpty());
     }
     
@@ -513,7 +513,7 @@ public class TreeTableViewTest {
         TreeTableColumn<String, String> col = initSortTestStructure();
         col.setSortType(DESCENDING);
         treeTableView.getSortOrder().add(col);
-        ControlAsserts.assertListContainsItemsInOrder(treeTableView.getRoot().getChildren(), orange, banana, apple);
+        VirtualFlowTestUtils.assertListContainsItemsInOrder(treeTableView.getRoot().getChildren(), orange, banana, apple);
         
         treeTableView.setSortPolicy(NO_SORT_FAILED_SORT_POLICY);
 
@@ -521,20 +521,20 @@ public class TreeTableViewTest {
         // sort policy fails the items list should remain unchanged and the sort
         // order list should continue to have the column in it.
         treeTableView.getSortOrder().remove(col);
-        ControlAsserts.assertListContainsItemsInOrder(treeTableView.getRoot().getChildren(), orange, banana, apple);
-        ControlAsserts.assertListContainsItemsInOrder(treeTableView.getSortOrder(), col);
+        VirtualFlowTestUtils.assertListContainsItemsInOrder(treeTableView.getRoot().getChildren(), orange, banana, apple);
+        VirtualFlowTestUtils.assertListContainsItemsInOrder(treeTableView.getSortOrder(), col);
     }
     
     @Test public void testFailedSortPolicyBacksOutLastChange_sortTypeChange_ascendingToDescending() {
         TreeTableColumn<String, String> col = initSortTestStructure();
         col.setSortType(ASCENDING);
         treeTableView.getSortOrder().add(col);
-        ControlAsserts.assertListContainsItemsInOrder(treeTableView.getRoot().getChildren(), apple, banana, orange);
+        VirtualFlowTestUtils.assertListContainsItemsInOrder(treeTableView.getRoot().getChildren(), apple, banana, orange);
         
         treeTableView.setSortPolicy(NO_SORT_FAILED_SORT_POLICY);
 
         col.setSortType(DESCENDING);
-        ControlAsserts.assertListContainsItemsInOrder(treeTableView.getRoot().getChildren(), apple, banana, orange);
+        VirtualFlowTestUtils.assertListContainsItemsInOrder(treeTableView.getRoot().getChildren(), apple, banana, orange);
         assertEquals(ASCENDING, col.getSortType());
     }
     
@@ -542,12 +542,12 @@ public class TreeTableViewTest {
         TreeTableColumn<String, String> col = initSortTestStructure();
         col.setSortType(DESCENDING);
         treeTableView.getSortOrder().add(col);
-        ControlAsserts.assertListContainsItemsInOrder(treeTableView.getRoot().getChildren(), orange, banana, apple);
+        VirtualFlowTestUtils.assertListContainsItemsInOrder(treeTableView.getRoot().getChildren(), orange, banana, apple);
         
         treeTableView.setSortPolicy(NO_SORT_FAILED_SORT_POLICY);
 
         col.setSortType(null);
-        ControlAsserts.assertListContainsItemsInOrder(treeTableView.getRoot().getChildren(), orange, banana, apple);
+        VirtualFlowTestUtils.assertListContainsItemsInOrder(treeTableView.getRoot().getChildren(), orange, banana, apple);
         assertEquals(DESCENDING, col.getSortType());
     }
     
@@ -555,12 +555,12 @@ public class TreeTableViewTest {
         TreeTableColumn<String, String> col = initSortTestStructure();
         col.setSortType(null);
         treeTableView.getSortOrder().add(col);
-        ControlAsserts.assertListContainsItemsInOrder(treeTableView.getRoot().getChildren(), apple, orange, banana);
+        VirtualFlowTestUtils.assertListContainsItemsInOrder(treeTableView.getRoot().getChildren(), apple, orange, banana);
         
         treeTableView.setSortPolicy(NO_SORT_FAILED_SORT_POLICY);
 
         col.setSortType(ASCENDING);
-        ControlAsserts.assertListContainsItemsInOrder(treeTableView.getRoot().getChildren(), apple, orange, banana);
+        VirtualFlowTestUtils.assertListContainsItemsInOrder(treeTableView.getRoot().getChildren(), apple, orange, banana);
         assertNull(col.getSortType());
     }
     
@@ -572,7 +572,7 @@ public class TreeTableViewTest {
         treeTableView.getSortOrder().add(col);
         TreeTableColumnComparator c = (TreeTableColumnComparator)treeTableView.getComparator();
         assertNotNull(c);
-        ControlAsserts.assertListContainsItemsInOrder(c.getColumns(), col);
+        VirtualFlowTestUtils.assertListContainsItemsInOrder(c.getColumns(), col);
     }
     
     @Test public void testComparatorChangesInSyncWithSortOrder_2() {
@@ -584,7 +584,7 @@ public class TreeTableViewTest {
         treeTableView.getSortOrder().add(col);
         TreeTableColumnComparator c = (TreeTableColumnComparator)treeTableView.getComparator();
         assertNotNull(c);
-        ControlAsserts.assertListContainsItemsInOrder(c.getColumns(), col);
+        VirtualFlowTestUtils.assertListContainsItemsInOrder(c.getColumns(), col);
         
         // now remove column from sort order, and the comparator should go to
         // being null
@@ -597,7 +597,7 @@ public class TreeTableViewTest {
         final TreeTableColumnComparator oldComparator = (TreeTableColumnComparator)treeTableView.getComparator();
         
         col.setSortType(DESCENDING);
-        ControlAsserts.assertListContainsItemsInOrder(treeTableView.getRoot().getChildren(), apple, orange, banana);
+        VirtualFlowTestUtils.assertListContainsItemsInOrder(treeTableView.getRoot().getChildren(), apple, orange, banana);
         treeTableView.setSortPolicy(NO_SORT_FAILED_SORT_POLICY);
         
         treeTableView.getSortOrder().add(col);
@@ -612,15 +612,15 @@ public class TreeTableViewTest {
 
         col.setSortType(DESCENDING);
         treeTableView.getSortOrder().add(col);
-        ControlAsserts.assertListContainsItemsInOrder(treeTableView.getRoot().getChildren(), orange, banana, apple);
+        VirtualFlowTestUtils.assertListContainsItemsInOrder(treeTableView.getRoot().getChildren(), orange, banana, apple);
         oldComparator = (TreeTableColumnComparator)treeTableView.getComparator();
-        ControlAsserts.assertListContainsItemsInOrder(oldComparator.getColumns(), col);
+        VirtualFlowTestUtils.assertListContainsItemsInOrder(oldComparator.getColumns(), col);
         
         treeTableView.setSortPolicy(NO_SORT_FAILED_SORT_POLICY);
         treeTableView.getSortOrder().remove(col);
         
         assertTrue(treeTableView.getSortOrder().contains(col));
-        ControlAsserts.assertListContainsItemsInOrder(oldComparator.getColumns(), col);
+        VirtualFlowTestUtils.assertListContainsItemsInOrder(oldComparator.getColumns(), col);
     }
     
     @Test public void testFailedSortPolicyBacksOutComparatorChange_sortTypeChange() {
@@ -1339,8 +1339,8 @@ public class TreeTableViewTest {
 
         table.getColumns().addAll(firstNameCol, lastNameCol, emailCol);
 
-        ControlAsserts.assertRowsNotEmpty(table, 0, 6); // rows 0 - 6 should be filled
-        ControlAsserts.assertRowsEmpty(table, 6, -1); // rows 6+ should be empty
+        VirtualFlowTestUtils.assertRowsNotEmpty(table, 0, 6); // rows 0 - 6 should be filled
+        VirtualFlowTestUtils.assertRowsEmpty(table, 6, -1); // rows 6+ should be empty
         
         // now we replace the data and expect the cells that have no data
         // to be empty
@@ -1348,8 +1348,8 @@ public class TreeTableViewTest {
                 new TreeItem(new Person("*_*Emma", "Jones", "emma.jones@example.com")),
                 new TreeItem(new Person("_Michael", "Brown", "michael.brown@example.com")));
         
-        ControlAsserts.assertRowsNotEmpty(table, 0, 3); // rows 0 - 3 should be filled
-        ControlAsserts.assertRowsEmpty(table, 3, -1); // rows 3+ should be empty
+        VirtualFlowTestUtils.assertRowsNotEmpty(table, 0, 3); // rows 0 - 3 should be filled
+        VirtualFlowTestUtils.assertRowsEmpty(table, 3, -1); // rows 3+ should be empty
     }
     
     @Test public void test_rt22463() {
@@ -1378,8 +1378,8 @@ public class TreeTableViewTest {
         root.getChildren().addAll(
                 new TreeItem<RT_22463_Person>(p1), 
                 new TreeItem<RT_22463_Person>(p2));
-        ControlAsserts.assertCellTextEquals(table, 1, "1", "name1");
-        ControlAsserts.assertCellTextEquals(table, 2, "2", "name2");
+        VirtualFlowTestUtils.assertCellTextEquals(table, 1, "1", "name1");
+        VirtualFlowTestUtils.assertCellTextEquals(table, 2, "2", "name2");
         
         // now we change the persons but they are still equal as the ID's don't
         // change - but the items list is cleared so the cells should update
@@ -1393,8 +1393,8 @@ public class TreeTableViewTest {
         root.getChildren().setAll(
                 new TreeItem<RT_22463_Person>(new_p1), 
                 new TreeItem<RT_22463_Person>(new_p2));
-        ControlAsserts.assertCellTextEquals(table, 1, "1", "updated name1");
-        ControlAsserts.assertCellTextEquals(table, 2, "2", "updated name2");
+        VirtualFlowTestUtils.assertCellTextEquals(table, 1, "1", "updated name1");
+        VirtualFlowTestUtils.assertCellTextEquals(table, 2, "2", "updated name2");
     }
     
     @Test public void test_rt28637() {
@@ -1743,19 +1743,19 @@ public class TreeTableViewTest {
         table.getColumns().addAll(firstNameCol, lastNameCol, emailCol);
         
         // test the state before we hide and re-add a column
-        ControlAsserts.assertCellTextEquals(table, 0, "Jacob", "Smith", "jacob.smith@example.com");
-        ControlAsserts.assertCellTextEquals(table, 1, "Isabella", "Johnson", "isabella.johnson@example.com");
-        ControlAsserts.assertCellTextEquals(table, 2, "Ethan", "Williams", "ethan.williams@example.com");
-        ControlAsserts.assertCellTextEquals(table, 3, "Emma", "Jones", "emma.jones@example.com");
-        ControlAsserts.assertCellTextEquals(table, 4, "Michael", "Brown", "michael.brown@example.com");
+        VirtualFlowTestUtils.assertCellTextEquals(table, 0, "Jacob", "Smith", "jacob.smith@example.com");
+        VirtualFlowTestUtils.assertCellTextEquals(table, 1, "Isabella", "Johnson", "isabella.johnson@example.com");
+        VirtualFlowTestUtils.assertCellTextEquals(table, 2, "Ethan", "Williams", "ethan.williams@example.com");
+        VirtualFlowTestUtils.assertCellTextEquals(table, 3, "Emma", "Jones", "emma.jones@example.com");
+        VirtualFlowTestUtils.assertCellTextEquals(table, 4, "Michael", "Brown", "michael.brown@example.com");
         
         // hide the last name column, and test cells again
         table.getColumns().remove(lastNameCol);
-        ControlAsserts.assertCellTextEquals(table, 0, "Jacob", "jacob.smith@example.com");
-        ControlAsserts.assertCellTextEquals(table, 1, "Isabella", "isabella.johnson@example.com");
-        ControlAsserts.assertCellTextEquals(table, 2, "Ethan", "ethan.williams@example.com");
-        ControlAsserts.assertCellTextEquals(table, 3, "Emma", "emma.jones@example.com");
-        ControlAsserts.assertCellTextEquals(table, 4, "Michael", "michael.brown@example.com");
+        VirtualFlowTestUtils.assertCellTextEquals(table, 0, "Jacob", "jacob.smith@example.com");
+        VirtualFlowTestUtils.assertCellTextEquals(table, 1, "Isabella", "isabella.johnson@example.com");
+        VirtualFlowTestUtils.assertCellTextEquals(table, 2, "Ethan", "ethan.williams@example.com");
+        VirtualFlowTestUtils.assertCellTextEquals(table, 3, "Emma", "emma.jones@example.com");
+        VirtualFlowTestUtils.assertCellTextEquals(table, 4, "Michael", "michael.brown@example.com");
         
         // re-add the last name column - we should go back to the original state.
         // However, what appears to be happening is that, for some reason, some
@@ -1763,11 +1763,11 @@ public class TreeTableViewTest {
         // some of the last name values will not be where we expect them to be.
         // This is clearly not ideal!
         table.getColumns().add(1, lastNameCol);
-        ControlAsserts.assertCellTextEquals(table, 0, "Jacob", "Smith", "jacob.smith@example.com");
-        ControlAsserts.assertCellTextEquals(table, 1, "Isabella", "Johnson", "isabella.johnson@example.com");
-        ControlAsserts.assertCellTextEquals(table, 2, "Ethan", "Williams", "ethan.williams@example.com");
-        ControlAsserts.assertCellTextEquals(table, 3, "Emma", "Jones", "emma.jones@example.com");
-        ControlAsserts.assertCellTextEquals(table, 4, "Michael", "Brown", "michael.brown@example.com");
+        VirtualFlowTestUtils.assertCellTextEquals(table, 0, "Jacob", "Smith", "jacob.smith@example.com");
+        VirtualFlowTestUtils.assertCellTextEquals(table, 1, "Isabella", "Johnson", "isabella.johnson@example.com");
+        VirtualFlowTestUtils.assertCellTextEquals(table, 2, "Ethan", "Williams", "ethan.williams@example.com");
+        VirtualFlowTestUtils.assertCellTextEquals(table, 3, "Emma", "Jones", "emma.jones@example.com");
+        VirtualFlowTestUtils.assertCellTextEquals(table, 4, "Michael", "Brown", "michael.brown@example.com");
     }
     
     @Test public void test_rt29390() {
@@ -1808,7 +1808,7 @@ public class TreeTableViewTest {
         Toolkit.getToolkit().firePulse();
         
         // we want the vertical scrollbar
-        VirtualScrollBar scrollBar = ControlAsserts.getVirtualFlowVerticalScrollbar(table);
+        VirtualScrollBar scrollBar = VirtualFlowTestUtils.getVirtualFlowVerticalScrollbar(table);
         
         assertNotNull(scrollBar);
         assertTrue(scrollBar.isVisible());

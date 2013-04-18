@@ -22,13 +22,11 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-package com.sun.javafx.scene.control.test;
+package com.sun.javafx.scene.control.infrastructure;
 
-import com.sun.javafx.scene.control.skin.LabeledText;
-import com.sun.javafx.scene.control.skin.VirtualFlow;
-import com.sun.javafx.scene.control.skin.VirtualScrollBar;
-import com.sun.javafx.tk.Toolkit;
-import java.util.Arrays;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+
 import java.util.List;
 
 import javafx.geometry.Orientation;
@@ -37,13 +35,15 @@ import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.Control;
 import javafx.scene.control.IndexedCell;
-import javafx.scene.control.TreeItem;
-import javafx.scene.layout.Region;
 import javafx.stage.Stage;
 import javafx.util.Callback;
-import static org.junit.Assert.*;
 
-public class ControlAsserts {
+import com.sun.javafx.scene.control.skin.LabeledText;
+import com.sun.javafx.scene.control.skin.VirtualFlow;
+import com.sun.javafx.scene.control.skin.VirtualScrollBar;
+import com.sun.javafx.tk.Toolkit;
+
+public class VirtualFlowTestUtils {
     
     public static void assertListContainsItemsInOrder(final List items, final Object... expected) {
         assertEquals(expected.length, items.size());

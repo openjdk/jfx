@@ -27,7 +27,8 @@ package javafx.scene.chart;
 
 import javafx.css.CssMetaData;
 import java.util.List;
-import static javafx.scene.control.ControlTestUtils.*;
+
+import static com.sun.javafx.scene.control.infrastructure.ControlTestUtils.*;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;

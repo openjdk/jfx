@@ -23,15 +23,7 @@
  * questions.
  */
 
-package javafx.scene.control;
-
-import javafx.beans.InvalidationListener;
-import javafx.beans.property.IntegerPropertyBase;
-import javafx.beans.property.ObjectPropertyBase;
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
-import javafx.collections.ListChangeListener;
-import javafx.collections.ObservableList;
+package com.sun.javafx.scene.control.infrastructure;
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -43,14 +35,20 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
-import com.sun.javafx.binding.ExpressionHelper;
-import com.sun.javafx.collections.ObservableListWrapper;
+import javafx.beans.InvalidationListener;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
+import javafx.collections.ListChangeListener;
+import javafx.collections.ObservableList;
 import javafx.css.PseudoClass;
-import com.sun.javafx.css.StyleManager;
-import javafx.scene.control.Pagination;
-import com.sun.javafx.scene.control.ReadOnlyUnbackedObservableList;
-import javafx.scene.Node;
 import javafx.scene.chart.Axis;
+import javafx.scene.control.Control;
+import javafx.scene.control.MenuItem;
+import javafx.scene.control.Pagination;
+import javafx.scene.control.PopupControl;
+import javafx.scene.control.Tab;
+
+import com.sun.javafx.binding.ExpressionHelper;
 
 public final class ControlTestUtils {
     private ControlTestUtils() { }

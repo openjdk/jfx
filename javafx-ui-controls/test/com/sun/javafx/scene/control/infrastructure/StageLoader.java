@@ -44,6 +44,12 @@ public class StageLoader {
         stage.show();
     }
     
+    public StageLoader(Scene scene) {
+        stage = new Stage();
+        stage.setScene(scene);
+        stage.show();
+    }
+    
     public Stage getStage() {
         return stage;
     }

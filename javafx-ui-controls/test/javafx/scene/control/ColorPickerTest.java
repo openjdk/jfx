@@ -29,7 +29,7 @@ package javafx.scene.control;
  * Copyright (c) 2012, Oracle and/or its affiliates. All rights reserved.
  */
 
-import static javafx.scene.control.ControlTestUtils.assertStyleClassContains;
+import static com.sun.javafx.scene.control.infrastructure.ControlTestUtils.assertStyleClassContains;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -39,6 +39,7 @@ import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.scene.Scene;
 import javafx.scene.input.KeyCode;
+import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.VBox;
@@ -50,6 +51,7 @@ import org.junit.Test;
 
 import com.sun.javafx.pgstub.StubToolkit;
 import com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
+import com.sun.javafx.scene.control.infrastructure.MouseEventFirer;
 import com.sun.javafx.scene.control.infrastructure.MouseEventGenerator;
 import com.sun.javafx.scene.control.skin.ColorPalette;
 import com.sun.javafx.scene.control.skin.ColorPickerPaletteRetriever;
@@ -172,6 +174,7 @@ public class ColorPickerTest {
         
         Scene paletteScene = ColorPickerPaletteRetriever.getPopup(colorPicker).getScene();
         paletteScene.getWindow().requestFocus();
+        
         paletteScene.impl_processMouseEvent(
                 generator.generateMouseEvent(MouseEvent.MOUSE_PRESSED, xval+85, yval+40));
         
@@ -183,7 +186,7 @@ public class ColorPickerTest {
     }
     
     @Test public void testEscapeClosesCustomColorDialog() {
-        final MouseEventGenerator generator = new MouseEventGenerator();
+//        final MouseEventGenerator generator = new MouseEventGenerator();
         ColorPickerSkin skin = (ColorPickerSkin)colorPicker.getSkin();
         assertTrue(skin != null);
         ColorPalette colorPalette = ColorPickerPaletteRetriever.getColorPalette(colorPicker);
@@ -191,18 +194,13 @@ public class ColorPickerTest {
         tk.firePulse();
         assertTrue(colorPicker.isShowing());
         Hyperlink link = ColorPickerPaletteRetriever.getCustomColorLink(colorPalette);
-        double xval = link.getBoundsInParent().getMinX();
-        double yval = link.getBoundsInParent().getMinY();
          
         Scene paletteScene = ColorPickerPaletteRetriever.getPopup(colorPicker).getScene();
         paletteScene.getWindow().requestFocus();
-        //Click on CustomColor hyperlink to show the custom color dialog.
-        paletteScene.impl_processMouseEvent(
-                generator.generateMouseEvent(MouseEvent.MOUSE_PRESSED, xval+20, yval+10));
         
-        paletteScene.impl_processMouseEvent(
-                generator.generateMouseEvent(MouseEvent.MOUSE_RELEASED, xval+20, yval+10));
-        tk.firePulse();
+        //Click on CustomColor hyperlink to show the custom color dialog.
+        Hyperlink hyperlink = ColorPickerPaletteRetriever.getCustomColorLink(colorPalette);
+        MouseEventFirer.fireMousePressAndRelease(hyperlink);
         
         Stage dialog = ColorPickerPaletteRetriever.getCustomColorDialog(colorPalette);
         assertNotNull(dialog);
