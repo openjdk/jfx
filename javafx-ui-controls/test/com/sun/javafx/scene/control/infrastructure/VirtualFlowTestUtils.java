@@ -35,6 +35,8 @@ import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.Control;
 import javafx.scene.control.IndexedCell;
+import javafx.scene.control.TableRow;
+import javafx.scene.control.TreeTableRow;
 import javafx.stage.Stage;
 import javafx.util.Callback;
 
@@ -50,6 +52,23 @@ public class VirtualFlowTestUtils {
         for (int i = 0; i < expected.length; i++) {
             Object item = items.get(i);
             assertEquals(expected[i], item);
+        }
+    }
+    
+    public static void clickOnRow(final Control control, int row, KeyModifier... modifiers) {
+        IndexedCell cell = VirtualFlowTestUtils.getCell(control, row);
+        
+        if ((cell instanceof TableRow) || (cell instanceof TreeTableRow)) {
+            for (Node n : cell.getChildrenUnmodifiable()) {
+                if (! (n instanceof IndexedCell)) {
+                    continue;
+                }
+                IndexedCell<?> childCell = (IndexedCell<?>)n;
+                MouseEventFirer.fireMousePressAndRelease(childCell, modifiers);
+                break;
+            }
+        } else {
+            MouseEventFirer.fireMousePressAndRelease(cell, modifiers);
         }
     }
     
@@ -211,7 +230,7 @@ public class VirtualFlowTestUtils {
         group.getChildren().setAll(control);
         stage.show();
 
-        Toolkit.getToolkit().firePulse();
+//        Toolkit.getToolkit().firePulse();
 
         VirtualFlow<?> flow = (VirtualFlow<?>)control.lookup("#virtual-flow");
         return flow;

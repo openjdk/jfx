@@ -28,16 +28,24 @@ package javafx.scene.control;
 import com.sun.javafx.Utils;
 import com.sun.javafx.scene.control.behavior.ListViewAnchorRetriever;
 import com.sun.javafx.scene.control.behavior.TableViewAnchorRetriever;
+import com.sun.javafx.scene.control.behavior.TableViewBehavior;
+import com.sun.javafx.scene.control.behavior.TableViewBehaviorBase;
+import com.sun.javafx.scene.control.infrastructure.VirtualFlowTestUtils;
 import com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
 import com.sun.javafx.scene.control.infrastructure.KeyModifier;
+import com.sun.javafx.scene.control.infrastructure.MouseEventFirer;
 import com.sun.javafx.scene.control.infrastructure.StageLoader;
+import com.sun.javafx.scene.control.skin.TableViewSkin;
 
 import static org.junit.Assert.*;
 
 import java.util.List;
+
+import javafx.event.EventHandler;
 import javafx.scene.Group;
 import javafx.scene.Scene;
 import javafx.scene.input.KeyCode;
+import javafx.scene.input.MouseEvent;
 
 import javafx.stage.Stage;
 import org.junit.After;
@@ -1748,5 +1756,39 @@ public class TableViewKeyInputTest {
         assertTrue(fm.isFocused(11));
         keyboard.doDownArrowPress(KeyModifier.SHIFT);
         assertTrue(debug(), fm.isFocused(11));
+    }
+    
+    @Test public void test_rt29833_keyboard_select_upwards() {
+        sm.setCellSelectionEnabled(false);
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+        
+        sm.clearAndSelect(9);
+        
+        // select all from 9 - 7
+        fm.focus(7);
+        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.SHIFT);
+        assertTrue(isSelected(7,8,9));
+        
+        // select all from 9 - 7 - 5
+        fm.focus(5);
+        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.SHIFT);
+        assertTrue(isSelected(5,6,7,8,9));
+    }
+    
+    @Test public void test_rt29833_keyboard_select_downwards() {
+        sm.setCellSelectionEnabled(false);
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+        
+        sm.clearAndSelect(5);
+        
+        // select all from 5 - 7
+        fm.focus(7);
+        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.SHIFT);
+        assertTrue(isSelected(5,6,7));
+        
+        // select all from 5 - 7 - 9
+        fm.focus(9);
+        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.SHIFT);
+        assertTrue(isSelected(5,6,7,8,9));
     }
 }
