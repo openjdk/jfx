@@ -590,7 +590,7 @@ project(":graphics") {
     }
 
     dependencies {
-        compile project(":base"), BUILD_SRC
+        compile project(":base"), BUILD_SRC, files("$JDK_HOME/jre/lib/plugin.jar")
         compile name: SWT_FILE_NAME
         stubCompile group: "junit", name: "junit", version: "4.8.2",
             project(":base").sourceSets.test.output, sourceSets.main.output
@@ -656,6 +656,7 @@ project(":graphics") {
                 workingDir = "modules/graphics"
                 main = settings.generator
                 classpath = configurations.compile + configurations.antlr3
+                classpath += files("$buildDir/classes/main")
                 classpath += files("$buildDir/classes/jsl-compilers/decora")
                 args = ["-i", sourceDir, "-o", destinationDir, "-t", "-pkg", "com/sun/scenario/effect", "$settings.outputs", "$settings.fileName"]
             }
@@ -775,7 +776,9 @@ project(":controls") {
         "$buildDir/resources/main/com/sun/javafx/scene/control/skin/modena/modena.css",
         "$buildDir/resources/main/com/sun/javafx/scene/control/skin/modena/touch.css"].each { css ->
             javaexec {
-                classpath "$buildDir/classes/main"
+                classpath files("$buildDir/classes/main",
+                        project(":graphics").sourceSets.main.output,
+                        project(":base").sourceSets.main.output)
                 main = "com.sun.javafx.css.parser.Css2Bin"
                 args css
             }
@@ -1136,6 +1139,9 @@ task javadoc(type: Javadoc) {
     // Might need a classpath
     classpath = files(projectsToDocument.collect { project ->
         project.sourceSets.main.compileClasspath
+    });
+    classpath += files(projectsToDocument.collect { project ->
+        project.sourceSets.main.output
     });
     exclude("com/**/*", "javafx/scene/ParentDesignInfo*", "Compile*", "javafx/builder/**/*");
     options.windowTitle("JavaFX ${RELEASE_NAME}")
