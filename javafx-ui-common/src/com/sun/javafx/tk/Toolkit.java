@@ -249,19 +249,6 @@ public abstract class Toolkit {
              });
     }
 
-    /**
-     * Returns a PlatformLogger of a given name.
-     *
-     * @param name the name of the PlatformLogger to get
-     */
-    public PlatformLogger getLogger(String name) {
-        /*
-         * PlatformLogger is full of statics. So, we use PlatformLogger in this
-         * manner to limit the amount of mutable static state in the public API.
-         */
-        return PlatformLogger.getLogger(name);
-    }
-
     public abstract boolean init();
 
     /**
