@@ -219,13 +219,14 @@ defineProperty("JAVAH", cygpath("$JDK_HOME/bin/javah${IS_WINDOWS ? '.exe' : ''}"
 defineProperty("JAVADOC", cygpath("$JDK_HOME/bin/javadoc${IS_WINDOWS ? '.exe' : ''}"));
 defineProperty("JDK_DOCS", "http://download.oracle.com/javase/7/docs/api");
 defineProperty("BINARY_STUB", cygpath("$JDK_HOME/jre/lib/ext/jfxrt.jar"));
+ext.BINARY_STUB = "".equals(BINARY_STUB) ? null : files(BINARY_STUB);
 
 // COMPILE_WEBKIT specifies whether to build all of webkit. COMPILE_GSTREAMER
 // specifies whether to build GStreamer.
 defineProperty("COMPILE_WEBKIT", "false")
 defineProperty("COMPILE_GSTREAMER", "false")
-COMPILE_WEBKIT = Boolean.parseBoolean(COMPILE_WEBKIT)
-COMPILE_GSTREAMER = Boolean.parseBoolean(COMPILE_GSTREAMER)
+ext.COMPILE_WEBKIT = Boolean.parseBoolean(COMPILE_WEBKIT)
+ext.COMPILE_GSTREAMER = Boolean.parseBoolean(COMPILE_GSTREAMER)
 
 // Define the SWT.jar that we are going to have to download during the build process based
 // on what platform we are compiling from (not based on our target). SWT in particular is
@@ -313,7 +314,7 @@ if (!file(JAVA).exists()) throw new Exception("Missing or incorrect path to 'jav
 if (!file(JAVAC).exists()) throw new Exception("Missing or incorrect path to 'javac': '$JAVAC'. Perhaps bad JDK_HOME? $JDK_HOME")
 if (!file(JAVAH).exists()) throw new Exception("Missing or incorrect path to 'javah': '$JAVAH'. Perhaps bad JDK_HOME? $JDK_HOME")
 if (!file(JAVADOC).exists()) throw new Exception("Missing or incorrect path to 'javadoc': '$JAVADOC'. Perhaps bad JDK_HOME? $JDK_HOME")
-if (!file(BINARY_STUB).exists()) logger.warn("Missing or incorrect path to 'jfxrt.jar': '$BINARY_STUB'. Perhaps bad JDK_HOME? $JDK_HOME")
+if (BINARY_STUB != null && !BINARY_STUB.getSingleFile().exists()) logger.warn("Missing or incorrect path to 'jfxrt.jar': '${BINARY_STUB.asPath}'. Perhaps bad JDK_HOME? $JDK_HOME")
 
 // Verify that CONF is something useful
 if (CONF != "Release" && CONF != "Debug") logger.warn("Unknown configuration CONF='$CONF'. Treating as 'Release'");
@@ -343,7 +344,7 @@ logger.info("OS_NAME: $OS_NAME");
 logger.info("OS_ARCH: $OS_ARCH");
 logger.info("JAVA_HOME: $JAVA_HOME");
 logger.info("JDK_HOME: $JDK_HOME");
-logger.info("BINARY_STUB: ${file(BINARY_STUB)}");
+logger.info("BINARY_STUB: ${BINARY_STUB == null ? '' : BINARY_STUB.asPath}");
 logger.info("HUDSON_JOB_NAME: $HUDSON_JOB_NAME");
 logger.info("HUDSON_BUILD_NUMBER: $HUDSON_BUILD_NUMBER");
 logger.info("PROMOTED_BUILD_NUMBER: $PROMOTED_BUILD_NUMBER");
@@ -382,7 +383,8 @@ void addNative(Project project, String name) {
     def javahTask = project.task("javah$name", type: JavaHeaderTask, dependsOn: project.classes, group: "Build") {
         description = "Generates JNI Headers for $name"
         source project.sourceSets.main.output.classesDir
-        classpath = project.files(project.sourceSets.main.output.classesDir, project.files(project.BINARY_STUB))
+        classpath = project.files(project.sourceSets.main.output.classesDir)
+        if (rootProject.BINARY_STUB != null) classpath += rootProject.BINARY_STUB
         output = project.file("$project.buildDir/generated-src/headers/$name")
     }
     def ccTask = project.task("cc$name", type: CCTask, dependsOn: javahTask, group: "Build") {
@@ -505,7 +507,7 @@ allprojects {
     // we start building with Java 9.
     test {
         jvmArgs("-Djava.ext.dirs=");
-        classpath = classpath + rootProject.files(rootProject.BINARY_STUB);
+        if (rootProject.BINARY_STUB != null) classpath += rootProject.BINARY_STUB;
         executable = JAVA;
         enableAssertions = true;
         testLogging.exceptionFormat = "full";
@@ -730,11 +732,13 @@ project(":graphics") {
     }
     task testWithoutStub(type: Test, dependsOn: ":graphics:compileJava", group: "Verification") {
         jvmArgs "-Djava.ext.dirs="
-        classpath = sourceSets.test.runtimeClasspath + rootProject.files(rootProject.BINARY_STUB)
+        classpath = sourceSets.test.runtimeClasspath
+        if (rootProject.BINARY_STUB != null) classpath += rootProject.BINARY_STUB
     }
     task testWithStub(type: Test, dependsOn: [":graphics:compileJava"], group: "Verification") {
         jvmArgs "-Djava.ext.dirs=", "-Djavafx.toolkit=com.sun.javafx.pgstub.StubToolkit", "-DCSS_META_DATA_TEST_DIR=${file('$buildDir/classes/main/javafx')}"
-        classpath = sourceSets.stub.runtimeClasspath + sourceSets.main.runtimeClasspath + rootProject.files(rootProject.BINARY_STUB)
+        classpath = sourceSets.stub.runtimeClasspath + sourceSets.main.runtimeClasspath
+        if (rootProject.BINARY_STUB != null) classpath += rootProject.BINARY_STUB
         testClassesDir = file("$buildDir/classes/stub")
         testResultsDir = file("$buildDir/stub-results")
         testReportDir = file("$buildDir/reports/stub")
@@ -1027,16 +1031,19 @@ allprojects {
         // Note that the compileFooJava task is automatically created whenever a source set is
         // defined. So the "test" source set automatically creates a "compileTestJava" task (among others).
         if (name == "compileTestJava") {
-            classpath = sourceSets.test.compileClasspath + rootProject.files(rootProject.BINARY_STUB)
+            classpath = sourceSets.test.compileClasspath
+            if (rootProject.BINARY_STUB != null) classpath += rootProject.BINARY_STUB
         } else if (name == "compileStubJava") {
-            classpath = sourceSets.stub.compileClasspath + rootProject.files(rootProject.BINARY_STUB)
+            classpath = sourceSets.stub.compileClasspath
+            if (rootProject.BINARY_STUB != null) classpath += rootProject.BINARY_STUB
         } else if (name == "compileJava") {
             // Not everything needs the builder processor
             if (["graphics", "controls", "swing", "swt", "base", "fxml"].contains(project.name)){
                 compile.options.compilerArgs += ["-s", "$buildDir/generated-src/builders"]
                 compile.options.compilerArgs += ["-processor", "javafx.builder.processor.BuilderProcessor"]
             }
-            classpath = sourceSets.main.compileClasspath + rootProject.files(rootProject.BINARY_STUB)
+            classpath = sourceSets.main.compileClasspath
+            if (rootProject.BINARY_STUB != null) classpath += rootProject.BINARY_STUB
         } else {
             logger.info("Not using BINARY_STUB in compilation: $name")
         }
@@ -1340,13 +1347,15 @@ allprojects {
 
     // Configure all projects to include $buildDir/generated-src/builders in the generated IDEA project files.
     // Also need to un-exclude the build-dir since we put stuff in it, and then re-exclude other stuff
-    configurations {
-      binaryStub
-      binaryStub.extendsFrom(compile)
-    }
+    if (rootProject.BINARY_STUB != null) {
+        configurations {
+          binaryStub
+          binaryStub.extendsFrom(compile)
+        }
 
-    dependencies {
-      binaryStub rootProject.files(rootProject.BINARY_STUB)
+        dependencies {
+          binaryStub rootProject.BINARY_STUB
+        }
     }
 
     idea {
@@ -1360,20 +1369,23 @@ allprojects {
                     new File(buildDir, "libs"),
                     new File(buildDir, "resources"),
                     new File(buildDir, "tmp")];
-            scopes.COMPILE.plus += configurations.binaryStub
 
-            // Some hackery. I have to make sure the binary stub is the VERY LAST entry
-            // in the class path or things will be somewhat unpredictable
-            iml {
-                withXml { xmlProvider ->
-                    def root = xmlProvider.asNode();
-                    // Find the <root url=".../jfxrt.jar!/" />. Walk up 3 steps to <orderEntry>
-                    def orderEntry = root.depthFirst().find { it.name() == "root" }.parent().parent().parent(); // && it.@url.contains(rootProject.files(rootProject.BINARY_STUB))
-                    if (orderEntry.name() != "orderEntry") throw new Exception("Couldn't find the order entry");
-                    // Move that <orderEntry> to be the last child of its parent.
-                    def parent = orderEntry.parent();
-                    parent.remove(orderEntry);
-                    parent.append(orderEntry);
+            if (rootProject.BINARY_STUB != null) {
+                scopes.COMPILE.plus += configurations.binaryStub
+
+                // Some hackery. I have to make sure the binary stub is the VERY LAST entry
+                // in the class path or things will be somewhat unpredictable
+                iml {
+                    withXml { xmlProvider ->
+                        def root = xmlProvider.asNode();
+                        // Find the <root url=".../jfxrt.jar!/" />. Walk up 3 steps to <orderEntry>
+                        def orderEntry = root.depthFirst().find { it.name() == "root" }.parent().parent().parent(); // && it.@url.contains(rootProject.files(rootProject.BINARY_STUB))
+                        if (orderEntry.name() != "orderEntry") throw new Exception("Couldn't find the order entry");
+                        // Move that <orderEntry> to be the last child of its parent.
+                        def parent = orderEntry.parent();
+                        parent.remove(orderEntry);
+                        parent.append(orderEntry);
+                    }
                 }
             }
         }
