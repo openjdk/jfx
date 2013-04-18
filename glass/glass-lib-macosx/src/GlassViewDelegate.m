@@ -871,8 +871,7 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
             }
         } else {
             NSArray *items = [pasteboard pasteboardItems];
-            // NOTE:  There is always a placeholder item on the pasteboard, subtract it
-            if ([items count] - 1 == 1)
+            if ([items count] == 1)
             {
                 image = [[NSImage alloc] initWithContentsOfFile:@"/System/Library/CoreServices/CoreTypes.bundle/Contents/Resources/GenericDocumentIcon.icns"];
             }
