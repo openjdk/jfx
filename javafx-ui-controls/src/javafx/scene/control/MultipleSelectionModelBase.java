@@ -362,7 +362,7 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
             for (int i = rows.length - 1; i >= 0; i--) {
                 int index = rows[i];
                 if (index >= 0 && index < rowCount) {
-                    selectedIndices.set((int) index);
+                    selectedIndices.set(index);
                     select(index);
                     break;
                 }
@@ -370,8 +370,8 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
 
             if (selectedIndices.isEmpty()) {
                 if (row > 0 && row < rowCount) {
-                    selectedIndices.set((int) row);
-                    select((int) row);
+                    selectedIndices.set(row);
+                    select(row);
                 }
             }
 
@@ -380,14 +380,14 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
             int lastIndex = -1;
             if (row >= 0 && row < rowCount) {
                 lastIndex = row;
-                selectedIndices.set((int) row);
+                selectedIndices.set(row);
             }
 
             for (int i = 0; i < rows.length; i++) {
                 int index = rows[i];
                 if (index < 0 || index >= rowCount) continue;
                 lastIndex = index;
-                selectedIndices.set((int) index);
+                selectedIndices.set(index);
             }
 
             if (lastIndex != -1) {
