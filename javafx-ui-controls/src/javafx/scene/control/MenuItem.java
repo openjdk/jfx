@@ -26,6 +26,8 @@
 package javafx.scene.control;
 
 import com.sun.javafx.beans.IDProperty;
+import javafx.collections.ObservableSet;
+import javafx.css.PseudoClass;
 import javafx.css.Styleable;
 import javafx.css.CssMetaData;
 import javafx.beans.property.BooleanProperty;
@@ -52,6 +54,7 @@ import com.sun.javafx.scene.control.skin.ContextMenuSkin;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
+
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.collections.ObservableMap;
@@ -570,6 +573,12 @@ public class MenuItem implements EventTarget, Styleable {
         }
     }
 
+    /**
+     * {@inheritDoc}
+     */
+    public final ObservableSet<PseudoClass> getPseudoClassStates() {
+        return FXCollections.emptyObservableSet();
+    }
 
     @Override
     public List<CssMetaData<? extends Styleable, ?>> getCssMetaData() {

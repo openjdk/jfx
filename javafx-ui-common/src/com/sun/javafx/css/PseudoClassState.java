@@ -25,12 +25,11 @@
 package com.sun.javafx.css;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
+
 import javafx.css.PseudoClass;
 
 /**
@@ -38,7 +37,7 @@ import javafx.css.PseudoClass;
  * one pseudo-class state. {@code States} is used to aggregate the active
  * pseudo-class state of a {@code Node}.
  */
-public final class PseudoClassState extends BitSet<PseudoClass> implements Set<PseudoClass> {
+public final class PseudoClassState extends BitSet<PseudoClass> {
 
     /** Create an empty set of PseudoClass */
     public PseudoClassState() {
@@ -129,7 +128,7 @@ public final class PseudoClassState extends BitSet<PseudoClass> implements Set<P
 
    
     /**
-     * @see javafx.css.PseudoClass#getPseudoClassName(String)
+     * @see javafx.css.PseudoClass#getPseudoClass(String)
      */
     public static PseudoClass getPseudoClass(String pseudoClass) {
 
@@ -171,6 +170,6 @@ public final class PseudoClassState extends BitSet<PseudoClass> implements Set<P
 
     static final List<PseudoClass> pseudoClasses =
             new ArrayList<PseudoClass>();
-     
+
 }
 

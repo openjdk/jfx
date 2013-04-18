@@ -30,6 +30,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+
 import javafx.application.Application;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.DoublePropertyBase;
@@ -37,8 +38,10 @@ import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ObjectPropertyBase;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
+import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener.Change;
 import javafx.collections.ObservableList;
+import javafx.collections.ObservableSet;
 import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.stage.PopupWindow;
@@ -950,6 +953,13 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
     @Override
     public Styleable getStyleableParent() {
         return null;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public final ObservableSet<PseudoClass> getPseudoClassStates() {
+        return FXCollections.emptyObservableSet();
     }
 
     /**

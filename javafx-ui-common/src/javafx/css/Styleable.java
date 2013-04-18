@@ -26,7 +26,9 @@
 package javafx.css;
 
 import java.util.List;
+
 import javafx.collections.ObservableList;
+import javafx.collections.ObservableSet;
 
 /** 
  * Styleable comprises the minimal interface required for an object to be 
@@ -84,6 +86,11 @@ public interface Styleable {
     /** 
      * Return the parent of this Styleable, or null if there is no parent. 
      */ 
-    Styleable getStyleableParent(); 
+    Styleable getStyleableParent();
+
+    /**
+     * Return the pseudo-class state of this Styleable. CSS assumes this set is read-only.
+     */
+    ObservableSet<PseudoClass> getPseudoClassStates();
      
 }
