@@ -709,7 +709,7 @@ public class NGRegion extends NGGroup implements PGRegion {
                             final CornerRadii radii = fill.getRadii();
                             // This is a workaround for RT-28435 so we use path rasterizer for small radius's We are
                             // keeping old rendering
-                            if (radii.isUniform() && !(!PlatformImpl.isCaspian() && radii.getTopLeftHorizontalRadius() <= 4)) {
+                            if (radii.isUniform() && !(!PlatformImpl.isCaspian() && radii.getTopLeftHorizontalRadius() > 0 && radii.getTopLeftHorizontalRadius() <= 4)) {
                                 // If the radii is uniform then we know every corner matches, so we can do some
                                 // faster rendering paths.
                                 float tlhr = (float) radii.getTopLeftHorizontalRadius();
