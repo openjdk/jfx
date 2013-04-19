@@ -94,7 +94,7 @@ public class AccordionSkin extends BehaviorSkinBase<Accordion, AccordionBehavior
         }
     }
 
-    @Override protected double computeMinHeight(double width, int topInset, int rightInset, int bottomInset, int leftInset) {
+    @Override protected double computeMinHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
         double h = 0;
         for (Node child: getChildren()) {
             h += snapSize(child.minHeight(width));
@@ -102,7 +102,7 @@ public class AccordionSkin extends BehaviorSkinBase<Accordion, AccordionBehavior
         return h;
     }
 
-    @Override protected double computePrefHeight(double width, int topInset, int rightInset, int bottomInset, int leftInset) {
+    @Override protected double computePrefHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
         double h = 0;
 
         if (expandedPane != null) {

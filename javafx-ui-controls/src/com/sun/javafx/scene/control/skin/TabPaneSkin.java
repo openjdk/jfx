@@ -50,7 +50,6 @@ import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.Bounds;
 import javafx.geometry.HPos;
-import javafx.geometry.Insets;
 import javafx.geometry.Point2D;
 import javafx.geometry.Pos;
 import javafx.geometry.Side;
@@ -418,7 +417,7 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
 //    }
 
     private double maxw = 0.0d;
-    @Override protected double computePrefWidth(double height, int topInset, int rightInset, int bottomInset, int leftInset) {
+    @Override protected double computePrefWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
         // The TabPane can only be as wide as it widest content width.
         for (TabContentRegion contentRegion: tabContentRegions) {
              maxw = Math.max(maxw, snapSize(contentRegion.prefWidth(-1)));
@@ -429,7 +428,7 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
     }
 
     private double maxh = 0.0d;
-    @Override protected double computePrefHeight(double width, int topInset, int rightInset, int bottomInset, int leftInset) {
+    @Override protected double computePrefHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
         // The TabPane can only be as high as it highest content height.
         for (TabContentRegion contentRegion: tabContentRegions) {
              maxh = Math.max(maxh, snapSize(contentRegion.prefHeight(-1)));
@@ -439,7 +438,7 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
         return snapSize(prefheight) + topInset + bottomInset;
     }
 
-    @Override public double computeBaselineOffset(int topInset, int rightInset, int bottomInset, int leftInset) {
+    @Override public double computeBaselineOffset(double topInset, double rightInset, double bottomInset, double leftInset) {
         return tabHeaderArea.getBaselineOffset() + tabHeaderArea.getLayoutY();
     }
 

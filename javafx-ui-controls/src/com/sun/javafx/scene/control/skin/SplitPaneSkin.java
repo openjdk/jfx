@@ -47,7 +47,6 @@ import com.sun.javafx.scene.control.behavior.BehaviorBase;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-import javafx.geometry.Insets;
 import javafx.geometry.NodeOrientation;
 
 public class SplitPaneSkin extends BehaviorSkinBase<SplitPane, BehaviorBase<SplitPane>>  {
@@ -830,7 +829,7 @@ public class SplitPaneSkin extends BehaviorSkinBase<SplitPane, BehaviorBase<Spli
         resize = false;        
     }
 
-    @Override protected double computeMinWidth(double height, int topInset, int rightInset, int bottomInset, int leftInset) {
+    @Override protected double computeMinWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
         double minWidth = 0;
         double maxMinWidth = 0;
         for (Content c: contentRegions) {
@@ -847,7 +846,7 @@ public class SplitPaneSkin extends BehaviorSkinBase<SplitPane, BehaviorBase<Spli
         }
     }
 
-    @Override protected double computeMinHeight(double width, int topInset, int rightInset, int bottomInset, int leftInset) {
+    @Override protected double computeMinHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
         double minHeight = 0;
         double maxMinHeight = 0;
         for (Content c: contentRegions) {
@@ -864,7 +863,7 @@ public class SplitPaneSkin extends BehaviorSkinBase<SplitPane, BehaviorBase<Spli
         }
     }
 
-    @Override protected double computePrefWidth(double height, int topInset, int rightInset, int bottomInset, int leftInset) {
+    @Override protected double computePrefWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
         double prefWidth = 0;
         double prefMaxWidth = 0;
         for (Content c: contentRegions) {
@@ -881,7 +880,7 @@ public class SplitPaneSkin extends BehaviorSkinBase<SplitPane, BehaviorBase<Spli
         }
     }
 
-    @Override protected double computePrefHeight(double width, int topInset, int rightInset, int bottomInset, int leftInset) {
+    @Override protected double computePrefHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
         double prefHeight = 0;
         double maxPrefHeight = 0;
         for (Content c: contentRegions) {

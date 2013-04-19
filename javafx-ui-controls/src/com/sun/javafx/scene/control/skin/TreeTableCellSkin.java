@@ -110,7 +110,7 @@ public class TreeTableCellSkin<S,T> extends TableCellSkinBase<TreeTableCell<S,T>
         return leftPadding;
     }
 
-    @Override protected double computePrefWidth(double height, int topInset, int rightInset, int bottomInset, int leftInset) {
+    @Override protected double computePrefWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
         if (isDeferToParentForPrefWidth) {
             // RT-27167: we must take into account the disclosure node and the
             // indentation (which is not taken into account by the LabeledSkinBase.

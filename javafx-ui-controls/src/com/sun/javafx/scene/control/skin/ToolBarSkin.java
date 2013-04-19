@@ -231,21 +231,21 @@ public class ToolBarSkin extends BehaviorSkinBase<ToolBar, ToolBarBehavior> impl
         }
     }
 
-    @Override protected double computeMinWidth(double height, int topInset, int rightInset, int bottomInset, int leftInset) {
+    @Override protected double computeMinWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
         final ToolBar toolbar = getSkinnable();
         return toolbar.getOrientation() == Orientation.VERTICAL ?
             computePrefWidth(-1, topInset, rightInset, bottomInset, leftInset) :
             snapSize(overflowMenu.prefWidth(-1)) + leftInset + rightInset;
     }
 
-    @Override protected double computeMinHeight(double width, int topInset, int rightInset, int bottomInset, int leftInset) {
+    @Override protected double computeMinHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
         final ToolBar toolbar = getSkinnable();
         return toolbar.getOrientation() == Orientation.VERTICAL?
             snapSize(overflowMenu.prefHeight(-1)) + topInset + bottomInset :
             computePrefHeight(-1, topInset, rightInset, bottomInset, leftInset);
     }
 
-    @Override protected double computePrefWidth(double height, int topInset, int rightInset, int bottomInset, int leftInset) {
+    @Override protected double computePrefWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
         double prefWidth = 0;
         final ToolBar toolbar = getSkinnable();
 
@@ -267,7 +267,7 @@ public class ToolBarSkin extends BehaviorSkinBase<ToolBar, ToolBarBehavior> impl
         return leftInset + prefWidth + rightInset;
     }
 
-    @Override protected double computePrefHeight(double width, int topInset, int rightInset, int bottomInset, int leftInset) {
+    @Override protected double computePrefHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
         double prefHeight = 0;
         final ToolBar toolbar = getSkinnable();
         
@@ -289,12 +289,12 @@ public class ToolBarSkin extends BehaviorSkinBase<ToolBar, ToolBarBehavior> impl
         return topInset + prefHeight + bottomInset;
     }
 
-    @Override protected double computeMaxWidth(double height, int topInset, int rightInset, int bottomInset, int leftInset) {
+    @Override protected double computeMaxWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
         return getSkinnable().getOrientation() == Orientation.VERTICAL ?
                 snapSize(getSkinnable().prefWidth(-1)) : Double.MAX_VALUE;
     }
 
-    @Override protected double computeMaxHeight(double width, int topInset, int rightInset, int bottomInset, int leftInset) {
+    @Override protected double computeMaxHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
         return getSkinnable().getOrientation() == Orientation.VERTICAL ?
                 Double.MAX_VALUE : snapSize(getSkinnable().prefHeight(-1));
     }

@@ -448,12 +448,12 @@ public abstract class TableViewSkinBase<S, C extends Control, B extends Behavior
     
     private static final double GOLDEN_RATIO_MULTIPLIER = 0.618033987;
 
-    @Override protected double computePrefHeight(double width, int topInset, int rightInset, int bottomInset, int leftInset) {
+    @Override protected double computePrefHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
         return 400;
     }
 
     /** {@inheritDoc} */
-    @Override protected double computePrefWidth(double height, int topInset, int rightInset, int bottomInset, int leftInset) {
+    @Override protected double computePrefWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
         double prefHeight = computePrefHeight(-1, topInset, rightInset, bottomInset, leftInset);
         
         List<? extends TableColumnBase> cols = getVisibleLeafColumns();

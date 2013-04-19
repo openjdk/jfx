@@ -336,19 +336,19 @@ import javafx.collections.WeakListChangeListener;
                 y, obw, h, /*baseline ignored*/0, HPos.CENTER, VPos.CENTER);
     }
 
-    @Override protected double computeMinWidth(double height, int topInset, int rightInset, int bottomInset, int leftInset) {
+    @Override protected double computeMinWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
         final double boxWidth = label.minWidth(-1) + openButton.minWidth(-1);
         final double popupWidth = popup.minWidth(-1);
         return leftInset + Math.max(boxWidth, popupWidth) + rightInset;
     }
 
-    @Override protected double computeMinHeight(double width, int topInset, int rightInset, int bottomInset, int leftInset) {
+    @Override protected double computeMinHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
         final double displayHeight = label.minHeight(-1);
         final double openButtonHeight = openButton.minHeight(-1);
         return topInset + Math.max(displayHeight, openButtonHeight) + bottomInset;
     }
 
-    @Override protected double computePrefWidth(double height, int topInset, int rightInset, int bottomInset, int leftInset) {
+    @Override protected double computePrefWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
         final double boxWidth = label.prefWidth(-1)
                 + openButton.prefWidth(-1);
         double popupWidth = popup.prefWidth(-1);
@@ -361,7 +361,7 @@ import javafx.collections.WeakListChangeListener;
                 + rightInset;
     }
 
-    @Override protected double computePrefHeight(double width, int topInset, int rightInset, int bottomInset, int leftInset) {
+    @Override protected double computePrefHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
         final double displayHeight = label.prefHeight(-1);
         final double openButtonHeight = openButton.prefHeight(-1);
         return topInset
@@ -369,11 +369,11 @@ import javafx.collections.WeakListChangeListener;
                 + bottomInset;
     }
     
-    @Override protected double computeMaxHeight(double width, int topInset, int rightInset, int bottomInset, int leftInset) {
+    @Override protected double computeMaxHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
         return getSkinnable().prefHeight(width);
     }
     
-    @Override protected double computeMaxWidth(double height, int topInset, int rightInset, int bottomInset, int leftInset) {
+    @Override protected double computeMaxWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
         return getSkinnable().prefWidth(height);
     }
 }

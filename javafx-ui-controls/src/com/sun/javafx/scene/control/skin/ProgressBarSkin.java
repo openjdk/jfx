@@ -43,7 +43,6 @@ import javafx.css.StyleableDoubleProperty;
 import javafx.css.StyleableProperty;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
-import javafx.geometry.Insets;
 import javafx.scene.control.ProgressBar;
 import javafx.scene.control.SkinBase;
 import javafx.scene.layout.Background;
@@ -404,7 +403,7 @@ public class ProgressBarSkin extends BehaviorSkinBase<ProgressBar, ProgressBarBe
     }
 
     @Override
-    public double computeBaselineOffset(int topInset, int rightInset, int bottomInset, int leftInset) {
+    public double computeBaselineOffset(double topInset, double rightInset, double bottomInset, double leftInset) {
         double height = getSkinnable().getHeight();        
         return topInset + height;
     }
@@ -425,19 +424,19 @@ public class ProgressBarSkin extends BehaviorSkinBase<ProgressBar, ProgressBarBe
      *                                                                         *
      **************************************************************************/
 
-    @Override protected double computePrefWidth(double height, int topInset, int rightInset, int bottomInset, int leftInset) {
+    @Override protected double computePrefWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
         return Math.max(100, leftInset + bar.prefWidth(getSkinnable().getWidth()) + rightInset);
     }
 
-    @Override protected double computePrefHeight(double width, int topInset, int rightInset, int bottomInset, int leftInset) {
+    @Override protected double computePrefHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
         return topInset + bar.prefHeight(width) + bottomInset;
     }
 
-    @Override protected double computeMaxWidth(double height, int topInset, int rightInset, int bottomInset, int leftInset) {
+    @Override protected double computeMaxWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
         return getSkinnable().prefWidth(height);
     }
 
-    @Override protected double computeMaxHeight(double width, int topInset, int rightInset, int bottomInset, int leftInset) {
+    @Override protected double computeMaxHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
         return getSkinnable().prefHeight(width);
     }
 

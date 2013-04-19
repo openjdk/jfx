@@ -27,7 +27,6 @@ package com.sun.javafx.scene.control.skin;
 
 import javafx.animation.Transition;
 import javafx.event.EventHandler;
-import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
 import javafx.geometry.Point2D;
 import javafx.geometry.Side;
@@ -351,7 +350,7 @@ public class SliderSkin extends BehaviorSkinBase<Slider, SliderBehavior> {
         return 2*thumb.prefWidth(-1);
     }
 
-    @Override protected double computeMinWidth(double height, int topInset, int rightInset, int bottomInset, int leftInset) {
+    @Override protected double computeMinWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
         final Slider s = getSkinnable();
         if (getSkinnable().getOrientation() == Orientation.HORIZONTAL) {
             return (leftInset + minTrackLength() + thumb.minWidth(-1) + rightInset);
@@ -360,7 +359,7 @@ public class SliderSkin extends BehaviorSkinBase<Slider, SliderBehavior> {
         }
     }
 
-    @Override protected double computeMinHeight(double width, int topInset, int rightInset, int bottomInset, int leftInset) {
+    @Override protected double computeMinHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
         final Slider s = getSkinnable();
          if (getSkinnable().getOrientation() == Orientation.HORIZONTAL) {
             return(topInset + thumb.prefHeight(-1) + bottomInset);
@@ -369,7 +368,7 @@ public class SliderSkin extends BehaviorSkinBase<Slider, SliderBehavior> {
         }
     }
 
-    @Override protected double computePrefWidth(double height, int topInset, int rightInset, int bottomInset, int leftInset) {
+    @Override protected double computePrefWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
         final Slider s = getSkinnable();
         if (s.getOrientation() == Orientation.HORIZONTAL) {
             if(showTickMarks) {
@@ -383,7 +382,7 @@ public class SliderSkin extends BehaviorSkinBase<Slider, SliderBehavior> {
         }
     }
 
-    @Override protected double computePrefHeight(double width, int topInset, int rightInset, int bottomInset, int leftInset) {
+    @Override protected double computePrefHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
         final Slider s = getSkinnable();
         if (s.getOrientation() == Orientation.HORIZONTAL) {
             return topInset + Math.max(thumb.prefHeight(-1), track.prefHeight(-1)) +
@@ -397,7 +396,7 @@ public class SliderSkin extends BehaviorSkinBase<Slider, SliderBehavior> {
         }
     }
 
-    @Override protected double computeMaxWidth(double height, int topInset, int rightInset, int bottomInset, int leftInset) {
+    @Override protected double computeMaxWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
         if (getSkinnable().getOrientation() == Orientation.HORIZONTAL) {
             return Double.MAX_VALUE;
         } else {
@@ -405,7 +404,7 @@ public class SliderSkin extends BehaviorSkinBase<Slider, SliderBehavior> {
         }
     }
 
-    @Override protected double computeMaxHeight(double width, int topInset, int rightInset, int bottomInset, int leftInset) {
+    @Override protected double computeMaxHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
         if (getSkinnable().getOrientation() == Orientation.HORIZONTAL) {
             return getSkinnable().prefHeight(width);
         } else {

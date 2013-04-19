@@ -104,24 +104,24 @@ public class SeparatorSkin extends BehaviorSkinBase<Separator, BehaviorBase<Sepa
         positionInArea(line, x, y, w, h, 0, sep.getHalignment(), sep.getValignment());
     }
 
-    @Override protected double computePrefWidth(double h, int topInset, int rightInset, int bottomInset, int leftInset) {
+    @Override protected double computePrefWidth(double h, double topInset, double rightInset, double bottomInset, double leftInset) {
         final Separator sep = getSkinnable();
         double w = sep.getOrientation() == Orientation.VERTICAL ? line.prefWidth(-1) : DEFAULT_LENGTH;
         return w + leftInset + rightInset;
     }
 
-    @Override protected double computePrefHeight(double w, int topInset, int rightInset, int bottomInset, int leftInset) {
+    @Override protected double computePrefHeight(double w, double topInset, double rightInset, double bottomInset, double leftInset) {
         final Separator sep = getSkinnable();
         double h = sep.getOrientation() == Orientation.VERTICAL ? DEFAULT_LENGTH : line.prefHeight(-1);
         return h + topInset + bottomInset;
     }
 
-    @Override protected double computeMaxWidth(double h, int topInset, int rightInset, int bottomInset, int leftInset) {
+    @Override protected double computeMaxWidth(double h, double topInset, double rightInset, double bottomInset, double leftInset) {
         final Separator sep = getSkinnable();
         return sep.getOrientation() == Orientation.VERTICAL ? sep.prefWidth(h) : Double.MAX_VALUE;
     }
 
-    @Override protected double computeMaxHeight(double w, int topInset, int rightInset, int bottomInset, int leftInset) {
+    @Override protected double computeMaxHeight(double w, double topInset, double rightInset, double bottomInset, double leftInset) {
         final Separator sep = getSkinnable();
         return sep.getOrientation() == Orientation.VERTICAL ? Double.MAX_VALUE : sep.prefHeight(w);
     }

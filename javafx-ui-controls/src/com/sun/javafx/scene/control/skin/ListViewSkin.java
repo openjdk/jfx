@@ -348,7 +348,7 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListViewB
         }
     }
     
-    @Override protected double computePrefWidth(double height, int topInset, int rightInset, int bottomInset, int leftInset) {
+    @Override protected double computePrefWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
         if (getItemCount() == 0) {
             if (placeholderRegion == null) {
                 updatePlaceholderRegionVisibility();
@@ -359,7 +359,7 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListViewB
         }
     }
 
-    @Override protected double computePrefHeight(double width, int topInset, int rightInset, int bottomInset, int leftInset) {
+    @Override protected double computePrefHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
 //        return getInsets().getTop() + flow.computePrefHeight(width) + getInsets().getBottom();
         return 400;
     }

@@ -43,7 +43,6 @@ import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.Bounds;
-import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
 import javafx.geometry.Point2D;
 import javafx.geometry.Rectangle2D;
@@ -803,7 +802,7 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
     }
 
     @Override
-    public double computeBaselineOffset(int topInset, int rightInset, int bottomInset, int leftInset) {
+    public double computeBaselineOffset(double topInset, double rightInset, double bottomInset, double leftInset) {
         Text firstParagraph = (Text) paragraphNodes.getChildren().get(0);
         return Utils.getAscent(getSkinnable().getFont(),firstParagraph.getBoundsType())
                 + contentView.snappedTopInset() + textArea.snappedTopInset();
