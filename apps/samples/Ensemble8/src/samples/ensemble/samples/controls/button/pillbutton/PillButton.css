@@ -30,33 +30,41 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-.button.left-pill,
 .toggle-button.left-pill {
-    -fx-background-radius: 5 0 0 5, 4 0 0 4, 3 0 0 3;
-    -fx-background-insets: 0, 1 0 1 1, 2 1 2 2;
+    -fx-background-radius: 3 0 0 3, 3 0 0 3, 2 0 0 2, 1 0 0 1;
+    -fx-background-insets: 0 0 -1 0, 0, 1, 2;
+    -fx-padding: 0.333333em 0.666667em 0.333333em 0.75em; /* 4 8 4 9 */
 }
-.button.center-pill,
 .toggle-button.center-pill {
     -fx-background-radius: 0;
-    -fx-background-insets: 0, 1 0 1 1, 2 1 2 2;
+    -fx-background-insets: 0 0 -1 0, 0 0 0 0, 1 1 1 0, 2 2 2 1 ;
 }
-.button.right-pill,
 .toggle-button.right-pill {
-    -fx-background-radius: 0 5 5 0, 0 4 4 0, 0 3 3 0;
-    -fx-background-insets: 0, 1 0 1 1, 2 1 2 2;
+    -fx-background-radius: 0 3 3 0, 0 3 3 0, 0 2 2 0, 0 1 1 0;
+    -fx-background-insets: 0 0 -1 0, 0, 1 1 1 0, 2 2 2 1 ;
 }
-.button.left-pill:focused,
 .toggle-button.left-pill:focused {
-    -fx-background-radius: 7 0 0 7, 6 0 0 6, 4 0 0 4, 3 0 0 3;
-    -fx-background-insets: -2 0 -2 -2, -0.3 0 -0.3 -0.3, 1, 2;
+    -fx-background-insets: -0.2 0 -0.2 -0.2, 1, 2, -1.4 0 -1.4 -1.4, 2.6;
+    -fx-background-radius: 3 0 0 3, 2 0 0 2, 1 0 0 1, 4 0 0 4, 1 0 0 1;
 }
-.button.center-pill:focused,
 .toggle-button.center-pill:focused {
-    -fx-background-radius: 0;
-    -fx-background-insets: -2 0 -1 0, -0.3 0 -0.3 0, 1, 2;
+    -fx-background-insets: -0.2 0 -0.2 -1, 1 1 1 0, 2 2 2 1, -1.4 0 -1.4 -1, 2.6 2.6 2.6 1.6;
+    -fx-background-radius: 0, 0, 0, 0, 0;
 }
-.button.right-pill:focused,
 .toggle-button.right-pill:focused {
-    -fx-background-radius: 0 7 7 0, 0 6 6 0, 0 4 4 0, 0 3 3 0;
-    -fx-background-insets: -2 -2 -2 0, -0.3 -0.3 -0.3 0, 1, 2;
+    -fx-background-insets: -0.2 -0.2 -0.2 -1, 1 1 1 0, 2 2 2 1, -1.4 -1.4 -1.4 -1, 2.6 2.6 2.6 1.6;
+    -fx-background-radius: 0 3 3 0, 0 2 2 0, 0 1 1 0, 0 4 4 0, 0 1 1 0;
 }
+.toggle-button:selected.left-pill:focused {
+    -fx-background-insets: -0.2 0 -0.2 -0.2, 1, -1.4 0 -1.4 -1.4, 2.6;
+    -fx-background-radius: 3 0 0 3, 2 0 0 2, 4 0 0 4, 0;
+}
+.toggle-button:selected.center-pill:focused {
+    -fx-background-insets: -0.2 0 -0.2 -1, 1 1 1 0, -1.4 0 -1.4 -1, 2.6 2.6 2.6 1.6;
+    -fx-background-radius: 0, 0, 0, 0;
+}
+.toggle-button:selected.right-pill:focused {
+    -fx-background-insets: -0.2 -0.2 -0.2 -1, 1 1 1 0, -1.4 -1.4 -1.4 -1, 2.6 2.6 2.6 1.6;
+    -fx-background-radius: 0 3 3 0, 0 2 2 0, 0 4 4 0, 0;
+}
+
