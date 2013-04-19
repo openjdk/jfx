@@ -108,7 +108,7 @@ public final class FontConverter extends StyleConverterImpl<ParsedValue[], Font>
         return "FontConverter";
     }
 
-    public static final class FontStyleConverter extends StyleConverterImpl<FontUnits.Style, FontPosture> {
+    public static final class FontStyleConverter extends StyleConverterImpl<String, FontPosture> {
 
         // lazy, thread-safe instatiation
         private static class Holder {
@@ -124,20 +124,16 @@ public final class FontConverter extends StyleConverterImpl<ParsedValue[], Font>
         }
 
         @Override
-        public FontPosture convert(ParsedValue<FontUnits.Style, FontPosture> value, Font font) {
+        public FontPosture convert(ParsedValue<String, FontPosture> value, Font font) {
 
-            final FontUnits.Style style = value.getValue();
-
-            if (FontUnits.Style.INHERIT != style) {
-                return style.toFontPosture();
-
-            } else if (font != null) { // Inherit
-                // TODO get the posture from the inherited font
-                // TODO take font.oblique into account? (dekstop only vs common)
-                return FontPosture.REGULAR;
-            } else {
-                return FontPosture.REGULAR;
+            FontPosture fontPosture = FontPosture.REGULAR;
+            final String ident = value.getValue().toUpperCase();
+            try {
+                fontPosture = FontPosture.valueOf(ident);
+            } catch (IllegalArgumentException iae) {
+                // TODO: How to handle "inherit"? Probably in CssStyleHelper so that inherit is never passed to here
             }
+            return fontPosture;
         }
 
         @Override
@@ -146,7 +142,7 @@ public final class FontConverter extends StyleConverterImpl<ParsedValue[], Font>
         }
     }
 
-    public static final class FontWeightConverter extends StyleConverterImpl<FontUnits.Weight, FontWeight> {
+    public static final class FontWeightConverter extends StyleConverterImpl<String, FontWeight> {
 
         // lazy, thread-safe instatiation
         private static class Holder {
@@ -162,30 +158,17 @@ public final class FontConverter extends StyleConverterImpl<ParsedValue[], Font>
         }
 
         @Override
-        public FontWeight convert(ParsedValue<FontUnits.Weight, FontWeight> value, Font font) {
+        public FontWeight convert(ParsedValue<String, FontWeight> value, Font font) {
 
-            final FontUnits.Weight weight = value.getValue();
+            FontWeight weight = FontWeight.NORMAL;
 
-            if (FontUnits.Weight.INHERIT != weight
-                    && FontUnits.Weight.BOLDER != weight
-                    && FontUnits.Weight.LIGHTER != weight) {
-                return weight.toFontWeight();
-            } else if (font != null) {
-                FontWeight fweight = FontWeight.NORMAL;
-                // TODO: take font.embolden into account? (dekstop only vs common)
-                if (FontUnits.Weight.INHERIT == weight) {
-                    return fweight;
-                } else if (FontUnits.Weight.BOLDER == weight) {
-                    // TODO - this FontUnits.Weight API sucks.
-                    return FontUnits.Weight.toWeight(fweight).bolder().toFontWeight();
-                } else if (FontUnits.Weight.LIGHTER == weight) {
-                    return FontUnits.Weight.toWeight(fweight).lighter().toFontWeight();
-                } else {
-                    return weight.toFontWeight();
-                }
-            } else {
-                return weight.toFontWeight();
+            final String ident = value.getValue().toUpperCase();
+            try {
+                weight = FontWeight.valueOf(ident);
+            } catch (IllegalArgumentException iae) {
+                // TODO: How to handle "inherit"? Probably in CssStyleHelper so that inherit is never passed to here
             }
+            return weight;
         }
 
         @Override

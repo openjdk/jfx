@@ -62,11 +62,11 @@ public class FontTypeTest {
                     SizeConverter.getInstance()
                 );
 
-        ParsedValue<FontUnits.Style,FontPosture> style =
-                new ParsedValueImpl<FontUnits.Style,FontPosture>(FontUnits.Style.NORMAL, FontConverter.FontStyleConverter.getInstance());
+        ParsedValue<String,FontPosture> style =
+                new ParsedValueImpl<String,FontPosture>(FontPosture.REGULAR.name(), FontConverter.FontStyleConverter.getInstance());
 
-        ParsedValue<FontUnits.Weight,FontWeight> weight =
-                new ParsedValueImpl<FontUnits.Weight,FontWeight>(FontUnits.Weight.NORMAL, FontConverter.FontWeightConverter.getInstance());
+        ParsedValue<String,FontWeight> weight =
+                new ParsedValueImpl<String,FontWeight>(FontWeight.NORMAL.name(), FontConverter.FontWeightConverter.getInstance());
         ParsedValue<ParsedValue[],Font> value = new ParsedValueImpl<ParsedValue[],Font>(
                 new ParsedValue[] {family, size, weight, style},
                 FontConverter.getInstance()
