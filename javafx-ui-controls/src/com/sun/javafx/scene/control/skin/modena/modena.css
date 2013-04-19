@@ -1359,7 +1359,7 @@ is being used to size a border should also be in pixels.
     -fx-background-color: transparent;
 }
 .context-menu > .scroll-arrow:hover {
-    -fx-background: -fx-seleection-bar;
+    -fx-background: -fx-selection-bar;
     -fx-background-color: -fx-background;
     -fx-text-fill: -fx-text-background-color;
 }
