@@ -78,10 +78,6 @@ public class StubScene implements TKScene {
         camera = ci;
     }
 
-    public PickRay computePickRay(float x, float y, PickRay pickRay) {
-        return null;
-    }
-
     public void setFillPaint(Object fillPaint) {
         // ignore
     }
@@ -92,12 +88,6 @@ public class StubScene implements TKScene {
 
     public Object getCursor() {
         return cursor;
-    }
-
-    public void requestFocus() {
-        if (stage != null) {
-            stage.requestFocus();
-        }
     }
 
     public void enableInputMethodEvents(boolean enable) {

@@ -31,17 +31,10 @@ import javafx.stage.StageStyle;
 import com.sun.glass.ui.Clipboard;
 import com.sun.glass.ui.ClipboardAssistance;
 import com.sun.glass.ui.View;
-import com.sun.javafx.geom.PickRay;
-import com.sun.javafx.geom.Rectangle;
-import com.sun.javafx.geom.Vec3d;
-import com.sun.javafx.geom.transform.Affine3D;
-import com.sun.javafx.geom.transform.GeneralTransform3D;
-import com.sun.javafx.geom.transform.NoninvertibleTransformException;
 import com.sun.javafx.sg.PGCamera;
 import com.sun.javafx.sg.PGNode;
 import com.sun.javafx.sg.prism.NGCamera;
 import com.sun.javafx.sg.prism.NGNode;
-import com.sun.javafx.sg.prism.SceneChangeListener;
 import com.sun.javafx.tk.TKClipboard;
 import com.sun.javafx.tk.TKDragGestureListener;
 import com.sun.javafx.tk.TKDragSourceListener;
@@ -51,20 +44,17 @@ import com.sun.javafx.tk.TKSceneListener;
 import com.sun.javafx.tk.TKScenePaintListener;
 import com.sun.prism.camera.PrismCameraImpl;
 import com.sun.prism.camera.PrismParallelCameraImpl;
-import com.sun.prism.camera.PrismPerspectiveCameraImpl;
 import com.sun.prism.impl.PrismSettings;
 import com.sun.prism.paint.Color;
 import com.sun.prism.paint.Paint;
-
-import sun.util.logging.PlatformLogger;
 
 import java.security.AccessControlContext;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 
-abstract class GlassScene implements TKScene, SceneChangeListener {
+abstract class GlassScene implements TKScene {
 
-    protected GlassStage glassStage;
+    private GlassStage stage;
 
     protected TKSceneListener sceneListener;
     protected TKDragGestureListener dragGestureListener;
@@ -80,7 +70,6 @@ abstract class GlassScene implements TKScene, SceneChangeListener {
     private Paint fillPaint;
 
     private boolean entireSceneDirty = true;
-    private boolean dirty = true;
     private boolean doPresent = true;
 
     private boolean depthBuffer = false;
@@ -233,12 +222,6 @@ abstract class GlassScene implements TKScene, SceneChangeListener {
         entireSceneDirty = false;
     }
 
-    @Override public void requestFocus() {
-        if (glassStage != null) {
-            glassStage.requestFocus();
-        }
-    }
-
     @Override
     public TKClipboard createDragboard(boolean isDragSource) {
         ClipboardAssistance assistant = new ClipboardAssistance(Clipboard.DND) {
@@ -263,16 +246,13 @@ abstract class GlassScene implements TKScene, SceneChangeListener {
         return dragboard;
     }
 
-    void setGlassStage(GlassStage stage) {
-        glassStage = stage;
-        if (glassStage != null) {
-            sceneChanged();
-        } else {
-            // the scene is no longer associated with a stage, remove from
-            // the dirty list and clear. it will be marked dirty if it becomes
-            // active again
-            PaintCollector.getInstance().removeDirtyScene(this);
-        }
+    protected final GlassStage getStage() {
+        return stage;
+    }
+
+    void setStage(GlassStage stage) {
+        this.stage = stage;
+        sceneChanged();
     }
 
     final SceneState getSceneState() {
@@ -304,88 +284,17 @@ abstract class GlassScene implements TKScene, SceneChangeListener {
         }
     }
 
-    // Note: Class variables use with care, not MT safe.
-    private static final double[] projMatValues = new double[16];
-    private static final Vec3d ptCc = new Vec3d();
-    private static final Vec3d ptEc = new Vec3d();
-    private static final Vec3d ptWc = new Vec3d();
-    private static final Vec3d eyeEc = new Vec3d();
-    private static final Vec3d eyeWc = new Vec3d();
-
-    //TODO: 3D - Need to handle movable camera ...
-    @Override public PickRay computePickRay(float x, float y, PickRay pickRay) {
-        GeneralTransform3D projTx = camera.getProjectionTransform(null);
-        projTx.get(projMatValues);
-
-        Affine3D viewTx = camera.getViewTransform(null);
-        Rectangle vp = camera.getViewport(null);
-
-        double xCc = (x / vp.width) * 2.0 - 1.0;
-        double yCc = (y / vp.height) * -2.0 + 1.0;
-
-        if (!(camera instanceof PrismPerspectiveCameraImpl)) {
-            // Parallel projection
-            if ((pickRay == null) || (!pickRay.isParallel())) {
-                pickRay = new PickRay(x, y);
-            } else {
-                pickRay.set(x, y);
-            }
-        } else {
-            // Perspective projection
-            double[] m = projMatValues;
-            double zEc = (1.0 - m[15]) / m[14];
-            double zCc = m[10] * zEc + m[11];
-            ptCc.set(xCc, yCc, zCc);
-
-            // Invert the projection transform. Note that we reuse projTx
-            // to avoid constructing another transform.
-            projTx.invert();
-
-            // Transform the Cc point into Ec via the inverse projection transform
-            projTx.transform(ptCc, ptEc);
-            try {
-                // Invert the view transform. Note that we reuse projTx
-                // to avoid constructing another transform.
-                // TODO: if we decide to define picking in Ec rather
-                // than Wc then this step becomes unnecessary; instead it will
-                // be handled as part of the ModelView transform
-                viewTx.invert();
-            } catch (NoninvertibleTransformException ex) {
-                String logname = ViewScene.class.getName();
-                PlatformLogger.getLogger(logname).severe("computePickRay", ex);
-            }
-
-            viewTx.transform(ptEc, ptWc);
-
-            eyeEc.set(0.0, 0.0, 0.0);
-            viewTx.transform(eyeEc, eyeWc);
-
-            //            String msg = "computePickRay:" + "\n" +
-            //                    "  ptCc = " + ptCc + "\n" +
-            //                    "  ptEc = " + ptEc + "\n" +
-            //                    "  ptWc = " + ptWc + "\n" +
-            //                    "  eyeEc = " + eyeEc + "  eyeWc = " + eyeWc;
-            //            System.err.println(msg);
-
-            if ((pickRay == null) || (pickRay.isParallel())) {
-                pickRay = new PickRay(eyeWc, ptWc);
-            } else {
-                pickRay.set(eyeWc, ptWc);
-            }
-            pickRay.getDirectionNoClone().sub(eyeWc);
-        }
-
-        return pickRay;
-    }
-
-    /* com.sun.javafx.tk.TKSceneListener */
-
-    @Override public void sceneChanged() {
-        if (glassStage != null) {
+    public void sceneChanged() {
+        if (stage != null) {
             // don't mark this scene dirty and add it to the dirty scene list if
             // it is not attached to a Stage. When it does get attached the
             // scene will be marked dirty anyway.
             PaintCollector.getInstance().addDirtyScene(this);
+        } else {
+            // the scene is no longer associated with a stage, remove from
+            // the dirty list and clear. it will be marked dirty if it becomes
+            // active again
+            PaintCollector.getInstance().removeDirtyScene(this);
         }
     }
 
@@ -393,14 +302,6 @@ abstract class GlassScene implements TKScene, SceneChangeListener {
         if (scenePaintListener != null) {
             scenePaintListener.frameRendered();
         }
-    }
-
-    public final synchronized void setDirty(boolean value) {
-        dirty = value;
-    }
-
-    public final synchronized boolean getDirty() {
-        return dirty;
     }
 
     public final synchronized void setDoPresent(boolean value) {
@@ -412,7 +313,7 @@ abstract class GlassScene implements TKScene, SceneChangeListener {
     }
 
     protected final Color getClearColor() {
-        WindowStage windowStage = glassStage instanceof WindowStage ? (WindowStage)glassStage : null;
+        WindowStage windowStage = stage instanceof WindowStage ? (WindowStage)stage : null;
         if (windowStage != null && windowStage.getPlatformWindow().isTransparentWindow()) {
             return (Color.TRANSPARENT);
         } else {
@@ -436,7 +337,7 @@ abstract class GlassScene implements TKScene, SceneChangeListener {
     }
 
     protected final Paint getCurrentPaint() {
-        WindowStage windowStage = glassStage instanceof WindowStage ? (WindowStage)glassStage : null;
+        WindowStage windowStage = stage instanceof WindowStage ? (WindowStage)stage : null;
         if ((windowStage != null) && windowStage.getStyle() == StageStyle.TRANSPARENT) {
             return Color.TRANSPARENT.equals(fillPaint) ? null : fillPaint;
         }

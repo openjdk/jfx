@@ -31,6 +31,10 @@ import java.security.AccessController;
 import java.security.AllPermission;
 import java.security.Permission;
 import java.security.PrivilegedAction;
+import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 
 import javafx.stage.Modality;
@@ -53,16 +57,11 @@ import com.sun.javafx.accessible.providers.AccessibleStageProvider;
 
 class WindowStage extends GlassStage {
 
-    PushbroomScaler scaler;
-    StageStyle style;
-    Window platformWindow;
-    MenuBar menubar;
-    String title;
+    protected Window platformWindow;
 
-    int minWidth = 0;
-    int minHeight = 0;
-    int maxWidth = Integer.MAX_VALUE;
-    int maxHeight = Integer.MAX_VALUE;
+    private StageStyle style;
+    private GlassStage owner = null;
+    private Modality modality = Modality.NONE;
 
     private OverlayWarning warning = null;
     private boolean rtl = false;
@@ -70,11 +69,6 @@ class WindowStage extends GlassStage {
     private boolean isPrimaryStage = false;
     private boolean isAppletStage = false; // true if this is an embedded applet window
     private boolean isInFullScreen = false;
-    // Owner of this window
-    private TKStage owner = null;
-    // Owner's window
-    private Window ownerWindow = null;
-    private Modality modality = Modality.NONE;
 
     // A flag to indicate whether a call was generated from
     // an input event handler.
@@ -82,20 +76,20 @@ class WindowStage extends GlassStage {
 
     private static final AtomicReference<WindowStage> activeFSWindow = new AtomicReference<>();
 
+    // An active window is visible && enabled && focusable.
+    // The list is maintained in the z-order, so that the last element
+    // represents the topmost window (or more accurately, the last
+    // focused window, which we assume is very close to the last topmost one).
+    private static List<WindowStage> activeWindows = new LinkedList<>();
+
+    private static Map<Window, WindowStage> platformWindows = new HashMap<>();
+
     private static GlassAppletWindow appletWindow = null;
     static void setAppletWindow(GlassAppletWindow aw) {
         appletWindow = aw;
     }
     static GlassAppletWindow getAppletWindow() {
         return appletWindow;
-    }
-
-    public WindowStage() {
-        this(StageStyle.DECORATED, false, Modality.NONE, null);
-    }
-
-    public WindowStage(final StageStyle stageStyle) {
-        this(stageStyle, false, Modality.NONE, null);
     }
 
     public WindowStage(final StageStyle stageStyle, final boolean isPrimary, Modality modality, TKStage owner) {
@@ -111,15 +105,8 @@ class WindowStage extends GlassStage {
             if (modality == Modality.WINDOW_MODAL) {
                 modality = Modality.NONE;
             }
-        } else {
-            if (owner instanceof WindowStage) {
-                ownerWindow = ((WindowStage) owner).platformWindow;
-            } else {
-                // We don't expect this case to happen.
-                System.err.println("Error: Unsupported type of owner " + owner);
-            }
         }
-        this.owner = owner;
+        this.owner = (GlassStage)owner;
         this.modality = modality;
     }
 
@@ -127,8 +114,6 @@ class WindowStage extends GlassStage {
     public final WindowStage init(GlassSystemMenu sysmenu) {
         initPlatformWindow();
         platformWindow.setEventHandler(new GlassWindowEventHandler(this));
-        platformWindow.setMinimumSize(minWidth, minHeight);
-        platformWindow.setMaximumSize(maxWidth, maxHeight);
         if (sysmenu.isSupported()) {
             sysmenu.createMenuBar();
             platformWindow.setMenuBar(sysmenu.getMenuBar());
@@ -137,42 +122,52 @@ class WindowStage extends GlassStage {
     }
 
     protected void initPlatformWindow() {
-        int windowMask = rtl ? Window.RIGHT_TO_LEFT : 0;
-
-        Application app = Application.GetApplication();
-        if (isPrimaryStage && (null != appletWindow)) {
-            platformWindow = app.createWindow(appletWindow.getGlassWindow().getNativeWindow());
-        } else if (style == StageStyle.DECORATED || style == StageStyle.UNIFIED) {
-            windowMask |= Window.TITLED | Window.CLOSABLE | Window.MINIMIZABLE |
-                    Window.MAXIMIZABLE;
-            if (style == StageStyle.UNIFIED && app.supportsUnifiedWindows()) {
-                windowMask |= Window.UNIFIED;
+        if (platformWindow == null) {
+            Application app = Application.GetApplication();
+            Window ownerWindow = null;
+            if (owner instanceof WindowStage) {
+                ownerWindow = ((WindowStage)owner).platformWindow;
             }
-            platformWindow = 
-                    app.createWindow(ownerWindow, Screen.getMainScreen(), windowMask);
-            platformWindow.setResizable(true);
-        } else if (style == StageStyle.UTILITY) {
-            windowMask |=  Window.TITLED | Window.UTILITY | Window.CLOSABLE;
-            platformWindow = 
-                    app.createWindow(ownerWindow, Screen.getMainScreen(), windowMask);
-        } else {
-            windowMask |= (transparent ? Window.TRANSPARENT : Window.UNTITLED) |
-                    Window.CLOSABLE;
-            platformWindow = 
-                    app.createWindow(ownerWindow, Screen.getMainScreen(), windowMask);
+            int windowMask = rtl ? Window.RIGHT_TO_LEFT : 0;
+            if (isPrimaryStage && (null != appletWindow)) {
+                platformWindow = app.createWindow(appletWindow.getGlassWindow().getNativeWindow());
+            } else if (style == StageStyle.DECORATED || style == StageStyle.UNIFIED) {
+                windowMask |= Window.TITLED | Window.CLOSABLE | Window.MINIMIZABLE |
+                        Window.MAXIMIZABLE;
+                if (style == StageStyle.UNIFIED && app.supportsUnifiedWindows()) {
+                    windowMask |= Window.UNIFIED;
+                }
+                platformWindow =
+                        app.createWindow(ownerWindow, Screen.getMainScreen(), windowMask);
+                platformWindow.setResizable(true);
+            } else if (style == StageStyle.UTILITY) {
+                windowMask |=  Window.TITLED | Window.UTILITY | Window.CLOSABLE;
+                platformWindow =
+                        app.createWindow(ownerWindow, Screen.getMainScreen(), windowMask);
+            } else {
+                windowMask |= (transparent ? Window.TRANSPARENT : Window.UNTITLED) |
+                        Window.CLOSABLE;
+                platformWindow =
+                        app.createWindow(ownerWindow, Screen.getMainScreen(), windowMask);
+            }
         }
+        platformWindows.put(platformWindow, this);
     }
 
-    protected Window getPlatformWindow() {
+    final Window getPlatformWindow() {
         return platformWindow;
     }
 
-    protected TKStage getOwner() {
+    static WindowStage findWindowStage(Window platformWindow) {
+        return platformWindows.get(platformWindow);
+    }
+
+    protected GlassStage getOwner() {
         return owner;
     }
     
     protected ViewScene getViewScene() {
-        return (ViewScene)scene;
+        return (ViewScene)getScene();
     }
     
     StageStyle getStyle() {
@@ -189,9 +184,9 @@ class WindowStage extends GlassStage {
      * @param scene The peer of the scene to be displayed
      */
     @Override public void setScene(TKScene scene) {
-        GlassScene oldScene = this.scene;
+        GlassScene oldScene = getScene();
         super.setScene(scene);
-        if (this.scene != null) {
+        if (scene != null) {
             GlassScene newScene = getViewScene();
             View view = newScene.getPlatformView();
             AbstractPainter.renderLock.lock();
@@ -232,23 +227,11 @@ class WindowStage extends GlassStage {
     }
 
     @Override public void setMinimumSize(int minWidth, int minHeight) {
-        if (this.minWidth != minWidth || this.minHeight != minHeight) {
-            this.minWidth = minWidth;
-            this.minHeight = minHeight;
-            if (platformWindow != null) {
-                platformWindow.setMinimumSize(minWidth, minHeight);
-            }
-        }
+        platformWindow.setMinimumSize(minWidth, minHeight);
     }
 
     @Override public void setMaximumSize(int maxWidth, int maxHeight) {
-        if (this.maxWidth != maxWidth || this.maxHeight != maxHeight) {
-            this.maxWidth = maxWidth;
-            this.maxHeight = maxHeight;
-            if (platformWindow != null) {
-                platformWindow.setMaximumSize(maxWidth, maxHeight);
-            }
-        }
+        platformWindow.setMaximumSize(maxWidth, maxHeight);
     }
 
     @Override public void setIcons(java.util.List icons) {
@@ -352,9 +335,9 @@ class WindowStage extends GlassStage {
             return;
         }
 
-        scaler = ScalerFactory.createScaler(image.getWidth(), image.getHeight(),
-                                            image.getBytesPerPixelUnit(),
-                                            SMALL_ICON_WIDTH, SMALL_ICON_HEIGHT, true);
+        PushbroomScaler scaler = ScalerFactory.createScaler(image.getWidth(), image.getHeight(),
+                                                            image.getBytesPerPixelUnit(),
+                                                            SMALL_ICON_WIDTH, SMALL_ICON_HEIGHT, true);
 
         //shrink the image and convert the format to INT_ARGB_PRE
         ByteBuffer buf = (ByteBuffer) image.getPixelBuffer();
@@ -367,9 +350,7 @@ class WindowStage extends GlassStage {
         for (int z = 0; z < iheight; z++) {
             buf.position(z*image.getScanlineStride());
             buf.get(bytes, 0, image.getScanlineStride());
-            if (this.scaler != null) {
-                scaler.putSourceScanline(bytes, 0);
-            }
+            scaler.putSourceScanline(bytes, 0);
         }
 
         buf.rewind();
@@ -379,17 +360,14 @@ class WindowStage extends GlassStage {
     }
 
     @Override public void setTitle(String title) {
-        if (platformWindow == null) {
-            this.title = title;
-        } else {
-            platformWindow.setTitle(title);
-        }
+        platformWindow.setTitle(title);
     }
 
     @Override public void setVisible(final boolean visible) {
         // Before setting visible to false on the native window, we unblock
         // other windows.
         if (!visible) {
+            removeActiveWindow(this);
             if (modality == Modality.WINDOW_MODAL) {
                 assert (owner != null);
                 ((WindowStage) owner).setEnabled(true);
@@ -583,30 +561,47 @@ class WindowStage extends GlassStage {
     
     @Override public void close() {
         super.close();
-        // prevents closing a closed platform window
-        if (!platformWindowClosed) {
-            AbstractPainter.renderLock.lock();
-            try {
-                GlassScene oldScene = getViewScene();
+        AbstractPainter.renderLock.lock();
+        try {
+            // prevents closing a closed platform window
+            if (platformWindow != null) {
+                platformWindows.remove(platformWindow);
                 platformWindow.close();
-                if (oldScene != null) oldScene.updateSceneState();
-            } finally {
-                AbstractPainter.renderLock.unlock();
+                platformWindow = null;
             }
+            GlassScene oldScene = getViewScene();
+            if (oldScene != null) {
+                oldScene.updateSceneState();
+            }
+        } finally {
+            AbstractPainter.renderLock.unlock();
         }
     }
 
-    private boolean platformWindowClosed = false;
     // setPlatformWindowClosed is only set upon receiving platform window has
     // closed notification. This state is necessary to prevent the platform
     // window from being closed more than once.
-    @Override protected void setPlatformWindowClosed() {
-        platformWindowClosed = true;
+    void setPlatformWindowClosed() {
+        platformWindow = null;
     }
 
-    // True for unowned stage
-    @Override public boolean isTopLevel() {
-        return owner == null;
+    static void addActiveWindow(WindowStage window) {
+        activeWindows.remove(window);
+        activeWindows.add(window);
+    }
+
+    static void removeActiveWindow(WindowStage window) {
+        activeWindows.remove(window);
+    }
+
+    final void handleFocusDisabled() {
+        if (activeWindows.isEmpty()) {
+            return;
+        }
+        WindowStage window = activeWindows.get(activeWindows.size() - 1);
+        window.setIconified(false);
+        window.requestToFront();
+        window.requestFocus();
     }
 
     @Override public boolean grabFocus() {
@@ -638,12 +633,14 @@ class WindowStage extends GlassStage {
         }
     }
 
-    @Override protected void setPlatformEnabled(boolean enabled) {
-        if (!platformWindowClosed) {
-            platformWindow.setEnabled(enabled);
-        }
-        if (!enabled) {
-            GlassStage.removeActiveWindow(this);
+    @Override
+    protected void setPlatformEnabled(boolean enabled) {
+        super.setPlatformEnabled(enabled);
+        platformWindow.setEnabled(enabled);
+        if (enabled) {
+            requestToFront();
+        } else {
+            removeActiveWindow(this);
         }
     }
 
@@ -661,31 +658,14 @@ class WindowStage extends GlassStage {
         }
         setPlatformEnabled(enabled);
         if (enabled) {
-            this.requestToFront();
             if (isAppletStage && null != appletWindow) {
                 appletWindow.assertStageOrder();
             }
         }
     }
 
-    void windowsSetEnabled(boolean enabled) {
-        // TODO: Need to solve RT-12605:
-        // If Window #1 pops up an APPLICATION modal dialog #2 it should block
-        // Window #1, but will also block Window #3, #4, etc., unless those
-        // windows are descendants of #2.
-        for (GlassStage window : windows) {
-            if (window != this) {
-                window.setPlatformEnabled(enabled);
-                if (enabled) {
-                    window.requestToFront();
-                }
-            }
-        }
-    }
-
-    // Note: This method is required to workaround a glass issue mentioned 
-    // in RT-12607
-    @Override protected void requestToFront() {
+    // Note: This method is required to workaround a glass issue mentioned in RT-12607
+    protected void requestToFront() {
         platformWindow.toFront();
         platformWindow.requestFocus();
     }

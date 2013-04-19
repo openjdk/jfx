@@ -68,8 +68,6 @@ public interface TKScene {
 
     public void setCamera(PGCamera camera);
 
-    public PickRay computePickRay(float x, float y, PickRay pickRay);
-
     Object[] getLights();
     public void setLights(Object lights[]);
 
@@ -81,8 +79,6 @@ public interface TKScene {
     public void setFillPaint(Object fillPaint);
 
     public void setCursor(Object cursor);
-
-    public void requestFocus();
 
     public void enableInputMethodEvents(boolean enable);
 

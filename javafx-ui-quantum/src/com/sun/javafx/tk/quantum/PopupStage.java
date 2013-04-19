@@ -25,6 +25,7 @@
 
 package com.sun.javafx.tk.quantum;
 
+import javafx.stage.Modality;
 import javafx.stage.StageStyle;
 
 import com.sun.glass.ui.Application;
@@ -36,26 +37,22 @@ import com.sun.javafx.tk.TKStage;
 
 final class PopupStage extends WindowStage  {
 
-    private GlassStage ownerStage;
-
     public PopupStage(final TKStage owner) {
-        super(StageStyle.TRANSPARENT);
-        ownerStage = (GlassStage)owner;
+        super(StageStyle.TRANSPARENT, false, Modality.NONE, owner);
     }
 
     @Override
     protected void initPlatformWindow() {
         Application app = Application.GetApplication();
+        GlassStage ownerStage = getOwner();
         Window owner = (ownerStage instanceof WindowStage) ?
                        ((WindowStage)ownerStage).getPlatformWindow() :
                        null;
         platformWindow = app.createWindow(owner, Screen.getMainScreen(),
                                           Window.TRANSPARENT | Window.POPUP);
         platformWindow.setFocusable(false);
-    }
 
-    public GlassScene getOwnerScene() {
-        return ownerStage.scene;
+        super.initPlatformWindow();
     }
 
     @Override
@@ -70,19 +67,5 @@ final class PopupStage extends WindowStage  {
     public void setTitle(final String title) {
         // no-op
     }
-
-    @Override public void setVisible(boolean visible) {
-        if (visible) {
-            ownerStage.addPopup(this);
-        } else {
-            ownerStage.removePopup(this);
-        }
-        super.setVisible(visible);
-    }
-
-    @Override public boolean isTopLevel() {
-        return false;
-    }
-
 }
 

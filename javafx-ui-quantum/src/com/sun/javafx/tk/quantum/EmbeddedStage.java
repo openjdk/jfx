@@ -88,11 +88,9 @@ final class EmbeddedStage extends GlassStage implements EmbeddedStageInterface {
 
     @Override
     protected void setPlatformEnabled(boolean enabled) {
+        super.setPlatformEnabled(enabled);
         host.setEnabled(enabled);
     }
-
-    @Override
-    protected void requestToFront() {}
 
     @Override
     public void setIcons(List icons) {

@@ -302,7 +302,6 @@ public abstract class Toolkit {
      */
     public abstract void exitNestedEventLoop(Object key, Object rval);
 
-    public abstract TKStage createTKStage(StageStyle stageStyle);
     public abstract TKStage createTKStage(StageStyle stageStyle, boolean primary,
             Modality modality, TKStage owner, boolean rtl);
 

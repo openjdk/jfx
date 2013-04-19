@@ -25,8 +25,6 @@
 
 package com.sun.javafx.tk.quantum;
 
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 import java.util.Set;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -57,15 +55,8 @@ import com.sun.prism.camera.PrismCameraImpl;
 
 abstract class AbstractPainter implements Runnable {
     
-    private static final NodePath<NGNode> NODE_PATH = new NodePath<NGNode>();
+    private static final NodePath<NGNode> NODE_PATH = new NodePath<>();
 
-    protected static final boolean verbose =
-        AccessController.doPrivileged(new PrivilegedAction<Boolean>() {
-            @Override public Boolean run() {
-                return Boolean.getBoolean("quantum.paint");
-            }
-        });
-        
     /*
      * This could be a per-scene lock but there is no guarantee that the 
      * FX handlers called in GlassViewEventHandler would not modify other scenes.

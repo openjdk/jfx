@@ -84,7 +84,6 @@ public class WindowPeerListener implements TKStageListener {
 
     @Override
     public void closed() {
-        window.hide();
     }
 
     @Override public void focusUngrab() {

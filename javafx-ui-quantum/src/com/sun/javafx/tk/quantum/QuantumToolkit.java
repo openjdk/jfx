@@ -595,11 +595,6 @@ public final class QuantumToolkit extends Toolkit implements ToolkitInterface {
         }
     }
 
-    @Override public TKStage createTKStage(StageStyle stageStyle) {
-        assertToolkitRunning();
-        return new WindowStage(stageStyle).init(systemMenu);
-    }
-
     @Override public TKStage createTKStage(StageStyle stageStyle,
             boolean primary, Modality modality, TKStage owner, boolean rtl) {
         assertToolkitRunning();

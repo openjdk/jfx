@@ -74,8 +74,8 @@ class ViewScene extends GlassScene {
     }
 
     @Override
-    public void setGlassStage(GlassStage stage) {
-        super.setGlassStage(stage);
+    public void setStage(GlassStage stage) {
+        super.setStage(stage);
         if (stage != null) {
             WindowStage wstage  = (WindowStage)stage;
             if (wstage.needsUpdateWindow()) {
@@ -93,7 +93,7 @@ class ViewScene extends GlassScene {
     }
 
     WindowStage getWindowStage() {
-        return (WindowStage)glassStage;
+        return (WindowStage)getStage();
     }
 
     /* com.sun.javafx.tk.TKScene */

@@ -330,7 +330,6 @@ final class PaintCollector implements CompletionListener {
     final void liveRepaintRenderJob(final ViewScene scene) {
         ViewPainter viewPainter = scene.getPainter();
         ((QuantumToolkit)QuantumToolkit.getToolkit()).pulse(false);
-        scene.setDirty(true);
          final CountDownLatch latch = new CountDownLatch(1);
          boolean locked =  AbstractPainter.renderLock.isHeldByCurrentThread();
          if (locked) {
@@ -406,40 +405,34 @@ final class PaintCollector implements CompletionListener {
             // No native window manager.  We call repaint on every scene (to make sure it gets recopied
             // to the screen) but we may be able to skip some steps in the repaint.
 
-            List<GlassStage> glassStageList = GlassStage.windows;
             // Obtain a z-ordered window list from glass.  For platforms without a native window manager,
             // we need to recopy the all of the window contents to the screen on every frame.
             List<com.sun.glass.ui.Window> glassWindowList = com.sun.glass.ui.Window.getWindows();
             allWorkCompletedLatch = new CountDownLatch(glassWindowList.size());
             for (int i = 0, n = glassWindowList.size(); i < n; i++) {
                 final Window w = glassWindowList.get(i);
-                // now figure out which scene goes with this window... ugly...
-                for (int j = 0; j < glassStageList.size(); j++){
-                    WindowStage ws = (WindowStage)glassStageList.get(j);
-                    if (w == ws.getPlatformWindow()) {
-                        ViewScene vs = ws.getViewScene();
+                final WindowStage ws = WindowStage.findWindowStage(w);
+                if (ws != null) {
+                    ViewScene vs = ws.getViewScene();
 
-                        // Check to see if this scene is in our dirty list.  If so, we will need to render
-                        // the scene before we recopy it to the screen.  If not, we can skip this step.
-                        if (dirtyScenes.indexOf(vs) != -1) {
-                            vs.setDirty(true);
-                            if (!needsHint) {
-                                needsHint = vs.isSynchronous();
-                            }
+                    // Check to see if this scene is in our dirty list.  If so, we will need to render
+                    // the scene before we recopy it to the screen.  If not, we can skip this step.
+                    if (dirtyScenes.indexOf(vs) != -1) {
+                        if (!needsHint) {
+                            needsHint = vs.isSynchronous();
                         }
-                        if (!PlatformUtil.useEGL() || i == (n - 1)) {
-                            // for platforms without a native window manager, we only want to do the
-                            // swap to the screen after the last window has been rendered
-                            vs.setDoPresent(true);
-                        } else {
-                            vs.setDoPresent(false);
-                        }
-                        try {
-                            vs.repaint();
-                        } catch (Throwable t) {
-                            t.printStackTrace();
-                        }
-                        break;
+                    }
+                    if (!PlatformUtil.useEGL() || i == (n - 1)) {
+                        // for platforms without a native window manager, we only want to do the
+                        // swap to the screen after the last window has been rendered
+                        vs.setDoPresent(true);
+                    } else {
+                        vs.setDoPresent(false);
+                    }
+                    try {
+                        vs.repaint();
+                    } catch (Throwable t) {
+                        t.printStackTrace();
                     }
                 }
             }
@@ -455,17 +448,14 @@ final class PaintCollector implements CompletionListener {
             // processed.
             allWorkCompletedLatch = new CountDownLatch(dirtyScenes.size());
 
-            for (int i = 0, n = dirtyScenes.size(); i < n; i++) {
-                final GlassScene gs = dirtyScenes.get(i);
-
+            for (final GlassScene gs : dirtyScenes) {
                 // Only post the vsync hint if there are synchronous scenes
                 if (!needsHint) {
                     needsHint = gs.isSynchronous();
                 }
-                // On platforms with a window manager, we always set dirty and doPresent = true
-                // because we always need to rerender the scene  if it's in the dirty list and we do a
+                // On platforms with a window manager, we always set doPresent = true, because
+                // we always need to rerender the scene  if it's in the dirty list and we do a
                 // swap on a per-window basis
-                gs.setDirty(true);
                 gs.setDoPresent(true);
                 try {
                     gs.repaint();

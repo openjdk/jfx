@@ -72,7 +72,7 @@ final class UploadingPainter extends ViewPainter implements Runnable {
             valid = validateStageGraphics();
 
             if (!valid) {
-                if (verbose) {
+                if (QuantumToolkit.verbose) {
                     System.err.println("UploadingPainter: validateStageGraphics failed");
                 }
                 return;

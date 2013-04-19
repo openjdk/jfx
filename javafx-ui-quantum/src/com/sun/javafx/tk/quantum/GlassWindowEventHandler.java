@@ -36,13 +36,12 @@ import java.security.PrivilegedAction;
 
 class GlassWindowEventHandler extends Window.EventHandler implements PrivilegedAction<Void> {
 
-    private final GlassStage stage;
+    private final WindowStage stage;
 
     private Window window;
-    private long time;
     private int type;
 
-    public GlassWindowEventHandler(GlassStage stage) {
+    public GlassWindowEventHandler(WindowStage stage) {
         this.stage = stage;
     }
 
@@ -69,7 +68,7 @@ class GlassWindowEventHandler extends Window.EventHandler implements PrivilegedA
                 stage.stageListener.changedSize(window.getWidth(), window.getHeight());
                 break;
             case WindowEvent.FOCUS_GAINED:
-                GlassStage.addActiveWindow(stage);
+                WindowStage.addActiveWindow(stage);
                 stage.stageListener.changedFocused(true, FocusCause.ACTIVATED);
                 break;
             case WindowEvent.FOCUS_LOST:
@@ -79,11 +78,11 @@ class GlassWindowEventHandler extends Window.EventHandler implements PrivilegedA
                 stage.stageListener.focusUngrab();
                 break;
             case WindowEvent.FOCUS_GAINED_FORWARD:
-                GlassStage.addActiveWindow(stage);
+                WindowStage.addActiveWindow(stage);
                 stage.stageListener.changedFocused(true, FocusCause.TRAVERSED_FORWARD);
                 break;
             case WindowEvent.FOCUS_GAINED_BACKWARD:
-                GlassStage.addActiveWindow(stage);
+                WindowStage.addActiveWindow(stage);
                 stage.stageListener.changedFocused(true, FocusCause.TRAVERSED_BACKWARD);
                 break;
             case WindowEvent.FOCUS_DISABLED:
@@ -111,7 +110,6 @@ class GlassWindowEventHandler extends Window.EventHandler implements PrivilegedA
     @Override
     public void handleWindowEvent(final Window window, final long time, final int type) {
         this.window = window;
-        this.time = time;
         this.type = type;
 
         AccessControlContext acc = stage.getAccessControlContext();

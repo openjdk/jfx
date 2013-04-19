@@ -32,14 +32,15 @@ final class PopupScene extends ViewScene {
     }
 
     private PopupStage getPopupStage() {
-        return (PopupStage)glassStage;
+        return (PopupStage)getStage();
     }
 
     @Override
     public void sceneChanged() {
         PopupStage popupStage = getPopupStage();
         if (popupStage != null) {
-            GlassScene ownerScene = popupStage.getOwnerScene();
+            GlassStage ownerStage = popupStage.getOwner();
+            GlassScene ownerScene = ownerStage.getScene();
             if (ownerScene != null) {
                 ownerScene.sceneChanged();
             }
