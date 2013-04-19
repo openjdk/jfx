@@ -42,10 +42,11 @@ if (!windows_tools.exists()) {
     windows_tools.getParentFile().mkdirs();
     windows_tools.createNewFile();
     ByteArrayOutputStream results = new ByteArrayOutputStream();
+    String winsdkDir = System.getenv().get("WINSDK_DIR");
     exec({
         environment([
-                "WINSDKPATH" : "",
-                "CONF"       : CONF, // TODO does this mean the generated properties must be reset when in a different configuration?
+                "WINSDKPATH" : winsdkDir == null ? "" : winsdkDir,
+                "CONF"       : "/$CONF", // TODO does this mean the generated properties must be reset when in a different configuration?
                 "VCARCH"     : IS_64 ? "amd64" : "x86",
                 "SDKARCH"    : IS_64 ? "/x64" : "/x86",
         ]);
