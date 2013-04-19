@@ -25,8 +25,10 @@
 package com.sun.glass.ui.mac;
 
 import com.sun.glass.ui.Application;
+import com.sun.glass.ui.CommonDialogs;
 import com.sun.glass.ui.CommonDialogs.Type;
 import com.sun.glass.ui.CommonDialogs.ExtensionFilter;
+import com.sun.glass.ui.CommonDialogs.FileChooserResult;
 import com.sun.glass.ui.Window;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
@@ -45,29 +47,22 @@ final class MacCommonDialogs {
         _initIDs();
     }
     
-    private static native List<File> _showFileOpenChooser(long owner, String folder, String title,
-                                                    boolean multipleMode, Object[] extensions);
-    private static native List<File> _showFileSaveChooser(long owner, String folder, String filename, String title,
-                                                    Object[] extensions);
+    private static native FileChooserResult _showFileOpenChooser(long owner, String folder, String title,
+                                                    boolean multipleMode, ExtensionFilter[] extensionFilters, int defaultFilterIndex);
+    private static native FileChooserResult _showFileSaveChooser(long owner, String folder, String filename, String title,
+                                                                 ExtensionFilter[] extensionFilters, int defaultFilterIndex);
 
     private static native File _showFolderChooser(String folder, String title);
 
-    static List<File> showFileChooser_impl(Window owner, String folder, String filename, String title, int type,
+    static FileChooserResult showFileChooser_impl(Window owner, String folder, String filename, String title, int type,
                                          boolean multipleMode, ExtensionFilter[] extensionFilters, int defaultFilterIndex) {
-        List<String> list = new ArrayList<String>();
-        for (ExtensionFilter extension : extensionFilters) {
-            for (String suffix : extension.getExtensions()) {
-                list.add(suffix);
-            }
-        }
-        Object extensions[] = list.toArray();
 
         final long ownerPtr = owner != null ? owner.getNativeWindow() : 0L;
         
         if (type == Type.OPEN) {
-            return _showFileOpenChooser(ownerPtr, folder, title, multipleMode, extensions);
+            return _showFileOpenChooser(ownerPtr, folder, title, multipleMode, extensionFilters, defaultFilterIndex);
         } else if (type == Type.SAVE) {
-            return _showFileSaveChooser(ownerPtr, folder, filename, title, extensions);
+            return _showFileSaveChooser(ownerPtr, folder, filename, title, extensionFilters, defaultFilterIndex);
         } else {
             return null;
         }
