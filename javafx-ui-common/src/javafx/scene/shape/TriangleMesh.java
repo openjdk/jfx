@@ -615,11 +615,18 @@ public class TriangleMesh extends Mesh {
     
     /**
      * Sets the face smoothing group for each face in this {@code TriangleMesh}
-     * A smoothing group value of 0 implies hard edges for its associated face, 
-     * and a null faceSmoothingGroup implies all faces in this mesh have a 
+     * Smoothing affects how a mesh is rendered but it does not effect its
+     * geometry. The face smoothing group value is used to control the smoothing
+     * between adjacent faces. This value ranges from 0 to 32. A value of 0
+     * implies no smoothing group or hard edges. A face can have no or more
+     * smoothing groups. Smoothing is applied when adjacent pair of faces shared
+     * a smoothing group. Otherwise the faces are rendered with a hard edge
+     * between them.
+     *
+     * A null faceSmoothingGroups implies all faces in this mesh have a
      * smoothing group value of 1.
-     * 
-     * Note: If faceSmoothingGroup is not null, faceSmoothingGroups.length must
+     *
+     * Note: If faceSmoothingGroups is not null, faceSmoothingGroups.length must
      * be equal to faces.length/NUM_COMPONENTS_PER_FACE.
      */
     public final void setFaceSmoothingGroups(int[] faceSmoothingGroups) {
@@ -650,8 +657,14 @@ public class TriangleMesh extends Mesh {
      * Sets the faceSmoothingGroups associated with this {@code TriangleMesh}
      * starting at the specified {@code index} using data in {@code faceSmoothingGroups} 
      * starting at index {@code start} for {@code length} number of faceSmoothingGroups.
-     * A smoothing group value of 0 implies hard edges for its associated face.
      * 
+     * The face smoothing group value is used to control the smoothing between
+     * adjacent faces. This value ranges from 0 to 32. A value of 0 implies no
+     * smoothing group or hard edges. A face can have no or more smoothing
+     * groups. Smoothing is applied when adjacent pair of faces shared a
+     * smoothing group. Otherwise the faces are rendered with a hard edge
+     * between them.
+     *
      * @param index the starting destination index in this TriangleMesh's faceSmoothingGroups array
      * @param points source array of floats containing the new faceSmoothingGroups
      * @param start starting source index in the faceSmoothingGroups array.
