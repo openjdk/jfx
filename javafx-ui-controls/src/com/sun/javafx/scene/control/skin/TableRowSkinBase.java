@@ -724,7 +724,7 @@ public abstract class TableRowSkinBase<T,
         return ph;
     }
     
-    @Override protected double computeMinHeight(double width, int topInset, int rightInset, int bottomInset, int leftInset) {
+    @Override protected double computeMinHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
         if (fixedCellLengthEnabled) {
             return fixedCellLength;
         }
