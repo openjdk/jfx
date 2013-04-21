@@ -246,7 +246,13 @@ public class TreeCellSkin<T> extends CellSkinBase<TreeCell<T>, TreeCellBehavior<
 
         layoutLabelInArea(x, y, w, h);
     }
-
+    
+    @Override protected double computeMinHeight(double width, int topInset, int rightInset, int bottomInset, int leftInset) {
+        double pref = super.computeMinHeight(width, topInset, rightInset, bottomInset, leftInset);
+        Node d = getSkinnable().getDisclosureNode();
+        return (d == null) ? pref : Math.max(d.minHeight(-1), pref);
+    }
+    
     @Override protected double computePrefHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
         double pref = super.computePrefHeight(width, topInset, rightInset, bottomInset, leftInset);
         Node d = getSkinnable().getDisclosureNode();

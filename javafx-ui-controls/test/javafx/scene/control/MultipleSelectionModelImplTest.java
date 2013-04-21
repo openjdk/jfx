@@ -777,4 +777,34 @@ public class MultipleSelectionModelImplTest {
         assertEquals(1, rt_28615_row_1_hit_count);
         assertEquals(1, rt_28615_row_2_hit_count);
     }
+    
+    private int rt_29860_size_count = 0;
+    @Ignore("Bug not fixed yet")
+    @Test public void test_rt_29833_add() {
+        msModel().setSelectionMode(SelectionMode.MULTIPLE);
+
+        msModel().getSelectedIndices().addListener(new ListChangeListener<Object>() {
+            @Override
+            public void onChanged(ListChangeListener.Change<? extends Object> change) {
+                while (change.next()) {
+                    if (change.wasAdded()) {
+                        rt_29860_size_count = change.getAddedSize();
+                    }
+                }
+            }
+        });
+
+        assertEquals(0, rt_29860_size_count);
+        
+        msModel().selectIndices(0, 1, 2, 3);
+        assertEquals(4, rt_29860_size_count);   // 0,1,2,3 are all selected
+        rt_29860_size_count = 0;
+        
+        msModel().selectIndices(0,1,2,3,4);
+        assertEquals(1, rt_29860_size_count);   // only 4 was selected
+        rt_29860_size_count = 0;
+        
+        msModel().selectIndices(6,7,8);
+        assertEquals(3, rt_29860_size_count);   // 6,7,8 was selected
+    }
 }

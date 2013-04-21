@@ -61,7 +61,6 @@ import com.sun.javafx.css.CompoundSelector;
 import com.sun.javafx.css.CssError;
 import com.sun.javafx.css.Declaration;
 import com.sun.javafx.css.FontFace;
-import com.sun.javafx.css.FontUnits;
 import javafx.css.ParsedValue;
 import com.sun.javafx.css.ParsedValueImpl;
 import com.sun.javafx.css.Rule;
