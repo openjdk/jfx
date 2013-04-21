@@ -26,7 +26,6 @@
 package com.sun.javafx.css.converters;
 
 import com.sun.javafx.Utils;
-import com.sun.javafx.css.FontUnits;
 import com.sun.javafx.css.Size;
 import com.sun.javafx.css.StyleConverterImpl;
 import java.util.Map;
@@ -35,7 +34,6 @@ import javafx.css.CssMetaData;
 import javafx.css.ParsedValue;
 import javafx.css.StyleConverter;
 import javafx.css.Styleable;
-import javafx.scene.Node;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontPosture;
 import javafx.scene.text.FontWeight;
