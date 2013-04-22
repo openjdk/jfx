@@ -615,6 +615,7 @@ public class ComboBoxTest {
     
     @Test public void ensureImpl_getPseudoClassStateReturnsValidValue() {
         Set<PseudoClass> value1 = comboBox.getPseudoClassStates();
+        assertFalse(comboBox.isEditable());
         assertTrue(value1.size() >= 0);
         
         comboBox.setEditable(true);

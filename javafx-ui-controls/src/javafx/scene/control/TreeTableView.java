@@ -2263,6 +2263,11 @@ public class TreeTableView<S> extends Control {
         }
 
         @Override public void select(TreeItem<S> obj) {
+            if (obj == null && getSelectionMode() == SelectionMode.SINGLE) {
+                clearSelection();
+                return;
+            }
+            
             // We have no option but to iterate through the model and select the
             // first occurrence of the given object. Once we find the first one, we
             // don't proceed to select any others.

@@ -48,6 +48,8 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
 
+import com.sun.javafx.scene.control.infrastructure.VirtualFlowTestUtils;
+
 import static org.junit.Assert.*;
 
 /**
@@ -65,6 +67,7 @@ public class MultipleSelectionModelImplTest {
     private FocusModel focusModel;
 
     private Class<? extends MultipleSelectionModel> modelClass;
+    private Control currentControl;
 
     // ListView
     private static final ListView<String> listView;
@@ -161,6 +164,7 @@ public class MultipleSelectionModelImplTest {
                 // create a new focus model
                 focusModel = new ListViewFocusModel(listView);
                 listView.setFocusModel(focusModel);
+                currentControl = listView;
             } else if (modelClass.equals(TreeView.TreeViewBitSetSelectionModel.class)) {
                 model = modelClass.getConstructor(TreeView.class).newInstance(treeView);
                 treeView.setSelectionModel((MultipleSelectionModel<String>)model);
@@ -169,6 +173,7 @@ public class MultipleSelectionModelImplTest {
                 // create a new focus model
                 focusModel = new TreeViewFocusModel(treeView);
                 treeView.setFocusModel(focusModel);
+                currentControl = treeView;
             } else if (TableViewSelectionModel.class.isAssignableFrom(modelClass)) {
                 // recreate the selection model
                 model = modelClass.getConstructor(TableView.class).newInstance(tableView);
@@ -177,6 +182,7 @@ public class MultipleSelectionModelImplTest {
                 // create a new focus model
                 focusModel = new TableViewFocusModel(tableView);
                 tableView.setFocusModel((TableViewFocusModel) focusModel);
+                currentControl = tableView;
             } else if (TreeTableViewSelectionModel.class.isAssignableFrom(modelClass)) {
                 // recreate the selection model
                 model = modelClass.getConstructor(TreeTableView.class).newInstance(treeTableView);
@@ -185,6 +191,7 @@ public class MultipleSelectionModelImplTest {
                 // create a new focus model
                 focusModel = new TreeTableViewFocusModel(treeTableView);
                 treeTableView.setFocusModel((TreeTableViewFocusModel) focusModel);
+                currentControl = treeTableView;
             }
         } catch (Exception ex) {
             ex.printStackTrace();
@@ -806,5 +813,25 @@ public class MultipleSelectionModelImplTest {
         
         msModel().selectIndices(6,7,8);
         assertEquals(3, rt_29860_size_count);   // 6,7,8 was selected
+    }
+    
+    @Test public void test_rt_29821() {
+        msModel().setSelectionMode(SelectionMode.MULTIPLE);
+        
+        IndexedCell cell_3 = VirtualFlowTestUtils.getCell(currentControl, 3);
+        assertNotNull(cell_3);
+        assertFalse(cell_3.isSelected());
+
+        msModel().clearSelection();
+        msModel().select(3);
+        assertTrue(cell_3.isSelected());
+        assertEquals(1, msModel().getSelectedIndices().size());
+
+        // in multiple selection passing in select(null) is a no-op. In single
+        // selection (tested elsewhere), this would result in a clearSelection() 
+        // call
+        msModel().select(null);
+        assertTrue(msModel().isSelected(3));
+        assertTrue(cell_3.isSelected());
     }
 }

@@ -313,6 +313,11 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
     @Override public void select(T obj) {
 //        if (getItemCount() <= 0) return;
         
+        if (obj == null && getSelectionMode() == SelectionMode.SINGLE) {
+            clearSelection();
+            return;
+        }
+        
         // We have no option but to iterate through the model and select the
         // first occurrence of the given object. Once we find the first one, we
         // don't proceed to select any others.

@@ -565,8 +565,4 @@ public class ComboBox<T> extends ComboBoxBase<T> {
             return items == null ? 0 : items.size();
         }
     }
-    
-    
-    
-    
 }

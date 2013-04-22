@@ -53,6 +53,8 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
 
+import com.sun.javafx.scene.control.infrastructure.VirtualFlowTestUtils;
+
 /**
  * Unit tests for the SelectionModel abstract class used by ListView
  * and TreeView. This unit test attempts to test all known implementations, and
@@ -68,6 +70,7 @@ public class SelectionModelImplTest {
     private FocusModel focusModel;
 
     private Class<? extends SelectionModel> modelClass;
+    private Control currentControl;
 
     // ListView
     private static final ListView<String> listView;
@@ -166,6 +169,7 @@ public class SelectionModelImplTest {
                 // create a new focus model
                 focusModel = new ListViewFocusModel(listView);
                 listView.setFocusModel(focusModel);
+                currentControl = listView;
             } else if (modelClass.equals(TreeView.TreeViewBitSetSelectionModel.class)) {
                 model = modelClass.getConstructor(TreeView.class).newInstance(treeView);
                 treeView.setSelectionModel((MultipleSelectionModel<String>)model);
@@ -174,6 +178,7 @@ public class SelectionModelImplTest {
                 // create a new focus model
                 focusModel = new TreeViewFocusModel(treeView);
                 treeView.setFocusModel(focusModel);
+                currentControl = treeView;
             } else if (TableViewSelectionModel.class.isAssignableFrom(modelClass)) {
                 // recreate the selection model
                 model = modelClass.getConstructor(TableView.class).newInstance(tableView);
@@ -182,6 +187,7 @@ public class SelectionModelImplTest {
                 // create a new focus model
                 focusModel = new TableViewFocusModel(tableView);
                 tableView.setFocusModel((TableViewFocusModel) focusModel);
+                currentControl = tableView;
             } else if (ChoiceBoxSelectionModel.class.isAssignableFrom(modelClass)) {
                 // recreate the selection model
                 model = modelClass.getConstructor(ChoiceBox.class).newInstance(choiceBox);
@@ -189,6 +195,7 @@ public class SelectionModelImplTest {
 
                 // create a new focus model
                 focusModel = null;
+                currentControl = choiceBox;
             } else if (ComboBoxSelectionModel.class.isAssignableFrom(modelClass)) {
                 // recreate the selection model
                 model = modelClass.getConstructor(ComboBox.class).newInstance(comboBox);
@@ -196,6 +203,7 @@ public class SelectionModelImplTest {
 
                 // create a new focus model
                 focusModel = null;
+                currentControl = comboBox;
             }
         } catch (Exception ex) {
             ex.printStackTrace();
@@ -340,5 +348,38 @@ public class SelectionModelImplTest {
         data.add(0, "Inserted String");
         assertFalse(model.isSelected(3));
         assertTrue(model.isSelected(4));
+    }
+    
+    @Test public void test_rt_29821() {
+        // in single selection passing in select(null) should clear selection. 
+        // In multiple selection (tested elsewhere), this would result in a no-op
+        
+        if (currentControl instanceof ChoiceBox) {
+            model.clearSelection();
+            
+            model.select(3);
+            assertNotNull(choiceBox.getValue());
+    
+            model.select(null);
+            assertFalse(model.isSelected(3));
+            assertNull(choiceBox.getValue());
+        } else {
+            IndexedCell cell_3 = VirtualFlowTestUtils.getCell(currentControl, 3);
+            assertNotNull(cell_3);
+            assertFalse(cell_3.isSelected());
+    
+            model.clearSelection();
+            model.select(3);
+            assertTrue(cell_3.isSelected());
+    
+            model.select(null);
+            assertFalse(model.isSelected(3));
+            
+            if (currentControl instanceof ComboBox) {
+                ((ComboBox)currentControl).layoutChildren();
+            }
+            
+            assertFalse(cell_3.isSelected());
+        }
     }
 }

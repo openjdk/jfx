@@ -1048,6 +1048,11 @@ public class TreeView<T> extends Control {
         @Override public void select(TreeItem<T> obj) {
 //        if (getRowCount() <= 0) return;
             
+            if (obj == null && getSelectionMode() == SelectionMode.SINGLE) {
+                clearSelection();
+                return;
+            }
+            
             // we firstly expand the path down such that the given object is
             // visible. This fixes RT-14456, where selection was not happening
             // correctly on TreeItems that are not visible.

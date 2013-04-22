@@ -33,13 +33,16 @@ import javafx.geometry.Orientation;
 import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.Scene;
+import javafx.scene.control.ComboBox;
 import javafx.scene.control.Control;
 import javafx.scene.control.IndexedCell;
+import javafx.scene.control.ListView;
 import javafx.scene.control.TableRow;
 import javafx.scene.control.TreeTableRow;
 import javafx.stage.Stage;
 import javafx.util.Callback;
 
+import com.sun.javafx.scene.control.skin.ComboBoxListViewSkin;
 import com.sun.javafx.scene.control.skin.LabeledText;
 import com.sun.javafx.scene.control.skin.VirtualFlow;
 import com.sun.javafx.scene.control.skin.VirtualScrollBar;
@@ -220,7 +223,7 @@ public class VirtualFlowTestUtils {
         assertEquals(getVirtualFlow(control).getCellCount(), expected);
     }
     
-    public static VirtualFlow<?> getVirtualFlow(final Control control) {
+    public static VirtualFlow<?> getVirtualFlow(Control control) {
         Group group = new Group();
         Scene scene = new Scene(group);
 
@@ -231,8 +234,15 @@ public class VirtualFlowTestUtils {
         stage.show();
 
 //        Toolkit.getToolkit().firePulse();
-
-        VirtualFlow<?> flow = (VirtualFlow<?>)control.lookup("#virtual-flow");
+        
+        VirtualFlow<?> flow;
+        if (control instanceof ComboBox) {
+            final ComboBox cb = (ComboBox) control;
+            final ComboBoxListViewSkin skin = (ComboBoxListViewSkin) cb.getSkin();
+            control = skin.getListView();
+        }
+        
+        flow = (VirtualFlow<?>)control.lookup("#virtual-flow");
         return flow;
     }
     

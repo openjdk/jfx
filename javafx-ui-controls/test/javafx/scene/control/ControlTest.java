@@ -106,7 +106,8 @@ public class ControlTest {
 
     private void enableLogging() {
         final PlatformLogger logger = Logging.getControlsLogger();
-        logger.setLevel(originalLogLevel);
+//        logger.setLevel(originalLogLevel);
+        logger.setLevel(PlatformLogger.FINE);
     }
 
     @Test public void focusTraversableIsTrueByDefault() {
