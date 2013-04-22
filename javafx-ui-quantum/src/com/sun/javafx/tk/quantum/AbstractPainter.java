@@ -138,7 +138,6 @@ abstract class AbstractPainter implements Runnable {
             scaleTx.setToScale(width / 2.0, -height / 2.0, 1);
             scaleTx.translate(1, -1);
             projTx.mul(scaleTx);
-            perspCamera.validate(width, height);
             viewProjTx = perspCamera.getProjViewTx(viewProjTx);
             projTx.mul(viewProjTx);
         }

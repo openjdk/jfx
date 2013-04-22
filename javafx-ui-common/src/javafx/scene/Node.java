@@ -2963,7 +2963,7 @@ public abstract class Node implements EventTarget, Styleable {
             }
 
             GeneralTransform3D projViewTx = TempState.getInstance().projViewTx;
-            projViewTx = camera.getProjViewTransform(projViewTx);
+            projViewTx.set(camera.getProjViewTransform());
 
             // We need to set tempTx to identity since it is a recycled transform.
             // This is because impl_apply is a matrix concatenation operation.

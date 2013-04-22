@@ -76,6 +76,20 @@ public class Mouse3DTest {
     }
 
     @Test
+    public void shouldComputeCorrectPerspectivePickRayWithFixedEye() {
+        Camera cam = new PerspectiveCamera(true);
+        scene(group(), cam, true);
+        cam.impl_updatePG();
+        PickRay pickRay = cam.computePickRay(10, 20, null);
+        assertEquals(0.0, pickRay.getOriginNoClone().x, 0.00001);
+        assertEquals(0.0, pickRay.getOriginNoClone().y, 0.00001);
+        assertEquals(-1.0, pickRay.getOriginNoClone().z, 0.00001);
+        assertEquals(10 - PERSPECTIVE_CAMERA_X, pickRay.getDirectionNoClone().x, 0.00001);
+        assertEquals(20 - PERSPECTIVE_CAMERA_Y, pickRay.getDirectionNoClone().y, 0.00001);
+        assertEquals(-PERSPECTIVE_CAMERA_Z, pickRay.getDirectionNoClone().z, 0.00001);
+    }
+
+    @Test
     public void shouldComputeCorrectMovedPerspectivePickRay() {
         Camera cam = new PerspectiveCamera();
         scene(group(cam), cam, true);

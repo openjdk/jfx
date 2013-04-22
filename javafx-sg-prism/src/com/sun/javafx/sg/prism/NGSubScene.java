@@ -32,7 +32,7 @@ import com.sun.prism.RTTexture;
 import com.sun.prism.Graphics;
 import com.sun.prism.ResourceFactory;
 import com.sun.prism.Texture;
-import com.sun.prism.camera.PrismParallelCameraImpl;
+import com.sun.prism.camera.PrismDefaultCamera;
 import com.sun.prism.paint.Color;
 import com.sun.prism.paint.Paint;
 import com.sun.prism.camera.PrismCameraImpl;
@@ -80,7 +80,7 @@ public class NGSubScene extends NGNode implements PGSubScene {
         if (camera != null) {
             this.camera = ((NGCamera) camera).getCameraImpl();
         } else {
-            this.camera = PrismParallelCameraImpl.getInstance();
+            this.camera = PrismDefaultCamera.getInstance();
         }
         if (oldCamera != this.camera) {
             visualsChanged();

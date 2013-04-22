@@ -25,7 +25,7 @@
 
 package com.sun.javafx.sg.prism;
 
-import com.sun.javafx.geom.Rectangle;
+import com.sun.javafx.geom.Vec3d;
 import com.sun.javafx.geom.transform.Affine3D;
 import com.sun.javafx.geom.transform.GeneralTransform3D;
 import com.sun.javafx.sg.PGCamera;
@@ -49,12 +49,34 @@ abstract public class NGCamera extends NGNode implements PGCamera {
         return false;
     }
 
+    @Override
     public void setNearClip(float nearClip) {
         getCameraImpl().setNearClip(nearClip);
     }
 
+    @Override
     public void setFarClip(float farClip) {
         getCameraImpl().setFarClip(farClip);
+    }
+
+    @Override
+    public void setViewWidth(double viewWidth) {
+        getCameraImpl().setViewWidth(viewWidth);
+    }
+
+    @Override
+    public void setViewHeight(double viewHeight) {
+        getCameraImpl().setViewHeight(viewHeight);
+    }
+
+    @Override
+    public void setProjViewTransform(GeneralTransform3D projViewTx) {
+        getCameraImpl().setProjViewTransform(projViewTx);
+    }
+
+    @Override
+    public void setPosition(Vec3d position) {
+        getCameraImpl().setPosition(position);
     }
 
     @Override
@@ -75,15 +97,5 @@ abstract public class NGCamera extends NGNode implements PGCamera {
     public void release() {
         // TODO: 3D - Need to release native resources
 //        System.err.println("NGCamera: Need to release native resources");
-    }
-
-    @Override
-    public GeneralTransform3D getScreenProjViewTx(GeneralTransform3D tx, double w, double h) {
-        return getCameraImpl().getScreenProjViewTx(tx, w, h);
-    }
-
-    @Override
-    public Rectangle getViewport(Rectangle vp) {
-        return getCameraImpl().getViewport(vp);
     }
 }

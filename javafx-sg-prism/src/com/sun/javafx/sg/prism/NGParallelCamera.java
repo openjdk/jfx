@@ -36,7 +36,7 @@ public class NGParallelCamera extends NGCamera implements PGParallelCamera {
     public NGParallelCamera() {
         //TODO: 3D - Need to merge the logic in PrismParallelCameraImpl to NGParallelCamera
         //      We shouldn't need PrismParallelCameraImpl class in the future.
-        setCameraImpl(PrismParallelCameraImpl.getInstance());
+        setCameraImpl(new PrismParallelCameraImpl());
     }
 
 }

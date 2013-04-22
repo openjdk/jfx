@@ -25,7 +25,6 @@
 
 package com.sun.javafx.tk;
 
-import com.sun.javafx.geom.PickRay;
 import com.sun.javafx.sg.PGCamera;
 import com.sun.javafx.sg.PGNode;
 import java.security.AccessControlContext;

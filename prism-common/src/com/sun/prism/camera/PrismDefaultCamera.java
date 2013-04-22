@@ -23,21 +23,38 @@
  * questions.
  */
 
-package com.sun.javafx.sg;
+package com.sun.prism.camera;
 
-import com.sun.javafx.geom.Vec3d;
-import com.sun.javafx.geom.transform.Affine3D;
-import com.sun.javafx.geom.transform.GeneralTransform3D;
+public class PrismDefaultCamera extends PrismParallelCameraImpl {
 
-/**
- * TODO: 3D - Need documentation
- */
-public interface PGCamera extends PGNode {
-    public void setNearClip(float nearClip);
-    public void setFarClip(float farClip);
-    public void setViewWidth(double viewWidth);
-    public void setViewHeight(double viewHeight);
-    public void setProjViewTransform(GeneralTransform3D projViewTx);
-    public void setPosition(Vec3d position);
-    public void setWorldTransform(Affine3D localToWorldTx);
+    private static final PrismDefaultCamera theInstance = new PrismDefaultCamera();
+
+    public static PrismDefaultCamera getInstance() {
+        return theInstance;
+    }
+
+    /**
+     * Constructs a orthographic camera object with default parameters.
+     */
+    private PrismDefaultCamera() {}
+
+    @Override
+    public void setNearClip(float nearClip) {
+        super.setNearClip(nearClip);
+    }
+
+    @Override
+    public void setFarClip(float farClip) {
+        super.setFarClip(farClip);
+    }
+
+    public void validate(int w, int h) {
+        if ((w != viewWidth) || (h != viewHeight)) {
+            setViewWidth(w);
+            setViewHeight(h);
+
+            double halfDepth = (w > h) ? w / 2.0 : h / 2.0;
+            projViewTx.ortho(0.0, w, h, 0.0, -halfDepth, halfDepth);
+        }
+    }
 }

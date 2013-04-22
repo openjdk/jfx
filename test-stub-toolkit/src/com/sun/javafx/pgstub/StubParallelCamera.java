@@ -26,7 +26,7 @@
 package com.sun.javafx.pgstub;
 
 import com.sun.javafx.geom.BaseBounds;
-import com.sun.javafx.geom.Rectangle;
+import com.sun.javafx.geom.Vec3d;
 import com.sun.javafx.geom.transform.Affine3D;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.geom.transform.GeneralTransform3D;
@@ -35,10 +35,12 @@ import com.sun.javafx.sg.PGParallelCamera;
 import com.sun.scenario.effect.Blend;
 
 public class StubParallelCamera extends StubNode implements PGParallelCamera {
-    @Override public GeneralTransform3D getScreenProjViewTx(GeneralTransform3D tx, double w, double h) { return null; }
-    @Override public Rectangle getViewport(Rectangle vp) { return null; }
     @Override public void setNearClip(float f) {}
     @Override public void setFarClip(float f) {}
+    @Override public void setViewWidth(double viewWidth) { }
+    @Override public void setViewHeight(double viewHeight) { }
+    @Override public void setProjViewTransform(GeneralTransform3D projViewTx) { }
+    @Override public void setPosition(Vec3d position) { }
     @Override public void setWorldTransform(Affine3D ad) {}
     @Override public void setTransformMatrix(BaseTransform bt) {}
     @Override public void setContentBounds(BaseBounds bb) {}

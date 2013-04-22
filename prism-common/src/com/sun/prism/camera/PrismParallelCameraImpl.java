@@ -26,43 +26,16 @@
 package com.sun.prism.camera;
 
 import com.sun.javafx.geom.PickRay;
-import com.sun.javafx.geom.transform.Affine3D;
-import com.sun.javafx.geom.transform.GeneralTransform3D;
 
 public class PrismParallelCameraImpl extends PrismCameraImpl {
-
-
-    private static final PrismParallelCameraImpl theInstance = new PrismParallelCameraImpl();
-
-    public static PrismParallelCameraImpl getInstance() {
-        return theInstance;
-    }
 
     /**
      * Constructs a orthographic camera object with default parameters.
      */
-    private PrismParallelCameraImpl() {}
-
-    @Override
-    protected void computeProjection(GeneralTransform3D proj) {
-        double width = viewport.width;
-        double height = viewport.height;
-        double halfDepth = (width > height) ? width / 2.0 : height / 2.0;
-        proj.ortho(0.0, width, height, 0.0, -halfDepth, halfDepth);
-    }
-
-    @Override
-    protected void computeViewTransform(Affine3D view) {
-        view.setToTranslation(0.0, 0.0, 0.0);
-    }
+    public PrismParallelCameraImpl() {}
 
     @Override
     public PickRay computePickRay(float x, float y, PickRay pickRay) {
-        if (pickRay == null) {
-            pickRay = new PickRay();
-        }
-        pickRay.getOriginNoClone()   .set(x, y, 0);
-        pickRay.getDirectionNoClone().set(0, 0, 1);
-        return pickRay;
+        return PickRay.computeParallelPickRay(x, y, worldTransform, pickRay);
     }
 }

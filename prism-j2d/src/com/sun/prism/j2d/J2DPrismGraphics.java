@@ -50,7 +50,7 @@ import com.sun.prism.ResourceFactory;
 import com.sun.prism.Texture;
 import com.sun.prism.Texture.WrapMode;
 import com.sun.prism.camera.PrismCameraImpl;
-import com.sun.prism.camera.PrismParallelCameraImpl;
+import com.sun.prism.camera.PrismDefaultCamera;
 import com.sun.prism.paint.Color;
 import com.sun.prism.paint.Gradient;
 import com.sun.prism.paint.ImagePattern;
@@ -104,7 +104,7 @@ public class J2DPrismGraphics
         RadialGradientPaint.CycleMethod.REPEAT,
     };
 
-    private static final PrismParallelCameraImpl DEFAULT_CAMERA = PrismParallelCameraImpl.getInstance();
+    private static final PrismDefaultCamera DEFAULT_CAMERA = PrismDefaultCamera.getInstance();
     private static final BasicStroke DEFAULT_STROKE =
         new BasicStroke(1.0f, BasicStroke.CAP_SQUARE, BasicStroke.JOIN_MITER, 10.0f);
     private static final Paint DEFAULT_PAINT = Color.WHITE;

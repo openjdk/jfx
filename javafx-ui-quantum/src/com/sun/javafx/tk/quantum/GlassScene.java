@@ -43,7 +43,7 @@ import com.sun.javafx.tk.TKScene;
 import com.sun.javafx.tk.TKSceneListener;
 import com.sun.javafx.tk.TKScenePaintListener;
 import com.sun.prism.camera.PrismCameraImpl;
-import com.sun.prism.camera.PrismParallelCameraImpl;
+import com.sun.prism.camera.PrismDefaultCamera;
 import com.sun.prism.impl.PrismSettings;
 import com.sun.prism.paint.Color;
 import com.sun.prism.paint.Paint;
@@ -175,7 +175,7 @@ abstract class GlassScene implements TKScene {
         if (camera != null) {
             this.camera = ((NGCamera) camera).getCameraImpl();
         } else {
-            this.camera = PrismParallelCameraImpl.getInstance();
+            this.camera = PrismDefaultCamera.getInstance();
         }
         entireSceneNeedsRepaint();
     }
