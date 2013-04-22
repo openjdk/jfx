@@ -27,18 +27,16 @@ package com.sun.javafx.scene.control.behavior;
 
 import java.util.List;
 
-import javafx.scene.Node;
+import javafx.scene.control.TableColumn;
+import javafx.scene.control.TableRow;
 import javafx.scene.control.TableSelectionModel;
-import javafx.scene.control.TreeItem;
-import javafx.scene.control.TreeTableColumn;
-import javafx.scene.control.TreeTableRow;
-import javafx.scene.control.TreeTableView;
+import javafx.scene.control.TableView;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 
-public class TreeTableRowBehavior<T> extends CellBehaviorBase<TreeTableRow<T>> {
+public class TableRowBehavior<T> extends CellBehaviorBase<TableRow<T>> {
 
-    public TreeTableRowBehavior(TreeTableRow<T> control) {
+    public TableRowBehavior(TableRow<T> control) {
         super(control);
     }
 
@@ -47,21 +45,8 @@ public class TreeTableRowBehavior<T> extends CellBehaviorBase<TreeTableRow<T>> {
         
         if (e.getButton() != MouseButton.PRIMARY) return;
         
-        TreeTableRow<T> treeTableRow = getControl();
-        TreeItem treeItem = treeTableRow.getTreeItem();
-        if (treeItem == null) return;
-        
-        // if the user has clicked on the disclosure node, we do nothing other
-        // than expand/collapse the tree item (if applicable). We do not do editing!
-        Node disclosureNode = treeTableRow.getDisclosureNode();
-        if (disclosureNode != null) {
-            if (disclosureNode.getBoundsInParent().contains(e.getX(), e.getY())) {
-                treeItem.setExpanded(! treeItem.isExpanded());
-                return;
-            }
-        }
-
-        TreeTableView table = treeTableRow.getTreeTableView();
+        final TableRow<T> tableRow = getControl();
+        final TableView<T> table = tableRow.getTableView();
         if (table == null) return;
         final TableSelectionModel sm = table.getSelectionModel();
         if (sm == null || sm.isCellSelectionEnabled()) return;
@@ -72,7 +57,7 @@ public class TreeTableRowBehavior<T> extends CellBehaviorBase<TreeTableRow<T>> {
         if (clickCount == 1) {
             // get width of all visible columns (we only care about clicks to the
             // right of the right-most column)
-            List<TreeTableColumn<T, ?>> columns = getControl().getTreeTableView().getVisibleLeafColumns();
+            List<TableColumn<T, ?>> columns = table.getVisibleLeafColumns();
             double width = 0.0;
             for (int i = 0; i < columns.size(); i++) {
                 width += columns.get(i).getWidth();
@@ -87,9 +72,9 @@ public class TreeTableRowBehavior<T> extends CellBehaviorBase<TreeTableRow<T>> {
                 sm.clearSelection(index);
             } else {
                 if (e.isShortcutDown()) {
-                    sm.select(treeTableRow.getIndex());
+                    sm.select(tableRow.getIndex());
                 } else {
-                    sm.clearAndSelect(treeTableRow.getIndex());
+                    sm.clearAndSelect(tableRow.getIndex());
                 }
             }
         }
