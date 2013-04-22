@@ -22,6 +22,7 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
+
 package com.sun.glass.ui.swt;
 
 import com.sun.glass.events.WindowEvent;
@@ -30,7 +31,6 @@ import com.sun.glass.ui.Pixels;
 import com.sun.glass.ui.Screen;
 import com.sun.glass.ui.View;
 import com.sun.glass.ui.Window;
-import com.sun.glass.ui.accessible.AccessibleRoot;
 
 import org.eclipse.swt.*;
 import org.eclipse.swt.graphics.*;
@@ -401,9 +401,5 @@ final class SWTWindow extends Window {
         return 0;
     }
 
-    @Override
-    protected void _accessibilityInitIsComplete(long ptr, AccessibleRoot acc) {
-        throw new RuntimeException("_accessibilityInitIsComplete not implemented.");
-    }
 }
 

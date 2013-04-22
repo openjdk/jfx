@@ -24,23 +24,25 @@
  */
 package com.sun.glass.ui.accessible.win;
 
-import com.sun.glass.ui.Application;
 import com.sun.glass.ui.accessible.AccessibleBasePatternProvider;
 import com.sun.glass.ui.accessible.AccessibleBaseProvider;
 import com.sun.glass.ui.accessible.AccessibleLogger;
-import java.util.HashMap;
-import com.sun.javafx.accessible.utils.NavigateDirection;
 import com.sun.javafx.accessible.providers.AccessibleProvider;
+import com.sun.javafx.accessible.utils.NavigateDirection;
+import java.util.HashMap;
+import sun.util.logging.PlatformLogger;
 
 /**
  * Windows platform implementation class for Accessible.
  */
-public class WinAccessibleBaseProvider extends AccessibleBaseProvider {
+public final class WinAccessibleBaseProvider extends AccessibleBaseProvider {
 
-    private static final HashMap<Integer, NavigateDirection> directionMap =
+    final private static HashMap<Integer, NavigateDirection> directionMap =
         new HashMap<Integer, NavigateDirection>();
     
     static {
+        _initIDs();
+        
         for (NavigateDirection type : NavigateDirection.values()) {
             directionMap.put(type.ordinal(), type);
         }
@@ -51,19 +53,11 @@ public class WinAccessibleBaseProvider extends AccessibleBaseProvider {
     native private void _destroyAccessible(long nativeAccessible);
     native private void _fireEvent(long nativeAccessible, int eventID);
     native private void _firePropertyChange( long nativeAccessible, int propertyID, 
-                                                    int oldProperty, int newProperty );
+                                             int oldProperty, int newProperty );
     native private void _firePropertyChange( long nativeAccessible, int propertyID, 
-                                                    boolean oldProperty, boolean newProperty );
+                                             boolean oldProperty, boolean newProperty );
     
-    /**
-     * A class static block that loads the Glass native library and initializes
-     * the JNI method IDs.
-     * 
-     * PTB: Is loadNativeLibrary needed?  It's likely already loaded.
-     */
-    static {
-        _initIDs();
-    }
+    private long nativeAccessible;  // the native accessible
     
     /**
      * Downcall to create the native accessible.  This will be used when firing
@@ -76,6 +70,15 @@ public class WinAccessibleBaseProvider extends AccessibleBaseProvider {
         nativeAccessible = _createAccessible();
     }
     
+    /**
+     * Get the reference to the native accessible.
+     * 
+     * @return a reference to the native accessible.
+     */
+    long getNativeAccessible() {
+        return nativeAccessible;
+    }
+    
     ////////////////////////////////////
     //
     // Start of downcalls to native code
@@ -86,7 +89,7 @@ public class WinAccessibleBaseProvider extends AccessibleBaseProvider {
      * Downcall to destroy the native accessible.
      */
     @Override
-    final public void destroyAccessible() {
+    public void destroyAccessible() {
         _destroyAccessible(nativeAccessible);
     }
 
@@ -96,35 +99,44 @@ public class WinAccessibleBaseProvider extends AccessibleBaseProvider {
      * @param eventID   the event ID.
      */
     @Override
-    final public void fireEvent(int eventID) {
-        AccessibleLogger.getLogger().fine("In WinAccessibleBaseProvider.fireEvent");
-        AccessibleLogger.getLogger().fine("  nativeAccessible: " + Long.toHexString(nativeAccessible));
-        AccessibleLogger.getLogger().fine("  eventID: " + eventID);
+    public void fireEvent(int eventID) {
+        AccessibleLogger.getLogger().fine("this: " + this);
+        AccessibleLogger.getLogger().fine("nativeAccessible: " + Long.toHexString(nativeAccessible));
+        AccessibleLogger.getLogger().fine("eventID: " + eventID);
         _fireEvent(nativeAccessible, eventID);
     }
     
-    /** Fire a property change event
-     * 
+    /** 
+     * Fire a property change event
+     *
+     * @param propertyID    identifies the property
+     * @param oldProperty   the old value of the property
+     * @param newProperty   the new value of the property
+     */
+    @Override
+    public void firePropertyChange(int propertyID, int oldProperty, int newProperty) {
+        AccessibleLogger.getLogger().fine("this: " + this);
+        AccessibleLogger.getLogger().fine("nativeAccessible: " + Long.toHexString(nativeAccessible));
+        AccessibleLogger.getLogger().fine("propertyID: " + propertyID);
+        AccessibleLogger.getLogger().fine("old: " + oldProperty);
+        AccessibleLogger.getLogger().fine("new: " + newProperty);
+        _firePropertyChange(nativeAccessible, propertyID, oldProperty, newProperty);
+    }
+    
+    /** 
+     * Fire a property change event
+     *
      * @param propertyId    identifies the property
      * @param oldProperty   the old value of the property
      * @param newProperty   the new value of the property
      */
     @Override
-    final public void firePropertyChange(int propertyID, int oldProperty, int newProperty) {
-        AccessibleLogger.getLogger().fine("In WinAccessibleBaseProvider.firePropertyChange");
-        AccessibleLogger.getLogger().fine("  nativeAccessible: " + Long.toHexString(nativeAccessible));
-        AccessibleLogger.getLogger().fine("  propertyID: " + propertyID);
-        AccessibleLogger.getLogger().fine("  old: " + oldProperty);
-        AccessibleLogger.getLogger().fine("  new: " + newProperty);
-        _firePropertyChange(nativeAccessible, propertyID, oldProperty, newProperty);
-    }
-    @Override
-    final public void firePropertyChange(int propertyID, boolean oldProperty, boolean newProperty) {
-        AccessibleLogger.getLogger().fine("In WinAccessibleBaseProvider.firePropertyChange");
-        AccessibleLogger.getLogger().fine("  nativeAccessible: " + Long.toHexString(nativeAccessible));
-        AccessibleLogger.getLogger().fine("  propertyID: " + propertyID);
-        AccessibleLogger.getLogger().fine("  old: " + oldProperty);
-        AccessibleLogger.getLogger().fine("  new: " + newProperty);
+    public void firePropertyChange(int propertyID, boolean oldProperty, boolean newProperty) {
+        AccessibleLogger.getLogger().fine("this: " + this);
+        AccessibleLogger.getLogger().fine("nativeAccessible: " + Long.toHexString(nativeAccessible));
+        AccessibleLogger.getLogger().fine("propertyID: " + propertyID);
+        AccessibleLogger.getLogger().fine("old: " + oldProperty);
+        AccessibleLogger.getLogger().fine("new: " + newProperty);
         _firePropertyChange(nativeAccessible, propertyID, oldProperty, newProperty);
     }
     
@@ -151,13 +163,12 @@ public class WinAccessibleBaseProvider extends AccessibleBaseProvider {
      * @return address of native accessible of root object
      */
     private long getFragmentRoot() {
-        AccessibleLogger.getLogger().fine("In WinAccessibleBaseProvider.getFragmentRoot");
         WinAccessibleRoot root = (WinAccessibleRoot)(((AccessibleProvider)node).fragmentRoot());
         if (root == null) {
             return 0;
         } else {
-            long nativeRoot = ((WinAccessibleRoot)root).getNativeAccessible();
-            AccessibleLogger.getLogger().fine("  nativeRoot:  " + Long.toHexString(nativeRoot));
+            long nativeRoot = root.getNativeAccessible();
+            AccessibleLogger.getLogger().fine("nativeRoot:  " + Long.toHexString(nativeRoot));
             return nativeRoot;
         }
     }
@@ -172,27 +183,25 @@ public class WinAccessibleBaseProvider extends AccessibleBaseProvider {
      */
 
     private long navigate(int direction) {
-        AccessibleLogger.getLogger().fine("In WinAccessibleBaseProvider.navigate");
-        //AccessibleLogger.getLogger().fine("  Thread ID: " + Thread.currentThread().getId());
-        AccessibleLogger.getLogger().fine("  direction: " + directionMap.get(direction));
+        //AccessibleLogger.getLogger().fine("Thread ID: " + Thread.currentThread().getId());
+        AccessibleLogger.getLogger().fine("direction: " + directionMap.get(direction));
         Object target =
             ((AccessibleProvider)node).navigate(directionMap.get(direction));
+        long nativeTarget = 0;
         if (target == null) {
-            AccessibleLogger.getLogger().fine("  No object in that direction.");
-            return 0;
+            AccessibleLogger.getLogger().fine("No object in that direction.");
         } else {
-            long nativeTarget = 0;
             if (target instanceof WinAccessibleBaseProvider) {
-                nativeTarget = ((WinAccessibleBaseProvider)target).nativeAccessible;
+                nativeTarget = ((WinAccessibleBaseProvider)target).getNativeAccessible();
             } else if (target instanceof WinAccessibleRoot) {
                 nativeTarget = ((WinAccessibleRoot)target).getNativeAccessible();
             }
-            // PTB: Throw exception if instanceof something else?
+            // TODO: Throw exception if instanceof something else?
             if (nativeTarget != 0) {
-                AccessibleLogger.getLogger().fine("  nativeTarget:  " + Long.toHexString(nativeTarget));
+                AccessibleLogger.getLogger().fine("nativeTarget:  " + Long.toHexString(nativeTarget));
             }
-            return nativeTarget;
         }
+        return nativeTarget;
     }
     
     /**
@@ -202,20 +211,23 @@ public class WinAccessibleBaseProvider extends AccessibleBaseProvider {
      *    
      *   @return Object that implements the pattern interface, or null if the pattern is not supported.
      */
-    private long getPatternProvider(int patternId)
-    {
-        AccessibleLogger.getLogger().fine("In WinAccessibleBaseProvider.getPatternProvider id" + patternId);
+    private long getPatternProvider(int patternId) {
+        long nativeProvider = 0;
+        PlatformLogger logger = AccessibleLogger.getLogger();
+        
+        logger.fine("id: " + patternId);
         for (AccessibleBasePatternProvider pattern : patternProviders) {
-            AccessibleLogger.getLogger().fine("In WinAccessibleBaseProvider.getPatternProvider pattern.id" + pattern.getPatternId());
-            if (pattern.getPatternId() == patternId) {
-                if( pattern instanceof WinAccessibleBasePatternProvider ) {
-                    AccessibleLogger.getLogger().fine("In WinAccessibleBaseProvider.getPatternProvider Found matching id" +
-                        patternId + "returning " + ((WinAccessibleBasePatternProvider)pattern).getNativeAccessible());
-                }
-                return ((WinAccessibleBasePatternProvider)pattern).getNativeAccessible() ;
+            logger.fine("pattern.id" + ((WinAccessibleBasePatternProvider)pattern).getPatternId());
+            if ( ((AccessibleBasePatternProvider)pattern).getPatternId() == patternId &&
+                 pattern instanceof WinAccessibleBasePatternProvider ) {
+                logger.fine("Found matching id: " + patternId);
+                logger.fine("returning: " +
+                    ((WinAccessibleBasePatternProvider)pattern).getNativeAccessible());
+                nativeProvider =
+                    ((WinAccessibleBasePatternProvider)pattern).getNativeAccessible();
             }
         }
-        return 0 ; // Did not find the pattern
+        return nativeProvider;
     }
 
     //////////////////////////////////

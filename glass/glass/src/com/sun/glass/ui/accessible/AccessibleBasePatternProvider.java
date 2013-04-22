@@ -27,21 +27,21 @@ package com.sun.glass.ui.accessible;
 public abstract class AccessibleBasePatternProvider {
     protected Object node;  // the JavaFX node
     
-    // The native accessible object is programmaticly accessible:
-    // - read/write in subclases via protected access
-    // - readable by any object via public getNativeAccessible
-    protected long nativeAccessible;  // The native accessible
-    
-    public AccessibleBasePatternProvider(Object node, long nativeSimple){
-        nativeAccessible = nativeSimple;
+    /**
+     * Constructor for AccessibleBasePatternProvider
+     * 
+     * @param node          The FX accessible node.
+     */
+    public AccessibleBasePatternProvider(Object node) {
         this.node = node;
     }
+
+    // Downcalls
     
-    abstract protected void destroyAccessible();
-    
-    public long getNativeAccessible() {
-        return nativeAccessible;
-    }
+    /**
+     * Destroy the native accessible
+     */
+    abstract public void destroyAccessible();
     
     public int getPatternId() {
         return 0;  // Only needed for Win implementation

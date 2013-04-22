@@ -34,27 +34,27 @@
 // normal Glass window delegate
 @interface GlassWindow : NSObject <NSWindowDelegate> 
 {
-    jobject                     jWindow;
-        
+    jobject             jWindow;
+
 @public
     // A reference to an NSWindow or NSPanel descendant - the native window
     NSWindow            *nsWindow;
 
-    NSWindow                        *owner;
-        NSView<GlassView>        *view;
-    NSScreen                    *currentScreen;
-    GlassMenubar                *menubar;
-    NSRect                                preZoomedRect;
+    NSWindow            *owner;
+    NSView<GlassView>   *view;
+    NSScreen            *currentScreen;
+    GlassMenubar        *menubar;
+    NSRect              preZoomedRect;
     NSWindow            *fullscreenWindow;
-        
-    BOOL                        isFocusable;
+
+    BOOL                isFocusable;
     BOOL                isEnabled;
     NSUInteger          enabledStyleMask; // valid while the window is disabled
-    BOOL                        isTransparent;
-    BOOL                        isDecorated;
-    BOOL                        isResizable;
-    BOOL                        suppressWindowMoveEvent;
-    BOOL                        suppressWindowResizeEvent;
+    BOOL                isTransparent;
+    BOOL                isDecorated;
+    BOOL                isResizable;
+    BOOL                suppressWindowMoveEvent;
+    BOOL                suppressWindowResizeEvent;
 
     NSPoint             lastReportedLocation; // which was sent to Java
     
@@ -76,7 +76,7 @@
 }
 
 - (void)setFullscreenWindow:(NSWindow *)fsWindow;
-- (void)accessibilityIsReady:(GlassAccessibleRoot *)acc;
+- (void)setAccessibilityInitIsComplete:(GlassAccessibleRoot *)acc;
 
 // NSWindow overrides delegate methods
 - (void)close;
@@ -118,7 +118,7 @@
 @interface GlassEmbeddedWindow : GlassWindow_Normal
 {
 @public
-        
+
     NSWindow            *fullscreenWindow;
     
     BOOL                isKeyWindow;

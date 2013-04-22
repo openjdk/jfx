@@ -24,12 +24,13 @@
  */
 package com.sun.glass.ui;
 
-import com.sun.glass.ui.accessible.AccessibleRoot;
 import com.sun.glass.ui.accessible.AccessibleBaseProvider;
+import com.sun.glass.ui.accessible.AccessibleRoot;
 import com.sun.glass.ui.delegate.ClipboardDelegate;
 import com.sun.glass.ui.delegate.MenuBarDelegate;
 import com.sun.glass.ui.delegate.MenuDelegate;
 import com.sun.glass.ui.delegate.MenuItemDelegate;
+import com.sun.javafx.accessible.providers.AccessibleProvider;
 
 public abstract class PlatformFactory {
     private static PlatformFactory instance;
@@ -50,7 +51,7 @@ public abstract class PlatformFactory {
     }
 
     public abstract Application createApplication();
-    public abstract AccessibleRoot createAccessibleRoot(Object node, long ptr);
+    public abstract AccessibleRoot createAccessibleRoot(Object node, Window window);
     public abstract AccessibleBaseProvider createAccessibleProvider(Object node);
     public abstract MenuBarDelegate createMenuBarDelegate(MenuBar menubar);
     public abstract MenuDelegate createMenuDelegate(Menu menu);

@@ -266,20 +266,25 @@ public class StubStage implements TKStage {
      * Accessibility glue for native
      * 
      */
+    
     /**
      * Initialize Accessiblility
+     * 
+     * @param ac    the Glass accessible root object.
      */
-    @Override public void accessibleInitIsComplete(Object ac) {
+    @Override public void setAccessibilityInitIsComplete(Object ac) {
         // TODO: Add code later
     } 
 
     /**
-     * Create accessible native object corresponding to stage
+     * Create accessible Glass object corresponding to stage
      * 
-     * @param ac 
-     * returns native Object
+     * @param ac    the FX accessible root/stage node.
+     * 
+     * @return the Glass AccessibleRoot object.
      */
-    @Override public Object accessibleCreateStageProvider(AccessibleStageProvider ac, long ptr) {
+    @Override
+    public Object accessibleCreateStageProvider(AccessibleStageProvider ac) {
         // TODO: Add code later
         return null ;
     }
@@ -487,7 +492,7 @@ public class StubStage implements TKStage {
         /**
         * Initialize accessibility
         */
-        public void initAccessibleTKStageListener(long ptr) {
+        public void initAccessibleTKStageListener() {
             // TODO: Add code later
         }
                 

@@ -122,9 +122,9 @@ IFACEMETHODIMP AccessibleGridItemProvider::GetPatternProvider(PATTERNID patternI
 /**
  * Get the ordinal number of the column that contains this cell or item
  *
- * pRetVal:                receiver of the state
+ * pRetVal:     receiver of the state
  *
- * returns:     S_OK
+ * returns: S_OK
  */
 IFACEMETHODIMP AccessibleGridItemProvider::get_Column(int *pRetVal) {
     LOG("In AccessibleGridItemProvider::get_Column\n");
@@ -136,7 +136,7 @@ IFACEMETHODIMP AccessibleGridItemProvider::get_Column(int *pRetVal) {
     jint value = env->CallIntMethod(m_self, midGetColumn);
     CheckAndClearException(env);  
     LOG("  returning %d\n", value);
-        *pRetVal = value ;
+    *pRetVal = value ;
     return S_OK;
 }
  
@@ -148,7 +148,7 @@ IFACEMETHODIMP AccessibleGridItemProvider::get_ColumnSpan(int *pRetVal) {
     *pRetVal = NULL;
     JNIEnv* env = GetEnv();
     jint value = env->CallIntMethod(m_self, midGetColumnSpan);
-        *pRetVal = value ;
+    *pRetVal = value ;
     return S_OK;
 }
 
@@ -162,7 +162,7 @@ IFACEMETHODIMP AccessibleGridItemProvider::get_Row(int *pRetVal) {
     jint value = env->CallIntMethod(m_self, midGetRow);
     CheckAndClearException(env);  
     LOG("  returning %d\n", value);
-        *pRetVal = value ;
+    *pRetVal = value ;
     return S_OK;
 }
  
@@ -174,7 +174,7 @@ IFACEMETHODIMP AccessibleGridItemProvider::get_RowSpan(int *pRetVal) {
     *pRetVal = NULL;
     JNIEnv* env = GetEnv();
     jint value = env->CallIntMethod(m_self, midGetRowSpan);
-        *pRetVal = value ;
+    *pRetVal = value ;
     return S_OK;
 }
 
@@ -230,7 +230,7 @@ Java_com_sun_glass_ui_accessible_win_WinAccessibleGridItemProvider__1initIDs(
     ASSERT(midGetRow);
     midGetRowSpan = env->GetMethodID(cls, "getRowSpan", "()I");
     ASSERT(midGetRowSpan);
-        midGetContainingGrid = env->GetMethodID(cls, "getContainingGrid", "()J");
+    midGetContainingGrid = env->GetMethodID(cls, "getContainingGrid", "()J");
     ASSERT(midGetContainingGrid);
 }
 
@@ -255,19 +255,19 @@ Java_com_sun_glass_ui_accessible_win_WinAccessibleGridItemProvider__1createAcces
     JNIEnv* env, jobject self, jlong accSimple) {
     LOG("In WinAccessibleGridItemProvider._createAccessible\n");
     LOG("  accSimple: %p\n", accSimple);
-    // PTB: Do we need try/catch around the new?
+    // TODO: Do we need try/catch around the new?
     AccessibleGridItemProvider* acc = new AccessibleGridItemProvider(env, self);
     LOG("  acc: %p\n", acc);
-        // Add this to the simple provider
-        if (accSimple != 0) {
-                AccessibleBaseProvider* accessibleSimple =
+    // Add this to the simple provider
+    if (accSimple != 0) {
+        AccessibleBaseProvider* accessibleSimple =
             reinterpret_cast<AccessibleBaseProvider *>(accSimple) ;
-                if (accessibleSimple != NULL) {
-                        accessibleSimple->AddPatternObject(reinterpret_cast<IUnknown*>(acc));
-                } else {
-                        LOG("  AddPatternObject not called; accessibleSimple is NULL.\n");
+        if (accessibleSimple != NULL) {
+            accessibleSimple->AddPatternObject(reinterpret_cast<IUnknown*>(acc));
+        } else {
+            LOG("  AddPatternObject not called; accessibleSimple is NULL.\n");
         }
-        }
+    }
     return reinterpret_cast<jlong>(acc);
 }
 

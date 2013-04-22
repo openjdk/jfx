@@ -24,10 +24,9 @@
  */
 package com.sun.glass.ui;
 
-import com.sun.glass.ui.accessible.AccessibleRoot;
 import com.sun.glass.events.MouseEvent;
 import com.sun.glass.events.WindowEvent;
-
+import com.sun.glass.ui.accessible.AccessibleRoot;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -1203,10 +1202,15 @@ public abstract class Window {
         }
     }
 
-    protected abstract void _accessibilityInitIsComplete(long ptr, AccessibleRoot acc);
-    public void accessibilityInitIsComplete(AccessibleRoot acc) {
+    /*
+     * Notify the native code that the accessibilty tree has been built and is
+     * ready for use.
+     * 
+     * @param accRoot   the Java side accessible root object.
+     */
+    public void setAccessibilityInitIsComplete(AccessibleRoot accRoot) {
         Application.checkEventThread();
-        _accessibilityInitIsComplete(ptr, acc);
+        accRoot.setAccessibilityInitIsComplete();
     }
 
     // *****************************************************

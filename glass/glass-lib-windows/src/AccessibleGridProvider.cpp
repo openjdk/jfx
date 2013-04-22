@@ -120,9 +120,9 @@ IFACEMETHODIMP AccessibleGridProvider::GetPatternProvider(PATTERNID patternId, I
 /**
  * Get the ordinal number of the column that contains this cell or item
  *
- * pRetVal:                receiver of the state
+ * pRetVal:    receiver of the state
  *
- * returns:     S_OK
+ * returns: S_OK
  */
 IFACEMETHODIMP AccessibleGridProvider::get_ColumnCount(int *pRetVal) {
     LOG("In AccessibleGridProvider::get_ColumnCount\n");
@@ -134,7 +134,7 @@ IFACEMETHODIMP AccessibleGridProvider::get_ColumnCount(int *pRetVal) {
     jint value = env->CallIntMethod(m_self, midGetColumnCount);
     CheckAndClearException(env);  
     LOG("  returning %d\n", value);
-        *pRetVal = value ;
+    *pRetVal = value ;
     return S_OK;
 }
  
@@ -146,7 +146,7 @@ IFACEMETHODIMP AccessibleGridProvider::get_RowCount(int *pRetVal) {
     *pRetVal = NULL;
     JNIEnv* env = GetEnv();
     jint value = env->CallIntMethod(m_self, midGetRowCount);
-        *pRetVal = value ;
+    *pRetVal = value ;
     return S_OK;
 }
 
@@ -198,7 +198,7 @@ Java_com_sun_glass_ui_accessible_win_WinAccessibleGridProvider__1initIDs(
     ASSERT(midGetColumnCount);
     midGetRowCount = env->GetMethodID(cls, "getRowCount", "()I");
     ASSERT(midGetRowCount);
-        midGetItem = env->GetMethodID(cls, "getItem", "(II)J");
+    midGetItem = env->GetMethodID(cls, "getItem", "(II)J");
     ASSERT(midGetItem);
 }
 
@@ -223,19 +223,19 @@ Java_com_sun_glass_ui_accessible_win_WinAccessibleGridProvider__1createAccessibl
     JNIEnv* env, jobject self, jlong accSimple) {
     LOG("In WinAccessibleGridProvider._createAccessible\n");
     LOG("  accSimple: %p\n", accSimple);
-    // PTB: Do we need try/catch around the new?
+    // TODO: Do we need try/catch around the new?
     AccessibleGridProvider* acc = new AccessibleGridProvider(env, self);
     LOG("  acc: %p\n", acc);
-        // Add this to the simple provider
-        if (accSimple != 0) {
-                AccessibleBaseProvider* accessibleSimple =
+    // Add this to the simple provider
+    if (accSimple != 0) {
+        AccessibleBaseProvider* accessibleSimple =
             reinterpret_cast<AccessibleBaseProvider *>(accSimple);
-                if (accessibleSimple != NULL) {
-                        accessibleSimple->AddPatternObject(reinterpret_cast<IUnknown*>(acc));
-                } else {
-                        LOG("  AddPatternObject not called; accessibleSimple is NULL.\n");
+        if (accessibleSimple != NULL) {
+            accessibleSimple->AddPatternObject(reinterpret_cast<IUnknown*>(acc));
+        } else {
+            LOG("  AddPatternObject not called; accessibleSimple is NULL.\n");
         }
-        }
+    }
     return reinterpret_cast<jlong>(acc);
 }
 

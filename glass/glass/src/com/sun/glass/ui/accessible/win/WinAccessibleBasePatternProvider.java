@@ -28,8 +28,10 @@ import com.sun.glass.ui.accessible.AccessibleBasePatternProvider;
 
 abstract public class WinAccessibleBasePatternProvider extends AccessibleBasePatternProvider {
     
-    public WinAccessibleBasePatternProvider(Object node, long nativeSimple){
-        super(node, nativeSimple);
+    public WinAccessibleBasePatternProvider(Object node){
+        super(node);
     }
+    
+    abstract long getNativeAccessible();
     
 }

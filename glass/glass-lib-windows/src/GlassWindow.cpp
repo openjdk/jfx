@@ -490,11 +490,11 @@ LRESULT GlassWindow::WindowProc(UINT msg, WPARAM wParam, LPARAM lParam)
                 m_a11yInitRequested = true;  // only call once
                 HandleAccessibilityInitEvent();  // initialize
             } else if (m_a11yTreeIsReady) {
-                //PTB: From spec: When a window that previously returned providers has been destroyed,
+                //TODO: From spec: When a window that previously returned providers has been destroyed,
                 // you should notify UI Automation by calling UiaReturnRawElementProvider(hwnd, 0, 0, NULL)
                 // Do this from WM_DESTROY?
                 LRESULT lr = UiaReturnRawElementProvider(GetHWND(), wParam, lParam, m_pProvider);
-                //PTB: It's not clear that Release() is needed.  Some examples use it; some don't.
+                //TODO: It's not clear that Release() is needed.  Some examples use it; some don't.
                 // I'm getting a premature call to the d'tor so I'm removing it at least for now
                 //m_pProvider->Release();
                 return lr;
@@ -594,7 +594,7 @@ void GlassWindow::HandleAccessibilityInitEvent() {
     CheckAndClearException(env);
 }
 
-void GlassWindow::AccessibilityIsReady(AccessibleRoot* pAcc) {
+void GlassWindow::SetAccessibilityInitIsComplete(AccessibleRoot* pAcc) {
     m_pProvider = pAcc;
     m_a11yTreeIsReady = true;
 }
@@ -1698,28 +1698,6 @@ JNIEXPORT jint JNICALL Java_com_sun_glass_ui_win_WinWindow__1getEmbeddedX
     LEAVE_MAIN_THREAD_WITH_hWnd;
 
     return PERFORM_AND_RETURN();
-}
-
-/*
- * Class:     com_sun_glass_ui_win_WinWindow
- * Method:    _accessibillityIsReady
- * Signature: (JJ)V
- */
-JNIEXPORT void JNICALL Java_com_sun_glass_ui_win_WinWindow__1accessibilityIsReady
-    (JNIEnv *env, jobject jThis, jlong ptr, jlong acc)
-{
-    ENTER_MAIN_THREAD()
-    {
-        GlassWindow *pWindow = GlassWindow::FromHandle(hWnd);
-        if (pWindow) {
-            pWindow->AccessibilityIsReady(reinterpret_cast<AccessibleRoot*>(acc));
-        }
-    }
-    jlong acc;
-    LEAVE_MAIN_THREAD_WITH_hWnd;
-
-    ARG(acc) = acc;
-    PERFORM();
 }
 
 /*

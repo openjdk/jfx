@@ -730,72 +730,96 @@ class WindowStage extends GlassStage {
      * Accessibility glue for native
      * 
      */
+    
     /**
-     * Initialize Accessiblility
+     * Initialize Accessibility
+     *
+     * @param ac    the Glass accessible root object.
      */
-    @Override public void accessibleInitIsComplete(Object ac) {
-        if( ac instanceof AccessibleRoot)
-            platformWindow.accessibilityInitIsComplete((AccessibleRoot)ac);
-        else
-            platformWindow.accessibilityInitIsComplete(null);
+    @Override public void setAccessibilityInitIsComplete(Object ac) {
+        if (ac instanceof AccessibleRoot) {
+            platformWindow.setAccessibilityInitIsComplete((AccessibleRoot)ac);
+        } else {
+            platformWindow.setAccessibilityInitIsComplete(null);
+        }
     } 
 
     /**
-     * Create accessible native object corresponding to stage
+     * Create accessible Glass object corresponding to stage
      * 
-     * @param ac 
-     * returns native Object
+     * @param ac    the FX accessible root/stage node.
+     * 
+     * @return the Glass AccessibleRoot object.
      */
-    @Override public Object accessibleCreateStageProvider(AccessibleStageProvider ac, long ptr) {
-        return AccessibleRoot.createAccessible(ac,ptr) ;
+    @Override
+    public Object accessibleCreateStageProvider(AccessibleStageProvider ac) {
+        return AccessibleRoot.createAccessible(ac, platformWindow);
     }
 
     /**
-     * Create accessible native object corresponding to controls
+     * Create Glass accessible object corresponding to controls
      * 
-     * @param ac 
-     * returns native Object
+     * @param ac    the FX accessible node
+     * 
+     * @return the Glass accessible Object
      */
     @Override public Object accessibleCreateBasicProvider(AccessibleProvider ac) {
         return AccessibleBaseProvider.createProvider(ac);
     }
 
     /**
-     * Delete accessible native object corresponding to controls
-     * 
-     * @param nativeAcc
-     * returns native Object
+     * Delete Glass accessible object corresponding to controls
+     *
+     * @param glassAcc the Glass accessible
      */
-    @Override public void accessibleDestroyBasicProvider(Object nativeAcc) {
-        if( nativeAcc instanceof AccessibleBaseProvider)
-            ((AccessibleBaseProvider)nativeAcc).destroyAccessible();
+    @Override public void accessibleDestroyBasicProvider(Object glassAcc) {
+        if (glassAcc instanceof AccessibleBaseProvider) {
+            ((AccessibleBaseProvider)glassAcc).destroyAccessible();
+        }
     }
 
     /**
      * Fire accessible event
-     * 
+     *
+     * @param glassAcc  the Glass accessible
      * @param eventID   identifies the event.
      */
-    @Override public void accessibleFireEvent(Object nativeAcc, int eventID) {
-        if( nativeAcc instanceof AccessibleBaseProvider)
-           ((AccessibleBaseProvider)nativeAcc).fireEvent(eventID); 
+    @Override public void accessibleFireEvent(Object glassAcc, int eventID) {
+        if (glassAcc instanceof AccessibleBaseProvider) {
+            ((AccessibleBaseProvider)glassAcc).fireEvent(eventID);
+        }
     }
     
-    /** Fire accessible property change event
+    /**
+     * Fire accessible property change event
      * 
+     * @param glassAcc      the Glass accessible 
      * @param propertyId    identifies the property
      * @param oldProperty   the old value of the property
      * @param newProperty   the new value of the property
      */
-    @Override public void accessibleFirePropertyChange(Object nativeAcc, int propertyId, int oldProperty,
-                                             int newProperty ) {
-        if( nativeAcc instanceof AccessibleBaseProvider)
-           ((AccessibleBaseProvider)nativeAcc).firePropertyChange(propertyId, oldProperty, newProperty); 
+    @Override public void accessibleFirePropertyChange( Object glassAcc, int propertyId,
+                                                        int oldProperty, int newProperty ) {
+        if (glassAcc instanceof AccessibleBaseProvider) {
+            ((AccessibleBaseProvider)glassAcc).
+                firePropertyChange(propertyId, oldProperty, newProperty);
+        }
     }
     
-    @Override public void accessibleFirePropertyChange(Object nativeAcc, int propertyId, boolean oldProperty,
-                                             boolean newProperty ) {
-        if( nativeAcc instanceof AccessibleBaseProvider)
-           ((AccessibleBaseProvider)nativeAcc).firePropertyChange(propertyId, oldProperty, newProperty); 
-    }    
+    /**
+     * Fire accessible property change event
+     * 
+     * @param glassAcc      the Glass accessible
+     * @param propertyId    identifies the property
+     * @param oldProperty   the old value of the property
+     * @param newProperty   the new value of the property
+     */
+    @Override public void accessibleFirePropertyChange( Object glassAcc, int propertyId,
+                                                        boolean oldProperty,
+                                                        boolean newProperty ) {
+        if (glassAcc instanceof AccessibleBaseProvider) {
+            ((AccessibleBaseProvider)glassAcc).
+                firePropertyChange(propertyId, oldProperty, newProperty);
+        }
+    }
 }

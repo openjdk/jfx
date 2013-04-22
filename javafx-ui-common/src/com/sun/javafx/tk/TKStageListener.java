@@ -108,5 +108,5 @@ public interface TKStageListener {
     /**
      * Initialize accessibility
      */
-    public void initAccessibleTKStageListener(long ptr);
+    public void initAccessibleTKStageListener();
 }

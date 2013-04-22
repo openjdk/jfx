@@ -24,32 +24,23 @@
  */
 package com.sun.glass.ui.accessible.win;
 
-import com.sun.glass.ui.Application;
+import com.sun.glass.ui.Window;
 import com.sun.glass.ui.accessible.AccessibleLogger;
 import com.sun.glass.ui.accessible.AccessibleRoot;
-import java.util.HashMap;
-import com.sun.javafx.accessible.utils.NavigateDirection;
 import com.sun.javafx.accessible.providers.AccessibleProvider;
+import com.sun.javafx.accessible.utils.NavigateDirection;
+import java.util.HashMap;
 
 /**
- * Windows platform implementation class for Accessible.
+ * Windows platform implementation class for AccessibleRoot.
  */
-public class WinAccessibleRoot extends AccessibleRoot {
-    
-    private long hwnd;  // The top level HWND
-    
-    native private static void _initIDs();
-    native private long _createAccessible();
-    native private void _destroyAccessible(long nativeAccessible);
-    native private void _fireEvent(long nativeAccessible, int eventID);
+public final class WinAccessibleRoot extends AccessibleRoot {
     
     private static final HashMap<Integer, NavigateDirection> directionMap =
         new HashMap<Integer, NavigateDirection>();
 
     static {
-        // Load the Glass native library and initialize the JNI method IDs.
-        // 
-        // PTB: Is loadNativeLibrary needed?  It's likely already loaded.
+        // Initialize the JNI method IDs.
         _initIDs();
         
         // Initialize directionMap
@@ -58,20 +49,35 @@ public class WinAccessibleRoot extends AccessibleRoot {
         }
     }
     
+    native private static void _initIDs();
+    native private long _createAccessible();
+    native private void _setAccessibilityInitIsComplete(long hwnd, long nativeAccessible);
+    native private void _destroyAccessible(long nativeAccessible);
+    native private void _fireEvent(long nativeAccessible, int eventID);
+    
+    private long hwnd;  // the native window handle
+    private long nativeAccessible;  // the native accessible
+    
     /**
      * Construct the platform dependent Java side of the native accessible.  This
      * will be used when firing events or when destroying the native accessible.
      * 
-     * @param node  the related FX node object.
-     * @param ptr   the native window handle, i.e. HWND
+     * @param node      the related FX node object.
+     * @param window    the associated top level Glass Window object.
      */
-    public WinAccessibleRoot(Object node, long ptr) {
+    public WinAccessibleRoot(Object node, Window window) {
         super(node);
-        AccessibleLogger.getLogger().fine("In WinAccessibleRoot c'tor");
         nativeAccessible = _createAccessible();
-        AccessibleLogger.getLogger().fine("  nativeAccessible: " + Long.toHexString(nativeAccessible));
-        hwnd = ptr;
-        AccessibleLogger.getLogger().fine("  HWND: " + Long.toHexString(hwnd));
+        hwnd = window.getNativeWindow();
+    }
+    
+    /**
+     * Get the reference to the native accessible.
+     * 
+     * @return a reference to the native accessible.
+     */
+    long getNativeAccessible() {
+        return nativeAccessible;
     }
     
     ////////////////////////////////////
@@ -80,25 +86,34 @@ public class WinAccessibleRoot extends AccessibleRoot {
     //
     ////////////////////////////////////
     
-    /**
-     * Downcall to destroy the native accessible.
+    /*
+     * Signal that initialization is complete.
      */
     @Override
-    final public void destroyAccessible() {
-        _destroyAccessible(nativeAccessible);
+    public void setAccessibilityInitIsComplete() {
+        _setAccessibilityInitIsComplete(hwnd, nativeAccessible);
     }
     
     /**
-     * Downcall to fire an event.
-     * 
-     * @param eventID   the event ID.
+     * Destroy the native accessible
      */
     @Override
-    final public void fireEvent(int eventID) {
-        AccessibleLogger.getLogger().fine("In WinAccessibleRoot.fireEvent");
-        //AccessibleLogger.getLogger().fine("  Thread ID: " + Thread.currentThread().getId());
-        AccessibleLogger.getLogger().fine("  nativeAccessible: " + Long.toHexString(nativeAccessible));
-        AccessibleLogger.getLogger().fine("  eventID: " + eventID);
+    public void destroyAccessible() {
+        if (nativeAccessible != 0) {
+            _destroyAccessible(nativeAccessible);
+        }
+    }
+
+    /**
+     * Fire an event
+     * 
+     * @param eventID   identifies the event.
+     */
+    @Override
+    public void fireEvent(int eventID) {
+        AccessibleLogger.getLogger().fine("this: " + this);
+        AccessibleLogger.getLogger().fine("nativeAccessible: " + Long.toHexString(nativeAccessible));
+        AccessibleLogger.getLogger().fine("eventID: " + eventID);
         _fireEvent(nativeAccessible, eventID);
     }
     
@@ -125,9 +140,8 @@ public class WinAccessibleRoot extends AccessibleRoot {
      * @return address of native accessible of root object
      */
     private long getHostHwnd() {
-        AccessibleLogger.getLogger().fine("In WinAccessibleRoot.getHostRawElementProvider");
         //AccessibleLogger.getLogger().fine("  Thread ID: " + Thread.currentThread().getId());
-        AccessibleLogger.getLogger().fine("  Returning hwnd: " + Long.toHexString(hwnd));
+        AccessibleLogger.getLogger().fine("Returning hwnd: " + Long.toHexString(hwnd));
         return hwnd;
     }
     
@@ -142,17 +156,16 @@ public class WinAccessibleRoot extends AccessibleRoot {
      * Note: Roots have no parents or siblings.
      */
     private long navigate(int direction) {
-        AccessibleLogger.getLogger().fine("In WinAccessibleElement.navigate");
         //AccessibleLogger.getLogger().fine("  Thread ID: " + Thread.currentThread().getId());
-        AccessibleLogger.getLogger().fine("  direction: " + directionMap.get(direction));
+        AccessibleLogger.getLogger().fine("direction: " + directionMap.get(direction));
         Object target =
             ((AccessibleProvider)node).navigate(directionMap.get(direction));
         if (target == null) {
-            AccessibleLogger.getLogger().fine("  No object in that direction.");
+            AccessibleLogger.getLogger().fine("No object in that direction.");
             return 0;
         } else {
             long nativeTarget = ((WinAccessibleBaseProvider)target).getNativeAccessible();
-            AccessibleLogger.getLogger().fine("  nativeTarget:  " + Long.toHexString(nativeTarget));
+            AccessibleLogger.getLogger().fine("nativeTarget:  " + Long.toHexString(nativeTarget));
             return nativeTarget;
         }
     }

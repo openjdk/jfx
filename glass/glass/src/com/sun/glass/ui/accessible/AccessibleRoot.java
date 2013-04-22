@@ -25,9 +25,10 @@
 package com.sun.glass.ui.accessible;
 
 import com.sun.glass.ui.PlatformFactory;
+import com.sun.glass.ui.Window;
+import com.sun.javafx.accessible.providers.AccessibleProvider;
 import com.sun.javafx.accessible.utils.NavigateDirection;
 import com.sun.javafx.accessible.utils.Rect;
-import com.sun.javafx.accessible.providers.AccessibleProvider;
 
 /**
  * The Accessible for a top level Glass object.
@@ -39,51 +40,40 @@ import com.sun.javafx.accessible.providers.AccessibleProvider;
  * This class is subclassed by platform specific specializations, e.g. WinAccessibleRoot,
  * GtkAccessibleRoot, and MacAccessibleRoot.  During construction each subclass
  * downcalls to native code to create a native accessible.
- * <p>
- * This class implements AccessibleProvider, AccessibleProvider,
- * and AccessibleStageProvider.  Their methods are callable from the native
- * code via JNI.
  */
 
-// PTB ToDo:  This used to implement AccessibleProvider/AccessibleStageProvider.
-// This needs to be changed to a different interface so as to not cause conflicts 
-// that result in methods in Glass to be called instead of methods in the FX peers
-// when objects are cast to interfaces.
-
-//public abstract class AccessibleRoot implements AccessibleProvider, AccessibleStageProvider {
 public abstract class AccessibleRoot {
     
-    protected Object node;  // This is the node that will be accessed.
-    protected long nativeAccessible;  // the native accessible
+    protected Object node;  // This is the FX node that will be accessed.
 
     /**
      * Static method to create a Glass root accessible
      * 
-     * @param node  the related FX node object.
-     * @param ptr   the native window handle, e.g HWND, NSWindow*, etc.
-     *
      * Determines which platform and then calls the platform specific factory to
      * construct and return a platform specific accessible.
+     * 
+     * @param node      the related FX node object.
+     * @param window    the top level Window object.
+     * 
+     * @return a newly created platform specific Glass root accessible.
      */
-    public static AccessibleRoot createAccessible(Object node, long ptr) {
-        AccessibleRoot acc =
-            PlatformFactory.getPlatformFactory().createAccessibleRoot(node, ptr);
-        return acc;
+    public static AccessibleRoot createAccessible(Object node, Window window) {
+        return PlatformFactory.getPlatformFactory().createAccessibleRoot(node, window);
     }
     
     /**
-     * Construct the Java side of the native accessible.  This will be used when
-     * firing events or when destroying the native accessible.
+     * Construct the Java and native sides of the Glass accessible.
      * 
      * @param node  the related FX node object.
      */
     public AccessibleRoot(Object node) {
         this.node = node;
-    }
-
-    public long getNativeAccessible() {
-        return nativeAccessible;
-    }
+    }   
+    
+   /**
+    * Signal that initialization is complete.
+    */
+    public abstract void setAccessibilityInitIsComplete();
 
     // Downcalls
     
@@ -91,7 +81,7 @@ public abstract class AccessibleRoot {
      * Destroy the native accessible
      */
     abstract public void destroyAccessible();
-    
+
     /**
      * Fire an event
      * 
@@ -106,7 +96,7 @@ public abstract class AccessibleRoot {
      * 
      * @return null for now.
      *
-     * PTB: This may not be needed; using UiaHostProviderFromHwnd in the native
+     * TODO: This may not be needed; using UiaHostProviderFromHwnd in the native
      * code might be enough.  We'll have to experiment.
      */
     private AccessibleProvider hostRawElementProvider() {
@@ -121,7 +111,7 @@ public abstract class AccessibleRoot {
      * @return the object implementing the pattern or null.
      */
     private Object getPatternProvider(int patternId) {
-        return null;
+        return null;  //TODO: Determine if this is needed
     }
     
     /**
@@ -132,15 +122,15 @@ public abstract class AccessibleRoot {
      * @return the value of the property.
      */
     protected Object getPropertyValue(int propertyId) {
-        AccessibleLogger.getLogger().fine("In AccessibleRoot.getPropetyValue propertyID : "+propertyId);
+        AccessibleLogger.getLogger().fine("propertyID : " + propertyId);
         Object value;
         if (node instanceof AccessibleProvider) {
             value = ((AccessibleProvider)node).getPropertyValue(propertyId);
         } else {
-            // PTB: Should we do something else like throw an acception?
+            // TODO: Should we do something else like throw an acception?
             value = null;
         }
-        AccessibleLogger.getLogger().fine("  returning: " + value);
+        AccessibleLogger.getLogger().fine("returning: " + value);
         return value;
     }
       
@@ -151,15 +141,14 @@ public abstract class AccessibleRoot {
      * with respect to upper left corner.
      */
     private Rect boundingRectangle() {
-        AccessibleLogger.getLogger().fine("In AccessibleRoot.boundingRectangle");
         Rect rect;
         if (node instanceof AccessibleProvider) {
             rect = ((AccessibleProvider)node).boundingRectangle();
         } else {
-            // PTB: Should I do something else like throw an acception?
+            // TODO: Should we do something else like throw an acception?
             rect = null;
         }
-        AccessibleLogger.getLogger().fine("  returning: " + rect);
+        AccessibleLogger.getLogger().fine("returning: " + rect);
         return rect;
     }
     
@@ -183,7 +172,7 @@ public abstract class AccessibleRoot {
      * @return an array of root fragments, or null.
      */
     private AccessibleProvider[] getEmbeddedFragmentRoots() {
-        return null;
+        return null;  // TODO: add code if needed.
     }
 
     /**
@@ -192,7 +181,7 @@ public abstract class AccessibleRoot {
      * @return the unique run-time identifier of the element.
      */
     private int[] getRuntimeId() {
-        return null;
+        return null;  // TODO: add code if needed.
     }
     
     /**
@@ -207,17 +196,18 @@ public abstract class AccessibleRoot {
         if (node instanceof AccessibleProvider) {
             return ((AccessibleProvider)node).navigate(direction);
         } else {
-            return null; // PTB: Can this ever happen?  Throw exception instead?
+            return null; // TODO: Can this ever happen?  Throw exception instead?
         }
     }
     
-    private void setFocus() {}
+    private void setFocus() {}  // TODO: add code
    
     private long elementProviderFromPoint(double x, double y) {
-        return 0;
+        return 0;  // TODO: add code
     }
     
     private AccessibleProvider getFocus() {
-        return null;
+        return null;  // TODO: add code
     }
+    
 }

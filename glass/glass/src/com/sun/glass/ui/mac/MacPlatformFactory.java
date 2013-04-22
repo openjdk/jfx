@@ -47,8 +47,8 @@ public final class MacPlatformFactory extends PlatformFactory {
         return new MacApplication();
     }
     
-    @Override public AccessibleRoot createAccessibleRoot(Object node, long ptr) {
-        return new MacAccessibleRoot(node, ptr);
+    @Override public AccessibleRoot createAccessibleRoot(Object node, Window window) {
+        return new MacAccessibleRoot(node, window);
     }
     
     @Override public AccessibleBaseProvider createAccessibleProvider(Object node) {
@@ -57,16 +57,13 @@ public final class MacPlatformFactory extends PlatformFactory {
             element = new MacAccessibleBaseProvider(node);
         }
         if (node instanceof ToggleProvider) { 
-            element.addPatternProviders(new MacAccessibleToggleProvider(node,
-                    element.getNativeAccessible()));
+            element.addPatternProviders(new MacAccessibleToggleProvider(node, element));
         }
         if (node instanceof SelectionProvider) { 
-            element.addPatternProviders(new MacAccessibleSelectionProvider(node,
-                    element.getNativeAccessible()));
+            element.addPatternProviders(new MacAccessibleSelectionProvider(node, element));
         }
         if (node instanceof SelectionItemProvider) {
-            element.addPatternProviders(new MacAccessibleSelectionItemProvider(node,
-                    element.getNativeAccessible()));
+            element.addPatternProviders(new MacAccessibleSelectionItemProvider(node, element));
         }
         return element;
     }

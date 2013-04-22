@@ -333,9 +333,9 @@ GLASS_NS_WINDOW_IMPLEMENTATION
     }
 }
 
-- (void)accessibilityIsReady:(GlassAccessibleRoot *)acc
+- (void)setAccessibilityInitIsComplete:(GlassAccessibleRoot *)acc
 {
-    // PTB: When should the retained reference be released?
+    // TODO: When should the retained reference be released?
     accChildren = [[NSArray arrayWithObject:acc] retain];
     isAccessibleInitComplete = YES;  // set the flag so init isn't called again
     acc->parent = nsWindow;  // this is the parent of the root
@@ -1531,28 +1531,6 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacWindow__1toBack
     {
         GlassWindow *window = getGlassWindow(env, jPtr);
         [window->nsWindow orderBack:nil];
-    }
-    GLASS_POOL_EXIT;
-    GLASS_CHECK_EXCEPTION(env);
-}
-
-/*
- * Class:     com_sun_glass_ui_win_MacWindow
- * Method:    _accessibillityIsReady
- * Signature: (JJ)V
- */
-JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacWindow__1accessibilityIsReady
-(JNIEnv *env, jobject jWindow, jlong jPtr, jlong acc)
-{
-    LOG("Java_com_sun_glass_ui_mac_MacWindow__1accessibilityIsReady");
-    
-    GLASS_ASSERT_MAIN_JAVA_THREAD(env);
-    GLASS_POOL_ENTER;
-    {
-        GlassWindow *window = getGlassWindow(env, jPtr);
-        if (window) {
-            [window accessibilityIsReady:(GlassAccessibleRoot *)jlong_to_ptr(acc)];
-        }
     }
     GLASS_POOL_EXIT;
     GLASS_CHECK_EXCEPTION(env);

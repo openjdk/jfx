@@ -90,7 +90,7 @@ class GlassWindowEventHandler extends Window.EventHandler implements PrivilegedA
                 stage.handleFocusDisabled();
                 break;
             case WindowEvent.INIT_ACCESSIBILITY:
-                stage.stageListener.initAccessibleTKStageListener(window.getNativeWindow());
+                stage.stageListener.initAccessibleTKStageListener();
                 break;
             case WindowEvent.DESTROY:
                 stage.setPlatformWindowClosed();

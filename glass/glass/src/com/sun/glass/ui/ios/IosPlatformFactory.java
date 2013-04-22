@@ -32,6 +32,7 @@ import com.sun.glass.ui.delegate.ClipboardDelegate;
 import com.sun.glass.ui.delegate.MenuBarDelegate;
 import com.sun.glass.ui.delegate.MenuDelegate;
 import com.sun.glass.ui.delegate.MenuItemDelegate;
+import com.sun.javafx.accessible.providers.AccessibleProvider;
 
 @SuppressWarnings({"UnusedDeclaration"})
 public final class IosPlatformFactory extends PlatformFactory {
@@ -80,7 +81,7 @@ public final class IosPlatformFactory extends PlatformFactory {
      * @inheritDoc 
      */
     @Override
-    public AccessibleRoot createAccessibleRoot(Object node, long ptr) {
+    public AccessibleRoot createAccessibleRoot(Object node, Window window) {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 

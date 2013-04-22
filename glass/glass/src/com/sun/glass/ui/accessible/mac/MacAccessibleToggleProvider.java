@@ -24,47 +24,69 @@
  */
 package com.sun.glass.ui.accessible.mac;
 
-import com.sun.glass.ui.Application;
 import com.sun.glass.ui.accessible.AccessibleLogger;
-import com.sun.javafx.accessible.utils.ToggleState;
 import com.sun.javafx.accessible.providers.ToggleProvider;
+import com.sun.javafx.accessible.utils.ToggleState;
 
 /**
- * Windows platform implementation class for Accessible.
+ * Mac platform implementation class for Accessible.
  */
-public class MacAccessibleToggleProvider extends MacAccessibleBasePatternProvider {
-    
-    native private static void _initIDs();
-    native private static long _createAccessible(long nativeSimple);
-    native private static void _destroyAccessible(long nativeAccessible);
+public final class MacAccessibleToggleProvider extends MacAccessibleBasePatternProvider {
     
     /**
-     * A class static block that loads the Glass native library and initializes
-     * the JNI method IDs.
-     * 
-     * PTB: Is loadNativeLibrary needed?  It's likely already loaded.
+     * A class static block that initializes the JNI method IDs.
      */
     static {
         _initIDs();
     }
     
+    native private static void _initIDs();  
+    //native protected long _createAccessible(long nativeBaseProvider);
+    native protected long _createAccessible();
+    // TODO: The base/basic/simple provider needs to be passed on this call.  
+    // At this point the Mac native code does not have the code that adds the
+    // newly created pattern providing accessible to the list of pattern providers
+    // that will be maintained in the base/basic/simple accessible.
+    // See the Win code for how it's done there.
+    native private void _destroyAccessible(long nativeAccessible);
+    
+    private long nativeAccessible;  // The native accessible
+    
     /**
      * Downcall to create the native accessible.  This will be used when firing
      * events or when destroying the native accessible.
-     * 
-     * @param node          the related FX node object.
-     * @param nativeSimple  the native accessible
-     */   
-    public MacAccessibleToggleProvider(Object node, long nativeSimple) {
-        super(node, nativeSimple);
-        nativeAccessible = _createAccessible(nativeSimple);
+     *
+     * @param node      the related FX node object.
+     * @param provider  the base provider which this pattern provider is chained to.
+     */
+    public MacAccessibleToggleProvider(Object node, MacAccessibleBaseProvider provider) {
+        super(node);
+        //nativeAccessible = _createAccessible(provider.getNativeAccessible());
+        nativeAccessible = _createAccessible();
+        // TODO: See note on _createAccessible above.
     }
     
+    /**
+     * Get the native accessible
+     * 
+     * @return the native accessible
+     */
     @Override
-    final public void destroyAccessible() {
+    long getNativeAccessible() {
+        return nativeAccessible;
+    }
+    
+    // Downcalls
+    
+    /**
+     * Destroy the native accessible
+     * 
+     */
+    @Override
+    public void destroyAccessible() {
         _destroyAccessible(nativeAccessible);
     }
-    
+
     ////////////////////////////////////
     //
     // Start of upcalls from native code
@@ -72,9 +94,9 @@ public class MacAccessibleToggleProvider extends MacAccessibleBasePatternProvide
     ////////////////////////////////////
     
     // Note:
-    //   These upcalls are from a native UIA implementation.  This code translates
-    //   the upcalls to the UIA-like implementation used in the JavaFX accessibility 
-    //   implementation.
+    //   These upcalls are from a native NSAccessibility implementation.  This code
+    //   translates the upcalls to a UIA-like implementation used in the JavaFX
+    //   accessibility implementation.
     
     /**
      * For ToggleProvider - get_ToggleState
@@ -82,8 +104,6 @@ public class MacAccessibleToggleProvider extends MacAccessibleBasePatternProvide
      * @return the state: 0 == OFF, 1 == ON, 2 == INDETERMINATE
      */
     private long getToggleState() {
-        AccessibleLogger.getLogger().fine("In WinAccessibleCheckBox.getToggleState");
-        //AccessibleLogger.getLogger().fine("  Thread ID: " + Thread.currentThread().getId());
         long value = 2;
         ToggleState state = ((ToggleProvider)node).getToggleState();
         switch (state) {

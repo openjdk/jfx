@@ -24,14 +24,11 @@
  */
 package com.sun.glass.ui.win;
 
-import com.sun.glass.ui.Application;
 import com.sun.glass.ui.Cursor;
 import com.sun.glass.ui.Pixels;
 import com.sun.glass.ui.Screen;
 import com.sun.glass.ui.View;
 import com.sun.glass.ui.Window;
-import com.sun.glass.ui.accessible.AccessibleRoot;
-import com.sun.glass.ui.accessible.win.WinAccessibleRoot;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 
@@ -81,13 +78,6 @@ class WinWindow extends Window {
     @Override native protected void _ungrabFocus(long ptr);
     @Override native protected int _getEmbeddedX(long ptr);
     @Override native protected int _getEmbeddedY(long ptr);
-    
-    native protected void _accessibilityIsReady(long ptr, long nativeAccessible);
-    @Override
-    protected void _accessibilityInitIsComplete(long ptr, AccessibleRoot acc) {
-        _accessibilityIsReady(ptr, acc.getNativeAccessible());
-    }
-
     @Override native protected void _setCursor(long ptr, Cursor cursor);
 
     @Override

@@ -100,7 +100,7 @@ public:
 
     bool IsChild() { return m_parent != NULL; }
 
-    void AccessibilityIsReady(AccessibleRoot* pAcc);
+    void SetAccessibilityInitIsComplete(AccessibleRoot* pAcc);
 
     virtual BOOL EnterFullScreenMode(GlassView * view, BOOL animate, BOOL keepRatio);
     virtual void ExitFullScreenMode(BOOL animate);

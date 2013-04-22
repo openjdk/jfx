@@ -23,6 +23,7 @@
  * questions.
  */
 
+// TODO: Might be able to get rid of some of these imports
 #import "GlassAccessibleBaseProvider.h"
 #import "GlassAccessibleRoot.h"
 #import "GlassMacros.h"
@@ -49,12 +50,12 @@ static jmethodID midGetRoot = 0;
 static jmethodID midBoundingRectangle = 0;
 static jmethodID midSetFocus = 0;
 
-// PTB: Probably should move this stuff into another file.
+// TODO: Probably should move this stuff into another file.
 //
 // Collections used to convert between integer IDs and NSAccessibility's NSString IDs.
 // The enums on the Java side need to be kept in sync with these collections.
 //
-// PTB: Is there a better way to code the initialization of these collections?
+// TODO: Is there a better way to code the initialization of these collections?
 
 @implementation GlassAccessibleBaseProvider
 
@@ -369,7 +370,7 @@ NSArray* settableAttribute = nil ;
     return self;
 }
 
-// PTB: Is this needed?
+// TODO: Is this needed?
 - (void)dealloc {
     GET_MAIN_JENV;
     if (env != NULL) {
@@ -489,14 +490,14 @@ NSArray* settableAttribute = nil ;
         return nil;
     
     ///// Children /////
-    ///// Visible Chidren ///// PTB: Change later when we support visible vs non-visible
+    ///// Visible Chidren ///// TODO: Change later when we support visible vs non-visible
     } else if ( ([attribute isEqualToString:NSAccessibilityChildrenAttribute]) ||
                 ([attribute isEqualToString:NSAccessibilityVisibleChildrenAttribute]) ) {
         return [self accessibilityArrayAttributeValues:attribute index:0 maxCount:-1];
         
     ///// Parent /////
     } else if ([attribute isEqualToString:NSAccessibilityParentAttribute]) {
-        // PTB: Is there a better idea about dealing with root vs base?
+        // TODO: Is there a better idea about dealing with root vs base?
         id ptr = nil;
         jlong root = 0;
         jlong parent = (*env)->CallLongMethod(env, jBaseProvider, midGetParent);
@@ -626,7 +627,7 @@ NSArray* settableAttribute = nil ;
         }
         
     ///// Window /////
-    // PTB: This returns the same thing for Top Level UI Element which may or may not be right
+    // TODO: This returns the same thing for Top Level UI Element which may or may not be right
     } else if ( [attribute isEqualToString:NSAccessibilityWindowAttribute] ||
                 [attribute isEqualToString:NSAccessibilityTopLevelUIElementAttribute] ) {
         // walk up the tree to the root and get its parent
@@ -674,7 +675,7 @@ NSArray* settableAttribute = nil ;
     GET_MAIN_JENV;
     
     ///// Children /////
-    ///// Visible Chidren ///// PTB: Change later when we support visible vs non-visible
+    ///// Visible Chidren ///// TODO: Change later when we support visible vs non-visible
     if (([attribute isEqualToString:NSAccessibilityChildrenAttribute]) ||
         ([attribute isEqualToString:NSAccessibilityVisibleChildrenAttribute])) {
         jlongArray children =

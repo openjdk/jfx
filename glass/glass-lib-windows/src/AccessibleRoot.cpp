@@ -25,6 +25,14 @@
 
 #include "common.h"
 #include "AccessibleRoot.h"
+#include "GlassApplication.h"
+#include "GlassWindow.h"
+
+// TODO: Remove if not needed below
+#define LEAVE_MAIN_THREAD_WITH_hWnd  \
+    HWND hWnd;  \
+    LEAVE_MAIN_THREAD;  \
+    ARG(hWnd) = (HWND)ptr;
 
 static jmethodID midGetHostHwnd;
 static jmethodID midGetPropertyValue;
@@ -163,7 +171,7 @@ IFACEMETHODIMP AccessibleRoot::get_HostRawElementProvider(IRawElementProviderSim
     if (hwnd != NULL) {
         return UiaHostProviderFromHwnd(reinterpret_cast<HWND>(hwnd), pRetVal);
     } else {
-        return E_FAIL;  // PTB: Is this the right failure code?
+        return E_FAIL;  // TODO: Is this the right failure code?
     }
 }
 
@@ -212,7 +220,7 @@ IFACEMETHODIMP AccessibleRoot::GetPatternProvider(PATTERNID patternId, IUnknown*
     LOG("  returning NULL\n");
     *pRetVal = NULL;
     return S_OK;  
-    // PTB: Use AddRef when implementing
+    // TODO: Use AddRef when implementing
 }
 
 /**
@@ -251,10 +259,10 @@ IFACEMETHODIMP AccessibleRoot::GetPropertyValue(PROPERTYID propertyId, VARIANT* 
                 jdoubleArray javaCoordinateArray =
                     static_cast<jdoubleArray>(env->CallObjectMethod( m_self, midGetPropertyValue,
                                                                      static_cast<jint>(propertyId) ));
-                CheckAndClearException(env);  // PTB: Is this needed on Get/ReleaseDoubleArrayElements below?
+                CheckAndClearException(env);  // TODO: Is this needed on Get/ReleaseDoubleArrayElements below?
                 jint size = env->GetArrayLength(javaCoordinateArray);
                 if (size != 0) {
-                    // PTB: Are there any concerns that I am not using Get/ReleasePrimitiveArrayCritical?
+                    // TODO: Are there any concerns that I am not using Get/ReleasePrimitiveArrayCritical?
                     jdouble* pJavaCoordinates = env->GetDoubleArrayElements(javaCoordinateArray, JNI_FALSE);
                     for (int i = 0; i < 4; i++) {
                         // Load safe array with screen coordinates for left, top, width, height
@@ -288,11 +296,13 @@ IFACEMETHODIMP AccessibleRoot::GetPropertyValue(PROPERTYID propertyId, VARIANT* 
             // get method id
             jmethodID midIntValue = env->GetMethodID(cls, "intValue", "()I");
             if (midIntValue == NULL) {
-                hr = E_FAIL;  // PTB: Is this right?
+                hr = E_FAIL;  // TODO: Is this right?
+                LOG("    failure: intValue of ControlType\n");
             } else {
                 // get value
                 jint type = env->CallIntMethod(javaInteger, midIntValue);
-                CheckAndClearException(env);  // PTB: Is this the right place for this?
+                LOG("    type: %d\n", type);
+                CheckAndClearException(env);  // TODO: Is this the right place for this?
                 pRetVal->vt = VT_I4;
                 pRetVal->lVal = type;
             }
@@ -320,11 +330,11 @@ IFACEMETHODIMP AccessibleRoot::GetPropertyValue(PROPERTYID propertyId, VARIANT* 
             // get method id
             jmethodID midBooleanValue = env->GetMethodID(cls, "booleanValue", "()Z");
             if (midBooleanValue == NULL) {
-                hr = E_FAIL;  // PTB: correct failure code?
+                hr = E_FAIL;  // TODO: correct failure code?
             } else {
                 // get value
                 jboolean value = env->CallBooleanMethod(javaBoolean, midBooleanValue);
-                CheckAndClearException(env);  // PTB: Is this the right place for this?
+                CheckAndClearException(env);  // TODO: Is this the right place for this?
                 pRetVal->vt = VT_BOOL;
                 if (value) {
                     LOG("  returning true\n");
@@ -341,9 +351,9 @@ IFACEMETHODIMP AccessibleRoot::GetPropertyValue(PROPERTYID propertyId, VARIANT* 
         LOG("  ID: Name\n");
         jstring name = static_cast<jstring>(env->CallObjectMethod( m_self, midGetPropertyValue,
                                                                    static_cast<jint>(propertyId) ));
-        CheckAndClearException(env);  // PTB: Is this needed on GetStringCritical, GetStringLength below?
+        CheckAndClearException(env);  // TODO: Is this needed on GetStringCritical, GetStringLength below?
         if (name == NULL) {
-            hr = E_FAIL;  // PTB: correct failure code?
+            hr = E_FAIL;  // TODO: correct failure code?
         } else {
             const jchar* jcstr = env->GetStringCritical(name, NULL);
             pRetVal->vt = VT_BSTR;
@@ -353,7 +363,7 @@ IFACEMETHODIMP AccessibleRoot::GetPropertyValue(PROPERTYID propertyId, VARIANT* 
             env->ReleaseStringCritical(name, jcstr);
         }
         //CheckAndClearException(env);
-        // PTB: In cases where there are several env-> calls instead of several calls to CheckAndClearException
+        // TODO: In cases where there are several env-> calls instead of several calls to CheckAndClearException
         // would it work to just put one at the end?
         break;
     }
@@ -361,20 +371,20 @@ IFACEMETHODIMP AccessibleRoot::GetPropertyValue(PROPERTYID propertyId, VARIANT* 
         LOG("  ID: NativeWindowHandle\n");
         pRetVal->vt = VT_I4;
         JNIEnv* env = GetEnv();
-        // PTB: Maybe, lfater, change this to CallLongMethod; and change Javaside from returning jlong to jint
+        // TODO: Maybe, lfater, change this to CallLongMethod; and change Javaside from returning jlong to jint
         //   Even on 64 bit Wins HWNDs are 32 bits
         jlong hwnd = env->CallLongMethod(m_self, midGetHostHwnd);
         if (hwnd != NULL) {
             pRetVal->lVal = static_cast<LONG>(hwnd);
             LOG("  Handle: %X\n", pRetVal->lVal);
         } else {
-            pRetVal->lVal = 0;  // PTB: Is this the right way to handle lack of a HWND?
-            // PTB: Note that S_OK is sreturned
+            pRetVal->lVal = 0;  // TODO: Is this the right way to handle lack of a HWND?
+            // TODO: Note that S_OK is sreturned
         }
         break;
     }
     default:
-        LOG("  ID: Unhandled Propety ID: %d\n", propertyId);
+        LOG("  Unhandled Property ID: %d\n", propertyId);
     }
     return hr;
 }
@@ -400,10 +410,10 @@ IFACEMETHODIMP AccessibleRoot::get_BoundingRectangle(UiaRect *pRetVal) {
     jdoubleArray javaCoordinateArray =
         static_cast<jdoubleArray>(env->CallObjectMethod( m_self, midGetPropertyValue,
                                                          static_cast<jint>(propertyId) ));
-    CheckAndClearException(env);  // PTB: Is this needed on Get/ReleaseDoubleArrayElements below?
+    CheckAndClearException(env);  // TODO: Is this needed on Get/ReleaseDoubleArrayElements below?
     jint size = env->GetArrayLength(javaCoordinateArray);
     if (size != 0) {
-        // PTB: Are there any concerns that I am not using Get/ReleasePrimitiveArrayCritical?
+        // TODO: Are there any concerns that I am not using Get/ReleasePrimitiveArrayCritical?
         jdouble* pJavaCoordinates = env->GetDoubleArrayElements(javaCoordinateArray, JNI_FALSE);
         for (int i = 0; i < 4; i++) {
             // Load safe array with screen coordinates for left, top, width, height
@@ -428,7 +438,7 @@ IFACEMETHODIMP AccessibleRoot::get_FragmentRoot(IRawElementProviderFragmentRoot 
     //LOG("  Process name: %S\n", name);
     //LOG("  Process ID: %d\n", ::GetCurrentProcessId);
     //LOG("  Thread ID: %d\n", ::GetCurrentThreadId());
-    *pRetVal = this;  // PTB: Is this right?
+    *pRetVal = this;  // TODO: Is this right?
     //LOG("  Calling AddRef from get_FragmentRoot\n");
     AddRef();
     LOG("  returning: %p\n", this);
@@ -539,7 +549,7 @@ IFACEMETHODIMP AccessibleRoot::ElementProviderFromPoint( double x, double y,
     //LOG("  Thread ID: %d\n", ::GetCurrentThreadId());
     LOG("  NOT IMPLEMENTED\n");
     return E_NOTIMPL;
-    // PTB: Use AddRef when implementing
+    // TODO: Use AddRef when implementing
 }
 
 IFACEMETHODIMP AccessibleRoot::GetFocus(IRawElementProviderFragment **pRetVal) {
@@ -552,7 +562,7 @@ IFACEMETHODIMP AccessibleRoot::GetFocus(IRawElementProviderFragment **pRetVal) {
     //LOG("  Thread ID: %d\n", ::GetCurrentThreadId());
     LOG("  NOT IMPLEMENTED\n");
     return E_NOTIMPL;
-    // PTB: Use AddRef when implementing
+    // TODO: Use AddRef when implementing
 }
 
 ////////////////////////////////////////
@@ -616,10 +626,39 @@ Java_com_sun_glass_ui_accessible_win_WinAccessibleRoot__1createAccessible(
     //LOG("  Process name: %S\n", name);
     //LOG("  Process ID: %d\n", ::GetCurrentProcessId);
     //LOG("  Thread ID: %d\n", ::GetCurrentThreadId());
-    // PTB: Do we need try/catch around the new?
+    // TODO: Do we need try/catch around the new?
     AccessibleRoot* acc = new AccessibleRoot(env, self);  // Starts with ref count of 1
     LOG("  acc: %p\n", acc);
     return reinterpret_cast<jlong>(acc);
+}
+    
+/*
+ * Class:     com_sun_glass_ui_accessible_win_WinAccessibleRoot
+ * Method:    _setAccessibilityInitIsComplete
+ * Signature: (JJ)V
+ */
+JNIEXPORT void JNICALL
+Java_com_sun_glass_ui_accessible_win_WinAccessibleRoot__1setAccessibilityInitIsComplete(
+    JNIEnv *env, jobject jThis, jlong ptr, jlong acc) {
+    LOG("In WinAccessibleRoot._setAccessibilityInitIsComplete\n");
+    LOG("  ptr: %p\n", ptr);
+    LOG("  acc: %p\n", acc);
+    // TODO: Are the threading macros needed, i.e. ENTER, LEAVE, ARG, PERFORM?
+    //       This was moved from GlassWindow.cpp where they were used.
+    ENTER_MAIN_THREAD()
+    {
+        if (hWnd) {
+            GlassWindow *pWindow = GlassWindow::FromHandle(hWnd);
+            if (pWindow) {
+                pWindow->SetAccessibilityInitIsComplete(reinterpret_cast<AccessibleRoot*>(acc));
+            }
+        }
+    }
+    jlong acc;
+    LEAVE_MAIN_THREAD_WITH_hWnd;
+    
+    ARG(acc) = acc;
+    PERFORM();
 }
 
 /**

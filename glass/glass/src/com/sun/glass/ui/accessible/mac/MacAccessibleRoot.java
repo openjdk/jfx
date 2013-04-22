@@ -24,7 +24,7 @@
  */
 package com.sun.glass.ui.accessible.mac;
 
-import com.sun.glass.ui.Application;
+import com.sun.glass.ui.Window;
 import com.sun.glass.ui.accessible.AccessibleLogger;
 import com.sun.glass.ui.accessible.AccessibleRoot;
 import com.sun.glass.ui.accessible.mac.MacAccessibleAttributes.MacAttribute;
@@ -42,50 +42,61 @@ import java.util.HashMap;
 import java.util.List;
 
 /**
- * Windows platform implementation class for Accessible.
+ * Mac platform implementation class for AccessibleRoot.
  */
-public class MacAccessibleRoot extends AccessibleRoot {
-
-    private long ptr;               // The native window handle
+public final class MacAccessibleRoot extends AccessibleRoot {
     
-    private static final HashMap<Integer, MacRole>MacRoleMap =
+    final private static HashMap<Integer, MacRole>MacRoleMap =
         new HashMap<Integer, MacRole>();
-    private static final HashMap<Integer, MacEventId>MacEventIdMap =
+    final private static HashMap<Integer, MacEventId>MacEventIdMap =
         new HashMap<Integer, MacEventId>();
-    private static final EnumMap<MacAttribute, Integer>FxaAttributeMap =
+    final private static EnumMap<MacAttribute, Integer>FxaAttributeMap =
         new EnumMap<MacAttribute, Integer>(MacAttribute.class);
     
     static {
         _initIDs();  // Initialize the method Ids
         
-        // PTB: Add more roles later - in alpha order
+        // TODO: Add more roles later - in alpha order
         MacRoleMap.put(ControlTypeIds.BUTTON, MacRole.BUTTON);
         MacRoleMap.put(ControlTypeIds.CHECK_BOX, MacRole.CHECK_BOX);
         MacRoleMap.put(ControlTypeIds.RADIO_BUTTON, MacRole.RADIO_BUTTON);
         
-        // PTB: Add more later - in alpha order
+        // TODO: Add more later - in alpha order
         MacEventIdMap.put(EventIds.AUTOMATION_FOCUS_CHANGED, MacEventId.FOCUSED_UI_ELEMENT_CHANGED);
         
-        // PTB: Add more attributes later - in alpha order
+        // TODO: Add more attributes later - in alpha order
         FxaAttributeMap.put(MacAttribute.ROLE, PropertyIds.CONTROL_TYPE);
     }
     
     native private static void _initIDs();
     native private long _createAccessible();
+    native private void _setAccessibilityInitIsComplete(long nativeWindow, long nativeAccessible);
     native private void _destroyAccessible(long nativeAccessible);
     native private void _fireEvent(long nativeAccessible, int eventID);
+    
+    private long nativeWindow;  // the native window object
+    private long nativeAccessible;  // the native accessible
     
     /**
      * Construct the platform dependent Java side of the native accessible.  This
      * will be used when firing events or when destroying the native accessible.
      * 
-     * @param node  the related FX node object.
-     * @param ptr   the native window handle.
+     * @param node      the related FX node object.
+     * @param window    the top level Glass Window object (not used in this implementation).
      */
-    public MacAccessibleRoot(Object node, long ptr) {
+    public MacAccessibleRoot(Object node, Window window) {
         super(node);
         nativeAccessible = _createAccessible();
-        this.ptr = ptr;
+        nativeWindow = window.getNativeWindow();
+    }
+    
+    /**
+     * Get the reference to the native accessible.
+     * 
+     * @return a reference to the native accessible.
+     */
+    long getNativeAccessible() {
+        return nativeAccessible;
     }
     
     ////////////////////////////////////
@@ -95,11 +106,21 @@ public class MacAccessibleRoot extends AccessibleRoot {
     ////////////////////////////////////
     
     /**
-     * Downcall to destroy the native accessible.
+     * Signal that initialization is complete.
      */
     @Override
-    final public void destroyAccessible() {
-        _destroyAccessible(nativeAccessible);
+    public void setAccessibilityInitIsComplete() {
+        _setAccessibilityInitIsComplete(nativeWindow, nativeAccessible);
+    }
+    
+    /**
+     * Destroy the native accessible
+     */
+    @Override
+    public void destroyAccessible() {
+        if (nativeAccessible != 0) {
+            _destroyAccessible(nativeAccessible);
+        }
     }
     
     /**
@@ -108,7 +129,7 @@ public class MacAccessibleRoot extends AccessibleRoot {
      * @param eventID   the FXA event ID.
      */
     @Override
-    final public void fireEvent(int eventID) {
+    public void fireEvent(int eventID) {
         AccessibleLogger.getLogger().fine("this: " + this);
         AccessibleLogger.getLogger().fine("nativeAccessible: " + Long.toHexString(nativeAccessible));
         AccessibleLogger.getLogger().fine("eventID: " + eventID);
@@ -193,7 +214,7 @@ public class MacAccessibleRoot extends AccessibleRoot {
             int i = 0;
             AccessibleLogger.getLogger().fine("returning");
             for (Long e : children)  {
-                AccessibleLogger.getLogger().fine("  child [" + i + "]: " + Long.toHexString(e));
+                AccessibleLogger.getLogger().fine("child [" + i + "]: " + Long.toHexString(e));
                 longs[i++] = e.longValue();
             }
             return longs;
@@ -207,7 +228,7 @@ public class MacAccessibleRoot extends AccessibleRoot {
      * @return the property value
      */
     @Override
-    final protected Object getPropertyValue(int attributeId) {
+    protected Object getPropertyValue(int attributeId) {
         AccessibleLogger.getLogger().fine("this: " + this);
         AccessibleLogger.getLogger().fine("attributeId: " + attributeId);
         Object value;
@@ -220,13 +241,21 @@ public class MacAccessibleRoot extends AccessibleRoot {
             value = null;  // todo
         } else {
             // catch if attribute not handled
-            // PTB: raise exception or just return null?
+            // TODO: raise exception or just return null?
             value = null;
             AccessibleLogger.getLogger().fine("Attribute not handled, returning null");
         }
         return value;
     }
     
+    /**
+     * Get the native provider at the specified point.
+     * 
+     * @param   x
+     * @param   y 
+     * 
+     * @return the native provider
+     */
     private long elementProviderFromPoint(double x, double y) { 
         AccessibleLogger.getLogger().fine("this: " + this);
         if (node instanceof AccessibleStageProvider) {

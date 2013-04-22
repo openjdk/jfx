@@ -30,7 +30,6 @@ import com.sun.glass.ui.Pixels;
 import com.sun.glass.ui.Screen;
 import com.sun.glass.ui.View;
 import com.sun.glass.ui.Window;
-import com.sun.glass.ui.accessible.AccessibleRoot;
 
 class GtkWindow extends Window {
 
@@ -216,12 +215,6 @@ class GtkWindow extends Window {
     }
 
     private native void getFrameExtents(long ptr, int[] extarr);
-
-    native protected void _accessibilityIsReady(long ptr, long nativeAccessible);
-    @Override
-    protected void _accessibilityInitIsComplete(long ptr, AccessibleRoot acc) {
-        throw new UnsupportedOperationException("Not supported yet.");
-    }
 
     @Override
     protected void _requestInput(long ptr, String text, int type, double width, double height, 

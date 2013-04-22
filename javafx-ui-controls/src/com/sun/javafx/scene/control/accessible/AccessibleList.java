@@ -25,30 +25,41 @@
 
 package com.sun.javafx.scene.control.accessible;
 
-import com.sun.javafx.accessible.utils.OrientationType;
-import com.sun.javafx.accessible.utils.ControlTypeIds;
-import com.sun.javafx.accessible.utils.PropertyIds;
-import java.util.Set;
-import javafx.scene.Node;
-import javafx.scene.control.Cell;
-import javafx.scene.control.ListView;
 import com.sun.javafx.accessible.AccessibleNode;
-import com.sun.javafx.accessible.providers.Accessible;
 import com.sun.javafx.accessible.providers.AccessibleProvider;
 import com.sun.javafx.accessible.providers.GridProvider;
 import com.sun.javafx.accessible.providers.SelectionProvider;
+import com.sun.javafx.accessible.utils.ControlTypeIds;
+import com.sun.javafx.accessible.utils.OrientationType;
+import com.sun.javafx.accessible.utils.PropertyIds;
+import javafx.scene.Node;
+import javafx.scene.control.Cell;
+import javafx.scene.control.ListView;
 
-public class AccessibleList extends AccessibleControl implements SelectionProvider,
-        GridProvider {
+public class AccessibleList extends AccessibleControl
+                            implements SelectionProvider, GridProvider {
 
     ListView listView;
-     public AccessibleList(ListView listView) {
+    
+    /**
+     * Constructor
+     * 
+     * @param listView the associated FX control
+     */
+    public AccessibleList(ListView listView) {
         super(listView);
         this.listView = listView ; 
        
     }
-     
-     @Override public Object getPropertyValue(int propertyId) {
+
+    /**
+     * Gets a property value
+     * 
+     * @param propertyId
+     * 
+     * @return the requested property value 
+     */
+    @Override public Object getPropertyValue(int propertyId) {
         Object retVal = null ;
         switch(propertyId){
             case PropertyIds.NAME:
@@ -93,14 +104,50 @@ public class AccessibleList extends AccessibleControl implements SelectionProvid
         }   
         return retVal;
     }
-     
+
+    /**
+     * Determine if the list supports multiple selection
+     * 
+     * @return whether or not the list supports multiple selection 
+     */
     @Override
     public boolean canSelectMultiple() {
         return false;
     }
 
+    /**
+     * Get the Glass objects that are currently selected
+     * 
+     * @return return the Glass objects that are currently selected
+     */
     @Override
     public Object[] getSelection() {
+        /**
+         * For now the following code is being commented out due to the use of getMethod
+         * as flagged by findbugs and reported in RT-28367.  When this code is finally
+         * implemented the issue raised by RT-28367 should be resolved in some manner
+         * other than throwing UnsupportedOperationException.
+         * 
+         * 
+        // Fix this later to allocate and fill the correctly sized array.
+        //      For now it will work for single selection lists.
+        Object[] selection = new Object[1];  // it'll be a Glass AccessibleBaseProvider
+        //  selection[1] = null;  // Is this needed?  Probably already null.
+        Object selected = listView.getSelectionModel().getSelectedItem();
+        try {
+            java.lang.reflect.Method method = selected.getClass().getMethod("impl_getAccessible");
+            AccessibleProvider provider = (AccessibleProvider)method.invoke(selected);
+        // if (selected instanceof Accessible) {
+           // AccessibleProvider provider = ((Accessible)selected).impl_getAccessible();
+            if (provider instanceof AccessibleNode) {
+                selection[1] = ((AccessibleNode)provider).getAccessibleElement();
+            }
+        } catch (Exception ex) {
+        }
+        return selection;
+         * 
+         *
+         */
         throw new UnsupportedOperationException();
     }
 
@@ -110,19 +157,62 @@ public class AccessibleList extends AccessibleControl implements SelectionProvid
     }
 
 
+    /**
+     * Get the number of columns in this list
+     * 
+     * @return the number of columns in this list 
+     */
     @Override
     public int getColumnCount() {
         return 1;
     }
 
+    /**
+     * Get the number of rows in this list
+     * 
+     * @return the number of rows in this list
+     */
     @Override
     public int getRowCount() {
         return listView.getItems().size();
     }
 
-    @Override
-    public AccessibleProvider getItem(int row, int col) {
+    /**
+     * Gets the accessible Glass object of the specified item in the list.
+     * 
+     * @param row
+     * @param col
+     * 
+     * @return the accessible Glass object of the specified item in the list
+     */
+    @Override   
+    public Object getItem(int row, int col) {
+        Object item = null;
         // get the cell and then its associated provider
+        /**
+         * For now the following code is being commented out due to the use of getMethod
+         * as flagged by findbugs and reported in RT-28367.  When this code is finally
+         * implemented the issue raised by RT-28367 should be resolved in some manner
+         * other than throwing UnsupportedOperationException.
+         * 
+         * 
+        // TODO fix this to return the appropriate item
+        listView.getItems().get(row);
+        for (Node cell : listView.lookupAll(".cell")) {
+            if (cell instanceof Cell) {
+                try {
+                    java.lang.reflect.Method method = cell.getClass().getMethod("impl_getAccessible");
+                    AccessibleProvider provider = (AccessibleProvider)method.invoke(cell);
+                    if (provider instanceof AccessibleNode) {
+                        item = ((AccessibleNode)provider).getAccessibleElement();
+                    }
+                } catch (Exception ex) {}
+            }
+        }
+        return item;
+         *
+         * 
+         */
         throw new UnsupportedOperationException();
     }
 
