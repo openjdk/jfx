@@ -103,7 +103,7 @@ public class TableColumnHeader extends Region {
         changeListenerHandler.registerChangeListener(sceneProperty(), "SCENE");
         
         if (column != null && skin != null) {
-            setSortPos(! column.isSortable() ? -1 : skin.getSortOrder().indexOf(column));
+            updateSortPosition();
             skin.getSortOrder().addListener(weakSortOrderListener);
             skin.getVisibleLeafColumns().addListener(weakVisibleLeafColumnsListener);
         }
@@ -160,7 +160,12 @@ public class TableColumnHeader extends Region {
         } else if ("TABLE_COLUMN_SORT_NODE".equals(p)) {
             updateSortGrid();
         } else if ("TABLE_COLUMN_SORTABLE".equals(p)) {
-            setSortPos(! column.isSortable() ? -1 : skin.getSortOrder().indexOf(column));
+            // we need to notify all headers that a sortable state has changed,
+            // in case the sort grid in other columns needs to be updated.
+            if (skin.getSortOrder().contains(getTableColumn())) {
+                NestedTableColumnHeader root = getTableHeaderRow().getRootHeader();
+                updateAllHeaders(root);
+            }
         } else if ("TABLE_COLUMN_TEXT".equals(p)) {
             label.setText(column.getText());
         } else if ("TABLE_COLUMN_GRAPHIC".equals(p)) {
@@ -170,7 +175,7 @@ public class TableColumnHeader extends Region {
     
     private ListChangeListener<TableColumnBase<?,?>> sortOrderListener = new ListChangeListener<TableColumnBase<?,?>>() {
         @Override public void onChanged(Change<? extends TableColumnBase<?,?>> c) {
-            setSortPos(! getTableColumn().isSortable() ? -1 : getTableViewSkin().getSortOrder().indexOf(getTableColumn()));
+            updateSortPosition();
         }
     };
     
@@ -265,9 +270,6 @@ public class TableColumnHeader extends Region {
     
     private double dragOffset;
 
-//    private final TableView table;
-//    protected TableView getTableView() { return table; }
-    
     private final TableViewSkinBase skin;
     protected TableViewSkinBase getTableViewSkin() {
         return skin;
@@ -349,6 +351,23 @@ public class TableColumnHeader extends Region {
      *                                                                         *
      **************************************************************************/   
     
+    // RT-29682: When the sortable property of a TableColumnBase changes this
+    // may impact other TableColumnHeaders, as they may need to change their
+    // sort order representation. Rather than install listeners across all 
+    // TableColumn in the sortOrder list for their sortable property, we simply
+    // update the sortPosition of all headers whenever the sortOrder property
+    // changes, assuming the column is within the sortOrder list.
+    private void updateAllHeaders(TableColumnHeader header) {
+        if (header instanceof NestedTableColumnHeader) {
+            List<TableColumnHeader> children = ((NestedTableColumnHeader)header).getColumnHeaders();
+            for (int i = 0; i < children.size(); i++) {
+                updateAllHeaders(children.get(i));
+            }
+        } else {
+            header.updateSortPosition();
+        }
+    }
+    
     private void updateStyleClass() {
         // For now we leave the 'column-header' style class intact so that the
         // appropriate border styles are shown, etc.
@@ -419,8 +438,8 @@ public class TableColumnHeader extends Region {
         }
     }
     
-    private void setSortPos(int sortPos) {
-        this.sortPos = sortPos;
+    private void updateSortPosition() {
+        this.sortPos = ! column.isSortable() ? -1 : getSortPosition(skin.getSortOrder(), column);
         updateSortGrid();
     }
     
@@ -446,7 +465,7 @@ public class TableColumnHeader extends Region {
         int visibleLeafIndex = skin.getVisibleLeafIndex(getTableColumn());
         if (visibleLeafIndex == -1) return;
         
-        final int sortColumnCount = getTableViewSkin().getSortOrder().size();
+        final int sortColumnCount = getSortColumnCount(getTableViewSkin().getSortOrder());
         boolean showSortOrderDots = sortPos <= 3 && sortColumnCount > 1;
         
         Node _sortArrow = null;
@@ -582,71 +601,7 @@ public class TableColumnHeader extends Region {
         pseudoClassStateChanged(PSEUDO_CLASS_LAST_VISIBLE, isLastVisibleColumn);
     }
 
-    public static void sortColumn(final ObservableList<TableColumnBase<?,?>> sortOrder, 
-            final TableColumnBase column, 
-            final boolean isSortingEnabled, 
-            final boolean isSortColumn, 
-            final boolean addColumn) {
-        if (! isSortingEnabled) return;
-        
-        // we only allow sorting on the leaf columns and columns
-        // that actually have comparators defined, and are sortable
-        if (column == null || column.getColumns().size() != 0 || column.getComparator() == null || !column.isSortable()) return;
-//        final int sortPos = getTable().getSortOrder().indexOf(column);
-//        final boolean isSortColumn = sortPos != -1;
-
-        // addColumn is true e.g. when the user is holding down Shift
-        if (addColumn) {
-            if (!isSortColumn) {
-                setSortType(column, TableColumn.SortType.ASCENDING);
-                sortOrder.add(column);
-            } else if (isAscending(column)) {
-                setSortType(column, TableColumn.SortType.DESCENDING);
-            } else {
-                int i = sortOrder.indexOf(column);
-                if (i != -1) {
-                    sortOrder.remove(i);
-                }
-            }
-        } else {
-            // the user has clicked on a column header - we should add this to
-            // the TableView sortOrder list if it isn't already there.
-            if (isSortColumn && sortOrder.size() == 1) {
-                // the column is already being sorted, and it's the only column.
-                // We therefore move through the 2nd or 3rd states:
-                //   1st click: sort ascending
-                //   2nd click: sort descending
-                //   3rd click: natural sorting (sorting is switched off) 
-                if (isAscending(column)) {
-                    setSortType(column, TableColumn.SortType.DESCENDING);
-                } else {
-                    // remove from sort
-                    sortOrder.remove(column);
-                }
-            } else if (isSortColumn) {
-                // the column is already being used to sort, so we toggle its
-                // sortAscending property, and also make the column become the
-                // primary sort column
-                if (isAscending(column)) {
-                    setSortType(column, TableColumn.SortType.DESCENDING);
-                } else if (isDescending(column)) {
-                    setSortType(column, TableColumn.SortType.ASCENDING);
-                }
-                
-                // to prevent multiple sorts, we make a copy of the sort order
-                // list, moving the column value from the current position to 
-                // its new position at the front of the list
-                List<TableColumnBase<?,?>> sortOrderCopy = new ArrayList<TableColumnBase<?,?>>(sortOrder);
-                sortOrderCopy.remove(column);
-                sortOrderCopy.add(0, column);
-                sortOrder.setAll(column);
-            } else {
-                // add to the sort order, in ascending form
-                setSortType(column, TableColumn.SortType.ASCENDING);
-                sortOrder.setAll(column);
-            }
-        }
-    }
+    
     
     
     
@@ -837,8 +792,121 @@ public class TableColumnHeader extends Region {
         getTableHeaderRow().setReorderingRegion(null);
         dragOffset = 0.0F;
     }
-
     
+    
+    
+    /***************************************************************************
+     *                                                                         *
+     * Static utility methods                                                  *
+     *                                                                         *
+     **************************************************************************/ 
+
+    // Because it is possible that some columns are in the sortOrder list but are
+    // not themselves sortable, we cannot just do sortOrderList.indexOf(column).
+    // Therefore, this method does the proper work required of iterating through
+    // and ignoring non-sortable (and null) columns in the sortOrder list.
+    private static int getSortPosition(final ObservableList<TableColumnBase> sortOrder, final TableColumnBase tc) {
+        if (tc == null) {
+            return -1;
+        }
+        
+        int pos = 0;
+        for (int i = 0; i < sortOrder.size(); i++) {
+            TableColumnBase _tc = sortOrder.get(i);
+            if (_tc == null || ! _tc.isSortable()) {
+                continue;
+            }
+            
+            if (tc.equals(_tc)) {
+                return pos;
+            }
+            
+            pos++;
+        }
+        return -1;
+    }
+    
+    // as with getSortPosition above, this method iterates through the sortOrder
+    // list ignoring the null and non-sortable columns, so that we get the correct
+    // number of columns in the sortOrder list.
+    private static int getSortColumnCount(final ObservableList<TableColumnBase> sortOrder) {
+        int pos = 0;
+        for (int i = 0; i < sortOrder.size(); i++) {
+            TableColumnBase _tc = sortOrder.get(i);
+            if (_tc == null || ! _tc.isSortable()) {
+                continue;
+            }
+            
+            pos++;
+        }
+        return pos;
+    }
+    
+    public static void sortColumn(final ObservableList<TableColumnBase<?,?>> sortOrder, 
+            final TableColumnBase column, 
+            final boolean isSortingEnabled, 
+            final boolean isSortColumn, 
+            final boolean addColumn) {
+        if (! isSortingEnabled) return;
+        
+        // we only allow sorting on the leaf columns and columns
+        // that actually have comparators defined, and are sortable
+        if (column == null || column.getColumns().size() != 0 || column.getComparator() == null || !column.isSortable()) return;
+//        final int sortPos = getTable().getSortOrder().indexOf(column);
+//        final boolean isSortColumn = sortPos != -1;
+
+        // addColumn is true e.g. when the user is holding down Shift
+        if (addColumn) {
+            if (!isSortColumn) {
+                setSortType(column, TableColumn.SortType.ASCENDING);
+                sortOrder.add(column);
+            } else if (isAscending(column)) {
+                setSortType(column, TableColumn.SortType.DESCENDING);
+            } else {
+                int i = sortOrder.indexOf(column);
+                if (i != -1) {
+                    sortOrder.remove(i);
+                }
+            }
+        } else {
+            // the user has clicked on a column header - we should add this to
+            // the TableView sortOrder list if it isn't already there.
+            if (isSortColumn && sortOrder.size() == 1) {
+                // the column is already being sorted, and it's the only column.
+                // We therefore move through the 2nd or 3rd states:
+                //   1st click: sort ascending
+                //   2nd click: sort descending
+                //   3rd click: natural sorting (sorting is switched off) 
+                if (isAscending(column)) {
+                    setSortType(column, TableColumn.SortType.DESCENDING);
+                } else {
+                    // remove from sort
+                    sortOrder.remove(column);
+                }
+            } else if (isSortColumn) {
+                // the column is already being used to sort, so we toggle its
+                // sortAscending property, and also make the column become the
+                // primary sort column
+                if (isAscending(column)) {
+                    setSortType(column, TableColumn.SortType.DESCENDING);
+                } else if (isDescending(column)) {
+                    setSortType(column, TableColumn.SortType.ASCENDING);
+                }
+                
+                // to prevent multiple sorts, we make a copy of the sort order
+                // list, moving the column value from the current position to 
+                // its new position at the front of the list
+                List<TableColumnBase<?,?>> sortOrderCopy = new ArrayList<TableColumnBase<?,?>>(sortOrder);
+                sortOrderCopy.remove(column);
+                sortOrderCopy.add(0, column);
+                sortOrder.setAll(column);
+            } else {
+                // add to the sort order, in ascending form
+                setSortType(column, TableColumn.SortType.ASCENDING);
+                sortOrder.setAll(column);
+            }
+        }
+    }
 
     /***************************************************************************
      *                                                                         *

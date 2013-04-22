@@ -103,6 +103,14 @@ public class SeparatorSkin extends BehaviorSkinBase<Separator, BehaviorBase<Sepa
         // Now that the line has been sized, simply position it
         positionInArea(line, x, y, w, h, 0, sep.getHalignment(), sep.getValignment());
     }
+    
+    @Override protected double computeMinWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
+        return computePrefWidth(height, topInset, rightInset, bottomInset, leftInset);
+    }
+    
+    @Override protected double computeMinHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
+        return computePrefHeight(width, topInset, rightInset, bottomInset, leftInset);
+    }
 
     @Override protected double computePrefWidth(double h, double topInset, double rightInset, double bottomInset, double leftInset) {
         final Separator sep = getSkinnable();

@@ -207,7 +207,18 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
      * @return A double representing the minimum width of this Skin.
      */
     protected double computeMinWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
-        return control.prefWidth(height);
+        double minX = 0;
+        double maxX = 0;
+        for (int i = 0; i < children.size(); i++) {
+            Node node = children.get(i);
+            if (node.isManaged()) {
+                final double x = node.getLayoutBounds().getMinX() + node.getLayoutX();
+                minX = Math.min(minX, x);
+                maxX = Math.max(maxX, x + node.minWidth(-1));
+            }
+        }
+        double minWidth = maxX - minX;
+        return leftInset + minWidth + rightInset;
     }
 
     /**
@@ -223,7 +234,18 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
      * @return A double representing the minimum height of this Skin.
      */
     protected double computeMinHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
-        return control.prefHeight(width);
+        double minY = 0;
+        double maxY = 0;
+        for (int i = 0; i < children.size(); i++) {
+            Node node = children.get(i);
+            if (node.isManaged()) {
+                final double y = node.getLayoutBounds().getMinY() + node.getLayoutY();
+                minY = Math.min(minY, y);
+                maxY = Math.max(maxY, y + node.minHeight(-1));
+            }
+        }
+        double minHeight = maxY - minY;
+        return topInset + minHeight + bottomInset;
     }
 
     /**
