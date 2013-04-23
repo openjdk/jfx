@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="prism-es2-common" default="jar" basedir=".">
+
+  <property name="cpp.dir" value="../prism-es2-native"/>
+  <property name="native.dist.dir" value="../prism-es2-native/dist${cross.name.suffix}"/>
+  <property name="native.build.dir" value="../prism-es2-native/build${cross.name.suffix}"/>
+  <property name="native.makefile" value="Makefile"/>
+  <property name="prism-es2.classes.dir" value="../prism-es2/build/classes"/>
+  <property name="prism-common.classes.dir" value="../prism-common/build/classes"/>
+  <property name="nativelib.suffix.macosx" value=".dylib"/>
+
+  <target name="get-libname-macosx" if="isMacOSX">
+    <property name="native.lib.file" value="libprism-es2${nativelib.suffix.macosx}"/>
+  </target>
+  <target name="get-libname-android" if="isAndroid">
+    <property name="native.lib.file" value="libprism-es2-eglfb.so"/>
+  </target>
+  <target name="get-libname-ios" if="isIOS">
+    <property name="native.lib.file" value="libprism-es2.a"/>
+  </target>
+  <target name="get-libname-linux" if="isLinux">
+    <property name="native.lib.file" value="libprism-es2.so"/>
+  </target>
+  <target name="get-libname-solaris" if="isSolaris">
+    <property name="native.lib.file" value="libprism-es2.so"/>
+  </target>
+  <target name="get-libname-windows" if="isWindows">
+    <property name="native.lib.file" value="prism-es2.dll"/>
+  </target>
+  <target name="get-libname" depends="get-libname-macosx,get-libname-android,get-libname-ios,get-libname-linux,get-libname-solaris,get-libname-windows"/>
+
+  <target name="-pre-init" depends="get-libname">
+    <mkdir dir="build/gensrc"/>
+  </target>
+
+  <target name="check-native" unless="isLinux">
+    <uptodate property="native.uptodate" targetfile="${native.dist.dir}/${native.lib.file}" >
+      <srcfiles dir="${cpp.dir}/src" includes="**/*.c"/>
+      <srcfiles dir="${cpp.dir}/src" includes="**/*.h"/>
+      <!-- Platform specific source files -->
+      <srcfiles dir="${cpp.dir}/src/macosx" includes="*.c"/>
+      <srcfiles dir="${cpp.dir}/src/macosx" includes="*.m"/>
+      <srcfiles dir="${cpp.dir}/src/ios" includes="*.c"/>
+      <srcfiles dir="${cpp.dir}/src/ios" includes="*.m"/>
+      <srcfiles dir="${cpp.dir}/src/windows" includes="*.c"/>
+      <srcfiles dir="${cpp.dir}/src/x11" includes="*.c"/>
+    </uptodate>
+  </target>
+
+  <target name="compile-native" depends="check-native" unless="native.uptodate">
+    <ant antfile="build-${os_name}.xml" target="compile-native" inheritAll="true">
+        <propertyset id="jfx.build.ant.properties"/>
+    </ant>
+  </target>
+
+  <target name="jar" depends="init">
+        <build-project>
+            <addedsrcdirs>
+                <pathelement location="build/gensrc"/>
+            </addedsrcdirs>
+            <addedsrcfiles>
+                <fileset dir="build/gensrc" excludes="${build.classes.excludes}"/>
+            </addedsrcfiles>
+        </build-project>
+  </target>
+
+  <target name="build-native" depends="init">
+        <antcall target="compile-native"/>
+        <jar destfile="${dist.dir}/prism-es2-native.jar"
+           basedir="${native.dist.dir}"
+           includes="${native.lib.file}"/>
+  </target>
+
+  <target name="clean">
+    <clean-project/>
+    <ant antfile="build-${os_name}.xml" target="clean-native" inheritAll="true">
+        <propertyset id="jfx.build.ant.properties"/>
+    </ant>
+  </target>
+</project>

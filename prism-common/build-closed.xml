@@ -11,7 +11,7 @@
         ${rt.dist.root.dir}/javafx-logging/dist/javafx-logging.jar:
         ${rt.dist.root.dir}/pisces/dist/pisces.jar:
         ${rt.dist.root.dir}/javafx-ui-common/dist/javafx-ui-common.jar:
-        ${runtime.dist.root.dir}/javafx-iio/dist/javafx-iio.jar:
+        ${rt.dist.root.dir}/javafx-iio/dist/javafx-iio.jar:
         ${rt.dist.root.dir}/prism-util/dist/prism-util.jar:
         ${rt.dist.root.dir}/glass/dist/lib/glass.jar" />
     <property name="javac.classpath" refid="javac.closed.classpath.path"/>

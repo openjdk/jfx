@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="prism-es2" default="all" basedir=".">
+
+  <condition property="ios.version" value="5.1">
+    <not>
+      <isset property="${ios.version}"/>
+    </not>
+  </condition>
+
+  <target name="compile-native">
+    <exec executable="make" dir="../prism-es2-native" failonerror="true">
+      <arg value="DIST_DIR=${native.dist.dir}"/>
+      <arg value="BUILD_DIR=${native.build.dir}"/>
+      <arg value="PRISM-ES2_CP=${prism-es2.classes.dir}"/>
+      <arg value="JDK_HOME=${platform.home}"/>
+      <arg value="IS_IOS=true"/>
+      <arg value="IOS_ARCH=armv7"/>
+      <arg value="IOS_PLATFORM=iPhoneOS"/>
+      <arg value="IOS_VERSION=${ios.version}"/>
+      <arg value="CONF=${build.conf}"/>
+      <arg value="all"/>
+    </exec>
+
+    <exec executable="make" dir="../prism-es2-native" failonerror="true">
+      <arg value="DIST_DIR=${native.dist.dir}"/>
+      <arg value="BUILD_DIR=${native.build.dir}"/>
+      <arg value="PRISM-ES2_CP=${prism-es2.classes.dir}"/>
+      <arg value="JDK_HOME=${platform.home}"/>
+      <arg value="IS_IOS=true"/>
+      <arg value="IOS_ARCH=i386"/>
+      <arg value="IOS_PLATFORM=iPhoneSimulator"/>
+      <arg value="IOS_VERSION=${ios.version}"/>
+      <arg value="CONF=${build.conf}"/>
+      <arg value="all"/>
+    </exec>
+
+    <exec executable="lipo" dir="../prism-es2-native" failonerror="true">
+        <arg value="-create"/>
+        <arg value="-output"/>
+        <arg value="${native.dist.dir}/libprism-es2.a"/>
+        <arg value="${native.dist.dir}/libprism-es2-armv7.a"/>
+        <arg value="${native.dist.dir}/libprism-es2-i386.a"/>
+    </exec>
+  </target>
+
+  <target name="clean-native">
+    <exec executable="make" dir="../prism-es2-native" failonerror="true">
+      <arg value="DIST_DIR=${native.dist.dir}"/>
+      <arg value="BUILD_DIR=${native.build.dir}"/>
+      <arg value="clean"/>
+    </exec>
+  </target>
+
+</project>

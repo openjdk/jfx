@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="javafx-iio" default="all" basedir=".">
+
+  <target name="compile-native">
+    <exec executable="gnumake" dir="../javafx-iio-native" failonerror="true">
+      <arg value="JDK_HOME=${platform.home}"/>
+      <arg value="DIST_DIR=${native.dist.dir}"/>
+      <arg value="BUILD_DIR=${native.build.dir}"/>
+      <arg value="JFXIIO_CP=${jfxiio.classes.dir}"/>
+      <arg value="all"/>
+    </exec>
+  </target>
+
+  <target name="clean-native">
+    <exec executable="gnumake" dir="../javafx-iio-native" failonerror="true">
+      <arg value="DIST_DIR=${native.dist.dir}"/>
+      <arg value="BUILD_DIR=${native.build.dir}"/>
+      <arg value="clean"/>
+    </exec>
+  </target>
+
+</project>

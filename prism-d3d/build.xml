@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="prism-d3d" default="jar" basedir=".">
+    <description>Builds, tests, and runs the OpenJFX prism-d3d project.</description>
+
+    <import file="../build-defs.xml"/>
+    <import file="build-common.xml"/>
+
+    <target name="jar" depends="prism-d3d-common.jar"/>
+    <target name="clean" depends="prism-d3d-common.clean"/>
+
+</project>

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="prism-es2-eglx11" default="jar" basedir=".">
+    <description>Builds, tests, and jars the closed version of the prism-es2-eglx11 project.</description>
+
+    <property name="rt.dist.root.dir" value="../../rt" />
+    <property name="runtime.dist.root.dir" value="../../rt-closed" />
+    <path id="javac.closed.classpath.path" path="
+        ${rt.dist.root.dir}/prism-common/dist/prism-common.jar:
+        ${rt.dist.root.dir}/prism-es2/dist/prism-es2.jar" />
+    <property name="javac.classpath" refid="javac.closed.classpath.path"/>
+
+    <import file="../build-defs.xml"/>
+    <import file="build-common.xml"/>
+</project>

@@ -51,9 +51,37 @@
             </or>
         </condition>
         
-        <!-- only build decora-d3d if on Windows -->
+        <!-- Build decora-d3d and prism-d3d if on Windows -->
         <condition property="include.d3d">
             <istrue value="${isWindows}"/>
+        </condition>
+
+      <condition property="include.eglx11">
+        <and>
+          <istrue value="${cross.build.EGL.X11}"/>
+        </and>
+      </condition>
+
+      <condition property="include.eglfb">
+        <and>
+          <istrue value="${cross.build.EGL.FB}"/>
+        </and>
+      </condition>
+
+        <!-- Build prism-es2 and decora-ogl on all desktop platforms
+             and on embedded platforms that have OpenGL ES -->
+        <condition property="include.ogl">
+          <or>
+            <not>
+              <isset property="cross.platform"/>
+            </not>
+            <or>
+              <isset property="include.eglfb"/>
+              <isset property="include.eglx11"/>
+              <isset property="isIOS"/>
+              <isset property="isAndroid"/>
+            </or>
+          </or>
         </condition>
 
         <condition property="sse.native.lib.file"
@@ -95,7 +123,7 @@
         <ant antfile="${rt.root.dir}/javafx-ui-charts/build.xml" target="jar" inheritAll="false"/>
         <ant antfile="${rt.root.dir}/decora-prism/build.xml" target="jar" inheritAll="false"/>
         <antcall target="jar-decora-d3d"/>
-        <ant antfile="${rt.root.dir}/decora-es2/build.xml" target="jar" inheritAll="false"/>
+        <antcall target="jar-decora-es2"/>
         <ant antfile="${rt.root.dir}/decora-jsw/build.xml" target="jar" inheritAll="false"/>
         <ant antfile="${rt.root.dir}/decora-prism-sw/build.xml" target="jar" inheritAll="false"/>
         <ant antfile="${rt.root.dir}/decora-prism-ps/build.xml" target="jar" inheritAll="false"/>
@@ -106,6 +134,8 @@
         <ant antfile="${rt.root.dir}/prism-ps/build.xml" target="jar" inheritAll="false"/>
         <ant antfile="${rt.root.dir}/prism-null/build.xml" target="jar" inheritAll="false"/>
         <antcall target="jar-prism-sw"/>
+        <antcall target="jar-prism-d3d"/>
+        <antcall target="jar-prism-es2-all"/>
         <ant antfile="${rt.root.dir}/javafx-beans-dt/build.xml" target="jar" inheritAll="false"/>
         <ant antfile="${rt.root.dir}/javafx-fxml/build.xml" target="jar" inheritAll="false"/>
         <antcall target="jar-javafx-embed-swt"/>
@@ -115,6 +145,10 @@
         <ant antfile="${rt.root.dir}/decora-d3d/build.xml" target="jar" inheritAll="false"/>
     </target>
 
+    <target name="jar-decora-es2" if="include.ogl">
+        <ant antfile="${rt.root.dir}/decora-es2/build.xml" target="jar" inheritAll="false"/>
+    </target>
+
     <target name="jar-decora-sse" if="include.sse">
         <ant antfile="${rt.root.dir}/decora-sse/build.xml" target="jar" inheritAll="false"/>
     </target>
@@ -122,6 +156,49 @@
     <target name="jar-prism-sw" if="include.prism.sw">
         <ant antfile="${rt.root.dir}/prism-sw/build.xml" target="jar" inheritAll="false"/>
     </target>
+
+    <target name="jar-prism-d3d" if="include.d3d">
+        <ant antfile="${rt.root.dir}/prism-d3d/build.xml" target="jar" inheritAll="false"/>
+    </target>
+
+    <target name="jar-prism-es2-all"
+            depends="jar-prism-es2, jar-prism-es2-mac,
+                     jar-prism-es2-ios, jar-prism-es2-eglx11,
+                     jar-prism-es2-eglfb, jar-prism-es2-win,
+                     jar-prism-es2-x11, build-prism-es2-native"/>
+
+    <target name="jar-prism-es2" if="include.ogl">
+        <ant antfile="${rt.root.dir}/prism-es2/build.xml" target="jar" inheritAll="false"/>
+    </target>
+
+    <target name="build-prism-es2-native" if="include.ogl">
+      <ant antfile="${rt.root.dir}/prism-es2/build.xml" target="build-native" inheritAll="false"/>
+    </target>
+
+    <target name="jar-prism-es2-mac" if="isMacOSX">
+        <ant antfile="${rt.root.dir}/prism-es2-mac/build.xml" target="jar" inheritAll="false"/>
+    </target>
+
+    <target name="jar-prism-es2-ios" if="isIOS">
+        <ant antfile="${rt.root.dir}/prism-es2-ios/build.xml" target="jar" inheritAll="false"/>
+    </target>
+
+    <target name="jar-prism-es2-eglfb" if="include.eglfb">
+        <ant antfile="${rt.root.dir}/prism-es2-eglfb/build.xml" target="jar" inheritAll="false"/>
+    </target>
+
+    <target name="jar-prism-es2-eglx11" if="include.eglx11">
+        <ant antfile="${rt.root.dir}/prism-es2-eglx11/build.xml" target="jar" inheritAll="false"/>
+    </target>
+
+    <target name="jar-prism-es2-win" if="isWindows">
+        <ant antfile="${rt.root.dir}/prism-es2-win/build.xml" target="jar" inheritAll="false"/>
+    </target>
+
+    <target name="jar-prism-es2-x11" if="isLinux">
+        <ant antfile="${rt.root.dir}/prism-es2-x11/build.xml" target="jar" inheritAll="false"/>
+    </target>
+
 
     <target name="jar-javafx-embed-swt" if="swt.available">
         <ant antfile="${rt.root.dir}/javafx-embed-swt/build.xml" target="jar" inheritAll="false"/>
@@ -177,7 +254,7 @@
         <ant antfile="${rt.root.dir}/javafx-fxml/build.xml" target="clean" inheritAll="false"/>
         <ant antfile="${rt.root.dir}/javafx-embed-swing/build.xml" target="clean" inheritAll="false"/>
         <antcall target="clean-decora-d3d"/>
-        <ant antfile="${rt.root.dir}/decora-es2/build.xml" target="clean" inheritAll="false"/>
+        <antcall target="clean-decora-es2"/>
         <ant antfile="${rt.root.dir}/decora-jsw/build.xml" target="clean" inheritAll="false"/>
         <ant antfile="${rt.root.dir}/decora-prism-sw/build.xml" target="clean" inheritAll="false"/>
         <ant antfile="${rt.root.dir}/decora-prism-ps/build.xml" target="clean" inheritAll="false"/>
@@ -188,11 +265,17 @@
         <ant antfile="${rt.root.dir}/prism-ps/build.xml" target="clean" inheritAll="false"/>
         <ant antfile="${rt.root.dir}/prism-null/build.xml" target="clean" inheritAll="false"/>
         <antcall target="clean-prism-sw"/>
+        <antcall target="clean-prism-d3d"/>
+        <antcall target="clean-prism-es2-all"/>
         <antcall target="clean-javafx-embed-swt"/>
     </target>
 
     <target name="clean-decora-d3d" if="include.d3d">
         <ant antfile="${rt.root.dir}/decora-d3d/build.xml" target="clean" inheritAll="false"/>
+    </target>
+
+    <target name="clean-decora-es2" if="include.ogl">
+        <ant antfile="${rt.root.dir}/decora-es2/build.xml" target="clean" inheritAll="false"/>
     </target>
 
     <target name="clean-decora-sse" if="include.sse">
@@ -201,6 +284,44 @@
 
     <target name="clean-prism-sw" if="include.prism.sw">
         <ant antfile="${rt.root.dir}/prism-sw/build.xml" target="clean" inheritAll="false"/>
+    </target>
+
+    <target name="clean-prism-d3d" if="include.d3d">
+        <ant antfile="${rt.root.dir}/prism-d3d/build.xml" target="clean" inheritAll="false"/>
+    </target>
+
+    <target name="clean-prism-es2-all"
+            depends="clean-prism-es2, clean-prism-es2-mac,
+                     clean-prism-es2-ios, clean-prism-es2-eglx11,
+                     clean-prism-es2-eglfb, clean-prism-es2-win,
+                     clean-prism-es2-x11"/>
+
+    <target name="clean-prism-es2" if="include.ogl">
+        <ant antfile="${rt.root.dir}/prism-es2/build.xml" target="clean" inheritAll="false"/>
+    </target>
+
+    <target name="clean-prism-es2-mac" if="isMacOSX">
+        <ant antfile="${rt.root.dir}/prism-es2-mac/build.xml" target="clean" inheritAll="false"/>
+    </target>
+
+    <target name="clean-prism-es2-ios" if="isIOS">
+        <ant antfile="${rt.root.dir}/prism-es2-ios/build.xml" target="clean" inheritAll="false"/>
+    </target>
+
+    <target name="clean-prism-es2-eglfb" if="include.eglfb">
+        <ant antfile="${rt.root.dir}/prism-es2-eglfb/build.xml" target="clean" inheritAll="false"/>
+    </target>
+
+    <target name="clean-prism-es2-eglx11" if="include.eglx11">
+        <ant antfile="${rt.root.dir}/prism-es2-eglx11/build.xml" target="clean" inheritAll="false"/>
+    </target>
+
+    <target name="clean-prism-es2-win" if="isWindows">
+        <ant antfile="${rt.root.dir}/prism-es2-win/build.xml" target="clean" inheritAll="false"/>
+    </target>
+
+    <target name="clean-prism-es2-x11" if="isLinux">
+        <ant antfile="${rt.root.dir}/prism-es2-x11/build.xml" target="clean" inheritAll="false"/>
     </target>
 
     <target name="clean-javafx-embed-swt" if="swt.available">
