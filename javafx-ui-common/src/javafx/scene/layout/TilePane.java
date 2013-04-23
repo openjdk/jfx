@@ -913,11 +913,8 @@ public class TilePane extends Pane {
                           top + computeYOffset(insideHeight,
                                             computeContentHeight(lastColumnRemainder, getTileHeight()),
                                             vpos) : columnY;
+        double baselineOffset = getMaxBaselineOffset(managed);
 
-        double baselineOffset = vpos == VPos.BASELINE? getMaxBaselineOffset(managed)
-                       // baseline isn't useful if nodeVpos isn't BASELINE
-                       : getTileHeight()/2;
-        
         int r = 0;
         int c = 0;
         for (int i = 0, size = managed.size(); i < size; i++) {

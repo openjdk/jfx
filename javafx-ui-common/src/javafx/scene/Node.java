@@ -2786,10 +2786,10 @@ public abstract class Node implements EventTarget, Styleable {
                 h = boundedSize(prefHeight(-1), minHeight(-1), maxHeight(-1));
             } else if (contentBias == Orientation.HORIZONTAL) {
                 w = boundedSize(prefWidth(-1), minWidth(-1), maxWidth(-1));
-                h = prefHeight(w);
+                h = boundedSize(prefHeight(w), minHeight(w), maxHeight(w));
             } else { // bias == VERTICAL
                 h = boundedSize(prefHeight(-1), minHeight(-1), maxHeight(-1));
-                w = prefWidth(h);
+                w = boundedSize(prefWidth(h), minWidth(h), maxWidth(h));
             }
             resize(w,h);
         }
