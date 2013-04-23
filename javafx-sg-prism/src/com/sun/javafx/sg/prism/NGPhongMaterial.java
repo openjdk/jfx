@@ -66,6 +66,7 @@ public class NGPhongMaterial implements PGPhongMaterial {
         return img != null ? f.getCachedTexture(img, Texture.WrapMode.CLAMP_TO_EDGE) : null;
     }
 
+    private Image specular;
     private void validate(ResourceFactory f) {
 
         if (diffuseColorDirty) {
@@ -92,7 +93,7 @@ public class NGPhongMaterial implements PGPhongMaterial {
             selfIlluminationMapDirty = false;
         }
         if (specularMapDirty || specularColorDirty || specularPowerDirty) {
-            Image specular = specularMap;
+            specular = specularMap;
             if (specular == null && specularColor != null) {
                 int ia = (int) (255.0 * specularPower);
                 int ir = (int) (255.0 * specularColor.getRed());
