@@ -383,17 +383,6 @@ public abstract class Application {
     }
 
     private static String userAgentStylesheet = null;
-    static {
-        userAgentStylesheet = AccessController.doPrivileged(
-            new PrivilegedAction<String>() {
-                public String run() {
-                    return System.getProperty("javafx.application.userAgentStylesheet",null);
-                }
-            });
-        if (userAgentStylesheet != null) {
-            StyleManager.getInstance().setDefaultUserAgentStylesheet(null, userAgentStylesheet);
-        }
-    }
 
     /**
      * Get the user agent stylesheet used by the whole application. This is
