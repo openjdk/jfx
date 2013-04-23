@@ -41,6 +41,7 @@ import com.sun.javafx.accessible.providers.AccessibleStageProvider;
 import com.sun.javafx.accessible.utils.NavigateDirection;
 import com.sun.javafx.accessible.utils.PropertyIds;
 import com.sun.javafx.accessible.utils.Rect;
+import com.sun.javafx.stage.WindowHelper;
 import sun.util.logging.PlatformLogger;
 /**
  *
@@ -308,9 +309,9 @@ public class AccessibleStage implements AccessibleProvider,
         // on the plaform.
         // Should the y value include the scene offset (the offset below the title bar).
         double x =
-            Screen.getPrimary().getBounds().getMinX() + stage.getX() + scene.getX();
+            Screen.getPrimary().getBounds().getMinX() + WindowHelper.getScreenX(stage) + scene.getX();
         double y =
-            Screen.getPrimary().getBounds().getMinY() + stage.getY() + scene.getY();      
+            Screen.getPrimary().getBounds().getMinY() + WindowHelper.getScreenY(stage) + scene.getY();
         return new Rect(x, y, scene.getWidth(), scene.getHeight());
     }
     

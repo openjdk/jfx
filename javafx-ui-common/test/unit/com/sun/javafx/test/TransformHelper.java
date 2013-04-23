@@ -29,6 +29,7 @@ import javafx.scene.transform.Transform;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import com.sun.javafx.geom.transform.Affine3D;
+import com.sun.javafx.geom.transform.GeneralTransform3D;
 import com.sun.javafx.scene.transform.TransformUtils;
 import javafx.event.EventHandler;
 import javafx.geometry.Point3D;
@@ -125,6 +126,17 @@ public final class TransformHelper {
         assertEquals(message, reference.getMzy(), matrix.getMzy(), 0.00001);
         assertEquals(message, reference.getMzz(), matrix.getMzz(), 0.00001);
         assertEquals(message, reference.getTz(), matrix.getTz(), 0.00001);
+    }
+
+    /**
+     * Asserts the {@code matrix} elements equal to the expected values
+     * specified by {@code reference}
+     */
+    public static void assertMatrix(GeneralTransform3D matrix,
+            GeneralTransform3D reference) {
+        for (int i = 0; i < 16; i++) {
+            assertEquals(reference.get(i), matrix.get(i), 0.00001);
+        }
     }
 
     /**

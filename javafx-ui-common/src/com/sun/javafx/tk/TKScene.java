@@ -25,7 +25,6 @@
 
 package com.sun.javafx.tk;
 
-import com.sun.javafx.geom.PickRay;
 import com.sun.javafx.sg.PGCamera;
 import com.sun.javafx.sg.PGNode;
 import java.security.AccessControlContext;
@@ -35,6 +34,11 @@ import java.security.AccessControlContext;
  *
  */
 public interface TKScene {
+
+    /**
+      * This method is called from Scene, when it is being destroyed.
+      */
+    public void dispose();
 
     /**
      * This method is used to set security context of the Scene.
@@ -57,15 +61,11 @@ public interface TKScene {
     public void setTKSceneListener(TKSceneListener listener);
     public void setTKScenePaintListener(final TKScenePaintListener listener);
 
-    public void setScene(Object scene);
-
     public void setRoot(PGNode root);
 
     public void markDirty();
 
     public void setCamera(PGCamera camera);
-
-    public PickRay computePickRay(float x, float y, PickRay pickRay);
 
     Object[] getLights();
     public void setLights(Object lights[]);
@@ -78,8 +78,6 @@ public interface TKScene {
     public void setFillPaint(Object fillPaint);
 
     public void setCursor(Object cursor);
-
-    public void requestFocus();
 
     public void enableInputMethodEvents(boolean enable);
 

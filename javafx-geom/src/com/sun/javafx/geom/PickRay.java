@@ -25,7 +25,9 @@
 
 package com.sun.javafx.geom;
 
+import com.sun.javafx.geom.transform.Affine3D;
 import com.sun.javafx.geom.transform.BaseTransform;
+import com.sun.javafx.geom.transform.GeneralTransform3D;
 import com.sun.javafx.geom.transform.NoninvertibleTransformException;
 
 /**
@@ -53,6 +55,64 @@ public class PickRay {
         setOrigin(origin);
         setDirection(direction);
         this.parallel = parallel;
+    }
+
+    public static PickRay computePerspectivePickRay(
+            double x, double y, boolean fixedEye,
+            double viewWidth, double viewHeight,
+            double fieldOfView, boolean verticalFieldOfView,
+            Affine3D cameraTransform,
+            PickRay pickRay) {
+
+        if (pickRay == null) {
+            pickRay = new PickRay();
+        }
+
+        Vec3d direction = pickRay.getDirectionNoClone();
+        double halfViewWidth = viewWidth / 2.0;
+        double halfViewHeight = viewHeight / 2.0;
+        double halfViewDim = verticalFieldOfView? halfViewHeight: halfViewWidth;
+        // Distance to projection plane from eye
+        double distanceZ = halfViewDim / Math.tan(Math.toRadians(fieldOfView / 2.0));
+
+        direction.x = x - halfViewWidth;
+        direction.y = y - halfViewHeight;
+        direction.z = distanceZ;
+
+        Vec3d eye = pickRay.getOriginNoClone();
+
+        if (fixedEye) {
+            eye.set(0.0, 0.0, -1.0);
+        } else {
+            // Projection plane is at Z = 0, implies that eye must be located at:
+            eye.set(halfViewWidth, halfViewHeight, -distanceZ);
+        }
+
+        // set eye at center of viewport and move back so that projection plane
+        // is at Z = 0
+        if (pickRay.isParallel()) { pickRay.set(eye, direction); }
+
+        pickRay.transform(cameraTransform);
+
+        return pickRay;
+    }
+
+    public static PickRay computeParallelPickRay(
+            double x, double y,
+            Affine3D cameraTransform,
+            PickRay pickRay) {
+
+        if (pickRay == null) {
+            pickRay = new PickRay();
+        }
+
+        pickRay.set(x, y);
+
+        if (cameraTransform != null) {
+            pickRay.transform(cameraTransform);
+        }
+
+        return pickRay;
     }
 
     public final void set(Vec3d origin, Vec3d direction) {

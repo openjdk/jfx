@@ -44,7 +44,7 @@ public class Logging {
      */
     public static final PlatformLogger getLayoutLogger() {
         if (layoutLogger == null) {
-            layoutLogger = com.sun.javafx.tk.Toolkit.getToolkit().getLogger("layout");
+            layoutLogger = PlatformLogger.getLogger("layout");
         }
         return layoutLogger;
     }
@@ -61,7 +61,7 @@ public class Logging {
      */
     public static final PlatformLogger getFocusLogger() {
         if (focusLogger == null) {
-            focusLogger = com.sun.javafx.tk.Toolkit.getToolkit().getLogger("focus");
+            focusLogger = PlatformLogger.getLogger("focus");
         }
         return focusLogger;
     }
@@ -78,7 +78,7 @@ public class Logging {
      */
     public static final PlatformLogger getInputLogger() {
         if (inputLogger == null) {
-            inputLogger = com.sun.javafx.tk.Toolkit.getToolkit().getLogger("input");
+            inputLogger = PlatformLogger.getLogger("input");
         }
         return inputLogger;
     }
@@ -95,7 +95,7 @@ public class Logging {
      */
     public static final PlatformLogger getCSSLogger() {
         if (cssLogger == null) {
-            cssLogger = com.sun.javafx.tk.Toolkit.getToolkit().getLogger("css");
+            cssLogger = PlatformLogger.getLogger("css");
         }
         return cssLogger;
     }
@@ -112,7 +112,7 @@ public class Logging {
      */
     public static final PlatformLogger getJavaFXLogger() {
         if (javafxLogger == null) {
-            javafxLogger = com.sun.javafx.tk.Toolkit.getToolkit().getLogger("javafx");
+            javafxLogger = PlatformLogger.getLogger("javafx");
         }
         return javafxLogger;
     }
@@ -129,7 +129,7 @@ public class Logging {
      */
     public static final PlatformLogger getAccessibilityLogger() {
         if (accessibilityLogger == null) {
-            accessibilityLogger = com.sun.javafx.tk.Toolkit.getToolkit().getLogger("accessibility");
+            accessibilityLogger = PlatformLogger.getLogger("accessibility");
         }
         return accessibilityLogger;
     }

@@ -29,34 +29,23 @@ import java.security.AccessControlContext;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.ArrayList;
-import java.util.LinkedList;
 import java.util.List;
 import com.sun.javafx.tk.FocusCause;
 import com.sun.javafx.tk.TKScene;
 import com.sun.javafx.tk.TKStage;
 import com.sun.javafx.tk.TKStageListener;
 import com.sun.javafx.tk.Toolkit;
-import javafx.application.Platform;
 
 abstract class GlassStage implements TKStage {
 
-    // A list of all GlassStage objects regardless of visibility. Used in WindowStage.
-    protected static final List<GlassStage> windows = new ArrayList<GlassStage>();
+    // A list of all GlassStage objects regardless of visibility.
+    private static final List<GlassStage> windows = new ArrayList<>();
 
-    // A list of currently visible TKStage objects.
-    private static List<TKStage> topLevelWindows = new ArrayList<TKStage>();
+    // A list of currently visible important windows. This list is used to
+    // check if the application should exit, when idle
+    private static List<TKStage> importantWindows = new ArrayList<>();
 
-    private List<PopupStage> popups = new LinkedList<PopupStage>();
-
-    // An active window is visible && enabled && focusable.
-    // The list is maintained in the z-order, so that the last element
-    // represents the topmost window (or more accurately, the last
-    // focused window, which we assume is very close to the last topmost one).
-    private static List<GlassStage> activeWindows = new LinkedList<GlassStage>();
-
-    protected boolean verbose;
-
-    protected GlassScene scene;
+    private GlassScene scene;
 
     protected TKStageListener stageListener;
 
@@ -66,9 +55,14 @@ abstract class GlassStage implements TKStage {
 
     private AccessControlContext accessCtrlCtx = null;
 
-    protected GlassStage(boolean verbose) {
-        this.verbose = verbose;
+    protected GlassStage() {
         windows.add(this);
+    }
+
+    @Override public void close() {
+        windows.remove(this);
+        importantWindows.remove(this);
+        notifyWindowListeners();
     }
 
     /**
@@ -80,17 +74,18 @@ abstract class GlassStage implements TKStage {
         this.stageListener = listener;
     }
 
+    protected final GlassScene getScene() {
+        return scene;
+    }
+
     @Override public void setScene(TKScene scene) {
         if (this.scene != null) {
-            this.scene.setGlassStage(null);
+            this.scene.setStage(null);
         }
         this.scene = (GlassScene)scene;
         if (this.scene != null) {
-            this.scene.setGlassStage(this);
+            this.scene.setStage(this);
         }
-    }
-
-    protected void setPlatformWindowClosed() {
     }
 
     // To be used by subclasses to enforce context check
@@ -114,46 +109,21 @@ abstract class GlassStage implements TKStage {
     @Override public void requestFocus(FocusCause cause) {
     }
 
-    static void addActiveWindow(GlassStage window) {
-        GlassStage.activeWindows.remove(window);
-        GlassStage.activeWindows.add(window);
-    }
-
-    static void removeActiveWindow(GlassStage window) {
-        GlassStage.activeWindows.remove(window);
-    }
-
-    final void handleFocusDisabled() {
-        if (GlassStage.activeWindows.isEmpty()) {
-            return;
-        }
-        GlassStage window = GlassStage.activeWindows.get(GlassStage.activeWindows.size() - 1);
-
-        window.setIconified(false);
-        window.requestToFront();
-        window.requestFocus();
-    }
-
     /**
      * Set if the stage is visible on screen
      *
      * @param visible True if the stage should be visible
      */
     @Override public void setVisible(boolean visible) {
-        boolean isTopLevel = this.isImportant() && this.isTopLevel();
-        boolean visibilityChanged = this.visible != visible;
-
         this.visible = visible;
         if (visible) {
-            if (visibilityChanged && isTopLevel) {
-                topLevelWindows.add(this);
+            if (important) {
+                importantWindows.add(this);
                 notifyWindowListeners();
             }
-        }
-        if (!visible) {
-            GlassStage.removeActiveWindow(this);
-            if (visibilityChanged && isTopLevel) {
-                topLevelWindows.remove(this);
+        } else {
+            if (important) {
+                importantWindows.remove(this);
                 notifyWindowListeners();
             }
         }
@@ -167,48 +137,29 @@ abstract class GlassStage implements TKStage {
     }
 
     // We do blocking on windows that are backed by WindowStage and EmbeddedStage
-    protected abstract void setPlatformEnabled(boolean enabled);
-
-    protected abstract void requestToFront();
-
-    @Override public void close() {
-        windows.remove(this);
-        topLevelWindows.remove(this);
-        notifyWindowListeners();
+    protected void setPlatformEnabled(boolean enabled) {
+        // Overridden in subclasses
     }
 
-    static boolean windowsAreOpen() {
-        for (GlassStage w : windows) {
-            if (w.isVisible()) {
-                return true;
+    void windowsSetEnabled(boolean enabled) {
+        // TODO: Need to solve RT-12605:
+        // If Window #1 pops up an APPLICATION modal dialog #2 it should block
+        // Window #1, but will also block Window #3, #4, etc., unless those
+        // windows are descendants of #2.
+        for (GlassStage window : windows) {
+            if (window != this) {
+                window.setPlatformEnabled(enabled);
             }
         }
-        return false;
     }
 
-    // True for unowned, non-Popup stage, or embedded stage
-    public boolean isTopLevel() {
-        return true;
-    }
-
-    @Override public void setImportant(boolean important) {
+    @Override
+    public void setImportant(boolean important) {
         this.important = important;
     }
 
-    public boolean isImportant() {
-        return important;
-    }
-
     private static void notifyWindowListeners() {
-        Toolkit.getToolkit().notifyWindowListeners(topLevelWindows);
-    }
-
-    protected void addPopup(final PopupStage popup) {
-        popups.add(popup);
-    }
-
-    protected void removePopup(final PopupStage popup) {
-        popups.remove(popup);
+        Toolkit.getToolkit().notifyWindowListeners(importantWindows);
     }
 
     // Cmd+Q action

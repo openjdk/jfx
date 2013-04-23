@@ -211,11 +211,8 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
 
     @Override protected FileChooserResult staticCommonDialogs_showFileChooser(Window owner, String folder, String filename, String title, int type,
                                                      boolean multipleMode, ExtensionFilter[] extensionFilters, int defaultFilterIndex) {
-        //TODO: support FileChooserResult
-        //TODO: support defaultFilterIndex
-        return new FileChooserResult(
-                MacCommonDialogs.showFileChooser_impl(owner, folder, filename,
-                title, type, multipleMode, extensionFilters, defaultFilterIndex), null);
+        return MacCommonDialogs.showFileChooser_impl(owner, folder, filename,
+                title, type, multipleMode, extensionFilters, defaultFilterIndex);
     }
 
     @Override protected File staticCommonDialogs_showFolderChooser(Window owner, String folder, String title) {

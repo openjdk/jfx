@@ -380,6 +380,7 @@ private:
     WindowContextTop& operator= (const WindowContextTop&);
 };
 
+void destroy_and_delete_ctx(WindowContext* ctx);
 
 #endif        /* GLASS_WINDOW_H */
 

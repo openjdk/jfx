@@ -178,11 +178,6 @@ public class StubToolkit extends Toolkit {
         return true;
     }
 
-    @Override
-    public TKStage createTKStage(StageStyle stageStyle) {
-        return new StubStage();
-    }
-
     public TKStage createTKStage(StageStyle stageStyle, boolean primary,
             Modality modality, TKStage owner, boolean rtl) {
 
@@ -190,7 +185,7 @@ public class StubToolkit extends Toolkit {
     }
 
     @Override
-    public TKStage createTKPopupStage(StageStyle stageStyle, Object owner) {
+    public TKStage createTKPopupStage(StageStyle stageStyle, TKStage owner) {
         return new StubPopupStage();
     }
 

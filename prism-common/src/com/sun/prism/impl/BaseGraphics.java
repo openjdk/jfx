@@ -43,13 +43,14 @@ import com.sun.prism.RenderTarget;
 import com.sun.prism.ResourceFactory;
 import com.sun.prism.Texture;
 import com.sun.prism.camera.PrismCameraImpl;
+import com.sun.prism.camera.PrismDefaultCamera;
 import com.sun.prism.camera.PrismParallelCameraImpl;
 import com.sun.prism.paint.Color;
 import com.sun.prism.paint.Paint;
 
 public abstract class BaseGraphics implements RectShadowGraphics {
 
-    private static final PrismCameraImpl DEFAULT_CAMERA = PrismParallelCameraImpl.getInstance();
+    private static final PrismCameraImpl DEFAULT_CAMERA = PrismDefaultCamera.getInstance();
     private static final BasicStroke DEFAULT_STROKE =
         new BasicStroke(1.0f, BasicStroke.CAP_SQUARE, BasicStroke.JOIN_MITER, 10.0f);
     private static final Paint DEFAULT_PAINT = Color.WHITE;
@@ -255,7 +256,7 @@ public abstract class BaseGraphics implements RectShadowGraphics {
     }
 
     public boolean hasOrthoCamera() {
-        return camera == DEFAULT_CAMERA;
+        return camera instanceof PrismParallelCameraImpl;
     }
 
     public void setDepthTest(boolean depthTest) {

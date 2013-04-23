@@ -49,7 +49,7 @@ final class PresentingPainter extends ViewPainter {
             valid = validateStageGraphics();
 
             if (!valid) {
-                if (verbose) {
+                if (QuantumToolkit.verbose) {
                     System.err.println("PresentingPainter: validateStageGraphics failed");
                 }
                 return;
@@ -88,12 +88,11 @@ final class PresentingPainter extends ViewPainter {
                 Graphics g = presentable.createGraphics();
 
                 ViewScene vs = (ViewScene) sceneState.getScene();
-                if (g != null && vs.getDirty()) {
+                if (g != null) {
                     if (needsReset) {
                         g.reset();
                     }
                     paintImpl(g);
-                    vs.setDirty(false);
                 }
                 
                 if (!presentable.prepare(null)) {

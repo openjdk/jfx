@@ -9,6 +9,7 @@
 
     <import file="../../build-defs.xml"/>
 
+    <property name="glass.dist.dir" value="dist"/>
     <property name="glass.dist.cross.dir" value="${glass.dist.dir}${cross.name.suffix}"/>
     <property name="glass.dist.cross.bin.dir" value="${glass.dist.cross.dir}/bin"/>
 
@@ -165,7 +166,7 @@
         <arg value="BUILD_DIR=${glass-lib.build.dir}"/>
         <arg value="CC=${crosstools.gcc}"/>
         <arg value="BUILD_HEADERS=${jheaders.dir}"/>
-        <arg value="EXTRA_CFLAGS=${cross.glass.lens.eglfb.cflags}"/>
+        <arg value="EXTRA_CFLAGS=${cross.glass.lens.eglfb.cflags} -DISEGLFB"/>
         <arg value="EXTRA_LDFLAGS=${cross.glass.lens.eglfb.ldflags} -ldl"/>
         <arg value="LINK=${crosstools.gcc}"/>
         <arg value="eglfb"/>

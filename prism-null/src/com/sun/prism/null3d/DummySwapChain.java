@@ -34,27 +34,31 @@ import com.sun.prism.PresentableState;
 class DummySwapChain extends DummyResource implements Presentable {
 
     private final PresentableState pState;
+    private final DummyRTTexture texBackBuffer;
     private int w,h;
     private boolean opaque;
 
-    DummySwapChain(DummyContext context) {
-        super(context);
-        this.pState = null;
-        w = 256; h = 256;
-    }
-
-    DummySwapChain(DummyContext context, PresentableState pState) {
+    DummySwapChain(DummyContext context, PresentableState pState, DummyRTTexture rtt) {
         super(context);
         this.pState = pState;
         this.w = pState.getWidth();
         this.h = pState.getHeight();
+        texBackBuffer = rtt;
+    }
+
+    @Override
+    public void dispose() {
+        texBackBuffer.dispose();
+        super.dispose();
     }
 
     public boolean lockResources() {
+        texBackBuffer.lock();
         return false;
     }
 
     public boolean prepare(Rectangle clip) {
+        texBackBuffer.unlock();
         return true;
     }
 
@@ -91,7 +95,7 @@ class DummySwapChain extends DummyResource implements Presentable {
     }
 
     public Graphics createGraphics() {
-        return DummyGraphics.create(this, context);
+        return DummyGraphics.create(texBackBuffer, context);
     }
 
     public Screen getAssociatedScreen() {

@@ -1,0 +1,320 @@
+/*
+ * Copyright (c) 2009, 2013, Oracle and/or its affiliates. All rights reserved.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.  Oracle designates this
+ * particular file as subject to the "Classpath" exception as provided
+ * by Oracle in the LICENSE file that accompanied this code.
+ *
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
+ *
+ * You should have received a copy of the GNU General Public License version
+ * 2 along with this work; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+ * or visit www.oracle.com if you need additional information or have any
+ * questions.
+ */
+
+package com.sun.javafx.iio.jpeg;
+
+import com.sun.javafx.iio.ImageFrame;
+import com.sun.javafx.iio.ImageMetadata;
+import com.sun.javafx.iio.ImageStorage.ImageType;
+import com.sun.glass.utils.NativeLibLoader;
+import com.sun.javafx.iio.common.ImageLoaderImpl;
+import com.sun.javafx.iio.common.ImageTools;
+import com.sun.javafx.iio.common.PushbroomScaler;
+import com.sun.javafx.iio.common.ScalerFactory;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.ByteBuffer;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
+
+public class JPEGImageLoader extends ImageLoaderImpl {
+
+    // IJG Color codes.
+    public static final int JCS_UNKNOWN = 0;       // error/unspecified
+    public static final int JCS_GRAYSCALE = 1;     // monochrome
+    public static final int JCS_RGB = 2;           // red/green/blue
+    public static final int JCS_YCbCr = 3;         // Y/Cb/Cr (also known as YUV)
+    public static final int JCS_CMYK = 4;          // C/M/Y/K
+    public static final int JCS_YCC = 5;           // PhotoYCC
+    public static final int JCS_RGBA = 6;          // RGB-Alpha
+    public static final int JCS_YCbCrA = 7;        // Y/Cb/Cr/Alpha
+    // 8 and 9 were old "Legacy" codes which the old code never identified
+    // on reading anyway.  Support for writing them is being dropped, too.
+    public static final int JCS_YCCA = 10;         // PhotoYCC-Alpha
+    public static final int JCS_YCCK = 11;         // Y/Cb/Cr/K
+    /**
+     * The following variable contains a pointer to the IJG library
+     * structure for this reader.  It is assigned in the constructor
+     * and then is passed in to every native call.  It is set to 0
+     * by dispose to avoid disposing twice.
+     */
+    private long structPointer = 0L;
+    /** Set by setInputAttributes native code callback */
+    private int inWidth;
+    /** Set by setInputAttributes native code callback */
+    private int inHeight;
+    /**
+     * Set by setInputAttributes native code callback.  A modified
+     * IJG+NIFTY colorspace code.
+     */
+    private int inColorSpaceCode;
+    /**
+     * Set by setInputAttributes native code callback.  A modified
+     * IJG+NIFTY colorspace code.
+     */
+    private int outColorSpaceCode;
+    /** Set by setInputAttributes native code callback */
+    private int inNumComponents;
+    /** Set by setInputAttributes native code callback */
+    private byte[] iccData;
+    /** Set by setOutputAttributes native code callback. */
+    private int outWidth;
+    /** Set by setOutputAttributes native code callback. */
+    private int outHeight;
+    private ImageType outImageType;
+
+    private boolean isDisposed = false;
+
+    private Lock accessLock = new Lock();
+
+    /** Sets up static C structures. */
+    private static native void initJPEGMethodIDs(Class inputStreamClass);
+
+    private static native void disposeNative(long structPointer);
+
+    /** Sets up per-reader C structure and returns a pointer to it. */
+    private native long initDecompressor(InputStream stream) throws IOException;
+
+    /** Sets output color space and scale factor. */
+    private native void startDecompression(long structPointer,
+            int outColorSpaceCode, int scaleNum, int scaleDenom);
+
+    private native boolean decompressIndirect(long structPointer, boolean reportProgress, byte[] array) throws IOException;
+    // Uncomment next line for direct ByteBuffers.
+    //private native ByteBuffer decompressDirect(long structPointer, boolean reportProgress) throws IOException;
+
+    static {
+        AccessController.doPrivileged(new PrivilegedAction<Object>() {
+
+            public Object run() {
+                NativeLibLoader.loadLibrary("javafx-iio");
+                return null;
+            }
+        });
+        initJPEGMethodIDs(InputStream.class);
+    }
+
+    /*
+     * Called by the native code when the image header has been read.
+     */
+    private void setInputAttributes(int width,
+            int height,
+            int colorSpaceCode,
+            int outColorSpaceCode,
+            int numComponents,
+            byte[] iccData) {
+        this.inWidth = width;
+        this.inHeight = height;
+        this.inColorSpaceCode = colorSpaceCode;
+        this.outColorSpaceCode = outColorSpaceCode;
+        this.inNumComponents = numComponents;
+        this.iccData = iccData;
+
+        // Set outImageType.
+        switch (outColorSpaceCode) {
+            case JCS_GRAYSCALE:
+                this.outImageType = ImageType.GRAY;
+                break;
+            case JCS_YCbCr:
+            case JCS_YCC:
+            case JCS_RGB:
+                this.outImageType = ImageType.RGB;
+                break;
+            case JCS_CMYK:
+            case JCS_YCbCrA:
+            case JCS_YCCA:
+            case JCS_YCCK:
+            case JCS_RGBA:
+                this.outImageType = ImageType.RGBA_PRE;
+                break;
+            case JCS_UNKNOWN:
+                switch (numComponents) {
+                    case 1:
+                        this.outImageType = ImageType.GRAY;
+                        break;
+                    case 3:
+                        this.outImageType = ImageType.RGB;
+                        break;
+                    case 4:
+                        this.outImageType = ImageType.RGBA_PRE;
+                        break;
+                    default:
+                        assert false;
+                }
+                break;
+            default:
+                assert false;
+                break;
+        }
+    }
+
+    /*
+     * Called by the native code after starting decompression.
+     */
+    private void setOutputAttributes(int width, int height) {
+        this.outWidth = width;
+        this.outHeight = height;
+    }
+
+    private void updateImageProgress(int outLinesDecoded) {
+        updateImageProgress(100.0F * outLinesDecoded / outHeight);
+    }
+
+    JPEGImageLoader(InputStream input) throws IOException {
+        super(JPEGDescriptor.getInstance());
+        if (input == null) {
+            throw new IllegalArgumentException("input == null!");
+        }
+
+        try {
+            this.structPointer = initDecompressor(input);
+        } catch (IOException e) {
+            dispose();
+            throw e;
+        }
+
+        if (this.structPointer == 0L) {
+            throw new IOException("Unable to initialize JPEG decompressor");
+        }
+    }
+
+    public synchronized void dispose() {
+        if(!accessLock.isLocked() && !isDisposed && structPointer != 0L) {
+            isDisposed = true;
+            disposeNative(structPointer);
+            structPointer = 0L;
+        }
+    }
+
+    protected void finalize() {
+        dispose();
+    }
+
+    public ImageFrame load(int imageIndex, int width, int height, boolean preserveAspectRatio, boolean smooth) throws IOException {
+        if (imageIndex != 0) {
+            return null;
+        }
+
+        accessLock.lock();
+
+        // Determine output image dimensions.
+        int[] widthHeight = ImageTools.computeDimensions(inWidth, inHeight, width, height, preserveAspectRatio);
+        width = widthHeight[0];
+        height = widthHeight[1];
+
+        ImageMetadata md = new ImageMetadata(null, true,
+                null, null, null, null,
+                inWidth, inHeight, null, null, null);
+
+        updateImageMetadata(md);
+
+        ByteBuffer buffer = null;
+
+        try {
+            startDecompression(structPointer, outColorSpaceCode, width, height);
+            // Uncomment next line for direct ByteBuffer.
+            //buffer = decompressDirect(structPointer, listeners != null && !listeners.isEmpty());
+            // Comment out next three lines to suppress indirect ByteBuffers.
+            byte[] array = new byte[outWidth*outHeight*inNumComponents];
+            buffer = ByteBuffer.wrap(array);
+            decompressIndirect(structPointer, listeners != null && !listeners.isEmpty(), buffer.array());
+        } catch (IOException e) {
+            throw e;
+        } finally {
+            accessLock.unlock();
+            dispose();
+        }
+
+        if (buffer == null) {
+            throw new IOException("Error decompressing JPEG stream!");
+        }
+
+        ImageFrame frame = null;
+
+        // Check whether the decompressed image has been scaled to the correct
+        // dimensions. If not, downscalte it here. Note outData, outHeight, and
+        // outWidth refer to the image as returned by the decompressor. This
+        // image might have been downscaled from the original source by a factor
+        // of N/8 where 1 <= N <=8.
+        if (outWidth != width || outHeight != height) {
+            // Get the decompressed data array. Note that the code really should
+            // be moidified to use direct buffers if and only if this post-
+            // decompression scaling will NOT occur.
+            byte[] outData;
+            if (buffer.hasArray()) {
+                outData = buffer.array();
+            } else {
+                outData = new byte[buffer.capacity()];
+                buffer.get(outData);
+            }
+
+            PushbroomScaler scaler = ScalerFactory.createScaler(outWidth, outHeight, inNumComponents,
+                    width, height, smooth);
+            int stride = outWidth * inNumComponents;
+            int off = 0;
+            for (int y = 0; y < outHeight; y++) {
+                if (scaler.putSourceScanline(outData, off)) {
+                    break;
+                }
+                off += stride;
+            }
+            buffer = scaler.getDestination();
+            frame = new ImageFrame(outImageType, buffer,
+                    width, height, width * inNumComponents, null, md);
+        }
+        else {
+            frame = new ImageFrame(outImageType, buffer,
+                                   outWidth, outHeight, outWidth * inNumComponents, null, md);
+        }
+
+        return frame;
+    }
+
+    private static class Lock {
+        private boolean locked;
+
+        public Lock() {
+            locked = false;
+        }
+
+        public synchronized boolean isLocked() {
+            return locked;
+        }
+
+        public synchronized void lock() {
+            if (locked) {
+                throw new IllegalStateException("Recursive loading is not allowed.");
+            }
+            locked = true;
+        }
+
+        public synchronized void unlock() {
+            if (!locked) {
+                throw new IllegalStateException("Invalid loader state.");
+            }
+            locked = false;
+        }
+    }
+}

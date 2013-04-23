@@ -25,26 +25,25 @@
 
 package com.sun.javafx.tk.quantum;
 
-class PopupScene extends ViewScene {
+final class PopupScene extends ViewScene {
 
-    public PopupScene(boolean verbose, boolean depthBuffer) {
-        super(verbose, depthBuffer);
+    public PopupScene(boolean depthBuffer) {
+        super(depthBuffer);
     }
 
-    @Override
-    public void setGlassStage(GlassStage stage) {
-        super.setGlassStage(stage);
-    }
-
-    PopupStage getPopupStage() {
-        return (PopupStage)glassStage;
+    private PopupStage getPopupStage() {
+        return (PopupStage)getStage();
     }
 
     @Override
     public void sceneChanged() {
-        GlassScene ownerScene;
-        if (getPopupStage() != null && (ownerScene = getPopupStage().getOwnerScene()) != null) {
-            ownerScene.sceneChanged();
+        PopupStage popupStage = getPopupStage();
+        if (popupStage != null) {
+            GlassStage ownerStage = popupStage.getOwner();
+            GlassScene ownerScene = ownerStage.getScene();
+            if (ownerScene != null) {
+                ownerScene.sceneChanged();
+            }
         }
         super.sceneChanged();
     }

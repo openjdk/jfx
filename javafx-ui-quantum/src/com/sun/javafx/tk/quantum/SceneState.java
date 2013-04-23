@@ -32,9 +32,9 @@ import com.sun.prism.PresentableState;
  * similar to the shadow Graph, providing a static snapshot until the Scene 
  * is rendered.
  */
-class SceneState extends PresentableState {
+final class SceneState extends PresentableState {
 
-    GlassScene scene;
+    private GlassScene scene;
 
     /**
      * Create the View State

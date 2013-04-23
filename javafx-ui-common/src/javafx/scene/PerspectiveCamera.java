@@ -144,34 +144,12 @@ public  class PerspectiveCamera extends Camera {
     }
 
     @Override
-    final PickRay computePickRay(double localX, double localY, PickRay pickRay) {
-        if (pickRay == null) {
-            pickRay = new PickRay();
-        }
+    final PickRay computePickRay(double x, double y, PickRay pickRay) {
 
-        Vec3d direction = pickRay.getDirectionNoClone();
-        double halfViewWidth = getViewWidth() / 2.0;
-        double halfViewHeight = getViewHeight() / 2.0;
-        double halfViewDim = isVerticalFieldOfView() ? halfViewHeight: halfViewWidth;
-        // Distance to projection plane from eye
-        double distanceZ = halfViewDim / Math.tan(Math.toRadians(getFieldOfView()/2.0));
-
-        direction.x = localX - halfViewWidth;
-        direction.y = localY - halfViewHeight;
-        direction.z = distanceZ;
-
-        Vec3d eye = pickRay.getOriginNoClone();
-        // Projection plane is at Z = 0, implies that eye must be located at:
-        eye.set(halfViewWidth, halfViewHeight, -distanceZ);
-        // set eye at center of viewport and move back so that projection plane
-        // is at Z = 0
-        if (pickRay.isParallel()) { pickRay.set(eye, direction); }
-
-        if (getScene() != null) {
-            pickRay.transform(getCameraTransform());
-        }
-
-        return pickRay;
+        return PickRay.computePerspectivePickRay(x, y, fixedEyePosition,
+                getViewWidth(), getViewHeight(),
+                getFieldOfView(), isVerticalFieldOfView(),
+                getCameraTransform(), pickRay);
     }
 
     @Override Camera copy() {
@@ -246,5 +224,26 @@ public  class PerspectiveCamera extends Camera {
             view.concatenate(LOOK_AT_TX);
             view.scale(scale, scale, scale);
         }
+    }
+
+    @Override
+    Vec3d computePosition(Vec3d position) {
+        if (position == null) {
+            position = new Vec3d();
+        }
+
+        if (fixedEyePosition) {
+            position.set(0.0, 0.0, -1.0);
+        } else {
+            final double halfViewWidth = getViewWidth() / 2.0;
+            final double halfViewHeight = getViewHeight() / 2.0;
+            final double halfViewDim = isVerticalFieldOfView()
+                    ? halfViewHeight : halfViewWidth;
+            final double distanceZ = halfViewDim
+                    / Math.tan(Math.toRadians(getFieldOfView() / 2.0));
+
+            position.set(halfViewWidth, halfViewHeight, -distanceZ);
+        }
+        return position;
     }
 }

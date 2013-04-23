@@ -934,6 +934,79 @@ public class TilePaneTest {
         assertEquals(100, last.getLayoutBounds().getHeight(), 1e-100);
     }
 
+    @Test public void testHorizontalTilePaneWithPrefSize() {
+        TilePane tilepane = new TilePane(Orientation.HORIZONTAL);
+        tilepane.setPrefSize(100,100);
+
+        for(int i = 0; i < 8; i++) {
+            Rectangle child = new Rectangle(40, 40);
+            tilepane.getChildren().add(child);
+        }
+
+        tilepane.autosize();
+        tilepane.layout();
+
+        assertEquals(40, tilepane.getTileWidth(), 0);
+        assertEquals(40, tilepane.getTileHeight(), 0);
+
+        assertEquals(100, tilepane.prefWidth(-1), 0);
+        assertEquals(100, tilepane.prefHeight(-1), 0);
+
+        Node first = tilepane.getChildren().get(0);
+
+        assertEquals(0, first.getLayoutX(), 1e-100);
+        assertEquals(0, first.getLayoutY(), 1e-100);
+        assertEquals(100, tilepane.getLayoutBounds().getWidth(), 1e-100);
+        assertEquals(160, tilepane.getLayoutBounds().getHeight(), 1e-100);
+    }
+
+    @Test public void testVerticalTilePaneWithPrefSize() {
+        TilePane tilepane = new TilePane(Orientation.VERTICAL);
+        tilepane.setPrefSize(100,100);
+
+        for(int i = 0; i < 8; i++) {
+            Rectangle child = new Rectangle(40, 40);
+            tilepane.getChildren().add(child);
+        }
+
+        tilepane.autosize();
+        tilepane.layout();
+
+        assertEquals(40, tilepane.getTileWidth(), 0);
+        assertEquals(40, tilepane.getTileHeight(), 0);
+
+        assertEquals(100, tilepane.prefWidth(-1), 0);
+        assertEquals(100, tilepane.prefHeight(-1), 0);
+
+        Node first = tilepane.getChildren().get(0);
+
+        assertEquals(0, first.getLayoutX(), 1e-100);
+        assertEquals(0, first.getLayoutY(), 1e-100);
+        assertEquals(160, tilepane.getLayoutBounds().getWidth(), 1e-100);
+        assertEquals(100, tilepane.getLayoutBounds().getHeight(), 1e-100);
+    }
+
+    @Test public void testTilePaneWithBaselineAlignment() {
+        TilePane tilepane = new TilePane(Orientation.HORIZONTAL);
+        tilepane.setPrefSize(100,100);
+        tilepane.setTileAlignment(Pos.BASELINE_CENTER);
+
+        for(int i = 0; i < 8; i++) {
+            Rectangle child = new Rectangle(40, 40);
+            tilepane.getChildren().add(child);
+        }
+
+        tilepane.autosize();
+        tilepane.layout();
+
+        Node first = tilepane.getChildren().get(0);
+
+        assertEquals(0, first.getLayoutX(), 1e-100);
+        assertEquals(0, first.getLayoutY(), 1e-100);
+        assertEquals(100, tilepane.getLayoutBounds().getWidth(), 1e-100);
+        assertEquals(160, tilepane.getLayoutBounds().getHeight(), 1e-100);
+    }
+
     @Test public void testCSSsetPrefTileWidthAndHeight_RT20388() {
         Scene scene = new Scene(tilepane);
         Stage stage = new Stage();

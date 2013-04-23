@@ -120,6 +120,13 @@ typedef struct _tagJavaIDs {
         jmethodID notifyNextTouchEvent;
         jmethodID notifyEndTouchEvent;
     } GestureSupport;
+    struct {
+        jmethodID getDescription;
+        jmethodID extensionsToArray;
+    } ExtensionFilter;
+    struct {
+        jmethodID init;
+    } FileChooserResult;
 } JavaIDs;
 extern JavaIDs javaIDs;
 

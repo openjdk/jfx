@@ -477,7 +477,7 @@ static void process_events(GdkEvent* event, gpointer data)
                     gtk_main_do_event(event);
                     break;
                 case GDK_DESTROY:
-                    ctx->process_destroy();
+                    destroy_and_delete_ctx(ctx);
                     gtk_main_do_event(event);
                     break;
                 case GDK_DELETE:

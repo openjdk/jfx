@@ -813,10 +813,6 @@ JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_mac_MacPasteboard__1putItemsFromAr
                 }
             }
             
-            NSPasteboardItem *item = [[[NSPasteboardItem alloc] init] autorelease];
-            [item setString:@"PLACEHOLDER" forType:@"placeholder.custom.bytes"];
-            [objects addObject: item];
-            
             // http://developer.apple.com/library/mac/#documentation/cocoa/Conceptual/PasteboardGuide106/Articles/pbCustom.html
             [pasteboard writeObjects:objects];
             

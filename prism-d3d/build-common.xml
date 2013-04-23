@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="prism-d3d-common" default="jar" basedir=".">
+
+  <!-- NOTE: the following properties are passed to the native makefile -->
+  <property name="native.dist.dir" value="../prism-d3d-native/dist"/>
+  <property name="native.build.dir" value="../prism-d3d-native/build"/>
+  <property name="native.makefile" value="Makefile"/>
+  <property name="glass.class.dir" value="../glass/glass/build/classes"/>
+  <property name="prism-common.class.dir" value="../prism-common/build/classes"/>
+  <property name="prism-d3d.class.dir" value="../prism-d3d/build/classes"/>
+  <property name="prism-ps.class.dir" value="../prism-ps/build/classes"/>
+  <property name="javafx-geom.class.dir" value="../javafx-geom/build/classes"/>
+
+  <property name="hlsl.dir" value="build/gensrc/com/sun/prism/d3d/hlsl"/>
+  <property name="cpp.dir" value="../prism-d3d-native/src"/>
+  <property name="dll.file" value="${native.dist.dir}/prism-d3d.dll"/>
+
+  <target name="hlsl-to-obj">
+    <apply executable="${dxsdk.path}/utilities/bin/x86/fxc"
+           dest="${hlsl.dir}" dir="${hlsl.dir}"
+           parallel="false" failonerror="true">
+      <arg value="/nologo"/>
+      <arg value="/T"/>
+      <arg value="ps_3_0"/>
+      <arg value="/Fo"/>
+      <targetfile/>
+      <srcfile/>
+      <fileset dir="${hlsl.dir}" includes="*.hlsl"/>
+      <mapper type="glob" from="*.hlsl" to="*.obj"/>
+    </apply>
+  </target>
+  <target name="check-native">
+   <uptodate property="native.uptodate" targetfile="${dll.file}" >
+      <srcfiles dir= "${cpp.dir}" includes="*.cc"/>
+      <srcfiles dir= "${cpp.dir}" includes="*.h"/>
+      <srcfiles dir= "${cpp.dir}" includes="*.hlsl"/>
+      <srcfiles dir= "${cpp.dir}/hlsl" includes="*.hlsl"/>
+    </uptodate>
+  </target>
+
+  <target name="compile-native" depends="check-native,needs-vs-properties" unless="native.uptodate">
+    <exec executable="cygpath" dir="." outputproperty="short.platform.home" failonerror="true">
+      <arg value="-m"/>
+      <arg value="-a"/>
+      <arg value="-s"/>
+      <arg value="${platform.home}"/>
+    </exec>
+    <exec executable="cygpath" dir="." outputproperty="short.dxsdk.path" failonerror="true">
+      <arg value="-m"/>
+      <arg value="-a"/>
+      <arg value="-s"/>
+      <arg value="${dxsdk.path}"/>
+    </exec>
+    <condition property="tmp.fxc.arch" value="x64" else="x86">
+      <equals arg1="${arch}" arg2="amd64" />
+    </condition>
+    <!-- TODO: reuse do-make macro here -->
+    <get-cygwin-path/>
+    <property file="${vs.properties}"/>
+    <condition property="native.no_perf_counters">
+      <isset property="no_perf_counters" />
+    </condition>
+    <!-- TODO: reuse do-make macro here -->
+    <exec executable="${cmd.utility}" dir="../prism-d3d-native" failonerror="true">
+      <env key="JDK_HOME" value="${short.platform.home}"/>
+      <env key="INCLUDE" value="${windows.vs.INCLUDE}"/>
+      <env key="LIB" value="${windows.vs.LIB}"/>
+      <env key="LIBPATH" value="${windows.vs.LIBPATH}"/>
+      <env key="PATH" value="${windows.vs.PATH}"/>
+      <env key="DXSDK_PATH" value="${short.dxsdk.path}"/>
+      <env key="CONF" value="${build.conf}"/>
+      <env key="DIST_DIR" value="${native.dist.dir}"/>
+      <env key="BUILD_DIR" value="${native.build.dir}"/>
+      <env key="PRISM_D3D_CLASS_DIR" value="${prism-d3d.class.dir}"/>
+      <env key="PRISM_DEP_CP" value="${prism-common.class.dir};${prism-ps.class.dir};${javafx-geom.class.dir};${glass.class.dir}"/>
+      <env key="FXC_ARCH" value="${tmp.fxc.arch}"/>
+      <env key="NO_PERF_CONT" value="${native.no_perf_counters}" />
+      <arg value="/C"/>
+      <arg value="${make.utility}"/>
+      <arg value="-f"/>
+      <arg value="${native.makefile}"/>
+      <arg value="all"/>
+    </exec>
+  </target>
+
+  <target name="jar" depends="init">
+    <antcall target="hlsl-to-obj"/>
+    <build-project>
+      <addedsrcdirs>
+        <pathelement location="build/gensrc"/>
+      </addedsrcdirs>
+      <addedsrcfiles>
+        <fileset dir="build/gensrc" excludes="${build.classes.excludes}"/>
+      </addedsrcfiles>
+    </build-project>
+    <antcall target="compile-native"/>
+    <jar destfile="${dist.dir}/prism-d3d-native.jar"
+         basedir="${native.dist.dir}"
+         includes="prism-d3d.dll"/>
+  </target>
+
+  <target name="clean">
+    <get-cygwin-path/>
+    <clean-project/>
+    <!-- TODO: reuse do-make macro here -->
+    <exec executable="${cmd.utility}" dir="../prism-d3d-native" failonerror="true">
+      <env key="DIST_DIR" value="${native.dist.dir}"/>
+      <env key="BUILD_DIR" value="${native.build.dir}"/>
+      <arg value="/C"/>
+      <arg value="${make.utility}"/>
+      <arg value="-f"/>
+      <arg value="${native.makefile}"/>
+      <arg value="clean"/>
+    </exec>
+  </target>
+
+</project>

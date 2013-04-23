@@ -43,6 +43,7 @@ import javafx.stage.Stage;
 import javafx.stage.Window;
 
 import com.sun.javafx.stage.StageHelper;
+import com.sun.javafx.stage.WindowHelper;
 import javafx.geometry.NodeOrientation;
 
 /**
@@ -557,9 +558,9 @@ public class Utils {
      * true will result in the point being shifted such that the entire node is onscreen.
      */
     public static Point2D pointRelativeTo(Node parent, Node node, double x, double y, boolean reposition) {
-        final Bounds bounds = parent.localToScene(parent.getBoundsInLocal());
-        final double layoutX = x + bounds.getMinX() + parent.getScene().getX() + parent.getScene().getWindow().getX();
-        final double layoutY = y + bounds.getMinY() + parent.getScene().getY() + parent.getScene().getWindow().getY();
+        final Bounds bounds = parent.localToScreen(parent.getBoundsInLocal());
+        final double layoutX = x + bounds.getMinX();
+        final double layoutY = y + bounds.getMinY();
 
         if (reposition) {
             return pointRelativeTo(parent, node, layoutX, layoutY, null, null);
@@ -696,9 +697,9 @@ public class Utils {
             if ((scene == null) || (scene.getWindow() == null)) {
                 return 0;
             }
-            return scene.getX() + scene.getWindow().getX();
+            return scene.getX() + WindowHelper.getScreenX(scene.getWindow());
         } else if (obj instanceof Window) {
-            return ((Window)obj).getX();
+            return WindowHelper.getScreenX((Window)obj);
         } else {
             return 0;
         }
@@ -716,9 +717,9 @@ public class Utils {
             if ((scene == null) || (scene.getWindow() == null)) {
                 return 0;
             }
-            return scene.getY() + scene.getWindow().getY();
+            return scene.getY() + WindowHelper.getScreenY(scene.getWindow());
         } else if (obj instanceof Window) {
-            return ((Window)obj).getY();
+            return WindowHelper.getScreenY((Window)obj);
         } else {
             return 0;
         }

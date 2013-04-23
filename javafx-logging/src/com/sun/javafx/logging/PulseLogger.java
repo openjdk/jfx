@@ -80,8 +80,10 @@ public class PulseLogger {
 
     /**
      * We have a simple counter that keeps track of the current pulse number.
+     * INTER_PULSE_DATA is used to mark data that comes between pulses.
      */
     private int pulseCount = 1;
+    private static final int INTER_PULSE_DATA = -1;
 
     /**
      * When printing the truncated form of the pulse, we just print one truncated
@@ -225,10 +227,13 @@ public class PulseLogger {
      */
     public void renderEnd() {
         renderData.state = COMPLETE;
-        do {
+        for (;;) {
             renderData.printAndReset();
+            if (active.decrementAndGet() == 0) {
+                break;
+            }
             renderData = renderData.next;
-        } while (active.decrementAndGet() > 0);
+        }
         renderData = null;
     }
 
@@ -240,7 +245,7 @@ public class PulseLogger {
      */
     public void fxMessage(String message) {
         if (fxData == null) {
-            fxData = allocate(-1);
+            fxData = allocate(INTER_PULSE_DATA);
         }
         fxData.message
             .append("T")
@@ -269,7 +274,7 @@ public class PulseLogger {
      */
     public void fxMessage(long start, long end, String message) {
         if (fxData == null) {
-            fxData = allocate(-1);
+            fxData = allocate(INTER_PULSE_DATA);
         }
         fxData.message
             .append("T")
@@ -286,7 +291,7 @@ public class PulseLogger {
      */
     public void fxIncrementCounter(String counter) {
         if (fxData == null) {
-            fxData = allocate(-1);
+            fxData = allocate(INTER_PULSE_DATA);
         }
         Map<String,Integer> counters = fxData.counters;
         if (counters.containsKey(counter)) {
@@ -400,10 +405,13 @@ public class PulseLogger {
             }
             
             if (totalTime <= THRESHOLD) {
-                System.err.print((wrapCount++ % 10 == 0 ? "\n[" : "[") + pulseCount+ " " + interval + "ms:" + totalTime + "ms]");
+                // Don't print inter pulse data
+                if (pulseCount != INTER_PULSE_DATA) {
+                    System.err.print((wrapCount++ % 10 == 0 ? "\n[" : "[") + pulseCount+ " " + interval + "ms:" + totalTime + "ms]");
+                }
             }
             else {
-                if (pulseCount < 0) {
+                if (pulseCount == INTER_PULSE_DATA) {
                     System.err.println("\n\nINTER PULSE LOG DATA");                
                 }
                 else {

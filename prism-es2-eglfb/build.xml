@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="prism-es2-eglfb" default="jar" basedir=".">
+    <description>Builds, tests, and runs the OpenJFX prism-es2-eglfb project.</description>
+
+    <import file="../build-defs.xml"/>
+    <import file="build-common.xml"/>
+</project>

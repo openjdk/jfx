@@ -1488,7 +1488,7 @@ public class Region extends Parent {
         return left + snapSize(boundedSize(child.minWidth(alt), max, child.maxWidth(alt))) + right;
     }
 
-     double computeChildMaxAreaHeight(Node child, Insets margin, double width) {
+    double computeChildMaxAreaHeight(Node child, Insets margin, double width) {
         double max = child.maxHeight(-1);
         if (max == Double.MAX_VALUE) {
             return max;

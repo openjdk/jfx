@@ -1,0 +1,146 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configurationDescriptor version="84">
+  <logicalFolder name="root" displayName="root" projectFiles="true" kind="ROOT">
+    <logicalFolder name="HeaderFiles"
+                   displayName="Header Files"
+                   projectFiles="true">
+      <logicalFolder name="GL" displayName="GL" projectFiles="true">
+        <itemPath>src/GL/gl.h</itemPath>
+        <itemPath>src/GL/glext.h</itemPath>
+        <itemPath>src/GL/glx.h</itemPath>
+        <itemPath>src/GL/glxext.h</itemPath>
+        <itemPath>src/GL/wglext.h</itemPath>
+      </logicalFolder>
+      <logicalFolder name="GLES2" displayName="GLES2" projectFiles="true">
+        <itemPath>src/GLES2/gl2.h</itemPath>
+        <itemPath>src/GLES2/gl2ext.h</itemPath>
+      </logicalFolder>
+    </logicalFolder>
+    <logicalFolder name="ResourceFiles"
+                   displayName="Resource Files"
+                   projectFiles="true">
+    </logicalFolder>
+    <logicalFolder name="SourceFiles"
+                   displayName="Source Files"
+                   projectFiles="true">
+      <logicalFolder name="eglfb" displayName="eglfb" projectFiles="true">
+        <itemPath>src/eglfb/EGLFBGLContext.c</itemPath>
+        <itemPath>src/eglfb/EGLFBGLDrawable.c</itemPath>
+        <itemPath>src/eglfb/EGLFBGLFactory.c</itemPath>
+        <itemPath>src/eglfb/EGLFBGLPixelFormat.c</itemPath>
+        <itemPath>src/eglfb/eglUtils.c</itemPath>
+        <itemPath>src/eglfb/eglUtils.h</itemPath>
+        <itemPath>src/eglfb/wrapped_egl.c</itemPath>
+        <itemPath>src/eglfb/wrapped_egl.h</itemPath>
+      </logicalFolder>
+      <logicalFolder name="eglx11" displayName="eglx11" projectFiles="true">
+        <itemPath>src/eglx11/EGLX11GLContext.c</itemPath>
+        <itemPath>src/eglx11/EGLX11GLDrawable.c</itemPath>
+        <itemPath>src/eglx11/EGLX11GLFactory.c</itemPath>
+        <itemPath>src/eglx11/EGLX11GLPixelFormat.c</itemPath>
+      </logicalFolder>
+      <logicalFolder name="ios" displayName="ios" projectFiles="true">
+        <itemPath>src/ios/IOSGLContext.c</itemPath>
+        <itemPath>src/ios/IOSGLDrawable.c</itemPath>
+        <itemPath>src/ios/IOSGLFactory.c</itemPath>
+        <itemPath>src/ios/IOSWindowSystemInterface.m</itemPath>
+        <itemPath>src/ios/ios-window-system.h</itemPath>
+      </logicalFolder>
+      <logicalFolder name="macosx" displayName="macosx" projectFiles="true">
+        <itemPath>src/macosx/MacGLContext.c</itemPath>
+        <itemPath>src/macosx/MacGLDrawable.c</itemPath>
+        <itemPath>src/macosx/MacGLFactory.c</itemPath>
+        <itemPath>src/macosx/MacGLPixelFormat.c</itemPath>
+        <itemPath>src/macosx/MacOSXWindowSystemInterface.m</itemPath>
+      </logicalFolder>
+      <logicalFolder name="windows" displayName="windows" projectFiles="true">
+        <itemPath>src/windows/WinGLContext.c</itemPath>
+        <itemPath>src/windows/WinGLDrawable.c</itemPath>
+        <itemPath>src/windows/WinGLFactory.c</itemPath>
+        <itemPath>src/windows/WinGLPixelFormat.c</itemPath>
+      </logicalFolder>
+      <logicalFolder name="x11" displayName="x11" projectFiles="true">
+        <itemPath>src/x11/X11GLContext.c</itemPath>
+        <itemPath>src/x11/X11GLDrawable.c</itemPath>
+        <itemPath>src/x11/X11GLFactory.c</itemPath>
+        <itemPath>src/x11/X11GLPixelFormat.c</itemPath>
+      </logicalFolder>
+      <itemPath>src/GLContext.c</itemPath>
+      <itemPath>src/GLDrawable.c</itemPath>
+      <itemPath>src/GLFactory.c</itemPath>
+      <itemPath>src/GLPixelFormat.c</itemPath>
+      <itemPath>src/PrismES2Defs.h</itemPath>
+      <itemPath>src/glext-64bit-types.h</itemPath>
+      <itemPath>src/macosx-window-system.h</itemPath>
+    </logicalFolder>
+    <logicalFolder name="ExternalFiles"
+                   displayName="Important Files"
+                   projectFiles="false">
+      <itemPath>Makefile</itemPath>
+    </logicalFolder>
+  </logicalFolder>
+  <sourceRootList>
+    <Elem>src/windows</Elem>
+    <Elem>src/x11</Elem>
+    <Elem>src/macosx</Elem>
+    <Elem>src/ios</Elem>
+    <Elem>src/eglx11</Elem>
+    <Elem>src/eglfb</Elem>
+    <Elem>src/GL</Elem>
+    <Elem>src/GLES2</Elem>
+  </sourceRootList>
+  <projectmakefile>Makefile</projectmakefile>
+  <confs>
+    <conf name="Debug" type="2">
+      <toolsSet>
+        <remote-sources-mode>LOCAL_SOURCES</remote-sources-mode>
+        <compilerSet>default</compilerSet>
+      </toolsSet>
+      <compileType>
+        <cTool>
+          <incDir>
+            <pElem>build</pElem>
+          </incDir>
+        </cTool>
+      </compileType>
+      <folder path="HeaderFiles">
+        <cTool>
+          <incDir>
+            <pElem>build</pElem>
+            <pElem>src/GL</pElem>
+            <pElem>src/GLES2</pElem>
+          </incDir>
+        </cTool>
+      </folder>
+      <folder path="SourceFiles">
+        <cTool>
+          <incDir>
+            <pElem>src/eglfb</pElem>
+            <pElem>src/eglx11</pElem>
+            <pElem>src/ios</pElem>
+            <pElem>src/macosx</pElem>
+            <pElem>src/windows</pElem>
+            <pElem>src/x11</pElem>
+          </incDir>
+        </cTool>
+      </folder>
+    </conf>
+    <conf name="Release" type="2">
+      <toolsSet>
+        <remote-sources-mode>LOCAL_SOURCES</remote-sources-mode>
+        <compilerSet>GNU|GNU</compilerSet>
+      </toolsSet>
+      <compileType>
+        <cTool>
+          <developmentMode>5</developmentMode>
+        </cTool>
+        <ccTool>
+          <developmentMode>5</developmentMode>
+        </ccTool>
+        <fortranCompilerTool>
+          <developmentMode>5</developmentMode>
+        </fortranCompilerTool>
+      </compileType>
+    </conf>
+  </confs>
+</configurationDescriptor>

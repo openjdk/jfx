@@ -25,7 +25,7 @@
 
 package com.sun.javafx.sg;
 
-import com.sun.javafx.geom.Rectangle;
+import com.sun.javafx.geom.Vec3d;
 import com.sun.javafx.geom.transform.Affine3D;
 import com.sun.javafx.geom.transform.GeneralTransform3D;
 
@@ -33,9 +33,11 @@ import com.sun.javafx.geom.transform.GeneralTransform3D;
  * TODO: 3D - Need documentation
  */
 public interface PGCamera extends PGNode {
-    public GeneralTransform3D getScreenProjViewTx(GeneralTransform3D tx, double w, double h);
-    public Rectangle getViewport(Rectangle vp);
     public void setNearClip(float nearClip);
     public void setFarClip(float farClip);
+    public void setViewWidth(double viewWidth);
+    public void setViewHeight(double viewHeight);
+    public void setProjViewTransform(GeneralTransform3D projViewTx);
+    public void setPosition(Vec3d position);
     public void setWorldTransform(Affine3D localToWorldTx);
 }

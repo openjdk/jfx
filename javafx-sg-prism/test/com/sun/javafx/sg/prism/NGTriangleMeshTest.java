@@ -38,8 +38,8 @@ public class NGTriangleMeshTest {
         int[] faceSmoothingGroups = new int[]{0, 1, 2, 3, 4, 5};
         NGTriangleMesh instance = new NGTriangleMesh();
         instance.setFaceSmoothingGroups(faceSmoothingGroups);
-        int[] actuals = instance.test_getShiftedFaceSmoothingGroups();
-        int[] expecteds = new int[]{1, 2, 4, 8, 16, 32};
+        int[] actuals = instance.test_getFaceSmoothingGroups();
+        int[] expecteds = new int[]{0, 1, 2, 3, 4, 5};
         assertArrayEquals(expecteds, actuals);
     }
 
@@ -53,8 +53,8 @@ public class NGTriangleMeshTest {
         instance.setFaceSmoothingGroups(faceSmoothingGroups);
         Arrays.fill(faceSmoothingGroups, 1);
         instance.setFaceSmoothingGroups(faceSmoothingGroups, 1, 4);
-        int[] actuals = instance.test_getShiftedFaceSmoothingGroups();
-        int[] expecteds = new int[]{1, 2, 2, 2, 2, 32};
+        int[] actuals = instance.test_getFaceSmoothingGroups();
+        int[] expecteds = new int[]{0, 1, 1, 1, 1, 5};
         assertArrayEquals(expecteds, actuals);
     }
 }

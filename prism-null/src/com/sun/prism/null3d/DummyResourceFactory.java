@@ -78,7 +78,8 @@ class DummyResourceFactory extends BaseShaderFactory {
 
     // Glass-Prism bringup
     public Presentable createPresentable(PresentableState pState) {
-        return new DummySwapChain(context, pState);
+        DummyRTTexture rtt = new DummyRTTexture(context, WrapMode.CLAMP_NOT_NEEDED, pState.getWidth(), pState.getHeight());
+        return new DummySwapChain(context, pState, rtt);
     }
 
 

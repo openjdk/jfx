@@ -1,0 +1,408 @@
+/*
+ * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.  Oracle designates this
+ * particular file as subject to the "Classpath" exception as provided
+ * by Oracle in the LICENSE file that accompanied this code.
+ *
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
+ *
+ * You should have received a copy of the GNU General Public License version
+ * 2 along with this work; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+ * or visit www.oracle.com if you need additional information or have any
+ * questions.
+ */
+
+package com.sun.javafx.iio;
+
+import java.awt.Canvas;
+import java.awt.Dimension;
+import java.awt.Frame;
+import java.awt.Graphics;
+import java.awt.Image;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
+import java.awt.image.BufferedImage;
+import java.awt.image.DataBufferByte;
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import org.junit.After;
+import org.junit.AfterClass;
+import org.junit.Before;
+import org.junit.BeforeClass;
+import org.junit.Test;
+
+/**
+ *
+ * @author bpb
+ */
+public class ImageStorageTest {
+
+    private static final boolean WRITE_OUTPUT = false;
+
+    private static final float MINIFY_FRACTION = 0.57F;
+    private static final float MAGNIFY_FRACTION = 1.47F;
+
+    private static int rawWidth = -1;
+    private static int rawHeight = -1;
+
+    public static final void main(String[] args) throws Throwable {
+        String input = args[0];
+        String output = null;
+        if (args.length > 1) {
+            output = args[1];
+        }
+        ImageStorageTest test = new ImageStorageTest();
+        int width = 111;
+        int height = 97;
+        boolean preserveAspectRatio = true;
+        boolean smooth = true;
+        test.loadAllTest(input, output, width, height, preserveAspectRatio, smooth);
+        Thread.sleep(3000);
+        System.exit(0);
+    }
+
+    public static final BufferedImage getAsBufferedImage(ImageFrame frame) {
+        BufferedImage image = null;
+        int width = frame.getWidth();
+        int height = frame.getHeight();
+        int scanlineStride = frame.getStride();
+        ByteBuffer bbuf = (ByteBuffer) frame.getImageData();
+        byte[] pixels = null;
+        if (bbuf.hasArray()) {
+            pixels = bbuf.array();
+        } else {
+            pixels = new byte[bbuf.capacity()];
+            bbuf.get(pixels);
+        }
+        switch (frame.getImageType()) {
+            case GRAY: {
+                image = new BufferedImage(width, height,
+                        BufferedImage.TYPE_BYTE_GRAY);
+                DataBufferByte db =
+                        (DataBufferByte) image.getRaster().getDataBuffer();
+                byte[] data = db.getData();
+                int inLine = 0;
+                int outLine = 0;
+                for (int y = 0; y < height; y++) {
+                    System.arraycopy(pixels, inLine, data, outLine, width);
+                    inLine += scanlineStride;
+                    outLine += width;
+                }
+
+            }
+            break;
+//            case PALETTE:
+//            case PALETTE_ALPHA: {
+//                byte[][] p = frame.getPalette();
+//                IndexColorModel icm =
+//                        frame.getImageType() == ImageType.PALETTE ? new IndexColorModel(8, p[0].length,
+//                        p[0], p[1], p[2]) : new IndexColorModel(8, p[0].length,
+//                        p[0], p[1], p[2], p[3]);
+//                image = new BufferedImage(width, height,
+//                        BufferedImage.TYPE_BYTE_INDEXED, icm);
+//                DataBufferByte db =
+//                        (DataBufferByte) image.getRaster().getDataBuffer();
+//                byte[] data = db.getData();
+//                int inLine = 0;
+//                int outLine = 0;
+//                for (int y = 0; y < height; y++) {
+//                    System.arraycopy(pixels, inLine, data, outLine, width);
+//                    inLine += scanlineStride;
+//                    outLine += width;
+//                }
+//            }
+//            break;
+            case RGB: {
+                image = new BufferedImage(width, height,
+                        BufferedImage.TYPE_3BYTE_BGR);
+                for (int y = 0; y < height; y++) {
+                    int off = y * scanlineStride;
+                    for (int x = 0; x < width; x++) {
+                        int rgb = ((pixels[off++] & 0xff) << 16) |
+                                ((pixels[off++] & 0xff) << 8) |
+                                (pixels[off++] & 0xff);
+                        image.setRGB(x, y, rgb);
+                    }
+                }
+            }
+            break;
+            case RGBA_PRE: {
+                image = new BufferedImage(width, height,
+                        BufferedImage.TYPE_INT_ARGB_PRE);
+                for (int y = 0; y < height; y++) {
+                    int off = y * scanlineStride;
+                    for (int x = 0; x < width; x++) {
+                        byte red = pixels[off++];
+                        byte green = pixels[off++];
+                        byte blue = pixels[off++];
+                        byte alpha = pixels[off++];
+//                        float f = alpha/255.0F;
+//                        red = (byte)((red & 0xff)/f);
+//                        green = (byte)((green & 0xff)/f);
+//                        blue = (byte)((blue & 0xff)/f);
+                        int rgb = ((alpha & 0xff) << 24) |
+                                ((red & 0xff) << 16) |
+                                ((green & 0xff) << 8) |
+                                (blue & 0xff);
+                        image.setRGB(x, y, rgb);
+                    }
+                }
+//                DataBufferByte db =
+//                        (DataBufferByte) image.getRaster().getDataBuffer();
+//                byte[] data = db.getData();
+//                for (int y = 0; y < height; y++) {
+//                    int offPrism = y * scanlineStride;
+//                    int offImage = y * width * 4;
+//                    for (int x = 0; x < width; x++) {
+//                        data[offImage++] = pixels[offPrism + 3]; // A
+//                        data[offImage++] = pixels[offPrism + 2]; // B
+//                        data[offImage++] = pixels[offPrism + 1]; // G
+//                        data[offImage++] = pixels[offPrism];     // R
+//                        offPrism += 4;
+//                    }
+//                }
+            }
+            break;
+            default:
+                throw new UnsupportedOperationException("Unsupported test case " +
+                        frame.getImageType());
+        }
+
+        return image;
+    }
+
+    public static void show(Image img, String label) {
+        final Frame f = new Frame();
+        f.addWindowListener(new WindowAdapter() {
+
+            public void windowClosing(WindowEvent e) {
+                f.setVisible(false);
+                f.dispose();
+            }
+        });
+        f.setTitle(label);
+        f.add(new ImageCanvas(img));
+        f.pack();
+        f.setVisible(true);
+    }
+
+    public static class ImageCanvas extends Canvas {
+
+        private static final long serialVersionUID = 1L;
+        Image image;
+
+        public ImageCanvas(Image img) {
+            this.image = img;
+        }
+
+        public Dimension getPreferredSize() {
+            return new Dimension(image.getWidth(null), image.getHeight(null));
+        }
+
+        public void paint(Graphics g) {
+            g.drawImage(image, 0, 0, this);
+        }
+    }
+
+    public ImageStorageTest() {
+    }
+
+    @BeforeClass
+    public static void setUpClass() throws Exception {
+    }
+
+    @AfterClass
+    public static void tearDownClass() throws Exception {
+    }
+
+    @Before
+    public void setUp() {
+    }
+
+    @After
+    public void tearDown() {
+    }
+
+    /**
+     * Test of loadAll method, of class ImageStorage.
+     */
+    @Test
+    public void testLoadRaw() throws IOException, InterruptedException {
+        loadTest("testLoadRaw", "Output", 0, 0, false, false);
+    }
+
+    /**
+     * Test of loadAll method, of class ImageStorage.
+     */
+    @Test
+    public void testLoadMagnifyNoAspectRough() throws IOException, InterruptedException {
+        loadTest("testLoadMagnifyNoAspectRough", "Output_scaled",
+                (int)(MAGNIFY_FRACTION*rawHeight), (int)(MAGNIFY_FRACTION*rawWidth),
+                false, false);
+    }
+
+    /**
+     * Test of loadAll method, of class ImageStorage.
+     */
+    @Test
+    public void testLoadMagnifyAspectRough() throws IOException, InterruptedException {
+        loadTest("testLoadMagnifyAspectRough", "Output_scaled",
+                (int)(MAGNIFY_FRACTION*rawHeight), (int)(MAGNIFY_FRACTION*rawWidth),
+                true, false);
+    }
+
+    /**
+     * Test of loadAll method, of class ImageStorage.
+     */
+    @Test
+    public void testLoadMagnifyNoAspectSmooth() throws IOException, InterruptedException {
+        loadTest("testLoadMagnifyNoAspectSmooth", "Output_scaled",
+                (int)(MAGNIFY_FRACTION*rawHeight), (int)(MAGNIFY_FRACTION*rawWidth),
+                false, true);
+    }
+
+    /**
+     * Test of loadAll method, of class ImageStorage.
+     */
+    @Test
+    public void testLoadMagnifyAspectSmooth() throws IOException, InterruptedException {
+        loadTest("testLoadMagnifyAspectSmooth", "Output_scaled",
+                (int)(MAGNIFY_FRACTION*rawHeight), (int)(MAGNIFY_FRACTION*rawWidth),
+                true, true);
+    }
+
+    /**
+     * Test of loadAll method, of class ImageStorage.
+     */
+    @Test
+    public void testLoadMinifyNoAspectRough() throws IOException, InterruptedException {
+        loadTest("testLoadMinifyNoAspectRough", "Output_scaled",
+                (int)(MINIFY_FRACTION*rawHeight), (int)(MINIFY_FRACTION*rawWidth),
+                false, false);
+    }
+
+    /**
+     * Test of loadAll method, of class ImageStorage.
+     */
+    @Test
+    public void testLoadMinifyAspectRough() throws IOException, InterruptedException {
+        loadTest("testLoadMinifyAspectRough", "Output_scaled",
+                (int)(MINIFY_FRACTION*rawHeight), (int)(MINIFY_FRACTION*rawWidth),
+                true, false);
+    }
+
+    /**
+     * Test of loadAll method, of class ImageStorage.
+     */
+    @Test
+    public void testLoadMinifyNoAspectSmooth() throws IOException, InterruptedException {
+        loadTest("testLoadMinifyNoAspectSmooth", "Output_scaled",
+                (int)(MINIFY_FRACTION*rawHeight), (int)(MINIFY_FRACTION*rawWidth),
+                false, true);
+    }
+
+    /**
+     * Test of loadAll method, of class ImageStorage.
+     */
+    @Test
+    public void testLoadMinifyAspectSmooth() throws IOException, InterruptedException {
+        loadTest("testLoadMinifyAspectSmooth", "Output_scaled",
+                (int)(MINIFY_FRACTION*rawHeight), (int)(MINIFY_FRACTION*rawWidth),
+                true, true);
+    }
+
+    private void loadTest(String testName, String outbasename, int width, int height,
+            boolean preserveAspectRatio, boolean smooth)
+            throws IOException, InterruptedException {
+        System.out.println(testName+", "+width+"x"+height+
+                ", preserveAspectRatio: "+preserveAspectRatio+
+                ", smooth: "+smooth);
+        String input = System.getProperty("image.input.url");
+        String outBase = System.getProperty("user.home") +
+                System.getProperty("file.separator") + outbasename;
+        loadAllTest(input, outBase, width, height, preserveAspectRatio, smooth);
+        Thread.sleep(3000);
+    }
+
+    private void loadAllTest(String input, String output,
+            int width, int height, boolean preserveAspectRatio, boolean smooth)
+            throws IOException {
+        ImageLoadListener listener = new ImageLoadListener() {
+
+            public void imageLoadProgress(ImageLoader loader, float percentageComplete) {
+                if (percentageComplete == 0.0) {
+                    System.out.println("Image loading started (" + percentageComplete + "%).");
+                } else if (percentageComplete == 100.0) {
+                    System.out.println("Image loading completed (" + percentageComplete + "%).");
+                } else {
+                    System.out.println(percentageComplete + "% complete ...");
+                }
+            }
+
+            public void imageLoadWarning(ImageLoader loader, String message) {
+                System.err.println("WARNING: " + loader + ": " + message);
+            }
+
+            public void imageLoadMetaData(ImageLoader loader, ImageMetadata metadata) {
+                System.out.println("metadata ready = " + metadata);
+            }
+        };
+
+        ImageFrame[] prismImages = null;
+        try {
+            long startTime = System.nanoTime();
+            prismImages = ImageStorage.loadAll(input, listener, width, height, preserveAspectRatio, smooth);
+            long finishTime = System.nanoTime();
+            System.out.println("Execution time: " + ((finishTime - startTime) / 1000000.0F) + " ms");
+        } catch (IOException e) {
+            System.err.print("ERROR!: ");
+            Throwable t = e.getCause();
+            e.printStackTrace();
+            if (t != null) {
+                t.printStackTrace();
+            }
+        }
+
+        if (prismImages != null) {
+
+            for (int i = 0; i < prismImages.length; i++) {
+                ImageFrame im = prismImages[i];
+                System.out.println(im.getImageType() + " " + im.getWidth() + "x" + im.getHeight());
+                if (rawWidth < 0) {
+                    rawWidth = im.getWidth();
+                    rawHeight = im.getHeight();
+                }
+                ImageMetadata md = im.getMetadata();
+                if (md != null) {
+                    System.out.println(im.getMetadata());
+                }
+                if (output != null) {
+                    BufferedImage bi = getAsBufferedImage(im);
+                    show(bi, input);
+                    if (WRITE_OUTPUT) {
+                        try {
+                            Class.forName("javax.imageio.ImageIO");
+                            javax.imageio.ImageIO.write(bi, "PNG",
+                                    new java.io.File(output + "_" + i + ".png"));
+                        } catch(Exception e) {
+                            System.err.println("Cannot locate javax.imageio.ImageIO: output write skipped");
+                        }
+                    }
+                }
+            }
+        } else {
+            System.out.println("No images loaded from " + input + "!");
+        }
+    }
+}

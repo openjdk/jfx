@@ -29,6 +29,7 @@ import com.sun.javafx.fxml.BeanAdapter;
 import com.sun.javafx.fxml.builder.JavaFXFontBuilder;
 import com.sun.javafx.fxml.builder.JavaFXImageBuilder;
 import com.sun.javafx.fxml.builder.JavaFXSceneBuilder;
+import com.sun.javafx.fxml.builder.TriangleMeshBuilder;
 import com.sun.javafx.fxml.builder.URLBuilder;
 import java.lang.reflect.Array;
 import java.lang.reflect.InvocationTargetException;
@@ -55,6 +56,7 @@ import javafx.collections.ObservableMap;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.image.Image;
+import javafx.scene.shape.TriangleMesh;
 import javafx.scene.text.Font;
 import javafx.util.Builder;
 import javafx.util.BuilderFactory;
@@ -130,6 +132,8 @@ public final class JavaFXBuilderFactory implements BuilderFactory {
             builder = new JavaFXImageBuilder();
         } else if (type == URL.class) {
             builder = new URLBuilder(classLoader);
+        } else if (type == TriangleMesh.class) {
+            builder = new TriangleMeshBuilder();
         } else {
             Builder<Object> objectBuilder = null;
             JavaFXBuilder typeBuilder = builders.get(type);

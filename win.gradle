@@ -42,10 +42,11 @@ if (!windows_tools.exists()) {
     windows_tools.getParentFile().mkdirs();
     windows_tools.createNewFile();
     ByteArrayOutputStream results = new ByteArrayOutputStream();
+    String winsdkDir = System.getenv().get("WINSDK_DIR");
     exec({
         environment([
-                "WINSDKPATH" : "",
-                "CONF"       : CONF, // TODO does this mean the generated properties must be reset when in a different configuration?
+                "WINSDKPATH" : winsdkDir == null ? "" : winsdkDir,
+                "CONF"       : "/$CONF", // TODO does this mean the generated properties must be reset when in a different configuration?
                 "VCARCH"     : IS_64 ? "amd64" : "x86",
                 "SDKARCH"    : IS_64 ? "/x64" : "/x86",
         ]);
@@ -102,11 +103,14 @@ ext.WINDOWS_NATIVE_COMPILE_ENVIRONMENT = [
         "DXSDK_DIR"            : WINDOWS_DXSDK_DIR
 ];
 
-defineProperty("CC", "$WINDOWS_VS_VSINSTALLDIR/VC/BIN/cl.exe");
-defineProperty("LINK", "$WINDOWS_VS_VSINSTALLDIR/VC/BIN/link.exe");
-defineProperty("RC", "$WINDOWS_SDK_DIR/Bin/RC.Exe");
-defineProperty("FXC", "$WINDOWS_DXSDK_DIR/utilities/bin/x86/fxc");
-defineProperty("MT", "$WINDOWS_SDK_DIR/Bin/mt.exe");
+String msvcBinDir = (IS_64
+                  ? "$WINDOWS_VS_VSINSTALLDIR/VC/BIN/amd64"
+                  : "$WINDOWS_VS_VSINSTALLDIR/VC/BIN")
+defineProperty("CC", cygpath("$msvcBinDir/cl.exe"));
+defineProperty("LINK", cygpath("$msvcBinDir/link.exe"));
+defineProperty("RC", cygpath("$WINDOWS_SDK_DIR/Bin/RC.Exe"));
+defineProperty("FXC", cygpath("$WINDOWS_DXSDK_DIR/utilities/bin/x86/fxc.exe"));
+defineProperty("MT", cygpath("$WINDOWS_SDK_DIR/Bin/mt.exe"));
 defineProperty("PRISM_CC", CC);
 defineProperty("PRISM_SW_CC", CC);
 
@@ -121,6 +125,8 @@ ext.PRISM_CC_FLAGS = new ArrayList(CC_FLAGS);
 ext.PRISM_LINK_FLAGS = new ArrayList(LINK_FLAGS);
 ext.PRISM_SW_CC_FLAGS = new ArrayList(CC_FLAGS);
 ext.PRISM_SW_LINK_FLAGS = new ArrayList(LINK_FLAGS);
+ext.PRISM_D3D_CC_FLAGS = [CC_FLAGS, "/Ibuild/headers/PrismD3D"].flatten();
+ext.PRISM_D3D_LINK_FLAGS = new ArrayList(LINK_FLAGS);
 ext.LAUNCHER_CC_FLAGS = ["/nologo", "/W3", "/EHsc", "/D_WINDOWS", "/DUNICODE", "/D_UNICODE", "/DWIN32",
         "/D_LITTLE_ENDIAN", "/DWIN32_LEAN_AND_MEAN", "/I$JDK_HOME/include", "/I$JDK_HOME/include/win32",
         "/arch:SSE", "/fp:fast", "/O2", "/MD"];

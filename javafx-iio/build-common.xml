@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="javafx-iio-common" default="jar" basedir=".">
+
+  <property name="cpp.dir" value="../javafx-iio-native"/>
+
+  <!-- NOTE: the following properties are passed to the native makefile and
+       are overridden by the tv build -->
+  <property name="native.dist.dir" value="../javafx-iio-native/dist${cross.name.suffix}"/>
+  <property name="native.build.dir" value="../javafx-iio-native/build${cross.name.suffix}"/>
+  <property name="native.makefile" value="Makefile"/>
+  <property name="jfxiio.classes.dir" value="../javafx-iio/build/classes"/>
+  <property name="nativelib.suffix.macosx" value=".dylib"/>
+
+  <target name="get-libname-macosx" if="isMacOSX">
+    <property name="native.lib.file" value="libjavafx-iio${nativelib.suffix.macosx}"/>
+  </target>
+  <target name="get-libname-linux" if="isLinux">
+    <property name="native.lib.file" value="libjavafx-iio.so"/>
+  </target>
+  <target name="get-libname-solaris" if="isSolaris">
+    <property name="native.lib.file" value="libjavafx-iio.so"/>
+  </target>
+  <target name="get-libname-windows" if="isWindows">
+    <property name="native.lib.file" value="javafx-iio.dll"/>
+  </target>
+  <target name="get-libname-android" if="isAndroid">
+    <property name="native.lib.file" value="libjavafx-iio.so"/>
+  </target>
+
+  <target name="get-libname" depends="get-libname-macosx,get-libname-linux,get-libname-solaris,get-libname-windows, get-libname-android"/>
+
+  <target name="-pre-init" depends="get-libname"/>
+
+  <target name="check-native">
+    <uptodate property="native.uptodate" targetfile="${native.dist.dir}/${native.lib.file}" >
+      <srcfiles dir="${cpp.dir}/src" includes="*.c"/>
+      <srcfiles dir="${cpp.dir}/src" includes="*.h"/>
+      <srcfiles dir="${cpp.dir}/src/libjpeg7" includes="*.c"/>
+      <srcfiles dir="${cpp.dir}/src/libjpeg7" includes="*.h"/>
+    </uptodate>
+  </target>
+
+  <target name="compile-native" depends="check-native" unless="native.uptodate">
+    <ant antfile="build-${os_name}.xml" target="compile-native" inheritAll="true"/>
+  </target>
+
+  <target name="jar-native" if="native.lib.file.exists">
+    <jar destfile="${dist.dir}/javafx-iio-native.jar"
+         basedir="${native.dist.dir}"
+         includes="${native.lib.file}"/>
+  </target>
+
+  <target name="jar" depends="init">
+    <build-project/>
+    <antcall target="compile-native"/>
+    <available property="native.lib.file.exists" file="${native.dist.dir}/${native.lib.file}"/>
+    <antcall target="jar-native"/>
+  </target>
+
+  <target name="clean">
+    <clean-project/>
+    <ant antfile="build-${os_name}.xml" target="clean-native" inheritAll="true"/>
+  </target>
+
+</project>

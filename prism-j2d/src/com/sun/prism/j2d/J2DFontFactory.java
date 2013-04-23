@@ -95,6 +95,17 @@ final class J2DFontFactory implements FontFactory {
 
         if (font == null) return null;
         final FontResource fr = font.getFontResource();
+        registerFont(font.getFontResource());
+        return font;
+    }
+
+    /**
+     * Printing uses the 2D pipeline which isn't initialised until
+     * printing begins, so grabs a copy of the file holding an 
+     * embedded font to 2D on first use.
+     */
+    public static void registerFont(final FontResource fr) {
+
         AccessController.doPrivileged(new PrivilegedAction<Object>() {
             public Object run() {
                 InputStream stream = null;
@@ -116,7 +127,6 @@ final class J2DFontFactory implements FontFactory {
                 return null;
             }
         });
-        return font;
     }
 
     public PGFont loadEmbeddedFont(String name, String path, 

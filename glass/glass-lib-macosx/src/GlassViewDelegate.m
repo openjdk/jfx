@@ -171,7 +171,7 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
                                                                                    NSPasteboardTypeMultipleTextSelection,
                                                                                    (NSString*)kUTTypeURL,
                                                                                    (NSString*)kUTTypeFileURL,
-                                                                                   (NSString*)@"placeholder.custom.bytes",
+                                                                                   (NSString*)@"public.mime-type",
                                                                             nil]];
     }
     return self;
@@ -534,15 +534,15 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
             // Can be inertia from scroll gesture, 
             // scroll gesture or mouse wheel itself
             //
-            // RT-22388
+            // RT-22388, RT-25269
             jint sender = com_sun_glass_ui_mac_MacGestureSupport_SCROLL_SRC_WHEEL;
-            if (self->gestureInProgress == YES) {
-                if (isInertialScroll(theEvent)) {
-                   sender = com_sun_glass_ui_mac_MacGestureSupport_SCROLL_SRC_INERTIA;
-                }
-                else {
-                    sender = com_sun_glass_ui_mac_MacGestureSupport_SCROLL_SRC_GESTURE;
-                }
+            if (isInertialScroll(theEvent))
+            {
+                sender = com_sun_glass_ui_mac_MacGestureSupport_SCROLL_SRC_INERTIA;
+            }
+            else if (self->gestureInProgress == YES)
+            {
+                sender = com_sun_glass_ui_mac_MacGestureSupport_SCROLL_SRC_GESTURE;
             }
             
             const jclass jGestureSupportClass = [GlassHelper ClassForName:"com.sun.glass.ui.mac.MacGestureSupport"
@@ -871,8 +871,7 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
             }
         } else {
             NSArray *items = [pasteboard pasteboardItems];
-            // NOTE:  There is always a placeholder item on the pasteboard, subtract it
-            if ([items count] - 1 == 1)
+            if ([items count] == 1)
             {
                 image = [[NSImage alloc] initWithContentsOfFile:@"/System/Library/CoreServices/CoreTypes.bundle/Contents/Resources/GenericDocumentIcon.icns"];
             }

@@ -25,83 +25,47 @@
 
 package com.sun.javafx.tk.quantum;
 
+import javafx.stage.Modality;
 import javafx.stage.StageStyle;
 
 import com.sun.glass.ui.Application;
 import com.sun.glass.ui.Screen;
 import com.sun.glass.ui.Window;
+
 import com.sun.javafx.tk.TKScene;
-import com.sun.prism.impl.PrismSettings;
+import com.sun.javafx.tk.TKStage;
 
-class PopupStage extends WindowStage  {
+final class PopupStage extends WindowStage  {
 
-    private GlassStage ownerStage;
-
-    public PopupStage(boolean verbose, final Object owner) {
-        super(verbose, StageStyle.TRANSPARENT);
-        assert owner instanceof GlassStage;
-        ownerStage = (GlassStage)owner;
+    public PopupStage(final TKStage owner) {
+        super(StageStyle.TRANSPARENT, false, Modality.NONE, owner);
     }
 
     @Override
     protected void initPlatformWindow() {
         Application app = Application.GetApplication();
+        GlassStage ownerStage = getOwner();
         Window owner = (ownerStage instanceof WindowStage) ?
                        ((WindowStage)ownerStage).getPlatformWindow() :
                        null;
         platformWindow = app.createWindow(owner, Screen.getMainScreen(),
                                           Window.TRANSPARENT | Window.POPUP);
         platformWindow.setFocusable(false);
-    }
 
-    public GlassScene getOwnerScene() {
-        return ownerStage.scene;
+        super.initPlatformWindow();
     }
 
     @Override
     public TKScene createTKScene(boolean depthBuffer) {
-        PopupScene scene = new PopupScene(verbose, depthBuffer);
-        scene.setGlassStage(this);
-
-        return scene;
+        return new PopupScene(depthBuffer);
     }
 
     public void setResizable(final boolean resizable) {
+        // no-op
     }
 
     public void setTitle(final String title) {
+        // no-op
     }
-
-    public void sizeToScene() {
-    }
-
-    public void centerOnScreen(){
-    }
-
-    public void close() {
-        super.close();
-    }
-
-    @Override
-    public void setBounds(float x, float y, boolean xSet, boolean ySet,
-                          float width, float height, float clientWidth, float clientHeight,
-                          float xGravity, float yGravity)
-    {
-        super.setBounds(x, y, xSet, ySet, width, height, clientWidth, clientHeight, xGravity, yGravity);
-    }
-
-    @Override public void setVisible(boolean visible) {
-        if (visible) {
-            ownerStage.addPopup(this);
-        } else {
-            ownerStage.removePopup(this);
-        }
-        super.setVisible(visible);
-    }
-
-    @Override public boolean isTopLevel() {
-        return false;
-    }
-
 }
 

@@ -38,40 +38,23 @@
     #define LOG(MSG, ...) GLASS_LOG(MSG, ## __VA_ARGS__);
 #endif
 
-// NSSavePanel is the super class for NSLoadPanel
-static inline void applyExtensions(JNIEnv* env, jobjectArray jExtensions, NSSavePanel *panel)
-{
-    if (jExtensions != NULL)
-    {
-        int itemCount = (*env)->GetArrayLength(env, jExtensions);
-        if (itemCount > 0)
-        {
-            NSMutableArray *types = [NSMutableArray arrayWithCapacity:(NSUInteger)itemCount];
-            for (int i=0; i<itemCount; i++)
-            {
-                jstring type = (*env)->GetObjectArrayElement(env, jExtensions, i);
-                NSString *string = [GlassHelper nsStringWithJavaString:type withEnv:env];
-                [types addObject:[string pathExtension]];
-            }
-            [panel setAllowedFileTypes:types];
-        }
-    }
-}
-
 #pragma mark --- Dispatcher
 
 @interface DialogDispatcher : NSObject
 {
     NSSavePanel *panel;
     NSWindow    *owner;
-    NSInteger   button;
-    jobject     eventLoop;
+    NSInteger    button;
+    jobject      eventLoop;
+    NSArray     *m_filters;
 }
 
 - initWithPanel:(NSSavePanel*)panel owner:(NSWindow*)owner;
 - (void)runModally;
 - (NSInteger)getButton;
 
+- (void)applyExtensions:(jobjectArray)jExtensionFilters withDefaultIndex:(jint)index withEnv:(JNIEnv*)env;
+- (void)extensionFilterChanged:(NSPopUpButton*)sender;
 @end
 
 @implementation DialogDispatcher
@@ -86,7 +69,7 @@ static inline void applyExtensions(JNIEnv* env, jobjectArray jExtensions, NSSave
     return self;
 }
 
-- (void)exitModalWithEnv:(JNIEnv*)env result:(NSInteger)result
+- (void)exitModalWithEnv:(JNIEnv*)env result:(NSInteger)result 
 {
     self->button = result;
     (*env)->CallVoidMethod(env, self->eventLoop, javaIDs.EventLoop.leave, NULL);
@@ -128,6 +111,72 @@ static inline void applyExtensions(JNIEnv* env, jobjectArray jExtensions, NSSave
     return self->button;
 }
 
+- (void)applyExtensions:(jobjectArray)jExtensionFilters withDefaultIndex:(jint)index withEnv:(JNIEnv*)env
+{
+    if (jExtensionFilters != NULL)
+    {
+        NSUInteger itemCount = (*env)->GetArrayLength(env, jExtensionFilters);
+        if (itemCount > 0)
+        {
+            NSMutableArray *filters = [NSMutableArray arrayWithCapacity:itemCount];
+            NSMutableArray *filterNames = [NSMutableArray arrayWithCapacity:itemCount];
+            for (int i = 0; i < itemCount; i++)
+            {
+                jobject jFilter = (*env)->GetObjectArrayElement(env, jExtensionFilters, i);
+                
+                jstring jDescription = (*env)->CallObjectMethod(env, jFilter, javaIDs.ExtensionFilter.getDescription);
+                [filterNames addObject:[GlassHelper nsStringWithJavaString:jDescription withEnv:env]];
+
+                jobjectArray jExtensions = (jobjectArray)(*env)->CallObjectMethod(env, jFilter, javaIDs.ExtensionFilter.extensionsToArray);
+                NSUInteger extensionCount = (NSUInteger)(*env)->GetArrayLength(env, jExtensions);
+                NSMutableArray* extensions = [NSMutableArray arrayWithCapacity:extensionCount];
+                for (int j = 0; j < extensionCount; j++)
+                {
+                    NSString* extension = [GlassHelper nsStringWithJavaString:(*env)->GetObjectArrayElement(env, jExtensions, j)
+                                                                       withEnv:env];
+                    [extensions addObject:[extension pathExtension]];
+                }
+                [filters addObject:extensions];
+            }
+
+            GLASS_CHECK_EXCEPTION(env);
+            
+            self->m_filters = filters;
+            
+            NSPopUpButton* filterView = [[[NSPopUpButton alloc] initWithFrame:NSZeroRect pullsDown:NO] autorelease];
+            [self->panel setAccessoryView:filterView];
+            [filterView setTarget:self];
+            [filterView setAction:@selector(extensionFilterChanged:)];
+            [filterView addItemsWithTitles:filterNames];
+            [filterView selectItemAtIndex:index];
+            [self extensionFilterChanged:filterView];
+            [filterView sizeToFit];
+        }
+    }
+
+}
+
+-(void)extensionFilterChanged:(NSPopUpButton*)sender
+{
+    NSInteger index = [sender indexOfSelectedItem];
+    if (index >= 0)
+    {
+        NSArray* extensions = [self->m_filters objectAtIndex:index];
+        if ([extensions count] == 0 || [extensions containsObject:@"*"])
+        {
+            [self->panel setAllowedFileTypes:nil];
+            //Clean up the added extensions when resetting to any file type.
+            NSString* fileName = [[self->panel nameFieldStringValue] stringByDeletingPathExtension];
+            [self->panel setNameFieldStringValue:fileName];
+        }
+        else
+        {
+            [self->panel setAllowedFileTypes:extensions];
+        }
+        [self->panel validateVisibleColumns];
+    }
+}
+
 @end
 
 static jobject convertNSURLtoFile(JNIEnv *env, NSURL *url)
@@ -140,7 +189,7 @@ static jobject convertNSURLtoFile(JNIEnv *env, NSURL *url)
     // Make sure the class is initialized before using the methodIDs
     const jclass MacCommonDialogsCls = [GlassHelper ClassForName:"com.sun.glass.ui.mac.MacCommonDialogs" withEnv:env];
 
-    // Performance doesn't matter here, so call the method every time
+    // Performance doesn't matter here, so call the method every time 
     if ((*env)->CallStaticBooleanMethod(env,
                 MacCommonDialogsCls,
                 javaIDs.MacCommonDialogs.isFileNSURLEnabled))
@@ -322,19 +371,26 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacCommonDialogs__1initIDs
     initJavaIDsList(env);
     initJavaIDsArrayList(env);
     initJavaIDsFile(env);
+
+    cls = [GlassHelper ClassForName:"com.sun.glass.ui.CommonDialogs$ExtensionFilter" withEnv:env];
+    javaIDs.ExtensionFilter.getDescription = (*env)->GetMethodID(env, cls, "getDescription", "()Ljava/lang/String;");
+    javaIDs.ExtensionFilter.extensionsToArray  = (*env)->GetMethodID(env, cls, "extensionsToArray", "()[Ljava/lang/String;");
+    
+    cls = [GlassHelper ClassForName:"com.sun.glass.ui.CommonDialogs$FileChooserResult" withEnv:env];
+    javaIDs.FileChooserResult.init = (*env)->GetMethodID(env, cls, "<init>", "(Ljava/util/List;Lcom/sun/glass/ui/CommonDialogs$ExtensionFilter;)V");
 }
 
 /*
  * Class:     com_sun_glass_ui_mac_MacCommonDialogs
  * Method:    _showFileOpenChooser
- * Signature: (JLjava/lang/String;Ljava/lang/String;Z[Lcom/sun/glass/ui/CommonDialogs$ExtensionFilter;)Ljava/util/List;
+ * Signature: (JLjava/lang/String;Ljava/lang/String;Z[Lcom/sun/glass/ui/CommonDialogs$ExtensionFilter;I)Lcom.sun.glass.ui.CommonDialogs$FileChooserResult;
  */
 JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_mac_MacCommonDialogs__1showFileOpenChooser
-(JNIEnv *env, jclass cls, jlong owner, jstring jFolder, jstring jTitle, jboolean jMultipleMode, jobjectArray jExtensionFilters)
+(JNIEnv *env, jclass cls, jlong owner, jstring jFolder, jstring jTitle, jboolean jMultipleMode, jobjectArray jExtensionFilters, jint defaultIndex)
 {
     LOG("Java_com_sun_glass_ui_mac_MacCommonDialogs__1showFileOpenChooser");
     
-    jobject chosen = NULL;
+    jobject result = NULL;
     
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER;
@@ -356,42 +412,54 @@ JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_mac_MacCommonDialogs__1showFileO
         [panel setCanSelectHiddenExtension:YES];
         [panel setAllowsOtherFileTypes:NO];
         [panel setCanCreateDirectories:NO];
-        applyExtensions(env, jExtensionFilters, panel);
+
+        jobject chosenFiles = NULL;
+        jobject chosenFilter = NULL;
         
         DialogDispatcher *dispatcher = [[DialogDispatcher alloc] initWithPanel:panel owner:(NSWindow*)jlong_to_ptr(owner)];
+        [dispatcher applyExtensions:jExtensionFilters withDefaultIndex:defaultIndex withEnv:env];
         {
             [dispatcher performSelectorOnMainThread:@selector(runModally) withObject:nil waitUntilDone:YES];
             NSArray *urls = [panel URLs];
 
-            chosen = (*env)->NewObject(env, (*env)->FindClass(env, "java/util/ArrayList"), javaIDs.ArrayList.init);
+            chosenFiles = (*env)->NewObject(env, (*env)->FindClass(env, "java/util/ArrayList"), javaIDs.ArrayList.init);
             if (([dispatcher getButton] == NSFileHandlingPanelOKButton) && ([urls count] > 0))
             {
                 for (NSUInteger i=0; i<[urls count]; i++)
                 {
                     NSURL *url = [urls objectAtIndex:i];
-                    (*env)->CallBooleanMethod(env, chosen, javaIDs.List.add, convertNSURLtoFile(env, url));
+                    (*env)->CallBooleanMethod(env, chosenFiles, javaIDs.List.add, convertNSURLtoFile(env, url));
                 }
+            }
+            
+            if (jExtensionFilters != NULL && (*env)->GetArrayLength(env, jExtensionFilters) > 0)
+            {
+                chosenFilter = (*env)->GetObjectArrayElement(env, jExtensionFilters,
+                                                             [(NSPopUpButton*)[panel accessoryView] indexOfSelectedItem]);
             }
         }
         [dispatcher release];
+
+        cls = [GlassHelper ClassForName:"com.sun.glass.ui.CommonDialogs$FileChooserResult" withEnv:env];
+        result = (*env)->NewObject(env, cls, javaIDs.FileChooserResult.init, chosenFiles, chosenFilter);
     }
     GLASS_POOL_EXIT;
     GLASS_CHECK_EXCEPTION(env);
-    
-    return chosen;
+
+    return result;
 }
 
 /*
  * Class:     com_sun_glass_ui_mac_MacCommonDialogs
  * Method:    _showFileSaveChooser
- * Signature: (JLjava/lang/String;Ljava/lang/String;Ljava/lang/String;[Lcom/sun/glass/ui/CommonDialogs$ExtensionFilter;)Ljava/util/List;
+ * Signature: (JLjava/lang/String;Ljava/lang/String;Ljava/lang/String;[Lcom/sun/glass/ui/CommonDialogs$ExtensionFilter;I)Lcom.sun.glass.ui.CommonDialogs$FileChooserResult;
  */
 JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_mac_MacCommonDialogs__1showFileSaveChooser
-(JNIEnv *env, jclass cls, jlong owner, jstring jFolder, jstring jFilename, jstring jTitle, jobjectArray jExtensionFilters)
+(JNIEnv *env, jclass cls, jlong owner, jstring jFolder, jstring jFilename, jstring jTitle, jobjectArray jExtensionFilters, jint defaultIndex)
 {
     LOG("Java_com_sun_glass_ui_mac_MacCommonDialogs__1showFileSaveChooser");
-    
-    jobject chosen = NULL;
+
+    jobject result = NULL;
     
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER;
@@ -414,25 +482,37 @@ JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_mac_MacCommonDialogs__1showFileS
         [panel setCanSelectHiddenExtension:YES];
         [panel setAllowsOtherFileTypes:NO];
         [panel setCanCreateDirectories:YES];
-        applyExtensions(env, jExtensionFilters, panel);
+
+        jobject chosenFile = NULL;
+        jobject chosenFilter = NULL;
         
         DialogDispatcher *dispatcher = [[DialogDispatcher alloc] initWithPanel:panel owner:(NSWindow*)jlong_to_ptr(owner)];
+        [dispatcher applyExtensions:jExtensionFilters withDefaultIndex:defaultIndex withEnv:env];
         {
             [dispatcher performSelectorOnMainThread:@selector(runModally) withObject:nil waitUntilDone:YES];
             NSURL *url = [panel URL];
 
-            chosen = (*env)->NewObject(env, (*env)->FindClass(env, "java/util/ArrayList"), javaIDs.ArrayList.init);
+            chosenFile = (*env)->NewObject(env, (*env)->FindClass(env, "java/util/ArrayList"), javaIDs.ArrayList.init);
             if (([dispatcher getButton] == NSFileHandlingPanelOKButton) && (url != nil))
             {
-                (*env)->CallBooleanMethod(env, chosen, javaIDs.List.add, convertNSURLtoFile(env, url));
+                (*env)->CallBooleanMethod(env, chosenFile, javaIDs.List.add, convertNSURLtoFile(env, url));
+            }
+            
+            if (jExtensionFilters != NULL && (*env)->GetArrayLength(env, jExtensionFilters) > 0)
+            {
+                chosenFilter = (*env)->GetObjectArrayElement(env, jExtensionFilters,
+                                                             [(NSPopUpButton*)[panel accessoryView] indexOfSelectedItem]);
             }
         }
         [dispatcher release];
+
+        cls = [GlassHelper ClassForName:"com.sun.glass.ui.CommonDialogs$FileChooserResult" withEnv:env];
+        result = (*env)->NewObject(env, cls, javaIDs.FileChooserResult.init, chosenFile, chosenFilter);
     }
     GLASS_POOL_EXIT;
     GLASS_CHECK_EXCEPTION(env);
     
-    return chosen;
+    return result;
 }
 
 /*

@@ -722,10 +722,10 @@ public class Scene implements EventTarget {
         impl_peer.setSecurityContext(acc);
         impl_peer.setTKSceneListener(new ScenePeerListener());
         impl_peer.setTKScenePaintListener(new ScenePeerPaintListener());
-        impl_peer.setScene(this);
         PerformanceTracker.logEvent("Scene.initPeer TKScene set");
         impl_peer.setRoot(getRoot().impl_getPGNode());
         impl_peer.setFillPaint(getFill() == null ? null : tk.getPaint(getFill()));
+        getEffectiveCamera().impl_updatePG();
         impl_peer.setCamera(getEffectiveCamera().getPlatformCamera());
 
         impl_setAllowPGAccess(false);
@@ -755,7 +755,7 @@ public class Scene implements EventTarget {
         }
         Toolkit tk = Toolkit.getToolkit();
         tk.removeSceneTkPulseListener(scenePulseListener);
-        impl_peer.setScene(null);
+        impl_peer.dispose();
         impl_peer = null;
     }
 
@@ -1169,7 +1169,14 @@ public class Scene implements EventTarget {
         context.depthBuffer = depthBuffer;
         context.root = root.impl_getPGNode();
         context.platformPaint = fill == null ? null : tk.getPaint(fill);
+        double cameraViewWidth = 1.0;
+        double cameraViewHeight = 1.0;
         if (camera != null) {
+            // temporarily adjust camera viewport to the snapshot size
+            cameraViewWidth = camera.getViewWidth();
+            cameraViewHeight = camera.getViewHeight();
+            camera.setViewWidth(width);
+            camera.setViewHeight(height);
             camera.impl_updatePG();
             context.camera = camera.getPlatformCamera();
         } else {
@@ -1181,6 +1188,14 @@ public class Scene implements EventTarget {
         impl_setAllowPGAccess(false);
         Object tkImage = tk.renderToImage(context);
         accessor.loadTkImage(wimg, tkImage);
+
+        if (camera != null) {
+            impl_setAllowPGAccess(true);
+            camera.setViewWidth(cameraViewWidth);
+            camera.setViewHeight(cameraViewHeight);
+            camera.impl_updatePG();
+            impl_setAllowPGAccess(false);
+        }
 
         // if this scene belongs to some stage
         // we need to mark the entire scene as dirty
@@ -2238,11 +2253,11 @@ public class Scene implements EventTarget {
                 impl_peer.setFillPaint(getFill() == null ? null : tk.getPaint(getFill()));
             }
 
-            // new camera was set on the scene
-            if (isDirty(DirtyBits.CAMERA_DIRTY)) {
-                final Camera camera = getEffectiveCamera();
-                camera.impl_updatePG();
-                impl_peer.setCamera(camera.getPlatformCamera());
+            // new camera was set on the scene or old camera changed
+            final Camera cam = getEffectiveCamera();
+            if (isDirty(DirtyBits.CAMERA_DIRTY) || !cam.impl_isDirtyEmpty()) {
+                cam.impl_updatePG();
+                impl_peer.setCamera(cam.getPlatformCamera());
             }
 
             clearDirty();
@@ -2294,7 +2309,7 @@ public class Scene implements EventTarget {
                 Scene.this.doLayoutPass();
             }
 
-            boolean dirty = dirtyNodes == null || dirtyNodesSize != 0 || !isDirtyEmpty();
+            boolean dirty = dirtyNodes == null || dirtyNodesSize != 0 || !isDirtyEmpty() || !getEffectiveCamera().impl_isDirtyEmpty();
             if (dirty) {
                 getRoot().updateBounds();
                 if (impl_peer != null) {
