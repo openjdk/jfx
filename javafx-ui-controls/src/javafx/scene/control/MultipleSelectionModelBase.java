@@ -30,6 +30,7 @@ import com.sun.javafx.collections.NonIterableChange;
 import static javafx.scene.control.SelectionMode.SINGLE;
 
 import java.util.AbstractList;
+import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.Collections;
 import java.util.List;
@@ -38,6 +39,7 @@ import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
+import javafx.collections.ListChangeListener.Change;
 
 import com.sun.javafx.scene.control.ReadOnlyUnbackedObservableList;
 
@@ -382,31 +384,120 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
 
             selectedIndicesSeq.callObservers(new NonIterableChange.SimpleAddChange<Integer>(0, 1, selectedIndicesSeq));
         } else {
+            final List<Integer> actualSelectedRows = new ArrayList<Integer>();
+            
             int lastIndex = -1;
             if (row >= 0 && row < rowCount) {
                 lastIndex = row;
-                selectedIndices.set(row);
+                if (! selectedIndices.get(row)) {
+                    selectedIndices.set(row);
+                    actualSelectedRows.add(row);
+                }
             }
 
             for (int i = 0; i < rows.length; i++) {
                 int index = rows[i];
                 if (index < 0 || index >= rowCount) continue;
                 lastIndex = index;
-                selectedIndices.set(index);
+                
+                if (! selectedIndices.get(index)) {
+                    selectedIndices.set(index);
+                    actualSelectedRows.add(index);
+                }
             }
 
             if (lastIndex != -1) {
-                select(lastIndex);
+                setSelectedIndex(lastIndex);
+                focus(lastIndex);
+                setSelectedItem(getModelItem(lastIndex));
             }
 
-            if (rows.length == 0) {
-                // TODO this isn't accurate
-                selectedIndicesSeq.callObservers(new NonIterableChange.SimpleAddChange<Integer>((int) row, (int) row, selectedIndicesSeq));
-            } else {
-                // TODO this isn't accurate
-                selectedIndicesSeq.callObservers(new NonIterableChange.SimpleAddChange<Integer>((int) row, (int) rows[rows.length - 1], selectedIndicesSeq));
-            }
+            // need to come up with ranges based on the actualSelectedRows, and
+            // then fire the appropriate number of changes. We also need to
+            // translate from a desired row to select to where that row is 
+            // represented in the selectedIndices list. For example,
+            // we may have requested to select row 5, and the selectedIndices
+            // list may therefore have the following: [1,4,5], meaning row 5
+            // is in position 2 of the selectedIndices list
+            Change<Integer> change = createRangeChange(selectedIndicesSeq, actualSelectedRows);
+            selectedIndicesSeq.callObservers(change);
         }
+    }
+    
+    static Change<Integer> createRangeChange(final ObservableList<Integer> list, final List<Integer> addedItems) {
+        Change<Integer> change = new Change<Integer>(list) {
+            private final int[] EMPTY_PERM = new int[0];
+            private final int addedSize = addedItems.size(); 
+            
+            private boolean invalid = true;
+            
+            private int pos = 0;
+            private int from = pos;
+            private int to = pos;
+            
+            @Override public int getFrom() {
+                checkState();
+                return from;
+            }
+
+            @Override public int getTo() {
+                checkState();
+                return to;
+            }
+
+            @Override public List<Integer> getRemoved() {
+                checkState();
+                return Collections.<Integer>emptyList();
+            }
+
+            @Override protected int[] getPermutation() {
+                checkState();
+                return EMPTY_PERM;
+            }
+            
+            @Override public int getAddedSize() {
+                return to - from;
+            }
+
+            @Override public boolean next() {
+                if (pos >= addedSize) return false;
+                
+                // starting from pos, we keep going until the value is
+                // not the next value
+                from = pos;
+                int startValue = addedItems.get(pos++);
+                int endValue = startValue;
+                while (pos < addedSize) {
+                    int previousEndValue = endValue;
+                    endValue = addedItems.get(pos++);
+                    if (previousEndValue != (endValue - 1)) {
+                        break;
+                    }
+                }
+                to = pos;
+                
+                if (invalid) {
+                    invalid = false;
+                    return true; 
+                }
+                
+                // we keep going until we've represented all changes!
+                return pos < addedSize;
+            }
+
+            @Override public void reset() {
+                invalid = true;
+                pos = 0;
+            }
+            
+            private void checkState() {
+                if (invalid) {
+                    throw new IllegalStateException("Invalid Change state: next() must be called before inspecting the Change.");
+                }
+            }
+            
+        };
+        return change;
     }
 
     @Override public void selectAll() {
