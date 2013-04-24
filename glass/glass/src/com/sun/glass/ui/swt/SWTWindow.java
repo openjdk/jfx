@@ -74,6 +74,7 @@ final class SWTWindow extends Window {
         }
         int [] shellEvents = new int [] {
             SWT.Activate,
+            SWT.Close,
             SWT.Deactivate,
             SWT.Iconify,
             SWT.Deiconify,
@@ -137,6 +138,11 @@ final class SWTWindow extends Window {
                 Rectangle rect = shell.getClientArea();
                 Control [] children = shell.getChildren();
                 for (int i=0; i<children.length; i++) children[i].setBounds(rect);
+                break;
+            }
+            case SWT.Close: {
+                notifyClose();
+                event.doit = false;
                 break;
             }
             case SWT.Dispose: {
