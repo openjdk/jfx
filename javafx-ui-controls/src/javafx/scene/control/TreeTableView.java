@@ -38,6 +38,7 @@ import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.Comparator;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 import javafx.application.Platform;
@@ -1989,13 +1990,20 @@ public class TreeTableView<S> extends Control {
                     // }
                     // 
                     // A more efficient solution:
+                    final List<Integer> newlySelectedRows = new ArrayList<Integer>();
+                    final List<Integer> newlyUnselectedRows = new ArrayList<Integer>();
+                    
                     while (c.next()) {
                         if (c.wasRemoved()) {
                             List<? extends TreeTablePosition<S,?>> removed = c.getRemoved();
                             for (int i = 0; i < removed.size(); i++) {
                                 final TreeTablePosition<S,?> tp = removed.get(i);
                                 final int row = tp.getRow();
-                                selectedIndicesBitSet.clear(row);
+                                
+                                if (selectedIndicesBitSet.get(row)) {
+                                    selectedIndicesBitSet.clear(row);
+                                    newlySelectedRows.add(row);
+                                }
                             }
                         }
                         if (c.wasAdded()) {
@@ -2003,7 +2011,11 @@ public class TreeTableView<S> extends Control {
                             for (int i = 0; i < added.size(); i++) {
                                 final TreeTablePosition<S,?> tp = added.get(i);
                                 final int row = tp.getRow();
-                                selectedIndicesBitSet.set(row);
+                                
+                                if (! selectedIndicesBitSet.get(row)) {
+                                    selectedIndicesBitSet.set(row);
+                                    newlySelectedRows.add(row);
+                                }
                             }
                         }
                     }
@@ -2018,8 +2030,20 @@ public class TreeTableView<S> extends Control {
                     selectedItems.callObservers(new MappingChange<TreeTablePosition<S,?>, TreeItem<S>>(c, cellToItemsMap, selectedItems));
                     c.reset();
 
-                    selectedIndices.callObservers(new MappingChange<TreeTablePosition<S,?>, Integer>(c, cellToIndicesMap, selectedIndices));
-                    c.reset();
+                    if (! newlySelectedRows.isEmpty() && newlyUnselectedRows.isEmpty()) {
+                        // need to come up with ranges based on the actualSelectedRows, and
+                        // then fire the appropriate number of changes. We also need to
+                        // translate from a desired row to select to where that row is 
+                        // represented in the selectedIndices list. For example,
+                        // we may have requested to select row 5, and the selectedIndices
+                        // list may therefore have the following: [1,4,5], meaning row 5
+                        // is in position 2 of the selectedIndices list
+                        Change<Integer> change = createRangeChange(selectedIndices, newlySelectedRows);
+                        selectedIndices.callObservers(change);
+                    } else {
+                        selectedIndices.callObservers(new MappingChange<TreeTablePosition<S,?>, Integer>(c, cellToIndicesMap, selectedIndices));
+                        c.reset();
+                    }
 
                     selectedCellsSeq.callObservers(new MappingChange<TreeTablePosition<S,?>, TreeTablePosition<S,?>>(c, MappingChange.NOOP_MAP, selectedCellsSeq));
                     c.reset();
@@ -2328,19 +2352,25 @@ public class TreeTableView<S> extends Control {
                 }
             } else {
                 int lastIndex = -1;
-                List<TreeTablePosition<S,?>> positions = new ArrayList<TreeTablePosition<S,?>>();
+                Set<TreeTablePosition<S,?>> positions = new LinkedHashSet<TreeTablePosition<S,?>>();
 
                 if (row >= 0 && row < rowCount) {
-                    positions.add(new TreeTablePosition(getTreeTableView(), row, null));
-                    lastIndex = row;
+                    TreeTablePosition<S,Object> pos = new TreeTablePosition<S,Object>(getTreeTableView(), row, null);
+                    
+                    if (! selectedCells.contains(pos)) {
+                        positions.add(pos);
+                        lastIndex = row;
+                    }
                 }
 
                 for (int i = 0; i < rows.length; i++) {
                     int index = rows[i];
                     if (index < 0 || index >= rowCount) continue;
                     lastIndex = index;
-                    TreeTablePosition pos = new TreeTablePosition(getTreeTableView(), index, null);
-                    if (selectedCells.contains(pos)) continue;
+                    TreeTablePosition<S,Object> pos = new TreeTablePosition<S,Object>(getTreeTableView(), index, null);
+                    if (! selectedCells.contains(pos)) {
+                        positions.add(pos);
+                    }
 
                     positions.add(pos);
                 }

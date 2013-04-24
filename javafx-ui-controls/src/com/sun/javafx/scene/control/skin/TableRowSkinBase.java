@@ -506,7 +506,7 @@ public abstract class TableRowSkinBase<T,
                             } else {
                                 fadeIn(graphic);
                                 positionInArea(graphic, x + leftMargin + disclosureWidth, y,
-                                            disclosureWidth, h, /*baseline ignored*/0,
+                                            graphicWidth, h, /*baseline ignored*/0,
                                             HPos.CENTER, VPos.CENTER);
                                 graphic.toFront();
                             }

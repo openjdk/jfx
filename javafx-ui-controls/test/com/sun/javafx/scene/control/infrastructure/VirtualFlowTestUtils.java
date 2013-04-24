@@ -243,6 +243,10 @@ public class VirtualFlowTestUtils {
         }
         
         flow = (VirtualFlow<?>)control.lookup("#virtual-flow");
+        
+        stage.close();
+        stage = null;
+        
         return flow;
     }
     
