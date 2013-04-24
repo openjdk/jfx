@@ -388,7 +388,8 @@ renderer_setGamma(Renderer* rdr, jfloat gamma, jfloat invgamma)
 }
 
 static INLINE void
-renderer_setMask(Renderer* rdr, jint maskType, jbyte* data, jint width, jint height, jboolean freeData)
+renderer_setMask(Renderer* rdr, jint maskType, jbyte* data, jint width, jint height,
+    jint subPosX, jboolean freeData)
 {
     if (rdr->_mask_free == JNI_TRUE) {
         my_free(rdr->_mask_byteData);
@@ -401,6 +402,7 @@ renderer_setMask(Renderer* rdr, jint maskType, jbyte* data, jint width, jint hei
     
     rdr->_mask_width = width;
     rdr->_mask_height = height;
+    rdr->_mask_subPosX = subPosX;
     
     rdr->_rendererState |= INVALID_BLITTING_MASK | INVALID_MASK_DEPENDED_ROUTINES;
 }

@@ -1117,6 +1117,8 @@ blitSrcOverLCDMask8888_pre(Renderer *rdr, jint height) {
     jbyte *alpha = rdr->_mask_byteData;
     jint alphaOffset = rdr->_maskOffset;
     jint alphaStride = rdr->_alphaWidth;
+    jint subPosXL = rdr->_mask_subPosX >> 2;
+    jint subPosXR = rdr->_mask_subPosX & 3;
 
     jbyte *a, *am;
 
@@ -1131,12 +1133,36 @@ blitSrcOverLCDMask8888_pre(Renderer *rdr, jint height) {
     minX = rdr->_minTouched;
     maxX = rdr->_maxTouched;
     w = (maxX >= minX) ? (maxX - minX + 1) : 0;
-    
+
     for (j = 0; j < height; j++) {
         iidx = imageOffset + minX * imagePixelStride;
-        
+
         a = alpha + alphaOffset;
-        am = a + 3*w;
+        am = a + 3*w - (subPosXR ? 3 : 0); // right subpixel - remove from loop
+
+        // check for left subpixel
+        if (subPosXL) {
+            switch (subPosXL) {
+            case 1:
+                ared = 0;
+                agreen = *a++ & 0xff;
+                ablue = *a++ & 0xff;
+                break;
+            case 2:
+                ared = agreen = 0;
+                ablue = *a++ & 0xff;
+                break;
+            }
+            if (calpha < MAX_ALPHA) {
+                ared = ((ared+1) * calpha) >> 8;
+                agreen = ((agreen+1) * calpha) >> 8;
+                ablue = ((ablue+1) * calpha) >> 8;
+            }
+            blendLCDSrcOver8888_pre(&intData[iidx], ared, agreen, ablue,
+                cred, cgreen, cblue, gamma, invgamma);
+            iidx += imagePixelStride;
+        }
+
         while (a < am) {
             ared = *a++ & 0xff;
             agreen = *a++ & 0xff;
@@ -1156,7 +1182,30 @@ blitSrcOverLCDMask8888_pre(Renderer *rdr, jint height) {
             }
             iidx += imagePixelStride;
         }
-        
+
+        // check for right subpixel
+        if (subPosXR) {
+            switch (subPosXR) {
+            case 1:
+                ared = *a++ & 0xff;;
+                agreen = ablue = 0;
+                break;
+            case 2:
+                ared = *a++ & 0xff;
+                agreen = *a++ & 0xff;;
+                ablue = 0;
+                break;
+            }
+            if (calpha < MAX_ALPHA) {
+                ared = ((ared+1) * calpha) >> 8;
+                agreen = ((agreen+1) * calpha) >> 8;
+                ablue = ((ablue+1) * calpha) >> 8;
+            }
+            blendLCDSrcOver8888_pre(&intData[iidx], ared, agreen, ablue,
+                cred, cgreen, cblue, gamma, invgamma);
+            iidx += imagePixelStride;
+        }
+
         imageOffset += imageScanlineStride;
         alphaOffset += alphaStride;
     }

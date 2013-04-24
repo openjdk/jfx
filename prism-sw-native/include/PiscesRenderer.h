@@ -307,10 +307,8 @@ typedef struct _Renderer {
     jint* _rowAAInt;
 
     // Mask
-    jlong _mask_m00, _mask_m01, _mask_m02;
-    jlong _mask_m10, _mask_m11, _mask_m12;
-    jboolean _mask_identityTransform;
     jboolean _mask_free;
+    jint _mask_subPosX;
     
     // Mask data
     jint _maskType;
