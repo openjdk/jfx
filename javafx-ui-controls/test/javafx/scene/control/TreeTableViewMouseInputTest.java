@@ -213,7 +213,6 @@ public class TreeTableViewMouseInputTest {
         assertTrue(debug(),isSelected(5,6,7,8,9));
     }
     
-    @Ignore("Bug is not yet fixed")
     @Test public void test_rt29833_mouse_select_downwards() {
         sm.setCellSelectionEnabled(false);
         sm.setSelectionMode(SelectionMode.MULTIPLE);
