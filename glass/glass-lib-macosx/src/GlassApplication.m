@@ -962,4 +962,36 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacApplication__1supportsSy
     return !isEmbedded;
 }
 
+/*
+ * Class:     com_sun_glass_ui_mac_MacApplication
+ * Method:    _hide
+ * Signature: ()V;
+ */
+JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacApplication__1hide
+(JNIEnv *env, jobject japplication)
+{
+    [NSApp hide:NSApp];
+}
+
+/*
+ * Class:     com_sun_glass_ui_mac_MacApplication
+ * Method:    _hideOtherApplications
+ * Signature: ()V;
+ */
+JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacApplication__1hideOtherApplications
+(JNIEnv *env, jobject japplication)
+{
+    [NSApp hideOtherApplications:NSApp];
+}
+
+/*
+ * Class:     com_sun_glass_ui_mac_MacApplication
+ * Method:    _unhideAllApplications
+ * Signature: ()V;
+ */
+JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacApplication__1unhideAllApplications
+(JNIEnv *env, jobject japplication)
+{
+    [NSApp unhideAllApplications:NSApp];
+}
 
