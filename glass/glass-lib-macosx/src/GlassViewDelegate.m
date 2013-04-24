@@ -646,7 +646,8 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
             // Quirk in Firefox: If we have to generate a key-typed and this
             // event is a repeat we will also need to generate a fake RELEASE event
             // because we won't see a key-release.
-            if ([theEvent isARepeat]) {
+            if ([theEvent isARepeat] &&
+                [[self->nsView window] isKindOfClass:[GlassEmbeddedWindow class]]) {
                 SEND_KEY_EVENT(com_sun_glass_events_KeyEvent_RELEASE);
             }
         }
