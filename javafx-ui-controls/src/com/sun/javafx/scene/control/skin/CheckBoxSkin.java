@@ -59,12 +59,21 @@ public class CheckBoxSkin extends LabeledSkinBase<CheckBox, ButtonBehavior<Check
             getChildren().add(box);
         }
     }
+    
+    @Override protected double computeMinWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
+        return super.computePrefWidth(height, topInset, rightInset, bottomInset, leftInset) + snapSize(box.minWidth(-1));
+    }
+    
+    @Override protected double computeMinHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
+        return Math.max(super.computeMinHeight(width - box.minWidth(-1), topInset, rightInset, bottomInset, leftInset),
+                topInset + box.minHeight(-1) + bottomInset);
+    }
 
-    @Override protected double computePrefWidth(double height, int topInset, int rightInset, int bottomInset, int leftInset) {
+    @Override protected double computePrefWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
         return super.computePrefWidth(height, topInset, rightInset, bottomInset, leftInset) + snapSize(box.prefWidth(-1));
     }
 
-    @Override protected double computePrefHeight(double width, int topInset, int rightInset, int bottomInset, int leftInset) {
+    @Override protected double computePrefHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
         return Math.max(super.computePrefHeight(width - box.prefWidth(-1), topInset, rightInset, bottomInset, leftInset),
                         topInset + box.prefHeight(-1) + bottomInset);
     }

@@ -57,6 +57,7 @@ import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener.Change;
 import javafx.collections.ObservableList;
 import javafx.collections.ObservableMap;
+import javafx.collections.ObservableSet;
 import javafx.event.Event;
 import javafx.event.EventDispatchChain;
 import javafx.event.EventDispatcher;
@@ -110,7 +111,6 @@ import javafx.css.StyleableBooleanProperty;
 import javafx.css.StyleableDoubleProperty;
 import javafx.css.StyleableObjectProperty;
 import javafx.css.CssMetaData;
-import javafx.css.StyleOrigin;
 import javafx.css.PseudoClass;
 import com.sun.javafx.css.converters.BooleanConverter;
 import com.sun.javafx.css.converters.CursorConverter;
@@ -8351,13 +8351,13 @@ public abstract class Node implements EventTarget, Styleable {
    }
 
     // package so that StyleHelper can get at it
-    final Set<PseudoClass> pseudoClassStates = new PseudoClassState();
+    final ObservableSet<PseudoClass> pseudoClassStates = new PseudoClassState();
     /**
      * @return An unmodifiable Set of active pseudo-class states
      */
-    public final Set<PseudoClass> getPseudoClassStates() {
+    public final ObservableSet<PseudoClass> getPseudoClassStates() {
 
-        return Collections.unmodifiableSet(pseudoClassStates);
+        return FXCollections.unmodifiableObservableSet(pseudoClassStates);
 
     }
 

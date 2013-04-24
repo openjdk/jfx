@@ -54,7 +54,7 @@ AccessibleSelectionProvider::~AccessibleSelectionProvider() {
  * returns: the new reference count
  */
 IFACEMETHODIMP_(ULONG) AccessibleSelectionProvider::AddRef() {
-        //LOG("AccessibleSelectionProvider::AddRef\n");
+    //LOG("AccessibleSelectionProvider::AddRef\n");
     return AccessibleBasePatternProvider::AddRef();
 }
 
@@ -64,7 +64,7 @@ IFACEMETHODIMP_(ULONG) AccessibleSelectionProvider::AddRef() {
  * returns: the new reference count
  */
 IFACEMETHODIMP_(ULONG) AccessibleSelectionProvider::Release() {
-        //LOG("AccessibleSelectionProvider::Release\n");
+    //LOG("AccessibleSelectionProvider::Release\n");
     return AccessibleBasePatternProvider::Release();
 }
 
@@ -115,9 +115,9 @@ IFACEMETHODIMP AccessibleSelectionProvider::GetPatternProvider(PATTERNID pattern
 /**
  * Get the state of the control.
  *
- * pRetVal:                receiver of the state
+ * pRetVal:     receiver of the state
  *
- * returns:     S_OK
+ * returns: S_OK
  */
 IFACEMETHODIMP AccessibleSelectionProvider::get_IsSelectionRequired(BOOL *pRetVal) {
     LOG("In AccessibleSelectionProvider::get_IsSelectionRequired\n");
@@ -163,24 +163,24 @@ IFACEMETHODIMP AccessibleSelectionProvider::GetSelection(SAFEARRAY **pRetVal) {
     if (pRetVal == NULL)
         return E_INVALIDARG;
     JNIEnv* env = GetEnv();
-        jlongArray selectedElements = static_cast<jlongArray>(env->CallObjectMethod(m_self, midGetSelection));
-        if( selectedElements == NULL )
-                return S_OK;
-        jint size = env->GetArrayLength(selectedElements);
+    jlongArray selectedElements = static_cast<jlongArray>(env->CallObjectMethod(m_self, midGetSelection));
+    if( selectedElements == NULL )
+        return S_OK;
+    jint size = env->GetArrayLength(selectedElements);
     if (size != 0) {
-                //LOG("  size: %d\n", size);
+        //LOG("  size: %d\n", size);
         jlong* selectedElementsPatterns = env->GetLongArrayElements(selectedElements, JNI_FALSE);
-                SAFEARRAY *psaElements = SafeArrayCreateVector(VT_I4, 0, size);
-                if (psaElements == NULL) {
-                        return E_OUTOFMEMORY;
-                }
-                for (LONG idx = 0; idx < size; idx++) {
-                        LOG("  idx: %d\n", idx);
-                        LOG("  selectedElements: %p\n", reinterpret_cast<void*>(jlong_to_ptr(selectedElementsPatterns[idx])) );
+        SAFEARRAY *psaElements = SafeArrayCreateVector(VT_I4, 0, size);
+        if (psaElements == NULL) {
+            return E_OUTOFMEMORY;
+        }
+        for (LONG idx = 0; idx < size; idx++) {
+            LOG("  idx: %d\n", idx);
+            LOG("  selectedElements: %p\n", reinterpret_cast<void*>(jlong_to_ptr(selectedElementsPatterns[idx])) );
             SafeArrayPutElement(psaElements, &idx, (void*)(jlong_to_ptr(selectedElementsPatterns[idx])));
-                }
+        }
         env->ReleaseLongArrayElements(selectedElements, selectedElementsPatterns, JNI_FALSE);
-                *pRetVal = psaElements;
+        *pRetVal = psaElements;
     } else 
         LOG("AccessibleSelectionProvider size=%d\n" , size);
     return S_OK;
@@ -214,7 +214,7 @@ Java_com_sun_glass_ui_accessible_win_WinAccessibleSelectionProvider__1initIDs(
     LOG("In WinAccessibleSelectionProvider._initIDs\n");
     midCanSelectMultiple = env->GetMethodID(cls, "canSelectMultiple", "()Z");
     ASSERT(midCanSelectMultiple);
-        midGetIsSelectionRequired= env->GetMethodID(cls, "isSelectionRequired", "()Z");
+    midGetIsSelectionRequired= env->GetMethodID(cls, "isSelectionRequired", "()Z");
     ASSERT(midGetIsSelectionRequired);
     midGetSelection = env->GetMethodID(cls, "getSelection", "()[J");
     ASSERT(midGetSelection);
@@ -239,22 +239,22 @@ Java_com_sun_glass_ui_accessible_win_WinAccessibleSelectionProvider__1initIDs(
  */
 JNIEXPORT jlong JNICALL
 Java_com_sun_glass_ui_accessible_win_WinAccessibleSelectionProvider__1createAccessible(
-        JNIEnv* env, jobject self, jlong accSimple) {
+    JNIEnv* env, jobject self, jlong accSimple) {
     LOG("In WinAccessibleSelectionProvider._createAccessible\n");
     LOG("  accSimple: %p\n", accSimple);
-    // PTB: Do we need try/catch around the new?
+    // TODO: Do we need try/catch around the new?
     AccessibleSelectionProvider* acc = new AccessibleSelectionProvider(env, self);
     LOG("  acc: %p\n", acc);
-        // Add this to the simple provider
-        if (accSimple != 0) {
-                AccessibleBaseProvider* accessibleSimple =
+    // Add this to the simple provider
+    if (accSimple != 0) {
+        AccessibleBaseProvider* accessibleSimple =
             reinterpret_cast<AccessibleBaseProvider *>(accSimple) ;
-                if (accessibleSimple != NULL) {
-                        accessibleSimple->AddPatternObject(reinterpret_cast<IUnknown*>(acc));
-                } else {
-                        LOG("  AddPatternObject not called; accessibleSimple is NULL.\n");
+        if (accessibleSimple != NULL) {
+            accessibleSimple->AddPatternObject(reinterpret_cast<IUnknown*>(acc));
+        } else {
+            LOG("  AddPatternObject not called; accessibleSimple is NULL.\n");
         }
-        }
+    }
     return reinterpret_cast<jlong>(acc);
 }
 

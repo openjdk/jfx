@@ -353,6 +353,7 @@ public class Region extends Parent {
         if (snapToPixel == null) {
             if (_snapToPixel != value) {
                 _snapToPixel = value;
+                updateSnappedInsets();
                 requestParentLayout();
             }
         } else {
@@ -374,6 +375,7 @@ public class Region extends Parent {
                     boolean value = get();
                     if (_snapToPixel != value) {
                         _snapToPixel = value;
+                        updateSnappedInsets();
                         requestParentLayout();
                     }
                 }
@@ -557,6 +559,7 @@ public class Region extends Parent {
 
         void fireValueChanged() {
             cache = null;
+            updateSnappedInsets();
             requestLayout();
             ExpressionHelper.fireValueChangedEvent(helper);
         }
@@ -593,6 +596,31 @@ public class Region extends Parent {
             return cache;
         }
     };
+
+    /**
+     * cached results of snapped insets, this are used a lot during layout so makes sense
+     * to keep fast access cached copies here.
+     */
+    private double snappedTopInset = 0;
+    private double snappedRightInset = 0;
+    private double snappedBottomInset = 0;
+    private double snappedLeftInset = 0;
+
+    /** Called to update the cached snapped insets */
+    private void updateSnappedInsets() {
+        final Insets insets = getInsets();
+        if (_snapToPixel) {
+            snappedTopInset = Math.ceil(insets.getTop());
+            snappedRightInset = Math.ceil(insets.getRight());
+            snappedBottomInset = Math.ceil(insets.getBottom());
+            snappedLeftInset = Math.ceil(insets.getLeft());
+        } else {
+            snappedTopInset = insets.getTop();
+            snappedRightInset = insets.getRight();
+            snappedBottomInset = insets.getBottom();
+            snappedLeftInset = insets.getLeft();
+        }
+    }
 
     /**
     * The width of this resizable node.  This property is set by the region's parent
@@ -1362,8 +1390,8 @@ public class Region extends Parent {
      * @since 8.0
      * @return Rounded up insets top
      */
-    public final int snappedTopInset() {
-        return (int)snapSize(getInsets().getTop());
+    public final double snappedTopInset() {
+        return snappedTopInset;
     }
 
     /**
@@ -1373,8 +1401,8 @@ public class Region extends Parent {
      * @since 8.0
      * @return Rounded up insets bottom
      */
-    public final int snappedBottomInset() {
-        return (int)snapSize(getInsets().getBottom());
+    public final double snappedBottomInset() {
+        return snappedBottomInset;
     }
 
     /**
@@ -1384,8 +1412,8 @@ public class Region extends Parent {
      * @since 8.0
      * @return Rounded up insets left
      */
-    public final int snappedLeftInset() {
-        return (int)snapSize(getInsets().getLeft());
+    public final double snappedLeftInset() {
+        return snappedLeftInset;
     }
 
     /**
@@ -1395,8 +1423,8 @@ public class Region extends Parent {
      * @since 8.0
      * @return Rounded up insets right
      */
-    public final int snappedRightInset() {
-        return (int)snapSize(getInsets().getRight());
+    public final double snappedRightInset() {
+        return snappedRightInset;
     }
 
 

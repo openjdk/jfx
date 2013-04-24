@@ -53,7 +53,7 @@ AccessibleSelectionItemProvider::~AccessibleSelectionItemProvider() {
  * returns: the new reference count
  */
 IFACEMETHODIMP_(ULONG) AccessibleSelectionItemProvider::AddRef() {
-        //LOG("AccessibleSelectionItemProvider::AddRef\n");
+    //LOG("AccessibleSelectionItemProvider::AddRef\n");
     return AccessibleBasePatternProvider::AddRef();
 }
 
@@ -63,7 +63,7 @@ IFACEMETHODIMP_(ULONG) AccessibleSelectionItemProvider::AddRef() {
  * returns: the new reference count
  */
 IFACEMETHODIMP_(ULONG) AccessibleSelectionItemProvider::Release() {
-        //LOG("AccessibleSelectionItemProvider::Release\n");
+    //LOG("AccessibleSelectionItemProvider::Release\n");
     return AccessibleBasePatternProvider::Release();
 }
 
@@ -115,9 +115,9 @@ IFACEMETHODIMP AccessibleSelectionItemProvider::GetPatternProvider(PATTERNID pat
 /**
  * Get the state of the control.
  *
- * pRetVal:                receiver of the state
+ * pRetVal:     receiver of the state
  *
- * returns:     S_OK
+ * returns: S_OK
  */
 IFACEMETHODIMP AccessibleSelectionItemProvider::get_IsSelected(BOOL *pRetVal) {
     LOG("In AccessibleSelectionItemProvider::get_IsSelected\n");
@@ -127,7 +127,7 @@ IFACEMETHODIMP AccessibleSelectionItemProvider::get_IsSelected(BOOL *pRetVal) {
     *pRetVal = NULL;
     JNIEnv* env = GetEnv();
     jboolean value = env->CallBooleanMethod(m_self, midGetIsSelected);
-    CheckAndClearException(env);  // PTB: Is this the right place for this?
+    CheckAndClearException(env);  // TODO: Is this the right place for this?
     if (value) {
         LOG("  returning true\n");
         *pRetVal = TRUE;
@@ -229,22 +229,22 @@ Java_com_sun_glass_ui_accessible_win_WinAccessibleSelectionItemProvider__1initID
  */
 JNIEXPORT jlong JNICALL
 Java_com_sun_glass_ui_accessible_win_WinAccessibleSelectionItemProvider__1createAccessible(
-        JNIEnv* env, jobject self, jlong accSimple) {
+	JNIEnv* env, jobject self, jlong accSimple) {
     LOG("In WinAccessibleSelectionItemProvider._createAccessible\n");
     LOG("  accSimple: %p\n", accSimple);
-    // PTB: Do we need try/catch around the new?
+    // TODO: Do we need try/catch around the new?
     AccessibleSelectionItemProvider* acc = new AccessibleSelectionItemProvider(env, self);
     LOG("  acc: %p\n", acc);
-        // Add this to the simple provider
-        if (accSimple != 0) {
-                AccessibleBaseProvider* accessibleSimple =
+    // Add this to the simple provider
+    if (accSimple != 0) {
+        AccessibleBaseProvider* accessibleSimple =
             reinterpret_cast<AccessibleBaseProvider *>(accSimple) ;
-                if (accessibleSimple != NULL) {
-                        accessibleSimple->AddPatternObject(reinterpret_cast<IUnknown*>(acc));
-                } else {
-                        LOG("  AddPatternObject not called; accessibleSimple is NULL.\n");
+        if (accessibleSimple != NULL) {
+            accessibleSimple->AddPatternObject(reinterpret_cast<IUnknown*>(acc));
+        } else {
+            LOG("  AddPatternObject not called; accessibleSimple is NULL.\n");
         }
-        }
+    }
     return reinterpret_cast<jlong>(acc);
 }
 

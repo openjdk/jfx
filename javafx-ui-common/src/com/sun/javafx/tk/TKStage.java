@@ -214,34 +214,36 @@ public interface TKStage {
     /**
      * Accessibility methods
      */
+    
     /**
      * Notify accessibility initialization completion to AT
      * 
-     * @param ac 
+     * @param ac    the FX accessible root/stage node.
      */
-    public void accessibleInitIsComplete(Object ac) ;
+    public void setAccessibilityInitIsComplete(Object ac) ;
 
     /**
-     * Create accessible native object corresponding to stage
+     * Create accessible Glass object corresponding to stage
      * 
-     * @param ac 
-     * returns native Object
+     * @param ac    the FX accessible root/stage node.
+     * 
+     * @return the Glass AccessibleRoot object.
      */
-    public Object accessibleCreateStageProvider(AccessibleStageProvider ac, long ptr) ;
+    public Object accessibleCreateStageProvider(AccessibleStageProvider ac) ;
 
     /**
-     * Create accessible native object corresponding to controls
+     * Create the Glass accessible object corresponding to controls
      * 
-     * @param ac 
-     * returns native Object
+     * @param ac    the FX accessible node
+     * 
+     * @return the Glass accessible Object
      */
     public Object accessibleCreateBasicProvider(AccessibleProvider ac) ;
 
     /**
      * Delete accessible native object corresponding to controls
      * 
-     * @param ac 
-     * returns native Object
+     * @param ac    the FX accessible node
      */
     public void accessibleDestroyBasicProvider(Object nativeAcc) ;
 

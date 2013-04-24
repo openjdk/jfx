@@ -25,9 +25,17 @@
 
 package javafx.scene.control;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertTrue;
+
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
+import java.util.List;
 
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
@@ -35,9 +43,9 @@ import javafx.collections.ObservableList;
 import javafx.scene.control.ListView.ListViewFocusModel;
 import javafx.scene.control.TableView.TableViewFocusModel;
 import javafx.scene.control.TableView.TableViewSelectionModel;
-import javafx.scene.control.TreeView.TreeViewFocusModel;
 import javafx.scene.control.TreeTableView.TreeTableViewFocusModel;
 import javafx.scene.control.TreeTableView.TreeTableViewSelectionModel;
+import javafx.scene.control.TreeView.TreeViewFocusModel;
 
 import org.junit.After;
 import org.junit.AfterClass;
@@ -48,7 +56,7 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
 
-import static org.junit.Assert.*;
+import com.sun.javafx.scene.control.infrastructure.VirtualFlowTestUtils;
 
 /**
  * Unit tests for the SelectionModel abstract class used by ListView
@@ -65,6 +73,7 @@ public class MultipleSelectionModelImplTest {
     private FocusModel focusModel;
 
     private Class<? extends MultipleSelectionModel> modelClass;
+    private Control currentControl;
 
     // ListView
     private static final ListView<String> listView;
@@ -161,6 +170,7 @@ public class MultipleSelectionModelImplTest {
                 // create a new focus model
                 focusModel = new ListViewFocusModel(listView);
                 listView.setFocusModel(focusModel);
+                currentControl = listView;
             } else if (modelClass.equals(TreeView.TreeViewBitSetSelectionModel.class)) {
                 model = modelClass.getConstructor(TreeView.class).newInstance(treeView);
                 treeView.setSelectionModel((MultipleSelectionModel<String>)model);
@@ -169,6 +179,7 @@ public class MultipleSelectionModelImplTest {
                 // create a new focus model
                 focusModel = new TreeViewFocusModel(treeView);
                 treeView.setFocusModel(focusModel);
+                currentControl = treeView;
             } else if (TableViewSelectionModel.class.isAssignableFrom(modelClass)) {
                 // recreate the selection model
                 model = modelClass.getConstructor(TableView.class).newInstance(tableView);
@@ -177,6 +188,7 @@ public class MultipleSelectionModelImplTest {
                 // create a new focus model
                 focusModel = new TableViewFocusModel(tableView);
                 tableView.setFocusModel((TableViewFocusModel) focusModel);
+                currentControl = tableView;
             } else if (TreeTableViewSelectionModel.class.isAssignableFrom(modelClass)) {
                 // recreate the selection model
                 model = modelClass.getConstructor(TreeTableView.class).newInstance(treeTableView);
@@ -185,6 +197,7 @@ public class MultipleSelectionModelImplTest {
                 // create a new focus model
                 focusModel = new TreeTableViewFocusModel(treeTableView);
                 treeTableView.setFocusModel((TreeTableViewFocusModel) focusModel);
+                currentControl = treeTableView;
             }
         } catch (Exception ex) {
             ex.printStackTrace();
@@ -776,5 +789,57 @@ public class MultipleSelectionModelImplTest {
         msModel().select(1);
         assertEquals(1, rt_28615_row_1_hit_count);
         assertEquals(1, rt_28615_row_2_hit_count);
+    }
+    
+    private int rt_29860_size_count = 0;
+    @Test public void test_rt_29860_add() {
+        msModel().setSelectionMode(SelectionMode.MULTIPLE);
+
+        msModel().getSelectedIndices().addListener(new ListChangeListener<Object>() {
+            @Override
+            public void onChanged(ListChangeListener.Change<? extends Object> change) {
+                while (change.next()) {
+                    if (change.wasAdded()) {
+                        rt_29860_size_count += change.getAddedSize();
+                    }
+                }
+            }
+        });
+
+        assertEquals(0, rt_29860_size_count);
+        
+        // 0,1,2,3 are all selected. The bug is not that the msModel().getSelectedIndices()
+        // list is wrong (it isn't - it's correct). The bug is that the addedSize
+        // reported in the callback above is incorrect.
+        msModel().selectIndices(0, 1, 2, 3);
+        assertEquals(msModel().getSelectedIndices().toString(), 4, rt_29860_size_count);   
+        rt_29860_size_count = 0;
+        
+        msModel().selectIndices(0,1,2,3,4);
+        assertEquals(msModel().getSelectedIndices().toString(), 1, rt_29860_size_count);   // only 4 was selected
+        rt_29860_size_count = 0;
+        
+        msModel().selectIndices(6,7,8);
+        assertEquals(3, rt_29860_size_count);   // 6,7,8 was selected
+    }
+    
+    @Test public void test_rt_29821() {
+        msModel().setSelectionMode(SelectionMode.MULTIPLE);
+        
+        IndexedCell cell_3 = VirtualFlowTestUtils.getCell(currentControl, 3);
+        assertNotNull(cell_3);
+        assertFalse(cell_3.isSelected());
+
+        msModel().clearSelection();
+        msModel().select(3);
+        assertTrue(cell_3.isSelected());
+        assertEquals(1, msModel().getSelectedIndices().size());
+
+        // in multiple selection passing in select(null) is a no-op. In single
+        // selection (tested elsewhere), this would result in a clearSelection() 
+        // call
+        msModel().select(null);
+        assertTrue(msModel().isSelected(3));
+        assertTrue(cell_3.isSelected());
     }
 }

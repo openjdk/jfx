@@ -338,11 +338,11 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeViewB
         };
     }
     
-    @Override protected double computePrefWidth(double height, int topInset, int rightInset, int bottomInset, int leftInset) {
+    @Override protected double computePrefWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
         return computePrefHeight(-1, topInset, rightInset, bottomInset, leftInset) * 0.618033987;
     }
 
-    @Override protected double computePrefHeight(double width, int topInset, int rightInset, int bottomInset, int leftInset) {
+    @Override protected double computePrefHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
         return 400;
     }
 

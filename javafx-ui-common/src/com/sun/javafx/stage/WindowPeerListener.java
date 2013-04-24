@@ -94,7 +94,7 @@ public class WindowPeerListener implements TKStageListener {
      * Initialize accessibility
      */
     @Override
-    public void initAccessibleTKStageListener(long ptr) {
+    public void initAccessibleTKStageListener() {
         // Overridden in subclasses
     }
 }

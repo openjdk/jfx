@@ -46,7 +46,6 @@ import com.sun.javafx.css.converters.SizeConverter;
 import com.sun.javafx.scene.control.MultiplePropertyChangeListenerHandler;
 import com.sun.javafx.scene.control.behavior.TreeCellBehavior;
 import javafx.css.Styleable;
-import javafx.geometry.Insets;
 import javafx.util.Callback;
 
 public class TreeCellSkin<T> extends CellSkinBase<TreeCell<T>, TreeCellBehavior<T>> {
@@ -247,14 +246,20 @@ public class TreeCellSkin<T> extends CellSkinBase<TreeCell<T>, TreeCellBehavior<
 
         layoutLabelInArea(x, y, w, h);
     }
-
-    @Override protected double computePrefHeight(double width, int topInset, int rightInset, int bottomInset, int leftInset) {
+    
+    @Override protected double computeMinHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
+        double pref = super.computeMinHeight(width, topInset, rightInset, bottomInset, leftInset);
+        Node d = getSkinnable().getDisclosureNode();
+        return (d == null) ? pref : Math.max(d.minHeight(-1), pref);
+    }
+    
+    @Override protected double computePrefHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
         double pref = super.computePrefHeight(width, topInset, rightInset, bottomInset, leftInset);
         Node d = getSkinnable().getDisclosureNode();
         return (d == null) ? pref : Math.max(d.prefHeight(-1), pref);
     }
     
-    @Override protected double computePrefWidth(double height, int topInset, int rightInset, int bottomInset, int leftInset) {
+    @Override protected double computePrefWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
         double labelWidth = super.computePrefWidth(height, topInset, rightInset, bottomInset, leftInset);
 
         double pw = snappedLeftInset() + snappedRightInset();

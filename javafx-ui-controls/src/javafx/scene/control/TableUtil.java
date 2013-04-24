@@ -38,6 +38,10 @@ import javafx.collections.ObservableList;
  */
 class TableUtil {
     
+    private TableUtil() { 
+        // no-op
+    }
+    
     static void removeTableColumnListener(List<? extends TableColumnBase> list,
                         final InvalidationListener columnVisibleObserver,
                         final InvalidationListener columnSortableObserver,

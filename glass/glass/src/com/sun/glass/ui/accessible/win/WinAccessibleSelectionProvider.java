@@ -28,11 +28,7 @@ import com.sun.glass.ui.accessible.AccessibleLogger;
 import com.sun.javafx.accessible.providers.SelectionProvider;
 import com.sun.javafx.accessible.utils.PatternIds;
 
-public class WinAccessibleSelectionProvider extends WinAccessibleBasePatternProvider {
-
-    native private static void _initIDs();
-    native private long _createAccessible(long nativeSimple);
-    native private void _destroyAccessible(long nativeAccessible);
+public final class WinAccessibleSelectionProvider extends WinAccessibleBasePatternProvider {
 
     /**
      * A class static block that initializes the JNI method IDs.
@@ -40,23 +36,43 @@ public class WinAccessibleSelectionProvider extends WinAccessibleBasePatternProv
     static {
         _initIDs();
     }
-
+    
+    native private static void _initIDs();
+    native protected long _createAccessible(long nativeBaseProvider);
+    native private void _destroyAccessible(long nativeAccessible);
+    
+    private long nativeAccessible;  // The native accessible    
 
     /**
      * Downcall to create the native accessible.  This will be used when firing
      * events or when destroying the native accessible.
      * 
      * @param node          the related FX node object.
-     * @param nativeSimple  the native accessible.
+     * @param provider  the base provider which this pattern provider is chained to.
      */
-    public WinAccessibleSelectionProvider(Object node, long nativeSimple) {
-        super(node, nativeSimple);
-        AccessibleLogger.getLogger().fine("In WinAccessibleSelectionProvider nativeSimple" + nativeSimple);  
-        nativeAccessible = _createAccessible(nativeSimple);
+    public WinAccessibleSelectionProvider(Object node, WinAccessibleBaseProvider provider) {
+        super(node);
+        nativeAccessible = _createAccessible(provider.getNativeAccessible());
     }
     
+    /**
+     * Get the native accessible
+     * 
+     * @return the native accessible
+     */
     @Override
-    final public void destroyAccessible() {
+    long getNativeAccessible() {
+        return nativeAccessible;
+    }
+    
+    // Downcalls
+    
+    /**
+     * Destroy the native accessible
+     * 
+     */
+    @Override
+    public void destroyAccessible() {
         _destroyAccessible(nativeAccessible);
     }
 
@@ -71,11 +87,6 @@ public class WinAccessibleSelectionProvider extends WinAccessibleBasePatternProv
     //   the upcalls to the UIA-like implementation used in the JavaFX accessibility 
     //   implementation.
     
-    /**
-     * For WinAccessibleGridProvider - getColumnCount
-     *
-     * @return the ColumnCount
-     */
     private boolean canSelectMultiple() {
         AccessibleLogger.getLogger().fine("In WinAccessibleSelectionProvider.canSelectMultiple");
         boolean bRet = false;
@@ -95,14 +106,15 @@ public class WinAccessibleSelectionProvider extends WinAccessibleBasePatternProv
             selection = new long[size];
             for (int idx=0; idx<size; idx++) {
                 if (selectedItems[idx] instanceof WinAccessibleBasePatternProvider) {
-                    selection[idx] = ((WinAccessibleBasePatternProvider)selectedItems[idx]).getNativeAccessible();
+                    selection[idx] =
+                        ((WinAccessibleBasePatternProvider)selectedItems[idx]).getNativeAccessible();
                 } else {
                     selection = null;
                     break;
                 }
             }
         }
-        AccessibleLogger.getLogger().fine("  returning: " + selection);
+        AccessibleLogger.getLogger().fine("returning: " + selection);
         return selection;
     }
 
@@ -117,9 +129,11 @@ public class WinAccessibleSelectionProvider extends WinAccessibleBasePatternProv
         
     }
     
-    // Return the pattern supported by this class
+    /**
+     * Return the ID of the pattern supported by this class
+     */
     @Override
-    final public int getPatternId() {
+    public int getPatternId() {
         return PatternIds.SELECTION ;
     }
 

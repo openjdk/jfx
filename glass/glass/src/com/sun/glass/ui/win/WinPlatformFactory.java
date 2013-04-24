@@ -28,6 +28,7 @@ import com.sun.glass.ui.Menu;
 import com.sun.glass.ui.MenuBar;
 import com.sun.glass.ui.MenuItem;
 import com.sun.glass.ui.PlatformFactory;
+import com.sun.glass.ui.Window;
 import com.sun.glass.ui.accessible.AccessibleBaseProvider;
 import com.sun.glass.ui.accessible.AccessibleRoot;
 import com.sun.glass.ui.accessible.win.WinAccessibleBaseProvider;
@@ -56,8 +57,8 @@ public final class WinPlatformFactory extends PlatformFactory {
         return new WinApplication();
     }
     
-    @Override public AccessibleRoot createAccessibleRoot(Object node, long ptr) {
-        return new WinAccessibleRoot(node, ptr);
+    @Override public AccessibleRoot createAccessibleRoot(Object node, Window window) {
+        return new WinAccessibleRoot(node, window);
     }
     
     @Override public AccessibleBaseProvider createAccessibleProvider(Object node) {
@@ -67,27 +68,27 @@ public final class WinPlatformFactory extends PlatformFactory {
         }
         if (node instanceof GridItemProvider) { 
             element.addPatternProviders(
-                new WinAccessibleGridItemProvider(node, element.getNativeAccessible()));
+                new WinAccessibleGridItemProvider(node, element));
         }
-        if (node instanceof GridProvider) { 
+        if (node instanceof GridProvider) {
             element.addPatternProviders(
-                new WinAccessibleGridProvider(node, element.getNativeAccessible()));
+                new WinAccessibleGridProvider(node, element));
         }
-        if (node instanceof ToggleProvider) { 
+        if (node instanceof ToggleProvider) {
             element.addPatternProviders(
-                new WinAccessibleToggleProvider(node, element.getNativeAccessible()));
+                new WinAccessibleToggleProvider(node, element));
         }
-        if (node instanceof SelectionProvider) { 
+        if (node instanceof SelectionProvider) {
             element.addPatternProviders(
-                new WinAccessibleSelectionProvider(node, element.getNativeAccessible()));
+                new WinAccessibleSelectionProvider(node, element));
         }
-        if (node instanceof SelectionItemProvider) { 
+        if (node instanceof SelectionItemProvider) {
             element.addPatternProviders(
-                new WinAccessibleSelectionItemProvider(node, element.getNativeAccessible()));
+                new WinAccessibleSelectionItemProvider(node, element));
         }
-        if (node instanceof RangeValueProvider) { 
+        if (node instanceof RangeValueProvider) {
             element.addPatternProviders(
-                new WinAccessibleRangeValueProvider(node, element.getNativeAccessible()));
+                new WinAccessibleRangeValueProvider(node, element));
         }
         return element;
     }

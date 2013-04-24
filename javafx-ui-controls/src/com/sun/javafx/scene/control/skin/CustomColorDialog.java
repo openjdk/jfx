@@ -537,7 +537,7 @@ public class CustomColorDialog extends HBox {
             settingsPane.add(bottomSpacer, 0, 4);   
             
             webField = new WebColorField();
-            webField.getStyleClass().addAll("text-field", "web-field");
+            webField.getStyleClass().add("web-field");
             webField.setSkin(new WebColorFieldSkin(webField));
             webField.valueProperty().bindBidirectional(customColorProperty);
             webField.visibleProperty().bind(group.selectedToggleProperty().isEqualTo(webButton));
@@ -551,7 +551,7 @@ public class CustomColorDialog extends HBox {
                 sliders[i] = new Slider();
 
                 fields[i] = new IntegerField();
-                fields[i].getStyleClass().addAll("color-input-field", "text-field");
+                fields[i].getStyleClass().add("color-input-field");
                 fields[i].setSkin(new IntegerFieldSkin(fields[i]));
                 
                 units[i] = new Label(i == 0 ? "\u00B0" : "%");                

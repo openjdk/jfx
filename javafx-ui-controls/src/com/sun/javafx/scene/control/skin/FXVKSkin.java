@@ -343,12 +343,12 @@ public class FXVKSkin extends BehaviorSkinBase<FXVK, BehaviorBase<FXVK>> {
     // This skin is designed such that it gives equal widths to all columns. So
     // the pref width is just some hard-coded value (although I could have maybe
     // done it based on the pref width of a text node with the right font).
-    @Override protected double computePrefWidth(double height, int topInset, int rightInset, int bottomInset, int leftInset) {
+    @Override protected double computePrefWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
         return leftInset + (56 * numCols) + rightInset;
     }
 
     // Pref height is just some value. This isn't overly important.
-    @Override protected double computePrefHeight(double width, int topInset, int rightInset, int bottomInset, int leftInset) {
+    @Override protected double computePrefHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
         return topInset + (80 * 5) + bottomInset;
     }
 

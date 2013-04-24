@@ -28,6 +28,11 @@ package com.sun.javafx.css;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Set;
+
+import javafx.beans.value.ChangeListener;
+import javafx.collections.ObservableSet;
+import javafx.collections.SetChangeListener;
 import javafx.css.PseudoClass;
 import static org.junit.Assert.*;
 import org.junit.Before;
@@ -805,5 +810,339 @@ public class PseudoClassTest {
         assertTrue (nPseudoClasses+"!="+states.size(), nPseudoClasses == states.size());
         
     }
-    
+
+    int nObservations = 0;
+
+    @Test public void testObservablePseudoClass_listener_add() {
+
+
+        final PseudoClass[] expectedObservations = new PseudoClass[] {
+                PseudoClass.getPseudoClass("ONE"),
+                PseudoClass.getPseudoClass("TWO"),
+                PseudoClass.getPseudoClass("THREE")
+
+        };
+        final int nObservationsExpected = expectedObservations.length;
+        nObservations = 0;
+
+        ObservableSet<PseudoClass> pseudoClasses = new PseudoClassState();
+        pseudoClasses.addListener(new SetChangeListener<PseudoClass>() {
+
+            @Override
+            public void onChanged(SetChangeListener.Change<? extends PseudoClass> change) {
+                if (change.wasAdded()) {
+                    assert (nObservations < nObservationsExpected);
+                    PseudoClass observed = change.getElementAdded();
+                    assertSame(expectedObservations[nObservations], observed);
+                    nObservations += 1;
+                } else {
+                    fail();
+                }
+            }
+        });
+
+        for (int n=0; n<expectedObservations.length; n++) {
+            pseudoClasses.add(expectedObservations[n]);
+        };
+
+        assertEquals(nObservationsExpected, nObservations);
+
+    }
+
+    @Test public void testObservablePseudoClass_listener_remove() {
+
+
+        final PseudoClass[] expectedObservations = new PseudoClass[] {
+                PseudoClass.getPseudoClass("ONE"),
+                PseudoClass.getPseudoClass("TWO"),
+                PseudoClass.getPseudoClass("THREE")
+
+        };
+        final int nObservationsExpected = expectedObservations.length;
+        nObservations = 0;
+
+        ObservableSet<PseudoClass> pseudoClasses = new PseudoClassState();
+        for (int n=0; n<expectedObservations.length; n++) {
+            pseudoClasses.add(expectedObservations[n]);
+        };
+
+        pseudoClasses.addListener(new SetChangeListener<PseudoClass>() {
+
+            @Override
+            public void onChanged(SetChangeListener.Change<? extends PseudoClass> change) {
+                if (change.wasRemoved()) {
+                    assert (nObservations < nObservationsExpected);
+                    PseudoClass observed = change.getElementRemoved();
+                    assertSame(expectedObservations[nObservations], observed);
+                    nObservations += 1;
+                } else {
+                    fail();
+                }
+            }
+        });
+
+        for (int n=0; n<expectedObservations.length; n++) {
+            pseudoClasses.remove(expectedObservations[n]);
+        };
+
+        assertEquals(nObservationsExpected, nObservations);
+
+    }
+
+    @Test public void testObservablePseudoClass_listener_iter_remove() {
+
+
+        final PseudoClass[] expectedObservations = new PseudoClass[] {
+                PseudoClass.getPseudoClass("ONE"),
+                PseudoClass.getPseudoClass("TWO"),
+                PseudoClass.getPseudoClass("THREE")
+
+        };
+        final int nObservationsExpected = expectedObservations.length;
+        nObservations = 0;
+
+        ObservableSet<PseudoClass> pseudoClasses = new PseudoClassState();
+        for (int n=0; n<expectedObservations.length; n++) {
+            pseudoClasses.add(expectedObservations[n]);
+        };
+
+        pseudoClasses.addListener(new SetChangeListener<PseudoClass>() {
+
+            @Override
+            public void onChanged(SetChangeListener.Change<? extends PseudoClass> change) {
+                if (change.wasRemoved()) {
+                    assert (nObservations < nObservationsExpected);
+                    PseudoClass observed = change.getElementRemoved();
+                    assertSame(expectedObservations[nObservations], observed);
+                    nObservations += 1;
+                } else {
+                    fail();
+                }
+            }
+        });
+
+        for (Iterator<PseudoClass> iter = pseudoClasses.iterator(); iter.hasNext();) {
+            iter.remove();
+        };
+
+        assertEquals(nObservationsExpected, nObservations);
+
+    }
+
+    @Test public void testObservablePseudoClass_listener_addAll() {
+
+
+        final PseudoClass[] expectedObservations = new PseudoClass[] {
+                PseudoClass.getPseudoClass("ONE"),
+                PseudoClass.getPseudoClass("TWO"),
+                PseudoClass.getPseudoClass("THREE")
+
+        };
+        final int nObservationsExpected = expectedObservations.length;
+        nObservations = 0;
+
+        Set<PseudoClass> pseudoClassesToAdd = new PseudoClassState();
+        for (int n=0; n<expectedObservations.length; n++) {
+            pseudoClassesToAdd.add(expectedObservations[n]);
+        };
+
+        ObservableSet<PseudoClass> pseudoClasses = new PseudoClassState();
+        pseudoClasses.addListener(new SetChangeListener<PseudoClass>() {
+
+            @Override
+            public void onChanged(SetChangeListener.Change<? extends PseudoClass> change) {
+                if (change.wasAdded()) {
+                    assert (nObservations < nObservationsExpected);
+                    PseudoClass observed = change.getElementAdded();
+                    assertSame(expectedObservations[nObservations], observed);
+                    nObservations += 1;
+                } else {
+                    fail();
+                }
+            }
+        });
+
+        pseudoClasses.addAll(pseudoClassesToAdd);
+
+        assertEquals(nObservationsExpected, nObservations);
+
+    }
+
+    @Test public void testObservablePseudoClass_listener_removeAll() {
+
+
+        final PseudoClass[] pseudoClassesToRemove = new PseudoClass[] {
+                PseudoClass.getPseudoClass("TWO"),
+                PseudoClass.getPseudoClass("THREE")
+
+        };
+
+        final PseudoClass[] pseudoClasses = new PseudoClass[] {
+                PseudoClass.getPseudoClass("ONE"),
+                PseudoClass.getPseudoClass("TWO"),
+                PseudoClass.getPseudoClass("THREE"),
+                PseudoClass.getPseudoClass("FOUR")
+
+        };
+
+        final int nObservationsExpected = pseudoClassesToRemove.length;
+        nObservations = 0;
+
+        Set<PseudoClass> other = new PseudoClassState();
+        for (int n=0; n<pseudoClassesToRemove.length; n++) {
+            other.add(pseudoClassesToRemove[n]);
+        };
+
+        ObservableSet<PseudoClass> master = new PseudoClassState();
+        for (int n=0; n<pseudoClasses.length; n++) {
+            master.add(pseudoClasses[n]);
+        };
+
+        master.addListener(new SetChangeListener<PseudoClass>() {
+
+            @Override
+            public void onChanged(SetChangeListener.Change<? extends PseudoClass> change) {
+                if (change.wasRemoved()) {
+                    assert (nObservations < nObservationsExpected);
+                    PseudoClass observed = change.getElementRemoved();
+                    assertSame(pseudoClassesToRemove[nObservations], observed);
+                    nObservations += 1;
+                } else {
+                    fail();
+                }
+            }
+        });
+
+        master.removeAll(other);
+
+        assertEquals(nObservationsExpected, nObservations);
+        assertEquals(pseudoClasses.length-pseudoClassesToRemove.length, master.size());
+
+    }
+
+    @Test public void testObservablePseudoClass_listener_retainAll() {
+
+
+        final PseudoClass[] pseudoClassesToRetain = new PseudoClass[] {
+                PseudoClass.getPseudoClass("TWO"),
+                PseudoClass.getPseudoClass("THREE")
+
+        };
+
+        final PseudoClass[] removedPseudoClasses = new PseudoClass[] {
+                PseudoClass.getPseudoClass("ONE"),
+                PseudoClass.getPseudoClass("FOUR")
+
+        };
+
+        final PseudoClass[] pseudoClasses = new PseudoClass[] {
+                PseudoClass.getPseudoClass("ONE"),
+                PseudoClass.getPseudoClass("TWO"),
+                PseudoClass.getPseudoClass("THREE"),
+                PseudoClass.getPseudoClass("FOUR")
+
+        };
+
+        final int nObservationsExpected = pseudoClassesToRetain.length;
+        nObservations = 0;
+
+        Set<PseudoClass> other = new PseudoClassState();
+        for (int n=0; n<pseudoClassesToRetain.length; n++) {
+            other.add(pseudoClassesToRetain[n]);
+        };
+
+        ObservableSet<PseudoClass> master = new PseudoClassState();
+        for (int n=0; n<pseudoClasses.length; n++) {
+            master.add(pseudoClasses[n]);
+        };
+
+        master.addListener(new SetChangeListener<PseudoClass>() {
+
+            @Override
+            public void onChanged(SetChangeListener.Change<? extends PseudoClass> change) {
+                if (change.wasRemoved()) {
+                    assert (nObservations < nObservationsExpected);
+                    PseudoClass observed = change.getElementRemoved();
+                    assertSame(removedPseudoClasses[nObservations], observed);
+                    nObservations += 1;
+                } else {
+                    fail();
+                }
+            }
+        });
+
+        master.retainAll(other);
+
+        assertEquals(nObservationsExpected, nObservations);
+        assertEquals(pseudoClassesToRetain.length, master.size());
+
+    }
+
+    @Test public void testObservablePseudoClass_listener_clear() {
+
+
+        final PseudoClass[] pseudoClasses = new PseudoClass[] {
+                PseudoClass.getPseudoClass("ONE"),
+                PseudoClass.getPseudoClass("TWO"),
+                PseudoClass.getPseudoClass("THREE"),
+                PseudoClass.getPseudoClass("FOUR")
+
+        };
+
+        final int nObservationsExpected = pseudoClasses.length;
+        nObservations = 0;
+
+        ObservableSet<PseudoClass> master = new PseudoClassState();
+        for (int n=0; n<pseudoClasses.length; n++) {
+            master.add(pseudoClasses[n]);
+        };
+
+        master.addListener(new SetChangeListener<PseudoClass>() {
+
+            @Override
+            public void onChanged(SetChangeListener.Change<? extends PseudoClass> change) {
+                if (change.wasRemoved()) {
+                    assert (nObservations < nObservationsExpected);
+                    PseudoClass observed = change.getElementRemoved();
+                    assertSame(pseudoClasses[nObservations], observed);
+                    nObservations += 1;
+                } else {
+                    fail();
+                }
+            }
+        });
+
+        master.clear();
+
+        assertEquals(nObservationsExpected, nObservations);
+        assertTrue(master.isEmpty());
+
+    }
+
+    @Test public void testObservablePseudoClass_listener_getSet_unmodifiable() {
+
+        final ObservableSet<PseudoClass> master = new PseudoClassState();
+
+        master.addListener(new SetChangeListener<PseudoClass>() {
+
+            @Override
+            public void onChanged(SetChangeListener.Change<? extends PseudoClass> change) {
+                master.removeListener(this);
+                try {
+                    ObservableSet set = change.getSet();
+                    set.add(PseudoClass.getPseudoClass("TWO"));
+                    fail();
+                } catch (UnsupportedOperationException e) {
+                    // This is the exception we expect from an unmodifiable set
+                } catch (Exception other) {
+                    fail(other.getMessage());
+                }
+            }
+        });
+
+        master.add(PseudoClass.getPseudoClass("ONE"));
+
+    }
+
+
 }

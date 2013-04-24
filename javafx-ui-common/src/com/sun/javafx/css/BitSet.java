@@ -24,17 +24,22 @@
  */
 package com.sun.javafx.css;
 
+import com.sun.javafx.collections.SetListenerHelper;
+import javafx.beans.InvalidationListener;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableSet;
+import javafx.collections.SetChangeListener;
+
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
-import java.util.Set;
 
 /**
  * Pseudo-class state and style-classes are represented as bits in a long[]
  * which makes matching faster.
  */
-abstract class BitSet<T>  implements Set<T> {
+abstract class BitSet<T> implements ObservableSet<T> {
 
     /** Create an empty set of T */
     protected BitSet () {
@@ -160,6 +165,9 @@ abstract class BitSet<T>  implements Set<T> {
         
         // if index[element] == temp, then the bit was already set
         final boolean modified = (bits[element] != temp);
+        if (modified && SetListenerHelper.hasListeners(listenerHelper)){
+            notifyObservers(t, Change.ELEMENT_ADDED);
+        }
         return modified;
     }
 
@@ -187,6 +195,9 @@ abstract class BitSet<T>  implements Set<T> {
 
         // if index[element] == temp, then the bit was not there
         final boolean modified = (bits[element] != temp);
+        if (modified && SetListenerHelper.hasListeners(listenerHelper)) {
+            notifyObservers(t, Change.ELEMENT_REMOVED);
+        }
         return modified;
     }
 
@@ -255,7 +266,7 @@ abstract class BitSet<T>  implements Set<T> {
     @Override
     public boolean addAll(Collection<? extends T> c) {
         
-        if (c == null) {
+        if (c == null || c.isEmpty()) {
             // this not modified!
             return false;
         }
@@ -265,12 +276,7 @@ abstract class BitSet<T>  implements Set<T> {
         if (c instanceof BitSet) {
             
             BitSet other = (BitSet)c;
-            
-            if (other.isEmpty()) {
-                // this not modified!
-                return false;
-            } 
-            
+
             final long[] maskOne = this.bits;
             final long[] maskTwo = other.bits;
 
@@ -291,9 +297,37 @@ abstract class BitSet<T>  implements Set<T> {
                 }
                 
             }
+
             if (modified) {
+
+                if (SetListenerHelper.hasListeners(listenerHelper)) {
+
+                    for (int n = 0; n < max; n++) {
+
+                        long bitsAdded = 0l;
+
+                        if (n < maskOne.length && n < maskTwo.length) {
+                            bitsAdded = ~maskOne[n] & maskTwo[n];
+                        } else if (n < maskOne.length) {
+                            // union[n] = maskOne[n], so no bits added
+                            continue;
+                        } else {
+                            bitsAdded = maskTwo[n];
+                        }
+
+                        for(int b = 0; b < Long.SIZE; b++) {
+                            long m = 1l << b;
+                            if ((m & bitsAdded) == m) {
+                                T t = getT(n*Long.SIZE + b);
+                                notifyObservers(t, Change.ELEMENT_ADDED);
+                            }
+                        }
+                    }
+                }
+
                 this.bits = union;
             }
+
             return modified;
         }
         
@@ -319,23 +353,49 @@ abstract class BitSet<T>  implements Set<T> {
             
             BitSet other = (BitSet)c;
             
-            if (other.isEmpty()) {
-                // if other is empty, then discard all!
-                this.bits = EMPTY_SET;
-            }
-
             final long[] maskOne = this.bits;
             final long[] maskTwo = other.bits;
 
             final int max = Math.min(maskOne.length, maskTwo.length);
+
+            final long[] intersection = new long[max];
+
             for(int n = 0; n < max; n++) {
-                long temp = maskOne[n] & maskTwo[n];
+                intersection[n] = maskOne[n] & maskTwo[n];
                 
-                modified |= temp != maskOne[n];
+                modified |= intersection[n] != maskOne[n];
                 
-                maskOne[n] = temp; 
             }
-            
+
+            if (modified) {
+
+                if (SetListenerHelper.hasListeners(listenerHelper)) {
+
+                    for (int n = 0; n < maskOne.length; n++) {
+
+                        long bitsRemoved = 0l;
+
+                        if (n < maskTwo.length) {
+                            bitsRemoved = maskOne[n] & ~maskTwo[n];
+                        } else {
+                            // maskTwo was shorter than maskOne,
+                            // and remaining bits in maskOne (which is this.bits) were removed
+                            bitsRemoved = maskOne[n];
+                        }
+
+                        for(int b = 0; b < Long.SIZE; b++) {
+                            long m = 1l << b;
+                            if ((m & bitsRemoved) == m) {
+                                T t = getT(n*Long.SIZE + b);
+                                notifyObservers(t, Change.ELEMENT_REMOVED);
+                            }
+                        }
+                    }
+                }
+
+                this.bits = intersection;
+            }
+
             return modified;
         }
         
@@ -352,7 +412,7 @@ abstract class BitSet<T>  implements Set<T> {
     @Override
     public boolean removeAll(Collection<?> c) {
         
-        if (c == null) {
+        if (c == null || c.isEmpty()) {
             // this not modified!
             return false;
         }
@@ -362,25 +422,42 @@ abstract class BitSet<T>  implements Set<T> {
         if (c instanceof BitSet) {
             
             BitSet other = (BitSet)c;
-            
-            if (other.isEmpty()) {
-                // this was not modified!
-                return false;
-            }
 
             final long[] maskOne = bits;
             final long[] maskTwo = other.bits;
 
             final int max = Math.min(maskOne.length, maskTwo.length);
-            for(int n = 0; n < max; n++) {
-                long temp = maskOne[n] & ~maskTwo[n];
 
-                modified |= temp != maskOne[n];
-                
-                maskOne[n] = temp;
+            final long[] difference = new long[max];
+
+            for(int n = 0; n < max; n++) {
+                difference[n] = maskOne[n] & ~maskTwo[n];
+
+                modified |= difference[n] != maskOne[n];
             }
 
-            return modified;            
+            if (modified) {
+
+                if (SetListenerHelper.hasListeners(listenerHelper)) {
+
+                    for (int n = 0; n < max; n++) {
+
+                        long bitsRemoved = maskOne[n] & maskTwo[n];
+
+                        for(int b = 0; b < Long.SIZE; b++) {
+                            long m = 1l << b;
+                            if ((m & bitsRemoved) == m) {
+                                T t = getT(n*Long.SIZE + b);
+                                notifyObservers(t, Change.ELEMENT_REMOVED);
+                            }
+                        }
+                    }
+                }
+
+                this.bits = difference;
+            }
+
+            return modified;
         }
         
         // the hard way...
@@ -405,6 +482,20 @@ abstract class BitSet<T>  implements Set<T> {
     /** {@inheritDoc} */
     @Override
     public void clear() {
+
+        for (int n = 0; n < bits.length; n++) {
+
+            long bitsRemoved = bits[n];
+
+            for(int b = 0; b < Long.SIZE; b++) {
+                long m = 1l << b;
+                if ((m & bitsRemoved) == m) {
+                    T t = getT(n*Long.SIZE + b);
+                    notifyObservers(t, Change.ELEMENT_REMOVED);
+                }
+            }
+        }
+
         bits = new long[1];
     }
     
@@ -447,5 +538,77 @@ abstract class BitSet<T>  implements Set<T> {
     // the set
     private long[] bits;
 
+    private SetListenerHelper<T> listenerHelper;
+
+    private class Change extends SetChangeListener.Change<T> {
+
+        private static final boolean ELEMENT_ADDED = false;
+        private static final boolean ELEMENT_REMOVED = true;
+
+        private final T element;
+        private final boolean removed;
+
+        public Change(T element, boolean removed) {
+            super(FXCollections.unmodifiableObservableSet(BitSet.this));
+            this.element = element;
+            this.removed = removed;
+        }
+
+        @Override
+        public boolean wasAdded() {
+            return removed != ELEMENT_REMOVED;
+        }
+
+        @Override
+        public boolean wasRemoved() {
+            return removed;
+        }
+
+        @Override
+        public T getElementAdded() {
+            return removed ? null : element;
+        }
+
+        @Override
+        public T getElementRemoved() {
+            return removed ? element : null;
+        }
+
+    }
+
+    @Override
+    public void addListener(SetChangeListener<? super T> setChangeListener) {
+        if (setChangeListener != null) {
+            listenerHelper = SetListenerHelper.addListener(listenerHelper, setChangeListener);
+        }
+    }
+
+    @Override
+    public void removeListener(SetChangeListener<? super T> setChangeListener) {
+        if (setChangeListener != null) {
+            SetListenerHelper.removeListener(listenerHelper, setChangeListener);
+        }
+    }
+
+    @Override
+    public void addListener(InvalidationListener invalidationListener) {
+        if (invalidationListener != null) {
+            listenerHelper = SetListenerHelper.addListener(listenerHelper, invalidationListener);
+        }
+    }
+
+    @Override
+    public void removeListener(InvalidationListener invalidationListener) {
+        if (invalidationListener != null) {
+            SetListenerHelper.removeListener(listenerHelper, invalidationListener);
+        }
+    }
+
+    private void notifyObservers(T element, boolean removed) {
+        if (element != null) {
+            Change change = new Change(element, removed);
+            SetListenerHelper.fireValueChangedEvent(listenerHelper, change);
+        }
+    }
 }
 

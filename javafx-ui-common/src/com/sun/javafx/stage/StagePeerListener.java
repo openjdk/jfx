@@ -72,10 +72,10 @@ public class StagePeerListener extends WindowPeerListener {
      * Initialize accessibility
      */
     @Override 
-    public void initAccessibleTKStageListener(long ptr) {
-        accessibleController = new  AccessibleStage(stage,ptr) ;
+    public void initAccessibleTKStageListener() {
+        accessibleController = new AccessibleStage(stage);
         
-        stage.impl_getPeer().accessibleInitIsComplete(accessibleController.getStageAccessible());
+        stage.impl_getPeer().setAccessibilityInitIsComplete(accessibleController.getStageAccessible());
     }
 
 }

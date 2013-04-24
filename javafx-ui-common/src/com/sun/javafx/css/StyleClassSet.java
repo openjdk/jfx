@@ -29,14 +29,13 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 /**
  * States represents a set of State. A {@code Node} may be in more than
  * one pseudo-class state. {@code States} is used to aggregate the active
  * pseudo-class state of a {@code Node}.
  */
-public final class StyleClassSet  extends BitSet<StyleClass> implements Set<StyleClass> {
+public final class StyleClassSet  extends BitSet<StyleClass> {
 
     /** Create an empty set of StyleClass */
     public StyleClassSet() {
@@ -134,7 +133,6 @@ public final class StyleClassSet  extends BitSet<StyleClass> implements Set<Styl
 
    
     /**
-     * @see javafx.css.StyleClass#getStyleClassName(String)
      */
     static StyleClass getStyleClass(String styleClass) {
 

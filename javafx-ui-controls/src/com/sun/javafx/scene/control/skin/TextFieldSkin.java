@@ -458,7 +458,7 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
     }
 
     @Override
-    protected double computePrefWidth(double height, int topInset, int rightInset, int bottomInset, int leftInset) {
+    protected double computePrefWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
         TextField textField = getSkinnable();
 
         double characterWidth = fontMetrics.get().computeStringWidth("W");
@@ -468,15 +468,15 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
         return columnCount * characterWidth + leftInset + rightInset;
     }
 
-    @Override protected double computePrefHeight(double width, int topInset, int rightInset, int bottomInset, int leftInset) {
+    @Override protected double computePrefHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
         return topInset + textNode.getLayoutBounds().getHeight() + bottomInset;
     }
 
-    @Override protected double computeMaxHeight(double width, int topInset, int rightInset, int bottomInset, int leftInset) {
+    @Override protected double computeMaxHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
         return getSkinnable().prefHeight(width);
     }
 
-    @Override public double computeBaselineOffset(int topInset, int rightInset, int bottomInset, int leftInset) {
+    @Override public double computeBaselineOffset(double topInset, double rightInset, double bottomInset, double leftInset) {
         return topInset + textNode.getBaselineOffset();
     }
 

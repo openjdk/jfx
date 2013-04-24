@@ -644,7 +644,7 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
      * about a single or multiline labeled. So a multiline labeled may find that
      * the width of the "..." is as small as it will ever get.
      */
-    @Override protected double computeMinWidth(double height, int topInset, int rightInset, int bottomInset, int leftInset) {
+    @Override protected double computeMinWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
         // First compute the minTextWidth by checking the width of the string
         // made by the ellipsis "...", and then by checking the width of the
         // string made up by labeled.text. We want the smaller of the two.
@@ -696,7 +696,7 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
         return width + widthPadding;
     }
 
-    @Override protected double computeMinHeight(double width, int topInset, int rightInset, int bottomInset, int leftInset) {
+    @Override protected double computeMinHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
         final Labeled labeled = getSkinnable();
         final Font font = text.getFont();
 
@@ -729,7 +729,7 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
         return topInset + h + bottomInset + topLabelPadding() - bottomLabelPadding();
     }
 
-    @Override protected double computePrefWidth(double height, int topInset, int rightInset, int bottomInset, int leftInset) {
+    @Override protected double computePrefWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
         // Get the preferred width of the text
         final Labeled labeled = getSkinnable();
         final Font font = text.getFont();
@@ -754,7 +754,7 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
         }
     }
 
-    @Override protected double computePrefHeight(double width, int topInset, int rightInset, int bottomInset, int leftInset) {
+    @Override protected double computePrefHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
         final Labeled labeled = getSkinnable();
         final Font font = text.getFont();
         final ContentDisplay contentDisplay = labeled.getContentDisplay();
@@ -794,15 +794,15 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
         return topInset + h + bottomInset + topLabelPadding() + bottomLabelPadding();
     }
 
-    @Override protected double computeMaxWidth(double height, int topInset, int rightInset, int bottomInset, int leftInset) {
+    @Override protected double computeMaxWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
         return getSkinnable().prefWidth(height);
     }
 
-    @Override protected double computeMaxHeight(double width, int topInset, int rightInset, int bottomInset, int leftInset) {
+    @Override protected double computeMaxHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
         return getSkinnable().prefHeight(width);
     }
 
-    @Override public double computeBaselineOffset(int topInset, int rightInset, int bottomInset, int leftInset) {
+    @Override public double computeBaselineOffset(double topInset, double rightInset, double bottomInset, double leftInset) {
         double textBaselineOffset = text.getBaselineOffset();
         double h = textBaselineOffset;
         final Labeled labeled = getSkinnable();

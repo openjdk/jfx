@@ -25,6 +25,7 @@
 
 package javafx.scene.control;
 
+import javafx.collections.ObservableSet;
 import javafx.css.CssMetaData;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
@@ -35,6 +36,7 @@ import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.css.PseudoClass;
 import javafx.event.Event;
 import javafx.event.EventDispatchChain;
 import javafx.event.EventHandler;
@@ -49,6 +51,7 @@ import java.lang.ref.WeakReference;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
+
 import javafx.beans.DefaultProperty;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
@@ -783,6 +786,13 @@ public class Tab implements EventTarget, Styleable {
     @Override
     public Styleable getStyleableParent() {
         return getTabPane();
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public final ObservableSet<PseudoClass> getPseudoClassStates() {
+        return FXCollections.emptyObservableSet();
     }
 
     /**

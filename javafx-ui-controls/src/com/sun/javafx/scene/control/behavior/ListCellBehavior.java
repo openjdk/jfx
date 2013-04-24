@@ -25,7 +25,6 @@
 
 package com.sun.javafx.scene.control.behavior;
 
-import java.util.WeakHashMap;
 import javafx.application.ConditionalFeature;
 import javafx.scene.control.FocusModel;
 import javafx.scene.control.ListCell;
@@ -34,7 +33,6 @@ import javafx.scene.control.MultipleSelectionModel;
 import javafx.scene.control.SelectionMode;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
-import com.sun.javafx.PlatformUtil;
 import com.sun.javafx.application.PlatformImpl;
 import com.sun.javafx.scene.control.Logging;
 import sun.util.logging.PlatformLogger;
@@ -42,33 +40,47 @@ import sun.util.logging.PlatformLogger;
 /**
  */
 public class ListCellBehavior extends CellBehaviorBase<ListCell> {
-    // global map used to store the focus index for a list view when it is first
-    // shift-clicked. This allows for proper keyboard interactions, in particular
-    // resolving RT-11446
-    private static final WeakHashMap<ListView, Integer> map = new WeakHashMap<ListView, Integer>();
+    
+    /***************************************************************************
+     *                                                                         *
+     * Private static implementation                                           *
+     *                                                                         *
+     **************************************************************************/
+    
+    private static final String ANCHOR_PROPERTY_KEY = "list.anchor";
     
     static int getAnchor(ListView list) {
         FocusModel fm = list.getFocusModel();
         if (fm == null) return -1;
         
-        return hasAnchor(list) ? map.get(list) : fm.getFocusedIndex();
+        return hasAnchor(list) ? 
+                (int)list.getProperties().get(ANCHOR_PROPERTY_KEY) : 
+                fm.getFocusedIndex();
     }
     
     static void setAnchor(ListView list, int anchor) {
         if (list != null && anchor < 0) {
-            map.remove(list);
+            removeAnchor(list);
         } else {
-            map.put(list, anchor);
+            list.getProperties().put(ANCHOR_PROPERTY_KEY, anchor);
         }
     }
     
     static boolean hasAnchor(ListView list) {
-        return map.containsKey(list) && map.get(list) != -1;
+        return list.getProperties().get(ANCHOR_PROPERTY_KEY) != null;
     }
     
     static void removeAnchor(ListView list) {
-        map.remove(list);
+        list.getProperties().remove(ANCHOR_PROPERTY_KEY);
     }
+    
+    
+    
+    /***************************************************************************
+     *                                                                         *
+     * Private fields                                                          *
+     *                                                                         *
+     **************************************************************************/     
     
     // For RT-17456: have selection occur as fast as possible with mouse input.
     // The idea is (consistently with some native applications we've tested) to 
@@ -83,10 +95,26 @@ public class ListCellBehavior extends CellBehaviorBase<ListCell> {
     private boolean latePress = false;
     private final boolean isTouch = PlatformImpl.isSupported(ConditionalFeature.INPUT_TOUCH);
     private boolean wasSelected = false;
+    
+    
+    
+    /***************************************************************************
+     *                                                                         *
+     * Constructors                                                            *
+     *                                                                         *
+     **************************************************************************/   
 
     public ListCellBehavior(ListCell control) {
         super(control);
     }
+    
+    
+    
+    /***************************************************************************
+     *                                                                         *
+     * Public API                                                              *
+     *                                                                         *
+     **************************************************************************/  
     
     @Override public void mousePressed(MouseEvent event) {
         boolean selectedBefore = getControl().isSelected();
@@ -122,6 +150,14 @@ public class ListCellBehavior extends CellBehaviorBase<ListCell> {
             getControl().getListView().getSelectionModel().clearSelection(getControl().getIndex());
         }
     }
+    
+    
+    
+    /***************************************************************************
+     *                                                                         *
+     * Private implementation                                                  *
+     *                                                                         *
+     **************************************************************************/ 
     
     private void doSelect(MouseEvent e) {
         // Note that list.select will reset selection
@@ -159,11 +195,11 @@ public class ListCellBehavior extends CellBehaviorBase<ListCell> {
         // result in the correct selection occuring (whilst the focus index moves
         // about).
         if (e.isShiftDown()) {
-            if (! map.containsKey(listView)) {
+            if (! hasAnchor(listView)) {
                 setAnchor(listView, fm.getFocusedIndex());
             }
         } else {
-            map.remove(listView);
+            removeAnchor(listView);
         }
         
         MouseButton button = e.getButton();

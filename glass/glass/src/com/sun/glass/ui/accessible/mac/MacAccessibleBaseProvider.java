@@ -24,7 +24,6 @@
  */
 package com.sun.glass.ui.accessible.mac;
 
-import com.sun.glass.ui.Application;
 import com.sun.glass.ui.accessible.AccessibleBaseProvider;
 import com.sun.glass.ui.accessible.AccessibleLogger;
 import com.sun.glass.ui.accessible.mac.MacAccessibleAttributes.MacAttribute;
@@ -41,10 +40,9 @@ import java.util.HashMap;
 import java.util.List;
 
 /**
- * Windows platform implementation class for Accessible.
- *
+ * Mac platform implementation class for Accessible.
  */
-public class MacAccessibleBaseProvider extends AccessibleBaseProvider {
+public final class MacAccessibleBaseProvider extends AccessibleBaseProvider {
     
     // map from fx role ID constant to mac role ID enum value
     private static final HashMap<Integer, MacRole>MacRoleMap =
@@ -62,23 +60,23 @@ public class MacAccessibleBaseProvider extends AccessibleBaseProvider {
     static {
         _initIDs();  // Initialize JNI method IDs.
         
-        // PTB: Add more roles later - in alpha order
+        // TODO: Add more roles later - in alpha order
         MacRoleMap.put(ControlTypeIds.BUTTON, MacRole.BUTTON);
         MacRoleMap.put(ControlTypeIds.CHECK_BOX, MacRole.CHECK_BOX);
         MacRoleMap.put(ControlTypeIds.RADIO_BUTTON, MacRole.RADIO_BUTTON);
         MacRoleMap.put(ControlTypeIds.TEXT, MacRole.TEXT_FIELD);
         MacRoleMap.put(ControlTypeIds.LIST, MacRole.LIST);
-        // PTB: Fix the following later.  Currrently an FX cell is given control ID
+        // TODO: Fix the following later.  Currrently an FX cell is given control ID
         // of List Item with no children.  However it should be List Item with 
         // image/text/edit children.  For Mac the FX cell node should be role cell
         // and the children a relevant role.  For now list item is mapped to static text.
         MacRoleMap.put(ControlTypeIds.LIST_ITEM, MacRole.CELL);
         
-        // PTB: Add more later - in alpha order
+        // TODO: Add more later - in alpha order
         MacEventIdMap.put(EventIds.AUTOMATION_FOCUS_CHANGED, MacEventId.FOCUSED_UI_ELEMENT_CHANGED);
         MacEventIdMap.put(EventIds.AUTOMATION_PROPERTY_CHANGED, MacEventId.VALUE_CHANGED);
         
-        // PTB: Add more attributes later - in alpha order
+        // TODO: Add more attributes later - in alpha order
         FxaAttributeMap.put(MacAttribute.ENABLED, PropertyIds.IS_ENABLED);
         MacAttributeMap.put(PropertyIds.IS_ENABLED, MacAttribute.ENABLED);
         FxaAttributeMap.put(MacAttribute.FOCUSED, PropertyIds.HAS_KEYBOARD_FOCUS);
@@ -95,16 +93,8 @@ public class MacAccessibleBaseProvider extends AccessibleBaseProvider {
     native private long _createAccessible();
     native private void _destroyAccessible(long nativeAccessible);
     native private void _fireEvent(long nativeAccessible, int eventID);
-    native private void _firePropertyChange( long nativeAccessible, int propertyID, 
-                                                    int oldProperty, int newProperty );
-    native private void _firePropertyChange( long nativeAccessible, int propertyID, 
-                                                    boolean oldProperty, boolean newProperty );
     
-    ////////////////////////////////////
-    //
-    // Start of downcalls to native code
-    //
-    ////////////////////////////////////
+    private long nativeAccessible;  // the native accessible
     
     /**
      * Downcall to create the native accessible.  This will be used when firing
@@ -120,10 +110,25 @@ public class MacAccessibleBaseProvider extends AccessibleBaseProvider {
     }
     
     /**
-     * Downcall to destroy the native accessible.
+     * Get the reference to the native accessible.
+     * 
+     * @return a reference to the native accessible.
+     */
+    long getNativeAccessible() {
+        return nativeAccessible;
+    }
+    
+    ////////////////////////////////////
+    //
+    // Start of downcalls to native code
+    //
+    ////////////////////////////////////
+    
+    /**
+     * Destroy the native accessible
      */
     @Override
-    final public void destroyAccessible() {
+    public void destroyAccessible() {
         _destroyAccessible(nativeAccessible);
     }
     
@@ -133,32 +138,44 @@ public class MacAccessibleBaseProvider extends AccessibleBaseProvider {
      * @param eventID   the FXA event ID.
      */
     @Override
-    final public void fireEvent(int eventID) {
+    public void fireEvent(int eventID) {
         AccessibleLogger.getLogger().fine("this: " + this);
         AccessibleLogger.getLogger().fine("nativeAccessible: " + Long.toHexString(nativeAccessible));
         AccessibleLogger.getLogger().fine("eventID: " + eventID);
-        int eventlocal = MacEventIdMap.get(eventID).ordinal() ;
-        AccessibleLogger.getLogger().fine("local eventID: " + eventlocal);
         _fireEvent(nativeAccessible, MacEventIdMap.get(eventID).ordinal());
     }
     
-    /** Fire a property change event
-     * 
-     * @param propertyID    identifies the property
+    /** 
+     * Fire a property change event
+     *
+     * @param propertyID        identifies the property
+     * @param oldProperty       the old value of the property
+     * @param newProperty       the new value of the property
+     */
+    @Override
+    public void firePropertyChange(int propertyID, int oldProperty, int newProperty ) {
+        AccessibleLogger.getLogger().fine("this: " + this);
+        AccessibleLogger.getLogger().fine("nativeAccessible: " + Long.toHexString(nativeAccessible));
+        AccessibleLogger.getLogger().fine("propertyID: " + propertyID);
+        AccessibleLogger.getLogger().fine("old: " + oldProperty);
+        AccessibleLogger.getLogger().fine("new: " + newProperty);
+        _fireEvent(nativeAccessible, MacEventId.VALUE_CHANGED.ordinal());                    
+    }
+    
+    /** 
+     * Fire a property change event
+     *
+     * @param propertyId    identifies the property
      * @param oldProperty   the old value of the property
      * @param newProperty   the new value of the property
      */
     @Override
-    final public void firePropertyChange(int propertyID, int oldProperty, int newProperty) {
+    public void firePropertyChange(int propertyID, boolean oldProperty, boolean newProperty) {
         AccessibleLogger.getLogger().fine("this: " + this);
         AccessibleLogger.getLogger().fine("nativeAccessible: " + Long.toHexString(nativeAccessible));
-        _fireEvent(nativeAccessible, MacEventId.VALUE_CHANGED.ordinal());                    
-    }
-    
-    @Override
-    final public void firePropertyChange(int propertyID, boolean oldProperty, boolean newProperty) {
-        AccessibleLogger.getLogger().fine("this: " + this);
-        AccessibleLogger.getLogger().fine("nativeAccessible: " + Long.toHexString(nativeAccessible));
+        AccessibleLogger.getLogger().fine("propertyID: " + propertyID);
+        AccessibleLogger.getLogger().fine("old: " + oldProperty);
+        AccessibleLogger.getLogger().fine("new: " + newProperty);
         _fireEvent(nativeAccessible, MacEventId.VALUE_CHANGED.ordinal());                    
     }
     
@@ -177,7 +194,7 @@ public class MacAccessibleBaseProvider extends AccessibleBaseProvider {
     
     // Note:
     //   These upcalls are from a native NSAccessibility implementation.  This code
-    //   translates the upcalls to s UIA-like implementation used in the JavaFX
+    //   translates the upcalls to a UIA-like implementation used in the JavaFX
     //   accessibility implementation.
     
     /**
@@ -240,7 +257,7 @@ public class MacAccessibleBaseProvider extends AccessibleBaseProvider {
             int i = 0;
             AccessibleLogger.getLogger().fine("returning");
             for (Long e : children)  {
-                AccessibleLogger.getLogger().fine("  child [" + i + "]: " + Long.toHexString(e));
+                AccessibleLogger.getLogger().fine("child [" + i + "]: " + Long.toHexString(e));
                 longs[i++] = e.longValue();
             }
             return longs;
@@ -264,7 +281,7 @@ public class MacAccessibleBaseProvider extends AccessibleBaseProvider {
         } else if (parent instanceof MacAccessibleRoot) {
             nativeParent = -1;
         } else {
-            nativeParent = ((MacAccessibleBaseProvider)parent).nativeAccessible;
+            nativeParent = ((MacAccessibleBaseProvider)parent).getNativeAccessible();
         }
         AccessibleLogger.getLogger().fine("returning parent: " + nativeParent);
         return nativeParent;
@@ -272,6 +289,8 @@ public class MacAccessibleBaseProvider extends AccessibleBaseProvider {
     
     /**
      * Get the root
+     * 
+     * Checks the parent and returns it if it is a MacAccessibleRoot.
      * 
      * @return address of native accessible of the root or NULL if no parent
      *         or the parent is not a MacAccessibleRoot
@@ -302,7 +321,7 @@ public class MacAccessibleBaseProvider extends AccessibleBaseProvider {
      * @return the property value or null if not handled
      */
     @Override
-    final protected Object getPropertyValue(int attributeId) {
+    protected Object getPropertyValue(int attributeId) {
         AccessibleLogger.getLogger().fine("this: " + this);
         AccessibleLogger.getLogger().fine("attributeId: " + attributeId);
         Object value;
@@ -324,7 +343,7 @@ public class MacAccessibleBaseProvider extends AccessibleBaseProvider {
             value = (Boolean)super.getPropertyValue(FxaAttributeMap.get(MacAttribute.FOCUSED));
         } else {
             // catch if attribute not handled
-            // PTB: raise exception or just return null?
+            // TODO: raise exception or just return null?
             value = null;
             AccessibleLogger.getLogger().fine("Attribute not handled, returning null");
         }

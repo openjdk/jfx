@@ -42,7 +42,7 @@ std::vector<LONG> AccessibleBaseProviderChildIDFactory::sm_reusePool;
  * self:    Java side caller
  */
 AccessibleBaseProvider::AccessibleBaseProvider(JNIEnv* env, jobject self) : m_refCount(1),m_patternObjectCnt(0) {
-    LOG("AccessibleBaseProvider::1ctor\n");
+    LOG("In AccessibleBaseProvider::ctor\n");
     m_self = env->NewGlobalRef(self);
 }
 
@@ -50,7 +50,7 @@ AccessibleBaseProvider::AccessibleBaseProvider(JNIEnv* env, jobject self) : m_re
  * Destructor
  */
 AccessibleBaseProvider::~AccessibleBaseProvider() {
-    LOG("AccessibleBaseProvider::dtor\n");
+    LOG("In AccessibleBaseProvider::dtor\n");
     JNIEnv* env = GetEnv();
     if (env) env->DeleteGlobalRef(m_self);
 }
@@ -106,10 +106,10 @@ IFACEMETHODIMP_(ULONG) AccessibleBaseProvider::Release() {
 IFACEMETHODIMP AccessibleBaseProvider::QueryInterface(REFIID riid, void** ppInterface) {
     LOG("In AccessibleBaseProvider::QueryInterface\n");
     LOG("  this: %p\n", this);
-        // Use the pattern composition objects to determine which specific object to return
-        if( FindPatternObject(riid, ppInterface) == S_OK ) {
-                return S_OK;
-        } else if (riid == __uuidof(IUnknown)) {
+    // Use the pattern composition objects to determine which specific object to return
+    if( FindPatternObject(riid, ppInterface) == S_OK ) {
+        return S_OK;
+    } else if (riid == __uuidof(IUnknown)) {
         LOG("  riid: IUnknown\n");
         *ppInterface = static_cast<IRawElementProviderSimple*>(this);
     } else if (riid == __uuidof(IRawElementProviderSimple)) {
@@ -135,10 +135,10 @@ IFACEMETHODIMP AccessibleBaseProvider::QueryInterface(REFIID riid, void** ppInte
         *ppInterface = NULL;
         return E_NOINTERFACE;
     } else {
-        /*LOG( "  Unhandled riid: %08X-%04X-%04X-%02X%02X-%02X%02X%02X%02X%02X%02X\n", 
+        LOG( "  Unhandled riid: %08X-%04X-%04X-%02X%02X-%02X%02X%02X%02X%02X%02X\n", 
                 riid.Data1, riid.Data2, riid.Data3,
                 riid.Data4[0], riid.Data4[1], riid.Data4[2], riid.Data4[3],
-                riid.Data4[4], riid.Data4[5], riid.Data4[6], riid.Data4[7] );*/
+                riid.Data4[4], riid.Data4[5], riid.Data4[6], riid.Data4[7] );
         *ppInterface = NULL;
         return E_NOINTERFACE;
     }
@@ -211,16 +211,13 @@ IFACEMETHODIMP AccessibleBaseProvider::GetPatternProvider(PATTERNID patternId, I
     if (acc != NULL) {
         LOG("  returning: %p\n", acc);
         *pRetVal = reinterpret_cast<IUnknown *>(acc);
-                LOG(" GetPatternProvider: after reinterpret_cast: %p\n", acc);
         reinterpret_cast<IUnknown*>(acc)->AddRef();
-                LOG(" GetPatternProvider: after AddRef: %p\n", acc);
-                LOG("  returning pattern %d\n", acc);
     } else {
         LOG("  returning NULL\n");
     }
     return S_OK;
 
-    // PTB: Use AddRef when implementing
+    // TODO: Use AddRef when implementing
 }
 
 /**
@@ -260,10 +257,10 @@ IFACEMETHODIMP AccessibleBaseProvider::GetPropertyValue(PROPERTYID propertyId, V
                 jdoubleArray javaCoordinateArray =
                     static_cast<jdoubleArray>(env->CallObjectMethod( m_self, midGetPropertyValue,
                                                                      static_cast<jint>(propertyId) ));
-                CheckAndClearException(env);  // PTB: Is this needed on Get/ReleaseDoubleArrayElements below?
+                CheckAndClearException(env);  // TODO: Is this needed on Get/ReleaseDoubleArrayElements below?
                 jint size = env->GetArrayLength(javaCoordinateArray);
                 if (size != 0) {
-                    // PTB: Are there any concerns that I am not using Get/ReleasePrimitiveArrayCritical?
+                    // TODO: Are there any concerns that I am not using Get/ReleasePrimitiveArrayCritical?
                     jdouble* pJavaCoordinates = env->GetDoubleArrayElements(javaCoordinateArray, JNI_FALSE);
                     for (int i = 0; i < 4; i++) {
                         // Load safe array with screen coordinates for left, top, width, height
@@ -298,11 +295,13 @@ IFACEMETHODIMP AccessibleBaseProvider::GetPropertyValue(PROPERTYID propertyId, V
             // get method id
             jmethodID midIntValue = env->GetMethodID(cls, "intValue", "()I");
             if (midIntValue == NULL) {
-                hr = E_FAIL;  // PTB: Is this right?
+                hr = E_FAIL;  // TODO: Is this right?
+                LOG("    failure: intValue of ControlType\n");
             } else {
                 // get value
                 jint type = env->CallIntMethod(javaInteger, midIntValue);
-                CheckAndClearException(env);  // PTB: Is this the right place for this?
+                LOG("    type: %d\n", type);
+                CheckAndClearException(env);  // TODO: Is this the right place for this?
                 pRetVal->vt = VT_I4;
                 pRetVal->lVal = type;
             }
@@ -316,7 +315,7 @@ IFACEMETHODIMP AccessibleBaseProvider::GetPropertyValue(PROPERTYID propertyId, V
     case UIA_IsKeyboardFocusablePropertyId:
     case UIA_IsSelectionPatternAvailablePropertyId:
     case UIA_IsSelectionItemPatternAvailablePropertyId:
-        case UIA_IsRangeValuePatternAvailablePropertyId:
+    case UIA_IsRangeValuePatternAvailablePropertyId:
     case UIA_IsTogglePatternAvailablePropertyId: {
         // debug
         switch (propertyId) {
@@ -355,12 +354,12 @@ IFACEMETHODIMP AccessibleBaseProvider::GetPropertyValue(PROPERTYID propertyId, V
             // get method id
             jmethodID midBooleanValue = env->GetMethodID(cls, "booleanValue", "()Z");
             if (midBooleanValue == NULL) {
-                hr = E_FAIL;  // PTB: correct failure code?
+                hr = E_FAIL;  // TODO: correct failure code?
                 LOG("  returning E_FAIL; midBooleanValue is NULL\n");
             } else {
                 // get value
                 jboolean value = env->CallBooleanMethod(javaBoolean, midBooleanValue);
-                CheckAndClearException(env);  // PTB: Is this the right place for this?
+                CheckAndClearException(env);  // TODO: Is this the right place for this?
                 pRetVal->vt = VT_BOOL;
                 if (value) {
                     LOG("  returning true\n");
@@ -377,9 +376,9 @@ IFACEMETHODIMP AccessibleBaseProvider::GetPropertyValue(PROPERTYID propertyId, V
         LOG("  ID: Name\n");
         jstring name = static_cast<jstring>(env->CallObjectMethod( m_self, midGetPropertyValue,
                                                                    static_cast<jint>(propertyId) ));
-        CheckAndClearException(env);  // PTB: Is this needed on GetStringCritical, GetStringLength below?
+        CheckAndClearException(env);  // TODO: Is this needed on GetStringCritical, GetStringLength below?
         if (name == NULL) {
-            hr = E_FAIL;  // PTB: correct failure code?
+            hr = E_FAIL;  // TODO: correct failure code?
         } else {
             const jchar* jcstr = env->GetStringCritical(name, NULL);
             pRetVal->vt = VT_BSTR;
@@ -396,12 +395,12 @@ IFACEMETHODIMP AccessibleBaseProvider::GetPropertyValue(PROPERTYID propertyId, V
     }
     case UIA_NativeWindowHandlePropertyId:
         LOG("  ID: NativeWindowHandle\n");
-        // PTB: Add more code later to return the HWND if there is one, else 0;
+        // TODO: Add more code later to return the HWND if there is one, else 0;
         pRetVal->vt = VT_I4;
         pRetVal->lVal = 0;
         break;
     default:
-        LOG("  ID: Unhandled Property ID: %d\n", propertyId);
+        LOG("  Unhandled Property ID: %d\n", propertyId);
     }
     return hr;
 }
@@ -427,10 +426,10 @@ IFACEMETHODIMP AccessibleBaseProvider::get_BoundingRectangle(UiaRect *pRetVal) {
     jdoubleArray javaCoordinateArray =
         static_cast<jdoubleArray>(env->CallObjectMethod( m_self, midGetPropertyValue,
                                                          static_cast<jint>(propertyId) ));
-    CheckAndClearException(env);  // PTB: Is this needed on Get/ReleaseDoubleArrayElements below?
+    CheckAndClearException(env);  // TODO: Is this needed on Get/ReleaseDoubleArrayElements below?
     jint size = env->GetArrayLength(javaCoordinateArray);
     if (size != 0) {
-        // PTB: Are there any concerns that I am not using Get/ReleasePrimitiveArrayCritical?
+        // TODO: Are there any concerns that I am not using Get/ReleasePrimitiveArrayCritical?
         jdouble* pJavaCoordinates = env->GetDoubleArrayElements(javaCoordinateArray, JNI_FALSE);
         for (int i = 0; i < 4; i++) {
             // Load safe array with screen coordinates for left, top, width, height
@@ -473,7 +472,7 @@ IFACEMETHODIMP AccessibleBaseProvider::get_FragmentRoot(IRawElementProviderFragm
         *pRetVal = reinterpret_cast<IRawElementProviderFragmentRoot *>(acc);
         return S_OK;
     } else {
-        return E_FAIL;  // PTB: Is this the right failure code?
+        return E_FAIL;  // TODO: Is this the right failure code?
     }
 }
 
@@ -575,31 +574,33 @@ IFACEMETHODIMP AccessibleBaseProvider::SetFocus() {
     LOG("  NOT IMPLEMENTED\n");
     return E_NOTIMPL;
 }
-        
+
 void AccessibleBaseProvider::AddPatternObject(IUnknown* native)
 {
-        LOG("AccessibleBaseProvider::AddPatternObject %d m_patternObjectCnt%d\n", native, m_patternObjectCnt);
-        m_patternObjects[m_patternObjectCnt++] = native ;
-        LOG("AccessibleBaseProvider::AddPatternObject returning \n");
+    LOG("In AccessibleBaseProvider::AddPatternObject\n");
+    LOG("  native: %p\n", native);
+    LOG("  m_patternObjectCnt: %d\n", m_patternObjectCnt);
+    m_patternObjects[m_patternObjectCnt++] = native ;
 }
 
 IFACEMETHODIMP AccessibleBaseProvider::FindPatternObject(REFIID riid,void **ppInterface)
 {
-        LOG("AccessibleBaseProvider::FindPatternObject\n");
-        bool found = false ;
-        AccessibleBasePatternProvider *patternObject=NULL;
-        for(int idx=0; idx<m_patternObjectCnt; idx++)
+    LOG("In AccessibleBaseProvider::FindPatternObject\n");
+    LOG("  this: %p\n", this);
+    bool found = false ;
+    AccessibleBasePatternProvider *patternObject=NULL;
+    for(int idx=0; idx<m_patternObjectCnt; idx++)
+    {
+        patternObject=(AccessibleBasePatternProvider*)m_patternObjects[idx];
+        LOG("  patternObject %p\n", patternObject);
+        if( patternObject->QueryInterface(riid,ppInterface) == S_OK )
         {
-                patternObject=(AccessibleBasePatternProvider*)m_patternObjects[idx];
-                LOG("AccessibleBaseProvider::FindPatternObject %d\n", patternObject);
-                if( patternObject->QueryInterface(riid,ppInterface) == S_OK )
-                {
-                        LOG("AccessibleBaseProvider::FindPatternObject found\n");
-                        return S_OK ;
-                }
+            LOG("  AccessibleBasePatternProvider found\n");
+            return S_OK ;
         }
-        LOG("AccessibleBaseProvider::FindPatternObject not found\n");
-        // pattern not found in composition
+    }
+    LOG("  AccessibleBasePatternProvider not found\n");
+    // pattern not found in composition
     *ppInterface = NULL;
     return E_NOINTERFACE;
 }
@@ -618,14 +619,14 @@ IFACEMETHODIMP AccessibleBaseProvider::FindPatternObject(REFIID riid,void **ppIn
  * the reuse pool is empty.  These values are always negative to differentiate from
  * normal MSAA childIDs. See the class declaration in the h file for more information.
  *
- * Returns:        LONG containing a unique childID
+ * Returns: LONG containing a unique childID
  *
  */
 LONG
 AccessibleBaseProviderChildIDFactory::getChildID(void) {
     LOG("In AccessibleBaseProviderChildIDFactory::getChildID\n");
     if (sm_reusePool.empty()) {
-        //PTB: Is this the best way to handle this?  It shouldn't ever happen, i.e. we'd never have 2G active accessibles.
+        // TODO: Is this the best way to handle this?  It shouldn't ever happen, i.e. we'd never have 2G active accessibles.
         ASSERT(sm_ChildID != LONG_MIN); 
         return --sm_ChildID;
     } else {
@@ -643,7 +644,7 @@ AccessibleBaseProviderChildIDFactory::getChildID(void) {
  *
  * id:       a LONG indicating the ID to return to the pool
  *
- * Returns:         void
+ * Returns: void
  *
  */
 void
@@ -716,7 +717,7 @@ Java_com_sun_glass_ui_accessible_win_WinAccessibleBaseProvider__1createAccessibl
     //LOG("  Process name: %S\n", name);
     //LOG("  Process ID: %d\n", ::GetCurrentProcessId);
     //LOG("  Thread ID: %d\n", ::GetCurrentThreadId());
-    // PTB: Do we need try/catch around the new?
+    // TODO: Do we need try/catch around the new?
     AccessibleBaseProvider* acc = new AccessibleBaseProvider(env, self);  // Starts with ref count of 1
     LOG("  acc: %p\n", acc);
     acc->m_id = AccessibleBaseProviderChildIDFactory::getChildID();
@@ -808,15 +809,15 @@ Java_com_sun_glass_ui_accessible_win_WinAccessibleBaseProvider__1firePropertyCha
     LOG("In downcall for WinAccessibleBaseProvider._firePropertyChange\n");
     LOG("  acc: %p\n", acc);
     LOG("  eventID:");
-        VARIANT vtOld , vtNew ;
-        VariantInit(&vtOld);
-        vtOld.vt = VT_I4 ;
-        vtOld.iVal = static_cast<int>(oldProperty);
-        VariantInit(&vtNew);
-        vtNew.vt = VT_I4 ;
-        vtNew.iVal = static_cast<int>(newProperty);
+    VARIANT vtOld , vtNew ;
+    VariantInit(&vtOld);
+    vtOld.vt = VT_I4 ;
+    vtOld.iVal = static_cast<int>(oldProperty);
+    VariantInit(&vtNew);
+    vtNew.vt = VT_I4 ;
+    vtNew.iVal = static_cast<int>(newProperty);
     UiaRaiseAutomationPropertyChangedEvent(reinterpret_cast<AccessibleBaseProvider*>(acc), 
-                static_cast<EVENTID>(eventID), vtOld, vtNew);
+        static_cast<EVENTID>(eventID), vtOld, vtNew);
 }
  
 /**
@@ -840,15 +841,15 @@ Java_com_sun_glass_ui_accessible_win_WinAccessibleBaseProvider__1firePropertyCha
     LOG("In downcall for WinAccessibleBaseProvider._firePropertyChangeBool Old %d New %d\n", oldProperty,newProperty );
     LOG("  acc: %p\n", acc);
     LOG("  eventID:");
-        VARIANT vtOld , vtNew ;
-        VariantInit(&vtOld);
-        vtOld.vt = VT_BOOL ;
-        vtOld.boolVal = static_cast<BOOLEAN>(oldProperty);
-        VariantInit(&vtNew);
-        vtNew.vt = VT_BOOL ;
-        vtNew.boolVal = static_cast<BOOLEAN>(newProperty);
+    VARIANT vtOld , vtNew ;
+    VariantInit(&vtOld);
+    vtOld.vt = VT_BOOL ;
+    vtOld.boolVal = static_cast<BOOLEAN>(oldProperty);
+    VariantInit(&vtNew);
+    vtNew.vt = VT_BOOL ;
+    vtNew.boolVal = static_cast<BOOLEAN>(newProperty);
     UiaRaiseAutomationPropertyChangedEvent(reinterpret_cast<AccessibleBaseProvider*>(acc), 
-                static_cast<EVENTID>(eventID), vtOld, vtNew);
+        static_cast<EVENTID>(eventID), vtOld, vtNew);
 }
 
 } /* extern "C" */

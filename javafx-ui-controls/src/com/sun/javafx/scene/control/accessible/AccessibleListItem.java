@@ -25,21 +25,27 @@
 
 package com.sun.javafx.scene.control.accessible;
 
-import com.sun.javafx.accessible.utils.ControlTypeIds;
-import com.sun.javafx.accessible.utils.PropertyIds;
+import com.sun.javafx.accessible.AccessibleNode;
 import com.sun.javafx.accessible.providers.AccessibleProvider;
 import com.sun.javafx.accessible.providers.GridItemProvider;
 import com.sun.javafx.accessible.providers.SelectionItemProvider;
+import com.sun.javafx.accessible.utils.ControlTypeIds;
+import com.sun.javafx.accessible.utils.PropertyIds;
 import javafx.scene.Node;
 import javafx.scene.control.Cell;
 import javafx.scene.control.ListView;
 
-public class AccessibleListItem extends AccessibleControl implements 
+public final class AccessibleListItem extends AccessibleControl implements 
         SelectionItemProvider, GridItemProvider {
 
     Cell listCell;
     static ListView listView = null;
-     
+
+    /**
+     * Constructor
+     * 
+     * @param listCell The associated list item cell
+     */
     public AccessibleListItem(Cell listCell) {
         super(listCell);
         this.listCell = listCell ; 
@@ -56,7 +62,14 @@ public class AccessibleListItem extends AccessibleControl implements
         }
     }
     
-     @Override public Object getPropertyValue(int propertyId) {
+    /**
+     * Get the property value for the specified property ID.
+     * 
+     * @param propertyId    specifies which property to fetch
+     * 
+     * @return the requested property
+     */
+    @Override public Object getPropertyValue(int propertyId) {
         Object retVal = null ;
         switch(propertyId){
             case PropertyIds.NAME:
@@ -84,58 +97,138 @@ public class AccessibleListItem extends AccessibleControl implements
         }   
         return retVal;
     }
-     
+    
+    /**
+     * Add this object to the selection.
+     */
     @Override
     public void addToSelection() {
         listView.getSelectionModel().select(listCell);
     }
 
+    /**
+     * Remove this object from the selection.
+     */
     @Override
     public void removeFromSelection() {
         // TODO assuming single selection for now
         listView.getSelectionModel().clearSelection();
     }
 
+    /**
+     * Select this object.
+     */
     @Override
     public void select() {
         listView.getSelectionModel().select(listCell);
     }
 
+    /**
+     * Determine if this object is selected.
+     * 
+     * @return whether or not this object is selected
+     */
     @Override
     public boolean isSelected() {
         return listCell == listView.getSelectionModel().getSelectedItem();
     }
 
+    /**
+     * Get the Glass accessible for the container.
+     * 
+     * @return the Glass accessible of the container.
+     */
     @Override
-    public AccessibleProvider getSelectionContainer() {
-        // not implemented for now
+    public Object getSelectionContainer() {
+        /**
+         * For now the following code is being commented out due to the use of getMethod
+         * as flagged by findbugs and reported in RT-28367.  When this code is finally
+         * implemented the issue raised by RT-28367 should be resolved in some manner
+         * other than throwing UnsupportedOperationException.
+         *
+         * 
+        Object item = null;
+        try {
+            java.lang.reflect.Method method = listView.getClass().getMethod("impl_getAccessible");
+            AccessibleProvider provider = (AccessibleProvider)method.invoke(listView);
+            item = ((AccessibleNode)provider).getAccessibleElement();
+            } catch (Exception ex) {}
+        return item;
+         *
+         * 
+         */
         throw new UnsupportedOperationException();
     }
 
+    /**
+     * For GridItemProvider Row property
+     *
+     * @return the row index of this object.
+     */
     @Override
     public int getRow() {
         return listView.getItems().indexOf(listCell);
     }
 
+    /**
+     * For GridItemProvider Column property
+     *
+     * @return the column index of this object.
+     */
     @Override
     public int getColumn() {
         return 1;
     }
 
+    /**
+     * For GridItemProvider RowSpan property
+     *
+     * @return the the number of rows spanned by this object.
+     */
     @Override
     public int getRowSpan() {
         return listView.getItems().size();
        
     }
 
+    /**
+     * For GridItemProvider ColumnSpan property
+     *
+     * @return the the number of columns spanned by this object.
+     */
     @Override
     public int getColumnSpan() {
         return 1;
     }
 
+    /**
+     * For GridItemProvider ContainingGrid property
+     *
+     * @return the Glass provider that implements the GridProvider pattern and represents
+     *         the container of this object. 
+     */
     @Override
-    public AccessibleProvider getContainingGrid() {
-        // not implemented for now
+    public Object getContainingGrid() {
+        /**
+         * For now the following code is being commented out due to the use of getMethod
+         * as flagged by findbugs and reported in RT-28367.  When this code is finally
+         * implemented the issue raised by RT-28367 should be resolved in some manner
+         * other than throwing UnsupportedOperationException.
+         *
+         *
+        Object container = null;
+        try {
+            java.lang.reflect.Method method =
+                listView.getClass().getMethod("impl_getAccessible");
+            AccessibleProvider provider = (AccessibleProvider)method.invoke(listView);
+            if (provider instanceof AccessibleNode) {
+                container = ((AccessibleNode)provider).getAccessibleElement();
+            }                   
+        } catch (Exception ex) {}
+        return container;
+         *
+         * 
+         */
         throw new UnsupportedOperationException();
     }
     

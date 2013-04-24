@@ -26,14 +26,11 @@ package com.sun.glass.ui.accessible.win;
 
 import com.sun.javafx.accessible.providers.RangeValueProvider;
 import com.sun.javafx.accessible.utils.PatternIds;
-
-public class WinAccessibleRangeValueProvider extends WinAccessibleBasePatternProvider {
-    double storeValue = -1;
-    double smallChange = -1;
-    
-    native private static void _initIDs();
-    native private long _createAccessible(long nativeSimple);
-    native private void _destroyAccessible(long nativeAccessible);
+/**
+ *
+ * @author paru
+ */
+public final class WinAccessibleRangeValueProvider extends WinAccessibleBasePatternProvider {
 
     /**
      * A class static block that initializes the JNI method IDs.
@@ -42,23 +39,47 @@ public class WinAccessibleRangeValueProvider extends WinAccessibleBasePatternPro
         _initIDs();
     }
     
+    native private static void _initIDs();
+    native protected long _createAccessible(long nativeBaseProvider);
+    native private void _destroyAccessible(long nativeAccessible);
+    
+    private long nativeAccessible;  // The native accessible
+    private double storeValue = -1;  // TODO: add description
+    private double smallChange = -1;  // TODO: add description
+    
     /**
      * Downcall to create the native accessible.  This will be used when firing
      * events or when destroying the native accessible.
      * 
      * @param node          the related FX node object.
-     * @param nativeSimple  the native accessible.
+     * @param provider  the base provider which this pattern provider is chained to.
      */
-    public WinAccessibleRangeValueProvider(Object node, long nativeSimple) {
-        super(node, nativeSimple);
-        nativeAccessible = _createAccessible(nativeSimple);
+    public WinAccessibleRangeValueProvider(Object node, WinAccessibleBaseProvider provider) {
+        super(node);
+        nativeAccessible = _createAccessible(provider.getNativeAccessible());
     }
     
+    /**
+     * Get the native accessible
+     * 
+     * @return the native accessible
+     */
     @Override
-    final public void destroyAccessible() {
+    long getNativeAccessible() {
+        return nativeAccessible;
+    }
+    
+    // Downcalls
+    
+    /**
+     * Destroy the native accessible
+     * 
+     */
+    @Override
+    public void destroyAccessible() {
         _destroyAccessible(nativeAccessible);
     }
-    
+
     ////////////////////////////////////
     //
     // Start of upcalls from native code
@@ -70,6 +91,11 @@ public class WinAccessibleRangeValueProvider extends WinAccessibleBasePatternPro
     //   the upcalls to the UIA-like implementation used in the JavaFX accessibility 
     //   implementation.
     
+    /**
+     * Get the value
+     * 
+     * @return the value 
+     */
     private double getValue() {
         if (storeValue == -1) {
             storeValue = ((RangeValueProvider)node).getValue();
@@ -79,29 +105,56 @@ public class WinAccessibleRangeValueProvider extends WinAccessibleBasePatternPro
         return ((RangeValueProvider)node).getValue();
     }
     
+    /**
+     * Set the value
+     */
     private void setValue() {
         // do nothing: not sure we want to setValue on the slider?
     }
     
+    /**
+     * Get the Minimum value
+     * 
+     * @return the minimum value 
+     */
     private double getMinimum() {
         return ((RangeValueProvider)node).getMinimum();
     }
     
+    /**
+     * Get the Maximum value
+     * 
+     * @return the maximum value 
+     */
     private double getMaximum() {
         return ((RangeValueProvider)node).getMaximum();
     }
     
+    /**
+     * Determine if the control's value is read only
+     * 
+     * @return whether or not the control's value is read only
+     */
     private boolean getIsReadOnly() {
         return ((RangeValueProvider)node).isReadOnly();
     }
     
+    /**
+     * TODO: Add Description
+     * 
+     * @return TODO: Add description
+     */
     private double getSmallChange() {
         return smallChange;
     }
+    
+    // TODO: Add getLargeChange?
 
-    // Return the pattern supported by this class
+    /**
+     * Return the ID of the pattern supported by this class
+     */
     @Override
-    final public int getPatternId() {
+    public int getPatternId() {
         return PatternIds.RANGE_VALUE;
     }
     

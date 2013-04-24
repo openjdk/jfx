@@ -123,9 +123,9 @@ IFACEMETHODIMP AccessibleRangeValueProvider::GetPatternProvider(PATTERNID patter
 /**
  * Get the state of the control.
  *
- * pRetVal:                receiver of the state
+ * pRetVal:     receiver of the state
  *
- * returns:     S_OK
+ * returns: S_OK
  */
 IFACEMETHODIMP AccessibleRangeValueProvider::get_Value(double *valuePtr) {
     LOG("In AccessibleRangeValueProvider::get_Value\n");
@@ -135,62 +135,62 @@ IFACEMETHODIMP AccessibleRangeValueProvider::get_Value(double *valuePtr) {
     *valuePtr = NULL;
     JNIEnv* env = GetEnv();
     jdouble value = env->CallDoubleMethod(m_self, midGetValue);
-    CheckAndClearException(env);  // PTB: Is this the right place for this?
+    CheckAndClearException(env);  // TODO: Is this the right place for this?
     *valuePtr = value;
     return S_OK;
 }
 
 IFACEMETHODIMP AccessibleRangeValueProvider::get_IsReadOnly(BOOL *pRetVal) {
-        LOG("In AccessibleRangeValueProvider::get_IsReadOnly\n");
+    LOG("In AccessibleRangeValueProvider::get_IsReadOnly\n");
     LOG("  this: %p\n", this);
-        JNIEnv* env = GetEnv();
+    JNIEnv* env = GetEnv();
     jboolean val = env->CallBooleanMethod(m_self, midGetIsReadOnly);
-    CheckAndClearException(env);  // PTB: Is this the right place for this?
+    CheckAndClearException(env);  // TODO: Is this the right place for this?
     *pRetVal = val;
-        LOG(" Returning %f\n",val);
+    LOG(" Returning %f\n",val);
     return S_OK;
 }
-        
+
 IFACEMETHODIMP AccessibleRangeValueProvider::get_Maximum(double *pRetVal) {
-        LOG("In AccessibleRangeValueProvider::get_Maximum\n");
+    LOG("In AccessibleRangeValueProvider::get_Maximum\n");
     LOG("  this: %p\n", this);
-        *pRetVal = NULL;
+    *pRetVal = NULL;
     JNIEnv* env = GetEnv();
     jdouble val = env->CallDoubleMethod(m_self, midGetMaximum);
-    CheckAndClearException(env);  // PTB: Is this the right place for this?
+    CheckAndClearException(env);  // TODO: Is this the right place for this?
     *pRetVal = val;
-        LOG(" Returning %f\n",val);
+    LOG(" Returning %f\n",val);
     return S_OK;
 }
 
 IFACEMETHODIMP AccessibleRangeValueProvider::get_Minimum(double *pRetVal) {
-        LOG("In AccessibleRangeValueProvider::get_Minimum\n");
+    LOG("In AccessibleRangeValueProvider::get_Minimum\n");
     LOG("  this: %p\n", this);
-        *pRetVal = NULL;
+    *pRetVal = NULL;
     JNIEnv* env = GetEnv();
     jdouble val = env->CallDoubleMethod(m_self, midGetMinimum);
-    CheckAndClearException(env);  // PTB: Is this the right place for this?
+    CheckAndClearException(env);  // TODO: Is this the right place for this?
     *pRetVal = val;
-        LOG(" Returning %f\n",val);
+    LOG(" Returning %f\n",val);
     return S_OK;
 }
-        
+    
 IFACEMETHODIMP AccessibleRangeValueProvider::get_LargeChange(double *pRetVal) {
-        LOG("In AccessibleRangeValueProvider::get_LargeChange\n");
+    LOG("In AccessibleRangeValueProvider::get_LargeChange\n");
     LOG("  this: %p\n", this);
-        LOG("  NOT IMPLEMENTED\n");
+    LOG("  NOT IMPLEMENTED\n");
     return E_NOTIMPL;
 }
-        
+
 IFACEMETHODIMP AccessibleRangeValueProvider::get_SmallChange(double *pRetVal) {
-        LOG("In AccessibleRangeValueProvider::get_SmallChange\n");
+    LOG("In AccessibleRangeValueProvider::get_SmallChange\n");
     LOG("  this: %p\n", this);
-        *pRetVal = NULL;
+    *pRetVal = NULL;
     JNIEnv* env = GetEnv();
     jdouble val = env->CallDoubleMethod(m_self, midGetSmallChange);
-    CheckAndClearException(env);  // PTB: Is this the right place for this?
+    CheckAndClearException(env);  // TODO: Is this the right place for this?
     *pRetVal = val;
-        LOG(" Returning %f\n",val);
+    LOG(" Returning %f\n",val);
     return S_OK;
 }
 
@@ -199,7 +199,7 @@ IFACEMETHODIMP AccessibleRangeValueProvider::SetValue(double) {
     LOG("  this: %p\n", this);
     JNIEnv* env = GetEnv();
     //env->CallVoidMethod(m_self, midSetValue);
-    //CheckAndClearException(env);  // PTB: Is this the right place for this
+    //CheckAndClearException(env);  // TODO: Is this the right place for this
     return S_OK;
 }
 
@@ -231,15 +231,15 @@ Java_com_sun_glass_ui_accessible_win_WinAccessibleRangeValueProvider__1initIDs(
     LOG("In WinAccessibleRangeValueProvider._initIDs\n");
     midGetValue = env->GetMethodID(cls, "getValue", "()D");
     ASSERT(midGetValue);
-        midGetMaximum = env->GetMethodID(cls, "getMaximum", "()D");
+    midGetMaximum = env->GetMethodID(cls, "getMaximum", "()D");
     ASSERT(midGetMaximum);
-        midGetMinimum = env->GetMethodID(cls, "getMinimum", "()D");
+    midGetMinimum = env->GetMethodID(cls, "getMinimum", "()D");
     ASSERT(midGetMinimum);
-        midGetSmallChange = env->GetMethodID(cls, "getSmallChange", "()D");
+    midGetSmallChange = env->GetMethodID(cls, "getSmallChange", "()D");
     ASSERT(midGetSmallChange);
-        midGetIsReadOnly = env->GetMethodID(cls, "getIsReadOnly", "()Z");
+    midGetIsReadOnly = env->GetMethodID(cls, "getIsReadOnly", "()Z");
     ASSERT(midGetIsReadOnly);
-        //midSetValue = env->GetMethodID(cls, "setValue", "()");
+    //midSetValue = env->GetMethodID(cls, "setValue", "()");
     //ASSERT(midSetValue);
 }
 
@@ -264,19 +264,19 @@ Java_com_sun_glass_ui_accessible_win_WinAccessibleRangeValueProvider__1createAcc
     JNIEnv* env, jobject self, jlong accSimple) {
     LOG("In WinAccessibleRangeValueProvider._createAccessible\n");
     LOG("  accSimple: %p\n", accSimple);
-    // PTB: Do we need try/catch around the new?
+    // TODO: Do we need try/catch around the new?
     AccessibleRangeValueProvider* acc = new AccessibleRangeValueProvider(env, self);
     LOG("  acc: %p\n", acc);
-        // Add this to the simple provider
-        if (accSimple != 0) {
-                AccessibleBaseProvider* accessibleSimple =
+    // Add this to the simple provider
+    if (accSimple != 0) {
+        AccessibleBaseProvider* accessibleSimple =
             reinterpret_cast<AccessibleBaseProvider *>(accSimple);
-                if (accessibleSimple != NULL) {
-                        accessibleSimple->AddPatternObject(reinterpret_cast<IUnknown*>(acc));
+        if (accessibleSimple != NULL) {
+            accessibleSimple->AddPatternObject(reinterpret_cast<IUnknown*>(acc));
         } else {
-                        LOG("  AddPatternObject not called; accessibleSimple is NULL.\n");
+            LOG("  AddPatternObject not called; accessibleSimple is NULL.\n");
         }
-        }
+    }
     return reinterpret_cast<jlong>(acc);
 }
 

@@ -34,7 +34,6 @@ import com.sun.glass.ui.Pixels;
 import com.sun.glass.ui.Screen;
 import com.sun.glass.ui.View;
 import com.sun.glass.ui.Window;
-import com.sun.glass.ui.accessible.AccessibleRoot;
 import sun.util.logging.PlatformLogger;
 
 final class LensWindow extends Window {
@@ -441,11 +440,6 @@ final class LensWindow extends Window {
 
     @Override
     protected void _releaseInput(long ptr) {
-        throw new UnsupportedOperationException("Not supported yet.");
-    }
-
-    @Override
-    protected void _accessibilityInitIsComplete(long ptr, AccessibleRoot acc) {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 

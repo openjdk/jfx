@@ -39,7 +39,7 @@ import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
 
-import static javafx.scene.control.ControlTestUtils.*;
+import static com.sun.javafx.scene.control.infrastructure.ControlTestUtils.*;
 import static org.junit.Assert.*;
 
 /**
@@ -496,7 +496,7 @@ public class ListCellTest {
         assertFalse(other.isSelected());
     }
 
-    @Ignore @Test public void replacingTheFocusModelRemovesTheListenerFromTheOldModel() {
+    @Test public void replacingTheFocusModelRemovesTheListenerFromTheOldModel() {
         cell.updateIndex(0);
         cell.updateListView(list);
         FocusModel<String> fm = list.getFocusModel();

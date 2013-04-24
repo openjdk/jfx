@@ -229,27 +229,27 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane, TitledPaneBehavi
             w, contentHeight, /*baseline ignored*/0, HPos.CENTER, VPos.CENTER);
     }
 
-    @Override protected double computeMinWidth(double height, int topInset, int rightInset, int bottomInset, int leftInset) {
+    @Override protected double computeMinWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
         return computePrefWidth(height, topInset, rightInset, bottomInset, leftInset);
     }
 
-    @Override protected double computeMinHeight(double width, int topInset, int rightInset, int bottomInset, int leftInset) {
+    @Override protected double computeMinHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
         return Math.max(MIN_HEADER_HEIGHT, snapSize(titleRegion.prefHeight(-1)));
     }
 
-    @Override protected double computePrefWidth(double height, int topInset, int rightInset, int bottomInset, int leftInset) {
+    @Override protected double computePrefWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
         double titleWidth = snapSize(titleRegion.prefWidth(height));
         double contentWidth = snapSize(contentContainer.prefWidth(height));
         return Math.max(titleWidth, contentWidth) + leftInset + rightInset;
     }
 
-    @Override protected double computePrefHeight(double width, int topInset, int rightInset, int bottomInset, int leftInset) {
+    @Override protected double computePrefHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
         double headerHeight = Math.max(MIN_HEADER_HEIGHT, snapSize(titleRegion.prefHeight(-1)));
         double contentHeight = contentContainer.prefHeight(-1) * getTransition();
         return headerHeight + snapSize(contentHeight) + topInset + bottomInset;
     }
 
-    @Override protected double computeMaxWidth(double height, int topInset, int rightInset, int bottomInset, int leftInset) {
+    @Override protected double computeMaxWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
         return Double.MAX_VALUE;
     }
 

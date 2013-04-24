@@ -58,7 +58,7 @@ AccessibleBasePatternProvider::~AccessibleBasePatternProvider() {
  * returns: the new reference count
  */
 IFACEMETHODIMP_(ULONG) AccessibleBasePatternProvider::AddRef() {
-        //LOG("In AccessibleBasePatternProvider::AddRef\n");
+    //LOG("In AccessibleBasePatternProvider::AddRef\n");
     return InterlockedIncrement(&m_refCount);
 }
 
@@ -68,7 +68,7 @@ IFACEMETHODIMP_(ULONG) AccessibleBasePatternProvider::AddRef() {
  * returns: the new reference count
  */
 IFACEMETHODIMP_(ULONG) AccessibleBasePatternProvider::Release() {
-        //LOG("In AccessibleBasePatternProvider::Release\n");
+    //LOG("In AccessibleBasePatternProvider::Release\n");
     long val = InterlockedDecrement(&m_refCount);
     if (val == 0) {
         AccessibleBasePatternProviderChildIDFactory::releaseChildID(m_id);
@@ -89,14 +89,13 @@ IFACEMETHODIMP_(ULONG) AccessibleBasePatternProvider::Release() {
 IFACEMETHODIMP AccessibleBasePatternProvider::QueryInterface(REFIID riid, void** ppInterface) {
     //LOG("In AccessibleBasePatternProvider::QueryInterface\n");
     //LOG("  AccessibleBasePatternProvider this: %p\n", this);
-        if (riid == __uuidof(IUnknown)) {
+    if (riid == __uuidof(IUnknown)) {
         //LOG(" AccessibleBasePatternProvider riid: IUnknown\n");
         *ppInterface = static_cast<IUnknown*>(this);
-        }
-        else {
-                //LOG(" AccessibleBasePatternProvider Unhandled riid \n");
-                *ppInterface = NULL;
-        }
+    } else {
+        //LOG(" AccessibleBasePatternProvider Unhandled riid \n");
+        *ppInterface = NULL;
+    }
     return E_NOINTERFACE;
 }
 
@@ -130,14 +129,14 @@ IFACEMETHODIMP AccessibleBasePatternProvider::GetPatternProvider(PATTERNID patte
  * the reuse pool is empty.  These values are always negative to differentiate from
  * normal MSAA childIDs. See the class declaration in the h file for more information.
  *
- * Returns:        LONG containing a unique childID
+ * Returns: LONG containing a unique childID
  *
  */
 LONG
 AccessibleBasePatternProviderChildIDFactory::getChildID(void) {
     LOG("In AccessibleBasePatternProviderChildIDFactory::getChildID\n");
     if (sm_reusePool.empty()) {
-        //PTB: Is this the best way to handle this?  It shouldn't ever happen, i.e. we'd never have 2G active accessibles.
+        // TODO: Is this the best way to handle this?  It shouldn't ever happen, i.e. we'd never have 2G active accessibles.
         ASSERT(sm_ChildID != LONG_MIN); 
         return --sm_ChildID;
     } else {
@@ -155,7 +154,7 @@ AccessibleBasePatternProviderChildIDFactory::getChildID(void) {
  *
  * id:       a LONG indicating the ID to return to the pool
  *
- * Returns:         void
+ * Returns: void
  *
  */
 void

@@ -26,9 +26,6 @@ package com.sun.glass.ui.mac;
 
 import com.sun.glass.events.WindowEvent;
 import com.sun.glass.events.mac.NpapiEvent;
-import com.sun.glass.ui.accessible.AccessibleRoot;
-import com.sun.glass.ui.accessible.mac.MacAccessibleRoot;
-import com.sun.glass.ui.Application;
 import com.sun.glass.ui.Cursor;
 import com.sun.glass.ui.Pixels;
 import com.sun.glass.ui.Screen;
@@ -93,12 +90,6 @@ final class MacWindow extends Window {
 
     @Override native protected boolean _grabFocus(long ptr);
     @Override native protected void _ungrabFocus(long ptr);
-    
-    native protected void _accessibilityIsReady(long ptr, long nativeAccessible);
-    @Override
-    protected void _accessibilityInitIsComplete(long ptr, AccessibleRoot acc) {
-        _accessibilityIsReady(ptr, ((MacAccessibleRoot)acc).getNativeAccessible());
-    }
 
     @Override native protected int _getEmbeddedX(long ptr);
     @Override native protected int _getEmbeddedY(long ptr);

@@ -231,24 +231,24 @@ public abstract class MenuButtonSkinBase<C extends MenuButton, B extends MenuBut
      *                                                                         *
      **************************************************************************/
 
-    @Override protected double computePrefWidth(double height, int topInset, int rightInset, int bottomInset, int leftInset) {
+    @Override protected double computePrefWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
         return leftInset
                 + label.prefWidth(height)
                 + snapSize(arrowButton.prefWidth(height))
                 + rightInset;
     }
 
-    @Override protected double computePrefHeight(double width, int topInset, int rightInset, int bottomInset, int leftInset) {
+    @Override protected double computePrefHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
         return topInset
                 + Math.max(label.prefHeight(width), snapSize(arrowButton.prefHeight(-1)))
                 + bottomInset;
     }
 
-    @Override protected double computeMaxWidth(double height, int topInset, int rightInset, int bottomInset, int leftInset) {
+    @Override protected double computeMaxWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
         return getSkinnable().prefWidth(height);
     }
 
-    @Override protected double computeMaxHeight(double width, int topInset, int rightInset, int bottomInset, int leftInset) {
+    @Override protected double computeMaxHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
         return getSkinnable().prefHeight(width);
     }
 

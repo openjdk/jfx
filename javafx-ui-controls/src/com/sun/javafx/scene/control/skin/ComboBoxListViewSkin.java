@@ -151,39 +151,35 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
             }
         });
         
-        comboBox.addEventFilter(InputEvent.ANY, new EventHandler<InputEvent>() {
-            @Override public void handle(InputEvent t) {
+        comboBox.addEventFilter(KeyEvent.ANY, new EventHandler<KeyEvent>() {
+            @Override public void handle(KeyEvent ke) {
                 if (textField == null) return;
                 
                 // When the user hits the enter or F4 keys, we respond before 
                 // ever giving the event to the TextField.
-                if (t instanceof KeyEvent) {
-                    KeyEvent ke = (KeyEvent)t;
-                    
-                    if (ke.getCode() == KeyCode.ENTER) {
-                        setTextFromTextFieldIntoComboBoxValue();
-                        /*
-                        ** don't consume this if we're on an embedded
-                        ** platform that supports 5-button navigation 
-                        */
-                        if (!Utils.isTwoLevelFocus()) {
-                            t.consume();
-                        }
-                        return;
-                    } else if (ke.getCode() == KeyCode.F4 && ke.getEventType() == KeyEvent.KEY_RELEASED) {
-                        if (comboBox.isShowing()) comboBox.hide();
-                        else comboBox.show();
-                        t.consume();
-                        return;
-                    } else if (ke.getCode() == KeyCode.F10 || ke.getCode() == KeyCode.ESCAPE) {
-                        // RT-23275: The TextField fires F10 and ESCAPE key events
-                        // up to the parent, which are then fired back at the 
-                        // TextField, and this ends up in an infinite loop until
-                        // the stack overflows. So, here we consume these two
-                        // events and stop them from going any further.
-                        t.consume();
-                        return;
+                if (ke.getCode() == KeyCode.ENTER) {
+                    setTextFromTextFieldIntoComboBoxValue();
+                    /*
+                    ** don't consume this if we're on an embedded
+                    ** platform that supports 5-button navigation 
+                    */
+                    if (!Utils.isTwoLevelFocus()) {
+                        ke.consume();
                     }
+                    return;
+                } else if (ke.getCode() == KeyCode.F4 && ke.getEventType() == KeyEvent.KEY_RELEASED) {
+                    if (comboBox.isShowing()) comboBox.hide();
+                    else comboBox.show();
+                    ke.consume();
+                    return;
+                } else if (ke.getCode() == KeyCode.F10 || ke.getCode() == KeyCode.ESCAPE) {
+                    // RT-23275: The TextField fires F10 and ESCAPE key events
+                    // up to the parent, which are then fired back at the 
+                    // TextField, and this ends up in an infinite loop until
+                    // the stack overflows. So, here we consume these two
+                    // events and stop them from going any further.
+                    ke.consume();
+                    return;
                 }
             }
         });
@@ -283,7 +279,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
         return listView;
     }
     
-    @Override protected double computePrefWidth(double height, int topInset, int rightInset, int bottomInset, int leftInset) {
+    @Override protected double computePrefWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
         double superPrefWidth = super.computePrefWidth(height, topInset, rightInset, bottomInset, leftInset);
         double listViewWidth = listView.prefWidth(height);
         double pw = Math.max(superPrefWidth, listViewWidth);
@@ -293,7 +289,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
         return pw;
     }
     
-    @Override protected double computeMinWidth(double height, int topInset, int rightInset, int bottomInset, int leftInset) {
+    @Override protected double computeMinWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
         return 50;
     }
     

@@ -26,6 +26,7 @@
 package javafx.scene.control;
 
 import java.text.Collator;
+import java.util.Collections;
 import java.util.Comparator;
 
 import javafx.beans.property.BooleanProperty;
@@ -37,6 +38,8 @@ import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.collections.ObservableSet;
+import javafx.css.PseudoClass;
 import javafx.css.Styleable;
 import javafx.event.Event;
 import javafx.event.EventDispatchChain;
@@ -742,6 +745,13 @@ public abstract class TableColumnBase<S,T> implements EventTarget, Styleable {
      * Stylesheet Handling                                                     *
      *                                                                         *
      **************************************************************************/
+
+    /**
+     * {@inheritDoc}
+     */
+    public final ObservableSet<PseudoClass> getPseudoClassStates() {
+        return FXCollections.emptyObservableSet();
+    }
 
     
     

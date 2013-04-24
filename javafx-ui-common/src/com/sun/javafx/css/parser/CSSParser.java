@@ -61,7 +61,6 @@ import com.sun.javafx.css.CompoundSelector;
 import com.sun.javafx.css.CssError;
 import com.sun.javafx.css.Declaration;
 import com.sun.javafx.css.FontFace;
-import com.sun.javafx.css.FontUnits;
 import javafx.css.ParsedValue;
 import com.sun.javafx.css.ParsedValueImpl;
 import com.sun.javafx.css.Rule;
@@ -3486,7 +3485,7 @@ final public class CSSParser {
     }
 
     /* http://www.w3.org/TR/css3-fonts/#font-style-the-font-style-property */
-    private ParsedValueImpl<FontUnits.Style,FontPosture> parseFontStyle(Term root) throws ParseException {
+    private ParsedValueImpl<String,FontPosture> parseFontStyle(Term root) throws ParseException {
 
         if (root == null) return null;
         final Token token = root.token;
@@ -3496,25 +3495,25 @@ final public class CSSParser {
             token.getText().isEmpty()) error(root, "Expected \'<font-style>\'");
 
         final String ident = token.getText().toLowerCase();
-        FontUnits.Style style = null;
+        String posture = FontPosture.REGULAR.name();
 
         if ("normal".equals(ident)) {
-            style = FontUnits.Style.NORMAL;
+            posture = FontPosture.REGULAR.name();
         } else if ("italic".equals(ident)) {
-            style = FontUnits.Style.ITALIC;
+            posture = FontPosture.ITALIC.name();
         } else if ("oblique".equals(ident)) {
-            style = FontUnits.Style.OBLIQUE;
+            posture = FontPosture.ITALIC.name();
         } else if ("inherit".equals(ident)) {
-            style = FontUnits.Style.OBLIQUE;
+            posture = "inherit";
         } else {
             return null;
         }
 
-        return new ParsedValueImpl<FontUnits.Style,FontPosture>(style, FontConverter.FontStyleConverter.getInstance());
+        return new ParsedValueImpl<String,FontPosture>(posture, FontConverter.FontStyleConverter.getInstance());
     }
 
     /* http://www.w3.org/TR/css3-fonts/#font-weight-the-font-weight-property */
-    private ParsedValueImpl<FontUnits.Weight,FontWeight> parseFontWeight(Term root) throws ParseException {
+    private ParsedValueImpl<String, FontWeight> parseFontWeight(Term root) throws ParseException {
 
         if (root == null) return null;
         final Token token = root.token;
@@ -3523,38 +3522,40 @@ final public class CSSParser {
             token.getText().isEmpty()) error(root, "Expected \'<font-weight>\'");
 
         final String ident = token.getText().toLowerCase();
-        FontUnits.Weight weight = null;
+        String weight = FontWeight.NORMAL.name();
 
         if ("inherit".equals(ident)) {
-            weight = FontUnits.Weight.INHERIT;
+            weight = FontWeight.NORMAL.name();
         } else if ("normal".equals(ident)) {
-            weight = FontUnits.Weight.NORMAL;
+            weight = FontWeight.NORMAL.name();
         } else if ("bold".equals(ident)) {
-            weight = FontUnits.Weight.BOLD;
+            weight = FontWeight.BOLD.name();
         } else if ("bolder".equals(ident)) {
-            weight = FontUnits.Weight.BOLDER;
+            weight = FontWeight.BOLD.name();
         } else if ("lighter".equals(ident)) {
-            weight = FontUnits.Weight.LIGHTER;
+            weight = FontWeight.LIGHT.name();
         } else if ("100".equals(ident)) {
-            weight = FontUnits.Weight.SCALE_100;
+            weight = FontWeight.findByWeight(100).name();
         } else if ("200".equals(ident)) {
-            weight = FontUnits.Weight.SCALE_200;
+            weight = FontWeight.findByWeight(200).name();
         } else if ("300".equals(ident)) {
-            weight = FontUnits.Weight.SCALE_300;
+            weight = FontWeight.findByWeight(300).name();
         } else if ("400".equals(ident)) {
-            weight = FontUnits.Weight.SCALE_400;
+            weight = FontWeight.findByWeight(400).name();
         } else if ("500".equals(ident)) {
-            weight = FontUnits.Weight.SCALE_500;
+            weight = FontWeight.findByWeight(500).name();
         } else if ("600".equals(ident)) {
-            weight = FontUnits.Weight.SCALE_600;
+            weight = FontWeight.findByWeight(600).name();
         } else if ("700".equals(ident)) {
-            weight = FontUnits.Weight.SCALE_700;
+            weight = FontWeight.findByWeight(700).name();
         } else if ("800".equals(ident)) {
-            weight = FontUnits.Weight.SCALE_800;
+            weight = FontWeight.findByWeight(800).name();
+        } else if ("900".equals(ident)) {
+            weight = FontWeight.findByWeight(900).name();
         } else {
-	    error(root, "Expected \'<font-weight>\'");
-	}
-        return new ParsedValueImpl<FontUnits.Weight,FontWeight>(weight, FontConverter.FontWeightConverter.getInstance());
+            error(root, "Expected \'<font-weight>\'");
+        }
+        return new ParsedValueImpl<String,FontWeight>(weight, FontConverter.FontWeightConverter.getInstance());
     }
 
     private ParsedValueImpl<String,String>  parseFontFamily(Term root) throws ParseException {
@@ -3625,8 +3626,8 @@ final public class CSSParser {
         ParsedValueImpl<ParsedValue<?,Size>,Number> fsize = parseFontSize(term);
         if (fsize == null) error(root, "Expected \'<size>\'");
 
-        ParsedValueImpl<FontUnits.Style,FontPosture> fstyle = null;
-        ParsedValueImpl<FontUnits.Weight,FontWeight> fweight = null;
+        ParsedValueImpl<String,FontPosture> fstyle = null;
+        ParsedValueImpl<String,FontWeight> fweight = null;
         String fvariant = null;
 
         while ((term = term.nextInSeries) != null) {

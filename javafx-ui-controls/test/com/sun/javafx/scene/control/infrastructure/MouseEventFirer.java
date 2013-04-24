@@ -29,9 +29,12 @@ import java.util.Arrays;
 import java.util.List;
 
 import javafx.event.Event;
+import javafx.event.EventTarget;
 import javafx.event.EventType;
+import javafx.geometry.BoundingBox;
 import javafx.geometry.Bounds;
 import javafx.scene.Node;
+import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
@@ -39,7 +42,9 @@ import javafx.scene.image.WritableImage;
 import javafx.scene.input.ContextMenuEvent;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
+import javafx.scene.input.PickResult;
 import javafx.scene.layout.Pane;
+import javafx.scene.layout.Region;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
 
@@ -50,7 +55,7 @@ public final class MouseEventFirer {
         // no-op
     }
     
-    public static void fireMouseClickAndRelease(Node target, KeyModifier... modifiers) {
+    public static void fireMousePressAndRelease(Node target, KeyModifier... modifiers) {
         fireMouseEvent(target, MouseEvent.MOUSE_PRESSED, modifiers);
         fireMouseEvent(target, MouseEvent.MOUSE_RELEASED, modifiers);
     }
@@ -104,17 +109,55 @@ public final class MouseEventFirer {
     }
     
     public static void fireMouseEvent(Node target, EventType<MouseEvent> evtType, MouseButton button, int clickCount, double deltaX, double deltaY, KeyModifier... modifiers) {
-        List<KeyModifier> ml = Arrays.asList(modifiers);
+        fireMouseEvent((EventTarget)target, evtType, button, clickCount, deltaX, deltaY, modifiers);
+    }
+    
+    public static void fireMouseEvent(Scene target, EventType<MouseEvent> evtType, MouseButton button, int clickCount, double deltaX, double deltaY, KeyModifier... modifiers) {
+        fireMouseEvent((EventTarget)target, evtType, button, clickCount, deltaX, deltaY, modifiers);
+    }
+    
+    private static void fireMouseEvent(EventTarget target, EventType<MouseEvent> evtType, MouseButton button, int clickCount, double deltaX, double deltaY, KeyModifier... modifiers) {
+        Scene scene = null;
+        Bounds targetBounds = null;
         
-        Bounds screenBounds = target.localToScreen(target.getLayoutBounds());
-        double screenX = screenBounds.getMaxX() - screenBounds.getWidth() / 2.0 + deltaX;
-        double screenY = screenBounds.getMaxY() - screenBounds.getHeight() / 2.0 + deltaY;
+        // Force the target node onto a stage so that it is accessible
+        if (target instanceof Node) {
+            Node n = (Node)target;
+            new StageLoader(n);
+            scene = n.getScene();
+            targetBounds = n.getLayoutBounds();
+        } else if (target instanceof Scene) {
+            scene = (Scene)target;
+            new StageLoader(scene);
+            targetBounds = new BoundingBox(0, 0, scene.getWidth(), scene.getHeight());
+        }
+
+        // calculate bounds
+        final Stage stage = (Stage) scene.getWindow();
+        
+        // width / height of target node
+        final double w = targetBounds.getWidth();
+        final double h = targetBounds.getHeight();
+        
+        // x / y click position is centered
+        final double x = w / 2.0 + deltaX;
+        final double y = h / 2.0 + deltaY;
+        
+        final double sceneX = x + scene.getX() + deltaX;
+        final double sceneY = y + scene.getY() + deltaY;
+        
+        final double screenX = sceneX + stage.getX();
+        final double screenY = sceneY + stage.getY();
+        
+        final List<KeyModifier> ml = Arrays.asList(modifiers);
+        
+        final PickResult pickResult = new PickResult(target, sceneX, sceneY);
         
         MouseEvent evt = new MouseEvent(
                 target, 
                 target, 
                 evtType, 
-                deltaX, deltaY, 
+                x, y, 
                 screenX, screenY, 
                 button, 
                 clickCount,
@@ -125,10 +168,10 @@ public final class MouseEventFirer {
                 button == MouseButton.PRIMARY,     // primary button
                 button == MouseButton.MIDDLE,      // middle button
                 button == MouseButton.SECONDARY,   // secondary button
-                true,                              // synthesized 
+                false,                             // synthesized 
                 button == MouseButton.SECONDARY,   // is popup trigger
                 true,                              // still since pick
-                null);                             // pick result
+                pickResult);                       // pick result
         
 //        // lets see the click position.
 //        // Unfortunately this doesn't work at present because StubToolkit 

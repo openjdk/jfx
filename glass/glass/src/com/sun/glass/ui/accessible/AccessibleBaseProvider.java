@@ -25,49 +25,42 @@
 package com.sun.glass.ui.accessible;
 
 import com.sun.glass.ui.PlatformFactory;
+import com.sun.javafx.accessible.providers.AccessibleProvider;
+import com.sun.javafx.accessible.utils.Rect;
 import java.util.ArrayList;
 import java.util.List;
-import com.sun.javafx.accessible.utils.Rect;
-import com.sun.javafx.accessible.providers.AccessibleProvider;
 
 /**
- * The Accessible for a Glass button object.
+ * The Accessible for a Glass accessible object.
  * <p>
- * Accessibles are created via a call to the static createAccessible method.  Once
+ * Accessibles are created via a call to the static createProvider method.  Once
  * the platform (Windows, Linux, OS X) is determined a platform specific Accessible
  * is returned.
  * <p>
- * This class is subclassed by platform specific specializations, e.g. WinAccessibleButton,
- * GtkAccessibleButton, and MacAccessibleButton.  During construction each subclass
- * downcalls to native code to create a native accessible.
- * <p>
- * This class implements IRawElementProviderSimple and IRawElementProviderFragment.
- * Its methods are callable from the native code via JNI.
+ * This class is subclassed by platform specific specializations, e.g.
+ * WinAccessibleBaseProvider, MacAccessibleBaseProvider.  During construction each
+ * subclass downcalls to native code to create a native accessible.
  */
 
 public abstract class AccessibleBaseProvider {
     
     protected List<AccessibleBasePatternProvider> patternProviders;
     
-    // The objects are programmaticly accessible:
-    // - read/write in subclases via protected access
-    // - readable by any object via public getters
     protected Object node;  // the JavaFX node
-    protected long nativeAccessible;  // the native accessible
 
     /**
      * Static method to create a Glass accessible
      * 
-     * @param node          the related FX node object.
-     *
      * Determines which platform and then calls the platform specific factory to
      * construct and return a platform specific accessible.
+     * 
+     * @param node  the related FX node object.
+     *
+     * @return a newly created platform specific AccessibleBaseProvider.
      */
     public static AccessibleBaseProvider createProvider(Object node) {
-        AccessibleLogger.getLogger().fine("node: " + node);
-        AccessibleBaseProvider acc =
-            PlatformFactory.getPlatformFactory().createAccessibleProvider(node);
-        return acc;
+        AccessibleLogger.getLogger().fine("node: " + node);            
+        return PlatformFactory.getPlatformFactory().createAccessibleProvider(node);
     }
     
     /**
@@ -80,14 +73,20 @@ public abstract class AccessibleBaseProvider {
         patternProviders = new ArrayList<AccessibleBasePatternProvider>();
     }
     
-    public long getNativeAccessible() {
-        return nativeAccessible;
-    }
-    
+    /**
+     * Get the FX accessible node.
+     * 
+     * @return the FX accessible node.
+     */
     public Object getNode() {
         return node;
     }
     
+    /**
+     * Add a pattern provider to the base provider.
+     * 
+     * @param pattern the pattern provider to add
+     */
     public void addPatternProviders(AccessibleBasePatternProvider pattern) {
         patternProviders.add(pattern);
     } 
@@ -97,7 +96,6 @@ public abstract class AccessibleBaseProvider {
     /**
      * Destroy the native accessible
      */
-    
     abstract public void destroyAccessible();
     
     /**
@@ -106,17 +104,23 @@ public abstract class AccessibleBaseProvider {
      * @param eventID   identifies the event.
      */
     abstract public void fireEvent(int eventID);
-    
+
     /** Fire a property change event
      * 
      * @param propertyId    identifies the property
      * @param oldProperty   the old value of the property
      * @param newProperty   the new value of the property
      */
-    abstract public void firePropertyChange( int propertyId, int oldProperty,
-                                             int newProperty );
-    abstract public void firePropertyChange( int propertyId, boolean oldProperty,
-                                             boolean newProperty );
+    abstract public void firePropertyChange(int propertyId, int oldProperty, int newProperty);
+
+    /** Fire a property change event
+     * 
+     * @param propertyId    identifies the property
+     * @param oldProperty   the old value of the property
+     * @param newProperty   the new value of the property
+     */
+    abstract public void firePropertyChange( int propertyId,
+                                             boolean oldProperty, boolean newProperty );
     
     // Upcalls
     
@@ -133,7 +137,7 @@ public abstract class AccessibleBaseProvider {
         if (node instanceof AccessibleProvider) {
             value = ((AccessibleProvider)node).getPropertyValue(propertyId);
         } else {
-            // PTB: Should I do something else like throw an acception?
+            // TODO: Should we do something else like throw an acception?
             value = null;
         }
         AccessibleLogger.getLogger().fine("returning: " + value);
@@ -154,7 +158,7 @@ public abstract class AccessibleBaseProvider {
                 "MinX=" + rect.getMinX() + "MinY=" + rect.getMinY() + 
                 "MaxX=" + rect.getMaxX() + "MaxY=" + rect.getMaxY());
         } else {
-            // PTB: Should I do something else like throw an acception?
+            // TODO: Should we do something else like throw an acception?
             rect = null;
         }
         return rect;

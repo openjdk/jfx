@@ -36,8 +36,6 @@ import java.lang.ref.WeakReference;
 import java.util.List;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
-
-import com.sun.javafx.scene.control.MultiplePropertyChangeListenerHandler;
 import com.sun.javafx.scene.control.skin.TableRowSkin;
 
 /**
@@ -90,6 +88,36 @@ public class TableRow<T> extends IndexedCell<T> {
      *                                                                         *
      **************************************************************************/
 
+    /*
+     * This is the list observer we use to keep an eye on the SelectedCells
+     * list in the table view. Because it is possible that the table can
+     * be mutated, we create this observer here, and add/remove it from the
+     * storeTableView method.
+     */
+    private ListChangeListener<TablePosition> selectedListener = new ListChangeListener<TablePosition>() {
+        @Override
+        public void onChanged(Change<? extends TablePosition> c) {
+            updateSelection();
+        }
+    };
+
+    // Same as selectedListener, but this time for focus events
+    private final InvalidationListener focusedListener = new InvalidationListener() {
+        @Override public void invalidated(Observable valueModel) {
+            updateFocus();
+        }
+    };
+
+    // same as above, but for editing events
+    private final InvalidationListener editingListener = new InvalidationListener() {
+        @Override public void invalidated(Observable valueModel) {
+            updateEditing();
+        }
+    };
+
+    private final WeakListChangeListener weakSelectedListener = new WeakListChangeListener(selectedListener);
+    private final WeakInvalidationListener weakFocusedListener = new WeakInvalidationListener(focusedListener);
+    private final WeakInvalidationListener weakEditingListener = new WeakInvalidationListener(editingListener);
 
     
     
@@ -123,23 +151,21 @@ public class TableRow<T> extends IndexedCell<T> {
                 @Override protected void invalidated() {
                     TableView.TableViewSelectionModel sm;
                     TableViewFocusModel fm;
-                    
-                    final MultiplePropertyChangeListenerHandler listener = getPropertyListener();
 
                     if (weakTableViewRef != null) {
                         TableView oldTableView = weakTableViewRef.get();
                         if (oldTableView != null) {
                             sm = oldTableView.getSelectionModel();
                             if (sm != null) {
-                                listener.unregisterChangeListener(sm.getSelectedCells());
+                                sm.getSelectedCells().removeListener(weakSelectedListener);
                             }
 
                             fm = oldTableView.getFocusModel();
                             if (fm != null) {
-                                listener.unregisterChangeListener(fm.focusedCellProperty());
+                                fm.focusedCellProperty().removeListener(weakFocusedListener);
                             }
 
-                            listener.unregisterChangeListener(oldTableView.editingCellProperty());
+                            oldTableView.editingCellProperty().removeListener(weakEditingListener);
                         }
                         
                         weakTableViewRef = null;
@@ -149,15 +175,15 @@ public class TableRow<T> extends IndexedCell<T> {
                     if (tableView != null) {
                         sm = tableView.getSelectionModel();
                         if (sm != null) {
-                            listener.registerChangeListener(sm.getSelectedCells(), "SELECTED_CELLS");
+                            sm.getSelectedCells().addListener(weakSelectedListener);
                         }
 
                         fm = tableView.getFocusModel();
                         if (fm != null) {
-                            listener.registerChangeListener(fm.focusedCellProperty(), "FOCUSED_CELL");
+                            fm.focusedCellProperty().addListener(weakFocusedListener);
                         }
 
-                        listener.registerChangeListener(tableView.editingCellProperty(), "EDITING_CELL");
+                        tableView.editingCellProperty().addListener(weakEditingListener);
                         
                         weakTableViewRef = new WeakReference<TableView<T>>(get());
                     }
@@ -285,18 +311,6 @@ public class TableRow<T> extends IndexedCell<T> {
             startEdit();
         } else if (isEditing() && ! rowMatch) {
             cancelEdit();
-        }
-    }
-    
-    @Override void handlePropertyChanged(String p) {
-        super.handlePropertyChanged(p);
-        
-        if ("SELECTED_CELLS".equals(p)) {
-            updateSelection();
-        } else if ("FOCUSED_CELL".equals(p)) {
-            updateFocus();
-        } else if ("EDITING_CELL".equals(p)) {
-            updateEditing();
         }
     }
 

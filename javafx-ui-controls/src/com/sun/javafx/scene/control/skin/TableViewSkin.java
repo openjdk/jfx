@@ -112,11 +112,6 @@ public class TableViewSkin<T> extends TableViewSkinBase<T, TableView<T>, TableVi
         });
     }
 
-    @Override public void dispose() {
-        getBehavior().dispose();
-        super.dispose();
-    }
-    
     
     /***************************************************************************
      *                                                                         *

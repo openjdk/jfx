@@ -679,22 +679,22 @@ public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehav
         getSkinnable().requestLayout();
     }
 
-    @Override protected double computeMinWidth(double height, int topInset, int rightInset, int bottomInset, int leftInset) {
+    @Override protected double computeMinWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
         double navigationWidth = navigation.isVisible() ? snapSize(navigation.minWidth(height)) : 0;
         return leftInset + Math.max(currentStackPane.minWidth(height), navigationWidth) + rightInset;
     }
 
-    @Override protected double computeMinHeight(double width, int topInset, int rightInset, int bottomInset, int leftInset) {
+    @Override protected double computeMinHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
         double navigationHeight = navigation.isVisible() ? snapSize(navigation.minHeight(width)) : 0;
         return topInset + currentStackPane.minHeight(width) + navigationHeight + bottomInset;
     }
 
-    @Override protected double computePrefWidth(double height, int topInset, int rightInset, int bottomInset, int leftInset) {
+    @Override protected double computePrefWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
         double navigationWidth = navigation.isVisible() ? snapSize(navigation.prefWidth(height)) : 0;
         return leftInset + Math.max(currentStackPane.prefWidth(height), navigationWidth) + rightInset;
     }
 
-    @Override protected double computePrefHeight(double width, int topInset, int rightInset, int bottomInset, int leftInset) {
+    @Override protected double computePrefHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
         double navigationHeight = navigation.isVisible() ? snapSize(navigation.prefHeight(width)) : 0;
         return topInset + currentStackPane.prefHeight(width) + navigationHeight + bottomInset;
     }

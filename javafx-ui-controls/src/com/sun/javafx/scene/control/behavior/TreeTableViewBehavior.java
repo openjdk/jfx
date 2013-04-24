@@ -121,22 +121,6 @@ public class TreeTableViewBehavior<T> extends TableViewBehaviorBase<TreeTableVie
      *************************************************************************/
     
     /** {@inheritDoc}  */
-    @Override protected void setAnchor(TablePositionBase tp) {
-        TableCellBehaviorBase.setAnchor(getControl(), tp);
-        selectionPathDeviated = false;
-    }
-
-    /** {@inheritDoc}  */
-    @Override protected TablePositionBase getAnchor() {
-        return TableCellBehaviorBase.getAnchor(getControl(), getFocusedCell());
-    }
-
-    /** {@inheritDoc}  */
-    @Override protected boolean hasAnchor() {
-        return TableCellBehaviorBase.hasAnchor(getControl());
-    }
-
-    /** {@inheritDoc}  */
     @Override protected int getItemCount() {
         return getControl().getExpandedItemCount();
     }

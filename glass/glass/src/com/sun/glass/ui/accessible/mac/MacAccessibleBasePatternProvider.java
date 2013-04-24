@@ -28,8 +28,10 @@ import com.sun.glass.ui.accessible.AccessibleBasePatternProvider;
 
 abstract public class MacAccessibleBasePatternProvider extends AccessibleBasePatternProvider {
     
-    public MacAccessibleBasePatternProvider(Object node, long nativeSimple){
-        super(node, nativeSimple);
+    public MacAccessibleBasePatternProvider(Object node){
+        super(node);
     }
+    
+    abstract long getNativeAccessible();
     
 }

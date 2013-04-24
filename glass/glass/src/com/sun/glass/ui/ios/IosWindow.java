@@ -30,7 +30,6 @@ import com.sun.glass.ui.Pixels;
 import com.sun.glass.ui.Screen;
 import com.sun.glass.ui.View;
 import com.sun.glass.ui.Window;
-import com.sun.glass.ui.accessible.AccessibleRoot;
 
 /**
  * iOS platform Window implementation class.
@@ -99,8 +98,4 @@ final class IosWindow extends Window {
         return 0;
     }
 
-    @Override
-    protected void _accessibilityInitIsComplete(long ptr, AccessibleRoot acc) {
-        throw new UnsupportedOperationException("Not supported yet.");
-    }
 }

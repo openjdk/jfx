@@ -38,7 +38,6 @@ import javafx.collections.ObservableList;
 import javafx.collections.ObservableMap;
 import javafx.collections.WeakListChangeListener;
 import javafx.geometry.HPos;
-import javafx.geometry.Insets;
 import javafx.geometry.VPos;
 import javafx.scene.Node;
 import javafx.scene.control.Control;
@@ -507,7 +506,7 @@ public abstract class TableRowSkinBase<T,
                             } else {
                                 fadeIn(graphic);
                                 positionInArea(graphic, x + leftMargin + disclosureWidth, y,
-                                            disclosureWidth, h, /*baseline ignored*/0,
+                                            graphicWidth, h, /*baseline ignored*/0,
                                             HPos.CENTER, VPos.CENTER);
                                 graphic.toFront();
                             }
@@ -684,7 +683,7 @@ public abstract class TableRowSkinBase<T,
         return cell;
     }
     
-    @Override protected double computePrefWidth(double height, int topInset, int rightInset, int bottomInset, int leftInset) {
+    @Override protected double computePrefWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
         double prefWidth = 0.0F;
 
         List<? extends TableColumnBase/*<T,?>*/> visibleLeafColumns = getVisibleLeafColumns();
@@ -696,7 +695,7 @@ public abstract class TableRowSkinBase<T,
         return prefWidth;
     }
     
-    @Override protected double computePrefHeight(double width, int topInset, int rightInset, int bottomInset, int leftInset) {
+    @Override protected double computePrefHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
         if (fixedCellLengthEnabled) {
             return fixedCellLength;
         }
@@ -723,6 +722,33 @@ public abstract class TableRowSkinBase<T,
         double ph = Math.max(prefHeight, Math.max(getCellSize(), getSkinnable().minHeight(-1)));
         
         return ph;
+    }
+    
+    @Override protected double computeMinHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
+        if (fixedCellLengthEnabled) {
+            return fixedCellLength;
+        }
+        
+        // fix for RT-29080
+        checkState(false);
+        
+        // Support for RT-18467: making it easier to specify a height for
+        // cells via CSS, where the desired height is less than the height
+        // of the TableCells. Essentially, -fx-cell-size is given higher
+        // precedence now
+        if (getCellSize() < CellSkinBase.DEFAULT_CELL_SIZE) {
+            return getCellSize();
+        }
+
+        // FIXME according to profiling, this method is slow and should
+        // be optimised
+        double minHeight = 0.0f;
+        final int count = cells.size();
+        for (int i = 0; i < count; i++) {
+            final R tableCell = cells.get(i);
+            minHeight = Math.max(minHeight, tableCell.minHeight(-1));
+        }
+        return minHeight;
     }
     
     private void checkState(boolean doRecreateIfNecessary) {

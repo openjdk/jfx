@@ -36,22 +36,18 @@ public class ListCellSkin extends CellSkinBase<ListCell, ListCellBehavior> {
     public ListCellSkin(ListCell control) {
         super(control, new ListCellBehavior(control));
     }
-
-    @Override protected double computePrefWidth(double height, int topInset, int rightInset, int bottomInset, int leftInset) {
+    
+    @Override protected double computePrefWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
         double pref = super.computePrefWidth(height, topInset, rightInset, bottomInset, leftInset);
         ListView listView = getSkinnable().getListView();
         return listView == null ? 0 :
             listView.getOrientation() == Orientation.VERTICAL ? pref : Math.max(pref, getCellSize());
     }
  
-    @Override protected double computePrefHeight(double width, int topInset, int rightInset, int bottomInset, int leftInset) {
-//        if (cellSizeSet) {
-            // Added the comparison between the default cell size and the requested
-            // cell size to prevent the issue identified in RT-19873.
-            double cellSize = getCellSize();
-            return cellSize == DEFAULT_CELL_SIZE ? super.computePrefHeight(width, topInset, rightInset, bottomInset, leftInset) : cellSize;
-//        } else {
-//            return Math.max(DEFAULT_CELL_SIZE, super.computePrefHeight(width));
-//        }
+    @Override protected double computePrefHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
+        // Added the comparison between the default cell size and the requested
+        // cell size to prevent the issue identified in RT-19873.
+        double cellSize = getCellSize();
+        return cellSize == DEFAULT_CELL_SIZE ? super.computePrefHeight(width, topInset, rightInset, bottomInset, leftInset) : cellSize;
     }
 }

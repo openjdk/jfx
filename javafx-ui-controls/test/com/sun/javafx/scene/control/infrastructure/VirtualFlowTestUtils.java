@@ -22,34 +22,56 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-package com.sun.javafx.scene.control.test;
+package com.sun.javafx.scene.control.infrastructure;
 
-import com.sun.javafx.scene.control.skin.LabeledText;
-import com.sun.javafx.scene.control.skin.VirtualFlow;
-import com.sun.javafx.scene.control.skin.VirtualScrollBar;
-import com.sun.javafx.tk.Toolkit;
-import java.util.Arrays;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+
 import java.util.List;
 
 import javafx.geometry.Orientation;
 import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.Scene;
+import javafx.scene.control.ComboBox;
 import javafx.scene.control.Control;
 import javafx.scene.control.IndexedCell;
-import javafx.scene.control.TreeItem;
-import javafx.scene.layout.Region;
+import javafx.scene.control.ListView;
+import javafx.scene.control.TableRow;
+import javafx.scene.control.TreeTableRow;
 import javafx.stage.Stage;
 import javafx.util.Callback;
-import static org.junit.Assert.*;
 
-public class ControlAsserts {
+import com.sun.javafx.scene.control.skin.ComboBoxListViewSkin;
+import com.sun.javafx.scene.control.skin.LabeledText;
+import com.sun.javafx.scene.control.skin.VirtualFlow;
+import com.sun.javafx.scene.control.skin.VirtualScrollBar;
+import com.sun.javafx.tk.Toolkit;
+
+public class VirtualFlowTestUtils {
     
     public static void assertListContainsItemsInOrder(final List items, final Object... expected) {
         assertEquals(expected.length, items.size());
         for (int i = 0; i < expected.length; i++) {
             Object item = items.get(i);
             assertEquals(expected[i], item);
+        }
+    }
+    
+    public static void clickOnRow(final Control control, int row, KeyModifier... modifiers) {
+        IndexedCell cell = VirtualFlowTestUtils.getCell(control, row);
+        
+        if ((cell instanceof TableRow) || (cell instanceof TreeTableRow)) {
+            for (Node n : cell.getChildrenUnmodifiable()) {
+                if (! (n instanceof IndexedCell)) {
+                    continue;
+                }
+                IndexedCell<?> childCell = (IndexedCell<?>)n;
+                MouseEventFirer.fireMousePressAndRelease(childCell, modifiers);
+                break;
+            }
+        } else {
+            MouseEventFirer.fireMousePressAndRelease(cell, modifiers);
         }
     }
     
@@ -201,7 +223,7 @@ public class ControlAsserts {
         assertEquals(getVirtualFlow(control).getCellCount(), expected);
     }
     
-    public static VirtualFlow<?> getVirtualFlow(final Control control) {
+    public static VirtualFlow<?> getVirtualFlow(Control control) {
         Group group = new Group();
         Scene scene = new Scene(group);
 
@@ -211,9 +233,20 @@ public class ControlAsserts {
         group.getChildren().setAll(control);
         stage.show();
 
-        Toolkit.getToolkit().firePulse();
-
-        VirtualFlow<?> flow = (VirtualFlow<?>)control.lookup("#virtual-flow");
+//        Toolkit.getToolkit().firePulse();
+        
+        VirtualFlow<?> flow;
+        if (control instanceof ComboBox) {
+            final ComboBox cb = (ComboBox) control;
+            final ComboBoxListViewSkin skin = (ComboBoxListViewSkin) cb.getSkin();
+            control = skin.getListView();
+        }
+        
+        flow = (VirtualFlow<?>)control.lookup("#virtual-flow");
+        
+        stage.close();
+        stage = null;
+        
         return flow;
     }
     

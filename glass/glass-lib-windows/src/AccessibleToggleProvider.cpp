@@ -118,9 +118,9 @@ IFACEMETHODIMP AccessibleToggleProvider::GetPatternProvider(PATTERNID patternId,
 /**
  * Get the state of the control.
  *
- * pRetVal:                receiver of the state
+ * pRetVal:    receiver of the state
  *
- * returns:     S_OK
+ * returns: S_OK
  */
 IFACEMETHODIMP AccessibleToggleProvider::get_ToggleState(ToggleState* pRetVal) {
     LOG("In AccessibleToggleProvider::get_ToggleState\n");
@@ -148,7 +148,7 @@ IFACEMETHODIMP AccessibleToggleProvider::get_ToggleState(ToggleState* pRetVal) {
 /**
  * Toggle the state of the control
  *
- * returns:        S_OK
+ * returns: S_OK
  */
 IFACEMETHODIMP AccessibleToggleProvider::Toggle() {
     LOG("In AccessibleToggleProvider::Toggle\n");
@@ -208,19 +208,19 @@ Java_com_sun_glass_ui_accessible_win_WinAccessibleToggleProvider__1createAccessi
     JNIEnv* env, jobject self, jlong accSimple) {
     LOG("In WinAccessibleToggleProvider._createAccessible\n");
     LOG("  accSimple: %p\n", accSimple);
-    // PTB: Do we need try/catch around the new?
+    // TODO: Do we need try/catch around the new?
     AccessibleToggleProvider* acc = new AccessibleToggleProvider(env, self);
     LOG("  acc: %p\n", acc);
-        // Add this to the simple provider
-        if (accSimple != 0) {
-                AccessibleBaseProvider* accessibleSimple =
+    // Add this to the simple provider
+    if (accSimple != 0) {
+        AccessibleBaseProvider* accessibleSimple =
             reinterpret_cast<AccessibleBaseProvider *>(accSimple) ;
-                if (accessibleSimple != NULL) {
-                        accessibleSimple->AddPatternObject(reinterpret_cast<IUnknown*>(acc));
-                } else {
-                        LOG("  AddPatternObject not called; accessibleSimple is NULL.\n");
+        if (accessibleSimple != NULL) {
+            accessibleSimple->AddPatternObject(reinterpret_cast<IUnknown*>(acc));
+        } else {
+            LOG("  AddPatternObject not called; accessibleSimple is NULL.\n");
         }
-        }
+    }
     return reinterpret_cast<jlong>(acc);
 }
 

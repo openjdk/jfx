@@ -51,32 +51,31 @@ public class TreeCellBehavior<T> extends CellBehaviorBase<TreeCell<T>> {
      *                                                                         *
      **************************************************************************/
     
-    // global map used to store the focus index for a tree view when it is first
-    // shift-clicked. This allows for proper keyboard interactions, in particular
-    // resolving RT-11446
-    private static final WeakHashMap<TreeView<?>, Integer> map = new WeakHashMap<TreeView<?>, Integer>();
+    private static final String ANCHOR_PROPERTY_KEY = "list.anchor";
     
     static int getAnchor(TreeView<?> tree) {
         FocusModel<?> fm = tree.getFocusModel();
         if (fm == null) return -1;
         
-        return hasAnchor(tree) ? map.get(tree) : fm.getFocusedIndex();
+        return hasAnchor(tree) ? 
+                (int)tree.getProperties().get(ANCHOR_PROPERTY_KEY) : 
+                fm.getFocusedIndex();
     }
     
     static void setAnchor(TreeView<?> tree, int anchor) {
         if (tree != null && anchor < 0) {
-            map.remove(tree);
+            removeAnchor(tree);
         } else {
-            map.put(tree, anchor);
+            tree.getProperties().put(ANCHOR_PROPERTY_KEY, anchor);
         }
     }
     
     static boolean hasAnchor(TreeView<?> tree) {
-        return map.containsKey(tree) && map.get(tree) != -1;
+        return tree.getProperties().get(ANCHOR_PROPERTY_KEY) != null;
     }
     
     static void removeAnchor(TreeView<?> tree) {
-        map.remove(tree);
+        tree.getProperties().remove(ANCHOR_PROPERTY_KEY);
     }
     
     
@@ -210,11 +209,11 @@ public class TreeCellBehavior<T> extends CellBehaviorBase<TreeCell<T>> {
         // result in the correct selection occuring (whilst the focus index moves
         // about).
         if (event.isShiftDown()) {
-            if (! map.containsKey(treeView)) {
+            if (! hasAnchor(treeView)) {
                 setAnchor(treeView, fm.getFocusedIndex());
             }
         } else {
-            map.remove(treeView);
+            removeAnchor(treeView);
         }
         
         MouseButton button = event.getButton();

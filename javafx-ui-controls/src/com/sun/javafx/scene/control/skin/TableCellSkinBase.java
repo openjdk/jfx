@@ -111,7 +111,7 @@ public abstract class TableCellSkinBase<C extends IndexedCell, B extends CellBeh
         layoutLabelInArea(x, y, w, h - getSkinnable().getPadding().getBottom());
     }
 
-    @Override protected double computePrefWidth(double height, int topInset, int rightInset, int bottomInset, int leftInset) {
+    @Override protected double computePrefWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
         if (isDeferToParentForPrefWidth) {
             return super.computePrefWidth(height, topInset, rightInset, bottomInset, leftInset);
         }

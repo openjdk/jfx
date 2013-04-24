@@ -24,45 +24,59 @@
  */
 package com.sun.glass.ui.accessible.win;
 
-import com.sun.glass.ui.Application;
 import com.sun.glass.ui.accessible.AccessibleLogger;
+import com.sun.javafx.accessible.providers.ToggleProvider;
 import com.sun.javafx.accessible.utils.PatternIds;
 import com.sun.javafx.accessible.utils.ToggleState;
-import com.sun.javafx.accessible.providers.ToggleProvider;
 
 /**
  * Windows platform implementation class for Accessible.
  */
-public class WinAccessibleToggleProvider extends WinAccessibleBasePatternProvider {
-
-    native private static void _initIDs();
-    native private long _createAccessible(long nativeSimple);
-    native private void _destroyAccessible(long nativeAccessible);
+public final class WinAccessibleToggleProvider extends WinAccessibleBasePatternProvider {
 
     /**
-     * A class static block that loads the Glass native library and initializes
-     * the JNI method IDs.
-     * 
-     * PTB: Is loadNativeLibrary needed?  It's likely already loaded.
+     * A class static block that initializes the JNI method IDs.
      */
     static {
         _initIDs();
     }
 
+    native private static void _initIDs();
+    native protected long _createAccessible(long nativeBaseProvider);
+    native private void _destroyAccessible(long nativeAccessible);
+    
+    private long nativeAccessible;  // The native accessible
+
     /**
      * Downcall to create the native accessible.  This will be used when firing
      * events or when destroying the native accessible.
      * 
-     * @param node          the related FX node object.
-     * @param nativeSimple  the native accessible.
+     * @param node      the related FX node object.
+     * @param provider  the base provider which this pattern provider is chained to.
      */
-    public WinAccessibleToggleProvider(Object node, long nativeSimple) {
-        super(node, nativeSimple);
-        nativeAccessible = _createAccessible(nativeSimple);
+    public WinAccessibleToggleProvider(Object node, WinAccessibleBaseProvider provider) {
+        super(node);
+        nativeAccessible = _createAccessible(provider.getNativeAccessible());
     }
     
+    /**
+     * Get the native accessible
+     * 
+     * @return the native accessible
+     */
     @Override
-    final public void destroyAccessible() {
+    long getNativeAccessible() {
+        return nativeAccessible;
+    }
+    
+    // Downcalls
+    
+    /**
+     * Destroy the native accessible
+     * 
+     */
+    @Override
+    public void destroyAccessible() {
         _destroyAccessible(nativeAccessible);
     }
     
@@ -83,8 +97,6 @@ public class WinAccessibleToggleProvider extends WinAccessibleBasePatternProvide
      * @return the state: 0 == OFF, 1 == ON, 2 == INDETERMINATE
      */
     private int getToggleState() {
-        AccessibleLogger.getLogger().fine("In WinAccessibleToggleProvider.getToggleState");
-        //AccessibleLogger.getLogger().fine("  Thread ID: " + Thread.currentThread().getId());
         int value = 2;
         ToggleState state = ((ToggleProvider)node).getToggleState();
         switch (state) {
@@ -101,9 +113,11 @@ public class WinAccessibleToggleProvider extends WinAccessibleBasePatternProvide
         return value;
     }
 
-    // Return the pattern supported by this class
+    /**
+     * Return the ID of the pattern supported by this class
+     */
     @Override
-    final public int getPatternId() {
+    public int getPatternId() {
         return PatternIds.TOGGLE;
     }
     

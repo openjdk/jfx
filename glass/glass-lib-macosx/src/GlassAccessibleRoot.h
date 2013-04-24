@@ -23,6 +23,7 @@
  * questions.
  */
 
+// TODO: Might be able to get rid of some of these #imports
 #import <Cocoa/Cocoa.h>
 #import <Foundation/Foundation.h>
 #import <jni.h>
@@ -36,6 +37,6 @@
 }
 
 - (id)initWithEnv:(JNIEnv*)env root:(jobject)root;
-- (void)dealloc;  // PTB: Is this needed?
+- (void)dealloc;  // TODO: Is this needed?
 
 @end

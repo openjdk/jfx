@@ -23,9 +23,11 @@
  * questions.
  */
 
+// TODO: Might be able to get rid of some of these imports
 #import "GlassAccessibleRoot.h"
 #import "GlassAccessibleBaseProvider.h"
 #import "GlassMacros.h"
+#import "GlassWindow.h"
 #import <AppKit/AppKit.h>
 #import "com_sun_glass_ui_accessible_mac_MacAccessibleRoot.h"
 
@@ -45,12 +47,12 @@ static jmethodID midGetChildren = 0;
 static jmethodID midBoundingRectangle = 0;
 static jmethodID midElementProviderFromPoint = 0;
 
-// PTB: Probably should move this stuff into another file.
+// TODO: Probably should move this stuff into another file.
 //
 // Collections used to convert between integer IDs and NSAccessibility's NSString IDs.
 // The enums on the Java side need to be kept in sync with these collections.
 //
-// PTB: Is there a better way to code the initialization of these collections?
+// TODO: Is there a better way to code the initialization of these collections?
 
 static NSDictionary* attributeIds = nil;
 static NSArray* eventIds = nil;
@@ -366,7 +368,7 @@ static NSArray* settableAttribute = nil ;
     return self;
 }
 
-// PTB: Is this needed?
+// TODO: Is this needed?
 - (void)dealloc {
     GET_MAIN_JENV;
     if (env != NULL) {
@@ -436,14 +438,14 @@ static NSArray* settableAttribute = nil ;
     GET_MAIN_JENV;
     
     ///// Children /////
-    ///// Visible Chidren ///// PTB: Change later when we support visible vs non-visible
+    ///// Visible Chidren ///// TODO: Change later when we support visible vs non-visible
     if (([attribute isEqualToString:NSAccessibilityChildrenAttribute]) ||
         ([attribute isEqualToString:NSAccessibilityVisibleChildrenAttribute])) {
         return [self accessibilityArrayAttributeValues:attribute index:0 maxCount:-1];
         
     ///// Enabled /////
     } else if ([attribute isEqualToString:NSAccessibilityEnabledAttribute]) {
-                return [NSNumber numberWithBool:NO];
+        return [NSNumber numberWithBool:NO];
         
     ///// Parent /////
     } else if ([attribute isEqualToString:NSAccessibilityParentAttribute]) {
@@ -497,7 +499,7 @@ static NSArray* settableAttribute = nil ;
     } else if ([attribute isEqualToString:NSAccessibilityRoleDescriptionAttribute]) {
         LOG( " returning: %s",
              [NSAccessibilityRoleDescription(NSAccessibilityGroupRole, nil) UTF8String] );
-                return NSAccessibilityRoleDescription(NSAccessibilityGroupRole, nil);
+        return NSAccessibilityRoleDescription(NSAccessibilityGroupRole, nil);
         
     ///// Size /////
     } else if ([attribute isEqualToString:NSAccessibilitySizeAttribute]) {
@@ -530,7 +532,7 @@ static NSArray* settableAttribute = nil ;
         
     ///// Top Level UI Element /////
     } else if ([attribute isEqualToString:NSAccessibilityTopLevelUIElementAttribute]) {
-                return parent;  // PTB: This may not be correct
+        return parent;  // TODO: This may not be correct
         
     ///// Window /////
     } else if ([attribute isEqualToString:NSAccessibilityWindowAttribute]) {
@@ -630,6 +632,33 @@ Java_com_sun_glass_ui_accessible_mac_MacAccessibleRoot__1initIDs(
     GLASS_CHECK_EXCEPTION(env);
     midElementProviderFromPoint =
         (*env)->GetMethodID(env, cls, "elementProviderFromPoint", "(DD)J");    
+    GLASS_CHECK_EXCEPTION(env);
+}
+
+/*
+ * Class:     com_sun_glass_ui_accessible_mac_MacAccessibleRoot
+ * Method:    _setAccessibilityInitIsComplete
+ * Signature: (JJ)V
+ */
+JNIEXPORT void JNICALL Java_com_sun_glass_ui_accessible_mac_MacAccessibleRoot__1setAccessibilityInitIsComplete(
+    JNIEnv *env, jobject jRoot, jlong jPtr, jlong jAcc)
+{
+    LOG("Java_com_sun_glass_ui_accessible_mac_MacAccessibleRoot__1setAccessibilityInitIsComplete");
+    LOG("  jAcc: %p", jAcc);
+    LOG("  jPtr: %p", jPtr);
+
+    // TODO: Are the threading macros needed, i.e. ASSERT, ENTER, EXIT?
+    //       This was moved from GlassWindow.m where they were used.
+    GLASS_ASSERT_MAIN_JAVA_THREAD(env);
+    GLASS_POOL_ENTER;
+    {
+        if (jPtr != 0) {
+            NSWindow* nsWindow = (NSWindow*)jlong_to_ptr(jPtr);
+            GlassWindow* window = (GlassWindow*)[nsWindow delegate];
+            [window setAccessibilityInitIsComplete:(GlassAccessibleRoot *)jlong_to_ptr(jAcc)];
+        }
+    }
+    GLASS_POOL_EXIT;
     GLASS_CHECK_EXCEPTION(env);
 }
 

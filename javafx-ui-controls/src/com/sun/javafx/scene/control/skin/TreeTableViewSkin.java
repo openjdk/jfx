@@ -139,7 +139,6 @@ public class TreeTableViewSkin<S> extends TableViewSkinBase<S, TreeTableView<S>,
     }
     
     @Override public void dispose() {
-        getBehavior().dispose();
         treeItemToListMap.remove(getSkinnable());
         
         super.dispose();

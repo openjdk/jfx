@@ -32,6 +32,8 @@ import javafx.scene.control.TableRow;
 import javafx.scene.control.TableView;
 
 import com.sun.javafx.scene.control.behavior.CellBehaviorBase;
+import com.sun.javafx.scene.control.behavior.TableRowBehavior;
+
 import javafx.beans.property.ObjectProperty;
 import javafx.collections.ObservableList;
 import javafx.scene.Node;
@@ -46,7 +48,7 @@ public class TableRowSkin<T> extends TableRowSkinBase<T, TableRow<T>, CellBehavi
     private TableViewSkin tableViewSkin;
     
     public TableRowSkin(TableRow<T> tableRow) {
-        super(tableRow, new CellBehaviorBase<TableRow<T>>(tableRow));
+        super(tableRow, new TableRowBehavior<T>(tableRow));
         
         this.tableView = tableRow.getTableView();
         updateTableViewSkin();

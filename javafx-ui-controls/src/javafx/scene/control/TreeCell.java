@@ -33,9 +33,6 @@ import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.ListChangeListener;
 import javafx.scene.Node;
-import javafx.util.Callback;
-
-import com.sun.javafx.scene.control.MultiplePropertyChangeListenerHandler;
 import com.sun.javafx.scene.control.skin.TreeCellSkin;
 import javafx.collections.WeakListChangeListener;
 import java.lang.ref.WeakReference;
@@ -93,6 +90,12 @@ public class TreeCell<T> extends IndexedCell<T> {
      *                                                                         *
      **************************************************************************/
     
+    private final ListChangeListener<Integer> selectedListener = new ListChangeListener<Integer>() {
+        @Override public void onChanged(ListChangeListener.Change<? extends Integer> c) {
+            updateSelection();
+        }
+    };
+    
     /**
      * Listens to the selectionModel property on the TreeView. Whenever the entire model is changed,
      * we have to unhook the weakSelectedListener and update the selection.
@@ -102,15 +105,21 @@ public class TreeCell<T> extends IndexedCell<T> {
                                       MultipleSelectionModel<TreeItem<T>> oldValue,
                                       MultipleSelectionModel<TreeItem<T>> newValue) {
             if (oldValue != null) {
-                getPropertyListener().unregisterChangeListener(oldValue.getSelectedIndices());
+                oldValue.getSelectedIndices().removeListener(weakSelectedListener);
             }
             if (newValue != null) {
-                getPropertyListener().unregisterChangeListener(newValue.getSelectedIndices());
+                newValue.getSelectedIndices().addListener(weakSelectedListener);
             }
             updateSelection();
         }
     };    
 
+    private final InvalidationListener focusedListener = new InvalidationListener() {
+        @Override public void invalidated(Observable valueModel) {
+            updateFocus();
+        }
+    };
+    
     /**
      * Listens to the focusModel property on the TreeView. Whenever the entire model is changed,
      * we have to unhook the weakFocusedListener and update the focus.
@@ -120,21 +129,51 @@ public class TreeCell<T> extends IndexedCell<T> {
                                       FocusModel<TreeItem<T>> oldValue,
                                       FocusModel<TreeItem<T>> newValue) {
             if (oldValue != null) {
-                getPropertyListener().unregisterChangeListener(oldValue.focusedIndexProperty());
+                oldValue.focusedIndexProperty().removeListener(weakFocusedListener);
             }
             if (newValue != null) {
-                getPropertyListener().registerChangeListener(newValue.focusedIndexProperty(), "FOCUSED_INDEX");
+                newValue.focusedIndexProperty().addListener(weakFocusedListener);
             }
             updateFocus();
         }
     };
 
-    private final WeakChangeListener<MultipleSelectionModel<TreeItem<T>>> weakSelectionModelPropertyListener = 
-            new WeakChangeListener<MultipleSelectionModel<TreeItem<T>>>(selectionModelPropertyListener);
-    private final WeakChangeListener<FocusModel<TreeItem<T>>> weakFocusModelPropertyListener = 
-            new WeakChangeListener<FocusModel<TreeItem<T>>>(focusModelPropertyListener);
+    private final InvalidationListener editingListener = new InvalidationListener() {
+        @Override public void invalidated(Observable valueModel) {
+            updateEditing();
+        }
+    };
     
-
+    private final InvalidationListener leafListener = new InvalidationListener() {
+        @Override public void invalidated(Observable valueModel) {
+            // necessary to update the disclosure node in the skin when the
+            // leaf property changes
+            TreeItem<T> treeItem = getTreeItem();
+            if (treeItem != null) {
+                requestLayout();
+            }
+        }
+    };
+    
+    /* proxy pseudo-class state change from treeItem's expandedProperty */
+    private final InvalidationListener treeItemExpandedInvalidationListener = new InvalidationListener() {
+        @Override public void invalidated(Observable o) {
+            boolean isExpanded = ((BooleanProperty)o).get();
+            pseudoClassStateChanged(EXPANDED_PSEUDOCLASS_STATE,   isExpanded);
+            pseudoClassStateChanged(COLLAPSED_PSEUDOCLASS_STATE, !isExpanded);
+        }
+    };
+    
+    private final WeakListChangeListener<Integer> weakSelectedListener = new WeakListChangeListener<Integer>(selectedListener);
+    private final WeakChangeListener<MultipleSelectionModel<TreeItem<T>>> weakSelectionModelPropertyListener = new WeakChangeListener<MultipleSelectionModel<TreeItem<T>>>(selectionModelPropertyListener);
+    private final WeakInvalidationListener weakFocusedListener = new WeakInvalidationListener(focusedListener);
+    private final WeakChangeListener<FocusModel<TreeItem<T>>> weakFocusModelPropertyListener = new WeakChangeListener<FocusModel<TreeItem<T>>>(focusModelPropertyListener);
+    private final WeakInvalidationListener weakEditingListener = new WeakInvalidationListener(editingListener);
+    private final WeakInvalidationListener weakLeafListener = new WeakInvalidationListener(leafListener);
+    private final WeakInvalidationListener weakTreeItemExpandedInvalidationListener =
+            new WeakInvalidationListener(treeItemExpandedInvalidationListener);
+    
+    
     
     /***************************************************************************
      *                                                                         *
@@ -150,17 +189,17 @@ public class TreeCell<T> extends IndexedCell<T> {
             
             @Override protected void invalidated() {
                 if (oldValue != null) {
-                    getPropertyListener().unregisterChangeListener(oldValue.expandedProperty());
+                    oldValue.expandedProperty().removeListener(weakTreeItemExpandedInvalidationListener);
                 }
                 
                 oldValue = get(); 
                 
                 if (oldValue != null) {
-                    getPropertyListener().registerChangeListener(oldValue.expandedProperty(), "TREE_ITEM_EXPANDED");
-                    
+                    oldValue.expandedProperty().addListener(weakTreeItemExpandedInvalidationListener);
                     // fake an invalidation to ensure updated pseudo-class state
-                    handlePropertyChanged("TREE_ITEM_EXPANDED");
+                    weakTreeItemExpandedInvalidationListener.invalidated(oldValue.expandedProperty());            
                 }
+                
             }
     };
     private void setTreeItem(TreeItem<T> value) {
@@ -218,15 +257,15 @@ public class TreeCell<T> extends IndexedCell<T> {
                     // remove old listeners
                     sm = oldTreeView.getSelectionModel();
                     if (sm != null) {
-                        getPropertyListener().unregisterChangeListener(sm.getSelectedIndices());
+                        sm.getSelectedIndices().removeListener(weakSelectedListener);
                     }
 
                     fm = oldTreeView.getFocusModel();
                     if (fm != null) {
-                        getPropertyListener().unregisterChangeListener(fm.focusedIndexProperty());
+                        fm.focusedIndexProperty().removeListener(weakFocusedListener);
                     }
 
-                    getPropertyListener().unregisterChangeListener(oldTreeView.editingItemProperty());
+                    oldTreeView.editingItemProperty().removeListener(weakEditingListener);
                     oldTreeView.focusModelProperty().removeListener(weakFocusModelPropertyListener);
                     oldTreeView.selectionModelProperty().removeListener(weakSelectionModelPropertyListener);
                 }
@@ -240,16 +279,16 @@ public class TreeCell<T> extends IndexedCell<T> {
                 if (sm != null) {
                     // listening for changes to treeView.selectedIndex and IndexedCell.index,
                     // to determine if this cell is selected
-                    getPropertyListener().registerChangeListener(sm.getSelectedIndices(), "SELECTED_INDICES");
+                    sm.getSelectedIndices().addListener(weakSelectedListener);
                 }
 
                 fm = treeView.getFocusModel();
                 if (fm != null) {
                     // similar to above, but this time for focus
-                    getPropertyListener().registerChangeListener(fm.focusedIndexProperty(), "FOCUSED_INDEX");
+                    fm.focusedIndexProperty().addListener(weakFocusedListener);
                 }
 
-                getPropertyListener().registerChangeListener(treeView.editingItemProperty(), "EDITING_ITEM");
+                treeView.editingItemProperty().addListener(weakEditingListener);
                 treeView.focusModelProperty().addListener(weakFocusModelPropertyListener);
                 treeView.selectionModelProperty().addListener(weakSelectionModelPropertyListener);
                 
@@ -482,30 +521,6 @@ public class TreeCell<T> extends IndexedCell<T> {
             updateEditingIndex = true;
         }
     }
-    
-    @Override void handlePropertyChanged(final String p) {
-        super.handlePropertyChanged(p);
-        
-        if ("SELECTED_INDICES".equals(p)) {
-            updateSelection();
-        } else if ("TREE_ITEM_EXPANDED".equals(p)) {
-            /* proxy pseudo-class state change from treeItem's expandedProperty */
-            boolean isExpanded = getTreeItem().isExpanded();
-            pseudoClassStateChanged(EXPANDED_PSEUDOCLASS_STATE,   isExpanded);
-            pseudoClassStateChanged(COLLAPSED_PSEUDOCLASS_STATE, !isExpanded);
-        } else if ("TREE_ITEM_LEAF".equals(p)) {
-            // necessary to update the disclosure node in the skin when the
-            // leaf property changes
-            TreeItem<T> treeItem = getTreeItem();
-            if (treeItem != null) {
-                requestLayout();
-            }
-        } else if ("EDITING_ITEM".equals(p)) {
-            updateEditing();
-        } else if ("FOCUSED_INDEX".equals(p)) {
-            updateFocus();
-        }
-    }
 
 
 
@@ -541,11 +556,11 @@ public class TreeCell<T> extends IndexedCell<T> {
     public final void updateTreeItem(TreeItem<T> treeItem) {
         TreeItem<T> _treeItem = getTreeItem();
         if (_treeItem != null) {
-            getPropertyListener().unregisterChangeListener(_treeItem.leafProperty());
+            _treeItem.leafProperty().removeListener(weakLeafListener);
         }
         setTreeItem(treeItem);
         if (treeItem != null) {
-            getPropertyListener().registerChangeListener(treeItem.leafProperty(), "TREE_ITEM_LEAF");
+            treeItem.leafProperty().addListener(weakLeafListener);
         }
     }
 

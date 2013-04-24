@@ -107,22 +107,6 @@ public class TableViewBehavior<T> extends TableViewBehaviorBase<TableView<T>, T,
      *************************************************************************/
     
     /** {@inheritDoc}  */
-    @Override protected void setAnchor(TablePositionBase tp) {
-        TableCellBehavior.setAnchor(getControl(), tp);
-        selectionPathDeviated = false;
-    }
-
-    /** {@inheritDoc}  */
-    @Override protected TablePositionBase getAnchor() {
-        return TableCellBehavior.getAnchor(getControl(), getFocusedCell());
-    }
-
-    /** {@inheritDoc}  */
-    @Override protected boolean hasAnchor() {
-        return TableCellBehavior.hasAnchor(getControl());
-    }
-
-    /** {@inheritDoc}  */
     @Override protected int getItemCount() {
         return getControl().getItems() == null ? 0 : getControl().getItems().size();
     }

@@ -25,7 +25,7 @@
 
 package javafx.scene.control;
 
-import static javafx.scene.control.ControlTestUtils.assertStyleClassContains;
+import static com.sun.javafx.scene.control.infrastructure.ControlTestUtils.assertStyleClassContains;
 import static javafx.scene.control.TableColumn.SortType.ASCENDING;
 import static javafx.scene.control.TableColumn.SortType.DESCENDING;
 import static org.junit.Assert.assertEquals;
@@ -54,8 +54,8 @@ import org.junit.Ignore;
 import org.junit.Test;
 
 import com.sun.javafx.scene.control.TableColumnComparatorBase.TableColumnComparator;
+import com.sun.javafx.scene.control.infrastructure.VirtualFlowTestUtils;
 import com.sun.javafx.scene.control.skin.VirtualScrollBar;
-import com.sun.javafx.scene.control.test.ControlAsserts;
 import com.sun.javafx.scene.control.test.Person;
 import com.sun.javafx.scene.control.test.RT_22463_Person;
 
@@ -365,9 +365,9 @@ public class TableViewTest {
             }
         });
         
-        ControlAsserts.assertListContainsItemsInOrder(table.getItems(), "Apple", "Orange", "Banana");
+        VirtualFlowTestUtils.assertListContainsItemsInOrder(table.getItems(), "Apple", "Orange", "Banana");
         table.getSortOrder().add(col);
-        ControlAsserts.assertListContainsItemsInOrder(table.getItems(), "Apple", "Orange", "Banana");
+        VirtualFlowTestUtils.assertListContainsItemsInOrder(table.getItems(), "Apple", "Orange", "Banana");
         
         // the sort order list should be returned back to its original state
         assertTrue(table.getSortOrder().isEmpty());
@@ -381,11 +381,11 @@ public class TableViewTest {
             }
         });
         
-        ControlAsserts.assertListContainsItemsInOrder(table.getItems(), "Apple", "Orange", "Banana");
+        VirtualFlowTestUtils.assertListContainsItemsInOrder(table.getItems(), "Apple", "Orange", "Banana");
         table.getSortOrder().add(col);
-        ControlAsserts.assertListContainsItemsInOrder(table.getItems(), "Apple", "Banana", "Orange");
+        VirtualFlowTestUtils.assertListContainsItemsInOrder(table.getItems(), "Apple", "Banana", "Orange");
         
-        ControlAsserts.assertListContainsItemsInOrder(table.getSortOrder(), col);
+        VirtualFlowTestUtils.assertListContainsItemsInOrder(table.getSortOrder(), col);
     }
     
     @Ignore("This test is only valid if sort event consumption should revert changes")
@@ -399,16 +399,16 @@ public class TableViewTest {
             }
         });
         
-        ControlAsserts.assertListContainsItemsInOrder(table.getItems(), "Apple", "Banana", "Orange");
+        VirtualFlowTestUtils.assertListContainsItemsInOrder(table.getItems(), "Apple", "Banana", "Orange");
         
         // when we change from ASCENDING to DESCENDING we don't expect the sort
         // to actually change (and in fact we expect the sort type to resort
         // back to being ASCENDING)
         col.setSortType(DESCENDING);
-        ControlAsserts.assertListContainsItemsInOrder(table.getItems(), "Apple", "Banana", "Orange");
+        VirtualFlowTestUtils.assertListContainsItemsInOrder(table.getItems(), "Apple", "Banana", "Orange");
         assertEquals(ASCENDING, col.getSortType());
         
-        ControlAsserts.assertListContainsItemsInOrder(table.getSortOrder(), col);
+        VirtualFlowTestUtils.assertListContainsItemsInOrder(table.getSortOrder(), col);
     }
     
     @Test public void testSortEventCanBeNotConsumedToAllowSortToOccur_changeColumnSortType_AscendingToDescending() {
@@ -421,13 +421,13 @@ public class TableViewTest {
             }
         });
         
-        ControlAsserts.assertListContainsItemsInOrder(table.getItems(), "Apple", "Banana", "Orange");
+        VirtualFlowTestUtils.assertListContainsItemsInOrder(table.getItems(), "Apple", "Banana", "Orange");
         
         col.setSortType(DESCENDING);
-        ControlAsserts.assertListContainsItemsInOrder(table.getItems(), "Orange", "Banana", "Apple");
+        VirtualFlowTestUtils.assertListContainsItemsInOrder(table.getItems(), "Orange", "Banana", "Apple");
         assertEquals(DESCENDING, col.getSortType());
         
-        ControlAsserts.assertListContainsItemsInOrder(table.getSortOrder(), col);
+        VirtualFlowTestUtils.assertListContainsItemsInOrder(table.getSortOrder(), col);
     }
     
     @Ignore("This test is only valid if sort event consumption should revert changes")
@@ -442,13 +442,13 @@ public class TableViewTest {
             }
         });
         
-        ControlAsserts.assertListContainsItemsInOrder(table.getItems(), "Orange", "Banana", "Apple");
+        VirtualFlowTestUtils.assertListContainsItemsInOrder(table.getItems(), "Orange", "Banana", "Apple");
         
         col.setSortType(null);
-        ControlAsserts.assertListContainsItemsInOrder(table.getItems(), "Orange", "Banana", "Apple");
+        VirtualFlowTestUtils.assertListContainsItemsInOrder(table.getItems(), "Orange", "Banana", "Apple");
         assertEquals(DESCENDING, col.getSortType());
         
-        ControlAsserts.assertListContainsItemsInOrder(table.getSortOrder(), col);
+        VirtualFlowTestUtils.assertListContainsItemsInOrder(table.getSortOrder(), col);
     }
     
     @Test public void testSortEventCanBeNotConsumedToAllowSortToOccur_changeColumnSortType_DescendingToNull() {
@@ -462,13 +462,13 @@ public class TableViewTest {
             }
         });
         
-        ControlAsserts.assertListContainsItemsInOrder(table.getItems(), "Orange", "Banana", "Apple");
+        VirtualFlowTestUtils.assertListContainsItemsInOrder(table.getItems(), "Orange", "Banana", "Apple");
         
         col.setSortType(null);
-        ControlAsserts.assertListContainsItemsInOrder(table.getItems(), "Orange", "Banana", "Apple");
+        VirtualFlowTestUtils.assertListContainsItemsInOrder(table.getItems(), "Orange", "Banana", "Apple");
         assertNull(col.getSortType());
         
-        ControlAsserts.assertListContainsItemsInOrder(table.getSortOrder(), col);
+        VirtualFlowTestUtils.assertListContainsItemsInOrder(table.getSortOrder(), col);
     }
     
     @Ignore("This test is only valid if sort event consumption should revert changes")
@@ -483,13 +483,13 @@ public class TableViewTest {
             }
         });
         
-        ControlAsserts.assertListContainsItemsInOrder(table.getItems(), "Apple", "Orange", "Banana");
+        VirtualFlowTestUtils.assertListContainsItemsInOrder(table.getItems(), "Apple", "Orange", "Banana");
         
         col.setSortType(ASCENDING);
-        ControlAsserts.assertListContainsItemsInOrder(table.getItems(), "Apple", "Orange", "Banana");
+        VirtualFlowTestUtils.assertListContainsItemsInOrder(table.getItems(), "Apple", "Orange", "Banana");
         assertNull(col.getSortType());
         
-        ControlAsserts.assertListContainsItemsInOrder(table.getSortOrder(), col);
+        VirtualFlowTestUtils.assertListContainsItemsInOrder(table.getSortOrder(), col);
     }
     
     @Test public void testSortEventCanBeNotConsumedToAllowSortToOccur_changeColumnSortType_NullToAscending() {
@@ -503,13 +503,13 @@ public class TableViewTest {
             }
         });
         
-        ControlAsserts.assertListContainsItemsInOrder(table.getItems(), "Apple", "Orange", "Banana");
+        VirtualFlowTestUtils.assertListContainsItemsInOrder(table.getItems(), "Apple", "Orange", "Banana");
         
         col.setSortType(ASCENDING);
-        ControlAsserts.assertListContainsItemsInOrder(table.getItems(), "Apple", "Banana", "Orange");
+        VirtualFlowTestUtils.assertListContainsItemsInOrder(table.getItems(), "Apple", "Banana", "Orange");
         assertEquals(ASCENDING, col.getSortType());
         
-        ControlAsserts.assertListContainsItemsInOrder(table.getSortOrder(), col);
+        VirtualFlowTestUtils.assertListContainsItemsInOrder(table.getSortOrder(), col);
     }
 
     @Test public void testSortMethodWithNullSortPolicy() {
@@ -522,33 +522,33 @@ public class TableViewTest {
     @Test public void testChangingSortPolicyUpdatesItemsList() {
         TableColumn<String, String> col = initSortTestStructure();
         col.setSortType(DESCENDING);
-        ControlAsserts.assertListContainsItemsInOrder(table.getItems(), "Apple", "Orange", "Banana");
+        VirtualFlowTestUtils.assertListContainsItemsInOrder(table.getItems(), "Apple", "Orange", "Banana");
         table.getSortOrder().add(col);
-        ControlAsserts.assertListContainsItemsInOrder(table.getItems(), "Orange", "Banana", "Apple");
+        VirtualFlowTestUtils.assertListContainsItemsInOrder(table.getItems(), "Orange", "Banana", "Apple");
         table.setSortPolicy(SORT_SUCCESS_ASCENDING_SORT_POLICY);
-        ControlAsserts.assertListContainsItemsInOrder(table.getItems(), "Apple", "Banana", "Orange");
+        VirtualFlowTestUtils.assertListContainsItemsInOrder(table.getItems(), "Apple", "Banana", "Orange");
     }
     
     @Test public void testChangingSortPolicyDoesNotUpdateItemsListWhenTheSortOrderListIsEmpty() {
         TableColumn<String, String> col = initSortTestStructure();
         col.setSortType(DESCENDING);
-        ControlAsserts.assertListContainsItemsInOrder(table.getItems(), "Apple", "Orange", "Banana");
+        VirtualFlowTestUtils.assertListContainsItemsInOrder(table.getItems(), "Apple", "Orange", "Banana");
         
         table.setSortPolicy(SORT_SUCCESS_ASCENDING_SORT_POLICY);
-        ControlAsserts.assertListContainsItemsInOrder(table.getItems(), "Apple", "Orange", "Banana");
+        VirtualFlowTestUtils.assertListContainsItemsInOrder(table.getItems(), "Apple", "Orange", "Banana");
     }
     
     @Test public void testFailedSortPolicyBacksOutLastChange_sortOrderAddition() {
         TableColumn<String, String> col = initSortTestStructure();
         col.setSortType(DESCENDING);
-        ControlAsserts.assertListContainsItemsInOrder(table.getItems(), "Apple", "Orange", "Banana");
+        VirtualFlowTestUtils.assertListContainsItemsInOrder(table.getItems(), "Apple", "Orange", "Banana");
         table.setSortPolicy(NO_SORT_FAILED_SORT_POLICY);
         
         table.getSortOrder().add(col);
         
         // no sort should be run (as we have a custom sort policy), and the 
         // sortOrder list should be empty as the sortPolicy failed
-        ControlAsserts.assertListContainsItemsInOrder(table.getItems(), "Apple", "Orange", "Banana");
+        VirtualFlowTestUtils.assertListContainsItemsInOrder(table.getItems(), "Apple", "Orange", "Banana");
         assertTrue(table.getSortOrder().isEmpty());
     }
     
@@ -556,7 +556,7 @@ public class TableViewTest {
         TableColumn<String, String> col = initSortTestStructure();
         col.setSortType(DESCENDING);
         table.getSortOrder().add(col);
-        ControlAsserts.assertListContainsItemsInOrder(table.getItems(), "Orange", "Banana", "Apple");
+        VirtualFlowTestUtils.assertListContainsItemsInOrder(table.getItems(), "Orange", "Banana", "Apple");
         
         table.setSortPolicy(NO_SORT_FAILED_SORT_POLICY);
 
@@ -564,20 +564,20 @@ public class TableViewTest {
         // sort policy fails the items list should remain unchanged and the sort
         // order list should continue to have the column in it.
         table.getSortOrder().remove(col);
-        ControlAsserts.assertListContainsItemsInOrder(table.getItems(), "Orange", "Banana", "Apple");
-        ControlAsserts.assertListContainsItemsInOrder(table.getSortOrder(), col);
+        VirtualFlowTestUtils.assertListContainsItemsInOrder(table.getItems(), "Orange", "Banana", "Apple");
+        VirtualFlowTestUtils.assertListContainsItemsInOrder(table.getSortOrder(), col);
     }
     
     @Test public void testFailedSortPolicyBacksOutLastChange_sortTypeChange_ascendingToDescending() {
         TableColumn<String, String> col = initSortTestStructure();
         col.setSortType(ASCENDING);
         table.getSortOrder().add(col);
-        ControlAsserts.assertListContainsItemsInOrder(table.getItems(), "Apple", "Banana", "Orange");
+        VirtualFlowTestUtils.assertListContainsItemsInOrder(table.getItems(), "Apple", "Banana", "Orange");
         
         table.setSortPolicy(NO_SORT_FAILED_SORT_POLICY);
 
         col.setSortType(DESCENDING);
-        ControlAsserts.assertListContainsItemsInOrder(table.getItems(), "Apple", "Banana", "Orange");
+        VirtualFlowTestUtils.assertListContainsItemsInOrder(table.getItems(), "Apple", "Banana", "Orange");
         assertEquals(ASCENDING, col.getSortType());
     }
     
@@ -585,12 +585,12 @@ public class TableViewTest {
         TableColumn<String, String> col = initSortTestStructure();
         col.setSortType(DESCENDING);
         table.getSortOrder().add(col);
-        ControlAsserts.assertListContainsItemsInOrder(table.getItems(), "Orange", "Banana", "Apple");
+        VirtualFlowTestUtils.assertListContainsItemsInOrder(table.getItems(), "Orange", "Banana", "Apple");
         
         table.setSortPolicy(NO_SORT_FAILED_SORT_POLICY);
 
         col.setSortType(null);
-        ControlAsserts.assertListContainsItemsInOrder(table.getItems(), "Orange", "Banana", "Apple");
+        VirtualFlowTestUtils.assertListContainsItemsInOrder(table.getItems(), "Orange", "Banana", "Apple");
         assertEquals(DESCENDING, col.getSortType());
     }
     
@@ -598,12 +598,12 @@ public class TableViewTest {
         TableColumn<String, String> col = initSortTestStructure();
         col.setSortType(null);
         table.getSortOrder().add(col);
-        ControlAsserts.assertListContainsItemsInOrder(table.getItems(), "Apple", "Orange", "Banana");
+        VirtualFlowTestUtils.assertListContainsItemsInOrder(table.getItems(), "Apple", "Orange", "Banana");
         
         table.setSortPolicy(NO_SORT_FAILED_SORT_POLICY);
 
         col.setSortType(ASCENDING);
-        ControlAsserts.assertListContainsItemsInOrder(table.getItems(), "Apple", "Orange", "Banana");
+        VirtualFlowTestUtils.assertListContainsItemsInOrder(table.getItems(), "Apple", "Orange", "Banana");
         assertNull(col.getSortType());
     }
     
@@ -615,7 +615,7 @@ public class TableViewTest {
         table.getSortOrder().add(col);
         TableColumnComparator c = (TableColumnComparator)table.getComparator();
         assertNotNull(c);
-        ControlAsserts.assertListContainsItemsInOrder(c.getColumns(), col);
+        VirtualFlowTestUtils.assertListContainsItemsInOrder(c.getColumns(), col);
     }
     
     @Ignore
@@ -628,7 +628,7 @@ public class TableViewTest {
         table.getSortOrder().add(col);
         TableColumnComparator c = (TableColumnComparator)table.getComparator();
         assertNotNull(c);
-        ControlAsserts.assertListContainsItemsInOrder(c.getColumns(), col);
+        VirtualFlowTestUtils.assertListContainsItemsInOrder(c.getColumns(), col);
         
         // now remove column from sort order, and the comparator should go to
         // being null
@@ -641,7 +641,7 @@ public class TableViewTest {
         final TableColumnComparator oldComparator = (TableColumnComparator)table.getComparator();
         
         col.setSortType(DESCENDING);
-        ControlAsserts.assertListContainsItemsInOrder(table.getItems(), "Apple", "Orange", "Banana");
+        VirtualFlowTestUtils.assertListContainsItemsInOrder(table.getItems(), "Apple", "Orange", "Banana");
         table.setSortPolicy(NO_SORT_FAILED_SORT_POLICY);
         
         table.getSortOrder().add(col);
@@ -656,15 +656,15 @@ public class TableViewTest {
 
         col.setSortType(DESCENDING);
         table.getSortOrder().add(col);
-        ControlAsserts.assertListContainsItemsInOrder(table.getItems(), "Orange", "Banana", "Apple");
+        VirtualFlowTestUtils.assertListContainsItemsInOrder(table.getItems(), "Orange", "Banana", "Apple");
         oldComparator = (TableColumnComparator)table.getComparator();
-        ControlAsserts.assertListContainsItemsInOrder(oldComparator.getColumns(), col);
+        VirtualFlowTestUtils.assertListContainsItemsInOrder(oldComparator.getColumns(), col);
         
         table.setSortPolicy(NO_SORT_FAILED_SORT_POLICY);
         table.getSortOrder().remove(col);
         
         assertTrue(table.getSortOrder().contains(col));
-        ControlAsserts.assertListContainsItemsInOrder(oldComparator.getColumns(), col);
+        VirtualFlowTestUtils.assertListContainsItemsInOrder(oldComparator.getColumns(), col);
     }
     
     @Test public void testFailedSortPolicyBacksOutComparatorChange_sortTypeChange() {
@@ -888,8 +888,8 @@ public class TableViewTest {
 
         table.getColumns().addAll(firstNameCol, lastNameCol, emailCol);
         
-        ControlAsserts.assertRowsNotEmpty(table, 0, 5); // rows 0 - 5 should be filled
-        ControlAsserts.assertRowsEmpty(table, 5, -1); // rows 5+ should be empty
+        VirtualFlowTestUtils.assertRowsNotEmpty(table, 0, 5); // rows 0 - 5 should be filled
+        VirtualFlowTestUtils.assertRowsEmpty(table, 5, -1); // rows 5+ should be empty
         
         // now we replace the data and expect the cells that have no data
         // to be empty
@@ -897,8 +897,8 @@ public class TableViewTest {
             new Person("*_*Emma", "Jones", "emma.jones@example.com"),
             new Person("_Michael", "Brown", "michael.brown@example.com")));
         
-        ControlAsserts.assertRowsNotEmpty(table, 0, 2); // rows 0 - 2 should be filled
-        ControlAsserts.assertRowsEmpty(table, 2, -1); // rows 2+ should be empty
+        VirtualFlowTestUtils.assertRowsNotEmpty(table, 0, 2); // rows 0 - 2 should be filled
+        VirtualFlowTestUtils.assertRowsEmpty(table, 2, -1); // rows 2+ should be empty
     }
     
     @Test public void test_rt22463() {
@@ -918,8 +918,8 @@ public class TableViewTest {
         p2.setId(2l);
         p2.setName("name2");
         table.setItems(FXCollections.observableArrayList(p1, p2));
-        ControlAsserts.assertCellTextEquals(table, 0, "1", "name1");
-        ControlAsserts.assertCellTextEquals(table, 1, "2", "name2");
+        VirtualFlowTestUtils.assertCellTextEquals(table, 0, "1", "name1");
+        VirtualFlowTestUtils.assertCellTextEquals(table, 1, "2", "name2");
         
         // now we change the persons but they are still equal as the ID's don't
         // change - but the items list is cleared so the cells should update
@@ -931,8 +931,8 @@ public class TableViewTest {
         new_p2.setName("updated name2");
         table.getItems().clear();
         table.setItems(FXCollections.observableArrayList(new_p1, new_p2));
-        ControlAsserts.assertCellTextEquals(table, 0, "1", "updated name1");
-        ControlAsserts.assertCellTextEquals(table, 1, "2", "updated name2");
+        VirtualFlowTestUtils.assertCellTextEquals(table, 0, "1", "updated name1");
+        VirtualFlowTestUtils.assertCellTextEquals(table, 1, "2", "updated name2");
     }
     
     @Test public void test_rt28637() {
@@ -1229,19 +1229,19 @@ public class TableViewTest {
         table.getColumns().addAll(firstNameCol, lastNameCol, emailCol);
         
         // test the state before we hide and re-add a column
-        ControlAsserts.assertCellTextEquals(table, 0, "Jacob", "Smith", "jacob.smith@example.com");
-        ControlAsserts.assertCellTextEquals(table, 1, "Isabella", "Johnson", "isabella.johnson@example.com");
-        ControlAsserts.assertCellTextEquals(table, 2, "Ethan", "Williams", "ethan.williams@example.com");
-        ControlAsserts.assertCellTextEquals(table, 3, "Emma", "Jones", "emma.jones@example.com");
-        ControlAsserts.assertCellTextEquals(table, 4, "Michael", "Brown", "michael.brown@example.com");
+        VirtualFlowTestUtils.assertCellTextEquals(table, 0, "Jacob", "Smith", "jacob.smith@example.com");
+        VirtualFlowTestUtils.assertCellTextEquals(table, 1, "Isabella", "Johnson", "isabella.johnson@example.com");
+        VirtualFlowTestUtils.assertCellTextEquals(table, 2, "Ethan", "Williams", "ethan.williams@example.com");
+        VirtualFlowTestUtils.assertCellTextEquals(table, 3, "Emma", "Jones", "emma.jones@example.com");
+        VirtualFlowTestUtils.assertCellTextEquals(table, 4, "Michael", "Brown", "michael.brown@example.com");
         
         // hide the last name column, and test cells again
         table.getColumns().remove(lastNameCol);
-        ControlAsserts.assertCellTextEquals(table, 0, "Jacob", "jacob.smith@example.com");
-        ControlAsserts.assertCellTextEquals(table, 1, "Isabella", "isabella.johnson@example.com");
-        ControlAsserts.assertCellTextEquals(table, 2, "Ethan", "ethan.williams@example.com");
-        ControlAsserts.assertCellTextEquals(table, 3, "Emma", "emma.jones@example.com");
-        ControlAsserts.assertCellTextEquals(table, 4, "Michael", "michael.brown@example.com");
+        VirtualFlowTestUtils.assertCellTextEquals(table, 0, "Jacob", "jacob.smith@example.com");
+        VirtualFlowTestUtils.assertCellTextEquals(table, 1, "Isabella", "isabella.johnson@example.com");
+        VirtualFlowTestUtils.assertCellTextEquals(table, 2, "Ethan", "ethan.williams@example.com");
+        VirtualFlowTestUtils.assertCellTextEquals(table, 3, "Emma", "emma.jones@example.com");
+        VirtualFlowTestUtils.assertCellTextEquals(table, 4, "Michael", "michael.brown@example.com");
         
         // re-add the last name column - we should go back to the original state.
         // However, what appears to be happening is that, for some reason, some
@@ -1249,11 +1249,11 @@ public class TableViewTest {
         // some of the last name values will not be where we expect them to be.
         // This is clearly not ideal!
         table.getColumns().add(1, lastNameCol);
-        ControlAsserts.assertCellTextEquals(table, 0, "Jacob", "Smith", "jacob.smith@example.com");
-        ControlAsserts.assertCellTextEquals(table, 1, "Isabella", "Johnson", "isabella.johnson@example.com");
-        ControlAsserts.assertCellTextEquals(table, 2, "Ethan", "Williams", "ethan.williams@example.com");
-        ControlAsserts.assertCellTextEquals(table, 3, "Emma", "Jones", "emma.jones@example.com");
-        ControlAsserts.assertCellTextEquals(table, 4, "Michael", "Brown", "michael.brown@example.com");
+        VirtualFlowTestUtils.assertCellTextEquals(table, 0, "Jacob", "Smith", "jacob.smith@example.com");
+        VirtualFlowTestUtils.assertCellTextEquals(table, 1, "Isabella", "Johnson", "isabella.johnson@example.com");
+        VirtualFlowTestUtils.assertCellTextEquals(table, 2, "Ethan", "Williams", "ethan.williams@example.com");
+        VirtualFlowTestUtils.assertCellTextEquals(table, 3, "Emma", "Jones", "emma.jones@example.com");
+        VirtualFlowTestUtils.assertCellTextEquals(table, 4, "Michael", "Brown", "michael.brown@example.com");
     }
     
     @Test public void test_rt29390() {
@@ -1285,7 +1285,7 @@ public class TableViewTest {
         tableView.getColumns().add(firstNameCol);
         
         // we want the vertical scrollbar
-        VirtualScrollBar scrollBar = ControlAsserts.getVirtualFlowVerticalScrollbar(tableView);
+        VirtualScrollBar scrollBar = VirtualFlowTestUtils.getVirtualFlowVerticalScrollbar(tableView);
         
         assertNotNull(scrollBar);
         assertTrue(scrollBar.isVisible());

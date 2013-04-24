@@ -25,52 +25,47 @@
 
 package javafx.scene.control;
 
-import com.sun.javafx.collections.MappingChange;
-import com.sun.javafx.collections.NonIterableChange;
-
+import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.BitSet;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 
+import javafx.beans.DefaultProperty;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
+import javafx.beans.WeakInvalidationListener;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ObjectPropertyBase;
+import javafx.beans.property.ReadOnlyObjectProperty;
+import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
+import javafx.beans.value.WeakChangeListener;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.MapChangeListener;
 import javafx.collections.ObservableList;
-
-import javafx.scene.Node;
-import javafx.scene.layout.GridPane;
-import javafx.util.Callback;
-
-import com.sun.javafx.collections.annotations.ReturnsUnmodifiableCollection;
-import javafx.css.PseudoClass;
-import com.sun.javafx.scene.control.ReadOnlyUnbackedObservableList;
-import com.sun.javafx.scene.control.TableColumnComparatorBase.TableColumnComparator;
-import com.sun.javafx.scene.control.skin.TableColumnHeader;
 import javafx.collections.WeakListChangeListener;
+import javafx.css.PseudoClass;
 import javafx.event.EventHandler;
 import javafx.event.EventType;
+import javafx.scene.Node;
+import javafx.util.Callback;
 
+import com.sun.javafx.collections.MappingChange;
+import com.sun.javafx.collections.NonIterableChange;
+import com.sun.javafx.collections.annotations.ReturnsUnmodifiableCollection;
+import com.sun.javafx.scene.control.ReadOnlyUnbackedObservableList;
+import com.sun.javafx.scene.control.TableColumnComparatorBase.TableColumnComparator;
 import com.sun.javafx.scene.control.skin.TableViewSkin;
 import com.sun.javafx.scene.control.skin.TableViewSkinBase;
-import java.lang.ref.WeakReference;
-import java.util.Comparator;
-import java.util.HashMap;
-import javafx.beans.DefaultProperty;
-import javafx.beans.WeakInvalidationListener;
-import javafx.beans.property.ReadOnlyObjectProperty;
-import javafx.beans.property.ReadOnlyObjectWrapper;
-import javafx.beans.value.WeakChangeListener;
-import static javafx.scene.control.TableColumn.SortType.ASCENDING;
-import static javafx.scene.control.TableColumn.SortType.DESCENDING;
 
 /**
  * The TableView control is designed to visualize an unlimited number of rows
@@ -1481,13 +1476,20 @@ public class TableView<S> extends Control {
                     // }
                     // 
                     // A more efficient solution:
+                    final List<Integer> newlySelectedRows = new ArrayList<Integer>();
+                    final List<Integer> newlyUnselectedRows = new ArrayList<Integer>();
+                    
                     while (c.next()) {
                         if (c.wasRemoved()) {
                             List<? extends TablePosition<S,?>> removed = c.getRemoved();
                             for (int i = 0; i < removed.size(); i++) {
                                 final TablePosition<S,?> tp = removed.get(i);
                                 final int row = tp.getRow();
-                                selectedIndicesBitSet.clear(row);
+                                
+                                if (selectedIndicesBitSet.get(row)) {
+                                    selectedIndicesBitSet.clear(row);
+                                    newlySelectedRows.add(row);
+                                }
                             }
                         }
                         if (c.wasAdded()) {
@@ -1495,7 +1497,11 @@ public class TableView<S> extends Control {
                             for (int i = 0; i < added.size(); i++) {
                                 final TablePosition<S,?> tp = added.get(i);
                                 final int row = tp.getRow();
-                                selectedIndicesBitSet.set(row);
+                                
+                                if (! selectedIndicesBitSet.get(row)) {
+                                    selectedIndicesBitSet.set(row);
+                                    newlySelectedRows.add(row);
+                                }
                             }
                         }
                     }
@@ -1510,8 +1516,20 @@ public class TableView<S> extends Control {
                     selectedItems.callObservers(new MappingChange<TablePosition<S,?>, S>(c, cellToItemsMap, selectedItems));
                     c.reset();
 
-                    selectedIndices.callObservers(new MappingChange<TablePosition<S,?>, Integer>(c, cellToIndicesMap, selectedIndices));
-                    c.reset();
+                    if (! newlySelectedRows.isEmpty() && newlyUnselectedRows.isEmpty()) {
+                        // need to come up with ranges based on the actualSelectedRows, and
+                        // then fire the appropriate number of changes. We also need to
+                        // translate from a desired row to select to where that row is 
+                        // represented in the selectedIndices list. For example,
+                        // we may have requested to select row 5, and the selectedIndices
+                        // list may therefore have the following: [1,4,5], meaning row 5
+                        // is in position 2 of the selectedIndices list
+                        Change<Integer> change = createRangeChange(selectedIndices, newlySelectedRows);
+                        selectedIndices.callObservers(change);
+                    } else {
+                        selectedIndices.callObservers(new MappingChange<TablePosition<S,?>, Integer>(c, cellToIndicesMap, selectedIndices));
+                        c.reset();
+                    }
 
                     selectedCellsSeq.callObservers(new MappingChange<TablePosition<S,?>, TablePosition<S,?>>(c, MappingChange.NOOP_MAP, selectedCellsSeq));
                     c.reset();
@@ -1847,6 +1865,11 @@ public class TableView<S> extends Control {
         }
 
         @Override public void select(S obj) {
+            if (obj == null && getSelectionMode() == SelectionMode.SINGLE) {
+                clearSelection();
+                return;
+            }
+            
             // We have no option but to iterate through the model and select the
             // first occurrence of the given object. Once we find the first one, we
             // don't proceed to select any others.
@@ -1907,25 +1930,29 @@ public class TableView<S> extends Control {
                 }
             } else {
                 int lastIndex = -1;
-                List<TablePosition<S,?>> positions = new ArrayList<TablePosition<S,?>>();
+                Set<TablePosition<S,?>> positions = new LinkedHashSet<TablePosition<S,?>>();
 
                 if (row >= 0 && row < rowCount) {
-                    positions.add(new TablePosition(getTableView(), row, null));
-                    lastIndex = row;
+                    TablePosition<S,Object> tp = new TablePosition<S,Object>(getTableView(), row, null);
+                    
+                    if (! selectedCells.contains(tp)) {
+                        positions.add(tp);
+                        lastIndex = row;
+                    }
                 }
 
                 for (int i = 0; i < rows.length; i++) {
                     int index = rows[i];
                     if (index < 0 || index >= rowCount) continue;
                     lastIndex = index;
-                    TablePosition pos = new TablePosition(getTableView(), index, null);
-                    if (selectedCells.contains(pos)) continue;
-
-                    positions.add(pos);
+                    TablePosition<S,Object> pos = new TablePosition<S,Object>(getTableView(), index, null);
+                    if (! selectedCells.contains(pos)) {
+                        positions.add(pos);
+                    }
                 }
-
+                
                 selectedCells.addAll(positions);
-
+                
                 if (lastIndex != -1) {
                     select(lastIndex);
                 }

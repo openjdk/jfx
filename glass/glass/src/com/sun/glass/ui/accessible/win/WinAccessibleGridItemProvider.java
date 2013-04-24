@@ -25,14 +25,10 @@
 package com.sun.glass.ui.accessible.win;
 
 import com.sun.glass.ui.accessible.AccessibleLogger;
-import com.sun.javafx.accessible.providers.AccessibleProvider;
 import com.sun.javafx.accessible.providers.GridItemProvider;
 import com.sun.javafx.accessible.utils.PatternIds;
 
-public class WinAccessibleGridItemProvider extends WinAccessibleBasePatternProvider {
-    native private static void _initIDs();
-    native private long _createAccessible(long nativeSimple);
-    native private void _destroyAccessible(long nativeAccessible);
+public final class WinAccessibleGridItemProvider extends WinAccessibleBasePatternProvider {
 
     /**
      * A class static block that initializes the JNI method IDs.
@@ -40,24 +36,45 @@ public class WinAccessibleGridItemProvider extends WinAccessibleBasePatternProvi
     static {
         _initIDs();
     }
+
+    native private static void _initIDs();
+    native private long _createAccessible(long nativeBaseProvider);
+    native private void _destroyAccessible(long nativeAccessible);
+    
+    private long nativeAccessible;  // The native accessible
  
     /**
      * Downcall to create the native accessible.  This will be used when firing
      * events or when destroying the native accessible.
      * 
      * @param node      the related FX node object.
-     * @param nativeSimple  the native accessible.
+     * @param provider  the base provider which this pattern provider is chained to.
      */
-    public WinAccessibleGridItemProvider(Object node, long nativeSimple) {
-        super(node, nativeSimple);
-        nativeAccessible = _createAccessible(nativeSimple);
+    public WinAccessibleGridItemProvider(Object node, WinAccessibleBaseProvider provider) {
+        super(node);
+        nativeAccessible = _createAccessible(provider.getNativeAccessible());
     }
     
+    /**
+     * Get the native accessible
+     * 
+     * @return the native accessible
+     */
     @Override
-    final public void destroyAccessible() {
+    long getNativeAccessible() {
+        return nativeAccessible;
+    }
+    
+    // Downcalls
+    
+    /**
+     * Destroy the native accessible
+     */
+    @Override
+    public void destroyAccessible() {
         _destroyAccessible(nativeAccessible);
     }
-    
+
     ////////////////////////////////////
     //
     // Start of upcalls from native code
@@ -70,45 +87,67 @@ public class WinAccessibleGridItemProvider extends WinAccessibleBasePatternProvi
     //   implementation.
     
     /**
-     * For WinAccessibleGridItemProvider - getColumnCount
+     * For GridItemProvider Row property
      *
-     * @return the ColumnCount
+     * @return the row index of this object.
      */
     private int getRow() {
         AccessibleLogger.getLogger().fine("In WinAccessibleGridItemProvider.getRow");
         return ((GridItemProvider)node).getRow();
     }
 
+    /**
+     * For GridItemProvider RowSpan property
+     *
+     * @return the the number of rows spanned by this object.
+     */
     private int getRowSpan() {
         AccessibleLogger.getLogger().fine("In WinAccessibleGridItemProvider.getRowSpan");
         return ((GridItemProvider)node).getRowSpan();
     }
     
+    /**
+     * For GridItemProvider Column property
+     *
+     * @return the column index of this object.
+     */
     private int getColumn() {
         AccessibleLogger.getLogger().fine("In WinAccessibleGridItemProvider.getColumn");
         return ((GridItemProvider)node).getColumn();
     }
 
+    /**
+     * For GridItemProvider ColumnSpan property
+     *
+     * @return the the number of columns spanned by this object.
+     */
     private int getColumnSpan() {
         AccessibleLogger.getLogger().fine("In WinAccessibleGridItemProvider.getColumnSpan");
         return ((GridItemProvider)node).getColumnSpan();
     }
-    
+
+    /**
+     * For GridItemProvider ContainingGrid property
+     *
+     * @return the provider that implements the GridProvider pattern and represents
+     *         the container of this object. 
+     */
     private long getContainingGrid() {
-        AccessibleLogger.getLogger().fine("In WinAccessibleGridItemProvider.getContainingGrid");
-        AccessibleProvider container = ((GridItemProvider)node).getContainingGrid() ;
-        if (container == null) {
-            return 0;
-        } else {
-            long nativeContainer = ((WinAccessibleBasePatternProvider)container).getNativeAccessible();
-            AccessibleLogger.getLogger().fine("  nativeContainer:  " + Long.toHexString(nativeContainer));
-            return nativeContainer;
+        long nativeContainer = 0;
+        Object glassContainer = ((GridItemProvider)node).getContainingGrid();
+        if (glassContainer != null) {
+            nativeContainer =
+                ((WinAccessibleBasePatternProvider)glassContainer).getNativeAccessible();
+            AccessibleLogger.getLogger().fine("nativeContainer: " +
+                Long.toHexString(nativeContainer));
         }
+        return nativeContainer;
     }
     
-    // Return the pattern supported by this class
-    @Override
-    final public int getPatternId() {
+    /**
+     * Return the ID of the pattern supported by this class
+     */
+    public int getPatternId() {
         return PatternIds.GRID_ITEM ;
     }
     

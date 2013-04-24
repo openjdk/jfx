@@ -70,7 +70,7 @@ public:
 #define WM_DO_ACTION        (WM_USER+1)
 #define WM_DO_ACTION_LATER  (WM_USER+2)
 // Accessibility (a11y) messages
-#define WM_A11Y_INIT_IS_COMPLETE (WM_USER+3) // PTB: Should RegisterWindowMessage be used instead?
+#define WM_A11Y_INIT_IS_COMPLETE (WM_USER+3)
 
 class GlassApplication : protected BaseWnd {
 public:

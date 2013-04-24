@@ -109,6 +109,12 @@ public abstract class SingleSelectionModel<T> extends SelectionModel<T> {
      * any previously selected index to be unselected.
      */
     @Override public void select(T obj) {
+        if (obj == null) {
+            setSelectedIndex(-1);
+            setSelectedItem(null);
+            return;
+        }
+        
         final int itemCount = getItemCount();
 
         for (int i = 0; i < itemCount; i++) {

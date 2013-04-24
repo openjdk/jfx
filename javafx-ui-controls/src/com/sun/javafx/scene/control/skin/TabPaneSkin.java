@@ -50,7 +50,6 @@ import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.Bounds;
 import javafx.geometry.HPos;
-import javafx.geometry.Insets;
 import javafx.geometry.Point2D;
 import javafx.geometry.Pos;
 import javafx.geometry.Side;
@@ -246,90 +245,119 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
             clipRect.setHeight(getSkinnable().getHeight());
         }
     }
-
+    private void removeTabs(List<? extends Tab> removedList, final Map<Tab, Timeline> closedTab) {
+        for (final Tab tab : removedList) {
+            // Animate the tab removal
+            final TabHeaderSkin tabRegion = tabHeaderArea.getTabHeaderSkin(tab);
+            Timeline closedTabTimeline = null;
+            if (tabRegion != null) {
+                if( closeTabAnimation.get() == TabAnimation.GROW ) {
+                    tabRegion.animating = true;
+                    closedTabTimeline = createTimeline(tabRegion, Duration.millis(ANIMATION_SPEED * 1.5F), 0.0F, new EventHandler<ActionEvent>() {
+                        @Override public void handle(ActionEvent event) {      
+                            handleClosedTab(tab, closedTab);
+                        }
+                    });
+                    closedTabTimeline.play();    
+                } else {
+                    handleClosedTab(tab, closedTab);
+                }
+            }
+            closedTab.put(tab, closedTabTimeline);
+        }
+    }
+    
+    private void handleClosedTab(Tab tab, Map<Tab, Timeline> closedTab) {
+        removeTab(tab);
+        closedTab.remove(tab);
+        if (getSkinnable().getTabs().isEmpty()) {
+            tabHeaderArea.setVisible(false);
+        }
+    }
+    private void addTabs(List<? extends Tab> addedList, int from, boolean handle, final Map<Tab, Timeline> closedTab) {
+        int i = 0;
+        for (final Tab tab : addedList) {
+            // Handle the case where we are removing and adding the same tab.
+            Timeline closedTabTimeline = closedTab.get(tab);
+            if (closedTabTimeline != null) {
+                closedTabTimeline.stop();
+                Iterator<Tab> keys = closedTab.keySet().iterator();
+                while (keys.hasNext()) {
+                    Tab key = keys.next();
+                    if (tab.equals(key)) {
+                        removeTab(key);
+                        keys.remove();                                    
+                    }
+                }
+            }
+            // A new tab was added - animate it out
+            if (!tabHeaderArea.isVisible()) {
+                tabHeaderArea.setVisible(true);
+            }
+            int index = from + i++;
+            tabHeaderArea.addTab(tab, index, false);
+            addTabContent(tab);
+            final TabHeaderSkin tabRegion = tabHeaderArea.getTabHeaderSkin(tab);
+            if (tabRegion != null) {
+                if( openTabAnimation.get() == TabAnimation.GROW ) {
+                    tabRegion.animateNewTab = new Runnable() {
+                        @Override public void run() {
+                            final double w = snapSize(tabRegion.prefWidth(-1));
+                            tabRegion.animating = true;
+                            tabRegion.prefWidth.set(0.0);
+                            tabRegion.setVisible(true);
+                            createTimeline(tabRegion, Duration.millis(ANIMATION_SPEED), w, new EventHandler<ActionEvent>() {
+                                @Override public void handle(ActionEvent event) {
+                                    tabRegion.animating = false;
+                                    tabRegion.inner.requestLayout();
+                                }
+                            }).play();
+                        }
+                    };    
+                } else {
+                    tabRegion.setVisible(true);
+                    tabRegion.inner.requestLayout();
+                }
+            }
+        }
+    }
+    
     private void initializeTabListener() {
         final Map<Tab, Timeline> closedTab = new HashMap<Tab, Timeline>();
         getSkinnable().getTabs().addListener(new ListChangeListener<Tab>() {
             @Override public void onChanged(final Change<? extends Tab> c) {      
                 while (c.next()) {
-                    for (final Tab tab : c.getRemoved()) {
-                        // Animate the tab removal
-                        final TabHeaderSkin tabRegion = tabHeaderArea.getTabHeaderSkin(tab);
-                        Timeline closedTabTimeline = null;
-                        if (tabRegion != null) {
-                            if( closeTabAnimation.get() == TabAnimation.GROW ) {
-                                tabRegion.animating = true;
-                                closedTabTimeline = createTimeline(tabRegion, Duration.millis(ANIMATION_SPEED * 1.5F), 0.0F, new EventHandler<ActionEvent>() {
-
-                                    @Override
-                                    public void handle(ActionEvent event) {      
-                                        removeTab(tab);
-                                        closedTab.remove(tab);
-                                        if (getSkinnable().getTabs().isEmpty()) {
-                                            tabHeaderArea.setVisible(false);
-                                        }
-                                    }
-                                });
-                                closedTabTimeline.play();    
-                            } else {
-                                removeTab(tab);
-                                closedTab.remove(tab);
-                                if (getSkinnable().getTabs().isEmpty()) {
-                                    tabHeaderArea.setVisible(false);
-                                }
-                            }
+                    if (c.wasPermutated()) { 
+                        TabPane tabPane = getSkinnable();
+                        List<Tab> tabs = tabPane.getTabs();
+                        // tabs sorted : create list of permutated tabs.
+                        // clear selection, set tab animation to NONE
+                        // remove permutated tabs, add them back in correct order.
+                        // restore old selection, and old tab animation states.
+                        int size = c.getTo() - c.getFrom();
+                        Tab selTab = tabPane.getSelectionModel().getSelectedItem();
+                        List<Tab> permutatedTabs = new ArrayList<Tab>(size);
+                        getSkinnable().getSelectionModel().clearSelection();
+                        // save and set tab animation to none - as it is not a good idea
+                        // to animate on the same data for open and close. 
+                        TabAnimation prevOpenAnimation = openTabAnimation.get();
+                        TabAnimation prevCloseAnimation = closeTabAnimation.get();
+                        openTabAnimation.set(TabAnimation.NONE);
+                        closeTabAnimation.set(TabAnimation.NONE);
+                        for (int i = c.getFrom(); i < c.getTo(); i++) {
+                            permutatedTabs.add(tabs.get(i));
                         }
-                        closedTab.put(tab, closedTabTimeline);
+                        removeTabs(permutatedTabs, closedTab);
+                        addTabs(permutatedTabs, c.getFrom(), false, closedTab);
+                        openTabAnimation.set(prevOpenAnimation);
+                        closeTabAnimation.set(prevCloseAnimation);
+                        getSkinnable().getSelectionModel().select(selTab);
                     }
-
-                    int i = 0;
-                    for (final Tab tab : c.getAddedSubList()) {
-                        // Handle the case where we are removing and adding the same tab.
-                        Timeline closedTabTimeline = closedTab.get(tab);
-                        if (closedTabTimeline != null) {
-                            closedTabTimeline.stop();
-                            Iterator<Tab> keys = closedTab.keySet().iterator();
-                            while (keys.hasNext()) {
-                                Tab key = keys.next();
-                                if (tab.equals(key)) {
-                                    removeTab(key);
-                                    keys.remove();                                    
-                                }
-                            }
-                        }
-                        // A new tab was added - animate it out
-                        if (!tabHeaderArea.isVisible()) {
-                            tabHeaderArea.setVisible(true);
-                        }
-                        int index = c.getFrom() + i++;
-                        tabHeaderArea.addTab(tab, index, false);
-                        addTabContent(tab);
-                        final TabHeaderSkin tabRegion = tabHeaderArea.getTabHeaderSkin(tab);
-                        if (tabRegion != null) {
-                            if( openTabAnimation.get() == TabAnimation.GROW ) {
-                                tabRegion.animateNewTab = new Runnable() {
-
-                                    @Override
-                                    public void run() {
-                                        final double w = snapSize(tabRegion.prefWidth(-1));
-                                        tabRegion.animating = true;
-                                        tabRegion.prefWidth.set(0.0);
-                                        tabRegion.setVisible(true);
-                                        createTimeline(tabRegion, Duration.millis(ANIMATION_SPEED), w, new EventHandler<ActionEvent>() {
-
-                                            @Override
-                                            public void handle(ActionEvent event) {
-                                                tabRegion.animating = false;
-                                                tabRegion.inner.requestLayout();
-                                            }
-                                        }).play();
-                                    }
-                                };    
-                            } else {
-                                tabRegion.setVisible(true);
-                                tabRegion.inner.requestLayout();
-                            }
-                        }
+                    if (c.getRemovedSize() > 0) {
+                        removeTabs(c.getRemoved(), closedTab);
+                    }
+                    if (c.getAddedSize() > 0) {
+                        addTabs(c.getAddedSubList(), c.getFrom(), true, closedTab);
                     }
                 }
             }
@@ -418,7 +446,7 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
 //    }
 
     private double maxw = 0.0d;
-    @Override protected double computePrefWidth(double height, int topInset, int rightInset, int bottomInset, int leftInset) {
+    @Override protected double computePrefWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
         // The TabPane can only be as wide as it widest content width.
         for (TabContentRegion contentRegion: tabContentRegions) {
              maxw = Math.max(maxw, snapSize(contentRegion.prefWidth(-1)));
@@ -429,7 +457,7 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
     }
 
     private double maxh = 0.0d;
-    @Override protected double computePrefHeight(double width, int topInset, int rightInset, int bottomInset, int leftInset) {
+    @Override protected double computePrefHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
         // The TabPane can only be as high as it highest content height.
         for (TabContentRegion contentRegion: tabContentRegions) {
              maxh = Math.max(maxh, snapSize(contentRegion.prefHeight(-1)));
@@ -439,7 +467,7 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
         return snapSize(prefheight) + topInset + bottomInset;
     }
 
-    @Override public double computeBaselineOffset(int topInset, int rightInset, int bottomInset, int leftInset) {
+    @Override public double computeBaselineOffset(double topInset, double rightInset, double bottomInset, double leftInset) {
         return tabHeaderArea.getBaselineOffset() + tabHeaderArea.getLayoutY();
     }
 

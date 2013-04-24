@@ -206,8 +206,19 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
      * @param leftInset  the pixel snapped left inset
      * @return A double representing the minimum width of this Skin.
      */
-    protected double computeMinWidth(double height, int topInset, int rightInset, int bottomInset, int leftInset) {
-        return control.prefWidth(height);
+    protected double computeMinWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
+        double minX = 0;
+        double maxX = 0;
+        for (int i = 0; i < children.size(); i++) {
+            Node node = children.get(i);
+            if (node.isManaged()) {
+                final double x = node.getLayoutBounds().getMinX() + node.getLayoutX();
+                minX = Math.min(minX, x);
+                maxX = Math.max(maxX, x + node.minWidth(-1));
+            }
+        }
+        double minWidth = maxX - minX;
+        return leftInset + minWidth + rightInset;
     }
 
     /**
@@ -222,8 +233,19 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
      * @param leftInset  the pixel snapped left inset
      * @return A double representing the minimum height of this Skin.
      */
-    protected double computeMinHeight(double width, int topInset, int rightInset, int bottomInset, int leftInset) {
-        return control.prefHeight(width);
+    protected double computeMinHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
+        double minY = 0;
+        double maxY = 0;
+        for (int i = 0; i < children.size(); i++) {
+            Node node = children.get(i);
+            if (node.isManaged()) {
+                final double y = node.getLayoutBounds().getMinY() + node.getLayoutY();
+                minY = Math.min(minY, y);
+                maxY = Math.max(maxY, y + node.minHeight(-1));
+            }
+        }
+        double minHeight = maxY - minY;
+        return topInset + minHeight + bottomInset;
     }
 
     /**
@@ -238,7 +260,7 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
      * @param leftInset  the pixel snapped left inset
      * @return A double representing the maximum width of this Skin.
      */
-    protected double computeMaxWidth(double height, int topInset, int rightInset, int bottomInset, int leftInset) {
+    protected double computeMaxWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
         return Double.MAX_VALUE;
     }
     
@@ -254,7 +276,7 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
      * @param leftInset  the pixel snapped left inset
      * @return A double representing the maximum height of this Skin.
      */
-    protected double computeMaxHeight(double width, int topInset, int rightInset, int bottomInset, int leftInset) {
+    protected double computeMaxHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
         return Double.MAX_VALUE;
     }
     
@@ -272,7 +294,7 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
      * @param leftInset  the pixel snapped left inset
      * @return the calculated preferred width
      */
-    protected double computePrefWidth(double height, int topInset, int rightInset, int bottomInset, int leftInset) {
+    protected double computePrefWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
         double minX = 0;
         double maxX = 0;
         for (int i = 0; i < children.size(); i++) {
@@ -300,7 +322,7 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
      * @param leftInset  the pixel snapped left inset
      * @return the calculated preferred height
      */
-    protected double computePrefHeight(double width, int topInset, int rightInset, int bottomInset, int leftInset) {
+    protected double computePrefHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
         double minY = 0;
         double maxY = 0;
         for (int i = 0; i < children.size(); i++) {
@@ -324,7 +346,7 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
      * @param leftInset  the pixel snapped left inset
      * @return baseline offset
      */
-    protected double computeBaselineOffset(int topInset, int rightInset, int bottomInset, int leftInset) {
+    protected double computeBaselineOffset(double topInset, double rightInset, double bottomInset, double leftInset) {
         int size = children.size();
         for (int i = 0; i < size; ++i) {
             Node child = children.get(i);
@@ -348,7 +370,7 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
      *
      * @return Rounded up insets top
      */
-    protected int snappedTopInset() {
+    protected double snappedTopInset() {
         return control.snappedTopInset();
     }
 
@@ -358,7 +380,7 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
      *
      * @return Rounded up insets bottom
      */
-    protected int snappedBottomInset() {
+    protected double snappedBottomInset() {
         return control.snappedBottomInset();
     }
 
@@ -368,7 +390,7 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
      *
      * @return Rounded up insets left
      */
-    protected int snappedLeftInset() {
+    protected double snappedLeftInset() {
         return control.snappedLeftInset();
     }
 
@@ -378,7 +400,7 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
      *
      * @return Rounded up insets right
      */
-    protected int snappedRightInset() {
+    protected double snappedRightInset() {
         return control.snappedRightInset();
     }
 
