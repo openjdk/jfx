@@ -1110,6 +1110,8 @@ final class LensApplication extends Application {
 
     };
 
+    private native void _notfyPlatformDnDStarted();
+    private native void _notfyPlatformDnDEnded();
     /**
      * This funtion should be only called from LensDnDClipboard after it has
      * been initialized.
@@ -1118,6 +1120,7 @@ final class LensApplication extends Application {
      * events are discarded until Drag Drop is detected.
      */
     void notifyDragStart() {
+        _notfyPlatformDnDStarted();
         dragStarted = true;
     }
     /**
@@ -1163,6 +1166,10 @@ final class LensApplication extends Application {
                     LensLogger.getLogger().finest("notifying drag DROP");
                 }
                 postEvent(new LensDragEvent(view, x, y, absx, absy, DragActions.DROP));
+
+                //notify platform DnD endded
+                _notfyPlatformDnDEnded();
+
                 //reset internal state machine
                 dragActionsPreformed = DragActions.NONE.getValue();
                 dragView = null;

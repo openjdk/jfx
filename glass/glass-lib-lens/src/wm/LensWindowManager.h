@@ -207,6 +207,22 @@ LensResult lens_platform_windowSetVisible(JNIEnv *env,
                                         NativeWindow window,
                                         jboolean visible);
 
+/**
+ * Notification sent from 
+ * LensDnDClipboard::pushToSystem()->LensApplication::notifyDragStart(), 
+ * indicating Drag N' Drop has been started
+ *  
+ * Note: DnD events has a higher priority then mouse drag events
+ * 
+ */
+void notify_lens_wm_DnDStarted();
+
+/**
+ * Notification sent from LensApplication::handleDragEvents() 
+ * after a DROP event was generated, indicating DnD has ended.
+ * 
+ */
+void notify_lens_wm_DnDEnded();
 
 #endif
 

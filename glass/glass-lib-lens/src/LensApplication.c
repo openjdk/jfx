@@ -702,3 +702,17 @@ void glass_application_RemoveWindowFromVisibleWindowList (JNIEnv *env,
 
     CHECK_AND_RET_VOID(env);
 }
+
+JNIEXPORT void JNICALL Java_com_sun_glass_ui_lens_LensApplication__1notfyPlatformDnDStarted
+  (JNIEnv *env, jobject lensApplication) {
+
+    notify_lens_wm_DnDStarted();
+
+}
+
+JNIEXPORT void JNICALL Java_com_sun_glass_ui_lens_LensApplication__1notfyPlatformDnDEnded
+  (JNIEnv *env, jobject lensApplication) {
+
+    notify_lens_wm_DnDEnded();
+
+}

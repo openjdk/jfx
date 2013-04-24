@@ -44,6 +44,8 @@ static jboolean _mousePressed = JNI_FALSE;
 static jboolean _onDraggingAction = JNI_FALSE;
 static NativeWindow _dragGrabbingWindow = NULL;
 
+static jboolean isDnDStarted = JNI_FALSE;
+
 static inline void render_lock() {
     pthread_mutex_lock(&renderMutex);
 }
@@ -1120,7 +1122,7 @@ void lens_wm_notifyMotionEvent(JNIEnv *env, int mousePosX, int mousePosY, int is
     }
 
 
-    if (_mousePressed && !_onDraggingAction) {
+    if (_mousePressed && !_onDraggingAction && !isDnDStarted) {
         GLASS_LOG_FINE("Starting native mouse drag");
         _onDraggingAction = JNI_TRUE;
         _dragGrabbingWindow = lens_wm_getMouseWindow();
@@ -1204,7 +1206,6 @@ void lens_wm_notifyMotionEvent(JNIEnv *env, int mousePosX, int mousePosY, int is
 
         }
     }
-
 
     lens_wm_setMouseWindow(window);
 
@@ -1397,6 +1398,21 @@ static void lens_wm_windowUncacheBounds(NativeWindow window) {
     window->currentBounds.width = window->cachedBounds.width;
     window->currentBounds.height = window->cachedBounds.height;
 
+}
+
+
+void notify_lens_wm_DnDStarted() {
+    isDnDStarted = JNI_TRUE;
+    GLASS_LOG_FINE("DnD is active");
+
+    //reset mouse drag as DnD events has higher priority
+    _onDraggingAction = JNI_FALSE;
+    _dragGrabbingWindow = NULL;
+}
+
+void notify_lens_wm_DnDEnded() {
+    isDnDStarted = JNI_FALSE;
+    GLASS_LOG_FINE("DnD has ended");
 }
 
 //// RFB support
