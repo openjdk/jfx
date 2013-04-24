@@ -63,6 +63,9 @@
 	<classpathentry kind="src" path="javafx-fxml/test"/>
 	<classpathentry kind="src" path="javafx-geom/src"/>
 	<classpathentry kind="src" path="javafx-geom/test"/>
+	
+	<classpathentry kind="src" path="javafx-iio/src"/>
+	<classpathentry kind="src" path="javafx-iio/test"/>
 	<classpathentry kind="src" path="javafx-logging/src"/>
 	<classpathentry kind="src" path="javafx-sg-common/src"/>
 	<classpathentry kind="src" path="javafx-sg-common/test"/>
@@ -84,11 +87,35 @@
 	
 	<classpathentry kind="src" path="prism-common/src"/>
 	<classpathentry kind="src" path="prism-common/test"/>
+	<classpathentry kind="src" path="prism-d3d/src"/>
+	<classpathentry kind="src" path="prism-d3d/build/gensrc">
+		<attributes>
+			<attribute name="optional" value="true"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="src" path="prism-es2/src"/>
+	<classpathentry kind="src" path="prism-es2-eglfb/src"/>
+	<classpathentry kind="src" path="prism-es2-eglx11/src"/>
+	<!--
+	<classpathentry kind="src" path="prism-es2-ios/src"/>
+	-->
+	<classpathentry kind="src" path="prism-es2-mac/src"/>
+	<classpathentry kind="src" path="prism-es2-win/src"/>
+	<classpathentry kind="src" path="prism-es2-x11/src"/>
+	<classpathentry kind="src" path="prism-es2/build/gensrc">
+		<attributes>
+			<attribute name="optional" value="true"/>
+		</attributes>
+	</classpathentry>
 	<classpathentry kind="src" path="prism-j2d/src"/>
 	<classpathentry kind="src" path="prism-sw/src"/>
 	<classpathentry kind="src" path="prism-null/src"/>
 	<classpathentry kind="src" path="prism-ps/src"/>
 	<classpathentry kind="src" path="prism-ps/build/gensrc"/>
+	<classpathentry kind="src" path="prism-ps/test"/>
+	<!--
+	<classpathentry kind="src" path="prism-ps/shadergen"/>
+	-->
 	<classpathentry kind="src" path="prism-util/src"/>
 	
 	<classpathentry kind="src" path="test-stub-toolkit/src"/>
