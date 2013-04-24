@@ -376,4 +376,41 @@ public class Node_LocalToSceneTransform_Test {
                 0, 1, 0, 0,
                 0, 0, 1, 0);
     }
+
+    @Test
+    public void shouldGetProperValueWhenSiblingValidatesParent() {
+        final Node n = new Rectangle(20, 20);
+        final Node n2 = new Rectangle(20, 20);
+        final Group g = new Group(n, n2);
+        g.setTranslateX(50);
+
+        // one of the nodes has listener
+        n.localToSceneTransformProperty().addListener(new InvalidationListener() {
+            public void invalidated(Observable o) {
+                notified = true;
+                TransformHelper.assertMatrix(n.getLocalToSceneTransform(),
+                    1, 0, 0, 60,
+                    0, 1, 0,  0,
+                    0, 0, 1,  0);
+            }
+        });
+
+        // the other node reports the value correctly
+        TransformHelper.assertMatrix(n2.getLocalToSceneTransform(),
+            1, 0, 0, 50,
+            0, 1, 0,  0,
+            0, 0, 1,  0);
+
+        // change the value on parent, child with listener is notified
+        // and validates parent
+        notified = false;
+        g.setTranslateX(60);
+        assertTrue(notified);
+
+        // now the other node needs to report correctly updated value
+        TransformHelper.assertMatrix(n2.getLocalToSceneTransform(),
+            1, 0, 0, 60,
+            0, 1, 0,  0,
+            0, 0, 1,  0);
+    }
 }

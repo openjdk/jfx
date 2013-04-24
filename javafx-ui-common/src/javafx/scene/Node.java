@@ -5177,99 +5177,121 @@ public abstract class Node implements EventTarget, Styleable {
             return localToSceneTransformProperty().get();
         }
 
+        class LocalToSceneTransformProperty extends LazyTransformProperty {
+            // need this to track number of listeners
+            private List localToSceneListeners;
+            // stamps to watch for parent changes when the listeners
+            // are not present
+            private long stamp, parentStamp;
+
+            @Override
+            protected Transform computeTransform(Transform reuse) {
+                stamp++;
+                updateLocalToParentTransform();
+
+                Node parentNode = Node.this.getParent();
+                if (parentNode != null) {
+                    final LocalToSceneTransformProperty parentProperty =
+                            (LocalToSceneTransformProperty) parentNode.localToSceneTransformProperty();
+                    final Transform parentTransform = parentProperty.getInternalValue();
+
+                    parentStamp = parentProperty.stamp;
+
+                    return TransformUtils.immutableTransform(reuse,
+                            parentTransform,
+                            ((LazyTransformProperty) localToParentTransformProperty()).getInternalValue());
+                } else {
+                    return TransformUtils.immutableTransform(reuse,
+                            ((LazyTransformProperty) localToParentTransformProperty()).getInternalValue());
+                }
+            }
+
+            @Override
+            public Object getBean() {
+                return Node.this;
+            }
+
+            @Override
+            public String getName() {
+                return "localToSceneTransform";
+            }
+
+            @Override
+            protected boolean validityKnown() {
+                return listenerReasons > 0;
+            }
+
+            @Override
+            protected int computeValidity() {
+                if (valid != VALIDITY_UNKNOWN) {
+                    return valid;
+                }
+
+                Node n = (Node) getBean();
+                Node parent = n.getParent();
+
+                if (parent != null) {
+                    final LocalToSceneTransformProperty parentProperty =
+                            (LocalToSceneTransformProperty) parent.localToSceneTransformProperty();
+
+                    if (parentStamp != parentProperty.stamp) {
+                        valid = INVALID;
+                        return INVALID;
+                    }
+
+                    int parentValid = parentProperty.computeValidity();
+                    if (parentValid == INVALID) {
+                        valid = INVALID;
+                    }
+                    return parentValid;
+                }
+
+                // Validity unknown for root means it is valid
+                return VALID;
+            }
+
+            @Override
+            public void addListener(InvalidationListener listener) {
+                incListenerReasons();
+                if (localToSceneListeners == null) {
+                    localToSceneListeners = new LinkedList<Object>();
+                }
+                localToSceneListeners.add(listener);
+                super.addListener(listener);
+            }
+
+            @Override
+            public void addListener(ChangeListener<? super Transform> listener) {
+                incListenerReasons();
+                if (localToSceneListeners == null) {
+                    localToSceneListeners = new LinkedList<Object>();
+                }
+                localToSceneListeners.add(listener);
+                super.addListener(listener);
+            }
+
+            @Override
+            public void removeListener(InvalidationListener listener) {
+                if (localToSceneListeners != null &&
+                        localToSceneListeners.remove(listener)) {
+                    decListenerReasons();
+                }
+                super.removeListener(listener);
+            }
+
+            @Override
+            public void removeListener(ChangeListener<? super Transform> listener) {
+                if (localToSceneListeners != null &&
+                        localToSceneListeners.remove(listener)) {
+                    decListenerReasons();
+                }
+                super.removeListener(listener);
+            }
+        }
+
         public final ReadOnlyObjectProperty<Transform> localToSceneTransformProperty() {
             if (localToSceneTransform == null) {
-                localToSceneTransform = new LazyTransformProperty() {
-                    // need this to track number of listeners
-                    private List localToSceneListeners;
-
-                    @Override
-                    protected Transform computeTransform(Transform reuse) {
-                        updateLocalToParentTransform();
-
-                        Node parentNode = Node.this.getParent();
-                        if (parentNode != null) {
-                            return TransformUtils.immutableTransform(reuse,
-                                    ((LazyTransformProperty) parentNode.localToSceneTransformProperty()).getInternalValue(),
-                                    ((LazyTransformProperty) localToParentTransformProperty()).getInternalValue());
-                        } else {
-                            return TransformUtils.immutableTransform(reuse,
-                                    ((LazyTransformProperty) localToParentTransformProperty()).getInternalValue());
-                        }
-                    }
-
-                    @Override
-                    public Object getBean() {
-                        return Node.this;
-                    }
-
-                    @Override
-                    public String getName() {
-                        return "localToSceneTransform";
-                    }
-
-                    @Override
-                    protected boolean validityKnown() {
-                        return listenerReasons > 0;
-                    }
-
-                    @Override
-                    protected int computeValidity() {
-                        Node n = (Node) getBean();
-                        while (n != null) {
-                            int nValid = ((LazyTransformProperty)
-                                    n.localToSceneTransformProperty()).valid;
-
-                            if (nValid == VALID) {
-                                return VALID;
-                            } else if (nValid == INVALID) {
-                                return INVALID;
-                            }
-                            n = n.getParent();
-                        }
-
-                        // Everything up to the root is unknown, so there is no invalid parent
-                        return VALID;
-                    }
-
-                    @Override
-                    public void addListener(InvalidationListener listener) {
-                        incListenerReasons();
-                        if (localToSceneListeners == null) {
-                            localToSceneListeners = new LinkedList<Object>();
-                        }
-                        localToSceneListeners.add(listener);
-                        super.addListener(listener);
-                    }
-
-                    @Override
-                    public void addListener(ChangeListener<? super Transform> listener) {
-                        incListenerReasons();
-                        if (localToSceneListeners == null) {
-                            localToSceneListeners = new LinkedList<Object>();
-                        }
-                        localToSceneListeners.add(listener);
-                        super.addListener(listener);
-                    }
-
-                    @Override
-                    public void removeListener(InvalidationListener listener) {
-                        if (localToSceneListeners != null &&
-                                localToSceneListeners.remove(listener)) {
-                            decListenerReasons();
-                        }
-                        super.removeListener(listener);
-                    }
-
-                    @Override
-                    public void removeListener(ChangeListener<? super Transform> listener) {
-                        if (localToSceneListeners != null &&
-                                localToSceneListeners.remove(listener)) {
-                            decListenerReasons();
-                        }
-                        super.removeListener(listener);
-                    }
-                };
+                localToSceneTransform = new LocalToSceneTransformProperty();
             }
 
             return localToSceneTransform;
@@ -8566,7 +8588,7 @@ public abstract class Node implements EventTarget, Styleable {
             helper = ExpressionHelper.removeListener(helper, listener);
         }
 
-        private Transform getInternalValue() {
+        protected Transform getInternalValue() {
             if (valid == INVALID ||
                     (valid == VALIDITY_UNKNOWN && computeValidity() == INVALID)) {
                 transform = computeTransform(canReuse ? transform : null);
