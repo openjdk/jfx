@@ -31,6 +31,7 @@ import com.sun.javafx.geom.transform.GeneralTransform3D;
 import com.sun.javafx.geom.Rectangle;
 import com.sun.javafx.geom.Vec3d;
 import com.sun.javafx.geom.transform.Affine2D;
+import com.sun.javafx.geom.transform.Affine3D;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.prism.CompositeMode;
 import com.sun.prism.Material;
@@ -50,6 +51,7 @@ class ES2Context extends BaseShaderContext {
     // Temporary variables
     private static GeneralTransform3D scratchTx = new GeneralTransform3D();
     private static final GeneralTransform3D flipTx = new GeneralTransform3D();
+    private static Affine3D powerOfTwoCompensation = new Affine3D();
     // contains the combined projection/modelview matrix (elements 0-15)
     private static float rawMatrix[] = new float[GLContext.NUM_MATRIX_ELEMENTS];
 
@@ -241,8 +243,20 @@ class ES2Context extends BaseShaderContext {
             // update projection matrix; this will be uploaded to the shader
             // along with the modelview matrix in updateShaderTransform()
             ((PrismDefaultCamera) camera).validate(w, h);
+            scratchTx = camera.getProjViewTx(scratchTx);
+        } else {
+            scratchTx = camera.getProjViewTx(scratchTx);
+            // TODO: verify that this is the right solution. There may be
+            // other use-cases where rendering needs different viewport size.
+            if (!glContext.canCreateNonPowTwoTextures()) {
+                powerOfTwoCompensation.setToScale(
+                        camera.getViewWidth() / w,
+                        camera.getViewHeight() / h,
+                        1.0);
+                scratchTx.mul(powerOfTwoCompensation);
+            }
         }
-        scratchTx = camera.getProjViewTx(scratchTx);
+
         if (target instanceof ES2RTTexture) {
             // Compute a flipped version of projViewTx
             projViewTx.set(flipTx);

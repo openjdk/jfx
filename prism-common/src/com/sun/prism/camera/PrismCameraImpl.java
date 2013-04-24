@@ -83,6 +83,14 @@ public abstract class PrismCameraImpl {
         this.viewHeight = viewHeight;
     }
 
+    public double getViewWidth() {
+        return viewWidth;
+    }
+
+    public double getViewHeight() {
+        return viewHeight;
+    }
+
     public void setProjViewTransform(GeneralTransform3D projViewTx) {
         this.projViewTx.set(projViewTx);
     }
