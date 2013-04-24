@@ -78,11 +78,13 @@ class J2DTexture extends BaseTexture<J2DTexResource> {
             return null;
         }
         BufferedImage bimg = new BufferedImage(w, h, type);
-        return new J2DTexture(bimg, updater, wrapMode);
+        return new J2DTexture(bimg, format, updater, wrapMode);
     }
 
-    J2DTexture(BufferedImage bimg, Updater updater, WrapMode wrapMode) {
-        super(new J2DTexResource(bimg), PixelFormat.BYTE_RGB, wrapMode,
+    J2DTexture(BufferedImage bimg, PixelFormat format,
+               Updater updater, WrapMode wrapMode)
+    {
+        super(new J2DTexResource(bimg), format, wrapMode,
               bimg.getWidth(), bimg.getHeight());
         this.updater = updater;
     }

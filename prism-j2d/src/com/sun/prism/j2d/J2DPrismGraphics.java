@@ -1037,7 +1037,9 @@ public class J2DPrismGraphics
     }
 
     public void releaseReadBackBuffer(RTTexture view) {
-        target.getReadbackBuffer().unlock();
+        // This will be needed when we track LCD buffer locks and uses.
+        // (See RT-29488)
+//        target.getReadbackBuffer().unlock();
     }
 
     public PrismCameraImpl getCameraNoClone() {

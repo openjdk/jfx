@@ -42,6 +42,7 @@ class J2DRTTexture extends J2DTexture implements RTTexture {
 
     J2DRTTexture(int w, int h, J2DResourceFactory factory) {
         super(new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB_PRE),
+              PixelFormat.INT_ARGB_PRE,
               IntArgbPreUpdater.INT_ARGB_PRE_INSTANCE, WrapMode.CLAMP_TO_ZERO);
         this.factory = factory;
         this.opaque = false;
