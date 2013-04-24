@@ -483,6 +483,7 @@ is being used to size a border should also be in pixels.
     -fx-stroke: transparent;
 }
 
+.titled-pane:show-mnemonics > .mnemonic-underline,
 .label:show-mnemonics > .mnemonic-underline,
 .context-menu:show-mnemonics > .mnemonic-underline,
 .menu:show-mnemonics > .mnemonic-underline,
