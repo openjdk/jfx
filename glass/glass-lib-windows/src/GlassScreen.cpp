@@ -30,8 +30,6 @@
 
 #include "com_sun_glass_ui_Screen.h"
 
-static jclass screenCls = NULL;
-
 static int g_nMonitorCounter = 0;
 static int g_nMonitorLimit = 0;
 
@@ -91,12 +89,21 @@ void GetMonitorSettings(HMONITOR hMonitor, MonitorInfoStruct *mis)
     ::DeleteDC(hDC);
 }
 
+jclass GetScreenCls(JNIEnv *env)
+{
+    static jclass screenCls = NULL;
+    if (!screenCls) {
+        jclass cls = GlassApplication::ClassForName(env, "com.sun.glass.ui.Screen");
+        ASSERT(cls);
+        screenCls = (jclass)env->NewGlobalRef(cls);
+        env->DeleteLocalRef(cls);
+    }
+    return screenCls;
+}
+
 jobject CreateJavaMonitorWithSettings(JNIEnv *env, MonitorInfoStruct *mis)
 {
-    if (screenCls == NULL) {
-        screenCls = GlassApplication::ClassForName(env, "com.sun.glass.ui.Screen");
-        ASSERT(screenCls);
-    }
+    jclass screenCls = GetScreenCls(env);
 
     if (javaIDs.Screen.init == NULL) {
         javaIDs.Screen.init = env->GetMethodID(screenCls, "<init>", "(JIIIIIIIIIIIF)V");
@@ -129,10 +136,8 @@ void GlassScreen::HandleDisplayChange()
 {
     JNIEnv *env = GetEnv();
 
-    if (screenCls == NULL) {
-        screenCls = GlassApplication::ClassForName(env, "com.sun.glass.ui.Screen");
-        ASSERT(screenCls);
-    }
+    jclass screenCls = GetScreenCls(env);
+
     if (javaIDs.Screen.notifySettingsChanged == NULL) {
         javaIDs.Screen.notifySettingsChanged
              = env->GetStaticMethodID(screenCls, "notifySettingsChanged", "()V");
@@ -149,10 +154,7 @@ jobjectArray GlassScreen::CreateJavaScreens(JNIEnv *env)
     g_hmpMonitors = (HMONITOR *)malloc(numMonitors * sizeof(HMONITOR));
     numMonitors = CollectMonitors(numMonitors);
 
-    if (screenCls == NULL) {
-        screenCls = GlassApplication::ClassForName(env, "com.sun.glass.ui.Screen");
-        ASSERT(screenCls);
-    }
+    jclass screenCls = GetScreenCls(env);
 
     jobjectArray jScreens = env->NewObjectArray(numMonitors, screenCls, NULL);
 
