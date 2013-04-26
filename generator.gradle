@@ -185,12 +185,21 @@ task generate << {
              "${RTDir}/javafx-concurrent/src",
              "${RTDir}/javafx-geom/src",
              "${RTDir}/javafx-geom/cagsrc.double",
+             "${RTDir}/javafx-iio/src",
              "${RTDir}/javafx-sg-common/src",
              "${RTDir}/javafx-sg-prism/src",
              "${RTDir}/pisces/src",
              "${RTDir}/glass/glass/src",
              "${RTDir}/javafx-ui-quantum/src",
              "${RTDir}/prism-common/src",
+             "${RTDir}/prism-d3d/src",
+             "${RTDir}/prism-es2/src",
+             "${RTDir}/prism-es2-eglfb/src",
+             "${RTDir}/prism-es2-eglx11/src",
+             "${RTDir}/prism-es2-ios/src",
+             "${RTDir}/prism-es2-mac/src",
+             "${RTDir}/prism-es2-win/src",
+             "${RTDir}/prism-es2-x11/src",
              "${RTDir}/prism-j2d/src",
              "${RTDir}/prism-null/src",
              "${RTDir}/prism-ps/src",
@@ -213,12 +222,21 @@ task generate << {
              "${RTDir}/javafx-concurrent/src",
              "${RTDir}/javafx-geom/src",
              "${RTDir}/javafx-geom/cagsrc.double",
+             "${RTDir}/javafx-iio/src",
              "${RTDir}/javafx-sg-common/src",
              "${RTDir}/javafx-sg-prism/src",
              "${RTDir}/pisces/src",
              "${RTDir}/glass/glass/src",
              "${RTDir}/javafx-ui-quantum/src",
              "${RTDir}/prism-common/src",
+             "${RTDir}/prism-d3d/src",
+             "${RTDir}/prism-es2/src",
+             "${RTDir}/prism-es2-eglfb/src",
+             "${RTDir}/prism-es2-eglx11/src",
+             "${RTDir}/prism-es2-ios/src",
+             "${RTDir}/prism-es2-mac/src",
+             "${RTDir}/prism-es2-win/src",
+             "${RTDir}/prism-es2-x11/src",
              "${RTDir}/prism-j2d/src",
              "${RTDir}/prism-null/src",
              "${RTDir}/prism-ps/src",
@@ -296,8 +314,23 @@ task generate << {
     }
 
     copy {
+        from "${RTDir}/javafx-iio-native/src"
+        into "${FXDir}/modules/graphics/src/main/native-iio"
+    }
+
+    copy {
         from "${RTDir}/prism-common-native/src"
         into "${FXDir}/modules/graphics/src/main/native-prism"
+    }
+
+    copy {
+        from "${RTDir}/prism-d3d-native/src"
+        into "${FXDir}/modules/graphics/src/main/native-prism-d3d"
+    }
+
+    copy {
+        from "${RTDir}/prism-es2-native/src"
+        into "${FXDir}/modules/graphics/src/main/native-prism-es2"
     }
 
     copy {

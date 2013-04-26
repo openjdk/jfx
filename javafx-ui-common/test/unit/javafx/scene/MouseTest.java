@@ -37,8 +37,11 @@ import org.junit.Test;
 import com.sun.javafx.pgstub.StubScene;
 import com.sun.javafx.pgstub.StubToolkit;
 import com.sun.javafx.tk.Toolkit;
+import javafx.scene.paint.Color;
 
 public class MouseTest {
+
+    private boolean called;
 
     @Test
     public void moveShouldBubbleToParent() {
@@ -986,6 +989,53 @@ public class MouseTest {
         assertFalse(scene.smallSquareTracker.wasMoved());
         assertTrue(scene.bigSquareTracker.wasMoved());
         assertTrue(scene.groupTracker.wasMoved());
+    }
+
+    @Test
+    public void subSceneShouldBePickedOnFill() {
+        final MouseEventGenerator generator = new MouseEventGenerator();
+        final Group root = new Group();
+        final Scene scene = new Scene(root, 400, 400);
+        final SubScene sub = new SubScene(new Group(), 100, 100);
+        sub.setTranslateX(100);
+        sub.setTranslateY(100);
+        sub.setFill(Color.BLACK);
+        root.getChildren().add(sub);
+
+        scene.addEventFilter(MouseEvent.MOUSE_MOVED, new EventHandler<MouseEvent>() {
+            @Override public void handle(MouseEvent event) {
+                assertSame(sub, event.getTarget());
+                called = true;
+            }
+        });
+
+        called = false;
+        scene.impl_processMouseEvent(generator.generateMouseEvent(
+                MouseEvent.MOUSE_MOVED, 150, 150));
+        assertTrue(called);
+    }
+
+    @Test
+    public void subSceneShouldNotBePickedWithoutFill() {
+        final MouseEventGenerator generator = new MouseEventGenerator();
+        final Group root = new Group();
+        final Scene scene = new Scene(root, 400, 400);
+        final SubScene sub = new SubScene(new Group(), 100, 100);
+        sub.setTranslateX(100);
+        sub.setTranslateY(100);
+        root.getChildren().add(sub);
+
+        scene.addEventFilter(MouseEvent.MOUSE_MOVED, new EventHandler<MouseEvent>() {
+            @Override public void handle(MouseEvent event) {
+                assertSame(scene, event.getTarget());
+                called = true;
+            }
+        });
+
+        called = false;
+        scene.impl_processMouseEvent(generator.generateMouseEvent(
+                MouseEvent.MOUSE_MOVED, 150, 150));
+        assertTrue(called);
     }
 
     private static class SimpleTestScene {

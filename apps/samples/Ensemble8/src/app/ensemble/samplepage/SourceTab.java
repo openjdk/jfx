@@ -60,6 +60,7 @@ class SourceTab extends Tab {
         switch (ext) {
             case ".java":
             case ".css":
+            case ".fxml":
                 String source = Utils.loadFile(getClass().getResource(url));
                 if (EnsembleApp.IS_BEAGLE) {
                     // TODO: Convert to TextFlow

@@ -474,23 +474,27 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
             [self sendJavaMouseEvent:eeEvent];
         }
 
-        jint modifiers = GetJavaModifiers(theEvent);
-        if (type != com_sun_glass_events_MouseEvent_UP)
-        {
-            switch (button)
+        jint modifiers = GetJavaKeyModifiers(theEvent);
+        if (type != com_sun_glass_events_MouseEvent_ENTER &&
+            type != com_sun_glass_events_MouseEvent_EXIT) {
+            modifiers |= GetJavaMouseModifiers([NSEvent pressedMouseButtons]);
+            if (type != com_sun_glass_events_MouseEvent_UP)
             {
-                case com_sun_glass_events_MouseEvent_BUTTON_LEFT:
-                    modifiers |= com_sun_glass_events_KeyEvent_MODIFIER_BUTTON_PRIMARY;
-                    break;
-                case com_sun_glass_events_MouseEvent_BUTTON_RIGHT:
-                    modifiers |= com_sun_glass_events_KeyEvent_MODIFIER_BUTTON_SECONDARY;
-                    break;
-                case com_sun_glass_events_MouseEvent_BUTTON_OTHER:
-                    modifiers |= com_sun_glass_events_KeyEvent_MODIFIER_BUTTON_MIDDLE;
-                    break;
+                switch (button)
+                {
+                    case com_sun_glass_events_MouseEvent_BUTTON_LEFT:
+                        modifiers |= com_sun_glass_events_KeyEvent_MODIFIER_BUTTON_PRIMARY;
+                        break;
+                    case com_sun_glass_events_MouseEvent_BUTTON_RIGHT:
+                        modifiers |= com_sun_glass_events_KeyEvent_MODIFIER_BUTTON_SECONDARY;
+                        break;
+                    case com_sun_glass_events_MouseEvent_BUTTON_OTHER:
+                        modifiers |= com_sun_glass_events_KeyEvent_MODIFIER_BUTTON_MIDDLE;
+                        break;
+                }
             }
         }
-        
+                
         jboolean isSynthesized = JNI_FALSE;
         
         jboolean isPopupTrigger = JNI_FALSE;

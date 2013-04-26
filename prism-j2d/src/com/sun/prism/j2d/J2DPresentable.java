@@ -248,6 +248,7 @@ public abstract class J2DPresentable implements Presentable {
             readbackBuffer = (J2DRTTexture)
                 factory.createRTTexture(getContentWidth(), getContentHeight(),
                                         WrapMode.CLAMP_NOT_NEEDED);
+            readbackBuffer.makePermanent();
         }
         return readbackBuffer;
     }

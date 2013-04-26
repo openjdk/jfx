@@ -634,7 +634,7 @@ public class SubScene extends Node {
                     localPickRay, boundsDistance);
             final PickResult subSceneResult =
                     pickRootSG(intersectPt.getX(), intersectPt.getY());
-            if (result != null) {
+            if (subSceneResult != null) {
                 result.offerSubScenePickResult(this, subSceneResult, boundsDistance);
             } else if (isPickOnBounds() ||
                     subSceneComputeContains(intersectPt.getX(), intersectPt.getY())) {
