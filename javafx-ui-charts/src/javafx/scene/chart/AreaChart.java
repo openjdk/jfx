@@ -296,6 +296,7 @@ public class AreaChart<X,Y> extends XYChart<X,Y> {
                             item.getCurrentX())),
                             new KeyFrame(Duration.millis(800), new EventHandler<ActionEvent>() {
                                 @Override public void handle(ActionEvent actionEvent) {
+                                    item.setSeries(null);
                                     getPlotChildren().remove(symbol);
                                     removeDataItemFromDisplay(series, item);
                                 }
@@ -307,6 +308,7 @@ public class AreaChart<X,Y> extends XYChart<X,Y> {
                 );
             }
         } else {
+            item.setSeries(null);
             getPlotChildren().remove(symbol);
             removeDataItemFromDisplay(series, item);
         }

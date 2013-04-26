@@ -1213,7 +1213,7 @@ public abstract class XYChart<X,Y> extends Chart {
         private boolean setToRemove = false;
         /** The series this data belongs to */
         private Series<X,Y> series;
-        private void setSeries(Series<X,Y> series) {
+        void setSeries(Series<X,Y> series) {
             this.series = series;
         }
 
@@ -1479,7 +1479,6 @@ public abstract class XYChart<X,Y> extends Chart {
                     }
                     // update data items reference to series
                     for (Data<X,Y> item : c.getRemoved()) {
-                        item.setSeries(null);
                         item.setToRemove = true;
                     }
                     if (c.getAddedSize() > 0) {
