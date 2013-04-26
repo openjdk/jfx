@@ -143,8 +143,13 @@ public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehav
     private final InvalidationListener nodeListener = new InvalidationListener() {
         @Override public void invalidated(Observable valueModel) {
             if (nodeWidth != -1.0 && nodeHeight != -1.0) {
-                // if new size causes scrollbar visibility to change, then need to relayout
-                if (vsbvis != determineVerticalSBVisible() || hsbvis != determineHorizontalSBVisible()) {
+                /*
+                ** if the new size causes scrollbar visibility to change, then need to relayout
+                ** we also need to correct the thumb size when the scrollnode's size changes 
+                */
+                if (vsbvis != determineVerticalSBVisible() || hsbvis != determineHorizontalSBVisible() ||
+                    (scrollNode.getLayoutBounds().getWidth() != 0.0  && nodeWidth != scrollNode.getLayoutBounds().getWidth()) ||
+                    (scrollNode.getLayoutBounds().getHeight() != 0.0 && nodeHeight != scrollNode.getLayoutBounds().getHeight())) {
                     getSkinnable().requestLayout();
                 } else {
                     // otherwise just update scrollbars based on new scrollNode size
