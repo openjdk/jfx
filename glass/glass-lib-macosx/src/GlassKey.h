@@ -26,6 +26,9 @@
 #import <jni.h>
 #import <Cocoa/Cocoa.h>
 
+
+jint GetJavaKeyModifiers(NSEvent *event);
+jint GetJavaMouseModifiers(NSUInteger buttons);
 jint GetJavaModifiers(NSEvent *event);
 jint GetJavaKeyCodeFor(unsigned short keyCode);
 jint GetJavaKeyCode(NSEvent *event);

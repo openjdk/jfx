@@ -177,10 +177,10 @@ static const struct KeyMapEntry gKeyMap[] =
 };
 static const int gKeyMapSize = sizeof(gKeyMap) / sizeof(struct KeyMapEntry);
 
-jint GetJavaModifiers(NSEvent *event)
+jint GetJavaKeyModifiers(NSEvent *event)
 {
     jint jModifiers = 0;
-    
+
     NSUInteger modifierFlags = ([event modifierFlags] & NSDeviceIndependentModifierFlagsMask);
     if (((modifierFlags & NSShiftKeyMask) != 0) == YES)
     {
@@ -202,8 +202,12 @@ jint GetJavaModifiers(NSEvent *event)
     {
         jModifiers |= com_sun_glass_events_KeyEvent_MODIFIER_COMMAND;
     }
+    return jModifiers;
+}
 
-    NSUInteger buttons = [NSEvent pressedMouseButtons];
+jint GetJavaMouseModifiers(NSUInteger buttons)
+{
+    jint jModifiers = 0;
     if (buttons & (1 << 0)) {
         jModifiers |= com_sun_glass_events_KeyEvent_MODIFIER_BUTTON_PRIMARY;
     }
@@ -213,8 +217,12 @@ jint GetJavaModifiers(NSEvent *event)
     if (buttons & (1 << 2)) {
         jModifiers |= com_sun_glass_events_KeyEvent_MODIFIER_BUTTON_MIDDLE;
     }
-    
     return jModifiers;
+}
+
+jint GetJavaModifiers(NSEvent *event)
+{
+    return GetJavaKeyModifiers(event) | GetJavaMouseModifiers([NSEvent pressedMouseButtons]);
 }
 
 jint GetJavaKeyCodeFor(unsigned short keyCode)
