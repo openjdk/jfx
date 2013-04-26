@@ -56,6 +56,11 @@
  */
 defaultTasks = ["assemble"]
 
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
+import java.util.concurrent.Future
+
 /******************************************************************************
  *                              Utility methods                               *
  *****************************************************************************/
@@ -623,6 +628,17 @@ project(":graphics") {
     linkPrism.linkParams.addAll(PRISM_LINK_FLAGS);
     linkPrism.lib = file("$project.buildDir/libs/${COMPILE_TARGET.name}/${library('prism-common')}");
 
+    // Add the tasks for native compilation of IIO
+    addNative(project, "IIO")
+    javahIIO.include "com/sun/javafx/iio/**/*"
+    ccIIO.compiler = PRISM_CC;
+    ccIIO.params.addAll(CC_FLAGS);
+    ccIIO.source (file("src/main/native-iio"),
+                 file("src/main/native-iio/libjpeg7"));
+                 // NOTE THERE IS AN IOS DIRECTORY HERE TOO
+    linkIIO.linkParams.addAll(LINK_FLAGS);
+    linkIIO.lib = file("$project.buildDir/libs/${COMPILE_TARGET.name}/${library('javafx-iio')}");
+
     // Add the tasks for native compilation of Prism Software Pipeline
     addNative(project, "PrismSW")
     javahPrismSW.include "com/sun/pisces/**/*"
@@ -631,6 +647,138 @@ project(":graphics") {
     ccPrismSW.source(file("src/main/native-prism-sw"));
     linkPrismSW.linkParams.addAll(PRISM_SW_LINK_FLAGS);
     linkPrismSW.lib = file("$project.buildDir/libs/${COMPILE_TARGET.name}/${library('prism-sw')}");
+
+
+    if (IS_WINDOWS) {
+        addNative(project, "PrismD3D")
+        javahPrismD3D {
+            enabled = IS_WINDOWS
+            include "com/sun/prism/d3d/**/*"
+        }
+
+        // TODO need to hook this up to be executed only if PassThroughVS.h is missing or PassThroughVS.hlsl is changed
+        task generateD3DHeaders(group: "Build") {
+            enabled = IS_WINDOWS
+            dependsOn javahPrismD3D
+            description = "Generate headers by compiling hlsl files"
+            doLast {
+                mkdir file("$buildDir/headers/PrismD3D/hlsl")
+                def PS_3D_SRC = file("src/main/native-prism-d3d/hlsl/Mtl1PS.hlsl")
+                def VS_3D_SRC = file("src/main/native-prism-d3d/hlsl/Mtl1VS.hlsl")
+                def PASSTHROUGH_VS_SRC = file("src/main/native-prism-d3d/PassThroughVS.hlsl")
+                def jobs = [
+                        ["$FXC", "/nologo", "/T", "vs_3_0", "/Fh", "$buildDir/headers/PrismD3D/PassThroughVS.h", "/E", "passThrough", "$PASSTHROUGH_VS_SRC"],
+                        ["$FXC", "/nologo", "/T", "ps_2_0", "/Fh", "$buildDir/headers/PrismD3D/hlsl/Mtl1PS.h", "/DSpec=0", "/DSType=0", "$PS_3D_SRC"],
+                        ["$FXC", "/nologo", "/T", "ps_2_0", "/Fh", "$buildDir/headers/PrismD3D/hlsl/Mtl1PS_i.h", "/DSpec=0", "/DSType=0", "/DIllumMap=1", "$PS_3D_SRC"],
+                        ["$FXC", "/nologo", "/T", "ps_2_0", "/Fh", "$buildDir/headers/PrismD3D/hlsl/Mtl1PS_s1n.h", "/DSpec=1", "/DSType=0", "$PS_3D_SRC"],
+                        ["$FXC", "/nologo", "/T", "ps_2_0", "/Fh", "$buildDir/headers/PrismD3D/hlsl/Mtl1PS_s2n.h", "/DSpec=2", "/DSType=0", "$PS_3D_SRC"],
+                        ["$FXC", "/nologo", "/T", "ps_2_0", "/Fh", "$buildDir/headers/PrismD3D/hlsl/Mtl1PS_s3n.h", "/DSpec=3", "/DSType=0", "$PS_3D_SRC"],
+                        ["$FXC", "/nologo", "/T", "ps_2_0", "/Fh", "$buildDir/headers/PrismD3D/hlsl/Mtl1PS_s1a.h", "/DSpec=1", "/DSType=1", "$PS_3D_SRC"],
+                        ["$FXC", "/nologo", "/T", "ps_2_0", "/Fh", "$buildDir/headers/PrismD3D/hlsl/Mtl1PS_s2a.h", "/DSpec=2", "/DSType=1", "$PS_3D_SRC"],
+                        ["$FXC", "/nologo", "/T", "ps_2_0", "/Fh", "$buildDir/headers/PrismD3D/hlsl/Mtl1PS_s3a.h", "/DSpec=3", "/DSType=1", "$PS_3D_SRC"],
+                        ["$FXC", "/nologo", "/T", "ps_2_0", "/Fh", "$buildDir/headers/PrismD3D/hlsl/Mtl1PS_s1s.h", "/DSpec=1", "/DSType=2", "$PS_3D_SRC"],
+                        ["$FXC", "/nologo", "/T", "ps_2_0", "/Fh", "$buildDir/headers/PrismD3D/hlsl/Mtl1PS_s2s.h", "/DSpec=2", "/DSType=2", "$PS_3D_SRC"],
+                        ["$FXC", "/nologo", "/T", "ps_2_0", "/Fh", "$buildDir/headers/PrismD3D/hlsl/Mtl1PS_s3s.h", "/DSpec=3", "/DSType=2", "$PS_3D_SRC"],
+                        ["$FXC", "/nologo", "/T", "ps_2_0", "/Fh", "$buildDir/headers/PrismD3D/hlsl/Mtl1PS_b1n.h", "/DSpec=1", "/DSType=0", "/DBump=1", "$PS_3D_SRC"],
+                        ["$FXC", "/nologo", "/T", "ps_2_0", "/Fh", "$buildDir/headers/PrismD3D/hlsl/Mtl1PS_b2n.h", "/DSpec=2", "/DSType=0", "/DBump=1", "$PS_3D_SRC"],
+                        ["$FXC", "/nologo", "/T", "ps_2_0", "/Fh", "$buildDir/headers/PrismD3D/hlsl/Mtl1PS_b3n.h", "/DSpec=3", "/DSType=0", "/DBump=1", "$PS_3D_SRC"],
+                        ["$FXC", "/nologo", "/T", "ps_2_0", "/Fh", "$buildDir/headers/PrismD3D/hlsl/Mtl1PS_b1a.h", "/DSpec=1", "/DSType=1", "/DBump=1", "$PS_3D_SRC"],
+                        ["$FXC", "/nologo", "/T", "ps_2_0", "/Fh", "$buildDir/headers/PrismD3D/hlsl/Mtl1PS_b2a.h", "/DSpec=2", "/DSType=1", "/DBump=1", "$PS_3D_SRC"],
+                        ["$FXC", "/nologo", "/T", "ps_2_0", "/Fh", "$buildDir/headers/PrismD3D/hlsl/Mtl1PS_b3a.h", "/DSpec=3", "/DSType=1", "/DBump=1", "$PS_3D_SRC"],
+                        ["$FXC", "/nologo", "/T", "ps_2_0", "/Fh", "$buildDir/headers/PrismD3D/hlsl/Mtl1PS_b1s.h", "/DSpec=1", "/DSType=2", "/DBump=1", "$PS_3D_SRC"],
+                        ["$FXC", "/nologo", "/T", "ps_2_0", "/Fh", "$buildDir/headers/PrismD3D/hlsl/Mtl1PS_b2s.h", "/DSpec=2", "/DSType=2", "/DBump=1", "$PS_3D_SRC"],
+                        ["$FXC", "/nologo", "/T", "ps_2_0", "/Fh", "$buildDir/headers/PrismD3D/hlsl/Mtl1PS_b3s.h", "/DSpec=3", "/DSType=2", "/DBump=1", "$PS_3D_SRC"],
+                        ["$FXC", "/nologo", "/T", "ps_2_0", "/Fh", "$buildDir/headers/PrismD3D/hlsl/Mtl1PS_s1ni.h", "/DSpec=1", "/DSType=0", "/DIllumMap=1", "$PS_3D_SRC"],
+                        ["$FXC", "/nologo", "/T", "ps_2_0", "/Fh", "$buildDir/headers/PrismD3D/hlsl/Mtl1PS_s2ni.h", "/DSpec=2", "/DSType=0", "/DIllumMap=1", "$PS_3D_SRC"],
+                        ["$FXC", "/nologo", "/T", "ps_2_0", "/Fh", "$buildDir/headers/PrismD3D/hlsl/Mtl1PS_s3ni.h", "/DSpec=3", "/DSType=0", "/DIllumMap=1", "$PS_3D_SRC"],
+                        ["$FXC", "/nologo", "/T", "ps_2_0", "/Fh", "$buildDir/headers/PrismD3D/hlsl/Mtl1PS_s1ai.h", "/DSpec=1", "/DSType=1", "/DIllumMap=1", "$PS_3D_SRC"],
+                        ["$FXC", "/nologo", "/T", "ps_2_0", "/Fh", "$buildDir/headers/PrismD3D/hlsl/Mtl1PS_s2ai.h", "/DSpec=2", "/DSType=1", "/DIllumMap=1", "$PS_3D_SRC"],
+                        ["$FXC", "/nologo", "/T", "ps_2_0", "/Fh", "$buildDir/headers/PrismD3D/hlsl/Mtl1PS_s3ai.h", "/DSpec=3", "/DSType=1", "/DIllumMap=1", "$PS_3D_SRC"],
+                        ["$FXC", "/nologo", "/T", "ps_2_0", "/Fh", "$buildDir/headers/PrismD3D/hlsl/Mtl1PS_s1si.h", "/DSpec=1", "/DSType=2", "/DIllumMap=1", "$PS_3D_SRC"],
+                        ["$FXC", "/nologo", "/T", "ps_2_0", "/Fh", "$buildDir/headers/PrismD3D/hlsl/Mtl1PS_s2si.h", "/DSpec=2", "/DSType=2", "/DIllumMap=1", "$PS_3D_SRC"],
+                        ["$FXC", "/nologo", "/T", "ps_2_0", "/Fh", "$buildDir/headers/PrismD3D/hlsl/Mtl1PS_s3si.h", "/DSpec=3", "/DSType=2", "/DIllumMap=1", "$PS_3D_SRC"],
+                        ["$FXC", "/nologo", "/T", "ps_2_0", "/Fh", "$buildDir/headers/PrismD3D/hlsl/Mtl1PS_b1ni.h", "/DSpec=1", "/DSType=0", "/DBump=1", "/DIllumMap=1", "$PS_3D_SRC"],
+                        ["$FXC", "/nologo", "/T", "ps_2_0", "/Fh", "$buildDir/headers/PrismD3D/hlsl/Mtl1PS_b2ni.h", "/DSpec=2", "/DSType=0", "/DBump=1", "/DIllumMap=1", "$PS_3D_SRC"],
+                        ["$FXC", "/nologo", "/T", "ps_2_0", "/Fh", "$buildDir/headers/PrismD3D/hlsl/Mtl1PS_b3ni.h", "/DSpec=3", "/DSType=0", "/DBump=1", "/DIllumMap=1", "$PS_3D_SRC"],
+                        ["$FXC", "/nologo", "/T", "ps_2_0", "/Fh", "$buildDir/headers/PrismD3D/hlsl/Mtl1PS_b1ai.h", "/DSpec=1", "/DSType=1", "/DBump=1", "/DIllumMap=1", "$PS_3D_SRC"],
+                        ["$FXC", "/nologo", "/T", "ps_2_0", "/Fh", "$buildDir/headers/PrismD3D/hlsl/Mtl1PS_b2ai.h", "/DSpec=2", "/DSType=1", "/DBump=1", "/DIllumMap=1", "$PS_3D_SRC"],
+                        ["$FXC", "/nologo", "/T", "ps_2_0", "/Fh", "$buildDir/headers/PrismD3D/hlsl/Mtl1PS_b3ai.h", "/DSpec=3", "/DSType=1", "/DBump=1", "/DIllumMap=1", "$PS_3D_SRC"],
+                        ["$FXC", "/nologo", "/T", "ps_2_0", "/Fh", "$buildDir/headers/PrismD3D/hlsl/Mtl1PS_b1si.h", "/DSpec=1", "/DSType=2", "/DBump=1", "/DIllumMap=1", "$PS_3D_SRC"],
+                        ["$FXC", "/nologo", "/T", "ps_2_0", "/Fh", "$buildDir/headers/PrismD3D/hlsl/Mtl1PS_b2si.h", "/DSpec=2", "/DSType=2", "/DBump=1", "/DIllumMap=1", "$PS_3D_SRC"],
+                        ["$FXC", "/nologo", "/T", "ps_2_0", "/Fh", "$buildDir/headers/PrismD3D/hlsl/Mtl1PS_b3si.h", "/DSpec=3", "/DSType=2", "/DBump=1", "/DIllumMap=1", "$PS_3D_SRC"],
+                        ["$FXC", "/nologo", "/T", "vs_2_0", "/Fh", "$buildDir/headers/PrismD3D/hlsl/Mtl1VS_Obj.h", "/DVertexType=ObjVertex", "$VS_3D_SRC"]
+                ]
+                final ExecutorService executor = Executors.newFixedThreadPool(Integer.parseInt(project.NUM_COMPILE_THREADS.toString()));
+                final CountDownLatch latch = new CountDownLatch(jobs.size());
+                List futures = new ArrayList<Future>();
+                jobs.each { cmd ->
+                    futures.add(executor.submit(new Runnable() {
+                        @Override public void run() {
+                            try {
+                                exec {
+                                    commandLine cmd
+                                }
+                            } finally {
+                                latch.countDown();
+                            }
+                        }
+                    }));
+                }
+                latch.await();
+                // Looking for whether an exception occurred while executing any of the futures.
+                // By calling "get()" on each future an exception will be thrown if one had occurred
+                // on the background thread.
+                futures.each {it.get();}
+            }
+        }
+
+        ccPrismD3D {
+            // TODO have to compile the hlsl files. How to do that?
+            enabled = IS_WINDOWS
+            params.addAll(PRISM_D3D_CC_FLAGS);
+            source file("src/main/native-prism-d3d"),
+                    file("src/main/native-prism-d3d/hlsl")
+            dependsOn generateD3DHeaders
+        }
+
+        linkPrismD3D {
+            enabled = IS_WINDOWS
+            lib = file("$project.buildDir/libs/${COMPILE_TARGET.name}/${library('prism-d3d')}")
+            linkParams.addAll(PRISM_D3D_LINK_FLAGS);
+            linkParams.add("user32.lib");
+        }
+    }
+
+    addNative(project, "PrismES2")
+    javahPrismES2 {
+        include "com/sun/prism/es2/**/*"
+    }
+
+    ccPrismES2 {
+        if (IS_WINDOWS){
+            params.addAll(["/Ob1", "/GF", "/Gy", "/GS"])
+        }
+        params.addAll([
+                IS_WINDOWS ? "/DWIN32" : IS_MAC ? "-DMACOSX" : IS_LINUX ? "-DLINUX" : "-DUNIX",
+                "-DGRADLE_BUILD"])
+        params.addAll(CC_FLAGS);
+
+        source file("src/main/native-prism-es2"),
+                file("src/main/native-prism-es2/GL"),
+                COMPILE_TARGET.name == "mac" ? file("src/main/native-prism-es2/macosx") :
+                COMPILE_TARGET.name == "win" ? file("src/main/native-prism-es2/windows") :
+                COMPILE_TARGET.name == "linux" ? file("src/main/native-prism-es2/x11") :
+                COMPILE_TARGET.name == "armhf" || COMPILE_TARGET.name == "armvfp" ?
+                    [file("src/main/native-prism-es2/eglfb"), file("src/main/native-prism-es2/eglx11")] :
+                COMPILE_TARGET.name == "ios" ? file("src/main/native-prism-es2/ios") : null
+                // TODO what about compile target of swt? Is 'null' OK in that case?
+    }
+
+    linkPrismES2 {
+        lib = file("$project.buildDir/libs/${COMPILE_TARGET.name}/${library('prism-es2')}")
+        linkParams.addAll(LINK_FLAGS);
+        if (IS_WINDOWS) linkParams.addAll(["/SUBSYSTEM:WINDOWS", "opengl32.lib", "gdi32.lib", "user32.lib", "kernel32.lib"])
+    }
 
     // The Decora and Prism JSL files have to be generated in a very specific set of steps.
     //      1) Compile the *Compile.java classes. These live in src/main/jsl-* and will be
@@ -1191,8 +1339,13 @@ task sdk {
         copy {
             from("modules/graphics/build/libs/${COMPILE_TARGET.name}/${library('decora-sse')}",
                  "modules/graphics/build/libs/${COMPILE_TARGET.name}/${library('prism-common')}",
+                 "modules/graphics/build/libs/${COMPILE_TARGET.name}/${library('javafx-iio')}",
+                 "modules/graphics/build/libs/${COMPILE_TARGET.name}/${library('prism-es2')}",
                  "modules/graphics/build/libs/${COMPILE_TARGET.name}/${library('prism-sw')}",
                  "modules/graphics/build/libs/${COMPILE_TARGET.name}/${library('glass')}");
+            if (IS_WINDOWS) {
+                from ("modules/graphics/build/libs/${COMPILE_TARGET.name}/${library('prism-d3d')}");
+            }
             if (IS_WINDOWS) {
                 rename("lib(.*).dll", "\$1.dll");
             }
@@ -1548,6 +1701,8 @@ project(":base") {
         }
     }
 }
+
+// TODO need to do the iOS stuff (ios package of prism-es2-native, ios package of javafx-iio-native)
 
 project(":graphics") {
     idea {
