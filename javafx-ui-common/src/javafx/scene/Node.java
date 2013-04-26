@@ -841,7 +841,7 @@ public abstract class Node implements EventTarget, Styleable {
     }
 
     /**
-     * Exists for Parent
+     * Exists for Parent and LightBase
      */
     void scenesChanged(final Scene newScene, final SubScene newSubScene,
                        final Scene oldScene, final SubScene oldSubScene) { }

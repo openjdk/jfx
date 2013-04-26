@@ -185,6 +185,24 @@ public abstract class LightBase extends Node {
         return scope;
     }
 
+    @Override
+    void scenesChanged(final Scene newScene, final SubScene newSubScene,
+                       final Scene oldScene, final SubScene oldSubScene) {
+        // This light is owned by the Scene/SubScene, and thus must change
+        // accordingly. Note lights can owned by either a Scene or SubScene,
+        // but not both.
+        if (oldSubScene != null) {
+            oldSubScene.removeLight(this);
+        } else if (oldScene != null) {
+            oldScene.removeLight(this);
+        }
+        if (newSubScene != null) {
+            newSubScene.addLight(this);
+        } else if (newScene != null) {
+            newScene.addLight(this);
+        }
+    }
+
     /**
      * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
@@ -219,11 +237,6 @@ public abstract class LightBase extends Node {
             // TODO: 3D - For now, we are treating the scene as world. This may need to change
             // for the fixed eye position case.
             pgLightBase.setWorldTransform(localToSceneTx);
-        }
-        if (getSubScene() == null) {
-            getScene().addLight(this);
-        } else {
-            getSubScene().addLight(this);
         }
     }
 

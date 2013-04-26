@@ -653,22 +653,24 @@ public class SubScene extends Node {
     }
 
 
-    // TODO: 3D - Should avoid the need to do costly linear search and update of 
-    //            lights at every light add and graph sync.
-    private List<LightBase> lights = new ArrayList<LightBase>();
+    private List<LightBase> lights = new ArrayList<>();
 
+    // @param light must not be null
     final void addLight(LightBase light) {
-        // There is only an add light method and no removed method. However, if
-        // a light is no longer attached it will be removed via syncLights.
         if (!lights.contains(light)) {
-            markDirty(SubScene.SubSceneDirtyBits.LIGHTS_DIRTY);
+            markDirty(SubSceneDirtyBits.LIGHTS_DIRTY);
             lights.add(light);
         }
     }
 
+    final void removeLight(LightBase light) {
+        if (lights.remove(light)) {
+            markDirty(SubSceneDirtyBits.LIGHTS_DIRTY);
+        }
+    }
+
     /**
-     * PG Light synchronizer. It will verify if light is attached, if not the
-     * light is removed.
+     * PG Light synchronizer.
      */
     private void syncLights() {
         if (!isDirty(SubSceneDirtyBits.LIGHTS_DIRTY)) {
@@ -680,18 +682,12 @@ public class SubScene extends Node {
             if (lights.isEmpty()) {
                 pgSubScene.setLights(null);
             } else {
-                if (peerLights == null || peerLights.length != lights.size()) {
+                if (peerLights == null || peerLights.length < lights.size()) {
                     peerLights = new PGLightBase[lights.size()];
                 }
                 int i = 0;
                 for (; i < lights.size(); i++) {
-                    LightBase light = lights.get(i);
-                    if (light.getSubScene() == this) {
-                        peerLights[i] = (PGLightBase) light.impl_getPGNode();
-                    } else {
-                        // The light does not belong here
-                        lights.remove(i--);
-                    }
+                    peerLights[i] = lights.get(i).impl_getPGNode();
                 }
                 // Clear the rest of the list
                 while (i < peerLights.length && peerLights[i] != null) {
