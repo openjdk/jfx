@@ -811,6 +811,10 @@ public class Utils {
     }
 
     static void addMnemonics(ContextMenu popup, Scene scene) {
+        addMnemonics(popup, scene, false);
+    }
+
+    static void addMnemonics(ContextMenu popup, Scene scene, boolean initialState) {
 
         if (!com.sun.javafx.PlatformUtil.isMac()) {
 
@@ -839,6 +843,7 @@ public class Utils {
 
                         Mnemonic myMnemonic = new Mnemonic(cmContent.getLabelAt(i), mnemonicKeyCombo);
                         scene.addMnemonic(myMnemonic);
+                        cmContent.getLabelAt(i).impl_setShowMnemonics(initialState);
                     }
                 }
             }

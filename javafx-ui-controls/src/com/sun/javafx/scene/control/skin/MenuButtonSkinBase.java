@@ -212,7 +212,7 @@ public abstract class MenuButtonSkinBase<C extends MenuButton, B extends MenuBut
             }
 
             if (popup.isShowing()) {
-                Utils.addMnemonics(popup, getSkinnable().getScene());
+                Utils.addMnemonics(popup, getSkinnable().getScene(), getSkinnable().impl_isShowMnemonics());
             }
             else {
                 Utils.removeMnemonics(popup, getSkinnable().getScene());

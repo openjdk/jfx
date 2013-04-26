@@ -470,7 +470,7 @@ public class ColorPalette extends VBox {
                         if (isCustom && contextMenu != null) {
                             if (!contextMenu.isShowing()) {
                                 contextMenu.show(ColorSquare.this, Side.RIGHT, 0, 0);
-                                Utils.addMnemonics(contextMenu, ColorSquare.this.getScene());
+                                Utils.addMnemonics(contextMenu, ColorSquare.this.getScene(), colorPicker.impl_isShowMnemonics());
                             }
                             else {
                                 contextMenu.hide();
