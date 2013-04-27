@@ -312,23 +312,40 @@ JNIEXPORT jint JNICALL Java_com_sun_prism_d3d_D3DGraphics_nClear
  * Method:    nSetBlendEnabled
  */
 JNIEXPORT jint JNICALL Java_com_sun_prism_d3d_D3DContext_nSetBlendEnabled
-  (JNIEnv *, jclass, jlong ctx, jboolean enabled, jboolean clear)
+  (JNIEnv *, jclass, jlong ctx, jint d3dmode)
 {
     HRESULT res;
+    D3DBLEND srcBlend, dstBlend;
+    BOOL enable = TRUE;
     D3DContext *pCtx = (D3DContext*)jlong_to_ptr(ctx);
 
     IDirect3DDevice9 *pd3dDevice = pCtx->Get3DDevice();
-    if (enabled) {
-        res = pd3dDevice->SetRenderState(D3DRS_ALPHABLENDENABLE, TRUE);
-        if (clear) {
-            res = pd3dDevice->SetRenderState(D3DRS_SRCBLEND, D3DBLEND_ZERO);
-            res = pd3dDevice->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_ZERO);
-        } else {
-            res = pd3dDevice->SetRenderState(D3DRS_SRCBLEND, D3DBLEND_ONE);
-            res = pd3dDevice->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA);
-        }
-    } else {
-        res = pd3dDevice->SetRenderState(D3DRS_ALPHABLENDENABLE, FALSE);
+
+    switch (d3dmode) {
+        case com_sun_prism_d3d_D3DContext_D3DCOMPMODE_CLEAR:
+            srcBlend = D3DBLEND_ZERO;
+            dstBlend = D3DBLEND_ZERO;
+            break;
+        case com_sun_prism_d3d_D3DContext_D3DCOMPMODE_SRC:
+            enable = FALSE;
+            break;
+        case com_sun_prism_d3d_D3DContext_D3DCOMPMODE_SRCOVER:
+            srcBlend = D3DBLEND_ONE;
+            dstBlend = D3DBLEND_INVSRCALPHA;
+            break;
+        case com_sun_prism_d3d_D3DContext_D3DCOMPMODE_DSTOUT:
+            srcBlend = D3DBLEND_ZERO;
+            dstBlend = D3DBLEND_INVSRCALPHA;
+            break;
+        case com_sun_prism_d3d_D3DContext_D3DCOMPMODE_ADD:
+            srcBlend = D3DBLEND_ONE;
+            dstBlend = D3DBLEND_ONE;
+            break;
+    }
+    res = pd3dDevice->SetRenderState(D3DRS_ALPHABLENDENABLE, enable);
+    if (enable) {
+        res = pd3dDevice->SetRenderState(D3DRS_SRCBLEND, srcBlend);
+        res = pd3dDevice->SetRenderState(D3DRS_DESTBLEND, dstBlend);
     }
 
     return res;

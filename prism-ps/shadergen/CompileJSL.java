@@ -311,6 +311,16 @@ public class CompileJSL {
         compileShader(jslcinfo, fullSource);
     }
 
+    private static void compileMaskTexture(JSLCInfo jslcinfo, String suffix)
+        throws Exception
+    {
+        ShaderInfo maskInfo = getMaskInfo(jslcinfo, MaskType.SOLID);
+        ShaderInfo paintInfo = getPaintInfo(jslcinfo, "MaskTexture" + suffix,
+                                            InputParam.TEXCOORD0, InputParam.TEXCOORD1);
+        ShaderInfo fullSource = getFullSource("Mask_Texture" + suffix, maskInfo, paintInfo);
+        compileShader(jslcinfo, fullSource);
+    }
+
     private static void compileLCDShader(JSLCInfo jslcinfo, String suffix)
         throws Exception
     {
@@ -477,6 +487,7 @@ public class CompileJSL {
 
         // create the basic Solid+Texture* shaders
         compileSolidTexture(jslcinfo, "RGB");
+        compileMaskTexture(jslcinfo, "RGB");
         compileSolidTexture(jslcinfo, "YV12");
         compileSolidTexture(jslcinfo, "FirstPassLCD");
         compileLCDShader(jslcinfo, "SecondPassLCD");

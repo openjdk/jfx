@@ -370,6 +370,12 @@ class ES2Context extends BaseShaderContext {
             case SRC_OVER:
                 glContext.blendFunc(GLContext.GL_ONE, GLContext.GL_ONE_MINUS_SRC_ALPHA);
                 break;
+            case DST_OUT:
+                glContext.blendFunc(GLContext.GL_ZERO, GLContext.GL_ONE_MINUS_SRC_ALPHA);
+                break;
+            case ADD:
+                glContext.blendFunc(GLContext.GL_ONE, GLContext.GL_ONE);
+                break;
             default:
                 throw new InternalError("Unrecognized composite mode: " + mode);
         }

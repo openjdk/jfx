@@ -43,6 +43,7 @@ import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.geom.transform.GeneralTransform3D;
 import com.sun.prism.BasicStroke;
 import com.sun.prism.CompositeMode;
+import com.sun.prism.MaskTextureGraphics;
 import com.sun.prism.RTTexture;
 import com.sun.prism.ReadbackGraphics;
 import com.sun.prism.RenderTarget;
@@ -72,7 +73,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class J2DPrismGraphics
     // Do not subclass BaseGraphics without fixing drawTextureVO below...
-    implements ReadbackGraphics
+    implements ReadbackGraphics, MaskTextureGraphics
     // Do not implement RectShadowGraphics without fixing RT-15016 (note that
     // BaseGraphics implements RectShadowGraphics).
 {
@@ -1013,6 +1014,171 @@ public class J2DPrismGraphics
         drawTexture(tex, dx1, dy1, dx2, dy2, sx1, sy1, sx2, sy2);
         g2d.setComposite(savecomp);
         g2d.setPaint(savepaint);
+    }
+
+    public void drawPixelsMasked(RTTexture imgtex, RTTexture masktex,
+                                 int dx, int dy, int dw, int dh,
+                                 int ix, int iy, int mx, int my)
+    {
+        doDrawMaskTexture((J2DRTTexture) imgtex, (J2DRTTexture) masktex,
+                          dx, dy, dw, dh,
+                          ix, iy, mx, my,
+                          true);
+    }
+
+    public void maskInterpolatePixels(RTTexture imgtex, RTTexture masktex, int dx,
+                                      int dy, int dw, int dh, int ix, int iy,
+                                      int mx, int my) {
+        doDrawMaskTexture((J2DRTTexture) imgtex, (J2DRTTexture) masktex,
+                          dx, dy, dw, dh,
+                          ix, iy, mx, my,
+                          false);
+    }
+
+    private void doDrawMaskTexture(J2DRTTexture imgtex, J2DRTTexture masktex,
+                                   int dx, int dy, int dw, int dh,
+                                   int ix, int iy, int mx, int my,
+                                   boolean srcover)
+    {
+        int cx0 = clipRect.x;
+        int cy0 = clipRect.y;
+        int cx1 = cx0 + clipRect.width;
+        int cy1 = cy0 + clipRect.height;
+
+        if (dw <= 0 || dh <= 0) return;
+        if (dx < cx0) {
+            int bump = cx0 - dx;
+            if ((dw -= bump) <= 0) return;
+            ix += bump;
+            mx += bump;
+            dx = cx0;
+        }
+        if (dy < cy0) {
+            int bump = cy0 - dy;
+            if ((dh -= bump) <= 0) return;
+            iy += bump;
+            my += bump;
+            dy = cy0;
+        }
+        if (dx + dw > cx1 && (dw = cx1 - dx) <= 0) return;
+        if (dy + dh > cy1 && (dh = cy1 - dy) <= 0) return;
+
+        int iw = imgtex.getContentWidth();
+        int ih = imgtex.getContentHeight();
+        if (ix < 0) {
+            if ((dw += ix) <= 0) return;
+            dx -= ix;
+            mx -= ix;
+            ix = 0;
+        }
+        if (iy < 0) {
+            if ((dh += iy) <= 0) return;
+            dy -= iy;
+            my -= iy;
+            iy = 0;
+        }
+        if (ix + dw > iw && (dw = iw - ix) <= 0) return;
+        if (iy + dh > ih && (dh = ih - iy) <= 0) return;
+
+        int mw = masktex.getContentWidth();
+        int mh = masktex.getContentHeight();
+        if (mx < 0) {
+            if ((dw += mx) <= 0) return;
+            dx -= mx;
+            ix -= mx;
+            mx = 0;
+        }
+        if (my < 0) {
+            if ((dh += my) <= 0) return;
+            dy -= my;
+            iy -= my;
+            my = 0;
+        }
+        if (mx + dw > mw && (dw = mw - mx) <= 0) return;
+        if (my + dh > mh && (dh = mh - my) <= 0) return;
+
+        int imgbuf[] = imgtex.getPixels();
+        int maskbuf[] = masktex.getPixels();
+        java.awt.image.DataBuffer db = target.getBackBuffer().getRaster().getDataBuffer();
+        int dstbuf[] = ((java.awt.image.DataBufferInt) db).getData();
+        int iscan = imgtex.getBufferedImage().getWidth();
+        int mscan = masktex.getBufferedImage().getWidth();
+        int dscan = target.getBackBuffer().getWidth();
+        int ioff = iy * iscan + ix;
+        int moff = my * mscan + mx;
+        int doff = dy * dscan + dx;
+        if (srcover) {
+            for (int y = 0; y < dh; y++) {
+                for (int x = 0; x < dw; x++) {
+                    int a, r, g, b;
+                    int maskalpha = maskbuf[moff+x] >>> 24;
+                    if (maskalpha == 0) continue;
+                    int imgpix = imgbuf[ioff+x];
+                    a = (imgpix >>> 24);
+                    if (a == 0) continue;
+                    if (maskalpha < 0xff) {
+                        maskalpha += (maskalpha >> 7);
+                        a *= maskalpha;
+                        r = ((imgpix >>  16) & 0xff) * maskalpha;
+                        g = ((imgpix >>   8) & 0xff) * maskalpha;
+                        b = ((imgpix       ) & 0xff) * maskalpha;
+                    } else if (a < 0xff) {
+                        a <<= 8;
+                        r = ((imgpix >>  16) & 0xff) << 8;
+                        g = ((imgpix >>   8) & 0xff) << 8;
+                        b = ((imgpix       ) & 0xff) << 8;
+                    } else {
+                        dstbuf[doff+x] = imgpix;
+                        continue;
+                    }
+                    maskalpha = ((a + 128) >> 8);
+                    maskalpha += (maskalpha >> 7);
+                    maskalpha = 256 - maskalpha;
+                    imgpix = dstbuf[doff+x];
+                    a += ((imgpix >>> 24)       ) * maskalpha + 128;
+                    r += ((imgpix >>  16) & 0xff) * maskalpha + 128;
+                    g += ((imgpix >>   8) & 0xff) * maskalpha + 128;
+                    b += ((imgpix       ) & 0xff) * maskalpha + 128;
+                    imgpix = ((a >> 8) << 24) +
+                             ((r >> 8) << 16) +
+                             ((g >> 8) <<  8) +
+                             ((b >> 8)      );
+                    dstbuf[doff+x] = imgpix;
+                }
+                ioff += iscan;
+                moff += mscan;
+                doff += dscan;
+            }
+        } else {
+            for (int y = 0; y < dh; y++) {
+                for (int x = 0; x < dw; x++) {
+                    int maskalpha = maskbuf[moff+x] >>> 24;
+                    if (maskalpha == 0) continue;
+                    int imgpix = imgbuf[ioff+x];
+                    if (maskalpha < 0xff) {
+                        maskalpha += (maskalpha >> 7);
+                        int a = ((imgpix >>> 24)       ) * maskalpha;
+                        int r = ((imgpix >>  16) & 0xff) * maskalpha;
+                        int g = ((imgpix >>   8) & 0xff) * maskalpha;
+                        int b = ((imgpix       ) & 0xff) * maskalpha;
+                        maskalpha = 256 - maskalpha;
+                        imgpix = dstbuf[doff+x];
+                        a += ((imgpix >>> 24)       ) * maskalpha + 128;
+                        r += ((imgpix >>  16) & 0xff) * maskalpha + 128;
+                        g += ((imgpix >>   8) & 0xff) * maskalpha + 128;
+                        b += ((imgpix       ) & 0xff) * maskalpha + 128;
+                        imgpix = ((a >> 8) << 24) +
+                                 ((r >> 8) << 16) +
+                                 ((g >> 8) <<  8) +
+                                 ((b >> 8)      );
+                    }
+                    dstbuf[doff+x] = imgpix;
+                }
+                ioff += iscan;
+                moff += mscan;
+                doff += dscan;
+            }
+        }
     }
 
     public boolean canReadBack() {

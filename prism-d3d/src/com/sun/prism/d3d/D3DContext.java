@@ -49,6 +49,12 @@ class D3DContext extends BaseShaderContext {
     public static final int D3DERR_OUTOFVIDEOMEMORY = 0x8876017c;
     public static final int D3D_OK                  = 0x0;
 
+    public static final int D3DCOMPMODE_CLEAR           = 0;
+    public static final int D3DCOMPMODE_SRC             = 1;
+    public static final int D3DCOMPMODE_SRCOVER         = 2;
+    public static final int D3DCOMPMODE_DSTOUT          = 3;
+    public static final int D3DCOMPMODE_ADD             = 4;
+
     public static final int D3DTADDRESS_NOP             = 0;
     public static final int D3DTADDRESS_WRAP            = 1;
     public static final int D3DTADDRESS_MIRROR          = 2;
@@ -101,7 +107,7 @@ class D3DContext extends BaseShaderContext {
     protected void initState() {
         init();
         state = new State();
-        validate(nSetBlendEnabled(pContext, true, false));
+        validate(nSetBlendEnabled(pContext, D3DCOMPMODE_SRCOVER));
         validate(nSetDeviceParametersFor2D(pContext));
     }
 
@@ -291,21 +297,27 @@ class D3DContext extends BaseShaderContext {
 
     @Override
     protected void updateCompositeMode(CompositeMode mode) {
-        int res;
+        int d3dmode;
         switch (mode) {
             case CLEAR:
-                res = nSetBlendEnabled(pContext, true, true);
+                d3dmode = D3DCOMPMODE_CLEAR;
                 break;
             case SRC:
-                res = nSetBlendEnabled(pContext, false, false);
+                d3dmode = D3DCOMPMODE_SRC;
                 break;
             case SRC_OVER:
-                res = nSetBlendEnabled(pContext, true, false);
+                d3dmode = D3DCOMPMODE_SRCOVER;
+                break;
+            case DST_OUT:
+                d3dmode = D3DCOMPMODE_DSTOUT;
+                break;
+            case ADD:
+                d3dmode = D3DCOMPMODE_ADD;
                 break;
             default:
                 throw new InternalError("Unrecognized composite mode: "+mode);
         }
-        validate(res);
+        validate(nSetBlendEnabled(pContext, d3dmode));
     }
 
     void sync() {
@@ -343,8 +355,7 @@ class D3DContext extends BaseShaderContext {
     private static native int nResetClipRect(long pContext);
     private static native int nSetClipRect(long pContext,
         int x1, int y1, int x2, int y2);
-    private static native int nSetBlendEnabled(long pContext,
-        boolean enable, boolean clear);
+    private static native int nSetBlendEnabled(long pContext, int mode);
     private static native int nSetDeviceParametersFor2D(long pContext);
     private static native int nSetDeviceParametersFor3D(long pContext);
 

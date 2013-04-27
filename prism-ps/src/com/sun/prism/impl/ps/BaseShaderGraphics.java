@@ -45,6 +45,7 @@ import com.sun.javafx.font.PrismFontUtils;
 import com.sun.javafx.geom.transform.Affine2D;
 import com.sun.javafx.geom.transform.AffineBase;
 import com.sun.prism.CompositeMode;
+import com.sun.prism.MaskTextureGraphics;
 import com.sun.prism.MultiTexture;
 import com.sun.prism.PixelFormat;
 import com.sun.prism.ReadbackGraphics;
@@ -69,7 +70,7 @@ import java.security.PrivilegedAction;
 
 public abstract class BaseShaderGraphics
     extends BaseGraphics
-    implements ShaderGraphics, ReadbackGraphics
+    implements ShaderGraphics, ReadbackGraphics, MaskTextureGraphics
 {
     private static Affine2D TEMP_TX2D = new Affine2D();
     private static Affine3D TEMP_TX3D = new Affine3D();
@@ -264,6 +265,74 @@ public abstract class BaseShaderGraphics
                          t1x12, t1y12, t1x22, t1y22,
                          t2x11, t2y11, t2x21, t2y21,
                          t2x12, t2y12, t2x22, t2y22);
+    }
+
+    public void drawPixelsMasked(RTTexture imgtex, RTTexture masktex,
+                                 int dx, int dy, int dw, int dh,
+                                 int ix, int iy, int mx, int my)
+    {
+        if (dw <= 0 || dh <= 0) return;
+        float iw = imgtex.getPhysicalWidth();
+        float ih = imgtex.getPhysicalHeight();
+        float mw = masktex.getPhysicalWidth();
+        float mh = masktex.getPhysicalHeight();
+        float dx1 = dx;
+        float dy1 = dy;
+        float dx2 = dx + dw;
+        float dy2 = dy + dh;
+        float ix1 = ix / iw;
+        float iy1 = iy / ih;
+        float ix2 = (ix + dw) / iw;
+        float iy2 = (iy + dh) / ih;
+        float mx1 = mx / mw;
+        float my1 = my / mh;
+        float mx2 = (mx + dw) / mw;
+        float my2 = (my + dh) / mh;
+        context.validateMaskTextureOp(this, IDENT, imgtex, masktex,
+                                      PixelFormat.INT_ARGB_PRE);
+        VertexBuffer vb = context.getVertexBuffer();
+        vb.addQuad(dx1, dy1, dx2, dy2,
+                   ix1, iy1, ix2, iy2,
+                   mx1, my1, mx2, my2);
+    }
+
+    public void maskInterpolatePixels(RTTexture imgtex, RTTexture masktex,
+                                      int dx, int dy, int dw, int dh,
+                                      int ix, int iy, int mx, int my)
+    {
+        if (dw <= 0 || dh <= 0) return;
+        float iw = imgtex.getPhysicalWidth();
+        float ih = imgtex.getPhysicalHeight();
+        float mw = masktex.getPhysicalWidth();
+        float mh = masktex.getPhysicalHeight();
+        float dx1 = dx;
+        float dy1 = dy;
+        float dx2 = dx + dw;
+        float dy2 = dy + dh;
+        float ix1 = ix / iw;
+        float iy1 = iy / ih;
+        float ix2 = (ix + dw) / iw;
+        float iy2 = (iy + dh) / ih;
+        float mx1 = mx / mw;
+        float my1 = my / mh;
+        float mx2 = (mx + dw) / mw;
+        float my2 = (my + dh) / mh;
+        CompositeMode oldmode = getCompositeMode();
+        setCompositeMode(CompositeMode.DST_OUT);
+        context.validateTextureOp(this, IDENT, masktex,
+                                  PixelFormat.INT_ARGB_PRE);
+        VertexBuffer vb = context.getVertexBuffer();
+        vb.addQuad(dx1, dy1, dx2, dy2,
+                   mx1, my1, mx2, my2);
+
+        setCompositeMode(CompositeMode.ADD);
+        context.validateMaskTextureOp(this, IDENT, imgtex, masktex,
+                                      PixelFormat.INT_ARGB_PRE);
+        vb.addQuad(dx1, dy1, dx2, dy2,
+                   ix1, iy1, ix2, iy2,
+                   mx1, my1, mx2, my2);
+
+        setCompositeMode(oldmode);
     }
 
     private void renderWithComplexPaint(Shape shape, BasicStroke stroke,

@@ -31,7 +31,7 @@ import com.sun.scenario.effect.FilterContext;
 import com.sun.scenario.effect.Filterable;
 import com.sun.scenario.effect.impl.Renderer;
 
-public abstract class PrDrawable extends PrTexture implements Filterable {
+public abstract class PrDrawable extends PrTexture<RTTexture> implements Filterable {
 
     public static PrDrawable create(FilterContext fctx, RTTexture rtt) {
         return ((PrRenderer) Renderer.getRenderer(fctx)).createDrawable(rtt);

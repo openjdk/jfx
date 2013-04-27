@@ -28,12 +28,12 @@ package com.sun.scenario.effect.impl.prism;
 import com.sun.javafx.geom.Rectangle;
 import com.sun.scenario.effect.LockableResource;
 
-public class PrTexture implements LockableResource {
+public class PrTexture<T extends com.sun.prism.Texture> implements LockableResource {
 
-    private final com.sun.prism.Texture tex;
+    private final T tex;
     private final Rectangle bounds;
 
-    public PrTexture(com.sun.prism.Texture tex) {
+    public PrTexture(T tex) {
         if (tex == null) {
             throw new IllegalArgumentException("Texture must be non-null");
         }
@@ -57,7 +57,7 @@ public class PrTexture implements LockableResource {
         return bounds;
     }
 
-    public com.sun.prism.Texture getTextureObject() {
+    public T getTextureObject() {
         return tex;
     }
 }

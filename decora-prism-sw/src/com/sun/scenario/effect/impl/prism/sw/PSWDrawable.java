@@ -128,7 +128,7 @@ public class PSWDrawable extends PrDrawable implements HeapImage {
     }
 
     @Override
-    public Texture getTextureObject() {
+    public RTTexture getTextureObject() {
         if (heapDirty) {
             // RT-27562
             // TODO: inefficient approach: upload heap array to (cached)

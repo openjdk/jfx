@@ -133,7 +133,7 @@ public class ImagePool {
             }
             int ew = eimg.getContentWidth();
             int eh = eimg.getContentHeight();
-            if (ew >= w && eh >= h) {
+            if (ew >= w && eh >= h && ew * eh / 2 <= w * h) {
                 int diff = (ew-w) * (eh-h);
                 if (chosenEntry == null || diff < mindiff) {
                     eimg.lock();

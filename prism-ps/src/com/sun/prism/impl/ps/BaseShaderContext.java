@@ -123,6 +123,7 @@ public abstract class BaseShaderContext extends BaseContext {
     // TODO: need to dispose these when the context is disposed... (RT-27379)
     private final Shader[] stockShaders = new Shader[NUM_STOCK_SHADER_SLOTS];
     private Shader textureRGBShader;
+    private Shader textureMaskRGBShader;
     private Shader textureYV12Shader;
     private Shader textureFirstLCDShader;
     private Shader textureSecondLCDShader;
@@ -269,6 +270,17 @@ public abstract class BaseShaderContext extends BaseContext {
             textureRGBShader = factory.createStockShader("Solid_TextureRGB");
         }
         return textureRGBShader;
+    }
+
+    private Shader getTextureMaskRGBShader() {
+        if (textureMaskRGBShader != null && !textureMaskRGBShader.isValid()) {
+            textureMaskRGBShader.dispose();
+            textureMaskRGBShader = null;
+        }
+        if (textureMaskRGBShader == null) {
+            textureMaskRGBShader = factory.createStockShader("Mask_TextureRGB");
+        }
+        return textureMaskRGBShader;
     }
 
     private Shader getTextureYV12Shader() {
@@ -514,6 +526,32 @@ public abstract class BaseShaderContext extends BaseContext {
             case BYTE_GRAY:
             case BYTE_APPLE_422: // uses GL_RGBA as internal format
                 shader = getTextureRGBShader();
+                break;
+            case MULTI_YCbCr_420: // Must use multitexture method
+            case BYTE_ALPHA:
+            default:
+                throw new InternalError("Pixel format not supported: " + format);
+            }
+        } else {
+            shader = externalShader;
+        }
+        checkState(g, xform, shader, tex0, tex1);
+        updatePerVertexColor(null, g.getExtraAlpha());
+        return shader;
+    }
+
+    Shader validateMaskTextureOp(BaseShaderGraphics g, BaseTransform xform,
+                                 Texture tex0, Texture tex1, PixelFormat format)
+    {
+        Shader shader;
+        if (externalShader == null) {
+            switch (format) {
+            case INT_ARGB_PRE:
+            case BYTE_BGRA_PRE:
+            case BYTE_RGB:
+            case BYTE_GRAY:
+            case BYTE_APPLE_422: // uses GL_RGBA as internal format
+                shader = getTextureMaskRGBShader();
                 break;
             case MULTI_YCbCr_420: // Must use multitexture method
             case BYTE_ALPHA:
