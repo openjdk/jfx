@@ -39,7 +39,7 @@ public interface ListChangeListener<E> {
     /**
      * Represents a report of a changes done to an Observablelist.
      * The Change may consist of one or more actual changes and must be iterated by {@link #next()} method.
-     * 
+     *
      * Each change must be one of the following:
      * <ul>
      * <li><b>Permutation change</b> : {@link #wasPermutated()} returns true in this case.
@@ -58,7 +58,7 @@ public interface ListChangeListener<E> {
      * <li><b>Update change</b> : {@link #wasUpdated()} return true on an update change.
      * All elements between {@link #getFrom() from}(inclusive) and {@link #getTo() to}(exclusive) were updated.
      * </ul>
-     * 
+     *
      *<p>
      * Typical usage is to observe changes on an ObservableList in order
      * to hook or unhook (or add or remove a listener) or in order to maintain
@@ -67,7 +67,7 @@ public interface ListChangeListener<E> {
      *
      * <blockquote><pre>
      * ObservableList<Item> theList = ...;
-     * 
+     *
      * theList.addListener(new ListChangeListener&lt;Item&gt;() {
      *     public void onChanged(Change&lt;tem&gt; c) {
      *         while (c.next()) {
@@ -88,7 +88,7 @@ public interface ListChangeListener<E> {
      *             }
      *         }
      *     });
-     * 
+     *
      * }</pre></blockquote>
      * <p>
      * <b>Warning:</b> This class directly accesses the source list to acquire information about the changes.
@@ -104,10 +104,10 @@ public interface ListChangeListener<E> {
      */
     public abstract static class Change<E> {
         private final ObservableList<E> list;
-        
+
         /**
          * Go to the next change.
-         * In initial state is invalid a require a call to next() before
+         * The Change in the initial state is invalid a requires a call to next() before
          * calling other methods. The first next() call will make this object
          * represent the first change.
          * @return true if switched to the next change, false if this is the last change.
@@ -119,7 +119,7 @@ public interface ListChangeListener<E> {
          * before working with the first change.
          */
         public abstract void reset();
-        
+
         /**
          * Constructs a new change done to a list.
          * @param list that was changed
@@ -149,7 +149,7 @@ public interface ListChangeListener<E> {
          * The end of the change interval.
          * @return a end (exclusive) of an interval related to the change.
          * @throws IllegalStateException if this Change is in initial state
-         * @see #getFrom() 
+         * @see #getFrom()
          */
         public abstract int getTo();
         /**
@@ -203,7 +203,7 @@ public interface ListChangeListener<E> {
         public boolean wasReplaced() {
             return wasAdded() && wasRemoved();
         }
-        
+
         /**
          * Indicates that the elements between getFrom() (inclusive)
          * to getTo() exclusive has changed.
@@ -215,7 +215,7 @@ public interface ListChangeListener<E> {
         public boolean wasUpdated() {
             return false;
         }
-        
+
         /**
          * To get a subList view of the list that contains only the elements
          * added, use getAddedSubList() method.
@@ -250,7 +250,7 @@ public interface ListChangeListener<E> {
         public int getAddedSize() {
             return wasAdded() ? getTo() - getFrom() : 0;
         }
-        
+
         /**
          * If this change is an permutation, it returns an integer array
          * that describes the permutation.
@@ -259,18 +259,18 @@ public interface ListChangeListener<E> {
          * The 0 index of the array corresponds to index {@link #getFrom()} of the list. The same applies
          * for the last index and {@link #getTo()}.
          * The method is used by {@link #wasPermutated() } and {@link #getPermutation(int)} methods.
-         * @return empty array if this is not permutation or an integer array containing the permutation 
+         * @return empty array if this is not permutation or an integer array containing the permutation
          * @throws IllegalStateException if this Change is in initial state
          */
         protected abstract int[] getPermutation();
-        
+
         /**
          * By calling these method, you can observe the permutation that happened.
          * In order to get the new position of an element, you must call:
          * <pre>
          *    change.getPermutation(oldIndex);
          * </pre>
-         *  
+         *
          * Note: default implementation of this method takes the information
          * from {@link #getPermutation()} method. You don't have to override this method.
          * @param i the old index that contained the element prior to this change
