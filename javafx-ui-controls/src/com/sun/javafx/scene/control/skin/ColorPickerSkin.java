@@ -40,7 +40,6 @@ import javafx.css.StyleableStringProperty;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.event.EventHandler;
-import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.StackPane;
@@ -453,7 +452,6 @@ public class ColorPickerSkin extends ComboBoxPopupControl<Color> {
         final ColorPicker colorPicker = (ColorPicker)getSkinnable();
         popupContent.updateSelection(colorPicker.getValue());
         popupContent.clearFocus();
-        popupContent.setDialogLocation(getPopup().getX()+getPopup().getWidth(), getPopup().getY());
     }
     
     @Override protected void handleControlPropertyChanged(String p) {

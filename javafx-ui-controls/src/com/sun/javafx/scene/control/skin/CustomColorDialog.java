@@ -25,6 +25,8 @@
 
 package com.sun.javafx.scene.control.skin;
 
+import javafx.beans.InvalidationListener;
+import javafx.beans.Observable;
 import javafx.beans.property.*;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
@@ -44,7 +46,9 @@ import javafx.beans.binding.ObjectBinding;
 import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
+import javafx.geometry.Rectangle2D;
 import javafx.scene.input.KeyEvent;
+import javafx.stage.Screen;
 /**
  *
  * @author paru
@@ -141,14 +145,51 @@ public class CustomColorDialog extends HBox {
         return dialog;
     }
     
-    public void show(double x, double y) {
-        if (x != 0 && y != 0) {
-            dialog.setX(x);
-            dialog.setY(y);
+    public void show() {
+        if (dialog.getOwner() != null) {
+            // Workaround of RT-29871: Instead of just invoking fixPosition() 
+            // here need to use listener that fixes dialog position once both
+            // width and height are determined
+            dialog.widthProperty().addListener(positionAdjuster);
+            dialog.heightProperty().addListener(positionAdjuster);
+            positionAdjuster.invalidated(null);
         }
         if (dialog.getScene() == null) dialog.setScene(customScene);
         colorRectPane.updateValues();
         dialog.show();
+    }
+    
+    private InvalidationListener positionAdjuster = new InvalidationListener() {
+
+        @Override
+        public void invalidated(Observable ignored) {
+            if (Double.isNaN(dialog.getWidth()) || Double.isNaN(dialog.getHeight())) {
+                return;
+            }
+            dialog.widthProperty().removeListener(positionAdjuster);
+            dialog.heightProperty().removeListener(positionAdjuster);
+            fixPosition();
+        }
+
+    };
+    
+    private void fixPosition() {
+        Window w = dialog.getOwner();
+        Screen s = com.sun.javafx.Utils.getScreen(w);
+        Rectangle2D sb = s.getBounds();
+        double xR = w.getX() + w.getWidth();
+        double xL = w.getX() - dialog.getWidth();
+        double x, y;
+        if (sb.getMaxX() >= xR + dialog.getWidth()) {
+            x = xR;
+        } else if (sb.getMinX() <= xL) {
+            x = xL;
+        } else {
+            x = Math.max(sb.getMinX(), sb.getMaxX() - dialog.getWidth());
+        }
+        y = Math.max(sb.getMinY(), Math.min(sb.getMaxY() - dialog.getHeight(), w.getY()));
+        dialog.setX(x);
+        dialog.setY(y);
     }
     
     @Override public void layoutChildren() {

@@ -50,7 +50,6 @@ import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.shape.StrokeType;
-import javafx.stage.Window;
 
 
 public class ColorPalette extends VBox {
@@ -70,8 +69,6 @@ public class ColorPalette extends VBox {
     CustomColorDialog customColorDialog = null;
     private final List<ColorSquare> customSquares = FXCollections.observableArrayList();
  
-    private double x;
-    private double y;
     private PopupControl popupControl;
     private ColorSquare focusedSquare;
     private ContextMenu contextMenu = null;
@@ -125,7 +122,7 @@ public class ColorPalette extends VBox {
                 }
                 customColorDialog.setCurrentColor(colorPicker.valueProperty().get());
                 if (popupControl != null) popupControl.setAutoHide(false);
-                customColorDialog.show(x, y);
+                customColorDialog.show();
                 if (popupControl != null) popupControl.setAutoHide(true);
             }
         });
@@ -370,11 +367,6 @@ public class ColorPalette extends VBox {
     
     public void setPopupControl(PopupControl pc) {
         this.popupControl = pc;
-    }
-    
-    public void setDialogLocation(double xValue, double yValue) {
-        x = xValue;
-        y = yValue;
     }
     
     public ColorPickerGrid getColorGrid() {
