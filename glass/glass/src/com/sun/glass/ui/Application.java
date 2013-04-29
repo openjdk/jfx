@@ -589,9 +589,6 @@ public abstract class Application {
     protected abstract int staticView_getMultiClickMaxX();
     protected abstract int staticView_getMultiClickMaxY();
 
-    /** Called when all Views have completed rendering */
-    protected void staticView_notifyRenderingEnd() { }
-
     protected abstract boolean _supportsTransparentWindows();
     public boolean supportsTransparentWindows() {
         checkEventThread();

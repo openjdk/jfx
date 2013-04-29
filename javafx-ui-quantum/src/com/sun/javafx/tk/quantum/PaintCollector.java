@@ -302,10 +302,6 @@ final class PaintCollector implements CompletionListener {
         // with the FX app thread, and I'd prefer to minimize the number
         // of things here that could be happening in parallel.
         if (allWorkCompletedLatch.getCount() == 1) {
-            // The embedded platform needs some indication when rendering
-            // is finished so they can paint the stacking order and cursor
-            // on machines that might not have a window manager. 
-            View.notifyRenderingEnd();
             // In some cases we need to tell the toolkit that
             // now would be a great time to vsync! 
             if (needsHint && !toolkit.hasNativeSystemVsync()) {

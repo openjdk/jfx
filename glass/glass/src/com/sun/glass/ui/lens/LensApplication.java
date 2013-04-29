@@ -138,11 +138,6 @@ final class LensApplication extends Application {
         LensApplication.initLibrary();
     }
 
-    @Override
-    protected void staticView_notifyRenderingEnd() {
-        //do nothing
-    }
-
     //cache the singleton object for native layer usage
     native void registerApplication();
 

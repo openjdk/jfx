@@ -347,11 +347,6 @@ public abstract class View {
         return Application.GetApplication().staticView_getMultiClickMaxY();
     }
 
-    public static void notifyRenderingEnd() {
-        //Application.checkEventThread(); // Quantum
-        Application.GetApplication().staticView_notifyRenderingEnd();
-    }
-
     protected abstract void _enableInputMethodEvents(long ptr, boolean enable);
 
     private long ptr; // Native handle (NSView*, or internal structure pointer)
