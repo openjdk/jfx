@@ -1602,6 +1602,8 @@ public class GridPane extends Pane {
             }
         }
         layoutGridLines(widths, heights, x, y, rowTotal, columnTotal);
+        currentHeights = heights;
+        currentWidths = widths;
         performingLayout = false;
     }
 
@@ -1988,6 +1990,18 @@ public class GridPane extends Pane {
     private int getNodeColumnEndConvertRemaining(Node child) {
         int columnSpan = getNodeColumnSpan(child);
         return columnSpan != REMAINING? getNodeColumnIndex(child) + columnSpan - 1 : getNumberOfColumns() - 1;
+    }
+
+
+    // This methods are inteded to be used by GridPaneDesignInfo
+    private CompositeSize currentHeights;
+    private CompositeSize currentWidths;
+
+    double[][] getGrid() {
+        if (currentHeights == null || currentWidths == null) {
+            return null;
+        }
+        return new double[][] {currentWidths.asArray(), currentHeights.asArray()};
     }
 
     /***************************************************************************

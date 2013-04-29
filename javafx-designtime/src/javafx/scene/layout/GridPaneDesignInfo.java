@@ -63,7 +63,7 @@ public class GridPaneDesignInfo extends PaneDesignInfo {
         }
         return numColumns;
     }
-    
+
     public Bounds getCellBounds(GridPane pane, int columnIndex, int rowIndex) {
         final double snaphgap = pane.snapSpace(pane.getHgap());
         final double snapvgap = pane.snapSpace(pane.getVgap());
@@ -74,11 +74,19 @@ public class GridPaneDesignInfo extends PaneDesignInfo {
         final double gridPaneHeight = pane.snapSize(pane.getHeight()) - (top + bottom);
         final double gridPaneWidth = pane.snapSize(pane.getWidth()) - (left + right);
 
-        // Compute row height
-        double[] rowHeights = pane.getRowHeights();        
-        if (rowHeights == null || rowHeights.length == 0 || rowHeights.length != getRowCount(pane)) {
+        // Compute grid. Result contains two double arrays, first for columns, second for rows
+        double[] columnWidths;
+        double[] rowHeights;
+
+        double[][] grid = pane.getGrid();
+        if (grid == null) {
             rowHeights = new double[] {0};
             rowIndex = 0;
+            columnWidths = new double[] {0};
+            columnIndex = 0;
+        } else {
+            columnWidths = grid[0];
+            rowHeights = grid[1];
         }
 
         // Compute the total row height
@@ -93,13 +101,6 @@ public class GridPaneDesignInfo extends PaneDesignInfo {
         double height = rowHeights[rowIndex];
         for (int j = 0; j < rowIndex; j++) {
             minY += rowHeights[j] + snapvgap;
-        }
-
-        // Compute column width
-        double[] columnWidths = pane.getColumnWidths();
-        if (columnWidths == null || columnWidths.length == 0 || columnWidths.length != getColumnCount(pane)) {
-            columnWidths = new double[] {0};
-            columnIndex = 0;
         }
 
         // Compute the total column width
