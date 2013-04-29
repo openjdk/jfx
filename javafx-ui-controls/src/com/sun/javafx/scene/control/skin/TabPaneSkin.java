@@ -1039,6 +1039,7 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
         private Label label;
         private StackPane closeBtn;
         private StackPane inner;
+        private Tooltip oldTooltip;
         private Tooltip tooltip;
         private Rectangle clip;
         
@@ -1190,6 +1191,7 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
             tooltip = tab.getTooltip();
             if (tooltip != null) {
                 Tooltip.install(this, tooltip);
+                oldTooltip = tooltip;
             }
 
             listener.registerChangeListener(tab.closableProperty(), "CLOSABLE");
@@ -1271,10 +1273,15 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
             } else if ("CONTEXT_MENU".equals(p)) {
                 // todo
             } else if ("TOOLTIP".equals(p)) {
-                getChildren().remove(tooltip);
+                // uninstall the old tooltip
+                if (oldTooltip != null) {
+                    Tooltip.uninstall(this, oldTooltip);
+                }
                 tooltip = tab.getTooltip();
                 if (tooltip != null) {
-//                    getChildren().addAll(tooltip);
+                    // install new tooltip and save as old tooltip.
+                    Tooltip.install(this, tooltip);
+                    oldTooltip = tooltip; 
                 }
             } else if ("DISABLE".equals(p)) {
                 pseudoClassStateChanged(DISABLED_PSEUDOCLASS_STATE, tab.isDisable());
@@ -1302,12 +1309,16 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
                 updateGraphicRotation();
             } else if ("TAB_MIN_WIDTH".equals(p)) {
                 requestLayout();
+                getSkinnable().requestLayout();
             } else if ("TAB_MAX_WIDTH".equals(p)) {
                 requestLayout();
+                getSkinnable().requestLayout();
             } else if ("TAB_MIN_HEIGHT".equals(p)) {
                 requestLayout();
+                getSkinnable().requestLayout();
             } else if ("TAB_MAX_HEIGHT".equals(p)) {
                 requestLayout();
+                getSkinnable().requestLayout();
             } 
         }
 
