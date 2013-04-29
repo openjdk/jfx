@@ -1407,7 +1407,7 @@ public class ContextMenuContent extends Region {
         @Override protected double computePrefHeight(double width) {
             double prefHeight = 0;
             if (item instanceof CustomMenuItem || item instanceof SeparatorMenuItem) {
-                prefHeight = getChildren().get(0).prefHeight(-1);
+                prefHeight = (getChildren().isEmpty()) ? 0 : getChildren().get(0).prefHeight(-1);
             } else {
                 prefHeight = Math.max(prefHeight, (left != null) ? left.prefHeight(-1) : 0);
                 prefHeight = Math.max(prefHeight, (graphic != null) ? graphic.prefHeight(-1) : 0);
