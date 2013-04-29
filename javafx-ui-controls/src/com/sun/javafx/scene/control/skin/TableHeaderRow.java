@@ -45,6 +45,7 @@ import javafx.geometry.Side;
 import javafx.geometry.VPos;
 import javafx.scene.control.CheckMenuItem;
 import javafx.scene.control.ContextMenu;
+import javafx.scene.control.Control;
 import javafx.scene.control.Label;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableColumnBase;
@@ -94,7 +95,10 @@ public class TableHeaderRow extends StackPane {
     private void updateTableWidth() {
         // snapping added for RT-19428
         double padding = snapSize(getTablePadding().getLeft()) + snapSize(getTablePadding().getRight());
-        this.tableWidth = snapSize(tableSkin.getSkinnable().getWidth()) - padding;
+        
+        Control c = tableSkin.getSkinnable();
+        this.tableWidth = c == null ? 0 : snapSize(c.getWidth()) - padding;
+        
         clip.setWidth(tableWidth);
     }
 
