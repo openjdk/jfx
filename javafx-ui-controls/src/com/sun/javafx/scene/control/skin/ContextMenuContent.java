@@ -810,6 +810,7 @@ public class ContextMenuContent extends Region {
 
                 // Listener to items in PopupMenu to update items in PopupMenuContent
                 itemsDirty = true;
+                updateItems(); // RT-29761
             }
         });
     }
