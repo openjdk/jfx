@@ -480,8 +480,9 @@ public class GridPaneTest {
         gridpane.resize(500, 500);
         gridpane.layout();
 
+        // Default align is CENTER - LEFT
         assertEquals(0, child0_0.getLayoutX(), 1e-100);
-        assertEquals(0, child0_0.getLayoutY(), 1e-100);
+        assertEquals(200, child0_0.getLayoutY(), 1e-100);
         assertEquals(300, child0_0.getLayoutBounds().getWidth(), 1e-100);
         assertEquals(100, child0_0.getLayoutBounds().getHeight(), 1e-100);
     }
@@ -1759,6 +1760,7 @@ public class GridPaneTest {
                                       child0_1, child1_1, child2_1);
 
         assertEquals(Orientation.HORIZONTAL, gridpane.getContentBias());
+        assertEquals(300, gridpane.minWidth(-1), 0);
         assertEquals(800, gridpane.prefWidth(-1), 0);
         assertEquals(400, gridpane.prefHeight(-1), 0);
 
@@ -2002,7 +2004,7 @@ public class GridPaneTest {
         GridPane.setConstraints(child1_0, 1, 0);
         MockBiased child2_0 = new MockBiased(Orientation.VERTICAL, 300, 100);
         GridPane.setConstraints(child2_0, 2, 0);
-        Rectangle child0_1 = new Rectangle(100, 300);
+        Rectangle child0_1 = new Rectangle(100, 100);
         GridPane.setConstraints(child0_1, 0, 1);
         MockResizable child1_1 = new MockResizable(100,100, 200, 200, 800, 800);
         GridPane.setConstraints(child1_1, 1, 1);
@@ -2013,8 +2015,9 @@ public class GridPaneTest {
                                       child0_1, child1_1, child2_1);
 
         assertEquals(Orientation.VERTICAL, gridpane.getContentBias());
+        assertEquals(200, gridpane.minHeight(-1), 0);
         assertEquals(800, gridpane.prefWidth(-1), 0);
-        assertEquals(400, gridpane.prefHeight(-1), 0);
+        assertEquals(300, gridpane.prefHeight(-1), 0);
 
         gridpane.autosize();
         gridpane.layout();
@@ -2033,17 +2036,17 @@ public class GridPaneTest {
         assertEquals(100, child2_0.getLayoutBounds().getHeight(), 1e-100);
 
         assertEquals(0, child0_1.getLayoutX(), 1e-100);
-        assertEquals(100, child0_1.getLayoutY(), 1e-100);
+        assertEquals(150, child0_1.getLayoutY(), 1e-100);
         assertEquals(100, child0_1.getLayoutBounds().getWidth(), 1e-100);
-        assertEquals(300, child0_1.getLayoutBounds().getHeight(), 1e-100);
+        assertEquals(100, child0_1.getLayoutBounds().getHeight(), 1e-100);
         assertEquals(300, child1_1.getLayoutX(), 1e-100);
         assertEquals(100, child1_1.getLayoutY(), 1e-100);
         assertEquals(200, child1_1.getLayoutBounds().getWidth(), 1e-100);
-        assertEquals(300, child1_1.getLayoutBounds().getHeight(), 1e-100);
+        assertEquals(200, child1_1.getLayoutBounds().getHeight(), 1e-100);
         assertEquals(500, child2_1.getLayoutX(), 1e-100);
         assertEquals(100, child2_1.getLayoutY(), 1e-100);
         assertEquals(300, child2_1.getLayoutBounds().getWidth(), 1e-100);
-        assertEquals(300, child2_1.getLayoutBounds().getHeight(), 1e-100);
+        assertEquals(200, child2_1.getLayoutBounds().getHeight(), 1e-100);
     }
 
     @Test public void testGridPaneWithVerticalContentBiasVerticalShrinking() {
@@ -2262,6 +2265,7 @@ public class GridPaneTest {
         ColumnConstraints cc = new ColumnConstraints();
         cc.setMinWidth(100);
         cc.setMaxWidth(Region.USE_PREF_SIZE);
+        cc.setHgrow(Priority.ALWAYS);
 
         ColumnConstraints cc2 = new ColumnConstraints();
         cc2.setMinWidth(50);
@@ -2272,16 +2276,21 @@ public class GridPaneTest {
         MockResizable child1_0 = new MockResizable(50,50);
         GridPane.setConstraints(child1_0, 1, 0);
         gridpane.getChildren().add(child1_0);
+        MockResizable child0_0 = new MockResizable(110, 110);
+        GridPane.setConstraints(child0_0, 0, 0);
+        gridpane.getChildren().add(child0_0);
 
         gridpane.resize(200,200);
         gridpane.layout();
-        double[] cw = gridpane.getColumnWidths();
 
-        assertEquals(100, cw[0], 1e-100);
-        assertEquals(50, cw[1], 1e-100);
+        assertEquals(110, child0_0.getLayoutBounds().getWidth(), 1e-100);
+        assertEquals(50, child1_0.getLayoutBounds().getWidth(), 1e-100);
     }
 
     @Test public void test_RT20931_cellHeightTotalShouldEqualColumnHeight() {
+        MockResizable child1 = new MockResizable(0,0, 100,100, 1000,1000);
+        MockResizable child2 = new MockResizable(0,0, 100,100, 1000,1000);
+        MockResizable child3 = new MockResizable(0,0, 100,100, 1000,1000);
         ColumnConstraints c1 = new ColumnConstraints();
         c1.setMinWidth(10);
         c1.setHgrow(Priority.SOMETIMES);
@@ -2301,20 +2310,25 @@ public class GridPaneTest {
         RowConstraints r3 = new RowConstraints();
         r3.setMinHeight(10);
         r3.setVgrow(Priority.SOMETIMES);
+
+        gridpane.add(child1, 0, 0);
+        gridpane.add(child2, 0, 1);
+        gridpane.add(child3, 0, 2);
 
         gridpane.getColumnConstraints().addAll(c1, c2);
         gridpane.getRowConstraints().addAll(r1, r2, r3);
 
         gridpane.resize(150, 73);
         gridpane.layout();
-        double[] rh = gridpane.getRowHeights();
 
-        assertEquals(25, rh[0], 1e-100);
-        assertEquals(24, rh[1], 1e-100);
-        assertEquals(24, rh[2], 1e-100);
+        assertEquals(73, child1.getLayoutBounds().getHeight()+
+                child2.getLayoutBounds().getHeight() +
+                child3.getLayoutBounds().getHeight(), 1e-100);
     }
 
     @Test public void test_RT20931_cellWidthTotalShouldEqualRowWidth() {
+        MockResizable child1 = new MockResizable(0,0, 100,100, 1000,1000);
+        MockResizable child2 = new MockResizable(0,0, 100,100, 1000,1000);
         ColumnConstraints c1 = new ColumnConstraints();
         c1.setMinWidth(10);
         c1.setHgrow(Priority.SOMETIMES);
@@ -2338,12 +2352,13 @@ public class GridPaneTest {
         gridpane.getColumnConstraints().addAll(c1, c2);
         gridpane.getRowConstraints().addAll(r1, r2, r3);
 
+        gridpane.add(child1, 0, 0);
+        gridpane.add(child2, 1, 0);
+
         gridpane.resize(151, 73);
         gridpane.layout();
-        double[] cw = gridpane.getColumnWidths();
 
-        assertEquals(76, cw[0], 1e-100);
-        assertEquals(75, cw[1], 1e-100);
+        assertEquals(151, child1.getLayoutBounds().getWidth() + child2.getLayoutBounds().getWidth(), 1e-100);
     }
 
     @Test public void testBaselineRowAlignment() {
@@ -2369,4 +2384,84 @@ public class GridPaneTest {
         assertEquals(300, child2.getLayoutBounds().getWidth(), 1e-100);
         assertEquals(300, child2.getLayoutBounds().getHeight(), 1e-100);
     }
+
+    @Test public void testRowGrowDoesNotChangeColumnSizes() {
+        MockResizable child1 = new MockResizable(50,50, 100,100, 300,300);
+        MockResizable child2 = new MockResizable(50,50, 50,50, 50,50);
+        GridPane.setHgrow(child2, Priority.ALWAYS);
+        MockResizable child3 = new MockResizable(50,50, 50,50, 300,300);
+        MockResizable child_grow = new MockResizable(100,100, 300,300, 500,500);
+
+        gridpane.add(child1, 0, 0);
+        gridpane.add(child2, 1, 0);
+        gridpane.add(child3, 2, 0);
+        gridpane.add(child_grow, 0, 1, 3, 1);
+
+        gridpane.resize(200, 150);
+        gridpane.layout();
+
+        assertEquals(100, child1.getLayoutBounds().getWidth(), 1e-100);
+        assertEquals(50, child2.getLayoutBounds().getWidth(), 1e-100);
+        assertEquals(50, child3.getLayoutBounds().getWidth(), 1e-100);
+        assertEquals(200, child_grow.getLayoutBounds().getWidth(), 1e-100);
+        assertEquals(0, child1.getLayoutX(), 1e-100);
+        assertEquals(100, child2.getLayoutX(), 1e-100);
+        assertEquals(150, child3.getLayoutX(), 1e-100);
+        assertEquals(0, child_grow.getLayoutX(), 1e-100);
+
+        gridpane.resize(300, 150);
+        gridpane.layout();
+
+        assertEquals(100, child1.getLayoutBounds().getWidth(), 1e-100);
+        assertEquals(50, child2.getLayoutBounds().getWidth(), 1e-100);
+        assertEquals(50, child3.getLayoutBounds().getWidth(), 1e-100);
+        assertEquals(300, child_grow.getLayoutBounds().getWidth(), 1e-100);
+        assertEquals(0, child1.getLayoutX(), 1e-100);
+        assertEquals(100, child2.getLayoutX(), 1e-100);
+        // middle row is actually 150 wide, even though child2 is max 50.
+        // This is intended (col 2 has grow && child_grow is spanning multiple columns)
+        assertEquals(250, child3.getLayoutX(), 1e-100);
+        assertEquals(0, child_grow.getLayoutX(), 1e-100);
+    }
+
+    @Test public void testColumnGrowDoesNotChangeColumnSizes() {
+        MockResizable child1 = new MockResizable(50,50, 100,100, 300,300);
+        MockResizable child2 = new MockResizable(50,50, 50,50, 50,50);
+        GridPane.setVgrow(child2, Priority.ALWAYS);
+        MockResizable child3 = new MockResizable(50,50, 50,50, 300,300);
+        MockResizable child_grow = new MockResizable(100,100, 300,300, 500,500);
+
+        gridpane.add(child1, 0, 0);
+        gridpane.add(child2, 0, 1);
+        GridPane.setValignment(child2, VPos.TOP);
+        gridpane.add(child3, 0, 2);
+        gridpane.add(child_grow, 1, 0, 1, 3);
+
+        gridpane.resize(150, 200);
+        gridpane.layout();
+
+        assertEquals(100, child1.getLayoutBounds().getHeight(), 1e-100);
+        assertEquals(50, child2.getLayoutBounds().getHeight(), 1e-100);
+        assertEquals(50, child3.getLayoutBounds().getHeight(), 1e-100);
+        assertEquals(200, child_grow.getLayoutBounds().getHeight(), 1e-100);
+        assertEquals(0, child1.getLayoutY(), 1e-100);
+        assertEquals(100, child2.getLayoutY(), 1e-100);
+        assertEquals(150, child3.getLayoutY(), 1e-100);
+        assertEquals(0, child_grow.getLayoutY(), 1e-100);
+
+        gridpane.resize(150, 300);
+        gridpane.layout();
+
+        assertEquals(100, child1.getLayoutBounds().getHeight(), 1e-100);
+        assertEquals(50, child2.getLayoutBounds().getHeight(), 1e-100);
+        assertEquals(50, child3.getLayoutBounds().getHeight(), 1e-100);
+        assertEquals(300, child_grow.getLayoutBounds().getHeight(), 1e-100);
+        assertEquals(0, child1.getLayoutY(), 1e-100);
+        assertEquals(100, child2.getLayoutY(), 1e-100);
+        // middle row is actually 150 tall, even though child2 is max 50.
+        // This is intended (col 2 has grow && child_grow is spanning multiple rows)
+        assertEquals(250, child3.getLayoutY(), 1e-100);
+        assertEquals(0, child_grow.getLayoutY(), 1e-100);
+    }
+
 }
