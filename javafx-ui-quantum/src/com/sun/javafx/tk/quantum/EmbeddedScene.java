@@ -68,14 +68,35 @@ final class EmbeddedScene extends GlassScene implements EmbeddedSceneInterface {
 
     public EmbeddedScene(HostInterface host, boolean depthBuffer) {
         super(depthBuffer);
-        this.dndDelegate = new EmbeddedSceneDnD(this);
 
         this.host = host;
-        this.host.setEmbeddedScene(this);
+        this.dndDelegate = new EmbeddedSceneDnD(this);
 
         PaintCollector collector = PaintCollector.getInstance();
         painter = new EmbeddedPainter(this);
         paintRenderJob = new PaintRenderJob(this, collector.getRendered(), painter);
+    }
+
+    @Override
+    public void dispose() {
+        assert host != null;
+        AbstractPainter.renderLock.lock();
+        try {
+            host.setEmbeddedScene(null);
+            host = null;
+            updateSceneState();
+        } finally {
+            AbstractPainter.renderLock.unlock();
+        }
+        super.dispose();
+    }
+
+    @Override
+    void setStage(GlassStage stage) {
+        super.setStage(stage);
+
+        assert host != null;
+        host.setEmbeddedScene(stage != null ? this : null);
     }
 
     @Override protected boolean isSynchronous() {
@@ -97,15 +118,6 @@ final class EmbeddedScene extends GlassScene implements EmbeddedSceneInterface {
         if (QuantumToolkit.verbose) {
             System.err.println("EmbeddedScene.enableInputMethodEvents " + enable);
         }
-    }
-
-    @Override
-    void stageVisible(boolean visible) {
-        if (!visible) {
-            host.setEmbeddedScene(null);
-            host = null;
-        }
-        super.stageVisible(visible);
     }
 
     // Called by EmbeddedPainter on the render thread under renderLock

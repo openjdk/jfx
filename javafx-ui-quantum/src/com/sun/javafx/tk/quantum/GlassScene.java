@@ -272,7 +272,7 @@ abstract class GlassScene implements TKScene {
         // Overridden in subclasses
     }
 
-    void stageVisible(boolean visible) {
+    final void stageVisible(boolean visible) {
         // if the stage became invisible (for example before being destroyed)
         // we need to remove the scene from the repainter list to prevent
         // potential leak
