@@ -67,6 +67,7 @@ import java.util.Collections;
 import java.util.List;
 import javafx.scene.layout.Region;
 import javafx.scene.text.Text;
+import com.sun.javafx.css.StyleManager;
 
 
 public class FXVKSkin extends BehaviorSkinBase<FXVK, BehaviorBase<FXVK>> {
@@ -219,9 +220,7 @@ public class FXVKSkin extends BehaviorSkinBase<FXVK, BehaviorBase<FXVK>> {
                             vkPopup = new Popup();
                             vkPopup.setAutoFix(false);
 
-                            Scene popupScene = vkPopup.getScene();
-                            popupScene.getStylesheets().add(getClass().getResource("caspian/fxvk.css").toExternalForm());
-
+                            StyleManager.getInstance().addUserAgentStylesheet("com/sun/javafx/scene/control/skin/caspian/fxvk.css");
 
                             // RT-21860 - This is causing
                             // IllegalStateException: The window must be focused when calling grabFocus()
