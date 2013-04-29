@@ -88,12 +88,6 @@ final class EmbeddedScene extends GlassScene implements EmbeddedSceneInterface {
     }
 
     @Override
-    public void sceneChanged() {
-        super.sceneChanged();
-        host.repaint();
-    }
-    
-    @Override
     public TKClipboard createDragboard(boolean isDragSource) {
         return dndDelegate.createDragboard();
     }
@@ -112,6 +106,13 @@ final class EmbeddedScene extends GlassScene implements EmbeddedSceneInterface {
             host = null;
         }
         super.stageVisible(visible);
+    }
+
+    // Called by EmbeddedPainter on the render thread under renderLock
+    void sceneRepainted() {
+        if (host != null) {
+            host.repaint();
+        }
     }
 
     // EmbeddedSceneInterface methods

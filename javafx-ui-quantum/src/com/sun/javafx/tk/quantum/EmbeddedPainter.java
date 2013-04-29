@@ -111,7 +111,7 @@ final class EmbeddedPainter extends AbstractPainter {
             escene.textureBits.rewind();
             texture.readPixels(escene.textureBits);
             
-            escene.host.repaint();
+            escene.sceneRepainted();
         } catch (Throwable th) {
             th.printStackTrace(System.err);
         } finally {
