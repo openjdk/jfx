@@ -79,6 +79,7 @@ import javafx.scene.control.ToggleButton;
 import javafx.scene.control.ToggleButtonBuilder;
 import javafx.scene.control.ToggleGroup;
 import javafx.scene.control.ToolBar;
+import javafx.scene.control.Tooltip;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.image.WritableImage;
@@ -98,6 +99,7 @@ public class Modena extends Application {
     }
     private static final String testAppCssUrl = Modena.class.getResource("TestApp.css").toExternalForm();
     private static String MODENA_STYLESHEET_URL;
+    private static String MODENA_EMBEDDED_STYLESHEET_URL;
     private static String MODENA_STYLESHEET_BASE;
     private static String CASPIAN_STYLESHEET_URL;
     private static String CASPIAN_STYLESHEET_BASE;
@@ -121,6 +123,8 @@ public class Modena extends Application {
                     com.sun.javafx.scene.control.skin.ButtonSkin.class.getResource("modena/modena.css").toExternalForm();
             MODENA_STYLESHEET_BASE = MODENA_STYLESHEET_URL.substring(0,MODENA_STYLESHEET_URL.lastIndexOf('/')+1);
             CASPIAN_STYLESHEET_BASE = CASPIAN_STYLESHEET_URL.substring(0,CASPIAN_STYLESHEET_URL.lastIndexOf('/')+1);
+            MODENA_EMBEDDED_STYLESHEET_URL = MODENA_STYLESHEET_BASE + "modena-embedded-performance.css";
+            System.out.println("MODENA_EMBEDDED_STYLESHEET_URL = " + MODENA_EMBEDDED_STYLESHEET_URL);
         } catch (MalformedURLException ex) {
             Logger.getLogger(Modena.class.getName()).log(Level.SEVERE, null, ex);
         }
@@ -143,17 +147,18 @@ public class Modena extends Application {
     private int fontSize = 13;
     private String styleSheetContent = "";
     private String styleSheetBase = "";
-    private ToggleButton modenaButton,retinaButton,rtlButton;
+    private ToggleButton modenaButton,retinaButton,rtlButton,embeddedPerformanceButton;
     private TabPane contentTabs;
     private boolean test = false;
+    private boolean embeddedPerformanceMode = false;
     private final EventHandler<ActionEvent> rebuild = new EventHandler<ActionEvent>(){
-        @Override public void handle(ActionEvent event) { 
+        @Override public void handle(ActionEvent event) {
             Platform.runLater(new Runnable() {
                 @Override public void run() {
                     updateUserAgentStyleSheet();
-                    rebuildUI(modenaButton.isSelected(), retinaButton.isSelected(), 
-                            contentTabs.getSelectionModel().getSelectedIndex(),
-                            samplePageNavigation.getCurrentSection());
+                    rebuildUI(modenaButton.isSelected(), retinaButton.isSelected(),
+                              contentTabs.getSelectionModel().getSelectedIndex(),
+                              samplePageNavigation.getCurrentSection());
                 }
             });
         }
@@ -253,6 +258,7 @@ public class Modena extends Application {
         styleSheetContent = modena ? 
                 loadUrl(MODENA_STYLESHEET_URL) : 
                 loadUrl(CASPIAN_STYLESHEET_URL);
+        if (modena && embeddedPerformanceMode) styleSheetContent += loadUrl(MODENA_EMBEDDED_STYLESHEET_URL);
         styleSheetBase = modena ? MODENA_STYLESHEET_BASE : CASPIAN_STYLESHEET_BASE;
         styleSheetContent += "\n.root {\n";
         System.out.println("baseColor = "+baseColor);
@@ -390,6 +396,17 @@ public class Modena extends Application {
                                         NodeOrientation.RIGHT_TO_LEFT : NodeOrientation.LEFT_TO_RIGHT);
                             }
                         })
+                    .build(),
+                embeddedPerformanceButton = ToggleButtonBuilder.create()
+                    .text("EP")
+                    .selected(embeddedPerformanceMode)
+                    .tooltip(new Tooltip("Apply Embedded Performance extra stylesheet"))
+                    .onAction(new EventHandler<ActionEvent>() {
+                        @Override public void handle(ActionEvent event) {
+                            embeddedPerformanceMode = embeddedPerformanceButton.isSelected();
+                            rebuild.handle(event);
+                        }
+                    })
                     .build(),
                 new Separator(),
                 retinaButton,

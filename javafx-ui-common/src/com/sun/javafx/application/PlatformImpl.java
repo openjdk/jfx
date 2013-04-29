@@ -25,6 +25,7 @@
 
 package com.sun.javafx.application;
 
+import com.sun.javafx.PlatformUtil;
 import com.sun.javafx.css.StyleManager;
 import com.sun.javafx.runtime.SystemProperties;
 
@@ -543,6 +544,11 @@ public class PlatformImpl {
                             if (isSupported(ConditionalFeature.INPUT_TOUCH)) {
                                 StyleManager.getInstance().addUserAgentStylesheet(
                                         "com/sun/javafx/scene/control/skin/modena/touch.css");
+                            }
+                            // when running on embedded add a extra stylesheet to tune performance of modena theme
+                            if (PlatformUtil.isEmbedded()) {
+                                StyleManager.getInstance().addUserAgentStylesheet(
+                                        "com/sun/javafx/scene/control/skin/modena/modena-embedded-performance.css");
                             }
                             return null;
                         }
