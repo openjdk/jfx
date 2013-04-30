@@ -194,6 +194,10 @@ public class CustomColorDialog extends HBox {
     
     @Override public void layoutChildren() {
         super.layoutChildren();
+        if (dialog.getMinWidth() > 0 && dialog.getMinHeight() > 0) {
+            // don't recalculate min size once it's set
+            return;
+        }
         dialog.setMinWidth(computeMinWidth(getHeight()) + (dialog.getWidth() - customScene.getWidth()));
         dialog.setMinHeight(computeMinHeight(getWidth()) + (dialog.getHeight() - customScene.getHeight()));
     }
