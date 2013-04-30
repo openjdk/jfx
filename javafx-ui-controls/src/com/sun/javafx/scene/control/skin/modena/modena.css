@@ -347,6 +347,7 @@ is being used to size a border should also be in pixels.
     -fx-selection-bar-text: -fx-text-background-color;
 
     /* These are needed for Popup */
+    -fx-background-color: inherit;
     -fx-background-radius: inherit;
     -fx-background-insets: inherit;
     -fx-padding: inherit;

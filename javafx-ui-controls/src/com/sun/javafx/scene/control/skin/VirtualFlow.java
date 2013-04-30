@@ -1669,10 +1669,13 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
 
     private void resizeCellSize(T cell) {
         if (cell == null) return;
-        if (isVertical())
-            cell.resize(cell.getWidth(), cell.prefHeight(-1));
-        else
-            cell.resize(cell.prefWidth(-1), cell.getHeight());
+        if (isVertical()) {
+            double width = cell.getWidth();
+            cell.resize(width, cell.prefHeight(width));
+        } else {
+            double height = cell.getHeight();
+            cell.resize(cell.prefWidth(height), cell.getHeight());
+        }
     }
 
     private void setCellIndex(T cell, int index) {
