@@ -51,7 +51,11 @@ class NativeCompileTask extends DefaultTask {
 
     public NativeCompileTask source(Object... sources) {
         for (Object source : sources) {
-            sourceRoots.add(source);
+            if (source instanceof Collection) {
+                sourceRoots.addAll((Collection)source);
+            } else {
+                sourceRoots.add(source);
+            }
         }
         return this;
     }

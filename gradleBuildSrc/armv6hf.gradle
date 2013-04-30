@@ -1,0 +1,287 @@
+/*
+ * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.  Oracle designates this
+ * particular file as subject to the "Classpath" exception as provided
+ * by Oracle in the LICENSE file that accompanied this code.
+ *
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
+ *
+ * You should have received a copy of the GNU General Public License version
+ * 2 along with this work; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+ * or visit www.oracle.com if you need additional information or have any
+ * questions.
+ */
+
+// Define the location of the sdk file
+def sdk=file("/opt/armhf-raspberry-pi-05")
+def compilerHome=file("/opt/gcc-linaro-arm-linux-gnueabihf-raspbian-2012.09-20120921_linux")
+
+// Declare whether this particular target file applies to the current system
+ext.ARMV6HF_CAN_BUILD = IS_LINUX && compilerHome.exists() && sdk.exists()
+if (!ARMV6HF_CAN_BUILD) return;
+
+// Libraries end up in the sdk/rt/lib/arm directory for arm builds
+ext.ARMV6HF_LIB_DEST = "lib/arm"
+
+// TODO this is garbage. Each target file should define what it includes,
+// not what it excludes.
+ext.ARMV6HF_JFXRT_JAR_EXCLUDES = [
+    "**/*.hlsl",
+    "com/sun/glass/ui/win",
+    "com/sun/glass/ui/accessible/win",
+    "com/sun/prism/d3d",
+    "com/sun/prism/es2/gl/win",
+    "com/sun/prism/null3d",
+    "com/sun/scenario/effect/impl/hw/d3d",
+    
+    "com/sun/glass/events/mac",
+    "com/sun/glass/ui/mac",
+    "com/sun/glass/ui/accessible/mac",
+    "com/sun/prism/es2/gl/mac",
+    
+    "com/sun/glass/ui/gtk",
+    
+    "com/sun/glass/ui/ios",
+    
+    "com/sun/glass/ui/swt", // SWT glass
+    
+    "javafx/embed/swing", // Swing Interop
+    
+    "javafx/embed/swt", // SWT Interop
+]
+
+def commonFlags = [
+        "-fno-strict-aliasing", "-fPIC", "-fno-omit-frame-pointer", // optimization flags
+        "-W", "-Wall", "-Wno-unused", "-Wno-parentheses", "-Werror=implicit-function-declaration"] // warning flags
+// Specify the compilation parameters and link parameters
+def ccFlags = [
+        commonFlags, "-I$JDK_HOME/include", "-I$JDK_HOME/include/linux", "-c",
+        IS_DEBUG ? ["-ggdb", "-DVERBOSE"] : "-O2"].flatten()
+//ccFlags.addAll(["-Wnon-virtual-dtor", "-Woverloaded-virtual", "-std=c++0x"])
+def linkFlags = ["-shared", commonFlags].flatten()
+
+// Specify the compilation parameters and link parameters
+def extraCFlags = [
+        "-I", "-L",
+        ccFlags,
+        "-marm", "-mfloat-abi=hard", "-mfpu=vfp",
+        "-I$sdk/usr/include",
+        "-I$sdk/opt/vc/include",
+        "-I$sdk/opt/vc/include/interface/vcos/pthreads",
+        "-DOMAP3", "-DUSE_DISPMAN"].flatten();
+def extraLFlags = [
+        "-I", "-L",
+        linkFlags,
+        "-L$sdk/lib/arm-linux/gnueabihf",
+        "-L$sdk/usr/lib/arm-linux-gnueabihf",
+        "-L$sdk/opt/vc/lib"].flatten()
+
+def lensLFlags = [extraLFlags, "-lpthread", "-ludev", "-ldl", "-lm"].flatten()
+
+def fontCFlags = [extraCFlags].flatten()
+def fontLFlags = [extraLFlags].flatten()
+
+def iioCFlags = [extraCFlags].flatten()
+def iioLFlags = [extraLFlags].flatten()
+
+def es2EglfbCFlags = [extraCFlags, "-DIS_EGLFB", "-DLINUX", "-DGRADLE_BUILD"].flatten()
+def es2EglfbLFlags = [extraLFlags].flatten()
+
+def es2X11CFlags = [extraCFlags, "-DUSE_XSHM", "-DDEBUG", "-DIS_EGLX11"].flatten()
+def es2X11LFlags = [extraLFlags, "-lX11", "-lXext", "-lXdmcp", "-lXau"].flatten()
+
+def mediaCFlags = [extraCFlags,
+    "-I$sdk/usr/include/gstreamer-0.10",
+    "-I$sdk/usr/include/glib-2.0",
+    "-I$sdk/usr/lib/arm-linux-gnueabihf/glib-2.0/include",
+    "-DENABLE_NATIVE_SOURCE=1", "-DENABLE_GST_FFMPEG=1"].flatten()
+def mediaLFlags = [extraLFlags, "-lgstreamer-0.10", "-lgstapp-0.10",
+    "-lgstbase-0.10", "-lglib-2.0", "-lgobject-2.0", "-lgmodule-2.0", "-lgthread-2.0"].flatten()
+
+def webCFlags = [extraCFlags].flatten()
+def webLFlags = [extraLFlags].flatten()
+
+// libraries to remove from the SDK
+//deploy.trim.public.library.filter= \
+//  fxavcodecplugin-52.so \
+//  fxavcodecplugin-53.so \
+//  fxplugins.so \
+//  libjfxwebkit.so \
+//  libgstplugins-lite.so \
+//  libgstreamer-lite.so \
+//  libprism-es2-eglx11.so \
+//  libglass-lens-fb.so \
+
+setupTools("armv6-hf_tools",
+    { propFile ->
+        ByteArrayOutputStream results = new ByteArrayOutputStream();
+        exec {
+            commandLine("$sdk/bin/pkg-config", "--cflags", "gtk+-2.0", "gthread-2.0", "xtst");
+            setStandardOutput(results);
+        }
+        propFile << "cflags=" << results.toString().trim() << "\n";
+
+        results = new ByteArrayOutputStream();
+        exec {
+            commandLine "$sdk/bin/pkg-config", "--libs", "gtk+-2.0", "gthread-2.0", "xtst"
+            standardOutput = results
+        }
+        propFile << "libs=" << results.toString().trim();
+    },
+    { properties ->
+        // TODO ONLY TO BE USED WITH GTK COMPILATION
+//        extraCFlags.addAll(properties.getProperty("cflags").split(" "))
+//        extraLFlags.addAll(properties.getProperty("libs").split(" "))
+    }
+)
+
+ext.ARMV6HF_JAVAFX_PLATFORM_PROPERTIES =
+"""javafx.platform=eglfb
+directfb.glass.platform=Lens
+directfb.glass.lens=dfb
+directfb.prism.order=sw
+directfb.com.sun.javafx.isEmbedded=true
+directfb.com.sun.javafx.scene.control.skin.FXVK.cache=true
+eglfb.glass.platform=Lens
+eglfb.glass.lens=eglfb
+eglfb.prism.order=es2
+eglfb.prism.eglfb=true
+eglfb.prism.device=true
+eglfb.prism.lcdtext=false
+eglfb.use.egl=true
+eglfb.use.gles2=true
+eglfb.embedded=eglfb
+eglfb.com.sun.javafx.isEmbedded=true
+eglfb.doNativeComposite=true
+eglfb.com.sun.javafx.scene.control.skin.FXVK.cache=true
+fb.glass.platform=Lens
+fb.glass.lens=fb
+fb.prism.order=sw
+fb.com.sun.javafx.isEmbedded=true
+fb.glass.restrictWindowToScreen=true
+fb.com.sun.javafx.scene.control.skin.FXVK.cache=true
+eglx11.glass.platform=Lens
+eglx11.glass.lens=eglx11
+eglx11.prism.order=es2
+eglx11.prism.eglx11=true
+eglx11.prism.device=true
+eglx11.prism.lcdtext=false
+eglx11.use.egl=true
+eglx11.use.gles2=true
+eglx11.embedded=eglx11
+eglx11.com.sun.javafx.isEmbedded=true
+eglx11.com.sun.javafx.scene.control.skin.FXVK.cache=true
+gtk.glass.platform=gtk
+gtk.prism.order=sw
+gtk.com.sun.javafx.isEmbedded=true
+gtk.com.sun.javafx.scene.control.skin.FXVK.cache=true"""
+
+def COMPILER = file("$compilerHome/bin/arm-linux-gnueabihf-gcc").getAbsolutePath()
+def LINKER = file("$compilerHome/bin/arm-linux-gnueabihf-g++").getAbsolutePath()
+
+ext.ARMV6HF_GLASS_VARIANTS = ["eglfb", "directfb", "fb", "eglx11", "gtk"]
+ext.ARMV6HF_GLASS_JAVAH_INCLUDE = [
+    "com/sun/glass/events/**",
+    "com/sun/glass/ui/*",
+    "com/sun/glass/ui/lens/*"]
+
+ext.ARMV6HF_GLASS_EGLFB_NATIVE_SOURCE = file("modules/graphics/src/main/native-glass/lens")
+ext.ARMV6HF_GLASS_EGLFB_COMPILER = COMPILER
+ext.ARMV6HF_GLASS_EGLFB_CC_FLAGS = ["-ffast-math", extraCFlags].flatten()
+ext.ARMV6HF_GLASS_EGLFB_LINKER = LINKER
+ext.ARMV6HF_GLASS_EGLFB_LINK_FLAGS = [lensLFlags].flatten()
+
+ext.ARMV6HF_GLASS_DIRECTFB_NATIVE_SOURCE = file("modules/graphics/src/main/native-glass/lens")
+ext.ARMV6HF_GLASS_DIRECTFB_COMPILER = COMPILER
+ext.ARMV6HF_GLASS_DIRECTFB_CC_FLAGS = ["-ffast-math", extraCFlags, "-I$sdk/usr/include/directfb"].flatten()
+ext.ARMV6HF_GLASS_DIRECTFB_LINKER = LINKER
+ext.ARMV6HF_GLASS_DIRECTFB_LINK_FLAGS = [lensLFlags].flatten()
+
+ext.ARMV6HF_GLASS_FB_NATIVE_SOURCE = file("modules/graphics/src/main/native-glass/lens")
+ext.ARMV6HF_GLASS_FB_COMPILER = COMPILER
+ext.ARMV6HF_GLASS_FB_CC_FLAGS = ["-ffast-math", extraCFlags].flatten()
+ext.ARMV6HF_GLASS_FB_LINKER = LINKER
+ext.ARMV6HF_GLASS_FB_LINK_FLAGS = [lensLFlags].flatten()
+
+ext.ARMV6HF_GLASS_EGLX11_NATIVE_SOURCE = file("modules/graphics/src/main/native-glass/lens")
+ext.ARMV6HF_GLASS_EGLX11_COMPILER = COMPILER
+ext.ARMV6HF_GLASS_EGLX11_CC_FLAGS = ["-ffast-math", extraCFlags].flatten()
+ext.ARMV6HF_GLASS_EGLX11_LINKER = LINKER
+ext.ARMV6HF_GLASS_EGLX11_LINK_FLAGS = [lensLFlags].flatten()
+
+ext.ARMV6HF_GLASS_GTK_NATIVE_SOURCE = file("modules/graphics/src/main/native-glass/lens")
+ext.ARMV6HF_GLASS_GTK_COMPILER = COMPILER
+ext.ARMV6HF_GLASS_GTK_CC_FLAGS = ["-ffast-math", extraCFlags].flatten()
+ext.ARMV6HF_GLASS_GTK_LINKER = LINKER
+ext.ARMV6HF_GLASS_GTK_LINK_FLAGS = [lensLFlags, "-lstdc++"].flatten()
+
+ext.ARMV6HF_DECORA_COMPILER = COMPILER
+ext.ARMV6HF_DECORA_CC_FLAGS = extraCFlags
+ext.ARMV6HF_DECORA_LINKER = LINKER
+ext.ARMV6HF_DECORA_LINK_FLAGS = extraLFlags
+
+ext.ARMV6HF_PRISM_COMMON_JAVAH_INCLUDE = ["com/sun/prism/impl/**/*", "com/sun/prism/PresentableState*"]
+ext.ARMV6HF_PRISM_COMMON_NATIVE_SOURCE = file("modules/graphics/src/main/native-prism")
+ext.ARMV6HF_PRISM_COMMON_COMPILER = COMPILER
+ext.ARMV6HF_PRISM_COMMON_CC_FLAGS = [extraCFlags].flatten()
+ext.ARMV6HF_PRISM_COMMON_LINKER = LINKER
+ext.ARMV6HF_PRISM_COMMON_LINK_FLAGS = [extraLFlags, "-lX11", "-lXext", "-lXdmcp", "-lXau"].flatten()
+
+ext.ARMV6HF_PRISM_SW_JAVAH_INCLUDE = ["com/sun/pisces/**/*"]
+ext.ARMV6HF_PRISM_SW_NATIVE_SOURCE = file("modules/graphics/src/main/native-prism-sw")
+ext.ARMV6HF_PRISM_SW_COMPILER = COMPILER
+ext.ARMV6HF_PRISM_SW_CC_FLAGS = [extraCFlags].flatten()
+ext.ARMV6HF_PRISM_SW_LINKER = LINKER
+ext.ARMV6HF_PRISM_SW_LINK_FLAGS = [extraLFlags].flatten()
+
+def closedDir = file("$projectDir/../rt-closed")
+ext.ARMV6HF_JAVAFX_FONT_JAVAH_INCLUDE = ["com/sun/javafx/font/*", "com/sun/javafx/text/*", "com/sun/t2k/*"]
+ext.ARMV6HF_JAVAFX_FONT_NATIVE_SOURCE = [
+    file("$closedDir/javafx-font-native/src"),
+    file("$closedDir/javafx-font-native/src/layout"),
+    file("$closedDir/javafx-font-native/src/layoutfx")]
+ext.ARMV6HF_JAVAFX_FONT_COMPILER = COMPILER
+ext.ARMV6HF_JAVAFX_FONT_CC_FLAGS = fontCFlags
+ext.ARMV6HF_JAVAFX_FONT_LINKER = LINKER
+ext.ARMV6HF_JAVAFX_FONT_LINK_FLAGS = fontLFlags
+
+ext.ARMV6HF_IIO_JAVAH_INCLUDE = ["com/sun/javafx/iio/**/*"]
+ext.ARMV6HF_IIO_NATIVE_SOURCE = [
+    file("$closedDir/javafx-iio-native/src"),
+    file("$closedDir/javafx-iio-native/src/libjpeg7")]
+ext.ARMV6HF_IIO_COMPILER = COMPILER
+ext.ARMV6HF_IIO_CC_FLAGS = iioCFlags
+ext.ARMV6HF_IIO_LINKER = LINKER
+ext.ARMV6HF_IIO_LINK_FLAGS = iioLFlags
+
+ext.ARMV6HF_PRISM_ES2_JAVAH_INCLUDE = ["com/sun/prism/es2/**/*"]
+ext.ARMV6HF_PRISM_ES2_NATIVE_SOURCE = [
+    file("$closedDir/prism-es2-native/src"),
+    file("$closedDir/prism-es2-native/src/GL"),
+    file("$closedDir/prism-es2-native/src/eglfb") // TODO pick eglfb or eglx11 depending on pipeline
+]
+ext.ARMV6HF_PRISM_ES2_COMPILER = COMPILER
+ext.ARMV6HF_PRISM_ES2_CC_FLAGS = es2EglfbCFlags //es2CFlags or es2EglfbCFlags or es2X11CFlags?
+ext.ARMV6HF_PRISM_ES2_LINKER = LINKER
+ext.ARMV6HF_PRISM_ES2_LINK_FLAGS = es2EglfbLFlags //es2LFlags or es2EglfbLFlags or es2X11LFlags?
+
+/******************************************************************************
+ *                                                                            *
+ *                         Build Setup Sanity Checks                          *
+ *                                                                            *
+ *****************************************************************************/
+
+if (!IS_LINUX) throw new Exception("Must be on Linux to compile for armv6-hf")
+// TODO Check for presence of cross tools
+ 

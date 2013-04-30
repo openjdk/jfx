@@ -40,14 +40,6 @@ task generate << {
         exclude "generator.gradle"
     }
 
-    // Copy over the genVSproperties.bat, used to generate properties required
-    // for compilation on Windows.
-    copy {
-        from "$RTDir/gradle-genVSproperties.bat"
-        into FXDir
-        rename ("gradle-genVSproperties.bat", "genVSproperties.bat")
-    }
-
     // Copy over the apps
     ["ConferenceScheduleApp", "Modena"].each { app ->
         copy {
