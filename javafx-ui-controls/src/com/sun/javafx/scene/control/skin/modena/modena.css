@@ -369,6 +369,8 @@ is being used to size a border should also be in pixels.
      **************************************************************************/
 
     -fx-background-color: -fx-background;
+    
+    -fx-transparent-white:#00FFFFFF;
 }
 
 /*******************************************************************************
@@ -1813,7 +1815,7 @@ is being used to size a border should also be in pixels.
 .titled-pane > *.content {
     -fx-border-color: -fx-box-border;
     -fx-border-insets: -1 0 0 0;
-    -fx-background-color: linear-gradient(from 0px 0px to 0px 5px, derive(-fx-color, -4%), transparent);
+    -fx-background-color: linear-gradient(from 0px 0px to 0px 5px, derive(-fx-background, -6%), -fx-background);
 }
 
 
