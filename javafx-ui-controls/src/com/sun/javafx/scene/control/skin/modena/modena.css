@@ -369,8 +369,6 @@ is being used to size a border should also be in pixels.
      **************************************************************************/
 
     -fx-background-color: -fx-background;
-    
-    -fx-transparent-white:#00FFFFFF;
 }
 
 /*******************************************************************************
