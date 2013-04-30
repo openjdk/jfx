@@ -143,7 +143,7 @@ ext.MAC_PRISM_SW_LINKER = LINKER
 ext.MAC_PRISM_SW_LINK_FLAGS = [MAC_PRISM_COMMON_LINK_FLAGS].flatten()
 
 ext.LAUNCHER_COMPILER = COMPILER
-ext.LAUNCHER_CC_FLAGS = ["-DJAVAARCH=\"$OS_ARCH\"", "-I$JDK_HOME/include", "-I$JDK_HOME/include/linux"];
+ext.LAUNCHER_CC_FLAGS = [ccFlags].flatten();
 ext.LAUNCHER_LINKER = LINKER
 ext.LAUNCHER_LINK_FLAGS = ["-ldl"]
 
@@ -174,7 +174,7 @@ ext.MAC_PRISM_ES2_NATIVE_SOURCE = [
     file("modules/graphics/src/main/native-prism-es2/macosx")
 ]
 ext.MAC_PRISM_ES2_COMPILER = COMPILER
-ext.MAC_PRISM_ES2_CC_FLAGS = ["-DMAC", "-DGRADLE_BUILD", ccFlags].flatten()
+ext.MAC_PRISM_ES2_CC_FLAGS = ["-DMACOSX", "-DGRADLE_BUILD", ccFlags].flatten()
 ext.MAC_PRISM_ES2_LINKER = LINKER
 ext.MAC_PRISM_ES2_LINK_FLAGS = [linkFlags].flatten()
 
