@@ -235,7 +235,7 @@ public class TableColumnHeader extends Region {
             if (menu != null && menu.isShowing()) return;
             if (header.getTableHeaderRow().isReordering() && header.isColumnReorderingEnabled()) {
                 header.columnReorderingComplete(me);
-            } else {
+            } else if (me.isStillSincePress()) {
                 TableColumnHeader.sortColumn(
                         header.getTableViewSkin().getSortOrder(), 
                         tableColumn, 
@@ -685,6 +685,8 @@ public class TableColumnHeader extends Region {
     private int newColumnPos;
     
     private void columnReorderingStarted(MouseEvent me) {
+        if (! column.impl_isReorderable()) return;
+        
         // Used to ensure the column ghost is positioned relative to where the
         // user clicked on the column header
         dragOffset = me.getX();
@@ -695,6 +697,8 @@ public class TableColumnHeader extends Region {
     }
 
     private void columnReordering(MouseEvent me) {
+        if (! column.impl_isReorderable()) return;
+        
         // this is for handling the column drag to reorder columns.
         // It shows a line to indicate where the 'drop' will be.
 
@@ -778,6 +782,8 @@ public class TableColumnHeader extends Region {
     }
     
     protected void columnReorderingComplete(MouseEvent me) {
+        if (! column.impl_isReorderable()) return;
+        
         // Move col from where it is now to the new position.
         moveColumn(getTableColumn(), newColumnPos);
         

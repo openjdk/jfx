@@ -478,6 +478,39 @@ public abstract class TableColumnBase<S,T> implements EventTarget, Styleable {
     }
     
     
+    
+    // --- Reorderable
+    private BooleanProperty reorderable;
+    /**
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     */
+    @Deprecated
+    public final BooleanProperty impl_reorderableProperty() {
+        if (reorderable == null) {
+            reorderable = new SimpleBooleanProperty(this, "reorderable", true);
+        }
+        return reorderable;
+    }
+    /**
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     */
+    @Deprecated
+    public final void impl_setReorderable(boolean value) {
+        impl_reorderableProperty().set(value);
+    }
+    /**
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     */
+    @Deprecated
+    public final boolean impl_isReorderable() {
+        return reorderable == null ? false : reorderable.get();
+    }
+    
+    
+    
     // --- Comparator
     /**
      * Comparator function used when sorting this table column. The two Objects
