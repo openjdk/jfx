@@ -52,9 +52,9 @@ public class GlyphCache {
     // is likely something we'd want to tune as they may have much less
     // VRAM and are less likely to be used for apps that have huge
     // text demands.
-  // 2048 pixels introduced very noticeable pauses when trying
-  // to free 1/4 of the glyphs, which for spiral text also amounts
-  // to 1/4 of the strikes.
+    // 2048 pixels introduced very noticeable pauses when trying
+    // to free 1/4 of the glyphs, which for spiral text also amounts
+    // to 1/4 of the strikes.
     private static final int WIDTH = 1024; // in pixels
     private static final int HEIGHT = 1024; // in pixels
     private static ByteBuffer emptyMask;
@@ -65,10 +65,15 @@ public class GlyphCache {
     // segmented arrays are in blocks of 32 glyphs.
     private static final int SEGSHIFT = 5;
     private static final int SEGSIZE  = 1 << SEGSHIFT;
-    //private final GlyphData[][] glyphs;
     HashMap<Integer, GlyphData[]>
         glyphDataMap = new HashMap<Integer, GlyphData[]>();
-    //private int numGlyphs;
+
+    // Because of SEGSHIFT the 5 high bit in the key to glyphDataMap are unused
+    // Using them for subpixel
+    private static final int SUBPIXEL_NONE = 0;
+    private static final int SUBPIXEL_ONEQUARTER    = 0x08000000; // bit 27
+    private static final int SUBPIXEL_ONEHALF       = 0x10000000; // bit 28
+    private static final int SUBPIXEL_THREEQUARTERS = 0x18000000; // bit 27+28
 
     private RectanglePacker packer;
 
@@ -117,7 +122,6 @@ public class GlyphCache {
             dstw = 1;
             dsth = 1;
         }
-        float xAdvanceTotal = x, yAdvanceTotal = y;
         Texture tex = getBackingStore();
         VertexBuffer vb = ctx.getVertexBuffer();
 
@@ -125,16 +129,19 @@ public class GlyphCache {
         Color currentColor = null;
         Point2D pt = new Point2D();
 
+        boolean subPixel = strike.isSubPixelGlyph() && xform.isTranslateOrIdentity();
+        boolean useGlyphListForAdvances = gl.isComplex() || subPixel;
+
         /* For complex text the advances from GlyphList must be used.
          * As advances in the GlyphList are cached without transform
          * the final location has to transform.
          */
-        if (!gl.isComplex()) {
-            pt.setLocation(xAdvanceTotal, yAdvanceTotal);
+        if (!useGlyphListForAdvances) {
+            pt.setLocation(x, y);
             xform.transform(pt, pt);
-            xAdvanceTotal = pt.x;
-            yAdvanceTotal = pt.y;
         }
+
+        float subPixelX = 0;
         for (int gi = 0; gi < len; gi++) {
             int gc = gl.getGlyphCode(gi);
 
@@ -144,14 +151,22 @@ public class GlyphCache {
             if (gc == CharToGlyphMapper.INVISIBLE_GLYPH_ID) {
                 continue;
             }
-            GlyphData data = getCachedGlyph(gc);
+            if (useGlyphListForAdvances) {
+                pt.setLocation(x + gl.getPosX(gi), y + gl.getPosY(gi));
+                if (subPixel) {
+                    subPixelX = pt.x;
+                    pt.x = (int)pt.x;
+                    subPixelX -= pt.x;
+                }
+            }
+            GlyphData data = getCachedGlyph(gc, subPixelX, 0);
             if (data != null) {
                 if (clip != null) {
                     // Always check clipping using user space.
                     if (x + gl.getPosX(gi) > clip.getMaxX()) break;
                     if (x + gl.getPosX(gi + 1) < clip.getMinX()) {
-                        xAdvanceTotal += data.getXAdvance();
-                        yAdvanceTotal += data.getYAdvance();
+                        pt.x += data.getXAdvance();
+                        pt.y += data.getYAdvance();
                         continue;
                     }
                 }
@@ -172,14 +187,13 @@ public class GlyphCache {
                         }
                     }
                 }
-                if (!gl.isComplex()) {
-                    addDataToQuad(data, vb, tex, xAdvanceTotal, yAdvanceTotal, dstw, dsth);
-                    xAdvanceTotal += data.getXAdvance();
-                    yAdvanceTotal += data.getYAdvance();
-                } else {
-                    pt.setLocation(x + gl.getPosX(gi), y + gl.getPosY(gi));
+                if (useGlyphListForAdvances) {
                     xform.transform(pt, pt);
                     addDataToQuad(data, vb, tex, pt.x, pt.y, dstw, dsth);
+                } else {
+                    addDataToQuad(data, vb, tex, pt.x, pt.y, dstw, dsth);
+                    pt.x += data.getXAdvance();
+                    pt.y += data.getYAdvance();
                 }
             }
         }
@@ -244,9 +258,23 @@ public class GlyphCache {
         packer.clear();
     }
 
-    private GlyphData getCachedGlyph(int glyphCode) {
+    private GlyphData getCachedGlyph(int glyphCode, float x, float y) {
         int segIndex = glyphCode >> SEGSHIFT;
         int subIndex = glyphCode % SEGSIZE;
+        if (x != 0) {
+            if (x < 0.25) {
+                x = 0;
+            } else if (x < 0.50) {
+                x = 0.25f;
+                segIndex |= SUBPIXEL_ONEQUARTER;
+            } else if (x < 0.75) {
+                x = 0.50f;
+                segIndex |= SUBPIXEL_ONEHALF;
+            } else {
+                x = 0.75f;
+                segIndex |= SUBPIXEL_THREEQUARTERS;
+            }
+        }
         GlyphData[] segment = glyphDataMap.get(segIndex);
         if (segment != null) {
             if (segment[subIndex] != null) {
@@ -272,7 +300,7 @@ public class GlyphCache {
                 // NOTE : if the MaskData can be stored back directly
                 // in the glyph, even as an opaque type, it should save
                 // repeated work next time the glyph is used.
-                MaskData maskData = MaskData.create(glyph.getPixelData(),
+                MaskData maskData = MaskData.create(glyph.getPixelData(x ,y),
                                                     glyph.getOriginX(),
                                                     glyph.getOriginY(),
                                                     glyph.getWidth(),

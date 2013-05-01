@@ -257,7 +257,7 @@ public final class PrismSettings {
 
         forcePow2 = getBoolean(systemProperties, "prism.forcepowerof2", false);
         noClampToZero = getBoolean(systemProperties, "prism.noclamptozero", false);
-        
+
         allowHiDPIScaling = getBoolean(systemProperties, "prism.allowhidpi", true);
 
         maxVram = getLong(systemProperties, "prism.maxvram", 256 * 1024 * 1024, null);
