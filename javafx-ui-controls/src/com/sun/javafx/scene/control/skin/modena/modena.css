@@ -155,6 +155,29 @@ is being used to size a border should also be in pixels.
     CHART_COLOR_6: #9a42c8;
     CHART_COLOR_7: #c84164;
     CHART_COLOR_8: #888888;
+    /* Chart Color Palette Semi-Transparent
+     * These are used by charts that need semi transparent versions of the above colors, such as BubbleChart. They
+     * are exactly the same colors as above just with alpha
+     *
+     * 20% opacity
+     */
+    CHART_COLOR_1_TRANS_20: #f3622d33;
+    CHART_COLOR_2_TRANS_20: #fba71b33;
+    CHART_COLOR_3_TRANS_20: #57b75733;
+    CHART_COLOR_4_TRANS_20: #41a9c933;
+    CHART_COLOR_5_TRANS_20: #4258c933;
+    CHART_COLOR_6_TRANS_20: #9a42c833;
+    CHART_COLOR_7_TRANS_20: #c8416433;
+    CHART_COLOR_8_TRANS_20: #88888833;
+    /* 70% opacity */
+    CHART_COLOR_1_TRANS_70: #f3622db3;
+    CHART_COLOR_2_TRANS_70: #fba71bb3;
+    CHART_COLOR_3_TRANS_70: #57b757b3;
+    CHART_COLOR_4_TRANS_70: #41a9c9b3;
+    CHART_COLOR_5_TRANS_70: #4258c9b3;
+    CHART_COLOR_6_TRANS_70: #9a42c8b3;
+    CHART_COLOR_7_TRANS_70: #c84164b3;
+    CHART_COLOR_8_TRANS_70: #888888b3;
 
     /***************************************************************************
      *                                                                         *
@@ -324,6 +347,7 @@ is being used to size a border should also be in pixels.
     -fx-selection-bar-text: -fx-text-background-color;
 
     /* These are needed for Popup */
+    -fx-background-color: inherit;
     -fx-background-radius: inherit;
     -fx-background-insets: inherit;
     -fx-padding: inherit;
@@ -483,6 +507,7 @@ is being used to size a border should also be in pixels.
     -fx-stroke: transparent;
 }
 
+.titled-pane:show-mnemonics > .mnemonic-underline,
 .label:show-mnemonics > .mnemonic-underline,
 .context-menu:show-mnemonics > .mnemonic-underline,
 .menu:show-mnemonics > .mnemonic-underline,
@@ -746,16 +771,28 @@ is being used to size a border should also be in pixels.
     -fx-border-color: transparent;
     -fx-border-width: 1px;
 }
-.hyperlink:visited {
+.hyperlink,
+.hyperlink:hover,
+.hyperlink:hover:visited {
     -fx-text-fill: -fx-accent;
+}
+.hyperlink:armed,
+.hyperlink:visited,
+.hyperlink:hover:armed {
+    -fx-text-fill: -fx-text-background-color;
+}
+.hyperlink:hover,
+.hyperlink:visited,
+.hyperlink:hover:visited {
+    -fx-underline: true;
+}
+.hyperlink:visited:armed {
+    -fx-underline: false;
 }
 .hyperlink:focused {
     -fx-border-color: -fx-focus-color;
     -fx-border-style: segments(0.166667em, 0.166667em);
     -fx-border-width: 1px;
-}
-.hyperlink:hover {
-    -fx-underline: true;
 }
 .hyperlink:show-mnemonics > .mnemonic-underline {
     -fx-stroke: -fx-text-fill;
@@ -1776,7 +1813,7 @@ is being used to size a border should also be in pixels.
 .titled-pane > *.content {
     -fx-border-color: -fx-box-border;
     -fx-border-insets: -1 0 0 0;
-    -fx-background-color: linear-gradient(from 0px 0px to 0px 5px, derive(-fx-color, -4%), transparent);
+    -fx-background-color: linear-gradient(from 0px 0px to 0px 5px, derive(-fx-background, -6%), -fx-background);
 }
 
 
@@ -1872,11 +1909,6 @@ is being used to size a border should also be in pixels.
     -fx-padding: 1em; /* 12 */
     -fx-effect: dropshadow( gaussian , rgba(0,0,0,0.2) , 12, 0.0 , 0 , 8 );
 }
-/*.color-palette > .color-picker-grid > .color-square > .color-rect {
-    -fx-stroke: black;
-    -fx-stroke-width: 0.4;
-    -fx-border-color: black;
-}*/
 .color-palette > .color-picker-grid {
     -fx-padding: 0.5px;
     -fx-snap-to-pixel: false;
@@ -2064,12 +2096,12 @@ is being used to size a border should also be in pixels.
 .pagination > .pagination-control > .control-box > .left-arrow-button {
     -fx-background-radius: 3 0 0 3, 3 0 0 3, 2 0 0 2, 1 0 0 1;
     -fx-background-insets: 0 0 -1 5, 0 0 0 5, 1 1 1 6, 2 2 2 7;
-    -fx-padding: 0.166667em 0em 0.25em 0.9em;
+    -fx-padding: 0em 0.417em 0em 0.833em; /* 0 5 0 10 */
 }
 .pagination > .pagination-control > .control-box > .right-arrow-button {
     -fx-background-radius: 0 3 3 0, 0 3 3 0, 0 2 2 0, 0 1 1 0;
     -fx-background-insets: 0 5 -1 0, 0 5 0 0, 1 6 1 1, 2 7 2 2;
-    -fx-padding: 0.166667em 0em 0.25em 0.4em;
+    -fx-padding: 0em 0.75em 0em 0.417em; /* 0 9 0 5 */
 }
 .pagination > .pagination-control .left-arrow {
     -fx-background-color: -fx-mark-highlight-color, -fx-mark-color;
@@ -2087,7 +2119,7 @@ is being used to size a border should also be in pixels.
 }
 .pagination > .pagination-control > .control-box > .bullet-button {   
    -fx-background-radius: 0, 4em, 4em, 4em, 4em;
-   -fx-padding: 0.333em;  
+   -fx-padding: 0.333em;
    -fx-background-color: transparent, -fx-outer-border, -fx-inner-border, -fx-body-color;
    -fx-background-insets: 0, 5,  6,  7;
 }
@@ -2101,12 +2133,12 @@ is being used to size a border should also be in pixels.
 .pagination.bullet > .pagination-control > .control-box > .left-arrow-button {
     -fx-background-radius: 4em;
     -fx-background-insets: 0, 1, 2;
-    -fx-padding: 0 0 0 0.667em; /* 0 0 0 8 */
+    -fx-padding: 0em 0.25em 0em 0.083em; /* 0 3 0 1 */
 } 
 .pagination.bullet > .pagination-control > .control-box > .right-arrow-button {
     -fx-background-radius: 4em;
     -fx-background-insets: 0, 1, 2;
-    -fx-padding: 0 0 0 0.833em; /* 0 0 0 10 */
+    -fx-padding: 0em 0.083em 0em 0.25em; /* 0 1 0 3 */
 }
 .pagination > .pagination-control > .control-box > .number-button {
     -fx-background-radius: 0;
@@ -2640,13 +2672,13 @@ is being used to size a border should also be in pixels.
  ******************************************************************************/
 
 .chart-line-symbol {
-    -fx-background-color: #f9d900, white;
+    -fx-background-color: CHART_COLOR_1, white;
     -fx-background-insets: 0, 2;
     -fx-background-radius: 5px;
     -fx-padding: 5px;
 }
 .chart-series-line {
-    -fx-stroke: #f9d900;
+    -fx-stroke: CHART_COLOR_1;
     -fx-stroke-width: 3px;
 }
 .default-color0.chart-line-symbol { -fx-background-color: CHART_COLOR_1, white; }
@@ -2673,7 +2705,7 @@ is being used to size a border should also be in pixels.
  ******************************************************************************/
 
 .chart-area-symbol {
-    -fx-background-color: #f9d900, white;
+    -fx-background-color: CHART_COLOR_1, white;
     -fx-background-insets: 0, 1;
     -fx-background-radius: 4px; /* makes sure this remains circular */
     -fx-padding: 3px;
@@ -2687,7 +2719,7 @@ is being used to size a border should also be in pixels.
 .default-color6.chart-area-symbol { -fx-background-color: CHART_COLOR_7, white; }
 .default-color7.chart-area-symbol { -fx-background-color: CHART_COLOR_8, white; }
 .chart-series-area-line {
-    -fx-stroke: #f9d900;
+    -fx-stroke: CHART_COLOR_1;
     -fx-stroke-width: 1px;
 }
 .default-color0.chart-series-area-line { -fx-stroke: CHART_COLOR_1; }
@@ -2700,16 +2732,16 @@ is being used to size a border should also be in pixels.
 .default-color7.chart-series-area-line { -fx-stroke: CHART_COLOR_8; }
 .chart-series-area-fill {
     -fx-stroke: null;
-    -fx-fill: #f9d90044;
+    -fx-fill: CHART_COLOR_1_TRANS_20;
 }
-.default-color0.chart-series-area-fill { -fx-fill: CHART_COLOR_1; -fx-opacity: 0.2; }
-.default-color1.chart-series-area-fill { -fx-fill: CHART_COLOR_2; -fx-opacity: 0.2; }
-.default-color2.chart-series-area-fill { -fx-fill: CHART_COLOR_3; -fx-opacity: 0.2; }
-.default-color3.chart-series-area-fill { -fx-fill: CHART_COLOR_4; -fx-opacity: 0.2; }
-.default-color4.chart-series-area-fill { -fx-fill: CHART_COLOR_5; -fx-opacity: 0.2; }
-.default-color5.chart-series-area-fill { -fx-fill: CHART_COLOR_6; -fx-opacity: 0.2; }
-.default-color6.chart-series-area-fill { -fx-fill: CHART_COLOR_7; -fx-opacity: 0.2; }
-.default-color7.chart-series-area-fill { -fx-fill: CHART_COLOR_8; -fx-opacity: 0.2; }
+.default-color0.chart-series-area-fill { -fx-fill: CHART_COLOR_1_TRANS_20; }
+.default-color1.chart-series-area-fill { -fx-fill: CHART_COLOR_2_TRANS_20; }
+.default-color2.chart-series-area-fill { -fx-fill: CHART_COLOR_3_TRANS_20; }
+.default-color3.chart-series-area-fill { -fx-fill: CHART_COLOR_4_TRANS_20; }
+.default-color4.chart-series-area-fill { -fx-fill: CHART_COLOR_5_TRANS_20; }
+.default-color5.chart-series-area-fill { -fx-fill: CHART_COLOR_6_TRANS_20; }
+.default-color6.chart-series-area-fill { -fx-fill: CHART_COLOR_7_TRANS_20; }
+.default-color7.chart-series-area-fill { -fx-fill: CHART_COLOR_8_TRANS_20; }
 .area-legend-symbol {
     -fx-padding: 6px;
     -fx-background-radius: 6px; /* makes sure this remains circular */
@@ -2727,17 +2759,17 @@ is being used to size a border should also be in pixels.
     -fx-padding: 8px;
 }
 .chart-bubble {
-    -fx-bubble-fill: #f9d900;
+    -fx-bubble-fill: CHART_COLOR_1_TRANS_70;
     -fx-background-color: radial-gradient(center 50% 50%, radius 80%, derive(-fx-bubble-fill,20%), derive(-fx-bubble-fill,-30%));
 }
-.default-color0.chart-bubble { -fx-bubble-fill: CHART_COLOR_1; -fx-opacity: 0.7; }
-.default-color1.chart-bubble { -fx-bubble-fill: CHART_COLOR_2; -fx-opacity: 0.7; }
-.default-color2.chart-bubble { -fx-bubble-fill: CHART_COLOR_3; -fx-opacity: 0.7; }
-.default-color3.chart-bubble { -fx-bubble-fill: CHART_COLOR_4; -fx-opacity: 0.7; }
-.default-color4.chart-bubble { -fx-bubble-fill: CHART_COLOR_5; -fx-opacity: 0.7; }
-.default-color5.chart-bubble { -fx-bubble-fill: CHART_COLOR_6; -fx-opacity: 0.7; }
-.default-color6.chart-bubble { -fx-bubble-fill: CHART_COLOR_7; -fx-opacity: 0.7; }
-.default-color7.chart-bubble { -fx-bubble-fill: CHART_COLOR_8; -fx-opacity: 0.7; }
+.default-color0.chart-bubble { -fx-bubble-fill: CHART_COLOR_1_TRANS_70; }
+.default-color1.chart-bubble { -fx-bubble-fill: CHART_COLOR_2_TRANS_70; }
+.default-color2.chart-bubble { -fx-bubble-fill: CHART_COLOR_3_TRANS_70; }
+.default-color3.chart-bubble { -fx-bubble-fill: CHART_COLOR_4_TRANS_70; }
+.default-color4.chart-bubble { -fx-bubble-fill: CHART_COLOR_5_TRANS_70; }
+.default-color5.chart-bubble { -fx-bubble-fill: CHART_COLOR_6_TRANS_70; }
+.default-color6.chart-bubble { -fx-bubble-fill: CHART_COLOR_7_TRANS_70; }
+.default-color7.chart-bubble { -fx-bubble-fill: CHART_COLOR_8_TRANS_70; }
 
 /*******************************************************************************
  *                                                                             *
@@ -2745,22 +2777,8 @@ is being used to size a border should also be in pixels.
  *                                                                             *
  ******************************************************************************/
 
-/* TODO flip gradient vertical for negative bars */
-/*.chart-bar {
-    -fx-bar-fill: #22bad9;
-    -fx-background-color:   derive(-fx-bar-fill,-30%),
-                            linear-gradient(to bottom, derive(-fx-bar-fill,40%), derive(-fx-bar-fill,10%)),
-                            linear-gradient(to bottom, derive(-fx-bar-fill,10%) ,derive(-fx-bar-fill,-6%));
-    -fx-background-insets: 0,1 1 0 1,2 2 1 2;
-}
-.chart-bar.negative {
-    -fx-background-color:   derive(-fx-bar-fill,-30%),
-                            linear-gradient(to top, derive(-fx-bar-fill,40%), derive(-fx-bar-fill,10%)),
-                            linear-gradient(to top, derive(-fx-bar-fill,10%) ,derive(-fx-bar-fill,-6%));
-    -fx-background-insets: 1 0 0 0,1,2;
-}*/
 .chart-bar {
-    -fx-bar-fill: #22bad9;
+    -fx-bar-fill: CHART_COLOR_1;
     -fx-background-color:   linear-gradient(to right, 
                                 derive(-fx-bar-fill, -4%),
                                 derive(-fx-bar-fill, -1%),
@@ -2805,7 +2823,7 @@ is being used to size a border should also be in pixels.
  ******************************************************************************/
 
 .chart-pie {
-    -fx-pie-color: #2f357f;
+    -fx-pie-color: CHART_COLOR_1;
     -fx-background-color: radial-gradient(radius 100%, derive(-fx-pie-color,20%), derive(-fx-pie-color,-10%));
     -fx-background-insets: 1;
     -fx-border-color: -fx-background;

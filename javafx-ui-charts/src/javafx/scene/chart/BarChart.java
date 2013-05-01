@@ -242,6 +242,7 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
             seriesOfDataRemoved = series;
             dataRemoveTimeline.setOnFinished(new EventHandler<ActionEvent>() {
                 public void handle(ActionEvent event) {
+                    item.setSeries(null);
                     getPlotChildren().remove(bar);
                     removeDataItemFromDisplay(series, item);
                     dataItemBeingRemoved = null;
@@ -250,6 +251,7 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
             });
             dataRemoveTimeline.play();
         } else {
+            item.setSeries(null);
             getPlotChildren().remove(bar);
             removeDataItemFromDisplay(series, item);
             updateMap(series, item);

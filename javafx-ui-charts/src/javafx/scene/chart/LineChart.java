@@ -280,6 +280,7 @@ public class LineChart<X,Y> extends XYChart<X,Y> {
                     ft.setToValue(0);
                     ft.setOnFinished(new EventHandler<ActionEvent>() {
                         @Override public void handle(ActionEvent actionEvent) {
+                            item.setSeries(null);
                             getPlotChildren().remove(symbol);
                             removeDataItemFromDisplay(series, item);
                         }
@@ -294,6 +295,7 @@ public class LineChart<X,Y> extends XYChart<X,Y> {
                 dataRemoveTimeline.play();
             }
         } else {
+            item.setSeries(null);
             if (symbol != null) getPlotChildren().remove(symbol);
             removeDataItemFromDisplay(series, item);
         }

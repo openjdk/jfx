@@ -166,7 +166,7 @@ public abstract class XYChart<X,Y> extends Chart {
             requestChartLayout();
         }
     };
-
+    
     // -------------- PUBLIC PROPERTIES --------------------------------------------------------------------------------
 
     private final Axis<X> xAxis;
@@ -1213,7 +1213,7 @@ public abstract class XYChart<X,Y> extends Chart {
         private boolean setToRemove = false;
         /** The series this data belongs to */
         private Series<X,Y> series;
-        private void setSeries(Series<X,Y> series) {
+        void setSeries(Series<X,Y> series) {
             this.series = series;
         }
 
@@ -1479,7 +1479,6 @@ public abstract class XYChart<X,Y> extends Chart {
                     }
                     // update data items reference to series
                     for (Data<X,Y> item : c.getRemoved()) {
-                        item.setSeries(null);
                         item.setToRemove = true;
                     }
                     if (c.getAddedSize() > 0) {
@@ -1509,6 +1508,18 @@ public abstract class XYChart<X,Y> extends Chart {
                             }
                         }
                     }
+                    // check cycle in the data list
+                    // if cycle exists, and the data is not set to be removed, 
+                    // eliminate loop and throw exception stating operation not permitted.
+                    // RT-28880 : infinite loop when same data is added to two charts.
+                    Data<X,Y> cycle = checkCycleInList();
+                    if ( cycle != null) {
+                        if (!cycle.setToRemove) {
+                            eliminateLoop(cycle);
+                            throw new IllegalArgumentException(
+                                    "Duplicate data added or same data added to more than one chart ");
+                        }
+                    }
                     // inform chart
                     XYChart<X,Y> chart = getChart();
                     if(chart!=null) chart.dataItemsChanged(Series.this,
@@ -1516,6 +1527,39 @@ public abstract class XYChart<X,Y> extends Chart {
                 }
             }
         };
+        
+        private Data<X,Y> checkCycleInList() {
+            Data<X,Y> slow = null;
+            Data<X,Y> fast = null;
+            slow = fast = begin;
+            while (slow != null && fast != null) {
+                fast = fast.next;
+                if (fast == slow) return slow;
+                if (fast == null) return null;
+                fast = fast.next;
+                if (fast == slow) return fast;
+                slow = slow.next;
+            }
+            return null;
+        }
+        
+        private void eliminateLoop(Data<X,Y> cycle) {
+            Data<X,Y> slow = cycle;
+            // Identify the data that is the start of the loop
+            Data<X,Y> fast = begin;
+            //until both the refs are one short of the common element which is the start of the loop
+            while(fast.next != slow.next) {
+                fast = fast.next;
+                slow = slow.next;
+            }
+            Data<X,Y>start = fast.next;
+            //Eliminate loop by setting next pointer of last element to null
+            fast = start;
+            while(fast.next != start) {
+                fast = fast.next;
+            }
+            fast.next = null; //break the loop
+        }
 
         // -------------- PUBLIC PROPERTIES ----------------------------------------
 
@@ -1679,5 +1723,5 @@ public abstract class XYChart<X,Y> extends Chart {
             return count;
         }
     }
-
+    
 }

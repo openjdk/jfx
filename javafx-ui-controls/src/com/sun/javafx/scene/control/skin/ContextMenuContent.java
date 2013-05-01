@@ -810,6 +810,7 @@ public class ContextMenuContent extends Region {
 
                 // Listener to items in PopupMenu to update items in PopupMenuContent
                 itemsDirty = true;
+                updateItems(); // RT-29761
             }
         });
     }
@@ -1406,7 +1407,7 @@ public class ContextMenuContent extends Region {
         @Override protected double computePrefHeight(double width) {
             double prefHeight = 0;
             if (item instanceof CustomMenuItem || item instanceof SeparatorMenuItem) {
-                prefHeight = getChildren().get(0).prefHeight(-1);
+                prefHeight = (getChildren().isEmpty()) ? 0 : getChildren().get(0).prefHeight(-1);
             } else {
                 prefHeight = Math.max(prefHeight, (left != null) ? left.prefHeight(-1) : 0);
                 prefHeight = Math.max(prefHeight, (graphic != null) ? graphic.prefHeight(-1) : 0);
@@ -1457,7 +1458,7 @@ public class ContextMenuContent extends Region {
     private class MenuLabel extends Label {
 
         final MenuItem menuitem;
-        MenuItemContainer menuItemContainer;
+        final MenuItemContainer menuItemContainer;
         public MenuLabel(MenuItem item, MenuItemContainer mic) {
             super(item.getText());
             setMnemonicParsing(item.isMnemonicParsing());
@@ -1482,6 +1483,71 @@ public class ContextMenuContent extends Region {
 
                     }
                     Event.fireEvent(menuitem, new ActionEvent());
+
+
+                    /*
+                    ** The menuitem may contain a submenu, so check
+                    ** if there needs to be any further action
+                    */
+                    if (menuitem instanceof Menu) {
+                        if (((Menu)menuitem).isShowing()) {
+                            ((Menu)menuitem).hide();
+                        }
+                        else {
+                            /*
+                            ** close and open submenus first
+                            */
+                            for (Node node : itemsContainer.getChildren()) {
+                                if (node instanceof MenuItemContainer
+                                    && ((MenuItemContainer)node).item instanceof Menu) {
+                                    Menu menu = (Menu)((MenuItemContainer)node).item;
+                                    if (menu.isShowing()) {
+                                        menu.hide();
+                                    }
+                                }
+                            }
+
+                            Node nx = itemsContainer.getChildren().get(0);
+                            if (nx instanceof MenuItemContainer) {
+                                MenuItem item = ((MenuItemContainer)nx).item;
+                                item = menuitem;
+                                if (item instanceof Menu) {
+                                    final Menu menu = (Menu) item;
+                                    if (menu.isDisable()) return;
+
+                                    selectedBackground = menuItemContainer;
+
+                                    /*
+                                    ** if submenu for this menu is already showing then do nothing
+                                    ** Menubar will process the right key and move to the next menu
+                                    */
+                                    if (openSubmenu == menu && submenu.isShowing()) return;
+                                    menu.show();
+
+                                    /*
+                                    ** request focus on the first item of the submenu after it is shown
+                                    */
+                                    ContextMenuContent cmContent = (ContextMenuContent)submenu.getSkin().getNode();
+                                    if (cmContent != null) {
+                                        if (cmContent.itemsContainer.getChildren().size() > 0) {
+                                            ((MenuItemContainer)(cmContent.itemsContainer.getChildren().get(0))).requestFocus();
+                                        } else {
+                                            cmContent.requestFocus();
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    else {
+                        /*
+                        ** the menuitem doesn't have a submenu, so once
+                        ** we've fired our event we can close the menu
+                        */
+                        if (menuitem.getParentMenu().isShowing()) {
+                            menuitem.getParentMenu().hide();
+                        }
+                    }
                     e.consume();
                 }
             });

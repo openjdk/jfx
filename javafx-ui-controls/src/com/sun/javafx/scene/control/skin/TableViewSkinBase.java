@@ -149,7 +149,8 @@ public abstract class TableViewSkinBase<S, C extends Control, B extends Behavior
         tableHeaderRow.setFocusTraversable(false);
         control.paddingProperty().addListener(new InvalidationListener() {
             @Override public void invalidated(Observable valueModel) {
-                tableHeaderRow.setTablePadding(getSkinnable().getInsets());
+                C c = getSkinnable();
+                tableHeaderRow.setTablePadding(c == null ? Insets.EMPTY : c.getInsets());
             }
         });
 
@@ -675,7 +676,10 @@ public abstract class TableViewSkinBase<S, C extends Control, B extends Behavior
 
     private void refreshView() {
         rowCountDirty = true;
-        getSkinnable().requestLayout();
+        Control c = getSkinnable();
+        if (c != null) {
+            c.requestLayout();
+        }
     }
 
     private int itemCount = -1;

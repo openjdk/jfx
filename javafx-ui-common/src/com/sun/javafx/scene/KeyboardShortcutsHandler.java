@@ -56,8 +56,6 @@ public final class KeyboardShortcutsHandler extends BasicEventDispatcher {
     private ObservableMap<KeyCombination, Runnable> accelerators;
     private ObservableMap<KeyCombination, ObservableList<Mnemonic>> mnemonics;
 
-    private boolean mnemonicsLatch = false;
-
     public void addMnemonic(Mnemonic m) {
         ObservableList<Mnemonic> mnemonicsList = (ObservableList)getMnemonics().get(m.getKeyCombination());
         if (mnemonicsList == null) {
@@ -188,14 +186,16 @@ public final class KeyboardShortcutsHandler extends BasicEventDispatcher {
                     if (!isMnemonicsDisplayEnabled()) {
                         setMnemonicsDisplayEnabled(true);
                     }
-                    if (PlatformUtil.isWindows()) {
-                        mnemonicsLatch = !mnemonicsLatch;
+                    else {
+                        if (PlatformUtil.isWindows()) {
+                            setMnemonicsDisplayEnabled(!isMnemonicsDisplayEnabled());
+                        }
                     }
                 }
             }
             if (event.getEventType() == KeyEvent.KEY_RELEASED) {
                 if (!((KeyEvent)event).isAltDown()) {
-                    if (mnemonicsLatch != true) {
+                    if (!PlatformUtil.isWindows()) {
                         setMnemonicsDisplayEnabled(false);
                     }
                 }

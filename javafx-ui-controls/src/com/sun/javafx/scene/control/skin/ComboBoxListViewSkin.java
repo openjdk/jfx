@@ -446,8 +446,12 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
         } else {
             // run item through StringConverter if it isn't null
             StringConverter<T> c = comboBox.getConverter();
-            String s = item == null ? comboBox.getPromptText() : (c == null ? item.toString() : c.toString(item));
+            
+            // prompt text used to be displayed in the display text of a 
+            // non-editable node, but was removed as per RT-29284
+            String s = item == null ? /*comboBox.getPromptText()*/"" : (c == null ? item.toString() : c.toString(item));
             cell.setText(s);
+            
             cell.setGraphic(null);
             return s == null || s.isEmpty();
         }
