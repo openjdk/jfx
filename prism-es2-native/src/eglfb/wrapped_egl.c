@@ -43,6 +43,7 @@
 #include <linux/fb.h>
 #include <fcntl.h>
 #include <dlfcn.h>
+#include <sys/ioctl.h>
 
 #define WRAPPEDAPI
 #include "wrapped_egl.h"

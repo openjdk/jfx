@@ -28,15 +28,17 @@ import org.gradle.api.tasks.InputDirectory
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
 
+
 class LinkTask extends DefaultTask {
     List<String> linkParams = new ArrayList<String>();
     @InputDirectory File objectDir;
     @OutputFile File lib;
+    String linker;
     @TaskAction void compile() {
         // Link & generate the library (.dll, .so, .dylib)
         lib.getParentFile().mkdirs();
         project.exec({
-            commandLine("$project.LINK");
+            commandLine(linker);
             args(objectDir.listFiles());
             if (project.IS_WINDOWS) {
                 args("/out:$lib");

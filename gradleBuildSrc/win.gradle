@@ -1,0 +1,334 @@
+/*
+ * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.  Oracle designates this
+ * particular file as subject to the "Classpath" exception as provided
+ * by Oracle in the LICENSE file that accompanied this code.
+ *
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
+ *
+ * You should have received a copy of the GNU General Public License version
+ * 2 along with this work; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+ * or visit www.oracle.com if you need additional information or have any
+ * questions.
+ */
+
+/******************************************************************************
+ *                                                                            *
+ *                         Build Setup Sanity Checks                          *
+ *                                                                            *
+ *****************************************************************************/
+ext.WIN_CAN_BUILD = IS_WINDOWS
+if (!WIN_CAN_BUILD) return;
+
+if (!IS_WINDOWS) throw new Exception("Must be on Windows to compile for Windows");
+
+//            if (COMPILE_TARGET == CompileTarget.MAC || COMPILE_TARGET == CompileTarget.IOS) {
+//                into("build/${COMPILE_TARGET.name}-sdk/rt/lib");
+//            } else if (COMPILE_TARGET == CompileTarget.WIN) {
+//                into("build/${COMPILE_TARGET.name}-sdk/rt/bin");
+//            } else {
+//                into("build/${COMPILE_TARGET.name}-sdk/rt/lib/$OS_ARCH");
+//            }
+
+ext.GLASS_PLATFORM = "gtk"
+ext.LIB_DEST = "lib/$OS_ARCH"
+ext.JFXRT_JAR_EXCLUDES = [
+    "com/sun/glass/events/mac",
+    "com/sun/glass/ui/mac",
+    "com/sun/glass/ui/accessible/mac",
+    "com/sun/prism/es2/gl/mac",
+    
+    "com/sun/glass/ui/gtk",
+    
+    "com/sun/glass/ui/ios",
+    
+    "com/sun/glass/ui/lens",
+    "com/sun/prism/es2/gl/eglfb",
+    "com/sun/prism/es2/gl/eglx11",
+    "com/sun/prism/es2/gl/x11",
+    
+    "com/sun/glass/ui/swt", // SWT glass
+    
+    "javafx/embed/swing", // Swing Interop
+    
+    "javafx/embed/swt", // SWT Interop
+]
+
+ext.CC_FLAGS = ["/nologo", "/W3", "/EHsc", "/c",
+        "/D_STATIC_CPP_LIB", "/D_DISABLE_DEPRECATE_STATIC_CPPLIB", "/DINLINE=__inline",
+        "/DUNICODE", "/D_UNICODE", "/DWIN32", "/DIAL", "/D_LITTLE_ENDIAN", "/DWIN32_LEAN_AND_MEAN",
+        "/I$JDK_HOME/include", "/I$JDK_HOME/include/win32", "/arch:SSE", "/fp:fast",
+        IS_DEBUG ? ["/MDd", "/Od", "/Zi", "/DDEBUG"] : ["/O2", "/MD"]].flatten();
+
+ext.LINK_FLAGS = ["/nologo", "/dll", "/manifest", "/opt:REF", "/incremental:no"];
+if (IS_DEBUG) LINK_FLAGS.add("/debug");
+
+// Check to see whether $buildDir/windows_tools.properties file exists. If not, then generate it.
+// Once generated, we need to read the properties file to help us define the defaults for this
+// block of properties
+File windows_tools = file("$buildDir/windows_tools.properties");
+//outputs.file = windows_tools;
+if (!windows_tools.exists()) {
+    // Create the properties file
+    windows_tools.getParentFile().mkdirs();
+    windows_tools.createNewFile();
+    ByteArrayOutputStream results = new ByteArrayOutputStream();
+    String winsdkDir = System.getenv().get("WINSDK_DIR");
+    exec({
+        environment([
+                "WINSDKPATH" : winsdkDir == null ? "" : winsdkDir,
+                "CONF"       : "/$CONF", // TODO does this mean the generated properties must be reset when in a different configuration?
+                "VCARCH"     : IS_64 ? "amd64" : "x86",
+                "SDKARCH"    : IS_64 ? "/x64" : "/x86",
+        ]);
+        commandLine("cmd", "/q", "/c", "genVSproperties.bat");
+        setStandardOutput(results);
+    });
+    BufferedReader reader = new BufferedReader(new StringReader(results.toString().trim()));
+    reader.readLine();
+    reader.readLine();
+    String line;
+    while ((line = reader.readLine()) != null && !line.startsWith("######")) {
+        line = line.replace("\\", "/").replace("/@@ENDOFLINE@@", "").replace("@@ENDOFLINE@@", "").replace("//", "/").replace("windows.vs.", "WINDOWS_VS_");
+        windows_tools << line << "\r\n";
+    }
+}
+// Try reading the properties in order to define the properties. If the property file cannot
+// be located, then we will end up using some hard-coded defaults (which are probably wrong 80%
+// of the time, but what the heck).
+InputStream windows_tools_stream = null;
+try {
+    Properties windows_tools_properties = new Properties();
+    windows_tools_stream = new FileInputStream(windows_tools);
+    windows_tools_properties.load(windows_tools_stream);
+    defineProperty("WINDOWS_VS_VSINSTALLDIR", windows_tools_properties, "c:/Program Files (x86)/Microsoft Visual Studio 10.0");
+    defineProperty("WINDOWS_SDK_DIR", windows_tools_properties, System.getenv().get("WindowsSdkDir"))
+    defineProperty("WINDOWS_VS_VCINSTALLDIR", windows_tools_properties, "$WINDOWS_VS_VSINSTALLDIR/VC")
+    defineProperty("WINDOWS_VS_DEVENVDIR", windows_tools_properties, "$WINDOWS_VS_VSINSTALLDIR/Common7/IDE")
+    defineProperty("WINDOWS_VS_DEVENVCMD", windows_tools_properties, "$WINDOWS_VS_DEVENVDIR/VCExpress.exe")
+    defineProperty("WINDOWS_VS_MSVCDIR", windows_tools_properties, WINDOWS_VS_VCINSTALLDIR)
+    defineProperty("WINDOWS_DXSDK_DIR", windows_tools_properties, System.getenv().get("DXSDK_DIR"))
+    defineProperty("WINDOWS_VS_INCLUDE", windows_tools_properties, "$WINDOWS_VS_VCINSTALLDIR/INCLUDE;" + "$WINDOWS_SDK_DIR/include;")
+    defineProperty("WINDOWS_VS_LIB", windows_tools_properties, "$WINDOWS_VS_VCINSTALLDIR/LIB;" + "$WINDOWS_SDK_DIR/lib;")
+    defineProperty("WINDOWS_VS_LIBPATH", windows_tools_properties, "$WINDOWS_VS_VCINSTALLDIR/LIB;")
+    defineProperty("WINDOWS_VS_PATH", windows_tools_properties, "$WINDOWS_VS_DEVENVDIR;" +
+            "$WINDOWS_VS_VSINSTALLDIR/VC/BIN;" +
+            "$WINDOWS_VS_VSINSTALLDIR/Common7/Tools;" +
+            "$WINDOWS_VS_VCINSTALLDIR/VCPackages;" +
+            "$WINDOWS_SDK_DIR/bin/NETFX 4.0 Tools;" +
+            "$WINDOWS_SDK_DIR/bin;" +
+            System.getenv().get("PATH"))
+} finally {
+    try { windows_tools_stream.close() } catch (Exception e) { }
+}
+
+ext.WINDOWS_NATIVE_COMPILE_ENVIRONMENT = [
+        "VCINSTALLDIR"         : WINDOWS_VS_VCINSTALLDIR,
+        "VSINSTALLDIR"         : WINDOWS_VS_VSINSTALLDIR,
+        "DEVENVDIR"            : WINDOWS_VS_DEVENVDIR,
+        "MSVCDIR"              : WINDOWS_VS_MSVCDIR,
+        "PATH"                 : WINDOWS_VS_PATH,
+        "INCLUDE"              : WINDOWS_VS_INCLUDE,
+        "LIB"                  : WINDOWS_VS_LIB,
+        "LIBPATH"              : WINDOWS_VS_LIBPATH,
+        "DXSDK_DIR"            : WINDOWS_DXSDK_DIR
+];
+
+String msvcBinDir = (IS_64
+                  ? "$WINDOWS_VS_VSINSTALLDIR/VC/BIN/amd64"
+                  : "$WINDOWS_VS_VSINSTALLDIR/VC/BIN")
+defineProperty("CC", cygpath("$msvcBinDir/cl.exe"));
+defineProperty("LINK", cygpath("$msvcBinDir/link.exe"));
+defineProperty("RC", cygpath("$WINDOWS_SDK_DIR/Bin/RC.Exe"));
+defineProperty("FXC", cygpath("$WINDOWS_DXSDK_DIR/utilities/bin/x86/fxc.exe"));
+defineProperty("MT", cygpath("$WINDOWS_SDK_DIR/Bin/mt.exe"));
+defineProperty("PRISM_CC", CC);
+defineProperty("PRISM_SW_CC", CC);
+
+ext.GLASS_CC_FLAGS = [CC_FLAGS, "/WX"].flatten();
+ext.GLASS_LINK_FLAGS = [LINK_FLAGS, "delayimp.lib", "gdi32.lib", "urlmon.lib", "Comdlg32.lib",
+        "winmm.lib", "imm32.lib", "shell32.lib", "Uiautomationcore.lib", "dwmapi.lib",
+        "/DELAYLOAD:user32.dll", "/DELAYLOAD:urlmon.dll", "/DELAYLOAD:winmm.dll", "/DELAYLOAD:shell32.dll",
+        "/DELAYLOAD:Uiautomationcore.dll", "/DELAYLOAD:dwmapi.dll"].flatten();
+ext.DECORA_CC_FLAGS = new ArrayList(CC_FLAGS);
+ext.DECORA_LINK_FLAGS = new ArrayList(LINK_FLAGS);
+ext.PRISM_CC_FLAGS = new ArrayList(CC_FLAGS);
+ext.PRISM_LINK_FLAGS = new ArrayList(LINK_FLAGS);
+ext.PRISM_SW_CC_FLAGS = new ArrayList(CC_FLAGS);
+ext.PRISM_SW_LINK_FLAGS = new ArrayList(LINK_FLAGS);
+ext.PRISM_D3D_CC_FLAGS = [CC_FLAGS, "/Ibuild/headers/PrismD3D"].flatten();
+ext.PRISM_D3D_LINK_FLAGS = new ArrayList(LINK_FLAGS);
+ext.LAUNCHER_CC_FLAGS = ["/nologo", "/W3", "/EHsc", "/D_WINDOWS", "/DUNICODE", "/D_UNICODE", "/DWIN32",
+        "/D_LITTLE_ENDIAN", "/DWIN32_LEAN_AND_MEAN", "/I$JDK_HOME/include", "/I$JDK_HOME/include/win32",
+        "/arch:SSE", "/fp:fast", "/O2", "/MD"];
+ext.LAUNCHER_LINK_FLAGS = ["/link", "/nologo", "/SUBSYSTEM:WINDOWS", "user32.lib", "shell32.lib", "advapi32.lib"]
+
+ext.ICON_LAUNCHER_CC_FLAGS = ["/nologo", "/W3", "/EHsc", "/D_WINDOWS", "/DUNICODE", "/D_UNICODE",
+        "/arch:SSE", "/fp:fast", "/O2"]
+ext.ICON_LAUNCHER_LINK_FLAGS = ["/link", "/nologo", "/SUBSYSTEM:CONSOLE"];
+
+ext.FONT_LINK_FLAGS = [LINK_FLAGS, "advapi32.lib", "gdi32.lib", "user32.lib"].flatten
+
+
+ext.GLASS_JAVAH_INCLUDE = [
+    "com/sun/glass/events/**",
+    "com/sun/glass/ui/*",
+    "com/sun/glass/ui/$GLASS_PLATFORM/*",
+    "com/sun/glass/ui/accessible/$GLASS_PLATFORM/*"]
+ext.GLASS_NATIVE_SOURCE = file("modules/graphics/src/main/native-glass/$GLASS_PLATFORM")
+ext.GLASS_CC_FLAGS = new ArrayList(CC_FLAGS);
+ext.GLASS_LINK_FLAGS = new ArrayList(LINK_FLAGS);
+
+ext.DECORA_CC_FLAGS = [CC_FLAGS, "-ffast-math"].flatten();
+ext.DECORA_LINK_FLAGS = new ArrayList(LINK_FLAGS);
+
+ext.PRISM_JAVAH_INCLUDE = ["com/sun/prism/impl/**/*", "com/sun/prism/PresentableState*"]
+ext.PRISM_NATIVE_SOURCE = file("modules/graphics/src/main/native-prism")
+ext.PRISM_CC_FLAGS = new ArrayList(CC_FLAGS);
+ext.PRISM_LINK_FLAGS = new ArrayList(LINK_FLAGS);
+
+ext.PRISMSW_JAVAH_INCLUDE = ["com/sun/pisces/**/*"]
+ext.PRISMSW_NATIVE_SOURCE = file("modules/graphics/src/main/native-prism-sw")
+ext.PRISMSW_CC_FLAGS = new ArrayList(CC_FLAGS);
+ext.PRISMSW_LINK_FLAGS = new ArrayList(LINK_FLAGS);
+
+ext.LAUNCHER_CC_FLAGS = ["-DJAVAARCH=\"$OS_ARCH\"", "-I$JDK_HOME/include", "-I$JDK_HOME/include/linux"];
+ext.LAUNCHER_LINK_FLAGS = ["-ldl"]
+
+ext.FONT_JAVAH_INCLUDE = ["com/sun/javafx/font/*", "com/sun/javafx/text/*", "com/sun/t2k/*"]
+ext.FONT_NATIVE_SOURCE = [
+    file("$closedDir/javafx-font-native/src"),
+    file("$closedDir/javafx-font-native/src/layout"),
+    file("$closedDir/javafx-font-native/src/layoutfx")]
+ext.FONT_CC_FLAGS = ["-DJFXFONT_PLUS", CC_FLAGS].flatten
+ext.FONT_LINK_FLAGS = [LINK_FLAGS].flatten
+
+ext.IIO_JAVAH_INCLUDE = ["com/sun/javafx/iio/**/*"]
+ext.IIO_NATIVE_SOURCE = [
+    file("modules/graphics/src/main/native-iio"),
+    file("modules/graphics/src/main/native-iio/libjpeg7")]
+ext.IIO_CC_FLAGS = [CC_FLAGS].flatten
+ext.IIO_LINK_FLAGS = [LINK_FLAGS].flatten
+
+ext.PRISMD3D_JAVAH_INCLUDE = ["com/sun/prism/d3d/**/*"]
+ext.PRISMD3D_NATIVE_SOURCE = [
+    file("$closedDir/prism-d3d-native/src"),
+    file("$closedDir/prism-d3d-native/src/hlsl")]
+ext.PRISMD3D_CC_FLAGS = [CC_FLAGS, "/Ibuild/headers/PrismD3D"].flatten()
+ext.PRISMD3D_LINK_FLAGS = [LINK_FLAGS, "user32.lib"].flatten
+
+ext.PRISMES2_JAVAH_INCLUDE = ["com/sun/prism/es2/**/*"]
+ext.PRISMES2_NATIVE_SOURCE = [
+    file("modules/graphics/src/main/native-prism-es2"),
+    file("modules/graphics/src/main/native-prism-es2/GL"),
+    file("modules/graphics/src/main/native-prism-es2/windows")
+].flatten
+ext.PRISMES2_CC_FLAGS = []
+//    ccPrismES2 {
+//        if (IS_WINDOWS){
+//            params.addAll(["/Ob1", "/GF", "/Gy", "/GS"])
+//        }
+//        params.addAll([
+//                IS_WINDOWS ? "/DWIN32" : IS_MAC ? "-DMACOSX" : IS_LINUX ? "-DLINUX" : "-DUNIX",
+//                "-DGRADLE_BUILD"])
+//        params.addAll(CC_FLAGS);
+//    }
+
+//    linkPrismES2 {
+//        lib = file("$project.buildDir/libs/${COMPILE_TARGET}/${library('prism-es2')}")
+//        linkParams.addAll(LINK_FLAGS);
+//        if (IS_WINDOWS) linkParams.addAll(["/SUBSYSTEM:WINDOWS", "opengl32.lib", "gdi32.lib", "user32.lib", "kernel32.lib"])
+//    }
+
+
+
+ext.GLASS_JAVAH_INCLUDE = [
+    "com/sun/glass/events/**",
+    "com/sun/glass/ui/*",
+    "com/sun/glass/ui/$GLASS_PLATFORM/*",
+    "com/sun/glass/ui/accessible/$GLASS_PLATFORM/*"]
+ext.GLASS_NATIVE_SOURCE = file("modules/graphics/src/main/native-glass/$GLASS_PLATFORM")
+ext.GLASS_COMPILER = COMPILER
+ext.GLASS_CC_FLAGS = new ArrayList(CC_FLAGS)
+ext.GLASS_LINKER = LINKER
+ext.GLASS_LINK_FLAGS = new ArrayList(LINK_FLAGS)
+
+ext.DECORA_COMPILER = COMPILER
+ext.DECORA_CC_FLAGS = [CC_FLAGS, "-ffast-math"].flatten();
+ext.DECORA_LINKER = LINKER
+ext.DECORA_LINK_FLAGS = new ArrayList(LINK_FLAGS);
+
+ext.PRISM_JAVAH_INCLUDE = ["com/sun/prism/impl/**/*", "com/sun/prism/PresentableState*"]
+ext.PRISM_NATIVE_SOURCE = file("modules/graphics/src/main/native-prism")
+ext.PRISM_COMPILER = "cc"
+ext.PRISM_CC_FLAGS = new ArrayList(CC_FLAGS);
+ext.PRISM_LINKER = LINKER
+ext.PRISM_LINK_FLAGS = new ArrayList(LINK_FLAGS);
+
+ext.PRISMSW_JAVAH_INCLUDE = ["com/sun/pisces/**/*"]
+ext.PRISMSW_NATIVE_SOURCE = file("modules/graphics/src/main/native-prism-sw")
+ext.PRISMSW_COMPILER = "cc"
+ext.PRISMSW_CC_FLAGS = new ArrayList(CC_FLAGS);
+ext.PRISMSW_LINKER = LINKER
+ext.PRISMSW_LINK_FLAGS = new ArrayList(LINK_FLAGS);
+
+ext.LAUNCHER_COMPILER = COMPILER
+ext.LAUNCHER_CC_FLAGS = ["-DJAVAARCH=\"$OS_ARCH\"", "-I$JDK_HOME/include", "-I$JDK_HOME/include/linux"];
+ext.LAUNCHER_LINKER = LINKER
+ext.LAUNCHER_LINK_FLAGS = ["-ldl"]
+
+ext.FONT_JAVAH_INCLUDE = ["com/sun/javafx/font/*", "com/sun/javafx/text/*", "com/sun/t2k/*"]
+ext.FONT_NATIVE_SOURCE = [
+    file("$closedDir/javafx-font-native/src"),
+    file("$closedDir/javafx-font-native/src/layout"),
+    file("$closedDir/javafx-font-native/src/layoutfx")]
+ext.FONT_COMPILER = COMPILER
+ext.FONT_CC_FLAGS = ["-DJFXFONT_PLUS", CC_FLAGS].flatten
+ext.FONT_LINKER = LINKER
+ext.FONT_LINK_FLAGS = [LINK_FLAGS].flatten
+
+ext.IIO_JAVAH_INCLUDE = ["com/sun/javafx/iio/**/*"]
+ext.IIO_NATIVE_SOURCE = [
+    file("$closedDir/javafx-iio-native/src"),
+    file("$closedDir/javafx-iio-native/src/libjpeg7")]
+ext.IIO_COMPILER = COMPILER
+ext.IIO_CC_FLAGS = [CC_FLAGS].flatten
+ext.IIO_LINKER = LINKER
+ext.IIO_LINK_FLAGS = [LINK_FLAGS].flatten
+
+ext.PRISMD3D_JAVAH_INCLUDE = ["com/sun/prism/d3d/**/*"]
+ext.PRISMD3D_NATIVE_SOURCE = [
+    file("$closedDir/prism-d3d-native/src"),
+    file("$closedDir/prism-d3d-native/src/hlsl")]
+ext.PRISMD3D_COMPILER = COMPILER
+ext.PRISMD3D_CC_FLAGS = [CC_FLAGS, "/Ibuild/headers/PrismD3D"].flatten()
+ext.PRISMD3D_LINKER = LINKER
+ext.PRISMD3D_LINK_FLAGS = [LINK_FLAGS, "user32.lib"].flatten
+
+ext.PRISMES2_JAVAH_INCLUDE = ["com/sun/prism/es2/**/*"]
+ext.PRISMES2_NATIVE_SOURCE = [
+    file("$closedDir/prism-es2-native/src"),
+    file("$closedDir/prism-es2-native/src/GL"),
+    COMPILE_TARGET == "mac" ? file("$closedDir/prism-es2-native/src/macosx") :
+    COMPILE_TARGET == "win" ? file("$closedDir/prism-es2-native/src/windows") :
+    COMPILE_TARGET == "linux" ? file("$closedDir/prism-es2-native/src/x11") :
+    COMPILE_TARGET == "armhf" || COMPILE_TARGET == "armvfp" ?
+    [file("$closedDir/prism-es2-native/src/eglfb"), file("$closedDir/prism-es2-native/src/eglx11")] :
+    COMPILE_TARGET == "ios" ? file("$closedDir/prism-es2-native/src/ios") : null
+    // TODO what about compile target of swt? Is 'null' OK in that case?
+].flatten
+ext.PRISMES2_COMPILER = COMPILER
+ext.PRISMES2_CC_FLAGS = ["-DLINUX", "-DGRADLE_BUILD", CC_FLAGS].flatten
+ext.PRISMES2_LINKER = LINKER
+ext.PRISMES2_LINK_FLAGS = [LINK_FLAGS].flatten

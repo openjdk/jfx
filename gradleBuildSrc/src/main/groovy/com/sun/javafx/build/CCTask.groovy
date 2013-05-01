@@ -1,6 +1,3 @@
-import org.gradle.api.tasks.InputDirectory
-import org.gradle.api.tasks.Optional
-
 /*
  * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
@@ -26,8 +23,11 @@ import org.gradle.api.tasks.Optional
  * questions.
  */
 
+import org.gradle.api.tasks.InputDirectory
+import org.gradle.api.tasks.Optional
+
 class CCTask extends NativeCompileTask {
-    @Optional String compiler;
+    String compiler;
     @Optional List<String> linkerOptions = new ArrayList<String>();
     @Optional @InputDirectory File headers;
     @Optional Closure eachOutputFile; // will be given a File and must return a File
@@ -50,14 +50,7 @@ class CCTask extends NativeCompileTask {
         // TODO the PDB file is never being built -- maybe because it is only built during
         // debug builds, otherwise that flag is ignored "/Fd" or "-Fd"
         project.exec({
-            commandLine("${compiler == null ? project.CC : compiler}");
-            if (headers != null) args("-I$headers");
-
-            // Add the source roots in as include directories
-            sourceRoots.each { root ->
-                final File file = root instanceof File ? (File) root : project.file(root)
-                args("-I$file");
-            }
+            commandLine(compiler);
 
             // Add in any additional compilation params
             if (params != null) {
@@ -70,6 +63,14 @@ class CCTask extends NativeCompileTask {
                     args(params)
                 }
             };
+
+            if (headers != null) args("-I$headers");
+
+            // Add the source roots in as include directories
+            sourceRoots.each { root ->
+                final File file = root instanceof File ? (File) root : project.file(root)
+                args("-I$file");
+            }
 
             // Add the name of the source file to compile
             if (project.IS_WINDOWS) {

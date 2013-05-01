@@ -1,0 +1,187 @@
+/*
+ * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.  Oracle designates this
+ * particular file as subject to the "Classpath" exception as provided
+ * by Oracle in the LICENSE file that accompanied this code.
+ *
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
+ *
+ * You should have received a copy of the GNU General Public License version
+ * 2 along with this work; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+ * or visit www.oracle.com if you need additional information or have any
+ * questions.
+ */
+
+ext.MAC_CAN_BUILD = IS_MAC
+if (!MAC_CAN_BUILD) return;
+// All desktop related packages should be built
+ext.MAC_COMPILE_SWING = true;
+ext.MAC_COMPILE_SWT = true;
+ext.MAC_COMPILE_FXPACKAGER = true;
+ext.MAC_COMPILE_DESIGN_TIME = true;
+ext.MAC_LIB_DEST = "lib"
+ext.MAC_JFXRT_JAR_EXCLUDES = [
+    "**/*.hlsl",
+    "com/sun/glass/ui/win",
+    "com/sun/glass/ui/accessible/win",
+    "com/sun/prism/d3d",
+    "com/sun/prism/es2/gl/win",
+    "com/sun/prism/null3d",
+    "com/sun/scenario/effect/impl/hw/d3d",
+    
+    "com/sun/glass/ui/gtk",
+    
+    "com/sun/glass/ui/ios",
+    
+    "com/sun/glass/ui/lens",
+    "com/sun/prism/es2/gl/eglfb",
+    "com/sun/prism/es2/gl/eglx11",
+    "com/sun/prism/es2/gl/x11",
+    
+    "com/sun/glass/ui/swt", // SWT glass
+    
+    "javafx/embed/swing", // Swing Interop
+    
+    "javafx/embed/swt", // SWT Interop
+]
+
+// Define settings for Mac compilation. This is much easier than Windows because we know what version we're
+// compiling against and Mac always puts it in the same place. In extreme cases you can provide your own
+// properties in your home dir to override these settings or pass them on the command line via -P
+defineProperty("MACOSX_MIN_VERSION", "10.7");
+defineProperty("MACOSX_SDK_PATH", "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX${MACOSX_MIN_VERSION}.sdk");
+defineProperty("MACOSX_JDK_FRAMEWORK", "/System/Library/Frameworks/JavaVM.framework");
+
+// Sanity check
+if (!IS_64) throw new Exception("Cannot compile on 32-bit Mac, only on 64-bit Mac");
+
+def commonParams = [
+        "-mmacosx-version-min=$MACOSX_MIN_VERSION",
+        "-isysroot", "$MACOSX_SDK_PATH",
+        "-arch", "x86_64",
+        "-F$MACOSX_JDK_FRAMEWORK/Frameworks"]
+
+def linkFlags = [
+        "-framework", "AppKit",
+        "-framework", "ApplicationServices",
+        "-framework", "JavaVM",
+        "-framework", "JavaRuntimeSupport",
+        "-framework", "OpenGL",
+        "-framework", "QuartzCore",
+        "-dynamiclib", "-lobjc", commonParams].flatten();
+
+def ccFlags = [
+        "-std=c99",
+        "-c",
+        "-I$JDK_HOME/include",
+        "-I$JDK_HOME/include/darwin",
+        commonParams,
+        IS_DEBUG ? "-DDEBUG" : ["-O3", "-DNDEBUG"]].flatten()
+
+//// NOTE: I've attempted to use the exact same build flags here as what are used in the ant builds, so that
+//// the transition can be made simpler. However, this needs to be fixed and the flags that are used consolidated.
+//// There are many "accidental" differences between the different builds that have cropped up over time, and
+//// there are a few intentional differences. We need to take a measured look at what flags are being used to build with.
+//ext.GLASS_CC_FLAGS = [commonCcParams].flatten()
+//if (!IS_DEBUG) GLASS_CC_FLAGS += "-Werror";
+//ext.GLASS_LINK_FLAGS = [commonLinkParams].flatten()
+//if (IS_DEBUG) GLASS_LINK_FLAGS += "-g";
+def COMPILER = "gcc"
+def LINKER = "g++"
+
+ext.MAC_GLASS_JAVAH_INCLUDE = [
+    "com/sun/glass/events/**",
+    "com/sun/glass/ui/*",
+    "com/sun/glass/ui/mac/*",
+    "com/sun/glass/ui/accessible/mac/*"]
+ext.MAC_GLASS_NATIVE_SOURCE = file("modules/graphics/src/main/native-glass/mac")
+ext.MAC_GLASS_COMPILER = COMPILER
+ext.MAC_GLASS_CC_FLAGS = [ccFlags].flatten()
+ext.MAC_GLASS_LINKER = LINKER
+ext.MAC_GLASS_LINK_FLAGS = [linkFlags].flatten()
+
+ext.MAC_DECORA_COMPILER = COMPILER
+ext.MAC_DECORA_CC_FLAGS = ["-O1", "-ffast-math",
+        "-I$JDK_HOME/include",
+        "-I$JDK_HOME/include/darwin",
+        "-mmacosx-version-min=$MACOSX_MIN_VERSION",
+        "-arch", "x86_64", "-c"].flatten()
+ext.MAC_DECORA_LINKER = LINKER
+ext.MAC_DECORA_LINK_FLAGS = ["-dynamiclib",
+        "-mmacosx-version-min=$MACOSX_MIN_VERSION",
+        "-arch", "x86_64"].flatten()
+
+ext.MAC_PRISM_COMMON_JAVAH_INCLUDE = ["com/sun/prism/impl/**/*", "com/sun/prism/PresentableState*"]
+ext.MAC_PRISM_COMMON_NATIVE_SOURCE = file("modules/graphics/src/main/native-prism")
+ext.MAC_PRISM_COMMON_COMPILER = "cc"
+ext.MAC_PRISM_COMMON_CC_FLAGS = ["-O3", "-DINLINE=inline",
+        "-I$JDK_HOME/include",
+        "-I$JDK_HOME/include/darwin",
+        "-mmacosx-version-min=$MACOSX_MIN_VERSION",
+        "-arch", "x86_64", "-c"].flatten()
+ext.MAC_PRISM_COMMON_LINKER = LINKER
+ext.MAC_PRISM_COMMON_LINK_FLAGS = ["-dynamiclib",
+        "-mmacosx-version-min=$MACOSX_MIN_VERSION",
+        "-arch", "x86_64"].flatten()
+
+ext.MAC_PRISM_SW_JAVAH_INCLUDE = ["com/sun/pisces/**/*"]
+ext.MAC_PRISM_SW_NATIVE_SOURCE = file("modules/graphics/src/main/native-prism-sw")
+ext.MAC_PRISM_SW_COMPILER = "cc"
+ext.MAC_PRISM_SW_CC_FLAGS = [MAC_PRISM_COMMON_CC_FLAGS].flatten()
+ext.MAC_PRISM_SW_LINKER = LINKER
+ext.MAC_PRISM_SW_LINK_FLAGS = [MAC_PRISM_COMMON_LINK_FLAGS].flatten()
+
+ext.LAUNCHER_COMPILER = COMPILER
+ext.LAUNCHER_CC_FLAGS = [ccFlags].flatten();
+ext.LAUNCHER_LINKER = LINKER
+ext.LAUNCHER_LINK_FLAGS = ["-ldl"]
+
+def closedDir = file("$projectDir/../rt-closed")
+ext.MAC_JAVAFX_FONT_JAVAH_INCLUDE = ["com/sun/javafx/font/*", "com/sun/javafx/text/*", "com/sun/t2k/*"]
+ext.MAC_JAVAFX_FONT_NATIVE_SOURCE = [
+    file("$closedDir/javafx-font-native/src"),
+    file("$closedDir/javafx-font-native/src/layout"),
+    file("$closedDir/javafx-font-native/src/layoutfx")]
+ext.MAC_JAVAFX_FONT_COMPILER = COMPILER
+ext.MAC_JAVAFX_FONT_CC_FLAGS = ["-DJFXFONT_PLUS", ccFlags].flatten()
+ext.MAC_JAVAFX_FONT_LINKER = LINKER
+ext.MAC_JAVAFX_FONT_LINK_FLAGS = [linkFlags].flatten()
+
+ext.MAC_IIO_JAVAH_INCLUDE = ["com/sun/javafx/iio/**/*"]
+ext.MAC_IIO_NATIVE_SOURCE = [
+    file("modules/graphics/src/main/native-iio"),
+    file("modules/graphics/src/main/native-iio/libjpeg7")]
+ext.MAC_IIO_COMPILER = COMPILER
+ext.MAC_IIO_CC_FLAGS = [ccFlags].flatten()
+ext.MAC_IIO_LINKER = LINKER
+ext.MAC_IIO_LINK_FLAGS = [linkFlags].flatten()
+
+ext.MAC_PRISM_ES2_JAVAH_INCLUDE = ["com/sun/prism/es2/**/*"]
+ext.MAC_PRISM_ES2_NATIVE_SOURCE = [
+    file("modules/graphics/src/main/native-prism-es2"),
+    file("modules/graphics/src/main/native-prism-es2/GL"),
+    file("modules/graphics/src/main/native-prism-es2/macosx")
+]
+ext.MAC_PRISM_ES2_COMPILER = COMPILER
+ext.MAC_PRISM_ES2_CC_FLAGS = ["-DMACOSX", "-DGRADLE_BUILD", ccFlags].flatten()
+ext.MAC_PRISM_ES2_LINKER = LINKER
+ext.MAC_PRISM_ES2_LINK_FLAGS = [linkFlags].flatten()
+
+/******************************************************************************
+ *                                                                            *
+ *                         Build Setup Sanity Checks                          *
+ *                                                                            *
+ *****************************************************************************/
+
+if (!IS_MAC) throw new Exception("Must be on MacOSX to compile for MacOSX");
