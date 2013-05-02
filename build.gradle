@@ -726,14 +726,15 @@ project(":graphics") {
         // TODO need to hook this up to be executed only if PassThroughVS.h is missing or PassThroughVS.hlsl is changed
         task generateD3DHeaders(group: "Build") {
             enabled = IS_WINDOWS
-            dependsOn javahPrismD3D
+            dependsOn javahWinPrismD3d
             description = "Generate headers by compiling hlsl files"
             doLast {
                 mkdir file("$buildDir/headers/PrismD3D/hlsl")
-                def PS_3D_SRC = file("$closedDir/prism-d3d-native/src/hlsl/Mtl1PS.hlsl")
-                def VS_3D_SRC = file("$closedDir/prism-d3d-native/src/hlsl/Mtl1VS.hlsl")
+                def PS_3D_SRC = file("src/main/native-prism-d3d/hlsl/Mtl1PS.hlsl")
+                def VS_3D_SRC = file("src/main/native-prism-d3d/hlsl/Mtl1VS.hlsl")
+                def PASSTHROUGH_VS_SRC = file("src/main/native-prism-d3d/PassThroughVS.hlsl")
                 def jobs = [
-                        ["$FXC", "/nologo", "/T", "vs_3_0", "/Fh", "$buildDir/headers/PrismD3D/PassThroughVS.h", "/E", "passThrough", "$closedDir/prism-d3d-native/src/PassThroughVS.hlsl"],
+                        ["$FXC", "/nologo", "/T", "vs_3_0", "/Fh", "$buildDir/headers/PrismD3D/PassThroughVS.h", "/E", "passThrough", "$PASSTHROUGH_VS_SRC"],
                         ["$FXC", "/nologo", "/T", "ps_2_0", "/Fh", "$buildDir/headers/PrismD3D/hlsl/Mtl1PS.h", "/DSpec=0", "/DSType=0", "$PS_3D_SRC"],
                         ["$FXC", "/nologo", "/T", "ps_2_0", "/Fh", "$buildDir/headers/PrismD3D/hlsl/Mtl1PS_i.h", "/DSpec=0", "/DSType=0", "/DIllumMap=1", "$PS_3D_SRC"],
                         ["$FXC", "/nologo", "/T", "ps_2_0", "/Fh", "$buildDir/headers/PrismD3D/hlsl/Mtl1PS_s1n.h", "/DSpec=1", "/DSType=0", "$PS_3D_SRC"],
@@ -798,7 +799,7 @@ project(":graphics") {
             }
         }
 
-        ccPrismD3D.dependsOn generateD3DHeaders
+        ccWinPrismD3d.dependsOn generateD3DHeaders
     }
 
     // The Decora and Prism JSL files have to be generated in a very specific set of steps.
@@ -1079,6 +1080,7 @@ project(":fxpackager") {
             params.addAll(LAUNCHER_CC_FLAGS);
             output(file("$buildDir/native/WinLauncher"));
             source(file("src/main/native/launcher/win"));
+            compiler = LAUNCHER_COMPILER
             exe = true;
             linkerOptions.addAll(LAUNCHER_LINK_FLAGS);
             doLast {
@@ -1094,6 +1096,7 @@ project(":fxpackager") {
             params.addAll(ICON_LAUNCHER_CC_FLAGS)
             output(file("$buildDir/native/IconSwap"))
             source file("src/main/native/launcher/win")
+            compiler = LAUNCHER_COMPILER
             exe = true
             linkerOptions.addAll(ICON_LAUNCHER_LINK_FLAGS)
             doLast {
@@ -1139,17 +1142,14 @@ project(":fxpackager") {
         task buildJavaFXPackager(type: CCTask, group: "Build") {
             description = "Compiles native sources for javafxpackager.exe"
             matches = "javafxpackager\\.cpp"
-            params.addAll(["/nologo", "/W3", "/EHsc", "/MT", "/GS",
-                    "/DWIN32", "/D_LITTLE_ENDIAN", "/DWIN32_LEAN_AND_MEAN",
-                    "/D_WIN32_WINDOWS=0X0500", "/D_WIN32_WINNT=0X0500",
-                    "/I$JDK_HOME/include", "/I$JDK_HOME/include/win32", "/arch:SSE", "/fp:fast",
-                    "/O2", "-c"])
+            params.addAll(FXPACKAGER_CC_FLAGS)
+            compiler = FXPACKAGER_COMPILER
             output(file("$buildDir/native/javafxpackager"))
-            source file("src/main/native/javafxpackager/win")
+            source FXPACKAGER_NATIVE_SOURCE
             doLast {
                 mkdir "$buildDir/native"
                 exec({
-                    commandLine("$FXPACKAGER_WIN_RC", "/nologo", "/l", "0x409", "/r", "/dJFX_DVERSION=8", "/dJFX_VERSION=8",
+                    commandLine("$RC", "/nologo", "/l", "0x409", "/r", "/dJFX_DVERSION=8", "/dJFX_VERSION=8",
                             "/fo$buildDir/native/javafxpackager/javafxpackager.res",
                             "src/main/native/javafxpackager/win/javafxpackager.rc");
                     environment(WINDOWS_NATIVE_COMPILE_ENVIRONMENT);
@@ -1158,7 +1158,7 @@ project(":fxpackager") {
             doLast {
                 mkdir "$buildDir/javafxpackager"
                 exec({
-                    commandLine("$FXPACKAGER_WIN_LINKER", "/nologo", "/opt:REF", "/incremental:no", "/manifest", "kernel32.lib", "advapi32.lib",
+                    commandLine("$FXPACKAGER_LINKER", "/nologo", "/opt:REF", "/incremental:no", "/manifest", "kernel32.lib", "advapi32.lib",
                             "/out:$buildDir/native/javafxpackager/javafxpackager.exe",
                             "$buildDir/native/javafxpackager/javafxpackager.obj",
                             "$buildDir/native/javafxpackager/javafxpackager.res")
