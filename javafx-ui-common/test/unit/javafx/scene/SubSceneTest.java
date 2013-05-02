@@ -24,6 +24,11 @@
  */
 package javafx.scene;
 
+import com.sun.javafx.pgstub.StubParallelCamera;
+import com.sun.javafx.pgstub.StubSubScene;
+import com.sun.javafx.pgstub.StubToolkit;
+import com.sun.javafx.tk.Toolkit;
+import javafx.stage.Stage;
 import static org.junit.Assert.*;
 import org.junit.Test;
 
@@ -128,5 +133,100 @@ public class SubSceneTest {
 
         nestedSubScene.setCamera(camera);
         subScene.setCamera(camera);
+    }
+
+    @Test
+    public void testCameraUpdatesPG() {
+        SubScene sub = new SubScene(new Group(), 100, 100);
+        Scene scene = new Scene(new Group(sub), 300, 200);
+        Camera cam = new ParallelCamera();
+        Stage stage = new Stage();
+        stage.setScene(scene);
+        stage.show();
+
+        sub.setCamera(cam);
+        ((StubToolkit) Toolkit.getToolkit()).firePulse();
+
+        // verify it has correct owner
+        cam.setNearClip(20);
+        ((StubToolkit) Toolkit.getToolkit()).firePulse();
+        assertEquals(20, ((StubParallelCamera) (((StubSubScene) sub.impl_getPGNode())
+                .getCamera())).getNearClip(), 0.00001);
+
+        sub.setCamera(null);
+        ((StubToolkit) Toolkit.getToolkit()).firePulse();
+        // verify owner was removed
+        cam.setNearClip(30);
+        ((StubToolkit) Toolkit.getToolkit()).firePulse();
+        assertEquals(20, ((StubParallelCamera) (((StubSubScene) sub.impl_getPGNode())
+                .getCamera())).getNearClip(), 0.00001);
+
+        sub.setCamera(cam);
+        ((StubToolkit) Toolkit.getToolkit()).firePulse();
+        // verify it has correct owner
+        cam.setNearClip(40);
+        ((StubToolkit) Toolkit.getToolkit()).firePulse();
+        assertEquals(40, ((StubParallelCamera) (((StubSubScene) sub.impl_getPGNode())
+                .getCamera())).getNearClip(), 0.00001);
+
+        StubParallelCamera oldCam =
+                ((StubParallelCamera) (((StubSubScene) sub.impl_getPGNode()).getCamera()));
+        sub.setCamera(new ParallelCamera());
+        ((StubToolkit) Toolkit.getToolkit()).firePulse();
+        // verify owner was removed
+        cam.setNearClip(50);
+        ((StubToolkit) Toolkit.getToolkit()).firePulse();
+        assertEquals(40, oldCam.getNearClip(), 0.00001);
+        assertEquals(0.1, ((StubParallelCamera) (((StubSubScene) sub.impl_getPGNode())
+                .getCamera())).getNearClip(), 0.00001);
+    }
+
+    @Test
+    public void testDefaultCameraUpdatesPG() {
+        SubScene sub = new SubScene(new Group(), 100, 100);
+        Scene scene = new Scene(new Group(sub), 300, 200);
+        Stage stage = new Stage();
+        stage.setScene(scene);
+        stage.show();
+
+        ((StubToolkit) Toolkit.getToolkit()).firePulse();
+        Camera cam = sub.getEffectiveCamera();
+
+        cam.setNearClip(20);
+        ((StubToolkit) Toolkit.getToolkit()).firePulse();
+        assertEquals(20, ((StubParallelCamera) (((StubSubScene) sub.impl_getPGNode())
+                .getCamera())).getNearClip(), 0.00001);
+    }
+
+    @Test(expected=IllegalArgumentException.class)
+    public void subScenesCannotShareCamera() {
+        SubScene sub = new SubScene(new Group(), 100, 100);
+        SubScene sub2 = new SubScene(new Group(), 100, 100);
+        Scene scene = new Scene(new Group(sub, sub2), 300, 200);
+        Camera cam = new ParallelCamera();
+        sub.setCamera(cam);
+        sub2.setCamera(cam);
+    }
+
+    @Test(expected=IllegalArgumentException.class)
+    public void sceneAndSubSceneCannotShareCamera() {
+        SubScene sub = new SubScene(new Group(), 100, 100);
+        Scene scene = new Scene(new Group(sub), 300, 200);
+        Camera cam = new ParallelCamera();
+        scene.setCamera(cam);
+        sub.setCamera(cam);
+    }
+
+    @Test
+    public void shouldBeAbleToSetCameraTwiceToSubScene() {
+        SubScene sub = new SubScene(new Group(), 100, 100);
+        Scene scene = new Scene(new Group(sub), 300, 200);
+        Camera cam = new ParallelCamera();
+        try {
+            sub.setCamera(cam);
+            sub.setCamera(cam);
+        } catch (IllegalArgumentException e) {
+            fail("It didn't allow to 'share' camera with myslef");
+        }
     }
 }

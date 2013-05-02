@@ -25,10 +25,15 @@
 
 package javafx.scene;
 
+import com.sun.javafx.pgstub.StubParallelCamera;
+import com.sun.javafx.pgstub.StubScene;
+import com.sun.javafx.pgstub.StubToolkit;
+import com.sun.javafx.tk.Toolkit;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.fail;
 import javafx.scene.layout.StackPane;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.transform.Scale;
@@ -667,5 +672,91 @@ public class SceneTest {
 
         nestedSubScene.setCamera(camera);
         scene.setCamera(camera);
+    }
+
+    @Test
+    public void testCameraUpdatesPG() {
+        Scene scene = new Scene(new Group(), 300, 200);
+        Camera cam = new ParallelCamera();
+        stage.setScene(scene);
+
+        scene.setCamera(cam);
+        ((StubToolkit) Toolkit.getToolkit()).firePulse();
+
+        // verify it has correct owner
+        cam.setNearClip(20);
+        ((StubToolkit) Toolkit.getToolkit()).firePulse();
+        assertEquals(20, ((StubParallelCamera) (((StubScene) scene.impl_getPeer())
+                .getCamera())).getNearClip(), 0.00001);
+
+        scene.setCamera(null);
+        ((StubToolkit) Toolkit.getToolkit()).firePulse();
+        // verify owner was removed
+        cam.setNearClip(30);
+        ((StubToolkit) Toolkit.getToolkit()).firePulse();
+        assertEquals(20, ((StubParallelCamera) (((StubScene) scene.impl_getPeer())
+                .getCamera())).getNearClip(), 0.00001);
+
+        scene.setCamera(cam);
+        ((StubToolkit) Toolkit.getToolkit()).firePulse();
+        // verify it has correct owner
+        cam.setNearClip(40);
+        ((StubToolkit) Toolkit.getToolkit()).firePulse();
+        assertEquals(40, ((StubParallelCamera) (((StubScene) scene.impl_getPeer())
+                .getCamera())).getNearClip(), 0.00001);
+
+        StubParallelCamera oldCam =
+                ((StubParallelCamera) (((StubScene) scene.impl_getPeer()).getCamera()));
+        scene.setCamera(new ParallelCamera());
+        ((StubToolkit) Toolkit.getToolkit()).firePulse();
+        // verify owner was removed
+        cam.setNearClip(50);
+        ((StubToolkit) Toolkit.getToolkit()).firePulse();
+        assertEquals(40, oldCam.getNearClip(), 0.00001);
+        assertEquals(0.1, ((StubParallelCamera) (((StubScene) scene.impl_getPeer())
+                .getCamera())).getNearClip(), 0.00001);
+    }
+
+    @Test
+    public void testDefaultCameraUpdatesPG() {
+        Scene scene = new Scene(new Group(), 300, 200);
+        stage.setScene(scene);
+        ((StubToolkit) Toolkit.getToolkit()).firePulse();
+        Camera cam = scene.getEffectiveCamera();
+
+        cam.setNearClip(20);
+        ((StubToolkit) Toolkit.getToolkit()).firePulse();
+        assertEquals(20, ((StubParallelCamera) (((StubScene) scene.impl_getPeer())
+                .getCamera())).getNearClip(), 0.00001);
+    }
+
+    @Test(expected=IllegalArgumentException.class)
+    public void scenesCannotShareCamera() {
+        Scene scene = new Scene(new Group(), 300, 200);
+        Scene scene2 = new Scene(new Group(), 300, 200);
+        Camera cam = new ParallelCamera();
+        scene.setCamera(cam);
+        scene2.setCamera(cam);
+    }
+
+    @Test(expected=IllegalArgumentException.class)
+    public void subSceneAndSceneCannotShareCamera() {
+        SubScene sub = new SubScene(new Group(), 100, 100);
+        Scene scene = new Scene(new Group(sub), 300, 200);
+        Camera cam = new ParallelCamera();
+        sub.setCamera(cam);
+        scene.setCamera(cam);
+    }
+
+    @Test
+    public void shouldBeAbleToSetCameraTwiceToScene() {
+        Scene scene = new Scene(new Group(), 300, 200);
+        Camera cam = new ParallelCamera();
+        try {
+            scene.setCamera(cam);
+            scene.setCamera(cam);
+        } catch (IllegalArgumentException e) {
+            fail("It didn't allow to 'share' camera with myslef");
+        }
     }
 }

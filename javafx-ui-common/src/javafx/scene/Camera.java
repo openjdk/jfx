@@ -71,6 +71,10 @@ public abstract class Camera extends Node {
     private double farClipInScene;
     private double nearClipInScene;
 
+    // only one of them can be non-null at a time
+    private Scene ownerScene = null;
+    private SubScene ownerSubScene = null;
+
     private GeneralTransform3D projViewTx = new GeneralTransform3D();
     private GeneralTransform3D projTx = new GeneralTransform3D();
     private Affine3D viewTx = new Affine3D();
@@ -241,6 +245,32 @@ public abstract class Camera extends Node {
         return viewHeight;
     }
 
+    void setOwnerScene(Scene s) {
+        if (s == null) {
+            ownerScene = null;
+        } else if (s != ownerScene) {
+            if (ownerScene != null || ownerSubScene != null) {
+                throw new IllegalArgumentException(this
+                        + "is already set as camera in other scene or subscene");
+            }
+            ownerScene = s;
+            markOwnerDirty();
+        }
+    }
+
+    void setOwnerSubScene(SubScene s) {
+        if (s == null) {
+            ownerSubScene = null;
+        } else if (s != ownerSubScene) {
+            if (ownerScene != null || ownerSubScene != null) {
+                throw new IllegalArgumentException(this
+                        + "is already set as camera in other scene or subscene");
+            }
+            ownerSubScene = s;
+            markOwnerDirty();
+        }
+    }
+
     @Override
     protected void impl_markDirty(DirtyBits dirtyBit) {
         super.impl_markDirty(dirtyBit);
@@ -252,8 +282,20 @@ public abstract class Camera extends Node {
         } else if (dirtyBit == DirtyBits.NODE_CAMERA) {
             projViewTxValid = false;
         }
+        markOwnerDirty();
     }
 
+    private void markOwnerDirty() {
+        // if the camera is part of the scene/subScene, we don't need to notify
+        // the owner as the camera will be added to its dirty list as usual
+
+        if (ownerScene != null && ownerScene != getScene()) {
+            ownerScene.markCameraDirty();
+        }
+        if (ownerSubScene != null && ownerSubScene != getSubScene()) {
+            ownerSubScene.markCameraDirty();
+        }
+    }
 
     /**
      * Returns the local-to-scene transform of this camera.

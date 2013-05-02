@@ -76,6 +76,7 @@ import com.sun.javafx.scene.text.TextLayoutFactory;
 import com.sun.javafx.sg.PGAmbientLight;
 import com.sun.javafx.sg.PGArc;
 import com.sun.javafx.sg.PGBox;
+import com.sun.javafx.sg.PGCamera;
 import com.sun.javafx.sg.PGCanvas;
 import com.sun.javafx.sg.PGCircle;
 import com.sun.javafx.sg.PGCubicCurve;
@@ -889,7 +890,7 @@ public class StubToolkit extends Toolkit {
 
     @Override
     public PGSubScene createPGSubScene() {
-        throw new UnsupportedOperationException("Not supported yet.");
+        return new StubSubScene();
     }
 
     public interface DndDelegate {

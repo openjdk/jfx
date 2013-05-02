@@ -118,4 +118,8 @@ public class StubScene implements TKScene {
     public void setLights(Object[] lights) {
         // ignore
     }
+
+    public PGCamera getCamera() {
+        return camera;
+    }
 }
