@@ -47,6 +47,10 @@ public class BasicRoundRectRep extends BasicShapeRep {
     // Note: This method has been made static so that it can be shared
     // with CachingRoundRectRep.
     public static void fillRoundRect(Graphics g, RoundRectangle2D r) {
+        if ((r.width <= 0) || (r.height <= 0)) {
+            // Don't render if it is of negative dimension
+            return;
+        }
         float arcw = r.arcWidth;
         float arch = r.arcHeight;
         if (arcw > 0 && arch > 0) {
