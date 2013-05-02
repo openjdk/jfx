@@ -724,6 +724,10 @@ public class SubScene extends Node {
             return subScene.depthBuffer;
         };
 
+        @Override
+        public Camera getEffectiveCamera(SubScene subScene) {
+            return subScene.getEffectiveCamera();
+        }
     }
 
     static {

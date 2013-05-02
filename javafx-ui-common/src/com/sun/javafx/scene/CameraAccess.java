@@ -25,25 +25,27 @@
 
 package com.sun.javafx.scene;
 
+import javafx.geometry.Point3D;
 import javafx.scene.Camera;
-import javafx.scene.SubScene;
+import javafx.scene.Node;
 
-public abstract class SubSceneAccess {
-    private static SubSceneAccess access;
+public abstract class CameraAccess {
+    private static CameraAccess access;
 
-    public static synchronized void setSubSceneAccess(SubSceneAccess acc) {
+    public static synchronized void setCameraAccess(CameraAccess acc) {
         if (access == null) {
             access = acc;
         }
     }
 
     /**
-     * Return the accessor created by the Node class when its loaded.
+     * Return the accessor created by the Camera class when its loaded.
      */
-    public static synchronized SubSceneAccess getSubSceneAccess() {
+    public static synchronized CameraAccess getCameraAccess() {
         return access;
     }
 
-    public abstract boolean isDepthBuffer(SubScene subScene);
-    public abstract Camera getEffectiveCamera(SubScene subScene);
+    public abstract Point3D project(Camera camera, Point3D p);
+    public abstract Point3D pickNodeXYPlane(Camera camera, Node node, double x, double y);
+    public abstract Point3D pickProjectPlane(Camera camera, double x, double y);
 }

@@ -35,12 +35,14 @@ import com.sun.javafx.geom.transform.GeneralTransform3D;
 import com.sun.javafx.geom.transform.NoninvertibleTransformException;
 import com.sun.javafx.jmx.MXNodeAlgorithm;
 import com.sun.javafx.jmx.MXNodeAlgorithmContext;
+import com.sun.javafx.scene.CameraAccess;
 import com.sun.javafx.scene.DirtyBits;
 import com.sun.javafx.sg.PGCamera;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.SimpleDoubleProperty;
+import javafx.geometry.Point3D;
 import javafx.scene.transform.Transform;
 import sun.util.logging.PlatformLogger;
 
@@ -338,6 +340,64 @@ public abstract class Camera extends Node {
     }
 
     /**
+     * Transforms the given 3D point to the flat projected coordinates.
+     */
+    private Point3D project(Point3D p) {
+
+        final Vec3d vec = getProjViewTransform().transform(new Vec3d(
+                p.getX(), p.getY(), p.getZ()));
+
+        final double halfViewWidth = getViewWidth() / 2.0;
+        final double halfViewHeight = getViewHeight() / 2.0;
+
+        return new Point3D(
+                halfViewWidth * (1 + vec.x),
+                halfViewHeight * (1 - vec.y),
+                0.0);
+    }
+
+    /**
+     * Computes intersection point of the pick ray cast by the given coordinates
+     * and the node's local XY plane.
+     */
+    private Point3D pickNodeXYPlane(Node node, double x, double y) {
+        final PickRay ray = computePickRay(x, y, null);
+
+        final Affine3D localToScene = new Affine3D();
+        node.getLocalToSceneTransform().impl_apply(localToScene);
+
+        final Vec3d o = ray.getOriginNoClone();
+        final Vec3d d = ray.getDirectionNoClone();
+
+        try {
+            localToScene.inverseTransform(o, o);
+            localToScene.inverseDeltaTransform(d, d);
+        } catch (NoninvertibleTransformException e) {
+            return null;
+        }
+
+        if (almostZero(d.z)) {
+            return null;
+        }
+
+        final double t = -o.z / d.z;
+        return new Point3D(o.x + (d.x * t), o.y + (d.y * t), 0.0);
+    }
+
+    /**
+     * Computes intersection point of the pick ray cast by the given coordinates
+     * and the projection plane.
+     */
+    private Point3D pickProjectPlane(double x, double y) {
+        final PickRay ray = computePickRay(x, y, null);
+        final Vec3d p = new Vec3d();
+        p.add(ray.getOriginNoClone(), ray.getDirectionNoClone());
+
+        return new Point3D(p.x, p.y, p.z);
+    }
+
+
+    /**
      * Computes pick ray for the content rendered by this camera.
      * @param x horizontal coordinate of the pick ray in the projected
      *               view, usually mouse cursor position
@@ -386,5 +446,31 @@ public abstract class Camera extends Node {
     @Override
     public Object impl_processMXNode(MXNodeAlgorithm alg, MXNodeAlgorithmContext ctx) {
         throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    /**
+     * This class is used by classes in different packages to get access to
+     * private and package private methods.
+     */
+    private static class CameraAccessImpl extends CameraAccess {
+
+        @Override
+        public Point3D project(Camera camera, Point3D p) {
+            return camera.project(p);
+        }
+
+        @Override
+        public Point3D pickNodeXYPlane(Camera camera, Node node, double x, double y) {
+            return camera.pickNodeXYPlane(node, x, y);
+        }
+
+        @Override
+        public Point3D pickProjectPlane(Camera camera, double x, double y) {
+            return camera.pickProjectPlane(x, y);
+        }
+    }
+
+    static {
+        CameraAccess.setCameraAccess(new CameraAccessImpl());
     }
 }

@@ -393,6 +393,12 @@ public class Scene implements EventTarget {
                                 final Scene scene) {
                             scene.parentEffectiveOrientationInvalidated();
                         }
+
+                        @Override
+                        public Camera getEffectiveCamera(Scene scene) {
+                            return scene.getEffectiveCamera();
+                        }
+
                     });
         }
 
@@ -5733,7 +5739,8 @@ public class Scene implements EventTarget {
             Node n = node;
             while(n != null) {
                 list.add(n);
-                n = n.getParent();
+                final Parent p = n.getParent();
+                n = p != null ? p : n.getSubScene();
             }
 
             if (scene != null) {
@@ -5749,10 +5756,12 @@ public class Scene implements EventTarget {
             Cursor cursor = null;
             if (node != null) {
                 cursor = node.getCursor();
-                Parent p = node.getParent();
-                while (cursor == null && p != null) {
-                    cursor = p.getCursor();
-                    p = p.getParent();
+                Node n = node.getParent();
+                while (cursor == null && n != null) {
+                    cursor = n.getCursor();
+
+                    final Parent p = n.getParent();
+                    n = p != null ? p : n.getSubScene();
                 }
             }
             return cursor;

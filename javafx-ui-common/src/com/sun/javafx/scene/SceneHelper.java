@@ -25,6 +25,7 @@
 
 package com.sun.javafx.scene;
 
+import javafx.scene.Camera;
 import javafx.scene.Scene;
 
 /**
@@ -49,6 +50,10 @@ public final class SceneHelper {
         sceneAccessor.parentEffectiveOrientationInvalidated(scene);
     }
 
+    public static Camera getEffectiveCamera(final Scene scene) {
+        return sceneAccessor.getEffectiveCamera(scene);
+    }
+
     public static void setSceneAccessor(final SceneAccessor newAccessor) {
         if (sceneAccessor != null) {
             throw new IllegalStateException();
@@ -61,6 +66,8 @@ public final class SceneHelper {
         void setPaused(boolean paused);
 
         void parentEffectiveOrientationInvalidated(Scene scene);
+
+        Camera getEffectiveCamera(Scene scene);
     }
 
     private static void forceInit(final Class<?> classToInit) {
