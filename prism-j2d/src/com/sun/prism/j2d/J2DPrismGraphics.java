@@ -27,13 +27,12 @@ package com.sun.prism.j2d;
 
 import com.sun.glass.ui.Screen;
 import com.sun.javafx.PlatformUtil;
+import com.sun.javafx.font.CompositeGlyphMapper;
+import com.sun.javafx.font.CompositeStrike;
 import com.sun.javafx.font.FontResource;
 import com.sun.javafx.font.FontStrike;
 import com.sun.javafx.font.Metrics;
 import com.sun.javafx.scene.text.GlyphList;
-import com.sun.t2k.CompositeGlyphMapper;
-import com.sun.t2k.CompositeStrike;
-
 import com.sun.javafx.geom.RectBounds;
 import com.sun.javafx.geom.PathIterator;
 import com.sun.javafx.geom.Rectangle;

@@ -27,8 +27,8 @@ package com.sun.prism;
 
 import com.sun.glass.ui.Screen;
 import com.sun.javafx.font.FontFactory;
+import com.sun.javafx.font.PrismFontFactory;
 import com.sun.prism.impl.PrismSettings;
-import com.sun.t2k.T2KFontFactory;
 
 import java.lang.reflect.Method;
 import java.util.Iterator;
@@ -118,7 +118,7 @@ public abstract class GraphicsPipeline {
 
     public FontFactory getFontFactory() {
         if (fontFactory == null) {
-            fontFactory = T2KFontFactory.getFontFactory();
+            fontFactory = PrismFontFactory.getFontFactory();
         }
         return fontFactory;
     }

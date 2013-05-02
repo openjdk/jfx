@@ -25,14 +25,15 @@
 
 package com.sun.prism.impl;
 
+import com.sun.javafx.font.CharToGlyphMapper;
 import com.sun.javafx.font.FontResource;
 import com.sun.javafx.font.FontStrike;
+import com.sun.javafx.font.Glyph;
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.Rectangle;
 import com.sun.javafx.geom.Point2D;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.scene.text.GlyphList;
-import com.sun.t2k.CharToGlyphMapper;
 import com.sun.prism.impl.packrect.RectanglePacker;
 import com.sun.prism.Texture;
 import com.sun.prism.impl.shape.MaskData;
@@ -287,7 +288,7 @@ public class GlyphCache {
 
         // Render the glyph and insert it in the cache
         GlyphData data = null;
-        FontStrike.Glyph glyph = strike.getGlyph(glyphCode);
+        Glyph glyph = strike.getGlyph(glyphCode);
         if (glyph != null) {
             if (glyph.getWidth() == 0 || glyph.getHeight() == 0) {
                 data = new GlyphData(0, 0, 0,
