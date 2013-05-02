@@ -2335,10 +2335,10 @@ public class Scene implements EventTarget {
                         }
                         start = PULSE_LOGGING_ENABLED ? System.currentTimeMillis() : 0;
                         // synchronize scene properties
+                        syncLights();
                         synchronizeSceneProperties();
                         // Run the synchronizer
                         synchronizeSceneNodes();
-                        syncLights();
                         Scene.this.mouseHandler.pulse();
                         // Tell the scene peer that it needs to repaint
                         impl_peer.markDirty();
