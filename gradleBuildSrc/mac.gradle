@@ -148,7 +148,7 @@ ext.LAUNCHER_LINKER = LINKER
 ext.LAUNCHER_LINK_FLAGS = ["-ldl"]
 
 def closedDir = file("$projectDir/../rt-closed")
-ext.MAC_JAVAFX_FONT_JAVAH_INCLUDE = ["com/sun/javafx/font/*", "com/sun/javafx/text/*", "com/sun/t2k/*"]
+ext.MAC_JAVAFX_FONT_JAVAH_INCLUDE = ["com/sun/javafx/font/*", "com/sun/javafx/text/*", "com/sun/javafx/font/coretext/*", "com/sun/t2k/*"]
 ext.MAC_JAVAFX_FONT_NATIVE_SOURCE = [
     file("$closedDir/javafx-font-native/src"),
     file("$closedDir/javafx-font-native/src/layout"),
