@@ -123,6 +123,7 @@ String library(String name) {
 String cygpath(String path) {
     if (!IS_WINDOWS) return path;
     ByteArrayOutputStream out = new ByteArrayOutputStream();
+    logger.info("Converting path '$path' via cygpath")
     exec {
         standardOutput = out
         commandLine "cmd", "/c", "cygpath", "-m", path
