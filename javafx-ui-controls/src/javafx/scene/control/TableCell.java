@@ -532,7 +532,10 @@ public class TableCell<S,T> extends IndexedCell<T> {
                 !isVisible() ||
                 tableColumn == null || 
                 !tableColumn.isVisible()) {
-            updateItem(null, true);
+            
+            if (! isEmpty()) {
+                updateItem(null, true);
+            }
             return;
         } else {
             currentObservableValue = tableColumn.getCellObservableValue(index);
