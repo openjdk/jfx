@@ -479,18 +479,50 @@ public class GridPane extends Pane {
         return (Priority)getConstraint(child, VGROW_CONSTRAINT);
     }
 
+    /**
+     * Sets the horizontal fill policy for the child when contained by a gridpane.
+     * If set, the gridpane will use the policy to determine whether node
+     * should be expanded to fill the column or kept to it's preferred width.
+     * Setting the value to null will remove the constraint.
+     * If not value is specified for the node nor for the column, the default value is true.
+     * @param child the child node of a gridpane
+     * @param value the horizontal fill policy or null for unset
+     * @since 8.0
+     */
     public static void setFillWidth(Node child, Boolean value) {
         setConstraint(child, FILL_WIDTH_CONSTRAINT, value);
     }
 
+    /**
+     * Returns the child's horizontal fill policy if set
+     * @param child the child node of a gridpane
+     * @return the horizontal fill policy for the child or null if no policy was set
+     * @since 8.0
+     */
     public static Boolean isFillWidth(Node child) {
         return (Boolean) getConstraint(child, FILL_WIDTH_CONSTRAINT);
     }
 
+    /**
+     * Sets the vertical fill policy for the child when contained by a gridpane.
+     * If set, the gridpane will use the policy to determine whether node
+     * should be expanded to fill the row or kept to it's preferred height.
+     * Setting the value to null will remove the constraint.
+     * If not value is specified for the node nor for the row, the default value is true.
+     * @param child the child node of a gridpane
+     * @param value the vertical fill policy or null for unset
+     * @since 8.0
+     */
     public static void setFillHeight(Node child, Boolean value) {
         setConstraint(child, FILL_HEIGHT_CONSTRAINT, value);
     }
 
+    /**
+     * Returns the child's vertical fill policy if set
+     * @param child the child node of a gridpane
+     * @return the vertical fill policy for the child or null if no policy was set
+     * @since 8.0
+     */
     public static Boolean isFillHeight(Node child) {
         return (Boolean) getConstraint(child, FILL_HEIGHT_CONSTRAINT);
     }
