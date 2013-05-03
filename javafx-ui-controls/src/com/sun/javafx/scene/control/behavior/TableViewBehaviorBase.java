@@ -236,26 +236,13 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
                 TablePositionBase anchor = getAnchor();
                 boolean cellSelectionEnabled = sm.isCellSelectionEnabled();
                 
-                // there are no selected items, so lets clear out the anchor
-                if (! selectionChanging && anchor != null) {
-                    if (sm.isEmpty()) {
-                        setAnchor(null);
-                    } else if (! sm.isSelected(anchor.getRow(), anchor.getTableColumn())) {
-                        setAnchor(null);
-                    }
-                }
-                
                 int addedSize = c.getAddedSize();
                 List<TablePositionBase> addedSubList = (List<TablePositionBase>) c.getAddedSubList();
                 
-                if (! hasAnchor() && addedSize > 0) {
-                    for (int i = 0; i < addedSize; i++) {
-                        TablePositionBase tp = addedSubList.get(i);
-                        if (tp.getRow() >= 0) {
-                            setAnchor(tp);
-                            break;
-                        }
-                    }
+                // newest selection
+                if (addedSize > 0 && ! hasAnchor()) {
+                    TablePositionBase tp = addedSubList.get(addedSize - 1);
+                    setAnchor(tp);
                 }
                 
                 if (!hasAnchor() && cellSelectionEnabled && ! selectionPathDeviated) {
@@ -445,9 +432,9 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
     @Override public void mousePressed(MouseEvent e) {
         super.mousePressed(e);
         
-        // FIXME can't assume (yet) cells.get(0) is necessarily the lead cell
-        ObservableList<? extends TablePositionBase> cells = getSelectedCells();
-        setAnchor(cells.isEmpty() ? null : cells.get(0));
+//        // FIXME can't assume (yet) cells.get(0) is necessarily the lead cell
+//        ObservableList<? extends TablePositionBase> cells = getSelectedCells();
+//        setAnchor(cells.isEmpty() ? null : cells.get(0));
         
         if (!getControl().isFocused() && getControl().isFocusTraversable()) {
             getControl().requestFocus();

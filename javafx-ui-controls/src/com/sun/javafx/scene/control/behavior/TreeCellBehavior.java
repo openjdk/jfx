@@ -25,6 +25,7 @@
 
 package com.sun.javafx.scene.control.behavior;
 
+import java.util.List;
 import java.util.WeakHashMap;
 import javafx.application.ConditionalFeature;
 import javafx.scene.Node;
@@ -240,7 +241,15 @@ public class TreeCellBehavior<T> extends CellBehaviorBase<TreeCell<T>> {
                     int maxRow = Math.max(focusedIndex, index);
 
                     // and then perform the selection
-                    sm.clearSelection();
+                    // We do this by deselecting the elements that are not in
+                    // range, and then selecting all elements that are in range
+                    List<Integer> selectedIndices = sm.getSelectedIndices();
+                    for (int i = 0, max = selectedIndices.size(); i < max; i++) {
+                        int selectedIndex = selectedIndices.get(i);
+                        if (selectedIndex < minRow || selectedIndex > maxRow) {
+                            sm.clearSelection(selectedIndex);
+                        }
+                    }
                     sm.selectRange(minRow, maxRow+1);
 
                     fm.focus(index);

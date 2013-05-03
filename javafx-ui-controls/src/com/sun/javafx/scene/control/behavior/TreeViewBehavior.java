@@ -208,17 +208,12 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
                         setAnchor(-1);
                     }
                 }
-                
+
                 int addedSize = c.getAddedSize();
-                if (! hasAnchor() && addedSize > 0) {
-                    List<Integer> addedSubList = (List<Integer>) c.getAddedSubList();
-                    for (int i = 0; i < addedSize; i++) {
-                        int index = addedSubList.get(i);
-                        if (index >= 0) {
-                            setAnchor(index);
-                            break;
-                        }
-                    }
+                if (addedSize > 0 && ! hasAnchor()) {
+                    List<? extends Integer> addedSubList = c.getAddedSubList();
+                    int index = addedSubList.get(addedSize - 1);
+                    setAnchor(index);
                 }
             }
         }

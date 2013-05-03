@@ -25,6 +25,8 @@
 
 package com.sun.javafx.scene.control.behavior;
 
+import java.util.List;
+
 import javafx.application.ConditionalFeature;
 import javafx.scene.control.FocusModel;
 import javafx.scene.control.ListCell;
@@ -225,8 +227,16 @@ public class ListCellBehavior extends CellBehaviorBase<ListCell> {
                     int minRow = Math.min(focusIndex, index);
                     int maxRow = Math.max(focusIndex, index);
 
-                    // and then perform the selection
-                    sm.clearSelection();
+                    // and then perform the selection.
+                    // We do this by deselecting the elements that are not in
+                    // range, and then selecting all elements that are in range
+                    List<Integer> selectedIndices = sm.getSelectedIndices();
+                    for (int i = 0, max = selectedIndices.size(); i < max; i++) {
+                        int selectedIndex = selectedIndices.get(i);
+                        if (selectedIndex < minRow || selectedIndex > maxRow) {
+                            sm.clearSelection(selectedIndex);
+                        }
+                    }
                     sm.selectRange(minRow, maxRow+1);
 
                     // return selection back to the focus owner
