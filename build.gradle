@@ -151,8 +151,8 @@ void compileTargets(Closure c) {
     COMPILE_TARGETS.split(",").each { target ->
         CompileTarget ct = new CompileTarget();
         ct.name = target;
-        ct.upper = target.trim().toUpperCase().replace("-", "_");
-        ct.capital = target.trim().capitalize().replace("-", "_");
+        ct.upper = target.trim().toUpperCase()
+        ct.capital = target.trim().capitalize()
         c(ct)
     }
 }
@@ -317,7 +317,7 @@ if (COMPILE_TARGETS == "all") {
         if (f.isFile() && f.name.endsWith(".gradle") && !f.name.equals("build.gradle")) {
             def target = f.name.substring(0, f.name.lastIndexOf('.gradle')).toUpperCase()
             apply from: f
-            if (project.ext["${target}_CAN_BUILD"]) {
+            if (project.ext["${target}"].canBuild) {
                 tmp.add(target)
             }
         }
@@ -331,6 +331,16 @@ if (COMPILE_TARGETS == "all") {
     }
 }
 
+// Sanity check the expected properties all exist
+compileTargets { t ->
+    // Every platform must define these variables
+    if (!project.hasProperty(t.upper)) throw new Exception("ERROR: Incorrectly configured compile flags file, missing ${t.name} property")
+    def props = project.ext[t.upper];
+    ["jfxrtJarExcludes", "compileSwing", "compileSWT", "compileFXPackager", "compileDesignTime", "libDest"].each { prop ->
+        if (!props.containsKey(prop)) throw new Exception("ERROR: Incorrectly configured compile flags file, missing ${prop} property on ${t.name}")
+    }
+}
+
 // Various build flags may be set by the different target files, such as
 // whether to build Swing, SWT, FXPackager, etc. We iterate over all
 // compile targets and look for these settings in our properties. Note that
@@ -341,14 +351,10 @@ ext.COMPILE_SWT = false;
 ext.COMPILE_FXPACKAGER = false;
 ext.COMPILE_DESIGN_TIME = false;
 compileTargets { t ->
-    ["COMPILE_SWING", "COMPILE_SWT",
-     "COMPILE_FXPACKAGER", "COMPILE_DESIGN_TIME"].each { prop ->
-        if (project.hasProperty("${t.upper}_${prop}")) {
-            if (project.ext["${t.upper}_${prop}"] == true) {
-                project.ext[prop] = true;
-            }
-        }
-    }
+    if (project.ext[t.upper].compileSwing) COMPILE_SWING = true
+    if (project.ext[t.upper].compileSWT) COMPILE_SWING = true
+    if (project.ext[t.upper].compileFXPackager) COMPILE_SWING = true
+    if (project.ext[t.upper].compileDesignTime) COMPILE_SWING = true
 }
 
 /******************************************************************************
@@ -377,12 +383,6 @@ if (IS_WINDOWS && OS_ARCH != "x86" && OS_ARCH != "amd64") {
 // Sanity check that we actually have a list of compile targets to execute
 if (COMPILE_TARGETS == null || COMPILE_TARGETS == "") {
     throw new Exception("Unable to determine compilation platform, must specify valid COMPILE_TARGETS!")
-}
-
-compileTargets { t ->
-    // Every platform must define these variables
-    if (!project.hasProperty("${t.upper}_JFXRT_JAR_EXCLUDES")) throw new Exception("Missing ${t.upper}_JFXRT_JAR_EXCLUDES variable definition")
-    if (!project.hasProperty("${t.upper}_LIB_DEST")) throw new Exception("Missing ${t.upper}_LIB_DEST variable definition")
 }
 
 // Make sure JAVA_HOME/bin/java exists
@@ -468,7 +468,6 @@ void addNative(Project project, String name) {
     // TODO if we want to handle 32/64 bit windows in the same build,
     // Then we will need to modify the win compile target to be win32 or win64
     def capitalName = name.split("-").collect{it.capitalize()}.join()
-    def upperName = name.toUpperCase().replace("-", "_")
     def nativeTask = project.task("native$capitalName", group: "Build") {
         description = "Generates JNI headers, compiles, and builds native dynamic library for $name for all compile targets"
     }
@@ -480,6 +479,9 @@ void addNative(Project project, String name) {
     def libRootDir = project.file("$project.buildDir/libs/$name")
     // For each compile target, create a javah / cc / link triplet
     compileTargets { t ->
+        def targetProperties = project.rootProject.ext[t.upper]
+        println "name=$name"
+        def properties = targetProperties.get(name)
         def nativeDir = file("$nativeRootDir/${t.name}")
         def headerDir = file("$headerRootDir/${t.name}")
         def javahTask = project.task("javah${t.capital}${capitalName}", type: JavaHeaderTask, dependsOn: project.classes, group: "Build") {
@@ -488,31 +490,28 @@ void addNative(Project project, String name) {
             classpath = project.files(project.sourceSets.main.output.classesDir)
             if (rootProject.BINARY_STUB != null) classpath += rootProject.BINARY_STUB
             output = headerDir
-            include(project.rootProject.ext["${t.upper}_${upperName}_JAVAH_INCLUDE"])
+            include(properties.javahInclude)
         }
-        
-        def variants = project.rootProject.hasProperty("${t.upper}_${upperName}_VARIANTS") ?
-            project.rootProject.ext["${t.upper}_${upperName}_VARIANTS"] : [""];
-        
+
+        def variants = properties.hasProperty("variants") ? properties.variants : [""];
         variants.each { variant ->
-            def upperVariant = variant.toUpperCase()
+            def variantProperties = variant == "" ? properties : properties.get(variant)
             def capitalVariant = variant.capitalize()
-            def _upperVariant = upperVariant == "" ? "" : "_$upperVariant"
             def ccTask = project.task("cc${t.capital}$capitalName$capitalVariant", type: CCTask, dependsOn: javahTask, group: "Build") {
                 description = "Compiles native sources for ${name} for ${t.name}${capitalVariant != '' ? ' for variant ' + capitalVariant : ''}"
                 matches = ".*\\.c|.*\\.cpp|.*\\.m|.*\\.cc"
                 headers = headerDir
                 output(nativeDir)
-                params.addAll(project.rootProject.ext["${t.upper}_${upperName}${_upperVariant}_CC_FLAGS"])
-                compiler = project.rootProject.ext["${t.upper}_${upperName}${_upperVariant}_COMPILER"]
-                source(project.rootProject.ext["${t.upper}_${upperName}${_upperVariant}_NATIVE_SOURCE"])
+                params.addAll(variantProperties.ccFlags)
+                compiler = variantProperties.compiler
+                source(variantProperties.nativeSource)
             }
             def linkTask = project.task("link${t.capital}$capitalName$capitalVariant", type: LinkTask, dependsOn: ccTask, group: "Build") {
                 description = "Creates native dynamic library for $name for ${t.name}${capitalVariant != '' ? ' for variant ' + capitalVariant : ''}"
                 objectDir = nativeDir
-                linkParams.addAll(project.rootProject.ext["${t.upper}_${upperName}${_upperVariant}_LINK_FLAGS"])
+                linkParams.addAll(variantProperties.linkFlags)
                 lib = file("$libRootDir/${t.name}/${variant == '' ? library(name) : library(name + '-' + variant)}")
-                linker = project.rootProject.ext["${t.upper}_${upperName}${_upperVariant}_LINKER"]
+                linker = variantProperties.linker
             }
             nativeTask.dependsOn(linkTask)
             if (IS_WINDOWS && t.name == "win") {
@@ -716,14 +715,14 @@ project(":graphics") {
 
     // Add tasks for native compilation
     addNative(project, "glass");
-    addNative(project, "prism-common")
-    addNative(project, "prism-sw")
+    addNative(project, "prism")
+    addNative(project, "prismSW")
 
     addNative(project, "iio")
-    addNative(project, "prism-es2")
+    addNative(project, "prismES2")
 
     if (IS_WINDOWS) {
-        addNative(project, "prism-d3d")
+        addNative(project, "prismD3D")
         // TODO need to hook this up to be executed only if PassThroughVS.h is missing or PassThroughVS.hlsl is changed
         task generateD3DHeaders(group: "Build") {
             enabled = IS_WINDOWS
@@ -862,7 +861,7 @@ project(":graphics") {
         def target = t.name
         def upperTarget = t.upper
         def capitalTarget = t.capital
-        def nativeDir = file("$nativeRootDir/$target")
+        def properties = rootProject.ext[upperTarget];
 
         def ccTask = task("compileDecoraNativeShaders$capitalTarget", type: CCTask, dependsOn: generateDecoraNativeHeaders) {
             description = "Compiles Decora SSE natives"
@@ -870,17 +869,17 @@ project(":graphics") {
             source file("$buildDir/generated-src/jsl-decora")
             source file("modules/graphics/src/main/native-decora")
             headers = headerDir
-            params.addAll(rootProject.ext["${upperTarget}_DECORA_CC_FLAGS"])
+            params.addAll(properties.decora.ccFlags)
             output(file("$nativeRootDir/$target"))
-            compiler = project.rootProject.ext["${upperTarget}_DECORA_COMPILER"]
+            compiler = properties.decora.compiler
         }
 
         def linkTask = task("linkDecoraNativeShaders$capitalTarget", type: LinkTask, dependsOn: ccTask) {
             description = "Creates native dynamic library for Decora SSE"
             objectDir = file("$nativeRootDir/$target")
-            linkParams.addAll(rootProject.ext["${upperTarget}_DECORA_LINK_FLAGS"])
+            linkParams.addAll(properties.decora.linkFlags)
             lib = file("$libRootDir/$t.name/${library('decora-sse')}")
-            linker = project.rootProject.ext["${upperTarget}_DECORA_LINKER"]
+            linker = properties.decora.linker
         }
 
         nativeDecora.dependsOn(linkTask)
@@ -905,10 +904,10 @@ project(":graphics") {
 
     compilePrismHLSLShaders.source "$buildDir/generated-src/jsl-prism/com/sun/prism/d3d/hlsl/"
     classes.dependsOn compilePrismJavaShaders;
-    nativePrismCommon.dependsOn compilePrismHLSLShaders;
+    nativePrism.dependsOn compilePrismHLSLShaders;
 
     // Create a single "native" task which will depend on all the individual native tasks for graphics
-    task("native", dependsOn: [nativeGlass, nativePrismCommon, nativePrismSw, nativeDecora]) {
+    task("native", dependsOn: [nativeGlass, nativePrism, nativePrismSW, nativeDecora]) {
         group = "Build"
         description = "Compiles and Builds all native libraries for Graphics"
     }
@@ -1078,12 +1077,12 @@ project(":fxpackager") {
         task compileWinLauncher(type: CCTask, group: "Build") {
             description = "Compiles native sources for the application co-bundle launcher";
             matches = "WinLauncher\\.cpp";
-            params.addAll(LAUNCHER_CC_FLAGS);
+            params.addAll(WIN.launcher.ccFlags);
             output(file("$buildDir/native/WinLauncher"));
             source(file("src/main/native/launcher/win"));
-            compiler = LAUNCHER_COMPILER
+            compiler = WIN.launcher.compiler
             exe = true;
-            linkerOptions.addAll(LAUNCHER_LINK_FLAGS);
+            linkerOptions.addAll(WIN.launcher.linkFlags);
             doLast {
                 copy {
                     from "$buildDir/native/WinLauncher/WinLauncher.exe"
@@ -1094,10 +1093,10 @@ project(":fxpackager") {
         task compileIconSwap(type: CCTask, group: "Build") {
             description = "Compiles native sources for the application co-bundle launcher"
             matches = "IconSwap\\.cpp"
-            params.addAll(ICON_LAUNCHER_CC_FLAGS)
+            params.addAll(WIN.iconLauncher.ccFlags)
             output(file("$buildDir/native/IconSwap"))
             source file("src/main/native/launcher/win")
-            compiler = LAUNCHER_COMPILER
+            compiler = WIN.launcher.compiler
             exe = true
             linkerOptions.addAll(ICON_LAUNCHER_LINK_FLAGS)
             doLast {
@@ -1115,18 +1114,18 @@ project(":fxpackager") {
             if (IS_MAC) {
                 matches = ".*\\.m"
                 output(file("$buildDir/classes/main/com/sun/javafx/tools/resource/mac"))
-                params.addAll(LAUNCHER_CC_FLAGS);
+                params.addAll(WIN.launcher.ccFlags)
                 source file("src/main/native/launcher/mac")
-                compiler = LAUNCHER_COMPILER
+                compiler = WIN.launcher.compiler
                 eachOutputFile = { f ->
                     return new File(f.getParent(), "JavaAppLauncher")
                 }
             } else {
                 matches = ".*\\.c"
                 output(file("$buildDir/classes/main/com/sun/javafx/tools/resource/linux"))
-                params.addAll(LAUNCHER_CC_FLAGS)
-                compiler = LAUNCHER_COMPILER
-                linkerOptions.addAll(LAUNCHER_LINK_FLAGS)
+                params.addAll(WIN.launcher.ccFlags)
+                compiler = WIN.launcher.compiler
+                linkerOptions.addAll(WIN.launcher.linkFlags)
                 source file("src/main/native/launcher/linux")
                 eachOutputFile = { f ->
                     return new File(f.getParent(), "JavaAppLauncher")
@@ -1143,10 +1142,10 @@ project(":fxpackager") {
         task buildJavaFXPackager(type: CCTask, group: "Build") {
             description = "Compiles native sources for javafxpackager.exe"
             matches = "javafxpackager\\.cpp"
-            params.addAll(FXPACKAGER_CC_FLAGS)
-            compiler = FXPACKAGER_COMPILER
+            params.addAll(WIN.fxpackager.ccFlags)
+            compiler = WIN.fxpackager.compiler
             output(file("$buildDir/native/javafxpackager"))
-            source FXPACKAGER_NATIVE_SOURCE
+            source WIN.fxpackager.nativeSource
             doLast {
                 mkdir "$buildDir/native"
                 exec({
@@ -1159,7 +1158,7 @@ project(":fxpackager") {
             doLast {
                 mkdir "$buildDir/javafxpackager"
                 exec({
-                    commandLine("$FXPACKAGER_LINKER", "/nologo", "/opt:REF", "/incremental:no", "/manifest", "kernel32.lib", "advapi32.lib",
+                    commandLine("$WIN.fxpackager.linker", "/nologo", "/opt:REF", "/incremental:no", "/manifest", "kernel32.lib", "advapi32.lib",
                             "/out:$buildDir/native/javafxpackager/javafxpackager.exe",
                             "$buildDir/native/javafxpackager/javafxpackager.obj",
                             "$buildDir/native/javafxpackager/javafxpackager.res")
@@ -1314,6 +1313,7 @@ task jfxrt()
 task sdk()
 
 compileTargets { t ->
+    def targetProperties = project.ext[t.upper]
     // The jfxrt task is responsible for creating the jfxrt.jar. A developer may
     // have multiple SDK's on their system at any one time, depending on which
     // cross compiles they have done. For example, I might have:
@@ -1347,7 +1347,7 @@ compileTargets { t ->
                 "**/*.java");  // Builder java files are in build/classes and should be excluded
 
         // Filter out platform specific Java sources (glass) when compiling for other targets
-        exclude(project.ext["${t.upper}_JFXRT_JAR_EXCLUDES"])
+        exclude(targetProperties.jfxrtJarExcludes)
 
         dependsOn(subprojects.collect { project -> project.getTasksByName("assemble", true)});
     }
@@ -1363,16 +1363,16 @@ compileTargets { t ->
             // Copy all of the .dll / .so / .dylib native libraries into build/sdk/rt/lib/
             copy {
                 from("modules/graphics/build/libs/jsl-decora/${t.name}/${library('decora-sse')}",
-                     "modules/graphics/build/libs/prism-common/${t.name}/${library('prism-common')}",
-                     "modules/graphics/build/libs/prism-sw/${t.name}/${library('prism-sw')}",
-                 "modules/graphics/build/libs/javafx-iio/${t.name}/${library('javafx-iio')}",
-                 "modules/graphics/build/libs/prism-es2/${t.name}/${library('prism-es2')}",
+                     "modules/graphics/build/libs/prism/${t.name}/${library('prism-common')}",
+                     "modules/graphics/build/libs/prismSW/${t.name}/${library('prism-sw')}",
+                 "modules/graphics/build/libs/iio/${t.name}/${library('javafx-iio')}",
+                 "modules/graphics/build/libs/prismES2/${t.name}/${library('prism-es2')}",
                      "modules/graphics/build/libs/glass/${t.name}/${library('glass')}");
                 if (IS_WINDOWS) {
-                    from ("modules/graphics/build/libs/prism-d3d/${t.name}/${library('prism-d3d')}");
+                    from ("modules/graphics/build/libs/prismD3D/${t.name}/${library('prism-d3d')}");
                     rename("lib(.*).dll", "\$1.dll");
                 }
-                def libDest = project.ext["${t.upper}_LIB_DEST"]
+                def libDest = targetProperties.libDest
                 into ("build/${t.name}-sdk/rt/$libDest")
             }
 
@@ -1381,14 +1381,14 @@ compileTargets { t ->
             javafxProperties << "javafx.runtime.version=$RAW_VERSION";
             // Include any properties that have been defined (most likely in
             // one of the various platform gradle files)
-            if (hasProperty("JAVAFX_PROPERTIES")) {
-                javafxProperties << JAVAFX_PROPERTIES
+            if (targetProperties.hasProperty("javafxProperties")) {
+                javafxProperties << targetProperties.javafxProperties
             }
 
             // Embedded builds define this file as well
-            if (hasProperty("${t.upper}_JAVAFX_PLATFORM_PROPERTIES")) {
+            if (targetProperties.hasProperty("javafxPlatformProperties")) {
                 final File javafxPlatformProperties = file("build/${t.name}-sdk/rt/lib/javafx.platform.properties");
-                javafxPlatformProperties << project.ext["${t.upper}_JAVAFX_PLATFORM_PROPERTIES"]
+                javafxPlatformProperties << targetProperties.javafxPlatformProperties
             }
 
             // Copy over the javadocs that were generated. This is done rather than just generating

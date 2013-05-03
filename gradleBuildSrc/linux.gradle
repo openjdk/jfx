@@ -22,22 +22,25 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
+
+ext.LINUX = [:]
+
 // Declare whether this particular target file applies to the current system
-ext.LINUX_CAN_BUILD = IS_LINUX;
-if (!LINUX_CAN_BUILD) return;
+LINUX.canBuild = IS_LINUX;
+if (!LINUX.canBuild) return;
 
 // All desktop related packages should be built
-ext.LINUX_COMPILE_SWING = true;
-ext.LINUX_COMPILE_SWT = true;
-ext.LINUX_COMPILE_FXPACKAGER = true;
-ext.LINUX_COMPILE_DESIGN_TIME = true;
+LINUX.compileSwing = true;
+LINUX.compileSWT = true;
+LINUX.compileFXPackager = true;
+LINUX.compileDesignTime = true;
 
 // Libraries end up in the sdk/rt/lib/$OS_ARCH directory for Linux
-ext.LINUX_LIB_DEST = "lib/$OS_ARCH"
+LINUX.libDist = "lib/$OS_ARCH"
 
 // TODO this is garbage. Each target file should define what it includes,
 // not what it excludes.
-ext.LINUX_JFXRT_JAR_EXCLUDES = [
+LINUX.jfxrtJarExcludes = [
     "**/*.hlsl",
     "com/sun/glass/ui/win",
     "com/sun/glass/ui/accessible/win",
@@ -96,81 +99,81 @@ setupTools("linux_tools",
     }
 )
 
-def COMPILER = "gcc"
-def LINKER = "g++"
+def compiler = "gcc"
+def linker = "g++"
 
-ext.LINUX_GLASS_JAVAH_INCLUDE = [
+LINUX.glass = [:]
+LINUX.glass.javahInclude = [
     "com/sun/glass/events/**",
     "com/sun/glass/ui/*",
     "com/sun/glass/ui/gtk/*",
     "com/sun/glass/ui/accessible/gtk/*"]
-ext.LINUX_GLASS_NATIVE_SOURCE = file("modules/graphics/src/main/native-glass/gtk")
-ext.LINUX_GLASS_COMPILER = COMPILER
-ext.LINUX_GLASS_CC_FLAGS = [ccFlags].flatten()
-ext.LINUX_GLASS_LINKER = LINKER
-ext.LINUX_GLASS_LINK_FLAGS = [linkFlags].flatten()
+LINUX.glass.nativeSource = file("modules/graphics/src/main/native-glass/gtk")
+LINUX.glass.compiler = compiler
+LINUX.glass.ccFlags = [ccFlags].flatten()
+LINUX.glass.linker = linker
+LINUX.glass.linkFlags = [linkFlags].flatten()
 
-ext.LINUX_DECORA_COMPILER = COMPILER
-ext.LINUX_DECORA_CC_FLAGS = [ccFlags, "-ffast-math"].flatten()
-ext.LINUX_DECORA_LINKER = LINKER
-ext.LINUX_DECORA_LINK_FLAGS = [linkFlags].flatten()
+LINUX.decora = [:]
+LINUX.decora.compiler = compiler
+LINUX.decora.ccFlags = [ccFlags, "-ffast-math"].flatten()
+LINUX.decora.linker = linker
+LINUX.decora.linkFlags = [linkFlags].flatten()
 
-ext.LINUX_PRISM_COMMON_JAVAH_INCLUDE = ["com/sun/prism/impl/**/*", "com/sun/prism/PresentableState*"]
-ext.LINUX_PRISM_COMMON_NATIVE_SOURCE = file("modules/graphics/src/main/native-prism")
-ext.LINUX_PRISM_COMMON_COMPILER = "cc"
-ext.LINUX_PRISM_COMMON_CC_FLAGS = [ccFlags].flatten()
-ext.LINUX_PRISM_COMMON_LINKER = LINKER
-ext.LINUX_PRISM_COMMON_LINK_FLAGS = [linkFlags].flatten()
+LINUX.prism = [:]
+LINUX.prism.javahInclude = ["com/sun/prism/impl/**/*", "com/sun/prism/PresentableState*"]
+LINUX.prism.nativeSource = file("modules/graphics/src/main/native-prism")
+LINUX.prism.compiler = "cc"
+LINUX.prism.ccFlags = [ccFlags].flatten()
+LINUX.prism.linker = linker
+LINUX.prism.linkFlags = [linkFlags].flatten()
 
-ext.LINUX_PRISM_SW_JAVAH_INCLUDE = ["com/sun/pisces/**/*"]
-ext.LINUX_PRISM_SW_NATIVE_SOURCE = file("modules/graphics/src/main/native-prism-sw")
-ext.LINUX_PRISM_SW_COMPILER = "cc"
-ext.LINUX_PRISM_SW_CC_FLAGS = [ccFlags].flatten()
-ext.LINUX_PRISM_SW_LINKER = LINKER
-ext.LINUX_PRISM_SW_LINK_FLAGS = [linkFlags].flatten()
+LINUX.prismSW = [:]
+LINUX.prismSW.javahInclude = ["com/sun/pisces/**/*"]
+LINUX.prismSW.nativeSource = file("modules/graphics/src/main/native-prism-sw")
+LINUX.prismSW.compiler = "cc"
+LINUX.prismSW.ccFlags = [ccFlags].flatten()
+LINUX.prismSW.linker = linker
+LINUX.prismSW.linkFlags = [linkFlags].flatten()
 
-ext.LAUNCHER_COMPILER = COMPILER
-ext.LAUNCHER_CC_FLAGS = ["-DJAVAARCH=\"$OS_ARCH\"", "-I$JDK_HOME/include", "-I$JDK_HOME/include/linux"];
-ext.LAUNCHER_LINKER = LINKER
-ext.LAUNCHER_LINK_FLAGS = ["-ldl"]
+LINUX.launcher = [:]
+LINUX.launcher.compiler = compiler
+LINUX.launcher.ccFlags = ["-DJAVAARCH=\"$OS_ARCH\"", "-I$JDK_HOME/include", "-I$JDK_HOME/include/linux"];
+LINUX.launcher.linker = linker
+LINUX.launcher.linkFlags = ["-ldl"]
 
 def closedDir = file("$projectDir/../rt-closed")
-ext.LINUX_JAVAFX_FONT_JAVAH_INCLUDE = [
+LINUX.font = [:]
+LINUX.font.javahInclude = [
         "com/sun/javafx/font/**/*",
         "com/sun/javafx/text/**/*"]
-ext.LINUX_JAVAFX_FONT_NATIVE_SOURCE = [
+LINUX.font.nativeSource = [
     file("$closedDir/javafx-font-native/src"),
     file("$closedDir/javafx-font-native/src/layout"),
     file("$closedDir/javafx-font-native/src/layoutfx")]
-ext.LINUX_JAVAFX_FONT_COMPILER = COMPILER
-ext.LINUX_JAVAFX_FONT_CC_FLAGS = ["-DJFXFONT_PLUS", ccFlags].flatten()
-ext.LINUX_JAVAFX_FONT_LINKER = LINKER
-ext.LINUX_JAVAFX_FONT_LINK_FLAGS = [linkFlags].flatten()
+LINUX.font.compiler = compiler
+LINUX.font.ccFlags = ["-DJFXFONT_PLUS", ccFlags].flatten()
+LINUX.font.linker = linker
+LINUX.font.linkFlags = [linkFlags].flatten()
 
-ext.LINUX_IIO_JAVAH_INCLUDE = ["com/sun/javafx/iio/**/*"]
-ext.LINUX_IIO_NATIVE_SOURCE = [
+LINUX.iio = [:]
+LINUX.iio.javahInclude = ["com/sun/javafx/iio/**/*"]
+LINUX.iio.nativeSource = [
     file("modules/graphics/src/main/native-iio"),
     file("modules/graphics/src/main/native-iio/libjpeg7")]
-ext.LINUX_IIO_COMPILER = COMPILER
-ext.LINUX_IIO_CC_FLAGS = [ccFlags].flatten()
-ext.LINUX_IIO_LINKER = LINKER
-ext.LINUX_IIO_LINK_FLAGS = [linkFlags].flatten()
+LINUX.iio.compiler = compiler
+LINUX.iio.ccFlags = [ccFlags].flatten()
+LINUX.iio.linker = linker
+LINUX.iio.linkFlags = [linkFlags].flatten()
 
-ext.LINUX_PRISM_ES2_JAVAH_INCLUDE = ["com/sun/prism/es2/**/*"]
-ext.LINUX_PRISM_ES2_NATIVE_SOURCE = [
+LINUX.prismES2 = [:]
+LINUX.prismES2.javahInclude = ["com/sun/prism/es2/**/*"]
+LINUX.prismES2.nativeSource = [
     file("modules/graphics/src/main/native-prism-es2"),
     file("modules/graphics/src/main/native-prism-es2/GL"),
     file("modules/graphics/src/main/native-prism-es2/x11")
 ]
-ext.LINUX_PRISM_ES2_COMPILER = COMPILER
-ext.LINUX_PRISM_ES2_CC_FLAGS = ["-DLINUX", "-DGRADLE_BUILD", ccFlags].flatten()
-ext.LINUX_PRISM_ES2_LINKER = LINKER
-ext.LINUX_PRISM_ES2_LINK_FLAGS = [linkFlags].flatten()
-
-/******************************************************************************
- *                                                                            *
- *                         Build Setup Sanity Checks                          *
- *                                                                            *
- *****************************************************************************/
-
-if (!IS_LINUX) throw new Exception("Must be on Linux to compile for Linux");
+LINUX.prismES2.compiler = compiler
+LINUX.prismES2.ccFlags = ["-DLINUX", "-DGRADLE_BUILD", ccFlags].flatten()
+LINUX.prismES2.linker = linker
+LINUX.prismES2.linkFlags = [linkFlags].flatten()

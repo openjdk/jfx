@@ -23,15 +23,17 @@
  * questions.
  */
 
-ext.MAC_CAN_BUILD = IS_MAC
-if (!MAC_CAN_BUILD) return;
+ext.MAC = [:]
+
+MAC.canBuild = IS_MAC && IS_64
+if (!MAC.canBuild) return;
 // All desktop related packages should be built
-ext.MAC_COMPILE_SWING = true;
-ext.MAC_COMPILE_SWT = true;
-ext.MAC_COMPILE_FXPACKAGER = true;
-ext.MAC_COMPILE_DESIGN_TIME = true;
-ext.MAC_LIB_DEST = "lib"
-ext.MAC_JFXRT_JAR_EXCLUDES = [
+MAC.compileSwing = true;
+MAC.compileSWT = true;
+MAC.compileFXPackager = true;
+MAC.compileDesignTime = true;
+MAC.libDest = "lib"
+MAC.jfxrtJarExcludes = [
     "**/*.hlsl",
     "com/sun/glass/ui/win",
     "com/sun/glass/ui/accessible/win",
@@ -63,9 +65,6 @@ defineProperty("MACOSX_MIN_VERSION", "10.7");
 defineProperty("MACOSX_SDK_PATH", "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX${MACOSX_MIN_VERSION}.sdk");
 defineProperty("MACOSX_JDK_FRAMEWORK", "/System/Library/Frameworks/JavaVM.framework");
 
-// Sanity check
-if (!IS_64) throw new Exception("Cannot compile on 32-bit Mac, only on 64-bit Mac");
-
 def commonParams = [
         "-mmacosx-version-min=$MACOSX_MIN_VERSION",
         "-isysroot", "$MACOSX_SDK_PATH",
@@ -93,97 +92,97 @@ def ccFlags = [
 //// the transition can be made simpler. However, this needs to be fixed and the flags that are used consolidated.
 //// There are many "accidental" differences between the different builds that have cropped up over time, and
 //// there are a few intentional differences. We need to take a measured look at what flags are being used to build with.
-//ext.GLASS_CC_FLAGS = [commonCcParams].flatten()
-//if (!IS_DEBUG) GLASS_CC_FLAGS += "-Werror";
-//ext.GLASS_LINK_FLAGS = [commonLinkParams].flatten()
-//if (IS_DEBUG) GLASS_LINK_FLAGS += "-g";
-def COMPILER = "gcc"
-def LINKER = "g++"
+//ext.GLASS.ccFlags = [commonCcParams].flatten()
+//if (!IS_DEBUG) GLASS.ccFlags += "-Werror";
+//ext.GLASS.linkFlags = [commonLinkParams].flatten()
+//if (IS_DEBUG) GLASS.linkFlags += "-g";
+def compiler = "gcc"
+def linker = "g++"
 
-ext.MAC_GLASS_JAVAH_INCLUDE = [
+MAC.glass = [:]
+MAC.glass.javahInclude = [
     "com/sun/glass/events/**",
     "com/sun/glass/ui/*",
     "com/sun/glass/ui/mac/*",
     "com/sun/glass/ui/accessible/mac/*"]
-ext.MAC_GLASS_NATIVE_SOURCE = file("modules/graphics/src/main/native-glass/mac")
-ext.MAC_GLASS_COMPILER = COMPILER
-ext.MAC_GLASS_CC_FLAGS = [ccFlags].flatten()
-ext.MAC_GLASS_LINKER = LINKER
-ext.MAC_GLASS_LINK_FLAGS = [linkFlags].flatten()
+MAC.glass.nativeSource = file("modules/graphics/src/main/native-glass/mac")
+MAC.glass.compiler = compiler
+MAC.glass.ccFlags = [ccFlags].flatten()
+MAC.glass.linker = linker
+MAC.glass.linkFlags = [linkFlags].flatten()
 
-ext.MAC_DECORA_COMPILER = COMPILER
-ext.MAC_DECORA_CC_FLAGS = ["-O1", "-ffast-math",
+MAC.decora = [:]
+MAC.decora.compiler = compiler
+MAC.decora.ccFlags = ["-O1", "-ffast-math",
         "-I$JDK_HOME/include",
         "-I$JDK_HOME/include/darwin",
         "-mmacosx-version-min=$MACOSX_MIN_VERSION",
         "-arch", "x86_64", "-c"].flatten()
-ext.MAC_DECORA_LINKER = LINKER
-ext.MAC_DECORA_LINK_FLAGS = ["-dynamiclib",
+MAC.decora.linker = linker
+MAC.decora.linkFlags = ["-dynamiclib",
         "-mmacosx-version-min=$MACOSX_MIN_VERSION",
         "-arch", "x86_64"].flatten()
 
-ext.MAC_PRISM_COMMON_JAVAH_INCLUDE = ["com/sun/prism/impl/**/*", "com/sun/prism/PresentableState*"]
-ext.MAC_PRISM_COMMON_NATIVE_SOURCE = file("modules/graphics/src/main/native-prism")
-ext.MAC_PRISM_COMMON_COMPILER = "cc"
-ext.MAC_PRISM_COMMON_CC_FLAGS = ["-O3", "-DINLINE=inline",
+MAC.prism = [:]
+MAC.prism.javahInclude = ["com/sun/prism/impl/**/*", "com/sun/prism/PresentableState*"]
+MAC.prism.nativeSource = file("modules/graphics/src/main/native-prism")
+MAC.prism.compiler = "cc"
+MAC.prism.ccFlags = ["-O3", "-DINLINE=inline",
         "-I$JDK_HOME/include",
         "-I$JDK_HOME/include/darwin",
         "-mmacosx-version-min=$MACOSX_MIN_VERSION",
         "-arch", "x86_64", "-c"].flatten()
-ext.MAC_PRISM_COMMON_LINKER = LINKER
-ext.MAC_PRISM_COMMON_LINK_FLAGS = ["-dynamiclib",
+MAC.prism.linker = linker
+MAC.prism.linkFlags = ["-dynamiclib",
         "-mmacosx-version-min=$MACOSX_MIN_VERSION",
         "-arch", "x86_64"].flatten()
 
-ext.MAC_PRISM_SW_JAVAH_INCLUDE = ["com/sun/pisces/**/*"]
-ext.MAC_PRISM_SW_NATIVE_SOURCE = file("modules/graphics/src/main/native-prism-sw")
-ext.MAC_PRISM_SW_COMPILER = "cc"
-ext.MAC_PRISM_SW_CC_FLAGS = [MAC_PRISM_COMMON_CC_FLAGS].flatten()
-ext.MAC_PRISM_SW_LINKER = LINKER
-ext.MAC_PRISM_SW_LINK_FLAGS = [MAC_PRISM_COMMON_LINK_FLAGS].flatten()
+MAC.prismSW = [:]
+MAC.prismSW.javahInclude = ["com/sun/pisces/**/*"]
+MAC.prismSW.nativeSource = file("modules/graphics/src/main/native-prism-sw")
+MAC.prismSW.compiler = "cc"
+MAC.prismSW.ccFlags = [MAC.prism.ccFlags].flatten()
+MAC.prismSW.linker = linker
+MAC.prismSW.linkFlags = [MAC.prism.linkFlags].flatten()
 
-ext.LAUNCHER_COMPILER = COMPILER
-ext.LAUNCHER_CC_FLAGS = [ccFlags].flatten();
-ext.LAUNCHER_LINKER = LINKER
-ext.LAUNCHER_LINK_FLAGS = ["-ldl"]
+MAC.launcher = [:]
+MAC.launcher.compiler = compiler
+MAC.launcher.ccFlags = [ccFlags].flatten();
+MAC.launcher.linker = linker
+MAC.launcher.linkFlags = ["-ldl"]
 
 def closedDir = file("$projectDir/../rt-closed")
-ext.MAC_JAVAFX_FONT_JAVAH_INCLUDE = [
+MAC.font = [:]
+MAC.font.javahInclude = [
         "com/sun/javafx/font/**/*",
         "com/sun/javafx/text/**/*"]
-ext.MAC_JAVAFX_FONT_NATIVE_SOURCE = [
+MAC.font.nativeSource = [
     file("$closedDir/javafx-font-native/src"),
     file("$closedDir/javafx-font-native/src/layout"),
     file("$closedDir/javafx-font-native/src/layoutfx")]
-ext.MAC_JAVAFX_FONT_COMPILER = COMPILER
-ext.MAC_JAVAFX_FONT_CC_FLAGS = ["-DJFXFONT_PLUS", ccFlags].flatten()
-ext.MAC_JAVAFX_FONT_LINKER = LINKER
-ext.MAC_JAVAFX_FONT_LINK_FLAGS = [linkFlags].flatten()
+MAC.font.compiler = compiler
+MAC.font.ccFlags = ["-DJFXFONT_PLUS", ccFlags].flatten()
+MAC.font.linker = linker
+MAC.font.linkFlags = [linkFlags].flatten()
 
-ext.MAC_IIO_JAVAH_INCLUDE = ["com/sun/javafx/iio/**/*"]
-ext.MAC_IIO_NATIVE_SOURCE = [
+MAC.iio = [:]
+MAC.iio.javahInclude = ["com/sun/javafx/iio/**/*"]
+MAC.iio.nativeSource = [
     file("modules/graphics/src/main/native-iio"),
     file("modules/graphics/src/main/native-iio/libjpeg7")]
-ext.MAC_IIO_COMPILER = COMPILER
-ext.MAC_IIO_CC_FLAGS = [ccFlags].flatten()
-ext.MAC_IIO_LINKER = LINKER
-ext.MAC_IIO_LINK_FLAGS = [linkFlags].flatten()
+MAC.iio.compiler = compiler
+MAC.iio.ccFlags = [ccFlags].flatten()
+MAC.iio.linker = linker
+MAC.iio.linkFlags = [linkFlags].flatten()
 
-ext.MAC_PRISM_ES2_JAVAH_INCLUDE = ["com/sun/prism/es2/**/*"]
-ext.MAC_PRISM_ES2_NATIVE_SOURCE = [
+MAC.prismES2 = [:]
+MAC.prismES2.javahInclude = ["com/sun/prism/es2/**/*"]
+MAC.prismES2.nativeSource = [
     file("modules/graphics/src/main/native-prism-es2"),
     file("modules/graphics/src/main/native-prism-es2/GL"),
     file("modules/graphics/src/main/native-prism-es2/macosx")
 ]
-ext.MAC_PRISM_ES2_COMPILER = COMPILER
-ext.MAC_PRISM_ES2_CC_FLAGS = ["-DMACOSX", "-DGRADLE_BUILD", ccFlags].flatten()
-ext.MAC_PRISM_ES2_LINKER = LINKER
-ext.MAC_PRISM_ES2_LINK_FLAGS = [linkFlags].flatten()
-
-/******************************************************************************
- *                                                                            *
- *                         Build Setup Sanity Checks                          *
- *                                                                            *
- *****************************************************************************/
-
-if (!IS_MAC) throw new Exception("Must be on MacOSX to compile for MacOSX");
+MAC.prismES2.compiler = compiler
+MAC.prismES2.ccFlags = ["-DMACOSX", "-DGRADLE_BUILD", ccFlags].flatten()
+MAC.prismES2.linker = linker
+MAC.prismES2.linkFlags = [linkFlags].flatten()

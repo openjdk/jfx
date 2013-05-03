@@ -23,16 +23,18 @@
  * questions.
  */
 
-ext.WIN_CAN_BUILD = IS_WINDOWS
-if (!WIN_CAN_BUILD) return;
+ext.WIN = [:]
 
-ext.WIN_COMPILE_SWING = true;
-ext.WIN_COMPILE_SWT = true;
-ext.WIN_COMPILE_FXPACKAGER = true;
-ext.WIN_COMPILE_DESIGN_TIME = true;
+WIN.canBuild = IS_WINDOWS
+if (!WIN.canBuild) return;
 
-ext.WIN_LIB_DEST = "bin"
-ext.WIN_JFXRT_JAR_EXCLUDES = [
+WIN.compileSwing = true;
+WIN.compileSWT = true;
+WIN.compileFXPackager = true;
+WIN.compileDesignTime = true;
+
+WIN.libDist = "bin"
+WIN.jfxrtJarExcludes = [
     "com/sun/glass/events/mac",
     "com/sun/glass/ui/mac",
     "com/sun/glass/ui/accessible/mac",
@@ -108,7 +110,7 @@ setupTools("windows_tools",
     }
 )
 
-ext.WINDOWS_NATIVE_COMPILE_ENVIRONMENT = [
+WINDOWS_NATIVE_COMPILE_ENVIRONMENT = [
         "VCINSTALLDIR"         : WINDOWS_VS_VCINSTALLDIR,
         "VSINSTALLDIR"         : WINDOWS_VS_VSINSTALLDIR,
         "DEVENVDIR"            : WINDOWS_VS_DEVENVDIR,
@@ -123,114 +125,117 @@ ext.WINDOWS_NATIVE_COMPILE_ENVIRONMENT = [
 String msvcBinDir = (IS_64
                   ? "$WINDOWS_VS_VSINSTALLDIR/VC/BIN/amd64"
                   : "$WINDOWS_VS_VSINSTALLDIR/VC/BIN")
-def COMPILER = cygpath("$msvcBinDir/cl.exe")
-def LINKER = cygpath("$msvcBinDir/link.exe")
+def compiler = cygpath("$msvcBinDir/cl.exe")
+def linker = cygpath("$msvcBinDir/link.exe")
 ext.RC = cygpath("$WINDOWS_SDK_DIR/Bin/RC.Exe")
 ext.FXC = cygpath("$WINDOWS_DXSDK_DIR/utilities/bin/x86/fxc.exe")
 ext.MC = cygpath("$WINDOWS_SDK_DIR/Bin/mt.exe")
 
-ext.WIN_GLASS_JAVAH_INCLUDE = [
+WIN.glass = [:]
+WIN.glass.javahInclude = [
     "com/sun/glass/events/**",
     "com/sun/glass/ui/*",
     "com/sun/glass/ui/win/*",
     "com/sun/glass/ui/accessible/win/*"]
-ext.WIN_GLASS_NATIVE_SOURCE = file("modules/graphics/src/main/native-glass/win")
-ext.WIN_GLASS_COMPILER = COMPILER
-ext.WIN_GLASS_CC_FLAGS = [ccFlags, "/WX"].flatten()
-ext.WIN_GLASS_LINKER = LINKER
-ext.WIN_GLASS_LINK_FLAGS = [linkFlags, "delayimp.lib", "gdi32.lib", "urlmon.lib", "Comdlg32.lib",
+WIN.glass.nativeSource = file("modules/graphics/src/main/native-glass/win")
+WIN.glass.compiler = compiler
+WIN.glass.ccFlags = [ccFlags, "/WX"].flatten()
+WIN.glass.linker = linker
+WIN.glass.linkFlags = [linkFlags, "delayimp.lib", "gdi32.lib", "urlmon.lib", "Comdlg32.lib",
         "winmm.lib", "imm32.lib", "shell32.lib", "Uiautomationcore.lib", "dwmapi.lib",
         "/DELAYLOAD:user32.dll", "/DELAYLOAD:urlmon.dll", "/DELAYLOAD:winmm.dll", "/DELAYLOAD:shell32.dll",
         "/DELAYLOAD:Uiautomationcore.dll", "/DELAYLOAD:dwmapi.dll"].flatten()
 
-ext.WIN_DECORA_COMPILER = COMPILER
-ext.WIN_DECORA_CC_FLAGS = [ccFlags].flatten()
-ext.WIN_DECORA_LINKER = LINKER
-ext.WIN_DECORA_LINK_FLAGS = [linkFlags].flatten()
+WIN.decora = [:]
+WIN.decora.compiler = compiler
+WIN.decora.ccFlags = [ccFlags].flatten()
+WIN.decora.linker = linker
+WIN.decora.linkFlags = [linkFlags].flatten()
 
-ext.WIN_PRISM_COMMON_JAVAH_INCLUDE = ["com/sun/prism/impl/**/*", "com/sun/prism/PresentableState*"]
-ext.WIN_PRISM_COMMON_NATIVE_SOURCE = file("modules/graphics/src/main/native-prism")
-ext.WIN_PRISM_COMMON_COMPILER = COMPILER
-ext.WIN_PRISM_COMMON_CC_FLAGS = [ccFlags].flatten()
-ext.WIN_PRISM_COMMON_LINKER = LINKER
-ext.WIN_PRISM_COMMON_LINK_FLAGS = [linkFlags].flatten()
+WIN.prism = [:]
+WIN.prism.javahInclude = ["com/sun/prism/impl/**/*", "com/sun/prism/PresentableState*"]
+WIN.prism.nativeSource = file("modules/graphics/src/main/native-prism")
+WIN.prism.compiler = compiler
+WIN.prism.ccFlags = [ccFlags].flatten()
+WIN.prism.linker = linker
+WIN.prism.linkFlags = [linkFlags].flatten()
 
-ext.WIN_PRISM_SW_JAVAH_INCLUDE = ["com/sun/pisces/**/*"]
-ext.WIN_PRISM_SW_NATIVE_SOURCE = file("modules/graphics/src/main/native-prism-sw")
-ext.WIN_PRISM_SW_COMPILER = COMPILER
-ext.WIN_PRISM_SW_CC_FLAGS = [ccFlags].flatten()
-ext.WIN_PRISM_SW_LINKER = LINKER
-ext.WIN_PRISM_SW_LINK_FLAGS = [linkFlags].flatten()
+WIN.prismSW = [:]
+WIN.prismSW.javahInclude = ["com/sun/pisces/**/*"]
+WIN.prismSW.nativeSource = file("modules/graphics/src/main/native-prism-sw")
+WIN.prismSW.compiler = compiler
+WIN.prismSW.ccFlags = [ccFlags].flatten()
+WIN.prismSW.linker = linker
+WIN.prismSW.linkFlags = [linkFlags].flatten()
 
-ext.WIN_PRISM_D3D_JAVAH_INCLUDE = ["com/sun/prism/d3d/**/*"]
-ext.WIN_PRISM_D3D_NATIVE_SOURCE = [
+WIN.prismD3D = [:]
+WIN.prismD3D.javahInclude = ["com/sun/prism/d3d/**/*"]
+WIN.prismD3D.nativeSource = [
     file("modules/graphics/src/main/native-prism-d3d"),
     file("modules/graphics/src/main/native-prism-d3d/hlsl")]
-ext.WIN_PRISM_D3D_COMPILER = COMPILER
-ext.WIN_PRISM_D3D_CC_FLAGS = [ccFlags, "/Ibuild/headers/PrismD3D"].flatten()
-ext.WIN_PRISM_D3D_LINKER = LINKER
-ext.WIN_PRISM_D3D_LINK_FLAGS = [linkFlags, "user32.lib"].flatten()
+WIN.prismD3D.compiler = compiler
+WIN.prismD3D.ccFlags = [ccFlags, "/Ibuild/headers/PrismD3D"].flatten()
+WIN.prismD3D.linker = linker
+WIN.prismD3D.linkFlags = [linkFlags, "user32.lib"].flatten()
 
-ext.LAUNCHER_COMPILER = COMPILER
-ext.LAUNCHER_CC_FLAGS = ["/nologo", "/W3", "/EHsc", "/D_WINDOWS", "/DUNICODE", "/D_UNICODE", "/DWIN32",
+WIN.launcher = [:]
+WIN.launcher.compiler = compiler
+WIN.launcher.ccFlags = ["/nologo", "/W3", "/EHsc", "/D_WINDOWS", "/DUNICODE", "/D_UNICODE", "/DWIN32",
         "/D_LITTLE_ENDIAN", "/DWIN32_LEAN_AND_MEAN", "/I$JDK_HOME/include", "/I$JDK_HOME/include/win32",
         "/arch:SSE", "/fp:fast", "/O2", "/MD"];
-ext.LAUNCHER_LINKER = LINKER
-ext.LAUNCHER_LINK_FLAGS = ["/link", "/nologo", "/SUBSYSTEM:WINDOWS", "user32.lib", "shell32.lib", "advapi32.lib"]
+WIN.launcher.linker = linker
+WIN.launcher.linkFlags = ["/link", "/nologo", "/SUBSYSTEM:WINDOWS", "user32.lib", "shell32.lib", "advapi32.lib"]
 
-ext.ICON_LAUNCHER_COMPILER = COMPILER
-ext.ICON_LAUNCHER_CC_FLAGS = ["/nologo", "/W3", "/EHsc", "/D_WINDOWS", "/DUNICODE", "/D_UNICODE",
+WIN.iconLauncher = [:]
+WIN.iconLauncher.compiler = compiler
+WIN.iconLauncher.ccFlags = ["/nologo", "/W3", "/EHsc", "/D_WINDOWS", "/DUNICODE", "/D_UNICODE",
         "/arch:SSE", "/fp:fast", "/O2"]
-ext.ICON_LAUNCHER_LINKER = LINKER
-ext.ICON_LAUNCHER_LINK_FLAGS = ["/link", "/nologo", "/SUBSYSTEM:CONSOLE"];
+WIN.iconLauncher.linker = linker
+WIN.iconLauncher.linkFlags = ["/link", "/nologo", "/SUBSYSTEM:CONSOLE"];
 
-ext.FXPACKAGER_NATIVE_SOURCE = [
+WIN.fxpackager = [:]
+WIN.fxpackager.nativeSource = [
     file("modules/fxpackager/src/main/native/javafxpackager/win")]
-ext.FXPACKAGER_COMPILER = COMPILER
-ext.FXPACKAGER_CC_FLAGS = ["/nologo", "/W3", "/EHsc", "/MT", "/GS",
+WIN.fxpackager.compiler = compiler
+WIN.fxpackager.ccFlags = ["/nologo", "/W3", "/EHsc", "/MT", "/GS",
                     "/DWIN32", "/D_LITTLE_ENDIAN", "/DWIN32_LEAN_AND_MEAN",
                     "/D_WIN32_WINDOWS=0X0500", "/D_WIN32_WINNT=0X0500",
                     "/I$JDK_HOME/include", "/I$JDK_HOME/include/win32", "/arch:SSE", "/fp:fast",
                     "/O2", "-c"]
-ext.FXPACKAGER_LINKER = LINKER
+WIN.fxpackager.linker = linker
 
-ext.WIN_IIO_JAVAH_INCLUDE = ["com/sun/javafx/iio/**/*"]
-ext.WIN_IIO_NATIVE_SOURCE = [
+WIN.iio = [:]
+WIN.iio.javahInclude = ["com/sun/javafx/iio/**/*"]
+WIN.iio.nativeSource = [
     file("modules/graphics/src/main/native-iio"),
     file("modules/graphics/src/main/native-iio/libjpeg7")]
-ext.WIN_IIO_COMPILER = COMPILER
-ext.WIN_IIO_CC_FLAGS = [ccFlags].flatten()
-ext.WIN_IIO_LINKER = LINKER
-ext.WIN_IIO_LINK_FLAGS = [linkFlags].flatten()
+WIN.iio.compiler = compiler
+WIN.iio.ccFlags = [ccFlags].flatten()
+WIN.iio.linker = linker
+WIN.iio.linkFlags = [linkFlags].flatten()
 
-ext.WIN_PRISM_ES2_JAVAH_INCLUDE = ["com/sun/prism/es2/**/*"]
-ext.WIN_PRISM_ES2_NATIVE_SOURCE = [
+WIN.prismES2 = [:]
+WIN.prismES2.javahInclude = ["com/sun/prism/es2/**/*"]
+WIN.prismES2.nativeSource = [
     file("modules/graphics/src/main/native-prism-es2"),
     file("modules/graphics/src/main/native-prism-es2/GL"),
     file("modules/graphics/src/main/native-prism-es2/windows")
 ]
-ext.WIN_PRISM_ES2_COMPILER = COMPILER
-ext.WIN_PRISM_ES2_CC_FLAGS = ["/Ob1", "/GF", "/Gy", "/GS", "/DWIN32", "/DGRADLE_BUILD", ccFlags].flatten()
-ext.WIN_PRISM_ES2_LINKER = LINKER
-ext.WIN_PRISM_ES2_LINK_FLAGS = [linkFlags, "/SUBSYSTEM:WINDOWS", "opengl32.lib", "gdi32.lib", "user32.lib", "kernel32.lib"].flatten()
+WIN.prismES2.compiler = compiler
+WIN.prismES2.ccFlags = ["/Ob1", "/GF", "/Gy", "/GS", "/DWIN32", "/DGRADLE_BUILD", ccFlags].flatten()
+WIN.prismES2.linker = linker
+WIN.prismES2.linkFlags = [linkFlags, "/SUBSYSTEM:WINDOWS", "opengl32.lib", "gdi32.lib", "user32.lib", "kernel32.lib"].flatten()
 
 def closedDir = file("$projectDir/../rt-closed")
-ext.WIN_JAVAFX_FONT_JAVAH_INCLUDE = [
+WIN.font = [:]
+WIN.font.javahInclude = [
         "com/sun/javafx/font/**/*",
         "com/sun/javafx/text/**/*"]
-ext.WIN_JAVAFX_FONT_NATIVE_SOURCE = [
+WIN.font.nativeSource = [
     file("$closedDir/javafx-font-native/src"),
     file("$closedDir/javafx-font-native/src/layout"),
     file("$closedDir/javafx-font-native/src/layoutfx")]
-ext.WIN_JAVAFX_FONT_COMPILER = COMPILER
-ext.WIN_JAVAFX_FONT_CC_FLAGS = ["/DJFXFONT_PLUS", ccFlags].flatten()
-ext.WIN_JAVAFX_FONT_LINKER = LINKER
-ext.WIN_JAVAFX_FONT_LINK_FLAGS = [linkFlags, "advapi32.lib", "gdi32.lib", "user32.lib"].flatten()
-
-/******************************************************************************
- *                                                                            *
- *                         Build Setup Sanity Checks                          *
- *                                                                            *
- *****************************************************************************/
-if (!IS_WINDOWS) throw new Exception("Must be on Windows to compile for Windows");
-
+WIN.font.compiler = compiler
+WIN.font.ccFlags = ["/DJFXFONT_PLUS", ccFlags].flatten()
+WIN.font.linker = linker
+WIN.font.linkFlags = [linkFlags, "advapi32.lib", "gdi32.lib", "user32.lib"].flatten()

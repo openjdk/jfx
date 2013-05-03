@@ -26,19 +26,18 @@
 // Declare some local variables which define the cross tools locations
 def sdk=file("/opt/armv6-vfp-03")
 def compilerHome=file("/opt/arm-2009q1")
+ext.ARMV6SF = [:]
 
 // Declare whether this particular target file applies to the current system
-ext.ARMV6SF_CAN_BUILD = IS_LINUX && compilerHome.exists() && sdk.exists()
-if (!ARMV6SF_CAN_BUILD) return;
-
-ext.ARMV6SF_PRISM_PIPELINES = ["eglfb", "directfb"] // TODO list others as we get them working
+ARMV6SF.canBuild = IS_LINUX && compilerHome.exists() && sdk.exists()
+if (!ARMV6SF.canBuild) return;
 
 // Libraries end up in the sdk/rt/lib/arm directory for arm builds
-ext.ARMV6SF_LIB_DEST = "lib/arm"
+ARMV6SF.libDest = "lib/arm"
 
 // TODO this is garbage. Each target file should define what it includes,
 // not what it excludes.
-ext.ARMV6SF_JFXRT_JAR_EXCLUDES = [
+ARMV6SF.jfxrtJarExcludes = [
     "**/*.hlsl",
     "com/sun/glass/ui/win",
     "com/sun/glass/ui/accessible/win",
@@ -120,7 +119,7 @@ def mediaCFlags = [extraCFlags,
     "-I$sdk/usr/include/gstreamer-0.10",
     "-I$sdk/usr/include/glib-2.0",
     "-I$sdk/usr/lib/arm-linux-gnueabihf/glib-2.0/include",
-    "-DENABLE_NATIVE_SOURCE=1", "-DENABLE_GST_FFMPEG=1"].flatten()
+    "-DENABLE.nativeSource=1", "-DENABLE_GST_FFMPEG=1"].flatten()
 def mediaLFlags = [extraLFlags, "-lgstreamer-0.10", "-lgstapp-0.10",
     "-lgstbase-0.10", "-lglib-2.0", "-lgobject-2.0", "-lgmodule-2.0", "-lgthread-2.0"].flatten()
 
@@ -165,7 +164,7 @@ setupTools("armv6-sf_tools",
     }
 )
 
-ext.ARMV6SF_JAVAFX_PLATFORM_PROPERTIES =
+ARMV6SF.javafxPlatformProperties =
 """javafx.platform=eglfb
 directfb.glass.platform=Lens
 directfb.glass.lens=dfb
@@ -216,99 +215,102 @@ x11.prism.disableRegionCaching=true"""
 def COMPILER = file("$compilerHome/bin/arm-none-linux-gnueabi-gcc").getAbsolutePath()
 def LINKER = file("$compilerHome/bin/arm-none-linux-gnueabi-g++").getAbsolutePath()
 
-ext.ARMV6SF_GLASS_VARIANTS = ["eglfb", "directfb", "fb", "eglx11", "gtk"]
-ext.ARMV6SF_GLASS_JAVAH_INCLUDE = [
+ARMV6SF.glass = [:]
+ARMV6SF.glass.variants = ["eglfb", "directfb", "fb", "eglx11", "gtk"]
+ARMV6SF.glass.javahInclude = [
     "com/sun/glass/events/**",
     "com/sun/glass/ui/*",
     "com/sun/glass/ui/lens/*"]
 
-ext.ARMV6SF_GLASS_EGLFB_NATIVE_SOURCE = file("modules/graphics/src/main/native-glass/lens")
-ext.ARMV6SF_GLASS_EGLFB_COMPILER = COMPILER
-ext.ARMV6SF_GLASS_EGLFB_CC_FLAGS = ["-ffast-math", extraCFlags].flatten()
-ext.ARMV6SF_GLASS_EGLFB_LINKER = LINKER
-ext.ARMV6SF_GLASS_EGLFB_LINK_FLAGS = [lensLFlags].flatten()
+ARMV6SF.glass.eglfb = [:]
+ARMV6SF.glass.eglfb.nativeSource = file("modules/graphics/src/main/native-glass/lens")
+ARMV6SF.glass.eglfb.compiler = COMPILER
+ARMV6SF.glass.eglfb.ccFlags = ["-ffast-math", extraCFlags].flatten()
+ARMV6SF.glass.eglfb.linker = LINKER
+ARMV6SF.glass.eglfb.linkFlags = [lensLFlags].flatten()
 
-ext.ARMV6SF_GLASS_DIRECTFB_NATIVE_SOURCE = file("modules/graphics/src/main/native-glass/lens")
-ext.ARMV6SF_GLASS_DIRECTFB_COMPILER = COMPILER
-ext.ARMV6SF_GLASS_DIRECTFB_CC_FLAGS = ["-ffast-math", extraCFlags, "-I$sdk/usr/include/directfb"].flatten()
-ext.ARMV6SF_GLASS_DIRECTFB_LINKER = LINKER
-ext.ARMV6SF_GLASS_DIRECTFB_LINK_FLAGS = [lensLFlags].flatten()
+ARMV6SF.glass.directfb = [:]
+ARMV6SF.glass.directfb.nativeSource = file("modules/graphics/src/main/native-glass/lens")
+ARMV6SF.glass.directfb.compiler = COMPILER
+ARMV6SF.glass.directfb.ccFlags = ["-ffast-math", extraCFlags, "-I$sdk/usr/include/directfb"].flatten()
+ARMV6SF.glass.directfb.linker = LINKER
+ARMV6SF.glass.directfb.linkFlags = [lensLFlags].flatten()
 
-ext.ARMV6SF_GLASS_FB_NATIVE_SOURCE = file("modules/graphics/src/main/native-glass/lens")
-ext.ARMV6SF_GLASS_FB_COMPILER = COMPILER
-ext.ARMV6SF_GLASS_FB_CC_FLAGS = ["-ffast-math", extraCFlags].flatten()
-ext.ARMV6SF_GLASS_FB_LINKER = LINKER
-ext.ARMV6SF_GLASS_FB_LINK_FLAGS = [lensLFlags].flatten()
+ARMV6SF.glass.fb = [:]
+ARMV6SF.glass.fb.nativeSource = file("modules/graphics/src/main/native-glass/lens")
+ARMV6SF.glass.fb.compiler = COMPILER
+ARMV6SF.glass.fb.ccFlags = ["-ffast-math", extraCFlags].flatten()
+ARMV6SF.glass.fb.linker = LINKER
+ARMV6SF.glass.fb.linkFlags = [lensLFlags].flatten()
 
-ext.ARMV6SF_GLASS_EGLX11_NATIVE_SOURCE = file("modules/graphics/src/main/native-glass/lens")
-ext.ARMV6SF_GLASS_EGLX11_COMPILER = COMPILER
-ext.ARMV6SF_GLASS_EGLX11_CC_FLAGS = ["-ffast-math", extraCFlags].flatten()
-ext.ARMV6SF_GLASS_EGLX11_LINKER = LINKER
-ext.ARMV6SF_GLASS_EGLX11_LINK_FLAGS = [lensLFlags].flatten()
+ARMV6SF.glass.eglx11 = [:]
+ARMV6SF.glass.eglx11.nativeSource = file("modules/graphics/src/main/native-glass/lens")
+ARMV6SF.glass.eglx11.compiler = COMPILER
+ARMV6SF.glass.eglx11.ccFlags = ["-ffast-math", extraCFlags].flatten()
+ARMV6SF.glass.eglx11.linker = LINKER
+ARMV6SF.glass.eglx11.linkFlags = [lensLFlags].flatten()
 
-ext.ARMV6SF_GLASS_GTK_NATIVE_SOURCE = file("modules/graphics/src/main/native-glass/lens")
-ext.ARMV6SF_GLASS_GTK_COMPILER = COMPILER
-ext.ARMV6SF_GLASS_GTK_CC_FLAGS = ["-ffast-math", extraCFlags].flatten()
-ext.ARMV6SF_GLASS_GTK_LINKER = LINKER
-ext.ARMV6SF_GLASS_GTK_LINK_FLAGS = [lensLFlags, "-lstdc++"].flatten()
+ARMV6SF.glass.gtk = [:]
+ARMV6SF.glass.gtk.nativeSource = file("modules/graphics/src/main/native-glass/lens")
+ARMV6SF.glass.gtk.compiler = COMPILER
+ARMV6SF.glass.gtk.ccFlags = ["-ffast-math", extraCFlags].flatten()
+ARMV6SF.glass.gtk.linker = LINKER
+ARMV6SF.glass.gtk.linkFlags = [lensLFlags, "-lstdc++"].flatten()
 
-ext.ARMV6SF_DECORA_COMPILER = COMPILER
-ext.ARMV6SF_DECORA_CC_FLAGS = extraCFlags
-ext.ARMV6SF_DECORA_LINKER = LINKER
-ext.ARMV6SF_DECORA_LINK_FLAGS = extraLFlags
+ARMV6SF.decora = [:]
+ARMV6SF.decora.compiler = COMPILER
+ARMV6SF.decora.ccFlags = extraCFlags
+ARMV6SF.decora.linker = LINKER
+ARMV6SF.decora.linkFlags = extraLFlags
 
-ext.ARMV6SF_PRISM_COMMON_JAVAH_INCLUDE = ["com/sun/prism/impl/**/*", "com/sun/prism/PresentableState*"]
-ext.ARMV6SF_PRISM_COMMON_NATIVE_SOURCE = file("modules/graphics/src/main/native-prism")
-ext.ARMV6SF_PRISM_COMMON_COMPILER = COMPILER
-ext.ARMV6SF_PRISM_COMMON_CC_FLAGS = es2CFlags // or es2EglfbCFlags? or es2X11CFlags?
-ext.ARMV6SF_PRISM_COMMON_LINKER = LINKER
-ext.ARMV6SF_PRISM_COMMON_LINK_FLAGS = es2LFlags // or es2EglfbLFlags or es2X11LFlags?
+ARMV6SF.prism = [:]
+ARMV6SF.prism.javahInclude = ["com/sun/prism/impl/**/*", "com/sun/prism/PresentableState*"]
+ARMV6SF.prism.nativeSource = file("modules/graphics/src/main/native-prism")
+ARMV6SF.prism.compiler = COMPILER
+ARMV6SF.prism.ccFlags = es2CFlags // or es2EglfbCFlags? or es2X11CFlags?
+ARMV6SF.prism.linker = LINKER
+ARMV6SF.prism.linkFlags = es2LFlags // or es2EglfbLFlags or es2X11LFlags?
 
-ext.ARMV6SF_PRISM_SW_JAVAH_INCLUDE = ["com/sun/pisces/**/*"]
-ext.ARMV6SF_PRISM_SW_NATIVE_SOURCE = file("modules/graphics/src/main/native-prism-sw")
-ext.ARMV6SF_PRISM_SW_COMPILER = COMPILER
-ext.ARMV6SF_PRISM_SW_CC_FLAGS = prismSWCFlags
-ext.ARMV6SF_PRISM_SW_LINKER = LINKER
-ext.ARMV6SF_PRISM_SW_LINK_FLAGS = prismSWLFlags
+ARMV6SF.prismSW = [:]
+ARMV6SF.prismSW.javahInclude = ["com/sun/pisces/**/*"]
+ARMV6SF.prismSW.nativeSource = file("modules/graphics/src/main/native-prism-sw")
+ARMV6SF.prismSW.compiler = COMPILER
+ARMV6SF.prismSW.ccFlags = prismSWCFlags
+ARMV6SF.prismSW.linker = LINKER
+ARMV6SF.prismSW.linkFlags = prismSWLFlags
 
 def closedDir = file("$projectDir/../rt-closed")
-ext.ARMV6SF_JAVAFX_FONT_JAVAH_INCLUDE = [
+ARMV6SF.font = [:]
+ARMV6SF.font.javahInclude = [
         "com/sun/javafx/font/**/*",
         "com/sun/javafx/text/**/*"]
-ext.ARMV6SF_JAVAFX_FONT_NATIVE_SOURCE = [
+ARMV6SF.font.nativeSource = [
     file("$closedDir/javafx-font-native/src"),
     file("$closedDir/javafx-font-native/src/layout"),
     file("$closedDir/javafx-font-native/src/layoutfx")]
-ext.ARMV6SF_JAVAFX_FONT_COMPILER = COMPILER
-ext.ARMV6SF_JAVAFX_FONT_CC_FLAGS = fontCFlags
-ext.ARMV6SF_JAVAFX_FONT_LINKER = LINKER
-ext.ARMV6SF_JAVAFX_FONT_LINK_FLAGS = fontLFlags
+ARMV6SF.font.compiler = COMPILER
+ARMV6SF.font.ccFlags = fontCFlags
+ARMV6SF.font.linker = LINKER
+ARMV6SF.font.linkFlags = fontLFlags
 
-ext.ARMV6SF_IIO_JAVAH_INCLUDE = ["com/sun/javafx/iio/**/*"]
-ext.ARMV6SF_IIO_NATIVE_SOURCE = [
+ARMV6SF.iio = [:]
+ARMV6SF.iio.javahInclude = ["com/sun/javafx/iio/**/*"]
+ARMV6SF.iio.nativeSource = [
     file("$closedDir/javafx-iio-native/src"),
     file("$closedDir/javafx-iio-native/src/libjpeg7")]
-ext.ARMV6SF_IIO_COMPILER = COMPILER
-ext.ARMV6SF_IIO_CC_FLAGS = iioCFlags
-ext.ARMV6SF_IIO_LINKER = LINKER
-ext.ARMV6SF_IIO_LINK_FLAGS = iioLFlags
+ARMV6SF.iio.compiler = COMPILER
+ARMV6SF.iio.ccFlags = iioCFlags
+ARMV6SF.iio.linker = LINKER
+ARMV6SF.iio.linkFlags = iioLFlags
 
-ext.ARMV6SF_PRISM_ES2_JAVAH_INCLUDE = ["com/sun/prism/es2/**/*"]
-ext.ARMV6SF_PRISM_ES2_NATIVE_SOURCE = [
+ARMV6SF.prismES2 = [:]
+ARMV6SF.prismES2.javahInclude = ["com/sun/prism/es2/**/*"]
+ARMV6SF.prismES2.nativeSource = [
     file("$closedDir/prism-es2-native/src"),
     file("$closedDir/prism-es2-native/src/GL"),
     file("$closedDir/prism-es2-native/src/eglfb") // TODO pick eglfb or eglx11 depending on pipeline
 ]
-ext.ARMV6SF_PRISM_ES2_COMPILER = COMPILER
-ext.ARMV6SF_PRISM_ES2_CC_FLAGS = es2EglfbCFlags //es2CFlags or es2EglfbCFlags or es2X11CFlags?
-ext.ARMV6SF_PRISM_ES2_LINKER = LINKER
-ext.ARMV6SF_PRISM_ES2_LINK_FLAGS = es2EglfbLFlags //es2LFlags or es2EglfbLFlags or es2X11LFlags?
-
-/******************************************************************************
- *                                                                            *
- *                         Build Setup Sanity Checks                          *
- *                                                                            *
- *****************************************************************************/
-
-if (!IS_LINUX) throw new Exception("Must be on Linux to compile for armv6-hf")
-// TODO Check for presence of cross tools
+ARMV6SF.prismES2.compiler = COMPILER
+ARMV6SF.prismES2.ccFlags = es2EglfbCFlags //es2CFlags or es2EglfbCFlags or es2X11CFlags?
+ARMV6SF.prismES2.linker = LINKER
+ARMV6SF.prismES2.linkFlags = es2EglfbLFlags //es2LFlags or es2EglfbLFlags or es2X11LFlags?
