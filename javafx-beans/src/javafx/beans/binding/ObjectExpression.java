@@ -172,6 +172,7 @@ public abstract class ObjectExpression<T> implements ObservableObjectValue<T> {
      * {@code StringBinding} will be updated automatically.
      *
      * @return the new {@code StringBinding}
+     * @since 8.0
      */
     public StringBinding asString() {
         return (StringBinding) StringFormatter.convert(this);
@@ -189,6 +190,7 @@ public abstract class ObjectExpression<T> implements ObservableObjectValue<T> {
      * @param format
      *            the formatting {@code String}
      * @return the new {@code StringBinding}
+     * @since 8.0
      */
     public StringBinding asString(String format) {
         return (StringBinding) Bindings.format(format, this);
@@ -208,6 +210,7 @@ public abstract class ObjectExpression<T> implements ObservableObjectValue<T> {
      * @param format
      *            the formatting {@code String}
      * @return the new {@code StringBinding}
+     * @since 8.0
      */
     public StringBinding asString(Locale locale, String format) {
         return (StringBinding) Bindings.format(locale, format, this);
