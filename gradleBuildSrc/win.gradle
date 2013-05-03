@@ -33,7 +33,7 @@ WIN.compileSWT = true;
 WIN.compileFXPackager = true;
 WIN.compileDesignTime = true;
 
-WIN.libDist = "bin"
+WIN.libDest = "bin"
 WIN.jfxrtJarExcludes = [
     "com/sun/glass/events/mac",
     "com/sun/glass/ui/mac",
