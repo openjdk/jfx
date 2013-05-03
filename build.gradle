@@ -480,7 +480,6 @@ void addNative(Project project, String name) {
     // For each compile target, create a javah / cc / link triplet
     compileTargets { t ->
         def targetProperties = project.rootProject.ext[t.upper]
-        println "name=$name"
         def properties = targetProperties.get(name)
         def nativeDir = file("$nativeRootDir/${t.name}")
         def headerDir = file("$headerRootDir/${t.name}")
@@ -493,7 +492,7 @@ void addNative(Project project, String name) {
             include(properties.javahInclude)
         }
 
-        def variants = properties.hasProperty("variants") ? properties.variants : [""];
+        def variants = properties.containsKey("variants") ? properties.variants : [""];
         variants.each { variant ->
             def variantProperties = variant == "" ? properties : properties.get(variant)
             def capitalVariant = variant.capitalize()
@@ -726,7 +725,7 @@ project(":graphics") {
         // TODO need to hook this up to be executed only if PassThroughVS.h is missing or PassThroughVS.hlsl is changed
         task generateD3DHeaders(group: "Build") {
             enabled = IS_WINDOWS
-            dependsOn javahWinPrismD3D
+            dependsOn javahWinPrismD3d
             description = "Generate headers by compiling hlsl files"
             doLast {
                 mkdir file("$buildDir/headers/PrismD3D/hlsl")
@@ -799,7 +798,7 @@ project(":graphics") {
             }
         }
 
-        ccWinPrismD3D.dependsOn generateD3DHeaders
+        ccWinPrismD3d.dependsOn generateD3DHeaders
     }
 
     // The Decora and Prism JSL files have to be generated in a very specific set of steps.

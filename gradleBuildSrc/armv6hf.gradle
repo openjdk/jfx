@@ -32,6 +32,11 @@ ext.ARMV6HF = [:]
 ARMV6HF.canBuild = IS_LINUX && compilerHome.exists() && sdk.exists()
 if (!ARMV6HF.canBuild) return;
 
+ARMV6HF.compileSwing = false;
+ARMV6HF.compileSWT = false;
+ARMV6HF.compileFXPackager = false;
+ARMV6HF.compileDesignTime = false;
+
 // Libraries end up in the sdk/rt/lib/arm directory for arm builds
 ARMV6HF.libDest = "lib/arm"
 
@@ -272,8 +277,8 @@ ARMV6HF.font.linkFlags = fontLFlags
 ARMV6HF.iio = [:]
 ARMV6HF.iio.javahInclude = ["com/sun/javafx/iio/**/*"]
 ARMV6HF.iio.nativeSource = [
-    file("$closedDir/javafx-iio-native/src"),
-    file("$closedDir/javafx-iio-native/src/libjpeg7")]
+    file("modules/graphics/src/main/native-iio"),
+    file("modules/graphics/src/main/native-iio/libjpeg7")]
 ARMV6HF.iio.compiler = compiler
 ARMV6HF.iio.ccFlags = iioCFlags
 ARMV6HF.iio.linker = linker
@@ -282,9 +287,9 @@ ARMV6HF.iio.linkFlags = iioLFlags
 ARMV6HF.prismES2 = [:]
 ARMV6HF.prismES2.javahInclude = ["com/sun/prism/es2/**/*"]
 ARMV6HF.prismES2.nativeSource = [
-    file("$closedDir/prism-es2-native/src"),
-    file("$closedDir/prism-es2-native/src/GL"),
-    file("$closedDir/prism-es2-native/src/eglfb") // TODO pick eglfb or eglx11 depending on pipeline
+    file("modules/graphics/src/main/native-prism-es2"),
+    file("modules/graphics/src/main/native-prism-es2/GL"),
+    file("modules/graphics/src/main/native-prism-es2/eglfb") // TODO pick eglfb or eglx11 depending on pipeline
 ]
 ARMV6HF.prismES2.compiler = compiler
 ARMV6HF.prismES2.ccFlags = es2EglfbCFlags //es2CFlags or es2EglfbCFlags or es2X11CFlags?
