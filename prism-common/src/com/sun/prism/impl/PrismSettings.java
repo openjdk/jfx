@@ -67,6 +67,7 @@ public final class PrismSettings {
     public static final boolean showCull;
     public static final boolean shutdownHook;
     public static final int minTextureSize;
+    public static final int minRTTSize;
     public static final int dirtyRegionCount;
     public static final boolean disableBadDriverWarning;
     public static final boolean forceGPU;
@@ -314,6 +315,9 @@ public final class PrismSettings {
                              ? getInt(systemProperties, "prism.mintexturesize",
                                       0, "Try -Dprism.mintexturesize=<number>")
                              : 0;
+        
+        minRTTSize = getInt(systemProperties, "prism.minrttsize",
+                                      isEmbededDevice ? 16 : 0, "Try -Dprism.minrttsize=<number>");
 
         disableRegionCaching = getBoolean(systemProperties,
                                           "prism.disableRegionCaching",
