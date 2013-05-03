@@ -27,11 +27,13 @@ ext.MAC = [:]
 
 MAC.canBuild = IS_MAC && IS_64
 if (!MAC.canBuild) return;
+
 // All desktop related packages should be built
 MAC.compileSwing = true;
 MAC.compileSWT = true;
 MAC.compileFXPackager = true;
 MAC.compileDesignTime = true;
+
 MAC.libDest = "lib"
 MAC.jfxrtJarExcludes = [
     "**/*.hlsl",
@@ -88,14 +90,6 @@ def ccFlags = [
         commonParams,
         IS_DEBUG ? "-DDEBUG" : ["-O3", "-DNDEBUG"]].flatten()
 
-//// NOTE: I've attempted to use the exact same build flags here as what are used in the ant builds, so that
-//// the transition can be made simpler. However, this needs to be fixed and the flags that are used consolidated.
-//// There are many "accidental" differences between the different builds that have cropped up over time, and
-//// there are a few intentional differences. We need to take a measured look at what flags are being used to build with.
-//ext.GLASS.ccFlags = [commonCcParams].flatten()
-//if (!IS_DEBUG) GLASS.ccFlags += "-Werror";
-//ext.GLASS.linkFlags = [commonLinkParams].flatten()
-//if (IS_DEBUG) GLASS.linkFlags += "-g";
 def compiler = "gcc"
 def linker = "g++"
 
@@ -151,20 +145,6 @@ MAC.launcher.ccFlags = [ccFlags].flatten();
 MAC.launcher.linker = linker
 MAC.launcher.linkFlags = ["-ldl"]
 
-def closedDir = file("$projectDir/../rt-closed")
-MAC.font = [:]
-MAC.font.javahInclude = [
-        "com/sun/javafx/font/**/*",
-        "com/sun/javafx/text/**/*"]
-MAC.font.nativeSource = [
-    file("$closedDir/javafx-font-native/src"),
-    file("$closedDir/javafx-font-native/src/layout"),
-    file("$closedDir/javafx-font-native/src/layoutfx")]
-MAC.font.compiler = compiler
-MAC.font.ccFlags = ["-DJFXFONT_PLUS", ccFlags].flatten()
-MAC.font.linker = linker
-MAC.font.linkFlags = [linkFlags].flatten()
-
 MAC.iio = [:]
 MAC.iio.javahInclude = ["com/sun/javafx/iio/**/*"]
 MAC.iio.nativeSource = [
@@ -186,3 +166,17 @@ MAC.prismES2.compiler = compiler
 MAC.prismES2.ccFlags = ["-DMACOSX", "-DGRADLE_BUILD", ccFlags].flatten()
 MAC.prismES2.linker = linker
 MAC.prismES2.linkFlags = [linkFlags].flatten()
+
+def closedDir = file("$projectDir/../rt-closed")
+MAC.font = [:]
+MAC.font.javahInclude = [
+        "com/sun/javafx/font/**/*",
+        "com/sun/javafx/text/**/*"]
+MAC.font.nativeSource = [
+    file("$closedDir/javafx-font-native/src"),
+    file("$closedDir/javafx-font-native/src/layout"),
+    file("$closedDir/javafx-font-native/src/layoutfx")]
+MAC.font.compiler = compiler
+MAC.font.ccFlags = ["-DJFXFONT_PLUS", ccFlags].flatten()
+MAC.font.linker = linker
+MAC.font.linkFlags = [linkFlags].flatten()

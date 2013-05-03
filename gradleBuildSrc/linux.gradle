@@ -142,20 +142,6 @@ LINUX.launcher.ccFlags = ["-DJAVAARCH=\"$OS_ARCH\"", "-I$JDK_HOME/include", "-I$
 LINUX.launcher.linker = linker
 LINUX.launcher.linkFlags = ["-ldl"]
 
-def closedDir = file("$projectDir/../rt-closed")
-LINUX.font = [:]
-LINUX.font.javahInclude = [
-        "com/sun/javafx/font/**/*",
-        "com/sun/javafx/text/**/*"]
-LINUX.font.nativeSource = [
-    file("$closedDir/javafx-font-native/src"),
-    file("$closedDir/javafx-font-native/src/layout"),
-    file("$closedDir/javafx-font-native/src/layoutfx")]
-LINUX.font.compiler = compiler
-LINUX.font.ccFlags = ["-DJFXFONT_PLUS", ccFlags].flatten()
-LINUX.font.linker = linker
-LINUX.font.linkFlags = [linkFlags].flatten()
-
 LINUX.iio = [:]
 LINUX.iio.javahInclude = ["com/sun/javafx/iio/**/*"]
 LINUX.iio.nativeSource = [
@@ -177,3 +163,17 @@ LINUX.prismES2.compiler = compiler
 LINUX.prismES2.ccFlags = ["-DLINUX", "-DGRADLE_BUILD", ccFlags].flatten()
 LINUX.prismES2.linker = linker
 LINUX.prismES2.linkFlags = [linkFlags].flatten()
+
+def closedDir = file("$projectDir/../rt-closed")
+LINUX.font = [:]
+LINUX.font.javahInclude = [
+        "com/sun/javafx/font/**/*",
+        "com/sun/javafx/text/**/*"]
+LINUX.font.nativeSource = [
+    file("$closedDir/javafx-font-native/src"),
+    file("$closedDir/javafx-font-native/src/layout"),
+    file("$closedDir/javafx-font-native/src/layoutfx")]
+LINUX.font.compiler = compiler
+LINUX.font.ccFlags = ["-DJFXFONT_PLUS", ccFlags].flatten()
+LINUX.font.linker = linker
+LINUX.font.linkFlags = [linkFlags].flatten()

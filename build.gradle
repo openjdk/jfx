@@ -352,9 +352,9 @@ ext.COMPILE_FXPACKAGER = false;
 ext.COMPILE_DESIGN_TIME = false;
 compileTargets { t ->
     if (project.ext[t.upper].compileSwing) COMPILE_SWING = true
-    if (project.ext[t.upper].compileSWT) COMPILE_SWING = true
-    if (project.ext[t.upper].compileFXPackager) COMPILE_SWING = true
-    if (project.ext[t.upper].compileDesignTime) COMPILE_SWING = true
+    if (project.ext[t.upper].compileSWT) COMPILE_SWT = true
+    if (project.ext[t.upper].compileFXPackager) COMPILE_FXPACKAGER = true
+    if (project.ext[t.upper].compileDesignTime) COMPILE_DESIGN_TIME = true
 }
 
 /******************************************************************************
@@ -1097,7 +1097,7 @@ project(":fxpackager") {
             source file("src/main/native/launcher/win")
             compiler = WIN.launcher.compiler
             exe = true
-            linkerOptions.addAll(ICON_LAUNCHER_LINK_FLAGS)
+            linkerOptions.addAll(WIN.iconLauncher.linkFlags)
             doLast {
                 copy {
                     from "$buildDir/native/IconSwap/IconSwap.exe"
@@ -1113,18 +1113,18 @@ project(":fxpackager") {
             if (IS_MAC) {
                 matches = ".*\\.m"
                 output(file("$buildDir/classes/main/com/sun/javafx/tools/resource/mac"))
-                params.addAll(WIN.launcher.ccFlags)
+                params.addAll(MAC.launcher.ccFlags)
                 source file("src/main/native/launcher/mac")
-                compiler = WIN.launcher.compiler
+                compiler = MAC.launcher.compiler
                 eachOutputFile = { f ->
                     return new File(f.getParent(), "JavaAppLauncher")
                 }
             } else {
                 matches = ".*\\.c"
                 output(file("$buildDir/classes/main/com/sun/javafx/tools/resource/linux"))
-                params.addAll(WIN.launcher.ccFlags)
-                compiler = WIN.launcher.compiler
-                linkerOptions.addAll(WIN.launcher.linkFlags)
+                params.addAll(LINUX.launcher.ccFlags)
+                compiler = LINUX.launcher.compiler
+                linkerOptions.addAll(LINUX.launcher.linkFlags)
                 source file("src/main/native/launcher/linux")
                 eachOutputFile = { f ->
                     return new File(f.getParent(), "JavaAppLauncher")

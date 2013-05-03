@@ -260,20 +260,6 @@ ARMV6HF.prismSW.ccFlags = [extraCFlags].flatten()
 ARMV6HF.prismSW.linker = linker
 ARMV6HF.prismSW.linkFlags = [extraLFlags].flatten()
 
-def closedDir = file("$projectDir/../rt-closed")
-ARMV6HF.font = [:]
-ARMV6HF.font.javahInclude = [
-        "com/sun/javafx/font/**/*",
-        "com/sun/javafx/text/**/*"]
-ARMV6HF.font.nativeSource = [
-    file("$closedDir/javafx-font-native/src"),
-    file("$closedDir/javafx-font-native/src/layout"),
-    file("$closedDir/javafx-font-native/src/layoutfx")]
-ARMV6HF.font.compiler = compiler
-ARMV6HF.font.ccFlags = fontCFlags
-ARMV6HF.font.linker = linker
-ARMV6HF.font.linkFlags = fontLFlags
-
 ARMV6HF.iio = [:]
 ARMV6HF.iio.javahInclude = ["com/sun/javafx/iio/**/*"]
 ARMV6HF.iio.nativeSource = [
@@ -295,3 +281,17 @@ ARMV6HF.prismES2.compiler = compiler
 ARMV6HF.prismES2.ccFlags = es2EglfbCFlags //es2CFlags or es2EglfbCFlags or es2X11CFlags?
 ARMV6HF.prismES2.linker = linker
 ARMV6HF.prismES2.linkFlags = es2EglfbLFlags //es2LFlags or es2EglfbLFlags or es2X11LFlags?
+
+def closedDir = file("$projectDir/../rt-closed")
+ARMV6HF.font = [:]
+ARMV6HF.font.javahInclude = [
+        "com/sun/javafx/font/**/*",
+        "com/sun/javafx/text/**/*"]
+ARMV6HF.font.nativeSource = [
+    file("$closedDir/javafx-font-native/src"),
+    file("$closedDir/javafx-font-native/src/layout"),
+    file("$closedDir/javafx-font-native/src/layoutfx")]
+ARMV6HF.font.compiler = compiler
+ARMV6HF.font.ccFlags = fontCFlags
+ARMV6HF.font.linker = linker
+ARMV6HF.font.linkFlags = fontLFlags
