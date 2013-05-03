@@ -30,6 +30,7 @@ uniform vec4 diffuseColor;
 uniform sampler2D diffuseTexture;
 
 vec4 apply_diffuse() {
-    return texture2D(diffuseTexture, gl_TexCoord[0].xy);
+    vec4 dTexColor = texture2D(diffuseTexture, gl_TexCoord[0].xy);
+    return dTexColor * diffuseColor; 
 }
 

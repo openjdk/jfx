@@ -54,7 +54,7 @@ public class PhongMaterial extends Material {
      */
     public PhongMaterial() {
         // TODO: 3D - Need to document this ...
-        setDiffuseColor(Color.LIGHTGRAY);        
+        setDiffuseColor(Color.WHITE);        
     }
 
     // TODO: 3D - Need to document this ...
@@ -75,7 +75,7 @@ public class PhongMaterial extends Material {
     /**
      * Specifies the diffuse color of this Material.
      *
-     * @defaultValue null
+     * @defaultValue Color.WHITE
      */
     private ObjectProperty<Color> diffuseColor;
 

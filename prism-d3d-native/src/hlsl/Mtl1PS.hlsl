@@ -66,7 +66,7 @@ float4 main(ObjectPsIn objAttr, LocalBump  lSpace) : color {
     float4 ambColor = objAttr.ambient;
 
     float4 tDiff = tex2D(mapDiffuse, objAttr.texD);
-    tDiff.xyz = lerp(tDiff.xyz, gConstantColor.xyz, gConstantColor.a);
+    tDiff = tDiff * gConstantColor;
 
     // return gConstantColor.aaaa;
 
