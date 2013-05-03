@@ -36,7 +36,7 @@ LINUX.compileFXPackager = true;
 LINUX.compileDesignTime = true;
 
 // Libraries end up in the sdk/rt/lib/$OS_ARCH directory for Linux
-LINUX.libDist = "lib/$OS_ARCH"
+LINUX.libDest = "lib/$OS_ARCH"
 
 // TODO this is garbage. Each target file should define what it includes,
 // not what it excludes.
