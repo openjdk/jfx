@@ -51,14 +51,14 @@ class D3DSwapChain
 
     public boolean prepare(Rectangle clip) {
         D3DContext context = getContext();
-        context.getVertexBuffer().flush();
+        context.flushVertexBuffer();
         D3DGraphics g = (D3DGraphics) D3DGraphics.create(this, context);
         if (g == null) {
             return false;
         }
         g.setCompositeMode(CompositeMode.SRC);
         g.drawTexture(texBackBuffer, 0, 0, this.getContentWidth(), this.getContentHeight());
-        context.getVertexBuffer().flush();
+        context.flushVertexBuffer();
         texBackBuffer.unlock();
         return true;
     }

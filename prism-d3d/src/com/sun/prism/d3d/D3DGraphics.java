@@ -91,7 +91,7 @@ class D3DGraphics extends BaseShaderGraphics implements D3DContextSource {
     }
 
     public void sync() {
-        context.sync();
+        context.flushVertexBuffer();
     }
 
     public D3DContext getContext() {
