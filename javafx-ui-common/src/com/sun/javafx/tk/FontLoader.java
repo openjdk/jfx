@@ -25,7 +25,6 @@
 
 package com.sun.javafx.tk;
 
-import java.io.FileInputStream;
 import java.io.InputStream;
 import java.util.List;
 
@@ -40,40 +39,9 @@ public abstract class FontLoader {
     public abstract List<String> getFontNames(String family);
     public abstract Font font(String family, FontWeight weight,
                               FontPosture posture, float size);
-    /* The following function was there for fxdloader *only*.
-     * Its now left here only until we remove the Swing pipeline.
-     */
-    public abstract Font font(Object inStream, float size);
+    public abstract Font loadFont(InputStream in, double size);
+    public abstract Font loadFont(String path, double size);
     public abstract FontMetrics getFontMetrics(Font font);
     public abstract float computeStringWidth(String string, Font font);
     public abstract float getSystemFontSize();
-
-    /** Default implementation temporarily uses font() above which
-     * is obsoleted but left here until we remove the Swing pipeline.
-     */
-    public Font loadFont(InputStream in, double size) {
-        return font(in,  (float)size);
-    }
-
-    /** Default implementation uses font() which is implemented for
-     * all pipelines.
-     */
-    public Font loadFont(String path, double size) {
-        InputStream in = null;
-        Font font = null;
-        try {
-            in = new FileInputStream(path);
-            font = font(in, (float)size);
-        } catch (Exception e) {
-        } finally {
-            if (in != null) {
-              try {
-                in.close();
-              }
-              catch (Exception e) {
-              }
-            }
-        }
-        return font;
-    }
 }
