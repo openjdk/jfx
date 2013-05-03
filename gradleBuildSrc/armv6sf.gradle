@@ -272,7 +272,9 @@ ext.ARMV6SF_PRISM_SW_LINKER = LINKER
 ext.ARMV6SF_PRISM_SW_LINK_FLAGS = prismSWLFlags
 
 def closedDir = file("$projectDir/../rt-closed")
-ext.ARMV6SF_JAVAFX_FONT_JAVAH_INCLUDE = ["com/sun/javafx/font/*", "com/sun/javafx/text/*", "com/sun/t2k/*"]
+ext.ARMV6SF_JAVAFX_FONT_JAVAH_INCLUDE = [
+        "com/sun/javafx/font/**/*",
+        "com/sun/javafx/text/**/*"]
 ext.ARMV6SF_JAVAFX_FONT_NATIVE_SOURCE = [
     file("$closedDir/javafx-font-native/src"),
     file("$closedDir/javafx-font-native/src/layout"),

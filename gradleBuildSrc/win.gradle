@@ -215,7 +215,9 @@ ext.WIN_PRISM_ES2_LINKER = LINKER
 ext.WIN_PRISM_ES2_LINK_FLAGS = [linkFlags, "/SUBSYSTEM:WINDOWS", "opengl32.lib", "gdi32.lib", "user32.lib", "kernel32.lib"].flatten()
 
 def closedDir = file("$projectDir/../rt-closed")
-ext.WIN_JAVAFX_FONT_JAVAH_INCLUDE = ["com/sun/javafx/font/*", "com/sun/javafx/text/*", "com/sun/t2k/*"]
+ext.WIN_JAVAFX_FONT_JAVAH_INCLUDE = [
+        "com/sun/javafx/font/**/*",
+        "com/sun/javafx/text/**/*"]
 ext.WIN_JAVAFX_FONT_NATIVE_SOURCE = [
     file("$closedDir/javafx-font-native/src"),
     file("$closedDir/javafx-font-native/src/layout"),
