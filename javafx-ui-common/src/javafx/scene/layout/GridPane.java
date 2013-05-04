@@ -270,6 +270,8 @@ public class GridPane extends Pane {
     private static final String COLUMN_INDEX_CONSTRAINT = "gridpane-column";
     private static final String ROW_SPAN_CONSTRAINT = "gridpane-row-span";
     private static final String COLUMN_SPAN_CONSTRAINT = "gridpane-column-span";
+    private static final String FILL_WIDTH_CONSTRAINT = "gridpane-fill-width";
+    private static final String FILL_HEIGHT_CONSTRAINT = "gridpane-fill-height";
 
     /**
      * Sets the row index for the child when contained by a gridpane
@@ -475,6 +477,54 @@ public class GridPane extends Pane {
      */
     public static Priority getVgrow(Node child) {
         return (Priority)getConstraint(child, VGROW_CONSTRAINT);
+    }
+
+    /**
+     * Sets the horizontal fill policy for the child when contained by a gridpane.
+     * If set, the gridpane will use the policy to determine whether node
+     * should be expanded to fill the column or kept to it's preferred width.
+     * Setting the value to null will remove the constraint.
+     * If not value is specified for the node nor for the column, the default value is true.
+     * @param child the child node of a gridpane
+     * @param value the horizontal fill policy or null for unset
+     * @since 8.0
+     */
+    public static void setFillWidth(Node child, Boolean value) {
+        setConstraint(child, FILL_WIDTH_CONSTRAINT, value);
+    }
+
+    /**
+     * Returns the child's horizontal fill policy if set
+     * @param child the child node of a gridpane
+     * @return the horizontal fill policy for the child or null if no policy was set
+     * @since 8.0
+     */
+    public static Boolean isFillWidth(Node child) {
+        return (Boolean) getConstraint(child, FILL_WIDTH_CONSTRAINT);
+    }
+
+    /**
+     * Sets the vertical fill policy for the child when contained by a gridpane.
+     * If set, the gridpane will use the policy to determine whether node
+     * should be expanded to fill the row or kept to it's preferred height.
+     * Setting the value to null will remove the constraint.
+     * If not value is specified for the node nor for the row, the default value is true.
+     * @param child the child node of a gridpane
+     * @param value the vertical fill policy or null for unset
+     * @since 8.0
+     */
+    public static void setFillHeight(Node child, Boolean value) {
+        setConstraint(child, FILL_HEIGHT_CONSTRAINT, value);
+    }
+
+    /**
+     * Returns the child's vertical fill policy if set
+     * @param child the child node of a gridpane
+     * @return the vertical fill policy for the child or null if no policy was set
+     * @since 8.0
+     */
+    public static Boolean isFillHeight(Node child) {
+        return (Boolean) getConstraint(child, FILL_HEIGHT_CONSTRAINT);
     }
 
     /**
@@ -1193,7 +1243,7 @@ public class GridPane extends Pane {
 
     private boolean shouldRowFillHeight(int rowIndex) {
         if (rowIndex < getRowConstraints().size()) {
-            return getRowConstraints().get(rowIndex).isFillHeight() && getRowValignment(rowIndex) != VPos.BASELINE;
+            return getRowConstraints().get(rowIndex).isFillHeight();
         }
         return true;
     }
@@ -1587,8 +1637,24 @@ public class GridPane extends Pane {
 
                 HPos halign = getHalignment(child);
                 VPos valign = getValignment(child);
+                Boolean fillWidth = isFillWidth(child);
+                Boolean fillHeight = isFillHeight(child);
+
+                if (halign == null) {
+                    halign = getColumnHalignment(columnIndex);
+                }
+                if (valign == null) {
+                    valign = getRowValignment(rowIndex);
+                }
+                if (fillWidth == null) {
+                    fillWidth = shouldColumnFillWidth(columnIndex);
+                }
+                if (fillHeight == null) {
+                    fillHeight = shouldRowFillHeight(rowIndex);
+                }
+
                 Insets margin = getMargin(child);
-                if (margin != null && (valign == VPos.BASELINE || getRowValignment(rowIndex) == VPos.BASELINE)) {
+                if (margin != null && valign == VPos.BASELINE) {
                     // The top margin has already added to rowBaseline[] in computeRowMetric()
                     // we do not need to add it again in layoutInArea.
                     margin = new Insets(0, margin.getRight(), margin.getBottom(), margin.getLeft());
@@ -1596,9 +1662,8 @@ public class GridPane extends Pane {
                 //System.out.println("layoutNode("+child.toString()+" row/span="+rowIndex+"/"+rowspan+" col/span="+columnIndex+"/"+colspan+" area="+areaX+","+areaY+" "+areaW+"x"+areaH+""+" rowBaseline="+rowBaseline[rowIndex]);
                 layoutInArea(child, areaX, areaY, areaW, areaH, rowBaseline[rowIndex],
                         margin,
-                        shouldColumnFillWidth(columnIndex), shouldRowFillHeight(rowIndex),
-                        halign != null? halign : getColumnHalignment(columnIndex),
-                        valign != null? valign : getRowValignment(rowIndex));
+                        fillWidth, fillHeight && valign != VPos.BASELINE,
+                        halign, valign);
             }
         }
         layoutGridLines(widths, heights, x, y, rowTotal, columnTotal);

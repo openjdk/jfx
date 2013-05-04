@@ -28,6 +28,7 @@ package com.sun.prism.sw;
 import com.sun.glass.ui.Screen;
 import com.sun.javafx.font.FontResource;
 import com.sun.javafx.font.FontStrike;
+import com.sun.javafx.font.Glyph;
 import com.sun.javafx.font.Metrics;
 import com.sun.javafx.font.PrismFontUtils;
 import com.sun.javafx.scene.text.GlyphList;
@@ -748,7 +749,7 @@ final class SWGraphics implements ReadbackGraphics {
                                      Paint p, float bx, float by, float bw, float bh)
     {
         float advanceX = 0;
-        if (tx.isTranslateOrIdentity() && strike.supportsGlyphImages() && (!strike.drawAsShapes())) {
+        if (tx.isTranslateOrIdentity() && (!strike.drawAsShapes())) {
             final boolean doLCDText = (strike.getAAMode() == FontResource.AA_LCD) &&
                     getRenderTarget().isOpaque() &&
                     (p.getType() == Paint.Type.COLOR) &&
@@ -774,7 +775,7 @@ final class SWGraphics implements ReadbackGraphics {
             }
 
             for (int i = strFrom; i < strTo; i++) {
-                final FontStrike.Glyph g = strike.getGlyph(gl.getGlyphCode(i));
+                final Glyph g = strike.getGlyph(gl.getGlyphCode(i));
                 if (doLCDText && g.isLCDGlyph()) {
                     final double posX = x + tx.getMxt() + g.getOriginX() + gl.getPosX(i) + 0.5f;
                     int subPosX = ((int)(3*posX)) % 3;
@@ -800,7 +801,7 @@ final class SWGraphics implements ReadbackGraphics {
             final BaseTransform glyphTx = tx.copy();
             glyphTx.deriveWithTranslation(x, y);
             for (int i = strFrom; i < strTo; i++) {
-                final FontStrike.Glyph g = strike.getGlyph(gl.getGlyphCode(i));
+                final Glyph g = strike.getGlyph(gl.getGlyphCode(i));
                 this.paintShape(g.getShape(), null, glyphTx);
                 advanceX += g.getAdvance();
                 glyphTx.deriveWithTranslation(g.getAdvance(), 0);
@@ -864,7 +865,7 @@ final class SWGraphics implements ReadbackGraphics {
             System.out.println("Clip: " + finalClip);
             System.out.println("Composite rule: " + compositeMode);
         }
-   
+
         final SWArgbPreTexture swTex = (SWArgbPreTexture) tex;
         int data[] = swTex.getDataNoClone();
 

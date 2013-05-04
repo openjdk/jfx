@@ -141,6 +141,41 @@ static void releaseReasources() {
     DEBUG_FUNC_EXIT();
 }
 
+/**
+ * Service function to enable/disable the console cursor blink
+ * 
+ * @param mode JNI_TRUE enabled, JNI_FALSE disabled
+ * 
+ * @return jboolean JNI_TRUE on success
+ */
+static jboolean dfb_setCursorBlink(jboolean mode) {
+     
+     int fd = open ("/sys/class/graphics/fbcon/cursor_blink", O_WRONLY);
+     jboolean result = JNI_FALSE;
+
+     GLASS_LOG_FINE("Trying to %s the console cursor bling",
+                    (mode)?"enable" : "disable");
+
+     if (fd < 0) {
+         GLASS_LOG_WARNING("Failed to open /sys/class/graphics/fbcon/cursor_blink"
+                           ", errno %i -%s", errno, strerror(errno));
+     } else {
+         char c = (mode)? 1 : 0;
+         int res = write(fd, &c, sizeof(char));
+         if (res == sizeof(char)) { // we tried to write 1 byte
+             GLASS_LOG_FINE("command prompt cursor %s",
+                             (mode)?"enabled" : "disabled");
+             result = JNI_TRUE;
+         } else {
+             GLASS_LOG_WARNING("Failed to %s command prompt, errno %i - %s",
+                                (mode)?"enable" : "disable",
+                               errno, strerror(errno));
+         }
+         close(fd);
+     }
+
+     return result;
+}
 
 
 /**
@@ -290,6 +325,9 @@ jboolean glass_application_initialize(JNIEnv *env) {
 
         initialized = JNI_TRUE;
 
+        //try to disable the command prompt cursor
+        dfb_setCursorBlink(JNI_FALSE);
+
     } while (0);
 
     if (initialized != JNI_TRUE) {
@@ -305,6 +343,9 @@ void lens_platform_shutdown(JNIEnv *env) {
 
     //all windows should got close request by now
     GLASS_LOG_FINE("native shutdown");
+
+    //try to enable the command prompt cursor
+    dfb_setCursorBlink(JNI_TRUE);
 
     GLASS_LOG_FINE("Release DFB resources");
     releaseReasources();

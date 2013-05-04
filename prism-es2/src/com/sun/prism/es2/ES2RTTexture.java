@@ -142,7 +142,7 @@ class ES2RTTexture extends ES2Texture<ES2RTTextureData>
         }
 
         // make sure the texture is not smaller than minimum size
-        int minSize = PrismSettings.minTextureSize;
+        int minSize = PrismSettings.minRTTSize;
         texWidth = Math.max(texWidth, minSize);
         texHeight = Math.max(texHeight, minSize);
 

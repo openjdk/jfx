@@ -90,7 +90,7 @@ class D3DRTTexture extends D3DTexture
     }
 
     public boolean readPixels(Buffer pixels) {
-        getContext().getVertexBuffer().flush();
+        getContext().flushVertexBuffer();
         long ctx = getContext().getContextHandle();
         int res = D3DContext.D3D_OK;
         if (pixels instanceof ByteBuffer) {

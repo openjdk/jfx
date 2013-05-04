@@ -1,0 +1,113 @@
+/*
+ * Copyright (c) 2010, 2013 Oracle and/or its affiliates.
+ * All rights reserved. Use is subject to license terms.
+ *
+ * This file is available and licensed under the following license:
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ *
+ *  - Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ *  - Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in
+ *    the documentation and/or other materials provided with the distribution.
+ *  - Neither the name of Oracle Corporation nor the names of its
+ *    contributors may be used to endorse or promote products derived
+ *    from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+.split-pane {
+    -fx-background-color: null;
+    -fx-background-insets: 0, 0;
+    -fx-padding: 0;
+}
+#statusBar > .container {
+    -fx-alignment: center;
+}
+#statusBar .text {
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+    -fx-fill: #1d3866;
+    -fx-effect: dropshadow(one-pass-box, white, 0, 1.0, 0, 1);
+}
+#zoomBar {
+    -fx-background-insets: 0, 1;
+    -fx-background-radius: 10, 10;
+    -fx-padding: 2 0 2 0;
+}
+#zoomBar > .increment-button > .increment-arrow {
+    -fx-padding: 4;
+    -fx-shape: "M124.438,1083.516H121.5v-2.953c0-0.587-0.476-1.062-1.062-1.062s-1.062,0.476-1.062,1.062v2.953h-2.812c-0.587,0-1.062,0.476-1.062,1.062s0.476,1.062,1.062,1.062h2.812v2.797c0,0.587,0.476,1.062,1.062,1.062s1.062-0.476,1.062-1.062v-2.797h2.938c0.587,0,1.062-0.476,1.062-1.062S125.024,1083.516,124.438,1083.516z";
+}
+#zoomBar > .decrement-button > .decrement-arrow {
+    -fx-padding: 2 8 0 0;
+    -fx-shape: "M128.562,1085.625c-0.587,0-1.062-0.476-1.062-1.062l0,0c0-0.587,0.476-1.062,1.062-1.062h7.875 c0.587,0,1.062,0.476,1.062,1.062l0,0c0,0.587-0.476,1.062-1.062,1.062H128.562z";
+}
+#zoomBar > .decrement-button {
+    -fx-padding: 8 6 8 6;
+    -fx-background-radius: 10;
+}
+#zoomBar > .increment-button {
+    -fx-padding: 5 6 5 6;
+    -fx-background-radius: 10;
+}
+.four-way {
+    -fx-background-radius: 100;
+    -fx-padding: 3px;
+}
+.four-way > * {
+    -fx-shape: "M6.623,6.144L6.62,8.168L2.372,2.501L6.62-3.167L6.623-1.14l-2.8,3.641L6.623,6.";
+    -fx-scale-shape: false;
+    -fx-padding: 4px;
+    -fx-background-color: -fx-mark-highlight-color,derive(-fx-base,-45%);
+    -fx-effect: dropshadow(two-pass-box , -fx-shadow-highlight-color, 1, 0.0 , 0, 1.4);
+}
+.four-way > .center {
+    -fx-scale-shape: false;
+    -fx-padding: 10px;
+}
+.four-way > .up {
+    -fx-rotate: 90;
+}
+.four-way > .down {
+    -fx-rotate: -90;
+}
+.four-way > .right {
+    -fx-rotate: 180;
+    -fx-effect: dropshadow(two-pass-box , -fx-shadow-highlight-color, 1, 0.0 , 0, -1.4);
+}
+#eyeNav > .center {
+    -fx-shape: "M121.5,1093.484c-3.866,0-7,2.025-7,4.523s3.134,4.523,7,4.523s7-2.025,7-4.523S125.366,1093.484,121.5,1093.484z M121.5,1101.531c-3.252,0-6-1.613-6-3.523s2.748-3.523,6-3.523s6,1.613,6,3.523S124.752,1101.531,121.5,1101.531z M121.5,1094.833c-1.749,0-3.167,1.418-3.167,3.167s1.418,3.167,3.167,3.167s3.167-1.418,3.167-3.167S123.249,1094.833,121.5,1094.833z M120.595,1097.548c-0.25,0-0.453-0.202-0.453-0.453c0-0.25,0.203-0.452,0.453-0.452s0.452,0.202,0.452,0.452C121.047,1097.346,120.845,1097.548,120.595,1097.548z";
+}
+#camNav > .center {
+    -fx-shape: "M20.34,47.5c0,0-0.875-2.688-1.938-3.688s-4.688-4.438-3.625-5.562s5.25,2.25,5.25,2.25s-3.295-7.148-1.438-8c1.5-0.688,3.438,4.938,3.438,4.938S21.34,30.5,23.152,30.5c1.938,0,1.25,6.938,1.25,6.938s1.5-6.188,2.938-5.812s0,6.375,0,6.375s3.039-3.571,3.812-2.875c1.25,1.125-2.381,5.987-2.443,7.362S28.277,47.5,28.277,47.5H20.34z";
+}
+.four-way > .up:pressed,
+.four-way > .down:pressed,
+.four-way > .left:pressed,
+.four-way > .right:pressed {
+    -fx-effect: dropshadow(gaussian, -fx-accent, 15, 0.7, 0, 0);
+
+}
+.settings-header {
+    -fx-font-weight: bold;
+    -fx-alignment: center;
+    -fx-text-fill: #6f6f6f;
+    -fx-border-color: transparent transparent #dddddd transparent;
+}
+.settings {
+    -fx-font-size: 11px;
+}

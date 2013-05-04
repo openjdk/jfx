@@ -185,7 +185,7 @@ public class SubScene extends Node {
                     }
                     _value.getStyleClass().add(0, "root");
                     _value.setScenes(getScene(), SubScene.this);
-                    markDirty(SubScene.SubSceneDirtyBits.ROOT_SG_DIRTY);
+                    markDirty(SubSceneDirtyBits.ROOT_SG_DIRTY);
                     _value.resize(getWidth(), getHeight()); // maybe no-op if root is not resizable
                     _value.requestLayout();
                 }
@@ -230,6 +230,7 @@ public class SubScene extends Node {
     public final ObjectProperty<Camera> cameraProperty() {
         if (camera == null) {
             camera = new ObjectPropertyBase<Camera>() {
+                Camera oldCamera = null;
 
                 @Override
                 protected void invalidated() {
@@ -239,12 +240,17 @@ public class SubScene extends Node {
                         if ((_value.getScene() != null || _value.getSubScene() != null)
                                 && (_value.getScene() != getScene() || _value.getSubScene() != SubScene.this)) {
                             throw new IllegalArgumentException(_value
-                                    + "is already set as camera in other scene/subscene");
+                                    + "is already part of other scene or subscene");
                         }
+                        // throws exception if the camera already has a different owner
+                        _value.setOwnerSubScene(SubScene.this);
                         _value.setViewWidth(getWidth());
                         _value.setViewHeight(getHeight());
                     }
-                    markDirty(SubScene.SubSceneDirtyBits.CAMERA_DIRTY);
+                    if (oldCamera != null && oldCamera != _value) {
+                        oldCamera.setOwnerSubScene(null);
+                    }
+                    oldCamera = _value;
                 }
 
                 @Override
@@ -268,6 +274,7 @@ public class SubScene extends Node {
         if (cam == null) {
             if (defaultCamera == null) {
                 defaultCamera = new ParallelCamera();
+                defaultCamera.setOwnerSubScene(this);
                 defaultCamera.setViewWidth(getWidth());
                 defaultCamera.setViewHeight(getHeight());
             }
@@ -275,6 +282,11 @@ public class SubScene extends Node {
         }
 
         return cam;
+    }
+
+    // Used by the camera
+    void markCameraDirty() {
+        markDirty(SubSceneDirtyBits.CAMERA_DIRTY);
     }
 
     /**
@@ -306,7 +318,7 @@ public class SubScene extends Node {
                     if (_root.isResizable()) {
                         _root.resize(get() - _root.getLayoutX() - _root.getTranslateX(), _root.getLayoutBounds().getHeight());
                     }
-                    markDirty(SubScene.SubSceneDirtyBits.CAMERA_DIRTY);
+                    markDirty(SubSceneDirtyBits.SIZE_DIRTY);
                     SubScene.this.impl_geomChanged();
 
                     getEffectiveCamera().setViewWidth(get());
@@ -351,7 +363,7 @@ public class SubScene extends Node {
                     if (_root.isResizable()) {
                         _root.resize(_root.getLayoutBounds().getWidth(), get() - _root.getLayoutY() - _root.getTranslateY());
                     }
-                    markDirty(SubScene.SubSceneDirtyBits.CAMERA_DIRTY);
+                    markDirty(SubSceneDirtyBits.SIZE_DIRTY);
                     SubScene.this.impl_geomChanged();
 
                     getEffectiveCamera().setViewHeight(get());
@@ -394,7 +406,7 @@ public class SubScene extends Node {
 
                 @Override
                 protected void invalidated() {
-                    markDirty(SubScene.SubSceneDirtyBits.FILL_DIRTY);
+                    markDirty(SubSceneDirtyBits.FILL_DIRTY);
                 }
 
                 @Override
@@ -418,8 +430,6 @@ public class SubScene extends Node {
     @Deprecated @Override
     public void impl_updatePG() {
         super.impl_updatePG();
-        final Camera cam = getEffectiveCamera();
-        cam.impl_syncPGNode();
 
         // TODO deal with clip node
 
@@ -437,9 +447,13 @@ public class SubScene extends Node {
                 peer.setFillPaint(platformPaint);
             }
             peer.setDepthBuffer(depthBuffer);
-            if (isDirty(SubSceneDirtyBits.CAMERA_DIRTY)) {
+            if (isDirty(SubSceneDirtyBits.SIZE_DIRTY)) {
                 peer.setWidth((float)getWidth());
                 peer.setHeight((float)getHeight());
+            }
+            if (isDirty(SubSceneDirtyBits.CAMERA_DIRTY)) {
+                final Camera cam = getEffectiveCamera();
+                cam.impl_syncPGNode();
                 peer.setCamera(cam.getPlatformCamera());
             }
             syncLights();
@@ -532,13 +546,14 @@ public class SubScene extends Node {
     }
 
     private enum SubSceneDirtyBits {
+        SIZE_DIRTY,
         FILL_DIRTY,
         /* ROOT_SG_DIRTY is set either when the root has changed or hint that
          * root scene graph needs to be re-rendered. For example when layout
          * occurs, or node has been added or removed.
          */
         ROOT_SG_DIRTY,
-        CAMERA_DIRTY, // get set if the camera, width or height change
+        CAMERA_DIRTY,
         LIGHTS_DIRTY;
 
         private int mask;
@@ -709,6 +724,10 @@ public class SubScene extends Node {
             return subScene.depthBuffer;
         };
 
+        @Override
+        public Camera getEffectiveCamera(SubScene subScene) {
+            return subScene.getEffectiveCamera();
+        }
     }
 
     static {

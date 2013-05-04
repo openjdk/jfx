@@ -29,16 +29,15 @@ import javafx.scene.transform.Transform;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import com.sun.javafx.geom.transform.Affine3D;
+import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.geom.transform.GeneralTransform3D;
 import com.sun.javafx.scene.transform.TransformUtils;
-import javafx.event.EventHandler;
 import javafx.geometry.Point3D;
 import javafx.scene.transform.Affine;
 import javafx.scene.transform.NonInvertibleTransformException;
 import javafx.scene.transform.Rotate;
 import javafx.scene.transform.Scale;
 import javafx.scene.transform.Shear;
-import javafx.scene.transform.TransformChangedEvent;
 import javafx.scene.transform.Translate;
 
 /**
@@ -106,6 +105,26 @@ public final class TransformHelper {
         assertEquals(reference.getMzy(), matrix.getMzy(), 0.00001);
         assertEquals(reference.getMzz(), matrix.getMzz(), 0.00001);
         assertEquals(reference.getTz(), matrix.getTz(), 0.00001);
+    }
+
+    /**
+     * Asserts the {@code matrix} elements equal to the expected values
+     * specified by {@code reference}
+     */
+    public static void assertMatrix(Affine3D matrix,
+            BaseTransform reference) {
+        assertEquals(reference.getMxx(), matrix.getMxx(), 0.00001);
+        assertEquals(reference.getMxy(), matrix.getMxy(), 0.00001);
+        assertEquals(reference.getMxz(), matrix.getMxz(), 0.00001);
+        assertEquals(reference.getMxt(), matrix.getMxt(), 0.00001);
+        assertEquals(reference.getMyx(), matrix.getMyx(), 0.00001);
+        assertEquals(reference.getMyy(), matrix.getMyy(), 0.00001);
+        assertEquals(reference.getMyz(), matrix.getMyz(), 0.00001);
+        assertEquals(reference.getMyt(), matrix.getMyt(), 0.00001);
+        assertEquals(reference.getMzx(), matrix.getMzx(), 0.00001);
+        assertEquals(reference.getMzy(), matrix.getMzy(), 0.00001);
+        assertEquals(reference.getMzz(), matrix.getMzz(), 0.00001);
+        assertEquals(reference.getMzt(), matrix.getMzt(), 0.00001);
     }
 
     /**

@@ -25,6 +25,7 @@
 
 package com.sun.javafx.scene;
 
+import javafx.scene.Camera;
 import javafx.scene.SubScene;
 
 public abstract class SubSceneAccess {
@@ -44,4 +45,5 @@ public abstract class SubSceneAccess {
     }
 
     public abstract boolean isDepthBuffer(SubScene subScene);
+    public abstract Camera getEffectiveCamera(SubScene subScene);
 }

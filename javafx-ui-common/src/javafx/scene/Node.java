@@ -7851,7 +7851,8 @@ public abstract class Node implements EventTarget, Styleable {
                     tail = tail.prepend(eventDispatcherValue);
                 }
             }
-            curNode = curNode.getParent();
+            final Node curParent = curNode.getParent();
+            curNode = curParent != null ? curParent : curNode.getSubScene();
         } while (curNode != null);
 
         if (getScene() != null) {

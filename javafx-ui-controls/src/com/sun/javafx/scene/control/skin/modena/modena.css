@@ -2882,6 +2882,22 @@ is being used to size a border should also be in pixels.
     -fx-background-insets: 0, 0;
     -fx-padding: 0;
  }
+.split-pane > * > .accordion > .titled-pane > *.content {
+    -fx-border-color: null;
+    -fx-border-insets: 0;
+}
+.split-pane > * > .accordion > .titled-pane > .title  {
+    -fx-background-insets: 0,1 0 1 0, 2 1 2 1;
+}
+.split-pane > * > .accordion > .first-titled-pane > .title  {
+    -fx-background-insets: 0,0 0 1 0, 1 1 2 1;
+}
+.split-pane > * > .accordion > .titled-pane:collapsed > .title  {
+    -fx-background-insets: 0,1 0 0 0, 2 1 1 1;
+}
+.split-pane > * > .accordion > .first-titled-pane:collapsed > .title  {
+    -fx-background-insets: 0,0 0 0 0, 1 1 1 1;
+}
 .titled-pane > * > * > .split-pane,
 .titled-pane > * > * > .text-area,
 .titled-pane > * > * > .html-editor,

@@ -259,8 +259,8 @@ public class Box extends Shape3D {
         } else {
             t0 = ((signX ? hWidth : -hWidth) - originX) * invDirX;
             t1 = ((signX ? -hWidth : hWidth) - originX) * invDirX;
-            side0 = 'x';
-            side1 = 'x';
+            side0 = signX ? 'X' : 'x';
+            side1 = signX ? 'x' : 'X';
         }
 
         if (Double.isInfinite(invDirY)) {
@@ -277,11 +277,11 @@ public class Box extends Shape3D {
                 return false;
             }
             if (ty0 > t0) {
-                side0 = 'y';
+                side0 = signY ? 'Y' : 'y';
                 t0 = ty0;
             }
             if (ty1 < t1) {
-                side1 = 'y';
+                side1 = signY ? 'y' : 'Y';
                 t1 = ty1;
             }
         }
@@ -333,27 +333,42 @@ public class Box extends Shape3D {
             Point3D point = PickResultChooser.computePoint(pickRay, t);
 
             Point2D txtCoords = null;
-
-            if (side == 'x') {
-                txtCoords = new Point2D(
-                        0.5 - point.getY() / h,
-                        0.5 - point.getZ() / d);
-            } else if (side == 'y') {
-                txtCoords = new Point2D(
-                        0.5 - point.getX() / w,
-                        0.5 - point.getZ() / d);
-            } else if (side == 'z') {
-                txtCoords = new Point2D(
-                        0.5 - point.getX() / w,
-                        0.5 - point.getY() / h);
-            } else if (side == 'Z') {
-                txtCoords = new Point2D(
-                        0.5 - point.getY() / h,
-                        0.5 - point.getX() / w);
-            } else {
-                // No hit with any of the planes. We must have had a zero
-                // pick ray direction vector. Should never happen.
-                return false;
+            
+            switch (side) {
+                case 'x': // left
+                    txtCoords = new Point2D(
+                            0.5 - point.getZ() / d,
+                            0.5 + point.getY() / h);
+                    break;
+                case 'X': // right
+                    txtCoords = new Point2D(
+                            0.5 + point.getZ() / d,
+                            0.5 + point.getY() / h);
+                    break;
+                case 'y': // top
+                    txtCoords = new Point2D(
+                            0.5 + point.getX() / w,
+                            0.5 - point.getZ() / d);
+                    break;
+                case 'Y': // bottom
+                    txtCoords = new Point2D(
+                            0.5 + point.getX() / w,
+                            0.5 + point.getZ() / d);
+                    break;
+                case 'z': // front
+                    txtCoords = new Point2D(
+                            0.5 + point.getX() / w,
+                            0.5 + point.getY() / h);
+                    break;
+                case 'Z': // back
+                    txtCoords = new Point2D(
+                            0.5 - point.getX() / w,
+                            0.5 + point.getY() / h);
+                    break;
+                default:
+                    // No hit with any of the planes. We must have had a zero
+                    // pick ray direction vector. Should never happen.
+                    return false;
             }
 
             pickResult.offer(this, t, PickResult.FACE_UNDEFINED, point, txtCoords);
@@ -373,19 +388,35 @@ public class Box extends Shape3D {
         float hd = d / 2f;
 
         float points[] = {
-            hw, hh, hd, hw, hh, -hd, hw, -hh, hd, hw, -hh, -hd,
-            -hw, hh, hd, -hw, hh, -hd, -hw, -hh, hd, -hw, -hh, -hd };
+            -hw, -hh, -hd,
+             hw, -hh, -hd,
+             hw,  hh, -hd,
+            -hw,  hh, -hd,
+            -hw, -hh,  hd,
+             hw, -hh,  hd,
+             hw,  hh,  hd,
+            -hw,  hh,  hd};
 
-        float texCoords[] = {0, 0, 0, 1, 1, 0, 1, 1};
+        float texCoords[] = {0, 0, 1, 0, 1, 1, 0, 1};
 
         int faceSmoothingGroups[] = {
             1, 1, 1, 1, 2, 2, 2, 2, 4, 4, 4, 4
         };
 
         int faces[] = {
-            0, 0, 2, 2, 1, 1, 2, 2, 3, 3, 1, 1, 4, 0, 5, 1, 6, 2, 6, 2, 5, 1, 7, 3,
-            0, 0, 1, 1, 4, 2, 4, 2, 1, 1, 5, 3, 2, 0, 6, 2, 3, 1, 3, 1, 6, 2, 7, 3,
-            0, 0, 4, 1, 2, 2, 2, 2, 4, 1, 6, 3, 1, 0, 3, 1, 5, 2, 5, 2, 3, 1, 7, 3,};
+            0, 0, 2, 2, 1, 1,
+            2, 2, 0, 0, 3, 3,            
+            1, 0, 6, 2, 5, 1,
+            6, 2, 1, 0, 2, 3,            
+            5, 0, 7, 2, 4, 1,
+            7, 2, 5, 0, 6, 3,
+            4, 0, 3, 2, 0, 1,
+            3, 2, 4, 0, 7, 3,            
+            3, 0, 6, 2, 2, 1,
+            6, 2, 3, 0, 7, 3,
+            4, 0, 1, 2, 5, 1,
+            1, 2, 4, 0, 0, 3,
+        };
 
         TriangleMesh mesh = new TriangleMesh(points, texCoords, faces);
         mesh.setFaceSmoothingGroups(faceSmoothingGroups);

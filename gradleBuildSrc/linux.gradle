@@ -1,0 +1,179 @@
+/*
+ * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.  Oracle designates this
+ * particular file as subject to the "Classpath" exception as provided
+ * by Oracle in the LICENSE file that accompanied this code.
+ *
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
+ *
+ * You should have received a copy of the GNU General Public License version
+ * 2 along with this work; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+ * or visit www.oracle.com if you need additional information or have any
+ * questions.
+ */
+
+ext.LINUX = [:]
+
+// Declare whether this particular target file applies to the current system
+LINUX.canBuild = IS_LINUX;
+if (!LINUX.canBuild) return;
+
+// All desktop related packages should be built
+LINUX.compileSwing = true;
+LINUX.compileSWT = true;
+LINUX.compileFXPackager = true;
+LINUX.compileDesignTime = true;
+
+// Libraries end up in the sdk/rt/lib/$OS_ARCH directory for Linux
+LINUX.libDest = "lib/$OS_ARCH"
+
+// TODO this is garbage. Each target file should define what it includes,
+// not what it excludes.
+LINUX.jfxrtJarExcludes = [
+    "**/*.hlsl",
+    "com/sun/glass/ui/win",
+    "com/sun/glass/ui/accessible/win",
+    "com/sun/prism/d3d",
+    "com/sun/prism/es2/gl/win",
+    "com/sun/prism/null3d",
+    "com/sun/scenario/effect/impl/hw/d3d",
+    
+    "com/sun/glass/events/mac",
+    "com/sun/glass/ui/mac",
+    "com/sun/glass/ui/accessible/mac",
+    "com/sun/prism/es2/gl/mac",
+        
+    "com/sun/glass/ui/ios",
+    
+    "com/sun/glass/ui/lens",
+    "com/sun/prism/es2/gl/eglfb",
+    "com/sun/prism/es2/gl/eglx11",
+    "com/sun/prism/es2/gl/x11",
+    
+    "com/sun/glass/ui/swt", // SWT glass
+]
+
+// A set of common parameters to use for both compiling and linking
+def commonFlags = [
+        "-fno-strict-aliasing", "-fPIC", "-fno-omit-frame-pointer", // optimization flags
+        "-W", "-Wall", "-Wno-unused", "-Wno-parentheses", "-Werror=implicit-function-declaration"] // warning flags
+
+// Specify the compilation parameters and link parameters
+def ccFlags = [
+        commonFlags, "-I$JDK_HOME/include", "-I$JDK_HOME/include/linux", "-c",
+        IS_DEBUG ? ["-ggdb", "-DVERBOSE"] : "-O2", "-DINLINE=inline"].flatten()
+//ccFlags.addAll(["-Wnon-virtual-dtor", "-Woverloaded-virtual", "-std=c++0x"])
+def linkFlags = ["-shared", commonFlags].flatten()
+
+// Create $buildDir/linux_tools.properties file and load props from it
+setupTools("linux_tools",
+    { propFile ->
+        ByteArrayOutputStream results = new ByteArrayOutputStream();
+        exec {
+            commandLine("pkg-config", "--cflags", "gtk+-2.0", "gthread-2.0", "xtst");
+            setStandardOutput(results);
+        }
+        propFile << "cflags=" << results.toString().trim() << "\n";
+
+        results = new ByteArrayOutputStream();
+        exec {
+            commandLine "pkg-config", "--libs", "gtk+-2.0", "gthread-2.0", "xtst"
+            standardOutput = results
+        }
+        propFile << "libs=" << results.toString().trim();
+    },
+    { properties ->
+        ccFlags.addAll(properties.getProperty("cflags").split(" "))
+        linkFlags.addAll(properties.getProperty("libs").split(" "))
+    }
+)
+
+def compiler = "gcc"
+def linker = "g++"
+
+LINUX.glass = [:]
+LINUX.glass.javahInclude = [
+    "com/sun/glass/events/**",
+    "com/sun/glass/ui/*",
+    "com/sun/glass/ui/gtk/*",
+    "com/sun/glass/ui/accessible/gtk/*"]
+LINUX.glass.nativeSource = file("modules/graphics/src/main/native-glass/gtk")
+LINUX.glass.compiler = compiler
+LINUX.glass.ccFlags = [ccFlags].flatten()
+LINUX.glass.linker = linker
+LINUX.glass.linkFlags = [linkFlags].flatten()
+
+LINUX.decora = [:]
+LINUX.decora.compiler = compiler
+LINUX.decora.ccFlags = [ccFlags, "-ffast-math"].flatten()
+LINUX.decora.linker = linker
+LINUX.decora.linkFlags = [linkFlags].flatten()
+
+LINUX.prism = [:]
+LINUX.prism.javahInclude = ["com/sun/prism/impl/**/*", "com/sun/prism/PresentableState*"]
+LINUX.prism.nativeSource = file("modules/graphics/src/main/native-prism")
+LINUX.prism.compiler = "cc"
+LINUX.prism.ccFlags = [ccFlags].flatten()
+LINUX.prism.linker = linker
+LINUX.prism.linkFlags = [linkFlags].flatten()
+
+LINUX.prismSW = [:]
+LINUX.prismSW.javahInclude = ["com/sun/pisces/**/*"]
+LINUX.prismSW.nativeSource = file("modules/graphics/src/main/native-prism-sw")
+LINUX.prismSW.compiler = "cc"
+LINUX.prismSW.ccFlags = [ccFlags].flatten()
+LINUX.prismSW.linker = linker
+LINUX.prismSW.linkFlags = [linkFlags].flatten()
+
+LINUX.launcher = [:]
+LINUX.launcher.compiler = compiler
+LINUX.launcher.ccFlags = ["-DJAVAARCH=\"$OS_ARCH\"", "-I$JDK_HOME/include", "-I$JDK_HOME/include/linux"];
+LINUX.launcher.linker = linker
+LINUX.launcher.linkFlags = ["-ldl"]
+
+LINUX.iio = [:]
+LINUX.iio.javahInclude = ["com/sun/javafx/iio/**/*"]
+LINUX.iio.nativeSource = [
+    file("modules/graphics/src/main/native-iio"),
+    file("modules/graphics/src/main/native-iio/libjpeg7")]
+LINUX.iio.compiler = compiler
+LINUX.iio.ccFlags = [ccFlags].flatten()
+LINUX.iio.linker = linker
+LINUX.iio.linkFlags = [linkFlags].flatten()
+
+LINUX.prismES2 = [:]
+LINUX.prismES2.javahInclude = ["com/sun/prism/es2/**/*"]
+LINUX.prismES2.nativeSource = [
+    file("modules/graphics/src/main/native-prism-es2"),
+    file("modules/graphics/src/main/native-prism-es2/GL"),
+    file("modules/graphics/src/main/native-prism-es2/x11")
+]
+LINUX.prismES2.compiler = compiler
+LINUX.prismES2.ccFlags = ["-DLINUX", "-DGRADLE_BUILD", ccFlags].flatten()
+LINUX.prismES2.linker = linker
+LINUX.prismES2.linkFlags = [linkFlags].flatten()
+
+def closedDir = file("$projectDir/../rt-closed")
+LINUX.font = [:]
+LINUX.font.javahInclude = [
+        "com/sun/javafx/font/**/*",
+        "com/sun/javafx/text/**/*"]
+LINUX.font.nativeSource = [
+    file("$closedDir/javafx-font-native/src"),
+    file("$closedDir/javafx-font-native/src/layout"),
+    file("$closedDir/javafx-font-native/src/layoutfx")]
+LINUX.font.compiler = compiler
+LINUX.font.ccFlags = ["-DJFXFONT_PLUS", ccFlags].flatten()
+LINUX.font.linker = linker
+LINUX.font.linkFlags = [linkFlags].flatten()

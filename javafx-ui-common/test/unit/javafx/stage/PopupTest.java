@@ -121,7 +121,7 @@ public class PopupTest {
         final Popup popup = new Popup();
         final Rectangle contentRect = new Rectangle(10, 20, 100, 100);
 
-        popup.impl_setAlignWithContentOrigin(true);
+        popup.setAlignWithContentOrigin(true);
         popup.getContent().add(contentRect);
         popup.show(stage, 50, 50);
         pulse();
@@ -132,6 +132,27 @@ public class PopupTest {
 
         contentRect.setX(-20);
         contentRect.setY(-10);
+        pulse();
+
+        assertEquals(30.0, peer.x, 1e-100);
+        assertEquals(40.0, peer.y, 1e-100);
+    }
+
+    @Test
+    public void testContentAdjustmentChange() {
+        final Popup popup = new Popup();
+        final Rectangle contentRect = new Rectangle(-20, -10, 100, 100);
+
+        popup.setAlignWithContentOrigin(false);
+        popup.getContent().add(contentRect);
+        popup.show(stage, 50, 50);
+        pulse();
+        final StubPopupStage peer = (StubPopupStage) popup.impl_getPeer();
+
+        assertEquals(50.0, peer.x, 1e-100);
+        assertEquals(50.0, peer.y, 1e-100);
+
+        popup.setAlignWithContentOrigin(true);
         pulse();
 
         assertEquals(30.0, peer.x, 1e-100);

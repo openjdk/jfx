@@ -393,6 +393,12 @@ public class Scene implements EventTarget {
                                 final Scene scene) {
                             scene.parentEffectiveOrientationInvalidated();
                         }
+
+                        @Override
+                        public Camera getEffectiveCamera(Scene scene) {
+                            return scene.getEffectiveCamera();
+                        }
+
                     });
         }
 
@@ -932,6 +938,7 @@ public class Scene implements EventTarget {
     public final ObjectProperty<Camera> cameraProperty() {
         if (camera == null) {
             camera = new ObjectPropertyBase<Camera>() {
+                Camera oldCamera = null;
 
                 @Override
                 protected void invalidated() {
@@ -941,12 +948,17 @@ public class Scene implements EventTarget {
                         if ((_value.getScene() != null && _value.getScene() != Scene.this)
                                 || _value.getSubScene() != null) {
                             throw new IllegalArgumentException(_value
-                                    + "is already set as camera in other scene");
+                                    + "is already part of other scene or subscene");
                         }
+                        // throws exception if the camera already has a different owner
+                        _value.setOwnerScene(Scene.this);
                         _value.setViewWidth(getWidth());
                         _value.setViewHeight(getHeight());
                     }
-                    markDirty(DirtyBits.CAMERA_DIRTY);
+                    if (oldCamera != null && oldCamera != _value) {
+                        oldCamera.setOwnerScene(null);
+                    }
+                    oldCamera = _value;
                 }
 
                 @Override
@@ -968,6 +980,7 @@ public class Scene implements EventTarget {
         if (cam == null) {
             if (defaultCamera == null) {
                 defaultCamera = new ParallelCamera();
+                defaultCamera.setOwnerScene(this);
                 defaultCamera.setViewWidth(getWidth());
                 defaultCamera.setViewHeight(getHeight());
             }
@@ -975,6 +988,11 @@ public class Scene implements EventTarget {
         }
 
         return cam;
+    }
+
+    // Used by the camera
+    void markCameraDirty() {
+        markDirty(DirtyBits.CAMERA_DIRTY);
     }
 
     /**
@@ -2251,7 +2269,7 @@ public class Scene implements EventTarget {
 
             // new camera was set on the scene or old camera changed
             final Camera cam = getEffectiveCamera();
-            if (isDirty(DirtyBits.CAMERA_DIRTY) || !cam.impl_isDirtyEmpty()) {
+            if (isDirty(DirtyBits.CAMERA_DIRTY)) {
                 cam.impl_updatePG();
                 impl_peer.setCamera(cam.getPlatformCamera());
             }
@@ -2305,7 +2323,7 @@ public class Scene implements EventTarget {
                 Scene.this.doLayoutPass();
             }
 
-            boolean dirty = dirtyNodes == null || dirtyNodesSize != 0 || !isDirtyEmpty() || !getEffectiveCamera().impl_isDirtyEmpty();
+            boolean dirty = dirtyNodes == null || dirtyNodesSize != 0 || !isDirtyEmpty();
             if (dirty) {
                 getRoot().updateBounds();
                 if (impl_peer != null) {
@@ -2317,10 +2335,10 @@ public class Scene implements EventTarget {
                         }
                         start = PULSE_LOGGING_ENABLED ? System.currentTimeMillis() : 0;
                         // synchronize scene properties
+                        syncLights();
                         synchronizeSceneProperties();
                         // Run the synchronizer
                         synchronizeSceneNodes();
-                        syncLights();
                         Scene.this.mouseHandler.pulse();
                         // Tell the scene peer that it needs to repaint
                         impl_peer.markDirty();
@@ -5721,7 +5739,8 @@ public class Scene implements EventTarget {
             Node n = node;
             while(n != null) {
                 list.add(n);
-                n = n.getParent();
+                final Parent p = n.getParent();
+                n = p != null ? p : n.getSubScene();
             }
 
             if (scene != null) {
@@ -5737,10 +5756,12 @@ public class Scene implements EventTarget {
             Cursor cursor = null;
             if (node != null) {
                 cursor = node.getCursor();
-                Parent p = node.getParent();
-                while (cursor == null && p != null) {
-                    cursor = p.getCursor();
-                    p = p.getParent();
+                Node n = node.getParent();
+                while (cursor == null && n != null) {
+                    cursor = n.getCursor();
+
+                    final Parent p = n.getParent();
+                    n = p != null ? p : n.getSubScene();
                 }
             }
             return cursor;

@@ -162,7 +162,7 @@ class ES2SwapChain implements ES2RenderTarget, Presentable, GraphicsResource {
             g.setCompositeMode(CompositeMode.SRC);
         }
         g.drawTexture(src, dx1, dy1, dx2, dy2, sx1, sy1, sx2, sy2);
-        context.getVertexBuffer().flush();
+        context.flushVertexBuffer();
         // restore the blend
         g.setCompositeMode(savedMode);
     }

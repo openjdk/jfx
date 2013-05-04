@@ -184,7 +184,7 @@ public class Mouse3DTest {
         assertNotNull(e);
         assertCoordinates(e, 10, 40, -200);
         assertPickResult(e.getPickResult(),
-                b, point(10, 40, -200), 800, NOFACE, point(0.4, 0.3));
+                b, point(10, 40, -200), 800, NOFACE, point(0.6, 0.7));
     }
 
     @Test
@@ -200,7 +200,7 @@ public class Mouse3DTest {
         assertNotNull(e);
         assertCoordinates(e, 10, 40, 200);
         assertPickResult(e.getPickResult(),
-                b, point(10, 40, 200), 1200, NOFACE, point(0.3, 0.4));
+                b, point(10, 40, 200), 1200, NOFACE, point(0.4, 0.7));
     }
 
     @Test
@@ -216,7 +216,7 @@ public class Mouse3DTest {
         assertNotNull(e);
         assertCoordinates(e, 10, 40, -200);
         assertPickResult(e.getPickResult(),
-                b, point(10, 40, -200), 800, NOFACE, point(0.4, 0.3));
+                b, point(10, 40, -200), 800, NOFACE, point(0.6, 0.7));
     }
 
     @Test
@@ -231,7 +231,7 @@ public class Mouse3DTest {
         assertNotNull(e);
         assertCoordinates(e, 10, -100, -20);
         assertPickResult(e.getPickResult(),
-                b, point(10, -100, -20), 900, NOFACE, point(0.4, 0.55));
+                b, point(10, -100, -20), 900, NOFACE, point(0.6, 0.55));
     }
 
     @Test
@@ -246,7 +246,7 @@ public class Mouse3DTest {
         assertNotNull(e);
         assertCoordinates(e, 10, -40, 200);
         assertPickResult(e.getPickResult(),
-                b, point(10, -40, 200), 800, NOFACE, point(0.7, 0.4));
+                b, point(10, -40, 200), 800, NOFACE, point(0.4, 0.3));
     }
 
     @Test
@@ -261,7 +261,7 @@ public class Mouse3DTest {
         assertNotNull(e);
         assertCoordinates(e, 10, 100, 20);
         assertPickResult(e.getPickResult(),
-                b, point(10, 100, 20), 900, NOFACE, point(0.4, 0.45));
+                b, point(10, 100, 20), 900, NOFACE, point(0.6, 0.55));
     }
 
     @Test
@@ -276,7 +276,7 @@ public class Mouse3DTest {
         assertNotNull(e);
         assertCoordinates(e, -50, 20, -10);
         assertPickResult(e.getPickResult(),
-                b, point(-50, 20, -10), 950, NOFACE, point(0.4, 0.525));
+                b, point(-50, 20, -10), 950, NOFACE, point(0.525, 0.6));
     }
 
     @Test
@@ -291,7 +291,7 @@ public class Mouse3DTest {
         assertNotNull(e);
         assertCoordinates(e, 50, 20, 10);
         assertPickResult(e.getPickResult(),
-                b, point(50, 20, 10), 950, NOFACE, point(0.4, 0.475));
+                b, point(50, 20, 10), 950, NOFACE, point(0.525, 0.6));
     }
 
     @Test
@@ -306,7 +306,7 @@ public class Mouse3DTest {
         assertNotNull(e);
         assertCoordinates(e, 10, 40, 10, 40, -200);
         assertPickResult(e.getPickResult(),
-                b, point(10, 40, -200), Double.POSITIVE_INFINITY, NOFACE, point(0.4, 0.3));
+                b, point(10, 40, -200), Double.POSITIVE_INFINITY, NOFACE, point(0.6, 0.7));
     }
 
     @Test
@@ -320,7 +320,7 @@ public class Mouse3DTest {
         assertNotNull(e);
         assertCoordinates(e, 10, 40, 10, -40, 200);
         assertPickResult(e.getPickResult(),
-                b, point(10, -40, 200), Double.POSITIVE_INFINITY, NOFACE, point(0.7, 0.4));
+                b, point(10, -40, 200), Double.POSITIVE_INFINITY, NOFACE, point(0.4, 0.3));
     }
 
     @Test
@@ -350,7 +350,7 @@ public class Mouse3DTest {
         assertNotNull(e);
         assertCoordinates(e, 50, -41.95498, 0);
         assertPickResult(e.getPickResult(),
-                b, point(50, -41.95498, 0), 934.729635, NOFACE, point(0.709774, 0.5));
+                b, point(50, -41.95498, 0), 934.729635, NOFACE, point(0.5, 0.290226));
     }
 
     @Test
@@ -431,7 +431,7 @@ public class Mouse3DTest {
         assertNotNull(e);
         assertCoordinates(e, 10, 40, 200);
         assertPickResult(e.getPickResult(),
-                b, point(10, 40, 200), 200, NOFACE, point(0.3, 0.4));
+                b, point(10, 40, 200), 200, NOFACE, point(0.4, 0.7));
     }
 
     @Test
@@ -447,7 +447,7 @@ public class Mouse3DTest {
         assertNotNull(e);
         assertCoordinates(e, 10, 40, 10, 40, -200);
         assertPickResult(e.getPickResult(),
-                b, point(10, 40, -200), Double.POSITIVE_INFINITY, NOFACE, point(0.4, 0.3));
+                b, point(10, 40, -200), Double.POSITIVE_INFINITY, NOFACE, point(0.6, 0.7));
     }
 
     @Test
@@ -476,7 +476,7 @@ public class Mouse3DTest {
         assertNotNull(e);
         assertCoordinates(e, 10, 40, 10, 40, -200);
         assertPickResult(e.getPickResult(),
-                b, point(10, 40, -200), Double.POSITIVE_INFINITY, NOFACE, point(0.4, 0.3));
+                b, point(10, 40, -200), Double.POSITIVE_INFINITY, NOFACE, point(0.6, 0.7));
     }
 
     /*****************  SPHERE picking ********************/
@@ -494,7 +494,7 @@ public class Mouse3DTest {
         assertNotNull(e);
         assertCoordinates(e, 10, 20, -97.46794);
         assertPickResult(e.getPickResult(),
-                sph, point(10, 20, -97.46794), 902.53205, NOFACE, point(0.483727, 0.6));
+                sph, point(10, 20, -97.46794), 902.53205, NOFACE, point(0.516273, 0.6));
     }
 
     @Test
@@ -509,7 +509,7 @@ public class Mouse3DTest {
         assertNotNull(e);
         assertCoordinates(e, 10, 20, 97.46794);
         assertPickResult(e.getPickResult(),
-                sph, point(10, 20, 97.46794), 1097.46794, NOFACE, point(0.01627, 0.6));
+                sph, point(10, 20, 97.46794), 1097.46794, NOFACE, point(0.98373, 0.6));
     }
 
     @Test
@@ -524,7 +524,7 @@ public class Mouse3DTest {
         assertNotNull(e);
         assertCoordinates(e, 10, 20, -97.46794);
         assertPickResult(e.getPickResult(),
-                sph, point(10, 20, -97.46794), 902.53205, NOFACE, point(0.483727, 0.6));
+                sph, point(10, 20, -97.46794), 902.53205, NOFACE, point(0.516273, 0.6));
     }
 
     @Test
@@ -539,7 +539,7 @@ public class Mouse3DTest {
         assertNotNull(e);
         assertCoordinates(e, -10, 20, 97.46794);
         assertPickResult(e.getPickResult(),
-                sph, point(-10, 20, 97.46794), 902.53205, NOFACE, point(0.98372, 0.6));
+                sph, point(-10, 20, 97.46794), 902.53205, NOFACE, point(0.01628, 0.6));
     }
 
     @Test
@@ -567,7 +567,7 @@ public class Mouse3DTest {
         assertNotNull(e);
         assertCoordinates(e, 50, 25, -25);
         assertPickResult(e.getPickResult(),
-                sph, point(50, 25, -25), 975, NOFACE, point(0.34374, 0.62402));
+                sph, point(50, 25, -25), 975, NOFACE, point(0.59375, 0.62402));
     }
 
     @Test
@@ -596,7 +596,7 @@ public class Mouse3DTest {
         assertNotNull(e);
         assertCoordinates(e, 50, 25, -25);
         assertPickResult(e.getPickResult(),
-                sph, point(50, 25, -25), 1, NOFACE, point(0.34374, 0.62402));
+                sph, point(50, 25, -25), 1, NOFACE, point(0.59375, 0.62402));
     }
 
     @Test
@@ -674,7 +674,7 @@ public class Mouse3DTest {
         assertNotNull(e);
         assertCoordinates(e, 10, 20, 97.46794);
         assertPickResult(e.getPickResult(),
-                sph, point(10, 20, 97.46794), 97.46794, NOFACE, point(0.01627, 0.6));
+                sph, point(10, 20, 97.46794), 97.46794, NOFACE, point(0.98373, 0.6));
     }
 
     @Test
@@ -690,7 +690,7 @@ public class Mouse3DTest {
         assertNotNull(e);
         assertCoordinates(e, 10, 20, 10, 20, -97.46794);
         assertPickResult(e.getPickResult(),
-                sph, point(10, 20, -97.46794), Double.POSITIVE_INFINITY, NOFACE, point(0.483727, 0.6));
+                sph, point(10, 20, -97.46794), Double.POSITIVE_INFINITY, NOFACE, point(0.516273, 0.6));
     }
 
     @Test
@@ -719,7 +719,7 @@ public class Mouse3DTest {
         assertNotNull(e);
         assertCoordinates(e, 10, 20, 10, 20, -97.46794);
         assertPickResult(e.getPickResult(),
-                sph, point(10, 20, -97.46794), Double.POSITIVE_INFINITY, NOFACE, point(0.483727, 0.6));
+                sph, point(10, 20, -97.46794), Double.POSITIVE_INFINITY, NOFACE, point(0.516273, 0.6));
     }
 
 
@@ -738,7 +738,7 @@ public class Mouse3DTest {
         assertNotNull(e);
         assertCoordinates(e, 10, 20, -48.98979);
         assertPickResult(e.getPickResult(),
-                c, point(10, 20, -48.98979), 951.01020, NOFACE, point(0.467952, 0.4));
+                c, point(10, 20, -48.98979), 951.01020, NOFACE, point(0.532048, 0.6));
     }
 
     @Test
@@ -753,7 +753,7 @@ public class Mouse3DTest {
         assertNotNull(e);
         assertCoordinates(e, 10, 20, 48.98979);
         assertPickResult(e.getPickResult(),
-                c, point(10, 20, 48.98979), 1048.98979, NOFACE, point(0.03204, 0.4));
+                c, point(10, 20, 48.98979), 1048.98979, NOFACE, point(0.96796, 0.6));
     }
 
     @Test
@@ -768,7 +768,7 @@ public class Mouse3DTest {
         assertNotNull(e);
         assertCoordinates(e, -10, 20, 48.98979);
         assertPickResult(e.getPickResult(),
-                c, point(-10, 20, 48.98979), 951.01020, NOFACE, point(0.967952, 0.4));
+                c, point(-10, 20, 48.98979), 951.01020, NOFACE, point(0.032048, 0.6));
     }
 
     @Test
@@ -783,7 +783,7 @@ public class Mouse3DTest {
         assertNotNull(e);
         assertCoordinates(e, 10, 20, -48.98979);
         assertPickResult(e.getPickResult(),
-                c, point(10, 20, -48.98979), 951.01020, NOFACE, point(0.467952, 0.4));
+                c, point(10, 20, -48.98979), 951.01020, NOFACE, point(0.532048, 0.6));
     }
 
     @Test
@@ -797,7 +797,7 @@ public class Mouse3DTest {
         assertNotNull(e);
         assertCoordinates(e, 10, -100, -20);
         assertPickResult(e.getPickResult(),
-                c, point(10, -100, -20), 900, NOFACE, point(0.6, 0.3));
+                c, point(10, -100, -20), 900, NOFACE, point(0.6, 0.7));
     }
 
     @Test
@@ -827,7 +827,7 @@ public class Mouse3DTest {
         assertNotNull(e);
         assertCoordinates(e, 10, -100, -20);
         assertPickResult(e.getPickResult(),
-                c, point(10, -100, -20), 900, NOFACE, point(0.6, 0.3));
+                c, point(10, -100, -20), 900, NOFACE, point(0.6, 0.7));
     }
 
     @Test
@@ -907,7 +907,7 @@ public class Mouse3DTest {
         assertNotNull(e);
         assertCoordinates(e, 10, 20, -40);
         assertPickResult(e.getPickResult(),
-                c, point(10, 20, -40), 960, NOFACE, point(0.45, 0.40078));
+                c, point(10, 20, -40), 960, NOFACE, point(0.55, 0.59922));
     }
 
     @Test
@@ -936,7 +936,7 @@ public class Mouse3DTest {
         assertNotNull(e);
         assertCoordinates(e, 10, 20, -40);
         assertPickResult(e.getPickResult(),
-                c, point(10, 20, -40), 1, NOFACE, point(0.45, 0.40078));
+                c, point(10, 20, -40), 1, NOFACE, point(0.55, 0.59922));
     }
 
     @Test
@@ -1014,7 +1014,7 @@ public class Mouse3DTest {
         assertNotNull(e);
         assertCoordinates(e, 10, 20, 48.98979);
         assertPickResult(e.getPickResult(),
-                c, point(10, 20, 48.98979), 48.98979, NOFACE, point(0.03204, 0.4));
+                c, point(10, 20, 48.98979), 48.98979, NOFACE, point(0.96796, 0.6));
     }
 
     @Test
@@ -1030,7 +1030,7 @@ public class Mouse3DTest {
         assertNotNull(e);
         assertCoordinates(e, 10, 20, 10, 20, -48.98979);
         assertPickResult(e.getPickResult(),
-                c, point(10, 20, -48.98979), Double.POSITIVE_INFINITY, NOFACE, point(0.467952, 0.4));
+                c, point(10, 20, -48.98979), Double.POSITIVE_INFINITY, NOFACE, point(0.532048, 0.6));
     }
 
     @Test
@@ -1059,7 +1059,7 @@ public class Mouse3DTest {
         assertNotNull(e);
         assertCoordinates(e, 10, 20, 10, 20, -48.98979);
         assertPickResult(e.getPickResult(),
-                c, point(10, 20, -48.98979), Double.POSITIVE_INFINITY, NOFACE, point(0.467952, 0.4));
+                c, point(10, 20, -48.98979), Double.POSITIVE_INFINITY, NOFACE, point(0.532048, 0.6));
     }
 
 
@@ -1397,7 +1397,7 @@ public class Mouse3DTest {
         assertNotNull(e);
         assertCoordinates(e, 30, 20, -200);
         assertPickResult(e.getPickResult(),
-                b, point(30, 20, -200), 800, NOFACE, point(0.2, 0.4));
+                b, point(30, 20, -200), 800, NOFACE, point(0.8, 0.6));
     }
 
     @Test
@@ -1418,7 +1418,7 @@ public class Mouse3DTest {
         assertNotNull(e);
         assertCoordinates(e, 30, 20, -200);
         assertPickResult(e.getPickResult(),
-                b, point(30, 20, -200), 800, NOFACE, point(0.2, 0.4));
+                b, point(30, 20, -200), 800, NOFACE, point(0.8, 0.6));
     }
 
     @Test
@@ -1438,7 +1438,7 @@ public class Mouse3DTest {
         assertNotNull(e);
         assertCoordinates(e, 30, 20, -200);
         assertPickResult(e.getPickResult(),
-                b, point(30, 20, -200), 800, NOFACE, point(0.2, 0.4));
+                b, point(30, 20, -200), 800, NOFACE, point(0.8, 0.6));
     }
 
     @Test
@@ -1460,7 +1460,7 @@ public class Mouse3DTest {
         assertNotNull(e);
         assertCoordinates(e, 30, 20, -200);
         assertPickResult(e.getPickResult(),
-                b2, point(30, 20, -200), 790, NOFACE, point(0.2, 0.4));
+                b2, point(30, 20, -200), 790, NOFACE, point(0.8, 0.6));
     }
 
     @Test
@@ -1482,7 +1482,7 @@ public class Mouse3DTest {
         assertNotNull(e);
         assertCoordinates(e, 30, 20, -200);
         assertPickResult(e.getPickResult(),
-                b, point(30, 20, -200), 800, NOFACE, point(0.2, 0.4));
+                b, point(30, 20, -200), 800, NOFACE, point(0.8, 0.6));
     }
 
     @Test
@@ -1503,7 +1503,7 @@ public class Mouse3DTest {
         assertNotNull(e);
         assertCoordinates(e, 30, 20, -200);
         assertPickResult(e.getPickResult(),
-                b, point(30, 20, -200), 800, NOFACE, point(0.2, 0.4));
+                b, point(30, 20, -200), 800, NOFACE, point(0.8, 0.6));
     }
 
     @Test
@@ -1524,7 +1524,7 @@ public class Mouse3DTest {
         assertNotNull(e);
         assertCoordinates(e, 30, 20, -200);
         assertPickResult(e.getPickResult(),
-                b1, point(30, 20, -200), 800, NOFACE, point(0.2, 0.4));
+                b1, point(30, 20, -200), 800, NOFACE, point(0.8, 0.6));
     }
 
     @Test
@@ -1548,7 +1548,7 @@ public class Mouse3DTest {
         assertNotNull(e);
         assertCoordinates(e, 30, 20, -200);
         assertPickResult(e.getPickResult(),
-                b1, point(30, 20, -200), 800, NOFACE, point(0.2, 0.4));
+                b1, point(30, 20, -200), 800, NOFACE, point(0.8, 0.6));
     }
 
 
@@ -1763,7 +1763,7 @@ public class Mouse3DTest {
         assertNotNull(e);
         assertCoordinates(e, 20, 50, -200);
         assertPickResult(e.getPickResult(), b, point(20, 50, -200), 800,
-                NOFACE, point(0.3, 0.25));
+                NOFACE, point(0.7, 0.75));
     }
 
     @Test
@@ -1787,13 +1787,13 @@ public class Mouse3DTest {
         assertNotNull(e);
         assertCoordinates(e, 15, 50, -201);
         assertPickResult(e.getPickResult(), b2, point(-30, 50, -200), 799,
-                NOFACE, point(0.8, 0.25));
+                NOFACE, point(0.2, 0.75));
 
         e = pme.event;
         assertNotNull(e);
         assertCoordinates(e, -30, 50, -200);
         assertPickResult(e.getPickResult(), b2, point(-30, 50, -200), 799,
-                NOFACE, point(0.8, 0.25));
+                NOFACE, point(0.2, 0.75));
     }
 
     @Test
@@ -1815,7 +1815,7 @@ public class Mouse3DTest {
         assertNotNull(e);
         assertCoordinates(e, 20, 50, -200);
         assertPickResult(e.getPickResult(), b, point(20, 50, -200), 800,
-                NOFACE, point(0.3, 0.25));
+                NOFACE, point(0.7, 0.75));
     }
 
 
@@ -1846,7 +1846,7 @@ public class Mouse3DTest {
         assertNotNull(e);
         assertCoordinates(e, 15, 50, -201);
         assertPickResult(e.getPickResult(), b2, point(-30, 50, -200), 799,
-                NOFACE, point(0.8, 0.25));
+                NOFACE, point(0.2, 0.75));
     }
 
     @Test
@@ -1887,19 +1887,19 @@ public class Mouse3DTest {
         assertNotNull(e);
         assertCoordinates(e, 15, 50, -201);
         assertPickResult(e.getPickResult(), b2, point(-30, 50, -200), 799,
-                NOFACE, point(0.8, 0.25));
+                NOFACE, point(0.2, 0.75));
 
         e = tmde.event;
         assertNotNull(e);
         assertCoordinates(e, -30, 50, -200);
         assertPickResult(e.getPickResult(), b2, point(-30, 50, -200), 799,
-                NOFACE, point(0.8, 0.25));
+                NOFACE, point(0.2, 0.75));
 
         e = tmde.event;
         assertNotNull(e);
         assertCoordinates(e, -30, 50, -200);
         assertPickResult(e.getPickResult(), b2, point(-30, 50, -200), 799,
-                NOFACE, point(0.8, 0.25));
+                NOFACE, point(0.2, 0.75));
     }
 
 
@@ -1926,7 +1926,7 @@ public class Mouse3DTest {
         assertNotNull(e);
         assertCoordinates(e, 30, 40, 50, 70.638298, -85.106383);
         assertPickResult(e.getPickResult(),
-                b, point(50, 70.638298, -85.106383), 1063.207158, NOFACE, point(0.146808, 0.712767));
+                b, point(50, 70.638298, -85.106383), 1063.207158, NOFACE, point(0.287234, 0.853192));
     }
 
     @Test
@@ -1949,7 +1949,7 @@ public class Mouse3DTest {
         assertNotNull(e);
         assertCoordinates(e, 30, 40, 50, 55.31915, -42.553191);
         assertPickResult(e.getPickResult(),
-                b, point(50, 55.31915, -42.553191), 1112.658654, NOFACE, point(0.223404, 0.606383));
+                b, point(50, 55.31915, -42.553191), 1112.658654, NOFACE, point(0.393617, 0.776596));
     }
 
     @Test
@@ -1973,7 +1973,7 @@ public class Mouse3DTest {
         assertNotNull(e);
         assertCoordinates(e, 30, 40, 10, 40, -200);
         assertPickResult(e.getPickResult(),
-                b, point(10, 40, -200), Double.POSITIVE_INFINITY, NOFACE, point(0.4, 0.3));
+                b, point(10, 40, -200), Double.POSITIVE_INFINITY, NOFACE, point(0.6, 0.7));
     }
 
     @Test
@@ -1996,7 +1996,7 @@ public class Mouse3DTest {
         assertNotNull(e);
         assertCoordinates(e, 30, 40, 30, 40, -200);
         assertPickResult(e.getPickResult(),
-                b, point(30, 40, -200), Double.POSITIVE_INFINITY, NOFACE, point(0.2, 0.3));
+                b, point(30, 40, -200), Double.POSITIVE_INFINITY, NOFACE, point(0.8, 0.7));
     }
 
 

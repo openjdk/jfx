@@ -487,7 +487,7 @@ public abstract class PopupWindow extends Window {
         rootNode.setTranslateX(-layoutBounds.getMinX());
         rootNode.setTranslateY(-layoutBounds.getMinY());
 
-        if (alignWithContentOrigin) {
+        if (isAlignWithContentOrigin()) {
             // update window position
             setWindowTranslate(layoutBounds.getMinX(), layoutBounds.getMinY());
             if (autofixActive) {
@@ -496,29 +496,64 @@ public abstract class PopupWindow extends Window {
         }
     }
 
-    private boolean alignWithContentOrigin = true;
-
     /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     * Specifies the reference point associated with the x, y location of the
+     * window on the screen. If set to {@code false} this point corresponds to
+     * the window's upper left corner. If set to {@code true} the reference
+     * point is moved to the origin of the popup content coordinate space. This
+     * simplifies placement of popup windows which content have some additional
+     * borders extending past their origins. Setting the property to {code true}
+     * for such windows makes their position independent of their borders.
+     *
+     * @defaultValue {@code true}
+     * @since JavaFX 8
      */
-    @Deprecated
-    protected void impl_setAlignWithContentOrigin(final boolean value) {
-        if (alignWithContentOrigin != value) {
-            alignWithContentOrigin = value;
-            if (alignWithContentOrigin) {
-                final Bounds layoutBounds =
-                        getScene().getRoot().getLayoutBounds();
-                setWindowTranslate(layoutBounds.getMinX(),
-                                   layoutBounds.getMinY());
-            } else {
-                setWindowTranslate(0, 0);
-            }
+    private BooleanProperty alignWithContentOrigin =
+            new BooleanPropertyBase(true) {
+                private boolean oldValue = true;
 
-            if (autofixActive) {
-                autofixHandler.adjustPosition();
-            }
-        }
+                @Override
+                protected void invalidated() {
+                    final boolean newValue = get();
+                    if (oldValue != newValue) {
+                        if (newValue) {
+                            final Bounds layoutBounds =
+                                    getScene().getRoot().getLayoutBounds();
+                            setWindowTranslate(layoutBounds.getMinX(),
+                                               layoutBounds.getMinY());
+                        } else {
+                            setWindowTranslate(0, 0);
+                        }
+
+                        if (autofixActive) {
+                            autofixHandler.adjustPosition();
+                        }
+
+                        oldValue = newValue;
+                    }
+                }
+
+                @Override
+                public Object getBean() {
+                    return PopupWindow.this;
+                }
+
+                @Override
+                public String getName() {
+                    return "alignWithContentOrigin";
+                }
+            };
+
+    public final void setAlignWithContentOrigin(boolean value) {
+        alignWithContentOrigin.set(value);
+    }
+
+    public final boolean isAlignWithContentOrigin() {
+        return alignWithContentOrigin.get();
+    }
+
+    public final BooleanProperty alignWithContentOriginProperty() {
+        return alignWithContentOrigin;
     }
 
     /**

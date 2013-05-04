@@ -1067,7 +1067,7 @@ public final class QuantumToolkit extends Toolkit implements ToolkitInterface {
     }
 
     @Override public TextLayoutFactory getTextLayoutFactory() {
-        return com.sun.javafx.text.TextLayoutFactory.getFactory();
+        return com.sun.javafx.text.PrismTextLayoutFactory.getFactory();
     }
 
     @Override public PGArc createPGArc() {

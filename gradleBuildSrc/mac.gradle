@@ -1,0 +1,182 @@
+/*
+ * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.  Oracle designates this
+ * particular file as subject to the "Classpath" exception as provided
+ * by Oracle in the LICENSE file that accompanied this code.
+ *
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
+ *
+ * You should have received a copy of the GNU General Public License version
+ * 2 along with this work; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+ * or visit www.oracle.com if you need additional information or have any
+ * questions.
+ */
+
+ext.MAC = [:]
+
+MAC.canBuild = IS_MAC && IS_64
+if (!MAC.canBuild) return;
+
+// All desktop related packages should be built
+MAC.compileSwing = true;
+MAC.compileSWT = true;
+MAC.compileFXPackager = true;
+MAC.compileDesignTime = true;
+
+MAC.libDest = "lib"
+MAC.jfxrtJarExcludes = [
+    "**/*.hlsl",
+    "com/sun/glass/ui/win",
+    "com/sun/glass/ui/accessible/win",
+    "com/sun/prism/d3d",
+    "com/sun/prism/es2/gl/win",
+    "com/sun/prism/null3d",
+    "com/sun/scenario/effect/impl/hw/d3d",
+    
+    "com/sun/glass/ui/gtk",
+    
+    "com/sun/glass/ui/ios",
+    
+    "com/sun/glass/ui/lens",
+    "com/sun/prism/es2/gl/eglfb",
+    "com/sun/prism/es2/gl/eglx11",
+    "com/sun/prism/es2/gl/x11",
+    
+    "com/sun/glass/ui/swt", // SWT glass
+    
+    "javafx/embed/swing", // Swing Interop
+    
+    "javafx/embed/swt", // SWT Interop
+]
+
+// Define settings for Mac compilation. This is much easier than Windows because we know what version we're
+// compiling against and Mac always puts it in the same place. In extreme cases you can provide your own
+// properties in your home dir to override these settings or pass them on the command line via -P
+defineProperty("MACOSX_MIN_VERSION", "10.7");
+defineProperty("MACOSX_SDK_PATH", "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX${MACOSX_MIN_VERSION}.sdk");
+defineProperty("MACOSX_JDK_FRAMEWORK", "/System/Library/Frameworks/JavaVM.framework");
+
+def commonParams = [
+        "-mmacosx-version-min=$MACOSX_MIN_VERSION",
+        "-isysroot", "$MACOSX_SDK_PATH",
+        "-arch", "x86_64",
+        "-F$MACOSX_JDK_FRAMEWORK/Frameworks"]
+
+def linkFlags = [
+        "-framework", "AppKit",
+        "-framework", "ApplicationServices",
+        "-framework", "JavaVM",
+        "-framework", "JavaRuntimeSupport",
+        "-framework", "OpenGL",
+        "-framework", "QuartzCore",
+        "-dynamiclib", "-lobjc", commonParams].flatten();
+
+def ccFlags = [
+        "-std=c99",
+        "-c",
+        "-I$JDK_HOME/include",
+        "-I$JDK_HOME/include/darwin",
+        commonParams,
+        IS_DEBUG ? "-DDEBUG" : ["-O3", "-DNDEBUG"]].flatten()
+
+def compiler = "gcc"
+def linker = "g++"
+
+MAC.glass = [:]
+MAC.glass.javahInclude = [
+    "com/sun/glass/events/**",
+    "com/sun/glass/ui/*",
+    "com/sun/glass/ui/mac/*",
+    "com/sun/glass/ui/accessible/mac/*"]
+MAC.glass.nativeSource = file("modules/graphics/src/main/native-glass/mac")
+MAC.glass.compiler = compiler
+MAC.glass.ccFlags = [ccFlags].flatten()
+MAC.glass.linker = linker
+MAC.glass.linkFlags = [linkFlags].flatten()
+
+MAC.decora = [:]
+MAC.decora.compiler = compiler
+MAC.decora.ccFlags = ["-O1", "-ffast-math",
+        "-I$JDK_HOME/include",
+        "-I$JDK_HOME/include/darwin",
+        "-mmacosx-version-min=$MACOSX_MIN_VERSION",
+        "-arch", "x86_64", "-c"].flatten()
+MAC.decora.linker = linker
+MAC.decora.linkFlags = ["-dynamiclib",
+        "-mmacosx-version-min=$MACOSX_MIN_VERSION",
+        "-arch", "x86_64"].flatten()
+
+MAC.prism = [:]
+MAC.prism.javahInclude = ["com/sun/prism/impl/**/*", "com/sun/prism/PresentableState*"]
+MAC.prism.nativeSource = file("modules/graphics/src/main/native-prism")
+MAC.prism.compiler = "cc"
+MAC.prism.ccFlags = ["-O3", "-DINLINE=inline",
+        "-I$JDK_HOME/include",
+        "-I$JDK_HOME/include/darwin",
+        "-mmacosx-version-min=$MACOSX_MIN_VERSION",
+        "-arch", "x86_64", "-c"].flatten()
+MAC.prism.linker = linker
+MAC.prism.linkFlags = ["-dynamiclib",
+        "-mmacosx-version-min=$MACOSX_MIN_VERSION",
+        "-arch", "x86_64"].flatten()
+
+MAC.prismSW = [:]
+MAC.prismSW.javahInclude = ["com/sun/pisces/**/*"]
+MAC.prismSW.nativeSource = file("modules/graphics/src/main/native-prism-sw")
+MAC.prismSW.compiler = "cc"
+MAC.prismSW.ccFlags = [MAC.prism.ccFlags].flatten()
+MAC.prismSW.linker = linker
+MAC.prismSW.linkFlags = [MAC.prism.linkFlags].flatten()
+
+MAC.launcher = [:]
+MAC.launcher.compiler = compiler
+MAC.launcher.ccFlags = [ccFlags].flatten();
+MAC.launcher.linker = linker
+MAC.launcher.linkFlags = ["-ldl"]
+
+MAC.iio = [:]
+MAC.iio.javahInclude = ["com/sun/javafx/iio/**/*"]
+MAC.iio.nativeSource = [
+    file("modules/graphics/src/main/native-iio"),
+    file("modules/graphics/src/main/native-iio/libjpeg7")]
+MAC.iio.compiler = compiler
+MAC.iio.ccFlags = [ccFlags].flatten()
+MAC.iio.linker = linker
+MAC.iio.linkFlags = [linkFlags].flatten()
+
+MAC.prismES2 = [:]
+MAC.prismES2.javahInclude = ["com/sun/prism/es2/**/*"]
+MAC.prismES2.nativeSource = [
+    file("modules/graphics/src/main/native-prism-es2"),
+    file("modules/graphics/src/main/native-prism-es2/GL"),
+    file("modules/graphics/src/main/native-prism-es2/macosx")
+]
+MAC.prismES2.compiler = compiler
+MAC.prismES2.ccFlags = ["-DMACOSX", "-DGRADLE_BUILD", ccFlags].flatten()
+MAC.prismES2.linker = linker
+MAC.prismES2.linkFlags = [linkFlags].flatten()
+
+def closedDir = file("$projectDir/../rt-closed")
+MAC.font = [:]
+MAC.font.javahInclude = [
+        "com/sun/javafx/font/**/*",
+        "com/sun/javafx/text/**/*"]
+MAC.font.nativeSource = [
+    file("$closedDir/javafx-font-native/src"),
+    file("$closedDir/javafx-font-native/src/layout"),
+    file("$closedDir/javafx-font-native/src/layoutfx")]
+MAC.font.compiler = compiler
+MAC.font.ccFlags = ["-DJFXFONT_PLUS", ccFlags].flatten()
+MAC.font.linker = linker
+MAC.font.linkFlags = [linkFlags].flatten()

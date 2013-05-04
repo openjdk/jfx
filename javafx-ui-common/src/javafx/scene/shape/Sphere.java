@@ -267,7 +267,7 @@ public class Sphere extends Shape3D {
             if (cross.getY() > 0) {
                 angle = 360 - angle;
             }
-            Point2D txtCoords = new Point2D(angle / 360, 0.5 + point.getY() / (2 * r));
+            Point2D txtCoords = new Point2D(1 - angle / 360, 0.5 + point.getY() / (2 * r));
 
             pickResult.offer(this, t, PickResult.FACE_UNDEFINED, point, txtCoords);
         }
@@ -313,7 +313,7 @@ public class Sphere extends Shape3D {
                 points[pPos + 0] = hSin * cos_va * r;
                 points[pPos + 2] = hCos * cos_va * r;
                 points[pPos + 1] = sin_va * r;
-                tPoints[tPos + 0] = rDiv * i;
+                tPoints[tPos + 0] = 1- rDiv * i;
                 tPoints[tPos + 1] = ty;
                 pPos += 3; tPos += 2;
             }

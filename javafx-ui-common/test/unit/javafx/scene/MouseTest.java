@@ -37,11 +37,15 @@ import org.junit.Test;
 import com.sun.javafx.pgstub.StubScene;
 import com.sun.javafx.pgstub.StubToolkit;
 import com.sun.javafx.tk.Toolkit;
+import javafx.event.EventTarget;
+import javafx.event.EventType;
+import javafx.scene.input.PickResult;
 import javafx.scene.paint.Color;
+import javafx.scene.transform.Rotate;
 
 public class MouseTest {
 
-    private boolean called;
+    private static final double DONT_TEST = 0.0;
 
     @Test
     public void moveShouldBubbleToParent() {
@@ -78,6 +82,31 @@ public class MouseTest {
                 MouseEvent.MOUSE_MOVED, 350, 350));
 
         assertTrue(scene.wasMoused());
+    }
+
+    @Test
+    public void ImpossibleToComputeCoordsShouldResultInNaNs() {
+        final SimpleTestScene scene = new SimpleTestScene();
+
+        scene.smallSquareTracker.node.setOnMouseMoved(new EventHandler<MouseEvent>() {
+            @Override public void handle(MouseEvent event) {
+                scene.smallSquareTracker.node.setScaleX(0);
+            }
+        });
+
+        scene.smallSquareTracker.node.setOnMouseExited(new EventHandler<MouseEvent>() {
+            @Override public void handle(MouseEvent event) {
+                assertTrue(Double.isNaN(event.getX()));
+                assertTrue(Double.isNaN(event.getY()));
+                assertTrue(Double.isNaN(event.getZ()));
+            }
+        });
+
+        scene.processEvent(MouseEventGenerator.generateMouseEvent(
+                MouseEvent.MOUSE_MOVED, 250, 250));
+        scene.processEvent(MouseEventGenerator.generateMouseEvent(
+                MouseEvent.MOUSE_MOVED, 260, 260));
+        assertTrue(scene.smallSquareTracker.enteredMe);
     }
 
     @Test
@@ -993,50 +1022,428 @@ public class MouseTest {
 
     @Test
     public void subSceneShouldBePickedOnFill() {
-        final MouseEventGenerator generator = new MouseEventGenerator();
-        final Group root = new Group();
-        final Scene scene = new Scene(root, 400, 400);
-        final SubScene sub = new SubScene(new Group(), 100, 100);
-        sub.setTranslateX(100);
-        sub.setTranslateY(100);
-        sub.setFill(Color.BLACK);
-        root.getChildren().add(sub);
+        final TestSceneWithSubScenes s = new TestSceneWithSubScenes();
 
-        scene.addEventFilter(MouseEvent.MOUSE_MOVED, new EventHandler<MouseEvent>() {
-            @Override public void handle(MouseEvent event) {
-                assertSame(sub, event.getTarget());
-                called = true;
-            }
-        });
+        s.subScene1.setFill(Color.BLACK);
 
-        called = false;
-        scene.impl_processMouseEvent(generator.generateMouseEvent(
-                MouseEvent.MOUSE_MOVED, 150, 150));
-        assertTrue(called);
+        s.scene.addEventFilter(MouseEvent.MOUSE_MOVED,
+                s.handler(s.subScene1, DONT_TEST, DONT_TEST));
+
+        s.processEvent(MouseEvent.MOUSE_MOVED, 22, 12);
+        s.assertCalled();
     }
 
     @Test
     public void subSceneShouldNotBePickedWithoutFill() {
-        final MouseEventGenerator generator = new MouseEventGenerator();
-        final Group root = new Group();
-        final Scene scene = new Scene(root, 400, 400);
-        final SubScene sub = new SubScene(new Group(), 100, 100);
-        sub.setTranslateX(100);
-        sub.setTranslateY(100);
-        root.getChildren().add(sub);
+        final TestSceneWithSubScenes s = new TestSceneWithSubScenes();
 
-        scene.addEventFilter(MouseEvent.MOUSE_MOVED, new EventHandler<MouseEvent>() {
+        s.scene.addEventFilter(MouseEvent.MOUSE_MOVED,
+                s.handler(s.scene, DONT_TEST, DONT_TEST));
+
+        s.processEvent(MouseEvent.MOUSE_MOVED, 22, 12);
+        s.assertCalled();
+    }
+
+    @Test
+    public void eventShouldBubbleOutOfSubScene() {
+        final TestSceneWithSubScenes s = new TestSceneWithSubScenes();
+
+        s.parent1.setOnMouseMoved(s.handler(s.innerRect1, 120, 20));
+
+        s.processEvent(MouseEvent.MOUSE_MOVED, 130, 30);
+        s.assertCalled();
+    }
+
+    @Test
+    public void enteredEventShouldBeGeneratedInsideSubScene() {
+        final TestSceneWithSubScenes s = new TestSceneWithSubScenes();
+
+        s.innerRect1.setOnMouseEntered(s.handler(s.innerRect1, 10, 10));
+
+        s.processEvent(MouseEvent.MOUSE_MOVED, 130, 30);
+        s.assertCalled();
+    }
+
+    @Test
+    public void enteredEventShouldBubbleOutOfSubScene() {
+        final TestSceneWithSubScenes s = new TestSceneWithSubScenes();
+
+        s.parent1.addEventHandler(MouseEvent.MOUSE_ENTERED_TARGET,
+                new EventHandler<MouseEvent>() {
+                    @Override public void handle(MouseEvent event) {
+                        if (event.getTarget() == s.innerRect1) {
+                            s.called = true;
+                        }
+                    }
+                });
+
+        s.processEvent(MouseEvent.MOUSE_MOVED, 130, 30);
+        s.assertCalled();
+    }
+
+    @Test
+    public void enteredEventShouldBeGeneratedOutsideSubScene() {
+        final TestSceneWithSubScenes s = new TestSceneWithSubScenes();
+
+        s.parent1.setOnMouseEntered(s.handler(s.parent1, 120, 20));
+
+        s.processEvent(MouseEvent.MOUSE_MOVED, 130, 30);
+        s.assertCalled();
+    }
+
+    @Test
+    public void exitedEventShouldBeGeneratedInsideSubScene() {
+        final TestSceneWithSubScenes s = new TestSceneWithSubScenes();
+
+        s.innerRect1.setOnMouseExited(s.handler(s.innerRect1, 60, 10));
+
+        s.processEvent(MouseEvent.MOUSE_MOVED, 130, 30);
+        s.processEvent(MouseEvent.MOUSE_MOVED, 180, 30);
+        s.assertCalled();
+    }
+
+    @Test
+    public void exitedEventShouldBeGeneratedInsideSubSceneWhenMovedOut() {
+        final TestSceneWithSubScenes s = new TestSceneWithSubScenes();
+
+        s.innerRect1.setOnMouseExited(s.handler(s.innerRect1, 60, -15));
+
+        s.processEvent(MouseEvent.MOUSE_MOVED, 130, 30);
+        s.processEvent(MouseEvent.MOUSE_MOVED, 180, 5);
+        s.assertCalled();
+    }
+
+    @Test
+    public void exitedEventShouldBeGeneratedInsideSubSceneWhenMovedToOtherSubScene() {
+        final TestSceneWithSubScenes s = new TestSceneWithSubScenes();
+
+        s.innerRect1.setOnMouseExited(s.handler(s.innerRect1, 240, 10));
+
+        s.processEvent(MouseEvent.MOUSE_MOVED, 130, 30);
+        s.processEvent(MouseEvent.MOUSE_MOVED, 360, 30);
+        s.assertCalled();
+    }
+
+    @Test
+    public void cursorShouldBePropagatedFromSubScene() {
+        final TestSceneWithSubScenes s = new TestSceneWithSubScenes();
+
+        s.innerRect1.setCursor(Cursor.HAND);
+        s.processEvent(MouseEvent.MOUSE_MOVED, 130, 30);
+        assertSame(Cursor.HAND.getCurrentFrame(), s.getCursorFrame());
+    }
+
+    @Test
+    public void cursorShouldBeTakenFromOutsideOfSubScene() {
+        final TestSceneWithSubScenes s = new TestSceneWithSubScenes();
+
+        s.parent1.setCursor(Cursor.HAND);
+        s.processEvent(MouseEvent.MOUSE_MOVED, 130, 30);
+        assertSame(Cursor.HAND.getCurrentFrame(), s.getCursorFrame());
+    }
+
+    @Test
+    public void coordinatesShouldBeFineWhenDraggedOutOfSubSecne() {
+        final TestSceneWithSubScenes s = new TestSceneWithSubScenes();
+
+        s.innerRect1.setOnMouseDragged(s.handler(s.innerRect1, 60, -15));
+
+        s.processEvent(MouseEvent.MOUSE_MOVED, 130, 30);
+        s.processEvent(MouseEvent.MOUSE_PRESSED, 130, 30);
+        s.processEvent(MouseEvent.MOUSE_DRAGGED, 180, 5);
+        s.processEvent(MouseEvent.MOUSE_RELEASED, 180, 5);
+
+        s.assertCalled();
+        assertNotNull(s.lastPickResult);
+        assertNull(s.lastPickResult.getIntersectedNode());
+    }
+
+    @Test
+    public void coordinatesShouldBeFineWhenDraggedToOtherSubSecne() {
+        final TestSceneWithSubScenes s = new TestSceneWithSubScenes();
+
+        s.innerRect1.setOnMouseDragged(s.handler(s.innerRect1, 240, 10));
+
+        s.processEvent(MouseEvent.MOUSE_MOVED, 130, 30);
+        s.processEvent(MouseEvent.MOUSE_PRESSED, 130, 30);
+        s.processEvent(MouseEvent.MOUSE_DRAGGED, 360, 30);
+        s.processEvent(MouseEvent.MOUSE_RELEASED, 360, 30);
+
+        s.assertCalled();
+        assertNotNull(s.lastPickResult);
+        assertSame(s.innerRect2, s.lastPickResult.getIntersectedNode());
+    }
+
+    @Test
+    public void fullDragShouldDeliverToOtherSubScene() {
+        final TestSceneWithSubScenes s = new TestSceneWithSubScenes();
+
+        s.innerRect1.setOnDragDetected(new EventHandler<MouseEvent>() {
             @Override public void handle(MouseEvent event) {
-                assertSame(scene, event.getTarget());
-                called = true;
+                s.innerRect1.startFullDrag();
+            }
+        });
+        s.innerRect2.setOnMouseDragOver(s.handler(s.innerRect2, 10, 10));
+
+        s.processEvent(MouseEvent.MOUSE_MOVED, 130, 30);
+        s.processEvent(MouseEvent.MOUSE_PRESSED, 130, 30);
+        s.processEvent(MouseEvent.MOUSE_DRAGGED, 360, 29);
+        s.processEvent(MouseEvent.MOUSE_DRAGGED, 360, 30);
+        s.processEvent(MouseEvent.MOUSE_RELEASED, 360, 30);
+
+        s.assertCalled();
+    }
+
+    @Test
+    public void fullDragEnterShouldDeliverToOtherSubScene() {
+        final TestSceneWithSubScenes s = new TestSceneWithSubScenes();
+
+        s.innerRect1.setOnDragDetected(new EventHandler<MouseEvent>() {
+            @Override public void handle(MouseEvent event) {
+                s.innerRect1.startFullDrag();
+            }
+        });
+        s.innerRect2.setOnMouseDragEntered(s.handler(s.innerRect2, 10, 10));
+
+        s.processEvent(MouseEvent.MOUSE_MOVED, 130, 30);
+        s.processEvent(MouseEvent.MOUSE_PRESSED, 130, 30);
+        s.processEvent(MouseEvent.MOUSE_DRAGGED, 360, 30);
+        s.processEvent(MouseEvent.MOUSE_RELEASED, 360, 30);
+
+        s.assertCalled();
+    }
+
+    @Test
+    public void fullDragEnterShouldDeliverToOtherSubScenesParent() {
+        final TestSceneWithSubScenes s = new TestSceneWithSubScenes();
+
+        s.innerRect1.setOnDragDetected(new EventHandler<MouseEvent>() {
+            @Override public void handle(MouseEvent event) {
+                s.innerRect1.startFullDrag();
+            }
+        });
+        s.parent2.setOnMouseDragEntered(s.handler(s.parent2, 130, 20));
+
+        s.processEvent(MouseEvent.MOUSE_MOVED, 130, 30);
+        s.processEvent(MouseEvent.MOUSE_PRESSED, 130, 30);
+        s.processEvent(MouseEvent.MOUSE_DRAGGED, 360, 30);
+        s.processEvent(MouseEvent.MOUSE_RELEASED, 360, 30);
+
+        s.assertCalled();
+    }
+
+    @Test
+    public void depthBufferShouldWorkInsideSubScene() {
+        final TestSceneWithSubScenes s = new TestSceneWithSubScenes(false, true);
+
+        Rectangle r = new Rectangle(50, 50);
+        r.setTranslateX(100);
+        r.setTranslateY(10);
+        r.setTranslateZ(1);
+        s.subScene1.getRoot().getChildren().add(r);
+
+        s.innerRect1.addEventFilter(MouseEvent.MOUSE_MOVED,
+                s.handler(s.innerRect1, DONT_TEST, DONT_TEST));
+
+        s.processEvent(MouseEvent.MOUSE_MOVED, 130, 30);
+        s.assertCalled();
+    }
+
+    @Test
+    public void sceneDepthBufferShouldNotInfluenceSubSceneDepthBuffer() {
+        final TestSceneWithSubScenes s = new TestSceneWithSubScenes(true, false);
+
+        Rectangle r = new Rectangle(50, 50);
+        r.setTranslateX(100);
+        r.setTranslateY(10);
+        r.setTranslateZ(1);
+        s.subScene1.getRoot().getChildren().add(r);
+
+        r.addEventFilter(MouseEvent.MOUSE_MOVED,
+                s.handler(r, DONT_TEST, DONT_TEST));
+
+        s.processEvent(MouseEvent.MOUSE_MOVED, 130, 30);
+        s.assertCalled();
+    }
+
+    @Test
+    public void sceneShouldConsiderSubScenesFlat() {
+        final TestSceneWithSubScenes s = new TestSceneWithSubScenes(false, true);
+
+        s.parent2.setTranslateX(10);
+        s.innerRect2.setTranslateZ(-10);
+        s.parent2.setTranslateZ(1);
+
+        s.innerRect2.addEventFilter(MouseEvent.MOUSE_MOVED,
+                s.handler(s.innerRect2, DONT_TEST, DONT_TEST));
+
+        s.processEvent(MouseEvent.MOUSE_MOVED, 130, 30);
+        s.assertCalled();
+    }
+
+    @Test
+    public void coordinatesShouldBeFlattenedWhenBubblingOutOfSubScene() {
+        final TestSceneWithSubScenes s = new TestSceneWithSubScenes();
+
+        s.subScene1.setTranslateZ(5);
+        s.innerRect1.setTranslateZ(10);
+
+        s.parent1.setOnMouseMoved(new EventHandler<MouseEvent>() {
+            @Override public void handle(MouseEvent event) {
+                assertEquals(5, event.getZ(), 0.00001);
+                assertSame(s.innerRect1, event.getTarget());
+                s.called = true;
             }
         });
 
-        called = false;
-        scene.impl_processMouseEvent(generator.generateMouseEvent(
-                MouseEvent.MOUSE_MOVED, 150, 150));
-        assertTrue(called);
+        s.processEvent(MouseEvent.MOUSE_MOVED, 130, 30);
+        s.processEvent(MouseEvent.MOUSE_MOVED, 360, 30);
+        s.assertCalled();
     }
+    
+    @Test
+    public void coordinatesShouldBeReComputedToSubScenePlane() {
+        final TestSceneWithSubScenes s = new TestSceneWithSubScenes();
+
+        s.parent2.setTranslateZ(10);
+        s.innerRect2.setTranslateZ(10);
+
+        s.innerRect1.setOnMouseExited(s.handler(s.innerRect1, 240, 10));
+
+        s.processEvent(MouseEvent.MOUSE_MOVED, 130, 30);
+        s.processEvent(MouseEvent.MOUSE_MOVED, 360, 30);
+        s.assertCalled();
+    }
+
+    @Test
+    public void coordinatesShouldBeRecomputedToSubSceneProjectionPlane() {
+        final TestSceneWithSubScenes s = new TestSceneWithSubScenes();
+
+        s.scene.setCamera(new PerspectiveCamera());
+        s.subScene1.setCamera(new PerspectiveCamera());
+        s.subScene2.setCamera(new PerspectiveCamera());
+
+        s.subScene1.setRotationAxis(Rotate.Y_AXIS);
+        s.subScene1.setRotate(45);
+        s.subScene2.setRotationAxis(Rotate.Y_AXIS);
+        s.subScene2.setRotate(-45);
+        ((Group) s.subScene1.getRoot()).getChildren().add(s.subScene1.getCamera());
+        s.subScene1.getCamera().setTranslateZ(-3.0);
+
+        s.innerRect1.setOnMouseExited(new EventHandler<MouseEvent>() {
+            @Override public void handle(MouseEvent event) {
+                assertSame(s.innerRect2, event.getPickResult().getIntersectedNode());
+                assertSame(s.innerRect1, event.getTarget());
+                assertEquals(16.58, event.getPickResult().getIntersectedPoint().getX(), 0.1);
+                assertEquals(7.33, event.getPickResult().getIntersectedPoint().getY(), 0.1);
+                assertEquals(0.0, event.getPickResult().getIntersectedPoint().getZ(), 0.0001);
+                assertEquals(295.81, event.getX(), 0.1);
+                assertEquals(57.64, event.getY(), 0.1);
+                assertEquals(-3.0, event.getZ(), 0.1);
+
+                s.called = true;
+            }
+        });
+
+        s.processEvent(MouseEvent.MOUSE_MOVED, 130, 30);
+        s.processEvent(MouseEvent.MOUSE_MOVED, 360, 30);
+        s.assertCalled();
+    }
+
+    @Test
+    public void coordinatesShouldBeRecomputedToNodeLocalCoordsOfSubSceneProjectionPlane() {
+        final TestSceneWithSubScenes s = new TestSceneWithSubScenes();
+
+        s.scene.setCamera(new PerspectiveCamera());
+        s.subScene1.setCamera(new PerspectiveCamera());
+        s.subScene2.setCamera(new PerspectiveCamera());
+
+        s.subScene1.setRotationAxis(Rotate.Y_AXIS);
+        s.subScene1.setRotate(45);
+        s.innerRect1.setRotationAxis(Rotate.Y_AXIS);
+        s.innerRect1.setRotate(-45);
+        s.subScene2.setRotationAxis(Rotate.Y_AXIS);
+        s.subScene2.setRotate(-45);
+        s.innerRect2.setRotationAxis(Rotate.Y_AXIS);
+        s.innerRect2.setRotate(45);
+
+        s.innerRect1.setOnMouseExited(new EventHandler<MouseEvent>() {
+            @Override public void handle(MouseEvent event) {
+                assertSame(s.innerRect2, event.getPickResult().getIntersectedNode());
+                assertSame(s.innerRect1, event.getTarget());
+                assertEquals(14.07, event.getPickResult().getIntersectedPoint().getX(), 0.1);
+                assertEquals(5.97, event.getPickResult().getIntersectedPoint().getY(), 0.1);
+                assertEquals(0.0, event.getPickResult().getIntersectedPoint().getZ(), 0.0001);
+                assertEquals(216.49, event.getX(), 0.1);
+                assertEquals(57.64, event.getY(), 0.1);
+                assertEquals(-191.49, event.getZ(), 0.1);
+
+                s.called = true;
+            }
+        });
+
+        s.processEvent(MouseEvent.MOUSE_MOVED, 130, 30);
+        s.processEvent(MouseEvent.MOUSE_MOVED, 360, 30);
+        s.assertCalled();
+    }
+
+    @Test
+    public void ImpossibleToComputeSubSceneInnerNodeCoordsShouldResultInNaNs() {
+        final TestSceneWithSubScenes s = new TestSceneWithSubScenes();
+
+        s.parent2.setTranslateZ(10);
+        s.innerRect2.setTranslateZ(10);
+
+        s.innerRect1.setOnMouseMoved(new EventHandler<MouseEvent>() {
+            @Override public void handle(MouseEvent event) {
+                s.innerRect1.setScaleX(0.0);
+            }
+        });
+
+        s.innerRect1.setOnMouseExited(new EventHandler<MouseEvent>() {
+            @Override public void handle(MouseEvent event) {
+                assertSame(s.innerRect1, event.getTarget());
+                assertTrue(Double.isNaN(event.getX()));
+                assertTrue(Double.isNaN(event.getY()));
+                assertTrue(Double.isNaN(event.getZ()));
+                s.called = true;
+            }
+        });
+
+        s.processEvent(MouseEvent.MOUSE_MOVED, 130, 30);
+        s.processEvent(MouseEvent.MOUSE_MOVED, 360, 30);
+        s.assertCalled();
+    }
+
+    @Test
+    public void ImpossibleToComputeSubSceneCoordsShouldResultInNaNs() {
+        final TestSceneWithSubScenes s = new TestSceneWithSubScenes();
+
+        s.parent2.setTranslateZ(10);
+        s.innerRect2.setTranslateZ(10);
+
+        s.innerRect1.setOnMouseMoved(new EventHandler<MouseEvent>() {
+            @Override public void handle(MouseEvent event) {
+                s.subScene1.setRotationAxis(Rotate.Y_AXIS);
+                s.subScene1.setRotate(90);
+            }
+        });
+
+        s.innerRect1.setOnMouseExited(new EventHandler<MouseEvent>() {
+            @Override public void handle(MouseEvent event) {
+                assertSame(s.innerRect1, event.getTarget());
+                assertTrue(Double.isNaN(event.getX()));
+                assertTrue(Double.isNaN(event.getY()));
+                assertTrue(Double.isNaN(event.getZ()));
+                s.called = true;
+            }
+        });
+
+        s.processEvent(MouseEvent.MOUSE_MOVED, 130, 30);
+        s.processEvent(MouseEvent.MOUSE_MOVED, 360, 30);
+        s.assertCalled();
+    }
+
 
     private static class SimpleTestScene {
 
@@ -1281,4 +1688,79 @@ public class MouseTest {
             lastClickCount = 0;
         }
     }
+
+    private static class TestSceneWithSubScenes {
+        private SubScene subScene1, subScene2;
+        private Rectangle innerRect1, innerRect2;
+        private Group root, parent1, parent2;
+        private Scene scene;
+        private boolean called = false;
+        private PickResult lastPickResult = null;
+
+        public TestSceneWithSubScenes() {
+            this(false, false);
+        }
+
+        public TestSceneWithSubScenes(boolean depthBuffer, boolean subDepthBuffer) {
+            root = new Group();
+            scene = new Scene(root, 500, 400, depthBuffer);
+
+            innerRect1 = new Rectangle(50, 50);
+            innerRect1.setTranslateX(100);
+            innerRect1.setTranslateY(10);
+            subScene1 = new SubScene(new Group(innerRect1), 200, 100,
+                    subDepthBuffer, false);
+            subScene1.setTranslateX(10);
+            parent1 = new Group(subScene1);
+            parent1.setTranslateX(10);
+            parent1.setTranslateY(10);
+
+            innerRect2 = new Rectangle(50, 50);
+            innerRect2.setTranslateX(100);
+            innerRect2.setTranslateY(10);
+            subScene2 = new SubScene(new Group(innerRect2), 200, 100);
+            subScene2.setTranslateX(20);
+
+            parent2 = new Group(subScene2);
+            parent2.setTranslateX(230);
+            parent2.setTranslateY(10);
+
+
+            root.getChildren().addAll(parent1, parent2);
+
+            Stage stage = new Stage();
+            stage.setScene(scene);
+            stage.show();
+        }
+
+        public void processEvent(EventType<MouseEvent> type, double x, double y) {
+            scene.impl_processMouseEvent(
+                    MouseEventGenerator.generateMouseEvent(type, x, y));
+        }
+
+        public Object getCursorFrame() {
+            return ((StubScene) scene.impl_getPeer()).getCursor();
+        }
+
+        public EventHandler<MouseEvent> handler(final EventTarget target,
+                final double x, final double y) {
+
+            return new EventHandler<MouseEvent>() {
+                @Override
+                public void handle(MouseEvent event) {
+                    if (target != null) assertSame(target, event.getTarget());
+                    if (x != DONT_TEST) assertEquals(x, event.getX(), 0.00001);
+                    if (y != DONT_TEST) assertEquals(y, event.getY(), 0.00001);
+                    assertEquals(0.0, event.getZ(), 0.00001);
+                    lastPickResult = event.getPickResult();
+                    called = true;
+                }
+            };
+        }
+
+        public void assertCalled() {
+            assertTrue(called);
+        }
+    }
+
 }

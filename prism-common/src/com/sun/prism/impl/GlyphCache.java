@@ -25,18 +25,18 @@
 
 package com.sun.prism.impl;
 
+import com.sun.javafx.font.CharToGlyphMapper;
 import com.sun.javafx.font.FontResource;
 import com.sun.javafx.font.FontStrike;
+import com.sun.javafx.font.Glyph;
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.Rectangle;
 import com.sun.javafx.geom.Point2D;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.scene.text.GlyphList;
-import com.sun.t2k.CharToGlyphMapper;
 import com.sun.prism.impl.packrect.RectanglePacker;
 import com.sun.prism.Texture;
 import com.sun.prism.impl.shape.MaskData;
-import com.sun.prism.impl.shape.ShapeUtil;
 import com.sun.prism.paint.Color;
 import java.nio.ByteBuffer;
 import java.util.HashMap;
@@ -53,9 +53,9 @@ public class GlyphCache {
     // is likely something we'd want to tune as they may have much less
     // VRAM and are less likely to be used for apps that have huge
     // text demands.
-  // 2048 pixels introduced very noticeable pauses when trying
-  // to free 1/4 of the glyphs, which for spiral text also amounts
-  // to 1/4 of the strikes.
+    // 2048 pixels introduced very noticeable pauses when trying
+    // to free 1/4 of the glyphs, which for spiral text also amounts
+    // to 1/4 of the strikes.
     private static final int WIDTH = 1024; // in pixels
     private static final int HEIGHT = 1024; // in pixels
     private static ByteBuffer emptyMask;
@@ -66,17 +66,19 @@ public class GlyphCache {
     // segmented arrays are in blocks of 32 glyphs.
     private static final int SEGSHIFT = 5;
     private static final int SEGSIZE  = 1 << SEGSHIFT;
-    //private final GlyphData[][] glyphs;
     HashMap<Integer, GlyphData[]>
         glyphDataMap = new HashMap<Integer, GlyphData[]>();
-    //private int numGlyphs;
+
+    // Because of SEGSHIFT the 5 high bit in the key to glyphDataMap are unused
+    // Using them for subpixel
+    private static final int SUBPIXEL_NONE = 0;
+    private static final int SUBPIXEL_ONEQUARTER    = 0x08000000; // bit 27
+    private static final int SUBPIXEL_ONEHALF       = 0x10000000; // bit 28
+    private static final int SUBPIXEL_THREEQUARTERS = 0x18000000; // bit 27+28
 
     private RectanglePacker packer;
 
     private boolean isLCDCache;
-
-    /* The number of allocated glyphs. Not actually used so far. */
-    private int numAllocatedGlyphs = 0;
 
     /* Share a RectanglePacker and its associated texture cache
      * for all uses on a particular screen.
@@ -109,10 +111,6 @@ public class GlyphCache {
         }
     }
 
-    public boolean isLCDCache() {
-        return isLCDCache;
-    }
-
     public void render(BaseContext ctx, GlyphList gl, float x, float y,
                        int start, int end, Color rangeColor, Color textColor,
                        BaseTransform xform, BaseBounds clip) {
@@ -125,7 +123,6 @@ public class GlyphCache {
             dstw = 1;
             dsth = 1;
         }
-        float xAdvanceTotal = x, yAdvanceTotal = y;
         Texture tex = getBackingStore();
         VertexBuffer vb = ctx.getVertexBuffer();
 
@@ -133,16 +130,19 @@ public class GlyphCache {
         Color currentColor = null;
         Point2D pt = new Point2D();
 
+        boolean subPixel = strike.isSubPixelGlyph() && xform.isTranslateOrIdentity();
+        boolean useGlyphListForAdvances = gl.isComplex() || subPixel;
+
         /* For complex text the advances from GlyphList must be used.
          * As advances in the GlyphList are cached without transform
          * the final location has to transform.
          */
-        if (!gl.isComplex()) {
-            pt.setLocation(xAdvanceTotal, yAdvanceTotal);
+        if (!useGlyphListForAdvances) {
+            pt.setLocation(x, y);
             xform.transform(pt, pt);
-            xAdvanceTotal = pt.x;
-            yAdvanceTotal = pt.y;
         }
+
+        float subPixelX = 0;
         for (int gi = 0; gi < len; gi++) {
             int gc = gl.getGlyphCode(gi);
 
@@ -152,14 +152,22 @@ public class GlyphCache {
             if (gc == CharToGlyphMapper.INVISIBLE_GLYPH_ID) {
                 continue;
             }
-            GlyphData data = getCachedGlyph(gc);
+            if (useGlyphListForAdvances) {
+                pt.setLocation(x + gl.getPosX(gi), y + gl.getPosY(gi));
+                if (subPixel) {
+                    subPixelX = pt.x;
+                    pt.x = (int)pt.x;
+                    subPixelX -= pt.x;
+                }
+            }
+            GlyphData data = getCachedGlyph(gc, subPixelX, 0);
             if (data != null) {
                 if (clip != null) {
                     // Always check clipping using user space.
                     if (x + gl.getPosX(gi) > clip.getMaxX()) break;
                     if (x + gl.getPosX(gi + 1) < clip.getMinX()) {
-                        xAdvanceTotal += data.getXAdvance();
-                        yAdvanceTotal += data.getYAdvance();
+                        pt.x += data.getXAdvance();
+                        pt.y += data.getYAdvance();
                         continue;
                     }
                 }
@@ -180,14 +188,13 @@ public class GlyphCache {
                         }
                     }
                 }
-                if (!gl.isComplex()) {
-                    addDataToQuad(data, vb, tex, xAdvanceTotal, yAdvanceTotal, dstw, dsth);
-                    xAdvanceTotal += data.getXAdvance();
-                    yAdvanceTotal += data.getYAdvance();
-                } else {
-                    pt.setLocation(x + gl.getPosX(gi), y + gl.getPosY(gi));
+                if (useGlyphListForAdvances) {
                     xform.transform(pt, pt);
                     addDataToQuad(data, vb, tex, pt.x, pt.y, dstw, dsth);
+                } else {
+                    addDataToQuad(data, vb, tex, pt.x, pt.y, dstw, dsth);
+                    pt.x += data.getXAdvance();
+                    pt.y += data.getYAdvance();
                 }
             }
         }
@@ -242,11 +249,6 @@ public class GlyphCache {
 
     public void clear() {
         glyphDataMap.clear();
-        numAllocatedGlyphs = 0;
-    }
-
-    public int getNumAllocatedGlyphs() {
-        return numAllocatedGlyphs;
     }
 
     private void clearAll() {
@@ -257,17 +259,23 @@ public class GlyphCache {
         packer.clear();
     }
 
-    private boolean isEmptyGlyph(FontStrike.Glyph glyph) {
-        if (!strike.supportsGlyphImages()) {
-            return glyph.getBBox().isEmpty();
-        } else {
-            return glyph.getWidth() == 0 || glyph.getHeight() == 0;
-        }
-    }
-
-    private GlyphData getCachedGlyph(int glyphCode) {
+    private GlyphData getCachedGlyph(int glyphCode, float x, float y) {
         int segIndex = glyphCode >> SEGSHIFT;
         int subIndex = glyphCode % SEGSIZE;
+        if (x != 0) {
+            if (x < 0.25) {
+                x = 0;
+            } else if (x < 0.50) {
+                x = 0.25f;
+                segIndex |= SUBPIXEL_ONEQUARTER;
+            } else if (x < 0.75) {
+                x = 0.50f;
+                segIndex |= SUBPIXEL_ONEHALF;
+            } else {
+                x = 0.75f;
+                segIndex |= SUBPIXEL_THREEQUARTERS;
+            }
+        }
         GlyphData[] segment = glyphDataMap.get(segIndex);
         if (segment != null) {
             if (segment[subIndex] != null) {
@@ -280,9 +288,9 @@ public class GlyphCache {
 
         // Render the glyph and insert it in the cache
         GlyphData data = null;
-        FontStrike.Glyph glyph = strike.getGlyph(glyphCode);
+        Glyph glyph = strike.getGlyph(glyphCode);
         if (glyph != null) {
-            if (isEmptyGlyph(glyph)) {
+            if (glyph.getWidth() == 0 || glyph.getHeight() == 0) {
                 data = new GlyphData(0, 0, 0,
                                      glyph.getPixelXAdvance(),
                                      glyph.getPixelYAdvance(),
@@ -293,16 +301,11 @@ public class GlyphCache {
                 // NOTE : if the MaskData can be stored back directly
                 // in the glyph, even as an opaque type, it should save
                 // repeated work next time the glyph is used.
-                MaskData maskData;
-                if (strike.supportsGlyphImages()) {
-                    maskData = MaskData.create(glyph.getPixelData(),
-                                               glyph.getOriginX(),
-                                               glyph.getOriginY(),
-                                               glyph.getWidth(),
-                                               glyph.getHeight());
-                } else {
-                    maskData = ShapeUtil.rasterizeGlyphOutline(glyph.getShape());
-                }
+                MaskData maskData = MaskData.create(glyph.getPixelData(x ,y),
+                                                    glyph.getOriginX(),
+                                                    glyph.getOriginY(),
+                                                    glyph.getWidth(),
+                                                    glyph.getHeight());
 
                 // Make room for the rectangle on the backing store
                 int border = 1;
@@ -360,7 +363,6 @@ public class GlyphCache {
 
             }
             segment[subIndex] = data;
-            numAllocatedGlyphs++;
         }
 
         return data;

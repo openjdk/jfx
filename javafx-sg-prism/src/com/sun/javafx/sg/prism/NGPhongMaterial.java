@@ -81,6 +81,10 @@ public class NGPhongMaterial implements PGPhongMaterial {
         }
 
         if (diffuseMapDirty) {
+            if (diffuseMap == null) { 
+                int pixel = 0xffffffff;
+                diffuseMap = Image.fromIntArgbPreData( new int[]{pixel}, 1, 1);
+            }
             material.setMap(PhongMaterial.MapType.DIFFUSE, getCachedTexture(f, diffuseMap));
             diffuseMapDirty = false;
         }

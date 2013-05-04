@@ -35,15 +35,30 @@ import com.sun.javafx.sg.PGPerspectiveCamera;
 import com.sun.scenario.effect.Blend;
 
 public class StubPerspectiveCamera extends StubNode implements PGPerspectiveCamera{
-    @Override public void setFieldOfView(float f) {}
-    @Override public void setVerticalFieldOfView(boolean bln) {}
-    @Override public void setNearClip(float f) {}
-    @Override public void setFarClip(float f) {}
-    @Override public void setViewWidth(double viewWidth) { }
-    @Override public void setViewHeight(double viewHeight) { }
-    @Override public void setProjViewTransform(GeneralTransform3D projViewTx) { }
-    @Override public void setPosition(Vec3d position) { }
-    @Override public void setWorldTransform(Affine3D ad) {}
+    private float fieldOfView;
+    private boolean verticalFOV;
+    private float nearClip, farClip;
+    private double viewWidth, viewHeight;
+    private GeneralTransform3D projViewTx;
+    private Vec3d position;
+    private Affine3D worldTransform;
+
+    @Override public void setFieldOfView(float f) { this.fieldOfView = f; }
+    @Override public void setVerticalFieldOfView(boolean bln) { this.verticalFOV = bln; }
+    @Override public void setNearClip(float f) { this.nearClip = f; }
+    @Override public void setFarClip(float f) { this.farClip = f; }
+    @Override public void setViewWidth(double viewWidth) { this.viewWidth = viewWidth; }
+    @Override public void setViewHeight(double viewHeight) { this.viewHeight = viewHeight; }
+    @Override public void setProjViewTransform(GeneralTransform3D projViewTx) {
+        this.projViewTx = new GeneralTransform3D();
+        this.projViewTx.set(projViewTx);
+    }
+    @Override public void setPosition(Vec3d position) {
+        this.position = new Vec3d(position);
+    }
+    @Override public void setWorldTransform(Affine3D ad) {
+        this.worldTransform = new Affine3D(ad);
+    }
     @Override public void setTransformMatrix(BaseTransform bt) {}
     @Override public void setContentBounds(BaseBounds bb) {}
     @Override public void setTransformedBounds(BaseBounds bb, boolean bln) {}
@@ -56,4 +71,14 @@ public class StubPerspectiveCamera extends StubNode implements PGPerspectiveCame
     @Override public void setEffect(Object o) {}
     @Override public void effectChanged() {}
     @Override public void release() {}
+
+    public float getFieldOfView() { return fieldOfView; }
+    public boolean isVerticalFOV() { return verticalFOV; }
+    public float getNearClip() { return nearClip; }
+    public float getFarClip() { return farClip; }
+    public double getViewWidth() { return viewWidth; }
+    public double getViewHeight() { return viewHeight; }
+    public GeneralTransform3D getProjViewTx() { return projViewTx; }
+    public Vec3d getPosition() { return position; }
+    public Affine3D getWorldTransform() { return worldTransform; }
 }

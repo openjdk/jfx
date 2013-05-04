@@ -320,10 +320,6 @@ class D3DContext extends BaseShaderContext {
         validate(nSetBlendEnabled(pContext, d3dmode));
     }
 
-    void sync() {
-        getVertexBuffer().flush();
-    }
-
     D3DFrameStats getFrameStats(boolean reset, D3DFrameStats result) {
         if (result == null) {
             result = new D3DFrameStats();

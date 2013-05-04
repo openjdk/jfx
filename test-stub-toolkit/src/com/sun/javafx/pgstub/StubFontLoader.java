@@ -160,19 +160,14 @@ public class StubFontLoader extends FontLoader {
     }
 
     @Override
-    public Font font(Object in, float size) {
+    public Font loadFont(InputStream in, double size) {
         return new Font("not implemented", size);
     }
 
     @Override
-    public Font loadFont(InputStream in, double size) {
-        return new Font("not implemented", size);
-    }    
-
-    @Override
     public Font loadFont(String urlPath, double size) {
         return new Font("not implemented", size);
-    }    
+    }
 
     @Override
     public FontMetrics getFontMetrics(Font font) {

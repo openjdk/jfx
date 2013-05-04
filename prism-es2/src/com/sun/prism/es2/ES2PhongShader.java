@@ -198,8 +198,7 @@ class ES2PhongShader {
 
         //TODO: 3D - May remove diffuseColor check if we are certain that
         //           it is never null.
-        if (material.diffuseColor != null && !material.diffuseMap) {
-
+        if (material.diffuseColor != null) {
             shader.setConstant("diffuseColor", material.diffuseColor.getRed(),
                     material.diffuseColor.getGreen(), material.diffuseColor.getBlue(),
                     material.diffuseColor.getAlpha());

@@ -41,7 +41,7 @@ import com.sun.javafx.geom.transform.NoninvertibleTransformException;
 import com.sun.javafx.sg.GrowableDataBuffer;
 import com.sun.javafx.sg.PGCanvas;
 import com.sun.javafx.sg.PGShape;
-import com.sun.javafx.text.TextLayout;
+import com.sun.javafx.text.PrismTextLayout;
 import com.sun.prism.BasicStroke;
 import com.sun.prism.CompositeMode;
 import com.sun.prism.Graphics;
@@ -234,7 +234,7 @@ public class NGCanvas extends NGNode implements PGCanvas {
     private BasicStroke stroke;
     private Path2D path;
     private NGText ngtext;
-    private TextLayout textLayout;
+    private PrismTextLayout textLayout;
     private PGFont pgfont;
     private int align;
     private int baseline;
@@ -266,7 +266,7 @@ public class NGCanvas extends NGNode implements PGCanvas {
         stroke = null;
         path = new Path2D();
         ngtext = new NGText();
-        textLayout = new TextLayout();
+        textLayout = new PrismTextLayout();
         pgfont = (PGFont) Font.getDefault().impl_getNativeFont();
         align = PGCanvas.ALIGN_LEFT;
         baseline = VPos.BASELINE.ordinal();
@@ -1079,7 +1079,7 @@ public class NGCanvas extends NGNode implements PGCanvas {
                         textLayout.getBounds(null, bounds);
                         TEMP_TX.transform(bounds, bounds);
                     } else {
-                        int flag = TextLayout.TYPE_TEXT;
+                        int flag = PrismTextLayout.TYPE_TEXT;
                         Shape textShape = textLayout.getShape(flag, null);
                         strokebounds(getStroke(), textShape, bounds, TEMP_TX);
                     }

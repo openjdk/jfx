@@ -35,12 +35,14 @@ import com.sun.javafx.geom.transform.GeneralTransform3D;
 import com.sun.javafx.geom.transform.NoninvertibleTransformException;
 import com.sun.javafx.jmx.MXNodeAlgorithm;
 import com.sun.javafx.jmx.MXNodeAlgorithmContext;
+import com.sun.javafx.scene.CameraAccess;
 import com.sun.javafx.scene.DirtyBits;
 import com.sun.javafx.sg.PGCamera;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.SimpleDoubleProperty;
+import javafx.geometry.Point3D;
 import javafx.scene.transform.Transform;
 import sun.util.logging.PlatformLogger;
 
@@ -70,6 +72,10 @@ public abstract class Camera extends Node {
     // NOTE: farClipInScene and nearClipInScene are valid only if there is no rotation
     private double farClipInScene;
     private double nearClipInScene;
+
+    // only one of them can be non-null at a time
+    private Scene ownerScene = null;
+    private SubScene ownerSubScene = null;
 
     private GeneralTransform3D projViewTx = new GeneralTransform3D();
     private GeneralTransform3D projTx = new GeneralTransform3D();
@@ -241,6 +247,32 @@ public abstract class Camera extends Node {
         return viewHeight;
     }
 
+    void setOwnerScene(Scene s) {
+        if (s == null) {
+            ownerScene = null;
+        } else if (s != ownerScene) {
+            if (ownerScene != null || ownerSubScene != null) {
+                throw new IllegalArgumentException(this
+                        + "is already set as camera in other scene or subscene");
+            }
+            ownerScene = s;
+            markOwnerDirty();
+        }
+    }
+
+    void setOwnerSubScene(SubScene s) {
+        if (s == null) {
+            ownerSubScene = null;
+        } else if (s != ownerSubScene) {
+            if (ownerScene != null || ownerSubScene != null) {
+                throw new IllegalArgumentException(this
+                        + "is already set as camera in other scene or subscene");
+            }
+            ownerSubScene = s;
+            markOwnerDirty();
+        }
+    }
+
     @Override
     protected void impl_markDirty(DirtyBits dirtyBit) {
         super.impl_markDirty(dirtyBit);
@@ -252,8 +284,20 @@ public abstract class Camera extends Node {
         } else if (dirtyBit == DirtyBits.NODE_CAMERA) {
             projViewTxValid = false;
         }
+        markOwnerDirty();
     }
 
+    private void markOwnerDirty() {
+        // if the camera is part of the scene/subScene, we don't need to notify
+        // the owner as the camera will be added to its dirty list as usual
+
+        if (ownerScene != null && ownerScene != getScene()) {
+            ownerScene.markCameraDirty();
+        }
+        if (ownerSubScene != null && ownerSubScene != getSubScene()) {
+            ownerSubScene.markCameraDirty();
+        }
+    }
 
     /**
      * Returns the local-to-scene transform of this camera.
@@ -294,6 +338,64 @@ public abstract class Camera extends Node {
 
         return projViewTx;
     }
+
+    /**
+     * Transforms the given 3D point to the flat projected coordinates.
+     */
+    private Point3D project(Point3D p) {
+
+        final Vec3d vec = getProjViewTransform().transform(new Vec3d(
+                p.getX(), p.getY(), p.getZ()));
+
+        final double halfViewWidth = getViewWidth() / 2.0;
+        final double halfViewHeight = getViewHeight() / 2.0;
+
+        return new Point3D(
+                halfViewWidth * (1 + vec.x),
+                halfViewHeight * (1 - vec.y),
+                0.0);
+    }
+
+    /**
+     * Computes intersection point of the pick ray cast by the given coordinates
+     * and the node's local XY plane.
+     */
+    private Point3D pickNodeXYPlane(Node node, double x, double y) {
+        final PickRay ray = computePickRay(x, y, null);
+
+        final Affine3D localToScene = new Affine3D();
+        node.getLocalToSceneTransform().impl_apply(localToScene);
+
+        final Vec3d o = ray.getOriginNoClone();
+        final Vec3d d = ray.getDirectionNoClone();
+
+        try {
+            localToScene.inverseTransform(o, o);
+            localToScene.inverseDeltaTransform(d, d);
+        } catch (NoninvertibleTransformException e) {
+            return null;
+        }
+
+        if (almostZero(d.z)) {
+            return null;
+        }
+
+        final double t = -o.z / d.z;
+        return new Point3D(o.x + (d.x * t), o.y + (d.y * t), 0.0);
+    }
+
+    /**
+     * Computes intersection point of the pick ray cast by the given coordinates
+     * and the projection plane.
+     */
+    private Point3D pickProjectPlane(double x, double y) {
+        final PickRay ray = computePickRay(x, y, null);
+        final Vec3d p = new Vec3d();
+        p.add(ray.getOriginNoClone(), ray.getDirectionNoClone());
+
+        return new Point3D(p.x, p.y, p.z);
+    }
+
 
     /**
      * Computes pick ray for the content rendered by this camera.
@@ -344,5 +446,31 @@ public abstract class Camera extends Node {
     @Override
     public Object impl_processMXNode(MXNodeAlgorithm alg, MXNodeAlgorithmContext ctx) {
         throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    /**
+     * This class is used by classes in different packages to get access to
+     * private and package private methods.
+     */
+    private static class CameraAccessImpl extends CameraAccess {
+
+        @Override
+        public Point3D project(Camera camera, Point3D p) {
+            return camera.project(p);
+        }
+
+        @Override
+        public Point3D pickNodeXYPlane(Camera camera, Node node, double x, double y) {
+            return camera.pickNodeXYPlane(node, x, y);
+        }
+
+        @Override
+        public Point3D pickProjectPlane(Camera camera, double x, double y) {
+            return camera.pickProjectPlane(x, y);
+        }
+    }
+
+    static {
+        CameraAccess.setCameraAccess(new CameraAccessImpl());
     }
 }

@@ -295,14 +295,16 @@ public class Cylinder extends Shape3D {
         // if we already know we are going to do the exact picking,
         // there is no need to check the caps
         
-        boolean cap = false;
+        boolean topCap = false, bottomCap = false;
         if (t == Double.POSITIVE_INFINITY || !exactPicking) {
             final double tBottom = (-halfHeight - originY) / dirY;
             final double tTop = (halfHeight - originY) / dirY;
+            boolean isT0Bottom = false;
 
             if (tBottom < tTop) {
                 t0 = tBottom;
                 t1 = tTop;
+                isT0Bottom = true;
             } else {
                 t0 = tTop;
                 t1 = tBottom;
@@ -312,7 +314,7 @@ public class Cylinder extends Shape3D {
                 final double tX = originX + dirX * t0;
                 final double tZ = originZ + dirZ * t0;
                 if (tX * tX + tZ * tZ <= r * r) {
-                    cap = true;
+                    bottomCap = isT0Bottom; topCap = !isT0Bottom;
                     t = t0;
                 }
             }
@@ -321,7 +323,7 @@ public class Cylinder extends Shape3D {
                 final double tX = originX + dirX * t1;
                 final double tZ = originZ + dirZ * t1;
                 if (tX * tX + tZ * tZ <= r * r) {
-                    cap = true;
+                    topCap = isT0Bottom; bottomCap = !isT0Bottom;
                     t = t1;
                 }
             }
@@ -340,10 +342,14 @@ public class Cylinder extends Shape3D {
             final Point3D point = PickResultChooser.computePoint(pickRay, t);
 
             Point2D txCoords;
-            if (cap) {
+            if (topCap) {
                 txCoords = new Point2D(
                         0.5 + point.getX() / (2 * r),
                         0.5 + point.getZ() / (2 * r));
+            } else if (bottomCap) {
+                txCoords = new Point2D(
+                        0.5 + point.getX() / (2 * r),
+                        0.5 - point.getZ() / (2 * r));
             } else {
                 final Point3D proj = new Point3D(point.getX(), 0, point.getZ());
                 final Point3D cross = proj.crossProduct(Rotate.Z_AXIS);
@@ -351,7 +357,7 @@ public class Cylinder extends Shape3D {
                 if (cross.getY() > 0) {
                     angle = 360 - angle;
                 }
-                txCoords = new Point2D(angle / 360, 0.5 - point.getY() / h);
+                txCoords = new Point2D(1 - angle / 360, 0.5 + point.getY() / h);
             }
 
             pickResult.offer(this, t, PickResult.FACE_UNDEFINED, point, txCoords);
@@ -366,7 +372,7 @@ public class Cylinder extends Shape3D {
         }
 
         final int nPonits = (div + 1) * 2 + 2;
-        final int tcCount = (div + 1) * 3 + 1;
+        final int tcCount = (div + 1) * 4 + 1; // 2 cap tex
         final int faceCount = div * 4;
 
         float textureDelta = 1.f / 256;
@@ -387,8 +393,8 @@ public class Cylinder extends Shape3D {
             points[pPos + 0] = (float) (Math.sin(a) * r);
             points[pPos + 2] = (float) (Math.cos(a) * r);
             points[pPos + 1] = h;
-            tPoints[tPos + 0] = dA * i;
-            tPoints[tPos + 1] = textureDelta;
+            tPoints[tPos + 0] = 1 - dA * i;
+            tPoints[tPos + 1] = 1 - textureDelta;
             pPos += 3; tPos += 2;
         }
 
@@ -397,8 +403,8 @@ public class Cylinder extends Shape3D {
             points[pPos + 0] = (float) (Math.sin(a) * r);
             points[pPos + 2] = (float) (Math.cos(a) * r);
             points[pPos + 1] = -h;
-            tPoints[tPos + 0] = dA * i;
-            tPoints[tPos + 1] = 1 - textureDelta;
+            tPoints[tPos + 0] = 1 - dA * i;
+            tPoints[tPos + 1] = textureDelta;
             pPos += 3; tPos += 2;
         }
 
@@ -412,10 +418,19 @@ public class Cylinder extends Shape3D {
         pPos += 6;
 
         // add cap central points
+        // bottom cap
         for (int i = 0; i <= div; ++i) {
-            double a = (i < div) ? dA * i * 2 * Math.PI : 0;
+            double a = (i < div) ? (dA * i * 2) * Math.PI: 0;
             tPoints[tPos + 0] = (float) (Math.sin(a) * 0.5f) + 0.5f;
             tPoints[tPos + 1] = (float) (Math.cos(a) * 0.5f) + 0.5f;
+            tPos += 2;
+        }
+
+        // top cap
+        for (int i = 0; i <= div; ++i) {
+            double a = (i < div) ? (dA * i * 2) * Math.PI: 0;
+            tPoints[tPos + 0] = 0.5f + (float) (Math.sin(a) * 0.5f);
+            tPoints[tPos + 1] = 0.5f - (float) (Math.cos(a) * 0.5f);
             tPos += 2;
         }
 
@@ -452,8 +467,9 @@ public class Cylinder extends Shape3D {
 
         }
         // build cap faces
-        int tStart = (div + 1) * 2, t1 = (div + 1) * 3, p1 = (div + 1) * 2;
+        int tStart = (div + 1) * 2, t1 = (div + 1) * 4, p1 = (div + 1) * 2;
 
+        // bottom cap
         for (int p0 = 0; p0 != div; ++p0) {
             int p2 = p0 + 1, t0 = tStart + p0, t2 = t0 + 1;
             // add p0, p1, p2
@@ -468,7 +484,9 @@ public class Cylinder extends Shape3D {
         }
 
         p1 = (div + 1) * 2 + 1;
+        tStart = (div + 1) * 3;
 
+        // top cap
         for (int p0 = 0; p0 != div; ++p0) {
             int p2 = p0 + 1 + div + 1, t0 = tStart + p0, t2 = t0 + 1;
             //*faces++ = SmFace(p0+div+1,p1,p2, t0,t1,t2, 2);

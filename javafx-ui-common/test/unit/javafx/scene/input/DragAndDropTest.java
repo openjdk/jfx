@@ -61,6 +61,7 @@ import com.sun.javafx.tk.TKDragSourceListener;
 import com.sun.javafx.tk.TKDropTargetListener;
 import com.sun.javafx.tk.Toolkit;
 import com.sun.javafx.test.MouseEventGenerator;
+import javafx.scene.SubScene;
 import javafx.scene.image.Image;
 
 public class DragAndDropTest {
@@ -880,6 +881,38 @@ public class DragAndDropTest {
         assertEquals(1, counter);
     }
     
+    @Test
+    public void dragSourcesSubScenesParentShouldGetEnteredImmediately() {
+        final Node[] ns = oneNodeInSubScene();
+        final Node n = ns[0];
+        final Node subScene = ns[1];
+
+        dragSource = n;
+        n.setOnMousePressed(doDetect);
+        n.setOnDragDetected(stringSource(TransferMode.ANY));
+        n.setOnDragOver(acceptAny);
+        subScene.setOnDragEntered(new EventHandler<DragEvent>() {
+            @Override public void handle(DragEvent event) {
+                counter++;
+            }
+        });
+        subScene.getParent().setOnDragEntered(new EventHandler<DragEvent>() {
+            @Override public void handle(DragEvent event) {
+                counter++;
+            }
+        });
+
+        /* start drag */
+        n.getScene().impl_processMouseEvent(
+                MouseEventGenerator.generateMouseEvent(
+                    MouseEvent.MOUSE_PRESSED, 50, 50));
+        assertEquals(0, counter);
+
+        /* drag */
+        toolkit.dragTo(52, 52, TransferMode.MOVE);
+        assertEquals(2, counter);
+    }
+
     @Test 
     public void dragSourcesParentShouldGetEnteredTargetTwice() {
         final Node n = oneNode();
@@ -933,7 +966,42 @@ public class DragAndDropTest {
         toolkit.dragTo(150, 52, TransferMode.MOVE);
         assertEquals(1, counter);
     }
-    
+
+    @Test
+    public void dragSourcesSubScenesParentShouldGetExitedWhenLeft() {
+        final Node[] ns = oneNodeInSubScene();
+        final Node n = ns[0];
+        final Node subScene = ns[1];
+
+        dragSource = n;
+        n.setOnMousePressed(doDetect);
+        n.setOnDragDetected(stringSource(TransferMode.ANY));
+        n.setOnDragOver(acceptAny);
+        subScene.setOnDragExited(new EventHandler<DragEvent>() {
+            @Override public void handle(DragEvent event) {
+                counter++;
+            }
+        });
+        subScene.getParent().setOnDragExited(new EventHandler<DragEvent>() {
+            @Override public void handle(DragEvent event) {
+                counter++;
+            }
+        });
+
+        /* start drag */
+        n.getScene().impl_processMouseEvent(
+                MouseEventGenerator.generateMouseEvent(
+                    MouseEvent.MOUSE_PRESSED, 50, 50));
+        assertEquals(0, counter);
+
+        /* drag */
+        toolkit.dragTo(52, 52, TransferMode.MOVE);
+        assertEquals(0, counter);
+
+        toolkit.dragTo(250, 52, TransferMode.MOVE);
+        assertEquals(2, counter);
+    }
+
     @Test 
     public void dragSourceShouldGetEnteredWhenReturned() {
         final Node n = oneNode();
@@ -1439,7 +1507,7 @@ public class DragAndDropTest {
     };
     
     // Scenes
-    
+
     private static Node oneNode() {
         Group root = new Group();
         getScene(root);
@@ -1460,7 +1528,19 @@ public class DragAndDropTest {
         root.getChildren().add(r2);
         return new Node[] { r, r2 };
     }
-    
+
+    private static Node[] oneNodeInSubScene() {
+        Group root = new Group();
+        getScene(root);
+
+        Rectangle r = new Rectangle(100, 100);
+        SubScene subScene = new SubScene(new Group(r), 200, 200);
+        root.getChildren().add(subScene);
+
+        return new Node[] { subScene, r };
+    }
+
+
     private static Scene getScene(Group root) {
         final Scene scene = new Scene(root, 400, 400);
 
