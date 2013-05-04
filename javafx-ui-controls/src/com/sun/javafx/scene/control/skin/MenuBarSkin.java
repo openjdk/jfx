@@ -244,12 +244,10 @@ public class MenuBarSkin extends BehaviorSkinBase<MenuBar, BehaviorBase<MenuBar>
                             // RT-18859: Doing nothing for space and enter 
                             if (control.getScene().getWindow().isFocused()) {
                                 if (focusedMenuIndex != -1 && openMenu != null) {
+                                    openMenu = getSkinnable().getMenus().get(focusedMenuIndex);
                                     if (!isMenuEmpty(getSkinnable().getMenus().get(focusedMenuIndex))) {
-                                        openMenu = getSkinnable().getMenus().get(focusedMenuIndex);
                                         openMenu.show();
-                                    } else {
-                                        openMenu = null;
-                                    }
+                                    } 
                                     event.consume();
                                 }
                             }
@@ -624,12 +622,10 @@ public class MenuBarSkin extends BehaviorSkinBase<MenuBar, BehaviorBase<MenuBar>
 
                     // check if the owner window has focus
                     if (menuButton.getScene().getWindow().isFocused()) {
+                        openMenu = menu;
                         if (!isMenuEmpty(menu)){
-                            openMenu = menu;
                             openMenu.show();
-                        } else {
-                            openMenu = null;
-                        }
+                        } 
                         // update FocusedIndex
                         focusedMenuIndex = getMenuBarButtonIndex(menuButton);
                     }
@@ -721,18 +717,15 @@ public class MenuBarSkin extends BehaviorSkinBase<MenuBar, BehaviorBase<MenuBar>
                                 openMenuButton = null;
                                 openMenuButton = menuButton;
                         }
-                        if (openMenu == null) return;
                         updateFocusedIndex();
-                        if (openMenu.isShowing() && openMenu != menu) {
+                        if (openMenu != null && openMenu != menu) {
                          // hide the currently visible menu, and move to the new one
                             openMenu.hide();
+                            openMenu = menu;
+                            updateFocusedIndex();
                             if (!isMenuEmpty(menu)) {
-                                openMenu = menu;
-                                updateFocusedIndex();
                                 openMenu.show();
-                            } else {
-                                openMenu = null;
-                            }
+                            } 
                         }
                     }
                 }
@@ -809,24 +802,20 @@ public class MenuBarSkin extends BehaviorSkinBase<MenuBar, BehaviorBase<MenuBar>
         Menu nextMenu = findNextSibling();
         // hide the currently visible menu, and move to the next one
         if (openMenu != null) openMenu.hide();
+        openMenu = nextMenu;
         if (!isMenuEmpty(nextMenu)) {
-            openMenu = nextMenu;
             openMenu.show();
-        } else {
-            openMenu = null;
-        }
+        } 
     }
 
     private void showPrevMenu() {
         Menu prevMenu = findPreviousSibling();
         // hide the currently visible menu, and move to the next one
         if (openMenu != null) openMenu.hide();
+        openMenu = prevMenu;
         if (!isMenuEmpty(prevMenu)) {
-            openMenu = prevMenu;
             openMenu.show();
-        } else {
-            openMenu = null;
-        }
+        } 
     }
     
     private Menu findPreviousSibling() {
