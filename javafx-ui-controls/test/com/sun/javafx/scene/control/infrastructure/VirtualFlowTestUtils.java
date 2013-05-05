@@ -195,6 +195,10 @@ public class VirtualFlowTestUtils {
         assertCallback(control, startRow, endRow, callback);
     }
     
+    public static int getCellCount(final Control control) {
+        return getVirtualFlow(control).getCellCount();
+    }
+    
     public static IndexedCell getCell(final Control control, final int index) {
         return getVirtualFlow(control).getCell(index);
     }
