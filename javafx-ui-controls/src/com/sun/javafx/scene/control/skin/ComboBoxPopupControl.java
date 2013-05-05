@@ -43,7 +43,7 @@ import javafx.scene.input.MouseEvent;
 
 public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
     
-    private PopupControl popup;
+    protected PopupControl popup;
     public static final String COMBO_BOX_STYLE_CLASS = "combo-box-popup";
 
     public ComboBoxPopupControl(ComboBoxBase<T> comboBox, final ComboBoxBaseBehavior<T> behavior) {

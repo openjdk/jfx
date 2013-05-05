@@ -3520,6 +3520,190 @@ Only the properties with values that are different from the TextBox are specifie
 }
 
 
+/* -------------------------- STYLES FOR THE DATE-PICKER CONTROL ----- */
+
+
+.date-picker > .date-picker-display-node {
+    -fx-padding: 0.166667em 0.833333em 0.25em 0.833333em; /* 2 10 3 10 */
+}
+
+.date-picker > .arrow-button {
+    -fx-background-color: null;
+    -fx-background-insets: 0, 1, 2;
+    -fx-background-radius: 0 5 5 0, 0 4 4 0, 0 3 3 0;
+    -fx-padding: 0.5em 0.416667em 0.5em 0.416667em; /* 6 5 6 5 */
+}
+
+.date-picker-popup {
+     -fx-background-color:
+        derive(-fx-color,-40%),
+        derive(-fx-color,100%),
+        linear-gradient(to bottom, 
+        derive(-fx-color,100%) 0%, 
+        derive(-fx-color,50%) 12%, 
+        derive(-fx-color,65%) 88%, 
+        derive(-fx-color,23%) 100%);
+    -fx-background-insets: 0, 1, 2;
+    -fx-background-radius: 0 6 6 6, 0 5 5 5, 0 4 4 4;
+    -fx-padding: 1;
+    -fx-alignment: CENTER; /* VBox */
+    -fx-spacing: 4; /* VBox */
+    -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.6), 8, 0.0, 0, 0);
+}
+
+.date-picker-popup > .month-year-pane {
+    -fx-padding: 0.5em;
+    -fx-background-color: -fx-base;
+}
+
+.date-picker-popup > * > .spinner {
+    -fx-spacing: 3;
+    -fx-alignment: CENTER;
+    -fx-fill-height: false;
+}
+
+.date-picker-popup > * > .spinner > .label {
+    -fx-font-size: 1.083333em;
+}
+
+.date-picker-popup > * > .spinner > .button {
+    -fx-background-color: transparent;
+    -fx-background-radius: 0;
+}
+
+.date-picker-popup > * > .spinner > .button:hover {
+    -fx-background-color: -fx-shadow-highlight-color, -fx-outer-border, -fx-inner-border, -fx-body-color;
+}
+
+.date-picker-popup > * > .spinner > .button:focused {
+    -fx-background-color: -fx-focus-color, -fx-outer-border, -fx-inner-border, -fx-body-color;
+}
+
+.date-picker-popup > * > .spinner > .left-button {
+    -fx-padding: 0 0.333333em 0 0.25em;
+}
+
+.date-picker-popup > * > .spinner > .right-button {
+    -fx-padding: 0 0.25em 0 0.333333em;
+}
+
+.date-picker-popup > * > .spinner > .button > .left-arrow {
+    -fx-background-color: -fx-mark-highlight-color, -fx-mark-color;
+    -fx-background-insets: 1 0 -1 0, 0;
+    -fx-padding: 0.375em 0.291em 0.375em 0.291em;
+    -fx-shape: "M 0 0 L -13 7 L 0 13 z";
+    -fx-scale-shape: true;
+}
+
+.date-picker-popup > * > .spinner > .button > .right-arrow {
+    -fx-background-color: -fx-mark-highlight-color, -fx-mark-color;
+    -fx-background-insets: 1 0 -1 0, 0;
+    -fx-padding: 0.375em 0.291em 0.375em 0.291em;
+    -fx-shape: "M 0 0 L 13 7 L 0 13 z";
+    -fx-scale-shape: true;
+}
+
+.date-picker-popup > * > .spinner > .label {
+    -fx-alignment: CENTER;
+}
+
+.date-picker-popup > .month-year-pane > .secondary-label {
+    -fx-alignment: BASELINE_CENTER;
+    -fx-padding: 0.5em 0 0 0;
+    -fx-text-fill: #ff5050;
+}
+
+.date-picker-popup > .calendar-grid {
+    -fx-padding: 0 0.25em 0.25em 0;
+}
+
+.date-picker-popup > * > .cell { 
+    -fx-background-color: transparent;
+    -fx-background-insets: 1, 2;
+    -fx-padding: 0.166667em;
+    -fx-alignment: BASELINE_CENTER;
+    -fx-opacity: 1.0;
+}
+
+.date-picker-popup > * > .cell:disabled > * { 
+    /* This is set on the cell's children so the border is not affected. */
+    -fx-opacity: 0.4;
+}
+
+.date-picker-popup > * > .week-number-header-cell,
+.date-picker-popup > * > .day-name-cell {
+    /* -fx-background-color: #f1f1f1; */
+    -fx-font-size: 0.833333em;
+}
+
+.date-picker-popup > * > .week-number-cell { 
+    -fx-text-fill: -fx-accent;
+    -fx-font-size: 0.75em;
+}
+
+.date-picker-popup > * > .day-cell { 
+    -fx-padding: 0.166667em 0.5em 0.166667em 0.5em;
+    -fx-border-color: lightgray;
+    -fx-border-width: 1px;
+    -fx-text-fill: -fx-text-base-color;
+}
+
+.date-picker-popup > * > .hijrah-day-cell {
+    -fx-alignment: TOP_LEFT;
+    -fx-padding: 0.083333em;
+    -fx-cell-size: 2.75em;
+}
+
+.date-picker-popup > * > .day-cell > .secondary-text {
+    -fx-font-size: 1.0em;
+    -fx-fill: #ff5050;
+}
+
+.date-picker-popup > * > .day-cell:focused { 
+    -fx-background-color: -fx-cell-focus-inner-border, white;
+}
+
+.date-picker-popup > * > .day-cell:hover { 
+    -fx-background-color: gray, white;
+}
+
+.date-picker-popup > * > .today { 
+    -fx-background-color: transparent, lightgray;
+}
+
+.date-picker-popup > * > .today:focused { 
+    -fx-background-color: -fx-cell-focus-inner-border, lightgray;
+}
+
+.date-picker-popup > * > .today:hover { 
+    -fx-background-color: gray, lightgray;
+}
+
+.date-picker-popup > * > .previous-month,
+.date-picker-popup > * > .next-month { 
+    -fx-text-fill: #aaaaaa;
+}
+
+.date-picker-popup > * > .previous-month > .secondary-text,
+.date-picker-popup > * > .next-month > .secondary-text {
+    -fx-fill: #aaaaaa;
+}
+
+.date-picker-popup > * > .selected { 
+    -fx-background-color: transparent, -fx-accent;
+    -fx-text-fill: white;
+}
+
+.date-picker-popup > * > .selected:focused { 
+    -fx-background-color: -fx-cell-focus-inner-border, -fx-accent;
+}
+
+.date-picker-popup > * > .selected:hover { 
+    -fx-background-color: gray, -fx-accent;
+}
+
+
+
 /* -------------------------- STYLES FOR PAGINATION CONTROL ----- */
 .pagination {
     -fx-padding: 0;        
