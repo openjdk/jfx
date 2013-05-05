@@ -671,10 +671,8 @@ public abstract class TableRowSkinBase<T,
                 cell = createCell(col);
             }
             
-            if (skinnableIndex != cell.getIndex()) {
-                updateCell(cell, skinnable);
-                cell.updateIndex(skinnableIndex);
-            }
+            updateCell(cell, skinnable);
+            cell.updateIndex(skinnableIndex);
             cells.add(cell);
         }
 

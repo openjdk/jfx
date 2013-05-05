@@ -173,7 +173,6 @@ public class TreeViewMouseInputTest {
      * Tests for specific bug reports
      **************************************************************************/
     
-    @Ignore("Bug is not yet fixed")
     @Test public void test_rt29833_mouse_select_upwards() {
         sm.setSelectionMode(SelectionMode.MULTIPLE);
         

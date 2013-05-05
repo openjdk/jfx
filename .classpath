@@ -108,26 +108,6 @@
 		</attributes>
 	</classpathentry>
     <classpathentry kind="src" path="prism-j2d/src"/>
-    <classpathentry kind="src" path="prism-d3d/src"/>
-    <classpathentry kind="src" path="prism-d3d/build/gensrc">
-		<attributes>
-			<attribute name="optional" value="true"/>
-		</attributes>
-	</classpathentry>
-	<classpathentry kind="src" path="prism-es2/src"/>
-	<classpathentry kind="src" path="prism-es2-eglfb/src"/>
-	<classpathentry kind="src" path="prism-es2-eglx11/src"/>
-	<!--
-	<classpathentry kind="src" path="prism-es2-ios/src"/>
-	-->
-	<classpathentry kind="src" path="prism-es2-mac/src"/>
-	<classpathentry kind="src" path="prism-es2-win/src"/>
-	<classpathentry kind="src" path="prism-es2-x11/src"/>
-	<classpathentry kind="src" path="prism-es2/build/gensrc">
-		<attributes>
-			<attribute name="optional" value="true"/>
-		</attributes>
-	</classpathentry>
     <classpathentry kind="src" path="prism-sw/src"/>
     <classpathentry kind="src" path="prism-null/src"/>
     <classpathentry kind="src" path="prism-ps/src"/>
