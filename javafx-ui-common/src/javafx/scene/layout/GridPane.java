@@ -1780,7 +1780,7 @@ public class GridPane extends Pane {
 
         double available = extraHeight; // will be negative in shrinking case
         boolean handleRemainder = false;
-        int portion = 0;
+        double portion = 0;
 
         // RT-25684: We have to be careful that when subtracting change
         // that we don't jump right past 0 - this leads to an infinite
@@ -1792,7 +1792,8 @@ public class GridPane extends Pane {
                             computeMaxHeights();
         while (available != 0 && wasPositive == isPositive && adjusting.size() > 0) {
             if (!handleRemainder) {
-                portion = (int)available / adjusting.size(); // negative in shrinking case
+                portion = available > 0 ? Math.floor(available / adjusting.size()) :
+                        Math.ceil(available / adjusting.size()); // negative in shrinking case
             }
             if (portion != 0) {
                 for (Iterator<Integer> i = adjusting.iterator(); i.hasNext();) {
@@ -1934,7 +1935,7 @@ public class GridPane extends Pane {
 
         double available = extraWidth; // will be negative in shrinking case
         boolean handleRemainder = false;
-        int portion = 0;
+        double portion = 0;
 
         // RT-25684: We have to be careful that when subtracting change
         // that we don't jump right past 0 - this leads to an infinite
@@ -1946,7 +1947,8 @@ public class GridPane extends Pane {
                             computeMaxWidths();
         while (available != 0 && wasPositive == isPositive && adjusting.size() > 0) {
             if (!handleRemainder) {
-                portion = (int)available / adjusting.size(); // negative in shrinking case
+                portion = available > 0 ? Math.floor(available / adjusting.size()) :
+                        Math.ceil(available / adjusting.size()); // negative in shrinking case
             }
             if (portion != 0) {
                 for (Iterator<Integer> i = adjusting.iterator(); i.hasNext();) {
