@@ -339,7 +339,11 @@ final class LensWindow extends Window {
     //**************************************************************
     // wrappers so Application run loop can get where it needs to go
     protected void _notifyClose() {
+        //This event is called by LensWindowManager when a window needs to be
+        //closed, so this is a synthetic way to emulate platform window manager 
+        //window close event
         notifyClose();
+        close();
     }
 
     protected void _notifyDestroy() {

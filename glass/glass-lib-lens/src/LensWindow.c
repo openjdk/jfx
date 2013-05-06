@@ -36,6 +36,30 @@ LensResult glass_window_NativeWindow_release(JNIEnv *env,
                    window ? (signed int)window->id : -1,
                    window);
 
+    //Check to see if this window is an owner of other windows, if so close them
+    NativeWindow w = glass_window_list_getHead();
+    while (w) {
+
+        GLASS_LOG_FINER("checking if w(%i)->owner(%i[%p]) == window %i[%p]", 
+                        w->id,
+                        w->owner?w->owner->id:-1,
+                        w->owner,
+                        window->id,window);
+
+        if (w->owner == window) {
+
+            GLASS_LOG_FINE("Closing window %i[%p] - owned by closing window %i[%p]", 
+                           w->id,w,
+                           window->id,window);
+
+            GLASS_LOG_FINER("Sending CLOSE event to window %i[%p]", w->id, w);
+
+            glass_application_notifyWindowEvent(env,w,com_sun_glass_events_WindowEvent_CLOSE);
+
+        }
+        w = w->nextWindow;
+    }
+
     GLASS_LOG_FINE("Removing window from window's list");
     glass_window_list_remove(window);
 
