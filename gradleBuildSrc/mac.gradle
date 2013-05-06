@@ -41,7 +41,7 @@ MAC.jfxrtJarExcludes = [
     "com/sun/glass/ui/accessible/win",
     "com/sun/prism/d3d",
     "com/sun/prism/es2/gl/win",
-    "com/sun/prism/null3d",
+    //"com/sun/prism/null3d", // TODO This is used in dev builds but not the final sdk
     "com/sun/scenario/effect/impl/hw/d3d",
     
     "com/sun/glass/ui/gtk",
@@ -52,12 +52,10 @@ MAC.jfxrtJarExcludes = [
     "com/sun/prism/es2/gl/eglfb",
     "com/sun/prism/es2/gl/eglx11",
     "com/sun/prism/es2/gl/x11",
-    
-    "com/sun/glass/ui/swt", // SWT glass
-    
-    "javafx/embed/swing", // Swing Interop
-    
-    "javafx/embed/swt", // SWT Interop
+    "com/sun/prism/es2/EGL*",
+    "com/sun/prism/es2/IOSGL*",
+    "com/sun/prism/es2/WinGL*",
+    "com/sun/prism/es2/X11GL*",
 ]
 
 // Define settings for Mac compilation. This is much easier than Windows because we know what version we're
@@ -104,6 +102,7 @@ MAC.glass.compiler = compiler
 MAC.glass.ccFlags = [ccFlags].flatten()
 MAC.glass.linker = linker
 MAC.glass.linkFlags = [linkFlags].flatten()
+MAC.glass.lib = "glass"
 
 MAC.decora = [:]
 MAC.decora.compiler = compiler
@@ -116,6 +115,7 @@ MAC.decora.linker = linker
 MAC.decora.linkFlags = ["-dynamiclib",
         "-mmacosx-version-min=$MACOSX_MIN_VERSION",
         "-arch", "x86_64"].flatten()
+MAC.decora.lib = "decora-sse"
 
 MAC.prism = [:]
 MAC.prism.javahInclude = ["com/sun/prism/impl/**/*", "com/sun/prism/PresentableState*"]
@@ -130,6 +130,7 @@ MAC.prism.linker = linker
 MAC.prism.linkFlags = ["-dynamiclib",
         "-mmacosx-version-min=$MACOSX_MIN_VERSION",
         "-arch", "x86_64"].flatten()
+MAC.prism.lib = "prism-common"
 
 MAC.prismSW = [:]
 MAC.prismSW.javahInclude = ["com/sun/pisces/**/*"]
@@ -138,6 +139,7 @@ MAC.prismSW.compiler = "cc"
 MAC.prismSW.ccFlags = [MAC.prism.ccFlags].flatten()
 MAC.prismSW.linker = linker
 MAC.prismSW.linkFlags = [MAC.prism.linkFlags].flatten()
+MAC.prismSW.lib = "prism-sw"
 
 MAC.launcher = [:]
 MAC.launcher.compiler = compiler
@@ -154,6 +156,7 @@ MAC.iio.compiler = compiler
 MAC.iio.ccFlags = [ccFlags].flatten()
 MAC.iio.linker = linker
 MAC.iio.linkFlags = [linkFlags].flatten()
+MAC.iio.lib = "javafx-iio"
 
 MAC.prismES2 = [:]
 MAC.prismES2.javahInclude = ["com/sun/prism/es2/**/*"]
@@ -166,6 +169,7 @@ MAC.prismES2.compiler = compiler
 MAC.prismES2.ccFlags = ["-DMACOSX", "-DGRADLE_BUILD", ccFlags].flatten()
 MAC.prismES2.linker = linker
 MAC.prismES2.linkFlags = [linkFlags].flatten()
+MAC.prismES2.lib = "prism-es2"
 
 def closedDir = file("$projectDir/../rt-closed")
 MAC.font = [:]
@@ -180,3 +184,4 @@ MAC.font.compiler = compiler
 MAC.font.ccFlags = ["-DJFXFONT_PLUS", ccFlags].flatten()
 MAC.font.linker = linker
 MAC.font.linkFlags = [linkFlags].flatten()
+MAC.font.lib = "javafx-font"

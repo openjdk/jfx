@@ -65,6 +65,11 @@ ARMV6SF.jfxrtJarExcludes = [
     "javafx/embed/swing", // Swing Interop
     
     "javafx/embed/swt", // SWT Interop
+
+    "com/sun/prism/es2/MacGL*",
+    "com/sun/prism/es2/IOSGL*",
+    "com/sun/prism/es2/WinGL*",
+    "com/sun/prism/es2/X11GL*",
 ]
 
 def commonFlags = [
@@ -226,6 +231,7 @@ ARMV6SF.glass.javahInclude = [
     "com/sun/glass/events/**",
     "com/sun/glass/ui/*",
     "com/sun/glass/ui/lens/*"]
+ARMV6SF.glass.lib = "glass"
 
 ARMV6SF.glass.eglfb = [:]
 ARMV6SF.glass.eglfb.nativeSource = file("modules/graphics/src/main/native-glass/lens")
@@ -267,6 +273,7 @@ ARMV6SF.decora.compiler = COMPILER
 ARMV6SF.decora.ccFlags = extraCFlags
 ARMV6SF.decora.linker = LINKER
 ARMV6SF.decora.linkFlags = extraLFlags
+ARMV6SF.decora.lib = "decora-sse"
 
 ARMV6SF.prism = [:]
 ARMV6SF.prism.javahInclude = ["com/sun/prism/impl/**/*", "com/sun/prism/PresentableState*"]
@@ -275,6 +282,7 @@ ARMV6SF.prism.compiler = COMPILER
 ARMV6SF.prism.ccFlags = es2CFlags // or es2EglfbCFlags? or es2X11CFlags?
 ARMV6SF.prism.linker = LINKER
 ARMV6SF.prism.linkFlags = es2LFlags // or es2EglfbLFlags or es2X11LFlags?
+ARMV6SF.prism.lib = "prism-common"
 
 ARMV6SF.prismSW = [:]
 ARMV6SF.prismSW.javahInclude = ["com/sun/pisces/**/*"]
@@ -283,6 +291,7 @@ ARMV6SF.prismSW.compiler = COMPILER
 ARMV6SF.prismSW.ccFlags = prismSWCFlags
 ARMV6SF.prismSW.linker = LINKER
 ARMV6SF.prismSW.linkFlags = prismSWLFlags
+ARMV6SF.prismSW.lib = "prism-sw"
 
 ARMV6SF.iio = [:]
 ARMV6SF.iio.javahInclude = ["com/sun/javafx/iio/**/*"]
@@ -293,6 +302,7 @@ ARMV6SF.iio.compiler = COMPILER
 ARMV6SF.iio.ccFlags = iioCFlags
 ARMV6SF.iio.linker = LINKER
 ARMV6SF.iio.linkFlags = iioLFlags
+ARMV6SF.iio.lib = "javafx-iio"
 
 ARMV6SF.prismES2 = [:]
 ARMV6SF.prismES2.javahInclude = ["com/sun/prism/es2/**/*"]
@@ -305,6 +315,7 @@ ARMV6SF.prismES2.compiler = COMPILER
 ARMV6SF.prismES2.ccFlags = es2EglfbCFlags //es2CFlags or es2EglfbCFlags or es2X11CFlags?
 ARMV6SF.prismES2.linker = LINKER
 ARMV6SF.prismES2.linkFlags = es2EglfbLFlags //es2LFlags or es2EglfbLFlags or es2X11LFlags?
+ARMV6SF.prismES2.lib = "prism-es2"
 
 def closedDir = file("$projectDir/../rt-closed")
 ARMV6SF.font = [:]
@@ -319,3 +330,4 @@ ARMV6SF.font.compiler = COMPILER
 ARMV6SF.font.ccFlags = fontCFlags
 ARMV6SF.font.linker = LINKER
 ARMV6SF.font.linkFlags = fontLFlags
+ARMV6SF.font.lib = "javafx-font"

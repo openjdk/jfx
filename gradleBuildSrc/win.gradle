@@ -39,7 +39,8 @@ WIN.jfxrtJarExcludes = [
     "com/sun/glass/ui/mac",
     "com/sun/glass/ui/accessible/mac",
     "com/sun/prism/es2/gl/mac",
-    
+    //"com/sun/prism/null3d", // TODO This is used in dev builds but not the final sdk
+
     "com/sun/glass/ui/gtk",
     
     "com/sun/glass/ui/ios",
@@ -48,12 +49,10 @@ WIN.jfxrtJarExcludes = [
     "com/sun/prism/es2/gl/eglfb",
     "com/sun/prism/es2/gl/eglx11",
     "com/sun/prism/es2/gl/x11",
-    
-    "com/sun/glass/ui/swt", // SWT glass
-    
-    "javafx/embed/swing", // Swing Interop
-    
-    "javafx/embed/swt", // SWT Interop
+    "com/sun/prism/es2/EGL*",
+    "com/sun/prism/es2/IOSGL*",
+    "com/sun/prism/es2/MacGL*",
+    "com/sun/prism/es2/X11GL*",
 ]
 
 def ccFlags = ["/nologo", "/W3", "/EHsc", "/c",
@@ -145,12 +144,14 @@ WIN.glass.linkFlags = [linkFlags, "delayimp.lib", "gdi32.lib", "urlmon.lib", "Co
         "winmm.lib", "imm32.lib", "shell32.lib", "Uiautomationcore.lib", "dwmapi.lib",
         "/DELAYLOAD:user32.dll", "/DELAYLOAD:urlmon.dll", "/DELAYLOAD:winmm.dll", "/DELAYLOAD:shell32.dll",
         "/DELAYLOAD:Uiautomationcore.dll", "/DELAYLOAD:dwmapi.dll"].flatten()
+WIN.glass.lib = "glass"
 
 WIN.decora = [:]
 WIN.decora.compiler = compiler
 WIN.decora.ccFlags = [ccFlags].flatten()
 WIN.decora.linker = linker
 WIN.decora.linkFlags = [linkFlags].flatten()
+WIN.decora.lib = "decora-sse"
 
 WIN.prism = [:]
 WIN.prism.javahInclude = ["com/sun/prism/impl/**/*", "com/sun/prism/PresentableState*"]
@@ -159,6 +160,7 @@ WIN.prism.compiler = compiler
 WIN.prism.ccFlags = [ccFlags].flatten()
 WIN.prism.linker = linker
 WIN.prism.linkFlags = [linkFlags].flatten()
+WIN.prism.lib = "prism-common"
 
 WIN.prismSW = [:]
 WIN.prismSW.javahInclude = ["com/sun/pisces/**/*"]
@@ -167,6 +169,7 @@ WIN.prismSW.compiler = compiler
 WIN.prismSW.ccFlags = [ccFlags].flatten()
 WIN.prismSW.linker = linker
 WIN.prismSW.linkFlags = [linkFlags].flatten()
+WIN.prismSW.lib = "prism-sw"
 
 WIN.prismD3D = [:]
 WIN.prismD3D.javahInclude = ["com/sun/prism/d3d/**/*"]
@@ -177,6 +180,7 @@ WIN.prismD3D.compiler = compiler
 WIN.prismD3D.ccFlags = [ccFlags, "/Ibuild/headers/PrismD3D"].flatten()
 WIN.prismD3D.linker = linker
 WIN.prismD3D.linkFlags = [linkFlags, "user32.lib"].flatten()
+WIN.prismD3D.lib = "prism-d3d"
 
 WIN.launcher = [:]
 WIN.launcher.compiler = compiler
@@ -213,6 +217,7 @@ WIN.iio.compiler = compiler
 WIN.iio.ccFlags = [ccFlags].flatten()
 WIN.iio.linker = linker
 WIN.iio.linkFlags = [linkFlags].flatten()
+WIN.iio.lib = "javafx-iio"
 
 WIN.prismES2 = [:]
 WIN.prismES2.javahInclude = ["com/sun/prism/es2/**/*"]
@@ -225,6 +230,7 @@ WIN.prismES2.compiler = compiler
 WIN.prismES2.ccFlags = ["/Ob1", "/GF", "/Gy", "/GS", "/DWIN32", "/DGRADLE_BUILD", ccFlags].flatten()
 WIN.prismES2.linker = linker
 WIN.prismES2.linkFlags = [linkFlags, "/SUBSYSTEM:WINDOWS", "opengl32.lib", "gdi32.lib", "user32.lib", "kernel32.lib"].flatten()
+WIN.prismES2.lib = "prism-es2"
 
 def closedDir = file("$projectDir/../rt-closed")
 WIN.font = [:]
@@ -239,3 +245,4 @@ WIN.font.compiler = compiler
 WIN.font.ccFlags = ["/DJFXFONT_PLUS", ccFlags].flatten()
 WIN.font.linker = linker
 WIN.font.linkFlags = [linkFlags, "advapi32.lib", "gdi32.lib", "user32.lib"].flatten()
+WIN.font.lib = "javafx-font"

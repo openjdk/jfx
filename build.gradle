@@ -509,7 +509,7 @@ void addNative(Project project, String name) {
                 description = "Creates native dynamic library for $name for ${t.name}${capitalVariant != '' ? ' for variant ' + capitalVariant : ''}"
                 objectDir = nativeDir
                 linkParams.addAll(variantProperties.linkFlags)
-                lib = file("$libRootDir/${t.name}/${variant == '' ? library(name) : library(name + '-' + variant)}")
+                lib = file("$libRootDir/${t.name}/${variant == '' ? library(properties.lib) : library(properties.lib + '-' + variant)}")
                 linker = variantProperties.linker
             }
             nativeTask.dependsOn(linkTask)
@@ -877,7 +877,7 @@ project(":graphics") {
             description = "Creates native dynamic library for Decora SSE"
             objectDir = file("$nativeRootDir/$target")
             linkParams.addAll(properties.decora.linkFlags)
-            lib = file("$libRootDir/$t.name/${library('decora-sse')}")
+            lib = file("$libRootDir/$t.name/${library(properties.decora.lib)}")
             linker = properties.decora.linker
         }
 
@@ -1340,6 +1340,8 @@ compileTargets { t ->
              "modules/graphics/build/resources/jsl-decora",
              "modules/graphics/build/classes/jsl-prism",
              "modules/graphics/build/resources/jsl-prism");
+        if (COMPILE_SWING) from ("modules/swing/build/classes/main", "modules/swing/build/resources/main")
+        if (COMPILE_SWT) from ("modules/swt/build/classes/main", "modules/swt/build/resources/main")
         exclude("js/**/*", // er...
                 "PrismLoaderBackend*", // More decora stuff
                 "**/*.stg",    // any glue files for decora must be excluded
@@ -1361,14 +1363,18 @@ compileTargets { t ->
             // TODO instead of using copy everywhere, I probably want to use "sync" instead?
             // Copy all of the .dll / .so / .dylib native libraries into build/sdk/rt/lib/
             copy {
-                from("modules/graphics/build/libs/jsl-decora/${t.name}/${library('decora-sse')}",
-                     "modules/graphics/build/libs/prism/${t.name}/${library('prism-common')}",
-                     "modules/graphics/build/libs/prismSW/${t.name}/${library('prism-sw')}",
-                 "modules/graphics/build/libs/iio/${t.name}/${library('javafx-iio')}",
-                 "modules/graphics/build/libs/prismES2/${t.name}/${library('prism-es2')}",
-                     "modules/graphics/build/libs/glass/${t.name}/${library('glass')}");
-                if (IS_WINDOWS) {
-                    from ("modules/graphics/build/libs/prismD3D/${t.name}/${library('prism-d3d')}");
+                from("modules/graphics/build/libs/jsl-decora/${t.name}/${library(targetProperties.decora.lib)}",
+                     "modules/graphics/build/libs/prism/${t.name}/${library(targetProperties.prism.lib)}",
+                     "modules/graphics/build/libs/prismSW/${t.name}/${library(targetProperties.prismSW.lib)}",
+                     "modules/graphics/build/libs/iio/${t.name}/${library(targetProperties.iio.lib)}",
+                     "modules/graphics/build/libs/prismES2/${t.name}/${library(targetProperties.prismES2.lib)}");
+                def glassVariants = targetProperties.glass.containsKey("variants") ? targetProperties.glass.variants : [""];
+                glassVariants.each { glassVariant ->
+                    def glassVariantExt = glassVariant == ""? "" : "-" + glassVariant;
+                    from ("modules/graphics/build/libs/glass/${t.name}/${library(targetProperties.glass.lib + glassVariantExt)}");
+                }
+                 if (IS_WINDOWS) {
+                    from ("modules/graphics/build/libs/prismD3D/${t.name}/${library(targetProperties.prismD3D.lib)}");
                     rename("lib(.*).dll", "\$1.dll");
                 }
                 def libDest = targetProperties.libDest
@@ -1376,17 +1382,20 @@ compileTargets { t ->
             }
 
             // Create the javafx.properties file
-            final File javafxProperties = file("build/${t.name}-sdk/rt/lib/javafx.properties");
+            final File javafxProperties = file("build/${t.name}-sdk/rt/lib/javafx.properties")
+            javafxProperties.delete()
             javafxProperties << "javafx.runtime.version=$RAW_VERSION";
             // Include any properties that have been defined (most likely in
             // one of the various platform gradle files)
             if (targetProperties.hasProperty("javafxProperties")) {
+                javafxProperties << "\n"
                 javafxProperties << targetProperties.javafxProperties
             }
 
             // Embedded builds define this file as well
             if (targetProperties.hasProperty("javafxPlatformProperties")) {
-                final File javafxPlatformProperties = file("build/${t.name}-sdk/rt/lib/javafx.platform.properties");
+                final File javafxPlatformProperties = file("build/${t.name}-sdk/rt/lib/javafx.platform.properties")
+                javafxPlatformProperties.delete()
                 javafxPlatformProperties << targetProperties.javafxPlatformProperties
             }
 
@@ -1394,8 +1403,8 @@ compileTargets { t ->
             // the docs into the "right place" because for a cross-compile you only need one set of
             // docs but need to have a copy in each created sdk
             copy {
-                from("build/javadoc");
-                into("build/${t.name}-sdk/docs/api");
+                from "build/javadoc"
+                into "build/${t.name}-sdk/docs/api"
             }
 
             // Copy over the fxpackager and rename as ant-javafx.jar

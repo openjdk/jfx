@@ -46,7 +46,7 @@ LINUX.jfxrtJarExcludes = [
     "com/sun/glass/ui/accessible/win",
     "com/sun/prism/d3d",
     "com/sun/prism/es2/gl/win",
-    "com/sun/prism/null3d",
+    //"com/sun/prism/null3d", // TODO This is used in dev builds but not the final sdk
     "com/sun/scenario/effect/impl/hw/d3d",
     
     "com/sun/glass/events/mac",
@@ -60,8 +60,10 @@ LINUX.jfxrtJarExcludes = [
     "com/sun/prism/es2/gl/eglfb",
     "com/sun/prism/es2/gl/eglx11",
     "com/sun/prism/es2/gl/x11",
-    
-    "com/sun/glass/ui/swt", // SWT glass
+    "com/sun/prism/es2/EGL*",
+    "com/sun/prism/es2/IOSGL*",
+    "com/sun/prism/es2/WinGL*",
+    "com/sun/prism/es2/MacGL*",
 ]
 
 // A set of common parameters to use for both compiling and linking
@@ -113,12 +115,14 @@ LINUX.glass.compiler = compiler
 LINUX.glass.ccFlags = [ccFlags].flatten()
 LINUX.glass.linker = linker
 LINUX.glass.linkFlags = [linkFlags].flatten()
+LINUX.glass.lib = "glass"
 
 LINUX.decora = [:]
 LINUX.decora.compiler = compiler
 LINUX.decora.ccFlags = [ccFlags, "-ffast-math"].flatten()
 LINUX.decora.linker = linker
 LINUX.decora.linkFlags = [linkFlags].flatten()
+LINUX.decora.lib = "decora-sse"
 
 LINUX.prism = [:]
 LINUX.prism.javahInclude = ["com/sun/prism/impl/**/*", "com/sun/prism/PresentableState*"]
@@ -127,6 +131,7 @@ LINUX.prism.compiler = "cc"
 LINUX.prism.ccFlags = [ccFlags].flatten()
 LINUX.prism.linker = linker
 LINUX.prism.linkFlags = [linkFlags].flatten()
+LINUX.prism.lib = "prism-common"
 
 LINUX.prismSW = [:]
 LINUX.prismSW.javahInclude = ["com/sun/pisces/**/*"]
@@ -135,6 +140,7 @@ LINUX.prismSW.compiler = "cc"
 LINUX.prismSW.ccFlags = [ccFlags].flatten()
 LINUX.prismSW.linker = linker
 LINUX.prismSW.linkFlags = [linkFlags].flatten()
+LINUX.prismSW.lib = "prism-sw"
 
 LINUX.launcher = [:]
 LINUX.launcher.compiler = compiler
@@ -151,6 +157,7 @@ LINUX.iio.compiler = compiler
 LINUX.iio.ccFlags = [ccFlags].flatten()
 LINUX.iio.linker = linker
 LINUX.iio.linkFlags = [linkFlags].flatten()
+LINUX.iio.lib = "javafx-iio"
 
 LINUX.prismES2 = [:]
 LINUX.prismES2.javahInclude = ["com/sun/prism/es2/**/*"]
@@ -163,6 +170,7 @@ LINUX.prismES2.compiler = compiler
 LINUX.prismES2.ccFlags = ["-DLINUX", "-DGRADLE_BUILD", ccFlags].flatten()
 LINUX.prismES2.linker = linker
 LINUX.prismES2.linkFlags = [linkFlags].flatten()
+LINUX.prismES2.lib = "prism-es2"
 
 def closedDir = file("$projectDir/../rt-closed")
 LINUX.font = [:]
@@ -177,3 +185,4 @@ LINUX.font.compiler = compiler
 LINUX.font.ccFlags = ["-DJFXFONT_PLUS", ccFlags].flatten()
 LINUX.font.linker = linker
 LINUX.font.linkFlags = [linkFlags].flatten()
+LINUX.font.lib = "javafx-font"
