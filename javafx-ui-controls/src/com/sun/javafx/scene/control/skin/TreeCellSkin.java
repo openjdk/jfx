@@ -254,9 +254,14 @@ public class TreeCellSkin<T> extends CellSkinBase<TreeCell<T>, TreeCellBehavior<
     }
     
     @Override protected double computePrefHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
-        double pref = super.computePrefHeight(width, topInset, rightInset, bottomInset, leftInset);
-        Node d = getSkinnable().getDisclosureNode();
-        return (d == null) ? pref : Math.max(d.prefHeight(-1), pref);
+        final TreeCell cell = getSkinnable();
+        
+        final double pref = super.computePrefHeight(width, topInset, rightInset, bottomInset, leftInset);
+        final Node d = cell.getDisclosureNode();
+        final double prefHeight = (d == null) ? pref : Math.max(d.prefHeight(-1), pref);
+        
+        // RT-30212: TreeCell does not honor minSize of cells
+        return Math.max(cell.getMinHeight(), prefHeight);
     }
     
     @Override protected double computePrefWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
