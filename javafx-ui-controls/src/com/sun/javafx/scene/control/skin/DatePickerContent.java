@@ -26,7 +26,7 @@
 package com.sun.javafx.scene.control.skin;
 
 import java.time.LocalDate;
-import java.time.format.DateTimeFormatSymbols;
+// import java.time.format.DateTimeFormatSymbols;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
 import java.time.chrono.Chronology;
@@ -348,7 +348,7 @@ yearSpinner.setFillHeight(false);
                 // such as when Thai numerals are required.
                 String cellText =
                     weekNumberFormatter.withLocale(locale)
-                                       .withSymbols(DateTimeFormatSymbols.of(locale))
+//                                        .withSymbols(DateTimeFormatSymbols.of(locale))
                                        .format(date);
                 weekNumberCells.get(i).setText(cellText);
             }
@@ -401,7 +401,7 @@ yearSpinner.setFillHeight(false);
             String cellText =
                 dayCellFormatter.withLocale(locale)
                                 .withChronology(chrono)
-                                .withSymbols(DateTimeFormatSymbols.of(locale))
+//                                 .withSymbols(DateTimeFormatSymbols.of(locale))
                                 .format(cDate);
             dayCell.setText(cellText);
 
@@ -481,7 +481,7 @@ yearSpinner.setFillHeight(false);
         // Fixme: Format Japanese era names with Japanese text.
         String str = formatter.withLocale(getLocale())
                               .withChronology(getChronology())
-                              .withSymbols(DateTimeFormatSymbols.of(getLocale()))
+//                               .withSymbols(DateTimeFormatSymbols.of(getLocale()))
                               .format(cDate);
 
         return str;
