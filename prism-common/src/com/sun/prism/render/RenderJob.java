@@ -47,7 +47,11 @@ public class RenderJob extends FutureTask {
         super(pen, null);
         setCompletionListener(cl);
     }
-
+    
+    public CompletionListener getCompletionListener() {
+        return listener;
+    }
+    
     public void setCompletionListener(CompletionListener cl) {
         listener = cl;
     }

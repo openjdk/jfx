@@ -324,15 +324,16 @@ final class PaintCollector implements CompletionListener {
      * Run a full pulse and repaint before returning.
      */
     final void liveRepaintRenderJob(final ViewScene scene) {
-        ViewPainter viewPainter = scene.getPainter();
-        ((QuantumToolkit)QuantumToolkit.getToolkit()).pulse(false);
+         ViewPainter viewPainter = scene.getPainter();
+         QuantumToolkit quantum = (QuantumToolkit)QuantumToolkit.getToolkit();
+         quantum.pulse(false);
          final CountDownLatch latch = new CountDownLatch(1);
          boolean locked =  AbstractPainter.renderLock.isHeldByCurrentThread();
          if (locked) {
              AbstractPainter.renderLock.unlock();
          }
          try {
-             renderer.submit(new RenderJob(viewPainter, new CompletionListener() {
+             quantum.addRenderJob(new RenderJob(viewPainter, new CompletionListener() {
                  @Override public void done(final RenderJob rj) {
                      latch.countDown();
                  }

@@ -247,6 +247,28 @@ public final class QuantumToolkit extends Toolkit implements ToolkitInterface {
                     String result = PlatformUtil.isMac() && isSWT ? "true" : "false";
                     return result.equals(System.getProperty("javafx.draw.in.paint", "true"));}
             });
+    
+    private static boolean singleThreaded =
+            AccessController.doPrivileged(new PrivilegedAction<Boolean>() {
+                @Override public Boolean run() {
+                    Boolean result = Boolean.getBoolean("quantum.singlethreaded");
+                    if (/*verbose &&*/ result) {
+                        System.out.println("Warning: Single GUI Threadiong is enabled, FPS should be slower");
+                    }
+                    return result;
+                }
+            });
+    
+    private static boolean noRenderJobs =
+            AccessController.doPrivileged(new PrivilegedAction<Boolean>() {
+                @Override public Boolean run() {
+                    Boolean result = Boolean.getBoolean("quantum.norenderjobs");
+                    if (/*verbose &&*/ result) {
+                        System.out.println("Warning: Quantum will not submit render jobs, nothing should draw");
+                    }
+                    return result;
+                }
+            });
 
     private AtomicBoolean           toolkitRunning = new AtomicBoolean(false);
     private AtomicBoolean           animationRunning = new AtomicBoolean(false);
@@ -499,6 +521,26 @@ public final class QuantumToolkit extends Toolkit implements ToolkitInterface {
     /* com.sun.javafx.tk.ToolkitInterface */
 
     @Override public Future addRenderJob(RenderJob r) {
+        // Do not run any render jobs (this is for benchmarking only)
+        if (noRenderJobs) {
+            CompletionListener listener = r.getCompletionListener();
+            if (r instanceof PaintRenderJob) {
+                ((ViewScene)(((PaintRenderJob)r).getScene())).setPainting(false);
+            }
+            if (listener != null) {
+                try {
+                    listener.done(r);
+                } catch (Throwable th) {
+                    th.printStackTrace();
+                }
+            }
+            return null;
+        }
+        // Run the render job in the UI thread (this is for benchmarking only)
+        if (singleThreaded) {
+            r.run();
+            return null;
+        }
         return (renderer.submitRenderJob(r));
     }
 
