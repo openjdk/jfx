@@ -121,6 +121,7 @@ import java.util.Arrays;
 import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import javafx.application.Platform;
+import javafx.application.ConditionalFeature;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ObjectPropertyBase;
 import javafx.beans.property.ReadOnlyDoubleProperty;
@@ -331,10 +332,19 @@ public class Scene implements EventTarget {
         // TODO: 3D - Support scene anti-aliasing using MSAA.
         this(root, width, height, Color.WHITE, depthBuffer);
 
-        try {
-            throw new UnsupportedOperationException("Unsupported Scene constructor --- *** antiAliasing ***");
-        } catch (UnsupportedOperationException ex) {
-            ex.printStackTrace();
+        // NOTE: this block will be removed once implement anti-aliasing
+        if (antiAliasing) {
+            String logname = Scene.class.getName();
+            PlatformLogger.getLogger(logname).warning("3D anti-aliasing is "
+                    + "not supported yet.");
+        }
+
+        if ((depthBuffer || antiAliasing)
+                && !Platform.isSupported(ConditionalFeature.SCENE3D)) {
+            String logname = Scene.class.getName();
+            PlatformLogger.getLogger(logname).warning("System can't support "
+                    + "ConditionalFeature.SCENE3D");
+            // TODO: 3D - ignore depthBuffer and antiAliasing at rendering time
         }
     }
 
@@ -345,6 +355,12 @@ public class Scene implements EventTarget {
             throw new NullPointerException("Root cannot be null");
         }
 
+        if (depthBuffer && !Platform.isSupported(ConditionalFeature.SCENE3D)) {
+            String logname = Scene.class.getName();
+            PlatformLogger.getLogger(logname).warning("System can't support "
+                    + "ConditionalFeature.SCENE3D");
+        }
+        
         Toolkit.getToolkit().checkFxUserThread();
         setRoot(root);
         init(width, height, depthBuffer);
@@ -723,7 +739,7 @@ public class Scene implements EventTarget {
 
         impl_setAllowPGAccess(true);
 
-        impl_peer = windowPeer.createTKScene(isDepthBuffer());
+        impl_peer = windowPeer.createTKScene(isDepthBufferInteral());
         PerformanceTracker.logEvent("Scene.initPeer TKScene created");
         impl_peer.setSecurityContext(acc);
         impl_peer.setTKSceneListener(new ScenePeerListener());
@@ -944,6 +960,12 @@ public class Scene implements EventTarget {
                 protected void invalidated() {
                     Camera _value = get();
                     if (_value != null) {
+                        if (_value instanceof PerspectiveCamera
+                                && !Platform.isSupported(ConditionalFeature.SCENE3D)) {
+                            String logname = Scene.class.getName();
+                            PlatformLogger.getLogger(logname).warning("System can't support "
+                                    + "ConditionalFeature.SCENE3D");
+                        }
                         // Illegal value if it belongs to other scene or any subscene
                         if ((_value.getScene() != null && _value.getScene() != Scene.this)
                                 || _value.getSubScene() != null) {
@@ -977,7 +999,9 @@ public class Scene implements EventTarget {
 
     Camera getEffectiveCamera() {
         final Camera cam = getCamera();
-        if (cam == null) {
+        if (cam == null
+                || (cam instanceof PerspectiveCamera
+                && !Platform.isSupported(ConditionalFeature.SCENE3D))) {
             if (defaultCamera == null) {
                 defaultCamera = new ParallelCamera();
                 defaultCamera.setOwnerScene(this);
@@ -1238,7 +1262,7 @@ public class Scene implements EventTarget {
         BaseTransform transform = BaseTransform.IDENTITY_TRANSFORM;
 
         return doSnapshot(this, 0, 0, w, h,
-                getRoot(), transform, isDepthBuffer(),
+                getRoot(), transform, isDepthBufferInteral(),
                 getFill(), getEffectiveCamera(), img);
     }
 
@@ -1476,6 +1500,13 @@ public class Scene implements EventTarget {
      * @return the depth buffer attribute.
      */
     public final boolean isDepthBuffer() {
+        return depthBuffer;
+    }
+    
+    boolean isDepthBufferInteral() {
+        if (!Platform.isSupported(ConditionalFeature.SCENE3D)) {
+            return false;
+        }
         return depthBuffer;
     }
 

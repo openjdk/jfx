@@ -29,6 +29,8 @@ import com.sun.javafx.geom.PickRay;
 import com.sun.javafx.geom.Vec3d;
 import com.sun.javafx.scene.NodeAccess;
 import com.sun.javafx.scene.SubSceneAccess;
+import javafx.application.ConditionalFeature;
+import javafx.application.Platform;
 import javafx.geometry.Point2D;
 import javafx.geometry.Point3D;
 import javafx.scene.Node;
@@ -184,9 +186,9 @@ public class PickResultChooser {
         final NodeAccess na = NodeAccess.getNodeAccess();
         final SubSceneAccess sa = SubSceneAccess.getSubSceneAccess();
         final SubScene subScene = na.getSubScene(depthTestNode);
-        final boolean hasDepthBuffer = subScene != null
-                ? sa.isDepthBuffer(subScene)
-                : depthTestNode.getScene().isDepthBuffer();
+        final boolean hasDepthBuffer = Platform.isSupported(ConditionalFeature.SCENE3D)
+                ? (subScene != null ? sa.isDepthBuffer(subScene) : depthTestNode.getScene().isDepthBuffer())
+                : false;
         final boolean hasDepthTest = 
                 hasDepthBuffer && na.isDerivedDepthTest(depthTestNode);
 

@@ -128,6 +128,7 @@ import com.sun.scenario.animation.AbstractMasterTimer;
 import com.sun.scenario.effect.Blend.Mode;
 import com.sun.scenario.effect.FilterContext;
 import com.sun.scenario.effect.Filterable;
+import javafx.application.ConditionalFeature;
 
 /**
  * A Toolkit implementation for use with Testing.
@@ -451,6 +452,13 @@ public class StubToolkit extends Toolkit {
         return new StubExternalNode();
     }
 
+    @Override public boolean isSupported(ConditionalFeature feature) {
+        if (feature == ConditionalFeature.SCENE3D) {
+            return true;
+        }
+        return false;
+    }
+    
     /*
      * additional testing functions
      */

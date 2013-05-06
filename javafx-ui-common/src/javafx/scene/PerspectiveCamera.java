@@ -33,10 +33,13 @@ import com.sun.javafx.scene.DirtyBits;
 import com.sun.javafx.sg.PGNode;
 import com.sun.javafx.sg.PGPerspectiveCamera;
 import com.sun.javafx.tk.Toolkit;
+import javafx.application.ConditionalFeature;
+import javafx.application.Platform;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleDoubleProperty;
+import sun.util.logging.PlatformLogger;
 
 
 
@@ -51,7 +54,11 @@ import javafx.beans.property.SimpleDoubleProperty;
  * origin in the upper left corner of the panel with the Y-axis pointing
  * down and the Z axis pointing away from the viewer (into the screen). The
  * units are in pixel coordinates at the projection plane (Z=0).
- *
+ * 
+ * Note that this is a conditional feature. See
+ * {@link javafx.application.ConditionalFeature#SCENE3D ConditionalFeature.SCENE3D}
+ * for more information.
+ * 
  * @since JavaFX 1.3
  */
 public  class PerspectiveCamera extends Camera {   
@@ -126,6 +133,7 @@ public  class PerspectiveCamera extends Camera {
     }
 
     public PerspectiveCamera() {
+        this(false);
     }
 
    /**
@@ -136,6 +144,11 @@ public  class PerspectiveCamera extends Camera {
     * @since JavaFX 8
     */
     public PerspectiveCamera(boolean fixedEyePosition) {
+        if (!Platform.isSupported(ConditionalFeature.SCENE3D)) {
+            String logname = PerspectiveCamera.class.getName();
+            PlatformLogger.getLogger(logname).warning("System can't support "
+                    + "ConditionalFeature.SCENE3D");
+        }
         this.fixedEyePosition = fixedEyePosition;
     }
 
