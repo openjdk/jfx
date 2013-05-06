@@ -31,7 +31,7 @@ import java.time.LocalDate;
 import java.time.chrono.Chronology;
 import java.time.chrono.ChronoLocalDate;
 import java.time.chrono.IsoChronology;
-import java.time.format.DateTimeFormatSymbols;
+// import java.time.format.DateTimeFormatSymbols;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.time.format.FormatStyle;
@@ -344,8 +344,8 @@ public class DatePicker extends ComboBoxBase<LocalDate> {
                 DateTimeFormatter dateFormatter =
                     DateTimeFormatter.ofLocalizedDate(FormatStyle.SHORT)
                                      .withLocale(locale)
-                                     .withChronology(chrono)
-                                     .withSymbols(DateTimeFormatSymbols.of(locale));
+                                     .withChronology(chrono);
+//                                      .withSymbols(DateTimeFormatSymbols.of(locale));
 
                 String pattern = getPattern();
                 //System.err.println("pattern = "+pattern);
@@ -384,8 +384,8 @@ public class DatePicker extends ComboBoxBase<LocalDate> {
                 DateTimeFormatter df =
                     DateTimeFormatter.ofLocalizedDate(FormatStyle.SHORT)
                                      .withLocale(locale)
-                                     .withChronology(chrono)
-                                     .withSymbols(DateTimeFormatSymbols.of(locale));
+                                     .withChronology(chrono);
+//                                      .withSymbols(DateTimeFormatSymbols.of(locale));
                 TemporalAccessor temporal = df.parse(text);
                 ChronoLocalDate cDate = chrono.date(temporal);
                 return LocalDate.from(cDate);
