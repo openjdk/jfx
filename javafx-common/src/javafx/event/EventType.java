@@ -59,7 +59,7 @@ import java.util.WeakHashMap;
 public final class EventType<T extends Event> implements Serializable{
     
     /**
-     * The root event type. All other event types are eighter direct or
+     * The root event type. All other event types are either direct or
      * indirect sub types of it. It is also the only event type which
      * has its super event type set to {@code null}.
      */
