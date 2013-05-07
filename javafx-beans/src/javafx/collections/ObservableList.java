@@ -26,13 +26,17 @@
 package javafx.collections;
 
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.List;
+import java.util.function.Predicate;
 
 import javafx.beans.Observable;
+import javafx.collections.transformation.FilteredList;
+import javafx.collections.transformation.SortedList;
 
 /**
  * A list that allows listeners to track changes when they occur.
- * 
+ *
  * @see ListChangeListener
  * @see ListChangeListener.Change
  * @param <E> the list element type
@@ -73,27 +77,56 @@ public interface ObservableList<E> extends List<E>, Observable {
      * @throws NullPointerException if the specified collection contains one or more null elements
      */
     public boolean setAll(Collection<? extends E> col);
-    
+
     /**
      * A convenient method for var-arg usage of removaAll method.
      * @param elements the elements to be removed
      * @return true if list changed as a result of this call
      */
     public boolean removeAll(E... elements);
-    
+
     /**
      * A convenient method for var-arg usage of retain method.
      * @param elements the elements to be retained
      * @return true if list changed as a result of this call
      */
     public boolean retainAll(E... elements);
-    
+
     /**
      * Basically a shortcut to sublist(from, to).clear()
      * As this is a common operation, ObservableList has this method for convenient usage.
      * @param from the start of the range to remove (inclusive)
      * @param to the end of the range to remove (exclusive)
      * @throws IndexOutOfBoundsException if an illegal range is provided
-     */ 
+     */
     public void remove(int from, int to);
+
+    /**
+     * Creates a {@link FilteredList} wrapper of this list using
+     * the specified predicate.
+     * @param predicate the predicate to use
+     * @return new {@code FilteredList}
+     */
+    public default FilteredList<E> filtered(Predicate<E> predicate) {
+        return new FilteredList<>(this, predicate);
+    }
+
+    /**
+     * Creates a {@link SortedList} wrapper of this list using
+     * the specified comparator.
+     * @param comparator the comparator to use or null for the natural order
+     * @return new {@code SortedList}
+     */
+    public default SortedList<E> sorted(Comparator<E> comparator) {
+        return new SortedList<>(this, comparator);
+    }
+
+    /**
+     * Creates a {@link SortedList} wrapper of this list with the natural
+     * ordering.
+     * @return new {@code SortedList}
+     */
+    public default SortedList<E> sorted() {
+        return sorted(null);
+    }
 }

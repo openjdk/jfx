@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2012, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,15 +22,13 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
+package javafx.collections.transformation;
 
-package com.sun.javafx.collections.transformation;
-
-import javafx.collections.ObservableListBase;
-import javafx.collections.ListChangeListener;
 import javafx.collections.ListChangeListener.Change;
-import javafx.collections.ObservableList;
-
 import java.util.List;
+import javafx.collections.ListChangeListener;
+import javafx.collections.ObservableList;
+import javafx.collections.ObservableListBase;
 import javafx.collections.WeakListChangeListener;
 
 /**
@@ -49,12 +47,11 @@ public abstract class TransformationList<E, F> extends ObservableListBase<E> imp
      * Contains the source list of this transformation list.
      * This is never null and should be used to directly access source list content
      */
-    protected List<? extends F> source;
+    private ObservableList<? extends F> source;
     /**
      * This field contains the result of expression "source instanceof {@link javafx.collections.ObservableList}".
      * If this is true, it is possible to do transforms online.
      */
-    protected final boolean observable;
     private ListChangeListener<F> sourceListener;
 
     /**
@@ -62,50 +59,50 @@ public abstract class TransformationList<E, F> extends ObservableListBase<E> imp
      * @param source the wrapped list 
      */
     @SuppressWarnings("unchecked")
-    protected TransformationList(List<? extends F> source) {
+    protected TransformationList(ObservableList<? extends F> source) {
         if (source == null) {
             throw new NullPointerException();
         }
         this.source = source;
-        if (source instanceof ObservableList) {
-            observable = true;
-            ((ObservableList<F>)source).addListener(new WeakListChangeListener<F>(getListener()));
-        } else {
-            observable = false;
-        }
+        source.addListener(new WeakListChangeListener<>(getListener()));
     }
 
     /**
      * The source list specified in the constructor of this transformation list.
      * @return The List that is directly wrapped by this TransformationList
      */
-    public final List<? extends F> getDirectSource() {
+    public final ObservableList<? extends F> getSource() {
         return source;
     }
-
+    
     /**
-     * The first non-transformation list in the chain.
-     * @return the first wrapped list in the chain of TransformationLists that's
-     * not a TransformationList
-     * @see #getDirectSource() 
+     * Checks whether the provided list is in the chain under this
+     * {@code TransformationList}.
+     * 
+     * This means the list is either the direct source as returned by 
+     * {@link #getSource()} or the direct source is a {@code TransformationList},
+     * and the list is in it's transformation chain.
+     * @param list the list to check
+     * @return true if the list is in the transformation chain as specified above.
      */
-    public final List<?> getBottomMostSource() {
+    public final boolean isInTransformationChain(ObservableList<?> list) {
+        if (source == list) {
+            return true;
+        }
         List<?> currentSource = source;
         while(currentSource instanceof TransformationList) {
             currentSource = ((TransformationList)currentSource).source;
+            if (currentSource == list) {
+                return true;
+            }
         }
-        return currentSource;
+        return false;
     }
 
     private ListChangeListener<F> getListener() {
         if (sourceListener == null) {
-            sourceListener = new ListChangeListener<F>() {
-
-                @Override
-                public void onChanged(Change<? extends F> c) {
-                    TransformationList.this.onSourceChanged(c);
-                }
-
+            sourceListener = (Change<? extends F> c) -> {
+                TransformationList.this.sourceChanged(c);
             };
         }
         return sourceListener;
@@ -115,32 +112,39 @@ public abstract class TransformationList<E, F> extends ObservableListBase<E> imp
      * Called when a change from the source is triggered.
      * @param c the change
      */
-    protected abstract void onSourceChanged(Change<? extends F> c);
+    protected abstract void sourceChanged(Change<? extends F> c);
     
     /**
      * Maps the index of this list's element to an index in the direct source list.
-     * @param index the original index
-     * @return the index of the element in the original list. 
-     * @see #getDirectSource() 
+     * @param index the index in this list
+     * @return the index of the element's origin in the source list
+     * @see #getSource() 
      */
     public abstract int getSourceIndex(int index);
     
     /**
-     * Maps the index of list's element to an index in the bottom-most source list.
-     * @param index the original index
-     * @return the index of the element in the original list.
-     * @see #getBottomMostSource() 
-     * @see #getSourceIndex(int) 
+     * Maps the index of this list's element to an index of the provided {@code list}.
+     * 
+     * The {@code list} must be in the transformation chain.
+     * 
+     * @param list a list from the transformation chain
+     * @param index the index of an element in this list
+     * @return the index of the element's origin in the provided list
+     * @see #isInTransformationChain(javafx.collections.ObservableList) 
      */
-    public final int getBottomMostSourceIndex(int index) {
+    public final int getSourceIndexFor(ObservableList<?> list, int index) {
+        if (!isInTransformationChain(list)) {
+            throw new IllegalArgumentException("Provided list is not in the transformation chain of this"
+                    + "transformation list");
+        }
         List<?> currentSource = source;
         int idx = getSourceIndex(index);
-        while(currentSource instanceof TransformationList) {
+        while(currentSource != list && currentSource instanceof TransformationList) {
             final TransformationList tSource = (TransformationList)currentSource;
             idx = tSource.getSourceIndex(idx);
             currentSource = tSource.source;
         }
         return idx;
     }
-
+    
 }
