@@ -725,7 +725,7 @@ project(":graphics") {
         // TODO need to hook this up to be executed only if PassThroughVS.h is missing or PassThroughVS.hlsl is changed
         task generateD3DHeaders(group: "Build") {
             enabled = IS_WINDOWS
-            dependsOn javahWinPrismD3d
+            dependsOn javahWinPrismD3D
             description = "Generate headers by compiling hlsl files"
             doLast {
                 mkdir file("$buildDir/headers/PrismD3D/hlsl")
@@ -798,7 +798,7 @@ project(":graphics") {
             }
         }
 
-        ccWinPrismD3d.dependsOn generateD3DHeaders
+        ccWinPrismD3D.dependsOn generateD3DHeaders
     }
 
     // The Decora and Prism JSL files have to be generated in a very specific set of steps.
