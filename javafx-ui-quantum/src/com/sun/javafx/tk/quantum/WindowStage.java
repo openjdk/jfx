@@ -202,8 +202,14 @@ class WindowStage extends GlassStage {
         } else {
             AbstractPainter.renderLock.lock();
             try {
-                platformWindow.setView(null);
-                if (oldScene != null) oldScene.updateSceneState();
+                // platformWindow can be null here, if this window is owned,
+                // and its owner is being closed.
+                if (platformWindow != null) {
+                    platformWindow.setView(null);
+                }
+                if (oldScene != null) {
+                    oldScene.updateSceneState();
+                }
             } finally {
                 AbstractPainter.renderLock.unlock();
             }
@@ -384,7 +390,11 @@ class WindowStage extends GlassStage {
         }
         try {
             AbstractPainter.renderLock.lock();
-            platformWindow.setVisible(visible);
+            // platformWindow can be null here, if this window is owned,
+            // and its owner is being closed.
+            if (platformWindow != null) {
+                platformWindow.setVisible(visible);
+            }
             super.setVisible(visible);
         } finally {
             AbstractPainter.renderLock.unlock();
@@ -472,10 +482,14 @@ class WindowStage extends GlassStage {
     private boolean fullScreenFromUserEvent = false;
 
     private void applyFullScreen() {
+        if (platformWindow == null) {
+            // applyFullScreen() can be called from setVisible(false), while the
+            // platformWindow has already been destroyed.
+            return;
+        }
         View v = platformWindow.getView();
         if (isVisible() && v != null && v.isInFullscreen() != isInFullScreen) {
             if (isInFullScreen) {
-
                 // Check whether app is full screen trusted or flag is set
                 // indicating that the fullscreen request came from an input
                 // event handler.

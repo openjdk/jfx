@@ -84,6 +84,13 @@ public class WindowPeerListener implements TKStageListener {
 
     @Override
     public void closed() {
+        if (window.isShowing()) {
+            // This is a notification to an owned window, which is being
+            // closed as a result of closing its owner. The owned window
+            // can be a modal dialog, so we call hide() to exit its nested
+            // event loop and unblock other windows.
+            window.hide();
+        }
     }
 
     @Override public void focusUngrab() {
