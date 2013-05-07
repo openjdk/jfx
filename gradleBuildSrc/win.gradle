@@ -249,3 +249,15 @@ WIN.font.ccFlags = ["/DJFXFONT_PLUS", ccFlags].flatten()
 WIN.font.linker = linker
 WIN.font.linkFlags = [linkFlags, "advapi32.lib", "gdi32.lib", "user32.lib"].flatten()
 WIN.font.lib = "javafx-font"
+
+WIN.fontT2K = [:]
+WIN.fontT2K.javahInclude = ["com/sun/javafx/font/t2k/**/*"]
+WIN.fontT2K.nativeSource = [
+        file("$closedDir/javafx-font-t2k-native/src"),
+        file("$closedDir/javafx-font-t2k-native/src/layout"),
+        file("$closedDir/javafx-font-t2k-native/src/layoutfx")]
+WIN.fontT2K.compiler = compiler
+WIN.fontT2K.ccFlags = ["/DJFXFONT_PLUS", ccFlags].flatten()
+WIN.fontT2K.linker = linker
+WIN.fontT2K.linkFlags = [linkFlags, "advapi32.lib", "gdi32.lib", "user32.lib"].flatten()
+WIN.fontT2K.lib = "javafx-font-t2k"
