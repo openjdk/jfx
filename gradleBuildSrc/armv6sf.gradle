@@ -214,13 +214,7 @@ eglx11.com.sun.javafx.scene.control.skin.FXVK.cache=true
 gtk.glass.platform=gtk
 gtk.prism.order=sw
 gtk.com.sun.javafx.isEmbedded=true
-gtk.com.sun.javafx.scene.control.skin.FXVK.cache=true
-# temp workaround RT-24955
-eglfb.prism.disableRegionCaching=true
-directfb.prism.disableRegionCaching=true
-fb.prism.disableRegionCaching=true
-eglx11.prism.disableRegionCaching=true
-x11.prism.disableRegionCaching=true"""
+gtk.com.sun.javafx.scene.control.skin.FXVK.cache=true"""
 
 def COMPILER = file("$compilerHome/bin/arm-none-linux-gnueabi-gcc").getAbsolutePath()
 def LINKER = file("$compilerHome/bin/arm-none-linux-gnueabi-g++").getAbsolutePath()
@@ -322,10 +316,7 @@ ARMV6SF.font = [:]
 ARMV6SF.font.javahInclude = [
         "com/sun/javafx/font/**/*",
         "com/sun/javafx/text/**/*"]
-ARMV6SF.font.nativeSource = [
-    file("$closedDir/javafx-font-native/src"),
-    file("$closedDir/javafx-font-native/src/layout"),
-    file("$closedDir/javafx-font-native/src/layoutfx")]
+ARMV6SF.font.nativeSource = [file("$closedDir/javafx-font-native/src")]
 ARMV6SF.font.compiler = COMPILER
 ARMV6SF.font.ccFlags = fontCFlags
 ARMV6SF.font.linker = LINKER

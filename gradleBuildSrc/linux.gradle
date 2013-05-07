@@ -177,11 +177,8 @@ LINUX.font = [:]
 LINUX.font.javahInclude = [
         "com/sun/javafx/font/**/*",
         "com/sun/javafx/text/**/*"]
-LINUX.font.nativeSource = [
-    file("$closedDir/javafx-font-native/src"),
-    file("$closedDir/javafx-font-native/src/layout"),
-    file("$closedDir/javafx-font-native/src/layoutfx")]
 LINUX.font.compiler = compiler
+LINUX.font.nativeSource = [file("$closedDir/javafx-font-native/src")]
 LINUX.font.ccFlags = ["-DJFXFONT_PLUS", ccFlags].flatten()
 LINUX.font.linker = linker
 LINUX.font.linkFlags = [linkFlags].flatten()
