@@ -1449,7 +1449,11 @@ public final class QuantumToolkit extends Toolkit implements ToolkitInterface {
         }
 
         @Override
-        public boolean getError() { return image == null; }
+        public Exception getException() {
+            return (image == null)
+                    ? new IllegalStateException("Unitialized image")
+                    : null;
+        }
         @Override
         public int getFrameCount() { return 1; }
         @Override

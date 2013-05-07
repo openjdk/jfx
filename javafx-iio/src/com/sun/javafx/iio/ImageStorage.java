@@ -272,6 +272,8 @@ public class ImageStorage {
         ImageFrame[] images = null;
         if (loader != null) {
             images = loadAll(loader, width, height, preserveAspectRatio, pixelScale, smooth);
+        } else {
+            throw new ImageStorageException("No loader for image data");
         }
 
         return images;
@@ -323,6 +325,8 @@ public class ImageStorage {
 
             if (loader != null) {
                 images = loadAll(loader, width, height, preserveAspectRatio, pixelScale, smooth);
+            } else {
+                throw new ImageStorageException("No loader for image data");
             }
         } finally {
             try {

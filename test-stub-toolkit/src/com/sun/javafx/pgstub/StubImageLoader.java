@@ -64,8 +64,8 @@ public final class StubImageLoader implements ImageLoader {
     }
 
     @Override
-    public boolean getError() {
-        return false;
+    public Exception getException() {
+        return null;
     }
 
     @Override

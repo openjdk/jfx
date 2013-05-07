@@ -33,6 +33,7 @@ import com.sun.javafx.iio.ImageLoadListener;
 import com.sun.javafx.iio.ImageLoader;
 import com.sun.javafx.iio.ImageMetadata;
 import com.sun.javafx.iio.ImageStorage;
+import com.sun.javafx.iio.ImageStorageException;
 import com.sun.javafx.runtime.async.AbstractRemoteResource;
 import com.sun.javafx.runtime.async.AsyncOperationListener;
 import com.sun.javafx.tk.PlatformImage;
@@ -49,15 +50,17 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import sun.util.logging.PlatformLogger;
 
 class PrismImageLoader2 implements com.sun.javafx.tk.ImageLoader {
+
+    private static PlatformLogger imageioLogger = null;
 
     private Image[] images;
     private int[] delayTimes;
     private int width;
     private int height;
     private float pixelScale;
-    private boolean error;
     private Exception exception;
 
     public PrismImageLoader2(String url, int width, int height,
@@ -102,10 +105,6 @@ class PrismImageLoader2 implements com.sun.javafx.tk.ImageLoader {
         return delayTimes[index];
     }
 
-    public boolean getError() {
-        return error;
-    }
-
     public Exception getException() {
         return exception;
     }
@@ -119,12 +118,10 @@ class PrismImageLoader2 implements com.sun.javafx.tk.ImageLoader {
             ImageFrame[] imgFrames =
                 ImageStorage.loadAll(url, listener, w, h, preserveRatio, pixelScale, smooth);
             convertAll(imgFrames);
+        } catch (ImageStorageException e) {
+            handleException(e);
         } catch (Exception e) {
-            if (PrismSettings.verbose) {
-                e.getCause().printStackTrace(System.err);
-            }
-            error = true;
-            exception = e;
+            handleException(e);
         }
     }
 
@@ -136,13 +133,28 @@ class PrismImageLoader2 implements com.sun.javafx.tk.ImageLoader {
             ImageFrame[] imgFrames =
                 ImageStorage.loadAll(stream, listener, w, h, preserveRatio, 1.0f, smooth);
             convertAll(imgFrames);
+        } catch (ImageStorageException e) {
+            handleException(e);
         } catch (Exception e) {
-            if (PrismSettings.verbose) {
-                e.getCause().printStackTrace(System.err);
-            }
-            error = true;
-            exception = e;
+            handleException(e);
         }
+    }
+
+    private void handleException(final ImageStorageException isException) {
+        // unwrap ImageStorageException if possible
+        final Throwable exceptionCause = isException.getCause();
+        if (exceptionCause instanceof Exception) {
+            handleException((Exception) exceptionCause);
+        } else {
+            handleException((Exception) isException);
+        }
+    }
+
+    private void handleException(final Exception exception) {
+        if (PrismSettings.verbose) {
+            exception.printStackTrace(System.err);
+        }
+        this.exception = exception;
     }
 
     private void convertAll(ImageFrame[] imgFrames) {
@@ -166,10 +178,20 @@ class PrismImageLoader2 implements com.sun.javafx.tk.ImageLoader {
         }
     }
 
-    
+    /**
+     * Returns the PlatformLogger for logging imageio-related activities.
+     */
+    private static synchronized PlatformLogger getImageioLogger() {
+        if (imageioLogger == null) {
+            imageioLogger = PlatformLogger.getLogger("imageio");
+        }
+
+        return imageioLogger;
+    }
+
     private class PrismLoadListener implements ImageLoadListener {
         public void imageLoadWarning(ImageLoader loader, String message) {
-            error = true;
+            getImageioLogger().warning(message);
         }
 
         public void imageLoadProgress(ImageLoader loader,

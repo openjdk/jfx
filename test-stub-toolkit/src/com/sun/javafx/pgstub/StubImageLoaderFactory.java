@@ -40,9 +40,12 @@ public final class StubImageLoaderFactory {
 
     private final ImageLoader ERROR_IMAGE_LOADER =
             new ImageLoader() {
+                private final Exception exception =
+                            new Exception("Loading failed");
+
                 @Override
-                public boolean getError() {
-                    return true;
+                public Exception getException() {
+                    return exception;
                 }
 
                 @Override

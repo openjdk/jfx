@@ -34,6 +34,7 @@ import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 import java.util.LinkedList;
 import java.util.Queue;
+import java.util.concurrent.CancellationException;
 import java.util.regex.Pattern;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
@@ -44,6 +45,7 @@ import javafx.beans.property.ReadOnlyDoublePropertyBase;
 import javafx.beans.property.ReadOnlyDoubleWrapper;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectPropertyBase;
+import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.scene.paint.Color;
@@ -459,6 +461,33 @@ public class Image {
     }
 
     /**
+     * The exception which caused image loading to fail. Contains a non-null
+     * value only if the {@code error} property is set to {@code true}.
+     *
+     * @since JavaFX 8
+     */
+    private ReadOnlyObjectWrapper<Exception> exception;
+
+    private void setException(Exception value) {
+        exceptionPropertyImpl().set(value);
+    }
+
+    public final Exception getException() {
+        return exception == null ? null : exception.get();
+    }
+
+    public final ReadOnlyObjectProperty<Exception> exceptionProperty() {
+        return exceptionPropertyImpl().getReadOnlyProperty();
+    }
+
+    private ReadOnlyObjectWrapper<Exception> exceptionPropertyImpl() {
+        if (exception == null) {
+            exception = new ReadOnlyObjectWrapper<Exception>(this, "exception");
+        }
+        return exception;
+    }
+
+    /**
      * The underlying platform representation of this Image object.
      *
      * @defaultValue null
@@ -742,21 +771,28 @@ public class Image {
     }
 
     private void finishImage(ImageLoader loader) {
-        if ((loader != null) && !loader.getError()) {
-            if (loader.getFrameCount() > 1) {
-                initializeAnimatedImage(loader);
-            } else {
-                PlatformImage pi = loader.getFrame(0);
-                double w = loader.getWidth() / pi.getPixelScale();
-                double h = loader.getHeight() / pi.getPixelScale();
-                setPlatformImageWH(pi, w, h);
-            }
-        } else {
-            setError(true);
-            setPlatformImageWH(null, 0, 0);
+        final Exception loadingException = loader.getException();
+        if (loadingException != null) {
+            finishImage(loadingException);
+            return;
         }
 
+        if (loader.getFrameCount() > 1) {
+            initializeAnimatedImage(loader);
+        } else {
+            PlatformImage pi = loader.getFrame(0);
+            double w = loader.getWidth() / pi.getPixelScale();
+            double h = loader.getHeight() / pi.getPixelScale();
+            setPlatformImageWH(pi, w, h);
+        }
         setProgress(1);
+    }
+
+    private void finishImage(Exception exception) {
+       setException(exception);
+       setError(true);
+       setPlatformImageWH(null, 0, 0);
+       setProgress(1);
     }
 
     // Support for animated images.
@@ -939,13 +975,13 @@ public class Image {
 
         @Override
         public void onCancel() {
-            finishImage(null);
+            finishImage(new CancellationException("Loading cancelled"));
             cycleTasks();
         }
 
         @Override
         public void onException(Exception exception) {
-            finishImage(null);
+            finishImage(exception);
             cycleTasks();
         }
 

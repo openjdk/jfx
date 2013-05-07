@@ -250,8 +250,11 @@ public final class ImageTest {
         final StubAsyncImageLoader lastAsyncImageLoader =
                 getLastAsyncImageLoader();
 
-        lastAsyncImageLoader.finish(new Exception("Test exception"));
+        final Exception testException = new Exception("Test exception");
+
+        lastAsyncImageLoader.finish(testException);
         assertTrue(image.isError());
+        assertEquals(testException, image.getException());
     }
 
     @Test
