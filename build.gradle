@@ -583,7 +583,7 @@ allprojects {
     if (project == rootProject || project.name == "media" || project.name == "web") return
     // All of our projects are java projects
     apply plugin: "java"
-    sourceCompatibility = 1.7
+    sourceCompatibility = 1.8
 
     // Setup the repositories that we'll download libraries from. Maven Central is
     // just easy for most things. The custom "ivy" repo is for downloading SWT. The way it
