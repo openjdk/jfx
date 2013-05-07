@@ -120,7 +120,9 @@ class DatePickerHijrahContent extends DatePickerContent {
                     }
                 }
             } catch (DateTimeException ex) {
-                System.err.println(dayCellDate(dayCell) + " " + ex);
+                // Date is out of range, ignore.
+
+                //System.err.println(dayCellDate(dayCell) + " " + ex);
             }
         }
 
@@ -149,12 +151,12 @@ class DatePickerHijrahContent extends DatePickerContent {
 
         for (DateCell dayCell : dayCells) {
             Text secondaryText = (Text)dayCell.getProperties().get("DateCell.secondaryText");
+            dayCell.getStyleClass().add("hijrah-day-cell");
+            secondaryText.getStyleClass().setAll("text", "secondary-text");
+
             try {
                 HijrahDate cDate = chrono.date(dayCellDate(dayCell));
 //             long month = cDate.getLong(MONTH_OF_YEAR);
-
-                dayCell.getStyleClass().add("hijrah-day-cell");
-                secondaryText.getStyleClass().setAll("text", "secondary-text");
 
                 String hijrahStr =
                     dayCellFormatter.withLocale(locale)
@@ -163,8 +165,9 @@ class DatePickerHijrahContent extends DatePickerContent {
                                     .format(cDate);
 
                 secondaryText.setText(hijrahStr);
-            } catch (Exception ex) {
-                System.err.println(dayCellDate(dayCell) + " " + ex);
+            } catch (DateTimeException ex) {
+                // Date is out of range.
+                // System.err.println(dayCellDate(dayCell) + " " + ex);
                 secondaryText.setText(" ");
             }
 

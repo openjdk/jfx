@@ -28,6 +28,7 @@ package javafx.scene.control;
 // editor and converter code in sync with ComboBox 2708:a3e606ef6ead
 
 import java.time.LocalDate;
+import java.time.DateTimeException;
 import java.time.chrono.Chronology;
 import java.time.chrono.ChronoLocalDate;
 import java.time.chrono.IsoChronology;
@@ -340,7 +341,14 @@ public class DatePicker extends ComboBoxBase<LocalDate> {
             if (value != null) {
                 Locale locale = Locale.getDefault(Locale.Category.FORMAT);
                 Chronology chrono = getChronology();
-                ChronoLocalDate cDate = chrono.date(value);
+                ChronoLocalDate cDate;
+                try {
+                    cDate = chrono.date(value);
+                } catch (DateTimeException ex) {
+                    System.err.println(ex);
+                    chrono = IsoChronology.INSTANCE;
+                    cDate = value;
+                }
                 DateTimeFormatter dateFormatter =
                     DateTimeFormatter.ofLocalizedDate(FormatStyle.SHORT)
                                      .withLocale(locale)
@@ -374,8 +382,13 @@ public class DatePicker extends ComboBoxBase<LocalDate> {
                     DateTimeFormatter df = DateTimeFormatter.ofPattern(pattern);
                     try {
                         TemporalAccessor temporal = df.parse(text);
-                        ChronoLocalDate cDate = chrono.date(temporal);
-                        return LocalDate.from(cDate);
+                        try {
+                            ChronoLocalDate cDate = chrono.date(temporal);
+                            return LocalDate.from(cDate);
+                        } catch (DateTimeException ex) {
+                            System.err.println(ex);
+                            return null;
+                        }
                     } catch (DateTimeParseException ex) {
                         // Didn't work, so continue with original two-digit pattern
                     }
