@@ -59,6 +59,7 @@
             <exclude name="com/sun/glass/ui/mac/" unless="isMacOSX" />
             <exclude name="com/sun/glass/ui/win/" unless="isWindows" />
             <exclude name="com/sun/glass/ui/x11/" unless="isLinux" />
+            <exclude name="com/sun/glass/ui/android/" unless="isAndroid" />
         </jar>
         <copy todir="${glass.dist.lib.dir}" flatten="true">
             <fileset file="${glass-java.dist.jar}"/>

@@ -31,6 +31,7 @@
 #include "com_sun_glass_events_MouseEvent.h"
 #include "com_sun_glass_events_KeyEvent.h"
 #include "com_sun_glass_ui_lens_LensApplication.h"
+#include "com_sun_glass_ui_android_SoftwareKeyboard.h"
 
 #define round(x) ((x)>=0?(int)((x)+0.5):(int)((x)-0.5))
 
@@ -225,12 +226,14 @@ void handle_key_event(AInputEvent *event) {
 
        case AKEY_EVENT_ACTION_MULTIPLE:
            GLASS_LOG_FINE("AKEY_EVENT_ACTION_MULTIPLE:");
-           jfxEventType = com_sun_glass_events_KeyEvent_PRESS;
-           isRepeatEvent = JNI_TRUE;
+           jfxEventType = com_sun_glass_events_KeyEvent_TYPED;
            keyCode = AKeyEvent_getKeyCode(event);
-           jfxKeyCode = glass_inputEvents_getJavaKeycodeFromPlatformKeyCode(
-                           translateToLinuxKeyCode(keyCode));
-           kcount = AKeyEvent_getRepeatCount(event);
+           if (keyCode != AKEYCODE_UNKNOWN) {
+        	   jfxKeyCode = glass_inputEvents_getJavaKeycodeFromPlatformKeyCode(
+        			   translateToLinuxKeyCode(keyCode));
+           	   kcount = AKeyEvent_getRepeatCount(event);
+           	   isRepeatEvent = JNI_TRUE;
+           }
            break;
 
        default:
@@ -238,14 +241,16 @@ void handle_key_event(AInputEvent *event) {
            break;
    }
 
-   GLASS_LOG_FINEST("Notifying key event on windows %d[%p] - "
-                            "event type %d, key code %d, is repeat?%s",
-                            window->id, window, jfxEventType, jfxKeyCode,
-                            (isRepeatEvent ? "yes" : "no"));
-
-   if (action != AKEY_EVENT_ACTION_MULTIPLE) {
-       glass_application_notifyKeyEvent(env, window, jfxEventType, jfxKeyCode, isRepeatEvent);
+   if (keyCode != AKEYCODE_UNKNOWN) {
+	   for(int i = 0; i < kcount; i++) {
+		   GLASS_LOG_FINEST("Notifying key event on windows %d[%p] - "
+		                               "event type %d, key code %d, is repeat?%s",
+		                               window->id, window, jfxEventType, jfxKeyCode,
+		                               (isRepeatEvent ? "yes" : "no"));
+		   glass_application_notifyKeyEvent(env, window, jfxEventType, jfxKeyCode, isRepeatEvent);
+	   }
    }
+
 }
 
 int32_t handle_input(struct android_app* app, AInputEvent* event) {
@@ -291,17 +296,20 @@ void dvkEventLoop(DvkContext context) {
            }
        }
    }//event loop
-
-void showIme(int32_t flags) {
-   DvkContext context = getDvkContext();
-   ANativeActivity_showSoftInput(context->app->activity, flags);
 }
 
-void hideIme(int32_t flags) {
+JNIEXPORT void JNICALL Java_com_sun_glass_ui_android_SoftwareKeyboard_show
+  (JNIEnv *env, jclass clazz) {
    DvkContext context = getDvkContext();
-   ANativeActivity_hideSoftInput(context->app->activity, flags);
+   ANativeActivity_showSoftInput(context->app->activity, 0);
+   GLASS_LOG_FINE("Show SoftwareKeyboard");
 }
 
+JNIEXPORT void JNICALL Java_com_sun_glass_ui_android_SoftwareKeyboard_hide
+     (JNIEnv *env, jclass clazz) {
+	   DvkContext context = getDvkContext();
+	   ANativeActivity_hideSoftInput(context->app->activity, 0);
+	   GLASS_LOG_FINE("Hide SoftwareKeyboard");
 }
 
 #endif /* ANDROID_NDK */
