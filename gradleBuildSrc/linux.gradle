@@ -56,7 +56,7 @@ LINUX.jfxrtJarExcludes = [
         
     "com/sun/glass/ui/ios",
     
-    "com/sun/glass/ui/lens",
+    //"com/sun/glass/ui/lens", // TODO This probably shouldn't be on linux sdk
     "com/sun/prism/es2/gl/eglfb",
     "com/sun/prism/es2/gl/eglx11",
     "com/sun/prism/es2/gl/x11",
