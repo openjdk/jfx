@@ -767,8 +767,8 @@ public class MenuBarSkin extends BehaviorSkinBase<MenuBar, BehaviorBase<MenuBar>
     }
     
     private void unSelectMenus() {
-        if (focusedMenuIndex == -1) return;
         clearMenuButtonHover();
+        if (focusedMenuIndex == -1) return;
         if (openMenu != null) {
             openMenu.hide();
             openMenu = null;
