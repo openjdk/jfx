@@ -1119,7 +1119,7 @@ public class ListView<T> extends Control {
                     }
                 } else if (c.wasAdded() || c.wasRemoved()) {
                     int shift = c.wasAdded() ? c.getAddedSize() : -c.getRemovedSize();
-                    shiftSelection(c.getFrom(), shift);
+                    shiftSelection(c.getFrom(), shift, null);
                 } else if (c.wasPermutated()) {
 
                     // General approach:
