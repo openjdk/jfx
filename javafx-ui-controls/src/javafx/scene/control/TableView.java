@@ -1416,7 +1416,6 @@ public class TableView<S> extends Control {
     static class TableViewArrayListSelectionModel<S> extends TableViewSelectionModel<S> {
         
         private int itemCount = 0;
-        private BitSet selectedIndicesBitSet;
 
         /***********************************************************************
          *                                                                     *
@@ -1427,7 +1426,7 @@ public class TableView<S> extends Control {
         public TableViewArrayListSelectionModel(final TableView<S> tableView) {
             super(tableView);
             this.tableView = tableView;
-            this.selectedIndicesBitSet = new BitSet();
+//            this.selectedIndicesBitSet = new BitSet();
             
             updateItemCount();
             
@@ -1486,8 +1485,8 @@ public class TableView<S> extends Control {
                                 final TablePosition<S,?> tp = removed.get(i);
                                 final int row = tp.getRow();
                                 
-                                if (selectedIndicesBitSet.get(row)) {
-                                    selectedIndicesBitSet.clear(row);
+                                if (selectedIndices.get(row)) {
+                                    selectedIndices.clear(row);
                                     newlySelectedRows.add(row);
                                 }
                             }
@@ -1498,8 +1497,8 @@ public class TableView<S> extends Control {
                                 final TablePosition<S,?> tp = added.get(i);
                                 final int row = tp.getRow();
                                 
-                                if (! selectedIndicesBitSet.get(row)) {
-                                    selectedIndicesBitSet.set(row);
+                                if (! selectedIndices.get(row)) {
+                                    selectedIndices.set(row);
                                     newlySelectedRows.add(row);
                                 }
                             }
@@ -1515,6 +1514,9 @@ public class TableView<S> extends Control {
                     // given rows
                     selectedItems.callObservers(new MappingChange<TablePosition<S,?>, S>(c, cellToItemsMap, selectedItems));
                     c.reset();
+                    
+                    final ReadOnlyUnbackedObservableList<Integer> selectedIndicesSeq = 
+                            (ReadOnlyUnbackedObservableList<Integer>)getSelectedIndices();
 
                     if (! newlySelectedRows.isEmpty() && newlyUnselectedRows.isEmpty()) {
                         // need to come up with ranges based on the actualSelectedRows, and
@@ -1524,10 +1526,10 @@ public class TableView<S> extends Control {
                         // we may have requested to select row 5, and the selectedIndices
                         // list may therefore have the following: [1,4,5], meaning row 5
                         // is in position 2 of the selectedIndices list
-                        Change<Integer> change = createRangeChange(selectedIndices, newlySelectedRows);
-                        selectedIndices.callObservers(change);
+                        Change<Integer> change = createRangeChange(selectedIndicesSeq, newlySelectedRows);
+                        selectedIndicesSeq.callObservers(change);
                     } else {
-                        selectedIndices.callObservers(new MappingChange<TablePosition<S,?>, Integer>(c, cellToIndicesMap, selectedIndices));
+                        selectedIndicesSeq.callObservers(new MappingChange<TablePosition<S,?>, Integer>(c, cellToIndicesMap, selectedIndicesSeq));
                         c.reset();
                     }
 
@@ -1536,43 +1538,13 @@ public class TableView<S> extends Control {
                 }
             });
 
-            selectedIndices = new ReadOnlyUnbackedObservableList<Integer>() {
-                @Override public Integer get(int index) {
-                    if (index < 0 || index >= getItemCount()) return -1;
-
-                    for (int pos = 0, val = selectedIndicesBitSet.nextSetBit(0);
-                        val >= 0 || pos == index;
-                        pos++, val = selectedIndicesBitSet.nextSetBit(val+1)) {
-                            if (pos == index) return val;
-                    }
-
-                    return -1;
-                }
-
-                @Override public int size() {
-                    return selectedIndicesBitSet.cardinality();
-                }
-
-                @Override public boolean contains(Object o) {
-                    if (o instanceof Number) {
-                        Number n = (Number) o;
-                        int index = n.intValue();
-
-                        return index > 0 && index < selectedIndicesBitSet.length() &&
-                                selectedIndicesBitSet.get(index);
-                    }
-
-                    return false;
-                }
-            };
-
             selectedItems = new ReadOnlyUnbackedObservableList<S>() {
                 @Override public S get(int i) {
-                    return getModelItem(selectedIndices.get(i));
+                    return getModelItem(getSelectedIndices().get(i));
                 }
 
                 @Override public int size() {
-                    return selectedIndices.size();
+                    return getSelectedIndices().size();
                 }
             };
             
@@ -1682,12 +1654,6 @@ public class TableView<S> extends Control {
         // the only 'proper' internal observableArrayList, selectedItems and selectedIndices
         // are both 'read-only and unbacked'.
         private final ObservableList<TablePosition<S,?>> selectedCells;
-
-        // NOTE: represents selected ROWS only - use selectedCells for more data
-        private final ReadOnlyUnbackedObservableList<Integer> selectedIndices;
-        @Override public ObservableList<Integer> getSelectedIndices() {
-            return selectedIndices;
-        }
 
         // used to represent the _row_ backing data for the selectedCells
         private final ReadOnlyUnbackedObservableList<S> selectedItems;

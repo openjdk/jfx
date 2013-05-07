@@ -951,40 +951,43 @@ public class TreeView<T> extends Control {
                 
                 if (getSelectedIndex() == -1 && getSelectedItem() == null) return;
                 
+                final TreeItem<T> treeItem = e.getTreeItem();
+                if (treeItem == null) return;
+                
                 // we only shift selection from this row - everything before it
                 // is safe. We might change this below based on certain criteria
-                int startRow = treeView.getRow(e.getTreeItem());
+                int startRow = treeView.getRow(treeItem);
                 
                 int shift = 0;
                 if (e.wasExpanded()) {
                     // need to shuffle selection by the number of visible children
-                    shift = e.getTreeItem().getExpandedDescendentCount(false) - 1;
+                    shift = treeItem.getExpandedDescendentCount(false) - 1;
                     startRow++;
                 } else if (e.wasCollapsed()) {
                     // remove selection from any child treeItem
-                    int row = treeView.getRow(e.getTreeItem());
-                    int count = e.getTreeItem().previousExpandedDescendentCount;
+                    treeItem.getExpandedDescendentCount(false);
+                    int count = treeItem.previousExpandedDescendentCount;
                     boolean wasAnyChildSelected = false;
-                    for (int i = row; i < row + count; i++) {
+                    for (int i = startRow; i < startRow + count; i++) {
                         if (isSelected(i)) {
                             wasAnyChildSelected = true;
                             break;
                         }
                     }
 
-                    // put selection onto the collapsed tree item
+                    // put selection onto the newly-collapsed tree item
                     if (wasAnyChildSelected) {
                         select(startRow);
                     }
 
-                    shift = - e.getTreeItem().previousExpandedDescendentCount + 1;
+                    shift = - count + 1;
                     startRow++;
                 } else if (e.wasAdded()) {
                     // shuffle selection by the number of added items
-                    shift = e.getTreeItem().isExpanded() ? e.getAddedSize() : 0;
+                    shift = treeItem.isExpanded() ? e.getAddedSize() : 0;
                 } else if (e.wasRemoved()) {
                     // shuffle selection by the number of removed items
-                    shift = e.getTreeItem().isExpanded() ? -e.getRemovedSize() : 0;
+                    shift = treeItem.isExpanded() ? -e.getRemovedSize() : 0;
                     
                     // whilst we are here, we should check if the removed items
                     // are part of the selectedItems list - and remove them
@@ -1018,7 +1021,7 @@ public class TreeView<T> extends Control {
                 }
                 
                 treeView.expandedItemCountDirty = true;
-                shiftSelection(startRow, shift);
+                shiftSelection(startRow, shift, null);
             }
         };
         

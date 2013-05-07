@@ -26,14 +26,20 @@
 package javafx.scene.control;
 
 import com.sun.javafx.collections.MappingChange;
+import com.sun.javafx.collections.NonIterableChange;
 import com.sun.javafx.collections.annotations.ReturnsUnmodifiableCollection;
+
 import javafx.css.PseudoClass;
+
 import com.sun.javafx.scene.control.ReadOnlyUnbackedObservableList;
 import com.sun.javafx.scene.control.TableColumnComparatorBase;
 import com.sun.javafx.scene.control.skin.TableViewSkinBase;
+
 import javafx.event.WeakEventHandler;
+
 import com.sun.javafx.scene.control.skin.TreeTableViewSkin;
 import com.sun.javafx.scene.control.skin.VirtualContainerBase;
+
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.BitSet;
@@ -41,6 +47,7 @@ import java.util.Comparator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
+
 import javafx.application.Platform;
 import javafx.beans.DefaultProperty;
 import javafx.beans.InvalidationListener;
@@ -70,6 +77,7 @@ import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.event.EventType;
 import javafx.scene.Node;
+import javafx.scene.control.MultipleSelectionModelBase.ShiftParams;
 import javafx.scene.layout.GridPane;
 import javafx.util.Callback;
 
@@ -1935,8 +1943,6 @@ public class TreeTableView<S> extends Control {
     // package for testing
     static class TreeTableViewArrayListSelectionModel<S> extends TreeTableViewSelectionModel<S> {
 
-        private BitSet selectedIndicesBitSet;
-        
         /***********************************************************************
          *                                                                     *
          * Constructors                                                        *
@@ -1946,7 +1952,6 @@ public class TreeTableView<S> extends Control {
         public TreeTableViewArrayListSelectionModel(final TreeTableView<S> treeTableView) {
             super(treeTableView);
             this.treeTableView = treeTableView;
-            this.selectedIndicesBitSet = new BitSet();
             
             this.treeTableView.rootProperty().addListener(weakRootPropertyListener);
             updateTreeEventListener(null, treeTableView.getRoot());
@@ -2000,8 +2005,8 @@ public class TreeTableView<S> extends Control {
                                 final TreeTablePosition<S,?> tp = removed.get(i);
                                 final int row = tp.getRow();
                                 
-                                if (selectedIndicesBitSet.get(row)) {
-                                    selectedIndicesBitSet.clear(row);
+                                if (selectedIndices.get(row)) {
+                                    selectedIndices.clear(row);
                                     newlySelectedRows.add(row);
                                 }
                             }
@@ -2012,8 +2017,8 @@ public class TreeTableView<S> extends Control {
                                 final TreeTablePosition<S,?> tp = added.get(i);
                                 final int row = tp.getRow();
                                 
-                                if (! selectedIndicesBitSet.get(row)) {
-                                    selectedIndicesBitSet.set(row);
+                                if (! selectedIndices.get(row)) {
+                                    selectedIndices.set(row);
                                     newlySelectedRows.add(row);
                                 }
                             }
@@ -2030,6 +2035,9 @@ public class TreeTableView<S> extends Control {
                     selectedItems.callObservers(new MappingChange<TreeTablePosition<S,?>, TreeItem<S>>(c, cellToItemsMap, selectedItems));
                     c.reset();
 
+                    final ReadOnlyUnbackedObservableList<Integer> selectedIndicesSeq = 
+                            (ReadOnlyUnbackedObservableList<Integer>)getSelectedIndices();
+                    
                     if (! newlySelectedRows.isEmpty() && newlyUnselectedRows.isEmpty()) {
                         // need to come up with ranges based on the actualSelectedRows, and
                         // then fire the appropriate number of changes. We also need to
@@ -2038,10 +2046,10 @@ public class TreeTableView<S> extends Control {
                         // we may have requested to select row 5, and the selectedIndices
                         // list may therefore have the following: [1,4,5], meaning row 5
                         // is in position 2 of the selectedIndices list
-                        Change<Integer> change = createRangeChange(selectedIndices, newlySelectedRows);
-                        selectedIndices.callObservers(change);
+                        Change<Integer> change = createRangeChange(selectedIndicesSeq, newlySelectedRows);
+                        selectedIndicesSeq.callObservers(change);
                     } else {
-                        selectedIndices.callObservers(new MappingChange<TreeTablePosition<S,?>, Integer>(c, cellToIndicesMap, selectedIndices));
+                        selectedIndicesSeq.callObservers(new MappingChange<TreeTablePosition<S,?>, Integer>(c, cellToIndicesMap, selectedIndicesSeq));
                         c.reset();
                     }
 
@@ -2050,43 +2058,13 @@ public class TreeTableView<S> extends Control {
                 }
             });
 
-            selectedIndices = new ReadOnlyUnbackedObservableList<Integer>() {
-                @Override public Integer get(int index) {
-                    if (index < 0 || index >= getItemCount()) return -1;
-
-                    for (int pos = 0, val = selectedIndicesBitSet.nextSetBit(0);
-                        val >= 0 || pos == index;
-                        pos++, val = selectedIndicesBitSet.nextSetBit(val+1)) {
-                            if (pos == index) return val;
-                    }
-
-                    return -1;
-                }
-
-                @Override public int size() {
-                    return selectedIndicesBitSet.cardinality();
-                }
-
-                @Override public boolean contains(Object o) {
-                    if (o instanceof Number) {
-                        Number n = (Number) o;
-                        int index = n.intValue();
-
-                        return index > 0 && index < selectedIndicesBitSet.length() &&
-                                selectedIndicesBitSet.get(index);
-                    }
-
-                    return false;
-                }
-            };
-
             selectedItems = new ReadOnlyUnbackedObservableList<TreeItem<S>>() {
                 @Override public TreeItem<S> get(int i) {
-                    return getModelItem(selectedIndices.get(i));
+                    return getModelItem(getSelectedIndices().get(i));
                 }
 
                 @Override public int size() {
-                    return selectedIndices.size();
+                    return getSelectedIndices().size();
                 }
             };
             
@@ -2127,40 +2105,43 @@ public class TreeTableView<S> extends Control {
                 
                 if (getSelectedIndex() == -1 && getSelectedItem() == null) return;
                 
+                final TreeItem<S> treeItem = e.getTreeItem();
+                if (treeItem == null) return;
+                
                 // we only shift selection from this row - everything before it
                 // is safe. We might change this below based on certain criteria
-                int startRow = treeTableView.getRow(e.getTreeItem());
+                int startRow = treeTableView.getRow(treeItem);
                 
                 int shift = 0;
                 if (e.wasExpanded()) {
                     // need to shuffle selection by the number of visible children
-                    shift = e.getTreeItem().getExpandedDescendentCount(false) - 1;
+                    shift = treeItem.getExpandedDescendentCount(false) - 1;
                     startRow++;
                 } else if (e.wasCollapsed()) {
                     // remove selection from any child treeItem
-                    int row = treeTableView.getRow(e.getTreeItem());
-                    int count = e.getTreeItem().previousExpandedDescendentCount;
+                    treeItem.getExpandedDescendentCount(false);
+                    int count = treeItem.previousExpandedDescendentCount;
                     boolean wasAnyChildSelected = false;
-                    for (int i = row; i < row + count; i++) {
+                    for (int i = startRow; i < startRow + count; i++) {
                         if (isSelected(i)) {
                             wasAnyChildSelected = true;
                             break;
                         }
                     }
 
-                    // put selection onto the collapsed tree item
+                    // put selection onto the newly-collapsed tree item
                     if (wasAnyChildSelected) {
                         select(startRow);
                     }
 
-                    shift = - e.getTreeItem().previousExpandedDescendentCount + 1;
+                    shift = - count + 1;
                     startRow++;
                 } else if (e.wasAdded()) {
                     // shuffle selection by the number of added items
-                    shift = e.getTreeItem().isExpanded() ? e.getAddedSize() : 0;
+                    shift = treeItem.isExpanded() ? e.getAddedSize() : 0;
                 } else if (e.wasRemoved()) {
                     // shuffle selection by the number of removed items
-                    shift = e.getTreeItem().isExpanded() ? -e.getRemovedSize() : 0;
+                    shift = treeItem.isExpanded() ? -e.getRemovedSize() : 0;
                     
                     // whilst we are here, we should check if the removed items
                     // are part of the selectedItems list - and remove them
@@ -2194,7 +2175,31 @@ public class TreeTableView<S> extends Control {
                 }
                 
                 treeTableView.expandedItemCountDirty = true;
-                shiftSelection(startRow, shift);
+                shiftSelection(startRow, shift, new Callback<ShiftParams, Void>() {
+                    @Override public Void call(ShiftParams param) {
+                        final int clearIndex = param.getClearIndex();
+                        TreeTablePosition oldTP = null;
+                        if (clearIndex > -1) {
+                            for (int i = 0; i < selectedCells.size(); i++) {
+                                TreeTablePosition<S,?> tp = selectedCells.get(i);
+                                if (tp.getRow() == clearIndex) {
+                                    oldTP = tp;
+                                    selectedCells.remove(i);
+                                    break;
+                                }
+                            }
+                        }
+                        
+                        if (oldTP != null && param.isSelected()) {
+                            TreeTablePosition<S,?> newTP = new TreeTablePosition<>(
+                                    treeTableView, param.getSetIndex(), oldTP.getTableColumn());
+                            
+                            selectedCells.add(newTP);
+                        }
+                        
+                        return null;
+                    }
+                });
             }
         };
         
@@ -2214,12 +2219,6 @@ public class TreeTableView<S> extends Control {
         // the only 'proper' internal observableArrayList, selectedItems and selectedIndices
         // are both 'read-only and unbacked'.
         private final ObservableList<TreeTablePosition<S,?>> selectedCells;
-
-        // NOTE: represents selected ROWS only - use selectedCells for more data
-        private final ReadOnlyUnbackedObservableList<Integer> selectedIndices;
-        @Override public ObservableList<Integer> getSelectedIndices() {
-            return selectedIndices;
-        }
 
         // used to represent the _row_ backing data for the selectedCells
         private final ReadOnlyUnbackedObservableList<TreeItem<S>> selectedItems;
@@ -2274,16 +2273,19 @@ public class TreeTableView<S> extends Control {
 
             TreeTablePosition pos = new TreeTablePosition(getTreeTableView(), row, column);
             
-            if (getSelectionMode() == SelectionMode.SINGLE) {
-                quietClearSelection();
-            }
-
             if (! selectedCells.contains(pos)) {
+                if (getSelectionMode() == SelectionMode.SINGLE) {
+                    quietClearSelection();
+                }
                 selectedCells.add(pos);
             }
 
+//            setSelectedIndex(row);
             updateSelectedIndex(row);
             focus(row, column);
+            
+            int changeIndex = selectedCellsSeq.indexOf(pos);
+            selectedCellsSeq.callObservers(new NonIterableChange.SimpleAddChange<TreeTablePosition<S,?>>(changeIndex, changeIndex+1, selectedCellsSeq));
         }
 
         @Override public void select(TreeItem<S> obj) {

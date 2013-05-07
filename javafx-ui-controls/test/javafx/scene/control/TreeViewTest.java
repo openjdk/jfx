@@ -33,10 +33,12 @@ import com.sun.javafx.scene.control.test.Employee;
 import com.sun.javafx.scene.control.test.Person;
 import com.sun.javafx.scene.control.test.RT_22463_Person;
 import com.sun.javafx.tk.Toolkit;
+
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import static com.sun.javafx.scene.control.infrastructure.ControlTestUtils.assertStyleClassContains;
@@ -65,6 +67,8 @@ import org.junit.Test;
 
 public class TreeViewTest {
     private TreeView<String> treeView;
+    private MultipleSelectionModel<TreeItem<String>> sm;
+    private FocusModel<TreeItem<String>> fm;
     
     // sample data #1
     private TreeItem<String> root;
@@ -86,9 +90,25 @@ public class TreeViewTest {
             private TreeItem<String> mikeGraham;
             private TreeItem<String> judyMayer;
             private TreeItem<String> gregorySmith;
+            
+    private String debug() {
+        StringBuilder sb = new StringBuilder("Selected Indices: [");
+        
+        List<Integer> indices = sm.getSelectedIndices();
+        for (Integer index : indices) {
+            sb.append(index);
+            sb.append(", ");
+        }
+        
+        sb.append("] \nFocus: " + fm.getFocusedIndex());
+//        sb.append(" \nAnchor: " + getAnchor());
+        return sb.toString();
+    }
     
     @Before public void setup() {
         treeView = new TreeView<String>();
+        sm = treeView.getSelectionModel();
+        fm = treeView.getFocusModel();
         
         // build sample data #2, even though it may not be used...
         myCompanyRootNode = new TreeItem<String>("MyCompany Human Resources");
@@ -873,5 +893,110 @@ public class TreeViewTest {
         // this next test is likely to be brittle, but we'll see...If it is the
         // cause of failure then it can be commented out
         assertEquals(0.125, scrollBar.getVisibleAmount(), 0.0);
+    }
+    
+    @Test public void test_rt27180_collapseBranch_childSelected_singleSelection() {
+        sm.setSelectionMode(SelectionMode.SINGLE);
+        
+        treeView.setRoot(myCompanyRootNode);
+        myCompanyRootNode.setExpanded(true);
+        salesDepartment.setExpanded(true);
+        itSupport.setExpanded(true);
+        sm.select(2);                   // ethanWilliams
+        assertFalse(sm.isSelected(1));  // salesDepartment
+        assertTrue(sm.isSelected(2));   // ethanWilliams
+        assertTrue(treeView.getFocusModel().isFocused(2));
+        assertEquals(1, sm.getSelectedIndices().size());
+        
+        // now collapse the salesDepartment, selection should
+        // not jump down to the itSupport people
+        salesDepartment.setExpanded(false);
+        assertTrue(sm.isSelected(1));   // salesDepartment
+        assertTrue(treeView.getFocusModel().isFocused(1));
+        assertEquals(1, sm.getSelectedIndices().size());
+    }
+    
+    @Test public void test_rt27180_collapseBranch_laterSiblingSelected_singleSelection() {
+        sm.setSelectionMode(SelectionMode.SINGLE);
+        
+        treeView.setRoot(myCompanyRootNode);
+        myCompanyRootNode.setExpanded(true);
+        salesDepartment.setExpanded(true);
+        itSupport.setExpanded(true);
+        sm.select(8);                   // itSupport
+        assertFalse(sm.isSelected(1));  // salesDepartment
+        assertTrue(sm.isSelected(8));   // itSupport
+        assertTrue(treeView.getFocusModel().isFocused(8));
+        assertEquals(1, sm.getSelectedIndices().size());
+        
+        salesDepartment.setExpanded(false);
+        assertTrue(sm.isSelected(2));   // itSupport
+        assertTrue(treeView.getFocusModel().isFocused(2));
+        assertEquals(1, sm.getSelectedIndices().size());
+    }
+    
+    @Test public void test_rt27180_collapseBranch_laterSiblingAndChildrenSelected() {
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+        
+        treeView.setRoot(myCompanyRootNode);
+        myCompanyRootNode.setExpanded(true);
+        salesDepartment.setExpanded(true);
+        itSupport.setExpanded(true);
+        sm.selectIndices(8, 9, 10);     // itSupport, and two people
+        assertFalse(sm.isSelected(1));  // salesDepartment
+        assertTrue(sm.isSelected(8));   // itSupport
+        assertTrue(sm.isSelected(9));   // mikeGraham
+        assertTrue(sm.isSelected(10));  // judyMayer
+        assertTrue(treeView.getFocusModel().isFocused(10));
+        assertEquals(3, sm.getSelectedIndices().size());
+        
+        salesDepartment.setExpanded(false);
+        assertTrue(sm.isSelected(2));   // itSupport
+        assertTrue(sm.isSelected(3));   // mikeGraham
+        assertTrue(sm.isSelected(4));   // judyMayer
+        assertTrue(treeView.getFocusModel().isFocused(4));
+        assertEquals(3, sm.getSelectedIndices().size());
+    }
+    
+    @Test public void test_rt27180_expandBranch_laterSiblingSelected_singleSelection() {
+        sm.setSelectionMode(SelectionMode.SINGLE);
+        
+        treeView.setRoot(myCompanyRootNode);
+        myCompanyRootNode.setExpanded(true);
+        salesDepartment.setExpanded(false);
+        itSupport.setExpanded(true);
+        sm.select(2);                   // itSupport
+        assertFalse(sm.isSelected(1));  // salesDepartment
+        assertTrue(sm.isSelected(2));   // itSupport
+        assertTrue(treeView.getFocusModel().isFocused(2));
+        assertEquals(1, sm.getSelectedIndices().size());
+        
+        salesDepartment.setExpanded(true);
+        assertTrue(sm.isSelected(8));   // itSupport
+        assertTrue(treeView.getFocusModel().isFocused(8));
+        assertEquals(1, sm.getSelectedIndices().size());
+    }
+    
+    @Test public void test_rt27180_expandBranch_laterSiblingAndChildrenSelected() {
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+        
+        treeView.setRoot(myCompanyRootNode);
+        myCompanyRootNode.setExpanded(true);
+        salesDepartment.setExpanded(false);
+        itSupport.setExpanded(true);
+        sm.selectIndices(2,3,4);     // itSupport, and two people
+        assertFalse(sm.isSelected(1));  // salesDepartment
+        assertTrue(sm.isSelected(2));   // itSupport
+        assertTrue(sm.isSelected(3));   // mikeGraham
+        assertTrue(sm.isSelected(4));  // judyMayer
+        assertTrue(treeView.getFocusModel().isFocused(4));
+        assertEquals(3, sm.getSelectedIndices().size());
+        
+        salesDepartment.setExpanded(true);
+        assertTrue(sm.isSelected(8));   // itSupport
+        assertTrue(sm.isSelected(9));   // mikeGraham
+        assertTrue(sm.isSelected(10));   // judyMayer
+        assertTrue(treeView.getFocusModel().isFocused(10));
+        assertEquals(3, sm.getSelectedIndices().size());
     }
 }
