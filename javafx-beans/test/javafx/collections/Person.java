@@ -42,6 +42,13 @@ class Person {
         }
     };
 
+    public Person(String name) {
+        this.name.set(name);
+    }
+    
+    public Person() {
+    }
+
     @Override
     public boolean equals(Object obj) {
         if (obj == null) {
@@ -63,5 +70,12 @@ class Person {
         hash = 59 * hash + (this.name.get() != null ? this.name.get().hashCode() : 0);
         return hash;
     }
+
+    @Override
+    public String toString() {
+        return "Person[" + name.get() + "]";
+    }
+    
+    
 
 }

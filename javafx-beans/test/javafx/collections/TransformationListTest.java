@@ -25,11 +25,11 @@
 
 package javafx.collections;
 
-import com.sun.javafx.collections.transformation.TransformationList;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import javafx.collections.ListChangeListener.Change;
+import javafx.collections.transformation.TransformationList;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -43,12 +43,12 @@ public class TransformationListTest {
 
     private static class TransformationListImpl extends TransformationList<String, String> {
 
-        public TransformationListImpl(List<String> list) {
+        public TransformationListImpl(ObservableList<String> list) {
             super(list);
         }
 
         @Override
-        protected void onSourceChanged(Change<? extends String> change) {
+        protected void sourceChanged(Change<? extends String> change) {
             throw new UnsupportedOperationException("Not supported yet.");
         }
 
@@ -98,29 +98,21 @@ public class TransformationListTest {
         }
 
     }
-    
+
     private TransformationList<String, String> list1, list2;
-    private List<String> list3;
+    private ObservableList<String> list3;
 
     @Before
     public void setUp() {
-        list3 = new ArrayList<String>();
+        list3 = FXCollections.observableArrayList();
         list2 = new TransformationListImpl(list3);
         list1 = new TransformationListImpl(list2);
     }
 
     @Test
     public void testDirect() {
-        assertEquals(list2, list1.getDirectSource());
-        assertEquals(list3, list2.getDirectSource());
+        assertEquals(list2, list1.getSource());
+        assertEquals(list3, list2.getSource());
     }
-
-
-    @Test
-    public void testBottom() {
-        assertEquals(list3, list1.getBottomMostSource());
-    }
-    
-
 
 }
