@@ -169,7 +169,7 @@ LINUX.prismES2.nativeSource = [
 LINUX.prismES2.compiler = compiler
 LINUX.prismES2.ccFlags = ["-DLINUX", "-DGRADLE_BUILD", ccFlags].flatten()
 LINUX.prismES2.linker = linker
-LINUX.prismES2.linkFlags = [linkFlags].flatten()
+LINUX.prismES2.linkFlags = [linkFlags, "-lX11", "-lXxf86vm", "-lGL"].flatten()
 LINUX.prismES2.lib = "prism-es2"
 
 def closedDir = file("$projectDir/../rt-closed")
