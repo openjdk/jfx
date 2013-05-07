@@ -159,8 +159,21 @@ public class CameraTest {
         Affine3D expected = new Affine3D();
         assertEquals(expected, camera.getSceneToLocalTransform());
 
+        try {
+            camera.getLocalToSceneTransform().createInverse().impl_apply(expected);
+        } catch (NonInvertibleTransformException ex) {
+            fail("NonInvertibleTransformException when compute sceneToLocalTx.");
+        }
+        assertEquals(expected, camera.getSceneToLocalTransform());
+
         camera.setTranslateZ(-10);
         camera.setScaleX(10);
+        expected.setToIdentity();
+        try {
+            camera.getLocalToSceneTransform().createInverse().impl_apply(expected);
+        } catch (NonInvertibleTransformException ex) {
+            fail("NonInvertibleTransformException when compute sceneToLocalTx.");
+        }
         assertEquals(expected, camera.getSceneToLocalTransform());
     }
 
@@ -217,10 +230,29 @@ public class CameraTest {
         Camera camera = new ParallelCamera();
         scene.setCamera(camera);
         scene.getRoot().setTranslateX(50);
+        camera.setTranslateX(50);
         camera.setTranslateY(60);
 
         GeneralTransform3D expected = new GeneralTransform3D();
         expected.ortho(0.0, 300, 200, 0.0, -150, 150);
+        expected.mul(Affine3D.getTranslateInstance(-50, -60));
+
+        TransformHelper.assertMatrix(camera.getProjViewTransform(), expected);
+    }
+
+    @Test
+    public void testParallelProjViewTxWithMovedCameraNotInScene2() {
+        final Scene scene = new Scene(new Group(), 300, 200);
+        Camera camera = new ParallelCamera();
+        scene.setCamera(camera);
+        scene.getRoot().setTranslateX(50);
+        new Group(camera);
+        camera.getParent().setTranslateX(50);
+        camera.setTranslateY(60);
+
+        GeneralTransform3D expected = new GeneralTransform3D();
+        expected.ortho(0.0, 300, 200, 0.0, -150, 150);
+        expected.mul(Affine3D.getTranslateInstance(-50, -60));
 
         TransformHelper.assertMatrix(camera.getProjViewTransform(), expected);
     }
@@ -296,9 +328,55 @@ public class CameraTest {
         PerspectiveCamera camera = new PerspectiveCamera();
         scene.setCamera(camera);
         scene.getRoot().setTranslateX(50);
+        camera.setTranslateX(50);
         camera.setTranslateY(60);
 
-        TransformHelper.assertMatrix(camera.getProjViewTransform(), DEFAULT_PROJVIEW_TX);
+        GeneralTransform3D expected = new GeneralTransform3D();
+        expected.perspective(true, Math.toRadians(30), 1.5, 0.1, 100);
+
+        final double tanOfHalfFOV = Math.tan(Math.toRadians(30) / 2.0);
+
+        Affine3D view = new Affine3D();
+        final double scale = 2.0 * tanOfHalfFOV / 200;
+
+        view.setToTranslation(-tanOfHalfFOV * 1.5, tanOfHalfFOV, 0.0);
+        view.translate(0, 0, -1);
+        view.rotate(Math.PI, 1, 0, 0);
+        view.scale(scale, scale, scale);
+
+        expected.mul(view);
+        expected.mul(Affine3D.getTranslateInstance(-50, -60));
+
+        TransformHelper.assertMatrix(camera.getProjViewTransform(), expected);
+    }
+
+    @Test
+    public void testPerspectiveProjViewTxWithMovedCameraNotInScene2() {
+        final Scene scene = new Scene(new Group(), 300, 200);
+        PerspectiveCamera camera = new PerspectiveCamera();
+        scene.setCamera(camera);
+        scene.getRoot().setTranslateX(50);
+        new Group(camera);
+        camera.getParent().setTranslateX(50);
+        camera.setTranslateY(60);
+
+        GeneralTransform3D expected = new GeneralTransform3D();
+        expected.perspective(true, Math.toRadians(30), 1.5, 0.1, 100);
+
+        final double tanOfHalfFOV = Math.tan(Math.toRadians(30) / 2.0);
+
+        Affine3D view = new Affine3D();
+        final double scale = 2.0 * tanOfHalfFOV / 200;
+
+        view.setToTranslation(-tanOfHalfFOV * 1.5, tanOfHalfFOV, 0.0);
+        view.translate(0, 0, -1);
+        view.rotate(Math.PI, 1, 0, 0);
+        view.scale(scale, scale, scale);
+
+        expected.mul(view);
+        expected.mul(Affine3D.getTranslateInstance(-50, -60));
+
+        TransformHelper.assertMatrix(camera.getProjViewTransform(), expected);
     }
 
     @Test
@@ -369,6 +447,7 @@ public class CameraTest {
         PerspectiveCamera camera = new PerspectiveCamera(true);
         scene.setCamera(camera);
         scene.getRoot().setTranslateX(50);
+        camera.setTranslateX(50);
         camera.setTranslateY(60);
 
         GeneralTransform3D expected = new GeneralTransform3D();
@@ -379,6 +458,30 @@ public class CameraTest {
         view.rotate(Math.PI, 1, 0, 0);
 
         expected.mul(view);
+        expected.mul(Affine3D.getTranslateInstance(-50, -60));
+
+        TransformHelper.assertMatrix(camera.getProjViewTransform(), expected);
+    }
+
+    @Test
+    public void testPerspectiveProjViewTxWithFixedEyeAndMovedCameraNotInScene2() {
+        final Scene scene = new Scene(new Group(), 300, 200);
+        PerspectiveCamera camera = new PerspectiveCamera(true);
+        scene.setCamera(camera);
+        scene.getRoot().setTranslateX(50);
+        new Group(camera);
+        camera.getParent().setTranslateX(50);
+        camera.setTranslateY(60);
+
+        GeneralTransform3D expected = new GeneralTransform3D();
+        expected.perspective(true, Math.toRadians(30), 1.5, 0.1, 100);
+
+        Affine3D view = new Affine3D();
+        view.translate(0, 0, -1);
+        view.rotate(Math.PI, 1, 0, 0);
+
+        expected.mul(view);
+        expected.mul(Affine3D.getTranslateInstance(-50, -60));
 
         TransformHelper.assertMatrix(camera.getProjViewTransform(), expected);
     }
