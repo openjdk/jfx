@@ -82,7 +82,6 @@ public class MenuBarSkin extends BehaviorSkinBase<MenuBar, BehaviorBase<MenuBar>
     private int focusedMenuIndex = -1;
     private TraversalEngine engine;
     private Direction direction;
-    private boolean firstF10 = true;
 
     private static WeakHashMap<Stage, MenuBarSkin> systemMenuMap;
     private static List<MenuBase> wrappedDefaultMenus = new ArrayList<MenuBase>();
@@ -285,7 +284,6 @@ public class MenuBarSkin extends BehaviorSkinBase<MenuBar, BehaviorBase<MenuBar>
             @Override public void handle(MouseEvent t) {
                 if (!container.localToScene(container.getLayoutBounds()).contains(t.getX(), t.getY())) {
                     unSelectMenus();
-                    firstF10 = true;
                 }
             }
         };
@@ -298,7 +296,6 @@ public class MenuBarSkin extends BehaviorSkinBase<MenuBar, BehaviorBase<MenuBar>
             public void changed(ObservableValue<? extends Boolean> ov, Boolean t, Boolean t1) {
               if (!t1) {
                   unSelectMenus();
-                  firstF10 = true;
               }
             }
         }));
@@ -386,15 +383,14 @@ public class MenuBarSkin extends BehaviorSkinBase<MenuBar, BehaviorBase<MenuBar>
                 if (container.getChildren().size() > 0) {
                     if (container.getChildren().get(0) instanceof MenuButton) {
 //                        container.getChildren().get(0).requestFocus();
-                        if (firstF10) { 
-                            firstF10 = false;
+                        if (focusedMenuIndex != 0) {
                             unSelectMenus();
                             focusedMenuIndex = 0;
                             openMenuButton = ((MenuBarButton)container.getChildren().get(0));
                             openMenu = getSkinnable().getMenus().get(0);
                             openMenuButton.setHover();
-                        } else {
-                            firstF10 = true;
+                        }
+                        else {
                             unSelectMenus();
                         }
                     }
