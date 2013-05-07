@@ -106,23 +106,6 @@ public class Mouse3DTest {
     }
 
     @Test
-    public void shouldIgnoreCameraMovesOfPerspectivePickRayIfNotInScene() {
-        Camera cam = new PerspectiveCamera();
-        scene(group(), cam, true);
-        group(cam);
-        cam.setTranslateX(50);
-        cam.getParent().setTranslateY(30);
-        cam.impl_updatePG();
-        PickRay pickRay = cam.computePickRay(10, 20, null);
-        assertEquals(PERSPECTIVE_CAMERA_X, pickRay.getOriginNoClone().x, 0.00001);
-        assertEquals(PERSPECTIVE_CAMERA_Y, pickRay.getOriginNoClone().y, 0.00001);
-        assertEquals(PERSPECTIVE_CAMERA_Z, pickRay.getOriginNoClone().z, 0.00001);
-        assertEquals(10 - PERSPECTIVE_CAMERA_X, pickRay.getDirectionNoClone().x, 0.00001);
-        assertEquals(20 - PERSPECTIVE_CAMERA_Y, pickRay.getDirectionNoClone().y, 0.00001);
-        assertEquals(-PERSPECTIVE_CAMERA_Z, pickRay.getDirectionNoClone().z, 0.00001);
-    }
-
-    @Test
     public void shouldComputeCorrectParallelPickRay() {
         Camera cam = new ParallelCamera();
         scene(group(), cam, true);
@@ -145,23 +128,6 @@ public class Mouse3DTest {
         PickRay pickRay = cam.computePickRay(10, 20, null);
         assertEquals(60.0, pickRay.getOriginNoClone().x, 0.00001);
         assertEquals(50.0, pickRay.getOriginNoClone().y, 0.00001);
-        assertEquals(-1, pickRay.getOriginNoClone().z, 0.1);
-        assertEquals(0.0, pickRay.getDirectionNoClone().x, 0.00001);
-        assertEquals(0.0, pickRay.getDirectionNoClone().y, 0.00001);
-        assertEquals(1.0, pickRay.getDirectionNoClone().z, 0.1);
-    }
-
-    @Test
-    public void shouldIgnoreCameraMovesOfParallelPickRayIfNotInScene() {
-        Camera cam = new ParallelCamera();
-        scene(group(), cam, true);
-        group(cam);
-        cam.setTranslateX(50);
-        cam.getParent().setTranslateY(30);
-        cam.impl_updatePG();
-        PickRay pickRay = cam.computePickRay(10, 20, null);
-        assertEquals(10.0, pickRay.getOriginNoClone().x, 0.00001);
-        assertEquals(20.0, pickRay.getOriginNoClone().y, 0.00001);
         assertEquals(-1, pickRay.getOriginNoClone().z, 0.1);
         assertEquals(0.0, pickRay.getDirectionNoClone().x, 0.00001);
         assertEquals(0.0, pickRay.getDirectionNoClone().y, 0.00001);
@@ -1930,29 +1896,6 @@ public class Mouse3DTest {
     }
 
     @Test
-    public void ignoresPerspectiveCameraMovesIfCameraNotInScene() {
-        MouseEventGenerator g = new MouseEventGenerator();
-        Box b = box().handleMove(me);
-        Camera cam = perspective();
-        Group camGroup = group(cam);
-        cam.setTranslateX(-143);
-        camGroup.setTranslateX(123);
-        cam.impl_updatePG();
-        cam.setTranslateX(-43);
-        camGroup.setTranslateX(23);
-        cam.impl_updatePG();
-
-        Scene s = scene(group(b), cam, true);
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 30, 40));
-
-        MouseEvent e = me.event;
-        assertNotNull(e);
-        assertCoordinates(e, 30, 40, 50, 55.31915, -42.553191);
-        assertPickResult(e.getPickResult(),
-                b, point(50, 55.31915, -42.553191), 1112.658654, NOFACE, point(0.393617, 0.776596));
-    }
-
-    @Test
     public void takesParallelCameraMovesIntoAccount() {
         MouseEventGenerator g = new MouseEventGenerator();
         Box b = box().handleMove(me);
@@ -1974,29 +1917,6 @@ public class Mouse3DTest {
         assertCoordinates(e, 30, 40, 10, 40, -200);
         assertPickResult(e.getPickResult(),
                 b, point(10, 40, -200), Double.POSITIVE_INFINITY, NOFACE, point(0.6, 0.7));
-    }
-
-    @Test
-    public void ignoresParallelCameraMovesIfCameraNotInScene() {
-        MouseEventGenerator g = new MouseEventGenerator();
-        Box b = box().handleMove(me);
-        Camera cam = parallel();
-        Group camGroup = group(cam);
-        cam.setTranslateX(-43);
-        camGroup.setTranslateX(23);
-        cam.impl_updatePG();
-        cam.setTranslateX(-143);
-        camGroup.setTranslateX(123);
-        cam.impl_updatePG();
-
-        Scene s = scene(group(b), cam, true);
-        s.impl_processMouseEvent(g.generateMouseEvent(MouseEvent.MOUSE_MOVED, 30, 40));
-
-        MouseEvent e = me.event;
-        assertNotNull(e);
-        assertCoordinates(e, 30, 40, 30, 40, -200);
-        assertPickResult(e.getPickResult(),
-                b, point(30, 40, -200), Double.POSITIVE_INFINITY, NOFACE, point(0.8, 0.7));
     }
 
 
