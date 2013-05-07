@@ -14,6 +14,7 @@
   <target name="jheaders" unless="uptodate">
    <mkdir dir="${jheaders.dir}" />
         <javah destdir="${jheaders.dir}" classpath="${glass.classpath}" force="yes">
+            <class name="com.sun.glass.ui.android.SoftwareKeyboard"/>
             <class name="com.sun.glass.events.DndEvent"/>
             <class name="com.sun.glass.events.KeyEvent"/>
             <class name="com.sun.glass.events.MouseEvent"/>
@@ -61,10 +62,11 @@
     <target name="jar" depends="check-native, jheaders, compile-native-eglfb"/>
 
     <target name="clean">
-   <delete dir="libs"/>
-   <delete dir="obj"/>
-        <delete dir="${dist.dir}"/>
-        <delete dir="${build.dir}"/>
+       <delete dir="libs"/>
+       <delete dir="obj"/>
+       <delete dir="build"/>
+       <delete dir="dist"/>
+       <delete dir="bin"/>
     </target>
 
 </project>
