@@ -1255,6 +1255,18 @@ public class GridPane extends Pane {
         return true;
     }
 
+    private double getTotalWidthOfNodeColumns(Node child, double[] widths) {
+        if (getNodeColumnSpan(child) == 1) {
+            return widths[getNodeColumnIndex(child)];
+        } else {
+            double total = 0;
+            for (int i = getNodeColumnIndex(child), last = getNodeColumnEndConvertRemaining(child); i <= last; ++i) {
+                total += widths[i];
+            }
+            return total;
+        }
+    }
+
     private CompositeSize computeMaxHeights() {
         if (rowMaxHeight == null) {
             rowMaxHeight = createCompositeRows();
@@ -1330,10 +1342,10 @@ public class GridPane extends Pane {
                 int end = getNodeRowEndConvertRemaining(child);
                 if (start == end && !result.isPreset(start)) {
                     result.setMaxSize(start, computeChildPrefAreaHeight(child, getMargin(child),
-                            widths == null ? -1 : widths[getNodeColumnIndex(child)]));
+                            widths == null ? -1 : getTotalWidthOfNodeColumns(child, widths)));
                 } else if (start != end){
                     result.setMaxMultiSize(start, end + 1, computeChildPrefAreaHeight(child, getMargin(child),
-                            widths == null ? -1 : widths[getNodeColumnIndex(child)]));
+                            widths == null ? -1 : getTotalWidthOfNodeColumns(child, widths)));
                 }
             }
         }
@@ -1373,10 +1385,10 @@ public class GridPane extends Pane {
                 int end = getNodeRowEndConvertRemaining(child);
                 if (start == end && !result.isPreset(start)) {
                     result.setMaxSize(start, computeChildMinAreaHeight(child, getMargin(child),
-                            widths == null ? -1 : widths[getNodeColumnIndex(child)]));
+                            widths == null ? -1 : getTotalWidthOfNodeColumns(child, widths)));
                 } else if (start != end){
                     result.setMaxMultiSize(start, end + 1, computeChildMinAreaHeight(child, getMargin(child),
-                            widths == null ? -1 : widths[getNodeColumnIndex(child)]));
+                            widths == null ? -1 : getTotalWidthOfNodeColumns(child, widths)));
                 }
             }
         }
@@ -1384,6 +1396,18 @@ public class GridPane extends Pane {
 
 
         return result;
+    }
+
+    private double getTotalHeightOfNodeRows(Node child, double[] heights) {
+        if (getNodeRowSpan(child) == 1) {
+            return heights[getNodeRowIndex(child)];
+        } else {
+            double total = 0;
+            for (int i = getNodeRowIndex(child), last = getNodeRowEndConvertRemaining(child); i <= last; ++i) {
+                total += heights[i];
+            }
+            return total;
+        }
     }
 
     private CompositeSize computeMaxWidths() {
@@ -1461,10 +1485,10 @@ public class GridPane extends Pane {
                 int end = getNodeColumnEndConvertRemaining(child);
                 if (start == end && !result.isPreset(start)) {
                     result.setMaxSize(start, computeChildPrefAreaWidth(child, getMargin(child),
-                            heights == null ? -1 : heights[getNodeRowIndex(child)]));
+                            heights == null ? -1 : getTotalHeightOfNodeRows(child, heights)));
                 } else if (start != end) {
                     result.setMaxMultiSize(start, end + 1, computeChildPrefAreaWidth(child, getMargin(child),
-                            heights == null ? -1 : heights[getNodeRowIndex(child)]));
+                            heights == null ? -1 : getTotalHeightOfNodeRows(child, heights)));
                 }
             }
         }
@@ -1504,10 +1528,10 @@ public class GridPane extends Pane {
                 int end = getNodeColumnEndConvertRemaining(child);
                 if (start == end && !result.isPreset(start)) {
                     result.setMaxSize(start, computeChildMinAreaWidth(child, getMargin(child),
-                            heights == null ? -1 : heights[getNodeRowIndex(child)]));
+                            heights == null ? -1 : getTotalHeightOfNodeRows(child, heights)));
                 } else if (start != end){
                     result.setMaxMultiSize(start, end + 1, computeChildMinAreaWidth(child, getMargin(child),
-                            heights == null ? -1 : heights[getNodeRowIndex(child)]));
+                            heights == null ? -1 : getTotalHeightOfNodeRows(child, heights)));
                 }
             }
         }
