@@ -559,11 +559,11 @@ void addJSL(Project project, String name, Closure compile) {
         enabled = IS_WINDOWS
         description = "Compile $name HLSL files into .obj files"
         matches = ".*\\.hlsl"
-        output project.file("$project.buildDir/hlsl") // TODO!!
+        output project.file("$project.buildDir/hlsl/$name")
     }
 
     project.task("process${name}Shaders", dependsOn: [generateShaders, compileHLSLShaders], type: Copy, description: "Copy hlsl / frag shaders to build/resources/jsl-$lowerName") {
-        from("$project.buildDir/hlsl") { // TODO!!
+        from("$project.buildDir/hlsl/$name") {
             include "**/*.obj"
         }
         from("$project.buildDir/generated-src/jsl-$lowerName") {
