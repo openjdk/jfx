@@ -52,7 +52,7 @@ class ES2PhongShader {
         TEXTURE
     }
 
-    enum SelfIllumination {
+    enum SelfIllumState {
 
         NONE,
         TEXTURE
@@ -66,13 +66,13 @@ class ES2PhongShader {
     static final int lightStateCount = 4;
     private static String diffuseShaderParts[] = new String[DiffuseState.values().length];
     private static String SpecularShaderParts[] = new String[SpecularState.values().length];
-    private static String selfIlluminationShaderParts[] = new String[SelfIllumination.values().length];
+    private static String selfIllumShaderParts[] = new String[SelfIllumState.values().length];
     private static String normalMapShaderParts[] = new String[BumpMapState.values().length];
     private static String lightingShaderParts[] = new String[lightStateCount];
 
     static {
         shaders = new ES2Shader[DiffuseState.values().length][SpecularState.values().length]
-                [SelfIllumination.values().length][BumpMapState.values().length][lightStateCount];
+                [SelfIllumState.values().length][BumpMapState.values().length][lightStateCount];
 
         //NOTE: When creating new shaders, underscore denotes a "shader part"
         diffuseShaderParts[DiffuseState.NONE.ordinal()] =
@@ -89,9 +89,9 @@ class ES2PhongShader {
         SpecularShaderParts[SpecularState.TEXTURE.ordinal()] =
                 ES2Shader.readStreamIntoString(ES2ResourceFactory.class.getResourceAsStream("glsl/specular_texture.frag"));
 
-        selfIlluminationShaderParts[SelfIllumination.NONE.ordinal()] =
+        selfIllumShaderParts[SelfIllumState.NONE.ordinal()] =
                 ES2Shader.readStreamIntoString(ES2ResourceFactory.class.getResourceAsStream("glsl/selfIllum_none.frag"));
-        selfIlluminationShaderParts[SelfIllumination.TEXTURE.ordinal()] =
+        selfIllumShaderParts[SelfIllumState.TEXTURE.ordinal()] =
                 ES2Shader.readStreamIntoString(ES2ResourceFactory.class.getResourceAsStream("glsl/selfIllum_texture.frag"));
 
         normalMapShaderParts[BumpMapState.NONE.ordinal()] =
@@ -115,27 +115,19 @@ class ES2PhongShader {
     static ES2Shader getShader(ES2MeshView meshView, ES2Context context) {
 
         ES2PhongMaterial material = meshView.getMaterial();
-        DiffuseState diffuseState = DiffuseState.NONE;
 
-        //TODO: 3D - determine proper check (does a TEXTURE override a color?)
-        //TODO: 3D - May remove diffuseColor check if we are certain that
-        //           it is never null.
-        if (material.diffuseColor != null) {
-            diffuseState = DiffuseState.DIFFUSECOLOR;
-        }
-
-        if (material.diffuseMap) {
+        DiffuseState diffuseState = DiffuseState.DIFFUSECOLOR;
+        if (material.maps[ES2PhongMaterial.DIFFUSE].getTexture() != null) {
             diffuseState = DiffuseState.TEXTURE;
         }
 
         SpecularState specularState = SpecularState.NONE;
-
         //TODO: 3D - determine proper check (does a TEXTURE override a color?)
         if (material.specularColor != null) {
             specularState = SpecularState.SPECULARCOLOR;
         }
 
-        if (material.specularMap) {
+        if (material.maps[ES2PhongMaterial.SPECULAR].getTexture() != null) {
             if (material.isSpecularAlpha) {
                 specularState = SpecularState.TEXTURE;
             } else {
@@ -144,15 +136,13 @@ class ES2PhongShader {
         }
 
         BumpMapState bumpState = BumpMapState.NONE;
-
-        if (material.bumpMap) {
+        if (material.maps[ES2PhongMaterial.BUMP].getTexture() != null) {
             bumpState = BumpMapState.TEXTURE;
         }
 
-        SelfIllumination selfIllumState = SelfIllumination.NONE;
-
-        if (material.selfIlluminationMap) {
-            selfIllumState = SelfIllumination.TEXTURE;
+        SelfIllumState selfIllumState = SelfIllumState.NONE;
+        if (material.maps[ES2PhongMaterial.SELF_ILLUM].getTexture() != null) {
+            selfIllumState = SelfIllumState.TEXTURE;
         }
 
         int numLights = 0;
@@ -166,7 +156,7 @@ class ES2PhongShader {
             String[] pixelShaders = new String[]{
                 diffuseShaderParts[diffuseState.ordinal()],
                 SpecularShaderParts[specularState.ordinal()],
-                selfIlluminationShaderParts[selfIllumState.ordinal()],
+                selfIllumShaderParts[selfIllumState.ordinal()],
                 normalMapShaderParts[bumpState.ordinal()],
                 lightingShaderParts[numLights]
             };
@@ -196,29 +186,14 @@ class ES2PhongShader {
 
         ES2PhongMaterial material = meshView.getMaterial();
 
-        //TODO: 3D - May remove diffuseColor check if we are certain that
-        //           it is never null.
-        if (material.diffuseColor != null) {
-            shader.setConstant("diffuseColor", material.diffuseColor.getRed(),
-                    material.diffuseColor.getGreen(), material.diffuseColor.getBlue(),
-                    material.diffuseColor.getAlpha());
-        }
+        shader.setConstant("diffuseColor", material.diffuseColor.getRed(),
+                material.diffuseColor.getGreen(), material.diffuseColor.getBlue(),
+                material.diffuseColor.getAlpha());
 
-        if (material.diffuseMap) {
-            context.updateTexture(0, material.maps[ES2PhongMaterial.DIFFUSE_MAP]);
-        }
-
-        if (material.specularMap) {
-            context.updateTexture(1, material.maps[ES2PhongMaterial.SPECULAR_MAP]);
-        }
-
-        if (material.bumpMap) {
-            context.updateTexture(2, material.maps[ES2PhongMaterial.BUMP_MAP]);
-        }
-
-        if (material.selfIlluminationMap) {
-            context.updateTexture(3, material.maps[ES2PhongMaterial.SELF_ILLUM_MAP]);
-        }
+        context.updateTexture(ES2PhongMaterial.DIFFUSE, material.maps[ES2PhongMaterial.DIFFUSE].getTexture());
+        context.updateTexture(ES2PhongMaterial.SPECULAR, material.maps[ES2PhongMaterial.SPECULAR].getTexture());
+        context.updateTexture(ES2PhongMaterial.BUMP, material.maps[ES2PhongMaterial.BUMP].getTexture());
+        context.updateTexture(ES2PhongMaterial.SELF_ILLUM, material.maps[ES2PhongMaterial.SELF_ILLUM].getTexture());
 
         shader.setConstant("ambientColor", meshView.getAmbientLightRed(),
                 meshView.getAmbientLightGreen(), meshView.getAmbientLightBlue());

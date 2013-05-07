@@ -34,7 +34,7 @@ public class StubPhongMaterial extends StubShape3D implements PGPhongMaterial {
     private Object diffuseMap;
     private Object specularMap;
     private Object bumpMap;
-    private Object selfIlluminationMap;
+    private Object selfIllumMap;
 
     @Override
     public void setDiffuseColor(Object diffuseColor) {
@@ -67,8 +67,8 @@ public class StubPhongMaterial extends StubShape3D implements PGPhongMaterial {
     }
 
     @Override
-    public void setSelfIlluminationMap(Object selfIlluminationMap) {
-        this.selfIlluminationMap = selfIlluminationMap;
+    public void setSelfIllumMap(Object selfIllumMap) {
+        this.selfIllumMap = selfIllumMap;
     }
 
     public Object getBumpMap() {
@@ -84,7 +84,7 @@ public class StubPhongMaterial extends StubShape3D implements PGPhongMaterial {
     }
 
     public Object getSelfIlluminationMap() {
-        return selfIlluminationMap;
+        return selfIllumMap;
     }
 
     public Object getSpecularColor() {

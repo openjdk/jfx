@@ -27,6 +27,7 @@ package com.sun.prism.es2;
 
 import com.sun.prism.PhongMaterial;
 import com.sun.prism.Texture;
+import com.sun.prism.TextureMap;
 import com.sun.prism.impl.BaseGraphicsResource;
 import com.sun.prism.impl.Disposer;
 import com.sun.prism.paint.Color;
@@ -38,17 +39,7 @@ class ES2PhongMaterial extends BaseGraphicsResource implements PhongMaterial {
 
     static int count = 0;
     private final long nativeHandle;
-
-    static final int DIFFUSE_MAP = 0;
-    static final int SPECULAR_MAP = 1;
-    static final int BUMP_MAP = 2;
-    static final int SELF_ILLUM_MAP = 3;
-    Texture maps[] = new ES2Texture[4];
-
-    boolean diffuseMap = false;
-    boolean specularMap = false;
-    boolean selfIlluminationMap = false;
-    boolean bumpMap = false;
+    TextureMap maps[] = new TextureMap[MAX_MAP_TYPE];
 
     Color diffuseColor = Color.WHITE;
     Color specularColor = Color.WHITE;
@@ -76,36 +67,34 @@ class ES2PhongMaterial extends BaseGraphicsResource implements PhongMaterial {
         diffuseColor = new Color(r,g,b,a);
     }
 
-    public void setMap(MapType mapID, Texture map) {
-        switch (mapID) {
+    public void setTextureMap(TextureMap map) {
+        switch (map.getType()) {
             case SPECULAR:
-                isSpecularAlpha = map == null ?
-                        false : !map.getPixelFormat().isOpaque();
-                specularMap = true;
-                maps[SPECULAR_MAP] = (ES2Texture) map;
+                isSpecularAlpha = map.getTexture() == null ?
+                        false : !map.getTexture().getPixelFormat().isOpaque();
+                maps[SPECULAR] = map;
                 break;
             case BUMP:
-                isBumpAlpha = map == null ?
-                        false : !map.getPixelFormat().isOpaque();
-                bumpMap = map != null;
-                maps[BUMP_MAP] = (ES2Texture) map;
+                isBumpAlpha = map.getTexture() == null ?
+                        false : !map.getTexture().getPixelFormat().isOpaque();
+
+                maps[BUMP] = map;
                 break;
             case DIFFUSE:
-                diffuseMap = map != null;
-                maps[DIFFUSE_MAP] = (ES2Texture) map;
+                maps[DIFFUSE] = map;
                 break;
             case SELF_ILLUM:
-                selfIlluminationMap = map != null;
-                maps[SELF_ILLUM_MAP] = (ES2Texture) map;
+                maps[SELF_ILLUM] = map;
                 break;
             default:
                 // NOP
         }
 
         // TODO: 3D - This is a workaround only. See JIRA RT-29543 for detail.
-        if (map != null) {
-            map.contentsUseful();
-            map.makePermanent();
+        Texture texture = map.getTexture();
+        if (texture != null) {
+            texture.contentsUseful();
+            texture.makePermanent();
         }
     }
 

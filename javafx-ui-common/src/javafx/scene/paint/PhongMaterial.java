@@ -345,7 +345,7 @@ public class PhongMaterial extends Material {
                     == null ? null : getBumpMap().impl_getPlatformImage());
         }
         if (selfIlluminationMapDirty) {
-            pMaterial.setSelfIlluminationMap(getSelfIlluminationMap()
+            pMaterial.setSelfIllumMap(getSelfIlluminationMap()
                     == null ? null : getSelfIlluminationMap().impl_getPlatformImage());
         }
 

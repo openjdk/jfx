@@ -27,6 +27,7 @@ package com.sun.prism.d3d;
 
 import com.sun.prism.PhongMaterial;
 import com.sun.prism.Texture;
+import com.sun.prism.TextureMap;
 import com.sun.prism.impl.BaseGraphicsResource;
 import com.sun.prism.impl.Disposer;
 
@@ -39,7 +40,8 @@ class D3DPhongMaterial extends BaseGraphicsResource implements PhongMaterial {
 
     private final D3DContext context;
     private final long nativeHandle;
-
+    private TextureMap maps[] = new TextureMap[MAX_MAP_TYPE];
+    
     private D3DPhongMaterial(D3DContext context, long nativeHandle,
             Disposer.Record disposerRecord) {
         super(disposerRecord);
@@ -61,32 +63,41 @@ class D3DPhongMaterial extends BaseGraphicsResource implements PhongMaterial {
         context.setSolidColor(nativeHandle, r, g, b, a);
     }
 
-    public void setMap(PhongMaterial.MapType mapID, Texture map) {
+    public void setTextureMap(TextureMap map) {
         boolean isSpecularAlpha = false;
         boolean isBumpAlpha = false;
-        switch (mapID) {
+        switch (map.getType()) {
             case SPECULAR:
-                isSpecularAlpha = map == null ?
-                        false : !map.getPixelFormat().isOpaque();
+                isSpecularAlpha = map.getTexture() == null ?
+                        false : !map.getTexture().getPixelFormat().isOpaque();
+                maps[SPECULAR] = map;
                 break;
             case BUMP:
-                isBumpAlpha = map == null ?
-                        false : !map.getPixelFormat().isOpaque();
+                isBumpAlpha = map.getTexture() == null ?
+                        false : !map.getTexture().getPixelFormat().isOpaque();
+                maps[BUMP] = map;
+                break;
+            case DIFFUSE:
+                maps[DIFFUSE] = map;
+                break;
+            case SELF_ILLUM:
+                maps[SELF_ILLUM] = map;
                 break;
             default:
                 // NOP
         }
         long hTexture;
-        if (map != null) {
+        Texture texture = map.getTexture();
+        if (texture != null) {
             // TODO: 3D - This is a workaround only. See JIRA RT-29543 for detail.
-            map.contentsUseful();
-            map.makePermanent();
+            texture.contentsUseful();
+            texture.makePermanent();
 
-            hTexture = ((D3DTexture) map).getNativeTextureObject();
+            hTexture = ((D3DTexture) texture).getNativeTextureObject();
         } else {
             hTexture = 0;
         }
-        context.setMap(nativeHandle, mapID.ordinal(),
+        context.setMap(nativeHandle, map.getType().ordinal(),
                 hTexture, isSpecularAlpha, isBumpAlpha);
     }
 
