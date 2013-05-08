@@ -33,6 +33,7 @@ import java.util.List;
 import java.util.Set;
 import javafx.css.PseudoClass;
 
+import javafx.css.Styleable;
 import javafx.scene.Node;
 
 /**
@@ -59,19 +60,19 @@ abstract public class Selector {
      *@return a <code>Match</code> describing the match, or <code>null</code> 
      *      for no match
      */
-    abstract Match matches(Node node);
+    abstract Match matches(Styleable node);
 
     // same as the matches method expect return true/false rather than a match
-    public abstract boolean applies(Node node);
+    public abstract boolean applies(Styleable styleable);
     
     // same as applies, but will return pseudoclass state that it finds along the way
-    abstract boolean applies(Node node, Set<PseudoClass>[] triggerStates, int bit);
+    abstract boolean applies(Styleable styleable, Set<PseudoClass>[] triggerStates, int bit);
     
     /**
      * Determines whether the current state of the node and its parents
      * matches the pseudo-classes defined (if any) for this selector.
      */
-    public abstract boolean stateMatches(Node node, Set<PseudoClass> state);
+    public abstract boolean stateMatches(Styleable styleable, Set<PseudoClass> state);
 
     private static final int TYPE_SIMPLE = 1;
     private static final int TYPE_COMPOUND = 2;

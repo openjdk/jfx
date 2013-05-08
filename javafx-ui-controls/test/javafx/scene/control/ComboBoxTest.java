@@ -613,30 +613,31 @@ public class ComboBoxTest {
         assertEquals(null, sc.toString(null));
     }
     
-    @Ignore("Fails due to RT-29927")
     @Test public void ensureImpl_getPseudoClassStateReturnsValidValue() {
-        Set<PseudoClass> value1 = comboBox.getPseudoClassStates();
+        Set<PseudoClass> pseudoClassStates = comboBox.getPseudoClassStates();
         assertFalse(comboBox.isEditable());
-        assertTrue(value1.size() >= 0);
-        
+        assertTrue(pseudoClassStates.size() >= 0);
+
         comboBox.setEditable(true);
-        Set<PseudoClass> value2 = comboBox.getPseudoClassStates();
-        assertTrue(value2.contains(PseudoClass.getPseudoClass("editable")));
-        
+        pseudoClassStates = comboBox.getPseudoClassStates();
+        assertTrue(pseudoClassStates.contains(PseudoClass.getPseudoClass("editable")));
+
+        comboBox.setEditable(false);
+        pseudoClassStates = comboBox.getPseudoClassStates();
+        assertTrue(pseudoClassStates.contains(PseudoClass.getPseudoClass("editable")) == false);
+
         comboBox.show();
-        Set<PseudoClass> value3 = comboBox.getPseudoClassStates();
-        assertTrue(value3.contains(PseudoClass.getPseudoClass("showing")));
-        
+        pseudoClassStates = comboBox.getPseudoClassStates();
+        assertTrue(pseudoClassStates.contains(PseudoClass.getPseudoClass("showing")));
+
+        comboBox.hide();
+        pseudoClassStates = comboBox.getPseudoClassStates();
+        assertTrue(pseudoClassStates.contains(PseudoClass.getPseudoClass("showing")) == false);
+
         comboBox.arm();
-        Set<PseudoClass> value4 = comboBox.getPseudoClassStates();
-        assertTrue(value4.contains(PseudoClass.getPseudoClass("armed")));
+        pseudoClassStates = comboBox.getPseudoClassStates();
+        assertTrue(pseudoClassStates.contains(PseudoClass.getPseudoClass("armed")));
         
-        assertFalse(value1.equals(value2));
-        assertFalse(value1.equals(value3));
-        assertFalse(value1.equals(value4));
-        assertFalse(value2.equals(value3));
-        assertFalse(value2.equals(value4));
-        assertFalse(value3.equals(value4));
     }
     
     /*********************************************************************

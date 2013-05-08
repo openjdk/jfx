@@ -476,6 +476,10 @@ public class Tooltip extends PopupControl {
         return getClassCssMetaData();
     }
 
+    @Override public Styleable getStyleableParent() {
+        return BEHAVIOR.hoveredNode;
+    }
+
     private final class CSSBridge extends PopupControl.CSSBridge {
         
         @Override public List<CssMetaData<? extends Styleable, ?>> getCssMetaData() {
@@ -866,7 +870,6 @@ public class Tooltip extends PopupControl {
                         if (leftTimer.getStatus() == Timeline.Status.RUNNING) {
                             if (visibleTooltip != null) visibleTooltip.hide();
                             visibleTooltip = t;
-                            hoveredNode = null;
                             t.show(owner, event.getScreenX(), event.getScreenY());
                             leftTimer.stop();
                             hideTimer.playFromStart();

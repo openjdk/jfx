@@ -67,6 +67,8 @@ public abstract class TableRowSkinBase<T,
      */
     static final Map<Control, Double> maxDisclosureWidthMap = new WeakHashMap<Control, Double>();
     
+    private double prefWidth = -1;
+    
     protected int getIndentationLevel(C control) {
         // TreeTableView.getNodeLevel(control.getTreeTable)
         return 0;
@@ -376,146 +378,149 @@ public abstract class TableRowSkinBase<T,
         if (cellsMap.isEmpty()) return;
         
         ObservableList<? extends TableColumnBase> visibleLeafColumns = getVisibleLeafColumns();
-        if (! visibleLeafColumns.isEmpty()) {
+        if (visibleLeafColumns.isEmpty()) {
+            super.layoutChildren(x,y,w,h);
+            return;
+        }
+        
+        ///////////////////////////////////////////
+        // indentation code starts here
+        ///////////////////////////////////////////
+        double leftMargin = 0;
+        double disclosureWidth = 0;
+        double graphicWidth = 0;
+        boolean indentationRequired = isIndentationRequired();
+        boolean disclosureVisible = isDisclosureNodeVisible();
+        int indentationColumnIndex = 0;
+        Node disclosureNode = null;
+        if (indentationRequired) {
+            // Determine the column in which we want to put the disclosure node.
+            // By default it is null, which means the 0th column should be
+            // where the indentation occurs.
+            TableColumnBase<?,?> treeColumn = getTreeColumn();
+            indentationColumnIndex = treeColumn == null ? 0 : visibleLeafColumns.indexOf(treeColumn);
+            indentationColumnIndex = indentationColumnIndex < 0 ? 0 : indentationColumnIndex;
             
-            ///////////////////////////////////////////
-            // indentation code starts here
-            ///////////////////////////////////////////
-            double leftMargin = 0;
-            double disclosureWidth = 0;
-            double graphicWidth = 0;
-            boolean indentationRequired = isIndentationRequired();
-            boolean disclosureVisible = isDisclosureNodeVisible();
-            int indentationColumnIndex = 0;
-            Node disclosureNode = null;
-            if (indentationRequired) {
-                // Determine the column in which we want to put the disclosure node.
-                // By default it is null, which means the 0th column should be
-                // where the indentation occurs.
-                TableColumnBase<?,?> treeColumn = getTreeColumn();
-                indentationColumnIndex = treeColumn == null ? 0 : visibleLeafColumns.indexOf(treeColumn);
-                indentationColumnIndex = indentationColumnIndex < 0 ? 0 : indentationColumnIndex;
-                
-                int indentationLevel = getIndentationLevel(getSkinnable());
-                if (! isShowRoot()) indentationLevel--;
-                final double indentationPerLevel = getIndentationPerLevel();
-                leftMargin = indentationLevel * indentationPerLevel;
+            int indentationLevel = getIndentationLevel(getSkinnable());
+            if (! isShowRoot()) indentationLevel--;
+            final double indentationPerLevel = getIndentationPerLevel();
+            leftMargin = indentationLevel * indentationPerLevel;
+        
+            // position the disclosure node so that it is at the proper indent
+            Control c = getVirtualFlowOwner();
+            final double defaultDisclosureWidth = maxDisclosureWidthMap.containsKey(c) ?
+                maxDisclosureWidthMap.get(c) : 0;
+            disclosureWidth = defaultDisclosureWidth;
             
-                // position the disclosure node so that it is at the proper indent
-                Control c = getVirtualFlowOwner();
-                final double defaultDisclosureWidth = maxDisclosureWidthMap.containsKey(c) ?
-                    maxDisclosureWidthMap.get(c) : 0;
-                disclosureWidth = defaultDisclosureWidth;
+            disclosureNode = getDisclosureNode();
+            if (disclosureNode != null) {
+                disclosureNode.setVisible(disclosureVisible);
                 
-                disclosureNode = getDisclosureNode();
-                if (disclosureNode != null) {
-                    disclosureNode.setVisible(disclosureVisible);
-                    
-                    if (disclosureVisible) {
-                        disclosureWidth = disclosureNode.prefWidth(h);
-                        if (disclosureWidth > defaultDisclosureWidth) {
-                            maxDisclosureWidthMap.put(c, disclosureWidth);
-                        }
+                if (disclosureVisible) {
+                    disclosureWidth = disclosureNode.prefWidth(h);
+                    if (disclosureWidth > defaultDisclosureWidth) {
+                        maxDisclosureWidthMap.put(c, disclosureWidth);
                     }
                 }
             }
-            ///////////////////////////////////////////
-            // indentation code ends here
-            ///////////////////////////////////////////
-            
-            // layout the individual column cells
-            double width;
-            double height;
-            
-            double verticalPadding = snappedTopInset() + snappedBottomInset();
-            double horizontalPadding = snappedLeftInset() + snappedRightInset();
+        }
+        ///////////////////////////////////////////
+        // indentation code ends here
+        ///////////////////////////////////////////
+        
+        // layout the individual column cells
+        double width;
+        double height;
+        
+        double verticalPadding = snappedTopInset() + snappedBottomInset();
+        double horizontalPadding = snappedLeftInset() + snappedRightInset();
 
-            /**
-             * RT-26743:TreeTableView: Vertical Line looks unfinished.
-             * We used to not do layout on cells whose row exceeded the number
-             * of items, but now we do so as to ensure we get vertical lines
-             * where expected in cases where the vertical height exceeds the 
-             * number of items.
-             */
-            int index = getSkinnable().getIndex();
-            if (index < 0/* || row >= itemsProperty().get().size()*/) return;
+        /**
+         * RT-26743:TreeTableView: Vertical Line looks unfinished.
+         * We used to not do layout on cells whose row exceeded the number
+         * of items, but now we do so as to ensure we get vertical lines
+         * where expected in cases where the vertical height exceeds the 
+         * number of items.
+         */
+        int index = getSkinnable().getIndex();
+        if (index < 0/* || row >= itemsProperty().get().size()*/) return;
+        
+        for (int column = 0, max = cells.size(); column < max; column++) {
+            R tableCell = cells.get(column);
+            TableColumnBase<T, ?> tableColumn = getTableColumnBase(tableCell);
             
-            for (int column = 0, max = cells.size(); column < max; column++) {
-                R tableCell = cells.get(column);
-                TableColumnBase<T, ?> tableColumn = getTableColumnBase(tableCell);
-                
-                show(tableCell);
-                
-                width = snapSize(tableCell.prefWidth(-1)) - snapSize(horizontalPadding);
-                height = Math.max(getSkinnable().getHeight(), tableCell.prefHeight(-1));
-                height = snapSize(height) - snapSize(verticalPadding);
-                
-                boolean isVisible = true;
-                if (fixedCellLengthEnabled) {
-                    // we determine if the cell is visible, and if not we have the
-                    // ability to take it out of the scenegraph to help improve 
-                    // performance. However, we only do this when there is a 
-                    // fixed cell length specified in the TableView. This is because
-                    // when we have a fixed cell length it is possible to know with
-                    // certainty the height of each TableCell - it is the fixed value
-                    // provided by the developer, and this means that we do not have
-                    // to concern ourselves with the possibility that the height
-                    // may be variable and / or dynamic.
-                    isVisible = isColumnPartiallyOrFullyVisible(tableColumn);
-                } 
+            show(tableCell);
+            
+            width = snapSize(tableCell.prefWidth(-1)) - snapSize(horizontalPadding);
+            height = Math.max(getSkinnable().getHeight(), tableCell.prefHeight(-1));
+            height = snapSize(height) - snapSize(verticalPadding);
+            
+            boolean isVisible = true;
+            if (fixedCellLengthEnabled) {
+                // we determine if the cell is visible, and if not we have the
+                // ability to take it out of the scenegraph to help improve 
+                // performance. However, we only do this when there is a 
+                // fixed cell length specified in the TableView. This is because
+                // when we have a fixed cell length it is possible to know with
+                // certainty the height of each TableCell - it is the fixed value
+                // provided by the developer, and this means that we do not have
+                // to concern ourselves with the possibility that the height
+                // may be variable and / or dynamic.
+                isVisible = isColumnPartiallyOrFullyVisible(tableColumn);
+            } 
 
-                if (isVisible) {
-                    // not ideal to have to do this O(n) lookup, but compared
-                    // to what we had previously this is still a massive step
-                    // forward
-                    if (fixedCellLengthEnabled && ! getChildren().contains(tableCell)) {
-                        getChildren().add(tableCell);
+            if (isVisible) {
+                // not ideal to have to do this O(n) lookup, but compared
+                // to what we had previously this is still a massive step
+                // forward
+                if (fixedCellLengthEnabled && ! getChildren().contains(tableCell)) {
+                    getChildren().add(tableCell);
+                }
+                
+                
+                
+                ///////////////////////////////////////////
+                // further indentation code starts here
+                ///////////////////////////////////////////
+                if (indentationRequired && column == indentationColumnIndex) {
+                    if (disclosureVisible) {
+                        double ph = disclosureNode.prefHeight(disclosureWidth);
+                        
+                        if (width < (disclosureWidth + leftMargin)) {
+                            fadeOut(disclosureNode);
+                        } else {
+                            fadeIn(disclosureNode);
+                            disclosureNode.resize(disclosureWidth, ph);
+                            positionInArea(disclosureNode, x + leftMargin, y,
+                                    disclosureWidth, h, /*baseline ignored*/0,
+                                    HPos.CENTER, VPos.CENTER);
+                            disclosureNode.toFront();
+                        }
                     }
                     
+                    // determine starting point of the graphic or cell node, and the
+                    // remaining width available to them
+                    ObjectProperty<Node> graphicProperty = graphicProperty();
+                    Node graphic = graphicProperty == null ? null : graphicProperty.get();
                     
-                    
-                    ///////////////////////////////////////////
-                    // further indentation code starts here
-                    ///////////////////////////////////////////
-                    if (indentationRequired && column == indentationColumnIndex) {
-                        if (disclosureVisible) {
-                            double ph = disclosureNode.prefHeight(disclosureWidth);
-                            
-                            if (width < (disclosureWidth + leftMargin)) {
-                                fadeOut(disclosureNode);
-                            } else {
-                                fadeIn(disclosureNode);
-                                disclosureNode.resize(disclosureWidth, ph);
-                                positionInArea(disclosureNode, x + leftMargin, y,
-                                        disclosureWidth, h, /*baseline ignored*/0,
+                    if (graphic != null) {
+                        graphicWidth = graphic.prefWidth(-1) + 3;
+                        
+                        if (width < disclosureWidth + leftMargin + graphicWidth) {
+                            fadeOut(graphic);
+                        } else {
+                            fadeIn(graphic);
+                            positionInArea(graphic, x + leftMargin + disclosureWidth, y,
+                                        graphicWidth, h, /*baseline ignored*/0,
                                         HPos.CENTER, VPos.CENTER);
-                                disclosureNode.toFront();
-                            }
-                        }
-                        
-                        // determine starting point of the graphic or cell node, and the
-                        // remaining width available to them
-                        ObjectProperty<Node> graphicProperty = graphicProperty();
-                        Node graphic = graphicProperty == null ? null : graphicProperty.get();
-                        
-                        if (graphic != null) {
-                            graphicWidth = graphic.prefWidth(-1) + 3;
-                            
-                            if (width < disclosureWidth + leftMargin + graphicWidth) {
-                                fadeOut(graphic);
-                            } else {
-                                fadeIn(graphic);
-                                positionInArea(graphic, x + leftMargin + disclosureWidth, y,
-                                            graphicWidth, h, /*baseline ignored*/0,
-                                            HPos.CENTER, VPos.CENTER);
-                                graphic.toFront();
-                            }
+                            graphic.toFront();
                         }
                     }
-                    ///////////////////////////////////////////
-                    // further indentation code ends here
-                    ///////////////////////////////////////////
-                    
+                }
+                ///////////////////////////////////////////
+                // further indentation code ends here
+                ///////////////////////////////////////////
+                
 //                    ///////////////////////////////////////////
 //                    // cell spanning code starts here
 //                    ///////////////////////////////////////////
@@ -567,25 +572,22 @@ public abstract class TableRowSkinBase<T,
 //                    ///////////////////////////////////////////
 //                    // cell spanning code ends here
 //                    ///////////////////////////////////////////
-                    
-                    tableCell.resize(width, height);
-                    tableCell.relocate(x, snappedTopInset());
-                    
-                    // Request layout is here as (partial) fix for RT-28684
-                    tableCell.requestLayout();
-                } else {
-                    if (fixedCellLengthEnabled) {
-                        // we only add/remove to the scenegraph if the fixed cell
-                        // length support is enabled - otherwise we keep all
-                        // TableCells in the scenegraph
-                        getChildren().remove(tableCell);
-                    }
+                
+                tableCell.resize(width, height);
+                tableCell.relocate(x, snappedTopInset());
+                
+                // Request layout is here as (partial) fix for RT-28684
+                tableCell.requestLayout();
+            } else {
+                if (fixedCellLengthEnabled) {
+                    // we only add/remove to the scenegraph if the fixed cell
+                    // length support is enabled - otherwise we keep all
+                    // TableCells in the scenegraph
+                    getChildren().remove(tableCell);
                 }
-                       
-                x += width;
             }
-        } else {
-            super.layoutChildren(x,y,w,h);
+                   
+            x += width;
         }
     }
     
@@ -648,27 +650,34 @@ public abstract class TableRowSkinBase<T,
     protected void updateCells(boolean resetChildren) {
         // if clear isn't called first, we can run into situations where the
         // cells aren't updated properly.
+        final boolean cellsEmpty = cells.isEmpty();
         cells.clear();
+        
+        prefWidth = 0;
 
-        C skinnable = getSkinnable();
-        int skinnableIndex = skinnable.getIndex();
-        List<? extends TableColumnBase/*<T,?>*/> visibleLeafColumns = getVisibleLeafColumns();
+        final C skinnable = getSkinnable();
+        final int skinnableIndex = skinnable.getIndex();
+        final List<? extends TableColumnBase/*<T,?>*/> visibleLeafColumns = getVisibleLeafColumns();
+        
         for (int i = 0, max = visibleLeafColumns.size(); i < max; i++) {
             TableColumnBase<T,?> col = visibleLeafColumns.get(i);
+            
+            prefWidth += col.getWidth();
+            
             R cell = cellsMap.get(col);
             if (cell == null) {
                 // if the cell is null it means we don't have it in cache and
                 // need to create it
                 cell = createCell(col);
             }
-
+            
             updateCell(cell, skinnable);
             cell.updateIndex(skinnableIndex);
             cells.add(cell);
         }
 
         // update children of each row
-        if (! fixedCellLengthEnabled && resetChildren) {
+        if (! fixedCellLengthEnabled && (resetChildren || cellsEmpty)) {
             getChildren().setAll(cells);
         }
     }
@@ -684,14 +693,6 @@ public abstract class TableRowSkinBase<T,
     }
     
     @Override protected double computePrefWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
-        double prefWidth = 0.0F;
-
-        List<? extends TableColumnBase/*<T,?>*/> visibleLeafColumns = getVisibleLeafColumns();
-        for (int i = 0, max = visibleLeafColumns.size(); i < max; i++) {
-            TableColumnBase<T,?> tableColumn = visibleLeafColumns.get(i);
-            prefWidth += tableColumn.getWidth();
-        }
-
         return prefWidth;
     }
     
@@ -761,7 +762,7 @@ public abstract class TableRowSkinBase<T,
             updateCells(true);
             isDirty = false;
         } else if (updateCells) {
-            updateCells(true);
+            updateCells(false);
             updateCells = false;
         }
     }

@@ -38,6 +38,7 @@ import javafx.beans.value.ObservableValue;
 import javafx.collections.ListChangeListener;
 import javafx.collections.MapChangeListener;
 import javafx.collections.ObservableList;
+import javafx.css.Styleable;
 import javafx.event.EventHandler;
 import javafx.geometry.Bounds;
 import javafx.geometry.NodeOrientation;
@@ -82,7 +83,6 @@ public class MenuBarSkin extends BehaviorSkinBase<MenuBar, BehaviorBase<MenuBar>
     private int focusedMenuIndex = -1;
     private TraversalEngine engine;
     private Direction direction;
-    private boolean firstF10 = true;
 
     private static WeakHashMap<Stage, MenuBarSkin> systemMenuMap;
     private static List<MenuBase> wrappedDefaultMenus = new ArrayList<MenuBase>();
@@ -244,12 +244,10 @@ public class MenuBarSkin extends BehaviorSkinBase<MenuBar, BehaviorBase<MenuBar>
                             // RT-18859: Doing nothing for space and enter 
                             if (control.getScene().getWindow().isFocused()) {
                                 if (focusedMenuIndex != -1 && openMenu != null) {
+                                    openMenu = getSkinnable().getMenus().get(focusedMenuIndex);
                                     if (!isMenuEmpty(getSkinnable().getMenus().get(focusedMenuIndex))) {
-                                        openMenu = getSkinnable().getMenus().get(focusedMenuIndex);
                                         openMenu.show();
-                                    } else {
-                                        openMenu = null;
-                                    }
+                                    } 
                                     event.consume();
                                 }
                             }
@@ -287,7 +285,6 @@ public class MenuBarSkin extends BehaviorSkinBase<MenuBar, BehaviorBase<MenuBar>
             @Override public void handle(MouseEvent t) {
                 if (!container.localToScene(container.getLayoutBounds()).contains(t.getX(), t.getY())) {
                     unSelectMenus();
-                    firstF10 = true;
                 }
             }
         };
@@ -300,7 +297,6 @@ public class MenuBarSkin extends BehaviorSkinBase<MenuBar, BehaviorBase<MenuBar>
             public void changed(ObservableValue<? extends Boolean> ov, Boolean t, Boolean t1) {
               if (!t1) {
                   unSelectMenus();
-                  firstF10 = true;
               }
             }
         }));
@@ -388,15 +384,14 @@ public class MenuBarSkin extends BehaviorSkinBase<MenuBar, BehaviorBase<MenuBar>
                 if (container.getChildren().size() > 0) {
                     if (container.getChildren().get(0) instanceof MenuButton) {
 //                        container.getChildren().get(0).requestFocus();
-                        if (firstF10) { 
-                            firstF10 = false;
+                        if (focusedMenuIndex != 0) {
                             unSelectMenus();
                             focusedMenuIndex = 0;
                             openMenuButton = ((MenuBarButton)container.getChildren().get(0));
                             openMenu = getSkinnable().getMenus().get(0);
                             openMenuButton.setHover();
-                        } else {
-                            firstF10 = true;
+                        }
+                        else {
                             unSelectMenus();
                         }
                     }
@@ -552,7 +547,8 @@ public class MenuBarSkin extends BehaviorSkinBase<MenuBar, BehaviorBase<MenuBar>
             final MenuBarButton menuButton = new MenuBarButton(menu.getText(), menu.getGraphic());
             menuButton.setFocusTraversable(false);
             menuButton.getStyleClass().add("menu");
-            menuButton.setStyle(menu.getStyle()); // copy style 
+            menuButton.setStyle(menu.getStyle()); // copy style
+            menuButton.setId(menu.getId());
 
             menuButton.getItems().setAll(menu.getItems());
             container.getChildren().add(menuButton);
@@ -576,6 +572,12 @@ public class MenuBarSkin extends BehaviorSkinBase<MenuBar, BehaviorBase<MenuBar>
                             menuButton.getStyleClass().remove(str);
                         }
                     }
+                }
+            });
+            menu.idProperty().addListener(new ChangeListener<String>() {
+                @Override
+                public void changed(ObservableValue<? extends String> observableValue, String s, String s2) {
+                    menuButton.setId(s2);
                 }
             });
             menuButton.menuListener = new ChangeListener<Boolean>() {
@@ -624,12 +626,10 @@ public class MenuBarSkin extends BehaviorSkinBase<MenuBar, BehaviorBase<MenuBar>
 
                     // check if the owner window has focus
                     if (menuButton.getScene().getWindow().isFocused()) {
+                        openMenu = menu;
                         if (!isMenuEmpty(menu)){
-                            openMenu = menu;
                             openMenu.show();
-                        } else {
-                            openMenu = null;
-                        }
+                        } 
                         // update FocusedIndex
                         focusedMenuIndex = getMenuBarButtonIndex(menuButton);
                     }
@@ -721,18 +721,15 @@ public class MenuBarSkin extends BehaviorSkinBase<MenuBar, BehaviorBase<MenuBar>
                                 openMenuButton = null;
                                 openMenuButton = menuButton;
                         }
-                        if (openMenu == null) return;
                         updateFocusedIndex();
-                        if (openMenu.isShowing() && openMenu != menu) {
+                        if (openMenu != null && openMenu != menu) {
                          // hide the currently visible menu, and move to the new one
                             openMenu.hide();
+                            openMenu = menu;
+                            updateFocusedIndex();
                             if (!isMenuEmpty(menu)) {
-                                openMenu = menu;
-                                updateFocusedIndex();
                                 openMenu.show();
-                            } else {
-                                openMenu = null;
-                            }
+                            } 
                         }
                     }
                 }
@@ -774,8 +771,8 @@ public class MenuBarSkin extends BehaviorSkinBase<MenuBar, BehaviorBase<MenuBar>
     }
     
     private void unSelectMenus() {
-        if (focusedMenuIndex == -1) return;
         clearMenuButtonHover();
+        if (focusedMenuIndex == -1) return;
         if (openMenu != null) {
             openMenu.hide();
             openMenu = null;
@@ -809,24 +806,20 @@ public class MenuBarSkin extends BehaviorSkinBase<MenuBar, BehaviorBase<MenuBar>
         Menu nextMenu = findNextSibling();
         // hide the currently visible menu, and move to the next one
         if (openMenu != null) openMenu.hide();
+        openMenu = nextMenu;
         if (!isMenuEmpty(nextMenu)) {
-            openMenu = nextMenu;
             openMenu.show();
-        } else {
-            openMenu = null;
-        }
+        } 
     }
 
     private void showPrevMenu() {
         Menu prevMenu = findPreviousSibling();
         // hide the currently visible menu, and move to the next one
         if (openMenu != null) openMenu.hide();
+        openMenu = prevMenu;
         if (!isMenuEmpty(prevMenu)) {
-            openMenu = prevMenu;
             openMenu.show();
-        } else {
-            openMenu = null;
-        }
+        } 
     }
     
     private Menu findPreviousSibling() {
@@ -910,7 +903,6 @@ public class MenuBarSkin extends BehaviorSkinBase<MenuBar, BehaviorBase<MenuBar>
         private void setHover() {
             setHover(true);
         }
-      
     }
 
     /***************************************************************************

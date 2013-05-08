@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,24 +23,17 @@
  * questions.
  */
 
-package com.sun.javafx.scene.control.skin.resources;
+package com.sun.javafx.scene.control.behavior;
 
-import java.util.ResourceBundle;
+import javafx.scene.control.DateCell;
 
-public final class ControlResources {
-
-    private static final String BASE_NAME = "com/sun/javafx/scene/control/skin/resources/controls";
-
-    // Do not cache the bundle here. It is cached by the ResourceBundle
-    // class and may be updated if the default locale changes.
-
-    /*
-     * Look up a string in the properties file corresponding to the
-     * default locale (i.e. the application's locale). If not found, the
-     * search then falls back to the base controls.properties file,
-     * containing the default string (usually English).
-     */
-    public static String getString(String key) {
-        return ResourceBundle.getBundle(BASE_NAME).getString(key);
+/**
+ * Behaviors for LocalDate based cells types. Simply defines methods
+ * that subclasses implement so that CellSkinBase has API to call.
+ *
+ */
+public class DateCellBehavior extends CellBehaviorBase<DateCell> {
+    public DateCellBehavior(DateCell dateCell) {
+        super(dateCell);
     }
 }

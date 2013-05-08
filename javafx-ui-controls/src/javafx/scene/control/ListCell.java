@@ -420,7 +420,9 @@ public class ListCell<T> extends IndexedCell<T> {
                 updateItem(newValue, false);
             }
         } else {
-            updateItem(null, true);
+            if (! isEmpty()) {
+                updateItem(null, true);
+            }
         }
     }
     

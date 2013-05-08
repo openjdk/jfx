@@ -40,6 +40,7 @@ import javafx.beans.Observable;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.collections.ListChangeListener.Change;
+import javafx.util.Callback;
 
 import com.sun.javafx.scene.control.ReadOnlyUnbackedObservableList;
 
@@ -161,7 +162,7 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
      */
 
 
-    private final BitSet selectedIndices;
+    final BitSet selectedIndices;
     private final ReadOnlyUnbackedObservableList<Integer> selectedIndicesSeq;
     @Override public ObservableList<Integer> getSelectedIndices() {
         return selectedIndicesSeq;
@@ -215,9 +216,32 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
     protected abstract void focus(int index);
     protected abstract int getFocusedIndex();
     
+    static class ShiftParams {
+        private final int clearIndex;
+        private final int setIndex;
+        private final boolean selected;
+        
+        ShiftParams(int clearIndex, int setIndex, boolean selected) {
+            this.clearIndex = clearIndex;
+            this.setIndex = setIndex;
+            this.selected = selected;
+        }
+        
+        public final int getClearIndex() {
+            return clearIndex;
+        }
+        
+        public final int getSetIndex() {
+            return setIndex;
+        }
+        
+        public final boolean isSelected() {
+            return selected;
+        }
+    }
     
     // package only
-    void shiftSelection(int position, int shift) {
+    void shiftSelection(int position, int shift, final Callback<ShiftParams, Void> callback) {
         // with no check here, we get RT-15024
         if (position < 0) return;
         if (shift == 0) return;
@@ -233,8 +257,13 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
         if (shift > 0) {
             for (int i = selectedIndicesSize - 1; i >= position && i >= 0; i--) {
                 boolean selected = selectedIndices.get(i);
-                selectedIndices.clear(i);
-                selectedIndices.set(i + shift, selected);
+                
+                if (callback == null) {
+                    selectedIndices.clear(i);
+                    selectedIndices.set(i + shift, selected);
+                } else {
+                    callback.call(new ShiftParams(i, i + shift, selected));
+                }
 
                 if (selected) {
                     perm[idx++] = i + 1;
@@ -244,9 +273,15 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
         } else if (shift < 0) {
             for (int i = position; i < selectedIndicesSize; i++) {
                 if ((i + shift) < 0) continue;
+                if ((i + 1 + shift) < position) continue;
                 boolean selected = selectedIndices.get(i + 1);
-                selectedIndices.clear(i + 1);
-                selectedIndices.set(i + 1 + shift, selected);
+                
+                if (callback == null) {
+                    selectedIndices.clear(i + 1);
+                    selectedIndices.set(i + 1 + shift, selected);
+                } else {
+                    callback.call(new ShiftParams(i + 1, i + 1 + shift, selected));
+                }
 
                 if (selected) {
                     perm[idx++] = i;

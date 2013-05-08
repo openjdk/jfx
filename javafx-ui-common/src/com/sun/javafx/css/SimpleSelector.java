@@ -29,14 +29,12 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import javafx.css.PseudoClass;
+import javafx.css.Styleable;
 import javafx.geometry.NodeOrientation;
 import static javafx.geometry.NodeOrientation.*;
 import javafx.scene.Node;
@@ -223,7 +221,7 @@ final public class SimpleSelector extends Selector {
      *      otherwise
      */
     @Override 
-    Match matches(final Node node) {
+    Match matches(final Styleable node) {
         if (applies(node)) {
             final int idCount = (matchOnId) ? 1 : 0;
             int styleClassCount = styleClassSet.size();
@@ -233,13 +231,13 @@ final public class SimpleSelector extends Selector {
     }
 
     @Override 
-    public boolean applies(Node node) {
+    public boolean applies(Styleable styleable) {
         
         // handle functional pseudo-class :dir()
         // INHERIT applies to both :dir(rtl) and :dir(ltr)
-        if (nodeOrientation != INHERIT) {
+        if (nodeOrientation != INHERIT && styleable instanceof Node) {
             
-            final Scene scene = node.getScene();
+            final Scene scene = ((Node)styleable).getScene();
             final NodeOrientation effectiveNodeOrientation =
                     scene.getEffectiveNodeOrientation();
             
@@ -253,7 +251,7 @@ final public class SimpleSelector extends Selector {
         // then bail if it doesn't match the node's id
         // (do this first since it is potentially the cheapest check)
         if (matchOnId) {
-            final String otherId = node.getId();
+            final String otherId = styleable.getId();
             final boolean idMatch = id.equals(otherId);
             if (!idMatch) return false;
         }
@@ -262,7 +260,7 @@ final public class SimpleSelector extends Selector {
         // then bail if it doesn't match the node's class name
         // if not wildcard, then match name with node's class name
         if (matchOnName) {
-            final String otherName = node.getClass().getName();
+            final String otherName = styleable.getClass().getName();
             final boolean classMatch = nameMatchesAtEnd(otherName);
             if (!classMatch) return false;
         }
@@ -270,7 +268,7 @@ final public class SimpleSelector extends Selector {
         if (matchOnStyleClass) {
             
             final StyleClassSet otherStyleClassSet = new StyleClassSet();
-            final List<String> styleClasses = node.getStyleClass();
+            final List<String> styleClasses = styleable.getStyleClass();
             for(int n=0, nMax = styleClasses.size(); n<nMax; n++) { 
 
                 final String styleClassName = styleClasses.get(n);
@@ -288,10 +286,10 @@ final public class SimpleSelector extends Selector {
     }
     
     @Override 
-    boolean applies(Node node, Set<PseudoClass>[] pseudoClasses, int depth) {
+    boolean applies(Styleable styleable, Set<PseudoClass>[] pseudoClasses, int depth) {
 
         
-        final boolean applies = applies(node);
+        final boolean applies = applies(styleable);
         
         //
         // We only need the pseudo-classes if the selector applies to the node.
@@ -317,7 +315,7 @@ final public class SimpleSelector extends Selector {
     }
     
     @Override
-    public boolean stateMatches(final Node node, Set<PseudoClass> states) {
+    public boolean stateMatches(final Styleable styleable, Set<PseudoClass> states) {
         // [foo bar] matches [foo bar bang], 
         // but [foo bar bang] doesn't match [foo bar]
         return states != null ? states.containsAll(pseudoClassState) : false;

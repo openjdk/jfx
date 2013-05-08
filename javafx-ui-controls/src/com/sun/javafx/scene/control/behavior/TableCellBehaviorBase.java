@@ -26,6 +26,8 @@
 package com.sun.javafx.scene.control.behavior;
 
 import com.sun.javafx.application.PlatformImpl;
+
+import java.util.List;
 import java.util.WeakHashMap;
 import javafx.application.ConditionalFeature;
 import javafx.scene.control.Control;
@@ -249,17 +251,25 @@ public abstract class TableCellBehaviorBase<S, T extends IndexedCell> extends Ce
                     int minColumn = Math.min(anchor.getColumn(), column);
                     int maxColumn = Math.max(anchor.getColumn(), column);
 
-                    // clear selection, but maintain the anchor
-                    sm.clearSelection();
-                    
-                    // and then perform the selection
                     if (sm.isCellSelectionEnabled()) {
+                        // clear selection, but maintain the anchor
+                        sm.clearSelection();
+
+                        // and then perform the selection
                         for (int _row = minRow; _row <= maxRow; _row++) {
                             for (int _col = minColumn; _col <= maxColumn; _col++) {
                                 sm.select(_row, getVisibleLeafColumn(_col));
                             }
                         }
                     } else {
+                        List<Integer> selectedIndices = sm.getSelectedIndices();
+                        for (int i = 0, max = selectedIndices.size(); i < max; i++) {
+                            int selectedIndex = selectedIndices.get(i);
+                            if (selectedIndex < minRow || selectedIndex > maxRow) {
+                                sm.clearSelection(selectedIndex);
+                            }
+                        }
+                        
                         sm.selectRange(minRow, maxRow + 1);
                     }
 

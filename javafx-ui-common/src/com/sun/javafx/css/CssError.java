@@ -170,14 +170,14 @@ public class CssError {
     public final static class PropertySetError extends CssError { 
         
         public PropertySetError(CssMetaData styleableProperty, 
-                Node node, String message) {
+                Styleable styleable, String message) {
             super(message);
             this.styleableProperty = styleableProperty;
-            this.node = node;
+            this.styleable = styleable;
         }
         
-        public Node getNode() {
-            return node;
+        public Styleable getStyleable() {
+            return styleable;
         }
         
         public CssMetaData getProperty() {
@@ -185,7 +185,7 @@ public class CssError {
         }
         
         private final CssMetaData styleableProperty;
-        private final Node node;
+        private final Styleable styleable;
         
     }
 }     

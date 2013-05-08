@@ -137,7 +137,6 @@ public class TableViewMouseInputTest {
      * Tests for specific bug reports
      **************************************************************************/
     
-    @Ignore("Bug is not yet fixed")
     @Test public void test_rt29833_mouse_select_upwards() {
         sm.setCellSelectionEnabled(false);
         sm.setSelectionMode(SelectionMode.MULTIPLE);
