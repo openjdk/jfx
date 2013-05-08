@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="webkit-native" default="build" basedir=".">
+    <description>Builds webkit.org native code</description>
+
+    <import file="../../build-defs.xml"/>
+
+    <condition property="isLinuxCrossBuild">
+	<and>
+            <isset property="isLinux"/>
+            <isset property="cross.platform"/>
+	</and>
+    </condition>
+
+    <condition property="isLinuxNativeBuild">
+	<and>
+            <isset property="isLinux"/>
+            <not><isset property="isLinuxCrossBuild"/></not>
+	</and>
+    </condition>
+
+    <target name="configure">
+        <echo message="Configuration to use: ${webkit.config}"/>
+        <condition property="config-param" value="--debug" else="--release">
+            <equals arg1="${webkit.config}" arg2="Debug"/>
+        </condition>
+        <exec executable="perl">
+            <arg value="Tools/Scripts/set-webkit-configuration"/>
+            <arg value="${config-param}"/>
+        </exec>
+    </target>
+
+    <target name="build-macosx" if="isMacOSX">
+        <copy todir="${webkit.lib.dir}">
+            <fileset dir="${import.webnode-deps.dir}" includes="**"/>
+        </copy>
+
+        <exec executable="Tools/Scripts/build-webkit" failonerror="true">
+            <arg value="--java"/>
+            <arg value="--imageio"/>
+            <env key="JAVA_HOME" value="${platform.home}"/>
+            <env key="QMAKESPEC" value="macx-g++"/>
+            <env key="QMAKE_CFLAGS" value="-m64"/>
+            <env key="QMAKE_LFLAGS" value="-m64"/>
+        </exec>
+    </target>
+
+    <target name="build-linux-native" if="isLinuxNativeBuild">
+        <exec executable="Tools/Scripts/build-webkit" failonerror="true">
+            <arg value="--java"/>
+            <arg value="--imageio"/>
+        </exec>
+    </target>
+
+    <target name="build-linux-cross" if="isLinuxCrossBuild">
+        <property environment="env"/>
+        <property name="output.dir" location="${build.dir}"/>
+        <property name="cross.qmakespec.platform"
+                value="linux-cross-${cross.tools.prefix}g++"/>
+        <property name="cross.qmakespec.dir"
+                location="${build.dir}/qws/${cross.qmakespec.platform}"/>
+        <mkdir dir="${cross.qmakespec.dir}"/>
+        <concat destfile="${cross.qmakespec.dir}/qmake.conf">
+TARGET_PLATFORM         = unix
+include(/usr/share/qt4/mkspecs/common/linux.conf)
+include(/usr/share/qt4/mkspecs/common/g++.conf)
+include(/usr/share/qt4/mkspecs/common/qws.conf)
+QMAKE_CC                = ${crosstools.gcc.bin}
+QMAKE_CXX               = ${crosstools.gpp.bin}
+QMAKE_LINK              = ${crosstools.gpp.bin}
+QMAKE_LINK_SHLIB        = ${crosstools.gpp.bin}
+QMAKE_AR                = ${crosstools.ar.bin} cqs
+QMAKE_OBJCOPY           = ${crosstools.objcopy.bin}
+QMAKE_STRIP             = ${crosstools.strip.bin}
+load(qt_config)
+        </concat>
+        <exec executable="Tools/Scripts/build-webkit" failonerror="true">
+            <arg value="--java"/>
+            <arg value="--imageio"/>
+            <arg value="--nocache"/>
+            <env key="JAVA_HOME" value="${platform.home}"/>
+            <env key="QMAKESPEC" value="${cross.qmakespec.dir}"/>
+            <env key="WK_CFLAGS" value="${crosstools.extra_cflags}"/>
+            <env key="WK_LFLAGS" value="${crosstools.extra_ldflags}"/>
+            <env key="PATH" value="${cross.tools}/bin:${env.PATH}"/>
+            <env key="WEBKITOUTPUTDIR" value="${output.dir}"/>
+        </exec>
+    </target>
+
+    <target name="build-windows" if="isWindows">
+        <copy todir="${webkit.lib.dir}">
+            <fileset dir="${import.webnode-deps.dir}" includes="**"/>
+        </copy>
+
+        <exec executable="cygpath" dir="." outputproperty="short.qtsdk.path" failonerror="true">
+            <arg value="-m"/>
+            <arg value="-a"/>
+            <arg value="-s"/>
+            <arg value="${qtsdk.path}"/>
+        </exec>
+        <condition property="qmake.dir"
+                   value="${short.qtsdk.path}/bin"
+                   else="${short.qtsdk.path}/qt/bin">
+            <available file="${short.qtsdk.path}/bin/qmake.exe"/>
+        </condition>
+
+        <get-cygwin-path/>
+        <ant target="needs-vs-properties"/>
+        <property file="${vs.properties}"/>
+        <exec executable="perl" dir="." failonerror="true">
+            <env key="INCLUDE" value="${windows.vs.INCLUDE}"/>
+            <env key="LIB" value="${windows.vs.LIB}"/>
+            <env key="LIBPATH" value="${windows.vs.LIBPATH}"/>
+            <env key="PATH" path="${windows.vs.PATH};${qmake.dir}"/>
+            <env key="QMAKESPEC" value="win32-msvc2008"/>
+            <arg value="Tools/Scripts/build-webkit"/>
+            <arg value="--java"/>
+            <arg value="--imageio"/>
+            <!-- To build with ICU:
+                 1. Download
+                    http://javaweb.us.oracle.com/jcg/fx-webrevs/RT-17164/WebKitLibrariesICU.zip
+                    and unzip it to WebKitLibraries folder.
+                 2. Copy DLLs from
+                    WebKitLibrariesICU.zip\WebKitLibraries\import\runtime
+                    to %windir%\system32
+                 3. Uncomment the arg line below, and delete
+                    the space between the two dashes.
+            -->
+            <!--arg value="- -icu-unicode"/-->
+        </exec>
+    </target>
+
+    <target name="build"
+            depends="configure,build-windows,build-macosx,build-linux-native,build-linux-cross"/>
+
+</project>

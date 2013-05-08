@@ -77,7 +77,12 @@ class NativeCompileTask extends DefaultTask {
         final File nativeDependenciesFile = project.file("$project.buildDir/dependency-cache/native-dependencies");
         if (nativeDependenciesFile.exists()) {
             nativeDependenciesFile.splitEachLine("\t", { strings ->
-                dependencies.put(strings[0], ["DATE":Long.parseLong(strings[1]), "SIZE":Long.parseLong(strings[2])]);
+                try {
+                    dependencies.put(strings[0], ["DATE":Long.parseLong(strings[1]), "SIZE":Long.parseLong(strings[2])]);
+                } catch (Exception e) {
+                    // Might fail due to a corrupt native-dependencies file, in which case, we'll just not
+                    // do anything which will cause the native code to execute again
+                }
             });
         }
 

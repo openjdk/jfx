@@ -1,0 +1,89 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+
+<!--
+/*
+ * Copyright (c) 2009, 2011, Oracle and/or its affiliates. All rights reserved.
+ */
+-->
+
+<html>
+<head><title>Building JavaFX Webkit Source Code</title></head>
+<body style="background-color: #D2B48C">
+
+<h1>Building JavaFX Webkit Source Code</h1>
+
+<h2>Prerequisites</h2>
+    <p>To build JavaFX Webkit you will need the following:
+
+    <h3>For All Systems</h3>
+    <ul>
+        <li>Install <a href="http://java.sun.com" target="_blank">JDK</a>
+            version 6 or 7. Make sure <tt>java</tt> is in the <tt>PATH</tt>,
+            and set <tt>JAVA_HOME</tt> to point to the location of the JDK
+            installation.
+        <li>Install <tt>qmake</tt> utility version 2.01a which is part of the
+            <a href="http://get.qt.nokia.com/qt/source" target="_blank">
+            Qt SDK</a> version 4.6.0. Make sure <tt>qmake</tt> is in the
+            <tt>PATH</tt>.
+    </ul>
+
+    <h3>For Windows</h3>
+    <ul>
+        <li>Install Microsoft Visual Studio 10.0 compiler. Make sure to run
+            <tt>vcvars32.bat</tt> to set up build environment.
+        <li>Install <a href="http://www.cygwin.com" target="_blank">Cygwin</a>
+            and the following additional packages:
+            <ul>
+                <li><tt>bison</tt>
+                <li><tt>flex</tt>
+                <li><tt>g++</tt>
+                <li><tt>gperf</tt>
+                <li><tt>makedepend</tt>
+                <li><tt>perl</tt>
+                <li><tt>python</tt>
+                <li><tt>unzip</tt>
+            </ul>
+        <li>Set an environment variable:
+            <ul style="list-style-type: none">
+                <li><tt>QMAKESPEC=win32-msvc2008</tt>
+            </ul>
+    </ul>
+
+
+    <h3>For Mac</h3>
+    <ul>
+        <li>Install Xcode 3.2.1 Developer Tools
+        <li>Set some environment variables:
+            <ul style="list-style-type: none">
+                <li><tt>QMAKESPEC=macx-g++</tt>
+                <li><tt>QMAKE_CFLAGS=-m64</tt>
+                <li><tt>QMAKE_LFLAGS=-m64</tt>
+            </ul>
+    </ul>
+
+    <h3>For Linux</h3>
+    <p>Install the following packages:
+    <ul>
+        <li><tt>g++</tt> compiler version 4 or newer
+        <li><tt>bison</tt>
+        <li><tt>flex</tt>
+        <li><tt>gperf</tt>
+        <li><tt>libxml2-dev</tt>
+        <li><tt>libxslt1-dev</tt>
+        <li><tt>pkg-config</tt>
+        <li><tt>qt4-qmake</tt>
+    </ul>
+
+<h2>Building The Source</h2>
+<p>To set the desired build configuration, run from the top level directory
+    <blockquote><tt>
+            ./Tools/Scripts/set-webkit-configuration [--debug|--release]
+    </tt></blockquote>
+
+<p>Start the build by running
+    <blockquote><tt>
+            ./Tools/Scripts/build-webkit --java --imageio
+    </tt></blockquote>
+
+</body>
+</html>

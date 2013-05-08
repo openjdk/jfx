@@ -298,12 +298,21 @@ ARMV6HF.font = [:]
 ARMV6HF.font.javahInclude = [
         "com/sun/javafx/font/**/*",
         "com/sun/javafx/text/**/*"]
-ARMV6HF.font.nativeSource = [
-    file("$closedDir/javafx-font-native/src"),
-    file("$closedDir/javafx-font-native/src/layout"),
-    file("$closedDir/javafx-font-native/src/layoutfx")]
+ARMV6HF.font.nativeSource = [file("$closedDir/javafx-font-native/src")]
 ARMV6HF.font.compiler = compiler
 ARMV6HF.font.ccFlags = fontCFlags
 ARMV6HF.font.linker = linker
 ARMV6HF.font.linkFlags = fontLFlags
 ARMV6HF.font.lib = "javafx-font"
+
+ARMV6HF.fontT2K = [:]
+ARMV6HF.fontT2K.javahInclude = ["com/sun/javafx/font/t2k/**/*"]
+ARMV6HF.fontT2K.nativeSource = [
+        file("$closedDir/javafx-font-t2k-native/src"),
+        file("$closedDir/javafx-font-t2k-native/src/layout"),
+        file("$closedDir/javafx-font-t2k-native/src/layoutfx")]
+ARMV6HF.fontT2K.compiler = compiler
+ARMV6HF.fontT2K.ccFlags = fontCFlags
+ARMV6HF.fontT2K.linker = linker
+ARMV6HF.fontT2K.linkFlags = fontLFlags
+ARMV6HF.fontT2K.lib = "javafx-font-t2k"

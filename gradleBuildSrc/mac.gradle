@@ -176,12 +176,21 @@ MAC.font = [:]
 MAC.font.javahInclude = [
         "com/sun/javafx/font/**/*",
         "com/sun/javafx/text/**/*"]
-MAC.font.nativeSource = [
-    file("$closedDir/javafx-font-native/src"),
-    file("$closedDir/javafx-font-native/src/layout"),
-    file("$closedDir/javafx-font-native/src/layoutfx")]
+MAC.font.nativeSource = [file("$closedDir/javafx-font-native/src")]
 MAC.font.compiler = compiler
 MAC.font.ccFlags = ["-DJFXFONT_PLUS", ccFlags].flatten()
 MAC.font.linker = linker
 MAC.font.linkFlags = [linkFlags].flatten()
 MAC.font.lib = "javafx-font"
+
+MAC.fontT2K = [:]
+MAC.fontT2K.javahInclude = ["com/sun/javafx/font/t2k/**/*"]
+MAC.fontT2K.nativeSource = [
+        file("$closedDir/javafx-font-t2k-native/src"),
+        file("$closedDir/javafx-font-t2k-native/src/layout"),
+        file("$closedDir/javafx-font-t2k-native/src/layoutfx")]
+MAC.fontT2K.compiler = compiler
+MAC.fontT2K.ccFlags = ["-DJFXFONT_PLUS", ccFlags].flatten()
+MAC.fontT2K.linker = linker
+MAC.fontT2K.linkFlags = [linkFlags].flatten()
+MAC.fontT2K.lib = "javafx-font-t2k"
