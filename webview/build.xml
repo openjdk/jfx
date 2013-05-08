@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="webview" default="jar" basedir=".">
+    <description>Builds WebView Java sources</description>
+
+    <import file="../build-defs.xml"/>
+
+    <target name="javah" depends="-jar">
+        <property name="javah.dir" value="${build.dir}/javah"/>
+        <mkdir dir="${javah.dir}"/>
+        <javah destdir="${javah.dir}" classpath="${build.classes.dir}:../../rt/javafx-ui-common/build/classes">
+            <class name="java.lang.Character"/>
+            <class name="java.net.IDN"/>
+            <class name="com.sun.webkit.ContextMenu"/>
+            <class name="com.sun.webkit.ContextMenuItem"/>
+            <class name="com.sun.webkit.CursorManager"/>
+            <class name="com.sun.webkit.PageCache"/>
+            <class name="com.sun.webkit.PopupMenu"/>
+            <class name="com.sun.webkit.SharedBuffer"/>
+            <class name="com.sun.webkit.WebPage"/>
+            <class name="com.sun.webkit.LoadListenerClient"/>
+            <class name="com.sun.webkit.event.WCFocusEvent"/>
+            <class name="com.sun.webkit.event.WCKeyEvent"/>
+            <class name="com.sun.webkit.event.WCMouseEvent"/>
+            <class name="com.sun.webkit.event.WCMouseWheelEvent"/>
+            <class name="com.sun.webkit.event.WCTouchEvent"/>
+            <class name="com.sun.webkit.graphics.GraphicsDecoder"/>
+            <class name="com.sun.webkit.graphics.RenderMediaControls"/>
+            <class name="com.sun.webkit.graphics.RenderTheme"/>
+            <class name="com.sun.webkit.graphics.ScrollBarTheme"/>
+            <class name="com.sun.webkit.graphics.WCMediaPlayer"/>
+            <class name="com.sun.webkit.graphics.WCGraphicsManager"/>
+            <class name="com.sun.webkit.graphics.WCRenderQueue"/>
+            <class name="com.sun.webkit.graphics.WCPath"/>
+            <class name="com.sun.webkit.graphics.WCPathIterator"/>
+            <class name="com.sun.webkit.Timer"/>
+            <class name="com.sun.webkit.WCFrameView"/>
+            <class name="com.sun.webkit.WCPasteboard"/>
+            <class name="com.sun.webkit.WCPluginWidget"/>
+            <class name="com.sun.webkit.dom.JSObject"/>
+            <class name="com.sun.webkit.network.SocketStreamHandle"/>
+            <class name="com.sun.webkit.network.URLLoader"/>            
+            <class name="com.sun.webkit.text.TextBreakIterator"/>
+            <class name="com.sun.webkit.text.TextNormalizer"/>
+        </javah>
+    </target>
+
+    <target name="-jar">
+        <build-project/>
+    </target>
+
+    <target name="jar" depends="-jar,javah,dist-drt">
+        <ant dir="native" antfile="build.xml" target="dist" inheritAll="false"/>
+    </target>
+
+    <target name="clean" depends="clean-drt">
+        <clean-project/>
+        <ant dir="native" antfile="build.xml" target="clean" inheritall="false"/>
+    </target>
+    
+    <target name="dist-drt" depends="-jar">
+        <jar destfile="${jfx.test.dir}/drt.jar">
+            <fileset dir="${build.classes.dir}" includes="${drt.classes}"/>
+        </jar>
+    </target>
+
+    <target name="clean-drt">
+        <delete file="${jfx.test.dir}/drt.jar"/>
+    </target>
+</project>
