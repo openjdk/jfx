@@ -44,6 +44,7 @@ import javafx.collections.ObservableList;
 import javafx.collections.ObservableSet;
 import javafx.scene.Group;
 import javafx.scene.Node;
+import javafx.scene.Scene;
 import javafx.stage.PopupWindow;
 import com.sun.javafx.application.PlatformImpl;
 import com.sun.javafx.collections.TrackableObservableList;
@@ -56,6 +57,7 @@ import javafx.css.StyleableStringProperty;
 import com.sun.javafx.css.converters.StringConverter;
 import com.sun.javafx.scene.control.Logging;
 import javafx.css.StyleableProperty;
+import javafx.stage.Window;
 import sun.util.logging.PlatformLogger;
 
 /**
@@ -857,7 +859,7 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
     }
     
     private void recomputeSkinSize() {
-        if (!skinSizeComputed && getScene() != null && getScene().getRoot() != null) {
+        if (!skinSizeComputed && getOwnerWindow() != null) { //getScene() != null && getScene().getRoot() != null) {
             // RT-14094, RT-16754: We need the skins of the popup
             // and it children before the stage is visible so we
             // can calculate the popup position based on content
@@ -948,10 +950,39 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
     
     /**
      * {@inheritDoc}
-     * @return null
+     *
+     * A PopupControl&apos;s styles are based on the popup &quot;owner&quot; which is the
+     * {@link javafx.stage.PopupWindow#getOwnerNode() ownerNode} or,
+     * if the ownerNode is not set, the root of the {@link javafx.stage.PopupWindow#getOwnerWindow() ownerWindow&apos;s}
+     * scene. If the popup has not been shown, both ownerNode and ownerWindow will be null and {@code null} will be returned.
+     *
+     * Note that the PopupWindow&apos;s scene root is not returned because there is no way to guarantee that the
+     * PopupWindow&apos;s scene root would properly return the ownerNode or ownerWindow.
+     *
+     * @return {@link javafx.stage.PopupWindow#getOwnerNode()}, {@link javafx.stage.PopupWindow#getOwnerWindow()},
+     * or null.
      */
     @Override
     public Styleable getStyleableParent() {
+
+        final Node ownerNode = getOwnerNode();
+        if (ownerNode != null) {
+
+            return ownerNode;
+
+        } else {
+
+            final Window ownerWindow = getOwnerWindow();
+            if (ownerWindow != null) {
+
+                final Scene ownerScene = ownerWindow.getScene();
+                if (ownerScene != null) {
+
+                    return ownerScene.getRoot();
+                }
+            }
+        }
+
         return null;
     }
 
@@ -1248,7 +1279,12 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
                 }
             }
         }
-        
+
+
+        @Override
+        public Styleable getStyleableParent() {
+            return PopupControl.this.getStyleableParent();
+        }
     }
 
 }

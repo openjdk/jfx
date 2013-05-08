@@ -38,6 +38,7 @@ import javafx.beans.value.ObservableValue;
 import javafx.collections.ListChangeListener;
 import javafx.collections.MapChangeListener;
 import javafx.collections.ObservableList;
+import javafx.css.Styleable;
 import javafx.event.EventHandler;
 import javafx.geometry.Bounds;
 import javafx.geometry.NodeOrientation;
@@ -546,7 +547,8 @@ public class MenuBarSkin extends BehaviorSkinBase<MenuBar, BehaviorBase<MenuBar>
             final MenuBarButton menuButton = new MenuBarButton(menu.getText(), menu.getGraphic());
             menuButton.setFocusTraversable(false);
             menuButton.getStyleClass().add("menu");
-            menuButton.setStyle(menu.getStyle()); // copy style 
+            menuButton.setStyle(menu.getStyle()); // copy style
+            menuButton.setId(menu.getId());
 
             menuButton.getItems().setAll(menu.getItems());
             container.getChildren().add(menuButton);
@@ -570,6 +572,12 @@ public class MenuBarSkin extends BehaviorSkinBase<MenuBar, BehaviorBase<MenuBar>
                             menuButton.getStyleClass().remove(str);
                         }
                     }
+                }
+            });
+            menu.idProperty().addListener(new ChangeListener<String>() {
+                @Override
+                public void changed(ObservableValue<? extends String> observableValue, String s, String s2) {
+                    menuButton.setId(s2);
                 }
             });
             menuButton.menuListener = new ChangeListener<Boolean>() {
@@ -895,7 +903,6 @@ public class MenuBarSkin extends BehaviorSkinBase<MenuBar, BehaviorBase<MenuBar>
         private void setHover() {
             setHover(true);
         }
-      
     }
 
     /***************************************************************************

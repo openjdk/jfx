@@ -25,6 +25,7 @@
 
 package com.sun.javafx.scene.control.skin;
 
+import javafx.css.Styleable;
 import javafx.scene.control.ComboBoxBase;
 import com.sun.javafx.scene.control.behavior.ComboBoxBaseBehavior;
 import javafx.beans.InvalidationListener;
@@ -102,6 +103,10 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
     
     private void createPopup() {
         popup = new PopupControl() {
+
+            @Override public Styleable getStyleableParent() {
+                return ComboBoxPopupControl.this.getSkinnable();
+            }
             {
                 setSkin(new Skin<Skinnable>() {
                     @Override public Skinnable getSkinnable() { return ComboBoxPopupControl.this.getSkinnable(); }

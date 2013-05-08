@@ -34,8 +34,8 @@ import java.util.List;
 import java.util.Set;
 import javafx.css.PseudoClass;
 
+import javafx.css.Styleable;
 import javafx.scene.Node;
-import javafx.scene.Scene;
 
 /**
  * A compound selector which behaves according to the CSS standard. The selector is 
@@ -107,18 +107,18 @@ final public class CompoundSelector extends Selector {
      *      otherwise
      */
     @Override
-    Match matches(final Node node) {
+    Match matches(final Styleable node) {
         return matches(node, selectors.size()-1);
     }
 
-    private Match matches(final Node node, final int index) {
+    private Match matches(final Styleable node, final int index) {
             
         final Match descendantMatch = selectors.get(index).matches(node);
         if (descendantMatch == null || index == 0) {
             return descendantMatch;
         }
 
-        Node parent = node.getParent();
+        Styleable parent = node.getStyleableParent();
         while (parent != null) {
             final Match ancestorMatch = matches(parent, index-1);
             if (ancestorMatch != null) {
@@ -134,21 +134,21 @@ final public class CompoundSelector extends Selector {
             }
             // Combinator.CHILD will cause this loop to exit after the first iteration
             if ( relationships.get(index-1) == Combinator.CHILD ) break;
-            parent = parent.getParent();
+            parent = parent.getStyleableParent();
         }
         
         return null;
     }
 
     @Override
-    public boolean applies(final Node node) {
-        return applies(node, selectors.size()-1, null, 0);
+    public boolean applies(final Styleable styleable) {
+        return applies(styleable, selectors.size()-1, null, 0);
     }
 
     @Override
-    boolean applies(final Node node, Set<PseudoClass>[] triggerStates, int depth) {
+    boolean applies(final Styleable styleable, Set<PseudoClass>[] triggerStates, int depth) {
         
-        assert (triggerStates == null || depth < triggerStates.length);        
+        assert (triggerStates == null || depth < triggerStates.length);
         if (triggerStates != null && triggerStates.length <= depth) {
             return false;
         }
@@ -165,7 +165,7 @@ final public class CompoundSelector extends Selector {
         final Set<PseudoClass>[] tempStates = triggerStates != null 
                 ? new PseudoClassState[triggerStates.length] : null;
         
-        final boolean applies = applies(node, selectors.size()-1, tempStates, depth);
+        final boolean applies = applies(styleable, selectors.size()-1, tempStates, depth);
         
         if (applies && tempStates != null) {
             
@@ -185,13 +185,13 @@ final public class CompoundSelector extends Selector {
         return applies;
     }
 
-    private boolean applies(final Node node, final int index, Set<PseudoClass>[] triggerStates, int depth) {
+    private boolean applies(final Styleable styleable, final int index, Set<PseudoClass>[] triggerStates, int depth) {
         // If the index is < 0 then we know we don't apply
         if (index < 0) return false;
 
         // Simply check the selector associated with this index and see if it
         // applies to the Node
-        if (! selectors.get(index).applies(node, triggerStates, depth)) return false;
+        if (! selectors.get(index).applies(styleable, triggerStates, depth)) return false;
 
         // If there are no more selectors to check (ie: index == 0) then we
         // know we know we apply
@@ -207,37 +207,37 @@ final public class CompoundSelector extends Selector {
         // of the selectors, then we know it doesn't apply.
         final Combinator relationship = relationships.get(index-1);
         if (relationship == Combinator.CHILD) {
-            final Node parent = node.getParent();
+            final Styleable parent = styleable.getStyleableParent();
             if (parent == null) return false;
             // If this call succeeds, then all preceding selectors will have
             // matched due to the recursive nature of the call
             return applies(parent, index - 1, triggerStates, ++depth);
         } else {
-             Node parent = node.getParent();
+             Styleable parent = styleable.getStyleableParent();
             while (parent != null) {
                 boolean answer = applies(parent, index - 1, triggerStates, ++depth);
                 // If a call to stateMatches succeeded, then we know that
                 // all preceding selectors will have also matched.
                 if (answer) return true;
                 // Otherwise we need to get the next parent and try again
-                parent = parent.getParent();
+                parent = parent.getStyleableParent();
             }
         }
         return false;
     }
 
     @Override
-    public boolean stateMatches(final Node node, Set<PseudoClass> states) {
-        return stateMatches(node, states, selectors.size()-1);
+    public boolean stateMatches(final Styleable styleable, Set<PseudoClass> states) {
+        return stateMatches(styleable, states, selectors.size()-1);
     }
 
-    private boolean stateMatches(Node node, Set<PseudoClass> states, int index) {
+    private boolean stateMatches(Styleable styleable, Set<PseudoClass> states, int index) {
         // If the index is < 0 then we know we don't match
         if (index < 0) return false;
 
         // Simply check the selector associated with this index and see if it
         // matches the Node and states provided.
-        if (! selectors.get(index).stateMatches(node, states)) return false;
+        if (! selectors.get(index).stateMatches(styleable, states)) return false;
 
         // If there are no more selectors to match (ie: index == 0) then we
         // know we have successfully matched
@@ -253,7 +253,7 @@ final public class CompoundSelector extends Selector {
         // of the selectors, then we know it doesn't match.
         final Combinator relationship = relationships.get(index - 1);
         if (relationship == Combinator.CHILD) {
-            final Node parent = node.getParent();
+            final Styleable parent = styleable.getStyleableParent();
             if (parent == null) return false;
             if (selectors.get(index-1).applies(parent)) {
                 PseudoClassState parentStates = new PseudoClassState();
@@ -263,7 +263,7 @@ final public class CompoundSelector extends Selector {
                 return stateMatches(parent, parentStates, index - 1);
             }
         } else {
-            Node parent = node.getParent();
+            Styleable parent = styleable.getStyleableParent();
             while (parent != null) {
                 if (selectors.get(index-1).applies(parent)) { 
                     PseudoClassState parentStates = new PseudoClassState();
@@ -271,7 +271,7 @@ final public class CompoundSelector extends Selector {
                     return stateMatches(parent, parentStates, index - 1);
                 }
                 // Otherwise we need to get the next parent and try again
-                parent = parent.getParent();
+                parent = parent.getStyleableParent();
             }
         }
 

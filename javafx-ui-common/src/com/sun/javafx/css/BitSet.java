@@ -35,6 +35,7 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 
+
 /**
  * Pseudo-class state and style-classes are represented as bits in a long[]
  * which makes matching faster.
