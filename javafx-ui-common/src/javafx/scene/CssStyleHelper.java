@@ -1810,8 +1810,8 @@ final class CssStyleHelper {
      * @param styleList
      * @return
      */
-    private CalculatedValue lookupFont(Node node, CssMetaData styleable,
-                                       Node originatingNode,
+    private CalculatedValue lookupFont(Styleable node, CssMetaData styleable,
+                                       Styleable originatingNode,
                                        CalculatedValue fontFromCacheEntry, List<Style> styleList) {
 
         // To make the code easier to read, define CONSIDER_INLINE_STYLES as true. 
@@ -1828,7 +1828,7 @@ final class CssStyleHelper {
         // many parents we've looked at. nlooks should never exceed distance. 
         int distance = 0, nlooks = 0;
         
-        Node parent = node;
+        Styleable parent = node;
         CssStyleHelper helper = this;
         String property = styleable == null ? null : styleable.getProperty();
         CascadingStyle csShorthand = null;
@@ -1839,7 +1839,7 @@ final class CssStyleHelper {
 
         while (parent != null) {
             
-            final Set<PseudoClass> states = parent.pseudoClassStates;
+            final Set<PseudoClass> states = parent.getPseudoClassStates();
             final Map<String,CascadingStyle> inlineStyles = CssStyleHelper.getInlineStyleMap(parent);
             
             final CascadingStyle cascadingStyle =
@@ -1893,9 +1893,9 @@ final class CssStyleHelper {
             // up the parent chain for the next -fx-font.
             //
             do {
-                parent = parent.getParent();
+                parent = parent.getStyleableParent();
                 nlooks += 1;
-                helper = parent != null ? parent.styleHelper : null;
+                helper = parent instanceof Node ? ((Node)parent).styleHelper : null;
             } while (parent != null && helper == null);
 
         }
@@ -1905,8 +1905,8 @@ final class CssStyleHelper {
         }
         nlooks = 0;
         
-        final Set<PseudoClass> states = node.pseudoClassStates;
         final Map<String,CascadingStyle> inlineStyles = getInlineStyleMap(node);
+        final Set<PseudoClass> states = node.getPseudoClassStates();
 
         String family = null;
         double size = -1;
