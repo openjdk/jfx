@@ -149,6 +149,9 @@ public interface ResourceFactory extends GraphicsResource {
      */
     public int getMaximumTextureSize();
 
+    public int getRTTWidth(int w, Texture.WrapMode wrapMode);
+    public int getRTTHeight(int h, Texture.WrapMode wrapMode);
+
     public Texture createMaskTexture(int width, int height, Texture.WrapMode wrapMode);
     public Texture createFloatTexture(int width, int height);
     public RTTexture createRTTexture(int width, int height, Texture.WrapMode wrapMode);

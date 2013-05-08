@@ -192,6 +192,24 @@ public class PSWRenderer extends PrRenderer {
     }
 
     @Override
+    public int getCompatibleWidth(int w) {
+        if (screen != null) {
+            return PSWDrawable.getCompatibleWidth(screen, w);
+        } else {
+            return resourceFactory.getRTTWidth(w, WrapMode.CLAMP_TO_EDGE);
+        }
+    }
+
+    @Override
+    public int getCompatibleHeight(int h) {
+        if (screen != null) {
+            return PSWDrawable.getCompatibleHeight(screen, h);
+        } else {
+            return resourceFactory.getRTTHeight(h, WrapMode.CLAMP_TO_EDGE);
+        }
+    }
+
+    @Override
     public final PSWDrawable createCompatibleImage(int w, int h) {
         if (screen != null) {
             return PSWDrawable.create(screen, w, h);

@@ -46,6 +46,18 @@ public class PPSDrawable extends PrDrawable {
         return new PPSDrawable(rtt);
     }
 
+    static int getCompatibleWidth(Screen screen, int w) {
+        ResourceFactory factory =
+            GraphicsPipeline.getPipeline().getResourceFactory(screen);
+        return factory.getRTTWidth(w, WrapMode.CLAMP_TO_ZERO);
+    }
+
+    static int getCompatibleHeight(Screen screen, int h) {
+        ResourceFactory factory =
+            GraphicsPipeline.getPipeline().getResourceFactory(screen);
+        return factory.getRTTHeight(h, WrapMode.CLAMP_TO_ZERO);
+    }
+
     static PPSDrawable create(Screen screen, int width, int height) {
         ResourceFactory factory =
             GraphicsPipeline.getPipeline().getResourceFactory(screen);

@@ -174,6 +174,8 @@ public class TestGraphics extends BaseGraphics {
         @Override public int getMaximumTextureSize() { return 0; }
         @Override public Texture createMaskTexture(int width, int height, Texture.WrapMode wrapMode) { return null; }
         @Override public Texture createFloatTexture(int width, int height) { return null; }
+        @Override public int getRTTWidth(int w, WrapMode wrapMode) { return w; }
+        @Override public int getRTTHeight(int h, WrapMode wrapMode) { return h; }
         @Override public RTTexture createRTTexture(final int width, final int height, Texture.WrapMode wrapMode) {
             return new RTTexture() {
                 @Override public int[] getPixels() { return new int[0]; }

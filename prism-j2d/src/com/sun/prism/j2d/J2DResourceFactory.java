@@ -84,6 +84,14 @@ class J2DResourceFactory extends BaseResourceFactory
         return J2DPresentable.create(pState, this);
     }
 
+    public int getRTTWidth(int w, WrapMode wrapMode) {
+        return w;
+    }
+
+    public int getRTTHeight(int h, WrapMode wrapMode) {
+        return h;
+    }
+
     public RTTexture createRTTexture(int width, int height, WrapMode wrapMode) {
         J2DTexturePool pool = J2DTexturePool.instance;
         long size = pool.estimateRTTextureSize(width, height, false);

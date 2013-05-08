@@ -116,6 +116,11 @@ public class ImagePool {
         // Allocate images rounded up to the nearest quantum size threshold.
         w = ((w + QUANT - 1) / QUANT) * QUANT;
         h = ((h + QUANT - 1) / QUANT) * QUANT;
+
+        // Adjust allocation sizes for platform requirements (pow2 etc.)
+        w = renderer.getCompatibleWidth(w);
+        h = renderer.getCompatibleHeight(h);
+
         numAccessed++;
         pixelsAccessed += ((long) w) * h;
         // first look for an already cached image of sufficient size,

@@ -109,7 +109,15 @@ final class SWResourceFactory
         }
         return new SWPresentable(pstate, this);
     }
-            
+
+    public int getRTTWidth(int w, WrapMode wrapMode) {
+        return w;
+    }
+
+    public int getRTTHeight(int h, WrapMode wrapMode) {
+        return h;
+    }
+
     @Override public RTTexture createRTTexture(int width, int height,
                                                WrapMode wrapMode)
     {

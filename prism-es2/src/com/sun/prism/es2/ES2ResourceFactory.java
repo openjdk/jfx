@@ -93,6 +93,14 @@ public class ES2ResourceFactory extends BaseShaderFactory {
         return ES2Texture.create(context, frame);
     }
 
+    public int getRTTWidth(int w, WrapMode wrapMode) {
+        return ES2RTTexture.getCompatibleDimension(context, w, wrapMode);
+    }
+
+    public int getRTTHeight(int h, WrapMode wrapMode) {
+        return ES2RTTexture.getCompatibleDimension(context, h, wrapMode);
+    }
+
     public RTTexture createRTTexture(int width, int height, WrapMode wrapMode) {
         return ES2RTTexture.create(context, width, height, wrapMode);
     }

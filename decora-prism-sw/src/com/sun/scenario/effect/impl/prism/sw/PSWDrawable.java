@@ -56,6 +56,18 @@ public class PSWDrawable extends PrDrawable implements HeapImage {
         return new PSWDrawable(rtt, true);
     }
 
+    static int getCompatibleWidth(Screen screen, int w) {
+        ResourceFactory factory =
+            GraphicsPipeline.getPipeline().getResourceFactory(screen);
+        return factory.getRTTWidth(w, WrapMode.CLAMP_TO_ZERO);
+    }
+
+    static int getCompatibleHeight(Screen screen, int h) {
+        ResourceFactory factory =
+            GraphicsPipeline.getPipeline().getResourceFactory(screen);
+        return factory.getRTTHeight(h, WrapMode.CLAMP_TO_ZERO);
+    }
+
     static PSWDrawable create(Screen screen, int width, int height) {
         ResourceFactory factory =
             GraphicsPipeline.getPipeline().getResourceFactory(screen);

@@ -74,6 +74,61 @@ class ES2RTTexture extends ES2Texture<ES2RTTextureData>
         texData.setDepthBufferID(dbID);
     }
 
+    static int getCompatibleDimension(ES2Context context, int dim, WrapMode wrapMode) {
+        GLContext glContext = context.getGLContext();
+        boolean pad;
+        switch (wrapMode) {
+            case CLAMP_NOT_NEEDED:
+                pad = false;
+                break;
+            case CLAMP_TO_ZERO:
+                pad = !glContext.canClampToZero();
+                break;
+            default:
+            case CLAMP_TO_EDGE:
+            case REPEAT:
+                throw new IllegalArgumentException("wrap mode not supported for RT textures: "+wrapMode);
+            case CLAMP_TO_EDGE_SIMULATED:
+            case CLAMP_TO_ZERO_SIMULATED:
+            case REPEAT_SIMULATED:
+                throw new IllegalArgumentException("Cannot request simulated wrap mode: "+wrapMode);
+        }
+
+        int paddedDim = pad ? dim + 2 : dim;
+
+        int maxSize = glContext.getMaxTextureSize();
+        int texDim;
+        if (glContext.canCreateNonPowTwoTextures()) {
+            texDim = (paddedDim <= maxSize) ? paddedDim : 0;
+        } else {
+            texDim = nextPowerOfTwo(paddedDim, maxSize);
+        }
+
+        if (texDim == 0) {
+            throw new RuntimeException(
+                    "Requested texture dimension (" + dim + ") "
+                    + "requires dimension (" + texDim + ") "
+                    + "that exceeds maximum texture size (" + maxSize + ")");
+        }
+
+        // make sure the texture is not smaller than minimum size
+        texDim = Math.max(texDim, PrismSettings.minRTTSize);
+
+        // Note that ES2Context will set the viewport to the content
+        // region of a RenderTarget (to ensure that we don't render into
+        // the padded area of transparent pixels, if present).  Since
+        // RTTextures are frequently recycled (i.e., reused by Decora) it
+        // is imperative that we initialize the content region of the
+        // RTTexture to be the physical size of the FBO modulo the padded
+        // region.  (Suppose the caller asks for a 110x220 RTTexture, but
+        // nonpow2 textures aren't supported; in this case, we will actually
+        // create a 128x256 FBO.  If later that RTTexture gets reused for
+        // a caller expecting to use 126x240 pixels, the viewport will be
+        // setup correctly because it will set to the content region, or
+        // 128x256 in this case, assuming no padding.)
+        return pad ? texDim - 2 : texDim;
+    }
+
     static ES2RTTexture create(ES2Context context, int w, int h, WrapMode wrapMode) {
         // Normally we would use GL_CLAMP_TO_BORDER with a transparent border
         // color to implement our CLAMP_TO_ZERO edge mode, but unfortunately

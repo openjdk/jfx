@@ -150,6 +150,16 @@ public class PPSRenderer extends PrRenderer {
     }
 
     @Override
+    public int getCompatibleWidth(int w) {
+        return PPSDrawable.getCompatibleWidth(screen, w);
+    }
+
+    @Override
+    public int getCompatibleHeight(int h) {
+        return PPSDrawable.getCompatibleHeight(screen, h);
+    }
+
+    @Override
     public final PPSDrawable createCompatibleImage(int w, int h) {
         return PPSDrawable.create(screen, w, h);
     }

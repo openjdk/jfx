@@ -114,6 +114,8 @@ public abstract class Renderer {
      */
     public abstract AccelType getAccelType();
 
+    public abstract int getCompatibleWidth(int w);
+    public abstract int getCompatibleHeight(int h);
     public abstract Filterable createCompatibleImage(int w, int h);
 
     public Filterable getCompatibleImage(int w, int h) {

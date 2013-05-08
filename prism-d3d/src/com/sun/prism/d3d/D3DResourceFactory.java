@@ -228,6 +228,30 @@ class D3DResourceFactory extends BaseShaderFactory {
         }
     }
 
+    public int getRTTWidth(int w, WrapMode wrapMode) {
+        // D3DRTTexture returns the requested dimension as the content dimension
+        // so the answer here is just "w" despite the fact that a pow2 adjustment
+        // is made for the actual allocation.  Typically, D3D supports non-pow2
+        // textures on every implementation so the pow2 code below is not really
+        // encountered in practice anyway (it's only supported for "debugging").
+//        if (PrismSettings.forcePow2) {
+//            w = nextPowerOfTwo(w, Integer.MAX_VALUE);
+//        }
+        return w;
+    }
+
+    public int getRTTHeight(int h, WrapMode wrapMode) {
+        // D3DRTTexture returns the requested dimension as the content dimension
+        // so the answer here is just "h" despite the fact that a pow2 adjustment
+        // is made for the actual allocation.  Typically, D3D supports non-pow2
+        // textures on every implementation so the pow2 code below is not really
+        // encountered in practice anyway (it's only supported for "debugging").
+//        if (PrismSettings.forcePow2) {
+//            h = nextPowerOfTwo(h, Integer.MAX_VALUE);
+//        }
+        return h;
+    }
+
     @Override
     public D3DRTTexture createRTTexture(int width, int height, WrapMode wrapMode) {
         if (PrismSettings.verbose && context.isLost()) {
