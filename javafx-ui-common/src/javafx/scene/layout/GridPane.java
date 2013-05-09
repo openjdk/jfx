@@ -1224,6 +1224,23 @@ public class GridPane extends Pane {
         return HPos.LEFT;
     }
 
+    private double getColumnMinWidth(int columnIndex) {
+        if (columnIndex < getColumnConstraints().size()) {
+            ColumnConstraints constraints = getColumnConstraints().get(columnIndex);
+            return constraints.getMinWidth();
+
+        }
+        return USE_COMPUTED_SIZE;
+    }
+
+    private double getRowMinHeight(int rowIndex) {
+        if (rowIndex < getRowConstraints().size()) {
+            RowConstraints constraints = getRowConstraints().get(rowIndex);
+            return constraints.getMinHeight();
+        }
+        return USE_COMPUTED_SIZE;
+    }
+
     private double getColumnMaxWidth(int columnIndex) {
         if (columnIndex < getColumnConstraints().size()) {
             ColumnConstraints constraints = getColumnConstraints().get(columnIndex);
@@ -1341,8 +1358,10 @@ public class GridPane extends Pane {
                 int start = getNodeRowIndex(child);
                 int end = getNodeRowEndConvertRemaining(child);
                 if (start == end && !result.isPreset(start)) {
-                    result.setMaxSize(start, computeChildPrefAreaHeight(child, getMargin(child),
-                            widths == null ? -1 : getTotalWidthOfNodeColumns(child, widths)));
+                    double min = getRowMinHeight(start);
+                    double max = getRowMaxHeight(start);
+                    result.setMaxSize(start, boundedSize(min < 0 ? 0 : min, computeChildPrefAreaHeight(child, getMargin(child),
+                            widths == null ? -1 : getTotalWidthOfNodeColumns(child, widths)), max < 0 ? Double.MAX_VALUE : max ));
                 } else if (start != end){
                     result.setMaxMultiSize(start, end + 1, computeChildPrefAreaHeight(child, getMargin(child),
                             widths == null ? -1 : getTotalWidthOfNodeColumns(child, widths)));
@@ -1484,8 +1503,10 @@ public class GridPane extends Pane {
                 int start = getNodeColumnIndex(child);
                 int end = getNodeColumnEndConvertRemaining(child);
                 if (start == end && !result.isPreset(start)) {
-                    result.setMaxSize(start, computeChildPrefAreaWidth(child, getMargin(child),
-                            heights == null ? -1 : getTotalHeightOfNodeRows(child, heights)));
+                    double min = getColumnMinWidth(start);
+                    double max = getColumnMaxWidth(start);
+                    result.setMaxSize(start, boundedSize(min < 0 ? 0 : min, computeChildPrefAreaWidth(child, getMargin(child),
+                            heights == null ? -1 : getTotalHeightOfNodeRows(child, heights)), max < 0 ? Double.MAX_VALUE : max));
                 } else if (start != end) {
                     result.setMaxMultiSize(start, end + 1, computeChildPrefAreaWidth(child, getMargin(child),
                             heights == null ? -1 : getTotalHeightOfNodeRows(child, heights)));
