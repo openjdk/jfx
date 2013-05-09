@@ -55,6 +55,7 @@ public class SettingsController implements Initializable {
     public CheckBox yUpCheckBox;
     public Slider fovSlider;
     public ColorPicker cameraColorPicker;
+    public CheckBox scaleToFitCheckBox;
 
     @Override public void initialize(URL location, ResourceBundle resources) {
         // keep one pane open always
@@ -72,5 +73,8 @@ public class SettingsController implements Initializable {
         // wire up settings
         fovSlider.setValue(contentModel.getCamera().getFieldOfView());
         contentModel.getCamera().fieldOfViewProperty().bind(fovSlider.valueProperty());
+        contentModel.getAutoScalingGroup().enabledProperty().bind(scaleToFitCheckBox.selectedProperty());
+        contentModel.showAxisProperty().bind(showAxisCheckBox.selectedProperty());
+        contentModel.yUpProperty().bind(yUpCheckBox.selectedProperty());
     }
 }

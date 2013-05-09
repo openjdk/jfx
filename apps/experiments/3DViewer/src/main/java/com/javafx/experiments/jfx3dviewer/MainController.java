@@ -44,11 +44,9 @@ import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.fxml.FXMLLoader;
 import javafx.fxml.Initializable;
-import javafx.scene.Group;
+import javafx.geometry.Bounds;
 import javafx.scene.Node;
 import javafx.scene.Parent;
-import javafx.scene.PerspectiveCamera;
-import javafx.scene.SubScene;
 import javafx.scene.control.Accordion;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
@@ -58,19 +56,13 @@ import javafx.scene.input.DragEvent;
 import javafx.scene.input.Dragboard;
 import javafx.scene.input.TransferMode;
 import javafx.scene.layout.Region;
-import javafx.scene.paint.Color;
-import javafx.scene.paint.PhongMaterial;
 import javafx.scene.shape.Box;
-import javafx.scene.shape.DrawMode;
 import javafx.scene.shape.MeshView;
 import javafx.scene.shape.TriangleMesh;
-import javafx.scene.transform.Rotate;
-import javafx.scene.transform.Translate;
 import javafx.stage.FileChooser;
 import javafx.util.Duration;
 import com.javafx.experiments.exporters.fxml.FXMLExporter;
 import com.javafx.experiments.importers.Importer3D;
-import sun.util.resources.cldr.be.CurrencyNames_be;
 
 /**
  * Controller class for main fxml file.
@@ -190,7 +182,12 @@ public class MainController implements Initializable {
         meshCount = 0;
         triangleCount = 0;
         updateCount(contentModel.getRoot3D());
-        status.setText("Nodes ["+nodeCount+"] :: Meshes ["+meshCount+"] :: Triangles ["+triangleCount+"]");
+        final Bounds bounds = contentModel.get3dContent().getBoundsInLocal();
+        status.setText(
+                String.format("Nodes [%d] :: Meshes [%d] :: Triangles [%d] :: " +
+                               "Bounds [w=%.2f,h=%.2f,d=%.2f]",
+                              nodeCount,meshCount,triangleCount,
+                              bounds.getWidth(),bounds.getHeight(),bounds.getDepth()));
     }
 
     private void updateCount(Node node){

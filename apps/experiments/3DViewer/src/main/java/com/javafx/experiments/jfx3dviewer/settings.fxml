@@ -45,12 +45,16 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 <Accordion fx:id="settings" minWidth="0.0" xmlns:fx="http://javafx.com/fxml" fx:controller="com.javafx.experiments.jfx3dviewer.SettingsController">
   <expandedPane>
-    <TitledPane fx:id="x1" animated="false" text="Camera">
+    <TitledPane fx:id="x4" animated="false" expanded="true" text="Options">
       <content>
         <GridPane hgap="5.0" styleClass="settings" vgap="5.0">
           <children>
-            <Label text="Field of view:" GridPane.columnIndex="0" GridPane.rowIndex="0" />
-            <Slider fx:id="fovSlider" majorTickUnit="40.0" max="180.0" min="0.0" minorTickCount="4" showTickLabels="true" showTickMarks="true" GridPane.columnIndex="1" GridPane.rowIndex="0" />
+            <Label text="Show Axis:" GridPane.columnIndex="0" GridPane.rowIndex="0" />
+            <Label text="Y Up:" GridPane.columnIndex="0" GridPane.rowIndex="1" />
+            <CheckBox fx:id="showAxisCheckBox" mnemonicParsing="false" text="" GridPane.columnIndex="1" GridPane.rowIndex="0" />
+            <CheckBox fx:id="yUpCheckBox" mnemonicParsing="false" text="" GridPane.columnIndex="1" GridPane.rowIndex="1" />
+            <Label text="Scale to Fit" GridPane.columnIndex="0" GridPane.rowIndex="2" />
+            <CheckBox id="yUpCheckBox" fx:id="scaleToFitCheckBox" mnemonicParsing="false" selected="true" text="" GridPane.columnIndex="1" GridPane.rowIndex="2" />
           </children>
           <columnConstraints>
             <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />
@@ -61,32 +65,15 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
           </padding>
           <rowConstraints>
             <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+            <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+            <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
           </rowConstraints>
         </GridPane>
       </content>
     </TitledPane>
   </expandedPane>
   <panes>
-    <TitledPane animated="false" expanded="false" text="Options">
-      <content>
-        <GridPane hgap="5.0" padding="$x3" styleClass="settings" vgap="5.0">
-          <children>
-            <Label text="Show Axis:" GridPane.columnIndex="0" GridPane.rowIndex="0" />
-            <Label text="Y Up:" GridPane.columnIndex="0" GridPane.rowIndex="1" />
-            <CheckBox fx:id="showAxisCheckBox" mnemonicParsing="false" text="" GridPane.columnIndex="1" GridPane.rowIndex="0" />
-            <CheckBox fx:id="yUpCheckBox" mnemonicParsing="false" text="" GridPane.columnIndex="1" GridPane.rowIndex="1" />
-          </children>
-          <columnConstraints>
-            <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />
-            <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />
-          </columnConstraints>
-          <rowConstraints>
-            <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
-            <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
-          </rowConstraints>
-        </GridPane>
-      </content>
-    </TitledPane>
+    <fx:reference source="x4" />
     <TitledPane fx:id="x2" animated="false" text="Lights">
       <content>
         <GridPane hgap="5.0" padding="$x3" styleClass="settings" vgap="5.0">
@@ -111,6 +98,22 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
         </GridPane>
       </content>
     </TitledPane>
-    <fx:reference source="x1" />
+    <TitledPane fx:id="x1" animated="false" text="Camera">
+      <content>
+        <GridPane hgap="5.0" padding="$x3" styleClass="settings" vgap="5.0">
+          <children>
+            <Label text="Field of view:" GridPane.columnIndex="0" GridPane.rowIndex="0" />
+            <Slider fx:id="fovSlider" majorTickUnit="40.0" max="180.0" min="0.0" minorTickCount="4" showTickLabels="true" showTickMarks="true" GridPane.columnIndex="1" GridPane.rowIndex="0" />
+          </children>
+          <columnConstraints>
+            <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />
+            <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />
+          </columnConstraints>
+          <rowConstraints>
+            <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+          </rowConstraints>
+        </GridPane>
+      </content>
+    </TitledPane>
   </panes>
 </Accordion>
