@@ -3,6 +3,7 @@
  */
 package com.sun.javafx.webkit.prism;
 
+import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.RectBounds;
 import com.sun.javafx.scene.text.GlyphList;
 import com.sun.javafx.scene.text.TextLayout;

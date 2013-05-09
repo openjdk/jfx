@@ -358,11 +358,10 @@ public final class WCGraphicsPerfLogger extends WCGraphicsContext {
     @Override
     public void drawString(WCFont f, String str, boolean rtl,
                            int from, int to,
-                           float lSpacing, float wSpacing,
                            float x, float y)
     {
         logger.resumeCount("DRAWSTRING");
-        gc.drawString(f, str, rtl, from, to, x, y, lSpacing, wSpacing);
+        gc.drawString(f, str, rtl, from, to, x, y);
         logger.suspendCount("DRAWSTRING");
     }
 

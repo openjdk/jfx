@@ -97,10 +97,9 @@ public abstract class WCGraphicsContext {
     public abstract void drawString(WCFont f, String str,
                                     boolean rtl,
                                     int from, int to,
-                                    float lSpacing, float wSpacing,
                                     float x, float y);
     public abstract void drawString(WCFont f, int[] glyphs,
-                                    float[] advanceDXY,
+                                    float[] advances,
                                     float x, float y);
     public abstract void drawWidget(RenderTheme theme, Ref widget, int x, int y);
     public abstract void drawScrollbar(ScrollBarTheme theme, Ref widget,

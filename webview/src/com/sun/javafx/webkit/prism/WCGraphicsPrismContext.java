@@ -26,6 +26,7 @@ import com.sun.javafx.sg.PGText;
 import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.sg.prism.NGShape;
 import com.sun.javafx.tk.Toolkit;
+import static com.sun.javafx.webkit.prism.TextUtilities.getLayoutWidth;
 import com.sun.prism.BasicStroke;
 import com.sun.prism.CompositeMode;
 import com.sun.prism.Graphics;
@@ -771,8 +772,9 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
             final float[] advances, final float x, final float y)
     {
         if (log.isLoggable(Level.FINE)) {
-            log.log(Level.FINE, "drawStringAsGlyph({0} {1}, {2})",
-                    new Object[] {glyphs, x, y});
+            log.fine(String.format(
+                    "Drawing %d glyphs @(%.1f, %.1f)",
+                    glyphs.length, x, y));
         }
         new Composite() {
             @Override void doPaint(Graphics g) {
@@ -811,11 +813,12 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
     }
 
     @Override public void drawString(WCFont f, String str, boolean rtl,
-            int from, int to, float lSpacing, float wSpacing, float x, float y)
+            int from, int to, float x, float y)
     {
         if (log.isLoggable(Level.FINE)) {
-            log.log(Level.FINE, "drawString({0}, {1}, {2})",
-                    new Object[] { str, x, y});
+            log.fine(String.format(
+                    "str='%s' (length=%d), from=%d, to=%d, rtl=%b, @(%.1f, %.1f)",
+                    str, str.length(), from, to, rtl, x, y));
         }
         TextLayout layout = TextUtilities.createLayout(
                 str.substring(from, to), f.getPlatformFont());
@@ -837,6 +840,13 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
             }
         }
 
+        // adjust x coordinate (see RT-29908)
+        if (rtl) {
+            x += (getLayoutWidth(str.substring(from), f.getPlatformFont()) -
+                  layout.getBounds().getWidth());
+        } else {
+            x += getLayoutWidth(str.substring(0, from), f.getPlatformFont());
+        }
         drawString(f, glyphs, adv, x, y);
     }
 

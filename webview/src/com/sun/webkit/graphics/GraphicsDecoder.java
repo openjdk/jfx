@@ -275,8 +275,6 @@ public final class GraphicsDecoder  {
                         bdata.getString(buf.getInt()),
                         (buf.getInt() == -1),           // rtl flag
                         buf.getInt(), buf.getInt(),     // from and to positions
-                        buf.getFloat(),                 // letter spacing
-                        buf.getFloat(),                 // word spacing
                         buf.getFloat(), buf.getFloat());// (x,y) position
                     break;
                 case DRAWSTRING_FAST:
