@@ -1284,17 +1284,17 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         }
     }
 
-//    @Override protected void setWidth(double value) {
-//        super.setWidth(value);
-//        setNeedsLayout(true);
-//        requestLayout();
-//    }
-//    
-//    @Override protected void setHeight(double value) {
-//        super.setHeight(value);
-//        setNeedsLayout(true);
-//        requestLayout();
-//    }
+    @Override protected void setWidth(double value) {
+        super.setWidth(value);
+        setNeedsLayout(true);
+        requestLayout();
+    }
+
+    @Override protected void setHeight(double value) {
+        super.setHeight(value);
+        setNeedsLayout(true);
+        requestLayout();
+    }
 
     private void updateScrollBarsAndCells() {
         // Assign the hbar and vbar to the breadthBar and lengthBar so as
@@ -1683,7 +1683,6 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
     private void setCellIndex(T cell, int index) {
         assert cell != null;
 
-        if (cell.getIndex() == index) return;
         cell.updateIndex(index);
         
         if (cell.isNeedsLayout() && cell.getScene() != null && cell.getProperties().containsKey(NEW_CELL)) {
