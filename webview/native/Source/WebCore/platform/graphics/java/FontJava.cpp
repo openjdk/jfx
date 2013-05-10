@@ -29,39 +29,6 @@ static JLString getJavaString(const TextRun& run)
     ).toJavaString(WebCore_GetJavaEnv());
 }
 
-static FloatRect getStringBounds(const Font* font, const TextRun& run,
-                                 int from, int to, int h)
-{
-    JNIEnv* env = WebCore_GetJavaEnv();
-
-    static jmethodID getStringBounds_mID = env->GetMethodID(
-        PG_GetFontClass(env),
-        "getStringBounds",
-        "(Ljava/lang/String;IIZFF)[D");
-    ASSERT(getStringBounds_mID);
-
-    RefPtr<RQRef> jFont = font->primaryFont()->platformData().nativeFontData();
-    if (!jFont)
-        return FloatRect();
-
-    JLocalRef<jdoubleArray> bnds(static_cast<jdoubleArray>(env->CallObjectMethod(
-        *jFont,
-        getStringBounds_mID,
-        (jstring)getJavaString(run),
-        jint(from),
-        jint(to),
-        jboolean(run.rtl()),
-        jfloat(font->letterSpacing()),
-        jfloat(font->wordSpacing()))));
-    CheckAndClearException(env);
-
-    jdouble* pBnds = (jdouble*)env->GetPrimitiveArrayCritical((jdoubleArray)bnds, NULL);
-    //FloatRect stringBounds(pBnds[0], 0, pBnds[2], pBnds[3] - pBnds[1]);
-    FloatRect stringBounds(pBnds[0], 0, pBnds[2], h);
-    env->ReleasePrimitiveArrayCritical(bnds, pBnds, JNI_ABORT);
-    return stringBounds;
-}
-
 void Font::drawComplexText(GraphicsContext* gc, const TextRun & run, const FloatPoint & point, int from, int to) const
 {
     if (!gc) {
@@ -90,42 +57,58 @@ void Font::drawComplexText(GraphicsContext* gc, const TextRun & run, const Float
         << (jint)(run.rtl() ? -1 : 0)
         << (jint)from
         << (jint)to
-        << (jfloat)letterSpacing()
-        << (jfloat)wordSpacing()
         << (jfloat)point.x()
         << (jfloat)point.y();
 }
 
 float Font::floatWidthForComplexText(const TextRun& run, HashSet<const SimpleFontData*>* fallbackFonts, GlyphOverflow* /* glyphOverflow */) const
 {
-    JNIEnv* env = WebCore_GetJavaEnv();
-
-    static jmethodID getStringWidth_mID = env->GetMethodID(
-        PG_GetFontClass(env),
-        "getStringWidth",
-        "(Ljava/lang/String;FF)D");
-    ASSERT(getStringWidth_mID);
-
     RefPtr<RQRef> jFont = primaryFont()->platformData().nativeFontData();
     if (!jFont)
         return 0.0f;
 
+    JNIEnv* env = WebCore_GetJavaEnv();
+    static jmethodID getStringWidth_mID = env->GetMethodID(
+        PG_GetFontClass(env),
+        "getStringWidth",
+        "(Ljava/lang/String;)D");
+    ASSERT(getStringWidth_mID);
+
     float res = env->CallDoubleMethod(
         *jFont,
         getStringWidth_mID,
-        (jstring)getJavaString(run),
-        (jfloat)letterSpacing(),
-        (jfloat)wordSpacing());
+        (jstring)getJavaString(run));
     CheckAndClearException(env);
 
     return res;
 }
 
-FloatRect Font::selectionRectForComplexText(const TextRun& run, const FloatPoint& point, int h, int from, int to) const
+FloatRect Font::selectionRectForComplexText(const TextRun& run,
+        const FloatPoint& point, int h, int from, int to) const
 {
-    FloatRect r = getStringBounds(this, run, from, to, h);
-    r.setX(r.x() + point.x());
-    r.setY(r.y() + point.y());
+    RefPtr<RQRef> jFont = primaryFont()->platformData().nativeFontData();
+    if (!jFont)
+        return FloatRect();
+
+    JNIEnv* env = WebCore_GetJavaEnv();
+    static jmethodID getStringBounds_mID = env->GetMethodID(
+        PG_GetFontClass(env),
+        "getStringBounds",
+        "(Ljava/lang/String;IIZ)[D");
+    ASSERT(getStringBounds_mID);
+
+    JLocalRef<jdoubleArray> bnds(static_cast<jdoubleArray>(env->CallObjectMethod(
+        *jFont,
+        getStringBounds_mID,
+        (jstring)getJavaString(run),
+        jint(from),
+        jint(to),
+        jboolean(run.rtl()))));
+    CheckAndClearException(env);
+
+    jdouble* pBnds = (jdouble*)env->GetPrimitiveArrayCritical((jdoubleArray)bnds, NULL);
+    FloatRect r(pBnds[0] + point.x(), point.y(), pBnds[2], h);
+    env->ReleasePrimitiveArrayCritical(bnds, pBnds, JNI_ABORT);
     return r;
 }
 
@@ -133,25 +116,22 @@ int Font::offsetForPositionForComplexText(
     const TextRun& run, float xFloat,
     bool includePartialGlyphs) const
 {
-    JNIEnv* env = WebCore_GetJavaEnv();
-
-    static jmethodID getOffsetForPosition_mID = env->GetMethodID(
-        PG_GetFontClass(env),
-        "getOffsetForPosition",
-        "(Ljava/lang/String;FFF)I");
-    ASSERT(getOffsetForPosition_mID);
-
     RefPtr<RQRef> jFont = primaryFont()->platformData().nativeFontData();
     if (!jFont)
         return 0;
+
+    JNIEnv* env = WebCore_GetJavaEnv();
+    static jmethodID getOffsetForPosition_mID = env->GetMethodID(
+        PG_GetFontClass(env),
+        "getOffsetForPosition",
+        "(Ljava/lang/String;F)I");
+    ASSERT(getOffsetForPosition_mID);
 
     jint res = env->CallIntMethod(
         *jFont,
         getOffsetForPosition_mID,
         (jstring)getJavaString(run),
-        xFloat,
-        (float)letterSpacing(),
-        (float)wordSpacing());
+        xFloat);
     CheckAndClearException(env);
 
     return res;

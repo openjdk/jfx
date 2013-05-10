@@ -7,8 +7,7 @@ public abstract class WCFont extends Ref {
 
     public abstract Object getPlatformFont();
 
-    public abstract int getOffsetForPosition(String str, float x,
-                                             float lSpacing, float wSpacing);
+    public abstract int getOffsetForPosition(String str, float x);
 
     public abstract int[] getGlyphCodes(char[] chars);
 
@@ -17,11 +16,9 @@ public abstract class WCFont extends Ref {
     public abstract double getGlyphWidth(int glyph);
 
     public abstract double[] getStringBounds(String str, int from, int to,
-                                             boolean rtl,
-                                             float lSpacing, float wSpacing);
+                                             boolean rtl);
 
-    public abstract double getStringWidth(String str, float lSpacing,
-                                          float wSpacing);
+    public abstract double getStringWidth(String str);
 
     /**
      * Returns a hash code value for the object.

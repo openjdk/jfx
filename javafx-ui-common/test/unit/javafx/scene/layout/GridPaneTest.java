@@ -2636,4 +2636,64 @@ public class GridPaneTest {
         assertEquals(20, child3.getLayoutBounds().getWidth(), 1e-100);
     }
 
+    @Test
+    public void testGridWithMultipleMultiSpanColumns() {
+        MockResizable child1 = new MockResizable(100, 100);
+        MockResizable child2 = new MockResizable(100, 100);
+        MockResizable child3 = new MockResizable(100, 100);
+        MockResizable child4 = new MockResizable(100, 100);
+
+        MockResizable child_double_12 = new MockResizable(300, 300);
+        MockResizable child_double_34 = new MockResizable(300, 300);
+
+        gridpane.add(child1, 0, 0);
+        gridpane.add(child2, 1, 0);
+        gridpane.add(child3, 2, 0);
+        gridpane.add(child4, 3, 0);
+
+        gridpane.add(child_double_12, 0, 1, 2, 1);
+        gridpane.add(child_double_34, 2, 1, 2, 1);
+
+        gridpane.resize(300, 300);
+        gridpane.layout();
+
+
+        assertEquals(75, child1.getLayoutBounds().getWidth(), 1e-100);
+        assertEquals(75, child2.getLayoutBounds().getWidth(), 1e-100);
+        assertEquals(75, child3.getLayoutBounds().getWidth(), 1e-100);
+        assertEquals(75, child4.getLayoutBounds().getWidth(), 1e-100);
+        assertEquals(150, child_double_12.getLayoutBounds().getWidth(), 1e-100);
+        assertEquals(150, child_double_34.getLayoutBounds().getWidth(), 1e-100);
+    }
+
+    @Test
+    public void testGridHeightMultipleMultiSpanRows() {
+        MockResizable child1 = new MockResizable(100, 100);
+        MockResizable child2 = new MockResizable(100, 100);
+        MockResizable child3 = new MockResizable(100, 100);
+        MockResizable child4 = new MockResizable(100, 100);
+
+        MockResizable child_double_12 = new MockResizable(300, 300);
+        MockResizable child_double_34 = new MockResizable(300, 300);
+
+        gridpane.add(child1, 0, 0);
+        gridpane.add(child2, 0, 1);
+        gridpane.add(child3, 0, 2);
+        gridpane.add(child4, 0, 3);
+
+        gridpane.add(child_double_12, 1, 0, 1, 2);
+        gridpane.add(child_double_34, 1, 2, 1, 2);
+
+        gridpane.resize(300, 300);
+        gridpane.layout();
+
+
+        assertEquals(75, child1.getLayoutBounds().getHeight(), 1e-100);
+        assertEquals(75, child2.getLayoutBounds().getHeight(), 1e-100);
+        assertEquals(75, child3.getLayoutBounds().getHeight(), 1e-100);
+        assertEquals(75, child4.getLayoutBounds().getHeight(), 1e-100);
+        assertEquals(150, child_double_12.getLayoutBounds().getHeight(), 1e-100);
+        assertEquals(150, child_double_34.getLayoutBounds().getHeight(), 1e-100);
+    }
+
 }

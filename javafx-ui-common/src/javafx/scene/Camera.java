@@ -295,7 +295,7 @@ public abstract class Camera extends Node {
             ownerScene.markCameraDirty();
         }
         if (ownerSubScene != null && ownerSubScene != getSubScene()) {
-            ownerSubScene.markCameraDirty();
+            ownerSubScene.markContentDirty();
         }
     }
 

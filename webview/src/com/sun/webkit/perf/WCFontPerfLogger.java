@@ -35,11 +35,9 @@ public final class WCFontPerfLogger extends WCFont {
         return fnt.getPlatformFont();
     }
 
-    public int getOffsetForPosition(String str, float x, float lSpacing,
-                                    float wSpacing)
-    {
+    public int getOffsetForPosition(String str, float x) {
         logger.resumeCount("GETOFFSETFORPOSITION");
-        int res = fnt.getOffsetForPosition(str, x, lSpacing, wSpacing);
+        int res = fnt.getOffsetForPosition(str, x);
         logger.suspendCount("GETOFFSETFORPOSITION");
         return res;
     }
@@ -66,18 +64,16 @@ public final class WCFontPerfLogger extends WCFont {
         return res;
     }
 
-    public double getStringWidth(String str, float lSpacing, float wSpacing) {
+    public double getStringWidth(String str) {
         logger.resumeCount("GETSTRINGLENGTH");
-        double res = fnt.getStringWidth(str, lSpacing, wSpacing);
+        double res = fnt.getStringWidth(str);
         logger.suspendCount("GETSTRINGLENGTH");
         return res;
     }
 
-    public double[] getStringBounds(String str, int from, int to, boolean rtl,
-                                    float lSpacing, float wSpacing)
-    {
+    public double[] getStringBounds(String str, int from, int to, boolean rtl) {
         logger.resumeCount("GETSTRINGBOUNDS");
-        double[] res = fnt.getStringBounds(str, from, to, rtl, lSpacing, wSpacing);
+        double[] res = fnt.getStringBounds(str, from, to, rtl);
         logger.suspendCount("GETSTRINGBOUNDS");
         return res;
     }

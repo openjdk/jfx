@@ -13,6 +13,8 @@ import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.scene.text.GlyphList;
 import com.sun.javafx.scene.text.TextLayout;
 import com.sun.javafx.text.TextRun;
+import static com.sun.javafx.webkit.prism.TextUtilities.getLayoutWidth;
+import static com.sun.javafx.webkit.prism.TextUtilities.getLayoutBounds;
 import com.sun.prism.GraphicsPipeline;
 import com.sun.webkit.graphics.WCFont;
 import java.util.HashMap;
@@ -64,13 +66,16 @@ final class WCFontImpl extends WCFont {
         this.font = font;
     }
 
-    @Override public int getOffsetForPosition(
-            String str, float x, float lSpacing, float wSpacing)
-    {
+    @Override public int getOffsetForPosition(String str, float x) {
         TextLayout layout = TextUtilities.createLayout(str, font);
         GlyphList[] runs = layout.getRuns();
         TextRun run = (TextRun) runs[0];
-        return run.getOffsetAtX(x, null);
+        int offset = run.getOffsetAtX(x, null);
+        if (log.isLoggable(Level.FINE)) {
+            log.fine(String.format("str='%s' (length=%d), x=%.2f => %d",
+                    str, str.length(), x, offset));
+        }
+        return offset;
     }
 
     private FontStrike strike;
@@ -97,27 +102,37 @@ final class WCFontImpl extends WCFont {
         return glyphs;
     }
 
-    @Override public double getStringWidth(
-            String str, float lSpacing, float wSpacing)
-    {
-        return getLayoutBounds(str).getWidth();
+    @Override public double getStringWidth(String str) {
+        double result = getLayoutWidth(str, font);
+        if (log.isLoggable(Level.FINE)) {
+            log.fine(String.format("str='%s' (length=%d) => %.1f",
+                                    str, str.length(), result));
+        }
+        return result;
     }
 
-    @Override public double[] getStringBounds(String str, int from, int to,
-            boolean rtl, float lSpacing, float wSpacing)
-    {
-        BaseBounds bounds = getLayoutBounds(str.substring(from, to));
-        return new double[] {
-            bounds.getMinX(), bounds.getMinY(),
-            bounds.getWidth(), bounds.getHeight(),
+    @Override public double[] getStringBounds(String str, int from, int to, boolean rtl) {
+        float beforeWidth = getLayoutWidth(str.substring(0, from), font);
+        BaseBounds bounds = getLayoutBounds(str.substring(0, to), font);
+        double[] result = new double[] {
+            beforeWidth,                    // see RTL case below
+            0,                              // not really used
+            bounds.getWidth() - beforeWidth,
+            bounds.getHeight(),             // not really used
         };
+        if (rtl) {
+            float totalWidth = getLayoutWidth(str, font);
+            result[0] = totalWidth - bounds.getWidth();
+        }
+        if (log.isLoggable(Level.FINE)) {
+            log.fine(String.format(
+                    "str='%s' (length=%d) [%d, %d], rtl=%b => [%.1f, %.1f + %.1f x %.1f]",
+                    str, str.length(), from, to, rtl,
+                    result[0], result[1], result[2], result[3]));
+        }
+        return result;
     }
 
-    private BaseBounds getLayoutBounds(String str) {
-        TextLayout layout = TextUtilities.createLayout(str, font);
-        return layout.getBounds();
-    }
-    
     public float getAscent() {
         // REMIND: This method needs to require a render context.
         float res = - getFontStrike().getMetrics().getAscent();
