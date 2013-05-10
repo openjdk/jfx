@@ -224,11 +224,15 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
 
         if (!isOut) {
             WCRectangle pathBounds = path.getBounds();
-            state.clip(new Rectangle(
-                    pathBounds.getIntX(),
-                    pathBounds.getIntY(),
-                    pathBounds.getIntWidth(),
-                    pathBounds.getIntHeight()));
+
+            // path bounds could be fractional so 'inclusive' rounding
+            // is used for determining clip rectangle
+            int pixelX = (int) Math.floor(pathBounds.getX());
+            int pixelY = (int) Math.floor(pathBounds.getY());
+            int pixelW = (int) Math.ceil(pathBounds.getMaxX()) - pixelX;
+            int pixelH = (int) Math.ceil(pathBounds.getMaxY()) - pixelY;
+
+            state.clip(new Rectangle(pixelX, pixelY, pixelW, pixelH));
         }
 
         Rectangle clip = state.getClipNoClone();
@@ -1249,7 +1253,7 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
             try {
                 readbackGraphics = (ReadbackGraphics) g;
                 texture = readbackGraphics.readBack(bounds);
-                getGraphics().drawTexture(texture, bounds.x, bounds.y, bounds.width, bounds.height);
+                getGraphics().drawTexture(texture, 0, 0, bounds.width, bounds.height);
             } finally {
                 if (readbackGraphics != null && texture != null) {
                     readbackGraphics.releaseReadBackBuffer(texture);
@@ -1272,22 +1276,15 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
             // blend buffer and clipImg onto |g|
             if (g instanceof MaskTextureGraphics) {
                 MaskTextureGraphics mg = (MaskTextureGraphics) g;
-                BaseTransform tx = g.getTransformNoClone();
-                // assert(tx.isTranslateOrIdentity());
-//                if (!tx.isTranslateOrIdentity()) {
-//                    System.out.println("NOT A TRANSLATE!!!!!!!!!!!!!!!!!!!!!!!");
-//                }
-                int dx = (int) Math.round(tx.getMxt());
-                int dy = (int) Math.round(tx.getMyt());
                 if (srcover) {
                     mg.drawPixelsMasked(buffer.getTextureObject(),
                                         bufferImg.getTextureObject(),
-                                        dx, dy, bounds.width, bounds.height,
+                                        bounds.x, bounds.y, bounds.width, bounds.height,
                                         0, 0, 0, 0);
                 } else {
                     mg.maskInterpolatePixels(buffer.getTextureObject(),
                                              bufferImg.getTextureObject(),
-                                             dx, dy, bounds.width, bounds.height,
+                                             bounds.x, bounds.y, bounds.width, bounds.height,
                                              0, 0, 0, 0);
                 }
             } else {
