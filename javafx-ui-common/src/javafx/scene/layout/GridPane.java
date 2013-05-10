@@ -108,13 +108,14 @@ import static javafx.scene.layout.Region.getMaxAreaBaselineOffset;
  * <pre><code>     GridPane gridpane = new GridPane();
  *
  *     // Set one constraint at a time...
+ *     // Places the button at the first row and second column
  *     Button button = new Button();
- *     <b>GridPane.setRowIndex(button, 1);
- *     GridPane.setColumnIndex(button, 2);</b>
+ *     <b>GridPane.setRowIndex(button, 0);
+ *     GridPane.setColumnIndex(button, 1);</b>
  *
  *     // or convenience methods set more than one constraint at once...
  *     Label label = new Label();
- *     <b>GridPane.setConstraints(label, 3, 1);</b> // column=3 row=1
+ *     <b>GridPane.setConstraints(label, 2, 0);</b> // column=2 row=0
  *
  *     // don't forget to add children to gridpane
  *     <b>gridpane.getChildren().addAll(button, label);</b>
@@ -124,8 +125,8 @@ import static javafx.scene.layout.Region.getMaxAreaBaselineOffset;
  * setting the constraints and adding the children:
  * <pre><code>
  *     GridPane gridpane = new GridPane();
- *     <b>gridpane.add(new Button(), 2, 1);</b> // column=2 row=1
- *     <b>gridpane.add(new Label(), 3, 1);</b>  // column=3 row=1
+ *     <b>gridpane.add(new Button(), 1, 0);</b> // column=1 row=0
+ *     <b>gridpane.add(new Label(), 2, 0);</b>  // column=2 row=0
  * </code></pre>
  *
  *
@@ -139,8 +140,8 @@ import static javafx.scene.layout.Region.getMaxAreaBaselineOffset;
  * For example, to create a grid with two fixed-width columns:
  * <pre><code>
  *     GridPane gridpane = new GridPane();
- *     <b>gridpane.getColumnConstraints().add(new ColumnConstraints(100));</b> // column 1 is 100 wide
- *     <b>gridpane.getColumnConstraints().add(new ColumnConstraints(200));</b> // column 2 is 200 wide
+ *     <b>gridpane.getColumnConstraints().add(new ColumnConstraints(100));</b> // column 0 is 100 wide
+ *     <b>gridpane.getColumnConstraints().add(new ColumnConstraints(200));</b> // column 1 is 200 wide
  * </code></pre>
  * By default the gridpane will resize rows/columns to their preferred sizes (either
  * computed from content or fixed), even if the gridpane is resized larger than
@@ -902,6 +903,9 @@ public class GridPane extends Pane {
      * Returns list of row constraints. Row constraints can be added to
      * explicitly control individual row sizing and layout behavior.
      * If not set, row sizing and layout behavior is computed based on content.
+     * 
+     * Index in the ObservableList denotes the row number, so the row constraint for the first row
+     * is at the position of 0.
      */
     public final ObservableList<RowConstraints> getRowConstraints() { return rowConstraints; }
     /**
@@ -932,6 +936,9 @@ public class GridPane extends Pane {
      * Returns list of column constraints. Column constraints can be added to
      * explicitly control individual column sizing and layout behavior.
      * If not set, column sizing and layout behavior is computed based on content.
+     * 
+     * Index in the ObservableList denotes the column number, so the column constraint for the first column
+     * is at the position of 0.
      */
     public final ObservableList<ColumnConstraints> getColumnConstraints() { return columnConstraints; }
 
@@ -940,8 +947,8 @@ public class GridPane extends Pane {
      * This convenience method will set the gridpane column and row constraints
      * on the child.
      * @param child the node being added to the gridpane
-     * @param columnIndex the column index position for the child within the gridpane
-     * @param rowIndex the row index position for the child within the gridpane
+     * @param columnIndex the column index position for the child within the gridpane, counting from 0
+     * @param rowIndex the row index position for the child within the gridpane, counting from 0
      */
     public void add(Node child, int columnIndex, int rowIndex) {
         setConstraints(child, columnIndex, rowIndex);
@@ -953,8 +960,8 @@ public class GridPane extends Pane {
      * This convenience method will set the gridpane column, row, and span constraints
      * on the child.
      * @param child the node being added to the gridpane
-     * @param columnIndex the column index position for the child within the gridpane
-     * @param rowIndex the row index position for the child within the gridpane
+     * @param columnIndex the column index position for the child within the gridpane, counting from 0
+     * @param rowIndex the row index position for the child within the gridpane, counting from 0
      * @param colspan the number of columns the child's layout area should span
      * @param rowspan the number of rows the child's layout area should span
      */
