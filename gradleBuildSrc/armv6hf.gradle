@@ -48,7 +48,7 @@ ARMV6HF.jfxrtJarExcludes = [
     "com/sun/glass/ui/accessible/win",
     "com/sun/prism/d3d",
     "com/sun/prism/es2/gl/win",
-    "com/sun/prism/null3d",
+    //"com/sun/prism/null3d",
     "com/sun/scenario/effect/impl/hw/d3d",
     
     "com/sun/glass/events/mac",
@@ -56,7 +56,7 @@ ARMV6HF.jfxrtJarExcludes = [
     "com/sun/glass/ui/accessible/mac",
     "com/sun/prism/es2/gl/mac",
     
-    "com/sun/glass/ui/gtk",
+    "com/sun/glass/ui/android",
     
     "com/sun/glass/ui/ios",
     
@@ -69,7 +69,6 @@ ARMV6HF.jfxrtJarExcludes = [
     "com/sun/prism/es2/MacGL*",
     "com/sun/prism/es2/IOSGL*",
     "com/sun/prism/es2/WinGL*",
-    "com/sun/prism/es2/X11GL*",
 ]
 
 def commonFlags = [
@@ -109,7 +108,7 @@ def iioLFlags = [extraLFlags].flatten()
 def es2EglfbCFlags = [extraCFlags, "-DIS_EGLFB", "-DLINUX", "-DGRADLE_BUILD"].flatten()
 def es2EglfbLFlags = [extraLFlags].flatten()
 
-def es2X11CFlags = [extraCFlags, "-DUSE_XSHM", "-DDEBUG", "-DIS_EGLX11"].flatten()
+def es2X11CFlags = [extraCFlags, "-DUSE_XSHM", "-DDEBUG", "-DIS_EGLX11", "-DLINUX", "-DGRADLE_BUILD"].flatten()
 def es2X11LFlags = [extraLFlags, "-lX11", "-lXext", "-lXdmcp", "-lXau"].flatten()
 
 def mediaCFlags = [extraCFlags,
@@ -157,8 +156,7 @@ setupTools("armv6-hf_tools",
     }
 )
 
-ARMV6HF.javafxPlatformProperties =
-"""javafx.platform=eglfb
+ARMV6HF.javafxPlatformProperties ="""javafx.platform=eglfb
 directfb.glass.platform=Lens
 directfb.glass.lens=dfb
 directfb.prism.order=sw
@@ -210,39 +208,77 @@ ARMV6HF.glass.javahInclude = [
 ARMV6HF.glass.lib = "glass"
 
 ARMV6HF.glass.eglfb = [:]
-ARMV6HF.glass.eglfb.nativeSource = file("modules/graphics/src/main/native-glass/lens")
+// TODO when building headless, use lens/cursor/nullcursor/
+// otherwise we use lens/cursor/fbCursor/ and lens/input/udev
+
+// TODO when USE_RFB is specified use lens/rfb
+
+// TODO use /eglfb/x11ContainerScreen when using eglfb and EGL_X11_FB_CONTAINER
+// TODO use /headless/headlessScreen when using headless
+ARMV6HF.glass.eglfb.nativeSource = [
+    file("modules/graphics/src/main/native-glass/lens"),
+    file("modules/graphics/src/main/native-glass/lens/wm"),
+    file("modules/graphics/src/main/native-glass/lens/cursor/fbCursor"),
+    file("modules/graphics/src/main/native-glass/lens/input/udev"),
+    file("modules/graphics/src/main/native-glass/lens/wm/screen/fbdevScreen.c")]
+    //file("modules/graphics/src/main/native-glass/lens/wm/screen")]
 ARMV6HF.glass.eglfb.compiler = compiler
-ARMV6HF.glass.eglfb.ccFlags = ["-ffast-math", extraCFlags].flatten()
+ARMV6HF.glass.eglfb.ccFlags = ["-ffast-math", extraCFlags, "-DLINUX", "-DGRADLE_BUILD"].flatten()
 ARMV6HF.glass.eglfb.linker = linker
 ARMV6HF.glass.eglfb.linkFlags = [lensLFlags].flatten()
+ARMV6HF.glass.eglfb.lib = "glass-lens-eglfb"
 
 ARMV6HF.glass.directfb = [:]
-ARMV6HF.glass.directfb.nativeSource = file("modules/graphics/src/main/native-glass/lens")
+ARMV6HF.glass.directfb.nativeSource = [
+    file("modules/graphics/src/main/native-glass/lens"),
+    file("modules/graphics/src/main/native-glass/lens/wm"),
+    file("modules/graphics/src/main/native-glass/lens/cursor/fbCursor"),
+    file("modules/graphics/src/main/native-glass/lens/input/udev"),
+    file("modules/graphics/src/main/native-glass/lens/wm/screen/dfbScreen.c")]
+    //file("modules/graphics/src/main/native-glass/lens/wm/screen")]
 ARMV6HF.glass.directfb.compiler = compiler
-ARMV6HF.glass.directfb.ccFlags = ["-ffast-math", extraCFlags, "-I$sdk/usr/include/directfb"].flatten()
+ARMV6HF.glass.directfb.ccFlags = ["-ffast-math", extraCFlags, "-I$sdk/usr/include/directfb", "-DLINUX", "-DGRADLE_BUILD"].flatten()
 ARMV6HF.glass.directfb.linker = linker
 ARMV6HF.glass.directfb.linkFlags = [lensLFlags].flatten()
+ARMV6HF.glass.directfb.lib = "glass-lens-directfb"
 
 ARMV6HF.glass.fb = [:]
-ARMV6HF.glass.fb.nativeSource = file("modules/graphics/src/main/native-glass/lens")
+ARMV6HF.glass.fb.nativeSource = [
+    file("modules/graphics/src/main/native-glass/lens"),
+    file("modules/graphics/src/main/native-glass/lens/wm"),
+    file("modules/graphics/src/main/native-glass/lens/cursor/fbCursor"),
+    file("modules/graphics/src/main/native-glass/lens/input/udev"),
+    file("modules/graphics/src/main/native-glass/lens/wm/screen/fbdevScreen.c")]
+    //file("modules/graphics/src/main/native-glass/lens/wm/screen")]
 ARMV6HF.glass.fb.compiler = compiler
-ARMV6HF.glass.fb.ccFlags = ["-ffast-math", extraCFlags].flatten()
+ARMV6HF.glass.fb.ccFlags = ["-ffast-math", extraCFlags, "-DLINUX", "-DGRADLE_BUILD"].flatten()
 ARMV6HF.glass.fb.linker = linker
 ARMV6HF.glass.fb.linkFlags = [lensLFlags].flatten()
+ARMV6HF.glass.fb.lib = "glass-lens-fb"
 
 ARMV6HF.glass.eglx11 = [:]
-ARMV6HF.glass.eglx11.nativeSource = file("modules/graphics/src/main/native-glass/lens")
+ARMV6HF.glass.eglx11.nativeSource = [
+    file("modules/graphics/src/main/native-glass/lens"),
+    file("modules/graphics/src/main/native-glass/lens/wm"),
+    file("modules/graphics/src/main/native-glass/lens/cursor/fbCursor"),
+    file("modules/graphics/src/main/native-glass/lens/input/udev"),
+    file("modules/graphics/src/main/native-glass/lens/wm/screen/x11ContainerScreen.c")]
+    //file("modules/graphics/src/main/native-glass/lens/wm/screen")]
 ARMV6HF.glass.eglx11.compiler = compiler
-ARMV6HF.glass.eglx11.ccFlags = ["-ffast-math", extraCFlags].flatten()
+ARMV6HF.glass.eglx11.ccFlags = ["-ffast-math", extraCFlags, "-DLINUX", "-DGRADLE_BUILD"].flatten()
 ARMV6HF.glass.eglx11.linker = linker
 ARMV6HF.glass.eglx11.linkFlags = [lensLFlags].flatten()
+ARMV6HF.glass.eglx11.lib = "glass-lens-eglx11"
 
 ARMV6HF.glass.gtk = [:]
-ARMV6HF.glass.gtk.nativeSource = file("modules/graphics/src/main/native-glass/lens")
+ARMV6HF.glass.gtk.nativeSource = [
+    file("modules/graphics/src/main/native-glass/lens"),
+    file("modules/graphics/src/main/native-glass/lens/wm")]
 ARMV6HF.glass.gtk.compiler = compiler
-ARMV6HF.glass.gtk.ccFlags = ["-ffast-math", extraCFlags].flatten()
+ARMV6HF.glass.gtk.ccFlags = ["-ffast-math", extraCFlags, "-DLINUX", "-DGRADLE_BUILD"].flatten()
 ARMV6HF.glass.gtk.linker = linker
 ARMV6HF.glass.gtk.linkFlags = [lensLFlags, "-lstdc++"].flatten()
+ARMV6HF.glass.gtk.lib = "glass"
 
 ARMV6HF.decora = [:]
 ARMV6HF.decora.compiler = compiler
@@ -281,17 +317,32 @@ ARMV6HF.iio.linkFlags = iioLFlags
 ARMV6HF.iio.lib = "javafx-iio"
 
 ARMV6HF.prismES2 = [:]
+ARMV6HF.prismES2.variants = ["eglfb", "eglx11"]
 ARMV6HF.prismES2.javahInclude = ["com/sun/prism/es2/**/*"]
-ARMV6HF.prismES2.nativeSource = [
+
+ARMV6HF.prismES2.eglfb = [:]
+ARMV6HF.prismES2.eglfb.nativeSource = [
     file("modules/graphics/src/main/native-prism-es2"),
     file("modules/graphics/src/main/native-prism-es2/GL"),
-    file("modules/graphics/src/main/native-prism-es2/eglfb") // TODO pick eglfb or eglx11 depending on pipeline
+    file("modules/graphics/src/main/native-prism-es2/eglfb")
 ]
-ARMV6HF.prismES2.compiler = compiler
-ARMV6HF.prismES2.ccFlags = es2EglfbCFlags //es2CFlags or es2EglfbCFlags or es2X11CFlags?
-ARMV6HF.prismES2.linker = linker
-ARMV6HF.prismES2.linkFlags = es2EglfbLFlags //es2LFlags or es2EglfbLFlags or es2X11LFlags?
-ARMV6HF.prismES2.lib = "prism-es2"
+ARMV6HF.prismES2.eglfb.compiler = compiler
+ARMV6HF.prismES2.eglfb.ccFlags = es2EglfbCFlags
+ARMV6HF.prismES2.eglfb.linker = linker
+ARMV6HF.prismES2.eglfb.linkFlags = es2EglfbLFlags
+ARMV6HF.prismES2.eglfb.lib = "prism-es2-eglfb"
+
+ARMV6HF.prismES2.eglx11 = [:]
+ARMV6HF.prismES2.eglx11.nativeSource = [
+    file("modules/graphics/src/main/native-prism-es2"),
+    file("modules/graphics/src/main/native-prism-es2/GL"),
+    file("modules/graphics/src/main/native-prism-es2/eglx11")
+]
+ARMV6HF.prismES2.eglx11.compiler = compiler
+ARMV6HF.prismES2.eglx11.ccFlags = es2X11CFlags
+ARMV6HF.prismES2.eglx11.linker = linker
+ARMV6HF.prismES2.eglx11.linkFlags = es2X11LFlags
+ARMV6HF.prismES2.eglx11.lib = "prism-es2-eglx11"
 
 def closedDir = file("$projectDir/../rt-closed")
 ARMV6HF.font = [:]

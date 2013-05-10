@@ -90,10 +90,12 @@ class NativeCompileTask extends DefaultTask {
         // Combine the different source roots into a single FileCollection based on all files in each source root
         def allFiles = [];
         sourceRoots.each {
-            allFiles += project.file(it).listFiles()
+            def dir = project.file(it);
+            allFiles += dir.isDirectory() ? dir.listFiles() : dir;
         }
         def source = project.files(allFiles);
         final Set<File> files = matches == null ? new HashSet<File>(source.files) : source.filter{it.name.matches(matches)}.files;
+        project.logger.info("Compiling native files: $files");
         boolean shouldCompileAnyway = false;
         final boolean forceCompile = shouldCompileAnyway;
         final ExecutorService executor = Executors.newFixedThreadPool(Integer.parseInt(project.NUM_COMPILE_THREADS.toString()));
