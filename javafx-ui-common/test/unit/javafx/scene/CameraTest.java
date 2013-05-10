@@ -389,7 +389,6 @@ public class CameraTest {
         expected.perspective(true, Math.toRadians(30), 1.5, 0.1, 100);
 
         Affine3D view = new Affine3D();
-        view.translate(0, 0, -1);
         view.rotate(Math.PI, 1, 0, 0);
 
         expected.mul(view);
@@ -411,7 +410,6 @@ public class CameraTest {
         expected.perspective(false, Math.toRadians(40), 1.5, 1.0, 200);
 
         Affine3D view = new Affine3D();
-        view.translate(0, 0, -1);
         view.rotate(Math.PI, 1, 0, 0);
 
         expected.mul(view);
@@ -432,7 +430,6 @@ public class CameraTest {
         expected.perspective(true, Math.toRadians(30), 1.5, 0.1, 100);
 
         Affine3D view = new Affine3D();
-        view.translate(0, 0, -1);
         view.rotate(Math.PI, 1, 0, 0);
 
         expected.mul(view);
@@ -454,7 +451,6 @@ public class CameraTest {
         expected.perspective(true, Math.toRadians(30), 1.5, 0.1, 100);
 
         Affine3D view = new Affine3D();
-        view.translate(0, 0, -1);
         view.rotate(Math.PI, 1, 0, 0);
 
         expected.mul(view);
@@ -477,7 +473,6 @@ public class CameraTest {
         expected.perspective(true, Math.toRadians(30), 1.5, 0.1, 100);
 
         Affine3D view = new Affine3D();
-        view.translate(0, 0, -1);
         view.rotate(Math.PI, 1, 0, 0);
 
         expected.mul(view);
@@ -505,7 +500,7 @@ public class CameraTest {
         Vec3d v = cam.computePosition(null);
         assertEquals(0.0, v.x, 0.000001);
         assertEquals(0.0, v.y, 0.000001);
-        assertEquals(-1.0, v.z, 0.000001);
+        assertEquals(0.0, v.z, 0.000001);
     }
 
     @Test

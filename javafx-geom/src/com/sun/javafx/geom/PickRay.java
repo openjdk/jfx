@@ -82,7 +82,7 @@ public class PickRay {
         Vec3d eye = pickRay.getOriginNoClone();
 
         if (fixedEye) {
-            eye.set(0.0, 0.0, -1.0);
+            eye.set(0.0, 0.0, 0.0);
         } else {
             // Projection plane is at Z = 0, implies that eye must be located at:
             eye.set(halfViewWidth, halfViewHeight, -distanceZ);

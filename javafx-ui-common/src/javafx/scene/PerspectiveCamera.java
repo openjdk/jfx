@@ -65,13 +65,22 @@ public  class PerspectiveCamera extends Camera {
 
     private boolean fixedEyePosition = false;
 
+    // Lookat transform for legacy case
     private static final Affine3D LOOK_AT_TX = new Affine3D();
+
+    // Lookat transform for fixedEyePosition case
+    private static final Affine3D LOOK_AT_TX_FIXED_EYE = new Affine3D();
+
     static {
-        // Compute the lookAt matrix such that the zero point ends up at
+        // Compute the legacy look at matrix such that the zero point ends up at
         // the z=-1 plane.
         LOOK_AT_TX.setToTranslation(0, 0, -1);
         // Y-axis pointing down
         LOOK_AT_TX.rotate(Math.PI, 1, 0, 0);
+
+        // Compute the fixed eye at (0, 0, 0) look at matrix such that the zero point
+        // ends up at the z=0 plane and Y-axis pointing down
+        LOOK_AT_TX_FIXED_EYE.rotate(Math.PI, 1, 0, 0);
     }
 
     /**
@@ -216,7 +225,7 @@ public  class PerspectiveCamera extends Camera {
         // local coord. of the camera node. In non-fixed eye case, the camera
         // position is (w/2, h/2, h/2/tan) in local coord. of the camera.
         if (isFixedEyePosition()) {
-            view.setTransform(LOOK_AT_TX);
+            view.setTransform(LOOK_AT_TX_FIXED_EYE);
         } else {
             final double viewWidth = getViewWidth();
             final double viewHeight = getViewHeight();
@@ -246,7 +255,7 @@ public  class PerspectiveCamera extends Camera {
         }
 
         if (fixedEyePosition) {
-            position.set(0.0, 0.0, -1.0);
+            position.set(0.0, 0.0, 0.0);
         } else {
             final double halfViewWidth = getViewWidth() / 2.0;
             final double halfViewHeight = getViewHeight() / 2.0;
