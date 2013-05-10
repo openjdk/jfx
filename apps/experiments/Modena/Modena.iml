@@ -55,6 +55,7 @@
     <orderEntry type="module" module-name="test-stub-toolkit" />
     <orderEntry type="module" module-name="webkit" />
     <orderEntry type="inheritedJdk" />
+    <orderEntry type="library" name="webkit-impl" level="project" />
   </component>
 </module>
 
