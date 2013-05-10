@@ -39,6 +39,7 @@ public class StubSubScene extends StubNode implements PGSubScene {
     @Override public void setDepthBuffer(boolean depthBuffer) { }
     @Override public Object[] getLights() { return null; }
     @Override public void setLights(Object[] object) { }
+    @Override public void markContentDirty() { }
 
     public PGCamera getCamera() {
         return camera;
