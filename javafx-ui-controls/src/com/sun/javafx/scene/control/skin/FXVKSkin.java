@@ -167,6 +167,9 @@ public class FXVKSkin extends BehaviorSkinBase<FXVK, BehaviorBase<FXVK>> {
             @Override public void invalidated(Observable valueModel) {
                 if (vkPopup != null) {
                     vkPopup.setY(winY.get());
+                    //workaround for RT-28648: popup window is not repainted after a move
+                    vkPopup.getScene().getRoot().setVisible(false);
+                    vkPopup.getScene().getRoot().setVisible(true);
                 }
             }
         });
