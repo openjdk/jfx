@@ -4544,6 +4544,9 @@ public abstract class Node implements EventTarget, Styleable {
             return false;
         }
         double t = -origZ / dirZ;
+        if (t < 0.0 && !pickRay.isParallel()) {
+            return false;
+        }
         double x = pickRay.getOriginNoClone().x + (pickRay.getDirectionNoClone().x * t);
         double y = pickRay.getOriginNoClone().y + (pickRay.getDirectionNoClone().y * t);
 
