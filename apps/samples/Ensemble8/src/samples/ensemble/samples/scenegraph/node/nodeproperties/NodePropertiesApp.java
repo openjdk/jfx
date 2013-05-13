@@ -32,9 +32,9 @@
 package ensemble.samples.scenegraph.node.nodeproperties;
 
 import javafx.application.Application;
-import javafx.scene.Group;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
+import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
@@ -76,12 +76,15 @@ public class NodePropertiesApp extends Application {
         //last posibility of setting X position of node
         rectC.setX(30);
         rectC.setY(20);
-
         //opacity of node can be set
         rectC.setOpacity(0.8);
-        Group g = new Group(rectA, rectB, rectC);
-        // g.setLayoutX(160 + 35);
-        return g;
+        
+        Pane root = new Pane(rectA, rectB, rectC);
+        root.setPrefSize(130, 100);
+        root.setMinSize(130, 100);
+        root.setMaxSize(130, 100);
+
+        return root;
     }
 
     @Override
