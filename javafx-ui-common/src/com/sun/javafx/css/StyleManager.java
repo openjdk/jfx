@@ -1725,8 +1725,8 @@ final public class StyleManager {
                             continue;
                         }
 
-                        for (int d = 0, dmax = rule.declarations.size(); d < dmax; d++) {
-                            final Declaration decl = rule.declarations.get(d);
+                        for (int d = 0, dmax = rule.getDeclarations().size(); d < dmax; d++) {
+                            final Declaration decl = rule.getDeclarations().get(d);
 
                             final CascadingStyle s = new CascadingStyle(
                                     new Style(match.selector, decl),

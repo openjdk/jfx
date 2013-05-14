@@ -26,6 +26,8 @@
 package com.sun.javafx.css;
 
 import com.sun.javafx.collections.TrackableObservableList;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -46,7 +48,7 @@ import javafx.scene.Scene;
  */
 final public class Rule {
 
-    final ObservableList<Selector> selectors =
+    private final ObservableList<Selector> selectors =
             new TrackableObservableList<Selector>() {
 
                 @Override
@@ -75,7 +77,7 @@ final public class Rule {
         return selectors;
     }
 
-    final ObservableList<Declaration> declarations = 
+    private final ObservableList<Declaration> declarations =
         new TrackableObservableList<Declaration>() {
 
         @Override
@@ -109,6 +111,27 @@ final public class Rule {
     };
     
     public List<Declaration> getDeclarations() {
+        if (serializedDecls != null && Rule.strings != null) {
+
+            try {
+                ByteArrayInputStream bis = new ByteArrayInputStream(serializedDecls);
+                DataInputStream dis = new DataInputStream(bis);
+                short nDeclarations = dis.readShort();
+                List<Declaration> decls = new ArrayList<Declaration>(nDeclarations);
+                for (int i = 0; i < nDeclarations; i++) {
+                    Declaration d = Declaration.readBinary(dis, Rule.strings);
+                    decls.add(d);
+                }
+
+                this.declarations.addAll(decls);
+
+            } catch (IOException ioe) {
+               assert false; ioe.getMessage();
+            } finally {
+                serializedDecls = null;
+            }
+
+        }
         return declarations;
     }
 
@@ -117,6 +140,7 @@ final public class Rule {
     public Stylesheet getStylesheet() {
         return stylesheet;
     }
+
     /* package */
     void setStylesheet(Stylesheet stylesheet) {
         this.stylesheet = stylesheet;
@@ -139,6 +163,16 @@ final public class Rule {
     public Rule(List<Selector> selectors, List<Declaration> declarations) {
         this.selectors.setAll(selectors);
         this.declarations.setAll(declarations);
+        serializedDecls = null;
+    }
+
+    private static String[] strings = null;  // TBD: blech!
+    private byte[] serializedDecls;
+
+    private Rule(List<Selector> selectors, byte[] buf, String[] stringStoreStrings) {
+        this.selectors.setAll(selectors);
+        this.serializedDecls = buf;
+        if (Rule.strings == null) Rule.strings = stringStoreStrings;
     }
 
     /**
@@ -204,11 +238,19 @@ final public class Rule {
             Selector sel = selectors.get(i);
             sel.writeBinary(os, stringStore);
         }
-        os.writeShort(declarations.size());
+
+        ByteArrayOutputStream bos = new ByteArrayOutputStream(5192);
+        DataOutputStream dos = new DataOutputStream(bos);
+
+        dos.writeShort(declarations.size());
+
         for (int i = 0; i < declarations.size(); i++) {
             Declaration decl = declarations.get(i);
-            decl.writeBinary(os, stringStore);
+            decl.writeBinary(dos, stringStore);
         }
+
+        os.writeInt(bos.size());
+        os.write(bos.toByteArray());
     }
 
     static Rule readBinary(DataInputStream is, String[] strings)
@@ -221,13 +263,13 @@ final public class Rule {
             selectors.add(s);
         }
 
-        short nDeclarations = is.readShort();
-        List<Declaration> declarations = new ArrayList<Declaration>(nDeclarations);
-        for (int i = 0; i < nDeclarations; i++) {
-            Declaration d = Declaration.readBinary(is, strings);
-            declarations.add(d);
-        }
 
-        return new Rule(selectors, declarations);
+        // de-serialize decls into byte array
+        int nBytes = is.readInt();
+        byte[] buf = new byte[nBytes];
+
+        is.readFully(buf);
+
+        return new Rule(selectors, buf, strings);
     }
 }
