@@ -334,7 +334,7 @@ static INLINE jboolean isInBounds(jint *a, jlong *la, jint min, jint max, jboole
     if (aval < min || aval > max) {
         if (repeat) {
             if (max > 0) {
-                *la = lmod(*la, max << 16);
+                *la = lmod(*la, (max+1) << 16);
                 *a = (jint)(*la >> 16);
             } else {
                 *la = 0;
@@ -483,6 +483,7 @@ genTexturePaint(Renderer *rdr, jint height) {
                     ++a;
                     ++pidx;
                     ++tx;
+                    ltx += 0x10000;
                 } // while (a < am)
                 paintOffset += paintStride;
             } // for
@@ -541,6 +542,7 @@ genTexturePaint(Renderer *rdr, jint height) {
                     ++a;
                     ++pidx;
                     ++tx;
+                    ltx += 0x10000;
                 } // while (a < am)
                 paintOffset += paintStride;
             } // for
