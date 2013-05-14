@@ -27,6 +27,7 @@ package com.sun.prism.impl;
 
 import com.sun.javafx.geom.Vec2f;
 import com.sun.javafx.geom.Vec3f;
+import sun.util.logging.PlatformLogger;
 
 /**
  * TODO: 3D - Need documentation
@@ -175,6 +176,10 @@ class MeshNormal {
             triVerts[2] = smFace[BaseMesh.FaceMembers.POINT2.ordinal()];
             if (MeshUtil.isDeadFace(triVerts)) {
                 nEmptyFaces++;
+                String logname = MeshNormal.class.getName();
+                PlatformLogger.getLogger(logname).warning("Dead face ["
+                        + triVerts[0] + ", " + triVerts[1] + ", " + triVerts[2]
+                        + "] @ face group " + f + "; nEmptyFaces = " + nEmptyFaces);
                 continue;
             }
             for (int i = 0; i < 3; i++) {
@@ -190,8 +195,10 @@ class MeshNormal {
 
             if (MeshUtil.isDeadFace(areaSquared)) {
                 nEmptyFaces++;
-                //LogFace("Wrong", f, mesh.faces[f]);
-                continue;
+                String logname = MeshNormal.class.getName();
+                PlatformLogger.getLogger(logname).warning("Face area exceeds the "
+                        + "minimum @ face group " + f + "; nEmptyFaces = "
+                        + nEmptyFaces);
             }
 
             for (int i = 0; i < 3; i++) {

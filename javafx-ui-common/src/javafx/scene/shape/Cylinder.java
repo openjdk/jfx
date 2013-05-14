@@ -80,15 +80,15 @@ public class Cylinder extends Shape3D {
      * Creates a new instance of {@code Cylinder} of a given radius, height, and
      * divisions. Resolution defaults to 15 divisions along X and Z axis.
      *
-     * Note that divisions should be at least 1. Any value less than that will be
-     * clamped to 1.
+     * Note that divisions should be at least 3. Any value less than that will be
+     * clamped to 3.
      * 
      * @param radius Radius
      * @param height Height
      * @param divisions Divisions 
      */
     public Cylinder (double radius, double height, int divisions) {
-        this.divisions = divisions < 1 ? 1 : divisions;
+        this.divisions = divisions < 3 ? 3 : divisions;
         setRadius(radius);
         setHeight(height);
     }
@@ -170,14 +170,18 @@ public class Cylinder extends Shape3D {
         super.impl_updatePG();
         if (impl_isDirty(DirtyBits.MESH_GEOM)) {
             PGCylinder pgCylinder = (PGCylinder) impl_getPGNode();
-            if (key == 0) {
-                key = generateKey((float) getHeight(), 
-                                  (float) getRadius(),
-                                  divisions);
+            final float h = (float) getHeight();
+            final float r = (float) getRadius();
+            if (h < 0 || r < 0) {
+                pgCylinder.updateMesh(null);
+            } else {
+                if (key == 0) {
+                    key = generateKey(h, r, divisions);
+                }
+                mesh = manager.getCylinderMesh(h, r, divisions, key);
+                mesh.impl_updatePG();
+                pgCylinder.updateMesh(mesh.impl_getPGTriangleMesh());
             }
-            mesh = manager.getCylinderMesh((float) getHeight(), (float) getRadius(), divisions, key);
-            mesh.impl_updatePG();
-            pgCylinder.updateMesh(mesh.impl_getPGTriangleMesh());
         }
     }
     
@@ -198,8 +202,14 @@ public class Cylinder extends Shape3D {
     @Deprecated
     @Override
     public BaseBounds impl_computeGeomBounds(BaseBounds bounds, BaseTransform tx) {
-        float r = (float) getRadius();
-        float hh = (float) getHeight() * 0.5f;
+        final float h = (float) getHeight();
+        final float r = (float) getRadius();
+
+        if (r < 0 || h < 0) {
+            return bounds.makeEmpty();
+        }
+        
+        final float hh = h * 0.5f;
         
         bounds = bounds.deriveWithNewBounds(-r, -hh, -r, r, hh, r);
         bounds = tx.transform(bounds, bounds);
@@ -367,10 +377,7 @@ public class Cylinder extends Shape3D {
 
     static TriangleMesh createMesh(int div, float h, float r) {
 
-        if (h * r == 0 || div < 3) {
-            return null;
-        }
-
+        // NOTE: still create mesh for degenerated cylinder
         final int nPonits = (div + 1) * 2 + 2;
         final int tcCount = (div + 1) * 4 + 1; // 2 cap tex
         final int faceCount = div * 4;

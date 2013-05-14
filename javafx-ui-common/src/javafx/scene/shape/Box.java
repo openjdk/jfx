@@ -176,17 +176,19 @@ public class Box extends Shape3D {
         super.impl_updatePG();
         if (impl_isDirty(DirtyBits.MESH_GEOM)) {
             PGBox pgBox = (PGBox) impl_getPGNode();
-            if (key == 0) {
-                key = generateKey((float) getWidth(), 
-                                  (float) getHeight(),
-                                  (float) getDepth());
+            final float w = (float) getWidth();
+            final float h = (float) getHeight();
+            final float d = (float) getDepth();
+            if (w < 0 || h < 0 || d < 0) {
+                pgBox.updateMesh(null);
+            } else {
+                if (key == 0) {
+                    key = generateKey(w, h, d);
+                }
+                mesh = manager.getBoxMesh(w, h, d, key);
+                mesh.impl_updatePG();
+                pgBox.updateMesh(mesh.impl_getPGTriangleMesh());
             }
-            mesh = manager.getBoxMesh((float) getWidth(), 
-                                      (float) getHeight(), 
-                                      (float) getDepth(),
-                                      key);
-            mesh.impl_updatePG();
-            pgBox.updateMesh(mesh.impl_getPGTriangleMesh());
         }
     }
     
@@ -197,9 +199,17 @@ public class Box extends Shape3D {
     @Deprecated
     @Override
     public BaseBounds impl_computeGeomBounds(BaseBounds bounds, BaseTransform tx) {
-        float hw = (float) getWidth() * 0.5f;
-        float hh = (float) getHeight() * 0.5f;
-        float hd = (float) getDepth() * 0.5f;
+        final float w = (float) getWidth();
+        final float h = (float) getHeight();
+        final float d = (float) getDepth();
+
+        if (w < 0 || h < 0 || d < 0) {
+            return bounds.makeEmpty();
+        }
+
+        final float hw = w * 0.5f;
+        final float hh = h * 0.5f;
+        final float hd = d * 0.5f;
         
         bounds = bounds.deriveWithNewBounds(-hw, -hh, -hd, hw, hh, hd);
         bounds = tx.transform(bounds, bounds);
@@ -379,10 +389,7 @@ public class Box extends Shape3D {
 
     static TriangleMesh createMesh(float w, float h, float d) {
 
-        if (w * h * d == 0) {
-            return null;
-        }
-
+        // NOTE: still create mesh for degenerated box       
         float hw = w / 2f;
         float hh = h / 2f;
         float hd = d / 2f;
