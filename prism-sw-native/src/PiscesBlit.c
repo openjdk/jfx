@@ -85,7 +85,7 @@ emitLineSource8888(Renderer *rdr, jint height, jint frac) {
     w -= (rfrac) ? 1 : 0;
 
     if (frac == 0x10000) { // full coverage
-        jint solid_pixel =  0xFF000000 | (cred << 16) | (cgreen << 8) | cblue;
+        jint pixel = (calpha << 24) | (cred << 16) | (cgreen << 8) | cblue;
         for (j = 0; j < height; j++) {
             iidx = imageOffset + minX * imagePixelStride;
             a = intData + iidx;
@@ -95,7 +95,7 @@ emitLineSource8888(Renderer *rdr, jint height, jint frac) {
             }
             am = a + w;
             while (a < am) {
-                *a = solid_pixel;
+                *a = pixel;
                 a += imagePixelStride;
             }
             if (rfrac) {
@@ -341,7 +341,10 @@ emitLineSource8888_pre(Renderer *rdr, jint height, jint frac) {
     w -= (rfrac) ? 1 : 0;
 
     if (frac == 0x10000) { // full coverage
-        jint solid_pixel =  0xFF000000 | (cred << 16) | (cgreen << 8) | cblue;
+        jint pre_red = ((calpha+1) * cred) >> 8;
+        jint pre_green = ((calpha+1) * cgreen) >> 8;
+        jint pre_blue = ((calpha+1) * cblue) >> 8;
+        jint pixel = (calpha << 24) | (pre_red << 16) | (pre_green << 8) | pre_blue;
         for (j = 0; j < height; j++) {
             iidx = imageOffset + minX * imagePixelStride;
             a = intData + iidx;
@@ -351,7 +354,7 @@ emitLineSource8888_pre(Renderer *rdr, jint height, jint frac) {
             }
             am = a + w;
             while (a < am) {
-                *a = solid_pixel;
+                *a = pixel;
                 a += imagePixelStride;
             }
             if (rfrac) {
