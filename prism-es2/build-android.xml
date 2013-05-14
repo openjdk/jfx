@@ -30,7 +30,7 @@
 
   <target name="compile-native">
    <antcall target="jheaders"/>
-        <exec executable="${ndk.build.cmd}" dir="${cpp.dir}" failonerror="true">
+        <exec executable="${android.ndk}/${ndk.build.cmd}" dir="${cpp.dir}" failonerror="true">
      <arg line="APP_BUILD_SCRIPT=Android.mk NDK_PROJECT_PATH=. TARGET_PLATFORM=${android.ndk.target}"/>
         </exec>
         <copy todir="${native.dist.dir}" flatten="true">
