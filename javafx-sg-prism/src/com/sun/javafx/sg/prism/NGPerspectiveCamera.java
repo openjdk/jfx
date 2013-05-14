@@ -34,8 +34,8 @@ import com.sun.prism.camera.PrismPerspectiveCameraImpl;
  */
 public class NGPerspectiveCamera extends NGCamera implements PGPerspectiveCamera {
 
-    public NGPerspectiveCamera(boolean fixedEyePosition) {
-        setCameraImpl(new PrismPerspectiveCameraImpl(fixedEyePosition));       
+    public NGPerspectiveCamera(boolean fixedEyeAtCameraZero) {
+        setCameraImpl(new PrismPerspectiveCameraImpl(fixedEyeAtCameraZero));       
     }
 
     public void setFieldOfView(float fieldOfView) {

@@ -891,7 +891,7 @@ public class StubToolkit extends Toolkit {
     }
 
     @Override
-    public PGPerspectiveCamera createPGPerspectiveCamera(boolean fixedEyePosition) {
+    public PGPerspectiveCamera createPGPerspectiveCamera(boolean fixedEyeAtCameraZero) {
         return new StubPerspectiveCamera();
     }
 

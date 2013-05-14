@@ -1394,8 +1394,8 @@ public final class QuantumToolkit extends Toolkit implements ToolkitInterface {
     }
 
     @Override
-    public PGPerspectiveCamera createPGPerspectiveCamera(boolean fixedEyePosition) {
-        return new NGPerspectiveCamera(fixedEyePosition);
+    public PGPerspectiveCamera createPGPerspectiveCamera(boolean fixedEyeAtCameraZero) {
+        return new NGPerspectiveCamera(fixedEyeAtCameraZero);
     }
 
     static class QuantumImage implements com.sun.javafx.tk.ImageLoader, ResourceFactoryListener {
