@@ -119,6 +119,9 @@
     <classpathentry kind="src" path="prism-util/src"/>
 
     <classpathentry kind="src" path="test-stub-toolkit/src"/>
+    
+	<classpathentry kind="src" path="webview/src"/>
+	<classpathentry kind="src" path="webview/build/builders"/>
 
     <classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
     <classpathentry kind="con" path="org.eclipse.jdt.junit.JUNIT_CONTAINER/4"/>
@@ -126,6 +129,27 @@
     <classpathentry kind="lib" path="../import/findbugs-2.0.1/findbugs-2.0.1/lib/ant.jar"/>
 
     <classpathentry kind="src" path="/rt-closed"/>
+	<classpathentry combineaccessrules="false" kind="src" path="/media">
+		<attributes>
+			<attribute name="optional" value="true"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="../caches/sdk/build/lib/desktop/jfxmedia.jar">
+		<attributes>
+			<attribute name="optional" value="true"/>
+		</attributes>
+	</classpathentry>
+    <classpathentry combineaccessrules="false" kind="src" path="/webnode">
+        <attributes>
+        <attribute name="optional" value="true"/>
+        </attributes>
+    </classpathentry>
+    <classpathentry kind="lib" path="../caches/sdk/build/lib/desktop/jfxwebkit.jar">
+        <attributes>
+            <attribute name="optional" value="true"/>
+        </attributes>
+    </classpathentry>
+    
     <classpathentry kind="src" path="/org.eclipse.swt">
         <attributes>
             <attribute name="optional" value="true"/>

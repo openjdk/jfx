@@ -11,6 +11,14 @@
     -fx-padding: 8 4 10 4;
 }
 
+.fxvk-secondary {
+    -fx-background-color: #ffffff, #ededed;
+    -fx-background-insets: 0, 1;
+    -fx-background-radius: 8;
+    -fx-padding: 10;
+    -fx-effect: dropshadow(three-pass-box, rgba(0, 0, 0, 0.75), 8, 0.0, 0, 0);
+}
+
 .backspace-icon {
     -fx-background-image: url("images/backspace-icon.png");
     -fx-background-repeat: no-repeat;
@@ -25,6 +33,12 @@
 
 .shift-icon {
     -fx-background-image: url("images/shift-icon.png");
+    -fx-background-repeat: no-repeat;
+    -fx-background-position: center;
+}
+
+.capslock-icon {
+    -fx-background-image: url("images/capslock-icon.png");
     -fx-background-repeat: no-repeat;
     -fx-background-position: center;
 }
@@ -50,16 +64,36 @@
 }
 
 .key-text {
+    -fx-font-weight: bold;
+    -fx-font: bold 24px "Amble";    
+    -fx-text-fill: #333333;
+}
+
+.key-alttext {
+/*
     -fx-font-size: 22px;
     -fx-fill: #333333;
+*/
+    -fx-text-fill: #959595;
+    -fx-font: bold 14px "Amble";
+    -fx-text-alignment: right;
+    -fx-text-origin: top;
+}
+
+.key-text.multi-char-text { 
+    -fx-font: bold 20px "Amble";
+}
+
+.key-alttext.multi-char-text { 
+    -fx-font: bold 12px "Amble";
 }
 
 .key.special {
-    -fx-border-image-source: url("images/vk-dark.png");
+    -fx-border-image-source: url("images/vk-medium.png");
 }
 
 .key.special:pressed {
-    -fx-border-image-source: url("images/vk-dark-pressed.png");
+    -fx-border-image-source: url("images/vk-medium-pressed.png");
     -fx-padding: 5 3 3 0;
 }
 
@@ -67,19 +101,3 @@
     -fx-font-size: 18px;
     -fx-fill: rgb(230, 230, 230);
 }
-
-.key.short {
-    -fx-border-image-source: url("images/vk-medium.png");
-}
-
-.key.short:pressed {
-    -fx-border-image-source: url("images/vk-medium-pressed.png");
-    -fx-padding: 5 3 3 0;
-}
-
-.short .key-text {
-    -fx-font-size: 20px;
-    -fx-font-weight: normal;
-    -fx-fill: #333333;
-}
-

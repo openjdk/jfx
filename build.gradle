@@ -500,16 +500,16 @@ void addNative(Project project, String name) {
                 description = "Compiles native sources for ${name} for ${t.name}${capitalVariant != '' ? ' for variant ' + capitalVariant : ''}"
                 matches = ".*\\.c|.*\\.cpp|.*\\.m|.*\\.cc"
                 headers = headerDir
-                output(nativeDir)
+                output(variant == "" ? nativeDir : file("$nativeDir/$variant"))
                 params.addAll(variantProperties.ccFlags)
                 compiler = variantProperties.compiler
                 source(variantProperties.nativeSource)
             }
             def linkTask = project.task("link${t.capital}$capitalName$capitalVariant", type: LinkTask, dependsOn: ccTask, group: "Build") {
                 description = "Creates native dynamic library for $name for ${t.name}${capitalVariant != '' ? ' for variant ' + capitalVariant : ''}"
-                objectDir = nativeDir
+                objectDir = variant == "" ? nativeDir : file("$nativeDir/$variant")
                 linkParams.addAll(variantProperties.linkFlags)
-                lib = file("$libRootDir/${t.name}/${variant == '' ? library(properties.lib) : library(properties.lib + '-' + variant)}")
+                lib = file("$libRootDir/${t.name}/${variant == '' ? library(properties.lib) : library(variantProperties.lib)}")
                 linker = variantProperties.linker
             }
             nativeTask.dependsOn(linkTask)
@@ -525,7 +525,7 @@ void addNative(Project project, String name) {
     }
 }
 
-void addJSL(Project project, String name, Closure compile) {
+void addJSL(Project project, String name, String pkg, Closure compile) {
     def lowerName = name.toLowerCase()
 
     def compileCompilers = project.task("compile${name}Compilers", type: JavaCompile, dependsOn: project.compileJava) {
@@ -559,7 +559,8 @@ void addJSL(Project project, String name, Closure compile) {
         enabled = IS_WINDOWS
         description = "Compile $name HLSL files into .obj files"
         matches = ".*\\.hlsl"
-        output project.file("$project.buildDir/hlsl/$name")
+        output project.file("$project.buildDir/hlsl/$name/$pkg")
+        source project.file("$project.buildDir/generated-src/jsl-$lowerName/$pkg")
     }
 
     project.task("process${name}Shaders", dependsOn: [generateShaders, compileHLSLShaders], type: Copy, description: "Copy hlsl / frag shaders to build/resources/jsl-$lowerName") {
@@ -816,7 +817,7 @@ project(":graphics") {
     // a new task for each of the decora files, preferring instead just to create a rule?? Also
     // need "clean" tasks for each compile task.
 
-    addJSL(project, "Decora") { sourceDir, destinationDir ->
+    addJSL(project, "Decora", "com/sun/scenario/effect/impl/hw/d3d/hlsl") { sourceDir, destinationDir ->
         [[fileName: "ColorAdjust", generator: "CompileJSL", outputs: "-all"],
          [fileName: "Brightpass", generator: "CompileJSL", outputs: "-all"],
          [fileName: "SepiaTone", generator: "CompileJSL", outputs: "-all"],
@@ -849,7 +850,6 @@ project(":graphics") {
         output = file("$buildDir/generated-src/headers/jsl-decora")
     }
 
-    compileDecoraHLSLShaders.source "$buildDir/generated-src/jsl-decora/com/sun/scenario/effect/impl/hw/d3d/hlsl/"
     task nativeDecora(dependsOn: compileDecoraHLSLShaders);
 
     def headerDir = file("$buildDir/generated-src/headers/jsl-decora")
@@ -885,7 +885,7 @@ project(":graphics") {
     }
 
     // Prism JSL
-    addJSL(project, "Prism") { sourceDir, destinationDir ->
+    addJSL(project, "Prism", "com/sun/prism/d3d/hlsl") { sourceDir, destinationDir ->
         def inputFiles = fileTree(dir: sourceDir)
         inputFiles.include "**/*.jsl"
         inputFiles.each { file ->
@@ -901,7 +901,6 @@ project(":graphics") {
         }
     }
 
-    compilePrismHLSLShaders.source "$buildDir/generated-src/jsl-prism/com/sun/prism/d3d/hlsl/"
     classes.dependsOn compilePrismJavaShaders;
     nativePrism.dependsOn compilePrismHLSLShaders;
 
@@ -1366,14 +1365,18 @@ compileTargets { t ->
                 from("modules/graphics/build/libs/jsl-decora/${t.name}/${library(targetProperties.decora.lib)}",
                      "modules/graphics/build/libs/prism/${t.name}/${library(targetProperties.prism.lib)}",
                      "modules/graphics/build/libs/prismSW/${t.name}/${library(targetProperties.prismSW.lib)}",
-                     "modules/graphics/build/libs/iio/${t.name}/${library(targetProperties.iio.lib)}",
-                     "modules/graphics/build/libs/prismES2/${t.name}/${library(targetProperties.prismES2.lib)}");
-                def glassVariants = targetProperties.glass.containsKey("variants") ? targetProperties.glass.variants : [""];
-                glassVariants.each { glassVariant ->
-                    def glassVariantExt = glassVariant == ""? "" : "-" + glassVariant;
-                    from ("modules/graphics/build/libs/glass/${t.name}/${library(targetProperties.glass.lib + glassVariantExt)}");
+                     "modules/graphics/build/libs/iio/${t.name}/${library(targetProperties.iio.lib)}");
+                def es2Variants = targetProperties.prismES2.containsKey("variants") ? targetProperties.prismES2.variants : [""];
+                es2Variants.each { variant ->
+                    def variantProperties = variant == "" ? targetProperties.prismES2 : targetProperties.prismES2.get(variant)
+                    from ("modules/graphics/build/libs/prismES2/${t.name}/${library(variantProperties.lib)}");
                 }
-                 if (IS_WINDOWS) {
+                def glassVariants = targetProperties.glass.containsKey("variants") ? targetProperties.glass.variants : [""];
+                glassVariants.each { variant ->
+                    def variantProperties = variant == "" ? targetProperties.glass : targetProperties.glass.get(variant)
+                    from ("modules/graphics/build/libs/glass/${t.name}/${library(variantProperties.lib)}");
+                }
+                if (IS_WINDOWS) {
                     from ("modules/graphics/build/libs/prismD3D/${t.name}/${library(targetProperties.prismD3D.lib)}");
                     rename("lib(.*).dll", "\$1.dll");
                 }
@@ -1387,13 +1390,13 @@ compileTargets { t ->
             javafxProperties << "javafx.runtime.version=$RAW_VERSION";
             // Include any properties that have been defined (most likely in
             // one of the various platform gradle files)
-            if (targetProperties.hasProperty("javafxProperties")) {
+            if (targetProperties.containsKey("javafxProperties")) {
                 javafxProperties << "\n"
                 javafxProperties << targetProperties.javafxProperties
             }
 
             // Embedded builds define this file as well
-            if (targetProperties.hasProperty("javafxPlatformProperties")) {
+            if (targetProperties.containsKey("javafxPlatformProperties")) {
                 final File javafxPlatformProperties = file("build/${t.name}-sdk/rt/lib/javafx.platform.properties")
                 javafxPlatformProperties.delete()
                 javafxPlatformProperties << targetProperties.javafxPlatformProperties
@@ -1420,9 +1423,11 @@ compileTargets { t ->
             }
 
             // Copy over the javafxpackager executable
-            copy {
-                from "modules/fxpackager/build/javafxpackager"
-                into "build/${t.name}-sdk/bin"
+            if (t.name == "win" || t.name == "linux" || t.name == "mac") {
+                copy {
+                    from "modules/fxpackager/build/javafxpackager"
+                    into "build/${t.name}-sdk/bin"
+                }
             }
         }
         dependsOn(jfxrtTask)

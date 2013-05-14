@@ -6,6 +6,8 @@ import javafx.animation.Timeline;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Group;
 import javafx.scene.Node;
+import javafx.scene.shape.MeshView;
+import javafx.scene.shape.TriangleMesh;
 import com.javafx.experiments.importers.max.MaxLoader;
 import com.javafx.experiments.importers.maya.MayaGroup;
 import com.javafx.experiments.importers.maya.MayaImporter;
@@ -47,7 +49,13 @@ public final class Importer3D {
             case "obj":
                 return loadObjFile(fileUrl);
             case "fxml":
-                return FXMLLoader.load(new URL(fileUrl));
+                Object fxmlRoot = FXMLLoader.load(new URL(fileUrl));
+                if (fxmlRoot instanceof Node) {
+                    return (Node)fxmlRoot;
+                } else if (fxmlRoot instanceof TriangleMesh) {
+                    return new MeshView((TriangleMesh)fxmlRoot);
+                }
+                throw new IOException("Unknown object in FXML file ["+fxmlRoot.getClass().getName()+"]");
             default:
                 throw new IOException("Unknown 3D file format ["+extension+"]");
         }

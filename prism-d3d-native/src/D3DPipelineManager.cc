@@ -23,6 +23,7 @@
  * questions.
  */
 
+#include <stdio.h>
 #include "D3DBadHardware.h"
 #include "D3DPipelineManager.h"
 
@@ -121,6 +122,7 @@ HRESULT D3DPipelineManager::ReleaseD3D()
 HRESULT D3DPipelineManager::InitD3D(IConfig &cfg)
 {
     bool useD3D9Ex = !cfg.getBool("disableD3D9Ex");
+    bool verbose = cfg.getBool("verbose");
 
     pd3d9Ex = 0;
     if (useD3D9Ex && OS::isWindows7orNewer()) {
@@ -128,6 +130,17 @@ HRESULT D3DPipelineManager::InitD3D(IConfig &cfg)
     }
 
     pd3d9 = pd3d9Ex ? addRef<IDirect3D9>(pd3d9Ex) : Direct3DCreate9();
+
+    if (verbose) {
+        if (pd3d9Ex) {
+            fprintf(stderr, "D3DPipelineManager: Created D3D9Ex device\n");
+        } else if (pd3d9) {
+            fprintf(stderr, "D3DPipelineManager: Created D3D9 device\n");
+        } else {
+            fprintf(stderr, "D3DPipelineManager: Unable to create D3D9 device\n");
+        }
+        fflush(stderr);
+    }
 
     if (pd3d9 == NULL) {
         SetErrorMessage("InitD3D: unable to create IDirect3D9 object");

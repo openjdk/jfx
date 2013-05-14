@@ -1,0 +1,195 @@
+/*
+ * Copyright (C) 2009 Apple Inc.  All rights reserved.
+ * Copyright (C) 2009 Google Inc.
+ * Copyright (C) 2011 Oracle Corp.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ *
+ * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+ * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+ * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
+ * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+
+/*
+media-controls-background
+media-current-time-display
+media-fullscreen-button
+media-mute-button
+media-play-button
+media-return-to-realtime-button
+media-rewind-button
+media-seek-back-button
+media-seek-forward-button
+media-slider
+media-sliderthumb
+media-time-remaining-display
+media-volume-slider
+media-volume-slider-container
+media-volume-sliderthumb
+*/
+
+audio {
+    width: 300px;
+    height: 27px;
+}
+
+audio::-webkit-media-controls-panel, video::-webkit-media-controls-panel {
+    -webkit-user-select: none;
+    -webkit-box-orient: horizontal;
+    display: -webkit-box;
+    overflow: visible;
+
+    bottom: 0;
+    width: 100%;
+    height: 27px;
+
+    z-index: 0;
+    background-color: rgba(0, 0, 0, 0.4);
+
+    box-sizing: border-box;
+
+    border-top: 1px solid #808080;
+    border-right: 1px solid #808080;
+}
+
+audio::-webkit-media-controls-mute-button, video::-webkit-media-controls-mute-button {
+    -webkit-appearance: media-mute-button;
+    /* image 20x20 */
+    width: 24px;
+    height: 26px;
+
+    z-index: 1;
+}
+
+audio::-webkit-media-controls-play-button, video::-webkit-media-controls-play-button {
+    -webkit-appearance: media-play-button;
+    /* image 16x16 */
+    width: 24px;
+    height: 26px;
+}
+
+audio::-webkit-media-controls-timeline-container, video::-webkit-media-controls-timeline-container {
+    -webkit-appearance: media-timeline-container;
+    -webkit-user-select: none;
+
+    height: 26px;
+}
+
+audio::-webkit-media-controls-current-time-display, video::-webkit-media-controls-current-time-display {
+    /* we use time-remaining-display to display "currentTime / duration" */
+    /* this control is used only for border painting */
+    /*display: none;*/
+    -webkit-user-select: none;
+    display: -webkit-inline-box;
+    overflow: hidden;
+
+    height: 26px;
+    width: 1px;
+
+    box-sizing: border-box;
+    border-left: 1px solid #808080;
+}
+
+audio::-webkit-media-controls-time-remaining-display, video::-webkit-media-controls-time-remaining-display {
+    -webkit-user-select: none;
+    display: -webkit-inline-box;
+    overflow: hidden;
+
+    height: 26px;
+
+    padding: 7px;
+    text-align: center;
+    font-family: Arial;
+    font-size: 10px;
+    font-weight: bold;
+    color: white;
+
+    white-space: nowrap;
+    box-sizing: border-box;
+
+    border-left: 1px solid #808080;
+    border-right: 1px solid #808080;
+}
+
+audio::-webkit-media-controls-timeline, video::-webkit-media-controls-timeline {
+    -webkit-appearance: media-slider;
+
+    height: 26px;
+}
+
+audio::-webkit-media-controls-seek-back-button, video::-webkit-media-controls-seek-back-button {
+    /*-webkit-appearance: media-seek-back-button;*/
+    display: none;
+}
+
+audio::-webkit-media-controls-seek-forward-button, video::-webkit-media-controls-seek-forward-button {
+    /*-webkit-appearance: media-seek-forward-button;*/
+    display: none;
+}
+
+audio::-webkit-media-controls-fullscreen-button, video::-webkit-media-controls-fullscreen-button {
+    /*-webkit-appearance: media-fullscreen-button;*/
+    display: none;
+}
+
+audio::-webkit-media-controls-rewind-button, video::-webkit-media-controls-rewind-button {
+    display: none;
+}
+
+audio::-webkit-media-controls-return-to-realtime-button, video::-webkit-media-controls-return-to-realtime-button {
+    display: none;
+}
+
+audio::-webkit-media-controls-toggle-closed-captions-button, video::-webkit-media-controls-toggle-closed-captions-button {
+    display: none;
+}
+
+audio::-webkit-media-controls-volume-slider-container, video::-webkit-media-controls-volume-slider-container {
+    -webkit-appearance: media-volume-slider-container;
+    -webkit-user-select: none;
+    display: -webkit-box;
+    position: absolute;
+    overflow: hidden;
+	
+    bottom: 27px;
+
+    width: 24px;
+    height: 100px;
+
+    background-color: rgba(0, 0, 0, 0.4);
+
+    box-sizing: border-box;
+
+    border-top: 1px solid #808080;
+    border-left: 1px solid #808080;
+    border-right: 1px solid #808080;
+    -webkit-border-top-left-radius: 12px 12px;
+    -webkit-border-top-right-radius: 12px 12px;
+
+    z-index: 2;
+}
+
+audio::-webkit-media-controls-volume-slider, video::-webkit-media-controls-volume-slider {
+    -webkit-appearance: media-volume-slider;
+    display: inline;
+    position: absolute;
+
+    left: 3px;
+    right: 3px;
+    top: 9px;
+    bottom: 7px;
+}

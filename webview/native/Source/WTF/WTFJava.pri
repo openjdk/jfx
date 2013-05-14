@@ -1,0 +1,241 @@
+# -------------------------------------------------------------------
+# Project file for WTF
+#
+# See 'Tools/qmake/README' for an overview of the build system
+# -------------------------------------------------------------------
+
+DEFINES += BUILDING_WTF
+
+VPATH += $$PWD/wtf
+
+INCLUDEPATH += $$PWD/wtf \
+               $$PWD/wtf/java \
+               $$PWD/../WebCore/platform
+
+HEADERS += \
+    Alignment.h \
+    AlwaysInline.h \
+    ArrayBuffer.h \
+    ArrayBufferView.h \
+    ASCIICType.h \
+    Assertions.h \
+    Atomics.h \
+    AVLTree.h \
+    Bitmap.h \
+    BitArray.h \
+    BitVector.h \
+    BloomFilter.h \
+    BoundsCheckedPointer.h \
+    BumpPointerAllocator.h \
+    CheckedArithmetic.h \
+    Compiler.h \
+    CryptographicallyRandomNumber.h \
+    CurrentTime.h \
+    DateMath.h \
+    DecimalNumber.h \
+    Decoder.h \
+    DataLog.h \ 
+    Deque.h \
+    DisallowCType.h \
+    dtoa.h \
+    dtoa/bignum-dtoa.h \
+    dtoa/bignum.h \
+    dtoa/cached-powers.h \
+    dtoa/diy-fp.h \
+    dtoa/double-conversion.h \
+    dtoa/double.h \
+    dtoa/fast-dtoa.h \
+    dtoa/fixed-dtoa.h \
+    dtoa/strtod.h \
+    dtoa/utils.h \
+    DynamicAnnotations.h \
+    Encoder.h \
+    ExportMacros.h \
+    FastAllocBase.h \
+    FastMalloc.h \
+    FixedArray.h \
+    Float32Array.h \
+    Float64Array.h \
+    Forward.h \
+    Functional.h \
+    GetPtr.h \
+    HashCountedSet.h \
+    HashFunctions.h \
+    HashIterators.h \
+    HashMap.h \
+    HashSet.h \
+    HashTable.h \
+    HashTraits.h \
+    HexNumber.h \
+    Int16Array.h \
+    Int32Array.h \
+    Int8Array.h \
+    ListHashSet.h \
+    ListRefPtr.h \
+    Locker.h \
+    MainThread.h \
+    MallocZoneSupport.h \
+    MathExtras.h \
+    MD5.h \
+    MessageQueue.h \
+    MetaAllocator.h \
+    MetaAllocatorHandle.h \
+    Noncopyable.h \
+    NonCopyingSort.h \
+    NotFound.h \
+    NullPtr.h \
+    NumberOfCores.h \
+    RAMSize.h \
+    OSAllocator.h \
+    OSRandomSource.h \
+    OwnArrayPtr.h \
+    OwnPtr.h \
+    OwnPtrCommon.h \
+    PackedIntVector.h \
+    PageAllocation.h \
+    PageAllocationAligned.h \
+    PageBlock.h \
+    PageReservation.h \
+    ParallelJobs.h \
+    ParallelJobsGeneric.h \
+    ParallelJobsLibdispatch.h \
+    ParallelJobsOpenMP.h \
+    PassOwnArrayPtr.h \
+    PassOwnPtr.h \
+    PassRefPtr.h \
+    PassTraits.h \
+    Platform.h \
+    PossiblyNull.h \
+#   qt/UtilsQt.h \
+    RandomNumber.h \
+    RandomNumberSeed.h \
+    RedBlackTree.h \
+    RefCounted.h \
+    RefCountedLeakCounter.h \
+    RefPtr.h \
+    RefPtrHashMap.h \
+    RetainPtr.h \
+    SHA1.h \
+    Spectrum.h \
+    StackBounds.h \
+    StaticConstructors.h \
+    StdLibExtras.h \
+    StringExtras.h \
+    StringHasher.h \
+    TCPackedCache.h \
+    TCSpinLock.h \
+    TCSystemAlloc.h \
+    text/ASCIIFastPath.h \
+    text/AtomicString.h \
+    text/AtomicStringHash.h \
+    text/AtomicStringImpl.h \
+    text/Base64.h \
+    text/CString.h \
+    text/StringBuffer.h \
+    text/StringBuilder.h \
+    text/StringConcatenate.h \
+    text/StringHash.h \
+    text/StringImpl.h \
+    text/StringOperators.h \
+    text/TextPosition.h \
+    text/WTFString.h \
+    Threading.h \
+    ThreadingPrimitives.h \
+    ThreadRestrictionVerifier.h \
+    ThreadSafeRefCounted.h \
+    ThreadSpecific.h \
+    TypeTraits.h \
+    Uint16Array.h \
+    Uint32Array.h \
+    Uint8Array.h \
+    Uint8ClampedArray.h \
+    unicode/CharacterNames.h \
+    unicode/Collator.h \
+    unicode/icu/UnicodeIcu.h \
+#    unicode/qt4/UnicodeQt4.h \
+    unicode/ScriptCodesFromICU.h \
+    unicode/Unicode.h \
+    unicode/UnicodeMacrosFromICU.h \
+    unicode/UTF8.h \
+    UnusedParam.h \
+    ValueCheck.h \
+    Vector.h \
+    VectorTraits.h \
+    VMTags.h \
+    WTFThreadData.h
+
+unix: HEADERS += ThreadIdentifierDataPthreads.h
+
+SOURCES += \
+    ArrayBuffer.cpp \
+    ArrayBufferView.cpp \
+    Assertions.cpp \
+    BitVector.cpp \
+    CryptographicallyRandomNumber.cpp \
+    CurrentTime.cpp \
+    DateMath.cpp \
+    DataLog.cpp \
+    DecimalNumber.cpp \
+    dtoa.cpp \
+    dtoa/bignum-dtoa.cc \
+    dtoa/bignum.cc \
+    dtoa/cached-powers.cc \
+    dtoa/diy-fp.cc \
+    dtoa/double-conversion.cc \
+    dtoa/fast-dtoa.cc \
+    dtoa/fixed-dtoa.cc \
+    dtoa/strtod.cc \
+    FastMalloc.cpp \
+    gobject/GOwnPtr.cpp \
+    gobject/GRefPtr.cpp \
+    HashTable.cpp \
+    MD5.cpp \
+    MainThread.cpp \
+    MetaAllocator.cpp \
+    NullPtr.cpp \
+    NumberOfCores.cpp \
+    RAMSize.cpp \
+    OSRandomSource.cpp \
+#   qt/MainThreadQt.cpp \
+#   qt/StringQt.cpp \
+    PageAllocationAligned.cpp \
+    PageBlock.cpp \
+    ParallelJobsGeneric.cpp \
+    RandomNumber.cpp \
+    RefCountedLeakCounter.cpp \
+    SHA1.cpp \
+    StackBounds.cpp \
+    TCSystemAlloc.cpp \
+    Threading.cpp \
+    TypeTraits.cpp \
+    WTFThreadData.cpp \
+    text/AtomicString.cpp \
+    text/Base64.cpp \
+    text/CString.cpp \
+    text/StringBuilder.cpp \
+    text/StringImpl.cpp \
+    text/StringStatics.cpp \
+    text/WTFString.cpp \
+    unicode/CollatorDefault.cpp \
+    unicode/icu/CollatorICU.cpp \
+    unicode/UTF8.cpp
+    
+unix: SOURCES += \
+    OSAllocatorPosix.cpp \
+    ThreadIdentifierDataPthreads.cpp \
+    ThreadingPthreads.cpp
+
+win*|wince*: SOURCES += \
+    win/OwnPtrWin.cpp \
+    OSAllocatorWin.cpp \
+    ThreadSpecificWin.cpp \
+    ThreadingWin.cpp
+
+
+*-g++*:QMAKE_CXXFLAGS_RELEASE -= -O2
+*-g++*:QMAKE_CXXFLAGS_RELEASE += -O3
+
+*sh4* {
+    QMAKE_CXXFLAGS += -mieee -w
+    QMAKE_CFLAGS   += -mieee -w
+}

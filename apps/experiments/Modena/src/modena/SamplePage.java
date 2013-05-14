@@ -108,6 +108,9 @@ public class SamplePage extends GridPane {
         setVgap(25);
         setHgap(15);
         setPadding(new Insets(15));
+        newSection("Label:",
+                new Label("Label"),
+                withState(new Label("Disabled"), "disabled"));
         newSection("Button:",
                 new Button("Button"),
                 withState(new Button("Hover"), "hover"),

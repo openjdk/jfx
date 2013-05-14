@@ -447,7 +447,7 @@ void glass_window_setBoundsImpl(JNIEnv *env,
 
     GLASS_LOG_FINE("setBoundsImpl on window %i[%p] x=%i y=%i w=%i h=%i"
                    " needToUpdatePostion=%s needToUpdateSize=%s isContentSize=%s"
-                   " statet=%s",
+                   " state=%s",
                    window->id, window,
                    x, y, width, height,
                    (needToUpdatePostion)?"true":"false",
@@ -497,7 +497,7 @@ void glass_window_setBoundsImpl(JNIEnv *env,
     //handle move if needed
     if (needToUpdatePostion && 
         (window->currentBounds.x != x || window->currentBounds.y != y)) {
-        GLASS_LOG_FINE("Updatating window %i[%p] locatoin from %iX%i to %iX%i",
+        GLASS_LOG_FINE("Updating window %i[%p] location from %iX%i to %iX%i",
                        window->id,
                        window,
                        window->currentBounds.x,

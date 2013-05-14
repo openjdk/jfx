@@ -543,7 +543,7 @@ final public class DummyToolkit extends Toolkit {
     }
 
     @Override
-    public PGPerspectiveCamera createPGPerspectiveCamera(boolean fixedEyePosition) {
+    public PGPerspectiveCamera createPGPerspectiveCamera(boolean fixedEyeAtCameraZero) {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 

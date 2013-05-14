@@ -649,7 +649,7 @@ public abstract class Toolkit {
 
     // Cameras
     public abstract PGParallelCamera createPGParallelCamera();
-    public abstract PGPerspectiveCamera createPGPerspectiveCamera(boolean fixedEyePosition);
+    public abstract PGPerspectiveCamera createPGPerspectiveCamera(boolean fixedEyeAtCameraZero);
 
     public abstract PGExternalNode createPGExternalNode();
 

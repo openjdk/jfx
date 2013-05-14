@@ -34,6 +34,7 @@ package com.javafx.experiments.jfx3dviewer;
 import java.net.URL;
 import java.util.ResourceBundle;
 import javafx.application.Platform;
+import javafx.beans.binding.DoubleBinding;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.fxml.Initializable;
@@ -42,6 +43,7 @@ import javafx.scene.control.CheckBox;
 import javafx.scene.control.ColorPicker;
 import javafx.scene.control.Slider;
 import javafx.scene.control.TitledPane;
+import javafx.scene.paint.Color;
 
 /**
  * Controller class for settings panel
@@ -54,7 +56,25 @@ public class SettingsController implements Initializable {
     public CheckBox showAxisCheckBox;
     public CheckBox yUpCheckBox;
     public Slider fovSlider;
-    public ColorPicker cameraColorPicker;
+    public CheckBox scaleToFitCheckBox;
+    public ColorPicker light1ColorPicker;
+    public CheckBox ambientEnableCheckbox;
+    public CheckBox light1EnabledCheckBox;
+    public CheckBox light1followCameraCheckBox;
+    public ColorPicker backgroundColorPicker;
+    public Slider light1x;
+    public Slider light1y;
+    public Slider light1z;
+    public CheckBox light2EnabledCheckBox;
+    public ColorPicker light2ColorPicker;
+    public Slider light2x;
+    public Slider light2y;
+    public Slider light2z;
+    public CheckBox light3EnabledCheckBox;
+    public ColorPicker light3ColorPicker;
+    public Slider light3x;
+    public Slider light3y;
+    public Slider light3z;
 
     @Override public void initialize(URL location, ResourceBundle resources) {
         // keep one pane open always
@@ -69,7 +89,71 @@ public class SettingsController implements Initializable {
                         });
             }
         });
-        // wire up settings
+        // wire up settings in OPTIONS
+        contentModel.getAutoScalingGroup().enabledProperty().bind(scaleToFitCheckBox.selectedProperty());
+        contentModel.showAxisProperty().bind(showAxisCheckBox.selectedProperty());
+        contentModel.yUpProperty().bind(yUpCheckBox.selectedProperty());
+        backgroundColorPicker.setValue((Color)contentModel.getSubScene().getFill());
+        contentModel.getSubScene().fillProperty().bind(backgroundColorPicker.valueProperty());
+        // wire up settings in LIGHTS
+        ambientEnableCheckbox.setSelected(contentModel.getAmbientLightEnabled());
+        contentModel.ambientLightEnabledProperty().bind(ambientEnableCheckbox.selectedProperty());
+        ambientColorPicker.setValue(contentModel.getAmbientLight().getColor());
+        contentModel.getAmbientLight().colorProperty().bind(ambientColorPicker.valueProperty());
+
+        // LIGHT 1
+        light1EnabledCheckBox.setSelected(contentModel.getLight1Enabled());
+        contentModel.light1EnabledProperty().bind(light1EnabledCheckBox.selectedProperty());
+        light1ColorPicker.setValue(contentModel.getLight1().getColor());
+        contentModel.getLight1().colorProperty().bind(light1ColorPicker.valueProperty());
+        light1x.disableProperty().bind(light1followCameraCheckBox.selectedProperty());
+        light1y.disableProperty().bind(light1followCameraCheckBox.selectedProperty());
+        light1z.disableProperty().bind(light1followCameraCheckBox.selectedProperty());
+        light1followCameraCheckBox.selectedProperty().addListener(new ChangeListener<Boolean>() {
+            @Override public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
+                if (newValue) {
+                    contentModel.getLight1().translateXProperty().bind(new DoubleBinding() {
+                        { bind(contentModel.getCamera().boundsInParentProperty()); }
+                        @Override protected double computeValue() {
+                            return contentModel.getCamera().getBoundsInParent().getMinX();
+                        }
+                    });
+                    contentModel.getLight1().translateYProperty().bind(new DoubleBinding() {
+                        { bind(contentModel.getCamera().boundsInParentProperty()); }
+                        @Override protected double computeValue() {
+                            return contentModel.getCamera().getBoundsInParent().getMinY();
+                        }
+                    });
+                    contentModel.getLight1().translateZProperty().bind(new DoubleBinding() {
+                        { bind(contentModel.getCamera().boundsInParentProperty()); }
+                        @Override protected double computeValue() {
+                            return contentModel.getCamera().getBoundsInParent().getMinZ();
+                        }
+                    });
+                } else {
+                    contentModel.getLight1().translateXProperty().bind(light1x.valueProperty());
+                    contentModel.getLight1().translateYProperty().bind(light1y.valueProperty());
+                    contentModel.getLight1().translateZProperty().bind(light1z.valueProperty());
+                }
+            }
+        });
+        // LIGHT 2
+        light2EnabledCheckBox.setSelected(contentModel.getLight2Enabled());
+        contentModel.light2EnabledProperty().bind(light2EnabledCheckBox.selectedProperty());
+        light2ColorPicker.setValue(contentModel.getLight2().getColor());
+        contentModel.getLight2().colorProperty().bind(light2ColorPicker.valueProperty());
+        contentModel.getLight2().translateXProperty().bind(light2x.valueProperty());
+        contentModel.getLight2().translateYProperty().bind(light2y.valueProperty());
+        contentModel.getLight2().translateZProperty().bind(light2z.valueProperty());
+        // LIGHT 3
+        light3EnabledCheckBox.setSelected(contentModel.getLight3Enabled());
+        contentModel.light3EnabledProperty().bind(light3EnabledCheckBox.selectedProperty());
+        light3ColorPicker.setValue(contentModel.getLight3().getColor());
+        contentModel.getLight3().colorProperty().bind(light3ColorPicker.valueProperty());
+        contentModel.getLight3().translateXProperty().bind(light3x.valueProperty());
+        contentModel.getLight3().translateYProperty().bind(light3y.valueProperty());
+        contentModel.getLight3().translateZProperty().bind(light3z.valueProperty());
+        // wire up settings in CAMERA
         fovSlider.setValue(contentModel.getCamera().getFieldOfView());
         contentModel.getCamera().fieldOfViewProperty().bind(fovSlider.valueProperty());
     }

@@ -32,16 +32,22 @@
 package com.javafx.experiments.jfx3dviewer;
 
 import java.io.IOException;
+import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.event.EventHandler;
+import javafx.scene.AmbientLight;
 import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.PerspectiveCamera;
+import javafx.scene.PointLight;
 import javafx.scene.SubScene;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.input.ScrollEvent;
 import javafx.scene.paint.Color;
+import javafx.scene.paint.PhongMaterial;
+import javafx.scene.shape.Box;
+import javafx.scene.shape.Sphere;
 import javafx.scene.transform.Rotate;
 import javafx.scene.transform.Translate;
 import com.javafx.experiments.importers.Importer3D;
@@ -60,6 +66,68 @@ public class ContentModel {
     private final Translate cameraPosition = new Translate(0,0,-7);
     private double dragStartX, dragStartY, dragStartRotateX, dragStartRotateY;
     private Node content;
+    private AutoScalingGroup autoScalingGroup = new AutoScalingGroup(2);
+    private Box xAxis,yAxis,zAxis;
+    private AmbientLight ambientLight = new AmbientLight(Color.DARKGREY);
+    private PointLight light1 = new PointLight(Color.WHITE);
+    private PointLight light2 = new PointLight(Color.ANTIQUEWHITE);
+    private PointLight light3 = new PointLight(Color.ALICEBLUE);
+    private SimpleBooleanProperty ambientLightEnabled = new SimpleBooleanProperty(false){
+        @Override protected void invalidated() {
+            if (get()) {
+                root3D.getChildren().add(ambientLight);
+            } else {
+                root3D.getChildren().remove(ambientLight);
+            }
+        }
+    };
+    private SimpleBooleanProperty light1Enabled = new SimpleBooleanProperty(false){
+        @Override protected void invalidated() {
+            if (get()) {
+                root3D.getChildren().add(light1);
+            } else {
+                root3D.getChildren().remove(light1);
+            }
+        }
+    };
+    private SimpleBooleanProperty light2Enabled = new SimpleBooleanProperty(false){
+        @Override protected void invalidated() {
+            if (get()) {
+                root3D.getChildren().add(light2);
+            } else {
+                root3D.getChildren().remove(light2);
+            }
+        }
+    };
+    private SimpleBooleanProperty light3Enabled = new SimpleBooleanProperty(false){
+        @Override protected void invalidated() {
+            if (get()) {
+                root3D.getChildren().add(light3);
+            } else {
+                root3D.getChildren().remove(light3);
+            }
+        }
+    };
+    private SimpleBooleanProperty showAxis = new SimpleBooleanProperty(false){
+        @Override protected void invalidated() {
+            if (get()) {
+                if (xAxis == null) createAxes();
+                root3D.getChildren().addAll(xAxis, yAxis, zAxis);
+            } else if (xAxis != null) {
+                root3D.getChildren().removeAll(xAxis, yAxis, zAxis);
+            }
+        }
+    };
+    private Rotate yUpRotate = new Rotate(0,0,0,0,Rotate.X_AXIS);
+    private SimpleBooleanProperty yUp = new SimpleBooleanProperty(false){
+        @Override protected void invalidated() {
+            if (get()) {
+                yUpRotate.setAngle(180);
+            } else {
+                yUpRotate.setAngle(0);
+            }
+        }
+    };
 
     public ContentModel() {
         subScene = new SubScene(root3D,400,400,true,false);
@@ -67,6 +135,7 @@ public class ContentModel {
 
         // CAMERA
         camera.getTransforms().addAll(
+                yUpRotate,
                 cameraXRotate,
                 cameraYRotate,
                 cameraPosition,
@@ -82,16 +151,19 @@ public class ContentModel {
             }
         });
         //LIGHTS
-//        root3D.getChildren().add(new AmbientLight(Color.WHITE));
+//        root3D.getChildren().addAll(light1, light2, light3);
         // BOX
 //        Box testBox = new Box(5,5,5);
 //        testBox.setMaterial(new PhongMaterial(Color.RED));
 //        testBox.setDrawMode(DrawMode.LINE);
 //        root3D.getChildren().add(testBox);
+
+        root3D.getChildren().add(autoScalingGroup);
+
         // LOAD DROP HERE MODEL
         try {
             content = Importer3D.load(ContentModel.class.getResource("drop-here.obj").toExternalForm());
-            root3D.getChildren().add(content);
+            autoScalingGroup.getChildren().add(content);
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -122,14 +194,106 @@ public class ContentModel {
         });
     }
 
+    public boolean getAmbientLightEnabled() {
+        return ambientLightEnabled.get();
+    }
+
+    public SimpleBooleanProperty ambientLightEnabledProperty() {
+        return ambientLightEnabled;
+    }
+
+    public void setAmbientLightEnabled(boolean ambientLightEnabled) {
+        this.ambientLightEnabled.set(ambientLightEnabled);
+    }
+
+    public boolean getLight1Enabled() {
+        return light1Enabled.get();
+    }
+
+    public SimpleBooleanProperty light1EnabledProperty() {
+        return light1Enabled;
+    }
+
+    public void setLight1Enabled(boolean light1Enabled) {
+        this.light1Enabled.set(light1Enabled);
+    }
+
+    public boolean getLight2Enabled() {
+        return light2Enabled.get();
+    }
+
+    public SimpleBooleanProperty light2EnabledProperty() {
+        return light2Enabled;
+    }
+
+    public void setLight2Enabled(boolean light2Enabled) {
+        this.light2Enabled.set(light2Enabled);
+    }
+
+    public boolean getLight3Enabled() {
+        return light3Enabled.get();
+    }
+
+    public SimpleBooleanProperty light3EnabledProperty() {
+        return light3Enabled;
+    }
+
+    public void setLight3Enabled(boolean light3Enabled) {
+        this.light3Enabled.set(light3Enabled);
+    }
+
+    public AmbientLight getAmbientLight() {
+        return ambientLight;
+    }
+
+    public PointLight getLight1() {
+        return light1;
+    }
+
+    public PointLight getLight2() {
+        return light2;
+    }
+
+    public PointLight getLight3() {
+        return light3;
+    }
+
+    public boolean getYUp() {
+        return yUp.get();
+    }
+
+    public SimpleBooleanProperty yUpProperty() {
+        return yUp;
+    }
+
+    public void setYUp(boolean yUp) {
+        this.yUp.set(yUp);
+    }
+
+    public boolean getShowAxis() {
+        return showAxis.get();
+    }
+
+    public SimpleBooleanProperty showAxisProperty() {
+        return showAxis;
+    }
+
+    public void setShowAxis(boolean showAxis) {
+        this.showAxis.set(showAxis);
+    }
+
+    public AutoScalingGroup getAutoScalingGroup() {
+        return autoScalingGroup;
+    }
+
     public Node get3dContent() {
         return this.content;
     }
 
     public void set3dContent(Node content) {
-        root3D.getChildren().remove(this.content);
+        autoScalingGroup.getChildren().remove(this.content);
         this.content = content;
-        root3D.getChildren().add(this.content);
+        autoScalingGroup.getChildren().add(this.content);
     }
 
     public SubScene getSubScene() {
@@ -162,5 +326,28 @@ public class ContentModel {
 
     public Rotate getCameraLookZRotate() {
         return cameraLookZRotate;
+    }
+
+
+    private void createAxes() {
+        final PhongMaterial redMaterial = new PhongMaterial();
+        redMaterial.setDiffuseColor(Color.DARKRED);
+        redMaterial.setSpecularColor(Color.RED);
+        final PhongMaterial greenMaterial = new PhongMaterial();
+        greenMaterial.setDiffuseColor(Color.DARKGREEN);
+        greenMaterial.setSpecularColor(Color.GREEN);
+        final PhongMaterial blueMaterial = new PhongMaterial();
+        blueMaterial.setDiffuseColor(Color.DARKBLUE);
+        blueMaterial.setSpecularColor(Color.BLUE);
+        final Sphere red = new Sphere(50);
+        red.setMaterial(redMaterial);
+        final Sphere blue = new Sphere(50);
+        blue.setMaterial(blueMaterial);
+        xAxis = new Box(24.0, 0.05, 0.05);
+        yAxis = new Box(0.05, 24.0, 0.05);
+        zAxis = new Box(0.05, 0.05, 24.0);
+        xAxis.setMaterial(redMaterial);
+        yAxis.setMaterial(greenMaterial);
+        zAxis.setMaterial(blueMaterial);
     }
 }

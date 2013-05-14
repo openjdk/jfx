@@ -538,7 +538,9 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_ios_IosApplication__1initIDs
     if (haveIDs)
         return;
     haveIDs = 1;
-    
+
+    assert(pthread_key_create(&GlassThreadDataKey, NULL) == 0);
+
     mat_jIntegerClass = (*env)->NewGlobalRef(env, (*env)->FindClass(env, "java/lang/Integer"));
     mat_jMapClass = (*env)->NewGlobalRef(env, (*env)->FindClass(env, "java/util/Map"));
     mat_jBooleanClass = (*env)->NewGlobalRef(env, (*env)->FindClass(env, "java/lang/Boolean"));

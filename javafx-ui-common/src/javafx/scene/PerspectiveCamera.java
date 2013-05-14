@@ -52,10 +52,31 @@ import sun.util.logging.PlatformLogger;
  * This camera is always located at center of the scene and looks along the
  * positive z-axis. The coordinate system defined by this camera has its
  * origin in the upper left corner of the panel with the Y-axis pointing
- * down and the Z axis pointing away from the viewer (into the screen). The
- * units are in pixel coordinates at the projection plane (Z=0).
+ * down and the Z axis pointing away from the viewer (into the screen). 
  * 
- * Note that this is a conditional feature. See
+ * <p> In the default camera, where fixedEyeAtCameraZero is false, the Z value
+ * of the eye position is adjusted in Z such that the projection matrix generated
+ * using the specified {@code fieldOfView} will produce units at 
+ * Z = 0 (the projection plane), in device-independent pixels, matches that of
+ * the ParallelCamera.
+ * When the Scene is resized,
+ * the objects in the scene at the projection plane (Z = 0) will stay the same size,
+ * but more or less content of the scene is viewable.
+ * 
+ * <p> If fixedEyeAtCameraZero is true, the eye position is fixed at (0, 0, 0)
+ * in the local coordinates of the camera. The projection matrix is generated
+ * using the specified {@code fieldOfView} and the projection volume is mapped
+ * onto the viewport (window) such that it is stretched over more or fewer
+ * device-independent pixels at the projection plane.
+ * When the Scene is resized,
+ * the objects in the scene will shrink or grow proportionally,
+ * but the visible portion of the content is unchanged.
+ * 
+ * <p> We recommend setting fixedEyeAtCameraZero to true if you are going to
+ * transform (move) the camera. Transforming the camera when fixedEyeAtCameraZero
+ * is set to false may lead to results that are not intuitive.
+ * 
+ * <p> Note that this is a conditional feature. See
  * {@link javafx.application.ConditionalFeature#SCENE3D ConditionalFeature.SCENE3D}
  * for more information.
  * 
@@ -63,15 +84,24 @@ import sun.util.logging.PlatformLogger;
  */
 public  class PerspectiveCamera extends Camera {   
 
-    private boolean fixedEyePosition = false;
+    private boolean fixedEyeAtCameraZero = false;
 
+    // Lookat transform for legacy case
     private static final Affine3D LOOK_AT_TX = new Affine3D();
+
+    // Lookat transform for fixedEyeAtCameraZero case
+    private static final Affine3D LOOK_AT_TX_FIXED_EYE = new Affine3D();
+
     static {
-        // Compute the lookAt matrix such that the zero point ends up at
+        // Compute the legacy look at matrix such that the zero point ends up at
         // the z=-1 plane.
         LOOK_AT_TX.setToTranslation(0, 0, -1);
         // Y-axis pointing down
         LOOK_AT_TX.rotate(Math.PI, 1, 0, 0);
+
+        // Compute the fixed eye at (0, 0, 0) look at matrix such that the zero point
+        // ends up at the z=0 plane and Y-axis pointing down
+        LOOK_AT_TX_FIXED_EYE.rotate(Math.PI, 1, 0, 0);
     }
 
     /**
@@ -136,37 +166,57 @@ public  class PerspectiveCamera extends Camera {
         this(false);
     }
 
-   /**
-    * Construct a PerspectiveCamera that may fix its eye position at (0, 0, 0),
-    * in its coordinate space, regardless in the change in the dimension
-    * of the projection area (or Window resize) if {@code fixedEyePosition} is true. 
-    *
-    * @since JavaFX 8
-    */
-    public PerspectiveCamera(boolean fixedEyePosition) {
+    /**
+     * Constructs a PerspectiveCamera with the specified fixedEyeAtCameraZero flag.
+     *
+     * <p> In the default camera, where fixedEyeAtCameraZero is false, the Z value of 
+     * the eye position is adjusted in Z such that the projection matrix generated
+     * using the specified {@code fieldOfView} will produce units at
+     * Z = 0 (the projection plane), in device-independent pixels, matches that of
+     * the ParallelCamera.
+     * When the Scene is resized,
+     * the objects in the scene at the projection plane (Z = 0) will stay the same size,
+     * but more or less content of the scene is viewable.
+     *
+     * <p> If fixedEyeAtCameraZero is true, the eye position is fixed at (0, 0, 0)
+     * in the local coordinates of the camera. The projection matrix is generated
+     * using the specified {@code fieldOfView} and the projection volume is mapped
+     * onto the viewport (window) such that it is stretched over more or fewer
+     * device-independent pixels at the projection plane.
+     * When the Scene is resized,
+     * the objects in the scene will shrink or grow proportionally,
+     * but the visible portion of the content is unchanged.
+     *
+     * <p> We recommend setting fixedEyeAtCameraZero to true if you are going to
+     * transform (move) the camera. Transforming the camera when fixedEyeAtCameraZero
+     * is set to false may lead to results that are not intuitive.
+     * 
+     * @since JavaFX 8
+     */ 
+    public PerspectiveCamera(boolean fixedEyeAtCameraZero) {
         if (!Platform.isSupported(ConditionalFeature.SCENE3D)) {
             String logname = PerspectiveCamera.class.getName();
             PlatformLogger.getLogger(logname).warning("System can't support "
                     + "ConditionalFeature.SCENE3D");
         }
-        this.fixedEyePosition = fixedEyePosition;
+        this.fixedEyeAtCameraZero = fixedEyeAtCameraZero;
     }
 
-    public final boolean isFixedEyePosition() {
-        return fixedEyePosition;
+    public final boolean isFixedEyeAtCameraZero() {
+        return fixedEyeAtCameraZero;
     }
 
     @Override
     final PickRay computePickRay(double x, double y, PickRay pickRay) {
 
-        return PickRay.computePerspectivePickRay(x, y, fixedEyePosition,
+        return PickRay.computePerspectivePickRay(x, y, fixedEyeAtCameraZero,
                 getViewWidth(), getViewHeight(),
                 getFieldOfView(), isVerticalFieldOfView(),
                 getCameraTransform(), pickRay);
     }
 
     @Override Camera copy() {
-        PerspectiveCamera c = new PerspectiveCamera(fixedEyePosition);
+        PerspectiveCamera c = new PerspectiveCamera(fixedEyeAtCameraZero);
         c.setNearClip(getNearClip());
         c.setFarClip(getFarClip());
         c.setFieldOfView(getFieldOfView());
@@ -180,7 +230,7 @@ public  class PerspectiveCamera extends Camera {
     @Deprecated
     @Override
     protected PGNode impl_createPGNode() {
-        PGPerspectiveCamera pgCamera = Toolkit.getToolkit().createPGPerspectiveCamera(fixedEyePosition);    
+        PGPerspectiveCamera pgCamera = Toolkit.getToolkit().createPGPerspectiveCamera(fixedEyeAtCameraZero);    
         pgCamera.setNearClip((float) getNearClip());
         pgCamera.setFarClip((float) getFarClip());
         pgCamera.setFieldOfView((float) getFieldOfView());
@@ -195,7 +245,6 @@ public  class PerspectiveCamera extends Camera {
     @Override
     public void impl_updatePG() {
         super.impl_updatePG();
-//        System.err.println("XXXXXXXX PerspectiveCamera.impl_updatePG() XXXXXXXX");
         PGPerspectiveCamera pgPerspectiveCamera = (PGPerspectiveCamera)impl_getPGNode();
         if (impl_isDirty(DirtyBits.NODE_CAMERA)) {
             pgPerspectiveCamera.setVerticalFieldOfView(isVerticalFieldOfView());
@@ -212,11 +261,11 @@ public  class PerspectiveCamera extends Camera {
     @Override
     protected void computeViewTransform(Affine3D view) {
 
-        // In the case of fixedEyePosition the camera position is (0,0,0) in
+        // In the case of fixedEyeAtCameraZero the camera position is (0,0,0) in
         // local coord. of the camera node. In non-fixed eye case, the camera
         // position is (w/2, h/2, h/2/tan) in local coord. of the camera.
-        if (isFixedEyePosition()) {
-            view.setTransform(LOOK_AT_TX);
+        if (isFixedEyeAtCameraZero()) {
+            view.setTransform(LOOK_AT_TX_FIXED_EYE);
         } else {
             final double viewWidth = getViewWidth();
             final double viewHeight = getViewHeight();
@@ -245,8 +294,8 @@ public  class PerspectiveCamera extends Camera {
             position = new Vec3d();
         }
 
-        if (fixedEyePosition) {
-            position.set(0.0, 0.0, -1.0);
+        if (fixedEyeAtCameraZero) {
+            position.set(0.0, 0.0, 0.0);
         } else {
             final double halfViewWidth = getViewWidth() / 2.0;
             final double halfViewHeight = getViewHeight() / 2.0;

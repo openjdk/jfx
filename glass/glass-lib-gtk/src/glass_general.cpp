@@ -105,6 +105,7 @@ jclass jApplicationCls;
 jfieldID jApplicationDisplay;
 jfieldID jApplicationScreen;
 jfieldID jApplicationVisualID;
+jmethodID jApplicationReportException;
 
 JNIEXPORT jint JNICALL
 JNI_OnLoad(JavaVM *jvm, void *reserved)
@@ -208,6 +209,8 @@ JNI_OnLoad(JavaVM *jvm, void *reserved)
     jApplicationDisplay = env->GetStaticFieldID(jApplicationCls, "display", "J");
     jApplicationScreen = env->GetStaticFieldID(jApplicationCls, "screen", "I");
     jApplicationVisualID = env->GetStaticFieldID(jApplicationCls, "visualID", "J");
+    jApplicationReportException = env->GetStaticMethodID(
+        jApplicationCls, "reportException", "(Ljava/lang/Throwable;)V");
 
     g_thread_init(NULL);
     gdk_threads_init();
@@ -266,8 +269,11 @@ void dump_jstring_array(JNIEnv* env, jobjectArray arr) {
 }
 
 void log_exception(JNIEnv *env) {
-    if (env->ExceptionCheck())
-        env->ExceptionDescribe();
+    jthrowable t = env->ExceptionOccurred();
+    if (t) {
+        env->ExceptionClear();
+        env->CallStaticVoidMethod(jApplicationCls, jApplicationReportException, t);
+    }
 }
 
 gpointer glass_try_malloc_n(gsize m, gsize n, 

@@ -53,12 +53,11 @@ static int toPiscesCoords(unsigned int ff);
 static void renderer_finalize(JNIEnv *env, jobject objectHandle);
 static void fillAlphaMask(Renderer* rdr, jint minX, jint minY, jint maxX, jint maxY,
     JNIEnv *env, jobject this, jint maskType, jbyteArray jmask, jint x, jint y, jint subPosX,
-    jint maskWidth, jint maskHeight, jint offset, jint stride,
-    jfloat gamma, jfloat invgamma);
+    jint maskWidth, jint maskHeight, jint offset, jint stride);
 
 JNIEXPORT void JNICALL
-Java_com_sun_pisces_PiscesRenderer_initialize(JNIEnv* env,
-                                              jobject objectHandle) {
+Java_com_sun_pisces_PiscesRenderer_initialize(JNIEnv* env, jobject objectHandle)
+{
     Renderer* rdr;
     Surface* surface;
     jboolean sfieldsOK;
@@ -715,7 +714,18 @@ JNIEXPORT void JNICALL Java_com_sun_pisces_PiscesRenderer_fillAlphaMaskImpl
     maskOffset = offset + (minY - y) * maskWidth + minX - x;
     
     fillAlphaMask(rdr, minX, minY, maxX, maxY, env, this, ALPHA_MASK, jmask,
-        x, y, 0, maskWidth, maskHeight, maskOffset, stride, 1, 1);
+        x, y, 0, maskWidth, maskHeight, maskOffset, stride);
+}
+
+/*
+ * Class:     com_sun_pisces_PiscesRenderer
+ * Method:    setLCDGammaCorrection
+ * Signature: (F)V
+ */
+JNIEXPORT void JNICALL Java_com_sun_pisces_PiscesRenderer_setLCDGammaCorrection
+(JNIEnv *env, jobject this, jfloat gamma)
+{
+    initGammaArrays(gamma);
 }
 
 /*
@@ -726,8 +736,7 @@ JNIEXPORT void JNICALL Java_com_sun_pisces_PiscesRenderer_fillAlphaMaskImpl
 JNIEXPORT void JNICALL Java_com_sun_pisces_PiscesRenderer_fillLCDAlphaMaskImpl
 (JNIEnv *env, jobject this, jbyteArray jmask, jint x, jint y, jint subPosX,
     jint maskWidth, jint maskHeight,
-    jint offset, jint stride,
-    jfloat gamma, jfloat invgamma)
+    jint offset, jint stride)
 {
     Renderer* rdr;
     jint minX, minY, maxX, maxY, maxXNoCplip;
@@ -753,13 +762,12 @@ JNIEXPORT void JNICALL Java_com_sun_pisces_PiscesRenderer_fillLCDAlphaMaskImpl
     }
 
     fillAlphaMask(rdr, minX, minY, maxX, maxY, env, this, LCD_ALPHA_MASK, jmask,
-        x, y, subPosXLR, maskWidth, maskHeight, maskOffset, stride, gamma, invgamma);
+        x, y, subPosXLR, maskWidth, maskHeight, maskOffset, stride);
 }
 
 static void fillAlphaMask(Renderer* rdr, jint minX, jint minY, jint maxX, jint maxY,
     JNIEnv *env, jobject this, jint maskType, jbyteArray jmask, 
-    jint x, jint y, jint subPosX, jint maskWidth, jint maskHeight, jint offset, jint stride,
-    jfloat gamma, jfloat invgamma)
+    jint x, jint y, jint subPosX, jint maskWidth, jint maskHeight, jint offset, jint stride)
 {
     jint rowsToBeRendered, rowsBeingRendered;
     
@@ -779,7 +787,6 @@ static void fillAlphaMask(Renderer* rdr, jint minX, jint minY, jint maxX, jint m
             jint height = maxY - minY + 1;
 
             renderer_setMask(rdr, maskType, mask, maskWidth, maskHeight, subPosX, JNI_FALSE);
-            renderer_setGamma(rdr, gamma, invgamma);
 
             INVALIDATE_RENDERER_SURFACE(rdr);
             VALIDATE_BLITTING(rdr);

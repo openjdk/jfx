@@ -252,7 +252,8 @@ abstract class GLContext {
              * GLContext class. */
             nonPowTwoExtAvailable = PrismSettings.forcePow2
                 ? Boolean.FALSE
-                : ES2Pipeline.glFactory.isGLExtensionSupported("GL_ARB_texture_non_power_of_two");
+                : (ES2Pipeline.glFactory.isGLExtensionSupported("GL_ARB_texture_non_power_of_two")
+                    || ES2Pipeline.glFactory.isGLExtensionSupported("GL_OES_texture_npot"));
         }
         return nonPowTwoExtAvailable.booleanValue();
     }

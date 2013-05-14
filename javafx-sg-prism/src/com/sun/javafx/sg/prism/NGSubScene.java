@@ -48,42 +48,20 @@ public class NGSubScene extends NGNode implements PGSubScene {
     private boolean renderSG = true;
 
     public void setRoot(PGNode root) {
-        if (this.root != root) {
-            this.root = (NGNode)root;
-            visualsChanged();
-        } else {
-            // FX SubScene will call setRoot either if root has changed or
-            // if root is dirty. This is a workaround for dirty region support.
-            // Remind: This workaround should be removed when dirty region
-            // support is added for SubScene
-
-            // Note FX subScene thinks SG is dirty, but will allow
-            // root.isClean() to make that decision at render time. Thus keeping
-            // old renderSG state.
-            boolean renderSGOld = renderSG;
-            visualsChanged();
-            renderSG = renderSGOld;
-        }
+        this.root = (NGNode)root;
     }
 
     private Paint fillPaint;
     public void setFillPaint(Object paint) {
-        if (fillPaint != paint) {
-            fillPaint = (Paint)paint;
-            visualsChanged();
-        }
+        fillPaint = (Paint)paint;
     }
 
     private PrismCameraImpl camera;
     public void setCamera(PGCamera camera) {
-        PrismCameraImpl oldCamera = this.camera;
         if (camera != null) {
             this.camera = ((NGCamera) camera).getCameraImpl();
         } else {
             this.camera = PrismDefaultCamera.getInstance();
-        }
-        if (oldCamera != this.camera) {
-            visualsChanged();
         }
     }
 
@@ -107,9 +85,6 @@ public class NGSubScene extends NGNode implements PGSubScene {
 
     boolean depthBuffer = false;
     public void setDepthBuffer(boolean depthBuffer) {
-        if (this.depthBuffer != depthBuffer) {
-            visualsChanged();
-        }
         this.depthBuffer = depthBuffer;
     }
 
@@ -120,6 +95,9 @@ public class NGSubScene extends NGNode implements PGSubScene {
 
     public void setLights(Object[] lights) {
         this.lights = lights;
+    }
+
+    public void markContentDirty() {
         visualsChanged();
     }
 
@@ -177,7 +155,7 @@ public class NGSubScene extends NGNode implements PGSubScene {
             }
         }
 
-        if (!root.isClean() || renderSG) {
+        if (renderSG || !root.isClean()) {
             if (rtt == null) {
                 ResourceFactory factory = g.getResourceFactory();
                 rtt = factory.createRTTexture(rtWidth, rtHeight,

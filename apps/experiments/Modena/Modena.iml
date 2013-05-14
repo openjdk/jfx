@@ -41,7 +41,6 @@
     <orderEntry type="module" module-name="javafx-ui-controls" />
     <orderEntry type="module" module-name="javafx-ui-desktop" />
     <orderEntry type="module" module-name="javafx-ui-quantum" />
-    <orderEntry type="module" module-name="javafx-ui-webnode" />
     <orderEntry type="module" module-name="javafx-util-converter" />
     <orderEntry type="module" module-name="jfxmedia" />
     <orderEntry type="module" module-name="pisces" />
@@ -56,6 +55,7 @@
     <orderEntry type="module" module-name="test-stub-toolkit" />
     <orderEntry type="module" module-name="webkit" />
     <orderEntry type="inheritedJdk" />
+    <orderEntry type="library" name="webkit-impl" level="project" />
   </component>
 </module>
 

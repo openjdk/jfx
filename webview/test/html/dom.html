@@ -1,0 +1,49 @@
+<!doctype html>
+<html>
+<head>
+    <title>DOM Tests</title>
+    <style media="screen">
+        @import url('imported-styles.css');
+
+        body {background-color: red}
+
+        @media screen
+        {
+            p.test {font-family:verdana,sans-serif;font-size:14px;}
+        }
+        @media print
+        {
+            p.test {font-family:times,serif;font-size:10px;}
+        }
+        @media screen,print
+        {
+            p.test {font-weight:bold;}
+        }
+    </style>
+    <link rel="stylesheet" type="text/css" href="imported-styles.css">
+</head>
+<body onclick="document.body.className='testClass';" style="background-color: blue" class="bodyClass">
+
+<!-- used by testEmptyTextContent -->
+<p id="empty-paragraph" align="left"></p>
+
+<!-- used by insert/append/remove/replace tests -->
+<p id="p1">Things <b>do</b> change</p>
+<p id="p2">Again <i>and</i> again</p>
+
+<!-- used by testNodeTypes -->
+<p id="showcase-paragraph">
+text<!--comment--><span class="spanclass">spantext</span></p>
+<img src="file:///C:/test.png" alt="test image">
+
+<label for="unittype">Select unit type:</label>
+<select id="unittype" name="unittype">
+    <option value="1"> Miner </option>
+    <option value="2"> Puffer </option>
+    <option value="3" selected> Snipey </option>
+    <option value="4"> Max </option>
+    <option value="5"> Firebot </option>
+</select>
+
+</body>
+</html>

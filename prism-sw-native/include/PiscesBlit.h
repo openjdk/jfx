@@ -32,6 +32,8 @@
 #define MIN_ALPHA 0
 #define MAX_ALPHA 255
 
+void initGammaArrays(jfloat gamma);
+
 void genLinearGradientPaint(Renderer *rdr, jint height);
 void genRadialGradientPaint(Renderer *rdr, jint height);
 void genTexturePaint(Renderer *rdr, jint height);

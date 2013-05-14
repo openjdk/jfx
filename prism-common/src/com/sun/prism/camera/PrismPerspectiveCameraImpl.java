@@ -42,7 +42,7 @@ import com.sun.javafx.geom.PickRay;
  */
 public class PrismPerspectiveCameraImpl extends PrismCameraImpl {
 
-    private final boolean fixedEyePosition;
+    private final boolean fixedEyeAtCameraZero;
 
     private double fov;
     private boolean verticalFieldOfView;
@@ -50,13 +50,13 @@ public class PrismPerspectiveCameraImpl extends PrismCameraImpl {
     /**
      * Constructs a camera object.
      */
-    public PrismPerspectiveCameraImpl(boolean fixedEyePosition) {
-        this.fixedEyePosition = fixedEyePosition;
+    public PrismPerspectiveCameraImpl(boolean fixedEyeAtCameraZero) {
+        this.fixedEyeAtCameraZero = fixedEyeAtCameraZero;
     }
 
     @Override
     public PickRay computePickRay(float x, float y, PickRay pickRay) {
-        return PickRay.computePerspectivePickRay(x, y, fixedEyePosition, 
+        return PickRay.computePerspectivePickRay(x, y, fixedEyeAtCameraZero, 
                 viewWidth, viewHeight, fov, verticalFieldOfView, worldTransform,
                 pickRay);
     }
@@ -73,7 +73,7 @@ public class PrismPerspectiveCameraImpl extends PrismCameraImpl {
         return verticalFieldOfView;
     }
 
-    public boolean isFixedEyePosition() {
-        return fixedEyePosition;
+    public boolean isFixedEyeAtCameraZero() {
+        return fixedEyeAtCameraZero;
     }
 }

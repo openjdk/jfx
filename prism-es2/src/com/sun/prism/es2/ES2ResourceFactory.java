@@ -71,6 +71,10 @@ public class ES2ResourceFactory extends BaseShaderFactory {
         } else {
             maxTextureSize = max;
         }
+        if (PrismSettings.verbose) {
+            System.out.println("Non power of two texture support = " + 
+                    context.getGLContext().canCreateNonPowTwoTextures());
+        }
     }
 
     public TextureResourcePool getTextureResourcePool() {

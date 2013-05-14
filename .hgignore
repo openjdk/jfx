@@ -19,3 +19,5 @@ syntax: glob
 */Release/*
 */Debug/*
 *~
+webview/native/WebKitBuild
+webview/native/WebKitLibraries/import

@@ -31,6 +31,7 @@
 #include <link.h>
 #include <limits.h>
 #include <dlfcn.h>
+#include <fcntl.h>
 
 #include "directfb.h"
 #include "directfb_util.h"

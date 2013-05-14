@@ -34,6 +34,7 @@ extern CVDisplayLinkRef GlassDisplayLink;
 extern JavaVM *jVM;
 extern JNIEnv *jEnv;
 
+extern jclass jApplicationClass;
 extern jclass jWindowClass;
 extern jclass jViewClass;
 
@@ -109,6 +110,7 @@ typedef struct _tagJavaIDs {
     struct {
         jmethodID createPixels;
         jmethodID getScaleFactor;
+        jmethodID reportException;
     } Application;
     struct {
         jmethodID rotateGesturePerformed;

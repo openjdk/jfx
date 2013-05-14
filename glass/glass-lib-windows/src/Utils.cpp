@@ -49,12 +49,17 @@ JNIEnv* GetEnv()
 
 jboolean CheckAndClearException(JNIEnv* env)
 {
-    const jboolean ret = env->ExceptionCheck();
-    if (ret) {
-        env->ExceptionDescribe();
-        env->ExceptionClear();
+    jthrowable t = env->ExceptionOccurred();
+    if (!t) {
+        return JNI_FALSE;
     }
-    return ret;
+    env->ExceptionClear();
+
+    jclass cls = env->FindClass("com/sun/glass/ui/Application");
+    env->CallStaticVoidMethod(cls, javaIDs.Application.reportExceptionMID, t);
+    env->DeleteLocalRef(cls);
+
+    return JNI_TRUE;
 }
 
 jint GetModifiers()

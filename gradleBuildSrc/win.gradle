@@ -97,6 +97,7 @@ setupTools("windows_tools",
         defineProperty("WINDOWS_VS_MSVCDIR", properties, WINDOWS_VS_VCINSTALLDIR)
         defineProperty("WINDOWS_DXSDK_DIR", properties, System.getenv().get("DXSDK_DIR"))
         defineProperty("WINDOWS_VS_INCLUDE", properties, "$WINDOWS_VS_VCINSTALLDIR/INCLUDE;" + "$WINDOWS_SDK_DIR/include;")
+        defineProperty("WINDOWS_VS_VER", properties, "70")
         defineProperty("WINDOWS_VS_LIB", properties, "$WINDOWS_VS_VCINSTALLDIR/LIB;" + "$WINDOWS_SDK_DIR/lib;")
         defineProperty("WINDOWS_VS_LIBPATH", properties, "$WINDOWS_VS_VCINSTALLDIR/LIB;")
         defineProperty("WINDOWS_VS_PATH", properties, "$WINDOWS_VS_DEVENVDIR;" +
@@ -129,6 +130,8 @@ def linker = cygpath("$msvcBinDir/link.exe")
 ext.RC = cygpath("$WINDOWS_SDK_DIR/Bin/RC.Exe")
 ext.FXC = cygpath("$WINDOWS_DXSDK_DIR/utilities/bin/x86/fxc.exe")
 ext.MC = cygpath("$WINDOWS_SDK_DIR/Bin/mt.exe")
+// This next line is based on a line in the ant build scripts, but doesn't seem to point to the right place
+//ext.MSVCR = cygpath("${WINDOWS_VS_MSVCDIR}/redist/${IS_64 ? 'x64' : 'x86'}/Microsoft.VC${WINDOWS_VS_VER}.CRT/msvcr${WINDOWS_VS_VER}.dll")
 
 WIN.glass = [:]
 WIN.glass.javahInclude = [
@@ -237,12 +240,21 @@ WIN.font = [:]
 WIN.font.javahInclude = [
         "com/sun/javafx/font/**/*",
         "com/sun/javafx/text/**/*"]
-WIN.font.nativeSource = [
-    file("$closedDir/javafx-font-native/src"),
-    file("$closedDir/javafx-font-native/src/layout"),
-    file("$closedDir/javafx-font-native/src/layoutfx")]
+WIN.font.nativeSource = [file("$closedDir/javafx-font-native/src")]
 WIN.font.compiler = compiler
 WIN.font.ccFlags = ["/DJFXFONT_PLUS", ccFlags].flatten()
 WIN.font.linker = linker
 WIN.font.linkFlags = [linkFlags, "advapi32.lib", "gdi32.lib", "user32.lib"].flatten()
 WIN.font.lib = "javafx-font"
+
+WIN.fontT2K = [:]
+WIN.fontT2K.javahInclude = ["com/sun/javafx/font/t2k/**/*"]
+WIN.fontT2K.nativeSource = [
+        file("$closedDir/javafx-font-t2k-native/src"),
+        file("$closedDir/javafx-font-t2k-native/src/layout"),
+        file("$closedDir/javafx-font-t2k-native/src/layoutfx")]
+WIN.fontT2K.compiler = compiler
+WIN.fontT2K.ccFlags = ["/DJFXFONT_PLUS", ccFlags].flatten()
+WIN.fontT2K.linker = linker
+WIN.fontT2K.linkFlags = [linkFlags, "advapi32.lib", "gdi32.lib", "user32.lib"].flatten()
+WIN.fontT2K.lib = "javafx-font-t2k"
