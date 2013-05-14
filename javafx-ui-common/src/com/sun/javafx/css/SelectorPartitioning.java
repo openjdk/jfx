@@ -25,7 +25,6 @@
 
 package com.sun.javafx.css;
 
-import java.lang.reflect.Array;
 import java.util.*;
 
 /**
@@ -35,107 +34,7 @@ public final class SelectorPartitioning {
 
     /** package accessible */
     SelectorPartitioning() {}
-    
-    /*
-     * SimpleSelector uses long[] for StyleClass. This wraps the long[]
-     * so that it can be used as a key in the selector maps.
-    */
-//    private final static class StyleClassKey {
-//        
-//        private final long[] bits;
-//        private final static long[] EMPTY_BITS = new long[0];
-//        private final static StyleClassKey WILDCARD = new StyleClassKey(EMPTY_BITS);
-//        
-//        private StyleClassKey(long[] bits) {
-//            this.bits = (bits != null) ? new long[bits.length] : EMPTY_BITS;
-//            System.arraycopy(bits, 0, this.bits, 0, bits.length);
-//        }
-//        
-//        /*
-//         * Test that all the bits of this key are present in the other. Given
-//         * <pre>
-//         * {@code
-//         * Key k1 = new Key(0x5);
-//         * Key k2 = new Key(0x4);}</pre> {@code k1.isSubset(k2) } returns false
-//         * and {@code k2.isSubset(k1) } returns true; <p> Note that one cannot
-//         * assume if {@code x.isSubsetOf(y) == false }
-//         * that {@code y.isSuperSetOf(x) == true } since <i>x</i> and <i>y</i>
-//         * might be disjoint.
-//         *
-//         * @return true if this Key is a subset of the other.
-//         */
-//        private boolean isSubsetOf(StyleClassKey other) {
-//        
-//            // they are a subset if both are empty
-//            if (bits.length == 0 && other.bits.length == 0) return true;
-//
-//            // [foo bar] cannot be a subset of [foo]
-//            if (bits.length > other.bits.length) return false;
-//
-//            // is [foo bar] a subset of [foo bar bang]?
-//            for (int n=0, max=bits.length; n<max; n++) {
-//                if ((bits[n] & other.bits[n]) != bits[n]) return false;
-//            }
-//            return true;
-//
-//        }
-//
-//        /*
-//         * return true if this seq1 is a superset of seq2. That is to say
-//         * that all the bits seq2 of the other key are present in seq1. Given
-//         * <pre>
-//         * {@code
-//         * Key k1 = new Key(0x5);
-//         * Key k2 = new Key(0x4);}</pre> {@code k1.isSupersetOf(k2) } returns
-//         * true and {@code k2.isSupersetOf(k1) } returns false <p> Note that one
-//         * cannot assume if {@code x.isSubsetOf(y) == false }
-//         * that {@code y.isSuperSetOf(x) == true } since <i>x</i> and <i>y</i>
-//         * might be disjoint.
-//         */
-//        private boolean isSupersetOf(StyleClassKey other) {
-//            
-//            // [foo] cannot be a superset of [foo  bar]
-//            // nor can [foo] be a superset of [foo]
-//            if (bits.length < other.bits.length) return false;
-//
-//            // is [foo bar bang] a superset of [foo bar]?
-//            for (int n=0, max=other.bits.length; n<max; n++) {
-//                if ((bits[n] & other.bits[n]) != other.bits[n]) return false;
-//            }
-//            return true;
-//
-//        }
-//        
-//        //
-//        // Need hashCode since StyleClassKey is used as a key in a Map.
-//        // 
-//        @Override
-//        public int hashCode() {
-//            int hash = 7;
-//            hash = 41 * hash + Arrays.hashCode(this.bits);
-//            return hash;
-//        }
-//
-//        //
-//        // Need equals since StyleClassKey is used as a key in a Map.
-//        // 
-//        @Override
-//        public boolean equals(Object obj) {
-//            if (obj == null) {
-//                return false;
-//            }
-//            if (getClass() != obj.getClass()) {
-//                return false;
-//            }
-//            final StyleClassKey other = (StyleClassKey) obj;
-//            if (!Arrays.equals(this.bits, other.bits)) {
-//                return false;
-//            }
-//            return true;
-//        }
-//        
-//    }
-    
+
     /*
      * Wrapper so that we can have Map<ParitionKey, Partition> even though
      * the innards of the key might be a String or long[]
@@ -173,25 +72,25 @@ public final class SelectorPartitioning {
     }   
     
     /** 
-     * Since Rules are retrieved from the tree in an indeterminate manner,
-     * we need to keep track of the order in which the rule was added. This
-     * can't be kept in Rule itself since the order depends on both the
-     * order of the stylesheets and the order of the rules in the stylesheets.
-     * Also, rules can be added and removed from the stylesheet which would
+     * Since matched selectors are retrieved from the tree in an indeterminate manner,
+     * we need to keep track of the order in which the selector was added. This
+     * can't be kept in Selector itself since the order depends on both the
+     * order of the stylesheets and the order of the selectors in the stylesheets.
+     * Also, selectors can be added and removed from the stylesheet which would
      * invalidate the order.
      */
-    private static class RuleData implements Comparable {
-        final Rule rule;
+    static final class SelectorData implements Comparable {
+        final Selector selector;
         final int ordinal;
         
-        private RuleData(Rule rule, int ordinal) {
-            this.rule = rule;
+        private SelectorData(Selector selector, int ordinal) {
+            this.selector = selector;
             this.ordinal = ordinal;
         }
 
         @Override
         public int compareTo(Object t) {
-            return ordinal - ((RuleData)t).ordinal;
+            return ordinal - ((SelectorData)t).ordinal;
         }
     }
     
@@ -207,38 +106,32 @@ public final class SelectorPartitioning {
      * for A in Partition #c would now have Slots for both .b and .z.
      * <p> 
      * Rules are added to the last Slot or to the Partition. If there is a 
-     * rule #c { -fx-fill: red; }, then the rule will be added to the
-     * Partition for #c. If the rule were for A.b#c, then rule would be added
+     * selector #c { -fx-fill: red; }, then the selector will be added to the
+     * Partition for #c. If the selector were for A.b#c, then selector would be added
      * to the slot for '.b' which is in the slot for A in partion #c. 
      * <p>
-     * When Node is matched, it picks up the Rules from the Partition and Slot 
+     * When Node is matched, it picks up the Selectors from the Partition and Slot
      * as the graph is traversed. 
      */
     private static final class Partition {
         
         private final PartitionKey key;
         private final Map<PartitionKey, Slot> slots;
-        private List<RuleData> rules;
+        private List<SelectorData> selectors;
         
         private Partition(PartitionKey key) {
            this.key = key;
             slots = new HashMap<PartitionKey,Slot>();
         }
-        
-        private void addRule(Rule rule, int ordinal) {
-            if (rules == null) {
-                rules = new ArrayList<RuleData>();
+
+        private void addSelectorData(SelectorData selectorData) {
+            if (selectors == null) {
+                selectors = new ArrayList<SelectorData>();
             }
-            rules.add(new RuleData(rule,ordinal));
+            selectors.add(selectorData);
         }
-        
-        private void copyRules(List<RuleData> to) {
-            if (rules != null && rules.isEmpty() == false) {
-                to.addAll(rules);
-            }
-        }
-        
-        /**   
+
+        /**
          * This routine finds the slot corresponding to the PartitionKey, 
          * creating a Partition and Slot if necessary. 
          */
@@ -267,29 +160,22 @@ public final class SelectorPartitioning {
         // The other Slots to which this Slot refers
         private final Map<PartitionKey, Slot> referents;
 
-        // Rules from selectors that matches the path to this slot
-        private List<RuleData> rules;
+        // Selectors that match the path to this slot
+        private List<SelectorData> selectors;
         
         private Slot(Partition partition) {
             this.partition = partition;
             this.referents = new HashMap<PartitionKey, Slot>();            
         }
         
-        private void addRule(Rule rule, int ordinal) {
-            if (rules == null) {
-                rules = new ArrayList<RuleData>();
+        private void addSelectorData(SelectorData selectorData) {
+            if (selectors == null) {
+                selectors = new ArrayList<SelectorData>();
             }
-            rules.add(new RuleData(rule,ordinal));
+            selectors.add(selectorData);
         }
-        
-        private void copyRules(List<RuleData> to) {
-            if (rules != null && rules.isEmpty() == false) {
-                to.addAll(rules);
-            }
-            partition.copyRules(to);
-        }
-                     
-        /**   
+
+        /**
          * This routine finds the slot corresponding to the PartitionKey, 
          * creating a Partition and Slot if necessary. 
          */
@@ -317,7 +203,7 @@ public final class SelectorPartitioning {
     private Map<PartitionKey, Partition> styleClassMap = new HashMap<PartitionKey,Partition>();
 
     /** 
-     * Keep track of the order in which a rule is added to the mapping so
+     * Keep track of the order in which a selector is added to the mapping so
      * the original order can be restored for the cascade.
      */
     private int ordinal;
@@ -355,7 +241,7 @@ public final class SelectorPartitioning {
     private static final PartitionKey WILDCARD = new PartitionKey<String>("*");
     
     /* Place this selector into the partitioning map. Package accessible */
-    void partition(Selector selector, Rule rule) {
+    void partition(Selector selector) {
         
         SimpleSelector simpleSelector = null;
         if (selector instanceof CompoundSelector) {
@@ -393,6 +279,8 @@ public final class SelectorPartitioning {
         Partition partition = null;
         Slot slot = null;
 
+        final SelectorData selectorData = new SelectorData(selector,ordinal++);
+
         switch(c) {
             case ID_BIT | TYPE_BIT | STYLECLASS_BIT: 
             case ID_BIT | TYPE_BIT: 
@@ -402,7 +290,7 @@ public final class SelectorPartitioning {
                 if ((c & STYLECLASS_BIT) == STYLECLASS_BIT) {
                     slot = slot.partition(styleClassKey, styleClassMap);
                 }                
-                slot.addRule(rule, ordinal++);
+                slot.addSelectorData(selectorData);
                 break;
                 
             case TYPE_BIT | STYLECLASS_BIT:
@@ -411,9 +299,9 @@ public final class SelectorPartitioning {
                 partition = getPartition(typeKey, typeMap);
                 if ((c & STYLECLASS_BIT) == STYLECLASS_BIT) {
                     slot = partition.partition(styleClassKey, styleClassMap);
-                    slot.addRule(rule, ordinal++);
+                    slot.addSelectorData(selectorData);
                 } else {
-                    partition.addRule(rule, ordinal++);                    
+                    partition.addSelectorData(selectorData);
                 }
                 break;
                 
@@ -427,8 +315,8 @@ public final class SelectorPartitioning {
         
     }
     
-    /** Get the list of rules that match this selector. Package accessible */
-    List<Rule> match(String selectorId, String selectorType, Set<StyleClass> selectorStyleClass) {
+    /** Get the list of selectors that match this selector. Package accessible */
+    List<SelectorData> match(String selectorId, String selectorType, Set<StyleClass> selectorStyleClass) {
         
         final boolean hasId = 
             (selectorId != null && selectorId.isEmpty() == false);
@@ -453,7 +341,7 @@ public final class SelectorPartitioning {
 
         Partition partition = null;
         Slot slot = null;
-        List<RuleData> ruleData = new ArrayList<RuleData>();
+        List<SelectorData> selectorData = new ArrayList<SelectorData>();
         
         while (c != 0) {
             
@@ -464,8 +352,9 @@ public final class SelectorPartitioning {
 
                     partition = idMap.get(idKey);
                     if (partition != null) {
-                        partition.copyRules(ruleData);
-
+                        if (partition.selectors != null) {
+                            selectorData.addAll(partition.selectors);
+                        }
                         // do-while handles A.b#c also matches A#c by first
                         // doing A.b#c then doing *.b#c
                         PartitionKey typePK = typeKey;
@@ -473,14 +362,16 @@ public final class SelectorPartitioning {
                             slot = partition.slots.get(typePK);                    
                             if (slot != null) {
 
-                                slot.copyRules(ruleData);
-
+                                if (slot.selectors != null) {
+                                    selectorData.addAll(slot.selectors);
+                                }
                                 if ((c & STYLECLASS_BIT) == STYLECLASS_BIT) {
                                     Set<StyleClass> key = (Set<StyleClass>)styleClassKey.key;
                                     for (Slot s : slot.referents.values()) {
+                                        if (s.selectors == null || s.selectors.isEmpty()) continue;;
                                         Set<StyleClass> other = (Set<StyleClass>)s.partition.key.key;
                                         if (key.containsAll(other)) {
-                                            s.copyRules(ruleData);
+                                            selectorData.addAll(s.selectors);
                                         }
                                     }
                                 }
@@ -513,14 +404,16 @@ public final class SelectorPartitioning {
                     do {
                         partition = typeMap.get(typePK);
                         if (partition != null) {
-                            partition.copyRules(ruleData);
-
+                            if (partition.selectors != null) {
+                                selectorData.addAll(partition.selectors);
+                            }
                             if ((c & STYLECLASS_BIT) == STYLECLASS_BIT) {
                                 Set<StyleClass> key = (Set<StyleClass>)styleClassKey.key;
                                 for (Slot s : partition.slots.values()) {
+                                    if (s.selectors == null || s.selectors.isEmpty()) continue;
                                     Set<StyleClass> other = (Set<StyleClass>)s.partition.key.key;
                                     if (key.containsAll(other)) {
-                                        s.copyRules(ruleData);
+                                        selectorData.addAll(s.selectors);
                                     }
                                 }
                             }
@@ -543,16 +436,7 @@ public final class SelectorPartitioning {
                     assert(false);
             }
         }
-        
-        Collections.sort(ruleData);
-        
-        // TODO: Unfortunate copy :(
-        List<Rule> rules = new ArrayList<Rule>(ruleData.size());
-        for (int r=0,rMax=ruleData.size(); r<rMax; r++) {
-            final RuleData datum = ruleData.get(r);
-            rules.add(datum.rule);
-        }
-        return rules;
+        return selectorData;
     }
 
 }

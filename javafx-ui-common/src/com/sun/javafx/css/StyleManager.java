@@ -85,18 +85,18 @@ import sun.util.logging.PlatformLogger;
  * is a two level cache. The first level cache simply maps the
  * classname/id/styleclass combination of the request node to a 2nd level cache.
  * If the node has "styles" specified then we still use this 2nd level cache,
- * but must combine its rules with the rules specified in "styles" and perform
+ * but must combine its selectorData with the selectorData specified in "styles" and perform
  * more work to cascade properly. <p> The 2nd level cache contains a data
  * structure called the Cache. The Cache contains an ordered sequence of Rules,
- * a Long, and a Map. The ordered sequence of rules are the rules that *may*
+ * a Long, and a Map. The ordered sequence of selectorData are the selectorData that *may*
  * match a node with the given classname, id, and style class. For example,
- * rules which may apply are any rule where the simple selector of the rule
+ * selectorData which may apply are any selector where the simple selector of the selector
  * contains a reference to the id, style class, or classname of the Node, or a
  * compound selector who's "descendant" part is a simple selector which contains
  * a reference to the id, style class, or classname of the Node. <p> During
- * lookup, we will iterate over all the potential rules and discover if they
+ * lookup, we will iterate over all the potential selectorData and discover if they
  * apply to this particular node. If so, then we toggle a bit position in the
- * Long corresponding to the position of the rule that matched. This long then
+ * Long corresponding to the position of the selector that matched. This long then
  * becomes our key into the final map. <p> Once we have established our key, we
  * will visit the map and look for an existing StyleHelper. If we find a
  * StyleHelper, then we will return it. If not, then we will take the Rules that
@@ -264,7 +264,7 @@ final public class StyleManager {
                     for (int s=0; s < sMax; s++) {
 
                         final Selector selector = selectors.get(s);
-                        selectorPartitioning.partition(selector, rule);
+                        selectorPartitioning.partition(selector);
 
                     }
                 }
@@ -1361,8 +1361,8 @@ final public class StyleManager {
             // If the cache is null, then we need to create a new Cache and
             // add it to the cache map
             
-            // Construct the list of Rules that could possibly apply
-            final List<Rule> rules = new ArrayList<Rule>();
+            // Construct the list of Selectors that could possibly apply
+            final List<SelectorPartitioning.SelectorData> selectorData = new ArrayList<>();
 
             // User agent stylesheets have lowest precedence and go first
             if (userAgentStylesheets.isEmpty() == false) {
@@ -1370,9 +1370,9 @@ final public class StyleManager {
                     final StylesheetContainer container = userAgentStylesheets.get(n);
                     
                     if (container != null && container.selectorPartitioning != null) {
-                        final List<Rule> matchingRules = 
+                        final List<SelectorPartitioning.SelectorData> matchingRules =
                                 container.selectorPartitioning.match(id, cname, key.styleClasses);
-                        rules.addAll(matchingRules);
+                        selectorData.addAll(matchingRules);
                     }
                 }
             }
@@ -1384,9 +1384,9 @@ final public class StyleManager {
                     final StylesheetContainer container = sceneStylesheets.get(n);
                     if (container != null && container.selectorPartitioning != null) {
                         container.keys.add(key); // remember that this stylesheet was used in this cache
-                        final List<Rule> matchingRules = 
+                        final List<SelectorPartitioning.SelectorData> matchingRules =
                                 container.selectorPartitioning.match(id, cname, key.styleClasses);
-                        rules.addAll(matchingRules);
+                        selectorData.addAll(matchingRules);
                     }
                 }
             }
@@ -1398,15 +1398,15 @@ final public class StyleManager {
                     final StylesheetContainer container = parentStylesheets.get(n);
                     container.keys.add(key); // remember that this stylesheet was used in this cache
                     if (container.selectorPartitioning != null) {
-                        final List<Rule> matchingRules = 
+                        final List<SelectorPartitioning.SelectorData> matchingRules =
                                 container.selectorPartitioning.match(id, cname, key.styleClasses);
-                        rules.addAll(matchingRules);
+                        selectorData.addAll(matchingRules);
                     }
                 }
             }
             
-            // create a new Cache from these rules.
-            cache = new Cache(rules);   
+            // create a new Cache from these selectorData.
+            cache = new Cache(selectorData);
             cacheMap.put(key, cache);
             
             // cause a new Key to be created the next time this method is called
@@ -1605,84 +1605,70 @@ final public class StyleManager {
             }
             
         }
-        // this must be initialized to the appropriate possible rules when
+        // this must be initialized to the appropriate possible selectorData when
         // the helper cache is created by the StylesheetContainer
-        private final List<Rule> rules;
+        private final List<SelectorPartitioning.SelectorData> selectorData;
         private final Map<Key, Integer> cache;
 
-        Cache(List<Rule> rules) {
-            this.rules = rules;
+        Cache(List<SelectorPartitioning.SelectorData> selectorData) {
+            this.selectorData = selectorData;
             this.cache = new HashMap<Key, Integer>();
         }
 
         private StyleMap getStyleMap(CacheContainer cacheContainer, Node node, Set<PseudoClass>[] triggerStates) {
             
-            if (rules == null || rules.isEmpty()) {                
+            if (selectorData == null || selectorData.isEmpty()) {
                 return StyleMap.EMPTY_MAP;
             }
 
+            final int selectorDataSize = selectorData.size();
 
             //
-            // Since the list of rules is found by matching only the
-            // rightmost selector, the set of rules may larger than those 
-            // rules that actually match the node. The following loop
-            // whittles the list down to those rules that apply.
+            // Since the list of selectorData is found by matching only the
+            // rightmost selector, the set of selectorData may larger than those
+            // selectorData that actually match the node. The following loop
+            // whittles the list down to those selectorData that apply.
             //
-            final Rule[] applicableRules = new Rule[rules.size()];
             //
             // To lookup from the cache, we construct a key from a Long
             // where the selectors that match this particular node are
-            // represented by bits on the Long.
+            // represented by bits on the long[].
             //
-            long key[] = new long[1];
-            int count = 0;
-            int index = 0;
-            for (int r = 0, rMax = rules.size(); r < rMax; r++) {
-                
-                final Rule rule = rules.get(r);
+            long key[] = new long[Long.SIZE/selectorDataSize + 1];
+            boolean nothingMatched = true;
 
+            for (int s = 0; s < selectorDataSize; s++) {
+                
                 //
                 // This particular flavor of applies takes a PseudoClassState[]
-                // fills in the pseudo-class states from the selectors where 
+                // fills in the pseudo-class states from the selectors where
                 // they apply to a node. This is an expedient to looking the
-                // applies loopa second time on the matching rules. This has to
+                // applies loopa second time on the matching selectorData. This has to
                 // be done ahead of the cache lookup since not all nodes that
-                // have the same set of rules will have the same node hierarchy. 
-                // 
+                // have the same set of selectorData will have the same node hierarchy.
+                //
                 // For example, if I have .foo:hover:focused .bar:selected {...}
                 // and the "bar" node is 4 away from the root and the foo
                 // node is two away from the root, pseudoclassBits would be
                 // [selected, 0, hover:focused, 0]
                 // Note that the states run from leaf to root. This is how
-                // the code in StyleHelper expects things. 
-                // Note also that, if the rule does not apply, the triggerStates
-                // is unchanged. 
+                // the code in StyleHelper expects things.
+                // Note also that, if the selector does not apply, the triggerStates
+                // is unchanged.
                 //
-                
-                final int nSelectors = rule.getSelectors().size();
-                if ((count + nSelectors) > Long.SIZE) {
-                    final long[] temp = new long[key.length+1];
-                    System.arraycopy(key, 0, temp, 0, key.length);
-                    key = temp;
-                    ++index;
-                    count = 0;
+                final SelectorPartitioning.SelectorData selectorDatum = selectorData.get(s);
+                final Selector sel = selectorDatum.selector;
+
+                if (sel.applies(node, triggerStates, 0)) {
+                    final int index = s / Long.SIZE;
+                    final long mask = key[index] | 1l << s;
+                    key[index] = mask;
+                    nothingMatched = false;
                 }
-                
-                long mask = rule.applies(node, triggerStates);
-                
-                if (mask != 0) {
-                    key[index] |= mask << count;
-                    applicableRules[r] = rule;
-                } else {
-                    applicableRules[r] = null;
-                }
-                
-                count += rule.getSelectors().size(); 
-                
             }
             
             // nothing matched!
-            if (key.length == 1 && key[0] == 0) {
+            if (nothingMatched) {
                 return StyleMap.EMPTY_MAP;
             }
             
@@ -1693,54 +1679,67 @@ final public class StyleManager {
                 return styleMap;
             }
 
-            int ordinal = 0;
-            
             // if there isn't a map in cache already, create one. 
             // 
-            // We know the rules apply, so they should also match. A rule
+            // We know the selectorData apply, so they should also match. A selector
             // might have more than one selector and match will return the
             // selector that matches. Matches is more expensive than applies, 
             // so we pay for it here, but only for the first time the 
             // cache is created.
             //
             final List<CascadingStyle> styles = new ArrayList<CascadingStyle>();
-            
-            for (int r = 0, rMax = applicableRules.length; r<rMax; r++) {
-                
-                final Rule rule = applicableRules[r];
-                
-                // if the rule didn't apply, then applicableRules[r] will be null
-                if (rule == null) {
-                    continue;
-                }
-                
-                final List<Match> matches = rule.matches(node);
-                if (matches == null || matches.isEmpty()) {
-                    continue;
-                }
-                
-                for (int m=0, mMax=matches.size(); m<mMax; m++) {
-                
-                    final Match match = matches.get(m);
-                    // TODO: should never get nulls in this list. Fix Rule#matches
-                    if (match == null) {
+
+            for (int k = 0; k<key.length; k++) {
+
+                if (key[k] == 0) continue;
+
+                final int offset = k * Long.SIZE;
+
+                for (int b = 0; b<Long.SIZE; b++) {
+
+                    // bit at b in key[k] set?
+                    final long mask = 1l << b;
+                    if ((mask & key[k]) != mask) continue;
+
+                    final SelectorPartitioning.SelectorData selectorDatum = selectorData.get(offset+b);
+                    int ordinal = selectorDatum.ordinal;
+                    final Selector selector = selectorDatum.selector;
+
+                    final Rule rule = selector.getRule();
+
+                    // if the selector didn't apply, then applicableRules[r] will be null
+                    if (rule == null) {
                         continue;
                     }
-                    
-                    for (int k = 0, kmax = rule.declarations.size(); k < kmax; k++) {
-                        final Declaration decl = rule.declarations.get(k);
 
-                        final CascadingStyle s = new CascadingStyle(
-                            new Style(match.selector, decl),
-                            match.pseudoClasses,
-                            match.specificity,
-                            // ordinal increments at declaration level since
-                            // there may be more than one declaration for the
-                            // same attribute within a rule or within a stylesheet
-                            ordinal++
-                        );
+                    final List<Match> matches = rule.matches(node);
+                    if (matches == null || matches.isEmpty()) {
+                        continue;
+                    }
 
-                        styles.add(s);
+                    for (int m=0, mMax=matches.size(); m<mMax; m++) {
+
+                        final Match match = matches.get(m);
+                        // TODO: should never get nulls in this list. Fix Rule#matches
+                        if (match == null) {
+                            continue;
+                        }
+
+                        for (int d = 0, dmax = rule.declarations.size(); d < dmax; d++) {
+                            final Declaration decl = rule.declarations.get(d);
+
+                            final CascadingStyle s = new CascadingStyle(
+                                    new Style(match.selector, decl),
+                                    match.pseudoClasses,
+                                    match.specificity,
+                                    // ordinal increments at declaration level since
+                                    // there may be more than one declaration for the
+                                    // same attribute within a selector or within a stylesheet
+                                    ordinal++
+                            );
+
+                            styles.add(s);
+                        }
                     }
                 }
             }

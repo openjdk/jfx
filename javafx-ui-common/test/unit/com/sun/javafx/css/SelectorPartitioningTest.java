@@ -187,7 +187,7 @@ public class SelectorPartitioningTest {
                 
         for (Rule rule : stylesheet.getRules()) {
             for (Selector selector : rule.selectors) {
-                instance.partition(selector, rule);                
+                instance.partition(selector);
             }
         }
         
@@ -202,11 +202,13 @@ public class SelectorPartitioningTest {
                 
         SimpleSelector simple = simpleData.selector;
         
-        List<Rule> matched = instance.match(simple.getId(), simple.getName(), simple.getStyleClassSet());
+        List<SelectorPartitioning.SelectorData> matched = instance.match(simple.getId(), simple.getName(), simple.getStyleClassSet());
         
         assertEquals(1,matched.size());
-        Rule rule = matched.get(0);
-        
+        SelectorPartitioning.SelectorData selectorDatum = matched.get(0);
+
+        Rule rule = selectorDatum.selector.getRule();
+
         assertEquals(1,rule.declarations.size());
         Declaration decl = rule.declarations.get(0);
         
@@ -224,11 +226,11 @@ public class SelectorPartitioningTest {
                 
         SimpleSelector simple = complexData.selector;
         
-        List<Rule> matched = instance.match(simple.getId(), simple.getName(), simple.getStyleClassSet());
+        List<SelectorPartitioning.SelectorData> matched = instance.match(simple.getId(), simple.getName(), simple.getStyleClassSet());
         assertEquals(complexData.matches, matched.size());
         
-        for(Rule rule : matched) {
-            Selector s1 = rule.selectors.get(0);
+        for(SelectorPartitioning.SelectorData selectorDatum : matched) {
+            Selector s1 = selectorDatum.selector;
             for (SimpleData datum : complexData.data) {
                 Selector s2 = (SimpleSelector)datum.selector;
                 if (s1.equals(s2)) {

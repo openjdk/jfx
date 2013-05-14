@@ -42,11 +42,35 @@ import javafx.scene.Node;
 import javafx.scene.Scene;
 
 /*
- * A rule is a collection of selectors and declarations.
+ * A selector is a collection of selectors and declarations.
  */
 final public class Rule {
 
-    final List<Selector> selectors;
+    final ObservableList<Selector> selectors =
+            new TrackableObservableList<Selector>() {
+
+                @Override
+                protected void onChanged(Change<Selector> c) {
+                    while (c.next()) {
+                        if (c.wasAdded()) {
+                            List<Selector> added = c.getAddedSubList();
+                            for(int i = 0, max = added.size(); i < max; i++) {
+                                Selector sel = added.get(i);
+                                sel.setRule(Rule.this);
+                            }
+                        }
+
+                        if (c.wasRemoved()) {
+                            List<Selector> removed = c.getAddedSubList();
+                            for(int i = 0, max = removed.size(); i < max; i++) {
+                                Selector sel = removed.get(i);
+                                if (sel.getRule() == Rule.this) sel.setRule(null);
+                            }
+                        }
+                    }
+                }
+            };
+
     public List<Selector> getSelectors() {
         return selectors;
     }
@@ -88,7 +112,7 @@ final public class Rule {
         return declarations;
     }
 
-    /** The stylesheet this rule belongs to */
+    /** The stylesheet this selector belongs to */
     private Stylesheet stylesheet;
     public Stylesheet getStylesheet() {
         return stylesheet;
@@ -113,18 +137,14 @@ final public class Rule {
 
 
     public Rule(List<Selector> selectors, List<Declaration> declarations) {
-        this.selectors = selectors;
-        this.declarations.addAll(declarations);
-    }
-
-    private Rule() {
-        this(null, null);
+        this.selectors.setAll(selectors);
+        this.declarations.setAll(declarations);
     }
 
     /**
      * Checks all selectors for a match, returning an array of all relevant
      * matches.  A match is considered irrelevant if its presence or absence
-     * cannot affect whether or not the rule applies;  this means that among
+     * cannot affect whether or not the selector applies;  this means that among
      * static (non-pseudoclass) matches, only the highest priority one is
      * relevant, and among pseudoclass matches, only ones with higher priority
      * than the most specific static match are relevant.

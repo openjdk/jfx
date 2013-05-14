@@ -345,13 +345,13 @@ final public class SimpleSelector extends Selector {
     // Are the Selector's style classes a subset of the Node's style classes?
     //
     // http://www.w3.org/TR/css3-selectors/#class-html
-    // The following rule matches any P element whose class attribute has been
+    // The following selector matches any P element whose class attribute has been
     // assigned a list of whitespace-separated values that includes both
     // pastoral and marine:
     //
     //     p.pastoral.marine { color: green }
     //
-    // This rule matches when class="pastoral blue aqua marine" but does not
+    // This selector matches when class="pastoral blue aqua marine" but does not
     // match for class="pastoral blue".
     private boolean matchStyleClasses(StyleClassSet otherStyleClasses) {
         return otherStyleClasses.containsAll(styleClassSet);

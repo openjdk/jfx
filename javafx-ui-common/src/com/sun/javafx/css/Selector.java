@@ -37,7 +37,7 @@ import javafx.css.Styleable;
 import javafx.scene.Node;
 
 /**
- * Used by CSSRule to determine whether or not the rule applies to a 
+ * Used by CSSRule to determine whether or not the selector applies to a
  * given object.
  *
  */
@@ -51,7 +51,14 @@ abstract public class Selector {
     public static Selector getUniversalSelector() {
         return UniversalSelector.INSTANCE;
     }
-    
+
+    private Rule rule;
+    void setRule(Rule rule) {
+        this.rule = rule;
+    }
+    Rule getRule() {
+        return rule;
+    }
     /**
      * Determines whether this selector applies to the specified object.  
      * Returns a {@link Match} on success, <code>null</code> otherwise. Note

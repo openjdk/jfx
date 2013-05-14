@@ -44,7 +44,7 @@ public class CascadingStyle implements Comparable<CascadingStyle> {
     /** State variables, like &quot;hover&quot; or &quot;pressed&quot; */
     private Set<PseudoClass> pseudoClasses;
 
-    /* specificity of the rule that matched */
+    /* specificity of the selector that matched */
     private final int specificity;
     
     /* order in which this style appeared in the stylesheet */

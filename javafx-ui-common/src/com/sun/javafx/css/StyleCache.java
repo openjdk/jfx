@@ -38,7 +38,7 @@ import java.util.Map;
  * to be unique to the set of StyleHelpers [A B C]. Because StyleHelpers
  * are chosen by the rules they match, and because StyleHelpers are shared,
  * every node that has the set of StyleHelpers [A B C] will match the same
- * rule for opacity (for a given pseudoclass state). Further, the value for
+ * selector for opacity (for a given pseudoclass state). Further, the value for
  * opacity (in the given pseudoclass state) will not change for the given
  * set of StyleHelpers. Therefore, rather than trying to cache a calculated
  * value with an individual StyleHelper, the value can be cached with a key
