@@ -24,26 +24,6 @@
  */
 package javafx.scene;
 
-import com.sun.javafx.Logging;
-import com.sun.javafx.Utils;
-import com.sun.javafx.css.CalculatedValue;
-import static com.sun.javafx.css.CalculatedValue.SKIP;
-import com.sun.javafx.css.CascadingStyle;
-import com.sun.javafx.css.CssError;
-import com.sun.javafx.css.Declaration;
-import com.sun.javafx.css.ParsedValueImpl;
-import com.sun.javafx.css.PseudoClassState;
-import com.sun.javafx.css.Rule;
-import com.sun.javafx.css.Selector;
-import com.sun.javafx.css.Style;
-import com.sun.javafx.css.StyleCache;
-import com.sun.javafx.css.StyleCacheEntry;
-import com.sun.javafx.css.StyleConverterImpl;
-import com.sun.javafx.css.StyleManager;
-import com.sun.javafx.css.StyleMap;
-import com.sun.javafx.css.Stylesheet;
-import com.sun.javafx.css.converters.FontConverter;
-import com.sun.javafx.css.parser.CSSParser;
 import java.lang.ref.Reference;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
@@ -68,7 +48,28 @@ import javafx.scene.text.Font;
 import javafx.scene.text.FontPosture;
 import javafx.scene.text.FontWeight;
 import javafx.stage.Window;
+import com.sun.javafx.Logging;
+import com.sun.javafx.Utils;
+import com.sun.javafx.css.CalculatedValue;
+import com.sun.javafx.css.CascadingStyle;
+import com.sun.javafx.css.CssError;
+import com.sun.javafx.css.Declaration;
+import com.sun.javafx.css.ParsedValueImpl;
+import com.sun.javafx.css.PseudoClassState;
+import com.sun.javafx.css.Rule;
+import com.sun.javafx.css.Selector;
+import com.sun.javafx.css.Style;
+import com.sun.javafx.css.StyleCache;
+import com.sun.javafx.css.StyleCacheEntry;
+import com.sun.javafx.css.StyleConverterImpl;
+import com.sun.javafx.css.StyleManager;
+import com.sun.javafx.css.StyleMap;
+import com.sun.javafx.css.Stylesheet;
+import com.sun.javafx.css.converters.FontConverter;
+import com.sun.javafx.css.parser.CSSParser;
 import sun.util.logging.PlatformLogger;
+
+import static com.sun.javafx.css.CalculatedValue.*;
 
 /**
  * The StyleHelper is a helper class used for applying CSS information to Nodes.
@@ -380,25 +381,18 @@ final class CssStyleHelper {
     }
     
     private void resetToInitialValues(Styleable styleable) {
-        
-        final List<CssMetaData<? extends Styleable, ?>> metaDataList = styleable.getCssMetaData();
-        final int nStyleables = metaDataList != null ? metaDataList.size() : 0;
-        for (int n=0; n<nStyleables; n++) {
-            final CssMetaData metaData = metaDataList.get(n);
-            if (metaData.isSettable(styleable) == false) continue;
-            final StyleableProperty styleableProperty = metaData.getStyleableProperty(styleable);
-            if (styleableProperty != null) {
-                final StyleOrigin origin = styleableProperty.getStyleOrigin();
-                if (origin != null && origin != StyleOrigin.USER) {
-                    // If a property is never set by the user or by CSS, then 
-                    // the StyleOrigin of the property is null. So, passing null 
-                    // here makes the property look (to CSS) like it was
-                    // initialized but never used.
-                    Object value = metaData.getInitialValue(styleable);
-                    styleableProperty.applyStyle(null, value);
-                }
+        for (StyleableProperty styleableProperty : cacheContainer.cssSetProperties.values()) {
+            final StyleOrigin origin = styleableProperty.getStyleOrigin();
+            if (origin != null && origin != StyleOrigin.USER) {
+                // If a property is never set by the user or by CSS, then
+                // the StyleOrigin of the property is null. So, passing null
+                // here makes the property look (to CSS) like it was
+                // initialized but never used.
+                CssMetaData metaData = styleableProperty.getCssMetaData();
+                Object value = metaData.getInitialValue(styleable);
+                styleableProperty.applyStyle(null, value);
             }
-        }        
+        }
     }
     
         
