@@ -322,6 +322,10 @@ BOOL WINAPI DllMain(HANDLE hinstDLL, DWORD dwReason, LPVOID lpvReserved)
 JNIEXPORT void JNICALL Java_com_sun_glass_ui_win_WinApplication_initIDs
   (JNIEnv *env, jclass cls)
 {
+    javaIDs.Application.reportExceptionMID =
+        env->GetStaticMethodID(cls, "reportException", "(Ljava/lang/Throwable;)V");
+    ASSERT(javaIDs.Application.reportExceptionMID);
+
     //NOTE: substitute the cls
     cls = (jclass)env->FindClass("java/lang/Runnable");
 

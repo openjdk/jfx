@@ -380,6 +380,14 @@ public abstract class Application {
         }
     }
 
+    // Called from native, when a JNI exception has occurred
+    public static void reportException(Throwable t) {
+        Thread currentThread = Thread.currentThread();
+        Thread.UncaughtExceptionHandler handler =
+                currentThread.getUncaughtExceptionHandler();
+        handler.uncaughtException(currentThread, t);
+    }
+
     abstract protected void _invokeAndWait(java.lang.Runnable runnable);
     /**
      * Block the current thread and wait until the given  runnable finishes

@@ -493,6 +493,9 @@ typedef struct _tagJavaIDs {
         jmethodID init;
         jmethodID notifySettingsChanged;
     } Screen;
+    struct {
+        jmethodID reportExceptionMID;
+    } Application;
 } JavaIDs;
 
 extern JavaIDs javaIDs;
