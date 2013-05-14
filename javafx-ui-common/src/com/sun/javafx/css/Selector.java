@@ -59,15 +59,8 @@ abstract public class Selector {
     Rule getRule() {
         return rule;
     }
-    /**
-     * Determines whether this selector applies to the specified object.  
-     * Returns a {@link Match} on success, <code>null</code> otherwise. Note
-     * that pseudoclass states are NOT included in this check.
-     *
-     *@return a <code>Match</code> describing the match, or <code>null</code> 
-     *      for no match
-     */
-    abstract Match matches(Styleable node);
+
+    abstract Match createMatch();
 
     // same as the matches method expect return true/false rather than a match
     public abstract boolean applies(Styleable styleable);

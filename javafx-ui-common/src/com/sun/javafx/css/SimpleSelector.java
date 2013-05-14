@@ -188,46 +188,11 @@ final public class SimpleSelector extends Selector {
         this.matchOnId = (id != null && !("".equals(id)));
 
     }
-    
-    /** copy constructor used by StyleManager
-    SimpleSelector(final SimpleSelector other) {
-        
-        this.name = other.name;
-        this.matchOnName = other.matchOnName;
-        this.styleClassSet = new StyleClass
-        if (other.matchOnStyleClass) {
-            final int length = other.styleClassSet.length;
-            final long[] src = other.styleClassSet;
-            final long[] dest = this.styleClassSet = new long[length];
-            System.arraycopy(src, 0, dest, 0, length);
-        } else {
-            // other is long[0]
-            this.styleClassSet = other.styleClassSet;
-        }
-        this.matchOnStyleClass = other.matchOnStyleClass;
-        
-        this.pseudoClassState = other.pseudoClassState;
-        this.nodeOrientation = other.nodeOrientation;
-        this.id = other.id;
-        this.matchOnId = other.matchOnId;
-    } */
 
-    /**
-     * Returns a {@link Match} if this selector matches the specified object, or 
-     * <code>null</code> otherwise.
-     *
-     *@param node the object to check for a match
-     *@return a {@link Match} if the selector matches, or <code>null</code> 
-     *      otherwise
-     */
-    @Override 
-    Match matches(final Styleable node) {
-        if (applies(node)) {
-            final int idCount = (matchOnId) ? 1 : 0;
-            int styleClassCount = styleClassSet.size();
-            return new Match(this, pseudoClassState, idCount, styleClassCount);
-        }
-        return null;
+    Match createMatch() {
+        final int idCount = (matchOnId) ? 1 : 0;
+        int styleClassCount = styleClassSet.size();
+        return new Match(this, pseudoClassState, idCount, styleClassCount);
     }
 
     @Override 

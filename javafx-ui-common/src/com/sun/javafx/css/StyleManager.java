@@ -1705,41 +1705,24 @@ final public class StyleManager {
                     int ordinal = selectorDatum.ordinal;
                     final Selector selector = selectorDatum.selector;
 
-                    final Rule rule = selector.getRule();
+                    Match match = selector.createMatch();
 
-                    // if the selector didn't apply, then applicableRules[r] will be null
-                    if (rule == null) {
-                        continue;
-                    }
+                    Rule rule = selector.getRule();
 
-                    final List<Match> matches = rule.matches(node);
-                    if (matches == null || matches.isEmpty()) {
-                        continue;
-                    }
+                    for (int d = 0, dmax = rule.getDeclarations().size(); d < dmax; d++) {
+                        final Declaration decl = rule.getDeclarations().get(d);
 
-                    for (int m=0, mMax=matches.size(); m<mMax; m++) {
+                        final CascadingStyle s = new CascadingStyle(
+                                new Style(match.selector, decl),
+                                match.pseudoClasses,
+                                match.specificity,
+                                // ordinal increments at declaration level since
+                                // there may be more than one declaration for the
+                                // same attribute within a selector or within a stylesheet
+                                ordinal++
+                        );
 
-                        final Match match = matches.get(m);
-                        // TODO: should never get nulls in this list. Fix Rule#matches
-                        if (match == null) {
-                            continue;
-                        }
-
-                        for (int d = 0, dmax = rule.getDeclarations().size(); d < dmax; d++) {
-                            final Declaration decl = rule.getDeclarations().get(d);
-
-                            final CascadingStyle s = new CascadingStyle(
-                                    new Style(match.selector, decl),
-                                    match.pseudoClasses,
-                                    match.specificity,
-                                    // ordinal increments at declaration level since
-                                    // there may be more than one declaration for the
-                                    // same attribute within a selector or within a stylesheet
-                                    ordinal++
-                            );
-
-                            styles.add(s);
-                        }
+                        styles.add(s);
                     }
                 }
             }

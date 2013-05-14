@@ -98,46 +98,21 @@ final public class CompoundSelector extends Selector {
         this(null, null);
     }
     
-    /**
-     * Returns a {@link Match} if this selector matches the specified object, or 
-     * <code>null</code> otherwise.
-     *
-     *@param node the object to check for a match
-     *@return a {@link Match} if the selector matches, or <code>null</code> 
-     *      otherwise
-     */
-    @Override
-    Match matches(final Styleable node) {
-        return matches(node, selectors.size()-1);
-    }
+    Match createMatch() {
 
-    private Match matches(final Styleable node, final int index) {
-            
-        final Match descendantMatch = selectors.get(index).matches(node);
-        if (descendantMatch == null || index == 0) {
-            return descendantMatch;
+        final PseudoClassState allPseudoClasses = new PseudoClassState();
+        int idCount = 0;
+        int styleClassCount = 0;
+
+        for(int n=0, nMax=selectors.size(); n<nMax; n++) {
+            Selector sel = selectors.get(n);
+            Match match = sel.createMatch();
+            allPseudoClasses.addAll(match.pseudoClasses);
+            idCount += match.idCount;
+            styleClassCount += match.styleClassCount;
         }
 
-        Styleable parent = node.getStyleableParent();
-        while (parent != null) {
-            final Match ancestorMatch = matches(parent, index-1);
-            if (ancestorMatch != null) {
-
-                final PseudoClassState allPseudoClasses = new PseudoClassState();
-                allPseudoClasses.addAll(ancestorMatch.pseudoClasses);
-                allPseudoClasses.addAll(descendantMatch.pseudoClasses);
-                
-                return new Match(this, 
-                        allPseudoClasses,
-                        ancestorMatch.idCount + descendantMatch.idCount,
-                        ancestorMatch.styleClassCount + descendantMatch.styleClassCount);
-            }
-            // Combinator.CHILD will cause this loop to exit after the first iteration
-            if ( relationships.get(index-1) == Combinator.CHILD ) break;
-            parent = parent.getStyleableParent();
-        }
-        
-        return null;
+        return new Match(this, allPseudoClasses, idCount, styleClassCount);
     }
 
     @Override
